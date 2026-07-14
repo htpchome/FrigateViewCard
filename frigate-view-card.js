@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.35";
+const VERSION = "1.0.36";
 
 import {
     LitElement,
@@ -170,7 +170,7 @@ const STYLES = `
     .card {
         --c-bg-main:   var(--card-background-color);
         --c-bg-panel:  var(--secondary-background-color);
-        --c-bg-panel-light: color-mix(in srgb, var(--secondary-background-color) 50%, white);
+        --c-bg-panel-light: var(--wa-color-neutral-fill-normal);
         --c-bg-deep:   #111111;
         --c-text:      var(--primary-text-color);
         --c-text2:     var(--secondary-text-color);
@@ -256,7 +256,7 @@ const STYLES = `
   .list-day-label{transform: scale(1.01);position:sticky;top:0;z-index:2;padding:2px 0 8px;margin:0 0 4px;font-size:0.82rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.50;pointer-events:none;background:var(--c-bg-main);border:none;}
   .list-day-label::before{content:"";position:absolute;left:0px;right:0px;top:-3px;height:3px;background:var(--c-bg-main);}
   .list-item{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:2px 10px 2px 2px;
-    background:var(--c-bg-panel);border:1px solid var(--c-border2);
+    background:var(--c-bg-panel-light);border:1px solid var(--c-border2);
     border-radius:8px;margin-bottom:5px;cursor:pointer}
   .list-item:hover{background: var(--c-bg-main);
     border-color:var(--c-acc-bdr,rgba(59,130,246,.25));}
@@ -407,7 +407,7 @@ const STYLES = `
   .ico.fav.on{color:#fbbf24;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 
   /* ── recordings ── */
-  .rec{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;}
+  .rec{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--c-bg-panel-light);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;}
   .rec:hover{background:rgba(255,255,255,.07);}
   .ric{width:36px;height:36px;border-radius:5px;background:rgba(30,80,200,.25);
     color:var(--c-acc-bdr);display:flex;align-items:center;justify-content:center;} 
@@ -418,7 +418,7 @@ const STYLES = `
   .rp{color:var(--c-on);}
 
   /* ── reviews ── */
-  .rev{display:flex;gap:5px;flex-wrap: wrap;align-items:center;padding:2px 10px 2px 0px;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;}
+  .rev{display:flex;gap:5px;flex-wrap: wrap;align-items:center;padding:2px 10px 2px 0px;background:var(--c-bg-panel-light);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;}
   .rev[data-review-open]:hover{background:rgba(255,255,255,.07);border-color:rgba(59,130,246,.25);}
   .rev-sev{width:2px;align-self:stretch;border-radius:3px;margin-right:0;} 
   .rev-sev.alert{background:#ef4444;} 
