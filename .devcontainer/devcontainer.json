@@ -21,7 +21,8 @@
         "redhat.vscode-yaml",
         "keesschollaart.vscode-home-assistant",
         "ms-azuretools.vscode-docker",
-        "saoudrizwan.cline"
+        "saoudrizwan.cline",
+        "saoudrizwan.claude-dev"
       ],
       "settings": {
         "editor.formatOnSave": true,
