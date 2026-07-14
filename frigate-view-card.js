@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.41";
+const VERSION = "1.0.42";
 
 import {
   LitElement,
@@ -2959,12 +2959,12 @@ class FrigateViewCard extends HTMLElement {
     this._mountEngine();
   }
   _initPopupInteractions() {
-    const header = this.shadowRoot.querySelector(".popup-header");
-    if (!header) return;
+    const popup = this._$("#myPopup");
+    if (!popup) return;
     if (this._popupHandlers) {
       const h = this._popupHandlers;
-      h.header.removeEventListener("mousedown", h.onMouseDown);
-      h.header.removeEventListener("touchstart", h.onTouchStart);
+      h.popup.removeEventListener("mousedown", h.onMouseDown);
+      h.popup.removeEventListener("touchstart", h.onTouchStart);
       document.removeEventListener("mousemove", h.onMouseMove);
       document.removeEventListener("touchmove", h.onTouchMove);
       document.removeEventListener("mouseup", h.onMouseUp);
@@ -2975,8 +2975,6 @@ class FrigateViewCard extends HTMLElement {
     const drag = this._popupDrag;
     const dragThreshold = 100;
     const start = (clientY) => {
-      const popup = this._$("#myPopup");
-      if (!popup) return;
       drag.isDragging = true;
       drag.startY = clientY;
       drag.currentY = 0;
@@ -3008,8 +3006,8 @@ class FrigateViewCard extends HTMLElement {
     const onTouchMove = (e) => move(e.touches[0].clientY, e);
     const onMouseUp = () => end();
     const onTouchEnd = () => end();
-    header.addEventListener("mousedown", onMouseDown);
-    header.addEventListener("touchstart", onTouchStart);
+    popup.addEventListener("mousedown", onMouseDown);
+    popup.addEventListener("touchstart", onTouchStart);
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("touchmove", onTouchMove, {
       passive: false,
@@ -3017,7 +3015,7 @@ class FrigateViewCard extends HTMLElement {
     document.addEventListener("mouseup", onMouseUp);
     document.addEventListener("touchend", onTouchEnd);
     this._popupHandlers = {
-      header,
+      popup,
       onMouseDown,
       onTouchStart,
       onMouseMove,
