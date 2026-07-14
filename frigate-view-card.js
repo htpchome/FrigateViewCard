@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.23";
+const VERSION = "1.0.24";
 
 import {
     LitElement,
@@ -250,7 +250,7 @@ const STYLES = `
 
   /* ── event list ── */
   .list{flex:1;flex-direction: column;min-height:0;} 
-  .list-sec{padding:6px 2px}  
+  .list-sec{padding:6px 2px;position:relative;}  
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
   .list-day-label{position:sticky;top:0;z-index:2;padding:2px 0 8px;margin:0 0 4px;font-size:0.82rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.50;pointer-events:none;background:var(--c-bg-main);border:none;}
@@ -2399,11 +2399,10 @@ class FrigateViewCard extends HTMLElement {
             </div>
          
             <div class="browse" id="browse" style="display:none">
-              <div style="background:#555555;height:29px;width:100%;position:sticky;top:0;left:0;z-index:1;">Text</div>
               <div class="filter-panel" id="filter-panel" style="display:none"></div>
               <div class="cal-panel" id="cal-panel" style="display:none"></div>
-
               <div class="list-sec">
+              <div style="background: var(--c-bg-panel);height:28px;width:100%;position:sticky;top:0;left:0;z-index:1;">Text</div>
                 <div class="list-head">
                   <span class="section-label" id="list-label">Recent Alerts</span>
                   <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
