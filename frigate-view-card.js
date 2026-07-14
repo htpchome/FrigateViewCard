@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.43";
+const VERSION = "1.0.44";
 
 import {
   LitElement,
@@ -572,7 +572,6 @@ class FrigateViewCard extends HTMLElement {
     this._popupMediaCleanup = null;
     this._recordingScrubCleanup = null;
     this._recordingScrubState = null;
-    this._recordingScrubSeekTimer = null;
     this._recordingAlertCache = new Map();
     this._mountSeq = 0;
     this._pendingMountDestroyers = [];
@@ -3232,10 +3231,6 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _teardownRecordingScrub() {
-    if (this._recordingScrubSeekTimer) {
-      clearTimeout(this._recordingScrubSeekTimer);
-      this._recordingScrubSeekTimer = null;
-    }
     if (this._recordingScrubCleanup) {
       try {
         this._recordingScrubCleanup();
@@ -3286,7 +3281,7 @@ class FrigateViewCard extends HTMLElement {
     return { absTarget, relTarget };
   }
 
-  _seekRecordingScrubToRatio(ratio, { throttleMs = 90, commit = false } = {}) {
+  _seekRecordingScrubToRatio(ratio, { commit = false } = {}) {
     const state = this._recordingScrubState;
     if (!state?.video) return;
     const target = this._resolveRecordingScrubTarget(ratio);
@@ -3296,32 +3291,16 @@ class FrigateViewCard extends HTMLElement {
     state.pendingRelTarget = target.relTarget;
     this._setRecordingScrubCursor(target.absTarget);
 
-    const applySeek = () => {
-      if (!this._recordingScrubState?.video) return;
-      const rel = Number(this._recordingScrubState.pendingRelTarget);
-      if (!Number.isFinite(rel)) return;
-      try {
-        this._recordingScrubState.video.currentTime = rel;
-      } catch (_) {}
-    };
+    if (!commit) return;
 
-    if (this._recordingScrubSeekTimer) {
-      clearTimeout(this._recordingScrubSeekTimer);
-      this._recordingScrubSeekTimer = null;
+    const rel = Number(state.pendingRelTarget);
+    if (!Number.isFinite(rel)) return;
+    try {
+      state.video.currentTime = rel;
+    } catch (_) {}
+    if (state.resumeAfterScrub) {
+      state.video.play?.().catch(() => {});
     }
-
-    if (commit || !throttleMs) {
-      applySeek();
-      if (commit && state.resumeAfterScrub) {
-        state.video.play?.().catch(() => {});
-      }
-      return;
-    }
-
-    this._recordingScrubSeekTimer = setTimeout(() => {
-      this._recordingScrubSeekTimer = null;
-      applySeek();
-    }, throttleMs);
   }
   async _fetchRecordingAlerts(clientId, cam, start, end) {
     const cacheKey = `${clientId}|${cam}|${Math.floor(start)}|${Math.floor(end)}`;
@@ -3385,22 +3364,19 @@ class FrigateViewCard extends HTMLElement {
       video.pause?.();
       track.setPointerCapture?.(ev.pointerId);
       lastRatio = clientXToRatio(ev.clientX);
-      this._seekRecordingScrubToRatio(lastRatio, { throttleMs: 0 });
+      this._seekRecordingScrubToRatio(lastRatio);
     };
     const onPointerMove = (ev) => {
       if (!dragging) return;
       lastRatio = clientXToRatio(ev.clientX);
-      this._seekRecordingScrubToRatio(lastRatio, { throttleMs: 90 });
+      this._seekRecordingScrubToRatio(lastRatio);
     };
     const onPointerUp = (ev) => {
       if (!dragging) return;
       dragging = false;
       state.isScrubbing = false;
       track.releasePointerCapture?.(ev.pointerId);
-      this._seekRecordingScrubToRatio(lastRatio, {
-        throttleMs: 0,
-        commit: true,
-      });
+      this._seekRecordingScrubToRatio(lastRatio, { commit: true });
     };
     const onTime = () => {
       if (this._recordingScrubState?.isScrubbing) return;
@@ -3784,10 +3760,24 @@ class FrigateViewCard extends HTMLElement {
       `/api/frigate/${clientId}/recording/${cam}/start/${start}/end/${chunkEnd}`,
     );
     if (this._playSeq !== token) return;
-    viewer.innerHTML = `<video controls autoplay playsinline muted><source src="${url}" type="video/mp4" /></video>`;
+    viewer.innerHTML = `<video controls playsinline webkit-playsinline preload="metadata" muted></video>`;
+    const video = viewer.querySelector("video");
+    if (video) {
+      video.src = url;
+      try {
+        video.load();
+      } catch (_) {}
+      const tryStart = () => {
+        video.play?.().catch(() => {});
+      };
+      if (isIOS) {
+        video.addEventListener("loadedmetadata", tryStart, { once: true });
+      } else {
+        tryStart();
+      }
+    }
     this._ensurePopupFullscreenButton("recording");
     this._scheduleRotateOverlayUpdate();
-    const video = viewer.querySelector("video");
     if (video) {
       this._initRecordingScrub({
         clientId,
