@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.6";
+const VERSION = "1.0.7";
 
 import {
     LitElement,
@@ -207,7 +207,6 @@ const STYLES = `
   /* ── responsive layout ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-    --ha-box-shadow:0px 2px 4px 0px rgba(0,0,0,0.16);
     --ha-border:1px solid var(--c-border) !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -216,14 +215,14 @@ const STYLES = `
     }
   .card{
     --ha-card-background: var(--c-bg-main) !important;
-    --ha-box-shadow: 0px 2px 4px 0px rgba(0,0,0,0.16);
-    --ha-border:1px solid var(--c-border);
+    --ha-border:1px solid var(--c-border);    
     color:var(--c-text);overflow:hidden;
     box-sizing: border-box;
     border-radius:var(--ha-card-border-radius,13px);
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     display:flex;
     flex-direction:column;
+    box-shadow: var(--ha-box-shadow-s);
     height:100%;
     padding:0;
     margin: 0 auto;
