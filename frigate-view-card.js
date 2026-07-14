@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.3";
+const VERSION = "1.0.4";
 
 import {
     LitElement,
@@ -268,7 +268,7 @@ const STYLES = `
   .list-item{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:2px 10px 2px 2px;
     background:var(--c-bg-panel);border:1px solid var(--c-border2);
     border-radius:8px;margin-bottom:5px;cursor:pointer;
-    boxShadow: var(--ha-box-shadow-l)}
+    boxShadow: 0px 4px 10px rgba(0, 0, 0, 0.15);}
   .list-item:hover{background: var(--c-bg-main);
     border-color:var(--c-acc-bdr,rgba(59,130,246,.25));}
   .list-item.compact{padding:2px 10px 2px 2px;flex-wrap:wrap;}
