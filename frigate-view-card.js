@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.16";
+const VERSION = "1.0.17";
 
 import {
     LitElement,
@@ -2409,6 +2409,7 @@ class FrigateViewCard extends HTMLElement {
                 </div>
                 <div class="diag" id="diag" style="display:none"></div>
                 <div class="list" id="list">
+                  <div style="background:#000;width:100%;position:absolute;top:0;left:0;">Text<div>
                   <div class="empty">Loading…</div>
                 </div>
                                 
