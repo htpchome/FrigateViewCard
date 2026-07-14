@@ -13,6 +13,7 @@ This repository uses Lit for building web components. Always prioritize native b
 - Integration: Leverage the global `applyTo` window objects where applicable for HA state management.
 - Stick to standard JavaScript and modern browser features (Custom Elements, Shadow DOM, CSS custom properties).
 - Avoid non-standard TypeScript features (like namespaces) unless explicitly required by the project.
+- The Version should be bumped up for each change.
 
 ## 2. Home Assistant Communication
 - All backend communication to Home Assistant MUST use the `homeassistant-js-websocket` API.
