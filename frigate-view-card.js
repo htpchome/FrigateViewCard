@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.30";
+const VERSION = "1.0.31";
 
 import {
     LitElement,
@@ -274,8 +274,8 @@ const STYLES = `
 
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
-  .more,.end{display:flex;min-height:0;align-items:center;justify-content:center;font-size:0.75rem;color:var(--c-text4);padding:6px;}
-  .more.to-top{cursor:pointer;color:var(--c-text2);}
+  .more,.end{position:relative;display:flex;min-height:0;align-items:center;justify-content:center;font-size:0.75rem;color:var(--c-text4);padding:6px;border-top: 2px solid var(--c-border2);}
+  .more.to-top{position:relative;cursor:pointer;color:var(--c-text2);}
 
   /* ── feed area ── */
   .feed-area{position:relative;width:100%;}
@@ -2415,8 +2415,9 @@ class FrigateViewCard extends HTMLElement {
                                 
               </div>              
             </div>
-            <div class="frigate-view">${ICONS.frigateview}</div>
-            <div class="more" id="older-hint" hidden>scroll for older…</div>
+            <div class="more" id="older-hint" hidden>
+              <div class="frigate-view">${ICONS.frigateview}</div>
+            scroll for older…</div>
           </div>
         </div>
         <!--<div class="toast" id="toast" style="display:none"></div>-->
