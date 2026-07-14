@@ -10,11 +10,10 @@ go2rtc:
   streams:
     # Demo camera using a test pattern (works without real cameras)
     demo_front_door:
-      - ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4#video=h264
+      - exec:/usr/lib/ffmpeg/7.0/bin/ffmpeg -re -stream_loop -1 -i https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_480p_h264.mov -c copy -rtsp_transport tcp -f rtsp {{output}}
     demo_backyard:
-      - ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4#video=h264
-    demo_driveway:
-      - ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4#video=h264
+      - exec:/usr/lib/ffmpeg/7.0/bin/ffmpeg -re -stream_loop -1 -i https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_480p_h264.mov -c copy -rtsp_transport tcp -f rtsp {{output}}
+
   webrtc:
     candidates:
       - 0.0.0.0:8555
@@ -25,8 +24,8 @@ cameras:
   front_door:
     ffmpeg:
       inputs:
-        - path: rtsp://127.0.0.1:8554/demo_front_door
-          input_params: -analyzeduration 1000000 -probesize 1000000
+        - path: rtsp://127.0.0.1:8554/demo_door
+          input_args: preset-rtsp-restream-low-latency
           roles:
             - detect
             - record
@@ -60,7 +59,7 @@ cameras:
     ffmpeg:
       inputs:
         - path: rtsp://127.0.0.1:8554/demo_backyard
-          input_params: -analyzeduration 1000000 -probesize 1000000
+          input_args: preset-rtsp-restream-low-latency
           roles:
             - detect
             - record
@@ -90,13 +89,12 @@ cameras:
       threshold: 25
 
   driveway:
+    enabled: True
     ffmpeg:
       inputs:
-        - path: rtsp://127.0.0.1:8554/demo_driveway
-          input_params: -analyzeduration 1000000 -probesize 1000000
+        - path: -f lavfi -i testsrc=size=1280x720:rate=10
           roles:
             - detect
-            - record
     detect:
       enabled: true
       width: 1280

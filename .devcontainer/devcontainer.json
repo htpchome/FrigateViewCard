@@ -4,7 +4,7 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  
+
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
@@ -27,7 +27,6 @@
       "settings": {
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "esbenp.prettier-vscode",
-        "javascript.format.semicolons": "insert",
         "files.associations": {
           "*.yaml": "yaml"
         }
