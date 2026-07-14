@@ -32,6 +32,7 @@ You are an expert full-stack developer assisting with JavaScript (ES6+) and Home
 
 - **Variables:** Use `const` by default; use `let` only if reassignments are absolutely necessary.
 - **Naming Conventions:** Use camelCase for variables and functions. Use kebab-case for custom component element names (e.g., `my-custom-card.js`).
+- **Functions:** Prefer arrow functions by default for callbacks and array methods, but avoid them for class/object methods, constructors, and any function that relies on hoisting or dynamic `this` binding.
 - **Error Handling:** Log errors explicitly using `console.error('Home Assistant Error:', error);` so they appear properly in the Home Assistant logs.
 - **Comments:** Explain _why_ a block of code is doing something, especially when parsing Home Assistant states (e.g., converting a state to a number or checking for domain availability).
 
