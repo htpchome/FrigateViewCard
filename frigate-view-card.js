@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.39";
+const VERSION = "1.0.40";
 
 import {
   LitElement,
@@ -295,6 +295,30 @@ const STYLES = `
     .card.mobile-rotate-live-exit #eng-wrap{animation:liveOverlayOut .24s ease both;}
     .card.mobile-rotate-live .stream-loading,
     .card.mobile-rotate-live-exit .stream-loading{display:none !important;}
+    .card.mobile-rotate-popup,
+    .card.mobile-rotate-popup-exit{overflow:hidden;height:var(--rotate-vh);max-height:var(--rotate-vh);}
+    .card.mobile-rotate-popup #myPopup,
+    .card.mobile-rotate-popup-exit #myPopup{position:fixed;top:var(--rotate-oy);left:var(--rotate-ox);right:auto;bottom:auto;width:var(--rotate-vw);height:var(--rotate-vh);max-height:var(--rotate-vh);min-height:var(--rotate-vh);z-index:1400;transform:translateY(0) !important;border-radius:0;background:var(--c-bg-deep);}
+    .card.mobile-rotate-popup #myPopup{animation:popupOverlayIn .28s ease both;}
+    .card.mobile-rotate-popup-exit #myPopup{animation:popupOverlayOut .24s ease both;}
+    .card.mobile-rotate-popup .popup-header,
+    .card.mobile-rotate-popup-exit .popup-header{display:none;}
+    .card.mobile-rotate-popup .popup-body,
+    .card.mobile-rotate-popup-exit .popup-body{padding:0;gap:0;overflow:hidden;}
+    .card.mobile-rotate-popup #viewer,
+    .card.mobile-rotate-popup-exit #viewer{width:100%;height:100%;max-height:none;min-height:100%;aspect-ratio:auto;border-radius:0;}
+    .card.mobile-rotate-popup #viewer video,
+    .card.mobile-rotate-popup-exit #viewer video,
+    .card.mobile-rotate-popup #viewer img.snap,
+    .card.mobile-rotate-popup-exit #viewer img.snap{object-fit:contain;object-position:center center;background:#000;}
+    .card.mobile-rotate-popup #popup-info-head,
+    .card.mobile-rotate-popup #popup-info,
+    .card.mobile-rotate-popup #recording-scrub,
+    .card.mobile-rotate-popup #popup-shell-ver,
+    .card.mobile-rotate-popup-exit #popup-info-head,
+    .card.mobile-rotate-popup-exit #popup-info,
+    .card.mobile-rotate-popup-exit #recording-scrub,
+    .card.mobile-rotate-popup-exit #popup-shell-ver{display:none !important;}
   #stream-fallback{position:absolute;inset:0;z-index:2;background:var(--c-bg-deep);
     pointer-events:none;line-height:0;}
   #stream-fallback[hidden]{display:none;}
@@ -327,6 +351,8 @@ const STYLES = `
   @keyframes spin{to{transform:rotate(360deg);}}
     @keyframes liveOverlayIn{from{opacity:.9;}to{opacity:1;}}
     @keyframes liveOverlayOut{from{opacity:1;}to{opacity:.92;}}
+    @keyframes popupOverlayIn{from{opacity:.9;}to{opacity:1;}}
+    @keyframes popupOverlayOut{from{opacity:1;}to{opacity:.92;}}
 
 
   /* ── info row ── */
@@ -550,6 +576,7 @@ class FrigateViewCard extends HTMLElement {
     this._resumeLiveT = null;
     this._lastLiveKick = 0;
     this._rotateOverlayActive = false;
+    this._rotateOverlayMode = "none";
     this._rotateOverlayRaf = 0;
     this._rotateOverlayExitT = null;
     this._rotateOverlaySyncVideo = null;
@@ -2703,38 +2730,84 @@ class FrigateViewCard extends HTMLElement {
     const card = this._$("#card");
     if (!card) return;
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
-    const shouldOverlay =
-      !popupOpen &&
-      this._isMobileTabletViewport() &&
-      this._isLandscapeViewport();
+    const viewer = this._$("#viewer");
+    const popupMediaVisible =
+      !!popupOpen &&
+      !!viewer &&
+      viewer.style.display !== "none" &&
+      viewer.childElementCount > 0;
+    const rotateEligible =
+      this._isMobileTabletViewport() && this._isLandscapeViewport();
+    const nextMode = rotateEligible
+      ? popupMediaVisible
+        ? "popup"
+        : !popupOpen
+          ? "live"
+          : "none"
+      : "none";
 
     if (this._rotateOverlayExitT) {
       clearTimeout(this._rotateOverlayExitT);
       this._rotateOverlayExitT = null;
     }
 
-    if (shouldOverlay) {
-      card.classList.remove("mobile-rotate-live-exit");
+    if (nextMode === "live") {
+      const fromPopup = this._rotateOverlayMode === "popup";
+      card.classList.remove(
+        "mobile-rotate-live-exit",
+        "mobile-rotate-popup",
+        "mobile-rotate-popup-exit",
+      );
       card.classList.add("mobile-rotate-live");
+      this._rotateOverlayMode = "live";
       this._rotateOverlayActive = true;
+      if (fromPopup) this._setLiveNativeControls(false);
       this._setStreamLoading(false);
       this._setLiveNativeControls(true);
       this._syncFullscreenButtonsVisibility();
       return;
     }
 
-    if (!this._rotateOverlayActive) {
-      card.classList.remove("mobile-rotate-live", "mobile-rotate-live-exit");
+    if (nextMode === "popup") {
+      const fromLive = this._rotateOverlayMode === "live";
+      card.classList.remove(
+        "mobile-rotate-popup-exit",
+        "mobile-rotate-live",
+        "mobile-rotate-live-exit",
+      );
+      card.classList.add("mobile-rotate-popup");
+      this._rotateOverlayMode = "popup";
+      this._rotateOverlayActive = true;
+      if (fromLive) this._setLiveNativeControls(false);
+      this._syncFullscreenButtonsVisibility();
       return;
     }
 
+    if (!this._rotateOverlayActive) {
+      card.classList.remove(
+        "mobile-rotate-live",
+        "mobile-rotate-live-exit",
+        "mobile-rotate-popup",
+        "mobile-rotate-popup-exit",
+      );
+      this._rotateOverlayMode = "none";
+      return;
+    }
+
+    const exitMode = this._rotateOverlayMode;
     this._rotateOverlayActive = false;
-    this._setLiveNativeControls(false);
-    card.classList.remove("mobile-rotate-live");
-    card.classList.add("mobile-rotate-live-exit");
+    this._rotateOverlayMode = "none";
+    if (exitMode === "live") this._setLiveNativeControls(false);
+    card.classList.remove("mobile-rotate-live", "mobile-rotate-popup");
+    if (exitMode === "popup") card.classList.add("mobile-rotate-popup-exit");
+    else card.classList.add("mobile-rotate-live-exit");
     this._rotateOverlayExitT = setTimeout(() => {
       const c = this._$("#card");
-      if (c) c.classList.remove("mobile-rotate-live-exit");
+      if (c)
+        c.classList.remove(
+          "mobile-rotate-live-exit",
+          "mobile-rotate-popup-exit",
+        );
       this._rotateOverlayExitT = null;
       this._syncFullscreenButtonsVisibility();
     }, 260);
@@ -3518,7 +3591,8 @@ class FrigateViewCard extends HTMLElement {
     );
     if (liveBtn)
       liveBtn.hidden = !!popupOpen || isFullscreen || this._rotateOverlayActive;
-    if (popupBtn) popupBtn.hidden = isFullscreen;
+    if (popupBtn)
+      popupBtn.hidden = isFullscreen || this._rotateOverlayMode === "popup";
   }
 
   _open(id) {
@@ -3576,6 +3650,7 @@ class FrigateViewCard extends HTMLElement {
     this._$("#viewer").innerHTML = html;
     this._ensurePopupFullscreenButton(fullscreenKind);
     this._renderPopupInfo(infoEvent, infoOpts);
+    this._scheduleRotateOverlayUpdate();
   }
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
@@ -3646,6 +3721,7 @@ class FrigateViewCard extends HTMLElement {
     if (this._playSeq !== token) return;
     viewer.innerHTML = `<video controls autoplay playsinline muted><source src="${url}" type="video/mp4" /></video>`;
     this._ensurePopupFullscreenButton("recording");
+    this._scheduleRotateOverlayUpdate();
     const video = viewer.querySelector("video");
     if (video) {
       this._initRecordingScrub({

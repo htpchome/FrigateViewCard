@@ -2,5 +2,11 @@
   "editor.tabSize": 2,
   "editor.detectIndentation": false,
   "prettier.tabWidth": 2,
-  "editor.defaultFormatter": "esbenp.prettier-vscode"
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "chat.mcp.discovery.enabled": {
+    "claude-desktop": true,
+    "cursor-global": true,
+    "cursor-workspace": true,
+    "windsurf": true
+  }
 }
