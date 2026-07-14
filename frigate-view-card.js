@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.38";
+const VERSION = "1.0.39";
 
 import {
   LitElement,
@@ -2019,8 +2019,7 @@ class FrigateViewCard extends HTMLElement {
   // ── view mode ─────────────────────────────────────────────
   _setViewMode(mode) {
     this._viewMode = mode;
-    const card = this.shadowRoot.querySelector(".card");
-    const engWrap = this.shadowRoot.querySelector("#eng-wrap");
+    const engWrap = this._$("#eng-wrap");
 
     if (engWrap) engWrap.style.display = "";
 
@@ -2059,7 +2058,7 @@ class FrigateViewCard extends HTMLElement {
     // Camera button should always return to single live view.
     this._viewMode = "single";
     if (popupOpen) this._closePopup();
-    const engWrap = this.shadowRoot.querySelector("#eng-wrap");
+    const engWrap = this._$("#eng-wrap");
     if (engWrap) engWrap.style.display = "";
     this.shadowRoot
       .querySelectorAll("[data-viewmode]")
@@ -2446,20 +2445,27 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _initResizeHandle() {
-    const handle = this.shadowRoot.querySelector("#resize-handle");
+    const handle = this._$("#resize-handle");
     if (!handle) return;
     let dragging = false;
     let startX = 0;
     let startLeftWidth = 0;
     let layoutWidth = 0;
+    let colL = null;
+    let colR = null;
 
     const onMouseDown = (e) => {
       e.preventDefault();
       dragging = true;
       startX = e.clientX;
-      const layout = this.shadowRoot.querySelector("#layout");
+      const layout = this._$("#layout");
+      colL = this._$(".col-left");
+      colR = this._$(".col-right");
+      if (!layout || !colL || !colR) {
+        dragging = false;
+        return;
+      }
       layoutWidth = layout.getBoundingClientRect().width;
-      const colL = this.shadowRoot.querySelector(".col-left");
       startLeftWidth = colL.getBoundingClientRect().width;
       handle.classList.add("active");
       document.addEventListener("mousemove", onMouseMove);
@@ -2468,8 +2474,7 @@ class FrigateViewCard extends HTMLElement {
 
     const onMouseMove = (e) => {
       if (!dragging) return;
-      const colL = this.shadowRoot.querySelector(".col-left");
-      const colR = this.shadowRoot.querySelector(".col-right");
+      if (!colL || !colR || !layoutWidth) return;
       const minPct = 10;
       const maxPct = 90;
       const dx = e.clientX - startX;
@@ -3525,8 +3530,8 @@ class FrigateViewCard extends HTMLElement {
     else this._showSnapshot(ev);
   }
   _enter() {
-    this.shadowRoot.querySelector("#engine").style.display = "none";
-    const v = this.shadowRoot.querySelector("#viewer");
+    this._$("#engine").style.display = "none";
+    const v = this._$("#viewer");
     v.style.display = "flex";
     this._openPopup();
   }
@@ -3568,7 +3573,7 @@ class FrigateViewCard extends HTMLElement {
   _renderPopupMedia({ playingId, html, fullscreenKind, infoEvent, infoOpts }) {
     this._enter();
     this._playing = playingId ? { id: playingId } : null;
-    this.shadowRoot.querySelector("#viewer").innerHTML = html;
+    this._$("#viewer").innerHTML = html;
     this._ensurePopupFullscreenButton(fullscreenKind);
     this._renderPopupInfo(infoEvent, infoOpts);
   }
@@ -3813,7 +3818,7 @@ class FrigateViewCard extends HTMLElement {
   }
   // ── browse / filter ───────────────────────────────────────
   _applyBrowse() {
-    const b = this.shadowRoot.querySelector("#browse");
+    const b = this._$("#browse");
     if (b) b.style.display = "block";
   }
   _toggleBrowse() {
@@ -3821,7 +3826,7 @@ class FrigateViewCard extends HTMLElement {
     this._applyBrowse();
   }
   _toast(msg, ms = 3500) {
-    const t = this.shadowRoot.querySelector("#toast");
+    const t = this._$("#toast");
     if (!t) return;
     t.textContent = msg;
     t.style.display = "block";
@@ -3831,16 +3836,20 @@ class FrigateViewCard extends HTMLElement {
     }, ms);
   }
   _toggleFilter() {
-    const p = this.shadowRoot.querySelector("#filter-panel");
+    const p = this._$("#filter-panel");
+    if (!p) return;
     const open = p.style.display === "none";
-    this.shadowRoot.querySelector("#cal-panel").style.display = "none";
+    const cal = this._$("#cal-panel");
+    if (cal) cal.style.display = "none";
     p.style.display = open ? "block" : "none";
     if (open) this._renderFilter();
   }
   _toggleCal() {
-    const p = this.shadowRoot.querySelector("#cal-panel");
+    const p = this._$("#cal-panel");
+    if (!p) return;
     const open = p.style.display === "none";
-    this.shadowRoot.querySelector("#filter-panel").style.display = "none";
+    const filter = this._$("#filter-panel");
+    if (filter) filter.style.display = "none";
     p.style.display = open ? "block" : "none";
     if (open) {
       if (!this._calMonth) {
