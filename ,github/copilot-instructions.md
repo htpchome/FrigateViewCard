@@ -27,7 +27,7 @@ You are an expert full-stack developer assisting with JavaScript (ES6+) and Home
 ## 3. Home Assistant & JavaScript Standards
 
 - **Entity Identification:** Never hallucinate entity IDs. When providing example code, use placeholders like `light.living_room` or `sensor.temperature`.
-- **API Communication:** When writing JS that interacts with Home Assistant, always rely on `home-assistant-js-websocket` patterns. Use the `hass` object's `.callService()` or `.callApi()` methods.
+- **API Communication:** When writing JS that interacts with Home Assistant, always rely on `home-assistant-js-websocket` patterns. Use the `hass` object's `.callService()` or `.callApi()` method when posible, but the code may also call frigate directly when that is the most reliable path.
 - **State Access:** Prefer directly reading from the `hass.states` object context rather than attempting to bypass the `hass` integration layer.
 - **Async/Await:** All calls to Home Assistant's backend and fetch requests must use `async/await` with proper `try...catch` blocks for error handling.
 
@@ -52,7 +52,7 @@ console.error('Failed to toggle light:', error);
 
 ## 6. Automation Rules
 
-- For standalone Node.js automations, utilize the `homeassistant-jsengine` package conventions.
+- utilize the `homeassistant-jsengine` package conventions when best.
 - When writing scripts, always handle real-time state changes by subscribing to Home Assistant's event stream (e.g., `state_changed`).
 - Prefer the use of JS `async/await` patterns over nested callbacks to keep automation logic readable.
 
