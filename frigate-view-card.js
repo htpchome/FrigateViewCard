@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.15";
+const VERSION = "1.0.16";
 
 import {
     LitElement,
@@ -254,7 +254,7 @@ const STYLES = `
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
   .list-day-label{position:sticky;top:0;z-index:2;padding:2px 0 8px;margin:0 0 4px;font-size:0.82rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.50;pointer-events:none;background:var(--c-bg-main);border:none;}
-  .list-day-label::before{content:"";position:absolute;left:-3px;right:-3px;top:-3px;height:3px;background:var(--c-bg-main);}
+  .list-day-label::before{content:"";position:absolute;left:0px;right:0px;top:-3px;height:3px;background:var(--c-bg-main);}
   .list-item{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:2px 10px 2px 2px;
     background:var(--c-bg-panel);border:1px solid var(--c-border2);
     border-radius:8px;margin-bottom:5px;cursor:pointer}
@@ -265,7 +265,7 @@ const STYLES = `
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
   .shadow-small{box-shadow: var(--ha-box-shadow-s);transition: transform 0.2s, box-shadow 0.2s;}
-  .shadow-small:hover{transform: scale(1.01);box-shadow: var(--ha-box-shadow-m);}
+  .shadow-small:hover{transform: scale(1.005);box-shadow: var(--ha-box-shadow-s);}
   .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;}
   .tabs::-webkit-scrollbar{display:none;}
 
