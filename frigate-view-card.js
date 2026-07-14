@@ -7,7 +7,14 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.2";
+const VERSION = "1.0.3";
+
+import {
+    LitElement,
+    html,
+    css,
+} from "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js";
+
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
