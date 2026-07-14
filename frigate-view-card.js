@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.34";
+const VERSION = "1.0.35";
 
 import {
     LitElement,
@@ -381,7 +381,8 @@ const STYLES = `
   .cal-dow span{font-size:0.675rem;color:var(--c-text4);padding:2px 0;}
   .cday{position:relative;background:none;border:none;color:var(--c-text);font-size:0.825rem;padding:6px 0;border-radius:4px;cursor:pointer;} .cday:hover{background:var(--c-acc-bg);} .cdot{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#ef4444;}
 
-  .frigate-view{position:absolute;bottom:2px;left:6px;max-height:24px;pointer-events: none;}
+  .frigate-view{position:absolute;bottom:2px;left:6px;max-height:24px;pointer-events: none;
+      fill: #ff5733;stroke: #000000;stroke-width: 2px;}
   .frigate-view svg{height:24px;pointer-events: none;}
   .et{width:112px;height:63px;border-radius:6px;overflow:hidden;flex-shrink:0;background:#0d1520;position:relative;}
   .et img{width:100%;height:100%;object-fit:cover;display:block;}
