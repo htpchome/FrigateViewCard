@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.10";
+const VERSION = "1.0.11";
 
 import {
     LitElement,
@@ -207,6 +207,8 @@ const STYLES = `
   /* ── responsive layout ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
+    --ha-card-box-shadow: --ha-box-shadow-m !important; 
+    box-shadow: --ha-box-shadow-m !important;
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
@@ -214,8 +216,8 @@ const STYLES = `
     }
   .card{
     --ha-card-background: var(--c-bg-main) !important;
-    --ha-border:1px solid var(--c-border);
-    --ha-card-box-shadow: --ha-box-shadow-m    
+    --ha-border:1px solid var(--c-border) !important;
+    --ha-card-box-shadow: --ha-box-shadow-m !important;    
     color:var(--c-text);overflow:hidden;
     box-sizing: border-box;
     border-radius:var(--ha-card-border-radius,13px);
