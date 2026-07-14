@@ -264,8 +264,8 @@ const STYLES = `
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
-  .shadow-xform{box-shadow: var(--ha-box-shadow-s);transition: transform 0.2s, box-shadow 0.2s;}
-  .shadow-xform:hover{transform: scale(1.005);box-shadow: var(--ha-box-shadow-s);}
+  .shadow-xform{box-shadow: var(--ha-box-shadow-s);transition: transform 0.1s, box-shadow 0.1s;}
+  .shadow-xform:hover{transform: scale(1.004);box-shadow: var(--ha-box-shadow-s);}
   .shadow-small {box-shadow: var(--ha-box-shadow-s);}  
   .shadow-medium {box-shadow: var(--ha-box-shadow-m);}
   .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;}
