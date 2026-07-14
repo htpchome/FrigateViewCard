@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.14";
+const VERSION = "1.0.15";
 
 import {
     LitElement,
@@ -254,7 +254,7 @@ const STYLES = `
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
   .list-day-label{position:sticky;top:0;z-index:2;padding:2px 0 8px;margin:0 0 4px;font-size:0.82rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.50;pointer-events:none;background:var(--c-bg-main);border:none;}
-  .list-day-label::before{content:"";position:absolute;left:0;right:0;top:-3px;height:3px;background:var(--c-bg-main);}
+  .list-day-label::before{content:"";position:absolute;left:-3px;right:-3px;top:-3px;height:3px;background:var(--c-bg-main);}
   .list-item{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:2px 10px 2px 2px;
     background:var(--c-bg-panel);border:1px solid var(--c-border2);
     border-radius:8px;margin-bottom:5px;cursor:pointer}
