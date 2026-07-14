@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.9";
+const VERSION = "1.0.10";
 
 import {
     LitElement,
@@ -203,7 +203,7 @@ const STYLES = `
         --c-green:     #c2f2c1;
         --c-red:       #dc3146;
   }
-  /* ── responsive layout ── */
+
   /* ── responsive layout ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
@@ -215,7 +215,7 @@ const STYLES = `
   .card{
     --ha-card-background: var(--c-bg-main) !important;
     --ha-border:1px solid var(--c-border);
-    --ha-box-shadow: --ha-box-shadow-m    
+    --ha-card-box-shadow: --ha-box-shadow-m    
     color:var(--c-text);overflow:hidden;
     box-sizing: border-box;
     border-radius:var(--ha-card-border-radius,13px);
