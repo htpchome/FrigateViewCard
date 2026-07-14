@@ -1,0 +1,139 @@
+# ── Frigate Configuration for Development ─────────────────────
+# This config uses demo/test cameras that work without real RTSP feeds.
+# Replace with your actual camera RTSP URLs for real testing.
+
+mqtt:
+  enabled: false
+
+# ── go2rtc for WebRTC streaming ──────────────────────────────
+go2rtc:
+  streams:
+    # Demo camera using a test pattern (works without real cameras)
+    demo_front_door:
+      - "ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4#video=h264"
+    demo_backyard:
+      - "ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4#video=h264"
+    demo_driveway:
+      - "ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4#video=h264"
+  webrtc:
+    candidates:
+      - 0.0.0.0:8555
+    listen: ":8555"
+
+# ── Camera Definitions ───────────────────────────────────────
+cameras:
+  front_door:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/demo_front_door
+          input_params: -analyzeduration 1000000 -probesize 1000000
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: true
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: true
+      retain:
+        days: 3
+        mode: all
+      events:
+        retain:
+          default: 7
+          mode: motion
+    objects:
+      track:
+        - person
+        - car
+        - dog
+        - cat
+    motion:
+      threshold: 25
+
+  backyard:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/demo_backyard
+          input_params: -analyzeduration 1000000 -probesize 1000000
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: true
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: true
+      retain:
+        days: 3
+        mode: all
+      events:
+        retain:
+          default: 7
+          mode: motion
+    objects:
+      track:
+        - person
+        - dog
+        - bird
+    motion:
+      threshold: 25
+
+  driveway:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/demo_driveway
+          input_params: -analyzeduration 1000000 -probesize 1000000
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: true
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: true
+      retain:
+        days: 3
+        mode: all
+      events:
+        retain:
+          default: 7
+          mode: motion
+    objects:
+      track:
+        - person
+        - car
+        - truck
+    motion:
+      threshold: 25
+
+# ── Detectors ────────────────────────────────────────────────
+# Using CPU detector for dev (no GPU required)
+detectors:
+  cpu:
+    type: cpu
+    num_threads: 3
+
+# ── Model ────────────────────────────────────────────────────
+model:
+  path: /cpu_model.tflite
+  width: 320
+  height: 320
+
+# ── Birdseye ─────────────────────────────────────────────────
+birdseye:
+  enabled: true
+  width: 1280
+  height: 720
+  quality: 8
+  mode: objects
+
+# ── UI Settings ──────────────────────────────────────────────
+ui:
+  live_mode: webrtc

@@ -10,15 +10,15 @@ go2rtc:
   streams:
     # Demo camera using a test pattern (works without real cameras)
     demo_front_door:
-      - "ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4#video=h264"
+      - ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4#video=h264
     demo_backyard:
-      - "ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4#video=h264"
+      - ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4#video=h264
     demo_driveway:
-      - "ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4#video=h264"
+      - ffmpeg:http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4#video=h264
   webrtc:
     candidates:
       - 0.0.0.0:8555
-    listen: ":8555"
+    listen: :8555
 
 # ── Camera Definitions ───────────────────────────────────────
 cameras:
@@ -37,13 +37,16 @@ cameras:
       fps: 5
     record:
       enabled: true
-      retain:
-        days: 3
-        mode: all
-      events:
+      alerts:
         retain:
-          default: 7
-          mode: motion
+          days: 7
+      detections:
+        retain:
+          days: 7
+      continuous:
+        days: 3
+      motion:
+        days: 0
     objects:
       track:
         - person
@@ -68,13 +71,16 @@ cameras:
       fps: 5
     record:
       enabled: true
-      retain:
-        days: 3
-        mode: all
-      events:
+      alerts:
         retain:
-          default: 7
-          mode: motion
+          days: 7
+      detections:
+        retain:
+          days: 7
+      continuous:
+        days: 3
+      motion:
+        days: 0
     objects:
       track:
         - person
@@ -98,13 +104,16 @@ cameras:
       fps: 5
     record:
       enabled: true
-      retain:
-        days: 3
-        mode: all
-      events:
+      alerts:
         retain:
-          default: 7
-          mode: motion
+          days: 7
+      detections:
+        retain:
+          days: 7
+      continuous:
+        days: 3
+      motion:
+        days: 0
     objects:
       track:
         - person
@@ -135,5 +144,5 @@ birdseye:
   mode: objects
 
 # ── UI Settings ──────────────────────────────────────────────
-ui:
-  live_mode: webrtc
+ui: {}
+version: 0.17-0

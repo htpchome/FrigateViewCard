@@ -12,11 +12,14 @@ echo "════════════════════════�
 echo ""
 echo "→ Setting up Home Assistant configuration..."
 if [ -d "/config" ]; then
-  cp -rn /workspaces/*/FrigateViewCard/.devcontainer/homeassistant/* /config/ 2>/dev/null || true
+  # Use sudo because /config is owned by root (shared volume with HA container)
+  sudo cp -rn /workspaces/*/FrigateViewCard/.devcontainer/homeassistant/* /config/ 2>/dev/null || true
   # Create themes directory if it doesn't exist
-  mkdir -p /config/themes
+  sudo mkdir -p /config/themes
   # Create www directory for custom cards
-  mkdir -p /config/www
+  sudo mkdir -p /config/www
+  # Ensure the node user can access these directories going forward
+  sudo chown -R node:node /config/themes /config/www 2>/dev/null || true
   echo "  ✓ Home Assistant config copied"
 else
   echo "  ⚠ /config not available yet (will be set up on first HA start)"
