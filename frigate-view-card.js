@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.27";
+const VERSION = "1.0.28";
 
 import {
     LitElement,
@@ -2345,7 +2345,7 @@ class FrigateViewCard extends HTMLElement {
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._config.theme === "light" ? "theme-light" : this._config.theme === "future" ? "theme-future" : ""}" id="card">
 
-        <div class="layout" id="layout">
+        <div class="layout shadow-small" id="layout">
 
           <div class="col-left" id="col-left">
             <div class="feed-area">
