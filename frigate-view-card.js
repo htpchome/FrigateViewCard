@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.31";
+const VERSION = "1.0.32";
 
 import {
     LitElement,
@@ -274,7 +274,7 @@ const STYLES = `
 
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
-  .more,.end{position:relative;display:flex;min-height:0;align-items:center;justify-content:center;font-size:0.75rem;color:var(--c-text4);padding:6px;border-top: 2px solid var(--c-border2);}
+  .more,.end{position:relative;display:flex;min-height:0;align-items:center;justify-content:center;font-size:0.85rem;color:var(--c-text4);padding:6px;border-top: 1px solid var(--c-border);}
   .more.to-top{position:relative;cursor:pointer;color:var(--c-text2);}
 
   /* ── feed area ── */
@@ -381,7 +381,7 @@ const STYLES = `
   .cal-dow span{font-size:0.675rem;color:var(--c-text4);padding:2px 0;}
   .cday{position:relative;background:none;border:none;color:var(--c-text);font-size:0.825rem;padding:6px 0;border-radius:4px;cursor:pointer;} .cday:hover{background:var(--c-acc-bg);} .cdot{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#ef4444;}
 
-  .frigate-view{position:absolute;bottom:3px;left:6px;max-height:24px;pointer-events: none;}
+  .frigate-view{position:absolute;top:2px;left:6px;max-height:24px;pointer-events: none;}
   .frigate-view svg{height:24px;pointer-events: none;}
   .et{width:112px;height:63px;border-radius:6px;overflow:hidden;flex-shrink:0;background:#0d1520;position:relative;}
   .et img{width:100%;height:100%;object-fit:cover;display:block;}
