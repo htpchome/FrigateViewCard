@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.17";
+const VERSION = "1.0.18";
 
 import {
     LitElement,
@@ -2404,12 +2404,12 @@ class FrigateViewCard extends HTMLElement {
 
               <div class="list-sec">
                 <div class="list-head">
+                <div style="background:#000;height:100px;width:100%;position:absolute;top:0;left:0;">Text<div>
                   <span class="section-label" id="list-label">Recent Alerts</span>
                   <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
                 </div>
                 <div class="diag" id="diag" style="display:none"></div>
                 <div class="list" id="list">
-                  <div style="background:#000;width:100%;position:absolute;top:0;left:0;">Text<div>
                   <div class="empty">Loading…</div>
                 </div>
                                 
