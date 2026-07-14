@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.8";
+const VERSION = "1.0.9";
 
 import {
     LitElement,
@@ -414,8 +414,13 @@ const STYLES = `
   .rinf{flex:1;} .rt{font-size:0.9rem;font-weight:600;color:var(--c-text);} .rsub{font-size:0.75rem;color:var(--c-text3);margin-top:1px;} .rp{color:var(--c-on);}
 
   /* ── reviews ── */
-  .rev{display:flex;gap:5px;flex-wrap: wrap;align-items:center;padding:2px 10px 2px 2px;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;}
-  .rev[data-review-open]:hover{background:rgba(255,255,255,.07);border-color:rgba(59,130,246,.25);}
+  .rev{display:flex;gap:5px;flex-wrap: wrap;align-items:center;padding:2px 10px 2px 2px;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;
+    box-shadow: var(--ha-box-shadow-s);
+    transition: transform 0.2s, box-shadow 0.2s;  
+    }
+  .rev[data-review-open]:hover{background:rgba(255,255,255,.07);border-color:rgba(59,130,246,.25);
+    transform: scale(1.01);
+    box-shadow: var(--ha-box-shadow-m);}
   .rev-sev{width:3px;align-self:stretch;border-radius:3px;margin-right:0;} 
   .rev-sev.alert{background:#ef4444;} 
   .rev-sev.detection{background:#f59e0b;}
