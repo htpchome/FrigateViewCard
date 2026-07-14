@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.29";
+const VERSION = "1.0.30";
 
 import {
     LitElement,
@@ -267,7 +267,7 @@ const STYLES = `
   .shadow-xform{box-shadow: var(--ha-box-shadow-s);transition: transform 0.2s, box-shadow 0.2s;}
   .shadow-xform:hover{transform: scale(1.005);box-shadow: var(--ha-box-shadow-s);}
   .shadow-small {box-shadow: var(--ha-box-shadow-s);}  
-  .shadow-med {box-shadow: var(--ha-box-shadow-m);}
+  .shadow-medium {box-shadow: var(--ha-box-shadow-m);}
   .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;}
   .tabs::-webkit-scrollbar{display:none;}
 
@@ -2347,7 +2347,7 @@ class FrigateViewCard extends HTMLElement {
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._config.theme === "light" ? "theme-light" : this._config.theme === "future" ? "theme-future" : ""}" id="card">
 
-        <div class="layout shadow-xform" id="layout">
+        <div class="layout shadow-medium" id="layout">
 
           <div class="col-left" id="col-left">
             <div class="feed-area">
