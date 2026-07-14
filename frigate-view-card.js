@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.28";
+const VERSION = "1.0.29";
 
 import {
     LitElement,
@@ -264,8 +264,10 @@ const STYLES = `
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
-  .shadow-small{box-shadow: var(--ha-box-shadow-s);transition: transform 0.2s, box-shadow 0.2s;}
-  .shadow-small:hover{transform: scale(1.005);box-shadow: var(--ha-box-shadow-s);}
+  .shadow-xform{box-shadow: var(--ha-box-shadow-s);transition: transform 0.2s, box-shadow 0.2s;}
+  .shadow-xform:hover{transform: scale(1.005);box-shadow: var(--ha-box-shadow-s);}
+  .shadow-small {box-shadow: var(--ha-box-shadow-s);}  
+  .shadow-med {box-shadow: var(--ha-box-shadow-m);}
   .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;}
   .tabs::-webkit-scrollbar{display:none;}
 
@@ -2345,7 +2347,7 @@ class FrigateViewCard extends HTMLElement {
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._config.theme === "light" ? "theme-light" : this._config.theme === "future" ? "theme-future" : ""}" id="card">
 
-        <div class="layout shadow-small" id="layout">
+        <div class="layout shadow-xform" id="layout">
 
           <div class="col-left" id="col-left">
             <div class="feed-area">
@@ -4228,7 +4230,7 @@ class FrigateViewCard extends HTMLElement {
         ? `<span class="cam-badge">${(ev.camera || "").replace(/_/g, " ")}</span>`
         : "";
     // compact: wrap everything in a tighter layout, actions horizontal
-    return `<div class="list-item${compact ? " compact" : ""} shadow-small" data-ev="${ev.id}">
+    return `<div class="list-item${compact ? " compact" : ""} shadow-xform" data-ev="${ev.id}">
       ${reviewBar}
       <div class="et">${thumb}<div class="ed">${this._dur(ev)}s</div></div>
       <div class="ei">
@@ -4342,7 +4344,7 @@ class FrigateViewCard extends HTMLElement {
         const mm = Math.floor(d / 60),
           ss = d % 60;
         const dur = `${mm ? mm + "m " : ""}${ss}s`;
-        return `<div class="rec shadow-small" data-rs="${rs}" data-re="${re}">
+        return `<div class="rec shadow-xform" data-rs="${rs}" data-re="${re}">
         <div class="ric">${ICONS.recordings}</div>
         <div class="rinf">
           <div class="rt">${this._time(r.start_time)} – ${this._time(r.end_time || Date.now() / 1000)}</div>
@@ -4395,7 +4397,7 @@ class FrigateViewCard extends HTMLElement {
             : `<div class="rev-th"><div class="rev-ph">${ICONS.person}</div></div>`
         : "";
       return `
-      <div class="rev ${sev} shadow-small" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
+      <div class="rev ${sev} shadow-xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
         <div class="rev-nogap">
           <div class="rev-sev ${sev}"></div>${thumb}
         </div>
