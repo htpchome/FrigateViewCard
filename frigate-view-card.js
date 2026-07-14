@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.11";
+const VERSION = "1.0.12";
 
 import {
     LitElement,
@@ -207,8 +207,6 @@ const STYLES = `
   /* ── responsive layout ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-    --ha-card-box-shadow: --ha-box-shadow-m !important; 
-    box-shadow: --ha-box-shadow-m !important;
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
@@ -216,9 +214,8 @@ const STYLES = `
     }
   .card{
     --ha-card-background: var(--c-bg-main) !important;
-    --ha-border:1px solid var(--c-border) !important;
-    --ha-card-box-shadow: --ha-box-shadow-m !important;    
-    color:var(--c-text);overflow:hidden;
+    color:var(--c-text);
+    overflow:hidden;
     box-sizing: border-box;
     border-radius:var(--ha-card-border-radius,13px);
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
@@ -230,7 +227,7 @@ const STYLES = `
     margin: 0 auto;
     position:relative;
     top:0;
-    left:0
+    left:0;
     }
 
   .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;}
@@ -268,13 +265,9 @@ const STYLES = `
   .more.to-top{cursor:pointer;color:var(--c-text2);}
   .list-item{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:2px 10px 2px 2px;
     background:var(--c-bg-panel);border:1px solid var(--c-border2);
-    border-radius:8px;margin-bottom:5px;cursor:pointer;
-    box-shadow: var(--ha-box-shadow-s);
-    transition: transform 0.2s, box-shadow 0.2s;}
+    border-radius:8px;margin-bottom:5px;cursor:pointer}
   .list-item:hover{background: var(--c-bg-main);
-    border-color:var(--c-acc-bdr,rgba(59,130,246,.25));
-    transform: scale(1.01);
-    box-shadow: var(--ha-box-shadow-m);}
+    border-color:var(--c-acc-bdr,rgba(59,130,246,.25));}
   .list-item.compact{padding:2px 10px 2px 2px;flex-wrap:wrap;}
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
@@ -408,21 +401,22 @@ const STYLES = `
   .ico{width:31.2px;height:31.2px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
   .ico svg{width:15.6px;height:15.6px;} .ico:hover{color:var(--c-acc-bdr);border-color:var(--c-acc-bdr);}
   .ico.fav.on{color:#fbbf24;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
-
+  .shadow-small{box-shadow: var(--ha-box-shadow-s);transition: transform 0.2s, box-shadow 0.2s;}
+  .shadow-small:hover{transform: scale(1.01);box-shadow: var(--ha-box-shadow-m);}
   /* ── recordings ── */
   .rec{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;}
   .rec:hover{background:rgba(255,255,255,.07);}
-  .ric{width:36px;height:36px;border-radius:5px;background:rgba(30,80,200,.25);color:var(--c-acc-bdr);display:flex;align-items:center;justify-content:center;} .ric svg{width:16.8px;height:16.8px;}
-  .rinf{flex:1;} .rt{font-size:0.9rem;font-weight:600;color:var(--c-text);} .rsub{font-size:0.75rem;color:var(--c-text3);margin-top:1px;} .rp{color:var(--c-on);}
+  .ric{width:36px;height:36px;border-radius:5px;background:rgba(30,80,200,.25);
+    color:var(--c-acc-bdr);display:flex;align-items:center;justify-content:center;} 
+  .ric svg{width:16.8px;height:16.8px;}
+  .rinf{flex:1;} 
+  .rt{font-size:0.9rem;font-weight:600;color:var(--c-text);} 
+  .rsub{font-size:0.75rem;color:var(--c-text3);margin-top:1px;} 
+  .rp{color:var(--c-on);}
 
   /* ── reviews ── */
-  .rev{display:flex;gap:5px;flex-wrap: wrap;align-items:center;padding:2px 10px 2px 2px;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;
-    box-shadow: var(--ha-box-shadow-s);
-    transition: transform 0.2s, box-shadow 0.2s;  
-    }
-  .rev[data-review-open]:hover{background:rgba(255,255,255,.07);border-color:rgba(59,130,246,.25);
-    transform: scale(1.01);
-    box-shadow: var(--ha-box-shadow-m);}
+  .rev{display:flex;gap:5px;flex-wrap: wrap;align-items:center;padding:2px 10px 2px 2px;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;}
+  .rev[data-review-open]:hover{background:rgba(255,255,255,.07);border-color:rgba(59,130,246,.25);}
   .rev-sev{width:3px;align-self:stretch;border-radius:3px;margin-right:0;} 
   .rev-sev.alert{background:#ef4444;} 
   .rev-sev.detection{background:#f59e0b;}
@@ -4235,7 +4229,7 @@ class FrigateViewCard extends HTMLElement {
         ? `<span class="cam-badge">${(ev.camera || "").replace(/_/g, " ")}</span>`
         : "";
     // compact: wrap everything in a tighter layout, actions horizontal
-    return `<div class="list-item${compact ? " compact" : ""}" data-ev="${ev.id}">
+    return `<div class="list-item${compact ? " compact" : ""} shadow-small" data-ev="${ev.id}">
       ${reviewBar}
       <div class="et">${thumb}<div class="ed">${this._dur(ev)}s</div></div>
       <div class="ei">
@@ -4349,7 +4343,7 @@ class FrigateViewCard extends HTMLElement {
         const mm = Math.floor(d / 60),
           ss = d % 60;
         const dur = `${mm ? mm + "m " : ""}${ss}s`;
-        return `<div class="rec" data-rs="${rs}" data-re="${re}">
+        return `<div class="rec shadow-small" data-rs="${rs}" data-re="${re}">
         <div class="ric">${ICONS.recordings}</div>
         <div class="rinf">
           <div class="rt">${this._time(r.start_time)} – ${this._time(r.end_time || Date.now() / 1000)}</div>
@@ -4402,7 +4396,7 @@ class FrigateViewCard extends HTMLElement {
             : `<div class="rev-th"><div class="rev-ph">${ICONS.person}</div></div>`
         : "";
       return `
-      <div class="rev ${sev}" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
+      <div class="rev ${sev} shadow-small" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
         <div class="rev-nogap">
           <div class="rev-sev ${sev}"></div>${thumb}
         </div>
