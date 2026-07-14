@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.42";
+const VERSION = "1.0.43";
 
 import {
   LitElement,
@@ -572,6 +572,7 @@ class FrigateViewCard extends HTMLElement {
     this._popupMediaCleanup = null;
     this._recordingScrubCleanup = null;
     this._recordingScrubState = null;
+    this._recordingScrubSeekTimer = null;
     this._recordingAlertCache = new Map();
     this._mountSeq = 0;
     this._pendingMountDestroyers = [];
@@ -3231,6 +3232,10 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _teardownRecordingScrub() {
+    if (this._recordingScrubSeekTimer) {
+      clearTimeout(this._recordingScrubSeekTimer);
+      this._recordingScrubSeekTimer = null;
+    }
     if (this._recordingScrubCleanup) {
       try {
         this._recordingScrubCleanup();
@@ -3262,9 +3267,9 @@ class FrigateViewCard extends HTMLElement {
     return best <= thresholdSec ? nearest : null;
   }
 
-  _seekRecordingScrubToRatio(ratio) {
+  _resolveRecordingScrubTarget(ratio) {
     const state = this._recordingScrubState;
-    if (!state?.video) return;
+    if (!state?.video) return null;
     const span = Math.max(1, state.end - state.start);
     const rawTarget = state.start + Math.max(0, Math.min(1, ratio)) * span;
     const snapThreshold = Math.max(4, span * 0.03);
@@ -3273,18 +3278,51 @@ class FrigateViewCard extends HTMLElement {
       state.alerts,
       snapThreshold,
     );
-    const target = Number.isFinite(snapped) ? snapped : rawTarget;
-    const current = Math.max(
+    const absTarget = Number.isFinite(snapped) ? snapped : rawTarget;
+    const relTarget = Math.max(
       0,
-      Math.min(state.end - state.start, target - state.start),
+      Math.min(state.end - state.start, absTarget - state.start),
     );
-    try {
-      state.video.currentTime = current;
-      state.video.play?.().catch(() => {});
-    } catch (_) {}
-    this._setRecordingScrubCursor(target);
+    return { absTarget, relTarget };
   }
 
+  _seekRecordingScrubToRatio(ratio, { throttleMs = 90, commit = false } = {}) {
+    const state = this._recordingScrubState;
+    if (!state?.video) return;
+    const target = this._resolveRecordingScrubTarget(ratio);
+    if (!target) return;
+
+    state.pendingAbsTarget = target.absTarget;
+    state.pendingRelTarget = target.relTarget;
+    this._setRecordingScrubCursor(target.absTarget);
+
+    const applySeek = () => {
+      if (!this._recordingScrubState?.video) return;
+      const rel = Number(this._recordingScrubState.pendingRelTarget);
+      if (!Number.isFinite(rel)) return;
+      try {
+        this._recordingScrubState.video.currentTime = rel;
+      } catch (_) {}
+    };
+
+    if (this._recordingScrubSeekTimer) {
+      clearTimeout(this._recordingScrubSeekTimer);
+      this._recordingScrubSeekTimer = null;
+    }
+
+    if (commit || !throttleMs) {
+      applySeek();
+      if (commit && state.resumeAfterScrub) {
+        state.video.play?.().catch(() => {});
+      }
+      return;
+    }
+
+    this._recordingScrubSeekTimer = setTimeout(() => {
+      this._recordingScrubSeekTimer = null;
+      applySeek();
+    }, throttleMs);
+  }
   async _fetchRecordingAlerts(clientId, cam, start, end) {
     const cacheKey = `${clientId}|${cam}|${Math.floor(start)}|${Math.floor(end)}`;
     if (this._recordingAlertCache.has(cacheKey)) {
@@ -3339,21 +3377,46 @@ class FrigateViewCard extends HTMLElement {
       return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     };
     let dragging = false;
+    let lastRatio = 0;
     const onPointerDown = (ev) => {
       dragging = true;
+      state.isScrubbing = true;
+      state.resumeAfterScrub = !video.paused;
+      video.pause?.();
       track.setPointerCapture?.(ev.pointerId);
-      this._seekRecordingScrubToRatio(clientXToRatio(ev.clientX));
+      lastRatio = clientXToRatio(ev.clientX);
+      this._seekRecordingScrubToRatio(lastRatio, { throttleMs: 0 });
     };
     const onPointerMove = (ev) => {
       if (!dragging) return;
-      this._seekRecordingScrubToRatio(clientXToRatio(ev.clientX));
+      lastRatio = clientXToRatio(ev.clientX);
+      this._seekRecordingScrubToRatio(lastRatio, { throttleMs: 90 });
     };
     const onPointerUp = (ev) => {
+      if (!dragging) return;
       dragging = false;
+      state.isScrubbing = false;
       track.releasePointerCapture?.(ev.pointerId);
+      this._seekRecordingScrubToRatio(lastRatio, {
+        throttleMs: 0,
+        commit: true,
+      });
     };
     const onTime = () => {
+      if (this._recordingScrubState?.isScrubbing) return;
       this._setRecordingScrubCursor(start + Number(video.currentTime || 0));
+    };
+
+    const state = {
+      start,
+      end,
+      alerts,
+      video,
+      cursor,
+      isScrubbing: false,
+      resumeAfterScrub: false,
+      pendingAbsTarget: null,
+      pendingRelTarget: null,
     };
 
     track.addEventListener("pointerdown", onPointerDown);
@@ -3362,7 +3425,7 @@ class FrigateViewCard extends HTMLElement {
     track.addEventListener("pointercancel", onPointerUp);
     video.addEventListener("timeupdate", onTime);
 
-    this._recordingScrubState = { start, end, alerts, video, cursor };
+    this._recordingScrubState = state;
     this._setRecordingScrubCursor(start);
     this._recordingScrubCleanup = () => {
       track.removeEventListener("pointerdown", onPointerDown);
