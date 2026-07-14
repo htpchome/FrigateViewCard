@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.20";
+const VERSION = "1.0.21";
 
 import {
     LitElement,
@@ -243,7 +243,7 @@ const STYLES = `
   .layout.wide .resize-handle{width:6px;height:auto;cursor:col-resize;}
   .layout.wide .resize-handle::after{width:2px;height:32px;}
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
-  .card .browse{flex:1 1 0;flex-direction: column; padding:0 10px;margin:0;min-height:0;height:100%;overflow-y:auto;}
+  .card .browse{flex:1 1 0;flex-direction: column; padding:0 10px;margin:0;min-height:0;height:100%;overflow-y:auto;position:relative}
   .card .browse::-webkit-scrollbar{width:8px;}
   .card .browse::-webkit-scrollbar-track{background:transparent;}
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text4);border-radius:4px;background-clip:content-box;border:2px solid transparent;}
@@ -2399,7 +2399,7 @@ class FrigateViewCard extends HTMLElement {
             </div>
          
             <div class="browse" id="browse" style="display:none">
-              <div style="background:#000;height:100px;width:100%;position:absolute;top:0;left:0;z-index:1;">Text</div>
+              <div style="background:#555555;height:16px;width:100%;position:absolute;top:0;left:0;z-index:1;">Text</div>
               <div class="filter-panel" id="filter-panel" style="display:none"></div>
               <div class="cal-panel" id="cal-panel" style="display:none"></div>
 
