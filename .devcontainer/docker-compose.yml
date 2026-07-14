@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  # ── Development Container ──────────────────────────────────
+  devcontainer:
+    image: mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm
+    volumes:
+      - ../..:/workspaces:cached
+      - ha-config:/config
+    command: sleep infinity
+    network_mode: service:homeassistant
+    depends_on:
+      - homeassistant
+      - frigate
+
+  # ── Home Assistant ─────────────────────────────────────────
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - ha-config:/config
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8123:8123"
+    depends_on:
+      - frigate
+
+  # ── Frigate NVR ────────────────────────────────────────────
+  frigate:
+    image: ghcr.io/blakeblackshear/frigate:stable
+    container_name: frigate
+    restart: unless-stopped
+    privileged: true
+    shm_size: "256mb"
+    volumes:
+      - ./frigate:/config
+      - frigate-media:/media/frigate
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "5000:5000"   # Frigate Web UI
+      - "8554:8554"   # go2rtc WebRTC
+      - "8555:8555/tcp" # go2rtc WebRTC TCP
+      - "8555:8555/udp" # go2rtc WebRTC UDP
+      - "1984:1984"   # go2rtc API
+
+  # ── RTSP Test Server (optional - simulates camera feeds) ──
+  rtsp-test:
+    image: bluenviron/mediamtx:latest
+    container_name: rtsp-test
+    restart: unless-stopped
+    ports:
+      - "8554:8554"
+    profiles:
+      - rtsp
+
+volumes:
+  ha-config:
+    name: frigateviewcard-ha-config
+  frigate-media:
+    name: frigateviewcard-frigate-media
