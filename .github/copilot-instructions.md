@@ -1,5 +1,3 @@
-# Home Assistant JavaScript and Node.js Guidelines
-
 # GitHub Copilot Instructions - JS & Home Assistant
 
 ## Project Overview
@@ -26,7 +24,7 @@ You are an expert full-stack developer assisting with JavaScript (ES6+) and Home
 ## 3. Home Assistant & JavaScript Standards
 
 - **Entity Identification:** Never hallucinate entity IDs. When providing example code, use placeholders like `light.living_room` or `sensor.temperature`.
-- **API Communication:** When writing JS that interacts with Home Assistant, always rely on `home-assistant-js-websocket` patterns. Use the `hass` object's `.callService()` or `.callApi()` method when posible, but the code may also call frigate directly when that is the most reliable path.
+- **API Communication:** When writing JS that interacts with Home Assistant, rely on `home-assistant-js-websocket` patterns. Use the `hass` object's `.callService()` or `.callApi()` method when possible, but code may also call Frigate directly when that is the most reliable path.
 - **State Access:** Prefer directly reading from the `hass.states` object context rather than attempting to bypass the `hass` integration layer.
 - **Async/Await:** All calls to Home Assistant's backend and fetch requests must use `async/await` with proper `try...catch` blocks for error handling.
 
@@ -41,17 +39,24 @@ You are an expert full-stack developer assisting with JavaScript (ES6+) and Home
 
 ### Service Call Example
 
+```javascript
 async function toggleLivingRoomLight(hass) {
-try {
-await hass.callService('light', 'toggle', {}, { entity_id: 'light.living_room' });
-} catch (error) {
-console.error('Failed to toggle light:', error);
+  try {
+    await hass.callService(
+      "light",
+      "toggle",
+      {},
+      { entity_id: "light.living_room" },
+    );
+  } catch (error) {
+    console.error("Failed to toggle light:", error);
+  }
 }
-}
+```
 
 ## 6. Automation Rules
 
-- utilize the `homeassistant-jsengine` package conventions when best.
+- Use `homeassistant-jsengine` package conventions when appropriate.
 - When writing scripts, always handle real-time state changes by subscribing to Home Assistant's event stream (e.g., `state_changed`).
 - Prefer the use of JS `async/await` patterns over nested callbacks to keep automation logic readable.
 
@@ -60,14 +65,14 @@ console.error('Failed to toggle light:', error);
 - Add JSDoc comments for all major functions, explaining their purpose, parameters, and return values.
 - Adhere strictly to the requested asynchronous paradigm—do not block the event loop with synchronous state polling.
 
-# 8. Component Design
+## 8. Component Design
 
 - Keep components small, focused, and compliant with the Single Responsibility Principle.
 - Name custom elements using kebab-case (e.g., `<user-profile>`).
 - Use descriptive property names and camelCase for property definitions.
 - Write JSDoc comments for public APIs and complex custom methods.
 
-# 9. Security
+## 9. Security
 
 - Never expose sensitive private keys or seed phrases in the code.
 - Always sanitize user input before rendering it in the DOM (to prevent XSS attacks).
