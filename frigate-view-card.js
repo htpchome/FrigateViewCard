@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.7";
+const VERSION = "1.0.8";
 
 import {
     LitElement,
@@ -207,7 +207,6 @@ const STYLES = `
   /* ── responsive layout ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-    --ha-border:1px solid var(--c-border) !important;
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
@@ -215,14 +214,15 @@ const STYLES = `
     }
   .card{
     --ha-card-background: var(--c-bg-main) !important;
-    --ha-border:1px solid var(--c-border);    
+    --ha-border:1px solid var(--c-border);
+    --ha-box-shadow: --ha-box-shadow-m    
     color:var(--c-text);overflow:hidden;
     box-sizing: border-box;
     border-radius:var(--ha-card-border-radius,13px);
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     display:flex;
     flex-direction:column;
-    box-shadow: var(--ha-box-shadow-s);
+    box-shadow: var(--ha-box-shadow-m);
     height:100%;
     padding:0;
     margin: 0 auto;
@@ -268,10 +268,10 @@ const STYLES = `
     background:var(--c-bg-panel);border:1px solid var(--c-border2);
     border-radius:8px;margin-bottom:5px;cursor:pointer;
     box-shadow: var(--ha-box-shadow-s);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;}
+    transition: transform 0.2s, box-shadow 0.2s;}
   .list-item:hover{background: var(--c-bg-main);
     border-color:var(--c-acc-bdr,rgba(59,130,246,.25));
-    transform: scale(1.05);
+    transform: scale(1.01);
     box-shadow: var(--ha-box-shadow-m);}
   .list-item.compact{padding:2px 10px 2px 2px;flex-wrap:wrap;}
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
