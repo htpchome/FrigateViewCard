@@ -19,7 +19,8 @@
         "ms-vscode.vscode-json",
         "redhat.vscode-yaml",
         "keesschollaart.vscode-home-assistant",
-        "ms-azuretools.vscode-docker"
+        "ms-azuretools.vscode-docker",
+        "saoudrizwan.cline"
       ],
       "settings": {
         "editor.formatOnSave": true,
