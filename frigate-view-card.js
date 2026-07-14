@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.32";
+const VERSION = "1.0.33";
 
 import {
     LitElement,
@@ -235,7 +235,7 @@ const STYLES = `
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
   .card .col-left > *{flex:0 0 auto;}
   .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
-  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;width:100%; display:flex;}
+  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-acc,#3b82f6);}
@@ -381,7 +381,7 @@ const STYLES = `
   .cal-dow span{font-size:0.675rem;color:var(--c-text4);padding:2px 0;}
   .cday{position:relative;background:none;border:none;color:var(--c-text);font-size:0.825rem;padding:6px 0;border-radius:4px;cursor:pointer;} .cday:hover{background:var(--c-acc-bg);} .cdot{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#ef4444;}
 
-  .frigate-view{position:absolute;top:2px;left:6px;max-height:24px;pointer-events: none;}
+  .frigate-view{position:absolute;bottom:2px;left:6px;max-height:24px;pointer-events: none;}
   .frigate-view svg{height:24px;pointer-events: none;}
   .et{width:112px;height:63px;border-radius:6px;overflow:hidden;flex-shrink:0;background:#0d1520;position:relative;}
   .et img{width:100%;height:100%;object-fit:cover;display:block;}
@@ -2386,7 +2386,8 @@ class FrigateViewCard extends HTMLElement {
             ${multiCam ? `<div class="cam-switcher" id="cam-switcher"></div>` : ""}
           </div>
           <div class="resize-handle" id="resize-handle"></div>
-          <div class="col-right" id="col-right"> 
+          <div class="col-right" id="col-right">
+            <div class="frigate-view">${ICONS.frigateview}</div> 
             <div class="tabs">
               ${tab("alerts", ICONS.alerts, "Alerts")}
               ${tab("clips", ICONS.clips, "Clips")}
@@ -2415,9 +2416,7 @@ class FrigateViewCard extends HTMLElement {
                                 
               </div>              
             </div>
-            <div class="more" id="older-hint" hidden>
-              <div class="frigate-view">${ICONS.frigateview}</div>
-            scroll for older…</div>
+            <div class="more" id="older-hint" hidden>scroll for older…</div>
           </div>
         </div>
         <!--<div class="toast" id="toast" style="display:none"></div>-->
