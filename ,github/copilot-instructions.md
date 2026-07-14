@@ -13,7 +13,6 @@ You are an expert full-stack developer assisting with JavaScript (ES6+) and Home
 - Styling: Use CSS custom properties matching the HA theme (e.g., `--primary-color`, `--accent-color`).
 - Use standard modern JavaScript (ES6+), leveraging `import` and `export` over CommonJS.
 - Semicolons are required at the end of statements.
-- Integration: Leverage the global `applyTo` window objects where applicable for HA state management.
 - Stick to standard JavaScript and modern browser features (Custom Elements, Shadow DOM, CSS custom properties).
 - Avoid non-standard TypeScript features (like namespaces) unless explicitly required by the project.
 - The Version should be bumped up for each change.
