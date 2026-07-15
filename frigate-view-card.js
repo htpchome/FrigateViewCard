@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.67";
+const VERSION = "1.0.69";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -544,23 +544,29 @@ const STYLES = `
 .popup-carousel-nav.right {right:0;border-radius:0 6px 6px 0;}
 .popup-carousel-wrap.touch .popup-carousel-nav {display:none;}
 .popup-info {background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 9px;
-    padding: 10px 12px;display: flex;flex-direction: column;gap: 8px;flex-wrap: wrap; }
+    padding: 10px 12px;display: flex;flex-direction: column;gap: 8px;}
 .popup-info[hidden] {display: none;}
 .popup-info-title {display: flex;align-items: center;gap: 8px;flex-wrap: wrap;}
 .popup-info-title .tb {font-size: 0.825rem;}
-.popup-grip-wrap{flex:1;}
-.popup-info-grid {display: flex;flex-direction: row;flex-wrap: wrap;gap: 6px 10px;}
-.popup-info-row {display: flex;align-items: baseline;gap: 6px;min-width: 0;}
+.popup-info-body {display:flex;align-items:flex-end;gap:10px;min-width:0;}
+.popup-info-grid {flex:1 1 auto;min-width:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 12px;}
+.popup-info-row {display:flex;align-items:baseline;gap:6px;min-width:0;}
 .popup-info-k {font-size: 0.75rem;color: var(--c-text3);text-transform: uppercase;
     letter-spacing: .05em;flex-shrink: 0;}
 .popup-info-v {font-size: 0.9rem;color: var(--c-text);white-space: nowrap;overflow: hidden;
     text-overflow: ellipsis;}
-.popup-info-actions {display: flex;gap: 8px;justify-content: flex-end;}
+.popup-info-actions {display:flex;align-items:flex-end;justify-content:flex-end;flex:0 0 auto;min-width:52px;}
 .popup-action {width: 52px;height: 52px;display: flex;align-items: center;justify-content: center;
     background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 6px;
     color: var(--c-text2);cursor: pointer;}
 .popup-action svg {width: 26px;height: 26px;}
 .popup-action:hover {color: var(--c-acc-bdr);border-color: var(--c-acc-bdr);}
+  @media (max-width: 980px){
+    .popup-info-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  @media (max-width: 720px){
+    .popup-info-grid{grid-template-columns:minmax(0,1fr);}
+  }
 .close-btn {width: 40px;height: 40px;border-radius: 50%;display: flex;align-items: center;  justify-content: center;font-size: 24px;line-height: 1;cursor: pointer;border: 1px solid #ccc;
   background-color: #f5f5f5;color: #333;transition: all 0.2s ease;}
 .close-btn:hover {background-color: #e0e0e0;color: #000;}
@@ -3902,18 +3908,18 @@ class FrigateViewCard extends HTMLElement {
             ${ev?.sub_label ? `<span class="subl">${ev.sub_label}</span>` : ""}
           </div>
 
-          <div class="popup-info-grid">
-            <div class="popup-info-row">
-              <span class="popup-info-k">Day/Date</span>
-              <span class="popup-info-v">${model.dayDate}</span></div>
-            <div class="popup-info-row"><span class="popup-info-k">Time</span><span class="popup-info-v">${model.time}</span></div>
-            <div class="popup-info-row"><span class="popup-info-k">Duration</span><span class="popup-info-v">${model.duration}</span></div>
-            <div class="popup-info-row"><span class="popup-info-k">Objects</span><span class="popup-info-v">${model.objects}</span></div>
-            <div class="popup-info-row"><span class="popup-info-k">Zone</span><span class="popup-info-v">${model.zone}</span></div>
-            <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${model.score}</span></div>
-            <div class="popup-info-row"><span class="popup-info-k">Camera</span><span class="popup-info-v">${model.camera}</span></div>
+          <div class="popup-info-body">
+            <div class="popup-info-grid">
+              <div class="popup-info-row"><span class="popup-info-k">Camera</span><span class="popup-info-v">${model.camera}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Day/Date</span><span class="popup-info-v">${model.dayDate}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Time</span><span class="popup-info-v">${model.time}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Duration</span><span class="popup-info-v">${model.duration}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Objects</span><span class="popup-info-v">${model.objects}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Zone</span><span class="popup-info-v">${model.zone}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${model.score}</span></div>
+            </div>
+            <div class="popup-info-actions">${downloadBtn}</div>
           </div>
-          <div class="popup-info-actions">${downloadBtn}</div>
         `;
     info.hidden = false;
   }
@@ -5431,9 +5437,12 @@ class FrigateViewCard extends HTMLElement {
   // ── clip download range ───────────────────────────────────
   async _downloadRecRange(dlStart, dlEnd) {
     const { clientId, cam } = this._cc();
-    const base = `/api/frigate/${clientId}/recording/${cam}/start/${dlStart}/end/${Math.min(dlEnd, dlStart + 7200)}`;
-    const signed = await this._signed(base);
-    const url = signed + (signed.includes("?") ? "&" : "?") + "download=true";
+    const start = Math.floor(Number(dlStart) || 0);
+    const endRaw = Math.floor(Number(dlEnd) || 0);
+    const end = Math.max(start + 1, Math.min(endRaw, start + 7200));
+    const base = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${end}`;
+    const signed = await this._signed(`${base}?download=true`);
+    const url = signed;
     const a = document.createElement("a");
     a.href = url;
     a.download = `${cam}_${this._time(dlStart).replace(/:/g, "-")}.mp4`;
