@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.56";
+const VERSION = "1.0.57";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -32,6 +32,12 @@ const ICONS = {
     '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg>',
   pin: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
   back: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>',
+  left: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>',
+  right:
+    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m8.59 16.59 1.41 1.41L16 12 10 6 8.59 7.41 13.17 12z"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  pause:
+    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>',
   download:
     '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
   star: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>',
@@ -312,10 +318,12 @@ const STYLES = `
     .card.mobile-rotate-popup #popup-info-head,
     .card.mobile-rotate-popup #popup-info,
     .card.mobile-rotate-popup #recording-scrub,
+    .card.mobile-rotate-popup #popup-carousel-wrap,
     .card.mobile-rotate-popup #popup-shell-ver,
     .card.mobile-rotate-popup-exit #popup-info-head,
     .card.mobile-rotate-popup-exit #popup-info,
     .card.mobile-rotate-popup-exit #recording-scrub,
+    .card.mobile-rotate-popup-exit #popup-carousel-wrap,
     .card.mobile-rotate-popup-exit #popup-shell-ver{display:none !important;}
   #stream-fallback{position:absolute;inset:0;z-index:2;background:var(--c-bg-deep);
     pointer-events:none;line-height:0;}
@@ -486,6 +494,37 @@ const STYLES = `
 .recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);z-index:4;}
 .recording-scrub-labels {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--c-text2);font-weight:600;line-height:1;}
 .recording-scrub-now {font-variant-numeric:tabular-nums;}
+.popup-media-controls {display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:var(--c-bg-panel);border:1px solid var(--c-border2);}
+.popup-media-controls[hidden] {display:none !important;}
+.popup-media-controls-spacer {width:8px;flex:0 0 8px;}
+.popup-media-btn {width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:7px;color:var(--c-text2);cursor:pointer;flex-shrink:0;}
+.popup-media-btn:hover {color:var(--c-acc-bdr);border-color:var(--c-acc-bdr);}
+.popup-media-btn svg {width:20px;height:20px;}
+.popup-media-progress {flex:1 1 auto;min-width:120px;-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:var(--c-bg-main);outline:none;}
+.popup-media-progress::-webkit-slider-runnable-track {height:6px;border-radius:999px;background:var(--c-bg-main);}
+.popup-media-progress::-webkit-slider-thumb {-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--c-primary);border:1px solid var(--c-acc-bdr);margin-top:-4px;}
+.popup-media-progress::-moz-range-track {height:6px;border-radius:999px;background:var(--c-bg-main);}
+.popup-media-progress::-moz-range-thumb {width:14px;height:14px;border-radius:50%;background:var(--c-primary);border:1px solid var(--c-acc-bdr);}
+.popup-media-time {min-width:82px;text-align:center;font-size:.82rem;color:var(--c-text2);font-variant-numeric:tabular-nums;}
+.card.mobile-rotate-popup .popup-media-controls,
+.card.mobile-rotate-popup-exit .popup-media-controls {position:fixed;left:calc(var(--rotate-ox) + 10px);right:auto;bottom:calc(var(--rotate-oy) + 10px);width:calc(var(--rotate-vw) - 20px);z-index:1406;background:var(--c-bg-main);opacity:.88;backdrop-filter:blur(3px);transition:opacity .22s ease;}
+.card.mobile-rotate-popup .popup-media-controls.is-hidden,
+.card.mobile-rotate-popup-exit .popup-media-controls.is-hidden {opacity:0;pointer-events:none;}
+
+.popup-carousel-wrap {position:relative;}
+.popup-carousel-wrap[hidden] {display:none !important;}
+.popup-carousel {display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:2px 0 4px;}
+.popup-carousel::-webkit-scrollbar {height:8px;}
+.popup-carousel::-webkit-scrollbar-thumb {background:var(--c-text4);border-radius:4px;}
+.popup-carousel-item {flex:0 0 auto;width:132px;display:flex;flex-direction:column;gap:4px;background:var(--c-bg-panel-light);border:1px solid var(--c-border2);border-radius:7px;padding:4px;cursor:pointer;scroll-snap-align:start;color:var(--c-text);}
+.popup-carousel-item.active {border-color:var(--c-acc-bdr);box-shadow:0 0 0 1px var(--c-acc-bdr) inset;}
+.popup-carousel-item .et {width:124px;height:70px;border-radius:5px;}
+.popup-carousel-meta {display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:.72rem;color:var(--c-text2);}
+.popup-carousel-nav {position:absolute;top:6px;bottom:8px;width:26px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-main);opacity:.86;border:1px solid var(--c-border2);color:var(--c-text2);z-index:2;cursor:pointer;}
+.popup-carousel-nav:hover {color:var(--c-acc-bdr);border-color:var(--c-acc-bdr);}
+.popup-carousel-nav.left {left:0;border-radius:6px 0 0 6px;}
+.popup-carousel-nav.right {right:0;border-radius:0 6px 6px 0;}
+.popup-carousel-wrap.touch .popup-carousel-nav {display:none;}
 .popup-info {background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 9px;
     padding: 10px 12px;display: flex;flex-direction: column;gap: 8px;}
 .popup-info[hidden] {display: none;}
@@ -569,6 +608,9 @@ class FrigateViewCard extends HTMLElement {
     this._popupDrag = null;
     this._popupHandlers = null;
     this._popupMediaCleanup = null;
+    this._popupMediaType = "";
+    this._popupMediaControlsCleanup = null;
+    this._popupControlsHideTimer = null;
     this._recordingScrubCleanup = null;
     this._recordingScrubState = null;
     this._recordingAlertCache = new Map();
@@ -888,6 +930,8 @@ class FrigateViewCard extends HTMLElement {
     if (this._io) this._io.disconnect();
     this._io = null;
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
+    if (this._popupControlsHideTimer)
+      clearTimeout(this._popupControlsHideTimer);
     this._clearPopupMediaCleanup();
     if (this._onDocVisibility) {
       document.removeEventListener("visibilitychange", this._onDocVisibility);
@@ -2519,9 +2563,11 @@ class FrigateViewCard extends HTMLElement {
             <div class="popup-header"></div>          
             <div class="popup-body">
               <div class="viewer" id="viewer" style="display:none"></div>
-                                                                                                                <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
+              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${ICONS.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${ICONS.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${ICONS.expand}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span></div>
+              <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
                             <div class="recording-scrub" id="recording-scrub" hidden><div class="recording-scrub-track" id="recording-scrub-track"><div class="recording-scrub-ticks" id="recording-scrub-ticks"></div><div class="recording-scrub-markers" id="recording-scrub-markers"></div><div class="recording-scrub-cursor" id="recording-scrub-cursor"></div></div><div class="recording-scrub-labels"><span id="recording-scrub-start">0:00</span><span class="recording-scrub-now" id="recording-scrub-now">0:00 / 0:00</span><span id="recording-scrub-end">0:00</span></div></div>
                             <div class="popup-info" id="popup-info" hidden></div>
+                            <div class="popup-carousel-wrap" id="popup-carousel-wrap" hidden><button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" aria-label="Previous items">${ICONS.left}</button><div class="popup-carousel" id="popup-carousel"></div><button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" aria-label="Next items">${ICONS.right}</button></div>
                             <h1 class="popup-shell-ver" id="popup-shell-ver">v${VERSION}</h1>
             </div>
           </div>
@@ -2829,6 +2875,7 @@ class FrigateViewCard extends HTMLElement {
       this._setStreamLoading(false);
       this._setLiveNativeControls(true);
       this._syncFullscreenButtonsVisibility();
+      this._showPopupControlsTemporarily();
       return;
     }
 
@@ -2844,6 +2891,7 @@ class FrigateViewCard extends HTMLElement {
       this._rotateOverlayActive = true;
       if (fromLive) this._setLiveNativeControls(false);
       this._syncFullscreenButtonsVisibility();
+      this._showPopupControlsTemporarily();
       return;
     }
 
@@ -2876,6 +2924,7 @@ class FrigateViewCard extends HTMLElement {
       this._syncFullscreenButtonsVisibility();
     }, 260);
     this._syncFullscreenButtonsVisibility();
+    this._showPopupControlsTemporarily();
   }
   _kickLiveIfStale(force = false) {
     if (!this._started || !this._hass || !this._config) return;
@@ -3001,7 +3050,17 @@ class FrigateViewCard extends HTMLElement {
 
     viewer.innerHTML = "";
     viewer.style.display = "none";
+    const controls = this._$("#popup-media-controls");
+    if (controls) {
+      controls.hidden = true;
+      controls.classList.remove("is-hidden");
+    }
+    const carouselWrap = this._$("#popup-carousel-wrap");
+    const carousel = this._$("#popup-carousel");
+    if (carouselWrap) carouselWrap.hidden = true;
+    if (carousel) carousel.innerHTML = "";
     this._hidePopupInfo();
+    this._popupMediaType = "";
     this._playing = null;
   }
   _closePopup() {
@@ -3103,6 +3162,25 @@ class FrigateViewCard extends HTMLElement {
     }
     if (target.closest("#mute-btn")) {
       this._toggleMute();
+      return true;
+    }
+    if (target.closest("#popup-media-play")) {
+      this._togglePopupMediaPlay();
+      return true;
+    }
+    if (target.closest("#popup-media-mute")) {
+      this._togglePopupMediaMute();
+      return true;
+    }
+    if (target.closest("#popup-media-fs")) {
+      this._fullscreen(this._$("#viewer"));
+      this._showPopupControlsTemporarily();
+      return true;
+    }
+    const carouselNav = target.closest("[data-carousel-dir]");
+    if (carouselNav) {
+      const dir = Number(carouselNav.dataset.carouselDir || 0);
+      if (dir) this._scrollPopupCarousel(dir);
       return true;
     }
     if (target.closest("#filter-btn")) {
@@ -3878,16 +3956,26 @@ class FrigateViewCard extends HTMLElement {
     );
     if (liveBtn)
       liveBtn.hidden = !!popupOpen || isFullscreen || this._rotateOverlayActive;
+    const suppressPopupBtn = this._usePopupCustomControls(this._popupMediaType);
     if (popupBtn)
-      popupBtn.hidden = isFullscreen || this._rotateOverlayMode === "popup";
+      popupBtn.hidden =
+        isFullscreen || this._rotateOverlayMode === "popup" || suppressPopupBtn;
   }
 
   _open(id) {
     const ev = this._allDisplayEvents().find((e) => e.id === id);
     if (!ev) return;
+    if (this._tab === "kept") {
+      if (ev.has_clip) this._showClip(ev, { mediaType: "kept" });
+      else this._showSnapshot(ev, { mediaType: "kept" });
+      return;
+    }
     if (this._tab === "snapshot" || (!ev.has_clip && ev.has_snapshot))
       this._showSnapshot(ev);
-    else if (ev.has_clip) this._showClip(ev);
+    else if (ev.has_clip)
+      this._showClip(ev, {
+        mediaType: this._tab === "kept" ? "kept" : "clip",
+      });
     else this._showSnapshot(ev);
   }
   _enter() {
@@ -3896,9 +3984,25 @@ class FrigateViewCard extends HTMLElement {
     v.style.display = "flex";
     this._openPopup();
   }
+  _isTouchPopupUi() {
+    return isIOS || this._isMobileTabletViewport();
+  }
+  _isPopupVideoMediaType(mediaType) {
+    return ["alert", "clip", "recording", "kept"].includes(
+      String(mediaType || "").toLowerCase(),
+    );
+  }
+  _usePopupCustomControls(mediaType) {
+    return this._isTouchPopupUi() && this._isPopupVideoMediaType(mediaType);
+  }
   _ensurePopupFullscreenButton(kind = "media") {
     const viewer = this._$("#viewer");
     if (!viewer) return;
+    if (this._usePopupCustomControls(kind)) {
+      const existingBtn = viewer.querySelector("#popup-fs-btn");
+      if (existingBtn) existingBtn.remove();
+      return;
+    }
     const label =
       kind === "alert"
         ? "Fullscreen alert"
@@ -3920,6 +4024,16 @@ class FrigateViewCard extends HTMLElement {
     viewer.appendChild(btn);
   }
   _clearPopupMediaCleanup() {
+    if (this._popupControlsHideTimer) {
+      clearTimeout(this._popupControlsHideTimer);
+      this._popupControlsHideTimer = null;
+    }
+    if (this._popupMediaControlsCleanup) {
+      try {
+        this._popupMediaControlsCleanup();
+      } catch (_) {}
+    }
+    this._popupMediaControlsCleanup = null;
     if (!this._popupMediaCleanup) return;
     try {
       this._popupMediaCleanup();
@@ -3961,25 +4075,251 @@ class FrigateViewCard extends HTMLElement {
     target.addEventListener(type, handler, options);
     return () => target.removeEventListener(type, handler, options);
   }
+  _popupMediaVideo() {
+    const viewer = this._$("#viewer");
+    if (!viewer) return null;
+    return viewer.querySelector("video");
+  }
+  _popupMediaCurrentId() {
+    if (this._playing?.id) return this._playing.id;
+    return "";
+  }
+  _showPopupControlsTemporarily() {
+    const controls = this._$("#popup-media-controls");
+    if (!controls || controls.hidden) return;
+    controls.classList.remove("is-hidden");
+    if (this._popupControlsHideTimer)
+      clearTimeout(this._popupControlsHideTimer);
+    if (this._rotateOverlayMode !== "popup") return;
+    this._popupControlsHideTimer = setTimeout(() => {
+      const el = this._$("#popup-media-controls");
+      if (el && !el.hidden) el.classList.add("is-hidden");
+    }, 2200);
+  }
+  _updatePopupMediaButtons(video) {
+    const playBtn = this._$("#popup-media-play");
+    const muteBtn = this._$("#popup-media-mute");
+    const progress = this._$("#popup-media-progress");
+    const time = this._$("#popup-media-time");
+    if (!playBtn || !muteBtn || !progress || !time) return;
+    const dur = Number(video?.duration || 0);
+    const cur = Number(video?.currentTime || 0);
+    const ratio = dur > 0 ? Math.max(0, Math.min(1, cur / dur)) : 0;
+    progress.value = String(Math.round(ratio * 1000));
+    playBtn.innerHTML = video && !video.paused ? ICONS.pause : ICONS.play;
+    muteBtn.innerHTML = video?.muted ? ICONS.volOff : ICONS.volOn;
+    time.textContent = `${this._fmtScrubTime(cur)}/${this._fmtScrubTime(dur)}`;
+  }
+  _togglePopupMediaPlay() {
+    const v = this._popupMediaVideo();
+    if (!v) return;
+    if (v.paused) v.play?.().catch(() => {});
+    else v.pause?.();
+    this._showPopupControlsTemporarily();
+    this._updatePopupMediaButtons(v);
+  }
+  _togglePopupMediaMute() {
+    const v = this._popupMediaVideo();
+    if (!v) return;
+    v.muted = !v.muted;
+    this._showPopupControlsTemporarily();
+    this._updatePopupMediaButtons(v);
+  }
+  _initPopupMediaControls(video, mediaType) {
+    const controls = this._$("#popup-media-controls");
+    if (!controls || !video) return;
+    const shouldUse = this._usePopupCustomControls(mediaType);
+    video.controls = !shouldUse;
+    if (shouldUse) video.removeAttribute("controls");
+    else video.setAttribute("controls", "");
+    controls.hidden = !shouldUse;
+    controls.classList.remove("is-hidden");
+    if (!shouldUse) return;
+
+    const progress = this._$("#popup-media-progress");
+    const removers = [];
+    const bind = (t, e, h, o) => {
+      const off = this._bindPopupMediaListener(t, e, h, o);
+      if (off) removers.push(off);
+    };
+    const sync = () => this._updatePopupMediaButtons(video);
+
+    if (progress) {
+      bind(progress, "input", () => {
+        const dur = Number(video.duration || 0);
+        const next = (Number(progress.value || 0) / 1000) * dur;
+        if (Number.isFinite(next) && dur > 0) {
+          video.currentTime = Math.max(0, Math.min(dur, next));
+        }
+        this._showPopupControlsTemporarily();
+        sync();
+      });
+      bind(progress, "pointerdown", () => {
+        if (this._popupControlsHideTimer)
+          clearTimeout(this._popupControlsHideTimer);
+      });
+      bind(progress, "pointerup", () => this._showPopupControlsTemporarily());
+    }
+
+    bind(controls, "pointerdown", () => {
+      if (this._popupControlsHideTimer)
+        clearTimeout(this._popupControlsHideTimer);
+      controls.classList.remove("is-hidden");
+    });
+    bind(controls, "pointerup", () => this._showPopupControlsTemporarily());
+    bind(
+      controls,
+      "touchstart",
+      () => {
+        if (this._popupControlsHideTimer)
+          clearTimeout(this._popupControlsHideTimer);
+        controls.classList.remove("is-hidden");
+      },
+      { passive: true },
+    );
+    bind(controls, "touchend", () => this._showPopupControlsTemporarily(), {
+      passive: true,
+    });
+
+    [
+      "play",
+      "pause",
+      "timeupdate",
+      "durationchange",
+      "loadedmetadata",
+      "volumechange",
+      "seeking",
+      "seeked",
+    ].forEach((evt) => bind(video, evt, sync));
+
+    const showOnInteraction = () => this._showPopupControlsTemporarily();
+    ["touchstart", "pointerdown", "mousemove", "click"].forEach((evt) =>
+      bind(video, evt, showOnInteraction, { passive: true }),
+    );
+
+    sync();
+    this._popupMediaControlsCleanup = () => {
+      removers.forEach((off) => {
+        try {
+          off();
+        } catch (_) {}
+      });
+      controls.classList.remove("is-hidden");
+    };
+  }
+  _carouselEventItem(ev, activeId = "") {
+    if (!ev?.id) return "";
+    const thumbFile = "thumbnail.jpg";
+    const thumbMissing = this._missingThumbIds.has(ev.id);
+    const thumb = thumbMissing
+      ? `<div class="tph">${ICONS.person}</div>`
+      : `<img src="${this._media(ev.id, thumbFile)}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
+    const active = ev.id === activeId ? " active" : "";
+    return `<button class="popup-carousel-item${active}" data-ev="${ev.id}" title="${this._dateTimeLabel(ev.start_time || 0)}"><div class="et">${thumb}</div><div class="popup-carousel-meta"><span>${cap(ev.label || "event")}</span><span>${this._time(ev.start_time || 0)}</span></div></button>`;
+  }
+  _popupCarouselEvents(mediaType) {
+    const type = String(mediaType || "").toLowerCase();
+    if (type === "kept") {
+      return [...(this._kept || [])].sort(
+        (a, b) => b.start_time - a.start_time,
+      );
+    }
+    if (type === "alert") {
+      const out = [];
+      const seen = new Set();
+      const reviews = [...(this._reviews || [])].sort(
+        (a, b) => b.start_time - a.start_time,
+      );
+      for (const r of reviews) {
+        const firstDet = (r.data?.detections && r.data.detections[0]) || "";
+        if (!firstDet || seen.has(firstDet)) continue;
+        const ev = this._findEventById(firstDet);
+        if (!ev) continue;
+        seen.add(firstDet);
+        out.push(ev);
+      }
+      return out;
+    }
+    const all = this._allDisplayEvents().sort(
+      (a, b) => b.start_time - a.start_time,
+    );
+    if (type === "snapshot") return all.filter((e) => e.has_snapshot);
+    return all.filter((e) => e.has_clip);
+  }
+  _renderPopupCarousel(mediaType, activeId = "") {
+    const wrap = this._$("#popup-carousel-wrap");
+    const row = this._$("#popup-carousel");
+    if (!wrap || !row) return;
+    const show = ["alert", "clip", "snapshot", "kept"].includes(
+      String(mediaType || "").toLowerCase(),
+    );
+    if (!show) {
+      wrap.hidden = true;
+      row.innerHTML = "";
+      return;
+    }
+    const events = this._popupCarouselEvents(mediaType).slice(0, 200);
+    if (!events.length) {
+      wrap.hidden = true;
+      row.innerHTML = "";
+      return;
+    }
+    row.innerHTML = events
+      .map((ev) => this._carouselEventItem(ev, activeId))
+      .join("");
+    wrap.hidden = false;
+    wrap.classList.toggle("touch", this._isTouchPopupUi());
+    requestAnimationFrame(() => {
+      const active = row.querySelector(".popup-carousel-item.active");
+      active?.scrollIntoView({ block: "nearest", inline: "center" });
+    });
+  }
+  _scrollPopupCarousel(dir = 1) {
+    const row = this._$("#popup-carousel");
+    if (!row) return;
+    const item = row.querySelector(".popup-carousel-item");
+    const step = (item?.getBoundingClientRect?.().width || 132) + 8;
+    row.scrollBy({ left: step * (dir < 0 ? -1 : 1), behavior: "smooth" });
+  }
   _renderPopupMedia({ playingId, html, fullscreenKind, infoEvent, infoOpts }) {
     this._enter();
     this._playing = playingId ? { id: playingId } : null;
-    this._$("#viewer").innerHTML = html;
+    this._popupMediaType = String(
+      infoOpts?.mediaType || fullscreenKind || "",
+    ).toLowerCase();
+    const viewer = this._$("#viewer");
+    viewer.innerHTML = html;
     this._ensurePopupFullscreenButton(fullscreenKind);
     this._renderPopupInfo(infoEvent, infoOpts);
+    const video = viewer.querySelector("video");
+    if (video) {
+      this._initPopupMediaControls(video, this._popupMediaType);
+    } else {
+      const controls = this._$("#popup-media-controls");
+      if (controls) {
+        controls.hidden = true;
+        controls.classList.remove("is-hidden");
+      }
+    }
+    this._renderPopupCarousel(
+      this._popupMediaType,
+      this._popupMediaCurrentId(),
+    );
     this._scheduleRotateOverlayUpdate();
+    this._showPopupControlsTemporarily();
   }
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
   }
-  _showClip(ev) {
+  _showClip(ev, opts = {}) {
     const src = this._media(ev.id, isIOS ? "master.m3u8" : "clip.mp4");
+    const mediaType = opts.mediaType || "clip";
     this._renderPopupMedia({
       playingId: ev.id,
       html: `<video controls autoplay muted playsinline><source src="${src}" /></video>`,
-      fullscreenKind: "clip",
+      fullscreenKind: mediaType,
       infoEvent: ev,
-      infoOpts: { mediaType: "clip" },
+      infoOpts: { mediaType },
     });
   }
   _showClipById(id, opts = {}) {
@@ -3998,13 +4338,14 @@ class FrigateViewCard extends HTMLElement {
       },
     });
   }
-  _showSnapshot(ev) {
+  _showSnapshot(ev, opts = {}) {
+    const mediaType = opts.mediaType || "snapshot";
     this._renderPopupMedia({
       playingId: ev.id,
       html: `<img class="snap" src="${this._media(ev.id, "snapshot.jpg")}">`,
-      fullscreenKind: "snapshot",
+      fullscreenKind: mediaType,
       infoEvent: ev,
-      infoOpts: { mediaType: "snapshot" },
+      infoOpts: { mediaType },
     });
   }
 
@@ -4101,6 +4442,7 @@ class FrigateViewCard extends HTMLElement {
     const token = ++this._playSeq; // cancel any in-flight load
     this._enter();
     this._clearPopupMediaCleanup();
+    this._popupMediaType = "recording";
     this._playing = { rec: s };
     const { clientId, cam } = this._cc();
     const maxChunk = 3600;
@@ -4180,6 +4522,7 @@ class FrigateViewCard extends HTMLElement {
     this._ensurePopupFullscreenButton("recording");
     this._scheduleRotateOverlayUpdate();
     if (video && playable) {
+      this._initPopupMediaControls(video, "recording");
       this._initRecordingScrub({
         clientId,
         cam,
@@ -4190,6 +4533,8 @@ class FrigateViewCard extends HTMLElement {
         sourceUrl: activeSource || video.currentSrc || video.src,
       });
     }
+    this._renderPopupCarousel("recording", "");
+    this._showPopupControlsTemporarily();
     this._popupMediaCleanup = () => {
       for (const fn of mediaCleanup) {
         try {
