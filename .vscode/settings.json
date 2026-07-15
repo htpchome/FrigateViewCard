@@ -8,5 +8,11 @@
     "cursor-global": true,
     "cursor-workspace": true,
     "windsurf": true
+  },
+  "yaml.disableSchemaDetection": [
+    "file:///workspaces/FrigateViewCard/.devcontainer/homeassistant/configuration.yaml"
+  ],
+  "yaml.schemas": {
+    "https://www.schemastore.org/eslintrc.json": "file:///workspaces/FrigateViewCard/.devcontainer/homeassistant/configuration.yaml"
   }
 }

@@ -11,7 +11,9 @@
     },
     "ghcr.io/devcontainers/features/git:1": {}
   },
-
+  "containerEnv": {
+    "HOME_ASSISTANT_ACCESS_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJjNmY3Yzg5YWU1NTE0MzZmOTlkZWMzOTA5NjI5NWE2MiIsImlhdCI6MTc4NDA3MzczOSwiZXhwIjoyMDk5NDMzNzM5fQ.rgJJ4EFlW_qC2aSCleKgc4m2xm2lH4gRUhpqtmDr1Rc"
+  },
   "customizations": {
     "vscode": {
       "extensions": [
