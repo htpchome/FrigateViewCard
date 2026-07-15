@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.78";
+const VERSION = "1.0.79";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1208,6 +1208,64 @@ class FrigateViewCard extends HTMLElement {
     return { ...raw, attributes: attrs };
   }
 
+  async _tryMountHaDirect(slot, streamType, startup = null, options = {}) {
+    const waitMs = Math.max(
+      500,
+      Number(
+        startup?.waitMs ??
+          (streamType === "hls" ? 5000 : streamType === "mse" ? 7000 : 8000),
+      ),
+    );
+    const minCurrentTime = Number(startup?.minCurrentTime ?? 0.05);
+    const minDecodedFrames = Number(startup?.minDecodedFrames ?? 1);
+    const requireReadyState = Number(
+      startup?.requireReadyState ?? (streamType === "webrtc" ? 0 : 2),
+    );
+    const strict = startup?.strict ?? false;
+    const commit = options.commit !== false;
+    const entity = this._activeCam?.entity;
+    if (!entity) return false;
+
+    const stateObj = this._hlsStateObj(entity, streamType);
+    if (!stateObj) return false;
+
+    const s = document.createElement("ha-camera-stream");
+    s.hass = this._hass;
+    s.stateObj = stateObj;
+    s.controls = false;
+    s.muted = this._streamMuted;
+    s.style.cssText = "width:100%;height:100%;display:block";
+
+    slot.innerHTML = "";
+    slot.appendChild(s);
+    this._attachVideoFit(s);
+
+    const destroy = () => {
+      try {
+        s.remove();
+      } catch (_) {}
+    };
+
+    const started = await this._waitForStreamStart(s, waitMs, {
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict,
+    });
+    if (!started) {
+      destroy();
+      return false;
+    }
+
+    const engine = s;
+    if (!commit) return { ok: true, type: streamType, engine, slot };
+    this._engine = engine;
+    this._setActiveStreamType(streamType);
+    this._setStreamLoading(false);
+    this._setStreamFallbackVisible(false);
+    return true;
+  }
+
   _cleanupEngine() {
     if (this._pendingWebRTCTakeoverTimer) {
       clearTimeout(this._pendingWebRTCTakeoverTimer);
@@ -1282,6 +1340,214 @@ class FrigateViewCard extends HTMLElement {
           });
       }
     });
+  }
+
+  _buildLiveStreamAttempts(connectionType, forcedType = null) {
+    const hiddenSlot = () => this._streamAttemptSlot();
+    const isHaDirect = connectionType === "ha_direct";
+    const build = isHaDirect
+      ? {
+          webrtc: () =>
+            this._tryMountHaDirect(
+              hiddenSlot(),
+              "webrtc",
+              {
+                waitMs: 8000,
+                minCurrentTime: 0.05,
+                minDecodedFrames: 1,
+                requireReadyState: 0,
+                strict: false,
+              },
+              { commit: false },
+            ),
+          mse: () =>
+            this._tryMountHaDirect(
+              hiddenSlot(),
+              "mse",
+              {
+                waitMs: 7000,
+                minCurrentTime: 0.05,
+                minDecodedFrames: 1,
+                requireReadyState: 2,
+                strict: false,
+              },
+              { commit: false },
+            ),
+          hls: () =>
+            this._tryMountHaDirect(
+              hiddenSlot(),
+              "hls",
+              {
+                waitMs: 5000,
+                minCurrentTime: 0.05,
+                minDecodedFrames: 1,
+                requireReadyState: 2,
+                strict: false,
+              },
+              { commit: false },
+            ),
+        }
+      : {
+          webrtc: () =>
+            this._tryMountGo2RTCWebRTC(
+              hiddenSlot(),
+              { waitMs: 7000 },
+              { commit: false },
+            ),
+          mse: () =>
+            this._tryMountGo2RTCMSE(
+              hiddenSlot(),
+              {
+                waitMs: 7000,
+                minCurrentTime: 0.05,
+                minDecodedFrames: 1,
+                requireReadyState: 2,
+                strict: false,
+              },
+              { commit: false },
+            ),
+          hls: () =>
+            this._tryMountGo2RTCHLS(
+              hiddenSlot(),
+              { waitMs: 5000 },
+              { commit: false },
+            ),
+        };
+
+    const order = forcedType ? [forcedType] : ["webrtc", "mse", "hls"];
+    return order
+      .filter((type) => typeof build[type] === "function")
+      .map((type) => ({ type, start: build[type] }));
+  }
+
+  async _mountLiveWithRace(slot, attempts, mountToken) {
+    const activeAttempts = attempts.map((attempt) => {
+      const promise = Promise.resolve()
+        .then(() => attempt.start())
+        .catch(() => false);
+      return { type: attempt.type, promise };
+    });
+
+    this._pendingMountDestroyers = activeAttempts.map((attempt) => () => {
+      attempt.promise.then((result) => {
+        if (result?.engine?.destroy) {
+          try {
+            result.engine.destroy();
+          } catch (_) {}
+        }
+      });
+    });
+
+    const winner = await this._raceMountAttempts(
+      activeAttempts.map((attempt) => attempt.promise),
+    );
+
+    if (mountToken !== this._mountSeq) {
+      if (winner?.engine?.destroy) winner.engine.destroy();
+      return false;
+    }
+
+    const destroyLosers = async () => {
+      for (const attempt of activeAttempts) {
+        const result = await attempt.promise.catch(() => null);
+        if (!result?.ok || result.type === winner?.type) continue;
+        try {
+          result.engine?.destroy?.();
+        } catch (_) {}
+      }
+      this._pendingMountDestroyers = [];
+    };
+
+    const scheduleWebRTCTakeover = () => {
+      if (!winner?.ok || winner.type === "webrtc") return false;
+      const webrtcAttempt = activeAttempts.find(
+        (attempt) => attempt.type === "webrtc",
+      );
+      if (!webrtcAttempt) return false;
+
+      let takeoverExpired = false;
+      this._pendingWebRTCTakeoverTimer = setTimeout(() => {
+        takeoverExpired = true;
+        this._pendingWebRTCTakeoverTimer = null;
+        webrtcAttempt.promise.then((result) => {
+          try {
+            result?.engine?.destroy?.();
+          } catch (_) {}
+        });
+      }, 30000);
+
+      webrtcAttempt.promise
+        .then((result) => {
+          if (
+            !result?.ok ||
+            takeoverExpired ||
+            mountToken !== this._mountSeq ||
+            this._activeStreamType === "webrtc"
+          ) {
+            if (takeoverExpired || mountToken !== this._mountSeq) {
+              try {
+                result?.engine?.destroy?.();
+              } catch (_) {}
+            }
+            return;
+          }
+          if (this._pendingWebRTCTakeoverTimer) {
+            clearTimeout(this._pendingWebRTCTakeoverTimer);
+            this._pendingWebRTCTakeoverTimer = null;
+          }
+          try {
+            this._engine?.destroy?.();
+          } catch (_) {}
+          this._adoptMountedAttempt(slot, result);
+        })
+        .catch(() => {});
+
+      return true;
+    };
+
+    if (winner?.ok) {
+      this._adoptMountedAttempt(slot, winner);
+      if (scheduleWebRTCTakeover()) {
+        activeAttempts
+          .filter(
+            (attempt) =>
+              attempt.type !== winner.type && attempt.type !== "webrtc",
+          )
+          .forEach((attempt) => {
+            attempt.promise.then((result) => {
+              try {
+                result?.engine?.destroy?.();
+              } catch (_) {}
+            });
+          });
+        this._pendingMountDestroyers = [
+          () => {
+            if (this._pendingWebRTCTakeoverTimer) {
+              clearTimeout(this._pendingWebRTCTakeoverTimer);
+              this._pendingWebRTCTakeoverTimer = null;
+            }
+          },
+          ...activeAttempts
+            .filter(
+              (attempt) =>
+                attempt.type !== winner.type && attempt.type !== "webrtc",
+            )
+            .map((attempt) => () => {
+              attempt.promise.then((result) => {
+                try {
+                  result?.engine?.destroy?.();
+                } catch (_) {}
+              });
+            }),
+        ];
+      } else {
+        await destroyLosers();
+      }
+      return true;
+    }
+
+    await destroyLosers();
+    return false;
   }
 
   _go2rtcCodecs(isSupported) {
@@ -1994,222 +2260,11 @@ class FrigateViewCard extends HTMLElement {
       }
 
       const connectionType = this._cameraConnectionType(entity);
-
-      if (connectionType === "ha_direct") {
-        const streamType = forcedType || this._preferredStreamType();
-        this._ffDebug("Mounting HA direct stream type", streamType);
-        this._setActiveStreamType(streamType);
-        const stateObj = this._hlsStateObj(entity, streamType);
-        if (!stateObj) {
-          this._setStreamLoading(false);
-          this._setStreamFallbackVisible(false);
-          return;
-        }
-
-        const s = document.createElement("ha-camera-stream");
-        s.hass = this._hass;
-        s.stateObj = stateObj;
-        s.controls = false;
-        s.muted = this._streamMuted;
-        s.style.cssText = "width:100%;height:100%;display:block";
-
-        slot.innerHTML = "";
-        slot.appendChild(s);
-        this._engine = s;
-        this._engineMountedMuted = this._streamMuted;
-        this._attachVideoFit(s);
-        if (this._rotateOverlayActive) this._setLiveNativeControls(true);
-
-        this._waitForStreamStart(s, 8000, {
-          minCurrentTime: 0.05,
-          minDecodedFrames: 1,
-          requireReadyState: 0,
-          strict: false,
-        }).then((ok) => {
-          if (ok && this._engine === s) {
-            this._setStreamLoading(false);
-            this._setStreamFallbackVisible(false);
-            if (this._rotateOverlayActive) this._setLiveNativeControls(true);
-          }
-        });
-        setTimeout(() => {
-          if (this._engine === s) {
-            this._setStreamLoading(false);
-            this._setStreamFallbackVisible(false);
-            if (this._rotateOverlayActive) this._setLiveNativeControls(true);
-          }
-        }, 1200);
-        return;
-      }
-
-      if (forcedType) {
-        const starters = {
-          webrtc: () => this._tryMountGo2RTCWebRTC(slot, { waitMs: 7000 }),
-          mse: () =>
-            this._tryMountGo2RTCMSE(slot, {
-              waitMs: 7000,
-              minCurrentTime: 0.05,
-              minDecodedFrames: 1,
-              requireReadyState: 2,
-              strict: false,
-            }),
-          hls: () => this._tryMountGo2RTCHLS(slot, { waitMs: 5000 }),
-        };
-        if (await starters[forcedType]?.()) return;
-      } else {
-        const attempts = [
-          {
-            type: "webrtc",
-            start: () =>
-              this._tryMountGo2RTCWebRTC(
-                this._streamAttemptSlot(),
-                { waitMs: 7000 },
-                { commit: false },
-              ),
-          },
-          {
-            type: "mse",
-            start: () =>
-              this._tryMountGo2RTCMSE(
-                this._streamAttemptSlot(),
-                {
-                  waitMs: 7000,
-                  minCurrentTime: 0.05,
-                  minDecodedFrames: 1,
-                  requireReadyState: 2,
-                  strict: false,
-                },
-                { commit: false },
-              ),
-          },
-        ];
-
-        const activeAttempts = attempts.map((attempt) => {
-          const promise = Promise.resolve()
-            .then(() => attempt.start())
-            .catch(() => false);
-          return { type: attempt.type, promise };
-        });
-
-        this._pendingMountDestroyers = activeAttempts.map((attempt) => () => {
-          attempt.promise.then((result) => {
-            if (result?.engine?.destroy) {
-              try {
-                result.engine.destroy();
-              } catch (_) {}
-            }
-          });
-        });
-
-        const winner = await this._raceMountAttempts(
-          activeAttempts.map((attempt) => attempt.promise),
-        );
-
-        if (mountToken !== this._mountSeq) {
-          if (winner?.engine?.destroy) winner.engine.destroy();
-          return;
-        }
-
-        const destroyLosers = async () => {
-          for (const attempt of activeAttempts) {
-            const result = await attempt.promise.catch(() => null);
-            if (!result?.ok || result.type === winner?.type) continue;
-            try {
-              result.engine?.destroy?.();
-            } catch (_) {}
-          }
-          this._pendingMountDestroyers = [];
-        };
-
-        const scheduleWebRTCTakeover = () => {
-          if (!winner?.ok || winner.type === "webrtc") return false;
-          const webrtcAttempt = activeAttempts.find(
-            (attempt) => attempt.type === "webrtc",
-          );
-          if (!webrtcAttempt) return false;
-
-          let takeoverExpired = false;
-          this._pendingWebRTCTakeoverTimer = setTimeout(() => {
-            takeoverExpired = true;
-            this._pendingWebRTCTakeoverTimer = null;
-            webrtcAttempt.promise.then((result) => {
-              try {
-                result?.engine?.destroy?.();
-              } catch (_) {}
-            });
-          }, 30000);
-
-          webrtcAttempt.promise
-            .then((result) => {
-              if (
-                !result?.ok ||
-                takeoverExpired ||
-                mountToken !== this._mountSeq ||
-                this._activeStreamType === "webrtc"
-              ) {
-                if (takeoverExpired || mountToken !== this._mountSeq) {
-                  try {
-                    result?.engine?.destroy?.();
-                  } catch (_) {}
-                }
-                return;
-              }
-              if (this._pendingWebRTCTakeoverTimer) {
-                clearTimeout(this._pendingWebRTCTakeoverTimer);
-                this._pendingWebRTCTakeoverTimer = null;
-              }
-              try {
-                this._engine?.destroy?.();
-              } catch (_) {}
-              this._adoptMountedAttempt(slot, result);
-            })
-            .catch(() => {});
-
-          return true;
-        };
-
-        if (winner?.ok) {
-          this._adoptMountedAttempt(slot, winner);
-          if (scheduleWebRTCTakeover()) {
-            activeAttempts
-              .filter(
-                (attempt) =>
-                  attempt.type !== winner.type && attempt.type !== "webrtc",
-              )
-              .forEach((attempt) => {
-                attempt.promise.then((result) => {
-                  try {
-                    result?.engine?.destroy?.();
-                  } catch (_) {}
-                });
-              });
-            this._pendingMountDestroyers = [
-              () => {
-                if (this._pendingWebRTCTakeoverTimer) {
-                  clearTimeout(this._pendingWebRTCTakeoverTimer);
-                  this._pendingWebRTCTakeoverTimer = null;
-                }
-              },
-              ...activeAttempts
-                .filter(
-                  (attempt) =>
-                    attempt.type !== winner.type && attempt.type !== "webrtc",
-                )
-                .map((attempt) => () => {
-                  attempt.promise.then((result) => {
-                    try {
-                      result?.engine?.destroy?.();
-                    } catch (_) {}
-                  });
-                }),
-            ];
-          } else {
-            destroyLosers();
-          }
-          return;
-        }
-        await destroyLosers();
-      }
+      const attempts = this._buildLiveStreamAttempts(
+        connectionType,
+        forcedType,
+      );
+      if (await this._mountLiveWithRace(slot, attempts, mountToken)) return;
 
       // go2rtc attempts failed: show snapshot fallback.
       this._setActiveStreamType("snapshot");
