@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.48";
+const VERSION = "1.0.50";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -475,12 +475,15 @@ const STYLES = `
 .popup-info-head {margin: 0;font-size: 18px;font-weight: 800;color: var(--c-text2);
     line-height: 1.35;text-transform: uppercase;letter-spacing: .03em;}
 .popup-info-head[hidden] {display: none;}
-.recording-scrub {display:flex;align-items:center;}
+.recording-scrub {display:flex;flex-direction:column;align-items:stretch;gap:6px;}
 .recording-scrub[hidden] {display:none;}
-.recording-scrub-track {position:relative;width:100%;height:10px;border-radius:999px;background:var(--c-green);cursor:pointer;touch-action:none;overflow:visible;}
+.recording-scrub-track {position:relative;width:100%;height:14px;border-radius:999px;background:var(--c-green);cursor:pointer;touch-action:none;overflow:visible;}
 .recording-scrub-markers {position:absolute;inset:0;}
 .recording-scrub-alert {position:absolute;top:-3px;bottom:-3px;background:var(--c-red);border-radius:999px;min-width:6px;}
-.recording-scrub-cursor {position:absolute;top:-5px;bottom:-5px;width:2px;background:rgba(255,255,255,.95);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);}
+.recording-scrub-detection {position:absolute;top:-2px;bottom:-2px;background:#f59e0b;border-radius:999px;min-width:4px;opacity:.95;}
+.recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);}
+.recording-scrub-labels {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--c-text2);font-weight:600;line-height:1;}
+.recording-scrub-now {font-variant-numeric:tabular-nums;}
 .popup-info {background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 9px;
     padding: 10px 12px;display: flex;flex-direction: column;gap: 8px;}
 .popup-info[hidden] {display: none;}
@@ -890,8 +893,17 @@ class FrigateViewCard extends HTMLElement {
     }
     if (this._popupHandlers) {
       const h = this._popupHandlers;
-      h.header.removeEventListener("mousedown", h.onMouseDown);
-      h.header.removeEventListener("touchstart", h.onTouchStart);
+      h.popup.removeEventListener("mousedown", h.onMouseDown);
+      h.popup.removeEventListener("touchstart", h.onTouchContain, {
+        capture: true,
+      });
+      h.popup.removeEventListener("touchmove", h.onTouchContain, {
+        capture: true,
+      });
+      h.popup.removeEventListener("touchend", h.onTouchContain, {
+        capture: true,
+      });
+      h.popup.removeEventListener("touchstart", h.onTouchStart);
       document.removeEventListener("mousemove", h.onMouseMove);
       document.removeEventListener("touchmove", h.onTouchMove);
       document.removeEventListener("mouseup", h.onMouseUp);
@@ -2111,12 +2123,19 @@ class FrigateViewCard extends HTMLElement {
   _isNowWindow() {
     return Math.abs(this._winEnd - Math.floor(Date.now() / 1000)) < 120;
   }
-  async _fetchWindowedEvents(clientId, cam, after, before) {
+  async _fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
     const items = [];
     const seen = new Set();
     const afterTs = Math.floor(after);
     let cursorBefore = Math.floor(before);
-    for (let page = 0; page < WINDOW_FETCH_PAGE_LIMIT; page++) {
+    const pageLimit = Math.max(
+      1,
+      Number.isFinite(opts?.pageLimit)
+        ? Math.floor(opts.pageLimit)
+        : WINDOW_FETCH_PAGE_LIMIT,
+    );
+    const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
+    for (let page = 0; page < pageLimit; page++) {
       const batch = await this._ws({
         type: "frigate/events/get",
         instance_id: clientId,
@@ -2131,20 +2150,32 @@ class FrigateViewCard extends HTMLElement {
         seen.add(item.id);
         items.push(item);
       }
+      onPage?.(items, {
+        page,
+        done: false,
+      });
       const oldest = Math.min(
         ...batch.map((item) => Math.floor(item?.start_time || before)),
       );
       if (batch.length < EVENT_FETCH_BATCH || oldest <= afterTs) break;
       cursorBefore = oldest - 1;
     }
+    onPage?.(items, { page: -1, done: true });
     return items;
   }
-  async _fetchWindowedReviews(clientId, cam, after, before) {
+  async _fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
     const items = [];
     const seen = new Set();
     const afterTs = Math.floor(after);
     let cursorBefore = Math.floor(before);
-    for (let page = 0; page < WINDOW_FETCH_PAGE_LIMIT; page++) {
+    const pageLimit = Math.max(
+      1,
+      Number.isFinite(opts?.pageLimit)
+        ? Math.floor(opts.pageLimit)
+        : WINDOW_FETCH_PAGE_LIMIT,
+    );
+    const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
+    for (let page = 0; page < pageLimit; page++) {
       const batch = await this._ws({
         type: "frigate/reviews/get",
         instance_id: clientId,
@@ -2159,12 +2190,17 @@ class FrigateViewCard extends HTMLElement {
         seen.add(item.id);
         items.push(item);
       }
+      onPage?.(items, {
+        page,
+        done: false,
+      });
       const oldest = Math.min(
         ...batch.map((item) => Math.floor(item?.start_time || before)),
       );
       if (batch.length < REVIEW_FETCH_BATCH || oldest <= afterTs) break;
       cursorBefore = oldest - 1;
     }
+    onPage?.(items, { page: -1, done: true });
     return items;
   }
   async _loadWindow(replace) {
@@ -2179,14 +2215,28 @@ class FrigateViewCard extends HTMLElement {
     const after = this._winStart,
       before = this._winEnd;
     const recAfter = Math.max(0, before - RECORDINGS_WINDOW);
-    const evPromise = this._fetchWindowedEvents(clientId, cam, after, before)
+    let renderedEventsFirstPage = false;
+    const evPromise = this._fetchWindowedEvents(clientId, cam, after, before, {
+      onPage: (items, meta) => {
+        this._events = Array.isArray(items) ? items.slice() : [];
+        const ent = this._activeCam?.entity;
+        if (ent && this._camCache[ent]) {
+          this._camCache[ent].events = this._events;
+        }
+        if (!renderedEventsFirstPage || meta?.done) {
+          renderedEventsFirstPage = true;
+          this._renderList();
+          this._renderStats();
+        }
+      },
+    })
       .then((ev) => {
         this._events = Array.isArray(ev) ? ev : [];
         const ent = this._activeCam?.entity;
         if (ent && this._camCache[ent]) {
           this._camCache[ent].events = this._events;
         }
-        // Render list ASAP once events arrive.
+        // Ensure final set is reflected after pagination finishes.
         this._renderList();
         this._renderStats();
       })
@@ -2204,18 +2254,39 @@ class FrigateViewCard extends HTMLElement {
     })
       .then((rec) => {
         this._recordings = Array.isArray(rec) ? rec : [];
+        const ent = this._activeCam?.entity;
+        if (ent && this._camCache[ent]) {
+          this._camCache[ent].recordings = this._recordings;
+        }
+        this._renderList();
       })
       .catch(() => {
         this._recordings = [];
       });
 
-    await Promise.allSettled([evPromise, recPromise]);
+    const revPromise =
+      this._tab === "alerts"
+        ? this._fetchWindowedReviews(clientId, cam, after, before, {
+            onPage: (items, meta) => {
+              this._reviews = Array.isArray(items) ? items.slice() : [];
+              if (meta?.page === 0 || meta?.done) this._renderList();
+            },
+          })
+            .then((r) => {
+              this._reviews = Array.isArray(r) ? r : [];
+              this._renderList();
+            })
+            .catch(() => {
+              this._reviews = [];
+            })
+        : Promise.resolve();
+
+    await Promise.allSettled([evPromise, recPromise, revPromise]);
     const ent = this._activeCam?.entity;
     if (ent && this._camCache[ent]) {
       this._camCache[ent].events = this._events;
       this._camCache[ent].recordings = this._recordings;
     }
-    if (this._tab === "alerts") await this._loadReviews();
     this._loading = false;
     if (this._eventsMode === "all") this._loadAllCamsBackground();
     this._renderAll();
@@ -2454,7 +2525,7 @@ class FrigateViewCard extends HTMLElement {
             <div class="popup-body">
               <div class="viewer" id="viewer" style="display:none"></div>
                                                                                                                 <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
-                            <div class="recording-scrub" id="recording-scrub" hidden><div class="recording-scrub-track" id="recording-scrub-track"><div class="recording-scrub-markers" id="recording-scrub-markers"></div><div class="recording-scrub-cursor" id="recording-scrub-cursor"></div></div></div>
+                            <div class="recording-scrub" id="recording-scrub" hidden><div class="recording-scrub-track" id="recording-scrub-track"><div class="recording-scrub-markers" id="recording-scrub-markers"></div><div class="recording-scrub-cursor" id="recording-scrub-cursor"></div></div><div class="recording-scrub-labels"><span id="recording-scrub-start">0:00</span><span class="recording-scrub-now" id="recording-scrub-now">0:00 / 0:00</span><span id="recording-scrub-end">0:00</span></div></div>
                             <div class="popup-info" id="popup-info" hidden></div>
                             <h1 class="popup-shell-ver" id="popup-shell-ver">v${VERSION}</h1>
             </div>
@@ -2958,6 +3029,15 @@ class FrigateViewCard extends HTMLElement {
     if (this._popupHandlers) {
       const h = this._popupHandlers;
       h.popup.removeEventListener("mousedown", h.onMouseDown);
+      h.popup.removeEventListener("touchstart", h.onTouchContain, {
+        capture: true,
+      });
+      h.popup.removeEventListener("touchmove", h.onTouchContain, {
+        capture: true,
+      });
+      h.popup.removeEventListener("touchend", h.onTouchContain, {
+        capture: true,
+      });
       h.popup.removeEventListener("touchstart", h.onTouchStart);
       document.removeEventListener("mousemove", h.onMouseMove);
       document.removeEventListener("touchmove", h.onTouchMove);
@@ -2995,12 +3075,27 @@ class FrigateViewCard extends HTMLElement {
       drag.currentY = 0;
     };
     const onMouseDown = (e) => start(e.clientY);
+    const onTouchContain = (e) => {
+      e.stopPropagation?.();
+    };
     const onTouchStart = (e) => start(e.touches[0].clientY);
     const onMouseMove = (e) => move(e.clientY);
     const onTouchMove = (e) => move(e.touches[0].clientY, e);
     const onMouseUp = () => end();
     const onTouchEnd = () => end();
     popup.addEventListener("mousedown", onMouseDown);
+    popup.addEventListener("touchstart", onTouchContain, {
+      capture: true,
+      passive: true,
+    });
+    popup.addEventListener("touchmove", onTouchContain, {
+      capture: true,
+      passive: true,
+    });
+    popup.addEventListener("touchend", onTouchContain, {
+      capture: true,
+      passive: true,
+    });
     popup.addEventListener("touchstart", onTouchStart);
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("touchmove", onTouchMove, {
@@ -3011,6 +3106,7 @@ class FrigateViewCard extends HTMLElement {
     this._popupHandlers = {
       popup,
       onMouseDown,
+      onTouchContain,
       onTouchStart,
       onMouseMove,
       onTouchMove,
@@ -3240,6 +3336,21 @@ class FrigateViewCard extends HTMLElement {
     const span = Math.max(1, state.end - state.start);
     const pct = ((timeSec - state.start) / span) * 100;
     state.cursor.style.left = `${Math.max(0, Math.min(100, pct))}%`;
+    if (state.labelNow) {
+      const rel = Math.max(0, Math.min(span, timeSec - state.start));
+      state.labelNow.textContent = `${this._fmtScrubTime(rel)} / ${this._fmtScrubTime(span)}`;
+    }
+  }
+
+  _fmtScrubTime(sec) {
+    const total = Math.max(0, Math.floor(Number(sec) || 0));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    if (h > 0) {
+      return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+    return `${m}:${String(s).padStart(2, "0")}`;
   }
 
   _closestRecordingAlertStart(targetSec, alerts, thresholdSec) {
@@ -3324,8 +3435,7 @@ class FrigateViewCard extends HTMLElement {
       const verify = () => {
         const cur = Number(video.currentTime || 0);
         const diff = Math.abs(cur - targetSec);
-        // Accept when near target or clearly advanced in the right direction.
-        finish(diff <= 1.5 || cur >= targetSec - 1.0);
+        finish(diff <= 1.5);
       };
       const onDone = () => verify();
       const onError = () => finish(false);
@@ -3342,7 +3452,7 @@ class FrigateViewCard extends HTMLElement {
       video.addEventListener("error", onError, { once: true });
 
       try {
-        if (typeof video.fastSeek === "function" && !this._isEdge()) {
+        if (typeof video.fastSeek === "function" && !this._isEdge() && !isIOS) {
           video.fastSeek(targetSec);
         } else {
           video.currentTime = targetSec;
@@ -3365,16 +3475,15 @@ class FrigateViewCard extends HTMLElement {
     const nonce = state.seekNonce;
     const video = state.video;
 
-    // For Edge/Firefox, recording URLs can expose unstable/partial seekable
-    // ranges. Server-side reopen at the requested timestamp is more reliable
-    // than in-file currentTime seeks.
+    // For Edge/Firefox, seeking by reloading at a fragment target is more
+    // reliable than relying on unstable seekable ranges.
     if (this._isFirefox() || this._isEdge()) {
-      if (state.isFallbackLoading) return;
-      state.isFallbackLoading = true;
-      try {
-        await this._showRecording(Math.floor(absTarget), Math.floor(state.end));
-      } finally {
-        state.isFallbackLoading = false;
+      const reloaded = await this._reloadRecordingAtTarget(state, relTarget);
+      if (!reloaded) {
+        const span = Math.max(1, state.end - state.start);
+        const fallbackStart = Math.floor(absTarget);
+        const fallbackEnd = Math.floor(absTarget + span);
+        await this._showRecording(fallbackStart, fallbackEnd);
       }
       return;
     }
@@ -3385,18 +3494,16 @@ class FrigateViewCard extends HTMLElement {
     const cur = Number(video.currentTime || 0);
     const diff = Math.abs(cur - relTarget);
     const isSeekable = this._isRecordingTimeSeekable(video, relTarget);
-    const shouldFallback =
-      !seekOk ||
-      diff > 2.0 ||
-      (!isSeekable && (this._isFirefox() || this._isEdge()));
+    const shouldFallback = !seekOk || diff > 2.0 || !isSeekable;
 
     if (shouldFallback) {
       if (state.isFallbackLoading) return;
       state.isFallbackLoading = true;
       try {
-        // Firefox/Edge can expose only buffered seek ranges for this endpoint.
-        // Reloading from the requested absolute timestamp gives consistent forward seeks.
-        await this._showRecording(Math.floor(absTarget), Math.floor(state.end));
+        const span = Math.max(1, state.end - state.start);
+        const fallbackStart = Math.floor(absTarget);
+        const fallbackEnd = Math.floor(absTarget + span);
+        await this._showRecording(fallbackStart, fallbackEnd);
       } finally {
         state.isFallbackLoading = false;
       }
@@ -3407,6 +3514,26 @@ class FrigateViewCard extends HTMLElement {
       video.play?.().catch(() => {});
     }
   }
+
+  async _reloadRecordingAtTarget(state, relTarget) {
+    if (!state?.video || !state.sourceUrlNoHash) return false;
+    if (!Number.isFinite(relTarget)) return false;
+    if (state.isFallbackLoading) return false;
+    state.isFallbackLoading = true;
+    try {
+      const target = Math.max(0, relTarget);
+      const nextSrc = `${state.sourceUrlNoHash}#t=${target.toFixed(3)}`;
+      const ok = await this._tryRecordingSource(state.video, nextSrc, {
+        autoplay: false,
+        timeoutMs: 7000,
+      });
+      if (!ok) return false;
+      if (state.resumeAfterScrub) state.video.play?.().catch(() => {});
+      return true;
+    } finally {
+      state.isFallbackLoading = false;
+    }
+  }
   async _fetchRecordingAlerts(clientId, cam, start, end) {
     const cacheKey = `${clientId}|${cam}|${Math.floor(start)}|${Math.floor(end)}`;
     if (this._recordingAlertCache.has(cacheKey)) {
@@ -3414,26 +3541,42 @@ class FrigateViewCard extends HTMLElement {
     }
     const reviews = await this._fetchWindowedReviews(clientId, cam, start, end);
     const alerts = (Array.isArray(reviews) ? reviews : [])
-      .filter((r) => String(r?.severity || "") === "alert")
       .map((r) => {
+        const severity = String(
+          r?.severity || r?.data?.severity || "detection",
+        ).toLowerCase();
+        if (!["alert", "detection"].includes(severity)) return null;
         const rs = Math.max(start, Number(r?.start_time || start));
         const re = Math.min(end, Number(r?.end_time || rs + 1));
         return {
           id: r?.id || `${rs}-${re}`,
           start: rs,
           end: re > rs ? re : rs + 1,
+          severity,
         };
       })
+      .filter(Boolean)
       .sort((a, b) => a.start - b.start);
     this._recordingAlertCache.set(cacheKey, alerts);
     return alerts;
   }
 
-  async _initRecordingScrub({ clientId, cam, start, end, video, token }) {
+  async _initRecordingScrub({
+    clientId,
+    cam,
+    start,
+    end,
+    video,
+    token,
+    sourceUrl,
+  }) {
     const scrub = this._$("#recording-scrub");
     const track = this._$("#recording-scrub-track");
     const markers = this._$("#recording-scrub-markers");
     const cursor = this._$("#recording-scrub-cursor");
+    const labelStart = this._$("#recording-scrub-start");
+    const labelNow = this._$("#recording-scrub-now");
+    const labelEnd = this._$("#recording-scrub-end");
     if (!scrub || !track || !markers || !cursor || !video) return;
 
     this._teardownRecordingScrub();
@@ -3449,10 +3592,18 @@ class FrigateViewCard extends HTMLElement {
     if (token !== this._playSeq) return;
 
     const span = Math.max(1, end - start);
+    if (labelStart) labelStart.textContent = "0:00";
+    if (labelEnd) labelEnd.textContent = this._fmtScrubTime(span);
+    if (labelNow)
+      labelNow.textContent = `${this._fmtScrubTime(0)} / ${this._fmtScrubTime(span)}`;
     for (const a of alerts) {
       const left = ((a.start - start) / span) * 100;
       const width = Math.max(0.75, ((a.end - a.start) / span) * 100);
-      markers.innerHTML += `<span class="recording-scrub-alert" style="left:${Math.max(0, left)}%;width:${Math.min(100, width)}%"></span>`;
+      const markerClass =
+        String(a.severity || "").toLowerCase() === "alert"
+          ? "recording-scrub-alert"
+          : "recording-scrub-detection";
+      markers.innerHTML += `<span class="${markerClass}" style="left:${Math.max(0, left)}%;width:${Math.min(100, width)}%"></span>`;
     }
 
     const clientXToRatio = (clientX) => {
@@ -3506,12 +3657,15 @@ class FrigateViewCard extends HTMLElement {
       alerts,
       video,
       cursor,
+      labelNow,
       isScrubbing: false,
       resumeAfterScrub: false,
       pendingAbsTarget: null,
       pendingRelTarget: null,
       seekNonce: 0,
       isFallbackLoading: false,
+      sourceUrl: sourceUrl || "",
+      sourceUrlNoHash: String(sourceUrl || "").split("#")[0],
     };
 
     track.addEventListener("pointerdown", onPointerDown);
@@ -3934,43 +4088,8 @@ class FrigateViewCard extends HTMLElement {
     viewer.innerHTML = `<video controls playsinline webkit-playsinline preload="metadata" muted></video>`;
     const video = viewer.querySelector("video");
     let playable = false;
-    const gestureCleanup = [];
+    let activeSource = "";
     if (video) {
-      if (isIOS) {
-        const guardTouch = (ev) => {
-          // Keep touch gestures inside the popup so HA dashboard horizontal
-          // swipe handlers do not steal navigation while interacting with video.
-          ev.stopPropagation?.();
-        };
-        viewer.addEventListener("touchstart", guardTouch, {
-          capture: true,
-          passive: true,
-        });
-        viewer.addEventListener("touchmove", guardTouch, {
-          capture: true,
-          passive: true,
-        });
-        viewer.addEventListener("touchend", guardTouch, {
-          capture: true,
-          passive: true,
-        });
-        gestureCleanup.push(() =>
-          viewer.removeEventListener("touchstart", guardTouch, {
-            capture: true,
-          }),
-        );
-        gestureCleanup.push(() =>
-          viewer.removeEventListener("touchmove", guardTouch, {
-            capture: true,
-          }),
-        );
-        gestureCleanup.push(() =>
-          viewer.removeEventListener("touchend", guardTouch, {
-            capture: true,
-          }),
-        );
-      }
-
       const recPath = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
       const vodBase = `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
       const sourceCandidates = isIOS
@@ -3984,7 +4103,10 @@ class FrigateViewCard extends HTMLElement {
         playable = await this._tryRecordingSource(video, signed, {
           autoplay: true,
         });
-        if (playable) break;
+        if (playable) {
+          activeSource = signed;
+          break;
+        }
       }
 
       if (!playable) {
@@ -3992,11 +4114,6 @@ class FrigateViewCard extends HTMLElement {
         this._teardownRecordingScrub();
         const scrub = this._$("#recording-scrub");
         if (scrub) scrub.hidden = true;
-        for (const fn of gestureCleanup) {
-          try {
-            fn();
-          } catch (_) {}
-        }
         return;
       }
     }
@@ -4010,15 +4127,10 @@ class FrigateViewCard extends HTMLElement {
         end: chunkEnd,
         video,
         token,
+        sourceUrl: activeSource || video.currentSrc || video.src,
       });
     }
-    this._popupMediaCleanup = () => {
-      for (const fn of gestureCleanup) {
-        try {
-          fn();
-        } catch (_) {}
-      }
-    };
+    this._popupMediaCleanup = null;
   }
   async _signed(path) {
     try {
