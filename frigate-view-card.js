@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.55";
+const VERSION = "1.0.56";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -478,12 +478,12 @@ const STYLES = `
 .recording-scrub {display:flex;flex-direction:column;align-items:stretch;gap:6px;}
 .recording-scrub[hidden] {display:none;}
 .recording-scrub-track {position:relative;width:100%;height:28px;border-radius:999px;background:var(--c-green);cursor:pointer;touch-action:none;overflow:visible;}
-.recording-scrub-ticks {position:absolute;inset:0;pointer-events:none;z-index:1;}
+.recording-scrub-ticks {position:absolute;inset:0;pointer-events:none;z-index:3;}
 .recording-scrub-markers {position:absolute;inset:0;pointer-events:none;z-index:2;}
 .recording-scrub-alert {position:absolute;top:2px;bottom:2px;background:var(--c-red);border-radius:999px;min-width:8px;opacity:.95;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset;}
 .recording-scrub-detection {position:absolute;top:4px;bottom:4px;background:#f59e0b;border-radius:999px;min-width:4px;opacity:.95;}
-.recording-scrub-tick {position:absolute;top:4px;bottom:4px;width:3px;background:rgba(255,255,255,.72);border-radius:999px;transform:translateX(-1px);}
-.recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);}
+.recording-scrub-tick {position:absolute;top:3px;bottom:3px;width:3px;background:rgba(15,21,40,.55);border-radius:999px;transform:translateX(-1px);box-shadow:0 0 0 1px rgba(255,255,255,.28);}
+.recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);z-index:4;}
 .recording-scrub-labels {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--c-text2);font-weight:600;line-height:1;}
 .recording-scrub-now {font-variant-numeric:tabular-nums;}
 .popup-info {background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 9px;
