@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.76";
+const VERSION = "1.0.77";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -638,6 +638,7 @@ class FrigateViewCard extends HTMLElement {
     this._popupHandlers = null;
     this._popupMediaCleanup = null;
     this._popupMediaType = "";
+    this._popupMediaStopTimer = null;
     this._popupMediaControlsCleanup = null;
     this._popupControlsHideTimer = null;
     this._recordingScrubCleanup = null;
@@ -1026,6 +1027,7 @@ class FrigateViewCard extends HTMLElement {
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
     if (this._popupControlsHideTimer)
       clearTimeout(this._popupControlsHideTimer);
+    if (this._popupMediaStopTimer) clearTimeout(this._popupMediaStopTimer);
     this._clearPopupMediaCleanup();
     if (this._onDocVisibility) {
       document.removeEventListener("visibilitychange", this._onDocVisibility);
@@ -3164,16 +3166,39 @@ class FrigateViewCard extends HTMLElement {
     const viewer = this._$("#viewer");
     if (!viewer) return;
 
-    viewer.querySelectorAll("video").forEach((v) => {
-      try {
-        v.pause();
-        if ("srcObject" in v) v.srcObject = null;
-        v.removeAttribute("src");
-        v.querySelectorAll("source").forEach((s) => s.remove());
-      } catch (_) {}
-    });
+    if (this._popupMediaStopTimer) {
+      clearTimeout(this._popupMediaStopTimer);
+      this._popupMediaStopTimer = null;
+    }
 
-    viewer.innerHTML = "";
+    const cleanupVideos = (dropSources) => {
+      viewer.querySelectorAll("video").forEach((v) => {
+        try {
+          v.pause();
+          if (dropSources) {
+            if ("srcObject" in v) v.srcObject = null;
+            v.removeAttribute("src");
+            v.querySelectorAll("source").forEach((s) => s.remove());
+          }
+        } catch (_) {}
+      });
+      if (dropSources) viewer.innerHTML = "";
+    };
+
+    const deferSourceDrop =
+      this._isFirefox() &&
+      this._popupMediaType &&
+      this._popupMediaType !== "recording";
+    if (deferSourceDrop) {
+      cleanupVideos(false);
+      this._popupMediaStopTimer = setTimeout(() => {
+        this._popupMediaStopTimer = null;
+        cleanupVideos(true);
+      }, 1200);
+    } else {
+      cleanupVideos(true);
+    }
+
     viewer.style.display = "none";
     const controls = this._$("#popup-media-controls");
     if (controls) {
@@ -4481,6 +4506,10 @@ class FrigateViewCard extends HTMLElement {
     infoOpts,
   }) {
     this._enter();
+    if (this._popupMediaStopTimer) {
+      clearTimeout(this._popupMediaStopTimer);
+      this._popupMediaStopTimer = null;
+    }
     this._playing = playingId ? { id: playingId } : null;
     this._popupMediaType = String(
       infoOpts?.mediaType || fullscreenKind || "",
