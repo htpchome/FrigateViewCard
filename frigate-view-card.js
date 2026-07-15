@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.66";
+const VERSION = "1.0.67";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -455,7 +455,9 @@ const STYLES = `
   .rinf{flex:1;} 
   .rt{font-size:0.9rem;font-weight:600;color:var(--c-text);} 
   .rsub{font-size:0.75rem;color:var(--c-text3);margin-top:1px;} 
-  .rp{color:var(--c-on);}
+  .rp{width:31.2px;height:31.2px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;flex-shrink:0;padding:0;}
+  .rp svg{width:15.6px;height:15.6px;}
+  .rp:hover{color:var(--c-acc-bdr);border-color:var(--c-acc-bdr);}
 
   /* ── reviews ── */
   .rev{display:flex;gap:5px;flex-wrap: wrap;align-items:center;padding:2px 10px 2px 0px;background:var(--c-bg-panel-light);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;}
@@ -5361,7 +5363,7 @@ class FrigateViewCard extends HTMLElement {
           <div class="rt">${this._time(r.start_time)} – ${this._time(r.end_time || Date.now() / 1000)}</div>
           <div class="rsub">${dur}${r.events ? " · " + r.events + " ev" : ""}</div>
         </div>
-        <div class="rp">▶</div>
+        <button class="rp" data-rec-dl-start="${rs}" data-rec-dl-end="${re}" title="Download recording" aria-label="Download recording">${ICONS.download}</button>
       </div>`;
       })
       .join("");
