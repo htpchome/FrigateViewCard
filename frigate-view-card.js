@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.83";
+const VERSION = "1.0.84";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2236,21 +2236,48 @@ class FrigateViewCard extends HTMLElement {
 
       const connectionType = this._cameraConnectionType(entity);
       if (connectionType === "ha_direct") {
-        if (
-          await this._tryMountHaDirect(slot, {
-            waitMs: 8000,
-            minCurrentTime: 0.05,
-            minDecodedFrames: 1,
-            requireReadyState: 0,
-            strict: false,
-          })
-        ) {
+        const streamType = forcedType || this._preferredStreamType();
+        this._setActiveStreamType(streamType);
+        const stateObj = this._hlsStateObj(entity, streamType);
+        if (!stateObj) {
+          this._setStreamLoading(false);
+          this._setStreamFallbackVisible(false);
           return;
         }
 
-        this._setActiveStreamType("snapshot");
-        this._setStreamLoading(false);
-        this._setStreamFallbackVisible(true);
+        const s = document.createElement("ha-camera-stream");
+        s.hass = this._hass;
+        s.stateObj = stateObj;
+        s.controls = false;
+        s.muted = this._streamMuted;
+        s.style.cssText = "width:100%;height:100%;display:block";
+
+        slot.innerHTML = "";
+        slot.appendChild(s);
+        this._engine = s;
+        this._engineMountedMuted = this._streamMuted;
+        this._attachVideoFit(s);
+        if (this._rotateOverlayActive) this._setLiveNativeControls(true);
+
+        this._waitForStreamStart(s, 8000, {
+          minCurrentTime: 0.05,
+          minDecodedFrames: 1,
+          requireReadyState: 0,
+          strict: false,
+        }).then((ok) => {
+          if (ok && this._engine === s) {
+            this._setStreamLoading(false);
+            this._setStreamFallbackVisible(false);
+            if (this._rotateOverlayActive) this._setLiveNativeControls(true);
+          }
+        });
+        setTimeout(() => {
+          if (this._engine === s) {
+            this._setStreamLoading(false);
+            this._setStreamFallbackVisible(false);
+            if (this._rotateOverlayActive) this._setLiveNativeControls(true);
+          }
+        }, 1200);
         return;
       }
       const attempts = this._buildLiveStreamAttempts(
