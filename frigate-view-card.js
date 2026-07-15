@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.44";
+const VERSION = "1.0.45";
 
 import {
   LitElement,
@@ -3267,7 +3267,7 @@ class FrigateViewCard extends HTMLElement {
     if (!state?.video) return null;
     const span = Math.max(1, state.end - state.start);
     const rawTarget = state.start + Math.max(0, Math.min(1, ratio)) * span;
-    const snapThreshold = Math.max(4, span * 0.03);
+    const snapThreshold = Math.min(12, Math.max(3, span * 0.005));
     const snapped = this._closestRecordingAlertStart(
       rawTarget,
       state.alerts,
@@ -3731,6 +3731,55 @@ class FrigateViewCard extends HTMLElement {
       infoOpts: { mediaType: "snapshot" },
     });
   }
+
+  async _tryRecordingSource(
+    video,
+    src,
+    { autoplay = true, timeoutMs = 9000 } = {},
+  ) {
+    if (!video || !src) return false;
+    return await new Promise((resolve) => {
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve(ok);
+      };
+      const onReady = async () => {
+        if (!autoplay) {
+          finish(true);
+          return;
+        }
+        try {
+          await video.play?.();
+          finish(true);
+        } catch (_) {
+          // iOS may block autoplay despite the source being valid.
+          finish(true);
+        }
+      };
+      const onErr = () => finish(false);
+      const cleanup = () => {
+        clearTimeout(timer);
+        video.removeEventListener("loadedmetadata", onReady);
+        video.removeEventListener("canplay", onReady);
+        video.removeEventListener("error", onErr);
+      };
+      const timer = setTimeout(() => finish(false), timeoutMs);
+
+      video.addEventListener("loadedmetadata", onReady, { once: true });
+      video.addEventListener("canplay", onReady, { once: true });
+      video.addEventListener("error", onErr, { once: true });
+      try {
+        video.src = src;
+        video.load();
+      } catch (_) {
+        finish(false);
+      }
+    });
+  }
+
   //Play Recordings
   async _showRecording(s, e) {
     const start = s;
@@ -3739,7 +3788,7 @@ class FrigateViewCard extends HTMLElement {
     this._clearPopupMediaCleanup();
     this._playing = { rec: s };
     const { clientId, cam } = this._cc();
-    const maxChunk = 7200;
+    const maxChunk = 3600;
     const chunkEnd = Math.min(e, start + maxChunk);
     const clipDur = chunkEnd - start; // real clip length in seconds
     const recCam = (cam || "").replace(/_/g, " ");
@@ -3756,34 +3805,43 @@ class FrigateViewCard extends HTMLElement {
     });
     const viewer = this.shadowRoot.querySelector("#viewer");
     viewer.innerHTML = '<div class="ld">Loading…</div>';
-    const url = await this._signed(
-      `/api/frigate/${clientId}/recording/${cam}/start/${start}/end/${chunkEnd}`,
-    );
     if (this._playSeq !== token) return;
     viewer.innerHTML = `<video controls playsinline webkit-playsinline preload="metadata" muted></video>`;
     const video = viewer.querySelector("video");
+    let playable = false;
     if (video) {
-      video.src = url;
-      try {
-        video.load();
-      } catch (_) {}
-      const tryStart = () => {
-        video.play?.().catch(() => {});
-      };
-      if (isIOS) {
-        video.addEventListener("loadedmetadata", tryStart, { once: true });
-      } else {
-        tryStart();
+      const recPath = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
+      const vodBase = `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
+      const sourceCandidates = isIOS
+        ? [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`, recPath]
+        : [recPath, `${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`];
+
+      for (const path of sourceCandidates) {
+        if (this._playSeq !== token) return;
+        const signed = await this._signed(path);
+        if (this._playSeq !== token) return;
+        playable = await this._tryRecordingSource(video, signed, {
+          autoplay: true,
+        });
+        if (playable) break;
+      }
+
+      if (!playable) {
+        viewer.innerHTML = '<div class="ld">Unable to load recording</div>';
+        this._teardownRecordingScrub();
+        const scrub = this._$("#recording-scrub");
+        if (scrub) scrub.hidden = true;
+        return;
       }
     }
     this._ensurePopupFullscreenButton("recording");
     this._scheduleRotateOverlayUpdate();
-    if (video) {
+    if (video && playable) {
       this._initRecordingScrub({
         clientId,
         cam,
         start: s,
-        end: e,
+        end: chunkEnd,
         video,
         token,
       });
