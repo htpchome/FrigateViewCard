@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.64";
+const VERSION = "1.0.65";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -287,6 +287,7 @@ const STYLES = `
   /* ── feed area ── */
   .feed-area{position:relative;width:100%;}
     #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
+    #eng-wrap.popup-covered::after{content:"";position:absolute;inset:0;background:var(--c-bg-deep);z-index:4;pointer-events:none;}
     .card.mobile-rotate-live,
     .card.mobile-rotate-live-exit{overflow:hidden;height:var(--rotate-vh);max-height:var(--rotate-vh);}
     .card.mobile-rotate-live #eng-wrap,
@@ -3056,6 +3057,8 @@ class FrigateViewCard extends HTMLElement {
     popup.style.transform = "translateY(0)";
     const body = popup.querySelector(".popup-body");
     if (body) body.scrollTop = 0;
+    this._setLivePopupCover(true);
+    this._applyLiveMuteChange(true, { source: "popup-open" });
     this._syncFullscreenButtonsVisibility();
     this._scheduleRotateOverlayUpdate();
   }
@@ -3093,14 +3096,12 @@ class FrigateViewCard extends HTMLElement {
     if (!popup) return;
     popup.classList.remove("is-open");
     popup.style.transform = "translateY(100%)";
+    this._setLivePopupCover(false);
+    this._applyLiveMuteChange(true, { source: "popup-close" });
     this._syncFullscreenButtonsVisibility();
     this._scheduleRotateOverlayUpdate();
 
     this._stopPopupMedia();
-
-    const engine = this._$("#engine");
-    if (engine) engine.style.display = "";
-    this._mountEngine();
   }
   _initPopupInteractions() {
     const popup = this._$("#myPopup");
@@ -4024,10 +4025,14 @@ class FrigateViewCard extends HTMLElement {
     else this._showSnapshot(ev);
   }
   _enter() {
-    this._$("#engine").style.display = "none";
     const v = this._$("#viewer");
     v.style.display = "flex";
     this._openPopup();
+  }
+  _setLivePopupCover(covered) {
+    const engWrap = this._$("#eng-wrap");
+    if (!engWrap) return;
+    engWrap.classList.toggle("popup-covered", !!covered);
   }
   _isTouchPopupUi() {
     return isIOS || this._isMobileTabletViewport();
