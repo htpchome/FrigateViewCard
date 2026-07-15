@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.60";
+const VERSION = "1.0.61";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -365,7 +365,7 @@ const STYLES = `
   .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
     border-bottom:1px solid var(--c-border);}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
-  .stats{display:flex;flex-wrap: wrap;gap:16px;justify-self:end;margin-left:auto;justify-self:end;} 
+  .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
   .sv{font-size:1.05rem;font-weight:700;color:var(--c-acc-bdr);} .sl{font-size:0.75rem;color:var(--c-text4);text-transform:uppercase;letter-spacing:.06em;}
   .info-mute{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:7px;color:var(--c-text2);cursor:pointer;flex-shrink:0;}
@@ -2513,15 +2513,19 @@ class FrigateViewCard extends HTMLElement {
                 <span class="section-label" id="tl-range">${subtitle}</span>
               </div>
               <div class="stats">
-                                <div class="stat"><div class="sv">v${VERSION}</div><div class="sl">Version</div></div>
-                                <div class="stat"><div class="sv stream-type" id="stream-type">--</div><div class="sl">Stream</div></div>
-                <button class="info-mute" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
                 <div class="stat">
+                  <div class="sv">v${VERSION}</div>
+                  <div class="sl">Version</div>
+                </div>
+                <div class="stat">
+                  <div class="sv stream-type" id="stream-type">--</div>
+                  <div class="sl">Stream</div>
                   <div class="sv" id="ev-count">—</div>
                   <div class="sl">Events</div></div>
                   <div class="stat"><div class="sv" id="on-dot" style="color:#4ade80">●</div>
                   <div class="sl" id="on-lbl">Online</div>
                 </div>
+                <button class="info-mute" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
               </div>
             </div>
             ${multiCam ? `<div class="cam-switcher" id="cam-switcher"></div>` : ""}
