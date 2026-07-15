@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.77";
+const VERSION = "1.0.78";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -15,6 +15,7 @@ const RECORDINGS_WINDOW = 24 * 3600;
 const EVENT_FETCH_BATCH = 100;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
+const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const isIOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -84,6 +85,16 @@ function parseWs(r) {
 function normalizePositiveInteger(value, fallback) {
   const parsed = parseInt(String(value ?? "").trim(), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeCameraConnectionType(value) {
+  const type = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (type === "ha_direct" || type === "ha" || type === "home_assistant") {
+    return "ha_direct";
+  }
+  return DEFAULT_CAMERA_CONNECTION_TYPE;
 }
 
 const LABEL_COLORS = {
@@ -853,7 +864,13 @@ class FrigateViewCard extends HTMLElement {
   }
   static getStubConfig() {
     return {
-      cameras: [{ entity: "camera.front_door", name: "Front Door" }],
+      cameras: [
+        {
+          entity: "camera.front_door",
+          name: "Front Door",
+          connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+        },
+      ],
       title: "Frigate",
       theme: "default",
       shadows: true,
@@ -868,15 +885,24 @@ class FrigateViewCard extends HTMLElement {
     let cameras;
     const normalizeCamera = (c) => {
       if (typeof c === "string") {
-        return { entity: c, name: null };
+        return {
+          entity: c,
+          name: null,
+          connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+        };
       }
       if (c && typeof c === "object") {
         return {
           entity: c.entity || c.camera_entity || null,
           name: c.name || null,
+          connection_type: normalizeCameraConnectionType(c.connection_type),
         };
       }
-      return { entity: null, name: null };
+      return {
+        entity: null,
+        name: null,
+        connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+      };
     };
 
     if (Array.isArray(config.cameras) && config.cameras.length) {
@@ -1131,9 +1157,14 @@ class FrigateViewCard extends HTMLElement {
     return /safari/i.test(ua) && !/chrome|chromium|crios|fxios|edg\//i.test(ua);
   }
 
-  _useLegacyHaStreamPath() {
-    // Keep conservative behavior for browsers explicitly marked as sensitive.
-    return isIOS || this._isSafari() || this._isEdge();
+  _useHaDirectStreamPath() {
+    return this._cameraConnectionType(this._activeCam?.entity) === "ha_direct";
+  }
+
+  _cameraConnectionType(entity) {
+    if (!entity) return DEFAULT_CAMERA_CONNECTION_TYPE;
+    const cam = this._config?.cameras?.find((c) => c?.entity === entity);
+    return normalizeCameraConnectionType(cam?.connection_type);
   }
 
   _isEditorPreviewContext() {
@@ -1962,9 +1993,11 @@ class FrigateViewCard extends HTMLElement {
         return;
       }
 
-      if (this._useLegacyHaStreamPath()) {
+      const connectionType = this._cameraConnectionType(entity);
+
+      if (connectionType === "ha_direct") {
         const streamType = forcedType || this._preferredStreamType();
-        this._ffDebug("Mounting legacy HA stream type", streamType);
+        this._ffDebug("Mounting HA direct stream type", streamType);
         this._setActiveStreamType(streamType);
         const stateObj = this._hlsStateObj(entity, streamType);
         if (!stateObj) {
@@ -4094,16 +4127,16 @@ class FrigateViewCard extends HTMLElement {
     this._setLiveMuted(nextMuted);
     this._renderMuteButton();
 
-    // Edge/iOS legacy live players can fail to start audio when the stream
-    // was originally mounted muted. Apply the same recovery whether unmute
-    // came from our button or native rotated-overlay controls.
+    // HA direct live players can fail to start audio when the stream was
+    // originally mounted muted. Apply the same recovery whether unmute came
+    // from our button or native rotated-overlay controls.
     const nativeOverlayUnmute =
       source === "native-controls" && this._rotateOverlayActive;
-    const needsLegacyRecovery =
-      this._useLegacyHaStreamPath() &&
+    const needsHaDirectRecovery =
+      this._useHaDirectStreamPath() &&
       !nextMuted &&
       (!nativeOverlayUnmute || this._engineMountedMuted);
-    if (needsLegacyRecovery) {
+    if (needsHaDirectRecovery) {
       this._mountEngine(null, { quiet: true });
       return;
     }
@@ -5598,14 +5631,27 @@ class FrigateViewCardEditor extends HTMLElement {
     if (Array.isArray(config?.cameras)) {
       cams = config.cameras;
     } else if (config?.camera_entity) {
-      cams = [{ entity: config.camera_entity, name: config.title || "" }];
+      cams = [
+        {
+          entity: config.camera_entity,
+          name: config.title || "",
+          connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+        },
+      ];
     }
     const normalized = cams
       .map((c) => {
-        if (typeof c === "string") return { entity: c, name: "" };
+        if (typeof c === "string") {
+          return {
+            entity: c,
+            name: "",
+            connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+          };
+        }
         return {
           entity: c?.entity || c?.camera_entity || "",
           name: c?.name || "",
+          connection_type: normalizeCameraConnectionType(c?.connection_type),
         };
       })
       .filter((c) => c.entity)
@@ -5671,6 +5717,12 @@ class FrigateViewCardEditor extends HTMLElement {
     return entity.replace(/^camera\./, "").replace(/_/g, " ");
   }
 
+  _cameraConnectionLabel(value) {
+    return normalizeCameraConnectionType(value) === "ha_direct"
+      ? "HA direct"
+      : "Frigate go2rtc";
+  }
+
   _reorderCameras(from, to) {
     if (from === to || from < 0 || to < 0) return;
     const cur = [...this._getCams()];
@@ -5684,13 +5736,21 @@ class FrigateViewCardEditor extends HTMLElement {
 
   _openCameraModal(index = null) {
     const cams = this._getCams();
-    const cam = index == null ? { entity: "", name: "" } : cams[index] || {};
+    const cam =
+      index == null
+        ? {
+            entity: "",
+            name: "",
+            connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+          }
+        : cams[index] || {};
     this._editingCamIndex = index;
     const title = this.querySelector("#camera-modal-title");
     const save = this.querySelector("#camera-modal-save");
     const modal = this.querySelector("#camera-modal");
     const name = this.querySelector("#camera-modal-name");
     const entity = this.querySelector("#camera-modal-entity");
+    const connectionType = this.querySelector("#camera-modal-connection-type");
     const helper = this.querySelector("#camera-modal-helper");
     if (title) title.textContent = index == null ? "Add" : "Edit";
     if (save) save.textContent = index == null ? "Add" : "Save";
@@ -5698,6 +5758,11 @@ class FrigateViewCardEditor extends HTMLElement {
     if (entity) {
       entity.value = cam?.entity || "";
       entity.dataset.value = cam?.entity || "";
+    }
+    if (connectionType) {
+      const nextType = normalizeCameraConnectionType(cam?.connection_type);
+      connectionType.value = nextType;
+      connectionType.dataset.value = nextType;
     }
     if (helper) helper.textContent = "";
     if (modal) modal.classList.remove("hidden");
@@ -5721,6 +5786,11 @@ class FrigateViewCardEditor extends HTMLElement {
     const name = (
       this.querySelector("#camera-modal-name")?.value || ""
     ).toString();
+    const connectionType = normalizeCameraConnectionType(
+      this.querySelector("#camera-modal-connection-type")?.dataset?.value ||
+        this.querySelector("#camera-modal-connection-type")?.value ||
+        DEFAULT_CAMERA_CONNECTION_TYPE,
+    );
     const helper = this.querySelector("#camera-modal-helper");
     if (!entity) {
       if (helper) helper.textContent = "Camera is required.";
@@ -5732,9 +5802,13 @@ class FrigateViewCardEditor extends HTMLElement {
         if (helper) helper.textContent = "Maximum 4 cameras.";
         return;
       }
-      cur.push({ entity, name });
+      cur.push({ entity, name, connection_type: connectionType });
     } else if (cur[this._editingCamIndex]) {
-      cur[this._editingCamIndex] = { entity, name };
+      cur[this._editingCamIndex] = {
+        entity,
+        name,
+        connection_type: connectionType,
+      };
     }
     this._config = { ...this._config, cameras: cur.slice(0, 4) };
     this._closeCameraModal();
@@ -5795,7 +5869,7 @@ class FrigateViewCardEditor extends HTMLElement {
         (cam, i) => `
       <div class="cam-row" draggable="true" data-row="${i}">
         <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
-        <div class="cam-name">${this._cameraLabel(cam)}</div>
+        <div><div class="cam-name">${this._cameraLabel(cam)}</div><div class="cam-meta">${this._cameraConnectionLabel(cam.connection_type)}</div></div>
                 <button class="cam-action" type="button" title="Edit" aria-label="Edit" data-edit-cam="${i}"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg></button>
                 <button class="cam-action" type="button" title="Delete" aria-label="Delete" data-remove-cam="${i}"><svg viewBox="0 0 24 24" style="width:24px; height:24px" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg></button>
       </div>`,
@@ -5835,6 +5909,7 @@ class FrigateViewCardEditor extends HTMLElement {
             .cam-drag:hover{background:var(--editor-secondary-bg);}
             .cam-drag ha-icon{--mdc-icon-size:18px;}
             .cam-name{font-size:15px;color:var(--editor-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+            .cam-meta{font-size:11px;color:var(--editor-muted);margin-top:2px;}
             .cam-action{width:32px;height:32px;border:none;background:transparent;color:var(--editor-icon);display:grid;place-items:center;cursor:pointer;border-radius:8px;}
             .cam-action:hover{background:var(--editor-secondary-bg);color:var(--editor-text);}
             .cam-action svg{width:18px;height:18px;display:block;fill:currentColor;}
@@ -5955,6 +6030,10 @@ class FrigateViewCardEditor extends HTMLElement {
             <ha-selector id="camera-modal-entity"></ha-selector>
           </div>
           <div class="cam-modal-field">
+            <span class="cam-modal-label">Connection Type</span>
+            <ha-selector id="camera-modal-connection-type"></ha-selector>
+          </div>
+          <div class="cam-modal-field">
             <ha-input id="camera-modal-name" label="Name" placeholder="Display name (optional)"></ha-input>
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
@@ -6017,6 +6096,41 @@ class FrigateViewCardEditor extends HTMLElement {
       };
       modalEntity.addEventListener("value-changed", syncModalEntity);
       modalEntity.addEventListener("selected-changed", syncModalEntity);
+    }
+
+    const modalConnectionType = this.querySelector(
+      "#camera-modal-connection-type",
+    );
+    if (modalConnectionType) {
+      modalConnectionType.hass = this._hass;
+      modalConnectionType.selector = {
+        select: {
+          mode: "dropdown",
+          options: [
+            { value: "frigate_go2rtc", label: "Frigate go2rtc" },
+            { value: "ha_direct", label: "HA direct" },
+          ],
+        },
+      };
+      modalConnectionType.value = DEFAULT_CAMERA_CONNECTION_TYPE;
+      modalConnectionType.dataset.value = DEFAULT_CAMERA_CONNECTION_TYPE;
+      const syncModalConnectionType = (ev) => {
+        const value =
+          ev?.detail?.value ??
+          modalConnectionType.value ??
+          DEFAULT_CAMERA_CONNECTION_TYPE;
+        const nextType = normalizeCameraConnectionType(value);
+        modalConnectionType.value = nextType;
+        modalConnectionType.dataset.value = nextType;
+      };
+      modalConnectionType.addEventListener(
+        "value-changed",
+        syncModalConnectionType,
+      );
+      modalConnectionType.addEventListener(
+        "selected-changed",
+        syncModalConnectionType,
+      );
     }
 
     this.querySelector("#camera-add")?.addEventListener("click", () => {
@@ -6117,6 +6231,7 @@ class FrigateViewCardEditor extends HTMLElement {
           .map((c) => ({
             entity: c?.entity || "",
             name: c?.name || "",
+            connection_type: normalizeCameraConnectionType(c?.connection_type),
           }))
           .filter((c) => c.entity)
           .slice(0, 4)

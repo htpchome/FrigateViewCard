@@ -124,3 +124,4 @@ window.customCards.push({
 
 - Implement `getCardSize()` returning an integer representing the row height (1 unit ≈ 50px).
 - Gracefully handle cases where the specified entity is missing or hasn't finished loading in `hass.states`.
+MCP
