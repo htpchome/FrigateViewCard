@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.81";
+const VERSION = "1.0.82";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1208,25 +1208,21 @@ class FrigateViewCard extends HTMLElement {
     return { ...raw, attributes: attrs };
   }
 
-  async _tryMountHaDirect(slot, streamType, startup = null, options = {}) {
-    const waitMs = Math.max(
-      500,
-      Number(
-        startup?.waitMs ??
-          (streamType === "hls" ? 5000 : streamType === "mse" ? 7000 : 8000),
-      ),
-    );
+  _cameraStateObj(entity) {
+    return this._hass?.states?.[entity] || null;
+  }
+
+  async _tryMountHaDirect(slot, startup = null, options = {}) {
+    const waitMs = Math.max(500, Number(startup?.waitMs ?? 8000));
     const minCurrentTime = Number(startup?.minCurrentTime ?? 0.05);
     const minDecodedFrames = Number(startup?.minDecodedFrames ?? 1);
-    const requireReadyState = Number(
-      startup?.requireReadyState ?? (streamType === "webrtc" ? 0 : 2),
-    );
+    const requireReadyState = Number(startup?.requireReadyState ?? 0);
     const strict = startup?.strict ?? false;
     const commit = options.commit !== false;
     const entity = this._activeCam?.entity;
     if (!entity) return false;
 
-    const stateObj = this._hlsStateObj(entity, streamType);
+    const stateObj = this._cameraStateObj(entity);
     if (!stateObj) return false;
 
     const s = document.createElement("ha-camera-stream");
@@ -1258,9 +1254,9 @@ class FrigateViewCard extends HTMLElement {
     }
 
     const engine = s;
-    if (!commit) return { ok: true, type: streamType, engine, slot };
+    if (!commit) return { ok: true, type: "ha", engine, slot };
     this._engine = engine;
-    this._setActiveStreamType(streamType);
+    this._setActiveStreamType("ha");
     this._setStreamLoading(false);
     this._setStreamFallbackVisible(false);
     return true;
@@ -1293,7 +1289,7 @@ class FrigateViewCard extends HTMLElement {
   _streamAttemptSlot(host = null) {
     const slot = document.createElement("div");
     slot.style.cssText =
-      "position:absolute;inset:0;visibility:hidden;pointer-events:none;overflow:hidden;";
+      "position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden;";
     if (host) host.appendChild(slot);
     return slot;
   }
@@ -1307,7 +1303,7 @@ class FrigateViewCard extends HTMLElement {
         } catch (_) {}
       }
     }
-    result.slot.style.visibility = "visible";
+    result.slot.style.opacity = "1";
     result.slot.style.pointerEvents = "auto";
     result.slot.style.overflow = "hidden";
     this._engine = result.engine;
@@ -1350,76 +1346,34 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _buildLiveStreamAttempts(connectionType, forcedType = null, hostSlot = null) {
+    if (connectionType === "ha_direct") return [];
     const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
-    const isHaDirect = connectionType === "ha_direct";
-    const build = isHaDirect
-      ? {
-          webrtc: () =>
-            this._tryMountHaDirect(
-              hiddenSlot(),
-              "webrtc",
-              {
-                waitMs: 8000,
-                minCurrentTime: 0.05,
-                minDecodedFrames: 1,
-                requireReadyState: 0,
-                strict: false,
-              },
-              { commit: false },
-            ),
-          mse: () =>
-            this._tryMountHaDirect(
-              hiddenSlot(),
-              "mse",
-              {
-                waitMs: 7000,
-                minCurrentTime: 0.05,
-                minDecodedFrames: 1,
-                requireReadyState: 2,
-                strict: false,
-              },
-              { commit: false },
-            ),
-          hls: () =>
-            this._tryMountHaDirect(
-              hiddenSlot(),
-              "hls",
-              {
-                waitMs: 5000,
-                minCurrentTime: 0.05,
-                minDecodedFrames: 1,
-                requireReadyState: 2,
-                strict: false,
-              },
-              { commit: false },
-            ),
-        }
-      : {
-          webrtc: () =>
-            this._tryMountGo2RTCWebRTC(
-              hiddenSlot(),
-              { waitMs: 7000 },
-              { commit: false },
-            ),
-          mse: () =>
-            this._tryMountGo2RTCMSE(
-              hiddenSlot(),
-              {
-                waitMs: 7000,
-                minCurrentTime: 0.05,
-                minDecodedFrames: 1,
-                requireReadyState: 2,
-                strict: false,
-              },
-              { commit: false },
-            ),
-          hls: () =>
-            this._tryMountGo2RTCHLS(
-              hiddenSlot(),
-              { waitMs: 5000 },
-              { commit: false },
-            ),
-        };
+    const build = {
+      webrtc: () =>
+        this._tryMountGo2RTCWebRTC(
+          hiddenSlot(),
+          { waitMs: 7000 },
+          { commit: false },
+        ),
+      mse: () =>
+        this._tryMountGo2RTCMSE(
+          hiddenSlot(),
+          {
+            waitMs: 7000,
+            minCurrentTime: 0.05,
+            minDecodedFrames: 1,
+            requireReadyState: 2,
+            strict: false,
+          },
+          { commit: false },
+        ),
+      hls: () =>
+        this._tryMountGo2RTCHLS(
+          hiddenSlot(),
+          { waitMs: 5000 },
+          { commit: false },
+        ),
+    };
 
     const order = forcedType ? [forcedType] : ["webrtc", "mse", "hls"];
     return order
@@ -2282,6 +2236,24 @@ class FrigateViewCard extends HTMLElement {
       }
 
       const connectionType = this._cameraConnectionType(entity);
+      if (connectionType === "ha_direct") {
+        if (
+          await this._tryMountHaDirect(slot, {
+            waitMs: 8000,
+            minCurrentTime: 0.05,
+            minDecodedFrames: 1,
+            requireReadyState: 0,
+            strict: false,
+          })
+        ) {
+          return;
+        }
+
+        this._setActiveStreamType("snapshot");
+        this._setStreamLoading(false);
+        this._setStreamFallbackVisible(true);
+        return;
+      }
       const attempts = this._buildLiveStreamAttempts(
         connectionType,
         forcedType,
