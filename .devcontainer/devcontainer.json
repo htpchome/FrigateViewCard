@@ -21,13 +21,54 @@
         "keesschollaart.vscode-home-assistant",
         "ms-azuretools.vscode-docker",
         "saoudrizwan.cline",
-        "saoudrizwan.claude-dev"
+        "saoudrizwan.claude-dev",
+        "GitHub.copilot-chat"
       ],
       "settings": {
+        "chat.mcp.enabled": true,
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "files.associations": {
           "*.yaml": "yaml"
+        },
+        "mcp.servers": {
+          // Official Model Context Protocol Sequential Thinking Server
+          "sequential-thinking": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+          },
+
+          // Microsoft Playwright MCP Server (--headless flag is recommended for background execution)
+          "playwright": {
+            "command": "npx",
+            "args": [
+              "-y",
+              "@playwright/mcp@latest",
+              "--headless",
+              "--browser",
+              "chromium"
+            ]
+          },
+
+          // Firecrawl Web Scraping & Crawling MCP Server
+          "firecrawl": {
+            "command": "npx",
+            "args": ["-y", "firecrawl-mcp"],
+            "env": {
+              // Pass host environment variables straight down safely into the container runtime
+              "FIRECRAWL_API_KEY": "${localEnv:FIRECRAWL_API_KEY}"
+            }
+          },
+
+          // Official Postman API Collections Explorer MCP Server
+          "postman": {
+            "command": "npx",
+            "args": ["-y", "@postman/postman-mcp-server"],
+            "env": {
+              // Pass host environment variables straight down safely into the container runtime
+              "POSTMAN_API_KEY": "${localEnv:POSTMAN_API_KEY}"
+            }
+          }
         }
       }
     }
