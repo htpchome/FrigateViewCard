@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.75";
+const VERSION = "1.0.76";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -4472,14 +4472,26 @@ class FrigateViewCard extends HTMLElement {
     const step = (item?.getBoundingClientRect?.().width || 132) + 8;
     row.scrollBy({ left: step * (dir < 0 ? -1 : 1), behavior: "smooth" });
   }
-  _renderPopupMedia({ playingId, html, fullscreenKind, infoEvent, infoOpts }) {
+  _renderPopupMedia({
+    playingId,
+    html,
+    mediaElement,
+    fullscreenKind,
+    infoEvent,
+    infoOpts,
+  }) {
     this._enter();
     this._playing = playingId ? { id: playingId } : null;
     this._popupMediaType = String(
       infoOpts?.mediaType || fullscreenKind || "",
     ).toLowerCase();
     const viewer = this._$("#viewer");
-    viewer.innerHTML = html;
+    viewer.innerHTML = "";
+    if (mediaElement instanceof Element) {
+      viewer.appendChild(mediaElement);
+    } else {
+      viewer.innerHTML = html || "";
+    }
     const body = this._$("#myPopup")?.querySelector(".popup-body");
     if (body) body.scrollTop = 0;
     this._ensurePopupFullscreenButton(fullscreenKind);
@@ -4504,12 +4516,24 @@ class FrigateViewCard extends HTMLElement {
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
   }
+  _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
+    const video = document.createElement("video");
+    video.controls = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.preload = "metadata";
+    video.muted = muted;
+    if (autoplay) video.autoplay = true;
+    video.src = src;
+    return video;
+  }
   _showClip(ev, opts = {}) {
     const src = this._media(ev.id, isIOS ? "master.m3u8" : "clip.mp4");
     const mediaType = opts.mediaType || "clip";
     this._renderPopupMedia({
       playingId: ev.id,
-      html: `<video controls autoplay muted playsinline><source src="${src}" /></video>`,
+      mediaElement: this._buildPopupVideo(src),
       fullscreenKind: mediaType,
       infoEvent: ev,
       infoOpts: { mediaType },
@@ -4520,7 +4544,7 @@ class FrigateViewCard extends HTMLElement {
     const src = this._media(id, isIOS ? "master.m3u8" : "clip.mp4");
     this._renderPopupMedia({
       playingId: id,
-      html: `<video controls autoplay muted playsinline><source src="${src}" /></video>`,
+      mediaElement: this._buildPopupVideo(src),
       fullscreenKind: opts.mediaType || "clip",
       infoEvent: this._findEventById(id),
       infoOpts: {
