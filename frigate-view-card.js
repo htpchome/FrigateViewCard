@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.79";
+const VERSION = "1.0.80";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1290,10 +1290,11 @@ class FrigateViewCard extends HTMLElement {
     this._engine = null;
   }
 
-  _streamAttemptSlot() {
+  _streamAttemptSlot(host = null) {
     const slot = document.createElement("div");
     slot.style.cssText =
       "position:absolute;inset:0;visibility:hidden;pointer-events:none;overflow:hidden;";
+    if (host) host.appendChild(slot);
     return slot;
   }
 
@@ -1303,6 +1304,9 @@ class FrigateViewCard extends HTMLElement {
     while (result.slot.firstChild) {
       targetSlot.appendChild(result.slot.firstChild);
     }
+    try {
+      result.slot.remove();
+    } catch (_) {}
     this._engine = result.engine;
     this._engineMountedMuted = this._streamMuted;
     this._setActiveStreamType(result.type);
@@ -1342,8 +1346,8 @@ class FrigateViewCard extends HTMLElement {
     });
   }
 
-  _buildLiveStreamAttempts(connectionType, forcedType = null) {
-    const hiddenSlot = () => this._streamAttemptSlot();
+  _buildLiveStreamAttempts(connectionType, forcedType = null, hostSlot = null) {
+    const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
     const isHaDirect = connectionType === "ha_direct";
     const build = isHaDirect
       ? {
@@ -1444,6 +1448,9 @@ class FrigateViewCard extends HTMLElement {
 
     if (mountToken !== this._mountSeq) {
       if (winner?.engine?.destroy) winner.engine.destroy();
+      try {
+        winner?.slot?.remove?.();
+      } catch (_) {}
       return false;
     }
 
@@ -1453,6 +1460,9 @@ class FrigateViewCard extends HTMLElement {
         if (!result?.ok || result.type === winner?.type) continue;
         try {
           result.engine?.destroy?.();
+        } catch (_) {}
+        try {
+          result.slot?.remove?.();
         } catch (_) {}
       }
       this._pendingMountDestroyers = [];
@@ -1488,6 +1498,9 @@ class FrigateViewCard extends HTMLElement {
               try {
                 result?.engine?.destroy?.();
               } catch (_) {}
+              try {
+                result?.slot?.remove?.();
+              } catch (_) {}
             }
             return;
           }
@@ -1518,6 +1531,9 @@ class FrigateViewCard extends HTMLElement {
               try {
                 result?.engine?.destroy?.();
               } catch (_) {}
+              try {
+                result?.slot?.remove?.();
+              } catch (_) {}
             });
           });
         this._pendingMountDestroyers = [
@@ -1536,6 +1552,9 @@ class FrigateViewCard extends HTMLElement {
               attempt.promise.then((result) => {
                 try {
                   result?.engine?.destroy?.();
+                } catch (_) {}
+                try {
+                  result?.slot?.remove?.();
                 } catch (_) {}
               });
             }),
@@ -2263,6 +2282,7 @@ class FrigateViewCard extends HTMLElement {
       const attempts = this._buildLiveStreamAttempts(
         connectionType,
         forcedType,
+        slot,
       );
       if (await this._mountLiveWithRace(slot, attempts, mountToken)) return;
 
