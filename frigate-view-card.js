@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.59";
+const VERSION = "1.0.60";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -365,7 +365,7 @@ const STYLES = `
   .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
     border-bottom:1px solid var(--c-border);}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
-  .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;} 
+  .stats{display:flex;flex-wrap: wrap;gap:16px;justify-self:end;margin-left:auto;justify-self:end;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
   .sv{font-size:1.05rem;font-weight:700;color:var(--c-acc-bdr);} .sl{font-size:0.75rem;color:var(--c-text4);text-transform:uppercase;letter-spacing:.06em;}
   .info-mute{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:7px;color:var(--c-text2);cursor:pointer;flex-shrink:0;}
@@ -494,25 +494,27 @@ const STYLES = `
 .recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);z-index:4;}
 .recording-scrub-labels {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--c-text2);font-weight:600;line-height:1;}
 .recording-scrub-now {font-variant-numeric:tabular-nums;}
-.popup-media-controls {display:grid;grid-template-columns:4px 36px minmax(0,1fr) 36px 36px 4px;grid-template-areas:"sp1 play progress mute fs sp2" ". . time . . .";align-items:center;column-gap:6px;row-gap:0;padding:2px 6px 3px;border-radius:8px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
+.popup-media-controls {display:grid;grid-template-columns:2px 36px minmax(0,1fr) 36px 36px 2px;grid-template-areas:"sp1 play progress mute fs sp2" ". . time . . .";align-items:center;column-gap:5px;row-gap:0;padding:1px 4px 2px;border-radius:8px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
 .popup-media-controls[hidden] {display:none !important;}
-.popup-media-controls-spacer {width:4px;}
+.popup-media-controls-spacer {width:2px;}
 .popup-media-controls-spacer:first-child {grid-area:sp1;}
 .popup-media-controls-spacer:last-child {grid-area:sp2;}
 .popup-media-btn {width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:7px;color:var(--c-text2);cursor:pointer;flex-shrink:0;}
 .popup-media-btn:hover {color:var(--c-acc-bdr);border-color:var(--c-acc-bdr);}
 .popup-media-btn svg {width:20px;height:20px;}
-.popup-media-progress {grid-area:progress;min-width:0;width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:var(--c-bg-main);outline:none;transform:translateY(-15%);}
+.popup-media-progress {grid-area:progress;min-width:0;width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:var(--c-bg-main);outline:none;transform:translateY(-20%);}
 .popup-media-progress::-webkit-slider-runnable-track {height:6px;border-radius:999px;background:var(--c-bg-main);}
 .popup-media-progress::-webkit-slider-thumb {-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--c-primary);border:1px solid var(--c-acc-bdr);margin-top:-4px;}
 .popup-media-progress::-moz-range-track {height:6px;border-radius:999px;background:var(--c-bg-main);}
 .popup-media-progress::-moz-range-thumb {width:14px;height:14px;border-radius:50%;background:var(--c-primary);border:1px solid var(--c-acc-bdr);}
-.popup-media-time {grid-area:time;min-width:0;text-align:left;font-size:.78rem;color:var(--c-text2);font-variant-numeric:tabular-nums;line-height:.95;margin-top:-6px;}
+.popup-media-time {grid-area:time;min-width:0;text-align:left;font-size:.76rem;color:var(--c-text2);font-variant-numeric:tabular-nums;line-height:.9;margin-top:-8px;}
 .popup-media-btn#popup-media-play {grid-area:play;}
 .popup-media-btn#popup-media-mute {grid-area:mute;}
 .popup-media-btn#popup-media-fs {grid-area:fs;}
 .card.mobile-rotate-popup .popup-media-controls,
-.card.mobile-rotate-popup-exit .popup-media-controls {position:fixed;left:10px;right:10px;bottom:4px;width:auto;z-index:1406;background:var(--c-bg-panel);opacity:.78;backdrop-filter:blur(3px);transition:opacity .22s ease;}
+.card.mobile-rotate-popup-exit .popup-media-controls {position:fixed;left:10px;right:10px;bottom:1px;width:auto;z-index:1406;background:var(--c-bg-panel);opacity:.62;backdrop-filter:blur(3px);transition:opacity .22s ease;}
+.card.mobile-rotate-popup .popup-media-btn#popup-media-fs,
+.card.mobile-rotate-popup-exit .popup-media-btn#popup-media-fs {display:none !important;}
 .card.mobile-rotate-popup .popup-media-controls.is-hidden,
 .card.mobile-rotate-popup-exit .popup-media-controls.is-hidden {opacity:0;pointer-events:none;}
 
@@ -2511,13 +2513,8 @@ class FrigateViewCard extends HTMLElement {
                 <span class="section-label" id="tl-range">${subtitle}</span>
               </div>
               <div class="stats">
-                <div class="stat">
-                  <div class="sv">v${VERSION}</div>
-                  <div class="sl">Version</div></div>
-                  <div class="stat">
-                  <div class="sv stream-type" id="stream-type">--</div>
-                  <div class="sl">Stream</div>
-                </div>
+                                <div class="stat"><div class="sv">v${VERSION}</div><div class="sl">Version</div></div>
+                                <div class="stat"><div class="sv stream-type" id="stream-type">--</div><div class="sl">Stream</div></div>
                 <button class="info-mute" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
                 <div class="stat">
                   <div class="sv" id="ev-count">—</div>
@@ -3979,6 +3976,7 @@ class FrigateViewCard extends HTMLElement {
   _syncFullscreenButtonsVisibility() {
     const liveBtn = this._$("#live-fs-btn");
     const popupBtn = this._$("#popup-fs-btn");
+    const popupControlsFsBtn = this._$("#popup-media-fs");
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     const isFullscreen = !!(
       document.fullscreenElement || document.webkitFullscreenElement
@@ -3989,6 +3987,8 @@ class FrigateViewCard extends HTMLElement {
     if (popupBtn)
       popupBtn.hidden =
         isFullscreen || this._rotateOverlayMode === "popup" || suppressPopupBtn;
+    if (popupControlsFsBtn)
+      popupControlsFsBtn.hidden = this._rotateOverlayMode === "popup";
   }
 
   _open(id) {
