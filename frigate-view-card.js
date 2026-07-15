@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.70";
+const VERSION = "1.0.71";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -662,6 +662,7 @@ class FrigateViewCard extends HTMLElement {
     this._engineMountedMuted = true;
     this._mountInProgress = false;
     this._mountTargetEntity = "";
+    this._domShadowOriginalStyles = new Map();
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
         this._scheduleResumeLive("doc-visible");
@@ -703,7 +704,67 @@ class FrigateViewCard extends HTMLElement {
         this._syncColHeight();
       }
     }
+    this._syncCardShellClasses();
+    this._syncDomShadows();
     this._scheduleRotateOverlayUpdate();
+  }
+
+  _syncCardShellClasses() {
+    const card = this.shadowRoot?.querySelector("#card");
+    if (!card) return;
+    card.classList.toggle("theme-light", this._config?.theme === "light");
+    card.classList.toggle("theme-future", this._config?.theme === "future");
+    card.classList.toggle("shadows-off", this._config?.shadows === false);
+  }
+
+  _restoreDomShadowStyles() {
+    for (const [el, original] of this._domShadowOriginalStyles.entries()) {
+      if (!(el instanceof HTMLElement)) continue;
+      el.style.boxShadow = original.boxShadow;
+      el.style.borderRadius = original.borderRadius;
+    }
+    this._domShadowOriginalStyles.clear();
+  }
+
+  _collectDomShadowTargets() {
+    const targets = new Set();
+    targets.add(this);
+    if (this.parentElement) targets.add(this.parentElement);
+
+    let node = this;
+    let depth = 0;
+    while (node && depth < 8) {
+      const root = node.getRootNode?.();
+      if (!(root instanceof ShadowRoot)) break;
+      const host = root.host;
+      if (!(host instanceof HTMLElement)) break;
+      const tag = host.tagName;
+      if (
+        tag === "HUI-CARD" ||
+        tag === "HUI-CARD-OPTIONS" ||
+        tag === "HA-CARD"
+      ) {
+        targets.add(host);
+      }
+      node = host;
+      depth += 1;
+    }
+    return [...targets].filter((el) => el instanceof HTMLElement);
+  }
+
+  _syncDomShadows() {
+    this._restoreDomShadowStyles();
+    if (this._config?.shadows === false) return;
+    for (const el of this._collectDomShadowTargets()) {
+      this._domShadowOriginalStyles.set(el, {
+        boxShadow: el.style.boxShadow,
+        borderRadius: el.style.borderRadius,
+      });
+      el.style.boxShadow = "var(--ha-box-shadow-m)";
+      if (!el.style.borderRadius) {
+        el.style.borderRadius = "var(--ha-card-border-radius, 12px)";
+      }
+    }
   }
 
   _syncColHeight() {
@@ -876,6 +937,8 @@ class FrigateViewCard extends HTMLElement {
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
     };
     this._config = nextConfig;
+    this._syncCardShellClasses();
+    this._syncDomShadows();
     this._browseOpen = this._config.browse_expanded;
     for (const c of cameras) {
       if (!this._camCache[c.entity]) this._camCache[c.entity] = mkCamState();
@@ -1012,6 +1075,7 @@ class FrigateViewCard extends HTMLElement {
       this.parentElement.style.height = this._parentOrigStyle.height;
       this.parentElement.style.margin = this._parentOrigStyle.margin;
     }
+    this._restoreDomShadowStyles();
     this._cleanupEngine();
   }
   // ── init ─────────────────────────────────────────────────
