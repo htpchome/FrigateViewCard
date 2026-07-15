@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.82";
+const VERSION = "1.0.83";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1208,10 +1208,6 @@ class FrigateViewCard extends HTMLElement {
     return { ...raw, attributes: attrs };
   }
 
-  _cameraStateObj(entity) {
-    return this._hass?.states?.[entity] || null;
-  }
-
   async _tryMountHaDirect(slot, startup = null, options = {}) {
     const waitMs = Math.max(500, Number(startup?.waitMs ?? 8000));
     const minCurrentTime = Number(startup?.minCurrentTime ?? 0.05);
@@ -1222,7 +1218,10 @@ class FrigateViewCard extends HTMLElement {
     const entity = this._activeCam?.entity;
     if (!entity) return false;
 
-    const stateObj = this._cameraStateObj(entity);
+    const stateObj = this._hlsStateObj(
+      entity,
+      startup?.streamType || this._preferredStreamType(),
+    );
     if (!stateObj) return false;
 
     const s = document.createElement("ha-camera-stream");
