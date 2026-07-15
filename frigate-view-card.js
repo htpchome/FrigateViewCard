@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.53";
+const VERSION = "1.0.54";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -477,10 +477,11 @@ const STYLES = `
 .popup-info-head[hidden] {display: none;}
 .recording-scrub {display:flex;flex-direction:column;align-items:stretch;gap:6px;}
 .recording-scrub[hidden] {display:none;}
-.recording-scrub-track {position:relative;width:100%;height:14px;border-radius:999px;background:var(--c-green);cursor:pointer;touch-action:none;overflow:visible;}
+.recording-scrub-track {position:relative;width:100%;height:28px;border-radius:999px;background:var(--c-green);cursor:pointer;touch-action:none;overflow:visible;}
 .recording-scrub-markers {position:absolute;inset:0;}
 .recording-scrub-alert {position:absolute;top:-3px;bottom:-3px;background:var(--c-red);border-radius:999px;min-width:6px;}
 .recording-scrub-detection {position:absolute;top:-2px;bottom:-2px;background:#f59e0b;border-radius:999px;min-width:4px;opacity:.95;}
+.recording-scrub-tick {position:absolute;top:4px;bottom:4px;width:2px;background:rgba(255,255,255,.55);border-radius:999px;transform:translateX(-1px);pointer-events:none;}
 .recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);}
 .recording-scrub-labels {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--c-text2);font-weight:600;line-height:1;}
 .recording-scrub-now {font-variant-numeric:tabular-nums;}
@@ -3325,7 +3326,13 @@ class FrigateViewCard extends HTMLElement {
     let nearest = null;
     let best = Infinity;
     for (const a of alerts) {
-      if (targetSec >= a.start && targetSec <= a.end) return a.start;
+      const inAlert = targetSec >= a.start && targetSec <= a.end;
+      const duration = Math.max(0, Number(a.end || 0) - Number(a.start || 0));
+      // For long alerts let the user seek where they clicked inside the bubble.
+      if (inAlert) {
+        if (duration > 20) return null;
+        return a.start;
+      }
       const d = Math.abs(targetSec - a.start);
       if (d < best) {
         best = d;
@@ -3543,6 +3550,14 @@ class FrigateViewCard extends HTMLElement {
     if (labelEnd) labelEnd.textContent = this._fmtScrubTime(span);
     if (labelNow)
       labelNow.textContent = `${this._fmtScrubTime(0)} / ${this._fmtScrubTime(span)}`;
+
+    // Add 10-minute tick marks for visual time reference.
+    const tickStep = 10 * 60;
+    for (let t = tickStep; t < span; t += tickStep) {
+      const left = (t / span) * 100;
+      markers.innerHTML += `<span class="recording-scrub-tick" style="left:${left}%"></span>`;
+    }
+
     for (const a of alerts) {
       const left = ((a.start - start) / span) * 100;
       const width = Math.max(0.75, ((a.end - a.start) / span) * 100);
