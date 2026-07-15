@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.63";
+const VERSION = "1.0.64";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2528,8 +2528,12 @@ class FrigateViewCard extends HTMLElement {
                 <div class="stat">
                   <div class="sv stream-type" id="stream-type">--</div>
                   <div class="sl">Stream</div>
+                </div>
+                <div class="stat">
                   <div class="sv" id="ev-count">—</div>
                   <div class="sl">Events</div>
+                </div>
+                <div class="stat">
                   <div class="sv" id="on-dot" style="color:#4ade80">●</div>
                   <div class="sl" id="on-lbl">Online</div>
                 </div>
