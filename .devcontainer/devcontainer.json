@@ -23,6 +23,42 @@
         "saoudrizwan.cline",
         "saoudrizwan.claude-dev"
       ],
+      "mcp": {
+        "servers": {
+          "sequential-thinking": {
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+            "type": "stdio"
+          },
+          "microsoft/playwright-mcp": {
+            "type": "stdio",
+            "command": "npx",
+            "args": ["@playwright/mcp@latest"],
+            "gallery": "https://api.mcp.github.com",
+            "version": "0.0.1-seed"
+          },
+          "firecrawl/firecrawl-mcp-server": {
+            "type": "stdio",
+            "command": "npx",
+            "args": ["-y", "firecrawl-mcp@latest"],
+            "env": {
+              "FIRECRAWL_API_KEY": ""
+            },
+            "gallery": "https://api.mcp.github.com",
+            "version": "1.0.0"
+          },
+          "com.postman/postman-mcp-server": {
+            "type": "http",
+            "url": "https://mcp.postman.com/mcp",
+            "headers": {
+              "Authorization": "${input:Authorization}"
+            },
+            "gallery": "https://api.mcp.github.com",
+            "version": "2.11.0"
+          }
+        }
+      },
+
       "settings": {
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "esbenp.prettier-vscode",
