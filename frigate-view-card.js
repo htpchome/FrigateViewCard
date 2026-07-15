@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.50";
+const VERSION = "1.0.51";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -894,15 +894,6 @@ class FrigateViewCard extends HTMLElement {
     if (this._popupHandlers) {
       const h = this._popupHandlers;
       h.popup.removeEventListener("mousedown", h.onMouseDown);
-      h.popup.removeEventListener("touchstart", h.onTouchContain, {
-        capture: true,
-      });
-      h.popup.removeEventListener("touchmove", h.onTouchContain, {
-        capture: true,
-      });
-      h.popup.removeEventListener("touchend", h.onTouchContain, {
-        capture: true,
-      });
       h.popup.removeEventListener("touchstart", h.onTouchStart);
       document.removeEventListener("mousemove", h.onMouseMove);
       document.removeEventListener("touchmove", h.onTouchMove);
@@ -3029,15 +3020,6 @@ class FrigateViewCard extends HTMLElement {
     if (this._popupHandlers) {
       const h = this._popupHandlers;
       h.popup.removeEventListener("mousedown", h.onMouseDown);
-      h.popup.removeEventListener("touchstart", h.onTouchContain, {
-        capture: true,
-      });
-      h.popup.removeEventListener("touchmove", h.onTouchContain, {
-        capture: true,
-      });
-      h.popup.removeEventListener("touchend", h.onTouchContain, {
-        capture: true,
-      });
       h.popup.removeEventListener("touchstart", h.onTouchStart);
       document.removeEventListener("mousemove", h.onMouseMove);
       document.removeEventListener("touchmove", h.onTouchMove);
@@ -3075,27 +3057,12 @@ class FrigateViewCard extends HTMLElement {
       drag.currentY = 0;
     };
     const onMouseDown = (e) => start(e.clientY);
-    const onTouchContain = (e) => {
-      e.stopPropagation?.();
-    };
     const onTouchStart = (e) => start(e.touches[0].clientY);
     const onMouseMove = (e) => move(e.clientY);
     const onTouchMove = (e) => move(e.touches[0].clientY, e);
     const onMouseUp = () => end();
     const onTouchEnd = () => end();
     popup.addEventListener("mousedown", onMouseDown);
-    popup.addEventListener("touchstart", onTouchContain, {
-      capture: true,
-      passive: true,
-    });
-    popup.addEventListener("touchmove", onTouchContain, {
-      capture: true,
-      passive: true,
-    });
-    popup.addEventListener("touchend", onTouchContain, {
-      capture: true,
-      passive: true,
-    });
     popup.addEventListener("touchstart", onTouchStart);
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("touchmove", onTouchMove, {
@@ -3106,7 +3073,6 @@ class FrigateViewCard extends HTMLElement {
     this._popupHandlers = {
       popup,
       onMouseDown,
-      onTouchContain,
       onTouchStart,
       onMouseMove,
       onTouchMove,
@@ -3493,8 +3459,7 @@ class FrigateViewCard extends HTMLElement {
 
     const cur = Number(video.currentTime || 0);
     const diff = Math.abs(cur - relTarget);
-    const isSeekable = this._isRecordingTimeSeekable(video, relTarget);
-    const shouldFallback = !seekOk || diff > 2.0 || !isSeekable;
+    const shouldFallback = !seekOk || diff > 2.0;
 
     if (shouldFallback) {
       if (state.isFallbackLoading) return;
@@ -4089,7 +4054,26 @@ class FrigateViewCard extends HTMLElement {
     const video = viewer.querySelector("video");
     let playable = false;
     let activeSource = "";
+    const mediaCleanup = [];
     if (video) {
+      let resumeAfterNativeSeek = false;
+      const onSeeking = () => {
+        if (!video.seeking) return;
+        if (!video.paused) {
+          resumeAfterNativeSeek = true;
+          video.pause?.();
+        }
+      };
+      const onSeeked = () => {
+        if (!resumeAfterNativeSeek) return;
+        resumeAfterNativeSeek = false;
+        video.play?.().catch(() => {});
+      };
+      video.addEventListener("seeking", onSeeking);
+      video.addEventListener("seeked", onSeeked);
+      mediaCleanup.push(() => video.removeEventListener("seeking", onSeeking));
+      mediaCleanup.push(() => video.removeEventListener("seeked", onSeeked));
+
       const recPath = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
       const vodBase = `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
       const sourceCandidates = isIOS
@@ -4110,6 +4094,11 @@ class FrigateViewCard extends HTMLElement {
       }
 
       if (!playable) {
+        for (const fn of mediaCleanup) {
+          try {
+            fn();
+          } catch (_) {}
+        }
         viewer.innerHTML = '<div class="ld">Unable to load recording</div>';
         this._teardownRecordingScrub();
         const scrub = this._$("#recording-scrub");
@@ -4130,7 +4119,13 @@ class FrigateViewCard extends HTMLElement {
         sourceUrl: activeSource || video.currentSrc || video.src,
       });
     }
-    this._popupMediaCleanup = null;
+    this._popupMediaCleanup = () => {
+      for (const fn of mediaCleanup) {
+        try {
+          fn();
+        } catch (_) {}
+      }
+    };
   }
   async _signed(path) {
     try {
