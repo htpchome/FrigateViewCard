@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.54";
+const VERSION = "1.0.55";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -478,10 +478,11 @@ const STYLES = `
 .recording-scrub {display:flex;flex-direction:column;align-items:stretch;gap:6px;}
 .recording-scrub[hidden] {display:none;}
 .recording-scrub-track {position:relative;width:100%;height:28px;border-radius:999px;background:var(--c-green);cursor:pointer;touch-action:none;overflow:visible;}
-.recording-scrub-markers {position:absolute;inset:0;}
-.recording-scrub-alert {position:absolute;top:-3px;bottom:-3px;background:var(--c-red);border-radius:999px;min-width:6px;}
-.recording-scrub-detection {position:absolute;top:-2px;bottom:-2px;background:#f59e0b;border-radius:999px;min-width:4px;opacity:.95;}
-.recording-scrub-tick {position:absolute;top:4px;bottom:4px;width:2px;background:rgba(255,255,255,.55);border-radius:999px;transform:translateX(-1px);pointer-events:none;}
+.recording-scrub-ticks {position:absolute;inset:0;pointer-events:none;z-index:1;}
+.recording-scrub-markers {position:absolute;inset:0;pointer-events:none;z-index:2;}
+.recording-scrub-alert {position:absolute;top:2px;bottom:2px;background:var(--c-red);border-radius:999px;min-width:8px;opacity:.95;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset;}
+.recording-scrub-detection {position:absolute;top:4px;bottom:4px;background:#f59e0b;border-radius:999px;min-width:4px;opacity:.95;}
+.recording-scrub-tick {position:absolute;top:4px;bottom:4px;width:3px;background:rgba(255,255,255,.72);border-radius:999px;transform:translateX(-1px);}
 .recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);}
 .recording-scrub-labels {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--c-text2);font-weight:600;line-height:1;}
 .recording-scrub-now {font-variant-numeric:tabular-nums;}
@@ -2519,7 +2520,7 @@ class FrigateViewCard extends HTMLElement {
             <div class="popup-body">
               <div class="viewer" id="viewer" style="display:none"></div>
                                                                                                                 <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
-                            <div class="recording-scrub" id="recording-scrub" hidden><div class="recording-scrub-track" id="recording-scrub-track"><div class="recording-scrub-markers" id="recording-scrub-markers"></div><div class="recording-scrub-cursor" id="recording-scrub-cursor"></div></div><div class="recording-scrub-labels"><span id="recording-scrub-start">0:00</span><span class="recording-scrub-now" id="recording-scrub-now">0:00 / 0:00</span><span id="recording-scrub-end">0:00</span></div></div>
+                            <div class="recording-scrub" id="recording-scrub" hidden><div class="recording-scrub-track" id="recording-scrub-track"><div class="recording-scrub-ticks" id="recording-scrub-ticks"></div><div class="recording-scrub-markers" id="recording-scrub-markers"></div><div class="recording-scrub-cursor" id="recording-scrub-cursor"></div></div><div class="recording-scrub-labels"><span id="recording-scrub-start">0:00</span><span class="recording-scrub-now" id="recording-scrub-now">0:00 / 0:00</span><span id="recording-scrub-end">0:00</span></div></div>
                             <div class="popup-info" id="popup-info" hidden></div>
                             <h1 class="popup-shell-ver" id="popup-shell-ver">v${VERSION}</h1>
             </div>
@@ -3526,6 +3527,7 @@ class FrigateViewCard extends HTMLElement {
   }) {
     const scrub = this._$("#recording-scrub");
     const track = this._$("#recording-scrub-track");
+    const ticks = this._$("#recording-scrub-ticks");
     const markers = this._$("#recording-scrub-markers");
     const cursor = this._$("#recording-scrub-cursor");
     const labelStart = this._$("#recording-scrub-start");
@@ -3535,6 +3537,7 @@ class FrigateViewCard extends HTMLElement {
 
     this._teardownRecordingScrub();
     scrub.hidden = false;
+    if (ticks) ticks.innerHTML = "";
     markers.innerHTML = "";
 
     const alerts = await this._fetchRecordingAlerts(
@@ -3553,9 +3556,10 @@ class FrigateViewCard extends HTMLElement {
 
     // Add 10-minute tick marks for visual time reference.
     const tickStep = 10 * 60;
+    const tickLayer = ticks || markers;
     for (let t = tickStep; t < span; t += tickStep) {
       const left = (t / span) * 100;
-      markers.innerHTML += `<span class="recording-scrub-tick" style="left:${left}%"></span>`;
+      tickLayer.innerHTML += `<span class="recording-scrub-tick" style="left:${left}%"></span>`;
     }
 
     for (const a of alerts) {
@@ -3650,6 +3654,7 @@ class FrigateViewCard extends HTMLElement {
       track.removeEventListener("touchmove", onTouchConsume);
       track.removeEventListener("touchend", onTouchConsume);
       video.removeEventListener("timeupdate", onTime);
+      if (ticks) ticks.innerHTML = "";
       markers.innerHTML = "";
     };
   }
