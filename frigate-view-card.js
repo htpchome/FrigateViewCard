@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.57";
+const VERSION = "1.0.58";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -478,7 +478,7 @@ const STYLES = `
 .popup-close-row {position: absolute;top: 3px;right: 10px;z-index: 5;pointer-events: none;}
 .popup-close-row .close-btn {pointer-events: auto;}
 .popup-header::before {content: '';width: 40px;height: 4px;background-color: var(--handle-color);  border-radius: 3px;}
-.popup-body {padding: 0 24px 24px 24px;overflow-y: auto;flex-grow: 1;display: flex;  flex-direction: column;gap: 12px;-webkit-overflow-scrolling: touch;overscroll-behavior-y: contain;}
+.popup-body {padding: 0 24px 24px 24px;overflow-y: auto;overflow-x:hidden;flex-grow: 1;display: flex;  flex-direction: column;gap: 12px;-webkit-overflow-scrolling: touch;overscroll-behavior-y: contain;}
 .popup-shell-ver {margin: 0;font-size: 18px;font-weight: 800;line-height: 1.2;color: var(--c-text2);}
 .popup-info-head {margin: 0;font-size: 18px;font-weight: 800;color: var(--c-text2);
     line-height: 1.35;text-transform: uppercase;letter-spacing: .03em;}
@@ -494,26 +494,31 @@ const STYLES = `
 .recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);z-index:4;}
 .recording-scrub-labels {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--c-text2);font-weight:600;line-height:1;}
 .recording-scrub-now {font-variant-numeric:tabular-nums;}
-.popup-media-controls {display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:var(--c-bg-panel);border:1px solid var(--c-border2);}
+.popup-media-controls {display:grid;grid-template-columns:8px 36px minmax(0,1fr) 36px 36px 8px;grid-template-areas:"sp1 play progress mute fs sp2" ". . time . . .";align-items:center;column-gap:8px;row-gap:2px;padding:6px 10px 8px;border-radius:9px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
 .popup-media-controls[hidden] {display:none !important;}
-.popup-media-controls-spacer {width:8px;flex:0 0 8px;}
+.popup-media-controls-spacer {width:8px;}
+.popup-media-controls-spacer:first-child {grid-area:sp1;}
+.popup-media-controls-spacer:last-child {grid-area:sp2;}
 .popup-media-btn {width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:7px;color:var(--c-text2);cursor:pointer;flex-shrink:0;}
 .popup-media-btn:hover {color:var(--c-acc-bdr);border-color:var(--c-acc-bdr);}
 .popup-media-btn svg {width:20px;height:20px;}
-.popup-media-progress {flex:1 1 auto;min-width:120px;-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:var(--c-bg-main);outline:none;}
+.popup-media-progress {grid-area:progress;min-width:0;width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:var(--c-bg-main);outline:none;transform:translateY(-2px);}
 .popup-media-progress::-webkit-slider-runnable-track {height:6px;border-radius:999px;background:var(--c-bg-main);}
 .popup-media-progress::-webkit-slider-thumb {-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--c-primary);border:1px solid var(--c-acc-bdr);margin-top:-4px;}
 .popup-media-progress::-moz-range-track {height:6px;border-radius:999px;background:var(--c-bg-main);}
 .popup-media-progress::-moz-range-thumb {width:14px;height:14px;border-radius:50%;background:var(--c-primary);border:1px solid var(--c-acc-bdr);}
-.popup-media-time {min-width:82px;text-align:center;font-size:.82rem;color:var(--c-text2);font-variant-numeric:tabular-nums;}
+.popup-media-time {grid-area:time;min-width:0;text-align:left;font-size:.82rem;color:var(--c-text2);font-variant-numeric:tabular-nums;line-height:1;}
+.popup-media-btn#popup-media-play {grid-area:play;}
+.popup-media-btn#popup-media-mute {grid-area:mute;}
+.popup-media-btn#popup-media-fs {grid-area:fs;}
 .card.mobile-rotate-popup .popup-media-controls,
-.card.mobile-rotate-popup-exit .popup-media-controls {position:fixed;left:calc(var(--rotate-ox) + 10px);right:auto;bottom:calc(var(--rotate-oy) + 10px);width:calc(var(--rotate-vw) - 20px);z-index:1406;background:var(--c-bg-main);opacity:.88;backdrop-filter:blur(3px);transition:opacity .22s ease;}
+.card.mobile-rotate-popup-exit .popup-media-controls {position:fixed;left:10px;right:10px;bottom:10px;width:auto;z-index:1406;background:var(--c-bg-main);opacity:.88;backdrop-filter:blur(3px);transition:opacity .22s ease;}
 .card.mobile-rotate-popup .popup-media-controls.is-hidden,
 .card.mobile-rotate-popup-exit .popup-media-controls.is-hidden {opacity:0;pointer-events:none;}
 
 .popup-carousel-wrap {position:relative;}
 .popup-carousel-wrap[hidden] {display:none !important;}
-.popup-carousel {display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:2px 0 4px;}
+.popup-carousel {display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:2px 0 4px;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;}
 .popup-carousel::-webkit-scrollbar {height:8px;}
 .popup-carousel::-webkit-scrollbar-thumb {background:var(--c-text4);border-radius:4px;}
 .popup-carousel-item {flex:0 0 auto;width:132px;display:flex;flex-direction:column;gap:4px;background:var(--c-bg-panel-light);border:1px solid var(--c-border2);border-radius:7px;padding:4px;cursor:pointer;scroll-snap-align:start;color:var(--c-text);}
@@ -3099,6 +3104,12 @@ class FrigateViewCard extends HTMLElement {
       drag.currentY = 0;
       popup.style.transition = "none";
     };
+    const shouldIgnoreDragStart = (target) => {
+      if (!target || !(target instanceof Element)) return false;
+      return !!target.closest(
+        "#popup-media-controls, #popup-carousel-wrap, #recording-scrub, .popup-info, .viewer, input, button, a, [data-ev]",
+      );
+    };
     const move = (clientY, ev = null) => {
       const popup = this._$("#myPopup");
       if (!popup) return;
@@ -3119,8 +3130,14 @@ class FrigateViewCard extends HTMLElement {
       else popup.style.transform = "translateY(0)";
       drag.currentY = 0;
     };
-    const onMouseDown = (e) => start(e.clientY);
-    const onTouchStart = (e) => start(e.touches[0].clientY);
+    const onMouseDown = (e) => {
+      if (shouldIgnoreDragStart(e.target)) return;
+      start(e.clientY);
+    };
+    const onTouchStart = (e) => {
+      if (shouldIgnoreDragStart(e.target)) return;
+      start(e.touches[0].clientY);
+    };
     const onMouseMove = (e) => move(e.clientY);
     const onTouchMove = (e) => move(e.touches[0].clientY, e);
     const onMouseUp = () => end();
@@ -3761,6 +3778,9 @@ class FrigateViewCard extends HTMLElement {
           : "-");
     const startTs = opts.startTime ?? ev?.start_time;
     const time = startTs ? this._time(startTs) : "-";
+    const dayDate = startTs
+      ? `${this._weekday(startTs)} - ${this._monthDay(startTs, { ordinal: true })}`
+      : "-";
     const duration =
       opts.durationSec != null
         ? `${Math.max(1, Math.round(opts.durationSec))}s`
@@ -3793,6 +3813,7 @@ class FrigateViewCard extends HTMLElement {
       score,
       zone,
       objects,
+      dayDate,
       time,
       duration,
       camera,
@@ -3820,7 +3841,7 @@ class FrigateViewCard extends HTMLElement {
       if (scrub) scrub.hidden = true;
     }
 
-    head.textContent = `${cap(model.mediaType || "media")} - ${model.camera} - ${model.time}`;
+    head.textContent = `${cap(model.mediaType || "media")} - ${model.camera} - ${model.dayDate} - ${model.time}`;
     head.hidden = false;
 
     const isRecordingDl =
@@ -3839,6 +3860,7 @@ class FrigateViewCard extends HTMLElement {
             ${ev?.sub_label ? `<span class="subl">${ev.sub_label}</span>` : ""}
           </div>
           <div class="popup-info-grid">
+            <div class="popup-info-row"><span class="popup-info-k">Day/Date</span><span class="popup-info-v">${model.dayDate}</span></div>
             <div class="popup-info-row"><span class="popup-info-k">Time</span><span class="popup-info-v">${model.time}</span></div>
             <div class="popup-info-row"><span class="popup-info-k">Duration</span><span class="popup-info-v">${model.duration}</span></div>
             <div class="popup-info-row"><span class="popup-info-k">Objects</span><span class="popup-info-v">${model.objects}</span></div>
@@ -4137,15 +4159,26 @@ class FrigateViewCard extends HTMLElement {
     if (!shouldUse) return;
 
     const progress = this._$("#popup-media-progress");
+    let progressDragging = false;
     const removers = [];
     const bind = (t, e, h, o) => {
       const off = this._bindPopupMediaListener(t, e, h, o);
       if (off) removers.push(off);
     };
-    const sync = () => this._updatePopupMediaButtons(video);
+    const sync = () => {
+      const playBtn = this._$("#popup-media-play");
+      const muteBtn = this._$("#popup-media-mute");
+      const time = this._$("#popup-media-time");
+      if (playBtn) playBtn.innerHTML = !video.paused ? ICONS.pause : ICONS.play;
+      if (muteBtn) muteBtn.innerHTML = video.muted ? ICONS.volOff : ICONS.volOn;
+      if (time)
+        time.textContent = `${this._fmtScrubTime(video.currentTime || 0)}/${this._fmtScrubTime(video.duration || 0)}`;
+      if (!progressDragging) this._updatePopupMediaButtons(video);
+    };
 
     if (progress) {
       bind(progress, "input", () => {
+        progressDragging = true;
         const dur = Number(video.duration || 0);
         const next = (Number(progress.value || 0) / 1000) * dur;
         if (Number.isFinite(next) && dur > 0) {
@@ -4154,11 +4187,37 @@ class FrigateViewCard extends HTMLElement {
         this._showPopupControlsTemporarily();
         sync();
       });
+      bind(progress, "change", () => {
+        progressDragging = false;
+        this._showPopupControlsTemporarily();
+        sync();
+      });
       bind(progress, "pointerdown", () => {
+        progressDragging = true;
         if (this._popupControlsHideTimer)
           clearTimeout(this._popupControlsHideTimer);
       });
-      bind(progress, "pointerup", () => this._showPopupControlsTemporarily());
+      bind(progress, "pointerup", () => {
+        progressDragging = false;
+        this._showPopupControlsTemporarily();
+      });
+      bind(
+        progress,
+        "touchstart",
+        () => {
+          progressDragging = true;
+        },
+        { passive: true },
+      );
+      bind(
+        progress,
+        "touchend",
+        () => {
+          progressDragging = false;
+          this._showPopupControlsTemporarily();
+        },
+        { passive: true },
+      );
     }
 
     bind(controls, "pointerdown", () => {
