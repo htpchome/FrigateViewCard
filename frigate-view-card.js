@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.66";
+const VERSION = "1.0.67";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -547,7 +547,7 @@ const STYLES = `
 .popup-info-title {display: flex;align-items: center;gap: 8px;flex-wrap: wrap;}
 .popup-info-title .tb {font-size: 0.825rem;}
 .popup-grip-wrap{flex:1;}
-.popup-info-grid {display: grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap: 6px 10px;}
+.popup-info-grid {display: flex;flex-direction: row | row-reverse | column | column-reverse;}
 .popup-info-row {display: flex;align-items: baseline;gap: 6px;min-width: 0;}
 .popup-info-k {font-size: 0.75rem;color: var(--c-text3);text-transform: uppercase;
     letter-spacing: .05em;flex-shrink: 0;}
@@ -3899,7 +3899,6 @@ class FrigateViewCard extends HTMLElement {
             <span class="tb" style="background:${labelColor(ev?.label || model.mediaType)}33;color:${labelColor(ev?.label || model.mediaType)}">${model.titleLabel}</span>
             ${ev?.sub_label ? `<span class="subl">${ev.sub_label}</span>` : ""}
           </div>
-          <div class="popup-info-wrap">
           <div class="popup-info-grid">
             <div class="popup-info-row">
               <span class="popup-info-k">Day/Date</span>
@@ -3910,7 +3909,6 @@ class FrigateViewCard extends HTMLElement {
             <div class="popup-info-row"><span class="popup-info-k">Zone</span><span class="popup-info-v">${model.zone}</span></div>
             <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${model.score}</span></div>
             <div class="popup-info-row"><span class="popup-info-k">Camera</span><span class="popup-info-v">${model.camera}</span></div>
-          </div>
           </div>
           <div class="popup-info-actions">${downloadBtn}</div>
         `;
