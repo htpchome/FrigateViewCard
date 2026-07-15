@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.51";
+const VERSION = "1.0.53";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -570,6 +570,8 @@ class FrigateViewCard extends HTMLElement {
     this._recordingScrubCleanup = null;
     this._recordingScrubState = null;
     this._recordingAlertCache = new Map();
+    this._recordingHls = null;
+    this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
     this._pendingMountDestroyers = [];
     this._pendingWebRTCTakeoverTimer = null;
@@ -3388,7 +3390,7 @@ class FrigateViewCard extends HTMLElement {
     return false;
   }
 
-  async _attemptRecordingSeek(video, targetSec, timeoutMs = 1200) {
+  async _attemptRecordingSeek(video, targetSec, timeoutMs = 2500) {
     if (!video || !Number.isFinite(targetSec)) return false;
     return await new Promise((resolve) => {
       let done = false;
@@ -3441,21 +3443,20 @@ class FrigateViewCard extends HTMLElement {
     const nonce = state.seekNonce;
     const video = state.video;
 
-    // For Edge/Firefox, seeking by reloading at a fragment target is more
-    // reliable than relying on unstable seekable ranges.
+    const seekTimeout = this._isFirefox() || this._isEdge() ? 4200 : 2500;
+    const seekOk = await this._attemptRecordingSeek(
+      video,
+      relTarget,
+      seekTimeout,
+    );
+    if (nonce !== state.seekNonce) return;
+
     if (this._isFirefox() || this._isEdge()) {
-      const reloaded = await this._reloadRecordingAtTarget(state, relTarget);
-      if (!reloaded) {
-        const span = Math.max(1, state.end - state.start);
-        const fallbackStart = Math.floor(absTarget);
-        const fallbackEnd = Math.floor(absTarget + span);
-        await this._showRecording(fallbackStart, fallbackEnd);
+      if (state.resumeAfterScrub) {
+        video.play?.().catch(() => {});
       }
       return;
     }
-
-    const seekOk = await this._attemptRecordingSeek(video, relTarget);
-    if (nonce !== state.seekNonce) return;
 
     const cur = Number(video.currentTime || 0);
     const diff = Math.abs(cur - relTarget);
@@ -3480,25 +3481,6 @@ class FrigateViewCard extends HTMLElement {
     }
   }
 
-  async _reloadRecordingAtTarget(state, relTarget) {
-    if (!state?.video || !state.sourceUrlNoHash) return false;
-    if (!Number.isFinite(relTarget)) return false;
-    if (state.isFallbackLoading) return false;
-    state.isFallbackLoading = true;
-    try {
-      const target = Math.max(0, relTarget);
-      const nextSrc = `${state.sourceUrlNoHash}#t=${target.toFixed(3)}`;
-      const ok = await this._tryRecordingSource(state.video, nextSrc, {
-        autoplay: false,
-        timeoutMs: 7000,
-      });
-      if (!ok) return false;
-      if (state.resumeAfterScrub) state.video.play?.().catch(() => {});
-      return true;
-    } finally {
-      state.isFallbackLoading = false;
-    }
-  }
   async _fetchRecordingAlerts(clientId, cam, start, end) {
     const cacheKey = `${clientId}|${cam}|${Math.floor(start)}|${Math.floor(end)}`;
     if (this._recordingAlertCache.has(cacheKey)) {
@@ -3923,6 +3905,36 @@ class FrigateViewCard extends HTMLElement {
       this._popupMediaCleanup();
     } catch (_) {}
     this._popupMediaCleanup = null;
+    this._destroyRecordingHls();
+  }
+
+  _destroyRecordingHls() {
+    if (!this._recordingHls) return;
+    try {
+      this._recordingHls.destroy();
+    } catch (_) {}
+    this._recordingHls = null;
+  }
+
+  async _getHlsJsCtor() {
+    const existing = window.Hls;
+    if (existing) return existing;
+    if (!this._hlsJsCtorPromise) {
+      this._hlsJsCtorPromise = new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src =
+          "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
+        script.async = true;
+        script.onload = () => resolve(window.Hls || null);
+        script.onerror = () => resolve(null);
+        document.head.appendChild(script);
+      });
+    }
+    return await this._hlsJsCtorPromise;
+  }
+
+  _recordingPreferHls() {
+    return isIOS || this._isFirefox() || this._isEdge();
   }
   _bindPopupMediaListener(target, type, handler, options) {
     if (!target) return null;
@@ -3982,6 +3994,9 @@ class FrigateViewCard extends HTMLElement {
     { autoplay = true, timeoutMs = 9000 } = {},
   ) {
     if (!video || !src) return false;
+    const isHlsSource = /\.m3u8(?:$|\?)/i.test(src);
+    this._destroyRecordingHls();
+
     return await new Promise((resolve) => {
       let done = false;
       const finish = (ok) => {
@@ -4015,12 +4030,48 @@ class FrigateViewCard extends HTMLElement {
       video.addEventListener("loadedmetadata", onReady, { once: true });
       video.addEventListener("canplay", onReady, { once: true });
       video.addEventListener("error", onErr, { once: true });
-      try {
-        video.src = src;
-        video.load();
-      } catch (_) {
-        finish(false);
-      }
+
+      const boot = async () => {
+        try {
+          if (!isHlsSource) {
+            video.src = src;
+            video.load();
+            return;
+          }
+
+          const canNativeHls = !!video.canPlayType(
+            "application/vnd.apple.mpegurl",
+          );
+          if (canNativeHls) {
+            video.src = src;
+            video.load();
+            return;
+          }
+
+          const HlsCtor = await this._getHlsJsCtor();
+          if (!HlsCtor || !HlsCtor.isSupported?.()) {
+            finish(false);
+            return;
+          }
+
+          const hls = new HlsCtor({
+            enableWorker: true,
+            maxBufferLength: 60,
+            backBufferLength: 90,
+          });
+          this._recordingHls = hls;
+          hls.on(HlsCtor.Events.ERROR, (_evt, data) => {
+            if (data?.fatal) finish(false);
+          });
+          hls.attachMedia(video);
+          hls.on(HlsCtor.Events.MEDIA_ATTACHED, () => {
+            hls.loadSource(src);
+          });
+        } catch (_) {
+          finish(false);
+        }
+      };
+      void boot();
     });
   }
 
@@ -4076,7 +4127,7 @@ class FrigateViewCard extends HTMLElement {
 
       const recPath = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
       const vodBase = `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
-      const sourceCandidates = isIOS
+      const sourceCandidates = this._recordingPreferHls()
         ? [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`, recPath]
         : [recPath, `${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`];
 
