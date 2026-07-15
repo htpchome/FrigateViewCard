@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.58";
+const VERSION = "1.0.59";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -478,7 +478,7 @@ const STYLES = `
 .popup-close-row {position: absolute;top: 3px;right: 10px;z-index: 5;pointer-events: none;}
 .popup-close-row .close-btn {pointer-events: auto;}
 .popup-header::before {content: '';width: 40px;height: 4px;background-color: var(--handle-color);  border-radius: 3px;}
-.popup-body {padding: 0 24px 24px 24px;overflow-y: auto;overflow-x:hidden;flex-grow: 1;display: flex;  flex-direction: column;gap: 12px;-webkit-overflow-scrolling: touch;overscroll-behavior-y: contain;}
+.popup-body {padding: 0 24px 24px 24px;overflow-y: auto;overflow-x:hidden;flex-grow: 1;display: flex;  flex-direction: column;gap: 8px;-webkit-overflow-scrolling: touch;overscroll-behavior-y: contain;}
 .popup-shell-ver {margin: 0;font-size: 18px;font-weight: 800;line-height: 1.2;color: var(--c-text2);}
 .popup-info-head {margin: 0;font-size: 18px;font-weight: 800;color: var(--c-text2);
     line-height: 1.35;text-transform: uppercase;letter-spacing: .03em;}
@@ -494,25 +494,25 @@ const STYLES = `
 .recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);z-index:4;}
 .recording-scrub-labels {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--c-text2);font-weight:600;line-height:1;}
 .recording-scrub-now {font-variant-numeric:tabular-nums;}
-.popup-media-controls {display:grid;grid-template-columns:8px 36px minmax(0,1fr) 36px 36px 8px;grid-template-areas:"sp1 play progress mute fs sp2" ". . time . . .";align-items:center;column-gap:8px;row-gap:2px;padding:6px 10px 8px;border-radius:9px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
+.popup-media-controls {display:grid;grid-template-columns:4px 36px minmax(0,1fr) 36px 36px 4px;grid-template-areas:"sp1 play progress mute fs sp2" ". . time . . .";align-items:center;column-gap:6px;row-gap:0;padding:2px 6px 3px;border-radius:8px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
 .popup-media-controls[hidden] {display:none !important;}
-.popup-media-controls-spacer {width:8px;}
+.popup-media-controls-spacer {width:4px;}
 .popup-media-controls-spacer:first-child {grid-area:sp1;}
 .popup-media-controls-spacer:last-child {grid-area:sp2;}
 .popup-media-btn {width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:7px;color:var(--c-text2);cursor:pointer;flex-shrink:0;}
 .popup-media-btn:hover {color:var(--c-acc-bdr);border-color:var(--c-acc-bdr);}
 .popup-media-btn svg {width:20px;height:20px;}
-.popup-media-progress {grid-area:progress;min-width:0;width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:var(--c-bg-main);outline:none;transform:translateY(-2px);}
+.popup-media-progress {grid-area:progress;min-width:0;width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:var(--c-bg-main);outline:none;transform:translateY(-15%);}
 .popup-media-progress::-webkit-slider-runnable-track {height:6px;border-radius:999px;background:var(--c-bg-main);}
 .popup-media-progress::-webkit-slider-thumb {-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--c-primary);border:1px solid var(--c-acc-bdr);margin-top:-4px;}
 .popup-media-progress::-moz-range-track {height:6px;border-radius:999px;background:var(--c-bg-main);}
 .popup-media-progress::-moz-range-thumb {width:14px;height:14px;border-radius:50%;background:var(--c-primary);border:1px solid var(--c-acc-bdr);}
-.popup-media-time {grid-area:time;min-width:0;text-align:left;font-size:.82rem;color:var(--c-text2);font-variant-numeric:tabular-nums;line-height:1;}
+.popup-media-time {grid-area:time;min-width:0;text-align:left;font-size:.78rem;color:var(--c-text2);font-variant-numeric:tabular-nums;line-height:.95;margin-top:-6px;}
 .popup-media-btn#popup-media-play {grid-area:play;}
 .popup-media-btn#popup-media-mute {grid-area:mute;}
 .popup-media-btn#popup-media-fs {grid-area:fs;}
 .card.mobile-rotate-popup .popup-media-controls,
-.card.mobile-rotate-popup-exit .popup-media-controls {position:fixed;left:10px;right:10px;bottom:10px;width:auto;z-index:1406;background:var(--c-bg-main);opacity:.88;backdrop-filter:blur(3px);transition:opacity .22s ease;}
+.card.mobile-rotate-popup-exit .popup-media-controls {position:fixed;left:10px;right:10px;bottom:4px;width:auto;z-index:1406;background:var(--c-bg-panel);opacity:.78;backdrop-filter:blur(3px);transition:opacity .22s ease;}
 .card.mobile-rotate-popup .popup-media-controls.is-hidden,
 .card.mobile-rotate-popup-exit .popup-media-controls.is-hidden {opacity:0;pointer-events:none;}
 
@@ -3036,6 +3036,8 @@ class FrigateViewCard extends HTMLElement {
     if (!popup) return;
     popup.classList.add("is-open");
     popup.style.transform = "translateY(0)";
+    const body = popup.querySelector(".popup-body");
+    if (body) body.scrollTop = 0;
     this._syncFullscreenButtonsVisibility();
     this._scheduleRotateOverlayUpdate();
   }
@@ -4326,11 +4328,15 @@ class FrigateViewCard extends HTMLElement {
     row.innerHTML = events
       .map((ev) => this._carouselEventItem(ev, activeId))
       .join("");
+    row.scrollLeft = 0;
     wrap.hidden = false;
     wrap.classList.toggle("touch", this._isTouchPopupUi());
     requestAnimationFrame(() => {
       const active = row.querySelector(".popup-carousel-item.active");
-      active?.scrollIntoView({ block: "nearest", inline: "center" });
+      if (active) {
+        const left = Math.max(0, active.offsetLeft - 8);
+        row.scrollLeft = left;
+      }
     });
   }
   _scrollPopupCarousel(dir = 1) {
@@ -4348,6 +4354,8 @@ class FrigateViewCard extends HTMLElement {
     ).toLowerCase();
     const viewer = this._$("#viewer");
     viewer.innerHTML = html;
+    const body = this._$("#myPopup")?.querySelector(".popup-body");
+    if (body) body.scrollTop = 0;
     this._ensurePopupFullscreenButton(fullscreenKind);
     this._renderPopupInfo(infoEvent, infoOpts);
     const video = viewer.querySelector("video");
