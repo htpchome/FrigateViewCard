@@ -7,13 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.45";
-
-import {
-  LitElement,
-  html,
-  css,
-} from "https://cdn.jsdelivr.net/gh/lit/dist@3/core/lit-core.min.js";
+const VERSION = "1.0.46";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
