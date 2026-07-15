@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.46";
+const VERSION = "1.0.47";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3289,11 +3289,108 @@ class FrigateViewCard extends HTMLElement {
 
     const rel = Number(state.pendingRelTarget);
     if (!Number.isFinite(rel)) return;
-    try {
-      state.video.currentTime = rel;
-    } catch (_) {}
+    void this._commitRecordingSeek(state, rel, target.absTarget);
+  }
+
+  _isRecordingTimeSeekable(video, targetSec, toleranceSec = 0.35) {
+    if (!video || !Number.isFinite(targetSec)) return false;
+    const ranges = video.seekable;
+    if (!ranges || !ranges.length) return false;
+    for (let i = 0; i < ranges.length; i++) {
+      const start = Number(ranges.start(i));
+      const end = Number(ranges.end(i));
+      if (
+        Number.isFinite(start) &&
+        Number.isFinite(end) &&
+        targetSec >= start - toleranceSec &&
+        targetSec <= end + toleranceSec
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  async _attemptRecordingSeek(video, targetSec, timeoutMs = 1200) {
+    if (!video || !Number.isFinite(targetSec)) return false;
+    return await new Promise((resolve) => {
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve(ok);
+      };
+      const verify = () => {
+        const cur = Number(video.currentTime || 0);
+        const diff = Math.abs(cur - targetSec);
+        // Accept when near target or clearly advanced in the right direction.
+        finish(diff <= 1.5 || cur >= targetSec - 1.0);
+      };
+      const onDone = () => verify();
+      const onError = () => finish(false);
+      const cleanup = () => {
+        clearTimeout(timer);
+        video.removeEventListener("seeked", onDone);
+        video.removeEventListener("timeupdate", onDone);
+        video.removeEventListener("error", onError);
+      };
+      const timer = setTimeout(() => verify(), timeoutMs);
+
+      video.addEventListener("seeked", onDone, { once: true });
+      video.addEventListener("timeupdate", onDone, { once: true });
+      video.addEventListener("error", onError, { once: true });
+
+      try {
+        if (typeof video.fastSeek === "function" && !this._isEdge()) {
+          video.fastSeek(targetSec);
+        } else {
+          video.currentTime = targetSec;
+        }
+      } catch (_) {
+        finish(false);
+      }
+    });
+  }
+
+  async _commitRecordingSeek(state, relTarget, absTarget) {
+    if (
+      !state?.video ||
+      !Number.isFinite(relTarget) ||
+      !Number.isFinite(absTarget)
+    )
+      return;
+
+    state.seekNonce = Number(state.seekNonce || 0) + 1;
+    const nonce = state.seekNonce;
+    const video = state.video;
+
+    const seekOk = await this._attemptRecordingSeek(video, relTarget);
+    if (nonce !== state.seekNonce) return;
+
+    const cur = Number(video.currentTime || 0);
+    const diff = Math.abs(cur - relTarget);
+    const isSeekable = this._isRecordingTimeSeekable(video, relTarget);
+    const shouldFallback =
+      !seekOk ||
+      diff > 2.0 ||
+      (!isSeekable && (this._isFirefox() || this._isEdge()));
+
+    if (shouldFallback) {
+      if (state.isFallbackLoading) return;
+      state.isFallbackLoading = true;
+      try {
+        // Firefox/Edge can expose only buffered seek ranges for this endpoint.
+        // Reloading from the requested absolute timestamp gives consistent forward seeks.
+        await this._showRecording(Math.floor(absTarget), Math.floor(state.end));
+      } finally {
+        state.isFallbackLoading = false;
+      }
+      return;
+    }
+
     if (state.resumeAfterScrub) {
-      state.video.play?.().catch(() => {});
+      video.play?.().catch(() => {});
     }
   }
   async _fetchRecordingAlerts(clientId, cam, start, end) {
@@ -3351,7 +3448,12 @@ class FrigateViewCard extends HTMLElement {
     };
     let dragging = false;
     let lastRatio = 0;
+    const consumeGesture = (ev) => {
+      ev.preventDefault?.();
+      ev.stopPropagation?.();
+    };
     const onPointerDown = (ev) => {
+      consumeGesture(ev);
       dragging = true;
       state.isScrubbing = true;
       state.resumeAfterScrub = !video.paused;
@@ -3362,15 +3464,22 @@ class FrigateViewCard extends HTMLElement {
     };
     const onPointerMove = (ev) => {
       if (!dragging) return;
+      consumeGesture(ev);
       lastRatio = clientXToRatio(ev.clientX);
       this._seekRecordingScrubToRatio(lastRatio);
     };
     const onPointerUp = (ev) => {
       if (!dragging) return;
+      consumeGesture(ev);
       dragging = false;
       state.isScrubbing = false;
       track.releasePointerCapture?.(ev.pointerId);
       this._seekRecordingScrubToRatio(lastRatio, { commit: true });
+    };
+    const onTouchConsume = (ev) => {
+      // iOS dashboard tab views can steal horizontal swipe gestures unless we
+      // explicitly consume touch events during scrub interactions.
+      consumeGesture(ev);
     };
     const onTime = () => {
       if (this._recordingScrubState?.isScrubbing) return;
@@ -3387,12 +3496,17 @@ class FrigateViewCard extends HTMLElement {
       resumeAfterScrub: false,
       pendingAbsTarget: null,
       pendingRelTarget: null,
+      seekNonce: 0,
+      isFallbackLoading: false,
     };
 
     track.addEventListener("pointerdown", onPointerDown);
     track.addEventListener("pointermove", onPointerMove);
     track.addEventListener("pointerup", onPointerUp);
     track.addEventListener("pointercancel", onPointerUp);
+    track.addEventListener("touchstart", onTouchConsume, { passive: false });
+    track.addEventListener("touchmove", onTouchConsume, { passive: false });
+    track.addEventListener("touchend", onTouchConsume, { passive: false });
     video.addEventListener("timeupdate", onTime);
 
     this._recordingScrubState = state;
@@ -3402,6 +3516,9 @@ class FrigateViewCard extends HTMLElement {
       track.removeEventListener("pointermove", onPointerMove);
       track.removeEventListener("pointerup", onPointerUp);
       track.removeEventListener("pointercancel", onPointerUp);
+      track.removeEventListener("touchstart", onTouchConsume);
+      track.removeEventListener("touchmove", onTouchConsume);
+      track.removeEventListener("touchend", onTouchConsume);
       video.removeEventListener("timeupdate", onTime);
       markers.innerHTML = "";
     };
