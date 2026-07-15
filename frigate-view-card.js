@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.74";
+const VERSION = "1.0.75";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3167,9 +3167,9 @@ class FrigateViewCard extends HTMLElement {
     viewer.querySelectorAll("video").forEach((v) => {
       try {
         v.pause();
+        if ("srcObject" in v) v.srcObject = null;
         v.removeAttribute("src");
-        v.querySelectorAll("source").forEach((s) => s.removeAttribute("src"));
-        v.load();
+        v.querySelectorAll("source").forEach((s) => s.remove());
       } catch (_) {}
     });
 
