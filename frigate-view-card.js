@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.69";
+const VERSION = "1.0.70";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -210,8 +210,11 @@ const STYLES = `
     margin: 0 !important;
     min-height: 0 !important;
     height: auto;
+    box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     }
   .card{
+    --fvc-shadow-s: var(--ha-box-shadow-s);
+    --fvc-shadow-m: var(--ha-box-shadow-m);
     --ha-card-background: var(--c-bg-main) !important;
     color:var(--c-text);
     overflow:hidden;
@@ -220,7 +223,7 @@ const STYLES = `
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     display:flex;
     flex-direction:column;
-    box-shadow: var(--ha-box-shadow-m);
+    box-shadow: var(--fvc-shadow-m);
     height:100%;
     padding:0;
     margin: 0 auto;
@@ -228,6 +231,7 @@ const STYLES = `
     top:0;
     left:0;
     }
+  .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
 
   .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;}
   .layout.wide{flex-direction:row;}
@@ -271,10 +275,10 @@ const STYLES = `
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
-  .shadow-xform{box-shadow: var(--ha-box-shadow-s);transition: transform 0.1s, box-shadow 0.1s;}
-  .shadow-xform:hover{transform: scale(1.004);box-shadow: var(--ha-box-shadow-s);}
-  .shadow-small {box-shadow: var(--ha-box-shadow-s);}  
-  .shadow-medium {box-shadow: var(--ha-box-shadow-m);}
+  .shadow-xform{box-shadow: var(--fvc-shadow-s);transition: transform 0.1s, box-shadow 0.1s;}
+  .shadow-xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
+  .shadow-small {box-shadow: var(--fvc-shadow-s);}  
+  .shadow-medium {box-shadow: var(--fvc-shadow-m);}
   .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;}
   .tabs::-webkit-scrollbar{display:none;}
 
@@ -790,6 +794,7 @@ class FrigateViewCard extends HTMLElement {
       cameras: [{ entity: "camera.front_door", name: "Front Door" }],
       title: "Frigate",
       theme: "default",
+      shadows: true,
       window_days: 3,
       window_hours: 72,
       stream_height_unit: "vh",
@@ -866,6 +871,7 @@ class FrigateViewCard extends HTMLElement {
             ? "future"
             : "default",
       tight_margins: config.tight_margins === true,
+      shadows: config.shadows !== false,
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
     };
@@ -2504,7 +2510,7 @@ class FrigateViewCard extends HTMLElement {
           : `<div class="pill icon-only" data-tab="${id}" title="${label}">${icon}</div>`;
 
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <ha-card class="card ${this._config.theme === "light" ? "theme-light" : this._config.theme === "future" ? "theme-future" : ""}" id="card">
+    <ha-card class="card ${this._config.theme === "light" ? "theme-light" : this._config.theme === "future" ? "theme-future" : ""} ${this._config.shadows === false ? "shadows-off" : ""}" id="card">
 
         <div class="layout shadow-medium" id="layout">
 
@@ -5499,6 +5505,7 @@ class FrigateViewCardEditor extends HTMLElement {
       );
     }
     delete src.camera_entity;
+    src.shadows = src.shadows !== false;
     return { ...src, cameras };
   }
 
@@ -5800,6 +5807,13 @@ class FrigateViewCardEditor extends HTMLElement {
                 </div>
       </div>
 
+        <div class="section">
+            <div class="layout-row">
+              <span class="field-label" style="margin:0">Shadows</span>
+              <ha-switch id="shadows" ${this._config?.shadows !== false ? "checked" : ""}></ha-switch>
+            </div>
+        </div>
+
       <div class="section">
                 <div class="layout-row">
                     <span class="field-label" style="margin:0">Wide View</span>
@@ -5935,7 +5949,7 @@ class FrigateViewCardEditor extends HTMLElement {
       if (!el) return;
       el.addEventListener("change", update);
     });
-    ["tight_margins", "wide_view"].forEach((id) => {
+    ["tight_margins", "wide_view", "shadows"].forEach((id) => {
       const el = this.querySelector(`#${id}`);
       if (!el) return;
       el.addEventListener("change", update);
@@ -6034,6 +6048,7 @@ class FrigateViewCardEditor extends HTMLElement {
     c.stream_height_unit = shu;
 
     c.tight_margins = this.querySelector("#tight_margins")?.checked === true;
+    c.shadows = this.querySelector("#shadows")?.checked !== false;
     c.wide_view = this.querySelector("#wide_view")?.checked === true;
 
     const pctInput = this.querySelector("#col_left_width_pct")
