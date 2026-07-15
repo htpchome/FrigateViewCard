@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.66";
+const VERSION = "1.0.67";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -541,7 +541,7 @@ const STYLES = `
 .popup-carousel-nav.left {left:0;border-radius:6px 0 0 6px;}
 .popup-carousel-nav.right {right:0;border-radius:0 6px 6px 0;}
 .popup-carousel-wrap.touch .popup-carousel-nav {display:none;}
-.popup-info {background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 9px;
+.popup-info {position: relativebackground: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 9px;
     padding: 10px 12px;display: flex;flex-direction: column;gap: 8px;}
 .popup-info[hidden] {display: none;}
 .popup-info-title {display: flex;align-items: center;gap: 8px;flex-wrap: wrap;}
@@ -552,7 +552,7 @@ const STYLES = `
     letter-spacing: .05em;flex-shrink: 0;}
 .popup-info-v {font-size: 0.9rem;color: var(--c-text);white-space: nowrap;overflow: hidden;
     text-overflow: ellipsis;}
-.popup-info-actions {display: flex;gap: 8px;justify-content: flex-end;}
+.popup-info-actions {postion:absolute; bottom:0;right;10px;display: flex;gap: 8px;justify-content: flex-end;}
 .popup-action {width: 52px;height: 52px;display: flex;align-items: center;justify-content: center;
     background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 6px;
     color: var(--c-text2);cursor: pointer;}
@@ -2581,18 +2581,36 @@ class FrigateViewCard extends HTMLElement {
 
 
           <div id="myPopup" class="popup-content">
-                        <div class="popup-close-row">
+            <div class="popup-close-row">
               <button class="close-btn" aria-label="Close">&times;</button> 
             </div>
             <div class="popup-header"></div>          
             <div class="popup-body">
               <div class="viewer" id="viewer" style="display:none"></div>
-              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${ICONS.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${ICONS.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${ICONS.expand}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span></div>
+              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${ICONS.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${ICONS.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${ICONS.expand}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
+              </div>
               <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
-                            <div class="recording-scrub" id="recording-scrub" hidden><div class="recording-scrub-track" id="recording-scrub-track"><div class="recording-scrub-ticks" id="recording-scrub-ticks"></div><div class="recording-scrub-markers" id="recording-scrub-markers"></div><div class="recording-scrub-cursor" id="recording-scrub-cursor"></div></div><div class="recording-scrub-labels"><span id="recording-scrub-start">0:00</span><span class="recording-scrub-now" id="recording-scrub-now">0:00 / 0:00</span><span id="recording-scrub-end">0:00</span></div></div>
-                            <div class="popup-info" id="popup-info" hidden></div>
-                            <div class="popup-carousel-wrap" id="popup-carousel-wrap" hidden><button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" aria-label="Previous items">${ICONS.left}</button><div class="popup-carousel" id="popup-carousel"></div><button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" aria-label="Next items">${ICONS.right}</button></div>
-                            <h1 class="popup-shell-ver" id="popup-shell-ver">v${VERSION}</h1>
+                <div class="recording-scrub" id="recording-scrub" hidden>
+                  <div class="recording-scrub-track" id="recording-scrub-track">
+                    <div class="recording-scrub-ticks" id="recording-scrub-ticks"></div>
+                    <div class="recording-scrub-markers" id="recording-scrub-markers"></div>
+                    <div class="recording-scrub-cursor" id="recording-scrub-cursor"></div>
+                  </div>
+                  <div class="recording-scrub-labels">
+                    <span id="recording-scrub-start">0:00</span>
+                    <span class="recording-scrub-now" id="recording-scrub-now">0:00 / 0:00</span>
+                    <span id="recording-scrub-end">0:00</span>
+                  </div>
+                </div>
+                <div class="popup-info" id="popup-info" hidden></div>
+                <div class="popup-carousel-wrap" id="popup-carousel-wrap" hidden>
+                  <button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" aria-label="Previous items">${ICONS.left}
+                  </button>
+                  <div class="popup-carousel" id="popup-carousel"></div>
+                  <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" aria-label="Next items">${ICONS.right}
+                  </button>
+                </div>
+                <h1 class="popup-shell-ver" id="popup-shell-ver">v${VERSION}</h1>
             </div>
           </div>
       </ha-card>`;
@@ -3889,7 +3907,7 @@ class FrigateViewCard extends HTMLElement {
             <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${model.score}</span></div>
             <div class="popup-info-row"><span class="popup-info-k">Camera</span><span class="popup-info-v">${model.camera}</span></div>
           </div>
-                                        <div class="popup-info-actions">${downloadBtn}</div>
+          <div class="popup-info-actions">${downloadBtn}</div>
         `;
     info.hidden = false;
   }
