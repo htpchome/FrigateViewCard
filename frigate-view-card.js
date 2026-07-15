@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.47";
+const VERSION = "1.0.48";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3365,6 +3365,20 @@ class FrigateViewCard extends HTMLElement {
     const nonce = state.seekNonce;
     const video = state.video;
 
+    // For Edge/Firefox, recording URLs can expose unstable/partial seekable
+    // ranges. Server-side reopen at the requested timestamp is more reliable
+    // than in-file currentTime seeks.
+    if (this._isFirefox() || this._isEdge()) {
+      if (state.isFallbackLoading) return;
+      state.isFallbackLoading = true;
+      try {
+        await this._showRecording(Math.floor(absTarget), Math.floor(state.end));
+      } finally {
+        state.isFallbackLoading = false;
+      }
+      return;
+    }
+
     const seekOk = await this._attemptRecordingSeek(video, relTarget);
     if (nonce !== state.seekNonce) return;
 
@@ -3920,7 +3934,43 @@ class FrigateViewCard extends HTMLElement {
     viewer.innerHTML = `<video controls playsinline webkit-playsinline preload="metadata" muted></video>`;
     const video = viewer.querySelector("video");
     let playable = false;
+    const gestureCleanup = [];
     if (video) {
+      if (isIOS) {
+        const guardTouch = (ev) => {
+          // Keep touch gestures inside the popup so HA dashboard horizontal
+          // swipe handlers do not steal navigation while interacting with video.
+          ev.stopPropagation?.();
+        };
+        viewer.addEventListener("touchstart", guardTouch, {
+          capture: true,
+          passive: true,
+        });
+        viewer.addEventListener("touchmove", guardTouch, {
+          capture: true,
+          passive: true,
+        });
+        viewer.addEventListener("touchend", guardTouch, {
+          capture: true,
+          passive: true,
+        });
+        gestureCleanup.push(() =>
+          viewer.removeEventListener("touchstart", guardTouch, {
+            capture: true,
+          }),
+        );
+        gestureCleanup.push(() =>
+          viewer.removeEventListener("touchmove", guardTouch, {
+            capture: true,
+          }),
+        );
+        gestureCleanup.push(() =>
+          viewer.removeEventListener("touchend", guardTouch, {
+            capture: true,
+          }),
+        );
+      }
+
       const recPath = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
       const vodBase = `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
       const sourceCandidates = isIOS
@@ -3942,6 +3992,11 @@ class FrigateViewCard extends HTMLElement {
         this._teardownRecordingScrub();
         const scrub = this._$("#recording-scrub");
         if (scrub) scrub.hidden = true;
+        for (const fn of gestureCleanup) {
+          try {
+            fn();
+          } catch (_) {}
+        }
         return;
       }
     }
@@ -3957,7 +4012,13 @@ class FrigateViewCard extends HTMLElement {
         token,
       });
     }
-    this._popupMediaCleanup = null;
+    this._popupMediaCleanup = () => {
+      for (const fn of gestureCleanup) {
+        try {
+          fn();
+        } catch (_) {}
+      }
+    };
   }
   async _signed(path) {
     try {
