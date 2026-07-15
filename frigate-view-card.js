@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.60";
+const VERSION = "1.0.61";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -365,7 +365,7 @@ const STYLES = `
   .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
     border-bottom:1px solid var(--c-border);}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
-  .stats{display:flex;flex-wrap: wrap;gap:16px;justify-self:end;margin-left:auto;justify-self:end;} 
+  .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
   .sv{font-size:1.05rem;font-weight:700;color:var(--c-acc-bdr);} .sl{font-size:0.75rem;color:var(--c-text4);text-transform:uppercase;letter-spacing:.06em;}
   .info-mute{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:7px;color:var(--c-text2);cursor:pointer;flex-shrink:0;}
@@ -502,12 +502,12 @@ const STYLES = `
 .popup-media-btn {width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:7px;color:var(--c-text2);cursor:pointer;flex-shrink:0;}
 .popup-media-btn:hover {color:var(--c-acc-bdr);border-color:var(--c-acc-bdr);}
 .popup-media-btn svg {width:20px;height:20px;}
-.popup-media-progress {grid-area:progress;min-width:0;width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:var(--c-bg-main);outline:none;transform:translateY(-20%);}
+.popup-media-progress {grid-area:progress;min-width:0;width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:999px;background:var(--c-bg-main);outline:none;transform:translateY(-34%);}
 .popup-media-progress::-webkit-slider-runnable-track {height:6px;border-radius:999px;background:var(--c-bg-main);}
 .popup-media-progress::-webkit-slider-thumb {-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--c-primary);border:1px solid var(--c-acc-bdr);margin-top:-4px;}
 .popup-media-progress::-moz-range-track {height:6px;border-radius:999px;background:var(--c-bg-main);}
 .popup-media-progress::-moz-range-thumb {width:14px;height:14px;border-radius:50%;background:var(--c-primary);border:1px solid var(--c-acc-bdr);}
-.popup-media-time {grid-area:time;min-width:0;text-align:left;font-size:.76rem;color:var(--c-text2);font-variant-numeric:tabular-nums;line-height:.9;margin-top:-8px;}
+.popup-media-time {grid-area:time;min-width:0;text-align:left;font-size:.76rem;color:var(--c-text2);font-variant-numeric:tabular-nums;line-height:.88;margin-top:-11px;}
 .popup-media-btn#popup-media-play {grid-area:play;}
 .popup-media-btn#popup-media-mute {grid-area:mute;}
 .popup-media-btn#popup-media-fs {grid-area:fs;}
@@ -2513,8 +2513,13 @@ class FrigateViewCard extends HTMLElement {
                 <span class="section-label" id="tl-range">${subtitle}</span>
               </div>
               <div class="stats">
-                                <div class="stat"><div class="sv">v${VERSION}</div><div class="sl">Version</div></div>
-                                <div class="stat"><div class="sv stream-type" id="stream-type">--</div><div class="sl">Stream</div></div>
+                <div class="stat">
+                  <div class="sv">v${VERSION}</div>
+                  <div class="sl">Version</div></div>
+                  <div class="stat">
+                  <div class="sv stream-type" id="stream-type">--</div>
+                  <div class="sl">Stream</div>
+                </div>
                 <button class="info-mute" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
                 <div class="stat">
                   <div class="sv" id="ev-count">—</div>
