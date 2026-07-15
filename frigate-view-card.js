@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.80";
+const VERSION = "1.0.81";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1300,13 +1300,16 @@ class FrigateViewCard extends HTMLElement {
 
   _adoptMountedAttempt(targetSlot, result) {
     if (!targetSlot || !result?.slot || !result?.engine) return;
-    targetSlot.innerHTML = "";
-    while (result.slot.firstChild) {
-      targetSlot.appendChild(result.slot.firstChild);
+    for (const child of [...targetSlot.children]) {
+      if (child !== result.slot) {
+        try {
+          child.remove();
+        } catch (_) {}
+      }
     }
-    try {
-      result.slot.remove();
-    } catch (_) {}
+    result.slot.style.visibility = "visible";
+    result.slot.style.pointerEvents = "auto";
+    result.slot.style.overflow = "hidden";
     this._engine = result.engine;
     this._engineMountedMuted = this._streamMuted;
     this._setActiveStreamType(result.type);
