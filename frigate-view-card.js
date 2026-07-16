@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.1555";
+const VERSION = "1.0.156";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -501,7 +501,7 @@ const STYLES = `
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 
   /* ── recordings ── */
-  .rec{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;}
+  .rec{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--c-bg-main);border-radius:15px;margin-bottom:5px;cursor:pointer;}
   .rec:hover{background:var(--c-bg-panel);}
   .ric{width:36px;height:36px;border-radius:5px;background:rgba(30,80,200,.25);
     color:var(--c-primary-d);display:flex;align-items:center;justify-content:center;} 
@@ -514,7 +514,7 @@ const STYLES = `
   .rp:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
 
   /* ── reviews ── */
-  .rev{display:flex;gap:5px;flex-wrap: wrap;align-items:center;padding:2px 10px 2px 0px;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:8px;margin-bottom:5px;cursor:pointer;}
+  .rev{display:flex;gap:5px;flex-wrap: wrap;align-items:center;padding:2px 10px 2px 0px;background:var(--c-bg-main);border-radius:15px;margin-bottom:5px;cursor:pointer;}
   .rev[data-review-open]:hover{background:var(--c-bg-panel);border-color:rgba(59,130,246,.25);}
   .rev-sev{width:2px;align-self:stretch;border-radius:3px;margin-right:0;} 
   .rev-sev.alert{background:#ef4444;} 
