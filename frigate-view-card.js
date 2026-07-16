@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.144";
+const VERSION = "1.0.145";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1060,6 +1060,8 @@ class FrigateViewCard extends HTMLElement {
     }
 
     if (needsShellRerender) {
+      // Shell rebuild replaces media host nodes, so always tear down first.
+      this._cleanupEngine();
       this._renderShell();
       this._mountEngine(null, { quiet: true });
       this._renderAll();
@@ -1075,8 +1077,8 @@ class FrigateViewCard extends HTMLElement {
     this._renderStats();
     this._renderCamSwitcher();
 
-    // Ensure we recover from editor preview snapshot state when config closes.
-    this._scheduleResumeLive("config-updated");
+    // Keep stream engine stable for visual-only config edits.
+    // Resume logic for editor close/visibility transitions is handled elsewhere.
 
     if (needsEngineRemount) {
       this._mountEngine(null, { quiet: true });
