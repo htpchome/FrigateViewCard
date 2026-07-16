@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.150";
+const VERSION = "1.0.151";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -16,7 +16,13 @@ const EVENT_FETCH_BATCH = 100;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
-const ALLOWED_HIDDEN_TABS = ["alerts", "clips", "snapshot", "kept"];
+const ALLOWED_HIDDEN_TABS = [
+  "alerts",
+  "clips",
+  "snapshot",
+  "recordings",
+  "kept",
+];
 const THEME_DEFAULTS = Object.freeze({
   "--c-bg-main": "var(--card-background-color)",
   "--c-bg-panel": "var(--secondary-background-color)",
@@ -6569,9 +6575,9 @@ class FrigateViewCardEditor extends HTMLElement {
     const activeTheme = this._config?.theme === "custom" ? "custom" : "default";
     const themeCustom = this._config?.theme_custom || {};
     const themeCustomDefaults = this._config?.theme_custom_defaults || {};
-    const tabCheck = (id, label) => `<ha-formfield label="${label}">
-            <ha-checkbox name="hide-${id}" data-hide-tab="${id}" ${hiddenTabs.has(id) ? "checked" : ""}></ha-checkbox>
-    </ha-formfield>`;
+    const tabToggle = (id, label) => `<ha-formfield label="${label}">
+          <ha-switch data-active-tab="${id}" ${hiddenTabs.has(id) ? "" : "checked"}></ha-switch>
+        </ha-formfield>`;
     const themeRows = THEME_CUSTOM_ROWS.map((row) => {
       const key = row.key;
       const defaultHex = this._themeDefaultHex(key);
@@ -6644,13 +6650,13 @@ class FrigateViewCardEditor extends HTMLElement {
 
     const layoutPanelContent = `
       <div class="section">
-        <span class="field-label">Hidden tabs</span>
+        <span class="field-label">Active tabs</span>
         <div class="chk-row">
-          ${tabCheck("alerts", "Alerts")}
-          ${tabCheck("clips", "Clips")}
-          ${tabCheck("snapshot", "Snapshots")}
-          ${tabCheck("recordings", "Recordings")}
-          ${tabCheck("kept", "Kept")}
+          ${tabToggle("alerts", "Alerts")}
+          ${tabToggle("clips", "Clips")}
+          ${tabToggle("snapshot", "Snapshots")}
+          ${tabToggle("recordings", "Recordings")}
+          ${tabToggle("kept", "Kept")}
         </div>
       </div>
       <div class="section">
@@ -7049,7 +7055,7 @@ class FrigateViewCardEditor extends HTMLElement {
       el.addEventListener("change", update);
       el.addEventListener("value-changed", update);
     });
-    this.querySelectorAll("[data-hide-tab]").forEach((el) => {
+    this.querySelectorAll("[data-active-tab]").forEach((el) => {
       el.addEventListener("change", update);
       el.addEventListener("value-changed", update);
     });
@@ -7156,9 +7162,9 @@ class FrigateViewCardEditor extends HTMLElement {
     c.theme_custom = themeCustom;
     c.theme_custom_defaults = themeCustomDefaults;
 
-    const hidden = [...this.querySelectorAll("[data-hide-tab]")]
-      .filter((el) => el.checked)
-      .map((el) => el.dataset.hideTab)
+    const hidden = [...this.querySelectorAll("[data-active-tab]")]
+      .filter((el) => el.checked !== true)
+      .map((el) => el.dataset.activeTab)
       .filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
     c.hidden_tabs = hidden.length ? hidden : [];
 
