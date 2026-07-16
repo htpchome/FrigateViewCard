@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.103";
+const VERSION = "1.0.104";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1217,7 +1217,23 @@ class FrigateViewCard extends HTMLElement {
     return normalizeCameraConnectionType(cam?.connection_type);
   }
 
+  _isLovelaceDashboardEditMode() {
+    try {
+      const href = String(window.location?.href || "");
+      if (!href) return false;
+      const url = new URL(href, window.location.origin);
+      const edit =
+        url.searchParams.get("edit") ||
+        url.searchParams.get("dashboard_edit") ||
+        "";
+      return /^(1|true|yes|on)$/i.test(String(edit));
+    } catch (_) {
+      return false;
+    }
+  }
+
   _isEditorPreviewContext() {
+    if (this._isLovelaceDashboardEditMode()) return true;
     // In Lovelace card editor preview, avoid opening live stream sessions.
     let el = this;
     let depth = 0;
@@ -3148,6 +3164,7 @@ class FrigateViewCard extends HTMLElement {
   }
   _kickLiveIfStale(force = false) {
     if (!this._started || !this._hass || !this._config) return;
+    if (this._isEditorPreviewContext()) return;
     if (!this._isCardVisible()) return;
     if (this._$("#myPopup")?.classList.contains("is-open")) return;
     if (this._mountInProgress) return;
@@ -3182,6 +3199,15 @@ class FrigateViewCard extends HTMLElement {
   _resumeLiveIfNeeded(_reason = "") {
     if (!this._started || !this._hass || !this._config) return;
     if (!this._isCardVisible()) return;
+    if (this._isEditorPreviewContext()) {
+      // Leaving card editor is two-step in HA; keep retrying until dashboard
+      // edit mode fully exits after pressing Done.
+      if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
+      this._resumeLiveT = setTimeout(() => {
+        this._resumeLiveIfNeeded("wait-edit-exit");
+      }, 700);
+      return;
+    }
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     if (popupOpen) return;
     const engWrap = this._$("#eng-wrap");
