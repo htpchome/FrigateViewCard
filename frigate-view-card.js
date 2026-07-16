@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.151";
+const VERSION = "1.0.152";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6593,7 +6593,19 @@ class FrigateViewCardEditor extends HTMLElement {
             <div>${row.label}</div>
             ${showWarn ? '<div class="theme-custom-warn">Draft changes require card config save.</div>' : ""}
           </div>
-          <input class="theme-color-input" type="color" data-theme-color="${key}" value="${visibleValue}" ${useDefault ? "disabled" : ""}>
+          <div class="theme-color-wrap">
+            <input class="theme-color-input" type="color" data-theme-color="${key}" value="${visibleValue}" ${useDefault ? "disabled" : ""}>
+            <button
+              type="button"
+              class="theme-color-reset"
+              data-theme-reset="${key}"
+              title="Reset to default color"
+              aria-label="Reset to default color"
+              ${useDefault ? "hidden" : ""}
+            >
+              <ha-icon icon="mdi:close-octagon"></ha-icon>
+            </button>
+          </div>
           <ha-formfield label="Use Default">
             <ha-switch data-theme-default="${key}" ${useDefault ? "checked" : ""}></ha-switch>
           </ha-formfield>
@@ -6819,8 +6831,25 @@ class FrigateViewCardEditor extends HTMLElement {
             .theme-custom-row:first-child{border-top:none;}
             .theme-custom-label{display:flex;flex-direction:column;gap:2px;min-width:0;}
             .theme-custom-warn{font-size:11px;color:var(--c-text2, var(--editor-muted));}
+            .theme-color-wrap{position:relative;width:60px;height:60px;display:flex;align-items:center;justify-content:center;}
             .theme-color-input{width:60px;height:60px;padding:0;border:1px solid var(--editor-border);border-radius:4px;background:transparent;cursor:pointer;}
             .theme-color-input:disabled{opacity:.5;cursor:not-allowed;}
+            .theme-color-reset{
+              position:absolute;
+              left:-0.35em;
+              bottom:-0.35em;
+              width:1.2em;
+              height:1.2em;
+              padding:0;
+              border:none;
+              background:transparent;
+              color:var(--error-color, #b91c1c);
+              display:grid;
+              place-items:center;
+              cursor:pointer;
+            }
+            .theme-color-reset[hidden]{display:none;}
+            .theme-color-reset ha-icon{--mdc-icon-size:1em;}
             .layout-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
             .readonly-value{font-size:12px;color:var(--c-text, var(--editor-text));background:var(--c-bg-main, var(--editor-secondary-bg));border:var(--editor-border-width) solid var(--c-border, var(--editor-border));border-radius:8px;padding:6px 10px;}
 
@@ -6901,9 +6930,24 @@ class FrigateViewCardEditor extends HTMLElement {
       input.addEventListener("change", update);
     });
 
+    this.querySelectorAll("[data-theme-reset]").forEach((button) => {
+      button.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const key = ev.currentTarget?.dataset?.themeReset;
+        const input = this.querySelector(`[data-theme-color="${key}"]`);
+        if (!key || !input || input.disabled) return;
+        const defaultHex = this._themeDefaultHex(key);
+        input.value = defaultHex;
+        this._themeDraftCache[key] = defaultHex;
+        update();
+      });
+    });
+
     this.querySelectorAll("[data-theme-default]").forEach((toggle) => {
       const key = toggle.dataset.themeDefault;
       const input = this.querySelector(`[data-theme-color="${key}"]`);
+      const reset = this.querySelector(`[data-theme-reset="${key}"]`);
       toggle.addEventListener("change", (ev) => {
         const checked = ev.currentTarget?.checked === true;
         if (!input) {
@@ -6913,10 +6957,12 @@ class FrigateViewCardEditor extends HTMLElement {
         if (checked) {
           input.value = this._themeDefaultHex(key);
           input.disabled = true;
+          if (reset) reset.hidden = true;
         } else {
           const draft = normalizeHexColor(this._themeDraftCache?.[key]);
           input.value = draft || this._themeDefaultHex(key);
           input.disabled = false;
+          if (reset) reset.hidden = false;
         }
         update();
       });
