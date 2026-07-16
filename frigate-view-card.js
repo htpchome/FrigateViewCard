@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.96";
+const VERSION = "1.0.97";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1058,6 +1058,9 @@ class FrigateViewCard extends HTMLElement {
     this._renderStats();
     this._renderCamSwitcher();
 
+    // Ensure we recover from editor preview snapshot state when config closes.
+    this._scheduleResumeLive("config-updated");
+
     if (needsEngineRemount) {
       this._mountEngine(null, { quiet: true });
     }
@@ -1421,7 +1424,7 @@ class FrigateViewCard extends HTMLElement {
         ),
     };
 
-    const order = forcedType ? [forcedType] : ["webrtc", "mse", "hls"];
+    const order = forcedType ? [forcedType] : ["webrtc", "mse"];
     return order
       .filter((type) => typeof build[type] === "function")
       .map((type) => ({ type, start: build[type] }));
@@ -1471,100 +1474,9 @@ class FrigateViewCard extends HTMLElement {
       this._pendingMountDestroyers = [];
     };
 
-    const scheduleWebRTCTakeover = () => {
-      if (!winner?.ok || winner.type === "webrtc") return false;
-      const webrtcAttempt = activeAttempts.find(
-        (attempt) => attempt.type === "webrtc",
-      );
-      if (!webrtcAttempt) return false;
-
-      let takeoverExpired = false;
-      this._pendingWebRTCTakeoverTimer = setTimeout(() => {
-        takeoverExpired = true;
-        this._pendingWebRTCTakeoverTimer = null;
-        webrtcAttempt.promise.then((result) => {
-          try {
-            result?.engine?.destroy?.();
-          } catch (_) {}
-        });
-      }, 30000);
-
-      webrtcAttempt.promise
-        .then((result) => {
-          if (
-            !result?.ok ||
-            takeoverExpired ||
-            mountToken !== this._mountSeq ||
-            this._activeStreamType === "webrtc"
-          ) {
-            if (takeoverExpired || mountToken !== this._mountSeq) {
-              try {
-                result?.engine?.destroy?.();
-              } catch (_) {}
-              try {
-                result?.slot?.remove?.();
-              } catch (_) {}
-            }
-            return;
-          }
-          if (this._pendingWebRTCTakeoverTimer) {
-            clearTimeout(this._pendingWebRTCTakeoverTimer);
-            this._pendingWebRTCTakeoverTimer = null;
-          }
-          try {
-            this._engine?.destroy?.();
-          } catch (_) {}
-          this._adoptMountedAttempt(slot, result);
-        })
-        .catch(() => {});
-
-      return true;
-    };
-
     if (winner?.ok) {
       this._adoptMountedAttempt(slot, winner);
-      if (scheduleWebRTCTakeover()) {
-        activeAttempts
-          .filter(
-            (attempt) =>
-              attempt.type !== winner.type && attempt.type !== "webrtc",
-          )
-          .forEach((attempt) => {
-            attempt.promise.then((result) => {
-              try {
-                result?.engine?.destroy?.();
-              } catch (_) {}
-              try {
-                result?.slot?.remove?.();
-              } catch (_) {}
-            });
-          });
-        this._pendingMountDestroyers = [
-          () => {
-            if (this._pendingWebRTCTakeoverTimer) {
-              clearTimeout(this._pendingWebRTCTakeoverTimer);
-              this._pendingWebRTCTakeoverTimer = null;
-            }
-          },
-          ...activeAttempts
-            .filter(
-              (attempt) =>
-                attempt.type !== winner.type && attempt.type !== "webrtc",
-            )
-            .map((attempt) => () => {
-              attempt.promise.then((result) => {
-                try {
-                  result?.engine?.destroy?.();
-                } catch (_) {}
-                try {
-                  result?.slot?.remove?.();
-                } catch (_) {}
-              });
-            }),
-        ];
-      } else {
-        await destroyLosers();
-      }
+      await destroyLosers();
       return true;
     }
 
@@ -2333,6 +2245,16 @@ class FrigateViewCard extends HTMLElement {
         slot,
       );
       if (await this._mountLiveWithRace(slot, attempts, mountToken)) return;
+
+      // Probe HLS only as an explicit fallback after WebRTC/MSE fail.
+      if (!forcedType) {
+        const hlsOk = await this._tryMountGo2RTCHLS(
+          slot,
+          { waitMs: 5000 },
+          { commit: true },
+        );
+        if (hlsOk) return;
+      }
 
       // go2rtc attempts failed: show snapshot fallback.
       this._setActiveStreamType("snapshot");
