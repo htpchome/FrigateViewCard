@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.110";
+const VERSION = "1.0.111";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -757,7 +757,10 @@ class FrigateViewCard extends HTMLElement {
     this._syncCardShellClasses();
     this._syncDomShadows();
     this._scheduleRotateOverlayUpdate();
-    if (this._started) this._startEditModeWatchdog();
+    if (this._started) {
+      this._startEditModeWatchdog();
+      this._scheduleResumeLive("connected");
+    }
     this._startEditorDialogCloseObserver();
   }
 
@@ -1193,18 +1196,40 @@ class FrigateViewCard extends HTMLElement {
   _startEditModeWatchdog() {
     if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
     this._lastEditorPreviewContext = this._isEditorPreviewContext();
+    this._editorDialogOpenLast = this._isCardEditorDialogOpen();
     this._editModeWatchdogT = setInterval(() => {
       if (!this.isConnected) return;
       const inEditorPreview = this._isEditorPreviewContext();
+      const dialogOpen = this._isCardEditorDialogOpen();
+      if (this._editorDialogOpenLast && !dialogOpen) {
+        this._scheduleResumeLive("watchdog-dialog-close");
+      }
       if (this._lastEditorPreviewContext === true && !inEditorPreview) {
         this._scheduleResumeLive("watchdog-edit-exit");
       }
+      this._editorDialogOpenLast = dialogOpen;
       this._lastEditorPreviewContext = inEditorPreview;
     }, 600);
   }
 
   _isCardEditorDialogOpen() {
-    return !!document.querySelector("hui-dialog-edit-card");
+    const dialogHost = document.querySelector("hui-dialog-edit-card");
+    if (!dialogHost) return false;
+    const root = dialogHost.shadowRoot;
+    const haDialog =
+      root?.querySelector?.("ha-dialog") ||
+      dialogHost.querySelector?.("ha-dialog") ||
+      null;
+    if (haDialog) {
+      if (haDialog.opened === true) return true;
+      if (haDialog.hasAttribute?.("open")) return true;
+      if (haDialog.hasAttribute?.("opened")) return true;
+      if (haDialog.getAttribute?.("aria-hidden") === "true") return false;
+      if (haDialog.hidden === true) return false;
+    }
+    if (dialogHost.hidden === true) return false;
+    if (dialogHost.getAttribute?.("aria-hidden") === "true") return false;
+    return true;
   }
 
   _startEditorDialogCloseObserver() {
@@ -1223,6 +1248,8 @@ class FrigateViewCard extends HTMLElement {
     this._editorDialogObserver.observe(document.body, {
       childList: true,
       subtree: true,
+      attributes: true,
+      attributeFilter: ["open", "opened", "hidden", "class", "style"],
     });
   }
 
