@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.112";
+const VERSION = "1.0.113";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2261,14 +2261,6 @@ class FrigateViewCard extends HTMLElement {
         this._setStreamLoading(false);
       }
 
-      if (this._isEditorPreviewContext()) {
-        // Keep preview lightweight and connection-safe in editor mode.
-        this._setActiveStreamType("snapshot");
-        this._setStreamLoading(false);
-        this._setStreamFallbackVisible(true, true);
-        return;
-      }
-
       const connectionType = this._cameraConnectionType(entity);
       if (connectionType === "ha_direct") {
         const streamType = forcedType || this._preferredStreamType();
@@ -3225,7 +3217,6 @@ class FrigateViewCard extends HTMLElement {
   }
   _kickLiveIfStale(force = false) {
     if (!this._started || !this._hass || !this._config) return;
-    if (this._isEditorPreviewContext()) return;
     if (!this._isCardVisible()) return;
     if (this._$("#myPopup")?.classList.contains("is-open")) return;
     if (this._mountInProgress) return;
@@ -3259,19 +3250,14 @@ class FrigateViewCard extends HTMLElement {
   }
   _resumeLiveIfNeeded(_reason = "") {
     if (!this._started || !this._hass || !this._config) return;
-    const inEditor = this._isEditorPreviewContext();
     const visible = this._isCardVisible();
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
-    if (inEditor || !visible || popupOpen || this._mountInProgress) {
-      // Edit exit and layout transitions are async. Keep retrying until
-      // the card is visible and no longer in editor context.
+    if (!visible || popupOpen || this._mountInProgress) {
+      // Layout transitions are async. Keep retrying until mount is possible.
       if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
-      this._resumeLiveT = setTimeout(
-        () => {
-          this._resumeLiveIfNeeded("wait-ready");
-        },
-        inEditor ? 700 : 450,
-      );
+      this._resumeLiveT = setTimeout(() => {
+        this._resumeLiveIfNeeded("wait-ready");
+      }, 450);
       return;
     }
     const engWrap = this._$("#eng-wrap");
