@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.152";
+const VERSION = "1.0.153";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6565,6 +6565,64 @@ class FrigateViewCardEditor extends HTMLElement {
     this._dialogActionHooksBound = true;
   }
 
+  _setEditorFieldError(selector, message) {
+    const field = this.querySelector(selector);
+    if (!field) return;
+    field.toggleAttribute("data-invalid", !!message);
+    const helper = this.querySelector(`${selector}-helper`);
+    if (helper) {
+      helper.textContent = message || "";
+      helper.classList.toggle("error", !!message);
+    }
+  }
+
+  _validateEditorFields() {
+    let valid = true;
+
+    const windowDaysValue =
+      this.querySelector("#window_days")?.dataset.value ||
+      this.querySelector("#window_days")?.value ||
+      "3";
+    const windowDays = Number(windowDaysValue);
+    const windowDaysMessage =
+      Number.isInteger(windowDays) && windowDays >= 1 && windowDays <= 15
+        ? ""
+        : "Select a value from 1 to 15.";
+    this._setEditorFieldError("#window_days", windowDaysMessage);
+    if (windowDaysMessage) valid = false;
+
+    const streamHeightRaw = String(
+      this.querySelector("#stream_height")?.value || "",
+    ).trim();
+    const streamHeight = Number(streamHeightRaw);
+    const streamHeightMessage =
+      !streamHeightRaw ||
+      (Number.isInteger(streamHeight) &&
+        streamHeight >= 1 &&
+        streamHeight <= 4000)
+        ? ""
+        : "Enter a whole number from 1 to 4000, or leave blank.";
+    this._setEditorFieldError("#stream_height", streamHeightMessage);
+    if (streamHeightMessage) valid = false;
+
+    const wideViewEnabled = this.querySelector("#wide_view")?.checked === true;
+    const colWidthRaw = String(
+      this.querySelector("#col_left_width_pct")?.value || "",
+    )
+      .replace(/%/g, "")
+      .trim();
+    const colWidth = Number(colWidthRaw);
+    const colWidthMessage =
+      !wideViewEnabled ||
+      (Number.isInteger(colWidth) && colWidth >= 10 && colWidth <= 90)
+        ? ""
+        : "Enter a whole number from 10 to 90.";
+    this._setEditorFieldError("#col_left_width_pct", colWidthMessage);
+    if (colWidthMessage) valid = false;
+
+    return valid;
+  }
+
   _render() {
     const frigEntities = this._frigateEntities();
     const cams = this._getCams();
@@ -6636,7 +6694,8 @@ class FrigateViewCardEditor extends HTMLElement {
       <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="Frigate"></ha-input>
       <div class="section">
         <span class="field-label">Event history days</span>
-        <ha-input name="window_days" id="window_days" type="number" min="1" step="1" inputmode="numeric" value="${this._config?.window_days ?? 3}" placeholder="3"></ha-input>
+        <ha-selector id="window_days" style="width:160px"></ha-selector>
+        <div class="field-helper" id="window_days-helper"></div>
       </div>
       <div class="section">
         <div class="layout-row">
@@ -6677,6 +6736,7 @@ class FrigateViewCardEditor extends HTMLElement {
           <ha-input name="stream_height" id="stream_height" type="number" value="${this._config?.stream_height || ""}" min="1" placeholder="${this._defaultHostVh()}" style="flex:1"></ha-input>
           <ha-selector id="stream_height_unit" style="width:120px"></ha-selector>
         </div>
+        <div class="field-helper" id="stream_height-helper"></div>
       </div>
       <div class="section">
         <div class="layout-row">
@@ -6700,6 +6760,7 @@ class FrigateViewCardEditor extends HTMLElement {
           <ha-input type="text" id="col_left_width_pct" value="${this._config?.col_left_width_pct ?? 50}" style="width:70px"></ha-input>
           <span style="font-size:11px;color:var(--c-text2)">%</span>
         </div>
+        <div class="field-helper" id="col_left_width_pct-helper"></div>
       </div>`;
 
     const activeSettingsPanel =
@@ -6737,6 +6798,7 @@ class FrigateViewCardEditor extends HTMLElement {
               --c-primary: var(--editor-primary);
               --c-primary-l: var(--light-primary-color, var(--editor-primary));
               --c-accent: var(--accent-color, var(--editor-primary));
+              --c-alert: var(--error-color, #b91c1c);
                 display:flex;
                 flex-direction:column;
                 gap:16px;
@@ -6783,6 +6845,8 @@ class FrigateViewCardEditor extends HTMLElement {
                 padding:0 14px 14px;
               }
               .field-label{font-size:12px;font-weight:600;margin-bottom:8px;display:block;color:var(--c-text, var(--editor-text));}
+            .field-helper{min-height:1.2em;margin-top:4px;font-size:11px;color:var(--c-text2, var(--editor-muted));}
+            .field-helper.error{color:var(--c-alert);}
             .section{border-top:1px solid var(--divider-color, #d1d5db);padding-top:16px;}
             .chk-row{display:flex;flex-wrap:wrap;gap:8px 16px;}
 
@@ -6836,14 +6900,14 @@ class FrigateViewCardEditor extends HTMLElement {
             .theme-color-input:disabled{opacity:.5;cursor:not-allowed;}
             .theme-color-reset{
               position:absolute;
-              left:-0.35em;
-              bottom:-0.35em;
-              width:1.2em;
-              height:1.2em;
+              left:1px;
+              bottom:1px;
+              width:1em;
+              height:1em;
               padding:0;
               border:none;
               background:transparent;
-              color:var(--error-color, #b91c1c);
+              color:var(--c-alert);
               display:grid;
               place-items:center;
               cursor:pointer;
@@ -6972,6 +7036,31 @@ class FrigateViewCardEditor extends HTMLElement {
       });
     });
 
+    const windowDays = this.querySelector("#window_days");
+    if (windowDays) {
+      windowDays.hass = this._hass;
+      windowDays.selector = {
+        select: {
+          mode: "dropdown",
+          options: Array.from({ length: 15 }, (_, index) => {
+            const value = String(index + 1);
+            return { value, label: value };
+          }),
+        },
+      };
+      windowDays.value = String(this._config?.window_days ?? 3);
+      windowDays.dataset.value = windowDays.value;
+      const syncWindowDays = (ev) => {
+        const value = String(ev?.detail?.value ?? windowDays.value ?? "3");
+        windowDays.value = value;
+        windowDays.dataset.value = value;
+        update();
+      };
+      windowDays.addEventListener("value-changed", syncWindowDays);
+      windowDays.addEventListener("selected-changed", syncWindowDays);
+      windowDays.addEventListener("change", syncWindowDays);
+    }
+
     const streamUnit = this.querySelector("#stream_height_unit");
     if (streamUnit) {
       streamUnit.hass = this._hass;
@@ -7084,17 +7173,13 @@ class FrigateViewCardEditor extends HTMLElement {
     this._wireSettingsPanels();
     this._wireEditorDialogActions();
 
-    [
-      "title",
-      "subtitle",
-      "window_days",
-      "stream_height",
-      "col_left_width_pct",
-    ].forEach((id) => {
-      const el = this.querySelector(`#${id}`);
-      if (!el) return;
-      el.addEventListener("change", update);
-    });
+    ["title", "subtitle", "stream_height", "col_left_width_pct"].forEach(
+      (id) => {
+        const el = this.querySelector(`#${id}`);
+        if (!el) return;
+        el.addEventListener("change", update);
+      },
+    );
     ["tight_margins", "wide_view", "shadows"].forEach((id) => {
       const el = this.querySelector(`#${id}`);
       if (!el) return;
@@ -7111,6 +7196,7 @@ class FrigateViewCardEditor extends HTMLElement {
     if (wideCb && colWidthRow) {
       const syncWideRow = () => {
         colWidthRow.style.display = wideCb.checked ? "flex" : "none";
+        this._validateEditorFields();
       };
       wideCb.addEventListener("change", syncWideRow);
       wideCb.addEventListener("value-changed", syncWideRow);
@@ -7122,22 +7208,29 @@ class FrigateViewCardEditor extends HTMLElement {
       const sanitize = () => {
         const clean = String(pctInput.value || "").replace(/[^0-9]/g, "");
         if (pctInput.value !== clean) pctInput.value = clean;
+        this._validateEditorFields();
       };
       pctInput.addEventListener("input", sanitize);
       pctInput.addEventListener("change", sanitize);
       pctInput.addEventListener("value-changed", sanitize);
     }
 
-    if (this.querySelector("#window_days")) {
-      const daysInput = this.querySelector("#window_days");
+    if (this.querySelector("#stream_height")) {
+      const streamHeightInput = this.querySelector("#stream_height");
       const sanitize = () => {
-        const clean = String(daysInput.value || "").replace(/[^0-9]/g, "");
-        if (daysInput.value !== clean) daysInput.value = clean;
+        const clean = String(streamHeightInput.value || "").replace(
+          /[^0-9]/g,
+          "",
+        );
+        if (streamHeightInput.value !== clean) streamHeightInput.value = clean;
+        this._validateEditorFields();
       };
-      daysInput.addEventListener("input", sanitize);
-      daysInput.addEventListener("change", sanitize);
-      daysInput.addEventListener("value-changed", sanitize);
+      streamHeightInput.addEventListener("input", sanitize);
+      streamHeightInput.addEventListener("change", sanitize);
+      streamHeightInput.addEventListener("value-changed", sanitize);
     }
+
+    this._validateEditorFields();
   }
 
   _getCams() {
@@ -7165,6 +7258,7 @@ class FrigateViewCardEditor extends HTMLElement {
   }
 
   _u({ dispatch = true, preview = false } = {}) {
+    if (!this._validateEditorFields()) return;
     const g = (id) => this.querySelector("#" + id)?.value?.trim() || "";
     const c = { ...this._config };
     c.cameras = this._getCams();
@@ -7177,7 +7271,12 @@ class FrigateViewCardEditor extends HTMLElement {
     if (s) c.subtitle = s;
     else delete c.subtitle;
 
-    c.window_days = normalizePositiveInteger(g("window_days"), 3);
+    c.window_days = normalizePositiveInteger(
+      this.querySelector("#window_days")?.dataset.value ||
+        this.querySelector("#window_days")?.value ||
+        "3",
+      3,
+    );
     c.window_hours = c.window_days * 24;
 
     delete c.primary_color;
