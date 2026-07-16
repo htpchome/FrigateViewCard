@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.97";
+const VERSION = "1.0.98";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6103,12 +6103,26 @@ class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
         </style>
     <div class="ed-wrap">
+
+
+<ha-expansion-panel .expanded=${true}>
+    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
+      <ha-icon icon="mdi:home"></ha-icon>
+      <span>Card General Options</span>
+    </div>
+
       <div>
         <span class="field-label">Cameras ${frigEntities.length ? '<small style="font-weight:400;color:var(--secondary-text-color)">(Frigate cameras detected)</small>' : ""}</span>
         <div class="cam-wrap" id="cam-list">${cameraRows}</div>
                 ${canAddCamera ? '<div class="cam-toolbar"><button id="camera-add" class="cam-add" type="button">Add</button></div>' : ""}
                 <span class="cam-helper">Maximum 4 cameras.</span>
       </div>
+</ha-expansion-panel>
+<ha-expansion-panel .expanded=${true}>
+    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
+      <ha-icon icon="mdi:home"></ha-icon>
+      <span>Card General Options</span>
+    </div>
 
       <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
       <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="Frigate"></ha-input>
@@ -6124,6 +6138,12 @@ class FrigateViewCardEditor extends HTMLElement {
                     <span class="readonly-value">${timezoneDisplay}</span>
                 </div>
             </div>
+</ha-expansion-panel>
+<ha-expansion-panel .expanded=${true}>
+    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
+      <ha-icon icon="mdi:home"></ha-icon>
+      <span>Card Theme Options</span>
+    </div>
 
             <div class="section">
                 <span class="field-label">Theme</span>
@@ -6138,11 +6158,12 @@ class FrigateViewCardEditor extends HTMLElement {
                 <div class="theme-custom-body">${themeRows}</div>
               </details>
             </div>
+</ha-expansion-panel>
 
 <ha-expansion-panel .expanded=${true}>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:home"></ha-icon>
-      <span>My Header Text</span>
+      <span>Card Layout Options</span>
     </div>
 
       <div class="section">
