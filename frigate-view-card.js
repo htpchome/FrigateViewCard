@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.140";
+const VERSION = "1.0.141";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6260,24 +6260,38 @@ class FrigateViewCardEditor extends HTMLElement {
       });
     });
   }
-   _setupAccordionLogic() {
-    // Select all native panels inside this specific card instance
-    const panels = this.querySelectorAll('ha-expansion-panel');
+  _renderSettingsPanel({ id, title, icon, content, active = false }) {
+    return `<section class="settings-panel ${active ? "active" : ""}" data-panel="${id}">
+      <button type="button" class="setting-title" data-panel-toggle="${id}" aria-expanded="${active ? "true" : "false"}">
+        <ha-icon icon="${icon}"></ha-icon>
+        <h3>${title}</h3>
+      </button>
+      <div class="setting-content">${content}</div>
+    </section>`;
+  }
 
-    panels.forEach((clickedPanel) => {
-      clickedPanel.addEventListener('expanded-changed', (event) => {
-        const isOpening = event.detail.value;
-
-        // If the panel is opening, close all other panels
-        if (isOpening) {
-          panels.forEach((otherPanel) => {
-            if (otherPanel !== clickedPanel) {
-              otherPanel.expanded = false; 
-            }
-          });
-        }
+  _wireSettingsPanels() {
+    const panels = Array.from(this.querySelectorAll(".settings-panel"));
+    if (!panels.length) return;
+    const setActive = (activePanel) => {
+      panels.forEach((panel) => {
+        const isActive = panel === activePanel;
+        panel.classList.toggle("active", isActive);
+        const toggle = panel.querySelector("[data-panel-toggle]");
+        if (toggle)
+          toggle.setAttribute("aria-expanded", isActive ? "true" : "false");
       });
+    };
+
+    panels.forEach((panel) => {
+      panel
+        .querySelector("[data-panel-toggle]")
+        ?.addEventListener("click", () => {
+          if (!panel.classList.contains("active")) setActive(panel);
+        });
     });
+
+    setActive(panels[0]);
   }
 
   _render() {
@@ -6326,6 +6340,93 @@ class FrigateViewCardEditor extends HTMLElement {
       )
       .join("");
 
+    const cameraPanelContent = `
+      <div>
+        <span class="field-label">Cameras ${frigEntities.length ? '<small style="font-weight:400;color:var(--c-text2)">(Frigate cameras detected)</small>' : ""}</span>
+        <div class="cam-wrap" id="cam-list">${cameraRows}</div>
+        ${canAddCamera ? '<div class="cam-toolbar"><button id="camera-add" class="cam-add" type="button">Add</button></div>' : ""}
+        <span class="cam-helper">Maximum 4 cameras.</span>
+      </div>`;
+
+    const generalPanelContent = `
+      <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
+      <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="Frigate"></ha-input>
+      <div class="section">
+        <span class="field-label">Event history days</span>
+        <ha-input name="window_days" id="window_days" type="number" min="1" step="1" inputmode="numeric" value="${this._config?.window_days ?? 3}" placeholder="3"></ha-input>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Timezone</span>
+          <span class="readonly-value">${timezoneDisplay}</span>
+        </div>
+      </div>`;
+
+    const themePanelContent = `
+      <div class="section">
+        <span class="field-label">Theme</span>
+        <div class="theme-row">
+          <div class="theme-seg" id="theme-seg" role="radiogroup" aria-label="Theme">
+            <button type="button" class="theme-opt ${activeTheme === "default" ? "active" : ""}" data-theme-option="default" role="radio" aria-checked="${activeTheme === "default" ? "true" : "false"}">Home Assistant Theme</button>
+            <button type="button" class="theme-opt ${activeTheme === "custom" ? "active" : ""}" data-theme-option="custom" role="radio" aria-checked="${activeTheme === "custom" ? "true" : "false"}">Custom</button>
+          </div>
+        </div>
+        <details id="theme-custom-panel" class="theme-custom-panel" ${activeTheme === "custom" ? "open" : ""} ${activeTheme === "custom" ? "" : "hidden"}>
+          <summary>Custom Color Overrides</summary>
+          <div class="theme-custom-body">${themeRows}</div>
+        </details>
+      </div>`;
+
+    const layoutPanelContent = `
+      <div class="section">
+        <span class="field-label">Hidden tabs</span>
+        <div class="chk-row">
+          ${tabCheck("alerts", "Alerts")}
+          ${tabCheck("clips", "Clips")}
+          ${tabCheck("snapshot", "Snapshots")}
+          ${tabCheck("recordings", "Recordings")}
+          ${tabCheck("kept", "Kept")}
+        </div>
+      </div>
+      <div class="section">
+        <span class="field-label">Card Height Limit</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <ha-input name="stream_height" id="stream_height" type="number" value="${this._config?.stream_height || ""}" min="1" placeholder="${this._defaultHostVh()}" style="flex:1"></ha-input>
+          <ha-selector id="stream_height_unit" style="width:120px"></ha-selector>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Tight Margins</span>
+          <ha-switch id="tight_margins" ${this._config?.tight_margins ? "checked" : ""}></ha-switch>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Shadows</span>
+          <ha-switch id="shadows" ${this._config?.shadows !== false ? "checked" : ""}></ha-switch>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Wide View</span>
+          <ha-switch id="wide_view" ${this._config?.wide_view ? "checked" : ""}></ha-switch>
+        </div>
+        <div id="col-width-row" style="display:flex;align-items:center;gap:6px;margin-top:6px;${this._config?.wide_view ? "" : "display:none"}">
+          <label style="font-size:11px;color:var(--c-text);white-space:nowrap">Left Width %</label>
+          <ha-input type="text" id="col_left_width_pct" value="${this._config?.col_left_width_pct ?? 50}" style="width:70px"></ha-input>
+          <span style="font-size:11px;color:var(--c-text2)">%</span>
+        </div>
+      </div>`;
+
+    const settingsPanelsMarkup = `
+      <div class="settings-container">
+        ${this._renderSettingsPanel({ id: "camera", title: "Camera Settings", icon: "mdi:camera", content: cameraPanelContent, active: true })}
+        ${this._renderSettingsPanel({ id: "general", title: "General Settings", icon: "mdi:cog", content: generalPanelContent })}
+        ${this._renderSettingsPanel({ id: "theme", title: "Theme Settings", icon: "mdi:palette", content: themePanelContent })}
+        ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent })}
+      </div>`;
+
     this.innerHTML = `<style>
             .ed-wrap{
                 --editor-primary-bg: var(--primary-background-color, #f6f7fb);
@@ -6347,7 +6448,43 @@ class FrigateViewCardEditor extends HTMLElement {
                 font-family: var(--ha-font-family, inherit);
                 font-size: var(--ha-font-size, 14px);
             }
-            .field-label{font-size:12px;font-weight:600;margin-bottom:8px;display:block;color:var(--editor-text);}
+              .settings-container{display:flex;flex-direction:column;gap:10px;}
+              .settings-panel{
+                border:1px solid var(--c-border2, var(--editor-border));
+                border-radius:16px;
+                background:var(--c-bg-panel, var(--editor-card-bg));
+                color:var(--c-text, var(--editor-text));
+                overflow:hidden;
+              }
+              .setting-title{
+                width:100%;
+                border:none;
+                background:transparent;
+                color:inherit;
+                display:flex;
+                align-items:center;
+                gap:10px;
+                padding:12px 14px;
+                text-align:left;
+                cursor:pointer;
+              }
+              .setting-title h3{margin:0;font-size:14px;font-weight:700;}
+              .setting-title ha-icon{color:var(--c-text2, var(--editor-muted));}
+              .settings-panel.active .setting-title{color:var(--c-accent, var(--editor-primary));}
+              .settings-panel.active .setting-title ha-icon{color:var(--c-accent, var(--editor-primary));}
+              .setting-content{
+                max-height:0;
+                opacity:0;
+                overflow:hidden;
+                padding:0 14px;
+                transition:max-height .28s ease, opacity .2s ease, padding .2s ease;
+              }
+              .settings-panel.active .setting-content{
+                max-height:1400px;
+                opacity:1;
+                padding:0 14px 14px;
+              }
+              .field-label{font-size:12px;font-weight:600;margin-bottom:8px;display:block;color:var(--c-text, var(--editor-text));}
             .section{border-top:1px solid var(--divider-color, #d1d5db);padding-top:16px;}
             .chk-row{display:flex;flex-wrap:wrap;gap:8px 16px;}
 
@@ -6367,7 +6504,7 @@ class FrigateViewCardEditor extends HTMLElement {
             .cam-add{border:var(--editor-border-width) solid var(--editor-border);border-radius:999px;padding:8px 16px;background:var(--editor-card-bg);color:var(--editor-primary);font-weight:600;cursor:pointer;}
             .cam-add:hover{border-color:var(--editor-primary);}
             .cam-add[disabled]{opacity:.5;cursor:not-allowed;}
-            .cam-helper{font-size:11px;color:var(--editor-muted);}
+            .cam-helper{font-size:11px;color:var(--c-text2, var(--editor-muted));}
 
             .theme-row{display:flex;align-items:center;}
             .theme-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;}
@@ -6375,17 +6512,17 @@ class FrigateViewCardEditor extends HTMLElement {
             .theme-opt.active{background:var(--editor-primary);border-color:var(--editor-primary);color:var(--text-primary-color, #ffffff);}
             .theme-custom-panel{margin-top:10px;border:var(--editor-border-width) solid var(--editor-border);border-radius:10px;background:var(--editor-card-bg);}
             .theme-custom-panel[hidden]{display:none;}
-            .theme-custom-panel summary{cursor:pointer;list-style:none;padding:10px 12px;font-weight:600;color:var(--editor-text);display:flex;align-items:center;justify-content:space-between;}
+            .theme-custom-panel summary{cursor:pointer;list-style:none;padding:10px 12px;font-weight:600;color:var(--c-text, var(--editor-text));display:flex;align-items:center;justify-content:space-between;}
             .theme-custom-panel summary::-webkit-details-marker{display:none;}
             .theme-custom-body{padding:0 12px 10px;}
             .theme-custom-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--c-border2, var(--editor-border));}
             .theme-custom-row:first-child{border-top:none;}
             .theme-custom-label{display:flex;flex-direction:column;gap:2px;min-width:0;}
-            .theme-custom-warn{font-size:11px;color:var(--editor-muted);}
+            .theme-custom-warn{font-size:11px;color:var(--c-text2, var(--editor-muted));}
             .theme-color-input{width:60px;height:60px;padding:0;border:1px solid var(--editor-border);border-radius:4px;background:transparent;cursor:pointer;}
             .theme-color-input:disabled{opacity:.5;cursor:not-allowed;}
             .layout-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-            .readonly-value{font-size:12px;color:var(--editor-text);background:var(--editor-secondary-bg);border:var(--editor-border-width) solid var(--editor-border);border-radius:8px;padding:6px 10px;}
+            .readonly-value{font-size:12px;color:var(--c-text, var(--editor-text));background:var(--c-bg-main, var(--editor-secondary-bg));border:var(--editor-border-width) solid var(--c-border, var(--editor-border));border-radius:8px;padding:6px 10px;}
 
             .cam-modal.hidden{display:none;}
             .cam-modal{position:fixed;inset:0;background:rgba(0,0,0,.30);display:flex;align-items:center;justify-content:center;z-index:10;}
@@ -6400,112 +6537,7 @@ class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
         </style>
     <div class="ed-wrap">
-
-
-  <ha-expansion-panel expanded>
-    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:camera"></ha-icon>
-      <span>Camera Settings</span>
-    </div>
-
-      <div>
-        <span class="field-label">Cameras ${frigEntities.length ? '<small style="font-weight:400;color:var(--secondary-text-color)">(Frigate cameras detected)</small>' : ""}</span>
-        <div class="cam-wrap" id="cam-list">${cameraRows}</div>
-                ${canAddCamera ? '<div class="cam-toolbar"><button id="camera-add" class="cam-add" type="button">Add</button></div>' : ""}
-                <span class="cam-helper">Maximum 4 cameras.</span>
-      </div>
-</ha-expansion-panel>
-<ha-expansion-panel>
-    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:cog"></ha-icon>
-      <span>General Settings</span>
-    </div>
-
-      <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
-      <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="Frigate"></ha-input>
-
-      <div class="section">
-            <span class="field-label">Event history days</span>
-            <ha-input name="window_days" id="window_days" type="number" min="1" step="1" inputmode="numeric" value="${this._config?.window_days ?? 3}" placeholder="3"></ha-input>
-      </div>
-
-            <div class="section">
-                <div class="layout-row">
-                    <span class="field-label" style="margin:0">Timezone</span>
-                    <span class="readonly-value">${timezoneDisplay}</span>
-                </div>
-            </div>
-</ha-expansion-panel>
-<ha-expansion-panel>
-    <div slot="header" style="display: flex; align-items: center; gap: 8px;background:#eeeee4"">
-      <ha-icon icon="mdi:palette"></ha-icon>
-      <span>Theme Settings</span>
-    </div>
-
-            <div class="section">
-                <span class="field-label">Theme</span>
-                <div class="theme-row">
-                    <div class="theme-seg" id="theme-seg" role="radiogroup" aria-label="Theme">
-                  <button type="button" class="theme-opt ${activeTheme === "default" ? "active" : ""}" data-theme-option="default" role="radio" aria-checked="${activeTheme === "default" ? "true" : "false"}">Home Assistant Theme</button>
-                  <button type="button" class="theme-opt ${activeTheme === "custom" ? "active" : ""}" data-theme-option="custom" role="radio" aria-checked="${activeTheme === "custom" ? "true" : "false"}">Custom</button>
-                    </div>
-                </div>
-              <details id="theme-custom-panel" class="theme-custom-panel" ${activeTheme === "custom" ? "open" : ""} ${activeTheme === "custom" ? "" : "hidden"}>
-                <summary>Custom Color Overrides</summary>
-                <div class="theme-custom-body">${themeRows}</div>
-              </details>
-            </div>
-</ha-expansion-panel>
-
-<ha-expansion-panel>
-    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:angle-right"></ha-icon>
-      <span>Layout Settings</span>
-    </div>
-
-      <div class="section">
-                <span class="field-label">Hidden tabs</span>
-                <div class="chk-row">
-                    ${tabCheck("alerts", "Alerts")}
-                    ${tabCheck("clips", "Clips")}
-                    ${tabCheck("snapshot", "Snapshots")}
-                    ${tabCheck("recordings", "Recordings")}
-                    ${tabCheck("kept", "Kept")}
-                </div>
-            </div>
-            <div class="section">
-                <span class="field-label">Card Height Limit</span>
-                <div style="display:flex;gap:8px;align-items:center">
-                    <ha-input name="stream_height" id="stream_height" type="number" value="${this._config?.stream_height || ""}" min="1" placeholder="${this._defaultHostVh()}" style="flex:1"></ha-input>
-                    <ha-selector id="stream_height_unit" style="width:120px"></ha-selector>
-                </div>
-            </div>
-      <div class="section">
-                <div class="layout-row">
-                    <span class="field-label" style="margin:0">Tight Margins</span>
-                    <ha-switch id="tight_margins" ${this._config?.tight_margins ? "checked" : ""}></ha-switch>
-                </div>
-      </div>
-
-        <div class="section">
-            <div class="layout-row">
-              <span class="field-label" style="margin:0">Shadows</span>
-              <ha-switch id="shadows" ${this._config?.shadows !== false ? "checked" : ""}></ha-switch>
-            </div>
-        </div>
-
-      <div class="section">
-                <div class="layout-row">
-                    <span class="field-label" style="margin:0">Wide View</span>
-                    <ha-switch id="wide_view" ${this._config?.wide_view ? "checked" : ""}></ha-switch>
-                </div>
-        <div id="col-width-row" style="display:flex;align-items:center;gap:6px;margin-top:6px;${this._config?.wide_view ? "" : "display:none"}">
-                    <label style="font-size:11px;color:var(--primary-text-color);white-space:nowrap">Left Width %</label>
-          <ha-input type="text" id="col_left_width_pct" value="${this._config?.col_left_width_pct ?? 50}" style="width:70px"></ha-input>
-          <span style="font-size:11px;color:var(--secondary-text-color)">%</span>
-        </div>
-      </div>
-</ha-expansion-panel>
+      ${settingsPanelsMarkup}
 
       <div id="camera-modal" class="cam-modal hidden">
         <div class="cam-modal-card" role="dialog" aria-modal="true" aria-label="Camera modal">
@@ -6697,6 +6729,7 @@ class FrigateViewCardEditor extends HTMLElement {
       },
     );
     this._wireCameraDragAndDrop();
+    this._wireSettingsPanels();
 
     [
       "title",
