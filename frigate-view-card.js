@@ -6052,6 +6052,12 @@ class FrigateViewCard extends HTMLElement {
 // editor.js — FrigateViewCardEditor config panel
 class FrigateViewCardEditor extends HTMLElement {
   disconnectedCallback() {
+    if (Array.isArray(this._boundDialogActionButtons)) {
+      this._boundDialogActionButtons.forEach(({ element, handler }) => {
+        element?.removeEventListener?.("click", handler, true);
+      });
+    }
+    this._boundDialogActionButtons = [];
     if (this._onDialogPrimaryActionClick) {
       document.removeEventListener(
         "click",
@@ -6445,15 +6451,7 @@ class FrigateViewCardEditor extends HTMLElement {
   _wireEditorDialogActions() {
     if (this._dialogActionHooksBound) return;
 
-    const getActionKind = (ev) => {
-      const path = Array.isArray(ev.composedPath?.()) ? ev.composedPath() : [];
-      if (path.some((node) => node?.id === "camera-modal")) return null;
-      const button = path.find((node) => {
-        if (!(node instanceof Element)) return false;
-        return node.matches?.(
-          '[slot="primaryAction"], [slot="secondaryAction"], mwc-button, ha-button, button',
-        );
-      });
+    const getActionElementKind = (button) => {
       if (!(button instanceof Element)) return null;
 
       const explicitSlot = button.getAttribute?.("slot") || "";
@@ -6486,6 +6484,56 @@ class FrigateViewCardEditor extends HTMLElement {
       return null;
     };
 
+    const bindDialogActionButtons = () => {
+      this._boundDialogActionButtons = [];
+      const seenRoots = new Set();
+      let node = this;
+      let depth = 0;
+      while (node && depth < 8) {
+        const root = node.getRootNode?.();
+        if (root instanceof ShadowRoot && !seenRoots.has(root)) {
+          seenRoots.add(root);
+          root
+            .querySelectorAll(
+              '[slot="primaryAction"], [slot="secondaryAction"], mwc-button, ha-button, button',
+            )
+            .forEach((button) => {
+              const kind = getActionElementKind(button);
+              if (!kind) return;
+              const handler = () => {
+                if (kind === "primary") {
+                  if (this._hasVisualDraft) {
+                    this._dispatch();
+                    this._hasVisualDraft = false;
+                  }
+                  this._emitPreviewDraft(null);
+                  return;
+                }
+                this._hasVisualDraft = false;
+                this._emitPreviewDraft(null);
+              };
+              button.addEventListener("click", handler, true);
+              this._boundDialogActionButtons.push({ element: button, handler });
+            });
+        }
+        node = node.parentNode || node.host;
+        depth += 1;
+      }
+    };
+
+    const getActionKind = (ev) => {
+      const path = Array.isArray(ev.composedPath?.()) ? ev.composedPath() : [];
+      if (path.some((node) => node?.id === "camera-modal")) return null;
+      const button = path.find((node) => {
+        if (!(node instanceof Element)) return false;
+        return node.matches?.(
+          '[slot="primaryAction"], [slot="secondaryAction"], mwc-button, ha-button, button',
+        );
+      });
+      if (!(button instanceof Element)) return null;
+      return getActionElementKind(button);
+    };
+
     this._onDialogPrimaryActionClick = (ev) => {
       if (getActionKind(ev) !== "primary") return;
       if (this._hasVisualDraft) {
@@ -6507,6 +6555,7 @@ class FrigateViewCardEditor extends HTMLElement {
       this._onDialogSecondaryActionClick,
       true,
     );
+    bindDialogActionButtons();
     this._dialogActionHooksBound = true;
   }
 
