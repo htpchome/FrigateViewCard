@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.167";
+const VERSION = "1.0.168";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -331,6 +331,7 @@ const STYLES = `
   .rev-sev{object-fit: cover;} 
   .rev-sev.alert{outline-offset: 2px;outline: 4px solid var(--c-bg-alert);} 
   .rev-sev.detection{outline-offset: 2px;outline: 4px solid var(--c-accent);}
+  .eact{display:flex;flex-direction:row;align-items:center;gap:4px;flex-shrink:0;padding:right:10px}
 
  /* ── recordings ── */
   .ric{width:63px;height:63px;border-radius:5px;background:rgba(30,80,200,.25);
@@ -524,7 +525,7 @@ const STYLES = `
   .em{display:flex;gap:8px;flex-wrap:wrap;font-size:0.75rem;color:var(--c-text2);} .em span{display:flex;align-items:center;gap:4px;} 
   .em svg{width:10.8px;height:10.8px;}
   .desc{margin-top:4px;font-size:0.825rem;color:var(--c-text2);line-height:1.45;background:var(--c-bg-panel);border-radius:5px;padding:6px 8.4px;}
-  .eact{display:flex;flex-direction:row;align-items:center;gap:4px;flex-shrink:0;}
+
   .ico{width:31.2px;height:31.2px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
   .ico svg{width:15.6px;height:15.6px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
