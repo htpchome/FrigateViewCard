@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.161";
+const VERSION = "1.0.162";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -317,7 +317,7 @@ const STYLES = `
   .list-day-sec{position:relative;}
   .list-day-label{transform: scale(1.01);position:sticky;top:0;z-index:2;padding:2px 0 8px;margin:0 0 4px;font-size:0.82rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.50;pointer-events:none;background:var(--c-bg-main);border:none;}
   .list-day-label::before{content:"";position:absolute;left:0px;right:0px;top:-3px;height:3px;background:var(--c-bg-main);}
-  .list-item{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:2px 10px 2px 2px;
+  .list-item{position: relative;display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:2px 10px 2px 2px;
     background:var(--c-bg-panel-main);margin-bottom:5px;cursor:pointer;border-radius: 15px;}
   .list-item:hover{background: var(--c-bg-panel);
     border-color:var(--c-primary-d,rgba(59,130,246,.25));}
@@ -328,7 +328,7 @@ const STYLES = `
   .et{width:112px;height:63px;border-radius:15px;overflow:hidden;flex-shrink:0;
     background:var(--c-bg-deep);position:relative;}
   .et img{width:100%;height:100%;object-fit:cover;display:block;}
-  .rev-sev{} 
+  .rev-sev{object-fit: cover;position:absolute;top:0;left:0} 
   .rev-sev.alert{outline-offset: 2px;outline: 4px solid var(--c-bg-alert);border: 4px solid var(--c-accent)} 
   .rev-sev.detection{outline-offset: 2px;outline: 4px solid var(--c-accent);border: 4px solid var(--c-accent)}
 
