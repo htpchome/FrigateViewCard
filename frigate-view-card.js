@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.162";
+const VERSION = "1.0.163";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -326,11 +326,11 @@ const STYLES = `
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
   .et{width:112px;height:63px;border-radius:15px;overflow:hidden;flex-shrink:0;
-    background:var(--c-bg-deep);position:relative;}
-  .et img{width:100%;height:100%;object-fit:cover;display:block; position:absolute;top:0;left:0}
+    background:var(--c-bg-deep);position:absolute;tops:0;left:0}
+  .et img{width:95%;height:95%;object-fit:cover;display:block; position:absolute;top:0;left:0}
   .rev-sev{object-fit: cover;position:absolute;top:0;left:0} 
-  .rev-sev.alert{outline-offset: 2px;outline: 4px solid var(--c-bg-alert);border: 4px solid var(--c-accent)} 
-  .rev-sev.detection{outline-offset: 2px;outline: 4px solid var(--c-accent);border: 4px solid var(--c-accent)}
+  .rev-sev.alert{outline-offset: 2px;outline: 4px solid var(--c-bg-alert);} 
+  .rev-sev.detection{outline-offset: 2px;outline: 4px solid var(--c-accent);}
 
  /* ── recordings ── */
   .ric{width:63px;height:63px;border-radius:5px;background:rgba(30,80,200,.25);
