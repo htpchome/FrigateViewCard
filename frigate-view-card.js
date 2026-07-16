@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.99";
+const VERSION = "1.0.100";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6112,7 +6112,7 @@ class FrigateViewCardEditor extends HTMLElement {
         <span>Camera Settings</span>
       </div>
     \`} 
-    .expanded=${true}>
+    .expanded=\${true}>
 
       <div>
         <span class="field-label">Cameras ${frigEntities.length ? '<small style="font-weight:400;color:var(--secondary-text-color)">(Frigate cameras detected)</small>' : ""}</span>
