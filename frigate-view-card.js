@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.106";
+const VERSION = "1.0.109";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3222,21 +3222,26 @@ class FrigateViewCard extends HTMLElement {
   }
   _resumeLiveIfNeeded(_reason = "") {
     if (!this._started || !this._hass || !this._config) return;
-    if (!this._isCardVisible()) return;
-    if (this._isEditorPreviewContext()) {
-      // Leaving card editor is two-step in HA; keep retrying until dashboard
-      // edit mode fully exits after pressing Done.
+    const inEditor = this._isEditorPreviewContext();
+    const visible = this._isCardVisible();
+    const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
+    if (inEditor || !visible || popupOpen || this._mountInProgress) {
+      // Edit exit and layout transitions are async. Keep retrying until
+      // the card is visible and no longer in editor context.
       if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
-      this._resumeLiveT = setTimeout(() => {
-        this._resumeLiveIfNeeded("wait-edit-exit");
-      }, 700);
+      this._resumeLiveT = setTimeout(
+        () => {
+          this._resumeLiveIfNeeded("wait-ready");
+        },
+        inEditor ? 700 : 450,
+      );
       return;
     }
-    const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
-    if (popupOpen) return;
     const engWrap = this._$("#eng-wrap");
     if (engWrap) engWrap.style.display = "";
     this._kickLiveIfStale(true);
+    // Safety follow-up: some browsers finalize media attachment one frame later.
+    setTimeout(() => this._kickLiveIfStale(true), 900);
   }
   _setupResizeObserver() {
     if (this._ro) this._ro.disconnect();
