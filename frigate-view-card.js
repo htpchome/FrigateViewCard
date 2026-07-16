@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.169";
+const VERSION = "1.0.170";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -319,7 +319,7 @@ const STYLES = `
   .list-day-label::before{content:"";position:absolute;left:0px;right:0px;top:-3px;height:3px;background:var(--c-bg-main);}
   .list-item{position: relative;display:flex;flex-wrap:wrap;gap:9px;align-items:center;
     background:var(--c-bg-panel-main);margin-bottom:5px;
-    cursor:pointer;border-radius: 15px;}
+    cursor:pointer;border-radius: 15px;padding:2px 10px 2px 2px}
   .list-item:hover{background: var(--c-bg-panel);border-color:var(--c-primary-d);}
   .list-item.compact{padding:2px 10px 2px 2px;flex-wrap:wrap;}
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
@@ -328,9 +328,8 @@ const STYLES = `
   .et{border-radius:15px;overflow:hidden;flex-shrink:0;
     background:var(--c-bg-deep);position:relative;object-fit:cover;}
   .et img{width:160px;height:90px;object-fit:cover;display:block;}
-  .rev-sev{object-fit: cover;} 
-  .rev-sev.alert{outline-offset: 2px;outline: 4px solid var(--c-bg-alert);} 
-  .rev-sev.detection{outline-offset: 2px;outline: 4px solid var(--c-accent);}
+  .alert{outline: 2px solid var(--c-bg-alert);} 
+  .detection{outline: 2px solid var(--c-accent);}
   .eact{display:flex;flex-direction:row;align-items:center;gap:4px;flex-shrink:0;padding:right:10px}
 
  /* ── recordings ── */
@@ -6015,8 +6014,8 @@ class FrigateViewCard extends HTMLElement {
         ? this._missingThumbIds.has(firstDet)
           ? `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
           : hasReviewMedia
-            ? `<div class="et">
-                <img class="rev-sev ${sev}" src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            ? `<div class="et ${sev}">
+                <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="rev-ph" style="display:none">${ICONS.person}</div>
                 </div>`
             : `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
