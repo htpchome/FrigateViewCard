@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.170";
+const VERSION = "1.0.171";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6021,7 +6021,7 @@ class FrigateViewCard extends HTMLElement {
             : `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
         : "";
       return `
-      <div class="list-item ${sev} shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
+      <div class="list-item shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
 
         ${thumb}
 
