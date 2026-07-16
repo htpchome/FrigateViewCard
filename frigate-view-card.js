@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.109";
+const VERSION = "1.0.110";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -697,6 +697,8 @@ class FrigateViewCard extends HTMLElement {
     this._wasVisible = false;
     this._resumeLiveT = null;
     this._editModeWatchdogT = null;
+    this._editorDialogObserver = null;
+    this._editorDialogOpenLast = false;
     this._lastEditorPreviewContext = null;
     this._lastLiveKick = 0;
     this._rotateOverlayActive = false;
@@ -756,6 +758,7 @@ class FrigateViewCard extends HTMLElement {
     this._syncDomShadows();
     this._scheduleRotateOverlayUpdate();
     if (this._started) this._startEditModeWatchdog();
+    this._startEditorDialogCloseObserver();
   }
 
   _syncCardShellClasses() {
@@ -1111,6 +1114,8 @@ class FrigateViewCard extends HTMLElement {
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
     if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
     this._editModeWatchdogT = null;
+    if (this._editorDialogObserver) this._editorDialogObserver.disconnect();
+    this._editorDialogObserver = null;
     if (this._popupControlsHideTimer)
       clearTimeout(this._popupControlsHideTimer);
     if (this._popupMediaStopTimer) clearTimeout(this._popupMediaStopTimer);
@@ -1178,6 +1183,7 @@ class FrigateViewCard extends HTMLElement {
     this._loadCalendar();
     this._subscribe();
     this._startEditModeWatchdog();
+    this._startEditorDialogCloseObserver();
     this._refresh = setInterval(() => {
       if (this._isNowWindow()) this._loadWindow(true);
     }, this._config.refresh_seconds * 1000);
@@ -1195,6 +1201,29 @@ class FrigateViewCard extends HTMLElement {
       }
       this._lastEditorPreviewContext = inEditorPreview;
     }, 600);
+  }
+
+  _isCardEditorDialogOpen() {
+    return !!document.querySelector("hui-dialog-edit-card");
+  }
+
+  _startEditorDialogCloseObserver() {
+    if (this._editorDialogObserver) this._editorDialogObserver.disconnect();
+    this._editorDialogObserver = null;
+    this._editorDialogOpenLast = this._isCardEditorDialogOpen();
+    if (!("MutationObserver" in window) || !document.body) return;
+    this._editorDialogObserver = new MutationObserver(() => {
+      const openNow = this._isCardEditorDialogOpen();
+      if (this._editorDialogOpenLast && !openNow) {
+        // Save/Cancel closed the card editor dialog; resume immediately.
+        this._scheduleResumeLive("card-editor-close");
+      }
+      this._editorDialogOpenLast = openNow;
+    });
+    this._editorDialogObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
   }
 
   // Discover all cameras in parallel for faster startup
@@ -1241,23 +1270,7 @@ class FrigateViewCard extends HTMLElement {
     return normalizeCameraConnectionType(cam?.connection_type);
   }
 
-  _isLovelaceDashboardEditMode() {
-    try {
-      const href = String(window.location?.href || "");
-      if (!href) return false;
-      const url = new URL(href, window.location.origin);
-      const edit =
-        url.searchParams.get("edit") ||
-        url.searchParams.get("dashboard_edit") ||
-        "";
-      return /^(1|true|yes|on)$/i.test(String(edit));
-    } catch (_) {
-      return false;
-    }
-  }
-
   _isEditorPreviewContext() {
-    if (this._isLovelaceDashboardEditMode()) return true;
     // In Lovelace card editor preview, avoid opening live stream sessions.
     let el = this;
     let depth = 0;
@@ -2967,9 +2980,10 @@ class FrigateViewCard extends HTMLElement {
   }
   _scheduleResumeLive(reason = "") {
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
+    const delay = reason === "card-editor-close" ? 40 : 140;
     this._resumeLiveT = setTimeout(() => {
       this._resumeLiveIfNeeded(reason);
-    }, 140);
+    }, delay);
     if (this._isFirefox()) {
       // Firefox may need a second kick after layout settles on tab return.
       setTimeout(() => this._kickLiveIfStale(true), 900);
