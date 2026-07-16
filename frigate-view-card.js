@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.87";
+const VERSION = "1.0.88";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -16,6 +16,7 @@ const EVENT_FETCH_BATCH = 100;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
+const ALLOWED_HIDDEN_TABS = ["alerts", "clips", "snapshot", "kept"];
 const isIOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -948,7 +949,9 @@ class FrigateViewCard extends HTMLElement {
       refresh_seconds: Math.max(15, config.refresh_seconds || 45),
       browse_expanded: config.browse_expanded === true,
       hidden_tabs: Array.isArray(config.hidden_tabs)
-        ? config.hidden_tabs.map((id) => (id === "reviews" ? "alerts" : id))
+        ? config.hidden_tabs
+            .map((id) => (id === "reviews" ? "alerts" : id))
+            .filter((id) => ALLOWED_HIDDEN_TABS.includes(id))
         : [],
       stream_height: config.stream_height ? Number(config.stream_height) : null,
       stream_height_unit: config.stream_height_unit || "vh",
@@ -5740,9 +5743,9 @@ class FrigateViewCardEditor extends HTMLElement {
     const src = config && typeof config === "object" ? { ...config } : {};
     const cameras = this._normalizeCameras(src);
     if (Array.isArray(src.hidden_tabs)) {
-      src.hidden_tabs = src.hidden_tabs.map((id) =>
-        id === "reviews" ? "alerts" : id,
-      );
+      src.hidden_tabs = src.hidden_tabs
+        .map((id) => (id === "reviews" ? "alerts" : id))
+        .filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
     }
     delete src.camera_entity;
     src.shadows = src.shadows !== false;
@@ -6345,7 +6348,8 @@ class FrigateViewCardEditor extends HTMLElement {
 
     const hidden = [...this.querySelectorAll("[data-hide-tab]")]
       .filter((el) => el.checked)
-      .map((el) => el.dataset.hideTab);
+      .map((el) => el.dataset.hideTab)
+      .filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
     c.hidden_tabs = hidden.length ? hidden : [];
 
     const sh = this.querySelector("#stream_height")?.value;
