@@ -327,7 +327,7 @@ const STYLES = `
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
   .et{width:112px;height:63px;border-radius:15px;overflow:hidden;flex-shrink:0;
     background:var(--c-bg-deep);position:relative;}
-  .et img{width:100%;height:100%;object-fit:cover;display:block;}
+  .et img{width:100%;height:100%;object-fit:cover;display:block; position:absolute;top:0;left:0}
   .rev-sev{object-fit: cover;position:absolute;top:0;left:0} 
   .rev-sev.alert{outline-offset: 2px;outline: 4px solid var(--c-bg-alert);border: 4px solid var(--c-accent)} 
   .rev-sev.detection{outline-offset: 2px;outline: 4px solid var(--c-accent);border: 4px solid var(--c-accent)}
