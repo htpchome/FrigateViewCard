@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.102";
+const VERSION = "1.0.103";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6120,8 +6120,8 @@ class FrigateViewCardEditor extends HTMLElement {
 </ha-expansion-panel>
 <ha-expansion-panel .expanded=${true}>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:home"></ha-icon>
-      <span>Card General Options</span>
+      <ha-icon icon="mdi:cog"></ha-icon>
+      <span>General Settings</span>
     </div>
 
       <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
@@ -6141,8 +6141,8 @@ class FrigateViewCardEditor extends HTMLElement {
 </ha-expansion-panel>
 <ha-expansion-panel .expanded=${true}>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:home"></ha-icon>
-      <span>Card Theme Options</span>
+      <ha-icon icon="mdi:palette"></ha-icon>
+      <span>Theme Settings</span>
     </div>
 
             <div class="section">
@@ -6162,8 +6162,8 @@ class FrigateViewCardEditor extends HTMLElement {
 
 <ha-expansion-panel .expanded=${true}>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:home"></ha-icon>
-      <span>Card Layout Options</span>
+      <ha-icon icon="mdi:angle-right"></ha-icon>
+      <span>Layout Settings</span>
     </div>
 
       <div class="section">
