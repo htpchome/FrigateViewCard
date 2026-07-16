@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.95";
+const VERSION = "1.0.96";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6218,7 +6218,6 @@ class FrigateViewCardEditor extends HTMLElement {
             </div>
 
 <ha-expansion-panel .expanded=${true}>
-<div slot="header" style="display: flex; align-items: center; gap: 8px;">
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:home"></ha-icon>
       <span>My Header Text</span>
