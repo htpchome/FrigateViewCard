@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.100";
+const VERSION = "1.0.101";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6106,12 +6106,12 @@ class FrigateViewCardEditor extends HTMLElement {
 
 
   <ha-expansion-panel 
-    .header=\${html\`
+    .header=${html`
       <div style="display: flex; align-items: center; gap: 8px;">
         <ha-icon icon="mdi:camera"></ha-icon>
         <span>Camera Settings</span>
       </div>
-    \`} 
+    `} 
     .expanded=\${true}>
 
       <div>
