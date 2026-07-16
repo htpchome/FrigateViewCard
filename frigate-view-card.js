@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.132";
+const VERSION = "1.0.133";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -5983,32 +5983,56 @@ class FrigateViewCardEditor extends HTMLElement {
 
   _setActiveEditorPanel(value) {
     const next = this._editorPanelIds().includes(value) ? value : "camera";
+    if (this._activeEditorPanel === next) {
+      this._syncEditorAccordion();
+      return;
+    }
     this._activeEditorPanel = next;
     this._syncEditorAccordion();
   }
 
-  _bindEditorAccordion() {
-    this.querySelectorAll("[data-open-panel]").forEach((header) => {
-      header.addEventListener("click", (ev) => {
-        const panel = ev.currentTarget?.dataset?.openPanel || "camera";
-        requestAnimationFrame(() => this._setActiveEditorPanel(panel));
-      });
-    });
+  _wireEditorAccordion() {
+    this.querySelectorAll("ha-expansion-panel[data-panel-id]").forEach(
+      (panel) => {
+        panel.addEventListener("expanded-changed", (ev) => {
+          if (this._syncingEditorAccordion) return;
+
+          const panelId = panel.dataset.panelId || "camera";
+          const isExpanded = ev?.detail?.value === true;
+
+          if (isExpanded) {
+            this._setActiveEditorPanel(panelId);
+            return;
+          }
+
+          // Keep accordion stable: prevent a full collapse by restoring active panel.
+          if ((this._activeEditorPanel || "camera") === panelId) {
+            requestAnimationFrame(() => this._syncEditorAccordion());
+          }
+        });
+      },
+    );
   }
 
   _syncEditorAccordion() {
-    const active = this._activeEditorPanel || "camera";
-    this.querySelectorAll("ha-expansion-panel[data-panel-id]").forEach(
-      (panel) => {
-        const expanded = panel.dataset.panelId === active;
-        const hasExpanded = panel.hasAttribute("expanded");
-        if (expanded && !hasExpanded) {
-          panel.setAttribute("expanded", "");
-        } else if (!expanded && hasExpanded) {
-          panel.removeAttribute("expanded");
-        }
-      },
-    );
+    if (this._syncingEditorAccordion) return;
+    this._syncingEditorAccordion = true;
+    try {
+      const active = this._activeEditorPanel || "camera";
+      this.querySelectorAll("ha-expansion-panel[data-panel-id]").forEach(
+        (panel) => {
+          const expanded = panel.dataset.panelId === active;
+          const hasExpanded = panel.hasAttribute("expanded");
+          if (expanded && !hasExpanded) {
+            panel.setAttribute("expanded", "");
+          } else if (!expanded && hasExpanded) {
+            panel.removeAttribute("expanded");
+          }
+        },
+      );
+    } finally {
+      this._syncingEditorAccordion = false;
+    }
   }
 
   _normalizeCameras(config) {
@@ -6429,10 +6453,7 @@ class FrigateViewCardEditor extends HTMLElement {
 
 
   <ha-expansion-panel data-panel-id="camera" ${panelExpandedAttr("camera")}>
-    <div slot="header" data-open-panel="camera" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:camera"></ha-icon>
-      <span>Camera Settings</span>
-    </div>
+    <div slot="header">Camera Settings</div>
 
       <div>
         <span class="field-label">Cameras ${frigEntities.length ? '<small style="font-weight:400;color:var(--secondary-text-color)">(Frigate cameras detected)</small>' : ""}</span>
@@ -6442,10 +6463,7 @@ class FrigateViewCardEditor extends HTMLElement {
       </div>
 </ha-expansion-panel>
 <ha-expansion-panel data-panel-id="general" ${panelExpandedAttr("general")}>
-    <div slot="header" data-open-panel="general" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:cog"></ha-icon>
-      <span>General Settings</span>
-    </div>
+  <div slot="header">General Settings</div>
 
       <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
       <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="Frigate"></ha-input>
@@ -6463,10 +6481,7 @@ class FrigateViewCardEditor extends HTMLElement {
             </div>
 </ha-expansion-panel>
 <ha-expansion-panel data-panel-id="theme" ${panelExpandedAttr("theme")}>
-    <div slot="header" data-open-panel="theme" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:palette"></ha-icon>
-      <span>Theme Settings</span>
-    </div>
+  <div slot="header">Theme Settings</div>
 
             <div class="section">
                 <span class="field-label">Theme</span>
@@ -6484,10 +6499,7 @@ class FrigateViewCardEditor extends HTMLElement {
 </ha-expansion-panel>
 
 <ha-expansion-panel data-panel-id="layout" ${panelExpandedAttr("layout")}>
-    <div slot="header" data-open-panel="layout" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:angle-right"></ha-icon>
-      <span>Layout Settings</span>
-    </div>
+  <div slot="header">Layout Settings</div>
 
       <div class="section">
                 <span class="field-label">Hidden tabs</span>
@@ -6758,7 +6770,7 @@ class FrigateViewCardEditor extends HTMLElement {
     }
 
     this._syncEditorAccordion();
-    this._bindEditorAccordion();
+    this._wireEditorAccordion();
 
     if (this.querySelector("#col_left_width_pct")) {
       const pctInput = this.querySelector("#col_left_width_pct");
