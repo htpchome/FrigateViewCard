@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.128";
+const VERSION = "1.0.130";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6000,48 +6000,10 @@ class FrigateViewCardEditor extends HTMLElement {
   }
 
   _bindEditorAccordion() {
-    if (this._editorAccordionObserver) {
-      try {
-        this._editorAccordionObserver.disconnect();
-      } catch (_) {}
-      this._editorAccordionObserver = null;
-    }
-
-    const panels = Array.from(
-      this.querySelectorAll("ha-expansion-panel[data-panel-id]"),
-    );
-    if (!panels.length) return;
-
-    const syncFromDom = () => {
-      const expandedPanel = panels.find((panel) =>
-        panel.hasAttribute("expanded"),
-      );
-      if (expandedPanel?.dataset?.panelId) {
-        const next = expandedPanel.dataset.panelId;
-        this._activeEditorPanel = next;
-        this._setStoredEditorPanel(next);
-      }
-      this._syncEditorAccordion();
-    };
-
-    panels.forEach((panel) => {
-      panel.addEventListener("click", () => {
-        requestAnimationFrame(syncFromDom);
-      });
-      panel.addEventListener("keydown", (ev) => {
-        if (ev.key === "Enter" || ev.key === " ") {
-          requestAnimationFrame(syncFromDom);
-        }
-      });
-    });
-
-    this._editorAccordionObserver = new MutationObserver(() => {
-      syncFromDom();
-    });
-    panels.forEach((panel) => {
-      this._editorAccordionObserver.observe(panel, {
-        attributes: true,
-        attributeFilter: ["expanded"],
+    this.querySelectorAll("[data-open-panel]").forEach((header) => {
+      header.addEventListener("click", (ev) => {
+        const panel = ev.currentTarget?.dataset?.openPanel || "camera";
+        requestAnimationFrame(() => this._setActiveEditorPanel(panel));
       });
     });
   }
@@ -6051,9 +6013,10 @@ class FrigateViewCardEditor extends HTMLElement {
     this.querySelectorAll("ha-expansion-panel[data-panel-id]").forEach(
       (panel) => {
         const expanded = panel.dataset.panelId === active;
-        if (expanded) {
+        const hasExpanded = panel.hasAttribute("expanded");
+        if (expanded && !hasExpanded) {
           panel.setAttribute("expanded", "");
-        } else {
+        } else if (!expanded && hasExpanded) {
           panel.removeAttribute("expanded");
         }
       },
