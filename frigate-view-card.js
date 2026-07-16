@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.91";
+const VERSION = "1.0.92";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6203,17 +6203,6 @@ class FrigateViewCardEditor extends HTMLElement {
                 </div>
             </div>
 
-      <div class="section">
-                <span class="field-label">Hidden tabs</span>
-                <div class="chk-row">
-                    ${tabCheck("alerts", "Alerts")}
-                    ${tabCheck("clips", "Clips")}
-                    ${tabCheck("snapshot", "Snapshots")}
-                    ${tabCheck("recordings", "Recordings")}
-                    ${tabCheck("kept", "Kept")}
-                </div>
-            </div>
-
             <div class="section">
                 <span class="field-label">Theme</span>
                 <div class="theme-row">
@@ -6235,7 +6224,16 @@ class FrigateViewCardEditor extends HTMLElement {
                     <ha-selector id="stream_height_unit" style="width:120px"></ha-selector>
                 </div>
             </div>
-
+      <div class="section">
+                <span class="field-label">Hidden tabs</span>
+                <div class="chk-row">
+                    ${tabCheck("alerts", "Alerts")}
+                    ${tabCheck("clips", "Clips")}
+                    ${tabCheck("snapshot", "Snapshots")}
+                    ${tabCheck("recordings", "Recordings")}
+                    ${tabCheck("kept", "Kept")}
+                </div>
+            </div>
       <div class="section">
                 <div class="layout-row">
                     <span class="field-label" style="margin:0">Tight Margins</span>
