@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.125";
+const VERSION = "1.0.126";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1482,6 +1482,17 @@ class FrigateViewCard extends HTMLElement {
     this._engine = null;
   }
 
+  _cancelPendingMount(reason = "") {
+    if (this._mountInProgress) {
+      this._mountSeq += 1;
+      this._mountInProgress = false;
+      this._mountStartedAt = 0;
+      this._mountTargetEntity = "";
+    }
+    this._pendingMountDestroyers = [];
+    this._cleanupEngine();
+  }
+
   _streamAttemptSlot(host = null) {
     const slot = document.createElement("div");
     slot.style.cssText =
@@ -2537,6 +2548,7 @@ class FrigateViewCard extends HTMLElement {
     this._renderStats();
     this._streamMuted = true;
     this._renderMuteButton();
+    this._cancelPendingMount("switch-camera");
     this._mountEngine();
     clearTimeout(this._switchLoadT);
     const loadDelay = this._isFirefox() ? 500 : 100;
@@ -5944,7 +5956,9 @@ class FrigateViewCard extends HTMLElement {
 class FrigateViewCardEditor extends HTMLElement {
   setConfig(config) {
     this._config = this._normalizeConfig(config);
-    if (!this._activeEditorPanel) this._activeEditorPanel = "camera";
+    if (!this._activeEditorPanel) {
+      this._activeEditorPanel = this._getStoredEditorPanel();
+    }
     this._rendered = true;
     this._render();
   }
@@ -5957,6 +5971,47 @@ class FrigateViewCardEditor extends HTMLElement {
       this._lastEntityKey = key;
       if (this._rendered) this._render();
     }
+  }
+
+  _editorPanelIds() {
+    return ["camera", "general", "theme", "layout"];
+  }
+
+  _getStoredEditorPanel() {
+    try {
+      const value =
+        localStorage.getItem("frigate-view-card.editor.panel") || "";
+      return this._editorPanelIds().includes(value) ? value : "camera";
+    } catch (_) {
+      return "camera";
+    }
+  }
+
+  _setStoredEditorPanel(value) {
+    try {
+      localStorage.setItem("frigate-view-card.editor.panel", value);
+    } catch (_) {}
+  }
+
+  _setActiveEditorPanel(value) {
+    const next = this._editorPanelIds().includes(value) ? value : "camera";
+    this._activeEditorPanel = next;
+    this._setStoredEditorPanel(next);
+    this._syncEditorAccordion();
+  }
+
+  _syncEditorAccordion() {
+    const active = this._activeEditorPanel || "camera";
+    this.querySelectorAll("ha-expansion-panel[data-panel-id]").forEach(
+      (panel) => {
+        const expanded = panel.dataset.panelId === active;
+        if (expanded) {
+          panel.setAttribute("expanded", "");
+        } else {
+          panel.removeAttribute("expanded");
+        }
+      },
+    );
   }
 
   _normalizeCameras(config) {
@@ -6360,6 +6415,9 @@ class FrigateViewCardEditor extends HTMLElement {
             .theme-color-input:disabled{opacity:.5;cursor:not-allowed;}
             .layout-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
             .readonly-value{font-size:12px;color:var(--editor-text);background:var(--editor-secondary-bg);border:var(--editor-border-width) solid var(--editor-border);border-radius:8px;padding:6px 10px;}
+            ha-expansion-panel{display:block;transition:transform .18s ease,opacity .18s ease,filter .18s ease;transform:translateY(0);opacity:1;filter:none;}
+            ha-expansion-panel:not([expanded]){opacity:.985;filter:saturate(.96);}
+            ha-expansion-panel[expanded]{transform:translateY(-1px);}
 
             .cam-modal.hidden{display:none;}
             .cam-modal{position:fixed;inset:0;background:rgba(0,0,0,.30);display:flex;align-items:center;justify-content:center;z-index:10;}
@@ -6376,7 +6434,7 @@ class FrigateViewCardEditor extends HTMLElement {
     <div class="ed-wrap">
 
 
-  <ha-expansion-panel ${panelExpandedAttr("camera")}>
+  <ha-expansion-panel data-panel-id="camera" ${panelExpandedAttr("camera")}>
     <div slot="header" data-open-panel="camera" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:camera"></ha-icon>
       <span>Camera Settings</span>
@@ -6389,7 +6447,7 @@ class FrigateViewCardEditor extends HTMLElement {
                 <span class="cam-helper">Maximum 4 cameras.</span>
       </div>
 </ha-expansion-panel>
-<ha-expansion-panel ${panelExpandedAttr("general")}>
+<ha-expansion-panel data-panel-id="general" ${panelExpandedAttr("general")}>
     <div slot="header" data-open-panel="general" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:cog"></ha-icon>
       <span>General Settings</span>
@@ -6410,7 +6468,7 @@ class FrigateViewCardEditor extends HTMLElement {
                 </div>
             </div>
 </ha-expansion-panel>
-<ha-expansion-panel ${panelExpandedAttr("theme")}>
+<ha-expansion-panel data-panel-id="theme" ${panelExpandedAttr("theme")}>
     <div slot="header" data-open-panel="theme" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:palette"></ha-icon>
       <span>Theme Settings</span>
@@ -6431,7 +6489,7 @@ class FrigateViewCardEditor extends HTMLElement {
             </div>
 </ha-expansion-panel>
 
-<ha-expansion-panel ${panelExpandedAttr("layout")}>
+<ha-expansion-panel data-panel-id="layout" ${panelExpandedAttr("layout")}>
     <div slot="header" data-open-panel="layout" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:angle-right"></ha-icon>
       <span>Layout Settings</span>
@@ -6513,8 +6571,7 @@ class FrigateViewCardEditor extends HTMLElement {
     this.querySelectorAll("[data-open-panel]").forEach((header) => {
       header.addEventListener("click", (ev) => {
         const panel = ev.currentTarget?.dataset?.openPanel || "camera";
-        this._activeEditorPanel = panel;
-        this._render();
+        this._setActiveEditorPanel(panel);
       });
     });
 
@@ -6712,6 +6769,8 @@ class FrigateViewCardEditor extends HTMLElement {
       wideCb.addEventListener("value-changed", syncWideRow);
       syncWideRow();
     }
+
+    this._syncEditorAccordion();
 
     if (this.querySelector("#col_left_width_pct")) {
       const pctInput = this.querySelector("#col_left_width_pct");
