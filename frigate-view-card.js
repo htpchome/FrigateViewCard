@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.116";
+const VERSION = "1.0.118";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -712,6 +712,7 @@ class FrigateViewCard extends HTMLElement {
     this._rotateStyledVideoCssText = "";
     this._engineMountedMuted = true;
     this._mountInProgress = false;
+    this._mountStartedAt = 0;
     this._mountTargetEntity = "";
     this._domShadowOriginalStyles = new Map();
     this._onDocVisibility = () => {
@@ -1578,7 +1579,11 @@ class FrigateViewCard extends HTMLElement {
         ),
     };
 
-    const order = forcedType ? [forcedType] : ["webrtc", "mse"];
+    const order = forcedType
+      ? [forcedType]
+      : this._isEdge()
+        ? ["mse", "webrtc"]
+        : ["webrtc", "mse"];
     return order
       .filter((type) => typeof build[type] === "function")
       .map((type) => ({ type, start: build[type] }));
@@ -2326,7 +2331,25 @@ class FrigateViewCard extends HTMLElement {
     this._engineMountedMuted = this._streamMuted;
     const mountToken = ++this._mountSeq;
     this._mountInProgress = true;
+    this._mountStartedAt = Date.now();
     this._mountTargetEntity = entity;
+    const mountWatchdogT = setTimeout(() => {
+      if (!this._mountInProgress) return;
+      if (this._mountSeq !== mountToken) return;
+      this._ffDebug("Mount watchdog timeout; forcing recovery", {
+        mountToken,
+        mountTarget: this._mountTargetEntity,
+      });
+      this._mountSeq += 1;
+      this._mountInProgress = false;
+      this._mountStartedAt = 0;
+      this._mountTargetEntity = "";
+      this._cleanupEngine();
+      this._setStreamLoading(false);
+      this._setStreamFallbackVisible(true);
+      this._setActiveStreamType("snapshot");
+      this._scheduleResumeLive("mount-watchdog-timeout");
+    }, 9000);
     try {
       this._cleanupEngine();
       slot.innerHTML = "";
@@ -2407,8 +2430,10 @@ class FrigateViewCard extends HTMLElement {
       this._setStreamLoading(false);
       this._setStreamFallbackVisible(true);
     } finally {
+      clearTimeout(mountWatchdogT);
       if (mountToken === this._mountSeq) {
         this._mountInProgress = false;
+        this._mountStartedAt = 0;
         this._mountTargetEntity = "";
       }
     }
@@ -3348,6 +3373,23 @@ class FrigateViewCard extends HTMLElement {
     if (!this._started || !this._hass || !this._config) return;
     const visible = this._isCardVisible();
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
+    const mountStuckMs = this._mountStartedAt
+      ? Date.now() - this._mountStartedAt
+      : 0;
+
+    if (this._mountInProgress && mountStuckMs > 12000) {
+      this._ffDebug("Mount appears stuck; forcing recovery", {
+        reason: _reason,
+        mountTarget: this._mountTargetEntity,
+        mountStuckMs,
+      });
+      this._mountSeq += 1;
+      this._mountInProgress = false;
+      this._mountStartedAt = 0;
+      this._mountTargetEntity = "";
+      this._cleanupEngine();
+    }
+
     if (!visible || popupOpen || this._mountInProgress) {
       // Layout transitions are async. Keep retrying until mount is possible.
       if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
@@ -3356,6 +3398,7 @@ class FrigateViewCard extends HTMLElement {
         visible,
         popupOpen,
         mountInProgress: this._mountInProgress,
+        mountStuckMs,
       });
       this._resumeLiveT = setTimeout(() => {
         this._resumeLiveIfNeeded("wait-ready");
