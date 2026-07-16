@@ -6402,7 +6402,7 @@ class FrigateViewCardEditor extends HTMLElement {
     <div class="ed-wrap">
 
 
-  <ha-expansion-panel>
+  <ha-expansion-panel expanded>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:camera"></ha-icon>
       <span>Camera Settings</span>
