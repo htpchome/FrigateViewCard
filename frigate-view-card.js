@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.141";
+const VERSION = "1.0.142";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6508,8 +6508,21 @@ class FrigateViewCardEditor extends HTMLElement {
 
             .theme-row{display:flex;align-items:center;}
             .theme-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;}
-            .theme-opt{border:var(--editor-border-width) solid var(--editor-border);background:var(--editor-card-bg);color:var(--editor-text);border-radius:10px;padding:8px 10px;cursor:pointer;font-weight:600;}
-            .theme-opt.active{background:var(--editor-primary);border-color:var(--editor-primary);color:var(--text-primary-color, #ffffff);}
+            .theme-opt{
+              appearance:none;
+              border:var(--editor-border-width) solid var(--c-border2);
+              background:var(--c-bg-panel);
+              color:var(--c-text);
+              border-radius:10px;
+              padding:8px 10px;
+              cursor:pointer;
+              font-weight:600;
+              line-height:1.4;
+              transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease;
+            }
+            .theme-opt:hover{border-color:var(--c-primary);}
+            .theme-opt:focus-visible{outline:none;box-shadow:0 0 0 2px var(--c-primary-l, var(--c-primary));}
+            .theme-opt.active{background:var(--c-primary);border-color:var(--c-primary);color:var(--c-text-rev);}
             .theme-custom-panel{margin-top:10px;border:var(--editor-border-width) solid var(--editor-border);border-radius:10px;background:var(--editor-card-bg);}
             .theme-custom-panel[hidden]{display:none;}
             .theme-custom-panel summary{cursor:pointer;list-style:none;padding:10px 12px;font-weight:600;color:var(--c-text, var(--editor-text));display:flex;align-items:center;justify-content:space-between;}
@@ -6569,7 +6582,13 @@ class FrigateViewCardEditor extends HTMLElement {
     const update = () => this._u();
 
     this.querySelectorAll("[data-theme-option]").forEach((btn) => {
+      btn.addEventListener("pointerdown", (ev) => {
+        // Prevent panel header handlers from receiving pointer events.
+        ev.stopPropagation();
+      });
       btn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
         const selected = ev.currentTarget?.dataset?.themeOption || "default";
         this.querySelectorAll("[data-theme-option]").forEach((b) => {
           const active = b.dataset.themeOption === selected;
