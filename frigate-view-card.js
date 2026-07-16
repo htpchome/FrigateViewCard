@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.130";
+const VERSION = "1.0.131";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6424,9 +6424,6 @@ class FrigateViewCardEditor extends HTMLElement {
             .theme-color-input:disabled{opacity:.5;cursor:not-allowed;}
             .layout-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
             .readonly-value{font-size:12px;color:var(--editor-text);background:var(--editor-secondary-bg);border:var(--editor-border-width) solid var(--editor-border);border-radius:8px;padding:6px 10px;}
-            ha-expansion-panel{display:block;transition:transform .18s ease,opacity .18s ease,filter .18s ease;transform:translateY(0);opacity:1;filter:none;}
-            ha-expansion-panel:not([expanded]){opacity:.985;filter:saturate(.96);}
-            ha-expansion-panel[expanded]{transform:translateY(-1px);}
 
             .cam-modal.hidden{display:none;}
             .cam-modal{position:fixed;inset:0;background:rgba(0,0,0,.30);display:flex;align-items:center;justify-content:center;z-index:10;}
