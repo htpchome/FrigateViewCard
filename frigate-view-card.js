@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.90";
+const VERSION = "1.0.91";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -991,6 +991,16 @@ class FrigateViewCard extends HTMLElement {
                 .filter(([key]) => THEME_CUSTOM_KEYS.has(key))
                 .map(([key, value]) => [key, normalizeHexColor(value)])
                 .filter(([, value]) => !!value),
+            )
+          : {},
+      theme_custom_defaults:
+        config.theme_custom_defaults &&
+        typeof config.theme_custom_defaults === "object"
+          ? Object.fromEntries(
+              Object.entries(config.theme_custom_defaults)
+                .filter(([key]) => THEME_CUSTOM_KEYS.has(key))
+                .map(([key, value]) => [key, value === true])
+                .filter(([, value]) => value === true),
             )
           : {},
       stream_height: config.stream_height ? Number(config.stream_height) : null,
@@ -2968,10 +2978,17 @@ class FrigateViewCard extends HTMLElement {
       typeof this._config.theme_custom === "object"
         ? this._config.theme_custom
         : {};
+    const customDefaults =
+      this._config?.theme === "custom" &&
+      this._config?.theme_custom_defaults &&
+      typeof this._config.theme_custom_defaults === "object"
+        ? this._config.theme_custom_defaults
+        : {};
     for (const row of THEME_CUSTOM_ROWS) {
       const key = row.key;
       const override = normalizeHexColor(customTheme[key]);
-      if (override) {
+      const useDefault = customDefaults[key] === true;
+      if (!useDefault && override) {
         card.style.setProperty(key, override);
       } else {
         card.style.removeProperty(key);
@@ -5743,8 +5760,8 @@ class FrigateViewCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    const themeKey = this._hass?.themes?.darkMode ? "dark" : "light";
-    const key = `${this._frigateEntities().join(",")}|${themeKey}`;
+    const modeKey = this._hass?.themes?.darkMode ? "dark" : "light";
+    const key = `${this._frigateEntities().join(",")}|${modeKey}`;
     if (key !== this._lastEntityKey) {
       this._lastEntityKey = key;
       if (this._rendered) this._render();
@@ -5803,6 +5820,19 @@ class FrigateViewCardEditor extends HTMLElement {
       );
     } else {
       src.theme_custom = {};
+    }
+    if (
+      src.theme_custom_defaults &&
+      typeof src.theme_custom_defaults === "object"
+    ) {
+      src.theme_custom_defaults = Object.fromEntries(
+        Object.entries(src.theme_custom_defaults)
+          .filter(([key]) => THEME_CUSTOM_KEYS.has(key))
+          .map(([key, value]) => [key, value === true])
+          .filter(([, value]) => value === true),
+      );
+    } else {
+      src.theme_custom_defaults = {};
     }
     src.shadows = src.shadows !== false;
     return { ...src, cameras };
@@ -6040,6 +6070,7 @@ class FrigateViewCardEditor extends HTMLElement {
     this._ensureThemeDraftCache();
     const activeTheme = this._config?.theme === "custom" ? "custom" : "default";
     const themeCustom = this._config?.theme_custom || {};
+    const themeCustomDefaults = this._config?.theme_custom_defaults || {};
     const tabCheck = (id, label) => `<ha-formfield label="${label}">
             <ha-checkbox name="hide-${id}" data-hide-tab="${id}" ${hiddenTabs.has(id) ? "checked" : ""}></ha-checkbox>
     </ha-formfield>`;
@@ -6048,19 +6079,19 @@ class FrigateViewCardEditor extends HTMLElement {
       const defaultHex = this._themeDefaultHex(key);
       const saved = normalizeHexColor(themeCustom[key]);
       const draft = normalizeHexColor(this._themeDraftCache?.[key]);
-      const hasCustom = !!saved;
-      const value = hasCustom ? saved : draft || defaultHex;
-      const useDefault = !hasCustom;
+      const value = saved || draft || defaultHex;
+      const useDefault = themeCustomDefaults[key] === true;
+      const visibleValue = useDefault ? defaultHex : value;
+      const showWarn = !useDefault && visibleValue !== defaultHex;
       return `
         <div class="theme-custom-row" data-theme-row="${key}">
           <div class="theme-custom-label">
             <div>${row.label}</div>
-            <div class="theme-custom-var">[var(${key})]</div>
-            <div class="theme-custom-warn">Draft changes require card config save.</div>
+            ${showWarn ? '<div class="theme-custom-warn">Draft changes require card config save.</div>' : ""}
           </div>
-          <input class="theme-color-input" type="color" data-theme-color="${key}" value="${value}" ${useDefault ? "disabled" : ""}>
+          <input class="theme-color-input" type="color" data-theme-color="${key}" value="${visibleValue}" ${useDefault ? "disabled" : ""}>
           <ha-formfield label="Use Default">
-            <ha-checkbox data-theme-default="${key}" ${useDefault ? "checked" : ""}></ha-checkbox>
+            <ha-switch data-theme-default="${key}" ${useDefault ? "checked" : ""}></ha-switch>
           </ha-formfield>
         </div>`;
     }).join("");
@@ -6131,9 +6162,8 @@ class FrigateViewCardEditor extends HTMLElement {
             .theme-custom-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--c-border2, var(--editor-border));}
             .theme-custom-row:first-child{border-top:none;}
             .theme-custom-label{display:flex;flex-direction:column;gap:2px;min-width:0;}
-            .theme-custom-var{font-size:11px;color:var(--editor-muted);}
             .theme-custom-warn{font-size:11px;color:var(--editor-muted);}
-            .theme-color-input{width:30px;height:30px;padding:0;border:1px solid var(--editor-border);border-radius:4px;background:transparent;cursor:pointer;}
+            .theme-color-input{width:60px;height:60px;padding:0;border:1px solid var(--editor-border);border-radius:4px;background:transparent;cursor:pointer;}
             .theme-color-input:disabled{opacity:.5;cursor:not-allowed;}
             .layout-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
             .readonly-value{font-size:12px;color:var(--editor-text);background:var(--editor-secondary-bg);border:var(--editor-border-width) solid var(--editor-border);border-radius:8px;padding:6px 10px;}
@@ -6288,10 +6318,10 @@ class FrigateViewCardEditor extends HTMLElement {
       input.addEventListener("change", update);
     });
 
-    this.querySelectorAll("[data-theme-default]").forEach((checkbox) => {
-      const key = checkbox.dataset.themeDefault;
+    this.querySelectorAll("[data-theme-default]").forEach((toggle) => {
+      const key = toggle.dataset.themeDefault;
       const input = this.querySelector(`[data-theme-color="${key}"]`);
-      checkbox.addEventListener("change", (ev) => {
+      toggle.addEventListener("change", (ev) => {
         const checked = ev.currentTarget?.checked === true;
         if (!input) {
           update();
@@ -6307,9 +6337,9 @@ class FrigateViewCardEditor extends HTMLElement {
         }
         update();
       });
-      checkbox.addEventListener("value-changed", (ev) => {
+      toggle.addEventListener("value-changed", (ev) => {
         const checked = ev?.detail?.value === true;
-        checkbox.checked = checked;
+        toggle.checked = checked;
       });
     });
 
@@ -6520,19 +6550,21 @@ class FrigateViewCardEditor extends HTMLElement {
       "custom"
         ? "custom"
         : "default";
+    const themeCustomDefaults = {};
     const themeCustom = {};
     this.querySelectorAll("[data-theme-color]").forEach((input) => {
       const key = input.dataset.themeColor;
       if (!THEME_CUSTOM_KEYS.has(key)) return;
       const useDefault =
         this.querySelector(`[data-theme-default="${key}"]`)?.checked === true;
-      const value = normalizeHexColor(input.value);
-      if (!useDefault && value) {
-        themeCustom[key] = value;
-        this._themeDraftCache[key] = value;
-      }
+      const inputValue = normalizeHexColor(input.value);
+      if (useDefault) themeCustomDefaults[key] = true;
+      if (!useDefault && inputValue) this._themeDraftCache[key] = inputValue;
+      const cached = normalizeHexColor(this._themeDraftCache?.[key]);
+      if (cached) themeCustom[key] = cached;
     });
     c.theme_custom = themeCustom;
+    c.theme_custom_defaults = themeCustomDefaults;
 
     const hidden = [...this.querySelectorAll("[data-hide-tab]")]
       .filter((el) => el.checked)
