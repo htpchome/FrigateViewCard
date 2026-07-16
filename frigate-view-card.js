@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.145";
+const VERSION = "1.0.148";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -716,6 +716,7 @@ class FrigateViewCard extends HTMLElement {
     this._mountStartedAt = 0;
     this._mountTargetEntity = "";
     this._domShadowOriginalStyles = new Map();
+    this._committedConfig = null;
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
         this._scheduleResumeLive("doc-visible");
@@ -739,6 +740,68 @@ class FrigateViewCard extends HTMLElement {
     window.visualViewport?.addEventListener("scroll", this._onViewportRotate, {
       passive: true,
     });
+    this._onEditorPreviewDraft = (ev) => {
+      if (ev?.detail?.cardTag !== CARD_TAG) return;
+      this._applyEditorPreviewDraft(ev.detail?.config || null);
+    };
+    window.addEventListener(
+      "frigate-view-card-preview-draft",
+      this._onEditorPreviewDraft,
+    );
+  }
+
+  _cloneCardConfig(config) {
+    try {
+      return JSON.parse(JSON.stringify(config || {}));
+    } catch (_) {
+      return { ...(config || {}) };
+    }
+  }
+
+  _applyEditorPreviewDraft(previewConfig) {
+    if (!this._isEditorPreviewContext()) return;
+    if (!this._committedConfig) return;
+
+    const base = this._cloneCardConfig(this._committedConfig);
+    const next = previewConfig
+      ? {
+          ...base,
+          title: previewConfig.title || null,
+          subtitle: previewConfig.subtitle || null,
+          window_days: normalizePositiveInteger(previewConfig.window_days, 3),
+          theme: previewConfig.theme === "custom" ? "custom" : "default",
+          theme_custom:
+            previewConfig.theme_custom &&
+            typeof previewConfig.theme_custom === "object"
+              ? previewConfig.theme_custom
+              : {},
+          theme_custom_defaults:
+            previewConfig.theme_custom_defaults &&
+            typeof previewConfig.theme_custom_defaults === "object"
+              ? previewConfig.theme_custom_defaults
+              : {},
+          stream_height: previewConfig.stream_height
+            ? Number(previewConfig.stream_height)
+            : null,
+          stream_height_unit: previewConfig.stream_height_unit || "vh",
+          tight_margins: previewConfig.tight_margins === true,
+          shadows: previewConfig.shadows !== false,
+          wide_view: previewConfig.wide_view === true,
+          col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
+        }
+      : base;
+
+    this._config = next;
+    this._syncCardShellClasses();
+    this._syncDomShadows();
+    this._browseOpen = this._config.browse_expanded;
+    this._applyCardStyle();
+    this._applyLayoutMode();
+    if (next.wide_view) this._syncColHeight();
+    this._syncStatus();
+    this._renderSubtitle();
+    this._renderStats();
+    this._renderCamSwitcher();
   }
   connectedCallback() {
     if (this._disconnectTeardownT) {
@@ -1027,6 +1090,7 @@ class FrigateViewCard extends HTMLElement {
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
     };
+    this._committedConfig = this._cloneCardConfig(nextConfig);
     this._config = nextConfig;
     this._syncCardShellClasses();
     this._syncDomShadows();
@@ -1179,6 +1243,12 @@ class FrigateViewCard extends HTMLElement {
       window.visualViewport?.removeEventListener(
         "scroll",
         this._onViewportRotate,
+      );
+    }
+    if (this._onEditorPreviewDraft) {
+      window.removeEventListener(
+        "frigate-view-card-preview-draft",
+        this._onEditorPreviewDraft,
       );
     }
     if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
@@ -5954,6 +6024,25 @@ class FrigateViewCard extends HTMLElement {
 //=========================================================================
 // editor.js — FrigateViewCardEditor config panel
 class FrigateViewCardEditor extends HTMLElement {
+  disconnectedCallback() {
+    if (this._onDialogPrimaryActionClick) {
+      document.removeEventListener(
+        "click",
+        this._onDialogPrimaryActionClick,
+        true,
+      );
+    }
+    if (this._onDialogSecondaryActionClick) {
+      document.removeEventListener(
+        "click",
+        this._onDialogSecondaryActionClick,
+        true,
+      );
+    }
+    this._dialogActionHooksBound = false;
+    this._emitPreviewDraft(null);
+  }
+
   _configSignature(config) {
     try {
       return JSON.stringify(config || {});
@@ -6326,6 +6415,35 @@ class FrigateViewCardEditor extends HTMLElement {
     setActive(initial || null);
   }
 
+  _wireEditorDialogActions() {
+    if (this._dialogActionHooksBound) return;
+
+    this._onDialogPrimaryActionClick = (ev) => {
+      const btn = ev.target?.closest?.('[slot="primaryAction"]');
+      if (!btn) return;
+      if (this._hasVisualDraft) {
+        this._dispatch();
+        this._hasVisualDraft = false;
+      }
+      this._emitPreviewDraft(null);
+    };
+
+    this._onDialogSecondaryActionClick = (ev) => {
+      const btn = ev.target?.closest?.('[slot="secondaryAction"]');
+      if (!btn) return;
+      this._hasVisualDraft = false;
+      this._emitPreviewDraft(null);
+    };
+
+    document.addEventListener("click", this._onDialogPrimaryActionClick, true);
+    document.addEventListener(
+      "click",
+      this._onDialogSecondaryActionClick,
+      true,
+    );
+    this._dialogActionHooksBound = true;
+  }
+
   _render() {
     const frigEntities = this._frigateEntities();
     const cams = this._getCams();
@@ -6627,7 +6745,7 @@ class FrigateViewCardEditor extends HTMLElement {
       </div>
     </div>`;
 
-    const update = () => this._u();
+    const update = () => this._u({ dispatch: false, preview: true });
 
     this.querySelectorAll("[data-theme-option]").forEach((btn) => {
       btn.addEventListener("pointerdown", (ev) => {
@@ -6797,6 +6915,7 @@ class FrigateViewCardEditor extends HTMLElement {
     );
     this._wireCameraDragAndDrop();
     this._wireSettingsPanels();
+    this._wireEditorDialogActions();
 
     [
       "title",
@@ -6867,7 +6986,18 @@ class FrigateViewCardEditor extends HTMLElement {
       : [];
   }
 
-  _u() {
+  _emitPreviewDraft(config) {
+    window.dispatchEvent(
+      new CustomEvent("frigate-view-card-preview-draft", {
+        detail: {
+          cardTag: CARD_TAG,
+          config,
+        },
+      }),
+    );
+  }
+
+  _u({ dispatch = true, preview = false } = {}) {
     const g = (id) => this.querySelector("#" + id)?.value?.trim() || "";
     const c = { ...this._config };
     c.cameras = this._getCams();
@@ -6937,7 +7067,24 @@ class FrigateViewCardEditor extends HTMLElement {
       : 50;
 
     this._config = c;
-    this._dispatch();
+    if (preview) {
+      this._hasVisualDraft = true;
+      this._emitPreviewDraft({
+        title: c.title,
+        subtitle: c.subtitle,
+        window_days: c.window_days,
+        theme: c.theme,
+        theme_custom: c.theme_custom,
+        theme_custom_defaults: c.theme_custom_defaults,
+        stream_height: c.stream_height,
+        stream_height_unit: c.stream_height_unit,
+        tight_margins: c.tight_margins,
+        shadows: c.shadows,
+        wide_view: c.wide_view,
+        col_left_width_pct: c.col_left_width_pct,
+      });
+    }
+    if (dispatch) this._dispatch();
   }
 
   _dispatch() {
