@@ -4012,7 +4012,25 @@ class FrigateViewCard extends HTMLElement {
     }
     return false;
   }
+   _setupAccordionLogic() {
+    // Select all native panels inside this specific card instance
+    const panels = this.querySelectorAll('ha-expansion-panel');
 
+    panels.forEach((clickedPanel) => {
+      clickedPanel.addEventListener('expanded-changed', (event) => {
+        const isOpening = event.detail.value;
+
+        // If the panel is opening, close all other panels
+        if (isOpening) {
+          panels.forEach((otherPanel) => {
+            if (otherPanel !== clickedPanel) {
+              otherPanel.expanded = false; 
+            }
+          });
+        }
+      });
+    });
+  }
   async _attemptRecordingSeek(video, targetSec, timeoutMs = 2500) {
     if (!video || !Number.isFinite(targetSec)) return false;
     return await new Promise((resolve) => {
