@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.131";
+const VERSION = "1.0.132";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -5953,10 +5953,15 @@ class FrigateViewCard extends HTMLElement {
 //=========================================================================
 // editor.js — FrigateViewCardEditor config panel
 class FrigateViewCardEditor extends HTMLElement {
+  connectedCallback() {
+    this._activeEditorPanel = "camera";
+    if (this._rendered) this._syncEditorAccordion();
+  }
+
   setConfig(config) {
     this._config = this._normalizeConfig(config);
     if (!this._activeEditorPanel) {
-      this._activeEditorPanel = this._getStoredEditorPanel();
+      this._activeEditorPanel = "camera";
     }
     this._rendered = true;
     this._render();
@@ -5976,26 +5981,9 @@ class FrigateViewCardEditor extends HTMLElement {
     return ["camera", "general", "theme", "layout"];
   }
 
-  _getStoredEditorPanel() {
-    try {
-      const value =
-        localStorage.getItem("frigate-view-card.editor.panel") || "";
-      return this._editorPanelIds().includes(value) ? value : "camera";
-    } catch (_) {
-      return "camera";
-    }
-  }
-
-  _setStoredEditorPanel(value) {
-    try {
-      localStorage.setItem("frigate-view-card.editor.panel", value);
-    } catch (_) {}
-  }
-
   _setActiveEditorPanel(value) {
     const next = this._editorPanelIds().includes(value) ? value : "camera";
     this._activeEditorPanel = next;
-    this._setStoredEditorPanel(next);
     this._syncEditorAccordion();
   }
 
