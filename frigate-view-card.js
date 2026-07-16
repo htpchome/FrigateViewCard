@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.149";
+const VERSION = "1.0.150";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -763,6 +763,7 @@ class FrigateViewCard extends HTMLElement {
     if (!this._committedConfig) return;
 
     const base = this._cloneCardConfig(this._committedConfig);
+    const prevHiddenTabs = JSON.stringify(base.hidden_tabs || []);
     const next = previewConfig
       ? {
           ...base,
@@ -798,6 +799,9 @@ class FrigateViewCard extends HTMLElement {
     this._syncCardShellClasses();
     this._syncDomShadows();
     this._browseOpen = this._config.browse_expanded;
+    if (JSON.stringify(next.hidden_tabs || []) !== prevHiddenTabs) {
+      this._syncTabsShell();
+    }
     this._applyCardStyle();
     this._applyLayoutMode();
     if (next.wide_view) this._syncColHeight();
@@ -805,6 +809,8 @@ class FrigateViewCard extends HTMLElement {
     this._renderSubtitle();
     this._renderStats();
     this._renderCamSwitcher();
+    this._renderListLabel();
+    this._renderList();
   }
   connectedCallback() {
     if (this._disconnectTeardownT) {
@@ -2930,16 +2936,8 @@ class FrigateViewCard extends HTMLElement {
     clearTimeout(this._rt);
     this._rt = setTimeout(() => this._loadWindow(true), 1500);
   }
-  // ── shell ─────────────────────────────────────────────────
-  _renderShell() {
-    const title =
-      this._config.title ||
-      (this._config.cameras.length === 1
-        ? cap(camDisplayName(this._config.cameras[0]))
-        : "Cameras") ||
-      "Camera";
-    const subtitle = this._subtitleText();
-    const multiCam = this._config.cameras.length > 1;
+
+  _buildTabsMarkup() {
     const ht = new Set(this._config.hidden_tabs || []);
     const tabOrder = ["alerts", "clips", "snapshot", "recordings", "kept"];
     const activeTab =
@@ -2953,7 +2951,42 @@ class FrigateViewCard extends HTMLElement {
         : id === activeTab
           ? `<div class="pill active" data-tab="${id}" title="${label}">${icon}</div>`
           : `<div class="pill icon-only" data-tab="${id}" title="${label}">${icon}</div>`;
+    return `${tab("alerts", ICONS.alerts, "Alerts")}
+      ${tab("clips", ICONS.clips, "Clips")}
+      ${tab("snapshot", ICONS.snapshot, "Snapshots")}
+      ${tab("recordings", ICONS.recordings, "Recordings")}
+      ${tab("kept", ICONS.star, "Kept events")}
+      <div class="tl-tools" style=" margin-left: auto;">
+        <button class="tool" id="now-btn" title="Today">${ICONS.bullseye}</button>
+        <button class="tool" id="filter-btn" title="Filter">${ICONS.filter}</button>
+        <button class="tool" id="cal-btn" title="Calendar">${ICONS.calendar}</button>
+      </div>`;
+  }
 
+  _syncTabsShell() {
+    const tabs = this._$(".tabs");
+    if (!tabs) return;
+    const prevTab = this._tab;
+    tabs.innerHTML = this._buildTabsMarkup();
+    if (this._tab !== prevTab) {
+      if (this._tab === "alerts") {
+        this._loadReviews().then(() => this._renderList());
+      } else if (this._tab === "kept") {
+        this._loadKept().then(() => this._renderList());
+      }
+    }
+  }
+
+  // ── shell ─────────────────────────────────────────────────
+  _renderShell() {
+    const title =
+      this._config.title ||
+      (this._config.cameras.length === 1
+        ? cap(camDisplayName(this._config.cameras[0]))
+        : "Cameras") ||
+      "Camera";
+    const subtitle = this._subtitleText();
+    const multiCam = this._config.cameras.length > 1;
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""}" id="card">
 
@@ -3007,16 +3040,7 @@ class FrigateViewCard extends HTMLElement {
           <div class="col-right" id="col-right">
             <div class="frigate-view">${ICONS.frigateview}</div> 
             <div class="tabs">
-              ${tab("alerts", ICONS.alerts, "Alerts")}
-              ${tab("clips", ICONS.clips, "Clips")}
-              ${tab("snapshot", ICONS.snapshot, "Snapshots")}
-              ${tab("recordings", ICONS.recordings, "Recordings")}
-              ${tab("kept", ICONS.star, "Kept events")}
-              <div class="tl-tools" style=" margin-left: auto;">
-                <button class="tool" id="now-btn" title="Today">${ICONS.bullseye}</button>
-                <button class="tool" id="filter-btn" title="Filter">${ICONS.filter}</button>
-                <button class="tool" id="cal-btn" title="Calendar">${ICONS.calendar}</button>
-              </div>
+              ${this._buildTabsMarkup()}
             </div>
          
             <div class="browse" id="browse" style="display:none">
@@ -6422,11 +6446,15 @@ class FrigateViewCardEditor extends HTMLElement {
     if (this._dialogActionHooksBound) return;
 
     const getActionKind = (ev) => {
-      if (ev.target?.closest?.("#camera-modal")) return null;
-      const button = ev.target?.closest?.(
-        '[slot="primaryAction"], [slot="secondaryAction"], mwc-button, ha-button, button',
-      );
-      if (!button) return null;
+      const path = Array.isArray(ev.composedPath?.()) ? ev.composedPath() : [];
+      if (path.some((node) => node?.id === "camera-modal")) return null;
+      const button = path.find((node) => {
+        if (!(node instanceof Element)) return false;
+        return node.matches?.(
+          '[slot="primaryAction"], [slot="secondaryAction"], mwc-button, ha-button, button',
+        );
+      });
+      if (!(button instanceof Element)) return null;
 
       const explicitSlot = button.getAttribute?.("slot") || "";
       if (explicitSlot === "primaryAction") return "primary";
