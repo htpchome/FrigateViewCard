@@ -1851,6 +1851,25 @@ class FrigateViewCard extends HTMLElement {
       if (visible && refreshImage) this._refreshStreamFallbackImage();
     }
   }
+    _setupAccordionLogic() {
+    // Select all native panels inside this specific card instance
+    const panels = this.querySelectorAll('ha-expansion-panel');
+
+    panels.forEach((clickedPanel) => {
+      clickedPanel.addEventListener('expanded-changed', (event) => {
+        const isOpening = event.detail.value;
+
+        // If the panel is opening, close all other panels
+        if (isOpening) {
+          panels.forEach((otherPanel) => {
+            if (otherPanel !== clickedPanel) {
+              otherPanel.expanded = false; 
+            }
+          });
+        }
+      });
+    });
+  }
 
   async _streamFallbackUrl(entity) {
     if (!entity) return "";
@@ -4011,25 +4030,6 @@ class FrigateViewCard extends HTMLElement {
       }
     }
     return false;
-  }
-   _setupAccordionLogic() {
-    // Select all native panels inside this specific card instance
-    const panels = this.querySelectorAll('ha-expansion-panel');
-
-    panels.forEach((clickedPanel) => {
-      clickedPanel.addEventListener('expanded-changed', (event) => {
-        const isOpening = event.detail.value;
-
-        // If the panel is opening, close all other panels
-        if (isOpening) {
-          panels.forEach((otherPanel) => {
-            if (otherPanel !== clickedPanel) {
-              otherPanel.expanded = false; 
-            }
-          });
-        }
-      });
-    });
   }
   async _attemptRecordingSeek(video, targetSec, timeoutMs = 2500) {
     if (!video || !Number.isFinite(targetSec)) return false;
@@ -6301,6 +6301,7 @@ class FrigateViewCardEditor extends HTMLElement {
   }
 
   _render() {
+    if (this.querySelector('.accordion-container')) return;
     const frigEntities = this._frigateEntities();
     const cams = this._getCams();
     const canAddCamera = cams.length < 4;
@@ -6420,7 +6421,7 @@ class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
         </style>
     <div class="ed-wrap">
-
+<div class="accordion-container">
 
   <ha-expansion-panel>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
@@ -6526,6 +6527,7 @@ class FrigateViewCardEditor extends HTMLElement {
         </div>
       </div>
 </ha-expansion-panel>
+</div>
 
       <div id="camera-modal" class="cam-modal hidden">
         <div class="cam-modal-card" role="dialog" aria-modal="true" aria-label="Camera modal">
