@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.113";
+const VERSION = "1.0.114";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -699,6 +699,7 @@ class FrigateViewCard extends HTMLElement {
     this._editModeWatchdogT = null;
     this._editorDialogObserver = null;
     this._editorDialogOpenLast = false;
+    this._dashboardEditLast = false;
     this._lastEditorPreviewContext = null;
     this._lastLiveKick = 0;
     this._rotateOverlayActive = false;
@@ -1197,19 +1198,48 @@ class FrigateViewCard extends HTMLElement {
     if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
     this._lastEditorPreviewContext = this._isEditorPreviewContext();
     this._editorDialogOpenLast = this._isCardEditorDialogOpen();
+    this._dashboardEditLast = this._isDashboardEditMode();
     this._editModeWatchdogT = setInterval(() => {
       if (!this.isConnected) return;
       const inEditorPreview = this._isEditorPreviewContext();
       const dialogOpen = this._isCardEditorDialogOpen();
+      const dashboardEdit = this._isDashboardEditMode();
       if (this._editorDialogOpenLast && !dialogOpen) {
         this._scheduleResumeLive("watchdog-dialog-close");
       }
       if (this._lastEditorPreviewContext === true && !inEditorPreview) {
         this._scheduleResumeLive("watchdog-edit-exit");
       }
+      if (this._dashboardEditLast !== dashboardEdit) {
+        this._scheduleResumeLive(
+          dashboardEdit
+            ? "watchdog-dashboard-edit-on"
+            : "watchdog-dashboard-edit-off",
+        );
+      }
+      if (dashboardEdit) {
+        // Some browsers suspend pipelines in dashboard edit mode.
+        this._kickLiveIfStale(true);
+      }
       this._editorDialogOpenLast = dialogOpen;
+      this._dashboardEditLast = dashboardEdit;
       this._lastEditorPreviewContext = inEditorPreview;
     }, 600);
+  }
+
+  _isDashboardEditMode() {
+    try {
+      const href = String(window.location?.href || "");
+      if (!href) return false;
+      const url = new URL(href, window.location.origin);
+      const edit =
+        url.searchParams.get("edit") ||
+        url.searchParams.get("dashboard_edit") ||
+        "";
+      return /^(1|true|yes|on)$/i.test(String(edit));
+    } catch (_) {
+      return false;
+    }
   }
 
   _isCardEditorDialogOpen() {
@@ -1224,12 +1254,12 @@ class FrigateViewCard extends HTMLElement {
       if (haDialog.opened === true) return true;
       if (haDialog.hasAttribute?.("open")) return true;
       if (haDialog.hasAttribute?.("opened")) return true;
+      if (haDialog.getAttribute?.("aria-hidden") === "false") return true;
       if (haDialog.getAttribute?.("aria-hidden") === "true") return false;
       if (haDialog.hidden === true) return false;
+      return false;
     }
-    if (dialogHost.hidden === true) return false;
-    if (dialogHost.getAttribute?.("aria-hidden") === "true") return false;
-    return true;
+    return false;
   }
 
   _startEditorDialogCloseObserver() {
@@ -2995,7 +3025,13 @@ class FrigateViewCard extends HTMLElement {
   }
   _scheduleResumeLive(reason = "") {
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
-    const delay = reason === "card-editor-close" ? 40 : 140;
+    const delay =
+      reason === "card-editor-close" ||
+      reason === "watchdog-dialog-close" ||
+      reason === "watchdog-dashboard-edit-on" ||
+      reason === "watchdog-dashboard-edit-off"
+        ? 40
+        : 140;
     this._resumeLiveT = setTimeout(() => {
       this._resumeLiveIfNeeded(reason);
     }, delay);
