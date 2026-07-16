@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.143";
+const VERSION = "1.0.144";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -5962,6 +5962,9 @@ class FrigateViewCardEditor extends HTMLElement {
 
   setConfig(config) {
     const normalized = this._normalizeConfig(config);
+    if (this._activeSettingsPanelId === undefined) {
+      this._activeSettingsPanelId = "camera";
+    }
     const incomingSig = this._configSignature(normalized);
     if (
       this._rendered &&
@@ -6300,24 +6303,25 @@ class FrigateViewCardEditor extends HTMLElement {
         if (toggle)
           toggle.setAttribute("aria-expanded", isActive ? "true" : "false");
       });
-      this._activeSettingsPanelId = activePanel?.dataset?.panel || "camera";
+      this._activeSettingsPanelId = activePanel?.dataset?.panel ?? null;
     };
 
     panels.forEach((panel) => {
       panel
         .querySelector("[data-panel-toggle]")
         ?.addEventListener("click", () => {
-          if (!panel.classList.contains("active")) setActive(panel);
+          if (panel.classList.contains("active")) {
+            setActive(null);
+          } else {
+            setActive(panel);
+          }
         });
     });
 
-    const fallback =
-      panels.find((panel) => panel.dataset.panel === "camera") || panels[0];
-    const initial =
-      panels.find(
-        (panel) => panel.dataset.panel === this._activeSettingsPanelId,
-      ) || fallback;
-    setActive(initial);
+    const initial = panels.find(
+      (panel) => panel.dataset.panel === this._activeSettingsPanelId,
+    );
+    setActive(initial || null);
   }
 
   _render() {
@@ -6445,7 +6449,10 @@ class FrigateViewCardEditor extends HTMLElement {
         </div>
       </div>`;
 
-    const activeSettingsPanel = this._activeSettingsPanelId || "camera";
+    const activeSettingsPanel =
+      this._activeSettingsPanelId === undefined
+        ? "camera"
+        : this._activeSettingsPanelId;
 
     const settingsPanelsMarkup = `
       <div class="settings-container">
