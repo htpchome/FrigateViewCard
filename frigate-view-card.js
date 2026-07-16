@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.126";
+const VERSION = "1.0.128";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1489,7 +1489,6 @@ class FrigateViewCard extends HTMLElement {
       this._mountStartedAt = 0;
       this._mountTargetEntity = "";
     }
-    this._pendingMountDestroyers = [];
     this._cleanupEngine();
   }
 
@@ -6000,6 +5999,53 @@ class FrigateViewCardEditor extends HTMLElement {
     this._syncEditorAccordion();
   }
 
+  _bindEditorAccordion() {
+    if (this._editorAccordionObserver) {
+      try {
+        this._editorAccordionObserver.disconnect();
+      } catch (_) {}
+      this._editorAccordionObserver = null;
+    }
+
+    const panels = Array.from(
+      this.querySelectorAll("ha-expansion-panel[data-panel-id]"),
+    );
+    if (!panels.length) return;
+
+    const syncFromDom = () => {
+      const expandedPanel = panels.find((panel) =>
+        panel.hasAttribute("expanded"),
+      );
+      if (expandedPanel?.dataset?.panelId) {
+        const next = expandedPanel.dataset.panelId;
+        this._activeEditorPanel = next;
+        this._setStoredEditorPanel(next);
+      }
+      this._syncEditorAccordion();
+    };
+
+    panels.forEach((panel) => {
+      panel.addEventListener("click", () => {
+        requestAnimationFrame(syncFromDom);
+      });
+      panel.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" || ev.key === " ") {
+          requestAnimationFrame(syncFromDom);
+        }
+      });
+    });
+
+    this._editorAccordionObserver = new MutationObserver(() => {
+      syncFromDom();
+    });
+    panels.forEach((panel) => {
+      this._editorAccordionObserver.observe(panel, {
+        attributes: true,
+        attributeFilter: ["expanded"],
+      });
+    });
+  }
+
   _syncEditorAccordion() {
     const active = this._activeEditorPanel || "camera";
     this.querySelectorAll("ha-expansion-panel[data-panel-id]").forEach(
@@ -6568,13 +6614,6 @@ class FrigateViewCardEditor extends HTMLElement {
 
     const update = () => this._u();
 
-    this.querySelectorAll("[data-open-panel]").forEach((header) => {
-      header.addEventListener("click", (ev) => {
-        const panel = ev.currentTarget?.dataset?.openPanel || "camera";
-        this._setActiveEditorPanel(panel);
-      });
-    });
-
     this.querySelectorAll("[data-theme-option]").forEach((btn) => {
       btn.addEventListener("click", (ev) => {
         const selected = ev.currentTarget?.dataset?.themeOption || "default";
@@ -6771,6 +6810,7 @@ class FrigateViewCardEditor extends HTMLElement {
     }
 
     this._syncEditorAccordion();
+    this._bindEditorAccordion();
 
     if (this.querySelector("#col_left_width_pct")) {
       const pctInput = this.querySelector("#col_left_width_pct");
