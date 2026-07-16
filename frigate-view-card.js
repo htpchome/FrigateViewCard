@@ -770,6 +770,7 @@ class FrigateViewCard extends HTMLElement {
       this._scheduleResumeLive("connected");
     }
     this._startEditorDialogCloseObserver();
+    this._setupAccordionLogic();
   }
 
   _syncCardShellClasses() {
@@ -6258,6 +6259,25 @@ class FrigateViewCardEditor extends HTMLElement {
         const from = Number(ev.dataTransfer?.getData("text/plain") || "-1");
         const to = Number(row.dataset.row || "-1");
         this._reorderCameras(from, to);
+      });
+    });
+  }
+   _setupAccordionLogic() {
+    // Select all native panels inside this specific card instance
+    const panels = this.querySelectorAll('ha-expansion-panel');
+
+    panels.forEach((clickedPanel) => {
+      clickedPanel.addEventListener('expanded-changed', (event) => {
+        const isOpening = event.detail.value;
+
+        // If the panel is opening, close all other panels
+        if (isOpening) {
+          panels.forEach((otherPanel) => {
+            if (otherPanel !== clickedPanel) {
+              otherPanel.expanded = false; 
+            }
+          });
+        }
       });
     });
   }
