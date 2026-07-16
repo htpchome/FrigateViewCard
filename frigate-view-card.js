@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.89";
+const VERSION = "1.0.90";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -17,6 +17,45 @@ const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = ["alerts", "clips", "snapshot", "kept"];
+const THEME_DEFAULTS = Object.freeze({
+  "--c-bg-main": "var(--card-background-color)",
+  "--c-bg-panel": "var(--secondary-background-color)",
+  "--c-bg-deep": "#111111",
+  "--c-text": "var(--primary-text-color)",
+  "--c-text2": "var(--secondary-text-color)",
+  "--c-text3": "var(--state-inactive-color)",
+  "--c-text4": "var(--disabled-text-color)",
+  "--c-text-rev": "var(--text-primary-color)",
+  "--c-border": "var(--secondary-background-color)",
+  "--c-border2": "var(--state-inactive-color)",
+  "--c-primary": "var(--primary-color)",
+  "--c-primary-l": "var(--light-primary-color)",
+  "--c-primary-d": "var(--dark-primary-color)",
+  "--c-accent": "var(--accent-color)",
+  "--c-on": "#4ade80",
+  "--c-off": "#FCA5A5",
+  "--c-bg-scrub": "#c2f2c1",
+  "--c-bg-alert": "#dc3146",
+});
+const THEME_CUSTOM_ROWS = Object.freeze([
+  { key: "--c-bg-main", label: "Card Background Color" },
+  { key: "--c-bg-panel", label: "Card Secondary Background Color" },
+  { key: "--c-bg-deep", label: "Card Video Background Color" },
+  { key: "--c-text", label: "Primary Text Color" },
+  { key: "--c-text2", label: "Secondary Text Color" },
+  { key: "--c-text3", label: "Third Text Color" },
+  { key: "--c-text4", label: "Fourth Text Color" },
+  { key: "--c-text-rev", label: "Reverse Text Color" },
+  { key: "--c-border", label: "Border Color One" },
+  { key: "--c-border2", label: "Border Color Two" },
+  { key: "--c-primary", label: "Primary Color" },
+  { key: "--c-primary-l", label: "Primary Light Color" },
+  { key: "--c-primary-d", label: "Primary Dark Color" },
+  { key: "--c-accent", label: "Accent Color" },
+  { key: "--c-bg-scrub", label: "Scrub Bar Background" },
+  { key: "--c-bg-alert", label: "Scrub Bar Alerts" },
+]);
+const THEME_CUSTOM_KEYS = new Set(THEME_CUSTOM_ROWS.map((row) => row.key));
 const isIOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -96,6 +135,17 @@ function normalizeCameraConnectionType(value) {
     return "ha_direct";
   }
   return DEFAULT_CAMERA_CONNECTION_TYPE;
+}
+
+function normalizeHexColor(value) {
+  const s = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(s)) return s;
+  if (/^#[0-9a-f]{3}$/.test(s)) {
+    return `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`;
+  }
+  return "";
 }
 
 const LABEL_COLORS = {
@@ -198,24 +248,6 @@ const STYLES = `
         --c-bg-scrub:  #c2f2c1;
         --c-bg-alert:  #dc3146;
     }
-  .card.theme-light {
-        --c-bg-main:        #1c2233;
-        --c-bg-panel:  rgba(255,255,255,.04);
-        --c-bg-deep:   #0d1117;
-        --c-text:      #f0f4ff;
-        --c-text2:     #9bb0d4;
-        --c-text3:     #5c7099;
-        --c-text4:     #3a4d6e;
-        --c-border:    rgba(255,255,255,.05);
-        --c-border2:   rgba(255,255,255,.08);
-        --c-primary:   rgba(59,130,246,.18);
-        --c-primary-l:    rgba(59,130,246,.18);
-        --c-primary-d:   rgba(59,130,246,.35);
-        --c-accent:       #3b82f6;
-        --c-bg-scrub:     #c2f2c1;
-        --c-bg-alert:       #dc3146;
-  }
-
   /* ── responsive layout ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
@@ -726,8 +758,6 @@ class FrigateViewCard extends HTMLElement {
   _syncCardShellClasses() {
     const card = this.shadowRoot?.querySelector("#card");
     if (!card) return;
-    card.classList.toggle("theme-light", this._config?.theme === "light");
-    card.classList.toggle("theme-future", this._config?.theme === "future");
     card.classList.toggle("shadows-off", this._config?.shadows === false);
   }
 
@@ -953,15 +983,18 @@ class FrigateViewCard extends HTMLElement {
             .map((id) => (id === "reviews" ? "alerts" : id))
             .filter((id) => ALLOWED_HIDDEN_TABS.includes(id))
         : [],
+      theme: config.theme === "custom" ? "custom" : "default",
+      theme_custom:
+        config.theme_custom && typeof config.theme_custom === "object"
+          ? Object.fromEntries(
+              Object.entries(config.theme_custom)
+                .filter(([key]) => THEME_CUSTOM_KEYS.has(key))
+                .map(([key, value]) => [key, normalizeHexColor(value)])
+                .filter(([, value]) => !!value),
+            )
+          : {},
       stream_height: config.stream_height ? Number(config.stream_height) : null,
       stream_height_unit: config.stream_height_unit || "vh",
-      theme: ["default", "light", "future"].includes(config.theme)
-        ? config.theme
-        : config.theme === "light"
-          ? "light"
-          : config.theme === "future"
-            ? "future"
-            : "default",
       tight_margins: config.tight_margins === true,
       shadows: config.shadows !== false,
       wide_view: config.wide_view === true,
@@ -2689,7 +2722,7 @@ class FrigateViewCard extends HTMLElement {
           : `<div class="pill icon-only" data-tab="${id}" title="${label}">${icon}</div>`;
 
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <ha-card class="card ${this._config.theme === "light" ? "theme-light" : this._config.theme === "future" ? "theme-future" : ""} ${this._config.shadows === false ? "shadows-off" : ""}" id="card">
+    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""}" id="card">
 
         <div class="layout shadow-medium" id="layout">
 
@@ -2929,9 +2962,21 @@ class FrigateViewCard extends HTMLElement {
         card.style.removeProperty("--stream-h");
       }
     }
-    const themeSetting = this._config.theme || "default";
-    card.classList.toggle("theme-light", themeSetting === "light");
-    card.classList.toggle("theme-future", themeSetting === "future");
+    const customTheme =
+      this._config?.theme === "custom" &&
+      this._config?.theme_custom &&
+      typeof this._config.theme_custom === "object"
+        ? this._config.theme_custom
+        : {};
+    for (const row of THEME_CUSTOM_ROWS) {
+      const key = row.key;
+      const override = normalizeHexColor(customTheme[key]);
+      if (override) {
+        card.style.setProperty(key, override);
+      } else {
+        card.style.removeProperty(key);
+      }
+    }
   }
   _isCardVisible() {
     if (!this.isConnected) return false;
@@ -5748,6 +5793,17 @@ class FrigateViewCardEditor extends HTMLElement {
         .filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
     }
     delete src.camera_entity;
+    src.theme = src.theme === "custom" ? "custom" : "default";
+    if (src.theme_custom && typeof src.theme_custom === "object") {
+      src.theme_custom = Object.fromEntries(
+        Object.entries(src.theme_custom)
+          .filter(([key]) => THEME_CUSTOM_KEYS.has(key))
+          .map(([key, value]) => [key, normalizeHexColor(value)])
+          .filter(([, value]) => !!value),
+      );
+    } else {
+      src.theme_custom = {};
+    }
     src.shadows = src.shadows !== false;
     return { ...src, cameras };
   }
@@ -5787,6 +5843,46 @@ class FrigateViewCardEditor extends HTMLElement {
     return Math.round(
       ((window.innerHeight - headerH) / window.innerHeight) * 100,
     );
+  }
+
+  _rgbToHex(value) {
+    const m = String(value || "")
+      .trim()
+      .match(/^rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (!m) return "";
+    const toHex = (n) =>
+      Math.max(0, Math.min(255, Number(n) || 0))
+        .toString(16)
+        .padStart(2, "0");
+    return `#${toHex(m[1])}${toHex(m[2])}${toHex(m[3])}`;
+  }
+
+  _resolveColorToHex(cssValue, fallback = "#000000") {
+    if (!cssValue) return fallback;
+    const hex = normalizeHexColor(cssValue);
+    if (hex) return hex;
+    const probe = document.createElement("span");
+    probe.style.color = String(cssValue);
+    this.appendChild(probe);
+    const computed = getComputedStyle(probe).color;
+    probe.remove();
+    return this._rgbToHex(computed) || fallback;
+  }
+
+  _themeDefaultHex(key) {
+    return this._resolveColorToHex(THEME_DEFAULTS[key], "#000000");
+  }
+
+  _ensureThemeDraftCache() {
+    if (!this._themeDraftCache || typeof this._themeDraftCache !== "object") {
+      this._themeDraftCache = {};
+    }
+    const custom = this._config?.theme_custom || {};
+    for (const row of THEME_CUSTOM_ROWS) {
+      const key = row.key;
+      const v = normalizeHexColor(custom[key]);
+      if (v) this._themeDraftCache[key] = v;
+    }
   }
 
   _cameraLabel(camera) {
@@ -5941,9 +6037,33 @@ class FrigateViewCardEditor extends HTMLElement {
     const canAddCamera = cams.length < 4;
     const timezoneDisplay = this._timezoneDisplay();
     const hiddenTabs = new Set(this._config?.hidden_tabs || []);
+    this._ensureThemeDraftCache();
+    const activeTheme = this._config?.theme === "custom" ? "custom" : "default";
+    const themeCustom = this._config?.theme_custom || {};
     const tabCheck = (id, label) => `<ha-formfield label="${label}">
             <ha-checkbox name="hide-${id}" data-hide-tab="${id}" ${hiddenTabs.has(id) ? "checked" : ""}></ha-checkbox>
     </ha-formfield>`;
+    const themeRows = THEME_CUSTOM_ROWS.map((row) => {
+      const key = row.key;
+      const defaultHex = this._themeDefaultHex(key);
+      const saved = normalizeHexColor(themeCustom[key]);
+      const draft = normalizeHexColor(this._themeDraftCache?.[key]);
+      const hasCustom = !!saved;
+      const value = hasCustom ? saved : draft || defaultHex;
+      const useDefault = !hasCustom;
+      return `
+        <div class="theme-custom-row" data-theme-row="${key}">
+          <div class="theme-custom-label">
+            <div>${row.label}</div>
+            <div class="theme-custom-var">[var(${key})]</div>
+            <div class="theme-custom-warn">Draft changes require card config save.</div>
+          </div>
+          <input class="theme-color-input" type="color" data-theme-color="${key}" value="${value}" ${useDefault ? "disabled" : ""}>
+          <ha-formfield label="Use Default">
+            <ha-checkbox data-theme-default="${key}" ${useDefault ? "checked" : ""}></ha-checkbox>
+          </ha-formfield>
+        </div>`;
+    }).join("");
     const cameraRows = cams
       .map(
         (cam, i) => `
@@ -6000,10 +6120,21 @@ class FrigateViewCardEditor extends HTMLElement {
             .cam-helper{font-size:11px;color:var(--editor-muted);}
 
             .theme-row{display:flex;align-items:center;}
-            .theme-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:100%;}
+            .theme-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;}
             .theme-opt{border:var(--editor-border-width) solid var(--editor-border);background:var(--editor-card-bg);color:var(--editor-text);border-radius:10px;padding:8px 10px;cursor:pointer;font-weight:600;}
             .theme-opt.active{background:var(--editor-primary);border-color:var(--editor-primary);color:var(--text-primary-color, #ffffff);}
-            .theme-opt.future{opacity:.65;cursor:not-allowed;}
+            .theme-custom-panel{margin-top:10px;border:var(--editor-border-width) solid var(--editor-border);border-radius:10px;background:var(--editor-card-bg);}
+            .theme-custom-panel[hidden]{display:none;}
+            .theme-custom-panel summary{cursor:pointer;list-style:none;padding:10px 12px;font-weight:600;color:var(--editor-text);display:flex;align-items:center;justify-content:space-between;}
+            .theme-custom-panel summary::-webkit-details-marker{display:none;}
+            .theme-custom-body{padding:0 12px 10px;}
+            .theme-custom-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--c-border2, var(--editor-border));}
+            .theme-custom-row:first-child{border-top:none;}
+            .theme-custom-label{display:flex;flex-direction:column;gap:2px;min-width:0;}
+            .theme-custom-var{font-size:11px;color:var(--editor-muted);}
+            .theme-custom-warn{font-size:11px;color:var(--editor-muted);}
+            .theme-color-input{width:30px;height:30px;padding:0;border:1px solid var(--editor-border);border-radius:4px;background:transparent;cursor:pointer;}
+            .theme-color-input:disabled{opacity:.5;cursor:not-allowed;}
             .layout-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
             .readonly-value{font-size:12px;color:var(--editor-text);background:var(--editor-secondary-bg);border:var(--editor-border-width) solid var(--editor-border);border-radius:8px;padding:6px 10px;}
 
@@ -6057,11 +6188,14 @@ class FrigateViewCardEditor extends HTMLElement {
                 <span class="field-label">Theme</span>
                 <div class="theme-row">
                     <div class="theme-seg" id="theme-seg" role="radiogroup" aria-label="Theme">
-                        <button type="button" class="theme-opt ${(this._config?.theme || "default") === "default" ? "active" : ""}" data-theme-option="default" role="radio" aria-checked="${(this._config?.theme || "default") === "default" ? "true" : "false"}">HA default</button>
-                        <button type="button" class="theme-opt ${(this._config?.theme || "default") === "light" ? "active" : ""}" data-theme-option="light" role="radio" aria-checked="${(this._config?.theme || "default") === "light" ? "true" : "false"}">Light</button>
-                        <button type="button" class="theme-opt future" disabled aria-disabled="true">Future</button>
+                  <button type="button" class="theme-opt ${activeTheme === "default" ? "active" : ""}" data-theme-option="default" role="radio" aria-checked="${activeTheme === "default" ? "true" : "false"}">Home Assistant Theme</button>
+                  <button type="button" class="theme-opt ${activeTheme === "custom" ? "active" : ""}" data-theme-option="custom" role="radio" aria-checked="${activeTheme === "custom" ? "true" : "false"}">Custom</button>
                     </div>
                 </div>
+              <details id="theme-custom-panel" class="theme-custom-panel" ${activeTheme === "custom" ? "open" : ""} ${activeTheme === "custom" ? "" : "hidden"}>
+                <summary>Custom Color Overrides</summary>
+                <div class="theme-custom-body">${themeRows}</div>
+              </details>
             </div>
 
             <div class="section">
@@ -6135,7 +6269,47 @@ class FrigateViewCardEditor extends HTMLElement {
           b.classList.toggle("active", active);
           b.setAttribute("aria-checked", active ? "true" : "false");
         });
+        const panel = this.querySelector("#theme-custom-panel");
+        if (panel) {
+          panel.hidden = selected !== "custom";
+          if (selected === "custom") panel.setAttribute("open", "");
+        }
         update();
+      });
+    });
+
+    this.querySelectorAll("[data-theme-color]").forEach((input) => {
+      input.addEventListener("input", (ev) => {
+        const key = ev.currentTarget?.dataset?.themeColor;
+        const value = normalizeHexColor(ev.currentTarget?.value);
+        if (key && value) this._themeDraftCache[key] = value;
+        update();
+      });
+      input.addEventListener("change", update);
+    });
+
+    this.querySelectorAll("[data-theme-default]").forEach((checkbox) => {
+      const key = checkbox.dataset.themeDefault;
+      const input = this.querySelector(`[data-theme-color="${key}"]`);
+      checkbox.addEventListener("change", (ev) => {
+        const checked = ev.currentTarget?.checked === true;
+        if (!input) {
+          update();
+          return;
+        }
+        if (checked) {
+          input.value = this._themeDefaultHex(key);
+          input.disabled = true;
+        } else {
+          const draft = normalizeHexColor(this._themeDraftCache?.[key]);
+          input.value = draft || this._themeDefaultHex(key);
+          input.disabled = false;
+        }
+        update();
+      });
+      checkbox.addEventListener("value-changed", (ev) => {
+        const checked = ev?.detail?.value === true;
+        checkbox.checked = checked;
       });
     });
 
@@ -6342,9 +6516,23 @@ class FrigateViewCardEditor extends HTMLElement {
     delete c.use_bg_color;
 
     c.theme =
-      this.querySelector("[data-theme-option].active")?.dataset?.themeOption ||
-      this._config?.theme ||
-      "default";
+      this.querySelector("[data-theme-option].active")?.dataset?.themeOption ===
+      "custom"
+        ? "custom"
+        : "default";
+    const themeCustom = {};
+    this.querySelectorAll("[data-theme-color]").forEach((input) => {
+      const key = input.dataset.themeColor;
+      if (!THEME_CUSTOM_KEYS.has(key)) return;
+      const useDefault =
+        this.querySelector(`[data-theme-default="${key}"]`)?.checked === true;
+      const value = normalizeHexColor(input.value);
+      if (!useDefault && value) {
+        themeCustom[key] = value;
+        this._themeDraftCache[key] = value;
+      }
+    });
+    c.theme_custom = themeCustom;
 
     const hidden = [...this.querySelectorAll("[data-hide-tab]")]
       .filter((el) => el.checked)
