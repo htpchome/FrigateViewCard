@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.98";
+const VERSION = "1.0.99";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6105,11 +6105,14 @@ class FrigateViewCardEditor extends HTMLElement {
     <div class="ed-wrap">
 
 
-<ha-expansion-panel .expanded=${true}>
-    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
-      <ha-icon icon="mdi:home"></ha-icon>
-      <span>Card General Options</span>
-    </div>
+  <ha-expansion-panel 
+    .header=\${html\`
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <ha-icon icon="mdi:camera"></ha-icon>
+        <span>Camera Settings</span>
+      </div>
+    \`} 
+    .expanded=${true}>
 
       <div>
         <span class="field-label">Cameras ${frigEntities.length ? '<small style="font-weight:400;color:var(--secondary-text-color)">(Frigate cameras detected)</small>' : ""}</span>
