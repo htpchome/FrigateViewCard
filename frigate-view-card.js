@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.114";
+const VERSION = "1.0.115";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1205,12 +1205,24 @@ class FrigateViewCard extends HTMLElement {
       const dialogOpen = this._isCardEditorDialogOpen();
       const dashboardEdit = this._isDashboardEditMode();
       if (this._editorDialogOpenLast && !dialogOpen) {
+        this._ffDebug("Watchdog detected card editor close", {
+          prevOpen: this._editorDialogOpenLast,
+          nowOpen: dialogOpen,
+        });
         this._scheduleResumeLive("watchdog-dialog-close");
       }
       if (this._lastEditorPreviewContext === true && !inEditorPreview) {
+        this._ffDebug("Watchdog detected editor preview exit", {
+          prevPreview: this._lastEditorPreviewContext,
+          nowPreview: inEditorPreview,
+        });
         this._scheduleResumeLive("watchdog-edit-exit");
       }
       if (this._dashboardEditLast !== dashboardEdit) {
+        this._ffDebug("Watchdog detected dashboard edit toggle", {
+          prevDashboardEdit: this._dashboardEditLast,
+          nowDashboardEdit: dashboardEdit,
+        });
         this._scheduleResumeLive(
           dashboardEdit
             ? "watchdog-dashboard-edit-on"
@@ -1257,9 +1269,17 @@ class FrigateViewCard extends HTMLElement {
       if (haDialog.getAttribute?.("aria-hidden") === "false") return true;
       if (haDialog.getAttribute?.("aria-hidden") === "true") return false;
       if (haDialog.hidden === true) return false;
-      return false;
+      const dStyle = window.getComputedStyle?.(haDialog);
+      if (dStyle?.display === "none" || dStyle?.visibility === "hidden")
+        return false;
+      return true;
     }
-    return false;
+    const hostStyle = window.getComputedStyle?.(dialogHost);
+    if (hostStyle?.display === "none" || hostStyle?.visibility === "hidden")
+      return false;
+    if (dialogHost.hidden === true) return false;
+    if (dialogHost.getAttribute?.("aria-hidden") === "true") return false;
+    return true;
   }
 
   _startEditorDialogCloseObserver() {
@@ -1349,7 +1369,31 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _ffDebug(msg, data = null) {
-    return;
+    try {
+      const params = new URLSearchParams(window.location?.search || "");
+      const q =
+        params.get("fvc_debug_stream") ||
+        params.get("fvc_debug") ||
+        params.get("debug_stream") ||
+        "";
+      const ls =
+        localStorage.getItem("fvc_debug_stream") ||
+        localStorage.getItem("frigate_view_card_debug") ||
+        "";
+      const gate = String(q || ls);
+      const enabled = /^(1|true|yes|on|debug|verbose|2)$/i.test(gate);
+      if (!enabled) return;
+
+      const verbose = /^(verbose|2)$/i.test(gate);
+      if (!verbose && String(msg) === "Received binary MSE chunk") return;
+
+      const prefix = `[FrigateViewCard ${VERSION}]`;
+      if (data === null || typeof data === "undefined") {
+        console.debug(prefix, msg);
+      } else {
+        console.debug(prefix, msg, data);
+      }
+    } catch (_) {}
   }
 
   _preferredStreamType() {
@@ -3035,6 +3079,7 @@ class FrigateViewCard extends HTMLElement {
     this._resumeLiveT = setTimeout(() => {
       this._resumeLiveIfNeeded(reason);
     }, delay);
+    this._ffDebug("Scheduled resume live", { reason, delay });
     if (this._isFirefox()) {
       // Firefox may need a second kick after layout settles on tab return.
       setTimeout(() => this._kickLiveIfStale(true), 900);
@@ -3256,7 +3301,11 @@ class FrigateViewCard extends HTMLElement {
     if (!this._isCardVisible()) return;
     if (this._$("#myPopup")?.classList.contains("is-open")) return;
     if (this._mountInProgress) return;
-    if (this._$("#stream-loading") && !this._$("#stream-loading").hidden)
+    if (
+      !force &&
+      this._$("#stream-loading") &&
+      !this._$("#stream-loading").hidden
+    )
       return;
     const now = Date.now();
     if (!force && now - this._lastLiveKick < 4000) return;
@@ -3281,6 +3330,13 @@ class FrigateViewCard extends HTMLElement {
 
     if (stale) {
       this._lastLiveKick = now;
+      this._ffDebug("Stale stream detected; remounting", {
+        force,
+        readyState: Number(v?.readyState) || 0,
+        ended: !!v?.ended,
+        paused: !!v?.paused,
+        currentTime: Number(v?.currentTime) || 0,
+      });
       this._mountEngine();
     }
   }
@@ -3291,6 +3347,12 @@ class FrigateViewCard extends HTMLElement {
     if (!visible || popupOpen || this._mountInProgress) {
       // Layout transitions are async. Keep retrying until mount is possible.
       if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
+      this._ffDebug("Resume deferred", {
+        reason: _reason,
+        visible,
+        popupOpen,
+        mountInProgress: this._mountInProgress,
+      });
       this._resumeLiveT = setTimeout(() => {
         this._resumeLiveIfNeeded("wait-ready");
       }, 450);
@@ -3301,6 +3363,7 @@ class FrigateViewCard extends HTMLElement {
     this._kickLiveIfStale(true);
     // Safety follow-up: some browsers finalize media attachment one frame later.
     setTimeout(() => this._kickLiveIfStale(true), 900);
+    this._ffDebug("Resume executed", { reason: _reason });
   }
   _setupResizeObserver() {
     if (this._ro) this._ro.disconnect();
