@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.105";
+const VERSION = "1.0.106";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -696,6 +696,8 @@ class FrigateViewCard extends HTMLElement {
     this._pendingWebRTCTakeoverTimer = null;
     this._wasVisible = false;
     this._resumeLiveT = null;
+    this._editModeWatchdogT = null;
+    this._lastEditorPreviewContext = null;
     this._lastLiveKick = 0;
     this._rotateOverlayActive = false;
     this._rotateOverlayMode = "none";
@@ -753,6 +755,7 @@ class FrigateViewCard extends HTMLElement {
     this._syncCardShellClasses();
     this._syncDomShadows();
     this._scheduleRotateOverlayUpdate();
+    if (this._started) this._startEditModeWatchdog();
   }
 
   _syncCardShellClasses() {
@@ -1073,6 +1076,11 @@ class FrigateViewCard extends HTMLElement {
       this._start();
       return;
     }
+    const inEditorPreview = this._isEditorPreviewContext();
+    if (this._lastEditorPreviewContext === true && !inEditorPreview) {
+      this._scheduleResumeLive("hass-edit-exit");
+    }
+    this._lastEditorPreviewContext = inEditorPreview;
     this._syncStatus();
     this._applyCardStyle(); // re-evaluate theme colors on each update
     this._kickLiveIfStale();
@@ -1101,6 +1109,8 @@ class FrigateViewCard extends HTMLElement {
     if (this._io) this._io.disconnect();
     this._io = null;
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
+    if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
+    this._editModeWatchdogT = null;
     if (this._popupControlsHideTimer)
       clearTimeout(this._popupControlsHideTimer);
     if (this._popupMediaStopTimer) clearTimeout(this._popupMediaStopTimer);
@@ -1167,10 +1177,24 @@ class FrigateViewCard extends HTMLElement {
     await this._loadWindow(true);
     this._loadCalendar();
     this._subscribe();
+    this._startEditModeWatchdog();
     this._refresh = setInterval(() => {
       if (this._isNowWindow()) this._loadWindow(true);
     }, this._config.refresh_seconds * 1000);
     this._setupResizeObserver();
+  }
+
+  _startEditModeWatchdog() {
+    if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
+    this._lastEditorPreviewContext = this._isEditorPreviewContext();
+    this._editModeWatchdogT = setInterval(() => {
+      if (!this.isConnected) return;
+      const inEditorPreview = this._isEditorPreviewContext();
+      if (this._lastEditorPreviewContext === true && !inEditorPreview) {
+        this._scheduleResumeLive("watchdog-edit-exit");
+      }
+      this._lastEditorPreviewContext = inEditorPreview;
+    }, 600);
   }
 
   // Discover all cameras in parallel for faster startup
