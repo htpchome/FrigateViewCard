@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.120";
+const VERSION = "1.0.124";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -696,6 +696,7 @@ class FrigateViewCard extends HTMLElement {
     this._pendingWebRTCTakeoverTimer = null;
     this._wasVisible = false;
     this._resumeLiveT = null;
+    this._disconnectTeardownT = null;
     this._editModeWatchdogT = null;
     this._editorDialogObserver = null;
     this._editorDialogOpenLast = false;
@@ -740,6 +741,11 @@ class FrigateViewCard extends HTMLElement {
     });
   }
   connectedCallback() {
+    if (this._disconnectTeardownT) {
+      clearTimeout(this._disconnectTeardownT);
+      this._disconnectTeardownT = null;
+      this._ffDebug("Reconnect during disconnect grace; preserving engine");
+    }
     if (this.parentElement) {
       this._parentOrigStyle = {
         height: this.parentElement.style.height,
@@ -1105,6 +1111,16 @@ class FrigateViewCard extends HTMLElement {
     return { columns: 2, rows: 3 };
   }
   disconnectedCallback() {
+    if (this._disconnectTeardownT) clearTimeout(this._disconnectTeardownT);
+    this._disconnectTeardownT = setTimeout(() => {
+      this._disconnectTeardownT = null;
+      if (this.isConnected) return;
+      this._ffDebug("Running deferred disconnect teardown");
+      this._teardownDisconnected();
+    }, 2500);
+  }
+
+  _teardownDisconnected() {
     if (this._refresh) clearInterval(this._refresh);
     if (this._unsub) {
       try {
@@ -1582,7 +1598,9 @@ class FrigateViewCard extends HTMLElement {
     const order = forcedType
       ? [forcedType]
       : this._isEdge()
-        ? ["mse", "webrtc"]
+        ? this._isDashboardEditMode()
+          ? ["webrtc"]
+          : ["webrtc", "mse"]
         : ["webrtc", "mse"];
     return order
       .filter((type) => typeof build[type] === "function")
@@ -2453,6 +2471,17 @@ class FrigateViewCard extends HTMLElement {
         slot,
       );
       if (await this._mountLiveWithRace(slot, attempts, mountToken)) return;
+
+      // Avoid parallel transport startup churn on Edge by trying MSE only
+      // after WebRTC has clearly failed.
+      if (!forcedType && this._isEdge() && this._isDashboardEditMode()) {
+        const edgeMseOk = await this._tryMountGo2RTCMSE(
+          slot,
+          { waitMs: 5000 },
+          { commit: true },
+        );
+        if (edgeMseOk) return;
+      }
 
       // Probe HLS only as an explicit fallback after WebRTC/MSE fail.
       if (!forcedType) {
