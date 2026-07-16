@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.92";
+const VERSION = "1.0.93";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6217,13 +6217,8 @@ class FrigateViewCardEditor extends HTMLElement {
               </details>
             </div>
 
-            <div class="section">
-                <span class="field-label">Card Height Limit</span>
-                <div style="display:flex;gap:8px;align-items:center">
-                    <ha-input name="stream_height" id="stream_height" type="number" value="${this._config?.stream_height || ""}" min="1" placeholder="${this._defaultHostVh()}" style="flex:1"></ha-input>
-                    <ha-selector id="stream_height_unit" style="width:120px"></ha-selector>
-                </div>
-            </div>
+<ha-expansion-panel .expanded=${true}>
+
       <div class="section">
                 <span class="field-label">Hidden tabs</span>
                 <div class="chk-row">
@@ -6232,6 +6227,13 @@ class FrigateViewCardEditor extends HTMLElement {
                     ${tabCheck("snapshot", "Snapshots")}
                     ${tabCheck("recordings", "Recordings")}
                     ${tabCheck("kept", "Kept")}
+                </div>
+            </div>
+            <div class="section">
+                <span class="field-label">Card Height Limit</span>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <ha-input name="stream_height" id="stream_height" type="number" value="${this._config?.stream_height || ""}" min="1" placeholder="${this._defaultHostVh()}" style="flex:1"></ha-input>
+                    <ha-selector id="stream_height_unit" style="width:120px"></ha-selector>
                 </div>
             </div>
       <div class="section">
@@ -6259,6 +6261,7 @@ class FrigateViewCardEditor extends HTMLElement {
           <span style="font-size:11px;color:var(--secondary-text-color)">%</span>
         </div>
       </div>
+</ha-expansion-panel>
 
       <div id="camera-modal" class="cam-modal hidden">
         <div class="cam-modal-card" role="dialog" aria-modal="true" aria-label="Camera modal">
