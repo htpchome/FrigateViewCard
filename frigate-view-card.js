@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.136";
+const VERSION = "1.0.137";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -770,7 +770,6 @@ class FrigateViewCard extends HTMLElement {
       this._scheduleResumeLive("connected");
     }
     this._startEditorDialogCloseObserver();
-    this._setupAccordionLogic();
   }
 
   _syncCardShellClasses() {
@@ -1850,25 +1849,6 @@ class FrigateViewCard extends HTMLElement {
       if (!visible && status) status.hidden = true;
       if (visible && refreshImage) this._refreshStreamFallbackImage();
     }
-  }
-    _setupAccordionLogic() {
-    // Select all native panels inside this specific card instance
-    const panels = this.querySelectorAll('ha-expansion-panel');
-
-    panels.forEach((clickedPanel) => {
-      clickedPanel.addEventListener('expanded-changed', (event) => {
-        const isOpening = event.detail.value;
-
-        // If the panel is opening, close all other panels
-        if (isOpening) {
-          panels.forEach((otherPanel) => {
-            if (otherPanel !== clickedPanel) {
-              otherPanel.expanded = false; 
-            }
-          });
-        }
-      });
-    });
   }
 
   async _streamFallbackUrl(entity) {
@@ -6301,7 +6281,6 @@ class FrigateViewCardEditor extends HTMLElement {
   }
 
   _render() {
-    if (this.querySelector('.accordion-container')) return;
     const frigEntities = this._frigateEntities();
     const cams = this._getCams();
     const canAddCamera = cams.length < 4;
@@ -6421,7 +6400,7 @@ class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
         </style>
     <div class="ed-wrap">
-<div class="accordion-container">
+
 
   <ha-expansion-panel>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
@@ -6527,7 +6506,6 @@ class FrigateViewCardEditor extends HTMLElement {
         </div>
       </div>
 </ha-expansion-panel>
-</div>
 
       <div id="camera-modal" class="cam-modal hidden">
         <div class="cam-modal-card" role="dialog" aria-modal="true" aria-label="Camera modal">
