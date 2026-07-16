@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.119";
+const VERSION = "1.0.120";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1567,7 +1567,7 @@ class FrigateViewCard extends HTMLElement {
             minCurrentTime: 0.05,
             minDecodedFrames: 1,
             requireReadyState: 2,
-            strict: false,
+            strict: true,
           },
           { commit: false },
         ),
@@ -2051,6 +2051,7 @@ class FrigateViewCard extends HTMLElement {
     const ws = new WebSocket(wsUrl);
     ws.binaryType = "arraybuffer";
     const startupAbort = new AbortController();
+    let streamStarted = false;
 
     let sb = null;
     let mseRequested = false;
@@ -2121,6 +2122,13 @@ class FrigateViewCard extends HTMLElement {
         wasClean: ev.wasClean,
       });
       if (!startupAbort.signal.aborted) startupAbort.abort();
+      if (streamStarted && commit && this._engine === engine) {
+        this._ffDebug("Active MSE stream closed; scheduling recovery", {
+          code: ev.code,
+          reason: ev.reason,
+        });
+        this._scheduleResumeLive("mse-ws-closed");
+      }
     });
 
     ws.addEventListener("message", (ev) => {
@@ -2180,6 +2188,7 @@ class FrigateViewCard extends HTMLElement {
       destroy();
       return false;
     }
+    streamStarted = true;
 
     if (!commit) return { ok: true, type: "mse", engine, slot };
     this._setActiveStreamType("mse");
