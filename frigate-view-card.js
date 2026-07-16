@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.115";
+const VERSION = "1.0.116";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1188,6 +1188,10 @@ class FrigateViewCard extends HTMLElement {
     this._subscribe();
     this._startEditModeWatchdog();
     this._startEditorDialogCloseObserver();
+    this._ffDebug("Stream debug active", {
+      ua: navigator.userAgent,
+      href: window.location?.href || "",
+    });
     this._refresh = setInterval(() => {
       if (this._isNowWindow()) this._loadWindow(true);
     }, this._config.refresh_seconds * 1000);
@@ -1389,9 +1393,9 @@ class FrigateViewCard extends HTMLElement {
 
       const prefix = `[FrigateViewCard ${VERSION}]`;
       if (data === null || typeof data === "undefined") {
-        console.debug(prefix, msg);
+        console.log(prefix, msg);
       } else {
-        console.debug(prefix, msg, data);
+        console.log(prefix, msg, data);
       }
     } catch (_) {}
   }
