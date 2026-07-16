@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.164";
+const VERSION = "1.0.165";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -326,9 +326,9 @@ const STYLES = `
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
   .et{width:112px;height:63px;border-radius:15px;overflow:hidden;flex-shrink:0;
-    background:var(--c-bg-deep);position:relative}
-  .et img{width:95%;height:95%;object-fit:cover;display:block; position:absolute;top:0;left:0}
-  .rev-sev{object-fit: cover;position:absolute;top:0;left:0} 
+    background:var(--c-bg-deep);position:relative;position:absolute;top:0;left:0}
+  .et img{width:95%;height:95%;object-fit:cover;display:block;}
+  .rev-sev{object-fit: cover;} 
   .rev-sev.alert{outline-offset: 2px;outline: 4px solid var(--c-bg-alert);} 
   .rev-sev.detection{outline-offset: 2px;outline: 4px solid var(--c-accent);}
 
@@ -6013,10 +6013,10 @@ class FrigateViewCard extends HTMLElement {
         ? this._missingThumbIds.has(firstDet)
           ? `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
           : hasReviewMedia
-            ? `
+            ? `<div class="et">
                 <img class="rev-sev ${sev}" src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="rev-ph" style="display:none">${ICONS.person}</div>
-              `
+                </div>`
             : `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
         : "";
       return `
