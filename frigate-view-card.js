@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.104";
+const VERSION = "1.0.105";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6131,7 +6131,7 @@ class FrigateViewCardEditor extends HTMLElement {
     <div class="ed-wrap">
 
 
-  <ha-expansion-panel .expanded="true">
+  <ha-expansion-panel expanded>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:camera"></ha-icon>
       <span>Camera Settings</span>
@@ -6144,7 +6144,7 @@ class FrigateViewCardEditor extends HTMLElement {
                 <span class="cam-helper">Maximum 4 cameras.</span>
       </div>
 </ha-expansion-panel>
-<ha-expansion-panel .expanded=${true}>
+<ha-expansion-panel>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:cog"></ha-icon>
       <span>General Settings</span>
@@ -6165,7 +6165,7 @@ class FrigateViewCardEditor extends HTMLElement {
                 </div>
             </div>
 </ha-expansion-panel>
-<ha-expansion-panel .expanded=${true}>
+<ha-expansion-panel>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:palette"></ha-icon>
       <span>Theme Settings</span>
@@ -6186,7 +6186,7 @@ class FrigateViewCardEditor extends HTMLElement {
             </div>
 </ha-expansion-panel>
 
-<ha-expansion-panel .expanded=${true}>
+<ha-expansion-panel>
     <div slot="header" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:angle-right"></ha-icon>
       <span>Layout Settings</span>
