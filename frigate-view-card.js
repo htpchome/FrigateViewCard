@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.118";
+const VERSION = "1.0.119";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1563,7 +1563,7 @@ class FrigateViewCard extends HTMLElement {
         this._tryMountGo2RTCMSE(
           hiddenSlot(),
           {
-            waitMs: 7000,
+            waitMs: 4000,
             minCurrentTime: 0.05,
             minDecodedFrames: 1,
             requireReadyState: 2,
@@ -1673,14 +1673,33 @@ class FrigateViewCard extends HTMLElement {
     const minDecodedFrames = Number(opts.minDecodedFrames ?? 1);
     const requireReadyState = Number(opts.requireReadyState ?? 0);
     const strict = opts.strict === true;
+    const abortSignal = opts.abortSignal || null;
     return new Promise((resolve) => {
+      let settled = false;
       let frameCallbackBound = false;
       let eventBound = false;
+      let onAbort = null;
       const done = (ok) => {
+        if (settled) return;
+        settled = true;
         clearInterval(tick);
         clearTimeout(to);
+        if (abortSignal && onAbort) {
+          try {
+            abortSignal.removeEventListener("abort", onAbort);
+          } catch (_) {}
+        }
         resolve(ok);
       };
+
+      if (abortSignal) {
+        onAbort = () => done(false);
+        if (abortSignal.aborted) {
+          done(false);
+          return;
+        }
+        abortSignal.addEventListener("abort", onAbort, { once: true });
+      }
 
       const tick = setInterval(() => {
         // stream elements often host the video inside shadow DOM.
@@ -2031,8 +2050,10 @@ class FrigateViewCard extends HTMLElement {
 
     const ws = new WebSocket(wsUrl);
     ws.binaryType = "arraybuffer";
+    const startupAbort = new AbortController();
 
     let sb = null;
+    let mseRequested = false;
     let queue = [];
 
     const appendNext = () => {
@@ -2045,7 +2066,19 @@ class FrigateViewCard extends HTMLElement {
     };
 
     const stopCatchup = this._startFirefoxLiveCatchup(video);
+    const requestMSE = () => {
+      if (mseRequested) return;
+      if (ws.readyState !== WebSocket.OPEN) return;
+      const codecs = this._go2rtcCodecs(MediaSource.isTypeSupported);
+      mseRequested = true;
+      this._ffDebug("Sending MSE codecs", codecs || "<empty>");
+      ws.send(JSON.stringify({ type: "mse", value: codecs }));
+    };
+
     const destroy = () => {
+      try {
+        if (!startupAbort.signal.aborted) startupAbort.abort();
+      } catch (_) {}
       try {
         ws.close();
       } catch (_) {}
@@ -2066,25 +2099,19 @@ class FrigateViewCard extends HTMLElement {
         this._ffDebug("MediaSource opened", {
           wsReadyState: ws.readyState,
         });
-        if (ws.readyState !== WebSocket.OPEN) return;
-        const codecs = this._go2rtcCodecs(MediaSource.isTypeSupported);
-        this._ffDebug("Sending MSE codecs", codecs || "<empty>");
-        ws.send(JSON.stringify({ type: "mse", value: codecs }));
+        requestMSE();
       },
       { once: true },
     );
 
     ws.addEventListener("open", () => {
       this._ffDebug("go2rtc websocket opened");
-      if (ms.readyState === "open") {
-        const codecs = this._go2rtcCodecs(MediaSource.isTypeSupported);
-        this._ffDebug("Sending MSE codecs on ws open", codecs || "<empty>");
-        ws.send(JSON.stringify({ type: "mse", value: codecs }));
-      }
+      if (ms.readyState === "open") requestMSE();
     });
 
     ws.addEventListener("error", () => {
       this._ffDebug("go2rtc websocket error");
+      if (!startupAbort.signal.aborted) startupAbort.abort();
     });
 
     ws.addEventListener("close", (ev) => {
@@ -2093,6 +2120,7 @@ class FrigateViewCard extends HTMLElement {
         reason: ev.reason,
         wasClean: ev.wasClean,
       });
+      if (!startupAbort.signal.aborted) startupAbort.abort();
     });
 
     ws.addEventListener("message", (ev) => {
@@ -2107,6 +2135,7 @@ class FrigateViewCard extends HTMLElement {
 
         this._ffDebug("Received go2rtc JSON message", msg?.type || "<unknown>");
         if (msg?.type === "mse" && msg.value && ms.readyState === "open") {
+          if (sb) return;
           try {
             const codecs = this._normalizeGo2RTCCodecs(msg.value);
             if (!codecs) {
@@ -2144,6 +2173,7 @@ class FrigateViewCard extends HTMLElement {
       minDecodedFrames,
       requireReadyState,
       strict,
+      abortSignal: startupAbort.signal,
     });
     if (!started) {
       this._ffDebug("Direct go2rtc MSE did not start within timeout");
