@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.124";
+const VERSION = "1.0.125";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1390,31 +1390,7 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _ffDebug(msg, data = null) {
-    try {
-      const params = new URLSearchParams(window.location?.search || "");
-      const q =
-        params.get("fvc_debug_stream") ||
-        params.get("fvc_debug") ||
-        params.get("debug_stream") ||
-        "";
-      const ls =
-        localStorage.getItem("fvc_debug_stream") ||
-        localStorage.getItem("frigate_view_card_debug") ||
-        "";
-      const gate = String(q || ls);
-      const enabled = /^(1|true|yes|on|debug|verbose|2)$/i.test(gate);
-      if (!enabled) return;
-
-      const verbose = /^(verbose|2)$/i.test(gate);
-      if (!verbose && String(msg) === "Received binary MSE chunk") return;
-
-      const prefix = `[FrigateViewCard ${VERSION}]`;
-      if (data === null || typeof data === "undefined") {
-        console.log(prefix, msg);
-      } else {
-        console.log(prefix, msg, data);
-      }
-    } catch (_) {}
+    return;
   }
 
   _preferredStreamType() {
@@ -5968,6 +5944,7 @@ class FrigateViewCard extends HTMLElement {
 class FrigateViewCardEditor extends HTMLElement {
   setConfig(config) {
     this._config = this._normalizeConfig(config);
+    if (!this._activeEditorPanel) this._activeEditorPanel = "camera";
     this._rendered = true;
     this._render();
   }
@@ -6283,6 +6260,8 @@ class FrigateViewCardEditor extends HTMLElement {
     const hiddenTabs = new Set(this._config?.hidden_tabs || []);
     this._ensureThemeDraftCache();
     const activeTheme = this._config?.theme === "custom" ? "custom" : "default";
+    const activePanel = this._activeEditorPanel || "camera";
+    const panelExpandedAttr = (id) => (activePanel === id ? "expanded" : "");
     const themeCustom = this._config?.theme_custom || {};
     const themeCustomDefaults = this._config?.theme_custom_defaults || {};
     const tabCheck = (id, label) => `<ha-formfield label="${label}">
@@ -6397,8 +6376,8 @@ class FrigateViewCardEditor extends HTMLElement {
     <div class="ed-wrap">
 
 
-  <ha-expansion-panel expanded>
-    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
+  <ha-expansion-panel ${panelExpandedAttr("camera")}>
+    <div slot="header" data-open-panel="camera" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:camera"></ha-icon>
       <span>Camera Settings</span>
     </div>
@@ -6410,8 +6389,8 @@ class FrigateViewCardEditor extends HTMLElement {
                 <span class="cam-helper">Maximum 4 cameras.</span>
       </div>
 </ha-expansion-panel>
-<ha-expansion-panel>
-    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
+<ha-expansion-panel ${panelExpandedAttr("general")}>
+    <div slot="header" data-open-panel="general" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:cog"></ha-icon>
       <span>General Settings</span>
     </div>
@@ -6431,8 +6410,8 @@ class FrigateViewCardEditor extends HTMLElement {
                 </div>
             </div>
 </ha-expansion-panel>
-<ha-expansion-panel>
-    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
+<ha-expansion-panel ${panelExpandedAttr("theme")}>
+    <div slot="header" data-open-panel="theme" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:palette"></ha-icon>
       <span>Theme Settings</span>
     </div>
@@ -6452,8 +6431,8 @@ class FrigateViewCardEditor extends HTMLElement {
             </div>
 </ha-expansion-panel>
 
-<ha-expansion-panel>
-    <div slot="header" style="display: flex; align-items: center; gap: 8px;">
+<ha-expansion-panel ${panelExpandedAttr("layout")}>
+    <div slot="header" data-open-panel="layout" style="display: flex; align-items: center; gap: 8px;">
       <ha-icon icon="mdi:angle-right"></ha-icon>
       <span>Layout Settings</span>
     </div>
@@ -6530,6 +6509,14 @@ class FrigateViewCardEditor extends HTMLElement {
     </div>`;
 
     const update = () => this._u();
+
+    this.querySelectorAll("[data-open-panel]").forEach((header) => {
+      header.addEventListener("click", (ev) => {
+        const panel = ev.currentTarget?.dataset?.openPanel || "camera";
+        this._activeEditorPanel = panel;
+        this._render();
+      });
+    });
 
     this.querySelectorAll("[data-theme-option]").forEach((btn) => {
       btn.addEventListener("click", (ev) => {
