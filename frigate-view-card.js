@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.153";
+const VERSION = "1.0.154";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6623,6 +6623,61 @@ class FrigateViewCardEditor extends HTMLElement {
     return valid;
   }
 
+  _bindNumericInput(selector, { onSanitize } = {}) {
+    const field = this.querySelector(selector);
+    if (!field) return;
+
+    const sanitize = () => {
+      const clean = String(field.value || "").replace(/[^0-9]/g, "");
+      if (field.value !== clean) field.value = clean;
+      onSanitize?.();
+    };
+
+    const restrictKey = (ev) => {
+      if (
+        ev.ctrlKey ||
+        ev.metaKey ||
+        ev.altKey ||
+        [
+          "Backspace",
+          "Delete",
+          "Tab",
+          "Enter",
+          "ArrowLeft",
+          "ArrowRight",
+          "ArrowUp",
+          "ArrowDown",
+          "Home",
+          "End",
+        ].includes(ev.key)
+      ) {
+        return;
+      }
+      if (!/^[0-9]$/.test(ev.key)) ev.preventDefault();
+    };
+
+    const restrictBeforeInput = (ev) => {
+      if (ev.data && /[^0-9]/.test(ev.data)) ev.preventDefault();
+    };
+
+    field.addEventListener("input", sanitize);
+    field.addEventListener("change", sanitize);
+    field.addEventListener("value-changed", sanitize);
+
+    requestAnimationFrame(() => {
+      const innerInput = field.shadowRoot?.querySelector("input");
+      if (!innerInput || innerInput.dataset.frigateNumericBound === "true") {
+        return;
+      }
+      innerInput.dataset.frigateNumericBound = "true";
+      innerInput.inputMode = "numeric";
+      innerInput.pattern = "[0-9]*";
+      innerInput.addEventListener("keydown", restrictKey);
+      innerInput.addEventListener("beforeinput", restrictBeforeInput);
+      innerInput.addEventListener("input", sanitize);
+    });
+  }
+
   _render() {
     const frigEntities = this._frigateEntities();
     const cams = this._getCams();
@@ -6900,10 +6955,10 @@ class FrigateViewCardEditor extends HTMLElement {
             .theme-color-input:disabled{opacity:.5;cursor:not-allowed;}
             .theme-color-reset{
               position:absolute;
-              left:1px;
-              bottom:1px;
-              width:1em;
-              height:1em;
+              left:calc(-1.4em - 2px);
+              bottom:0;
+              width:1.4em;
+              height:1.4em;
               padding:0;
               border:none;
               background:transparent;
@@ -6913,7 +6968,7 @@ class FrigateViewCardEditor extends HTMLElement {
               cursor:pointer;
             }
             .theme-color-reset[hidden]{display:none;}
-            .theme-color-reset ha-icon{--mdc-icon-size:1em;}
+            .theme-color-reset ha-icon{--mdc-icon-size:1.4em;}
             .layout-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
             .readonly-value{font-size:12px;color:var(--c-text, var(--editor-text));background:var(--c-bg-main, var(--editor-secondary-bg));border:var(--editor-border-width) solid var(--c-border, var(--editor-border));border-radius:8px;padding:6px 10px;}
 
@@ -7204,30 +7259,27 @@ class FrigateViewCardEditor extends HTMLElement {
     }
 
     if (this.querySelector("#col_left_width_pct")) {
-      const pctInput = this.querySelector("#col_left_width_pct");
-      const sanitize = () => {
-        const clean = String(pctInput.value || "").replace(/[^0-9]/g, "");
-        if (pctInput.value !== clean) pctInput.value = clean;
-        this._validateEditorFields();
-      };
-      pctInput.addEventListener("input", sanitize);
-      pctInput.addEventListener("change", sanitize);
-      pctInput.addEventListener("value-changed", sanitize);
+      this._bindNumericInput("#col_left_width_pct", {
+        onSanitize: () => {
+          this._validateEditorFields();
+        },
+      });
     }
 
     if (this.querySelector("#stream_height")) {
-      const streamHeightInput = this.querySelector("#stream_height");
-      const sanitize = () => {
-        const clean = String(streamHeightInput.value || "").replace(
-          /[^0-9]/g,
-          "",
-        );
-        if (streamHeightInput.value !== clean) streamHeightInput.value = clean;
-        this._validateEditorFields();
-      };
-      streamHeightInput.addEventListener("input", sanitize);
-      streamHeightInput.addEventListener("change", sanitize);
-      streamHeightInput.addEventListener("value-changed", sanitize);
+      this._bindNumericInput("#stream_height", {
+        onSanitize: () => {
+          const streamHeightInput = this.querySelector("#stream_height");
+          if (!streamHeightInput) return;
+          const clean = String(streamHeightInput.value || "").replace(
+            /[^0-9]/g,
+            "",
+          );
+          if (streamHeightInput.value !== clean)
+            streamHeightInput.value = clean;
+          this._validateEditorFields();
+        },
+      });
     }
 
     this._validateEditorFields();
