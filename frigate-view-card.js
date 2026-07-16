@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.157";
+const VERSION = "1.0.158";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -325,9 +325,12 @@ const STYLES = `
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
+  .et{width:112px;height:63px;border-radius:15px;overflow:hidden;flex-shrink:0;
+    background:var(--c-bg-deep);position:relative;}
+  .et img{width:100%;height:100%;object-fit:cover;display:block;}
 
  /* ── recordings ── */
-  .ric{width:36px;height:36px;border-radius:5px;background:rgba(30,80,200,.25);
+  .ric{width:63px;height:63px;border-radius:5px;background:rgba(30,80,200,.25);
     color:var(--c-primary-d);display:flex;align-items:center;justify-content:center;} 
   .ric svg{width:16.8px;height:16.8px;}
   .rinf{flex:1;} 
@@ -347,8 +350,6 @@ const STYLES = `
   .rev-m{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:0.75rem;color:var(--c-text2);margin-top:1px;} 
   .rev-m .time-meta,.rev-m .review-meta{display:inline-flex;align-items:center;gap:4px;} 
   .rev-m svg{width:10.8px;height:10.8px;}
-  .rev-th{width:112px;height:63px;border-radius:5px;overflow:hidden;flex-shrink:0;background:#0d1520;} 
-  .rev-th img{width:100%;height:100%;object-fit:cover;display:block;} 
   .rev-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a2840,#0d1520);color:var(--c-primary-d);} 
   .rev-ph svg{width:18px;height:18px;}
 
@@ -507,8 +508,7 @@ const STYLES = `
   .frigate-view{position:absolute;bottom:2px;left:6px;max-height:24px;pointer-events: none;
       fill: #ff5733;stroke: #000000;stroke-width: 2px;}
   .frigate-view svg{height:24px;pointer-events: none;}
-  .et{width:112px;height:63px;border-radius:6px;overflow:hidden;flex-shrink:0;background:#0d1520;position:relative;}
-  .et img{width:100%;height:100%;object-fit:cover;display:block;}
+
   .tph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a2840,#0d1520);color:var(--c-primary-d);} 
   .tph svg{width:20px;height:20px;}
   .ed{position:absolute;bottom:2px;right:3px;font-size:0.675rem;font-weight:700;color:var(--c-text-rev);background:rgba(0,0,0,.65);border-radius:3px;padding:1.2px 3.6px;}
@@ -6011,10 +6011,10 @@ class FrigateViewCard extends HTMLElement {
       const reviewThumbFile = "thumbnail.jpg";
       const thumb = firstDet
         ? this._missingThumbIds.has(firstDet)
-          ? `<div class="rev-th"><div class="rev-ph">${ICONS.person}</div></div>`
+          ? `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
           : hasReviewMedia
-            ? `<div class="rev-th"><img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rev-ph" style="display:none">${ICONS.person}</div></div>`
-            : `<div class="rev-th"><div class="rev-ph">${ICONS.person}</div></div>`
+            ? `<div class="et"><img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rev-ph" style="display:none">${ICONS.person}</div></div>`
+            : `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
         : "";
       return `
       <div class="list-item ${sev} shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
