@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.158";
+const VERSION = "1.0.159";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -328,6 +328,9 @@ const STYLES = `
   .et{width:112px;height:63px;border-radius:15px;overflow:hidden;flex-shrink:0;
     background:var(--c-bg-deep);position:relative;}
   .et img{width:100%;height:100%;object-fit:cover;display:block;}
+  .rev-sev{} 
+  .rev-sev.alert{outline: 4px solid var(--c-alert)} 
+  .rev-sev.detection{outline: 4px solid var(--c-accent)}
 
  /* ── recordings ── */
   .ric{width:63px;height:63px;border-radius:5px;background:rgba(30,80,200,.25);
@@ -341,9 +344,6 @@ const STYLES = `
   .rp:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
 
   /* ── reviews ── */
-  .rev-sev{width:2px;align-self:stretch;border-radius:3px;margin-right:0;} 
-  .rev-sev.alert{background:#ef4444;} 
-  .rev-sev.detection{background:#f59e0b;}
   .rev-nogap {display:flex;gap:0;}
   .rev-inf{flex:1;} 
   .rev-t{font-size:0.9rem;font-weight:600;color:var(--c-text);} 
@@ -6013,14 +6013,17 @@ class FrigateViewCard extends HTMLElement {
         ? this._missingThumbIds.has(firstDet)
           ? `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
           : hasReviewMedia
-            ? `<div class="et"><img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="rev-ph" style="display:none">${ICONS.person}</div></div>`
+            ? `<div class="et">
+                <img class="rev-sev ${sev}" src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                  <div class="rev-ph" style="display:none">${ICONS.person}</div>
+                </div>`
             : `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
         : "";
       return `
       <div class="list-item ${sev} shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
-        <div class="rev-nogap">
-          <div class="rev-sev ${sev}"></div>${thumb}
-        </div>
+
+        ${thumb}
+
         <div class="rev-inf">
           <div class="rev-t">${title}</div>
           <div class="rev-m">
