@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.142";
+const VERSION = "1.0.143";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -5952,8 +5952,26 @@ class FrigateViewCard extends HTMLElement {
 //=========================================================================
 // editor.js — FrigateViewCardEditor config panel
 class FrigateViewCardEditor extends HTMLElement {
+  _configSignature(config) {
+    try {
+      return JSON.stringify(config || {});
+    } catch (_) {
+      return "";
+    }
+  }
+
   setConfig(config) {
-    this._config = this._normalizeConfig(config);
+    const normalized = this._normalizeConfig(config);
+    const incomingSig = this._configSignature(normalized);
+    if (
+      this._rendered &&
+      this._lastDispatchedConfigSig &&
+      incomingSig === this._lastDispatchedConfigSig
+    ) {
+      this._config = normalized;
+      return;
+    }
+    this._config = normalized;
     this._rendered = true;
     this._render();
   }
@@ -6273,6 +6291,7 @@ class FrigateViewCardEditor extends HTMLElement {
   _wireSettingsPanels() {
     const panels = Array.from(this.querySelectorAll(".settings-panel"));
     if (!panels.length) return;
+
     const setActive = (activePanel) => {
       panels.forEach((panel) => {
         const isActive = panel === activePanel;
@@ -6281,6 +6300,7 @@ class FrigateViewCardEditor extends HTMLElement {
         if (toggle)
           toggle.setAttribute("aria-expanded", isActive ? "true" : "false");
       });
+      this._activeSettingsPanelId = activePanel?.dataset?.panel || "camera";
     };
 
     panels.forEach((panel) => {
@@ -6291,7 +6311,13 @@ class FrigateViewCardEditor extends HTMLElement {
         });
     });
 
-    setActive(panels[0]);
+    const fallback =
+      panels.find((panel) => panel.dataset.panel === "camera") || panels[0];
+    const initial =
+      panels.find(
+        (panel) => panel.dataset.panel === this._activeSettingsPanelId,
+      ) || fallback;
+    setActive(initial);
   }
 
   _render() {
@@ -6419,12 +6445,14 @@ class FrigateViewCardEditor extends HTMLElement {
         </div>
       </div>`;
 
+    const activeSettingsPanel = this._activeSettingsPanelId || "camera";
+
     const settingsPanelsMarkup = `
       <div class="settings-container">
-        ${this._renderSettingsPanel({ id: "camera", title: "Camera Settings", icon: "mdi:camera", content: cameraPanelContent, active: true })}
-        ${this._renderSettingsPanel({ id: "general", title: "General Settings", icon: "mdi:cog", content: generalPanelContent })}
-        ${this._renderSettingsPanel({ id: "theme", title: "Theme Settings", icon: "mdi:palette", content: themePanelContent })}
-        ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent })}
+        ${this._renderSettingsPanel({ id: "camera", title: "Camera Settings", icon: "mdi:camera", content: cameraPanelContent, active: activeSettingsPanel === "camera" })}
+        ${this._renderSettingsPanel({ id: "general", title: "General Settings", icon: "mdi:cog", content: generalPanelContent, active: activeSettingsPanel === "general" })}
+        ${this._renderSettingsPanel({ id: "theme", title: "Theme Settings", icon: "mdi:palette", content: themePanelContent, active: activeSettingsPanel === "theme" })}
+        ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent, active: activeSettingsPanel === "layout" })}
       </div>`;
 
     this.innerHTML = `<style>
@@ -6439,6 +6467,16 @@ class FrigateViewCardEditor extends HTMLElement {
                 --editor-border-width: var(--ha-card-border-width, 1px);
                 --editor-shadow: var(--ha-card-box-shadow, 0 2px 10px rgba(0,0,0,.14));
                 --editor-icon: var(--icon-color, var(--secondary-text-color, #6b7280));
+              --c-bg-main: var(--editor-primary-bg);
+              --c-bg-panel: var(--editor-card-bg);
+              --c-text: var(--editor-text);
+              --c-text2: var(--editor-muted);
+              --c-text-rev: var(--text-primary-color, #ffffff);
+              --c-border: var(--editor-border);
+              --c-border2: var(--divider-color, var(--editor-border));
+              --c-primary: var(--editor-primary);
+              --c-primary-l: var(--light-primary-color, var(--editor-primary));
+              --c-accent: var(--accent-color, var(--editor-primary));
                 display:flex;
                 flex-direction:column;
                 gap:16px;
@@ -6520,7 +6558,8 @@ class FrigateViewCardEditor extends HTMLElement {
               line-height:1.4;
               transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease;
             }
-            .theme-opt:hover{border-color:var(--c-primary);}
+            .theme-opt:hover{background:var(--c-bg-main);border-color:var(--c-primary);}
+            .theme-opt:active{transform:translateY(1px);}
             .theme-opt:focus-visible{outline:none;box-shadow:0 0 0 2px var(--c-primary-l, var(--c-primary));}
             .theme-opt.active{background:var(--c-primary);border-color:var(--c-primary);color:var(--c-text-rev);}
             .theme-custom-panel{margin-top:10px;border:var(--editor-border-width) solid var(--editor-border);border-radius:10px;background:var(--editor-card-bg);}
@@ -6893,6 +6932,7 @@ class FrigateViewCardEditor extends HTMLElement {
   }
 
   _dispatch() {
+    this._lastDispatchedConfigSig = this._configSignature(this._config);
     this.dispatchEvent(
       new CustomEvent("config-changed", {
         detail: { config: this._config },
