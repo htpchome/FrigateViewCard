@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.111";
+const VERSION = "1.0.112";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1303,11 +1303,7 @@ class FrigateViewCard extends HTMLElement {
     let depth = 0;
     while (el && depth < 48) {
       const tag = String(el.tagName || "").toUpperCase();
-      if (
-        tag === "HUI-CARD-PREVIEW" ||
-        tag === "HUI-DIALOG-EDIT-CARD" ||
-        tag === "HUI-CARD-OPTIONS"
-      ) {
+      if (tag === "HUI-CARD-PREVIEW" || tag === "HUI-DIALOG-EDIT-CARD") {
         return true;
       }
       const root = el.getRootNode?.();
