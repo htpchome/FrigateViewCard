@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.156";
+const VERSION = "1.0.157";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -325,8 +325,37 @@ const STYLES = `
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
-  .shadow-xform{box-shadow: var(--fvc-shadow-s);transition: transform 0.1s, box-shadow 0.1s;}
-  .shadow-xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
+
+ /* ── recordings ── */
+  .ric{width:36px;height:36px;border-radius:5px;background:rgba(30,80,200,.25);
+    color:var(--c-primary-d);display:flex;align-items:center;justify-content:center;} 
+  .ric svg{width:16.8px;height:16.8px;}
+  .rinf{flex:1;} 
+  .rt{font-size:0.9rem;font-weight:600;color:var(--c-text);} 
+  .rsub{font-size:0.75rem;color:var(--c-text2);margin-top:1px;} 
+  .rp{width:31.2px;height:31.2px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;flex-shrink:0;padding:0;}
+  .rp svg{width:15.6px;height:15.6px;}
+  .rp:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
+
+  /* ── reviews ── */
+  .rev-sev{width:2px;align-self:stretch;border-radius:3px;margin-right:0;} 
+  .rev-sev.alert{background:#ef4444;} 
+  .rev-sev.detection{background:#f59e0b;}
+  .rev-nogap {display:flex;gap:0;}
+  .rev-inf{flex:1;} 
+  .rev-t{font-size:0.9rem;font-weight:600;color:var(--c-text);} 
+  .rev-m{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:0.75rem;color:var(--c-text2);margin-top:1px;} 
+  .rev-m .time-meta,.rev-m .review-meta{display:inline-flex;align-items:center;gap:4px;} 
+  .rev-m svg{width:10.8px;height:10.8px;}
+  .rev-th{width:112px;height:63px;border-radius:5px;overflow:hidden;flex-shrink:0;background:#0d1520;} 
+  .rev-th img{width:100%;height:100%;object-fit:cover;display:block;} 
+  .rev-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a2840,#0d1520);color:var(--c-primary-d);} 
+  .rev-ph svg{width:18px;height:18px;}
+
+
+
+  .xform{box-shadow: var(--fvc-shadow-s);transition: transform 0.1s, box-shadow 0.1s;}
+  .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
   .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;}
@@ -500,37 +529,7 @@ const STYLES = `
   .ico svg{width:15.6px;height:15.6px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 
-  /* ── recordings ── */
-  .rec{display:flex;align-items:center;gap:9px;padding:8px 10px;background:var(--c-bg-main);border-radius:15px;margin-bottom:5px;cursor:pointer;}
-  .rec:hover{background:var(--c-bg-panel);}
-  .ric{width:36px;height:36px;border-radius:5px;background:rgba(30,80,200,.25);
-    color:var(--c-primary-d);display:flex;align-items:center;justify-content:center;} 
-  .ric svg{width:16.8px;height:16.8px;}
-  .rinf{flex:1;} 
-  .rt{font-size:0.9rem;font-weight:600;color:var(--c-text);} 
-  .rsub{font-size:0.75rem;color:var(--c-text2);margin-top:1px;} 
-  .rp{width:31.2px;height:31.2px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;flex-shrink:0;padding:0;}
-  .rp svg{width:15.6px;height:15.6px;}
-  .rp:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
-
-  /* ── reviews ── */
-  .rev{display:flex;gap:5px;flex-wrap: wrap;align-items:center;padding:2px 10px 2px 0px;background:var(--c-bg-main);border-radius:15px;margin-bottom:5px;cursor:pointer;}
-  .rev[data-review-open]:hover{background:var(--c-bg-panel);border-color:rgba(59,130,246,.25);}
-  .rev-sev{width:2px;align-self:stretch;border-radius:3px;margin-right:0;} 
-  .rev-sev.alert{background:#ef4444;} 
-  .rev-sev.detection{background:#f59e0b;}
-  .rev-nogap {display:flex;gap:0;}
-  .rev-inf{flex:1;} 
-  .rev-t{font-size:0.9rem;font-weight:600;color:var(--c-text);} 
-  .rev-m{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:0.75rem;color:var(--c-text2);margin-top:1px;} 
-  .rev-m .time-meta,.rev-m .review-meta{display:inline-flex;align-items:center;gap:4px;} 
-  .rev-m svg{width:10.8px;height:10.8px;}
-  .rev-th{width:112px;height:63px;border-radius:5px;overflow:hidden;flex-shrink:0;background:#0d1520;} 
-  .rev-th img{width:100%;height:100%;object-fit:cover;display:block;} 
-  .rev-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a2840,#0d1520);color:var(--c-primary-d);} 
-  .rev-ph svg{width:18px;height:18px;}
-
-  /* ── toast ── */
+   /* ── toast ── */
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99;background:rgba(15,21,40,.96);border:1px solid rgba(239,68,68,.4);color:var(--c-off);padding:8px 14px;border-radius:6px;font-size:0.9rem;box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:90%;}
   .diag{font-size:0.75rem;color:var(--c-off);background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:5px;padding:6px 8px;margin-bottom:7px;}
 
@@ -5851,7 +5850,7 @@ class FrigateViewCard extends HTMLElement {
         ? `<span class="cam-badge">${(ev.camera || "").replace(/_/g, " ")}</span>`
         : "";
     // compact: wrap everything in a tighter layout, actions horizontal
-    return `<div class="list-item${compact ? " compact" : ""} shadow-xform" data-ev="${ev.id}">
+    return `<div class="list-item${compact ? " compact" : ""} shadow-small xform" data-ev="${ev.id}">
       ${reviewBar}
       <div class="et">${thumb}<div class="ed">${this._dur(ev)}s</div></div>
       <div class="ei">
@@ -5965,7 +5964,7 @@ class FrigateViewCard extends HTMLElement {
         const mm = Math.floor(d / 60),
           ss = d % 60;
         const dur = `${mm ? mm + "m " : ""}${ss}s`;
-        return `<div class="rec shadow-xform" data-rs="${rs}" data-re="${re}">
+        return `<div class="list-item shadow-xform shadow-small" data-rs="${rs}" data-re="${re}">
         <div class="ric">${ICONS.recordings}</div>
         <div class="rinf">
           <div class="rt">${this._time(r.start_time)} – ${this._time(r.end_time || Date.now() / 1000)}</div>
@@ -6018,7 +6017,7 @@ class FrigateViewCard extends HTMLElement {
             : `<div class="rev-th"><div class="rev-ph">${ICONS.person}</div></div>`
         : "";
       return `
-      <div class="rev ${sev} shadow-xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
+      <div class="list-item ${sev} shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
         <div class="rev-nogap">
           <div class="rev-sev ${sev}"></div>${thumb}
         </div>
