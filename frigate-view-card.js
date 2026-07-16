@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.148";
+const VERSION = "1.0.149";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -769,6 +769,9 @@ class FrigateViewCard extends HTMLElement {
           title: previewConfig.title || null,
           subtitle: previewConfig.subtitle || null,
           window_days: normalizePositiveInteger(previewConfig.window_days, 3),
+          hidden_tabs: Array.isArray(previewConfig.hidden_tabs)
+            ? previewConfig.hidden_tabs
+            : [],
           theme: previewConfig.theme === "custom" ? "custom" : "default",
           theme_custom:
             previewConfig.theme_custom &&
@@ -6418,9 +6421,45 @@ class FrigateViewCardEditor extends HTMLElement {
   _wireEditorDialogActions() {
     if (this._dialogActionHooksBound) return;
 
+    const getActionKind = (ev) => {
+      if (ev.target?.closest?.("#camera-modal")) return null;
+      const button = ev.target?.closest?.(
+        '[slot="primaryAction"], [slot="secondaryAction"], mwc-button, ha-button, button',
+      );
+      if (!button) return null;
+
+      const explicitSlot = button.getAttribute?.("slot") || "";
+      if (explicitSlot === "primaryAction") return "primary";
+      if (explicitSlot === "secondaryAction") return "secondary";
+
+      const actionAttr = (
+        button.getAttribute?.("dialogAction") ||
+        button.getAttribute?.("dialog-action") ||
+        ""
+      )
+        .toString()
+        .trim()
+        .toLowerCase();
+      if (["save", "ok", "done", "confirm", "apply"].includes(actionAttr)) {
+        return "primary";
+      }
+      if (["cancel", "close", "dismiss"].includes(actionAttr)) {
+        return "secondary";
+      }
+
+      const label = (button.textContent || "").trim().toLowerCase();
+      if (["save", "done", "update", "apply", "ok"].includes(label)) {
+        return "primary";
+      }
+      if (["cancel", "close", "dismiss"].includes(label)) {
+        return "secondary";
+      }
+
+      return null;
+    };
+
     this._onDialogPrimaryActionClick = (ev) => {
-      const btn = ev.target?.closest?.('[slot="primaryAction"]');
-      if (!btn) return;
+      if (getActionKind(ev) !== "primary") return;
       if (this._hasVisualDraft) {
         this._dispatch();
         this._hasVisualDraft = false;
@@ -6429,8 +6468,7 @@ class FrigateViewCardEditor extends HTMLElement {
     };
 
     this._onDialogSecondaryActionClick = (ev) => {
-      const btn = ev.target?.closest?.('[slot="secondaryAction"]');
-      if (!btn) return;
+      if (getActionKind(ev) !== "secondary") return;
       this._hasVisualDraft = false;
       this._emitPreviewDraft(null);
     };
@@ -7073,6 +7111,7 @@ class FrigateViewCardEditor extends HTMLElement {
         title: c.title,
         subtitle: c.subtitle,
         window_days: c.window_days,
+        hidden_tabs: c.hidden_tabs,
         theme: c.theme,
         theme_custom: c.theme_custom,
         theme_custom_defaults: c.theme_custom_defaults,
