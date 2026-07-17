@@ -22,9 +22,9 @@ test("progressive list rendering constants and methods exist", () => {
   assert.match(source, /_visibleListSlice\(items\)\s*\{/);
 });
 
-test("startup order prefers list fetch kickoff before engine mount", () => {
+test("startup waits for initial list load before live mount", () => {
   assert.match(
     source,
-    /const initialWindowPromise\s*=\s*this\._loadWindow\(true\);[\s\S]*this\._mountEngine\(\);[\s\S]*await initialWindowPromise;/,
+    /await\s+this\._loadWindow\(true\);[\s\S]*this\._mountEngine\(\);/,
   );
 });

@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.182";
+const VERSION = "1.0.183";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1749,9 +1749,8 @@ class FrigateViewCard extends HTMLElement {
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
 
-    const initialWindowPromise = this._loadWindow(true);
+    await this._loadWindow(true);
     this._mountEngine();
-    await initialWindowPromise;
     this._loadCalendar();
     this._subscribe();
     this._startEditModeWatchdog();
@@ -6483,15 +6482,19 @@ class FrigateViewCard extends HTMLElement {
     if (this._tab === "kept") {
       this._renderListLabel();
       if (!this._kept.length) {
-        list.innerHTML = `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`;
+        this._setListHtmlIfChanged(
+          list,
+          `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
+        );
         this._syncOlderHint(false);
         this._cancelListRenderGrowth();
         return;
       }
       const visibleKept = this._visibleListSlice(this._kept);
-      list.innerHTML = visibleKept
-        .map((ev) => this._eventCardHTML(ev, false))
-        .join("");
+      this._setListHtmlIfChanged(
+        list,
+        visibleKept.map((ev) => this._eventCardHTML(ev, false)).join(""),
+      );
       this._scheduleListRenderGrowth(this._kept.length);
       this._syncOlderHint(false);
       return;
@@ -6499,13 +6502,16 @@ class FrigateViewCard extends HTMLElement {
     const events = this._filtered();
     this._renderListLabel(events[0]?.start_time || null);
     if (!events.length) {
-      list.innerHTML = `<div class="empty">No events in this window</div>`;
+      this._setListHtmlIfChanged(
+        list,
+        `<div class="empty">No events in this window</div>`,
+      );
       this._syncOlderHint(false);
       this._cancelListRenderGrowth();
       return;
     }
     const visibleEvents = this._visibleListSlice(events);
-    list.innerHTML =
+    const eventsHtml =
       (this._showStickyDayHeaders()
         ? this._renderStickyDaySections(visibleEvents, (ev) =>
             this._eventCardHTML(ev, false),
@@ -6514,6 +6520,7 @@ class FrigateViewCard extends HTMLElement {
       (this._exhausted && visibleEvents.length === events.length
         ? '<div class="end">— end —</div>'
         : "");
+    this._setListHtmlIfChanged(list, eventsHtml);
     this._scheduleListRenderGrowth(events.length);
     this._syncOlderHint();
     requestAnimationFrame(() => this._syncOlderHint());
@@ -6565,13 +6572,15 @@ class FrigateViewCard extends HTMLElement {
     );
     const recs = this._visibleListSlice(allRecs);
     if (!recs.length) {
-      list.innerHTML =
-        '<div class="empty">No recordings in the last 24 hours</div>';
+      this._setListHtmlIfChanged(
+        list,
+        '<div class="empty">No recordings in the last 24 hours</div>',
+      );
       this._syncOlderHint(true);
       this._cancelListRenderGrowth();
       return;
     }
-    list.innerHTML = recs
+    const recsHtml = recs
       .map((r) => {
         const rs = Math.floor(r.start_time),
           re = Math.floor(r.end_time || Date.now() / 1000);
@@ -6589,13 +6598,17 @@ class FrigateViewCard extends HTMLElement {
       </div>`;
       })
       .join("");
+    this._setListHtmlIfChanged(list, recsHtml);
     this._scheduleListRenderGrowth(allRecs.length);
     this._syncOlderHint(false);
   }
   _renderReviews(list) {
     this._renderListLabel(this._reviews[0]?.start_time || null);
     if (!this._reviews.length) {
-      list.innerHTML = '<div class="empty">No alerts in this window</div>';
+      this._setListHtmlIfChanged(
+        list,
+        '<div class="empty">No alerts in this window</div>',
+      );
       this._syncOlderHint(true);
       this._cancelListRenderGrowth();
       return;
@@ -6606,12 +6619,15 @@ class FrigateViewCard extends HTMLElement {
     const visibleRevs = this._visibleListSlice(allRevs);
     this._renderListLabel(allRevs[0]?.start_time || null);
     if (!visibleRevs.length) {
-      list.innerHTML = '<div class="empty">No alerts in this window</div>';
+      this._setListHtmlIfChanged(
+        list,
+        '<div class="empty">No alerts in this window</div>',
+      );
       this._syncOlderHint(true);
       this._cancelListRenderGrowth();
       return;
     }
-    list.innerHTML = this._renderStickyDaySections(visibleRevs, (r) => {
+    const reviewsHtml = this._renderStickyDaySections(visibleRevs, (r) => {
       const sev = r.severity === "alert" ? "alert" : "detection";
       const objs = (r.data?.objects || []).map(cap).join(", ");
       const title = r.data?.metadata?.title || objs || cap(r.severity);
@@ -6655,6 +6671,7 @@ class FrigateViewCard extends HTMLElement {
         ${favBtn}
       </div>`;
     });
+    this._setListHtmlIfChanged(list, reviewsHtml);
     this._scheduleListRenderGrowth(allRevs.length);
     this._syncOlderHint(false);
   }
