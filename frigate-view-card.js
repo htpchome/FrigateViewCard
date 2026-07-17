@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.248";
+const VERSION = "1.0.249";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -4167,7 +4167,7 @@ class FrigateViewCard extends HTMLElement {
                 </div>
 
               </div>
-              
+
             <div class="frigate-view">${ICONS.frigateview}</div> 
             <div class="tabs shadow-small">
               ${this._buildTabsMarkup()}
