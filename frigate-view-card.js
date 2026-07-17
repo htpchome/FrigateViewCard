@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.210";
+const VERSION = "1.0.211";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1127,6 +1127,7 @@ class FrigateViewCard extends HTMLElement {
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
+    this._lastRenderedListHtml = "";
     this._pendingMountDestroyers = [];
     this._pendingWebRTCTakeoverTimer = null;
     this._wasVisible = false;
@@ -1735,8 +1736,9 @@ class FrigateViewCard extends HTMLElement {
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
 
+    const initialLoad = this._loadWindow(true);
     this._mountEngine();
-    await this._loadWindow(true);
+    await initialLoad;
     this._loadCalendar();
     this._subscribe();
     this._startEditModeWatchdog();
@@ -3088,13 +3090,13 @@ class FrigateViewCard extends HTMLElement {
     this._renderCamSwitcher();
     this._syncStatus();
     this._renderStats();
+    this._renderList();
     this._streamMuted = true;
     this._renderMuteButton();
     this._cancelPendingMount("switch-camera");
     this._mountEngine();
     clearTimeout(this._switchLoadT);
-    const loadDelay = this._isFirefox() ? 500 : 100;
-    this._switchLoadT = setTimeout(() => this._loadWindow(true), loadDelay);
+    this._loadWindow(true);
   }
   // ── data ─────────────────────────────────────────────────
   _cc() {
@@ -3584,6 +3586,7 @@ class FrigateViewCard extends HTMLElement {
           </div>
       </ha-card>`;
     this._domCache = {}; // invalidate DOM element cache after full re-render
+    this._lastRenderedListHtml = "";
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
@@ -6348,6 +6351,16 @@ class FrigateViewCard extends HTMLElement {
       <div class="eact${compact ? " h" : ""}">${this._favIcon(ev)}${dlClip}${dlSnap}</div>
     </div>`;
   }
+
+  _setListHtmlIfChanged(list, html) {
+    if (!list) return false;
+    const nextHtml = String(html || "");
+    if (this._lastRenderedListHtml === nextHtml) return false;
+    list.innerHTML = nextHtml;
+    this._lastRenderedListHtml = nextHtml;
+    return true;
+  }
+
   _renderList() {
     const list = this._$("#list");
     if (!list) return;
@@ -6365,30 +6378,39 @@ class FrigateViewCard extends HTMLElement {
     if (this._tab === "kept") {
       this._renderListLabel();
       if (!this._kept.length) {
-        list.innerHTML = `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`;
+        this._setListHtmlIfChanged(
+          list,
+          `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
+        );
         this._syncOlderHint(false);
         return;
       }
-      list.innerHTML = this._kept
-        .map((ev) => this._eventCardHTML(ev, false))
-        .join("");
+      this._setListHtmlIfChanged(
+        list,
+        this._kept.map((ev) => this._eventCardHTML(ev, false)).join(""),
+      );
       this._syncOlderHint(false);
       return;
     }
     const events = this._filtered();
     this._renderListLabel(events[0]?.start_time || null);
     if (!events.length) {
-      list.innerHTML = `<div class="empty">No events in this window</div>`;
+      this._setListHtmlIfChanged(
+        list,
+        `<div class="empty">No events in this window</div>`,
+      );
       this._syncOlderHint(false);
       return;
     }
-    list.innerHTML =
+    this._setListHtmlIfChanged(
+      list,
       (this._showStickyDayHeaders()
         ? this._renderStickyDaySections(events, (ev) =>
             this._eventCardHTML(ev, false),
           )
         : events.map((ev) => this._eventCardHTML(ev, false)).join("")) +
-      (this._exhausted ? '<div class="end">— end —</div>' : "");
+        (this._exhausted ? '<div class="end">— end —</div>' : ""),
+    );
     this._syncOlderHint();
     requestAnimationFrame(() => this._syncOlderHint());
     setTimeout(() => this._syncOlderHint(), 200);
@@ -6438,20 +6460,24 @@ class FrigateViewCard extends HTMLElement {
       (a, b) => b.start_time - a.start_time,
     );
     if (!recs.length) {
-      list.innerHTML =
-        '<div class="empty">No recordings in the last 24 hours</div>';
+      this._setListHtmlIfChanged(
+        list,
+        '<div class="empty">No recordings in the last 24 hours</div>',
+      );
       this._syncOlderHint(true);
       return;
     }
-    list.innerHTML = recs
-      .map((r) => {
-        const rs = Math.floor(r.start_time),
-          re = Math.floor(r.end_time || Date.now() / 1000);
-        const d = Math.max(1, re - rs);
-        const mm = Math.floor(d / 60),
-          ss = d % 60;
-        const dur = `${mm ? mm + "m " : ""}${ss}s`;
-        return `<div class="list-item shadow-xform shadow-small" data-rs="${rs}" data-re="${re}">
+    this._setListHtmlIfChanged(
+      list,
+      recs
+        .map((r) => {
+          const rs = Math.floor(r.start_time),
+            re = Math.floor(r.end_time || Date.now() / 1000);
+          const d = Math.max(1, re - rs);
+          const mm = Math.floor(d / 60),
+            ss = d % 60;
+          const dur = `${mm ? mm + "m " : ""}${ss}s`;
+          return `<div class="list-item shadow-xform shadow-small" data-rs="${rs}" data-re="${re}">
         <div class="ric">${ICONS.recordings}</div>
         <div class="rinf">
           <div class="rt">${this._time(r.start_time)} – ${this._time(r.end_time || Date.now() / 1000)}</div>
@@ -6459,14 +6485,18 @@ class FrigateViewCard extends HTMLElement {
         </div>
         <button class="rp" data-rec-dl-start="${rs}" data-rec-dl-end="${re}" title="Download recording" aria-label="Download recording">${ICONS.download}</button>
       </div>`;
-      })
-      .join("");
+        })
+        .join(""),
+    );
     this._syncOlderHint(false);
   }
   _renderReviews(list) {
     this._renderListLabel(this._reviews[0]?.start_time || null);
     if (!this._reviews.length) {
-      list.innerHTML = '<div class="empty">No alerts in this window</div>';
+      this._setListHtmlIfChanged(
+        list,
+        '<div class="empty">No alerts in this window</div>',
+      );
       this._syncOlderHint(true);
       return;
     }
@@ -6475,38 +6505,43 @@ class FrigateViewCard extends HTMLElement {
     );
     this._renderListLabel(allRevs[0]?.start_time || null);
     if (!allRevs.length) {
-      list.innerHTML = '<div class="empty">No alerts in this window</div>';
+      this._setListHtmlIfChanged(
+        list,
+        '<div class="empty">No alerts in this window</div>',
+      );
       this._syncOlderHint(true);
       return;
     }
-    list.innerHTML = this._renderStickyDaySections(allRevs, (r) => {
-      const sev = r.severity === "alert" ? "alert" : "detection";
-      const objs = (r.data?.objects || []).map(cap).join(", ");
-      const title = r.data?.metadata?.title || objs || cap(r.severity);
-      const firstDet = (r.data?.detections && r.data.detections[0]) || "";
-      const reviewed = r.has_been_reviewed;
-      const favEv = firstDet ? this._findEventById(firstDet) : null;
-      const favBtn = firstDet
-        ? favEv?.retain_indefinitely
-          ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>`
-          : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>`
-        : "";
-      const hasReviewMedia = !!(
-        favEv &&
-        (favEv.has_snapshot || favEv.has_clip)
-      );
-      const reviewThumbFile = "thumbnail.jpg";
-      const thumb = firstDet
-        ? this._missingThumbIds.has(firstDet)
-          ? `<div class="tph">${ICONS.person}</div>`
-          : hasReviewMedia
-            ? `<div class="et ${sev}">
+    this._setListHtmlIfChanged(
+      list,
+      this._renderStickyDaySections(allRevs, (r) => {
+        const sev = r.severity === "alert" ? "alert" : "detection";
+        const objs = (r.data?.objects || []).map(cap).join(", ");
+        const title = r.data?.metadata?.title || objs || cap(r.severity);
+        const firstDet = (r.data?.detections && r.data.detections[0]) || "";
+        const reviewed = r.has_been_reviewed;
+        const favEv = firstDet ? this._findEventById(firstDet) : null;
+        const favBtn = firstDet
+          ? favEv?.retain_indefinitely
+            ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>`
+            : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>`
+          : "";
+        const hasReviewMedia = !!(
+          favEv &&
+          (favEv.has_snapshot || favEv.has_clip)
+        );
+        const reviewThumbFile = "thumbnail.jpg";
+        const thumb = firstDet
+          ? this._missingThumbIds.has(firstDet)
+            ? `<div class="tph">${ICONS.person}</div>`
+            : hasReviewMedia
+              ? `<div class="et ${sev}">
                 <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="tph" style="display:none">${ICONS.person}</div>
                 </div>`
-            : `<div class="tph">${ICONS.person}</div>`
-        : "";
-      return `
+              : `<div class="tph">${ICONS.person}</div>`
+          : "";
+        return `
       <div class="list-item shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
 
         ${thumb}
@@ -6522,7 +6557,8 @@ class FrigateViewCard extends HTMLElement {
         </div>
         ${favBtn}
       </div>`;
-    });
+      }),
+    );
     this._syncOlderHint(false);
   }
   // ── clip download range ───────────────────────────────────

@@ -24,9 +24,9 @@ test("window loads use loading-state guard", () => {
   assert.equal(/this\._loading = true;/.test(source), true);
 });
 
-test("startup waits for initial list load before live mount", () => {
+test("startup begins list load in parallel with live mount", () => {
   assert.match(
     source,
-    /await\s+this\._loadWindow\(true\);[\s\S]*this\._mountEngine\(\);/,
+    /const\s+initialLoad\s*=\s*this\._loadWindow\(true\);[\s\S]*this\._mountEngine\(\);[\s\S]*await\s+initialLoad;/,
   );
 });
