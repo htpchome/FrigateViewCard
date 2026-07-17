@@ -7,14 +7,16 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.211";
+const VERSION = "1.0.213";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
 const EVENT_FETCH_BATCH = 100;
+const INITIAL_EVENT_FETCH_LIMIT = 20;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
+const INITIAL_EVENTS_PAGE_LIMIT = 1;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
   "alerts",
@@ -1113,6 +1115,7 @@ class FrigateViewCard extends HTMLElement {
     this._go2rtcHlsProbeInFlight = new Map(); // key => Promise<url|null>
     this._fallbackImgUrlCache = new Map(); // entity => {url, exp}
     this._fallbackReqId = 0;
+    this._eventsLoadToken = 0;
     this._switchLoadT = null;
     this._popupDrag = null;
     this._popupHandlers = null;
@@ -3112,12 +3115,20 @@ class FrigateViewCard extends HTMLElement {
     const items = [];
     const seen = new Set();
     const afterTs = Math.floor(after);
-    let cursorBefore = Math.floor(before);
+    let cursorBefore = Math.floor(
+      Number.isFinite(opts?.cursorBefore) ? opts.cursorBefore : before,
+    );
     const pageLimit = Math.max(
       1,
       Number.isFinite(opts?.pageLimit)
         ? Math.floor(opts.pageLimit)
         : WINDOW_FETCH_PAGE_LIMIT,
+    );
+    const batchLimit = Math.max(
+      1,
+      Number.isFinite(opts?.limit)
+        ? Math.floor(opts.limit)
+        : EVENT_FETCH_BATCH,
     );
     const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
     for (let page = 0; page < pageLimit; page++) {
@@ -3127,7 +3138,7 @@ class FrigateViewCard extends HTMLElement {
         cameras: [cam],
         after: afterTs,
         before: cursorBefore,
-        limit: EVENT_FETCH_BATCH,
+        limit: batchLimit,
       });
       if (!Array.isArray(batch) || !batch.length) break;
       for (const item of batch) {
@@ -3142,7 +3153,7 @@ class FrigateViewCard extends HTMLElement {
       const oldest = Math.min(
         ...batch.map((item) => Math.floor(item?.start_time || before)),
       );
-      if (batch.length < EVENT_FETCH_BATCH || oldest <= afterTs) break;
+      if (batch.length < batchLimit || oldest <= afterTs) break;
       cursorBefore = oldest - 1;
     }
     onPage?.(items, { page: -1, done: true });
@@ -3222,29 +3233,66 @@ class FrigateViewCard extends HTMLElement {
   }
 
   async _loadWindowEvents(clientId, cam, after, before) {
-    let renderedEventsFirstPage = false;
+    const loadToken = ++this._eventsLoadToken;
     try {
-      const events = await this._fetchWindowedEvents(
+      const initialEvents = await this._fetchWindowedEvents(
         clientId,
         cam,
         after,
         before,
         {
-          onPage: (items, meta) => {
-            this._events = Array.isArray(items) ? items.slice() : [];
-            this._cacheActiveCamSlice("events", this._events);
-            if (!renderedEventsFirstPage || meta?.done) {
-              renderedEventsFirstPage = true;
-              this._renderList();
-              this._renderStats();
-            }
-          },
+          pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+          limit: INITIAL_EVENT_FETCH_LIMIT,
         },
       );
-      this._events = Array.isArray(events) ? events : [];
+      this._events = Array.isArray(initialEvents) ? initialEvents : [];
       this._cacheActiveCamSlice("events", this._events);
       this._renderList();
       this._renderStats();
+
+      if (
+        !this._events.length ||
+        WINDOW_FETCH_PAGE_LIMIT <= INITIAL_EVENTS_PAGE_LIMIT
+      ) {
+        return;
+      }
+
+      const oldest = Math.min(
+        ...this._events.map((item) => Math.floor(item?.start_time || before)),
+      );
+      const cursorBefore = oldest - 1;
+      const activeEntity = this._activeCam?.entity;
+      const winStart = this._winStart;
+      const winEnd = this._winEnd;
+
+      void (async () => {
+        try {
+          const remainingEvents = await this._fetchWindowedEvents(
+            clientId,
+            cam,
+            after,
+            before,
+            {
+              pageLimit: Math.max(
+                1,
+                WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT,
+              ),
+              cursorBefore,
+            },
+          );
+
+          if (loadToken !== this._eventsLoadToken) return;
+          if (activeEntity !== this._activeCam?.entity) return;
+          if (winStart !== this._winStart || winEnd !== this._winEnd) return;
+
+          if (Array.isArray(remainingEvents) && remainingEvents.length) {
+            this._events = this._events.concat(remainingEvents);
+            this._cacheActiveCamSlice("events", this._events);
+            this._renderList();
+            this._renderStats();
+          }
+        } catch (_) {}
+      })();
     } catch (error) {
       console.error("[Frigate] events", error);
       this._events = [];
