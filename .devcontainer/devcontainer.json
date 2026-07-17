@@ -1,12 +1,13 @@
 {
   "name": "FrigateViewCard Development",
-  "shutdownAction": "stopContainer",
+  "shutdownAction": "stopCompose",
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 
   "features": {
-    "ghcr.io/devcontainers/features/node:1": {
+    "ghcr.io/devcontainers/features/docker-in-docker:4.0.0": {},
+    "ghcr.io/devcontainers/features/node:2.1.0": {
       "version": "20"
     },
     "ghcr.io/devcontainers/features/git:1": {}
