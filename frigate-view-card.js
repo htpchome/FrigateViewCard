@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.178";
+const VERSION = "1.0.179";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -15,6 +15,9 @@ const RECORDINGS_WINDOW = 24 * 3600;
 const EVENT_FETCH_BATCH = 100;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
+const INITIAL_LIST_RENDER_COUNT = 16;
+const LIST_RENDER_INCREMENT = 24;
+const LIST_RENDER_IDLE_DELAY_MS = 60;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
   "alerts",
@@ -1738,8 +1741,9 @@ class FrigateViewCard extends HTMLElement {
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
 
+    const initialWindowPromise = this._loadWindow(true);
     this._mountEngine();
-    await this._loadWindow(true);
+    await initialWindowPromise;
     this._loadCalendar();
     this._subscribe();
     this._startEditModeWatchdog();
@@ -3192,7 +3196,10 @@ class FrigateViewCard extends HTMLElement {
   async _loadWindow(replace) {
     if (this._loading) return;
     this._loading = true;
-    if (replace) this._exhausted = false;
+    if (replace) {
+      this._exhausted = false;
+      this._resetListRenderBudget();
+    }
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) {
       this._loading = false;
@@ -4433,6 +4440,7 @@ class FrigateViewCard extends HTMLElement {
   }
   _setTab(tab) {
     this._tab = tab;
+    this._resetListRenderBudget();
     this.shadowRoot
       .querySelectorAll("[data-tab]")
       .forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
@@ -6220,6 +6228,74 @@ class FrigateViewCard extends HTMLElement {
     if (this._favOnly) list = list.filter((e) => e.retain_indefinitely);
     return list;
   }
+
+  _cancelListRenderGrowth() {
+    if (this._listRenderGrowTimer == null) return;
+    if (
+      this._listRenderGrowUsesIdle &&
+      typeof cancelIdleCallback === "function"
+    ) {
+      cancelIdleCallback(this._listRenderGrowTimer);
+    } else {
+      clearTimeout(this._listRenderGrowTimer);
+    }
+    this._listRenderGrowTimer = null;
+    this._listRenderGrowUsesIdle = false;
+  }
+
+  _resetListRenderBudget() {
+    this._cancelListRenderGrowth();
+    this._listRenderLimit = INITIAL_LIST_RENDER_COUNT;
+    this._listRenderTargetCount = 0;
+  }
+
+  _getListRenderLimit() {
+    if (
+      !Number.isFinite(this._listRenderLimit) ||
+      this._listRenderLimit < INITIAL_LIST_RENDER_COUNT
+    ) {
+      this._listRenderLimit = INITIAL_LIST_RENDER_COUNT;
+    }
+    return this._listRenderLimit;
+  }
+
+  _visibleListSlice(items) {
+    if (!Array.isArray(items)) return [];
+    return items.slice(0, this._getListRenderLimit());
+  }
+
+  _scheduleListRenderGrowth(totalCount) {
+    const total = Math.max(0, Number(totalCount) || 0);
+    this._listRenderTargetCount = total;
+    if (total <= this._getListRenderLimit()) {
+      this._cancelListRenderGrowth();
+      return;
+    }
+    if (this._listRenderGrowTimer != null) return;
+
+    const grow = () => {
+      this._listRenderGrowTimer = null;
+      this._listRenderGrowUsesIdle = false;
+      if (!this.isConnected) return;
+      const current = this._getListRenderLimit();
+      const target = Math.max(0, Number(this._listRenderTargetCount) || 0);
+      if (current >= target) return;
+      this._listRenderLimit = Math.min(target, current + LIST_RENDER_INCREMENT);
+      this._renderList();
+      if (this._listRenderLimit < target) {
+        this._scheduleListRenderGrowth(target);
+      }
+    };
+
+    if (typeof requestIdleCallback === "function") {
+      this._listRenderGrowUsesIdle = true;
+      this._listRenderGrowTimer = requestIdleCallback(grow, { timeout: 120 });
+      return;
+    }
+    this._listRenderGrowUsesIdle = false;
+    this._listRenderGrowTimer = setTimeout(grow, LIST_RENDER_IDLE_DELAY_MS);
+  }
+
   _mergeRecs(recs) {
     if (!recs.length) return [];
     const segs = [...recs].sort((a, b) => a.start_time - b.start_time);
@@ -6363,11 +6439,14 @@ class FrigateViewCard extends HTMLElement {
       if (!this._kept.length) {
         list.innerHTML = `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`;
         this._syncOlderHint(false);
+        this._cancelListRenderGrowth();
         return;
       }
-      list.innerHTML = this._kept
+      const visibleKept = this._visibleListSlice(this._kept);
+      list.innerHTML = visibleKept
         .map((ev) => this._eventCardHTML(ev, false))
         .join("");
+      this._scheduleListRenderGrowth(this._kept.length);
       this._syncOlderHint(false);
       return;
     }
@@ -6376,15 +6455,20 @@ class FrigateViewCard extends HTMLElement {
     if (!events.length) {
       list.innerHTML = `<div class="empty">No events in this window</div>`;
       this._syncOlderHint(false);
+      this._cancelListRenderGrowth();
       return;
     }
+    const visibleEvents = this._visibleListSlice(events);
     list.innerHTML =
       (this._showStickyDayHeaders()
-        ? this._renderStickyDaySections(events, (ev) =>
+        ? this._renderStickyDaySections(visibleEvents, (ev) =>
             this._eventCardHTML(ev, false),
           )
-        : events.map((ev) => this._eventCardHTML(ev, false)).join("")) +
-      (this._exhausted ? '<div class="end">— end —</div>' : "");
+        : visibleEvents.map((ev) => this._eventCardHTML(ev, false)).join("")) +
+      (this._exhausted && visibleEvents.length === events.length
+        ? '<div class="end">— end —</div>'
+        : "");
+    this._scheduleListRenderGrowth(events.length);
     this._syncOlderHint();
     requestAnimationFrame(() => this._syncOlderHint());
     setTimeout(() => this._syncOlderHint(), 200);
@@ -6430,13 +6514,15 @@ class FrigateViewCard extends HTMLElement {
     }
   }
   _renderRecordings(list) {
-    const recs = this._splitRecsHourly(this._recordings).sort(
+    const allRecs = this._splitRecsHourly(this._recordings).sort(
       (a, b) => b.start_time - a.start_time,
     );
+    const recs = this._visibleListSlice(allRecs);
     if (!recs.length) {
       list.innerHTML =
         '<div class="empty">No recordings in the last 24 hours</div>';
       this._syncOlderHint(true);
+      this._cancelListRenderGrowth();
       return;
     }
     list.innerHTML = recs
@@ -6457,6 +6543,7 @@ class FrigateViewCard extends HTMLElement {
       </div>`;
       })
       .join("");
+    this._scheduleListRenderGrowth(allRecs.length);
     this._syncOlderHint(false);
   }
   _renderReviews(list) {
@@ -6464,18 +6551,21 @@ class FrigateViewCard extends HTMLElement {
     if (!this._reviews.length) {
       list.innerHTML = '<div class="empty">No alerts in this window</div>';
       this._syncOlderHint(true);
+      this._cancelListRenderGrowth();
       return;
     }
     const allRevs = [...this._reviews].sort(
       (a, b) => b.start_time - a.start_time,
     );
+    const visibleRevs = this._visibleListSlice(allRevs);
     this._renderListLabel(allRevs[0]?.start_time || null);
-    if (!allRevs.length) {
+    if (!visibleRevs.length) {
       list.innerHTML = '<div class="empty">No alerts in this window</div>';
       this._syncOlderHint(true);
+      this._cancelListRenderGrowth();
       return;
     }
-    list.innerHTML = this._renderStickyDaySections(allRevs, (r) => {
+    list.innerHTML = this._renderStickyDaySections(visibleRevs, (r) => {
       const sev = r.severity === "alert" ? "alert" : "detection";
       const objs = (r.data?.objects || []).map(cap).join(", ");
       const title = r.data?.metadata?.title || objs || cap(r.severity);
@@ -6519,6 +6609,7 @@ class FrigateViewCard extends HTMLElement {
         ${favBtn}
       </div>`;
     });
+    this._scheduleListRenderGrowth(allRevs.length);
     this._syncOlderHint(false);
   }
   // ── clip download range ───────────────────────────────────
