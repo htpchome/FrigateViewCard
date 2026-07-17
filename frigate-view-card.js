@@ -787,7 +787,7 @@ const STYLES = `
   .list-day-sec{position:relative;}
   .list-day-label{transform: scale(1.01);position:sticky;top:0;z-index:2;padding:2px 0 8px;margin:0 0 4px;font-size:0.82rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.50;pointer-events:none;background:var(--c-bg-main);border:none;}
 
-  
+
   .list-item{position: relative;display:flex;flex-wrap:wrap;gap:9px;align-items:center;
     background:var(--c-bg-panel-main);margin-bottom:5px;
     cursor:pointer;border-radius: 15px;padding:2px 10px 2px 2px;}
@@ -829,7 +829,7 @@ const STYLES = `
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
-  .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px;border-radius: 8px;}
+  .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px 12px;overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;}
   .tabs::-webkit-scrollbar{display:none;}
 
 
