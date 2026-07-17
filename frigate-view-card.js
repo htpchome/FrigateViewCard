@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.190";
+const VERSION = "1.0.191";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1077,7 +1077,6 @@ class FrigateViewCard extends HTMLElement {
       if (!(img instanceof HTMLImageElement)) return;
       const id = img.dataset.thumbId;
       if (!id) return;
-      this._missingThumbIds.add(id);
       img.style.display = "none";
       const fallback = img.nextElementSibling;
       if (fallback) fallback.style.display = "flex";
@@ -1752,7 +1751,7 @@ class FrigateViewCard extends HTMLElement {
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
 
-    await this._loadWindow(true);
+    void this._loadWindow(true);
     this._mountEngine();
     this._loadCalendar();
     this._subscribe();
@@ -3107,13 +3106,13 @@ class FrigateViewCard extends HTMLElement {
     this._syncStatus();
     this._renderStats();
     this._requestListRender();
+    this._flushListRenderNow();
     this._streamMuted = true;
     this._renderMuteButton();
     this._cancelPendingMount("switch-camera");
-    this._mountEngine();
     clearTimeout(this._switchLoadT);
-    const loadDelay = this._isFirefox() ? 500 : 100;
-    this._switchLoadT = setTimeout(() => this._loadWindow(false), loadDelay);
+    void this._loadWindow(false);
+    this._mountEngine();
   }
   // ── data ─────────────────────────────────────────────────
   _cc() {
@@ -3231,6 +3230,16 @@ class FrigateViewCard extends HTMLElement {
     this._loading = false;
     if (this._eventsMode === "all") this._loadAllCamsBackground();
     this._renderAll();
+  }
+
+  _flushListRenderNow() {
+    if (this._listRenderRaf) cancelAnimationFrame(this._listRenderRaf);
+    this._listRenderRaf = 0;
+    if (this._listRenderTimer) {
+      clearTimeout(this._listRenderTimer);
+      this._listRenderTimer = null;
+    }
+    this._renderList();
   }
 
   _cacheActiveCamSlice(key, value) {
@@ -5408,7 +5417,7 @@ class FrigateViewCard extends HTMLElement {
     const thumbMissing = this._missingThumbIds.has(ev.id);
     const thumb = thumbMissing
       ? `<div class="tph">${ICONS.person}</div>`
-      : `<img src="${this._media(ev.id, thumbFile)}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
+      : `<img src="${this._media(ev.id, thumbFile)}" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
     const active = ev.id === activeId ? " active" : "";
     return `<button class="popup-carousel-item${active}" data-ev="${ev.id}" title="${this._dateTimeLabel(ev.start_time || 0)}"><div class="et">${thumb}</div><div class="popup-carousel-meta"><span>${cap(ev.label || "event")}</span><span>${this._time(ev.start_time || 0)}</span></div></button>`;
   }
@@ -6543,7 +6552,7 @@ class FrigateViewCard extends HTMLElement {
       ev.has_snapshot || ev.has_clip
         ? thumbMissing
           ? `<div class="tph">${ICONS.person}</div>`
-          : `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`
+          : `<img src="${thumbSrc}" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`
         : `<div class="tph">${ICONS.person}</div>`;
     const badge = ev.has_clip
       ? '<span class="bc">clip</span>'
@@ -6765,7 +6774,7 @@ class FrigateViewCard extends HTMLElement {
             ? `<div class="et"><div class="tph">${ICONS.person}</div></div>`
             : hasReviewMedia
               ? `<div class="et ${sev}">
-                <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                  <img src="${this._media(firstDet, reviewThumbFile)}" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="tph" style="display:none">${ICONS.person}</div>
                 </div>`
               : `<div class="et"><div class="tph">${ICONS.person}</div></div>`

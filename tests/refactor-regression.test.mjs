@@ -23,9 +23,10 @@ test("event list rendering uses chunked background growth", () => {
   assert.equal(/_visibleListSlice\(/.test(source), false);
 });
 
-test("startup waits for initial list load before live mount", () => {
+test("startup kicks list load before live mount without awaiting it", () => {
   assert.match(
     source,
-    /await\s+this\._loadWindow\(true\);[\s\S]*this\._mountEngine\(\);/,
+    /void\s+this\._loadWindow\(true\);[\s\S]*this\._mountEngine\(\);/,
   );
+  assert.equal(/_loadWindowBeforeLive\(/.test(source), false);
 });
