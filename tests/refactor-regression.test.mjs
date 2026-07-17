@@ -15,11 +15,11 @@ test("no .then chains remain after async/await refactor", () => {
   assert.equal(/\.then\(/.test(source), false);
 });
 
-test("progressive list rendering constants and methods exist", () => {
-  assert.match(source, /const INITIAL_LIST_RENDER_COUNT\s*=\s*16;/);
-  assert.match(source, /_resetListRenderBudget\(\)\s*\{/);
-  assert.match(source, /_scheduleListRenderGrowth\(totalCount\)\s*\{/);
-  assert.match(source, /_visibleListSlice\(items\)\s*\{/);
+test("progressive list rendering helpers are removed", () => {
+  assert.equal(/INITIAL_LIST_RENDER_COUNT/.test(source), false);
+  assert.equal(/_resetListRenderBudget\(/.test(source), false);
+  assert.equal(/_scheduleListRenderGrowth\(/.test(source), false);
+  assert.equal(/_visibleListSlice\(/.test(source), false);
 });
 
 test("startup waits for initial list load before live mount", () => {

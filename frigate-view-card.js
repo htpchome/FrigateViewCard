@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.183";
+const VERSION = "1.0.184";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -15,9 +15,6 @@ const RECORDINGS_WINDOW = 24 * 3600;
 const EVENT_FETCH_BATCH = 100;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
-const INITIAL_LIST_RENDER_COUNT = 16;
-const LIST_RENDER_INCREMENT = 24;
-const LIST_RENDER_IDLE_DELAY_MS = 60;
 const LIST_RENDER_FRAME_DELAY_MS = 0;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
@@ -764,8 +761,8 @@ const STYLES = `
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
   .et{border-radius:15px;overflow:hidden;flex-shrink:0;
-    background:var(--c-bg-deep);position:relative;object-fit:cover;width:160px;height:90px;}
-  .et img{width:100%;height:100%;object-fit:cover;display:block;}
+    background:var(--c-bg-deep);position:relative;object-fit:cover;}
+  .et img{width:160px;height:90px;object-fit:cover;display:block;}
   .alert{outline: 2px solid var(--c-bg-alert);} 
   .detection{outline: 2px solid var(--c-accent);}
   .eact{display:flex;flex-direction:row;align-items:center;gap:4px;flex-shrink:0;padding:right:10px}
@@ -3207,7 +3204,6 @@ class FrigateViewCard extends HTMLElement {
     this._loading = true;
     if (replace) {
       this._exhausted = false;
-      this._resetListRenderBudget();
     }
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) {
@@ -6288,59 +6284,6 @@ class FrigateViewCard extends HTMLElement {
     this._listRenderGrowUsesIdle = false;
   }
 
-  _resetListRenderBudget() {
-    this._cancelListRenderGrowth();
-    this._listRenderLimit = INITIAL_LIST_RENDER_COUNT;
-    this._listRenderTargetCount = 0;
-  }
-
-  _getListRenderLimit() {
-    if (
-      !Number.isFinite(this._listRenderLimit) ||
-      this._listRenderLimit < INITIAL_LIST_RENDER_COUNT
-    ) {
-      this._listRenderLimit = INITIAL_LIST_RENDER_COUNT;
-    }
-    return this._listRenderLimit;
-  }
-
-  _visibleListSlice(items) {
-    if (!Array.isArray(items)) return [];
-    return items.slice(0, this._getListRenderLimit());
-  }
-
-  _scheduleListRenderGrowth(totalCount) {
-    const total = Math.max(0, Number(totalCount) || 0);
-    this._listRenderTargetCount = total;
-    if (total <= this._getListRenderLimit()) {
-      this._cancelListRenderGrowth();
-      return;
-    }
-    if (this._listRenderGrowTimer != null) return;
-
-    const grow = () => {
-      this._listRenderGrowTimer = null;
-      this._listRenderGrowUsesIdle = false;
-      if (!this.isConnected) return;
-      const current = this._getListRenderLimit();
-      const target = Math.max(0, Number(this._listRenderTargetCount) || 0);
-      if (current >= target) return;
-      this._listRenderLimit = Math.min(target, current + LIST_RENDER_INCREMENT);
-      this._requestListRender();
-      if (this._listRenderLimit < target) {
-        this._scheduleListRenderGrowth(target);
-      }
-    };
-
-    if (typeof requestIdleCallback === "function") {
-      this._listRenderGrowUsesIdle = true;
-      this._listRenderGrowTimer = requestIdleCallback(grow, { timeout: 120 });
-      return;
-    }
-    this._listRenderGrowUsesIdle = false;
-    this._listRenderGrowTimer = setTimeout(grow, LIST_RENDER_IDLE_DELAY_MS);
-  }
-
   _mergeRecs(recs) {
     if (!recs.length) return [];
     const segs = [...recs].sort((a, b) => a.start_time - b.start_time);
@@ -6490,12 +6433,11 @@ class FrigateViewCard extends HTMLElement {
         this._cancelListRenderGrowth();
         return;
       }
-      const visibleKept = this._visibleListSlice(this._kept);
+      const visibleKept = this._kept;
       this._setListHtmlIfChanged(
         list,
         visibleKept.map((ev) => this._eventCardHTML(ev, false)).join(""),
       );
-      this._scheduleListRenderGrowth(this._kept.length);
       this._syncOlderHint(false);
       return;
     }
@@ -6510,7 +6452,7 @@ class FrigateViewCard extends HTMLElement {
       this._cancelListRenderGrowth();
       return;
     }
-    const visibleEvents = this._visibleListSlice(events);
+    const visibleEvents = events;
     const eventsHtml =
       (this._showStickyDayHeaders()
         ? this._renderStickyDaySections(visibleEvents, (ev) =>
@@ -6521,7 +6463,6 @@ class FrigateViewCard extends HTMLElement {
         ? '<div class="end">— end —</div>'
         : "");
     this._setListHtmlIfChanged(list, eventsHtml);
-    this._scheduleListRenderGrowth(events.length);
     this._syncOlderHint();
     requestAnimationFrame(() => this._syncOlderHint());
     setTimeout(() => this._syncOlderHint(), 200);
@@ -6570,7 +6511,7 @@ class FrigateViewCard extends HTMLElement {
     const allRecs = this._splitRecsHourly(this._recordings).sort(
       (a, b) => b.start_time - a.start_time,
     );
-    const recs = this._visibleListSlice(allRecs);
+    const recs = allRecs;
     if (!recs.length) {
       this._setListHtmlIfChanged(
         list,
@@ -6599,7 +6540,6 @@ class FrigateViewCard extends HTMLElement {
       })
       .join("");
     this._setListHtmlIfChanged(list, recsHtml);
-    this._scheduleListRenderGrowth(allRecs.length);
     this._syncOlderHint(false);
   }
   _renderReviews(list) {
@@ -6616,7 +6556,7 @@ class FrigateViewCard extends HTMLElement {
     const allRevs = [...this._reviews].sort(
       (a, b) => b.start_time - a.start_time,
     );
-    const visibleRevs = this._visibleListSlice(allRevs);
+    const visibleRevs = allRevs;
     this._renderListLabel(allRevs[0]?.start_time || null);
     if (!visibleRevs.length) {
       this._setListHtmlIfChanged(
@@ -6672,7 +6612,6 @@ class FrigateViewCard extends HTMLElement {
       </div>`;
     });
     this._setListHtmlIfChanged(list, reviewsHtml);
-    this._scheduleListRenderGrowth(allRevs.length);
     this._syncOlderHint(false);
   }
   // ── clip download range ───────────────────────────────────
