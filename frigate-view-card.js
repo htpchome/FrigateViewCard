@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.213";
+const VERSION = "1.0.214";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1116,6 +1116,7 @@ class FrigateViewCard extends HTMLElement {
     this._fallbackImgUrlCache = new Map(); // entity => {url, exp}
     this._fallbackReqId = 0;
     this._eventsLoadToken = 0;
+    this._warmCamsToken = 0;
     this._switchLoadT = null;
     this._popupDrag = null;
     this._popupHandlers = null;
@@ -1740,6 +1741,7 @@ class FrigateViewCard extends HTMLElement {
     this._winStart = now - this._config.window_days * DAY;
 
     const initialLoad = this._loadWindow(true);
+    void this._warmOtherCamerasEvents();
     this._mountEngine();
     await initialLoad;
     this._loadCalendar();
@@ -3157,6 +3159,45 @@ class FrigateViewCard extends HTMLElement {
     onPage?.(items, { page: -1, done: true });
     return items;
   }
+
+  async _warmOtherCamerasEvents() {
+    const token = ++this._warmCamsToken;
+    const activeEntity = this._activeCam?.entity;
+    const after = this._winStart;
+    const before = this._winEnd;
+
+    const tasks = this._config.cameras
+      .filter((camera) => camera.entity !== activeEntity)
+      .map(async (camera) => {
+        const entity = camera.entity;
+        const cache = this._camCache[entity];
+        if (!cache?.clientId || !cache?.cam) return;
+        if (
+          Array.isArray(cache.events) &&
+          cache.events.length >= INITIAL_EVENT_FETCH_LIMIT
+        ) {
+          return;
+        }
+        try {
+          const events = await this._fetchWindowedEvents(
+            cache.clientId,
+            cache.cam,
+            after,
+            before,
+            {
+              pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+              limit: INITIAL_EVENT_FETCH_LIMIT,
+            },
+          );
+          if (token !== this._warmCamsToken) return;
+          if (after !== this._winStart || before !== this._winEnd) return;
+          cache.events = Array.isArray(events) ? events : [];
+        } catch (_) {}
+      });
+
+    await Promise.allSettled(tasks);
+  }
+
   async _fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
     const items = [];
     const seen = new Set();
