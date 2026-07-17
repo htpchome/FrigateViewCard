@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.195";
+const VERSION = "1.0.178";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -15,10 +15,6 @@ const RECORDINGS_WINDOW = 24 * 3600;
 const EVENT_FETCH_BATCH = 100;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
-const LIST_RENDER_FRAME_DELAY_MS = 0;
-const LIST_RENDER_INITIAL_ITEMS = 24;
-const LIST_RENDER_CHUNK_ITEMS = 48;
-const LIST_RENDER_GROW_DELAY_MS = 32;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
   "alerts",
@@ -663,7 +659,7 @@ const STYLES = `
     padding:0 !important;
     overflow: hidden;
     box-sizing: border-box !important;
-    position: relative; 
+    position: relative; /* This confines the absolute layout bounds strictly to this component */
   }
   :host {
     --popup-z-index: 1000;
@@ -769,8 +765,6 @@ const STYLES = `
   .alert{outline: 2px solid var(--c-bg-alert);} 
   .detection{outline: 2px solid var(--c-accent);}
   .eact{display:flex;flex-direction:row;align-items:center;gap:4px;flex-shrink:0;padding:right:10px}
-  .tph{width:160px;height:90px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a2840,#0d1520);color:var(--c-primary-d);object-fit:cover;} 
-  .tph svg{width:20px;height:20px;}
 
  /* ── recordings ── */
   .ric{width:63px;height:63px;border-radius:5px;background:rgba(30,80,200,.25);
@@ -948,6 +942,9 @@ const STYLES = `
   .frigate-view{position:absolute;bottom:2px;left:6px;max-height:24px;pointer-events: none;
       fill: #ff5733;stroke: #000000;stroke-width: 2px;}
   .frigate-view svg{height:24px;pointer-events: none;}
+
+  .tph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a2840,#0d1520);color:var(--c-primary-d);} 
+  .tph svg{width:20px;height:20px;}
   .ed{position:absolute;bottom:2px;right:3px;font-size:0.675rem;font-weight:700;color:var(--c-text-rev);background:rgba(0,0,0,.65);border-radius:3px;padding:1.2px 3.6px;}
   .ei{flex:1;min-width:0;}
   .etop{display:flex;align-items:center;gap:5px;margin-bottom:3px;flex-wrap:wrap;}
@@ -1077,21 +1074,7 @@ class FrigateViewCard extends HTMLElement {
       if (!(img instanceof HTMLImageElement)) return;
       const id = img.dataset.thumbId;
       if (!id) return;
-      const retries = Number(img.dataset.thumbRetry || "0");
-      if (retries < 1) {
-        img.dataset.thumbRetry = String(retries + 1);
-        const baseSrc = img.currentSrc || img.src || "";
-        const retrySrc = baseSrc
-          ? `${baseSrc}${baseSrc.includes("?") ? "&" : "?"}retry=${Date.now()}`
-          : "";
-        if (retrySrc) {
-          setTimeout(() => {
-            if (!img.isConnected) return;
-            img.src = retrySrc;
-          }, 250);
-          return;
-        }
-      }
+      this._missingThumbIds.add(id);
       img.style.display = "none";
       const fallback = img.nextElementSibling;
       if (fallback) fallback.style.display = "flex";
@@ -1114,7 +1097,6 @@ class FrigateViewCard extends HTMLElement {
     this._winEnd = 0;
     this._winStart = 0;
     this._loading = false;
-    this._windowLoadSeq = 0;
     this._exhausted = false;
     this._daysWithActivity = new Set();
     this._filterLabel = "all";
@@ -1148,13 +1130,6 @@ class FrigateViewCard extends HTMLElement {
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
-    this._listRenderRaf = 0;
-    this._listRenderTimer = null;
-    this._listRenderGrowTimer = null;
-    this._listRenderGrowUsesIdle = false;
-    this._listRenderProgressKey = "";
-    this._listRenderProgressCount = 0;
-    this._lastRenderedListHtml = "";
     this._pendingMountDestroyers = [];
     this._pendingWebRTCTakeoverTimer = null;
     this._wasVisible = false;
@@ -1743,10 +1718,6 @@ class FrigateViewCard extends HTMLElement {
     }
     if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
     this._rotateOverlayRaf = 0;
-    if (this._listRenderRaf) cancelAnimationFrame(this._listRenderRaf);
-    this._listRenderRaf = 0;
-    if (this._listRenderTimer) clearTimeout(this._listRenderTimer);
-    this._listRenderTimer = null;
     if (this._rotateOverlayExitT) clearTimeout(this._rotateOverlayExitT);
     this._rotateOverlayExitT = null;
     this._clearRotateOverlayAudioSync();
@@ -1767,8 +1738,8 @@ class FrigateViewCard extends HTMLElement {
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
 
-    void this._loadWindow(true);
     this._mountEngine();
+    await this._loadWindow(true);
     this._loadCalendar();
     this._subscribe();
     this._startEditModeWatchdog();
@@ -1778,7 +1749,7 @@ class FrigateViewCard extends HTMLElement {
       href: window.location?.href || "",
     });
     this._refresh = setInterval(() => {
-      if (this._isNowWindow()) this._loadWindow(false);
+      if (this._isNowWindow()) this._loadWindow(true);
     }, this._config.refresh_seconds * 1000);
     this._setupResizeObserver();
   }
@@ -2460,16 +2431,9 @@ class FrigateViewCard extends HTMLElement {
     if (!img) return;
     const reqId = ++this._fallbackReqId;
     const entity = this._activeCam?.entity;
-    const altSrc = this._streamFallbackAltUrl(entity);
-
-    // Show an immediate image from HA state while signed proxy URL resolves.
-    if (altSrc) {
-      if (status) status.hidden = true;
-      if (img.src !== altSrc) img.src = altSrc;
-    }
-
     const primarySrc = await this._streamFallbackUrl(entity);
     if (reqId !== this._fallbackReqId) return;
+    const altSrc = this._streamFallbackAltUrl(entity);
     const src = primarySrc || altSrc;
     if (!src) return;
     if (status) status.hidden = true;
@@ -2979,7 +2943,6 @@ class FrigateViewCard extends HTMLElement {
       slot.innerHTML = "";
       if (!quiet) {
         this._setActiveStreamType("--");
-        // Show the latest snapshot while live transport negotiates.
         this._setStreamFallbackVisible(true, true);
         this._setStreamLoading(true);
       } else {
@@ -3128,14 +3091,13 @@ class FrigateViewCard extends HTMLElement {
     this._renderCamSwitcher();
     this._syncStatus();
     this._renderStats();
-    this._requestListRender();
-    this._flushListRenderNow();
     this._streamMuted = true;
     this._renderMuteButton();
     this._cancelPendingMount("switch-camera");
-    clearTimeout(this._switchLoadT);
-    void this._loadWindow(false);
     this._mountEngine();
+    clearTimeout(this._switchLoadT);
+    const loadDelay = this._isFirefox() ? 500 : 100;
+    this._switchLoadT = setTimeout(() => this._loadWindow(true), loadDelay);
   }
   // ── data ─────────────────────────────────────────────────
   _cc() {
@@ -3228,53 +3190,29 @@ class FrigateViewCard extends HTMLElement {
     return items;
   }
   async _loadWindow(replace) {
-    const loadSeq = ++this._windowLoadSeq;
-    const entity = this._activeCam?.entity;
+    if (this._loading) return;
     this._loading = true;
-    if (replace) {
-      this._exhausted = false;
-    }
+    if (replace) this._exhausted = false;
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) {
-      if (loadSeq === this._windowLoadSeq) this._loading = false;
+      this._loading = false;
       return;
     }
     const after = this._winStart,
       before = this._winEnd;
     await Promise.allSettled([
-      this._loadWindowEvents(clientId, cam, after, before, loadSeq, entity),
-      this._loadWindowRecordings(clientId, cam, before, loadSeq, entity),
-      this._loadWindowReviewsIfNeeded(
-        clientId,
-        cam,
-        after,
-        before,
-        loadSeq,
-        entity,
-      ),
+      this._loadWindowEvents(clientId, cam, after, before),
+      this._loadWindowRecordings(clientId, cam, before),
+      this._loadWindowReviewsIfNeeded(clientId, cam, after, before),
     ]);
-    if (loadSeq !== this._windowLoadSeq || entity !== this._activeCam?.entity) {
-      return;
-    }
     const ent = this._activeCam?.entity;
     if (ent && this._camCache[ent]) {
       this._camCache[ent].events = this._events;
-      this._camCache[ent].reviews = this._reviews;
       this._camCache[ent].recordings = this._recordings;
     }
     this._loading = false;
     if (this._eventsMode === "all") this._loadAllCamsBackground();
     this._renderAll();
-  }
-
-  _flushListRenderNow() {
-    if (this._listRenderRaf) cancelAnimationFrame(this._listRenderRaf);
-    this._listRenderRaf = 0;
-    if (this._listRenderTimer) {
-      clearTimeout(this._listRenderTimer);
-      this._listRenderTimer = null;
-    }
-    this._renderList();
   }
 
   _cacheActiveCamSlice(key, value) {
@@ -3284,10 +3222,8 @@ class FrigateViewCard extends HTMLElement {
     }
   }
 
-  async _loadWindowEvents(clientId, cam, after, before, loadSeq, entity) {
+  async _loadWindowEvents(clientId, cam, after, before) {
     let renderedEventsFirstPage = false;
-    const isCurrentLoad = () =>
-      loadSeq === this._windowLoadSeq && entity === this._activeCam?.entity;
     try {
       const events = await this._fetchWindowedEvents(
         clientId,
@@ -3296,32 +3232,27 @@ class FrigateViewCard extends HTMLElement {
         before,
         {
           onPage: (items, meta) => {
-            if (!isCurrentLoad()) return;
             this._events = Array.isArray(items) ? items.slice() : [];
             this._cacheActiveCamSlice("events", this._events);
             if (!renderedEventsFirstPage || meta?.done) {
               renderedEventsFirstPage = true;
-              this._requestListRender();
+              this._renderList();
               this._renderStats();
             }
           },
         },
       );
-      if (!isCurrentLoad()) return;
       this._events = Array.isArray(events) ? events : [];
       this._cacheActiveCamSlice("events", this._events);
-      this._requestListRender();
+      this._renderList();
       this._renderStats();
     } catch (error) {
-      if (!isCurrentLoad()) return;
       console.error("[Frigate] events", error);
       this._events = [];
     }
   }
 
-  async _loadWindowRecordings(clientId, cam, before, loadSeq, entity) {
-    const isCurrentLoad = () =>
-      loadSeq === this._windowLoadSeq && entity === this._activeCam?.entity;
+  async _loadWindowRecordings(clientId, cam, before) {
     const recAfter = Math.max(0, before - RECORDINGS_WINDOW);
     try {
       const recordings = await this._ws({
@@ -3331,27 +3262,16 @@ class FrigateViewCard extends HTMLElement {
         after: recAfter,
         before,
       });
-      if (!isCurrentLoad()) return;
       this._recordings = Array.isArray(recordings) ? recordings : [];
       this._cacheActiveCamSlice("recordings", this._recordings);
-      if (this._tab === "recordings") this._requestListRender();
+      this._renderList();
     } catch (_) {
-      if (!isCurrentLoad()) return;
       this._recordings = [];
     }
   }
 
-  async _loadWindowReviewsIfNeeded(
-    clientId,
-    cam,
-    after,
-    before,
-    loadSeq,
-    entity,
-  ) {
+  async _loadWindowReviewsIfNeeded(clientId, cam, after, before) {
     if (this._tab !== "alerts") return;
-    const isCurrentLoad = () =>
-      loadSeq === this._windowLoadSeq && entity === this._activeCam?.entity;
     try {
       const reviews = await this._fetchWindowedReviews(
         clientId,
@@ -3360,19 +3280,14 @@ class FrigateViewCard extends HTMLElement {
         before,
         {
           onPage: (items, meta) => {
-            if (!isCurrentLoad()) return;
             this._reviews = Array.isArray(items) ? items.slice() : [];
-            this._cacheActiveCamSlice("reviews", this._reviews);
-            if (meta?.page === 0 || meta?.done) this._requestListRender();
+            if (meta?.page === 0 || meta?.done) this._renderList();
           },
         },
       );
-      if (!isCurrentLoad()) return;
       this._reviews = Array.isArray(reviews) ? reviews : [];
-      this._cacheActiveCamSlice("reviews", this._reviews);
-      this._requestListRender();
+      this._renderList();
     } catch (_) {
-      if (!isCurrentLoad()) return;
       this._reviews = [];
     }
   }
@@ -3404,7 +3319,6 @@ class FrigateViewCard extends HTMLElement {
         this._winEnd,
       );
       this._reviews = Array.isArray(r) ? r : [];
-      this._cacheActiveCamSlice("reviews", this._reviews);
     } catch (_) {
       this._reviews = [];
     }
@@ -3500,7 +3414,7 @@ class FrigateViewCard extends HTMLElement {
   }
   _scheduleReload() {
     clearTimeout(this._rt);
-    this._rt = setTimeout(() => this._loadWindow(false), 1500);
+    this._rt = setTimeout(() => this._loadWindow(true), 1500);
   }
 
   _buildTabsMarkup() {
@@ -3544,7 +3458,7 @@ class FrigateViewCard extends HTMLElement {
     } catch (error) {
       console.error("[Frigate] tab data load failed", error);
     } finally {
-      this._requestListRender();
+      this._renderList();
     }
   }
 
@@ -3670,12 +3584,10 @@ class FrigateViewCard extends HTMLElement {
           </div>
       </ha-card>`;
     this._domCache = {}; // invalidate DOM element cache after full re-render
-    this._lastRenderedListHtml = "";
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
     this._applyLayoutMode();
-    this._renderCamSwitcher();
     this._bindListScroll();
     this._initResizeHandle();
   }
@@ -4526,7 +4438,7 @@ class FrigateViewCard extends HTMLElement {
       .forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
     this._renderListLabel();
     void this._loadTabData(tab);
-    this._requestListRender();
+    this._renderList();
   }
   // ── playback ──────────────────────────────────────────────
   _allDisplayEvents() {
@@ -5783,11 +5695,9 @@ class FrigateViewCard extends HTMLElement {
 
       const recPath = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
       const vodBase = `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
-      const sourceCandidates = isIOS
-        ? [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`]
-        : this._recordingPreferHls()
-          ? [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`, recPath]
-          : [recPath, `${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`];
+      const sourceCandidates = this._recordingPreferHls()
+        ? [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`, recPath]
+        : [recPath, `${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`];
 
       for (const path of sourceCandidates) {
         if (this._playSeq !== token) return;
@@ -6150,28 +6060,8 @@ class FrigateViewCard extends HTMLElement {
     this._renderLegend();
     this._renderSubtitle();
     this._renderCamSwitcher();
-    this._requestListRender();
+    this._renderList();
     this._syncStatus();
-  }
-
-  _requestListRender() {
-    if (this._listRenderRaf) return;
-    const render = () => {
-      this._listRenderRaf = 0;
-      if (this._listRenderTimer) {
-        clearTimeout(this._listRenderTimer);
-        this._listRenderTimer = null;
-      }
-      this._renderList();
-    };
-    this._listRenderRaf = requestAnimationFrame(render);
-    if (LIST_RENDER_FRAME_DELAY_MS > 0) {
-      this._listRenderTimer = setTimeout(() => {
-        if (!this._listRenderRaf) return;
-        cancelAnimationFrame(this._listRenderRaf);
-        render();
-      }, LIST_RENDER_FRAME_DELAY_MS);
-    }
   }
   _renderStats() {
     const el = this._$("#ev-count");
@@ -6268,23 +6158,6 @@ class FrigateViewCard extends HTMLElement {
     if (!lbl) return;
     lbl.textContent = this._listHeadingLabel(ts);
   }
-
-  _setListHtml(list, html) {
-    if (!list) return false;
-    const nextHtml = String(html || "");
-    list.innerHTML = nextHtml;
-    this._lastRenderedListHtml = nextHtml;
-    return true;
-  }
-
-  _setListHtmlIfChanged(list, html) {
-    if (!list) return false;
-    const nextHtml = String(html || "");
-    if (this._lastRenderedListHtml === nextHtml) return false;
-    this._setListHtml(list, nextHtml);
-    return true;
-  }
-
   _dayKey(ts) {
     const parts = new Intl.DateTimeFormat("en-US", {
       year: "numeric",
@@ -6304,7 +6177,6 @@ class FrigateViewCard extends HTMLElement {
       if (dayKey !== currentDay) {
         currentDay = dayKey;
         sections.push({
-          dayKey,
           label: this._listHeadingLabel(ts || null),
           rows: [],
         });
@@ -6314,7 +6186,7 @@ class FrigateViewCard extends HTMLElement {
     return sections
       .map(
         (section) =>
-          `<section class="list-day-sec" data-day-key="${section.dayKey}"><div class="list-day-label">${section.label}</div>${section.rows.join("")}</section>`,
+          `<section class="list-day-sec"><div class="list-day-label">${section.label}</div>${section.rows.join("")}</section>`,
       )
       .join("");
   }
@@ -6348,173 +6220,6 @@ class FrigateViewCard extends HTMLElement {
     if (this._favOnly) list = list.filter((e) => e.retain_indefinitely);
     return list;
   }
-
-  _cancelListRenderGrowth() {
-    if (this._listRenderGrowTimer == null) return;
-    if (
-      this._listRenderGrowUsesIdle &&
-      typeof cancelIdleCallback === "function"
-    ) {
-      cancelIdleCallback(this._listRenderGrowTimer);
-    } else {
-      clearTimeout(this._listRenderGrowTimer);
-    }
-    this._listRenderGrowTimer = null;
-    this._listRenderGrowUsesIdle = false;
-  }
-
-  _resetListRenderProgress(key = "") {
-    this._cancelListRenderGrowth();
-    this._listRenderProgressKey = key;
-    this._listRenderProgressCount = 0;
-  }
-
-  _scheduleListRenderGrowth(callback) {
-    this._cancelListRenderGrowth();
-    if (typeof requestIdleCallback === "function") {
-      this._listRenderGrowUsesIdle = true;
-      this._listRenderGrowTimer = requestIdleCallback(() => {
-        this._listRenderGrowTimer = null;
-        this._listRenderGrowUsesIdle = false;
-        callback();
-      });
-      return;
-    }
-    this._listRenderGrowUsesIdle = false;
-    this._listRenderGrowTimer = setTimeout(() => {
-      this._listRenderGrowTimer = null;
-      callback();
-    }, LIST_RENDER_GROW_DELAY_MS);
-  }
-
-  _progressiveListKey(tab, items, extra = "") {
-    const first = items[0]?.id || items[0]?.start_time || "";
-    const last =
-      items[items.length - 1]?.id || items[items.length - 1]?.start_time || "";
-    return [
-      tab,
-      this._activeCam?.entity || "",
-      this._winStart,
-      this._winEnd,
-      this._filterLabel,
-      this._filterZone,
-      this._favOnly ? 1 : 0,
-      this._exhausted ? 1 : 0,
-      items.length,
-      first,
-      last,
-      extra,
-    ].join("|");
-  }
-
-  _renderProgressiveSegment(list, items, start, end, renderItem, stickyDays) {
-    if (!list || start >= end) return;
-    if (!stickyDays) {
-      list.insertAdjacentHTML(
-        "beforeend",
-        items
-          .slice(start, end)
-          .map((item) => renderItem(item))
-          .join(""),
-      );
-      return;
-    }
-    let section = list.lastElementChild;
-    if (!section?.classList?.contains("list-day-sec")) section = null;
-    let currentDay = section?.dataset?.dayKey || null;
-    for (let index = start; index < end; index += 1) {
-      const item = items[index];
-      const ts = item?.start_time || 0;
-      const dayKey = this._dayKey(ts);
-      if (dayKey !== currentDay) {
-        section = document.createElement("section");
-        section.className = "list-day-sec";
-        section.dataset.dayKey = dayKey;
-        section.insertAdjacentHTML(
-          "beforeend",
-          `<div class="list-day-label">${this._listHeadingLabel(ts || null)}</div>`,
-        );
-        list.appendChild(section);
-        currentDay = dayKey;
-      }
-      section.insertAdjacentHTML("beforeend", renderItem(item));
-    }
-  }
-
-  _renderProgressiveList({
-    list,
-    items,
-    key,
-    renderItem,
-    stickyDays = false,
-    initialCount = LIST_RENDER_INITIAL_ITEMS,
-    chunkCount = LIST_RENDER_CHUNK_ITEMS,
-    endHtml = "",
-  }) {
-    const sameKey = this._listRenderProgressKey === key;
-    if (!sameKey) {
-      this._resetListRenderProgress(key);
-      this._setListHtml(list, "");
-    }
-
-    let renderedCount = sameKey ? this._listRenderProgressCount : 0;
-    const firstTarget = Math.min(items.length, initialCount);
-    if (renderedCount < firstTarget) {
-      if (renderedCount === 0) {
-        const initialItems = items.slice(0, firstTarget);
-        const initialHtml = stickyDays
-          ? this._renderStickyDaySections(initialItems, renderItem)
-          : initialItems.map((item) => renderItem(item)).join("");
-        this._setListHtml(list, initialHtml);
-      } else {
-        this._renderProgressiveSegment(
-          list,
-          items,
-          renderedCount,
-          firstTarget,
-          renderItem,
-          stickyDays,
-        );
-        this._lastRenderedListHtml = "";
-      }
-      renderedCount = firstTarget;
-      this._listRenderProgressCount = renderedCount;
-    }
-
-    const appendNext = () => {
-      if (this._listRenderProgressKey !== key) return;
-      const nextCount = Math.min(items.length, renderedCount + chunkCount);
-      this._renderProgressiveSegment(
-        list,
-        items,
-        renderedCount,
-        nextCount,
-        renderItem,
-        stickyDays,
-      );
-      renderedCount = nextCount;
-      this._listRenderProgressCount = renderedCount;
-      this._lastRenderedListHtml = "";
-      if (renderedCount >= items.length) {
-        if (endHtml) list.insertAdjacentHTML("beforeend", endHtml);
-        this._cancelListRenderGrowth();
-        this._syncOlderHint();
-        requestAnimationFrame(() => this._syncOlderHint());
-        return;
-      }
-      this._scheduleListRenderGrowth(appendNext);
-    };
-
-    if (renderedCount >= items.length) {
-      if (endHtml && !list.querySelector(".end")) {
-        list.insertAdjacentHTML("beforeend", endHtml);
-      }
-      this._cancelListRenderGrowth();
-      return;
-    }
-    this._scheduleListRenderGrowth(appendNext);
-  }
-
   _mergeRecs(recs) {
     if (!recs.length) return [];
     const segs = [...recs].sort((a, b) => a.start_time - b.start_time);
@@ -6654,49 +6359,32 @@ class FrigateViewCard extends HTMLElement {
       return this._renderReviews(list);
     }
     if (this._tab === "kept") {
-      this._resetListRenderProgress();
       this._renderListLabel();
       if (!this._kept.length) {
-        this._setListHtmlIfChanged(
-          list,
-          `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
-        );
+        list.innerHTML = `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`;
         this._syncOlderHint(false);
-        this._cancelListRenderGrowth();
         return;
       }
-      const visibleKept = this._kept;
-      this._setListHtmlIfChanged(
-        list,
-        visibleKept.map((ev) => this._eventCardHTML(ev, false)).join(""),
-      );
+      list.innerHTML = this._kept
+        .map((ev) => this._eventCardHTML(ev, false))
+        .join("");
       this._syncOlderHint(false);
       return;
     }
     const events = this._filtered();
     this._renderListLabel(events[0]?.start_time || null);
     if (!events.length) {
-      this._resetListRenderProgress();
-      this._setListHtmlIfChanged(
-        list,
-        `<div class="empty">No events in this window</div>`,
-      );
+      list.innerHTML = `<div class="empty">No events in this window</div>`;
       this._syncOlderHint(false);
-      this._cancelListRenderGrowth();
       return;
     }
-    this._cancelListRenderGrowth();
-    const visibleEvents = events;
-    const eventsHtml =
+    list.innerHTML =
       (this._showStickyDayHeaders()
-        ? this._renderStickyDaySections(visibleEvents, (ev) =>
+        ? this._renderStickyDaySections(events, (ev) =>
             this._eventCardHTML(ev, false),
           )
-        : visibleEvents.map((ev) => this._eventCardHTML(ev, false)).join("")) +
-      (this._exhausted && visibleEvents.length === events.length
-        ? '<div class="end">— end —</div>'
-        : "");
-    this._setListHtmlIfChanged(list, eventsHtml);
+        : events.map((ev) => this._eventCardHTML(ev, false)).join("")) +
+      (this._exhausted ? '<div class="end">— end —</div>' : "");
     this._syncOlderHint();
     requestAnimationFrame(() => this._syncOlderHint());
     setTimeout(() => this._syncOlderHint(), 200);
@@ -6742,22 +6430,16 @@ class FrigateViewCard extends HTMLElement {
     }
   }
   _renderRecordings(list) {
-    const allRecs = this._splitRecsHourly(this._recordings).sort(
+    const recs = this._splitRecsHourly(this._recordings).sort(
       (a, b) => b.start_time - a.start_time,
     );
-    const recs = allRecs;
     if (!recs.length) {
-      this._resetListRenderProgress();
-      this._setListHtmlIfChanged(
-        list,
-        '<div class="empty">No recordings in the last 24 hours</div>',
-      );
+      list.innerHTML =
+        '<div class="empty">No recordings in the last 24 hours</div>';
       this._syncOlderHint(true);
-      this._cancelListRenderGrowth();
       return;
     }
-    this._cancelListRenderGrowth();
-    const recsHtml = recs
+    list.innerHTML = recs
       .map((r) => {
         const rs = Math.floor(r.start_time),
           re = Math.floor(r.end_time || Date.now() / 1000);
@@ -6775,38 +6457,25 @@ class FrigateViewCard extends HTMLElement {
       </div>`;
       })
       .join("");
-    this._setListHtmlIfChanged(list, recsHtml);
     this._syncOlderHint(false);
   }
   _renderReviews(list) {
     this._renderListLabel(this._reviews[0]?.start_time || null);
     if (!this._reviews.length) {
-      this._resetListRenderProgress();
-      this._setListHtmlIfChanged(
-        list,
-        '<div class="empty">No alerts in this window</div>',
-      );
+      list.innerHTML = '<div class="empty">No alerts in this window</div>';
       this._syncOlderHint(true);
-      this._cancelListRenderGrowth();
       return;
     }
     const allRevs = [...this._reviews].sort(
       (a, b) => b.start_time - a.start_time,
     );
-    const visibleRevs = allRevs;
     this._renderListLabel(allRevs[0]?.start_time || null);
-    if (!visibleRevs.length) {
-      this._resetListRenderProgress();
-      this._setListHtmlIfChanged(
-        list,
-        '<div class="empty">No alerts in this window</div>',
-      );
+    if (!allRevs.length) {
+      list.innerHTML = '<div class="empty">No alerts in this window</div>';
       this._syncOlderHint(true);
-      this._cancelListRenderGrowth();
       return;
     }
-    this._cancelListRenderGrowth();
-    const reviewsHtml = this._renderStickyDaySections(visibleRevs, (r) => {
+    list.innerHTML = this._renderStickyDaySections(allRevs, (r) => {
       const sev = r.severity === "alert" ? "alert" : "detection";
       const objs = (r.data?.objects || []).map(cap).join(", ");
       const title = r.data?.metadata?.title || objs || cap(r.severity);
@@ -6825,13 +6494,13 @@ class FrigateViewCard extends HTMLElement {
       const reviewThumbFile = "thumbnail.jpg";
       const thumb = firstDet
         ? this._missingThumbIds.has(firstDet)
-          ? `<div class="et"><div class="tph">${ICONS.person}</div></div>`
+          ? `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
           : hasReviewMedia
             ? `<div class="et ${sev}">
-                  <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <div class="tph" style="display:none">${ICONS.person}</div>
+                <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                  <div class="rev-ph" style="display:none">${ICONS.person}</div>
                 </div>`
-            : `<div class="et"><div class="tph">${ICONS.person}</div></div>`
+            : `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
         : "";
       return `
       <div class="list-item shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
@@ -6850,7 +6519,6 @@ class FrigateViewCard extends HTMLElement {
         ${favBtn}
       </div>`;
     });
-    this._setListHtmlIfChanged(list, reviewsHtml);
     this._syncOlderHint(false);
   }
   // ── clip download range ───────────────────────────────────
