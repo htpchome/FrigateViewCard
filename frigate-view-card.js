@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.234";
+const VERSION = "1.0.235";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -734,7 +734,7 @@ const STYLES = `
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     }
   .card{
-    --fvc-shadow-s: rgba(14, 30, 37, 0.12) 0px 2px 4px 0px, rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
+    --fvc-shadow-s: var(--ha-dialog-box-shadow);
     --fvc-shadow-m: var(--ha-box-shadow-m);
     --ha-card-background: var(--c-bg-main) !important;
     color:var(--c-text);
