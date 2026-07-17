@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.227";
+const VERSION = "1.0.228";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -525,6 +525,12 @@ const buildEditorConfigFromDom = ({
       "3",
     3,
   );
+  nextConfig.alerts_reviews_days = normalizePositiveInteger(
+    root.querySelector("#alerts_reviews_days")?.dataset.value ||
+      root.querySelector("#alerts_reviews_days")?.value ||
+      String(nextConfig.window_days || 3),
+    nextConfig.window_days || 3,
+  );
   nextConfig.window_hours = nextConfig.window_days * 24;
   const realtimePollSeconds = Number(
     root.querySelector("#realtime_poll_seconds")?.dataset.value ||
@@ -602,6 +608,7 @@ const createEditorPreviewDraft = (config) => ({
   title: config.title,
   subtitle: config.subtitle,
   window_days: config.window_days,
+  alerts_reviews_days: config.alerts_reviews_days,
   realtime_poll_seconds: config.realtime_poll_seconds,
   mobile_poll_battery_saver: config.mobile_poll_battery_saver,
   hidden_tabs: config.hidden_tabs,
@@ -1247,6 +1254,10 @@ class FrigateViewCard extends HTMLElement {
           title: previewConfig.title || null,
           subtitle: previewConfig.subtitle || null,
           window_days: normalizePositiveInteger(previewConfig.window_days, 3),
+          alerts_reviews_days: normalizePositiveInteger(
+            previewConfig.alerts_reviews_days,
+            normalizePositiveInteger(previewConfig.window_days, 3),
+          ),
           realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
             Number(previewConfig.realtime_poll_seconds),
           )
@@ -1494,6 +1505,7 @@ class FrigateViewCard extends HTMLElement {
       theme: "default",
       shadows: true,
       window_days: 3,
+      alerts_reviews_days: 3,
       realtime_poll_seconds: 5,
       mobile_poll_battery_saver: false,
       window_hours: 72,
@@ -1586,6 +1598,10 @@ class FrigateViewCard extends HTMLElement {
         (Number.isFinite(legacyWindowHours) && legacyWindowHours > 0
           ? Math.max(1, Math.ceil(legacyWindowHours / 24))
           : 3),
+      alerts_reviews_days: normalizePositiveInteger(
+        config.alerts_reviews_days,
+        normalizePositiveInteger(config.window_days, 3),
+      ),
       refresh_seconds: Math.max(15, config.refresh_seconds || 45),
       realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
         Number(config.realtime_poll_seconds),
@@ -3669,11 +3685,15 @@ class FrigateViewCard extends HTMLElement {
 
   async _loadWindowReviewsIfNeeded(clientId, cam, after, before) {
     if (this._tab !== "alerts") return;
+    const reviewsAfter = Math.max(
+      0,
+      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY),
+    );
     try {
       const reviews = await this._fetchWindowedReviews(
         clientId,
         cam,
-        after,
+        reviewsAfter,
         before,
         {
           onPage: (items, meta) => {
@@ -3697,7 +3717,7 @@ class FrigateViewCard extends HTMLElement {
         instance_id: clientId,
         cameras: [cam],
         favorites: true,
-        limit: 200,
+        limit: 50,
       });
       this._kept = Array.isArray(k) ? k : [];
       const ent = this._activeCam?.entity;
@@ -3709,12 +3729,12 @@ class FrigateViewCard extends HTMLElement {
   async _loadReviews() {
     const { clientId, cam } = this._cc();
     try {
-      const r = await this._fetchWindowedReviews(
-        clientId,
-        cam,
-        this._winStart,
-        this._winEnd,
+      const before = this._winEnd;
+      const after = Math.max(
+        0,
+        Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY),
       );
+      const r = await this._fetchWindowedReviews(clientId, cam, after, before);
       this._reviews = Array.isArray(r) ? r : [];
     } catch (_) {
       this._reviews = [];
@@ -7197,6 +7217,10 @@ class FrigateViewCardEditor extends HTMLElement {
       ? Number(src.realtime_poll_seconds)
       : 5;
     src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
+    src.alerts_reviews_days = normalizePositiveInteger(
+      src.alerts_reviews_days,
+      normalizePositiveInteger(src.window_days, 3),
+    );
     return { ...src, cameras };
   }
 
@@ -7549,6 +7573,20 @@ class FrigateViewCardEditor extends HTMLElement {
     this._setEditorFieldError("#window_days", windowDaysMessage);
     if (windowDaysMessage) valid = false;
 
+    const alertsReviewsDaysValue =
+      this.querySelector("#alerts_reviews_days")?.dataset.value ||
+      this.querySelector("#alerts_reviews_days")?.value ||
+      "3";
+    const alertsReviewsDays = Number(alertsReviewsDaysValue);
+    const alertsReviewsDaysMessage =
+      Number.isInteger(alertsReviewsDays) &&
+      alertsReviewsDays >= 1 &&
+      alertsReviewsDays <= 15
+        ? ""
+        : "Select a value from 1 to 15.";
+    this._setEditorFieldError("#alerts_reviews_days", alertsReviewsDaysMessage);
+    if (alertsReviewsDaysMessage) valid = false;
+
     const streamHeightRaw = String(
       this.querySelector("#stream_height")?.value || "",
     ).trim();
@@ -7655,9 +7693,18 @@ class FrigateViewCardEditor extends HTMLElement {
       <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
       <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="Frigate"></ha-input>
       <div class="section">
-        <span class="field-label">Event history days</span>
-        <ha-selector id="window_days" style="width:160px"></ha-selector>
-        <div class="field-helper" id="window_days-helper"></div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Event history days</span>
+            <ha-selector id="window_days" style="width:160px"></ha-selector>
+            <div class="field-helper" id="window_days-helper"></div>
+          </div>
+          <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Alerts/Reviews Days</span>
+            <ha-selector id="alerts_reviews_days" style="width:160px"></ha-selector>
+            <div class="field-helper" id="alerts_reviews_days-helper"></div>
+          </div>
+        </div>
       </div>
       <div class="section">
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
@@ -7961,6 +8008,19 @@ class FrigateViewCardEditor extends HTMLElement {
         return { value, label: value };
       }),
       initialValue: String(this._config?.window_days ?? 3),
+      fallbackValue: "3",
+      normalize: (value) => String(value ?? "3"),
+      onChange: () => update(),
+    });
+
+    setupSelectSelector({
+      element: this.querySelector("#alerts_reviews_days"),
+      hass: this._hass,
+      options: Array.from({ length: 15 }, (_, index) => {
+        const value = String(index + 1);
+        return { value, label: value };
+      }),
+      initialValue: String(this._config?.alerts_reviews_days ?? 3),
       fallbackValue: "3",
       normalize: (value) => String(value ?? "3"),
       onChange: () => update(),
