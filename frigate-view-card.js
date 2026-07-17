@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.224";
+const VERSION = "1.0.225";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1830,6 +1830,47 @@ class FrigateViewCard extends HTMLElement {
     return params;
   }
 
+  _clearDeepLinkParamsFromUrl() {
+    const deepLinkKeys = new Set([
+      "event",
+      "event_id",
+      "frigate_event",
+      "frigate_event_id",
+      "review",
+      "review_id",
+      "frigate_review",
+      "frigate_review_id",
+      "media",
+      "view",
+      "open",
+      "camera",
+      "cam",
+      "camera_entity",
+    ]);
+
+    try {
+      const url = new URL(window.location.href);
+      for (const key of [...url.searchParams.keys()]) {
+        if (deepLinkKeys.has(key)) url.searchParams.delete(key);
+      }
+
+      const rawHash = String(url.hash || "");
+      const queryIndex = rawHash.indexOf("?");
+      if (queryIndex >= 0) {
+        const hashPath = rawHash.slice(0, queryIndex);
+        const hashQuery = new URLSearchParams(rawHash.slice(queryIndex + 1));
+        for (const key of [...hashQuery.keys()]) {
+          if (deepLinkKeys.has(key)) hashQuery.delete(key);
+        }
+        const nextHashQuery = hashQuery.toString();
+        url.hash = nextHashQuery ? `${hashPath}?${nextHashQuery}` : hashPath;
+      }
+
+      const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState(window.history.state, "", nextUrl);
+    } catch (_) {}
+  }
+
   _initDeepLinkFromUrl() {
     const params = this._mergedUrlSearchParams();
     const eventId =
@@ -1902,13 +1943,16 @@ class FrigateViewCard extends HTMLElement {
     this._deepLinkApplied = true;
     if (this._deepLinkMediaHint === "snapshot") {
       this._showSnapshot(event);
+      this._clearDeepLinkParamsFromUrl();
       return;
     }
     if (this._deepLinkMediaHint === "clip" && event.has_clip) {
       this._showClip(event, { mediaType: "clip" });
+      this._clearDeepLinkParamsFromUrl();
       return;
     }
     this._open(this._deepLinkEventId);
+    this._clearDeepLinkParamsFromUrl();
   }
 
   _consumeDeepLinkReviewOpen() {
