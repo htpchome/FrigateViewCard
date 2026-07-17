@@ -7556,7 +7556,7 @@ class FrigateViewCardEditor extends HTMLElement {
               aria-label="Reset to default color"
               ${useDefault ? "hidden" : ""}
             >
-              <ha-icon icon="mdi:close-octagon"></ha-icon>
+              <ha-icon icon="mdi:autorenew"></ha-icon>
             </button>
           </div>
           <ha-formfield label="Use Default">
