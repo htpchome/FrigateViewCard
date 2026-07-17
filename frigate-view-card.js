@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.249";
+const VERSION = "1.0.250";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1340,6 +1340,7 @@ class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("doc-visible");
       }
     };
+
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
@@ -1367,7 +1368,7 @@ class FrigateViewCard extends HTMLElement {
       this._onEditorPreviewDraft,
     );
   }
-
+  
   _cloneCardConfig(config) {
     try {
       return JSON.parse(JSON.stringify(config || {}));
@@ -4227,7 +4228,36 @@ class FrigateViewCard extends HTMLElement {
                 <h1 class="popup-shell-ver" id="popup-shell-ver">v${VERSION}</h1>
             </div>
           </div>
-      </ha-card>`;
+      </ha-card>
+
+    <script>
+        function setup() {
+    forEachElement(SEGMENTED_CONTROL_BASE_SELECTOR, elem => {    
+      elem.addEventListener("change", updatePillPosition);
+    })
+    window.addEventListener("resize", updatePillPosition); // Prevent pill from detaching from element when window resized. Becuase this is rare I haven't bothered with throttling the event 
+  }
+
+  function updatePillPosition() {    
+    forEachElement(SEGMENTED_CONTROL_INDIVIDUAL_SEGMENT_SELECTOR, (elem, index) => {
+      if (elem.checked) moveBackgroundPillToElement(elem, index);
+    })
+  }
+
+  function moveBackgroundPillToElement(elem, index) {
+    document.querySelector(SEGMENTED_CONTROL_BACKGROUND_PILL_SELECTOR).style.transform = "translateX(" + (elem.offsetWidth * index) + "px)";
+  }
+
+  // Helper functions
+
+  function forEachElement(className, fn) {
+    Array.from(document.querySelectorAll(className)).forEach(fn);
+  }
+  </script>  
+
+
+
+      `;
     this._domCache = {}; // invalidate DOM element cache after full re-render
     this._lastRenderedListHtml = "";
     this._initPopupInteractions();
