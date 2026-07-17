@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.180";
+const VERSION = "1.0.181";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -18,6 +18,7 @@ const WINDOW_FETCH_PAGE_LIMIT = 10;
 const INITIAL_LIST_RENDER_COUNT = 16;
 const LIST_RENDER_INCREMENT = 24;
 const LIST_RENDER_IDLE_DELAY_MS = 60;
+const LIST_RENDER_FRAME_DELAY_MS = 0;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
   "alerts",
@@ -1133,6 +1134,8 @@ class FrigateViewCard extends HTMLElement {
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
+    this._listRenderRaf = 0;
+    this._listRenderTimer = null;
     this._pendingMountDestroyers = [];
     this._pendingWebRTCTakeoverTimer = null;
     this._wasVisible = false;
@@ -1721,6 +1724,10 @@ class FrigateViewCard extends HTMLElement {
     }
     if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
     this._rotateOverlayRaf = 0;
+    if (this._listRenderRaf) cancelAnimationFrame(this._listRenderRaf);
+    this._listRenderRaf = 0;
+    if (this._listRenderTimer) clearTimeout(this._listRenderTimer);
+    this._listRenderTimer = null;
     if (this._rotateOverlayExitT) clearTimeout(this._rotateOverlayExitT);
     this._rotateOverlayExitT = null;
     this._clearRotateOverlayAudioSync();
@@ -2947,7 +2954,8 @@ class FrigateViewCard extends HTMLElement {
       slot.innerHTML = "";
       if (!quiet) {
         this._setActiveStreamType("--");
-        this._setStreamFallbackVisible(true, true);
+        // Keep fallback hidden during initial transport attempts to avoid startup flashing.
+        this._setStreamFallbackVisible(false);
         this._setStreamLoading(true);
       } else {
         this._setStreamFallbackVisible(false);
@@ -3081,6 +3089,7 @@ class FrigateViewCard extends HTMLElement {
     this._recordings = cached.recordings || [];
     this._reviews = cached.reviews || [];
     this._kept = cached.kept || [];
+    this._resetListRenderBudget();
     // Camera button should always return to single live view.
     this._viewMode = "single";
     if (popupOpen) this._closePopup();
@@ -3095,13 +3104,14 @@ class FrigateViewCard extends HTMLElement {
     this._renderCamSwitcher();
     this._syncStatus();
     this._renderStats();
+    this._requestListRender();
     this._streamMuted = true;
     this._renderMuteButton();
     this._cancelPendingMount("switch-camera");
     this._mountEngine();
     clearTimeout(this._switchLoadT);
     const loadDelay = this._isFirefox() ? 500 : 100;
-    this._switchLoadT = setTimeout(() => this._loadWindow(true), loadDelay);
+    this._switchLoadT = setTimeout(() => this._loadWindow(false), loadDelay);
   }
   // ── data ─────────────────────────────────────────────────
   _cc() {
@@ -3243,7 +3253,7 @@ class FrigateViewCard extends HTMLElement {
             this._cacheActiveCamSlice("events", this._events);
             if (!renderedEventsFirstPage || meta?.done) {
               renderedEventsFirstPage = true;
-              this._renderList();
+              this._requestListRender();
               this._renderStats();
             }
           },
@@ -3251,7 +3261,7 @@ class FrigateViewCard extends HTMLElement {
       );
       this._events = Array.isArray(events) ? events : [];
       this._cacheActiveCamSlice("events", this._events);
-      this._renderList();
+      this._requestListRender();
       this._renderStats();
     } catch (error) {
       console.error("[Frigate] events", error);
@@ -3271,7 +3281,7 @@ class FrigateViewCard extends HTMLElement {
       });
       this._recordings = Array.isArray(recordings) ? recordings : [];
       this._cacheActiveCamSlice("recordings", this._recordings);
-      this._renderList();
+      if (this._tab === "recordings") this._requestListRender();
     } catch (_) {
       this._recordings = [];
     }
@@ -3288,12 +3298,14 @@ class FrigateViewCard extends HTMLElement {
         {
           onPage: (items, meta) => {
             this._reviews = Array.isArray(items) ? items.slice() : [];
-            if (meta?.page === 0 || meta?.done) this._renderList();
+            this._cacheActiveCamSlice("reviews", this._reviews);
+            if (meta?.page === 0 || meta?.done) this._requestListRender();
           },
         },
       );
       this._reviews = Array.isArray(reviews) ? reviews : [];
-      this._renderList();
+      this._cacheActiveCamSlice("reviews", this._reviews);
+      this._requestListRender();
     } catch (_) {
       this._reviews = [];
     }
@@ -3326,6 +3338,7 @@ class FrigateViewCard extends HTMLElement {
         this._winEnd,
       );
       this._reviews = Array.isArray(r) ? r : [];
+      this._cacheActiveCamSlice("reviews", this._reviews);
     } catch (_) {
       this._reviews = [];
     }
@@ -6069,8 +6082,28 @@ class FrigateViewCard extends HTMLElement {
     this._renderLegend();
     this._renderSubtitle();
     this._renderCamSwitcher();
-    this._renderList();
+    this._requestListRender();
     this._syncStatus();
+  }
+
+  _requestListRender() {
+    if (this._listRenderRaf) return;
+    const render = () => {
+      this._listRenderRaf = 0;
+      if (this._listRenderTimer) {
+        clearTimeout(this._listRenderTimer);
+        this._listRenderTimer = null;
+      }
+      this._renderList();
+    };
+    this._listRenderRaf = requestAnimationFrame(render);
+    if (LIST_RENDER_FRAME_DELAY_MS > 0) {
+      this._listRenderTimer = setTimeout(() => {
+        if (!this._listRenderRaf) return;
+        cancelAnimationFrame(this._listRenderRaf);
+        render();
+      }, LIST_RENDER_FRAME_DELAY_MS);
+    }
   }
   _renderStats() {
     const el = this._$("#ev-count");
