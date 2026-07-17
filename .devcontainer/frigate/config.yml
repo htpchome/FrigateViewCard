@@ -9,10 +9,12 @@ mqtt:
 go2rtc:
   streams:
     # Demo camera using a test pattern (works without real cameras)
-    demo_front_door:
-      - exec:/usr/lib/ffmpeg/7.0/bin/ffmpeg -re -stream_loop -1 -i https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_480p_h264.mov -c copy -rtsp_transport tcp -f rtsp {{output}}
-    demo_backyard:
-      - exec:/usr/lib/ffmpeg/7.0/bin/ffmpeg -re -stream_loop -1 -i https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_480p_h264.mov -c copy -rtsp_transport tcp -f rtsp {{output}}
+    front_door:
+      - ffmpeg:http://97.68.104.34:80/mjpg/video.mjpg#video=copy#audio=copy#audio=opus
+
+    backyard:
+
+      - mjpeg_cam: "ffmpeg:http://204.93.117.45:80/mjpg/video.mjpg"
 
   webrtc:
     candidates:
@@ -24,18 +26,19 @@ cameras:
   front_door:
     ffmpeg:
       inputs:
-        - path: rtsp://127.0.0.1:8554/demo_door
+        - path: rtsp://127.0.0.1:8554/front_door
           input_args: preset-rtsp-restream-low-latency
           roles:
             - detect
             - record
+
     detect:
-      enabled: true
+      enabled: false
       width: 1280
       height: 720
       fps: 5
     record:
-      enabled: true
+      enabled: false
       alerts:
         retain:
           days: 7
@@ -58,26 +61,27 @@ cameras:
   backyard:
     ffmpeg:
       inputs:
-        - path: rtsp://127.0.0.1:8554/demo_backyard
+        - path: rtsp://127.0.0.1:8554/backyard
           input_args: preset-rtsp-restream-low-latency
           roles:
             - detect
             - record
+
     detect:
-      enabled: true
+      enabled: false
       width: 1280
       height: 720
       fps: 5
     record:
-      enabled: true
+      enabled: false
       alerts:
         retain:
-          days: 7
+          days: 1
       detections:
         retain:
-          days: 7
+          days: 1
       continuous:
-        days: 3
+        days: 1
       motion:
         days: 0
     objects:
