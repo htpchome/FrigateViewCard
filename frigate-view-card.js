@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.218";
+const VERSION = "1.0.219";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -18,6 +18,8 @@ const INACTIVE_WARM_EVENT_LIMIT = 10;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
 const INITIAL_EVENTS_PAGE_LIMIT = 1;
+const REALTIME_HEAD_POLL_MS = 5000;
+const REALTIME_RELOAD_DEBOUNCE_MS = 450;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
   "alerts",
@@ -1121,6 +1123,7 @@ class FrigateViewCard extends HTMLElement {
     this._warmCamsToken = 0;
     this._reloadPending = false;
     this._reloadAfterLoad = false;
+    this._realtimeHeadPollT = null;
     this._switchLoadT = null;
     this._popupDrag = null;
     this._popupHandlers = null;
@@ -1669,6 +1672,8 @@ class FrigateViewCard extends HTMLElement {
     this._ro = null;
     if (this._io) this._io.disconnect();
     this._io = null;
+    if (this._realtimeHeadPollT) clearInterval(this._realtimeHeadPollT);
+    this._realtimeHeadPollT = null;
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
     if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
     this._editModeWatchdogT = null;
@@ -1760,6 +1765,10 @@ class FrigateViewCard extends HTMLElement {
     this._refresh = setInterval(() => {
       if (this._isNowWindow()) this._loadWindow(true);
     }, this._config.refresh_seconds * 1000);
+    this._realtimeHeadPollT = setInterval(
+      () => this._pollLatestEventHead(),
+      REALTIME_HEAD_POLL_MS,
+    );
     this._setupResizeObserver();
   }
 
@@ -3522,10 +3531,36 @@ class FrigateViewCard extends HTMLElement {
         (msg) => {
           if (!this._isNowWindow()) return;
           if (!this._isRealtimeEventMessage(msg)) return;
-          this._scheduleReload();
+          this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);
         },
         { type: "frigate/events/subscribe", instance_id: clientId },
       );
+    } catch (_) {}
+  }
+
+  async _pollLatestEventHead() {
+    if (!this._isNowWindow()) return;
+    if (this._loading) return;
+    const { clientId, cam } = this._cc();
+    if (!clientId || !cam) return;
+    const now = Math.floor(Date.now() / 1000);
+    const after = now - this._config.window_days * DAY;
+    try {
+      const latest = await this._ws({
+        type: "frigate/events/get",
+        instance_id: clientId,
+        cameras: [cam],
+        after,
+        before: now,
+        limit: 1,
+      });
+      if (!Array.isArray(latest) || !latest.length) return;
+      const newestId = latest[0]?.id;
+      if (!newestId) return;
+      const currentId = this._events?.[0]?.id;
+      if (newestId !== currentId) {
+        this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);
+      }
     } catch (_) {}
   }
 
@@ -3555,18 +3590,21 @@ class FrigateViewCard extends HTMLElement {
     return String(messageCam) === String(activeCam);
   }
 
-  _scheduleReload() {
+  _scheduleReload(delayMs = 1500) {
     this._reloadPending = true;
     clearTimeout(this._rt);
-    this._rt = setTimeout(() => {
-      if (!this._reloadPending) return;
-      if (this._loading) {
-        this._reloadAfterLoad = true;
-        return;
-      }
-      this._reloadPending = false;
-      this._loadWindow(true);
-    }, 1500);
+    this._rt = setTimeout(
+      () => {
+        if (!this._reloadPending) return;
+        if (this._loading) {
+          this._reloadAfterLoad = true;
+          return;
+        }
+        this._reloadPending = false;
+        this._loadWindow(true);
+      },
+      Math.max(0, Number(delayMs) || 0),
+    );
   }
 
   _buildTabsMarkup() {
