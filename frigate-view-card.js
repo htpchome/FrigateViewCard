@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.219";
+const VERSION = "1.0.221";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -20,6 +20,8 @@ const WINDOW_FETCH_PAGE_LIMIT = 10;
 const INITIAL_EVENTS_PAGE_LIMIT = 1;
 const REALTIME_HEAD_POLL_MS = 5000;
 const REALTIME_RELOAD_DEBOUNCE_MS = 450;
+const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
+const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
   "alerts",
@@ -517,6 +519,18 @@ const buildEditorConfigFromDom = ({
     3,
   );
   nextConfig.window_hours = nextConfig.window_days * 24;
+  const realtimePollSeconds = Number(
+    root.querySelector("#realtime_poll_seconds")?.dataset.value ||
+      root.querySelector("#realtime_poll_seconds")?.value ||
+      "5",
+  );
+  nextConfig.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+    realtimePollSeconds,
+  )
+    ? realtimePollSeconds
+    : 5;
+  nextConfig.mobile_poll_battery_saver =
+    root.querySelector("#mobile_poll_battery_saver")?.checked === true;
 
   delete nextConfig.primary_color;
   delete nextConfig.accent_color;
@@ -581,6 +595,8 @@ const createEditorPreviewDraft = (config) => ({
   title: config.title,
   subtitle: config.subtitle,
   window_days: config.window_days,
+  realtime_poll_seconds: config.realtime_poll_seconds,
+  mobile_poll_battery_saver: config.mobile_poll_battery_saver,
   hidden_tabs: config.hidden_tabs,
   theme: config.theme,
   theme_custom: config.theme_custom,
@@ -1217,6 +1233,13 @@ class FrigateViewCard extends HTMLElement {
           title: previewConfig.title || null,
           subtitle: previewConfig.subtitle || null,
           window_days: normalizePositiveInteger(previewConfig.window_days, 3),
+          realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
+            Number(previewConfig.realtime_poll_seconds),
+          )
+            ? Number(previewConfig.realtime_poll_seconds)
+            : 5,
+          mobile_poll_battery_saver:
+            previewConfig.mobile_poll_battery_saver === true,
           hidden_tabs: Array.isArray(previewConfig.hidden_tabs)
             ? previewConfig.hidden_tabs
             : [],
@@ -1457,6 +1480,8 @@ class FrigateViewCard extends HTMLElement {
       theme: "default",
       shadows: true,
       window_days: 3,
+      realtime_poll_seconds: 5,
+      mobile_poll_battery_saver: false,
       window_hours: 72,
       stream_height_unit: "vh",
     };
@@ -1527,6 +1552,12 @@ class FrigateViewCard extends HTMLElement {
           ? Math.max(1, Math.ceil(legacyWindowHours / 24))
           : 3),
       refresh_seconds: Math.max(15, config.refresh_seconds || 45),
+      realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
+        Number(config.realtime_poll_seconds),
+      )
+        ? Number(config.realtime_poll_seconds)
+        : 5,
+      mobile_poll_battery_saver: config.mobile_poll_battery_saver === true,
       browse_expanded: config.browse_expanded === true,
       hidden_tabs: Array.isArray(config.hidden_tabs)
         ? config.hidden_tabs
@@ -1584,6 +1615,10 @@ class FrigateViewCard extends HTMLElement {
       JSON.stringify(nextConfig.hidden_tabs || []);
     const needsShellRerender = hiddenTabsChanged;
     const needsEngineRemount = camerasChanged;
+    const realtimePollChanged =
+      prevConfig.realtime_poll_seconds !== nextConfig.realtime_poll_seconds ||
+      prevConfig.mobile_poll_battery_saver !==
+        nextConfig.mobile_poll_battery_saver;
 
     if (needsEngineRemount) {
       this._cleanupEngine();
@@ -1616,6 +1651,9 @@ class FrigateViewCard extends HTMLElement {
 
     if (needsEngineRemount) {
       this._mountEngine(null, { quiet: true });
+    }
+    if (realtimePollChanged) {
+      this._restartRealtimeHeadPollTimer();
     }
   }
   set hass(hass) {
@@ -1765,11 +1803,35 @@ class FrigateViewCard extends HTMLElement {
     this._refresh = setInterval(() => {
       if (this._isNowWindow()) this._loadWindow(true);
     }, this._config.refresh_seconds * 1000);
+    this._restartRealtimeHeadPollTimer();
+    this._setupResizeObserver();
+  }
+
+  _isLikelyMobileClient() {
+    const compactViewport = window.matchMedia?.("(max-width: 900px)")?.matches;
+    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches;
+    return compactViewport || coarsePointer;
+  }
+
+  _effectiveRealtimePollSeconds() {
+    if (
+      this._config?.mobile_poll_battery_saver === true &&
+      this._isLikelyMobileClient()
+    ) {
+      return MOBILE_BATTERY_SAVER_POLL_SECONDS;
+    }
+    const configured = Number(this._config?.realtime_poll_seconds);
+    return REALTIME_POLL_OPTIONS_SECONDS.includes(configured)
+      ? configured
+      : REALTIME_HEAD_POLL_MS / 1000;
+  }
+
+  _restartRealtimeHeadPollTimer() {
+    if (this._realtimeHeadPollT) clearInterval(this._realtimeHeadPollT);
     this._realtimeHeadPollT = setInterval(
       () => this._pollLatestEventHead(),
-      REALTIME_HEAD_POLL_MS,
+      this._effectiveRealtimePollSeconds() * 1000,
     );
-    this._setupResizeObserver();
   }
 
   _startEditModeWatchdog() {
@@ -6911,6 +6973,12 @@ class FrigateViewCardEditor extends HTMLElement {
       src.theme_custom_defaults = {};
     }
     src.shadows = src.shadows !== false;
+    src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+      Number(src.realtime_poll_seconds),
+    )
+      ? Number(src.realtime_poll_seconds)
+      : 5;
+    src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
     return { ...src, cameras };
   }
 
@@ -7350,6 +7418,22 @@ class FrigateViewCardEditor extends HTMLElement {
         <div class="field-helper" id="window_days-helper"></div>
       </div>
       <div class="section">
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Realtime Update Poll</span>
+            <ha-selector id="realtime_poll_seconds" style="width:160px"></ha-selector>
+            <div class="field-helper">Lower values update faster but use more battery/data.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:320px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Mobile Battery Saver</span>
+              <ha-switch id="mobile_poll_battery_saver" ${this._config?.mobile_poll_battery_saver ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">On mobile-sized screens, use 10s polling to reduce battery use.</div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Timezone</span>
           <span class="readonly-value">${timezoneDisplay}</span>
@@ -7634,6 +7718,19 @@ class FrigateViewCardEditor extends HTMLElement {
     });
 
     setupSelectSelector({
+      element: this.querySelector("#realtime_poll_seconds"),
+      hass: this._hass,
+      options: REALTIME_POLL_OPTIONS_SECONDS.map((value) => ({
+        value: String(value),
+        label: `${value}s`,
+      })),
+      initialValue: String(this._config?.realtime_poll_seconds ?? 5),
+      fallbackValue: "5",
+      normalize: (value) => String(value ?? "5"),
+      onChange: () => update(),
+    });
+
+    setupSelectSelector({
       element: this.querySelector("#stream_height_unit"),
       hass: this._hass,
       options: [
@@ -7722,7 +7819,12 @@ class FrigateViewCardEditor extends HTMLElement {
     });
     bindEventsForIds({
       root: this,
-      ids: ["tight_margins", "wide_view", "shadows"],
+      ids: [
+        "tight_margins",
+        "wide_view",
+        "shadows",
+        "mobile_poll_battery_saver",
+      ],
       events: ["change", "value-changed"],
       handler: () => update(),
     });
