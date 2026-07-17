@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.250";
+const VERSION = "1.0.251";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -786,7 +786,8 @@ const STYLES = `
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
   .list-day-label{transform: scale(1.01);position:sticky;top:0;z-index:2;padding:2px 0 8px;margin:0 0 4px;font-size:0.82rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.50;pointer-events:none;background:var(--c-bg-main);border:none;}
-  .list-day-label::before{content:"";position:absolute;left:0px;right:0px;top:-3px;height:3px;background:var(--c-bg-main);}
+
+  
   .list-item{position: relative;display:flex;flex-wrap:wrap;gap:9px;align-items:center;
     background:var(--c-bg-panel-main);margin-bottom:5px;
     cursor:pointer;border-radius: 15px;padding:2px 10px 2px 2px;}
@@ -1092,136 +1093,6 @@ const STYLES = `
 .close-btn {width: 40px;height: 40px;border-radius: 50%;display: flex;align-items: center;  justify-content: center;font-size: 24px;line-height: 1;cursor: pointer;border: 1px solid #ccc;
   background-color: #f5f5f5;color: #333;transition: all 0.2s ease;}
 .close-btn:hover {background-color: #e0e0e0;color: #000;}
-
-
-	.ios13-segmented-control {
-		--background: rgba(239,239,240,1);
-		background: var(--background);
-		border-radius: 9px;
-		margin: 0;
-		padding: 2px;
-		border: none;
-		outline: none;
-		display: grid;
-		grid-auto-flow: column;
-		grid-auto-columns: 1fr;
-		-webkit-user-select: none;
-		-moz-user-select: none;
-		-ms-user-select: none;
-		user-select: none;
-	}
-
-	.ios13-segmented-control .option {
-		position: relative;
-		cursor: pointer;
-	}
-
-	.ios13-segmented-control .option:hover input:not(:checked) + label span, .ios13-segmented-control .option:active input:not(:checked) + label span, .ios13-segmented-control .option:focus input:not(:checked) + label span {
-		opacity: .2;
-	}
-
-	.ios13-segmented-control .option:active input:not(:checked) + label span {
-		transform: scale(.95);
-	}
-
-	.ios13-segmented-control .option label {
-		position: relative;
-		display: block;
-		text-align: center;
-		padding: 3px 6vmin;
-		background: rgba(255,255,255,0);
-		font-weight: 500;
-		color: rgba(0,0,0,1);
-		font-size: 14px;
-	}
-
-	.ios13-segmented-control .option label::before, .ios13-segmented-control .option label::after {
-		content: '';
-		width: 1px;
-		background: rgba(142,142,147,.15);
-		position: absolute;
-		top: 14%;
-		bottom: 14%;
-		border-radius: 10px;
-		will-change: background;
-		-webkit-transition: background .2s ease;
-		transition: background .2s ease;
-	}
-
-	.ios13-segmented-control .option label::before {
-		left: 0;
-		transform: translateX(-.5px);
-	}
-
-	.ios13-segmented-control .option label::after {
-		right: 0;
-		transform: translateX(.5px);
-	}
-
-	.ios13-segmented-control .option:first-of-type {
-		grid-column: 1;
-		grid-row: 1;
-		box-shadow: none;
-	}
-
-	.ios13-segmented-control .option:first-of-type label::before {
-		opacity: 0;
-	}
-
-	.ios13-segmented-control .option:last-of-type label::after {
-		opacity: 0;
-	}
-
-	.ios13-segmented-control .option input {
-		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		width: 100%;
-		height: 100%;
-		padding: 0;
-		margin: 0;
-		-webkit-appearance: none;
-		-moz-appearance: none;
-		appearance: none;
-		outline: none;
-		border: none;
-		opacity: 0;
-	}
-
-	.ios13-segmented-control .selection {
-		background: rgba(255,255,255,1);
-		border: .5px solid rgba(0,0,0,0.04);
-		box-shadow: 0 3px 8px 0 rgba(0,0,0,0.12), 0 3px 1px 0 rgba(0,0,0,0.04);
-		border-radius: 7px;
-		grid-column: 1;
-		grid-row: 1;
-		z-index: 2;
-		will-change: transform;
-		-webkit-transition: transform .2s ease;
-		transition: transform .2s ease;
-	}
-
-	.ios13-segmented-control .option label span {
-		display: block;
-		position: relative;
-		z-index: 2;
-		-webkit-transition: all .2s ease;
-		transition: all .2s ease;
-		will-change: transform;
-	}
-
-	.ios13-segmented-control .option input:checked+label::before, .ios13-segmented-control .option input:checked+label::after {
-		background: var(--background);
-		z-index: 1;
-	}
-
-	.ios13-segmented-control .option input:checked+label {
-		cursor: default;
-	}
-
-
 
 
 `; //==================END CSS SECTION=====================
@@ -4149,26 +4020,6 @@ class FrigateViewCard extends HTMLElement {
           </div>
           <div class="resize-handle" id="resize-handle"></div>
           <div class="col-right" id="col-right">
-          		<div class="ios13-segmented-control">
-                <span class="selection"></span>
-
-                <div class="option">
-                  <input type="radio" id="metro" name="sample" value="metro" checked>
-                  <label for="metro"><span>Metro</span></label>
-                </div>
-
-                <div class="option">
-                  <input type="radio" id="bus" name="sample" value="bus">
-                  <label for="bus"><span>Bus</span></label>
-                </div>
-
-                <div class="option">
-                  <input type="radio" id="train" name="sample" value="train">
-                  <label for="train"><span>Train</span></label>
-                </div>
-
-              </div>
-
             <div class="frigate-view">${ICONS.frigateview}</div> 
             <div class="tabs shadow-small">
               ${this._buildTabsMarkup()}
@@ -4229,34 +4080,6 @@ class FrigateViewCard extends HTMLElement {
             </div>
           </div>
       </ha-card>
-
-    <script>
-        function setup() {
-    forEachElement(SEGMENTED_CONTROL_BASE_SELECTOR, elem => {    
-      elem.addEventListener("change", updatePillPosition);
-    })
-    window.addEventListener("resize", updatePillPosition); // Prevent pill from detaching from element when window resized. Becuase this is rare I haven't bothered with throttling the event 
-  }
-
-  function updatePillPosition() {    
-    forEachElement(SEGMENTED_CONTROL_INDIVIDUAL_SEGMENT_SELECTOR, (elem, index) => {
-      if (elem.checked) moveBackgroundPillToElement(elem, index);
-    })
-  }
-
-  function moveBackgroundPillToElement(elem, index) {
-    document.querySelector(SEGMENTED_CONTROL_BACKGROUND_PILL_SELECTOR).style.transform = "translateX(" + (elem.offsetWidth * index) + "px)";
-  }
-
-  // Helper functions
-
-  function forEachElement(className, fn) {
-    Array.from(document.querySelectorAll(className)).forEach(fn);
-  }
-  </script>  
-
-
-
       `;
     this._domCache = {}; // invalidate DOM element cache after full re-render
     this._lastRenderedListHtml = "";
