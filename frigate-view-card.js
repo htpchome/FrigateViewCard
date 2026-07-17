@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.171";
+const VERSION = "1.0.172";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -153,6 +153,74 @@ function normalizeHexColor(value) {
   }
   return "";
 }
+
+const DIALOG_ACTION_SELECTOR =
+  '[slot="primaryAction"], [slot="secondaryAction"], mwc-button, ha-button, button';
+
+const resolveActiveTab = (currentTab, hiddenTabIds, tabOrder) => {
+  if (!hiddenTabIds.has(currentTab) && tabOrder.includes(currentTab)) {
+    return currentTab;
+  }
+  return (
+    tabOrder.find((id) => !hiddenTabIds.has(id)) || tabOrder[0] || "alerts"
+  );
+};
+
+const setSettingsPanelActiveState = (panels, activePanel) => {
+  panels.forEach((panel) => {
+    const isActive = panel === activePanel;
+    panel.classList.toggle("active", isActive);
+    const toggle = panel.querySelector("[data-panel-toggle]");
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", isActive ? "true" : "false");
+    }
+  });
+  return activePanel?.dataset?.panel ?? null;
+};
+
+const dialogActionKindFromElement = (button) => {
+  if (!(button instanceof Element)) return null;
+
+  const explicitSlot = button.getAttribute?.("slot") || "";
+  if (explicitSlot === "primaryAction") return "primary";
+  if (explicitSlot === "secondaryAction") return "secondary";
+
+  const actionAttr = (
+    button.getAttribute?.("dialogAction") ||
+    button.getAttribute?.("dialog-action") ||
+    ""
+  )
+    .toString()
+    .trim()
+    .toLowerCase();
+  if (["save", "ok", "done", "confirm", "apply"].includes(actionAttr)) {
+    return "primary";
+  }
+  if (["cancel", "close", "dismiss"].includes(actionAttr)) {
+    return "secondary";
+  }
+
+  const label = (button.textContent || "").trim().toLowerCase();
+  if (["save", "done", "update", "apply", "ok"].includes(label)) {
+    return "primary";
+  }
+  if (["cancel", "close", "dismiss"].includes(label)) {
+    return "secondary";
+  }
+  return null;
+};
+
+const dialogActionKindFromEvent = (event) => {
+  const path = Array.isArray(event.composedPath?.())
+    ? event.composedPath()
+    : [];
+  if (path.some((node) => node?.id === "camera-modal")) return null;
+  const button = path.find(
+    (node) => node instanceof Element && node.matches?.(DIALOG_ACTION_SELECTOR),
+  );
+  if (!(button instanceof Element)) return null;
+  return dialogActionKindFromElement(button);
+};
 
 const LABEL_COLORS = {
   person: "#3b82f6",
@@ -1202,9 +1270,13 @@ class FrigateViewCard extends HTMLElement {
   _teardownDisconnected() {
     if (this._refresh) clearInterval(this._refresh);
     if (this._unsub) {
-      try {
-        this._unsub.then((u) => u && u());
-      } catch (_) {}
+      const unsubscribePromise = this._unsub;
+      void (async () => {
+        try {
+          const unsubscribe = await unsubscribePromise;
+          if (typeof unsubscribe === "function") unsubscribe();
+        } catch (_) {}
+      })();
       this._unsub = null;
     }
     if (this._ro) this._ro.disconnect();
@@ -1619,19 +1691,20 @@ class FrigateViewCard extends HTMLElement {
         resolve(result);
       };
       for (const attempt of attempts) {
-        attempt
-          .then((result) => {
+        void (async () => {
+          try {
+            const result = await attempt;
             settled += 1;
             if (result?.ok) {
               finish(result);
               return;
             }
             if (settled >= attempts.length) finish(null);
-          })
-          .catch(() => {
+          } catch (_) {
             settled += 1;
             if (settled >= attempts.length) finish(null);
-          });
+          }
+        })();
       }
     });
   }
@@ -1680,20 +1753,25 @@ class FrigateViewCard extends HTMLElement {
 
   async _mountLiveWithRace(slot, attempts, mountToken) {
     const activeAttempts = attempts.map((attempt) => {
-      const promise = Promise.resolve()
-        .then(() => attempt.start())
-        .catch(() => false);
+      const promise = (async () => {
+        try {
+          return await attempt.start();
+        } catch (_) {
+          return false;
+        }
+      })();
       return { type: attempt.type, promise };
     });
 
     this._pendingMountDestroyers = activeAttempts.map((attempt) => () => {
-      attempt.promise.then((result) => {
+      void (async () => {
+        const result = await attempt.promise;
         if (result?.engine?.destroy) {
           try {
             result.engine.destroy();
           } catch (_) {}
         }
-      });
+      })();
     });
 
     const winner = await this._raceMountAttempts(
@@ -2515,18 +2593,19 @@ class FrigateViewCard extends HTMLElement {
         this._attachVideoFit(s);
         if (this._rotateOverlayActive) this._setLiveNativeControls(true);
 
-        this._waitForStreamStart(s, 8000, {
-          minCurrentTime: 0.05,
-          minDecodedFrames: 1,
-          requireReadyState: 0,
-          strict: false,
-        }).then((ok) => {
+        void (async () => {
+          const ok = await this._waitForStreamStart(s, 8000, {
+            minCurrentTime: 0.05,
+            minDecodedFrames: 1,
+            requireReadyState: 0,
+            strict: false,
+          });
           if (ok && this._engine === s) {
             this._setStreamLoading(false);
             this._setStreamFallbackVisible(false);
             if (this._rotateOverlayActive) this._setLiveNativeControls(true);
           }
-        });
+        })();
         setTimeout(() => {
           if (this._engine === s) {
             this._setStreamLoading(false);
@@ -2739,74 +2818,11 @@ class FrigateViewCard extends HTMLElement {
     }
     const after = this._winStart,
       before = this._winEnd;
-    const recAfter = Math.max(0, before - RECORDINGS_WINDOW);
-    let renderedEventsFirstPage = false;
-    const evPromise = this._fetchWindowedEvents(clientId, cam, after, before, {
-      onPage: (items, meta) => {
-        this._events = Array.isArray(items) ? items.slice() : [];
-        const ent = this._activeCam?.entity;
-        if (ent && this._camCache[ent]) {
-          this._camCache[ent].events = this._events;
-        }
-        if (!renderedEventsFirstPage || meta?.done) {
-          renderedEventsFirstPage = true;
-          this._renderList();
-          this._renderStats();
-        }
-      },
-    })
-      .then((ev) => {
-        this._events = Array.isArray(ev) ? ev : [];
-        const ent = this._activeCam?.entity;
-        if (ent && this._camCache[ent]) {
-          this._camCache[ent].events = this._events;
-        }
-        // Ensure final set is reflected after pagination finishes.
-        this._renderList();
-        this._renderStats();
-      })
-      .catch((e) => {
-        console.error("[Frigate] events", e);
-        this._events = [];
-      });
-
-    const recPromise = this._ws({
-      type: "frigate/recordings/get",
-      instance_id: clientId,
-      camera: cam,
-      after: recAfter,
-      before,
-    })
-      .then((rec) => {
-        this._recordings = Array.isArray(rec) ? rec : [];
-        const ent = this._activeCam?.entity;
-        if (ent && this._camCache[ent]) {
-          this._camCache[ent].recordings = this._recordings;
-        }
-        this._renderList();
-      })
-      .catch(() => {
-        this._recordings = [];
-      });
-
-    const revPromise =
-      this._tab === "alerts"
-        ? this._fetchWindowedReviews(clientId, cam, after, before, {
-            onPage: (items, meta) => {
-              this._reviews = Array.isArray(items) ? items.slice() : [];
-              if (meta?.page === 0 || meta?.done) this._renderList();
-            },
-          })
-            .then((r) => {
-              this._reviews = Array.isArray(r) ? r : [];
-              this._renderList();
-            })
-            .catch(() => {
-              this._reviews = [];
-            })
-        : Promise.resolve();
-
-    await Promise.allSettled([evPromise, recPromise, revPromise]);
+    await Promise.allSettled([
+      this._loadWindowEvents(clientId, cam, after, before),
+      this._loadWindowRecordings(clientId, cam, before),
+      this._loadWindowReviewsIfNeeded(clientId, cam, after, before),
+    ]);
     const ent = this._activeCam?.entity;
     if (ent && this._camCache[ent]) {
       this._camCache[ent].events = this._events;
@@ -2816,6 +2832,84 @@ class FrigateViewCard extends HTMLElement {
     if (this._eventsMode === "all") this._loadAllCamsBackground();
     this._renderAll();
   }
+
+  _cacheActiveCamSlice(key, value) {
+    const entity = this._activeCam?.entity;
+    if (entity && this._camCache[entity]) {
+      this._camCache[entity][key] = value;
+    }
+  }
+
+  async _loadWindowEvents(clientId, cam, after, before) {
+    let renderedEventsFirstPage = false;
+    try {
+      const events = await this._fetchWindowedEvents(
+        clientId,
+        cam,
+        after,
+        before,
+        {
+          onPage: (items, meta) => {
+            this._events = Array.isArray(items) ? items.slice() : [];
+            this._cacheActiveCamSlice("events", this._events);
+            if (!renderedEventsFirstPage || meta?.done) {
+              renderedEventsFirstPage = true;
+              this._renderList();
+              this._renderStats();
+            }
+          },
+        },
+      );
+      this._events = Array.isArray(events) ? events : [];
+      this._cacheActiveCamSlice("events", this._events);
+      this._renderList();
+      this._renderStats();
+    } catch (error) {
+      console.error("[Frigate] events", error);
+      this._events = [];
+    }
+  }
+
+  async _loadWindowRecordings(clientId, cam, before) {
+    const recAfter = Math.max(0, before - RECORDINGS_WINDOW);
+    try {
+      const recordings = await this._ws({
+        type: "frigate/recordings/get",
+        instance_id: clientId,
+        camera: cam,
+        after: recAfter,
+        before,
+      });
+      this._recordings = Array.isArray(recordings) ? recordings : [];
+      this._cacheActiveCamSlice("recordings", this._recordings);
+      this._renderList();
+    } catch (_) {
+      this._recordings = [];
+    }
+  }
+
+  async _loadWindowReviewsIfNeeded(clientId, cam, after, before) {
+    if (this._tab !== "alerts") return;
+    try {
+      const reviews = await this._fetchWindowedReviews(
+        clientId,
+        cam,
+        after,
+        before,
+        {
+          onPage: (items, meta) => {
+            this._reviews = Array.isArray(items) ? items.slice() : [];
+            if (meta?.page === 0 || meta?.done) this._renderList();
+          },
+        },
+      );
+      this._reviews = Array.isArray(reviews) ? reviews : [];
+      this._renderList();
+    } catch (_) {
+      this._reviews = [];
+    }
+  }
+
   async _loadKept() {
     const { clientId, cam } = this._cc();
     try {
@@ -2944,10 +3038,7 @@ class FrigateViewCard extends HTMLElement {
   _buildTabsMarkup() {
     const ht = new Set(this._config.hidden_tabs || []);
     const tabOrder = ["alerts", "clips", "snapshot", "recordings", "kept"];
-    const activeTab =
-      !ht.has(this._tab) && tabOrder.includes(this._tab)
-        ? this._tab
-        : tabOrder.find((id) => !ht.has(id)) || "alerts";
+    const activeTab = resolveActiveTab(this._tab, ht, tabOrder);
     this._tab = activeTab;
     const tab = (id, icon, label) =>
       ht.has(id)
@@ -2973,11 +3064,19 @@ class FrigateViewCard extends HTMLElement {
     const prevTab = this._tab;
     tabs.innerHTML = this._buildTabsMarkup();
     if (this._tab !== prevTab) {
-      if (this._tab === "alerts") {
-        this._loadReviews().then(() => this._renderList());
-      } else if (this._tab === "kept") {
-        this._loadKept().then(() => this._renderList());
-      }
+      void this._loadTabData(this._tab);
+    }
+  }
+
+  async _loadTabData(tab) {
+    if (tab !== "alerts" && tab !== "kept") return;
+    try {
+      if (tab === "alerts") await this._loadReviews();
+      if (tab === "kept") await this._loadKept();
+    } catch (error) {
+      console.error("[Frigate] tab data load failed", error);
+    } finally {
+      this._renderList();
     }
   }
 
@@ -3954,8 +4053,7 @@ class FrigateViewCard extends HTMLElement {
       .querySelectorAll("[data-tab]")
       .forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
     this._renderListLabel();
-    if (tab === "alerts") this._loadReviews().then(() => this._renderList());
-    if (tab === "kept") this._loadKept().then(() => this._renderList());
+    void this._loadTabData(tab);
     this._renderList();
   }
   // ── playback ──────────────────────────────────────────────
@@ -6428,14 +6526,10 @@ class FrigateViewCardEditor extends HTMLElement {
     if (!panels.length) return;
 
     const setActive = (activePanel) => {
-      panels.forEach((panel) => {
-        const isActive = panel === activePanel;
-        panel.classList.toggle("active", isActive);
-        const toggle = panel.querySelector("[data-panel-toggle]");
-        if (toggle)
-          toggle.setAttribute("aria-expanded", isActive ? "true" : "false");
-      });
-      this._activeSettingsPanelId = activePanel?.dataset?.panel ?? null;
+      this._activeSettingsPanelId = setSettingsPanelActiveState(
+        panels,
+        activePanel,
+      );
     };
 
     panels.forEach((panel) => {
@@ -6459,39 +6553,6 @@ class FrigateViewCardEditor extends HTMLElement {
   _wireEditorDialogActions() {
     if (this._dialogActionHooksBound) return;
 
-    const getActionElementKind = (button) => {
-      if (!(button instanceof Element)) return null;
-
-      const explicitSlot = button.getAttribute?.("slot") || "";
-      if (explicitSlot === "primaryAction") return "primary";
-      if (explicitSlot === "secondaryAction") return "secondary";
-
-      const actionAttr = (
-        button.getAttribute?.("dialogAction") ||
-        button.getAttribute?.("dialog-action") ||
-        ""
-      )
-        .toString()
-        .trim()
-        .toLowerCase();
-      if (["save", "ok", "done", "confirm", "apply"].includes(actionAttr)) {
-        return "primary";
-      }
-      if (["cancel", "close", "dismiss"].includes(actionAttr)) {
-        return "secondary";
-      }
-
-      const label = (button.textContent || "").trim().toLowerCase();
-      if (["save", "done", "update", "apply", "ok"].includes(label)) {
-        return "primary";
-      }
-      if (["cancel", "close", "dismiss"].includes(label)) {
-        return "secondary";
-      }
-
-      return null;
-    };
-
     const bindDialogActionButtons = () => {
       this._boundDialogActionButtons = [];
       const seenRoots = new Set();
@@ -6501,49 +6562,32 @@ class FrigateViewCardEditor extends HTMLElement {
         const root = node.getRootNode?.();
         if (root instanceof ShadowRoot && !seenRoots.has(root)) {
           seenRoots.add(root);
-          root
-            .querySelectorAll(
-              '[slot="primaryAction"], [slot="secondaryAction"], mwc-button, ha-button, button',
-            )
-            .forEach((button) => {
-              const kind = getActionElementKind(button);
-              if (!kind) return;
-              const handler = () => {
-                if (kind === "primary") {
-                  if (this._hasVisualDraft) {
-                    this._dispatch();
-                    this._hasVisualDraft = false;
-                  }
-                  this._emitPreviewDraft(null);
-                  return;
+          root.querySelectorAll(DIALOG_ACTION_SELECTOR).forEach((button) => {
+            const kind = dialogActionKindFromElement(button);
+            if (!kind) return;
+            const handler = () => {
+              if (kind === "primary") {
+                if (this._hasVisualDraft) {
+                  this._dispatch();
+                  this._hasVisualDraft = false;
                 }
-                this._hasVisualDraft = false;
                 this._emitPreviewDraft(null);
-              };
-              button.addEventListener("click", handler, true);
-              this._boundDialogActionButtons.push({ element: button, handler });
-            });
+                return;
+              }
+              this._hasVisualDraft = false;
+              this._emitPreviewDraft(null);
+            };
+            button.addEventListener("click", handler, true);
+            this._boundDialogActionButtons.push({ element: button, handler });
+          });
         }
         node = node.parentNode || node.host;
         depth += 1;
       }
     };
 
-    const getActionKind = (ev) => {
-      const path = Array.isArray(ev.composedPath?.()) ? ev.composedPath() : [];
-      if (path.some((node) => node?.id === "camera-modal")) return null;
-      const button = path.find((node) => {
-        if (!(node instanceof Element)) return false;
-        return node.matches?.(
-          '[slot="primaryAction"], [slot="secondaryAction"], mwc-button, ha-button, button',
-        );
-      });
-      if (!(button instanceof Element)) return null;
-      return getActionElementKind(button);
-    };
-
     this._onDialogPrimaryActionClick = (ev) => {
-      if (getActionKind(ev) !== "primary") return;
+      if (dialogActionKindFromEvent(ev) !== "primary") return;
       if (this._hasVisualDraft) {
         this._dispatch();
         this._hasVisualDraft = false;
@@ -6552,7 +6596,7 @@ class FrigateViewCardEditor extends HTMLElement {
     };
 
     this._onDialogSecondaryActionClick = (ev) => {
-      if (getActionKind(ev) !== "secondary") return;
+      if (dialogActionKindFromEvent(ev) !== "secondary") return;
       this._hasVisualDraft = false;
       this._emitPreviewDraft(null);
     };
