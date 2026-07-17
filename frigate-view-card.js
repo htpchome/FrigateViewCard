@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.179";
+const VERSION = "1.0.180";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -763,8 +763,8 @@ const STYLES = `
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
   .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
   .et{border-radius:15px;overflow:hidden;flex-shrink:0;
-    background:var(--c-bg-deep);position:relative;object-fit:cover;}
-  .et img{width:160px;height:90px;object-fit:cover;display:block;}
+    background:var(--c-bg-deep);position:relative;object-fit:cover;width:160px;height:90px;}
+  .et img{width:100%;height:100%;object-fit:cover;display:block;}
   .alert{outline: 2px solid var(--c-bg-alert);} 
   .detection{outline: 2px solid var(--c-accent);}
   .eact{display:flex;flex-direction:row;align-items:center;gap:4px;flex-shrink:0;padding:right:10px}
@@ -3595,6 +3595,7 @@ class FrigateViewCard extends HTMLElement {
     this._applyBrowse();
     this._applyCardStyle();
     this._applyLayoutMode();
+    this._renderCamSwitcher();
     this._bindListScroll();
     this._initResizeHandle();
   }
