@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.233";
+const VERSION = "1.0.234";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -695,10 +695,7 @@ const STYLES = `
     overflow: hidden;
     box-sizing: border-box !important;
     position: relative; 
-    --shadow-elevation-medium:0.3px 0.5px 0.7px hsl(var(--shadow-color) / 0.36),
-      0.8px 1.6px 2px -0.8px hsl(var(--shadow-color) / 0.36),
-      2.1px 4.1px 5.2px -1.7px hsl(var(--shadow-color) / 0.36),
-      5px 10px 12.6px -2.5px hsl(var(--shadow-color) / 0.36);
+
   }
   :host {
     --popup-z-index: 1000;
@@ -737,7 +734,7 @@ const STYLES = `
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     }
   .card{
-    --fvc-shadow-s: box-shadow: rgba(14, 30, 37, 0.12) 0px 2px 4px 0px, rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
+    --fvc-shadow-s: rgba(14, 30, 37, 0.12) 0px 2px 4px 0px, rgba(14, 30, 37, 0.32) 0px 2px 16px 0px;
     --fvc-shadow-m: var(--ha-box-shadow-m);
     --ha-card-background: var(--c-bg-main) !important;
     color:var(--c-text);
