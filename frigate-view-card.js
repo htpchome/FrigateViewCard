@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.216";
+const VERSION = "1.0.217";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1118,6 +1118,8 @@ class FrigateViewCard extends HTMLElement {
     this._fallbackReqId = 0;
     this._eventsLoadToken = 0;
     this._warmCamsToken = 0;
+    this._reloadPending = false;
+    this._reloadAfterLoad = false;
     this._switchLoadT = null;
     this._popupDrag = null;
     this._popupHandlers = null;
@@ -3255,6 +3257,8 @@ class FrigateViewCard extends HTMLElement {
   async _loadWindow(replace) {
     if (this._loading) return;
     this._loading = true;
+    this._reloadPending = false;
+    this._reloadAfterLoad = false;
     if (replace) this._exhausted = false;
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) {
@@ -3274,6 +3278,10 @@ class FrigateViewCard extends HTMLElement {
       this._camCache[ent].recordings = this._recordings;
     }
     this._loading = false;
+    if (this._reloadAfterLoad) {
+      this._reloadAfterLoad = false;
+      this._scheduleReload();
+    }
     if (this._eventsMode === "all") this._loadAllCamsBackground();
     this._renderAll();
   }
@@ -3505,16 +3513,53 @@ class FrigateViewCard extends HTMLElement {
     try {
       this._unsub = this._hass.connection.subscribeMessage(
         (msg) => {
-          if (msg?.type === "end" && this._isNowWindow())
-            this._scheduleReload();
+          if (!this._isNowWindow()) return;
+          if (!this._isRealtimeEventMessage(msg)) return;
+          this._scheduleReload();
         },
         { type: "frigate/events/subscribe", instance_id: clientId },
       );
     } catch (_) {}
   }
+
+  _isRealtimeEventMessage(msg) {
+    if (!msg || typeof msg !== "object") return false;
+    const type = String(msg.type || "").toLowerCase();
+    if (!type) return false;
+    if (type === "end") return true;
+    if (
+      !type.includes("event") &&
+      !type.includes("review") &&
+      !type.includes("detection") &&
+      type !== "new" &&
+      type !== "update"
+    ) {
+      return false;
+    }
+    if (this._eventsMode === "all") return true;
+    const activeCam = this._cc().cam;
+    const messageCam =
+      msg.camera ||
+      msg?.event?.camera ||
+      msg?.review?.camera ||
+      msg?.after?.camera ||
+      msg?.before?.camera;
+    if (!messageCam) return true;
+    return String(messageCam) === String(activeCam);
+  }
+
   _scheduleReload() {
+    this._reloadPending = true;
     clearTimeout(this._rt);
-    this._rt = setTimeout(() => this._loadWindow(true), 1500);
+    this._rt = setTimeout(() => {
+      if (!this._reloadPending) return;
+      if (this._loading) {
+        this._reloadAfterLoad = true;
+        return;
+      }
+      this._reloadPending = false;
+      this._loadWindow(true);
+    }, 1500);
   }
 
   _buildTabsMarkup() {
