@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.176";
+const VERSION = "1.0.178";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -466,6 +466,28 @@ const bindEachClickHandler = ({ root, selector, handler }) => {
   });
 };
 
+const bindEventsForIds = ({ root, ids, events, handler }) => {
+  ids.forEach((id) => {
+    const element = root.querySelector(`#${id}`);
+    if (!element) return;
+    events.forEach((eventName) => {
+      element.addEventListener(eventName, (event) =>
+        handler(event, element, id),
+      );
+    });
+  });
+};
+
+const bindEventsForSelectorAll = ({ root, selector, events, handler }) => {
+  root.querySelectorAll(selector).forEach((element) => {
+    events.forEach((eventName) => {
+      element.addEventListener(eventName, (event) =>
+        handler(event, element, selector),
+      );
+    });
+  });
+};
+
 const buildEditorConfigFromDom = ({
   root,
   baseConfig,
@@ -718,7 +740,6 @@ const STYLES = `
     height:95%;
     overflow-y:auto;
     position:relative}
-  .card.tight-margins .browse{padding:0 2px;}
   .card .browse::-webkit-scrollbar{width:8px;}
   .card .browse::-webkit-scrollbar-track{background:transparent;}
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;border:2px solid transparent;}
@@ -7452,22 +7473,23 @@ class FrigateViewCardEditor extends HTMLElement {
     this._wireSettingsPanels();
     this._wireEditorDialogActions();
 
-    ["title", "subtitle", "stream_height", "col_left_width_pct"].forEach(
-      (id) => {
-        const el = this.querySelector(`#${id}`);
-        if (!el) return;
-        el.addEventListener("change", update);
-      },
-    );
-    ["tight_margins", "wide_view", "shadows"].forEach((id) => {
-      const el = this.querySelector(`#${id}`);
-      if (!el) return;
-      el.addEventListener("change", update);
-      el.addEventListener("value-changed", update);
+    bindEventsForIds({
+      root: this,
+      ids: ["title", "subtitle", "stream_height", "col_left_width_pct"],
+      events: ["change"],
+      handler: () => update(),
     });
-    this.querySelectorAll("[data-active-tab]").forEach((el) => {
-      el.addEventListener("change", update);
-      el.addEventListener("value-changed", update);
+    bindEventsForIds({
+      root: this,
+      ids: ["tight_margins", "wide_view", "shadows"],
+      events: ["change", "value-changed"],
+      handler: () => update(),
+    });
+    bindEventsForSelectorAll({
+      root: this,
+      selector: "[data-active-tab]",
+      events: ["change", "value-changed"],
+      handler: () => update(),
     });
 
     const wideCb = this.querySelector("#wide_view");
