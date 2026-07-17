@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.252";
+const VERSION = "1.0.253";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -938,9 +938,6 @@ const STYLES = `
 
   /* ── camera switcher ── */
 
-  .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;}
-  .tabs::-webkit-scrollbar{display:none;}
-
   .cam-switcher{display:flex;align-items:center;gap:4px;flex-wrap: wrap;padding:6px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;}
   .cam-tabs{display:flex;gap:4px;flex:1;flex-wrap: wrap;overflow-x:auto;scrollbar-width:none;}
   .cam-tabs::-webkit-scrollbar{display:none;}
@@ -951,7 +948,7 @@ const STYLES = `
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
 
   /* ── pill button ── */
-  .pill{display:inline-flex;align-items:center;gap:4px;background:var(--c-primary-l);border:1px solid var(--c-border2);border-radius:12px;padding:4px;font-size:1rem;font-weight:600;color:var(--c-text2);cursor:pointer;white-space:nowrap;flex-shrink:0;max-width:36px;max-height:30px}
+  .pill{display:inline-flex;align-items:center;gap:4px;background:var(--c-primary-l);border:1px solid var(--c-border2);border-radius:50%;padding:4px;font-size:1rem;font-weight:600;color:var(--c-text2);cursor:pointer;white-space:nowrap;flex-shrink:0;max-width:30px;max-height:30px}
   .pill svg{width:24px;height:24px;opacity:0.85;}
   .pill:hover{background:var(--c-primary-d);border-color:var(--c-primary-l);color:var(--c-text);}
   .pill.active{background:var(--c-primary);border-color:var(--c-primary-d);color:var(--c-text);} 
