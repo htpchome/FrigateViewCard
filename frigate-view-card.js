@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.176";
+const VERSION = "1.0.205";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -7452,22 +7452,23 @@ class FrigateViewCardEditor extends HTMLElement {
     this._wireSettingsPanels();
     this._wireEditorDialogActions();
 
-    ["title", "subtitle", "stream_height", "col_left_width_pct"].forEach(
-      (id) => {
-        const el = this.querySelector(`#${id}`);
-        if (!el) return;
-        el.addEventListener("change", update);
-      },
-    );
-    ["tight_margins", "wide_view", "shadows"].forEach((id) => {
-      const el = this.querySelector(`#${id}`);
-      if (!el) return;
-      el.addEventListener("change", update);
-      el.addEventListener("value-changed", update);
+    bindEventsForIds({
+      root: this,
+      ids: ["title", "subtitle", "stream_height", "col_left_width_pct"],
+      events: ["change"],
+      handler: () => update(),
     });
-    this.querySelectorAll("[data-active-tab]").forEach((el) => {
-      el.addEventListener("change", update);
-      el.addEventListener("value-changed", update);
+    bindEventsForIds({
+      root: this,
+      ids: ["tight_margins", "wide_view", "shadows"],
+      events: ["change", "value-changed"],
+      handler: () => update(),
+    });
+    bindEventsForSelectorAll({
+      root: this,
+      selector: "[data-active-tab]",
+      events: ["change", "value-changed"],
+      handler: () => update(),
     });
 
     const wideCb = this.querySelector("#wide_view");
