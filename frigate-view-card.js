@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.205";
+const VERSION = "1.0.178";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -466,6 +466,28 @@ const bindEachClickHandler = ({ root, selector, handler }) => {
   });
 };
 
+const bindEventsForIds = ({ root, ids, events, handler }) => {
+  ids.forEach((id) => {
+    const element = root.querySelector(`#${id}`);
+    if (!element) return;
+    events.forEach((eventName) => {
+      element.addEventListener(eventName, (event) =>
+        handler(event, element, id),
+      );
+    });
+  });
+};
+
+const bindEventsForSelectorAll = ({ root, selector, events, handler }) => {
+  root.querySelectorAll(selector).forEach((element) => {
+    events.forEach((eventName) => {
+      element.addEventListener(eventName, (event) =>
+        handler(event, element, selector),
+      );
+    });
+  });
+};
+
 const buildEditorConfigFromDom = ({
   root,
   baseConfig,
@@ -718,7 +740,6 @@ const STYLES = `
     height:95%;
     overflow-y:auto;
     position:relative}
-  .card.tight-margins .browse{padding:0 2px;}
   .card .browse::-webkit-scrollbar{width:8px;}
   .card .browse::-webkit-scrollbar-track{background:transparent;}
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;border:2px solid transparent;}
@@ -744,8 +765,6 @@ const STYLES = `
   .alert{outline: 2px solid var(--c-bg-alert);} 
   .detection{outline: 2px solid var(--c-accent);}
   .eact{display:flex;flex-direction:row;align-items:center;gap:4px;flex-shrink:0;padding:right:10px}
-  .tph{width:160px;height:90px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a2840,#0d1520);color:var(--c-primary-d);} 
-  .tph svg{width:20px;height:20px;}
 
  /* ── recordings ── */
   .ric{width:63px;height:63px;border-radius:5px;background:rgba(30,80,200,.25);
@@ -765,6 +784,8 @@ const STYLES = `
   .rev-m{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:0.75rem;color:var(--c-text2);margin-top:1px;} 
   .rev-m .time-meta,.rev-m .review-meta{display:inline-flex;align-items:center;gap:4px;} 
   .rev-m svg{width:10.8px;height:10.8px;}
+  .rev-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a2840,#0d1520);color:var(--c-primary-d);} 
+  .rev-ph svg{width:18px;height:18px;}
 
 
 
@@ -922,6 +943,8 @@ const STYLES = `
       fill: #ff5733;stroke: #000000;stroke-width: 2px;}
   .frigate-view svg{height:24px;pointer-events: none;}
 
+  .tph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a2840,#0d1520);color:var(--c-primary-d);} 
+  .tph svg{width:20px;height:20px;}
   .ed{position:absolute;bottom:2px;right:3px;font-size:0.675rem;font-weight:700;color:var(--c-text-rev);background:rgba(0,0,0,.65);border-radius:3px;padding:1.2px 3.6px;}
   .ei{flex:1;min-width:0;}
   .etop{display:flex;align-items:center;gap:5px;margin-bottom:3px;flex-wrap:wrap;}
@@ -6289,9 +6312,9 @@ class FrigateViewCard extends HTMLElement {
     const thumb =
       ev.has_snapshot || ev.has_clip
         ? thumbMissing
-          ? `<div class="et"><div class="tph">${ICONS.person}</div></div>`
+          ? `<div class="tph">${ICONS.person}</div>`
           : `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`
-        : `<div class="et"><div class="tph">${ICONS.person}</div></div>`;
+        : `<div class="tph">${ICONS.person}</div>`;
     const badge = ev.has_clip
       ? '<span class="bc">clip</span>'
       : ev.has_snapshot
@@ -6471,13 +6494,13 @@ class FrigateViewCard extends HTMLElement {
       const reviewThumbFile = "thumbnail.jpg";
       const thumb = firstDet
         ? this._missingThumbIds.has(firstDet)
-          ? `<div class="et"><div class="tph">${ICONS.person}</div></div>`
+          ? `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
           : hasReviewMedia
             ? `<div class="et ${sev}">
                 <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <div class="tph" style="display:none">${ICONS.person}</div>
+                  <div class="rev-ph" style="display:none">${ICONS.person}</div>
                 </div>`
-            : `<div class="et"><div class="tph">${ICONS.person}</div></div>`
+            : `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
         : "";
       return `
       <div class="list-item shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
