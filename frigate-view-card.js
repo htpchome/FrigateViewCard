@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.181";
+const VERSION = "1.0.182";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1136,6 +1136,7 @@ class FrigateViewCard extends HTMLElement {
     this._mountSeq = 0;
     this._listRenderRaf = 0;
     this._listRenderTimer = null;
+    this._lastRenderedListHtml = "";
     this._pendingMountDestroyers = [];
     this._pendingWebRTCTakeoverTimer = null;
     this._wasVisible = false;
@@ -1760,7 +1761,7 @@ class FrigateViewCard extends HTMLElement {
       href: window.location?.href || "",
     });
     this._refresh = setInterval(() => {
-      if (this._isNowWindow()) this._loadWindow(true);
+      if (this._isNowWindow()) this._loadWindow(false);
     }, this._config.refresh_seconds * 1000);
     this._setupResizeObserver();
   }
@@ -3433,7 +3434,7 @@ class FrigateViewCard extends HTMLElement {
   }
   _scheduleReload() {
     clearTimeout(this._rt);
-    this._rt = setTimeout(() => this._loadWindow(true), 1500);
+    this._rt = setTimeout(() => this._loadWindow(false), 1500);
   }
 
   _buildTabsMarkup() {
@@ -3603,6 +3604,7 @@ class FrigateViewCard extends HTMLElement {
           </div>
       </ha-card>`;
     this._domCache = {}; // invalidate DOM element cache after full re-render
+    this._lastRenderedListHtml = "";
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
@@ -5715,9 +5717,11 @@ class FrigateViewCard extends HTMLElement {
 
       const recPath = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
       const vodBase = `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
-      const sourceCandidates = this._recordingPreferHls()
-        ? [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`, recPath]
-        : [recPath, `${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`];
+      const sourceCandidates = isIOS
+        ? [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`]
+        : this._recordingPreferHls()
+          ? [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`, recPath]
+          : [recPath, `${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`];
 
       for (const path of sourceCandidates) {
         if (this._playSeq !== token) return;
@@ -6198,6 +6202,16 @@ class FrigateViewCard extends HTMLElement {
     if (!lbl) return;
     lbl.textContent = this._listHeadingLabel(ts);
   }
+
+  _setListHtmlIfChanged(list, html) {
+    if (!list) return false;
+    const nextHtml = String(html || "");
+    if (this._lastRenderedListHtml === nextHtml) return false;
+    list.innerHTML = nextHtml;
+    this._lastRenderedListHtml = nextHtml;
+    return true;
+  }
+
   _dayKey(ts) {
     const parts = new Intl.DateTimeFormat("en-US", {
       year: "numeric",
