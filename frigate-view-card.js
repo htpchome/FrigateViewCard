@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.173";
+const VERSION = "1.0.174";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -316,6 +316,139 @@ const bindNumericInputField = ({ root, selector, onSanitize }) => {
     innerInput.addEventListener("keydown", restrictKey);
     innerInput.addEventListener("beforeinput", restrictBeforeInput);
     innerInput.addEventListener("input", sanitize);
+  });
+};
+
+const bindSelectorSyncEvents = (element, syncValue) => {
+  if (!element || typeof syncValue !== "function") return;
+  element.addEventListener("value-changed", syncValue);
+  element.addEventListener("selected-changed", syncValue);
+  element.addEventListener("change", syncValue);
+};
+
+const setupSelectSelector = ({
+  element,
+  hass,
+  options,
+  initialValue,
+  fallbackValue,
+  normalize = (value) => value,
+  onChange,
+}) => {
+  if (!element) return;
+  element.hass = hass;
+  element.selector = {
+    select: {
+      mode: "dropdown",
+      options,
+    },
+  };
+  const startValue = normalize(initialValue ?? fallbackValue);
+  element.value = startValue;
+  element.dataset.value = startValue;
+  const syncValue = (event) => {
+    const nextRaw = event?.detail?.value ?? element.value ?? fallbackValue;
+    const nextValue = normalize(nextRaw);
+    element.value = nextValue;
+    element.dataset.value = nextValue;
+    onChange?.(nextValue, event);
+  };
+  bindSelectorSyncEvents(element, syncValue);
+};
+
+const setupEntitySelector = ({ element, hass, domain, label, onChange }) => {
+  if (!element) return;
+  element.hass = hass;
+  element.selector = { entity: { domain } };
+  if (label) element.label = label;
+  const syncValue = (event) => {
+    const nextValue = event?.detail?.value ?? element.value ?? "";
+    element.dataset.value = String(nextValue || "");
+    onChange?.(String(nextValue || ""), event);
+  };
+  element.addEventListener("value-changed", syncValue);
+  element.addEventListener("selected-changed", syncValue);
+};
+
+const bindThemeControlEvents = ({
+  root,
+  update,
+  themeDraftCache,
+  resolveDefaultHex,
+}) => {
+  root.querySelectorAll("[data-theme-option]").forEach((button) => {
+    button.addEventListener("pointerdown", (event) => {
+      // Prevent panel header handlers from receiving pointer events.
+      event.stopPropagation();
+    });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const selectedTheme =
+        event.currentTarget?.dataset?.themeOption || "default";
+      root.querySelectorAll("[data-theme-option]").forEach((themeButton) => {
+        const isActive = themeButton.dataset.themeOption === selectedTheme;
+        themeButton.classList.toggle("active", isActive);
+        themeButton.setAttribute("aria-checked", isActive ? "true" : "false");
+      });
+      const customPanel = root.querySelector("#theme-custom-panel");
+      if (customPanel) {
+        customPanel.hidden = selectedTheme !== "custom";
+        if (selectedTheme === "custom") customPanel.setAttribute("open", "");
+      }
+      update();
+    });
+  });
+
+  root.querySelectorAll("[data-theme-color]").forEach((input) => {
+    input.addEventListener("input", (event) => {
+      const colorKey = event.currentTarget?.dataset?.themeColor;
+      const colorValue = normalizeHexColor(event.currentTarget?.value);
+      if (colorKey && colorValue) themeDraftCache[colorKey] = colorValue;
+      update();
+    });
+    input.addEventListener("change", update);
+  });
+
+  root.querySelectorAll("[data-theme-reset]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const colorKey = event.currentTarget?.dataset?.themeReset;
+      const input = root.querySelector(`[data-theme-color="${colorKey}"]`);
+      if (!colorKey || !input || input.disabled) return;
+      const defaultHex = resolveDefaultHex(colorKey);
+      input.value = defaultHex;
+      themeDraftCache[colorKey] = defaultHex;
+      update();
+    });
+  });
+
+  root.querySelectorAll("[data-theme-default]").forEach((toggle) => {
+    const colorKey = toggle.dataset.themeDefault;
+    const input = root.querySelector(`[data-theme-color="${colorKey}"]`);
+    const reset = root.querySelector(`[data-theme-reset="${colorKey}"]`);
+    toggle.addEventListener("change", (event) => {
+      const isDefault = event.currentTarget?.checked === true;
+      if (!input) {
+        update();
+        return;
+      }
+      if (isDefault) {
+        input.value = resolveDefaultHex(colorKey);
+        input.disabled = true;
+        if (reset) reset.hidden = true;
+      } else {
+        const draftHex = normalizeHexColor(themeDraftCache?.[colorKey]);
+        input.value = draftHex || resolveDefaultHex(colorKey);
+        input.disabled = false;
+        if (reset) reset.hidden = false;
+      }
+      update();
+    });
+    toggle.addEventListener("value-changed", (event) => {
+      toggle.checked = event?.detail?.value === true;
+    });
   });
 };
 
@@ -7085,179 +7218,58 @@ class FrigateViewCardEditor extends HTMLElement {
 
     const update = () => this._u({ dispatch: false, preview: true });
 
-    this.querySelectorAll("[data-theme-option]").forEach((btn) => {
-      btn.addEventListener("pointerdown", (ev) => {
-        // Prevent panel header handlers from receiving pointer events.
-        ev.stopPropagation();
-      });
-      btn.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        const selected = ev.currentTarget?.dataset?.themeOption || "default";
-        this.querySelectorAll("[data-theme-option]").forEach((b) => {
-          const active = b.dataset.themeOption === selected;
-          b.classList.toggle("active", active);
-          b.setAttribute("aria-checked", active ? "true" : "false");
-        });
-        const panel = this.querySelector("#theme-custom-panel");
-        if (panel) {
-          panel.hidden = selected !== "custom";
-          if (selected === "custom") panel.setAttribute("open", "");
-        }
-        update();
-      });
+    bindThemeControlEvents({
+      root: this,
+      update,
+      themeDraftCache: this._themeDraftCache,
+      resolveDefaultHex: (key) => this._themeDefaultHex(key),
     });
 
-    this.querySelectorAll("[data-theme-color]").forEach((input) => {
-      input.addEventListener("input", (ev) => {
-        const key = ev.currentTarget?.dataset?.themeColor;
-        const value = normalizeHexColor(ev.currentTarget?.value);
-        if (key && value) this._themeDraftCache[key] = value;
-        update();
-      });
-      input.addEventListener("change", update);
+    setupSelectSelector({
+      element: this.querySelector("#window_days"),
+      hass: this._hass,
+      options: Array.from({ length: 15 }, (_, index) => {
+        const value = String(index + 1);
+        return { value, label: value };
+      }),
+      initialValue: String(this._config?.window_days ?? 3),
+      fallbackValue: "3",
+      normalize: (value) => String(value ?? "3"),
+      onChange: () => update(),
     });
 
-    this.querySelectorAll("[data-theme-reset]").forEach((button) => {
-      button.addEventListener("click", (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        const key = ev.currentTarget?.dataset?.themeReset;
-        const input = this.querySelector(`[data-theme-color="${key}"]`);
-        if (!key || !input || input.disabled) return;
-        const defaultHex = this._themeDefaultHex(key);
-        input.value = defaultHex;
-        this._themeDraftCache[key] = defaultHex;
-        update();
-      });
+    setupSelectSelector({
+      element: this.querySelector("#stream_height_unit"),
+      hass: this._hass,
+      options: [
+        { value: "vh", label: "dvh" },
+        { value: "em", label: "em" },
+        { value: "px", label: "px" },
+      ],
+      initialValue: this._config?.stream_height_unit || "vh",
+      fallbackValue: "vh",
+      normalize: (value) => String(value ?? "vh"),
+      onChange: () => update(),
     });
 
-    this.querySelectorAll("[data-theme-default]").forEach((toggle) => {
-      const key = toggle.dataset.themeDefault;
-      const input = this.querySelector(`[data-theme-color="${key}"]`);
-      const reset = this.querySelector(`[data-theme-reset="${key}"]`);
-      toggle.addEventListener("change", (ev) => {
-        const checked = ev.currentTarget?.checked === true;
-        if (!input) {
-          update();
-          return;
-        }
-        if (checked) {
-          input.value = this._themeDefaultHex(key);
-          input.disabled = true;
-          if (reset) reset.hidden = true;
-        } else {
-          const draft = normalizeHexColor(this._themeDraftCache?.[key]);
-          input.value = draft || this._themeDefaultHex(key);
-          input.disabled = false;
-          if (reset) reset.hidden = false;
-        }
-        update();
-      });
-      toggle.addEventListener("value-changed", (ev) => {
-        const checked = ev?.detail?.value === true;
-        toggle.checked = checked;
-      });
+    setupEntitySelector({
+      element: this.querySelector("#camera-modal-entity"),
+      hass: this._hass,
+      domain: "camera",
+      label: "Camera",
     });
 
-    const windowDays = this.querySelector("#window_days");
-    if (windowDays) {
-      windowDays.hass = this._hass;
-      windowDays.selector = {
-        select: {
-          mode: "dropdown",
-          options: Array.from({ length: 15 }, (_, index) => {
-            const value = String(index + 1);
-            return { value, label: value };
-          }),
-        },
-      };
-      windowDays.value = String(this._config?.window_days ?? 3);
-      windowDays.dataset.value = windowDays.value;
-      const syncWindowDays = (ev) => {
-        const value = String(ev?.detail?.value ?? windowDays.value ?? "3");
-        windowDays.value = value;
-        windowDays.dataset.value = value;
-        update();
-      };
-      windowDays.addEventListener("value-changed", syncWindowDays);
-      windowDays.addEventListener("selected-changed", syncWindowDays);
-      windowDays.addEventListener("change", syncWindowDays);
-    }
-
-    const streamUnit = this.querySelector("#stream_height_unit");
-    if (streamUnit) {
-      streamUnit.hass = this._hass;
-      streamUnit.selector = {
-        select: {
-          mode: "dropdown",
-          options: [
-            { value: "vh", label: "dvh" },
-            { value: "em", label: "em" },
-            { value: "px", label: "px" },
-          ],
-        },
-      };
-      streamUnit.value = this._config?.stream_height_unit || "vh";
-      streamUnit.dataset.value = streamUnit.value;
-      const syncStreamUnit = (ev) => {
-        const value = ev?.detail?.value ?? streamUnit.value ?? "vh";
-        streamUnit.value = value;
-        streamUnit.dataset.value = value;
-        update();
-      };
-      streamUnit.addEventListener("value-changed", syncStreamUnit);
-      streamUnit.addEventListener("selected-changed", syncStreamUnit);
-      streamUnit.addEventListener("change", syncStreamUnit);
-    }
-
-    const modalEntity = this.querySelector("#camera-modal-entity");
-    if (modalEntity) {
-      modalEntity.hass = this._hass;
-      modalEntity.selector = { entity: { domain: "camera" } };
-      modalEntity.label = "Camera";
-      const syncModalEntity = (ev) => {
-        const value = ev?.detail?.value ?? modalEntity.value ?? "";
-        modalEntity.dataset.value = value || "";
-      };
-      modalEntity.addEventListener("value-changed", syncModalEntity);
-      modalEntity.addEventListener("selected-changed", syncModalEntity);
-    }
-
-    const modalConnectionType = this.querySelector(
-      "#camera-modal-connection-type",
-    );
-    if (modalConnectionType) {
-      modalConnectionType.hass = this._hass;
-      modalConnectionType.selector = {
-        select: {
-          mode: "dropdown",
-          options: [
-            { value: "frigate_go2rtc", label: "Frigate go2rtc" },
-            { value: "ha_direct", label: "HA direct" },
-          ],
-        },
-      };
-      modalConnectionType.value = DEFAULT_CAMERA_CONNECTION_TYPE;
-      modalConnectionType.dataset.value = DEFAULT_CAMERA_CONNECTION_TYPE;
-      const syncModalConnectionType = (ev) => {
-        const value =
-          ev?.detail?.value ??
-          modalConnectionType.value ??
-          DEFAULT_CAMERA_CONNECTION_TYPE;
-        const nextType = normalizeCameraConnectionType(value);
-        modalConnectionType.value = nextType;
-        modalConnectionType.dataset.value = nextType;
-      };
-      modalConnectionType.addEventListener(
-        "value-changed",
-        syncModalConnectionType,
-      );
-      modalConnectionType.addEventListener(
-        "selected-changed",
-        syncModalConnectionType,
-      );
-    }
+    setupSelectSelector({
+      element: this.querySelector("#camera-modal-connection-type"),
+      hass: this._hass,
+      options: [
+        { value: "frigate_go2rtc", label: "Frigate go2rtc" },
+        { value: "ha_direct", label: "HA direct" },
+      ],
+      initialValue: DEFAULT_CAMERA_CONNECTION_TYPE,
+      fallbackValue: DEFAULT_CAMERA_CONNECTION_TYPE,
+      normalize: (value) => normalizeCameraConnectionType(value),
+    });
 
     this.querySelector("#camera-add")?.addEventListener("click", () => {
       this._openCameraModal(null);
