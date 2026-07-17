@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.214";
+const VERSION = "1.0.215";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3166,36 +3166,49 @@ class FrigateViewCard extends HTMLElement {
     const after = this._winStart;
     const before = this._winEnd;
 
-    const tasks = this._config.cameras
-      .filter((camera) => camera.entity !== activeEntity)
-      .map(async (camera) => {
-        const entity = camera.entity;
-        const cache = this._camCache[entity];
-        if (!cache?.clientId || !cache?.cam) return;
-        if (
-          Array.isArray(cache.events) &&
-          cache.events.length >= INITIAL_EVENT_FETCH_LIMIT
-        ) {
-          return;
-        }
-        try {
-          const events = await this._fetchWindowedEvents(
-            cache.clientId,
-            cache.cam,
-            after,
-            before,
-            {
-              pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
-              limit: INITIAL_EVENT_FETCH_LIMIT,
-            },
-          );
-          if (token !== this._warmCamsToken) return;
-          if (after !== this._winStart || before !== this._winEnd) return;
-          cache.events = Array.isArray(events) ? events : [];
-        } catch (_) {}
-      });
+    for (const camera of this._config.cameras) {
+      if (camera.entity === activeEntity) continue;
+      const entity = camera.entity;
+      const cache = this._camCache[entity];
+      if (!cache?.clientId || !cache?.cam) continue;
+      if (
+        Array.isArray(cache.events) &&
+        cache.events.length >= INITIAL_EVENT_FETCH_LIMIT
+      ) {
+        continue;
+      }
+      try {
+        const events = await this._fetchWindowedEvents(
+          cache.clientId,
+          cache.cam,
+          after,
+          before,
+          {
+            pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+            limit: INITIAL_EVENT_FETCH_LIMIT,
+          },
+        );
+        if (token !== this._warmCamsToken) return;
+        if (after !== this._winStart || before !== this._winEnd) return;
+        cache.events = Array.isArray(events)
+          ? events.slice(0, INITIAL_EVENT_FETCH_LIMIT)
+          : [];
+      } catch (_) {}
+    }
+  }
 
-    await Promise.allSettled(tasks);
+  _pruneNonActiveCamWindowCaches() {
+    this._warmCamsToken++;
+    const activeEntity = this._activeCam?.entity;
+    for (const camera of this._config.cameras) {
+      const entity = camera.entity;
+      if (entity === activeEntity) continue;
+      const cache = this._camCache[entity];
+      if (!cache) continue;
+      cache.events = [];
+      cache.recordings = [];
+      cache.reviews = [];
+    }
   }
 
   async _fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
@@ -5939,7 +5952,11 @@ class FrigateViewCard extends HTMLElement {
     this._winStart = now - this._config.window_days * DAY;
     this._exhausted = false;
     this._calMonth = null;
-    this._loadWindow(true);
+    this._pruneNonActiveCamWindowCaches();
+    void (async () => {
+      await this._loadWindow(true);
+      await this._warmOtherCamerasEvents();
+    })();
   }
   _download(id, file) {
     const a = document.createElement("a");
@@ -6058,7 +6075,11 @@ class FrigateViewCard extends HTMLElement {
       Math.floor(Date.now() / 1000),
     );
     this.shadowRoot.querySelector("#cal-panel").style.display = "none";
-    this._loadWindow(true);
+    this._pruneNonActiveCamWindowCaches();
+    void (async () => {
+      await this._loadWindow(true);
+      await this._warmOtherCamerasEvents();
+    })();
   }
   _renderCal() {
     const p = this.shadowRoot.querySelector("#cal-panel");
