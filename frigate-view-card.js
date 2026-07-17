@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.261";
+const VERSION = "1.0.262";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -829,11 +829,12 @@ const STYLES = `
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
-  .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px;overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;transition: background-color 0.3s ease;}
+  .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:0 8px;overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;transition: background-color 0.3s ease;}
   .tabs::-webkit-scrollbar{display:none;}
 
   /* ── pill button ── */
-  .pill{display:inline-flex;align-items:center;justify-content: center;gap:4px;background:var(--c-bg-main);border:2px solid var(--c-border2);border-radius:50%;padding:2px;font-size:1rem;font-weight:600;color:var(--c-text2);cursor:pointer;white-space:nowrap;flex-shrink:0;width:32px;height:32px}
+  .pill{display:inline-flex;align-items:center;justify-content: center;gap:4px;background:var(--c-bg-main);border:2px solid var(--c-border2);padding:4px 2px;font-size:1rem;font-weight:600;color:var(--c-text2);cursor:pointer;white-space:nowrap;flex-shrink:0;max-width:30px;height:28px;
+    border-left:1px solid var(--c-border);border-right:1px solid var(--c-border2)}
   .pill svg{width:24px;height:24px;opacity:0.85;}
   .pill:hover{background:var(--c-primary-d);border-color:var(--c-border2);color:var(--c-text);}
   .pill.active{background:var(--c-primary-d);border-color:var(--c-border2);color:var(--c-text);} 
