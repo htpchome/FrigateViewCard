@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.221";
+const VERSION = "1.0.223";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1178,6 +1178,11 @@ class FrigateViewCard extends HTMLElement {
     this._mountInProgress = false;
     this._mountStartedAt = 0;
     this._mountTargetEntity = "";
+    this._deepLinkEventId = "";
+    this._deepLinkReviewId = "";
+    this._deepLinkCameraHint = "";
+    this._deepLinkApplied = false;
+    this._deepLinkReviewLookupTried = false;
     this._domShadowOriginalStyles = new Map();
     this._committedConfig = null;
     this._onDocVisibility = () => {
@@ -1783,6 +1788,8 @@ class FrigateViewCard extends HTMLElement {
   // ── init ─────────────────────────────────────────────────
   async _start() {
     await this._discoverAll();
+    this._initDeepLinkFromUrl();
+    this._applyDeepLinkCameraHint();
     const now = Math.floor(Date.now() / 1000);
     this._followNowWindow = true;
     this._winEnd = now;
@@ -1800,11 +1807,119 @@ class FrigateViewCard extends HTMLElement {
       ua: navigator.userAgent,
       href: window.location?.href || "",
     });
+    this._consumeDeepLinkReviewOpen();
+    this._consumeDeepLinkEventOpen();
     this._refresh = setInterval(() => {
       if (this._isNowWindow()) this._loadWindow(true);
     }, this._config.refresh_seconds * 1000);
     this._restartRealtimeHeadPollTimer();
     this._setupResizeObserver();
+  }
+
+  _mergedUrlSearchParams() {
+    const params = new URLSearchParams(window.location?.search || "");
+    const hash = String(window.location?.hash || "");
+    const queryIndex = hash.indexOf("?");
+    if (queryIndex >= 0) {
+      const hashParams = new URLSearchParams(hash.slice(queryIndex + 1));
+      for (const [key, value] of hashParams.entries()) {
+        if (value != null && value !== "") params.set(key, value);
+      }
+    }
+    return params;
+  }
+
+  _initDeepLinkFromUrl() {
+    const params = this._mergedUrlSearchParams();
+    const eventId =
+      params.get("event") ||
+      params.get("event_id") ||
+      params.get("frigate_event") ||
+      params.get("frigate_event_id") ||
+      "";
+    const reviewId =
+      params.get("review") ||
+      params.get("review_id") ||
+      params.get("frigate_review") ||
+      params.get("frigate_review_id") ||
+      "";
+    const cameraHint =
+      params.get("camera") ||
+      params.get("cam") ||
+      params.get("camera_entity") ||
+      "";
+    this._deepLinkEventId = String(eventId || "").trim();
+    this._deepLinkReviewId = String(reviewId || "").trim();
+    this._deepLinkCameraHint = String(cameraHint || "")
+      .trim()
+      .toLowerCase();
+    this._deepLinkApplied = false;
+    this._deepLinkReviewLookupTried = false;
+  }
+
+  _applyDeepLinkCameraHint() {
+    if (!this._deepLinkCameraHint) return;
+    const idx = this._config.cameras.findIndex((camera) => {
+      const entity = String(camera.entity || "").toLowerCase();
+      const name = String(camera.name || "").toLowerCase();
+      const cacheCam = String(
+        this._camCache[camera.entity]?.cam || "",
+      ).toLowerCase();
+      return (
+        entity === this._deepLinkCameraHint ||
+        name === this._deepLinkCameraHint ||
+        cacheCam === this._deepLinkCameraHint
+      );
+    });
+    if (idx >= 0) this._activeCamIdx = idx;
+  }
+
+  _consumeDeepLinkEventOpen() {
+    if (!this._deepLinkEventId || this._deepLinkApplied) return;
+    const event = this._findEventById(this._deepLinkEventId);
+    if (!event) return;
+
+    const eventCam = String(event.camera || "").toLowerCase();
+    if (eventCam) {
+      const idx = this._config.cameras.findIndex((camera) => {
+        const cacheCam = String(
+          this._camCache[camera.entity]?.cam || "",
+        ).toLowerCase();
+        return cacheCam === eventCam;
+      });
+      if (idx >= 0 && idx !== this._activeCamIdx) {
+        this._switchCamera(idx);
+        return;
+      }
+    }
+
+    this._deepLinkApplied = true;
+    this._open(this._deepLinkEventId);
+  }
+
+  _consumeDeepLinkReviewOpen() {
+    if (this._deepLinkApplied) return;
+    if (this._deepLinkEventId) return;
+    if (!this._deepLinkReviewId) return;
+
+    const review = (this._reviews || []).find(
+      (item) => String(item?.id || "") === this._deepLinkReviewId,
+    );
+    const reviewEventId = String(review?.data?.detections?.[0] || "");
+    if (reviewEventId) {
+      this._deepLinkEventId = reviewEventId;
+      this._consumeDeepLinkEventOpen();
+      return;
+    }
+
+    if (this._deepLinkReviewLookupTried) return;
+    this._deepLinkReviewLookupTried = true;
+    void this._loadReviews()
+      .catch(() => {})
+      .finally(() => {
+        this._consumeDeepLinkReviewOpen();
+        this._consumeDeepLinkEventOpen();
+      });
   }
 
   _isLikelyMobileClient() {
@@ -3360,6 +3475,8 @@ class FrigateViewCard extends HTMLElement {
       this._reloadAfterLoad = false;
       this._scheduleReload();
     }
+    this._consumeDeepLinkReviewOpen();
+    this._consumeDeepLinkEventOpen();
     if (this._eventsMode === "all") this._loadAllCamsBackground();
     this._renderAll();
   }
