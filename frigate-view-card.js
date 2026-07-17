@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.281";
+const VERSION = "1.0.282";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -829,7 +829,7 @@ const STYLES = `
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
-  .tabs{display:flex;flex-wrap: wrap;gap: 4px;padding:4px 8px;overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;transition: background-color 0.3s ease;}
+  .tabs{display:flex;flex-wrap: wrap;gap: 4px;padding:4px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;transition: background-color 0.3s ease;}
   .tabs::-webkit-scrollbar{display:none;}
 
   /* ── pill button ── */
@@ -4024,9 +4024,9 @@ class FrigateViewCard extends HTMLElement {
             <div class="frigate-view">${ICONS.frigateview}</div> 
             <div class="tabs shadow-small">
               ${this._buildTabsMarkup()}
+              <div class="filter-panel" id="filter-panel" style="display:none"></div>
+              <div class="cal-panel" id="cal-panel" style="display:none"></div>
             </div>
-            <div class="filter-panel" id="filter-panel" style="display:none"></div>
-            <div class="cal-panel" id="cal-panel" style="display:none"></div>
          
             <div class="browse" id="browse" style="display:none">
               <div class="list-sec">
