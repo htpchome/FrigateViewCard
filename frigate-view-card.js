@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.208";
+const VERSION = "1.0.209";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3468,6 +3468,9 @@ class FrigateViewCard extends HTMLElement {
       "Camera";
     const subtitle = this._subtitleText();
     const multiCam = this._config.cameras.length > 1;
+    const camSwitcher = multiCam
+      ? `<div class="cam-switcher" id="cam-switcher"><div class="cam-tabs">${this._camSwitcherMarkup({ includeStatus: false })}</div></div>`
+      : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""}" id="card">
 
@@ -3515,7 +3518,7 @@ class FrigateViewCard extends HTMLElement {
                 <button class="info-mute" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
               </div>
             </div>
-            ${multiCam ? `<div class="cam-switcher" id="cam-switcher"></div>` : ""}
+            ${camSwitcher}
           </div>
           <div class="resize-handle" id="resize-handle"></div>
           <div class="col-right" id="col-right">
@@ -4086,6 +4089,19 @@ class FrigateViewCard extends HTMLElement {
     }
   }
   // ── cam switcher ──────────────────────────────────────────
+  _camSwitcherMarkup({ includeStatus = true } = {}) {
+    return this._config.cameras
+      .map((c, i) => {
+        const name = cap(camDisplayName(c));
+        const active = this._viewMode === "single" && i === this._activeCamIdx;
+        const ok =
+          !includeStatus ||
+          this._hass?.states?.[c.entity]?.state !== "unavailable";
+        return `<button class="cam-tab ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
+      })
+      .join("");
+  }
+
   _renderCamSwitcher() {
     const el = this.shadowRoot.querySelector("#cam-switcher");
     if (!el) return;
@@ -4095,16 +4111,7 @@ class FrigateViewCard extends HTMLElement {
     }
     el.style.display = "";
 
-    const tabs = this._config.cameras
-      .map((c, i) => {
-        const name = cap(camDisplayName(c));
-        const active = this._viewMode === "single" && i === this._activeCamIdx;
-        const ok = this._hass?.states[c.entity]?.state !== "unavailable";
-        return `<button class="cam-tab ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
-      })
-      .join("");
-
-    el.innerHTML = `<div class="cam-tabs">${tabs}</div>`;
+    el.innerHTML = `<div class="cam-tabs">${this._camSwitcherMarkup({ includeStatus: true })}</div>`;
   }
   // ── interactions ──────────────────────────────────────────
   _openPopup() {

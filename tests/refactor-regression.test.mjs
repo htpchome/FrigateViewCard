@@ -19,15 +19,14 @@ test("event list thumbnails use browser lazy loading", () => {
   assert.equal((source.match(/loading="lazy"/g) || []).length >= 3, true);
 });
 
-test("window loads use a request sequence guard", () => {
-  assert.equal(/_windowLoadSeq\s*=\s*0/.test(source), true);
-  assert.equal(/const loadSeq = \+\+this\._windowLoadSeq;/.test(source), true);
+test("window loads use loading-state guard", () => {
+  assert.equal(/if \(this\._loading\) return;/.test(source), true);
+  assert.equal(/this\._loading = true;/.test(source), true);
 });
 
-test("startup kicks list load before live mount without awaiting it", () => {
+test("startup waits for initial list load before live mount", () => {
   assert.match(
     source,
-    /void\s+this\._loadWindow\(true\);[\s\S]*this\._mountEngine\(\);/,
+    /await\s+this\._loadWindow\(true\);[\s\S]*this\._mountEngine\(\);/,
   );
-  assert.equal(/_loadWindowBeforeLive\(/.test(source), false);
 });
