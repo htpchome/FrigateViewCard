@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.231";
+const VERSION = "1.0.232";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -737,7 +737,11 @@ const STYLES = `
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     }
   .card{
-    --fvc-shadow-s: var(--ha-box-shadow-s);
+    --shadow-color: 0deg 0% 63%;
+    --fvc-shadow-s: 0.3px 0.5px 0.7px hsl(var(--shadow-color) / 0.36),
+      0.8px 1.6px 2px -0.8px hsl(var(--shadow-color) / 0.36),
+      2.1px 4.1px 5.2px -1.7px hsl(var(--shadow-color) / 0.36),
+      5px 10px 12.6px -2.5px hsl(var(--shadow-color) / 0.36);
     --fvc-shadow-m: var(--ha-box-shadow-m);
     --ha-card-background: var(--c-bg-main) !important;
     color:var(--c-text);
@@ -829,11 +833,7 @@ const STYLES = `
 
   .xform{box-shadow: var(--fvc-shadow-s);transition: transform 0.1s, box-shadow 0.1s;}
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
-  .shadow-small { box-shadow:
-              0.3px 0.5px 0.7px hsl(var(--shadow-color) / 0.36),
-              0.8px 1.6px 2px -0.8px hsl(var(--shadow-color) / 0.36),
-              2.1px 4.1px 5.2px -1.7px hsl(var(--shadow-color) / 0.36),
-              5px 10px 12.6px -2.5px hsl(var(--shadow-color) / 0.36);}  
+  .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
   .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;}
   .tabs::-webkit-scrollbar{display:none;}
