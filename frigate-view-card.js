@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.287";
+const VERSION = "1.0.288";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -835,8 +835,7 @@ const STYLES = `
   /* ── pill button ── */
   .pill{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;height:30px;width:30px;background-color:var(--c-bg-main);padding:3px;}
   .pill svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
-  .pill:hover, .pill.active:hover {background-color:var(--c-bg-main);color:var(--c-primary-d);}
-  .pill:hover, .pill.active:hover svg{color:var(--c-primary-d);}
+  .pill:hover, .pill:hover.active {background-color:var(--c-bg-main);color:var(--c-primary-d);}
   .pill.active {background:var(--c-primary-d);} 
   .pill.active svg{color:var(--c-text2);}
 
@@ -4023,10 +4022,10 @@ class FrigateViewCard extends HTMLElement {
             <div class="tabs shadow-small">
               ${this._buildTabsMarkup()}
             </div>
-            <div class="filter-panel" id="filter-panel" style="display:none"></div>
-            <div class="cal-panel" id="cal-panel" style="display:none"></div>
-         
-            <div class="browse" id="browse" style="display:none">
+        
+            <div class="browse" id="browse" style="display:none">            <div class="filter-panel" id="filter-panel" style="display:none"></div>
+              <div class="cal-panel" id="cal-panel" style="display:none"></div>
+
               <div class="list-sec">
                 <div class="list-head">
                   <span class="section-label" id="list-label">Recent Alerts</span>
