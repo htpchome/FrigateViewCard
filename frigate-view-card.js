@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.225";
+const VERSION = "1.0.227";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -148,6 +148,13 @@ function normalizeCameraConnectionType(value) {
     return "ha_direct";
   }
   return DEFAULT_CAMERA_CONNECTION_TYPE;
+}
+
+function normalizeAlertsAreaContent(value) {
+  const mode = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  return mode === "all_reviews" ? "all_reviews" : "alerts_only";
 }
 
 function normalizeHexColor(value) {
@@ -1183,6 +1190,7 @@ class FrigateViewCard extends HTMLElement {
     this._deepLinkMediaHint = "";
     this._deepLinkCameraHint = "";
     this._deepLinkApplied = false;
+    this._deepLinkEventLookupTried = false;
     this._deepLinkReviewLookupTried = false;
     this._domShadowOriginalStyles = new Map();
     this._committedConfig = null;
@@ -1502,6 +1510,7 @@ class FrigateViewCard extends HTMLElement {
           entity: c,
           name: null,
           connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+          alerts_content: "alerts_only",
         };
       }
       if (c && typeof c === "object") {
@@ -1509,12 +1518,14 @@ class FrigateViewCard extends HTMLElement {
           entity: c.entity || c.camera_entity || null,
           name: c.name || null,
           connection_type: normalizeCameraConnectionType(c.connection_type),
+          alerts_content: normalizeAlertsAreaContent(c.alerts_content),
         };
       }
       return {
         entity: null,
         name: null,
         connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+        alerts_content: "alerts_only",
       };
     };
 
@@ -1525,16 +1536,28 @@ class FrigateViewCard extends HTMLElement {
     } else if (config.cameras && typeof config.cameras === "object") {
       cameras = [normalizeCamera(config.cameras)].filter((c) => c.entity);
     } else if (config.camera_entity) {
-      cameras = [{ entity: config.camera_entity, name: config.title || null }];
+      cameras = [
+        {
+          entity: config.camera_entity,
+          name: config.title || null,
+          alerts_content: "alerts_only",
+        },
+      ];
     } else if (config.camera) {
       cameras = [normalizeCamera(config.camera)].filter((c) => c.entity);
     } else if (config.entity && /^camera\./.test(String(config.entity))) {
-      cameras = [{ entity: String(config.entity), name: config.title || null }];
+      cameras = [
+        {
+          entity: String(config.entity),
+          name: config.title || null,
+          alerts_content: "alerts_only",
+        },
+      ];
     } else if (Array.isArray(config.entities) && config.entities.length) {
       cameras = config.entities
         .map((e) => (typeof e === "string" ? e : e?.entity))
         .filter((e) => typeof e === "string" && /^camera\./.test(e))
-        .map((e) => ({ entity: e, name: null }));
+        .map((e) => ({ entity: e, name: null, alerts_content: "alerts_only" }));
     } else if (prevConfig?.cameras?.length) {
       cameras = prevConfig.cameras.map(normalizeCamera).filter((c) => c.entity);
     } else {
@@ -1543,7 +1566,13 @@ class FrigateViewCard extends HTMLElement {
 
     if (!cameras.length) {
       // Final safety placeholder: keep card mountable instead of red error state.
-      cameras = [{ entity: "camera.front_door", name: "Front Door" }];
+      cameras = [
+        {
+          entity: "camera.front_door",
+          name: "Front Door",
+          alerts_content: "alerts_only",
+        },
+      ];
     }
     if (cameras.length > 4) cameras = cameras.slice(0, 4);
 
@@ -1901,6 +1930,7 @@ class FrigateViewCard extends HTMLElement {
       .trim()
       .toLowerCase();
     this._deepLinkApplied = false;
+    this._deepLinkEventLookupTried = false;
     this._deepLinkReviewLookupTried = false;
   }
 
@@ -1924,7 +1954,12 @@ class FrigateViewCard extends HTMLElement {
   _consumeDeepLinkEventOpen() {
     if (!this._deepLinkEventId || this._deepLinkApplied) return;
     const event = this._findEventById(this._deepLinkEventId);
-    if (!event) return;
+    if (!event) {
+      this._deepLinkEventLookupTried = true;
+      this._consumeDeepLinkReviewOpen();
+      return;
+    }
+    this._deepLinkEventLookupTried = true;
 
     const eventCam = String(event.camera || "").toLowerCase();
     if (eventCam) {
@@ -1957,7 +1992,7 @@ class FrigateViewCard extends HTMLElement {
 
   _consumeDeepLinkReviewOpen() {
     if (this._deepLinkApplied) return;
-    if (this._deepLinkEventId) return;
+    if (this._deepLinkEventId && !this._deepLinkEventLookupTried) return;
     if (!this._deepLinkReviewId) return;
 
     const review = (this._reviews || []).find(
@@ -1966,6 +2001,7 @@ class FrigateViewCard extends HTMLElement {
     const reviewEventId = String(review?.data?.detections?.[0] || "");
     if (reviewEventId) {
       this._deepLinkEventId = reviewEventId;
+      this._deepLinkEventLookupTried = false;
       this._consumeDeepLinkEventOpen();
       return;
     }
@@ -6929,16 +6965,21 @@ class FrigateViewCard extends HTMLElement {
     this._syncOlderHint(false);
   }
   _renderReviews(list) {
-    this._renderListLabel(this._reviews[0]?.start_time || null);
-    if (!this._reviews.length) {
-      this._setListHtmlIfChanged(
-        list,
-        '<div class="empty">No alerts in this window</div>',
-      );
+    const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
+    const filteredReviews = showAllReviews
+      ? [...this._reviews]
+      : this._reviews.filter((review) => review?.severity === "alert");
+    const emptyText = showAllReviews
+      ? "No reviews in this window"
+      : "No alerts in this window";
+
+    this._renderListLabel(filteredReviews[0]?.start_time || null);
+    if (!filteredReviews.length) {
+      this._setListHtmlIfChanged(list, `<div class="empty">${emptyText}</div>`);
       this._syncOlderHint(true);
       return;
     }
-    const allRevs = [...this._reviews].sort(
+    const allRevs = [...filteredReviews].sort(
       (a, b) => b.start_time - a.start_time,
     );
     this._renderListLabel(allRevs[0]?.start_time || null);
@@ -7101,12 +7142,14 @@ class FrigateViewCardEditor extends HTMLElement {
             entity: c,
             name: "",
             connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+            alerts_content: "alerts_only",
           };
         }
         return {
           entity: c?.entity || c?.camera_entity || "",
           name: c?.name || "",
           connection_type: normalizeCameraConnectionType(c?.connection_type),
+          alerts_content: normalizeAlertsAreaContent(c?.alerts_content),
         };
       })
       .filter((c) => c.entity)
@@ -7248,6 +7291,12 @@ class FrigateViewCardEditor extends HTMLElement {
       : "Frigate go2rtc";
   }
 
+  _cameraAlertsContentLabel(value) {
+    return normalizeAlertsAreaContent(value) === "all_reviews"
+      ? "All reviews"
+      : "Alerts only";
+  }
+
   _reorderCameras(from, to) {
     if (from === to || from < 0 || to < 0) return;
     const cur = [...this._getCams()];
@@ -7267,6 +7316,7 @@ class FrigateViewCardEditor extends HTMLElement {
             entity: "",
             name: "",
             connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+            alerts_content: "alerts_only",
           }
         : cams[index] || {};
     this._editingCamIndex = index;
@@ -7276,6 +7326,9 @@ class FrigateViewCardEditor extends HTMLElement {
     const name = this.querySelector("#camera-modal-name");
     const entity = this.querySelector("#camera-modal-entity");
     const connectionType = this.querySelector("#camera-modal-connection-type");
+    const alertsContentAllReviews = this.querySelector(
+      "#camera-modal-all-reviews",
+    );
     const helper = this.querySelector("#camera-modal-helper");
     if (title) title.textContent = index == null ? "Add" : "Edit";
     if (save) save.textContent = index == null ? "Add" : "Save";
@@ -7288,6 +7341,10 @@ class FrigateViewCardEditor extends HTMLElement {
       const nextType = normalizeCameraConnectionType(cam?.connection_type);
       connectionType.value = nextType;
       connectionType.dataset.value = nextType;
+    }
+    if (alertsContentAllReviews) {
+      alertsContentAllReviews.checked =
+        normalizeAlertsAreaContent(cam?.alerts_content) === "all_reviews";
     }
     if (helper) helper.textContent = "";
     if (modal) modal.classList.remove("hidden");
@@ -7316,6 +7373,10 @@ class FrigateViewCardEditor extends HTMLElement {
         this.querySelector("#camera-modal-connection-type")?.value ||
         DEFAULT_CAMERA_CONNECTION_TYPE,
     );
+    const alertsContent =
+      this.querySelector("#camera-modal-all-reviews")?.checked === true
+        ? "all_reviews"
+        : "alerts_only";
     const helper = this.querySelector("#camera-modal-helper");
     if (!entity) {
       if (helper) helper.textContent = "Camera is required.";
@@ -7327,12 +7388,18 @@ class FrigateViewCardEditor extends HTMLElement {
         if (helper) helper.textContent = "Maximum 4 cameras.";
         return;
       }
-      cur.push({ entity, name, connection_type: connectionType });
+      cur.push({
+        entity,
+        name,
+        connection_type: connectionType,
+        alerts_content: alertsContent,
+      });
     } else if (cur[this._editingCamIndex]) {
       cur[this._editingCamIndex] = {
         entity,
         name,
         connection_type: connectionType,
+        alerts_content: alertsContent,
       };
     }
     this._config = { ...this._config, cameras: cur.slice(0, 4) };
@@ -7569,7 +7636,7 @@ class FrigateViewCardEditor extends HTMLElement {
         (cam, i) => `
       <div class="cam-row" draggable="true" data-row="${i}">
         <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
-        <div><div class="cam-name">${this._cameraLabel(cam)}</div><div class="cam-meta">${this._cameraConnectionLabel(cam.connection_type)}</div></div>
+        <div><div class="cam-name">${this._cameraLabel(cam)}</div><div class="cam-meta">${this._cameraConnectionLabel(cam.connection_type)} · ${this._cameraAlertsContentLabel(cam.alerts_content)}</div></div>
                 <button class="cam-action" type="button" title="Edit" aria-label="Edit" data-edit-cam="${i}"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg></button>
                 <button class="cam-action" type="button" title="Delete" aria-label="Delete" data-remove-cam="${i}"><svg viewBox="0 0 24 24" style="width:24px; height:24px" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg></button>
       </div>`,
@@ -7861,6 +7928,13 @@ class FrigateViewCardEditor extends HTMLElement {
           <div class="cam-modal-field">
             <ha-input id="camera-modal-name" label="Name" placeholder="Display name (optional)"></ha-input>
           </div>
+          <div class="cam-modal-field">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="cam-modal-label" style="margin:0">Alerts Area Content: All Reviews</span>
+              <ha-switch id="camera-modal-all-reviews"></ha-switch>
+            </div>
+            <div class="field-helper">In Frigate, Reviews can include Alerts, Detections, or both. Off = Alerts Only (default). On = All Reviews.</div>
+          </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
             <button type="button" id="camera-modal-cancel" class="cam-btn">Cancel</button>
@@ -8048,6 +8122,7 @@ class FrigateViewCardEditor extends HTMLElement {
             entity: c?.entity || "",
             name: c?.name || "",
             connection_type: normalizeCameraConnectionType(c?.connection_type),
+            alerts_content: normalizeAlertsAreaContent(c?.alerts_content),
           }))
           .filter((c) => c.entity)
           .slice(0, 4)

@@ -26,8 +26,20 @@ Tap Action URL examples (Frigate Notifications blueprint variables):
 - Event-based: `https://YOUR_HA_URL/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}&event={{id}}`
 - Review-based: `https://YOUR_HA_URL/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}&review={{review_id}}`
 - Combined fallback (single template): `https://YOUR_HA_URL/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}&event={{id}}&review={{review_id}}`
+- Combined snapshot fallback (single template): `https://YOUR_HA_URL/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}&event={{id}}&review={{review_id}}&media=snapshot`
 - Snapshot popup from event: `https://YOUR_HA_URL/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}&event={{id}}&media=snapshot`
 - Snapshot popup from review: `https://YOUR_HA_URL/YOUR_DASHBOARD/YOUR_VIEW?camera={{camera}}&review={{review_id}}&media=snapshot`
+
+## Alerts Tab Review Filter (Per Camera)
+
+Frigate camera review settings can classify Reviews as Alerts, Detections, or both.
+
+Each camera in FrigateViewCard now has an `Alerts Area Content: All Reviews` toggle in Camera Settings:
+
+- Off (default): Alerts tab shows Alerts only.
+- On: Alerts tab shows all Reviews (Alerts + Detections).
+
+This is a per-camera setting and only affects what is displayed in the Alerts tab list.
 
 Notes:
 
