@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.207";
+const VERSION = "1.0.208";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1072,8 +1072,8 @@ class FrigateViewCard extends HTMLElement {
       if (!id) return;
       this._missingThumbIds.add(id);
       img.style.display = "none";
-      const fallback = img.nextElementSibling;
-      if (fallback) fallback.style.display = "flex";
+      const placeholder = img.nextElementSibling;
+      if (placeholder) placeholder.style.display = "flex";
     };
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
     this._hass = null;
@@ -1498,7 +1498,7 @@ class FrigateViewCard extends HTMLElement {
     }
 
     if (!cameras.length) {
-      // Final safety fallback: keep card mountable instead of red error state.
+      // Final safety placeholder: keep card mountable instead of red error state.
       cameras = [{ entity: "camera.front_door", name: "Front Door" }];
     }
     if (cameras.length > 4) cameras = cameras.slice(0, 4);
@@ -2257,7 +2257,7 @@ class FrigateViewCard extends HTMLElement {
           v.requestVideoFrameCallback(() => done(true));
         }
 
-        // Fallback signals for browsers without requestVideoFrameCallback.
+        // Placeholder-ready signals for browsers without requestVideoFrameCallback.
         if (!eventBound) {
           eventBound = true;
           const finish = () => {
@@ -2383,10 +2383,10 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _setStreamFallbackVisible(visible, refreshImage = false) {
-    const fallback = this.shadowRoot?.querySelector("#stream-fallback");
+    const placeholder = this.shadowRoot?.querySelector("#stream-fallback");
     const status = this.shadowRoot?.querySelector("#stream-fallback-status");
-    if (fallback) {
-      fallback.hidden = !visible;
+    if (placeholder) {
+      placeholder.hidden = !visible;
       if (!visible && status) status.hidden = true;
       if (visible && refreshImage) this._refreshStreamFallbackImage();
     }
@@ -3011,7 +3011,7 @@ class FrigateViewCard extends HTMLElement {
         if (edgeMseOk) return;
       }
 
-      // Probe HLS only as an explicit fallback after WebRTC/MSE fail.
+      // Probe HLS only as an explicit last resort after WebRTC/MSE fail.
       if (!forcedType) {
         const hlsOk = await this._tryMountGo2RTCHLS(
           slot,
@@ -3021,7 +3021,7 @@ class FrigateViewCard extends HTMLElement {
         if (hlsOk) return;
       }
 
-      // go2rtc attempts failed: show snapshot fallback.
+      // go2rtc attempts failed: show snapshot placeholder.
       this._setActiveStreamType("snapshot");
       this._setStreamLoading(false);
       this._setStreamFallbackVisible(true);
