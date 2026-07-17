@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.223";
+const VERSION = "1.0.224";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1180,6 +1180,7 @@ class FrigateViewCard extends HTMLElement {
     this._mountTargetEntity = "";
     this._deepLinkEventId = "";
     this._deepLinkReviewId = "";
+    this._deepLinkMediaHint = "";
     this._deepLinkCameraHint = "";
     this._deepLinkApplied = false;
     this._deepLinkReviewLookupTried = false;
@@ -1848,8 +1849,13 @@ class FrigateViewCard extends HTMLElement {
       params.get("cam") ||
       params.get("camera_entity") ||
       "";
+    const mediaHint =
+      params.get("media") || params.get("view") || params.get("open") || "";
     this._deepLinkEventId = String(eventId || "").trim();
     this._deepLinkReviewId = String(reviewId || "").trim();
+    this._deepLinkMediaHint = String(mediaHint || "")
+      .trim()
+      .toLowerCase();
     this._deepLinkCameraHint = String(cameraHint || "")
       .trim()
       .toLowerCase();
@@ -1894,6 +1900,14 @@ class FrigateViewCard extends HTMLElement {
     }
 
     this._deepLinkApplied = true;
+    if (this._deepLinkMediaHint === "snapshot") {
+      this._showSnapshot(event);
+      return;
+    }
+    if (this._deepLinkMediaHint === "clip" && event.has_clip) {
+      this._showClip(event, { mediaType: "clip" });
+      return;
+    }
     this._open(this._deepLinkEventId);
   }
 
