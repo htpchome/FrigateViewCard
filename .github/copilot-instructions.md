@@ -112,3 +112,18 @@ These standards are mandatory for changes to `frigate-view-card.js`.
 - Use async/await with explicit error handling.
 - Keep DOM work minimal and intentional; avoid unnecessary query/write churn.
 - When fixing regressions, remove complexity before adding new mechanisms.
+
+## 11. Refactoring Standards (Mandatory)
+
+These rules reflect the JS refactor completed in this project and must be preserved.
+
+- **SRP boundaries:** Keep data loading, normalization, view-state transitions, and DOM rendering in separate helpers/methods.
+- **Pure utilities first:** Move deterministic logic (formatting, URL/source selection, filtering/sorting, state derivation) into pure utility functions that do not read/write `this`.
+- **Class methods for orchestration only:** Component/class methods should primarily coordinate calls, update minimal state, and trigger focused renders.
+- **No Promise chains in new code:** Use `async/await` with `try...catch`; avoid `.then()` / `.catch()` flow for primary control paths.
+- **Guard clauses over deep nesting:** Use early returns for invalid state, missing config, unsupported tabs/windows, and empty payloads.
+- **Avoid hidden side effects:** Prefer explicit inputs/outputs over mutation-heavy flows; do not mutate fetched payloads in-place unless required and documented.
+- **Stable render contracts:** Rendering helpers should accept explicit data and produce deterministic markup for the same input.
+- **DOM writes are intentional:** Coalesce render updates and skip equivalent rewrites to prevent unnecessary remounting and browser churn.
+- **Keep public behavior unchanged unless requested:** Refactors must preserve user-facing behavior and media/startup contracts unless the task explicitly asks to change behavior.
+- **Refactor validation:** For behavioral refactors, run syntax and regression checks (for this repo: `node --check frigate-view-card.js` and `node --test tests/refactor-regression.test.mjs` when the test file exists).
