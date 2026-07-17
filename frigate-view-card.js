@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.286";
+const VERSION = "1.0.287";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1001,7 +1001,6 @@ const STYLES = `
 
    /* ── toast ── */
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99;background:rgba(15,21,40,.96);border:1px solid rgba(239,68,68,.4);color:var(--c-off);padding:8px 14px;border-radius:6px;font-size:0.9rem;box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:90%;}
-  .diag{font-size:0.75rem;color:var(--c-off);background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:5px;padding:6px 8px;margin-bottom:7px;}
 
 /* ========================================================= */
 .popup-content {position: absolute;bottom: 0;left: 0;width: 100%;height: 95%;max-height: 95%;  min-height: 95%;box-sizing: border-box;z-index: var(--popup-z-index);background: var(--popup-bg);
@@ -4023,9 +4022,9 @@ class FrigateViewCard extends HTMLElement {
             <div class="frigate-view">${ICONS.frigateview}</div> 
             <div class="tabs shadow-small">
               ${this._buildTabsMarkup()}
-              <div class="filter-panel" id="filter-panel" style="display:none"></div>
-              <div class="cal-panel" id="cal-panel" style="display:none"></div>
             </div>
+            <div class="filter-panel" id="filter-panel" style="display:none"></div>
+            <div class="cal-panel" id="cal-panel" style="display:none"></div>
          
             <div class="browse" id="browse" style="display:none">
               <div class="list-sec">
@@ -4033,7 +4032,6 @@ class FrigateViewCard extends HTMLElement {
                   <span class="section-label" id="list-label">Recent Alerts</span>
                   <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
                 </div>
-                <div class="diag" id="diag" style="display:none"></div>
                 <div class="list" id="list">
                   <div class="empty">Loading…</div>
                 </div>
