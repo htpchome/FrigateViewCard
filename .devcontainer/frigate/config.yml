@@ -12,7 +12,9 @@ go2rtc:
     front_door:
       - ffmpeg:http://97.68.104.34:80/mjpg/video.mjpg#video=copy#audio=copy#audio=opus
     backyard:
-      - ffmpeg:http://97.68.104.34:80/mjpg/video.mjpg#video=copy#audio=copy#audio=opus
+      - rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov
+    driveway:
+      -rtsp://demo:demo@ipvmdemo.dyndns.org:5541/onvif-media/media.amp?profile=profile_1_h264&sessiontimeout=60&streamtype=unicast
   webrtc:
     candidates:
       - 0.0.0.0:8555
@@ -93,9 +95,11 @@ cameras:
     enabled: True
     ffmpeg:
       inputs:
-        - path: -f lavfi -i testsrc=size=1280x720:rate=10
+        - path: rtsp://127.0.0.1/driveway
+          input_args: preset-rtsp-restream-low-latency
           roles:
             - detect
+            - record
     detect:
       enabled: false
       width: 1280
