@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.192";
+const VERSION = "1.0.195";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1077,6 +1077,21 @@ class FrigateViewCard extends HTMLElement {
       if (!(img instanceof HTMLImageElement)) return;
       const id = img.dataset.thumbId;
       if (!id) return;
+      const retries = Number(img.dataset.thumbRetry || "0");
+      if (retries < 1) {
+        img.dataset.thumbRetry = String(retries + 1);
+        const baseSrc = img.currentSrc || img.src || "";
+        const retrySrc = baseSrc
+          ? `${baseSrc}${baseSrc.includes("?") ? "&" : "?"}retry=${Date.now()}`
+          : "";
+        if (retrySrc) {
+          setTimeout(() => {
+            if (!img.isConnected) return;
+            img.src = retrySrc;
+          }, 250);
+          return;
+        }
+      }
       img.style.display = "none";
       const fallback = img.nextElementSibling;
       if (fallback) fallback.style.display = "flex";
@@ -2445,9 +2460,16 @@ class FrigateViewCard extends HTMLElement {
     if (!img) return;
     const reqId = ++this._fallbackReqId;
     const entity = this._activeCam?.entity;
+    const altSrc = this._streamFallbackAltUrl(entity);
+
+    // Show an immediate image from HA state while signed proxy URL resolves.
+    if (altSrc) {
+      if (status) status.hidden = true;
+      if (img.src !== altSrc) img.src = altSrc;
+    }
+
     const primarySrc = await this._streamFallbackUrl(entity);
     if (reqId !== this._fallbackReqId) return;
-    const altSrc = this._streamFallbackAltUrl(entity);
     const src = primarySrc || altSrc;
     if (!src) return;
     if (status) status.hidden = true;
@@ -2957,8 +2979,8 @@ class FrigateViewCard extends HTMLElement {
       slot.innerHTML = "";
       if (!quiet) {
         this._setActiveStreamType("--");
-        // Keep fallback hidden during initial transport attempts to avoid startup flashing.
-        this._setStreamFallbackVisible(false);
+        // Show the latest snapshot while live transport negotiates.
+        this._setStreamFallbackVisible(true, true);
         this._setStreamLoading(true);
       } else {
         this._setStreamFallbackVisible(false);
