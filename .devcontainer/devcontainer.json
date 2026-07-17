@@ -6,7 +6,7 @@
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
 
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:4.0.0": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/node:2.1.0": {
       "version": "20"
     },
@@ -23,7 +23,8 @@
         "ms-azuretools.vscode-docker",
         "saoudrizwan.cline",
         "saoudrizwan.claude-dev",
-        "GitHub.copilot-chat"
+        "GitHub.copilot-chat",
+        "keesschollaart.vscode-home-assistant"
       ],
       "settings": {
         "chat.mcp.enabled": true,

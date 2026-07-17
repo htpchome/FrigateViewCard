@@ -12,7 +12,7 @@ go2rtc:
     front_door:
       - ffmpeg:http://97.68.104.34:80/mjpg/video.mjpg#video=copy#audio=copy#audio=opus
     backyard:
-      - ffmpeg:http://217.180.234.228:80/mjpg/video.mjpg
+      - ffmpeg:http://97.68.104.34:80/mjpg/video.mjpg#video=copy#audio=copy#audio=opus
   webrtc:
     candidates:
       - 0.0.0.0:8555
@@ -97,20 +97,20 @@ cameras:
           roles:
             - detect
     detect:
-      enabled: true
+      enabled: false
       width: 1280
       height: 720
       fps: 5
     record:
-      enabled: true
+      enabled: false
       alerts:
         retain:
-          days: 7
+          days: 1
       detections:
         retain:
-          days: 7
+          days: 1
       continuous:
-        days: 3
+        days: 1
       motion:
         days: 0
     objects:
