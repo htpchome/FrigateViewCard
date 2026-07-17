@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.276";
+const VERSION = "1.0.277";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -833,12 +833,13 @@ const STYLES = `
   .tabs::-webkit-scrollbar{display:none;}
 
   /* ── pill button ── */
-  .pill{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;height:28px;width:28px;background-color:var(--c-bg-main);padding:3px;}
+  .pill{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;height:30px;width:30px;background-color:var(--c-bg-main);padding:3px;}
   .pill svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2);padding:4px;}
   .pill:hover svg{color:var(--c-primary-d);}
   .pill.active{background:var(--c-primary-d);} 
   .pill.active svg{opacity:1;}
-
+  .pill.active svg{color:var(--c-text2);}
+  
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
   .more,.end{position:relative;display:flex;min-height:0;align-items:center;justify-content:center;font-size:0.85rem;color:var(--c-text2);padding:6px;border-top: 1px solid var(--c-border);}
