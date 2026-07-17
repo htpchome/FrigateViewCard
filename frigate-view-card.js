@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.263";
+const VERSION = "1.0.264";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -829,7 +829,7 @@ const STYLES = `
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
-  .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:0 8px;overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;transition: background-color 0.3s ease;}
+  .tabs{display:flex;flex-wrap: wrap;padding:0 8px;overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;transition: background-color 0.3s ease;}
   .tabs::-webkit-scrollbar{display:none;}
 
   /* ── pill button ── */
