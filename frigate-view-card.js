@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.175";
+const VERSION = "1.0.176";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -718,6 +718,7 @@ const STYLES = `
     height:95%;
     overflow-y:auto;
     position:relative}
+  .card.tight-margins .browse{padding:0 2px;}
   .card .browse::-webkit-scrollbar{width:8px;}
   .card .browse::-webkit-scrollbar-track{background:transparent;}
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;border:2px solid transparent;}
@@ -1238,13 +1239,10 @@ class FrigateViewCard extends HTMLElement {
       this._parentOrigStyle = {
         height: this.parentElement.style.height,
         margin: this.parentElement.style.margin,
+        padding: this.parentElement.style.padding,
       };
       this.parentElement.style.height = "100%";
-      this.parentElement.style.margin = "0";
-      this.parentElement.style.padding = "0";
-      if (this._config?.tight_margins && !this._isPanelView()) {
-        this._adjustSectionRowGap();
-      }
+      this._applyTightMargins();
       this._applyLayoutMode();
       if (this._config?.wide_view) {
         this._syncColHeight();
@@ -1325,6 +1323,39 @@ class FrigateViewCard extends HTMLElement {
       if (h > 0) r.style.maxHeight = h + "px";
     });
   }
+
+  _applyTightMargins() {
+    const tightMarginsEnabled = this._config?.tight_margins === true;
+    if (this.parentElement) {
+      this.parentElement.style.height = "100%";
+      if (tightMarginsEnabled) {
+        this.parentElement.style.margin = "0";
+        this.parentElement.style.padding = "0";
+      } else if (this._parentOrigStyle) {
+        this.parentElement.style.margin = this._parentOrigStyle.margin;
+        this.parentElement.style.padding = this._parentOrigStyle.padding;
+      }
+    }
+    const card = this.shadowRoot?.querySelector("#card");
+    if (card) card.classList.toggle("tight-margins", tightMarginsEnabled);
+    this._setSectionsRowGap(tightMarginsEnabled);
+  }
+
+  _setSectionsRowGap(tightMarginsEnabled) {
+    let element = this;
+    while (element) {
+      if (element.tagName === "HUI-SECTIONS-VIEW") {
+        if (tightMarginsEnabled && !this._isPanelView()) {
+          element.style.setProperty("--ha-view-sections-row-gap", "0px");
+        } else {
+          element.style.removeProperty("--ha-view-sections-row-gap");
+        }
+        break;
+      }
+      element = element.parentNode || element.host;
+    }
+  }
+
   _applyLayoutMode() {
     const layout = this.shadowRoot.querySelector("#layout");
     if (!layout) return;
@@ -1344,22 +1375,6 @@ class FrigateViewCard extends HTMLElement {
         colL.style.width = "";
         colR.style.width = "";
       }
-    }
-  }
-
-  _adjustSectionRowGap() {
-    // 1. Climb out of the card to find the view container
-    let element = this;
-    while (element) {
-      // Look for the Sections view component
-      if (element.tagName === "HUI-SECTIONS-VIEW") {
-        // 2. Inject the custom CSS variable directly into the view element
-        element.style.setProperty("--ha-view-sections-row-gap", "0px");
-        break;
-      }
-
-      // Cross shadow boundaries if they exist, otherwise look at parentNode
-      element = element.parentNode || element.host;
     }
   }
 
@@ -1689,7 +1704,9 @@ class FrigateViewCard extends HTMLElement {
     if (this._parentOrigStyle && this.parentElement) {
       this.parentElement.style.height = this._parentOrigStyle.height;
       this.parentElement.style.margin = this._parentOrigStyle.margin;
+      this.parentElement.style.padding = this._parentOrigStyle.padding;
     }
+    this._setSectionsRowGap(false);
     this._restoreDomShadowStyles();
     this._cleanupEngine();
   }
@@ -3646,6 +3663,8 @@ class FrigateViewCard extends HTMLElement {
   _applyCardStyle() {
     const card = this.shadowRoot.querySelector(".card");
     if (!card) return;
+
+    this._applyTightMargins();
 
     // Stream height — sets :host height/max-height via --card-host-height,
     // and #eng-wrap max-height via --stream-h.
