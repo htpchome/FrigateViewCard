@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.217";
+const VERSION = "1.0.218";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1096,6 +1096,7 @@ class FrigateViewCard extends HTMLElement {
     this._browseOpen = false;
     this._winEnd = 0;
     this._winStart = 0;
+    this._followNowWindow = true;
     this._loading = false;
     this._exhausted = false;
     this._daysWithActivity = new Set();
@@ -1740,6 +1741,7 @@ class FrigateViewCard extends HTMLElement {
   async _start() {
     await this._discoverAll();
     const now = Math.floor(Date.now() / 1000);
+    this._followNowWindow = true;
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
 
@@ -3114,7 +3116,7 @@ class FrigateViewCard extends HTMLElement {
     return parseWs(await this._hass.callWS(p));
   }
   _isNowWindow() {
-    return Math.abs(this._winEnd - Math.floor(Date.now() / 1000)) < 120;
+    return this._followNowWindow;
   }
   async _fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
     const items = [];
@@ -3260,6 +3262,11 @@ class FrigateViewCard extends HTMLElement {
     this._reloadPending = false;
     this._reloadAfterLoad = false;
     if (replace) this._exhausted = false;
+    if (this._followNowWindow) {
+      const now = Math.floor(Date.now() / 1000);
+      this._winEnd = now;
+      this._winStart = now - this._config.window_days * DAY;
+    }
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) {
       this._loading = false;
@@ -5993,6 +6000,7 @@ class FrigateViewCard extends HTMLElement {
     }
   }
   _goNow() {
+    this._followNowWindow = true;
     const now = Math.floor(Date.now() / 1000);
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
@@ -6114,6 +6122,7 @@ class FrigateViewCard extends HTMLElement {
     this._renderCal();
   }
   _pickDay(ds) {
+    this._followNowWindow = false;
     const [y, mo, da] = ds.split("-").map(Number);
     this._winStart = this._tzDateTimeToEpochSeconds(y, mo, da, 0, 0, 0);
     this._winEnd = Math.min(
