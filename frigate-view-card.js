@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.260";
+const VERSION = "1.0.261";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -4020,10 +4020,10 @@ class FrigateViewCard extends HTMLElement {
             <div class="tabs shadow-small">
               ${this._buildTabsMarkup()}
             </div>
+            <div class="filter-panel" id="filter-panel" style="display:none"></div>
+            <div class="cal-panel" id="cal-panel" style="display:none"></div>
          
             <div class="browse" id="browse" style="display:none">
-              <div class="filter-panel" id="filter-panel" style="display:none"></div>
-              <div class="cal-panel" id="cal-panel" style="display:none"></div>
               <div class="list-sec">
                 <div class="list-head">
                   <span class="section-label" id="list-label">Recent Alerts</span>
