@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.172";
+const VERSION = "1.0.173";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -220,6 +220,103 @@ const dialogActionKindFromEvent = (event) => {
   );
   if (!(button instanceof Element)) return null;
   return dialogActionKindFromElement(button);
+};
+
+const wireCameraRowDragAndDrop = ({ rows, clearDropTargets, onReorder }) => {
+  rows.forEach((row) => {
+    row.addEventListener("dragstart", (event) => {
+      const rowIndex = row.dataset.row;
+      event.dataTransfer?.setData("text/plain", rowIndex);
+      event.dataTransfer.effectAllowed = "move";
+      row.classList.add("dragging");
+    });
+    row.addEventListener("dragend", () => {
+      row.classList.remove("dragging");
+      clearDropTargets();
+    });
+    row.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      row.classList.add("drop-target");
+    });
+    row.addEventListener("dragleave", () => {
+      row.classList.remove("drop-target");
+    });
+    row.addEventListener("drop", (event) => {
+      event.preventDefault();
+      row.classList.remove("drop-target");
+      const fromIndex = Number(
+        event.dataTransfer?.getData("text/plain") || "-1",
+      );
+      const toIndex = Number(row.dataset.row || "-1");
+      onReorder(fromIndex, toIndex);
+    });
+  });
+};
+
+const setFieldErrorState = (root, selector, message) => {
+  const field = root.querySelector(selector);
+  if (!field) return;
+  field.toggleAttribute("data-invalid", !!message);
+  const helper = root.querySelector(`${selector}-helper`);
+  if (helper) {
+    helper.textContent = message || "";
+    helper.classList.toggle("error", !!message);
+  }
+};
+
+const bindNumericInputField = ({ root, selector, onSanitize }) => {
+  const field = root.querySelector(selector);
+  if (!field) return;
+
+  const sanitize = () => {
+    const clean = String(field.value || "").replace(/[^0-9]/g, "");
+    if (field.value !== clean) field.value = clean;
+    onSanitize?.();
+  };
+
+  const restrictKey = (event) => {
+    if (
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      [
+        "Backspace",
+        "Delete",
+        "Tab",
+        "Enter",
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowUp",
+        "ArrowDown",
+        "Home",
+        "End",
+      ].includes(event.key)
+    ) {
+      return;
+    }
+    if (!/^[0-9]$/.test(event.key)) event.preventDefault();
+  };
+
+  const restrictBeforeInput = (event) => {
+    if (event.data && /[^0-9]/.test(event.data)) event.preventDefault();
+  };
+
+  field.addEventListener("input", sanitize);
+  field.addEventListener("change", sanitize);
+  field.addEventListener("value-changed", sanitize);
+
+  requestAnimationFrame(() => {
+    const innerInput = field.shadowRoot?.querySelector("input");
+    if (!innerInput || innerInput.dataset.frigateNumericBound === "true") {
+      return;
+    }
+    innerInput.dataset.frigateNumericBound = "true";
+    innerInput.inputMode = "numeric";
+    innerInput.pattern = "[0-9]*";
+    innerInput.addEventListener("keydown", restrictKey);
+    innerInput.addEventListener("beforeinput", restrictBeforeInput);
+    innerInput.addEventListener("input", sanitize);
+  });
 };
 
 const LABEL_COLORS = {
@@ -6482,33 +6579,17 @@ class FrigateViewCardEditor extends HTMLElement {
   }
 
   _wireCameraDragAndDrop() {
-    this.querySelectorAll(".cam-row").forEach((row) => {
-      row.addEventListener("dragstart", (ev) => {
-        const idx = row.dataset.row;
-        ev.dataTransfer?.setData("text/plain", idx);
-        ev.dataTransfer.effectAllowed = "move";
-        row.classList.add("dragging");
-      });
-      row.addEventListener("dragend", () => {
-        row.classList.remove("dragging");
-        this.querySelectorAll(".cam-row").forEach((r) =>
-          r.classList.remove("drop-target"),
-        );
-      });
-      row.addEventListener("dragover", (ev) => {
-        ev.preventDefault();
-        row.classList.add("drop-target");
-      });
-      row.addEventListener("dragleave", () => {
-        row.classList.remove("drop-target");
-      });
-      row.addEventListener("drop", (ev) => {
-        ev.preventDefault();
-        row.classList.remove("drop-target");
-        const from = Number(ev.dataTransfer?.getData("text/plain") || "-1");
-        const to = Number(row.dataset.row || "-1");
-        this._reorderCameras(from, to);
-      });
+    const rows = Array.from(this.querySelectorAll(".cam-row"));
+    wireCameraRowDragAndDrop({
+      rows,
+      clearDropTargets: () => {
+        this.querySelectorAll(".cam-row").forEach((row) => {
+          row.classList.remove("drop-target");
+        });
+      },
+      onReorder: (fromIndex, toIndex) => {
+        this._reorderCameras(fromIndex, toIndex);
+      },
     });
   }
   _renderSettingsPanel({ id, title, icon, content, active = false }) {
@@ -6612,14 +6693,7 @@ class FrigateViewCardEditor extends HTMLElement {
   }
 
   _setEditorFieldError(selector, message) {
-    const field = this.querySelector(selector);
-    if (!field) return;
-    field.toggleAttribute("data-invalid", !!message);
-    const helper = this.querySelector(`${selector}-helper`);
-    if (helper) {
-      helper.textContent = message || "";
-      helper.classList.toggle("error", !!message);
-    }
+    setFieldErrorState(this, selector, message);
   }
 
   _validateEditorFields() {
@@ -6670,58 +6744,7 @@ class FrigateViewCardEditor extends HTMLElement {
   }
 
   _bindNumericInput(selector, { onSanitize } = {}) {
-    const field = this.querySelector(selector);
-    if (!field) return;
-
-    const sanitize = () => {
-      const clean = String(field.value || "").replace(/[^0-9]/g, "");
-      if (field.value !== clean) field.value = clean;
-      onSanitize?.();
-    };
-
-    const restrictKey = (ev) => {
-      if (
-        ev.ctrlKey ||
-        ev.metaKey ||
-        ev.altKey ||
-        [
-          "Backspace",
-          "Delete",
-          "Tab",
-          "Enter",
-          "ArrowLeft",
-          "ArrowRight",
-          "ArrowUp",
-          "ArrowDown",
-          "Home",
-          "End",
-        ].includes(ev.key)
-      ) {
-        return;
-      }
-      if (!/^[0-9]$/.test(ev.key)) ev.preventDefault();
-    };
-
-    const restrictBeforeInput = (ev) => {
-      if (ev.data && /[^0-9]/.test(ev.data)) ev.preventDefault();
-    };
-
-    field.addEventListener("input", sanitize);
-    field.addEventListener("change", sanitize);
-    field.addEventListener("value-changed", sanitize);
-
-    requestAnimationFrame(() => {
-      const innerInput = field.shadowRoot?.querySelector("input");
-      if (!innerInput || innerInput.dataset.frigateNumericBound === "true") {
-        return;
-      }
-      innerInput.dataset.frigateNumericBound = "true";
-      innerInput.inputMode = "numeric";
-      innerInput.pattern = "[0-9]*";
-      innerInput.addEventListener("keydown", restrictKey);
-      innerInput.addEventListener("beforeinput", restrictBeforeInput);
-      innerInput.addEventListener("input", sanitize);
-    });
+    bindNumericInputField({ root: this, selector, onSanitize });
   }
 
   _render() {
@@ -7315,14 +7338,6 @@ class FrigateViewCardEditor extends HTMLElement {
     if (this.querySelector("#stream_height")) {
       this._bindNumericInput("#stream_height", {
         onSanitize: () => {
-          const streamHeightInput = this.querySelector("#stream_height");
-          if (!streamHeightInput) return;
-          const clean = String(streamHeightInput.value || "").replace(
-            /[^0-9]/g,
-            "",
-          );
-          if (streamHeightInput.value !== clean)
-            streamHeightInput.value = clean;
           this._validateEditorFields();
         },
       });
