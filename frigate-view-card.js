@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.254";
+const VERSION = "1.0.255";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -948,10 +948,10 @@ const STYLES = `
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
 
   /* ── pill button ── */
-  .pill{display:inline-flex;align-items:center;gap:4px;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:50%;padding:2px;font-size:1rem;font-weight:600;color:var(--c-text2);cursor:pointer;white-space:nowrap;flex-shrink:0;max-width:30px;max-height:30px}
+  .pill{display:inline-flex;align-items:center;gap:4px;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:50%;padding:2px;font-size:1rem;font-weight:600;color:var(--c-text2);cursor:pointer;white-space:nowrap;flex-shrink:0;width:36px;height:36px}
   .pill svg{width:24px;height:24px;opacity:0.85;}
-  .pill:hover{background:var(--c-primary-d);border-color:var(--c-primary-d);color:var(--c-text);}
-  .pill.active{background:var(--c-primary);border-color:var(--c-primary-d);color:var(--c-text);} 
+  .pill:hover{background:var(--c-primary-d);border-color:var(--c-border2);color:var(--c-text);}
+  .pill.active{background:var(--c-primary-d);border-color:var(--c-border2);color:var(--c-text);} 
   .pill.active svg{opacity:1;}
   .pill.icon-only{padding:4px;max-width:36px;max-height:30px}
   .pill.icon-only svg{width:24px;height:24px;opacity:0.85;}
