@@ -78,3 +78,37 @@ async function toggleLivingRoomLight(hass) {
 - Never expose sensitive private keys or seed phrases in the code.
 - Always sanitize user input before rendering it in the DOM (to prevent XSS attacks).
 - Handle asynchronous operations (such as API calls or promises) safely with proper error boundaries and loading states in templates.
+
+## 10. FrigateView Refactor Standards (Project-Specific)
+
+These standards are mandatory for changes to `frigate-view-card.js`.
+
+- **Versioning:** Bump `VERSION` for every behavioral or structural change.
+- **Live View Safety:** Do not modify live view mount/playback internals unless the change is explicitly requested or directly fixes a proven conflict.
+- **Startup Ordering:** Keep startup list-first for perceived performance: initial event window load must complete before live mount.
+
+### Event List & Thumbnail Stability
+
+- **Single-pass list rendering:** Prefer one complete list paint per data update over progressive chunk growth.
+- **No redundant list rewrites:** Do not call `innerHTML` repeatedly with equivalent content.
+- **Thumbnail nodes must remain stable:** Avoid patterns that remount thumbnail `<img>` elements during idle refreshes, tab switches, or camera switches.
+- **Avoid over-tuned render loops:** Do not introduce extra render timers/idle growth cycles for alerts/clips/snapshots unless explicitly requested.
+- **Keep fallback behavior simple:** Thumbnail fallback should only activate on actual image error, not via speculative toggling.
+
+### Camera/Tab Interaction Rules
+
+- **Camera switch:** Render cached list data immediately, then refresh in background.
+- **Tab switch:** Update only what changed; avoid forcing global rerenders that rebuild the same list markup.
+- **Refresh behavior:** Periodic refresh should not reset list state if the active window/camera is unchanged.
+
+### iOS Media Rules
+
+- **Alerts/Clips on iOS:** Must use `master.m3u8` playback path.
+- **Recordings on iOS:** Must use m3u8 recording sources only (no MP4 fallback path on iOS).
+
+### Code Hygiene Expectations
+
+- Prefer small, composable helpers over large coupled methods.
+- Use async/await with explicit error handling.
+- Keep DOM work minimal and intentional; avoid unnecessary query/write churn.
+- When fixing regressions, remove complexity before adding new mechanisms.
