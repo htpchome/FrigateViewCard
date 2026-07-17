@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.256";
+const VERSION = "1.0.257";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -829,9 +829,17 @@ const STYLES = `
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
-  .tabs{display:flex;gap:5px;flex-wrap: wrap;display:block;padding:8px;overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;}
+  .tabs{display:flex;gap:5px;flex-wrap: wrap;padding:8px;overflow-x:auto;scrollbar-width:none;position:sticky;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;}
   .tabs::-webkit-scrollbar{display:none;}
 
+  /* ── pill button ── */
+  .pill{display:inline-flex;align-items:center;gap:4px;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:50%;padding:2px;font-size:1rem;font-weight:600;color:var(--c-text2);cursor:pointer;white-space:nowrap;flex-shrink:0;width:32px;height:32px}
+  .pill svg{width:24px;height:24px;opacity:0.85;}
+  .pill:hover{background:var(--c-primary-d);border-color:var(--c-border2);color:var(--c-text);}
+  .pill.active{background:var(--c-primary-d);border-color:var(--c-border2);color:var(--c-text);} 
+  .pill.active svg{opacity:1;}
+  .pill.icon-only{padding:4px;max-width:36px;max-height:30px}
+  .pill.icon-only svg{width:24px;height:24px;opacity:0.85;}
 
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
@@ -946,15 +954,6 @@ const STYLES = `
   .cam-tab.active{background:var(--c-primary-l);border-color:var(--primary-color);color:var(--c-text);}
   .cam-tab svg{width:14.4px;height:14.4px;flex-shrink:0;}
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
-
-  /* ── pill button ── */
-  .pill{display:inline-flex;align-items:center;gap:4px;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:50%;padding:2px;font-size:1rem;font-weight:600;color:var(--c-text2);cursor:pointer;white-space:nowrap;flex-shrink:0;width:36px;height:36px}
-  .pill svg{width:24px;height:24px;opacity:0.85;}
-  .pill:hover{background:var(--c-primary-d);border-color:var(--c-border2);color:var(--c-text);}
-  .pill.active{background:var(--c-primary-d);border-color:var(--c-border2);color:var(--c-text);} 
-  .pill.active svg{opacity:1;}
-  .pill.icon-only{padding:4px;max-width:36px;max-height:30px}
-  .pill.icon-only svg{width:24px;height:24px;opacity:0.85;}
 
   /* ── timeline ── */
   .tl-tools{display:flex;gap:4px;}
