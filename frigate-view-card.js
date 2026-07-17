@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.236";
+const VERSION = "1.0.237";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -789,8 +789,9 @@ const STYLES = `
   .list-day-label::before{content:"";position:absolute;left:0px;right:0px;top:-3px;height:3px;background:var(--c-bg-main);}
   .list-item{position: relative;display:flex;flex-wrap:wrap;gap:9px;align-items:center;
     background:var(--c-bg-panel-main);margin-bottom:5px;
-    cursor:pointer;border-radius: 15px;padding:2px 10px 2px 2px}
-  .list-item:hover{background: var(--c-bg-panel);border:2px solid var(--c-primary-d);border-color:var(--c-primary-d);}
+    cursor:pointer;border-radius: 15px;padding:2px 10px 2px 2px;
+    border:2px solid var(--c-border);}
+  .list-item:hover{background: var(--c-bg-panel);border-color:var(--c-primary-d);}
   .list-item.compact{padding:2px 10px 2px 2px;flex-wrap:wrap;}
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
   .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
