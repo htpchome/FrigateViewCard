@@ -3089,7 +3089,6 @@ class FrigateViewCard extends HTMLElement {
     this._recordings = cached.recordings || [];
     this._reviews = cached.reviews || [];
     this._kept = cached.kept || [];
-    this._resetListRenderBudget();
     // Camera button should always return to single live view.
     this._viewMode = "single";
     if (popupOpen) this._closePopup();
@@ -3478,7 +3477,7 @@ class FrigateViewCard extends HTMLElement {
     } catch (error) {
       console.error("[Frigate] tab data load failed", error);
     } finally {
-      this._renderList();
+      this._requestListRender();
     }
   }
 
@@ -4454,13 +4453,12 @@ class FrigateViewCard extends HTMLElement {
   }
   _setTab(tab) {
     this._tab = tab;
-    this._resetListRenderBudget();
     this.shadowRoot
       .querySelectorAll("[data-tab]")
       .forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
     this._renderListLabel();
     void this._loadTabData(tab);
-    this._renderList();
+    this._requestListRender();
   }
   // ── playback ──────────────────────────────────────────────
   _allDisplayEvents() {
@@ -6315,7 +6313,7 @@ class FrigateViewCard extends HTMLElement {
       const target = Math.max(0, Number(this._listRenderTargetCount) || 0);
       if (current >= target) return;
       this._listRenderLimit = Math.min(target, current + LIST_RENDER_INCREMENT);
-      this._renderList();
+      this._requestListRender();
       if (this._listRenderLimit < target) {
         this._scheduleListRenderGrowth(target);
       }
