@@ -3126,9 +3126,7 @@ class FrigateViewCard extends HTMLElement {
     );
     const batchLimit = Math.max(
       1,
-      Number.isFinite(opts?.limit)
-        ? Math.floor(opts.limit)
-        : EVENT_FETCH_BATCH,
+      Number.isFinite(opts?.limit) ? Math.floor(opts.limit) : EVENT_FETCH_BATCH,
     );
     const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
     for (let page = 0; page < pageLimit; page++) {
