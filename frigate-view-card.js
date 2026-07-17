@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.272";
+const VERSION = "1.0.273";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -834,12 +834,10 @@ const STYLES = `
 
   /* ── pill button ── */
   .pill{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;height:28px;width:28px;background-color:var(--c-bg-main);}
-  .pill svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2);}
-  .pill:hover{background:var(--c-primary-d);}
+  .pill svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2);padding:4px;}
+  .pill:hover{background:var(--c-text4);}
   .pill.active{background:var(--c-primary-d);} 
   .pill.active svg{opacity:1;}
-  .pill.icon-only{padding:4px;max-width:36px;max-height:30px}
-  .pill.icon-only svg{width:24px;height:24px;opacity:0.85;}
 
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
@@ -3916,7 +3914,7 @@ class FrigateViewCard extends HTMLElement {
         ? ""
         : id === activeTab
           ? `<div class="pill active" data-tab="${id}" title="${label}">${icon}</div>`
-          : `<div class="pill icon-only" data-tab="${id}" title="${label}">${icon}</div>`;
+          : `<div class="pill" data-tab="${id}" title="${label}">${icon}</div>`;
     const filterDisabled = this._tab === "recordings";
     return `${tab("alerts", ICONS.alerts, "Alerts")}
       ${tab("clips", ICONS.clips, "Clips")}
