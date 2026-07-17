@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.189";
+const VERSION = "1.0.190";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -16,6 +16,9 @@ const EVENT_FETCH_BATCH = 100;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
 const LIST_RENDER_FRAME_DELAY_MS = 0;
+const LIST_RENDER_INITIAL_ITEMS = 24;
+const LIST_RENDER_CHUNK_ITEMS = 48;
+const LIST_RENDER_GROW_DELAY_MS = 32;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
   "alerts",
@@ -1132,6 +1135,10 @@ class FrigateViewCard extends HTMLElement {
     this._mountSeq = 0;
     this._listRenderRaf = 0;
     this._listRenderTimer = null;
+    this._listRenderGrowTimer = null;
+    this._listRenderGrowUsesIdle = false;
+    this._listRenderProgressKey = "";
+    this._listRenderProgressCount = 0;
     this._lastRenderedListHtml = "";
     this._pendingMountDestroyers = [];
     this._pendingWebRTCTakeoverTimer = null;
@@ -6197,12 +6204,19 @@ class FrigateViewCard extends HTMLElement {
     lbl.textContent = this._listHeadingLabel(ts);
   }
 
+  _setListHtml(list, html) {
+    if (!list) return false;
+    const nextHtml = String(html || "");
+    list.innerHTML = nextHtml;
+    this._lastRenderedListHtml = nextHtml;
+    return true;
+  }
+
   _setListHtmlIfChanged(list, html) {
     if (!list) return false;
     const nextHtml = String(html || "");
     if (this._lastRenderedListHtml === nextHtml) return false;
-    list.innerHTML = nextHtml;
-    this._lastRenderedListHtml = nextHtml;
+    this._setListHtml(list, nextHtml);
     return true;
   }
 
@@ -6225,6 +6239,7 @@ class FrigateViewCard extends HTMLElement {
       if (dayKey !== currentDay) {
         currentDay = dayKey;
         sections.push({
+          dayKey,
           label: this._listHeadingLabel(ts || null),
           rows: [],
         });
@@ -6234,7 +6249,7 @@ class FrigateViewCard extends HTMLElement {
     return sections
       .map(
         (section) =>
-          `<section class="list-day-sec"><div class="list-day-label">${section.label}</div>${section.rows.join("")}</section>`,
+          `<section class="list-day-sec" data-day-key="${section.dayKey}"><div class="list-day-label">${section.label}</div>${section.rows.join("")}</section>`,
       )
       .join("");
   }
@@ -6281,6 +6296,158 @@ class FrigateViewCard extends HTMLElement {
     }
     this._listRenderGrowTimer = null;
     this._listRenderGrowUsesIdle = false;
+  }
+
+  _resetListRenderProgress(key = "") {
+    this._cancelListRenderGrowth();
+    this._listRenderProgressKey = key;
+    this._listRenderProgressCount = 0;
+  }
+
+  _scheduleListRenderGrowth(callback) {
+    this._cancelListRenderGrowth();
+    if (typeof requestIdleCallback === "function") {
+      this._listRenderGrowUsesIdle = true;
+      this._listRenderGrowTimer = requestIdleCallback(() => {
+        this._listRenderGrowTimer = null;
+        this._listRenderGrowUsesIdle = false;
+        callback();
+      });
+      return;
+    }
+    this._listRenderGrowUsesIdle = false;
+    this._listRenderGrowTimer = setTimeout(() => {
+      this._listRenderGrowTimer = null;
+      callback();
+    }, LIST_RENDER_GROW_DELAY_MS);
+  }
+
+  _progressiveListKey(tab, items, extra = "") {
+    const first = items[0]?.id || items[0]?.start_time || "";
+    const last =
+      items[items.length - 1]?.id || items[items.length - 1]?.start_time || "";
+    return [
+      tab,
+      this._activeCam?.entity || "",
+      this._winStart,
+      this._winEnd,
+      this._filterLabel,
+      this._filterZone,
+      this._favOnly ? 1 : 0,
+      this._exhausted ? 1 : 0,
+      items.length,
+      first,
+      last,
+      extra,
+    ].join("|");
+  }
+
+  _renderProgressiveSegment(list, items, start, end, renderItem, stickyDays) {
+    if (!list || start >= end) return;
+    if (!stickyDays) {
+      list.insertAdjacentHTML(
+        "beforeend",
+        items
+          .slice(start, end)
+          .map((item) => renderItem(item))
+          .join(""),
+      );
+      return;
+    }
+    let section = list.lastElementChild;
+    if (!section?.classList?.contains("list-day-sec")) section = null;
+    let currentDay = section?.dataset?.dayKey || null;
+    for (let index = start; index < end; index += 1) {
+      const item = items[index];
+      const ts = item?.start_time || 0;
+      const dayKey = this._dayKey(ts);
+      if (dayKey !== currentDay) {
+        section = document.createElement("section");
+        section.className = "list-day-sec";
+        section.dataset.dayKey = dayKey;
+        section.insertAdjacentHTML(
+          "beforeend",
+          `<div class="list-day-label">${this._listHeadingLabel(ts || null)}</div>`,
+        );
+        list.appendChild(section);
+        currentDay = dayKey;
+      }
+      section.insertAdjacentHTML("beforeend", renderItem(item));
+    }
+  }
+
+  _renderProgressiveList({
+    list,
+    items,
+    key,
+    renderItem,
+    stickyDays = false,
+    initialCount = LIST_RENDER_INITIAL_ITEMS,
+    chunkCount = LIST_RENDER_CHUNK_ITEMS,
+    endHtml = "",
+  }) {
+    const sameKey = this._listRenderProgressKey === key;
+    if (!sameKey) {
+      this._resetListRenderProgress(key);
+      this._setListHtml(list, "");
+    }
+
+    let renderedCount = sameKey ? this._listRenderProgressCount : 0;
+    const firstTarget = Math.min(items.length, initialCount);
+    if (renderedCount < firstTarget) {
+      if (renderedCount === 0) {
+        const initialItems = items.slice(0, firstTarget);
+        const initialHtml = stickyDays
+          ? this._renderStickyDaySections(initialItems, renderItem)
+          : initialItems.map((item) => renderItem(item)).join("");
+        this._setListHtml(list, initialHtml);
+      } else {
+        this._renderProgressiveSegment(
+          list,
+          items,
+          renderedCount,
+          firstTarget,
+          renderItem,
+          stickyDays,
+        );
+        this._lastRenderedListHtml = "";
+      }
+      renderedCount = firstTarget;
+      this._listRenderProgressCount = renderedCount;
+    }
+
+    const appendNext = () => {
+      if (this._listRenderProgressKey !== key) return;
+      const nextCount = Math.min(items.length, renderedCount + chunkCount);
+      this._renderProgressiveSegment(
+        list,
+        items,
+        renderedCount,
+        nextCount,
+        renderItem,
+        stickyDays,
+      );
+      renderedCount = nextCount;
+      this._listRenderProgressCount = renderedCount;
+      this._lastRenderedListHtml = "";
+      if (renderedCount >= items.length) {
+        if (endHtml) list.insertAdjacentHTML("beforeend", endHtml);
+        this._cancelListRenderGrowth();
+        this._syncOlderHint();
+        requestAnimationFrame(() => this._syncOlderHint());
+        return;
+      }
+      this._scheduleListRenderGrowth(appendNext);
+    };
+
+    if (renderedCount >= items.length) {
+      if (endHtml && !list.querySelector(".end")) {
+        list.insertAdjacentHTML("beforeend", endHtml);
+      }
+      this._cancelListRenderGrowth();
+      return;
+    }
+    this._scheduleListRenderGrowth(appendNext);
   }
 
   _mergeRecs(recs) {
@@ -6422,6 +6589,7 @@ class FrigateViewCard extends HTMLElement {
       return this._renderReviews(list);
     }
     if (this._tab === "kept") {
+      this._resetListRenderProgress();
       this._renderListLabel();
       if (!this._kept.length) {
         this._setListHtmlIfChanged(
@@ -6443,6 +6611,7 @@ class FrigateViewCard extends HTMLElement {
     const events = this._filtered();
     this._renderListLabel(events[0]?.start_time || null);
     if (!events.length) {
+      this._resetListRenderProgress();
       this._setListHtmlIfChanged(
         list,
         `<div class="empty">No events in this window</div>`,
@@ -6451,17 +6620,15 @@ class FrigateViewCard extends HTMLElement {
       this._cancelListRenderGrowth();
       return;
     }
-    const visibleEvents = events;
-    const eventsHtml =
-      (this._showStickyDayHeaders()
-        ? this._renderStickyDaySections(visibleEvents, (ev) =>
-            this._eventCardHTML(ev, false),
-          )
-        : visibleEvents.map((ev) => this._eventCardHTML(ev, false)).join("")) +
-      (this._exhausted && visibleEvents.length === events.length
-        ? '<div class="end">— end —</div>'
-        : "");
-    this._setListHtmlIfChanged(list, eventsHtml);
+    const stickyDays = this._showStickyDayHeaders();
+    this._renderProgressiveList({
+      list,
+      items: events,
+      key: this._progressiveListKey(this._tab, events),
+      renderItem: (ev) => this._eventCardHTML(ev, false),
+      stickyDays,
+      endHtml: this._exhausted ? '<div class="end">— end —</div>' : "",
+    });
     this._syncOlderHint();
     requestAnimationFrame(() => this._syncOlderHint());
     setTimeout(() => this._syncOlderHint(), 200);
@@ -6512,6 +6679,7 @@ class FrigateViewCard extends HTMLElement {
     );
     const recs = allRecs;
     if (!recs.length) {
+      this._resetListRenderProgress();
       this._setListHtmlIfChanged(
         list,
         '<div class="empty">No recordings in the last 24 hours</div>',
@@ -6520,8 +6688,11 @@ class FrigateViewCard extends HTMLElement {
       this._cancelListRenderGrowth();
       return;
     }
-    const recsHtml = recs
-      .map((r) => {
+    this._renderProgressiveList({
+      list,
+      items: recs,
+      key: this._progressiveListKey("recordings", recs),
+      renderItem: (r) => {
         const rs = Math.floor(r.start_time),
           re = Math.floor(r.end_time || Date.now() / 1000);
         const d = Math.max(1, re - rs);
@@ -6536,14 +6707,14 @@ class FrigateViewCard extends HTMLElement {
         </div>
         <button class="rp" data-rec-dl-start="${rs}" data-rec-dl-end="${re}" title="Download recording" aria-label="Download recording">${ICONS.download}</button>
       </div>`;
-      })
-      .join("");
-    this._setListHtmlIfChanged(list, recsHtml);
+      },
+    });
     this._syncOlderHint(false);
   }
   _renderReviews(list) {
     this._renderListLabel(this._reviews[0]?.start_time || null);
     if (!this._reviews.length) {
+      this._resetListRenderProgress();
       this._setListHtmlIfChanged(
         list,
         '<div class="empty">No alerts in this window</div>',
@@ -6558,6 +6729,7 @@ class FrigateViewCard extends HTMLElement {
     const visibleRevs = allRevs;
     this._renderListLabel(allRevs[0]?.start_time || null);
     if (!visibleRevs.length) {
+      this._resetListRenderProgress();
       this._setListHtmlIfChanged(
         list,
         '<div class="empty">No alerts in this window</div>',
@@ -6566,34 +6738,39 @@ class FrigateViewCard extends HTMLElement {
       this._cancelListRenderGrowth();
       return;
     }
-    const reviewsHtml = this._renderStickyDaySections(visibleRevs, (r) => {
-      const sev = r.severity === "alert" ? "alert" : "detection";
-      const objs = (r.data?.objects || []).map(cap).join(", ");
-      const title = r.data?.metadata?.title || objs || cap(r.severity);
-      const firstDet = (r.data?.detections && r.data.detections[0]) || "";
-      const reviewed = r.has_been_reviewed;
-      const favEv = firstDet ? this._findEventById(firstDet) : null;
-      const favBtn = firstDet
-        ? favEv?.retain_indefinitely
-          ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>`
-          : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>`
-        : "";
-      const hasReviewMedia = !!(
-        favEv &&
-        (favEv.has_snapshot || favEv.has_clip)
-      );
-      const reviewThumbFile = "thumbnail.jpg";
-      const thumb = firstDet
-        ? this._missingThumbIds.has(firstDet)
-          ? `<div class="et"><div class="tph">${ICONS.person}</div></div>`
-          : hasReviewMedia
-            ? `<div class="et ${sev}">
+    this._renderProgressiveList({
+      list,
+      items: visibleRevs,
+      key: this._progressiveListKey("alerts", visibleRevs),
+      stickyDays: true,
+      renderItem: (r) => {
+        const sev = r.severity === "alert" ? "alert" : "detection";
+        const objs = (r.data?.objects || []).map(cap).join(", ");
+        const title = r.data?.metadata?.title || objs || cap(r.severity);
+        const firstDet = (r.data?.detections && r.data.detections[0]) || "";
+        const reviewed = r.has_been_reviewed;
+        const favEv = firstDet ? this._findEventById(firstDet) : null;
+        const favBtn = firstDet
+          ? favEv?.retain_indefinitely
+            ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>`
+            : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>`
+          : "";
+        const hasReviewMedia = !!(
+          favEv &&
+          (favEv.has_snapshot || favEv.has_clip)
+        );
+        const reviewThumbFile = "thumbnail.jpg";
+        const thumb = firstDet
+          ? this._missingThumbIds.has(firstDet)
+            ? `<div class="et"><div class="tph">${ICONS.person}</div></div>`
+            : hasReviewMedia
+              ? `<div class="et ${sev}">
                 <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="tph" style="display:none">${ICONS.person}</div>
                 </div>`
-            : `<div class="et"><div class="tph">${ICONS.person}</div></div>`
-        : "";
-      return `
+              : `<div class="et"><div class="tph">${ICONS.person}</div></div>`
+          : "";
+        return `
       <div class="list-item shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
 
         ${thumb}
@@ -6609,8 +6786,8 @@ class FrigateViewCard extends HTMLElement {
         </div>
         ${favBtn}
       </div>`;
+      },
     });
-    this._setListHtmlIfChanged(list, reviewsHtml);
     this._syncOlderHint(false);
   }
   // ── clip download range ───────────────────────────────────

@@ -15,10 +15,11 @@ test("no .then chains remain after async/await refactor", () => {
   assert.equal(/\.then\(/.test(source), false);
 });
 
-test("progressive list rendering helpers are removed", () => {
-  assert.equal(/INITIAL_LIST_RENDER_COUNT/.test(source), false);
-  assert.equal(/_resetListRenderBudget\(/.test(source), false);
-  assert.equal(/_scheduleListRenderGrowth\(/.test(source), false);
+test("event list rendering uses chunked background growth", () => {
+  assert.equal(/LIST_RENDER_INITIAL_ITEMS\s*=\s*24/.test(source), true);
+  assert.equal(/LIST_RENDER_CHUNK_ITEMS\s*=\s*48/.test(source), true);
+  assert.equal(/_renderProgressiveList\(/.test(source), true);
+  assert.equal(/_scheduleListRenderGrowth\(/.test(source), true);
   assert.equal(/_visibleListSlice\(/.test(source), false);
 });
 
