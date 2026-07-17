@@ -7,13 +7,14 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.215";
+const VERSION = "1.0.216";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
 const EVENT_FETCH_BATCH = 100;
 const INITIAL_EVENT_FETCH_LIMIT = 20;
+const INACTIVE_WARM_EVENT_LIMIT = 10;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
 const INITIAL_EVENTS_PAGE_LIMIT = 1;
@@ -3173,7 +3174,7 @@ class FrigateViewCard extends HTMLElement {
       if (!cache?.clientId || !cache?.cam) continue;
       if (
         Array.isArray(cache.events) &&
-        cache.events.length >= INITIAL_EVENT_FETCH_LIMIT
+        cache.events.length >= INACTIVE_WARM_EVENT_LIMIT
       ) {
         continue;
       }
@@ -3185,13 +3186,13 @@ class FrigateViewCard extends HTMLElement {
           before,
           {
             pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
-            limit: INITIAL_EVENT_FETCH_LIMIT,
+            limit: INACTIVE_WARM_EVENT_LIMIT,
           },
         );
         if (token !== this._warmCamsToken) return;
         if (after !== this._winStart || before !== this._winEnd) return;
         cache.events = Array.isArray(events)
-          ? events.slice(0, INITIAL_EVENT_FETCH_LIMIT)
+          ? events.slice(0, INACTIVE_WARM_EVENT_LIMIT)
           : [];
       } catch (_) {}
     }
