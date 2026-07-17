@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.174";
+const VERSION = "1.0.175";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -451,6 +451,120 @@ const bindThemeControlEvents = ({
     });
   });
 };
+
+const bindClickHandler = ({ root, selector, handler }) => {
+  root.querySelector(selector)?.addEventListener("click", handler);
+};
+
+const bindClickHandlers = (root, bindings) => {
+  bindings.forEach((binding) => bindClickHandler({ root, ...binding }));
+};
+
+const bindEachClickHandler = ({ root, selector, handler }) => {
+  root.querySelectorAll(selector).forEach((element) => {
+    element.addEventListener("click", (event) => handler(event, element));
+  });
+};
+
+const buildEditorConfigFromDom = ({
+  root,
+  baseConfig,
+  cameras,
+  themeDraftCache,
+}) => {
+  const readTrimmed = (id) => root.querySelector(`#${id}`)?.value?.trim() || "";
+  const nextConfig = { ...baseConfig, cameras };
+  delete nextConfig.camera_entity;
+
+  const title = readTrimmed("title");
+  const subtitle = readTrimmed("subtitle");
+  if (title) nextConfig.title = title;
+  else delete nextConfig.title;
+  if (subtitle) nextConfig.subtitle = subtitle;
+  else delete nextConfig.subtitle;
+
+  nextConfig.window_days = normalizePositiveInteger(
+    root.querySelector("#window_days")?.dataset.value ||
+      root.querySelector("#window_days")?.value ||
+      "3",
+    3,
+  );
+  nextConfig.window_hours = nextConfig.window_days * 24;
+
+  delete nextConfig.primary_color;
+  delete nextConfig.accent_color;
+  delete nextConfig.bg_color;
+  delete nextConfig.use_primary_color;
+  delete nextConfig.use_accent_color;
+  delete nextConfig.use_bg_color;
+
+  nextConfig.theme =
+    root.querySelector("[data-theme-option].active")?.dataset?.themeOption ===
+    "custom"
+      ? "custom"
+      : "default";
+
+  const themeCustomDefaults = {};
+  const themeCustom = {};
+  root.querySelectorAll("[data-theme-color]").forEach((input) => {
+    const key = input.dataset.themeColor;
+    if (!THEME_CUSTOM_KEYS.has(key)) return;
+    const useDefault =
+      root.querySelector(`[data-theme-default="${key}"]`)?.checked === true;
+    const inputValue = normalizeHexColor(input.value);
+    if (useDefault) themeCustomDefaults[key] = true;
+    if (!useDefault && inputValue) themeDraftCache[key] = inputValue;
+    const cached = normalizeHexColor(themeDraftCache?.[key]);
+    if (cached) themeCustom[key] = cached;
+  });
+  nextConfig.theme_custom = themeCustom;
+  nextConfig.theme_custom_defaults = themeCustomDefaults;
+
+  const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")]
+    .filter((element) => element.checked !== true)
+    .map((element) => element.dataset.activeTab)
+    .filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
+  nextConfig.hidden_tabs = hiddenTabs.length ? hiddenTabs : [];
+
+  const streamHeight = root.querySelector("#stream_height")?.value;
+  const streamHeightUnit =
+    root.querySelector("#stream_height_unit")?.dataset.value ||
+    root.querySelector("#stream_height_unit")?.value ||
+    "vh";
+  nextConfig.stream_height = streamHeight ? Number(streamHeight) : null;
+  nextConfig.stream_height_unit = streamHeightUnit;
+
+  nextConfig.tight_margins =
+    root.querySelector("#tight_margins")?.checked === true;
+  nextConfig.shadows = root.querySelector("#shadows")?.checked !== false;
+  nextConfig.wide_view = root.querySelector("#wide_view")?.checked === true;
+
+  const leftWidthRaw = root
+    .querySelector("#col_left_width_pct")
+    ?.value?.replace(/%/g, "")
+    .trim();
+  nextConfig.col_left_width_pct = leftWidthRaw
+    ? Math.min(Math.max(parseInt(leftWidthRaw, 10) || 50, 10), 90)
+    : 50;
+
+  return nextConfig;
+};
+
+const createEditorPreviewDraft = (config) => ({
+  title: config.title,
+  subtitle: config.subtitle,
+  window_days: config.window_days,
+  hidden_tabs: config.hidden_tabs,
+  theme: config.theme,
+  theme_custom: config.theme_custom,
+  theme_custom_defaults: config.theme_custom_defaults,
+  stream_height: config.stream_height,
+  stream_height_unit: config.stream_height_unit,
+  tight_margins: config.tight_margins,
+  shadows: config.shadows,
+  wide_view: config.wide_view,
+  col_left_width_pct: config.col_left_width_pct,
+});
 
 const LABEL_COLORS = {
   person: "#3b82f6",
@@ -7271,28 +7385,38 @@ class FrigateViewCardEditor extends HTMLElement {
       normalize: (value) => normalizeCameraConnectionType(value),
     });
 
-    this.querySelector("#camera-add")?.addEventListener("click", () => {
-      this._openCameraModal(null);
+    bindClickHandlers(this, [
+      {
+        selector: "#camera-add",
+        handler: () => this._openCameraModal(null),
+      },
+      {
+        selector: "#camera-modal-close",
+        handler: () => this._closeCameraModal(),
+      },
+      {
+        selector: "#camera-modal-cancel",
+        handler: () => this._closeCameraModal(),
+      },
+      {
+        selector: "#camera-modal-save",
+        handler: () => this._saveCameraModal(),
+      },
+    ]);
+    bindEachClickHandler({
+      root: this,
+      selector: "[data-edit-cam]",
+      handler: (event) => {
+        this._openCameraModal(Number(event.currentTarget.dataset.editCam));
+      },
     });
-    this.querySelectorAll("[data-edit-cam]").forEach((btn) =>
-      btn.addEventListener("click", (ev) => {
-        this._openCameraModal(Number(ev.currentTarget.dataset.editCam));
-      }),
-    );
-    this.querySelectorAll("[data-remove-cam]").forEach((btn) =>
-      btn.addEventListener("click", (ev) => {
-        this._removeCamera(Number(ev.currentTarget.dataset.removeCam));
-      }),
-    );
-    this.querySelector("#camera-modal-close")?.addEventListener("click", () =>
-      this._closeCameraModal(),
-    );
-    this.querySelector("#camera-modal-cancel")?.addEventListener("click", () =>
-      this._closeCameraModal(),
-    );
-    this.querySelector("#camera-modal-save")?.addEventListener("click", () =>
-      this._saveCameraModal(),
-    );
+    bindEachClickHandler({
+      root: this,
+      selector: "[data-remove-cam]",
+      handler: (event) => {
+        this._removeCamera(Number(event.currentTarget.dataset.removeCam));
+      },
+    });
     this.querySelector("#camera-modal")?.addEventListener("click", (ev) => {
       if (ev.target?.id === "camera-modal") this._closeCameraModal();
     });
@@ -7384,97 +7508,18 @@ class FrigateViewCardEditor extends HTMLElement {
 
   _u({ dispatch = true, preview = false } = {}) {
     if (!this._validateEditorFields()) return;
-    const g = (id) => this.querySelector("#" + id)?.value?.trim() || "";
-    const c = { ...this._config };
-    c.cameras = this._getCams();
-    delete c.camera_entity;
-
-    const t = g("title");
-    const s = g("subtitle");
-    if (t) c.title = t;
-    else delete c.title;
-    if (s) c.subtitle = s;
-    else delete c.subtitle;
-
-    c.window_days = normalizePositiveInteger(
-      this.querySelector("#window_days")?.dataset.value ||
-        this.querySelector("#window_days")?.value ||
-        "3",
-      3,
-    );
-    c.window_hours = c.window_days * 24;
-
-    delete c.primary_color;
-    delete c.accent_color;
-    delete c.bg_color;
-    delete c.use_primary_color;
-    delete c.use_accent_color;
-    delete c.use_bg_color;
-
-    c.theme =
-      this.querySelector("[data-theme-option].active")?.dataset?.themeOption ===
-      "custom"
-        ? "custom"
-        : "default";
-    const themeCustomDefaults = {};
-    const themeCustom = {};
-    this.querySelectorAll("[data-theme-color]").forEach((input) => {
-      const key = input.dataset.themeColor;
-      if (!THEME_CUSTOM_KEYS.has(key)) return;
-      const useDefault =
-        this.querySelector(`[data-theme-default="${key}"]`)?.checked === true;
-      const inputValue = normalizeHexColor(input.value);
-      if (useDefault) themeCustomDefaults[key] = true;
-      if (!useDefault && inputValue) this._themeDraftCache[key] = inputValue;
-      const cached = normalizeHexColor(this._themeDraftCache?.[key]);
-      if (cached) themeCustom[key] = cached;
+    const cameras = this._getCams();
+    const nextConfig = buildEditorConfigFromDom({
+      root: this,
+      baseConfig: this._config,
+      cameras,
+      themeDraftCache: this._themeDraftCache,
     });
-    c.theme_custom = themeCustom;
-    c.theme_custom_defaults = themeCustomDefaults;
 
-    const hidden = [...this.querySelectorAll("[data-active-tab]")]
-      .filter((el) => el.checked !== true)
-      .map((el) => el.dataset.activeTab)
-      .filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
-    c.hidden_tabs = hidden.length ? hidden : [];
-
-    const sh = this.querySelector("#stream_height")?.value;
-    const shu =
-      this.querySelector("#stream_height_unit")?.dataset.value ||
-      this.querySelector("#stream_height_unit")?.value ||
-      "vh";
-    c.stream_height = sh ? Number(sh) : null;
-    c.stream_height_unit = shu;
-
-    c.tight_margins = this.querySelector("#tight_margins")?.checked === true;
-    c.shadows = this.querySelector("#shadows")?.checked !== false;
-    c.wide_view = this.querySelector("#wide_view")?.checked === true;
-
-    const pctInput = this.querySelector("#col_left_width_pct")
-      ?.value?.replace(/%/g, "")
-      .trim();
-    c.col_left_width_pct = pctInput
-      ? Math.min(Math.max(parseInt(pctInput, 10) || 50, 10), 90)
-      : 50;
-
-    this._config = c;
+    this._config = nextConfig;
     if (preview) {
       this._hasVisualDraft = true;
-      this._emitPreviewDraft({
-        title: c.title,
-        subtitle: c.subtitle,
-        window_days: c.window_days,
-        hidden_tabs: c.hidden_tabs,
-        theme: c.theme,
-        theme_custom: c.theme_custom,
-        theme_custom_defaults: c.theme_custom_defaults,
-        stream_height: c.stream_height,
-        stream_height_unit: c.stream_height_unit,
-        tight_margins: c.tight_margins,
-        shadows: c.shadows,
-        wide_view: c.wide_view,
-        col_left_width_pct: c.col_left_width_pct,
-      });
+      this._emitPreviewDraft(createEditorPreviewDraft(nextConfig));
     }
     if (dispatch) this._dispatch();
   }
