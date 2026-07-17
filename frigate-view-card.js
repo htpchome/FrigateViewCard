@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.228";
+const VERSION = "1.0.229";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3396,6 +3396,10 @@ class FrigateViewCard extends HTMLElement {
     this._renderCamSwitcher();
     this._syncStatus();
     this._renderStats();
+    this._normalizeFilterSelections();
+    if (this._$("#filter-panel")?.style.display !== "none") {
+      this._renderFilter();
+    }
     this._renderList();
     this._streamMuted = true;
     this._renderMuteButton();
@@ -3911,6 +3915,7 @@ class FrigateViewCard extends HTMLElement {
         : id === activeTab
           ? `<div class="pill active" data-tab="${id}" title="${label}">${icon}</div>`
           : `<div class="pill icon-only" data-tab="${id}" title="${label}">${icon}</div>`;
+    const filterDisabled = this._tab === "recordings";
     return `${tab("alerts", ICONS.alerts, "Alerts")}
       ${tab("clips", ICONS.clips, "Clips")}
       ${tab("snapshot", ICONS.snapshot, "Snapshots")}
@@ -3918,7 +3923,7 @@ class FrigateViewCard extends HTMLElement {
       ${tab("kept", ICONS.star, "Kept events")}
       <div class="tl-tools" style=" margin-left: auto;">
         <button class="tool" id="now-btn" title="Today">${ICONS.bullseye}</button>
-        <button class="tool" id="filter-btn" title="Filter">${ICONS.filter}</button>
+        <button class="tool" id="filter-btn" title="Filter" ${filterDisabled ? "disabled" : ""}>${ICONS.filter}</button>
         <button class="tool" id="cal-btn" title="Calendar">${ICONS.calendar}</button>
       </div>`;
   }
@@ -4927,6 +4932,17 @@ class FrigateViewCard extends HTMLElement {
     this.shadowRoot
       .querySelectorAll("[data-tab]")
       .forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
+    const filterBtn = this._$("#filter-btn");
+    if (filterBtn) filterBtn.disabled = tab === "recordings";
+    if (tab === "recordings") {
+      const filterPanel = this._$("#filter-panel");
+      if (filterPanel) filterPanel.style.display = "none";
+    } else {
+      this._normalizeFilterSelections();
+      if (this._$("#filter-panel")?.style.display !== "none") {
+        this._renderFilter();
+      }
+    }
     this._renderListLabel();
     void this._loadTabData(tab);
     this._renderList();
@@ -6422,6 +6438,7 @@ class FrigateViewCard extends HTMLElement {
     }, ms);
   }
   _toggleFilter() {
+    if (this._tab === "recordings") return;
     const p = this._$("#filter-panel");
     if (!p) return;
     const open = p.style.display === "none";
@@ -6489,6 +6506,7 @@ class FrigateViewCard extends HTMLElement {
   _renderFilter() {
     const p = this.shadowRoot.querySelector("#filter-panel");
     if (!p) return;
+    this._normalizeFilterSelections();
     const lbls = ["all", ...this._labels()];
     const zones = ["all", ...this._zones()];
     const chip = (val, cur, attr) =>
@@ -6697,16 +6715,92 @@ class FrigateViewCard extends HTMLElement {
       Math.round((ev.end_time || Date.now() / 1000) - ev.start_time),
     );
   }
+  _reviewsForTabBase() {
+    const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
+    return showAllReviews
+      ? [...this._reviews]
+      : this._reviews.filter((review) => review?.severity === "alert");
+  }
+  _reviewSourceEvent(review) {
+    const firstDet =
+      (review?.data?.detections && review.data.detections[0]) || "";
+    return firstDet ? this._findEventById(firstDet) : null;
+  }
+  _filterOptionSourceEvents() {
+    if (this._tab === "alerts") {
+      const seen = new Set();
+      const out = [];
+      this._reviewsForTabBase().forEach((review) => {
+        const sourceEvent = this._reviewSourceEvent(review);
+        if (!sourceEvent?.id || seen.has(sourceEvent.id)) return;
+        seen.add(sourceEvent.id);
+        out.push(sourceEvent);
+      });
+      return out;
+    }
+    if (this._tab === "kept") {
+      return [...(this._kept || [])];
+    }
+    return this._allDisplayEvents();
+  }
+  _matchesEventFilters(ev) {
+    if (!ev) return false;
+    if (this._filterLabel !== "all" && ev.label !== this._filterLabel) {
+      return false;
+    }
+    if (
+      this._filterZone !== "all" &&
+      !(ev.zones || []).includes(this._filterZone)
+    ) {
+      return false;
+    }
+    if (this._favOnly && !ev.retain_indefinitely) {
+      return false;
+    }
+    return true;
+  }
+  _filteredReviews() {
+    return this._reviewsForTabBase().filter((review) => {
+      const sourceEvent = this._reviewSourceEvent(review);
+      if (this._favOnly) return !!sourceEvent?.retain_indefinitely;
+      if (this._filterLabel !== "all") {
+        if (!sourceEvent || sourceEvent.label !== this._filterLabel)
+          return false;
+      }
+      if (this._filterZone !== "all") {
+        if (
+          !sourceEvent ||
+          !(sourceEvent.zones || []).includes(this._filterZone)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+  _filteredKept() {
+    return (this._kept || []).filter((ev) => this._matchesEventFilters(ev));
+  }
+  _normalizeFilterSelections() {
+    const labels = this._labels();
+    const zones = this._zones();
+    if (this._filterLabel !== "all" && !labels.includes(this._filterLabel)) {
+      this._filterLabel = "all";
+    }
+    if (this._filterZone !== "all" && !zones.includes(this._filterZone)) {
+      this._filterZone = "all";
+    }
+  }
   _zones() {
     const z = new Set();
-    this._allDisplayEvents().forEach((e) =>
+    this._filterOptionSourceEvents().forEach((e) =>
       (e.zones || []).forEach((x) => z.add(x)),
     );
     return [...z];
   }
   _labels() {
     const l = new Set();
-    this._allDisplayEvents().forEach((e) => e.label && l.add(e.label));
+    this._filterOptionSourceEvents().forEach((e) => e.label && l.add(e.label));
     return [...l];
   }
   _filtered() {
@@ -6714,11 +6808,7 @@ class FrigateViewCard extends HTMLElement {
     if (this._tab === "clips") list = list.filter((e) => e.has_clip);
     else if (this._tab === "snapshot")
       list = list.filter((e) => e.has_snapshot);
-    if (this._filterLabel !== "all")
-      list = list.filter((e) => e.label === this._filterLabel);
-    if (this._filterZone !== "all")
-      list = list.filter((e) => (e.zones || []).includes(this._filterZone));
-    if (this._favOnly) list = list.filter((e) => e.retain_indefinitely);
+    list = list.filter((e) => this._matchesEventFilters(e));
     return list;
   }
   _mergeRecs(recs) {
@@ -6870,8 +6960,9 @@ class FrigateViewCard extends HTMLElement {
       return this._renderReviews(list);
     }
     if (this._tab === "kept") {
+      const kept = this._filteredKept();
       this._renderListLabel();
-      if (!this._kept.length) {
+      if (!kept.length) {
         this._setListHtmlIfChanged(
           list,
           `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
@@ -6881,7 +6972,7 @@ class FrigateViewCard extends HTMLElement {
       }
       this._setListHtmlIfChanged(
         list,
-        this._kept.map((ev) => this._eventCardHTML(ev, false)).join(""),
+        kept.map((ev) => this._eventCardHTML(ev, false)).join(""),
       );
       this._syncOlderHint(false);
       return;
@@ -6986,9 +7077,7 @@ class FrigateViewCard extends HTMLElement {
   }
   _renderReviews(list) {
     const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
-    const filteredReviews = showAllReviews
-      ? [...this._reviews]
-      : this._reviews.filter((review) => review?.severity === "alert");
+    const filteredReviews = this._filteredReviews();
     const emptyText = showAllReviews
       ? "No reviews in this window"
       : "No alerts in this window";
