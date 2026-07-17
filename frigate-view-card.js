@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.191";
+const VERSION = "1.0.192";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1099,6 +1099,7 @@ class FrigateViewCard extends HTMLElement {
     this._winEnd = 0;
     this._winStart = 0;
     this._loading = false;
+    this._windowLoadSeq = 0;
     this._exhausted = false;
     this._daysWithActivity = new Set();
     this._filterLabel = "all";
@@ -3205,26 +3206,38 @@ class FrigateViewCard extends HTMLElement {
     return items;
   }
   async _loadWindow(replace) {
-    if (this._loading) return;
+    const loadSeq = ++this._windowLoadSeq;
+    const entity = this._activeCam?.entity;
     this._loading = true;
     if (replace) {
       this._exhausted = false;
     }
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) {
-      this._loading = false;
+      if (loadSeq === this._windowLoadSeq) this._loading = false;
       return;
     }
     const after = this._winStart,
       before = this._winEnd;
     await Promise.allSettled([
-      this._loadWindowEvents(clientId, cam, after, before),
-      this._loadWindowRecordings(clientId, cam, before),
-      this._loadWindowReviewsIfNeeded(clientId, cam, after, before),
+      this._loadWindowEvents(clientId, cam, after, before, loadSeq, entity),
+      this._loadWindowRecordings(clientId, cam, before, loadSeq, entity),
+      this._loadWindowReviewsIfNeeded(
+        clientId,
+        cam,
+        after,
+        before,
+        loadSeq,
+        entity,
+      ),
     ]);
+    if (loadSeq !== this._windowLoadSeq || entity !== this._activeCam?.entity) {
+      return;
+    }
     const ent = this._activeCam?.entity;
     if (ent && this._camCache[ent]) {
       this._camCache[ent].events = this._events;
+      this._camCache[ent].reviews = this._reviews;
       this._camCache[ent].recordings = this._recordings;
     }
     this._loading = false;
@@ -3249,8 +3262,10 @@ class FrigateViewCard extends HTMLElement {
     }
   }
 
-  async _loadWindowEvents(clientId, cam, after, before) {
+  async _loadWindowEvents(clientId, cam, after, before, loadSeq, entity) {
     let renderedEventsFirstPage = false;
+    const isCurrentLoad = () =>
+      loadSeq === this._windowLoadSeq && entity === this._activeCam?.entity;
     try {
       const events = await this._fetchWindowedEvents(
         clientId,
@@ -3259,6 +3274,7 @@ class FrigateViewCard extends HTMLElement {
         before,
         {
           onPage: (items, meta) => {
+            if (!isCurrentLoad()) return;
             this._events = Array.isArray(items) ? items.slice() : [];
             this._cacheActiveCamSlice("events", this._events);
             if (!renderedEventsFirstPage || meta?.done) {
@@ -3269,17 +3285,21 @@ class FrigateViewCard extends HTMLElement {
           },
         },
       );
+      if (!isCurrentLoad()) return;
       this._events = Array.isArray(events) ? events : [];
       this._cacheActiveCamSlice("events", this._events);
       this._requestListRender();
       this._renderStats();
     } catch (error) {
+      if (!isCurrentLoad()) return;
       console.error("[Frigate] events", error);
       this._events = [];
     }
   }
 
-  async _loadWindowRecordings(clientId, cam, before) {
+  async _loadWindowRecordings(clientId, cam, before, loadSeq, entity) {
+    const isCurrentLoad = () =>
+      loadSeq === this._windowLoadSeq && entity === this._activeCam?.entity;
     const recAfter = Math.max(0, before - RECORDINGS_WINDOW);
     try {
       const recordings = await this._ws({
@@ -3289,16 +3309,27 @@ class FrigateViewCard extends HTMLElement {
         after: recAfter,
         before,
       });
+      if (!isCurrentLoad()) return;
       this._recordings = Array.isArray(recordings) ? recordings : [];
       this._cacheActiveCamSlice("recordings", this._recordings);
       if (this._tab === "recordings") this._requestListRender();
     } catch (_) {
+      if (!isCurrentLoad()) return;
       this._recordings = [];
     }
   }
 
-  async _loadWindowReviewsIfNeeded(clientId, cam, after, before) {
+  async _loadWindowReviewsIfNeeded(
+    clientId,
+    cam,
+    after,
+    before,
+    loadSeq,
+    entity,
+  ) {
     if (this._tab !== "alerts") return;
+    const isCurrentLoad = () =>
+      loadSeq === this._windowLoadSeq && entity === this._activeCam?.entity;
     try {
       const reviews = await this._fetchWindowedReviews(
         clientId,
@@ -3307,16 +3338,19 @@ class FrigateViewCard extends HTMLElement {
         before,
         {
           onPage: (items, meta) => {
+            if (!isCurrentLoad()) return;
             this._reviews = Array.isArray(items) ? items.slice() : [];
             this._cacheActiveCamSlice("reviews", this._reviews);
             if (meta?.page === 0 || meta?.done) this._requestListRender();
           },
         },
       );
+      if (!isCurrentLoad()) return;
       this._reviews = Array.isArray(reviews) ? reviews : [];
       this._cacheActiveCamSlice("reviews", this._reviews);
       this._requestListRender();
     } catch (_) {
+      if (!isCurrentLoad()) return;
       this._reviews = [];
     }
   }
@@ -5417,7 +5451,7 @@ class FrigateViewCard extends HTMLElement {
     const thumbMissing = this._missingThumbIds.has(ev.id);
     const thumb = thumbMissing
       ? `<div class="tph">${ICONS.person}</div>`
-      : `<img src="${this._media(ev.id, thumbFile)}" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
+      : `<img src="${this._media(ev.id, thumbFile)}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
     const active = ev.id === activeId ? " active" : "";
     return `<button class="popup-carousel-item${active}" data-ev="${ev.id}" title="${this._dateTimeLabel(ev.start_time || 0)}"><div class="et">${thumb}</div><div class="popup-carousel-meta"><span>${cap(ev.label || "event")}</span><span>${this._time(ev.start_time || 0)}</span></div></button>`;
   }
@@ -6552,7 +6586,7 @@ class FrigateViewCard extends HTMLElement {
       ev.has_snapshot || ev.has_clip
         ? thumbMissing
           ? `<div class="tph">${ICONS.person}</div>`
-          : `<img src="${thumbSrc}" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`
+          : `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`
         : `<div class="tph">${ICONS.person}</div>`;
     const badge = ev.has_clip
       ? '<span class="bc">clip</span>'
@@ -6629,15 +6663,18 @@ class FrigateViewCard extends HTMLElement {
       this._cancelListRenderGrowth();
       return;
     }
-    const stickyDays = this._showStickyDayHeaders();
-    this._renderProgressiveList({
-      list,
-      items: events,
-      key: this._progressiveListKey(this._tab, events),
-      renderItem: (ev) => this._eventCardHTML(ev, false),
-      stickyDays,
-      endHtml: this._exhausted ? '<div class="end">— end —</div>' : "",
-    });
+    this._cancelListRenderGrowth();
+    const visibleEvents = events;
+    const eventsHtml =
+      (this._showStickyDayHeaders()
+        ? this._renderStickyDaySections(visibleEvents, (ev) =>
+            this._eventCardHTML(ev, false),
+          )
+        : visibleEvents.map((ev) => this._eventCardHTML(ev, false)).join("")) +
+      (this._exhausted && visibleEvents.length === events.length
+        ? '<div class="end">— end —</div>'
+        : "");
+    this._setListHtmlIfChanged(list, eventsHtml);
     this._syncOlderHint();
     requestAnimationFrame(() => this._syncOlderHint());
     setTimeout(() => this._syncOlderHint(), 200);
@@ -6697,11 +6734,9 @@ class FrigateViewCard extends HTMLElement {
       this._cancelListRenderGrowth();
       return;
     }
-    this._renderProgressiveList({
-      list,
-      items: recs,
-      key: this._progressiveListKey("recordings", recs),
-      renderItem: (r) => {
+    this._cancelListRenderGrowth();
+    const recsHtml = recs
+      .map((r) => {
         const rs = Math.floor(r.start_time),
           re = Math.floor(r.end_time || Date.now() / 1000);
         const d = Math.max(1, re - rs);
@@ -6716,8 +6751,9 @@ class FrigateViewCard extends HTMLElement {
         </div>
         <button class="rp" data-rec-dl-start="${rs}" data-rec-dl-end="${re}" title="Download recording" aria-label="Download recording">${ICONS.download}</button>
       </div>`;
-      },
-    });
+      })
+      .join("");
+    this._setListHtmlIfChanged(list, recsHtml);
     this._syncOlderHint(false);
   }
   _renderReviews(list) {
@@ -6747,39 +6783,35 @@ class FrigateViewCard extends HTMLElement {
       this._cancelListRenderGrowth();
       return;
     }
-    this._renderProgressiveList({
-      list,
-      items: visibleRevs,
-      key: this._progressiveListKey("alerts", visibleRevs),
-      stickyDays: true,
-      renderItem: (r) => {
-        const sev = r.severity === "alert" ? "alert" : "detection";
-        const objs = (r.data?.objects || []).map(cap).join(", ");
-        const title = r.data?.metadata?.title || objs || cap(r.severity);
-        const firstDet = (r.data?.detections && r.data.detections[0]) || "";
-        const reviewed = r.has_been_reviewed;
-        const favEv = firstDet ? this._findEventById(firstDet) : null;
-        const favBtn = firstDet
-          ? favEv?.retain_indefinitely
-            ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>`
-            : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>`
-          : "";
-        const hasReviewMedia = !!(
-          favEv &&
-          (favEv.has_snapshot || favEv.has_clip)
-        );
-        const reviewThumbFile = "thumbnail.jpg";
-        const thumb = firstDet
-          ? this._missingThumbIds.has(firstDet)
-            ? `<div class="et"><div class="tph">${ICONS.person}</div></div>`
-            : hasReviewMedia
-              ? `<div class="et ${sev}">
-                  <img src="${this._media(firstDet, reviewThumbFile)}" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    this._cancelListRenderGrowth();
+    const reviewsHtml = this._renderStickyDaySections(visibleRevs, (r) => {
+      const sev = r.severity === "alert" ? "alert" : "detection";
+      const objs = (r.data?.objects || []).map(cap).join(", ");
+      const title = r.data?.metadata?.title || objs || cap(r.severity);
+      const firstDet = (r.data?.detections && r.data.detections[0]) || "";
+      const reviewed = r.has_been_reviewed;
+      const favEv = firstDet ? this._findEventById(firstDet) : null;
+      const favBtn = firstDet
+        ? favEv?.retain_indefinitely
+          ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>`
+          : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>`
+        : "";
+      const hasReviewMedia = !!(
+        favEv &&
+        (favEv.has_snapshot || favEv.has_clip)
+      );
+      const reviewThumbFile = "thumbnail.jpg";
+      const thumb = firstDet
+        ? this._missingThumbIds.has(firstDet)
+          ? `<div class="et"><div class="tph">${ICONS.person}</div></div>`
+          : hasReviewMedia
+            ? `<div class="et ${sev}">
+                  <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="tph" style="display:none">${ICONS.person}</div>
                 </div>`
-              : `<div class="et"><div class="tph">${ICONS.person}</div></div>`
-          : "";
-        return `
+            : `<div class="et"><div class="tph">${ICONS.person}</div></div>`
+        : "";
+      return `
       <div class="list-item shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
 
         ${thumb}
@@ -6795,8 +6827,8 @@ class FrigateViewCard extends HTMLElement {
         </div>
         ${favBtn}
       </div>`;
-      },
     });
+    this._setListHtmlIfChanged(list, reviewsHtml);
     this._syncOlderHint(false);
   }
   // ── clip download range ───────────────────────────────────

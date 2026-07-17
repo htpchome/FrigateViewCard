@@ -15,12 +15,13 @@ test("no .then chains remain after async/await refactor", () => {
   assert.equal(/\.then\(/.test(source), false);
 });
 
-test("event list rendering uses chunked background growth", () => {
-  assert.equal(/LIST_RENDER_INITIAL_ITEMS\s*=\s*24/.test(source), true);
-  assert.equal(/LIST_RENDER_CHUNK_ITEMS\s*=\s*48/.test(source), true);
-  assert.equal(/_renderProgressiveList\(/.test(source), true);
-  assert.equal(/_scheduleListRenderGrowth\(/.test(source), true);
-  assert.equal(/_visibleListSlice\(/.test(source), false);
+test("event list thumbnails use browser lazy loading", () => {
+  assert.equal((source.match(/loading="lazy"/g) || []).length >= 3, true);
+});
+
+test("window loads use a request sequence guard", () => {
+  assert.equal(/_windowLoadSeq\s*=\s*0/.test(source), true);
+  assert.equal(/const loadSeq = \+\+this\._windowLoadSeq;/.test(source), true);
 });
 
 test("startup kicks list load before live mount without awaiting it", () => {
