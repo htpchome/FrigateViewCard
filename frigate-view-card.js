@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.188";
+const VERSION = "1.0.189";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -660,7 +660,7 @@ const STYLES = `
     padding:0 !important;
     overflow: hidden;
     box-sizing: border-box !important;
-    position: relative; /* This confines the absolute layout bounds strictly to this component */
+    position: relative; 
   }
   :host {
     --popup-z-index: 1000;
@@ -6585,13 +6585,13 @@ class FrigateViewCard extends HTMLElement {
       const reviewThumbFile = "thumbnail.jpg";
       const thumb = firstDet
         ? this._missingThumbIds.has(firstDet)
-          ? `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
+          ? `<div class="et"><div class="tph">${ICONS.person}</div></div>`
           : hasReviewMedia
             ? `<div class="et ${sev}">
                 <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <div class="rev-ph" style="display:none">${ICONS.person}</div>
+                  <div class="tph" style="display:none">${ICONS.person}</div>
                 </div>`
-            : `<div class="et"><div class="rev-ph">${ICONS.person}</div></div>`
+            : `<div class="et"><div class="tph">${ICONS.person}</div></div>`
         : "";
       return `
       <div class="list-item shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
