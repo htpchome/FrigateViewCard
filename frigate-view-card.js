@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.323";
+const VERSION = "1.0.324";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -778,12 +778,12 @@ const STYLES = `
     overflow-y:auto;
     position:relative}
 
-  .card .browse-head{display:flex;align-items: center;justify-content: center;backgound:var(--c-bg-main);min-height:1.75rem;max-height:1.85em;  flex-direction:row;width: 100%;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;}
+  .card .browse-head{display:flex;align-items: center;justify-content: center;backgound:var(--c-bg-main);min-height:1.75rem;max-height:1.85em;  flex-direction:row;width: 100%;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;border:1px solid #444444;padding:0 8px;}
   .browse-head-left {display:flex;flex:1;justify-content:center;align-items:center;flex: 0 0 auto; }
-  .browse-head-right {display:flex;flex:1;justify-content center;align-items: center;flex: 0 0 auto;margin-top:2px;}
+  .browse-head-right {display:flex;justify-content center;align-items: center;flex: 0 0 auto;margin-top:2px;}
   .browse-head-middle {flex:1;text-align: center;font-weight:700;pointer-events:none;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
   .prev-next{}
-  .prev-next{display:inline-flex;align-items:center;gap:4px;font-size: 1rem;padding-inline: 0.5em;padding-block: 0.4em;line-height: 1;  border-radius: 999em;
+  .prev-next{display:inline-flex;align-items:center;gap:4px;font-size: 0.85rem;padding-inline: 0.3em;padding-block: 0.3em;line-height: 1;  border-radius: 999em;
     background:var(--c-bg-main);
     color:var(--c-text2);
     transition:all .15s;
