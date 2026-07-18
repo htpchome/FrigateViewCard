@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.295";
+const VERSION = "1.0.296";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -830,7 +830,7 @@ const STYLES = `
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
   .tabs-container{display:block;position:realtive;}
-  .tabs{display:flex;flex-wrap: wrap;gap: 4px;padding:4px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;transition: background-color 0.3s ease;}
+  .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;}
   .tabs::-webkit-scrollbar{display:none;}
 
   /* ── donut button ── */
@@ -839,7 +839,7 @@ const STYLES = `
   .donut:hover {background-color:var(--c-bg-main);color:var(--c-primary-d);}
   .donut:hover svg{color:var(--c-primary-d);}
   .donut.active {background:var(--c-primary-d);} 
-  .donut.active svg{color:var(--c-text2);}
+  .donut.active svg{color:var(--c-text3);}
 
 
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
@@ -848,7 +848,7 @@ const STYLES = `
   .more.to-top{position:relative;cursor:pointer;color:var(--c-text2);}
 
   /* ── feed area ── */
-  .feed-area{position:relative;width:100%;}
+    .feed-area{position:relative;width:100%;}
     #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
     #eng-wrap.popup-covered::after{content:"";position:absolute;inset:0;background:var(--c-bg-deep);z-index:4;pointer-events:none;}
     .card.mobile-rotate-live,
