@@ -2,6 +2,11 @@
 
 A simple Camera and Events Card to use with Home Assistant and Frigate.
 
+## Acknowledgments
+
+This project originally started as a fork of [frigate-modern-hass-card](https://github.com/QuadNL/frigate-modern-hass-card) developed by [QuadNL](https://github.com/QuadNL). Although the codebase has since been rewritten and evolved independently, we want to thank the original author for the foundational ideas that inspired this work.
+
+
 ## Notification Deep Links
 
 FrigateViewCard supports opening specific media from URL query parameters. This is useful for Home Assistant notification tap actions.

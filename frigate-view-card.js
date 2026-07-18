@@ -2,12 +2,18 @@
  * FrigateView Card Version 1.0.1
  * ---------------------------------------------------------------
  *
+ * ## Acknowledgments
+ * This project originally started as a fork of [frigate-modern-hass-card]
+ * (https://github.com/QuadNLfrigate-modern-hass-card) developed by [QuadNL]
+ * (https://github.com/QuadNL). Although the codebase has since been rewritten and evolved
+ * independently, we want to thank the original author for the foundational ideas that 
+ * inspired this work.
  *
  *
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.340";
+const VERSION = "1.0.341";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
