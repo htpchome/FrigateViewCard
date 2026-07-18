@@ -24,11 +24,13 @@ test("slideshow toolbar button is rendered", () => {
 
 test("slideshow runtime hooks are present", () => {
   assert.equal(source.includes("_handleSlideshowRealtimeMessage"), true);
+  assert.equal(source.includes("_handleSlideshowReviewsUpdated"), true);
   assert.equal(source.includes("_advanceSlideshowRotation"), true);
   assert.equal(source.includes("SLIDESHOW_ALERT_HOLD_MS"), true);
   assert.equal(source.includes("_shouldHandleSlideshowReview"), true);
   assert.equal(source.includes("_scheduleSlideshowReviewProbe"), true);
   assert.equal(source.includes("_probeLatestSlideshowReview"), true);
+  assert.equal(source.includes("alerts-window-initial"), true);
   assert.equal(source.includes("slideshow-detection"), true);
   assert.equal(source.includes("error-color"), true);
   assert.equal(source.includes("warning-color"), true);

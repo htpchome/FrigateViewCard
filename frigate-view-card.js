@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.351";
+const VERSION = "1.0.352";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3805,6 +3805,55 @@ class FrigateViewCard extends HTMLElement {
     if (oldest) this._slideshowHandledReviewIds.delete(oldest);
   }
 
+  _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
+    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
+    if (!entity || !Array.isArray(reviews) || !reviews.length) return;
+
+    let nextReview = null;
+    for (const review of reviews) {
+      const severity = this._normalizeReviewSeverity(review);
+      if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
+      const reviewId = String(review?.id || "").trim();
+      if (reviewId && this._slideshowHandledReviewIds.has(reviewId)) continue;
+      nextReview = {
+        entity,
+        severity,
+        reviewId,
+      };
+      break;
+    }
+    if (!nextReview) return;
+    if (nextReview.reviewId) {
+      this._rememberHandledSlideshowReview(nextReview.reviewId);
+    }
+
+    if (this._slideshowPopupPaused) {
+      this._slideshowPendingAlertCam = nextReview.entity;
+      this._slideshowPendingAlertType = nextReview.severity;
+      this._setSlideshowAlertState(nextReview.severity);
+      return;
+    }
+
+    const now = Date.now();
+    const activeEntity = this._activeCam?.entity || "";
+    this._slideshowLastAlertAt = now;
+    this._slideshowLastAlertCam = nextReview.entity;
+    this._slideshowPausedUntil = now + this._slideshowRotationMs();
+    this._setSlideshowAlertState(nextReview.severity);
+
+    if (nextReview.entity === activeEntity) {
+      this._scheduleSlideshowRotation(`${source}-active`);
+      return;
+    }
+
+    const idx = this._cameraIndexByEntity(nextReview.entity);
+    if (idx < 0) return;
+    this._slideshowPendingAlertCam = "";
+    this._slideshowPendingAlertType = "";
+    void this._switchCamera(idx, { source: "alert" });
+    this._scheduleSlideshowRotation(`${source}-switch`);
+  }
+
   async _probeLatestSlideshowReview() {
     if (
       !this._slideshowActive ||
@@ -4490,6 +4539,11 @@ class FrigateViewCard extends HTMLElement {
       );
       this._reviews = Array.isArray(initialReviews) ? initialReviews : [];
       this._renderList();
+      this._handleSlideshowReviewsUpdated(
+        this._activeCam?.entity || "",
+        this._reviews,
+        "alerts-window-initial",
+      );
 
       if (
         !this._reviews.length ||
@@ -4533,6 +4587,11 @@ class FrigateViewCard extends HTMLElement {
           if (Array.isArray(remainingReviews) && remainingReviews.length) {
             this._reviews = this._reviews.concat(remainingReviews);
             this._renderList();
+            this._handleSlideshowReviewsUpdated(
+              this._activeCam?.entity || "",
+              this._reviews,
+              "alerts-window-background",
+            );
           }
         } catch (_) {}
       })();
@@ -4570,6 +4629,11 @@ class FrigateViewCard extends HTMLElement {
         debugLabel: "alerts-tab",
       });
       this._reviews = Array.isArray(r) ? r : [];
+      this._handleSlideshowReviewsUpdated(
+        this._activeCam?.entity || "",
+        this._reviews,
+        "alerts-tab",
+      );
     } catch (_) {
       this._reviews = [];
     }
