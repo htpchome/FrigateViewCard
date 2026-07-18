@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.292";
+const VERSION = "1.0.293";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -794,8 +794,8 @@ const STYLES = `
   .list-item:hover{background: var(--c-bg-panel);}
   .list-item.compact{padding:2px 10px 2px 2px;flex-wrap:wrap;}
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
-  .list-item.compact .eact .ico{width:28.8px;height:28.8px;}
-  .list-item.compact .eact .ico svg{width:13.2px;height:13.2px;}
+  .list-item.compact .eact .ico{width:30px;height:30px;}
+  .list-item.compact .eact .ico svg{width:24px;height:24px;}
   .et{border-radius:15px;overflow:hidden;flex-shrink:0;
     background:var(--c-bg-deep);position:relative;object-fit:cover;}
   .et img{width:160px;height:90px;object-fit:cover;display:block;}
@@ -967,7 +967,7 @@ const STYLES = `
   /* ── filter + cal ── */
   .dropdown-content {display: none;position: absolute;background-color: #f1f1f1;min-width: 160px; overflow: auto;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 1;}
 
-  .filter-panel,.cal-panel{display: none;position: absolute;right:0;background-color: #f1f1f1;min-width: 160px; overflow: auto;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: auto;}
+  .filter-panel,.cal-panel{display: none;position: absolute;right:0;background-color: #f1f1f1;min-width: 160px; overflow: auto;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 2;}
 
 
   .frow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px;} .frow:last-child{margin-bottom:0;} .frow-l{font-size:0.75rem;color:var(--c-text3);width:38px;text-transform:uppercase;flex-shrink:0;}
