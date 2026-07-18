@@ -3869,16 +3869,20 @@ class FrigateViewCard extends HTMLElement {
   }
 
   async _loadWindowRecordings(clientId, cam, before) {
-    const recAfter = Math.max(0, before - RECORDINGS_WINDOW);
+    const bounds = this._recordingsDayBounds(before);
     try {
       const recordings = await this._ws({
         type: "frigate/recordings/get",
         instance_id: clientId,
         camera: cam,
-        after: recAfter,
-        before,
+        after: Math.max(0, bounds.start),
+        before: bounds.end,
       });
       this._recordings = Array.isArray(recordings) ? recordings : [];
+      this._recordingsDayAvailabilityCache.set(
+        `${clientId}|${cam}|${bounds.start}|${bounds.end}`,
+        this._recordings.length > 0,
+      );
       this._cacheActiveCamSlice("recordings", this._recordings);
       this._renderList();
     } catch (_) {
@@ -4403,6 +4407,7 @@ class FrigateViewCard extends HTMLElement {
 
     const onScroll = () => {
       this._syncOlderHint();
+      this._syncBrowseHeadFromScroll();
       if (
         (this._tab === "clips" || this._tab === "snapshot") &&
         !this._loading &&
@@ -5071,6 +5076,14 @@ class FrigateViewCard extends HTMLElement {
     }
     if (target.closest("#now-btn")) {
       this._goNow();
+      return true;
+    }
+    const recDayNav = target.closest("[data-rec-day-nav]");
+    if (recDayNav) {
+      const dir = Number(recDayNav.dataset.recDayNav || 0);
+      if (dir) {
+        void this._stepRecordingsDay(dir);
+      }
       return true;
     }
     return false;
@@ -6935,14 +6948,31 @@ class FrigateViewCard extends HTMLElement {
     }
     return `${this._weekday(ts)} - ${this._monthDay(ts, { ordinal: true })} - ${fallback}`;
   }
+  _recordingsHeadingLabel(ts = null) {
+    const target = Math.floor(ts || this._winEnd || Date.now() / 1000);
+    return `${this._weekday(target)} - ${this._monthDay(target, { ordinal: true })} - Recordings`;
+  }
   _showStickyDayHeaders() {
     return ["alerts", "clips", "snapshot"].includes(this._tab);
   }
   _renderListLabel(ts = null) {
-    const lbl = this._$("#list-label");
-    const head = this.shadowRoot?.querySelector(".list-head");
-    if (head) head.style.display = this._showStickyDayHeaders() ? "none" : "";
-    if (!lbl) return;
+    const lbl = this._$("#browse-head-label");
+    const browseHead = this._$("#browse-head");
+    const prev = this._$("#rec-day-prev");
+    const next = this._$("#rec-day-next");
+    if (!lbl || !browseHead) return;
+
+    browseHead.style.display = "flex";
+    if (this._tab === "recordings") {
+      lbl.textContent = this._recordingsHeadingLabel(ts || this._winEnd);
+      if (prev) prev.style.display = "inline-flex";
+      if (next) next.style.display = "inline-flex";
+      void this._updateRecordingsBrowseNav();
+      return;
+    }
+
+    if (prev) prev.style.display = "none";
+    if (next) next.style.display = "none";
     lbl.textContent = this._listHeadingLabel(ts);
   }
   _dayKey(ts) {
@@ -6964,6 +6994,7 @@ class FrigateViewCard extends HTMLElement {
       if (dayKey !== currentDay) {
         currentDay = dayKey;
         sections.push({
+          ts: Math.floor(ts || 0),
           label: this._listHeadingLabel(ts || null),
           rows: [],
         });
@@ -6971,11 +7002,163 @@ class FrigateViewCard extends HTMLElement {
       sections[sections.length - 1].rows.push(renderItem(item));
     }
     return sections
-      .map(
-        (section) =>
-          `<section class="list-day-sec"><div class="list-day-label">${section.label}</div>${section.rows.join("")}</section>`,
-      )
+      .map((section, idx) => {
+        const extraClass = idx === 0 ? " list-day-label-first" : "";
+        const ts = Number.isFinite(section.ts) ? Math.floor(section.ts) : 0;
+        return `<section class="list-day-sec"><div class="list-day-label${extraClass}" data-day-ts="${ts}" data-day-label="${section.label}">${section.label}</div>${section.rows.join("")}</section>`;
+      })
       .join("");
+  }
+
+  _recordingsDayBounds(tsSec = null) {
+    const target = Math.floor(tsSec || this._winEnd || Date.now() / 1000);
+    const z = this._tzParts(target);
+    const start = this._tzDateTimeToEpochSeconds(
+      z.year,
+      z.month,
+      z.day,
+      0,
+      0,
+      0,
+    );
+    const end = this._tzDateTimeToEpochSeconds(
+      z.year,
+      z.month,
+      z.day,
+      23,
+      59,
+      59,
+    );
+    return { start, end };
+  }
+
+  _recordingsOffsetDayBounds(offsetDays = 0) {
+    const base = this._tzParts(this._winEnd || Date.now() / 1000);
+    const shifted = new Date(
+      Date.UTC(base.year, base.month - 1, base.day + offsetDays, 12, 0, 0),
+    );
+    const y = shifted.getUTCFullYear();
+    const mo = shifted.getUTCMonth() + 1;
+    const d = shifted.getUTCDate();
+    const start = this._tzDateTimeToEpochSeconds(y, mo, d, 0, 0, 0);
+    const end = this._tzDateTimeToEpochSeconds(y, mo, d, 23, 59, 59);
+    return { start, end };
+  }
+
+  async _hasRecordingsInBounds(bounds, clientId, cam) {
+    const key = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
+    if (this._recordingsDayAvailabilityCache.has(key)) {
+      return this._recordingsDayAvailabilityCache.get(key);
+    }
+    try {
+      const recs = await this._ws({
+        type: "frigate/recordings/get",
+        instance_id: clientId,
+        camera: cam,
+        after: Math.max(0, bounds.start),
+        before: bounds.end,
+      });
+      const has = Array.isArray(recs) && recs.length > 0;
+      this._recordingsDayAvailabilityCache.set(key, has);
+      return has;
+    } catch (_) {
+      this._recordingsDayAvailabilityCache.set(key, false);
+      return false;
+    }
+  }
+
+  async _updateRecordingsBrowseNav() {
+    if (this._tab !== "recordings") return;
+    const prev = this._$("#rec-day-prev");
+    const next = this._$("#rec-day-next");
+    if (!prev || !next) return;
+
+    const { clientId, cam } = this._cc();
+    if (!clientId || !cam) {
+      prev.disabled = true;
+      next.disabled = true;
+      return;
+    }
+
+    const token = ++this._recordingsNavUpdateToken;
+    prev.disabled = true;
+    next.disabled = true;
+
+    const current = this._recordingsDayBounds();
+    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
+    const isTodayOrFuture = current.end >= today.end;
+    const prevBounds = this._recordingsOffsetDayBounds(-1);
+    const hasPrev = await this._hasRecordingsInBounds(
+      prevBounds,
+      clientId,
+      cam,
+    );
+    if (token !== this._recordingsNavUpdateToken) return;
+
+    let hasNext = false;
+    if (!isTodayOrFuture) {
+      const nextBounds = this._recordingsOffsetDayBounds(1);
+      hasNext = await this._hasRecordingsInBounds(nextBounds, clientId, cam);
+      if (token !== this._recordingsNavUpdateToken) return;
+    }
+
+    prev.disabled = !hasPrev;
+    next.disabled = isTodayOrFuture || !hasNext;
+  }
+
+  async _stepRecordingsDay(dir) {
+    if (this._tab !== "recordings") return;
+    const direction = Number(dir);
+    if (direction !== -1 && direction !== 1) return;
+
+    const bounds = this._recordingsOffsetDayBounds(direction);
+    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
+    if (direction > 0 && bounds.end > today.end) return;
+
+    const { clientId, cam } = this._cc();
+    if (!clientId || !cam) return;
+    const hasData = await this._hasRecordingsInBounds(bounds, clientId, cam);
+    if (!hasData) {
+      void this._updateRecordingsBrowseNav();
+      return;
+    }
+
+    this._followNowWindow = false;
+    this._winStart = bounds.start;
+    this._winEnd = bounds.end;
+    this._exhausted = false;
+    this._pruneNonActiveCamWindowCaches();
+    await this._loadWindowRecordings(clientId, cam, this._winEnd);
+    this._renderListLabel(this._winEnd);
+    this._renderList();
+  }
+
+  _syncBrowseHeadFromScroll() {
+    if (!this._showStickyDayHeaders()) return;
+    const list = this._$("#list");
+    const browse = this._$("#browse");
+    const lbl = this._$("#browse-head-label");
+    if (!list || !browse || !lbl) return;
+
+    const labels = Array.from(list.querySelectorAll(".list-day-label"));
+    if (!labels.length) return;
+
+    const listScrollable = list.scrollHeight > list.clientHeight + 2;
+    const scroller = listScrollable ? list : browse;
+    const anchorTop = scroller.getBoundingClientRect().top + 2;
+    let active = labels[0];
+    for (const dayLabel of labels) {
+      if (dayLabel.getBoundingClientRect().top <= anchorTop) {
+        active = dayLabel;
+      } else {
+        break;
+      }
+    }
+
+    const nextLabel = active.dataset.dayLabel || active.textContent || "";
+    if (nextLabel) {
+      lbl.textContent = nextLabel;
+    }
   }
   _dur(ev) {
     return Math.max(
@@ -7268,6 +7451,7 @@ class FrigateViewCard extends HTMLElement {
           : events.map((ev) => this._eventCardHTML(ev, false)).join("")) +
           (this._exhausted ? '<div class="end">— end —</div>' : ""),
       );
+      this._syncBrowseHeadFromScroll();
       this._syncOlderHint();
       requestAnimationFrame(() => this._syncOlderHint());
       setTimeout(() => this._syncOlderHint(), 200);
@@ -7332,6 +7516,7 @@ class FrigateViewCard extends HTMLElement {
     }
   }
   _renderRecordings(list) {
+    this._renderListLabel(this._winEnd);
     const recs = this._splitRecsHourly(this._recordings).sort(
       (a, b) => b.start_time - a.start_time,
     );
@@ -7438,6 +7623,7 @@ class FrigateViewCard extends HTMLElement {
       </div>`;
       }),
     );
+    this._syncBrowseHeadFromScroll();
     this._syncOlderHint(false);
   }
   // ── clip download range ───────────────────────────────────
