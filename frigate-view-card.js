@@ -778,7 +778,7 @@ const STYLES = `
     overflow-y:auto;
     position:relative}
 
-  .card .browse-head{flex:1 1 0;backgound:var(--c-bg-main);min-height:1.25rem;min-width:0;  flex-direction: row;width: 100%;}
+  .card .browse-head{flex:1 1 0;backgound:var(--c-bg-main);min-height:1.25rem;max-height:1.25em;  flex-direction:row;width: 100%;}
   .browse-head-left, .browse-head-right {flex: 0 0 auto;}
   .browse-head-middle {flex: 1 1 auto;}
   
