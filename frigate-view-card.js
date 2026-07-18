@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.353";
+const VERSION = "1.0.355";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -32,6 +32,8 @@ const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
 const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 const SLIDESHOW_ALERT_HOLD_MS = 10000;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
+const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
+const SLIDESHOW_REVIEW_WATCH_MAX_MS = 5000;
 const MAX_CAMERAS = 8;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
@@ -1287,6 +1289,7 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowHandledReviewIds = new Set();
     this._slideshowStartedAtSec = 0;
     this._slideshowReviewProbeT = null;
+    this._slideshowReviewWatchT = null;
     this._slideshowReviewProbeInFlight = false;
     this._slideshowSwitchT = null;
     this._slideshowPauseT = null;
@@ -3615,10 +3618,12 @@ class FrigateViewCard extends HTMLElement {
     if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
     if (this._slideshowFadeT) clearTimeout(this._slideshowFadeT);
     if (this._slideshowReviewProbeT) clearTimeout(this._slideshowReviewProbeT);
+    if (this._slideshowReviewWatchT) clearTimeout(this._slideshowReviewWatchT);
     this._slideshowSwitchT = null;
     this._slideshowPauseT = null;
     this._slideshowFadeT = null;
     this._slideshowReviewProbeT = null;
+    this._slideshowReviewWatchT = null;
   }
 
   _syncToolbarButtons() {
@@ -3684,6 +3689,7 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowAttentionType = "";
     this._slideshowHandledReviewIds.clear();
     this._slideshowStartedAtSec = Math.floor(Date.now() / 1000);
+    this._scheduleSlideshowReviewWatch(300);
     this._scheduleSlideshowRotation(source);
     this._syncToolbarButtons();
     return true;
@@ -3969,6 +3975,31 @@ class FrigateViewCard extends HTMLElement {
       },
       Math.max(0, Number(delayMs) || 0),
     );
+  }
+
+  _slideshowReviewWatchIntervalMs() {
+    return Math.max(
+      SLIDESHOW_REVIEW_WATCH_MIN_MS,
+      Math.min(
+        SLIDESHOW_REVIEW_WATCH_MAX_MS,
+        Math.floor(this._slideshowRotationMs() / 4),
+      ),
+    );
+  }
+
+  _scheduleSlideshowReviewWatch(delayMs = null) {
+    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
+    if (this._slideshowReviewWatchT) clearTimeout(this._slideshowReviewWatchT);
+    const wait =
+      delayMs == null
+        ? this._slideshowReviewWatchIntervalMs()
+        : Math.max(0, Number(delayMs) || 0);
+    this._slideshowReviewWatchT = setTimeout(() => {
+      this._slideshowReviewWatchT = null;
+      void this._probeLatestSlideshowReview().finally(() => {
+        this._scheduleSlideshowReviewWatch();
+      });
+    }, wait);
   }
 
   _cameraIndexByEntity(entity) {
