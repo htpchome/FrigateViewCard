@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.311";
+const VERSION = "1.0.312";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1862,7 +1862,13 @@ class FrigateViewCard extends HTMLElement {
     void this._warmOtherCamerasEvents();
     this._mountEngine();
     await initialLoad;
-    this._loadCalendar();
+    // Defer summary loading so initial event list paint is not competing
+    // with the heavy events/summary query.
+    setTimeout(() => {
+      if (!this.isConnected) return;
+      if (this._daysWithActivity.size > 0) return;
+      void this._loadCalendar();
+    }, 1200);
     this._subscribe();
     this._startEditModeWatchdog();
     this._startEditorDialogCloseObserver();
@@ -3722,9 +3728,13 @@ class FrigateViewCard extends HTMLElement {
           count: this._events.length,
         });
       }),
-      this._loadWindowRecordings(clientId, cam, before).finally(() => {
+      (this._tab === "recordings"
+        ? this._loadWindowRecordings(clientId, cam, before)
+        : Promise.resolve()
+      ).finally(() => {
         this._perfEnd(recordingsTrace, {
           count: this._recordings.length,
+          skipped: this._tab !== "recordings",
         });
       }),
       this._loadWindowReviewsIfNeeded(clientId, cam, after, before).finally(
@@ -4106,10 +4116,16 @@ class FrigateViewCard extends HTMLElement {
   }
 
   async _loadTabData(tab) {
-    if (tab !== "alerts" && tab !== "kept") return;
+    if (tab !== "alerts" && tab !== "kept" && tab !== "recordings") return;
     try {
       if (tab === "alerts") await this._loadReviews();
       if (tab === "kept") await this._loadKept();
+      if (tab === "recordings") {
+        const { clientId, cam } = this._cc();
+        if (clientId && cam) {
+          await this._loadWindowRecordings(clientId, cam, this._winEnd);
+        }
+      }
     } catch (error) {
       console.error("[Frigate] tab data load failed", error);
     } finally {
@@ -6629,6 +6645,14 @@ class FrigateViewCard extends HTMLElement {
         this._calMonth = new Date(z.year, z.month - 1, 1);
       }
       this._renderCal();
+      if (!this._daysWithActivity.size) {
+        void (async () => {
+          await this._loadCalendar();
+          if (this._$("#cal-panel")?.style.display !== "none") {
+            this._renderCal();
+          }
+        })();
+      }
     }
   }
   // ── calendar ──────────────────────────────────────────────
