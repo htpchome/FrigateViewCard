@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.314";
+const VERSION = "1.0.315";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -18,6 +18,7 @@ const INACTIVE_WARM_EVENT_LIMIT = 5;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
 const INITIAL_EVENTS_PAGE_LIMIT = 1;
+const WINDOW_BACKGROUND_PAGE_LIMIT = 4;
 const REALTIME_HEAD_POLL_MS = 5000;
 const REALTIME_RELOAD_DEBOUNCE_MS = 450;
 const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
@@ -3731,8 +3732,10 @@ class FrigateViewCard extends HTMLElement {
       camera: cam,
       tab: this._tab,
     });
+    const eventsTask = this._loadWindowEvents(clientId, cam, after, before);
+
     await Promise.allSettled([
-      this._loadWindowEvents(clientId, cam, after, before).finally(() => {
+      eventsTask.finally(() => {
         this._perfEnd(eventsTrace, {
           count: this._events.length,
         });
@@ -3746,14 +3749,15 @@ class FrigateViewCard extends HTMLElement {
           skipped: this._tab !== "recordings",
         });
       }),
-      this._loadWindowReviewsIfNeeded(clientId, cam, after, before).finally(
-        () => {
-          this._perfEnd(reviewsTrace, {
-            count: this._reviews.length,
-            skipped: this._tab !== "alerts",
-          });
-        },
-      ),
+      (async () => {
+        await eventsTask;
+        await this._loadWindowReviewsIfNeeded(clientId, cam, after, before);
+      })().finally(() => {
+        this._perfEnd(reviewsTrace, {
+          count: this._reviews.length,
+          skipped: this._tab !== "alerts",
+        });
+      }),
     ]);
     const ent = this._activeCam?.entity;
     if (ent && this._camCache[ent]) {
@@ -3825,9 +3829,12 @@ class FrigateViewCard extends HTMLElement {
             after,
             before,
             {
-              pageLimit: Math.max(
-                1,
-                WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT,
+              pageLimit: Math.min(
+                WINDOW_BACKGROUND_PAGE_LIMIT,
+                Math.max(
+                  1,
+                  WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT,
+                ),
               ),
               cursorBefore,
               debugLabel: "background",
@@ -3914,9 +3921,12 @@ class FrigateViewCard extends HTMLElement {
             reviewsAfter,
             before,
             {
-              pageLimit: Math.max(
-                1,
-                WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT,
+              pageLimit: Math.min(
+                WINDOW_BACKGROUND_PAGE_LIMIT,
+                Math.max(
+                  1,
+                  WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT,
+                ),
               ),
               cursorBefore,
               debugLabel: "alerts-window-background",
