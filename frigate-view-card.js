@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.347";
+const VERSION = "1.0.348";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3579,9 +3579,15 @@ class FrigateViewCard extends HTMLElement {
     return (
       this._config?.slideshow_rotation_enabled === true &&
       !DEVICE_PROFILE.isPhone &&
+      !this._isMobilePhoneViewport() &&
       Array.isArray(this._config?.cameras) &&
       this._config.cameras.length > 1
     );
+  }
+
+  _isMobilePhoneViewport() {
+    const width = Number(this._cardWidth || window.innerWidth || 0);
+    return width > 0 && width < 420;
   }
 
   _slideshowRotationMs() {
@@ -3609,7 +3615,7 @@ class FrigateViewCard extends HTMLElement {
     if (!slideshowBtn) return;
     const available = this._isSlideshowRotationAvailable();
     slideshowBtn.hidden = !available;
-    slideshowBtn.disabled = !available;
+    slideshowBtn.style.display = available ? "" : "none";
     slideshowBtn.classList.toggle("active", this._slideshowActive && available);
     slideshowBtn.setAttribute(
       "aria-pressed",
@@ -4550,6 +4556,9 @@ class FrigateViewCard extends HTMLElement {
           : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
     const filterDisabled = this._tab === "recordings";
     const slideshowHidden = !this._isSlideshowRotationAvailable();
+    const slideshowButton = slideshowHidden
+      ? ""
+      : `<button class=\"tool slideshow-btn\" id=\"slideshow-btn\" aria-pressed=\"${this._slideshowActive ? "true" : "false"}\" title=\"${this._slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}\" aria-label=\"${this._slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}\">${this._slideshowButtonIcon()}</button>`;
     return `${tab("alerts", ICONS.alerts, "Alerts")}
       ${tab("clips", ICONS.clips, "Clips")}
       ${tab("snapshot", ICONS.snapshot, "Snapshots")}
@@ -4557,7 +4566,7 @@ class FrigateViewCard extends HTMLElement {
       ${tab("kept", ICONS.star, "Kept events")}
       <div class="tl-tools" style=" margin-left: auto;">
         <button class="tool" id="now-btn" title="Today">${ICONS.bullseye}</button>
-        <button class="tool slideshow-btn" id="slideshow-btn" ${slideshowHidden ? "hidden" : ""} aria-pressed="${this._slideshowActive && !slideshowHidden ? "true" : "false"}" title="${this._slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${this._slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}">${this._slideshowButtonIcon()}</button>
+        ${slideshowButton}
         <button class="tool" id="filter-btn" title="Filter" ${filterDisabled ? "disabled" : ""}>${ICONS.filter}</button>
         <button class="tool" id="cal-btn" title="Calendar">${ICONS.calendar}</button>
       </div>`;

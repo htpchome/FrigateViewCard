@@ -15,7 +15,8 @@ test("slideshow config is wired through the card", () => {
 });
 
 test("slideshow toolbar button is rendered", () => {
-  assert.equal(source.includes('id="slideshow-btn"'), true);
+  assert.equal(source.includes("slideshow-btn"), true);
+  assert.equal(source.includes("slideshowButton"), true);
   assert.equal(source.includes("rotate3dActive"), true);
   assert.equal(source.includes("Start slideshow rotation"), true);
   assert.equal(source.includes("Stop slideshow rotation"), true);
