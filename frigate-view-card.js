@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.301";
+const VERSION = "1.0.302";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -830,11 +830,11 @@ const STYLES = `
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
   .tabs-container{display:block;position:realtive;}
-  .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:2px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;}
+  .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:8px 2px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;margin-bottom:3px;padding:8px 2px;}
   .tabs::-webkit-scrollbar{display:none;}
 
   /* ── donut button ── */
-  .donut{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;height:30px;width:30px;background-color:var(--c-bg-main);padding:3px;transition: all 0.2s ease;}
+  .donut{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;min-height:40px;min-width:40px;background-color:var(--c-bg-main);padding:3px;transition: all 0.2s ease;}
   .donut svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .donut:hover {background-color:var(--c-bg-main);color:var(--c-primary-d);}
   .donut:hover svg{color:var(--c-primary-d);}
@@ -958,7 +958,7 @@ const STYLES = `
 
   /* ── timeline ── */
   .tl-tools{display:flex;gap:4px;}
-  .tool{display:inline-flex;gap:4px;align-items:center;justify-content:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;padding:4px;cursor:pointer;padding:3px;transition: all 0.2s ease;}
+  .tool{display:inline-flex;gap:4px;align-items:center;justify-content:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;padding:4px;cursor:pointer;padding:3px;transition: all 0.2s ease;min-height:40px;min-width:40px;}
   .tool svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .tool:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);opacity:1;}
   .tool:hover svg{color:var(--c-primary-d);}
