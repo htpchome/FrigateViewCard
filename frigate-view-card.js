@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.342";
+const VERSION = "1.0.343";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -29,6 +29,7 @@ const REALTIME_HEAD_POLL_MS = 5000;
 const REALTIME_RELOAD_DEBOUNCE_MS = 450;
 const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
 const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
+const MAX_CAMERAS = 8;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
   "alerts",
@@ -8525,8 +8526,8 @@ class FrigateViewCardEditor extends HTMLElement {
     }
     const cur = [...this._getCams()];
     if (this._editingCamIndex == null) {
-      if (cur.length >= 4) {
-        if (helper) helper.textContent = "Maximum 4 cameras.";
+      if (cur.length >= MAX_CAMERAS) {
+        if (helper) helper.textContent = `Maximum ${MAX_CAMERAS} cameras.`;
         return;
       }
       cur.push({
@@ -8743,7 +8744,7 @@ class FrigateViewCardEditor extends HTMLElement {
   _render() {
     const frigEntities = this._frigateEntities();
     const cams = this._getCams();
-    const canAddCamera = cams.length < 4;
+    const canAddCamera = cams.length < MAX_CAMERAS;
     const timezoneDisplay = this._timezoneDisplay();
     const hiddenTabs = new Set(this._config?.hidden_tabs || []);
     this._ensureThemeDraftCache();
@@ -8804,7 +8805,7 @@ class FrigateViewCardEditor extends HTMLElement {
         <span class="field-label">Cameras ${frigEntities.length ? '<small style="font-weight:400;color:var(--c-text2)">(Frigate cameras detected)</small>' : ""}</span>
         <div class="cam-wrap" id="cam-list">${cameraRows}</div>
         ${canAddCamera ? '<div class="cam-toolbar"><button id="camera-add" class="cam-add" type="button">Add</button></div>' : ""}
-        <span class="cam-helper">Maximum 4 cameras.</span>
+        <span class="cam-helper">Maximum ${MAX_CAMERAS} cameras.</span>
       </div>`;
 
     const generalPanelContent = `
