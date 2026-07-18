@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.322";
+const VERSION = "1.0.323";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -778,10 +778,10 @@ const STYLES = `
     overflow-y:auto;
     position:relative}
 
-  .card .browse-head{display:flex;align-items:center;backgound:var(--c-bg-main);min-height:1.75rem;max-height:1.5em;  flex-direction:row;width: 100%;}
-  .browse-head-left {display:flex;flex: 1;text-align: left; }
-  .browse-head-right {display:flex;flex: 1;text-align: right; }
-  .browse-head-middle {display:flex;flex: 0 0 auto;text-align: center;}
+  .card .browse-head{display:flex;align-items: center;justify-content: center;backgound:var(--c-bg-main);min-height:1.75rem;max-height:1.85em;  flex-direction:row;width: 100%;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;}
+  .browse-head-left {display:flex;flex:1;justify-content:center;align-items:center;flex: 0 0 auto; }
+  .browse-head-right {display:flex;flex:1;justify-content center;align-items: center;flex: 0 0 auto;margin-top:2px;}
+  .browse-head-middle {flex:1;text-align: center;font-weight:700;pointer-events:none;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
   .prev-next{}
   .prev-next{display:inline-flex;align-items:center;gap:4px;font-size: 1rem;padding-inline: 0.5em;padding-block: 0.4em;line-height: 1;  border-radius: 999em;
     background:var(--c-bg-main);
@@ -4278,13 +4278,12 @@ class FrigateViewCard extends HTMLElement {
                 Day - Date - Category(alerts, clips, snaps, recordings, favorites)
               </div>
               <div class="browse-head-right">
-                <button class="prev-next">Previous</button>
+                <button class="prev-next">Next</button>
               </div>
             </div>
         
             <div class="browse" id="browse" style="display:none">
               <div class="list-head">
-                <span class="section-label" id="list-label">Recent Alerts</span>
                 <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
               </div>
               <div class="list" id="list">
