@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.329";
+const VERSION = "1.0.330";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -779,7 +779,7 @@ const STYLES = `
     position:relative}
 
   .card .browse-head{display:flex;align-items:center;justify-content:center;background:var(--c-bg-main);min-height:1.75rem;max-height:1.85em;flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;border:1px solid #444444;padding:1px 8px;}
-  .card:not(.mobile) .browse-head{min-height:3.5rem;max-height:none;}
+  .card.recordings-browse-head-tall:not(.mobile) .browse-head{min-height:3.5rem;max-height:none;}
   .browse-head-left {display:flex;flex:1;justify-content:center;align-items:center;flex: 0 0 auto; }
   .browse-head-right {display:flex;justify-content center;align-items: center;flex: 0 0 auto;}
   .browse-head-middle {flex:1;text-align:center;font-weight:700;pointer-events:none;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
@@ -4359,9 +4359,19 @@ class FrigateViewCard extends HTMLElement {
     this._applyBrowse();
     this._applyCardStyle();
     this._applyLayoutMode();
+    this._syncBrowseHeadModeClass();
     this._bindListScroll();
     this._bindRecordingsSwipe();
     this._initResizeHandle();
+  }
+
+  _syncBrowseHeadModeClass() {
+    const card = this._$("#card");
+    if (!card) return;
+    card.classList.toggle(
+      "recordings-browse-head-tall",
+      this._tab === "recordings",
+    );
   }
 
   _initResizeHandle() {
@@ -5330,6 +5340,7 @@ class FrigateViewCard extends HTMLElement {
         this._renderFilter();
       }
     }
+    this._syncBrowseHeadModeClass();
     this._renderListLabel();
     void this._loadTabData(tab);
     this._renderList();
