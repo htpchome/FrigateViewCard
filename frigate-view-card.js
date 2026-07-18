@@ -7,14 +7,14 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.313";
+const VERSION = "1.0.314";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
 const EVENT_FETCH_BATCH = 100;
 const INITIAL_EVENT_FETCH_LIMIT = 20;
-const INACTIVE_WARM_EVENT_LIMIT = 10;
+const INACTIVE_WARM_EVENT_LIMIT = 5;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
 const INITIAL_EVENTS_PAGE_LIMIT = 1;
@@ -1161,6 +1161,7 @@ class FrigateViewCard extends HTMLElement {
     this._eventsLoadToken = 0;
     this._reviewsLoadToken = 0;
     this._warmCamsToken = 0;
+    this._warmOtherCamsDelayT = null;
     this._reloadPending = false;
     this._reloadAfterLoad = false;
     this._perfEnabled = this._isPerfDiagnosticsEnabled();
@@ -1776,6 +1777,8 @@ class FrigateViewCard extends HTMLElement {
     this._io = null;
     if (this._realtimeHeadPollT) clearInterval(this._realtimeHeadPollT);
     this._realtimeHeadPollT = null;
+    if (this._warmOtherCamsDelayT) clearTimeout(this._warmOtherCamsDelayT);
+    this._warmOtherCamsDelayT = null;
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
     if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
     this._editModeWatchdogT = null;
@@ -1860,16 +1863,9 @@ class FrigateViewCard extends HTMLElement {
     this._winStart = now - this._config.window_days * DAY;
 
     const initialLoad = this._loadWindow(true);
-    void this._warmOtherCamerasEvents();
+    this._scheduleWarmOtherCamerasEvents();
     this._mountEngine();
     await initialLoad;
-    // Defer summary loading so initial event list paint is not competing
-    // with the heavy events/summary query.
-    setTimeout(() => {
-      if (!this.isConnected) return;
-      if (this._daysWithActivity.size > 0) return;
-      void this._loadCalendar();
-    }, 1200);
     this._subscribe();
     this._startEditModeWatchdog();
     this._startEditorDialogCloseObserver();
@@ -3617,6 +3613,18 @@ class FrigateViewCard extends HTMLElement {
           : [];
       } catch (_) {}
     }
+  }
+
+  _scheduleWarmOtherCamerasEvents(delayMs = 1000) {
+    if (this._warmOtherCamsDelayT) clearTimeout(this._warmOtherCamsDelayT);
+    this._warmOtherCamsDelayT = setTimeout(
+      () => {
+        this._warmOtherCamsDelayT = null;
+        if (!this.isConnected) return;
+        void this._warmOtherCamerasEvents();
+      },
+      Math.max(0, Number(delayMs) || 0),
+    );
   }
 
   _pruneNonActiveCamWindowCaches() {
@@ -6583,7 +6591,7 @@ class FrigateViewCard extends HTMLElement {
     this._pruneNonActiveCamWindowCaches();
     void (async () => {
       await this._loadWindow(true);
-      await this._warmOtherCamerasEvents();
+      this._scheduleWarmOtherCamerasEvents();
     })();
   }
   _download(id, file) {
@@ -6716,7 +6724,7 @@ class FrigateViewCard extends HTMLElement {
     this._pruneNonActiveCamWindowCaches();
     void (async () => {
       await this._loadWindow(true);
-      await this._warmOtherCamerasEvents();
+      this._scheduleWarmOtherCamerasEvents();
     })();
   }
   _renderCal() {
