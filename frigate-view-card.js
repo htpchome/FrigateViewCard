@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.355";
+const VERSION = "1.0.356";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -33,7 +33,7 @@ const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 const SLIDESHOW_ALERT_HOLD_MS = 10000;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
-const SLIDESHOW_REVIEW_WATCH_MAX_MS = 5000;
+const SLIDESHOW_REVIEW_WATCH_MAX_MS = 15000;
 const MAX_CAMERAS = 8;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
@@ -3978,11 +3978,12 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _slideshowReviewWatchIntervalMs() {
+    const realtimePollMs = Math.floor(this._effectiveRealtimePollSeconds() * 1000);
     return Math.max(
       SLIDESHOW_REVIEW_WATCH_MIN_MS,
       Math.min(
         SLIDESHOW_REVIEW_WATCH_MAX_MS,
-        Math.floor(this._slideshowRotationMs() / 4),
+        realtimePollMs,
       ),
     );
   }
