@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.331";
+const VERSION = "1.0.332";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -805,8 +805,8 @@ const STYLES = `
   .rec-swipe-pane{position:absolute;inset:0;will-change:transform;backface-visibility:hidden;}
   .rec-swipe-pane.loading{display:flex;align-items:center;justify-content:center;}
   .rec-swipe-pane.loading .empty{margin-top:14px;}
-  .browse.swipe-bounce-prev{animation:browseBouncePrev .26s ease-out;}
-  .browse.swipe-bounce-next{animation:browseBounceNext .26s ease-out;}
+  .browse.swipe-bounce-prev{animation:browseBouncePrev .24s ease-out;}
+  .browse.swipe-bounce-next{animation:browseBounceNext .24s ease-out;}
   @keyframes browseBouncePrev {
     0% { transform: translateX(0); }
     38% { transform: translateX(18px); }
@@ -4476,6 +4476,8 @@ class FrigateViewCard extends HTMLElement {
     let tracking = false;
     let horizontal = false;
     let direction = 0;
+    const dragEngageThreshold = this._isMobileTabletViewport() ? 4 : 6;
+    const dragFollowFactor = this._isMobileTabletViewport() ? 0.68 : 0.58;
 
     const canSwipe = () =>
       this._tab === "recordings" &&
@@ -4519,7 +4521,11 @@ class FrigateViewCard extends HTMLElement {
       deltaY = t.clientY - startY;
 
       if (!horizontal) {
-        if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) return;
+        if (
+          Math.abs(deltaX) < dragEngageThreshold &&
+          Math.abs(deltaY) < dragEngageThreshold
+        )
+          return;
         horizontal = Math.abs(deltaX) > Math.abs(deltaY);
         if (!horizontal) {
           resetGesture();
@@ -4535,7 +4541,9 @@ class FrigateViewCard extends HTMLElement {
       if (!stage) return;
       const max = stage.width;
       const x = Math.max(-max, Math.min(max, deltaX));
-      this._setRecordingsSwipeStageOffset(stage, x);
+      const follow =
+        Math.sign(x) * Math.min(Math.abs(x) * dragFollowFactor, max);
+      this._setRecordingsSwipeStageOffset(stage, follow);
     };
 
     const finishSwipe = async () => {
@@ -4555,14 +4563,14 @@ class FrigateViewCard extends HTMLElement {
         return;
       }
 
-      const threshold = Math.max(56, stage.width * 0.22);
+      const threshold = Math.max(44, stage.width * 0.16);
       const shouldAdvance = absX >= threshold;
       if (!shouldAdvance) {
         await this._animateRecordingsSwipeStageTo(
           stage,
           0,
-          180,
-          "cubic-bezier(0.2, 0.55, 0.2, 1)",
+          160,
+          "cubic-bezier(0.18, 0.6, 0.2, 1)",
         );
         resetGesture();
         return;
@@ -4573,8 +4581,8 @@ class FrigateViewCard extends HTMLElement {
         await this._animateRecordingsSwipeStageTo(
           stage,
           0,
-          200,
-          "cubic-bezier(0.2, 0.55, 0.2, 1)",
+          180,
+          "cubic-bezier(0.18, 0.6, 0.2, 1)",
         );
         this._bounceRecordingsArea(dir);
       }
