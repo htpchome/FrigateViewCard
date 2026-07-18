@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.298";
+const VERSION = "1.0.299";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -958,12 +958,12 @@ const STYLES = `
 
   /* ── timeline ── */
   .tl-tools{display:flex;gap:4px;}
-  .tool{display:inline-flex;gap:4px;align-items:center;justify-content:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;padding:4px;cursor:pointer;height:30px;width:30px;flex-shrink:0;}
+  .tool{display:inline-flex;gap:4px;align-items:center;vertical-align:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;padding:4px;cursor:pointer;height:30px;width:30px;flex-shrink:0;}
   .tool svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .tool:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
-  .ico{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
+  .ico{width:30px;height:30px;display:flex;align-items:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
   .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 
