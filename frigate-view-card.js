@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.343";
+const VERSION = "1.0.344";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1699,7 +1699,7 @@ class FrigateViewCard extends HTMLElement {
         },
       ];
     }
-    if (cameras.length > 4) cameras = cameras.slice(0, 4);
+    if (cameras.length > MAX_CAMERAS) cameras = cameras.slice(0, MAX_CAMERAS);
 
     const legacyWindowHours = parseInt(config.window_hours, 10);
     const nextConfig = {
@@ -8287,7 +8287,7 @@ class FrigateViewCardEditor extends HTMLElement {
         };
       })
       .filter((c) => c.entity)
-      .slice(0, 4);
+      .slice(0, MAX_CAMERAS);
     return normalized;
   }
 
@@ -8544,7 +8544,7 @@ class FrigateViewCardEditor extends HTMLElement {
         alerts_content: alertsContent,
       };
     }
-    this._config = { ...this._config, cameras: cur.slice(0, 4) };
+    this._config = { ...this._config, cameras: cur.slice(0, MAX_CAMERAS) };
     this._closeCameraModal();
     this._render();
     this._dispatch();
@@ -9304,7 +9304,7 @@ class FrigateViewCardEditor extends HTMLElement {
             alerts_content: normalizeAlertsAreaContent(c?.alerts_content),
           }))
           .filter((c) => c.entity)
-          .slice(0, 4)
+          .slice(0, MAX_CAMERAS)
       : [];
   }
 
