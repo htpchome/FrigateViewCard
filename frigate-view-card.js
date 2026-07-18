@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.309";
+const VERSION = "1.0.308";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1243,7 +1243,7 @@ class FrigateViewCard extends HTMLElement {
       this._onEditorPreviewDraft,
     );
   }
-
+  
   _cloneCardConfig(config) {
     try {
       return JSON.parse(JSON.stringify(config || {}));
@@ -7374,93 +7374,20 @@ class FrigateViewCardEditor extends HTMLElement {
     return `#${toHex(m[1])}${toHex(m[2])}${toHex(m[3])}`;
   }
 
-  _resolveColorToHex(cssValue, fallback = "#000000", contextElement = this) {
+  _resolveColorToHex(cssValue, fallback = "#000000") {
     if (!cssValue) return fallback;
     const hex = normalizeHexColor(cssValue);
     if (hex) return hex;
     const probe = document.createElement("span");
     probe.style.color = String(cssValue);
-    contextElement.appendChild(probe);
+    this.appendChild(probe);
     const computed = getComputedStyle(probe).color;
     probe.remove();
     return this._rgbToHex(computed) || fallback;
   }
 
-  _parseCssVarRef(cssValue) {
-    const match = String(cssValue || "")
-      .trim()
-      .match(/^var\(\s*(--[A-Za-z0-9_-]+)\s*(?:,\s*(.+))?\)$/);
-    if (!match) return null;
-    return { name: match[1], fallback: match[2] || "" };
-  }
-
-  _activeHaThemeValue(cssVarName) {
-    const themes = this._hass?.themes;
-    const themeMap = themes?.themes;
-    if (!themeMap || typeof themeMap !== "object") return "";
-    const themeNames = [
-      themes.theme,
-      themes.darkMode ? themes.default_dark_theme : themes.default_theme,
-      themes.default_theme,
-      "default",
-    ].filter((name, index, list) => name && list.indexOf(name) === index);
-    const propertyNames = [cssVarName.replace(/^--/, ""), cssVarName];
-    const modeKey = themes.darkMode ? "dark" : "light";
-    for (const themeName of themeNames) {
-      const theme = themeMap[themeName];
-      if (!theme || typeof theme !== "object") continue;
-      const sources = [theme.modes?.[modeKey], theme];
-      for (const source of sources) {
-        if (!source || typeof source !== "object") continue;
-        for (const propertyName of propertyNames) {
-          if (typeof source[propertyName] === "string") {
-            return source[propertyName];
-          }
-        }
-      }
-    }
-    return "";
-  }
-
-  _resolveThemeValueToHex(cssValue, seen = new Set()) {
-    const hex = normalizeHexColor(cssValue);
-    if (hex) return hex;
-    const varRef = this._parseCssVarRef(cssValue);
-    if (!varRef) return this._resolveColorToHex(cssValue, "");
-    if (seen.has(varRef.name)) return "";
-    seen.add(varRef.name);
-    const themeValue = this._activeHaThemeValue(varRef.name);
-    const themeHex = themeValue
-      ? this._resolveThemeValueToHex(themeValue, seen)
-      : "";
-    if (themeHex) return themeHex;
-    const computedValue = getComputedStyle(document.documentElement)
-      .getPropertyValue(varRef.name)
-      .trim();
-    const computedHex = computedValue
-      ? this._resolveThemeValueToHex(computedValue, seen)
-      : "";
-    if (computedHex) return computedHex;
-    return varRef.fallback
-      ? this._resolveThemeValueToHex(varRef.fallback, seen)
-      : "";
-  }
-
   _themeDefaultHex(key) {
-    const themeHex = this._resolveThemeValueToHex(THEME_DEFAULTS[key]);
-    if (themeHex) return themeHex;
-    const probe = document.createElement("div");
-    probe.className = "card";
-    probe.style.cssText =
-      "position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;pointer-events:none;";
-    for (const row of THEME_CUSTOM_ROWS) {
-      const themeKey = row.key;
-      probe.style.setProperty(themeKey, THEME_DEFAULTS[themeKey]);
-    }
-    this.appendChild(probe);
-    const hex = this._resolveColorToHex(`var(${key})`, "#000000", probe);
-    probe.remove();
-    return hex;
+    return this._resolveColorToHex(THEME_DEFAULTS[key], "#000000");
   }
 
   _ensureThemeDraftCache() {
