@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.326";
+const VERSION = "1.0.327";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -4270,16 +4270,8 @@ class FrigateViewCard extends HTMLElement {
               <div class="filter-panel" id="filter-panel" style="display:none"></div>
               <div class="cal-panel" id="cal-panel" style="display:none"></div>
             </div>
-            <div class="browse-head">
-              <div class="browse-head-left">
-                <button class="prev-next">Previous</button>
-              </div>
-              <div class="browse-head-middle">
-                Day - Date - Category(alerts, clips, snaps, recordings, favorites)
-              </div>
-              <div class="browse-head-right">
-                <button class="prev-next">Next</button>
-              </div>
+            <div class="browse-head" style="display:none">
+
             </div>
         
             <div class="browse" id="browse" style="display:none">
