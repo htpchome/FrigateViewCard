@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.345";
+const VERSION = "1.0.346";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1281,6 +1281,7 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowLastAlertCam = "";
     this._slideshowSwitchT = null;
     this._slideshowPauseT = null;
+    this._slideshowFadeT = null;
     this._domCache = {}; // querySelector result cache — cleared on re-render
     this._go2rtcWsUrlCache = new Map(); // key => {url, exp}
     this._go2rtcHlsUrlCache = new Map(); // key => {url|null, exp}
@@ -3596,8 +3597,10 @@ class FrigateViewCard extends HTMLElement {
   _clearSlideshowTimers() {
     if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
     if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
+    if (this._slideshowFadeT) clearTimeout(this._slideshowFadeT);
     this._slideshowSwitchT = null;
     this._slideshowPauseT = null;
+    this._slideshowFadeT = null;
   }
 
   _syncToolbarButtons() {
@@ -3794,10 +3797,10 @@ class FrigateViewCard extends HTMLElement {
     const engWrap = this._$("#eng-wrap");
     if (useTransition && engWrap) {
       engWrap.classList.add("slideshow-switching");
-      clearTimeout(this._slideshowSwitchT);
-      this._slideshowSwitchT = setTimeout(() => {
+      clearTimeout(this._slideshowFadeT);
+      this._slideshowFadeT = setTimeout(() => {
         engWrap.classList.remove("slideshow-switching");
-        this._slideshowSwitchT = null;
+        this._slideshowFadeT = null;
       }, 260);
     }
 
