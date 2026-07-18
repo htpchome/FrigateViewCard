@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.349";
+const VERSION = "1.0.350";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3756,6 +3756,32 @@ class FrigateViewCard extends HTMLElement {
     );
   }
 
+  _cameraIndexForIncomingCamera(cameraId) {
+    const normalized = String(cameraId || "")
+      .trim()
+      .toLowerCase();
+    if (!normalized) return -1;
+    return (
+      this._config?.cameras?.findIndex((camera) => {
+        const entity = String(camera?.entity || "").toLowerCase();
+        const name = String(camera?.name || "").toLowerCase();
+        const discovered = String(
+          this._camCache[camera?.entity]?.cam || "",
+        ).toLowerCase();
+        return (
+          entity === normalized ||
+          name === normalized ||
+          discovered === normalized
+        );
+      }) ?? -1
+    );
+  }
+
+  _cameraEntityForIncomingCamera(cameraId) {
+    const idx = this._cameraIndexForIncomingCamera(cameraId);
+    return idx >= 0 ? this._config?.cameras?.[idx]?.entity || "" : "";
+  }
+
   _cameraIndexByEntity(entity) {
     if (!entity) return -1;
     return (
@@ -3826,7 +3852,9 @@ class FrigateViewCard extends HTMLElement {
 
   _handleSlideshowRealtimeMessage(msg) {
     if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
-    const cam = this._extractRealtimeMessageCamera(msg);
+    const incomingCam = this._extractRealtimeMessageCamera(msg);
+    if (!incomingCam) return;
+    const cam = this._cameraEntityForIncomingCamera(incomingCam);
     if (!cam) return;
     const severity = this._extractRealtimeMessageSeverity(msg);
     if (!this._shouldHandleSlideshowReview(cam, severity)) return;
