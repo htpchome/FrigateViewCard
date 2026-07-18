@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.357";
+const VERSION = "1.0.358";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1922,6 +1922,9 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _teardownDisconnected() {
+    this._stopSlideshowRotation("disconnect", false);
+    if (this._rt) clearTimeout(this._rt);
+    this._rt = null;
     if (this._refresh) clearInterval(this._refresh);
     if (this._unsub) {
       const unsubscribePromise = this._unsub;
