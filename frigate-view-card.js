@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.344";
+const VERSION = "1.0.345";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -29,6 +29,8 @@ const REALTIME_HEAD_POLL_MS = 5000;
 const REALTIME_RELOAD_DEBOUNCE_MS = 450;
 const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
 const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
+const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
+const SLIDESHOW_ALERT_HOLD_MS = 10000;
 const MAX_CAMERAS = 8;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
@@ -158,6 +160,10 @@ const ICONS = {
     '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>',
   rotate:
     '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8A5.87 5.87 0 0 1 6 12c0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2A5.87 5.87 0 0 1 18 12c0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>',
+  rotate3d:
+    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 6v8l8 4 8-4V6l-8-4zm0 2.3L16.8 6 12 8.5 7.2 6 12 4.3zM6 7.7l5 2.6v5.9L6 13.6V7.7zm12 5.9l-5 2.6V10.3l5-2.6v5.9zM12 18.4l-4.7-2.4 4.7-2.4 4.7 2.4-4.7 2.4z"/></svg>',
+  rotate3dActive:
+    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 6v8l8 4 8-4V6l-8-4zm0 2.3L16.8 6 12 8.5 7.2 6 12 4.3zM6 7.7l5 2.6v5.9L6 13.6V7.7zm12 5.9l-5 2.6V10.3l5-2.6v5.9zM12 18.4l-4.7-2.4 4.7-2.4 4.7 2.4-4.7 2.4z"/><circle cx="18.2" cy="18.2" r="3.1" opacity="0.95"/></svg>',
   volOff:
     '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>',
   volOn:
@@ -593,6 +599,22 @@ const buildEditorConfigFromDom = ({
     : 5;
   nextConfig.mobile_poll_battery_saver =
     root.querySelector("#mobile_poll_battery_saver")?.checked === true;
+  nextConfig.slideshow_rotation_enabled =
+    root.querySelector("#slideshow_rotation_enabled")?.checked === true;
+  nextConfig.slideshow_rotation_seconds =
+    SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+      Number(
+        root.querySelector("#slideshow_rotation_seconds")?.dataset.value ||
+          root.querySelector("#slideshow_rotation_seconds")?.value ||
+          "30",
+      ),
+    )
+      ? Number(
+          root.querySelector("#slideshow_rotation_seconds")?.dataset.value ||
+            root.querySelector("#slideshow_rotation_seconds")?.value ||
+            "30",
+        )
+      : 30;
 
   delete nextConfig.primary_color;
   delete nextConfig.accent_color;
@@ -660,6 +682,8 @@ const createEditorPreviewDraft = (config) => ({
   alerts_reviews_days: config.alerts_reviews_days,
   realtime_poll_seconds: config.realtime_poll_seconds,
   mobile_poll_battery_saver: config.mobile_poll_battery_saver,
+  slideshow_rotation_enabled: config.slideshow_rotation_enabled,
+  slideshow_rotation_seconds: config.slideshow_rotation_seconds,
   hidden_tabs: config.hidden_tabs,
   theme: config.theme,
   theme_custom: config.theme_custom,
@@ -942,6 +966,8 @@ const STYLES = `
   /* ── feed area ── */
     .feed-area{position:relative;width:100%;}
     #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
+    #eng-wrap.slideshow-switching{opacity:.12;}
+    #eng-wrap.slideshow-alert{box-shadow:inset 0 0 0 3px var(--c-bg-alert);}
     #eng-wrap.popup-covered::after{content:"";position:absolute;inset:0;background:var(--c-bg-deep);z-index:4;pointer-events:none;}
     .card.mobile-rotate-live,
     .card.mobile-rotate-live-exit{overflow:hidden;height:var(--rotate-vh);max-height:var(--rotate-vh);}
@@ -1060,8 +1086,12 @@ const STYLES = `
   .tl-tools{display:flex;gap:4px;}
   .tool{display:inline-flex;gap:4px;align-items:center;justify-content:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;cursor:pointer;padding:2px;transition: all 0.2s ease;min-height:36px;min-width:36px;}
   .tool svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
+  .tool ha-icon{width:24px;height:24px;--mdc-icon-size:24px;color:var(--c-text2);opacity:0.85;}
   .tool:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);opacity:1;}
   .tool:hover svg{color:var(--c-primary-d);}
+  .tool:hover ha-icon{color:var(--c-primary-d);opacity:1;}
+  .tool.active{background:var(--c-primary-d);color:var(--c-text-rev);border-color:var(--c-primary-d);}
+  .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
   .ico{width:30px;height:30px;display:flex;align-items:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
@@ -1244,6 +1274,13 @@ class FrigateViewCard extends HTMLElement {
     this._playSeq = 0;
     this._streamMuted = true; // start muted; user can toggle via our mute button
     this._activeStreamType = "--";
+    this._slideshowActive = false;
+    this._slideshowPausedUntil = 0;
+    this._slideshowPendingAlertCam = "";
+    this._slideshowLastAlertAt = 0;
+    this._slideshowLastAlertCam = "";
+    this._slideshowSwitchT = null;
+    this._slideshowPauseT = null;
     this._domCache = {}; // querySelector result cache — cleared on re-render
     this._go2rtcWsUrlCache = new Map(); // key => {url, exp}
     this._go2rtcHlsUrlCache = new Map(); // key => {url|null, exp}
@@ -1621,6 +1658,8 @@ class FrigateViewCard extends HTMLElement {
       alerts_reviews_days: 3,
       realtime_poll_seconds: 5,
       mobile_poll_battery_saver: false,
+      slideshow_rotation_enabled: false,
+      slideshow_rotation_seconds: 30,
       window_hours: 72,
       stream_height_unit: "vh",
     };
@@ -1722,6 +1761,12 @@ class FrigateViewCard extends HTMLElement {
         ? Number(config.realtime_poll_seconds)
         : 5,
       mobile_poll_battery_saver: config.mobile_poll_battery_saver === true,
+      slideshow_rotation_enabled: config.slideshow_rotation_enabled === true,
+      slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+        Number(config.slideshow_rotation_seconds),
+      )
+        ? Number(config.slideshow_rotation_seconds)
+        : 30,
       browse_expanded: config.browse_expanded === true,
       hidden_tabs: Array.isArray(config.hidden_tabs)
         ? config.hidden_tabs
@@ -1757,6 +1802,9 @@ class FrigateViewCard extends HTMLElement {
     };
     this._committedConfig = this._cloneCardConfig(nextConfig);
     this._config = nextConfig;
+    if (!this._isSlideshowRotationAvailable()) {
+      this._stopSlideshowRotation("config-change");
+    }
     this._syncCardShellClasses();
     this._syncDomShadows();
     this._browseOpen = this._config.browse_expanded;
@@ -1809,6 +1857,7 @@ class FrigateViewCard extends HTMLElement {
     this._renderSubtitle();
     this._renderStats();
     this._renderCamSwitcher();
+    this._syncToolbarButtons();
 
     // Keep stream engine stable for visual-only config edits.
     // Resume logic for editor close/visibility transitions is handled elsewhere.
@@ -3523,11 +3572,234 @@ class FrigateViewCard extends HTMLElement {
         p.classList.toggle("active", p.dataset.viewmode === mode),
       );
   }
+
+  _isSlideshowRotationAvailable() {
+    return (
+      this._config?.slideshow_rotation_enabled === true &&
+      !DEVICE_PROFILE.isPhone &&
+      Array.isArray(this._config?.cameras) &&
+      this._config.cameras.length > 1
+    );
+  }
+
+  _slideshowRotationMs() {
+    const seconds = Number(this._config?.slideshow_rotation_seconds);
+    return SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(seconds)
+      ? seconds * 1000
+      : 30000;
+  }
+
+  _slideshowButtonIcon() {
+    return this._slideshowActive ? ICONS.rotate3dActive : ICONS.rotate3d;
+  }
+
+  _clearSlideshowTimers() {
+    if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
+    if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
+    this._slideshowSwitchT = null;
+    this._slideshowPauseT = null;
+  }
+
+  _syncToolbarButtons() {
+    const slideshowBtn = this._$("#slideshow-btn");
+    if (!slideshowBtn) return;
+    const available = this._isSlideshowRotationAvailable();
+    slideshowBtn.hidden = !available;
+    slideshowBtn.disabled = !available;
+    slideshowBtn.classList.toggle("active", this._slideshowActive && available);
+    slideshowBtn.setAttribute(
+      "aria-pressed",
+      this._slideshowActive && available ? "true" : "false",
+    );
+    slideshowBtn.setAttribute(
+      "title",
+      this._slideshowActive
+        ? "Stop slideshow rotation"
+        : "Start slideshow rotation",
+    );
+    slideshowBtn.setAttribute(
+      "aria-label",
+      this._slideshowActive
+        ? "Stop slideshow rotation"
+        : "Start slideshow rotation",
+    );
+    slideshowBtn.innerHTML = this._slideshowButtonIcon();
+    if (!available) this._stopSlideshowRotation("unavailable", false);
+  }
+
+  _stopSlideshowRotation(reason = "manual-stop", sync = true) {
+    this._clearSlideshowTimers();
+    this._slideshowActive = false;
+    this._slideshowPausedUntil = 0;
+    this._slideshowPendingAlertCam = "";
+    this._slideshowLastAlertAt = 0;
+    this._slideshowLastAlertCam = "";
+    const engWrap = this._$("#eng-wrap");
+    if (engWrap) {
+      engWrap.classList.remove("slideshow-switching", "slideshow-alert");
+    }
+    void reason;
+    if (sync) this._syncToolbarButtons();
+  }
+
+  _startSlideshowRotation(source = "manual") {
+    if (!this._isSlideshowRotationAvailable()) return false;
+    this._slideshowActive = true;
+    this._slideshowPausedUntil = 0;
+    this._slideshowPendingAlertCam = "";
+    this._scheduleSlideshowRotation(source);
+    this._syncToolbarButtons();
+    return true;
+  }
+
+  _toggleSlideshowRotation() {
+    if (this._slideshowActive) {
+      this._stopSlideshowRotation("manual-stop");
+      return;
+    }
+    this._startSlideshowRotation("manual-start");
+  }
+
+  _pauseSlideshowForInteraction() {
+    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
+    this._slideshowPausedUntil = Date.now() + this._slideshowRotationMs();
+    if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
+    if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
+    this._slideshowPauseT = setTimeout(() => {
+      this._slideshowPauseT = null;
+      this._scheduleSlideshowRotation("pause-expired");
+    }, this._slideshowRotationMs());
+  }
+
+  _scheduleSlideshowRotation(_reason = "") {
+    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
+    if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
+    const delay = Math.max(250, this._slideshowPausedUntil - Date.now());
+    const wait =
+      this._slideshowPausedUntil > Date.now()
+        ? delay
+        : this._slideshowRotationMs();
+    this._slideshowSwitchT = setTimeout(() => {
+      this._slideshowSwitchT = null;
+      void this._advanceSlideshowRotation();
+    }, wait);
+  }
+
+  _setSlideshowAlertState(active) {
+    const engWrap = this._$("#eng-wrap");
+    if (!engWrap) return;
+    engWrap.classList.toggle("slideshow-alert", !!active);
+  }
+
+  _cameraIndexByEntity(entity) {
+    if (!entity) return -1;
+    return (
+      this._config?.cameras?.findIndex((camera) => camera.entity === entity) ??
+      -1
+    );
+  }
+
+  async _advanceSlideshowRotation() {
+    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
+    const pendingAlertCam = this._slideshowPendingAlertCam;
+    this._slideshowPendingAlertCam = "";
+    const activeEntity = this._activeCam?.entity || "";
+    const currentIndex = this._cameraIndexByEntity(activeEntity);
+    const nextIndex =
+      pendingAlertCam && pendingAlertCam !== activeEntity
+        ? this._cameraIndexByEntity(pendingAlertCam)
+        : currentIndex >= 0
+          ? (currentIndex + 1) % this._config.cameras.length
+          : 0;
+    const targetIndex = nextIndex >= 0 ? nextIndex : 0;
+    const targetEntity = this._config?.cameras?.[targetIndex]?.entity || "";
+    if (!targetEntity) {
+      this._scheduleSlideshowRotation("missing-target");
+      return;
+    }
+    await this._switchCamera(targetIndex, {
+      source: pendingAlertCam ? "alert" : "slideshow",
+    });
+    this._slideshowPausedUntil = Date.now() + this._slideshowRotationMs();
+    this._setSlideshowAlertState(
+      !!pendingAlertCam || this._slideshowLastAlertCam === targetEntity,
+    );
+    this._scheduleSlideshowRotation("advance");
+  }
+
+  _extractRealtimeMessageCamera(msg) {
+    return String(
+      msg?.camera ||
+        msg?.event?.camera ||
+        msg?.review?.camera ||
+        msg?.after?.camera ||
+        msg?.before?.camera ||
+        "",
+    ).trim();
+  }
+
+  _extractRealtimeMessageSeverity(msg) {
+    return String(
+      msg?.severity || msg?.event?.severity || msg?.review?.severity || "",
+    )
+      .trim()
+      .toLowerCase();
+  }
+
+  _handleSlideshowRealtimeMessage(msg) {
+    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
+    const cam = this._extractRealtimeMessageCamera(msg);
+    if (!cam) return;
+    const severity = this._extractRealtimeMessageSeverity(msg);
+    if (severity !== "alert") return;
+
+    const now = Date.now();
+    const activeEntity = this._activeCam?.entity || "";
+    const withinWindow =
+      now - this._slideshowLastAlertAt < SLIDESHOW_ALERT_HOLD_MS;
+    this._slideshowLastAlertAt = now;
+    this._slideshowLastAlertCam = cam;
+
+    if (cam === activeEntity) {
+      this._slideshowPausedUntil = now + this._slideshowRotationMs();
+      this._setSlideshowAlertState(true);
+      this._scheduleSlideshowRotation("active-alert");
+      return;
+    }
+
+    if (withinWindow) {
+      this._slideshowPendingAlertCam = cam;
+      this._setSlideshowAlertState(true);
+      return;
+    }
+
+    const idx = this._cameraIndexByEntity(cam);
+    if (idx < 0) return;
+    this._slideshowPausedUntil = now + this._slideshowRotationMs();
+    this._slideshowPendingAlertCam = "";
+    this._setSlideshowAlertState(true);
+    void this._switchCamera(idx, { source: "alert" });
+    this._scheduleSlideshowRotation("alert-switch");
+  }
+
   // ── camera switching ──────────────────────────────────────
-  async _switchCamera(idx) {
+  async _switchCamera(idx, opts = {}) {
+    const source = String(opts?.source || "manual");
+    if (source === "manual") this._pauseSlideshowForInteraction();
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     if (idx === this._activeCamIdx && this._viewMode === "single" && !popupOpen)
       return;
+
+    const useTransition = source === "slideshow" || source === "alert";
+    const engWrap = this._$("#eng-wrap");
+    if (useTransition && engWrap) {
+      engWrap.classList.add("slideshow-switching");
+      clearTimeout(this._slideshowSwitchT);
+      this._slideshowSwitchT = setTimeout(() => {
+        engWrap.classList.remove("slideshow-switching");
+        this._slideshowSwitchT = null;
+      }, 260);
+    }
 
     const prevEnt = this._activeCam?.entity;
     if (prevEnt && this._camCache[prevEnt]) {
@@ -3546,7 +3818,6 @@ class FrigateViewCard extends HTMLElement {
     // Camera button should always return to single live view.
     this._viewMode = "single";
     if (popupOpen) this._closePopup();
-    const engWrap = this._$("#eng-wrap");
     if (engWrap) engWrap.style.display = "";
     this.shadowRoot
       .querySelectorAll("[data-viewmode]")
@@ -3568,6 +3839,7 @@ class FrigateViewCard extends HTMLElement {
     this._mountEngine();
     clearTimeout(this._switchLoadT);
     this._loadWindow(true);
+    this._syncToolbarButtons();
   }
   // ── data ─────────────────────────────────────────────────
   _cc() {
@@ -4155,6 +4427,7 @@ class FrigateViewCard extends HTMLElement {
     try {
       this._unsub = this._hass.connection.subscribeMessage(
         (msg) => {
+          this._handleSlideshowRealtimeMessage(msg);
           if (!this._isNowWindow()) return;
           if (!this._isRealtimeEventMessage(msg)) return;
           this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);
@@ -4245,6 +4518,7 @@ class FrigateViewCard extends HTMLElement {
           ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>`
           : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
     const filterDisabled = this._tab === "recordings";
+    const slideshowHidden = !this._isSlideshowRotationAvailable();
     return `${tab("alerts", ICONS.alerts, "Alerts")}
       ${tab("clips", ICONS.clips, "Clips")}
       ${tab("snapshot", ICONS.snapshot, "Snapshots")}
@@ -4252,6 +4526,7 @@ class FrigateViewCard extends HTMLElement {
       ${tab("kept", ICONS.star, "Kept events")}
       <div class="tl-tools" style=" margin-left: auto;">
         <button class="tool" id="now-btn" title="Today">${ICONS.bullseye}</button>
+        <button class="tool slideshow-btn" id="slideshow-btn" ${slideshowHidden ? "hidden" : ""} aria-pressed="${this._slideshowActive && !slideshowHidden ? "true" : "false"}" title="${this._slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${this._slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}">${this._slideshowButtonIcon()}</button>
         <button class="tool" id="filter-btn" title="Filter" ${filterDisabled ? "disabled" : ""}>${ICONS.filter}</button>
         <button class="tool" id="cal-btn" title="Calendar">${ICONS.calendar}</button>
       </div>`;
@@ -5573,6 +5848,10 @@ class FrigateViewCard extends HTMLElement {
     if (this._handleEventClick(target)) return;
   }
   _handleToolbarClick(target) {
+    if (target.closest("#slideshow-btn")) {
+      this._toggleSlideshowRotation();
+      return true;
+    }
     if (target.closest("#live-fs-btn")) {
       this._fullscreen(this._$("#eng-wrap"), { preferLive: true });
       return true;
@@ -5639,6 +5918,7 @@ class FrigateViewCard extends HTMLElement {
     }
     const camTab = target.closest("[data-camidx]");
     if (camTab) {
+      this._pauseSlideshowForInteraction();
       this._switchCamera(Number(camTab.dataset.camidx));
       return true;
     }
@@ -5676,6 +5956,7 @@ class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handleListClick(e, target) {
+    this._pauseSlideshowForInteraction();
     const dl = target.closest("[data-dl]");
     if (dl) {
       e.stopPropagation();
@@ -7420,6 +7701,7 @@ class FrigateViewCard extends HTMLElement {
     this._renderStats();
     this._renderMuteButton();
     this._syncFullscreenButtonsVisibility();
+    this._syncToolbarButtons();
     this._renderLegend();
     this._renderSubtitle();
     this._renderCamSwitcher();
@@ -8331,6 +8613,13 @@ class FrigateViewCardEditor extends HTMLElement {
       ? Number(src.realtime_poll_seconds)
       : 5;
     src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
+    src.slideshow_rotation_enabled = src.slideshow_rotation_enabled === true;
+    src.slideshow_rotation_seconds =
+      SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+        Number(src.slideshow_rotation_seconds),
+      )
+        ? Number(src.slideshow_rotation_seconds)
+        : 30;
     src.alerts_reviews_days = normalizePositiveInteger(
       src.alerts_reviews_days,
       normalizePositiveInteger(src.window_days, 3),
@@ -8842,6 +9131,21 @@ class FrigateViewCardEditor extends HTMLElement {
         </div>
       </div>
       <div class="section">
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:420px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Slideshow Rotation</span>
+              <ha-switch id="slideshow_rotation_enabled" ${this._config?.slideshow_rotation_enabled ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Allow the live camera view to rotate at a fixed interval. This is not available on mobile phone devices.</div>
+          </div>
+          <div id="slideshow_rotation_row" style="min-width:210px;display:${this._config?.slideshow_rotation_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Slideshow Rotation Frequency</span>
+            <ha-selector id="slideshow_rotation_seconds" style="width:210px"></ha-selector>
+          </div>
+        </div>
+      </div>
+      <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Timezone</span>
           <span class="readonly-value">${timezoneDisplay}</span>
@@ -9159,6 +9463,21 @@ class FrigateViewCardEditor extends HTMLElement {
     });
 
     setupSelectSelector({
+      element: this.querySelector("#slideshow_rotation_seconds"),
+      hass: this._hass,
+      options: [
+        { value: "10", label: "10 seconds" },
+        { value: "20", label: "20 seconds" },
+        { value: "30", label: "30 seconds" },
+        { value: "60", label: "1 minute" },
+      ],
+      initialValue: String(this._config?.slideshow_rotation_seconds ?? 30),
+      fallbackValue: "30",
+      normalize: (value) => String(value ?? "30"),
+      onChange: () => update(),
+    });
+
+    setupSelectSelector({
       element: this.querySelector("#stream_height_unit"),
       hass: this._hass,
       options: [
@@ -9252,9 +9571,17 @@ class FrigateViewCardEditor extends HTMLElement {
         "wide_view",
         "shadows",
         "mobile_poll_battery_saver",
+        "slideshow_rotation_enabled",
       ],
       events: ["change", "value-changed"],
-      handler: () => update(),
+      handler: () => {
+        const slideshowRow = this.querySelector("#slideshow_rotation_row");
+        const enabled =
+          this.querySelector("#slideshow_rotation_enabled")?.checked === true;
+        if (slideshowRow)
+          slideshowRow.style.display = enabled ? "flex" : "none";
+        update();
+      },
     });
     bindEventsForSelectorAll({
       root: this,
