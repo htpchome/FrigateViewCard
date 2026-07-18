@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.299";
+const VERSION = "1.0.300";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -830,7 +830,7 @@ const STYLES = `
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
   .tabs-container{display:block;position:realtive;}
-  .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:0 8px;overflow-x:auto;scrollbar-width:none;margin-bottom:2px;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;}
+  .tabs{display:flex;flex-wrap:wrap;gap:4px;padding:2px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;}
   .tabs::-webkit-scrollbar{display:none;}
 
   /* ── donut button ── */
@@ -961,6 +961,7 @@ const STYLES = `
   .tool{display:inline-flex;gap:4px;align-items:center;vertical-align:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;padding:4px;cursor:pointer;height:30px;width:30px;flex-shrink:0;}
   .tool svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .tool:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);opacity:1;}
+  .tool:hover svg{color:var(--c-primary-d);}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
   .ico{width:30px;height:30px;display:flex;align-items:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
