@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.352";
+const VERSION = "1.0.353";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -31,6 +31,7 @@ const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
 const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
 const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 const SLIDESHOW_ALERT_HOLD_MS = 10000;
+const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 const MAX_CAMERAS = 8;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
@@ -966,9 +967,10 @@ const STYLES = `
   /* ── feed area ── */
     .feed-area{position:relative;width:100%;}
     #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
+    #eng-wrap::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:5;box-sizing:border-box;border:0 solid transparent;transition:border-color .2s ease,border-width .2s ease;}
     #eng-wrap.slideshow-switching{opacity:.12;}
-    #eng-wrap.slideshow-alert{box-shadow:inset 0 0 0 3px var(--error-color, var(--c-bg-alert));}
-    #eng-wrap.slideshow-detection{box-shadow:inset 0 0 0 3px var(--warning-color, var(--c-accent));}
+    #eng-wrap.slideshow-alert::before{border-width:3px;border-color:var(--error-color, var(--c-bg-alert));}
+    #eng-wrap.slideshow-detection::before{border-width:3px;border-color:var(--warning-color, var(--c-accent));}
     #eng-wrap.popup-covered::after{content:"";position:absolute;inset:0;background:var(--c-bg-deep);z-index:4;pointer-events:none;}
     .card.mobile-rotate-live,
     .card.mobile-rotate-live-exit{overflow:hidden;height:var(--rotate-vh);max-height:var(--rotate-vh);}
@@ -1283,6 +1285,7 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowLastAlertCam = "";
     this._slideshowAttentionType = "";
     this._slideshowHandledReviewIds = new Set();
+    this._slideshowStartedAtSec = 0;
     this._slideshowReviewProbeT = null;
     this._slideshowReviewProbeInFlight = false;
     this._slideshowSwitchT = null;
@@ -3656,6 +3659,7 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowLastAlertCam = "";
     this._slideshowAttentionType = "";
     this._slideshowHandledReviewIds.clear();
+    this._slideshowStartedAtSec = 0;
     this._slideshowReviewProbeInFlight = false;
     const engWrap = this._$("#eng-wrap");
     if (engWrap) {
@@ -3679,6 +3683,7 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowPendingAlertType = "";
     this._slideshowAttentionType = "";
     this._slideshowHandledReviewIds.clear();
+    this._slideshowStartedAtSec = Math.floor(Date.now() / 1000);
     this._scheduleSlideshowRotation(source);
     this._syncToolbarButtons();
     return true;
@@ -3796,6 +3801,19 @@ class FrigateViewCard extends HTMLElement {
       .toLowerCase();
   }
 
+  _reviewStartTimeSec(review) {
+    const start = Number(review?.start_time || review?.after?.start_time || 0);
+    return Number.isFinite(start) ? start : 0;
+  }
+
+  _isSlideshowReviewFresh(review) {
+    const startedAt = Number(this._slideshowStartedAtSec || 0);
+    if (startedAt <= 0) return true;
+    const reviewStart = this._reviewStartTimeSec(review);
+    if (reviewStart <= 0) return false;
+    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC;
+  }
+
   _rememberHandledSlideshowReview(reviewId) {
     const id = String(reviewId || "").trim();
     if (!id) return;
@@ -3811,6 +3829,7 @@ class FrigateViewCard extends HTMLElement {
 
     let nextReview = null;
     for (const review of reviews) {
+      if (!this._isSlideshowReviewFresh(review)) continue;
       const severity = this._normalizeReviewSeverity(review);
       if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
       const reviewId = String(review?.id || "").trim();
@@ -3889,6 +3908,7 @@ class FrigateViewCard extends HTMLElement {
           reviews = [];
         }
         for (const review of reviews) {
+          if (!this._isSlideshowReviewFresh(review)) continue;
           const severity = this._normalizeReviewSeverity(review);
           if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
           const reviewId = String(review?.id || "").trim();
@@ -3898,7 +3918,7 @@ class FrigateViewCard extends HTMLElement {
             entity,
             severity,
             reviewId,
-            startTime: Number(review?.start_time || 0),
+            startTime: this._reviewStartTimeSec(review),
           });
           break;
         }
