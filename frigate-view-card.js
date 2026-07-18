@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.346";
+const VERSION = "1.0.347";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1282,6 +1282,7 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowSwitchT = null;
     this._slideshowPauseT = null;
     this._slideshowFadeT = null;
+    this._slideshowPopupPaused = false;
     this._domCache = {}; // querySelector result cache — cleared on re-render
     this._go2rtcWsUrlCache = new Map(); // key => {url, exp}
     this._go2rtcHlsUrlCache = new Map(); // key => {url|null, exp}
@@ -3633,6 +3634,7 @@ class FrigateViewCard extends HTMLElement {
   _stopSlideshowRotation(reason = "manual-stop", sync = true) {
     this._clearSlideshowTimers();
     this._slideshowActive = false;
+    this._slideshowPopupPaused = false;
     this._slideshowPausedUntil = 0;
     this._slideshowPendingAlertCam = "";
     this._slideshowLastAlertAt = 0;
@@ -3648,11 +3650,29 @@ class FrigateViewCard extends HTMLElement {
   _startSlideshowRotation(source = "manual") {
     if (!this._isSlideshowRotationAvailable()) return false;
     this._slideshowActive = true;
+    this._slideshowPopupPaused =
+      this._$("#myPopup")?.classList.contains("is-open") === true;
     this._slideshowPausedUntil = 0;
     this._slideshowPendingAlertCam = "";
     this._scheduleSlideshowRotation(source);
     this._syncToolbarButtons();
     return true;
+  }
+
+  _pauseSlideshowForPopup() {
+    if (!this._slideshowActive) return;
+    this._slideshowPopupPaused = true;
+    if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
+    if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
+    this._slideshowSwitchT = null;
+    this._slideshowPauseT = null;
+  }
+
+  _resumeSlideshowAfterPopup() {
+    if (!this._slideshowActive) return;
+    this._slideshowPopupPaused = false;
+    this._slideshowPausedUntil = Date.now() + this._slideshowRotationMs();
+    this._scheduleSlideshowRotation("popup-close");
   }
 
   _toggleSlideshowRotation() {
@@ -3676,6 +3696,7 @@ class FrigateViewCard extends HTMLElement {
 
   _scheduleSlideshowRotation(_reason = "") {
     if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
+    if (this._slideshowPopupPaused) return;
     if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
     const delay = Math.max(250, this._slideshowPausedUntil - Date.now());
     const wait =
@@ -3704,6 +3725,7 @@ class FrigateViewCard extends HTMLElement {
 
   async _advanceSlideshowRotation() {
     if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
+    if (this._slideshowPopupPaused) return;
     const pendingAlertCam = this._slideshowPendingAlertCam;
     this._slideshowPendingAlertCam = "";
     const activeEntity = this._activeCam?.entity || "";
@@ -3755,6 +3777,12 @@ class FrigateViewCard extends HTMLElement {
     if (!cam) return;
     const severity = this._extractRealtimeMessageSeverity(msg);
     if (severity !== "alert") return;
+
+    if (this._slideshowPopupPaused) {
+      this._slideshowPendingAlertCam = cam;
+      this._setSlideshowAlertState(true);
+      return;
+    }
 
     const now = Date.now();
     const activeEntity = this._activeCam?.entity || "";
@@ -5691,6 +5719,7 @@ class FrigateViewCard extends HTMLElement {
   _openPopup() {
     const popup = this._$("#myPopup");
     if (!popup) return;
+    this._pauseSlideshowForPopup();
     popup.classList.add("is-open");
     popup.style.transform = "translateY(0)";
     const body = popup.querySelector(".popup-body");
@@ -5763,6 +5792,7 @@ class FrigateViewCard extends HTMLElement {
     this._scheduleRotateOverlayUpdate();
 
     this._stopPopupMedia();
+    this._resumeSlideshowAfterPopup();
   }
   _initPopupInteractions() {
     const popup = this._$("#myPopup");
