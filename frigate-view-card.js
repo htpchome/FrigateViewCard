@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.321";
+const VERSION = "1.0.322";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -778,9 +778,24 @@ const STYLES = `
     overflow-y:auto;
     position:relative}
 
-  .card .browse-head{display:flex;backgound:var(--c-bg-main);min-height:1.25rem;max-height:1.25em;  flex-direction:row;width: auto;margin:0;}
-  .browse-head-left, .browse-head-right {display:flex;}
-  .browse-head-middle {display:flex;}
+  .card .browse-head{display:flex;align-items:center;backgound:var(--c-bg-main);min-height:1.75rem;max-height:1.5em;  flex-direction:row;width: 100%;}
+  .browse-head-left {display:flex;flex: 1;text-align: left; }
+  .browse-head-right {display:flex;flex: 1;text-align: right; }
+  .browse-head-middle {display:flex;flex: 0 0 auto;text-align: center;}
+  .prev-next{}
+  .prev-next{display:inline-flex;align-items:center;gap:4px;font-size: 1rem;padding-inline: 0.5em;padding-block: 0.4em;line-height: 1;  border-radius: 999em;
+    background:var(--c-bg-main);
+    color:var(--c-text2);
+    transition:all .15s;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+    box-shadow: var(--fvc-shadow-s);
+    }
+  
+  .prev-next:hover{color:var(--c-primary-d);}
+  .prev-next.active{background:var(--c-primary-d);color:var(--c-text-rev);}
+  .prev-next svg{width:14.4px;height:14.4px;flex-shrink:0;}
   
   .card .browse::-webkit-scrollbar{width:8px;}
   .card .browse::-webkit-scrollbar-track{background:transparent;}
