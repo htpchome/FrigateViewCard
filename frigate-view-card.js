@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.339";
+const VERSION = "1.0.340";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -799,6 +799,7 @@ const STYLES = `
   .prev-next:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);}
   .prev-next svg{width:14.4px;height:14.4px;flex-shrink:0;}
 
+  .card.recordings-browse-head-tall .browse{touch-action:pan-y;}
   .browse.recordings-swipe{touch-action:pan-y;}
   .list.recordings-swipe-active{position:relative;overflow:hidden;}
   .rec-swipe-stage{position:relative;width:100%;min-height:220px;}
@@ -1227,6 +1228,7 @@ class FrigateViewCard extends HTMLElement {
     this._recordingsDayNavAnimating = false;
     this._recordingsSwipeGesture = null;
     this._recordingsSwipeBlockTap = false;
+    this._recordingsSwipeCleanup = null;
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
@@ -1836,6 +1838,10 @@ class FrigateViewCard extends HTMLElement {
     if (this._popupControlsHideTimer)
       clearTimeout(this._popupControlsHideTimer);
     if (this._popupMediaStopTimer) clearTimeout(this._popupMediaStopTimer);
+    if (this._recordingsSwipeCleanup) {
+      this._recordingsSwipeCleanup();
+      this._recordingsSwipeCleanup = null;
+    }
     this._clearPopupMediaCleanup();
     if (this._onDocVisibility) {
       document.removeEventListener("visibilitychange", this._onDocVisibility);
@@ -4468,6 +4474,10 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _bindRecordingsSwipe() {
+    if (this._recordingsSwipeCleanup) {
+      this._recordingsSwipeCleanup();
+      this._recordingsSwipeCleanup = null;
+    }
     const browse = this._$("#browse");
     if (!browse) return;
 
@@ -4478,7 +4488,8 @@ class FrigateViewCard extends HTMLElement {
     let tracking = false;
     let horizontal = false;
     let direction = 0;
-    const dragEngageThreshold = this._isMobileTabletViewport() ? 1 : 2;
+    let pointerId = null;
+    const axisLockThreshold = this._isMobileTabletViewport() ? 6 : 8;
     const dragFollowFactor = this._isMobileTabletViewport() ? 1 : 0.85;
 
     const canSwipe = () =>
@@ -4497,6 +4508,12 @@ class FrigateViewCard extends HTMLElement {
       direction = 0;
       deltaX = 0;
       deltaY = 0;
+      if (pointerId != null && browse.hasPointerCapture?.(pointerId)) {
+        try {
+          browse.releasePointerCapture(pointerId);
+        } catch (_) {}
+      }
+      pointerId = null;
       browse.classList.remove("recordings-swipe");
       browse.style.transform = "";
     };
@@ -4506,50 +4523,66 @@ class FrigateViewCard extends HTMLElement {
       this._recordingsSwipeGesture = this._startRecordingsSwipeGesture(dir);
     };
 
-    const onTouchStart = (e) => {
-      if (!canSwipe()) return;
-      if (!e.touches || e.touches.length !== 1) return;
-      const t = e.touches[0];
-      startX = t.clientX;
-      startY = t.clientY;
+    const startGesture = (clientX, clientY) => {
+      startX = clientX;
+      startY = clientY;
+      deltaX = 0;
+      deltaY = 0;
       tracking = true;
+      horizontal = false;
+      direction = 0;
       this._recordingsSwipeBlockTap = false;
-      browse.classList.add("recordings-swipe");
     };
 
-    const onTouchMove = (e) => {
+    const moveGesture = (clientX, clientY, e) => {
       if (!tracking || !canSwipe()) return;
-      const t = e.touches?.[0];
-      if (!t) return;
-      deltaX = t.clientX - startX;
-      deltaY = t.clientY - startY;
+      deltaX = clientX - startX;
+      deltaY = clientY - startY;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+
       if (!horizontal) {
-        if (
-          Math.abs(deltaX) < dragEngageThreshold &&
-          Math.abs(deltaY) < dragEngageThreshold
-        )
-          return;
-        horizontal =
-          Math.abs(deltaX) > Math.abs(deltaY) || Math.abs(deltaX) >= 2;
-        if (!horizontal) {
+        if (absX < axisLockThreshold && absY < axisLockThreshold) return;
+        if (absY >= axisLockThreshold && absY > absX) {
           resetGesture();
           return;
+        }
+        if (absX < axisLockThreshold || absX <= absY * 1.15) return;
+        horizontal = true;
+        browse.classList.add("recordings-swipe");
+        if (pointerId != null && !browse.hasPointerCapture?.(pointerId)) {
+          try {
+            browse.setPointerCapture(pointerId);
+          } catch (_) {}
         }
       }
 
       e.preventDefault();
       direction = deltaX < 0 ? 1 : -1;
-      if (Math.abs(deltaX) >= 3) this._recordingsSwipeBlockTap = true;
+      if (absX >= 3) this._recordingsSwipeBlockTap = true;
       ensureGestureStage(direction);
 
       const stage = this._recordingsSwipeGesture?.stage;
       if (!stage) return;
       const max = stage.width;
       const x = Math.max(-max, Math.min(max, deltaX));
-      const absX = Math.abs(x);
-      const followFactor = absX < 60 ? 1 : dragFollowFactor;
-      const follow = Math.sign(x) * Math.min(absX * followFactor, max);
+      const clampedAbsX = Math.abs(x);
+      const followFactor = clampedAbsX < 60 ? 1 : dragFollowFactor;
+      const follow = Math.sign(x) * Math.min(clampedAbsX * followFactor, max);
       this._setRecordingsSwipeStageOffset(stage, follow);
+    };
+
+    const onPointerDown = (e) => {
+      if (!canSwipe()) return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (pointerId != null) return;
+      pointerId = e.pointerId;
+      startGesture(e.clientX, e.clientY);
+    };
+
+    const onPointerMove = (e) => {
+      if (e.pointerId !== pointerId) return;
+      moveGesture(e.clientX, e.clientY, e);
     };
 
     const finishSwipe = async () => {
@@ -4561,6 +4594,7 @@ class FrigateViewCard extends HTMLElement {
       const stage = gesture?.stage;
 
       tracking = false;
+      pointerId = null;
       browse.classList.remove("recordings-swipe");
       browse.style.transform = "";
 
@@ -4598,12 +4632,21 @@ class FrigateViewCard extends HTMLElement {
       resetGesture({ clearTapBlock: false });
     };
 
-    browse.addEventListener("touchstart", onTouchStart, { passive: true });
-    browse.addEventListener("touchmove", onTouchMove, { passive: false });
-    browse.addEventListener("touchend", () => {
+    const onPointerUp = (e) => {
+      if (e.pointerId !== pointerId) return;
       void finishSwipe();
-    });
-    browse.addEventListener("touchcancel", resetGesture);
+    };
+
+    browse.addEventListener("pointerdown", onPointerDown);
+    browse.addEventListener("pointermove", onPointerMove);
+    browse.addEventListener("pointerup", onPointerUp);
+    browse.addEventListener("pointercancel", resetGesture);
+    this._recordingsSwipeCleanup = () => {
+      browse.removeEventListener("pointerdown", onPointerDown);
+      browse.removeEventListener("pointermove", onPointerMove);
+      browse.removeEventListener("pointerup", onPointerUp);
+      browse.removeEventListener("pointercancel", resetGesture);
+    };
   }
 
   _recordingsListMarkup(recs) {
