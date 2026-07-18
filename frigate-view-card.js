@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.328";
+const VERSION = "1.0.329";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -779,6 +779,7 @@ const STYLES = `
     position:relative}
 
   .card .browse-head{display:flex;align-items:center;justify-content:center;background:var(--c-bg-main);min-height:1.75rem;max-height:1.85em;flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;border:1px solid #444444;padding:1px 8px;}
+  .card:not(.mobile) .browse-head{min-height:3.5rem;max-height:none;}
   .browse-head-left {display:flex;flex:1;justify-content:center;align-items:center;flex: 0 0 auto; }
   .browse-head-right {display:flex;justify-content center;align-items: center;flex: 0 0 auto;}
   .browse-head-middle {flex:1;text-align:center;font-weight:700;pointer-events:none;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
@@ -797,6 +798,20 @@ const STYLES = `
   .prev-next.active{background:var(--c-primary-d);color:var(--c-text-rev);}
   .prev-next:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);}
   .prev-next svg{width:14.4px;height:14.4px;flex-shrink:0;}
+
+  .browse.recordings-swipe{touch-action:pan-y;}
+  .browse.swipe-bounce-prev{animation:browseBouncePrev .26s ease-out;}
+  .browse.swipe-bounce-next{animation:browseBounceNext .26s ease-out;}
+  @keyframes browseBouncePrev {
+    0% { transform: translateX(0); }
+    38% { transform: translateX(18px); }
+    100% { transform: translateX(0); }
+  }
+  @keyframes browseBounceNext {
+    0% { transform: translateX(0); }
+    38% { transform: translateX(-18px); }
+    100% { transform: translateX(0); }
+  }
   
   .card .browse::-webkit-scrollbar{width:8px;}
   .card .browse::-webkit-scrollbar-track{background:transparent;}
@@ -4345,6 +4360,7 @@ class FrigateViewCard extends HTMLElement {
     this._applyCardStyle();
     this._applyLayoutMode();
     this._bindListScroll();
+    this._bindRecordingsSwipe();
     this._initResizeHandle();
   }
 
@@ -4427,6 +4443,103 @@ class FrigateViewCard extends HTMLElement {
     if (list) list.addEventListener("scroll", onScroll, { passive: true });
     if (browse && browse !== list)
       browse.addEventListener("scroll", onScroll, { passive: true });
+  }
+
+  _bindRecordingsSwipe() {
+    const browse = this._$("#browse");
+    if (!browse) return;
+
+    let startX = 0;
+    let startY = 0;
+    let deltaX = 0;
+    let deltaY = 0;
+    let tracking = false;
+    let horizontal = false;
+
+    const canSwipe = () =>
+      this._tab === "recordings" && this._isMobileTabletViewport();
+
+    const resetTransform = () => {
+      browse.style.transform = "";
+    };
+
+    const onTouchStart = (e) => {
+      if (!canSwipe()) return;
+      if (!e.touches || e.touches.length !== 1) return;
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      deltaX = 0;
+      deltaY = 0;
+      tracking = true;
+      horizontal = false;
+      browse.classList.add("recordings-swipe");
+    };
+
+    const onTouchMove = (e) => {
+      if (!tracking || !canSwipe()) return;
+      const t = e.touches?.[0];
+      if (!t) return;
+      deltaX = t.clientX - startX;
+      deltaY = t.clientY - startY;
+
+      if (!horizontal) {
+        if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) return;
+        horizontal = Math.abs(deltaX) > Math.abs(deltaY);
+        if (!horizontal) {
+          tracking = false;
+          resetTransform();
+          return;
+        }
+      }
+
+      e.preventDefault();
+      const damped = Math.max(-28, Math.min(28, deltaX * 0.25));
+      browse.style.transform = `translateX(${damped}px)`;
+    };
+
+    const finishSwipe = async () => {
+      if (!tracking) return;
+      tracking = false;
+      browse.classList.remove("recordings-swipe");
+      const x = deltaX;
+      const y = deltaY;
+      deltaX = 0;
+      deltaY = 0;
+      resetTransform();
+
+      if (!horizontal || Math.abs(x) < 36 || Math.abs(x) <= Math.abs(y)) {
+        return;
+      }
+
+      const dir = x < 0 ? 1 : -1;
+      const moved = await this._stepRecordingsDay(dir);
+      if (!moved) this._bounceRecordingsArea(dir);
+    };
+
+    browse.addEventListener("touchstart", onTouchStart, { passive: true });
+    browse.addEventListener("touchmove", onTouchMove, { passive: false });
+    browse.addEventListener("touchend", () => {
+      void finishSwipe();
+    });
+    browse.addEventListener("touchcancel", () => {
+      tracking = false;
+      horizontal = false;
+      browse.classList.remove("recordings-swipe");
+      resetTransform();
+    });
+  }
+
+  _bounceRecordingsArea(direction) {
+    const browse = this._$("#browse");
+    if (!browse) return;
+    const cls = direction > 0 ? "swipe-bounce-next" : "swipe-bounce-prev";
+    browse.classList.remove("swipe-bounce-prev", "swipe-bounce-next");
+    void browse.offsetWidth;
+    browse.classList.add(cls);
+    setTimeout(() => {
+      browse.classList.remove(cls);
+    }, 280);
   }
 
   _scrollEventsToTop() {
@@ -5201,6 +5314,7 @@ class FrigateViewCard extends HTMLElement {
     return true;
   }
   _setTab(tab) {
+    const prevTab = this._tab;
     this._tab = tab;
     this.shadowRoot
       .querySelectorAll("[data-tab]")
@@ -5219,6 +5333,24 @@ class FrigateViewCard extends HTMLElement {
     this._renderListLabel();
     void this._loadTabData(tab);
     this._renderList();
+    if (!this._shouldPreserveScrollOnTabSwitch(prevTab, tab)) {
+      this._resetBrowseScrollTop();
+    }
+  }
+
+  _shouldPreserveScrollOnTabSwitch(prevTab, nextTab) {
+    if (!prevTab || !nextTab || prevTab === nextTab) return true;
+    return (
+      (prevTab === "clips" && nextTab === "snapshot") ||
+      (prevTab === "snapshot" && nextTab === "clips")
+    );
+  }
+
+  _resetBrowseScrollTop() {
+    const list = this._$("#list");
+    const browse = this._$("#browse");
+    if (list) list.scrollTop = 0;
+    if (browse) browse.scrollTop = 0;
   }
   // ── playback ──────────────────────────────────────────────
   _allDisplayEvents() {
@@ -6965,8 +7097,9 @@ class FrigateViewCard extends HTMLElement {
     browseHead.style.display = "flex";
     if (this._tab === "recordings") {
       lbl.textContent = this._recordingsHeadingLabel(ts || this._winEnd);
-      if (prev) prev.style.display = "inline-flex";
-      if (next) next.style.display = "inline-flex";
+      const showButtons = !this._$("#card")?.classList.contains("mobile");
+      if (prev) prev.style.display = showButtons ? "inline-flex" : "none";
+      if (next) next.style.display = showButtons ? "inline-flex" : "none";
       void this._updateRecordingsBrowseNav();
       return;
     }
@@ -7107,20 +7240,20 @@ class FrigateViewCard extends HTMLElement {
   }
 
   async _stepRecordingsDay(dir) {
-    if (this._tab !== "recordings") return;
+    if (this._tab !== "recordings") return false;
     const direction = Number(dir);
-    if (direction !== -1 && direction !== 1) return;
+    if (direction !== -1 && direction !== 1) return false;
 
     const bounds = this._recordingsOffsetDayBounds(direction);
     const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
-    if (direction > 0 && bounds.end > today.end) return;
+    if (direction > 0 && bounds.end > today.end) return false;
 
     const { clientId, cam } = this._cc();
-    if (!clientId || !cam) return;
+    if (!clientId || !cam) return false;
     const hasData = await this._hasRecordingsInBounds(bounds, clientId, cam);
     if (!hasData) {
       void this._updateRecordingsBrowseNav();
-      return;
+      return false;
     }
 
     this._followNowWindow = false;
@@ -7131,6 +7264,7 @@ class FrigateViewCard extends HTMLElement {
     await this._loadWindowRecordings(clientId, cam, this._winEnd);
     this._renderListLabel(this._winEnd);
     this._renderList();
+    return true;
   }
 
   _syncBrowseHeadFromScroll() {
