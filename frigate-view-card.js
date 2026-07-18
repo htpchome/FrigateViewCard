@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.307";
+const VERSION = "1.0.308";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -830,7 +830,7 @@ const STYLES = `
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
   .tabs-container{display:block;position:realtive;}
-  .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:2px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;margin-bottom:3px 8px;}
+  .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:2px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;margin:3px 8px;}
   .tabs::-webkit-scrollbar{display:none;}
 
   /* ── donut button ── */
