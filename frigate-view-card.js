@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.330";
+const VERSION = "1.0.331";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -800,6 +800,11 @@ const STYLES = `
   .prev-next svg{width:14.4px;height:14.4px;flex-shrink:0;}
 
   .browse.recordings-swipe{touch-action:pan-y;}
+  .list.recordings-swipe-active{position:relative;overflow:hidden;}
+  .rec-swipe-stage{position:relative;width:100%;min-height:220px;}
+  .rec-swipe-pane{position:absolute;inset:0;will-change:transform;backface-visibility:hidden;}
+  .rec-swipe-pane.loading{display:flex;align-items:center;justify-content:center;}
+  .rec-swipe-pane.loading .empty{margin-top:14px;}
   .browse.swipe-bounce-prev{animation:browseBouncePrev .26s ease-out;}
   .browse.swipe-bounce-next{animation:browseBounceNext .26s ease-out;}
   @keyframes browseBouncePrev {
@@ -1216,7 +1221,10 @@ class FrigateViewCard extends HTMLElement {
     this._recordingScrubState = null;
     this._recordingAlertCache = new Map();
     this._recordingsDayAvailabilityCache = new Map();
+    this._recordingsDayDataCache = new Map();
     this._recordingsNavUpdateToken = 0;
+    this._recordingsDayNavAnimating = false;
+    this._recordingsSwipeGesture = null;
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
@@ -3885,6 +3893,7 @@ class FrigateViewCard extends HTMLElement {
 
   async _loadWindowRecordings(clientId, cam, before) {
     const bounds = this._recordingsDayBounds(before);
+    const cacheKey = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
     try {
       const recordings = await this._ws({
         type: "frigate/recordings/get",
@@ -3894,8 +3903,9 @@ class FrigateViewCard extends HTMLElement {
         before: bounds.end,
       });
       this._recordings = Array.isArray(recordings) ? recordings : [];
+      this._recordingsDayDataCache.set(cacheKey, this._recordings);
       this._recordingsDayAvailabilityCache.set(
-        `${clientId}|${cam}|${bounds.start}|${bounds.end}`,
+        cacheKey,
         this._recordings.length > 0,
       );
       this._cacheActiveCamSlice("recordings", this._recordings);
@@ -4465,12 +4475,30 @@ class FrigateViewCard extends HTMLElement {
     let deltaY = 0;
     let tracking = false;
     let horizontal = false;
+    let direction = 0;
 
     const canSwipe = () =>
-      this._tab === "recordings" && this._isMobileTabletViewport();
+      this._tab === "recordings" &&
+      this._isMobileTabletViewport() &&
+      !this._recordingsDayNavAnimating;
 
-    const resetTransform = () => {
+    const resetGesture = () => {
+      if (this._recordingsSwipeGesture?.stage) {
+        this._destroyRecordingsSwipeStage();
+      }
+      this._recordingsSwipeGesture = null;
+      tracking = false;
+      horizontal = false;
+      direction = 0;
+      deltaX = 0;
+      deltaY = 0;
+      browse.classList.remove("recordings-swipe");
       browse.style.transform = "";
+    };
+
+    const ensureGestureStage = (dir) => {
+      if (this._recordingsSwipeGesture?.direction === dir) return;
+      this._recordingsSwipeGesture = this._startRecordingsSwipeGesture(dir);
     };
 
     const onTouchStart = (e) => {
@@ -4479,10 +4507,7 @@ class FrigateViewCard extends HTMLElement {
       const t = e.touches[0];
       startX = t.clientX;
       startY = t.clientY;
-      deltaX = 0;
-      deltaY = 0;
       tracking = true;
-      horizontal = false;
       browse.classList.add("recordings-swipe");
     };
 
@@ -4497,34 +4522,63 @@ class FrigateViewCard extends HTMLElement {
         if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8) return;
         horizontal = Math.abs(deltaX) > Math.abs(deltaY);
         if (!horizontal) {
-          tracking = false;
-          resetTransform();
+          resetGesture();
           return;
         }
       }
 
       e.preventDefault();
-      const damped = Math.max(-28, Math.min(28, deltaX * 0.25));
-      browse.style.transform = `translateX(${damped}px)`;
+      direction = deltaX < 0 ? 1 : -1;
+      ensureGestureStage(direction);
+
+      const stage = this._recordingsSwipeGesture?.stage;
+      if (!stage) return;
+      const max = stage.width;
+      const x = Math.max(-max, Math.min(max, deltaX));
+      this._setRecordingsSwipeStageOffset(stage, x);
     };
 
     const finishSwipe = async () => {
       if (!tracking) return;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+      const dir = direction;
+      const gesture = this._recordingsSwipeGesture;
+      const stage = gesture?.stage;
+
       tracking = false;
       browse.classList.remove("recordings-swipe");
-      const x = deltaX;
-      const y = deltaY;
-      deltaX = 0;
-      deltaY = 0;
-      resetTransform();
+      browse.style.transform = "";
 
-      if (!horizontal || Math.abs(x) < 36 || Math.abs(x) <= Math.abs(y)) {
+      if (!horizontal || !stage || !gesture || !dir || absX <= absY) {
+        resetGesture();
         return;
       }
 
-      const dir = x < 0 ? 1 : -1;
-      const moved = await this._stepRecordingsDay(dir);
-      if (!moved) this._bounceRecordingsArea(dir);
+      const threshold = Math.max(56, stage.width * 0.22);
+      const shouldAdvance = absX >= threshold;
+      if (!shouldAdvance) {
+        await this._animateRecordingsSwipeStageTo(
+          stage,
+          0,
+          180,
+          "cubic-bezier(0.2, 0.55, 0.2, 1)",
+        );
+        resetGesture();
+        return;
+      }
+
+      const moved = await this._completeRecordingsSwipeGesture(gesture);
+      if (!moved) {
+        await this._animateRecordingsSwipeStageTo(
+          stage,
+          0,
+          200,
+          "cubic-bezier(0.2, 0.55, 0.2, 1)",
+        );
+        this._bounceRecordingsArea(dir);
+      }
+      resetGesture();
     };
 
     browse.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -4532,12 +4586,256 @@ class FrigateViewCard extends HTMLElement {
     browse.addEventListener("touchend", () => {
       void finishSwipe();
     });
-    browse.addEventListener("touchcancel", () => {
-      tracking = false;
-      horizontal = false;
-      browse.classList.remove("recordings-swipe");
-      resetTransform();
+    browse.addEventListener("touchcancel", resetGesture);
+  }
+
+  _recordingsListMarkup(recs) {
+    if (!Array.isArray(recs) || !recs.length) {
+      return '<div class="empty">No recordings in this day</div>';
+    }
+    return recs
+      .map((r) => {
+        const rs = Math.floor(r.start_time);
+        const re = Math.floor(r.end_time || Date.now() / 1000);
+        const d = Math.max(1, re - rs);
+        const mm = Math.floor(d / 60);
+        const ss = d % 60;
+        const dur = `${mm ? `${mm}m ` : ""}${ss}s`;
+        return `<div class="list-item shadow-xform shadow-small" data-rs="${rs}" data-re="${re}">
+        <div class="ric">${ICONS.recordings}</div>
+        <div class="rinf">
+          <div class="rt">${this._time(r.start_time)} – ${this._time(r.end_time || Date.now() / 1000)}</div>
+          <div class="rsub">${dur}${r.events ? ` · ${r.events} ev` : ""}</div>
+        </div>
+        <button class="rp" data-rec-dl-start="${rs}" data-rec-dl-end="${re}" title="Download recording" aria-label="Download recording">${ICONS.download}</button>
+      </div>`;
+      })
+      .join("");
+  }
+
+  _recordingsViewRows(recs) {
+    return this._splitRecsHourly(recs).sort(
+      (a, b) => b.start_time - a.start_time,
+    );
+  }
+
+  _createRecordingsSwipeStage(direction, incomingHtml) {
+    const list = this._$("#list");
+    if (!list) return null;
+    const width = Math.max(1, Math.round(list.clientWidth || 1));
+    const currentHtml = list.innerHTML || this._lastRenderedListHtml || "";
+    const stage = document.createElement("div");
+    stage.className = "rec-swipe-stage";
+    stage.style.minHeight = `${Math.max(220, list.scrollHeight || list.clientHeight || 220)}px`;
+
+    const current = document.createElement("div");
+    current.className = "rec-swipe-pane current";
+    current.innerHTML = currentHtml;
+
+    const incoming = document.createElement("div");
+    incoming.className = "rec-swipe-pane incoming";
+    incoming.innerHTML = incomingHtml;
+
+    stage.appendChild(current);
+    stage.appendChild(incoming);
+    list.classList.add("recordings-swipe-active");
+    list.innerHTML = "";
+    list.appendChild(stage);
+
+    const state = {
+      list,
+      stage,
+      current,
+      incoming,
+      direction,
+      width,
+      offset: 0,
+    };
+    this._setRecordingsSwipeStageOffset(state, 0);
+    return state;
+  }
+
+  _setRecordingsSwipeStageOffset(state, offset, transition = "") {
+    if (!state) return;
+    state.offset = offset;
+    state.current.style.transition = transition;
+    state.incoming.style.transition = transition;
+    state.current.style.transform = `translateX(${offset}px)`;
+    state.incoming.style.transform = `translateX(${offset + state.direction * state.width}px)`;
+  }
+
+  _animateRecordingsSwipeStageTo(
+    state,
+    offset,
+    duration = 260,
+    easing = "cubic-bezier(0.18, 0.5, 0.2, 1)",
+  ) {
+    if (!state) return Promise.resolve();
+    return new Promise((resolve) => {
+      const transition = `transform ${duration}ms ${easing}`;
+      this._setRecordingsSwipeStageOffset(state, offset, transition);
+      setTimeout(resolve, duration + 16);
     });
+  }
+
+  _destroyRecordingsSwipeStage() {
+    const state = this._recordingsSwipeGesture?.stage;
+    if (!state?.list) return;
+    state.list.classList.remove("recordings-swipe-active");
+    this._lastRenderedListHtml = "";
+    this._renderList();
+  }
+
+  _startRecordingsSwipeGesture(direction) {
+    const loadingHtml = '<div class="empty">Loading day…</div>';
+    const stage = this._createRecordingsSwipeStage(direction, loadingHtml);
+    const gesture = {
+      direction,
+      stage,
+      hasData: false,
+      ready: false,
+      bounds: null,
+      recs: [],
+      prepPromise: null,
+    };
+    gesture.prepPromise = (async () => {
+      try {
+        const prep = await this._prepareRecordingsDayTransition(direction);
+        gesture.ready = true;
+        gesture.hasData = prep.hasData;
+        gesture.bounds = prep.bounds;
+        gesture.recs = prep.recs;
+        if (gesture.stage?.incoming) {
+          gesture.stage.incoming.classList.remove("loading");
+          gesture.stage.incoming.innerHTML = prep.hasData
+            ? this._recordingsListMarkup(this._recordingsViewRows(prep.recs))
+            : '<div class="empty">No recordings in this day</div>';
+        }
+      } catch (_) {
+        gesture.ready = true;
+        gesture.hasData = false;
+        gesture.bounds = null;
+        gesture.recs = [];
+        if (gesture.stage?.incoming) {
+          gesture.stage.incoming.classList.remove("loading");
+          gesture.stage.incoming.innerHTML =
+            '<div class="empty">No recordings in this day</div>';
+        }
+      }
+    })();
+    if (gesture.stage?.incoming) {
+      gesture.stage.incoming.classList.add("loading");
+    }
+    return gesture;
+  }
+
+  async _prepareRecordingsDayTransition(direction) {
+    const bounds = this._recordingsOffsetDayBounds(direction);
+    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
+    if (direction > 0 && bounds.end > today.end) {
+      return { hasData: false, bounds, recs: [] };
+    }
+    const { clientId, cam } = this._cc();
+    if (!clientId || !cam) {
+      return { hasData: false, bounds, recs: [] };
+    }
+    const key = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
+    if (this._recordingsDayDataCache.has(key)) {
+      const cached = this._recordingsDayDataCache.get(key) || [];
+      return { hasData: cached.length > 0, bounds, recs: cached };
+    }
+    const hasData = await this._hasRecordingsInBounds(bounds, clientId, cam);
+    if (!hasData) {
+      return { hasData: false, bounds, recs: [] };
+    }
+    const recs = await this._ws({
+      type: "frigate/recordings/get",
+      instance_id: clientId,
+      camera: cam,
+      after: Math.max(0, bounds.start),
+      before: bounds.end,
+    });
+    const safe = Array.isArray(recs) ? recs : [];
+    this._recordingsDayDataCache.set(key, safe);
+    this._recordingsDayAvailabilityCache.set(key, safe.length > 0);
+    return { hasData: safe.length > 0, bounds, recs: safe };
+  }
+
+  async _navigateRecordingsDayAnimated(direction) {
+    if (this._tab !== "recordings") return false;
+    const dir = Number(direction);
+    if (dir !== -1 && dir !== 1) return false;
+    if (this._recordingsDayNavAnimating) return false;
+
+    this._recordingsDayNavAnimating = true;
+    try {
+      const prep = await this._prepareRecordingsDayTransition(dir);
+      if (!prep.hasData) {
+        this._bounceRecordingsArea(dir);
+        void this._updateRecordingsBrowseNav();
+        return false;
+      }
+
+      const incomingHtml = this._recordingsListMarkup(
+        this._recordingsViewRows(prep.recs),
+      );
+      const stage = this._createRecordingsSwipeStage(dir, incomingHtml);
+      if (!stage) {
+        await this._commitRecordingsDayTransition(prep.bounds, prep.recs);
+        return true;
+      }
+
+      await this._animateRecordingsSwipeStageTo(
+        stage,
+        -dir * stage.width,
+        320,
+        "cubic-bezier(0.28, 0.02, 0.18, 1)",
+      );
+      await this._commitRecordingsDayTransition(prep.bounds, prep.recs);
+      return true;
+    } finally {
+      this._recordingsDayNavAnimating = false;
+    }
+  }
+
+  async _completeRecordingsSwipeGesture(gesture) {
+    if (!gesture) return false;
+    await gesture.prepPromise;
+    if (!gesture.ready || !gesture.hasData || !gesture.stage) return false;
+
+    const target = -gesture.direction * gesture.stage.width;
+    await this._animateRecordingsSwipeStageTo(
+      gesture.stage,
+      target,
+      300,
+      "cubic-bezier(0.28, 0.02, 0.18, 1)",
+    );
+    await this._commitRecordingsDayTransition(gesture.bounds, gesture.recs);
+    return true;
+  }
+
+  async _commitRecordingsDayTransition(bounds, recs) {
+    if (!bounds) return;
+    const { clientId, cam } = this._cc();
+    const key =
+      clientId && cam ? `${clientId}|${cam}|${bounds.start}|${bounds.end}` : "";
+    this._followNowWindow = false;
+    this._winStart = bounds.start;
+    this._winEnd = bounds.end;
+    this._exhausted = false;
+    this._pruneNonActiveCamWindowCaches();
+    this._recordings = Array.isArray(recs) ? recs : [];
+    if (key) {
+      this._recordingsDayDataCache.set(key, this._recordings);
+      this._recordingsDayAvailabilityCache.set(
+        key,
+        this._recordings.length > 0,
+      );
+    }
+    this._cacheActiveCamSlice("recordings", this._recordings);
+    this._renderListLabel(this._winEnd);
+    this._lastRenderedListHtml = "";
+    this._renderList();
   }
 
   _bounceRecordingsArea(direction) {
@@ -5205,7 +5503,7 @@ class FrigateViewCard extends HTMLElement {
     if (recDayNav) {
       const dir = Number(recDayNav.dataset.recDayNav || 0);
       if (dir) {
-        void this._stepRecordingsDay(dir);
+        void this._navigateRecordingsDayAnimated(dir);
       }
       return true;
     }
@@ -7191,6 +7489,12 @@ class FrigateViewCard extends HTMLElement {
 
   async _hasRecordingsInBounds(bounds, clientId, cam) {
     const key = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
+    if (this._recordingsDayDataCache.has(key)) {
+      const cached = this._recordingsDayDataCache.get(key) || [];
+      const hasCached = cached.length > 0;
+      this._recordingsDayAvailabilityCache.set(key, hasCached);
+      return hasCached;
+    }
     if (this._recordingsDayAvailabilityCache.has(key)) {
       return this._recordingsDayAvailabilityCache.get(key);
     }
@@ -7251,31 +7555,7 @@ class FrigateViewCard extends HTMLElement {
   }
 
   async _stepRecordingsDay(dir) {
-    if (this._tab !== "recordings") return false;
-    const direction = Number(dir);
-    if (direction !== -1 && direction !== 1) return false;
-
-    const bounds = this._recordingsOffsetDayBounds(direction);
-    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
-    if (direction > 0 && bounds.end > today.end) return false;
-
-    const { clientId, cam } = this._cc();
-    if (!clientId || !cam) return false;
-    const hasData = await this._hasRecordingsInBounds(bounds, clientId, cam);
-    if (!hasData) {
-      void this._updateRecordingsBrowseNav();
-      return false;
-    }
-
-    this._followNowWindow = false;
-    this._winStart = bounds.start;
-    this._winEnd = bounds.end;
-    this._exhausted = false;
-    this._pruneNonActiveCamWindowCaches();
-    await this._loadWindowRecordings(clientId, cam, this._winEnd);
-    this._renderListLabel(this._winEnd);
-    this._renderList();
-    return true;
+    return this._navigateRecordingsDayAnimated(dir);
   }
 
   _syncBrowseHeadFromScroll() {
