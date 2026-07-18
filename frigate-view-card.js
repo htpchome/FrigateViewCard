@@ -6,7 +6,7 @@
  * This project originally started as a fork of [frigate-modern-hass-card]
  * (https://github.com/QuadNLfrigate-modern-hass-card) developed by [QuadNL]
  * (https://github.com/QuadNL). Although the codebase has since been rewritten and evolved
- * independently, we want to thank the original author for the foundational ideas that 
+ * independently, we want to thank the original author for the foundational ideas that
  * inspired this work.
  *
  *
@@ -89,7 +89,8 @@ function detectDeviceProfile() {
   const hoverNone = !!win.matchMedia?.("(hover: none)")?.matches;
   const hasTouch =
     maxTouchPoints > 0 || primaryPointerCoarse || anyPointerCoarse || hoverNone;
-  const isAndroid = platform.includes("android") || userAgent.includes("android");
+  const isAndroid =
+    platform.includes("android") || userAgent.includes("android");
   const isIPhone = /iphone/.test(userAgent);
   const isMobileHint =
     nav.userAgentData?.mobile === true || /mobile|mobi/.test(userAgent);
@@ -98,9 +99,7 @@ function detectDeviceProfile() {
     (platform.includes("mac") && maxTouchPoints > 1 && hasTouch);
   const isIPod = /ipod/.test(userAgent);
   const isIOS = isIPhone || isIPad || isIPod;
-  const isTablet =
-    isIPad ||
-    (isAndroid && hasTouch && !isMobileHint);
+  const isTablet = isIPad || (isAndroid && hasTouch && !isMobileHint);
   const isPhone = (isIOS || isAndroid) && !isTablet;
   const isMobile = isPhone || isTablet;
 

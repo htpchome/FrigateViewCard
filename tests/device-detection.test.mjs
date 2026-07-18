@@ -37,7 +37,11 @@ function extractFunction(sourceText, functionName) {
       continue;
     }
 
-    if (state === "single-quote" || state === "double-quote" || state === "template") {
+    if (
+      state === "single-quote" ||
+      state === "double-quote" ||
+      state === "template"
+    ) {
       if (escaped) {
         escaped = false;
         continue;
@@ -99,7 +103,11 @@ function extractFunction(sourceText, functionName) {
   throw new Error(`Unable to extract ${functionName}`);
 }
 
-function createMatchMedia({ pointerCoarse = false, anyPointerCoarse = false, hoverNone = false } = {}) {
+function createMatchMedia({
+  pointerCoarse = false,
+  anyPointerCoarse = false,
+  hoverNone = false,
+} = {}) {
   return (query) => {
     if (query === "(pointer: coarse)") return { matches: pointerCoarse };
     if (query === "(any-pointer: coarse)") return { matches: anyPointerCoarse };
