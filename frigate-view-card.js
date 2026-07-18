@@ -950,7 +950,7 @@ const STYLES = `
   .cam-switcher{display:flex;align-items:center;gap:4px;flex-wrap: wrap;padding:6px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;}
   .cam-tabs{display:flex;gap:4px;flex:1;flex-wrap: wrap;overflow-x:auto;scrollbar-width:none;}  
   .cam-tabs::-webkit-scrollbar{display:none;}
-  .cam-tab{display:inline-flex;align-items:center;gap:4px;font-size: 1;padding-inline: 0.5em;padding-block: 0.4em;line-height: 1;  border-radius: 999em;
+  .cam-tab{display:inline-flex;align-items:center;gap:4px;font-size: 1rem;padding-inline: 0.5em;padding-block: 0.4em;line-height: 1;  border-radius: 999em;
     background:var(--c-bg-main);
     color:var(--c-text2);
     transition:all .15s;
