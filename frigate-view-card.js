@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.297";
+const VERSION = "1.0.298";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -839,7 +839,7 @@ const STYLES = `
   .donut:hover {background-color:var(--c-bg-main);color:var(--c-primary-d);}
   .donut:hover svg{color:var(--c-primary-d);}
   .donut.active {background:var(--c-primary-d);} 
-  .donut.active svg{color:var(--c-text3);}
+  .donut.active svg{color:var(--c-text-rev);}
 
 
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
