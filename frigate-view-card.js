@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.337";
+const VERSION = "1.0.338";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -799,7 +799,7 @@ const STYLES = `
   .prev-next:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);}
   .prev-next svg{width:14.4px;height:14.4px;flex-shrink:0;}
 
-  .browse.recordings-swipe{touch-action:pan-y;}
+  .browse.recordings-swipe{touch-action:none;}
   .list.recordings-swipe-active{position:relative;overflow:hidden;}
   .rec-swipe-stage{position:relative;width:100%;min-height:220px;}
   .rec-swipe-pane{position:absolute;inset:0;will-change:transform;backface-visibility:hidden;}
