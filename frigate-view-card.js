@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.358";
+const VERSION = "1.0.359";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1236,13 +1236,11 @@ class FrigateViewCard extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._onShadowClick = (e) => this._click(e);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
-    this._missingThumbIds = new Set();
     this._onShadowError = (e) => {
       const img = e.target;
       if (!(img instanceof HTMLImageElement)) return;
       const id = img.dataset.thumbId;
       if (!id) return;
-      this._missingThumbIds.add(id);
       img.style.display = "none";
       const placeholder = img.nextElementSibling;
       if (placeholder) placeholder.style.display = "flex";
@@ -7358,10 +7356,7 @@ class FrigateViewCard extends HTMLElement {
   _carouselEventItem(ev, activeId = "") {
     if (!ev?.id) return "";
     const thumbFile = "thumbnail.jpg";
-    const thumbMissing = this._missingThumbIds.has(ev.id);
-    const thumb = thumbMissing
-      ? `<div class="tph">${ICONS.person}</div>`
-      : `<img src="${this._media(ev.id, thumbFile)}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
+    const thumb = `<img src="${this._media(ev.id, thumbFile)}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
     const active = ev.id === activeId ? " active" : "";
     return `<button class="popup-carousel-item${active}" data-ev="${ev.id}" title="${this._dateTimeLabel(ev.start_time || 0)}"><div class="et">${thumb}</div><div class="popup-carousel-meta"><span>${cap(ev.label || "event")}</span><span>${this._time(ev.start_time || 0)}</span></div></button>`;
   }
@@ -8532,12 +8527,9 @@ class FrigateViewCard extends HTMLElement {
         : "";
     const thumbFile = "thumbnail.jpg";
     const thumbSrc = this._media(ev.id, thumbFile);
-    const thumbMissing = this._missingThumbIds.has(ev.id);
     const thumb =
       ev.has_snapshot || ev.has_clip
-        ? thumbMissing
-          ? `<div class="tph">${ICONS.person}</div>`
-          : `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`
+        ? `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`
         : `<div class="tph">${ICONS.person}</div>`;
     const badge = ev.has_clip
       ? '<span class="bc">clip</span>'
@@ -8778,14 +8770,12 @@ class FrigateViewCard extends HTMLElement {
         );
         const reviewThumbFile = "thumbnail.jpg";
         const thumb = firstDet
-          ? this._missingThumbIds.has(firstDet)
-            ? `<div class="tph">${ICONS.person}</div>`
-            : hasReviewMedia
-              ? `<div class="et ${sev}">
+          ? hasReviewMedia
+            ? `<div class="et ${sev}">
                 <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="tph" style="display:none">${ICONS.person}</div>
                 </div>`
-              : `<div class="tph">${ICONS.person}</div>`
+            : `<div class="tph">${ICONS.person}</div>`
           : "";
         return `
       <div class="list-item shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
@@ -8867,11 +8857,8 @@ class FrigateViewCardEditor extends HTMLElement {
       this._activeSettingsPanelId = "camera";
     }
     const incomingSig = this._configSignature(normalized);
-    if (
-      this._rendered &&
-      this._lastDispatchedConfigSig &&
-      incomingSig === this._lastDispatchedConfigSig
-    ) {
+    const currentSig = this._configSignature(this._config);
+    if (this._rendered && incomingSig === currentSig) {
       this._config = normalized;
       return;
     }
