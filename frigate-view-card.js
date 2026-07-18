@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.308";
+const VERSION = "1.0.310";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1243,7 +1243,7 @@ class FrigateViewCard extends HTMLElement {
       this._onEditorPreviewDraft,
     );
   }
-  
+
   _cloneCardConfig(config) {
     try {
       return JSON.parse(JSON.stringify(config || {}));
@@ -7394,6 +7394,10 @@ class FrigateViewCardEditor extends HTMLElement {
     if (!this._themeDraftCache || typeof this._themeDraftCache !== "object") {
       this._themeDraftCache = {};
     }
+    if (this._config?.theme !== "custom") {
+      this._themeDraftCache = {};
+      return;
+    }
     const custom = this._config?.theme_custom || {};
     for (const row of THEME_CUSTOM_ROWS) {
       const key = row.key;
@@ -7742,7 +7746,8 @@ class FrigateViewCardEditor extends HTMLElement {
       const defaultHex = this._themeDefaultHex(key);
       const saved = normalizeHexColor(themeCustom[key]);
       const draft = normalizeHexColor(this._themeDraftCache?.[key]);
-      const value = saved || draft || defaultHex;
+      const value =
+        activeTheme === "custom" ? saved || draft || defaultHex : defaultHex;
       const useDefault = themeCustomDefaults[key] === true;
       const visibleValue = useDefault ? defaultHex : value;
       const showWarn = !useDefault && visibleValue !== defaultHex;
@@ -8023,7 +8028,7 @@ class FrigateViewCardEditor extends HTMLElement {
             .theme-custom-warn{font-size:11px;color:var(--c-text2, var(--editor-muted));}
             .theme-color-wrap{position:relative;width:60px;height:60px;display:flex;align-items:center;justify-content:center;}
             .theme-color-input{width:60px;height:60px;padding:0;border:1px solid var(--editor-border);border-radius:4px;background:transparent;cursor:pointer;}
-            .theme-color-input:disabled{opacity:.5;cursor:not-allowed;}
+            .theme-color-input:disabled{opacity:1;cursor:not-allowed;}
             .theme-color-reset{
               position:absolute;
               left:calc(-1.4em - 2px);
