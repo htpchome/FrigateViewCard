@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.312";
+const VERSION = "1.0.313";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1159,6 +1159,7 @@ class FrigateViewCard extends HTMLElement {
     this._fallbackImgUrlCache = new Map(); // entity => {url, exp}
     this._fallbackReqId = 0;
     this._eventsLoadToken = 0;
+    this._reviewsLoadToken = 0;
     this._warmCamsToken = 0;
     this._reloadPending = false;
     this._reloadAfterLoad = false;
@@ -3863,26 +3864,67 @@ class FrigateViewCard extends HTMLElement {
 
   async _loadWindowReviewsIfNeeded(clientId, cam, after, before) {
     if (this._tab !== "alerts") return;
+    const loadToken = ++this._reviewsLoadToken;
     const reviewsAfter = Math.max(
       0,
       Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY),
     );
     try {
-      const reviews = await this._fetchWindowedReviews(
+      const initialReviews = await this._fetchWindowedReviews(
         clientId,
         cam,
         reviewsAfter,
         before,
         {
-          debugLabel: "alerts-window",
-          onPage: (items, meta) => {
-            this._reviews = Array.isArray(items) ? items.slice() : [];
-            if (meta?.page === 0 || meta?.done) this._renderList();
-          },
+          pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+          debugLabel: "alerts-window-initial",
         },
       );
-      this._reviews = Array.isArray(reviews) ? reviews : [];
+      this._reviews = Array.isArray(initialReviews) ? initialReviews : [];
       this._renderList();
+
+      if (
+        !this._reviews.length ||
+        WINDOW_FETCH_PAGE_LIMIT <= INITIAL_EVENTS_PAGE_LIMIT
+      ) {
+        return;
+      }
+
+      const oldest = Math.min(
+        ...this._reviews.map((item) => Math.floor(item?.start_time || before)),
+      );
+      const cursorBefore = oldest - 1;
+      const activeEntity = this._activeCam?.entity;
+      const winStart = this._winStart;
+      const winEnd = this._winEnd;
+
+      void (async () => {
+        try {
+          const remainingReviews = await this._fetchWindowedReviews(
+            clientId,
+            cam,
+            reviewsAfter,
+            before,
+            {
+              pageLimit: Math.max(
+                1,
+                WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT,
+              ),
+              cursorBefore,
+              debugLabel: "alerts-window-background",
+            },
+          );
+
+          if (loadToken !== this._reviewsLoadToken) return;
+          if (activeEntity !== this._activeCam?.entity) return;
+          if (winStart !== this._winStart || winEnd !== this._winEnd) return;
+
+          if (Array.isArray(remainingReviews) && remainingReviews.length) {
+            this._reviews = this._reviews.concat(remainingReviews);
+            this._renderList();
+          }
+        } catch (_) {}
+      })();
     } catch (_) {
       this._reviews = [];
     }
