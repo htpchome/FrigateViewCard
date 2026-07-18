@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.310";
+const VERSION = "1.0.311";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1162,6 +1162,8 @@ class FrigateViewCard extends HTMLElement {
     this._warmCamsToken = 0;
     this._reloadPending = false;
     this._reloadAfterLoad = false;
+    this._perfEnabled = this._isPerfDiagnosticsEnabled();
+    this._perfSeq = 0;
     this._realtimeHeadPollT = null;
     this._switchLoadT = null;
     this._popupDrag = null;
@@ -1843,6 +1845,11 @@ class FrigateViewCard extends HTMLElement {
   }
   // ── init ─────────────────────────────────────────────────
   async _start() {
+    this._perfLog("diagnostics", {
+      enabled: this._perfEnabled,
+      realtimePollSeconds: this._effectiveRealtimePollSeconds(),
+      windowDays: this._config?.window_days,
+    });
     await this._discoverAll();
     this._initDeepLinkFromUrl();
     this._applyDeepLinkCameraHint();
@@ -2245,6 +2252,60 @@ class FrigateViewCard extends HTMLElement {
 
   _ffDebug(msg, data = null) {
     return;
+  }
+
+  _isPerfDiagnosticsEnabled() {
+    try {
+      const params = new URLSearchParams(window.location?.search || "");
+      const flag = String(params.get("fvc_perf") || "").toLowerCase();
+      if (["1", "true", "on", "yes"].includes(flag)) return true;
+      const stored = String(window.localStorage?.getItem("fvc_perf") || "")
+        .trim()
+        .toLowerCase();
+      return ["1", "true", "on", "yes"].includes(stored);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  _perfContext() {
+    return {
+      tab: this._tab,
+      cam: this._cc?.().cam || "",
+      mode: this._eventsMode,
+    };
+  }
+
+  _perfLog(event, data = {}) {
+    if (!this._perfEnabled) return;
+    console.info("[FVC perf]", event, {
+      ...this._perfContext(),
+      ...data,
+    });
+  }
+
+  _perfStart(label, data = {}) {
+    if (!this._perfEnabled) return null;
+    const token = {
+      id: ++this._perfSeq,
+      label,
+      start: performance.now(),
+    };
+    this._perfLog(`${label}:start`, {
+      id: token.id,
+      ...data,
+    });
+    return token;
+  }
+
+  _perfEnd(token, data = {}) {
+    if (!this._perfEnabled || !token) return;
+    const ms = Math.round((performance.now() - token.start) * 10) / 10;
+    this._perfLog(`${token.label}:end`, {
+      id: token.id,
+      ms,
+      ...data,
+    });
   }
 
   _preferredStreamType() {
@@ -3423,12 +3484,42 @@ class FrigateViewCard extends HTMLElement {
     return this._camCache[this._activeCam?.entity] || mkCamState();
   }
   async _ws(p) {
-    return parseWs(await this._hass.callWS(p));
+    const reqType = String(p?.type || "unknown");
+    const trace =
+      this._perfEnabled && reqType.startsWith("frigate/")
+        ? this._perfStart("ws", {
+            type: reqType,
+            limit: p?.limit,
+          })
+        : null;
+    try {
+      const result = parseWs(await this._hass.callWS(p));
+      this._perfEnd(trace, {
+        type: reqType,
+        count: Array.isArray(result) ? result.length : null,
+      });
+      return result;
+    } catch (error) {
+      this._perfEnd(trace, {
+        type: reqType,
+        error: error?.message || String(error),
+      });
+      throw error;
+    }
   }
   _isNowWindow() {
     return this._followNowWindow;
   }
   async _fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
+    const fetchTrace = this._perfStart("events.fetch", {
+      camera: cam,
+      after: Math.floor(after),
+      before: Math.floor(before),
+      pageLimit: opts?.pageLimit,
+      limit: opts?.limit,
+      cursorBefore: opts?.cursorBefore,
+      label: opts?.debugLabel || "",
+    });
     const items = [];
     const seen = new Set();
     const afterTs = Math.floor(after);
@@ -3446,6 +3537,7 @@ class FrigateViewCard extends HTMLElement {
       Number.isFinite(opts?.limit) ? Math.floor(opts.limit) : EVENT_FETCH_BATCH,
     );
     const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
+    let pagesFetched = 0;
     for (let page = 0; page < pageLimit; page++) {
       const batch = await this._ws({
         type: "frigate/events/get",
@@ -3456,6 +3548,7 @@ class FrigateViewCard extends HTMLElement {
         limit: batchLimit,
       });
       if (!Array.isArray(batch) || !batch.length) break;
+      pagesFetched += 1;
       for (const item of batch) {
         if (!item?.id || seen.has(item.id)) continue;
         seen.add(item.id);
@@ -3472,6 +3565,12 @@ class FrigateViewCard extends HTMLElement {
       cursorBefore = oldest - 1;
     }
     onPage?.(items, { page: -1, done: true });
+    this._perfEnd(fetchTrace, {
+      camera: cam,
+      pagesFetched,
+      count: items.length,
+      label: opts?.debugLabel || "",
+    });
     return items;
   }
 
@@ -3501,6 +3600,7 @@ class FrigateViewCard extends HTMLElement {
           {
             pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
             limit: INACTIVE_WARM_EVENT_LIMIT,
+            debugLabel: "warm-cache",
           },
         );
         if (token !== this._warmCamsToken) return;
@@ -3527,6 +3627,13 @@ class FrigateViewCard extends HTMLElement {
   }
 
   async _fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
+    const fetchTrace = this._perfStart("reviews.fetch", {
+      camera: cam,
+      after: Math.floor(after),
+      before: Math.floor(before),
+      pageLimit: opts?.pageLimit,
+      label: opts?.debugLabel || "",
+    });
     const items = [];
     const seen = new Set();
     const afterTs = Math.floor(after);
@@ -3538,6 +3645,7 @@ class FrigateViewCard extends HTMLElement {
         : WINDOW_FETCH_PAGE_LIMIT,
     );
     const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
+    let pagesFetched = 0;
     for (let page = 0; page < pageLimit; page++) {
       const batch = await this._ws({
         type: "frigate/reviews/get",
@@ -3548,6 +3656,7 @@ class FrigateViewCard extends HTMLElement {
         limit: REVIEW_FETCH_BATCH,
       });
       if (!Array.isArray(batch) || !batch.length) break;
+      pagesFetched += 1;
       for (const item of batch) {
         if (!item?.id || seen.has(item.id)) continue;
         seen.add(item.id);
@@ -3564,10 +3673,20 @@ class FrigateViewCard extends HTMLElement {
       cursorBefore = oldest - 1;
     }
     onPage?.(items, { page: -1, done: true });
+    this._perfEnd(fetchTrace, {
+      camera: cam,
+      pagesFetched,
+      count: items.length,
+      label: opts?.debugLabel || "",
+    });
     return items;
   }
   async _loadWindow(replace) {
     if (this._loading) return;
+    const loadTrace = this._perfStart("loadWindow", {
+      replace,
+      followNowWindow: this._followNowWindow,
+    });
     this._loading = true;
     this._reloadPending = false;
     this._reloadAfterLoad = false;
@@ -3580,14 +3699,42 @@ class FrigateViewCard extends HTMLElement {
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) {
       this._loading = false;
+      this._perfEnd(loadTrace, {
+        skipped: "missing-client-or-camera",
+      });
       return;
     }
     const after = this._winStart,
       before = this._winEnd;
+    const eventsTrace = this._perfStart("loadWindow.events", {
+      camera: cam,
+    });
+    const recordingsTrace = this._perfStart("loadWindow.recordings", {
+      camera: cam,
+    });
+    const reviewsTrace = this._perfStart("loadWindow.reviews", {
+      camera: cam,
+      tab: this._tab,
+    });
     await Promise.allSettled([
-      this._loadWindowEvents(clientId, cam, after, before),
-      this._loadWindowRecordings(clientId, cam, before),
-      this._loadWindowReviewsIfNeeded(clientId, cam, after, before),
+      this._loadWindowEvents(clientId, cam, after, before).finally(() => {
+        this._perfEnd(eventsTrace, {
+          count: this._events.length,
+        });
+      }),
+      this._loadWindowRecordings(clientId, cam, before).finally(() => {
+        this._perfEnd(recordingsTrace, {
+          count: this._recordings.length,
+        });
+      }),
+      this._loadWindowReviewsIfNeeded(clientId, cam, after, before).finally(
+        () => {
+          this._perfEnd(reviewsTrace, {
+            count: this._reviews.length,
+            skipped: this._tab !== "alerts",
+          });
+        },
+      ),
     ]);
     const ent = this._activeCam?.entity;
     if (ent && this._camCache[ent]) {
@@ -3603,6 +3750,11 @@ class FrigateViewCard extends HTMLElement {
     this._consumeDeepLinkEventOpen();
     if (this._eventsMode === "all") this._loadAllCamsBackground();
     this._renderAll();
+    this._perfEnd(loadTrace, {
+      events: this._events.length,
+      recordings: this._recordings.length,
+      reviews: this._reviews.length,
+    });
   }
 
   _cacheActiveCamSlice(key, value) {
@@ -3623,6 +3775,7 @@ class FrigateViewCard extends HTMLElement {
         {
           pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
           limit: INITIAL_EVENT_FETCH_LIMIT,
+          debugLabel: "initial",
         },
       );
       this._events = Array.isArray(initialEvents) ? initialEvents : [];
@@ -3658,6 +3811,7 @@ class FrigateViewCard extends HTMLElement {
                 WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT,
               ),
               cursorBefore,
+              debugLabel: "background",
             },
           );
 
@@ -3710,6 +3864,7 @@ class FrigateViewCard extends HTMLElement {
         reviewsAfter,
         before,
         {
+          debugLabel: "alerts-window",
           onPage: (items, meta) => {
             this._reviews = Array.isArray(items) ? items.slice() : [];
             if (meta?.page === 0 || meta?.done) this._renderList();
@@ -3748,7 +3903,9 @@ class FrigateViewCard extends HTMLElement {
         0,
         Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY),
       );
-      const r = await this._fetchWindowedReviews(clientId, cam, after, before);
+      const r = await this._fetchWindowedReviews(clientId, cam, after, before, {
+        debugLabel: "alerts-tab",
+      });
       this._reviews = Array.isArray(r) ? r : [];
     } catch (_) {
       this._reviews = [];
@@ -6958,59 +7115,82 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _renderList() {
-    const list = this._$("#list");
-    if (!list) return;
-    if (this._tab === "recordings") {
-      // Don't blow away the recording list while the user is watching a recording
-      const viewerActive = this._$("#viewer")?.style.display !== "none";
-      if (viewerActive && this._playing?.rec != null) return;
-      this._syncOlderHint(false);
-      return this._renderRecordings(list);
-    }
-    if (this._tab === "alerts") {
-      this._syncOlderHint(false);
-      return this._renderReviews(list);
-    }
-    if (this._tab === "kept") {
-      const kept = this._filteredKept();
-      this._renderListLabel();
-      if (!kept.length) {
+    const renderTrace = this._perfStart("render.list", {
+      tab: this._tab,
+    });
+    try {
+      const list = this._$("#list");
+      if (!list) return;
+      if (this._tab === "recordings") {
+        // Don't blow away the recording list while the user is watching a recording
+        const viewerActive = this._$("#viewer")?.style.display !== "none";
+        if (viewerActive && this._playing?.rec != null) return;
+        this._syncOlderHint(false);
+        return this._renderRecordings(list);
+      }
+      if (this._tab === "alerts") {
+        this._syncOlderHint(false);
+        return this._renderReviews(list);
+      }
+      if (this._tab === "kept") {
+        const kept = this._filteredKept();
+        this._renderListLabel();
+        if (!kept.length) {
+          this._setListHtmlIfChanged(
+            list,
+            `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
+          );
+          this._syncOlderHint(false);
+          return;
+        }
         this._setListHtmlIfChanged(
           list,
-          `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
+          kept.map((ev) => this._eventCardHTML(ev, false)).join(""),
+        );
+        this._syncOlderHint(false);
+        return;
+      }
+      const events = this._filtered();
+      this._renderListLabel(events[0]?.start_time || null);
+      if (!events.length) {
+        this._setListHtmlIfChanged(
+          list,
+          `<div class="empty">No events in this window</div>`,
         );
         this._syncOlderHint(false);
         return;
       }
       this._setListHtmlIfChanged(
         list,
-        kept.map((ev) => this._eventCardHTML(ev, false)).join(""),
+        (this._showStickyDayHeaders()
+          ? this._renderStickyDaySections(events, (ev) =>
+              this._eventCardHTML(ev, false),
+            )
+          : events.map((ev) => this._eventCardHTML(ev, false)).join("")) +
+          (this._exhausted ? '<div class="end">— end —</div>' : ""),
       );
-      this._syncOlderHint(false);
-      return;
+      this._syncOlderHint();
+      requestAnimationFrame(() => this._syncOlderHint());
+      setTimeout(() => this._syncOlderHint(), 200);
+    } finally {
+      if (this._perfEnabled) {
+        const itemCount =
+          this._tab === "recordings"
+            ? this._recordings.length
+            : this._tab === "alerts"
+              ? this._filteredReviews().length
+              : this._tab === "kept"
+                ? this._filteredKept().length
+                : this._filtered().length;
+        this._perfEnd(renderTrace, {
+          tab: this._tab,
+          itemCount,
+          htmlLength: this._lastRenderedListHtml.length,
+        });
+      } else {
+        this._perfEnd(renderTrace);
+      }
     }
-    const events = this._filtered();
-    this._renderListLabel(events[0]?.start_time || null);
-    if (!events.length) {
-      this._setListHtmlIfChanged(
-        list,
-        `<div class="empty">No events in this window</div>`,
-      );
-      this._syncOlderHint(false);
-      return;
-    }
-    this._setListHtmlIfChanged(
-      list,
-      (this._showStickyDayHeaders()
-        ? this._renderStickyDaySections(events, (ev) =>
-            this._eventCardHTML(ev, false),
-          )
-        : events.map((ev) => this._eventCardHTML(ev, false)).join("")) +
-        (this._exhausted ? '<div class="end">— end —</div>' : ""),
-    );
-    this._syncOlderHint();
-    requestAnimationFrame(() => this._syncOlderHint());
-    setTimeout(() => this._syncOlderHint(), 200);
   }
   _syncOlderHint(forceHide = null) {
     const hint = this._$("#older-hint");
