@@ -3978,13 +3978,12 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _slideshowReviewWatchIntervalMs() {
-    const realtimePollMs = Math.floor(this._effectiveRealtimePollSeconds() * 1000);
+    const realtimePollMs = Math.floor(
+      this._effectiveRealtimePollSeconds() * 1000,
+    );
     return Math.max(
       SLIDESHOW_REVIEW_WATCH_MIN_MS,
-      Math.min(
-        SLIDESHOW_REVIEW_WATCH_MAX_MS,
-        realtimePollMs,
-      ),
+      Math.min(SLIDESHOW_REVIEW_WATCH_MAX_MS, realtimePollMs),
     );
   }
 
