@@ -142,3 +142,17 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Frigate/Home Assistant dev runtime artifacts
+.devcontainer/frigate/.jwt_secret
+.devcontainer/frigate/.exports
+.devcontainer/frigate/.search_stats.json
+.devcontainer/frigate/.timeline
+.devcontainer/frigate/.vacuum
+.devcontainer/frigate/*.db
+.devcontainer/frigate/*.db-shm
+.devcontainer/frigate/*.db-wal
+.devcontainer/frigate/backup.db
+
+# Misc generated local artifacts
+wget-log
