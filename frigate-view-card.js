@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.291";
+const VERSION = "1.0.292";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -829,6 +829,7 @@ const STYLES = `
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
+  .tabs-container{display:block;position:realtive;}
   .tabs{display:flex;flex-wrap: wrap;gap: 4px;padding:4px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;top:0;background-color:var(--c-bg-panel) !important;margin:0 10px 2px;border-radius: 8px;transition: background-color 0.3s ease;}
   .tabs::-webkit-scrollbar{display:none;}
 
@@ -966,7 +967,7 @@ const STYLES = `
   /* ── filter + cal ── */
   .dropdown-content {display: none;position: absolute;background-color: #f1f1f1;min-width: 160px; overflow: auto;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 1;}
 
-  .filter-panel,.cal-panel{display: none;position: absolute;right:0;top:0;background-color: #f1f1f1;min-width: 160px; overflow: auto;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: auto;}
+  .filter-panel,.cal-panel{display: none;position: absolute;right:0;background-color: #f1f1f1;min-width: 160px; overflow: auto;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: auto;}
 
 
   .frow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px;} .frow:last-child{margin-bottom:0;} .frow-l{font-size:0.75rem;color:var(--c-text3);width:38px;text-transform:uppercase;flex-shrink:0;}
@@ -4019,14 +4020,16 @@ class FrigateViewCard extends HTMLElement {
           </div>
           <div class="resize-handle" id="resize-handle"></div>
           <div class="col-right" id="col-right">
-            <div class="frigate-view">${ICONS.frigateview}</div> 
-            <div class="tabs shadow-small">
-              ${this._buildTabsMarkup()}
+            <div class="frigate-view">${ICONS.frigateview}</div>
+            <div class="tabs-holder"> 
+              <div class="tabs shadow-small">            
+                ${this._buildTabsMarkup()}              
+              </div>
+              <div class="filter-panel" id="filter-panel" style="display:none"></div>
+              <div class="cal-panel" id="cal-panel" style="display:none"></div>
             </div>
         
-            <div class="browse" id="browse" style="display:none">            <div class="filter-panel" id="filter-panel" style="display:none"></div>
-              <div class="cal-panel" id="cal-panel" style="display:none"></div>
-
+            <div class="browse" id="browse" style="display:none">            
               <div class="list-sec">
                 <div class="list-head">
                   <span class="section-label" id="list-label">Recent Alerts</span>
