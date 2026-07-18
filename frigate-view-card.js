@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.317";
+const VERSION = "1.0.318";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -777,6 +777,11 @@ const STYLES = `
     height:95%;
     overflow-y:auto;
     position:relative}
+
+  .card .browse-head{flex:1 1 0;backgound:var(--c-bg-main);min-height:1.25rem;min-width:0;  flex-direction: row;width: 100%;}
+  .browse-head-left, .browse-head-right {flex: 0 0 auto;}
+  .browse-head-middle {flex: 1 1 auto;}
+  
   .card .browse::-webkit-scrollbar{width:8px;}
   .card .browse::-webkit-scrollbar-track{background:transparent;}
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;border:2px solid transparent;}
@@ -4250,18 +4255,26 @@ class FrigateViewCard extends HTMLElement {
               <div class="filter-panel" id="filter-panel" style="display:none"></div>
               <div class="cal-panel" id="cal-panel" style="display:none"></div>
             </div>
+            <div class="browse-head">
+              <div class="browse-head-left">
+                <button class="prev-next">Previous</button>
+              </div>
+              <div class="browse-head-middle">
+                Day - Date - Category(alerts, clips, snaps, recordings, favorites)
+              </div>
+              <div class="browse-head-right">
+                <button class="prev-next">Previous</button>
+              </div>
+            </div>
         
-            <div class="browse" id="browse" style="display:none">            
-
-                <div class="list-head">
-                  <span class="section-label" id="list-label">Recent Alerts</span>
-                  <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
-                </div>
-                <div class="list" id="list">
-                  <div class="empty">Loading…</div>
-                </div>
-                                
-            
+            <div class="browse" id="browse" style="display:none">
+              <div class="list-head">
+                <span class="section-label" id="list-label">Recent Alerts</span>
+                <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
+              </div>
+              <div class="list" id="list">
+                <div class="empty">Loading…</div>
+              </div>
             </div>
             <div class="more" id="older-hint" hidden>scroll for older…</div>
           </div>
