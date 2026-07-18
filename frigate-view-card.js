@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.293";
+const VERSION = "1.0.294";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -958,16 +958,16 @@ const STYLES = `
 
   /* ── timeline ── */
   .tl-tools{display:flex;gap:4px;}
-  .tool{display:inline-flex;gap:4px;align-items:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;padding:4px;cursor:pointer;max-height:30px;max-width:36px;flex-shrink:0;}
-  .tool svg{width:24px;height:24px;display:block;}
-  .tool:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
+  .tool{display:inline-flex;gap:4px;align-items:center;justify-content:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;padding:4px;cursor:pointer;height:30px;width:30px;flex-shrink:0;}
+  .tool svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
+  .tool:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
 
   /* ── filter + cal ── */
   .dropdown-content {display: none;position: absolute;background-color: #f1f1f1;min-width: 160px; overflow: auto;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 1;}
 
-  .filter-panel,.cal-panel{display: none;position: absolute;right:0;background-color: #f1f1f1;min-width: 160px; overflow: auto;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 2;}
+  .filter-panel,.cal-panel{display: none;position: absolute;right:0;background-color: #f1f1f1;min-width: 160px; overflow: auto;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 3;}
 
 
   .frow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px;} .frow:last-child{margin-bottom:0;} .frow-l{font-size:0.75rem;color:var(--c-text3);width:38px;text-transform:uppercase;flex-shrink:0;}
@@ -996,8 +996,8 @@ const STYLES = `
   .em svg{width:10.8px;height:10.8px;}
   .desc{margin-top:4px;font-size:0.825rem;color:var(--c-text2);line-height:1.45;background:var(--c-bg-panel);border-radius:5px;padding:6px 8.4px;}
 
-  .ico{width:31.2px;height:31.2px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
-  .ico svg{width:15.6px;height:15.6px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
+  .ico{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
+  .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 
    /* ── toast ── */
