@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.350";
+const VERSION = "1.0.351";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1282,6 +1282,9 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowLastAlertAt = 0;
     this._slideshowLastAlertCam = "";
     this._slideshowAttentionType = "";
+    this._slideshowHandledReviewIds = new Set();
+    this._slideshowReviewProbeT = null;
+    this._slideshowReviewProbeInFlight = false;
     this._slideshowSwitchT = null;
     this._slideshowPauseT = null;
     this._slideshowFadeT = null;
@@ -3608,9 +3611,11 @@ class FrigateViewCard extends HTMLElement {
     if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
     if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
     if (this._slideshowFadeT) clearTimeout(this._slideshowFadeT);
+    if (this._slideshowReviewProbeT) clearTimeout(this._slideshowReviewProbeT);
     this._slideshowSwitchT = null;
     this._slideshowPauseT = null;
     this._slideshowFadeT = null;
+    this._slideshowReviewProbeT = null;
   }
 
   _syncToolbarButtons() {
@@ -3650,6 +3655,8 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowLastAlertAt = 0;
     this._slideshowLastAlertCam = "";
     this._slideshowAttentionType = "";
+    this._slideshowHandledReviewIds.clear();
+    this._slideshowReviewProbeInFlight = false;
     const engWrap = this._$("#eng-wrap");
     if (engWrap) {
       engWrap.classList.remove(
@@ -3671,6 +3678,7 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowPendingAlertCam = "";
     this._slideshowPendingAlertType = "";
     this._slideshowAttentionType = "";
+    this._slideshowHandledReviewIds.clear();
     this._scheduleSlideshowRotation(source);
     this._syncToolbarButtons();
     return true;
@@ -3782,6 +3790,118 @@ class FrigateViewCard extends HTMLElement {
     return idx >= 0 ? this._config?.cameras?.[idx]?.entity || "" : "";
   }
 
+  _normalizeReviewSeverity(review) {
+    return String(review?.severity || review?.data?.severity || "")
+      .trim()
+      .toLowerCase();
+  }
+
+  _rememberHandledSlideshowReview(reviewId) {
+    const id = String(reviewId || "").trim();
+    if (!id) return;
+    this._slideshowHandledReviewIds.add(id);
+    if (this._slideshowHandledReviewIds.size <= 200) return;
+    const oldest = this._slideshowHandledReviewIds.values().next().value;
+    if (oldest) this._slideshowHandledReviewIds.delete(oldest);
+  }
+
+  async _probeLatestSlideshowReview() {
+    if (
+      !this._slideshowActive ||
+      !this._isSlideshowRotationAvailable() ||
+      this._slideshowReviewProbeInFlight
+    )
+      return;
+    this._slideshowReviewProbeInFlight = true;
+    try {
+      const before = Math.floor(Date.now() / 1000);
+      const after = Math.max(
+        0,
+        Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY),
+      );
+      const candidates = [];
+
+      for (const camera of this._config?.cameras || []) {
+        const entity = camera?.entity || "";
+        const cache = this._camCache[entity];
+        if (!entity || !cache?.clientId || !cache?.cam) continue;
+        let reviews = [];
+        try {
+          const batch = await this._ws({
+            type: "frigate/reviews/get",
+            instance_id: cache.clientId,
+            cameras: [cache.cam],
+            after,
+            before,
+            limit: 5,
+          });
+          reviews = Array.isArray(batch) ? batch : [];
+        } catch (_) {
+          reviews = [];
+        }
+        for (const review of reviews) {
+          const severity = this._normalizeReviewSeverity(review);
+          if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
+          const reviewId = String(review?.id || "").trim();
+          if (reviewId && this._slideshowHandledReviewIds.has(reviewId))
+            continue;
+          candidates.push({
+            entity,
+            severity,
+            reviewId,
+            startTime: Number(review?.start_time || 0),
+          });
+          break;
+        }
+      }
+
+      if (!candidates.length) return;
+      candidates.sort((a, b) => b.startTime - a.startTime);
+      const next = candidates[0];
+      if (!next?.entity) return;
+      if (next.reviewId) this._rememberHandledSlideshowReview(next.reviewId);
+
+      if (this._slideshowPopupPaused) {
+        this._slideshowPendingAlertCam = next.entity;
+        this._slideshowPendingAlertType = next.severity;
+        this._setSlideshowAlertState(next.severity);
+        return;
+      }
+
+      const activeEntity = this._activeCam?.entity || "";
+      this._slideshowLastAlertAt = Date.now();
+      this._slideshowLastAlertCam = next.entity;
+      this._slideshowPausedUntil = Date.now() + this._slideshowRotationMs();
+      this._setSlideshowAlertState(next.severity);
+
+      if (next.entity === activeEntity) {
+        this._scheduleSlideshowRotation("probe-active-review");
+        return;
+      }
+
+      const idx = this._cameraIndexByEntity(next.entity);
+      if (idx < 0) return;
+      this._slideshowPendingAlertCam = "";
+      this._slideshowPendingAlertType = "";
+      void this._switchCamera(idx, { source: "alert" });
+      this._scheduleSlideshowRotation("probe-review-switch");
+    } finally {
+      this._slideshowReviewProbeInFlight = false;
+    }
+  }
+
+  _scheduleSlideshowReviewProbe(delayMs = 180) {
+    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
+    if (this._slideshowReviewProbeT) clearTimeout(this._slideshowReviewProbeT);
+    this._slideshowReviewProbeT = setTimeout(
+      () => {
+        this._slideshowReviewProbeT = null;
+        void this._probeLatestSlideshowReview();
+      },
+      Math.max(0, Number(delayMs) || 0),
+    );
+  }
+
   _cameraIndexByEntity(entity) {
     if (!entity) return -1;
     return (
@@ -3852,6 +3972,7 @@ class FrigateViewCard extends HTMLElement {
 
   _handleSlideshowRealtimeMessage(msg) {
     if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
+    this._scheduleSlideshowReviewProbe();
     const incomingCam = this._extractRealtimeMessageCamera(msg);
     if (!incomingCam) return;
     const cam = this._cameraEntityForIncomingCamera(incomingCam);
