@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.333";
+const VERSION = "1.0.334";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -4476,8 +4476,8 @@ class FrigateViewCard extends HTMLElement {
     let tracking = false;
     let horizontal = false;
     let direction = 0;
-    const dragEngageThreshold = this._isMobileTabletViewport() ? 2 : 4;
-    const dragFollowFactor = this._isMobileTabletViewport() ? 0.9 : 0.72;
+    const dragEngageThreshold = this._isMobileTabletViewport() ? 1 : 2;
+    const dragFollowFactor = this._isMobileTabletViewport() ? 1 : 0.85;
 
     const canSwipe = () =>
       this._tab === "recordings" &&
@@ -4526,7 +4526,8 @@ class FrigateViewCard extends HTMLElement {
           Math.abs(deltaY) < dragEngageThreshold
         )
           return;
-        horizontal = Math.abs(deltaX) > Math.abs(deltaY);
+        horizontal =
+          Math.abs(deltaX) > Math.abs(deltaY) || Math.abs(deltaX) >= 2;
         if (!horizontal) {
           resetGesture();
           return;
@@ -4542,7 +4543,7 @@ class FrigateViewCard extends HTMLElement {
       const max = stage.width;
       const x = Math.max(-max, Math.min(max, deltaX));
       const absX = Math.abs(x);
-      const followFactor = absX < 22 ? 1 : dragFollowFactor;
+      const followFactor = absX < 60 ? 1 : dragFollowFactor;
       const follow = Math.sign(x) * Math.min(absX * followFactor, max);
       this._setRecordingsSwipeStageOffset(stage, follow);
     };
@@ -4681,6 +4682,8 @@ class FrigateViewCard extends HTMLElement {
   ) {
     if (!state) return Promise.resolve();
     return new Promise((resolve) => {
+      void state.stage?.getBoundingClientRect?.();
+      void state.current?.offsetWidth;
       const transition = `transform ${duration}ms ${easing}`;
       this._setRecordingsSwipeStageOffset(state, offset, transition);
       setTimeout(resolve, duration + 16);
@@ -4795,6 +4798,7 @@ class FrigateViewCard extends HTMLElement {
       }
 
       await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
 
       await this._animateRecordingsSwipeStageTo(
         stage,
@@ -4814,6 +4818,7 @@ class FrigateViewCard extends HTMLElement {
     await gesture.prepPromise;
     if (!gesture.ready || !gesture.hasData || !gesture.stage) return false;
 
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
     const target = -gesture.direction * gesture.stage.width;
