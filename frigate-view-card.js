@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.348";
+const VERSION = "1.0.349";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -967,7 +967,8 @@ const STYLES = `
     .feed-area{position:relative;width:100%;}
     #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
     #eng-wrap.slideshow-switching{opacity:.12;}
-    #eng-wrap.slideshow-alert{box-shadow:inset 0 0 0 3px var(--c-bg-alert);}
+    #eng-wrap.slideshow-alert{box-shadow:inset 0 0 0 3px var(--error-color, var(--c-bg-alert));}
+    #eng-wrap.slideshow-detection{box-shadow:inset 0 0 0 3px var(--warning-color, var(--c-accent));}
     #eng-wrap.popup-covered::after{content:"";position:absolute;inset:0;background:var(--c-bg-deep);z-index:4;pointer-events:none;}
     .card.mobile-rotate-live,
     .card.mobile-rotate-live-exit{overflow:hidden;height:var(--rotate-vh);max-height:var(--rotate-vh);}
@@ -1277,8 +1278,10 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowActive = false;
     this._slideshowPausedUntil = 0;
     this._slideshowPendingAlertCam = "";
+    this._slideshowPendingAlertType = "";
     this._slideshowLastAlertAt = 0;
     this._slideshowLastAlertCam = "";
+    this._slideshowAttentionType = "";
     this._slideshowSwitchT = null;
     this._slideshowPauseT = null;
     this._slideshowFadeT = null;
@@ -3643,11 +3646,17 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowPopupPaused = false;
     this._slideshowPausedUntil = 0;
     this._slideshowPendingAlertCam = "";
+    this._slideshowPendingAlertType = "";
     this._slideshowLastAlertAt = 0;
     this._slideshowLastAlertCam = "";
+    this._slideshowAttentionType = "";
     const engWrap = this._$("#eng-wrap");
     if (engWrap) {
-      engWrap.classList.remove("slideshow-switching", "slideshow-alert");
+      engWrap.classList.remove(
+        "slideshow-switching",
+        "slideshow-alert",
+        "slideshow-detection",
+      );
     }
     void reason;
     if (sync) this._syncToolbarButtons();
@@ -3660,6 +3669,8 @@ class FrigateViewCard extends HTMLElement {
       this._$("#myPopup")?.classList.contains("is-open") === true;
     this._slideshowPausedUntil = 0;
     this._slideshowPendingAlertCam = "";
+    this._slideshowPendingAlertType = "";
+    this._slideshowAttentionType = "";
     this._scheduleSlideshowRotation(source);
     this._syncToolbarButtons();
     return true;
@@ -3715,10 +3726,34 @@ class FrigateViewCard extends HTMLElement {
     }, wait);
   }
 
-  _setSlideshowAlertState(active) {
+  _setSlideshowAlertState(type = "") {
+    this._slideshowAttentionType =
+      type === "alert" || type === "detection" ? type : "";
     const engWrap = this._$("#eng-wrap");
     if (!engWrap) return;
-    engWrap.classList.toggle("slideshow-alert", !!active);
+    engWrap.classList.toggle(
+      "slideshow-alert",
+      this._slideshowAttentionType === "alert",
+    );
+    engWrap.classList.toggle(
+      "slideshow-detection",
+      this._slideshowAttentionType === "detection",
+    );
+  }
+
+  _slideshowReviewModeForCamera(entity) {
+    const cam = this._config?.cameras?.find(
+      (camera) => camera.entity === entity,
+    );
+    return normalizeAlertsAreaContent(cam?.alerts_content);
+  }
+
+  _shouldHandleSlideshowReview(entity, severity) {
+    if (severity === "alert") return true;
+    return (
+      severity === "detection" &&
+      this._slideshowReviewModeForCamera(entity) === "all_reviews"
+    );
   }
 
   _cameraIndexByEntity(entity) {
@@ -3733,7 +3768,9 @@ class FrigateViewCard extends HTMLElement {
     if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
     if (this._slideshowPopupPaused) return;
     const pendingAlertCam = this._slideshowPendingAlertCam;
+    const pendingAlertType = this._slideshowPendingAlertType;
     this._slideshowPendingAlertCam = "";
+    this._slideshowPendingAlertType = "";
     const activeEntity = this._activeCam?.entity || "";
     const currentIndex = this._cameraIndexByEntity(activeEntity);
     const nextIndex =
@@ -3752,9 +3789,7 @@ class FrigateViewCard extends HTMLElement {
       source: pendingAlertCam ? "alert" : "slideshow",
     });
     this._slideshowPausedUntil = Date.now() + this._slideshowRotationMs();
-    this._setSlideshowAlertState(
-      !!pendingAlertCam || this._slideshowLastAlertCam === targetEntity,
-    );
+    this._setSlideshowAlertState(pendingAlertCam ? pendingAlertType : "");
     this._scheduleSlideshowRotation("advance");
   }
 
@@ -3770,8 +3805,20 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _extractRealtimeMessageSeverity(msg) {
+    const type = String(msg?.type || "")
+      .trim()
+      .toLowerCase();
     return String(
-      msg?.severity || msg?.event?.severity || msg?.review?.severity || "",
+      msg?.severity ||
+        msg?.event?.severity ||
+        msg?.event?.data?.severity ||
+        msg?.review?.severity ||
+        msg?.review?.data?.severity ||
+        msg?.after?.severity ||
+        msg?.after?.data?.severity ||
+        msg?.before?.severity ||
+        msg?.before?.data?.severity ||
+        (type.includes("detection") ? "detection" : ""),
     )
       .trim()
       .toLowerCase();
@@ -3782,31 +3829,26 @@ class FrigateViewCard extends HTMLElement {
     const cam = this._extractRealtimeMessageCamera(msg);
     if (!cam) return;
     const severity = this._extractRealtimeMessageSeverity(msg);
-    if (severity !== "alert") return;
+    if (!this._shouldHandleSlideshowReview(cam, severity)) return;
 
     if (this._slideshowPopupPaused) {
       this._slideshowPendingAlertCam = cam;
-      this._setSlideshowAlertState(true);
+      this._slideshowPendingAlertType = severity;
+      this._setSlideshowAlertState(severity);
       return;
     }
 
     const now = Date.now();
     const activeEntity = this._activeCam?.entity || "";
-    const withinWindow =
-      now - this._slideshowLastAlertAt < SLIDESHOW_ALERT_HOLD_MS;
     this._slideshowLastAlertAt = now;
     this._slideshowLastAlertCam = cam;
 
     if (cam === activeEntity) {
+      this._slideshowPendingAlertCam = "";
+      this._slideshowPendingAlertType = "";
       this._slideshowPausedUntil = now + this._slideshowRotationMs();
-      this._setSlideshowAlertState(true);
+      this._setSlideshowAlertState(severity);
       this._scheduleSlideshowRotation("active-alert");
-      return;
-    }
-
-    if (withinWindow) {
-      this._slideshowPendingAlertCam = cam;
-      this._setSlideshowAlertState(true);
       return;
     }
 
@@ -3814,7 +3856,8 @@ class FrigateViewCard extends HTMLElement {
     if (idx < 0) return;
     this._slideshowPausedUntil = now + this._slideshowRotationMs();
     this._slideshowPendingAlertCam = "";
-    this._setSlideshowAlertState(true);
+    this._slideshowPendingAlertType = "";
+    this._setSlideshowAlertState(severity);
     void this._switchCamera(idx, { source: "alert" });
     this._scheduleSlideshowRotation("alert-switch");
   }
