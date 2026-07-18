@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.336";
+const VERSION = "1.0.337";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -4523,6 +4523,9 @@ class FrigateViewCard extends HTMLElement {
       if (!t) return;
       deltaX = t.clientX - startX;
       deltaY = t.clientY - startY;
+      if (Math.abs(deltaX) > 0 || Math.abs(deltaY) > 0) {
+        e.preventDefault();
+      }
 
       if (!horizontal) {
         if (
