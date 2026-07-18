@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.302";
+const VERSION = "1.0.303";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -834,7 +834,7 @@ const STYLES = `
   .tabs::-webkit-scrollbar{display:none;}
 
   /* ── donut button ── */
-  .donut{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;min-height:40px;min-width:40px;background-color:var(--c-bg-main);padding:3px;transition: all 0.2s ease;}
+  .donut{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;min-height:40px;min-width:40px;background-color:var(--c-bg-main);padding:3px;transition: all 0.2s ease;cursor:pointer;}
   .donut svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .donut:hover {background-color:var(--c-bg-main);color:var(--c-primary-d);}
   .donut:hover svg{color:var(--c-primary-d);}
@@ -948,11 +948,19 @@ const STYLES = `
   /* ── camera switcher ── */
 
   .cam-switcher{display:flex;align-items:center;gap:4px;flex-wrap: wrap;padding:6px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;}
-  .cam-tabs{display:flex;gap:4px;flex:1;flex-wrap: wrap;overflow-x:auto;scrollbar-width:none;}
+  .cam-tabs{display:flex;gap:4px;flex:1;flex-wrap: wrap;overflow-x:auto;scrollbar-width:none;}  
   .cam-tabs::-webkit-scrollbar{display:none;}
-  .cam-tab{display:inline-flex;align-items:center;gap:4px;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:12px;padding:8px 6px;font-size:0.825rem;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;}
-  .cam-tab:hover{background:var(--c-primary-l);border-color:var(--c-primary-d);color:var(--c-text);}
-  .cam-tab.active{background:var(--c-primary-l);border-color:var(--primary-color);color:var(--c-text);}
+  .cam-tab{display:inline-flex;align-items:center;gap:4px;font-size: 1.25rem;padding-inline: 2em;padding-block: 0.8em;line-height: 1.25;  border-radius: 999em;
+    background:var(--c-bg-main);
+    color:var(--c-text2);
+    transition:all .15s;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+    border:2px solid var(--c-primary-d);}
+  
+  .cam-tab:hover{color:var(--c-primary-d);}
+  .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
   .cam-tab svg{width:14.4px;height:14.4px;flex-shrink:0;}
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
 
