@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.316";
+const VERSION = "1.0.317";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -783,7 +783,6 @@ const STYLES = `
 
   /* ── event list ── */
   .list{flex:1;flex-direction: column;min-height:0;} 
-  .list-sec{padding:0px 0px;position:relative;}  
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
   .list-day-label{position:sticky;top:0;z-index:2;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-main);border:none;}
@@ -4253,7 +4252,7 @@ class FrigateViewCard extends HTMLElement {
             </div>
         
             <div class="browse" id="browse" style="display:none">            
-              <div class="list-sec">
+
                 <div class="list-head">
                   <span class="section-label" id="list-label">Recent Alerts</span>
                   <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
@@ -4262,10 +4261,11 @@ class FrigateViewCard extends HTMLElement {
                   <div class="empty">Loading…</div>
                 </div>
                                 
-              </div>              
+            
             </div>
             <div class="more" id="older-hint" hidden>scroll for older…</div>
           </div>
+
         </div>
         <!--<div class="toast" id="toast" style="display:none"></div>-->
 
