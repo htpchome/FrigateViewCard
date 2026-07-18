@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.327";
+const VERSION = "1.0.328";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -778,10 +778,10 @@ const STYLES = `
     overflow-y:auto;
     position:relative}
 
-  .card .browse-head{display:flex;align-items: center;justify-content: center;backgound:var(--c-bg-main);min-height:1.75rem;max-height:1.85em; flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;border:1px solid #444444;padding:1px 8px;}
+  .card .browse-head{display:flex;align-items:center;justify-content:center;background:var(--c-bg-main);min-height:1.75rem;max-height:1.85em;flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;border:1px solid #444444;padding:1px 8px;}
   .browse-head-left {display:flex;flex:1;justify-content:center;align-items:center;flex: 0 0 auto; }
   .browse-head-right {display:flex;justify-content center;align-items: center;flex: 0 0 auto;}
-  .browse-head-middle {flex:1;text-align: center;font-weight:700;pointer-events:none;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
+  .browse-head-middle {flex:1;text-align:center;font-weight:700;pointer-events:none;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
   .prev-next{}
   .prev-next{display:inline-flex;align-items:center;gap:4px;font-size: 0.85rem;padding-inline: 0.3em;padding-block: 0.3em;line-height: 1;  border-radius: 999em;
     background:var(--c-bg-main);min-width:80px;
@@ -795,6 +795,7 @@ const STYLES = `
   
   .prev-next:hover{color:var(--c-primary-d);}
   .prev-next.active{background:var(--c-primary-d);color:var(--c-text-rev);}
+  .prev-next:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);}
   .prev-next svg{width:14.4px;height:14.4px;flex-shrink:0;}
   
   .card .browse::-webkit-scrollbar{width:8px;}
@@ -805,7 +806,8 @@ const STYLES = `
   .list{flex:1;flex-direction: column;min-height:0;} 
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
-  .list-day-label{position:sticky;top:0;z-index:2;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-main);border:none;}
+  .list-day-label{position:relative;z-index:1;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-main);border:none;}
+  .list-day-label-first{display:none;}
 
 
   .list-item{position: relative;display:flex;flex-wrap:wrap;gap:9px;align-items:center;
@@ -1198,6 +1200,8 @@ class FrigateViewCard extends HTMLElement {
     this._recordingScrubCleanup = null;
     this._recordingScrubState = null;
     this._recordingAlertCache = new Map();
+    this._recordingsDayAvailabilityCache = new Map();
+    this._recordingsNavUpdateToken = 0;
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
@@ -4270,8 +4274,14 @@ class FrigateViewCard extends HTMLElement {
               <div class="filter-panel" id="filter-panel" style="display:none"></div>
               <div class="cal-panel" id="cal-panel" style="display:none"></div>
             </div>
-            <div class="browse-head" style="display:none">
-
+            <div class="browse-head" id="browse-head" style="display:none">
+              <div class="browse-head-left">
+                <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${ICONS.left}Previous</button>
+              </div>
+              <div class="browse-head-middle" id="browse-head-label"></div>
+              <div class="browse-head-right">
+                <button class="prev-next" id="rec-day-next" data-rec-day-nav="1" title="Next day" aria-label="Next day" style="display:none">Next${ICONS.right}</button>
+              </div>
             </div>
         
             <div class="browse" id="browse" style="display:none">
