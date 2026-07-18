@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.334";
+const VERSION = "1.0.335";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1225,6 +1225,7 @@ class FrigateViewCard extends HTMLElement {
     this._recordingsNavUpdateToken = 0;
     this._recordingsDayNavAnimating = false;
     this._recordingsSwipeGesture = null;
+    this._recordingsSwipeBlockTap = false;
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
@@ -4484,11 +4485,12 @@ class FrigateViewCard extends HTMLElement {
       this._isMobileTabletViewport() &&
       !this._recordingsDayNavAnimating;
 
-    const resetGesture = () => {
+    const resetGesture = ({ clearTapBlock = true } = {}) => {
       if (this._recordingsSwipeGesture?.stage) {
         this._destroyRecordingsSwipeStage();
       }
       this._recordingsSwipeGesture = null;
+      if (clearTapBlock) this._recordingsSwipeBlockTap = false;
       tracking = false;
       horizontal = false;
       direction = 0;
@@ -4510,6 +4512,7 @@ class FrigateViewCard extends HTMLElement {
       startX = t.clientX;
       startY = t.clientY;
       tracking = true;
+      this._recordingsSwipeBlockTap = false;
       browse.classList.add("recordings-swipe");
     };
 
@@ -4536,6 +4539,7 @@ class FrigateViewCard extends HTMLElement {
 
       e.preventDefault();
       direction = deltaX < 0 ? 1 : -1;
+      if (Math.abs(deltaX) >= 3) this._recordingsSwipeBlockTap = true;
       ensureGestureStage(direction);
 
       const stage = this._recordingsSwipeGesture?.stage;
@@ -4574,7 +4578,7 @@ class FrigateViewCard extends HTMLElement {
           140,
           "cubic-bezier(0.16, 0.64, 0.2, 1)",
         );
-        resetGesture();
+        resetGesture({ clearTapBlock: false });
         return;
       }
 
@@ -4588,7 +4592,10 @@ class FrigateViewCard extends HTMLElement {
         );
         this._bounceRecordingsArea(dir);
       }
-      resetGesture();
+      setTimeout(() => {
+        this._recordingsSwipeBlockTap = false;
+      }, 320);
+      resetGesture({ clearTapBlock: false });
     };
 
     browse.addEventListener("touchstart", onTouchStart, { passive: true });
@@ -5628,6 +5635,11 @@ class FrigateViewCard extends HTMLElement {
     }
     const recRow = target.closest("[data-rs]");
     if (recRow) {
+      if (this._tab === "recordings" && this._recordingsSwipeBlockTap) {
+        e.stopPropagation();
+        e.preventDefault();
+        return true;
+      }
       this._showRecording(+recRow.dataset.rs, +recRow.dataset.re);
       return true;
     }
