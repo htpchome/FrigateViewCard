@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.341";
+const VERSION = "1.0.342";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -76,9 +76,51 @@ const THEME_CUSTOM_ROWS = Object.freeze([
   { key: "--c-bg-alert", label: "Scrub Bar Alerts" },
 ]);
 const THEME_CUSTOM_KEYS = new Set(THEME_CUSTOM_ROWS.map((row) => row.key));
-const isIOS =
-  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function detectDeviceProfile() {
+  const nav = typeof navigator !== "undefined" ? navigator : {};
+  const win = typeof window !== "undefined" ? window : {};
+  const userAgent = String(nav.userAgent || "").toLowerCase();
+  const platform = String(
+    nav.userAgentData?.platform || nav.platform || "",
+  ).toLowerCase();
+  const maxTouchPoints = Number(nav.maxTouchPoints || 0);
+  const primaryPointerCoarse = !!win.matchMedia?.("(pointer: coarse)")?.matches;
+  const anyPointerCoarse = !!win.matchMedia?.("(any-pointer: coarse)")?.matches;
+  const hoverNone = !!win.matchMedia?.("(hover: none)")?.matches;
+  const hasTouch =
+    maxTouchPoints > 0 || primaryPointerCoarse || anyPointerCoarse || hoverNone;
+  const isAndroid = platform.includes("android") || userAgent.includes("android");
+  const isIPhone = /iphone/.test(userAgent);
+  const isMobileHint =
+    nav.userAgentData?.mobile === true || /mobile|mobi/.test(userAgent);
+  const isIPad =
+    /ipad/.test(userAgent) ||
+    (platform.includes("mac") && maxTouchPoints > 1 && hasTouch);
+  const isIPod = /ipod/.test(userAgent);
+  const isIOS = isIPhone || isIPad || isIPod;
+  const isTablet =
+    isIPad ||
+    (isAndroid && hasTouch && !isMobileHint);
+  const isPhone = (isIOS || isAndroid) && !isTablet;
+  const isMobile = isPhone || isTablet;
+
+  return {
+    hasTouch,
+    hasPrimaryTouch: primaryPointerCoarse,
+    hasAnyTouch: anyPointerCoarse || hoverNone,
+    isAndroid,
+    isIOS,
+    isPhone,
+    isTablet,
+    isMobile,
+    isDesktop: !isMobile,
+    os: isAndroid ? "Android" : isIOS ? "iOS" : "Desktop/Other",
+  };
+}
+
+const DEVICE_PROFILE = detectDeviceProfile();
+const isIOS = DEVICE_PROFILE.isIOS;
+const isAndroid = DEVICE_PROFILE.isAndroid;
 const ICONS = {
   live: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>',
   recordings:
@@ -2114,9 +2156,7 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _isLikelyMobileClient() {
-    const compactViewport = window.matchMedia?.("(max-width: 900px)")?.matches;
-    const coarsePointer = window.matchMedia?.("(pointer: coarse)")?.matches;
-    return compactViewport || coarsePointer;
+    return DEVICE_PROFILE.isMobile;
   }
 
   _effectiveRealtimePollSeconds() {
@@ -5008,7 +5048,10 @@ class FrigateViewCard extends HTMLElement {
     }
   }
   _isMobileTabletViewport() {
-    const coarse = window.matchMedia?.("(pointer: coarse)")?.matches || false;
+    const coarse =
+      window.matchMedia?.("(pointer: coarse)")?.matches ||
+      window.matchMedia?.("(any-pointer: coarse)")?.matches ||
+      false;
     const w = window.innerWidth || 0;
     const h = window.innerHeight || 0;
     const maxEdge = Math.max(w, h);
@@ -6420,7 +6463,7 @@ class FrigateViewCard extends HTMLElement {
     engWrap.classList.toggle("popup-covered", !!covered);
   }
   _isTouchPopupUi() {
-    return isIOS || this._isMobileTabletViewport();
+    return DEVICE_PROFILE.hasTouch || this._isMobileTabletViewport();
   }
   _isPopupVideoMediaType(mediaType) {
     return ["alert", "clip", "recording", "kept"].includes(
@@ -6503,7 +6546,7 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _recordingPreferHls() {
-    return isIOS || this._isFirefox() || this._isEdge();
+    return DEVICE_PROFILE.isIOS || this._isFirefox() || this._isEdge();
   }
   _bindPopupMediaListener(target, type, handler, options) {
     if (!target) return null;
