@@ -7,7 +7,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.315";
+const VERSION = "1.0.316";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1165,7 +1165,7 @@ class FrigateViewCard extends HTMLElement {
     this._warmOtherCamsDelayT = null;
     this._reloadPending = false;
     this._reloadAfterLoad = false;
-    this._perfEnabled = this._isPerfDiagnosticsEnabled();
+    this._perfEnabled = false;
     this._perfSeq = 0;
     this._realtimeHeadPollT = null;
     this._switchLoadT = null;
@@ -2259,17 +2259,7 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _isPerfDiagnosticsEnabled() {
-    try {
-      const params = new URLSearchParams(window.location?.search || "");
-      const flag = String(params.get("fvc_perf") || "").toLowerCase();
-      if (["1", "true", "on", "yes"].includes(flag)) return true;
-      const stored = String(window.localStorage?.getItem("fvc_perf") || "")
-        .trim()
-        .toLowerCase();
-      return ["1", "true", "on", "yes"].includes(stored);
-    } catch (_) {
-      return false;
-    }
+    return false;
   }
 
   _perfContext() {
@@ -2281,11 +2271,7 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _perfLog(event, data = {}) {
-    if (!this._perfEnabled) return;
-    console.info("[FVC perf]", event, {
-      ...this._perfContext(),
-      ...data,
-    });
+    return;
   }
 
   _perfStart(label, data = {}) {
