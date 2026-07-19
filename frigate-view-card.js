@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.366";
+const VERSION = "1.0.367";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1558,11 +1558,12 @@ class FrigateViewCard extends HTMLElement {
     this._scheduleRotateOverlayUpdate();
     if (this._started) {
       this._startEditModeWatchdog();
-      this._scheduleResumeLive("connected");
-      setTimeout(() => {
-        if (!this.isConnected) return;
+      if (this._shouldStartInGridMode()) {
         this._applyStartInGridMode("connected");
-      }, 150);
+        this._scheduleGridRefresh(140);
+      } else {
+        this._scheduleResumeLive("connected");
+      }
     }
     this._startEditorDialogCloseObserver();
   }
@@ -2117,9 +2118,14 @@ class FrigateViewCard extends HTMLElement {
 
     const initialLoad = this._loadWindow(true);
     this._scheduleWarmOtherCamerasEvents();
-    this._mountEngine();
+    const startInGrid = this._shouldStartInGridMode();
+    if (startInGrid) {
+      this._setViewMode("grid");
+    } else {
+      this._mountEngine();
+    }
     await initialLoad;
-    this._applyStartInGridMode("startup");
+    if (!startInGrid) this._applyStartInGridMode("startup");
     this._subscribe();
     this._startEditModeWatchdog();
     this._startEditorDialogCloseObserver();
@@ -2756,11 +2762,13 @@ class FrigateViewCard extends HTMLElement {
 
     const order = forcedType
       ? [forcedType]
-      : this._isEdge()
-        ? this._isDashboardEditMode()
-          ? ["webrtc"]
-          : ["webrtc", "mse"]
-        : ["webrtc", "mse"];
+      : this._isFirefox()
+        ? ["webrtc"]
+        : this._isEdge()
+          ? this._isDashboardEditMode()
+            ? ["webrtc"]
+            : ["webrtc", "mse"]
+          : ["webrtc", "mse"];
     this._ffDebug("Live attempt order", {
       forcedType: forcedType || "",
       order,
@@ -3652,6 +3660,21 @@ class FrigateViewCard extends HTMLElement {
       );
       if (await this._mountLiveWithRace(slot, attempts, mountToken)) return;
 
+      if (!forcedType && this._isFirefox()) {
+        const firefoxMseOk = await this._tryMountGo2RTCMSE(
+          slot,
+          {
+            waitMs: 9000,
+            minCurrentTime: 0,
+            minDecodedFrames: 0,
+            requireReadyState: 0,
+            strict: false,
+          },
+          { commit: true },
+        );
+        if (firefoxMseOk) return;
+      }
+
       // Avoid parallel transport startup churn on Edge by trying MSE only
       // after WebRTC has clearly failed.
       if (!forcedType && this._isEdge() && this._isDashboardEditMode()) {
@@ -3950,7 +3973,11 @@ class FrigateViewCard extends HTMLElement {
       if (idx >= 0) {
         const cam = this._config?.cameras?.[idx];
         const entity = cam?.entity || "";
-        const stateObj = entity ? this._hass?.states?.[entity] : null;
+        const stateObj = entity
+          ? this._hlsStateObj(entity, this._preferredStreamType()) ||
+            this._hass?.states?.[entity] ||
+            null
+          : null;
         const severity = this._gridCellSeverity(entity);
         if (severity === "alert") cell.classList.add("grid-alert");
         if (severity === "detection") cell.classList.add("grid-detection");
@@ -6298,6 +6325,11 @@ class FrigateViewCard extends HTMLElement {
     return r.width > 2 && r.height > 2;
   }
   _scheduleResumeLive(reason = "") {
+    if (this._viewMode === "grid") {
+      this._ffDebug("Grid resume mapped to grid refresh", { reason });
+      this._scheduleGridRefresh(120);
+      return;
+    }
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
     const delay =
       reason === "card-editor-close" ||
@@ -6310,7 +6342,7 @@ class FrigateViewCard extends HTMLElement {
       this._resumeLiveIfNeeded(reason);
     }, delay);
     this._ffDebug("Scheduled resume live", { reason, delay });
-    if (this._isFirefox()) {
+    if (this._isFirefox() && this._viewMode !== "grid") {
       // Firefox may need a second kick after layout settles on tab return.
       setTimeout(() => this._kickLiveIfStale(true), 900);
     }
