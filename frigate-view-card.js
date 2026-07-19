@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.449";
+const VERSION = "1.0.450";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1063,33 +1063,13 @@ const STYLES = `
   .stream-loading[hidden]{display:none;}
   .stream-loading .dot{width:10px;height:10px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--c-text-rev);border-radius:50%;animation:spin .9s linear infinite;}
 
-.glass-btn{
-  display: inline-flex; 
-  align-items: center; 
-  justify-content: center; 
-  padding: 3px; 
-  border-radius: 100px; 
-  color: black; 
-  font-size: 1.0rem; 
-  border: 1px solid rgba(255, 255, 255, 0.15); 
-  background-color: rgba(255, 255, 255, 0.15); 
-  backdrop-filter: blur(1px) saturate(150%); 
-  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);
-  cursor:pointer;  
+.glass-btn{display: inline-flex;align-items: center;justify-content: center;padding: 3px;border-radius: 100px;color: black;font-size: 1.0rem;border: 1px solid rgba(255, 255, 255, 0.15); 
+  background-color: rgba(255, 255, 255, 0.25);backdrop-filter: blur(1px) saturate(150%); 
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);cursor:pointer;  
 }
-.glass::after {
-  content: ""; /* Added missing quotes */
-  width: 100%; 
-  height: 100%; 
-  background: rgba(255, 255, 255, 0.04); 
-  border-radius: 100px; 
-  backdrop-filter: blur(1px); 
-  box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 0.3), 
-              inset 0px -9px 0px -8px rgba(255, 255, 255, 0.3); 
-  opacity: 0.4; 
-  z-index: -1; 
-  filter: brightness(115%); 
-}
+.glass::after {content: "";width: 100%;height: 100%;background: rgba(255, 255, 255, 0.25);
+  border-radius: 100px;backdrop-filter: blur(1px);filter: brightness(115%);opacity: 0.4;z-index: -1;box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 0.3), 
+                inset 0px -9px 0px -8px rgba(255, 255, 255, 0.3);}
 .glass-btn:hover{background:rgba(255, 255, 255, 0.3);} 
 .glass-btn svg {width:30px;height:30px;opacity: 0.8; }
 .glass-btn:hover svg {width:30px;height:30px;opacity: 0.95; }
@@ -1097,7 +1077,6 @@ const STYLES = `
 
 .overlay-fs{position:absolute;top:8px;left:8px;z-index:3;}
 .overlay-fs::after {content: "";position: absolute;top: 0;left: 0;}         
-
 .overlay-fs[hidden]{display:none !important;}
 .overlay-fs svg {width:30px;height:30px;opacity: 0.8; }
 .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
@@ -5814,7 +5793,7 @@ class FrigateViewCard extends HTMLElement {
     const subtitle = this._subtitleText();
     const multiCam = this._config.cameras.length > 1;
     const camSwitcher = multiCam
-      ? `<div class="cam-switcher" id="cam-switcher"><div class="cam-tabs">${this._camSwitcherMarkup({ includeStatus: false })}</div></div>`
+      ? `<div class="cam-switcher" id="cam-switcher"><div class="glass">${this._camSwitcherMarkup({ includeStatus: false })}</div></div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""}" id="card">
