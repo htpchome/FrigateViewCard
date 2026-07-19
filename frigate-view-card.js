@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.388";
+const VERSION = "1.0.391";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6530,16 +6530,45 @@ class FrigateViewCard extends HTMLElement {
       return;
     }
 
+    const card = this._$("#card");
     const browse = this._$("#browse");
     const list = this._$("#list");
-    const targets = [browse, list].filter((el) => el instanceof HTMLElement);
-    if (!targets.length) return;
+    if (!(card instanceof HTMLElement)) return;
+    const scrollers = [list, browse].filter((el) => el instanceof HTMLElement);
+
+    const canConsumeUpward = (scroller) => {
+      if (!(scroller instanceof HTMLElement)) return false;
+      const maxScrollTop = Math.max(
+        0,
+        scroller.scrollHeight - scroller.clientHeight,
+      );
+      if (maxScrollTop <= 1) return false;
+      return scroller.scrollTop < maxScrollTop - 1;
+    };
+
+    const resolveOuterScroller = () => {
+      let node = this;
+      while (node) {
+        node = node.parentNode || node.host || null;
+        if (!(node instanceof HTMLElement)) continue;
+        const style = getComputedStyle(node);
+        const overflowY = style.overflowY || "";
+        const scrollableOverflow =
+          overflowY.includes("auto") ||
+          overflowY.includes("scroll") ||
+          overflowY.includes("overlay");
+        const hasVerticalRange = node.scrollHeight > node.clientHeight + 1;
+        if (scrollableOverflow && hasVerticalRange) return node;
+      }
+      const docScroller = document.scrollingElement;
+      return docScroller instanceof HTMLElement ? docScroller : null;
+    };
 
     const sameTargets =
       Array.isArray(this._mobileBounceGuardTargets) &&
-      this._mobileBounceGuardTargets.length === targets.length &&
+      this._mobileBounceGuardTargets.length === scrollers.length + 1 &&
       this._mobileBounceGuardTargets.every(
-        (el, index) => el === targets[index],
+        (el, index) => el === [card, ...scrollers][index],
       );
     if (sameTargets && this._mobileBounceGuardCleanup) return;
 
@@ -6550,6 +6579,7 @@ class FrigateViewCard extends HTMLElement {
     }
 
     let startY = 0;
+
     const onTouchStart = (event) => {
       const touch = event.touches?.[0];
       if (!touch) return;
@@ -6558,33 +6588,37 @@ class FrigateViewCard extends HTMLElement {
     const onTouchMove = (event) => {
       if (event.touches?.length !== 1) return;
       const touch = event.touches[0];
-      const scroller = event.currentTarget;
-      if (!(scroller instanceof HTMLElement)) return;
 
       const deltaY = touch.clientY - startY;
       // Keep downward pull behavior for native refresh gestures.
       if (deltaY >= 0) return;
 
-      const maxScrollTop = Math.max(
-        0,
-        scroller.scrollHeight - scroller.clientHeight,
+      const canAnyCardScrollerConsumeUpward = scrollers.some((scroller) =>
+        canConsumeUpward(scroller),
       );
-      const atBottom =
-        maxScrollTop <= 1 || scroller.scrollTop >= maxScrollTop - 1;
-      if (atBottom) event.preventDefault();
+      if (canAnyCardScrollerConsumeUpward) return;
+
+      const outerScroller = resolveOuterScroller();
+      const canOuterConsumeUpward = canConsumeUpward(outerScroller);
+
+      if (!canOuterConsumeUpward && event.cancelable) {
+        event.preventDefault();
+      }
     };
 
-    targets.forEach((target) => {
-      target.addEventListener("touchstart", onTouchStart, { passive: true });
-      target.addEventListener("touchmove", onTouchMove, { passive: false });
+    card.addEventListener("touchstart", onTouchStart, {
+      passive: true,
+      capture: true,
+    });
+    card.addEventListener("touchmove", onTouchMove, {
+      passive: false,
+      capture: true,
     });
 
-    this._mobileBounceGuardTargets = targets;
+    this._mobileBounceGuardTargets = [card, ...scrollers];
     this._mobileBounceGuardCleanup = () => {
-      targets.forEach((target) => {
-        target.removeEventListener("touchstart", onTouchStart);
-        target.removeEventListener("touchmove", onTouchMove);
-      });
+      card.removeEventListener("touchstart", onTouchStart, true);
+      card.removeEventListener("touchmove", onTouchMove, true);
     };
   }
   _isCardVisible() {
