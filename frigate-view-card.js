@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.420";
+const VERSION = "1.0.421";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -84,6 +84,16 @@ const THEME_CUSTOM_ROWS = Object.freeze([
   { key: "--c-bg-scrub", label: "Scrub Bar Background" },
   { key: "--c-bg-alert", label: "Scrub Bar Alerts" },
 ]);
+
+//========================================
+const cardRoot = this.querySelector('ha-card');
+
+cardRoot.style.position = 'relative';
+cardRoot.style.top = '0';
+cardRoot.style.display = 'block';
+cardRoot.style.clear = 'both';
+//===================================
+
 const THEME_CUSTOM_KEYS = new Set(THEME_CUSTOM_ROWS.map((row) => row.key));
 function detectDeviceProfile() {
   const nav = typeof navigator !== "undefined" ? navigator : {};
@@ -1573,6 +1583,26 @@ class FrigateViewCard extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
+
+//===================================
+ super.connectedCallback?.(); // Include if using Lit/Humble elements
+
+  // Target the nearest stable Home Assistant layout engine or view container
+  const dashboardView = this.closest('home-assistant-main') || this.parentElement;
+
+  if (dashboardView) {
+    this._layoutObserver = new ResizeObserver(() => {
+      // Whenever the dashboard layout shifts (like the header sliding back up)
+      this._realignCardPosition();
+    });
+    
+    // Begin watching the layout wrapper for shape shifts
+    this._layoutObserver.observe(dashboardView);
+  }
+
+//===================================
+
+  
   }
 
   _syncCardShellClasses() {
@@ -2015,7 +2045,33 @@ class FrigateViewCard extends HTMLElement {
       this._ffDebug("Running deferred disconnect teardown");
       this._teardownDisconnected();
     }, 2500);
+//===============================================
+
+  if (this._layoutObserver) {
+    this._layoutObserver.disconnect();
   }
+  super.disconnectedCallback?.();
+
+//===============================================
+
+  }
+
+ //===============================
+ 
+_realignCardPosition() {
+  const container = this.querySelector('.my-main-container');
+  if (!container) return;
+
+  // Force-reset the rendering bounds and clear any trapped scroll states
+  container.style.transform = 'translate3d(0, 0, 0)'; // Flushes the WebKit composite layer
+  
+  if (container.scrollTop === 0) {
+    container.scrollTop = 1; // Re-engages the iOS bouncing safety trick
+  }
+}
+
+ //===============================
+
 
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);
@@ -9710,7 +9766,6 @@ class FrigateViewCardEditor extends HTMLElement {
     this._dialogActionHooksBound = false;
     this._emitPreviewDraft(null);
   }
-
   _configSignature(config) {
     try {
       return JSON.stringify(config || {});
