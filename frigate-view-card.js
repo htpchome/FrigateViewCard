@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.396";
+const VERSION = "1.0.397";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -800,8 +800,9 @@ const STYLES = `
     padding:0 !important;
     overflow: hidden;
     box-sizing: border-box !important;
-    position: relative; 
-
+    position: relative;
+    overflow: hidden !important; 
+    overscroll-behavior: none !important;
   }
   :host {
     --popup-z-index: 1000;
@@ -839,6 +840,7 @@ const STYLES = `
     height: auto;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     overscroll-behavior: none !important;
+    overflow: hidden !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-m);
@@ -859,10 +861,11 @@ const STYLES = `
     top:0;
     left:0;
     overscroll-behavior: none !important;
+    overflow: hidden !important;
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
 
-  .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;    overscroll-behavior: none !important;}
+  .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;    overscroll-behavior: none !important;overflow: hidden !important;}
   .layout.wide{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
   .card .col-left > *{flex:0 0 auto;}
