@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.380";
+const VERSION = "1.0.381";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -35,6 +35,8 @@ const SLIDESHOW_ALERT_HOLD_MS = 10000;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
 const SLIDESHOW_REVIEW_WATCH_MAX_MS = 15000;
+const MSE_SWITCH_GRACE_MS = 4000;
+const MSE_SWITCH_GRACE_MAX = 3;
 const MAX_CAMERAS = 8;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
 const ALLOWED_HIDDEN_TABS = [
@@ -1389,6 +1391,7 @@ class FrigateViewCard extends HTMLElement {
     this._lastRenderedListHtml = "";
     this._pendingMountDestroyers = [];
     this._pendingWebRTCTakeoverTimer = null;
+    this._mseGracePool = new Map();
     this._wasVisible = false;
     this._resumeLiveT = null;
     this._disconnectTeardownT = null;
@@ -2102,6 +2105,9 @@ class FrigateViewCard extends HTMLElement {
     this._rotateOverlayExitT = null;
     this._clearRotateOverlayAudioSync();
     this._clearRotateVideoFullscreenStyle();
+    for (const entity of [...this._mseGracePool.keys()]) {
+      this._evictGraceMseEntry(entity);
+    }
     if (this._parentOrigStyle && this.parentElement) {
       this.parentElement.style.height = this._parentOrigStyle.height;
       this.parentElement.style.margin = this._parentOrigStyle.margin;
@@ -2655,6 +2661,81 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _cleanupEngine() {
+    return this._cleanupEngineWithOptions();
+  }
+
+  _evictGraceMseEntry(entity) {
+    const key = String(entity || "").trim();
+    if (!key) return;
+    const entry = this._mseGracePool.get(key);
+    if (!entry) return;
+    if (entry.timer) clearTimeout(entry.timer);
+    this._mseGracePool.delete(key);
+    try {
+      entry.engine?.destroy?.();
+    } catch (_) {}
+  }
+
+  _trimGraceMsePool() {
+    while (this._mseGracePool.size > MSE_SWITCH_GRACE_MAX) {
+      const oldestKey = this._mseGracePool.keys().next().value;
+      if (!oldestKey) break;
+      this._evictGraceMseEntry(oldestKey);
+    }
+  }
+
+  _stashMseEngineForGrace(entity, engine) {
+    const key = String(entity || "").trim();
+    if (!key || !engine?.video || !engine?.ws) return false;
+    this._evictGraceMseEntry(key);
+    const entry = {
+      engine,
+      timer: setTimeout(() => {
+        if (this._mseGracePool.get(key) !== entry) return;
+        this._evictGraceMseEntry(key);
+      }, MSE_SWITCH_GRACE_MS),
+    };
+    this._mseGracePool.set(key, entry);
+    this._trimGraceMsePool();
+    return true;
+  }
+
+  _takeGraceMseEngine(entity) {
+    const key = String(entity || "").trim();
+    if (!key) return null;
+    const entry = this._mseGracePool.get(key);
+    if (!entry) return null;
+    if (entry.timer) clearTimeout(entry.timer);
+    this._mseGracePool.delete(key);
+    return entry.engine || null;
+  }
+
+  _adoptGraceMseEngine(slot, engine) {
+    if (!slot || !engine?.video || !engine?.ws) return false;
+    if (engine.ws.readyState > WebSocket.OPEN) {
+      try {
+        engine.destroy?.();
+      } catch (_) {}
+      return false;
+    }
+    engine.video.muted = this._streamMuted;
+    engine.video.controls = false;
+    engine.video.style.cssText =
+      "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+    slot.innerHTML = "";
+    slot.appendChild(engine.video);
+    this._attachVideoFit(engine.video);
+    this._engine = engine;
+    this._engineMountedMuted = this._streamMuted;
+    this._setActiveStreamType("mse");
+    this._setStreamLoading(false);
+    this._setStreamFallbackVisible(false);
+    if (this._rotateOverlayActive) this._setLiveNativeControls(true);
+    void engine.video.play?.().catch?.(() => {});
+    return true;
+  }
+
+  _cleanupEngineWithOptions(options = {}) {
     if (this._pendingWebRTCTakeoverTimer) {
       clearTimeout(this._pendingWebRTCTakeoverTimer);
       this._pendingWebRTCTakeoverTimer = null;
@@ -2670,6 +2751,17 @@ class FrigateViewCard extends HTMLElement {
     }
     const eng = this._engine;
     if (!eng) return;
+    const preserveMseEntity = String(options?.preserveMseEntity || "").trim();
+    if (
+      preserveMseEntity &&
+      String(this._activeStreamType || "")
+        .trim()
+        .toLowerCase() === "mse" &&
+      this._stashMseEngineForGrace(preserveMseEntity, eng)
+    ) {
+      this._engine = null;
+      return;
+    }
     try {
       if (typeof eng.destroy === "function") eng.destroy();
       if (eng.ws && typeof eng.ws.close === "function") eng.ws.close();
@@ -2678,14 +2770,14 @@ class FrigateViewCard extends HTMLElement {
     this._engine = null;
   }
 
-  _cancelPendingMount(reason = "") {
+  _cancelPendingMount(reason = "", options = {}) {
     if (this._mountInProgress) {
       this._mountSeq += 1;
       this._mountInProgress = false;
       this._mountStartedAt = 0;
       this._mountTargetEntity = "";
     }
-    this._cleanupEngine();
+    this._cleanupEngineWithOptions(options);
   }
 
   _streamAttemptSlot(host = null) {
@@ -3644,6 +3736,16 @@ class FrigateViewCard extends HTMLElement {
     const entity = this._activeCam?.entity;
     if (!entity) return;
     if (this._mountInProgress && this._mountTargetEntity === entity) return;
+    const connectionType = this._cameraConnectionType(entity);
+    if (
+      connectionType !== "ha_direct" &&
+      (!forcedType || forcedType === "mse")
+    ) {
+      const graceMseEngine = this._takeGraceMseEngine(entity);
+      if (graceMseEngine && this._adoptGraceMseEngine(slot, graceMseEngine)) {
+        return;
+      }
+    }
     this._engineMountedMuted = this._streamMuted;
     const mountToken = ++this._mountSeq;
     this._mountInProgress = true;
@@ -3678,7 +3780,6 @@ class FrigateViewCard extends HTMLElement {
         this._setStreamLoading(false);
       }
 
-      const connectionType = this._cameraConnectionType(entity);
       if (connectionType === "ha_direct") {
         const streamType = forcedType || this._preferredStreamType();
         this._setActiveStreamType(streamType);
@@ -4879,7 +4980,7 @@ class FrigateViewCard extends HTMLElement {
     this._renderList();
     this._streamMuted = true;
     this._renderMuteButton();
-    this._cancelPendingMount("switch-camera");
+    this._cancelPendingMount("switch-camera", { preserveMseEntity: prevEnt });
     this._mountEngine();
     clearTimeout(this._switchLoadT);
     this._loadWindow(true);
