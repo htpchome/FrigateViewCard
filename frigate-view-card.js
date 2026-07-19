@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.375";
+const VERSION = "1.0.376";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1314,6 +1314,7 @@ class FrigateViewCard extends HTMLElement {
     this._playSeq = 0;
     this._streamMuted = true; // start muted; user can toggle via our mute button
     this._activeStreamType = "--";
+    this._lastLiveStreamHint = "";
     this._slideshowActive = false;
     this._slideshowPausedUntil = 0;
     this._slideshowPendingAlertCam = "";
@@ -2574,6 +2575,12 @@ class FrigateViewCard extends HTMLElement {
     if (active === "webrtc" || active === "mse" || active === "hls") {
       return active;
     }
+    const lastHint = String(this._lastLiveStreamHint || "")
+      .trim()
+      .toLowerCase();
+    if (lastHint === "webrtc" || lastHint === "mse" || lastHint === "hls") {
+      return lastHint;
+    }
     return this._preferredStreamType();
   }
 
@@ -3023,6 +3030,10 @@ class FrigateViewCard extends HTMLElement {
 
   _setActiveStreamType(type) {
     this._activeStreamType = type || "--";
+    const active = String(this._activeStreamType).trim().toLowerCase();
+    if (active === "webrtc" || active === "mse" || active === "hls") {
+      this._lastLiveStreamHint = active;
+    }
     this._renderStats();
   }
 
