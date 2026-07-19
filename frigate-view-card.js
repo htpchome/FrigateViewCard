@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.427";
+const VERSION = "1.0.428";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1579,8 +1579,6 @@ class FrigateViewCard extends HTMLElement {
 
 //===================================
 
-  super.connectedCallback?.();
-
   this._onHAScrollReset = () => {
     // Wait for the native iOS pull-to-refresh spinner collapse timeline
     setTimeout(() => {
@@ -1609,6 +1607,10 @@ class FrigateViewCard extends HTMLElement {
       card.style.setProperty('margin-top', '0px', 'important');
       card.style.setProperty('top', '0px', 'important');
     }, 250); // 250ms guarantees alignment after the refresh completion sequence
+  };
+
+  // Capture when the user finishes dragging and releases the screen
+  window.addEventListener('touchend', this._onHAScrollReset, { passive: true });
 
 //===================================
 
