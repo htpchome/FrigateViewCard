@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.444";
+const VERSION = "1.0.445";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1064,7 +1064,7 @@ const STYLES = `
   .stream-loading .dot{width:10px;height:10px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--c-text-rev);border-radius:50%;animation:spin .9s linear infinite;}
   .overlay-fs{
     position:absolute;
-    top:16px;
+    top:8px;
     right:8px;
     z-index:3;
   display: inline-flex; 
@@ -1074,14 +1074,14 @@ const STYLES = `
   border-radius: 100px; 
   color: black; 
   font-size: 1.0rem; 
-  border: 1px solid rgba(255, 255, 255, 0.08); 
-  background-color: rgba(255, 255, 255, 0.08); 
-  backdrop-filter: blur(2px) saturate(150%); 
+  border: 1px solid rgba(255, 255, 255, 0.15); 
+  background-color: rgba(255, 255, 255, 0.15); 
+  backdrop-filter: blur(1px) saturate(150%); 
   box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);
   cursor:pointer;  
     }
   .overlay-fs::after {
-  content: ""; 
+  content: ""; /* Added missing quotes */
   position: absolute; 
   top: 0; 
   left: 0; 
@@ -1090,17 +1090,16 @@ const STYLES = `
   background: rgba(255, 255, 255, 0.04); 
   border-radius: 100px; 
   backdrop-filter: blur(1px); 
-  box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 0.4), 
-              inset 0px -9px 0px -8px rgba(255, 255, 255, 0.4); 
-  opacity: 0.6; 
+  box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 0.3), 
+              inset 0px -9px 0px -8px rgba(255, 255, 255, 0.3); 
+  opacity: 0.4; 
   z-index: -1; 
-  /* Removed heavy filter stack causing the jagged aliasing */
   filter: brightness(115%); 
     }         
 
   .overlay-fs[hidden]{display:none !important;}
   .overlay-fs svg{width:36px;height:36px;}
-  .overlay-fs:hover{background:rgba(255, 255, 255, 0.1);}
+  .overlay-fs:hover{background:rgba(255, 255, 255, 0.3);}
 
   #eng-wrap:fullscreen .overlay-fs,
   #eng-wrap:-webkit-full-screen .overlay-fs,
