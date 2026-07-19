@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.430";
+const VERSION = "1.0.431";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -84,8 +84,6 @@ const THEME_CUSTOM_ROWS = Object.freeze([
   { key: "--c-bg-scrub", label: "Scrub Bar Background" },
   { key: "--c-bg-alert", label: "Scrub Bar Alerts" },
 ]);
-
-
 const THEME_CUSTOM_KEYS = new Set(THEME_CUSTOM_ROWS.map((row) => row.key));
 function detectDeviceProfile() {
   const nav = typeof navigator !== "undefined" ? navigator : {};
@@ -1431,7 +1429,6 @@ class FrigateViewCard extends HTMLElement {
     };
 
 
-
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
@@ -1575,7 +1572,7 @@ class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("connected");
       }
     }
-    this._startEditorDialogCloseObserver();  
+    this._startEditorDialogCloseObserver();
   }
 
   _syncCardShellClasses() {
@@ -2019,7 +2016,6 @@ class FrigateViewCard extends HTMLElement {
       this._teardownDisconnected();
     }, 2500);
   }
-
 
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);
@@ -9714,6 +9710,7 @@ class FrigateViewCardEditor extends HTMLElement {
     this._dialogActionHooksBound = false;
     this._emitPreviewDraft(null);
   }
+
   _configSignature(config) {
     try {
       return JSON.stringify(config || {});
