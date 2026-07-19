@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.403";
+const VERSION = "1.0.404";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1441,15 +1441,21 @@ class FrigateViewCard extends HTMLElement {
       const currentY = Number(event.touches[0].clientY) || 0;
       const deltaX = currentX - this._touchStartX;
       const deltaY = currentY - this._touchStartY;
-      // Only guard pull-down gestures; do not interfere with upward or mostly-horizontal moves.
-      if (deltaY <= 0 || Math.abs(deltaY) <= Math.abs(deltaX)) return;
+      // Only guard pull-up gestures; keep pull-down for native refresh behavior.
+      if (deltaY >= 0 || Math.abs(deltaY) <= Math.abs(deltaX)) return;
 
       const path = event.composedPath?.() || [];
       const insideCard = path.includes(this) || path.includes(this.shadowRoot);
       if (!insideCard) return;
 
       const scrollable = this._nearestScrollableYInPath(path);
-      if (scrollable && scrollable.scrollTop > 0) return;
+      if (scrollable) {
+        const maxScrollTop = Math.max(
+          0,
+          Number(scrollable.scrollHeight) - Number(scrollable.clientHeight),
+        );
+        if (Number(scrollable.scrollTop) < maxScrollTop - 1) return;
+      }
       event.preventDefault();
     };
     this.shadowRoot.addEventListener("touchstart", this._onCardTouchStart, {
