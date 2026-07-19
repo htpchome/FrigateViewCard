@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.402";
+const VERSION = "1.0.410";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1429,66 +1429,17 @@ class FrigateViewCard extends HTMLElement {
     };
 //========================
 
-(function() {
-    let touchStartY = 0;
-
-    // Helper function to find nested shadow DOM elements
-    function getDeepElement(selector, root = document) {
-        let el = root.querySelector(selector);
-        if (el) return el;
-        
-        const allElements = root.querySelectorAll('*');
-        for (const element of allElements) {
-            if (element.shadowRoot) {
-                el = getDeepElement(selector, element.shadowRoot);
-                if (el) return el;
-            }
-        }
-        return null;
+document.addEventListener('touchmove', function(event) {
+    // Target the main Home Assistant panel or your section view class
+    const sectionView = event.target.closest('ha-section-view');
+    
+    // If we are touching the section view, let it scroll naturally. 
+    // Otherwise, prevent the whole page from bouncing.
+    if (sectionView) {
+        return;
     }
-
-    function initBounceKiller() {
-        // Target the internal container responsible for the view's scrolling
-        const scrollTarget = getDeepElement('ha-section-view');
-        
-        if (!scrollTarget) {
-            // Retry if Home Assistant hasn't fully loaded the UI yet
-            setTimeout(initBounceKiller, 1000);
-            return;
-        }
-
-        const scrollContent = scrollTarget.shadowRoot?.querySelector('.content') || scrollTarget;
-
-        scrollContent.addEventListener('touchstart', function(event) {
-            touchStartY = event.touches[0].clientY;
-        }, { passive: true });
-
-        scrollContent.addEventListener('touchmove', function(event) {
-            const touchCurrentY = event.touches[0].clientY;
-            const isPullingUp = touchStartY > touchCurrentY; // Moving finger up, scrolling down
-
-            if (isPullingUp) {
-                const totalHeight = scrollContent.scrollHeight;
-                const visibleHeight = scrollContent.clientHeight;
-                const currentScroll = scrollContent.scrollTop;
-
-                // Stop execution if the user is pulling up from the very bottom threshold
-                if (currentScroll + visibleHeight >= totalHeight - 2) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-            }
-        }, { passive: false });
-    }
-
-    // Run when Home Assistant frontend finishes rendering
-    if (document.readyState === 'complete') {
-        initBounceKiller();
-    } else {
-        window.addEventListener('DOMContentLoaded', initBounceKiller);
-    }
-})();
-
+    event.preventDefault();
+}, { passive: false });
 
 
 
