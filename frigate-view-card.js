@@ -1405,6 +1405,9 @@ class FrigateViewCard extends HTMLElement {
     this._mountInProgress = false;
     this._mountStartedAt = 0;
     this._mountTargetEntity = "";
+    this._mseConnectAt = 0;
+    this._mseLastChunkAt = 0;
+    this._mseChunkCount = 0;
     this._deepLinkEventId = "";
     this._deepLinkReviewId = "";
     this._deepLinkMediaHint = "";
@@ -3246,6 +3249,9 @@ class FrigateViewCard extends HTMLElement {
     ws.binaryType = "arraybuffer";
     const startupAbort = new AbortController();
     let streamStarted = false;
+    this._mseConnectAt = Date.now();
+    this._mseLastChunkAt = 0;
+    this._mseChunkCount = 0;
 
     let sb = null;
     let mseRequested = false;
@@ -3368,6 +3374,8 @@ class FrigateViewCard extends HTMLElement {
       }
 
       if (!(ev.data instanceof ArrayBuffer)) return;
+      this._mseLastChunkAt = Date.now();
+      this._mseChunkCount += 1;
       this._mseDebug("Received binary MSE chunk", ev.data.byteLength);
       queue.push(ev.data);
       appendNext();
