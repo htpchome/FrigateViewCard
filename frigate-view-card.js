@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.385";
+const VERSION = "1.0.386";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1364,8 +1364,6 @@ class FrigateViewCard extends HTMLElement {
     this._warmOtherCamsDelayT = null;
     this._reloadPending = false;
     this._reloadAfterLoad = false;
-    this._perfEnabled = this._isPerfDiagnosticsEnabled();
-    this._perfSeq = 0;
     this._realtimeHeadPollT = null;
     this._switchLoadT = null;
     this._popupDrag = null;
@@ -2119,11 +2117,6 @@ class FrigateViewCard extends HTMLElement {
   }
   // ── init ─────────────────────────────────────────────────
   async _start() {
-    this._perfLog("diagnostics", {
-      enabled: this._perfEnabled,
-      realtimePollSeconds: this._effectiveRealtimePollSeconds(),
-      windowDays: this._config?.window_days,
-    });
     await this._discoverAll();
     this._initDeepLinkFromUrl();
     this._applyDeepLinkCameraHint();
@@ -2539,69 +2532,6 @@ class FrigateViewCard extends HTMLElement {
 
   _ffDebug(_msg, _data = null) {}
 
-  _isPerfDiagnosticsEnabled() {
-    try {
-      const value = String(localStorage.getItem("fvc_perf") || "").trim();
-      return value === "1" || value.toLowerCase() === "true";
-    } catch (_) {
-      return false;
-    }
-  }
-
-  _perfContext() {
-    return {
-      tab: this._tab,
-      cam: this._cc?.().cam || "",
-      mode: this._eventsMode,
-    };
-  }
-
-  _perfLog(event, data = {}) {
-    if (!this._perfEnabled) return;
-    try {
-      console.info("[FrigateViewCard perf]", event, {
-        ts: Math.round(Date.now() / 10) * 10,
-        ...this._perfContext(),
-        ...data,
-      });
-    } catch (_) {}
-  }
-
-  _traceMseLifecycle(event, data = {}) {
-    if (!this._perfEnabled) return;
-    this._perfLog(`mse.${event}`, {
-      activeCam: this._activeCam?.entity || "",
-      activeStream: this._activeStreamType || "",
-      mountInProgress: this._mountInProgress,
-      mseChunkCount: this._mseChunkCount,
-      ...data,
-    });
-  }
-
-  _perfStart(label, data = {}) {
-    if (!this._perfEnabled) return null;
-    const token = {
-      id: ++this._perfSeq,
-      label,
-      start: performance.now(),
-    };
-    this._perfLog(`${label}:start`, {
-      id: token.id,
-      ...data,
-    });
-    return token;
-  }
-
-  _perfEnd(token, data = {}) {
-    if (!this._perfEnabled || !token) return;
-    const ms = Math.round((performance.now() - token.start) * 10) / 10;
-    this._perfLog(`${token.label}:end`, {
-      id: token.id,
-      ms,
-      ...data,
-    });
-  }
-
   _preferredStreamType() {
     return "webrtc";
   }
@@ -2692,11 +2622,6 @@ class FrigateViewCard extends HTMLElement {
     if (!key) return;
     const entry = this._mseGracePool.get(key);
     if (!entry) return;
-    this._traceMseLifecycle("grace-evict", {
-      entity: key,
-      hadEngine: !!entry.engine,
-      hadPromise: !!entry.promise,
-    });
     entry.cancelled = true;
     if (entry.timer) clearTimeout(entry.timer);
     this._mseGracePool.delete(key);
@@ -2717,11 +2642,6 @@ class FrigateViewCard extends HTMLElement {
     const key = String(entity || "").trim();
     if (!key || !engine?.video || !engine?.ws) return false;
     this._evictGraceMseEntry(key);
-    this._traceMseLifecycle("grace-stash-engine", {
-      entity: key,
-      wsReadyState: engine.ws.readyState,
-      chunkCount: this._mseChunkCount,
-    });
     this._ensureMseGraceHost().appendChild(engine.video);
     engine.video.muted = true;
     engine.video.controls = false;
@@ -2745,7 +2665,6 @@ class FrigateViewCard extends HTMLElement {
     const key = String(entity || "").trim();
     if (!key || !promise) return false;
     this._evictGraceMseEntry(key);
-    this._traceMseLifecycle("grace-stash-pending", { entity: key });
     const entry = {
       engine: null,
       cancelled: false,
@@ -2766,18 +2685,9 @@ class FrigateViewCard extends HTMLElement {
           return null;
         }
         if (!result?.ok || result.type !== "mse" || !result.engine) {
-          this._traceMseLifecycle("grace-pending-failed", {
-            entity: key,
-            ok: !!result?.ok,
-            type: result?.type || "",
-          });
           this._evictGraceMseEntry(key);
           return null;
         }
-        this._traceMseLifecycle("grace-pending-resolved", {
-          entity: key,
-          wsReadyState: result.engine.ws?.readyState,
-        });
         this._ensureMseGraceHost().appendChild(result.engine.video);
         result.engine.video.muted = true;
         result.engine.video.controls = false;
@@ -2788,7 +2698,6 @@ class FrigateViewCard extends HTMLElement {
         entry.promise = null;
         return result.engine;
       } catch (_) {
-        this._traceMseLifecycle("grace-pending-error", { entity: key });
         if (this._mseGracePool.get(key) === entry) {
           this._evictGraceMseEntry(key);
         }
@@ -2805,11 +2714,6 @@ class FrigateViewCard extends HTMLElement {
     if (!key) return null;
     const entry = this._mseGracePool.get(key);
     if (!entry) return null;
-    this._traceMseLifecycle("grace-take", {
-      entity: key,
-      hasEngine: !!entry.engine,
-      hasPromise: !!entry.promise,
-    });
     if (entry.timer) clearTimeout(entry.timer);
     this._mseGracePool.delete(key);
     return entry;
@@ -2829,17 +2733,11 @@ class FrigateViewCard extends HTMLElement {
   _adoptGraceMseEngine(slot, engine) {
     if (!slot || !engine?.video || !engine?.ws) return false;
     if (engine.ws.readyState > WebSocket.OPEN) {
-      this._traceMseLifecycle("grace-adopt-rejected", {
-        wsReadyState: engine.ws.readyState,
-      });
       try {
         engine.destroy?.();
       } catch (_) {}
       return false;
     }
-    this._traceMseLifecycle("grace-adopt", {
-      wsReadyState: engine.ws.readyState,
-    });
     engine.video.muted = this._streamMuted;
     engine.video.controls = false;
     engine.video.style.cssText =
@@ -3476,15 +3374,6 @@ class FrigateViewCard extends HTMLElement {
     const commit = options.commit !== false;
     const entity = options?.entity || this._activeCam?.entity || "";
     const muted = options?.muted ?? this._streamMuted;
-    let firstChunkLogged = false;
-
-    this._traceMseLifecycle("mount-begin", {
-      entity,
-      commit,
-      muted,
-      waitMs,
-    });
-
     if (!("WebSocket" in window) || !("MediaSource" in window)) {
       this._ffDebug("MSE unavailable in browser", {
         hasWebSocket: "WebSocket" in window,
@@ -3547,12 +3436,6 @@ class FrigateViewCard extends HTMLElement {
     };
 
     const destroy = () => {
-      this._traceMseLifecycle("destroy", {
-        entity,
-        streamStarted,
-        wsReadyState: ws.readyState,
-        chunkCount: this._mseChunkCount,
-      });
       try {
         if (!startupAbort.signal.aborted) startupAbort.abort();
       } catch (_) {}
@@ -3583,13 +3466,11 @@ class FrigateViewCard extends HTMLElement {
 
     ws.addEventListener("open", () => {
       this._ffDebug("go2rtc websocket opened");
-      this._traceMseLifecycle("ws-open", { entity });
       if (ms.readyState === "open") requestMSE();
     });
 
     ws.addEventListener("error", () => {
       this._ffDebug("go2rtc websocket error");
-      this._traceMseLifecycle("ws-error", { entity });
       if (!startupAbort.signal.aborted) startupAbort.abort();
     });
 
@@ -3598,13 +3479,6 @@ class FrigateViewCard extends HTMLElement {
         code: ev.code,
         reason: ev.reason,
         wasClean: ev.wasClean,
-      });
-      this._traceMseLifecycle("ws-close", {
-        entity,
-        code: ev.code,
-        reason: ev.reason,
-        wasClean: ev.wasClean,
-        streamStarted,
       });
       if (!startupAbort.signal.aborted) startupAbort.abort();
       if (streamStarted && commit && this._engine === engine) {
@@ -3658,13 +3532,6 @@ class FrigateViewCard extends HTMLElement {
       if (!(ev.data instanceof ArrayBuffer)) return;
       this._mseLastChunkAt = Date.now();
       this._mseChunkCount += 1;
-      if (!firstChunkLogged) {
-        firstChunkLogged = true;
-        this._traceMseLifecycle("first-chunk", {
-          entity,
-          bytes: ev.data.byteLength,
-        });
-      }
       this._ffDebug("Received binary MSE chunk", ev.data.byteLength);
       queue.push(ev.data);
       appendNext();
@@ -3679,16 +3546,10 @@ class FrigateViewCard extends HTMLElement {
     });
     if (!started) {
       this._ffDebug("Direct go2rtc MSE did not start within timeout");
-      this._traceMseLifecycle("mount-timeout", { entity, waitMs });
       destroy();
       return false;
     }
     streamStarted = true;
-    this._traceMseLifecycle("stream-started", {
-      entity,
-      chunkCount: this._mseChunkCount,
-      connectAgeMs: this._mseConnectAt ? Date.now() - this._mseConnectAt : 0,
-    });
 
     if (!commit) return { ok: true, type: "mse", engine, slot };
     this._setActiveStreamType("mse");
@@ -5250,42 +5111,12 @@ class FrigateViewCard extends HTMLElement {
     return this._camCache[this._activeCam?.entity] || mkCamState();
   }
   async _ws(p) {
-    const reqType = String(p?.type || "unknown");
-    const trace =
-      this._perfEnabled && reqType.startsWith("frigate/")
-        ? this._perfStart("ws", {
-            type: reqType,
-            limit: p?.limit,
-          })
-        : null;
-    try {
-      const result = parseWs(await this._hass.callWS(p));
-      this._perfEnd(trace, {
-        type: reqType,
-        count: Array.isArray(result) ? result.length : null,
-      });
-      return result;
-    } catch (error) {
-      this._perfEnd(trace, {
-        type: reqType,
-        error: error?.message || String(error),
-      });
-      throw error;
-    }
+    return parseWs(await this._hass.callWS(p));
   }
   _isNowWindow() {
     return this._followNowWindow;
   }
   async _fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
-    const fetchTrace = this._perfStart("events.fetch", {
-      camera: cam,
-      after: Math.floor(after),
-      before: Math.floor(before),
-      pageLimit: opts?.pageLimit,
-      limit: opts?.limit,
-      cursorBefore: opts?.cursorBefore,
-      label: opts?.debugLabel || "",
-    });
     const items = [];
     const seen = new Set();
     const afterTs = Math.floor(after);
@@ -5331,12 +5162,6 @@ class FrigateViewCard extends HTMLElement {
       cursorBefore = oldest - 1;
     }
     onPage?.(items, { page: -1, done: true });
-    this._perfEnd(fetchTrace, {
-      camera: cam,
-      pagesFetched,
-      count: items.length,
-      label: opts?.debugLabel || "",
-    });
     return items;
   }
 
@@ -5405,13 +5230,6 @@ class FrigateViewCard extends HTMLElement {
   }
 
   async _fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
-    const fetchTrace = this._perfStart("reviews.fetch", {
-      camera: cam,
-      after: Math.floor(after),
-      before: Math.floor(before),
-      pageLimit: opts?.pageLimit,
-      label: opts?.debugLabel || "",
-    });
     const items = [];
     const seen = new Set();
     const afterTs = Math.floor(after);
@@ -5451,20 +5269,10 @@ class FrigateViewCard extends HTMLElement {
       cursorBefore = oldest - 1;
     }
     onPage?.(items, { page: -1, done: true });
-    this._perfEnd(fetchTrace, {
-      camera: cam,
-      pagesFetched,
-      count: items.length,
-      label: opts?.debugLabel || "",
-    });
     return items;
   }
   async _loadWindow(replace) {
     if (this._loading) return;
-    const loadTrace = this._perfStart("loadWindow", {
-      replace,
-      followNowWindow: this._followNowWindow,
-    });
     this._loading = true;
     this._reloadPending = false;
     this._reloadAfterLoad = false;
@@ -5477,49 +5285,21 @@ class FrigateViewCard extends HTMLElement {
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) {
       this._loading = false;
-      this._perfEnd(loadTrace, {
-        skipped: "missing-client-or-camera",
-      });
       return;
     }
     const after = this._winStart,
       before = this._winEnd;
-    const eventsTrace = this._perfStart("loadWindow.events", {
-      camera: cam,
-    });
-    const recordingsTrace = this._perfStart("loadWindow.recordings", {
-      camera: cam,
-    });
-    const reviewsTrace = this._perfStart("loadWindow.reviews", {
-      camera: cam,
-      tab: this._tab,
-    });
     const eventsTask = this._loadWindowEvents(clientId, cam, after, before);
 
     await Promise.allSettled([
-      eventsTask.finally(() => {
-        this._perfEnd(eventsTrace, {
-          count: this._events.length,
-        });
-      }),
-      (this._tab === "recordings"
+      eventsTask,
+      this._tab === "recordings"
         ? this._loadWindowRecordings(clientId, cam, before)
-        : Promise.resolve()
-      ).finally(() => {
-        this._perfEnd(recordingsTrace, {
-          count: this._recordings.length,
-          skipped: this._tab !== "recordings",
-        });
-      }),
+        : Promise.resolve(),
       (async () => {
         await eventsTask;
         await this._loadWindowReviewsIfNeeded(clientId, cam, after, before);
-      })().finally(() => {
-        this._perfEnd(reviewsTrace, {
-          count: this._reviews.length,
-          skipped: this._tab !== "alerts",
-        });
-      }),
+      })(),
     ]);
     const ent = this._activeCam?.entity;
     if (ent && this._camCache[ent]) {
@@ -5535,11 +5315,6 @@ class FrigateViewCard extends HTMLElement {
     this._consumeDeepLinkEventOpen();
     if (this._eventsMode === "all") this._loadAllCamsBackground();
     this._renderAll();
-    this._perfEnd(loadTrace, {
-      events: this._events.length,
-      recordings: this._recordings.length,
-      reviews: this._reviews.length,
-    });
   }
 
   _cacheActiveCamSlice(key, value) {
@@ -9684,83 +9459,60 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _renderList() {
-    const renderTrace = this._perfStart("render.list", {
-      tab: this._tab,
-    });
-    try {
-      const list = this._$("#list");
-      if (!list) return;
-      if (this._tab === "recordings") {
-        // Don't blow away the recording list while the user is watching a recording
-        const viewerActive = this._$("#viewer")?.style.display !== "none";
-        if (viewerActive && this._playing?.rec != null) return;
-        this._syncOlderHint(false);
-        return this._renderRecordings(list);
-      }
-      if (this._tab === "alerts") {
-        this._syncOlderHint(false);
-        return this._renderReviews(list);
-      }
-      if (this._tab === "kept") {
-        const kept = this._filteredKept();
-        this._renderListLabel();
-        if (!kept.length) {
-          this._setListHtmlIfChanged(
-            list,
-            `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
-          );
-          this._syncOlderHint(false);
-          return;
-        }
+    const list = this._$("#list");
+    if (!list) return;
+    if (this._tab === "recordings") {
+      // Don't blow away the recording list while the user is watching a recording
+      const viewerActive = this._$("#viewer")?.style.display !== "none";
+      if (viewerActive && this._playing?.rec != null) return;
+      this._syncOlderHint(false);
+      return this._renderRecordings(list);
+    }
+    if (this._tab === "alerts") {
+      this._syncOlderHint(false);
+      return this._renderReviews(list);
+    }
+    if (this._tab === "kept") {
+      const kept = this._filteredKept();
+      this._renderListLabel();
+      if (!kept.length) {
         this._setListHtmlIfChanged(
           list,
-          kept.map((ev) => this._eventCardHTML(ev, false)).join(""),
-        );
-        this._syncOlderHint(false);
-        return;
-      }
-      const events = this._filtered();
-      this._renderListLabel(events[0]?.start_time || null);
-      if (!events.length) {
-        this._setListHtmlIfChanged(
-          list,
-          `<div class="empty">No events in this window</div>`,
+          `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
         );
         this._syncOlderHint(false);
         return;
       }
       this._setListHtmlIfChanged(
         list,
-        (this._showStickyDayHeaders()
-          ? this._renderStickyDaySections(events, (ev) =>
-              this._eventCardHTML(ev, false),
-            )
-          : events.map((ev) => this._eventCardHTML(ev, false)).join("")) +
-          (this._exhausted ? '<div class="end">— end —</div>' : ""),
+        kept.map((ev) => this._eventCardHTML(ev, false)).join(""),
       );
-      this._syncBrowseHeadFromScroll();
-      this._syncOlderHint();
-      requestAnimationFrame(() => this._syncOlderHint());
-      setTimeout(() => this._syncOlderHint(), 200);
-    } finally {
-      if (this._perfEnabled) {
-        const itemCount =
-          this._tab === "recordings"
-            ? this._recordings.length
-            : this._tab === "alerts"
-              ? this._filteredReviews().length
-              : this._tab === "kept"
-                ? this._filteredKept().length
-                : this._filtered().length;
-        this._perfEnd(renderTrace, {
-          tab: this._tab,
-          itemCount,
-          htmlLength: this._lastRenderedListHtml.length,
-        });
-      } else {
-        this._perfEnd(renderTrace);
-      }
+      this._syncOlderHint(false);
+      return;
     }
+    const events = this._filtered();
+    this._renderListLabel(events[0]?.start_time || null);
+    if (!events.length) {
+      this._setListHtmlIfChanged(
+        list,
+        `<div class="empty">No events in this window</div>`,
+      );
+      this._syncOlderHint(false);
+      return;
+    }
+    this._setListHtmlIfChanged(
+      list,
+      (this._showStickyDayHeaders()
+        ? this._renderStickyDaySections(events, (ev) =>
+            this._eventCardHTML(ev, false),
+          )
+        : events.map((ev) => this._eventCardHTML(ev, false)).join("")) +
+        (this._exhausted ? '<div class="end">— end —</div>' : ""),
+    );
+    this._syncBrowseHeadFromScroll();
+    this._syncOlderHint();
+    requestAnimationFrame(() => this._syncOlderHint());
+    setTimeout(() => this._syncOlderHint(), 200);
   }
   _syncOlderHint(forceHide = null) {
     const hint = this._$("#older-hint");
