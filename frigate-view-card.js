@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.373";
+const VERSION = "1.0.375";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3101,8 +3101,14 @@ class FrigateViewCard extends HTMLElement {
     img.alt = entity ? `${entity} snapshot` : "Camera snapshot";
   }
 
-  async _go2rtcWebSocketUrl() {
-    const { clientId, cam } = this._cc();
+  _cameraContext(entity) {
+    return this._camCache[entity] || mkCamState();
+  }
+
+  async _go2rtcWebSocketUrlForEntity(entity) {
+    if (!entity) return null;
+    await this._discoverOne(entity);
+    const { clientId, cam } = this._cameraContext(entity);
     if (!clientId || !cam) return null;
     const cacheKey = `${clientId}:${cam}`;
     const cached = this._go2rtcWsUrlCache.get(cacheKey);
@@ -3137,6 +3143,10 @@ class FrigateViewCard extends HTMLElement {
     });
     this._ffDebug("go2rtc websocket url", wsUrl);
     return wsUrl;
+  }
+
+  async _go2rtcWebSocketUrl() {
+    return await this._go2rtcWebSocketUrlForEntity(this._activeCam?.entity);
   }
 
   async _go2rtcHlsUrl() {
@@ -3206,6 +3216,8 @@ class FrigateViewCard extends HTMLElement {
     const requireReadyState = Number(startup?.requireReadyState ?? 3);
     const strict = startup?.strict !== false;
     const commit = options.commit !== false;
+    const entity = options?.entity || this._activeCam?.entity || "";
+    const muted = options?.muted ?? this._streamMuted;
 
     if (!("WebSocket" in window) || !("MediaSource" in window)) {
       this._ffDebug("MSE unavailable in browser", {
@@ -3215,7 +3227,7 @@ class FrigateViewCard extends HTMLElement {
       return false;
     }
 
-    const wsUrl = await this._go2rtcWebSocketUrl();
+    const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) {
       this._ffDebug("Missing go2rtc websocket URL");
       return false;
@@ -3225,7 +3237,7 @@ class FrigateViewCard extends HTMLElement {
     const video = document.createElement("video");
     video.autoplay = true;
     video.playsInline = true;
-    video.muted = this._streamMuted;
+    video.muted = muted;
     video.controls = false;
     video.style.cssText =
       "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
@@ -3390,6 +3402,47 @@ class FrigateViewCard extends HTMLElement {
     this._setStreamLoading(false);
     this._setStreamFallbackVisible(false);
     return true;
+  }
+
+  _mountGridDirectMSECell(cell, entity, gridState) {
+    const host = document.createElement("div");
+    host.style.cssText = "width:100%;height:100%;display:block";
+    cell.appendChild(host);
+    void (async () => {
+      const result = await this._tryMountGo2RTCMSE(
+        host,
+        {
+          waitMs: 4000,
+          minCurrentTime: 0.05,
+          minDecodedFrames: 1,
+          requireReadyState: 2,
+          strict: true,
+        },
+        {
+          commit: false,
+          entity,
+          muted: true,
+        },
+      );
+      if (!result?.ok) {
+        if (host.isConnected) host.innerHTML = "";
+        return;
+      }
+      if (gridState.destroyed || !host.isConnected) {
+        try {
+          result.engine?.destroy?.();
+        } catch (_) {}
+        return;
+      }
+      gridState.cleanup.push(() => {
+        try {
+          result.engine?.destroy?.();
+        } catch (_) {}
+        try {
+          host.innerHTML = "";
+        } catch (_) {}
+      });
+    })();
   }
 
   async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
@@ -3909,6 +3962,7 @@ class FrigateViewCard extends HTMLElement {
   _mountGridEngine(slot) {
     const indices = this._gridPageCameraIndices();
     const liveStreamHint = this._currentLiveStreamHint();
+    const gridState = { destroyed: false, cleanup: [] };
     const signatureParts = [];
     for (const idx of indices) {
       if (idx < 0) {
@@ -3954,15 +4008,20 @@ class FrigateViewCard extends HTMLElement {
         const useLive =
           this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
         if (stateObj && useLive) {
-          const stream = document.createElement("ha-camera-stream");
-          stream.hass = this._hass;
-          stream.stateObj = stateObj;
-          stream.controls = false;
-          stream.muted = true;
-          stream.defaultMuted = true;
-          stream.style.cssText = "width:100%;height:100%;display:block";
-          cell.appendChild(stream);
-          this._attachVideoFit(stream);
+          const connectionType = this._cameraConnectionType(entity);
+          if (liveStreamHint === "mse" && connectionType !== "ha_direct") {
+            this._mountGridDirectMSECell(cell, entity, gridState);
+          } else {
+            const stream = document.createElement("ha-camera-stream");
+            stream.hass = this._hass;
+            stream.stateObj = stateObj;
+            stream.controls = false;
+            stream.muted = true;
+            stream.defaultMuted = true;
+            stream.style.cssText = "width:100%;height:100%;display:block";
+            cell.appendChild(stream);
+            this._attachVideoFit(stream);
+          }
         } else if (entity) {
           const img = document.createElement("img");
           const entityPicture = stateObj?.attributes?.entity_picture || "";
@@ -4003,6 +4062,12 @@ class FrigateViewCard extends HTMLElement {
     slot.appendChild(grid);
     this._engine = {
       destroy: () => {
+        gridState.destroyed = true;
+        for (const cleanup of gridState.cleanup) {
+          try {
+            cleanup();
+          } catch (_) {}
+        }
         try {
           slot.innerHTML = "";
         } catch (_) {}
