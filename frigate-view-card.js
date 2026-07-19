@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.377";
+const VERSION = "1.0.378";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2477,6 +2477,14 @@ class FrigateViewCard extends HTMLElement {
     return /safari/i.test(ua) && !/chrome|chromium|crios|fxios|edg\//i.test(ua);
   }
 
+  _supportsNativeHlsPlayback() {
+    const video = document.createElement("video");
+    return !!(
+      video.canPlayType?.("application/vnd.apple.mpegurl") ||
+      video.canPlayType?.("application/x-mpegURL")
+    );
+  }
+
   _useHaDirectStreamPath() {
     return this._cameraConnectionType(this._activeCam?.entity) === "ha_direct";
   }
@@ -3147,6 +3155,7 @@ class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcHlsUrl() {
+    if (!this._supportsNativeHlsPlayback()) return null;
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) return null;
     const cacheKey = `${clientId}:${cam}`;
