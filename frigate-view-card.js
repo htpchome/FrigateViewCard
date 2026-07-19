@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.379";
+const VERSION = "1.0.380";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
