@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.451";
+const VERSION = "1.0.452";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6903,7 +6903,7 @@ class FrigateViewCard extends HTMLElement {
         const ok =
           !includeStatus ||
           this._hass?.states?.[c.entity]?.state !== "unavailable";
-        return `<button class="glass-btn ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
+        return `<button class="cam-tab ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
       })
       .join("");
   }
