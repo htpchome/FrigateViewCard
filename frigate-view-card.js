@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.397";
+const VERSION = "1.0.399";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -166,10 +166,10 @@ const ICONS = {
     '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"/></svg>',
   rotate:
     '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8A5.87 5.87 0 0 1 6 12c0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2A5.87 5.87 0 0 1 18 12c0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/></svg>',
-  rotate3d:
-    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 6v8l8 4 8-4V6l-8-4zm0 2.3L16.8 6 12 8.5 7.2 6 12 4.3zM6 7.7l5 2.6v5.9L6 13.6V7.7zm12 5.9l-5 2.6V10.3l5-2.6v5.9zM12 18.4l-4.7-2.4 4.7-2.4 4.7 2.4-4.7 2.4z"/></svg>',
-  rotate3dActive:
-    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 6v8l8 4 8-4V6l-8-4zm0 2.3L16.8 6 12 8.5 7.2 6 12 4.3zM6 7.7l5 2.6v5.9L6 13.6V7.7zm12 5.9l-5 2.6V10.3l5-2.6v5.9zM12 18.4l-4.7-2.4 4.7-2.4 4.7 2.4-4.7 2.4z"/><circle cx="18.2" cy="18.2" r="3.1" opacity="0.95"/></svg>',
+  presentationPlay:
+    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3C1.89 3 1 3.89 1 5V19C1 20.11 1.89 21 3 21H21C22.11 21 23 20.11 23 19V5C23 3.89 22.11 3 21 3M21 19H3V5H21M10 8.5V15.5L16 12"/></svg>',
+  presentationPlayActive:
+    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3C1.89 3 1 3.89 1 5V19C1 20.11 1.89 21 3 21H21C22.11 21 23 20.11 23 19V5C23 3.89 22.11 3 21 3M21 19H3V5H21M10 8.5V15.5L16 12"/></svg>',
   volOff:
     '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>',
   volOn:
@@ -4502,7 +4502,9 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _slideshowButtonIcon() {
-    return this._slideshowActive ? ICONS.rotate3dActive : ICONS.rotate3d;
+    return this._slideshowActive
+      ? ICONS.presentationPlayActive
+      : ICONS.presentationPlay;
   }
 
   _gridButtonIcon() {
@@ -10997,8 +10999,8 @@ if (!window.customCards.find((c) => c.type === CARD_TAG))
     preview: true,
   });
 
- console.info(
-    `%c FRIGATE-VIEW-CARD %c v${VERSION} `,
-    "color: white; background: #03a9f4; font-weight: 700;",
-    "color: #03a9f4; background: white; font-weight: 700;",
+console.info(
+  `%c FRIGATE-VIEW-CARD %c v${VERSION} `,
+  "color: white; background: #03a9f4; font-weight: 700;",
+  "color: #03a9f4; background: white; font-weight: 700;",
 );
