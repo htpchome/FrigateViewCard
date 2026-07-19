@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.450";
+const VERSION = "1.0.451";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -5793,7 +5793,7 @@ class FrigateViewCard extends HTMLElement {
     const subtitle = this._subtitleText();
     const multiCam = this._config.cameras.length > 1;
     const camSwitcher = multiCam
-      ? `<div class="cam-switcher" id="cam-switcher"><div class="glass-btn">${this._camSwitcherMarkup({ includeStatus: false })}</div></div>`
+      ? `<div class="cam-switcher" id="cam-switcher"><div class="cam-tabs">${this._camSwitcherMarkup({ includeStatus: false })}</div></div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""}" id="card">
@@ -6903,7 +6903,7 @@ class FrigateViewCard extends HTMLElement {
         const ok =
           !includeStatus ||
           this._hass?.states?.[c.entity]?.state !== "unavailable";
-        return `<button class="cam-tab ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
+        return `<button class="glass-btn ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
       })
       .join("");
   }
