@@ -34,6 +34,10 @@ test("switch-camera cleanup preserves MSE while regular live startup stays unifi
   assert.equal(source.includes("appendChild(result.engine.video)"), true);
   assert.match(
     source,
+    /_pendingMountDestroyers\s*=\s*this\._pendingMountDestroyers\.filter\([\s\S]*attempt\?\.type\s*!==\s*winner\.type/,
+  );
+  assert.match(
+    source,
     /const\s+order\s*=\s*forcedType\s*\?\s*\[forcedType\]\s*:\s*\["webrtc",\s*"mse",\s*"hls"\]/,
   );
 });
