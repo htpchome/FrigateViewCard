@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.395";
+const VERSION = "1.0.396";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -10993,3 +10993,9 @@ if (!window.customCards.find((c) => c.type === CARD_TAG))
     description: `Simple Frigate Camera and Events Card — v${VERSION}`,
     preview: true,
   });
+
+ console.info(
+    `%c FRIGATE-VIEW-CARD %c v${VERSION} `,
+    "color: white; background: #03a9f4; font-weight: 700;",
+    "color: #03a9f4; background: white; font-weight: 700;",
+);
