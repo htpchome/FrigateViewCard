@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.426";
+const VERSION = "1.0.427";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1430,17 +1430,7 @@ class FrigateViewCard extends HTMLElement {
       }
     };
 
-//========================================
-const cardRoot = this.shadowRoot 
-  ? this.shadowRoot.querySelector('ha-card') 
-  : this.querySelector('ha-card');
 
-if (cardRoot) {
-  cardElement.style.setProperty('align-self', 'start', 'important');
-  cardElement.style.setProperty('margin-top', '0px', 'important');
-  cardElement.style.setProperty('top', '0px', 'important');
-}
-//===================================
 
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
@@ -1592,23 +1582,33 @@ if (cardRoot) {
   super.connectedCallback?.();
 
   this._onHAScrollReset = () => {
-    let frames = 0;
-    
-    const forceSnap = () => {
-      this._realignCardPosition();
-      frames++;
-      // Loop across 3 animation ticks to outlast the iOS layout engine snap-back
-      if (frames < 3) {
-        requestAnimationFrame(forceSnap);
-      }
-    };
-    
-    requestAnimationFrame(forceSnap);
-  };
+    // Wait for the native iOS pull-to-refresh spinner collapse timeline
+    setTimeout(() => {
+      const root = this.shadowRoot || this;
+      const card = root.querySelector('ha-card') || root.querySelector('.my-main-container');
+      if (!card) return;
 
-  // Bind directly to window and parent touch tracking 
-  window.addEventListener('touchend', this._onHAScrollReset, { passive: true });
-  window.addEventListener('resize', this._onHAScrollReset, { passive: true });
+      // 1. Traverse upwards to target HA's strict grid layout column container
+      const haLayoutParent = card.closest('.column') 
+        || card.closest('hui-card-options-wrapper') 
+        || card.parentElement;
+
+      if (haLayoutParent) {
+        // 2. Force the parent view wrapper to instantly drop its cached height trap
+        haLayoutParent.style.display = 'inline-block';
+        haLayoutParent.style.width = '100%';
+        haLayoutParent.style.marginTop = '0px';
+        haLayoutParent.style.paddingTop = '0px';
+        haLayoutParent.style.transform = 'none';
+
+        // 3. Trigger a hardware-accelerated paint layer cycle to force Safari to snap back
+        haLayoutParent.style.display = ''; 
+      }
+
+      // 4. Reset card margins to prevent secondary spacing orphans
+      card.style.setProperty('margin-top', '0px', 'important');
+      card.style.setProperty('top', '0px', 'important');
+    }, 250); // 250ms guarantees alignment after the refresh completion sequence
 
 //===================================
 
@@ -2058,48 +2058,11 @@ if (cardRoot) {
 //===============================================
 
   window.removeEventListener('touchend', this._onHAScrollReset);
-  window.removeEventListener('resize', this._onHAScrollReset);
   super.disconnectedCallback?.();
 
 //===============================================
 
   }
-
- //===============================
- 
-_realignCardPosition() {
-  const root = this.shadowRoot || this;
-  const container = root.querySelector('.my-main-container') || root.querySelector('ha-card');
-  if (!container) return;
-
-  // STEP 1: Break parent sticky traps by forcing absolute resetting dimensions
-  container.style.position = 'relative';
-  container.style.top = '0px';
-  container.style.marginTop = '0px';
-
-  // STEP 2: Drill into Home Assistant's core header geometry engine to find the true header boundary
-  const haAppLayout = document.querySelector('home-assistant')
-    ?.shadowRoot?.querySelector('home-assistant-main')
-    ?.shadowRoot?.querySelector('ha-top-app-bar-fixed')
-    || document.querySelector('app-header');
-
-  if (haAppLayout) {
-    const headerBottom = haAppLayout.getBoundingClientRect().bottom;
-    const cardTop = container.getBoundingClientRect().top;
-
-    // If the layout engine has orphaned the card below the header boundary
-    if (cardTop > headerBottom) {
-      const visualGap = cardTop - headerBottom;
-      // Pull the card up by the exact layout error gap
-      container.style.transform = `translateY(-${visualGap}px)`;
-    } else {
-      // Re-normalize if layout boundaries match perfectly
-      container.style.transform = 'translateY(0px)';
-    }
-  }
-}
-
- //===============================
 
 
   _teardownDisconnected() {
