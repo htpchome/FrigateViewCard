@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.428";
+const VERSION = "1.0.429";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -800,6 +800,7 @@ const STYLES = `
     display: block !important;
     margin:0 !important;
     padding:0 !important;
+    top:0 !important;
     overflow: hidden;
     box-sizing: border-box !important;
     position: relative;
@@ -839,6 +840,10 @@ const STYLES = `
     min-height: 0 !important;
     height: auto;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
+    align-self: start !important;
+    margin-top: 0px !important;
+    top: 0px !important;
+    position: relative !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-m);
@@ -1575,46 +1580,7 @@ class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("connected");
       }
     }
-    this._startEditorDialogCloseObserver();
-
-//===================================
-
-  this._onHAScrollReset = () => {
-    // Wait for the native iOS pull-to-refresh spinner collapse timeline
-    setTimeout(() => {
-      const root = this.shadowRoot || this;
-      const card = root.querySelector('ha-card') || root.querySelector('.my-main-container');
-      if (!card) return;
-
-      // 1. Traverse upwards to target HA's strict grid layout column container
-      const haLayoutParent = card.closest('.column') 
-        || card.closest('hui-card-options-wrapper') 
-        || card.parentElement;
-
-      if (haLayoutParent) {
-        // 2. Force the parent view wrapper to instantly drop its cached height trap
-        haLayoutParent.style.display = 'inline-block';
-        haLayoutParent.style.width = '100%';
-        haLayoutParent.style.marginTop = '0px';
-        haLayoutParent.style.paddingTop = '0px';
-        haLayoutParent.style.transform = 'none';
-
-        // 3. Trigger a hardware-accelerated paint layer cycle to force Safari to snap back
-        haLayoutParent.style.display = ''; 
-      }
-
-      // 4. Reset card margins to prevent secondary spacing orphans
-      card.style.setProperty('margin-top', '0px', 'important');
-      card.style.setProperty('top', '0px', 'important');
-    }, 250); // 250ms guarantees alignment after the refresh completion sequence
-  };
-
-  // Capture when the user finishes dragging and releases the screen
-  window.addEventListener('touchend', this._onHAScrollReset, { passive: true });
-
-//===================================
-
-  
+    this._startEditorDialogCloseObserver();  
   }
 
   _syncCardShellClasses() {
@@ -2057,13 +2023,6 @@ class FrigateViewCard extends HTMLElement {
       this._ffDebug("Running deferred disconnect teardown");
       this._teardownDisconnected();
     }, 2500);
-//===============================================
-
-  window.removeEventListener('touchend', this._onHAScrollReset);
-  super.disconnectedCallback?.();
-
-//===============================================
-
   }
 
 
