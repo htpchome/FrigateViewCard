@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.364";
+const VERSION = "1.0.365";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2503,7 +2503,15 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _ffDebug(msg, data = null) {
-    return;
+    if (!this._isFirefox()) return;
+    const enabled =
+      window?.localStorage?.getItem("fvc_firefox_mse_debug") === "1";
+    if (!enabled) return;
+    if (data == null) {
+      console.debug(`[FVC][FF] ${msg}`);
+      return;
+    }
+    console.debug(`[FVC][FF] ${msg}`, data);
   }
 
   _isPerfDiagnosticsEnabled() {
@@ -2737,13 +2745,16 @@ class FrigateViewCard extends HTMLElement {
 
     const order = forcedType
       ? [forcedType]
-      : this._isFirefox()
-        ? ["webrtc"]
-        : this._isEdge()
-          ? this._isDashboardEditMode()
-            ? ["webrtc"]
-            : ["webrtc", "mse"]
-          : ["webrtc", "mse"];
+      : this._isEdge()
+        ? this._isDashboardEditMode()
+          ? ["webrtc"]
+          : ["webrtc", "mse"]
+        : ["webrtc", "mse"];
+    this._ffDebug("Live attempt order", {
+      forcedType: forcedType || "",
+      order,
+      connectionType,
+    });
     return order
       .filter((type) => typeof build[type] === "function")
       .map((type) => ({ type, start: build[type] }));
@@ -3817,7 +3828,13 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _markGridAlertCamera(entity, severity = "alert") {
-    if (!entity) return;
+    if (!entity) return false;
+    const wasLive = this._isGridCameraAlertLive(entity);
+    const prevSeverity = String(
+      this._gridAlertSeverityByEntity.get(entity) || "",
+    )
+      .trim()
+      .toLowerCase();
     const normalizedSeverity =
       String(severity || "")
         .trim()
@@ -3830,6 +3847,7 @@ class FrigateViewCard extends HTMLElement {
       Date.now() + this._gridRotationMs(),
     );
     this._scheduleGridAlertCleanup();
+    return !wasLive || prevSeverity !== normalizedSeverity;
   }
 
   _scheduleGridRotation() {
@@ -3916,9 +3934,7 @@ class FrigateViewCard extends HTMLElement {
       if (idx >= 0) {
         const cam = this._config?.cameras?.[idx];
         const entity = cam?.entity || "";
-        const stateObj = entity
-          ? this._hlsStateObj(entity, this._preferredStreamType())
-          : null;
+        const stateObj = entity ? this._hass?.states?.[entity] : null;
         const severity = this._gridCellSeverity(entity);
         if (severity === "alert") cell.classList.add("grid-alert");
         if (severity === "detection") cell.classList.add("grid-detection");
@@ -4048,8 +4064,13 @@ class FrigateViewCard extends HTMLElement {
     }
     this._gridLastAlertAt = now;
     this._gridLastAlertCam = entity;
-    this._markGridAlertCamera(entity, severity || "alert");
-    this._scheduleGridRefresh();
+    const changed = this._markGridAlertCamera(entity, severity || "alert");
+    this._ffDebug("Grid alert candidate", {
+      entity,
+      severity,
+      changed,
+    });
+    if (changed) this._scheduleGridRefresh();
   }
 
   _handleGridRealtimeMessage(msg) {
