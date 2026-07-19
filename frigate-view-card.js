@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.369";
+const VERSION = "1.0.370";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2749,7 +2749,7 @@ class FrigateViewCard extends HTMLElement {
         ),
     };
 
-    const order = forcedType ? [forcedType] : ["webrtc", "mse", "hls"];
+    const order = forcedType ? [forcedType] : ["mse"];
     this._ffDebug("Live attempt order", {
       forcedType: forcedType || "",
       order,
@@ -3645,16 +3645,6 @@ class FrigateViewCard extends HTMLElement {
           { commit: true },
         );
         if (edgeMseOk) return;
-      }
-
-      // Probe HLS only as an explicit last resort after WebRTC/MSE fail.
-      if (!forcedType) {
-        const hlsOk = await this._tryMountGo2RTCHLS(
-          slot,
-          { waitMs: 5000 },
-          { commit: true },
-        );
-        if (hlsOk) return;
       }
 
       // go2rtc attempts failed: show snapshot placeholder.
