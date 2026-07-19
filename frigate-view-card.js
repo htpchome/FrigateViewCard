@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.412";
+const VERSION = "1.0.413";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1424,6 +1424,8 @@ class FrigateViewCard extends HTMLElement {
     this._sectionContentStyleOriginal = new Map();
     this._sectionContentTouchHandlers = new Map();
     this._sectionContentSettleState = new Map();
+    this._sectionContentObserver = null;
+    this._sectionContentRetryT = null;
     this._committedConfig = null;
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -1663,7 +1665,7 @@ class FrigateViewCard extends HTMLElement {
   _setSectionsRowGap(tightMarginsEnabled) {
     let element = this;
     while (element) {
-      if (element.tagName === "HUI-SECTIONS-VIEW") {
+      if (this._isSectionsViewElement(element)) {
         if (tightMarginsEnabled && !this._isPanelView()) {
           element.style.setProperty("--ha-view-sections-row-gap", "0px");
         } else {
@@ -1676,21 +1678,32 @@ class FrigateViewCard extends HTMLElement {
     }
   }
 
-  _syncSectionsViewContentConstraints(sectionsViewEl = null) {
-    let sectionsView = sectionsViewEl;
-    if (!sectionsView) {
-      let element = this;
-      while (element) {
-        if (element.tagName === "HUI-SECTIONS-VIEW") {
-          sectionsView = element;
-          break;
-        }
-        element = element.parentNode || element.host;
-      }
+  _isSectionsViewElement(element) {
+    const tag = String(element?.tagName || "").toUpperCase();
+    return tag === "HUI-SECTIONS-VIEW" || tag === "HA-SECTION-VIEW";
+  }
+
+  _findSectionsViewElement() {
+    let element = this;
+    while (element) {
+      if (this._isSectionsViewElement(element)) return element;
+      element = element.parentNode || element.host;
     }
-    if (!sectionsView?.shadowRoot) return;
+    return null;
+  }
+
+  _syncSectionsViewContentConstraints(sectionsViewEl = null) {
+    const sectionsView = sectionsViewEl || this._findSectionsViewElement();
+    if (!sectionsView?.shadowRoot) {
+      this._scheduleSectionsViewContentConstraintsRetry();
+      return;
+    }
+    this._observeSectionsViewContent(sectionsView);
     const content = sectionsView.shadowRoot.querySelector(".content");
-    if (!(content instanceof HTMLElement)) return;
+    if (!(content instanceof HTMLElement)) {
+      this._scheduleSectionsViewContentConstraintsRetry();
+      return;
+    }
     if (!this._sectionContentStyleOriginal.has(content)) {
       this._sectionContentStyleOriginal.set(content, {
         overscrollBehavior: content.style.overscrollBehavior,
@@ -1770,7 +1783,32 @@ class FrigateViewCard extends HTMLElement {
     content.style.height = "100%";
   }
 
+  _scheduleSectionsViewContentConstraintsRetry() {
+    if (this._sectionContentRetryT) return;
+    this._sectionContentRetryT = setTimeout(() => {
+      this._sectionContentRetryT = null;
+      if (!this.isConnected) return;
+      this._syncSectionsViewContentConstraints();
+    }, 120);
+  }
+
+  _observeSectionsViewContent(sectionsView) {
+    if (!sectionsView?.shadowRoot || this._sectionContentObserver) return;
+    this._sectionContentObserver = new MutationObserver(() => {
+      if (!this.isConnected) return;
+      this._syncSectionsViewContentConstraints(sectionsView);
+    });
+    this._sectionContentObserver.observe(sectionsView.shadowRoot, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
   _restoreSectionsViewContentConstraints() {
+    if (this._sectionContentRetryT) clearTimeout(this._sectionContentRetryT);
+    this._sectionContentRetryT = null;
+    if (this._sectionContentObserver) this._sectionContentObserver.disconnect();
+    this._sectionContentObserver = null;
     for (const [
       content,
       original,
@@ -1881,7 +1919,7 @@ class FrigateViewCard extends HTMLElement {
     // inside a column element within the sections-view.
     let el = this;
     while (el) {
-      if (el.tagName === "HUI-SECTIONS-VIEW" && el.shadowRoot) {
+      if (this._isSectionsViewElement(el) && el.shadowRoot) {
         // Walk the sections-view shadow root looking for a
         // column / section wrapper between it and our card.
         return !this._hasAncestorInShadow(el.shadowRoot, this);
