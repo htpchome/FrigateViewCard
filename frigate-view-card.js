@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.447";
+const VERSION = "1.0.448";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1062,7 +1062,7 @@ const STYLES = `
   .stream-loading{position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:6px;padding:4.8px 9.6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:0.825rem;font-weight:600;line-height:1;z-index:3;backdrop-filter:blur(2px);}
   .stream-loading[hidden]{display:none;}
   .stream-loading .dot{width:10px;height:10px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--c-text-rev);border-radius:50%;animation:spin .9s linear infinite;}
-  .overlay-fs{
+.overlay-fs{
     position:absolute;
     top:8px;
     right:8px;
@@ -1079,8 +1079,8 @@ const STYLES = `
   backdrop-filter: blur(1px) saturate(150%); 
   box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);
   cursor:pointer;  
-    }
-  .overlay-fs::after {
+}
+.overlay-fs::after {
   content: ""; /* Added missing quotes */
   position: absolute; 
   top: 0; 
@@ -1095,11 +1095,11 @@ const STYLES = `
   opacity: 0.4; 
   z-index: -1; 
   filter: brightness(115%); 
-    }         
+}         
 
-  .overlay-fs[hidden]{display:none !important;}
+.overlay-fs[hidden]{display:none !important;}
 .overlay-fs:hover{background:rgba(255, 255, 255, 0.3);} 
-.overlay-fs svg {width:36px;height:36px;opacity: 0.8; }
+.overlay-fs svg {width:30px;height:30px;opacity: 0.8; }
 .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
 
   #eng-wrap:fullscreen .overlay-fs,
