@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.431";
+const VERSION = "1.0.432";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1062,10 +1062,41 @@ const STYLES = `
   .stream-loading{position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:6px;padding:4.8px 9.6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:0.825rem;font-weight:600;line-height:1;z-index:3;backdrop-filter:blur(2px);}
   .stream-loading[hidden]{display:none;}
   .stream-loading .dot{width:10px;height:10px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--c-text-rev);border-radius:50%;animation:spin .9s linear infinite;}
-  .overlay-fs{position:absolute;top:8px;left:8px;z-index:3;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.22);border-radius:7px;color:var(--c-text-rev);cursor:pointer;backdrop-filter:blur(2px);}
+  .overlay-fs{
+    position:absolute;
+    top:8px;
+    right:8px;
+    z-index:3;
+          padding: 15px 15px;
+          border-radius: 50px;
+          color: black;
+          font-size: 1.2rem;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          background-color: rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(2px) saturate(150%);
+          box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+    }
+  .overlay-fs::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 2rem;
+          backdrop-filter: blur(1px);
+          box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 1),
+                      inset 0px -9px 0px -8px rgba(255, 255, 255, 1);
+          opacity: 0.6;
+          z-index: -1;
+          filter: blur(1px) drop-shadow(10px 4px 6px black) brightness(115%);
+        }         
+
   .overlay-fs[hidden]{display:none !important;}
   .overlay-fs svg{width:16.8px;height:16.8px;}
   .overlay-fs:hover{background:rgba(59,130,246,.65);border-color:rgba(147,197,253,.9);}
+
   #eng-wrap:fullscreen .overlay-fs,
   #eng-wrap:-webkit-full-screen .overlay-fs,
   #viewer:fullscreen .overlay-fs,
