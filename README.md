@@ -2,10 +2,25 @@
 
 A simple Camera and Events Card to use with Home Assistant and Frigate.
 
+
+
+## Core Functions
+
+- Live camera viewing for up to 8 configured Frigate/Home Assistant camera entities.
+- Per-camera connection options for Frigate go2rtc or direct Home Assistant camera playback.
+- Alerts, Clips, Snapshots, Recordings, and Kept tabs with configurable active tabs.
+- Frigate event and review browsing with thumbnails, event history windows, and real-time refresh polling.
+- Media popups for event clips, snapshots, and recordings, including download actions where Frigate exposes downloadable media.
+- Event retain/unretain support for saving important Frigate events into the Kept view.
+- Optional slideshow rotation for the main live camera view on non-phone devices.
+- Optional 2x2 grid mode for multi-camera dashboards, including live or snapshot grid behavior and rotation for larger camera sets.
+- Mobile-aware behavior, including battery-saver polling and iOS-compatible HLS playback paths for Frigate media.
+- Visual customization through Home Assistant theme variables, custom color overrides, shadows, tight margins, wide view, and height controls.
+- Notification deep links that open a specific Frigate event or review directly from dashboard URL parameters.
+
 ## Acknowledgments
 
 This project originally started as a fork of [frigate-modern-hass-card](https://github.com/QuadNL/frigate-modern-hass-card) developed by [QuadNL](https://github.com/QuadNL). Although the codebase has since been rewritten and evolved independently, we want to thank the original author for the foundational ideas that inspired this work.
-
 
 ## Notification Deep Links
 
