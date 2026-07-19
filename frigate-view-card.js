@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.401";
+const VERSION = "1.0.402";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1427,6 +1427,26 @@ class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("doc-visible");
       }
     };
+//========================
+
+document.addEventListener('touchmove', function(event) {
+    // Target the main Home Assistant panel or your section view class
+    const sectionView = event.target.closest('ha-section-view');
+    
+    // If we are touching the section view, let it scroll naturally. 
+    // Otherwise, prevent the whole page from bouncing.
+    if (sectionView) {
+        return;
+    }
+    event.preventDefault();
+}, { passive: false });
+
+
+
+
+//=========================
+
+
 
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
@@ -1435,6 +1455,7 @@ class FrigateViewCard extends HTMLElement {
       "webkitfullscreenchange",
       this._onFullscreenChange,
     );
+    
     this._onViewportRotate = () => this._scheduleRotateOverlayUpdate();
     window.addEventListener("resize", this._onViewportRotate, {
       passive: true,
