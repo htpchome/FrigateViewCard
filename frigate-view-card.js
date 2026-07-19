@@ -5793,7 +5793,7 @@ class FrigateViewCard extends HTMLElement {
     const subtitle = this._subtitleText();
     const multiCam = this._config.cameras.length > 1;
     const camSwitcher = multiCam
-      ? `<div class="cam-switcher" id="cam-switcher"><div class="glass">${this._camSwitcherMarkup({ includeStatus: false })}</div></div>`
+      ? `<div class="cam-switcher" id="cam-switcher"><div class="glass-btn">${this._camSwitcherMarkup({ includeStatus: false })}</div></div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""}" id="card">
