@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.423";
+const VERSION = "1.0.424";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -85,18 +85,6 @@ const THEME_CUSTOM_ROWS = Object.freeze([
   { key: "--c-bg-alert", label: "Scrub Bar Alerts" },
 ]);
 
-//========================================
-const cardRoot = this.shadowRoot 
-  ? this.shadowRoot.querySelector('ha-card') 
-  : this.querySelector('ha-card');
-
-if (cardRoot) {
-  cardRoot.style.position = 'relative';
-  cardRoot.style.top = '0';
-  cardRoot.style.display = 'block';
-  cardRoot.style.clear = 'both';
-}
-//===================================
 
 const THEME_CUSTOM_KEYS = new Set(THEME_CUSTOM_ROWS.map((row) => row.key));
 function detectDeviceProfile() {
@@ -1442,6 +1430,18 @@ class FrigateViewCard extends HTMLElement {
       }
     };
 
+//========================================
+const cardRoot = this.shadowRoot 
+  ? this.shadowRoot.querySelector('ha-card') 
+  : this.querySelector('ha-card');
+
+if (cardRoot) {
+  cardRoot.style.position = 'relative';
+  cardRoot.style.top = '0';
+  cardRoot.style.display = 'block';
+  cardRoot.style.clear = 'both';
+}
+//===================================
 
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
