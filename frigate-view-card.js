@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.404";
+const VERSION = "1.0.405";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1430,10 +1430,13 @@ class FrigateViewCard extends HTMLElement {
 
     this._touchStartX = 0;
     this._touchStartY = 0;
+    this._touchStartScrollable = null;
     this._onCardTouchStart = (event) => {
       if (!event?.touches?.length) return;
       this._touchStartX = Number(event.touches[0].clientX) || 0;
       this._touchStartY = Number(event.touches[0].clientY) || 0;
+      const path = event.composedPath?.() || [];
+      this._touchStartScrollable = this._nearestScrollableYInPath(path);
     };
     this._onCardTouchMove = (event) => {
       if (!event?.cancelable || !event?.touches?.length) return;
@@ -1448,14 +1451,15 @@ class FrigateViewCard extends HTMLElement {
       const insideCard = path.includes(this) || path.includes(this.shadowRoot);
       if (!insideCard) return;
 
-      const scrollable = this._nearestScrollableYInPath(path);
-      if (scrollable) {
-        const maxScrollTop = Math.max(
-          0,
-          Number(scrollable.scrollHeight) - Number(scrollable.clientHeight),
-        );
-        if (Number(scrollable.scrollTop) < maxScrollTop - 1) return;
-      }
+      const scrollable = this._touchStartScrollable;
+      if (!(scrollable instanceof HTMLElement) || !scrollable.isConnected)
+        return;
+      const maxScrollTop = Math.max(
+        0,
+        Number(scrollable.scrollHeight) - Number(scrollable.clientHeight),
+      );
+      if (maxScrollTop <= 0) return;
+      if (Number(scrollable.scrollTop) < maxScrollTop - 1) return;
       event.preventDefault();
     };
     this.shadowRoot.addEventListener("touchstart", this._onCardTouchStart, {
