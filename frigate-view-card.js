@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.425";
+const VERSION = "1.0.426";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1436,10 +1436,9 @@ const cardRoot = this.shadowRoot
   : this.querySelector('ha-card');
 
 if (cardRoot) {
-  cardRoot.style.position = 'relative';
-  cardRoot.style.top = '0';
-  cardRoot.style.display = 'block';
-  cardRoot.style.clear = 'both';
+  cardElement.style.setProperty('align-self', 'start', 'important');
+  cardElement.style.setProperty('margin-top', '0px', 'important');
+  cardElement.style.setProperty('top', '0px', 'important');
 }
 //===================================
 
@@ -1592,23 +1591,23 @@ if (cardRoot) {
 
   super.connectedCallback?.();
 
-  // Find the exact Home Assistant viewport root that controls the scrolling layout
-  // In modern HA, this is typically handled within the hui-view element
-  this._viewRoot = this.closest('hui-view') || this.closest('.view') || window;
-
-  // Use a standard scroll or custom event listener depending on layout engine
   this._onHAScrollReset = () => {
-    // Clear any previous debounce timeout
-    if (this._resetTimeout) clearTimeout(this._resetTimeout);
+    let frames = 0;
     
-    // Wait 150ms for the iOS native pull-to-refresh spinner to fully collapse
-    this._resetTimeout = setTimeout(() => {
+    const forceSnap = () => {
       this._realignCardPosition();
-    }, 150);
+      frames++;
+      // Loop across 3 animation ticks to outlast the iOS layout engine snap-back
+      if (frames < 3) {
+        requestAnimationFrame(forceSnap);
+      }
+    };
+    
+    requestAnimationFrame(forceSnap);
   };
 
-  // Listen to both window resizing and layout scrolling to catch the header snap
-  this._viewRoot.addEventListener('scroll', this._onHAScrollReset, { passive: true });
+  // Bind directly to window and parent touch tracking 
+  window.addEventListener('touchend', this._onHAScrollReset, { passive: true });
   window.addEventListener('resize', this._onHAScrollReset, { passive: true });
 
 //===================================
@@ -2058,10 +2057,7 @@ if (cardRoot) {
     }, 2500);
 //===============================================
 
-  if (this._resetTimeout) clearTimeout(this._resetTimeout);
-  if (this._viewRoot) {
-    this._viewRoot.removeEventListener('scroll', this._onHAScrollReset);
-  }
+  window.removeEventListener('touchend', this._onHAScrollReset);
   window.removeEventListener('resize', this._onHAScrollReset);
   super.disconnectedCallback?.();
 
@@ -2072,43 +2068,36 @@ if (cardRoot) {
  //===============================
  
 _realignCardPosition() {
-  // Safe extraction targeting both Shadow DOM or light DOM setups
   const root = this.shadowRoot || this;
   const container = root.querySelector('.my-main-container') || root.querySelector('ha-card');
-  
   if (!container) return;
 
-  // STEP 1: Query the actual rendered bounding boxes to find the true gap
-  const header = document.querySelector('home-assistant')
+  // STEP 1: Break parent sticky traps by forcing absolute resetting dimensions
+  container.style.position = 'relative';
+  container.style.top = '0px';
+  container.style.marginTop = '0px';
+
+  // STEP 2: Drill into Home Assistant's core header geometry engine to find the true header boundary
+  const haAppLayout = document.querySelector('home-assistant')
     ?.shadowRoot?.querySelector('home-assistant-main')
-    ?.shadowRoot?.querySelector('ha-top-app-bar-fixed') 
-    || document.querySelector('app-header') 
-    || document.querySelector('.header');
+    ?.shadowRoot?.querySelector('ha-top-app-bar-fixed')
+    || document.querySelector('app-header');
 
-  if (header) {
-    const headerRect = header.getBoundingClientRect();
-    const cardRect = container.getBoundingClientRect();
+  if (haAppLayout) {
+    const headerBottom = haAppLayout.getBoundingClientRect().bottom;
+    const cardTop = container.getBoundingClientRect().top;
 
-    // If a gap exists between the bottom of the header and top of your card
-    if (cardRect.top > headerRect.bottom) {
-      // Forcefully snap the layout context by recalculating style properties
-      container.style.marginTop = '0px';
+    // If the layout engine has orphaned the card below the header boundary
+    if (cardTop > headerBottom) {
+      const visualGap = cardTop - headerBottom;
+      // Pull the card up by the exact layout error gap
+      container.style.transform = `translateY(-${visualGap}px)`;
+    } else {
+      // Re-normalize if layout boundaries match perfectly
       container.style.transform = 'translateY(0px)';
     }
   }
-
-  // STEP 2: Flushes the WebKit/Safari composite rendering layers to eliminate phantom gaps
-  container.style.display = 'none';
-  // Trigger a browser reflow programmatically
-  this.offsetHeight; 
-  container.style.display = 'block';
-
-  // STEP 3: Maintain your iOS bouncing safety trick
-  if (container.scrollTop === 0) {
-    container.scrollTop = 1;
-  }
 }
-
 
  //===============================
 
