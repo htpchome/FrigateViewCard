@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.382";
+const VERSION = "1.0.383";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -35,7 +35,7 @@ const SLIDESHOW_ALERT_HOLD_MS = 10000;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
 const SLIDESHOW_REVIEW_WATCH_MAX_MS = 15000;
-const MSE_SWITCH_GRACE_MS = 12000;
+const MSE_SWITCH_GRACE_MS = 20000;
 const MSE_SWITCH_GRACE_MAX = 3;
 const MAX_CAMERAS = 8;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
@@ -2669,6 +2669,7 @@ class FrigateViewCard extends HTMLElement {
     if (!key) return;
     const entry = this._mseGracePool.get(key);
     if (!entry) return;
+    entry.cancelled = true;
     if (entry.timer) clearTimeout(entry.timer);
     this._mseGracePool.delete(key);
     try {
@@ -2696,6 +2697,7 @@ class FrigateViewCard extends HTMLElement {
     void engine.video.play?.().catch?.(() => {});
     const entry = {
       engine,
+      cancelled: false,
       timer: setTimeout(() => {
         if (this._mseGracePool.get(key) !== entry) return;
         this._evictGraceMseEntry(key);
@@ -2712,6 +2714,7 @@ class FrigateViewCard extends HTMLElement {
     this._evictGraceMseEntry(key);
     const entry = {
       engine: null,
+      cancelled: false,
       timer: null,
       promise: null,
     };
@@ -2722,7 +2725,7 @@ class FrigateViewCard extends HTMLElement {
     entry.promise = (async () => {
       try {
         const result = await promise;
-        if (this._mseGracePool.get(key) !== entry) {
+        if (entry.cancelled) {
           try {
             result?.engine?.destroy?.();
           } catch (_) {}
@@ -3825,9 +3828,85 @@ class FrigateViewCard extends HTMLElement {
       if (graceMseEntry?.engine) {
         if (this._adoptGraceMseEngine(slot, graceMseEntry.engine)) return;
       } else if (graceMseEntry?.promise) {
-        const graceMseEngine = await graceMseEntry.promise;
-        if (graceMseEngine && this._adoptGraceMseEngine(slot, graceMseEngine)) {
-          return;
+        this._engineMountedMuted = this._streamMuted;
+        const mountToken = ++this._mountSeq;
+        this._mountInProgress = true;
+        this._mountStartedAt = Date.now();
+        this._mountTargetEntity = entity;
+        const mountWatchdogT = setTimeout(() => {
+          if (!this._mountInProgress) return;
+          if (this._mountSeq !== mountToken) return;
+          this._ffDebug("Mount watchdog timeout; forcing recovery", {
+            mountToken,
+            mountTarget: this._mountTargetEntity,
+          });
+          this._mountSeq += 1;
+          this._mountInProgress = false;
+          this._mountStartedAt = 0;
+          this._mountTargetEntity = "";
+          this._cleanupEngine();
+          this._setStreamLoading(false);
+          this._setStreamFallbackVisible(true);
+          this._setActiveStreamType("snapshot");
+          this._scheduleResumeLive("mount-watchdog-timeout");
+        }, 9000);
+        const clearMountState = () => {
+          clearTimeout(mountWatchdogT);
+          if (this._mountSeq === mountToken) {
+            this._mountInProgress = false;
+            this._mountStartedAt = 0;
+            this._mountTargetEntity = "";
+          }
+        };
+        const graceResultPromise = (async () => {
+          const graceMseEngine = await graceMseEntry.promise;
+          if (!graceMseEngine) return false;
+          return {
+            ok: true,
+            type: "mse",
+            engine: graceMseEngine,
+          };
+        })();
+        this._pendingMountDestroyers = [
+          {
+            type: "mse",
+            entity,
+            promise: graceResultPromise,
+            destroy: () => {
+              void (async () => {
+                const result = await graceResultPromise;
+                try {
+                  result?.engine?.destroy?.();
+                } catch (_) {}
+              })();
+            },
+          },
+        ];
+        slot.innerHTML = "";
+        if (!quiet) {
+          this._setActiveStreamType("--");
+          this._setStreamFallbackVisible(true, true);
+          this._setStreamLoading(true);
+        } else {
+          this._setStreamFallbackVisible(false);
+          this._setStreamLoading(false);
+        }
+        try {
+          const graceResult = await graceResultPromise;
+          if (!graceResult?.engine) return;
+          if (this._mountSeq !== mountToken) return;
+          this._pendingMountDestroyers = [];
+          if (this._adoptGraceMseEngine(slot, graceResult.engine)) {
+            clearMountState();
+            return;
+          }
+        } finally {
+          clearMountState();
+          if (
+            this._pendingMountDestroyers?.[0]?.promise === graceResultPromise
+          ) {
+            this._pendingMountDestroyers = [];
+          }
         }
       }
     }
