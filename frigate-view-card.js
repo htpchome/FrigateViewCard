@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.371";
+const VERSION = "1.0.372";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2523,19 +2523,6 @@ class FrigateViewCard extends HTMLElement {
     console.debug(`[FVC][FF] ${msg}`, data);
   }
 
-  _mseDebug(msg, data = null) {
-    if (!this._isFirefox() && !this._isEdge()) return;
-    const enabled =
-      window?.localStorage?.getItem("fvc_firefox_mse_debug") === "1";
-    if (!enabled) return;
-    const browserTag = this._isEdge() ? "EDGE" : "FF";
-    if (data == null) {
-      console.debug(`[FVC][${browserTag}][MSE] ${msg}`);
-      return;
-    }
-    console.debug(`[FVC][${browserTag}][MSE] ${msg}`, data);
-  }
-
   _isPerfDiagnosticsEnabled() {
     return false;
   }
@@ -2765,13 +2752,8 @@ class FrigateViewCard extends HTMLElement {
         ),
     };
 
-    const order = forcedType ? [forcedType] : ["mse"];
+    const order = forcedType ? [forcedType] : ["webrtc", "mse", "hls"];
     this._ffDebug("Live attempt order", {
-      forcedType: forcedType || "",
-      order,
-      connectionType,
-    });
-    this._mseDebug("Live attempt order", {
       forcedType: forcedType || "",
       order,
       connectionType,
@@ -3228,7 +3210,7 @@ class FrigateViewCard extends HTMLElement {
       this._ffDebug("Missing go2rtc websocket URL");
       return false;
     }
-    this._mseDebug("Attempting direct go2rtc MSE stream mount");
+    this._ffDebug("Attempting direct go2rtc MSE stream mount");
 
     const video = document.createElement("video");
     video.autoplay = true;
@@ -3297,7 +3279,7 @@ class FrigateViewCard extends HTMLElement {
     ms.addEventListener(
       "sourceopen",
       () => {
-        this._mseDebug("MediaSource opened", {
+        this._ffDebug("MediaSource opened", {
           wsReadyState: ws.readyState,
         });
         requestMSE();
@@ -3306,24 +3288,24 @@ class FrigateViewCard extends HTMLElement {
     );
 
     ws.addEventListener("open", () => {
-      this._mseDebug("go2rtc websocket opened");
+      this._ffDebug("go2rtc websocket opened");
       if (ms.readyState === "open") requestMSE();
     });
 
     ws.addEventListener("error", () => {
-      this._mseDebug("go2rtc websocket error");
+      this._ffDebug("go2rtc websocket error");
       if (!startupAbort.signal.aborted) startupAbort.abort();
     });
 
     ws.addEventListener("close", (ev) => {
-      this._mseDebug("go2rtc websocket closed", {
+      this._ffDebug("go2rtc websocket closed", {
         code: ev.code,
         reason: ev.reason,
         wasClean: ev.wasClean,
       });
       if (!startupAbort.signal.aborted) startupAbort.abort();
       if (streamStarted && commit && this._engine === engine) {
-        this._mseDebug("Active MSE stream closed; scheduling recovery", {
+        this._ffDebug("Active MSE stream closed; scheduling recovery", {
           code: ev.code,
           reason: ev.reason,
         });
@@ -3341,30 +3323,27 @@ class FrigateViewCard extends HTMLElement {
           return;
         }
 
-        this._mseDebug(
-          "Received go2rtc JSON message",
-          msg?.type || "<unknown>",
-        );
+        this._ffDebug("Received go2rtc JSON message", msg?.type || "<unknown>");
         if (msg?.type === "mse" && msg.value && ms.readyState === "open") {
           if (sb) return;
           try {
             const codecs = this._normalizeGo2RTCCodecs(msg.value);
             if (!codecs) {
-              this._mseDebug(
+              this._ffDebug(
                 "Could not parse codecs from go2rtc mse message",
                 msg.value,
               );
               return;
             }
             const mime = `video/mp4; codecs=\"${codecs}\"`;
-            this._mseDebug("Creating SourceBuffer", mime);
+            this._ffDebug("Creating SourceBuffer", mime);
             if (!MediaSource.isTypeSupported(mime)) return;
             sb = ms.addSourceBuffer(mime);
             sb.mode = "segments";
             sb.addEventListener("updateend", appendNext);
             appendNext();
           } catch (e) {
-            this._mseDebug(
+            this._ffDebug(
               "SourceBuffer creation failed",
               e?.message || String(e),
             );
@@ -3376,7 +3355,7 @@ class FrigateViewCard extends HTMLElement {
       if (!(ev.data instanceof ArrayBuffer)) return;
       this._mseLastChunkAt = Date.now();
       this._mseChunkCount += 1;
-      this._mseDebug("Received binary MSE chunk", ev.data.byteLength);
+      this._ffDebug("Received binary MSE chunk", ev.data.byteLength);
       queue.push(ev.data);
       appendNext();
     });
@@ -3389,7 +3368,7 @@ class FrigateViewCard extends HTMLElement {
       abortSignal: startupAbort.signal,
     });
     if (!started) {
-      this._mseDebug("Direct go2rtc MSE did not start within timeout");
+      this._ffDebug("Direct go2rtc MSE did not start within timeout");
       destroy();
       return false;
     }
@@ -3397,7 +3376,7 @@ class FrigateViewCard extends HTMLElement {
 
     if (!commit) return { ok: true, type: "mse", engine, slot };
     this._setActiveStreamType("mse");
-    this._mseDebug("Direct go2rtc MSE started successfully");
+    this._ffDebug("Direct go2rtc MSE started successfully");
     this._setStreamLoading(false);
     this._setStreamFallbackVisible(false);
     return true;
@@ -6536,6 +6515,7 @@ class FrigateViewCard extends HTMLElement {
           "mobile-rotate-popup-exit",
         );
       this._rotateOverlayExitT = null;
+      if (!force && this._resumeLiveT) return;
       this._syncFullscreenButtonsVisibility();
     }, 260);
     this._syncFullscreenButtonsVisibility();
