@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.446";
+const VERSION = "1.0.447";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1120,7 +1120,7 @@ const STYLES = `
   .live-grid-cell.empty{display:flex;align-items:center;justify-content:center;cursor:default;}
   .live-grid-cell.empty .ph{border-radius:7px;}
   .live-grid-cell video,.live-grid-cell img,.live-grid-cell ha-camera-stream{width:100%;height:100%;display:block;object-fit:cover;background:var(--c-bg-deep);}
-  .live-grid-label{position:absolute;left:6px;bottom:6px;z-index:2;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:.68rem;line-height:1.2;pointer-events:none;text-transform:none;}
+  .live-grid-label{position:absolute;left:6px;top:6px;z-index:2;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:.68rem;line-height:1.2;pointer-events:none;text-transform:none;}
   @supports (-moz-appearance:none) {
     .live-grid{transform:translateZ(0);backface-visibility:hidden;}
     .live-grid-cell{contain:layout paint;transform:translateZ(0);backface-visibility:hidden;}
