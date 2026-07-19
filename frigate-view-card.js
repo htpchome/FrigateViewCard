@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.421";
+const VERSION = "1.0.422";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1585,7 +1585,6 @@ class FrigateViewCard extends HTMLElement {
     this._startEditorDialogCloseObserver();
 
 //===================================
- super.connectedCallback?.(); // Include if using Lit/Humble elements
 
   // Target the nearest stable Home Assistant layout engine or view container
   const dashboardView = this.closest('home-assistant-main') || this.parentElement;
