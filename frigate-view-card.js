@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.361";
+const VERSION = "1.0.363";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -621,6 +621,8 @@ const buildEditorConfigFromDom = ({
       : 30;
   nextConfig.grid_mode_enabled =
     root.querySelector("#grid_mode_enabled")?.checked === true;
+  nextConfig.grid_start_in_grid_enabled =
+    root.querySelector("#grid_start_in_grid_enabled")?.checked === true;
   nextConfig.grid_live_view_enabled =
     root.querySelector("#grid_live_view_enabled")?.checked !== false;
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
@@ -706,6 +708,7 @@ const createEditorPreviewDraft = (config) => ({
   slideshow_rotation_enabled: config.slideshow_rotation_enabled,
   slideshow_rotation_seconds: config.slideshow_rotation_seconds,
   grid_mode_enabled: config.grid_mode_enabled,
+  grid_start_in_grid_enabled: config.grid_start_in_grid_enabled,
   grid_live_view_enabled: config.grid_live_view_enabled,
   grid_rotation_seconds: config.grid_rotation_seconds,
   hidden_tabs: config.hidden_tabs,
@@ -1077,6 +1080,11 @@ const STYLES = `
   .live-grid-cell.empty .ph{border-radius:7px;}
   .live-grid-cell video,.live-grid-cell img,.live-grid-cell ha-camera-stream{width:100%;height:100%;display:block;object-fit:cover;background:var(--c-bg-deep);}
   .live-grid-label{position:absolute;left:6px;bottom:6px;z-index:2;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:.68rem;line-height:1.2;pointer-events:none;text-transform:none;}
+  @supports (-moz-appearance:none) {
+    .live-grid{transform:translateZ(0);backface-visibility:hidden;}
+    .live-grid-cell{contain:layout paint;transform:translateZ(0);backface-visibility:hidden;}
+    .live-grid-cell video,.live-grid-cell img,.live-grid-cell ha-camera-stream{transform:translateZ(0);backface-visibility:hidden;}
+  }
   .ph-spin{width:24px;height:24px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--c-accent);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
     @keyframes liveOverlayIn{from{opacity:.9;}to{opacity:1;}}
@@ -1327,8 +1335,10 @@ class FrigateViewCard extends HTMLElement {
     this._gridAlertReturnT = null;
     this._gridAlertWatchT = null;
     this._gridAlertCleanupT = null;
+    this._gridRefreshT = null;
     this._gridResumePending = false;
     this._gridPinnedRotationStart = 0;
+    this._gridLastRenderSignature = "";
     this._gridStartedAtSec = 0;
     this._gridHandledReviewIds = new Set();
     this._gridLastAlertAt = 0;
@@ -1470,6 +1480,8 @@ class FrigateViewCard extends HTMLElement {
           mobile_poll_battery_saver:
             previewConfig.mobile_poll_battery_saver === true,
           grid_mode_enabled: previewConfig.grid_mode_enabled === true,
+          grid_start_in_grid_enabled:
+            previewConfig.grid_start_in_grid_enabled === true,
           grid_live_view_enabled:
             previewConfig.grid_live_view_enabled !== false,
           grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
@@ -1544,6 +1556,10 @@ class FrigateViewCard extends HTMLElement {
     if (this._started) {
       this._startEditModeWatchdog();
       this._scheduleResumeLive("connected");
+      setTimeout(() => {
+        if (!this.isConnected) return;
+        this._applyStartInGridMode("connected");
+      }, 150);
     }
     this._startEditorDialogCloseObserver();
   }
@@ -1723,6 +1739,7 @@ class FrigateViewCard extends HTMLElement {
       slideshow_rotation_enabled: false,
       slideshow_rotation_seconds: 30,
       grid_mode_enabled: false,
+      grid_start_in_grid_enabled: false,
       grid_live_view_enabled: true,
       grid_rotation_seconds: 30,
       window_hours: 72,
@@ -1833,6 +1850,7 @@ class FrigateViewCard extends HTMLElement {
         ? Number(config.slideshow_rotation_seconds)
         : 30,
       grid_mode_enabled: config.grid_mode_enabled === true,
+      grid_start_in_grid_enabled: config.grid_start_in_grid_enabled === true,
       grid_live_view_enabled: config.grid_live_view_enabled !== false,
       grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
         Number(config.grid_rotation_seconds),
@@ -2098,6 +2116,7 @@ class FrigateViewCard extends HTMLElement {
     this._scheduleWarmOtherCamerasEvents();
     this._mountEngine();
     await initialLoad;
+    this._applyStartInGridMode("startup");
     this._subscribe();
     this._startEditModeWatchdog();
     this._startEditorDialogCloseObserver();
@@ -3661,17 +3680,47 @@ class FrigateViewCard extends HTMLElement {
     if (this._gridAlertReturnT) clearTimeout(this._gridAlertReturnT);
     if (this._gridAlertWatchT) clearTimeout(this._gridAlertWatchT);
     if (this._gridAlertCleanupT) clearTimeout(this._gridAlertCleanupT);
+    if (this._gridRefreshT) clearTimeout(this._gridRefreshT);
     this._gridRotationT = null;
     this._gridAlertReturnT = null;
     this._gridAlertWatchT = null;
     this._gridAlertCleanupT = null;
+    this._gridRefreshT = null;
   }
 
   _clearGridAlertTracking() {
     this._gridAlertExpiresByEntity.clear();
     this._gridAlertSeverityByEntity.clear();
+    this._gridLastRenderSignature = "";
     if (this._gridAlertCleanupT) clearTimeout(this._gridAlertCleanupT);
     this._gridAlertCleanupT = null;
+  }
+
+  _scheduleGridRefresh(delayMs = 80) {
+    if (this._gridRefreshT) clearTimeout(this._gridRefreshT);
+    if (this._viewMode !== "grid") return;
+    this._gridRefreshT = setTimeout(
+      () => {
+        this._gridRefreshT = null;
+        if (this._viewMode !== "grid") return;
+        this._mountEngine(null, { quiet: true });
+      },
+      Math.max(0, Number(delayMs) || 0),
+    );
+  }
+
+  _shouldStartInGridMode() {
+    return (
+      this._config?.grid_start_in_grid_enabled === true &&
+      this._isGridModeAvailable()
+    );
+  }
+
+  _applyStartInGridMode(_source = "") {
+    if (!this._shouldStartInGridMode()) return;
+    if (this._viewMode === "grid") return;
+    this._gridRotationStart = 0;
+    this._setViewMode("grid");
   }
 
   _rememberHandledGridReview(reviewId) {
@@ -3759,7 +3808,7 @@ class FrigateViewCard extends HTMLElement {
         }
       }
       if (changed && this._viewMode === "grid") {
-        this._mountEngine(null, { quiet: true });
+        this._scheduleGridRefresh();
       }
       this._scheduleGridAlertCleanup();
     }, wait);
@@ -3830,10 +3879,35 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _mountGridEngine(slot) {
+    const indices = this._gridPageCameraIndices();
+    const signatureParts = [];
+    for (const idx of indices) {
+      if (idx < 0) {
+        signatureParts.push("-1");
+        continue;
+      }
+      const cam = this._config?.cameras?.[idx];
+      const entity = cam?.entity || "";
+      const severity = this._gridCellSeverity(entity);
+      const useLive =
+        this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
+      signatureParts.push(
+        `${idx}:${entity}:${severity || "none"}:${useLive ? "live" : "snap"}`,
+      );
+    }
+    const nextSignature = signatureParts.join("|");
+    const hasExistingGrid =
+      slot.firstElementChild?.classList?.contains("live-grid");
+    if (hasExistingGrid && this._gridLastRenderSignature === nextSignature) {
+      this._setActiveStreamType("grid");
+      this._setStreamLoading(false);
+      this._setStreamFallbackVisible(false);
+      return;
+    }
+    this._gridLastRenderSignature = nextSignature;
     slot.innerHTML = "";
     const grid = document.createElement("div");
     grid.className = "live-grid";
-    const indices = this._gridPageCameraIndices();
     for (const idx of indices) {
       const cell = document.createElement("div");
       cell.className = "live-grid-cell";
@@ -3852,6 +3926,7 @@ class FrigateViewCard extends HTMLElement {
           stream.stateObj = stateObj;
           stream.controls = false;
           stream.muted = true;
+          stream.defaultMuted = true;
           stream.style.cssText = "width:100%;height:100%;display:block";
           cell.appendChild(stream);
           this._attachVideoFit(stream);
@@ -3967,7 +4042,7 @@ class FrigateViewCard extends HTMLElement {
     this._gridLastAlertAt = now;
     this._gridLastAlertCam = entity;
     this._markGridAlertCamera(entity, severity || "alert");
-    this._mountEngine(null, { quiet: true });
+    this._scheduleGridRefresh();
   }
 
   _handleGridRealtimeMessage(msg) {
@@ -4019,10 +4094,12 @@ class FrigateViewCard extends HTMLElement {
       mode === "grid" && this._isGridModeAvailable() ? "grid" : "single";
     if (this._viewMode === "grid" && nextMode !== "grid") {
       this._stopGridModeState();
+      this._gridLastRenderSignature = "";
     }
     let startGridTimers = false;
     if (nextMode === "grid") {
       this._stopSlideshowRotation("grid-mode", false);
+      this._setLiveMuted(true);
       this._gridRotationStart = Math.max(
         0,
         Number(this._gridRotationStart) || 0,
@@ -7541,6 +7618,10 @@ class FrigateViewCard extends HTMLElement {
   _renderMuteButton() {
     const btn = this._$("#mute-btn");
     if (!btn) return;
+    const hideMute = this._viewMode === "grid";
+    btn.hidden = hideMute;
+    btn.style.display = hideMute ? "none" : "";
+    if (hideMute) return;
     const label = this._streamMuted ? "Unmute live view" : "Mute live view";
     btn.title = label;
     btn.setAttribute("aria-label", label);
@@ -7594,8 +7675,10 @@ class FrigateViewCard extends HTMLElement {
     const isFullscreen = !!(
       document.fullscreenElement || document.webkitFullscreenElement
     );
+    const inGridMode = this._viewMode === "grid";
     if (liveBtn)
-      liveBtn.hidden = !!popupOpen || isFullscreen || this._rotateOverlayActive;
+      liveBtn.hidden =
+        !!popupOpen || isFullscreen || this._rotateOverlayActive || inGridMode;
     const suppressPopupBtn = this._usePopupCustomControls(this._popupMediaType);
     if (popupBtn)
       popupBtn.hidden =
@@ -9497,6 +9580,7 @@ class FrigateViewCardEditor extends HTMLElement {
         ? Number(src.slideshow_rotation_seconds)
         : 30;
     src.grid_mode_enabled = src.grid_mode_enabled === true;
+    src.grid_start_in_grid_enabled = src.grid_start_in_grid_enabled === true;
     src.grid_live_view_enabled = src.grid_live_view_enabled !== false;
     src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
       Number(src.grid_rotation_seconds),
@@ -10037,6 +10121,13 @@ class FrigateViewCardEditor extends HTMLElement {
             </div>
             <div class="field-helper">Enable a 2x2 camera grid. This is not available on mobile phone devices and requires at least 2 cameras.</div>
           </div>
+          <div id="grid_start_row" style="min-width:210px;display:${this._config?.grid_mode_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Start In Grid Mode</span>
+              <ha-switch id="grid_start_in_grid_enabled" ${this._config?.grid_start_in_grid_enabled ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Start this card in grid mode and return to grid mode when re-entering the dashboard.</div>
+          </div>
           <div id="grid_live_row" style="min-width:210px;display:${this._config?.grid_mode_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
             <div class="layout-row" style="justify-content:flex-start;gap:8px">
               <span class="field-label" style="margin:0">Live View In Grid</span>
@@ -10493,6 +10584,7 @@ class FrigateViewCardEditor extends HTMLElement {
         "mobile_poll_battery_saver",
         "slideshow_rotation_enabled",
         "grid_mode_enabled",
+        "grid_start_in_grid_enabled",
         "grid_live_view_enabled",
       ],
       events: ["change", "value-changed"],
@@ -10501,11 +10593,14 @@ class FrigateViewCardEditor extends HTMLElement {
         const enabled =
           this.querySelector("#slideshow_rotation_enabled")?.checked === true;
         const gridRow = this.querySelector("#grid_rotation_row");
+        const gridStartRow = this.querySelector("#grid_start_row");
         const gridLiveRow = this.querySelector("#grid_live_row");
         const gridEnabled =
           this.querySelector("#grid_mode_enabled")?.checked === true;
         if (slideshowRow)
           slideshowRow.style.display = enabled ? "flex" : "none";
+        if (gridStartRow)
+          gridStartRow.style.display = gridEnabled ? "flex" : "none";
         if (gridLiveRow)
           gridLiveRow.style.display = gridEnabled ? "flex" : "none";
         if (gridRow)
