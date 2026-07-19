@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.410";
+const VERSION = "1.0.411";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -859,7 +859,7 @@ const STYLES = `
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
 
-  .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;    overscroll-behavior: none !important;overflow: hidden !important;}
+  .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;overflow: hidden !important;}
   .layout.wide{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
   .card .col-left > *{flex:0 0 auto;}
@@ -1421,33 +1421,13 @@ class FrigateViewCard extends HTMLElement {
     this._deepLinkEventLookupTried = false;
     this._deepLinkReviewLookupTried = false;
     this._domShadowOriginalStyles = new Map();
+    this._sectionContentStyleOriginal = new Map();
     this._committedConfig = null;
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
         this._scheduleResumeLive("doc-visible");
       }
     };
-//========================
-
-document.addEventListener('touchmove', function(event) {
-    // Target the main Home Assistant panel or your section view class
-    const sectionView = event.target.closest('ha-section-view');
-    
-    // If we are touching the section view, let it scroll naturally. 
-    // Otherwise, prevent the whole page from bouncing.
-    if (sectionView) {
-        return;
-    }
-    event.preventDefault();
-}, { passive: false });
-
-
-
-
-//=========================
-
-
-
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
@@ -1455,7 +1435,7 @@ document.addEventListener('touchmove', function(event) {
       "webkitfullscreenchange",
       this._onFullscreenChange,
     );
-    
+
     this._onViewportRotate = () => this._scheduleRotateOverlayUpdate();
     window.addEventListener("resize", this._onViewportRotate, {
       passive: true,
@@ -1581,6 +1561,7 @@ document.addEventListener('touchmove', function(event) {
     }
     this._syncCardShellClasses();
     this._syncDomShadows();
+    this._syncSectionsViewContentConstraints();
     this._scheduleRotateOverlayUpdate();
     if (this._started) {
       this._startEditModeWatchdog();
@@ -1686,10 +1667,48 @@ document.addEventListener('touchmove', function(event) {
         } else {
           element.style.removeProperty("--ha-view-sections-row-gap");
         }
+        this._syncSectionsViewContentConstraints(element);
         break;
       }
       element = element.parentNode || element.host;
     }
+  }
+
+  _syncSectionsViewContentConstraints(sectionsViewEl = null) {
+    let sectionsView = sectionsViewEl;
+    if (!sectionsView) {
+      let element = this;
+      while (element) {
+        if (element.tagName === "HUI-SECTIONS-VIEW") {
+          sectionsView = element;
+          break;
+        }
+        element = element.parentNode || element.host;
+      }
+    }
+    if (!sectionsView?.shadowRoot) return;
+    const content = sectionsView.shadowRoot.querySelector(".content");
+    if (!(content instanceof HTMLElement)) return;
+    if (!this._sectionContentStyleOriginal.has(content)) {
+      this._sectionContentStyleOriginal.set(content, {
+        overscrollBehaviorY: content.style.overscrollBehaviorY,
+        height: content.style.height,
+      });
+    }
+    content.style.overscrollBehaviorY = "contain";
+    content.style.height = "100%";
+  }
+
+  _restoreSectionsViewContentConstraints() {
+    for (const [
+      content,
+      original,
+    ] of this._sectionContentStyleOriginal.entries()) {
+      if (!(content instanceof HTMLElement)) continue;
+      content.style.overscrollBehaviorY = original.overscrollBehaviorY;
+      content.style.height = original.height;
+    }
+    this._sectionContentStyleOriginal.clear();
   }
 
   _applyLayoutMode() {
@@ -2132,6 +2151,7 @@ document.addEventListener('touchmove', function(event) {
       this.parentElement.style.padding = this._parentOrigStyle.padding;
     }
     this._setSectionsRowGap(false);
+    this._restoreSectionsViewContentConstraints();
     this._restoreDomShadowStyles();
     this._cleanupEngine();
   }
