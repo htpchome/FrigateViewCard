@@ -2,6 +2,28 @@
 
 A simple Camera and Events Card to use with Home Assistant and Frigate.
 
+## Acknowledgments
+
+This project originally started as a fork of [frigate-modern-hass-card](https://github.com/QuadNL/frigate-modern-hass-card) developed by [QuadNL](https://github.com/QuadNL). Although the codebase has since been rewritten and evolved independently, we want to thank the original author for the foundational ideas that inspired this work.
+
+## Installation
+## HACS (Recommended)
+
+    Go to the HACS page in your Home Assistant instance.
+    Click the three-dot menu in the top right.
+    Select "Custom repositories".
+    In the "Repository" field, paste the URL of this repository (https://github.com/htpchome/FrigateViewCard).
+    For "Category", select "Dashboard".
+    Click "Add".
+    The FrigateView Card will now appear in the HACS Frontend list. Click "Install".
+
+## Manual Installation
+
+    Download the frigate-view-card.js file from the latest release.
+    Copy the file to the www directory in your Home Assistant config folder.
+    In your Lovelace dashboard, go to "Manage Resources" and add a new resource:
+        URL: /local/frigate-view-card.js
+        Resource Type: JavaScript Module
 
 
 ## Core Functions
@@ -18,9 +40,6 @@ A simple Camera and Events Card to use with Home Assistant and Frigate.
 - Visual customization through Home Assistant theme variables, custom color overrides, shadows, tight margins, wide view, and height controls.
 - Notification deep links that open a specific Frigate event or review directly from dashboard URL parameters.
 
-## Acknowledgments
-
-This project originally started as a fork of [frigate-modern-hass-card](https://github.com/QuadNL/frigate-modern-hass-card) developed by [QuadNL](https://github.com/QuadNL). Although the codebase has since been rewritten and evolved independently, we want to thank the original author for the foundational ideas that inspired this work.
 
 ## Notification Deep Links
 
