@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.381";
+const VERSION = "1.0.382";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -35,7 +35,7 @@ const SLIDESHOW_ALERT_HOLD_MS = 10000;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
 const SLIDESHOW_REVIEW_WATCH_MAX_MS = 15000;
-const MSE_SWITCH_GRACE_MS = 4000;
+const MSE_SWITCH_GRACE_MS = 12000;
 const MSE_SWITCH_GRACE_MAX = 3;
 const MAX_CAMERAS = 8;
 const DEFAULT_CAMERA_CONNECTION_TYPE = "frigate_go2rtc";
@@ -2688,6 +2688,12 @@ class FrigateViewCard extends HTMLElement {
     const key = String(entity || "").trim();
     if (!key || !engine?.video || !engine?.ws) return false;
     this._evictGraceMseEntry(key);
+    this._ensureMseGraceHost().appendChild(engine.video);
+    engine.video.muted = true;
+    engine.video.controls = false;
+    engine.video.style.cssText =
+      "width:1px;height:1px;display:block;opacity:0;pointer-events:none;position:absolute;left:-9999px;top:-9999px;background:var(--c-bg-deep)";
+    void engine.video.play?.().catch?.(() => {});
     const entry = {
       engine,
       timer: setTimeout(() => {
@@ -2700,14 +2706,72 @@ class FrigateViewCard extends HTMLElement {
     return true;
   }
 
-  _takeGraceMseEngine(entity) {
+  _stashPendingMsePromiseForGrace(entity, promise) {
+    const key = String(entity || "").trim();
+    if (!key || !promise) return false;
+    this._evictGraceMseEntry(key);
+    const entry = {
+      engine: null,
+      timer: null,
+      promise: null,
+    };
+    entry.timer = setTimeout(() => {
+      if (this._mseGracePool.get(key) !== entry) return;
+      this._evictGraceMseEntry(key);
+    }, MSE_SWITCH_GRACE_MS);
+    entry.promise = (async () => {
+      try {
+        const result = await promise;
+        if (this._mseGracePool.get(key) !== entry) {
+          try {
+            result?.engine?.destroy?.();
+          } catch (_) {}
+          return null;
+        }
+        if (!result?.ok || result.type !== "mse" || !result.engine) {
+          this._evictGraceMseEntry(key);
+          return null;
+        }
+        this._ensureMseGraceHost().appendChild(result.engine.video);
+        result.engine.video.muted = true;
+        result.engine.video.controls = false;
+        result.engine.video.style.cssText =
+          "width:1px;height:1px;display:block;opacity:0;pointer-events:none;position:absolute;left:-9999px;top:-9999px;background:var(--c-bg-deep)";
+        void result.engine.video.play?.().catch?.(() => {});
+        entry.engine = result.engine;
+        entry.promise = null;
+        return result.engine;
+      } catch (_) {
+        if (this._mseGracePool.get(key) === entry) {
+          this._evictGraceMseEntry(key);
+        }
+        return null;
+      }
+    })();
+    this._mseGracePool.set(key, entry);
+    this._trimGraceMsePool();
+    return true;
+  }
+
+  _takeGraceMseEntry(entity) {
     const key = String(entity || "").trim();
     if (!key) return null;
     const entry = this._mseGracePool.get(key);
     if (!entry) return null;
     if (entry.timer) clearTimeout(entry.timer);
     this._mseGracePool.delete(key);
-    return entry.engine || null;
+    return entry;
+  }
+
+  _ensureMseGraceHost() {
+    if (this._mseGraceHost?.isConnected) return this._mseGraceHost;
+    const host = document.createElement("div");
+    host.setAttribute("aria-hidden", "true");
+    host.style.cssText =
+      "position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;left:-9999px;top:-9999px";
+    this.shadowRoot.appendChild(host);
+    this._mseGraceHost = host;
+    return host;
   }
 
   _adoptGraceMseEngine(slot, engine) {
@@ -2744,14 +2808,25 @@ class FrigateViewCard extends HTMLElement {
     this._clearRotateVideoFullscreenStyle();
     const pending = this._pendingMountDestroyers || [];
     this._pendingMountDestroyers = [];
-    for (const destroy of pending) {
+    const preserveMseEntity = String(options?.preserveMseEntity || "").trim();
+    for (const pendingAttempt of pending) {
+      if (
+        preserveMseEntity &&
+        pendingAttempt?.type === "mse" &&
+        pendingAttempt?.entity === preserveMseEntity
+      ) {
+        this._stashPendingMsePromiseForGrace(
+          preserveMseEntity,
+          pendingAttempt.promise,
+        );
+        continue;
+      }
       try {
-        destroy();
+        pendingAttempt?.destroy?.();
       } catch (_) {}
     }
     const eng = this._engine;
     if (!eng) return;
-    const preserveMseEntity = String(options?.preserveMseEntity || "").trim();
     if (
       preserveMseEntity &&
       String(this._activeStreamType || "")
@@ -2885,7 +2960,7 @@ class FrigateViewCard extends HTMLElement {
       .map((type) => ({ type, start: build[type] }));
   }
 
-  async _mountLiveWithRace(slot, attempts, mountToken) {
+  async _mountLiveWithRace(slot, attempts, mountToken, targetEntity) {
     const activeAttempts = attempts.map((attempt) => {
       const promise = (async () => {
         try {
@@ -2897,16 +2972,21 @@ class FrigateViewCard extends HTMLElement {
       return { type: attempt.type, promise };
     });
 
-    this._pendingMountDestroyers = activeAttempts.map((attempt) => () => {
-      void (async () => {
-        const result = await attempt.promise;
-        if (result?.engine?.destroy) {
-          try {
-            result.engine.destroy();
-          } catch (_) {}
-        }
-      })();
-    });
+    this._pendingMountDestroyers = activeAttempts.map((attempt) => ({
+      type: attempt.type,
+      entity: targetEntity,
+      promise: attempt.promise,
+      destroy: () => {
+        void (async () => {
+          const result = await attempt.promise;
+          if (result?.engine?.destroy) {
+            try {
+              result.engine.destroy();
+            } catch (_) {}
+          }
+        })();
+      },
+    }));
 
     const winner = await this._raceMountAttempts(
       activeAttempts.map((attempt) => attempt.promise),
@@ -3741,9 +3821,14 @@ class FrigateViewCard extends HTMLElement {
       connectionType !== "ha_direct" &&
       (!forcedType || forcedType === "mse")
     ) {
-      const graceMseEngine = this._takeGraceMseEngine(entity);
-      if (graceMseEngine && this._adoptGraceMseEngine(slot, graceMseEngine)) {
-        return;
+      const graceMseEntry = this._takeGraceMseEntry(entity);
+      if (graceMseEntry?.engine) {
+        if (this._adoptGraceMseEngine(slot, graceMseEntry.engine)) return;
+      } else if (graceMseEntry?.promise) {
+        const graceMseEngine = await graceMseEntry.promise;
+        if (graceMseEngine && this._adoptGraceMseEngine(slot, graceMseEngine)) {
+          return;
+        }
       }
     }
     this._engineMountedMuted = this._streamMuted;
@@ -3831,7 +3916,8 @@ class FrigateViewCard extends HTMLElement {
         forcedType,
         slot,
       );
-      if (await this._mountLiveWithRace(slot, attempts, mountToken)) return;
+      if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
+        return;
 
       // go2rtc attempts failed: show snapshot placeholder.
       this._setActiveStreamType("snapshot");
