@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.440";
+const VERSION = "1.0.441";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1067,40 +1067,41 @@ const STYLES = `
     top:8px;
     right:8px;
     z-index:3;
-    transform: translate(-50%, -50%); /* Centers the fixed button */
-    display: inline-flex; 
-    align-items: center; 
-    justify-content: center; 
-    padding: 6px; 
-    border-radius: 100px; /* Fixes sub-pixel math rounding errors */
-    color: black; 
-    font-size: 1.0rem; 
-    border: 1px solid rgba(255, 255, 255, 0.2); 
-    background-color: rgba(255, 255, 255, 0.2); 
-    backdrop-filter: blur(2px) saturate(150%); 
-    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2); 
-    cursor:pointer;
+  transform: translate(-50%, -50%); /* Centers the fixed button */
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+  padding: 6px; 
+  border-radius: 100px; /* Fixes sub-pixel math rounding errors */
+  color: black; 
+  font-size: 1.0rem; 
+  border: 1px solid rgba(255, 255, 255, 0.05); 
+  background-color: rgba(255, 255, 255, 0.05); 
+  backdrop-filter: blur(2px) saturate(150%); 
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);
+  cursor:pointer; 
     }
   .overlay-fs::after {
-    content: ""; /* Added missing quotes */
-    position: absolute; 
-    top: 0; 
-    left: 0; 
-    width: 100%; 
-    height: 100%; 
-    background: rgba(255, 255, 255, 0.1); 
-    border-radius: 100px; 
-    backdrop-filter: blur(1px); 
-    box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 1), 
-                inset 0px -9px 0px -8px rgba(255, 255, 255, 1); 
-    opacity: 0.6; 
-    z-index: -1; 
-    filter: brightness(115%);
+  content: ""; /* Added missing quotes */
+  position: absolute; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%; 
+  background: rgba(255, 255, 255, 0.02); 
+  border-radius: 100px; 
+  backdrop-filter: blur(1px); 
+  box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 0.4), 
+              inset 0px -9px 0px -8px rgba(255, 255, 255, 0.4); 
+  opacity: 0.6; 
+  z-index: -1; 
+  /* Removed heavy filter stack causing the jagged aliasing */
+  filter: brightness(115%);
     }         
 
   .overlay-fs[hidden]{display:none !important;}
   .overlay-fs svg{width:40px;height:40px;}
-  .overlay-fs:hover{background:rgba(255, 255, 255, 0.35);}
+  .overlay-fs:hover{background:rgba(255, 255, 255, 0.1);}
 
   #eng-wrap:fullscreen .overlay-fs,
   #eng-wrap:-webkit-full-screen .overlay-fs,
