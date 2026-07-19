@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.429";
+const VERSION = "1.0.430";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -800,7 +800,6 @@ const STYLES = `
     display: block !important;
     margin:0 !important;
     padding:0 !important;
-    top:0 !important;
     overflow: hidden;
     box-sizing: border-box !important;
     position: relative;
@@ -840,10 +839,6 @@ const STYLES = `
     min-height: 0 !important;
     height: auto;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
-    align-self: start !important;
-    margin-top: 0px !important;
-    top: 0px !important;
-    position: relative !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-m);
