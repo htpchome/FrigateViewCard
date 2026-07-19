@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.391";
+const VERSION = "1.0.392";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1388,6 +1388,7 @@ class FrigateViewCard extends HTMLElement {
     this._recordingsSwipeCleanup = null;
     this._mobileBounceGuardCleanup = null;
     this._mobileBounceGuardTargets = null;
+    this._mobileBounceAnchorTop = null;
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
@@ -6527,6 +6528,7 @@ class FrigateViewCard extends HTMLElement {
         this._mobileBounceGuardCleanup = null;
         this._mobileBounceGuardTargets = null;
       }
+      this._mobileBounceAnchorTop = null;
       return;
     }
 
@@ -6570,7 +6572,12 @@ class FrigateViewCard extends HTMLElement {
       this._mobileBounceGuardTargets.every(
         (el, index) => el === [card, ...scrollers][index],
       );
-    if (sameTargets && this._mobileBounceGuardCleanup) return;
+    if (sameTargets && this._mobileBounceGuardCleanup) {
+      if (!Number.isFinite(this._mobileBounceAnchorTop)) {
+        this._mobileBounceAnchorTop = this.getBoundingClientRect().top;
+      }
+      return;
+    }
 
     if (this._mobileBounceGuardCleanup) {
       this._mobileBounceGuardCleanup();
@@ -6579,6 +6586,7 @@ class FrigateViewCard extends HTMLElement {
     }
 
     let startY = 0;
+    this._mobileBounceAnchorTop = this.getBoundingClientRect().top;
 
     const onTouchStart = (event) => {
       const touch = event.touches?.[0];
@@ -6592,6 +6600,13 @@ class FrigateViewCard extends HTMLElement {
       const deltaY = touch.clientY - startY;
       // Keep downward pull behavior for native refresh gestures.
       if (deltaY >= 0) return;
+
+      const anchorTop = Number(this._mobileBounceAnchorTop);
+      const cardTop = this.getBoundingClientRect().top;
+      if (Number.isFinite(anchorTop) && cardTop <= anchorTop + 1) {
+        if (event.cancelable) event.preventDefault();
+        return;
+      }
 
       const canAnyCardScrollerConsumeUpward = scrollers.some((scroller) =>
         canConsumeUpward(scroller),
