@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.417";
+const VERSION = "1.0.418";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -880,7 +880,6 @@ const STYLES = `
     min-height:0;
     height:95%;
     overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
     position:relative}
 
   .card .browse-head{display:flex;align-items:center;justify-content:center;background:var(--c-bg-main);min-height:1.75rem;max-height:1.85em;flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;padding:1px 8px;}
@@ -1428,6 +1427,26 @@ class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("doc-visible");
       }
     };
+//========================
+
+document.addEventListener('touchmove', function(event) {
+    // Target the main Home Assistant panel or your section view class
+    const sectionView = event.target.closest('ha-section-view');
+    
+    // If we are touching the section view, let it scroll naturally. 
+    // Otherwise, prevent the whole page from bouncing.
+    if (sectionView) {
+        return;
+    }
+    event.preventDefault();
+}, { passive: false });
+
+
+
+
+//=========================
+
+
 
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
@@ -1436,7 +1455,7 @@ class FrigateViewCard extends HTMLElement {
       "webkitfullscreenchange",
       this._onFullscreenChange,
     );
-
+    
     this._onViewportRotate = () => this._scheduleRotateOverlayUpdate();
     window.addEventListener("resize", this._onViewportRotate, {
       passive: true,
@@ -5907,7 +5926,6 @@ class FrigateViewCard extends HTMLElement {
     this._applyLayoutMode();
     this._syncBrowseHeadModeClass();
     this._bindListScroll();
-    this._bindIOSBrowseBoundaryNudge();
     this._bindRecordingsSwipe();
     this._initResizeHandle();
   }
@@ -6000,31 +6018,6 @@ class FrigateViewCard extends HTMLElement {
     if (list) list.addEventListener("scroll", onScroll, { passive: true });
     if (browse && browse !== list)
       browse.addEventListener("scroll", onScroll, { passive: true });
-  }
-
-  _bindIOSBrowseBoundaryNudge() {
-    if (this._iosBrowseBoundaryCleanup) {
-      this._iosBrowseBoundaryCleanup();
-      this._iosBrowseBoundaryCleanup = null;
-    }
-    if (!isIOSDevice()) return;
-    const browse = this._$("#browse");
-    if (!browse) return;
-
-    const nudgeFromBottomEdge = () => {
-      const maxScrollTop = browse.scrollHeight - browse.clientHeight;
-      if (maxScrollTop <= 1) return;
-      if (browse.scrollTop >= maxScrollTop) {
-        browse.scrollTop = maxScrollTop - 1;
-      }
-    };
-
-    browse.addEventListener("touchstart", nudgeFromBottomEdge, {
-      passive: true,
-    });
-    this._iosBrowseBoundaryCleanup = () => {
-      browse.removeEventListener("touchstart", nudgeFromBottomEdge);
-    };
   }
 
   _bindRecordingsSwipe() {
