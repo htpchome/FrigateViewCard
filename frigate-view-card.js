@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.372";
+const VERSION = "1.0.373";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2567,6 +2567,16 @@ class FrigateViewCard extends HTMLElement {
     return "webrtc";
   }
 
+  _currentLiveStreamHint() {
+    const active = String(this._activeStreamType || "")
+      .trim()
+      .toLowerCase();
+    if (active === "webrtc" || active === "mse" || active === "hls") {
+      return active;
+    }
+    return this._preferredStreamType();
+  }
+
   _hlsStateObj(entity, streamType = null) {
     const raw = this._hass.states[entity];
     if (!raw) return null;
@@ -3898,6 +3908,7 @@ class FrigateViewCard extends HTMLElement {
 
   _mountGridEngine(slot) {
     const indices = this._gridPageCameraIndices();
+    const liveStreamHint = this._currentLiveStreamHint();
     const signatureParts = [];
     for (const idx of indices) {
       if (idx < 0) {
@@ -3910,7 +3921,7 @@ class FrigateViewCard extends HTMLElement {
       const useLive =
         this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
       signatureParts.push(
-        `${idx}:${entity}:${severity || "none"}:${useLive ? "live" : "snap"}`,
+        `${idx}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`,
       );
     }
     const nextSignature = signatureParts.join("|");
@@ -3933,7 +3944,7 @@ class FrigateViewCard extends HTMLElement {
         const cam = this._config?.cameras?.[idx];
         const entity = cam?.entity || "";
         const stateObj = entity
-          ? this._hlsStateObj(entity, this._preferredStreamType()) ||
+          ? this._hlsStateObj(entity, liveStreamHint) ||
             this._hass?.states?.[entity] ||
             null
           : null;
