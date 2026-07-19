@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.392";
+const VERSION = "1.0.393";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -692,8 +692,6 @@ const buildEditorConfigFromDom = ({
     root.querySelector("#tight_margins")?.checked === true;
   nextConfig.shadows = root.querySelector("#shadows")?.checked !== false;
   nextConfig.wide_view = root.querySelector("#wide_view")?.checked === true;
-  nextConfig.reduce_app_bounce_mobile =
-    root.querySelector("#reduce_app_bounce_mobile")?.checked === true;
 
   const leftWidthRaw = root
     .querySelector("#col_left_width_pct")
@@ -728,7 +726,6 @@ const createEditorPreviewDraft = (config) => ({
   tight_margins: config.tight_margins,
   shadows: config.shadows,
   wide_view: config.wide_view,
-  reduce_app_bounce_mobile: config.reduce_app_bounce_mobile,
   col_left_width_pct: config.col_left_width_pct,
 });
 
@@ -1386,9 +1383,6 @@ class FrigateViewCard extends HTMLElement {
     this._recordingsSwipeGesture = null;
     this._recordingsSwipeBlockTap = false;
     this._recordingsSwipeCleanup = null;
-    this._mobileBounceGuardCleanup = null;
-    this._mobileBounceGuardTargets = null;
-    this._mobileBounceAnchorTop = null;
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
@@ -1525,8 +1519,6 @@ class FrigateViewCard extends HTMLElement {
           tight_margins: previewConfig.tight_margins === true,
           shadows: previewConfig.shadows !== false,
           wide_view: previewConfig.wide_view === true,
-          reduce_app_bounce_mobile:
-            previewConfig.reduce_app_bounce_mobile === true,
           col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
         }
       : base;
@@ -1911,7 +1903,6 @@ class FrigateViewCard extends HTMLElement {
       tight_margins: config.tight_margins === true,
       shadows: config.shadows !== false,
       wide_view: config.wide_view === true,
-      reduce_app_bounce_mobile: config.reduce_app_bounce_mobile === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
     };
     this._committedConfig = this._cloneCardConfig(nextConfig);
@@ -2060,11 +2051,6 @@ class FrigateViewCard extends HTMLElement {
     if (this._recordingsSwipeCleanup) {
       this._recordingsSwipeCleanup();
       this._recordingsSwipeCleanup = null;
-    }
-    if (this._mobileBounceGuardCleanup) {
-      this._mobileBounceGuardCleanup();
-      this._mobileBounceGuardCleanup = null;
-      this._mobileBounceGuardTargets = null;
     }
     this._clearPopupMediaCleanup();
     if (this._onDocVisibility) {
@@ -6513,128 +6499,6 @@ class FrigateViewCard extends HTMLElement {
         card.style.removeProperty(key);
       }
     }
-
-    this._syncMobileBounceGuard();
-  }
-
-  _syncMobileBounceGuard() {
-    const enabled =
-      this._config?.reduce_app_bounce_mobile === true &&
-      DEVICE_PROFILE.isMobile;
-
-    if (!enabled) {
-      if (this._mobileBounceGuardCleanup) {
-        this._mobileBounceGuardCleanup();
-        this._mobileBounceGuardCleanup = null;
-        this._mobileBounceGuardTargets = null;
-      }
-      this._mobileBounceAnchorTop = null;
-      return;
-    }
-
-    const card = this._$("#card");
-    const browse = this._$("#browse");
-    const list = this._$("#list");
-    if (!(card instanceof HTMLElement)) return;
-    const scrollers = [list, browse].filter((el) => el instanceof HTMLElement);
-
-    const canConsumeUpward = (scroller) => {
-      if (!(scroller instanceof HTMLElement)) return false;
-      const maxScrollTop = Math.max(
-        0,
-        scroller.scrollHeight - scroller.clientHeight,
-      );
-      if (maxScrollTop <= 1) return false;
-      return scroller.scrollTop < maxScrollTop - 1;
-    };
-
-    const resolveOuterScroller = () => {
-      let node = this;
-      while (node) {
-        node = node.parentNode || node.host || null;
-        if (!(node instanceof HTMLElement)) continue;
-        const style = getComputedStyle(node);
-        const overflowY = style.overflowY || "";
-        const scrollableOverflow =
-          overflowY.includes("auto") ||
-          overflowY.includes("scroll") ||
-          overflowY.includes("overlay");
-        const hasVerticalRange = node.scrollHeight > node.clientHeight + 1;
-        if (scrollableOverflow && hasVerticalRange) return node;
-      }
-      const docScroller = document.scrollingElement;
-      return docScroller instanceof HTMLElement ? docScroller : null;
-    };
-
-    const sameTargets =
-      Array.isArray(this._mobileBounceGuardTargets) &&
-      this._mobileBounceGuardTargets.length === scrollers.length + 1 &&
-      this._mobileBounceGuardTargets.every(
-        (el, index) => el === [card, ...scrollers][index],
-      );
-    if (sameTargets && this._mobileBounceGuardCleanup) {
-      if (!Number.isFinite(this._mobileBounceAnchorTop)) {
-        this._mobileBounceAnchorTop = this.getBoundingClientRect().top;
-      }
-      return;
-    }
-
-    if (this._mobileBounceGuardCleanup) {
-      this._mobileBounceGuardCleanup();
-      this._mobileBounceGuardCleanup = null;
-      this._mobileBounceGuardTargets = null;
-    }
-
-    let startY = 0;
-    this._mobileBounceAnchorTop = this.getBoundingClientRect().top;
-
-    const onTouchStart = (event) => {
-      const touch = event.touches?.[0];
-      if (!touch) return;
-      startY = touch.clientY;
-    };
-    const onTouchMove = (event) => {
-      if (event.touches?.length !== 1) return;
-      const touch = event.touches[0];
-
-      const deltaY = touch.clientY - startY;
-      // Keep downward pull behavior for native refresh gestures.
-      if (deltaY >= 0) return;
-
-      const anchorTop = Number(this._mobileBounceAnchorTop);
-      const cardTop = this.getBoundingClientRect().top;
-      if (Number.isFinite(anchorTop) && cardTop <= anchorTop + 1) {
-        if (event.cancelable) event.preventDefault();
-        return;
-      }
-
-      const canAnyCardScrollerConsumeUpward = scrollers.some((scroller) =>
-        canConsumeUpward(scroller),
-      );
-      if (canAnyCardScrollerConsumeUpward) return;
-
-      const outerScroller = resolveOuterScroller();
-      const canOuterConsumeUpward = canConsumeUpward(outerScroller);
-
-      if (!canOuterConsumeUpward && event.cancelable) {
-        event.preventDefault();
-      }
-    };
-
-    card.addEventListener("touchstart", onTouchStart, {
-      passive: true,
-      capture: true,
-    });
-    card.addEventListener("touchmove", onTouchMove, {
-      passive: false,
-      capture: true,
-    });
-
-    this._mobileBounceGuardTargets = [card, ...scrollers];
-    this._mobileBounceGuardCleanup = () => {
-      card.removeEventListener("touchstart", onTouchStart, true);
-      card.removeEventListener("touchmove", onTouchMove, true);
-    };
   }
   _isCardVisible() {
     if (!this.isConnected) return false;
@@ -9967,7 +9831,6 @@ class FrigateViewCardEditor extends HTMLElement {
     src.grid_mode_enabled = src.grid_mode_enabled === true;
     src.grid_start_in_grid_enabled = src.grid_start_in_grid_enabled === true;
     src.grid_live_view_enabled = src.grid_live_view_enabled !== false;
-    src.reduce_app_bounce_mobile = src.reduce_app_bounce_mobile === true;
     src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
       Number(src.grid_rotation_seconds),
     )
@@ -10609,13 +10472,6 @@ class FrigateViewCardEditor extends HTMLElement {
           <span style="font-size:11px;color:var(--c-text2)">%</span>
         </div>
         <div class="field-helper" id="col_left_width_pct-helper"></div>
-      </div>
-      <div class="section">
-        <div class="layout-row">
-          <span class="field-label" style="margin:0">Reduce App Bounce on Mobile</span>
-          <ha-switch id="reduce_app_bounce_mobile" ${this._config?.reduce_app_bounce_mobile ? "checked" : ""}></ha-switch>
-        </div>
-        <div class="field-helper">Reduces upward overscroll bounce inside this card on phones/tablets while keeping downward pull-to-refresh behavior.</div>
       </div>`;
 
     const activeSettingsPanel =
@@ -10999,7 +10855,6 @@ class FrigateViewCardEditor extends HTMLElement {
         "tight_margins",
         "wide_view",
         "shadows",
-        "reduce_app_bounce_mobile",
         "mobile_poll_battery_saver",
         "slideshow_rotation_enabled",
         "grid_mode_enabled",
