@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.363";
+const VERSION = "1.0.364";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2737,11 +2737,13 @@ class FrigateViewCard extends HTMLElement {
 
     const order = forcedType
       ? [forcedType]
-      : this._isEdge()
-        ? this._isDashboardEditMode()
-          ? ["webrtc"]
-          : ["webrtc", "mse"]
-        : ["webrtc", "mse"];
+      : this._isFirefox()
+        ? ["webrtc"]
+        : this._isEdge()
+          ? this._isDashboardEditMode()
+            ? ["webrtc"]
+            : ["webrtc", "mse"]
+          : ["webrtc", "mse"];
     return order
       .filter((type) => typeof build[type] === "function")
       .map((type) => ({ type, start: build[type] }));
@@ -3914,7 +3916,9 @@ class FrigateViewCard extends HTMLElement {
       if (idx >= 0) {
         const cam = this._config?.cameras?.[idx];
         const entity = cam?.entity || "";
-        const stateObj = entity ? this._hass?.states?.[entity] : null;
+        const stateObj = entity
+          ? this._hlsStateObj(entity, this._preferredStreamType())
+          : null;
         const severity = this._gridCellSeverity(entity);
         if (severity === "alert") cell.classList.add("grid-alert");
         if (severity === "detection") cell.classList.add("grid-detection");
@@ -3936,15 +3940,18 @@ class FrigateViewCard extends HTMLElement {
           img.alt = `${entity} snapshot`;
           img.loading = "lazy";
           img.decoding = "async";
-          if (entityPicture) {
-            img.src = /^https?:\/\//i.test(entityPicture)
-              ? entityPicture
-              : `${window.location.origin}${entityPicture}`;
-          }
           void (async () => {
-            const url = await this._streamFallbackUrl(entity);
-            if (!url || !img.isConnected) return;
-            if (!img.src || img.src === "about:blank") img.src = url;
+            const primaryUrl = await this._streamFallbackUrl(entity);
+            if (!img.isConnected) return;
+            if (primaryUrl) {
+              img.src = primaryUrl;
+              return;
+            }
+            if (entityPicture) {
+              img.src = /^https?:\/\//i.test(entityPicture)
+                ? entityPicture
+                : `${window.location.origin}${entityPicture}`;
+            }
           })();
           cell.appendChild(img);
         } else {
