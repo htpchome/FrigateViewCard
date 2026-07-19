@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.402";
+const VERSION = "1.0.403";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1427,26 +1427,39 @@ class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("doc-visible");
       }
     };
-//========================
 
-document.addEventListener('touchmove', function(event) {
-    // Target the main Home Assistant panel or your section view class
-    const sectionView = event.target.closest('ha-section-view');
-    
-    // If we are touching the section view, let it scroll naturally. 
-    // Otherwise, prevent the whole page from bouncing.
-    if (sectionView) {
-        return;
-    }
-    event.preventDefault();
-}, { passive: false });
+    this._touchStartX = 0;
+    this._touchStartY = 0;
+    this._onCardTouchStart = (event) => {
+      if (!event?.touches?.length) return;
+      this._touchStartX = Number(event.touches[0].clientX) || 0;
+      this._touchStartY = Number(event.touches[0].clientY) || 0;
+    };
+    this._onCardTouchMove = (event) => {
+      if (!event?.cancelable || !event?.touches?.length) return;
+      const currentX = Number(event.touches[0].clientX) || 0;
+      const currentY = Number(event.touches[0].clientY) || 0;
+      const deltaX = currentX - this._touchStartX;
+      const deltaY = currentY - this._touchStartY;
+      // Only guard pull-down gestures; do not interfere with upward or mostly-horizontal moves.
+      if (deltaY <= 0 || Math.abs(deltaY) <= Math.abs(deltaX)) return;
 
+      const path = event.composedPath?.() || [];
+      const insideCard = path.includes(this) || path.includes(this.shadowRoot);
+      if (!insideCard) return;
 
-
-
-//=========================
-
-
+      const scrollable = this._nearestScrollableYInPath(path);
+      if (scrollable && scrollable.scrollTop > 0) return;
+      event.preventDefault();
+    };
+    this.shadowRoot.addEventListener("touchstart", this._onCardTouchStart, {
+      passive: true,
+      capture: true,
+    });
+    this.shadowRoot.addEventListener("touchmove", this._onCardTouchMove, {
+      passive: false,
+      capture: true,
+    });
 
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
@@ -1455,7 +1468,6 @@ document.addEventListener('touchmove', function(event) {
       "webkitfullscreenchange",
       this._onFullscreenChange,
     );
-    
     this._onViewportRotate = () => this._scheduleRotateOverlayUpdate();
     window.addEventListener("resize", this._onViewportRotate, {
       passive: true,
@@ -2078,6 +2090,20 @@ document.addEventListener('touchmove', function(event) {
     }
     if (this._onShadowError) {
       this.shadowRoot.removeEventListener("error", this._onShadowError, true);
+    }
+    if (this._onCardTouchStart) {
+      this.shadowRoot.removeEventListener(
+        "touchstart",
+        this._onCardTouchStart,
+        {
+          capture: true,
+        },
+      );
+    }
+    if (this._onCardTouchMove) {
+      this.shadowRoot.removeEventListener("touchmove", this._onCardTouchMove, {
+        capture: true,
+      });
     }
     if (this._popupHandlers) {
       const h = this._popupHandlers;
@@ -4507,6 +4533,22 @@ document.addEventListener('touchmove', function(event) {
   _isMobilePhoneViewport() {
     const width = Number(this._cardWidth || window.innerWidth || 0);
     return width > 0 && width < 420;
+  }
+
+  _nearestScrollableYInPath(path = []) {
+    for (const node of path) {
+      if (!(node instanceof HTMLElement)) continue;
+      const style = window.getComputedStyle?.(node);
+      const overflowY = String(style?.overflowY || "").toLowerCase();
+      const canScrollY =
+        (overflowY === "auto" ||
+          overflowY === "scroll" ||
+          overflowY === "overlay") &&
+        node.scrollHeight > node.clientHeight + 1;
+      if (canScrollY) return node;
+      if (node === this || node === this.shadowRoot?.host) break;
+    }
+    return null;
   }
 
   _slideshowRotationMs() {
