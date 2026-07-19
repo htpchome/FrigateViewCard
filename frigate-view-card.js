@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.437";
+const VERSION = "1.0.438";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1067,37 +1067,37 @@ const STYLES = `
     top:8px;
     right:8px;
     z-index:3;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 6px;
-    border-radius: 999rem;
-    color: var-(--c-text);
-    font-size: 1.0rem;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    background-color: rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(2px) saturate(150%);
-    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 6px;
+          border-radius: 999rem;
+          color: black;
+          font-size: 1.0rem;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          background-color: rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(2px) saturate(150%);
+          box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
     }
   .overlay-fs::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2rem;
-    backdrop-filter: blur(1px);
-    box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 1),
-                inset 0px -9px 0px -8px rgba(255, 255, 255, 1);
-    opacity: 0.6;
-    z-index: -1;
-    filter: blur(1px) drop-shadow(10px 4px 6px black) brightness(115%);
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 999rem;
+          backdrop-filter: blur(1px);
+          box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 1),
+                      inset 0px -9px 0px -8px rgba(255, 255, 255, 1);
+          opacity: 0.6;
+          z-index: -1;
+          filter: blur(1px) drop-shadow(10px 4px 6px black) brightness(115%);
     }         
 
   .overlay-fs[hidden]{display:none !important;}
-  .overlay-fs svg{width:44px;height:44px;}
+  .overlay-fs svg{width:40px;height:40px;}
   .overlay-fs:hover{background:rgba(255, 255, 255, 0.35);}
 
   #eng-wrap:fullscreen .overlay-fs,
