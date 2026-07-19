@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.368";
+const VERSION = "1.0.369";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1405,9 +1405,6 @@ class FrigateViewCard extends HTMLElement {
     this._mountInProgress = false;
     this._mountStartedAt = 0;
     this._mountTargetEntity = "";
-    this._mseConnectAt = 0;
-    this._mseLastChunkAt = 0;
-    this._mseChunkCount = 0;
     this._deepLinkEventId = "";
     this._deepLinkReviewId = "";
     this._deepLinkMediaHint = "";
@@ -2567,10 +2564,6 @@ class FrigateViewCard extends HTMLElement {
     return "webrtc";
   }
 
-  _gridLiveStreamType() {
-    return this._isFirefox() ? "mse" : this._preferredStreamType();
-  }
-
   _hlsStateObj(entity, streamType = null) {
     const raw = this._hass.states[entity];
     if (!raw) return null;
@@ -2739,21 +2732,13 @@ class FrigateViewCard extends HTMLElement {
       mse: () =>
         this._tryMountGo2RTCMSE(
           hiddenSlot(),
-          this._isFirefox()
-            ? {
-                waitMs: 9000,
-                minCurrentTime: 0,
-                minDecodedFrames: 0,
-                requireReadyState: 0,
-                strict: false,
-              }
-            : {
-                waitMs: 4000,
-                minCurrentTime: 0.05,
-                minDecodedFrames: 1,
-                requireReadyState: 2,
-                strict: true,
-              },
+          {
+            waitMs: 4000,
+            minCurrentTime: 0.05,
+            minDecodedFrames: 1,
+            requireReadyState: 2,
+            strict: true,
+          },
           { commit: false },
         ),
       hls: () =>
@@ -2764,15 +2749,7 @@ class FrigateViewCard extends HTMLElement {
         ),
     };
 
-    const order = forcedType
-      ? [forcedType]
-      : this._isFirefox()
-        ? ["webrtc"]
-        : this._isEdge()
-          ? this._isDashboardEditMode()
-            ? ["webrtc"]
-            : ["webrtc", "mse"]
-          : ["webrtc", "mse"];
+    const order = forcedType ? [forcedType] : ["webrtc", "mse", "hls"];
     this._ffDebug("Live attempt order", {
       forcedType: forcedType || "",
       order,
@@ -3251,9 +3228,6 @@ class FrigateViewCard extends HTMLElement {
     ws.binaryType = "arraybuffer";
     const startupAbort = new AbortController();
     let streamStarted = false;
-    this._mseConnectAt = Date.now();
-    this._mseLastChunkAt = 0;
-    this._mseChunkCount = 0;
 
     let sb = null;
     let mseRequested = false;
@@ -3373,8 +3347,6 @@ class FrigateViewCard extends HTMLElement {
       }
 
       if (!(ev.data instanceof ArrayBuffer)) return;
-      this._mseLastChunkAt = Date.now();
-      this._mseChunkCount += 1;
       this._ffDebug("Received binary MSE chunk", ev.data.byteLength);
       queue.push(ev.data);
       appendNext();
@@ -3664,21 +3636,6 @@ class FrigateViewCard extends HTMLElement {
       );
       if (await this._mountLiveWithRace(slot, attempts, mountToken)) return;
 
-      if (!forcedType && this._isFirefox()) {
-        const firefoxMseOk = await this._tryMountGo2RTCMSE(
-          slot,
-          {
-            waitMs: 9000,
-            minCurrentTime: 0,
-            minDecodedFrames: 0,
-            requireReadyState: 0,
-            strict: false,
-          },
-          { commit: true },
-        );
-        if (firefoxMseOk) return;
-      }
-
       // Avoid parallel transport startup churn on Edge by trying MSE only
       // after WebRTC has clearly failed.
       if (!forcedType && this._isEdge() && this._isDashboardEditMode()) {
@@ -3943,7 +3900,6 @@ class FrigateViewCard extends HTMLElement {
 
   _mountGridEngine(slot) {
     const indices = this._gridPageCameraIndices();
-    const gridStreamType = this._gridLiveStreamType();
     const signatureParts = [];
     for (const idx of indices) {
       if (idx < 0) {
@@ -3956,7 +3912,7 @@ class FrigateViewCard extends HTMLElement {
       const useLive =
         this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
       signatureParts.push(
-        `${idx}:${entity}:${severity || "none"}:${useLive ? `live:${gridStreamType}` : "snap"}`,
+        `${idx}:${entity}:${severity || "none"}:${useLive ? "live" : "snap"}`,
       );
     }
     const nextSignature = signatureParts.join("|");
@@ -3979,7 +3935,7 @@ class FrigateViewCard extends HTMLElement {
         const cam = this._config?.cameras?.[idx];
         const entity = cam?.entity || "";
         const stateObj = entity
-          ? this._hlsStateObj(entity, gridStreamType) ||
+          ? this._hlsStateObj(entity, this._preferredStreamType()) ||
             this._hass?.states?.[entity] ||
             null
           : null;
