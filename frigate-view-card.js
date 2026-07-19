@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.443";
+const VERSION = "1.0.444";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1067,11 +1067,10 @@ const STYLES = `
     top:16px;
     right:8px;
     z-index:3;
-  transform: translate(-50%, -50%); 
   display: inline-flex; 
   align-items: center; 
   justify-content: center; 
-  padding: 6px; 
+  padding: 3px; 
   border-radius: 100px; 
   color: black; 
   font-size: 1.0rem; 
