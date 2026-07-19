@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.424";
+const VERSION = "1.0.425";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1590,18 +1590,26 @@ if (cardRoot) {
 
 //===================================
 
-  // Target the nearest stable Home Assistant layout engine or view container
-  const dashboardView = this.closest('home-assistant-main') || this.parentElement;
+  super.connectedCallback?.();
 
-  if (dashboardView) {
-    this._layoutObserver = new ResizeObserver(() => {
-      // Whenever the dashboard layout shifts (like the header sliding back up)
-      this._realignCardPosition();
-    });
+  // Find the exact Home Assistant viewport root that controls the scrolling layout
+  // In modern HA, this is typically handled within the hui-view element
+  this._viewRoot = this.closest('hui-view') || this.closest('.view') || window;
+
+  // Use a standard scroll or custom event listener depending on layout engine
+  this._onHAScrollReset = () => {
+    // Clear any previous debounce timeout
+    if (this._resetTimeout) clearTimeout(this._resetTimeout);
     
-    // Begin watching the layout wrapper for shape shifts
-    this._layoutObserver.observe(dashboardView);
-  }
+    // Wait 150ms for the iOS native pull-to-refresh spinner to fully collapse
+    this._resetTimeout = setTimeout(() => {
+      this._realignCardPosition();
+    }, 150);
+  };
+
+  // Listen to both window resizing and layout scrolling to catch the header snap
+  this._viewRoot.addEventListener('scroll', this._onHAScrollReset, { passive: true });
+  window.addEventListener('resize', this._onHAScrollReset, { passive: true });
 
 //===================================
 
@@ -2050,9 +2058,11 @@ if (cardRoot) {
     }, 2500);
 //===============================================
 
-  if (this._layoutObserver) {
-    this._layoutObserver.disconnect();
+  if (this._resetTimeout) clearTimeout(this._resetTimeout);
+  if (this._viewRoot) {
+    this._viewRoot.removeEventListener('scroll', this._onHAScrollReset);
   }
+  window.removeEventListener('resize', this._onHAScrollReset);
   super.disconnectedCallback?.();
 
 //===============================================
@@ -2062,16 +2072,43 @@ if (cardRoot) {
  //===============================
  
 _realignCardPosition() {
-  const container = this.querySelector('.my-main-container');
+  // Safe extraction targeting both Shadow DOM or light DOM setups
+  const root = this.shadowRoot || this;
+  const container = root.querySelector('.my-main-container') || root.querySelector('ha-card');
+  
   if (!container) return;
 
-  // Force-reset the rendering bounds and clear any trapped scroll states
-  container.style.transform = 'translate3d(0, 0, 0)'; // Flushes the WebKit composite layer
-  
+  // STEP 1: Query the actual rendered bounding boxes to find the true gap
+  const header = document.querySelector('home-assistant')
+    ?.shadowRoot?.querySelector('home-assistant-main')
+    ?.shadowRoot?.querySelector('ha-top-app-bar-fixed') 
+    || document.querySelector('app-header') 
+    || document.querySelector('.header');
+
+  if (header) {
+    const headerRect = header.getBoundingClientRect();
+    const cardRect = container.getBoundingClientRect();
+
+    // If a gap exists between the bottom of the header and top of your card
+    if (cardRect.top > headerRect.bottom) {
+      // Forcefully snap the layout context by recalculating style properties
+      container.style.marginTop = '0px';
+      container.style.transform = 'translateY(0px)';
+    }
+  }
+
+  // STEP 2: Flushes the WebKit/Safari composite rendering layers to eliminate phantom gaps
+  container.style.display = 'none';
+  // Trigger a browser reflow programmatically
+  this.offsetHeight; 
+  container.style.display = 'block';
+
+  // STEP 3: Maintain your iOS bouncing safety trick
   if (container.scrollTop === 0) {
-    container.scrollTop = 1; // Re-engages the iOS bouncing safety trick
+    container.scrollTop = 1;
   }
 }
+
 
  //===============================
 
