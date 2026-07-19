@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.365";
+const VERSION = "1.0.366";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1405,6 +1405,9 @@ class FrigateViewCard extends HTMLElement {
     this._mountInProgress = false;
     this._mountStartedAt = 0;
     this._mountTargetEntity = "";
+    this._mseConnectAt = 0;
+    this._mseLastChunkAt = 0;
+    this._mseChunkCount = 0;
     this._deepLinkEventId = "";
     this._deepLinkReviewId = "";
     this._deepLinkMediaHint = "";
@@ -2726,13 +2729,21 @@ class FrigateViewCard extends HTMLElement {
       mse: () =>
         this._tryMountGo2RTCMSE(
           hiddenSlot(),
-          {
-            waitMs: 4000,
-            minCurrentTime: 0.05,
-            minDecodedFrames: 1,
-            requireReadyState: 2,
-            strict: true,
-          },
+          this._isFirefox()
+            ? {
+                waitMs: 9000,
+                minCurrentTime: 0,
+                minDecodedFrames: 0,
+                requireReadyState: 0,
+                strict: false,
+              }
+            : {
+                waitMs: 4000,
+                minCurrentTime: 0.05,
+                minDecodedFrames: 1,
+                requireReadyState: 2,
+                strict: true,
+              },
           { commit: false },
         ),
       hls: () =>
@@ -3228,6 +3239,9 @@ class FrigateViewCard extends HTMLElement {
     ws.binaryType = "arraybuffer";
     const startupAbort = new AbortController();
     let streamStarted = false;
+    this._mseConnectAt = Date.now();
+    this._mseLastChunkAt = 0;
+    this._mseChunkCount = 0;
 
     let sb = null;
     let mseRequested = false;
@@ -3347,6 +3361,8 @@ class FrigateViewCard extends HTMLElement {
       }
 
       if (!(ev.data instanceof ArrayBuffer)) return;
+      this._mseLastChunkAt = Date.now();
+      this._mseChunkCount += 1;
       this._ffDebug("Received binary MSE chunk", ev.data.byteLength);
       queue.push(ev.data);
       appendNext();
@@ -6515,6 +6531,7 @@ class FrigateViewCard extends HTMLElement {
   }
   _kickLiveIfStale(force = false) {
     if (!this._started || !this._hass || !this._config) return;
+    if (this._viewMode === "grid") return;
     if (!this._isCardVisible()) return;
     if (this._$("#myPopup")?.classList.contains("is-open")) return;
     if (this._mountInProgress) return;
@@ -6526,6 +6543,11 @@ class FrigateViewCard extends HTMLElement {
       return;
     const now = Date.now();
     if (!force && now - this._lastLiveKick < 4000) return;
+    const recentMseTraffic =
+      this._isFirefox() &&
+      (now - Number(this._mseConnectAt || 0) < 12000 ||
+        now - Number(this._mseLastChunkAt || 0) < 3500);
+    if (recentMseTraffic) return;
 
     const engineHost = this._$("#engine");
     const v =
@@ -6553,6 +6575,7 @@ class FrigateViewCard extends HTMLElement {
         ended: !!v?.ended,
         paused: !!v?.paused,
         currentTime: Number(v?.currentTime) || 0,
+        mseChunkCount: Number(this._mseChunkCount || 0),
       });
       this._mountEngine();
     }
