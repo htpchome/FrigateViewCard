@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.411";
+const VERSION = "1.0.412";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1422,6 +1422,8 @@ class FrigateViewCard extends HTMLElement {
     this._deepLinkReviewLookupTried = false;
     this._domShadowOriginalStyles = new Map();
     this._sectionContentStyleOriginal = new Map();
+    this._sectionContentTouchHandlers = new Map();
+    this._sectionContentSettleState = new Map();
     this._committedConfig = null;
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -1691,10 +1693,79 @@ class FrigateViewCard extends HTMLElement {
     if (!(content instanceof HTMLElement)) return;
     if (!this._sectionContentStyleOriginal.has(content)) {
       this._sectionContentStyleOriginal.set(content, {
+        overscrollBehavior: content.style.overscrollBehavior,
         overscrollBehaviorY: content.style.overscrollBehaviorY,
         height: content.style.height,
       });
     }
+    if (!this._sectionContentTouchHandlers.has(content)) {
+      const touch = {
+        startX: 0,
+        startY: 0,
+        pulldownAtTop: false,
+      };
+      const onTouchStart = (event) => {
+        if (!event?.touches?.length) return;
+        touch.startX = Number(event.touches[0].clientX) || 0;
+        touch.startY = Number(event.touches[0].clientY) || 0;
+        touch.pulldownAtTop = false;
+        this._clearSectionContentSettle(content);
+      };
+      const onTouchMove = (event) => {
+        if (!event?.cancelable || !event?.touches?.length) return;
+        const x = Number(event.touches[0].clientX) || 0;
+        const y = Number(event.touches[0].clientY) || 0;
+        const dx = x - touch.startX;
+        const dy = y - touch.startY;
+        if (Math.abs(dy) <= Math.abs(dx)) return;
+
+        if (dy > 12 && (Number(content.scrollTop) || 0) <= 1) {
+          touch.pulldownAtTop = true;
+        }
+
+        // Allow pull-down for refresh; only block upward elastic drag at bottom.
+        if (dy >= 0) return;
+
+        const maxScrollTop = Math.max(
+          0,
+          Number(content.scrollHeight) - Number(content.clientHeight),
+        );
+        if (
+          maxScrollTop <= 0 ||
+          Number(content.scrollTop) >= maxScrollTop - 1
+        ) {
+          event.preventDefault();
+        }
+      };
+      const onTouchEnd = () => {
+        if (touch.pulldownAtTop) {
+          this._queueSectionContentTopSettle(content);
+        }
+        touch.pulldownAtTop = false;
+      };
+      content.addEventListener("touchstart", onTouchStart, {
+        passive: true,
+        capture: true,
+      });
+      content.addEventListener("touchmove", onTouchMove, {
+        passive: false,
+        capture: true,
+      });
+      content.addEventListener("touchend", onTouchEnd, {
+        passive: true,
+        capture: true,
+      });
+      content.addEventListener("touchcancel", onTouchEnd, {
+        passive: true,
+        capture: true,
+      });
+      this._sectionContentTouchHandlers.set(content, {
+        onTouchStart,
+        onTouchMove,
+        onTouchEnd,
+      });
+    }
+    content.style.overscrollBehavior = "contain";
     content.style.overscrollBehaviorY = "contain";
     content.style.height = "100%";
   }
@@ -1705,10 +1776,79 @@ class FrigateViewCard extends HTMLElement {
       original,
     ] of this._sectionContentStyleOriginal.entries()) {
       if (!(content instanceof HTMLElement)) continue;
+      content.style.overscrollBehavior = original.overscrollBehavior;
       content.style.overscrollBehaviorY = original.overscrollBehaviorY;
       content.style.height = original.height;
     }
+    for (const [
+      content,
+      handlers,
+    ] of this._sectionContentTouchHandlers.entries()) {
+      if (!(content instanceof HTMLElement)) continue;
+      content.removeEventListener("touchstart", handlers.onTouchStart, {
+        capture: true,
+      });
+      content.removeEventListener("touchmove", handlers.onTouchMove, {
+        capture: true,
+      });
+      content.removeEventListener("touchend", handlers.onTouchEnd, {
+        capture: true,
+      });
+      content.removeEventListener("touchcancel", handlers.onTouchEnd, {
+        capture: true,
+      });
+      this._clearSectionContentSettle(content);
+    }
+    this._sectionContentTouchHandlers.clear();
     this._sectionContentStyleOriginal.clear();
+  }
+
+  _clearSectionContentSettle(content) {
+    const state = this._sectionContentSettleState.get(content);
+    if (!state) return;
+    if (state.raf) cancelAnimationFrame(state.raf);
+    for (const timer of state.timers || []) {
+      clearTimeout(timer);
+    }
+    this._sectionContentSettleState.delete(content);
+  }
+
+  _queueSectionContentTopSettle(content) {
+    if (!(content instanceof HTMLElement)) return;
+    this._clearSectionContentSettle(content);
+    const state = {
+      raf: 0,
+      until: Date.now() + 2200,
+      timers: [],
+    };
+    const alignTop = () => {
+      if (!this.isConnected || !content.isConnected) return;
+      if ((Number(content.scrollTop) || 0) > 0) {
+        content.scrollTop = 0;
+      }
+      const pageHost =
+        document.scrollingElement || document.documentElement || document.body;
+      if (pageHost && (Number(pageHost.scrollTop) || 0) > 0) {
+        pageHost.scrollTop = 0;
+      }
+    };
+    const step = () => {
+      alignTop();
+      if (Date.now() < state.until) {
+        state.raf = requestAnimationFrame(step);
+      } else {
+        state.raf = 0;
+      }
+    };
+    state.raf = requestAnimationFrame(step);
+    for (const delay of [120, 280, 520, 900, 1400, 2000]) {
+      state.timers.push(
+        setTimeout(() => {
+          alignTop();
+        }, delay),
+      );
+    }
+    this._sectionContentSettleState.set(content, state);
   }
 
   _applyLayoutMode() {
