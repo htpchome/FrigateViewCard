@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.376";
+const VERSION = "1.0.377";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2130,10 +2130,6 @@ class FrigateViewCard extends HTMLElement {
     this._subscribe();
     this._startEditModeWatchdog();
     this._startEditorDialogCloseObserver();
-    this._ffDebug("Stream debug active", {
-      ua: navigator.userAgent,
-      href: window.location?.href || "",
-    });
     this._consumeDeepLinkReviewOpen();
     this._consumeDeepLinkEventOpen();
     this._refresh = setInterval(() => {
@@ -2512,17 +2508,7 @@ class FrigateViewCard extends HTMLElement {
     return false;
   }
 
-  _ffDebug(msg, data = null) {
-    if (!this._isFirefox()) return;
-    const enabled =
-      window?.localStorage?.getItem("fvc_firefox_mse_debug") === "1";
-    if (!enabled) return;
-    if (data == null) {
-      console.debug(`[FVC][FF] ${msg}`);
-      return;
-    }
-    console.debug(`[FVC][FF] ${msg}`, data);
-  }
+  _ffDebug(_msg, _data = null) {}
 
   _isPerfDiagnosticsEnabled() {
     return false;
@@ -3717,17 +3703,6 @@ class FrigateViewCard extends HTMLElement {
         slot,
       );
       if (await this._mountLiveWithRace(slot, attempts, mountToken)) return;
-
-      // Avoid parallel transport startup churn on Edge by trying MSE only
-      // after WebRTC has clearly failed.
-      if (!forcedType && this._isEdge() && this._isDashboardEditMode()) {
-        const edgeMseOk = await this._tryMountGo2RTCMSE(
-          slot,
-          { waitMs: 5000 },
-          { commit: true },
-        );
-        if (edgeMseOk) return;
-      }
 
       // go2rtc attempts failed: show snapshot placeholder.
       this._setActiveStreamType("snapshot");
@@ -10844,9 +10819,3 @@ if (!window.customCards.find((c) => c.type === CARD_TAG))
     description: `Simple Frigate Camera and Events Card — v${VERSION}`,
     preview: true,
   });
-
-console.info(
-  `%c FRIGATE-VIEW-CARD %c v${VERSION} `,
-  "color:var(--c-text-rev);background:#1d4ed8;padding:2px 4px;border-radius:3px 0 0 3px;font-weight:bold",
-  "color:#1d4ed8;background:#dbeafe;padding:2px 4px;border-radius:0 3px 3px 0",
-);
