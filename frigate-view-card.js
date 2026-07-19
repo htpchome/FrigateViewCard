@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.414";
+const VERSION = "1.0.402";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -859,7 +859,7 @@ const STYLES = `
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
 
-  .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;overflow: hidden !important;}
+  .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;    overscroll-behavior: none !important;overflow: hidden !important;}
   .layout.wide{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
   .card .col-left > *{flex:0 0 auto;}
@@ -1421,15 +1421,13 @@ class FrigateViewCard extends HTMLElement {
     this._deepLinkEventLookupTried = false;
     this._deepLinkReviewLookupTried = false;
     this._domShadowOriginalStyles = new Map();
-    this._sectionContentStyleEl = null;
-    this._sectionContentObserver = null;
-    this._sectionContentRetryT = null;
     this._committedConfig = null;
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
         this._scheduleResumeLive("doc-visible");
       }
     };
+
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
@@ -1437,7 +1435,7 @@ class FrigateViewCard extends HTMLElement {
       "webkitfullscreenchange",
       this._onFullscreenChange,
     );
-
+    
     this._onViewportRotate = () => this._scheduleRotateOverlayUpdate();
     window.addEventListener("resize", this._onViewportRotate, {
       passive: true,
@@ -1563,7 +1561,6 @@ class FrigateViewCard extends HTMLElement {
     }
     this._syncCardShellClasses();
     this._syncDomShadows();
-    this._syncSectionsViewContentConstraints();
     this._scheduleRotateOverlayUpdate();
     if (this._started) {
       this._startEditModeWatchdog();
@@ -1663,90 +1660,16 @@ class FrigateViewCard extends HTMLElement {
   _setSectionsRowGap(tightMarginsEnabled) {
     let element = this;
     while (element) {
-      if (this._isSectionsViewElement(element)) {
+      if (element.tagName === "HUI-SECTIONS-VIEW") {
         if (tightMarginsEnabled && !this._isPanelView()) {
           element.style.setProperty("--ha-view-sections-row-gap", "0px");
         } else {
           element.style.removeProperty("--ha-view-sections-row-gap");
         }
-        this._syncSectionsViewContentConstraints(element);
         break;
       }
       element = element.parentNode || element.host;
     }
-  }
-
-  _isSectionsViewElement(element) {
-    const tag = String(element?.tagName || "").toUpperCase();
-    return tag === "HUI-SECTIONS-VIEW" || tag === "HA-SECTION-VIEW";
-  }
-
-  _findSectionsViewElement() {
-    let element = this;
-    while (element) {
-      if (this._isSectionsViewElement(element)) return element;
-      element = element.parentNode || element.host;
-    }
-    return null;
-  }
-
-  _syncSectionsViewContentConstraints(sectionsViewEl = null) {
-    const sectionsView = sectionsViewEl || this._findSectionsViewElement();
-    if (!sectionsView?.shadowRoot) {
-      this._scheduleSectionsViewContentConstraintsRetry();
-      return;
-    }
-    this._observeSectionsViewContent(sectionsView);
-    let styleEl = this._sectionContentStyleEl;
-    if (!(styleEl instanceof HTMLStyleElement) || !styleEl.isConnected) {
-      styleEl = sectionsView.shadowRoot.querySelector(
-        "style[data-frigate-view-section-content]",
-      );
-    }
-    if (!(styleEl instanceof HTMLStyleElement)) {
-      styleEl = document.createElement("style");
-      styleEl.dataset.frigateViewSectionContent = "true";
-      sectionsView.shadowRoot.prepend(styleEl);
-    }
-    styleEl.textContent = `
-      .content {
-        overscroll-behavior-y: contain !important;
-        height: 100% !important;
-      }
-    `;
-    this._sectionContentStyleEl = styleEl;
-  }
-
-  _scheduleSectionsViewContentConstraintsRetry() {
-    if (this._sectionContentRetryT) return;
-    this._sectionContentRetryT = setTimeout(() => {
-      this._sectionContentRetryT = null;
-      if (!this.isConnected) return;
-      this._syncSectionsViewContentConstraints();
-    }, 120);
-  }
-
-  _observeSectionsViewContent(sectionsView) {
-    if (!sectionsView?.shadowRoot || this._sectionContentObserver) return;
-    this._sectionContentObserver = new MutationObserver(() => {
-      if (!this.isConnected) return;
-      this._syncSectionsViewContentConstraints(sectionsView);
-    });
-    this._sectionContentObserver.observe(sectionsView.shadowRoot, {
-      childList: true,
-      subtree: true,
-    });
-  }
-
-  _restoreSectionsViewContentConstraints() {
-    if (this._sectionContentRetryT) clearTimeout(this._sectionContentRetryT);
-    this._sectionContentRetryT = null;
-    if (this._sectionContentObserver) this._sectionContentObserver.disconnect();
-    this._sectionContentObserver = null;
-    if (this._sectionContentStyleEl?.isConnected) {
-      this._sectionContentStyleEl.remove();
-    }
-    this._sectionContentStyleEl = null;
   }
 
   _applyLayoutMode() {
@@ -1779,7 +1702,7 @@ class FrigateViewCard extends HTMLElement {
     // inside a column element within the sections-view.
     let el = this;
     while (el) {
-      if (this._isSectionsViewElement(el) && el.shadowRoot) {
+      if (el.tagName === "HUI-SECTIONS-VIEW" && el.shadowRoot) {
         // Walk the sections-view shadow root looking for a
         // column / section wrapper between it and our card.
         return !this._hasAncestorInShadow(el.shadowRoot, this);
@@ -2189,7 +2112,6 @@ class FrigateViewCard extends HTMLElement {
       this.parentElement.style.padding = this._parentOrigStyle.padding;
     }
     this._setSectionsRowGap(false);
-    this._restoreSectionsViewContentConstraints();
     this._restoreDomShadowStyles();
     this._cleanupEngine();
   }
