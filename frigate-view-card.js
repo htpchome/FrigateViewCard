@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.402";
+const VERSION = "1.0.408";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1429,16 +1429,26 @@ class FrigateViewCard extends HTMLElement {
     };
 //========================
 
+let touchStartY = 0;
+
+document.addEventListener('touchstart', function(event) {
+    touchStartY = event.touches[0].clientY;
+}, { passive: true });
+
 document.addEventListener('touchmove', function(event) {
-    // Target the main Home Assistant panel or your section view class
-    const sectionView = event.target.closest('ha-section-view');
-    
-    // If we are touching the section view, let it scroll naturally. 
-    // Otherwise, prevent the whole page from bouncing.
-    if (sectionView) {
-        return;
+    const touchCurrentY = event.touches[0].clientY;
+    const isPullingUp = touchStartY > touchCurrentY; // Finger moving up, content moving down
+
+    if (isPullingUp) {
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = document.documentElement.clientHeight;
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+
+        // Check if the user is already at the very bottom of the page
+        if (scrollTop + clientHeight >= scrollHeight - 1) {
+            event.preventDefault(); // Stop the upward pull bounce
+        }
     }
-    event.preventDefault();
 }, { passive: false });
 
 
