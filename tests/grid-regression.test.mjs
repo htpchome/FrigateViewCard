@@ -9,7 +9,9 @@ const source = fs.readFileSync(
 
 test("grid mode config is wired through card and editor", () => {
   assert.equal(source.includes("grid_mode_enabled"), true);
+  assert.equal(source.includes("grid_live_view_enabled"), true);
   assert.equal(source.includes("grid_rotation_seconds"), true);
+  assert.equal(source.includes("Live View In Grid"), true);
   assert.equal(source.includes("Grid Rotation Frequency"), true);
   assert.equal(source.includes("grid_rotation_row"), true);
 });
@@ -22,4 +24,6 @@ test("grid mode toolbar and runtime hooks are present", () => {
   assert.equal(source.includes("_scheduleGridRotation"), true);
   assert.equal(source.includes("_handleGridRealtimeMessage"), true);
   assert.equal(source.includes("_probeLatestGridAlert"), true);
+  assert.equal(source.includes("_markGridAlertCamera"), true);
+  assert.equal(source.includes("data-grid-camidx"), true);
 });
