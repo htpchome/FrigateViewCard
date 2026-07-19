@@ -37,3 +37,19 @@ test("switch-camera cleanup preserves MSE while regular live startup stays unifi
     /const\s+order\s*=\s*forcedType\s*\?\s*\[forcedType\]\s*:\s*\["webrtc",\s*"mse",\s*"hls"\]/,
   );
 });
+
+test("MSE diagnostics are opt-in behind fvc_perf and trace the reuse lifecycle", () => {
+  assert.equal(source.includes('localStorage.getItem("fvc_perf")'), true);
+  assert.equal(source.includes("_traceMseLifecycle"), true);
+  assert.equal(source.includes("this._perfLog(`mse.${event}`"), true);
+  assert.equal(source.includes('this._traceMseLifecycle("ws-open"'), true);
+  assert.equal(source.includes('this._traceMseLifecycle("first-chunk"'), true);
+  assert.equal(
+    source.includes('this._traceMseLifecycle("stream-started"'),
+    true,
+  );
+  assert.equal(
+    source.includes('this._traceMseLifecycle("grace-stash-pending"'),
+    true,
+  );
+});

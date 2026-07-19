@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.383";
+const VERSION = "1.0.384";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1364,7 +1364,7 @@ class FrigateViewCard extends HTMLElement {
     this._warmOtherCamsDelayT = null;
     this._reloadPending = false;
     this._reloadAfterLoad = false;
-    this._perfEnabled = false;
+    this._perfEnabled = this._isPerfDiagnosticsEnabled();
     this._perfSeq = 0;
     this._realtimeHeadPollT = null;
     this._switchLoadT = null;
@@ -2540,7 +2540,12 @@ class FrigateViewCard extends HTMLElement {
   _ffDebug(_msg, _data = null) {}
 
   _isPerfDiagnosticsEnabled() {
-    return false;
+    try {
+      const value = String(localStorage.getItem("fvc_perf") || "").trim();
+      return value === "1" || value.toLowerCase() === "true";
+    } catch (_) {
+      return false;
+    }
   }
 
   _perfContext() {
@@ -2552,7 +2557,25 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _perfLog(event, data = {}) {
-    return;
+    if (!this._perfEnabled) return;
+    try {
+      console.info("[FrigateViewCard perf]", event, {
+        ts: Math.round(Date.now() / 10) * 10,
+        ...this._perfContext(),
+        ...data,
+      });
+    } catch (_) {}
+  }
+
+  _traceMseLifecycle(event, data = {}) {
+    if (!this._perfEnabled) return;
+    this._perfLog(`mse.${event}`, {
+      activeCam: this._activeCam?.entity || "",
+      activeStream: this._activeStreamType || "",
+      mountInProgress: this._mountInProgress,
+      mseChunkCount: this._mseChunkCount,
+      ...data,
+    });
   }
 
   _perfStart(label, data = {}) {
@@ -2669,6 +2692,11 @@ class FrigateViewCard extends HTMLElement {
     if (!key) return;
     const entry = this._mseGracePool.get(key);
     if (!entry) return;
+    this._traceMseLifecycle("grace-evict", {
+      entity: key,
+      hadEngine: !!entry.engine,
+      hadPromise: !!entry.promise,
+    });
     entry.cancelled = true;
     if (entry.timer) clearTimeout(entry.timer);
     this._mseGracePool.delete(key);
@@ -2689,6 +2717,11 @@ class FrigateViewCard extends HTMLElement {
     const key = String(entity || "").trim();
     if (!key || !engine?.video || !engine?.ws) return false;
     this._evictGraceMseEntry(key);
+    this._traceMseLifecycle("grace-stash-engine", {
+      entity: key,
+      wsReadyState: engine.ws.readyState,
+      chunkCount: this._mseChunkCount,
+    });
     this._ensureMseGraceHost().appendChild(engine.video);
     engine.video.muted = true;
     engine.video.controls = false;
@@ -2712,6 +2745,7 @@ class FrigateViewCard extends HTMLElement {
     const key = String(entity || "").trim();
     if (!key || !promise) return false;
     this._evictGraceMseEntry(key);
+    this._traceMseLifecycle("grace-stash-pending", { entity: key });
     const entry = {
       engine: null,
       cancelled: false,
@@ -2732,9 +2766,18 @@ class FrigateViewCard extends HTMLElement {
           return null;
         }
         if (!result?.ok || result.type !== "mse" || !result.engine) {
+          this._traceMseLifecycle("grace-pending-failed", {
+            entity: key,
+            ok: !!result?.ok,
+            type: result?.type || "",
+          });
           this._evictGraceMseEntry(key);
           return null;
         }
+        this._traceMseLifecycle("grace-pending-resolved", {
+          entity: key,
+          wsReadyState: result.engine.ws?.readyState,
+        });
         this._ensureMseGraceHost().appendChild(result.engine.video);
         result.engine.video.muted = true;
         result.engine.video.controls = false;
@@ -2745,6 +2788,7 @@ class FrigateViewCard extends HTMLElement {
         entry.promise = null;
         return result.engine;
       } catch (_) {
+        this._traceMseLifecycle("grace-pending-error", { entity: key });
         if (this._mseGracePool.get(key) === entry) {
           this._evictGraceMseEntry(key);
         }
@@ -2761,6 +2805,11 @@ class FrigateViewCard extends HTMLElement {
     if (!key) return null;
     const entry = this._mseGracePool.get(key);
     if (!entry) return null;
+    this._traceMseLifecycle("grace-take", {
+      entity: key,
+      hasEngine: !!entry.engine,
+      hasPromise: !!entry.promise,
+    });
     if (entry.timer) clearTimeout(entry.timer);
     this._mseGracePool.delete(key);
     return entry;
@@ -2780,11 +2829,17 @@ class FrigateViewCard extends HTMLElement {
   _adoptGraceMseEngine(slot, engine) {
     if (!slot || !engine?.video || !engine?.ws) return false;
     if (engine.ws.readyState > WebSocket.OPEN) {
+      this._traceMseLifecycle("grace-adopt-rejected", {
+        wsReadyState: engine.ws.readyState,
+      });
       try {
         engine.destroy?.();
       } catch (_) {}
       return false;
     }
+    this._traceMseLifecycle("grace-adopt", {
+      wsReadyState: engine.ws.readyState,
+    });
     engine.video.muted = this._streamMuted;
     engine.video.controls = false;
     engine.video.style.cssText =
@@ -3418,6 +3473,14 @@ class FrigateViewCard extends HTMLElement {
     const commit = options.commit !== false;
     const entity = options?.entity || this._activeCam?.entity || "";
     const muted = options?.muted ?? this._streamMuted;
+    let firstChunkLogged = false;
+
+    this._traceMseLifecycle("mount-begin", {
+      entity,
+      commit,
+      muted,
+      waitMs,
+    });
 
     if (!("WebSocket" in window) || !("MediaSource" in window)) {
       this._ffDebug("MSE unavailable in browser", {
@@ -3481,6 +3544,12 @@ class FrigateViewCard extends HTMLElement {
     };
 
     const destroy = () => {
+      this._traceMseLifecycle("destroy", {
+        entity,
+        streamStarted,
+        wsReadyState: ws.readyState,
+        chunkCount: this._mseChunkCount,
+      });
       try {
         if (!startupAbort.signal.aborted) startupAbort.abort();
       } catch (_) {}
@@ -3511,11 +3580,13 @@ class FrigateViewCard extends HTMLElement {
 
     ws.addEventListener("open", () => {
       this._ffDebug("go2rtc websocket opened");
+      this._traceMseLifecycle("ws-open", { entity });
       if (ms.readyState === "open") requestMSE();
     });
 
     ws.addEventListener("error", () => {
       this._ffDebug("go2rtc websocket error");
+      this._traceMseLifecycle("ws-error", { entity });
       if (!startupAbort.signal.aborted) startupAbort.abort();
     });
 
@@ -3524,6 +3595,13 @@ class FrigateViewCard extends HTMLElement {
         code: ev.code,
         reason: ev.reason,
         wasClean: ev.wasClean,
+      });
+      this._traceMseLifecycle("ws-close", {
+        entity,
+        code: ev.code,
+        reason: ev.reason,
+        wasClean: ev.wasClean,
+        streamStarted,
       });
       if (!startupAbort.signal.aborted) startupAbort.abort();
       if (streamStarted && commit && this._engine === engine) {
@@ -3577,6 +3655,13 @@ class FrigateViewCard extends HTMLElement {
       if (!(ev.data instanceof ArrayBuffer)) return;
       this._mseLastChunkAt = Date.now();
       this._mseChunkCount += 1;
+      if (!firstChunkLogged) {
+        firstChunkLogged = true;
+        this._traceMseLifecycle("first-chunk", {
+          entity,
+          bytes: ev.data.byteLength,
+        });
+      }
       this._ffDebug("Received binary MSE chunk", ev.data.byteLength);
       queue.push(ev.data);
       appendNext();
@@ -3591,10 +3676,16 @@ class FrigateViewCard extends HTMLElement {
     });
     if (!started) {
       this._ffDebug("Direct go2rtc MSE did not start within timeout");
+      this._traceMseLifecycle("mount-timeout", { entity, waitMs });
       destroy();
       return false;
     }
     streamStarted = true;
+    this._traceMseLifecycle("stream-started", {
+      entity,
+      chunkCount: this._mseChunkCount,
+      connectAgeMs: this._mseConnectAt ? Date.now() - this._mseConnectAt : 0,
+    });
 
     if (!commit) return { ok: true, type: "mse", engine, slot };
     this._setActiveStreamType("mse");
