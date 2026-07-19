@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.405";
+const VERSION = "1.0.406";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1431,12 +1431,16 @@ class FrigateViewCard extends HTMLElement {
     this._touchStartX = 0;
     this._touchStartY = 0;
     this._touchStartScrollable = null;
+    this._touchPulldownAtTop = false;
+    this._pullRefreshSettleTimers = [];
     this._onCardTouchStart = (event) => {
       if (!event?.touches?.length) return;
       this._touchStartX = Number(event.touches[0].clientX) || 0;
       this._touchStartY = Number(event.touches[0].clientY) || 0;
       const path = event.composedPath?.() || [];
       this._touchStartScrollable = this._nearestScrollableYInPath(path);
+      this._touchPulldownAtTop = false;
+      this._clearPullRefreshSettleTimers();
     };
     this._onCardTouchMove = (event) => {
       if (!event?.cancelable || !event?.touches?.length) return;
@@ -1452,6 +1456,12 @@ class FrigateViewCard extends HTMLElement {
       if (!insideCard) return;
 
       const scrollable = this._touchStartScrollable;
+      if (deltaY > 12) {
+        const atTop =
+          !(scrollable instanceof HTMLElement) ||
+          Number(scrollable.scrollTop) <= 1;
+        if (atTop) this._touchPulldownAtTop = true;
+      }
       if (!(scrollable instanceof HTMLElement) || !scrollable.isConnected)
         return;
       const maxScrollTop = Math.max(
@@ -1462,12 +1472,27 @@ class FrigateViewCard extends HTMLElement {
       if (Number(scrollable.scrollTop) < maxScrollTop - 1) return;
       event.preventDefault();
     };
+    this._onCardTouchEnd = () => {
+      if (this._touchPulldownAtTop) {
+        this._queuePullRefreshSettleAnchor();
+      }
+      this._touchPulldownAtTop = false;
+      this._touchStartScrollable = null;
+    };
     this.shadowRoot.addEventListener("touchstart", this._onCardTouchStart, {
       passive: true,
       capture: true,
     });
     this.shadowRoot.addEventListener("touchmove", this._onCardTouchMove, {
       passive: false,
+      capture: true,
+    });
+    this.shadowRoot.addEventListener("touchend", this._onCardTouchEnd, {
+      passive: true,
+      capture: true,
+    });
+    this.shadowRoot.addEventListener("touchcancel", this._onCardTouchEnd, {
+      passive: true,
       capture: true,
     });
 
@@ -2115,6 +2140,15 @@ class FrigateViewCard extends HTMLElement {
         capture: true,
       });
     }
+    if (this._onCardTouchEnd) {
+      this.shadowRoot.removeEventListener("touchend", this._onCardTouchEnd, {
+        capture: true,
+      });
+      this.shadowRoot.removeEventListener("touchcancel", this._onCardTouchEnd, {
+        capture: true,
+      });
+    }
+    this._clearPullRefreshSettleTimers();
     if (this._popupHandlers) {
       const h = this._popupHandlers;
       h.popup.removeEventListener("mousedown", h.onMouseDown);
@@ -4559,6 +4593,52 @@ class FrigateViewCard extends HTMLElement {
       if (node === this || node === this.shadowRoot?.host) break;
     }
     return null;
+  }
+
+  _pageScrollHostForCard() {
+    let node = this;
+    while (node) {
+      if (node instanceof HTMLElement) {
+        const style = window.getComputedStyle?.(node);
+        const overflowY = String(style?.overflowY || "").toLowerCase();
+        const canScrollY =
+          (overflowY === "auto" ||
+            overflowY === "scroll" ||
+            overflowY === "overlay") &&
+          node.scrollHeight > node.clientHeight + 1;
+        if (canScrollY) return node;
+      }
+      node = node.parentNode || node.host;
+    }
+    return document.scrollingElement || document.documentElement || null;
+  }
+
+  _clearPullRefreshSettleTimers() {
+    if (!Array.isArray(this._pullRefreshSettleTimers)) {
+      this._pullRefreshSettleTimers = [];
+      return;
+    }
+    for (const timer of this._pullRefreshSettleTimers) {
+      clearTimeout(timer);
+    }
+    this._pullRefreshSettleTimers = [];
+  }
+
+  _queuePullRefreshSettleAnchor() {
+    this._clearPullRefreshSettleTimers();
+    const scrollHost = this._pageScrollHostForCard();
+    if (!scrollHost) return;
+    const settleDelays = [80, 180, 320, 520, 800, 1200, 1700];
+    for (const delay of settleDelays) {
+      const timer = setTimeout(() => {
+        if (!this.isConnected) return;
+        const top = Number(scrollHost.scrollTop) || 0;
+        if (top > 1) {
+          scrollHost.scrollTop = 0;
+        }
+      }, delay);
+      this._pullRefreshSettleTimers.push(timer);
+    }
   }
 
   _slideshowRotationMs() {
