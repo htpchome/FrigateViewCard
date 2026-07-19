@@ -12,9 +12,9 @@ go2rtc:
     front_door:
       - ffmpeg:http://97.68.104.34:80/mjpg/video.mjpg#video=copy#audio=copy#audio=opus
     backyard:
-      - rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov
+      - ffmpeg:http://97.68.104.34:80/mjpg/video.mjpg#video=copy#audio=copy#audio=opus
     driveway:
-      - rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov
+      - ffmpeg:http://97.68.104.34:80/mjpg/video.mjpg#video=copy#audio=copy#audio=opus
   webrtc:
     candidates:
       - 0.0.0.0:8555
