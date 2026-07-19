@@ -1428,30 +1428,6 @@ class FrigateViewCard extends HTMLElement {
       }
     };
 
-    //=========================================
-
-const scrollArea = this.querySelector('.my-scroll-area'); 
-let startY = 0;
-
-// Capture the initial touch position
-scrollArea.addEventListener('touchstart', (e) => {
-  startY = e.touches[0].pageY;
-}, { passive: true });
-
-// Intercept and filter the movement
-scrollArea.addEventListener('touchmove', (e) => {
-  const currentY = e.touches[0].pageY;
-  const isMovingUpward = currentY > startY; // User dragging finger down (scrolling UP)
-
-  if (isMovingUpward) {
-    // Block the scroll action completely
-    if (e.cancelable) e.preventDefault(); 
-  }
-  // Downward finger drag (scrolling DOWN) is ignored here, letting child elements scroll normally
-}, { passive: false });
-
-    //=========================================
-
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
