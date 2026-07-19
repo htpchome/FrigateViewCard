@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.448";
+const VERSION = "1.0.449";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1062,11 +1062,8 @@ const STYLES = `
   .stream-loading{position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:6px;padding:4.8px 9.6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:0.825rem;font-weight:600;line-height:1;z-index:3;backdrop-filter:blur(2px);}
   .stream-loading[hidden]{display:none;}
   .stream-loading .dot{width:10px;height:10px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--c-text-rev);border-radius:50%;animation:spin .9s linear infinite;}
-.overlay-fs{
-    position:absolute;
-    top:8px;
-    right:8px;
-    z-index:3;
+
+.glass-btn{
   display: inline-flex; 
   align-items: center; 
   justify-content: center; 
@@ -1080,11 +1077,8 @@ const STYLES = `
   box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);
   cursor:pointer;  
 }
-.overlay-fs::after {
+.glass::after {
   content: ""; /* Added missing quotes */
-  position: absolute; 
-  top: 0; 
-  left: 0; 
   width: 100%; 
   height: 100%; 
   background: rgba(255, 255, 255, 0.04); 
@@ -1095,10 +1089,16 @@ const STYLES = `
   opacity: 0.4; 
   z-index: -1; 
   filter: brightness(115%); 
-}         
+}
+.glass-btn:hover{background:rgba(255, 255, 255, 0.3);} 
+.glass-btn svg {width:30px;height:30px;opacity: 0.8; }
+.glass-btn:hover svg {width:30px;height:30px;opacity: 0.95; }
+
+
+.overlay-fs{position:absolute;top:8px;left:8px;z-index:3;}
+.overlay-fs::after {content: "";position: absolute;top: 0;left: 0;}         
 
 .overlay-fs[hidden]{display:none !important;}
-.overlay-fs:hover{background:rgba(255, 255, 255, 0.3);} 
 .overlay-fs svg {width:30px;height:30px;opacity: 0.8; }
 .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
 
@@ -5827,7 +5827,7 @@ class FrigateViewCard extends HTMLElement {
                 <div id="engine">
                   <div class="ph">${ICONS.live}<span>Connecting…</span></div>
                 </div>
-                  <button class="overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${ICONS.expand}</button>
+                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${ICONS.expand}</button>
                   <div id="stream-fallback" hidden>
                     <img id="stream-fallback-img" alt="Camera snapshot">
                   </div>
@@ -8052,7 +8052,7 @@ class FrigateViewCard extends HTMLElement {
       return;
     }
     const btn = document.createElement("button");
-    btn.className = "overlay-fs popup-fs-btn";
+    btn.className = "glass-btn overlay-fs popup-fs-btn";
     btn.id = "popup-fs-btn";
     btn.title = label;
     btn.setAttribute("aria-label", label);
