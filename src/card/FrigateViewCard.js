@@ -393,7 +393,11 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
+//=================================
+  this._resizeObserver = new ResizeObserver(() => this._forceSnapToTop());
+  this._resizeObserver.observe(this);
 
+//=================================
   }
  
 
@@ -835,22 +839,6 @@ export class FrigateViewCard extends HTMLElement {
     if (themeChanged) {
       this._applyCardStyle();
     }
-
-//================================
-  // Wait for the exact moment the pull-to-refresh container stops rendering
-  requestAnimationFrame(() => {
-    // Force the global iOS WebKit window frame to snap strictly to coordinates 0,0
-    if (window.scrollY !== 0) {
-      window.scrollTo({
-        top: 0,
-        behavior: 'instant' // 'smooth' won't clear the locked WebKit bug
-      });
-    }
-  });
-
-//================================
-
-
   }
   get _activeCam() {
     return (
@@ -876,7 +864,32 @@ export class FrigateViewCard extends HTMLElement {
       this._ffDebug("Running deferred disconnect teardown");
       this._teardownDisconnected();
     }, 2500);
+//=============================
+this._resizeObserver?.disconnect();
+//=============================    
   }
+
+//=============================
+
+_forceSnapToTop() {
+  const innerWrapper = this.shadowRoot.getElementById('card-root');
+  if (!innerWrapper) return;
+
+  // This measures coordinates relative to the hardware screen frame, bypassing HA shadow roots
+  const rect = this.getBoundingClientRect();
+
+  // If rect.top drifts down significantly when it should be at the top grid row
+  // You can dynamically counteract the parent container's rendering offset
+  if (rect.top > 0 && rect.top < 120) { 
+    // Pull the inner card up exactly by the amount WebKit is lagging behind
+    // For standard headers, this neutralizes the "stuck slightly down" margin.
+    innerWrapper.style.transform = `translateY(-${rect.top - 56}px)`; 
+  } else {
+    innerWrapper.style.transform = 'translateY(0px)';
+  }
+}
+
+//=============================
 
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);

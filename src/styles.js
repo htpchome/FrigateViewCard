@@ -19,6 +19,33 @@ export const STYLES = `
     --popup-bg: white;
     --handle-color: #e0e0e0;
   }
+:host {
+  display: block;
+  /* Allow the inside element to float smoothly outside its broken parent rendering boundaries */
+  overflow: visible !important; 
+}
+
+#card-root {
+  position: relative;
+  will-change: transform;
+  /* Hardware accelerates the redraw, bypassing iOS WebKit container freezes */
+  transform: translateZ(0); 
+  -webkit-transform: translateZ(0);
+}
+ha-card {
+  position: relative;
+  will-change: transform;
+  /* Hardware accelerates the redraw, bypassing iOS WebKit container freezes */
+  transform: translateZ(0); 
+  -webkit-transform: translateZ(0);
+}
+.card {
+  position: relative;
+  will-change: transform;
+  /* Hardware accelerates the redraw, bypassing iOS WebKit container freezes */
+  transform: translateZ(0); 
+  -webkit-transform: translateZ(0);
+}
 
   /* ── theme variables (dark = default) ── */
     .card {

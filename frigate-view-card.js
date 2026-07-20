@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.530";
+const VERSION = "1.0.531";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -136,6 +136,33 @@ const STYLES = `
     --popup-bg: white;
     --handle-color: #e0e0e0;
   }
+:host {
+  display: block;
+  /* Allow the inside element to float smoothly outside its broken parent rendering boundaries */
+  overflow: visible !important; 
+}
+
+#card-root {
+  position: relative;
+  will-change: transform;
+  /* Hardware accelerates the redraw, bypassing iOS WebKit container freezes */
+  transform: translateZ(0); 
+  -webkit-transform: translateZ(0);
+}
+ha-card {
+  position: relative;
+  will-change: transform;
+  /* Hardware accelerates the redraw, bypassing iOS WebKit container freezes */
+  transform: translateZ(0); 
+  -webkit-transform: translateZ(0);
+}
+.card {
+  position: relative;
+  will-change: transform;
+  /* Hardware accelerates the redraw, bypassing iOS WebKit container freezes */
+  transform: translateZ(0); 
+  -webkit-transform: translateZ(0);
+}
 
   /* \u2500\u2500 theme variables (dark = default) \u2500\u2500 */
     .card {
@@ -1755,6 +1782,8 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
+    this._resizeObserver = new ResizeObserver(() => this._forceSnapToTop());
+    this._resizeObserver.observe(this);
   }
   _syncCardShellClasses() {
     const card = this.shadowRoot?.querySelector("#card");
@@ -2099,15 +2128,6 @@ const FrigateViewCard = class extends HTMLElement {
     if (themeChanged) {
       this._applyCardStyle();
     }
-    requestAnimationFrame(() => {
-      if (window.scrollY !== 0) {
-        window.scrollTo({
-          top: 0,
-          behavior: "instant"
-          // 'smooth' won't clear the locked WebKit bug
-        });
-      }
-    });
   }
   get _activeCam() {
     return this._config?.cameras[this._activeCamIdx] || this._config?.cameras[0];
@@ -2131,7 +2151,20 @@ const FrigateViewCard = class extends HTMLElement {
       this._ffDebug("Running deferred disconnect teardown");
       this._teardownDisconnected();
     }, 2500);
+    this._resizeObserver?.disconnect();
   }
+  //=============================
+  _forceSnapToTop() {
+    const innerWrapper = this.shadowRoot.getElementById("card-root");
+    if (!innerWrapper) return;
+    const rect = this.getBoundingClientRect();
+    if (rect.top > 0 && rect.top < 120) {
+      innerWrapper.style.transform = `translateY(-${rect.top - 56}px)`;
+    } else {
+      innerWrapper.style.transform = "translateY(0px)";
+    }
+  }
+  //=============================
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);
     this._stopGridModeState();
