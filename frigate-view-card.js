@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.527";
+const VERSION = "1.0.528";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1481,7 +1481,6 @@ const FrigateViewCard = class extends HTMLElement {
       const placeholder = img.nextElementSibling;
       if (placeholder) placeholder.style.display = "flex";
     };
-    this.attachShadow({ mode: "open" });
     this.shadowRoot.innerHTML = `
       <style>
         :host {

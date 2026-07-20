@@ -93,7 +93,6 @@ export class FrigateViewCard extends HTMLElement {
 
 //====================================
 
-    this.attachShadow({ mode: 'open' });
     this.shadowRoot.innerHTML = `
       <style>
         :host {
