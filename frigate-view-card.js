@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.455";
+const VERSION = "1.0.456";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1071,6 +1071,7 @@ const STYLES = `
     font-weight:600;padding:6px;
     white-space:nowrap;}  
   .cam-tab:hover{color:var(--c-primary-d);}
+  .cam-tab.active:hover{color:var(--c-primary-d);}
   .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
   .cam-tab svg{width:14.4px;height:14.4px;flex-shrink:0;}
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
@@ -5793,7 +5794,7 @@ class FrigateViewCard extends HTMLElement {
     const subtitle = this._subtitleText();
     const multiCam = this._config.cameras.length > 1;
     const camSwitcher = multiCam
-      ? `<div class="cam-switcher" id="cam-switcher"><div class="cam-tabs">${this._camSwitcherMarkup({ includeStatus: false })}</div></div>`
+      ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""}" id="card">
