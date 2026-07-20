@@ -91,30 +91,6 @@ export class FrigateViewCard extends HTMLElement {
       if (placeholder) placeholder.style.display = "flex";
     };
 
-//====================================
-
-    this.shadowRoot.innerHTML = `
-      <style>
-        :host {
-          display: block;
-        }
-        .stuck-shift-fix {
-          transform: translateY(0) !important;
-          margin-top: 0 !important;
-          padding-top: 0 !important;
-        }
-        #card-container {
-          position: relative;
-        }
-      </style>
-      <div id="sentinel" style="position:absolute; top:0; height:1px; width:1px;"></div>
-      <div id="card-container">
-         <!-- Your content -->
-      </div>
-    `;
-
-
-//=====================================
 
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
     this._hass = null;
@@ -417,37 +393,10 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-//=======================
-  this._setupObserver();
-//=======================
 
   }
  
-  //===============================
-_setupObserver() {
-    const sentinel = this.shadowRoot.getElementById('sentinel');
-    const container = this.shadowRoot.getElementById('card-container');
 
-    // Watch the card's entry position relative strictly to the main device window viewport
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        // If the bounding rect moves weirdly due to the iOS refresh container collapse
-        if (entry.boundingClientRect.top > 0) {
-          container.classList.add('stuck-shift-fix');
-        } else {
-          container.classList.remove('stuck-shift-fix');
-        }
-      });
-    }, {
-      root: null, // Viewport tracking mode
-      threshold: [0, 1.0]
-    });
-
-    observer.observe(sentinel);
-  }
-
-
-  //================================
 
 
   _syncCardShellClasses() {
