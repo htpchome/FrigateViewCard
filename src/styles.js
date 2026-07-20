@@ -368,15 +368,20 @@ export const STYLES = `
   .landing-shell-title{min-width:0;display:flex;flex-direction:column;gap:2px;}
   .landing-shell-title-main{font-size:1.05rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .landing-shell-title-sub{font-size:.78rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .card.landing-active .landing-shell{display:block;flex:1 1 auto;width:100%;min-width:0;min-height:0;padding:10px;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;}
+  .card.landing-active .landing-shell{
+    display:block;flex:1 1 auto;
+    width:100%;min-width:0;in-height:0;
+    padding:10px;box-sizing:border-box;
+    overflow-y:auto;
+    -webkit-overflow-scrolling: touch; 
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling:touch;touch-action:pan-y;
+    }
   .card.landing-active .landing-shell-footer{display:flex;flex:0 0 auto;align-items:center;min-height:30px;padding:4px 8px;border-top:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;bottom:0;z-index:4;}
   .landing-shell-footer .frigate-view{position:static;max-height:24px;}
   .landing-shell-footer .frigate-view svg{height:24px;}
 
 .landing-grid {
-  -webkit-overflow-scrolling: touch; /* Keeps momentum scrolling smooth on iOS */
-  overscroll-behavior: none;
-
   display: grid;
   gap: 10px;
   width: 100%;
