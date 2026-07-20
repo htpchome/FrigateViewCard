@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.494";
+const VERSION = "1.0.495";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1186,7 +1186,7 @@ const STYLES = `
   }
 
   /* Wide Viewport: 3 columns, 3 rows */
-  @media (min-width: 1024px) {
+  @media (min-width: 1600px) {
     .landing-grid {
       grid-template-columns: repeat(3, 1fr);
     }
