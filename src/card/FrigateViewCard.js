@@ -554,28 +554,9 @@ export class FrigateViewCard extends HTMLElement {
       cameras: [
         {
           entity: "camera.front_door",
-          name: "Front Door",
-          connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
         },
       ],
       title: "Frigate",
-      theme: "default",
-      shadows: true,
-      window_days: 3,
-      alerts_reviews_days: 3,
-      realtime_poll_seconds: 5,
-      mobile_poll_battery_saver: false,
-      slideshow_rotation_enabled: false,
-      slideshow_rotation_seconds: 30,
-      grid_mode_enabled: false,
-      grid_start_in_grid_enabled: false,
-      grid_live_view_enabled: true,
-      landing_page_enabled: false,
-      landing_page_live_cameras: false,
-      landing_page_show_title_bars: true,
-      grid_rotation_seconds: 30,
-      window_hours: 72,
-      stream_height_unit: "vh",
     };
   }
   setConfig(config) {

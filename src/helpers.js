@@ -196,7 +196,11 @@ export const dialogActionKindFromEvent = (event) => {
   return dialogActionKindFromElement(button);
 };
 
-export const wireCameraRowDragAndDrop = ({ rows, clearDropTargets, onReorder }) => {
+export const wireCameraRowDragAndDrop = ({
+  rows,
+  clearDropTargets,
+  onReorder,
+}) => {
   rows.forEach((row) => {
     row.addEventListener("dragstart", (event) => {
       const rowIndex = row.dataset.row;
@@ -330,7 +334,13 @@ export const setupSelectSelector = ({
   bindSelectorSyncEvents(element, syncValue);
 };
 
-export const setupEntitySelector = ({ element, hass, domain, label, onChange }) => {
+export const setupEntitySelector = ({
+  element,
+  hass,
+  domain,
+  label,
+  onChange,
+}) => {
   if (!element) return;
   element.hass = hass;
   element.selector = { entity: { domain } };
@@ -452,7 +462,12 @@ export const bindEventsForIds = ({ root, ids, events, handler }) => {
   });
 };
 
-export const bindEventsForSelectorAll = ({ root, selector, events, handler }) => {
+export const bindEventsForSelectorAll = ({
+  root,
+  selector,
+  events,
+  handler,
+}) => {
   root.querySelectorAll(selector).forEach((element) => {
     events.forEach((eventName) => {
       element.addEventListener(eventName, (event) =>
@@ -603,6 +618,188 @@ export const buildEditorConfigFromDom = ({
     : 50;
 
   return nextConfig;
+};
+
+const addStringIfPresent = (target, key, value) => {
+  const trimmed = String(value || "").trim();
+  if (trimmed) target[key] = trimmed;
+};
+
+const addIfNotDefault = (target, key, value, defaultValue) => {
+  if (value !== defaultValue) target[key] = value;
+};
+
+const compactCameraConfigForYaml = (camera) => {
+  const normalized = normalizeCameraConfig(camera, { fallbackName: "" });
+  if (!normalized.entity) return null;
+  const compact = { entity: normalized.entity };
+  addStringIfPresent(compact, "name", normalized.name);
+  if (normalized.connection_type !== DEFAULT_CAMERA_CONNECTION_TYPE) {
+    compact.connection_type = normalized.connection_type;
+  }
+  if (normalized.alerts_content !== "alerts_only") {
+    compact.alerts_content = normalized.alerts_content;
+  }
+  if (normalized.disable_hls_desktop === true) {
+    compact.disable_hls_desktop = true;
+  }
+  return compact;
+};
+
+export const compactEditorConfigForYaml = (
+  config,
+  { themeDefaultColors = {} } = {},
+) => {
+  const source = config && typeof config === "object" ? config : {};
+  const compact = {};
+  const cameras = Array.isArray(source.cameras)
+    ? source.cameras.map(compactCameraConfigForYaml).filter(Boolean)
+    : [];
+  if (cameras.length) compact.cameras = cameras;
+
+  addStringIfPresent(compact, "title", source.title);
+  addStringIfPresent(compact, "subtitle", source.subtitle);
+
+  const windowDays = normalizePositiveInteger(source.window_days, 3);
+  addIfNotDefault(compact, "window_days", windowDays, 3);
+  const alertsReviewsDays = normalizePositiveInteger(
+    source.alerts_reviews_days,
+    windowDays,
+  );
+  addIfNotDefault(
+    compact,
+    "alerts_reviews_days",
+    alertsReviewsDays,
+    windowDays,
+  );
+
+  const realtimePollSeconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+    Number(source.realtime_poll_seconds),
+  )
+    ? Number(source.realtime_poll_seconds)
+    : 5;
+  addIfNotDefault(compact, "realtime_poll_seconds", realtimePollSeconds, 5);
+  addIfNotDefault(
+    compact,
+    "mobile_poll_battery_saver",
+    source.mobile_poll_battery_saver === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
+    "slideshow_rotation_enabled",
+    source.slideshow_rotation_enabled === true,
+    false,
+  );
+
+  const slideshowRotationSeconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+    Number(source.slideshow_rotation_seconds),
+  )
+    ? Number(source.slideshow_rotation_seconds)
+    : 30;
+  addIfNotDefault(
+    compact,
+    "slideshow_rotation_seconds",
+    slideshowRotationSeconds,
+    30,
+  );
+  addIfNotDefault(
+    compact,
+    "grid_mode_enabled",
+    source.grid_mode_enabled === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
+    "grid_start_in_grid_enabled",
+    source.grid_start_in_grid_enabled === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
+    "grid_live_view_enabled",
+    source.grid_live_view_enabled !== false,
+    true,
+  );
+  addIfNotDefault(
+    compact,
+    "landing_page_enabled",
+    source.landing_page_enabled === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
+    "landing_page_live_cameras",
+    source.landing_page_live_cameras === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
+    "landing_page_show_title_bars",
+    source.landing_page_show_title_bars !== false,
+    true,
+  );
+
+  const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+    Number(source.grid_rotation_seconds),
+  )
+    ? Number(source.grid_rotation_seconds)
+    : 30;
+  addIfNotDefault(compact, "grid_rotation_seconds", gridRotationSeconds, 30);
+
+  const hiddenTabs = Array.isArray(source.hidden_tabs)
+    ? source.hidden_tabs
+        .map((id) => (id === "reviews" ? "alerts" : id))
+        .filter((id) => ALLOWED_HIDDEN_TABS.includes(id))
+    : [];
+  if (hiddenTabs.length) compact.hidden_tabs = hiddenTabs;
+
+  if (source.theme === "custom") {
+    compact.theme = "custom";
+    const themeCustom =
+      source.theme_custom && typeof source.theme_custom === "object"
+        ? source.theme_custom
+        : {};
+    const themeCustomDefaults =
+      source.theme_custom_defaults &&
+      typeof source.theme_custom_defaults === "object"
+        ? source.theme_custom_defaults
+        : {};
+    const compactThemeCustom = {};
+    Object.entries(themeCustom).forEach(([key, value]) => {
+      if (!THEME_CUSTOM_KEYS.has(key)) return;
+      if (themeCustomDefaults[key] === true) return;
+      const color = normalizeHexColor(value);
+      if (!color) return;
+      const defaultColor = normalizeHexColor(themeDefaultColors[key]);
+      if (defaultColor && color === defaultColor) return;
+      compactThemeCustom[key] = color;
+    });
+    if (Object.keys(compactThemeCustom).length) {
+      compact.theme_custom = compactThemeCustom;
+    }
+  }
+
+  const streamHeight = source.stream_height
+    ? Number(source.stream_height)
+    : null;
+  if (streamHeight) compact.stream_height = streamHeight;
+  const streamHeightUnit = source.stream_height_unit || "vh";
+  if (streamHeight && streamHeightUnit !== "vh") {
+    compact.stream_height_unit = streamHeightUnit;
+  }
+  addIfNotDefault(
+    compact,
+    "tight_margins",
+    source.tight_margins === true,
+    false,
+  );
+  addIfNotDefault(compact, "shadows", source.shadows !== false, true);
+  addIfNotDefault(compact, "wide_view", source.wide_view === true, false);
+  const leftWidth = Number(source.col_left_width_pct) || 50;
+  addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
+
+  return compact;
 };
 
 export const createEditorPreviewDraft = (config) => ({

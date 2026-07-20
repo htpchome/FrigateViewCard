@@ -62,6 +62,7 @@ import {
   bindEventsForIds,
   bindEventsForSelectorAll,
   buildEditorConfigFromDom,
+  compactEditorConfigForYaml,
   createEditorPreviewDraft,
   LABEL_COLORS,
   PALETTE,
@@ -283,6 +284,12 @@ export class FrigateViewCardEditor extends HTMLElement {
 
   _themeDefaultHex(key) {
     return this._resolveColorToHex(THEME_DEFAULTS[key], "#000000");
+  }
+
+  _themeDefaultHexMap() {
+    return Object.fromEntries(
+      THEME_CUSTOM_ROWS.map((row) => [row.key, this._themeDefaultHex(row.key)]),
+    );
   }
 
   _ensureThemeDraftCache() {
@@ -1372,10 +1379,13 @@ export class FrigateViewCardEditor extends HTMLElement {
   }
 
   _dispatch() {
-    this._lastDispatchedConfigSig = this._configSignature(this._config);
+    const config = compactEditorConfigForYaml(this._config, {
+      themeDefaultColors: this._themeDefaultHexMap(),
+    });
+    this._lastDispatchedConfigSig = this._configSignature(config);
     this.dispatchEvent(
       new CustomEvent("config-changed", {
-        detail: { config: this._config },
+        detail: { config },
       }),
     );
   }

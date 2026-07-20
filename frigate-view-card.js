@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.507";
+const VERSION = "1.0.508";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1144,6 +1144,151 @@ const buildEditorConfigFromDom = ({
   nextConfig.col_left_width_pct = leftWidthRaw ? Math.min(Math.max(parseInt(leftWidthRaw, 10) || 50, 10), 90) : 50;
   return nextConfig;
 };
+const addStringIfPresent = (target, key, value) => {
+  const trimmed = String(value || "").trim();
+  if (trimmed) target[key] = trimmed;
+};
+const addIfNotDefault = (target, key, value, defaultValue) => {
+  if (value !== defaultValue) target[key] = value;
+};
+const compactCameraConfigForYaml = (camera) => {
+  const normalized = normalizeCameraConfig(camera, { fallbackName: "" });
+  if (!normalized.entity) return null;
+  const compact = { entity: normalized.entity };
+  addStringIfPresent(compact, "name", normalized.name);
+  if (normalized.connection_type !== DEFAULT_CAMERA_CONNECTION_TYPE) {
+    compact.connection_type = normalized.connection_type;
+  }
+  if (normalized.alerts_content !== "alerts_only") {
+    compact.alerts_content = normalized.alerts_content;
+  }
+  if (normalized.disable_hls_desktop === true) {
+    compact.disable_hls_desktop = true;
+  }
+  return compact;
+};
+const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) => {
+  const source = config && typeof config === "object" ? config : {};
+  const compact = {};
+  const cameras = Array.isArray(source.cameras) ? source.cameras.map(compactCameraConfigForYaml).filter(Boolean) : [];
+  if (cameras.length) compact.cameras = cameras;
+  addStringIfPresent(compact, "title", source.title);
+  addStringIfPresent(compact, "subtitle", source.subtitle);
+  const windowDays = normalizePositiveInteger(source.window_days, 3);
+  addIfNotDefault(compact, "window_days", windowDays, 3);
+  const alertsReviewsDays = normalizePositiveInteger(
+    source.alerts_reviews_days,
+    windowDays
+  );
+  addIfNotDefault(
+    compact,
+    "alerts_reviews_days",
+    alertsReviewsDays,
+    windowDays
+  );
+  const realtimePollSeconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+    Number(source.realtime_poll_seconds)
+  ) ? Number(source.realtime_poll_seconds) : 5;
+  addIfNotDefault(compact, "realtime_poll_seconds", realtimePollSeconds, 5);
+  addIfNotDefault(
+    compact,
+    "mobile_poll_battery_saver",
+    source.mobile_poll_battery_saver === true,
+    false
+  );
+  addIfNotDefault(
+    compact,
+    "slideshow_rotation_enabled",
+    source.slideshow_rotation_enabled === true,
+    false
+  );
+  const slideshowRotationSeconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+    Number(source.slideshow_rotation_seconds)
+  ) ? Number(source.slideshow_rotation_seconds) : 30;
+  addIfNotDefault(
+    compact,
+    "slideshow_rotation_seconds",
+    slideshowRotationSeconds,
+    30
+  );
+  addIfNotDefault(
+    compact,
+    "grid_mode_enabled",
+    source.grid_mode_enabled === true,
+    false
+  );
+  addIfNotDefault(
+    compact,
+    "grid_start_in_grid_enabled",
+    source.grid_start_in_grid_enabled === true,
+    false
+  );
+  addIfNotDefault(
+    compact,
+    "grid_live_view_enabled",
+    source.grid_live_view_enabled !== false,
+    true
+  );
+  addIfNotDefault(
+    compact,
+    "landing_page_enabled",
+    source.landing_page_enabled === true,
+    false
+  );
+  addIfNotDefault(
+    compact,
+    "landing_page_live_cameras",
+    source.landing_page_live_cameras === true,
+    false
+  );
+  addIfNotDefault(
+    compact,
+    "landing_page_show_title_bars",
+    source.landing_page_show_title_bars !== false,
+    true
+  );
+  const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+    Number(source.grid_rotation_seconds)
+  ) ? Number(source.grid_rotation_seconds) : 30;
+  addIfNotDefault(compact, "grid_rotation_seconds", gridRotationSeconds, 30);
+  const hiddenTabs = Array.isArray(source.hidden_tabs) ? source.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [];
+  if (hiddenTabs.length) compact.hidden_tabs = hiddenTabs;
+  if (source.theme === "custom") {
+    compact.theme = "custom";
+    const themeCustom = source.theme_custom && typeof source.theme_custom === "object" ? source.theme_custom : {};
+    const themeCustomDefaults = source.theme_custom_defaults && typeof source.theme_custom_defaults === "object" ? source.theme_custom_defaults : {};
+    const compactThemeCustom = {};
+    Object.entries(themeCustom).forEach(([key, value]) => {
+      if (!THEME_CUSTOM_KEYS.has(key)) return;
+      if (themeCustomDefaults[key] === true) return;
+      const color = normalizeHexColor(value);
+      if (!color) return;
+      const defaultColor = normalizeHexColor(themeDefaultColors[key]);
+      if (defaultColor && color === defaultColor) return;
+      compactThemeCustom[key] = color;
+    });
+    if (Object.keys(compactThemeCustom).length) {
+      compact.theme_custom = compactThemeCustom;
+    }
+  }
+  const streamHeight = source.stream_height ? Number(source.stream_height) : null;
+  if (streamHeight) compact.stream_height = streamHeight;
+  const streamHeightUnit = source.stream_height_unit || "vh";
+  if (streamHeight && streamHeightUnit !== "vh") {
+    compact.stream_height_unit = streamHeightUnit;
+  }
+  addIfNotDefault(
+    compact,
+    "tight_margins",
+    source.tight_margins === true,
+    false
+  );
+  addIfNotDefault(compact, "shadows", source.shadows !== false, true);
+  addIfNotDefault(compact, "wide_view", source.wide_view === true, false);
+  const leftWidth = Number(source.col_left_width_pct) || 50;
+  addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
+  return compact;
+};
 const createEditorPreviewDraft = (config) => ({
   title: config.title,
   subtitle: config.subtitle,
@@ -1688,29 +1833,10 @@ const FrigateViewCard = class extends HTMLElement {
     return {
       cameras: [
         {
-          entity: "camera.front_door",
-          name: "Front Door",
-          connection_type: DEFAULT_CAMERA_CONNECTION_TYPE
+          entity: "camera.front_door"
         }
       ],
-      title: "Frigate",
-      theme: "default",
-      shadows: true,
-      window_days: 3,
-      alerts_reviews_days: 3,
-      realtime_poll_seconds: 5,
-      mobile_poll_battery_saver: false,
-      slideshow_rotation_enabled: false,
-      slideshow_rotation_seconds: 30,
-      grid_mode_enabled: false,
-      grid_start_in_grid_enabled: false,
-      grid_live_view_enabled: true,
-      landing_page_enabled: false,
-      landing_page_live_cameras: false,
-      landing_page_show_title_bars: true,
-      grid_rotation_seconds: 30,
-      window_hours: 72,
-      stream_height_unit: "vh"
+      title: "Frigate"
     };
   }
   setConfig(config) {
@@ -9642,6 +9768,11 @@ const FrigateViewCardEditor = class extends HTMLElement {
   _themeDefaultHex(key) {
     return this._resolveColorToHex(THEME_DEFAULTS[key], "#000000");
   }
+  _themeDefaultHexMap() {
+    return Object.fromEntries(
+      THEME_CUSTOM_ROWS.map((row) => [row.key, this._themeDefaultHex(row.key)])
+    );
+  }
   _ensureThemeDraftCache() {
     if (!this._themeDraftCache || typeof this._themeDraftCache !== "object") {
       this._themeDraftCache = {};
@@ -10608,10 +10739,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
     if (dispatch) this._dispatch();
   }
   _dispatch() {
-    this._lastDispatchedConfigSig = this._configSignature(this._config);
+    const config = compactEditorConfigForYaml(this._config, {
+      themeDefaultColors: this._themeDefaultHexMap()
+    });
+    this._lastDispatchedConfigSig = this._configSignature(config);
     this.dispatchEvent(
       new CustomEvent("config-changed", {
-        detail: { config: this._config }
+        detail: { config }
       })
     );
   }
