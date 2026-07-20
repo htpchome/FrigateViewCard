@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.526";
+const VERSION = "1.0.527";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1481,6 +1481,26 @@ const FrigateViewCard = class extends HTMLElement {
       const placeholder = img.nextElementSibling;
       if (placeholder) placeholder.style.display = "flex";
     };
+    this.attachShadow({ mode: "open" });
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+        }
+        .stuck-shift-fix {
+          transform: translateY(0) !important;
+          margin-top: 0 !important;
+          padding-top: 0 !important;
+        }
+        #card-container {
+          position: relative;
+        }
+      </style>
+      <div id="sentinel" style="position:absolute; top:0; height:1px; width:1px;"></div>
+      <div id="card-container">
+         <!-- Your content -->
+      </div>
+    `;
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
     this._hass = null;
     this._lastHassCameraStateSignature = "";
@@ -1755,24 +1775,28 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-    super.connectedCallback();
-    this._initRefreshFix();
-  }
-  //==============================
-  _initRefreshFix() {
-    const viewContainer = this.closest("home-assistant-main") || document.body;
-    if (!viewContainer) return;
-    const observer = new ResizeObserver(() => {
-      window.requestAnimationFrame(() => {
-        this.style.transform = "translateZ(0)";
-        if (window.scrollY !== 0) {
-          window.scrollTo(0, 0);
-        }
-      });
-    });
-    observer.observe(viewContainer);
+    this._setupObserver();
   }
   //===============================
+  _setupObserver() {
+    const sentinel = this.shadowRoot.getElementById("sentinel");
+    const container = this.shadowRoot.getElementById("card-container");
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.boundingClientRect.top > 0) {
+          container.classList.add("stuck-shift-fix");
+        } else {
+          container.classList.remove("stuck-shift-fix");
+        }
+      });
+    }, {
+      root: null,
+      // Viewport tracking mode
+      threshold: [0, 1]
+    });
+    observer.observe(sentinel);
+  }
+  //================================
   _syncCardShellClasses() {
     const card = this.shadowRoot?.querySelector("#card");
     if (!card) return;

@@ -90,6 +90,33 @@ export class FrigateViewCard extends HTMLElement {
       const placeholder = img.nextElementSibling;
       if (placeholder) placeholder.style.display = "flex";
     };
+
+//====================================
+
+    this.attachShadow({ mode: 'open' });
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host {
+          display: block;
+        }
+        .stuck-shift-fix {
+          transform: translateY(0) !important;
+          margin-top: 0 !important;
+          padding-top: 0 !important;
+        }
+        #card-container {
+          position: relative;
+        }
+      </style>
+      <div id="sentinel" style="position:absolute; top:0; height:1px; width:1px;"></div>
+      <div id="card-container">
+         <!-- Your content -->
+      </div>
+    `;
+
+
+//=====================================
+
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
     this._hass = null;
     this._lastHassCameraStateSignature = "";
@@ -391,47 +418,38 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-
-//=========================================
-
-  super.connectedCallback();
-  this._initRefreshFix();
-
-
-
-
-//==============================
-
+//=======================
+  this._setupObserver();
+//=======================
 
   }
-  
-//==============================
+ 
+  //===============================
+_setupObserver() {
+    const sentinel = this.shadowRoot.getElementById('sentinel');
+    const container = this.shadowRoot.getElementById('card-container');
 
-_initRefreshFix() {
-  // Target the Home Assistant view container or the card parent
-  const viewContainer = this.closest('home-assistant-main') || document.body;
-  
-  if (!viewContainer) return;
-
-  // Watch for layout shifts caused by the vanishing progress indicator
-  const observer = new ResizeObserver(() => {
-    // Force iOS WebKit to recalculate styles and scroll bounds
-    window.requestAnimationFrame(() => {
-      this.style.transform = 'translateZ(0)'; // Forces hardware acceleration redraw
-      
-      // If the page is slightly scrolled out of place, snap it back
-      if (window.scrollY !== 0) {
-        window.scrollTo(0, 0);
-      }
+    // Watch the card's entry position relative strictly to the main device window viewport
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        // If the bounding rect moves weirdly due to the iOS refresh container collapse
+        if (entry.boundingClientRect.top > 0) {
+          container.classList.add('stuck-shift-fix');
+        } else {
+          container.classList.remove('stuck-shift-fix');
+        }
+      });
+    }, {
+      root: null, // Viewport tracking mode
+      threshold: [0, 1.0]
     });
-  });
 
-  observer.observe(viewContainer);
-}
-
+    observer.observe(sentinel);
+  }
 
 
-//===============================
+  //================================
+
 
   _syncCardShellClasses() {
     const card = this.shadowRoot?.querySelector("#card");
