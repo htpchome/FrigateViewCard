@@ -432,7 +432,8 @@ export const STYLES = `
   
   /* ── camera switcher ── */
 
-  .cam-switcher{display:flex;align-items:center;gap:4px;flex-wrap: wrap;padding:6px 12px;overflow-x:auto;scrollbar-width:none;white-space:nowrap;-ms-overflow-style: none;}
+  .cam-switcher{display:flex;align-items:center;gap:4px;padding:6px 12px;overflow-x:auto;scrollbar-width:none;white-space:nowrap;-ms-overflow-style: none;-webkit-overflow-scrolling: touch;}
+  
   .cam-switcher::-webkit-scrollbar{display:none;}
 
   /* ── timeline ── */
