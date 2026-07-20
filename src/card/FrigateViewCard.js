@@ -426,6 +426,9 @@ _initRefreshFix() {
     });
   });
 
+  observer.observe(viewContainer);
+}
+
 
 
 //===============================
