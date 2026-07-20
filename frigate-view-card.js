@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.474";
+const VERSION = "1.0.475";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1115,6 +1115,8 @@ const STYLES = `
   .overlay-fs[hidden]{display:none !important;}
   .overlay-fs svg {width:30px;height:30px;opacity: 0.8; }
   .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
+  .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;padding:4px 10px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
+  .slideshow-next-chip[hidden]{display:none !important;}
   #eng-wrap.live-controls-visible .live-fs-btn,
   #eng-wrap.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {
@@ -1373,6 +1375,8 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowPauseT = null;
     this._slideshowFadeT = null;
     this._slideshowPopupPaused = false;
+    this._slideshowNextSwitchAtMs = 0;
+    this._slideshowCountdownT = null;
     this._gridRotationStart = 0;
     this._gridRotationT = null;
     this._gridAlertReturnT = null;
@@ -4566,6 +4570,47 @@ class FrigateViewCard extends HTMLElement {
     this._slideshowReviewWatchT = null;
   }
 
+  _clearSlideshowCountdownOverlay() {
+    this._slideshowNextSwitchAtMs = 0;
+    if (this._slideshowCountdownT) clearInterval(this._slideshowCountdownT);
+    this._slideshowCountdownT = null;
+    const chip = this._$("#slideshow-next-chip");
+    if (!chip) return;
+    chip.hidden = true;
+    chip.textContent = "Next Slide: 0s";
+  }
+
+  _syncSlideshowCountdownOverlay() {
+    const chip = this._$("#slideshow-next-chip");
+    if (!chip) return;
+    const show =
+      this._slideshowActive &&
+      this._viewMode === "single" &&
+      this._isSlideshowRotationAvailable() &&
+      !this._slideshowPopupPaused;
+    if (!show) {
+      chip.hidden = true;
+      return;
+    }
+    const remainingMs = Math.max(
+      0,
+      Number(this._slideshowNextSwitchAtMs || 0) - Date.now(),
+    );
+    const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
+    chip.textContent = `Next Slide: ${remainingSec}s`;
+    chip.hidden = false;
+  }
+
+  _setSlideshowCountdown(waitMs) {
+    this._slideshowNextSwitchAtMs =
+      Date.now() + Math.max(0, Number(waitMs) || 0);
+    if (this._slideshowCountdownT) clearInterval(this._slideshowCountdownT);
+    this._syncSlideshowCountdownOverlay();
+    this._slideshowCountdownT = setInterval(() => {
+      this._syncSlideshowCountdownOverlay();
+    }, 250);
+  }
+
   _syncToolbarButtons() {
     const gridBtn = this._$("#grid-btn");
     if (gridBtn) {
@@ -4623,6 +4668,7 @@ class FrigateViewCard extends HTMLElement {
 
   _stopSlideshowRotation(reason = "manual-stop", sync = true) {
     this._clearSlideshowTimers();
+    this._clearSlideshowCountdownOverlay();
     this._slideshowActive = false;
     this._slideshowPopupPaused = false;
     this._slideshowPausedUntil = 0;
@@ -4666,6 +4712,7 @@ class FrigateViewCard extends HTMLElement {
   _pauseSlideshowForPopup() {
     if (!this._slideshowActive) return;
     this._slideshowPopupPaused = true;
+    this._syncSlideshowCountdownOverlay();
     if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
     if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
     this._slideshowSwitchT = null;
@@ -4704,6 +4751,7 @@ class FrigateViewCard extends HTMLElement {
   _pauseSlideshowForInteraction() {
     if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
     this._slideshowPausedUntil = Date.now() + this._slideshowRotationMs();
+    this._setSlideshowCountdown(this._slideshowRotationMs());
     if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
     if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
     this._slideshowPauseT = setTimeout(() => {
@@ -4713,14 +4761,21 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _scheduleSlideshowRotation(_reason = "") {
-    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
-    if (this._slideshowPopupPaused) return;
+    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) {
+      this._clearSlideshowCountdownOverlay();
+      return;
+    }
+    if (this._slideshowPopupPaused) {
+      this._syncSlideshowCountdownOverlay();
+      return;
+    }
     if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
     const delay = Math.max(250, this._slideshowPausedUntil - Date.now());
     const wait =
       this._slideshowPausedUntil > Date.now()
         ? delay
         : this._slideshowRotationMs();
+    this._setSlideshowCountdown(wait);
     this._slideshowSwitchT = setTimeout(() => {
       this._slideshowSwitchT = null;
       void this._advanceSlideshowRotation();
@@ -5969,6 +6024,7 @@ class FrigateViewCard extends HTMLElement {
                 </div>
                   <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${ICONS.expand}</button>
                   <button class="glass-btn mute-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
+                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
                   <div id="stream-fallback" hidden>
                     <img id="stream-fallback-img" alt="Camera snapshot">
                   </div>
@@ -6086,6 +6142,7 @@ class FrigateViewCard extends HTMLElement {
     this._bindRecordingsSwipe();
     this._initResizeHandle();
     this._initLiveOverlayControls();
+    this._syncSlideshowCountdownOverlay();
   }
 
   _initLiveOverlayControls() {
