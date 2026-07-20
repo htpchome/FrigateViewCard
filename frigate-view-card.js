@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.483";
+const VERSION = "1.0.484";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1163,11 +1163,22 @@ const STYLES = `
   .landing-shell-title{min-width:0;display:flex;flex-direction:column;gap:2px;}
   .landing-shell-title-main{font-size:1.05rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .landing-shell-title-sub{font-size:.78rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .card.landing-active .landing-shell{display:block;flex:1 1 auto;min-height:0;padding:10px;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;}
+  .card.landing-active .landing-shell{display:block;flex:1 1 auto;min-height:0;padding:10px;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;container-type:inline-size;}
   .card.landing-active .landing-shell-footer{display:flex;flex:0 0 auto;align-items:center;min-height:30px;padding:4px 8px;border-top:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;bottom:0;z-index:4;}
   .landing-shell-footer .frigate-view{position:static;max-height:24px;}
   .landing-shell-footer .frigate-view svg{height:24px;}
-  .landing-grid{display:grid;gap:10px;}
+  .landing-grid{display:grid;gap:10px;grid-template-columns:repeat(3,minmax(0,1fr));}
+  .landing-grid.count-1{grid-template-columns:minmax(0,1fr);}
+  .landing-grid.count-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .landing-grid.count-4{grid-template-columns:repeat(2,minmax(0,1fr));}
+  @container (max-width: 820px){
+    .landing-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .landing-grid.count-1{grid-template-columns:minmax(0,1fr);}
+    .landing-grid.count-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  @container (max-width: 520px){
+    .landing-grid,.landing-grid.count-1,.landing-grid.count-2,.landing-grid.count-4{grid-template-columns:minmax(0,1fr);}
+  }
   .landing-cell{display:flex;flex-direction:column;gap:6px;cursor:pointer;}
   .landing-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:10px;border:1px solid var(--c-border2);background:var(--c-bg-deep);}
   .landing-media-host.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
@@ -1183,7 +1194,6 @@ const STYLES = `
   .landing-cam-buttons{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
   .landing-cam-btn{font-size:.9rem;line-height:1;padding:6px 9px;}
   @media (max-width: 720px){
-    .landing-grid{grid-template-columns:1fr !important;}
     .landing-meta{grid-template-columns:minmax(0,1fr);gap:2px;}
     .landing-meta-status{justify-self:start;}
   }
@@ -4221,10 +4231,8 @@ class FrigateViewCard extends HTMLElement {
     this._landingHandledReviewIds.clear();
   }
 
-  _landingGridColumns(total) {
-    if (total <= 1) return 1;
-    if (total <= 4) return 2;
-    return 3;
+  _landingGridCountClass(total) {
+    return `count-${Math.max(1, Math.min(9, Number(total) || 0))}`;
   }
 
   _isLandingCameraAlertLive(entity) {
@@ -4334,7 +4342,7 @@ class FrigateViewCard extends HTMLElement {
     const cameras = Array.isArray(this._config?.cameras)
       ? this._config.cameras.slice(0, 9)
       : [];
-    const columns = this._landingGridColumns(cameras.length);
+    const gridCountClass = this._landingGridCountClass(cameras.length);
     const showTitleBars = this._landingShowTitleBarsEnabled();
     const liveStreamHint = this._landingLiveStreamHint();
     const hassReady = !!this._hass?.states;
@@ -4346,7 +4354,7 @@ class FrigateViewCard extends HTMLElement {
         return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
       })
       .concat([
-        `cols:${columns}`,
+        `grid:${gridCountClass}`,
         `titles:${showTitleBars ? "1" : "0"}`,
         `hass:${hassReady ? "1" : "0"}`,
       ])
@@ -4395,7 +4403,7 @@ class FrigateViewCard extends HTMLElement {
       })
       .join("");
 
-    shell.innerHTML = `<div class="landing-grid" id="landing-grid" style="grid-template-columns:repeat(${columns}, minmax(0,1fr));">${cells}</div>
+    shell.innerHTML = `<div class="landing-grid ${gridCountClass}" id="landing-grid">${cells}</div>
       <div class="landing-cam-buttons">${buttons}</div>`;
     this._mountLandingMedia();
     this._applyLandingShellVisibility();
