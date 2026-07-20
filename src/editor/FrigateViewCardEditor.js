@@ -1384,6 +1384,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       compactEditorConfigForYaml(this._config, {
         themeDefaultColors: this._themeDefaultHexMap(),
       }),
+      { sourceConfig: this._config },
     );
     this._lastDispatchedConfigSig = this._configSignature(config);
     this.dispatchEvent(

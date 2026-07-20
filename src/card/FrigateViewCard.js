@@ -836,10 +836,15 @@ export class FrigateViewCard extends HTMLElement {
     );
   }
   getCardSize() {
-    return 1;
+    return 6;
   }
-  getGridSize() {
-    return { columns: 2, rows: 3 };
+  getGridOptions() {
+    return {
+      rows: 3,
+      columns: 6,
+      min_rows: 3,
+      max_rows: 3,
+    };
   }
   disconnectedCallback() {
     if (this._disconnectTeardownT) clearTimeout(this._disconnectTeardownT);

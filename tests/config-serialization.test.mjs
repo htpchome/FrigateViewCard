@@ -91,3 +91,23 @@ test("editor YAML payload always includes custom card type", () => {
     title: "Frigate",
   });
 });
+
+test("editor YAML payload preserves HA grid and visibility metadata", () => {
+  const compact = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+  });
+
+  const withType = withCardTypeForYaml(compact, {
+    sourceConfig: {
+      grid_options: { rows: "auto", columns: "full" },
+      visibility: [{ condition: "user", users: ["user-id"] }],
+    },
+  });
+
+  assert.deepEqual(withType, {
+    type: "custom:frigate-view-card",
+    cameras: [{ entity: "camera.front_door" }],
+    grid_options: { rows: "auto", columns: "full" },
+    visibility: [{ condition: "user", users: ["user-id"] }],
+  });
+});

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.517";
+const VERSION = "1.0.518";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1337,10 +1337,22 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
   addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
   return compact;
 };
-const withCardTypeForYaml = (config) => ({
-  type: `custom:${CARD_TAG}`,
-  ...config && typeof config === "object" ? config : {}
-});
+const withCardTypeForYaml = (config, { sourceConfig = null } = {}) => {
+  const payload = {
+    type: `custom:${CARD_TAG}`,
+    ...config && typeof config === "object" ? config : {}
+  };
+  const source = sourceConfig && typeof sourceConfig === "object" ? sourceConfig : null;
+  if (source && source.grid_options && typeof source.grid_options === "object") {
+    payload.grid_options = { ...source.grid_options };
+  }
+  if (source && source.visibility != null) {
+    payload.visibility = Array.isArray(source.visibility) ? source.visibility.map(
+      (item) => item && typeof item === "object" ? { ...item } : item
+    ) : source.visibility;
+  }
+  return payload;
+};
 const createEditorPreviewDraft = (config) => ({
   title: config.title,
   subtitle: config.subtitle,
@@ -2097,10 +2109,15 @@ const FrigateViewCard = class extends HTMLElement {
     return this._config?.cameras[this._activeCamIdx] || this._config?.cameras[0];
   }
   getCardSize() {
-    return 1;
+    return 6;
   }
-  getGridSize() {
-    return { columns: 2, rows: 3 };
+  getGridOptions() {
+    return {
+      rows: 3,
+      columns: 6,
+      min_rows: 3,
+      max_rows: 3
+    };
   }
   disconnectedCallback() {
     if (this._disconnectTeardownT) clearTimeout(this._disconnectTeardownT);
@@ -10795,7 +10812,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const config = withCardTypeForYaml(
       compactEditorConfigForYaml(this._config, {
         themeDefaultColors: this._themeDefaultHexMap()
-      })
+      }),
+      { sourceConfig: this._config }
     );
     this._lastDispatchedConfigSig = this._configSignature(config);
     this.dispatchEvent(
