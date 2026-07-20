@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.466";
+const VERSION = "1.0.467";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1100,7 +1100,7 @@ const STYLES = `
   .glass-btn svg {width:24px;height:24px;opacity: 0.8; }
   .glass-btn:hover svg {width:30px;height:30px;opacity: 0.95; }
 
-  .mute-btn {width:36px;height:36px;}
+  .mute-btn {position:absolute;left:8px;bottom:8px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
 
   .cam-tab{font-size: 1rem;padding:0.4em;line-height: 1;font-weight:600;padding:6px;white-space:nowrap;}  
@@ -1110,11 +1110,17 @@ const STYLES = `
   .cam-tab svg{width:14.4px;height:14.4px;flex-shrink:0;}
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
 
-  .overlay-fs{position:absolute;top:8px;left:8px;z-index:3;padding: 3px;}
+  .overlay-fs{position:absolute;top:8px;left:8px;z-index:3;padding: 3px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .overlay-fs::after {content: "";position: absolute;top: 0;left: 0;}         
   .overlay-fs[hidden]{display:none !important;}
   .overlay-fs svg {width:30px;height:30px;opacity: 0.8; }
   .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
+  #eng-wrap:hover .live-fs-btn,
+  #eng-wrap:hover .mute-btn,
+  #eng-wrap:focus-within .live-fs-btn,
+  #eng-wrap:focus-within .mute-btn,
+  #eng-wrap.live-controls-visible .live-fs-btn,
+  #eng-wrap.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
 
   #eng-wrap:fullscreen .overlay-fs,
   #eng-wrap:-webkit-full-screen .overlay-fs,
@@ -1403,6 +1409,7 @@ class FrigateViewCard extends HTMLElement {
     this._popupMediaStopTimer = null;
     this._popupMediaControlsCleanup = null;
     this._popupControlsHideTimer = null;
+    this._liveControlsHideTimer = null;
     this._recordingScrubCleanup = null;
     this._recordingScrubState = null;
     this._recordingAlertCache = new Map();
@@ -1459,7 +1466,6 @@ class FrigateViewCard extends HTMLElement {
       }
     };
 
-
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
@@ -1467,7 +1473,7 @@ class FrigateViewCard extends HTMLElement {
       "webkitfullscreenchange",
       this._onFullscreenChange,
     );
-    
+
     this._onViewportRotate = () => this._scheduleRotateOverlayUpdate();
     window.addEventListener("resize", this._onViewportRotate, {
       passive: true,
@@ -2079,6 +2085,7 @@ class FrigateViewCard extends HTMLElement {
     this._editorDialogObserver = null;
     if (this._popupControlsHideTimer)
       clearTimeout(this._popupControlsHideTimer);
+    if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._popupMediaStopTimer) clearTimeout(this._popupMediaStopTimer);
     if (this._recordingsSwipeCleanup) {
       this._recordingsSwipeCleanup();
@@ -5104,6 +5111,8 @@ class FrigateViewCard extends HTMLElement {
     if (prevEnt && this._camCache[prevEnt]) {
       this._camCache[prevEnt].events = this._events;
       this._camCache[prevEnt].recordings = this._recordings;
+      this._camCache[prevEnt].reviews = this._reviews;
+      this._camCache[prevEnt].kept = this._kept;
     }
     this._activeCamIdx = idx;
     const newEnt = this._activeCam?.entity;
@@ -5267,7 +5276,9 @@ class FrigateViewCard extends HTMLElement {
     const items = [];
     const seen = new Set();
     const afterTs = Math.floor(after);
-    let cursorBefore = Math.floor(before);
+    let cursorBefore = Math.floor(
+      Number.isFinite(opts?.cursorBefore) ? opts.cursorBefore : before,
+    );
     const pageLimit = Math.max(
       1,
       Number.isFinite(opts?.pageLimit)
@@ -5473,6 +5484,7 @@ class FrigateViewCard extends HTMLElement {
         },
       );
       this._reviews = Array.isArray(initialReviews) ? initialReviews : [];
+      this._cacheActiveCamSlice("reviews", this._reviews);
       this._renderList();
       this._handleSlideshowReviewsUpdated(
         this._activeCam?.entity || "",
@@ -5521,6 +5533,7 @@ class FrigateViewCard extends HTMLElement {
 
           if (Array.isArray(remainingReviews) && remainingReviews.length) {
             this._reviews = this._reviews.concat(remainingReviews);
+            this._cacheActiveCamSlice("reviews", this._reviews);
             this._renderList();
             this._handleSlideshowReviewsUpdated(
               this._activeCam?.entity || "",
@@ -5564,6 +5577,7 @@ class FrigateViewCard extends HTMLElement {
         debugLabel: "alerts-tab",
       });
       this._reviews = Array.isArray(r) ? r : [];
+      this._cacheActiveCamSlice("reviews", this._reviews);
       this._handleSlideshowReviewsUpdated(
         this._activeCam?.entity || "",
         this._reviews,
@@ -5823,6 +5837,7 @@ class FrigateViewCard extends HTMLElement {
                   <div class="ph">${ICONS.live}<span>Connecting…</span></div>
                 </div>
                   <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${ICONS.expand}</button>
+                  <button class="glass-btn mute-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
                   <div id="stream-fallback" hidden>
                     <img id="stream-fallback-img" alt="Camera snapshot">
                   </div>
@@ -5855,7 +5870,6 @@ class FrigateViewCard extends HTMLElement {
                   <div class="sv" id="on-dot" style="color:var(--c-on)">●</div>
                   <div class="sl" id="on-lbl">Online</div>
                 </div>
-                <button class="glass-btn mute-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
               </div>
             </div>
             ${camSwitcher}
@@ -5940,6 +5954,23 @@ class FrigateViewCard extends HTMLElement {
     this._bindListScroll();
     this._bindRecordingsSwipe();
     this._initResizeHandle();
+    this._initLiveOverlayControls();
+  }
+
+  _initLiveOverlayControls() {
+    const wrap = this._$("#eng-wrap");
+    if (!wrap) return;
+    const show = () => {
+      wrap.classList.add("live-controls-visible");
+      if (this._liveControlsHideTimer)
+        clearTimeout(this._liveControlsHideTimer);
+      this._liveControlsHideTimer = setTimeout(() => {
+        wrap.classList.remove("live-controls-visible");
+        this._liveControlsHideTimer = null;
+      }, 1800);
+    };
+    wrap.addEventListener("pointerdown", show, { passive: true });
+    wrap.addEventListener("touchstart", show, { passive: true });
   }
 
   _syncBrowseHeadModeClass() {
@@ -8018,13 +8049,23 @@ class FrigateViewCard extends HTMLElement {
   _isTouchPopupUi() {
     return DEVICE_PROFILE.hasTouch || this._isMobileTabletViewport();
   }
+  _isPhonePopupUi() {
+    if (DEVICE_PROFILE.isPhone) return true;
+    const coarse =
+      window.matchMedia?.("(pointer: coarse)")?.matches ||
+      window.matchMedia?.("(any-pointer: coarse)")?.matches ||
+      false;
+    return (
+      coarse && Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 560
+    );
+  }
   _isPopupVideoMediaType(mediaType) {
     return ["alert", "clip", "recording", "kept"].includes(
       String(mediaType || "").toLowerCase(),
     );
   }
   _usePopupCustomControls(mediaType) {
-    return this._isTouchPopupUi() && this._isPopupVideoMediaType(mediaType);
+    return this._isPhonePopupUi() && this._isPopupVideoMediaType(mediaType);
   }
   _ensurePopupFullscreenButton(kind = "media") {
     const viewer = this._$("#viewer");
@@ -9314,16 +9355,12 @@ class FrigateViewCard extends HTMLElement {
       const sourceEvent = this._reviewSourceEvent(review);
       if (this._favOnly) return !!sourceEvent?.retain_indefinitely;
       if (this._filterLabel !== "all") {
-        if (!sourceEvent || sourceEvent.label !== this._filterLabel)
-          return false;
+        const labels = this._reviewFilterLabels(review, sourceEvent);
+        if (!labels.includes(this._filterLabel)) return false;
       }
       if (this._filterZone !== "all") {
-        if (
-          !sourceEvent ||
-          !(sourceEvent.zones || []).includes(this._filterZone)
-        ) {
-          return false;
-        }
+        const zones = this._reviewFilterZones(review, sourceEvent);
+        if (!zones.includes(this._filterZone)) return false;
       }
       return true;
     });
@@ -9342,6 +9379,16 @@ class FrigateViewCard extends HTMLElement {
     }
   }
   _zones() {
+    if (this._tab === "alerts") {
+      const zones = new Set();
+      this._reviewsForTabBase().forEach((review) => {
+        const sourceEvent = this._reviewSourceEvent(review);
+        this._reviewFilterZones(review, sourceEvent).forEach((zone) =>
+          zones.add(zone),
+        );
+      });
+      return [...zones];
+    }
     const z = new Set();
     this._filterOptionSourceEvents().forEach((e) =>
       (e.zones || []).forEach((x) => z.add(x)),
@@ -9349,9 +9396,39 @@ class FrigateViewCard extends HTMLElement {
     return [...z];
   }
   _labels() {
+    if (this._tab === "alerts") {
+      const labels = new Set();
+      this._reviewsForTabBase().forEach((review) => {
+        const sourceEvent = this._reviewSourceEvent(review);
+        this._reviewFilterLabels(review, sourceEvent).forEach((label) =>
+          labels.add(label),
+        );
+      });
+      return [...labels];
+    }
     const l = new Set();
     this._filterOptionSourceEvents().forEach((e) => e.label && l.add(e.label));
     return [...l];
+  }
+
+  _reviewFilterLabels(review, sourceEvent = null) {
+    const labels = new Set();
+    if (sourceEvent?.label) labels.add(sourceEvent.label);
+    (review?.data?.objects || []).forEach((label) => {
+      if (label) labels.add(label);
+    });
+    return [...labels];
+  }
+
+  _reviewFilterZones(review, sourceEvent = null) {
+    const zones = new Set();
+    (sourceEvent?.zones || []).forEach((zone) => {
+      if (zone) zones.add(zone);
+    });
+    (review?.data?.zones || []).forEach((zone) => {
+      if (zone) zones.add(zone);
+    });
+    return [...zones];
   }
   _filtered() {
     let list = this._allDisplayEvents();
@@ -9663,10 +9740,7 @@ class FrigateViewCard extends HTMLElement {
             ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>`
             : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>`
           : "";
-        const hasReviewMedia = !!(
-          favEv &&
-          (favEv.has_snapshot || favEv.has_clip)
-        );
+        const hasReviewMedia = !!firstDet;
         const reviewThumbFile = "thumbnail.jpg";
         const thumb = firstDet
           ? hasReviewMedia
