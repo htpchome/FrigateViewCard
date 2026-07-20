@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.467";
+const VERSION = "1.0.468";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1117,8 +1117,6 @@ const STYLES = `
   .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
   #eng-wrap:hover .live-fs-btn,
   #eng-wrap:hover .mute-btn,
-  #eng-wrap:focus-within .live-fs-btn,
-  #eng-wrap:focus-within .mute-btn,
   #eng-wrap.live-controls-visible .live-fs-btn,
   #eng-wrap.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
 
@@ -1410,6 +1408,7 @@ class FrigateViewCard extends HTMLElement {
     this._popupMediaControlsCleanup = null;
     this._popupControlsHideTimer = null;
     this._liveControlsHideTimer = null;
+    this._liveOverlayControlsCleanup = null;
     this._recordingScrubCleanup = null;
     this._recordingScrubState = null;
     this._recordingAlertCache = new Map();
@@ -2087,6 +2086,12 @@ class FrigateViewCard extends HTMLElement {
       clearTimeout(this._popupControlsHideTimer);
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._popupMediaStopTimer) clearTimeout(this._popupMediaStopTimer);
+    if (this._liveOverlayControlsCleanup) {
+      try {
+        this._liveOverlayControlsCleanup();
+      } catch (_) {}
+      this._liveOverlayControlsCleanup = null;
+    }
     if (this._recordingsSwipeCleanup) {
       this._recordingsSwipeCleanup();
       this._recordingsSwipeCleanup = null;
@@ -5960,17 +5965,58 @@ class FrigateViewCard extends HTMLElement {
   _initLiveOverlayControls() {
     const wrap = this._$("#eng-wrap");
     if (!wrap) return;
+    if (this._liveOverlayControlsCleanup) {
+      try {
+        this._liveOverlayControlsCleanup();
+      } catch (_) {}
+      this._liveOverlayControlsCleanup = null;
+    }
     const show = () => {
       wrap.classList.add("live-controls-visible");
+    };
+    const hideNow = () => {
+      wrap.classList.remove("live-controls-visible");
+      if (this._liveControlsHideTimer) {
+        clearTimeout(this._liveControlsHideTimer);
+        this._liveControlsHideTimer = null;
+      }
+    };
+    const hideSoon = (ms = 1400) => {
       if (this._liveControlsHideTimer)
         clearTimeout(this._liveControlsHideTimer);
       this._liveControlsHideTimer = setTimeout(() => {
         wrap.classList.remove("live-controls-visible");
         this._liveControlsHideTimer = null;
-      }, 1800);
+      }, ms);
     };
-    wrap.addEventListener("pointerdown", show, { passive: true });
-    wrap.addEventListener("touchstart", show, { passive: true });
+    const onPointerEnter = (event) => {
+      if (event?.pointerType === "mouse") show();
+    };
+    const onPointerLeave = (event) => {
+      if (event?.pointerType === "mouse") hideNow();
+    };
+    const onPointerDown = (event) => {
+      const pointerType = String(event?.pointerType || "").toLowerCase();
+      if (pointerType === "mouse") return;
+      show();
+      hideSoon(1300);
+    };
+    const onTouchStart = () => {
+      // Fallback for environments that do not emit pointer events consistently.
+      show();
+      hideSoon(1300);
+    };
+    wrap.addEventListener("pointerenter", onPointerEnter, { passive: true });
+    wrap.addEventListener("pointerleave", onPointerLeave, { passive: true });
+    wrap.addEventListener("pointerdown", onPointerDown, { passive: true });
+    wrap.addEventListener("touchstart", onTouchStart, { passive: true });
+    this._liveOverlayControlsCleanup = () => {
+      wrap.removeEventListener("pointerenter", onPointerEnter);
+      wrap.removeEventListener("pointerleave", onPointerLeave);
+      wrap.removeEventListener("pointerdown", onPointerDown);
+      wrap.removeEventListener("touchstart", onTouchStart);
+      hideNow();
+    };
   }
 
   _syncBrowseHeadModeClass() {
