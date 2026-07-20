@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.471";
+const VERSION = "1.0.473";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -5778,11 +5778,12 @@ class FrigateViewCard extends HTMLElement {
     const gridActive = this._viewMode === "grid";
     const gridButton = gridHidden
       ? ""
-      : `<button class="tool" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}">${this._gridButtonIcon()}</button>`;
+      : `<button class="tool${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}">${this._gridButtonIcon()}</button>`;
     const slideshowHidden = !this._isSlideshowRotationAvailable();
+    const slideshowActive = this._slideshowActive;
     const slideshowButton = slideshowHidden
       ? ""
-      : `<button class=\"tool slideshow-btn\" id=\"slideshow-btn\" aria-pressed=\"${this._slideshowActive ? "true" : "false"}\" title=\"${this._slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}\" aria-label=\"${this._slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}\">${this._slideshowButtonIcon()}</button>`;
+      : `<button class=\"tool slideshow-btn${slideshowActive ? " active" : ""}\" id=\"slideshow-btn\" aria-pressed=\"${slideshowActive ? "true" : "false"}\" title=\"${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}\" aria-label=\"${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}\">${this._slideshowButtonIcon()}</button>`;
     return `${tab("alerts", ICONS.alerts, "Alerts")}
       ${tab("clips", ICONS.clips, "Clips")}
       ${tab("snapshot", ICONS.snapshot, "Snapshots")}
@@ -5802,6 +5803,15 @@ class FrigateViewCard extends HTMLElement {
     if (!tabs) return;
     const prevTab = this._tab;
     tabs.innerHTML = this._buildTabsMarkup();
+    [
+      "#grid-btn",
+      "#slideshow-btn",
+      "#filter-btn",
+      "#cal-btn",
+      "#now-btn",
+    ].forEach((sel) => {
+      delete this._domCache[sel];
+    });
     if (this._tab !== prevTab) {
       void this._loadTabData(this._tab);
     }
