@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.457";
+const VERSION = "1.0.458";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -6917,7 +6917,7 @@ class FrigateViewCard extends HTMLElement {
     }
     el.style.display = "";
 
-    el.innerHTML = `<div class="cam-tabs">${this._camSwitcherMarkup({ includeStatus: true })}</div>`;
+    el.innerHTML = `${this._camSwitcherMarkup({ includeStatus: true })}`;
   }
   // ── interactions ──────────────────────────────────────────
   _openPopup() {
