@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.503";
+const VERSION = "1.0.504";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1180,8 +1180,8 @@ const STYLES = `
   grid-template-columns: repeat(
     auto-fit, 
     minmax(
-      min(100%, 420px), 
-      max(calc(33.333% - 10px), 420px)
+      max(min(100%, 420px), calc(33.333% - 10px)), 
+      1fr
     )
   );
 }
