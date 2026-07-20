@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.470";
+const VERSION = "1.0.471";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -5140,6 +5140,7 @@ class FrigateViewCard extends HTMLElement {
       .forEach((p) =>
         p.classList.toggle("active", p.dataset.viewmode === "single"),
       );
+    this._syncTabsShell();
     //this._renderCamSwitcher();
     this._renderCamSwitcher();
     this._syncStatus();
