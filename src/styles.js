@@ -51,6 +51,7 @@ export const STYLES = `
     height: auto;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     -webkit-overflow-scrolling: touch;
+    overflow-y: auto; 
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-m);
@@ -71,6 +72,7 @@ export const STYLES = `
     top:0;
     left:0;
     -webkit-overflow-scrolling: touch;
+    overflow-y: auto; 
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
 
@@ -378,7 +380,9 @@ export const STYLES = `
     display:block;flex:1 1 auto;height:auto;
     width:100%;min-width:0;min-height:0;
     padding:10px;box-sizing:border-box;
-    overflow-y: visible;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch; 
     }
   .card.landing-active .landing-shell-footer{display:flex;flex:0 0 auto;align-items:center;min-height:30px;padding:4px 8px;border-top:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;bottom:0;z-index:4;}
   .landing-shell-footer .frigate-view{position:static;max-height:24px;}
