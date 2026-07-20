@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.468";
+const VERSION = "1.0.469";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1115,10 +1115,12 @@ const STYLES = `
   .overlay-fs[hidden]{display:none !important;}
   .overlay-fs svg {width:30px;height:30px;opacity: 0.8; }
   .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
-  #eng-wrap:hover .live-fs-btn,
-  #eng-wrap:hover .mute-btn,
   #eng-wrap.live-controls-visible .live-fs-btn,
   #eng-wrap.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
+  @media (hover: hover) and (pointer: fine) {
+    #eng-wrap:hover .live-fs-btn,
+    #eng-wrap:hover .mute-btn{opacity:1;pointer-events:auto;}
+  }
 
   #eng-wrap:fullscreen .overlay-fs,
   #eng-wrap:-webkit-full-screen .overlay-fs,
