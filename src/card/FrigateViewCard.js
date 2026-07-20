@@ -249,7 +249,7 @@ export class FrigateViewCard extends HTMLElement {
       }
     };
 //=============================
-const child = document.querySelector('.landing-shell');
+const child = document.querySelector('landing-shell');
 
 child.addEventListener('scroll', () => {
   // Toggle a data attribute based on whether the child is at the top
