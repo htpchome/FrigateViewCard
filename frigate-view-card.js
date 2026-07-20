@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.490";
+const VERSION = "1.0.491";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -4784,6 +4784,15 @@ class FrigateViewCard extends HTMLElement {
     void this._switchCamera(idx, { source: "manual" });
   }
 
+  _returnToLandingPage() {
+    if (!this._isLandingPageEnabled() || this._isLandingPageActive()) return;
+    this._landingPageActive = true;
+    if (this._$("#myPopup")?.classList.contains("is-open")) this._closePopup();
+    this._cancelPendingMount("landing-page-return");
+    this._applyLandingShellVisibility();
+    this._startLandingMode();
+  }
+
   // ── view mode ─────────────────────────────────────────────
   _isGridModeAvailable() {
     return (
@@ -6760,8 +6769,9 @@ class FrigateViewCard extends HTMLElement {
         : "Cameras") ||
       "Camera";
     const subtitle = this._subtitleText();
-    const multiCam = this._config.cameras.length > 1;
-    const camSwitcher = multiCam
+    const showCamSwitcher =
+      this._config.cameras.length > 1 || this._isLandingPageEnabled();
+    const camSwitcher = showCamSwitcher
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
@@ -7946,7 +7956,10 @@ class FrigateViewCard extends HTMLElement {
   }
   // ── cam switcher ──────────────────────────────────────────
   _camSwitcherMarkup({ includeStatus = true } = {}) {
-    return this._config.cameras
+    const backButton = this._isLandingPageEnabled()
+      ? `<button class="glass-btn cam-tab landing-back-btn" type="button" data-landing-back title="Back to landing page" aria-label="Back to landing page">${ICONS.left} Back</button>`
+      : "";
+    const cameraButtons = this._config.cameras
       .map((c, i) => {
         const name = cap(camDisplayName(c));
         const active = this._viewMode === "single" && i === this._activeCamIdx;
@@ -7956,12 +7969,13 @@ class FrigateViewCard extends HTMLElement {
         return `<button class="glass-btn cam-tab ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
       })
       .join("");
+    return `${backButton}${cameraButtons}`;
   }
 
   _renderCamSwitcher() {
     const el = this.shadowRoot.querySelector("#cam-switcher");
     if (!el) return;
-    if (this._config.cameras.length < 2) {
+    if (this._config.cameras.length < 2 && !this._isLandingPageEnabled()) {
       el.style.display = "none";
       return;
     }
@@ -8207,6 +8221,11 @@ class FrigateViewCard extends HTMLElement {
     const landingCell = target.closest("[data-landing-camidx]");
     if (landingCell && this._isLandingPageActive()) {
       this._exitLandingPageToCamera(Number(landingCell.dataset.landingCamidx));
+      return true;
+    }
+    const landingBack = target.closest("[data-landing-back]");
+    if (landingBack) {
+      this._returnToLandingPage();
       return true;
     }
     const setvm = target.closest("[data-setviewmode]");
