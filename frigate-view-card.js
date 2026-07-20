@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.469";
+const VERSION = "1.0.470";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -4504,6 +4504,7 @@ class FrigateViewCard extends HTMLElement {
 
     this._eventsMode = "camera";
     this._mountEngine();
+    this._syncTabsShell();
     this._renderAll();
 
     //this._renderCamSwitcher();
@@ -5758,11 +5759,15 @@ class FrigateViewCard extends HTMLElement {
 
   _buildTabsMarkup() {
     const ht = new Set(this._config.hidden_tabs || []);
-    const tabOrder = ["alerts", "clips", "snapshot", "recordings", "kept"];
+    const gridModeListOnly = this._viewMode === "grid";
+    const tabOrder = gridModeListOnly
+      ? ["alerts", "kept"]
+      : ["alerts", "clips", "snapshot", "recordings", "kept"];
     const activeTab = resolveActiveTab(this._tab, ht, tabOrder);
     this._tab = activeTab;
     const tab = (id, icon, label) =>
-      ht.has(id)
+      ht.has(id) ||
+      (gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id))
         ? ""
         : id === activeTab
           ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>`
@@ -5806,6 +5811,9 @@ class FrigateViewCard extends HTMLElement {
     try {
       if (tab === "alerts") await this._loadReviews();
       if (tab === "kept") await this._loadKept();
+      if (this._isGridMixedListMode() && (tab === "alerts" || tab === "kept")) {
+        await this._loadGridMixedTabData(tab);
+      }
       if (tab === "recordings") {
         const { clientId, cam } = this._cc();
         if (clientId && cam) {
@@ -5816,6 +5824,102 @@ class FrigateViewCard extends HTMLElement {
       console.error("[Frigate] tab data load failed", error);
     } finally {
       this._renderList();
+    }
+  }
+
+  _isGridMixedListMode() {
+    return this._viewMode === "grid";
+  }
+
+  _allGridReviews() {
+    const reviews = [];
+    const seen = new Set();
+    for (const camera of this._config.cameras || []) {
+      const cache = this._camCache[camera.entity];
+      for (const review of cache?.reviews || []) {
+        const id = String(review?.id || "");
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        reviews.push(review);
+      }
+    }
+    return reviews;
+  }
+
+  _allGridKeptEvents() {
+    const events = [];
+    const seen = new Set();
+    for (const camera of this._config.cameras || []) {
+      const cache = this._camCache[camera.entity];
+      for (const event of cache?.kept || []) {
+        const id = String(event?.id || "");
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        events.push(event);
+      }
+    }
+    return events;
+  }
+
+  _findReviewById(id) {
+    if (!id) return null;
+    const target = String(id);
+    if (this._isGridMixedListMode()) {
+      return (
+        this._allGridReviews().find(
+          (review) => String(review?.id || "") === target,
+        ) || null
+      );
+    }
+    return (
+      (this._reviews || []).find(
+        (review) => String(review?.id || "") === target,
+      ) || null
+    );
+  }
+
+  async _loadGridMixedTabData(tab) {
+    const before = this._winEnd;
+    const reviewsAfter = Math.max(
+      0,
+      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY),
+    );
+    for (const camera of this._config.cameras || []) {
+      const entity = camera.entity;
+      if (!entity) continue;
+      try {
+        if (!this._camCache[entity]?.discovered)
+          await this._discoverOne(entity);
+      } catch (_) {
+        continue;
+      }
+      const cache = this._camCache[entity];
+      const clientId = cache?.clientId;
+      const cam = cache?.cam;
+      if (!clientId || !cam) continue;
+
+      try {
+        if (tab === "alerts") {
+          const reviews = await this._fetchWindowedReviews(
+            clientId,
+            cam,
+            reviewsAfter,
+            before,
+            { debugLabel: "grid-alerts-tab" },
+          );
+          cache.reviews = Array.isArray(reviews) ? reviews : [];
+        }
+        if (tab === "kept") {
+          const kept = await this._ws({
+            type: "frigate/events/get",
+            instance_id: clientId,
+            cameras: [cam],
+            favorites: true,
+            limit: 50,
+          });
+          cache.kept = Array.isArray(kept) ? kept : [];
+        }
+      } catch (_) {}
     }
   }
 
@@ -7317,7 +7421,7 @@ class FrigateViewCard extends HTMLElement {
     const revOpen = target.closest("[data-review-open]");
     if (revOpen) {
       const rid = revOpen.closest("[data-review-id]")?.dataset.reviewId;
-      const review = rid ? this._reviews.find((r) => r.id === rid) : null;
+      const review = rid ? this._findReviewById(rid) : null;
       this._showClipById(revOpen.dataset.reviewOpen, {
         mediaType: "alert",
         startTime: review?.start_time,
@@ -9356,9 +9460,12 @@ class FrigateViewCard extends HTMLElement {
   }
   _reviewsForTabBase() {
     const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
+    const reviewSource = this._isGridMixedListMode()
+      ? this._allGridReviews()
+      : this._reviews;
     return showAllReviews
-      ? [...this._reviews]
-      : this._reviews.filter((review) => review?.severity === "alert");
+      ? [...reviewSource]
+      : reviewSource.filter((review) => review?.severity === "alert");
   }
   _reviewSourceEvent(review) {
     const firstDet =
@@ -9378,7 +9485,9 @@ class FrigateViewCard extends HTMLElement {
       return out;
     }
     if (this._tab === "kept") {
-      return [...(this._kept || [])];
+      return this._isGridMixedListMode()
+        ? this._allGridKeptEvents()
+        : [...(this._kept || [])];
     }
     return this._allDisplayEvents();
   }
@@ -9414,7 +9523,10 @@ class FrigateViewCard extends HTMLElement {
     });
   }
   _filteredKept() {
-    return (this._kept || []).filter((ev) => this._matchesEventFilters(ev));
+    const source = this._isGridMixedListMode()
+      ? this._allGridKeptEvents()
+      : this._kept || [];
+    return source.filter((ev) => this._matchesEventFilters(ev));
   }
   _normalizeFilterSelections() {
     const labels = this._labels();
@@ -9591,7 +9703,8 @@ class FrigateViewCard extends HTMLElement {
       : "";
     // show camera name in multi-cam all-events mode
     const camLabel =
-      this._eventsMode === "all" && this._config.cameras.length > 1
+      (this._eventsMode === "all" || this._isGridMixedListMode()) &&
+      this._config.cameras.length > 1
         ? `<span class="cam-badge">${(ev.camera || "").replace(/_/g, " ")}</span>`
         : "";
     // compact: wrap everything in a tighter layout, actions horizontal
@@ -9781,6 +9894,10 @@ class FrigateViewCard extends HTMLElement {
         const objs = (r.data?.objects || []).map(cap).join(", ");
         const title = r.data?.metadata?.title || objs || cap(r.severity);
         const firstDet = (r.data?.detections && r.data.detections[0]) || "";
+        const sourceEvent = this._reviewSourceEvent(r);
+        const cameraLabel = String(r?.camera || sourceEvent?.camera || "")
+          .replace(/_/g, " ")
+          .trim();
         const reviewed = r.has_been_reviewed;
         const favEv = firstDet ? this._findEventById(firstDet) : null;
         const favBtn = firstDet
@@ -9804,7 +9921,7 @@ class FrigateViewCard extends HTMLElement {
         ${thumb}
 
         <div class="rev-inf">
-          <div class="rev-t">${title}</div>
+          <div class="rev-t">${title}${cameraLabel ? ` <span class="cam-badge">${cameraLabel}</span>` : ""}</div>
           <div class="rev-m">
             <span class="time-meta">${ICONS.clock}${this._dateTimeLabel(r.start_time)}</span>
             <span class="review-meta">
