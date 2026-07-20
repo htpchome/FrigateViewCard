@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.465";
+const VERSION = "1.0.466";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1097,8 +1097,11 @@ const STYLES = `
     z-index: -1; 
     filter: brightness(115%); }
   .glass-btn:hover{background:rgba(255, 255, 255, 0.3);} 
-  .glass-btn svg {width:30px;height:30px;opacity: 0.8; }
+  .glass-btn svg {width:24px;height:24px;opacity: 0.8; }
   .glass-btn:hover svg {width:30px;height:30px;opacity: 0.95; }
+
+  .mute-btn {width:36px;height:36px;}
+  .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
 
   .cam-tab{font-size: 1rem;padding:0.4em;line-height: 1;font-weight:600;padding:6px;white-space:nowrap;}  
   .cam-tab:hover{color:var(--c-primary-d);}
@@ -1152,11 +1155,7 @@ const STYLES = `
   .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
   .sv{font-size:1.05rem;font-weight:700;color:var(--c-primary-d);} .sl{font-size:0.75rem;color:var(--c-text2);text-transform:uppercase;letter-spacing:.06em;}
-  .info-mute{width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:7px;color:var(--c-text2);cursor:pointer;flex-shrink:0;}
-    .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
-  .info-mute svg{width:24px;height:24px;}
-  .info-mute:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
-
+  
   /* ── camera switcher ── */
 
   .cam-switcher{display:flex;align-items:center;gap:4px;flex-wrap: wrap;padding:6px 12px;overflow-x:auto;scrollbar-width:none;}
@@ -5856,7 +5855,7 @@ class FrigateViewCard extends HTMLElement {
                   <div class="sv" id="on-dot" style="color:var(--c-on)">●</div>
                   <div class="sl" id="on-lbl">Online</div>
                 </div>
-                <button class="glass-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
+                <button class="glass-btn mute-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
               </div>
             </div>
             ${camSwitcher}
