@@ -1100,7 +1100,7 @@ const STYLES = `
   .glass-btn svg {width:24px;height:24px;opacity: 0.8; }
   .glass-btn:hover svg {width:30px;height:30px;opacity: 0.95; }
 
-  .mute-btn {position:absolute;left:8px;bottom:8px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .mute-btn {position:absolute;right:8px;bottom:8px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
 
   .cam-tab{font-size: 1rem;padding:0.4em;line-height: 1;font-weight:600;padding:6px;white-space:nowrap;}  
