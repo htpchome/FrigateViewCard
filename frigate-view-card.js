@@ -817,7 +817,11 @@ const dialogActionKindFromEvent = (event) => {
   if (!(button instanceof Element)) return null;
   return dialogActionKindFromElement(button);
 };
-const wireCameraRowDragAndDrop = ({ rows, clearDropTargets, onReorder }) => {
+const wireCameraRowDragAndDrop = ({
+  rows,
+  clearDropTargets,
+  onReorder
+}) => {
   rows.forEach((row) => {
     row.addEventListener("dragstart", (event) => {
       const rowIndex = row.dataset.row;
@@ -936,7 +940,13 @@ const setupSelectSelector = ({
   };
   bindSelectorSyncEvents(element, syncValue);
 };
-const setupEntitySelector = ({ element, hass, domain, label, onChange }) => {
+const setupEntitySelector = ({
+  element,
+  hass,
+  domain,
+  label,
+  onChange
+}) => {
   if (!element) return;
   element.hass = hass;
   element.selector = { entity: { domain } };
@@ -1048,7 +1058,12 @@ const bindEventsForIds = ({ root, ids, events, handler }) => {
     });
   });
 };
-const bindEventsForSelectorAll = ({ root, selector, events, handler }) => {
+const bindEventsForSelectorAll = ({
+  root,
+  selector,
+  events,
+  handler
+}) => {
   root.querySelectorAll(selector).forEach((element) => {
     events.forEach((eventName) => {
       element.addEventListener(
