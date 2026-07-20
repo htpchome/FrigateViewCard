@@ -78,6 +78,7 @@ import {
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
+
     this.attachShadow({ mode: "open" });
     this._onShadowClick = (e) => this._click(e);
     this.shadowRoot.addEventListener("click", this._onShadowClick);
@@ -392,46 +393,12 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._startEditorDialogCloseObserver();
 
-//=========================================
-
-  super.connectedCallback();
-  this._initRefreshFix();
-
-
-
-
-//==============================
-
+// Initial calculation once elements drop into the DOM
+    setTimeout(() => this.repositionToHeader(), 100);
+//====================================================
 
   }
   
-//==============================
-
-_initRefreshFix() {
-  // Target the Home Assistant view container or the card parent
-  const viewContainer = this.closest('home-assistant-main') || document.body;
-  
-  if (!viewContainer) return;
-
-  // Watch for layout shifts caused by the vanishing progress indicator
-  const observer = new ResizeObserver(() => {
-    // Force iOS WebKit to recalculate styles and scroll bounds
-    window.requestAnimationFrame(() => {
-      this.style.transform = 'translateZ(0)'; // Forces hardware acceleration redraw
-      
-      // If the page is slightly scrolled out of place, snap it back
-      if (window.scrollY !== 0) {
-        window.scrollTo(0, 0);
-      }
-    });
-  });
-
-  observer.observe(viewContainer);
-}
-
-
-
-//===============================
 
   _syncCardShellClasses() {
     const card = this.shadowRoot?.querySelector("#card");
@@ -835,6 +802,13 @@ _initRefreshFix() {
   }
   set hass(hass) {
     this._hass = hass;
+
+//=============================
+    requestAnimationFrame(() => {
+      this.repositionToHeader();
+    });
+//=============================
+
     if (!this._config) return;
     const cameraStateSignature = hassEntityStateSignature(
       hass,
@@ -886,6 +860,59 @@ _initRefreshFix() {
       max_rows: 3,
     };
   }
+
+//============================================
+
+  repositionToHeader() {
+    // 1. Locate the master Home Assistant App Header bar breaking out of local shadow bounds
+    const mainApp = document.querySelector("home-assistant")
+      ?.shadowRoot?.querySelector("home-assistant-main")
+      ?.shadowRoot?.querySelector("ha-drawer")
+      ?.querySelector("partial-panel-resolver, ha-panel-lovelace");
+
+    const header = mainApp
+      ?.shadowRoot?.querySelector("hui-root")
+      ?.shadowRoot?.querySelector("ha-header") || 
+      document.querySelector("app-header") || 
+      document.querySelector("ha-header");
+
+    if (!header) return;
+
+    // 2. Get exact bottom boundary coordinate of the header viewport
+    const headerRect = header.getBoundingClientRect();
+    const headerBottom = headerRect.bottom;
+
+    // 3. Get current absolute viewport coordinates of your card container
+    const cardRect = this.getBoundingClientRect();
+
+    // 4. If the gap doesn't equal 0 (meaning iOS WebKit pushed it down), compute the margin offset
+    // WebKit often offsets the parent hui-view grid container.
+    const parentView = this.closest('hui-view') || this.parentElement;
+
+    if (parentView && headerBottom > 0) {
+      // Forcefully correct the parent view container's offset calculation shift
+      const currentTopOffset = cardRect.top - headerBottom;
+      
+      if (Math.abs(currentTopOffset) > 2) { 
+        // Zero out the dynamic padding iOS stuck on the wrapper container
+        parentView.style.setProperty("padding-top", "0px", "important");
+        parentView.style.setProperty("margin-top", "0px", "important");
+        
+        // Directly align your card wrapper using absolute pixel corrections 
+        const cardWrapper = this.shadowRoot.getElementById("card-root");
+        if (cardWrapper) {
+          cardWrapper.style.position = "relative";
+          // Snaps the element upward exactly by the amount WebKit is miscalculating
+          cardWrapper.style.top = `-${currentTopOffset}px`;
+        }
+      }
+    }
+  }
+}
+
+//============================================
+
+
   disconnectedCallback() {
     if (this._disconnectTeardownT) clearTimeout(this._disconnectTeardownT);
     this._disconnectTeardownT = setTimeout(() => {
