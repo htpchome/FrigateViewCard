@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.510";
+const VERSION = "1.0.511";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -549,7 +549,7 @@ const STYLES = `
   
   /* \u2500\u2500 camera switcher \u2500\u2500 */
 
-  .cam-switcher{display:flex;align-items:center;gap:4px;flex-wrap: wrap;padding:6px 12px;overflow-x:auto;scrollbar-width:none;}
+  .cam-switcher{display:flex;align-items:center;gap:4px;flex-wrap: wrap;padding:6px 12px;overflow-x:auto;scrollbar-width:none;white-space:nowrap;-ms-overflow-style: none;}
   .cam-switcher::-webkit-scrollbar{display:none;}
 
   /* \u2500\u2500 timeline \u2500\u2500 */
