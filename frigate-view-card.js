@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.461";
+const VERSION = "1.0.462";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1102,8 +1102,8 @@ const STYLES = `
 
   .cam-tab{font-size: 1rem;padding:0.4em;line-height: 1;font-weight:600;padding:6px;white-space:nowrap;}  
   .cam-tab:hover{color:var(--c-primary-d);}
-  .cam-tab.active:hover{color:var(--c-primary-d);}
   .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
+  .cam-tab.active:hover{background:var(--c-primary-d);color:var(--c-text-rev);}
   .cam-tab svg{width:14.4px;height:14.4px;flex-shrink:0;}
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
 
