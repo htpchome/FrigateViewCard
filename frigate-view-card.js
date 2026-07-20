@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.520";
+const VERSION = "1.0.522";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -129,7 +129,7 @@ const STYLES = `
     padding:0 !important;
     overflow: hidden;
     box-sizing: border-box !important;
-    position: relative;
+    position: relative !important;
   }
   :host {
     --popup-z-index: 1000;
@@ -179,6 +179,8 @@ const STYLES = `
     min-height: 0 !important;
     height: auto;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
+    transition: top 0.1s ease-out;
+    position: relative;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-m);
@@ -196,6 +198,7 @@ const STYLES = `
     padding:0;
     margin: 0 auto;
     position:relative;
+    transition: top 0.1s ease-out;
     top:0;
     left:0;
     }
@@ -1768,24 +1771,8 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-    super.connectedCallback();
-    this._initRefreshFix();
+    setTimeout(() => this.repositionToHeader(), 100);
   }
-  //==============================
-  _initRefreshFix() {
-    const viewContainer = this.closest("home-assistant-main") || document.body;
-    if (!viewContainer) return;
-    const observer = new ResizeObserver(() => {
-      window.requestAnimationFrame(() => {
-        this.style.transform = "translateZ(0)";
-        if (window.scrollY !== 0) {
-          window.scrollTo(0, 0);
-        }
-      });
-    });
-    observer.observe(viewContainer);
-  }
-  //===============================
   _syncCardShellClasses() {
     const card = this.shadowRoot?.querySelector("#card");
     if (!card) return;
@@ -2096,6 +2083,9 @@ const FrigateViewCard = class extends HTMLElement {
   }
   set hass(hass) {
     this._hass = hass;
+    requestAnimationFrame(() => {
+      this.repositionToHeader();
+    });
     if (!this._config) return;
     const cameraStateSignature = hassEntityStateSignature(
       hass,
@@ -2144,6 +2134,29 @@ const FrigateViewCard = class extends HTMLElement {
       max_rows: 3
     };
   }
+  //============================================
+  repositionToHeader() {
+    const mainApp = document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")?.shadowRoot?.querySelector("ha-drawer")?.querySelector("partial-panel-resolver, ha-panel-lovelace");
+    const header = mainApp?.shadowRoot?.querySelector("hui-root")?.shadowRoot?.querySelector("ha-header") || document.querySelector("app-header") || document.querySelector("ha-header");
+    if (!header) return;
+    const headerRect = header.getBoundingClientRect();
+    const headerBottom = headerRect.bottom;
+    const cardRect = this.getBoundingClientRect();
+    const parentView = this.closest("hui-view") || this.parentElement;
+    if (parentView && headerBottom > 0) {
+      const currentTopOffset = cardRect.top - headerBottom;
+      if (Math.abs(currentTopOffset) > 2) {
+        parentView.style.setProperty("padding-top", "0px", "important");
+        parentView.style.setProperty("margin-top", "0px", "important");
+        const cardWrapper = this.shadowRoot.getElementById("card-root");
+        if (cardWrapper) {
+          cardWrapper.style.position = "relative";
+          cardWrapper.style.top = `-${currentTopOffset}px`;
+        }
+      }
+    }
+  }
+  //============================================
   disconnectedCallback() {
     if (this._disconnectTeardownT) clearTimeout(this._disconnectTeardownT);
     this._disconnectTeardownT = setTimeout(() => {

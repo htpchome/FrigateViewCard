@@ -12,7 +12,7 @@ export const STYLES = `
     padding:0 !important;
     overflow: hidden;
     box-sizing: border-box !important;
-    position: relative;
+    position: relative !important;
   }
   :host {
     --popup-z-index: 1000;
@@ -62,6 +62,8 @@ export const STYLES = `
     min-height: 0 !important;
     height: auto;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
+    transition: top 0.1s ease-out;
+    position: relative;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-m);
@@ -79,6 +81,7 @@ export const STYLES = `
     padding:0;
     margin: 0 auto;
     position:relative;
+    transition: top 0.1s ease-out;
     top:0;
     left:0;
     }
