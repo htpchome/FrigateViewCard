@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.480";
+const VERSION = "1.0.482";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3343,6 +3343,7 @@ class FrigateViewCard extends HTMLElement {
 
   async _streamFallbackUrl(entity) {
     if (!entity) return "";
+    if (!this._hass?.callWS) return "";
     const cached = this._fallbackImgUrlCache.get(entity);
     if (cached && cached.url && cached.exp > Date.now()) return cached.url;
 
@@ -3748,6 +3749,51 @@ class FrigateViewCard extends HTMLElement {
         } catch (_) {}
       });
     })();
+  }
+
+  _mountGridCameraCellMedia(
+    cell,
+    { entity, stateObj, useLive, liveStreamHint, gridState },
+  ) {
+    if (!cell || !entity) return false;
+    if (stateObj && useLive) {
+      const connectionType = this._cameraConnectionType(entity);
+      if (liveStreamHint === "mse" && connectionType !== "ha_direct") {
+        this._mountGridDirectMSECell(cell, entity, gridState);
+      } else {
+        const stream = document.createElement("ha-camera-stream");
+        stream.hass = this._hass;
+        stream.stateObj = stateObj;
+        stream.controls = false;
+        stream.muted = true;
+        stream.defaultMuted = true;
+        stream.style.cssText = "width:100%;height:100%;display:block";
+        cell.appendChild(stream);
+        this._attachVideoFit(stream);
+      }
+      return true;
+    }
+
+    const img = document.createElement("img");
+    const entityPicture = stateObj?.attributes?.entity_picture || "";
+    img.alt = `${entity} snapshot`;
+    img.loading = "lazy";
+    img.decoding = "async";
+    void (async () => {
+      const primaryUrl = await this._streamFallbackUrl(entity);
+      if (!img.isConnected) return;
+      if (primaryUrl) {
+        img.src = primaryUrl;
+        return;
+      }
+      if (entityPicture) {
+        img.src = /^https?:\/\//i.test(entityPicture)
+          ? entityPicture
+          : `${window.location.origin}${entityPicture}`;
+      }
+    })();
+    cell.appendChild(img);
+    return true;
   }
 
   async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
@@ -4210,8 +4256,24 @@ class FrigateViewCard extends HTMLElement {
     if (!useLive) return "Snapshot";
     const connectionType = this._cameraConnectionType(entity);
     if (connectionType === "ha_direct") return "HA Live";
-    const hint = String(this._currentLiveStreamHint() || "").toUpperCase();
+    const hint = String(this._landingLiveStreamHint() || "").toUpperCase();
     return hint ? `${hint} Live` : "Live";
+  }
+
+  _landingLiveStreamHint() {
+    const active = String(this._activeStreamType || "")
+      .trim()
+      .toLowerCase();
+    if (active === "webrtc" || active === "mse" || active === "hls") {
+      return active;
+    }
+    const lastHint = String(this._lastLiveStreamHint || "")
+      .trim()
+      .toLowerCase();
+    if (lastHint === "webrtc" || lastHint === "mse" || lastHint === "hls") {
+      return lastHint;
+    }
+    return "mse";
   }
 
   _teardownLandingMedia() {
@@ -4256,7 +4318,7 @@ class FrigateViewCard extends HTMLElement {
       : [];
     const columns = this._landingGridColumns(cameras.length);
     const showTitleBars = this._landingShowTitleBarsEnabled();
-    const liveStreamHint = this._currentLiveStreamHint();
+    const liveStreamHint = this._landingLiveStreamHint();
     const hassReady = !!this._hass?.states;
     const nextSignature = cameras
       .map((camera, index) => {
@@ -4349,7 +4411,13 @@ class FrigateViewCard extends HTMLElement {
   _mountLandingMedia() {
     if (!this._isLandingPageActive()) return;
     const hosts = this.shadowRoot.querySelectorAll(".landing-media-host");
-    const liveStreamHint = this._currentLiveStreamHint();
+    if (!this._hass?.states) {
+      hosts.forEach((host) => {
+        host.innerHTML = `<div class="ph">${ICONS.live}<span>Loading…</span></div>`;
+      });
+      return;
+    }
+    const liveStreamHint = this._landingLiveStreamHint();
     const landingState = { destroyed: false, cleanup: [] };
     this._landingMediaState = landingState;
     hosts.forEach((host) => {
@@ -4365,42 +4433,13 @@ class FrigateViewCard extends HTMLElement {
         host.innerHTML = `<div class="ph">${ICONS.live}<span>Unavailable</span></div>`;
         return;
       }
-      if (useLive && stateObj) {
-        const connectionType = this._cameraConnectionType(entity);
-        if (liveStreamHint === "mse" && connectionType !== "ha_direct") {
-          this._mountGridDirectMSECell(host, entity, landingState);
-        } else {
-          const stream = document.createElement("ha-camera-stream");
-          stream.hass = this._hass;
-          stream.stateObj = stateObj;
-          stream.controls = false;
-          stream.muted = true;
-          stream.defaultMuted = true;
-          stream.style.cssText = "width:100%;height:100%;display:block";
-          host.appendChild(stream);
-          this._attachVideoFit(stream);
-        }
-        return;
-      }
-      const img = document.createElement("img");
-      img.alt = `${entity} snapshot`;
-      img.loading = "lazy";
-      img.decoding = "async";
-      host.appendChild(img);
-      void (async () => {
-        const primaryUrl = await this._streamFallbackUrl(entity);
-        if (!img.isConnected) return;
-        if (primaryUrl) {
-          img.src = primaryUrl;
-          return;
-        }
-        const picture = stateObj?.attributes?.entity_picture || "";
-        if (picture) {
-          img.src = /^https?:\/\//i.test(picture)
-            ? picture
-            : `${window.location.origin}${picture}`;
-        }
-      })();
+      this._mountGridCameraCellMedia(host, {
+        entity,
+        stateObj,
+        useLive,
+        liveStreamHint,
+        gridState: landingState,
+      });
     });
   }
 
@@ -4906,41 +4945,14 @@ class FrigateViewCard extends HTMLElement {
         if (severity === "detection") cell.classList.add("grid-detection");
         const useLive =
           this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
-        if (stateObj && useLive) {
-          const connectionType = this._cameraConnectionType(entity);
-          if (liveStreamHint === "mse" && connectionType !== "ha_direct") {
-            this._mountGridDirectMSECell(cell, entity, gridState);
-          } else {
-            const stream = document.createElement("ha-camera-stream");
-            stream.hass = this._hass;
-            stream.stateObj = stateObj;
-            stream.controls = false;
-            stream.muted = true;
-            stream.defaultMuted = true;
-            stream.style.cssText = "width:100%;height:100%;display:block";
-            cell.appendChild(stream);
-            this._attachVideoFit(stream);
-          }
-        } else if (entity) {
-          const img = document.createElement("img");
-          const entityPicture = stateObj?.attributes?.entity_picture || "";
-          img.alt = `${entity} snapshot`;
-          img.loading = "lazy";
-          img.decoding = "async";
-          void (async () => {
-            const primaryUrl = await this._streamFallbackUrl(entity);
-            if (!img.isConnected) return;
-            if (primaryUrl) {
-              img.src = primaryUrl;
-              return;
-            }
-            if (entityPicture) {
-              img.src = /^https?:\/\//i.test(entityPicture)
-                ? entityPicture
-                : `${window.location.origin}${entityPicture}`;
-            }
-          })();
-          cell.appendChild(img);
+        if (entity) {
+          this._mountGridCameraCellMedia(cell, {
+            entity,
+            stateObj,
+            useLive,
+            liveStreamHint,
+            gridState,
+          });
         } else {
           cell.classList.add("empty");
         }
