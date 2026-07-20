@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.531";
+const VERSION = "1.0.532";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -138,28 +138,24 @@ const STYLES = `
   }
 :host {
   display: block;
-  /* Allow the inside element to float smoothly outside its broken parent rendering boundaries */
   overflow: visible !important; 
 }
 
 #card-root {
   position: relative;
   will-change: transform;
-  /* Hardware accelerates the redraw, bypassing iOS WebKit container freezes */
   transform: translateZ(0); 
   -webkit-transform: translateZ(0);
 }
 ha-card {
   position: relative;
   will-change: transform;
-  /* Hardware accelerates the redraw, bypassing iOS WebKit container freezes */
   transform: translateZ(0); 
   -webkit-transform: translateZ(0);
 }
 .card {
   position: relative;
   will-change: transform;
-  /* Hardware accelerates the redraw, bypassing iOS WebKit container freezes */
   transform: translateZ(0); 
   -webkit-transform: translateZ(0);
 }
