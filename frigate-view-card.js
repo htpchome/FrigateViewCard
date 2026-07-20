@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.515";
+const VERSION = "1.0.516";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -135,6 +135,11 @@ const STYLES = `
     --popup-z-index: 1000;
     --popup-bg: white;
     --handle-color: #e0e0e0;
+  }
+
+  hui-panel-view, hui-iframe-card iframe {
+  overscroll-behavior-y:none;
+  -webkit-overflow-scrolling: auto;
   }
 
   /* \u2500\u2500 theme variables (dark = default) \u2500\u2500 */
@@ -579,10 +584,6 @@ const STYLES = `
       flex-shrink: 0; 
     }
   }
-
-
-
-
 
   /* \u2500\u2500 timeline \u2500\u2500 */
   .tl-tools{display:flex;gap:4px;}

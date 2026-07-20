@@ -20,6 +20,11 @@ export const STYLES = `
     --handle-color: #e0e0e0;
   }
 
+  hui-panel-view, hui-iframe-card iframe {
+  overscroll-behavior-y:none;
+  -webkit-overflow-scrolling: auto;
+  }
+
   /* ── theme variables (dark = default) ── */
     .card {
         --c-bg-main:   var(--card-background-color);
@@ -462,10 +467,6 @@ export const STYLES = `
       flex-shrink: 0; 
     }
   }
-
-
-
-
 
   /* ── timeline ── */
   .tl-tools{display:flex;gap:4px;}
