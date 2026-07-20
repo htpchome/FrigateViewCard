@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.478";
+const VERSION = "1.0.479";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -2608,7 +2608,7 @@ class FrigateViewCard extends HTMLElement {
   async _discoverOne(entity) {
     const cache = this._camCache[entity] || mkCamState();
     if (cache.discovered) return;
-    const ent = this._hass.states[entity];
+    const ent = this._hass?.states?.[entity];
     if (!ent) return;
     cache.clientId =
       ent.attributes?.client_id || ent.attributes?.mqtt_client_id || "frigate";
@@ -2701,7 +2701,7 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _hlsStateObj(entity, streamType = null) {
-    const raw = this._hass.states[entity];
+    const raw = this._hass?.states?.[entity];
     if (!raw) return null;
     const attrs = { ...raw.attributes };
     attrs.frontend_stream_type = streamType || this._preferredStreamType();
