@@ -27,3 +27,22 @@ test("grid mode toolbar and runtime hooks are present", () => {
   assert.equal(source.includes("_markGridAlertCamera"), true);
   assert.equal(source.includes("data-grid-camidx"), true);
 });
+
+test("mobile live camera tiles avoid iOS MSE startup and cropping", () => {
+  assert.equal(
+    source.includes('if (DEVICE_PROFILE.isIOS) return "webrtc";'),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      ".live-grid-cell video,.live-grid-cell img,.live-grid-cell ha-camera-stream{width:100%;height:100%;display:block;object-fit:contain;object-position:center center;",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      ".landing-media-host video,.landing-media-host img,.landing-media-host ha-camera-stream{width:100%;height:100%;display:block;object-fit:contain;object-position:center center;",
+    ),
+    true,
+  );
+});

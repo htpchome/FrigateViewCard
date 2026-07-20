@@ -2987,6 +2987,7 @@ export class FrigateViewCard extends HTMLElement {
     if (lastHint === "webrtc" || lastHint === "mse" || lastHint === "hls") {
       return lastHint;
     }
+    if (DEVICE_PROFILE.isIOS) return "webrtc";
     return "mse";
   }
 
