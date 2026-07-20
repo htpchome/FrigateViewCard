@@ -20,6 +20,14 @@ export const STYLES = `
     --handle-color: #e0e0e0;
   }
 
+  :host {
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;  
+  -webkit-overflow-scrolling: touch !important;  
+  top: 0 !important;
+  margin-top: 0 !important;
+}
+
   hui-panel-view, hui-iframe-card iframe {
   overscroll-behavior-y:none;
   -webkit-overflow-scrolling: auto;

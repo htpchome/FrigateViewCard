@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.519";
+const VERSION = "1.0.520";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -136,6 +136,14 @@ const STYLES = `
     --popup-bg: white;
     --handle-color: #e0e0e0;
   }
+
+  :host {
+  transform: translateZ(0) !important;
+  -webkit-transform: translateZ(0) !important;  
+  -webkit-overflow-scrolling: touch !important;  
+  top: 0 !important;
+  margin-top: 0 !important;
+}
 
   hui-panel-view, hui-iframe-card iframe {
   overscroll-behavior-y:none;
