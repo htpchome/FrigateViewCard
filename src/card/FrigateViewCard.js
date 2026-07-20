@@ -391,7 +391,44 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
+
+//=========================================
+
+  super.connectedCallback();
+  this._initRefreshFix();
+
+
+
+
+//==============================
+
+
   }
+  
+//==============================
+
+_initRefreshFix() {
+  // Target the Home Assistant view container or the card parent
+  const viewContainer = this.closest('home-assistant-main') || document.body;
+  
+  if (!viewContainer) return;
+
+  // Watch for layout shifts caused by the vanishing progress indicator
+  const observer = new ResizeObserver(() => {
+    // Force iOS WebKit to recalculate styles and scroll bounds
+    window.requestAnimationFrame(() => {
+      this.style.transform = 'translateZ(0)'; // Forces hardware acceleration redraw
+      
+      // If the page is slightly scrolled out of place, snap it back
+      if (window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    });
+  });
+
+
+
+//===============================
 
   _syncCardShellClasses() {
     const card = this.shadowRoot?.querySelector("#card");
