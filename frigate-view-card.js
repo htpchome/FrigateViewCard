@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.504";
+const VERSION = "1.0.505";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -796,6 +796,49 @@ function camDisplayName(c) {
   return c.name || (c.entity || "").replace(/^camera\./, "").replace(/_/g, " ");
 }
 
+function normalizeCameraConfig(camera, { fallbackName = null } = {}) {
+  if (typeof camera === "string") {
+    return {
+      entity: camera,
+      name: fallbackName,
+      connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+      alerts_content: "alerts_only",
+      disable_hls_desktop: false,
+    };
+  }
+  if (camera && typeof camera === "object") {
+    return {
+      entity: camera.entity || camera.camera_entity || null,
+      name: camera.name || fallbackName,
+      connection_type: normalizeCameraConnectionType(camera.connection_type),
+      alerts_content: normalizeAlertsAreaContent(camera.alerts_content),
+      disable_hls_desktop: normalizeDisableHlsDesktop(
+        camera.disable_hls_desktop,
+      ),
+    };
+  }
+  return {
+    entity: null,
+    name: fallbackName,
+    connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+    alerts_content: "alerts_only",
+    disable_hls_desktop: false,
+  };
+}
+
+const configuredCameraEntities = (config) =>
+  (config?.cameras || []).map(({ entity }) => entity).filter(Boolean);
+
+const hassThemeSignature = (hass) => {
+  const { darkMode = false, theme = "" } = hass?.themes || {};
+  return `${darkMode === true ? "dark" : "light"}:${theme || hass?.selectedTheme || ""}`;
+};
+
+const hassEntityStateSignature = (hass, entities) =>
+  entities
+    .map((entity) => `${entity}:${hass?.states?.[entity]?.state ?? "missing"}`)
+    .join("|");
+
 // ── styles ───────────────────────────────────────────────────
 const STYLES = `
   :host {
@@ -1393,6 +1436,8 @@ class FrigateViewCard extends HTMLElement {
     };
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
     this._hass = null;
+    this._lastHassCameraStateSignature = "";
+    this._lastHassThemeSignature = "";
     this._config = null;
     this._started = false;
     this._activeCamIdx = 0;
@@ -1881,67 +1926,39 @@ class FrigateViewCard extends HTMLElement {
     const wasStarted = this._started === true;
     const prevConfig = this._config;
     let cameras;
-    const normalizeCamera = (c) => {
-      if (typeof c === "string") {
-        return {
-          entity: c,
-          name: null,
-          connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
-          alerts_content: "alerts_only",
-          disable_hls_desktop: false,
-        };
-      }
-      if (c && typeof c === "object") {
-        return {
-          entity: c.entity || c.camera_entity || null,
-          name: c.name || null,
-          connection_type: normalizeCameraConnectionType(c.connection_type),
-          alerts_content: normalizeAlertsAreaContent(c.alerts_content),
-          disable_hls_desktop: normalizeDisableHlsDesktop(
-            c.disable_hls_desktop,
-          ),
-        };
-      }
-      return {
-        entity: null,
-        name: null,
-        connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
-        alerts_content: "alerts_only",
-        disable_hls_desktop: false,
-      };
-    };
 
     if (Array.isArray(config.cameras) && config.cameras.length) {
-      cameras = config.cameras.map(normalizeCamera).filter((c) => c.entity);
+      cameras = config.cameras
+        .map((camera) => normalizeCameraConfig(camera))
+        .filter((c) => c.entity);
     } else if (typeof config.cameras === "string" && config.cameras) {
-      cameras = [normalizeCamera(config.cameras)].filter((c) => c.entity);
+      cameras = [normalizeCameraConfig(config.cameras)].filter((c) => c.entity);
     } else if (config.cameras && typeof config.cameras === "object") {
-      cameras = [normalizeCamera(config.cameras)].filter((c) => c.entity);
+      cameras = [normalizeCameraConfig(config.cameras)].filter((c) => c.entity);
     } else if (config.camera_entity) {
       cameras = [
-        {
-          entity: config.camera_entity,
-          name: config.title || null,
-          alerts_content: "alerts_only",
-        },
+        normalizeCameraConfig(
+          { camera_entity: config.camera_entity },
+          { fallbackName: config.title || null },
+        ),
       ];
     } else if (config.camera) {
-      cameras = [normalizeCamera(config.camera)].filter((c) => c.entity);
+      cameras = [normalizeCameraConfig(config.camera)].filter((c) => c.entity);
     } else if (config.entity && /^camera\./.test(String(config.entity))) {
       cameras = [
-        {
-          entity: String(config.entity),
-          name: config.title || null,
-          alerts_content: "alerts_only",
-        },
+        normalizeCameraConfig(String(config.entity), {
+          fallbackName: config.title || null,
+        }),
       ];
     } else if (Array.isArray(config.entities) && config.entities.length) {
       cameras = config.entities
         .map((e) => (typeof e === "string" ? e : e?.entity))
         .filter((e) => typeof e === "string" && /^camera\./.test(e))
-        .map((e) => ({ entity: e, name: null, alerts_content: "alerts_only" }));
+        .map((e) => normalizeCameraConfig(e));
     } else if (prevConfig?.cameras?.length) {
-      cameras = prevConfig.cameras.map(normalizeCamera).filter((c) => c.entity);
+      cameras = prevConfig.cameras
+        .map((camera) => normalizeCameraConfig(camera))
+        .filter((c) => c.entity);
     } else {
       cameras = [];
     }
@@ -2142,6 +2159,16 @@ class FrigateViewCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     if (!this._config) return;
+    const cameraStateSignature = hassEntityStateSignature(
+      hass,
+      configuredCameraEntities(this._config),
+    );
+    const themeSignature = hassThemeSignature(hass);
+    const cameraStateChanged =
+      cameraStateSignature !== this._lastHassCameraStateSignature;
+    const themeChanged = themeSignature !== this._lastHassThemeSignature;
+    this._lastHassCameraStateSignature = cameraStateSignature;
+    this._lastHassThemeSignature = themeSignature;
     if (!this._started) {
       this._started = true;
       this._start();
@@ -2152,13 +2179,19 @@ class FrigateViewCard extends HTMLElement {
       this._scheduleResumeLive("hass-edit-exit");
     }
     this._lastEditorPreviewContext = inEditorPreview;
+    if (!cameraStateChanged && !themeChanged) return;
     if (this._isLandingPageActive()) {
-      this._renderLandingPage();
+      if (cameraStateChanged) this._renderLandingPage();
+      if (themeChanged) this._applyCardStyle();
       return;
     }
-    this._syncStatus();
-    this._applyCardStyle(); // re-evaluate theme colors on each update
-    this._kickLiveIfStale();
+    if (cameraStateChanged) {
+      this._syncStatus();
+      this._kickLiveIfStale();
+    }
+    if (themeChanged) {
+      this._applyCardStyle();
+    }
   }
   get _activeCam() {
     return (
@@ -5201,8 +5234,6 @@ class FrigateViewCard extends HTMLElement {
     this._mountEngine();
     this._syncTabsShell();
     this._renderAll();
-
-    //this._renderCamSwitcher();
     this._applyBrowse();
     this.shadowRoot
       .querySelectorAll("[data-viewmode]")
@@ -5902,7 +5933,6 @@ class FrigateViewCard extends HTMLElement {
         p.classList.toggle("active", p.dataset.viewmode === "single"),
       );
     this._syncTabsShell();
-    //this._renderCamSwitcher();
     this._renderCamSwitcher();
     this._syncStatus();
     this._renderStats();
@@ -10852,26 +10882,7 @@ class FrigateViewCardEditor extends HTMLElement {
       ];
     }
     const normalized = cams
-      .map((c) => {
-        if (typeof c === "string") {
-          return {
-            entity: c,
-            name: "",
-            connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
-            alerts_content: "alerts_only",
-            disable_hls_desktop: false,
-          };
-        }
-        return {
-          entity: c?.entity || c?.camera_entity || "",
-          name: c?.name || "",
-          connection_type: normalizeCameraConnectionType(c?.connection_type),
-          alerts_content: normalizeAlertsAreaContent(c?.alerts_content),
-          disable_hls_desktop: normalizeDisableHlsDesktop(
-            c?.disable_hls_desktop,
-          ),
-        };
-      })
+      .map((camera) => normalizeCameraConfig(camera, { fallbackName: "" }))
       .filter((c) => c.entity)
       .slice(0, MAX_CAMERAS);
     return normalized;
