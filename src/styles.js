@@ -432,9 +432,40 @@ export const STYLES = `
   
   /* ── camera switcher ── */
 
-  .cam-switcher{display:flex;align-items:center;gap:4px;padding:6px 12px;overflow-x:auto;scrollbar-width:none;white-space:nowrap;-ms-overflow-style: none;-webkit-overflow-scrolling: touch;}
-  
-  .cam-switcher::-webkit-scrollbar{display:none;}
+  .cam-switcher {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap; /* Wraps items on larger displays */
+    padding: 6px 12px;
+  }
+
+
+  @media (max-width: 767px) {
+    .cam-switcher {
+      flex-wrap: nowrap; /* Forces items onto one line */
+      overflow-x: auto;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
+      
+      /* Hide scrollbars */
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .cam-switcher::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Crucial: Prevents child items from squishing on mobile */
+    .cam-switcher > * {
+      flex-shrink: 0; 
+    }
+  }
+
+
+
+
 
   /* ── timeline ── */
   .tl-tools{display:flex;gap:4px;}
