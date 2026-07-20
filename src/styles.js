@@ -374,6 +374,9 @@ export const STYLES = `
   .landing-shell-footer .frigate-view svg{height:24px;}
 
 .landing-grid {
+  -webkit-overflow-scrolling: touch; /* Keeps momentum scrolling smooth on iOS */
+  overscroll-behavior: none;
+
   display: grid;
   gap: 10px;
   width: 100%;

@@ -834,15 +834,6 @@ export class FrigateViewCard extends HTMLElement {
     if (themeChanged) {
       this._applyCardStyle();
     }
-//===========================
-setTimeout(() => {
-    const trigger = this.shadowRoot.getElementById('layout-trigger');
-    if (trigger) {
-      // Toggling an invisible zero-width space forces a micro-layout recalculation
-      trigger.textContent = trigger.textContent === '\u200B' ? '\u200C' : '\u200B';
-    }
-  }, 50);
-//===========================
 
   }
   get _activeCam() {
@@ -5389,7 +5380,7 @@ setTimeout(() => {
     }
   }
 
-  // ── shell ─────────────────────────────────────────────────
+  // =======================Render Shell===================================
   _renderShell() {
     const title =
       this._config.title ||
@@ -5404,7 +5395,6 @@ setTimeout(() => {
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <span id="layout-trigger" style="position: absolute; font-size: 0px; height: 0px; width: 0px;">&#8203;</span>
     <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
 
         <div class="layout shadow-medium" id="layout">

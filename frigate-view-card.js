@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.533";
+const VERSION = "1.0.534";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -491,6 +491,9 @@ const STYLES = `
   .landing-shell-footer .frigate-view svg{height:24px;}
 
 .landing-grid {
+  -webkit-overflow-scrolling: touch; /* Keeps momentum scrolling smooth on iOS */
+  overscroll-behavior: none;
+
   display: grid;
   gap: 10px;
   width: 100%;
@@ -2099,12 +2102,6 @@ const FrigateViewCard = class extends HTMLElement {
     if (themeChanged) {
       this._applyCardStyle();
     }
-    setTimeout(() => {
-      const trigger = this.shadowRoot.getElementById("layout-trigger");
-      if (trigger) {
-        trigger.textContent = trigger.textContent === "\u200B" ? "\u200C" : "\u200B";
-      }
-    }, 50);
   }
   get _activeCam() {
     return this._config?.cameras[this._activeCamIdx] || this._config?.cameras[0];
@@ -6052,14 +6049,13 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
   }
-  // ── shell ─────────────────────────────────────────────────
+  // =======================Render Shell===================================
   _renderShell() {
     const title = this._config.title || (this._config.cameras.length === 1 ? cap(camDisplayName(this._config.cameras[0])) : "Cameras") || "Camera";
     const subtitle = this._subtitleText();
     const showCamSwitcher = this._config.cameras.length > 1 || this._isLandingPageEnabled();
     const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <span id="layout-trigger" style="position: absolute; font-size: 0px; height: 0px; width: 0px;">&#8203;</span>
     <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
 
         <div class="layout shadow-medium" id="layout">
