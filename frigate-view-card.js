@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.492";
+const VERSION = "1.0.493";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1160,7 +1160,10 @@ const STYLES = `
   .card.landing-active{width:100%;max-width:none;margin:0;}
   .card.landing-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--stream-h,100dvh);max-height:var(--stream-h,100dvh);overflow:hidden !important;}
   .card.landing-active .col-left,.card.landing-active .resize-handle,.card.landing-active .col-right{display:none;}
+
   .card.landing-active .landing-shell-header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;top:0;z-index:4;}
+
+
   .landing-shell-title{min-width:0;display:flex;flex-direction:column;gap:2px;}
   .landing-shell-title-main{font-size:1.05rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .landing-shell-title-sub{font-size:.78rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -1168,7 +1171,29 @@ const STYLES = `
   .card.landing-active .landing-shell-footer{display:flex;flex:0 0 auto;align-items:center;min-height:30px;padding:4px 8px;border-top:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;bottom:0;z-index:4;}
   .landing-shell-footer .frigate-view{position:static;max-height:24px;}
   .landing-shell-footer .frigate-view svg{height:24px;}
-  .landing-grid{display:grid;gap:10px;width:100%;grid-template-columns:repeat(3,1fr);}
+
+  .landing-grid{
+    display:grid;
+    gap:10px;
+    width:100%;
+    grid-template-columns: 1fr;
+    }
+  /* Intermediate Viewport: 5 columns, 2 rows */
+  @media (min-width: 600px) {
+    .landing-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
+  }
+
+  /* Wide Viewport: 3 columns, 3 rows */
+  @media (min-width: 1024px) {
+    .landing-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }  
+
+
+
   .landing-cell{display:flex;flex-direction:column;gap:6px;cursor:pointer;}
   .landing-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:10px;border:1px solid var(--c-border2);background:var(--c-bg-deep);}
   .landing-media-host.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
