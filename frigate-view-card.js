@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.497";
+const VERSION = "1.0.498";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1172,26 +1172,13 @@ const STYLES = `
   .landing-shell-footer .frigate-view{position:static;max-height:24px;}
   .landing-shell-footer .frigate-view svg{height:24px;}
 
-  .landing-grid{
-    display:grid;
-    gap:10px;
-    width:100%;
-    grid-template-columns: minmax(350px, 1fr);;
-    }
-  @media (min-width: 800px) {
-    .landing-grid {
-      grid-template-columns: repeat(2, minmax(350px, 1fr));
-    }
-  }
-  @media (min-width: 1680px) {
-    .landing-grid {
-      grid-template-columns: repeat(3, minmax(350px, 1fr));
-    }
-  }
-  .landing-grid > div {
-  min-width: 0;
-  width: 100%; 
-  }  
+.landing-grid {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  /* Automatically wraps items to a new row if they drop under 180px */
+  grid-template-columns: repeat(auto-fit, minmax(480px, 1fr)); 
+}
 
 
 
