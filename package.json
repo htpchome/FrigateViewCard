@@ -1,0 +1,13 @@
+{
+  "name": "frigate-view-card",
+  "version": "1.0.505",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "npm run build && node --check frigate-view-card.js",
+    "test": "npm run build && node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

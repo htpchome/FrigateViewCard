@@ -7,6 +7,7 @@ A simple Camera and Events Card to use with Home Assistant and Frigate.
 This project originally started as a fork of [frigate-modern-hass-card](https://github.com/QuadNL/frigate-modern-hass-card) developed by [QuadNL](https://github.com/QuadNL). Although the codebase has since been rewritten and evolved independently, we want to thank the original author for the foundational ideas that inspired this work.
 
 ## Installation
+
 ## HACS (Recommended)
 
     Go to the HACS page in your Home Assistant instance.
@@ -25,6 +26,19 @@ This project originally started as a fork of [frigate-modern-hass-card](https://
         URL: /local/frigate-view-card.js
         Resource Type: JavaScript Module
 
+## Development
+
+Source files live in `src/`. The root `frigate-view-card.js` file is the generated production artifact used by Home Assistant and HACS.
+
+Build and validate locally:
+
+```bash
+npm install
+npm run build
+npm test
+```
+
+Edit files under `src/`, then run `npm run build` before testing or packaging a release.
 
 ## Core Functions
 
@@ -39,7 +53,6 @@ This project originally started as a fork of [frigate-modern-hass-card](https://
 - Mobile-aware behavior, including battery-saver polling and iOS-compatible HLS playback paths for Frigate media.
 - Visual customization through Home Assistant theme variables, custom color overrides, shadows, tight margins, wide view, and height controls.
 - Notification deep links that open a specific Frigate event or review directly from dashboard URL parameters.
-
 
 ## Notification Deep Links
 
