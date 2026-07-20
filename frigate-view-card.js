@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.479";
+const VERSION = "1.0.480";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1156,8 +1156,9 @@ const STYLES = `
   .live-grid-cell.empty .ph{border-radius:7px;}
   .live-grid-cell video,.live-grid-cell img,.live-grid-cell ha-camera-stream{width:100%;height:100%;display:block;object-fit:cover;background:var(--c-bg-deep);}
   .live-grid-label{position:absolute;left:6px;top:6px;z-index:2;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:.68rem;line-height:1.2;pointer-events:none;text-transform:none;}
-  .landing-shell{display:none;padding:10px;}
-  .card.landing-active .landing-shell{display:block;}
+  .landing-shell{display:none;padding:10px;box-sizing:border-box;min-height:0;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;}
+  .card.landing-active{overflow:auto;}
+  .card.landing-active .landing-shell{display:block;flex:1 1 auto;}
   .card.landing-active .layout{display:none;}
   .landing-grid{display:grid;gap:10px;}
   .landing-cell{display:flex;flex-direction:column;gap:6px;cursor:pointer;}
@@ -1434,6 +1435,8 @@ class FrigateViewCard extends HTMLElement {
     this._landingAlertCleanupT = null;
     this._landingHandledReviewIds = new Set();
     this._landingStartedAtSec = 0;
+    this._landingLastRenderSignature = "";
+    this._landingMediaState = null;
     this._landingAlertExpiresByEntity = new Map();
     this._landingAlertSeverityByEntity = new Map();
     this._domCache = {}; // querySelector result cache — cleared on re-render
@@ -2083,7 +2086,6 @@ class FrigateViewCard extends HTMLElement {
       this._renderLandingPage();
       if (landingModeConfigChanged || realtimePollChanged) {
         this._clearLandingTimers();
-        this._scheduleLandingSnapshotRefresh(300);
         this._scheduleLandingAlertWatch(300);
       }
       return;
@@ -4213,6 +4215,16 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _teardownLandingMedia() {
+    if (this._landingMediaState) {
+      this._landingMediaState.destroyed = true;
+      for (const cleanup of this._landingMediaState.cleanup || []) {
+        try {
+          cleanup();
+        } catch (_) {}
+      }
+    }
+    this._landingMediaState = null;
+    this._landingLastRenderSignature = "";
     const hosts = this.shadowRoot.querySelectorAll(".landing-media-host");
     hosts.forEach((host) => {
       host.querySelectorAll("video").forEach((video) => {
@@ -4244,6 +4256,31 @@ class FrigateViewCard extends HTMLElement {
       : [];
     const columns = this._landingGridColumns(cameras.length);
     const showTitleBars = this._landingShowTitleBarsEnabled();
+    const liveStreamHint = this._currentLiveStreamHint();
+    const hassReady = !!this._hass?.states;
+    const nextSignature = cameras
+      .map((camera, index) => {
+        const entity = camera?.entity || "";
+        const severity = this._landingCellSeverity(entity);
+        const useLive = this._landingShouldUseLive(entity);
+        return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
+      })
+      .concat([
+        `cols:${columns}`,
+        `titles:${showTitleBars ? "1" : "0"}`,
+        `hass:${hassReady ? "1" : "0"}`,
+      ])
+      .join("|");
+    if (
+      shell.firstElementChild?.classList?.contains("landing-grid") &&
+      this._landingLastRenderSignature === nextSignature
+    ) {
+      this._updateLandingMeta();
+      this._applyLandingShellVisibility();
+      return;
+    }
+    this._teardownLandingMedia();
+    this._landingLastRenderSignature = nextSignature;
 
     const cells = cameras
       .map((camera, index) => {
@@ -4284,10 +4321,37 @@ class FrigateViewCard extends HTMLElement {
     this._applyLandingShellVisibility();
   }
 
+  _updateLandingMeta() {
+    if (!this._landingShowTitleBarsEnabled()) return;
+    this.shadowRoot
+      .querySelectorAll("[data-landing-camidx]")
+      .forEach((cell) => {
+        const idx = Number(cell.dataset.landingCamidx);
+        const camera = this._config?.cameras?.[idx];
+        const entity = camera?.entity || "";
+        if (!entity) return;
+        const online = this._hass?.states?.[entity]?.state !== "unavailable";
+        const useLive = this._landingShouldUseLive(entity);
+        const status = cell.querySelector(".landing-meta-status");
+        if (status) {
+          status.innerHTML = `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">●</span>${online ? "Online" : "Offline"}`;
+        }
+        const source = cell.querySelector(".landing-meta-source");
+        if (source) {
+          source.textContent = `Stream Source: ${this._landingStreamSourceLabel(entity, useLive)}`;
+        }
+        const events = cell.querySelector(".landing-meta-events");
+        if (events)
+          events.textContent = `Events: ${this._landingEventsCount(entity)}`;
+      });
+  }
+
   _mountLandingMedia() {
     if (!this._isLandingPageActive()) return;
     const hosts = this.shadowRoot.querySelectorAll(".landing-media-host");
     const liveStreamHint = this._currentLiveStreamHint();
+    const landingState = { destroyed: false, cleanup: [] };
+    this._landingMediaState = landingState;
     hosts.forEach((host) => {
       const entity = host.dataset.landingMediaEntity || "";
       const useLive = host.dataset.landingUseLive === "1";
@@ -4302,15 +4366,20 @@ class FrigateViewCard extends HTMLElement {
         return;
       }
       if (useLive && stateObj) {
-        const stream = document.createElement("ha-camera-stream");
-        stream.hass = this._hass;
-        stream.stateObj = stateObj;
-        stream.controls = false;
-        stream.muted = true;
-        stream.defaultMuted = true;
-        stream.style.cssText = "width:100%;height:100%;display:block";
-        host.appendChild(stream);
-        this._attachVideoFit(stream);
+        const connectionType = this._cameraConnectionType(entity);
+        if (liveStreamHint === "mse" && connectionType !== "ha_direct") {
+          this._mountGridDirectMSECell(host, entity, landingState);
+        } else {
+          const stream = document.createElement("ha-camera-stream");
+          stream.hass = this._hass;
+          stream.stateObj = stateObj;
+          stream.controls = false;
+          stream.muted = true;
+          stream.defaultMuted = true;
+          stream.style.cssText = "width:100%;height:100%;display:block";
+          host.appendChild(stream);
+          this._attachVideoFit(stream);
+        }
         return;
       }
       const img = document.createElement("img");
@@ -4356,19 +4425,8 @@ class FrigateViewCard extends HTMLElement {
   _scheduleLandingSnapshotRefresh(delayMs = null) {
     if (this._landingSnapshotRefreshT)
       clearTimeout(this._landingSnapshotRefreshT);
-    if (!this._isLandingPageActive()) return;
-    const wait =
-      delayMs == null
-        ? Math.max(
-            2000,
-            Math.floor(this._effectiveRealtimePollSeconds() * 1000),
-          )
-        : Math.max(0, Number(delayMs) || 0);
-    this._landingSnapshotRefreshT = setTimeout(() => {
-      this._landingSnapshotRefreshT = null;
-      this._refreshLandingSnapshots();
-      this._scheduleLandingSnapshotRefresh();
-    }, wait);
+    this._landingSnapshotRefreshT = null;
+    void delayMs;
   }
 
   _scheduleLandingAlertCleanup() {
@@ -4547,7 +4605,6 @@ class FrigateViewCard extends HTMLElement {
     this._clearLandingTimers();
     this._clearLandingAlertTracking();
     this._renderLandingPage();
-    this._scheduleLandingSnapshotRefresh(700);
     this._scheduleLandingAlertWatch(350);
   }
 
