@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.452";
+const VERSION = "1.0.453";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1063,6 +1063,10 @@ const STYLES = `
   .stream-loading[hidden]{display:none;}
   .stream-loading .dot{width:10px;height:10px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--c-text-rev);border-radius:50%;animation:spin .9s linear infinite;}
 
+  .close-btn {width: 40px;height: 40px;border-radius: 50%;display: flex;align-items: center;  justify-content: center;font-size: 24px;line-height: 1;cursor: pointer;border: 1px solid #ccc;
+    background-color: #f5f5f5;color: #333;transition: all 0.2s ease;}
+  .close-btn:hover {background-color: #e0e0e0;color: #000;}
+
 .glass-btn{display: inline-flex;align-items: center;justify-content: center;padding: 3px;border-radius: 100px;color: black;font-size: 1.0rem;border: 1px solid rgba(255, 255, 255, 0.15); 
   background-color: rgba(255, 255, 255, 0.25);backdrop-filter: blur(1px) saturate(150%); 
   box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);cursor:pointer;  
@@ -1278,9 +1282,7 @@ const STYLES = `
   @media (max-width: 720px){
     .popup-info-grid{grid-template-columns:minmax(0,1fr);}
   }
-  .close-btn {width: 40px;height: 40px;border-radius: 50%;display: flex;align-items: center;  justify-content: center;font-size: 24px;line-height: 1;cursor: pointer;border: 1px solid #ccc;
-  background-color: #f5f5f5;color: #333;transition: all 0.2s ease;}
-  .close-btn:hover {background-color: #e0e0e0;color: #000;}
+
 
 
 `; //==================END CSS SECTION=====================
@@ -5839,7 +5841,7 @@ class FrigateViewCard extends HTMLElement {
                   <div class="sv" id="on-dot" style="color:var(--c-on)">●</div>
                   <div class="sl" id="on-lbl">Online</div>
                 </div>
-                <button class="info-mute" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
+                <button class="glass-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
               </div>
             </div>
             ${camSwitcher}
@@ -6903,7 +6905,7 @@ class FrigateViewCard extends HTMLElement {
         const ok =
           !includeStatus ||
           this._hass?.states?.[c.entity]?.state !== "unavailable";
-        return `<button class="cam-tab ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
+        return `<button class="glass-btn ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
       })
       .join("");
   }
