@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.529";
+const VERSION = "1.0.530";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2099,6 +2099,15 @@ const FrigateViewCard = class extends HTMLElement {
     if (themeChanged) {
       this._applyCardStyle();
     }
+    requestAnimationFrame(() => {
+      if (window.scrollY !== 0) {
+        window.scrollTo({
+          top: 0,
+          behavior: "instant"
+          // 'smooth' won't clear the locked WebKit bug
+        });
+      }
+    });
   }
   get _activeCam() {
     return this._config?.cameras[this._activeCamIdx] || this._config?.cameras[0];

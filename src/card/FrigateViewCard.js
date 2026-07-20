@@ -835,6 +835,22 @@ export class FrigateViewCard extends HTMLElement {
     if (themeChanged) {
       this._applyCardStyle();
     }
+
+//================================
+  // Wait for the exact moment the pull-to-refresh container stops rendering
+  requestAnimationFrame(() => {
+    // Force the global iOS WebKit window frame to snap strictly to coordinates 0,0
+    if (window.scrollY !== 0) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'instant' // 'smooth' won't clear the locked WebKit bug
+      });
+    }
+  });
+
+//================================
+
+
   }
   get _activeCam() {
     return (
