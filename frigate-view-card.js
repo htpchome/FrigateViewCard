@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.489";
+const VERSION = "1.0.490";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -3727,7 +3727,31 @@ class FrigateViewCard extends HTMLElement {
     return true;
   }
 
-  _mountGridDirectMSECell(cell, entity, gridState) {
+  _mountGridSnapshotCell(cell, { entity, stateObj }) {
+    if (!cell || !entity) return false;
+    const img = document.createElement("img");
+    const entityPicture = stateObj?.attributes?.entity_picture || "";
+    img.alt = `${entity} snapshot`;
+    img.loading = "lazy";
+    img.decoding = "async";
+    void (async () => {
+      const primaryUrl = await this._streamFallbackUrl(entity);
+      if (!img.isConnected) return;
+      if (primaryUrl) {
+        img.src = primaryUrl;
+        return;
+      }
+      if (entityPicture) {
+        img.src = /^https?:\/\//i.test(entityPicture)
+          ? entityPicture
+          : `${window.location.origin}${entityPicture}`;
+      }
+    })();
+    cell.appendChild(img);
+    return true;
+  }
+
+  _mountGridDirectMSECell(cell, entity, gridState, options = {}) {
     const host = document.createElement("div");
     host.style.cssText = "width:100%;height:100%;display:block";
     cell.appendChild(host);
@@ -3748,7 +3772,15 @@ class FrigateViewCard extends HTMLElement {
         },
       );
       if (!result?.ok) {
-        if (host.isConnected) host.innerHTML = "";
+        if (host.isConnected) {
+          host.remove();
+          if (!gridState.destroyed && options.fallbackOnFailure) {
+            this._mountGridSnapshotCell(cell, {
+              entity,
+              stateObj: options.stateObj || null,
+            });
+          }
+        }
         return;
       }
       if (gridState.destroyed || !host.isConnected) {
@@ -3770,13 +3802,23 @@ class FrigateViewCard extends HTMLElement {
 
   _mountGridCameraCellMedia(
     cell,
-    { entity, stateObj, useLive, liveStreamHint, gridState },
+    {
+      entity,
+      stateObj,
+      useLive,
+      liveStreamHint,
+      gridState,
+      fallbackOnLiveError = false,
+    },
   ) {
     if (!cell || !entity) return false;
     if (stateObj && useLive) {
       const connectionType = this._cameraConnectionType(entity);
       if (liveStreamHint === "mse" && connectionType !== "ha_direct") {
-        this._mountGridDirectMSECell(cell, entity, gridState);
+        this._mountGridDirectMSECell(cell, entity, gridState, {
+          fallbackOnFailure: fallbackOnLiveError,
+          stateObj,
+        });
       } else {
         const stream = document.createElement("ha-camera-stream");
         stream.hass = this._hass;
@@ -3790,27 +3832,7 @@ class FrigateViewCard extends HTMLElement {
       }
       return true;
     }
-
-    const img = document.createElement("img");
-    const entityPicture = stateObj?.attributes?.entity_picture || "";
-    img.alt = `${entity} snapshot`;
-    img.loading = "lazy";
-    img.decoding = "async";
-    void (async () => {
-      const primaryUrl = await this._streamFallbackUrl(entity);
-      if (!img.isConnected) return;
-      if (primaryUrl) {
-        img.src = primaryUrl;
-        return;
-      }
-      if (entityPicture) {
-        img.src = /^https?:\/\//i.test(entityPicture)
-          ? entityPicture
-          : `${window.location.origin}${entityPicture}`;
-      }
-    })();
-    cell.appendChild(img);
-    return true;
+    return this._mountGridSnapshotCell(cell, { entity, stateObj });
   }
 
   async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
@@ -4531,6 +4553,7 @@ class FrigateViewCard extends HTMLElement {
         useLive,
         liveStreamHint,
         gridState: landingState,
+        fallbackOnLiveError: true,
       });
     });
   }
