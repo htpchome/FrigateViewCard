@@ -908,8 +908,6 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
   }
-}
-
 //============================================
 
 
