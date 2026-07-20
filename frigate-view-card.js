@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.458";
+const VERSION = "1.0.460";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1078,14 +1078,33 @@ const STYLES = `
 
 
 
-.glass-btn{display: inline-flex;align-items: center;justify-content: center;border-radius: 2rem;color:var(--c-text2);font-size: 1.0rem;font-weight:600;
-  border: 1px solid rgba(255, 255, 255, 0.25); 
-  background-color: rgba(255, 255, 255, 0.15);backdrop-filter: blur(1px) saturate(150%); 
-  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);cursor:pointer;  
+.glass-btn{  display: inline-flex; 
+  align-items: center; 
+  justify-content: center; 
+  padding: 3px; 
+  border-radius: 100px; 
+  color: black; 
+  font-size: 1.0rem; 
+  border: 1px solid rgba(255, 255, 255, 0.15); 
+  background-color: rgba(255, 255, 255, 0.15); 
+  backdrop-filter: blur(1px) saturate(150%); 
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);
+  cursor:pointer;   
 }
-.glass::after {content: "";width: 100%;height: 100%;background: rgba(255, 255, 255, 0.25);
-  border-radius: 100px;backdrop-filter: blur(1px);filter: brightness(115%);opacity: 0.4;z-index: -1;box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 0.3), 
-                inset 0px -9px 0px -8px rgba(255, 255, 255, 0.3);}
+.glass::after {  content: ""; /* Added missing quotes */
+  position: absolute; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%; 
+  background: rgba(255, 255, 255, 0.04); 
+  border-radius: 100px; 
+  backdrop-filter: blur(1px); 
+  box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 0.3), 
+              inset 0px -9px 0px -8px rgba(255, 255, 255, 0.3); 
+  opacity: 0.4; 
+  z-index: -1; 
+  filter: brightness(115%); }
 .glass-btn:hover{background:rgba(255, 255, 255, 0.3);} 
 .glass-btn svg {width:30px;height:30px;opacity: 0.8; }
 .glass-btn:hover svg {width:30px;height:30px;opacity: 0.95; }
@@ -1143,7 +1162,7 @@ const STYLES = `
 
   /* ── camera switcher ── */
 
-  .cam-switcher{display:flex;align-items:center;gap:4px;flex-wrap: wrap;padding:6px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;scrollbar-width:none;}
+  .cam-switcher{display:flex;align-items:center;gap:4px;flex-wrap: wrap;padding:6px 12px;overflow-x:auto;scrollbar-width:none;}
   .cam-switcher::-webkit-scrollbar{display:none;}
 
   /* ── timeline ── */
@@ -1155,6 +1174,7 @@ const STYLES = `
   .tool:hover svg{color:var(--c-primary-d);}
   .tool:hover ha-icon{color:var(--c-primary-d);opacity:1;}
   .tool.active{background:var(--c-primary-d);color:var(--c-text-rev);border-color:var(--c-primary-d);}
+  .tool:hover svg{color:var(--c-text-rev);opacity:1;}
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
