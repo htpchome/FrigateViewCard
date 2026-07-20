@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.453";
+const VERSION = "1.0.454";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1067,7 +1067,18 @@ const STYLES = `
     background-color: #f5f5f5;color: #333;transition: all 0.2s ease;}
   .close-btn:hover {background-color: #e0e0e0;color: #000;}
 
-.glass-btn{display: inline-flex;align-items: center;justify-content: center;padding: 3px;border-radius: 100px;color: black;font-size: 1.0rem;border: 1px solid rgba(255, 255, 255, 0.15); 
+  .cam-tab{font-size: 1rem;padding-inline: 0.5em;padding-block: 0.4em;line-height: 1;  
+    font-weight:600;
+    white-space:nowrap;}  
+  .cam-tab:hover{color:var(--c-primary-d);}
+  .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
+  .cam-tab svg{width:14.4px;height:14.4px;flex-shrink:0;}
+  .cam-dot{font-size:0.7rem;vertical-align:middle;}
+
+
+
+.glass-btn{display: inline-flex;align-items: center;justify-content: center;padding: 3px;border-radius: 100px;color:var(--c-text2);font-size: 1.0rem;
+  border: 1px solid rgba(255, 255, 255, 0.15); 
   background-color: rgba(255, 255, 255, 0.25);backdrop-filter: blur(1px) saturate(150%); 
   box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);cursor:pointer;  
 }
@@ -1134,19 +1145,6 @@ const STYLES = `
   .cam-switcher{display:flex;align-items:center;gap:4px;flex-wrap: wrap;padding:6px 12px;border-bottom:1px solid var(--c-border);overflow-x:auto;}
   .cam-tabs{display:flex;gap:4px;flex:1;flex-wrap: wrap;overflow-x:auto;scrollbar-width:none;}  
   .cam-tabs::-webkit-scrollbar{display:none;}
-  .cam-tab{display:inline-flex;align-items:center;gap:4px;font-size: 1rem;padding-inline: 0.5em;padding-block: 0.4em;line-height: 1;  border-radius: 999em;
-    background:var(--c-bg-main);
-    color:var(--c-text2);
-    transition:all .15s;
-    font-weight:600;
-    cursor:pointer;
-    white-space:nowrap;
-    border:2px solid var(--c-primary-d);}
-  
-  .cam-tab:hover{color:var(--c-primary-d);}
-  .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
-  .cam-tab svg{width:14.4px;height:14.4px;flex-shrink:0;}
-  .cam-dot{font-size:0.7rem;vertical-align:middle;}
 
   /* ── timeline ── */
   .tl-tools{display:flex;gap:4px;}
@@ -6905,7 +6903,7 @@ class FrigateViewCard extends HTMLElement {
         const ok =
           !includeStatus ||
           this._hass?.states?.[c.entity]?.state !== "unavailable";
-        return `<button class="glass-btn ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
+        return `<button class="glass-btn cam-tab ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
       })
       .join("");
   }
