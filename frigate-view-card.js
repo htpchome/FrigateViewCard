@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.487";
+const VERSION = "1.0.489";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1157,19 +1157,28 @@ const STYLES = `
   .live-grid-cell video,.live-grid-cell img,.live-grid-cell ha-camera-stream{width:100%;height:100%;display:block;object-fit:cover;background:var(--c-bg-deep);}
   .live-grid-label{position:absolute;left:6px;top:6px;z-index:2;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:.68rem;line-height:1.2;pointer-events:none;text-transform:none;}
   .landing-shell,.landing-shell-header,.landing-shell-footer{display:none;}
-  .card.landing-active .layout{display:flex;flex-direction:column;height:var(--stream-h,100dvh);max-height:var(--stream-h,100dvh);overflow:hidden !important;}
+  .card.landing-active{width:100%;max-width:none;margin:0;}
+  .card.landing-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--stream-h,100dvh);max-height:var(--stream-h,100dvh);overflow:hidden !important;}
   .card.landing-active .col-left,.card.landing-active .resize-handle,.card.landing-active .col-right{display:none;}
   .card.landing-active .landing-shell-header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;top:0;z-index:4;}
   .landing-shell-title{min-width:0;display:flex;flex-direction:column;gap:2px;}
   .landing-shell-title-main{font-size:1.05rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .landing-shell-title-sub{font-size:.78rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .card.landing-active .landing-shell{display:block;flex:1 1 auto;min-height:0;padding:10px;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;}
+  .card.landing-active .landing-shell{display:block;flex:1 1 auto;width:100%;min-width:0;min-height:0;padding:10px;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;}
   .card.landing-active .landing-shell-footer{display:flex;flex:0 0 auto;align-items:center;min-height:30px;padding:4px 8px;border-top:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;bottom:0;z-index:4;}
   .landing-shell-footer .frigate-view{position:static;max-height:24px;}
   .landing-shell-footer .frigate-view svg{height:24px;}
   .landing-grid{display:grid;gap:10px;width:100%;grid-template-columns:repeat(3,minmax(0,1fr));}
   .landing-grid.cols-1{grid-template-columns:minmax(0,1fr);}
   .landing-grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .card.mobile .landing-grid{grid-template-columns:minmax(0,1fr);}
+  @media screen and (max-width: 980px){
+    .landing-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .landing-grid.count-1,.landing-grid.cols-1{grid-template-columns:minmax(0,1fr);}
+  }
+  @media screen and (max-width: 560px){
+    .landing-grid,.landing-grid.count-1,.landing-grid.count-2,.landing-grid.count-4,.landing-grid.cols-1,.landing-grid.cols-2{grid-template-columns:minmax(0,1fr);}
+  }
   .landing-cell{display:flex;flex-direction:column;gap:6px;cursor:pointer;}
   .landing-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:10px;border:1px solid var(--c-border2);background:var(--c-bg-deep);}
   .landing-media-host.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
@@ -4238,7 +4247,17 @@ class FrigateViewCard extends HTMLElement {
     const grid = this._$("#landing-grid");
     if (!grid) return;
     const shell = this._$("#landing-shell");
-    const measuredWidth = width || shell?.clientWidth || grid.clientWidth || 0;
+    const layout = this._$("#layout");
+    const card = this._$("#card");
+    const measuredWidth =
+      width ||
+      shell?.getBoundingClientRect?.().width ||
+      layout?.getBoundingClientRect?.().width ||
+      card?.getBoundingClientRect?.().width ||
+      shell?.clientWidth ||
+      grid.clientWidth ||
+      this._cardWidth ||
+      0;
     if (measuredWidth <= 0) return;
     const total = Array.isArray(this._config?.cameras)
       ? Math.min(9, this._config.cameras.length)
@@ -4251,23 +4270,23 @@ class FrigateViewCard extends HTMLElement {
   }
 
   _setupLandingResizeObserver() {
-    const shell = this._$("#landing-shell");
-    if (!shell || typeof ResizeObserver === "undefined") {
+    const target = this._$("#layout") || this._$("#landing-shell");
+    if (!target || typeof ResizeObserver === "undefined") {
       this._applyLandingGridColumns();
       return;
     }
-    if (this._landingResizeTarget === shell) {
-      this._applyLandingGridColumns(shell.clientWidth || 0);
+    if (this._landingResizeTarget === target) {
+      this._applyLandingGridColumns(target.clientWidth || 0);
       return;
     }
     if (this._landingResizeObserver) this._landingResizeObserver.disconnect();
-    this._landingResizeTarget = shell;
+    this._landingResizeTarget = target;
     this._landingResizeObserver = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect?.width || 0;
       this._applyLandingGridColumns(width);
     });
-    this._landingResizeObserver.observe(shell);
-    this._applyLandingGridColumns(shell.clientWidth || 0);
+    this._landingResizeObserver.observe(target);
+    this._applyLandingGridColumns(target.clientWidth || 0);
   }
 
   _clearLandingResizeObserver() {
@@ -7872,6 +7891,7 @@ class FrigateViewCard extends HTMLElement {
       const h = entries[0].contentRect.height;
       const prevW = this._cardWidth || 0;
       this._cardWidth = w;
+      if (this._isLandingPageActive()) this._applyLandingGridColumns(w);
       const visibleNow = w > 2 && h > 2;
       if (visibleNow && !this._wasVisible) {
         this._scheduleResumeLive("resize-visible");
