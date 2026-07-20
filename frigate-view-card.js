@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.473";
+const VERSION = "1.0.474";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -4684,12 +4684,21 @@ class FrigateViewCard extends HTMLElement {
       this._stopSlideshowRotation("manual-stop");
       return;
     }
+    let startedFromGrid = false;
     if (this._viewMode === "grid" || this._gridResumePending) {
       this._gridResumePending = false;
       this._stopGridModeState();
-      this._viewMode = "single";
+      this._setViewMode("single");
+      startedFromGrid = true;
     }
-    this._startSlideshowRotation("manual-start");
+    const started = this._startSlideshowRotation("manual-start");
+    if (started && startedFromGrid) {
+      if (this._slideshowSwitchT) {
+        clearTimeout(this._slideshowSwitchT);
+        this._slideshowSwitchT = null;
+      }
+      void this._advanceSlideshowRotation();
+    }
   }
 
   _pauseSlideshowForInteraction() {
