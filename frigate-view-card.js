@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.475";
+const VERSION = "1.0.476";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -998,8 +998,10 @@ const STYLES = `
   /* ── feed area ── */
     .feed-area{position:relative;width:100%;}
     #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
+    #engine,#stream-fallback{transition:opacity .22s ease;}
     #eng-wrap::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:5;box-sizing:border-box;border:0 solid transparent;transition:border-color .2s ease,border-width .2s ease;}
-    #eng-wrap.slideshow-switching{opacity:.12;}
+    #eng-wrap.slideshow-switching #engine,
+    #eng-wrap.slideshow-switching #stream-fallback{opacity:.12;}
     #eng-wrap.slideshow-alert::before{border-width:3px;border-color:var(--error-color, var(--c-bg-alert));}
     #eng-wrap.slideshow-detection::before{border-width:3px;border-color:var(--warning-color, var(--c-accent));}
     #eng-wrap.popup-covered::after{content:"";position:absolute;inset:0;background:var(--c-bg-deep);z-index:4;pointer-events:none;}
