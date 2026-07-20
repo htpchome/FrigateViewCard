@@ -1,4 +1,4 @@
-export const VERSION = "1.0.505";
+export const VERSION = "1.0.506";
 
 export const CARD_TAG = "frigate-view-card";
 export const DAY = 86400;
@@ -14,7 +14,9 @@ export const REALTIME_HEAD_POLL_MS = 5000;
 export const REALTIME_RELOAD_DEBOUNCE_MS = 450;
 export const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
 export const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
-export const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
+export const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
+  10, 20, 30, 60,
+]);
 export const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 export const SLIDESHOW_ALERT_HOLD_MS = 10000;
 export const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
@@ -71,4 +73,6 @@ export const THEME_CUSTOM_ROWS = Object.freeze([
   { key: "--c-bg-scrub", label: "Scrub Bar Background" },
   { key: "--c-bg-alert", label: "Scrub Bar Alerts" },
 ]);
-export const THEME_CUSTOM_KEYS = new Set(THEME_CUSTOM_ROWS.map((row) => row.key));
+export const THEME_CUSTOM_KEYS = new Set(
+  THEME_CUSTOM_ROWS.map((row) => row.key),
+);

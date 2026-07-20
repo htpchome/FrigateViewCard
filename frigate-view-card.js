@@ -16,7 +16,12 @@ const REALTIME_HEAD_POLL_MS = 5e3;
 const REALTIME_RELOAD_DEBOUNCE_MS = 450;
 const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
 const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
-const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
+const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
+  10,
+  20,
+  30,
+  60
+]);
 const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 const SLIDESHOW_ALERT_HOLD_MS = 1e4;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
@@ -73,7 +78,9 @@ const THEME_CUSTOM_ROWS = Object.freeze([
   { key: "--c-bg-scrub", label: "Scrub Bar Background" },
   { key: "--c-bg-alert", label: "Scrub Bar Alerts" }
 ]);
-const THEME_CUSTOM_KEYS = new Set(THEME_CUSTOM_ROWS.map((row) => row.key));
+const THEME_CUSTOM_KEYS = new Set(
+  THEME_CUSTOM_ROWS.map((row) => row.key)
+);
 
 // src/icons.js
 const ICONS = {
