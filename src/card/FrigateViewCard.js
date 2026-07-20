@@ -393,11 +393,6 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-//=================================
-  this._resizeObserver = new ResizeObserver(() => this._forceSnapToTop());
-  this._resizeObserver.observe(this);
-
-//=================================
   }
  
 
@@ -839,6 +834,16 @@ export class FrigateViewCard extends HTMLElement {
     if (themeChanged) {
       this._applyCardStyle();
     }
+//===========================
+setTimeout(() => {
+    const trigger = this.shadowRoot.getElementById('layout-trigger');
+    if (trigger) {
+      // Toggling an invisible zero-width space forces a micro-layout recalculation
+      trigger.textContent = trigger.textContent === '\u200B' ? '\u200C' : '\u200B';
+    }
+  }, 50);
+//===========================
+
   }
   get _activeCam() {
     return (
@@ -864,32 +869,10 @@ export class FrigateViewCard extends HTMLElement {
       this._ffDebug("Running deferred disconnect teardown");
       this._teardownDisconnected();
     }, 2500);
-//=============================
-this._resizeObserver?.disconnect();
-//=============================    
+  
   }
 
-//=============================
 
-_forceSnapToTop() {
-  const innerWrapper = this.shadowRoot.getElementById('card-root');
-  if (!innerWrapper) return;
-
-  // This measures coordinates relative to the hardware screen frame, bypassing HA shadow roots
-  const rect = this.getBoundingClientRect();
-
-  // If rect.top drifts down significantly when it should be at the top grid row
-  // You can dynamically counteract the parent container's rendering offset
-  if (rect.top > 0 && rect.top < 120) { 
-    // Pull the inner card up exactly by the amount WebKit is lagging behind
-    // For standard headers, this neutralizes the "stuck slightly down" margin.
-    innerWrapper.style.transform = `translateY(-${rect.top - 56}px)`; 
-  } else {
-    innerWrapper.style.transform = 'translateY(0px)';
-  }
-}
-
-//=============================
 
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);
@@ -5421,6 +5404,7 @@ _forceSnapToTop() {
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
+    <span id="layout-trigger" style="position: absolute; font-size: 0px; height: 0px; width: 0px;">&#8203;</span>
     <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
 
         <div class="layout shadow-medium" id="layout">

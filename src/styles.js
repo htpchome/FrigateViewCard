@@ -19,29 +19,6 @@ export const STYLES = `
     --popup-bg: white;
     --handle-color: #e0e0e0;
   }
-:host {
-  display: block;
-  overflow: visible !important; 
-}
-
-#card-root {
-  position: relative;
-  will-change: transform;
-  transform: translateZ(0); 
-  -webkit-transform: translateZ(0);
-}
-ha-card {
-  position: relative;
-  will-change: transform;
-  transform: translateZ(0); 
-  -webkit-transform: translateZ(0);
-}
-.card {
-  position: relative;
-  will-change: transform;
-  transform: translateZ(0); 
-  -webkit-transform: translateZ(0);
-}
 
   /* ── theme variables (dark = default) ── */
     .card {

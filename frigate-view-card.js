@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.532";
+const VERSION = "1.0.533";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -136,29 +136,6 @@ const STYLES = `
     --popup-bg: white;
     --handle-color: #e0e0e0;
   }
-:host {
-  display: block;
-  overflow: visible !important; 
-}
-
-#card-root {
-  position: relative;
-  will-change: transform;
-  transform: translateZ(0); 
-  -webkit-transform: translateZ(0);
-}
-ha-card {
-  position: relative;
-  will-change: transform;
-  transform: translateZ(0); 
-  -webkit-transform: translateZ(0);
-}
-.card {
-  position: relative;
-  will-change: transform;
-  transform: translateZ(0); 
-  -webkit-transform: translateZ(0);
-}
 
   /* \u2500\u2500 theme variables (dark = default) \u2500\u2500 */
     .card {
@@ -1778,8 +1755,6 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-    this._resizeObserver = new ResizeObserver(() => this._forceSnapToTop());
-    this._resizeObserver.observe(this);
   }
   _syncCardShellClasses() {
     const card = this.shadowRoot?.querySelector("#card");
@@ -2124,6 +2099,12 @@ const FrigateViewCard = class extends HTMLElement {
     if (themeChanged) {
       this._applyCardStyle();
     }
+    setTimeout(() => {
+      const trigger = this.shadowRoot.getElementById("layout-trigger");
+      if (trigger) {
+        trigger.textContent = trigger.textContent === "\u200B" ? "\u200C" : "\u200B";
+      }
+    }, 50);
   }
   get _activeCam() {
     return this._config?.cameras[this._activeCamIdx] || this._config?.cameras[0];
@@ -2147,20 +2128,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._ffDebug("Running deferred disconnect teardown");
       this._teardownDisconnected();
     }, 2500);
-    this._resizeObserver?.disconnect();
   }
-  //=============================
-  _forceSnapToTop() {
-    const innerWrapper = this.shadowRoot.getElementById("card-root");
-    if (!innerWrapper) return;
-    const rect = this.getBoundingClientRect();
-    if (rect.top > 0 && rect.top < 120) {
-      innerWrapper.style.transform = `translateY(-${rect.top - 56}px)`;
-    } else {
-      innerWrapper.style.transform = "translateY(0px)";
-    }
-  }
-  //=============================
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);
     this._stopGridModeState();
@@ -6091,6 +6059,7 @@ const FrigateViewCard = class extends HTMLElement {
     const showCamSwitcher = this._config.cameras.length > 1 || this._isLandingPageEnabled();
     const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
+    <span id="layout-trigger" style="position: absolute; font-size: 0px; height: 0px; width: 0px;">&#8203;</span>
     <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
 
         <div class="layout shadow-medium" id="layout">
