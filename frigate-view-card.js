@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.462";
+const VERSION = "1.0.463";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -932,7 +932,7 @@ const STYLES = `
   .list{flex:1;flex-direction: column;min-height:0;} 
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
-  .list-day-label{position:relative;z-index:1;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-main);border:none;}
+  .list-day-label{position:relative;z-index:1;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-main);border:none;text-align: center;}
   .list-day-label-first{display:none;}
 
 
