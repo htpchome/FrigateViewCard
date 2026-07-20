@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.476";
+const VERSION = "1.0.477";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -5153,7 +5153,13 @@ class FrigateViewCard extends HTMLElement {
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
     const source = String(opts?.source || "manual");
-    if (source === "manual") this._pauseSlideshowForInteraction();
+    if (source === "manual") {
+      if (this._slideshowActive) {
+        this._stopSlideshowRotation("manual-camera-select");
+      } else {
+        this._pauseSlideshowForInteraction();
+      }
+    }
     if (this._viewMode === "grid") {
       if (this._gridRotationT) clearTimeout(this._gridRotationT);
       this._gridRotationT = null;
