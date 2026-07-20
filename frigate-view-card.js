@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.454";
+const VERSION = "1.0.455";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1068,7 +1068,7 @@ const STYLES = `
   .close-btn:hover {background-color: #e0e0e0;color: #000;}
 
   .cam-tab{font-size: 1rem;padding-inline: 0.5em;padding-block: 0.4em;line-height: 1;  
-    font-weight:600;
+    font-weight:600;padding:6px;
     white-space:nowrap;}  
   .cam-tab:hover{color:var(--c-primary-d);}
   .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
@@ -1077,9 +1077,9 @@ const STYLES = `
 
 
 
-.glass-btn{display: inline-flex;align-items: center;justify-content: center;padding: 3px;border-radius: 100px;color:var(--c-text2);font-size: 1.0rem;
-  border: 1px solid rgba(255, 255, 255, 0.15); 
-  background-color: rgba(255, 255, 255, 0.25);backdrop-filter: blur(1px) saturate(150%); 
+.glass-btn{display: inline-flex;align-items: center;justify-content: center;border-radius: 2rem;color:var(--c-text2);font-size: 1.0rem;font-weight:600;
+  border: 1px solid rgba(255, 255, 255, 0.25); 
+  background-color: rgba(255, 255, 255, 0.15);backdrop-filter: blur(1px) saturate(150%); 
   box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.15);cursor:pointer;  
 }
 .glass::after {content: "";width: 100%;height: 100%;background: rgba(255, 255, 255, 0.25);
@@ -1090,7 +1090,7 @@ const STYLES = `
 .glass-btn:hover svg {width:30px;height:30px;opacity: 0.95; }
 
 
-.overlay-fs{position:absolute;top:8px;left:8px;z-index:3;}
+.overlay-fs{position:absolute;top:8px;left:8px;z-index:3;padding: 3px;}
 .overlay-fs::after {content: "";position: absolute;top: 0;left: 0;}         
 .overlay-fs[hidden]{display:none !important;}
 .overlay-fs svg {width:30px;height:30px;opacity: 0.8; }
