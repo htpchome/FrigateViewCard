@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { compactEditorConfigForYaml } from "../src/helpers.js";
+import {
+  compactEditorConfigForYaml,
+  withCardTypeForYaml,
+} from "../src/helpers.js";
 
 test("editor YAML config omits normalized default values", () => {
   const config = compactEditorConfigForYaml({
@@ -71,5 +74,20 @@ test("custom theme YAML config only keeps colors different from defaults", () =>
   assert.deepEqual(config, {
     cameras: [{ entity: "camera.front_door" }],
     theme: "custom",
+  });
+});
+
+test("editor YAML payload always includes custom card type", () => {
+  const compact = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    title: "Frigate",
+  });
+
+  const withType = withCardTypeForYaml(compact);
+
+  assert.deepEqual(withType, {
+    type: "custom:frigate-view-card",
+    cameras: [{ entity: "camera.front_door" }],
+    title: "Frigate",
   });
 });

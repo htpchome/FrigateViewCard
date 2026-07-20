@@ -63,6 +63,7 @@ import {
   bindEventsForSelectorAll,
   buildEditorConfigFromDom,
   compactEditorConfigForYaml,
+  withCardTypeForYaml,
   createEditorPreviewDraft,
   LABEL_COLORS,
   PALETTE,
@@ -1379,9 +1380,11 @@ export class FrigateViewCardEditor extends HTMLElement {
   }
 
   _dispatch() {
-    const config = compactEditorConfigForYaml(this._config, {
-      themeDefaultColors: this._themeDefaultHexMap(),
-    });
+    const config = withCardTypeForYaml(
+      compactEditorConfigForYaml(this._config, {
+        themeDefaultColors: this._themeDefaultHexMap(),
+      }),
+    );
     this._lastDispatchedConfigSig = this._configSignature(config);
     this.dispatchEvent(
       new CustomEvent("config-changed", {

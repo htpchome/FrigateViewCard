@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.516";
+const VERSION = "1.0.517";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1337,6 +1337,10 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
   addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
   return compact;
 };
+const withCardTypeForYaml = (config) => ({
+  type: `custom:${CARD_TAG}`,
+  ...config && typeof config === "object" ? config : {}
+});
 const createEditorPreviewDraft = (config) => ({
   title: config.title,
   subtitle: config.subtitle,
@@ -10788,9 +10792,11 @@ const FrigateViewCardEditor = class extends HTMLElement {
     if (dispatch) this._dispatch();
   }
   _dispatch() {
-    const config = compactEditorConfigForYaml(this._config, {
-      themeDefaultColors: this._themeDefaultHexMap()
-    });
+    const config = withCardTypeForYaml(
+      compactEditorConfigForYaml(this._config, {
+        themeDefaultColors: this._themeDefaultHexMap()
+      })
+    );
     this._lastDispatchedConfigSig = this._configSignature(config);
     this.dispatchEvent(
       new CustomEvent("config-changed", {

@@ -802,6 +802,11 @@ export const compactEditorConfigForYaml = (
   return compact;
 };
 
+export const withCardTypeForYaml = (config) => ({
+  type: `custom:${CARD_TAG}`,
+  ...(config && typeof config === "object" ? config : {}),
+});
+
 export const createEditorPreviewDraft = (config) => ({
   title: config.title,
   subtitle: config.subtitle,
