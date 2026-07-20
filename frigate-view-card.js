@@ -13,7 +13,7 @@
  * ---------------------------------------------------------------
  */
 
-const VERSION = "1.0.491";
+const VERSION = "1.0.492";
 
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
@@ -1168,17 +1168,7 @@ const STYLES = `
   .card.landing-active .landing-shell-footer{display:flex;flex:0 0 auto;align-items:center;min-height:30px;padding:4px 8px;border-top:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;bottom:0;z-index:4;}
   .landing-shell-footer .frigate-view{position:static;max-height:24px;}
   .landing-shell-footer .frigate-view svg{height:24px;}
-  .landing-grid{display:grid;gap:10px;width:100%;grid-template-columns:repeat(3,minmax(0,1fr));}
-  .landing-grid.cols-1{grid-template-columns:minmax(0,1fr);}
-  .landing-grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .card.mobile .landing-grid{grid-template-columns:minmax(0,1fr);}
-  @media screen and (max-width: 980px){
-    .landing-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-    .landing-grid.count-1,.landing-grid.cols-1{grid-template-columns:minmax(0,1fr);}
-  }
-  @media screen and (max-width: 560px){
-    .landing-grid,.landing-grid.count-1,.landing-grid.count-2,.landing-grid.count-4,.landing-grid.cols-1,.landing-grid.cols-2{grid-template-columns:minmax(0,1fr);}
-  }
+  .landing-grid{display:grid;gap:10px;width:100%;grid-template-columns:repeat(3,1fr);}
   .landing-cell{display:flex;flex-direction:column;gap:6px;cursor:pointer;}
   .landing-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:10px;border:1px solid var(--c-border2);background:var(--c-bg-deep);}
   .landing-media-host.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
@@ -4253,71 +4243,6 @@ class FrigateViewCard extends HTMLElement {
     this._landingHandledReviewIds.clear();
   }
 
-  _landingGridCountClass(total) {
-    return `count-${Math.max(1, Math.min(9, Number(total) || 0))}`;
-  }
-
-  _landingGridColumnsForWidth(width, total) {
-    const cameraCount = Math.max(1, Math.min(9, Number(total) || 0));
-    const maxColumns = cameraCount === 4 ? 2 : Math.min(3, cameraCount);
-    if (width < 560) return 1;
-    if (width < 980) return Math.min(2, maxColumns);
-    return maxColumns;
-  }
-
-  _applyLandingGridColumns(width = 0) {
-    const grid = this._$("#landing-grid");
-    if (!grid) return;
-    const shell = this._$("#landing-shell");
-    const layout = this._$("#layout");
-    const card = this._$("#card");
-    const measuredWidth =
-      width ||
-      shell?.getBoundingClientRect?.().width ||
-      layout?.getBoundingClientRect?.().width ||
-      card?.getBoundingClientRect?.().width ||
-      shell?.clientWidth ||
-      grid.clientWidth ||
-      this._cardWidth ||
-      0;
-    if (measuredWidth <= 0) return;
-    const total = Array.isArray(this._config?.cameras)
-      ? Math.min(9, this._config.cameras.length)
-      : 0;
-    const columns = this._landingGridColumnsForWidth(measuredWidth, total);
-    if (this._landingGridColumns === columns) return;
-    this._landingGridColumns = columns;
-    grid.classList.toggle("cols-1", columns === 1);
-    grid.classList.toggle("cols-2", columns === 2);
-  }
-
-  _setupLandingResizeObserver() {
-    const target = this._$("#layout") || this._$("#landing-shell");
-    if (!target || typeof ResizeObserver === "undefined") {
-      this._applyLandingGridColumns();
-      return;
-    }
-    if (this._landingResizeTarget === target) {
-      this._applyLandingGridColumns(target.clientWidth || 0);
-      return;
-    }
-    if (this._landingResizeObserver) this._landingResizeObserver.disconnect();
-    this._landingResizeTarget = target;
-    this._landingResizeObserver = new ResizeObserver((entries) => {
-      const width = entries[0]?.contentRect?.width || 0;
-      this._applyLandingGridColumns(width);
-    });
-    this._landingResizeObserver.observe(target);
-    this._applyLandingGridColumns(target.clientWidth || 0);
-  }
-
-  _clearLandingResizeObserver() {
-    if (this._landingResizeObserver) this._landingResizeObserver.disconnect();
-    this._landingResizeObserver = null;
-    this._landingResizeTarget = null;
-    this._landingGridColumns = 0;
-  }
-
   _isLandingCameraAlertLive(entity) {
     const until = Number(this._landingAlertExpiresByEntity.get(entity) || 0);
     return until > Date.now();
@@ -4414,12 +4339,10 @@ class FrigateViewCard extends HTMLElement {
     if (subtitleEl) subtitleEl.textContent = this._subtitleText();
     if (!this._isLandingPageEnabled()) {
       shell.innerHTML = "";
-      this._clearLandingResizeObserver();
       this._applyLandingShellVisibility();
       return;
     }
     if (!this._isLandingPageActive()) {
-      this._clearLandingResizeObserver();
       this._applyLandingShellVisibility();
       return;
     }
@@ -4427,7 +4350,6 @@ class FrigateViewCard extends HTMLElement {
     const cameras = Array.isArray(this._config?.cameras)
       ? this._config.cameras.slice(0, 9)
       : [];
-    const gridCountClass = this._landingGridCountClass(cameras.length);
     const showTitleBars = this._landingShowTitleBarsEnabled();
     const liveStreamHint = this._landingLiveStreamHint();
     const hassReady = !!this._hass?.states;
@@ -4439,7 +4361,6 @@ class FrigateViewCard extends HTMLElement {
         return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
       })
       .concat([
-        `grid:${gridCountClass}`,
         `titles:${showTitleBars ? "1" : "0"}`,
         `hass:${hassReady ? "1" : "0"}`,
       ])
@@ -4449,7 +4370,6 @@ class FrigateViewCard extends HTMLElement {
       this._landingLastRenderSignature === nextSignature
     ) {
       this._updateLandingMeta();
-      this._setupLandingResizeObserver();
       this._applyLandingShellVisibility();
       return;
     }
@@ -4489,10 +4409,8 @@ class FrigateViewCard extends HTMLElement {
       })
       .join("");
 
-    shell.innerHTML = `<div class="landing-grid ${gridCountClass}" id="landing-grid">${cells}</div>
+    shell.innerHTML = `<div class="landing-grid" id="landing-grid">${cells}</div>
       <div class="landing-cam-buttons">${buttons}</div>`;
-    this._landingGridColumns = 0;
-    this._setupLandingResizeObserver();
     this._mountLandingMedia();
     this._applyLandingShellVisibility();
   }
@@ -4764,7 +4682,6 @@ class FrigateViewCard extends HTMLElement {
 
   _stopLandingMode() {
     this._clearLandingTimers();
-    this._clearLandingResizeObserver();
     this._teardownLandingMedia();
   }
 
@@ -7924,7 +7841,6 @@ class FrigateViewCard extends HTMLElement {
       const h = entries[0].contentRect.height;
       const prevW = this._cardWidth || 0;
       this._cardWidth = w;
-      if (this._isLandingPageActive()) this._applyLandingGridColumns(w);
       const visibleNow = w > 2 && h > 2;
       if (visibleNow && !this._wasVisible) {
         this._scheduleResumeLive("resize-visible");
