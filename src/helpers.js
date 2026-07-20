@@ -802,10 +802,7 @@ export const compactEditorConfigForYaml = (
   return compact;
 };
 
-export const withCardTypeForYaml = (
-  config,
-  { sourceConfig = null } = {},
-) => {
+export const withCardTypeForYaml = (config, { sourceConfig = null } = {}) => {
   const payload = {
     type: `custom:${CARD_TAG}`,
     ...(config && typeof config === "object" ? config : {}),
@@ -813,7 +810,11 @@ export const withCardTypeForYaml = (
 
   const source =
     sourceConfig && typeof sourceConfig === "object" ? sourceConfig : null;
-  if (source && source.grid_options && typeof source.grid_options === "object") {
+  if (
+    source &&
+    source.grid_options &&
+    typeof source.grid_options === "object"
+  ) {
     payload.grid_options = { ...source.grid_options };
   }
   if (source && source.visibility != null) {
