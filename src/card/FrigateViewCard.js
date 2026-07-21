@@ -5356,7 +5356,7 @@ export class FrigateViewCard extends HTMLElement {
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <ha-card class="card ${this._cardStateClassNames()}" id="card" style="border-radius: var(--fvc-border-radius);var(--fvc-shadow-m);">
+    <ha-card class="card ${this._cardStateClassNames()}" id="card" style="border-radius: var(--fvc-border-radius);box-shadow:var(--fvc-shadow-m);">
 
         <div class="layout" id="layout">
 
