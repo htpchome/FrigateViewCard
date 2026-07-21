@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.577";
+const VERSION = "1.0.578";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -82,7 +82,87 @@ const THEME_CUSTOM_KEYS = new Set(
   THEME_CUSTOM_ROWS.map((row) => row.key)
 );
 
-// src/icons.js
+// src/card/FrigateViewCard.js
+const VERSION2 = "1.0.551";
+const CARD_TAG2 = "frigate-view-card";
+const DAY2 = 86400;
+const RECORDINGS_WINDOW2 = 24 * 3600;
+const EVENT_FETCH_BATCH2 = 100;
+const INITIAL_EVENT_FETCH_LIMIT2 = 20;
+const INACTIVE_WARM_EVENT_LIMIT2 = 5;
+const REVIEW_FETCH_BATCH2 = 100;
+const WINDOW_FETCH_PAGE_LIMIT2 = 10;
+const INITIAL_EVENTS_PAGE_LIMIT2 = 1;
+const WINDOW_BACKGROUND_PAGE_LIMIT2 = 4;
+const REALTIME_HEAD_POLL_MS2 = 5e3;
+const REALTIME_RELOAD_DEBOUNCE_MS2 = 450;
+const REALTIME_POLL_OPTIONS_SECONDS2 = Object.freeze([2, 5, 10, 15]);
+const MOBILE_BATTERY_SAVER_POLL_SECONDS2 = 10;
+const SLIDESHOW_ROTATION_OPTIONS_SECONDS2 = Object.freeze([
+  10,
+  20,
+  30,
+  60
+]);
+const GRID_ROTATION_OPTIONS_SECONDS2 = Object.freeze([10, 20, 30, 60]);
+const SLIDESHOW_ALERT_HOLD_MS2 = 1e4;
+const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC2 = 10;
+const SLIDESHOW_REVIEW_WATCH_MIN_MS2 = 1500;
+const SLIDESHOW_REVIEW_WATCH_MAX_MS2 = 15e3;
+const LANDING_ALERT_HOLD_MS2 = 6e3;
+const LANDING_ALERT_END_GRACE_MS2 = 3500;
+const MSE_SWITCH_GRACE_MS2 = 2e4;
+const MSE_SWITCH_GRACE_MAX2 = 3;
+const MAX_CAMERAS2 = 8;
+const DEFAULT_CAMERA_CONNECTION_TYPE2 = "frigate_go2rtc";
+const ALLOWED_HIDDEN_TABS2 = [
+  "alerts",
+  "clips",
+  "snapshot",
+  "recordings",
+  "kept"
+];
+const THEME_DEFAULTS2 = Object.freeze({
+  "--c-bg-main": "var(--card-background-color)",
+  "--c-bg-panel": "var(--secondary-background-color)",
+  "--c-bg-deep": "#111111",
+  "--c-text": "var(--primary-text-color)",
+  "--c-text2": "var(--secondary-text-color)",
+  "--c-text3": "var(--state-inactive-color)",
+  "--c-text4": "var(--disabled-text-color)",
+  "--c-text-rev": "var(--text-primary-color)",
+  "--c-border": "var(--secondary-background-color)",
+  "--c-border2": "var(--state-inactive-color)",
+  "--c-primary": "var(--primary-color)",
+  "--c-primary-l": "var(--light-primary-color)",
+  "--c-primary-d": "var(--dark-primary-color)",
+  "--c-accent": "var(--accent-color)",
+  "--c-on": "#4ade80",
+  "--c-off": "#FCA5A5",
+  "--c-bg-scrub": "#c2f2c1",
+  "--c-bg-alert": "#dc3146"
+});
+const THEME_CUSTOM_ROWS2 = Object.freeze([
+  { key: "--c-bg-main", label: "Card Background Color" },
+  { key: "--c-bg-panel", label: "Card Secondary Background Color" },
+  { key: "--c-bg-deep", label: "Card Video Background Color" },
+  { key: "--c-text", label: "Primary Text Color" },
+  { key: "--c-text2", label: "Secondary Text Color" },
+  { key: "--c-text3", label: "Third Text Color" },
+  { key: "--c-text4", label: "Fourth Text Color" },
+  { key: "--c-text-rev", label: "Reverse Text Color" },
+  { key: "--c-border", label: "Border Color One" },
+  { key: "--c-border2", label: "Border Color Two" },
+  { key: "--c-primary", label: "Primary Color" },
+  { key: "--c-primary-l", label: "Primary Light Color" },
+  { key: "--c-primary-d", label: "Primary Dark Color" },
+  { key: "--c-accent", label: "Accent Color" },
+  { key: "--c-bg-scrub", label: "Scrub Bar Background" },
+  { key: "--c-bg-alert", label: "Scrub Bar Alerts" }
+]);
+const THEME_CUSTOM_KEYS2 = new Set(
+  THEME_CUSTOM_ROWS2.map((row) => row.key)
+);
 const ICONS = {
   live: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>',
   recordings: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>',
@@ -113,18 +193,15 @@ const ICONS = {
   person: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
   frigateview: '<svg viewBox="100 300 820 155" xmlns="http://www.w3.org/2000/svg"><desc>FrigateView</desc><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(-30.73 177.492)scale(1.93682)" d="M118.652 71.916v9.36H89.13v10.801h29.523v9.361H89.13v20.882h-10.8V71.916z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(41.364 177.49)scale(1.93682)" d="M83.872 82.716h10.081v6.841c2.953-4.896 7.921-6.84 14.834-6.84h4.464v8.64h-4.464c-9.29 0-14.834 5.905-14.834 12.097v18.866h-10.08z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(82.504 177.492)scale(1.93682)" d="M103.601 82.716v39.604h-10.08V82.716z"/><rect style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#71787e;fill-rule:nonzero;opacity:1" x="-5.04" y="-3.24" rx="0" ry="0" width="10.081" height="6.481" transform="translate(273.397 323.056)scale(1.93682)"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(142.187 177.49)scale(1.93682)" d="M78.185 125.776h10.873c2.304 4.32 5.76 5.833 9.576 5.833 8.21 0 12.025-4.177 12.025-10.01v-3.96c-2.376 3.529-6.48 5.4-13.537 5.4-14.4 0-20.737-7.704-20.737-20.52 0-13.394 6.84-20.523 20.737-20.523 7.129 0 11.233 1.873 13.537 5.329v-4.609h10.081v41.548c0 9.36-9.432 17.065-22.106 17.065-9.576 0-18.29-4.608-20.45-15.553m20.377-12.457c7.633 0 12.097-3.744 12.097-10.8 0-6.77-4.248-10.802-12.097-10.802-7.632 0-12.097 3.745-12.097 10.801 0 6.769 4.249 10.801 12.097 10.801"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(234.991 177.49)scale(1.93682)" d="M76.276 102.518c0-13.393 6.84-20.522 20.738-20.522 7.129 0 11.233 1.873 13.537 5.329v-4.609h10.081v39.604h-10.08v-4.68c-2.377 3.528-6.481 5.4-13.538 5.4-14.401 0-20.738-7.705-20.738-20.522m22.178 10.801c7.633 0 12.097-3.744 12.097-10.8 0-6.77-4.248-10.802-12.097-10.802-7.632 0-12.097 3.745-12.097 10.801 0 6.769 4.248 10.801 12.097 10.801"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(312.315 177.492)scale(1.93682)" d="M88.481 108.279V91.357h-5.184v-8.64h5.184V71.914h10.081v10.801h15.265v8.641H98.562v16.634c0 3.888 2.376 4.968 5.112 4.968h10.153v9.36h-12.385c-6.408 0-12.961-2.807-12.961-14.04"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(386.992 177.49)scale(1.93682)" d="M76.42 102.518c0-13.393 8.28-20.522 22.178-20.522 14.401 0 22.178 7.705 22.178 20.522v1.512H86.573c.576 5.833 4.753 9.29 12.025 9.29 5.257 0 9-1.73 10.8-5.185h10.874c-2.16 9.72-9.937 14.905-21.674 14.905-14.401 0-22.178-7.705-22.178-20.522m32.907-5.832c-1.872-3.169-5.472-4.969-10.729-4.969-5.112 0-8.857 1.728-10.729 4.969z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#71787e;fill-rule:nonzero;opacity:1" transform="translate(458.247 177.492)scale(1.93682)" d="m80.525 71.915 18.001 50.405h-3.815L76.709 71.915z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(670.207 365.593)scale(1.93682)" d="M7.093-25.202h3.816L-7.093 25.202h-3.816z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#71787e;fill-rule:nonzero;opacity:1" transform="translate(508.662 177.492)scale(1.93682)" d="M100.36 82.716v39.604h-3.6V82.716z"/><rect style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" x="-1.8" y="-1.62" rx="0" ry="0" width="3.6" height="3.24" transform="translate(699.555 319.918)scale(1.93682)"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#71787e;fill-rule:nonzero;opacity:1" transform="translate(557.54 177.49)scale(1.93682)" d="M78.292 102.518c0-13.393 7.56-20.522 20.306-20.522 12.745 0 20.306 7.129 20.306 20.522H81.893c0 11.305 5.184 16.922 16.705 16.922 9.793 0 15.265-3.96 16.49-12.674h3.6c-1.512 10.657-8.785 16.274-20.09 16.274-13.177 0-20.306-7.705-20.306-20.522m36.867-3.24c-1.008-9.433-6.408-13.681-16.561-13.681s-15.553 4.248-16.561 13.68z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#71787e;fill-rule:nonzero;opacity:1" transform="translate(649.512 177.49)scale(1.93682)" d="M103.6 82.716H100l12.025 39.604h3.6zm-34.49 0 11.664 39.604h3.6L72.71 82.716z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(888.24 376.05)scale(1.93682)" d="M7.633-19.802h-3.6L-7.634 19.802h3.6z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(828.061 376.05)scale(1.93682)" d="M4.212-19.802-7.813 19.802h3.6L7.814-19.802z"/></svg>'
 };
-
-// src/styles.js
 const STYLES = `
   :host {
-    height:100% !important;
-    min-height:0 !important;
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     --rotate-vw: 100vw;
     --rotate-vh: 100dvh;
     --rotate-ox: 0px;
     --rotate-oy: 0px;
+    min-height: 0;
     display: block !important;
     margin:0 !important;
     padding:0 !important;
@@ -165,13 +242,11 @@ const STYLES = `
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+    height: auto;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     }
   .card{
-    --fvc-shadow-s: var(--ha-box-shadow-s);
+    --fvc-shadow-s: var(--ha-box-shadow-m);
     --fvc-shadow-m: var(--ha-box-shadow-m);
     --ha-card-background: var(--c-bg-main) !important;
     color:var(--c-text);
@@ -193,11 +268,13 @@ const STYLES = `
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
 
-  .layout{display:flex;flex-direction:column;min-height:0;height:100%;width:100%;
-    overflow: hidden !important;justify-content: space-between;}
+  .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
+    overflow: hidden !important;}
   .layout.wide{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
-   .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
+  .card .col-left > *{flex:0 0 auto;}
+  .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
+  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
@@ -262,7 +339,7 @@ const STYLES = `
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;border:2px solid transparent;}
 
   /* \u2500\u2500 event list \u2500\u2500 */
-  .list{flex:1;flex-direction: column;min-height:0;height:100%} 
+  .list{flex:1;flex-direction: column;min-height:0;} 
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
   .list-day-label{position:relative;z-index:1;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-main);border:none;text-align: center;}
@@ -271,7 +348,7 @@ const STYLES = `
 
   .list-item{position: relative;display:flex;flex-wrap:wrap;gap:9px;align-items:center;
     background:var(--c-bg-panel-main);margin-bottom:5px;
-    cursor:pointer;border-radius: 15px;padding:2px 10px 2px 2px;min-height:0;}
+    cursor:pointer;border-radius: 15px;padding:2px 10px 2px 2px;}
   .list-item:hover{background: var(--c-bg-panel);}
   .list-item.compact{padding:2px 10px 2px 2px;flex-wrap:wrap;}
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
@@ -311,7 +388,7 @@ const STYLES = `
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
   .tabs-container{display:block;position:realtive;}
-  .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:2px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;margin:3px 8px;min-height:0;}
+  .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:2px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;margin:3px 8px;}
   .tabs::-webkit-scrollbar{display:none;}
 
   /* \u2500\u2500 donut button \u2500\u2500 */
@@ -329,7 +406,8 @@ const STYLES = `
   .more.to-top{position:relative;cursor:pointer;color:var(--c-text2);}
 
   /* \u2500\u2500 feed area \u2500\u2500 */
-    #eng-wrap{display:flex;background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:400px;z-index:0;isolation:isolate;height:100%;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;min-height:0;}
+    .feed-area{position:relative;width:100%;}
+    #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
     #engine,#stream-fallback{transition:opacity .22s ease;}
     #eng-wrap::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:5;box-sizing:border-box;border:0 solid transparent;transition:border-color .2s ease,border-width .2s ease;}
     #eng-wrap.slideshow-switching #engine,
@@ -389,7 +467,7 @@ const STYLES = `
   #stream-fallback img{width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;object-position:center center;display:block;background:var(--c-bg-deep);}
   #stream-fallback::after{content:none;}
   #engine{position:absolute;inset:0;z-index:1;min-height:0;flex-shrink:0;}
-  #engine video{min-height:300px;display:block;object-fit:contain;var(--c-bg-deep);}
+  #engine video{width:100%;height:100%;display:block;object-fit:contain;var(--c-bg-deep);}
   #engine ha-camera-stream,#engine ha-hls-player,#engine webrtc-camera{width:100%;height:100%;display:block;}
   .stream-fallback-status{position:absolute;left:8px;bottom:8px;z-index:3;display:flex;align-items:center;gap:6px;padding:4.8px 9.6px;border-radius:999px;background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:0.825rem;font-weight:600;line-height:1;backdrop-filter:blur(2px);}
   .stream-fallback-status[hidden]{display:none;}
@@ -465,7 +543,8 @@ const STYLES = `
   #viewer:-webkit-full-screen .overlay-fs{display:none !important;}
   .viewer{width:100%;aspect-ratio:16/9;min-height:240px;max-height:70dvh;
     background:var(--c-bg-deep);display:flex;align-items:center;justify-content:center;z-index:2;position:relative;overflow:hidden;border-radius:7px;}
-  .viewer video,.viewer img.snap{object-fit:contain;background:var(--c-bg-deep);}
+  .viewer video,.viewer img.snap{width:100%;height:100%;object-fit:contain;
+    background:var(--c-bg-deep);}
   .viewer .ld{color:var(--c-text2);font-size:0.975rem;}
   .ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--c-text2);background:linear-gradient(145deg,#1a2540,#0d1520);}
   .ph svg{width:40px;height:40px;opacity:.35;}
@@ -475,11 +554,11 @@ const STYLES = `
   .live-grid-cell.grid-detection{border-color:var(--warning-color, var(--c-accent));box-shadow:inset 0 0 0 2px var(--warning-color, var(--c-accent));}
   .live-grid-cell.empty{display:flex;align-items:center;justify-content:center;cursor:default;}
   .live-grid-cell.empty .ph{border-radius:7px;}
-  .live-grid-cell video,.live-grid-cell img,.live-grid-cell ha-camera-stream{display:block;object-fit:contain;object-position:center center;background:var(--c-bg-deep);}
+  .live-grid-cell video,.live-grid-cell img,.live-grid-cell ha-camera-stream{width:100%;height:100%;display:block;object-fit:contain;object-position:center center;background:var(--c-bg-deep);}
   .live-grid-label{position:absolute;left:6px;top:6px;z-index:2;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:.68rem;line-height:1.2;pointer-events:none;text-transform:none;}
   .landing-shell,.landing-shell-header,.landing-shell-footer{display:none;}
   .card.landing-active{width:100%;max-width:none;margin:0;}
-  .card.landing-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--card-h,100dvh);max-height:var(--card-h,100dvh);overflow:hidden !important;}
+  .card.landing-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--stream-h,100dvh);max-height:var(--stream-h,100dvh);overflow:hidden !important;}
   .card.landing-active .col-left,.card.landing-active .resize-handle,.card.landing-active .col-right{display:none;}
 
   .card.landing-active .landing-shell-header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;top:0;z-index:4;}
@@ -503,7 +582,7 @@ const STYLES = `
     transform: translateZ(0);}
   .landing-media-host.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
   .landing-media-host.grid-detection{border-color:var(--warning-color, var(--c-accent));box-shadow:inset 0 0 0 2px var(--warning-color, var(--c-accent));}
-  .landing-media-host video,.landing-media-host img,.landing-media-host ha-camera-stream{display:block;object-fit:contain;object-position:center center;background:var(--c-bg-deep);}
+  .landing-media-host video,.landing-media-host img,.landing-media-host ha-camera-stream{width:100%;height:100%;display:block;object-fit:contain;object-position:center center;background:var(--c-bg-deep);}
   .landing-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;background:var(--c-bg-main);}
   .landing-meta-name{font-size:.82rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .landing-meta-source{font-size:.7rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -531,34 +610,40 @@ const STYLES = `
 
   /* \u2500\u2500 info row \u2500\u2500 */
   .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
-    border-bottom:1px solid var(--c-border);min-height:0;height:100%}
+    border-bottom:1px solid var(--c-border);}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
-  .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;min-height:0;} 
+  .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
   .sv{font-size:1.05rem;font-weight:700;color:var(--c-primary-d);} .sl{font-size:0.75rem;color:var(--c-text2);text-transform:uppercase;letter-spacing:.06em;}
   
   /* \u2500\u2500 camera switcher \u2500\u2500 */
+
   .cam-switcher {
     display: flex;
     align-items: center;
     gap: 4px;
-    flex-wrap: wrap; 
+    flex-wrap: wrap; /* Wraps items on larger displays */
     padding: 6px 12px;
-    min-height:0;
-    height:100%;
   }
+
+
   @media (max-width: 767px) {
     .cam-switcher {
-      flex-wrap: nowrap;
+      flex-wrap: nowrap; /* Forces items onto one line */
       overflow-x: auto;
       white-space: nowrap;
-      -webkit-overflow-scrolling: touch;
+      -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
+      
+      /* Hide scrollbars */
       scrollbar-width: none;
       -ms-overflow-style: none;
     }
+
     .cam-switcher::-webkit-scrollbar {
       display: none;
     }
+
+    /* Crucial: Prevents child items from squishing on mobile */
     .cam-switcher > * {
       flex-shrink: 0; 
     }
@@ -703,8 +788,6 @@ const STYLES = `
 
 
 `;
-
-// src/helpers.js
 function detectDeviceProfile() {
   const nav = typeof navigator !== "undefined" ? navigator : {};
   const win = typeof window !== "undefined" ? window : {};
@@ -717,26 +800,26 @@ function detectDeviceProfile() {
   const anyPointerCoarse = !!win.matchMedia?.("(any-pointer: coarse)")?.matches;
   const hoverNone = !!win.matchMedia?.("(hover: none)")?.matches;
   const hasTouch = maxTouchPoints > 0 || primaryPointerCoarse || anyPointerCoarse || hoverNone;
-  const isAndroid2 = platform.includes("android") || userAgent.includes("android");
+  const isAndroid22 = platform.includes("android") || userAgent.includes("android");
   const isIPhone = /iphone/.test(userAgent);
   const isMobileHint = nav.userAgentData?.mobile === true || /mobile|mobi/.test(userAgent);
   const isIPad = /ipad/.test(userAgent) || platform.includes("mac") && maxTouchPoints > 1 && hasTouch;
   const isIPod = /ipod/.test(userAgent);
-  const isIOS2 = isIPhone || isIPad || isIPod;
-  const isTablet = isIPad || isAndroid2 && hasTouch && !isMobileHint;
-  const isPhone = (isIOS2 || isAndroid2) && !isTablet;
+  const isIOS22 = isIPhone || isIPad || isIPod;
+  const isTablet = isIPad || isAndroid22 && hasTouch && !isMobileHint;
+  const isPhone = (isIOS22 || isAndroid22) && !isTablet;
   const isMobile = isPhone || isTablet;
   return {
     hasTouch,
     hasPrimaryTouch: primaryPointerCoarse,
     hasAnyTouch: anyPointerCoarse || hoverNone,
-    isAndroid: isAndroid2,
-    isIOS: isIOS2,
+    isAndroid: isAndroid22,
+    isIOS: isIOS22,
     isPhone,
     isTablet,
     isMobile,
     isDesktop: !isMobile,
-    os: isAndroid2 ? "Android" : isIOS2 ? "iOS" : "Desktop/Other"
+    os: isAndroid22 ? "Android" : isIOS22 ? "iOS" : "Desktop/Other"
   };
 }
 const DEVICE_PROFILE = detectDeviceProfile();
@@ -764,7 +847,7 @@ function normalizeCameraConnectionType(value) {
   if (type === "ha_direct" || type === "ha" || type === "home_assistant") {
     return "ha_direct";
   }
-  return DEFAULT_CAMERA_CONNECTION_TYPE;
+  return DEFAULT_CAMERA_CONNECTION_TYPE2;
 }
 function normalizeAlertsAreaContent(value) {
   const mode = String(value ?? "").trim().toLowerCase();
@@ -1112,12 +1195,12 @@ const buildEditorConfigFromDom = ({
   const realtimePollSeconds = Number(
     root.querySelector("#realtime_poll_seconds")?.dataset.value || root.querySelector("#realtime_poll_seconds")?.value || "5"
   );
-  nextConfig.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+  nextConfig.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS2.includes(
     realtimePollSeconds
   ) ? realtimePollSeconds : 5;
   nextConfig.mobile_poll_battery_saver = root.querySelector("#mobile_poll_battery_saver")?.checked === true;
   nextConfig.slideshow_rotation_enabled = root.querySelector("#slideshow_rotation_enabled")?.checked === true;
-  nextConfig.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+  nextConfig.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS2.includes(
     Number(
       root.querySelector("#slideshow_rotation_seconds")?.dataset.value || root.querySelector("#slideshow_rotation_seconds")?.value || "30"
     )
@@ -1130,7 +1213,7 @@ const buildEditorConfigFromDom = ({
   nextConfig.landing_page_enabled = root.querySelector("#landing_page_enabled")?.checked === true;
   nextConfig.landing_page_live_cameras = root.querySelector("#landing_page_live_cameras")?.checked === true;
   nextConfig.landing_page_show_title_bars = root.querySelector("#landing_page_show_title_bars")?.checked !== false;
-  nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+  nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS2.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value || root.querySelector("#grid_rotation_seconds")?.value || "30"
     )
@@ -1148,7 +1231,7 @@ const buildEditorConfigFromDom = ({
   const themeCustom = {};
   root.querySelectorAll("[data-theme-color]").forEach((input) => {
     const key = input.dataset.themeColor;
-    if (!THEME_CUSTOM_KEYS.has(key)) return;
+    if (!THEME_CUSTOM_KEYS2.has(key)) return;
     const useDefault = root.querySelector(`[data-theme-default="${key}"]`)?.checked === true;
     const inputValue = normalizeHexColor(input.value);
     if (useDefault) themeCustomDefaults[key] = true;
@@ -1158,7 +1241,7 @@ const buildEditorConfigFromDom = ({
   });
   nextConfig.theme_custom = themeCustom;
   nextConfig.theme_custom_defaults = themeCustomDefaults;
-  const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")].filter((element) => element.checked !== true).map((element) => element.dataset.activeTab).filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
+  const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")].filter((element) => element.checked !== true).map((element) => element.dataset.activeTab).filter((tabId) => ALLOWED_HIDDEN_TABS2.includes(tabId));
   nextConfig.hidden_tabs = hiddenTabs.length ? hiddenTabs : [];
   const streamHeight = root.querySelector("#stream_height")?.value;
   const streamHeightUnit = root.querySelector("#stream_height_unit")?.dataset.value || root.querySelector("#stream_height_unit")?.value || "vh";
@@ -1183,7 +1266,7 @@ const compactCameraConfigForYaml = (camera) => {
   if (!normalized.entity) return null;
   const compact = { entity: normalized.entity };
   addStringIfPresent(compact, "name", normalized.name);
-  if (normalized.connection_type !== DEFAULT_CAMERA_CONNECTION_TYPE) {
+  if (normalized.connection_type !== DEFAULT_CAMERA_CONNECTION_TYPE2) {
     compact.connection_type = normalized.connection_type;
   }
   if (normalized.alerts_content !== "alerts_only") {
@@ -1213,7 +1296,7 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     alertsReviewsDays,
     windowDays
   );
-  const realtimePollSeconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+  const realtimePollSeconds = REALTIME_POLL_OPTIONS_SECONDS2.includes(
     Number(source.realtime_poll_seconds)
   ) ? Number(source.realtime_poll_seconds) : 5;
   addIfNotDefault(compact, "realtime_poll_seconds", realtimePollSeconds, 5);
@@ -1229,7 +1312,7 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     source.slideshow_rotation_enabled === true,
     false
   );
-  const slideshowRotationSeconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+  const slideshowRotationSeconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS2.includes(
     Number(source.slideshow_rotation_seconds)
   ) ? Number(source.slideshow_rotation_seconds) : 30;
   addIfNotDefault(
@@ -1274,11 +1357,11 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     source.landing_page_show_title_bars !== false,
     true
   );
-  const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+  const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS2.includes(
     Number(source.grid_rotation_seconds)
   ) ? Number(source.grid_rotation_seconds) : 30;
   addIfNotDefault(compact, "grid_rotation_seconds", gridRotationSeconds, 30);
-  const hiddenTabs = Array.isArray(source.hidden_tabs) ? source.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [];
+  const hiddenTabs = Array.isArray(source.hidden_tabs) ? source.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS2.includes(id)) : [];
   if (hiddenTabs.length) compact.hidden_tabs = hiddenTabs;
   if (source.theme === "custom") {
     compact.theme = "custom";
@@ -1286,7 +1369,7 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     const themeCustomDefaults = source.theme_custom_defaults && typeof source.theme_custom_defaults === "object" ? source.theme_custom_defaults : {};
     const compactThemeCustom = {};
     Object.entries(themeCustom).forEach(([key, value]) => {
-      if (!THEME_CUSTOM_KEYS.has(key)) return;
+      if (!THEME_CUSTOM_KEYS2.has(key)) return;
       if (themeCustomDefaults[key] === true) return;
       const color = normalizeHexColor(value);
       if (!color) return;
@@ -1318,7 +1401,7 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
 };
 const withCardTypeForYaml = (config, { sourceConfig = null } = {}) => {
   const payload = {
-    type: `custom:${CARD_TAG}`,
+    type: `custom:${CARD_TAG2}`,
     ...config && typeof config === "object" ? config : {}
   };
   const source = sourceConfig && typeof sourceConfig === "object" ? sourceConfig : null;
@@ -1418,7 +1501,7 @@ function normalizeCameraConfig(camera, { fallbackName = null } = {}) {
     return {
       entity: camera,
       name: fallbackName,
-      connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+      connection_type: DEFAULT_CAMERA_CONNECTION_TYPE2,
       alerts_content: "alerts_only",
       disable_hls_desktop: false
     };
@@ -1437,7 +1520,7 @@ function normalizeCameraConfig(camera, { fallbackName = null } = {}) {
   return {
     entity: null,
     name: fallbackName,
-    connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+    connection_type: DEFAULT_CAMERA_CONNECTION_TYPE2,
     alerts_content: "alerts_only",
     disable_hls_desktop: false
   };
@@ -1448,8 +1531,6 @@ const hassThemeSignature = (hass) => {
   return `${darkMode === true ? "dark" : "light"}:${theme || hass?.selectedTheme || ""}`;
 };
 const hassEntityStateSignature = (hass, entities) => entities.map((entity) => `${entity}:${hass?.states?.[entity]?.state ?? "missing"}`).join("|");
-
-// src/card/FrigateViewCard.js
 const FrigateViewCard = class extends HTMLElement {
   constructor() {
     super();
@@ -1640,7 +1721,7 @@ const FrigateViewCard = class extends HTMLElement {
       passive: true
     });
     this._onEditorPreviewDraft = (ev) => {
-      if (ev?.detail?.cardTag !== CARD_TAG) return;
+      if (ev?.detail?.cardTag !== CARD_TAG2) return;
       this._applyEditorPreviewDraft(ev.detail?.config || null);
     };
     window.addEventListener(
@@ -1669,14 +1750,14 @@ const FrigateViewCard = class extends HTMLElement {
         previewConfig.alerts_reviews_days,
         normalizePositiveInteger(previewConfig.window_days, 3)
       ),
-      realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
+      realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS2.includes(
         Number(previewConfig.realtime_poll_seconds)
       ) ? Number(previewConfig.realtime_poll_seconds) : 5,
       mobile_poll_battery_saver: previewConfig.mobile_poll_battery_saver === true,
       grid_mode_enabled: previewConfig.grid_mode_enabled === true,
       grid_start_in_grid_enabled: previewConfig.grid_start_in_grid_enabled === true,
       grid_live_view_enabled: previewConfig.grid_live_view_enabled !== false,
-      grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
+      grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS2.includes(
         Number(previewConfig.grid_rotation_seconds)
       ) ? Number(previewConfig.grid_rotation_seconds) : 30,
       hidden_tabs: Array.isArray(previewConfig.hidden_tabs) ? previewConfig.hidden_tabs : [],
@@ -1870,7 +1951,7 @@ const FrigateViewCard = class extends HTMLElement {
     return walk(root, 0);
   }
   static getConfigElement() {
-    return document.createElement(CARD_TAG + "-editor");
+    return document.createElement(CARD_TAG2 + "-editor");
   }
   static getStubConfig() {
     return {
@@ -1923,7 +2004,7 @@ const FrigateViewCard = class extends HTMLElement {
         }
       ];
     }
-    if (cameras.length > MAX_CAMERAS) cameras = cameras.slice(0, MAX_CAMERAS);
+    if (cameras.length > MAX_CAMERAS2) cameras = cameras.slice(0, MAX_CAMERAS2);
     const legacyWindowHours = parseInt(config.window_hours, 10);
     const nextConfig = {
       cameras,
@@ -1935,12 +2016,12 @@ const FrigateViewCard = class extends HTMLElement {
         normalizePositiveInteger(config.window_days, 3)
       ),
       refresh_seconds: Math.max(15, config.refresh_seconds || 45),
-      realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
+      realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS2.includes(
         Number(config.realtime_poll_seconds)
       ) ? Number(config.realtime_poll_seconds) : 5,
       mobile_poll_battery_saver: config.mobile_poll_battery_saver === true,
       slideshow_rotation_enabled: config.slideshow_rotation_enabled === true,
-      slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+      slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS2.includes(
         Number(config.slideshow_rotation_seconds)
       ) ? Number(config.slideshow_rotation_seconds) : 30,
       grid_mode_enabled: config.grid_mode_enabled === true,
@@ -1949,17 +2030,17 @@ const FrigateViewCard = class extends HTMLElement {
       landing_page_enabled: config.landing_page_enabled === true,
       landing_page_live_cameras: config.landing_page_live_cameras === true,
       landing_page_show_title_bars: config.landing_page_show_title_bars !== false,
-      grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
+      grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS2.includes(
         Number(config.grid_rotation_seconds)
       ) ? Number(config.grid_rotation_seconds) : 30,
       browse_expanded: config.browse_expanded === true,
-      hidden_tabs: Array.isArray(config.hidden_tabs) ? config.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [],
+      hidden_tabs: Array.isArray(config.hidden_tabs) ? config.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS2.includes(id)) : [],
       theme: config.theme === "custom" ? "custom" : "default",
       theme_custom: config.theme_custom && typeof config.theme_custom === "object" ? Object.fromEntries(
-        Object.entries(config.theme_custom).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, normalizeHexColor(value)]).filter(([, value]) => !!value)
+        Object.entries(config.theme_custom).filter(([key]) => THEME_CUSTOM_KEYS2.has(key)).map(([key, value]) => [key, normalizeHexColor(value)]).filter(([, value]) => !!value)
       ) : {},
       theme_custom_defaults: config.theme_custom_defaults && typeof config.theme_custom_defaults === "object" ? Object.fromEntries(
-        Object.entries(config.theme_custom_defaults).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, value === true]).filter(([, value]) => value === true)
+        Object.entries(config.theme_custom_defaults).filter(([key]) => THEME_CUSTOM_KEYS2.has(key)).map(([key, value]) => [key, value === true]).filter(([, value]) => value === true)
       ) : {},
       stream_height: config.stream_height ? Number(config.stream_height) : null,
       stream_height_unit: config.stream_height_unit || "vh",
@@ -2092,14 +2173,10 @@ const FrigateViewCard = class extends HTMLElement {
   }
   getGridOptions() {
     return {
-      columns: 3,
-      // Default width (Out of 12 columns)
-      rows: 6,
-      // Default height (1 row = 56px + gap)
-      min_rows: 4,
-      // Minimum height the user can scale it down to
-      min_columns: 3
-      // Minimum width allowed
+      rows: 3,
+      columns: 6,
+      min_rows: 3,
+      max_rows: 3
     };
   }
   disconnectedCallback() {
@@ -2228,7 +2305,7 @@ const FrigateViewCard = class extends HTMLElement {
     const now = Math.floor(Date.now() / 1e3);
     this._followNowWindow = true;
     this._winEnd = now;
-    this._winStart = now - this._config.window_days * DAY;
+    this._winStart = now - this._config.window_days * DAY2;
     const startInLanding = this._isLandingPageEnabled() && !this._hasPendingDeepLinkTarget();
     this._landingPageActive = startInLanding;
     const initialLoad = this._loadWindow(true);
@@ -2393,10 +2470,10 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _effectiveRealtimePollSeconds() {
     if (this._config?.mobile_poll_battery_saver === true && this._isLikelyMobileClient()) {
-      return MOBILE_BATTERY_SAVER_POLL_SECONDS;
+      return MOBILE_BATTERY_SAVER_POLL_SECONDS2;
     }
     const configured = Number(this._config?.realtime_poll_seconds);
-    return REALTIME_POLL_OPTIONS_SECONDS.includes(configured) ? configured : REALTIME_HEAD_POLL_MS / 1e3;
+    return REALTIME_POLL_OPTIONS_SECONDS2.includes(configured) ? configured : REALTIME_HEAD_POLL_MS2 / 1e3;
   }
   _restartRealtimeHeadPollTimer() {
     if (this._realtimeHeadPollT) clearInterval(this._realtimeHeadPollT);
@@ -2537,7 +2614,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._cameraConnectionType(this._activeCam?.entity) === "ha_direct";
   }
   _cameraConnectionType(entity) {
-    if (!entity) return DEFAULT_CAMERA_CONNECTION_TYPE;
+    if (!entity) return DEFAULT_CAMERA_CONNECTION_TYPE2;
     const cam = this._config?.cameras?.find((c) => c?.entity === entity);
     return normalizeCameraConnectionType(cam?.connection_type);
   }
@@ -2607,7 +2684,7 @@ const FrigateViewCard = class extends HTMLElement {
     s.stateObj = stateObj;
     s.controls = false;
     s.muted = this._streamMuted;
-    s.style.cssText = "display:block;object-fit: contain;";
+    s.style.cssText = "width:100%;height:100%;display:block";
     slot.innerHTML = "";
     slot.appendChild(s);
     this._attachVideoFit(s);
@@ -2652,7 +2729,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   _trimGraceMsePool() {
-    while (this._mseGracePool.size > MSE_SWITCH_GRACE_MAX) {
+    while (this._mseGracePool.size > MSE_SWITCH_GRACE_MAX2) {
       const oldestKey = this._mseGracePool.keys().next().value;
       if (!oldestKey) break;
       this._evictGraceMseEntry(oldestKey);
@@ -2674,7 +2751,7 @@ const FrigateViewCard = class extends HTMLElement {
       timer: setTimeout(() => {
         if (this._mseGracePool.get(key) !== entry) return;
         this._evictGraceMseEntry(key);
-      }, MSE_SWITCH_GRACE_MS)
+      }, MSE_SWITCH_GRACE_MS2)
     };
     this._mseGracePool.set(key, entry);
     this._trimGraceMsePool();
@@ -2693,7 +2770,7 @@ const FrigateViewCard = class extends HTMLElement {
     entry.timer = setTimeout(() => {
       if (this._mseGracePool.get(key) !== entry) return;
       this._evictGraceMseEntry(key);
-    }, MSE_SWITCH_GRACE_MS);
+    }, MSE_SWITCH_GRACE_MS2);
     entry.promise = (async () => {
       try {
         const result = await promise;
@@ -2757,7 +2834,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     engine.video.muted = this._streamMuted;
     engine.video.controls = false;
-    engine.video.style.cssText = "display:block;background:var(--c-bg-deep);object-fit: contain;";
+    engine.video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
     slot.innerHTML = "";
     slot.appendChild(engine.video);
     this._attachVideoFit(engine.video);
@@ -3105,10 +3182,9 @@ const FrigateViewCard = class extends HTMLElement {
       const car = ch > 0 ? cw / ch : 0;
       const near169 = ar > 0 && Math.abs(ar - 16 / 9) < 0.08;
       const nearPanel = ar > 0 && car > 0 && Math.abs(ar - car) < 0.06;
-      const videoDisplayHeight = Math.abs(cw / 16 * 9);
       videoEl.style.display = "block";
       videoEl.style.width = "100%";
-      videoEl.style.height = `${videoDisplayHeight}px`;
+      videoEl.style.height = "100%";
       videoEl.style.objectPosition = "center center";
       videoEl.style.objectFit = near169 && nearPanel ? "cover" : "contain";
     };
@@ -3318,7 +3394,7 @@ const FrigateViewCard = class extends HTMLElement {
     video.playsInline = true;
     video.muted = muted;
     video.controls = false;
-    video.style.cssText = "display:block;background:var(--c-bg-deep);object-fit: contain;";
+    video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
     const ms = new MediaSource();
     video.src = URL.createObjectURL(ms);
     slot.innerHTML = "";
@@ -3491,7 +3567,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _mountGridDirectMSECell(cell, entity, gridState, options = {}) {
     const host = document.createElement("div");
-    host.style.cssText = "display:block;object-fit: contain;";
+    host.style.cssText = "width:100%;height:100%;display:block";
     cell.appendChild(host);
     void (async () => {
       const result = await this._tryMountGo2RTCMSE(
@@ -3563,7 +3639,7 @@ const FrigateViewCard = class extends HTMLElement {
         stream.controls = false;
         stream.muted = true;
         stream.defaultMuted = true;
-        stream.style.cssText = "display:block;object-fit: contain;";
+        stream.style.cssText = "width:100%;height:100%;display:block";
         cell.appendChild(stream);
         this._attachVideoFit(stream);
       }
@@ -3594,7 +3670,7 @@ const FrigateViewCard = class extends HTMLElement {
     video.playsInline = true;
     video.muted = this._streamMuted;
     video.controls = false;
-    video.style.cssText = "display:block;background:var(--c-bg-deep);object-fit: contain;";
+    video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
     slot.innerHTML = "";
     slot.appendChild(video);
     this._attachVideoFit(video);
@@ -3688,7 +3764,7 @@ const FrigateViewCard = class extends HTMLElement {
     video.playsInline = true;
     video.muted = this._streamMuted;
     video.controls = false;
-    video.style.cssText = "display:block;background:var(--c-bg-deep);object-fit: contain;";
+    video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
     video.src = hlsUrl;
     slot.innerHTML = "";
     slot.appendChild(video);
@@ -3870,7 +3946,7 @@ const FrigateViewCard = class extends HTMLElement {
         s.stateObj = stateObj;
         s.controls = false;
         s.muted = this._streamMuted;
-        s.style.cssText = "display:block;object-fit: contain;";
+        s.style.cssText = "width:100%;height:100%;display:block";
         slot.innerHTML = "";
         slot.appendChild(s);
         this._engine = s;
@@ -4190,13 +4266,13 @@ const FrigateViewCard = class extends HTMLElement {
       this._scheduleLandingAlertCleanup();
     }, wait);
   }
-  _markLandingAlertCamera(entity, severity = "alert", holdMs = LANDING_ALERT_HOLD_MS) {
+  _markLandingAlertCamera(entity, severity = "alert", holdMs = LANDING_ALERT_HOLD_MS2) {
     if (!entity) return;
     const normalizedSeverity = String(severity || "").trim().toLowerCase() === "detection" ? "detection" : "alert";
     this._landingAlertSeverityByEntity.set(entity, normalizedSeverity);
     this._landingAlertExpiresByEntity.set(
       entity,
-      Date.now() + Math.max(1e3, Number(holdMs) || LANDING_ALERT_HOLD_MS)
+      Date.now() + Math.max(1e3, Number(holdMs) || LANDING_ALERT_HOLD_MS2)
     );
     this._scheduleLandingAlertCleanup();
     if (this._isLandingPageActive()) this._renderLandingPage();
@@ -4214,14 +4290,14 @@ const FrigateViewCard = class extends HTMLElement {
     if (startedAt <= 0) return true;
     const reviewStart = this._reviewStartTimeSec(review);
     if (reviewStart <= 0) return false;
-    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC;
+    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC2;
   }
   async _probeLatestLandingAlert() {
     if (!this._isLandingPageActive()) return;
     const before = Math.floor(Date.now() / 1e3);
     const after = Math.max(
       0,
-      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
+      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY2)
     );
     const candidates = [];
     for (const camera of this._config?.cameras || []) {
@@ -4266,7 +4342,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._markLandingAlertCamera(
       next.entity,
       next.severity,
-      LANDING_ALERT_HOLD_MS
+      LANDING_ALERT_HOLD_MS2
     );
   }
   _scheduleLandingAlertWatch(delayMs = null) {
@@ -4296,7 +4372,7 @@ const FrigateViewCard = class extends HTMLElement {
         this._markLandingAlertCamera(
           cam,
           this._landingCellSeverity(cam),
-          LANDING_ALERT_END_GRACE_MS
+          LANDING_ALERT_END_GRACE_MS2
         );
       }
       return;
@@ -4305,7 +4381,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._markLandingAlertCamera(
       cam,
       severity || "alert",
-      LANDING_ALERT_HOLD_MS
+      LANDING_ALERT_HOLD_MS2
     );
   }
   _startLandingMode() {
@@ -4345,7 +4421,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _gridRotationMs() {
     const seconds = Number(this._config?.grid_rotation_seconds);
-    return GRID_ROTATION_OPTIONS_SECONDS.includes(seconds) ? seconds * 1e3 : 3e4;
+    return GRID_ROTATION_OPTIONS_SECONDS2.includes(seconds) ? seconds * 1e3 : 3e4;
   }
   _clearGridTimers() {
     if (this._gridRotationT) clearTimeout(this._gridRotationT);
@@ -4401,7 +4477,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (startedAt <= 0) return true;
     const reviewStart = this._reviewStartTimeSec(review);
     if (reviewStart <= 0) return false;
-    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC;
+    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC2;
   }
   _gridAlertWatchIntervalMs() {
     return Math.max(
@@ -4618,7 +4694,7 @@ const FrigateViewCard = class extends HTMLElement {
     const before = Math.floor(Date.now() / 1e3);
     const after = Math.max(
       0,
-      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
+      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY2)
     );
     const candidates = [];
     for (const camera of this._config?.cameras || []) {
@@ -4769,7 +4845,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _slideshowRotationMs() {
     const seconds = Number(this._config?.slideshow_rotation_seconds);
-    return SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(seconds) ? seconds * 1e3 : 3e4;
+    return SLIDESHOW_ROTATION_OPTIONS_SECONDS2.includes(seconds) ? seconds * 1e3 : 3e4;
   }
   _slideshowButtonIcon() {
     return this._slideshowActive ? ICONS.presentationPlayActive : ICONS.presentationPlay;
@@ -5027,7 +5103,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (startedAt <= 0) return true;
     const reviewStart = this._reviewStartTimeSec(review);
     if (reviewStart <= 0) return false;
-    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC;
+    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC2;
   }
   _rememberHandledSlideshowReview(reviewId) {
     const id = String(reviewId || "").trim();
@@ -5089,7 +5165,7 @@ const FrigateViewCard = class extends HTMLElement {
       const before = Math.floor(Date.now() / 1e3);
       const after = Math.max(
         0,
-        Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
+        Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY2)
       );
       const candidates = [];
       for (const camera of this._config?.cameras || []) {
@@ -5172,8 +5248,8 @@ const FrigateViewCard = class extends HTMLElement {
       this._effectiveRealtimePollSeconds() * 1e3
     );
     return Math.max(
-      SLIDESHOW_REVIEW_WATCH_MIN_MS,
-      Math.min(SLIDESHOW_REVIEW_WATCH_MAX_MS, realtimePollMs)
+      SLIDESHOW_REVIEW_WATCH_MIN_MS2,
+      Math.min(SLIDESHOW_REVIEW_WATCH_MAX_MS2, realtimePollMs)
     );
   }
   _scheduleSlideshowReviewWatch(delayMs = null) {
@@ -5354,11 +5430,11 @@ const FrigateViewCard = class extends HTMLElement {
     );
     const pageLimit = Math.max(
       1,
-      Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : WINDOW_FETCH_PAGE_LIMIT
+      Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : WINDOW_FETCH_PAGE_LIMIT2
     );
     const batchLimit = Math.max(
       1,
-      Number.isFinite(opts?.limit) ? Math.floor(opts.limit) : EVENT_FETCH_BATCH
+      Number.isFinite(opts?.limit) ? Math.floor(opts.limit) : EVENT_FETCH_BATCH2
     );
     const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
     let pagesFetched = 0;
@@ -5401,7 +5477,7 @@ const FrigateViewCard = class extends HTMLElement {
       const entity = camera.entity;
       const cache = this._camCache[entity];
       if (!cache?.clientId || !cache?.cam) continue;
-      if (Array.isArray(cache.events) && cache.events.length >= INACTIVE_WARM_EVENT_LIMIT) {
+      if (Array.isArray(cache.events) && cache.events.length >= INACTIVE_WARM_EVENT_LIMIT2) {
         continue;
       }
       try {
@@ -5411,14 +5487,14 @@ const FrigateViewCard = class extends HTMLElement {
           after,
           before,
           {
-            pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
-            limit: INACTIVE_WARM_EVENT_LIMIT,
+            pageLimit: INITIAL_EVENTS_PAGE_LIMIT2,
+            limit: INACTIVE_WARM_EVENT_LIMIT2,
             debugLabel: "warm-cache"
           }
         );
         if (token !== this._warmCamsToken) return;
         if (after !== this._winStart || before !== this._winEnd) return;
-        cache.events = Array.isArray(events) ? events.slice(0, INACTIVE_WARM_EVENT_LIMIT) : [];
+        cache.events = Array.isArray(events) ? events.slice(0, INACTIVE_WARM_EVENT_LIMIT2) : [];
       } catch (_) {
       }
     }
@@ -5456,7 +5532,7 @@ const FrigateViewCard = class extends HTMLElement {
     );
     const pageLimit = Math.max(
       1,
-      Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : WINDOW_FETCH_PAGE_LIMIT
+      Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : WINDOW_FETCH_PAGE_LIMIT2
     );
     const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
     let pagesFetched = 0;
@@ -5467,7 +5543,7 @@ const FrigateViewCard = class extends HTMLElement {
         cameras: [cam],
         after: afterTs,
         before: cursorBefore,
-        limit: REVIEW_FETCH_BATCH
+        limit: REVIEW_FETCH_BATCH2
       });
       if (!Array.isArray(batch) || !batch.length) break;
       pagesFetched += 1;
@@ -5483,7 +5559,7 @@ const FrigateViewCard = class extends HTMLElement {
       const oldest = Math.min(
         ...batch.map((item) => Math.floor(item?.start_time || before))
       );
-      if (batch.length < REVIEW_FETCH_BATCH || oldest <= afterTs) break;
+      if (batch.length < REVIEW_FETCH_BATCH2 || oldest <= afterTs) break;
       cursorBefore = oldest - 1;
     }
     onPage?.(items, { page: -1, done: true });
@@ -5499,7 +5575,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._followNowWindow) {
       const now = Math.floor(Date.now() / 1e3);
       this._winEnd = now;
-      this._winStart = now - this._config.window_days * DAY;
+      this._winStart = now - this._config.window_days * DAY2;
     }
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) {
@@ -5546,8 +5622,8 @@ const FrigateViewCard = class extends HTMLElement {
         after,
         before,
         {
-          pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
-          limit: INITIAL_EVENT_FETCH_LIMIT,
+          pageLimit: INITIAL_EVENTS_PAGE_LIMIT2,
+          limit: INITIAL_EVENT_FETCH_LIMIT2,
           debugLabel: "initial"
         }
       );
@@ -5555,7 +5631,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._cacheActiveCamSlice("events", this._events);
       this._renderList();
       this._renderStats();
-      if (!this._events.length || WINDOW_FETCH_PAGE_LIMIT <= INITIAL_EVENTS_PAGE_LIMIT) {
+      if (!this._events.length || WINDOW_FETCH_PAGE_LIMIT2 <= INITIAL_EVENTS_PAGE_LIMIT2) {
         return;
       }
       const oldest = Math.min(
@@ -5574,10 +5650,10 @@ const FrigateViewCard = class extends HTMLElement {
             before,
             {
               pageLimit: Math.min(
-                WINDOW_BACKGROUND_PAGE_LIMIT,
+                WINDOW_BACKGROUND_PAGE_LIMIT2,
                 Math.max(
                   1,
-                  WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT
+                  WINDOW_FETCH_PAGE_LIMIT2 - INITIAL_EVENTS_PAGE_LIMIT2
                 )
               ),
               cursorBefore,
@@ -5629,7 +5705,7 @@ const FrigateViewCard = class extends HTMLElement {
     const loadToken = ++this._reviewsLoadToken;
     const reviewsAfter = Math.max(
       0,
-      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
+      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY2)
     );
     try {
       const initialReviews = await this._fetchWindowedReviews(
@@ -5638,7 +5714,7 @@ const FrigateViewCard = class extends HTMLElement {
         reviewsAfter,
         before,
         {
-          pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+          pageLimit: INITIAL_EVENTS_PAGE_LIMIT2,
           debugLabel: "alerts-window-initial"
         }
       );
@@ -5650,7 +5726,7 @@ const FrigateViewCard = class extends HTMLElement {
         this._reviews,
         "alerts-window-initial"
       );
-      if (!this._reviews.length || WINDOW_FETCH_PAGE_LIMIT <= INITIAL_EVENTS_PAGE_LIMIT) {
+      if (!this._reviews.length || WINDOW_FETCH_PAGE_LIMIT2 <= INITIAL_EVENTS_PAGE_LIMIT2) {
         return;
       }
       const oldest = Math.min(
@@ -5669,10 +5745,10 @@ const FrigateViewCard = class extends HTMLElement {
             before,
             {
               pageLimit: Math.min(
-                WINDOW_BACKGROUND_PAGE_LIMIT,
+                WINDOW_BACKGROUND_PAGE_LIMIT2,
                 Math.max(
                   1,
-                  WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT
+                  WINDOW_FETCH_PAGE_LIMIT2 - INITIAL_EVENTS_PAGE_LIMIT2
                 )
               ),
               cursorBefore,
@@ -5722,7 +5798,7 @@ const FrigateViewCard = class extends HTMLElement {
       const before = this._winEnd;
       const after = Math.max(
         0,
-        Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
+        Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY2)
       );
       const r = await this._fetchWindowedReviews(clientId, cam, after, before, {
         debugLabel: "alerts-tab"
@@ -5819,7 +5895,7 @@ const FrigateViewCard = class extends HTMLElement {
           this._handleSlideshowRealtimeMessage(msg);
           if (!this._isNowWindow()) return;
           if (!this._isRealtimeEventMessage(msg)) return;
-          this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);
+          this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS2);
         },
         { type: "frigate/events/subscribe", instance_id: clientId }
       );
@@ -5832,7 +5908,7 @@ const FrigateViewCard = class extends HTMLElement {
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) return;
     const now = Math.floor(Date.now() / 1e3);
-    const after = now - this._config.window_days * DAY;
+    const after = now - this._config.window_days * DAY2;
     try {
       const latest = await this._ws({
         type: "frigate/events/get",
@@ -5847,7 +5923,7 @@ const FrigateViewCard = class extends HTMLElement {
       if (!newestId) return;
       const currentId = this._events?.[0]?.id;
       if (newestId !== currentId) {
-        this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);
+        this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS2);
       }
     } catch (_) {
     }
@@ -5995,7 +6071,7 @@ const FrigateViewCard = class extends HTMLElement {
     const before = this._winEnd;
     const reviewsAfter = Math.max(
       0,
-      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
+      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY2)
     );
     for (const camera of this._config.cameras || []) {
       const entity = camera.entity;
@@ -6058,20 +6134,22 @@ const FrigateViewCard = class extends HTMLElement {
           </div>
 
           <div class="col-left" id="col-left">
-            <div id="eng-wrap">
-              <div id="engine">
-                <div class="ph">${ICONS.live}<span>Connecting\u2026</span></div>
+            <div class="feed-area">
+              <div id="eng-wrap">
+                <div id="engine">
+                  <div class="ph">${ICONS.live}<span>Connecting\u2026</span></div>
+                </div>
+                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${ICONS.expand}</button>
+                  <button class="glass-btn mute-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
+                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
+                  <div id="stream-fallback" hidden>
+                    <img id="stream-fallback-img" alt="Camera snapshot">
+                  </div>
+                  <div class="stream-fallback-status" id="stream-fallback-status" hidden>Snapshot unavailable</div>
+                  <div class="stream-loading" id="stream-loading" hidden>
+                    <span class="dot"></span><span class="label">Loading\u2026</span>
+                  </div>
               </div>
-                <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${ICONS.expand}</button>
-                <button class="glass-btn mute-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
-                <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
-                <div id="stream-fallback" hidden>
-                  <img id="stream-fallback-img" alt="Camera snapshot">
-                </div>
-                <div class="stream-fallback-status" id="stream-fallback-status" hidden>Snapshot unavailable</div>
-                <div class="stream-loading" id="stream-loading" hidden>
-                  <span class="dot"></span><span class="label">Loading\u2026</span>
-                </div>
             </div>
 
             <div class="info-row">
@@ -6081,7 +6159,7 @@ const FrigateViewCard = class extends HTMLElement {
               </div>
               <div class="stats">
                 <div class="stat">
-                  <div class="sv">v${VERSION}</div>
+                  <div class="sv">v${VERSION2}</div>
                   <div class="sl">Version</div>
                 </div>
                 <div class="stat">
@@ -6103,7 +6181,7 @@ const FrigateViewCard = class extends HTMLElement {
           <div class="resize-handle" id="resize-handle"></div>
           <div class="col-right" id="col-right">
             <div class="frigate-view">${ICONS.frigateview}</div>
-            <div class="tabs-container"> 
+            <div class="tabs-holder"> 
               <div class="tabs shadow-small">            
                 ${this._buildTabsMarkup()}              
               </div>
@@ -6165,7 +6243,7 @@ const FrigateViewCard = class extends HTMLElement {
                   <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" aria-label="Next items">${ICONS.right}
                   </button>
                 </div>
-                <h1 class="popup-shell-ver" id="popup-shell-ver">v${VERSION}</h1>
+                <h1 class="popup-shell-ver" id="popup-shell-ver">v${VERSION2}</h1>
             </div>
           </div>
       </ha-card>
@@ -6723,19 +6801,19 @@ const FrigateViewCard = class extends HTMLElement {
     if (vh) {
       const unit = this._config.stream_height_unit || "vh";
       this.style.setProperty("--card-host-height", `${vh}${unit}`);
-      card.style.setProperty("--card-h", `${vh}${unit}`);
+      card.style.setProperty("--stream-h", `${vh}${unit}`);
     } else {
       this.style.removeProperty("--card-host-height");
       const haCardH = getComputedStyle(this).getPropertyValue("--ha-card-height").trim();
       if (haCardH) {
-        card.style.setProperty("--card-h", haCardH);
+        card.style.setProperty("--stream-h", haCardH);
       } else {
-        card.style.removeProperty("--card-h");
+        card.style.removeProperty("--stream-h");
       }
     }
     const customTheme = this._config?.theme === "custom" && this._config?.theme_custom && typeof this._config.theme_custom === "object" ? this._config.theme_custom : {};
     const customDefaults = this._config?.theme === "custom" && this._config?.theme_custom_defaults && typeof this._config.theme_custom_defaults === "object" ? this._config.theme_custom_defaults : {};
-    for (const row of THEME_CUSTOM_ROWS) {
+    for (const row of THEME_CUSTOM_ROWS2) {
       const key = row.key;
       const override = normalizeHexColor(customTheme[key]);
       const useDefault = customDefaults[key] === true;
@@ -8740,7 +8818,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._followNowWindow = true;
     const now = Math.floor(Date.now() / 1e3);
     this._winEnd = now;
-    this._winStart = now - this._config.window_days * DAY;
+    this._winStart = now - this._config.window_days * DAY2;
     this._exhausted = false;
     this._calMonth = null;
     this._pruneNonActiveCamWindowCaches();
@@ -9650,8 +9728,6 @@ const FrigateViewCard = class extends HTMLElement {
     a.remove();
   }
 };
-
-// src/editor/FrigateViewCardEditor.js
 const FrigateViewCardEditor = class extends HTMLElement {
   disconnectedCallback() {
     if (Array.isArray(this._boundDialogActionButtons)) {
@@ -9717,42 +9793,42 @@ const FrigateViewCardEditor = class extends HTMLElement {
         {
           entity: config.camera_entity,
           name: config.title || "",
-          connection_type: DEFAULT_CAMERA_CONNECTION_TYPE
+          connection_type: DEFAULT_CAMERA_CONNECTION_TYPE2
         }
       ];
     }
-    const normalized = cams.map((camera) => normalizeCameraConfig(camera, { fallbackName: "" })).filter((c) => c.entity).slice(0, MAX_CAMERAS);
+    const normalized = cams.map((camera) => normalizeCameraConfig(camera, { fallbackName: "" })).filter((c) => c.entity).slice(0, MAX_CAMERAS2);
     return normalized;
   }
   _normalizeConfig(config) {
     const src = config && typeof config === "object" ? { ...config } : {};
     const cameras = this._normalizeCameras(src);
     if (Array.isArray(src.hidden_tabs)) {
-      src.hidden_tabs = src.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
+      src.hidden_tabs = src.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS2.includes(id));
     }
     delete src.camera_entity;
     src.theme = src.theme === "custom" ? "custom" : "default";
     if (src.theme_custom && typeof src.theme_custom === "object") {
       src.theme_custom = Object.fromEntries(
-        Object.entries(src.theme_custom).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, normalizeHexColor(value)]).filter(([, value]) => !!value)
+        Object.entries(src.theme_custom).filter(([key]) => THEME_CUSTOM_KEYS2.has(key)).map(([key, value]) => [key, normalizeHexColor(value)]).filter(([, value]) => !!value)
       );
     } else {
       src.theme_custom = {};
     }
     if (src.theme_custom_defaults && typeof src.theme_custom_defaults === "object") {
       src.theme_custom_defaults = Object.fromEntries(
-        Object.entries(src.theme_custom_defaults).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, value === true]).filter(([, value]) => value === true)
+        Object.entries(src.theme_custom_defaults).filter(([key]) => THEME_CUSTOM_KEYS2.has(key)).map(([key, value]) => [key, value === true]).filter(([, value]) => value === true)
       );
     } else {
       src.theme_custom_defaults = {};
     }
     src.shadows = src.shadows !== false;
-    src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+    src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS2.includes(
       Number(src.realtime_poll_seconds)
     ) ? Number(src.realtime_poll_seconds) : 5;
     src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
     src.slideshow_rotation_enabled = src.slideshow_rotation_enabled === true;
-    src.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+    src.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS2.includes(
       Number(src.slideshow_rotation_seconds)
     ) ? Number(src.slideshow_rotation_seconds) : 30;
     src.grid_mode_enabled = src.grid_mode_enabled === true;
@@ -9761,7 +9837,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     src.landing_page_enabled = src.landing_page_enabled === true;
     src.landing_page_live_cameras = src.landing_page_live_cameras === true;
     src.landing_page_show_title_bars = src.landing_page_show_title_bars !== false;
-    src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+    src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS2.includes(
       Number(src.grid_rotation_seconds)
     ) ? Number(src.grid_rotation_seconds) : 30;
     src.alerts_reviews_days = normalizePositiveInteger(
@@ -9818,11 +9894,11 @@ const FrigateViewCardEditor = class extends HTMLElement {
     return this._rgbToHex(computed) || fallback;
   }
   _themeDefaultHex(key) {
-    return this._resolveColorToHex(THEME_DEFAULTS[key], "#000000");
+    return this._resolveColorToHex(THEME_DEFAULTS2[key], "#000000");
   }
   _themeDefaultHexMap() {
     return Object.fromEntries(
-      THEME_CUSTOM_ROWS.map((row) => [row.key, this._themeDefaultHex(row.key)])
+      THEME_CUSTOM_ROWS2.map((row) => [row.key, this._themeDefaultHex(row.key)])
     );
   }
   _ensureThemeDraftCache() {
@@ -9834,7 +9910,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       return;
     }
     const custom = this._config?.theme_custom || {};
-    for (const row of THEME_CUSTOM_ROWS) {
+    for (const row of THEME_CUSTOM_ROWS2) {
       const key = row.key;
       const v = normalizeHexColor(custom[key]);
       if (v) this._themeDraftCache[key] = v;
@@ -9871,7 +9947,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const cam = index == null ? {
       entity: "",
       name: "",
-      connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+      connection_type: DEFAULT_CAMERA_CONNECTION_TYPE2,
       alerts_content: "alerts_only",
       disable_hls_desktop: false
     } : cams[index] || {};
@@ -9923,7 +9999,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const entity = this._cameraModalEntityValue();
     const name = (this.querySelector("#camera-modal-name")?.value || "").toString();
     const connectionType = normalizeCameraConnectionType(
-      this.querySelector("#camera-modal-connection-type")?.dataset?.value || this.querySelector("#camera-modal-connection-type")?.value || DEFAULT_CAMERA_CONNECTION_TYPE
+      this.querySelector("#camera-modal-connection-type")?.dataset?.value || this.querySelector("#camera-modal-connection-type")?.value || DEFAULT_CAMERA_CONNECTION_TYPE2
     );
     const alertsContent = this.querySelector("#camera-modal-all-reviews")?.checked === true ? "all_reviews" : "alerts_only";
     const disableHlsDesktop = this.querySelector("#camera-modal-disable-hls-desktop")?.checked === true;
@@ -9934,8 +10010,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
     }
     const cur = [...this._getCams()];
     if (this._editingCamIndex == null) {
-      if (cur.length >= MAX_CAMERAS) {
-        if (helper) helper.textContent = `Maximum ${MAX_CAMERAS} cameras.`;
+      if (cur.length >= MAX_CAMERAS2) {
+        if (helper) helper.textContent = `Maximum ${MAX_CAMERAS2} cameras.`;
         return;
       }
       cur.push({
@@ -9954,7 +10030,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
         disable_hls_desktop: disableHlsDesktop
       };
     }
-    this._config = { ...this._config, cameras: cur.slice(0, MAX_CAMERAS) };
+    this._config = { ...this._config, cameras: cur.slice(0, MAX_CAMERAS2) };
     this._closeCameraModal();
     this._render();
     this._dispatch();
@@ -10106,6 +10182,1923 @@ const FrigateViewCardEditor = class extends HTMLElement {
   _render() {
     const frigEntities = this._frigateEntities();
     const cams = this._getCams();
+    const canAddCamera = cams.length < MAX_CAMERAS2;
+    const timezoneDisplay = this._timezoneDisplay();
+    const hiddenTabs = new Set(this._config?.hidden_tabs || []);
+    this._ensureThemeDraftCache();
+    const activeTheme = this._config?.theme === "custom" ? "custom" : "default";
+    const themeCustom = this._config?.theme_custom || {};
+    const themeCustomDefaults = this._config?.theme_custom_defaults || {};
+    const tabToggle = (id, label) => `<ha-formfield label="${label}">
+          <ha-switch data-active-tab="${id}" ${hiddenTabs.has(id) ? "" : "checked"}></ha-switch>
+        </ha-formfield>`;
+    const themeRows = THEME_CUSTOM_ROWS2.map((row) => {
+      const key = row.key;
+      const defaultHex = this._themeDefaultHex(key);
+      const saved = normalizeHexColor(themeCustom[key]);
+      const draft = normalizeHexColor(this._themeDraftCache?.[key]);
+      const value = activeTheme === "custom" ? saved || draft || defaultHex : defaultHex;
+      const useDefault = themeCustomDefaults[key] === true;
+      const visibleValue = useDefault ? defaultHex : value;
+      const showWarn = !useDefault && visibleValue !== defaultHex;
+      return `
+        <div class="theme-custom-row" data-theme-row="${key}">
+          <div class="theme-custom-label">
+            <div>${row.label}</div>
+            ${showWarn ? '<div class="theme-custom-warn">Draft changes require card config save.</div>' : ""}
+          </div>
+          <div class="theme-color-wrap">
+            <input class="theme-color-input" type="color" data-theme-color="${key}" value="${visibleValue}" ${useDefault ? "disabled" : ""}>
+            <button
+              type="button"
+              class="theme-color-reset"
+              data-theme-reset="${key}"
+              title="Reset to default color"
+              aria-label="Reset to default color"
+              ${useDefault ? "hidden" : ""}
+            >
+              <ha-icon icon="mdi:autorenew"></ha-icon>
+            </button>
+          </div>
+          <ha-formfield label="Use Default">
+            <ha-switch data-theme-default="${key}" ${useDefault ? "checked" : ""}></ha-switch>
+          </ha-formfield>
+        </div>`;
+    }).join("");
+    const cameraRows = cams.map(
+      (cam, i) => `
+      <div class="cam-row" draggable="true" data-row="${i}">
+        <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
+        <div><div class="cam-name">${this._cameraLabel(cam)}</div><div class="cam-meta">${this._cameraConnectionLabel(cam.connection_type)} \xB7 ${this._cameraAlertsContentLabel(cam.alerts_content)} \xB7 ${this._cameraDesktopHlsLabel(cam.disable_hls_desktop)}</div></div>
+                <button class="cam-action" type="button" title="Edit" aria-label="Edit" data-edit-cam="${i}"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg></button>
+                <button class="cam-action" type="button" title="Delete" aria-label="Delete" data-remove-cam="${i}"><svg viewBox="0 0 24 24" style="width:24px; height:24px" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg></button>
+      </div>`
+    ).join("");
+    const cameraPanelContent = `
+      <div>
+        <span class="field-label">Cameras ${frigEntities.length ? '<small style="font-weight:400;color:var(--c-text2)">(Frigate cameras detected)</small>' : ""}</span>
+        <div class="cam-wrap" id="cam-list">${cameraRows}</div>
+        ${canAddCamera ? '<div class="cam-toolbar"><button id="camera-add" class="cam-add" type="button">Add</button></div>' : ""}
+        <span class="cam-helper">Maximum ${MAX_CAMERAS2} cameras.</span>
+      </div>`;
+    const generalPanelContent = `
+      <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
+      <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="Frigate"></ha-input>
+      <div class="section">
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Event history days</span>
+            <ha-selector id="window_days" style="width:160px"></ha-selector>
+            <div class="field-helper" id="window_days-helper"></div>
+          </div>
+          <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Alerts/Reviews Days</span>
+            <ha-selector id="alerts_reviews_days" style="width:160px"></ha-selector>
+            <div class="field-helper" id="alerts_reviews_days-helper"></div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Realtime Update Poll</span>
+            <ha-selector id="realtime_poll_seconds" style="width:160px"></ha-selector>
+            <div class="field-helper">Lower values update faster but use more battery/data.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:320px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Mobile Battery Saver</span>
+              <ha-switch id="mobile_poll_battery_saver" ${this._config?.mobile_poll_battery_saver ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">On mobile-sized screens, use 10s polling to reduce battery use.</div>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:420px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Slideshow Rotation</span>
+              <ha-switch id="slideshow_rotation_enabled" ${this._config?.slideshow_rotation_enabled ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Allow the live camera view to rotate at a fixed interval. This is not available on mobile phone devices.</div>
+          </div>
+          <div id="slideshow_rotation_row" style="min-width:210px;display:${this._config?.slideshow_rotation_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Slideshow Rotation Frequency</span>
+            <ha-selector id="slideshow_rotation_seconds" style="width:210px"></ha-selector>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:420px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Grid Mode</span>
+              <ha-switch id="grid_mode_enabled" ${this._config?.grid_mode_enabled ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Enable a 2x2 camera grid. This is not available on mobile phone devices and requires at least 2 cameras.</div>
+          </div>
+          <div id="grid_start_row" style="min-width:210px;display:${this._config?.grid_mode_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Start In Grid Mode</span>
+              <ha-switch id="grid_start_in_grid_enabled" ${this._config?.grid_start_in_grid_enabled ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Start this card in grid mode and return to grid mode when re-entering the dashboard.</div>
+          </div>
+          <div id="grid_live_row" style="min-width:210px;display:${this._config?.grid_mode_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Live View In Grid</span>
+              <ha-switch id="grid_live_view_enabled" ${this._config?.grid_live_view_enabled !== false ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Off = snapshots by default. Alerted cameras switch to live temporarily and show border. On = all visible grid cameras stay live.</div>
+          </div>
+          <div id="grid_rotation_row" style="min-width:210px;display:${this._config?.grid_mode_enabled && cams.length > 4 ? "flex" : "none"};flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Grid Rotation Frequency</span>
+            <ha-selector id="grid_rotation_seconds" style="width:210px"></ha-selector>
+          </div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Timezone</span>
+          <span class="readonly-value">${timezoneDisplay}</span>
+        </div>
+      </div>`;
+    const themePanelContent = `
+      <div class="section">
+        <span class="field-label">Theme</span>
+        <div class="theme-row">
+          <div class="theme-seg" id="theme-seg" role="radiogroup" aria-label="Theme">
+            <button type="button" class="theme-opt ${activeTheme === "default" ? "active" : ""}" data-theme-option="default" role="radio" aria-checked="${activeTheme === "default" ? "true" : "false"}">Home Assistant Theme</button>
+            <button type="button" class="theme-opt ${activeTheme === "custom" ? "active" : ""}" data-theme-option="custom" role="radio" aria-checked="${activeTheme === "custom" ? "true" : "false"}">Custom</button>
+          </div>
+        </div>
+        <details id="theme-custom-panel" class="theme-custom-panel" ${activeTheme === "custom" ? "open" : ""} ${activeTheme === "custom" ? "" : "hidden"}>
+          <summary>Custom Color Overrides</summary>
+          <div class="theme-custom-body">${themeRows}</div>
+        </details>
+      </div>`;
+    const layoutPanelContent = `
+      <div class="section">
+        <span class="field-label">Active tabs</span>
+        <div class="chk-row">
+          ${tabToggle("alerts", "Alerts")}
+          ${tabToggle("clips", "Clips")}
+          ${tabToggle("snapshot", "Snapshots")}
+          ${tabToggle("recordings", "Recordings")}
+          ${tabToggle("kept", "Kept")}
+        </div>
+      </div>
+      <div class="section">
+        <span class="field-label">Card Height Limit</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <ha-input name="stream_height" id="stream_height" type="number" value="${this._config?.stream_height || ""}" min="1" placeholder="${this._defaultHostVh()}" style="flex:1"></ha-input>
+          <ha-selector id="stream_height_unit" style="width:120px"></ha-selector>
+        </div>
+        <div class="field-helper" id="stream_height-helper"></div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Tight Margins</span>
+          <ha-switch id="tight_margins" ${this._config?.tight_margins ? "checked" : ""}></ha-switch>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Shadows</span>
+          <ha-switch id="shadows" ${this._config?.shadows !== false ? "checked" : ""}></ha-switch>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Wide View</span>
+          <ha-switch id="wide_view" ${this._config?.wide_view ? "checked" : ""}></ha-switch>
+        </div>
+        <div id="col-width-row" style="display:flex;align-items:center;gap:6px;margin-top:6px;${this._config?.wide_view ? "" : "display:none"}">
+          <label style="font-size:11px;color:var(--c-text);white-space:nowrap">Left Width %</label>
+          <ha-input type="text" id="col_left_width_pct" value="${this._config?.col_left_width_pct ?? 50}" style="width:70px"></ha-input>
+          <span style="font-size:11px;color:var(--c-text2)">%</span>
+        </div>
+        <div class="field-helper" id="col_left_width_pct-helper"></div>
+      </div>`;
+    const landingPanelContent = `
+      <div class="section" style="border-top:none;padding-top:0">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Enable Landing Page</span>
+          <ha-switch id="landing_page_enabled" ${this._config?.landing_page_enabled ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">When enabled, the card starts on a camera landing grid instead of the standard live/event layout.</div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Live Cameras</span>
+          <ha-switch id="landing_page_live_cameras" ${this._config?.landing_page_live_cameras ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">On = all landing cameras load live. Off = snapshots, with alert/review cameras promoted to temporary live view.</div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Show Title Bars</span>
+          <ha-switch id="landing_page_show_title_bars" ${this._config?.landing_page_show_title_bars !== false ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">Shows per-camera metadata under each landing tile (name, source, events, and online status).</div>
+      </div>`;
+    const activeSettingsPanel = this._activeSettingsPanelId === void 0 ? "camera" : this._activeSettingsPanelId;
+    const settingsPanelsMarkup = `
+      <div class="settings-container">
+        ${this._renderSettingsPanel({ id: "camera", title: "Camera Settings", icon: "mdi:camera", content: cameraPanelContent, active: activeSettingsPanel === "camera" })}
+        ${this._renderSettingsPanel({ id: "general", title: "General Settings", icon: "mdi:cog", content: generalPanelContent, active: activeSettingsPanel === "general" })}
+        ${this._renderSettingsPanel({ id: "theme", title: "Theme Settings", icon: "mdi:palette", content: themePanelContent, active: activeSettingsPanel === "theme" })}
+        ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent, active: activeSettingsPanel === "layout" })}
+        ${this._renderSettingsPanel({ id: "landing", title: "Landing Page", icon: "mdi:view-grid", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
+      </div>`;
+    this.innerHTML = `<style>
+            .ed-wrap{
+                --editor-primary-bg: var(--primary-background-color, #f6f7fb);
+                --editor-secondary-bg: var(--secondary-background-color, #eef0f6);
+                --editor-card-bg: var(--card-background-color, #ffffff);
+                --editor-text: var(--primary-text-color, #1f2937);
+                --editor-muted: var(--secondary-text-color, #6b7280);
+                --editor-primary: var(--primary-color, #03a9f4);
+                --editor-border: var(--ha-card-border-color, var(--divider-color, #d1d5db));
+                --editor-border-width: var(--ha-card-border-width, 1px);
+                --editor-shadow: var(--ha-card-box-shadow, 0 2px 10px rgba(0,0,0,.14));
+                --editor-icon: var(--icon-color, var(--secondary-text-color, #6b7280));
+              --c-bg-main: var(--editor-primary-bg);
+              --c-bg-panel: var(--editor-card-bg);
+              --c-text: var(--editor-text);
+              --c-text2: var(--editor-muted);
+              --c-text-rev: var(--text-primary-color, #ffffff);
+              --c-border: var(--editor-border);
+              --c-border2: var(--divider-color, var(--editor-border));
+              --c-primary: var(--editor-primary);
+              --c-primary-l: var(--light-primary-color, var(--editor-primary));
+              --c-accent: var(--accent-color, var(--editor-primary));
+              --c-alert: var(--error-color, #b91c1c);
+                display:flex;
+                flex-direction:column;
+                gap:16px;
+                padding:8px 0;
+                background:transparent;
+                color:var(--editor-text);
+                font-family: var(--ha-font-family, inherit);
+                font-size: var(--ha-font-size, 14px);
+            }
+              .settings-container{display:flex;flex-direction:column;gap:10px;}
+              .settings-panel{
+                border:1px solid var(--c-border2, var(--editor-border));
+                border-radius:16px;
+                background:var(--c-bg-panel, var(--editor-card-bg));
+                color:var(--c-text, var(--editor-text));
+                overflow:hidden;
+              }
+              .setting-title{
+                width:100%;
+                border:none;
+                background:transparent;
+                color:inherit;
+                display:flex;
+                align-items:center;
+                gap:10px;
+                padding:12px 14px;
+                text-align:left;
+                cursor:pointer;
+              }
+              .setting-title h3{margin:0;font-size:14px;font-weight:700;}
+              .setting-title ha-icon{color:var(--c-text2, var(--editor-muted));}
+              .settings-panel.active .setting-title{color:var(--c-accent, var(--editor-primary));}
+              .settings-panel.active .setting-title ha-icon{color:var(--c-accent, var(--editor-primary));}
+              .setting-content{
+                max-height:0;
+                opacity:0;
+                overflow:hidden;
+                padding:0 14px;
+                transition:max-height .28s ease, opacity .2s ease, padding .2s ease;
+              }
+              .settings-panel.active .setting-content{
+                max-height:1400px;
+                opacity:1;
+                padding:0 14px 14px;
+              }
+              .field-label{font-size:12px;font-weight:600;margin-bottom:8px;display:block;color:var(--c-text, var(--editor-text));}
+            .field-helper{min-height:1.2em;margin-top:4px;font-size:11px;color:var(--c-text2, var(--editor-muted));}
+            .field-helper.error{color:var(--c-alert);}
+            .section{border-top:1px solid var(--divider-color, #d1d5db);padding-top:16px;}
+            .chk-row{display:flex;flex-wrap:wrap;gap:8px 16px;}
+
+            .cam-wrap{display:flex;flex-direction:column;gap:8px;}
+            .cam-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;border:var(--editor-border-width) solid var(--editor-border);border-radius:12px;padding:8px 12px;background:var(--editor-card-bg);box-shadow:var(--editor-shadow);}
+            .cam-row.dragging{opacity:.65;}
+            .cam-row.drop-target{border-color:var(--editor-primary);}
+            .cam-drag{border:none;background:transparent;color:var(--editor-icon);cursor:grab;line-height:1;display:grid;place-items:center;width:28px;height:28px;border-radius:8px;}
+            .cam-drag:hover{background:var(--editor-secondary-bg);}
+            .cam-drag ha-icon{--mdc-icon-size:18px;}
+            .cam-name{font-size:15px;color:var(--editor-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+            .cam-meta{font-size:11px;color:var(--editor-muted);margin-top:2px;}
+            .cam-action{width:32px;height:32px;border:none;background:transparent;color:var(--editor-icon);display:grid;place-items:center;cursor:pointer;border-radius:8px;}
+            .cam-action:hover{background:var(--editor-secondary-bg);color:var(--editor-text);}
+            .cam-action svg{width:18px;height:18px;display:block;fill:currentColor;}
+            .cam-toolbar{display:flex;align-items:center;gap:8px;}
+            .cam-add{border:var(--editor-border-width) solid var(--editor-border);border-radius:999px;padding:8px 16px;background:var(--editor-card-bg);color:var(--editor-primary);font-weight:600;cursor:pointer;}
+            .cam-add:hover{border-color:var(--editor-primary);}
+            .cam-add[disabled]{opacity:.5;cursor:not-allowed;}
+            .cam-helper{font-size:11px;color:var(--c-text2, var(--editor-muted));}
+
+            .theme-row{display:flex;align-items:center;}
+            .theme-seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;}
+            .theme-opt{
+              appearance:none;
+              border:var(--editor-border-width) solid var(--c-border2);
+              background:var(--c-bg-panel);
+              color:var(--c-text);
+              border-radius:10px;
+              padding:8px 10px;
+              cursor:pointer;
+              font-weight:600;
+              line-height:1.4;
+              transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease;
+            }
+            .theme-opt:hover{background:var(--c-bg-main);border-color:var(--c-primary);}
+            .theme-opt:active{transform:translateY(1px);}
+            .theme-opt:focus-visible{outline:none;box-shadow:0 0 0 2px var(--c-primary-l, var(--c-primary));}
+            .theme-opt.active{background:var(--c-primary);border-color:var(--c-primary);color:var(--c-text-rev);}
+            .theme-custom-panel{margin-top:10px;border:var(--editor-border-width) solid var(--editor-border);border-radius:10px;background:var(--editor-card-bg);}
+            .theme-custom-panel[hidden]{display:none;}
+            .theme-custom-panel summary{cursor:pointer;list-style:none;padding:10px 12px;font-weight:600;color:var(--c-text, var(--editor-text));display:flex;align-items:center;justify-content:space-between;}
+            .theme-custom-panel summary::-webkit-details-marker{display:none;}
+            .theme-custom-body{padding:0 12px 10px;}
+            .theme-custom-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--c-border2, var(--editor-border));}
+            .theme-custom-row:first-child{border-top:none;}
+            .theme-custom-label{display:flex;flex-direction:column;gap:2px;min-width:0;}
+            .theme-custom-warn{font-size:11px;color:var(--c-text2, var(--editor-muted));}
+            .theme-color-wrap{position:relative;width:60px;height:60px;display:flex;align-items:center;justify-content:center;}
+            .theme-color-input{width:60px;height:60px;padding:0;border:1px solid var(--editor-border);border-radius:4px;background:transparent;cursor:pointer;}
+            .theme-color-input:disabled{opacity:1;cursor:not-allowed;}
+            .theme-color-reset{
+              position:absolute;
+              left:calc(-1.4em - 2px);
+              bottom:0;
+              width:1.4em;
+              height:1.4em;
+              padding:0;
+              border:none;
+              background:transparent;
+              color:var(--c-alert);
+              display:grid;
+              place-items:center;
+              cursor:pointer;
+            }
+            .theme-color-reset[hidden]{display:none;}
+            .theme-color-reset ha-icon{--mdc-icon-size:1.4em;}
+            .layout-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+            .readonly-value{font-size:12px;color:var(--c-text, var(--editor-text));background:var(--c-bg-main, var(--editor-secondary-bg));border:var(--editor-border-width) solid var(--c-border, var(--editor-border));border-radius:8px;padding:6px 10px;}
+
+            .cam-modal.hidden{display:none;}
+            .cam-modal{position:fixed;inset:0;background:rgba(0,0,0,.30);display:flex;align-items:center;justify-content:center;z-index:10;}
+            .cam-modal-card{width:min(640px,calc(100vw - 24px));background:var(--editor-card-bg);border:var(--editor-border-width) solid var(--editor-border);border-radius:16px;padding:16px;box-shadow:var(--editor-shadow);}
+            .cam-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+            .cam-modal-title{font-size:30px;line-height:1;color:var(--editor-text);cursor:pointer;border:none;background:transparent;}
+            .cam-modal-label{font-size:12px;font-weight:600;color:var(--editor-text);margin-bottom:6px;display:block;}
+            .cam-modal-field{margin-bottom:8px;}
+            .cam-modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
+            .cam-btn{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
+            .cam-btn.primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
+            .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
+        </style>
+    <div class="ed-wrap">
+      ${settingsPanelsMarkup}
+
+      <div id="camera-modal" class="cam-modal hidden">
+        <div class="cam-modal-card" role="dialog" aria-modal="true" aria-label="Camera modal">
+          <div class="cam-modal-head">
+            <button type="button" id="camera-modal-close" class="cam-modal-title" aria-label="Close">x</button>
+            <div style="font-size:30px;font-weight:600;color:var(--primary-text-color)" id="camera-modal-title">Add</div>
+            <div></div>
+          </div>
+          <div class="cam-modal-field">
+            <span class="cam-modal-label">Camera</span>
+            <ha-selector id="camera-modal-entity"></ha-selector>
+          </div>
+          <div class="cam-modal-field">
+            <span class="cam-modal-label">Connection Type</span>
+            <ha-selector id="camera-modal-connection-type"></ha-selector>
+          </div>
+          <div class="cam-modal-field">
+            <ha-input id="camera-modal-name" label="Name" placeholder="Display name (optional)"></ha-input>
+          </div>
+          <div class="cam-modal-field">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="cam-modal-label" style="margin:0">Alerts Area Content: All Reviews</span>
+              <ha-switch id="camera-modal-all-reviews"></ha-switch>
+            </div>
+            <div class="field-helper">In Frigate, Reviews can include Alerts, Detections, or both. Off = Alerts Only (default). On = All Reviews.</div>
+          </div>
+          <div class="cam-modal-field">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="cam-modal-label" style="margin:0">Disable HLS On Desktop</span>
+              <ha-switch id="camera-modal-disable-hls-desktop"></ha-switch>
+            </div>
+            <div class="field-helper">Only affects non-mobile, non-tablet devices. WebRTC and MSE stay enabled; only the HLS fallback attempt is removed for this camera.</div>
+          </div>
+          <div class="cam-modal-helper" id="camera-modal-helper"></div>
+          <div class="cam-modal-foot">
+            <button type="button" id="camera-modal-cancel" class="cam-btn">Cancel</button>
+            <button type="button" id="camera-modal-save" class="cam-btn primary">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+    const update = () => this._u({ dispatch: false, preview: true });
+    bindThemeControlEvents({
+      root: this,
+      update,
+      themeDraftCache: this._themeDraftCache,
+      resolveDefaultHex: (key) => this._themeDefaultHex(key)
+    });
+    setupSelectSelector({
+      element: this.querySelector("#window_days"),
+      hass: this._hass,
+      options: Array.from({ length: 15 }, (_, index) => {
+        const value = String(index + 1);
+        return { value, label: value };
+      }),
+      initialValue: String(this._config?.window_days ?? 3),
+      fallbackValue: "3",
+      normalize: (value) => String(value ?? "3"),
+      onChange: () => update()
+    });
+    setupSelectSelector({
+      element: this.querySelector("#alerts_reviews_days"),
+      hass: this._hass,
+      options: Array.from({ length: 15 }, (_, index) => {
+        const value = String(index + 1);
+        return { value, label: value };
+      }),
+      initialValue: String(this._config?.alerts_reviews_days ?? 3),
+      fallbackValue: "3",
+      normalize: (value) => String(value ?? "3"),
+      onChange: () => update()
+    });
+    setupSelectSelector({
+      element: this.querySelector("#realtime_poll_seconds"),
+      hass: this._hass,
+      options: REALTIME_POLL_OPTIONS_SECONDS2.map((value) => ({
+        value: String(value),
+        label: `${value}s`
+      })),
+      initialValue: String(this._config?.realtime_poll_seconds ?? 5),
+      fallbackValue: "5",
+      normalize: (value) => String(value ?? "5"),
+      onChange: () => update()
+    });
+    setupSelectSelector({
+      element: this.querySelector("#slideshow_rotation_seconds"),
+      hass: this._hass,
+      options: [
+        { value: "10", label: "10 seconds" },
+        { value: "20", label: "20 seconds" },
+        { value: "30", label: "30 seconds" },
+        { value: "60", label: "1 minute" }
+      ],
+      initialValue: String(this._config?.slideshow_rotation_seconds ?? 30),
+      fallbackValue: "30",
+      normalize: (value) => String(value ?? "30"),
+      onChange: () => update()
+    });
+    setupSelectSelector({
+      element: this.querySelector("#grid_rotation_seconds"),
+      hass: this._hass,
+      options: [
+        { value: "10", label: "10 seconds" },
+        { value: "20", label: "20 seconds" },
+        { value: "30", label: "30 seconds" },
+        { value: "60", label: "1 minute" }
+      ],
+      initialValue: String(this._config?.grid_rotation_seconds ?? 30),
+      fallbackValue: "30",
+      normalize: (value) => String(value ?? "30"),
+      onChange: () => update()
+    });
+    setupSelectSelector({
+      element: this.querySelector("#stream_height_unit"),
+      hass: this._hass,
+      options: [
+        { value: "vh", label: "dvh" },
+        { value: "em", label: "em" },
+        { value: "px", label: "px" }
+      ],
+      initialValue: this._config?.stream_height_unit || "vh",
+      fallbackValue: "vh",
+      normalize: (value) => String(value ?? "vh"),
+      onChange: () => update()
+    });
+    setupEntitySelector({
+      element: this.querySelector("#camera-modal-entity"),
+      hass: this._hass,
+      domain: "camera",
+      label: "Camera"
+    });
+    setupSelectSelector({
+      element: this.querySelector("#camera-modal-connection-type"),
+      hass: this._hass,
+      options: [
+        { value: "frigate_go2rtc", label: "Frigate go2rtc" },
+        { value: "ha_direct", label: "HA direct" }
+      ],
+      initialValue: DEFAULT_CAMERA_CONNECTION_TYPE2,
+      fallbackValue: DEFAULT_CAMERA_CONNECTION_TYPE2,
+      normalize: (value) => normalizeCameraConnectionType(value)
+    });
+    bindClickHandlers(this, [
+      {
+        selector: "#camera-add",
+        handler: () => this._openCameraModal(null)
+      },
+      {
+        selector: "#camera-modal-close",
+        handler: () => this._closeCameraModal()
+      },
+      {
+        selector: "#camera-modal-cancel",
+        handler: () => this._closeCameraModal()
+      },
+      {
+        selector: "#camera-modal-save",
+        handler: () => this._saveCameraModal()
+      }
+    ]);
+    bindEachClickHandler({
+      root: this,
+      selector: "[data-edit-cam]",
+      handler: (event) => {
+        this._openCameraModal(Number(event.currentTarget.dataset.editCam));
+      }
+    });
+    bindEachClickHandler({
+      root: this,
+      selector: "[data-remove-cam]",
+      handler: (event) => {
+        this._removeCamera(Number(event.currentTarget.dataset.removeCam));
+      }
+    });
+    this.querySelector("#camera-modal")?.addEventListener("click", (ev) => {
+      if (ev.target?.id === "camera-modal") this._closeCameraModal();
+    });
+    this.querySelector("#camera-modal-name")?.addEventListener(
+      "keydown",
+      (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          this._saveCameraModal();
+        }
+      }
+    );
+    this._wireCameraDragAndDrop();
+    this._wireSettingsPanels();
+    this._wireEditorDialogActions();
+    bindEventsForIds({
+      root: this,
+      ids: ["title", "subtitle", "stream_height", "col_left_width_pct"],
+      events: ["change"],
+      handler: () => update()
+    });
+    bindEventsForIds({
+      root: this,
+      ids: [
+        "tight_margins",
+        "wide_view",
+        "shadows",
+        "mobile_poll_battery_saver",
+        "slideshow_rotation_enabled",
+        "grid_mode_enabled",
+        "grid_start_in_grid_enabled",
+        "grid_live_view_enabled",
+        "landing_page_enabled",
+        "landing_page_live_cameras",
+        "landing_page_show_title_bars"
+      ],
+      events: ["change", "value-changed"],
+      handler: () => {
+        const slideshowRow = this.querySelector("#slideshow_rotation_row");
+        const enabled = this.querySelector("#slideshow_rotation_enabled")?.checked === true;
+        const gridRow = this.querySelector("#grid_rotation_row");
+        const gridStartRow = this.querySelector("#grid_start_row");
+        const gridLiveRow = this.querySelector("#grid_live_row");
+        const gridEnabled = this.querySelector("#grid_mode_enabled")?.checked === true;
+        if (slideshowRow)
+          slideshowRow.style.display = enabled ? "flex" : "none";
+        if (gridStartRow)
+          gridStartRow.style.display = gridEnabled ? "flex" : "none";
+        if (gridLiveRow)
+          gridLiveRow.style.display = gridEnabled ? "flex" : "none";
+        if (gridRow)
+          gridRow.style.display = gridEnabled && cams.length > 4 ? "flex" : "none";
+        update();
+      }
+    });
+    bindEventsForSelectorAll({
+      root: this,
+      selector: "[data-active-tab]",
+      events: ["change", "value-changed"],
+      handler: () => update()
+    });
+    const wideCb = this.querySelector("#wide_view");
+    const colWidthRow = this.querySelector("#col-width-row");
+    if (wideCb && colWidthRow) {
+      const syncWideRow = () => {
+        colWidthRow.style.display = wideCb.checked ? "flex" : "none";
+        this._validateEditorFields();
+      };
+      wideCb.addEventListener("change", syncWideRow);
+      wideCb.addEventListener("value-changed", syncWideRow);
+      syncWideRow();
+    }
+    if (this.querySelector("#col_left_width_pct")) {
+      this._bindNumericInput("#col_left_width_pct", {
+        onSanitize: () => {
+          this._validateEditorFields();
+        }
+      });
+    }
+    if (this.querySelector("#stream_height")) {
+      this._bindNumericInput("#stream_height", {
+        onSanitize: () => {
+          this._validateEditorFields();
+        }
+      });
+    }
+    this._validateEditorFields();
+  }
+  _getCams() {
+    return Array.isArray(this._config?.cameras) ? this._config.cameras.map((c) => ({
+      entity: c?.entity || "",
+      name: c?.name || "",
+      connection_type: normalizeCameraConnectionType(c?.connection_type),
+      alerts_content: normalizeAlertsAreaContent(c?.alerts_content),
+      disable_hls_desktop: normalizeDisableHlsDesktop(
+        c?.disable_hls_desktop
+      )
+    })).filter((c) => c.entity).slice(0, MAX_CAMERAS2) : [];
+  }
+  _emitPreviewDraft(config) {
+    window.dispatchEvent(
+      new CustomEvent("frigate-view-card-preview-draft", {
+        detail: {
+          cardTag: CARD_TAG2,
+          config
+        }
+      })
+    );
+  }
+  _u({ dispatch = true, preview = false } = {}) {
+    if (!this._validateEditorFields()) return;
+    const cameras = this._getCams();
+    const nextConfig = buildEditorConfigFromDom({
+      root: this,
+      baseConfig: this._config,
+      cameras,
+      themeDraftCache: this._themeDraftCache
+    });
+    this._config = nextConfig;
+    if (preview) {
+      this._hasVisualDraft = true;
+      this._emitPreviewDraft(createEditorPreviewDraft(nextConfig));
+    }
+    if (dispatch) this._dispatch();
+  }
+  _dispatch() {
+    const config = withCardTypeForYaml(
+      compactEditorConfigForYaml(this._config, {
+        themeDefaultColors: this._themeDefaultHexMap()
+      }),
+      { sourceConfig: this._config }
+    );
+    this._lastDispatchedConfigSig = this._configSignature(config);
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config }
+      })
+    );
+  }
+};
+if (!customElements.get(CARD_TAG2))
+  customElements.define(CARD_TAG2, FrigateViewCard);
+if (!customElements.get(CARD_TAG2 + "-editor"))
+  customElements.define(CARD_TAG2 + "-editor", FrigateViewCardEditor);
+window.customCards = window.customCards || [];
+if (!window.customCards.find((c) => c.type === CARD_TAG2))
+  window.customCards.push({
+    type: CARD_TAG2,
+    name: "FrigateView Card",
+    description: `Simple Frigate Camera and Events Card \u2014 v${VERSION2}`,
+    preview: true
+  });
+console.info(
+  `%c FRIGATE-VIEW-CARD %c v${VERSION2} `,
+  "color: white; background: #03a9f4; font-weight: 700;",
+  "color: #03a9f4; background: white; font-weight: 700;"
+);
+
+// src/helpers.js
+function detectDeviceProfile2() {
+  const nav = typeof navigator !== "undefined" ? navigator : {};
+  const win = typeof window !== "undefined" ? window : {};
+  const userAgent = String(nav.userAgent || "").toLowerCase();
+  const platform = String(
+    nav.userAgentData?.platform || nav.platform || ""
+  ).toLowerCase();
+  const maxTouchPoints = Number(nav.maxTouchPoints || 0);
+  const primaryPointerCoarse = !!win.matchMedia?.("(pointer: coarse)")?.matches;
+  const anyPointerCoarse = !!win.matchMedia?.("(any-pointer: coarse)")?.matches;
+  const hoverNone = !!win.matchMedia?.("(hover: none)")?.matches;
+  const hasTouch = maxTouchPoints > 0 || primaryPointerCoarse || anyPointerCoarse || hoverNone;
+  const isAndroid3 = platform.includes("android") || userAgent.includes("android");
+  const isIPhone = /iphone/.test(userAgent);
+  const isMobileHint = nav.userAgentData?.mobile === true || /mobile|mobi/.test(userAgent);
+  const isIPad = /ipad/.test(userAgent) || platform.includes("mac") && maxTouchPoints > 1 && hasTouch;
+  const isIPod = /ipod/.test(userAgent);
+  const isIOS3 = isIPhone || isIPad || isIPod;
+  const isTablet = isIPad || isAndroid3 && hasTouch && !isMobileHint;
+  const isPhone = (isIOS3 || isAndroid3) && !isTablet;
+  const isMobile = isPhone || isTablet;
+  return {
+    hasTouch,
+    hasPrimaryTouch: primaryPointerCoarse,
+    hasAnyTouch: anyPointerCoarse || hoverNone,
+    isAndroid: isAndroid3,
+    isIOS: isIOS3,
+    isPhone,
+    isTablet,
+    isMobile,
+    isDesktop: !isMobile,
+    os: isAndroid3 ? "Android" : isIOS3 ? "iOS" : "Desktop/Other"
+  };
+}
+const DEVICE_PROFILE2 = detectDeviceProfile2();
+const isIOS2 = DEVICE_PROFILE2.isIOS;
+const isAndroid2 = DEVICE_PROFILE2.isAndroid;
+function cap2(s) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+function parseWs2(r) {
+  if (typeof r === "string") {
+    try {
+      return JSON.parse(r);
+    } catch (_) {
+      return [];
+    }
+  }
+  return r;
+}
+function normalizePositiveInteger2(value, fallback) {
+  const parsed = parseInt(String(value ?? "").trim(), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+function normalizeCameraConnectionType2(value) {
+  const type = String(value ?? "").trim().toLowerCase();
+  if (type === "ha_direct" || type === "ha" || type === "home_assistant") {
+    return "ha_direct";
+  }
+  return DEFAULT_CAMERA_CONNECTION_TYPE;
+}
+function normalizeAlertsAreaContent2(value) {
+  const mode = String(value ?? "").trim().toLowerCase();
+  return mode === "all_reviews" ? "all_reviews" : "alerts_only";
+}
+function normalizeDisableHlsDesktop2(value) {
+  return value === true;
+}
+function normalizeHexColor2(value) {
+  const s = String(value || "").trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(s)) return s;
+  if (/^#[0-9a-f]{3}$/.test(s)) {
+    return `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}`;
+  }
+  return "";
+}
+const DIALOG_ACTION_SELECTOR2 = '[slot="primaryAction"], [slot="secondaryAction"], mwc-button, ha-button, button';
+const resolveActiveTab2 = (currentTab, hiddenTabIds, tabOrder) => {
+  if (!hiddenTabIds.has(currentTab) && tabOrder.includes(currentTab)) {
+    return currentTab;
+  }
+  return tabOrder.find((id) => !hiddenTabIds.has(id)) || tabOrder[0] || "alerts";
+};
+const setSettingsPanelActiveState2 = (panels, activePanel) => {
+  panels.forEach((panel) => {
+    const isActive = panel === activePanel;
+    panel.classList.toggle("active", isActive);
+    const toggle = panel.querySelector("[data-panel-toggle]");
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", isActive ? "true" : "false");
+    }
+  });
+  return activePanel?.dataset?.panel ?? null;
+};
+const dialogActionKindFromElement2 = (button) => {
+  if (!(button instanceof Element)) return null;
+  const explicitSlot = button.getAttribute?.("slot") || "";
+  if (explicitSlot === "primaryAction") return "primary";
+  if (explicitSlot === "secondaryAction") return "secondary";
+  const actionAttr = (button.getAttribute?.("dialogAction") || button.getAttribute?.("dialog-action") || "").toString().trim().toLowerCase();
+  if (["save", "ok", "done", "confirm", "apply"].includes(actionAttr)) {
+    return "primary";
+  }
+  if (["cancel", "close", "dismiss"].includes(actionAttr)) {
+    return "secondary";
+  }
+  const label = (button.textContent || "").trim().toLowerCase();
+  if (["save", "done", "update", "apply", "ok"].includes(label)) {
+    return "primary";
+  }
+  if (["cancel", "close", "dismiss"].includes(label)) {
+    return "secondary";
+  }
+  return null;
+};
+const dialogActionKindFromEvent2 = (event) => {
+  const path = Array.isArray(event.composedPath?.()) ? event.composedPath() : [];
+  if (path.some((node) => node?.id === "camera-modal")) return null;
+  const button = path.find(
+    (node) => node instanceof Element && node.matches?.(DIALOG_ACTION_SELECTOR2)
+  );
+  if (!(button instanceof Element)) return null;
+  return dialogActionKindFromElement2(button);
+};
+const wireCameraRowDragAndDrop2 = ({
+  rows,
+  clearDropTargets,
+  onReorder
+}) => {
+  rows.forEach((row) => {
+    row.addEventListener("dragstart", (event) => {
+      const rowIndex = row.dataset.row;
+      event.dataTransfer?.setData("text/plain", rowIndex);
+      event.dataTransfer.effectAllowed = "move";
+      row.classList.add("dragging");
+    });
+    row.addEventListener("dragend", () => {
+      row.classList.remove("dragging");
+      clearDropTargets();
+    });
+    row.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      row.classList.add("drop-target");
+    });
+    row.addEventListener("dragleave", () => {
+      row.classList.remove("drop-target");
+    });
+    row.addEventListener("drop", (event) => {
+      event.preventDefault();
+      row.classList.remove("drop-target");
+      const fromIndex = Number(
+        event.dataTransfer?.getData("text/plain") || "-1"
+      );
+      const toIndex = Number(row.dataset.row || "-1");
+      onReorder(fromIndex, toIndex);
+    });
+  });
+};
+const setFieldErrorState2 = (root, selector, message) => {
+  const field = root.querySelector(selector);
+  if (!field) return;
+  field.toggleAttribute("data-invalid", !!message);
+  const helper = root.querySelector(`${selector}-helper`);
+  if (helper) {
+    helper.textContent = message || "";
+    helper.classList.toggle("error", !!message);
+  }
+};
+const bindNumericInputField2 = ({ root, selector, onSanitize }) => {
+  const field = root.querySelector(selector);
+  if (!field) return;
+  const sanitize = () => {
+    const clean = String(field.value || "").replace(/[^0-9]/g, "");
+    if (field.value !== clean) field.value = clean;
+    onSanitize?.();
+  };
+  const restrictKey = (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey || [
+      "Backspace",
+      "Delete",
+      "Tab",
+      "Enter",
+      "ArrowLeft",
+      "ArrowRight",
+      "ArrowUp",
+      "ArrowDown",
+      "Home",
+      "End"
+    ].includes(event.key)) {
+      return;
+    }
+    if (!/^[0-9]$/.test(event.key)) event.preventDefault();
+  };
+  const restrictBeforeInput = (event) => {
+    if (event.data && /[^0-9]/.test(event.data)) event.preventDefault();
+  };
+  field.addEventListener("input", sanitize);
+  field.addEventListener("change", sanitize);
+  field.addEventListener("value-changed", sanitize);
+  requestAnimationFrame(() => {
+    const innerInput = field.shadowRoot?.querySelector("input");
+    if (!innerInput || innerInput.dataset.frigateNumericBound === "true") {
+      return;
+    }
+    innerInput.dataset.frigateNumericBound = "true";
+    innerInput.inputMode = "numeric";
+    innerInput.pattern = "[0-9]*";
+    innerInput.addEventListener("keydown", restrictKey);
+    innerInput.addEventListener("beforeinput", restrictBeforeInput);
+    innerInput.addEventListener("input", sanitize);
+  });
+};
+const bindSelectorSyncEvents2 = (element, syncValue) => {
+  if (!element || typeof syncValue !== "function") return;
+  element.addEventListener("value-changed", syncValue);
+  element.addEventListener("selected-changed", syncValue);
+  element.addEventListener("change", syncValue);
+};
+const setupSelectSelector2 = ({
+  element,
+  hass,
+  options,
+  initialValue,
+  fallbackValue,
+  normalize = (value) => value,
+  onChange
+}) => {
+  if (!element) return;
+  element.hass = hass;
+  element.selector = {
+    select: {
+      mode: "dropdown",
+      options
+    }
+  };
+  const startValue = normalize(initialValue ?? fallbackValue);
+  element.value = startValue;
+  element.dataset.value = startValue;
+  const syncValue = (event) => {
+    const nextRaw = event?.detail?.value ?? element.value ?? fallbackValue;
+    const nextValue = normalize(nextRaw);
+    element.value = nextValue;
+    element.dataset.value = nextValue;
+    onChange?.(nextValue, event);
+  };
+  bindSelectorSyncEvents2(element, syncValue);
+};
+const setupEntitySelector2 = ({
+  element,
+  hass,
+  domain,
+  label,
+  onChange
+}) => {
+  if (!element) return;
+  element.hass = hass;
+  element.selector = { entity: { domain } };
+  if (label) element.label = label;
+  const syncValue = (event) => {
+    const nextValue = event?.detail?.value ?? element.value ?? "";
+    element.dataset.value = String(nextValue || "");
+    onChange?.(String(nextValue || ""), event);
+  };
+  element.addEventListener("value-changed", syncValue);
+  element.addEventListener("selected-changed", syncValue);
+};
+const bindThemeControlEvents2 = ({
+  root,
+  update,
+  themeDraftCache,
+  resolveDefaultHex
+}) => {
+  root.querySelectorAll("[data-theme-option]").forEach((button) => {
+    button.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const selectedTheme = event.currentTarget?.dataset?.themeOption || "default";
+      root.querySelectorAll("[data-theme-option]").forEach((themeButton) => {
+        const isActive = themeButton.dataset.themeOption === selectedTheme;
+        themeButton.classList.toggle("active", isActive);
+        themeButton.setAttribute("aria-checked", isActive ? "true" : "false");
+      });
+      const customPanel = root.querySelector("#theme-custom-panel");
+      if (customPanel) {
+        customPanel.hidden = selectedTheme !== "custom";
+        if (selectedTheme === "custom") customPanel.setAttribute("open", "");
+      }
+      update();
+    });
+  });
+  root.querySelectorAll("[data-theme-color]").forEach((input) => {
+    input.addEventListener("input", (event) => {
+      const colorKey = event.currentTarget?.dataset?.themeColor;
+      const colorValue = normalizeHexColor2(event.currentTarget?.value);
+      if (colorKey && colorValue) themeDraftCache[colorKey] = colorValue;
+      update();
+    });
+    input.addEventListener("change", update);
+  });
+  root.querySelectorAll("[data-theme-reset]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const colorKey = event.currentTarget?.dataset?.themeReset;
+      const input = root.querySelector(`[data-theme-color="${colorKey}"]`);
+      if (!colorKey || !input || input.disabled) return;
+      const defaultHex = resolveDefaultHex(colorKey);
+      input.value = defaultHex;
+      themeDraftCache[colorKey] = defaultHex;
+      update();
+    });
+  });
+  root.querySelectorAll("[data-theme-default]").forEach((toggle) => {
+    const colorKey = toggle.dataset.themeDefault;
+    const input = root.querySelector(`[data-theme-color="${colorKey}"]`);
+    const reset = root.querySelector(`[data-theme-reset="${colorKey}"]`);
+    toggle.addEventListener("change", (event) => {
+      const isDefault = event.currentTarget?.checked === true;
+      if (!input) {
+        update();
+        return;
+      }
+      if (isDefault) {
+        input.value = resolveDefaultHex(colorKey);
+        input.disabled = true;
+        if (reset) reset.hidden = true;
+      } else {
+        const draftHex = normalizeHexColor2(themeDraftCache?.[colorKey]);
+        input.value = draftHex || resolveDefaultHex(colorKey);
+        input.disabled = false;
+        if (reset) reset.hidden = false;
+      }
+      update();
+    });
+    toggle.addEventListener("value-changed", (event) => {
+      toggle.checked = event?.detail?.value === true;
+    });
+  });
+};
+const bindClickHandler2 = ({ root, selector, handler }) => {
+  root.querySelector(selector)?.addEventListener("click", handler);
+};
+const bindClickHandlers2 = (root, bindings) => {
+  bindings.forEach((binding) => bindClickHandler2({ root, ...binding }));
+};
+const bindEachClickHandler2 = ({ root, selector, handler }) => {
+  root.querySelectorAll(selector).forEach((element) => {
+    element.addEventListener("click", (event) => handler(event, element));
+  });
+};
+const bindEventsForIds2 = ({ root, ids, events, handler }) => {
+  ids.forEach((id) => {
+    const element = root.querySelector(`#${id}`);
+    if (!element) return;
+    events.forEach((eventName) => {
+      element.addEventListener(
+        eventName,
+        (event) => handler(event, element, id)
+      );
+    });
+  });
+};
+const bindEventsForSelectorAll2 = ({
+  root,
+  selector,
+  events,
+  handler
+}) => {
+  root.querySelectorAll(selector).forEach((element) => {
+    events.forEach((eventName) => {
+      element.addEventListener(
+        eventName,
+        (event) => handler(event, element, selector)
+      );
+    });
+  });
+};
+const buildEditorConfigFromDom2 = ({
+  root,
+  baseConfig,
+  cameras,
+  themeDraftCache
+}) => {
+  const readTrimmed = (id) => root.querySelector(`#${id}`)?.value?.trim() || "";
+  const nextConfig = { ...baseConfig, cameras };
+  delete nextConfig.camera_entity;
+  const title = readTrimmed("title");
+  const subtitle = readTrimmed("subtitle");
+  if (title) nextConfig.title = title;
+  else delete nextConfig.title;
+  if (subtitle) nextConfig.subtitle = subtitle;
+  else delete nextConfig.subtitle;
+  nextConfig.window_days = normalizePositiveInteger2(
+    root.querySelector("#window_days")?.dataset.value || root.querySelector("#window_days")?.value || "3",
+    3
+  );
+  nextConfig.alerts_reviews_days = normalizePositiveInteger2(
+    root.querySelector("#alerts_reviews_days")?.dataset.value || root.querySelector("#alerts_reviews_days")?.value || String(nextConfig.window_days || 3),
+    nextConfig.window_days || 3
+  );
+  nextConfig.window_hours = nextConfig.window_days * 24;
+  const realtimePollSeconds = Number(
+    root.querySelector("#realtime_poll_seconds")?.dataset.value || root.querySelector("#realtime_poll_seconds")?.value || "5"
+  );
+  nextConfig.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+    realtimePollSeconds
+  ) ? realtimePollSeconds : 5;
+  nextConfig.mobile_poll_battery_saver = root.querySelector("#mobile_poll_battery_saver")?.checked === true;
+  nextConfig.slideshow_rotation_enabled = root.querySelector("#slideshow_rotation_enabled")?.checked === true;
+  nextConfig.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+    Number(
+      root.querySelector("#slideshow_rotation_seconds")?.dataset.value || root.querySelector("#slideshow_rotation_seconds")?.value || "30"
+    )
+  ) ? Number(
+    root.querySelector("#slideshow_rotation_seconds")?.dataset.value || root.querySelector("#slideshow_rotation_seconds")?.value || "30"
+  ) : 30;
+  nextConfig.grid_mode_enabled = root.querySelector("#grid_mode_enabled")?.checked === true;
+  nextConfig.grid_start_in_grid_enabled = root.querySelector("#grid_start_in_grid_enabled")?.checked === true;
+  nextConfig.grid_live_view_enabled = root.querySelector("#grid_live_view_enabled")?.checked !== false;
+  nextConfig.landing_page_enabled = root.querySelector("#landing_page_enabled")?.checked === true;
+  nextConfig.landing_page_live_cameras = root.querySelector("#landing_page_live_cameras")?.checked === true;
+  nextConfig.landing_page_show_title_bars = root.querySelector("#landing_page_show_title_bars")?.checked !== false;
+  nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+    Number(
+      root.querySelector("#grid_rotation_seconds")?.dataset.value || root.querySelector("#grid_rotation_seconds")?.value || "30"
+    )
+  ) ? Number(
+    root.querySelector("#grid_rotation_seconds")?.dataset.value || root.querySelector("#grid_rotation_seconds")?.value || "30"
+  ) : 30;
+  delete nextConfig.primary_color;
+  delete nextConfig.accent_color;
+  delete nextConfig.bg_color;
+  delete nextConfig.use_primary_color;
+  delete nextConfig.use_accent_color;
+  delete nextConfig.use_bg_color;
+  nextConfig.theme = root.querySelector("[data-theme-option].active")?.dataset?.themeOption === "custom" ? "custom" : "default";
+  const themeCustomDefaults = {};
+  const themeCustom = {};
+  root.querySelectorAll("[data-theme-color]").forEach((input) => {
+    const key = input.dataset.themeColor;
+    if (!THEME_CUSTOM_KEYS.has(key)) return;
+    const useDefault = root.querySelector(`[data-theme-default="${key}"]`)?.checked === true;
+    const inputValue = normalizeHexColor2(input.value);
+    if (useDefault) themeCustomDefaults[key] = true;
+    if (!useDefault && inputValue) themeDraftCache[key] = inputValue;
+    const cached = normalizeHexColor2(themeDraftCache?.[key]);
+    if (cached) themeCustom[key] = cached;
+  });
+  nextConfig.theme_custom = themeCustom;
+  nextConfig.theme_custom_defaults = themeCustomDefaults;
+  const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")].filter((element) => element.checked !== true).map((element) => element.dataset.activeTab).filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
+  nextConfig.hidden_tabs = hiddenTabs.length ? hiddenTabs : [];
+  const streamHeight = root.querySelector("#stream_height")?.value;
+  const streamHeightUnit = root.querySelector("#stream_height_unit")?.dataset.value || root.querySelector("#stream_height_unit")?.value || "vh";
+  nextConfig.stream_height = streamHeight ? Number(streamHeight) : null;
+  nextConfig.stream_height_unit = streamHeightUnit;
+  nextConfig.tight_margins = root.querySelector("#tight_margins")?.checked === true;
+  nextConfig.shadows = root.querySelector("#shadows")?.checked !== false;
+  nextConfig.wide_view = root.querySelector("#wide_view")?.checked === true;
+  const leftWidthRaw = root.querySelector("#col_left_width_pct")?.value?.replace(/%/g, "").trim();
+  nextConfig.col_left_width_pct = leftWidthRaw ? Math.min(Math.max(parseInt(leftWidthRaw, 10) || 50, 10), 90) : 50;
+  return nextConfig;
+};
+const addStringIfPresent2 = (target, key, value) => {
+  const trimmed = String(value || "").trim();
+  if (trimmed) target[key] = trimmed;
+};
+const addIfNotDefault2 = (target, key, value, defaultValue) => {
+  if (value !== defaultValue) target[key] = value;
+};
+const compactCameraConfigForYaml2 = (camera) => {
+  const normalized = normalizeCameraConfig2(camera, { fallbackName: "" });
+  if (!normalized.entity) return null;
+  const compact = { entity: normalized.entity };
+  addStringIfPresent2(compact, "name", normalized.name);
+  if (normalized.connection_type !== DEFAULT_CAMERA_CONNECTION_TYPE) {
+    compact.connection_type = normalized.connection_type;
+  }
+  if (normalized.alerts_content !== "alerts_only") {
+    compact.alerts_content = normalized.alerts_content;
+  }
+  if (normalized.disable_hls_desktop === true) {
+    compact.disable_hls_desktop = true;
+  }
+  return compact;
+};
+const compactEditorConfigForYaml2 = (config, { themeDefaultColors = {} } = {}) => {
+  const source = config && typeof config === "object" ? config : {};
+  const compact = {};
+  const cameras = Array.isArray(source.cameras) ? source.cameras.map(compactCameraConfigForYaml2).filter(Boolean) : [];
+  if (cameras.length) compact.cameras = cameras;
+  addStringIfPresent2(compact, "title", source.title);
+  addStringIfPresent2(compact, "subtitle", source.subtitle);
+  const windowDays = normalizePositiveInteger2(source.window_days, 3);
+  addIfNotDefault2(compact, "window_days", windowDays, 3);
+  const alertsReviewsDays = normalizePositiveInteger2(
+    source.alerts_reviews_days,
+    windowDays
+  );
+  addIfNotDefault2(
+    compact,
+    "alerts_reviews_days",
+    alertsReviewsDays,
+    windowDays
+  );
+  const realtimePollSeconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+    Number(source.realtime_poll_seconds)
+  ) ? Number(source.realtime_poll_seconds) : 5;
+  addIfNotDefault2(compact, "realtime_poll_seconds", realtimePollSeconds, 5);
+  addIfNotDefault2(
+    compact,
+    "mobile_poll_battery_saver",
+    source.mobile_poll_battery_saver === true,
+    false
+  );
+  addIfNotDefault2(
+    compact,
+    "slideshow_rotation_enabled",
+    source.slideshow_rotation_enabled === true,
+    false
+  );
+  const slideshowRotationSeconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+    Number(source.slideshow_rotation_seconds)
+  ) ? Number(source.slideshow_rotation_seconds) : 30;
+  addIfNotDefault2(
+    compact,
+    "slideshow_rotation_seconds",
+    slideshowRotationSeconds,
+    30
+  );
+  addIfNotDefault2(
+    compact,
+    "grid_mode_enabled",
+    source.grid_mode_enabled === true,
+    false
+  );
+  addIfNotDefault2(
+    compact,
+    "grid_start_in_grid_enabled",
+    source.grid_start_in_grid_enabled === true,
+    false
+  );
+  addIfNotDefault2(
+    compact,
+    "grid_live_view_enabled",
+    source.grid_live_view_enabled !== false,
+    true
+  );
+  addIfNotDefault2(
+    compact,
+    "landing_page_enabled",
+    source.landing_page_enabled === true,
+    false
+  );
+  addIfNotDefault2(
+    compact,
+    "landing_page_live_cameras",
+    source.landing_page_live_cameras === true,
+    false
+  );
+  addIfNotDefault2(
+    compact,
+    "landing_page_show_title_bars",
+    source.landing_page_show_title_bars !== false,
+    true
+  );
+  const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+    Number(source.grid_rotation_seconds)
+  ) ? Number(source.grid_rotation_seconds) : 30;
+  addIfNotDefault2(compact, "grid_rotation_seconds", gridRotationSeconds, 30);
+  const hiddenTabs = Array.isArray(source.hidden_tabs) ? source.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [];
+  if (hiddenTabs.length) compact.hidden_tabs = hiddenTabs;
+  if (source.theme === "custom") {
+    compact.theme = "custom";
+    const themeCustom = source.theme_custom && typeof source.theme_custom === "object" ? source.theme_custom : {};
+    const themeCustomDefaults = source.theme_custom_defaults && typeof source.theme_custom_defaults === "object" ? source.theme_custom_defaults : {};
+    const compactThemeCustom = {};
+    Object.entries(themeCustom).forEach(([key, value]) => {
+      if (!THEME_CUSTOM_KEYS.has(key)) return;
+      if (themeCustomDefaults[key] === true) return;
+      const color = normalizeHexColor2(value);
+      if (!color) return;
+      const defaultColor = normalizeHexColor2(themeDefaultColors[key]);
+      if (defaultColor && color === defaultColor) return;
+      compactThemeCustom[key] = color;
+    });
+    if (Object.keys(compactThemeCustom).length) {
+      compact.theme_custom = compactThemeCustom;
+    }
+  }
+  const streamHeight = source.stream_height ? Number(source.stream_height) : null;
+  if (streamHeight) compact.stream_height = streamHeight;
+  const streamHeightUnit = source.stream_height_unit || "vh";
+  if (streamHeight && streamHeightUnit !== "vh") {
+    compact.stream_height_unit = streamHeightUnit;
+  }
+  addIfNotDefault2(
+    compact,
+    "tight_margins",
+    source.tight_margins === true,
+    false
+  );
+  addIfNotDefault2(compact, "shadows", source.shadows !== false, true);
+  addIfNotDefault2(compact, "wide_view", source.wide_view === true, false);
+  const leftWidth = Number(source.col_left_width_pct) || 50;
+  addIfNotDefault2(compact, "col_left_width_pct", leftWidth, 50);
+  return compact;
+};
+const withCardTypeForYaml2 = (config, { sourceConfig = null } = {}) => {
+  const payload = {
+    type: `custom:${CARD_TAG}`,
+    ...config && typeof config === "object" ? config : {}
+  };
+  const source = sourceConfig && typeof sourceConfig === "object" ? sourceConfig : null;
+  if (source && source.grid_options && typeof source.grid_options === "object") {
+    payload.grid_options = { ...source.grid_options };
+  }
+  if (source && source.visibility != null) {
+    payload.visibility = Array.isArray(source.visibility) ? source.visibility.map(
+      (item) => item && typeof item === "object" ? { ...item } : item
+    ) : source.visibility;
+  }
+  return payload;
+};
+const createEditorPreviewDraft2 = (config) => ({
+  title: config.title,
+  subtitle: config.subtitle,
+  window_days: config.window_days,
+  alerts_reviews_days: config.alerts_reviews_days,
+  realtime_poll_seconds: config.realtime_poll_seconds,
+  mobile_poll_battery_saver: config.mobile_poll_battery_saver,
+  slideshow_rotation_enabled: config.slideshow_rotation_enabled,
+  slideshow_rotation_seconds: config.slideshow_rotation_seconds,
+  grid_mode_enabled: config.grid_mode_enabled,
+  grid_start_in_grid_enabled: config.grid_start_in_grid_enabled,
+  grid_live_view_enabled: config.grid_live_view_enabled,
+  landing_page_enabled: config.landing_page_enabled,
+  landing_page_live_cameras: config.landing_page_live_cameras,
+  landing_page_show_title_bars: config.landing_page_show_title_bars,
+  grid_rotation_seconds: config.grid_rotation_seconds,
+  hidden_tabs: config.hidden_tabs,
+  theme: config.theme,
+  theme_custom: config.theme_custom,
+  theme_custom_defaults: config.theme_custom_defaults,
+  stream_height: config.stream_height,
+  stream_height_unit: config.stream_height_unit,
+  tight_margins: config.tight_margins,
+  shadows: config.shadows,
+  wide_view: config.wide_view,
+  col_left_width_pct: config.col_left_width_pct
+});
+const LABEL_COLORS2 = {
+  person: "#3b82f6",
+  car: "#a855f7",
+  motion: "#f59e0b",
+  dog: "#10b981",
+  cat: "#f472b6",
+  bicycle: "#22d3ee",
+  bird: "#eab308",
+  package: "#f97316",
+  face: "#818cf8",
+  truck: "#fb7185",
+  bus: "#34d399"
+};
+const PALETTE2 = [
+  "#3b82f6",
+  "#a855f7",
+  "#f59e0b",
+  "#10b981",
+  "#f472b6",
+  "#22d3ee",
+  "#eab308",
+  "#f97316",
+  "#818cf8",
+  "#fb7185",
+  "#34d399",
+  "#ef4444"
+];
+function labelColor2(l) {
+  if (!l) return "#f59e0b";
+  if (LABEL_COLORS2[l]) return LABEL_COLORS2[l];
+  let h = 0;
+  for (const c of l) h = h * 31 + c.charCodeAt(0) >>> 0;
+  return PALETTE2[h % PALETTE2.length];
+}
+const CAM_COLORS2 = [
+  "rgba(30,80,200,.5)",
+  "rgba(210,80,30,.5)",
+  "rgba(30,170,80,.5)",
+  "rgba(170,30,180,.5)"
+];
+function mkCamState2() {
+  return {
+    clientId: "frigate",
+    cam: "",
+    events: [],
+    recordings: [],
+    reviews: [],
+    kept: [],
+    discovered: false
+  };
+}
+function camDisplayName2(c) {
+  return c.name || (c.entity || "").replace(/^camera\./, "").replace(/_/g, " ");
+}
+function normalizeCameraConfig2(camera, { fallbackName = null } = {}) {
+  if (typeof camera === "string") {
+    return {
+      entity: camera,
+      name: fallbackName,
+      connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+      alerts_content: "alerts_only",
+      disable_hls_desktop: false
+    };
+  }
+  if (camera && typeof camera === "object") {
+    return {
+      entity: camera.entity || camera.camera_entity || null,
+      name: camera.name || fallbackName,
+      connection_type: normalizeCameraConnectionType2(camera.connection_type),
+      alerts_content: normalizeAlertsAreaContent2(camera.alerts_content),
+      disable_hls_desktop: normalizeDisableHlsDesktop2(
+        camera.disable_hls_desktop
+      )
+    };
+  }
+  return {
+    entity: null,
+    name: fallbackName,
+    connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+    alerts_content: "alerts_only",
+    disable_hls_desktop: false
+  };
+}
+const configuredCameraEntities2 = (config) => (config?.cameras || []).map(({ entity }) => entity).filter(Boolean);
+const hassThemeSignature2 = (hass) => {
+  const { darkMode = false, theme = "" } = hass?.themes || {};
+  return `${darkMode === true ? "dark" : "light"}:${theme || hass?.selectedTheme || ""}`;
+};
+const hassEntityStateSignature2 = (hass, entities) => entities.map((entity) => `${entity}:${hass?.states?.[entity]?.state ?? "missing"}`).join("|");
+
+// src/editor/FrigateViewCardEditor.js
+const FrigateViewCardEditor2 = class extends HTMLElement {
+  disconnectedCallback() {
+    if (Array.isArray(this._boundDialogActionButtons)) {
+      this._boundDialogActionButtons.forEach(({ element, handler }) => {
+        element?.removeEventListener?.("click", handler, true);
+      });
+    }
+    this._boundDialogActionButtons = [];
+    if (this._onDialogPrimaryActionClick) {
+      document.removeEventListener(
+        "click",
+        this._onDialogPrimaryActionClick,
+        true
+      );
+    }
+    if (this._onDialogSecondaryActionClick) {
+      document.removeEventListener(
+        "click",
+        this._onDialogSecondaryActionClick,
+        true
+      );
+    }
+    this._dialogActionHooksBound = false;
+    this._emitPreviewDraft(null);
+  }
+  _configSignature(config) {
+    try {
+      return JSON.stringify(config || {});
+    } catch (_) {
+      return "";
+    }
+  }
+  setConfig(config) {
+    const normalized = this._normalizeConfig(config);
+    if (this._activeSettingsPanelId === void 0) {
+      this._activeSettingsPanelId = "camera";
+    }
+    const incomingSig = this._configSignature(normalized);
+    const currentSig = this._configSignature(this._config);
+    if (this._rendered && incomingSig === currentSig) {
+      this._config = normalized;
+      return;
+    }
+    this._config = normalized;
+    this._rendered = true;
+    this._render();
+  }
+  set hass(hass) {
+    this._hass = hass;
+    const modeKey = this._hass?.themes?.darkMode ? "dark" : "light";
+    const key = `${this._frigateEntities().join(",")}|${modeKey}`;
+    if (key !== this._lastEntityKey) {
+      this._lastEntityKey = key;
+      if (this._rendered) this._render();
+    }
+  }
+  _normalizeCameras(config) {
+    let cams = [];
+    if (Array.isArray(config?.cameras)) {
+      cams = config.cameras;
+    } else if (config?.camera_entity) {
+      cams = [
+        {
+          entity: config.camera_entity,
+          name: config.title || "",
+          connection_type: DEFAULT_CAMERA_CONNECTION_TYPE
+        }
+      ];
+    }
+    const normalized = cams.map((camera) => normalizeCameraConfig2(camera, { fallbackName: "" })).filter((c) => c.entity).slice(0, MAX_CAMERAS);
+    return normalized;
+  }
+  _normalizeConfig(config) {
+    const src = config && typeof config === "object" ? { ...config } : {};
+    const cameras = this._normalizeCameras(src);
+    if (Array.isArray(src.hidden_tabs)) {
+      src.hidden_tabs = src.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
+    }
+    delete src.camera_entity;
+    src.theme = src.theme === "custom" ? "custom" : "default";
+    if (src.theme_custom && typeof src.theme_custom === "object") {
+      src.theme_custom = Object.fromEntries(
+        Object.entries(src.theme_custom).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, normalizeHexColor2(value)]).filter(([, value]) => !!value)
+      );
+    } else {
+      src.theme_custom = {};
+    }
+    if (src.theme_custom_defaults && typeof src.theme_custom_defaults === "object") {
+      src.theme_custom_defaults = Object.fromEntries(
+        Object.entries(src.theme_custom_defaults).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, value === true]).filter(([, value]) => value === true)
+      );
+    } else {
+      src.theme_custom_defaults = {};
+    }
+    src.shadows = src.shadows !== false;
+    src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+      Number(src.realtime_poll_seconds)
+    ) ? Number(src.realtime_poll_seconds) : 5;
+    src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
+    src.slideshow_rotation_enabled = src.slideshow_rotation_enabled === true;
+    src.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+      Number(src.slideshow_rotation_seconds)
+    ) ? Number(src.slideshow_rotation_seconds) : 30;
+    src.grid_mode_enabled = src.grid_mode_enabled === true;
+    src.grid_start_in_grid_enabled = src.grid_start_in_grid_enabled === true;
+    src.grid_live_view_enabled = src.grid_live_view_enabled !== false;
+    src.landing_page_enabled = src.landing_page_enabled === true;
+    src.landing_page_live_cameras = src.landing_page_live_cameras === true;
+    src.landing_page_show_title_bars = src.landing_page_show_title_bars !== false;
+    src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+      Number(src.grid_rotation_seconds)
+    ) ? Number(src.grid_rotation_seconds) : 30;
+    src.alerts_reviews_days = normalizePositiveInteger2(
+      src.alerts_reviews_days,
+      normalizePositiveInteger2(src.window_days, 3)
+    );
+    return { ...src, cameras };
+  }
+  _frigateEntities() {
+    if (!this._hass) return [];
+    return Object.keys(this._hass.states).filter((e) => e.startsWith("camera.")).filter((e) => {
+      const a = this._hass.states[e].attributes;
+      return a?.client_id || a?.mqtt_client_id || a?.camera_name;
+    }).sort();
+  }
+  _timezoneDisplay() {
+    const tz = this._hass?.config?.time_zone || "UTC";
+    try {
+      const parts = new Intl.DateTimeFormat(void 0, {
+        timeZone: tz,
+        timeZoneName: "longGeneric"
+      }).formatToParts(new Date());
+      const tzName = parts.find((p) => p.type === "timeZoneName")?.value || tz;
+      return `${tzName} (${tz})`;
+    } catch (_) {
+      return tz.replace(/_/g, " ");
+    }
+  }
+  _defaultHostVh() {
+    const headerH = parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue(
+        "--header-height"
+      )
+    ) || 56;
+    return Math.round(
+      (window.innerHeight - headerH) / window.innerHeight * 100
+    );
+  }
+  _rgbToHex(value) {
+    const m = String(value || "").trim().match(/^rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (!m) return "";
+    const toHex = (n) => Math.max(0, Math.min(255, Number(n) || 0)).toString(16).padStart(2, "0");
+    return `#${toHex(m[1])}${toHex(m[2])}${toHex(m[3])}`;
+  }
+  _resolveColorToHex(cssValue, fallback = "#000000") {
+    if (!cssValue) return fallback;
+    const hex = normalizeHexColor2(cssValue);
+    if (hex) return hex;
+    const probe = document.createElement("span");
+    probe.style.color = String(cssValue);
+    this.appendChild(probe);
+    const computed = getComputedStyle(probe).color;
+    probe.remove();
+    return this._rgbToHex(computed) || fallback;
+  }
+  _themeDefaultHex(key) {
+    return this._resolveColorToHex(THEME_DEFAULTS[key], "#000000");
+  }
+  _themeDefaultHexMap() {
+    return Object.fromEntries(
+      THEME_CUSTOM_ROWS.map((row) => [row.key, this._themeDefaultHex(row.key)])
+    );
+  }
+  _ensureThemeDraftCache() {
+    if (!this._themeDraftCache || typeof this._themeDraftCache !== "object") {
+      this._themeDraftCache = {};
+    }
+    if (this._config?.theme !== "custom") {
+      this._themeDraftCache = {};
+      return;
+    }
+    const custom = this._config?.theme_custom || {};
+    for (const row of THEME_CUSTOM_ROWS) {
+      const key = row.key;
+      const v = normalizeHexColor2(custom[key]);
+      if (v) this._themeDraftCache[key] = v;
+    }
+  }
+  _cameraLabel(camera) {
+    const name = String(camera?.name || "").trim();
+    if (name) return name;
+    const entity = String(camera?.entity || "").trim();
+    if (!entity) return "Select camera";
+    return entity.replace(/^camera\./, "").replace(/_/g, " ");
+  }
+  _cameraConnectionLabel(value) {
+    return normalizeCameraConnectionType2(value) === "ha_direct" ? "HA direct" : "Frigate go2rtc";
+  }
+  _cameraAlertsContentLabel(value) {
+    return normalizeAlertsAreaContent2(value) === "all_reviews" ? "All reviews" : "Alerts only";
+  }
+  _cameraDesktopHlsLabel(value) {
+    return normalizeDisableHlsDesktop2(value) ? "Desktop HLS off" : "Desktop HLS on";
+  }
+  _reorderCameras(from, to) {
+    if (from === to || from < 0 || to < 0) return;
+    const cur = [...this._getCams()];
+    if (from >= cur.length || to >= cur.length) return;
+    const [moved] = cur.splice(from, 1);
+    cur.splice(to, 0, moved);
+    this._config = { ...this._config, cameras: cur };
+    this._render();
+    this._dispatch();
+  }
+  _openCameraModal(index = null) {
+    const cams = this._getCams();
+    const cam = index == null ? {
+      entity: "",
+      name: "",
+      connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
+      alerts_content: "alerts_only",
+      disable_hls_desktop: false
+    } : cams[index] || {};
+    this._editingCamIndex = index;
+    const title = this.querySelector("#camera-modal-title");
+    const save = this.querySelector("#camera-modal-save");
+    const modal = this.querySelector("#camera-modal");
+    const name = this.querySelector("#camera-modal-name");
+    const entity = this.querySelector("#camera-modal-entity");
+    const connectionType = this.querySelector("#camera-modal-connection-type");
+    const alertsContentAllReviews = this.querySelector(
+      "#camera-modal-all-reviews"
+    );
+    const disableHlsDesktop = this.querySelector(
+      "#camera-modal-disable-hls-desktop"
+    );
+    const helper = this.querySelector("#camera-modal-helper");
+    if (title) title.textContent = index == null ? "Add" : "Edit";
+    if (save) save.textContent = index == null ? "Add" : "Save";
+    if (name) name.value = cam?.name || "";
+    if (entity) {
+      entity.value = cam?.entity || "";
+      entity.dataset.value = cam?.entity || "";
+    }
+    if (connectionType) {
+      const nextType = normalizeCameraConnectionType2(cam?.connection_type);
+      connectionType.value = nextType;
+      connectionType.dataset.value = nextType;
+    }
+    if (alertsContentAllReviews) {
+      alertsContentAllReviews.checked = normalizeAlertsAreaContent2(cam?.alerts_content) === "all_reviews";
+    }
+    if (disableHlsDesktop) {
+      disableHlsDesktop.checked = normalizeDisableHlsDesktop2(cam?.disable_hls_desktop) === true;
+    }
+    if (helper) helper.textContent = "";
+    if (modal) modal.classList.remove("hidden");
+  }
+  _closeCameraModal() {
+    const modal = this.querySelector("#camera-modal");
+    if (modal) modal.classList.add("hidden");
+    this._editingCamIndex = null;
+  }
+  _cameraModalEntityValue() {
+    const entity = this.querySelector("#camera-modal-entity");
+    return (entity?.dataset?.value || entity?.value || entity?.__value || "").toString().trim();
+  }
+  _saveCameraModal() {
+    const entity = this._cameraModalEntityValue();
+    const name = (this.querySelector("#camera-modal-name")?.value || "").toString();
+    const connectionType = normalizeCameraConnectionType2(
+      this.querySelector("#camera-modal-connection-type")?.dataset?.value || this.querySelector("#camera-modal-connection-type")?.value || DEFAULT_CAMERA_CONNECTION_TYPE
+    );
+    const alertsContent = this.querySelector("#camera-modal-all-reviews")?.checked === true ? "all_reviews" : "alerts_only";
+    const disableHlsDesktop = this.querySelector("#camera-modal-disable-hls-desktop")?.checked === true;
+    const helper = this.querySelector("#camera-modal-helper");
+    if (!entity) {
+      if (helper) helper.textContent = "Camera is required.";
+      return;
+    }
+    const cur = [...this._getCams()];
+    if (this._editingCamIndex == null) {
+      if (cur.length >= MAX_CAMERAS) {
+        if (helper) helper.textContent = `Maximum ${MAX_CAMERAS} cameras.`;
+        return;
+      }
+      cur.push({
+        entity,
+        name,
+        connection_type: connectionType,
+        alerts_content: alertsContent,
+        disable_hls_desktop: disableHlsDesktop
+      });
+    } else if (cur[this._editingCamIndex]) {
+      cur[this._editingCamIndex] = {
+        entity,
+        name,
+        connection_type: connectionType,
+        alerts_content: alertsContent,
+        disable_hls_desktop: disableHlsDesktop
+      };
+    }
+    this._config = { ...this._config, cameras: cur.slice(0, MAX_CAMERAS) };
+    this._closeCameraModal();
+    this._render();
+    this._dispatch();
+  }
+  _removeCamera(index) {
+    const cur = [...this._getCams()];
+    cur.splice(index, 1);
+    this._config = { ...this._config, cameras: cur };
+    this._render();
+    this._dispatch();
+  }
+  _wireCameraDragAndDrop() {
+    const rows = Array.from(this.querySelectorAll(".cam-row"));
+    wireCameraRowDragAndDrop2({
+      rows,
+      clearDropTargets: () => {
+        this.querySelectorAll(".cam-row").forEach((row) => {
+          row.classList.remove("drop-target");
+        });
+      },
+      onReorder: (fromIndex, toIndex) => {
+        this._reorderCameras(fromIndex, toIndex);
+      }
+    });
+  }
+  _renderSettingsPanel({ id, title, icon, content, active = false }) {
+    return `<section class="settings-panel ${active ? "active" : ""}" data-panel="${id}">
+      <button type="button" class="setting-title" data-panel-toggle="${id}" aria-expanded="${active ? "true" : "false"}">
+        <ha-icon icon="${icon}"></ha-icon>
+        <h3>${title}</h3>
+      </button>
+      <div class="setting-content">${content}</div>
+    </section>`;
+  }
+  _wireSettingsPanels() {
+    const panels = Array.from(this.querySelectorAll(".settings-panel"));
+    if (!panels.length) return;
+    const setActive = (activePanel) => {
+      this._activeSettingsPanelId = setSettingsPanelActiveState2(
+        panels,
+        activePanel
+      );
+    };
+    panels.forEach((panel) => {
+      panel.querySelector("[data-panel-toggle]")?.addEventListener("click", () => {
+        if (panel.classList.contains("active")) {
+          setActive(null);
+        } else {
+          setActive(panel);
+        }
+      });
+    });
+    const initial = panels.find(
+      (panel) => panel.dataset.panel === this._activeSettingsPanelId
+    );
+    setActive(initial || null);
+  }
+  _wireEditorDialogActions() {
+    if (this._dialogActionHooksBound) return;
+    const bindDialogActionButtons = () => {
+      this._boundDialogActionButtons = [];
+      const seenRoots = new Set();
+      let node = this;
+      let depth = 0;
+      while (node && depth < 8) {
+        const root = node.getRootNode?.();
+        if (root instanceof ShadowRoot && !seenRoots.has(root)) {
+          seenRoots.add(root);
+          root.querySelectorAll(DIALOG_ACTION_SELECTOR2).forEach((button) => {
+            const kind = dialogActionKindFromElement2(button);
+            if (!kind) return;
+            const handler = () => {
+              if (kind === "primary") {
+                if (this._hasVisualDraft) {
+                  this._dispatch();
+                  this._hasVisualDraft = false;
+                }
+                this._emitPreviewDraft(null);
+                return;
+              }
+              this._hasVisualDraft = false;
+              this._emitPreviewDraft(null);
+            };
+            button.addEventListener("click", handler, true);
+            this._boundDialogActionButtons.push({ element: button, handler });
+          });
+        }
+        node = node.parentNode || node.host;
+        depth += 1;
+      }
+    };
+    this._onDialogPrimaryActionClick = (ev) => {
+      if (dialogActionKindFromEvent2(ev) !== "primary") return;
+      if (this._hasVisualDraft) {
+        this._dispatch();
+        this._hasVisualDraft = false;
+      }
+      this._emitPreviewDraft(null);
+    };
+    this._onDialogSecondaryActionClick = (ev) => {
+      if (dialogActionKindFromEvent2(ev) !== "secondary") return;
+      this._hasVisualDraft = false;
+      this._emitPreviewDraft(null);
+    };
+    document.addEventListener("click", this._onDialogPrimaryActionClick, true);
+    document.addEventListener(
+      "click",
+      this._onDialogSecondaryActionClick,
+      true
+    );
+    bindDialogActionButtons();
+    this._dialogActionHooksBound = true;
+  }
+  _setEditorFieldError(selector, message) {
+    setFieldErrorState2(this, selector, message);
+  }
+  _validateEditorFields() {
+    let valid = true;
+    const windowDaysValue = this.querySelector("#window_days")?.dataset.value || this.querySelector("#window_days")?.value || "3";
+    const windowDays = Number(windowDaysValue);
+    const windowDaysMessage = Number.isInteger(windowDays) && windowDays >= 1 && windowDays <= 15 ? "" : "Select a value from 1 to 15.";
+    this._setEditorFieldError("#window_days", windowDaysMessage);
+    if (windowDaysMessage) valid = false;
+    const alertsReviewsDaysValue = this.querySelector("#alerts_reviews_days")?.dataset.value || this.querySelector("#alerts_reviews_days")?.value || "3";
+    const alertsReviewsDays = Number(alertsReviewsDaysValue);
+    const alertsReviewsDaysMessage = Number.isInteger(alertsReviewsDays) && alertsReviewsDays >= 1 && alertsReviewsDays <= 15 ? "" : "Select a value from 1 to 15.";
+    this._setEditorFieldError("#alerts_reviews_days", alertsReviewsDaysMessage);
+    if (alertsReviewsDaysMessage) valid = false;
+    const streamHeightRaw = String(
+      this.querySelector("#stream_height")?.value || ""
+    ).trim();
+    const streamHeight = Number(streamHeightRaw);
+    const streamHeightMessage = !streamHeightRaw || Number.isInteger(streamHeight) && streamHeight >= 1 && streamHeight <= 4e3 ? "" : "Enter a whole number from 1 to 4000, or leave blank.";
+    this._setEditorFieldError("#stream_height", streamHeightMessage);
+    if (streamHeightMessage) valid = false;
+    const wideViewEnabled = this.querySelector("#wide_view")?.checked === true;
+    const colWidthRaw = String(
+      this.querySelector("#col_left_width_pct")?.value || ""
+    ).replace(/%/g, "").trim();
+    const colWidth = Number(colWidthRaw);
+    const colWidthMessage = !wideViewEnabled || Number.isInteger(colWidth) && colWidth >= 10 && colWidth <= 90 ? "" : "Enter a whole number from 10 to 90.";
+    this._setEditorFieldError("#col_left_width_pct", colWidthMessage);
+    if (colWidthMessage) valid = false;
+    return valid;
+  }
+  _bindNumericInput(selector, { onSanitize } = {}) {
+    bindNumericInputField2({ root: this, selector, onSanitize });
+  }
+  _render() {
+    const frigEntities = this._frigateEntities();
+    const cams = this._getCams();
     const canAddCamera = cams.length < MAX_CAMERAS;
     const timezoneDisplay = this._timezoneDisplay();
     const hiddenTabs = new Set(this._config?.hidden_tabs || []);
@@ -10119,8 +12112,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const themeRows = THEME_CUSTOM_ROWS.map((row) => {
       const key = row.key;
       const defaultHex = this._themeDefaultHex(key);
-      const saved = normalizeHexColor(themeCustom[key]);
-      const draft = normalizeHexColor(this._themeDraftCache?.[key]);
+      const saved = normalizeHexColor2(themeCustom[key]);
+      const draft = normalizeHexColor2(this._themeDraftCache?.[key]);
       const value = activeTheme === "custom" ? saved || draft || defaultHex : defaultHex;
       const useDefault = themeCustomDefaults[key] === true;
       const visibleValue = useDefault ? defaultHex : value;
@@ -10533,13 +12526,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
       </div>
     </div>`;
     const update = () => this._u({ dispatch: false, preview: true });
-    bindThemeControlEvents({
+    bindThemeControlEvents2({
       root: this,
       update,
       themeDraftCache: this._themeDraftCache,
       resolveDefaultHex: (key) => this._themeDefaultHex(key)
     });
-    setupSelectSelector({
+    setupSelectSelector2({
       element: this.querySelector("#window_days"),
       hass: this._hass,
       options: Array.from({ length: 15 }, (_, index) => {
@@ -10551,7 +12544,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       normalize: (value) => String(value ?? "3"),
       onChange: () => update()
     });
-    setupSelectSelector({
+    setupSelectSelector2({
       element: this.querySelector("#alerts_reviews_days"),
       hass: this._hass,
       options: Array.from({ length: 15 }, (_, index) => {
@@ -10563,7 +12556,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       normalize: (value) => String(value ?? "3"),
       onChange: () => update()
     });
-    setupSelectSelector({
+    setupSelectSelector2({
       element: this.querySelector("#realtime_poll_seconds"),
       hass: this._hass,
       options: REALTIME_POLL_OPTIONS_SECONDS.map((value) => ({
@@ -10575,7 +12568,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       normalize: (value) => String(value ?? "5"),
       onChange: () => update()
     });
-    setupSelectSelector({
+    setupSelectSelector2({
       element: this.querySelector("#slideshow_rotation_seconds"),
       hass: this._hass,
       options: [
@@ -10589,7 +12582,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       normalize: (value) => String(value ?? "30"),
       onChange: () => update()
     });
-    setupSelectSelector({
+    setupSelectSelector2({
       element: this.querySelector("#grid_rotation_seconds"),
       hass: this._hass,
       options: [
@@ -10603,7 +12596,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       normalize: (value) => String(value ?? "30"),
       onChange: () => update()
     });
-    setupSelectSelector({
+    setupSelectSelector2({
       element: this.querySelector("#stream_height_unit"),
       hass: this._hass,
       options: [
@@ -10616,13 +12609,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
       normalize: (value) => String(value ?? "vh"),
       onChange: () => update()
     });
-    setupEntitySelector({
+    setupEntitySelector2({
       element: this.querySelector("#camera-modal-entity"),
       hass: this._hass,
       domain: "camera",
       label: "Camera"
     });
-    setupSelectSelector({
+    setupSelectSelector2({
       element: this.querySelector("#camera-modal-connection-type"),
       hass: this._hass,
       options: [
@@ -10631,9 +12624,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
       ],
       initialValue: DEFAULT_CAMERA_CONNECTION_TYPE,
       fallbackValue: DEFAULT_CAMERA_CONNECTION_TYPE,
-      normalize: (value) => normalizeCameraConnectionType(value)
+      normalize: (value) => normalizeCameraConnectionType2(value)
     });
-    bindClickHandlers(this, [
+    bindClickHandlers2(this, [
       {
         selector: "#camera-add",
         handler: () => this._openCameraModal(null)
@@ -10651,14 +12644,14 @@ const FrigateViewCardEditor = class extends HTMLElement {
         handler: () => this._saveCameraModal()
       }
     ]);
-    bindEachClickHandler({
+    bindEachClickHandler2({
       root: this,
       selector: "[data-edit-cam]",
       handler: (event) => {
         this._openCameraModal(Number(event.currentTarget.dataset.editCam));
       }
     });
-    bindEachClickHandler({
+    bindEachClickHandler2({
       root: this,
       selector: "[data-remove-cam]",
       handler: (event) => {
@@ -10680,13 +12673,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
     this._wireCameraDragAndDrop();
     this._wireSettingsPanels();
     this._wireEditorDialogActions();
-    bindEventsForIds({
+    bindEventsForIds2({
       root: this,
       ids: ["title", "subtitle", "stream_height", "col_left_width_pct"],
       events: ["change"],
       handler: () => update()
     });
-    bindEventsForIds({
+    bindEventsForIds2({
       root: this,
       ids: [
         "tight_margins",
@@ -10720,7 +12713,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
         update();
       }
     });
-    bindEventsForSelectorAll({
+    bindEventsForSelectorAll2({
       root: this,
       selector: "[data-active-tab]",
       events: ["change", "value-changed"],
@@ -10757,9 +12750,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
     return Array.isArray(this._config?.cameras) ? this._config.cameras.map((c) => ({
       entity: c?.entity || "",
       name: c?.name || "",
-      connection_type: normalizeCameraConnectionType(c?.connection_type),
-      alerts_content: normalizeAlertsAreaContent(c?.alerts_content),
-      disable_hls_desktop: normalizeDisableHlsDesktop(
+      connection_type: normalizeCameraConnectionType2(c?.connection_type),
+      alerts_content: normalizeAlertsAreaContent2(c?.alerts_content),
+      disable_hls_desktop: normalizeDisableHlsDesktop2(
         c?.disable_hls_desktop
       )
     })).filter((c) => c.entity).slice(0, MAX_CAMERAS) : [];
@@ -10777,7 +12770,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
   _u({ dispatch = true, preview = false } = {}) {
     if (!this._validateEditorFields()) return;
     const cameras = this._getCams();
-    const nextConfig = buildEditorConfigFromDom({
+    const nextConfig = buildEditorConfigFromDom2({
       root: this,
       baseConfig: this._config,
       cameras,
@@ -10786,13 +12779,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
     this._config = nextConfig;
     if (preview) {
       this._hasVisualDraft = true;
-      this._emitPreviewDraft(createEditorPreviewDraft(nextConfig));
+      this._emitPreviewDraft(createEditorPreviewDraft2(nextConfig));
     }
     if (dispatch) this._dispatch();
   }
   _dispatch() {
-    const config = withCardTypeForYaml(
-      compactEditorConfigForYaml(this._config, {
+    const config = withCardTypeForYaml2(
+      compactEditorConfigForYaml2(this._config, {
         themeDefaultColors: this._themeDefaultHexMap()
       }),
       { sourceConfig: this._config }
@@ -10808,9 +12801,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
 
 // src/index.js
 if (!customElements.get(CARD_TAG))
-  customElements.define(CARD_TAG, FrigateViewCard);
+  customElements.define(CARD_TAG, void 0);
 if (!customElements.get(CARD_TAG + "-editor"))
-  customElements.define(CARD_TAG + "-editor", FrigateViewCardEditor);
+  customElements.define(CARD_TAG + "-editor", FrigateViewCardEditor2);
 window.customCards = window.customCards || [];
 if (!window.customCards.find((c) => c.type === CARD_TAG))
   window.customCards.push({
