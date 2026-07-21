@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.587";
+const VERSION = "1.0.588";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1178,6 +1178,7 @@ const buildEditorConfigFromDom = ({
   nextConfig.stream_height_unit = streamHeightUnit;
   nextConfig.tight_margins = root.querySelector("#tight_margins")?.checked === true;
   nextConfig.shadows = root.querySelector("#shadows")?.checked !== false;
+  nextConfig.borders = root.querySelector("#borders")?.checked !== false;
   nextConfig.wide_view = root.querySelector("#wide_view")?.checked === true;
   const leftWidthRaw = root.querySelector("#col_left_width_pct")?.value?.replace(/%/g, "").trim();
   nextConfig.col_left_width_pct = leftWidthRaw ? Math.min(Math.max(parseInt(leftWidthRaw, 10) || 50, 10), 90) : 50;
@@ -1323,6 +1324,7 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     false
   );
   addIfNotDefault(compact, "shadows", source.shadows !== false, true);
+  addIfNotDefault(compact, "borders", source.borders !== false, true);
   addIfNotDefault(compact, "wide_view", source.wide_view === true, false);
   const leftWidth = Number(source.col_left_width_pct) || 50;
   addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
@@ -1368,6 +1370,7 @@ const createEditorPreviewDraft = (config) => ({
   stream_height_unit: config.stream_height_unit,
   tight_margins: config.tight_margins,
   shadows: config.shadows,
+  borderss: config.borders,
   wide_view: config.wide_view,
   col_left_width_pct: config.col_left_width_pct
 });
