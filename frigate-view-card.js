@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.546";
+const VERSION = "1.0.547";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -496,7 +496,7 @@ const STYLES = `
   .landing-grid > div {min-width: 0;}
 
   .landing-cell{display:flex;flex-direction:column;cursor:pointer;border-radius: 0 0 15px 15px}
-  .landing-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:15px;border:1px solid var(--c-border2);background:var(--c-bg-deep);}
+  .landing-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:15px;background:var(--c-bg-deep);}
   .landing-media-host.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
   .landing-media-host.grid-detection{border-color:var(--warning-color, var(--c-accent));box-shadow:inset 0 0 0 2px var(--warning-color, var(--c-accent));}
   .landing-media-host video,.landing-media-host img,.landing-media-host ha-camera-stream{width:100%;height:100%;display:block;object-fit:contain;object-position:center center;background:var(--c-bg-deep);}
