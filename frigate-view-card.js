@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.586";
+const VERSION = "1.0.587";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10331,7 +10331,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Borders</span>
-          <ha-switch id="borderss" ${this._config?.borders !== false ? "checked" : ""}></ha-switch>
+          <ha-switch id="borders" ${this._config?.borders !== false ? "checked" : ""}></ha-switch>
         </div>
       </div>
       <div class="section">
