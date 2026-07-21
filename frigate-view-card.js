@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.585";
+const VERSION = "1.0.586";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -166,11 +166,12 @@ const STYLES = `
     min-height: 0 !important;
     height: auto;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
+    border:var(--fvc-border-s) !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
-    --fvc-border-s: 1px solid #ffcc33;
+    : 1px solid #ffcc33;
     --fvc-border-m:  2px solid var(--c-border);
     --fvc-border-active:  1px solid var(--c-primary);
     --ha-card-background: var(--c-bg-main) !important;
@@ -1698,12 +1699,14 @@ const FrigateViewCard = class extends HTMLElement {
       stream_height_unit: previewConfig.stream_height_unit || "vh",
       tight_margins: previewConfig.tight_margins === true,
       shadows: previewConfig.shadows !== false,
+      borders: previewConfig.borders !== false,
       wide_view: previewConfig.wide_view === true,
       col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50
     } : base;
     this._config = next;
     this._syncCardShellClasses();
     this._syncDomShadows();
+    this._syncDomBorders();
     this._browseOpen = this._config.browse_expanded;
     if (JSON.stringify(next.hidden_tabs || []) !== prevHiddenTabs) {
       this._syncTabsShell();
@@ -1739,6 +1742,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._syncCardShellClasses();
     this._syncDomShadows();
+    this._syncDomBorders();
     this._scheduleRotateOverlayUpdate();
     if (this._started) {
       this._startEditModeWatchdog();
@@ -1762,6 +1766,13 @@ const FrigateViewCard = class extends HTMLElement {
       if (!(el instanceof HTMLElement)) continue;
       el.style.boxShadow = original.boxShadow;
       el.style.borderRadius = original.borderRadius;
+    }
+    this._domShadowOriginalStyles.clear();
+  }
+  _restoreDomBorderStyles() {
+    for (const [el, original] of this._domShadowOriginalStyles.entries()) {
+      if (!(el instanceof HTMLElement)) continue;
+      el.style.border = original.border;
     }
     this._domShadowOriginalStyles.clear();
   }
@@ -1793,9 +1804,22 @@ const FrigateViewCard = class extends HTMLElement {
         boxShadow: el.style.boxShadow,
         borderRadius: el.style.borderRadius
       });
-      el.style.boxShadow = "var(--ha-box-shadow-m)";
+      el.style.boxShadow = "var(--ha-box-shadow-s)";
       if (!el.style.borderRadius) {
         el.style.borderRadius = "var(--ha-card-border-radius, 12px)";
+      }
+    }
+  }
+  _syncDomBorders() {
+    this._restoreDomShadowStyles();
+    if (this._config?.borders === false) return;
+    for (const el of this._collectDomShadowTargets()) {
+      this._domShadowOriginalStyles.set(el, {
+        border: el.style.border
+      });
+      el.style.boxShadow = "var(--ha-box-shadow-s)";
+      if (!el.style.border) {
+        el.style.border = "var(--fvc-border-s)";
       }
     }
   }
@@ -1977,6 +2001,7 @@ const FrigateViewCard = class extends HTMLElement {
       stream_height_unit: config.stream_height_unit || "vh",
       tight_margins: config.tight_margins === true,
       shadows: config.shadows !== false,
+      borders: config.borders !== false,
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50
     };
@@ -2002,6 +2027,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._syncCardShellClasses();
     this._syncDomShadows();
+    this._syncDomBorders();
     this._browseOpen = this._config.browse_expanded;
     for (const c of cameras) {
       if (!this._camCache[c.entity]) this._camCache[c.entity] = mkCamState();
@@ -2226,6 +2252,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._setSectionsRowGap(false);
     this._restoreDomShadowStyles();
+    this._restoreDomBorderStyles();
     this._cleanupEngine();
   }
   // ── init ─────────────────────────────────────────────────
@@ -6049,7 +6076,7 @@ const FrigateViewCard = class extends HTMLElement {
     const showCamSwitcher = this._config.cameras.length > 1 || this._isLandingPageEnabled();
     const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._config.shadows === false ? "borders-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
+    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._config.borders === false ? "borders" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
 
         <div class="layout shadow-medium" id="layout">
 
@@ -10304,7 +10331,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Borders</span>
-          <ha-switch id="shadows" ${this._config?.borders !== false ? "checked" : ""}></ha-switch>
+          <ha-switch id="borderss" ${this._config?.borders !== false ? "checked" : ""}></ha-switch>
         </div>
       </div>
       <div class="section">

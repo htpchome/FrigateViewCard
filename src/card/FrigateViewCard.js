@@ -339,6 +339,7 @@ export class FrigateViewCard extends HTMLElement {
           stream_height_unit: previewConfig.stream_height_unit || "vh",
           tight_margins: previewConfig.tight_margins === true,
           shadows: previewConfig.shadows !== false,
+          borders: previewConfig.borders !== false,
           wide_view: previewConfig.wide_view === true,
           col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
         }
@@ -347,6 +348,7 @@ export class FrigateViewCard extends HTMLElement {
     this._config = next;
     this._syncCardShellClasses();
     this._syncDomShadows();
+    this._syncDomBorders();
     this._browseOpen = this._config.browse_expanded;
     if (JSON.stringify(next.hidden_tabs || []) !== prevHiddenTabs) {
       this._syncTabsShell();
@@ -382,6 +384,7 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._syncCardShellClasses();
     this._syncDomShadows();
+    this._syncDomBorders();
     this._scheduleRotateOverlayUpdate();
     if (this._started) {
       this._startEditModeWatchdog();
@@ -407,6 +410,13 @@ export class FrigateViewCard extends HTMLElement {
       if (!(el instanceof HTMLElement)) continue;
       el.style.boxShadow = original.boxShadow;
       el.style.borderRadius = original.borderRadius;
+    }
+    this._domShadowOriginalStyles.clear();
+  }
+  _restoreDomBorderStyles() {
+    for (const [el, original] of this._domShadowOriginalStyles.entries()) {
+      if (!(el instanceof HTMLElement)) continue;  
+      el.style.border = original.border;
     }
     this._domShadowOriginalStyles.clear();
   }
@@ -445,9 +455,22 @@ export class FrigateViewCard extends HTMLElement {
         boxShadow: el.style.boxShadow,
         borderRadius: el.style.borderRadius,
       });
-      el.style.boxShadow = "var(--ha-box-shadow-m)";
+      el.style.boxShadow = "var(--ha-box-shadow-s)";
       if (!el.style.borderRadius) {
         el.style.borderRadius = "var(--ha-card-border-radius, 12px)";
+      }
+    }
+  }
+  _syncDomBorders() {
+    this._restoreDomShadowStyles();
+    if (this._config?.borders === false) return;
+    for (const el of this._collectDomShadowTargets()) {
+      this._domShadowOriginalStyles.set(el, {
+        border: el.style.border,
+      });
+      el.style.boxShadow = "var(--ha-box-shadow-s)";
+      if (!el.style.border) {
+        el.style.border = "var(--fvc-border-s)";
       }
     }
   }
@@ -684,6 +707,7 @@ export class FrigateViewCard extends HTMLElement {
       stream_height_unit: config.stream_height_unit || "vh",
       tight_margins: config.tight_margins === true,
       shadows: config.shadows !== false,
+      borders: config.borders !== false,
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
     };
@@ -719,6 +743,7 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._syncCardShellClasses();
     this._syncDomShadows();
+    this._syncDomBorders();
     this._browseOpen = this._config.browse_expanded;
     for (const c of cameras) {
       if (!this._camCache[c.entity]) this._camCache[c.entity] = mkCamState();
@@ -968,6 +993,7 @@ getGridOptions() {
     }
     this._setSectionsRowGap(false);
     this._restoreDomShadowStyles();
+    this._restoreDomBorderStyles();
     this._cleanupEngine();
   }
   // ── init ─────────────────────────────────────────────────
@@ -5392,7 +5418,7 @@ getGridOptions() {
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._config.shadows === false ? "borders-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
+    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._config.borders === false ? "borders" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
 
         <div class="layout shadow-medium" id="layout">
 

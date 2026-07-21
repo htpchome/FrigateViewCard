@@ -49,11 +49,12 @@ export const STYLES = `
     min-height: 0 !important;
     height: auto;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
+    border:var(--fvc-border-s) !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
-    --fvc-border-s: 1px solid #ffcc33;
+    : 1px solid #ffcc33;
     --fvc-border-m:  2px solid var(--c-border);
     --fvc-border-active:  1px solid var(--c-primary);
     --ha-card-background: var(--c-bg-main) !important;

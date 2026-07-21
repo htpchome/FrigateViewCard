@@ -850,7 +850,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Borders</span>
-          <ha-switch id="shadows" ${this._config?.borders !== false ? "checked" : ""}></ha-switch>
+          <ha-switch id="borderss" ${this._config?.borders !== false ? "checked" : ""}></ha-switch>
         </div>
       </div>
       <div class="section">
