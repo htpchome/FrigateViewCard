@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.550";
+const VERSION = "1.0.551";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -431,8 +431,8 @@ const STYLES = `
     z-index: -1; 
     filter: brightness(115%); }
   .glass-btn:hover{background:rgba(255, 255, 255, 0.3);} 
-  .glass-btn svg {width:24px;height:24px;opacity: 0.8; }
-  .glass-btn:hover svg {width:30px;height:30px;opacity: 0.95; }
+  .glass-btn svg{width:24px;height:24px;opacity: 0.8; }
+  .glass-btn:hover svg{width:30px;height:30px;opacity: 0.95; }
 
   .mute-btn {position:absolute;right:8px;bottom:8px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
@@ -442,6 +442,7 @@ const STYLES = `
   .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
   .cam-tab.active:hover{background:var(--c-primary-d);color:var(--c-text-rev);}
   .cam-tab svg{width:14.4px;height:14.4px;flex-shrink:0;}
+  .cam-tab:hover svg{width:14.4px;height:14.4px;flex-shrink:0;} 
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
 
   .overlay-fs{position:absolute;top:8px;left:8px;z-index:3;padding: 3px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
