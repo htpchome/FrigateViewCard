@@ -462,16 +462,13 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
   _syncDomBorders() {
-    this._restoreDomShadowStyles();
+    this._restoreDomBorderStyles();
     if (this._config?.borders === false) return;
     for (const el of this._collectDomShadowTargets()) {
       this._domShadowOriginalStyles.set(el, {
         border: el.style.border,
       });
-      el.style.boxShadow = "var(--ha-box-shadow-s)";
-      if (!el.style.border) {
-        el.style.border = "var(--fvc-border-s)";
-      }
+      el.style.border = "var(--fvc-border-s)";
     }
   }
 
