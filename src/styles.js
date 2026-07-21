@@ -44,9 +44,9 @@ export const STYLES = `
   /* ── responsive layout ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-    --ha-card-border-radius: --fvc-border-radius !important;
-    --ha-box-shadow-s: --fvc-border-s !important;
-    --ha-box-shadow-m: --fvc-border-m !important;
+    --ha-card-border-radius: var(--fvc-border-radius) !important;
+    --ha-card-box-shadow: var(--fvc-border-s) !important;
+    --ha-card-border: var(--fvc-border-s: 1px solid #ffcc33) !important;
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
@@ -64,7 +64,7 @@ export const STYLES = `
     color:var(--c-text);
     overflow:hidden;
     box-sizing: border-box;
-    border-radius: var(--fvc-border-radius);
+
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
