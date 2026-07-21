@@ -2518,7 +2518,7 @@ getGridOptions() {
         stream.controls = false;
         stream.muted = true;
         stream.defaultMuted = true;
-        stream.style.cssText = "width:100%;height:100%;display:block";
+        stream.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
         cell.appendChild(stream);
         this._attachVideoFit(stream);
       }
@@ -2846,7 +2846,7 @@ getGridOptions() {
         s.stateObj = stateObj;
         s.controls = false;
         s.muted = this._streamMuted;
-        s.style.cssText = "width:100%;height:100%;display:block";
+        s.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
 
         slot.innerHTML = "";
         slot.appendChild(s);

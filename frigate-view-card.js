@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.583";
+const VERSION = "1.0.584";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -580,7 +580,7 @@ const STYLES = `
   .tool:hover svg{color:var(--c-primary-d);}
   .tool:hover ha-icon{color:var(--c-primary-d);opacity:1;}
   .tool.active{background:var(--c-primary-d);color:var(--c-text-rev);border-color:var(--c-primary-d);}
-  .tool:active svg{color:var(--c-text-rev);opacity:1;}
+  .tool.active svg{color:var(--c-text-rev);opacity:1;}
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
@@ -3565,7 +3565,7 @@ const FrigateViewCard = class extends HTMLElement {
         stream.controls = false;
         stream.muted = true;
         stream.defaultMuted = true;
-        stream.style.cssText = "width:100%;height:100%;display:block";
+        stream.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
         cell.appendChild(stream);
         this._attachVideoFit(stream);
       }
@@ -3872,7 +3872,7 @@ const FrigateViewCard = class extends HTMLElement {
         s.stateObj = stateObj;
         s.controls = false;
         s.muted = this._streamMuted;
-        s.style.cssText = "width:100%;height:100%;display:block";
+        s.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
         slot.innerHTML = "";
         slot.appendChild(s);
         this._engine = s;
