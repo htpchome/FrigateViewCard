@@ -1280,6 +1280,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         "wide_view",
         "shadows",
         "borders",
+        "rounded_corners",
         "mobile_poll_battery_saver",
         "slideshow_rotation_enabled",
         "grid_mode_enabled",

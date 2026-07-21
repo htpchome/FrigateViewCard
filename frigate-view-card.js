@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.606";
+const VERSION = "1.0.607";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10701,6 +10701,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
         "wide_view",
         "shadows",
         "borders",
+        "rounded_corners",
         "mobile_poll_battery_saver",
         "slideshow_rotation_enabled",
         "grid_mode_enabled",
