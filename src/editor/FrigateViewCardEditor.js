@@ -1178,6 +1178,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         { value: "vh", label: "dvh" },
         { value: "em", label: "em" },
         { value: "px", label: "px" },
+        { value: "%", label: "%"}
       ],
       initialValue: this._config?.stream_height_unit || "vh",
       fallbackValue: "vh",

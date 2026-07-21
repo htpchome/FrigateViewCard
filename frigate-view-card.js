@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.581";
+const VERSION = "1.0.582";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10613,7 +10613,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
       options: [
         { value: "vh", label: "dvh" },
         { value: "em", label: "em" },
-        { value: "px", label: "px" }
+        { value: "px", label: "px" },
+        { value: "%", label: "%" }
       ],
       initialValue: this._config?.stream_height_unit || "vh",
       fallbackValue: "vh",
