@@ -212,7 +212,7 @@ export const STYLES = `
 
   /* ── feed area ── */
     .feed-area{position:relative;width:100%;}
-    #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
+    #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--view-height,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
     #engine,#stream-fallback{transition:opacity .22s ease;}
     #eng-wrap::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:5;box-sizing:border-box;border:0 solid transparent;transition:border-color .2s ease,border-width .2s ease;}
     #eng-wrap.slideshow-switching #engine,
@@ -363,7 +363,7 @@ export const STYLES = `
   .live-grid-label{position:absolute;left:6px;top:6px;z-index:2;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:.68rem;line-height:1.2;pointer-events:none;text-transform:none;}
   .landing-shell,.landing-shell-header,.landing-shell-footer{display:none;}
   .card.landing-active{width:100%;max-width:none;margin:0;}
-  .card.landing-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--stream-h,100dvh);max-height:var(--stream-h,100dvh);overflow:hidden !important;}
+  .card.landing-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--view-height,100dvh);max-height:var(--view-height,100dvh);overflow:hidden !important;}
   .card.landing-active .col-left,.card.landing-active .resize-handle,.card.landing-active .col-right{display:none;}
 
   .card.landing-active .landing-shell-header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;top:0;z-index:4;}
