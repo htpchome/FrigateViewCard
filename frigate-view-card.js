@@ -164,7 +164,7 @@ const STYLES = `
     --ha-card-border-radius: var(--fvc-border-radius) !important;
     --ha-card-box-shadow: var(--fvc-shadow-m) !important;
     border-radius: var(--fvc-border-radius) !important;
-    box-shadow: var(--fvc-shadow-m) !important;
+    box-shadow: var(--ha-box-shadow-m) !important;
     border: var(--fvc-border-m);
     padding: 0 !important;
     margin: 0 !important;
