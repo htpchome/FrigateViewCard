@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.553";
+const VERSION = "1.0.554";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -164,6 +164,8 @@ const STYLES = `
     margin: 0 !important;
     min-height: 0 !important;
     height: 100%;
+    display: flex;
+    flex-direction: column;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     }
   .card{
@@ -189,8 +191,8 @@ const STYLES = `
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
 
-  .layout{display:flex;flex-direction:column;min-height:0;width:100%;
-    overflow: hidden !important;}
+  .layout{display:flex;flex-direction:column;min-height:0;height:100%;width:100%;
+    overflow: hidden !important;justify-content: space-between;}
   .layout.wide{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
   .card .col-left > *{flex:0 0 auto;}
