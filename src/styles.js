@@ -56,8 +56,6 @@ export const STYLES = `
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: var(--ha-card-border-radius,13px);
     --ha-card-background: var(--c-bg-main) !important;
-    box-shadow: var(--fvc-shadow-m) !important;
-    border: var(--fvc-border-s) !important;
     color:var(--c-text);
     overflow:hidden;
     box-sizing: border-box;
@@ -79,7 +77,7 @@ export const STYLES = `
   .card.corners-off{--fvc-border-radius:0px;}
 
   .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
-    overflow: hidden !important;border:var(--fvc-border-s);}
+    overflow: hidden !important;border:var(--fvc-border-s);box-shadow: var(--fvc-shadow-m);}
   .layout.wide{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
   .card .col-left > *{flex:0 0 auto;}
