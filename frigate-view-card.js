@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.55";
+const VERSION = "1.0.558";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -329,8 +329,8 @@ const STYLES = `
   .more.to-top{position:relative;cursor:pointer;color:var(--c-text2);}
 
   /* \u2500\u2500 feed area \u2500\u2500 */
-    .feed-area{position:relative;width:100%;min-height:0;height:100$;}
-    #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
+    .feed-area{display:flex;position:relative;width:100%;min-height:0;height:100$;}
+    #eng-wrap{display:flex;background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;height:100%;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
     #engine,#stream-fallback{transition:opacity .22s ease;}
     #eng-wrap::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:5;box-sizing:border-box;border:0 solid transparent;transition:border-color .2s ease,border-width .2s ease;}
     #eng-wrap.slideshow-switching #engine,
