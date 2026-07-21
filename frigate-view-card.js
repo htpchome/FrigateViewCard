@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.544";
+const VERSION = "1.0.545";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -490,31 +490,17 @@ const STYLES = `
   .landing-shell-footer .frigate-view{position:static;max-height:24px;}
   .landing-shell-footer .frigate-view svg{height:24px;}
 
-.landing-grid {
-  display: grid;
-  gap: 10px;
-  width: 100%;
-  max-width: 100%;
-  grid-template-columns: repeat(
-    auto-fit, 
-    minmax(
-      max(min(100%, 420px), calc(33.333% - 10px)), 
-      1fr
-    )
-  );
-}
-  .landing-grid > div {
-  min-width: 0; 
-}
+  .landing-grid {display: grid;gap: 10px;width: 100%;max-width: 100%;
+    grid-template-columns: repeat(auto-fit,minmax(max(min(100%, 420px), calc(33.333% - 10px)),1fr));
+  }
+    .landing-grid > div {min-width: 0;}
 
-
-  .landing-cell{display:flex;flex-direction:column;gap:6px;cursor:pointer;}
+  .landing-cell{display:flex;flex-direction:column;cursor:pointer;}
   .landing-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:10px;border:1px solid var(--c-border2);background:var(--c-bg-deep);}
   .landing-media-host.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
   .landing-media-host.grid-detection{border-color:var(--warning-color, var(--c-accent));box-shadow:inset 0 0 0 2px var(--warning-color, var(--c-accent));}
   .landing-media-host video,.landing-media-host img,.landing-media-host ha-camera-stream{width:100%;height:100%;display:block;object-fit:contain;object-position:center center;background:var(--c-bg-deep);}
-  .landing-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;border-radius:10px;border:1px solid var(--c-border2);background:var(--c-bg-panel);box-shadow:var(--card-shad);}
-  .card.shadows-off .landing-meta{box-shadow:none;}
+  .landing-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;border-radius:10px;border:1px solid var(--c-border2);background:var(--c-bg-main);}
   .landing-meta-name{font-size:.82rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .landing-meta-source{font-size:.7rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .landing-meta-events{font-size:.72rem;color:var(--c-text2);}
@@ -4075,7 +4061,7 @@ const FrigateViewCard = class extends HTMLElement {
       const sourceLabel = this._landingStreamSourceLabel(entity, useLive);
       const eventsCount = this._landingEventsCount(entity);
       const name = cap(camDisplayName(camera));
-      return `<div class="landing-cell" data-landing-camidx="${index}">
+      return `<div class="landing-cell shadow-small" data-landing-camidx="${index}">
           <div class="landing-media-host ${severity === "alert" ? "grid-alert" : severity === "detection" ? "grid-detection" : ""}" data-landing-media-entity="${entity}" data-landing-use-live="${useLive ? "1" : "0"}"></div>
           ${showTitleBars ? `<div class="landing-meta">
               <div class="landing-meta-name">${name}</div>
