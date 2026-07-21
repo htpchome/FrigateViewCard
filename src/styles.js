@@ -45,6 +45,8 @@ export const STYLES = `
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
     --ha-card-border-radius: --fvc-border-radius !important;
+    --ha-box-shadow-s: --fvc-border-s !important;
+    --ha-box-shadow-m: --fvc-border-m !important;
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
@@ -57,7 +59,7 @@ export const STYLES = `
     --fvc-border-s: 1px solid #ffcc33;
     --fvc-border-m:  2px solid var(--c-border);
     --fvc-border-active:  1px solid var(--c-primary);
-    --fvc-border-radius: 24px;
+    --fvc-border-radius: 56px;
     --ha-card-border-radius: --fvc-border-radius !important;
     color:var(--c-text);
     overflow:hidden;
