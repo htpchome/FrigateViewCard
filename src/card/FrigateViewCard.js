@@ -399,6 +399,7 @@ export class FrigateViewCard extends HTMLElement {
     const card = this.shadowRoot?.querySelector("#card");
     if (!card) return;
     card.classList.toggle("shadows-off", this._config?.shadows === false);
+    card.classList.toggle("borders-off", this._config?.shadows === false);
   }
 
   _restoreDomShadowStyles() {
@@ -5391,7 +5392,7 @@ getGridOptions() {
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
+    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._config.shadows === false ? "borders-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
 
         <div class="layout shadow-medium" id="layout">
 

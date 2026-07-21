@@ -51,8 +51,11 @@ export const STYLES = `
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     }
   .card{
-    --fvc-shadow-s: var(--ha-box-shadow-m);
+    --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
+    --fvc-border-s: 1px solid #ffcc33;
+    --fvc-border-m:  2px solid var(--c-border);
+    --fvc-border-active:  1px solid var(--c-primary);
     --ha-card-background: var(--c-bg-main) !important;
     color:var(--c-text);
     overflow:hidden;
@@ -72,9 +75,10 @@ export const STYLES = `
     left:0;
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
+  .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
 
   .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
-    overflow: hidden !important;}
+    overflow: hidden !important;border:var(--fvc-border-s);}
   .layout.wide{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
   .card .col-left > *{flex:0 0 auto;}
@@ -101,8 +105,8 @@ export const STYLES = `
   .card.recordings-browse-head-tall:not(.mobile) .browse-head{min-height:3.5rem;max-height:none;}
   .browse-head-left {display:flex;flex:1;justify-content:center;align-items:center;flex: 0 0 auto; }
   .browse-head-right {display:flex;justify-content center;align-items: center;flex: 0 0 auto;}
-  .browse-head-middle {flex:1;text-align:center;font-weight:700;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
-  .prev-next{}
+  .browse-head-middle {flex:1;text-align:center;font-weight:700;font-size:1rem;letter-spacing:.02em;line-height:1.40;box-shadow: var(--fvc-shadow-s);}
+
   .prev-next{display:inline-flex;align-items:center;gap:4px;font-size: 0.85rem;padding-inline: 0.3em;padding-block: 0.3em;line-height: 1;  border-radius: 999em;
     background:var(--c-bg-main);min-width:80px;
     color:var(--c-text2);

@@ -190,6 +190,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       src.theme_custom_defaults = {};
     }
     src.shadows = src.shadows !== false;
+    src.borders = src.borders !== false;
     src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
       Number(src.realtime_poll_seconds),
     )
@@ -848,6 +849,12 @@ export class FrigateViewCardEditor extends HTMLElement {
       </div>
       <div class="section">
         <div class="layout-row">
+          <span class="field-label" style="margin:0">Borders</span>
+          <ha-switch id="shadows" ${this._config?.borders !== false ? "checked" : ""}></ha-switch>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
           <span class="field-label" style="margin:0">Wide View</span>
           <ha-switch id="wide_view" ${this._config?.wide_view ? "checked" : ""}></ha-switch>
         </div>
@@ -1265,6 +1272,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         "tight_margins",
         "wide_view",
         "shadows",
+        "borders",
         "mobile_poll_battery_saver",
         "slideshow_rotation_enabled",
         "grid_mode_enabled",
