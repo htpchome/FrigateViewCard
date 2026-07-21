@@ -2,6 +2,8 @@ export const STYLES = `
   :host {
     height:100% !important;
     min-height:0 !important;
+    height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
+    max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     --rotate-vw: 100vw;
     --rotate-vh: 100dvh;
     --rotate-ox: 0px;
