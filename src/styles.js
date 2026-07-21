@@ -272,7 +272,7 @@ export const STYLES = `
   #stream-fallback img{width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;object-position:center center;display:block;background:var(--c-bg-deep);}
   #stream-fallback::after{content:none;}
   #engine{position:absolute;inset:0;z-index:1;min-height:0;flex-shrink:0;}
-  #engine video{width:100%;height:100%;display:block;object-fit:contain;var(--c-bg-deep);}
+  #engine video{min-height:300px;display:block;object-fit:contain;var(--c-bg-deep);}
   #engine ha-camera-stream,#engine ha-hls-player,#engine webrtc-camera{width:100%;height:100%;display:block;}
   .stream-fallback-status{position:absolute;left:8px;bottom:8px;z-index:3;display:flex;align-items:center;gap:6px;padding:4.8px 9.6px;border-radius:999px;background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:0.825rem;font-weight:600;line-height:1;backdrop-filter:blur(2px);}
   .stream-fallback-status[hidden]{display:none;}
