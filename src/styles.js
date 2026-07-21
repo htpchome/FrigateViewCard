@@ -71,7 +71,8 @@ export const STYLES = `
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
 
-  .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;    overscroll-behavior: none !important;overflow: hidden !important;}
+  .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
+    overflow: hidden !important;}
   .layout.wide{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
   .card .col-left > *{flex:0 0 auto;}
