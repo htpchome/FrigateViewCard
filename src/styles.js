@@ -43,13 +43,10 @@ export const STYLES = `
     }
   /* ── responsive layout ── */
   ha-card {
-    --ha-card-background: var(--c-bg-main) !important;
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
     height: auto;
-    box-shadow: var(--fvc-shadow-m) !important;
-    border: var(--fvc-border-s) !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
@@ -59,6 +56,8 @@ export const STYLES = `
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: var(--ha-card-border-radius,13px);
     --ha-card-background: var(--c-bg-main) !important;
+    box-shadow: var(--fvc-shadow-m) !important;
+    border: var(--fvc-border-s) !important;
     color:var(--c-text);
     overflow:hidden;
     box-sizing: border-box;
