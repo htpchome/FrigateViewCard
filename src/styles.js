@@ -46,7 +46,6 @@ export const STYLES = `
     --ha-card-background: var(--c-bg-main) !important;
     --ha-card-border-radius: var(--fvc-border-radius) !important;
     --ha-card-box-shadow: var(--fvc-border-s) !important;
-    --ha-card-border: var(--fvc-border-s: 1px solid #ffcc33) !important;
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
