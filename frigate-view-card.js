@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.565";
+const VERSION = "1.0.566";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6103,7 +6103,7 @@ const FrigateViewCard = class extends HTMLElement {
           <div class="resize-handle" id="resize-handle"></div>
           <div class="col-right" id="col-right">
             <div class="frigate-view">${ICONS.frigateview}</div>
-            <div class="tabs-holder"> 
+            <div class="tabs-container"> 
               <div class="tabs shadow-small">            
                 ${this._buildTabsMarkup()}              
               </div>

@@ -5452,7 +5452,7 @@ getGridOptions() {
           <div class="resize-handle" id="resize-handle"></div>
           <div class="col-right" id="col-right">
             <div class="frigate-view">${ICONS.frigateview}</div>
-            <div class="tabs-holder"> 
+            <div class="tabs-container"> 
               <div class="tabs shadow-small">            
                 ${this._buildTabsMarkup()}              
               </div>
