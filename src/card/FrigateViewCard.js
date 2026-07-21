@@ -1996,10 +1996,11 @@ getGridOptions() {
       const car = ch > 0 ? cw / ch : 0;
       const near169 = ar > 0 && Math.abs(ar - 16 / 9) < 0.08;
       const nearPanel = ar > 0 && car > 0 && Math.abs(ar - car) < 0.06;
+      const videoDisplayHeight = Math.abs((cw / 16) *9);
 
       videoEl.style.display = "block";
       videoEl.style.width = "100%";
-      videoEl.style.height = "100%";
+      videoEl.style.height = videoDisplayHeight;
       videoEl.style.objectPosition = "center center";
       videoEl.style.objectFit = near169 && nearPanel ? "cover" : "contain";
     };
