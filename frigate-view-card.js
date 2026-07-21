@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.573";
+const VERSION = "1.0.574";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2608,7 +2608,7 @@ const FrigateViewCard = class extends HTMLElement {
     s.stateObj = stateObj;
     s.controls = false;
     s.muted = this._streamMuted;
-    s.style.cssText = "width:100%;height:100%;display:block";
+    s.style.cssText = "display:block;object-fit: contain;";
     slot.innerHTML = "";
     slot.appendChild(s);
     this._attachVideoFit(s);
@@ -2758,7 +2758,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     engine.video.muted = this._streamMuted;
     engine.video.controls = false;
-    engine.video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+    engine.video.style.cssText = "display:block;background:var(--c-bg-deep);object-fit: contain;";
     slot.innerHTML = "";
     slot.appendChild(engine.video);
     this._attachVideoFit(engine.video);
@@ -3318,7 +3318,7 @@ const FrigateViewCard = class extends HTMLElement {
     video.playsInline = true;
     video.muted = muted;
     video.controls = false;
-    video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+    video.style.cssText = "display:block;background:var(--c-bg-deep);object-fit: contain;";
     const ms = new MediaSource();
     video.src = URL.createObjectURL(ms);
     slot.innerHTML = "";
@@ -3491,7 +3491,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _mountGridDirectMSECell(cell, entity, gridState, options = {}) {
     const host = document.createElement("div");
-    host.style.cssText = "width:100%;height:100%;display:block";
+    host.style.cssText = "display:block;object-fit: contain;";
     cell.appendChild(host);
     void (async () => {
       const result = await this._tryMountGo2RTCMSE(
@@ -3563,7 +3563,7 @@ const FrigateViewCard = class extends HTMLElement {
         stream.controls = false;
         stream.muted = true;
         stream.defaultMuted = true;
-        stream.style.cssText = "width:100%;height:100%;display:block";
+        stream.style.cssText = "display:block;object-fit: contain;";
         cell.appendChild(stream);
         this._attachVideoFit(stream);
       }
@@ -3594,7 +3594,7 @@ const FrigateViewCard = class extends HTMLElement {
     video.playsInline = true;
     video.muted = this._streamMuted;
     video.controls = false;
-    video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+    video.style.cssText = "display:block;background:var(--c-bg-deep);object-fit: contain;";
     slot.innerHTML = "";
     slot.appendChild(video);
     this._attachVideoFit(video);
@@ -3688,7 +3688,7 @@ const FrigateViewCard = class extends HTMLElement {
     video.playsInline = true;
     video.muted = this._streamMuted;
     video.controls = false;
-    video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+    video.style.cssText = "display:block;background:var(--c-bg-deep);object-fit: contain;";
     video.src = hlsUrl;
     slot.innerHTML = "";
     slot.appendChild(video);
@@ -3870,7 +3870,7 @@ const FrigateViewCard = class extends HTMLElement {
         s.stateObj = stateObj;
         s.controls = false;
         s.muted = this._streamMuted;
-        s.style.cssText = "width:100%;height:100%;display:block";
+        s.style.cssText = "display:block;object-fit: contain;";
         slot.innerHTML = "";
         slot.appendChild(s);
         this._engine = s;

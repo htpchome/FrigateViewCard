@@ -1440,7 +1440,7 @@ getGridOptions() {
     s.stateObj = stateObj;
     s.controls = false;
     s.muted = this._streamMuted;
-    s.style.cssText = "width:100%;height:100%;display:block";
+    s.style.cssText = "display:block;object-fit: contain;";
 
     slot.innerHTML = "";
     slot.appendChild(s);
@@ -1600,7 +1600,7 @@ getGridOptions() {
     engine.video.muted = this._streamMuted;
     engine.video.controls = false;
     engine.video.style.cssText =
-      "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+      "display:block;background:var(--c-bg-deep);object-fit: contain;";
     slot.innerHTML = "";
     slot.appendChild(engine.video);
     this._attachVideoFit(engine.video);
@@ -2255,7 +2255,7 @@ getGridOptions() {
     video.muted = muted;
     video.controls = false;
     video.style.cssText =
-      "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+      "display:block;background:var(--c-bg-deep);object-fit: contain;";
 
     const ms = new MediaSource();
     video.src = URL.createObjectURL(ms);
@@ -2445,7 +2445,7 @@ getGridOptions() {
 
   _mountGridDirectMSECell(cell, entity, gridState, options = {}) {
     const host = document.createElement("div");
-    host.style.cssText = "width:100%;height:100%;display:block";
+    host.style.cssText = "display:block;object-fit: contain;";
     cell.appendChild(host);
     void (async () => {
       const result = await this._tryMountGo2RTCMSE(
@@ -2518,7 +2518,7 @@ getGridOptions() {
         stream.controls = false;
         stream.muted = true;
         stream.defaultMuted = true;
-        stream.style.cssText = "width:100%;height:100%;display:block";
+        stream.style.cssText = "display:block;object-fit: contain;";
         cell.appendChild(stream);
         this._attachVideoFit(stream);
       }
@@ -2554,7 +2554,7 @@ getGridOptions() {
     video.muted = this._streamMuted;
     video.controls = false;
     video.style.cssText =
-      "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+      "display:block;background:var(--c-bg-deep);object-fit: contain;";
 
     slot.innerHTML = "";
     slot.appendChild(video);
@@ -2655,7 +2655,7 @@ getGridOptions() {
     video.muted = this._streamMuted;
     video.controls = false;
     video.style.cssText =
-      "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+      "display:block;background:var(--c-bg-deep);object-fit: contain;";
     video.src = hlsUrl;
 
     slot.innerHTML = "";
@@ -2846,7 +2846,7 @@ getGridOptions() {
         s.stateObj = stateObj;
         s.controls = false;
         s.muted = this._streamMuted;
-        s.style.cssText = "width:100%;height:100%;display:block";
+        s.style.cssText = "display:block;object-fit: contain;";
 
         slot.innerHTML = "";
         slot.appendChild(s);
