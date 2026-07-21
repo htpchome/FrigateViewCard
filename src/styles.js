@@ -41,25 +41,24 @@ export const STYLES = `
         --c-bg-scrub:  #c2f2c1;
         --c-bg-alert:  #dc3146;
     }
-  /* ── responsive layout     --ha-card-border-radius: var(--fvc-border-radius) !important; ── */
+  /* ── responsive layout         border-radius: var(--fvc-border-radius) !important; ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-
-    --ha-card-box-shadow: var(--fvc-shadow-s) !important;
+    --ha-card-border-radius: var(--fvc-border-radius) !important;
+    --ha-card-box-shadow: var(--fvc-shadow-m) !important;
     box-shadow: var(--fvc-shadow-m) !important;
-    border-radius: var(--fvc-border-radius) !important;
     border: var(--fvc-border-s);
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
-    box-shadow: var(--fvc-shadow-m) !important;
-    height: auto;
+    height: 100%;
+    overflow:visible !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
     --fvc-border-s: 1px solid #ffcc33;
-    --fvc-border-m:  2px solid var(--c-border);
+    --fvc-border-m:  2px solid #ff6d33;
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: 56px;
     --ha-card-border-radius: --fvc-border-radius !important;
