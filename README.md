@@ -1,3 +1,8 @@
+##### Under Construction ####
+
+Use at your own risk while this card is being built.
+
+
 # FrigateViewCard
 
 A simple Camera and Events Card to use with Home Assistant and Frigate.

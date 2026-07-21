@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.591";
+const VERSION = "1.0.592";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -165,8 +165,8 @@ const STYLES = `
     margin: 0 !important;
     min-height: 0 !important;
     height: auto;
-    box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
-    border:var(--fvc-border-s) !important;
+    box-shadow: var(--fvc-shadow-m) !important;
+    border: var(--fvc-border-s) !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
@@ -174,17 +174,17 @@ const STYLES = `
     --fvc-border-s: 1px solid #ffcc33;
     --fvc-border-m:  2px solid var(--c-border);
     --fvc-border-active:  1px solid var(--c-primary);
+    --fvc-border-radius: var(--ha-card-border-radius,13px)
     --ha-card-background: var(--c-bg-main) !important;
     color:var(--c-text);
     overflow:hidden;
     box-sizing: border-box;
-    border-radius:var(--ha-card-border-radius,13px);
+    border-radius: var(--fvc-border-radius);
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     display:flex;
     flex-direction:column;
-    box-shadow: var(--fvc-shadow-m);
     height:100%;
     padding:0;
     margin: 0 auto;
@@ -6076,7 +6076,7 @@ const FrigateViewCard = class extends HTMLElement {
     const showCamSwitcher = this._config.cameras.length > 1 || this._isLandingPageEnabled();
     const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._config.borders === false ? "borders" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
+    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._config.borders === false ? "borders-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
 
         <div class="layout shadow-medium" id="layout">
 
