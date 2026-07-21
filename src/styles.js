@@ -80,7 +80,7 @@ export const STYLES = `
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
   .card .col-left > *{flex:0 0 auto;}
   .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
-  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
+  .card .col-right{flex:1 1 auto; min-height:0; height:100%;flex-direction:column;position:relative;width:100%; display:flex;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
