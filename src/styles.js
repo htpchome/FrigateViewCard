@@ -160,7 +160,7 @@ export const STYLES = `
 
 
   .list-item{position: relative;display:flex;flex-wrap:wrap;gap:9px;align-items:center;
-    background:var(--c-bg-panel-main);margin-bottom:5px;
+    background:var(--c-bg-panel-main);margin-bottom:5px; border: var(--fvc-border-s);
     cursor:pointer;border-radius: 15px;padding:2px 10px 2px 2px;}
   .list-item:hover{background: var(--c-bg-panel);}
   .list-item.compact{padding:2px 10px 2px 2px;flex-wrap:wrap;}
