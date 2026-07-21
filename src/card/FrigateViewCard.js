@@ -841,12 +841,12 @@ export class FrigateViewCard extends HTMLElement {
   getCardSize() {
     return 6;
   }
-  getGridOptions() {
+getGridOptions() {
     return {
-      rows: 3,
-      columns: 6,
-      min_rows: 3,
-      max_rows: 3,
+      columns: 3,     
+      rows: 6,        
+      min_rows: 4,    
+      min_columns: 3, 
     };
   }
   disconnectedCallback() {
