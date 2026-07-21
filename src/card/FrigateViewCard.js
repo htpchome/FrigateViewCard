@@ -5407,6 +5407,11 @@ getGridOptions() {
           </div>
 
           <div class="col-left" id="col-left">
+            <div id="eng-wrap">
+              <div id="engine">
+                <div class="ph">${ICONS.live}<span>Connecting…</span></div>
+              </div>
+            </div>
 
             <div class="info-row">
               <div>

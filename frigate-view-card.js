@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.569";
+const VERSION = "1.0.570";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6058,6 +6058,11 @@ const FrigateViewCard = class extends HTMLElement {
           </div>
 
           <div class="col-left" id="col-left">
+            <div id="eng-wrap">
+              <div id="engine">
+                <div class="ph">${ICONS.live}<span>Connecting\u2026</span></div>
+              </div>
+            </div>
 
             <div class="info-row">
               <div>
