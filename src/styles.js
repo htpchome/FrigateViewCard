@@ -145,7 +145,7 @@ export const STYLES = `
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;border:2px solid transparent;}
 
   /* ── event list ── */
-  .list{flex:1;flex-direction: column;min-height:0;} 
+  .list{flex:1;flex-direction: column;min-height:0;height:100%} 
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
   .list-day-label{position:relative;z-index:1;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-main);border:none;text-align: center;}
