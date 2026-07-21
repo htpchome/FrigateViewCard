@@ -41,14 +41,14 @@ export const STYLES = `
         --c-bg-scrub:  #c2f2c1;
         --c-bg-alert:  #dc3146;
     }
-  /* ── responsive layout ── */
+  /* ── responsive layout     --ha-card-border-radius: var(--fvc-border-radius) !important; ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
 
-    --ha-card-box-shadow: var(--fvc-border-s) !important;
+    --ha-card-box-shadow: var(--fvc-shadow-s) !important;
     box-shadow: var(--fvc-shadow-m) !important;
     border-radius: var(--fvc-border-radius) !important;
-    border: none;
+    border: var(--fvc-border-s);
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
