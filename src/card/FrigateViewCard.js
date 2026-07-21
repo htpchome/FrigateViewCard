@@ -6142,23 +6142,20 @@ getGridOptions() {
 
     this._applyTightMargins();
 
-    // Stream height — sets :host height/max-height via --card-host-height,
-    // and #eng-wrap max-height via --stream-h.
     const vh = this._config.stream_height;
     if (vh) {
       const unit = this._config.stream_height_unit || "vh";
       this.style.setProperty("--card-host-height", `${vh}${unit}`);
-      card.style.setProperty("--stream-h", `${vh}${unit}`);
+      card.style.setProperty("--card-h", `${vh}${unit}`);
     } else {
       this.style.removeProperty("--card-host-height");
-      // Check if HA Sections injected a card height on the host element
       const haCardH = getComputedStyle(this)
         .getPropertyValue("--ha-card-height")
         .trim();
       if (haCardH) {
-        card.style.setProperty("--stream-h", haCardH);
+        card.style.setProperty("--card-h", haCardH);
       } else {
-        card.style.removeProperty("--stream-h");
+        card.style.removeProperty("--card-h");
       }
     }
     const customTheme =

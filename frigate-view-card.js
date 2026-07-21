@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.571";
+const VERSION = "1.0.572";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -480,7 +480,7 @@ const STYLES = `
   .live-grid-label{position:absolute;left:6px;top:6px;z-index:2;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:.68rem;line-height:1.2;pointer-events:none;text-transform:none;}
   .landing-shell,.landing-shell-header,.landing-shell-footer{display:none;}
   .card.landing-active{width:100%;max-width:none;margin:0;}
-  .card.landing-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--stream-h,100dvh);max-height:var(--stream-h,100dvh);overflow:hidden !important;}
+  .card.landing-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--card-h,100dvh);max-height:var(--card-h,100dvh);overflow:hidden !important;}
   .card.landing-active .col-left,.card.landing-active .resize-handle,.card.landing-active .col-right{display:none;}
 
   .card.landing-active .landing-shell-header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid var(--c-border);background:var(--c-bg-main);position:sticky;top:0;z-index:4;}
@@ -6723,14 +6723,14 @@ const FrigateViewCard = class extends HTMLElement {
     if (vh) {
       const unit = this._config.stream_height_unit || "vh";
       this.style.setProperty("--card-host-height", `${vh}${unit}`);
-      card.style.setProperty("--stream-h", `${vh}${unit}`);
+      card.style.setProperty("--card-h", `${vh}${unit}`);
     } else {
       this.style.removeProperty("--card-host-height");
       const haCardH = getComputedStyle(this).getPropertyValue("--ha-card-height").trim();
       if (haCardH) {
-        card.style.setProperty("--stream-h", haCardH);
+        card.style.setProperty("--card-h", haCardH);
       } else {
-        card.style.removeProperty("--stream-h");
+        card.style.removeProperty("--card-h");
       }
     }
     const customTheme = this._config?.theme === "custom" && this._config?.theme_custom && typeof this._config.theme_custom === "object" ? this._config.theme_custom : {};
