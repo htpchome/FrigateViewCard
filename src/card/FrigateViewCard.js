@@ -2000,7 +2000,7 @@ getGridOptions() {
 
       videoEl.style.display = "block";
       videoEl.style.width = "100%";
-      videoEl.style.height = videoDisplayHeight;
+      videoEl.style.height = `${videoDisplayHeight}px`;
       videoEl.style.objectPosition = "center center";
       videoEl.style.objectFit = near169 && nearPanel ? "cover" : "contain";
     };

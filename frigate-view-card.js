@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.576";
+const VERSION = "1.0.577";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3108,7 +3108,7 @@ const FrigateViewCard = class extends HTMLElement {
       const videoDisplayHeight = Math.abs(cw / 16 * 9);
       videoEl.style.display = "block";
       videoEl.style.width = "100%";
-      videoEl.style.height = videoDisplayHeight;
+      videoEl.style.height = `${videoDisplayHeight}px`;
       videoEl.style.objectPosition = "center center";
       videoEl.style.objectFit = near169 && nearPanel ? "cover" : "contain";
     };
