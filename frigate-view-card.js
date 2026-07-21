@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.560";
+const VERSION = "1.0.561";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -198,7 +198,6 @@ const STYLES = `
   .layout.wide{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
   .card .col-left > *{flex:0 0 auto;}
-  .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
   .card .col-right{flex:1 1 auto; min-height:0; height:100%;flex-direction:column;position:relative;width:100%; display:flex;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide) .resize-handle{display:none;}
@@ -331,7 +330,6 @@ const STYLES = `
   .more.to-top{position:relative;cursor:pointer;color:var(--c-text2);}
 
   /* \u2500\u2500 feed area \u2500\u2500 */
-    .feed-area{display:flex;position:relative;width:100%;min-height:0;height:100$;}
     #eng-wrap{display:flex;background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;height:100%;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
     #engine,#stream-fallback{transition:opacity .22s ease;}
     #eng-wrap::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:5;box-sizing:border-box;border:0 solid transparent;transition:border-color .2s ease,border-width .2s ease;}
@@ -6067,7 +6065,6 @@ const FrigateViewCard = class extends HTMLElement {
           </div>
 
           <div class="col-left" id="col-left">
-            <div class="feed-area">
               <div id="eng-wrap">
                 <div id="engine">
                   <div class="ph">${ICONS.live}<span>Connecting\u2026</span></div>
@@ -6083,7 +6080,6 @@ const FrigateViewCard = class extends HTMLElement {
                     <span class="dot"></span><span class="label">Loading\u2026</span>
                   </div>
               </div>
-            </div>
 
             <div class="info-row">
               <div>

@@ -5407,7 +5407,6 @@ getGridOptions() {
           </div>
 
           <div class="col-left" id="col-left">
-            <div class="feed-area">
               <div id="eng-wrap">
                 <div id="engine">
                   <div class="ph">${ICONS.live}<span>Connecting…</span></div>
@@ -5423,7 +5422,6 @@ getGridOptions() {
                     <span class="dot"></span><span class="label">Loading…</span>
                   </div>
               </div>
-            </div>
 
             <div class="info-row">
               <div>
