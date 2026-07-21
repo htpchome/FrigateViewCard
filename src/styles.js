@@ -415,7 +415,7 @@ export const STYLES = `
 
   /* ── info row ── */
   .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
-    border-bottom:1px solid var(--c-border);min-height:0;}
+    border-bottom:1px solid var(--c-border);min-height:0;height:100%}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
   .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;min-height:0;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
@@ -429,6 +429,7 @@ export const STYLES = `
     flex-wrap: wrap; 
     padding: 6px 12px;
     min-height:0;
+    height:100%;
   }
   @media (max-width: 767px) {
     .cam-switcher {
