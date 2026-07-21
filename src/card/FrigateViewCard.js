@@ -5407,21 +5407,21 @@ getGridOptions() {
           </div>
 
           <div class="col-left" id="col-left">
-              <div id="eng-wrap">
-                <div id="engine">
-                  <div class="ph">${ICONS.live}<span>Connecting…</span></div>
-                </div>
-                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${ICONS.expand}</button>
-                  <button class="glass-btn mute-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
-                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
-                  <div id="stream-fallback" hidden>
-                    <img id="stream-fallback-img" alt="Camera snapshot">
-                  </div>
-                  <div class="stream-fallback-status" id="stream-fallback-status" hidden>Snapshot unavailable</div>
-                  <div class="stream-loading" id="stream-loading" hidden>
-                    <span class="dot"></span><span class="label">Loading…</span>
-                  </div>
+            <div id="eng-wrap">
+              <div id="engine">
+                <div class="ph">${ICONS.live}<span>Connecting…</span></div>
               </div>
+                <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${ICONS.expand}</button>
+                <button class="glass-btn mute-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
+                <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
+                <div id="stream-fallback" hidden>
+                  <img id="stream-fallback-img" alt="Camera snapshot">
+                </div>
+                <div class="stream-fallback-status" id="stream-fallback-status" hidden>Snapshot unavailable</div>
+                <div class="stream-loading" id="stream-loading" hidden>
+                  <span class="dot"></span><span class="label">Loading…</span>
+                </div>
+            </div>
 
             <div class="info-row">
               <div>
