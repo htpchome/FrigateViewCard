@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.558";
+const VERSION = "1.0.559";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2100,10 +2100,14 @@ const FrigateViewCard = class extends HTMLElement {
   }
   getGridOptions() {
     return {
-      rows: 3,
-      columns: 6,
-      min_rows: 3,
-      max_rows: 3
+      columns: 3,
+      // Default width (Out of 12 columns)
+      rows: 6,
+      // Default height (1 row = 56px + gap)
+      min_rows: 4,
+      // Minimum height the user can scale it down to
+      min_columns: 3
+      // Minimum width allowed
     };
   }
   disconnectedCallback() {

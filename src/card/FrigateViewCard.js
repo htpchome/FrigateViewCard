@@ -841,12 +841,12 @@ export class FrigateViewCard extends HTMLElement {
   getCardSize() {
     return 6;
   }
-  getGridOptions() {
+getGridOptions() {
     return {
-      rows: 3,
-      columns: 6,
-      min_rows: 3,
-      max_rows: 3,
+      columns: 3,     // Default width (Out of 12 columns)
+      rows: 6,        // Default height (1 row = 56px + gap)
+      min_rows: 4,    // Minimum height the user can scale it down to
+      min_columns: 3, // Minimum width allowed
     };
   }
   disconnectedCallback() {
