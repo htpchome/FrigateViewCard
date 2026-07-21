@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.551";
+const VERSION = "1.0.552";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -117,8 +117,7 @@ const ICONS = {
 // src/styles.js
 const STYLES = `
   :host {
-    height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
-    max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
+    min-height:0 !important;
     --rotate-vw: 100vw;
     --rotate-vh: 100dvh;
     --rotate-ox: 0px;
@@ -168,7 +167,7 @@ const STYLES = `
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     }
   .card{
-    --fvc-shadow-s: var(--ha-box-shadow-m);
+    --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
     --ha-card-background: var(--c-bg-main) !important;
     color:var(--c-text);
@@ -190,7 +189,7 @@ const STYLES = `
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
 
-  .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
+  .layout{display:flex;flex-direction:column;min-height:0;width:100%;
     overflow: hidden !important;}
   .layout.wide{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
