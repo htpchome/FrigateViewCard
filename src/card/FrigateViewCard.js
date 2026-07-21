@@ -348,7 +348,6 @@ export class FrigateViewCard extends HTMLElement {
     this._config = next;
     this._syncCardShellClasses();
     this._syncDomShadows();
-    this._syncDomBorders();
     this._browseOpen = this._config.browse_expanded;
     if (JSON.stringify(next.hidden_tabs || []) !== prevHiddenTabs) {
       this._syncTabsShell();
@@ -384,7 +383,6 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._syncCardShellClasses();
     this._syncDomShadows();
-    this._syncDomBorders();
     this._scheduleRotateOverlayUpdate();
     if (this._started) {
       this._startEditModeWatchdog();
@@ -410,17 +408,10 @@ export class FrigateViewCard extends HTMLElement {
       if (!(el instanceof HTMLElement)) continue;
       el.style.boxShadow = original.boxShadow;
       el.style.borderRadius = original.borderRadius;
-    }
-    this._domShadowOriginalStyles.clear();
-  }
-  _restoreDomBorderStyles() {
-    for (const [el, original] of this._domShadowOriginalStyles.entries()) {
-      if (!(el instanceof HTMLElement)) continue;  
       el.style.border = original.border;
     }
     this._domShadowOriginalStyles.clear();
   }
-
   _collectDomShadowTargets() {
     const targets = new Set();
     targets.add(this);
@@ -454,24 +445,15 @@ export class FrigateViewCard extends HTMLElement {
       this._domShadowOriginalStyles.set(el, {
         boxShadow: el.style.boxShadow,
         borderRadius: el.style.borderRadius,
+        border: el.style.border,
       });
       el.style.boxShadow = "var(--ha-box-shadow-s)";
+      el.style.border = "var(--fvc-border-s)";
       if (!el.style.borderRadius) {
         el.style.borderRadius = "var(--ha-card-border-radius, 12px)";
       }
     }
   }
-  _syncDomBorders() {
-    this._restoreDomBorderStyles();
-    if (this._config?.borders === false) return;
-    for (const el of this._collectDomShadowTargets()) {
-      this._domShadowOriginalStyles.set(el, {
-        border: el.style.border,
-      });
-      el.style.border = "var(--fvc-border-s)";
-    }
-  }
-
   _syncColHeight() {
     requestAnimationFrame(() => {
       const l = this.shadowRoot.querySelector(".col-left");
@@ -740,7 +722,6 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._syncCardShellClasses();
     this._syncDomShadows();
-    this._syncDomBorders();
     this._browseOpen = this._config.browse_expanded;
     for (const c of cameras) {
       if (!this._camCache[c.entity]) this._camCache[c.entity] = mkCamState();
@@ -990,7 +971,6 @@ getGridOptions() {
     }
     this._setSectionsRowGap(false);
     this._restoreDomShadowStyles();
-    this._restoreDomBorderStyles();
     this._cleanupEngine();
   }
   // ── init ─────────────────────────────────────────────────
