@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.609";
+const VERSION = "1.0.610";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -160,6 +160,12 @@ const STYLES = `
     }
   /* \u2500\u2500 responsive layout    \u2500\u2500 */
   ha-card {
+    --ha-card-background: var(--c-bg-main) !important;
+    --ha-card-border-radius: var(--fvc-border-radius) !important;
+    --ha-card-box-shadow: var(--fvc-shadow-m) !important;
+    border-radius: var(--fvc-border-radius) !important;
+    box-shadow: var(--fvc-shadow-m) !important;
+    border: var(--fvc-border-m);
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
@@ -167,13 +173,6 @@ const STYLES = `
     overflow:visible !important;
     }
   .card{
-    --ha-card-background: var(--c-bg-main) !important;
-    --ha-card-border-radius: var(--fvc-border-radius) !important;
-    --ha-card-box-shadow: var(--fvc-shadow-m) !important;
-    border-radius: var(--fvc-border-radius) !important;
-    box-shadow: var(--fvc-shadow-m) !important;
-    border: var(--fvc-border-s);
-
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
     --fvc-border-s: 1px solid #ffcc33;
