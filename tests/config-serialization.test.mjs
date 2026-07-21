@@ -36,6 +36,7 @@ test("editor YAML config omits normalized default values", () => {
     window_hours: 72,
     stream_height_unit: "vh",
     tight_margins: false,
+    rounded_corners: true,
     wide_view: false,
     col_left_width_pct: 50,
     hidden_tabs: [],

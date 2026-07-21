@@ -91,7 +91,6 @@ export class FrigateViewCard extends HTMLElement {
       if (placeholder) placeholder.style.display = "flex";
     };
 
-
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
     this._hass = null;
     this._lastHassCameraStateSignature = "";
@@ -99,9 +98,9 @@ export class FrigateViewCard extends HTMLElement {
     this._config = null;
     this._started = false;
     this._activeCamIdx = 0;
-    this._camCache = {}; 
-    this._viewMode = "single"; 
-    this._eventsMode = "camera"; 
+    this._camCache = {};
+    this._viewMode = "single";
+    this._eventsMode = "camera";
     this._events = [];
     this._recordings = [];
     this._reviews = [];
@@ -124,7 +123,7 @@ export class FrigateViewCard extends HTMLElement {
     this._rotateTimer = null;
     this._cardWidth = 0;
     this._playSeq = 0;
-    this._streamMuted = true; 
+    this._streamMuted = true;
     this._activeStreamType = "--";
     this._lastLiveStreamHint = "";
     this._slideshowActive = false;
@@ -170,11 +169,11 @@ export class FrigateViewCard extends HTMLElement {
     this._landingMediaState = null;
     this._landingAlertExpiresByEntity = new Map();
     this._landingAlertSeverityByEntity = new Map();
-    this._domCache = {}; 
-    this._go2rtcWsUrlCache = new Map(); 
-    this._go2rtcHlsUrlCache = new Map(); 
-    this._go2rtcHlsProbeInFlight = new Map(); 
-    this._fallbackImgUrlCache = new Map(); 
+    this._domCache = {};
+    this._go2rtcWsUrlCache = new Map();
+    this._go2rtcHlsUrlCache = new Map();
+    this._go2rtcHlsProbeInFlight = new Map();
+    this._fallbackImgUrlCache = new Map();
     this._fallbackReqId = 0;
     this._eventsLoadToken = 0;
     this._reviewsLoadToken = 0;
@@ -241,7 +240,6 @@ export class FrigateViewCard extends HTMLElement {
     this._deepLinkApplied = false;
     this._deepLinkEventLookupTried = false;
     this._deepLinkReviewLookupTried = false;
-    this._domShadowOriginalStyles = new Map();
     this._committedConfig = null;
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -340,14 +338,14 @@ export class FrigateViewCard extends HTMLElement {
           tight_margins: previewConfig.tight_margins === true,
           shadows: previewConfig.shadows !== false,
           borders: previewConfig.borders !== false,
+          rounded_corners: previewConfig.rounded_corners !== false,
           wide_view: previewConfig.wide_view === true,
           col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
         }
       : base;
 
     this._config = next;
-    this._syncCardShellClasses();
-    this._syncDomShadows();
+    this._syncVisualStyleToggles();
     this._browseOpen = this._config.browse_expanded;
     if (JSON.stringify(next.hidden_tabs || []) !== prevHiddenTabs) {
       this._syncTabsShell();
@@ -381,8 +379,7 @@ export class FrigateViewCard extends HTMLElement {
         this._syncColHeight();
       }
     }
-    this._syncCardShellClasses();
-    this._syncDomShadows();
+    this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
     if (this._started) {
       this._startEditModeWatchdog();
@@ -396,62 +393,28 @@ export class FrigateViewCard extends HTMLElement {
     this._startEditorDialogCloseObserver();
   }
 
-  _syncCardShellClasses() {
+  _visualStyleToggleRules() {
+    return [
+      { configKey: "shadows", className: "shadows-off" },
+      { configKey: "borders", className: "borders-off" },
+      { configKey: "rounded_corners", className: "corners-off" },
+    ];
+  }
+
+  _cardStateClassNames() {
+    const classes = this._visualStyleToggleRules()
+      .filter(({ configKey }) => this._config?.[configKey] === false)
+      .map(({ className }) => className);
+    if (this._isLandingPageActive()) classes.push("landing-active");
+    return classes.join(" ");
+  }
+
+  _syncVisualStyleToggles() {
     const card = this.shadowRoot?.querySelector("#card");
     if (!card) return;
-    card.classList.toggle("shadows-off", this._config?.shadows === false);
-    card.classList.toggle("borders-off", this._config?.shadows === false);
-  }
-
-  _restoreDomShadowStyles() {
-    for (const [el, original] of this._domShadowOriginalStyles.entries()) {
-      if (!(el instanceof HTMLElement)) continue;
-      el.style.boxShadow = original.boxShadow;
-      el.style.borderRadius = original.borderRadius;
-      el.style.border = original.border;
-    }
-    this._domShadowOriginalStyles.clear();
-  }
-  _collectDomShadowTargets() {
-    const targets = new Set();
-    targets.add(this);
-    if (this.parentElement) targets.add(this.parentElement);
-
-    let node = this;
-    let depth = 0;
-    while (node && depth < 8) {
-      const root = node.getRootNode?.();
-      if (!(root instanceof ShadowRoot)) break;
-      const host = root.host;
-      if (!(host instanceof HTMLElement)) break;
-      const tag = host.tagName;
-      if (
-        tag === "HUI-CARD" ||
-        tag === "HUI-CARD-OPTIONS" ||
-        tag === "HA-CARD"
-      ) {
-        targets.add(host);
-      }
-      node = host;
-      depth += 1;
-    }
-    return [...targets].filter((el) => el instanceof HTMLElement);
-  }
-
-  _syncDomShadows() {
-    this._restoreDomShadowStyles();
-    if (this._config?.shadows === false) return;
-    for (const el of this._collectDomShadowTargets()) {
-      this._domShadowOriginalStyles.set(el, {
-        boxShadow: el.style.boxShadow,
-        borderRadius: el.style.borderRadius,
-        border: el.style.border,
-      });
-      el.style.boxShadow = "var(--ha-box-shadow-s)";
-      el.style.border = "var(--fvc-border-s)";
-      if (!el.style.borderRadius) {
-        el.style.borderRadius = "var(--ha-card-border-radius, 12px)";
-      }
+    for (const { configKey, className } of this._visualStyleToggleRules()) {
+      const isEnabled = this._config?.[configKey] !== false;
+      card.classList.toggle(className, !isEnabled);
     }
   }
   _syncColHeight() {
@@ -687,6 +650,7 @@ export class FrigateViewCard extends HTMLElement {
       tight_margins: config.tight_margins === true,
       shadows: config.shadows !== false,
       borders: config.borders !== false,
+      rounded_corners: config.rounded_corners !== false,
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
     };
@@ -720,8 +684,7 @@ export class FrigateViewCard extends HTMLElement {
       this._stopGridModeState();
       if (this._viewMode === "grid") this._viewMode = "single";
     }
-    this._syncCardShellClasses();
-    this._syncDomShadows();
+    this._syncVisualStyleToggles();
     this._browseOpen = this._config.browse_expanded;
     for (const c of cameras) {
       if (!this._camCache[c.entity]) this._camCache[c.entity] = mkCamState();
@@ -835,7 +798,6 @@ export class FrigateViewCard extends HTMLElement {
     if (themeChanged) {
       this._applyCardStyle();
     }
-
   }
   get _activeCam() {
     return (
@@ -845,12 +807,12 @@ export class FrigateViewCard extends HTMLElement {
   getCardSize() {
     return 6;
   }
-getGridOptions() {
+  getGridOptions() {
     return {
-      columns: 3,     
-      rows: 6,        
-      min_rows: 4,    
-      min_columns: 3, 
+      columns: 3,
+      rows: 6,
+      min_rows: 4,
+      min_columns: 3,
     };
   }
   disconnectedCallback() {
@@ -861,10 +823,7 @@ getGridOptions() {
       this._ffDebug("Running deferred disconnect teardown");
       this._teardownDisconnected();
     }, 2500);
-  
   }
-
-
 
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);
@@ -970,7 +929,6 @@ getGridOptions() {
       this.parentElement.style.padding = this._parentOrigStyle.padding;
     }
     this._setSectionsRowGap(false);
-    this._restoreDomShadowStyles();
     this._cleanupEngine();
   }
   // ── init ─────────────────────────────────────────────────
@@ -2522,7 +2480,8 @@ getGridOptions() {
         stream.controls = false;
         stream.muted = true;
         stream.defaultMuted = true;
-        stream.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+        stream.style.cssText =
+          "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
         cell.appendChild(stream);
         this._attachVideoFit(stream);
       }
@@ -2850,7 +2809,8 @@ getGridOptions() {
         s.stateObj = stateObj;
         s.controls = false;
         s.muted = this._streamMuted;
-        s.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+        s.style.cssText =
+          "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
 
         slot.innerHTML = "";
         slot.appendChild(s);
@@ -3095,7 +3055,8 @@ getGridOptions() {
         const name = cap(camDisplayName(camera));
         return `<div class="landing-cell shadow-small" data-landing-camidx="${index}">
           <div class="landing-media-host ${severity === "alert" ? "grid-alert" : severity === "detection" ? "grid-detection" : ""}" data-landing-media-entity="${entity}" data-landing-use-live="${useLive ? "1" : "0"}"></div>
-          ${showTitleBars
+          ${
+            showTitleBars
               ? `<div class="landing-meta">
               <div class="landing-meta-name">${name}</div>
               <div class="landing-meta-status"><span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">●</span>${online ? "Online" : "Offline"}</div>
@@ -5395,7 +5356,7 @@ getGridOptions() {
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._config.borders === false ? "borders-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
+    <ha-card class="card ${this._cardStateClassNames()}" id="card">
 
         <div class="layout shadow-medium" id="layout">
 

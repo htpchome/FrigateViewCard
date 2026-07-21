@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.593";
+const VERSION = "1.0.595";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -174,7 +174,7 @@ const STYLES = `
     --fvc-border-s: 1px solid #ffcc33;
     --fvc-border-m:  2px solid var(--c-border);
     --fvc-border-active:  1px solid var(--c-primary);
-    --fvc-border-radius: var(--ha-card-border-radius,13px)
+    --fvc-border-radius: var(--ha-card-border-radius,13px);
     --ha-card-background: var(--c-bg-main) !important;
     color:var(--c-text);
     overflow:hidden;
@@ -194,6 +194,7 @@ const STYLES = `
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
+  .card.corners-off{--fvc-border-radius:0px;}
 
   .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
     overflow: hidden !important;border:var(--fvc-border-s);}
@@ -1179,6 +1180,7 @@ const buildEditorConfigFromDom = ({
   nextConfig.tight_margins = root.querySelector("#tight_margins")?.checked === true;
   nextConfig.shadows = root.querySelector("#shadows")?.checked !== false;
   nextConfig.borders = root.querySelector("#borders")?.checked !== false;
+  nextConfig.rounded_corners = root.querySelector("#rounded_corners")?.checked !== false;
   nextConfig.wide_view = root.querySelector("#wide_view")?.checked === true;
   const leftWidthRaw = root.querySelector("#col_left_width_pct")?.value?.replace(/%/g, "").trim();
   nextConfig.col_left_width_pct = leftWidthRaw ? Math.min(Math.max(parseInt(leftWidthRaw, 10) || 50, 10), 90) : 50;
@@ -1325,6 +1327,12 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
   );
   addIfNotDefault(compact, "shadows", source.shadows !== false, true);
   addIfNotDefault(compact, "borders", source.borders !== false, true);
+  addIfNotDefault(
+    compact,
+    "rounded_corners",
+    source.rounded_corners !== false,
+    true
+  );
   addIfNotDefault(compact, "wide_view", source.wide_view === true, false);
   const leftWidth = Number(source.col_left_width_pct) || 50;
   addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
@@ -1371,6 +1379,7 @@ const createEditorPreviewDraft = (config) => ({
   tight_margins: config.tight_margins,
   shadows: config.shadows,
   borders: config.borders,
+  rounded_corners: config.rounded_corners,
   wide_view: config.wide_view,
   col_left_width_pct: config.col_left_width_pct
 });
@@ -1629,7 +1638,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._deepLinkApplied = false;
     this._deepLinkEventLookupTried = false;
     this._deepLinkReviewLookupTried = false;
-    this._domShadowOriginalStyles = new Map();
     this._committedConfig = null;
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -1703,12 +1711,12 @@ const FrigateViewCard = class extends HTMLElement {
       tight_margins: previewConfig.tight_margins === true,
       shadows: previewConfig.shadows !== false,
       borders: previewConfig.borders !== false,
+      rounded_corners: previewConfig.rounded_corners !== false,
       wide_view: previewConfig.wide_view === true,
       col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50
     } : base;
     this._config = next;
-    this._syncCardShellClasses();
-    this._syncDomShadows();
+    this._syncVisualStyleToggles();
     this._browseOpen = this._config.browse_expanded;
     if (JSON.stringify(next.hidden_tabs || []) !== prevHiddenTabs) {
       this._syncTabsShell();
@@ -1742,8 +1750,7 @@ const FrigateViewCard = class extends HTMLElement {
         this._syncColHeight();
       }
     }
-    this._syncCardShellClasses();
-    this._syncDomShadows();
+    this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
     if (this._started) {
       this._startEditModeWatchdog();
@@ -1756,55 +1763,24 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._startEditorDialogCloseObserver();
   }
-  _syncCardShellClasses() {
+  _visualStyleToggleRules() {
+    return [
+      { configKey: "shadows", className: "shadows-off" },
+      { configKey: "borders", className: "borders-off" },
+      { configKey: "rounded_corners", className: "corners-off" }
+    ];
+  }
+  _cardStateClassNames() {
+    const classes = this._visualStyleToggleRules().filter(({ configKey }) => this._config?.[configKey] === false).map(({ className }) => className);
+    if (this._isLandingPageActive()) classes.push("landing-active");
+    return classes.join(" ");
+  }
+  _syncVisualStyleToggles() {
     const card = this.shadowRoot?.querySelector("#card");
     if (!card) return;
-    card.classList.toggle("shadows-off", this._config?.shadows === false);
-    card.classList.toggle("borders-off", this._config?.shadows === false);
-  }
-  _restoreDomShadowStyles() {
-    for (const [el, original] of this._domShadowOriginalStyles.entries()) {
-      if (!(el instanceof HTMLElement)) continue;
-      el.style.boxShadow = original.boxShadow;
-      el.style.borderRadius = original.borderRadius;
-      el.style.border = original.border;
-    }
-    this._domShadowOriginalStyles.clear();
-  }
-  _collectDomShadowTargets() {
-    const targets = new Set();
-    targets.add(this);
-    if (this.parentElement) targets.add(this.parentElement);
-    let node = this;
-    let depth = 0;
-    while (node && depth < 8) {
-      const root = node.getRootNode?.();
-      if (!(root instanceof ShadowRoot)) break;
-      const host = root.host;
-      if (!(host instanceof HTMLElement)) break;
-      const tag = host.tagName;
-      if (tag === "HUI-CARD" || tag === "HUI-CARD-OPTIONS" || tag === "HA-CARD") {
-        targets.add(host);
-      }
-      node = host;
-      depth += 1;
-    }
-    return [...targets].filter((el) => el instanceof HTMLElement);
-  }
-  _syncDomShadows() {
-    this._restoreDomShadowStyles();
-    if (this._config?.shadows === false) return;
-    for (const el of this._collectDomShadowTargets()) {
-      this._domShadowOriginalStyles.set(el, {
-        boxShadow: el.style.boxShadow,
-        borderRadius: el.style.borderRadius,
-        border: el.style.border
-      });
-      el.style.boxShadow = "var(--ha-box-shadow-s)";
-      el.style.border = "var(--fvc-border-s)";
-      if (!el.style.borderRadius) {
-        el.style.borderRadius = "var(--ha-card-border-radius, 12px)";
-      }
+    for (const { configKey, className } of this._visualStyleToggleRules()) {
+      const isEnabled = this._config?.[configKey] !== false;
+      card.classList.toggle(className, !isEnabled);
     }
   }
   _syncColHeight() {
@@ -1986,6 +1962,7 @@ const FrigateViewCard = class extends HTMLElement {
       tight_margins: config.tight_margins === true,
       shadows: config.shadows !== false,
       borders: config.borders !== false,
+      rounded_corners: config.rounded_corners !== false,
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50
     };
@@ -2009,8 +1986,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._stopGridModeState();
       if (this._viewMode === "grid") this._viewMode = "single";
     }
-    this._syncCardShellClasses();
-    this._syncDomShadows();
+    this._syncVisualStyleToggles();
     this._browseOpen = this._config.browse_expanded;
     for (const c of cameras) {
       if (!this._camCache[c.entity]) this._camCache[c.entity] = mkCamState();
@@ -2234,7 +2210,6 @@ const FrigateViewCard = class extends HTMLElement {
       this.parentElement.style.padding = this._parentOrigStyle.padding;
     }
     this._setSectionsRowGap(false);
-    this._restoreDomShadowStyles();
     this._cleanupEngine();
   }
   // ── init ─────────────────────────────────────────────────
@@ -6058,7 +6033,7 @@ const FrigateViewCard = class extends HTMLElement {
     const showCamSwitcher = this._config.cameras.length > 1 || this._isLandingPageEnabled();
     const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
-    <ha-card class="card ${this._config.shadows === false ? "shadows-off" : ""} ${this._config.borders === false ? "borders-off" : ""} ${this._isLandingPageActive() ? "landing-active" : ""}" id="card">
+    <ha-card class="card ${this._cardStateClassNames()}" id="card">
 
         <div class="layout shadow-medium" id="layout">
 
@@ -9764,6 +9739,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     }
     src.shadows = src.shadows !== false;
     src.borders = src.borders !== false;
+    src.rounded_corners = src.rounded_corners !== false;
     src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
       Number(src.realtime_poll_seconds)
     ) ? Number(src.realtime_poll_seconds) : 5;
@@ -10314,6 +10290,12 @@ const FrigateViewCardEditor = class extends HTMLElement {
         <div class="layout-row">
           <span class="field-label" style="margin:0">Borders</span>
           <ha-switch id="borders" ${this._config?.borders !== false ? "checked" : ""}></ha-switch>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Rounded Corners</span>
+          <ha-switch id="rounded_corners" ${this._config?.rounded_corners !== false ? "checked" : ""}></ha-switch>
         </div>
       </div>
       <div class="section">

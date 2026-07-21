@@ -57,7 +57,7 @@ export const STYLES = `
     --fvc-border-s: 1px solid #ffcc33;
     --fvc-border-m:  2px solid var(--c-border);
     --fvc-border-active:  1px solid var(--c-primary);
-    --fvc-border-radius: var(--ha-card-border-radius,13px)
+    --fvc-border-radius: var(--ha-card-border-radius,13px);
     --ha-card-background: var(--c-bg-main) !important;
     color:var(--c-text);
     overflow:hidden;
@@ -77,6 +77,7 @@ export const STYLES = `
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
+  .card.corners-off{--fvc-border-radius:0px;}
 
   .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
     overflow: hidden !important;border:var(--fvc-border-s);}
