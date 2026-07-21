@@ -54,7 +54,7 @@ export const STYLES = `
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
-    : 1px solid #ffcc33;
+    --fvc-border-s: 1px solid #ffcc33;
     --fvc-border-m:  2px solid var(--c-border);
     --fvc-border-active:  1px solid var(--c-primary);
     --ha-card-background: var(--c-bg-main) !important;
