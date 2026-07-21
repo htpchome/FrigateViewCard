@@ -99,9 +99,9 @@ export class FrigateViewCard extends HTMLElement {
     this._config = null;
     this._started = false;
     this._activeCamIdx = 0;
-    this._camCache = {}; // entity → mkCamState()
-    this._viewMode = "single"; // 'single' | 'grid'
-    this._eventsMode = "camera"; // 'camera' | 'all'
+    this._camCache = {}; 
+    this._viewMode = "single"; 
+    this._eventsMode = "camera"; 
     this._events = [];
     this._recordings = [];
     this._reviews = [];
@@ -124,7 +124,7 @@ export class FrigateViewCard extends HTMLElement {
     this._rotateTimer = null;
     this._cardWidth = 0;
     this._playSeq = 0;
-    this._streamMuted = true; // start muted; user can toggle via our mute button
+    this._streamMuted = true; 
     this._activeStreamType = "--";
     this._lastLiveStreamHint = "";
     this._slideshowActive = false;
@@ -170,11 +170,11 @@ export class FrigateViewCard extends HTMLElement {
     this._landingMediaState = null;
     this._landingAlertExpiresByEntity = new Map();
     this._landingAlertSeverityByEntity = new Map();
-    this._domCache = {}; // querySelector result cache — cleared on re-render
-    this._go2rtcWsUrlCache = new Map(); // key => {url, exp}
-    this._go2rtcHlsUrlCache = new Map(); // key => {url|null, exp}
-    this._go2rtcHlsProbeInFlight = new Map(); // key => Promise<url|null>
-    this._fallbackImgUrlCache = new Map(); // entity => {url, exp}
+    this._domCache = {}; 
+    this._go2rtcWsUrlCache = new Map(); 
+    this._go2rtcHlsUrlCache = new Map(); 
+    this._go2rtcHlsProbeInFlight = new Map(); 
+    this._fallbackImgUrlCache = new Map(); 
     this._fallbackReqId = 0;
     this._eventsLoadToken = 0;
     this._reviewsLoadToken = 0;
