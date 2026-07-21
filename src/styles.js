@@ -41,11 +41,12 @@ export const STYLES = `
         --c-bg-scrub:  #c2f2c1;
         --c-bg-alert:  #dc3146;
     }
-  /* ── responsive layout         border-radius: var(--fvc-border-radius) !important; ── */
+  /* ── responsive layout    ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
     --ha-card-border-radius: var(--fvc-border-radius) !important;
     --ha-card-box-shadow: var(--fvc-shadow-m) !important;
+    border-radius: var(--fvc-border-radius) !important;
     box-shadow: var(--fvc-shadow-m) !important;
     border: var(--fvc-border-s);
     padding: 0 !important;
@@ -61,7 +62,6 @@ export const STYLES = `
     --fvc-border-m:  2px solid #ff6d33;
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: 56px;
-    --ha-card-border-radius: --fvc-border-radius !important;
     color:var(--c-text);
     overflow:hidden;
     box-sizing: border-box;
