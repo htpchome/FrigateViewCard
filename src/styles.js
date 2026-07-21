@@ -46,6 +46,8 @@ export const STYLES = `
     --ha-card-background: var(--c-bg-main) !important;
     --ha-card-border-radius: var(--fvc-border-radius) !important;
     --ha-card-box-shadow: var(--fvc-border-s) !important;
+    box-shadow: var(--fvc-shadow-s);
+    border-radius: var(--fvc-border-radius);
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
@@ -63,7 +65,6 @@ export const STYLES = `
     color:var(--c-text);
     overflow:hidden;
     box-sizing: border-box;
-
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
