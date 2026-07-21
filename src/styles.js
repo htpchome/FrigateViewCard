@@ -212,7 +212,7 @@ export const STYLES = `
   .more.to-top{position:relative;cursor:pointer;color:var(--c-text2);}
 
   /* ── feed area ── */
-    .feed-area{position:relative;width:100%;}
+    .feed-area{position:relative;width:100%;min-height:0;height:100$;}
     #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--stream-h,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
     #engine,#stream-fallback{transition:opacity .22s ease;}
     #eng-wrap::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:5;box-sizing:border-box;border:0 solid transparent;transition:border-color .2s ease,border-width .2s ease;}
