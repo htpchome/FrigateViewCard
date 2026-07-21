@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.589";
+const VERSION = "1.0.590";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1370,7 +1370,7 @@ const createEditorPreviewDraft = (config) => ({
   stream_height_unit: config.stream_height_unit,
   tight_margins: config.tight_margins,
   shadows: config.shadows,
-  borderss: config.borders,
+  borders: config.borders,
   wide_view: config.wide_view,
   col_left_width_pct: config.col_left_width_pct
 });

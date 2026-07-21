@@ -854,7 +854,7 @@ export const createEditorPreviewDraft = (config) => ({
   stream_height_unit: config.stream_height_unit,
   tight_margins: config.tight_margins,
   shadows: config.shadows,
-  borderss: config.borders,
+  borders: config.borders,
   wide_view: config.wide_view,
   col_left_width_pct: config.col_left_width_pct,
 });
