@@ -1,11 +1,11 @@
 export const STYLES = `
   :host {
+    height:100% !important;
     min-height:0 !important;
     --rotate-vw: 100vw;
     --rotate-vh: 100dvh;
     --rotate-ox: 0px;
     --rotate-oy: 0px;
-    min-height: 0;
     display: block !important;
     margin:0 !important;
     padding:0 !important;
@@ -46,7 +46,7 @@ export const STYLES = `
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
-    height: auto;
+    height: 100%;
     box-shadow: var(--fvc-shadow-s, var(--ha-box-shadow-s)) !important;
     }
   .card{
