@@ -248,20 +248,6 @@ export class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("doc-visible");
       }
     };
-//=============================
-const child = document.querySelector('landing-shell');
-
-child.addEventListener('scroll', () => {
-  // Toggle a data attribute based on whether the child is at the top
-  if (child.scrollTop <= 0) {
-    child.setAttribute('data-at-top', 'true');
-  } else {
-    child.removeAttribute('data-at-top');
-  }
-});
-
-//=============================
-
 
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();

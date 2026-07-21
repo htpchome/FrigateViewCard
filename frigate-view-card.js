@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.541";
+const VERSION = "1.0.542";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1652,14 +1652,6 @@ const FrigateViewCard = class extends HTMLElement {
         this._scheduleResumeLive("doc-visible");
       }
     };
-    const child = document.querySelector("landing-shell");
-    child.addEventListener("scroll", () => {
-      if (child.scrollTop <= 0) {
-        child.setAttribute("data-at-top", "true");
-      } else {
-        child.removeAttribute("data-at-top");
-      }
-    });
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
