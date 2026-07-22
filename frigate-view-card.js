@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.629";
+const VERSION = "1.0.630";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -176,7 +176,6 @@ const STYLES = `
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: 15px;
     color:var(--c-text);
-    border: var(--fvc-border-m);
     overflow:hidden;
     box-sizing: border-box;
     -webkit-backface-visibility: hidden;

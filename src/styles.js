@@ -59,7 +59,6 @@ export const STYLES = `
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: 15px;
     color:var(--c-text);
-    border: var(--fvc-border-m);
     overflow:hidden;
     box-sizing: border-box;
     -webkit-backface-visibility: hidden;
