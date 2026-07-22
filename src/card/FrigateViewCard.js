@@ -82,6 +82,79 @@ import {
   PAGE_IDS,
   resolveDeviceRouteBucket,
 } from "../router.js";
+
+const PRIMARY_PANE_KEY = "primary";
+
+const LEGACY_PANE_STATE_FIELDS = Object.freeze([
+  "_activeCamIdx",
+  "_viewMode",
+  "_eventsMode",
+  "_events",
+  "_recordings",
+  "_reviews",
+  "_kept",
+  "_tab",
+  "_browseOpen",
+  "_winEnd",
+  "_winStart",
+  "_followNowWindow",
+  "_loading",
+  "_exhausted",
+  "_daysWithActivity",
+  "_filterLabel",
+  "_filterZone",
+  "_favOnly",
+  "_calMonth",
+  "_streamMuted",
+  "_activeStreamType",
+  "_lastLiveStreamHint",
+  "_slideshowActive",
+  "_slideshowPausedUntil",
+  "_slideshowPendingAlertCam",
+  "_slideshowPendingAlertType",
+  "_slideshowLastAlertAt",
+  "_slideshowLastAlertCam",
+  "_slideshowAttentionType",
+  "_slideshowHandledReviewIds",
+  "_slideshowStartedAtSec",
+  "_slideshowReviewProbeT",
+  "_slideshowReviewWatchT",
+  "_slideshowReviewProbeInFlight",
+  "_slideshowSwitchT",
+  "_slideshowPauseT",
+  "_slideshowFadeT",
+  "_slideshowPopupPaused",
+  "_slideshowNextSwitchAtMs",
+  "_slideshowCountdownT",
+  "_gridRotationStart",
+  "_gridRotationT",
+  "_gridAlertReturnT",
+  "_gridAlertWatchT",
+  "_gridAlertCleanupT",
+  "_gridRefreshT",
+  "_gridResumePending",
+  "_gridPinnedRotationStart",
+  "_gridLastRenderSignature",
+  "_gridStartedAtSec",
+  "_gridHandledReviewIds",
+  "_gridLastAlertAt",
+  "_gridLastAlertCam",
+  "_gridAlertExpiresByEntity",
+  "_gridAlertSeverityByEntity",
+  "_eventsLoadToken",
+  "_reviewsLoadToken",
+  "_reloadPending",
+  "_reloadAfterLoad",
+  "_switchLoadT",
+  "_recordingsDayAvailabilityCache",
+  "_recordingsDayDataCache",
+  "_recordingsNavUpdateToken",
+  "_recordingsDayNavAnimating",
+  "_recordingsSwipeGesture",
+  "_recordingsSwipeBlockTap",
+  "_lastRenderedListHtml",
+]);
+
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -106,6 +179,11 @@ export class FrigateViewCard extends HTMLElement {
     this._navigationFactory = null;
     this._pageId = PAGE_IDS.singleView;
     this._lastNonPreviewPageId = PAGE_IDS.singleView;
+    this._activePaneKey = PRIMARY_PANE_KEY;
+    this._paneState = {
+      [PRIMARY_PANE_KEY]: this._createPaneState(),
+    };
+    this._defineLegacyPaneStateAccessors();
     this._started = false;
     this._activeCamIdx = 0;
     this._camCache = {};
@@ -286,6 +364,108 @@ export class FrigateViewCard extends HTMLElement {
       "frigate-view-card-preview-draft",
       this._onEditorPreviewDraft,
     );
+  }
+
+  _createPaneState() {
+    return {
+      _activeCamIdx: 0,
+      _viewMode: "single",
+      _eventsMode: "camera",
+      _events: [],
+      _recordings: [],
+      _reviews: [],
+      _kept: [],
+      _tab: "alerts",
+      _browseOpen: false,
+      _winEnd: 0,
+      _winStart: 0,
+      _followNowWindow: true,
+      _loading: false,
+      _exhausted: false,
+      _daysWithActivity: new Set(),
+      _filterLabel: "all",
+      _filterZone: "all",
+      _favOnly: false,
+      _calMonth: null,
+      _streamMuted: true,
+      _activeStreamType: "--",
+      _lastLiveStreamHint: "",
+      _slideshowActive: false,
+      _slideshowPausedUntil: 0,
+      _slideshowPendingAlertCam: "",
+      _slideshowPendingAlertType: "",
+      _slideshowLastAlertAt: 0,
+      _slideshowLastAlertCam: "",
+      _slideshowAttentionType: "",
+      _slideshowHandledReviewIds: new Set(),
+      _slideshowStartedAtSec: 0,
+      _slideshowReviewProbeT: null,
+      _slideshowReviewWatchT: null,
+      _slideshowReviewProbeInFlight: false,
+      _slideshowSwitchT: null,
+      _slideshowPauseT: null,
+      _slideshowFadeT: null,
+      _slideshowPopupPaused: false,
+      _slideshowNextSwitchAtMs: 0,
+      _slideshowCountdownT: null,
+      _gridRotationStart: 0,
+      _gridRotationT: null,
+      _gridAlertReturnT: null,
+      _gridAlertWatchT: null,
+      _gridAlertCleanupT: null,
+      _gridRefreshT: null,
+      _gridResumePending: false,
+      _gridPinnedRotationStart: 0,
+      _gridLastRenderSignature: "",
+      _gridStartedAtSec: 0,
+      _gridHandledReviewIds: new Set(),
+      _gridLastAlertAt: 0,
+      _gridLastAlertCam: "",
+      _gridAlertExpiresByEntity: new Map(),
+      _gridAlertSeverityByEntity: new Map(),
+      _eventsLoadToken: 0,
+      _reviewsLoadToken: 0,
+      _reloadPending: false,
+      _reloadAfterLoad: false,
+      _switchLoadT: null,
+      _recordingsDayAvailabilityCache: new Map(),
+      _recordingsDayDataCache: new Map(),
+      _recordingsNavUpdateToken: 0,
+      _recordingsDayNavAnimating: false,
+      _recordingsSwipeGesture: null,
+      _recordingsSwipeBlockTap: false,
+      _lastRenderedListHtml: "",
+    };
+  }
+
+  _getPaneState(paneKey = this._activePaneKey) {
+    if (!this._paneState[paneKey]) {
+      this._paneState[paneKey] = this._createPaneState();
+    }
+    return this._paneState[paneKey];
+  }
+
+  _defineLegacyPaneStateAccessors() {
+    LEGACY_PANE_STATE_FIELDS.forEach((fieldName) => {
+      Object.defineProperty(this, fieldName, {
+        configurable: true,
+        enumerable: false,
+        get: () => this._getPaneState()[fieldName],
+        set: (value) => {
+          this._getPaneState()[fieldName] = value;
+        },
+      });
+    });
+  }
+
+  _withPaneState(paneKey, callback) {
+    const prevPaneKey = this._activePaneKey;
+    this._activePaneKey = paneKey;
+    try {
+      return callback(this._getPaneState(paneKey));
+    } finally {
+      this._activePaneKey = prevPaneKey;
+    }
   }
 
   _cloneCardConfig(config) {
