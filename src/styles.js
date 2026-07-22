@@ -1,14 +1,7 @@
 export const STYLES = `
-  :root {
-  --fvc-outer-shadow: 4px 4px 4px 4px grey !important; 
-  }
-
-
   :host {
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
-    box-shadow: var(--fvc-outer-shadow) !important;
-    border-radius: 15px !important; 
     --rotate-vw: 100vw;
     --rotate-vh: 100dvh;
     --rotate-ox: 0px;

@@ -339,6 +339,9 @@ export class FrigateViewCard extends HTMLElement {
           shadows: previewConfig.shadows !== false,
           borders: previewConfig.borders !== false,
           rounded_corners: previewConfig.rounded_corners !== false,
+          outer_shadows: previewConfig.outer_shadows !== false,
+          outer_border: previewConfig.outer_border === true,
+          outer_rounded_corners: previewConfig.outer_rounded_corners !== false,
           wide_view: previewConfig.wide_view === true,
           col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
         }
@@ -416,6 +419,27 @@ export class FrigateViewCard extends HTMLElement {
       const isEnabled = this._config?.[configKey] !== false;
       card.classList.toggle(className, !isEnabled);
     }
+    this._syncHostOuterStyles();
+  }
+
+  _syncHostOuterStyles() {
+    const card = this.shadowRoot?.querySelector("#card");
+    if (!card) return;
+    const style = getComputedStyle(card);
+    const outerShadow = style.getPropertyValue("--fvc-shadow-m").trim();
+    const outerBorder = style.getPropertyValue("--fvc-border-s").trim();
+    const outerRadius = style.getPropertyValue("--fvc-border-radius").trim();
+
+    this.style.boxShadow =
+      this._config?.outer_shadows !== false && outerShadow
+        ? outerShadow
+        : "none";
+    this.style.border =
+      this._config?.outer_border === true && outerBorder ? outerBorder : "none";
+    this.style.borderRadius =
+      this._config?.outer_rounded_corners !== false && outerRadius
+        ? outerRadius
+        : "0px";
   }
   _syncColHeight() {
     requestAnimationFrame(() => {
@@ -651,6 +675,9 @@ export class FrigateViewCard extends HTMLElement {
       shadows: config.shadows !== false,
       borders: config.borders !== false,
       rounded_corners: config.rounded_corners !== false,
+      outer_shadows: config.outer_shadows !== false,
+      outer_border: config.outer_border === true,
+      outer_rounded_corners: config.outer_rounded_corners !== false,
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
     };
@@ -6148,6 +6175,7 @@ export class FrigateViewCard extends HTMLElement {
         card.style.removeProperty(key);
       }
     }
+    this._syncHostOuterStyles();
   }
   _isCardVisible() {
     if (!this.isConnected) return false;

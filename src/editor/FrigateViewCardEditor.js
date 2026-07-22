@@ -192,6 +192,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     src.shadows = src.shadows !== false;
     src.borders = src.borders !== false;
     src.rounded_corners = src.rounded_corners !== false;
+    src.outer_shadows = src.outer_shadows !== false;
+    src.outer_border = src.outer_border === true;
+    src.outer_rounded_corners = src.outer_rounded_corners !== false;
     src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
       Number(src.realtime_poll_seconds),
     )
@@ -858,6 +861,24 @@ export class FrigateViewCardEditor extends HTMLElement {
         <div class="layout-row">
           <span class="field-label" style="margin:0">Rounded Corners</span>
           <ha-switch id="rounded_corners" ${this._config?.rounded_corners !== false ? "checked" : ""}></ha-switch>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Card Outer Shadows</span>
+          <ha-switch id="outer_shadows" ${this._config?.outer_shadows !== false ? "checked" : ""}></ha-switch>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Card Outer Border</span>
+          <ha-switch id="outer_border" ${this._config?.outer_border === true ? "checked" : ""}></ha-switch>
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Card Outer Rounded Corners</span>
+          <ha-switch id="outer_rounded_corners" ${this._config?.outer_rounded_corners !== false ? "checked" : ""}></ha-switch>
         </div>
       </div>
       <div class="section">

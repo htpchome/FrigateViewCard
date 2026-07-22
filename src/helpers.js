@@ -610,6 +610,12 @@ export const buildEditorConfigFromDom = ({
   nextConfig.borders = root.querySelector("#borders")?.checked !== false;
   nextConfig.rounded_corners =
     root.querySelector("#rounded_corners")?.checked !== false;
+  nextConfig.outer_shadows =
+    root.querySelector("#outer_shadows")?.checked !== false;
+  nextConfig.outer_border =
+    root.querySelector("#outer_border")?.checked === true;
+  nextConfig.outer_rounded_corners =
+    root.querySelector("#outer_rounded_corners")?.checked !== false;
   nextConfig.wide_view = root.querySelector("#wide_view")?.checked === true;
 
   const leftWidthRaw = root
@@ -805,6 +811,19 @@ export const compactEditorConfigForYaml = (
     source.rounded_corners !== false,
     true,
   );
+  addIfNotDefault(
+    compact,
+    "outer_shadows",
+    source.outer_shadows !== false,
+    true,
+  );
+  addIfNotDefault(compact, "outer_border", source.outer_border === true, false);
+  addIfNotDefault(
+    compact,
+    "outer_rounded_corners",
+    source.outer_rounded_corners !== false,
+    true,
+  );
   addIfNotDefault(compact, "wide_view", source.wide_view === true, false);
   const leftWidth = Number(source.col_left_width_pct) || 50;
   addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
@@ -864,6 +883,9 @@ export const createEditorPreviewDraft = (config) => ({
   shadows: config.shadows,
   borders: config.borders,
   rounded_corners: config.rounded_corners,
+  outer_shadows: config.outer_shadows,
+  outer_border: config.outer_border,
+  outer_rounded_corners: config.outer_rounded_corners,
   wide_view: config.wide_view,
   col_left_width_pct: config.col_left_width_pct,
 });
