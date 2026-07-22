@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.677";
+const VERSION = "1.0.678";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2106,9 +2106,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _runPaneTask(paneKey, callback) {
     const normalizedPaneKey = paneKey === LEFT_PANE_KEY || paneKey === RIGHT_PANE_KEY ? paneKey : PRIMARY_PANE_KEY;
-    if (normalizedPaneKey === PRIMARY_PANE_KEY) {
-      return this._withPaneStateAsync(PRIMARY_PANE_KEY, callback);
-    }
     const taskGeneration = Number(this._paneTaskGeneration || 0);
     const runTask = async () => {
       while (this._paneTaskBusy) {
@@ -4806,18 +4803,18 @@ const FrigateViewCard = class extends HTMLElement {
       this._applyPreviewShellVisibility();
       this._applyCardStyle();
       this._applyLayoutMode();
-      void this._runPaneTask(LEFT_PANE_KEY, async () => {
+      void this._runPaneTask(LEFT_PANE_KEY, () => {
         this._syncTabsShell(true);
         this._renderList();
-        await this._mountEngine();
-        await this._loadWindow(true);
+        return this._mountEngine(null, { quiet: true });
       });
-      void this._runPaneTask(RIGHT_PANE_KEY, async () => {
+      void this._runPaneTask(RIGHT_PANE_KEY, () => {
         this._syncTabsShell(true);
         this._renderList();
-        await this._mountEngine();
-        await this._loadWindow(true);
+        return this._mountEngine(null, { quiet: true });
       });
+      void this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
+      void this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
       return;
     }
     this._applyPreviewShellVisibility();

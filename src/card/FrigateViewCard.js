@@ -545,11 +545,6 @@ export class FrigateViewCard extends HTMLElement {
         ? paneKey
         : PRIMARY_PANE_KEY;
 
-    // Keep single-view runtime responsive by bypassing side-pane task locks.
-    if (normalizedPaneKey === PRIMARY_PANE_KEY) {
-      return this._withPaneStateAsync(PRIMARY_PANE_KEY, callback);
-    }
-
     const taskGeneration = Number(this._paneTaskGeneration || 0);
     const runTask = async () => {
       while (this._paneTaskBusy) {
@@ -3669,18 +3664,20 @@ export class FrigateViewCard extends HTMLElement {
       this._applyPreviewShellVisibility();
       this._applyCardStyle();
       this._applyLayoutMode();
-      void this._runPaneTask(LEFT_PANE_KEY, async () => {
+      // Stage startup as mount A -> mount B -> data A -> data B to avoid
+      // cross-pane context drift while still bringing both live panes up first.
+      void this._runPaneTask(LEFT_PANE_KEY, () => {
         this._syncTabsShell(true);
         this._renderList();
-        await this._mountEngine();
-        await this._loadWindow(true);
+        return this._mountEngine(null, { quiet: true });
       });
-      void this._runPaneTask(RIGHT_PANE_KEY, async () => {
+      void this._runPaneTask(RIGHT_PANE_KEY, () => {
         this._syncTabsShell(true);
         this._renderList();
-        await this._mountEngine();
-        await this._loadWindow(true);
+        return this._mountEngine(null, { quiet: true });
       });
+      void this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
+      void this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
       return;
     }
     this._applyPreviewShellVisibility();
