@@ -3551,10 +3551,14 @@ export class FrigateViewCard extends HTMLElement {
       return;
     }
     if (context.deferCameraSwitch === true) return;
+    const shouldBootstrapPaneData = enteringSideBySide || leavingPreview;
     this._forEachRuntimePane(() => {
-      if (leavingPreview) {
+      if (shouldBootstrapPaneData) {
         void this._runPaneTask(this._activePaneKey, () =>
           this._mountEngine(null, { quiet: true }),
+        );
+        void this._runPaneTask(this._activePaneKey, () =>
+          this._loadWindow(true),
         );
       }
       this._syncTabsShell();

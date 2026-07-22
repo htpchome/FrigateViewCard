@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.666";
+const VERSION = "1.0.667";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4705,11 +4705,16 @@ const FrigateViewCard = class extends HTMLElement {
       return;
     }
     if (context.deferCameraSwitch === true) return;
+    const shouldBootstrapPaneData = enteringSideBySide || leavingPreview;
     this._forEachRuntimePane(() => {
-      if (leavingPreview) {
+      if (shouldBootstrapPaneData) {
         void this._runPaneTask(
           this._activePaneKey,
           () => this._mountEngine(null, { quiet: true })
+        );
+        void this._runPaneTask(
+          this._activePaneKey,
+          () => this._loadWindow(true)
         );
       }
       this._syncTabsShell();
