@@ -3,6 +3,9 @@ export const STYLES = `
     --ha-card-background: var(--c-bg-main) !important;
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
+    --fvc-outer-shadow: var(--ha-box-shadow-l) !importatnt;
+    box-shadow: var(--fvc-outer-shadow) !important;
+    border-radius: 15px !important; 
     --rotate-vw: 100vw;
     --rotate-vh: 100dvh;
     --rotate-ox: 0px;
@@ -55,10 +58,6 @@ export const STYLES = `
     height: 100%;
     overflow:hidden !important;
     }
-  :host{
-    box-shadow: var(--ha-box-shadow-m) !important;
-    border-radius: 15px !important; 
-  }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
