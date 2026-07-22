@@ -1,8 +1,13 @@
 export const STYLES = `
+  :root {
+  --fvc-outer-shadow: 4px 4px 4px 4px grey !important; 
+  }
+
+
   :host {
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
-    box-shadow: 4px 4px 4px 4px grey !important;
+    box-shadow: var(--fvc-outer-shadow) !important;
     border-radius: 15px !important; 
     --rotate-vw: 100vw;
     --rotate-vh: 100dvh;
@@ -47,9 +52,6 @@ export const STYLES = `
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
     --ha-card-border-radius: var(--fvc-border-radius) !important;
-    --ha-card-box-shadow: var(--fvc-shadow-m) !important;
-    box-shadow: var(--ha-box-shadow-m) !important;
-    border: var(--fvc-border-m);
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
@@ -59,12 +61,12 @@ export const STYLES = `
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
-    --fvc-border-s: 1px solid #63428c;
-    --fvc-border-m:  2px solid #ff6d33;
+    --fvc-border-s: 2px solid var(--c-border2);
+    --fvc-border-m: 2px solid var(--c-border2);
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: 15px;
     color:var(--c-text);
-    border: var(--fvc-border-s);
+    border: var(--fvc-border-m);
     overflow:hidden;
     box-sizing: border-box;
     -webkit-backface-visibility: hidden;
