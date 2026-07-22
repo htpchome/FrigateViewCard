@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.631";
+const VERSION = "1.0.632";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1808,35 +1808,35 @@ const FrigateViewCard = class extends HTMLElement {
   _syncHostOuterStyles() {
     const card = this.shadowRoot?.querySelector("#card");
     if (!card) return;
-    const style = getComputedStyle(card);
-    const outerShadow = style.getPropertyValue("--fvc-shadow-m").trim();
-    const outerBorder = this._resolveStyleVarsForHost(
-      style.getPropertyValue("--fvc-border-s").trim(),
-      style
+    const outerShadow = this._resolveCardTokenForHost(
+      card,
+      "box-shadow",
+      "var(--fvc-shadow-m)"
     );
-    const outerRadius = this._resolveStyleVarsForHost(
-      style.getPropertyValue("--fvc-border-radius").trim(),
-      style
+    const outerBorder = this._resolveCardTokenForHost(
+      card,
+      "border",
+      "var(--fvc-border-s)"
+    );
+    const outerRadius = this._resolveCardTokenForHost(
+      card,
+      "border-radius",
+      "var(--fvc-border-radius)"
     );
     this.style.boxShadow = this._config?.outer_shadows !== false && outerShadow ? outerShadow : "none";
     this.style.border = this._config?.outer_border === true && outerBorder ? outerBorder : "none";
     this.style.borderRadius = this._config?.outer_rounded_corners !== false && outerRadius ? outerRadius : "0px";
   }
-  _resolveStyleVarsForHost(value, scopedStyle) {
-    const raw = String(value || "").trim();
-    if (!raw || !/var\(/.test(raw)) return raw;
-    const resolveOne = (name, fallback = "") => {
-      const resolved = scopedStyle?.getPropertyValue?.(name)?.trim() || "";
-      return resolved || String(fallback || "").trim();
-    };
-    const withFallback = /var\(\s*(--[\w-]+)\s*,\s*([^\)]+)\)/g;
-    const withoutFallback = /var\(\s*(--[\w-]+)\s*\)/g;
-    let next = raw.replace(
-      withFallback,
-      (_m, varName, fallback) => resolveOne(varName, fallback)
-    );
-    next = next.replace(withoutFallback, (_m, varName) => resolveOne(varName));
-    return next;
+  _resolveCardTokenForHost(card, cssProperty, token) {
+    const value = String(token || "").trim();
+    if (!card || !value) return "";
+    const probe = document.createElement("div");
+    probe.style.cssText = "position:absolute;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;";
+    probe.style.setProperty(cssProperty, value);
+    card.appendChild(probe);
+    const resolved = getComputedStyle(probe).getPropertyValue(cssProperty).trim();
+    probe.remove();
+    return resolved || value;
   }
   _syncColHeight() {
     requestAnimationFrame(() => {
