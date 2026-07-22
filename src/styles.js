@@ -11,6 +11,7 @@ export const STYLES = `
     overflow: hidden;
     box-sizing: border-box !important;
     position: relative;
+    border:1px solid var(--secondary-background-color,#7a7a7a);
   }
   :host {
     --popup-z-index: 1000;
