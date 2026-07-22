@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.642";
+const VERSION = "1.0.643";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10326,17 +10326,31 @@ const FrigateViewCardEditor = class extends HTMLElement {
           <span class="field-label" style="margin:0">Tight Margins</span>
           <ha-switch id="tight_margins" ${this._config?.tight_margins ? "checked" : ""}></ha-switch>
         </div>
-      </div>
-      <div class="section">
-        <div class="layout-row">
-          <span class="field-label" style="margin:0">Shadows</span>
-          <ha-switch id="shadows" ${this._config?.shadows !== false ? "checked" : ""}></ha-switch>
+        <div class="field-helper">Enable or Disable Tight Margins.  This setting essentially removes the default Home Assistant Padding around an item in a Sections View.  Doing this allows the Card to span the full height of the available space.  This could be useful on phones or tablets.
         </div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Borders</span>
+          <span class="field-label" style="margin:0">Shadows (Inside Card)</span>
+          <ha-switch id="shadows" ${this._config?.shadows !== false ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">Enable or Disable Inner Shadows - these are the shadows around things like the events list items.  This could be useful on phones or tablets.
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Shadows (Outside Card)</span>
+          <ha-switch id="outer_shadows" ${this._config?.outer_shadows !== false ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">Enable or Disable Outer Shadows - this is the shadow around the entire card.  This could be useful on phones or tablets.
+        </div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Borders on Event Items</span>
           <ha-switch id="borders" ${this._config?.borders !== false ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">Enable or Disable Borders on Event List Items.  This may be usefull if Shadows are disabled to visually seperate the event list items.
         </div>
       </div>
       <div class="section">
@@ -10344,17 +10358,15 @@ const FrigateViewCardEditor = class extends HTMLElement {
           <span class="field-label" style="margin:0">Rounded Corners</span>
           <ha-switch id="rounded_corners" ${this._config?.rounded_corners !== false ? "checked" : ""}></ha-switch>
         </div>
-      </div>
-      <div class="section">
-        <div class="layout-row">
-          <span class="field-label" style="margin:0">Card Outer Shadows</span>
-          <ha-switch id="outer_shadows" ${this._config?.outer_shadows !== false ? "checked" : ""}></ha-switch>
+        <div class="field-helper">Enable or Disable Rounded Corners.  This could be useful on phones or tablets.
         </div>
       </div>
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Wide View</span>
           <ha-switch id="wide_view" ${this._config?.wide_view ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">When Wide View is Enabled, the card will display two columns wide.  The default is disabled which will display one column.  Wide view may be usefull in panel view
         </div>
         <div id="col-width-row" style="display:flex;align-items:center;gap:6px;margin-top:6px;${this._config?.wide_view ? "" : "display:none"}">
           <label style="font-size:11px;color:var(--c-text);white-space:nowrap">Left Width %</label>
