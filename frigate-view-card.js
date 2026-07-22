@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.669";
+const VERSION = "1.0.670";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4636,8 +4636,14 @@ const FrigateViewCard = class extends HTMLElement {
       this._cancelPendingMount(`page-route-${this._pageId}`);
     }
     if (leavingSideBySide) {
-      this._withPaneState(LEFT_PANE_KEY, () => this._cleanupEngine());
-      this._withPaneState(RIGHT_PANE_KEY, () => this._cleanupEngine());
+      this._withPaneState(
+        LEFT_PANE_KEY,
+        () => this._cancelPendingMount("page-route-side-by-side-leave-left")
+      );
+      this._withPaneState(
+        RIGHT_PANE_KEY,
+        () => this._cancelPendingMount("page-route-side-by-side-leave-right")
+      );
       this._renderShell();
     }
     this._applyPreviewShellVisibility();
@@ -4653,8 +4659,11 @@ const FrigateViewCard = class extends HTMLElement {
       return;
     }
     if (context.deferCameraSwitch === true) return;
-    if (leavingPreview) {
+    if (leavingPreview || leavingSideBySide) {
       this._mountEngine(null, { quiet: true });
+    }
+    if (leavingSideBySide) {
+      void this._loadWindow(true);
     }
     this._syncTabsShell();
     this._renderAll();
@@ -4686,7 +4695,15 @@ const FrigateViewCard = class extends HTMLElement {
       this._cancelPendingMount("page-route-side-by-side");
     }
     if (enteringSideBySide) {
-      this._cleanupEngine();
+      this._cancelPendingMount("page-route-side-by-side-enter");
+      this._withPaneState(
+        LEFT_PANE_KEY,
+        () => this._cancelPendingMount("page-route-side-by-side-enter-left")
+      );
+      this._withPaneState(
+        RIGHT_PANE_KEY,
+        () => this._cancelPendingMount("page-route-side-by-side-enter-right")
+      );
       this._renderShell();
     }
     this._applySideBySideStartingCameras();
