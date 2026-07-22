@@ -2281,25 +2281,8 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
-  _buildLiveStreamAttempts(
-    connectionType,
-    forcedType = null,
-    hostSlot = null,
-    startupOverrides = null,
-  ) {
+  _buildLiveStreamAttempts(connectionType, forcedType = null, hostSlot = null) {
     if (connectionType === "ha_direct") return [];
-    const webrtcWaitMs = Math.max(
-      500,
-      Number(startupOverrides?.webrtcWaitMs ?? 7000),
-    );
-    const mseWaitMs = Math.max(
-      500,
-      Number(startupOverrides?.mseWaitMs ?? 4000),
-    );
-    const hlsWaitMs = Math.max(
-      500,
-      Number(startupOverrides?.hlsWaitMs ?? 5000),
-    );
     const disableHlsOnDesktop =
       DEVICE_PROFILE.isDesktop &&
       this._cameraDisableHlsDesktop(this._activeCam?.entity);
@@ -2308,14 +2291,14 @@ export class FrigateViewCard extends HTMLElement {
       webrtc: () =>
         this._tryMountGo2RTCWebRTC(
           hiddenSlot(),
-          { waitMs: webrtcWaitMs },
+          { waitMs: 7000 },
           { commit: false },
         ),
       mse: () =>
         this._tryMountGo2RTCMSE(
           hiddenSlot(),
           {
-            waitMs: mseWaitMs,
+            waitMs: 4000,
             minCurrentTime: 0.05,
             minDecodedFrames: 1,
             requireReadyState: 2,
@@ -2326,7 +2309,7 @@ export class FrigateViewCard extends HTMLElement {
       hls: () =>
         this._tryMountGo2RTCHLS(
           hiddenSlot(),
-          { waitMs: hlsWaitMs },
+          { waitMs: 5000 },
           { commit: false },
         ),
     };
@@ -3260,7 +3243,6 @@ export class FrigateViewCard extends HTMLElement {
 
   async _mountEngine(forcedType = null, options = {}) {
     const quiet = options?.quiet === true;
-    const startupOverrides = options?.startupOverrides || null;
     const slot = this._$("#engine");
     if (!slot) return;
     if (this._isPreviewPageActive()) {
@@ -3452,7 +3434,6 @@ export class FrigateViewCard extends HTMLElement {
         connectionType,
         forcedType,
         slot,
-        startupOverrides,
       );
       if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
         return;
@@ -3671,12 +3652,7 @@ export class FrigateViewCard extends HTMLElement {
     if (enteringSideBySide) {
       this._invalidatePaneTaskQueue();
       this._capturePrimaryStateBeforeSideBySide();
-      const preserveEntity = this._withPaneState(PRIMARY_PANE_KEY, () =>
-        String(this._activeCam?.entity || "").trim(),
-      );
-      this._cancelPendingMount("page-route-side-by-side-enter", {
-        preserveMseEntity: preserveEntity,
-      });
+      this._cancelPendingMount("page-route-side-by-side-enter");
       this._withPaneState(LEFT_PANE_KEY, () =>
         this._cancelPendingMount("page-route-side-by-side-enter-left"),
       );
@@ -3688,28 +3664,17 @@ export class FrigateViewCard extends HTMLElement {
       this._applyPreviewShellVisibility();
       this._applyCardStyle();
       this._applyLayoutMode();
-      const sideBySideStartupOverrides = {
-        webrtcWaitMs: 2200,
-        mseWaitMs: 2200,
-        hlsWaitMs: 2200,
-      };
       // Stage startup as mount A -> mount B -> data A -> data B to avoid
       // cross-pane context drift while still bringing both live panes up first.
       void this._runPaneTask(LEFT_PANE_KEY, () => {
         this._syncTabsShell(true);
         this._renderList();
-        return this._mountEngine(null, {
-          quiet: true,
-          startupOverrides: sideBySideStartupOverrides,
-        });
+        return this._mountEngine(null, { quiet: true });
       });
       void this._runPaneTask(RIGHT_PANE_KEY, () => {
         this._syncTabsShell(true);
         this._renderList();
-        return this._mountEngine(null, {
-          quiet: true,
-          startupOverrides: sideBySideStartupOverrides,
-        });
+        return this._mountEngine(null, { quiet: true });
       });
       void this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
       void this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
