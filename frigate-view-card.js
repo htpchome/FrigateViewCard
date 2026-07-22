@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.643";
+const VERSION = "1.0.644";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10254,35 +10254,6 @@ const FrigateViewCardEditor = class extends HTMLElement {
         </div>
       </div>
       <div class="section">
-        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
-          <div style="display:flex;flex-direction:column;gap:6px;max-width:420px">
-            <div class="layout-row" style="justify-content:flex-start;gap:8px">
-              <span class="field-label" style="margin:0">Grid Mode</span>
-              <ha-switch id="grid_mode_enabled" ${this._config?.grid_mode_enabled ? "checked" : ""}></ha-switch>
-            </div>
-            <div class="field-helper">Enable a 2x2 camera grid. This is not available on mobile phone devices and requires at least 2 cameras.</div>
-          </div>
-          <div id="grid_start_row" style="min-width:210px;display:${this._config?.grid_mode_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
-            <div class="layout-row" style="justify-content:flex-start;gap:8px">
-              <span class="field-label" style="margin:0">Start In Grid Mode</span>
-              <ha-switch id="grid_start_in_grid_enabled" ${this._config?.grid_start_in_grid_enabled ? "checked" : ""}></ha-switch>
-            </div>
-            <div class="field-helper">Start this card in grid mode and return to grid mode when re-entering the dashboard.</div>
-          </div>
-          <div id="grid_live_row" style="min-width:210px;display:${this._config?.grid_mode_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
-            <div class="layout-row" style="justify-content:flex-start;gap:8px">
-              <span class="field-label" style="margin:0">Live View In Grid</span>
-              <ha-switch id="grid_live_view_enabled" ${this._config?.grid_live_view_enabled !== false ? "checked" : ""}></ha-switch>
-            </div>
-            <div class="field-helper">Off = snapshots by default. Alerted cameras switch to live temporarily and show border. On = all visible grid cameras stay live.</div>
-          </div>
-          <div id="grid_rotation_row" style="min-width:210px;display:${this._config?.grid_mode_enabled && cams.length > 4 ? "flex" : "none"};flex-direction:column;gap:6px">
-            <span class="field-label" style="margin:0">Grid Rotation Frequency</span>
-            <ha-selector id="grid_rotation_seconds" style="width:210px"></ha-selector>
-          </div>
-        </div>
-      </div>
-      <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Timezone</span>
           <span class="readonly-value">${timezoneDisplay}</span>
@@ -10397,6 +10368,36 @@ const FrigateViewCardEditor = class extends HTMLElement {
         </div>
         <div class="field-helper">Shows per-camera metadata under each landing tile (name, source, events, and online status).</div>
       </div>`;
+    const gridviewPanelContent = `
+      <div class="section">
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:420px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Grid Mode</span>
+              <ha-switch id="grid_mode_enabled" ${this._config?.grid_mode_enabled ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Enable a 2x2 camera grid. This is not available on mobile phone devices and requires at least 2 cameras.</div>
+          </div>
+          <div id="grid_start_row" style="min-width:210px;display:${this._config?.grid_mode_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Start In Grid Mode</span>
+              <ha-switch id="grid_start_in_grid_enabled" ${this._config?.grid_start_in_grid_enabled ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Start this card in grid mode and return to grid mode when re-entering the dashboard.</div>
+          </div>
+          <div id="grid_live_row" style="min-width:210px;display:${this._config?.grid_mode_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Live View In Grid</span>
+              <ha-switch id="grid_live_view_enabled" ${this._config?.grid_live_view_enabled !== false ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Off = snapshots by default. Alerted cameras switch to live temporarily and show border. On = all visible grid cameras stay live.</div>
+          </div>
+          <div id="grid_rotation_row" style="min-width:210px;display:${this._config?.grid_mode_enabled && cams.length > 4 ? "flex" : "none"};flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Grid Rotation Frequency</span>
+            <ha-selector id="grid_rotation_seconds" style="width:210px"></ha-selector>
+          </div>
+        </div>
+      </div>`;
     const activeSettingsPanel = this._activeSettingsPanelId === void 0 ? "camera" : this._activeSettingsPanelId;
     const settingsPanelsMarkup = `
       <div class="settings-container">
@@ -10404,7 +10405,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
         ${this._renderSettingsPanel({ id: "general", title: "General Settings", icon: "mdi:cog", content: generalPanelContent, active: activeSettingsPanel === "general" })}
         ${this._renderSettingsPanel({ id: "theme", title: "Theme Settings", icon: "mdi:palette", content: themePanelContent, active: activeSettingsPanel === "theme" })}
         ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent, active: activeSettingsPanel === "layout" })}
-        ${this._renderSettingsPanel({ id: "landing", title: "Landing Page", icon: "mdi:view-grid", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
+        ${this._renderSettingsPanel({ id: "layout", title: "Grid View", icon: "mdi:angle-right", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
+        ${this._renderSettingsPanel({ id: "gridview", title: "Landing Page", icon: "mdi:view-grid", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
     this.innerHTML = `<style>
             .ed-wrap{
