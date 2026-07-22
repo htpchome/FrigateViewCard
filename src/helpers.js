@@ -555,6 +555,16 @@ export const buildEditorConfigFromDom = ({
     root.querySelector("#preview_page_show_title_bars")?.checked !== false;
   nextConfig.wide_view_page_enabled =
     root.querySelector("#wide_view_page_enabled")?.checked === true;
+  nextConfig.side_by_side_page_enabled =
+    root.querySelector("#side_by_side_page_enabled")?.checked === true;
+  nextConfig.side_by_side_left_camera =
+    root.querySelector("#side_by_side_left_camera")?.dataset.value ||
+    root.querySelector("#side_by_side_left_camera")?.value ||
+    "";
+  nextConfig.side_by_side_right_camera =
+    root.querySelector("#side_by_side_right_camera")?.dataset.value ||
+    root.querySelector("#side_by_side_right_camera")?.value ||
+    "";
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value ||
@@ -769,6 +779,22 @@ export const compactEditorConfigForYaml = (
   );
   addIfNotDefault(
     compact,
+    "side_by_side_page_enabled",
+    source.side_by_side_page_enabled === true,
+    false,
+  );
+  addStringIfPresent(
+    compact,
+    "side_by_side_left_camera",
+    source.side_by_side_left_camera,
+  );
+  addStringIfPresent(
+    compact,
+    "side_by_side_right_camera",
+    source.side_by_side_right_camera,
+  );
+  addIfNotDefault(
+    compact,
     "landing_page",
     normalizePageRoute(source.landing_page),
     PAGE_IDS.singleView,
@@ -896,6 +922,9 @@ export const createEditorPreviewDraft = (config) => ({
   preview_page_live_cameras: config.preview_page_live_cameras,
   preview_page_show_title_bars: config.preview_page_show_title_bars,
   wide_view_page_enabled: config.wide_view_page_enabled,
+  side_by_side_page_enabled: config.side_by_side_page_enabled,
+  side_by_side_left_camera: config.side_by_side_left_camera,
+  side_by_side_right_camera: config.side_by_side_right_camera,
   landing_page: config.landing_page,
   mobile_page: config.mobile_page,
   grid_rotation_seconds: config.grid_rotation_seconds,

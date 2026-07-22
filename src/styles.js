@@ -83,6 +83,14 @@ export const STYLES = `
 
   .card .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
     overflow: hidden !important;}
+  .card .side-by-side-shell{display:none;}
+  .card.side-by-side-active .side-by-side-shell{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;flex:1 1 auto;min-height:0;padding:8px;box-sizing:border-box;overflow:hidden;}
+  .card.side-by-side-active .side-pane{min-width:0;min-height:0;border:var(--fvc-border-s);border-radius:var(--fvc-border-radius);background:var(--c-bg-main);overflow:hidden;display:flex;flex-direction:column;}
+  .card.side-by-side-active .side-pane .layout{max-height:none;height:100%;}
+  @media (max-width: 900px){
+    .card.side-by-side-active .side-by-side-shell{grid-template-columns:1fr;overflow-y:auto;}
+    .card.side-by-side-active .side-pane{min-height:420px;}
+  }
   .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
   .card .col-left > *{flex:0 0 auto;}
@@ -371,6 +379,11 @@ export const STYLES = `
   .live-grid-label{position:absolute;left:6px;top:6px;z-index:2;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:.68rem;line-height:1.2;pointer-events:none;text-transform:none;}
   .preview-shell,.preview-shell-header,.preview-shell-footer{display:none;}
   .card.preview-active{width:100%;max-width:none;margin:0;}
+  .card.side-by-side-active .col-left .page-nav{display:none;}
+  .card.side-by-side-active .preview-shell,
+  .card.side-by-side-active .preview-shell-header,
+  .card.side-by-side-active .preview-shell-footer{display:none;}
+  .card.side-by-side-active > .layout{display:none;}
   .card.preview-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--view-height,100dvh);max-height:var(--view-height,100dvh);overflow:hidden !important;}
   .card.preview-active .col-left,.card.preview-active .resize-handle,.card.preview-active .col-right{display:none;}
 
