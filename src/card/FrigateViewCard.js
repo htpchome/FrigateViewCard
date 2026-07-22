@@ -373,7 +373,9 @@ export class FrigateViewCard extends HTMLElement {
         margin: this.parentElement.style.margin,
         padding: this.parentElement.style.padding,
       };
-      this.parentElement.style.height = "100%";
+      this.parentElement.style.height = this._isPreviewContext()
+        ? "auto"
+        : "100%";
       this._applyTightMargins();
       this._applyLayoutMode();
       if (this._config?.wide_view) {
@@ -467,8 +469,9 @@ export class FrigateViewCard extends HTMLElement {
 
   _applyTightMargins() {
     const tightMarginsEnabled = this._config?.tight_margins === true;
+    const inPreviewContext = this._isPreviewContext();
     if (this.parentElement) {
-      this.parentElement.style.height = "100%";
+      this.parentElement.style.height = inPreviewContext ? "auto" : "100%";
       if (tightMarginsEnabled) {
         this.parentElement.style.margin = "0";
         this.parentElement.style.padding = "0";
@@ -560,9 +563,18 @@ export class FrigateViewCard extends HTMLElement {
       cameras: [
         {
           entity: "camera.front_door",
+          alerts_content: "alerts_only",
         },
       ],
-      title: "Frigate",
+      title: "Frigate Preview",
+      subtitle: "Compact preview",
+      compact_preview: true,
+      stream_height: 42,
+      stream_height_unit: "vh",
+      window_days: 1,
+      alerts_reviews_days: 1,
+      hidden_tabs: ["clips", "snapshot", "recordings", "kept"],
+      tight_margins: true,
     };
   }
   setConfig(config) {
@@ -685,6 +697,7 @@ export class FrigateViewCard extends HTMLElement {
           : {},
       stream_height: config.stream_height ? Number(config.stream_height) : null,
       stream_height_unit: config.stream_height_unit || "vh",
+      compact_preview: config.compact_preview === true,
       tight_margins: config.tight_margins === true,
       shadows: config.shadows !== false,
       borders: config.borders !== false,
@@ -844,6 +857,9 @@ export class FrigateViewCard extends HTMLElement {
     );
   }
   getCardSize() {
+    if (this._isPreviewContext() || this._config?.compact_preview === true) {
+      return 3;
+    }
     return 6;
   }
   getGridOptions() {
@@ -1388,6 +1404,35 @@ export class FrigateViewCard extends HTMLElement {
       depth += 1;
     }
     return false;
+  }
+
+  _isCardPickerPreviewContext() {
+    // Card picker preview context can mount outside editor preview tags.
+    let el = this;
+    let depth = 0;
+    while (el && depth < 64) {
+      const tag = String(el.tagName || "").toUpperCase();
+      if (
+        tag === "HUI-CARD-PICKER" ||
+        tag === "HUI-DIALOG-CREATE-CARD" ||
+        tag === "HUI-CARD-OPTIONS"
+      ) {
+        return true;
+      }
+      const root = el.getRootNode?.();
+      if (root?.host && root.host !== el) {
+        el = root.host;
+        depth += 1;
+        continue;
+      }
+      el = el.parentNode || el.host;
+      depth += 1;
+    }
+    return false;
+  }
+
+  _isPreviewContext() {
+    return this._isEditorPreviewContext() || this._isCardPickerPreviewContext();
   }
 
   _ffDebug(_msg, _data = null) {}
@@ -6149,10 +6194,16 @@ export class FrigateViewCard extends HTMLElement {
     // Stream height — sets :host height/max-height via --card-host-height,
     // and #eng-wrap max-height via --view-height.
     const vh = this._config.stream_height;
+    const isCompactPreview =
+      this._config?.compact_preview === true || this._isPreviewContext();
+    const previewHeightFallback = isCompactPreview && !vh ? "320px" : "";
     if (vh) {
       const unit = this._config.stream_height_unit || "vh";
       this.style.setProperty("--card-host-height", `${vh}${unit}`);
       card.style.setProperty("--view-height", `${vh}${unit}`);
+    } else if (previewHeightFallback) {
+      this.style.setProperty("--card-host-height", previewHeightFallback);
+      card.style.setProperty("--view-height", previewHeightFallback);
     } else {
       this.style.removeProperty("--card-host-height");
       // Check if HA Sections injected a card height on the host element
