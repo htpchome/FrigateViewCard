@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.620";
+const VERSION = "1.0.621";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -118,8 +118,6 @@ const ICONS = {
 const STYLES = `
   :host {
     --ha-card-background: var(--c-bg-main) !important;
-    box-shadow: 10px 5px 10px 10px red !important;
-    border-radius: var(--fvc-border-radius) !important;
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     --rotate-vw: 100vw;
@@ -174,6 +172,10 @@ const STYLES = `
     height: 100%;
     overflow:hidden !important;
     }
+  :host{
+    box-shadow: var(--fvc-shadow-s) !important;
+    border-radius: var(--fvc-border-radius) !important; 
+  }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
