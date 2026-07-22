@@ -427,18 +427,19 @@ export class FrigateViewCard extends HTMLElement {
     const outerShadow = this._resolveCardTokenForHost(
       card,
       "box-shadow",
-      "var(--fvc-shadow-m)",
+      "var(--fvc-outer-shadow-m)",
     );
     const outerRadius = this._resolveCardTokenForHost(
       card,
       "border-radius",
-      "var(--fvc-border-radius)",
+      "var(--fvc-outer-border-radius)",
     );
 
     this.style.boxShadow =
       this._config?.outer_shadows !== false && outerShadow
         ? outerShadow
         : "none";
+    this.style.border = "none";
     this.style.borderRadius =
       this._config?.outer_rounded_corners !== false && outerRadius
         ? outerRadius

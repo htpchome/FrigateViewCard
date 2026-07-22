@@ -1413,6 +1413,13 @@ export class FrigateViewCardEditor extends HTMLElement {
   }
 
   _dispatch() {
+    const cameras = this._getCams();
+    this._config = buildEditorConfigFromDom({
+      root: this,
+      baseConfig: this._config,
+      cameras,
+      themeDraftCache: this._themeDraftCache,
+    });
     const config = withCardTypeForYaml(
       compactEditorConfigForYaml(this._config, {
         themeDefaultColors: this._themeDefaultHexMap(),

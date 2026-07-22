@@ -38,7 +38,6 @@ test("editor YAML config omits normalized default values", () => {
     tight_margins: false,
     rounded_corners: true,
     outer_shadows: true,
-    outer_border: false,
     outer_rounded_corners: true,
     wide_view: false,
     col_left_width_pct: 50,

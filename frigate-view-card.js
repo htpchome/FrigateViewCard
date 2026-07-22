@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.634";
+const VERSION = "1.0.636";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -167,10 +167,12 @@ const STYLES = `
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
+    --fvc-outer-shadow-m: var(--ha-box-shadow-m);
     --fvc-border-s: 1px solid var(--c-border2);
     --fvc-border-m: 2px solid var(--c-border2);
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: 15px;
+    --fvc-outer-border-radius: 15px;
     color:var(--c-text);
     overflow:hidden;
     box-sizing: border-box;
@@ -1098,6 +1100,11 @@ const buildEditorConfigFromDom = ({
   themeDraftCache
 }) => {
   const readTrimmed = (id) => root.querySelector(`#${id}`)?.value?.trim() || "";
+  const isSwitchChecked = (element) => {
+    if (!element) return false;
+    if (element.checked === true) return true;
+    return element.getAttribute?.("checked") != null;
+  };
   const nextConfig = { ...baseConfig, cameras };
   delete nextConfig.camera_entity;
   const title = readTrimmed("title");
@@ -1164,7 +1171,7 @@ const buildEditorConfigFromDom = ({
   });
   nextConfig.theme_custom = themeCustom;
   nextConfig.theme_custom_defaults = themeCustomDefaults;
-  const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")].filter((element) => element.checked !== true).map((element) => element.dataset.activeTab).filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
+  const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")].filter((element) => !isSwitchChecked(element)).map((element) => element.dataset.activeTab).filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
   nextConfig.hidden_tabs = hiddenTabs.length ? hiddenTabs : [];
   const streamHeight = root.querySelector("#stream_height")?.value;
   const streamHeightUnit = root.querySelector("#stream_height_unit")?.dataset.value || root.querySelector("#stream_height_unit")?.value || "vh";
@@ -1801,14 +1808,15 @@ const FrigateViewCard = class extends HTMLElement {
     const outerShadow = this._resolveCardTokenForHost(
       card,
       "box-shadow",
-      "var(--fvc-shadow-m)"
+      "var(--fvc-outer-shadow-m)"
     );
     const outerRadius = this._resolveCardTokenForHost(
       card,
       "border-radius",
-      "var(--fvc-border-radius)"
+      "var(--fvc-outer-border-radius)"
     );
     this.style.boxShadow = this._config?.outer_shadows !== false && outerShadow ? outerShadow : "none";
+    this.style.border = "none";
     this.style.borderRadius = this._config?.outer_rounded_corners !== false && outerRadius ? outerRadius : "0px";
   }
   _resolveCardTokenForHost(card, cssProperty, token) {
@@ -10857,6 +10865,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
     if (dispatch) this._dispatch();
   }
   _dispatch() {
+    const cameras = this._getCams();
+    this._config = buildEditorConfigFromDom({
+      root: this,
+      baseConfig: this._config,
+      cameras,
+      themeDraftCache: this._themeDraftCache
+    });
     const config = withCardTypeForYaml(
       compactEditorConfigForYaml(this._config, {
         themeDefaultColors: this._themeDefaultHexMap()

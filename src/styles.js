@@ -50,10 +50,12 @@ export const STYLES = `
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
+    --fvc-outer-shadow-m: var(--ha-box-shadow-m);
     --fvc-border-s: 1px solid var(--c-border2);
     --fvc-border-m: 2px solid var(--c-border2);
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: 15px;
+    --fvc-outer-border-radius: 15px;
     color:var(--c-text);
     overflow:hidden;
     box-sizing: border-box;

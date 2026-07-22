@@ -484,6 +484,11 @@ export const buildEditorConfigFromDom = ({
   themeDraftCache,
 }) => {
   const readTrimmed = (id) => root.querySelector(`#${id}`)?.value?.trim() || "";
+  const isSwitchChecked = (element) => {
+    if (!element) return false;
+    if (element.checked === true) return true;
+    return element.getAttribute?.("checked") != null;
+  };
   const nextConfig = { ...baseConfig, cameras };
   delete nextConfig.camera_entity;
 
@@ -591,7 +596,7 @@ export const buildEditorConfigFromDom = ({
   nextConfig.theme_custom_defaults = themeCustomDefaults;
 
   const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")]
-    .filter((element) => element.checked !== true)
+    .filter((element) => !isSwitchChecked(element))
     .map((element) => element.dataset.activeTab)
     .filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
   nextConfig.hidden_tabs = hiddenTabs.length ? hiddenTabs : [];
