@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.675";
+const VERSION = "1.0.676";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2711,6 +2711,41 @@ const FrigateViewCard = class extends HTMLElement {
   _resetSingleViewForFreshLoad() {
     this._resetPaneForFreshLoad(PRIMARY_PANE_KEY, 0);
   }
+  _capturePrimaryStateBeforeSideBySide() {
+    this._withPaneState(PRIMARY_PANE_KEY, () => {
+      this._primaryBeforeSideBySide = {
+        activeCamIdx: this._activeCamIdx,
+        tab: this._tab,
+        eventsMode: this._eventsMode,
+        viewMode: this._viewMode
+      };
+    });
+  }
+  _restorePrimaryStateAfterSideBySide() {
+    const snapshot = this._primaryBeforeSideBySide;
+    if (!snapshot) return;
+    this._withPaneState(PRIMARY_PANE_KEY, () => {
+      const maxIdx = Math.max(0, (this._config?.cameras?.length || 1) - 1);
+      this._activeCamIdx = Math.min(
+        Math.max(0, Number(snapshot.activeCamIdx) || 0),
+        maxIdx
+      );
+      this._tab = String(snapshot.tab || "alerts");
+      this._eventsMode = snapshot.eventsMode === "all" || snapshot.eventsMode === "camera" ? snapshot.eventsMode : "camera";
+      this._viewMode = snapshot.viewMode === "grid" && this._isGridModeAvailable() ? "grid" : "single";
+      this._followNowWindow = true;
+      this._loading = false;
+      this._reloadPending = false;
+      this._reloadAfterLoad = false;
+      this._events = [];
+      this._recordings = [];
+      this._reviews = [];
+      this._kept = [];
+      this._eventsLoadToken += 1;
+      this._reviewsLoadToken += 1;
+      this._lastRenderedListHtml = "";
+    });
+  }
   getCardSize() {
     if (this._isPreviewContext() || this._config?.compact_preview === true) {
       return 3;
@@ -4690,7 +4725,7 @@ const FrigateViewCard = class extends HTMLElement {
       );
       this._withPaneState(PRIMARY_PANE_KEY, () => {
         this._cancelPendingMount("page-route-side-by-side-leave-primary");
-        this._resetSingleViewForFreshLoad();
+        this._restorePrimaryStateAfterSideBySide();
         this._renderShell();
         this._applyPreviewShellVisibility();
         this._applyCardStyle();
@@ -4759,6 +4794,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     if (enteringSideBySide) {
       this._invalidatePaneTaskQueue();
+      this._capturePrimaryStateBeforeSideBySide();
       this._cancelPendingMount("page-route-side-by-side-enter");
       this._withPaneState(
         LEFT_PANE_KEY,
@@ -4769,6 +4805,23 @@ const FrigateViewCard = class extends HTMLElement {
         () => this._cancelPendingMount("page-route-side-by-side-enter-right")
       );
       this._renderShell();
+      this._applySideBySideStartingCameras();
+      this._applyPreviewShellVisibility();
+      this._applyCardStyle();
+      this._applyLayoutMode();
+      void this._runPaneTask(LEFT_PANE_KEY, async () => {
+        this._syncTabsShell(true);
+        this._renderList();
+        await this._mountEngine();
+        await this._loadWindow(true);
+      });
+      void this._runPaneTask(RIGHT_PANE_KEY, async () => {
+        this._syncTabsShell(true);
+        this._renderList();
+        await this._mountEngine();
+        await this._loadWindow(true);
+      });
+      return;
     }
     this._applySideBySideStartingCameras();
     this._applyPreviewShellVisibility();
