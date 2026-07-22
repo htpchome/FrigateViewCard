@@ -753,21 +753,6 @@ export class FrigateViewCardEditor extends HTMLElement {
         </div>
       </div>
       <div class="section">
-        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
-          <div style="display:flex;flex-direction:column;gap:6px;max-width:420px">
-            <div class="layout-row" style="justify-content:flex-start;gap:8px">
-              <span class="field-label" style="margin:0">Slideshow Rotation</span>
-              <ha-switch id="slideshow_rotation_enabled" ${this._config?.slideshow_rotation_enabled ? "checked" : ""}></ha-switch>
-            </div>
-            <div class="field-helper">Allow the live camera view to rotate at a fixed interval. This is not available on mobile phone devices.</div>
-          </div>
-          <div id="slideshow_rotation_row" style="min-width:210px;display:${this._config?.slideshow_rotation_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
-            <span class="field-label" style="margin:0">Slideshow Rotation Frequency</span>
-            <ha-selector id="slideshow_rotation_seconds" style="width:210px"></ha-selector>
-          </div>
-        </div>
-      </div>
-      <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Timezone</span>
           <span class="readonly-value">${timezoneDisplay}</span>
@@ -862,6 +847,22 @@ export class FrigateViewCardEditor extends HTMLElement {
         </div>
         <div class="field-helper" id="col_left_width_pct-helper"></div>
       </div>`;
+    const slideshowPanelContent = `
+      <div class="section">
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:420px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Slideshow Rotation</span>
+              <ha-switch id="slideshow_rotation_enabled" ${this._config?.slideshow_rotation_enabled ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Allow the live camera view to rotate at a fixed interval. This is not available on mobile phone devices.</div>
+          </div>
+          <div id="slideshow_rotation_row" style="min-width:210px;display:${this._config?.slideshow_rotation_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
+            <span class="field-label" style="margin:0">Slideshow Rotation Frequency</span>
+            <ha-selector id="slideshow_rotation_seconds" style="width:210px"></ha-selector>
+          </div>
+        </div>
+      </div>`;
 
     const landingPanelContent = `
       <div class="section" style="border-top:none;padding-top:0">
@@ -927,8 +928,9 @@ export class FrigateViewCardEditor extends HTMLElement {
         ${this._renderSettingsPanel({ id: "general", title: "General Settings", icon: "mdi:cog", content: generalPanelContent, active: activeSettingsPanel === "general" })}
         ${this._renderSettingsPanel({ id: "theme", title: "Theme Settings", icon: "mdi:palette", content: themePanelContent, active: activeSettingsPanel === "theme" })}
         ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent, active: activeSettingsPanel === "layout" })}
-        ${this._renderSettingsPanel({ id: "layout", title: "Grid View", icon: "mdi:angle-right", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
-        ${this._renderSettingsPanel({ id: "gridview", title: "Landing Page", icon: "mdi:view-grid-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
+        ${this._renderSettingsPanel({ id: "slideshow", title: "Slideshow Settings", icon: "mdi:presentation-play", content: slideshowPanelContent, active: activeSettingsPanel === "slideshow" })}        
+        ${this._renderSettingsPanel({ id: "layout", title: "Grid View", icon: "mdi:view-grid-outline", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
+        ${this._renderSettingsPanel({ id: "gridview", title: "Landing Page", icon: "mdi:view-grid", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
 
     this.innerHTML = `<style>
