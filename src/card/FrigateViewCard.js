@@ -8587,7 +8587,7 @@ export class FrigateViewCard extends HTMLElement {
     if (open) {
       if (!this._calMonth) {
         const z = this._tzParts(this._winEnd);
-        this._calMonth = new Date(z.year, z.month - 1, 1);
+        this._calMonth = this._createCalendarMonthDate(z.year, z.month - 1);
       }
       this._renderCal();
       if (!this._daysWithActivity.size) {
@@ -8601,9 +8601,20 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
   // ── calendar ──────────────────────────────────────────────
+  _createCalendarMonthDate(year, monthIndex) {
+    // Use a UTC mid-month anchor to keep month identity stable across time zones.
+    return new Date(Date.UTC(year, monthIndex, 15, 12, 0, 0));
+  }
+  _resolveCalendarMonthDate() {
+    if (this._calMonth instanceof Date) {
+      return new Date(this._calMonth);
+    }
+    const z = this._tzParts(this._winEnd);
+    return this._createCalendarMonthDate(z.year, z.month - 1);
+  }
   _calNav(d) {
-    const m = this._calMonth || new Date();
-    m.setMonth(m.getMonth() + d);
+    const m = this._resolveCalendarMonthDate();
+    m.setUTCMonth(m.getUTCMonth() + d);
     this._calMonth = new Date(m);
     this._renderCal();
   }
@@ -8625,19 +8636,24 @@ export class FrigateViewCard extends HTMLElement {
   _renderCal() {
     const p = this.shadowRoot.querySelector("#cal-panel");
     if (!p) return;
-    const m = this._calMonth || new Date();
-    const y = m.getFullYear(),
-      mo = m.getMonth();
-    const first = new Date(y, mo, 1);
-    const startDow = (first.getDay() + 6) % 7;
-    const days = new Date(y, mo + 1, 0).getDate();
+    const m = this._resolveCalendarMonthDate();
+    const y = m.getUTCFullYear(),
+      mo = m.getUTCMonth();
+    const first = new Date(Date.UTC(y, mo, 1, 12, 0, 0));
+    const startDow = (first.getUTCDay() + 6) % 7;
+    const days = new Date(Date.UTC(y, mo + 1, 0, 12, 0, 0)).getUTCDate();
     let cells = "";
     for (let i = 0; i < startDow; i++) cells += "<span></span>";
     for (let d = 1; d <= days; d++) {
       const ds = `${y}-${String(mo + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       cells += `<button class="cday" data-cal-day="${ds}">${d}${this._daysWithActivity.has(ds) ? '<i class="cdot"></i>' : ""}</button>`;
     }
-    p.innerHTML = `<div class="cal-head"><button data-cal-nav="-1">‹</button><b>${m.toLocaleDateString([], { month: "long", year: "numeric", timeZone: this._tz() })}</b><button data-cal-nav="1">›</button></div>
+    const monthLabel = new Intl.DateTimeFormat([], {
+      month: "long",
+      year: "numeric",
+      timeZone: this._tz(),
+    }).format(m);
+    p.innerHTML = `<div class="cal-head"><button data-cal-nav="-1">‹</button><b>${monthLabel}</b><button data-cal-nav="1">›</button></div>
       <div class="cal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
       <div class="cal-grid">${cells}</div>`;
   }
