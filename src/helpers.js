@@ -555,8 +555,9 @@ export const buildEditorConfigFromDom = ({
     root.querySelector("#preview_page_show_title_bars")?.checked !== false;
   nextConfig.wide_view_page_enabled =
     root.querySelector("#wide_view_page_enabled")?.checked === true;
-  nextConfig.side_by_side_page_enabled =
-    root.querySelector("#side_by_side_page_enabled")?.checked === true;
+  nextConfig.side_by_side_page_enabled = isSwitchChecked(
+    root.querySelector("#side_by_side_page_enabled"),
+  );
   nextConfig.side_by_side_left_camera =
     root.querySelector("#side_by_side_left_camera")?.dataset.value ||
     root.querySelector("#side_by_side_left_camera")?.value ||

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.661";
+const VERSION = "1.0.662";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1273,7 +1273,9 @@ const buildEditorConfigFromDom = ({
   nextConfig.preview_page_live_cameras = root.querySelector("#preview_page_live_cameras")?.checked === true;
   nextConfig.preview_page_show_title_bars = root.querySelector("#preview_page_show_title_bars")?.checked !== false;
   nextConfig.wide_view_page_enabled = root.querySelector("#wide_view_page_enabled")?.checked === true;
-  nextConfig.side_by_side_page_enabled = root.querySelector("#side_by_side_page_enabled")?.checked === true;
+  nextConfig.side_by_side_page_enabled = isSwitchChecked(
+    root.querySelector("#side_by_side_page_enabled")
+  );
   nextConfig.side_by_side_left_camera = root.querySelector("#side_by_side_left_camera")?.dataset.value || root.querySelector("#side_by_side_left_camera")?.value || "";
   nextConfig.side_by_side_right_camera = root.querySelector("#side_by_side_right_camera")?.dataset.value || root.querySelector("#side_by_side_right_camera")?.value || "";
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
@@ -10979,10 +10981,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
             if (!kind) return;
             const handler = () => {
               if (kind === "primary") {
-                if (this._hasVisualDraft) {
-                  this._dispatch();
-                  this._hasVisualDraft = false;
-                }
+                this._dispatch();
+                this._hasVisualDraft = false;
                 this._emitPreviewDraft(null);
                 return;
               }
@@ -10999,10 +10999,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
     };
     this._onDialogPrimaryActionClick = (ev) => {
       if (dialogActionKindFromEvent(ev) !== "primary") return;
-      if (this._hasVisualDraft) {
-        this._dispatch();
-        this._hasVisualDraft = false;
-      }
+      this._dispatch();
+      this._hasVisualDraft = false;
       this._emitPreviewDraft(null);
     };
     this._onDialogSecondaryActionClick = (ev) => {
@@ -11779,14 +11777,23 @@ const FrigateViewCardEditor = class extends HTMLElement {
         "preview_page_live_cameras",
         "preview_page_show_title_bars"
       ],
-      events: ["change", "value-changed"],
+      events: ["change", "value-changed", "checked-changed"],
       handler: () => {
+        const isSwitchOn = (element) => {
+          if (!element) return false;
+          if (element.checked === true) return true;
+          return element.getAttribute?.("checked") != null;
+        };
         const slideshowRow = this.querySelector("#slideshow_rotation_row");
-        const enabled = this.querySelector("#slideshow_rotation_enabled")?.checked === true;
+        const enabled = isSwitchOn(
+          this.querySelector("#slideshow_rotation_enabled")
+        );
         const gridRow = this.querySelector("#grid_rotation_row");
         const gridStartRow = this.querySelector("#grid_start_row");
         const gridLiveRow = this.querySelector("#grid_live_row");
-        const gridEnabled = this.querySelector("#grid_mode_enabled")?.checked === true;
+        const gridEnabled = isSwitchOn(
+          this.querySelector("#grid_mode_enabled")
+        );
         if (slideshowRow)
           slideshowRow.style.display = enabled ? "flex" : "none";
         if (gridStartRow)
@@ -11796,7 +11803,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
         if (gridRow)
           gridRow.style.display = gridEnabled && cams.length > 4 ? "flex" : "none";
         const sideBySideCameras = this.querySelector("#side-by-side-cameras");
-        const sideBySideEnabled = this.querySelector("#side_by_side_page_enabled")?.checked === true;
+        const sideBySideEnabled = isSwitchOn(
+          this.querySelector("#side_by_side_page_enabled")
+        );
         if (sideBySideCameras) {
           sideBySideCameras.style.display = sideBySideEnabled ? "grid" : "none";
         }

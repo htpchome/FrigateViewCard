@@ -591,10 +591,8 @@ export class FrigateViewCardEditor extends HTMLElement {
             if (!kind) return;
             const handler = () => {
               if (kind === "primary") {
-                if (this._hasVisualDraft) {
-                  this._dispatch();
-                  this._hasVisualDraft = false;
-                }
+                this._dispatch();
+                this._hasVisualDraft = false;
                 this._emitPreviewDraft(null);
                 return;
               }
@@ -612,10 +610,8 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     this._onDialogPrimaryActionClick = (ev) => {
       if (dialogActionKindFromEvent(ev) !== "primary") return;
-      if (this._hasVisualDraft) {
-        this._dispatch();
-        this._hasVisualDraft = false;
-      }
+      this._dispatch();
+      this._hasVisualDraft = false;
       this._emitPreviewDraft(null);
     };
 
@@ -1470,16 +1466,23 @@ export class FrigateViewCardEditor extends HTMLElement {
         "preview_page_live_cameras",
         "preview_page_show_title_bars",
       ],
-      events: ["change", "value-changed"],
+      events: ["change", "value-changed", "checked-changed"],
       handler: () => {
+        const isSwitchOn = (element) => {
+          if (!element) return false;
+          if (element.checked === true) return true;
+          return element.getAttribute?.("checked") != null;
+        };
         const slideshowRow = this.querySelector("#slideshow_rotation_row");
-        const enabled =
-          this.querySelector("#slideshow_rotation_enabled")?.checked === true;
+        const enabled = isSwitchOn(
+          this.querySelector("#slideshow_rotation_enabled"),
+        );
         const gridRow = this.querySelector("#grid_rotation_row");
         const gridStartRow = this.querySelector("#grid_start_row");
         const gridLiveRow = this.querySelector("#grid_live_row");
-        const gridEnabled =
-          this.querySelector("#grid_mode_enabled")?.checked === true;
+        const gridEnabled = isSwitchOn(
+          this.querySelector("#grid_mode_enabled"),
+        );
         if (slideshowRow)
           slideshowRow.style.display = enabled ? "flex" : "none";
         if (gridStartRow)
@@ -1490,8 +1493,9 @@ export class FrigateViewCardEditor extends HTMLElement {
           gridRow.style.display =
             gridEnabled && cams.length > 4 ? "flex" : "none";
         const sideBySideCameras = this.querySelector("#side-by-side-cameras");
-        const sideBySideEnabled =
-          this.querySelector("#side_by_side_page_enabled")?.checked === true;
+        const sideBySideEnabled = isSwitchOn(
+          this.querySelector("#side_by_side_page_enabled"),
+        );
         if (sideBySideCameras) {
           sideBySideCameras.style.display = sideBySideEnabled ? "grid" : "none";
         }
