@@ -250,6 +250,19 @@ export class FrigateViewCardEditor extends HTMLElement {
     return { ...src, cameras };
   }
 
+  _landingPageOptionSignature(config) {
+    const normalized = this._normalizeConfig(config);
+    const desktop = getEnabledPageRoutes(
+      normalized,
+      DEVICE_ROUTE_BUCKETS.desktop,
+    ).join("|");
+    const mobile = getEnabledPageRoutes(
+      normalized,
+      DEVICE_ROUTE_BUCKETS.mobile,
+    ).join("|");
+    return `${desktop}::${mobile}`;
+  }
+
   _frigateEntities() {
     if (!this._hass) return [];
     return Object.keys(this._hass.states)
@@ -1478,17 +1491,25 @@ export class FrigateViewCardEditor extends HTMLElement {
   _u({ dispatch = true, preview = false } = {}) {
     if (!this._validateEditorFields()) return;
     const cameras = this._getCams();
+    const prevOptionSignature = this._landingPageOptionSignature(this._config);
     const nextConfig = buildEditorConfigFromDom({
       root: this,
       baseConfig: this._config,
       cameras,
       themeDraftCache: this._themeDraftCache,
     });
+    const normalizedNextConfig = this._normalizeConfig(nextConfig);
+    const nextOptionSignature =
+      this._landingPageOptionSignature(normalizedNextConfig);
 
-    this._config = nextConfig;
+    this._config = normalizedNextConfig;
+    if (prevOptionSignature !== nextOptionSignature) {
+      this._render();
+      return;
+    }
     if (preview) {
       this._hasVisualDraft = true;
-      this._emitPreviewDraft(createEditorPreviewDraft(nextConfig));
+      this._emitPreviewDraft(createEditorPreviewDraft(normalizedNextConfig));
     }
     if (dispatch) this._dispatch();
   }

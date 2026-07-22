@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.657";
+const VERSION = "1.0.658";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10183,6 +10183,18 @@ const FrigateViewCardEditor = class extends HTMLElement {
     delete src.wide_view;
     return { ...src, cameras };
   }
+  _landingPageOptionSignature(config) {
+    const normalized = this._normalizeConfig(config);
+    const desktop = getEnabledPageRoutes(
+      normalized,
+      DEVICE_ROUTE_BUCKETS.desktop
+    ).join("|");
+    const mobile = getEnabledPageRoutes(
+      normalized,
+      DEVICE_ROUTE_BUCKETS.mobile
+    ).join("|");
+    return `${desktop}::${mobile}`;
+  }
   _frigateEntities() {
     if (!this._hass) return [];
     return Object.keys(this._hass.states).filter((e) => e.startsWith("camera.")).filter((e) => {
@@ -11273,16 +11285,23 @@ const FrigateViewCardEditor = class extends HTMLElement {
   _u({ dispatch = true, preview = false } = {}) {
     if (!this._validateEditorFields()) return;
     const cameras = this._getCams();
+    const prevOptionSignature = this._landingPageOptionSignature(this._config);
     const nextConfig = buildEditorConfigFromDom({
       root: this,
       baseConfig: this._config,
       cameras,
       themeDraftCache: this._themeDraftCache
     });
-    this._config = nextConfig;
+    const normalizedNextConfig = this._normalizeConfig(nextConfig);
+    const nextOptionSignature = this._landingPageOptionSignature(normalizedNextConfig);
+    this._config = normalizedNextConfig;
+    if (prevOptionSignature !== nextOptionSignature) {
+      this._render();
+      return;
+    }
     if (preview) {
       this._hasVisualDraft = true;
-      this._emitPreviewDraft(createEditorPreviewDraft(nextConfig));
+      this._emitPreviewDraft(createEditorPreviewDraft(normalizedNextConfig));
     }
     if (dispatch) this._dispatch();
   }
