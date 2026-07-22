@@ -1,9 +1,8 @@
 export const STYLES = `
   :host {
-    --ha-card-background: #ffcc33;
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
-    box-shadow: box-shadow: 4px 4px 4px 4px grey;
+    box-shadow: 4px 4px 4px 4px grey !important;
     border-radius: 15px !important; 
     --rotate-vw: 100vw;
     --rotate-vh: 100dvh;
