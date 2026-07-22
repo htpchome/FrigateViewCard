@@ -114,3 +114,21 @@ test("editor YAML payload preserves HA grid and visibility metadata", () => {
     visibility: [{ condition: "user", users: ["user-id"] }],
   });
 });
+
+test("editor YAML includes side-by-side settings when enabled", () => {
+  const compact = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }, { entity: "camera.driveway" }],
+    side_by_side_page_enabled: true,
+    side_by_side_left_camera: "camera.front_door",
+    side_by_side_right_camera: "camera.driveway",
+    landing_page: "side-by-side",
+  });
+
+  assert.deepEqual(compact, {
+    cameras: [{ entity: "camera.front_door" }, { entity: "camera.driveway" }],
+    side_by_side_page_enabled: true,
+    side_by_side_left_camera: "camera.front_door",
+    side_by_side_right_camera: "camera.driveway",
+    landing_page: "side-by-side",
+  });
+});

@@ -6172,6 +6172,7 @@ export class FrigateViewCard extends HTMLElement {
     const sideBySideLayoutMarkup = (() => {
       const left = this._paneShellData(LEFT_PANE_KEY);
       const right = this._paneShellData(RIGHT_PANE_KEY);
+      const sideBySideNav = `<div class="side-by-side-nav" aria-label="Page navigation">${pageNav}</div>`;
       const leftLayout = this._withPaneState(LEFT_PANE_KEY, () =>
         this._renderStandardLayoutMarkup({
           title: left.title,
@@ -6188,7 +6189,7 @@ export class FrigateViewCard extends HTMLElement {
           camSwitcher: right.camSwitcher,
         }),
       );
-      return `<div class="side-by-side-shell">
+      return `${sideBySideNav}<div class="side-by-side-shell">
         <section class="side-pane" data-pane="left">
           ${leftLayout}
         </section>

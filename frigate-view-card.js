@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.660";
+const VERSION = "1.0.661";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -201,6 +201,9 @@ const STYLES = `
   .card .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
     overflow: hidden !important;}
   .card .side-by-side-shell{display:none;}
+  .card .side-by-side-nav{display:none;}
+  .card.side-by-side-active .side-by-side-nav{display:flex;align-items:center;padding:8px 10px 0;}
+  .card.side-by-side-active .side-by-side-nav .page-nav{padding:0;}
   .card.side-by-side-active .side-by-side-shell{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;flex:1 1 auto;min-height:0;padding:8px;box-sizing:border-box;overflow:hidden;}
   .card.side-by-side-active .side-pane{min-width:0;min-height:0;border:var(--fvc-border-s);border-radius:var(--fvc-border-radius);background:var(--c-bg-main);overflow:hidden;display:flex;flex-direction:column;}
   .card.side-by-side-active .side-pane .layout{max-height:none;height:100%;}
@@ -496,7 +499,7 @@ const STYLES = `
   .live-grid-label{position:absolute;left:6px;top:6px;z-index:2;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.2);color:var(--c-text-rev);font-size:.68rem;line-height:1.2;pointer-events:none;text-transform:none;}
   .preview-shell,.preview-shell-header,.preview-shell-footer{display:none;}
   .card.preview-active{width:100%;max-width:none;margin:0;}
-  .card.side-by-side-active .col-left .page-nav{display:none;}
+  .card.side-by-side-active .side-pane .col-left .page-nav{display:none;}
   .card.side-by-side-active .preview-shell,
   .card.side-by-side-active .preview-shell-header,
   .card.side-by-side-active .preview-shell-footer{display:none;}
@@ -6949,6 +6952,7 @@ const FrigateViewCard = class extends HTMLElement {
     const sideBySideLayoutMarkup = (() => {
       const left = this._paneShellData(LEFT_PANE_KEY);
       const right = this._paneShellData(RIGHT_PANE_KEY);
+      const sideBySideNav = `<div class="side-by-side-nav" aria-label="Page navigation">${pageNav}</div>`;
       const leftLayout = this._withPaneState(
         LEFT_PANE_KEY,
         () => this._renderStandardLayoutMarkup({
@@ -6967,7 +6971,7 @@ const FrigateViewCard = class extends HTMLElement {
           camSwitcher: right.camSwitcher
         })
       );
-      return `<div class="side-by-side-shell">
+      return `${sideBySideNav}<div class="side-by-side-shell">
         <section class="side-pane" data-pane="left">
           ${leftLayout}
         </section>
@@ -11878,12 +11882,14 @@ const FrigateViewCardEditor = class extends HTMLElement {
   }
   _dispatch() {
     const cameras = this._getCams();
-    this._config = buildEditorConfigFromDom({
-      root: this,
-      baseConfig: this._config,
-      cameras,
-      themeDraftCache: this._themeDraftCache
-    });
+    this._config = this._normalizeConfig(
+      buildEditorConfigFromDom({
+        root: this,
+        baseConfig: this._config,
+        cameras,
+        themeDraftCache: this._themeDraftCache
+      })
+    );
     const config = withCardTypeForYaml(
       compactEditorConfigForYaml(this._config, {
         themeDefaultColors: this._themeDefaultHexMap()
