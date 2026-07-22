@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.617";
+const VERSION = "1.0.618";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -119,7 +119,8 @@ const STYLES = `
   :host {
     --ha-card-background: var(--c-bg-main) !important;
     --ha-card-border-radius: var(--fvc-border-radius) !important;
-    box-shadow: box-shadow: 10px 5px 10px 10px red; !important;
+    --ha-card-box-shadow: box-shadow: 10px 5px 10px 10px red !important; 
+    box-shadow: box-shadow: 10px 5px 10px 10px red !important;
     border-radius: var(--fvc-border-radius) !important;
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
@@ -173,7 +174,7 @@ const STYLES = `
     margin: 0 !important;
     min-height: 0 !important;
     height: 100%;
-    overflow:visible !important;
+    overflow:hidden !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
@@ -197,16 +198,16 @@ const STYLES = `
     position:relative;
     top:0;
     left:0;
-    overflow:none !important;
+    overflow:hidden !important;
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;}
 
   .card .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
-    overflow: none !important;border-radius: var(--fvc-border-radius);}
+    overflow: hidden !important;}
   .card .layout.wide{flex-direction:row;}
-  .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;}
+  .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
   .card .col-left > *{flex:0 0 auto;}
   .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
   .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
