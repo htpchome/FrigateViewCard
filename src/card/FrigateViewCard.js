@@ -340,7 +340,6 @@ export class FrigateViewCard extends HTMLElement {
           borders: previewConfig.borders !== false,
           rounded_corners: previewConfig.rounded_corners !== false,
           outer_shadows: previewConfig.outer_shadows !== false,
-          outer_border: previewConfig.outer_border === true,
           outer_rounded_corners: previewConfig.outer_rounded_corners !== false,
           wide_view: previewConfig.wide_view === true,
           col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
@@ -430,11 +429,6 @@ export class FrigateViewCard extends HTMLElement {
       "box-shadow",
       "var(--fvc-shadow-m)",
     );
-    const outerBorder = this._resolveCardTokenForHost(
-      card,
-      "border",
-      "var(--fvc-border-s)",
-    );
     const outerRadius = this._resolveCardTokenForHost(
       card,
       "border-radius",
@@ -445,8 +439,6 @@ export class FrigateViewCard extends HTMLElement {
       this._config?.outer_shadows !== false && outerShadow
         ? outerShadow
         : "none";
-    this.style.border =
-      this._config?.outer_border === true && outerBorder ? outerBorder : "none";
     this.style.borderRadius =
       this._config?.outer_rounded_corners !== false && outerRadius
         ? outerRadius
@@ -702,7 +694,6 @@ export class FrigateViewCard extends HTMLElement {
       borders: config.borders !== false,
       rounded_corners: config.rounded_corners !== false,
       outer_shadows: config.outer_shadows !== false,
-      outer_border: config.outer_border === true,
       outer_rounded_corners: config.outer_rounded_corners !== false,
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
