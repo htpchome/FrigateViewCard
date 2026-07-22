@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.636";
+const VERSION = "1.0.638";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -159,7 +159,6 @@ const STYLES = `
   /* \u2500\u2500 responsive layout    \u2500\u2500 */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-    --ha-card-border-radius: var(--fvc-border-radius) !important;
     min-height: 0 !important;
     height: 100%;
     overflow:hidden !important;
@@ -1182,7 +1181,6 @@ const buildEditorConfigFromDom = ({
   nextConfig.borders = root.querySelector("#borders")?.checked !== false;
   nextConfig.rounded_corners = root.querySelector("#rounded_corners")?.checked !== false;
   nextConfig.outer_shadows = root.querySelector("#outer_shadows")?.checked !== false;
-  nextConfig.outer_rounded_corners = root.querySelector("#outer_rounded_corners")?.checked !== false;
   nextConfig.wide_view = root.querySelector("#wide_view")?.checked === true;
   const leftWidthRaw = root.querySelector("#col_left_width_pct")?.value?.replace(/%/g, "").trim();
   nextConfig.col_left_width_pct = leftWidthRaw ? Math.min(Math.max(parseInt(leftWidthRaw, 10) || 50, 10), 90) : 50;
@@ -1341,12 +1339,6 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     source.outer_shadows !== false,
     true
   );
-  addIfNotDefault(
-    compact,
-    "outer_rounded_corners",
-    source.outer_rounded_corners !== false,
-    true
-  );
   addIfNotDefault(compact, "wide_view", source.wide_view === true, false);
   const leftWidth = Number(source.col_left_width_pct) || 50;
   addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
@@ -1395,7 +1387,6 @@ const createEditorPreviewDraft = (config) => ({
   borders: config.borders,
   rounded_corners: config.rounded_corners,
   outer_shadows: config.outer_shadows,
-  outer_rounded_corners: config.outer_rounded_corners,
   wide_view: config.wide_view,
   col_left_width_pct: config.col_left_width_pct
 });
@@ -1729,7 +1720,6 @@ const FrigateViewCard = class extends HTMLElement {
       borders: previewConfig.borders !== false,
       rounded_corners: previewConfig.rounded_corners !== false,
       outer_shadows: previewConfig.outer_shadows !== false,
-      outer_rounded_corners: previewConfig.outer_rounded_corners !== false,
       wide_view: previewConfig.wide_view === true,
       col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50
     } : base;
@@ -1816,8 +1806,7 @@ const FrigateViewCard = class extends HTMLElement {
       "var(--fvc-outer-border-radius)"
     );
     this.style.boxShadow = this._config?.outer_shadows !== false && outerShadow ? outerShadow : "none";
-    this.style.border = "none";
-    this.style.borderRadius = this._config?.outer_rounded_corners !== false && outerRadius ? outerRadius : "0px";
+    this.style.borderRadius = outerRadius || "0px";
   }
   _resolveCardTokenForHost(card, cssProperty, token) {
     const value = String(token || "").trim();
@@ -2011,7 +2000,6 @@ const FrigateViewCard = class extends HTMLElement {
       borders: config.borders !== false,
       rounded_corners: config.rounded_corners !== false,
       outer_shadows: config.outer_shadows !== false,
-      outer_rounded_corners: config.outer_rounded_corners !== false,
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50
     };
@@ -9791,7 +9779,6 @@ const FrigateViewCardEditor = class extends HTMLElement {
     src.borders = src.borders !== false;
     src.rounded_corners = src.rounded_corners !== false;
     src.outer_shadows = src.outer_shadows !== false;
-    src.outer_rounded_corners = src.outer_rounded_corners !== false;
     src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
       Number(src.realtime_poll_seconds)
     ) ? Number(src.realtime_poll_seconds) : 5;
@@ -10358,12 +10345,6 @@ const FrigateViewCardEditor = class extends HTMLElement {
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Card Outer Rounded Corners</span>
-          <ha-switch id="outer_rounded_corners" ${this._config?.outer_rounded_corners !== false ? "checked" : ""}></ha-switch>
-        </div>
-      </div>
-      <div class="section">
-        <div class="layout-row">
           <span class="field-label" style="margin:0">Wide View</span>
           <ha-switch id="wide_view" ${this._config?.wide_view ? "checked" : ""}></ha-switch>
         </div>
@@ -10765,7 +10746,6 @@ const FrigateViewCardEditor = class extends HTMLElement {
         "borders",
         "rounded_corners",
         "outer_shadows",
-        "outer_rounded_corners",
         "mobile_poll_battery_saver",
         "slideshow_rotation_enabled",
         "grid_mode_enabled",

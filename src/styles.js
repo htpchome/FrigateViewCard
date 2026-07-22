@@ -42,7 +42,6 @@ export const STYLES = `
   /* ── responsive layout    ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-    --ha-card-border-radius: var(--fvc-border-radius) !important;
     min-height: 0 !important;
     height: 100%;
     overflow:hidden !important;

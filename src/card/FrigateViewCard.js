@@ -340,7 +340,6 @@ export class FrigateViewCard extends HTMLElement {
           borders: previewConfig.borders !== false,
           rounded_corners: previewConfig.rounded_corners !== false,
           outer_shadows: previewConfig.outer_shadows !== false,
-          outer_rounded_corners: previewConfig.outer_rounded_corners !== false,
           wide_view: previewConfig.wide_view === true,
           col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
         }
@@ -439,11 +438,7 @@ export class FrigateViewCard extends HTMLElement {
       this._config?.outer_shadows !== false && outerShadow
         ? outerShadow
         : "none";
-    this.style.border = "none";
-    this.style.borderRadius =
-      this._config?.outer_rounded_corners !== false && outerRadius
-        ? outerRadius
-        : "0px";
+    this.style.borderRadius = outerRadius || "0px";
   }
 
   _resolveCardTokenForHost(card, cssProperty, token) {
@@ -695,7 +690,6 @@ export class FrigateViewCard extends HTMLElement {
       borders: config.borders !== false,
       rounded_corners: config.rounded_corners !== false,
       outer_shadows: config.outer_shadows !== false,
-      outer_rounded_corners: config.outer_rounded_corners !== false,
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
     };
