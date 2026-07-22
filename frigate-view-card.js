@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.673";
+const VERSION = "1.0.674";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4684,26 +4684,28 @@ const FrigateViewCard = class extends HTMLElement {
         RIGHT_PANE_KEY,
         () => this._cancelPendingMount("page-route-side-by-side-leave-right")
       );
-      this._cancelPendingMount("page-route-side-by-side-leave-primary");
-      this._resetSingleViewForFreshLoad();
-      this._renderShell();
-      this._applyPreviewShellVisibility();
-      this._applyCardStyle();
-      this._applyLayoutMode();
-      if (this._isWideViewPageActive()) this._syncColHeight();
-      if (context.startup === true) {
-        if (context.startInGrid === true) {
-          this._setViewMode("grid");
-        } else {
-          this._mountEngine();
+      this._withPaneState(PRIMARY_PANE_KEY, () => {
+        this._cancelPendingMount("page-route-side-by-side-leave-primary");
+        this._resetSingleViewForFreshLoad();
+        this._renderShell();
+        this._applyPreviewShellVisibility();
+        this._applyCardStyle();
+        this._applyLayoutMode();
+        if (this._isWideViewPageActive()) this._syncColHeight();
+        if (context.startup === true) {
+          if (context.startInGrid === true) {
+            this._setViewMode("grid");
+          } else {
+            this._mountEngine();
+          }
+          return;
         }
-        return;
-      }
-      if (context.deferCameraSwitch === true) return;
-      this._syncTabsShell(true);
-      this._renderAll();
-      this._mountEngine();
-      void this._loadWindow(true);
+        if (context.deferCameraSwitch === true) return;
+        this._syncTabsShell(true);
+        this._renderAll();
+        this._mountEngine();
+        void this._runPaneTask(PRIMARY_PANE_KEY, () => this._loadWindow(true));
+      });
       return;
     }
     this._applyPreviewShellVisibility();
