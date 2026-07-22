@@ -3538,14 +3538,17 @@ export class FrigateViewCard extends HTMLElement {
     this._applyCardStyle();
     this._applyLayoutMode();
     if (context.startup === true) {
-      this._forEachRuntimePane(() => {
-        this._mountEngine();
-      });
+      void this._runPaneTask(LEFT_PANE_KEY, () => this._mountEngine());
+      void this._runPaneTask(RIGHT_PANE_KEY, () => this._mountEngine());
       return;
     }
     if (context.deferCameraSwitch === true) return;
     this._forEachRuntimePane(() => {
-      if (leavingPreview) this._mountEngine(null, { quiet: true });
+      if (leavingPreview) {
+        void this._runPaneTask(this._activePaneKey, () =>
+          this._mountEngine(null, { quiet: true }),
+        );
+      }
       this._syncTabsShell();
       this._renderStats();
       this._renderMuteButton();
@@ -5252,7 +5255,7 @@ export class FrigateViewCard extends HTMLElement {
     this._streamMuted = true;
     this._renderMuteButton();
     this._cancelPendingMount("switch-camera", { preserveMseEntity: prevEnt });
-    this._mountEngine();
+    void this._runPaneTask(paneKey, () => this._mountEngine());
     clearTimeout(this._switchLoadT);
     void this._runPaneTask(paneKey, () => this._loadWindow(true));
     this._applyCalendarActivityCacheForActiveCamera();
