@@ -114,6 +114,8 @@ export class FrigateViewCard extends HTMLElement {
     this._loading = false;
     this._exhausted = false;
     this._daysWithActivity = new Set();
+    this._calendarActivityByCam = new Map();
+    this._calendarActivityInFlight = new Map();
     this._filterLabel = "all";
     this._filterZone = "all";
     this._favOnly = false;
@@ -1010,6 +1012,7 @@ export class FrigateViewCard extends HTMLElement {
       this._mountEngine();
     }
     await initialLoad;
+    void this._prefetchCalendarActivityForActiveCamera();
     if (!startInGrid && !startInLanding) this._applyStartInGridMode("startup");
     this._subscribe();
     this._startEditModeWatchdog();
@@ -4644,6 +4647,11 @@ export class FrigateViewCard extends HTMLElement {
     this._mountEngine();
     clearTimeout(this._switchLoadT);
     this._loadWindow(true);
+    this._applyCalendarActivityCacheForActiveCamera();
+    void this._prefetchCalendarActivityForActiveCamera();
+    if (this._$("cal-panel")?.style.display !== "none") {
+      this._renderCal();
+    }
     this._syncToolbarButtons();
   }
   // ── data ─────────────────────────────────────────────────
@@ -5086,18 +5094,68 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
   async _loadCalendar() {
+    await this._prefetchCalendarActivityForActiveCamera();
+  }
+  _calendarActivityCacheKey(clientId, cam, tz = this._tz()) {
+    return `${clientId || ""}|${cam || ""}|${tz || "UTC"}`;
+  }
+  _applyCalendarActivityCacheForActiveCamera() {
     const { clientId, cam } = this._cc();
-    try {
-      const sum = await this._ws({
-        type: "frigate/events/summary",
-        instance_id: clientId,
-        timezone: this._tz(),
-      });
-      if (Array.isArray(sum))
-        this._daysWithActivity = new Set(
-          sum.filter((s) => s.camera === cam && s.day).map((s) => s.day),
+    const key = this._calendarActivityCacheKey(clientId, cam);
+    const cached = this._calendarActivityByCam.get(key);
+    this._daysWithActivity = cached ? new Set(cached) : new Set();
+  }
+  async _prefetchCalendarActivityForActiveCamera() {
+    const { clientId, cam } = this._cc();
+    if (!clientId || !cam) {
+      this._daysWithActivity = new Set();
+      return;
+    }
+    const tz = this._tz();
+    const key = this._calendarActivityCacheKey(clientId, cam, tz);
+    const cached = this._calendarActivityByCam.get(key);
+    if (cached) {
+      this._daysWithActivity = new Set(cached);
+      return;
+    }
+    const existing = this._calendarActivityInFlight.get(key);
+    if (existing) {
+      await existing;
+      return;
+    }
+    const task = (async () => {
+      try {
+        const sum = await this._ws({
+          type: "frigate/events/summary",
+          instance_id: clientId,
+          timezone: tz,
+        });
+        const days = Array.isArray(sum)
+          ? new Set(
+              sum.filter((s) => s.camera === cam && s.day).map((s) => s.day),
+            )
+          : new Set();
+        this._calendarActivityByCam.set(key, days);
+        const active = this._cc();
+        const activeKey = this._calendarActivityCacheKey(
+          active.clientId,
+          active.cam,
+          tz,
         );
-    } catch (_) {}
+        if (activeKey === key) {
+          this._daysWithActivity = new Set(days);
+          if (this._$("cal-panel")?.style.display !== "none") {
+            this._renderCal();
+          }
+        }
+      } catch (_) {}
+    })();
+    this._calendarActivityInFlight.set(key, task);
+    try {
+      await task;
+    } finally {
+      this._calendarActivityInFlight.delete(key);
+    }
   }
   _tz() {
     return (
@@ -8589,15 +8647,9 @@ export class FrigateViewCard extends HTMLElement {
         const z = this._tzParts(this._winEnd);
         this._calMonth = this._createCalendarMonthDate(z.year, z.month - 1);
       }
+      this._applyCalendarActivityCacheForActiveCamera();
       this._renderCal();
-      if (!this._daysWithActivity.size) {
-        void (async () => {
-          await this._loadCalendar();
-          if (this._$("#cal-panel")?.style.display !== "none") {
-            this._renderCal();
-          }
-        })();
-      }
+      void this._prefetchCalendarActivityForActiveCamera();
     }
   }
   // ── calendar ──────────────────────────────────────────────
