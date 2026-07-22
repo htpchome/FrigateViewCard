@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.676";
+const VERSION = "1.0.677";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2708,9 +2708,6 @@ const FrigateViewCard = class extends HTMLElement {
       this._lastRenderedListHtml = "";
     });
   }
-  _resetSingleViewForFreshLoad() {
-    this._resetPaneForFreshLoad(PRIMARY_PANE_KEY, 0);
-  }
   _capturePrimaryStateBeforeSideBySide() {
     this._withPaneState(PRIMARY_PANE_KEY, () => {
       this._primaryBeforeSideBySide = {
@@ -4823,39 +4820,12 @@ const FrigateViewCard = class extends HTMLElement {
       });
       return;
     }
-    this._applySideBySideStartingCameras();
     this._applyPreviewShellVisibility();
     this._applyCardStyle();
     this._applyLayoutMode();
-    if (context.startup === true) {
-      void this._runPaneTask(LEFT_PANE_KEY, async () => {
-        this._syncTabsShell(true);
-        this._renderList();
-        await this._mountEngine();
-      });
-      void this._runPaneTask(RIGHT_PANE_KEY, async () => {
-        this._syncTabsShell(true);
-        this._renderList();
-        await this._mountEngine();
-      });
-      return;
-    }
     if (context.deferCameraSwitch === true) return;
-    const shouldBootstrapPaneData = enteringSideBySide || leavingPreview;
-    if (shouldBootstrapPaneData) {
-      void this._runPaneTask(
-        LEFT_PANE_KEY,
-        () => this._mountEngine(null, { quiet: true })
-      );
-      void this._runPaneTask(
-        RIGHT_PANE_KEY,
-        () => this._mountEngine(null, { quiet: true })
-      );
-      void this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
-      void this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
-    }
     this._forEachRuntimePane(() => {
-      this._syncTabsShell(shouldBootstrapPaneData);
+      this._syncTabsShell();
       this._renderStats();
       this._renderMuteButton();
       this._syncToolbarButtons();

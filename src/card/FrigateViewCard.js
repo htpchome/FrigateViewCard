@@ -1305,10 +1305,6 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
-  _resetSingleViewForFreshLoad() {
-    this._resetPaneForFreshLoad(PRIMARY_PANE_KEY, 0);
-  }
-
   _capturePrimaryStateBeforeSideBySide() {
     this._withPaneState(PRIMARY_PANE_KEY, () => {
       this._primaryBeforeSideBySide = {
@@ -3687,38 +3683,12 @@ export class FrigateViewCard extends HTMLElement {
       });
       return;
     }
-    this._applySideBySideStartingCameras();
     this._applyPreviewShellVisibility();
     this._applyCardStyle();
     this._applyLayoutMode();
-    if (context.startup === true) {
-      void this._runPaneTask(LEFT_PANE_KEY, async () => {
-        this._syncTabsShell(true);
-        this._renderList();
-        await this._mountEngine();
-      });
-      void this._runPaneTask(RIGHT_PANE_KEY, async () => {
-        this._syncTabsShell(true);
-        this._renderList();
-        await this._mountEngine();
-      });
-      return;
-    }
     if (context.deferCameraSwitch === true) return;
-    const shouldBootstrapPaneData = enteringSideBySide || leavingPreview;
-    if (shouldBootstrapPaneData) {
-      // Queue both live mounts first so both panes become visible before window data loads.
-      void this._runPaneTask(LEFT_PANE_KEY, () =>
-        this._mountEngine(null, { quiet: true }),
-      );
-      void this._runPaneTask(RIGHT_PANE_KEY, () =>
-        this._mountEngine(null, { quiet: true }),
-      );
-      void this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
-      void this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
-    }
     this._forEachRuntimePane(() => {
-      this._syncTabsShell(shouldBootstrapPaneData);
+      this._syncTabsShell();
       this._renderStats();
       this._renderMuteButton();
       this._syncToolbarButtons();
