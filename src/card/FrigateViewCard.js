@@ -1405,8 +1405,10 @@ export class FrigateViewCard extends HTMLElement {
     await initialLoad;
     this._scheduleWarmOtherCamerasEvents();
     if (this._isSideBySidePageActive()) {
-      await this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
-      await this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
+      await Promise.all([
+        this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true)),
+        this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true)),
+      ]);
     }
     if (this._isSideBySidePageActive()) {
       void this._runPaneTask(LEFT_PANE_KEY, () =>
@@ -3552,15 +3554,18 @@ export class FrigateViewCard extends HTMLElement {
     }
     if (context.deferCameraSwitch === true) return;
     const shouldBootstrapPaneData = enteringSideBySide || leavingPreview;
+    if (shouldBootstrapPaneData) {
+      // Queue both live mounts first so both panes become visible before window data loads.
+      void this._runPaneTask(LEFT_PANE_KEY, () =>
+        this._mountEngine(null, { quiet: true }),
+      );
+      void this._runPaneTask(RIGHT_PANE_KEY, () =>
+        this._mountEngine(null, { quiet: true }),
+      );
+      void this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
+      void this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
+    }
     this._forEachRuntimePane(() => {
-      if (shouldBootstrapPaneData) {
-        void this._runPaneTask(this._activePaneKey, () =>
-          this._mountEngine(null, { quiet: true }),
-        );
-        void this._runPaneTask(this._activePaneKey, () =>
-          this._loadWindow(true),
-        );
-      }
       this._syncTabsShell();
       this._renderStats();
       this._renderMuteButton();
@@ -5501,6 +5506,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _loadWindowEvents(clientId, cam, after, before) {
+    const paneKey = this._activePaneKey;
     const loadToken = ++this._eventsLoadToken;
     try {
       const initialEvents = await this._fetchWindowedEvents(
@@ -5554,16 +5560,19 @@ export class FrigateViewCard extends HTMLElement {
             },
           );
 
-          if (loadToken !== this._eventsLoadToken) return;
-          if (activeEntity !== this._activeCam?.entity) return;
-          if (winStart !== this._winStart || winEnd !== this._winEnd) return;
+          // Keep background append scoped to the pane that initiated this load.
+          await this._runPaneTask(paneKey, () => {
+            if (loadToken !== this._eventsLoadToken) return;
+            if (activeEntity !== this._activeCam?.entity) return;
+            if (winStart !== this._winStart || winEnd !== this._winEnd) return;
 
-          if (Array.isArray(remainingEvents) && remainingEvents.length) {
-            this._events = this._events.concat(remainingEvents);
-            this._cacheActiveCamSlice("events", this._events);
-            this._renderList();
-            this._renderStats();
-          }
+            if (Array.isArray(remainingEvents) && remainingEvents.length) {
+              this._events = this._events.concat(remainingEvents);
+              this._cacheActiveCamSlice("events", this._events);
+              this._renderList();
+              this._renderStats();
+            }
+          });
         } catch (_) {}
       })();
     } catch (error) {

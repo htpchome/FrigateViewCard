@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.667";
+const VERSION = "1.0.669";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2821,8 +2821,10 @@ const FrigateViewCard = class extends HTMLElement {
     await initialLoad;
     this._scheduleWarmOtherCamerasEvents();
     if (this._isSideBySidePageActive()) {
-      await this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
-      await this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
+      await Promise.all([
+        this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true)),
+        this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true))
+      ]);
     }
     if (this._isSideBySidePageActive()) {
       void this._runPaneTask(
@@ -4706,17 +4708,19 @@ const FrigateViewCard = class extends HTMLElement {
     }
     if (context.deferCameraSwitch === true) return;
     const shouldBootstrapPaneData = enteringSideBySide || leavingPreview;
+    if (shouldBootstrapPaneData) {
+      void this._runPaneTask(
+        LEFT_PANE_KEY,
+        () => this._mountEngine(null, { quiet: true })
+      );
+      void this._runPaneTask(
+        RIGHT_PANE_KEY,
+        () => this._mountEngine(null, { quiet: true })
+      );
+      void this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
+      void this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
+    }
     this._forEachRuntimePane(() => {
-      if (shouldBootstrapPaneData) {
-        void this._runPaneTask(
-          this._activePaneKey,
-          () => this._mountEngine(null, { quiet: true })
-        );
-        void this._runPaneTask(
-          this._activePaneKey,
-          () => this._loadWindow(true)
-        );
-      }
       this._syncTabsShell();
       this._renderStats();
       this._renderMuteButton();
@@ -6356,6 +6360,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   async _loadWindowEvents(clientId, cam, after, before) {
+    const paneKey = this._activePaneKey;
     const loadToken = ++this._eventsLoadToken;
     try {
       const initialEvents = await this._fetchWindowedEvents(
@@ -6402,15 +6407,17 @@ const FrigateViewCard = class extends HTMLElement {
               debugLabel: "background"
             }
           );
-          if (loadToken !== this._eventsLoadToken) return;
-          if (activeEntity !== this._activeCam?.entity) return;
-          if (winStart !== this._winStart || winEnd !== this._winEnd) return;
-          if (Array.isArray(remainingEvents) && remainingEvents.length) {
-            this._events = this._events.concat(remainingEvents);
-            this._cacheActiveCamSlice("events", this._events);
-            this._renderList();
-            this._renderStats();
-          }
+          await this._runPaneTask(paneKey, () => {
+            if (loadToken !== this._eventsLoadToken) return;
+            if (activeEntity !== this._activeCam?.entity) return;
+            if (winStart !== this._winStart || winEnd !== this._winEnd) return;
+            if (Array.isArray(remainingEvents) && remainingEvents.length) {
+              this._events = this._events.concat(remainingEvents);
+              this._cacheActiveCamSlice("events", this._events);
+              this._renderList();
+              this._renderStats();
+            }
+          });
         } catch (_) {
         }
       })();
