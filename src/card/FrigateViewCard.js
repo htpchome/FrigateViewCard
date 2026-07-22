@@ -540,6 +540,16 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _runPaneTask(paneKey, callback) {
+    const normalizedPaneKey =
+      paneKey === LEFT_PANE_KEY || paneKey === RIGHT_PANE_KEY
+        ? paneKey
+        : PRIMARY_PANE_KEY;
+
+    // Keep single-view runtime responsive by bypassing side-pane task locks.
+    if (normalizedPaneKey === PRIMARY_PANE_KEY) {
+      return this._withPaneStateAsync(PRIMARY_PANE_KEY, callback);
+    }
+
     const taskGeneration = Number(this._paneTaskGeneration || 0);
     const runTask = async () => {
       while (this._paneTaskBusy) {
@@ -553,12 +563,13 @@ export class FrigateViewCard extends HTMLElement {
       try {
         if (taskGeneration !== Number(this._paneTaskGeneration || 0)) return;
         if (
-          (paneKey === LEFT_PANE_KEY || paneKey === RIGHT_PANE_KEY) &&
+          (normalizedPaneKey === LEFT_PANE_KEY ||
+            normalizedPaneKey === RIGHT_PANE_KEY) &&
           !this._isSideBySidePageActive()
         ) {
           return;
         }
-        return await this._withPaneStateAsync(paneKey, callback);
+        return await this._withPaneStateAsync(normalizedPaneKey, callback);
       } finally {
         this._paneTaskBusy = false;
         const next = this._paneTaskWaiters?.shift();

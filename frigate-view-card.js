@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.674";
+const VERSION = "1.0.675";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2105,6 +2105,10 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   _runPaneTask(paneKey, callback) {
+    const normalizedPaneKey = paneKey === LEFT_PANE_KEY || paneKey === RIGHT_PANE_KEY ? paneKey : PRIMARY_PANE_KEY;
+    if (normalizedPaneKey === PRIMARY_PANE_KEY) {
+      return this._withPaneStateAsync(PRIMARY_PANE_KEY, callback);
+    }
     const taskGeneration = Number(this._paneTaskGeneration || 0);
     const runTask = async () => {
       while (this._paneTaskBusy) {
@@ -2116,10 +2120,10 @@ const FrigateViewCard = class extends HTMLElement {
       this._paneTaskBusy = true;
       try {
         if (taskGeneration !== Number(this._paneTaskGeneration || 0)) return;
-        if ((paneKey === LEFT_PANE_KEY || paneKey === RIGHT_PANE_KEY) && !this._isSideBySidePageActive()) {
+        if ((normalizedPaneKey === LEFT_PANE_KEY || normalizedPaneKey === RIGHT_PANE_KEY) && !this._isSideBySidePageActive()) {
           return;
         }
-        return await this._withPaneStateAsync(paneKey, callback);
+        return await this._withPaneStateAsync(normalizedPaneKey, callback);
       } finally {
         this._paneTaskBusy = false;
         const next = this._paneTaskWaiters?.shift();
