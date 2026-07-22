@@ -56,8 +56,8 @@ export const STYLES = `
     overflow:hidden !important;
     }
   :host{
-    box-shadow: var(--fvc-shadow-s) !important;
-    border-radius: var(--fvc-border-radius) !important; 
+    box-shadow: var(--ha-box-shadow-m) !important;
+    border-radius: 15px !important; 
   }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
