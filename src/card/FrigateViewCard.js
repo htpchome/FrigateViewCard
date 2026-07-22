@@ -20,8 +20,8 @@ import {
   SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
   SLIDESHOW_REVIEW_WATCH_MIN_MS,
   SLIDESHOW_REVIEW_WATCH_MAX_MS,
-  LANDING_ALERT_HOLD_MS,
-  LANDING_ALERT_END_GRACE_MS,
+  PREVIEW_ALERT_HOLD_MS,
+  PREVIEW_ALERT_END_GRACE_MS,
   MSE_SWITCH_GRACE_MS,
   MSE_SWITCH_GRACE_MAX,
   MAX_CAMERAS,
@@ -161,16 +161,16 @@ export class FrigateViewCard extends HTMLElement {
     this._gridLastAlertCam = "";
     this._gridAlertExpiresByEntity = new Map();
     this._gridAlertSeverityByEntity = new Map();
-    this._landingPageActive = false;
-    this._landingSnapshotRefreshT = null;
-    this._landingAlertWatchT = null;
-    this._landingAlertCleanupT = null;
-    this._landingHandledReviewIds = new Set();
-    this._landingStartedAtSec = 0;
-    this._landingLastRenderSignature = "";
-    this._landingMediaState = null;
-    this._landingAlertExpiresByEntity = new Map();
-    this._landingAlertSeverityByEntity = new Map();
+    this._previewPageActive = false;
+    this._previewSnapshotRefreshT = null;
+    this._previewAlertWatchT = null;
+    this._previewAlertCleanupT = null;
+    this._previewHandledReviewIds = new Set();
+    this._previewStartedAtSec = 0;
+    this._previewLastRenderSignature = "";
+    this._previewMediaState = null;
+    this._previewAlertExpiresByEntity = new Map();
+    this._previewAlertSeverityByEntity = new Map();
     this._domCache = {};
     this._go2rtcWsUrlCache = new Map();
     this._go2rtcHlsUrlCache = new Map();
@@ -410,7 +410,7 @@ export class FrigateViewCard extends HTMLElement {
     const classes = this._visualStyleToggleRules()
       .filter(({ configKey }) => this._config?.[configKey] === false)
       .map(({ className }) => className);
-    if (this._isLandingPageActive()) classes.push("landing-active");
+    if (this._isPreviewPageActive()) classes.push("preview-active");
     return classes.join(" ");
   }
 
@@ -662,10 +662,10 @@ export class FrigateViewCard extends HTMLElement {
       grid_mode_enabled: config.grid_mode_enabled === true,
       grid_start_in_grid_enabled: config.grid_start_in_grid_enabled === true,
       grid_live_view_enabled: config.grid_live_view_enabled !== false,
-      landing_page_enabled: config.landing_page_enabled === true,
-      landing_page_live_cameras: config.landing_page_live_cameras === true,
-      landing_page_show_title_bars:
-        config.landing_page_show_title_bars !== false,
+      preview_page_enabled: config.preview_page_enabled === true,
+      preview_page_live_cameras: config.preview_page_live_cameras === true,
+      preview_page_show_title_bars:
+        config.preview_page_show_title_bars !== false,
       grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
         Number(config.grid_rotation_seconds),
       )
@@ -708,25 +708,25 @@ export class FrigateViewCard extends HTMLElement {
       wide_view: config.wide_view === true,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
     };
-    const landingEnabledChanged =
+    const previewEnabledChanged =
       !!prevConfig &&
-      prevConfig.landing_page_enabled !== nextConfig.landing_page_enabled;
-    const landingVisualChanged =
+      prevConfig.preview_page_enabled !== nextConfig.preview_page_enabled;
+    const previewVisualChanged =
       !!prevConfig &&
-      (prevConfig.landing_page_live_cameras !==
-        nextConfig.landing_page_live_cameras ||
-        prevConfig.landing_page_show_title_bars !==
-          nextConfig.landing_page_show_title_bars);
-    const landingModeConfigChanged =
-      landingEnabledChanged || landingVisualChanged;
+      (prevConfig.preview_page_live_cameras !==
+        nextConfig.preview_page_live_cameras ||
+        prevConfig.preview_page_show_title_bars !==
+          nextConfig.preview_page_show_title_bars);
+    const previewModeConfigChanged =
+      previewEnabledChanged || previewVisualChanged;
 
     if (!prevConfig) {
-      this._landingPageActive = nextConfig.landing_page_enabled === true;
-    } else if (nextConfig.landing_page_enabled !== true) {
-      this._landingPageActive = false;
-      this._stopLandingMode();
-    } else if (prevConfig.landing_page_enabled !== true) {
-      this._landingPageActive = true;
+      this._previewPageActive = nextConfig.preview_page_enabled === true;
+    } else if (nextConfig.preview_page_enabled !== true) {
+      this._previewPageActive = false;
+      this._stopPreviewMode();
+    } else if (prevConfig.preview_page_enabled !== true) {
+      this._previewPageActive = true;
     }
 
     this._committedConfig = this._cloneCardConfig(nextConfig);
@@ -757,7 +757,7 @@ export class FrigateViewCard extends HTMLElement {
     const hiddenTabsChanged =
       JSON.stringify(prevConfig.hidden_tabs || []) !==
       JSON.stringify(nextConfig.hidden_tabs || []);
-    const needsShellRerender = hiddenTabsChanged || landingEnabledChanged;
+    const needsShellRerender = hiddenTabsChanged || previewEnabledChanged;
     const needsEngineRemount = camerasChanged;
     const realtimePollChanged =
       prevConfig.realtime_poll_seconds !== nextConfig.realtime_poll_seconds ||
@@ -776,8 +776,8 @@ export class FrigateViewCard extends HTMLElement {
       // Shell rebuild replaces media host nodes, so always tear down first.
       this._cleanupEngine();
       this._renderShell();
-      if (this._isLandingPageActive()) {
-        this._startLandingMode();
+      if (this._isPreviewPageActive()) {
+        this._startPreviewMode();
       } else {
         this._mountEngine(null, { quiet: true });
         this._renderAll();
@@ -785,13 +785,13 @@ export class FrigateViewCard extends HTMLElement {
       return;
     }
 
-    if (this._isLandingPageActive()) {
+    if (this._isPreviewPageActive()) {
       this._applyCardStyle();
       this._applyLayoutMode();
-      this._renderLandingPage();
-      if (landingModeConfigChanged || realtimePollChanged) {
-        this._clearLandingTimers();
-        this._scheduleLandingAlertWatch(300);
+      this._renderPreviewPage();
+      if (previewModeConfigChanged || realtimePollChanged) {
+        this._clearPreviewTimers();
+        this._schedulePreviewAlertWatch(300);
       }
       return;
     }
@@ -840,8 +840,8 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._lastEditorPreviewContext = inEditorPreview;
     if (!cameraStateChanged && !themeChanged) return;
-    if (this._isLandingPageActive()) {
-      if (cameraStateChanged) this._renderLandingPage();
+    if (this._isPreviewPageActive()) {
+      if (cameraStateChanged) this._renderPreviewPage();
       if (themeChanged) this._applyCardStyle();
       return;
     }
@@ -885,7 +885,7 @@ export class FrigateViewCard extends HTMLElement {
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);
     this._stopGridModeState();
-    this._stopLandingMode();
+    this._stopPreviewMode();
     if (this._rt) clearTimeout(this._rt);
     this._rt = null;
     if (this._refresh) clearInterval(this._refresh);
@@ -998,14 +998,14 @@ export class FrigateViewCard extends HTMLElement {
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
 
-    const startInLanding =
-      this._isLandingPageEnabled() && !this._hasPendingDeepLinkTarget();
-    this._landingPageActive = startInLanding;
+    const startInPreview =
+      this._isPreviewPageEnabled() && !this._hasPendingDeepLinkTarget();
+    this._previewPageActive = startInPreview;
     const initialLoad = this._loadWindow(true);
     this._scheduleWarmOtherCamerasEvents();
-    const startInGrid = !startInLanding && this._shouldStartInGridMode();
-    if (startInLanding) {
-      this._startLandingMode();
+    const startInGrid = !startInPreview && this._shouldStartInGridMode();
+    if (startInPreview) {
+      this._startPreviewMode();
     } else if (startInGrid) {
       this._setViewMode("grid");
     } else {
@@ -1013,7 +1013,7 @@ export class FrigateViewCard extends HTMLElement {
     }
     await initialLoad;
     void this._prefetchCalendarActivityForActiveCamera();
-    if (!startInGrid && !startInLanding) this._applyStartInGridMode("startup");
+    if (!startInGrid && !startInPreview) this._applyStartInGridMode("startup");
     this._subscribe();
     this._startEditModeWatchdog();
     this._startEditorDialogCloseObserver();
@@ -2743,7 +2743,7 @@ export class FrigateViewCard extends HTMLElement {
     const quiet = options?.quiet === true;
     const slot = this.shadowRoot.querySelector("#engine");
     if (!slot) return;
-    if (this._isLandingPageActive()) {
+    if (this._isPreviewPageActive()) {
       this._setStreamLoading(false);
       this._setStreamFallbackVisible(false);
       return;
@@ -2950,12 +2950,12 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
 
-  _isLandingPageEnabled() {
-    return this._config?.landing_page_enabled === true;
+  _isPreviewPageEnabled() {
+    return this._config?.preview_page_enabled === true;
   }
 
-  _isLandingPageActive() {
-    return this._isLandingPageEnabled() && this._landingPageActive === true;
+  _isPreviewPageActive() {
+    return this._isPreviewPageEnabled() && this._previewPageActive === true;
   }
 
   _hasPendingDeepLinkTarget() {
@@ -2966,60 +2966,60 @@ export class FrigateViewCard extends HTMLElement {
     );
   }
 
-  _landingLiveCamerasEnabled() {
-    return this._config?.landing_page_live_cameras === true;
+  _previewLiveCamerasEnabled() {
+    return this._config?.preview_page_live_cameras === true;
   }
 
-  _landingShowTitleBarsEnabled() {
-    return this._config?.landing_page_show_title_bars !== false;
+  _previewShowTitleBarsEnabled() {
+    return this._config?.preview_page_show_title_bars !== false;
   }
 
-  _applyLandingShellVisibility() {
+  _applyPreviewShellVisibility() {
     const card = this._$("#card");
     if (!card) return;
-    card.classList.toggle("landing-active", this._isLandingPageActive());
+    card.classList.toggle("preview-active", this._isPreviewPageActive());
   }
 
-  _clearLandingTimers() {
-    if (this._landingSnapshotRefreshT)
-      clearTimeout(this._landingSnapshotRefreshT);
-    if (this._landingAlertWatchT) clearTimeout(this._landingAlertWatchT);
-    if (this._landingAlertCleanupT) clearTimeout(this._landingAlertCleanupT);
-    this._landingSnapshotRefreshT = null;
-    this._landingAlertWatchT = null;
-    this._landingAlertCleanupT = null;
+  _clearPreviewTimers() {
+    if (this._previewSnapshotRefreshT)
+      clearTimeout(this._previewSnapshotRefreshT);
+    if (this._previewAlertWatchT) clearTimeout(this._previewAlertWatchT);
+    if (this._previewAlertCleanupT) clearTimeout(this._previewAlertCleanupT);
+    this._previewSnapshotRefreshT = null;
+    this._previewAlertWatchT = null;
+    this._previewAlertCleanupT = null;
   }
 
-  _clearLandingAlertTracking() {
-    this._landingAlertExpiresByEntity.clear();
-    this._landingAlertSeverityByEntity.clear();
-    this._landingHandledReviewIds.clear();
+  _clearPreviewAlertTracking() {
+    this._previewAlertExpiresByEntity.clear();
+    this._previewAlertSeverityByEntity.clear();
+    this._previewHandledReviewIds.clear();
   }
 
-  _isLandingCameraAlertLive(entity) {
-    const until = Number(this._landingAlertExpiresByEntity.get(entity) || 0);
+  _isPreviewCameraAlertLive(entity) {
+    const until = Number(this._previewAlertExpiresByEntity.get(entity) || 0);
     return until > Date.now();
   }
 
-  _landingCellSeverity(entity) {
-    if (!this._isLandingCameraAlertLive(entity)) {
-      this._landingAlertSeverityByEntity.delete(entity);
+  _previewCellSeverity(entity) {
+    if (!this._isPreviewCameraAlertLive(entity)) {
+      this._previewAlertSeverityByEntity.delete(entity);
       return "";
     }
-    const sev = String(this._landingAlertSeverityByEntity.get(entity) || "")
+    const sev = String(this._previewAlertSeverityByEntity.get(entity) || "")
       .trim()
       .toLowerCase();
     return sev === "detection" ? "detection" : sev === "alert" ? "alert" : "";
   }
 
-  _landingShouldUseLive(entity) {
+  _previewShouldUseLive(entity) {
     return (
-      this._landingLiveCamerasEnabled() ||
-      this._isLandingCameraAlertLive(entity)
+      this._previewLiveCamerasEnabled() ||
+      this._isPreviewCameraAlertLive(entity)
     );
   }
 
-  _landingEventsCount(entity) {
+  _previewEventsCount(entity) {
     const cache = this._camCache[entity];
     const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
     const reviewsCount = Array.isArray(cache?.reviews)
@@ -3028,15 +3028,15 @@ export class FrigateViewCard extends HTMLElement {
     return eventsCount + reviewsCount;
   }
 
-  _landingStreamSourceLabel(entity, useLive) {
+  _previewStreamSourceLabel(entity, useLive) {
     if (!useLive) return "Snapshot";
     const connectionType = this._cameraConnectionType(entity);
     if (connectionType === "ha_direct") return "HA Live";
-    const hint = String(this._landingLiveStreamHint() || "").toUpperCase();
+    const hint = String(this._previewLiveStreamHint() || "").toUpperCase();
     return hint ? `${hint} Live` : "Live";
   }
 
-  _landingLiveStreamHint() {
+  _previewLiveStreamHint() {
     const active = String(this._activeStreamType || "")
       .trim()
       .toLowerCase();
@@ -3053,18 +3053,18 @@ export class FrigateViewCard extends HTMLElement {
     return "mse";
   }
 
-  _teardownLandingMedia() {
-    if (this._landingMediaState) {
-      this._landingMediaState.destroyed = true;
-      for (const cleanup of this._landingMediaState.cleanup || []) {
+  _teardownPreviewMedia() {
+    if (this._previewMediaState) {
+      this._previewMediaState.destroyed = true;
+      for (const cleanup of this._previewMediaState.cleanup || []) {
         try {
           cleanup();
         } catch (_) {}
       }
     }
-    this._landingMediaState = null;
-    this._landingLastRenderSignature = "";
-    const hosts = this.shadowRoot.querySelectorAll(".landing-media-host");
+    this._previewMediaState = null;
+    this._previewLastRenderSignature = "";
+    const hosts = this.shadowRoot.querySelectorAll(".preview-media-host");
     hosts.forEach((host) => {
       host.querySelectorAll("video").forEach((video) => {
         try {
@@ -3077,11 +3077,11 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
-  _renderLandingPage() {
-    const shell = this._$("#landing-shell");
+  _renderPreviewPage() {
+    const shell = this._$("#preview-shell");
     if (!shell) return;
-    const titleEl = this._$("#landing-shell-title");
-    const subtitleEl = this._$("#landing-shell-subtitle");
+    const titleEl = this._$("#preview-shell-title");
+    const subtitleEl = this._$("#preview-shell-subtitle");
     if (titleEl) {
       titleEl.textContent =
         this._config.title ||
@@ -3091,27 +3091,27 @@ export class FrigateViewCard extends HTMLElement {
         "Camera";
     }
     if (subtitleEl) subtitleEl.textContent = this._subtitleText();
-    if (!this._isLandingPageEnabled()) {
+    if (!this._isPreviewPageEnabled()) {
       shell.innerHTML = "";
-      this._applyLandingShellVisibility();
+      this._applyPreviewShellVisibility();
       return;
     }
-    if (!this._isLandingPageActive()) {
-      this._applyLandingShellVisibility();
+    if (!this._isPreviewPageActive()) {
+      this._applyPreviewShellVisibility();
       return;
     }
 
     const cameras = Array.isArray(this._config?.cameras)
       ? this._config.cameras.slice(0, 9)
       : [];
-    const showTitleBars = this._landingShowTitleBarsEnabled();
-    const liveStreamHint = this._landingLiveStreamHint();
+    const showTitleBars = this._previewShowTitleBarsEnabled();
+    const liveStreamHint = this._previewLiveStreamHint();
     const hassReady = !!this._hass?.states;
     const nextSignature = cameras
       .map((camera, index) => {
         const entity = camera?.entity || "";
-        const severity = this._landingCellSeverity(entity);
-        const useLive = this._landingShouldUseLive(entity);
+        const severity = this._previewCellSeverity(entity);
+        const useLive = this._previewShouldUseLive(entity);
         return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
       })
       .concat([
@@ -3120,35 +3120,35 @@ export class FrigateViewCard extends HTMLElement {
       ])
       .join("|");
     if (
-      shell.firstElementChild?.classList?.contains("landing-grid") &&
-      this._landingLastRenderSignature === nextSignature
+      shell.firstElementChild?.classList?.contains("preview-grid") &&
+      this._previewLastRenderSignature === nextSignature
     ) {
-      this._updateLandingMeta();
-      this._applyLandingShellVisibility();
+      this._updatePreviewMeta();
+      this._applyPreviewShellVisibility();
       return;
     }
-    this._teardownLandingMedia();
-    this._landingLastRenderSignature = nextSignature;
+    this._teardownPreviewMedia();
+    this._previewLastRenderSignature = nextSignature;
 
     const cells = cameras
       .map((camera, index) => {
         const entity = camera?.entity || "";
         const entState = this._hass?.states?.[entity];
         const online = entState?.state !== "unavailable";
-        const severity = this._landingCellSeverity(entity);
-        const useLive = this._landingShouldUseLive(entity);
-        const sourceLabel = this._landingStreamSourceLabel(entity, useLive);
-        const eventsCount = this._landingEventsCount(entity);
+        const severity = this._previewCellSeverity(entity);
+        const useLive = this._previewShouldUseLive(entity);
+        const sourceLabel = this._previewStreamSourceLabel(entity, useLive);
+        const eventsCount = this._previewEventsCount(entity);
         const name = cap(camDisplayName(camera));
-        return `<div class="landing-cell shadow-medium" data-landing-camidx="${index}">
-          <div class="landing-media-host ${severity === "alert" ? "grid-alert" : severity === "detection" ? "grid-detection" : ""}" data-landing-media-entity="${entity}" data-landing-use-live="${useLive ? "1" : "0"}"></div>
+        return `<div class="preview-cell shadow-medium" data-preview-camidx="${index}">
+          <div class="preview-media-host ${severity === "alert" ? "grid-alert" : severity === "detection" ? "grid-detection" : ""}" data-preview-media-entity="${entity}" data-preview-use-live="${useLive ? "1" : "0"}"></div>
           ${
             showTitleBars
-              ? `<div class="landing-meta">
-              <div class="landing-meta-name">${name}</div>
-              <div class="landing-meta-status"><span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">●</span>${online ? "Online" : "Offline"}</div>
-              <div class="landing-meta-source">Stream Source: ${sourceLabel}</div>
-              <div class="landing-meta-events">Events: ${eventsCount}</div>
+              ? `<div class="preview-meta">
+              <div class="preview-meta-name">${name}</div>
+              <div class="preview-meta-status"><span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">●</span>${online ? "Online" : "Offline"}</div>
+              <div class="preview-meta-source">Stream Source: ${sourceLabel}</div>
+              <div class="preview-meta-events">Events: ${eventsCount}</div>
             </div>`
               : ""
           }
@@ -3159,56 +3159,56 @@ export class FrigateViewCard extends HTMLElement {
     const buttons = cameras
       .map((camera, index) => {
         const name = cap(camDisplayName(camera));
-        return `<button class="glass-btn landing-cam-btn" type="button" data-landing-select-camidx="${index}">${name}</button>`;
+        return `<button class="glass-btn preview-cam-btn" type="button" data-preview-select-camidx="${index}">${name}</button>`;
       })
       .join("");
 
-    shell.innerHTML = `<div class="landing-grid" id="landing-grid">${cells}</div>
-      <div class="landing-cam-buttons">${buttons}</div>`;
-    this._mountLandingMedia();
-    this._applyLandingShellVisibility();
+    shell.innerHTML = `<div class="preview-grid" id="preview-grid">${cells}</div>
+      <div class="preview-cam-buttons">${buttons}</div>`;
+    this._mountPreviewMedia();
+    this._applyPreviewShellVisibility();
   }
 
-  _updateLandingMeta() {
-    if (!this._landingShowTitleBarsEnabled()) return;
+  _updatePreviewMeta() {
+    if (!this._previewShowTitleBarsEnabled()) return;
     this.shadowRoot
-      .querySelectorAll("[data-landing-camidx]")
+      .querySelectorAll("[data-preview-camidx]")
       .forEach((cell) => {
-        const idx = Number(cell.dataset.landingCamidx);
+        const idx = Number(cell.dataset.previewCamidx);
         const camera = this._config?.cameras?.[idx];
         const entity = camera?.entity || "";
         if (!entity) return;
         const online = this._hass?.states?.[entity]?.state !== "unavailable";
-        const useLive = this._landingShouldUseLive(entity);
-        const status = cell.querySelector(".landing-meta-status");
+        const useLive = this._previewShouldUseLive(entity);
+        const status = cell.querySelector(".preview-meta-status");
         if (status) {
           status.innerHTML = `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">●</span>${online ? "Online" : "Offline"}`;
         }
-        const source = cell.querySelector(".landing-meta-source");
+        const source = cell.querySelector(".preview-meta-source");
         if (source) {
-          source.textContent = `Stream Source: ${this._landingStreamSourceLabel(entity, useLive)}`;
+          source.textContent = `Stream Source: ${this._previewStreamSourceLabel(entity, useLive)}`;
         }
-        const events = cell.querySelector(".landing-meta-events");
+        const events = cell.querySelector(".preview-meta-events");
         if (events)
-          events.textContent = `Events: ${this._landingEventsCount(entity)}`;
+          events.textContent = `Events: ${this._previewEventsCount(entity)}`;
       });
   }
 
-  _mountLandingMedia() {
-    if (!this._isLandingPageActive()) return;
-    const hosts = this.shadowRoot.querySelectorAll(".landing-media-host");
+  _mountPreviewMedia() {
+    if (!this._isPreviewPageActive()) return;
+    const hosts = this.shadowRoot.querySelectorAll(".preview-media-host");
     if (!this._hass?.states) {
       hosts.forEach((host) => {
         host.innerHTML = `<div class="ph">${ICONS.live}<span>Loading…</span></div>`;
       });
       return;
     }
-    const liveStreamHint = this._landingLiveStreamHint();
-    const landingState = { destroyed: false, cleanup: [] };
-    this._landingMediaState = landingState;
+    const liveStreamHint = this._previewLiveStreamHint();
+    const previewState = { destroyed: false, cleanup: [] };
+    this._previewMediaState = previewState;
     hosts.forEach((host) => {
-      const entity = host.dataset.landingMediaEntity || "";
-      const useLive = host.dataset.landingUseLive === "1";
+      const entity = host.dataset.previewMediaEntity || "";
+      const useLive = host.dataset.previewUseLive === "1";
       const stateObj = entity
         ? this._hlsStateObj(entity, liveStreamHint) ||
           this._hass?.states?.[entity] ||
@@ -3224,20 +3224,20 @@ export class FrigateViewCard extends HTMLElement {
         stateObj,
         useLive,
         liveStreamHint,
-        gridState: landingState,
+        gridState: previewState,
         fallbackOnLiveError: true,
       });
     });
   }
 
-  _refreshLandingSnapshots() {
-    if (!this._isLandingPageActive() || this._landingLiveCamerasEnabled())
+  _refreshPreviewSnapshots() {
+    if (!this._isPreviewPageActive() || this._previewLiveCamerasEnabled())
       return;
     const hosts = this.shadowRoot.querySelectorAll(
-      ".landing-media-host[data-landing-use-live='0']",
+      ".preview-media-host[data-preview-use-live='0']",
     );
     hosts.forEach((host) => {
-      const entity = host.dataset.landingMediaEntity || "";
+      const entity = host.dataset.previewMediaEntity || "";
       const img = host.querySelector("img");
       if (!entity || !img) return;
       void (async () => {
@@ -3248,49 +3248,49 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
-  _scheduleLandingSnapshotRefresh(delayMs = null) {
-    if (this._landingSnapshotRefreshT)
-      clearTimeout(this._landingSnapshotRefreshT);
-    this._landingSnapshotRefreshT = null;
+  _schedulePreviewSnapshotRefresh(delayMs = null) {
+    if (this._previewSnapshotRefreshT)
+      clearTimeout(this._previewSnapshotRefreshT);
+    this._previewSnapshotRefreshT = null;
     void delayMs;
   }
 
-  _scheduleLandingAlertCleanup() {
-    if (this._landingAlertCleanupT) clearTimeout(this._landingAlertCleanupT);
+  _schedulePreviewAlertCleanup() {
+    if (this._previewAlertCleanupT) clearTimeout(this._previewAlertCleanupT);
     let nextExpiry = 0;
-    for (const until of this._landingAlertExpiresByEntity.values()) {
+    for (const until of this._previewAlertExpiresByEntity.values()) {
       const ts = Number(until || 0);
       if (ts <= Date.now()) continue;
       if (!nextExpiry || ts < nextExpiry) nextExpiry = ts;
     }
     if (!nextExpiry) {
-      this._landingAlertCleanupT = null;
+      this._previewAlertCleanupT = null;
       return;
     }
     const wait = Math.max(100, nextExpiry - Date.now() + 25);
-    this._landingAlertCleanupT = setTimeout(() => {
-      this._landingAlertCleanupT = null;
+    this._previewAlertCleanupT = setTimeout(() => {
+      this._previewAlertCleanupT = null;
       let changed = false;
       const now = Date.now();
       for (const [
         entity,
         until,
-      ] of this._landingAlertExpiresByEntity.entries()) {
+      ] of this._previewAlertExpiresByEntity.entries()) {
         if (Number(until || 0) <= now) {
-          this._landingAlertExpiresByEntity.delete(entity);
-          this._landingAlertSeverityByEntity.delete(entity);
+          this._previewAlertExpiresByEntity.delete(entity);
+          this._previewAlertSeverityByEntity.delete(entity);
           changed = true;
         }
       }
-      if (changed && this._isLandingPageActive()) this._renderLandingPage();
-      this._scheduleLandingAlertCleanup();
+      if (changed && this._isPreviewPageActive()) this._renderPreviewPage();
+      this._schedulePreviewAlertCleanup();
     }, wait);
   }
 
-  _markLandingAlertCamera(
+  _markPreviewAlertCamera(
     entity,
     severity = "alert",
-    holdMs = LANDING_ALERT_HOLD_MS,
+    holdMs = PREVIEW_ALERT_HOLD_MS,
   ) {
     if (!entity) return;
     const normalizedSeverity =
@@ -3299,34 +3299,34 @@ export class FrigateViewCard extends HTMLElement {
         .toLowerCase() === "detection"
         ? "detection"
         : "alert";
-    this._landingAlertSeverityByEntity.set(entity, normalizedSeverity);
-    this._landingAlertExpiresByEntity.set(
+    this._previewAlertSeverityByEntity.set(entity, normalizedSeverity);
+    this._previewAlertExpiresByEntity.set(
       entity,
-      Date.now() + Math.max(1000, Number(holdMs) || LANDING_ALERT_HOLD_MS),
+      Date.now() + Math.max(1000, Number(holdMs) || PREVIEW_ALERT_HOLD_MS),
     );
-    this._scheduleLandingAlertCleanup();
-    if (this._isLandingPageActive()) this._renderLandingPage();
+    this._schedulePreviewAlertCleanup();
+    if (this._isPreviewPageActive()) this._renderPreviewPage();
   }
 
-  _rememberHandledLandingReview(reviewId) {
+  _rememberHandledPreviewReview(reviewId) {
     const id = String(reviewId || "").trim();
     if (!id) return;
-    this._landingHandledReviewIds.add(id);
-    if (this._landingHandledReviewIds.size <= 200) return;
-    const oldest = this._landingHandledReviewIds.values().next().value;
-    if (oldest) this._landingHandledReviewIds.delete(oldest);
+    this._previewHandledReviewIds.add(id);
+    if (this._previewHandledReviewIds.size <= 200) return;
+    const oldest = this._previewHandledReviewIds.values().next().value;
+    if (oldest) this._previewHandledReviewIds.delete(oldest);
   }
 
-  _isLandingReviewFresh(review) {
-    const startedAt = Number(this._landingStartedAtSec || 0);
+  _isPreviewReviewFresh(review) {
+    const startedAt = Number(this._previewStartedAtSec || 0);
     if (startedAt <= 0) return true;
     const reviewStart = this._reviewStartTimeSec(review);
     if (reviewStart <= 0) return false;
     return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC;
   }
 
-  async _probeLatestLandingAlert() {
-    if (!this._isLandingPageActive()) return;
+  async _probeLatestPreviewAlert() {
+    if (!this._isPreviewPageActive()) return;
     const before = Math.floor(Date.now() / 1000);
     const after = Math.max(
       0,
@@ -3353,11 +3353,11 @@ export class FrigateViewCard extends HTMLElement {
       }
       cache.reviews = reviews;
       for (const review of reviews) {
-        if (!this._isLandingReviewFresh(review)) continue;
+        if (!this._isPreviewReviewFresh(review)) continue;
         const severity = this._normalizeReviewSeverity(review);
         if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
         const reviewId = String(review?.id || "").trim();
-        if (reviewId && this._landingHandledReviewIds.has(reviewId)) continue;
+        if (reviewId && this._previewHandledReviewIds.has(reviewId)) continue;
         candidates.push({
           entity,
           severity,
@@ -3371,17 +3371,17 @@ export class FrigateViewCard extends HTMLElement {
     candidates.sort((a, b) => b.startTime - a.startTime);
     const next = candidates[0];
     if (!next?.entity) return;
-    if (next.reviewId) this._rememberHandledLandingReview(next.reviewId);
-    this._markLandingAlertCamera(
+    if (next.reviewId) this._rememberHandledPreviewReview(next.reviewId);
+    this._markPreviewAlertCamera(
       next.entity,
       next.severity,
-      LANDING_ALERT_HOLD_MS,
+      PREVIEW_ALERT_HOLD_MS,
     );
   }
 
-  _scheduleLandingAlertWatch(delayMs = null) {
-    if (this._landingAlertWatchT) clearTimeout(this._landingAlertWatchT);
-    if (!this._isLandingPageActive()) return;
+  _schedulePreviewAlertWatch(delayMs = null) {
+    if (this._previewAlertWatchT) clearTimeout(this._previewAlertWatchT);
+    if (!this._isPreviewPageActive()) return;
     const wait =
       delayMs == null
         ? Math.max(
@@ -3389,16 +3389,16 @@ export class FrigateViewCard extends HTMLElement {
             Math.floor(this._effectiveRealtimePollSeconds() * 1000),
           )
         : Math.max(0, Number(delayMs) || 0);
-    this._landingAlertWatchT = setTimeout(() => {
-      this._landingAlertWatchT = null;
-      void this._probeLatestLandingAlert().finally(() => {
-        this._scheduleLandingAlertWatch();
+    this._previewAlertWatchT = setTimeout(() => {
+      this._previewAlertWatchT = null;
+      void this._probeLatestPreviewAlert().finally(() => {
+        this._schedulePreviewAlertWatch();
       });
     }, wait);
   }
 
-  _handleLandingRealtimeMessage(msg) {
-    if (!this._isLandingPageActive()) return;
+  _handlePreviewRealtimeMessage(msg) {
+    if (!this._isPreviewPageActive()) return;
     const incomingCam = this._extractRealtimeMessageCamera(msg);
     if (!incomingCam) return;
     const cam = this._cameraEntityForIncomingCamera(incomingCam);
@@ -3408,39 +3408,39 @@ export class FrigateViewCard extends HTMLElement {
       .toLowerCase();
     const severity = this._extractRealtimeMessageSeverity(msg);
     if (type === "end") {
-      if (this._isLandingCameraAlertLive(cam)) {
-        this._markLandingAlertCamera(
+      if (this._isPreviewCameraAlertLive(cam)) {
+        this._markPreviewAlertCamera(
           cam,
-          this._landingCellSeverity(cam),
-          LANDING_ALERT_END_GRACE_MS,
+          this._previewCellSeverity(cam),
+          PREVIEW_ALERT_END_GRACE_MS,
         );
       }
       return;
     }
     if (!this._shouldHandleSlideshowReview(cam, severity)) return;
-    this._markLandingAlertCamera(
+    this._markPreviewAlertCamera(
       cam,
       severity || "alert",
-      LANDING_ALERT_HOLD_MS,
+      PREVIEW_ALERT_HOLD_MS,
     );
   }
 
-  _startLandingMode() {
-    if (!this._isLandingPageActive()) return;
-    this._landingStartedAtSec = Math.floor(Date.now() / 1000);
-    this._clearLandingTimers();
-    this._clearLandingAlertTracking();
-    this._renderLandingPage();
-    this._scheduleLandingAlertWatch(350);
+  _startPreviewMode() {
+    if (!this._isPreviewPageActive()) return;
+    this._previewStartedAtSec = Math.floor(Date.now() / 1000);
+    this._clearPreviewTimers();
+    this._clearPreviewAlertTracking();
+    this._renderPreviewPage();
+    this._schedulePreviewAlertWatch(350);
   }
 
-  _stopLandingMode() {
-    this._clearLandingTimers();
-    this._teardownLandingMedia();
+  _stopPreviewMode() {
+    this._clearPreviewTimers();
+    this._teardownPreviewMedia();
   }
 
-  _exitLandingPageToCamera(idx) {
-    if (!this._isLandingPageActive()) return;
+  _exitPreviewPageToCamera(idx) {
+    if (!this._isPreviewPageActive()) return;
     if (
       !Number.isInteger(idx) ||
       idx < 0 ||
@@ -3448,20 +3448,20 @@ export class FrigateViewCard extends HTMLElement {
     ) {
       return;
     }
-    this._landingPageActive = false;
-    this._stopLandingMode();
-    this._applyLandingShellVisibility();
+    this._previewPageActive = false;
+    this._stopPreviewMode();
+    this._applyPreviewShellVisibility();
     if (this._activeCamIdx === idx) this._activeCamIdx = -1;
     void this._switchCamera(idx, { source: "manual" });
   }
 
-  _returnToLandingPage() {
-    if (!this._isLandingPageEnabled() || this._isLandingPageActive()) return;
-    this._landingPageActive = true;
+  _returnToPreviewPage() {
+    if (!this._isPreviewPageEnabled() || this._isPreviewPageActive()) return;
+    this._previewPageActive = true;
     if (this._$("#myPopup")?.classList.contains("is-open")) this._closePopup();
-    this._cancelPendingMount("landing-page-return");
-    this._applyLandingShellVisibility();
-    this._startLandingMode();
+    this._cancelPendingMount("preview-page-return");
+    this._applyPreviewShellVisibility();
+    this._startPreviewMode();
   }
 
   // ── view mode ─────────────────────────────────────────────
@@ -3524,7 +3524,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _applyStartInGridMode(_source = "") {
-    if (this._isLandingPageActive()) return;
+    if (this._isPreviewPageActive()) return;
     if (!this._shouldStartInGridMode()) return;
     if (this._viewMode === "grid") return;
     this._gridRotationStart = 0;
@@ -3886,7 +3886,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _toggleGridMode() {
-    if (this._isLandingPageActive()) return;
+    if (this._isPreviewPageActive()) return;
     if (this._viewMode === "grid" || this._gridResumePending) {
       this._gridResumePending = false;
       this._stopGridModeState();
@@ -3904,7 +3904,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _setViewMode(mode) {
-    if (this._isLandingPageActive()) return;
+    if (this._isPreviewPageActive()) return;
     const nextMode =
       mode === "grid" && this._isGridModeAvailable() ? "grid" : "single";
     if (this._viewMode === "grid" && nextMode !== "grid") {
@@ -4822,7 +4822,7 @@ export class FrigateViewCard extends HTMLElement {
     return items;
   }
   async _loadWindow(replace) {
-    if (this._isLandingPageActive()) return;
+    if (this._isPreviewPageActive()) return;
     if (this._loading) return;
     this._loading = true;
     this._reloadPending = false;
@@ -5226,7 +5226,7 @@ export class FrigateViewCard extends HTMLElement {
       this._unsub = this._hass.connection.subscribeMessage(
         (msg) => {
           this._handleGridRealtimeMessage(msg);
-          this._handleLandingRealtimeMessage(msg);
+          this._handlePreviewRealtimeMessage(msg);
           this._handleSlideshowRealtimeMessage(msg);
           if (!this._isNowWindow()) return;
           if (!this._isRealtimeEventMessage(msg)) return;
@@ -5290,7 +5290,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _scheduleReload(delayMs = 1500) {
-    if (this._isLandingPageActive()) return;
+    if (this._isPreviewPageActive()) return;
     this._reloadPending = true;
     clearTimeout(this._rt);
     this._rt = setTimeout(
@@ -5493,7 +5493,7 @@ export class FrigateViewCard extends HTMLElement {
       "Camera";
     const subtitle = this._subtitleText();
     const showCamSwitcher =
-      this._config.cameras.length > 1 || this._isLandingPageEnabled();
+      this._config.cameras.length > 1 || this._isPreviewPageEnabled();
     const camSwitcher = showCamSwitcher
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
@@ -5502,14 +5502,14 @@ export class FrigateViewCard extends HTMLElement {
 
         <div class="layout" id="layout">
 
-          <div class="landing-shell-header" id="landing-shell-header">
-            <div class="landing-shell-title">
-              <div class="landing-shell-title-main" id="landing-shell-title">${title}</div>
-              <div class="landing-shell-title-sub" id="landing-shell-subtitle">${subtitle}</div>
+          <div class="preview-shell-header" id="preview-shell-header">
+            <div class="preview-shell-title">
+              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
+              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
             </div>
           </div>
-          <div class="landing-shell" id="landing-shell"></div>
-          <div class="landing-shell-footer" id="landing-shell-footer">
+          <div class="preview-shell" id="preview-shell"></div>
+          <div class="preview-shell-footer" id="preview-shell-footer">
             <div class="frigate-view">${ICONS.frigateview}</div>
           </div>
 
@@ -5638,8 +5638,8 @@ export class FrigateViewCard extends HTMLElement {
     this._initResizeHandle();
     this._initLiveOverlayControls();
     this._syncSlideshowCountdownOverlay();
-    this._renderLandingPage();
-    this._applyLandingShellVisibility();
+    this._renderPreviewPage();
+    this._applyPreviewShellVisibility();
   }
 
   _initLiveOverlayControls() {
@@ -6307,9 +6307,9 @@ export class FrigateViewCard extends HTMLElement {
     return r.width > 2 && r.height > 2;
   }
   _scheduleResumeLive(reason = "") {
-    if (this._isLandingPageActive()) {
-      this._renderLandingPage();
-      this._scheduleLandingSnapshotRefresh(120);
+    if (this._isPreviewPageActive()) {
+      this._renderPreviewPage();
+      this._schedulePreviewSnapshotRefresh(120);
       return;
     }
     if (this._viewMode === "grid") {
@@ -6551,7 +6551,7 @@ export class FrigateViewCard extends HTMLElement {
   }
   _kickLiveIfStale(force = false) {
     if (!this._started || !this._hass || !this._config) return;
-    if (this._isLandingPageActive()) return;
+    if (this._isPreviewPageActive()) return;
     if (this._viewMode === "grid") return;
     if (!this._isCardVisible()) return;
     if (this._$("#myPopup")?.classList.contains("is-open")) return;
@@ -6603,7 +6603,7 @@ export class FrigateViewCard extends HTMLElement {
   }
   _resumeLiveIfNeeded(_reason = "") {
     if (!this._started || !this._hass || !this._config) return;
-    if (this._isLandingPageActive()) return;
+    if (this._isPreviewPageActive()) return;
     const visible = this._isCardVisible();
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     const mountStuckMs = this._mountStartedAt
@@ -6683,8 +6683,8 @@ export class FrigateViewCard extends HTMLElement {
   }
   // ── cam switcher ──────────────────────────────────────────
   _camSwitcherMarkup({ includeStatus = true } = {}) {
-    const backButton = this._isLandingPageEnabled()
-      ? `<button class="glass-btn cam-tab landing-back-btn" type="button" data-landing-back title="Back to landing page" aria-label="Back to landing page">${ICONS.left} Back</button>`
+    const backButton = this._isPreviewPageEnabled()
+      ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${ICONS.left} Back</button>`
       : "";
     const cameraButtons = this._config.cameras
       .map((c, i) => {
@@ -6702,7 +6702,7 @@ export class FrigateViewCard extends HTMLElement {
   _renderCamSwitcher() {
     const el = this.shadowRoot.querySelector("#cam-switcher");
     if (!el) return;
-    if (this._config.cameras.length < 2 && !this._isLandingPageEnabled()) {
+    if (this._config.cameras.length < 2 && !this._isPreviewPageEnabled()) {
       el.style.display = "none";
       return;
     }
@@ -6938,21 +6938,21 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handleSidebarClick(target) {
-    const landingButton = target.closest("[data-landing-select-camidx]");
-    if (landingButton && this._isLandingPageActive()) {
-      this._exitLandingPageToCamera(
-        Number(landingButton.dataset.landingSelectCamidx),
+    const previewButton = target.closest("[data-preview-select-camidx]");
+    if (previewButton && this._isPreviewPageActive()) {
+      this._exitPreviewPageToCamera(
+        Number(previewButton.dataset.previewSelectCamidx),
       );
       return true;
     }
-    const landingCell = target.closest("[data-landing-camidx]");
-    if (landingCell && this._isLandingPageActive()) {
-      this._exitLandingPageToCamera(Number(landingCell.dataset.landingCamidx));
+    const previewCell = target.closest("[data-preview-camidx]");
+    if (previewCell && this._isPreviewPageActive()) {
+      this._exitPreviewPageToCamera(Number(previewCell.dataset.previewCamidx));
       return true;
     }
-    const landingBack = target.closest("[data-landing-back]");
-    if (landingBack) {
-      this._returnToLandingPage();
+    const previewBack = target.closest("[data-preview-back]");
+    if (previewBack) {
+      this._returnToPreviewPage();
       return true;
     }
     const setvm = target.closest("[data-setviewmode]");
@@ -8779,8 +8779,8 @@ export class FrigateViewCard extends HTMLElement {
     );
   }
   _renderAll() {
-    if (this._isLandingPageActive()) {
-      this._renderLandingPage();
+    if (this._isPreviewPageActive()) {
+      this._renderPreviewPage();
       return;
     }
     this._renderStats();

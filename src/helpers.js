@@ -20,8 +20,8 @@ import {
   SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
   SLIDESHOW_REVIEW_WATCH_MIN_MS,
   SLIDESHOW_REVIEW_WATCH_MAX_MS,
-  LANDING_ALERT_HOLD_MS,
-  LANDING_ALERT_END_GRACE_MS,
+  PREVIEW_ALERT_HOLD_MS,
+  PREVIEW_ALERT_END_GRACE_MS,
   MSE_SWITCH_GRACE_MS,
   MSE_SWITCH_GRACE_MAX,
   MAX_CAMERAS,
@@ -546,12 +546,12 @@ export const buildEditorConfigFromDom = ({
     root.querySelector("#grid_start_in_grid_enabled")?.checked === true;
   nextConfig.grid_live_view_enabled =
     root.querySelector("#grid_live_view_enabled")?.checked !== false;
-  nextConfig.landing_page_enabled =
-    root.querySelector("#landing_page_enabled")?.checked === true;
-  nextConfig.landing_page_live_cameras =
-    root.querySelector("#landing_page_live_cameras")?.checked === true;
-  nextConfig.landing_page_show_title_bars =
-    root.querySelector("#landing_page_show_title_bars")?.checked !== false;
+  nextConfig.preview_page_enabled =
+    root.querySelector("#preview_page_enabled")?.checked === true;
+  nextConfig.preview_page_live_cameras =
+    root.querySelector("#preview_page_live_cameras")?.checked === true;
+  nextConfig.preview_page_show_title_bars =
+    root.querySelector("#preview_page_show_title_bars")?.checked !== false;
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value ||
@@ -733,20 +733,20 @@ export const compactEditorConfigForYaml = (
   );
   addIfNotDefault(
     compact,
-    "landing_page_enabled",
-    source.landing_page_enabled === true,
+    "preview_page_enabled",
+    source.preview_page_enabled === true,
     false,
   );
   addIfNotDefault(
     compact,
-    "landing_page_live_cameras",
-    source.landing_page_live_cameras === true,
+    "preview_page_live_cameras",
+    source.preview_page_live_cameras === true,
     false,
   );
   addIfNotDefault(
     compact,
-    "landing_page_show_title_bars",
-    source.landing_page_show_title_bars !== false,
+    "preview_page_show_title_bars",
+    source.preview_page_show_title_bars !== false,
     true,
   );
 
@@ -863,9 +863,9 @@ export const createEditorPreviewDraft = (config) => ({
   grid_mode_enabled: config.grid_mode_enabled,
   grid_start_in_grid_enabled: config.grid_start_in_grid_enabled,
   grid_live_view_enabled: config.grid_live_view_enabled,
-  landing_page_enabled: config.landing_page_enabled,
-  landing_page_live_cameras: config.landing_page_live_cameras,
-  landing_page_show_title_bars: config.landing_page_show_title_bars,
+  preview_page_enabled: config.preview_page_enabled,
+  preview_page_live_cameras: config.preview_page_live_cameras,
+  preview_page_show_title_bars: config.preview_page_show_title_bars,
   grid_rotation_seconds: config.grid_rotation_seconds,
   hidden_tabs: config.hidden_tabs,
   theme: config.theme,

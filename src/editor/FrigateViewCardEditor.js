@@ -20,8 +20,8 @@ import {
   SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
   SLIDESHOW_REVIEW_WATCH_MIN_MS,
   SLIDESHOW_REVIEW_WATCH_MAX_MS,
-  LANDING_ALERT_HOLD_MS,
-  LANDING_ALERT_END_GRACE_MS,
+  PREVIEW_ALERT_HOLD_MS,
+  PREVIEW_ALERT_END_GRACE_MS,
   MSE_SWITCH_GRACE_MS,
   MSE_SWITCH_GRACE_MAX,
   MAX_CAMERAS,
@@ -209,10 +209,10 @@ export class FrigateViewCardEditor extends HTMLElement {
     src.grid_mode_enabled = src.grid_mode_enabled === true;
     src.grid_start_in_grid_enabled = src.grid_start_in_grid_enabled === true;
     src.grid_live_view_enabled = src.grid_live_view_enabled !== false;
-    src.landing_page_enabled = src.landing_page_enabled === true;
-    src.landing_page_live_cameras = src.landing_page_live_cameras === true;
-    src.landing_page_show_title_bars =
-      src.landing_page_show_title_bars !== false;
+    src.preview_page_enabled = src.preview_page_enabled === true;
+    src.preview_page_live_cameras = src.preview_page_live_cameras === true;
+    src.preview_page_show_title_bars =
+      src.preview_page_show_title_bars !== false;
     src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
       Number(src.grid_rotation_seconds),
     )
@@ -864,27 +864,27 @@ export class FrigateViewCardEditor extends HTMLElement {
         </div>
       </div>`;
 
-    const landingPanelContent = `
+    const previewPanelContent = `
       <div class="section" style="border-top:none;padding-top:0">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Enable Landing Page</span>
-          <ha-switch id="landing_page_enabled" ${this._config?.landing_page_enabled ? "checked" : ""}></ha-switch>
+          <span class="field-label" style="margin:0">Enable Preview Page</span>
+          <ha-switch id="preview_page_enabled" ${this._config?.preview_page_enabled ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">When enabled, the card starts on a camera landing grid instead of the standard live/event layout.</div>
+        <div class="field-helper">When enabled, the card starts on a camera preview grid instead of the standard live/event layout.</div>
       </div>
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Live Cameras</span>
-          <ha-switch id="landing_page_live_cameras" ${this._config?.landing_page_live_cameras ? "checked" : ""}></ha-switch>
+          <ha-switch id="preview_page_live_cameras" ${this._config?.preview_page_live_cameras ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">On = all landing cameras load live. Off = snapshots, with alert/review cameras promoted to temporary live view.</div>
+        <div class="field-helper">On = all preview cameras load live. Off = snapshots, with alert/review cameras promoted to temporary live view.</div>
       </div>
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Show Title Bars</span>
-          <ha-switch id="landing_page_show_title_bars" ${this._config?.landing_page_show_title_bars !== false ? "checked" : ""}></ha-switch>
+          <ha-switch id="preview_page_show_title_bars" ${this._config?.preview_page_show_title_bars !== false ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Shows per-camera metadata under each landing tile (name, source, events, and online status).</div>
+        <div class="field-helper">Shows per-camera metadata under each preview tile (name, source, events, and online status).</div>
       </div>`;
     const gridviewPanelContent = `
       <div class="section">
@@ -930,7 +930,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent, active: activeSettingsPanel === "layout" })}
         ${this._renderSettingsPanel({ id: "slideshow", title: "Slideshow Settings", icon: "mdi:presentation-play", content: slideshowPanelContent, active: activeSettingsPanel === "slideshow" })}        
         ${this._renderSettingsPanel({ id: "layout", title: "Grid View", icon: "mdi:view-grid-outline", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
-        ${this._renderSettingsPanel({ id: "gridview", title: "Landing Page", icon: "mdi:view-grid", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
+        ${this._renderSettingsPanel({ id: "gridview", title: "Preview Page", icon: "mdi:view-grid", content: previewPanelContent, active: activeSettingsPanel === "preview" })}
       </div>`;
 
     this.innerHTML = `<style>
@@ -1310,9 +1310,9 @@ export class FrigateViewCardEditor extends HTMLElement {
         "grid_mode_enabled",
         "grid_start_in_grid_enabled",
         "grid_live_view_enabled",
-        "landing_page_enabled",
-        "landing_page_live_cameras",
-        "landing_page_show_title_bars",
+        "preview_page_enabled",
+        "preview_page_live_cameras",
+        "preview_page_show_title_bars",
       ],
       events: ["change", "value-changed"],
       handler: () => {
