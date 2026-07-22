@@ -75,6 +75,7 @@ export const STYLES = `
     top:0;
     left:0;
     overflow:hidden !important;
+    border:1px solid var(--secondary-background-color,#7a7a7a);
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
