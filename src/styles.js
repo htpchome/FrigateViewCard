@@ -45,7 +45,6 @@ export const STYLES = `
     min-height: 0 !important;
     height: 100%;
     overflow:hidden !important;
-    border:none !important;
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
