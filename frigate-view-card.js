@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.672";
+const VERSION = "1.0.673";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2105,6 +2105,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   _runPaneTask(paneKey, callback) {
+    const taskGeneration = Number(this._paneTaskGeneration || 0);
     const runTask = async () => {
       while (this._paneTaskBusy) {
         await new Promise((resolve) => {
@@ -2114,6 +2115,10 @@ const FrigateViewCard = class extends HTMLElement {
       }
       this._paneTaskBusy = true;
       try {
+        if (taskGeneration !== Number(this._paneTaskGeneration || 0)) return;
+        if ((paneKey === LEFT_PANE_KEY || paneKey === RIGHT_PANE_KEY) && !this._isSideBySidePageActive()) {
+          return;
+        }
         return await this._withPaneStateAsync(paneKey, callback);
       } finally {
         this._paneTaskBusy = false;
@@ -2122,6 +2127,15 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
     return runTask();
+  }
+  _invalidatePaneTaskQueue() {
+    this._paneTaskGeneration = Number(this._paneTaskGeneration || 0) + 1;
+    if (Array.isArray(this._paneTaskWaiters) && this._paneTaskWaiters.length) {
+      const waiters = this._paneTaskWaiters.splice(0);
+      waiters.forEach((resolve) => {
+        if (typeof resolve === "function") resolve();
+      });
+    }
   }
   _paneKeyFromElement(element) {
     const paneHost = element?.closest?.("[data-pane]");
@@ -4661,6 +4675,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._cancelPendingMount(`page-route-${this._pageId}`);
     }
     if (leavingSideBySide) {
+      this._invalidatePaneTaskQueue();
       this._withPaneState(
         LEFT_PANE_KEY,
         () => this._cancelPendingMount("page-route-side-by-side-leave-left")
@@ -4737,6 +4752,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._cancelPendingMount("page-route-side-by-side");
     }
     if (enteringSideBySide) {
+      this._invalidatePaneTaskQueue();
       this._cancelPendingMount("page-route-side-by-side-enter");
       this._withPaneState(
         LEFT_PANE_KEY,
@@ -9979,6 +9995,10 @@ const FrigateViewCard = class extends HTMLElement {
     const cacheKey = `${this._activePaneKey}|${resolvedSelector}`;
     if (this._domCache[cacheKey]) return this._domCache[cacheKey];
     const paneRoot = this._paneRoot(this._activePaneKey);
+    if ((this._activePaneKey === LEFT_PANE_KEY || this._activePaneKey === RIGHT_PANE_KEY) && !paneRoot) {
+      this._domCache[cacheKey] = null;
+      return null;
+    }
     const foundInPane = paneRoot?.querySelector?.(resolvedSelector) || null;
     const found = foundInPane || this.shadowRoot.querySelector(resolvedSelector);
     this._domCache[cacheKey] = found;
