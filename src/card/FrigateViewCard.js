@@ -3513,8 +3513,28 @@ export class FrigateViewCard extends HTMLElement {
       this._withPaneState(RIGHT_PANE_KEY, () =>
         this._cancelPendingMount("page-route-side-by-side-leave-right"),
       );
+      this._cancelPendingMount("page-route-side-by-side-leave-primary");
       this._resetSingleViewForFreshLoad();
       this._renderShell();
+      this._applyPreviewShellVisibility();
+      this._applyCardStyle();
+      this._applyLayoutMode();
+      if (this._isWideViewPageActive()) this._syncColHeight();
+      if (context.startup === true) {
+        if (context.startInGrid === true) {
+          this._setViewMode("grid");
+        } else {
+          this._mountEngine();
+        }
+        return;
+      }
+      if (context.deferCameraSwitch === true) return;
+      // Treat side-by-side -> single as a fresh single-view startup path.
+      this._syncTabsShell(true);
+      this._renderAll();
+      this._mountEngine();
+      void this._loadWindow(true);
+      return;
     }
     this._applyPreviewShellVisibility();
     this._applyCardStyle();
@@ -3529,13 +3549,10 @@ export class FrigateViewCard extends HTMLElement {
       return;
     }
     if (context.deferCameraSwitch === true) return;
-    if (leavingPreview || leavingSideBySide) {
+    if (leavingPreview) {
       this._mountEngine(null, { quiet: true });
     }
-    if (leavingSideBySide) {
-      void this._loadWindow(true);
-    }
-    this._syncTabsShell(leavingSideBySide);
+    this._syncTabsShell();
     this._renderAll();
   }
 
