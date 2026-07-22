@@ -427,8 +427,14 @@ export class FrigateViewCard extends HTMLElement {
     if (!card) return;
     const style = getComputedStyle(card);
     const outerShadow = style.getPropertyValue("--fvc-shadow-m").trim();
-    const outerBorder = style.getPropertyValue("--fvc-border-s").trim();
-    const outerRadius = style.getPropertyValue("--fvc-border-radius").trim();
+    const outerBorder = this._resolveStyleVarsForHost(
+      style.getPropertyValue("--fvc-border-s").trim(),
+      style,
+    );
+    const outerRadius = this._resolveStyleVarsForHost(
+      style.getPropertyValue("--fvc-border-radius").trim(),
+      style,
+    );
 
     this.style.boxShadow =
       this._config?.outer_shadows !== false && outerShadow
@@ -440,6 +446,24 @@ export class FrigateViewCard extends HTMLElement {
       this._config?.outer_rounded_corners !== false && outerRadius
         ? outerRadius
         : "0px";
+  }
+
+  _resolveStyleVarsForHost(value, scopedStyle) {
+    const raw = String(value || "").trim();
+    if (!raw || !/var\(/.test(raw)) return raw;
+
+    const resolveOne = (name, fallback = "") => {
+      const resolved = scopedStyle?.getPropertyValue?.(name)?.trim() || "";
+      return resolved || String(fallback || "").trim();
+    };
+
+    const withFallback = /var\(\s*(--[\w-]+)\s*,\s*([^\)]+)\)/g;
+    const withoutFallback = /var\(\s*(--[\w-]+)\s*\)/g;
+    let next = raw.replace(withFallback, (_m, varName, fallback) =>
+      resolveOne(varName, fallback),
+    );
+    next = next.replace(withoutFallback, (_m, varName) => resolveOne(varName));
+    return next;
   }
   _syncColHeight() {
     requestAnimationFrame(() => {
