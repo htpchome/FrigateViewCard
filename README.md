@@ -1,7 +1,6 @@
-##### Under Construction ####
+##### Under Construction
 
 Use at your own risk while this card is being built.
-
 
 # FrigateViewCard
 
@@ -68,9 +67,9 @@ cameras:
 | `grid_start_in_grid_enabled`   | boolean | `false`                  | Starts in grid mode and returns to grid mode when re-entering the dashboard.                                    |
 | `grid_live_view_enabled`       | boolean | `true`                   | Uses live streams in grid mode. Set to `false` for snapshot-first grid tiles.                                   |
 | `grid_rotation_seconds`        | number  | `30`                     | Grid camera rotation interval when more than four cameras are configured. Valid values: `10`, `20`, `30`, `60`. |
-| `landing_page_enabled`         | boolean | `false`                  | Starts on a camera landing grid instead of the standard live/event layout.                                      |
-| `landing_page_live_cameras`    | boolean | `false`                  | Uses live streams on landing-page camera tiles.                                                                 |
-| `landing_page_show_title_bars` | boolean | `true`                   | Shows title bars on landing-page camera tiles.                                                                  |
+| `preview_page_enabled`         | boolean | `false`                  | Enables the Preview page as a navigation and landing-page option.                                               |
+| `preview_page_live_cameras`    | boolean | `false`                  | Uses live streams on Preview page camera tiles.                                                                 |
+| `preview_page_show_title_bars` | boolean | `true`                   | Shows title bars on Preview page camera tiles.                                                                  |
 | `hidden_tabs`                  | list    | `[]`                     | Tabs to hide. Valid values: `alerts`, `clips`, `snapshot`, `recordings`, `kept`.                                |
 | `theme`                        | string  | `default`                | Use `default` for Home Assistant theme variables or `custom` for color overrides.                               |
 | `theme_custom`                 | map     | `{}`                     | Custom theme color overrides. Only values different from the resolved defaults need to be saved.                |
@@ -78,8 +77,10 @@ cameras:
 | `stream_height_unit`           | string  | `vh`                     | Unit for `stream_height`. Valid values: `vh`, `em`, `px`. Only useful when `stream_height` is set.              |
 | `tight_margins`                | boolean | `false`                  | Reduces outer card margins.                                                                                     |
 | `shadows`                      | boolean | `true`                   | Enables card shadows.                                                                                           |
-| `wide_view`                    | boolean | `false`                  | Enables wide two-column layout.                                                                                 |
-| `col_left_width_pct`           | number  | `50`                     | Left column width percentage for wide view. Valid range: `10` to `90`.                                          |
+| `wide_view_page_enabled`       | boolean | `false`                  | Enables the Wide View page as a navigation and desktop/tablet landing-page option.                              |
+| `landing_page`                 | string  | `single-view`            | Default starting page for desktop and tablet. Valid values depend on enabled pages.                             |
+| `mobile_page`                  | string  | `single-view`            | Default starting page for phones. Valid values: `single-view`, `preview`.                                       |
+| `col_left_width_pct`           | number  | `50`                     | Left column width percentage for the Wide View page. Valid range: `10` to `90`.                                 |
 
 ### Camera Options
 

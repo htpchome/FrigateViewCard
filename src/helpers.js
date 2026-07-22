@@ -31,6 +31,7 @@ import {
   THEME_CUSTOM_ROWS,
   THEME_CUSTOM_KEYS,
 } from "./constants.js";
+import { normalizePageRoute, PAGE_IDS } from "./router.js";
 
 export function detectDeviceProfile() {
   const nav = typeof navigator !== "undefined" ? navigator : {};
@@ -552,6 +553,8 @@ export const buildEditorConfigFromDom = ({
     root.querySelector("#preview_page_live_cameras")?.checked === true;
   nextConfig.preview_page_show_title_bars =
     root.querySelector("#preview_page_show_title_bars")?.checked !== false;
+  nextConfig.wide_view_page_enabled =
+    root.querySelector("#wide_view_page_enabled")?.checked === true;
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value ||
@@ -617,7 +620,16 @@ export const buildEditorConfigFromDom = ({
     root.querySelector("#rounded_corners")?.checked !== false;
   nextConfig.outer_shadows =
     root.querySelector("#outer_shadows")?.checked !== false;
-  nextConfig.wide_view = root.querySelector("#wide_view")?.checked === true;
+  nextConfig.landing_page = normalizePageRoute(
+    root.querySelector("#landing_page")?.dataset.value ||
+      root.querySelector("#landing_page")?.value ||
+      PAGE_IDS.singleView,
+  );
+  nextConfig.mobile_page = normalizePageRoute(
+    root.querySelector("#mobile_page")?.dataset.value ||
+      root.querySelector("#mobile_page")?.value ||
+      PAGE_IDS.singleView,
+  );
 
   const leftWidthRaw = root
     .querySelector("#col_left_width_pct")
@@ -749,6 +761,24 @@ export const compactEditorConfigForYaml = (
     source.preview_page_show_title_bars !== false,
     true,
   );
+  addIfNotDefault(
+    compact,
+    "wide_view_page_enabled",
+    source.wide_view_page_enabled === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
+    "landing_page",
+    normalizePageRoute(source.landing_page),
+    PAGE_IDS.singleView,
+  );
+  addIfNotDefault(
+    compact,
+    "mobile_page",
+    normalizePageRoute(source.mobile_page),
+    PAGE_IDS.singleView,
+  );
 
   const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(source.grid_rotation_seconds),
@@ -818,7 +848,6 @@ export const compactEditorConfigForYaml = (
     source.outer_shadows !== false,
     true,
   );
-  addIfNotDefault(compact, "wide_view", source.wide_view === true, false);
   const leftWidth = Number(source.col_left_width_pct) || 50;
   addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
 
@@ -866,6 +895,9 @@ export const createEditorPreviewDraft = (config) => ({
   preview_page_enabled: config.preview_page_enabled,
   preview_page_live_cameras: config.preview_page_live_cameras,
   preview_page_show_title_bars: config.preview_page_show_title_bars,
+  wide_view_page_enabled: config.wide_view_page_enabled,
+  landing_page: config.landing_page,
+  mobile_page: config.mobile_page,
   grid_rotation_seconds: config.grid_rotation_seconds,
   hidden_tabs: config.hidden_tabs,
   theme: config.theme,
@@ -878,7 +910,6 @@ export const createEditorPreviewDraft = (config) => ({
   borders: config.borders,
   rounded_corners: config.rounded_corners,
   outer_shadows: config.outer_shadows,
-  wide_view: config.wide_view,
   col_left_width_pct: config.col_left_width_pct,
 });
 

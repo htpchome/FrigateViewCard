@@ -83,17 +83,17 @@ export const STYLES = `
 
   .card .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
     overflow: hidden !important;}
-  .card .layout.wide{flex-direction:row;}
+  .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
   .card .col-left > *{flex:0 0 auto;}
   .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
   .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
-  .layout:not(.wide) .resize-handle{display:none;}
+  .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
   .resize-handle::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:2px;background:rgba(255,255,255,.4);border-radius:1px;}
-  .layout.wide .resize-handle{width:6px;height:auto;cursor:col-resize;}
-  .layout.wide .resize-handle::after{width:2px;height:32px;}
+  .layout.wide-view .resize-handle{width:6px;height:auto;cursor:col-resize;}
+  .layout.wide-view .resize-handle::after{width:2px;height:32px;}
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
   .card .browse{
     flex:1 1 0;
@@ -424,6 +424,10 @@ export const STYLES = `
   /* ── info row ── */
   .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
     border-bottom:1px solid var(--c-border);}
+  .page-nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0;}
+  .page-nav-btn{border:1px solid var(--c-border2);background:var(--c-bg-panel);color:var(--c-text2);border-radius:999px;padding:6px 10px;font-size:.78rem;font-weight:700;line-height:1;cursor:pointer;transition:background .16s ease,border-color .16s ease,color .16s ease;}
+  .page-nav-btn:hover{border-color:var(--c-primary);color:var(--c-primary-d);}
+  .page-nav-btn.active{background:var(--c-primary-d);border-color:var(--c-primary-d);color:var(--c-text-rev);}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
   .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}

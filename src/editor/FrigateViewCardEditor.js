@@ -76,6 +76,12 @@ import {
   hassThemeSignature,
   hassEntityStateSignature,
 } from "../helpers.js";
+import {
+  DEVICE_ROUTE_BUCKETS,
+  getEnabledPageRoutes,
+  normalizePageRoute,
+  PAGE_IDS,
+} from "../router.js";
 export class FrigateViewCardEditor extends HTMLElement {
   disconnectedCallback() {
     if (Array.isArray(this._boundDialogActionButtons)) {
@@ -213,6 +219,24 @@ export class FrigateViewCardEditor extends HTMLElement {
     src.preview_page_live_cameras = src.preview_page_live_cameras === true;
     src.preview_page_show_title_bars =
       src.preview_page_show_title_bars !== false;
+    src.wide_view_page_enabled =
+      src.wide_view_page_enabled === true || src.wide_view === true;
+    src.landing_page = normalizePageRoute(src.landing_page);
+    src.mobile_page = normalizePageRoute(src.mobile_page);
+    const landingPageOptions = getEnabledPageRoutes(
+      src,
+      DEVICE_ROUTE_BUCKETS.desktop,
+    );
+    const mobilePageOptions = getEnabledPageRoutes(
+      src,
+      DEVICE_ROUTE_BUCKETS.mobile,
+    );
+    if (!landingPageOptions.includes(src.landing_page)) {
+      src.landing_page = PAGE_IDS.singleView;
+    }
+    if (!mobilePageOptions.includes(src.mobile_page)) {
+      src.mobile_page = PAGE_IDS.singleView;
+    }
     src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
       Number(src.grid_rotation_seconds),
     )
@@ -222,6 +246,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       src.alerts_reviews_days,
       normalizePositiveInteger(src.window_days, 3),
     );
+    delete src.wide_view;
     return { ...src, cameras };
   }
 
@@ -630,7 +655,8 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._setEditorFieldError("#stream_height", streamHeightMessage);
     if (streamHeightMessage) valid = false;
 
-    const wideViewEnabled = this.querySelector("#wide_view")?.checked === true;
+    const wideViewEnabled =
+      this.querySelector("#wide_view_page_enabled")?.checked === true;
     const colWidthRaw = String(
       this.querySelector("#col_left_width_pct")?.value || "",
     )
@@ -662,6 +688,19 @@ export class FrigateViewCardEditor extends HTMLElement {
     const activeTheme = this._config?.theme === "custom" ? "custom" : "default";
     const themeCustom = this._config?.theme_custom || {};
     const themeCustomDefaults = this._config?.theme_custom_defaults || {};
+    const pageRouteLabel = (pageId) => {
+      if (pageId === PAGE_IDS.preview) return "Preview";
+      if (pageId === PAGE_IDS.wideView) return "Wide View";
+      return "Single View";
+    };
+    const landingPageOptions = getEnabledPageRoutes(
+      this._config,
+      DEVICE_ROUTE_BUCKETS.desktop,
+    ).map((pageId) => ({ value: pageId, label: pageRouteLabel(pageId) }));
+    const mobilePageOptions = getEnabledPageRoutes(
+      this._config,
+      DEVICE_ROUTE_BUCKETS.mobile,
+    ).map((pageId) => ({ value: pageId, label: pageRouteLabel(pageId) }));
     const tabToggle = (id, label) => `<ha-formfield label="${label}">
           <ha-switch data-active-tab="${id}" ${hiddenTabs.has(id) ? "" : "checked"}></ha-switch>
         </ha-formfield>`;
@@ -833,19 +872,6 @@ export class FrigateViewCardEditor extends HTMLElement {
         <div class="field-helper">Enable or Disable Rounded Corners.  This could be useful on phones or tablets.
         </div>
       </div>
-      <div class="section">
-        <div class="layout-row">
-          <span class="field-label" style="margin:0">Wide View</span>
-          <ha-switch id="wide_view" ${this._config?.wide_view ? "checked" : ""}></ha-switch>
-        </div>
-        <div class="field-helper">When Wide View is Enabled, the card will display two columns wide.  The default is disabled which will display one column.  Wide view may be usefull in panel view
-        </div>
-        <div id="col-width-row" style="display:flex;align-items:center;gap:6px;margin-top:6px;${this._config?.wide_view ? "" : "display:none"}">
-          <label style="font-size:11px;color:var(--c-text);white-space:nowrap">Left Width %</label>
-          <ha-input type="text" id="col_left_width_pct" value="${this._config?.col_left_width_pct ?? 50}" style="width:70px"></ha-input>
-          <span style="font-size:11px;color:var(--c-text2)">%</span>
-        </div>
-        <div class="field-helper" id="col_left_width_pct-helper"></div>
       </div>`;
     const slideshowPanelContent = `
       <div class="section">
@@ -870,7 +896,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           <span class="field-label" style="margin:0">Enable Preview Page</span>
           <ha-switch id="preview_page_enabled" ${this._config?.preview_page_enabled ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">When enabled, the card starts on a camera preview grid instead of the standard live/event layout.</div>
+        <div class="field-helper">When enabled, Preview becomes available in navigation and as a landing page option.</div>
       </div>
       <div class="section">
         <div class="layout-row">
@@ -885,6 +911,31 @@ export class FrigateViewCardEditor extends HTMLElement {
           <ha-switch id="preview_page_show_title_bars" ${this._config?.preview_page_show_title_bars !== false ? "checked" : ""}></ha-switch>
         </div>
         <div class="field-helper">Shows per-camera metadata under each preview tile (name, source, events, and online status).</div>
+      </div>`;
+    const wideViewPanelContent = `
+      <div class="section" style="border-top:none;padding-top:0">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Enable Wide View Page</span>
+          <ha-switch id="wide_view_page_enabled" ${this._config?.wide_view_page_enabled ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">When enabled, Wide View becomes available in navigation and as a desktop/tablet landing page option.</div>
+      </div>
+      <div id="col-width-row" style="display:flex;align-items:center;gap:6px;margin-top:6px;${this._config?.wide_view_page_enabled ? "" : "display:none"}">
+        <label style="font-size:11px;color:var(--c-text);white-space:nowrap">Left Width %</label>
+        <ha-input type="text" id="col_left_width_pct" value="${this._config?.col_left_width_pct ?? 50}" style="width:70px"></ha-input>
+        <span style="font-size:11px;color:var(--c-text2)">%</span>
+      </div>
+      <div class="field-helper" id="col_left_width_pct-helper">Controls the left column width when the Wide View page is active.</div>`;
+    const landingPanelContent = `
+      <div class="section" style="border-top:none;padding-top:0">
+        <span class="field-label">Landing Page</span>
+        <ha-selector id="landing_page" style="width:220px"></ha-selector>
+        <div class="field-helper">Choose the default starting page for desktop and tablet devices.</div>
+      </div>
+      <div class="section">
+        <span class="field-label">Mobile Page</span>
+        <ha-selector id="mobile_page" style="width:220px"></ha-selector>
+        <div class="field-helper">Choose the default starting page for phones. Wide View is intentionally excluded here.</div>
       </div>`;
     const gridviewPanelContent = `
       <div class="section">
@@ -928,9 +979,11 @@ export class FrigateViewCardEditor extends HTMLElement {
         ${this._renderSettingsPanel({ id: "general", title: "General Settings", icon: "mdi:cog", content: generalPanelContent, active: activeSettingsPanel === "general" })}
         ${this._renderSettingsPanel({ id: "theme", title: "Theme Settings", icon: "mdi:palette", content: themePanelContent, active: activeSettingsPanel === "theme" })}
         ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent, active: activeSettingsPanel === "layout" })}
-        ${this._renderSettingsPanel({ id: "slideshow", title: "Slideshow Settings", icon: "mdi:presentation-play", content: slideshowPanelContent, active: activeSettingsPanel === "slideshow" })}        
-        ${this._renderSettingsPanel({ id: "layout", title: "Grid View", icon: "mdi:view-grid-outline", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
-        ${this._renderSettingsPanel({ id: "gridview", title: "Preview Page", icon: "mdi:view-grid", content: previewPanelContent, active: activeSettingsPanel === "preview" })}
+        ${this._renderSettingsPanel({ id: "slideshow", title: "Slideshow Settings", icon: "mdi:presentation-play", content: slideshowPanelContent, active: activeSettingsPanel === "slideshow" })}
+        ${this._renderSettingsPanel({ id: "gridview", title: "Grid View", icon: "mdi:view-grid-outline", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
+        ${this._renderSettingsPanel({ id: "preview", title: "Preview Page", icon: "mdi:view-grid", content: previewPanelContent, active: activeSettingsPanel === "preview" })}
+        ${this._renderSettingsPanel({ id: "wideview", title: "Wide View Page", icon: "mdi:view-split-vertical", content: wideViewPanelContent, active: activeSettingsPanel === "wideview" })}
+        ${this._renderSettingsPanel({ id: "landing", title: "Landing Page", icon: "mdi:home-import-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
 
     this.innerHTML = `<style>
@@ -1223,6 +1276,26 @@ export class FrigateViewCardEditor extends HTMLElement {
       onChange: () => update(),
     });
 
+    setupSelectSelector({
+      element: this.querySelector("#landing_page"),
+      hass: this._hass,
+      options: landingPageOptions,
+      initialValue: this._config?.landing_page || PAGE_IDS.singleView,
+      fallbackValue: PAGE_IDS.singleView,
+      normalize: (value) => normalizePageRoute(value),
+      onChange: () => update(),
+    });
+
+    setupSelectSelector({
+      element: this.querySelector("#mobile_page"),
+      hass: this._hass,
+      options: mobilePageOptions,
+      initialValue: this._config?.mobile_page || PAGE_IDS.singleView,
+      fallbackValue: PAGE_IDS.singleView,
+      normalize: (value) => normalizePageRoute(value),
+      onChange: () => update(),
+    });
+
     setupEntitySelector({
       element: this.querySelector("#camera-modal-entity"),
       hass: this._hass,
@@ -1300,7 +1373,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       root: this,
       ids: [
         "tight_margins",
-        "wide_view",
+        "wide_view_page_enabled",
         "shadows",
         "borders",
         "rounded_corners",
@@ -1343,7 +1416,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       handler: () => update(),
     });
 
-    const wideCb = this.querySelector("#wide_view");
+    const wideCb = this.querySelector("#wide_view_page_enabled");
     const colWidthRow = this.querySelector("#col-width-row");
     if (wideCb && colWidthRow) {
       const syncWideRow = () => {

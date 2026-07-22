@@ -24,9 +24,9 @@ test("window loads use loading-state guard", () => {
   assert.equal(/this\._loading = true;/.test(source), true);
 });
 
-test("startup begins list load in parallel with live mount", () => {
+test("startup resolves initial page through the navigation factory", () => {
   assert.match(
     source,
-    /const\s+initialLoad\s*=\s*this\._loadWindow\(true\);[\s\S]*this\._mountEngine\(\);[\s\S]*await\s+initialLoad;/,
+    /const\s+initialLoad\s*=\s*this\._loadWindow\(true\);[\s\S]*const\s+startupPageId\s*=\s*this\._ensureNavigationFactory\(\)\.resolveStartupPage\([\s\S]*this\._navigateToPageRoute\(startupPageId,[\s\S]*await\s+initialLoad;/,
   );
 });
