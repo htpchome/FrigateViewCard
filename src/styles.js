@@ -387,7 +387,7 @@ export const STYLES = `
   .card.side-by-side-active .preview-shell-header,
   .card.side-by-side-active .preview-shell-footer{display:none;}
   .card.side-by-side-active > .layout{display:none;}
-  .card.preview-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--view-height,100dvh);max-height:var(--view-height,100dvh);overflow:hidden !important;}
+  .card.preview-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;min-height:0;height:100%;max-height:100%;overflow:hidden !important;}
   .card.preview-active .col-left,.card.preview-active .resize-handle,.card.preview-active .col-right{display:none;}
 
   .card.preview-active .preview-shell-header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;position:sticky;top:0;z-index:4;}

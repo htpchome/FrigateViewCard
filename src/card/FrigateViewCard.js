@@ -529,6 +529,38 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
 
+  async _withPaneStateAsync(paneKey, callback) {
+    const prevPaneKey = this._activePaneKey;
+    this._activePaneKey = paneKey;
+    try {
+      return await callback(this._getPaneState(paneKey));
+    } finally {
+      this._activePaneKey = prevPaneKey;
+    }
+  }
+
+  _runPaneTask(paneKey, callback) {
+    const runTask = async () => {
+      while (this._paneTaskBusy) {
+        await new Promise((resolve) => {
+          if (!this._paneTaskWaiters) this._paneTaskWaiters = [];
+          this._paneTaskWaiters.push(resolve);
+        });
+      }
+
+      this._paneTaskBusy = true;
+      try {
+        return await this._withPaneStateAsync(paneKey, callback);
+      } finally {
+        this._paneTaskBusy = false;
+        const next = this._paneTaskWaiters?.shift();
+        if (typeof next === "function") next();
+      }
+    };
+
+    return runTask();
+  }
+
   _paneKeyFromElement(element) {
     const paneHost = element?.closest?.("[data-pane]");
     const paneKey = String(paneHost?.dataset?.pane || "").trim();
@@ -1373,15 +1405,16 @@ export class FrigateViewCard extends HTMLElement {
     });
     await initialLoad;
     if (this._isSideBySidePageActive()) {
-      await Promise.all([
-        this._withPaneState(LEFT_PANE_KEY, () => this._loadWindow(true)),
-        this._withPaneState(RIGHT_PANE_KEY, () => this._loadWindow(true)),
-      ]);
+      await this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
+      await this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
     }
     if (this._isSideBySidePageActive()) {
-      this._forEachRuntimePane(() => {
-        void this._prefetchCalendarActivityForActiveCamera();
-      });
+      void this._runPaneTask(LEFT_PANE_KEY, () =>
+        this._prefetchCalendarActivityForActiveCamera(),
+      );
+      void this._runPaneTask(RIGHT_PANE_KEY, () =>
+        this._prefetchCalendarActivityForActiveCamera(),
+      );
     } else {
       void this._prefetchCalendarActivityForActiveCamera();
     }
@@ -1393,9 +1426,8 @@ export class FrigateViewCard extends HTMLElement {
     this._refresh = setInterval(() => {
       if (!this._isNowWindow()) return;
       if (this._isSideBySidePageActive()) {
-        this._forEachRuntimePane(() => {
-          this._loadWindow(true);
-        });
+        void this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
+        void this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
         return;
       }
       this._loadWindow(true);
@@ -5147,6 +5179,7 @@ export class FrigateViewCard extends HTMLElement {
 
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
+    const paneKey = this._activePaneKey;
     const source = String(opts?.source || "manual");
     if (source === "manual") {
       if (this._slideshowActive) {
@@ -5221,10 +5254,12 @@ export class FrigateViewCard extends HTMLElement {
     this._cancelPendingMount("switch-camera", { preserveMseEntity: prevEnt });
     this._mountEngine();
     clearTimeout(this._switchLoadT);
-    this._loadWindow(true);
+    void this._runPaneTask(paneKey, () => this._loadWindow(true));
     this._applyCalendarActivityCacheForActiveCamera();
-    void this._prefetchCalendarActivityForActiveCamera();
-    if (this._$("cal-panel")?.style.display !== "none") {
+    void this._runPaneTask(paneKey, () =>
+      this._prefetchCalendarActivityForActiveCamera(),
+    );
+    if (this._$("#cal-panel")?.style.display !== "none") {
       this._renderCal();
     }
     this._syncToolbarButtons();
@@ -5719,7 +5754,7 @@ export class FrigateViewCard extends HTMLElement {
         );
         if (activeKey === key) {
           this._daysWithActivity = new Set(days);
-          if (this._$("cal-panel")?.style.display !== "none") {
+          if (this._$("#cal-panel")?.style.display !== "none") {
             this._renderCal();
           }
         }
@@ -6395,24 +6430,29 @@ export class FrigateViewCard extends HTMLElement {
     const list = this._$("#list");
     const browse = this._$("#browse");
     if (!list && !browse) return;
+    const paneKey = this._activePaneKey;
 
     const onScroll = () => {
-      this._syncOlderHint();
-      this._syncBrowseHeadFromScroll();
-      if (
-        (this._tab === "clips" || this._tab === "snapshot") &&
-        !this._loading &&
-        !this._exhausted
-      ) {
-        const listScrollable =
-          list && list.scrollHeight > list.clientHeight + 2;
-        const scroller = listScrollable ? list : browse;
-        if (!scroller) return;
-        const nearBottom =
-          scroller.scrollTop + scroller.clientHeight >=
-          scroller.scrollHeight - 80;
-        if (nearBottom) this._loadOlder();
-      }
+      this._withPaneState(paneKey, () => {
+        this._syncOlderHint();
+        this._syncBrowseHeadFromScroll();
+        if (
+          (this._tab === "clips" || this._tab === "snapshot") &&
+          !this._loading &&
+          !this._exhausted
+        ) {
+          const listScrollable =
+            list && list.scrollHeight > list.clientHeight + 2;
+          const scroller = listScrollable ? list : browse;
+          if (!scroller) return;
+          const nearBottom =
+            scroller.scrollTop + scroller.clientHeight >=
+            scroller.scrollHeight - 80;
+          if (nearBottom) {
+            void this._runPaneTask(paneKey, () => this._loadOlder());
+          }
+        }
+      });
     };
 
     if (list) list.addEventListener("scroll", onScroll, { passive: true });
