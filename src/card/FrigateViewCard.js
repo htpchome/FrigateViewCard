@@ -3053,7 +3053,7 @@ export class FrigateViewCard extends HTMLElement {
         const sourceLabel = this._landingStreamSourceLabel(entity, useLive);
         const eventsCount = this._landingEventsCount(entity);
         const name = cap(camDisplayName(camera));
-        return `<div class="landing-cell shadow-small" data-landing-camidx="${index}">
+        return `<div class="landing-cell shadow-medium" data-landing-camidx="${index}">
           <div class="landing-media-host ${severity === "alert" ? "grid-alert" : severity === "detection" ? "grid-detection" : ""}" data-landing-media-entity="${entity}" data-landing-use-live="${useLive ? "1" : "0"}"></div>
           ${
             showTitleBars

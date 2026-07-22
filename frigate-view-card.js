@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.618";
+const VERSION = "1.0.619";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4063,7 +4063,7 @@ const FrigateViewCard = class extends HTMLElement {
       const sourceLabel = this._landingStreamSourceLabel(entity, useLive);
       const eventsCount = this._landingEventsCount(entity);
       const name = cap(camDisplayName(camera));
-      return `<div class="landing-cell shadow-small" data-landing-camidx="${index}">
+      return `<div class="landing-cell shadow-medium" data-landing-camidx="${index}">
           <div class="landing-media-host ${severity === "alert" ? "grid-alert" : severity === "detection" ? "grid-detection" : ""}" data-landing-media-entity="${entity}" data-landing-use-live="${useLive ? "1" : "0"}"></div>
           ${showTitleBars ? `<div class="landing-meta">
               <div class="landing-meta-name">${name}</div>
