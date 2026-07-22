@@ -6100,7 +6100,20 @@ export class FrigateViewCard extends HTMLElement {
       </div>`;
   }
 
+  _queueTabLoadForPane(paneKey, tab) {
+    const normalizedPaneKey =
+      paneKey === LEFT_PANE_KEY || paneKey === RIGHT_PANE_KEY
+        ? paneKey
+        : PRIMARY_PANE_KEY;
+    if (this._paneTaskBusy && this._activePaneKey === normalizedPaneKey) {
+      void this._loadTabData(tab);
+      return;
+    }
+    void this._runPaneTask(normalizedPaneKey, () => this._loadTabData(tab));
+  }
+
   _syncTabsShell(skipTabAutoLoad = false) {
+    const paneKey = this._activePaneKey;
     const tabs = this._$(".tabs");
     if (!tabs) return;
     const prevTab = this._tab;
@@ -6115,7 +6128,7 @@ export class FrigateViewCard extends HTMLElement {
       delete this._domCache[sel];
     });
     if (!skipTabAutoLoad && this._tab !== prevTab) {
-      void this._loadTabData(this._tab);
+      this._queueTabLoadForPane(paneKey, this._tab);
     }
   }
 
@@ -7913,6 +7926,7 @@ export class FrigateViewCard extends HTMLElement {
     return true;
   }
   _setTab(tab) {
+    const paneKey = this._activePaneKey;
     const prevTab = this._tab;
     this._tab = tab;
     this.shadowRoot
@@ -7931,7 +7945,7 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._syncBrowseHeadModeClass();
     this._renderListLabel();
-    void this._loadTabData(tab);
+    this._queueTabLoadForPane(paneKey, tab);
     this._renderList();
     if (!this._shouldPreserveScrollOnTabSwitch(prevTab, tab)) {
       this._resetBrowseScrollTop();

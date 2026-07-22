@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.678";
+const VERSION = "1.0.679";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6884,7 +6884,16 @@ const FrigateViewCard = class extends HTMLElement {
         <button class="tool" id="cal-btn" title="Calendar">${ICONS.calendar}</button>
       </div>`;
   }
+  _queueTabLoadForPane(paneKey, tab) {
+    const normalizedPaneKey = paneKey === LEFT_PANE_KEY || paneKey === RIGHT_PANE_KEY ? paneKey : PRIMARY_PANE_KEY;
+    if (this._paneTaskBusy && this._activePaneKey === normalizedPaneKey) {
+      void this._loadTabData(tab);
+      return;
+    }
+    void this._runPaneTask(normalizedPaneKey, () => this._loadTabData(tab));
+  }
   _syncTabsShell(skipTabAutoLoad = false) {
+    const paneKey = this._activePaneKey;
     const tabs = this._$(".tabs");
     if (!tabs) return;
     const prevTab = this._tab;
@@ -6899,7 +6908,7 @@ const FrigateViewCard = class extends HTMLElement {
       delete this._domCache[sel];
     });
     if (!skipTabAutoLoad && this._tab !== prevTab) {
-      void this._loadTabData(this._tab);
+      this._queueTabLoadForPane(paneKey, this._tab);
     }
   }
   async _loadTabData(tab) {
@@ -8516,6 +8525,7 @@ const FrigateViewCard = class extends HTMLElement {
     return true;
   }
   _setTab(tab) {
+    const paneKey = this._activePaneKey;
     const prevTab = this._tab;
     this._tab = tab;
     this.shadowRoot.querySelectorAll("[data-tab]").forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
@@ -8532,7 +8542,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._syncBrowseHeadModeClass();
     this._renderListLabel();
-    void this._loadTabData(tab);
+    this._queueTabLoadForPane(paneKey, tab);
     this._renderList();
     if (!this._shouldPreserveScrollOnTabSwitch(prevTab, tab)) {
       this._resetBrowseScrollTop();
