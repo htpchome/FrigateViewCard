@@ -1393,7 +1393,6 @@ export class FrigateViewCard extends HTMLElement {
     this._winStart = now - this._config.window_days * DAY;
 
     const initialLoad = this._loadWindow(true);
-    this._scheduleWarmOtherCamerasEvents();
     const startInGrid = this._shouldStartInGridMode();
     const startupPageId = this._ensureNavigationFactory().resolveStartupPage({
       hasPendingDeepLinkTarget: this._hasPendingDeepLinkTarget(),
@@ -1404,6 +1403,7 @@ export class FrigateViewCard extends HTMLElement {
       startInGrid,
     });
     await initialLoad;
+    this._scheduleWarmOtherCamerasEvents();
     if (this._isSideBySidePageActive()) {
       await this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
       await this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
@@ -3538,18 +3538,16 @@ export class FrigateViewCard extends HTMLElement {
     this._applyCardStyle();
     this._applyLayoutMode();
     if (context.startup === true) {
-      this._withPaneState(LEFT_PANE_KEY, () => {
-        void this._mountEngine();
+      void this._runPaneTask(LEFT_PANE_KEY, async () => {
         this._syncTabsShell();
         this._renderList();
+        await this._mountEngine();
       });
-      this._withPaneState(RIGHT_PANE_KEY, () => {
-        void this._mountEngine();
+      void this._runPaneTask(RIGHT_PANE_KEY, async () => {
         this._syncTabsShell();
         this._renderList();
+        await this._mountEngine();
       });
-      void this._runPaneTask(LEFT_PANE_KEY, () => this._loadWindow(true));
-      void this._runPaneTask(RIGHT_PANE_KEY, () => this._loadWindow(true));
       return;
     }
     if (context.deferCameraSwitch === true) return;
