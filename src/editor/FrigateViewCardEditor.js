@@ -928,7 +928,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         ${this._renderSettingsPanel({ id: "theme", title: "Theme Settings", icon: "mdi:palette", content: themePanelContent, active: activeSettingsPanel === "theme" })}
         ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent, active: activeSettingsPanel === "layout" })}
         ${this._renderSettingsPanel({ id: "layout", title: "Grid View", icon: "mdi:angle-right", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
-        ${this._renderSettingsPanel({ id: "gridview", title: "Landing Page", icon: "mdi:view-grid", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
+        ${this._renderSettingsPanel({ id: "gridview", title: "Landing Page", icon: "mdi:view-grid-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
 
     this.innerHTML = `<style>

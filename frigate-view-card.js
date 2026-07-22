@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.644";
+const VERSION = "1.0.645";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10406,7 +10406,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
         ${this._renderSettingsPanel({ id: "theme", title: "Theme Settings", icon: "mdi:palette", content: themePanelContent, active: activeSettingsPanel === "theme" })}
         ${this._renderSettingsPanel({ id: "layout", title: "Layout Settings", icon: "mdi:angle-right", content: layoutPanelContent, active: activeSettingsPanel === "layout" })}
         ${this._renderSettingsPanel({ id: "layout", title: "Grid View", icon: "mdi:angle-right", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
-        ${this._renderSettingsPanel({ id: "gridview", title: "Landing Page", icon: "mdi:view-grid", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
+        ${this._renderSettingsPanel({ id: "gridview", title: "Landing Page", icon: "mdi:view-grid-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
     this.innerHTML = `<style>
             .ed-wrap{
