@@ -822,7 +822,7 @@ export class FrigateViewCard extends HTMLElement {
       this._renderPreviewPage();
       if (previewModeConfigChanged || realtimePollChanged) {
         this._clearPreviewTimers();
-        this._schedulePreviewAlertWatch(300);
+        this._previewAlertController.scheduleAlertWatch(300);
       }
       return;
     }
@@ -3384,38 +3384,6 @@ export class FrigateViewCard extends HTMLElement {
     void delayMs;
   }
 
-  _schedulePreviewAlertCleanup() {
-    // Kept as a compatibility no-op wrapper after controller extraction.
-  }
-
-  _markPreviewAlertCamera(
-    entity,
-    severity = "alert",
-    holdMs = PREVIEW_ALERT_HOLD_MS,
-  ) {
-    this._previewAlertController.markAlertCamera(entity, severity, holdMs);
-  }
-
-  _rememberHandledPreviewReview(reviewId) {
-    this._previewAlertController.rememberHandledReview(reviewId);
-  }
-
-  _isPreviewReviewFresh(review) {
-    return this._previewAlertController.isReviewFresh(review);
-  }
-
-  async _probeLatestPreviewAlert() {
-    await this._previewAlertController.probeLatestAlert();
-  }
-
-  _schedulePreviewAlertWatch(delayMs = null) {
-    this._previewAlertController.scheduleAlertWatch(delayMs);
-  }
-
-  _handlePreviewRealtimeMessage(msg) {
-    this._previewAlertController.handleRealtimeMessage(msg);
-  }
-
   _startPreviewMode() {
     this._previewPageController.startPreviewMode();
   }
@@ -5194,7 +5162,7 @@ export class FrigateViewCard extends HTMLElement {
       this._unsub = this._hass.connection.subscribeMessage(
         (msg) => {
           this._handleGridRealtimeMessage(msg);
-          this._handlePreviewRealtimeMessage(msg);
+          this._previewAlertController.handleRealtimeMessage(msg);
           this._handleSlideshowRealtimeMessage(msg);
           if (!this._isNowWindow()) return;
           if (!this._isRealtimeEventMessage(msg)) return;

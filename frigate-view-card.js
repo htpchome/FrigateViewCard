@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.704";
+const VERSION = "1.0.705";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2560,7 +2560,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._renderPreviewPage();
       if (previewModeConfigChanged || realtimePollChanged) {
         this._clearPreviewTimers();
-        this._schedulePreviewAlertWatch(300);
+        this._previewAlertController.scheduleAlertWatch(300);
       }
       return;
     }
@@ -4799,26 +4799,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewSnapshotRefreshT = null;
     void delayMs;
   }
-  _schedulePreviewAlertCleanup() {
-  }
-  _markPreviewAlertCamera(entity, severity = "alert", holdMs = PREVIEW_ALERT_HOLD_MS) {
-    this._previewAlertController.markAlertCamera(entity, severity, holdMs);
-  }
-  _rememberHandledPreviewReview(reviewId) {
-    this._previewAlertController.rememberHandledReview(reviewId);
-  }
-  _isPreviewReviewFresh(review) {
-    return this._previewAlertController.isReviewFresh(review);
-  }
-  async _probeLatestPreviewAlert() {
-    await this._previewAlertController.probeLatestAlert();
-  }
-  _schedulePreviewAlertWatch(delayMs = null) {
-    this._previewAlertController.scheduleAlertWatch(delayMs);
-  }
-  _handlePreviewRealtimeMessage(msg) {
-    this._previewAlertController.handleRealtimeMessage(msg);
-  }
   _startPreviewMode() {
     this._previewPageController.startPreviewMode();
   }
@@ -6360,7 +6340,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._unsub = this._hass.connection.subscribeMessage(
         (msg) => {
           this._handleGridRealtimeMessage(msg);
-          this._handlePreviewRealtimeMessage(msg);
+          this._previewAlertController.handleRealtimeMessage(msg);
           this._handleSlideshowRealtimeMessage(msg);
           if (!this._isNowWindow()) return;
           if (!this._isRealtimeEventMessage(msg)) return;
