@@ -2282,19 +2282,25 @@ const resolveFallbackSourceResolversForCard = ({ card, origin }) => createFallba
   card,
   origin
 });
-const loadFallbackPrimaryForCard = async ({ card, entity, origin }) => {
-  const resolvers = resolveFallbackSourceResolversForCard({
+const withFallbackSourceResolversForCard = ({ card, origin, run }) => run(
+  resolveFallbackSourceResolversForCard({
     card,
     origin
+  })
+);
+const loadFallbackPrimaryForCard = async ({ card, entity, origin }) => {
+  return await withFallbackSourceResolversForCard({
+    card,
+    origin,
+    run: async (resolvers) => await resolvers.loadPrimary(entity)
   });
-  return await resolvers.loadPrimary(entity);
 };
 const loadFallbackAltForCard = ({ card, entity, origin }) => {
-  const resolvers = resolveFallbackSourceResolversForCard({
+  return withFallbackSourceResolversForCard({
     card,
-    origin
+    origin,
+    run: (resolvers) => resolvers.loadAlt(entity)
   });
-  return resolvers.loadAlt(entity);
 };
 
 // src/live/live-fallback-image.js
@@ -6054,20 +6060,22 @@ const FrigateViewCard = class extends HTMLElement {
       refreshImage
     });
   }
-  async _streamFallbackUrl(entity) {
+  _fallbackOriginForAdapters() {
     this._fallbackOrigin = window.location.origin;
+    return this._fallbackOrigin;
+  }
+  async _streamFallbackUrl(entity) {
     return await loadFallbackPrimaryForCard({
       card: this,
       entity,
-      origin: this._fallbackOrigin
+      origin: this._fallbackOriginForAdapters()
     });
   }
   _streamFallbackAltUrl(entity) {
-    this._fallbackOrigin = window.location.origin;
     return loadFallbackAltForCard({
       card: this,
       entity,
-      origin: this._fallbackOrigin
+      origin: this._fallbackOriginForAdapters()
     });
   }
   async _refreshStreamFallbackImage() {

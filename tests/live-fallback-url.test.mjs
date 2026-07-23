@@ -403,5 +403,8 @@ test("loadFallbackAltForCard falls back to card-provided origin", () => {
     origin: "",
   });
 
-  assert.equal(alt, "https://from-card.local/api/camera_proxy/camera.front?x=6");
+  assert.equal(
+    alt,
+    "https://from-card.local/api/camera_proxy/camera.front?x=6",
+  );
 });

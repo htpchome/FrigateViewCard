@@ -2179,21 +2179,24 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
-  async _streamFallbackUrl(entity) {
+  _fallbackOriginForAdapters() {
     this._fallbackOrigin = window.location.origin;
+    return this._fallbackOrigin;
+  }
+
+  async _streamFallbackUrl(entity) {
     return await loadFallbackPrimaryForCard({
       card: this,
       entity,
-      origin: this._fallbackOrigin,
+      origin: this._fallbackOriginForAdapters(),
     });
   }
 
   _streamFallbackAltUrl(entity) {
-    this._fallbackOrigin = window.location.origin;
     return loadFallbackAltForCard({
       card: this,
       entity,
-      origin: this._fallbackOrigin,
+      origin: this._fallbackOriginForAdapters(),
     });
   }
 
