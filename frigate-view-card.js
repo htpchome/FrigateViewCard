@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.728";
+const VERSION = "1.0.729";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1886,6 +1886,35 @@ function buildPopupShellMarkup({ icons, version }) {
                 <h1 class="popup-shell-ver" id="popup-shell-ver">v${version}</h1>
             </div>
           </div>`;
+}
+function buildMainLayoutShellMarkup({
+  previewShellHeader,
+  previewFooterIcon,
+  liveEngineWrap,
+  infoRow,
+  pageNav,
+  camSwitcher,
+  rightColumnShell
+}) {
+  return `<div class="layout" id="layout">
+
+          ${previewShellHeader}
+          <div class="preview-shell" id="preview-shell"></div>
+          <div class="preview-shell-footer" id="preview-shell-footer">
+            <div class="frigate-view">${previewFooterIcon}</div>
+          </div>
+
+          <div class="col-left" id="col-left">
+            ${liveEngineWrap}
+
+            ${infoRow}
+            ${pageNav}
+            ${camSwitcher}
+          </div>
+          <div class="resize-handle" id="resize-handle"></div>
+          ${rightColumnShell}
+
+        </div>`;
 }
 
 // src/preview/preview-alert-controller.js
@@ -7010,6 +7039,15 @@ const FrigateViewCard = class extends HTMLElement {
       icons: ICONS,
       tabsMarkup: this._buildTabsMarkup()
     });
+    const mainLayoutShell = buildMainLayoutShellMarkup({
+      previewShellHeader,
+      previewFooterIcon: ICONS.frigateview,
+      liveEngineWrap,
+      infoRow,
+      pageNav,
+      camSwitcher,
+      rightColumnShell
+    });
     const popupShell = buildPopupShellMarkup({
       icons: ICONS,
       version: VERSION
@@ -7017,25 +7055,7 @@ const FrigateViewCard = class extends HTMLElement {
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._cardStateClassNames()}" id="card" style="border-radius: var(--fvc-border-radius);">
 
-        <div class="layout" id="layout">
-
-          ${previewShellHeader}
-          <div class="preview-shell" id="preview-shell"></div>
-          <div class="preview-shell-footer" id="preview-shell-footer">
-            <div class="frigate-view">${ICONS.frigateview}</div>
-          </div>
-
-          <div class="col-left" id="col-left">
-            ${liveEngineWrap}
-
-            ${infoRow}
-            ${pageNav}
-            ${camSwitcher}
-          </div>
-          <div class="resize-handle" id="resize-handle"></div>
-          ${rightColumnShell}
-
-        </div>
+        ${mainLayoutShell}
         <!--<div class="toast" id="toast" style="display:none"></div>-->
 
           ${popupShell}

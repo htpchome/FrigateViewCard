@@ -95,6 +95,7 @@ import {
   buildCamSwitcherMarkup,
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
+  buildMainLayoutShellMarkup,
   buildPageNavMarkup,
   buildPopupShellMarkup,
   buildPreviewShellHeaderMarkup,
@@ -4748,6 +4749,15 @@ export class FrigateViewCard extends HTMLElement {
       icons: ICONS,
       tabsMarkup: this._buildTabsMarkup(),
     });
+    const mainLayoutShell = buildMainLayoutShellMarkup({
+      previewShellHeader,
+      previewFooterIcon: ICONS.frigateview,
+      liveEngineWrap,
+      infoRow,
+      pageNav,
+      camSwitcher,
+      rightColumnShell,
+    });
     const popupShell = buildPopupShellMarkup({
       icons: ICONS,
       version: VERSION,
@@ -4755,25 +4765,7 @@ export class FrigateViewCard extends HTMLElement {
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._cardStateClassNames()}" id="card" style="border-radius: var(--fvc-border-radius);">
 
-        <div class="layout" id="layout">
-
-          ${previewShellHeader}
-          <div class="preview-shell" id="preview-shell"></div>
-          <div class="preview-shell-footer" id="preview-shell-footer">
-            <div class="frigate-view">${ICONS.frigateview}</div>
-          </div>
-
-          <div class="col-left" id="col-left">
-            ${liveEngineWrap}
-
-            ${infoRow}
-            ${pageNav}
-            ${camSwitcher}
-          </div>
-          <div class="resize-handle" id="resize-handle"></div>
-          ${rightColumnShell}
-
-        </div>
+        ${mainLayoutShell}
         <!--<div class="toast" id="toast" style="display:none"></div>-->
 
           ${popupShell}

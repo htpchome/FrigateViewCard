@@ -215,3 +215,33 @@ export function buildPopupShellMarkup({ icons, version }) {
             </div>
           </div>`;
 }
+
+export function buildMainLayoutShellMarkup({
+  previewShellHeader,
+  previewFooterIcon,
+  liveEngineWrap,
+  infoRow,
+  pageNav,
+  camSwitcher,
+  rightColumnShell,
+}) {
+  return `<div class="layout" id="layout">
+
+          ${previewShellHeader}
+          <div class="preview-shell" id="preview-shell"></div>
+          <div class="preview-shell-footer" id="preview-shell-footer">
+            <div class="frigate-view">${previewFooterIcon}</div>
+          </div>
+
+          <div class="col-left" id="col-left">
+            ${liveEngineWrap}
+
+            ${infoRow}
+            ${pageNav}
+            ${camSwitcher}
+          </div>
+          <div class="resize-handle" id="resize-handle"></div>
+          ${rightColumnShell}
+
+        </div>`;
+}
