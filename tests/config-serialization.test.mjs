@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 
 import {
   buildEditorConfigFromDom,
-  compactEditorConfigForYaml,
-  createEditorPreviewDraft,
   resolveSwitchChecked,
-  withCardTypeForYaml,
 } from "../src/helpers.js";
+import { createEditorPreviewDraft } from "../src/config/editor-preview-mapper.js";
+import {
+  compactEditorConfigForYaml,
+  withCardTypeForYaml,
+} from "../src/config/yaml-config-mapper.js";
 
 test("editor YAML config omits normalized default values", () => {
   const config = compactEditorConfigForYaml({

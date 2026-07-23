@@ -62,8 +62,6 @@ import {
   bindEventsForIds,
   bindEventsForSelectorAll,
   buildEditorConfigFromDom,
-  compactEditorConfigForYaml,
-  withCardTypeForYaml,
   resolveSwitchChecked,
   LABEL_COLORS,
   PALETTE,
@@ -84,6 +82,10 @@ import {
 } from "../router.js";
 import { normalizeCardConfig } from "../config/card-config-normalizer.js";
 import { createEditorPreviewDraft } from "../config/editor-preview-mapper.js";
+import {
+  compactEditorConfigForYaml,
+  withCardTypeForYaml,
+} from "../config/yaml-config-mapper.js";
 export class FrigateViewCardEditor extends HTMLElement {
   _normalizeHiddenTabs(hiddenTabs) {
     if (!Array.isArray(hiddenTabs)) return [];
