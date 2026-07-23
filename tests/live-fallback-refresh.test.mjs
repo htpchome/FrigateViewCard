@@ -5,6 +5,7 @@ import {
   beginFallbackRefresh,
   buildFallbackRefreshContext,
   buildFallbackImageApplyPayload,
+  buildFallbackImageWriteInput,
   buildFallbackRefreshOutcome,
   canRefreshFallbackImage,
   getFallbackRefreshElements,
@@ -236,6 +237,29 @@ test("buildFallbackImageApplyPayload maps source and element payload", () => {
   assert.equal(payload.entity, "camera.front");
   assert.equal(payload.altSrc, "https://ha.local/alt.jpg");
   assert.equal(payload.src, "https://ha.local/primary.jpg");
+});
+
+test("buildFallbackImageWriteInput maps context and elements to write input", () => {
+  const imgEl = { id: "img" };
+  const statusEl = { id: "status" };
+  const writeInput = buildFallbackImageWriteInput({
+    context: {
+      entity: "camera.front",
+      sources: {
+        altSrc: "https://ha.local/alt.jpg",
+        src: "https://ha.local/primary.jpg",
+      },
+    },
+    imgEl,
+    statusEl,
+  });
+
+  assert.equal(writeInput.applyPayload.img, imgEl);
+  assert.equal(writeInput.applyPayload.statusEl, statusEl);
+  assert.equal(writeInput.applyPayload.entity, "camera.front");
+  assert.equal(writeInput.applyPayload.altSrc, "https://ha.local/alt.jpg");
+  assert.equal(writeInput.applyPayload.src, "https://ha.local/primary.jpg");
+  assert.equal(writeInput.src, "https://ha.local/primary.jpg");
 });
 
 test("buildFallbackRefreshOutcome resolves source and hasSource", () => {

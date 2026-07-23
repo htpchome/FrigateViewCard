@@ -139,7 +139,7 @@ import {
 import {
   beginFallbackRefresh,
   buildFallbackRefreshContext,
-  buildFallbackImageApplyPayload,
+  buildFallbackImageWriteInput,
   getFallbackRefreshElements,
   isFallbackRefreshStale,
   loadPrimaryFallbackSource,
@@ -2244,16 +2244,15 @@ export class FrigateViewCard extends HTMLElement {
     });
     const sources = context.sources;
     if (!shouldApplyFallbackRefreshSources({ sources })) return;
-    const applyPayload = buildFallbackImageApplyPayload({
+    const writeInput = buildFallbackImageWriteInput({
+      context,
       imgEl,
       statusEl,
-      entity: context.entity,
-      sources,
     });
-    applyFallbackImageHandlers(applyPayload);
+    applyFallbackImageHandlers(writeInput.applyPayload);
     setFallbackImageSourceIfChanged({
-      img: applyPayload.img,
-      src: applyPayload.src,
+      img: writeInput.applyPayload.img,
+      src: writeInput.src,
     });
   }
 

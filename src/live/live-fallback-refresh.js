@@ -94,6 +94,23 @@ export const buildFallbackImageApplyPayload = ({
   src: sources?.src || "",
 });
 
+export const buildFallbackImageWriteInput = ({
+  context,
+  imgEl,
+  statusEl,
+}) => {
+  const sources = context?.sources || null;
+  return {
+    applyPayload: buildFallbackImageApplyPayload({
+      imgEl,
+      statusEl,
+      entity: context?.entity || "",
+      sources,
+    }),
+    src: sources?.src || "",
+  };
+};
+
 export const isFallbackRefreshStale = ({ requestId, activeRequestId }) =>
   requestId !== activeRequestId;
 
