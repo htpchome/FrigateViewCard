@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.711";
+const VERSION = "1.0.712";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2306,6 +2306,37 @@ const GridPageController = class {
     this._host._setViewMode("grid");
   }
 };
+
+// src/slideshow/slideshow-utils.js
+function isSlideshowReviewFresh({
+  slideshowStartedAtSec,
+  reviewStartSec,
+  graceSec
+}) {
+  const startedAt = Number(slideshowStartedAtSec || 0);
+  if (startedAt <= 0) return true;
+  const reviewStart = Number(reviewStartSec || 0);
+  if (reviewStart <= 0) return false;
+  return reviewStart >= startedAt - Number(graceSec || 0);
+}
+function rememberHandledSlideshowReview(handledSet, reviewId, maxSize = 200) {
+  const id = String(reviewId || "").trim();
+  if (!id || !(handledSet instanceof Set)) return;
+  handledSet.add(id);
+  if (handledSet.size <= Math.max(1, Number(maxSize) || 200)) return;
+  const oldest = handledSet.values().next().value;
+  if (oldest) handledSet.delete(oldest);
+}
+function slideshowReviewWatchIntervalMs({
+  realtimePollSeconds,
+  minMs,
+  maxMs
+}) {
+  const realtimePollMs = Math.floor(Number(realtimePollSeconds || 0) * 1e3);
+  const min = Math.max(0, Number(minMs) || 0);
+  const max = Math.max(min, Number(maxMs) || min);
+  return Math.max(min, Math.min(max, realtimePollMs));
+}
 
 // src/card/FrigateViewCard.js
 const FrigateViewCard = class extends HTMLElement {
@@ -5584,19 +5615,14 @@ const FrigateViewCard = class extends HTMLElement {
     return Number.isFinite(start) ? start : 0;
   }
   _isSlideshowReviewFresh(review) {
-    const startedAt = Number(this._slideshowStartedAtSec || 0);
-    if (startedAt <= 0) return true;
-    const reviewStart = this._reviewStartTimeSec(review);
-    if (reviewStart <= 0) return false;
-    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC;
+    return isSlideshowReviewFresh({
+      slideshowStartedAtSec: this._slideshowStartedAtSec,
+      reviewStartSec: this._reviewStartTimeSec(review),
+      graceSec: SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
+    });
   }
   _rememberHandledSlideshowReview(reviewId) {
-    const id = String(reviewId || "").trim();
-    if (!id) return;
-    this._slideshowHandledReviewIds.add(id);
-    if (this._slideshowHandledReviewIds.size <= 200) return;
-    const oldest = this._slideshowHandledReviewIds.values().next().value;
-    if (oldest) this._slideshowHandledReviewIds.delete(oldest);
+    rememberHandledSlideshowReview(this._slideshowHandledReviewIds, reviewId);
   }
   _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
     if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
@@ -5729,13 +5755,11 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _slideshowReviewWatchIntervalMs() {
-    const realtimePollMs = Math.floor(
-      this._effectiveRealtimePollSeconds() * 1e3
-    );
-    return Math.max(
-      SLIDESHOW_REVIEW_WATCH_MIN_MS,
-      Math.min(SLIDESHOW_REVIEW_WATCH_MAX_MS, realtimePollMs)
-    );
+    return slideshowReviewWatchIntervalMs({
+      realtimePollSeconds: this._effectiveRealtimePollSeconds(),
+      minMs: SLIDESHOW_REVIEW_WATCH_MIN_MS,
+      maxMs: SLIDESHOW_REVIEW_WATCH_MAX_MS
+    });
   }
   _scheduleSlideshowReviewWatch(delayMs = null) {
     if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;

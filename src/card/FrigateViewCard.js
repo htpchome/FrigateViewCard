@@ -105,6 +105,11 @@ import {
 } from "../grid/grid-markup.js";
 import { GridAlertController } from "../grid/grid-alert-controller.js";
 import { GridPageController } from "../grid/grid-page-controller.js";
+import {
+  isSlideshowReviewFresh,
+  rememberHandledSlideshowReview,
+  slideshowReviewWatchIntervalMs,
+} from "../slideshow/slideshow-utils.js";
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -3927,20 +3932,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isSlideshowReviewFresh(review) {
-    const startedAt = Number(this._slideshowStartedAtSec || 0);
-    if (startedAt <= 0) return true;
-    const reviewStart = this._reviewStartTimeSec(review);
-    if (reviewStart <= 0) return false;
-    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC;
+    return isSlideshowReviewFresh({
+      slideshowStartedAtSec: this._slideshowStartedAtSec,
+      reviewStartSec: this._reviewStartTimeSec(review),
+      graceSec: SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
+    });
   }
 
   _rememberHandledSlideshowReview(reviewId) {
-    const id = String(reviewId || "").trim();
-    if (!id) return;
-    this._slideshowHandledReviewIds.add(id);
-    if (this._slideshowHandledReviewIds.size <= 200) return;
-    const oldest = this._slideshowHandledReviewIds.values().next().value;
-    if (oldest) this._slideshowHandledReviewIds.delete(oldest);
+    rememberHandledSlideshowReview(this._slideshowHandledReviewIds, reviewId);
   }
 
   _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
@@ -4092,13 +4092,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _slideshowReviewWatchIntervalMs() {
-    const realtimePollMs = Math.floor(
-      this._effectiveRealtimePollSeconds() * 1000,
-    );
-    return Math.max(
-      SLIDESHOW_REVIEW_WATCH_MIN_MS,
-      Math.min(SLIDESHOW_REVIEW_WATCH_MAX_MS, realtimePollMs),
-    );
+    return slideshowReviewWatchIntervalMs({
+      realtimePollSeconds: this._effectiveRealtimePollSeconds(),
+      minMs: SLIDESHOW_REVIEW_WATCH_MIN_MS,
+      maxMs: SLIDESHOW_REVIEW_WATCH_MAX_MS,
+    });
   }
 
   _scheduleSlideshowReviewWatch(delayMs = null) {
