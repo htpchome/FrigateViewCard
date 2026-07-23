@@ -100,6 +100,16 @@ import {
   prepareEngineVideoForGraceHost,
 } from "../live/live-grace-pool.js";
 import {
+  buildGo2rtcHlsCandidates,
+  buildGo2rtcWsPath,
+  getFreshCachedValue,
+  isM3u8Response,
+  makeGo2rtcCacheKey,
+  setCachedValue,
+  toAbsoluteSignedUrl,
+  toWebSocketUrl,
+} from "../live/live-url-provider.js";
+import {
   applyMountWatchdogTimeout,
   beginMountTracking,
   clearMountTrackingIfCurrent,
@@ -2234,13 +2244,16 @@ export class FrigateViewCard extends HTMLElement {
     await this._discoverOne(entity);
     const { clientId, cam } = this._cameraContext(entity);
     if (!clientId || !cam) return null;
-    const cacheKey = `${clientId}:${cam}`;
-    const cached = this._go2rtcWsUrlCache.get(cacheKey);
-    if (cached && cached.url && cached.exp > Date.now()) {
-      return cached.url;
-    }
+    const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
+    const nowMs = Date.now();
+    const cachedUrl = getFreshCachedValue({
+      cacheMap: this._go2rtcWsUrlCache,
+      cacheKey,
+      nowMs,
+    });
+    if (cachedUrl) return cachedUrl;
 
-    let path = `/api/frigate/${encodeURIComponent(clientId)}/mse/api/ws?src=${encodeURIComponent(cam)}`;
+    let path = buildGo2rtcWsPath({ clientId, cam });
 
     // Frigate go2rtc websocket may require a signed HA path when accessed via
     // remote URLs/reverse proxies (seen as ws close 1006 in Firefox).
@@ -2256,14 +2269,18 @@ export class FrigateViewCard extends HTMLElement {
       this._ffDebug("Failed to sign go2rtc ws path", e?.message || String(e));
     }
 
-    const abs = path.startsWith("http")
-      ? path
-      : `${window.location.origin}${path}`;
-    const wsUrl = abs.replace(/^http/i, "ws");
+    const abs = toAbsoluteSignedUrl({
+      signedPath: path,
+      origin: window.location.origin,
+    });
+    const wsUrl = toWebSocketUrl(abs);
     // Signed path expires in 1h; refresh a bit early.
-    this._go2rtcWsUrlCache.set(cacheKey, {
+    setCachedValue({
+      cacheMap: this._go2rtcWsUrlCache,
+      cacheKey,
       url: wsUrl,
-      exp: Date.now() + 55 * 60 * 1000,
+      ttlMs: 55 * 60 * 1000,
+      nowMs,
     });
     this._ffDebug("go2rtc websocket url", wsUrl);
     return wsUrl;
@@ -2277,25 +2294,27 @@ export class FrigateViewCard extends HTMLElement {
     if (!this._supportsNativeHlsPlayback()) return null;
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) return null;
-    const cacheKey = `${clientId}:${cam}`;
-    const cached = this._go2rtcHlsUrlCache.get(cacheKey);
-    if (cached && cached.exp > Date.now()) return cached.url || null;
+    const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
+    const nowMs = Date.now();
+    const cachedUrl = getFreshCachedValue({
+      cacheMap: this._go2rtcHlsUrlCache,
+      cacheKey,
+      nowMs,
+    });
+    if (cachedUrl !== undefined) return cachedUrl;
 
     const inFlight = this._go2rtcHlsProbeInFlight.get(cacheKey);
     if (inFlight) return inFlight;
 
-    const candidates = [
-      `/api/frigate/${encodeURIComponent(clientId)}/hls/${encodeURIComponent(cam)}/index.m3u8`,
-      `/api/frigate/${encodeURIComponent(clientId)}/live/${encodeURIComponent(cam)}/index.m3u8`,
-      `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/index.m3u8`,
-    ];
+    const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
 
     const probePromise = (async () => {
       for (const p of candidates) {
         const signed = await this._signed(p);
-        const abs = signed.startsWith("http")
-          ? signed
-          : `${window.location.origin}${signed}`;
+        const abs = toAbsoluteSignedUrl({
+          signedPath: signed,
+          origin: window.location.origin,
+        });
         try {
           const resp = await fetch(abs, {
             method: "GET",
@@ -2303,27 +2322,30 @@ export class FrigateViewCard extends HTMLElement {
             credentials: "same-origin",
           });
           if (!resp.ok) continue;
-          const ct = String(
-            resp.headers.get("content-type") || "",
-          ).toLowerCase();
           if (
-            ct.includes("application/vnd.apple.mpegurl") ||
-            ct.includes("application/x-mpegurl") ||
-            ct.includes("audio/mpegurl") ||
-            abs.toLowerCase().includes(".m3u8")
-          ) {
-            this._go2rtcHlsUrlCache.set(cacheKey, {
+            isM3u8Response({
+              contentType: resp.headers.get("content-type") || "",
               url: abs,
-              exp: Date.now() + 30 * 60 * 1000,
+            })
+          ) {
+            setCachedValue({
+              cacheMap: this._go2rtcHlsUrlCache,
+              cacheKey,
+              url: abs,
+              ttlMs: 30 * 60 * 1000,
+              nowMs: Date.now(),
             });
             return abs;
           }
         } catch (_) {}
       }
       // Negative cache to avoid hammering known-missing endpoints every mount.
-      this._go2rtcHlsUrlCache.set(cacheKey, {
+      setCachedValue({
+        cacheMap: this._go2rtcHlsUrlCache,
+        cacheKey,
         url: null,
-        exp: Date.now() + 2 * 60 * 1000,
+        ttlMs: 2 * 60 * 1000,
+        nowMs: Date.now(),
       });
       return null;
     })().finally(() => {

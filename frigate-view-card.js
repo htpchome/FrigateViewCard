@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.769";
+const VERSION = "1.0.770";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1927,6 +1927,36 @@ const prepareEngineVideoForGraceHost = (video) => {
   video.style.cssText = OFFSCREEN_VIDEO_STYLE;
   void video.play?.().catch?.(() => {
   });
+};
+
+// src/live/live-url-provider.js
+const makeGo2rtcCacheKey = ({ clientId, cam }) => `${clientId}:${cam}`;
+const buildGo2rtcWsPath = ({ clientId, cam }) => `/api/frigate/${encodeURIComponent(clientId)}/mse/api/ws?src=${encodeURIComponent(cam)}`;
+const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
+  const encClient = encodeURIComponent(clientId);
+  const encCam = encodeURIComponent(cam);
+  return [
+    `/api/frigate/${encClient}/hls/${encCam}/index.m3u8`,
+    `/api/frigate/${encClient}/live/${encCam}/index.m3u8`,
+    `/api/frigate/${encClient}/vod/${encCam}/index.m3u8`
+  ];
+};
+const toAbsoluteSignedUrl = ({ signedPath, origin }) => signedPath.startsWith("http") ? signedPath : `${origin}${signedPath}`;
+const toWebSocketUrl = (httpUrl) => httpUrl.replace(/^http/i, "ws");
+const getFreshCachedValue = ({ cacheMap, cacheKey, nowMs }) => {
+  const entry = cacheMap.get(cacheKey);
+  if (entry && entry.exp > nowMs) return entry.url ?? null;
+  return void 0;
+};
+const setCachedValue = ({ cacheMap, cacheKey, url, ttlMs, nowMs }) => {
+  cacheMap.set(cacheKey, {
+    url,
+    exp: nowMs + ttlMs
+  });
+};
+const isM3u8Response = ({ contentType, url }) => {
+  const ct = String(contentType || "").toLowerCase();
+  return ct.includes("application/vnd.apple.mpegurl") || ct.includes("application/x-mpegurl") || ct.includes("audio/mpegurl") || String(url || "").toLowerCase().includes(".m3u8");
 };
 
 // src/live/live-mount-lifecycle.js
@@ -5485,12 +5515,15 @@ const FrigateViewCard = class extends HTMLElement {
     await this._discoverOne(entity);
     const { clientId, cam } = this._cameraContext(entity);
     if (!clientId || !cam) return null;
-    const cacheKey = `${clientId}:${cam}`;
-    const cached = this._go2rtcWsUrlCache.get(cacheKey);
-    if (cached && cached.url && cached.exp > Date.now()) {
-      return cached.url;
-    }
-    let path = `/api/frigate/${encodeURIComponent(clientId)}/mse/api/ws?src=${encodeURIComponent(cam)}`;
+    const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
+    const nowMs = Date.now();
+    const cachedUrl = getFreshCachedValue({
+      cacheMap: this._go2rtcWsUrlCache,
+      cacheKey,
+      nowMs
+    });
+    if (cachedUrl) return cachedUrl;
+    let path = buildGo2rtcWsPath({ clientId, cam });
     try {
       const r = await this._hass.callWS({
         type: "auth/sign_path",
@@ -5502,11 +5535,17 @@ const FrigateViewCard = class extends HTMLElement {
     } catch (e) {
       this._ffDebug("Failed to sign go2rtc ws path", e?.message || String(e));
     }
-    const abs = path.startsWith("http") ? path : `${window.location.origin}${path}`;
-    const wsUrl = abs.replace(/^http/i, "ws");
-    this._go2rtcWsUrlCache.set(cacheKey, {
+    const abs = toAbsoluteSignedUrl({
+      signedPath: path,
+      origin: window.location.origin
+    });
+    const wsUrl = toWebSocketUrl(abs);
+    setCachedValue({
+      cacheMap: this._go2rtcWsUrlCache,
+      cacheKey,
       url: wsUrl,
-      exp: Date.now() + 55 * 60 * 1e3
+      ttlMs: 55 * 60 * 1e3,
+      nowMs
     });
     this._ffDebug("go2rtc websocket url", wsUrl);
     return wsUrl;
@@ -5518,20 +5557,24 @@ const FrigateViewCard = class extends HTMLElement {
     if (!this._supportsNativeHlsPlayback()) return null;
     const { clientId, cam } = this._cc();
     if (!clientId || !cam) return null;
-    const cacheKey = `${clientId}:${cam}`;
-    const cached = this._go2rtcHlsUrlCache.get(cacheKey);
-    if (cached && cached.exp > Date.now()) return cached.url || null;
+    const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
+    const nowMs = Date.now();
+    const cachedUrl = getFreshCachedValue({
+      cacheMap: this._go2rtcHlsUrlCache,
+      cacheKey,
+      nowMs
+    });
+    if (cachedUrl !== void 0) return cachedUrl;
     const inFlight = this._go2rtcHlsProbeInFlight.get(cacheKey);
     if (inFlight) return inFlight;
-    const candidates = [
-      `/api/frigate/${encodeURIComponent(clientId)}/hls/${encodeURIComponent(cam)}/index.m3u8`,
-      `/api/frigate/${encodeURIComponent(clientId)}/live/${encodeURIComponent(cam)}/index.m3u8`,
-      `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/index.m3u8`
-    ];
+    const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
     const probePromise = (async () => {
       for (const p of candidates) {
         const signed = await this._signed(p);
-        const abs = signed.startsWith("http") ? signed : `${window.location.origin}${signed}`;
+        const abs = toAbsoluteSignedUrl({
+          signedPath: signed,
+          origin: window.location.origin
+        });
         try {
           const resp = await fetch(abs, {
             method: "GET",
@@ -5539,22 +5582,28 @@ const FrigateViewCard = class extends HTMLElement {
             credentials: "same-origin"
           });
           if (!resp.ok) continue;
-          const ct = String(
-            resp.headers.get("content-type") || ""
-          ).toLowerCase();
-          if (ct.includes("application/vnd.apple.mpegurl") || ct.includes("application/x-mpegurl") || ct.includes("audio/mpegurl") || abs.toLowerCase().includes(".m3u8")) {
-            this._go2rtcHlsUrlCache.set(cacheKey, {
+          if (isM3u8Response({
+            contentType: resp.headers.get("content-type") || "",
+            url: abs
+          })) {
+            setCachedValue({
+              cacheMap: this._go2rtcHlsUrlCache,
+              cacheKey,
               url: abs,
-              exp: Date.now() + 30 * 60 * 1e3
+              ttlMs: 30 * 60 * 1e3,
+              nowMs: Date.now()
             });
             return abs;
           }
         } catch (_) {
         }
       }
-      this._go2rtcHlsUrlCache.set(cacheKey, {
+      setCachedValue({
+        cacheMap: this._go2rtcHlsUrlCache,
+        cacheKey,
         url: null,
-        exp: Date.now() + 2 * 60 * 1e3
+        ttlMs: 2 * 60 * 1e3,
+        nowMs: Date.now()
       });
       return null;
     })().finally(() => {
