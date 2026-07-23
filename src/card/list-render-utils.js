@@ -198,3 +198,11 @@ export function applyListMarkupWithOlderHint({
   }
   return true;
 }
+
+export function createOlderHintSyncer(syncOlderHint) {
+  return (forceHide = null) => {
+    if (typeof syncOlderHint === "function") {
+      syncOlderHint(forceHide);
+    }
+  };
+}

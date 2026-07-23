@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.752";
+const VERSION = "1.0.753";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2198,6 +2198,13 @@ function applyListMarkupWithOlderHint({
     syncOlderHint(contentForceHide);
   }
   return true;
+}
+function createOlderHintSyncer(syncOlderHint) {
+  return (forceHide = null) => {
+    if (typeof syncOlderHint === "function") {
+      syncOlderHint(forceHide);
+    }
+  };
 }
 
 // src/data/review-candidate-utils.js
@@ -10669,6 +10676,9 @@ const FrigateViewCard = class extends HTMLElement {
   _renderKeptList(list) {
     const kept = this._filteredKept();
     this._renderListLabel();
+    const syncOlderHint = createOlderHintSyncer(
+      (forceHide) => this._syncOlderHint(forceHide)
+    );
     const renderState = resolveListMarkup({
       items: kept,
       emptyMessage: "No kept events",
@@ -10679,7 +10689,7 @@ const FrigateViewCard = class extends HTMLElement {
       setHtml: (html) => this._setListHtmlIfChanged(list, html),
       html: renderState.html,
       isEmpty: renderState.isEmpty,
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       emptyForceHide: false,
       contentForceHide: false,
       syncOnContent: true
@@ -10688,6 +10698,9 @@ const FrigateViewCard = class extends HTMLElement {
   _renderEventsList(list) {
     const events = this._filtered();
     this._renderListLabel(resolveListLabelTimestamp(events));
+    const syncOlderHint = createOlderHintSyncer(
+      (forceHide) => this._syncOlderHint(forceHide)
+    );
     const renderState = resolveListMarkup({
       items: events,
       emptyMessage: "No events in this window",
@@ -10703,7 +10716,7 @@ const FrigateViewCard = class extends HTMLElement {
       setHtml: (html) => this._setListHtmlIfChanged(list, html),
       html: renderState.html,
       isEmpty: renderState.isEmpty,
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       emptyForceHide: false,
       contentForceHide: null,
       syncOnContent: false
@@ -10713,7 +10726,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     runListPostRenderSync({
       syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       forceHide: null,
       scheduleDeferredOlderHint: true
     });
@@ -10737,6 +10750,9 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderListLabel(this._winEnd);
     const recs = this._recordingsViewRows(this._recordings);
     const isEmpty = !recs.length;
+    const syncOlderHint = createOlderHintSyncer(
+      (forceHide) => this._syncOlderHint(forceHide)
+    );
     const html = this._recordingsListMarkup(
       recs,
       "No recordings in the last 24 hours"
@@ -10745,7 +10761,7 @@ const FrigateViewCard = class extends HTMLElement {
       setHtml: (nextHtml) => this._setListHtmlIfChanged(list, nextHtml),
       html,
       isEmpty,
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       emptyForceHide: true,
       contentForceHide: false,
       syncOnContent: true
@@ -10767,6 +10783,9 @@ const FrigateViewCard = class extends HTMLElement {
     const filteredReviews = this._filteredReviews();
     const emptyText = showAllReviews ? "No reviews in this window" : "No alerts in this window";
     this._renderListLabel(resolveListLabelTimestamp(filteredReviews));
+    const syncOlderHint = createOlderHintSyncer(
+      (forceHide) => this._syncOlderHint(forceHide)
+    );
     const allRevs = [...filteredReviews].sort(
       (a, b) => b.start_time - a.start_time
     );
@@ -10783,7 +10802,7 @@ const FrigateViewCard = class extends HTMLElement {
       setHtml: (html) => this._setListHtmlIfChanged(list, html),
       html: renderState.html,
       isEmpty: renderState.isEmpty,
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       emptyForceHide: true,
       contentForceHide: false,
       syncOnContent: false
@@ -10793,7 +10812,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     runListPostRenderSync({
       syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       forceHide: false,
       scheduleDeferredOlderHint: false
     });

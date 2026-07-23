@@ -116,6 +116,7 @@ import {
   applyOlderHintDomState,
   appendEndMarker,
   buildStickyDaySectionsHtml,
+  createOlderHintSyncer,
   resolveActiveDayLabelFromScroll,
   resolveListLabelTimestamp,
   resolveListMarkup,
@@ -8490,6 +8491,9 @@ export class FrigateViewCard extends HTMLElement {
   _renderKeptList(list) {
     const kept = this._filteredKept();
     this._renderListLabel();
+    const syncOlderHint = createOlderHintSyncer((forceHide) =>
+      this._syncOlderHint(forceHide),
+    );
     const renderState = resolveListMarkup({
       items: kept,
       emptyMessage: "No kept events",
@@ -8501,7 +8505,7 @@ export class FrigateViewCard extends HTMLElement {
       setHtml: (html) => this._setListHtmlIfChanged(list, html),
       html: renderState.html,
       isEmpty: renderState.isEmpty,
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       emptyForceHide: false,
       contentForceHide: false,
       syncOnContent: true,
@@ -8511,6 +8515,9 @@ export class FrigateViewCard extends HTMLElement {
   _renderEventsList(list) {
     const events = this._filtered();
     this._renderListLabel(resolveListLabelTimestamp(events));
+    const syncOlderHint = createOlderHintSyncer((forceHide) =>
+      this._syncOlderHint(forceHide),
+    );
     const renderState = resolveListMarkup({
       items: events,
       emptyMessage: "No events in this window",
@@ -8527,7 +8534,7 @@ export class FrigateViewCard extends HTMLElement {
       setHtml: (html) => this._setListHtmlIfChanged(list, html),
       html: renderState.html,
       isEmpty: renderState.isEmpty,
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       emptyForceHide: false,
       contentForceHide: null,
       syncOnContent: false,
@@ -8537,7 +8544,7 @@ export class FrigateViewCard extends HTMLElement {
     }
     runListPostRenderSync({
       syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       forceHide: null,
       scheduleDeferredOlderHint: true,
     });
@@ -8563,6 +8570,9 @@ export class FrigateViewCard extends HTMLElement {
     this._renderListLabel(this._winEnd);
     const recs = this._recordingsViewRows(this._recordings);
     const isEmpty = !recs.length;
+    const syncOlderHint = createOlderHintSyncer((forceHide) =>
+      this._syncOlderHint(forceHide),
+    );
     const html = this._recordingsListMarkup(
       recs,
       "No recordings in the last 24 hours",
@@ -8571,7 +8581,7 @@ export class FrigateViewCard extends HTMLElement {
       setHtml: (nextHtml) => this._setListHtmlIfChanged(list, nextHtml),
       html,
       isEmpty,
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       emptyForceHide: true,
       contentForceHide: false,
       syncOnContent: true,
@@ -8598,6 +8608,9 @@ export class FrigateViewCard extends HTMLElement {
       : "No alerts in this window";
 
     this._renderListLabel(resolveListLabelTimestamp(filteredReviews));
+    const syncOlderHint = createOlderHintSyncer((forceHide) =>
+      this._syncOlderHint(forceHide),
+    );
     const allRevs = [...filteredReviews].sort(
       (a, b) => b.start_time - a.start_time,
     );
@@ -8614,7 +8627,7 @@ export class FrigateViewCard extends HTMLElement {
       setHtml: (html) => this._setListHtmlIfChanged(list, html),
       html: renderState.html,
       isEmpty: renderState.isEmpty,
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       emptyForceHide: true,
       contentForceHide: false,
       syncOnContent: false,
@@ -8624,7 +8637,7 @@ export class FrigateViewCard extends HTMLElement {
     }
     runListPostRenderSync({
       syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
-      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      syncOlderHint,
       forceHide: false,
       scheduleDeferredOlderHint: false,
     });
