@@ -96,12 +96,6 @@ import {
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import {
-  gridAlertWatchIntervalMs,
-  isGridReviewFresh,
-  normalizeGridAlertSeverity,
-  normalizeGridCellSeverity,
-} from "../grid/grid-utils.js";
-import {
   applyGridCellSeverityClass,
   buildGridSignaturePart,
   createGridCellElement,
@@ -109,6 +103,7 @@ import {
   createGridRootElement,
   renderGridEmptyPlaceholder,
 } from "../grid/grid-markup.js";
+import { GridAlertController } from "../grid/grid-alert-controller.js";
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -186,18 +181,14 @@ export class FrigateViewCard extends HTMLElement {
     this._gridRotationStart = 0;
     this._gridRotationT = null;
     this._gridAlertReturnT = null;
-    this._gridAlertWatchT = null;
-    this._gridAlertCleanupT = null;
     this._gridRefreshT = null;
     this._gridResumePending = false;
     this._gridPinnedRotationStart = 0;
     this._gridLastRenderSignature = "";
-    this._gridStartedAtSec = 0;
-    this._gridHandledReviewIds = new Set();
-    this._gridLastAlertAt = 0;
-    this._gridLastAlertCam = "";
-    this._gridAlertExpiresByEntity = new Map();
-    this._gridAlertSeverityByEntity = new Map();
+    this._gridAlertController = new GridAlertController(this, {
+      DAY,
+      SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
+    });
     this._previewPageActive = false;
     this._previewLastRenderSignature = "";
     this._previewMediaState = null;
@@ -3402,22 +3393,16 @@ export class FrigateViewCard extends HTMLElement {
   _clearGridTimers() {
     if (this._gridRotationT) clearTimeout(this._gridRotationT);
     if (this._gridAlertReturnT) clearTimeout(this._gridAlertReturnT);
-    if (this._gridAlertWatchT) clearTimeout(this._gridAlertWatchT);
-    if (this._gridAlertCleanupT) clearTimeout(this._gridAlertCleanupT);
     if (this._gridRefreshT) clearTimeout(this._gridRefreshT);
     this._gridRotationT = null;
     this._gridAlertReturnT = null;
-    this._gridAlertWatchT = null;
-    this._gridAlertCleanupT = null;
     this._gridRefreshT = null;
+    this._gridAlertController.clearTimers();
   }
 
   _clearGridAlertTracking() {
-    this._gridAlertExpiresByEntity.clear();
-    this._gridAlertSeverityByEntity.clear();
+    this._gridAlertController.clearAlertTracking();
     this._gridLastRenderSignature = "";
-    if (this._gridAlertCleanupT) clearTimeout(this._gridAlertCleanupT);
-    this._gridAlertCleanupT = null;
   }
 
   _scheduleGridRefresh(delayMs = 80) {
@@ -3449,40 +3434,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _rememberHandledGridReview(reviewId) {
-    const id = String(reviewId || "").trim();
-    if (!id) return;
-    this._gridHandledReviewIds.add(id);
-    if (this._gridHandledReviewIds.size <= 200) return;
-    const oldest = this._gridHandledReviewIds.values().next().value;
-    if (oldest) this._gridHandledReviewIds.delete(oldest);
+    this._gridAlertController.rememberHandledReview(reviewId);
   }
 
   _isGridReviewFresh(review) {
-    return isGridReviewFresh({
-      gridStartedAtSec: this._gridStartedAtSec,
-      reviewStartSec: this._reviewStartTimeSec(review),
-      graceSec: SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
-    });
+    return this._gridAlertController.isReviewFresh(review);
   }
 
   _gridAlertWatchIntervalMs() {
-    return gridAlertWatchIntervalMs(this._effectiveRealtimePollSeconds());
+    return this._gridAlertController.alertWatchIntervalMs();
   }
 
   _scheduleGridAlertWatch(delayMs = null) {
-    if (!this._isGridModeAvailable()) return;
-    if (this._viewMode !== "grid") return;
-    if (this._gridAlertWatchT) clearTimeout(this._gridAlertWatchT);
-    const wait =
-      delayMs == null
-        ? this._gridAlertWatchIntervalMs()
-        : Math.max(0, Number(delayMs) || 0);
-    this._gridAlertWatchT = setTimeout(() => {
-      this._gridAlertWatchT = null;
-      void this._probeLatestGridAlert().finally(() => {
-        this._scheduleGridAlertWatch();
-      });
-    }, wait);
+    this._gridAlertController.scheduleAlertWatch(delayMs);
   }
 
   _gridLiveViewEnabled() {
@@ -3490,67 +3454,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isGridCameraAlertLive(entity) {
-    const until = Number(this._gridAlertExpiresByEntity.get(entity) || 0);
-    return until > Date.now();
+    return this._gridAlertController.isCameraAlertLive(entity);
   }
 
   _gridCellSeverity(entity) {
-    if (!this._isGridCameraAlertLive(entity)) {
-      this._gridAlertSeverityByEntity.delete(entity);
-      return "";
-    }
-    return normalizeGridCellSeverity(
-      this._gridAlertSeverityByEntity.get(entity),
-    );
+    return this._gridAlertController.cellSeverity(entity);
   }
 
   _scheduleGridAlertCleanup() {
-    if (this._gridAlertCleanupT) clearTimeout(this._gridAlertCleanupT);
-    let nextExpiry = 0;
-    for (const until of this._gridAlertExpiresByEntity.values()) {
-      const ts = Number(until || 0);
-      if (ts <= Date.now()) continue;
-      if (!nextExpiry || ts < nextExpiry) nextExpiry = ts;
-    }
-    if (!nextExpiry) {
-      this._gridAlertCleanupT = null;
-      return;
-    }
-    const wait = Math.max(80, nextExpiry - Date.now() + 20);
-    this._gridAlertCleanupT = setTimeout(() => {
-      this._gridAlertCleanupT = null;
-      let changed = false;
-      const now = Date.now();
-      for (const [entity, until] of this._gridAlertExpiresByEntity.entries()) {
-        if (Number(until || 0) <= now) {
-          this._gridAlertExpiresByEntity.delete(entity);
-          this._gridAlertSeverityByEntity.delete(entity);
-          changed = true;
-        }
-      }
-      if (changed && this._viewMode === "grid") {
-        this._scheduleGridRefresh();
-      }
-      this._scheduleGridAlertCleanup();
-    }, wait);
+    this._gridAlertController.scheduleAlertCleanup();
   }
 
   _markGridAlertCamera(entity, severity = "alert") {
-    if (!entity) return false;
-    const wasLive = this._isGridCameraAlertLive(entity);
-    const prevSeverity = String(
-      this._gridAlertSeverityByEntity.get(entity) || "",
-    )
-      .trim()
-      .toLowerCase();
-    const normalizedSeverity = normalizeGridAlertSeverity(severity);
-    this._gridAlertSeverityByEntity.set(entity, normalizedSeverity);
-    this._gridAlertExpiresByEntity.set(
-      entity,
-      Date.now() + this._gridRotationMs(),
-    );
-    this._scheduleGridAlertCleanup();
-    return !wasLive || prevSeverity !== normalizedSeverity;
+    return this._gridAlertController.markAlertCamera(entity, severity);
   }
 
   _scheduleGridRotation() {
@@ -3692,88 +3608,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _probeLatestGridAlert() {
-    if (!this._isGridModeAvailable()) return;
-    if (this._viewMode !== "grid") return;
-    const before = Math.floor(Date.now() / 1000);
-    const after = Math.max(
-      0,
-      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY),
-    );
-    const candidates = [];
-    for (const camera of this._config?.cameras || []) {
-      const entity = camera?.entity || "";
-      const cache = this._camCache[entity];
-      if (!entity || !cache?.clientId || !cache?.cam) continue;
-      let reviews = [];
-      try {
-        const batch = await this._ws({
-          type: "frigate/reviews/get",
-          instance_id: cache.clientId,
-          cameras: [cache.cam],
-          after,
-          before,
-          limit: 5,
-        });
-        reviews = Array.isArray(batch) ? batch : [];
-      } catch (_) {
-        reviews = [];
-      }
-      for (const review of reviews) {
-        if (!this._isGridReviewFresh(review)) continue;
-        const severity = this._normalizeReviewSeverity(review);
-        if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
-        const reviewId = String(review?.id || "").trim();
-        if (reviewId && this._gridHandledReviewIds.has(reviewId)) continue;
-        candidates.push({
-          entity,
-          severity,
-          reviewId,
-          startTime: this._reviewStartTimeSec(review),
-        });
-        break;
-      }
-    }
-    if (!candidates.length) return;
-    candidates.sort((a, b) => b.startTime - a.startTime);
-    const next = candidates[0];
-    if (!next?.entity) return;
-    if (next.reviewId) this._rememberHandledGridReview(next.reviewId);
-    this._handleGridAlertCandidate(next.entity, next.severity);
+    await this._gridAlertController.probeLatestAlert();
   }
 
   _handleGridAlertCandidate(entity, severity = "alert") {
-    if (!this._isGridModeAvailable()) return;
-    if (this._viewMode !== "grid") return;
-    const idx = this._cameraIndexByEntity(entity);
-    if (idx < 0) return;
-    const now = Date.now();
-    if (
-      this._gridLastAlertCam === entity &&
-      now - Number(this._gridLastAlertAt || 0) < 1200
-    ) {
-      return;
-    }
-    this._gridLastAlertAt = now;
-    this._gridLastAlertCam = entity;
-    const changed = this._markGridAlertCamera(entity, severity || "alert");
-    this._ffDebug("Grid alert candidate", {
-      entity,
-      severity,
-      changed,
-    });
-    if (changed) this._scheduleGridRefresh();
+    this._gridAlertController.handleAlertCandidate(entity, severity);
   }
 
   _handleGridRealtimeMessage(msg) {
-    if (!this._isGridModeAvailable()) return;
-    if (this._viewMode !== "grid") return;
-    const incomingCam = this._extractRealtimeMessageCamera(msg);
-    if (!incomingCam) return;
-    const severity = this._extractRealtimeMessageSeverity(msg);
-    const cam = this._cameraEntityForIncomingCamera(incomingCam);
-    if (!cam) return;
-    if (!this._shouldHandleSlideshowReview(cam, severity)) return;
-    this._handleGridAlertCandidate(cam, severity || "alert");
+    this._gridAlertController.handleRealtimeMessage(msg);
   }
 
   _stopGridModeState() {
@@ -3783,11 +3626,8 @@ export class FrigateViewCard extends HTMLElement {
       0,
       Number(this._gridRotationStart) || 0,
     );
-    this._gridLastAlertAt = 0;
-    this._gridLastAlertCam = "";
-    this._gridStartedAtSec = 0;
-    this._gridHandledReviewIds.clear();
-    this._clearGridAlertTracking();
+    this._gridAlertController.stopSession();
+    this._gridLastRenderSignature = "";
     this._setSlideshowAlertState("");
   }
 
@@ -3825,9 +3665,8 @@ export class FrigateViewCard extends HTMLElement {
         0,
         Number(this._gridRotationStart) || 0,
       );
-      this._gridStartedAtSec = Math.floor(Date.now() / 1000);
-      this._gridHandledReviewIds.clear();
-      this._clearGridAlertTracking();
+      this._gridAlertController.startSession();
+      this._gridLastRenderSignature = "";
       this._gridResumePending = false;
       startGridTimers = true;
     }
@@ -4489,8 +4328,7 @@ export class FrigateViewCard extends HTMLElement {
     if (this._viewMode === "grid") {
       if (this._gridRotationT) clearTimeout(this._gridRotationT);
       this._gridRotationT = null;
-      if (this._gridAlertWatchT) clearTimeout(this._gridAlertWatchT);
-      this._gridAlertWatchT = null;
+      this._gridAlertController.clearWatchTimer();
       if (opts?.keepGridResume !== true) {
         this._gridResumePending = false;
         if (this._gridAlertReturnT) clearTimeout(this._gridAlertReturnT);
@@ -6398,9 +6236,6 @@ export class FrigateViewCard extends HTMLElement {
         "mobile-rotate-popup",
         "mobile-rotate-popup-exit",
       );
-      card.classList.add("mobile-rotate-live");
-      this._rotateOverlayMode = "live";
-      this._rotateOverlayActive = true;
       if (fromPopup) this._setLiveNativeControls(false);
       this._setStreamLoading(false);
       this._setLiveNativeControls(true);
