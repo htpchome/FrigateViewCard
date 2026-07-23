@@ -6,7 +6,9 @@ import {
   canRefreshFallbackImage,
   getFallbackRefreshElements,
   isFallbackRefreshStale,
+  loadPrimaryFallbackSource,
   nextFallbackRequestId,
+  resolveFallbackRefreshEntity,
 } from "../src/live/live-fallback-refresh.js";
 
 test("nextFallbackRequestId increments from current id", () => {
@@ -51,6 +53,37 @@ test("getFallbackRefreshElements resolves fallback image and status elements", (
 test("canRefreshFallbackImage requires an image element", () => {
   assert.equal(canRefreshFallbackImage({ imgEl: { id: "img" } }), true);
   assert.equal(canRefreshFallbackImage({ imgEl: null }), false);
+});
+
+test("resolveFallbackRefreshEntity normalizes active camera entity", () => {
+  assert.equal(
+    resolveFallbackRefreshEntity({ entity: "camera.front" }),
+    "camera.front",
+  );
+  assert.equal(
+    resolveFallbackRefreshEntity({ entity: "  camera.front  " }),
+    "camera.front",
+  );
+  assert.equal(resolveFallbackRefreshEntity({}), "");
+});
+
+test("loadPrimaryFallbackSource loads source only for valid entity", async () => {
+  let calledWith = "";
+  const loaded = await loadPrimaryFallbackSource({
+    entity: "camera.front",
+    loadPrimary: async (entity) => {
+      calledWith = entity;
+      return "https://ha.local/primary.jpg";
+    },
+  });
+  assert.equal(calledWith, "camera.front");
+  assert.equal(loaded, "https://ha.local/primary.jpg");
+
+  const skipped = await loadPrimaryFallbackSource({
+    entity: "",
+    loadPrimary: async () => "should-not-run",
+  });
+  assert.equal(skipped, "");
 });
 
 test("buildFallbackRefreshOutcome resolves source and hasSource", () => {

@@ -10,6 +10,14 @@ export const getFallbackRefreshElements = (shadowRoot) => ({
 
 export const canRefreshFallbackImage = ({ imgEl }) => !!imgEl;
 
+export const resolveFallbackRefreshEntity = (activeCam) =>
+  String(activeCam?.entity || "").trim();
+
+export const loadPrimaryFallbackSource = async ({ entity, loadPrimary }) => {
+  if (!entity) return "";
+  return await loadPrimary(entity);
+};
+
 export const isFallbackRefreshStale = ({ requestId, activeRequestId }) =>
   requestId !== activeRequestId;
 
