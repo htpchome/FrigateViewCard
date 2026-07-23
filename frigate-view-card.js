@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.745";
+const VERSION = "1.0.746";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2095,6 +2095,17 @@ function resolveOlderHintState({
     isToTop: showTop,
     text: showTop ? "Click to return to top" : "scroll for older\u2026",
     isButton: showTop
+  };
+}
+function resolveOlderHintMetrics({ list, browse }) {
+  const listScrollable = !!list && Number(list.scrollHeight || 0) > Number(list.clientHeight || 0) + 2;
+  const scroller = listScrollable ? list : browse;
+  const scrollTop = Number(scroller?.scrollTop || 0);
+  const sample = list?.querySelector(".list-item, .rev, .rec");
+  const itemHeight = Number(sample?.getBoundingClientRect?.().height || 60);
+  return {
+    scrollTop,
+    itemHeight
   };
 }
 
@@ -10621,18 +10632,15 @@ const FrigateViewCard = class extends HTMLElement {
   _syncOlderHint(forceHide = null) {
     const hint = this._$("#older-hint");
     if (!hint) return;
-    const list = this._$("#list");
-    const browse = this._$("#browse");
-    const listScrollable = list && list.scrollHeight > list.clientHeight + 2;
-    const scroller = listScrollable ? list : browse;
-    const scrollTop = scroller?.scrollTop || 0;
-    const sample = list?.querySelector(".list-item, .rev, .rec");
-    const itemH = sample?.getBoundingClientRect?.().height || 60;
+    const metrics = resolveOlderHintMetrics({
+      list: this._$("#list"),
+      browse: this._$("#browse")
+    });
     const nextState = resolveOlderHintState({
       forceHide,
       tab: this._tab,
-      scrollTop,
-      itemHeight: itemH
+      scrollTop: metrics.scrollTop,
+      itemHeight: metrics.itemHeight
     });
     hint.hidden = !!nextState.hidden;
     hint.classList.toggle("to-top", !!nextState.isToTop);

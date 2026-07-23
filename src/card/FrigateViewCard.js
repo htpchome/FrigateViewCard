@@ -115,6 +115,7 @@ import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
   buildEmptyListMessageHtml,
+  resolveOlderHintMetrics,
   resolveOlderHintState,
 } from "./list-render-utils.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
@@ -8542,19 +8543,16 @@ export class FrigateViewCard extends HTMLElement {
   _syncOlderHint(forceHide = null) {
     const hint = this._$("#older-hint");
     if (!hint) return;
-    const list = this._$("#list");
-    const browse = this._$("#browse");
-    const listScrollable = list && list.scrollHeight > list.clientHeight + 2;
-    const scroller = listScrollable ? list : browse;
-    const scrollTop = scroller?.scrollTop || 0;
-    const sample = list?.querySelector(".list-item, .rev, .rec");
-    const itemH = sample?.getBoundingClientRect?.().height || 60;
+    const metrics = resolveOlderHintMetrics({
+      list: this._$("#list"),
+      browse: this._$("#browse"),
+    });
 
     const nextState = resolveOlderHintState({
       forceHide,
       tab: this._tab,
-      scrollTop,
-      itemHeight: itemH,
+      scrollTop: metrics.scrollTop,
+      itemHeight: metrics.itemHeight,
     });
 
     hint.hidden = !!nextState.hidden;

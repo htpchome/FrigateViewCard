@@ -74,3 +74,17 @@ export function resolveOlderHintState({
     isButton: showTop,
   };
 }
+
+export function resolveOlderHintMetrics({ list, browse }) {
+  const listScrollable =
+    !!list &&
+    Number(list.scrollHeight || 0) > Number(list.clientHeight || 0) + 2;
+  const scroller = listScrollable ? list : browse;
+  const scrollTop = Number(scroller?.scrollTop || 0);
+  const sample = list?.querySelector(".list-item, .rev, .rec");
+  const itemHeight = Number(sample?.getBoundingClientRect?.().height || 60);
+  return {
+    scrollTop,
+    itemHeight,
+  };
+}
