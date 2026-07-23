@@ -128,7 +128,6 @@ import {
   applyStreamLoadingStateForCard,
 } from "../live/live-stream-state.js";
 import {
-  createFallbackSourceResolversForCard,
   loadFallbackAltForCard,
   loadFallbackPrimaryForCard,
 } from "../live/live-fallback-url.js";
@@ -2192,13 +2191,6 @@ export class FrigateViewCard extends HTMLElement {
     return loadFallbackAltForCard({
       card: this,
       entity,
-      origin: window.location.origin,
-    });
-  }
-
-  _fallbackSourceResolvers() {
-    return createFallbackSourceResolversForCard({
-      card: this,
       origin: window.location.origin,
     });
   }

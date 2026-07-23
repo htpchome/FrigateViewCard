@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.799";
+const VERSION = "1.0.801";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2272,15 +2272,19 @@ const createFallbackSourceResolversForCard = ({ card, origin }) => {
     origin
   });
 };
+const resolveFallbackSourceResolversForCard = ({ card, origin }) => createFallbackSourceResolversForCard({
+  card,
+  origin
+});
 const loadFallbackPrimaryForCard = async ({ card, entity, origin }) => {
-  const resolvers = createFallbackSourceResolversForCard({
+  const resolvers = resolveFallbackSourceResolversForCard({
     card,
     origin
   });
   return await resolvers.loadPrimary(entity);
 };
 const loadFallbackAltForCard = ({ card, entity, origin }) => {
-  const resolvers = createFallbackSourceResolversForCard({
+  const resolvers = resolveFallbackSourceResolversForCard({
     card,
     origin
   });
@@ -6055,12 +6059,6 @@ const FrigateViewCard = class extends HTMLElement {
     return loadFallbackAltForCard({
       card: this,
       entity,
-      origin: window.location.origin
-    });
-  }
-  _fallbackSourceResolvers() {
-    return createFallbackSourceResolversForCard({
-      card: this,
       origin: window.location.origin
     });
   }
