@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.768";
+const VERSION = "1.0.769";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1893,6 +1893,41 @@ const shouldClearPendingDestroyersForPromise = ({
   pendingDestroyers,
   promise
 }) => (pendingDestroyers || []).some((attempt) => attempt?.promise === promise);
+
+// src/live/live-grace-pool.js
+const OFFSCREEN_VIDEO_STYLE = "width:1px;height:1px;display:block;opacity:0;pointer-events:none;position:absolute;left:-9999px;top:-9999px;background:var(--c-bg-deep)";
+const normalizeGraceEntityKey = (entity) => String(entity || "").trim();
+const createGraceEngineEntry = ({ engine, onExpire, graceMs }) => {
+  const entry = {
+    engine,
+    cancelled: false,
+    timer: null
+  };
+  entry.timer = setTimeout(() => {
+    onExpire?.(entry);
+  }, graceMs);
+  return entry;
+};
+const createGracePendingEntry = ({ onExpire, graceMs }) => {
+  const entry = {
+    engine: null,
+    cancelled: false,
+    timer: null,
+    promise: null
+  };
+  entry.timer = setTimeout(() => {
+    onExpire?.(entry);
+  }, graceMs);
+  return entry;
+};
+const prepareEngineVideoForGraceHost = (video) => {
+  if (!video) return;
+  video.muted = true;
+  video.controls = false;
+  video.style.cssText = OFFSCREEN_VIDEO_STYLE;
+  void video.play?.().catch?.(() => {
+  });
+};
 
 // src/live/live-mount-lifecycle.js
 const beginMountTracking = ({
@@ -4875,7 +4910,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._cleanupEngineWithOptions();
   }
   _evictGraceMseEntry(entity) {
-    const key = String(entity || "").trim();
+    const key = normalizeGraceEntityKey(entity);
     if (!key) return;
     const entry = this._mseGracePool.get(key);
     if (!entry) return;
@@ -4895,41 +4930,34 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   _stashMseEngineForGrace(entity, engine) {
-    const key = String(entity || "").trim();
+    const key = normalizeGraceEntityKey(entity);
     if (!key || !engine?.video || !engine?.ws) return false;
     this._evictGraceMseEntry(key);
     this._ensureMseGraceHost().appendChild(engine.video);
-    engine.video.muted = true;
-    engine.video.controls = false;
-    engine.video.style.cssText = "width:1px;height:1px;display:block;opacity:0;pointer-events:none;position:absolute;left:-9999px;top:-9999px;background:var(--c-bg-deep)";
-    void engine.video.play?.().catch?.(() => {
-    });
-    const entry = {
+    prepareEngineVideoForGraceHost(engine.video);
+    const entry = createGraceEngineEntry({
       engine,
-      cancelled: false,
-      timer: setTimeout(() => {
+      graceMs: MSE_SWITCH_GRACE_MS,
+      onExpire: () => {
         if (this._mseGracePool.get(key) !== entry) return;
         this._evictGraceMseEntry(key);
-      }, MSE_SWITCH_GRACE_MS)
-    };
+      }
+    });
     this._mseGracePool.set(key, entry);
     this._trimGraceMsePool();
     return true;
   }
   _stashPendingMsePromiseForGrace(entity, promise) {
-    const key = String(entity || "").trim();
+    const key = normalizeGraceEntityKey(entity);
     if (!key || !promise) return false;
     this._evictGraceMseEntry(key);
-    const entry = {
-      engine: null,
-      cancelled: false,
-      timer: null,
-      promise: null
-    };
-    entry.timer = setTimeout(() => {
-      if (this._mseGracePool.get(key) !== entry) return;
-      this._evictGraceMseEntry(key);
-    }, MSE_SWITCH_GRACE_MS);
+    const entry = createGracePendingEntry({
+      graceMs: MSE_SWITCH_GRACE_MS,
+      onExpire: () => {
+        if (this._mseGracePool.get(key) !== entry) return;
+        this._evictGraceMseEntry(key);
+      }
+    });
     entry.promise = (async () => {
       try {
         const result = await promise;
@@ -4945,11 +4973,7 @@ const FrigateViewCard = class extends HTMLElement {
           return null;
         }
         this._ensureMseGraceHost().appendChild(result.engine.video);
-        result.engine.video.muted = true;
-        result.engine.video.controls = false;
-        result.engine.video.style.cssText = "width:1px;height:1px;display:block;opacity:0;pointer-events:none;position:absolute;left:-9999px;top:-9999px;background:var(--c-bg-deep)";
-        void result.engine.video.play?.().catch?.(() => {
-        });
+        prepareEngineVideoForGraceHost(result.engine.video);
         entry.engine = result.engine;
         entry.promise = null;
         return result.engine;
@@ -4965,7 +4989,7 @@ const FrigateViewCard = class extends HTMLElement {
     return true;
   }
   _takeGraceMseEntry(entity) {
-    const key = String(entity || "").trim();
+    const key = normalizeGraceEntityKey(entity);
     if (!key) return null;
     const entry = this._mseGracePool.get(key);
     if (!entry) return null;

@@ -94,6 +94,12 @@ import {
   shouldClearPendingDestroyersForPromise,
 } from "../live/live-pending-destroyers.js";
 import {
+  createGraceEngineEntry,
+  createGracePendingEntry,
+  normalizeGraceEntityKey,
+  prepareEngineVideoForGraceHost,
+} from "../live/live-grace-pool.js";
+import {
   applyMountWatchdogTimeout,
   beginMountTracking,
   clearMountTrackingIfCurrent,
@@ -1574,7 +1580,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _evictGraceMseEntry(entity) {
-    const key = String(entity || "").trim();
+    const key = normalizeGraceEntityKey(entity);
     if (!key) return;
     const entry = this._mseGracePool.get(key);
     if (!entry) return;
@@ -1595,42 +1601,35 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _stashMseEngineForGrace(entity, engine) {
-    const key = String(entity || "").trim();
+    const key = normalizeGraceEntityKey(entity);
     if (!key || !engine?.video || !engine?.ws) return false;
     this._evictGraceMseEntry(key);
     this._ensureMseGraceHost().appendChild(engine.video);
-    engine.video.muted = true;
-    engine.video.controls = false;
-    engine.video.style.cssText =
-      "width:1px;height:1px;display:block;opacity:0;pointer-events:none;position:absolute;left:-9999px;top:-9999px;background:var(--c-bg-deep)";
-    void engine.video.play?.().catch?.(() => {});
-    const entry = {
+    prepareEngineVideoForGraceHost(engine.video);
+    const entry = createGraceEngineEntry({
       engine,
-      cancelled: false,
-      timer: setTimeout(() => {
+      graceMs: MSE_SWITCH_GRACE_MS,
+      onExpire: () => {
         if (this._mseGracePool.get(key) !== entry) return;
         this._evictGraceMseEntry(key);
-      }, MSE_SWITCH_GRACE_MS),
-    };
+      },
+    });
     this._mseGracePool.set(key, entry);
     this._trimGraceMsePool();
     return true;
   }
 
   _stashPendingMsePromiseForGrace(entity, promise) {
-    const key = String(entity || "").trim();
+    const key = normalizeGraceEntityKey(entity);
     if (!key || !promise) return false;
     this._evictGraceMseEntry(key);
-    const entry = {
-      engine: null,
-      cancelled: false,
-      timer: null,
-      promise: null,
-    };
-    entry.timer = setTimeout(() => {
-      if (this._mseGracePool.get(key) !== entry) return;
-      this._evictGraceMseEntry(key);
-    }, MSE_SWITCH_GRACE_MS);
+    const entry = createGracePendingEntry({
+      graceMs: MSE_SWITCH_GRACE_MS,
+      onExpire: () => {
+        if (this._mseGracePool.get(key) !== entry) return;
+        this._evictGraceMseEntry(key);
+      },
+    });
     entry.promise = (async () => {
       try {
         const result = await promise;
@@ -1645,11 +1644,7 @@ export class FrigateViewCard extends HTMLElement {
           return null;
         }
         this._ensureMseGraceHost().appendChild(result.engine.video);
-        result.engine.video.muted = true;
-        result.engine.video.controls = false;
-        result.engine.video.style.cssText =
-          "width:1px;height:1px;display:block;opacity:0;pointer-events:none;position:absolute;left:-9999px;top:-9999px;background:var(--c-bg-deep)";
-        void result.engine.video.play?.().catch?.(() => {});
+        prepareEngineVideoForGraceHost(result.engine.video);
         entry.engine = result.engine;
         entry.promise = null;
         return result.engine;
@@ -1666,7 +1661,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _takeGraceMseEntry(entity) {
-    const key = String(entity || "").trim();
+    const key = normalizeGraceEntityKey(entity);
     if (!key) return null;
     const entry = this._mseGracePool.get(key);
     if (!entry) return null;
