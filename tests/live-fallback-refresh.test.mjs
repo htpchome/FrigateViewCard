@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  beginFallbackRefresh,
   buildFallbackImageApplyPayload,
   buildFallbackRefreshOutcome,
   canRefreshFallbackImage,
@@ -21,6 +22,25 @@ test("nextFallbackRequestId increments from current id", () => {
   assert.equal(nextFallbackRequestId(0), 1);
   assert.equal(nextFallbackRequestId(4), 5);
   assert.equal(nextFallbackRequestId(undefined), 1);
+});
+
+test("beginFallbackRefresh aborts when image element is missing", () => {
+  const begin = beginFallbackRefresh({
+    imgEl: null,
+    currentRequestId: 2,
+  });
+  assert.equal(begin.shouldAbort, true);
+  assert.equal(begin.token, null);
+});
+
+test("beginFallbackRefresh issues token when image element exists", () => {
+  const begin = beginFallbackRefresh({
+    imgEl: { id: "img" },
+    currentRequestId: 2,
+  });
+  assert.equal(begin.shouldAbort, false);
+  assert.equal(begin.token?.requestId, 3);
+  assert.equal(begin.token?.nextRequestId, 3);
 });
 
 test("issueFallbackRefreshToken returns request and next ids", () => {

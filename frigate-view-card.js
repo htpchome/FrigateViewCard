@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.783";
+const VERSION = "1.0.784";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2254,6 +2254,18 @@ const getFallbackRefreshElements = (shadowRoot) => ({
   statusEl: shadowRoot?.querySelector?.("#stream-fallback-status") || null
 });
 const canRefreshFallbackImage = ({ imgEl }) => !!imgEl;
+const beginFallbackRefresh = ({ imgEl, currentRequestId }) => {
+  if (!canRefreshFallbackImage({ imgEl })) {
+    return {
+      shouldAbort: true,
+      token: null
+    };
+  }
+  return {
+    shouldAbort: false,
+    token: issueFallbackRefreshToken({ currentRequestId })
+  };
+};
 const resolveFallbackRefreshEntity = (activeCam) => String(activeCam?.entity || "").trim();
 const loadPrimaryFallbackSource = async ({ entity, loadPrimary }) => {
   if (!entity) return "";
@@ -5767,10 +5779,12 @@ const FrigateViewCard = class extends HTMLElement {
   }
   async _refreshStreamFallbackImage() {
     const { imgEl, statusEl } = getFallbackRefreshElements(this.shadowRoot);
-    if (!canRefreshFallbackImage({ imgEl })) return;
-    const token = issueFallbackRefreshToken({
+    const begin = beginFallbackRefresh({
+      imgEl,
       currentRequestId: this._fallbackReqId
     });
+    if (begin.shouldAbort) return;
+    const token = begin.token;
     this._fallbackReqId = token.nextRequestId;
     const entity = resolveFallbackRefreshEntity(this._activeCam);
     const primarySrc = await loadPrimaryFallbackSource({

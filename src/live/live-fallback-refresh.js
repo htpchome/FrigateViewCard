@@ -18,6 +18,19 @@ export const getFallbackRefreshElements = (shadowRoot) => ({
 
 export const canRefreshFallbackImage = ({ imgEl }) => !!imgEl;
 
+export const beginFallbackRefresh = ({ imgEl, currentRequestId }) => {
+  if (!canRefreshFallbackImage({ imgEl })) {
+    return {
+      shouldAbort: true,
+      token: null,
+    };
+  }
+  return {
+    shouldAbort: false,
+    token: issueFallbackRefreshToken({ currentRequestId }),
+  };
+};
+
 export const resolveFallbackRefreshEntity = (activeCam) =>
   String(activeCam?.entity || "").trim();
 
