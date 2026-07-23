@@ -671,7 +671,11 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const handlePreviewUpdate = (event) => {
       if (!shouldPreviewUpdate(event)) return;
-      this._u({ dispatch: false, preview: true });
+      if (this._livePreviewRaf) return;
+      this._livePreviewRaf = requestAnimationFrame(() => {
+        this._livePreviewRaf = 0;
+        this._u({ dispatch: false, preview: true });
+      });
     };
 
     ["input", "change", "value-changed", "selected-changed", "click"].forEach(

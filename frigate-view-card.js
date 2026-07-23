@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.758";
+const VERSION = "1.0.759";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11354,7 +11354,11 @@ const FrigateViewCardEditor = class extends HTMLElement {
     };
     const handlePreviewUpdate = (event) => {
       if (!shouldPreviewUpdate(event)) return;
-      this._u({ dispatch: false, preview: true });
+      if (this._livePreviewRaf) return;
+      this._livePreviewRaf = requestAnimationFrame(() => {
+        this._livePreviewRaf = 0;
+        this._u({ dispatch: false, preview: true });
+      });
     };
     ["input", "change", "value-changed", "selected-changed", "click"].forEach(
       (eventName) => {
