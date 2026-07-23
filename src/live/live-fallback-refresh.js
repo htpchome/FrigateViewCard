@@ -128,6 +128,15 @@ export const shouldAbortStaleFallbackRefresh = ({
   activeRequestId,
 }) => isFallbackRefreshStale({ requestId, activeRequestId });
 
+export const shouldAbortFallbackRefreshAfterPrimary = ({
+  token,
+  activeRequestId,
+}) =>
+  shouldAbortStaleFallbackRefresh({
+    requestId: token?.requestId,
+    activeRequestId,
+  });
+
 export const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   const src = resolveFallbackDisplaySource({
     primarySrc,

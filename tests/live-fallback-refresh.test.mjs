@@ -16,6 +16,7 @@ import {
   resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
   resolveFallbackRefreshSources,
+  shouldAbortFallbackRefreshAfterPrimary,
   shouldAbortStaleFallbackRefresh,
   shouldApplyFallbackRefreshSources,
 } from "../src/live/live-fallback-refresh.js";
@@ -82,6 +83,23 @@ test("shouldAbortStaleFallbackRefresh mirrors stale check", () => {
     shouldAbortStaleFallbackRefresh({
       requestId: 2,
       activeRequestId: 3,
+    }),
+    true,
+  );
+});
+
+test("shouldAbortFallbackRefreshAfterPrimary checks token request id against active id", () => {
+  assert.equal(
+    shouldAbortFallbackRefreshAfterPrimary({
+      token: { requestId: 5 },
+      activeRequestId: 5,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldAbortFallbackRefreshAfterPrimary({
+      token: { requestId: 5 },
+      activeRequestId: 6,
     }),
     true,
   );

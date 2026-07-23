@@ -145,7 +145,7 @@ import {
   isFallbackRefreshStale,
   loadPrimaryFallbackSource,
   resolveFallbackRefreshEntity,
-  shouldAbortStaleFallbackRefresh,
+  shouldAbortFallbackRefreshAfterPrimary,
   shouldApplyFallbackRefreshSources,
 } from "../live/live-fallback-refresh.js";
 import {
@@ -2231,8 +2231,8 @@ export class FrigateViewCard extends HTMLElement {
         await this._streamFallbackUrl(nextEntity),
     });
     if (
-      shouldAbortStaleFallbackRefresh({
-        requestId: token.requestId,
+      shouldAbortFallbackRefreshAfterPrimary({
+        token,
         activeRequestId: this._fallbackReqId,
       })
     ) {
