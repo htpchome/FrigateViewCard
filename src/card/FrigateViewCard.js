@@ -1485,6 +1485,7 @@ export class FrigateViewCard extends HTMLElement {
   _ffDebug(_msg, _data = null) {}
 
   _preferredStreamType() {
+    if (DEVICE_PROFILE.isIOS) return "webrtc";
     return "webrtc";
   }
 
@@ -3457,6 +3458,18 @@ export class FrigateViewCard extends HTMLElement {
     this._gridPageController.advanceGridRotation();
   }
 
+  _markGridAlertCamera(entity, severity = "alert") {
+    return this._gridAlertController.markAlertCamera(entity, severity);
+  }
+
+  async _probeLatestGridAlert() {
+    await this._gridAlertController.probeLatestAlert();
+  }
+
+  _handleGridRealtimeMessage(msg) {
+    this._gridAlertController.handleRealtimeMessage(msg);
+  }
+
   _gridPageCameraIndices() {
     const total = this._config?.cameras?.length || 0;
     if (!total) return [];
@@ -3641,10 +3654,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _gridButtonIcon() {
     return ICONS.grid;
-  }
-
-  _clearSlideshowTimers() {
-    this._slideshowPageController.clearTimers();
   }
 
   _clearSlideshowCountdownOverlay() {
@@ -3838,6 +3847,30 @@ export class FrigateViewCard extends HTMLElement {
     return Number.isFinite(start) ? start : 0;
   }
 
+  _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
+    this._slideshowAlertController.handleReviewsUpdated(
+      entity,
+      reviews,
+      source,
+    );
+  }
+
+  async _probeLatestSlideshowReview() {
+    await this._slideshowAlertController.probeLatestReview();
+  }
+
+  _scheduleSlideshowReviewProbe(delayMs = 180) {
+    this._slideshowAlertController.scheduleReviewProbe(delayMs);
+  }
+
+  _scheduleSlideshowReviewWatch(delayMs = null) {
+    this._slideshowAlertController.scheduleReviewWatch(delayMs);
+  }
+
+  async _advanceSlideshowRotation() {
+    await this._slideshowPageController.advanceRotation();
+  }
+
   _cameraIndexByEntity(entity) {
     if (!entity) return -1;
     return (
@@ -3875,6 +3908,10 @@ export class FrigateViewCard extends HTMLElement {
     )
       .trim()
       .toLowerCase();
+  }
+
+  _handleSlideshowRealtimeMessage(msg) {
+    this._slideshowAlertController.handleRealtimeMessage(msg);
   }
 
   // ── camera switching ──────────────────────────────────────
@@ -4531,9 +4568,9 @@ export class FrigateViewCard extends HTMLElement {
     try {
       this._unsub = this._hass.connection.subscribeMessage(
         (msg) => {
-          this._gridAlertController.handleRealtimeMessage(msg);
+          this._handleGridRealtimeMessage(msg);
           this._previewAlertController.handleRealtimeMessage(msg);
-          this._slideshowAlertController.handleRealtimeMessage(msg);
+          this._handleSlideshowRealtimeMessage(msg);
           if (!this._isNowWindow()) return;
           if (!this._isRealtimeEventMessage(msg)) return;
           this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);

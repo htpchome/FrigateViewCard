@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.717";
+const VERSION = "1.0.719";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3882,6 +3882,7 @@ const FrigateViewCard = class extends HTMLElement {
   _ffDebug(_msg, _data = null) {
   }
   _preferredStreamType() {
+    if (DEVICE_PROFILE.isIOS) return "webrtc";
     return "webrtc";
   }
   _currentLiveStreamHint() {
@@ -5599,6 +5600,15 @@ const FrigateViewCard = class extends HTMLElement {
   _advanceGridRotation() {
     this._gridPageController.advanceGridRotation();
   }
+  _markGridAlertCamera(entity, severity = "alert") {
+    return this._gridAlertController.markAlertCamera(entity, severity);
+  }
+  async _probeLatestGridAlert() {
+    await this._gridAlertController.probeLatestAlert();
+  }
+  _handleGridRealtimeMessage(msg) {
+    this._gridAlertController.handleRealtimeMessage(msg);
+  }
   _gridPageCameraIndices() {
     const total = this._config?.cameras?.length || 0;
     if (!total) return [];
@@ -5754,9 +5764,6 @@ const FrigateViewCard = class extends HTMLElement {
   _gridButtonIcon() {
     return ICONS.grid;
   }
-  _clearSlideshowTimers() {
-    this._slideshowPageController.clearTimers();
-  }
   _clearSlideshowCountdownOverlay() {
     this._slideshowNextSwitchAtMs = 0;
     if (this._slideshowCountdownT) clearInterval(this._slideshowCountdownT);
@@ -5906,6 +5913,25 @@ const FrigateViewCard = class extends HTMLElement {
     const start = Number(review?.start_time || review?.after?.start_time || 0);
     return Number.isFinite(start) ? start : 0;
   }
+  _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
+    this._slideshowAlertController.handleReviewsUpdated(
+      entity,
+      reviews,
+      source
+    );
+  }
+  async _probeLatestSlideshowReview() {
+    await this._slideshowAlertController.probeLatestReview();
+  }
+  _scheduleSlideshowReviewProbe(delayMs = 180) {
+    this._slideshowAlertController.scheduleReviewProbe(delayMs);
+  }
+  _scheduleSlideshowReviewWatch(delayMs = null) {
+    this._slideshowAlertController.scheduleReviewWatch(delayMs);
+  }
+  async _advanceSlideshowRotation() {
+    await this._slideshowPageController.advanceRotation();
+  }
   _cameraIndexByEntity(entity) {
     if (!entity) return -1;
     return this._config?.cameras?.findIndex((camera) => camera.entity === entity) ?? -1;
@@ -5920,6 +5946,9 @@ const FrigateViewCard = class extends HTMLElement {
     return String(
       msg?.severity || msg?.event?.severity || msg?.event?.data?.severity || msg?.review?.severity || msg?.review?.data?.severity || msg?.after?.severity || msg?.after?.data?.severity || msg?.before?.severity || msg?.before?.data?.severity || (type.includes("detection") ? "detection" : "")
     ).trim().toLowerCase();
+  }
+  _handleSlideshowRealtimeMessage(msg) {
+    this._slideshowAlertController.handleRealtimeMessage(msg);
   }
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
@@ -6526,9 +6555,9 @@ const FrigateViewCard = class extends HTMLElement {
     try {
       this._unsub = this._hass.connection.subscribeMessage(
         (msg) => {
-          this._gridAlertController.handleRealtimeMessage(msg);
+          this._handleGridRealtimeMessage(msg);
           this._previewAlertController.handleRealtimeMessage(msg);
-          this._slideshowAlertController.handleRealtimeMessage(msg);
+          this._handleSlideshowRealtimeMessage(msg);
           if (!this._isNowWindow()) return;
           if (!this._isRealtimeEventMessage(msg)) return;
           this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);
