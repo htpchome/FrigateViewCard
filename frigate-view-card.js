@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.744";
+const VERSION = "1.0.745";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2062,6 +2062,35 @@ function buildStickyDaySectionsHtml(items, deps) {
     const ts = Number.isFinite(section.ts) ? Math.floor(section.ts) : 0;
     return `<section class="list-day-sec"><div class="list-day-label${extraClass}" data-day-ts="${ts}" data-day-label="${section.label}">${section.label}</div>${section.rows.join("")}</section>`;
   }).join("");
+}
+function resolveOlderHintState({ forceHide = null, tab = "", scrollTop = 0, itemHeight = 60 }) {
+  if (forceHide === true) {
+    return {
+      hidden: true,
+      isToTop: false,
+      text: "scroll for older\u2026",
+      isButton: false
+    };
+  }
+  const supportsHint = ["clips", "snapshot", "alerts", "recordings"].includes(
+    String(tab || "")
+  );
+  const canShowHint = forceHide !== false && supportsHint;
+  if (!canShowHint) {
+    return {
+      hidden: true,
+      isToTop: false,
+      text: "scroll for older\u2026",
+      isButton: false
+    };
+  }
+  const showTop = Number(scrollTop || 0) >= Math.max(120, Number(itemHeight || 60) * 3.5);
+  return {
+    hidden: false,
+    isToTop: showTop,
+    text: showTop ? "Click to return to top" : "scroll for older\u2026",
+    isButton: showTop
+  };
 }
 
 // src/data/review-candidate-utils.js
@@ -10587,23 +10616,6 @@ const FrigateViewCard = class extends HTMLElement {
   _syncOlderHint(forceHide = null) {
     const hint = this._$("#older-hint");
     if (!hint) return;
-    if (forceHide === true) {
-      hint.hidden = true;
-      hint.classList.remove("to-top");
-      return;
-    }
-    const supportsHint = ["clips", "snapshot", "alerts", "recordings"].includes(
-      this._tab
-    );
-    const canShowHint = forceHide !== false && supportsHint;
-    hint.hidden = !canShowHint;
-    if (!canShowHint) {
-      hint.classList.remove("to-top");
-      hint.textContent = "scroll for older\u2026";
-      hint.removeAttribute("role");
-      hint.removeAttribute("tabindex");
-      return;
-    }
     const list = this._$("#list");
     const browse = this._$("#browse");
     const listScrollable = list && list.scrollHeight > list.clientHeight + 2;
@@ -10611,10 +10623,16 @@ const FrigateViewCard = class extends HTMLElement {
     const scrollTop = scroller?.scrollTop || 0;
     const sample = list?.querySelector(".list-item, .rev, .rec");
     const itemH = sample?.getBoundingClientRect?.().height || 60;
-    const showTop = scrollTop >= Math.max(120, itemH * 3.5);
-    hint.classList.toggle("to-top", showTop);
-    hint.textContent = showTop ? "Click to return to top" : "scroll for older\u2026";
-    if (showTop) {
+    const nextState = resolveOlderHintState({
+      forceHide,
+      tab: this._tab,
+      scrollTop,
+      itemHeight: itemH
+    });
+    hint.hidden = !!nextState.hidden;
+    hint.classList.toggle("to-top", !!nextState.isToTop);
+    hint.textContent = nextState.text;
+    if (nextState.isButton) {
       hint.setAttribute("role", "button");
       hint.setAttribute("tabindex", "0");
     } else {

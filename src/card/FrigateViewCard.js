@@ -115,6 +115,7 @@ import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
   buildEmptyListMessageHtml,
+  resolveOlderHintState,
 } from "./list-render-utils.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
@@ -8541,24 +8542,6 @@ export class FrigateViewCard extends HTMLElement {
   _syncOlderHint(forceHide = null) {
     const hint = this._$("#older-hint");
     if (!hint) return;
-    if (forceHide === true) {
-      hint.hidden = true;
-      hint.classList.remove("to-top");
-      return;
-    }
-    const supportsHint = ["clips", "snapshot", "alerts", "recordings"].includes(
-      this._tab,
-    );
-    const canShowHint = forceHide !== false && supportsHint;
-    hint.hidden = !canShowHint;
-    if (!canShowHint) {
-      hint.classList.remove("to-top");
-      hint.textContent = "scroll for older…";
-      hint.removeAttribute("role");
-      hint.removeAttribute("tabindex");
-      return;
-    }
-
     const list = this._$("#list");
     const browse = this._$("#browse");
     const listScrollable = list && list.scrollHeight > list.clientHeight + 2;
@@ -8566,11 +8549,18 @@ export class FrigateViewCard extends HTMLElement {
     const scrollTop = scroller?.scrollTop || 0;
     const sample = list?.querySelector(".list-item, .rev, .rec");
     const itemH = sample?.getBoundingClientRect?.().height || 60;
-    const showTop = scrollTop >= Math.max(120, itemH * 3.5);
 
-    hint.classList.toggle("to-top", showTop);
-    hint.textContent = showTop ? "Click to return to top" : "scroll for older…";
-    if (showTop) {
+    const nextState = resolveOlderHintState({
+      forceHide,
+      tab: this._tab,
+      scrollTop,
+      itemHeight: itemH,
+    });
+
+    hint.hidden = !!nextState.hidden;
+    hint.classList.toggle("to-top", !!nextState.isToTop);
+    hint.textContent = nextState.text;
+    if (nextState.isButton) {
       hint.setAttribute("role", "button");
       hint.setAttribute("tabindex", "0");
     } else {

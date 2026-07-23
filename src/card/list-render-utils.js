@@ -36,3 +36,35 @@ export function buildStickyDaySectionsHtml(items, deps) {
     })
     .join("");
 }
+
+export function resolveOlderHintState({ forceHide = null, tab = "", scrollTop = 0, itemHeight = 60 }) {
+  if (forceHide === true) {
+    return {
+      hidden: true,
+      isToTop: false,
+      text: "scroll for older…",
+      isButton: false,
+    };
+  }
+
+  const supportsHint = ["clips", "snapshot", "alerts", "recordings"].includes(
+    String(tab || ""),
+  );
+  const canShowHint = forceHide !== false && supportsHint;
+  if (!canShowHint) {
+    return {
+      hidden: true,
+      isToTop: false,
+      text: "scroll for older…",
+      isButton: false,
+    };
+  }
+
+  const showTop = Number(scrollTop || 0) >= Math.max(120, Number(itemHeight || 60) * 3.5);
+  return {
+    hidden: false,
+    isToTop: showTop,
+    text: showTop ? "Click to return to top" : "scroll for older…",
+    isButton: showTop,
+  };
+}
