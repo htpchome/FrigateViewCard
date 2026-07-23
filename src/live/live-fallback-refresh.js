@@ -141,16 +141,18 @@ export const loadPrimaryWithStaleGate = async ({
   entity,
   token,
   activeRequestId,
+  readActiveRequestId,
   loadPrimary,
 }) => {
   const primarySrc = await loadPrimaryFallbackSource({
     entity,
     loadPrimary,
   });
+  const resolvedActiveRequestId = readActiveRequestId?.() ?? activeRequestId;
   if (
     shouldAbortFallbackRefreshAfterPrimary({
       token,
-      activeRequestId,
+      activeRequestId: resolvedActiveRequestId,
     })
   ) {
     return {
@@ -161,6 +163,76 @@ export const loadPrimaryWithStaleGate = async ({
   return {
     shouldAbort: false,
     primarySrc,
+  };
+};
+
+export const runFallbackRefreshCycle = async ({
+  shadowRoot,
+  currentRequestId,
+  activeCam,
+  setActiveRequestId,
+  readActiveRequestId,
+  loadPrimary,
+  loadAlt,
+  applyHandlers,
+  applySource,
+}) => {
+  const { imgEl, statusEl } = getFallbackRefreshElements(shadowRoot);
+  const begin = beginFallbackRefresh({
+    imgEl,
+    currentRequestId,
+  });
+  if (begin.shouldAbort) {
+    return {
+      shouldAbort: true,
+      didWrite: false,
+    };
+  }
+
+  const token = begin.token;
+  setActiveRequestId?.(token.nextRequestId);
+
+  const entity = resolveFallbackRefreshEntity(activeCam);
+  const primaryPhase = await loadPrimaryWithStaleGate({
+    entity,
+    token,
+    activeRequestId: token.nextRequestId,
+    readActiveRequestId,
+    loadPrimary,
+  });
+  if (primaryPhase.shouldAbort) {
+    return {
+      shouldAbort: true,
+      didWrite: false,
+    };
+  }
+
+  const context = buildFallbackRefreshContext({
+    entity,
+    primarySrc: primaryPhase.primarySrc,
+    loadAlt,
+  });
+  if (!shouldApplyFallbackRefreshSources({ sources: context.sources })) {
+    return {
+      shouldAbort: false,
+      didWrite: false,
+    };
+  }
+
+  const writeInput = buildFallbackImageWriteInput({
+    context,
+    imgEl,
+    statusEl,
+  });
+  executeFallbackRefreshWrite({
+    writeInput,
+    applyHandlers,
+    applySource,
+  });
+
+  return {
+    shouldAbort: false,
+    didWrite: true,
   };
 };
 

@@ -136,16 +136,7 @@ import {
   applyFallbackImageHandlers,
   setFallbackImageSourceIfChanged,
 } from "../live/live-fallback-image.js";
-import {
-  beginFallbackRefresh,
-  buildFallbackRefreshContext,
-  buildFallbackImageWriteInput,
-  executeFallbackRefreshWrite,
-  getFallbackRefreshElements,
-  loadPrimaryWithStaleGate,
-  resolveFallbackRefreshEntity,
-  shouldApplyFallbackRefreshSources,
-} from "../live/live-fallback-refresh.js";
+import { runFallbackRefreshCycle } from "../live/live-fallback-refresh.js";
 import {
   resolveHaDirectStartup,
   resolveHlsStartup,
@@ -2214,37 +2205,17 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _refreshStreamFallbackImage() {
-    const { imgEl, statusEl } = getFallbackRefreshElements(this.shadowRoot);
-    const begin = beginFallbackRefresh({
-      imgEl,
+    await runFallbackRefreshCycle({
+      shadowRoot: this.shadowRoot,
       currentRequestId: this._fallbackReqId,
-    });
-    if (begin.shouldAbort) return;
-    const token = begin.token;
-    this._fallbackReqId = token.nextRequestId;
-    const entity = resolveFallbackRefreshEntity(this._activeCam);
-    const primaryPhase = await loadPrimaryWithStaleGate({
-      entity,
-      token,
-      activeRequestId: this._fallbackReqId,
+      activeCam: this._activeCam,
+      setActiveRequestId: (nextRequestId) => {
+        this._fallbackReqId = nextRequestId;
+      },
+      readActiveRequestId: () => this._fallbackReqId,
       loadPrimary: async (nextEntity) =>
         await this._streamFallbackUrl(nextEntity),
-    });
-    if (primaryPhase.shouldAbort) return;
-    const context = buildFallbackRefreshContext({
-      entity,
-      primarySrc: primaryPhase.primarySrc,
       loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity),
-    });
-    const sources = context.sources;
-    if (!shouldApplyFallbackRefreshSources({ sources })) return;
-    const writeInput = buildFallbackImageWriteInput({
-      context,
-      imgEl,
-      statusEl,
-    });
-    executeFallbackRefreshWrite({
-      writeInput,
       applyHandlers: (payload) => applyFallbackImageHandlers(payload),
       applySource: (next) => setFallbackImageSourceIfChanged(next),
     });

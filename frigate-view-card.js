@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.789";
+const VERSION = "1.0.790";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2360,15 +2360,17 @@ const loadPrimaryWithStaleGate = async ({
   entity,
   token,
   activeRequestId,
+  readActiveRequestId,
   loadPrimary
 }) => {
   const primarySrc = await loadPrimaryFallbackSource({
     entity,
     loadPrimary
   });
+  const resolvedActiveRequestId = readActiveRequestId?.() ?? activeRequestId;
   if (shouldAbortFallbackRefreshAfterPrimary({
     token,
-    activeRequestId
+    activeRequestId: resolvedActiveRequestId
   })) {
     return {
       shouldAbort: true,
@@ -2378,6 +2380,70 @@ const loadPrimaryWithStaleGate = async ({
   return {
     shouldAbort: false,
     primarySrc
+  };
+};
+const runFallbackRefreshCycle = async ({
+  shadowRoot,
+  currentRequestId,
+  activeCam,
+  setActiveRequestId,
+  readActiveRequestId,
+  loadPrimary,
+  loadAlt,
+  applyHandlers,
+  applySource
+}) => {
+  const { imgEl, statusEl } = getFallbackRefreshElements(shadowRoot);
+  const begin = beginFallbackRefresh({
+    imgEl,
+    currentRequestId
+  });
+  if (begin.shouldAbort) {
+    return {
+      shouldAbort: true,
+      didWrite: false
+    };
+  }
+  const token = begin.token;
+  setActiveRequestId?.(token.nextRequestId);
+  const entity = resolveFallbackRefreshEntity(activeCam);
+  const primaryPhase = await loadPrimaryWithStaleGate({
+    entity,
+    token,
+    activeRequestId: token.nextRequestId,
+    readActiveRequestId,
+    loadPrimary
+  });
+  if (primaryPhase.shouldAbort) {
+    return {
+      shouldAbort: true,
+      didWrite: false
+    };
+  }
+  const context = buildFallbackRefreshContext({
+    entity,
+    primarySrc: primaryPhase.primarySrc,
+    loadAlt
+  });
+  if (!shouldApplyFallbackRefreshSources({ sources: context.sources })) {
+    return {
+      shouldAbort: false,
+      didWrite: false
+    };
+  }
+  const writeInput = buildFallbackImageWriteInput({
+    context,
+    imgEl,
+    statusEl
+  });
+  executeFallbackRefreshWrite({
+    writeInput,
+    applyHandlers,
+    applySource
+  });
+  return {
+    shouldAbort: false,
+    didWrite: true
   };
 };
 const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
@@ -5853,36 +5919,16 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _refreshStreamFallbackImage() {
-    const { imgEl, statusEl } = getFallbackRefreshElements(this.shadowRoot);
-    const begin = beginFallbackRefresh({
-      imgEl,
-      currentRequestId: this._fallbackReqId
-    });
-    if (begin.shouldAbort) return;
-    const token = begin.token;
-    this._fallbackReqId = token.nextRequestId;
-    const entity = resolveFallbackRefreshEntity(this._activeCam);
-    const primaryPhase = await loadPrimaryWithStaleGate({
-      entity,
-      token,
-      activeRequestId: this._fallbackReqId,
-      loadPrimary: async (nextEntity) => await this._streamFallbackUrl(nextEntity)
-    });
-    if (primaryPhase.shouldAbort) return;
-    const context = buildFallbackRefreshContext({
-      entity,
-      primarySrc: primaryPhase.primarySrc,
-      loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity)
-    });
-    const sources = context.sources;
-    if (!shouldApplyFallbackRefreshSources({ sources })) return;
-    const writeInput = buildFallbackImageWriteInput({
-      context,
-      imgEl,
-      statusEl
-    });
-    executeFallbackRefreshWrite({
-      writeInput,
+    await runFallbackRefreshCycle({
+      shadowRoot: this.shadowRoot,
+      currentRequestId: this._fallbackReqId,
+      activeCam: this._activeCam,
+      setActiveRequestId: (nextRequestId) => {
+        this._fallbackReqId = nextRequestId;
+      },
+      readActiveRequestId: () => this._fallbackReqId,
+      loadPrimary: async (nextEntity) => await this._streamFallbackUrl(nextEntity),
+      loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity),
       applyHandlers: (payload) => applyFallbackImageHandlers(payload),
       applySource: (next) => setFallbackImageSourceIfChanged(next)
     });

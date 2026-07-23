@@ -17,6 +17,7 @@ import {
   resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
   resolveFallbackRefreshSources,
+  runFallbackRefreshCycle,
   shouldAbortFallbackRefreshAfterPrimary,
   shouldAbortStaleFallbackRefresh,
   shouldApplyFallbackRefreshSources,
@@ -128,6 +129,134 @@ test("loadPrimaryWithStaleGate aborts when token becomes stale", async () => {
 
   assert.equal(result.shouldAbort, true);
   assert.equal(result.primarySrc, "");
+});
+
+test("runFallbackRefreshCycle writes once when source resolves", async () => {
+  let activeRequestId = 4;
+  const imgEl = { id: "img" };
+  const statusEl = { id: "status" };
+  const writes = [];
+  const handlerPayloads = [];
+
+  const result = await runFallbackRefreshCycle({
+    shadowRoot: {
+      querySelector: (selector) => {
+        if (selector === "#stream-fallback-img") return imgEl;
+        if (selector === "#stream-fallback-status") return statusEl;
+        return null;
+      },
+    },
+    currentRequestId: activeRequestId,
+    activeCam: { entity: "camera.front" },
+    setActiveRequestId: (nextId) => {
+      activeRequestId = nextId;
+    },
+    readActiveRequestId: () => activeRequestId,
+    loadPrimary: async () => "https://ha.local/primary.jpg",
+    loadAlt: () => "https://ha.local/alt.jpg",
+    applyHandlers: (payload) => handlerPayloads.push(payload),
+    applySource: (entry) => writes.push(entry),
+  });
+
+  assert.equal(result.shouldAbort, false);
+  assert.equal(result.didWrite, true);
+  assert.equal(activeRequestId, 5);
+  assert.equal(handlerPayloads.length, 1);
+  assert.equal(handlerPayloads[0].img, imgEl);
+  assert.equal(handlerPayloads[0].statusEl, statusEl);
+  assert.equal(handlerPayloads[0].entity, "camera.front");
+  assert.equal(handlerPayloads[0].src, "https://ha.local/primary.jpg");
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].img, imgEl);
+  assert.equal(writes[0].src, "https://ha.local/primary.jpg");
+});
+
+test("runFallbackRefreshCycle aborts when request becomes stale after primary load", async () => {
+  let activeRequestId = 2;
+  const writes = [];
+  const handlerPayloads = [];
+
+  const result = await runFallbackRefreshCycle({
+    shadowRoot: {
+      querySelector: (selector) =>
+        selector === "#stream-fallback-img" ? { id: "img" } : null,
+    },
+    currentRequestId: activeRequestId,
+    activeCam: { entity: "camera.front" },
+    setActiveRequestId: (nextId) => {
+      activeRequestId = nextId;
+    },
+    readActiveRequestId: () => activeRequestId,
+    loadPrimary: async () => {
+      activeRequestId = 99;
+      return "https://ha.local/primary.jpg";
+    },
+    loadAlt: () => "https://ha.local/alt.jpg",
+    applyHandlers: (payload) => handlerPayloads.push(payload),
+    applySource: (entry) => writes.push(entry),
+  });
+
+  assert.equal(result.shouldAbort, true);
+  assert.equal(result.didWrite, false);
+  assert.equal(handlerPayloads.length, 0);
+  assert.equal(writes.length, 0);
+});
+
+test("runFallbackRefreshCycle short-circuits when image element is missing", async () => {
+  let activeRequestId = 7;
+  let setCalled = false;
+  const writes = [];
+
+  const result = await runFallbackRefreshCycle({
+    shadowRoot: {
+      querySelector: () => null,
+    },
+    currentRequestId: activeRequestId,
+    activeCam: { entity: "camera.front" },
+    setActiveRequestId: () => {
+      setCalled = true;
+    },
+    readActiveRequestId: () => activeRequestId,
+    loadPrimary: async () => "https://ha.local/primary.jpg",
+    loadAlt: () => "https://ha.local/alt.jpg",
+    applyHandlers: () => {},
+    applySource: (entry) => writes.push(entry),
+  });
+
+  assert.equal(result.shouldAbort, true);
+  assert.equal(result.didWrite, false);
+  assert.equal(setCalled, false);
+  assert.equal(activeRequestId, 7);
+  assert.equal(writes.length, 0);
+});
+
+test("runFallbackRefreshCycle skips write when both primary and alt sources are empty", async () => {
+  let activeRequestId = 1;
+  const writes = [];
+  const handlerPayloads = [];
+
+  const result = await runFallbackRefreshCycle({
+    shadowRoot: {
+      querySelector: (selector) =>
+        selector === "#stream-fallback-img" ? { id: "img" } : null,
+    },
+    currentRequestId: activeRequestId,
+    activeCam: { entity: "camera.front" },
+    setActiveRequestId: (nextId) => {
+      activeRequestId = nextId;
+    },
+    readActiveRequestId: () => activeRequestId,
+    loadPrimary: async () => "",
+    loadAlt: () => "",
+    applyHandlers: (payload) => handlerPayloads.push(payload),
+    applySource: (entry) => writes.push(entry),
+  });
+
+  assert.equal(result.shouldAbort, false);
+  assert.equal(result.didWrite, false);
+  assert.equal(activeRequestId, 2);
+  assert.equal(handlerPayloads.length, 0);
+  assert.equal(writes.length, 0);
 });
 
 test("getFallbackRefreshElements resolves fallback image and status elements", () => {
