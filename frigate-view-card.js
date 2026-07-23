@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.742";
+const VERSION = "1.0.743";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2028,6 +2028,17 @@ function buildEventListItemHtml(model, { icons, expanded, compact }) {
       </div>
       <div class="eact${compact ? " h" : ""}">${model.favBtn}${model.dlClip}${model.dlSnap}</div>
     </div>`;
+}
+
+// src/card/list-render-utils.js
+function buildEmptyListMessageHtml(message, hint = "") {
+  const base = String(message || "").trim();
+  const extra = String(hint || "").trim();
+  if (!extra) return `<div class="empty">${base}</div>`;
+  return `<div class="empty">${base}<br><span style="opacity:.6">${extra}</span></div>`;
+}
+function appendEndMarker(html, isExhausted) {
+  return `${String(html || "")}${isExhausted ? '<div class="end">\u2014 end \u2014</div>' : ""}`;
 }
 
 // src/data/review-candidate-utils.js
@@ -10529,7 +10540,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (!kept.length) {
       this._setListHtmlIfChanged(
         list,
-        `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`
+        buildEmptyListMessageHtml("No kept events", "star an event to keep it")
       );
       this._syncOlderHint(false);
       return;
@@ -10546,7 +10557,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (!events.length) {
       this._setListHtmlIfChanged(
         list,
-        `<div class="empty">No events in this window</div>`
+        buildEmptyListMessageHtml("No events in this window")
       );
       this._syncOlderHint(false);
       return;
@@ -10557,7 +10568,7 @@ const FrigateViewCard = class extends HTMLElement {
     ) : events.map((ev) => this._eventCardHTML(ev, false)).join("");
     this._setListHtmlIfChanged(
       list,
-      eventsHtml + (this._exhausted ? '<div class="end">\u2014 end \u2014</div>' : "")
+      appendEndMarker(eventsHtml, this._exhausted)
     );
     this._syncBrowseHeadFromScroll();
     this._syncOlderHint();
@@ -10633,7 +10644,7 @@ const FrigateViewCard = class extends HTMLElement {
     const emptyText = showAllReviews ? "No reviews in this window" : "No alerts in this window";
     this._renderListLabel(filteredReviews[0]?.start_time || null);
     if (!filteredReviews.length) {
-      this._setListHtmlIfChanged(list, `<div class="empty">${emptyText}</div>`);
+      this._setListHtmlIfChanged(list, buildEmptyListMessageHtml(emptyText));
       this._syncOlderHint(true);
       return;
     }
@@ -10644,7 +10655,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (!allRevs.length) {
       this._setListHtmlIfChanged(
         list,
-        '<div class="empty">No alerts in this window</div>'
+        buildEmptyListMessageHtml("No alerts in this window")
       );
       this._syncOlderHint(true);
       return;

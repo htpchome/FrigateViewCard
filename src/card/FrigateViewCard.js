@@ -111,6 +111,10 @@ import {
   buildEventListItemHtml,
   buildEventListItemModel,
 } from "./event-list-model.js";
+import {
+  appendEndMarker,
+  buildEmptyListMessageHtml,
+} from "./list-render-utils.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import {
@@ -8512,7 +8516,7 @@ export class FrigateViewCard extends HTMLElement {
     if (!kept.length) {
       this._setListHtmlIfChanged(
         list,
-        `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
+        buildEmptyListMessageHtml("No kept events", "star an event to keep it"),
       );
       this._syncOlderHint(false);
       return;
@@ -8530,7 +8534,7 @@ export class FrigateViewCard extends HTMLElement {
     if (!events.length) {
       this._setListHtmlIfChanged(
         list,
-        `<div class="empty">No events in this window</div>`,
+        buildEmptyListMessageHtml("No events in this window"),
       );
       this._syncOlderHint(false);
       return;
@@ -8542,7 +8546,7 @@ export class FrigateViewCard extends HTMLElement {
       : events.map((ev) => this._eventCardHTML(ev, false)).join("");
     this._setListHtmlIfChanged(
       list,
-      eventsHtml + (this._exhausted ? '<div class="end">— end —</div>' : ""),
+      appendEndMarker(eventsHtml, this._exhausted),
     );
     this._syncBrowseHeadFromScroll();
     this._syncOlderHint();
@@ -8625,7 +8629,7 @@ export class FrigateViewCard extends HTMLElement {
 
     this._renderListLabel(filteredReviews[0]?.start_time || null);
     if (!filteredReviews.length) {
-      this._setListHtmlIfChanged(list, `<div class="empty">${emptyText}</div>`);
+      this._setListHtmlIfChanged(list, buildEmptyListMessageHtml(emptyText));
       this._syncOlderHint(true);
       return;
     }
@@ -8636,7 +8640,7 @@ export class FrigateViewCard extends HTMLElement {
     if (!allRevs.length) {
       this._setListHtmlIfChanged(
         list,
-        '<div class="empty">No alerts in this window</div>',
+        buildEmptyListMessageHtml("No alerts in this window"),
       );
       this._syncOlderHint(true);
       return;
