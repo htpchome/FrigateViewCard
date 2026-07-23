@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.737";
+const VERSION = "1.0.738";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10516,6 +10516,39 @@ const FrigateViewCard = class extends HTMLElement {
     this._setListHtmlIfChanged(list, this._recordingsListMarkup(recs));
     this._syncOlderHint(false);
   }
+  _reviewListItemHTML(review) {
+    const sev = review.severity === "alert" ? "alert" : "detection";
+    const objs = (review.data?.objects || []).map(cap).join(", ");
+    const title = review.data?.metadata?.title || objs || cap(review.severity);
+    const firstDet = review.data?.detections && review.data.detections[0] || "";
+    const sourceEvent = this._reviewSourceEvent(review);
+    const cameraLabel = String(review?.camera || sourceEvent?.camera || "").replace(/_/g, " ").trim();
+    const reviewed = review.has_been_reviewed;
+    const favEv = firstDet ? this._findEventById(firstDet) : null;
+    const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>` : "";
+    const hasReviewMedia = !!firstDet;
+    const reviewThumbFile = "thumbnail.jpg";
+    const thumb = firstDet ? hasReviewMedia ? `<div class="et ${sev}">
+                <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                  <div class="tph" style="display:none">${ICONS.person}</div>
+                </div>` : `<div class="tph">${ICONS.person}</div>` : "";
+    return `
+      <div class="list-item shadow-small xform" data-review-id="${review.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
+
+        ${thumb}
+
+        <div class="rev-inf">
+          <div class="rev-t">${title}${cameraLabel ? ` <span class="cam-badge">${cameraLabel}</span>` : ""}</div>
+          <div class="rev-m">
+            <span class="time-meta">${ICONS.clock}${this._dateTimeLabel(review.start_time)}</span>
+            <span class="review-meta">
+              ${cap(sev)}${reviewed ? " \xB7 \u2713" : firstDet ? " \xB7 tap" : ""}
+            </span>
+          </div>
+        </div>
+        ${favBtn}
+      </div>`;
+  }
   _renderReviews(list) {
     const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
     const filteredReviews = this._filteredReviews();
@@ -10540,39 +10573,10 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._setListHtmlIfChanged(
       list,
-      this._renderStickyDaySections(allRevs, (r) => {
-        const sev = r.severity === "alert" ? "alert" : "detection";
-        const objs = (r.data?.objects || []).map(cap).join(", ");
-        const title = r.data?.metadata?.title || objs || cap(r.severity);
-        const firstDet = r.data?.detections && r.data.detections[0] || "";
-        const sourceEvent = this._reviewSourceEvent(r);
-        const cameraLabel = String(r?.camera || sourceEvent?.camera || "").replace(/_/g, " ").trim();
-        const reviewed = r.has_been_reviewed;
-        const favEv = firstDet ? this._findEventById(firstDet) : null;
-        const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>` : "";
-        const hasReviewMedia = !!firstDet;
-        const reviewThumbFile = "thumbnail.jpg";
-        const thumb = firstDet ? hasReviewMedia ? `<div class="et ${sev}">
-                <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <div class="tph" style="display:none">${ICONS.person}</div>
-                </div>` : `<div class="tph">${ICONS.person}</div>` : "";
-        return `
-      <div class="list-item shadow-small xform" data-review-id="${r.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
-
-        ${thumb}
-
-        <div class="rev-inf">
-          <div class="rev-t">${title}${cameraLabel ? ` <span class="cam-badge">${cameraLabel}</span>` : ""}</div>
-          <div class="rev-m">
-            <span class="time-meta">${ICONS.clock}${this._dateTimeLabel(r.start_time)}</span>
-            <span class="review-meta">
-              ${cap(sev)}${reviewed ? " \xB7 \u2713" : firstDet ? " \xB7 tap" : ""}
-            </span>
-          </div>
-        </div>
-        ${favBtn}
-      </div>`;
-      })
+      this._renderStickyDaySections(
+        allRevs,
+        (review) => this._reviewListItemHTML(review)
+      )
     );
     this._syncBrowseHeadFromScroll();
     this._syncOlderHint(false);
