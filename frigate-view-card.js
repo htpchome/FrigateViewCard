@@ -1239,8 +1239,12 @@ const buildEditorConfigFromDom = ({
   nextConfig.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
     realtimePollSeconds
   ) ? realtimePollSeconds : 5;
-  nextConfig.mobile_poll_battery_saver = resolveSwitchChecked(root.querySelector("#mobile_poll_battery_saver"));
-  nextConfig.slideshow_rotation_enabled = resolveSwitchChecked(root.querySelector("#slideshow_rotation_enabled"));
+  nextConfig.mobile_poll_battery_saver = resolveSwitchChecked(
+    root.querySelector("#mobile_poll_battery_saver")
+  );
+  nextConfig.slideshow_rotation_enabled = resolveSwitchChecked(
+    root.querySelector("#slideshow_rotation_enabled")
+  );
   nextConfig.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#slideshow_rotation_seconds")?.dataset.value || root.querySelector("#slideshow_rotation_seconds")?.value || "30"
@@ -1248,13 +1252,25 @@ const buildEditorConfigFromDom = ({
   ) ? Number(
     root.querySelector("#slideshow_rotation_seconds")?.dataset.value || root.querySelector("#slideshow_rotation_seconds")?.value || "30"
   ) : 30;
-  nextConfig.grid_mode_enabled = resolveSwitchChecked(root.querySelector("#grid_mode_enabled"));
-  nextConfig.grid_start_in_grid_enabled = resolveSwitchChecked(root.querySelector("#grid_start_in_grid_enabled"));
+  nextConfig.grid_mode_enabled = resolveSwitchChecked(
+    root.querySelector("#grid_mode_enabled")
+  );
+  nextConfig.grid_start_in_grid_enabled = resolveSwitchChecked(
+    root.querySelector("#grid_start_in_grid_enabled")
+  );
   nextConfig.grid_live_view_enabled = resolveSwitchChecked(root.querySelector("#grid_live_view_enabled")) !== false;
-  nextConfig.preview_page_enabled = resolveSwitchChecked(root.querySelector("#preview_page_enabled"));
-  nextConfig.preview_page_live_cameras = resolveSwitchChecked(root.querySelector("#preview_page_live_cameras"));
-  nextConfig.preview_page_show_title_bars = resolveSwitchChecked(root.querySelector("#preview_page_show_title_bars")) !== false;
-  nextConfig.wide_view_page_enabled = resolveSwitchChecked(root.querySelector("#wide_view_page_enabled"));
+  nextConfig.preview_page_enabled = resolveSwitchChecked(
+    root.querySelector("#preview_page_enabled")
+  );
+  nextConfig.preview_page_live_cameras = resolveSwitchChecked(
+    root.querySelector("#preview_page_live_cameras")
+  );
+  nextConfig.preview_page_show_title_bars = resolveSwitchChecked(
+    root.querySelector("#preview_page_show_title_bars")
+  ) !== false;
+  nextConfig.wide_view_page_enabled = resolveSwitchChecked(
+    root.querySelector("#wide_view_page_enabled")
+  );
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value || root.querySelector("#grid_rotation_seconds")?.value || "30"
@@ -1274,7 +1290,9 @@ const buildEditorConfigFromDom = ({
   root.querySelectorAll("[data-theme-color]").forEach((input) => {
     const key = input.dataset.themeColor;
     if (!THEME_CUSTOM_KEYS.has(key)) return;
-    const useDefault = resolveSwitchChecked(root.querySelector(`[data-theme-default="${key}"]`));
+    const useDefault = resolveSwitchChecked(
+      root.querySelector(`[data-theme-default="${key}"]`)
+    );
     const inputValue = normalizeHexColor(input.value);
     if (useDefault) themeCustomDefaults[key] = true;
     if (!useDefault && inputValue) themeDraftCache[key] = inputValue;
@@ -1289,7 +1307,9 @@ const buildEditorConfigFromDom = ({
   const streamHeightUnit = root.querySelector("#stream_height_unit")?.dataset.value || root.querySelector("#stream_height_unit")?.value || "vh";
   nextConfig.stream_height = streamHeight ? Number(streamHeight) : null;
   nextConfig.stream_height_unit = streamHeightUnit;
-  nextConfig.tight_margins = resolveSwitchChecked(root.querySelector("#tight_margins"));
+  nextConfig.tight_margins = resolveSwitchChecked(
+    root.querySelector("#tight_margins")
+  );
   nextConfig.shadows = resolveSwitchChecked(root.querySelector("#shadows")) !== false;
   nextConfig.borders = resolveSwitchChecked(root.querySelector("#borders")) !== false;
   nextConfig.rounded_corners = resolveSwitchChecked(root.querySelector("#rounded_corners")) !== false;
