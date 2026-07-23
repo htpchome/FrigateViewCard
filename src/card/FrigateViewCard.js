@@ -117,6 +117,12 @@ import {
   shouldRunMountWatchdog,
 } from "../live/live-mount-lifecycle.js";
 import {
+  adoptMountedAttemptSlot,
+  cleanupStaleWinnerResult,
+  destroyLoserAttemptResults,
+  isMountTokenCurrent,
+} from "../live/live-mount-result.js";
+import {
   resolveHaDirectStartup,
   resolveHlsStartup,
   resolveMseStartup,
@@ -1846,16 +1852,10 @@ export class FrigateViewCard extends HTMLElement {
 
   _adoptMountedAttempt(targetSlot, result) {
     if (!targetSlot || !result?.slot || !result?.engine) return;
-    for (const child of [...targetSlot.children]) {
-      if (child !== result.slot) {
-        try {
-          child.remove();
-        } catch (_) {}
-      }
-    }
-    result.slot.style.opacity = "1";
-    result.slot.style.pointerEvents = "auto";
-    result.slot.style.overflow = "hidden";
+    adoptMountedAttemptSlot({
+      targetSlot,
+      resultSlot: result.slot,
+    });
     this._engine = result.engine;
     this._engineMountedMuted = this._streamMuted;
     this._setActiveStreamType(result.type);
@@ -1935,25 +1935,16 @@ export class FrigateViewCard extends HTMLElement {
       activeAttempts.map((attempt) => attempt.promise),
     );
 
-    if (mountToken !== this._mountSeq) {
-      if (winner?.engine?.destroy) winner.engine.destroy();
-      try {
-        winner?.slot?.remove?.();
-      } catch (_) {}
+    if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
+      cleanupStaleWinnerResult(winner);
       return false;
     }
 
     const destroyLosers = async () => {
-      for (const attempt of activeAttempts) {
-        const result = await attempt.promise.catch(() => null);
-        if (!result?.ok || result.type === winner?.type) continue;
-        try {
-          result.engine?.destroy?.();
-        } catch (_) {}
-        try {
-          result.slot?.remove?.();
-        } catch (_) {}
-      }
+      await destroyLoserAttemptResults({
+        activeAttempts,
+        winnerType: winner?.type,
+      });
       this._pendingMountDestroyers = [];
     };
 
