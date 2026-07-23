@@ -127,11 +127,7 @@ import {
   applyStreamLoadingState,
   resolveActiveStreamTypeState,
 } from "../live/live-stream-state.js";
-import {
-  FALLBACK_SIGNED_URL_TTL_MS,
-  resolveEntityPictureFallbackUrl,
-  resolveSignedFallbackUrl,
-} from "../live/live-fallback-url.js";
+import { createFallbackSourceResolvers } from "../live/live-fallback-url.js";
 import {
   applyFallbackImageHandlers,
   setFallbackImageSourceIfChanged,
@@ -2185,20 +2181,20 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _streamFallbackUrl(entity) {
-    return await resolveSignedFallbackUrl({
-      entity,
-      canCallWs: !!this._hass?.callWS,
-      signedPathResolver: async (path) => await this._signed(path),
-      cacheMap: this._fallbackImgUrlCache,
-      nowMs: Date.now(),
-      origin: window.location.origin,
-      ttlMs: FALLBACK_SIGNED_URL_TTL_MS,
-    });
+    const resolvers = this._fallbackSourceResolvers();
+    return await resolvers.loadPrimary(entity);
   }
 
   _streamFallbackAltUrl(entity) {
-    return resolveEntityPictureFallbackUrl({
-      entity,
+    const resolvers = this._fallbackSourceResolvers();
+    return resolvers.loadAlt(entity);
+  }
+
+  _fallbackSourceResolvers() {
+    return createFallbackSourceResolvers({
+      canCallWs: !!this._hass?.callWS,
+      signedPathResolver: async (path) => await this._signed(path),
+      cacheMap: this._fallbackImgUrlCache,
       stateMap: this._hass?.states,
       origin: window.location.origin,
     });

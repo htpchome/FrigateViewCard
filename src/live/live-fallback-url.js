@@ -73,3 +73,30 @@ export const resolveEntityPictureFallbackUrl = ({
     origin,
   });
 };
+
+export const createFallbackSourceResolvers = ({
+  canCallWs,
+  signedPathResolver,
+  cacheMap,
+  stateMap,
+  origin,
+  ttlMs = FALLBACK_SIGNED_URL_TTL_MS,
+  nowMsProvider = () => Date.now(),
+}) => ({
+  loadPrimary: async (entity) =>
+    await resolveSignedFallbackUrl({
+      entity,
+      canCallWs,
+      signedPathResolver,
+      cacheMap,
+      nowMs: nowMsProvider(),
+      origin,
+      ttlMs,
+    }),
+  loadAlt: (entity) =>
+    resolveEntityPictureFallbackUrl({
+      entity,
+      stateMap,
+      origin,
+    }),
+});

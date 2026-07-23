@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  createFallbackSourceResolvers,
   getCachedEntityUrl,
   isAbsoluteOrDataUrl,
   resolveEntityPictureFallbackUrl,
@@ -155,4 +156,51 @@ test("resolveEntityPictureFallbackUrl resolves from hass state map", () => {
     }),
     "",
   );
+});
+
+test("createFallbackSourceResolvers wires primary and alt loaders", async () => {
+  const cacheMap = new Map();
+  const stateMap = {
+    "camera.front": {
+      attributes: {
+        entity_picture: "/api/camera_proxy/camera.front?x=2",
+      },
+    },
+  };
+  const resolvers = createFallbackSourceResolvers({
+    canCallWs: true,
+    signedPathResolver: async (path) => `${path}?token=abc`,
+    cacheMap,
+    stateMap,
+    origin: "https://ha.local",
+    ttlMs: 1000,
+    nowMsProvider: () => 10,
+  });
+
+  const primary = await resolvers.loadPrimary("camera.front");
+  const alt = resolvers.loadAlt("camera.front");
+
+  assert.equal(
+    primary,
+    "https://ha.local/api/camera_proxy/camera.front?token=abc",
+  );
+  assert.equal(alt, "https://ha.local/api/camera_proxy/camera.front?x=2");
+  assert.equal(
+    cacheMap.get("camera.front")?.url,
+    "https://ha.local/api/camera_proxy/camera.front?token=abc",
+  );
+  assert.equal(cacheMap.get("camera.front")?.exp, 1010);
+});
+
+test("createFallbackSourceResolvers primary loader returns empty when ws is unavailable", async () => {
+  const resolvers = createFallbackSourceResolvers({
+    canCallWs: false,
+    signedPathResolver: async (path) => `${path}?token=abc`,
+    cacheMap: new Map(),
+    stateMap: {},
+    origin: "https://ha.local",
+  });
+
+  const primary = await resolvers.loadPrimary("camera.front");
+  assert.equal(primary, "");
 });

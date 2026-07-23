@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.791";
+const VERSION = "1.0.792";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2189,6 +2189,30 @@ const resolveEntityPictureFallbackUrl = ({
     origin
   });
 };
+const createFallbackSourceResolvers = ({
+  canCallWs,
+  signedPathResolver,
+  cacheMap,
+  stateMap,
+  origin,
+  ttlMs = FALLBACK_SIGNED_URL_TTL_MS,
+  nowMsProvider = () => Date.now()
+}) => ({
+  loadPrimary: async (entity) => await resolveSignedFallbackUrl({
+    entity,
+    canCallWs,
+    signedPathResolver,
+    cacheMap,
+    nowMs: nowMsProvider(),
+    origin,
+    ttlMs
+  }),
+  loadAlt: (entity) => resolveEntityPictureFallbackUrl({
+    entity,
+    stateMap,
+    origin
+  })
+});
 
 // src/live/live-fallback-image.js
 const resolveFallbackDisplaySource = ({ primarySrc, altSrc }) => primarySrc || altSrc || "";
@@ -5927,19 +5951,18 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _streamFallbackUrl(entity) {
-    return await resolveSignedFallbackUrl({
-      entity,
+    const resolvers = this._fallbackSourceResolvers();
+    return await resolvers.loadPrimary(entity);
+  }
+  _streamFallbackAltUrl(entity) {
+    const resolvers = this._fallbackSourceResolvers();
+    return resolvers.loadAlt(entity);
+  }
+  _fallbackSourceResolvers() {
+    return createFallbackSourceResolvers({
       canCallWs: !!this._hass?.callWS,
       signedPathResolver: async (path) => await this._signed(path),
       cacheMap: this._fallbackImgUrlCache,
-      nowMs: Date.now(),
-      origin: window.location.origin,
-      ttlMs: FALLBACK_SIGNED_URL_TTL_MS
-    });
-  }
-  _streamFallbackAltUrl(entity) {
-    return resolveEntityPictureFallbackUrl({
-      entity,
       stateMap: this._hass?.states,
       origin: window.location.origin
     });
