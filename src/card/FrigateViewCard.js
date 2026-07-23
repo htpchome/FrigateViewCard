@@ -3428,22 +3428,6 @@ export class FrigateViewCard extends HTMLElement {
     this._gridPageController.applyStartInGridMode(_source);
   }
 
-  _rememberHandledGridReview(reviewId) {
-    this._gridAlertController.rememberHandledReview(reviewId);
-  }
-
-  _isGridReviewFresh(review) {
-    return this._gridAlertController.isReviewFresh(review);
-  }
-
-  _gridAlertWatchIntervalMs() {
-    return this._gridAlertController.alertWatchIntervalMs();
-  }
-
-  _scheduleGridAlertWatch(delayMs = null) {
-    this._gridAlertController.scheduleAlertWatch(delayMs);
-  }
-
   _gridLiveViewEnabled() {
     return this._config?.grid_live_view_enabled !== false;
   }
@@ -3454,14 +3438,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _gridCellSeverity(entity) {
     return this._gridAlertController.cellSeverity(entity);
-  }
-
-  _scheduleGridAlertCleanup() {
-    this._gridAlertController.scheduleAlertCleanup();
-  }
-
-  _markGridAlertCamera(entity, severity = "alert") {
-    return this._gridAlertController.markAlertCamera(entity, severity);
   }
 
   _scheduleGridRotation() {
@@ -3575,18 +3551,6 @@ export class FrigateViewCard extends HTMLElement {
     this._setStreamFallbackVisible(false);
   }
 
-  async _probeLatestGridAlert() {
-    await this._gridAlertController.probeLatestAlert();
-  }
-
-  _handleGridAlertCandidate(entity, severity = "alert") {
-    this._gridAlertController.handleAlertCandidate(entity, severity);
-  }
-
-  _handleGridRealtimeMessage(msg) {
-    this._gridAlertController.handleRealtimeMessage(msg);
-  }
-
   _stopGridModeState() {
     this._gridPageController.stopGridModeState();
   }
@@ -3633,7 +3597,7 @@ export class FrigateViewCard extends HTMLElement {
       );
     if (startGridTimers) {
       this._scheduleGridRotation();
-      this._scheduleGridAlertWatch(300);
+      this._gridAlertController.scheduleAlertWatch(300);
     }
     this._syncToolbarButtons();
   }
@@ -4915,7 +4879,7 @@ export class FrigateViewCard extends HTMLElement {
     try {
       this._unsub = this._hass.connection.subscribeMessage(
         (msg) => {
-          this._handleGridRealtimeMessage(msg);
+          this._gridAlertController.handleRealtimeMessage(msg);
           this._previewAlertController.handleRealtimeMessage(msg);
           this._handleSlideshowRealtimeMessage(msg);
           if (!this._isNowWindow()) return;

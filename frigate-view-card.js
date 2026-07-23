@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.710";
+const VERSION = "1.0.711";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5168,18 +5168,6 @@ const FrigateViewCard = class extends HTMLElement {
   _applyStartInGridMode(_source = "") {
     this._gridPageController.applyStartInGridMode(_source);
   }
-  _rememberHandledGridReview(reviewId) {
-    this._gridAlertController.rememberHandledReview(reviewId);
-  }
-  _isGridReviewFresh(review) {
-    return this._gridAlertController.isReviewFresh(review);
-  }
-  _gridAlertWatchIntervalMs() {
-    return this._gridAlertController.alertWatchIntervalMs();
-  }
-  _scheduleGridAlertWatch(delayMs = null) {
-    this._gridAlertController.scheduleAlertWatch(delayMs);
-  }
   _gridLiveViewEnabled() {
     return this._config?.grid_live_view_enabled !== false;
   }
@@ -5188,12 +5176,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _gridCellSeverity(entity) {
     return this._gridAlertController.cellSeverity(entity);
-  }
-  _scheduleGridAlertCleanup() {
-    this._gridAlertController.scheduleAlertCleanup();
-  }
-  _markGridAlertCamera(entity, severity = "alert") {
-    return this._gridAlertController.markAlertCamera(entity, severity);
   }
   _scheduleGridRotation() {
     this._gridPageController.scheduleGridRotation();
@@ -5296,15 +5278,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._setStreamLoading(false);
     this._setStreamFallbackVisible(false);
   }
-  async _probeLatestGridAlert() {
-    await this._gridAlertController.probeLatestAlert();
-  }
-  _handleGridAlertCandidate(entity, severity = "alert") {
-    this._gridAlertController.handleAlertCandidate(entity, severity);
-  }
-  _handleGridRealtimeMessage(msg) {
-    this._gridAlertController.handleRealtimeMessage(msg);
-  }
   _stopGridModeState() {
     this._gridPageController.stopGridModeState();
   }
@@ -5344,7 +5317,7 @@ const FrigateViewCard = class extends HTMLElement {
     );
     if (startGridTimers) {
       this._scheduleGridRotation();
-      this._scheduleGridAlertWatch(300);
+      this._gridAlertController.scheduleAlertWatch(300);
     }
     this._syncToolbarButtons();
   }
@@ -6454,7 +6427,7 @@ const FrigateViewCard = class extends HTMLElement {
     try {
       this._unsub = this._hass.connection.subscribeMessage(
         (msg) => {
-          this._handleGridRealtimeMessage(msg);
+          this._gridAlertController.handleRealtimeMessage(msg);
           this._previewAlertController.handleRealtimeMessage(msg);
           this._handleSlideshowRealtimeMessage(msg);
           if (!this._isNowWindow()) return;
