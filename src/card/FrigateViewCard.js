@@ -127,7 +127,11 @@ import {
   applyStreamFallbackVisibilityForCard,
   applyStreamLoadingStateForCard,
 } from "../live/live-stream-state.js";
-import { createFallbackSourceResolversForCard } from "../live/live-fallback-url.js";
+import {
+  createFallbackSourceResolversForCard,
+  loadFallbackAltForCard,
+  loadFallbackPrimaryForCard,
+} from "../live/live-fallback-url.js";
 import {
   applyFallbackImageHandlers,
   setFallbackImageSourceIfChanged,
@@ -2177,13 +2181,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _streamFallbackUrl(entity) {
-    const resolvers = this._fallbackSourceResolvers();
-    return await resolvers.loadPrimary(entity);
+    return await loadFallbackPrimaryForCard({
+      card: this,
+      entity,
+      origin: window.location.origin,
+    });
   }
 
   _streamFallbackAltUrl(entity) {
-    const resolvers = this._fallbackSourceResolvers();
-    return resolvers.loadAlt(entity);
+    return loadFallbackAltForCard({
+      card: this,
+      entity,
+      origin: window.location.origin,
+    });
   }
 
   _fallbackSourceResolvers() {

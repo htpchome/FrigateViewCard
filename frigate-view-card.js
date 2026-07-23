@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.798";
+const VERSION = "1.0.799";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2271,6 +2271,24 @@ const createFallbackSourceResolversForCard = ({ card, origin }) => {
     stateMap: card._hass?.states,
     origin
   });
+};
+const loadFallbackPrimaryForCard = async ({
+  card,
+  entity,
+  origin
+}) => {
+  const resolvers = createFallbackSourceResolversForCard({
+    card,
+    origin
+  });
+  return await resolvers.loadPrimary(entity);
+};
+const loadFallbackAltForCard = ({ card, entity, origin }) => {
+  const resolvers = createFallbackSourceResolversForCard({
+    card,
+    origin
+  });
+  return resolvers.loadAlt(entity);
 };
 
 // src/live/live-fallback-image.js
@@ -6031,12 +6049,18 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _streamFallbackUrl(entity) {
-    const resolvers = this._fallbackSourceResolvers();
-    return await resolvers.loadPrimary(entity);
+    return await loadFallbackPrimaryForCard({
+      card: this,
+      entity,
+      origin: window.location.origin
+    });
   }
   _streamFallbackAltUrl(entity) {
-    const resolvers = this._fallbackSourceResolvers();
-    return resolvers.loadAlt(entity);
+    return loadFallbackAltForCard({
+      card: this,
+      entity,
+      origin: window.location.origin
+    });
   }
   _fallbackSourceResolvers() {
     return createFallbackSourceResolversForCard({
