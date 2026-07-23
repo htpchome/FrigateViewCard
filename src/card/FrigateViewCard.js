@@ -133,9 +133,13 @@ import {
 } from "../live/live-fallback-url.js";
 import {
   applyFallbackImageHandlers,
-  resolveFallbackDisplaySource,
   setFallbackImageSourceIfChanged,
 } from "../live/live-fallback-image.js";
+import {
+  buildFallbackRefreshOutcome,
+  isFallbackRefreshStale,
+  nextFallbackRequestId,
+} from "../live/live-fallback-refresh.js";
 import {
   resolveHaDirectStartup,
   resolveHlsStartup,
@@ -2207,16 +2211,24 @@ export class FrigateViewCard extends HTMLElement {
     const img = this.shadowRoot?.querySelector("#stream-fallback-img");
     const status = this.shadowRoot?.querySelector("#stream-fallback-status");
     if (!img) return;
-    const reqId = ++this._fallbackReqId;
+    const reqId = nextFallbackRequestId(this._fallbackReqId);
+    this._fallbackReqId = reqId;
     const entity = this._activeCam?.entity;
     const primarySrc = await this._streamFallbackUrl(entity);
-    if (reqId !== this._fallbackReqId) return;
+    if (
+      isFallbackRefreshStale({
+        requestId: reqId,
+        activeRequestId: this._fallbackReqId,
+      })
+    ) {
+      return;
+    }
     const altSrc = this._streamFallbackAltUrl(entity);
-    const src = resolveFallbackDisplaySource({
+    const outcome = buildFallbackRefreshOutcome({
       primarySrc,
       altSrc,
     });
-    if (!src) return;
+    if (!outcome.hasSource) return;
     applyFallbackImageHandlers({
       img,
       statusEl: status,
@@ -2225,7 +2237,7 @@ export class FrigateViewCard extends HTMLElement {
     });
     setFallbackImageSourceIfChanged({
       img,
-      src,
+      src: outcome.src,
     });
   }
 

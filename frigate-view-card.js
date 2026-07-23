@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.775";
+const VERSION = "1.0.776";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2219,6 +2219,20 @@ const applyFallbackImageHandlers = ({
 const setFallbackImageSourceIfChanged = ({ img, src }) => {
   if (!img || !src) return;
   if (img.src !== src) img.src = src;
+};
+
+// src/live/live-fallback-refresh.js
+const nextFallbackRequestId = (currentRequestId) => Number(currentRequestId || 0) + 1;
+const isFallbackRefreshStale = ({ requestId, activeRequestId }) => requestId !== activeRequestId;
+const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
+  const src = resolveFallbackDisplaySource({
+    primarySrc,
+    altSrc
+  });
+  return {
+    src,
+    hasSource: !!src
+  };
 };
 
 // src/live/live-startup-policy.js
@@ -5686,16 +5700,22 @@ const FrigateViewCard = class extends HTMLElement {
     const img = this.shadowRoot?.querySelector("#stream-fallback-img");
     const status = this.shadowRoot?.querySelector("#stream-fallback-status");
     if (!img) return;
-    const reqId = ++this._fallbackReqId;
+    const reqId = nextFallbackRequestId(this._fallbackReqId);
+    this._fallbackReqId = reqId;
     const entity = this._activeCam?.entity;
     const primarySrc = await this._streamFallbackUrl(entity);
-    if (reqId !== this._fallbackReqId) return;
+    if (isFallbackRefreshStale({
+      requestId: reqId,
+      activeRequestId: this._fallbackReqId
+    })) {
+      return;
+    }
     const altSrc = this._streamFallbackAltUrl(entity);
-    const src = resolveFallbackDisplaySource({
+    const outcome = buildFallbackRefreshOutcome({
       primarySrc,
       altSrc
     });
-    if (!src) return;
+    if (!outcome.hasSource) return;
     applyFallbackImageHandlers({
       img,
       statusEl: status,
@@ -5704,7 +5724,7 @@ const FrigateViewCard = class extends HTMLElement {
     });
     setFallbackImageSourceIfChanged({
       img,
-      src
+      src: outcome.src
     });
   }
   _cameraContext(entity) {
