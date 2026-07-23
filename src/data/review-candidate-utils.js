@@ -39,6 +39,19 @@ export function selectNewestReviewCandidate(candidates) {
   return newest;
 }
 
+export function rememberHandledReviewId(
+  handledReviewIds,
+  reviewId,
+  maxSize = 200,
+) {
+  const id = String(reviewId || "").trim();
+  if (!id || !(handledReviewIds instanceof Set)) return;
+  handledReviewIds.add(id);
+  if (handledReviewIds.size <= Math.max(1, Number(maxSize) || 200)) return;
+  const oldest = handledReviewIds.values().next().value;
+  if (oldest) handledReviewIds.delete(oldest);
+}
+
 export async function findNewestReviewCandidateAcrossCameras({
   cameras,
   getEntity,

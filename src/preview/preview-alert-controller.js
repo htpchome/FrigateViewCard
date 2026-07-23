@@ -6,6 +6,7 @@ import {
 import {
   findFirstReviewCandidateForEntity,
   findNewestReviewCandidateAcrossCameras,
+  rememberHandledReviewId,
 } from "../data/review-candidate-utils.js";
 import { parseRealtimeAlertMessage } from "../data/realtime-alert-message-utils.js";
 
@@ -63,12 +64,7 @@ export class PreviewAlertController {
   }
 
   rememberHandledReview(reviewId) {
-    const id = String(reviewId || "").trim();
-    if (!id) return;
-    this._handledReviewIds.add(id);
-    if (this._handledReviewIds.size <= 200) return;
-    const oldest = this._handledReviewIds.values().next().value;
-    if (oldest) this._handledReviewIds.delete(oldest);
+    rememberHandledReviewId(this._handledReviewIds, reviewId);
   }
 
   isReviewFresh(review) {

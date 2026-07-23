@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.732";
+const VERSION = "1.0.733";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1954,6 +1954,14 @@ function selectNewestReviewCandidate(candidates) {
   }
   return newest;
 }
+function rememberHandledReviewId(handledReviewIds, reviewId, maxSize = 200) {
+  const id = String(reviewId || "").trim();
+  if (!id || !(handledReviewIds instanceof Set)) return;
+  handledReviewIds.add(id);
+  if (handledReviewIds.size <= Math.max(1, Number(maxSize) || 200)) return;
+  const oldest = handledReviewIds.values().next().value;
+  if (oldest) handledReviewIds.delete(oldest);
+}
 async function findNewestReviewCandidateAcrossCameras({
   cameras,
   getEntity,
@@ -2048,12 +2056,7 @@ const PreviewAlertController = class {
     if (this._host._isPreviewPageActive()) this._host._renderPreviewPage();
   }
   rememberHandledReview(reviewId) {
-    const id = String(reviewId || "").trim();
-    if (!id) return;
-    this._handledReviewIds.add(id);
-    if (this._handledReviewIds.size <= 200) return;
-    const oldest = this._handledReviewIds.values().next().value;
-    if (oldest) this._handledReviewIds.delete(oldest);
+    rememberHandledReviewId(this._handledReviewIds, reviewId);
   }
   isReviewFresh(review) {
     return isPreviewReviewFresh({
@@ -2345,12 +2348,7 @@ const GridAlertController = class {
     this.clearAlertTracking();
   }
   rememberHandledReview(reviewId) {
-    const id = String(reviewId || "").trim();
-    if (!id) return;
-    this._handledReviewIds.add(id);
-    if (this._handledReviewIds.size <= 200) return;
-    const oldest = this._handledReviewIds.values().next().value;
-    if (oldest) this._handledReviewIds.delete(oldest);
+    rememberHandledReviewId(this._handledReviewIds, reviewId);
   }
   isReviewFresh(review) {
     return isGridReviewFresh({
