@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.712";
+const VERSION = "1.0.714";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2338,6 +2338,225 @@ function slideshowReviewWatchIntervalMs({
   return Math.max(min, Math.min(max, realtimePollMs));
 }
 
+// src/slideshow/slideshow-alert-controller.js
+const SlideshowAlertController = class {
+  constructor(host, constants) {
+    this._host = host;
+    this._constants = constants;
+  }
+  isReviewFresh(review) {
+    return isSlideshowReviewFresh({
+      slideshowStartedAtSec: this._host._slideshowStartedAtSec,
+      reviewStartSec: this._host._reviewStartTimeSec(review),
+      graceSec: this._constants.SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
+    });
+  }
+  rememberHandledReview(reviewId) {
+    rememberHandledSlideshowReview(
+      this._host._slideshowHandledReviewIds,
+      reviewId
+    );
+  }
+  handleReviewsUpdated(entity, reviews, source = "reviews-update") {
+    if (!this._host._slideshowActive || !this._host._isSlideshowRotationAvailable()) {
+      return;
+    }
+    if (!entity || !Array.isArray(reviews) || !reviews.length) return;
+    let nextReview = null;
+    for (const review of reviews) {
+      if (!this.isReviewFresh(review)) continue;
+      const severity = this._host._normalizeReviewSeverity(review);
+      if (!this._host._shouldHandleSlideshowReview(entity, severity)) continue;
+      const reviewId = String(review?.id || "").trim();
+      if (reviewId && this._host._slideshowHandledReviewIds.has(reviewId)) {
+        continue;
+      }
+      nextReview = { entity, severity, reviewId };
+      break;
+    }
+    if (!nextReview) return;
+    if (nextReview.reviewId) this.rememberHandledReview(nextReview.reviewId);
+    if (this._host._slideshowPopupPaused) {
+      this._host._slideshowPendingAlertCam = nextReview.entity;
+      this._host._slideshowPendingAlertType = nextReview.severity;
+      this._host._setSlideshowAlertState(nextReview.severity);
+      return;
+    }
+    const now = Date.now();
+    const activeEntity = this._host._activeCam?.entity || "";
+    this._host._slideshowLastAlertAt = now;
+    this._host._slideshowLastAlertCam = nextReview.entity;
+    this._host._slideshowPausedUntil = now + this._host._slideshowRotationMs();
+    this._host._setSlideshowAlertState(nextReview.severity);
+    if (nextReview.entity === activeEntity) {
+      this._host._scheduleSlideshowRotation(`${source}-active`);
+      return;
+    }
+    const idx = this._host._cameraIndexByEntity(nextReview.entity);
+    if (idx < 0) return;
+    this._host._slideshowPendingAlertCam = "";
+    this._host._slideshowPendingAlertType = "";
+    void this._host._switchCamera(idx, { source: "alert" });
+    this._host._scheduleSlideshowRotation(`${source}-switch`);
+  }
+  async probeLatestReview() {
+    if (!this._host._slideshowActive || !this._host._isSlideshowRotationAvailable() || this._host._slideshowReviewProbeInFlight) {
+      return;
+    }
+    this._host._slideshowReviewProbeInFlight = true;
+    try {
+      const before = Math.floor(Date.now() / 1e3);
+      const after = Math.max(
+        0,
+        Math.floor(
+          before - (this._host._config?.alerts_reviews_days || 3) * this._constants.DAY
+        )
+      );
+      const candidates = [];
+      for (const camera of this._host._config?.cameras || []) {
+        const entity = camera?.entity || "";
+        const cache = this._host._camCache[entity];
+        if (!entity || !cache?.clientId || !cache?.cam) continue;
+        let reviews = [];
+        try {
+          const batch = await this._host._ws({
+            type: "frigate/reviews/get",
+            instance_id: cache.clientId,
+            cameras: [cache.cam],
+            after,
+            before,
+            limit: 5
+          });
+          reviews = Array.isArray(batch) ? batch : [];
+        } catch (_) {
+          reviews = [];
+        }
+        for (const review of reviews) {
+          if (!this.isReviewFresh(review)) continue;
+          const severity = this._host._normalizeReviewSeverity(review);
+          if (!this._host._shouldHandleSlideshowReview(entity, severity)) {
+            continue;
+          }
+          const reviewId = String(review?.id || "").trim();
+          if (reviewId && this._host._slideshowHandledReviewIds.has(reviewId)) {
+            continue;
+          }
+          candidates.push({
+            entity,
+            severity,
+            reviewId,
+            startTime: this._host._reviewStartTimeSec(review)
+          });
+          break;
+        }
+      }
+      if (!candidates.length) return;
+      candidates.sort((a, b) => b.startTime - a.startTime);
+      const next = candidates[0];
+      if (!next?.entity) return;
+      if (next.reviewId) this.rememberHandledReview(next.reviewId);
+      if (this._host._slideshowPopupPaused) {
+        this._host._slideshowPendingAlertCam = next.entity;
+        this._host._slideshowPendingAlertType = next.severity;
+        this._host._setSlideshowAlertState(next.severity);
+        return;
+      }
+      const activeEntity = this._host._activeCam?.entity || "";
+      this._host._slideshowLastAlertAt = Date.now();
+      this._host._slideshowLastAlertCam = next.entity;
+      this._host._slideshowPausedUntil = Date.now() + this._host._slideshowRotationMs();
+      this._host._setSlideshowAlertState(next.severity);
+      if (next.entity === activeEntity) {
+        this._host._scheduleSlideshowRotation("probe-active-review");
+        return;
+      }
+      const idx = this._host._cameraIndexByEntity(next.entity);
+      if (idx < 0) return;
+      this._host._slideshowPendingAlertCam = "";
+      this._host._slideshowPendingAlertType = "";
+      void this._host._switchCamera(idx, { source: "alert" });
+      this._host._scheduleSlideshowRotation("probe-review-switch");
+    } finally {
+      this._host._slideshowReviewProbeInFlight = false;
+    }
+  }
+  scheduleReviewProbe(delayMs = 180) {
+    if (!this._host._slideshowActive || !this._host._isSlideshowRotationAvailable()) {
+      return;
+    }
+    if (this._host._slideshowReviewProbeT) {
+      clearTimeout(this._host._slideshowReviewProbeT);
+    }
+    this._host._slideshowReviewProbeT = setTimeout(
+      () => {
+        this._host._slideshowReviewProbeT = null;
+        void this.probeLatestReview();
+      },
+      Math.max(0, Number(delayMs) || 0)
+    );
+  }
+  reviewWatchIntervalMs() {
+    return slideshowReviewWatchIntervalMs({
+      realtimePollSeconds: this._host._effectiveRealtimePollSeconds(),
+      minMs: this._constants.SLIDESHOW_REVIEW_WATCH_MIN_MS,
+      maxMs: this._constants.SLIDESHOW_REVIEW_WATCH_MAX_MS
+    });
+  }
+  scheduleReviewWatch(delayMs = null) {
+    if (!this._host._slideshowActive || !this._host._isSlideshowRotationAvailable()) {
+      return;
+    }
+    if (this._host._slideshowReviewWatchT) {
+      clearTimeout(this._host._slideshowReviewWatchT);
+    }
+    const wait = delayMs == null ? this.reviewWatchIntervalMs() : Math.max(0, Number(delayMs) || 0);
+    this._host._slideshowReviewWatchT = setTimeout(() => {
+      this._host._slideshowReviewWatchT = null;
+      void this.probeLatestReview().finally(() => {
+        this.scheduleReviewWatch();
+      });
+    }, wait);
+  }
+  handleRealtimeMessage(msg) {
+    if (!this._host._slideshowActive || !this._host._isSlideshowRotationAvailable()) {
+      return;
+    }
+    this.scheduleReviewProbe();
+    const incomingCam = this._host._extractRealtimeMessageCamera(msg);
+    if (!incomingCam) return;
+    const cam = this._host._cameraEntityForIncomingCamera(incomingCam);
+    if (!cam) return;
+    const severity = this._host._extractRealtimeMessageSeverity(msg);
+    if (!this._host._shouldHandleSlideshowReview(cam, severity)) return;
+    if (this._host._slideshowPopupPaused) {
+      this._host._slideshowPendingAlertCam = cam;
+      this._host._slideshowPendingAlertType = severity;
+      this._host._setSlideshowAlertState(severity);
+      return;
+    }
+    const now = Date.now();
+    const activeEntity = this._host._activeCam?.entity || "";
+    this._host._slideshowLastAlertAt = now;
+    this._host._slideshowLastAlertCam = cam;
+    if (cam === activeEntity) {
+      this._host._slideshowPendingAlertCam = "";
+      this._host._slideshowPendingAlertType = "";
+      this._host._slideshowPausedUntil = now + this._host._slideshowRotationMs();
+      this._host._setSlideshowAlertState(severity);
+      this._host._scheduleSlideshowRotation("active-alert");
+      return;
+    }
+    const idx = this._host._cameraIndexByEntity(cam);
+    if (idx < 0) return;
+    this._host._slideshowPausedUntil = now + this._host._slideshowRotationMs();
+    this._host._slideshowPendingAlertCam = "";
+    this._host._slideshowPendingAlertType = "";
+    this._host._setSlideshowAlertState(severity);
+    void this._host._switchCamera(idx, { source: "alert" });
+    this._host._scheduleSlideshowRotation("alert-switch");
+  }
+};
+
 // src/card/FrigateViewCard.js
 const FrigateViewCard = class extends HTMLElement {
   constructor() {
@@ -2424,6 +2643,12 @@ const FrigateViewCard = class extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
     this._gridPageController = new GridPageController(this);
+    this._slideshowAlertController = new SlideshowAlertController(this, {
+      DAY,
+      SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
+      SLIDESHOW_REVIEW_WATCH_MIN_MS,
+      SLIDESHOW_REVIEW_WATCH_MAX_MS
+    });
     this._previewPageActive = false;
     this._previewLastRenderSignature = "";
     this._previewMediaState = null;
@@ -5615,162 +5840,25 @@ const FrigateViewCard = class extends HTMLElement {
     return Number.isFinite(start) ? start : 0;
   }
   _isSlideshowReviewFresh(review) {
-    return isSlideshowReviewFresh({
-      slideshowStartedAtSec: this._slideshowStartedAtSec,
-      reviewStartSec: this._reviewStartTimeSec(review),
-      graceSec: SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
-    });
+    return this._slideshowAlertController.isReviewFresh(review);
   }
   _rememberHandledSlideshowReview(reviewId) {
-    rememberHandledSlideshowReview(this._slideshowHandledReviewIds, reviewId);
+    this._slideshowAlertController.rememberHandledReview(reviewId);
   }
   _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
-    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
-    if (!entity || !Array.isArray(reviews) || !reviews.length) return;
-    let nextReview = null;
-    for (const review of reviews) {
-      if (!this._isSlideshowReviewFresh(review)) continue;
-      const severity = this._normalizeReviewSeverity(review);
-      if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
-      const reviewId = String(review?.id || "").trim();
-      if (reviewId && this._slideshowHandledReviewIds.has(reviewId)) continue;
-      nextReview = {
-        entity,
-        severity,
-        reviewId
-      };
-      break;
-    }
-    if (!nextReview) return;
-    if (nextReview.reviewId) {
-      this._rememberHandledSlideshowReview(nextReview.reviewId);
-    }
-    if (this._slideshowPopupPaused) {
-      this._slideshowPendingAlertCam = nextReview.entity;
-      this._slideshowPendingAlertType = nextReview.severity;
-      this._setSlideshowAlertState(nextReview.severity);
-      return;
-    }
-    const now = Date.now();
-    const activeEntity = this._activeCam?.entity || "";
-    this._slideshowLastAlertAt = now;
-    this._slideshowLastAlertCam = nextReview.entity;
-    this._slideshowPausedUntil = now + this._slideshowRotationMs();
-    this._setSlideshowAlertState(nextReview.severity);
-    if (nextReview.entity === activeEntity) {
-      this._scheduleSlideshowRotation(`${source}-active`);
-      return;
-    }
-    const idx = this._cameraIndexByEntity(nextReview.entity);
-    if (idx < 0) return;
-    this._slideshowPendingAlertCam = "";
-    this._slideshowPendingAlertType = "";
-    void this._switchCamera(idx, { source: "alert" });
-    this._scheduleSlideshowRotation(`${source}-switch`);
+    this._slideshowAlertController.handleReviewsUpdated(entity, reviews, source);
   }
   async _probeLatestSlideshowReview() {
-    if (!this._slideshowActive || !this._isSlideshowRotationAvailable() || this._slideshowReviewProbeInFlight)
-      return;
-    this._slideshowReviewProbeInFlight = true;
-    try {
-      const before = Math.floor(Date.now() / 1e3);
-      const after = Math.max(
-        0,
-        Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
-      );
-      const candidates = [];
-      for (const camera of this._config?.cameras || []) {
-        const entity = camera?.entity || "";
-        const cache = this._camCache[entity];
-        if (!entity || !cache?.clientId || !cache?.cam) continue;
-        let reviews = [];
-        try {
-          const batch = await this._ws({
-            type: "frigate/reviews/get",
-            instance_id: cache.clientId,
-            cameras: [cache.cam],
-            after,
-            before,
-            limit: 5
-          });
-          reviews = Array.isArray(batch) ? batch : [];
-        } catch (_) {
-          reviews = [];
-        }
-        for (const review of reviews) {
-          if (!this._isSlideshowReviewFresh(review)) continue;
-          const severity = this._normalizeReviewSeverity(review);
-          if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
-          const reviewId = String(review?.id || "").trim();
-          if (reviewId && this._slideshowHandledReviewIds.has(reviewId))
-            continue;
-          candidates.push({
-            entity,
-            severity,
-            reviewId,
-            startTime: this._reviewStartTimeSec(review)
-          });
-          break;
-        }
-      }
-      if (!candidates.length) return;
-      candidates.sort((a, b) => b.startTime - a.startTime);
-      const next = candidates[0];
-      if (!next?.entity) return;
-      if (next.reviewId) this._rememberHandledSlideshowReview(next.reviewId);
-      if (this._slideshowPopupPaused) {
-        this._slideshowPendingAlertCam = next.entity;
-        this._slideshowPendingAlertType = next.severity;
-        this._setSlideshowAlertState(next.severity);
-        return;
-      }
-      const activeEntity = this._activeCam?.entity || "";
-      this._slideshowLastAlertAt = Date.now();
-      this._slideshowLastAlertCam = next.entity;
-      this._slideshowPausedUntil = Date.now() + this._slideshowRotationMs();
-      this._setSlideshowAlertState(next.severity);
-      if (next.entity === activeEntity) {
-        this._scheduleSlideshowRotation("probe-active-review");
-        return;
-      }
-      const idx = this._cameraIndexByEntity(next.entity);
-      if (idx < 0) return;
-      this._slideshowPendingAlertCam = "";
-      this._slideshowPendingAlertType = "";
-      void this._switchCamera(idx, { source: "alert" });
-      this._scheduleSlideshowRotation("probe-review-switch");
-    } finally {
-      this._slideshowReviewProbeInFlight = false;
-    }
+    await this._slideshowAlertController.probeLatestReview();
   }
   _scheduleSlideshowReviewProbe(delayMs = 180) {
-    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
-    if (this._slideshowReviewProbeT) clearTimeout(this._slideshowReviewProbeT);
-    this._slideshowReviewProbeT = setTimeout(
-      () => {
-        this._slideshowReviewProbeT = null;
-        void this._probeLatestSlideshowReview();
-      },
-      Math.max(0, Number(delayMs) || 0)
-    );
+    this._slideshowAlertController.scheduleReviewProbe(delayMs);
   }
   _slideshowReviewWatchIntervalMs() {
-    return slideshowReviewWatchIntervalMs({
-      realtimePollSeconds: this._effectiveRealtimePollSeconds(),
-      minMs: SLIDESHOW_REVIEW_WATCH_MIN_MS,
-      maxMs: SLIDESHOW_REVIEW_WATCH_MAX_MS
-    });
+    return this._slideshowAlertController.reviewWatchIntervalMs();
   }
   _scheduleSlideshowReviewWatch(delayMs = null) {
-    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
-    if (this._slideshowReviewWatchT) clearTimeout(this._slideshowReviewWatchT);
-    const wait = delayMs == null ? this._slideshowReviewWatchIntervalMs() : Math.max(0, Number(delayMs) || 0);
-    this._slideshowReviewWatchT = setTimeout(() => {
-      this._slideshowReviewWatchT = null;
-      void this._probeLatestSlideshowReview().finally(() => {
-        this._scheduleSlideshowReviewWatch();
-      });
-    }, wait);
+    this._slideshowAlertController.scheduleReviewWatch(delayMs);
   }
   _cameraIndexByEntity(entity) {
     if (!entity) return -1;
@@ -5811,40 +5899,7 @@ const FrigateViewCard = class extends HTMLElement {
     ).trim().toLowerCase();
   }
   _handleSlideshowRealtimeMessage(msg) {
-    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
-    this._scheduleSlideshowReviewProbe();
-    const incomingCam = this._extractRealtimeMessageCamera(msg);
-    if (!incomingCam) return;
-    const cam = this._cameraEntityForIncomingCamera(incomingCam);
-    if (!cam) return;
-    const severity = this._extractRealtimeMessageSeverity(msg);
-    if (!this._shouldHandleSlideshowReview(cam, severity)) return;
-    if (this._slideshowPopupPaused) {
-      this._slideshowPendingAlertCam = cam;
-      this._slideshowPendingAlertType = severity;
-      this._setSlideshowAlertState(severity);
-      return;
-    }
-    const now = Date.now();
-    const activeEntity = this._activeCam?.entity || "";
-    this._slideshowLastAlertAt = now;
-    this._slideshowLastAlertCam = cam;
-    if (cam === activeEntity) {
-      this._slideshowPendingAlertCam = "";
-      this._slideshowPendingAlertType = "";
-      this._slideshowPausedUntil = now + this._slideshowRotationMs();
-      this._setSlideshowAlertState(severity);
-      this._scheduleSlideshowRotation("active-alert");
-      return;
-    }
-    const idx = this._cameraIndexByEntity(cam);
-    if (idx < 0) return;
-    this._slideshowPausedUntil = now + this._slideshowRotationMs();
-    this._slideshowPendingAlertCam = "";
-    this._slideshowPendingAlertType = "";
-    this._setSlideshowAlertState(severity);
-    void this._switchCamera(idx, { source: "alert" });
-    this._scheduleSlideshowRotation("alert-switch");
+    this._slideshowAlertController.handleRealtimeMessage(msg);
   }
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
