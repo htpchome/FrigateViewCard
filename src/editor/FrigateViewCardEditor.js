@@ -1208,7 +1208,10 @@ export class FrigateViewCardEditor extends HTMLElement {
 
             .cam-modal.hidden{display:none;}
             .cam-modal{position:fixed;inset:0;background:rgba(0,0,0,.30);display:flex;align-items:center;justify-content:center;z-index:10;}
-            .cam-modal-card{width:min(640px,calc(100vw - 24px));background:var(--editor-card-bg);border:var(--editor-border-width) solid var(--editor-border);border-radius:16px;padding:16px;box-shadow:var(--editor-shadow);}
+            .cam-modal-card{width:min(640px,calc(100vw - 24px));background:#fff;background:var(--editor-card-bg, #fff);color:var(--editor-text);border:var(--editor-border-width) solid var(--editor-border);border-radius:16px;padding:16px;box-shadow:var(--editor-shadow);}
+            .cam-modal-card ha-input,
+            .cam-modal-card ha-selector,
+            .cam-modal-card ha-switch{--ha-card-background:var(--editor-card-bg, #fff);}
             .cam-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
             .cam-modal-title{font-size:30px;line-height:1;color:var(--editor-text);cursor:pointer;border:none;background:transparent;}
             .cam-modal-label{font-size:12px;font-weight:600;color:var(--editor-text);margin-bottom:6px;display:block;}

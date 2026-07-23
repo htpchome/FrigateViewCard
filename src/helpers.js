@@ -305,6 +305,16 @@ export const bindSelectorSyncEvents = (element, syncValue) => {
   element.addEventListener("change", syncValue);
 };
 
+export const resolveSwitchChecked = (element) => {
+  if (!element) return false;
+  if (element.checked === true) return true;
+  if (element.getAttribute?.("checked") != null) return true;
+  if (element.getAttribute?.("aria-checked") === "true") return true;
+  const shadowInput = element.shadowRoot?.querySelector?.("input");
+  if (shadowInput?.checked === true) return true;
+  return false;
+};
+
 export const setupSelectSelector = ({
   element,
   hass,
@@ -485,11 +495,6 @@ export const buildEditorConfigFromDom = ({
   themeDraftCache,
 }) => {
   const readTrimmed = (id) => root.querySelector(`#${id}`)?.value?.trim() || "";
-  const isSwitchChecked = (element) => {
-    if (!element) return false;
-    if (element.checked === true) return true;
-    return element.getAttribute?.("checked") != null;
-  };
   const nextConfig = { ...baseConfig, cameras };
   delete nextConfig.camera_entity;
 
@@ -524,9 +529,9 @@ export const buildEditorConfigFromDom = ({
     ? realtimePollSeconds
     : 5;
   nextConfig.mobile_poll_battery_saver =
-    root.querySelector("#mobile_poll_battery_saver")?.checked === true;
+    resolveSwitchChecked(root.querySelector("#mobile_poll_battery_saver"));
   nextConfig.slideshow_rotation_enabled =
-    root.querySelector("#slideshow_rotation_enabled")?.checked === true;
+    resolveSwitchChecked(root.querySelector("#slideshow_rotation_enabled"));
   nextConfig.slideshow_rotation_seconds =
     SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
       Number(
@@ -542,19 +547,21 @@ export const buildEditorConfigFromDom = ({
         )
       : 30;
   nextConfig.grid_mode_enabled =
-    root.querySelector("#grid_mode_enabled")?.checked === true;
+    resolveSwitchChecked(root.querySelector("#grid_mode_enabled"));
   nextConfig.grid_start_in_grid_enabled =
-    root.querySelector("#grid_start_in_grid_enabled")?.checked === true;
+    resolveSwitchChecked(root.querySelector("#grid_start_in_grid_enabled"));
   nextConfig.grid_live_view_enabled =
-    root.querySelector("#grid_live_view_enabled")?.checked !== false;
+    resolveSwitchChecked(root.querySelector("#grid_live_view_enabled")) !==
+    false;
   nextConfig.preview_page_enabled =
-    root.querySelector("#preview_page_enabled")?.checked === true;
+    resolveSwitchChecked(root.querySelector("#preview_page_enabled"));
   nextConfig.preview_page_live_cameras =
-    root.querySelector("#preview_page_live_cameras")?.checked === true;
+    resolveSwitchChecked(root.querySelector("#preview_page_live_cameras"));
   nextConfig.preview_page_show_title_bars =
-    root.querySelector("#preview_page_show_title_bars")?.checked !== false;
+    resolveSwitchChecked(root.querySelector("#preview_page_show_title_bars")) !==
+    false;
   nextConfig.wide_view_page_enabled =
-    root.querySelector("#wide_view_page_enabled")?.checked === true;
+    resolveSwitchChecked(root.querySelector("#wide_view_page_enabled"));
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value ||
@@ -588,7 +595,7 @@ export const buildEditorConfigFromDom = ({
     const key = input.dataset.themeColor;
     if (!THEME_CUSTOM_KEYS.has(key)) return;
     const useDefault =
-      root.querySelector(`[data-theme-default="${key}"]`)?.checked === true;
+      resolveSwitchChecked(root.querySelector(`[data-theme-default="${key}"]`));
     const inputValue = normalizeHexColor(input.value);
     if (useDefault) themeCustomDefaults[key] = true;
     if (!useDefault && inputValue) themeDraftCache[key] = inputValue;
@@ -599,7 +606,7 @@ export const buildEditorConfigFromDom = ({
   nextConfig.theme_custom_defaults = themeCustomDefaults;
 
   const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")]
-    .filter((element) => !isSwitchChecked(element))
+    .filter((element) => !resolveSwitchChecked(element))
     .map((element) => element.dataset.activeTab)
     .filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
   nextConfig.hidden_tabs = hiddenTabs.length ? hiddenTabs : [];
@@ -613,13 +620,13 @@ export const buildEditorConfigFromDom = ({
   nextConfig.stream_height_unit = streamHeightUnit;
 
   nextConfig.tight_margins =
-    root.querySelector("#tight_margins")?.checked === true;
-  nextConfig.shadows = root.querySelector("#shadows")?.checked !== false;
-  nextConfig.borders = root.querySelector("#borders")?.checked !== false;
+    resolveSwitchChecked(root.querySelector("#tight_margins"));
+  nextConfig.shadows = resolveSwitchChecked(root.querySelector("#shadows")) !== false;
+  nextConfig.borders = resolveSwitchChecked(root.querySelector("#borders")) !== false;
   nextConfig.rounded_corners =
-    root.querySelector("#rounded_corners")?.checked !== false;
+    resolveSwitchChecked(root.querySelector("#rounded_corners")) !== false;
   nextConfig.outer_shadows =
-    root.querySelector("#outer_shadows")?.checked !== false;
+    resolveSwitchChecked(root.querySelector("#outer_shadows")) !== false;
   nextConfig.landing_page = normalizePageRoute(
     root.querySelector("#landing_page")?.dataset.value ||
       root.querySelector("#landing_page")?.value ||

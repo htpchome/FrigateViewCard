@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.759";
+const VERSION = "1.0.760";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1038,6 +1038,15 @@ const bindSelectorSyncEvents = (element, syncValue) => {
   element.addEventListener("selected-changed", syncValue);
   element.addEventListener("change", syncValue);
 };
+const resolveSwitchChecked = (element) => {
+  if (!element) return false;
+  if (element.checked === true) return true;
+  if (element.getAttribute?.("checked") != null) return true;
+  if (element.getAttribute?.("aria-checked") === "true") return true;
+  const shadowInput = element.shadowRoot?.querySelector?.("input");
+  if (shadowInput?.checked === true) return true;
+  return false;
+};
 const setupSelectSelector = ({
   element,
   hass,
@@ -1207,11 +1216,6 @@ const buildEditorConfigFromDom = ({
   themeDraftCache
 }) => {
   const readTrimmed = (id) => root.querySelector(`#${id}`)?.value?.trim() || "";
-  const isSwitchChecked = (element) => {
-    if (!element) return false;
-    if (element.checked === true) return true;
-    return element.getAttribute?.("checked") != null;
-  };
   const nextConfig = { ...baseConfig, cameras };
   delete nextConfig.camera_entity;
   const title = readTrimmed("title");
@@ -1235,8 +1239,8 @@ const buildEditorConfigFromDom = ({
   nextConfig.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
     realtimePollSeconds
   ) ? realtimePollSeconds : 5;
-  nextConfig.mobile_poll_battery_saver = root.querySelector("#mobile_poll_battery_saver")?.checked === true;
-  nextConfig.slideshow_rotation_enabled = root.querySelector("#slideshow_rotation_enabled")?.checked === true;
+  nextConfig.mobile_poll_battery_saver = resolveSwitchChecked(root.querySelector("#mobile_poll_battery_saver"));
+  nextConfig.slideshow_rotation_enabled = resolveSwitchChecked(root.querySelector("#slideshow_rotation_enabled"));
   nextConfig.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#slideshow_rotation_seconds")?.dataset.value || root.querySelector("#slideshow_rotation_seconds")?.value || "30"
@@ -1244,13 +1248,13 @@ const buildEditorConfigFromDom = ({
   ) ? Number(
     root.querySelector("#slideshow_rotation_seconds")?.dataset.value || root.querySelector("#slideshow_rotation_seconds")?.value || "30"
   ) : 30;
-  nextConfig.grid_mode_enabled = root.querySelector("#grid_mode_enabled")?.checked === true;
-  nextConfig.grid_start_in_grid_enabled = root.querySelector("#grid_start_in_grid_enabled")?.checked === true;
-  nextConfig.grid_live_view_enabled = root.querySelector("#grid_live_view_enabled")?.checked !== false;
-  nextConfig.preview_page_enabled = root.querySelector("#preview_page_enabled")?.checked === true;
-  nextConfig.preview_page_live_cameras = root.querySelector("#preview_page_live_cameras")?.checked === true;
-  nextConfig.preview_page_show_title_bars = root.querySelector("#preview_page_show_title_bars")?.checked !== false;
-  nextConfig.wide_view_page_enabled = root.querySelector("#wide_view_page_enabled")?.checked === true;
+  nextConfig.grid_mode_enabled = resolveSwitchChecked(root.querySelector("#grid_mode_enabled"));
+  nextConfig.grid_start_in_grid_enabled = resolveSwitchChecked(root.querySelector("#grid_start_in_grid_enabled"));
+  nextConfig.grid_live_view_enabled = resolveSwitchChecked(root.querySelector("#grid_live_view_enabled")) !== false;
+  nextConfig.preview_page_enabled = resolveSwitchChecked(root.querySelector("#preview_page_enabled"));
+  nextConfig.preview_page_live_cameras = resolveSwitchChecked(root.querySelector("#preview_page_live_cameras"));
+  nextConfig.preview_page_show_title_bars = resolveSwitchChecked(root.querySelector("#preview_page_show_title_bars")) !== false;
+  nextConfig.wide_view_page_enabled = resolveSwitchChecked(root.querySelector("#wide_view_page_enabled"));
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value || root.querySelector("#grid_rotation_seconds")?.value || "30"
@@ -1270,7 +1274,7 @@ const buildEditorConfigFromDom = ({
   root.querySelectorAll("[data-theme-color]").forEach((input) => {
     const key = input.dataset.themeColor;
     if (!THEME_CUSTOM_KEYS.has(key)) return;
-    const useDefault = root.querySelector(`[data-theme-default="${key}"]`)?.checked === true;
+    const useDefault = resolveSwitchChecked(root.querySelector(`[data-theme-default="${key}"]`));
     const inputValue = normalizeHexColor(input.value);
     if (useDefault) themeCustomDefaults[key] = true;
     if (!useDefault && inputValue) themeDraftCache[key] = inputValue;
@@ -1279,17 +1283,17 @@ const buildEditorConfigFromDom = ({
   });
   nextConfig.theme_custom = themeCustom;
   nextConfig.theme_custom_defaults = themeCustomDefaults;
-  const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")].filter((element) => !isSwitchChecked(element)).map((element) => element.dataset.activeTab).filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
+  const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")].filter((element) => !resolveSwitchChecked(element)).map((element) => element.dataset.activeTab).filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
   nextConfig.hidden_tabs = hiddenTabs.length ? hiddenTabs : [];
   const streamHeight = root.querySelector("#stream_height")?.value;
   const streamHeightUnit = root.querySelector("#stream_height_unit")?.dataset.value || root.querySelector("#stream_height_unit")?.value || "vh";
   nextConfig.stream_height = streamHeight ? Number(streamHeight) : null;
   nextConfig.stream_height_unit = streamHeightUnit;
-  nextConfig.tight_margins = root.querySelector("#tight_margins")?.checked === true;
-  nextConfig.shadows = root.querySelector("#shadows")?.checked !== false;
-  nextConfig.borders = root.querySelector("#borders")?.checked !== false;
-  nextConfig.rounded_corners = root.querySelector("#rounded_corners")?.checked !== false;
-  nextConfig.outer_shadows = root.querySelector("#outer_shadows")?.checked !== false;
+  nextConfig.tight_margins = resolveSwitchChecked(root.querySelector("#tight_margins"));
+  nextConfig.shadows = resolveSwitchChecked(root.querySelector("#shadows")) !== false;
+  nextConfig.borders = resolveSwitchChecked(root.querySelector("#borders")) !== false;
+  nextConfig.rounded_corners = resolveSwitchChecked(root.querySelector("#rounded_corners")) !== false;
+  nextConfig.outer_shadows = resolveSwitchChecked(root.querySelector("#outer_shadows")) !== false;
   nextConfig.landing_page = normalizePageRoute(
     root.querySelector("#landing_page")?.dataset.value || root.querySelector("#landing_page")?.value || PAGE_IDS.singleView
   );
@@ -11839,7 +11843,10 @@ const FrigateViewCardEditor = class extends HTMLElement {
 
             .cam-modal.hidden{display:none;}
             .cam-modal{position:fixed;inset:0;background:rgba(0,0,0,.30);display:flex;align-items:center;justify-content:center;z-index:10;}
-            .cam-modal-card{width:min(640px,calc(100vw - 24px));background:var(--editor-card-bg);border:var(--editor-border-width) solid var(--editor-border);border-radius:16px;padding:16px;box-shadow:var(--editor-shadow);}
+            .cam-modal-card{width:min(640px,calc(100vw - 24px));background:#fff;background:var(--editor-card-bg, #fff);color:var(--editor-text);border:var(--editor-border-width) solid var(--editor-border);border-radius:16px;padding:16px;box-shadow:var(--editor-shadow);}
+            .cam-modal-card ha-input,
+            .cam-modal-card ha-selector,
+            .cam-modal-card ha-switch{--ha-card-background:var(--editor-card-bg, #fff);}
             .cam-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
             .cam-modal-title{font-size:30px;line-height:1;color:var(--editor-text);cursor:pointer;border:none;background:transparent;}
             .cam-modal-label{font-size:12px;font-weight:600;color:var(--editor-text);margin-bottom:6px;display:block;}
