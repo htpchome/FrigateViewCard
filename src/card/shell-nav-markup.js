@@ -179,3 +179,39 @@ export function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
             <div class="more" id="older-hint" hidden>scroll for older…</div>
           </div>`;
 }
+
+export function buildPopupShellMarkup({ icons, version }) {
+  return `<div id="myPopup" class="popup-content">
+            <div class="popup-close-row">
+              <button class="close-btn" aria-label="Close">&times;</button> 
+            </div>
+            <div class="popup-header"></div>          
+            <div class="popup-body">
+              <div class="viewer" id="viewer" style="display:none"></div>
+              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
+              </div>
+              <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
+                <div class="recording-scrub" id="recording-scrub" hidden>
+                  <div class="recording-scrub-track" id="recording-scrub-track">
+                    <div class="recording-scrub-ticks" id="recording-scrub-ticks"></div>
+                    <div class="recording-scrub-markers" id="recording-scrub-markers"></div>
+                    <div class="recording-scrub-cursor" id="recording-scrub-cursor"></div>
+                  </div>
+                  <div class="recording-scrub-labels">
+                    <span id="recording-scrub-start">0:00</span>
+                    <span class="recording-scrub-now" id="recording-scrub-now">0:00 / 0:00</span>
+                    <span id="recording-scrub-end">0:00</span>
+                  </div>
+                </div>
+                <div class="popup-info" id="popup-info" hidden></div>
+                <div class="popup-carousel-wrap" id="popup-carousel-wrap" hidden>
+                  <button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" aria-label="Previous items">${icons.left}
+                  </button>
+                  <div class="popup-carousel" id="popup-carousel"></div>
+                  <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" aria-label="Next items">${icons.right}
+                  </button>
+                </div>
+                <h1 class="popup-shell-ver" id="popup-shell-ver">v${version}</h1>
+            </div>
+          </div>`;
+}
