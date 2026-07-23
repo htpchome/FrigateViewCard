@@ -5641,6 +5641,7 @@ export class FrigateViewCard extends HTMLElement {
       this._setStreamLoading(false);
       this._setLiveNativeControls(true);
       this._syncFullscreenButtonsVisibility();
+      this._showLiveControlsTemporarily();
       this._showPopupControlsTemporarily();
       return;
     }
@@ -5656,6 +5657,7 @@ export class FrigateViewCard extends HTMLElement {
       this._rotateOverlayMode = "popup";
       this._rotateOverlayActive = true;
       if (fromLive) this._setLiveNativeControls(false);
+      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
       this._syncFullscreenButtonsVisibility();
       this._showPopupControlsTemporarily();
       return;
@@ -5668,6 +5670,7 @@ export class FrigateViewCard extends HTMLElement {
         "mobile-rotate-popup",
         "mobile-rotate-popup-exit",
       );
+      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
       this._rotateOverlayMode = "none";
       return;
     }
@@ -6918,9 +6921,10 @@ export class FrigateViewCard extends HTMLElement {
       document.fullscreenElement || document.webkitFullscreenElement
     );
     const inGridMode = this._viewMode === "grid";
+    const hideLiveForPopupRotate = this._rotateOverlayMode === "popup";
     if (liveBtn)
       liveBtn.hidden =
-        !!popupOpen || isFullscreen || this._rotateOverlayActive || inGridMode;
+        !!popupOpen || isFullscreen || inGridMode || hideLiveForPopupRotate;
     const suppressPopupBtn = this._usePopupCustomControls(this._popupMediaType);
     if (popupBtn)
       popupBtn.hidden =
@@ -7076,6 +7080,24 @@ export class FrigateViewCard extends HTMLElement {
       const el = this._$("#popup-media-controls");
       if (el && !el.hidden) el.classList.add("is-hidden");
     }, 2200);
+  }
+
+  _showLiveControlsTemporarily(ms = 2200) {
+    const wrap = this._$("#eng-wrap");
+    if (!wrap) return;
+    wrap.classList.add("live-controls-visible");
+    if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
+    if (this._rotateOverlayMode !== "live") return;
+    this._liveControlsHideTimer = setTimeout(
+      () => {
+        const nextWrap = this._$("#eng-wrap");
+        if (nextWrap && this._rotateOverlayMode === "live") {
+          nextWrap.classList.remove("live-controls-visible");
+        }
+        this._liveControlsHideTimer = null;
+      },
+      Math.max(500, Number(ms) || 2200),
+    );
   }
   _updatePopupMediaButtons(video) {
     const playBtn = this._$("#popup-media-play");
