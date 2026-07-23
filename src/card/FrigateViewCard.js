@@ -105,7 +105,6 @@ import {
 } from "../grid/grid-markup.js";
 import { GridAlertController } from "../grid/grid-alert-controller.js";
 import { GridPageController } from "../grid/grid-page-controller.js";
-import {
 import { SlideshowAlertController } from "../slideshow/slideshow-alert-controller.js";
 export class FrigateViewCard extends HTMLElement {
   constructor() {
@@ -3943,7 +3942,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
-    this._slideshowAlertController.handleReviewsUpdated(entity, reviews, source);
+    this._slideshowAlertController.handleReviewsUpdated(
+      entity,
+      reviews,
+      source,
+    );
   }
 
   async _probeLatestSlideshowReview() {

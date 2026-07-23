@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.714";
+const VERSION = "1.0.715";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5846,7 +5846,11 @@ const FrigateViewCard = class extends HTMLElement {
     this._slideshowAlertController.rememberHandledReview(reviewId);
   }
   _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
-    this._slideshowAlertController.handleReviewsUpdated(entity, reviews, source);
+    this._slideshowAlertController.handleReviewsUpdated(
+      entity,
+      reviews,
+      source
+    );
   }
   async _probeLatestSlideshowReview() {
     await this._slideshowAlertController.probeLatestReview();
