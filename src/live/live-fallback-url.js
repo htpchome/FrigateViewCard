@@ -1,6 +1,8 @@
 export const isAbsoluteOrDataUrl = (url) =>
   /^https?:\/\//i.test(url) || String(url || "").startsWith("data:");
 
+export const FALLBACK_SIGNED_URL_TTL_MS = 55 * 60 * 1000;
+
 export const toAbsoluteLocalUrl = ({ url, origin }) => {
   if (!url) return "";
   return isAbsoluteOrDataUrl(url) ? url : `${origin}${url}`;
@@ -27,7 +29,7 @@ export const resolveSignedFallbackUrl = async ({
   cacheMap,
   nowMs,
   origin,
-  ttlMs = 55 * 60 * 1000,
+  ttlMs = FALLBACK_SIGNED_URL_TTL_MS,
 }) => {
   if (!entity) return "";
   if (!canCallWs) return "";

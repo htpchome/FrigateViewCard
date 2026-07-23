@@ -128,6 +128,7 @@ import {
   resolveActiveStreamTypeState,
 } from "../live/live-stream-state.js";
 import {
+  FALLBACK_SIGNED_URL_TTL_MS,
   resolveEntityPictureFallbackUrl,
   resolveSignedFallbackUrl,
 } from "../live/live-fallback-url.js";
@@ -2195,7 +2196,7 @@ export class FrigateViewCard extends HTMLElement {
       cacheMap: this._fallbackImgUrlCache,
       nowMs: Date.now(),
       origin: window.location.origin,
-      ttlMs: 55 * 60 * 1000,
+      ttlMs: FALLBACK_SIGNED_URL_TTL_MS,
     });
   }
 

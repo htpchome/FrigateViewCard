@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.776";
+const VERSION = "1.0.777";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2073,6 +2073,24 @@ const destroyLoserAttemptResults = async ({
   }
 };
 
+// src/live/live-fallback-status.js
+const setFallbackStatusVisible = ({ statusEl, visible }) => {
+  if (!statusEl) return;
+  statusEl.hidden = !visible;
+};
+const hideFallbackStatus = (statusEl) => {
+  setFallbackStatusVisible({
+    statusEl,
+    visible: false
+  });
+};
+const showFallbackStatus = (statusEl) => {
+  setFallbackStatusVisible({
+    statusEl,
+    visible: true
+  });
+};
+
 // src/live/live-stream-state.js
 const isLiveTransportType = (type) => {
   const active = String(type || "").trim().toLowerCase();
@@ -2102,12 +2120,13 @@ const applyStreamFallbackState = ({
   const status = shadowRoot?.querySelector?.("#stream-fallback-status");
   if (!placeholder) return;
   placeholder.hidden = !visible;
-  if (!visible && status) status.hidden = true;
+  if (!visible) hideFallbackStatus(status);
   if (visible && refreshImage) onRefresh?.();
 };
 
 // src/live/live-fallback-url.js
 const isAbsoluteOrDataUrl = (url) => /^https?:\/\//i.test(url) || String(url || "").startsWith("data:");
+const FALLBACK_SIGNED_URL_TTL_MS = 55 * 60 * 1e3;
 const toAbsoluteLocalUrl = ({ url, origin }) => {
   if (!url) return "";
   return isAbsoluteOrDataUrl(url) ? url : `${origin}${url}`;
@@ -2131,7 +2150,7 @@ const resolveSignedFallbackUrl = async ({
   cacheMap,
   nowMs,
   origin,
-  ttlMs = 55 * 60 * 1e3
+  ttlMs = FALLBACK_SIGNED_URL_TTL_MS
 }) => {
   if (!entity) return "";
   if (!canCallWs) return "";
@@ -2196,16 +2215,16 @@ const applyFallbackImageHandlers = ({
   entity
 }) => {
   if (!img) return;
-  if (statusEl) statusEl.hidden = true;
+  hideFallbackStatus(statusEl);
   img.onerror = () => {
     if (altSrc && img.src !== altSrc) {
       img.src = altSrc;
       return;
     }
-    if (statusEl) statusEl.hidden = false;
+    showFallbackStatus(statusEl);
   };
   img.onload = () => {
-    if (statusEl) statusEl.hidden = true;
+    hideFallbackStatus(statusEl);
     const host = img.parentElement;
     img.style.objectFit = resolveFallbackObjectFit({
       naturalWidth: img.naturalWidth,
@@ -5686,7 +5705,7 @@ const FrigateViewCard = class extends HTMLElement {
       cacheMap: this._fallbackImgUrlCache,
       nowMs: Date.now(),
       origin: window.location.origin,
-      ttlMs: 55 * 60 * 1e3
+      ttlMs: FALLBACK_SIGNED_URL_TTL_MS
     });
   }
   _streamFallbackAltUrl(entity) {

@@ -1,3 +1,8 @@
+import {
+  hideFallbackStatus,
+  showFallbackStatus,
+} from "./live-fallback-status.js";
+
 export const resolveFallbackDisplaySource = ({ primarySrc, altSrc }) =>
   primarySrc || altSrc || "";
 
@@ -25,18 +30,18 @@ export const applyFallbackImageHandlers = ({
   entity,
 }) => {
   if (!img) return;
-  if (statusEl) statusEl.hidden = true;
+  hideFallbackStatus(statusEl);
 
   img.onerror = () => {
     if (altSrc && img.src !== altSrc) {
       img.src = altSrc;
       return;
     }
-    if (statusEl) statusEl.hidden = false;
+    showFallbackStatus(statusEl);
   };
 
   img.onload = () => {
-    if (statusEl) statusEl.hidden = true;
+    hideFallbackStatus(statusEl);
     const host = img.parentElement;
     img.style.objectFit = resolveFallbackObjectFit({
       naturalWidth: img.naturalWidth,

@@ -1,3 +1,5 @@
+import { hideFallbackStatus } from "./live-fallback-status.js";
+
 export const isLiveTransportType = (type) => {
   const active = String(type || "")
     .trim()
@@ -33,6 +35,6 @@ export const applyStreamFallbackState = ({
   const status = shadowRoot?.querySelector?.("#stream-fallback-status");
   if (!placeholder) return;
   placeholder.hidden = !visible;
-  if (!visible && status) status.hidden = true;
+  if (!visible) hideFallbackStatus(status);
   if (visible && refreshImage) onRefresh?.();
 };
