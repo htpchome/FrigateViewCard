@@ -2063,7 +2063,12 @@ function buildStickyDaySectionsHtml(items, deps) {
     return `<section class="list-day-sec"><div class="list-day-label${extraClass}" data-day-ts="${ts}" data-day-label="${section.label}">${section.label}</div>${section.rows.join("")}</section>`;
   }).join("");
 }
-function resolveOlderHintState({ forceHide = null, tab = "", scrollTop = 0, itemHeight = 60 }) {
+function resolveOlderHintState({
+  forceHide = null,
+  tab = "",
+  scrollTop = 0,
+  itemHeight = 60
+}) {
   if (forceHide === true) {
     return {
       hidden: true,

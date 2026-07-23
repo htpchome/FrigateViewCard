@@ -37,7 +37,12 @@ export function buildStickyDaySectionsHtml(items, deps) {
     .join("");
 }
 
-export function resolveOlderHintState({ forceHide = null, tab = "", scrollTop = 0, itemHeight = 60 }) {
+export function resolveOlderHintState({
+  forceHide = null,
+  tab = "",
+  scrollTop = 0,
+  itemHeight = 60,
+}) {
   if (forceHide === true) {
     return {
       hidden: true,
@@ -60,7 +65,8 @@ export function resolveOlderHintState({ forceHide = null, tab = "", scrollTop = 
     };
   }
 
-  const showTop = Number(scrollTop || 0) >= Math.max(120, Number(itemHeight || 60) * 3.5);
+  const showTop =
+    Number(scrollTop || 0) >= Math.max(120, Number(itemHeight || 60) * 3.5);
   return {
     hidden: false,
     isToTop: showTop,
