@@ -11,6 +11,7 @@ import {
   resolveFallbackOrigin,
   resolveFallbackOriginForCard,
   resolveFallbackSourceResolversForCard,
+  withFallbackSourceResolversForCard,
   resolveEntityPictureFallbackUrl,
   resolveSignedFallbackUrl,
   setCachedEntityUrl,
@@ -331,6 +332,38 @@ test("resolveFallbackSourceResolversForCard returns reusable card resolvers", as
     "https://ha.local/api/camera_proxy/camera.front?token=def",
   );
   assert.equal(alt, "https://ha.local/api/camera_proxy/camera.front?x=5");
+});
+
+test("withFallbackSourceResolversForCard executes callback with resolved adapter", async () => {
+  const card = {
+    _hass: {
+      callWS: () => {},
+      states: {
+        "camera.front": {
+          attributes: {
+            entity_picture: "/api/camera_proxy/camera.front?x=7",
+          },
+        },
+      },
+    },
+    _signed: async (path) => `${path}?token=ghi`,
+    _fallbackImgUrlCache: new Map(),
+  };
+
+  const result = await withFallbackSourceResolversForCard({
+    card,
+    origin: "https://ha.local",
+    run: async (resolvers) => ({
+      primary: await resolvers.loadPrimary("camera.front"),
+      alt: resolvers.loadAlt("camera.front"),
+    }),
+  });
+
+  assert.equal(
+    result.primary,
+    "https://ha.local/api/camera_proxy/camera.front?token=ghi",
+  );
+  assert.equal(result.alt, "https://ha.local/api/camera_proxy/camera.front?x=7");
 });
 
 test("loadFallbackPrimaryForCard resolves primary via card adapter", async () => {
