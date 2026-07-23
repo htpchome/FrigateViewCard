@@ -103,7 +103,10 @@ import {
   buildTabsMarkup,
   resolveSubtitleText,
 } from "./shell-nav-markup.js";
-import { buildReviewListItemModel } from "./review-list-model.js";
+import {
+  buildReviewListItemHtml,
+  buildReviewListItemModel,
+} from "./review-list-model.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import {
@@ -8651,28 +8654,7 @@ export class FrigateViewCard extends HTMLElement {
       media: (id, file) => this._media(id, file),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
     });
-    const thumb = model.firstDet
-      ? `<div class="et ${model.sev}">
-                <img src="${model.thumbSrc}" loading="lazy" data-thumb-id="${model.firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <div class="tph" style="display:none">${ICONS.person}</div>
-                </div>`
-      : "";
-    return `
-      <div class="list-item shadow-small xform" data-review-id="${model.reviewId}" ${model.firstDet ? `data-review-open="${model.firstDet}"` : ""}>
-
-        ${thumb}
-
-        <div class="rev-inf">
-          <div class="rev-t">${model.title}${model.cameraLabel ? ` <span class="cam-badge">${model.cameraLabel}</span>` : ""}</div>
-          <div class="rev-m">
-            <span class="time-meta">${ICONS.clock}${model.timeLabel}</span>
-            <span class="review-meta">
-              ${cap(model.sev)}${model.reviewed ? " · ✓" : model.firstDet ? " · tap" : ""}
-            </span>
-          </div>
-        </div>
-        ${model.favBtn}
-      </div>`;
+    return buildReviewListItemHtml(model, { cap, icons: ICONS });
   }
 
   _renderReviews(list) {

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.740";
+const VERSION = "1.0.741";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1947,6 +1947,29 @@ function buildReviewListItemModel(review, deps) {
     thumbSrc: firstDet ? media(firstDet, "thumbnail.jpg") : "",
     timeLabel: dateTimeLabel(review?.start_time)
   };
+}
+function buildReviewListItemHtml(model, deps) {
+  const { cap: cap2, icons } = deps || {};
+  const thumb = model?.firstDet ? `<div class="et ${model.sev}">
+                <img src="${model.thumbSrc}" loading="lazy" data-thumb-id="${model.firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                  <div class="tph" style="display:none">${icons.person}</div>
+                </div>` : "";
+  return `
+      <div class="list-item shadow-small xform" data-review-id="${model.reviewId}" ${model.firstDet ? `data-review-open="${model.firstDet}"` : ""}>
+
+        ${thumb}
+
+        <div class="rev-inf">
+          <div class="rev-t">${model.title}${model.cameraLabel ? ` <span class="cam-badge">${model.cameraLabel}</span>` : ""}</div>
+          <div class="rev-m">
+            <span class="time-meta">${icons.clock}${model.timeLabel}</span>
+            <span class="review-meta">
+              ${cap2(model.sev)}${model.reviewed ? " \xB7 \u2713" : model.firstDet ? " \xB7 tap" : ""}
+            </span>
+          </div>
+        </div>
+        ${model.favBtn}
+      </div>`;
 }
 
 // src/data/review-candidate-utils.js
@@ -10557,26 +10580,7 @@ const FrigateViewCard = class extends HTMLElement {
       media: (id, file) => this._media(id, file),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts)
     });
-    const thumb = model.firstDet ? `<div class="et ${model.sev}">
-                <img src="${model.thumbSrc}" loading="lazy" data-thumb-id="${model.firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <div class="tph" style="display:none">${ICONS.person}</div>
-                </div>` : "";
-    return `
-      <div class="list-item shadow-small xform" data-review-id="${model.reviewId}" ${model.firstDet ? `data-review-open="${model.firstDet}"` : ""}>
-
-        ${thumb}
-
-        <div class="rev-inf">
-          <div class="rev-t">${model.title}${model.cameraLabel ? ` <span class="cam-badge">${model.cameraLabel}</span>` : ""}</div>
-          <div class="rev-m">
-            <span class="time-meta">${ICONS.clock}${model.timeLabel}</span>
-            <span class="review-meta">
-              ${cap(model.sev)}${model.reviewed ? " \xB7 \u2713" : model.firstDet ? " \xB7 tap" : ""}
-            </span>
-          </div>
-        </div>
-        ${model.favBtn}
-      </div>`;
+    return buildReviewListItemHtml(model, { cap, icons: ICONS });
   }
   _renderReviews(list) {
     const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
