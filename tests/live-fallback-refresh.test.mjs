@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   buildFallbackRefreshOutcome,
+  canRefreshFallbackImage,
+  getFallbackRefreshElements,
   isFallbackRefreshStale,
   nextFallbackRequestId,
 } from "../src/live/live-fallback-refresh.js";
@@ -28,6 +30,27 @@ test("isFallbackRefreshStale checks request id equality", () => {
     }),
     true,
   );
+});
+
+test("getFallbackRefreshElements resolves fallback image and status elements", () => {
+  const imgEl = { id: "img" };
+  const statusEl = { id: "status" };
+  const shadowRoot = {
+    querySelector: (selector) => {
+      if (selector === "#stream-fallback-img") return imgEl;
+      if (selector === "#stream-fallback-status") return statusEl;
+      return null;
+    },
+  };
+
+  const resolved = getFallbackRefreshElements(shadowRoot);
+  assert.equal(resolved.imgEl, imgEl);
+  assert.equal(resolved.statusEl, statusEl);
+});
+
+test("canRefreshFallbackImage requires an image element", () => {
+  assert.equal(canRefreshFallbackImage({ imgEl: { id: "img" } }), true);
+  assert.equal(canRefreshFallbackImage({ imgEl: null }), false);
 });
 
 test("buildFallbackRefreshOutcome resolves source and hasSource", () => {

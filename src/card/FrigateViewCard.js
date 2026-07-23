@@ -138,6 +138,8 @@ import {
 } from "../live/live-fallback-image.js";
 import {
   buildFallbackRefreshOutcome,
+  canRefreshFallbackImage,
+  getFallbackRefreshElements,
   isFallbackRefreshStale,
   nextFallbackRequestId,
 } from "../live/live-fallback-refresh.js";
@@ -2209,9 +2211,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _refreshStreamFallbackImage() {
-    const img = this.shadowRoot?.querySelector("#stream-fallback-img");
-    const status = this.shadowRoot?.querySelector("#stream-fallback-status");
-    if (!img) return;
+    const { imgEl, statusEl } = getFallbackRefreshElements(this.shadowRoot);
+    if (!canRefreshFallbackImage({ imgEl })) return;
     const reqId = nextFallbackRequestId(this._fallbackReqId);
     this._fallbackReqId = reqId;
     const entity = this._activeCam?.entity;
@@ -2231,13 +2232,13 @@ export class FrigateViewCard extends HTMLElement {
     });
     if (!outcome.hasSource) return;
     applyFallbackImageHandlers({
-      img,
-      statusEl: status,
+      img: imgEl,
+      statusEl,
       altSrc,
       entity,
     });
     setFallbackImageSourceIfChanged({
-      img,
+      img: imgEl,
       src: outcome.src,
     });
   }

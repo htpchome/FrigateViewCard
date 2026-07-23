@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.777";
+const VERSION = "1.0.778";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2242,6 +2242,11 @@ const setFallbackImageSourceIfChanged = ({ img, src }) => {
 
 // src/live/live-fallback-refresh.js
 const nextFallbackRequestId = (currentRequestId) => Number(currentRequestId || 0) + 1;
+const getFallbackRefreshElements = (shadowRoot) => ({
+  imgEl: shadowRoot?.querySelector?.("#stream-fallback-img") || null,
+  statusEl: shadowRoot?.querySelector?.("#stream-fallback-status") || null
+});
+const canRefreshFallbackImage = ({ imgEl }) => !!imgEl;
 const isFallbackRefreshStale = ({ requestId, activeRequestId }) => requestId !== activeRequestId;
 const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   const src = resolveFallbackDisplaySource({
@@ -5716,9 +5721,8 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _refreshStreamFallbackImage() {
-    const img = this.shadowRoot?.querySelector("#stream-fallback-img");
-    const status = this.shadowRoot?.querySelector("#stream-fallback-status");
-    if (!img) return;
+    const { imgEl, statusEl } = getFallbackRefreshElements(this.shadowRoot);
+    if (!canRefreshFallbackImage({ imgEl })) return;
     const reqId = nextFallbackRequestId(this._fallbackReqId);
     this._fallbackReqId = reqId;
     const entity = this._activeCam?.entity;
@@ -5736,13 +5740,13 @@ const FrigateViewCard = class extends HTMLElement {
     });
     if (!outcome.hasSource) return;
     applyFallbackImageHandlers({
-      img,
-      statusEl: status,
+      img: imgEl,
+      statusEl,
       altSrc,
       entity
     });
     setFallbackImageSourceIfChanged({
-      img,
+      img: imgEl,
       src: outcome.src
     });
   }
