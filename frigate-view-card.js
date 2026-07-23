@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.738";
+const VERSION = "1.0.739";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10516,7 +10516,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._setListHtmlIfChanged(list, this._recordingsListMarkup(recs));
     this._syncOlderHint(false);
   }
-  _reviewListItemHTML(review) {
+  _reviewListItemModel(review) {
     const sev = review.severity === "alert" ? "alert" : "detection";
     const objs = (review.data?.objects || []).map(cap).join(", ");
     const title = review.data?.metadata?.title || objs || cap(review.severity);
@@ -10526,27 +10526,40 @@ const FrigateViewCard = class extends HTMLElement {
     const reviewed = review.has_been_reviewed;
     const favEv = firstDet ? this._findEventById(firstDet) : null;
     const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>` : "";
-    const hasReviewMedia = !!firstDet;
-    const reviewThumbFile = "thumbnail.jpg";
-    const thumb = firstDet ? hasReviewMedia ? `<div class="et ${sev}">
-                <img src="${this._media(firstDet, reviewThumbFile)}" loading="lazy" data-thumb-id="${firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    const thumbSrc = firstDet ? this._media(firstDet, "thumbnail.jpg") : "";
+    return {
+      reviewId: review.id,
+      firstDet,
+      sev,
+      title,
+      cameraLabel,
+      reviewed,
+      favBtn,
+      thumbSrc,
+      timeLabel: this._dateTimeLabel(review.start_time)
+    };
+  }
+  _reviewListItemHTML(review) {
+    const model = this._reviewListItemModel(review);
+    const thumb = model.firstDet ? `<div class="et ${model.sev}">
+                <img src="${model.thumbSrc}" loading="lazy" data-thumb-id="${model.firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="tph" style="display:none">${ICONS.person}</div>
-                </div>` : `<div class="tph">${ICONS.person}</div>` : "";
+                </div>` : "";
     return `
-      <div class="list-item shadow-small xform" data-review-id="${review.id}" ${firstDet ? `data-review-open="${firstDet}"` : ""}>
+      <div class="list-item shadow-small xform" data-review-id="${model.reviewId}" ${model.firstDet ? `data-review-open="${model.firstDet}"` : ""}>
 
         ${thumb}
 
         <div class="rev-inf">
-          <div class="rev-t">${title}${cameraLabel ? ` <span class="cam-badge">${cameraLabel}</span>` : ""}</div>
+          <div class="rev-t">${model.title}${model.cameraLabel ? ` <span class="cam-badge">${model.cameraLabel}</span>` : ""}</div>
           <div class="rev-m">
-            <span class="time-meta">${ICONS.clock}${this._dateTimeLabel(review.start_time)}</span>
+            <span class="time-meta">${ICONS.clock}${model.timeLabel}</span>
             <span class="review-meta">
-              ${cap(sev)}${reviewed ? " \xB7 \u2713" : firstDet ? " \xB7 tap" : ""}
+              ${cap(model.sev)}${model.reviewed ? " \xB7 \u2713" : model.firstDet ? " \xB7 tap" : ""}
             </span>
           </div>
         </div>
-        ${favBtn}
+        ${model.favBtn}
       </div>`;
   }
   _renderReviews(list) {
