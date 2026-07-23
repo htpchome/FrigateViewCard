@@ -113,7 +113,6 @@ import {
 } from "./event-list-model.js";
 import {
   applyListMarkupWithOlderHint,
-  applyOlderHintDomState,
   appendEndMarker,
   buildStickyDaySectionsHtml,
   createOlderHintSyncer,
@@ -121,8 +120,7 @@ import {
   resolveListLabelTimestamp,
   resolveListMarkup,
   runListPostRenderSync,
-  resolveOlderHintMetrics,
-  resolveOlderHintState,
+  syncOlderHintFromScroll,
 } from "./list-render-utils.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
@@ -8550,21 +8548,13 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
   _syncOlderHint(forceHide = null) {
-    const hint = this._$("#older-hint");
-    if (!hint) return;
-    const metrics = resolveOlderHintMetrics({
+    syncOlderHintFromScroll({
+      hintEl: this._$("#older-hint"),
       list: this._$("#list"),
       browse: this._$("#browse"),
-    });
-
-    const nextState = resolveOlderHintState({
-      forceHide,
       tab: this._tab,
-      scrollTop: metrics.scrollTop,
-      itemHeight: metrics.itemHeight,
+      forceHide,
     });
-
-    applyOlderHintDomState(hint, nextState);
   }
   _renderRecordings(list) {
     this._renderListLabel(this._winEnd);

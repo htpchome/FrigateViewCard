@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.753";
+const VERSION = "1.0.754";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2120,6 +2120,23 @@ function applyOlderHintDomState(hintEl, state) {
   }
   hintEl.removeAttribute("role");
   hintEl.removeAttribute("tabindex");
+}
+function syncOlderHintFromScroll({
+  hintEl,
+  list,
+  browse,
+  tab,
+  forceHide = null
+}) {
+  if (!hintEl) return;
+  const metrics = resolveOlderHintMetrics({ list, browse });
+  const nextState = resolveOlderHintState({
+    forceHide,
+    tab,
+    scrollTop: metrics.scrollTop,
+    itemHeight: metrics.itemHeight
+  });
+  applyOlderHintDomState(hintEl, nextState);
 }
 function resolveActiveDayLabelFromScroll({ list, browse }) {
   if (!list || !browse) return "";
@@ -10732,19 +10749,13 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _syncOlderHint(forceHide = null) {
-    const hint = this._$("#older-hint");
-    if (!hint) return;
-    const metrics = resolveOlderHintMetrics({
+    syncOlderHintFromScroll({
+      hintEl: this._$("#older-hint"),
       list: this._$("#list"),
-      browse: this._$("#browse")
-    });
-    const nextState = resolveOlderHintState({
-      forceHide,
+      browse: this._$("#browse"),
       tab: this._tab,
-      scrollTop: metrics.scrollTop,
-      itemHeight: metrics.itemHeight
+      forceHide
     });
-    applyOlderHintDomState(hint, nextState);
   }
   _renderRecordings(list) {
     this._renderListLabel(this._winEnd);

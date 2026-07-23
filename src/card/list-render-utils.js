@@ -106,6 +106,26 @@ export function applyOlderHintDomState(hintEl, state) {
   hintEl.removeAttribute("tabindex");
 }
 
+export function syncOlderHintFromScroll({
+  hintEl,
+  list,
+  browse,
+  tab,
+  forceHide = null,
+}) {
+  if (!hintEl) return;
+
+  const metrics = resolveOlderHintMetrics({ list, browse });
+  const nextState = resolveOlderHintState({
+    forceHide,
+    tab,
+    scrollTop: metrics.scrollTop,
+    itemHeight: metrics.itemHeight,
+  });
+
+  applyOlderHintDomState(hintEl, nextState);
+}
+
 export function resolveActiveDayLabelFromScroll({ list, browse }) {
   if (!list || !browse) return "";
 
