@@ -92,6 +92,7 @@ import {
   buildPreviewStatusMarkup,
 } from "../preview/preview-markup.js";
 import {
+  buildCamSwitcherMarkup,
   buildPageNavMarkup,
   buildTabsMarkup,
   resolveSubtitleText,
@@ -5908,20 +5909,17 @@ export class FrigateViewCard extends HTMLElement {
   }
   // ── cam switcher ──────────────────────────────────────────
   _camSwitcherMarkup({ includeStatus = true } = {}) {
-    const backButton = this._isPreviewPageEnabled()
-      ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${ICONS.left} Back</button>`
-      : "";
-    const cameraButtons = this._config.cameras
-      .map((c, i) => {
-        const name = cap(camDisplayName(c));
-        const active = this._viewMode === "single" && i === this._activeCamIdx;
-        const ok =
-          !includeStatus ||
-          this._hass?.states?.[c.entity]?.state !== "unavailable";
-        return `<button class="glass-btn cam-tab ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
-      })
-      .join("");
-    return `${backButton}${cameraButtons}`;
+    return buildCamSwitcherMarkup({
+      previewPageEnabled: this._isPreviewPageEnabled(),
+      includeStatus,
+      cameras: this._config.cameras,
+      activeCamIdx: this._activeCamIdx,
+      isSingleView: this._viewMode === "single",
+      icons: ICONS,
+      getCameraName: (camera) => cap(camDisplayName(camera)),
+      isCameraAvailable: (camera) =>
+        this._hass?.states?.[camera.entity]?.state !== "unavailable",
+    });
   }
 
   _renderCamSwitcher() {

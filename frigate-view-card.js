@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.723";
+const VERSION = "1.0.724";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1747,6 +1747,25 @@ function buildTabsMarkup({
         <button class="tool" id="cal-btn" title="Calendar">${icons.calendar}</button>
       </div>`;
   return { activeTab, markup };
+}
+function buildCamSwitcherMarkup({
+  previewPageEnabled,
+  includeStatus,
+  cameras,
+  activeCamIdx,
+  isSingleView,
+  icons,
+  getCameraName,
+  isCameraAvailable
+}) {
+  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
+  const cameraButtons = (cameras || []).map((camera, index) => {
+    const name = getCameraName(camera);
+    const active = isSingleView && index === activeCamIdx;
+    const ok = !includeStatus || isCameraAvailable(camera);
+    return `<button class="glass-btn cam-tab ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
+  }).join("");
+  return `${backButton}${cameraButtons}`;
 }
 
 // src/preview/preview-alert-controller.js
@@ -7892,14 +7911,16 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── cam switcher ──────────────────────────────────────────
   _camSwitcherMarkup({ includeStatus = true } = {}) {
-    const backButton = this._isPreviewPageEnabled() ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${ICONS.left} Back</button>` : "";
-    const cameraButtons = this._config.cameras.map((c, i) => {
-      const name = cap(camDisplayName(c));
-      const active = this._viewMode === "single" && i === this._activeCamIdx;
-      const ok = !includeStatus || this._hass?.states?.[c.entity]?.state !== "unavailable";
-      return `<button class="glass-btn cam-tab ${active ? "active" : ""}" data-camidx="${i}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
-    }).join("");
-    return `${backButton}${cameraButtons}`;
+    return buildCamSwitcherMarkup({
+      previewPageEnabled: this._isPreviewPageEnabled(),
+      includeStatus,
+      cameras: this._config.cameras,
+      activeCamIdx: this._activeCamIdx,
+      isSingleView: this._viewMode === "single",
+      icons: ICONS,
+      getCameraName: (camera) => cap(camDisplayName(camera)),
+      isCameraAvailable: (camera) => this._hass?.states?.[camera.entity]?.state !== "unavailable"
+    });
   }
   _renderCamSwitcher() {
     const el = this.shadowRoot.querySelector("#cam-switcher");
