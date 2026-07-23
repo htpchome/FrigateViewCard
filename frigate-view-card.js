@@ -1986,11 +1986,7 @@ async function findNewestReviewCandidateAcrossCameras({
 }
 
 // src/data/realtime-alert-message-utils.js
-function parseRealtimeAlertMessage({
-  host,
-  msg,
-  checkSeverity = true
-}) {
+function parseRealtimeAlertMessage({ host, msg, checkSeverity = true }) {
   const incomingCam = host?._extractRealtimeMessageCamera(msg);
   if (!incomingCam) return null;
   const cam = host?._cameraEntityForIncomingCamera(incomingCam);

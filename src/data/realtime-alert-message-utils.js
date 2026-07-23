@@ -1,8 +1,4 @@
-export function parseRealtimeAlertMessage({
-  host,
-  msg,
-  checkSeverity = true,
-}) {
+export function parseRealtimeAlertMessage({ host, msg, checkSeverity = true }) {
   const incomingCam = host?._extractRealtimeMessageCamera(msg);
   if (!incomingCam) return null;
 
