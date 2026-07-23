@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.729";
+const VERSION = "1.0.730";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1917,6 +1917,44 @@ function buildMainLayoutShellMarkup({
         </div>`;
 }
 
+// src/data/review-candidate-utils.js
+function findFirstReviewCandidateForEntity({
+  reviews,
+  entity,
+  isReviewFresh,
+  normalizeSeverity,
+  shouldHandleSeverity,
+  isHandledReviewId,
+  reviewStartTime
+}) {
+  const list = Array.isArray(reviews) ? reviews : [];
+  for (const review of list) {
+    if (!isReviewFresh(review)) continue;
+    const severity = normalizeSeverity(review);
+    if (!shouldHandleSeverity(entity, severity)) continue;
+    const reviewId = String(review?.id || "").trim();
+    if (reviewId && isHandledReviewId(reviewId)) continue;
+    return {
+      entity,
+      severity,
+      reviewId,
+      startTime: Number(reviewStartTime(review)) || 0
+    };
+  }
+  return null;
+}
+function selectNewestReviewCandidate(candidates) {
+  if (!Array.isArray(candidates) || !candidates.length) return null;
+  let newest = null;
+  for (const candidate of candidates) {
+    if (!candidate?.entity) continue;
+    if (!newest || Number(candidate.startTime || 0) > Number(newest.startTime || 0)) {
+      newest = candidate;
+    }
+  }
+  return newest;
+}
+
 // src/preview/preview-alert-controller.js
 const PreviewAlertController = class {
   constructor(host, constants) {
@@ -2009,26 +2047,19 @@ const PreviewAlertController = class {
         reviews = [];
       }
       cache.reviews = reviews;
-      for (const review of reviews) {
-        if (!this.isReviewFresh(review)) continue;
-        const severity = this._host._normalizeReviewSeverity(review);
-        if (!this._host._shouldHandleSlideshowReview(entity, severity)) {
-          continue;
-        }
-        const reviewId = String(review?.id || "").trim();
-        if (reviewId && this._handledReviewIds.has(reviewId)) continue;
-        candidates.push({
-          entity,
-          severity,
-          reviewId,
-          startTime: this._host._reviewStartTimeSec(review)
-        });
-        break;
-      }
+      const candidate = findFirstReviewCandidateForEntity({
+        reviews,
+        entity,
+        isReviewFresh: (review) => this.isReviewFresh(review),
+        normalizeSeverity: (review) => this._host._normalizeReviewSeverity(review),
+        shouldHandleSeverity: (targetEntity, severity) => this._host._shouldHandleSlideshowReview(targetEntity, severity),
+        isHandledReviewId: (reviewId) => this._handledReviewIds.has(reviewId),
+        reviewStartTime: (review) => this._host._reviewStartTimeSec(review)
+      });
+      if (candidate) candidates.push(candidate);
     }
     if (!candidates.length) return;
-    candidates.sort((a, b) => b.startTime - a.startTime);
-    const next = candidates[0];
+    const next = selectNewestReviewCandidate(candidates);
     if (!next?.entity) return;
     if (next.reviewId) this.rememberHandledReview(next.reviewId);
     this.markAlertCamera(
@@ -2389,26 +2420,19 @@ const GridAlertController = class {
       } catch (_) {
         reviews = [];
       }
-      for (const review of reviews) {
-        if (!this.isReviewFresh(review)) continue;
-        const severity = this._host._normalizeReviewSeverity(review);
-        if (!this._host._shouldHandleSlideshowReview(entity, severity)) {
-          continue;
-        }
-        const reviewId = String(review?.id || "").trim();
-        if (reviewId && this._handledReviewIds.has(reviewId)) continue;
-        candidates.push({
-          entity,
-          severity,
-          reviewId,
-          startTime: this._host._reviewStartTimeSec(review)
-        });
-        break;
-      }
+      const candidate = findFirstReviewCandidateForEntity({
+        reviews,
+        entity,
+        isReviewFresh: (review) => this.isReviewFresh(review),
+        normalizeSeverity: (review) => this._host._normalizeReviewSeverity(review),
+        shouldHandleSeverity: (targetEntity, severity) => this._host._shouldHandleSlideshowReview(targetEntity, severity),
+        isHandledReviewId: (reviewId) => this._handledReviewIds.has(reviewId),
+        reviewStartTime: (review) => this._host._reviewStartTimeSec(review)
+      });
+      if (candidate) candidates.push(candidate);
     }
     if (!candidates.length) return;
-    candidates.sort((a, b) => b.startTime - a.startTime);
-    const next = candidates[0];
+    const next = selectNewestReviewCandidate(candidates);
     if (!next?.entity) return;
     if (next.reviewId) this.rememberHandledReview(next.reviewId);
     this.handleAlertCandidate(next.entity, next.severity);
@@ -2578,18 +2602,15 @@ const SlideshowAlertController = class {
       return;
     }
     if (!entity || !Array.isArray(reviews) || !reviews.length) return;
-    let nextReview = null;
-    for (const review of reviews) {
-      if (!this.isReviewFresh(review)) continue;
-      const severity = this._host._normalizeReviewSeverity(review);
-      if (!this._host._shouldHandleSlideshowReview(entity, severity)) continue;
-      const reviewId = String(review?.id || "").trim();
-      if (reviewId && this._host._slideshowHandledReviewIds.has(reviewId)) {
-        continue;
-      }
-      nextReview = { entity, severity, reviewId };
-      break;
-    }
+    const nextReview = findFirstReviewCandidateForEntity({
+      reviews,
+      entity,
+      isReviewFresh: (review) => this.isReviewFresh(review),
+      normalizeSeverity: (review) => this._host._normalizeReviewSeverity(review),
+      shouldHandleSeverity: (targetEntity, severity) => this._host._shouldHandleSlideshowReview(targetEntity, severity),
+      isHandledReviewId: (reviewId) => this._host._slideshowHandledReviewIds.has(reviewId),
+      reviewStartTime: (review) => this._host._reviewStartTimeSec(review)
+    });
     if (!nextReview) return;
     if (nextReview.reviewId) this.rememberHandledReview(nextReview.reviewId);
     if (this._host._slideshowPopupPaused) {
@@ -2647,28 +2668,19 @@ const SlideshowAlertController = class {
         } catch (_) {
           reviews = [];
         }
-        for (const review of reviews) {
-          if (!this.isReviewFresh(review)) continue;
-          const severity = this._host._normalizeReviewSeverity(review);
-          if (!this._host._shouldHandleSlideshowReview(entity, severity)) {
-            continue;
-          }
-          const reviewId = String(review?.id || "").trim();
-          if (reviewId && this._host._slideshowHandledReviewIds.has(reviewId)) {
-            continue;
-          }
-          candidates.push({
-            entity,
-            severity,
-            reviewId,
-            startTime: this._host._reviewStartTimeSec(review)
-          });
-          break;
-        }
+        const candidate = findFirstReviewCandidateForEntity({
+          reviews,
+          entity,
+          isReviewFresh: (review) => this.isReviewFresh(review),
+          normalizeSeverity: (review) => this._host._normalizeReviewSeverity(review),
+          shouldHandleSeverity: (targetEntity, severity) => this._host._shouldHandleSlideshowReview(targetEntity, severity),
+          isHandledReviewId: (reviewId) => this._host._slideshowHandledReviewIds.has(reviewId),
+          reviewStartTime: (review) => this._host._reviewStartTimeSec(review)
+        });
+        if (candidate) candidates.push(candidate);
       }
       if (!candidates.length) return;
-      candidates.sort((a, b) => b.startTime - a.startTime);
-      const next = candidates[0];
+      const next = selectNewestReviewCandidate(candidates);
       if (!next?.entity) return;
       if (next.reviewId) this.rememberHandledReview(next.reviewId);
       if (this._host._slideshowPopupPaused) {

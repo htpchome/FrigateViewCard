@@ -3,6 +3,10 @@ import {
   normalizePreviewAlertSeverity,
   normalizePreviewCellSeverity,
 } from "./preview-utils.js";
+import {
+  findFirstReviewCandidateForEntity,
+  selectNewestReviewCandidate,
+} from "../data/review-candidate-utils.js";
 
 export class PreviewAlertController {
   constructor(host, constants) {
@@ -104,26 +108,21 @@ export class PreviewAlertController {
         reviews = [];
       }
       cache.reviews = reviews;
-      for (const review of reviews) {
-        if (!this.isReviewFresh(review)) continue;
-        const severity = this._host._normalizeReviewSeverity(review);
-        if (!this._host._shouldHandleSlideshowReview(entity, severity)) {
-          continue;
-        }
-        const reviewId = String(review?.id || "").trim();
-        if (reviewId && this._handledReviewIds.has(reviewId)) continue;
-        candidates.push({
-          entity,
-          severity,
-          reviewId,
-          startTime: this._host._reviewStartTimeSec(review),
-        });
-        break;
-      }
+      const candidate = findFirstReviewCandidateForEntity({
+        reviews,
+        entity,
+        isReviewFresh: (review) => this.isReviewFresh(review),
+        normalizeSeverity: (review) =>
+          this._host._normalizeReviewSeverity(review),
+        shouldHandleSeverity: (targetEntity, severity) =>
+          this._host._shouldHandleSlideshowReview(targetEntity, severity),
+        isHandledReviewId: (reviewId) => this._handledReviewIds.has(reviewId),
+        reviewStartTime: (review) => this._host._reviewStartTimeSec(review),
+      });
+      if (candidate) candidates.push(candidate);
     }
     if (!candidates.length) return;
-    candidates.sort((a, b) => b.startTime - a.startTime);
-    const next = candidates[0];
+    const next = selectNewestReviewCandidate(candidates);
     if (!next?.entity) return;
     if (next.reviewId) this.rememberHandledReview(next.reviewId);
     this.markAlertCamera(
