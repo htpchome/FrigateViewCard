@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  applyActiveStreamTypeForCard,
   applyStreamFallbackVisibilityForCard,
   applyStreamFallbackVisibility,
   applyStreamFallbackState,
@@ -31,6 +32,40 @@ test("resolveActiveStreamTypeState updates hint only for live transports", () =>
   });
   assert.equal(nextFallback.activeStreamType, "snapshot");
   assert.equal(nextFallback.lastLiveStreamHint, "mse");
+});
+
+test("applyActiveStreamTypeForCard updates active type, hint, and stats render", () => {
+  let renderCalls = 0;
+  const card = {
+    _activeStreamType: "--",
+    _lastLiveStreamHint: "webrtc",
+    _renderStats: () => {
+      renderCalls += 1;
+    },
+  };
+
+  applyActiveStreamTypeForCard({
+    card,
+    type: "MSE",
+  });
+
+  assert.equal(card._activeStreamType, "MSE");
+  assert.equal(card._lastLiveStreamHint, "mse");
+  assert.equal(renderCalls, 1);
+
+  applyActiveStreamTypeForCard({
+    card,
+    type: "snapshot",
+  });
+
+  assert.equal(card._activeStreamType, "snapshot");
+  assert.equal(card._lastLiveStreamHint, "mse");
+  assert.equal(renderCalls, 2);
+
+  applyActiveStreamTypeForCard({
+    card: null,
+    type: "hls",
+  });
 });
 
 test("applyStreamLoadingState toggles hidden and updates label", () => {

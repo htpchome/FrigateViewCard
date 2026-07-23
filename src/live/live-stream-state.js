@@ -66,3 +66,14 @@ export const applyStreamFallbackVisibilityForCard = ({
     refreshFallbackImage: () => card._refreshStreamFallbackImage?.(),
   });
 };
+
+export const applyActiveStreamTypeForCard = ({ card, type }) => {
+  if (!card) return;
+  const nextState = resolveActiveStreamTypeState({
+    type,
+    lastLiveStreamHint: card._lastLiveStreamHint,
+  });
+  card._activeStreamType = nextState.activeStreamType;
+  card._lastLiveStreamHint = nextState.lastLiveStreamHint;
+  card._renderStats?.();
+};

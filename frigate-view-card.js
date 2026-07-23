@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.796";
+const VERSION = "1.0.797";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2148,6 +2148,16 @@ const applyStreamFallbackVisibilityForCard = ({
     refreshImage,
     refreshFallbackImage: () => card._refreshStreamFallbackImage?.()
   });
+};
+const applyActiveStreamTypeForCard = ({ card, type }) => {
+  if (!card) return;
+  const nextState = resolveActiveStreamTypeState({
+    type,
+    lastLiveStreamHint: card._lastLiveStreamHint
+  });
+  card._activeStreamType = nextState.activeStreamType;
+  card._lastLiveStreamHint = nextState.lastLiveStreamHint;
+  card._renderStats?.();
 };
 
 // src/live/live-fallback-url.js
@@ -6000,13 +6010,10 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _setActiveStreamType(type) {
-    const nextState = resolveActiveStreamTypeState({
-      type,
-      lastLiveStreamHint: this._lastLiveStreamHint
+    applyActiveStreamTypeForCard({
+      card: this,
+      type
     });
-    this._activeStreamType = nextState.activeStreamType;
-    this._lastLiveStreamHint = nextState.lastLiveStreamHint;
-    this._renderStats();
   }
   _setStreamFallbackVisible(visible, refreshImage = false) {
     applyStreamFallbackVisibilityForCard({
