@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.760";
+const VERSION = "1.0.761";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11920,6 +11920,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
       </div>
     </div>`;
     const update = () => this._u({ dispatch: false, preview: true });
+    const scheduleUpdate = () => {
+      if (this._previewUpdateRaf) return;
+      this._previewUpdateRaf = requestAnimationFrame(() => {
+        this._previewUpdateRaf = 0;
+        update();
+      });
+    };
     bindThemeControlEvents({
       root: this,
       update,
@@ -12127,14 +12134,14 @@ const FrigateViewCardEditor = class extends HTMLElement {
           gridLiveRow.style.display = gridEnabled ? "flex" : "none";
         if (gridRow)
           gridRow.style.display = gridEnabled && cams.length > 4 ? "flex" : "none";
-        update();
+        scheduleUpdate();
       }
     });
     bindEventsForSelectorAll({
       root: this,
       selector: "[data-active-tab]",
       events: ["change", "value-changed"],
-      handler: () => update()
+      handler: () => scheduleUpdate()
     });
     const wideCb = this.querySelector("#wide_view_page_enabled");
     const colWidthRow = this.querySelector("#col-width-row");

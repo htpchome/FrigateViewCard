@@ -1266,6 +1266,13 @@ export class FrigateViewCardEditor extends HTMLElement {
     </div>`;
 
     const update = () => this._u({ dispatch: false, preview: true });
+    const scheduleUpdate = () => {
+      if (this._previewUpdateRaf) return;
+      this._previewUpdateRaf = requestAnimationFrame(() => {
+        this._previewUpdateRaf = 0;
+        update();
+      });
+    };
 
     bindThemeControlEvents({
       root: this,
@@ -1489,14 +1496,14 @@ export class FrigateViewCardEditor extends HTMLElement {
         if (gridRow)
           gridRow.style.display =
             gridEnabled && cams.length > 4 ? "flex" : "none";
-        update();
+        scheduleUpdate();
       },
     });
     bindEventsForSelectorAll({
       root: this,
       selector: "[data-active-tab]",
       events: ["change", "value-changed"],
-      handler: () => update(),
+      handler: () => scheduleUpdate(),
     });
 
     const wideCb = this.querySelector("#wide_view_page_enabled");
