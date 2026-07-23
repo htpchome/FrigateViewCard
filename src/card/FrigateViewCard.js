@@ -90,6 +90,10 @@ import {
   raceMountAttempts,
 } from "../live/live-attempt-planner.js";
 import {
+  createPendingMountDestroyers,
+  shouldClearPendingDestroyersForPromise,
+} from "../live/live-pending-destroyers.js";
+import {
   applyMountWatchdogTimeout,
   beginMountTracking,
   clearMountTrackingIfCurrent,
@@ -1908,21 +1912,10 @@ export class FrigateViewCard extends HTMLElement {
       return { type: attempt.type, promise };
     });
 
-    this._pendingMountDestroyers = activeAttempts.map((attempt) => ({
-      type: attempt.type,
-      entity: targetEntity,
-      promise: attempt.promise,
-      destroy: () => {
-        void (async () => {
-          const result = await attempt.promise;
-          if (result?.engine?.destroy) {
-            try {
-              result.engine.destroy();
-            } catch (_) {}
-          }
-        })();
-      },
-    }));
+    this._pendingMountDestroyers = createPendingMountDestroyers({
+      activeAttempts,
+      targetEntity,
+    });
 
     const winner = await this._raceMountAttempts(
       activeAttempts.map((attempt) => attempt.promise),
@@ -2892,7 +2885,10 @@ export class FrigateViewCard extends HTMLElement {
         } finally {
           clearMountState();
           if (
-            this._pendingMountDestroyers?.[0]?.promise === graceResultPromise
+            shouldClearPendingDestroyersForPromise({
+              pendingDestroyers: this._pendingMountDestroyers,
+              promise: graceResultPromise,
+            })
           ) {
             this._pendingMountDestroyers = [];
           }

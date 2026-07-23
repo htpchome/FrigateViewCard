@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.767";
+const VERSION = "1.0.768";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1842,6 +1842,57 @@ const raceMountAttempts = async (attempts) => {
     }
   });
 };
+
+// src/live/live-pending-destroyers.js
+const createPendingMountDestroyers = ({
+  activeAttempts,
+  targetEntity
+}) => activeAttempts.map((attempt) => ({
+  type: attempt.type,
+  entity: targetEntity,
+  promise: attempt.promise,
+  destroy: () => {
+    void (async () => {
+      const result = await attempt.promise;
+      if (result?.engine?.destroy) {
+        try {
+          result.engine.destroy();
+        } catch (_) {
+        }
+      }
+    })();
+  }
+}));
+const filterPendingDestroyersForWinner = ({
+  pendingDestroyers,
+  winnerType
+}) => (pendingDestroyers || []).filter((attempt) => attempt?.type !== winnerType);
+const splitPendingDestroyersByGraceMse = ({
+  pendingDestroyers,
+  preserveMseEntity
+}) => {
+  const preserveKey = String(preserveMseEntity || "").trim();
+  if (!preserveKey) {
+    return {
+      toPreserve: [],
+      toDestroy: [...pendingDestroyers || []]
+    };
+  }
+  const toPreserve = [];
+  const toDestroy = [];
+  for (const pendingAttempt of pendingDestroyers || []) {
+    if (pendingAttempt?.type === "mse" && pendingAttempt?.entity === preserveKey) {
+      toPreserve.push(pendingAttempt);
+      continue;
+    }
+    toDestroy.push(pendingAttempt);
+  }
+  return { toPreserve, toDestroy };
+};
+const shouldClearPendingDestroyersForPromise = ({
+  pendingDestroyers,
+  promise
+}) => (pendingDestroyers || []).some((attempt) => attempt?.promise === promise);
 
 // src/live/live-mount-lifecycle.js
 const beginMountTracking = ({
@@ -5130,22 +5181,10 @@ const FrigateViewCard = class extends HTMLElement {
       })();
       return { type: attempt.type, promise };
     });
-    this._pendingMountDestroyers = activeAttempts.map((attempt) => ({
-      type: attempt.type,
-      entity: targetEntity,
-      promise: attempt.promise,
-      destroy: () => {
-        void (async () => {
-          const result = await attempt.promise;
-          if (result?.engine?.destroy) {
-            try {
-              result.engine.destroy();
-            } catch (_) {
-            }
-          }
-        })();
-      }
-    }));
+    this._pendingMountDestroyers = createPendingMountDestroyers({
+      activeAttempts,
+      targetEntity
+    });
     const winner = await this._raceMountAttempts(
       activeAttempts.map((attempt) => attempt.promise)
     );
@@ -6006,7 +6045,10 @@ const FrigateViewCard = class extends HTMLElement {
           }
         } finally {
           clearMountState();
-          if (this._pendingMountDestroyers?.[0]?.promise === graceResultPromise) {
+          if (shouldClearPendingDestroyersForPromise({
+            pendingDestroyers: this._pendingMountDestroyers,
+            promise: graceResultPromise
+          })) {
             this._pendingMountDestroyers = [];
           }
         }
