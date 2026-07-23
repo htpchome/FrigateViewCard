@@ -107,6 +107,19 @@ export const buildFallbackImageWriteInput = ({ context, imgEl, statusEl }) => {
   };
 };
 
+export const executeFallbackRefreshWrite = ({
+  writeInput,
+  applyHandlers,
+  applySource,
+}) => {
+  if (!writeInput?.applyPayload) return;
+  applyHandlers(writeInput.applyPayload);
+  applySource({
+    img: writeInput.applyPayload.img,
+    src: writeInput.src,
+  });
+};
+
 export const isFallbackRefreshStale = ({ requestId, activeRequestId }) =>
   requestId !== activeRequestId;
 

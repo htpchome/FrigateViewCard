@@ -140,6 +140,7 @@ import {
   beginFallbackRefresh,
   buildFallbackRefreshContext,
   buildFallbackImageWriteInput,
+  executeFallbackRefreshWrite,
   getFallbackRefreshElements,
   isFallbackRefreshStale,
   loadPrimaryFallbackSource,
@@ -2249,10 +2250,10 @@ export class FrigateViewCard extends HTMLElement {
       imgEl,
       statusEl,
     });
-    applyFallbackImageHandlers(writeInput.applyPayload);
-    setFallbackImageSourceIfChanged({
-      img: writeInput.applyPayload.img,
-      src: writeInput.src,
+    executeFallbackRefreshWrite({
+      writeInput,
+      applyHandlers: (payload) => applyFallbackImageHandlers(payload),
+      applySource: (next) => setFallbackImageSourceIfChanged(next),
     });
   }
 
