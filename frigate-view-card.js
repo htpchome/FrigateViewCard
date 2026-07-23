@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.720";
+const VERSION = "1.0.721";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2762,6 +2762,59 @@ function extractRealtimeMessageSeverity(msg) {
   return String(
     msg?.severity || msg?.event?.severity || msg?.event?.data?.severity || msg?.review?.severity || msg?.review?.data?.severity || msg?.after?.severity || msg?.after?.data?.severity || msg?.before?.severity || msg?.before?.data?.severity || (type.includes("detection") ? "detection" : "")
   ).trim().toLowerCase();
+}
+
+// src/data/window-fetch-utils.js
+async function fetchWindowedItems({
+  after,
+  before,
+  opts = {},
+  defaultPageLimit,
+  defaultBatchLimit,
+  useOptionLimit = true,
+  fetchBatch,
+  getItemStartTime
+}) {
+  const items = [];
+  const seen = new Set();
+  const afterTs = Math.floor(after);
+  let cursorBefore = Math.floor(
+    Number.isFinite(opts?.cursorBefore) ? opts.cursorBefore : before
+  );
+  const pageLimit = Math.max(
+    1,
+    Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : defaultPageLimit
+  );
+  const batchLimit = useOptionLimit ? Math.max(
+    1,
+    Number.isFinite(opts?.limit) ? Math.floor(opts.limit) : defaultBatchLimit
+  ) : defaultBatchLimit;
+  const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
+  for (let page = 0; page < pageLimit; page++) {
+    const batch = await fetchBatch({
+      after: afterTs,
+      before: cursorBefore,
+      limit: batchLimit,
+      page
+    });
+    if (!Array.isArray(batch) || !batch.length) break;
+    for (const item of batch) {
+      if (!item?.id || seen.has(item.id)) continue;
+      seen.add(item.id);
+      items.push(item);
+    }
+    onPage?.(items, {
+      page,
+      done: false
+    });
+    const oldest = Math.min(
+      ...batch.map((item) => Math.floor(getItemStartTime(item, before)))
+    );
+    if (batch.length < batchLimit || oldest <= afterTs) break;
+    cursorBefore = oldest - 1;
+  }
+  onPage?.(items, { page: -1, done: true });
+  return items;
 }
 
 // src/card/FrigateViewCard.js
@@ -6070,50 +6123,23 @@ const FrigateViewCard = class extends HTMLElement {
     return this._followNowWindow;
   }
   async _fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
-    const items = [];
-    const seen = new Set();
-    const afterTs = Math.floor(after);
-    let cursorBefore = Math.floor(
-      Number.isFinite(opts?.cursorBefore) ? opts.cursorBefore : before
-    );
-    const pageLimit = Math.max(
-      1,
-      Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : WINDOW_FETCH_PAGE_LIMIT
-    );
-    const batchLimit = Math.max(
-      1,
-      Number.isFinite(opts?.limit) ? Math.floor(opts.limit) : EVENT_FETCH_BATCH
-    );
-    const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
-    let pagesFetched = 0;
-    for (let page = 0; page < pageLimit; page++) {
-      const batch = await this._ws({
+    return fetchWindowedItems({
+      after,
+      before,
+      opts,
+      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
+      defaultBatchLimit: EVENT_FETCH_BATCH,
+      useOptionLimit: true,
+      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._ws({
         type: "frigate/events/get",
         instance_id: clientId,
         cameras: [cam],
         after: afterTs,
-        before: cursorBefore,
-        limit: batchLimit
-      });
-      if (!Array.isArray(batch) || !batch.length) break;
-      pagesFetched += 1;
-      for (const item of batch) {
-        if (!item?.id || seen.has(item.id)) continue;
-        seen.add(item.id);
-        items.push(item);
-      }
-      onPage?.(items, {
-        page,
-        done: false
-      });
-      const oldest = Math.min(
-        ...batch.map((item) => Math.floor(item?.start_time || before))
-      );
-      if (batch.length < batchLimit || oldest <= afterTs) break;
-      cursorBefore = oldest - 1;
-    }
-    onPage?.(items, { page: -1, done: true });
-    return items;
+        before: beforeTs,
+        limit
+      }),
+      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
+    });
   }
   async _warmOtherCamerasEvents() {
     const token = ++this._warmCamsToken;
@@ -6172,46 +6198,23 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   async _fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
-    const items = [];
-    const seen = new Set();
-    const afterTs = Math.floor(after);
-    let cursorBefore = Math.floor(
-      Number.isFinite(opts?.cursorBefore) ? opts.cursorBefore : before
-    );
-    const pageLimit = Math.max(
-      1,
-      Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : WINDOW_FETCH_PAGE_LIMIT
-    );
-    const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
-    let pagesFetched = 0;
-    for (let page = 0; page < pageLimit; page++) {
-      const batch = await this._ws({
+    return fetchWindowedItems({
+      after,
+      before,
+      opts,
+      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
+      defaultBatchLimit: REVIEW_FETCH_BATCH,
+      useOptionLimit: false,
+      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._ws({
         type: "frigate/reviews/get",
         instance_id: clientId,
         cameras: [cam],
         after: afterTs,
-        before: cursorBefore,
-        limit: REVIEW_FETCH_BATCH
-      });
-      if (!Array.isArray(batch) || !batch.length) break;
-      pagesFetched += 1;
-      for (const item of batch) {
-        if (!item?.id || seen.has(item.id)) continue;
-        seen.add(item.id);
-        items.push(item);
-      }
-      onPage?.(items, {
-        page,
-        done: false
-      });
-      const oldest = Math.min(
-        ...batch.map((item) => Math.floor(item?.start_time || before))
-      );
-      if (batch.length < REVIEW_FETCH_BATCH || oldest <= afterTs) break;
-      cursorBefore = oldest - 1;
-    }
-    onPage?.(items, { page: -1, done: true });
-    return items;
+        before: beforeTs,
+        limit
+      }),
+      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
+    });
   }
   async _loadWindow(replace) {
     if (this._isPreviewPageActive()) return;
