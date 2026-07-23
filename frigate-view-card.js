@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.739";
+const VERSION = "1.0.740";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1915,6 +1915,38 @@ function buildMainLayoutShellMarkup({
           ${rightColumnShell}
 
         </div>`;
+}
+
+// src/card/review-list-model.js
+function buildReviewListItemModel(review, deps) {
+  const {
+    cap: cap2,
+    icons,
+    resolveSourceEvent,
+    findEventById,
+    media,
+    dateTimeLabel
+  } = deps || {};
+  const sev = review?.severity === "alert" ? "alert" : "detection";
+  const objs = (review?.data?.objects || []).map((label) => cap2(label)).join(", ");
+  const title = review?.data?.metadata?.title || objs || cap2(review?.severity || "");
+  const firstDet = review?.data?.detections && review.data.detections[0] || "";
+  const sourceEvent = resolveSourceEvent(review);
+  const cameraLabel = String(review?.camera || sourceEvent?.camera || "").replace(/_/g, " ").trim();
+  const reviewed = !!review?.has_been_reviewed;
+  const favEv = firstDet ? findEventById(firstDet) : null;
+  const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>` : "";
+  return {
+    reviewId: review?.id || "",
+    firstDet,
+    sev,
+    title,
+    cameraLabel,
+    reviewed,
+    favBtn,
+    thumbSrc: firstDet ? media(firstDet, "thumbnail.jpg") : "",
+    timeLabel: dateTimeLabel(review?.start_time)
+  };
 }
 
 // src/data/review-candidate-utils.js
@@ -10516,31 +10548,15 @@ const FrigateViewCard = class extends HTMLElement {
     this._setListHtmlIfChanged(list, this._recordingsListMarkup(recs));
     this._syncOlderHint(false);
   }
-  _reviewListItemModel(review) {
-    const sev = review.severity === "alert" ? "alert" : "detection";
-    const objs = (review.data?.objects || []).map(cap).join(", ");
-    const title = review.data?.metadata?.title || objs || cap(review.severity);
-    const firstDet = review.data?.detections && review.data.detections[0] || "";
-    const sourceEvent = this._reviewSourceEvent(review);
-    const cameraLabel = String(review?.camera || sourceEvent?.camera || "").replace(/_/g, " ").trim();
-    const reviewed = review.has_been_reviewed;
-    const favEv = firstDet ? this._findEventById(firstDet) : null;
-    const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>` : "";
-    const thumbSrc = firstDet ? this._media(firstDet, "thumbnail.jpg") : "";
-    return {
-      reviewId: review.id,
-      firstDet,
-      sev,
-      title,
-      cameraLabel,
-      reviewed,
-      favBtn,
-      thumbSrc,
-      timeLabel: this._dateTimeLabel(review.start_time)
-    };
-  }
   _reviewListItemHTML(review) {
-    const model = this._reviewListItemModel(review);
+    const model = buildReviewListItemModel(review, {
+      cap,
+      icons: ICONS,
+      resolveSourceEvent: (value) => this._reviewSourceEvent(value),
+      findEventById: (id) => this._findEventById(id),
+      media: (id, file) => this._media(id, file),
+      dateTimeLabel: (ts) => this._dateTimeLabel(ts)
+    });
     const thumb = model.firstDet ? `<div class="et ${model.sev}">
                 <img src="${model.thumbSrc}" loading="lazy" data-thumb-id="${model.firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="tph" style="display:none">${ICONS.person}</div>

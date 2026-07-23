@@ -103,6 +103,7 @@ import {
   buildTabsMarkup,
   resolveSubtitleText,
 } from "./shell-nav-markup.js";
+import { buildReviewListItemModel } from "./review-list-model.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import {
@@ -8641,39 +8642,15 @@ export class FrigateViewCard extends HTMLElement {
     this._syncOlderHint(false);
   }
 
-  _reviewListItemModel(review) {
-    const sev = review.severity === "alert" ? "alert" : "detection";
-    const objs = (review.data?.objects || []).map(cap).join(", ");
-    const title = review.data?.metadata?.title || objs || cap(review.severity);
-    const firstDet =
-      (review.data?.detections && review.data.detections[0]) || "";
-    const sourceEvent = this._reviewSourceEvent(review);
-    const cameraLabel = String(review?.camera || sourceEvent?.camera || "")
-      .replace(/_/g, " ")
-      .trim();
-    const reviewed = review.has_been_reviewed;
-    const favEv = firstDet ? this._findEventById(firstDet) : null;
-    const favBtn = firstDet
-      ? favEv?.retain_indefinitely
-        ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${ICONS.star}</button>`
-        : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${ICONS.starO}</button>`
-      : "";
-    const thumbSrc = firstDet ? this._media(firstDet, "thumbnail.jpg") : "";
-    return {
-      reviewId: review.id,
-      firstDet,
-      sev,
-      title,
-      cameraLabel,
-      reviewed,
-      favBtn,
-      thumbSrc,
-      timeLabel: this._dateTimeLabel(review.start_time),
-    };
-  }
-
   _reviewListItemHTML(review) {
-    const model = this._reviewListItemModel(review);
+    const model = buildReviewListItemModel(review, {
+      cap,
+      icons: ICONS,
+      resolveSourceEvent: (value) => this._reviewSourceEvent(value),
+      findEventById: (id) => this._findEventById(id),
+      media: (id, file) => this._media(id, file),
+      dateTimeLabel: (ts) => this._dateTimeLabel(ts),
+    });
     const thumb = model.firstDet
       ? `<div class="et ${model.sev}">
                 <img src="${model.thumbSrc}" loading="lazy" data-thumb-id="${model.firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
