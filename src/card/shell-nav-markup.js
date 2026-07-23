@@ -127,3 +127,23 @@ export function buildInfoRowMarkup({ title, subtitle, version }) {
               </div>
             </div>`;
 }
+
+export function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
+  const muteLabel = streamMuted ? "Unmute live view" : "Mute live view";
+  const muteIcon = streamMuted ? icons.volOff : icons.volOn;
+  return `<div id="eng-wrap">
+                <div id="engine">
+                  <div class="ph">${icons.live}<span>Connecting…</span></div>
+                </div>
+                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
+                  <button class="glass-btn mute-btn" id="mute-btn" title="${muteLabel}" aria-label="${muteLabel}">${muteIcon}</button>
+                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
+                  <div id="stream-fallback" hidden>
+                    <img id="stream-fallback-img" alt="Camera snapshot">
+                  </div>
+                  <div class="stream-fallback-status" id="stream-fallback-status" hidden>Snapshot unavailable</div>
+                  <div class="stream-loading" id="stream-loading" hidden>
+                    <span class="dot"></span><span class="label">Loading…</span>
+                  </div>
+              </div>`;
+}

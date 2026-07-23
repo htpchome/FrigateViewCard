@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.725";
+const VERSION = "1.0.726";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1801,6 +1801,25 @@ function buildInfoRowMarkup({ title, subtitle, version }) {
                 </div>
               </div>
             </div>`;
+}
+function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
+  const muteLabel = streamMuted ? "Unmute live view" : "Mute live view";
+  const muteIcon = streamMuted ? icons.volOff : icons.volOn;
+  return `<div id="eng-wrap">
+                <div id="engine">
+                  <div class="ph">${icons.live}<span>Connecting\u2026</span></div>
+                </div>
+                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
+                  <button class="glass-btn mute-btn" id="mute-btn" title="${muteLabel}" aria-label="${muteLabel}">${muteIcon}</button>
+                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
+                  <div id="stream-fallback" hidden>
+                    <img id="stream-fallback-img" alt="Camera snapshot">
+                  </div>
+                  <div class="stream-fallback-status" id="stream-fallback-status" hidden>Snapshot unavailable</div>
+                  <div class="stream-loading" id="stream-loading" hidden>
+                    <span class="dot"></span><span class="label">Loading\u2026</span>
+                  </div>
+              </div>`;
 }
 
 // src/preview/preview-alert-controller.js
@@ -6917,6 +6936,10 @@ const FrigateViewCard = class extends HTMLElement {
       subtitle,
       version: VERSION
     });
+    const liveEngineWrap = buildLiveEngineWrapMarkup({
+      icons: ICONS,
+      streamMuted: this._streamMuted
+    });
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._cardStateClassNames()}" id="card" style="border-radius: var(--fvc-border-radius);">
 
@@ -6929,21 +6952,7 @@ const FrigateViewCard = class extends HTMLElement {
           </div>
 
           <div class="col-left" id="col-left">
-              <div id="eng-wrap">
-                <div id="engine">
-                  <div class="ph">${ICONS.live}<span>Connecting\u2026</span></div>
-                </div>
-                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${ICONS.expand}</button>
-                  <button class="glass-btn mute-btn" id="mute-btn" title="${this._streamMuted ? "Unmute live view" : "Mute live view"}" aria-label="${this._streamMuted ? "Unmute live view" : "Mute live view"}">${this._streamMuted ? ICONS.volOff : ICONS.volOn}</button>
-                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
-                  <div id="stream-fallback" hidden>
-                    <img id="stream-fallback-img" alt="Camera snapshot">
-                  </div>
-                  <div class="stream-fallback-status" id="stream-fallback-status" hidden>Snapshot unavailable</div>
-                  <div class="stream-loading" id="stream-loading" hidden>
-                    <span class="dot"></span><span class="label">Loading\u2026</span>
-                  </div>
-              </div>
+            ${liveEngineWrap}
 
             ${infoRow}
             ${pageNav}
