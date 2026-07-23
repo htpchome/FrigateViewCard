@@ -116,6 +116,7 @@ import {
   buildStickyDaySectionsHtml,
   buildEmptyListMessageHtml,
   resolveActiveDayLabelFromScroll,
+  runListPostRenderSync,
   resolveOlderHintMetrics,
   resolveOlderHintState,
 } from "./list-render-utils.js";
@@ -8521,10 +8522,12 @@ export class FrigateViewCard extends HTMLElement {
       list,
       appendEndMarker(eventsHtml, this._exhausted),
     );
-    this._syncBrowseHeadFromScroll();
-    this._syncOlderHint();
-    requestAnimationFrame(() => this._syncOlderHint());
-    setTimeout(() => this._syncOlderHint(), 200);
+    runListPostRenderSync({
+      syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      forceHide: null,
+      scheduleDeferredOlderHint: true,
+    });
   }
   _syncOlderHint(forceHide = null) {
     const hint = this._$("#older-hint");
@@ -8610,8 +8613,12 @@ export class FrigateViewCard extends HTMLElement {
         this._reviewListItemHTML(review),
       ),
     );
-    this._syncBrowseHeadFromScroll();
-    this._syncOlderHint(false);
+    runListPostRenderSync({
+      syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      forceHide: false,
+      scheduleDeferredOlderHint: false,
+    });
   }
   // ── clip download range ───────────────────────────────────
   async _downloadRecRange(dlStart, dlEnd) {

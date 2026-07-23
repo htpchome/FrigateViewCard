@@ -110,3 +110,21 @@ export function resolveActiveDayLabelFromScroll({ list, browse }) {
 
   return String(active?.dataset?.dayLabel || active?.textContent || "");
 }
+
+export function runListPostRenderSync({
+  syncBrowseHead,
+  syncOlderHint,
+  forceHide = null,
+  scheduleDeferredOlderHint = false,
+}) {
+  if (typeof syncBrowseHead === "function") {
+    syncBrowseHead();
+  }
+  if (typeof syncOlderHint !== "function") return;
+
+  syncOlderHint(forceHide);
+  if (!scheduleDeferredOlderHint) return;
+
+  requestAnimationFrame(() => syncOlderHint(forceHide));
+  setTimeout(() => syncOlderHint(forceHide), 200);
+}

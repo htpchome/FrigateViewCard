@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.747";
+const VERSION = "1.0.748";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2124,6 +2124,21 @@ function resolveActiveDayLabelFromScroll({ list, browse }) {
     }
   }
   return String(active?.dataset?.dayLabel || active?.textContent || "");
+}
+function runListPostRenderSync({
+  syncBrowseHead,
+  syncOlderHint,
+  forceHide = null,
+  scheduleDeferredOlderHint = false
+}) {
+  if (typeof syncBrowseHead === "function") {
+    syncBrowseHead();
+  }
+  if (typeof syncOlderHint !== "function") return;
+  syncOlderHint(forceHide);
+  if (!scheduleDeferredOlderHint) return;
+  requestAnimationFrame(() => syncOlderHint(forceHide));
+  setTimeout(() => syncOlderHint(forceHide), 200);
 }
 
 // src/data/review-candidate-utils.js
@@ -10628,10 +10643,12 @@ const FrigateViewCard = class extends HTMLElement {
       list,
       appendEndMarker(eventsHtml, this._exhausted)
     );
-    this._syncBrowseHeadFromScroll();
-    this._syncOlderHint();
-    requestAnimationFrame(() => this._syncOlderHint());
-    setTimeout(() => this._syncOlderHint(), 200);
+    runListPostRenderSync({
+      syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      forceHide: null,
+      scheduleDeferredOlderHint: true
+    });
   }
   _syncOlderHint(forceHide = null) {
     const hint = this._$("#older-hint");
@@ -10711,8 +10728,12 @@ const FrigateViewCard = class extends HTMLElement {
         (review) => this._reviewListItemHTML(review)
       )
     );
-    this._syncBrowseHeadFromScroll();
-    this._syncOlderHint(false);
+    runListPostRenderSync({
+      syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      forceHide: false,
+      scheduleDeferredOlderHint: false
+    });
   }
   // ── clip download range ───────────────────────────────────
   async _downloadRecRange(dlStart, dlEnd) {
