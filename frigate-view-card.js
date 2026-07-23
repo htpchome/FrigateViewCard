@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.716";
+const VERSION = "1.0.717";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2614,7 +2614,7 @@ const SlideshowPageController = class {
     this._host._slideshowAttentionType = "";
     this._host._slideshowHandledReviewIds.clear();
     this._host._slideshowStartedAtSec = Math.floor(Date.now() / 1e3);
-    this._host._scheduleSlideshowReviewWatch(300);
+    this._host._slideshowAlertController.scheduleReviewWatch(300);
     this.scheduleRotation(source);
     this._host._syncToolbarButtons();
     return true;
@@ -5906,37 +5906,9 @@ const FrigateViewCard = class extends HTMLElement {
     const start = Number(review?.start_time || review?.after?.start_time || 0);
     return Number.isFinite(start) ? start : 0;
   }
-  _isSlideshowReviewFresh(review) {
-    return this._slideshowAlertController.isReviewFresh(review);
-  }
-  _rememberHandledSlideshowReview(reviewId) {
-    this._slideshowAlertController.rememberHandledReview(reviewId);
-  }
-  _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
-    this._slideshowAlertController.handleReviewsUpdated(
-      entity,
-      reviews,
-      source
-    );
-  }
-  async _probeLatestSlideshowReview() {
-    await this._slideshowAlertController.probeLatestReview();
-  }
-  _scheduleSlideshowReviewProbe(delayMs = 180) {
-    this._slideshowAlertController.scheduleReviewProbe(delayMs);
-  }
-  _slideshowReviewWatchIntervalMs() {
-    return this._slideshowAlertController.reviewWatchIntervalMs();
-  }
-  _scheduleSlideshowReviewWatch(delayMs = null) {
-    this._slideshowAlertController.scheduleReviewWatch(delayMs);
-  }
   _cameraIndexByEntity(entity) {
     if (!entity) return -1;
     return this._config?.cameras?.findIndex((camera) => camera.entity === entity) ?? -1;
-  }
-  async _advanceSlideshowRotation() {
-    await this._slideshowPageController.advanceRotation();
   }
   _extractRealtimeMessageCamera(msg) {
     return String(
@@ -5948,9 +5920,6 @@ const FrigateViewCard = class extends HTMLElement {
     return String(
       msg?.severity || msg?.event?.severity || msg?.event?.data?.severity || msg?.review?.severity || msg?.review?.data?.severity || msg?.after?.severity || msg?.after?.data?.severity || msg?.before?.severity || msg?.before?.data?.severity || (type.includes("detection") ? "detection" : "")
     ).trim().toLowerCase();
-  }
-  _handleSlideshowRealtimeMessage(msg) {
-    this._slideshowAlertController.handleRealtimeMessage(msg);
   }
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
@@ -6340,7 +6309,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._reviews = Array.isArray(initialReviews) ? initialReviews : [];
       this._cacheActiveCamSlice("reviews", this._reviews);
       this._renderList();
-      this._handleSlideshowReviewsUpdated(
+      this._slideshowAlertController.handleReviewsUpdated(
         this._activeCam?.entity || "",
         this._reviews,
         "alerts-window-initial"
@@ -6381,7 +6350,7 @@ const FrigateViewCard = class extends HTMLElement {
             this._reviews = this._reviews.concat(remainingReviews);
             this._cacheActiveCamSlice("reviews", this._reviews);
             this._renderList();
-            this._handleSlideshowReviewsUpdated(
+            this._slideshowAlertController.handleReviewsUpdated(
               this._activeCam?.entity || "",
               this._reviews,
               "alerts-window-background"
@@ -6424,7 +6393,7 @@ const FrigateViewCard = class extends HTMLElement {
       });
       this._reviews = Array.isArray(r) ? r : [];
       this._cacheActiveCamSlice("reviews", this._reviews);
-      this._handleSlideshowReviewsUpdated(
+      this._slideshowAlertController.handleReviewsUpdated(
         this._activeCam?.entity || "",
         this._reviews,
         "alerts-tab"
@@ -6559,7 +6528,7 @@ const FrigateViewCard = class extends HTMLElement {
         (msg) => {
           this._gridAlertController.handleRealtimeMessage(msg);
           this._previewAlertController.handleRealtimeMessage(msg);
-          this._handleSlideshowRealtimeMessage(msg);
+          this._slideshowAlertController.handleRealtimeMessage(msg);
           if (!this._isNowWindow()) return;
           if (!this._isRealtimeEventMessage(msg)) return;
           this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);

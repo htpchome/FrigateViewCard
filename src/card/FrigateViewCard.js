@@ -3838,48 +3838,12 @@ export class FrigateViewCard extends HTMLElement {
     return Number.isFinite(start) ? start : 0;
   }
 
-  _isSlideshowReviewFresh(review) {
-    return this._slideshowAlertController.isReviewFresh(review);
-  }
-
-  _rememberHandledSlideshowReview(reviewId) {
-    this._slideshowAlertController.rememberHandledReview(reviewId);
-  }
-
-  _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
-    this._slideshowAlertController.handleReviewsUpdated(
-      entity,
-      reviews,
-      source,
-    );
-  }
-
-  async _probeLatestSlideshowReview() {
-    await this._slideshowAlertController.probeLatestReview();
-  }
-
-  _scheduleSlideshowReviewProbe(delayMs = 180) {
-    this._slideshowAlertController.scheduleReviewProbe(delayMs);
-  }
-
-  _slideshowReviewWatchIntervalMs() {
-    return this._slideshowAlertController.reviewWatchIntervalMs();
-  }
-
-  _scheduleSlideshowReviewWatch(delayMs = null) {
-    this._slideshowAlertController.scheduleReviewWatch(delayMs);
-  }
-
   _cameraIndexByEntity(entity) {
     if (!entity) return -1;
     return (
       this._config?.cameras?.findIndex((camera) => camera.entity === entity) ??
       -1
     );
-  }
-
-  async _advanceSlideshowRotation() {
-    await this._slideshowPageController.advanceRotation();
   }
 
   _extractRealtimeMessageCamera(msg) {
@@ -3911,10 +3875,6 @@ export class FrigateViewCard extends HTMLElement {
     )
       .trim()
       .toLowerCase();
-  }
-
-  _handleSlideshowRealtimeMessage(msg) {
-    this._slideshowAlertController.handleRealtimeMessage(msg);
   }
 
   // ── camera switching ──────────────────────────────────────
@@ -4338,7 +4298,7 @@ export class FrigateViewCard extends HTMLElement {
       this._reviews = Array.isArray(initialReviews) ? initialReviews : [];
       this._cacheActiveCamSlice("reviews", this._reviews);
       this._renderList();
-      this._handleSlideshowReviewsUpdated(
+      this._slideshowAlertController.handleReviewsUpdated(
         this._activeCam?.entity || "",
         this._reviews,
         "alerts-window-initial",
@@ -4387,7 +4347,7 @@ export class FrigateViewCard extends HTMLElement {
             this._reviews = this._reviews.concat(remainingReviews);
             this._cacheActiveCamSlice("reviews", this._reviews);
             this._renderList();
-            this._handleSlideshowReviewsUpdated(
+            this._slideshowAlertController.handleReviewsUpdated(
               this._activeCam?.entity || "",
               this._reviews,
               "alerts-window-background",
@@ -4430,7 +4390,7 @@ export class FrigateViewCard extends HTMLElement {
       });
       this._reviews = Array.isArray(r) ? r : [];
       this._cacheActiveCamSlice("reviews", this._reviews);
-      this._handleSlideshowReviewsUpdated(
+      this._slideshowAlertController.handleReviewsUpdated(
         this._activeCam?.entity || "",
         this._reviews,
         "alerts-tab",
@@ -4573,7 +4533,7 @@ export class FrigateViewCard extends HTMLElement {
         (msg) => {
           this._gridAlertController.handleRealtimeMessage(msg);
           this._previewAlertController.handleRealtimeMessage(msg);
-          this._handleSlideshowRealtimeMessage(msg);
+          this._slideshowAlertController.handleRealtimeMessage(msg);
           if (!this._isNowWindow()) return;
           if (!this._isRealtimeEventMessage(msg)) return;
           this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);

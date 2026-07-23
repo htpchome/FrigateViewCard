@@ -58,7 +58,7 @@ export class SlideshowPageController {
     this._host._slideshowAttentionType = "";
     this._host._slideshowHandledReviewIds.clear();
     this._host._slideshowStartedAtSec = Math.floor(Date.now() / 1000);
-    this._host._scheduleSlideshowReviewWatch(300);
+    this._host._slideshowAlertController.scheduleReviewWatch(300);
     this.scheduleRotation(source);
     this._host._syncToolbarButtons();
     return true;
