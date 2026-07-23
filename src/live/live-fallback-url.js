@@ -100,3 +100,20 @@ export const createFallbackSourceResolvers = ({
       origin,
     }),
 });
+
+export const createFallbackSourceResolversForCard = ({ card, origin }) => {
+  if (!card) {
+    return {
+      loadPrimary: async () => "",
+      loadAlt: () => "",
+    };
+  }
+
+  return createFallbackSourceResolvers({
+    canCallWs: !!card._hass?.callWS,
+    signedPathResolver: async (path) => await card._signed(path),
+    cacheMap: card._fallbackImgUrlCache,
+    stateMap: card._hass?.states,
+    origin,
+  });
+};

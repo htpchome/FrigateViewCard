@@ -127,7 +127,7 @@ import {
   applyStreamLoadingState,
   resolveActiveStreamTypeState,
 } from "../live/live-stream-state.js";
-import { createFallbackSourceResolvers } from "../live/live-fallback-url.js";
+import { createFallbackSourceResolversForCard } from "../live/live-fallback-url.js";
 import {
   applyFallbackImageHandlers,
   setFallbackImageSourceIfChanged,
@@ -2191,11 +2191,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _fallbackSourceResolvers() {
-    return createFallbackSourceResolvers({
-      canCallWs: !!this._hass?.callWS,
-      signedPathResolver: async (path) => await this._signed(path),
-      cacheMap: this._fallbackImgUrlCache,
-      stateMap: this._hass?.states,
+    return createFallbackSourceResolversForCard({
+      card: this,
       origin: window.location.origin,
     });
   }

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  createFallbackSourceResolversForCard,
   createFallbackSourceResolvers,
   getCachedEntityUrl,
   isAbsoluteOrDataUrl,
@@ -203,4 +204,50 @@ test("createFallbackSourceResolvers primary loader returns empty when ws is unav
 
   const primary = await resolvers.loadPrimary("camera.front");
   assert.equal(primary, "");
+});
+
+test("createFallbackSourceResolversForCard maps card runtime to source resolvers", async () => {
+  const cacheMap = new Map();
+  const card = {
+    _hass: {
+      callWS: () => {},
+      states: {
+        "camera.front": {
+          attributes: {
+            entity_picture: "/api/camera_proxy/camera.front?x=3",
+          },
+        },
+      },
+    },
+    _signed: async (path) => `${path}?token=abc`,
+    _fallbackImgUrlCache: cacheMap,
+  };
+
+  const resolvers = createFallbackSourceResolversForCard({
+    card,
+    origin: "https://ha.local",
+  });
+
+  const primary = await resolvers.loadPrimary("camera.front");
+  const alt = resolvers.loadAlt("camera.front");
+
+  assert.equal(
+    primary,
+    "https://ha.local/api/camera_proxy/camera.front?token=abc",
+  );
+  assert.equal(alt, "https://ha.local/api/camera_proxy/camera.front?x=3");
+  assert.equal(
+    cacheMap.get("camera.front")?.url,
+    "https://ha.local/api/camera_proxy/camera.front?token=abc",
+  );
+});
+
+test("createFallbackSourceResolversForCard returns empty resolvers without card", async () => {
+  const resolvers = createFallbackSourceResolversForCard({
+    card: null,
+    origin: "https://ha.local",
+  });
+
+  assert.equal(await resolvers.loadPrimary("camera.front"), "");
+  assert.equal(resolvers.loadAlt("camera.front"), "");
 });
