@@ -137,7 +137,6 @@ import {
   setFallbackImageSourceIfChanged,
 } from "../live/live-fallback-image.js";
 import {
-  buildFallbackRefreshOutcome,
   canRefreshFallbackImage,
   getFallbackRefreshElements,
   isFallbackRefreshStale,
@@ -145,6 +144,7 @@ import {
   nextFallbackRequestId,
   resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
+  resolveFallbackRefreshSources,
 } from "../live/live-fallback-refresh.js";
 import {
   resolveHaDirectStartup,
@@ -2236,20 +2236,20 @@ export class FrigateViewCard extends HTMLElement {
       entity,
       loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity),
     });
-    const outcome = buildFallbackRefreshOutcome({
+    const sources = resolveFallbackRefreshSources({
       primarySrc,
       altSrc,
     });
-    if (!outcome.hasSource) return;
+    if (!sources.hasSource) return;
     applyFallbackImageHandlers({
       img: imgEl,
       statusEl,
-      altSrc,
+      altSrc: sources.altSrc,
       entity,
     });
     setFallbackImageSourceIfChanged({
       img: imgEl,
-      src: outcome.src,
+      src: sources.src,
     });
   }
 

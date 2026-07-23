@@ -23,6 +23,19 @@ export const resolveAltFallbackSource = ({ entity, loadAlt }) => {
   return loadAlt(entity);
 };
 
+export const resolveFallbackRefreshSources = ({ primarySrc, altSrc }) => {
+  const outcome = buildFallbackRefreshOutcome({
+    primarySrc,
+    altSrc,
+  });
+  return {
+    primarySrc,
+    altSrc,
+    src: outcome.src,
+    hasSource: outcome.hasSource,
+  };
+};
+
 export const isFallbackRefreshStale = ({ requestId, activeRequestId }) =>
   requestId !== activeRequestId;
 

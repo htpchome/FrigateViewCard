@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.780";
+const VERSION = "1.0.781";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2255,6 +2255,18 @@ const loadPrimaryFallbackSource = async ({ entity, loadPrimary }) => {
 const resolveAltFallbackSource = ({ entity, loadAlt }) => {
   if (!entity) return "";
   return loadAlt(entity);
+};
+const resolveFallbackRefreshSources = ({ primarySrc, altSrc }) => {
+  const outcome = buildFallbackRefreshOutcome({
+    primarySrc,
+    altSrc
+  });
+  return {
+    primarySrc,
+    altSrc,
+    src: outcome.src,
+    hasSource: outcome.hasSource
+  };
 };
 const isFallbackRefreshStale = ({ requestId, activeRequestId }) => requestId !== activeRequestId;
 const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
@@ -5749,20 +5761,20 @@ const FrigateViewCard = class extends HTMLElement {
       entity,
       loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity)
     });
-    const outcome = buildFallbackRefreshOutcome({
+    const sources = resolveFallbackRefreshSources({
       primarySrc,
       altSrc
     });
-    if (!outcome.hasSource) return;
+    if (!sources.hasSource) return;
     applyFallbackImageHandlers({
       img: imgEl,
       statusEl,
-      altSrc,
+      altSrc: sources.altSrc,
       entity
     });
     setFallbackImageSourceIfChanged({
       img: imgEl,
-      src: outcome.src
+      src: sources.src
     });
   }
   _cameraContext(entity) {

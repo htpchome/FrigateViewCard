@@ -10,6 +10,7 @@ import {
   nextFallbackRequestId,
   resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
+  resolveFallbackRefreshSources,
 } from "../src/live/live-fallback-refresh.js";
 
 test("nextFallbackRequestId increments from current id", () => {
@@ -105,6 +106,31 @@ test("resolveAltFallbackSource resolves alt only for valid entity", () => {
     loadAlt: () => "should-not-run",
   });
   assert.equal(skipped, "");
+});
+
+test("resolveFallbackRefreshSources returns combined source outcome", () => {
+  const withPrimary = resolveFallbackRefreshSources({
+    primarySrc: "https://ha.local/primary.jpg",
+    altSrc: "https://ha.local/alt.jpg",
+  });
+  assert.equal(withPrimary.primarySrc, "https://ha.local/primary.jpg");
+  assert.equal(withPrimary.altSrc, "https://ha.local/alt.jpg");
+  assert.equal(withPrimary.src, "https://ha.local/primary.jpg");
+  assert.equal(withPrimary.hasSource, true);
+
+  const withAltOnly = resolveFallbackRefreshSources({
+    primarySrc: "",
+    altSrc: "https://ha.local/alt.jpg",
+  });
+  assert.equal(withAltOnly.src, "https://ha.local/alt.jpg");
+  assert.equal(withAltOnly.hasSource, true);
+
+  const empty = resolveFallbackRefreshSources({
+    primarySrc: "",
+    altSrc: "",
+  });
+  assert.equal(empty.src, "");
+  assert.equal(empty.hasSource, false);
 });
 
 test("buildFallbackRefreshOutcome resolves source and hasSource", () => {
