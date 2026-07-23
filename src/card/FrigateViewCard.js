@@ -42,7 +42,6 @@ import {
   parseWs,
   normalizePositiveInteger,
   normalizeCameraConnectionType,
-  normalizeAlertsAreaContent,
   normalizeDisableHlsDesktop,
   normalizeHexColor,
   DIALOG_ACTION_SELECTOR,
@@ -107,6 +106,17 @@ import { GridAlertController } from "../grid/grid-alert-controller.js";
 import { GridPageController } from "../grid/grid-page-controller.js";
 import { SlideshowAlertController } from "../slideshow/slideshow-alert-controller.js";
 import { SlideshowPageController } from "../slideshow/slideshow-page-controller.js";
+import {
+  slideshowReviewModeForCamera,
+  shouldHandleSlideshowReview,
+  cameraIndexForIncomingCamera,
+  cameraEntityForIncomingCamera,
+  normalizeReviewSeverity,
+  reviewStartTimeSec,
+  cameraIndexByEntity,
+  extractRealtimeMessageCamera,
+  extractRealtimeMessageSeverity,
+} from "../slideshow/slideshow-routing-utils.js";
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -3796,55 +3806,31 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _slideshowReviewModeForCamera(entity) {
-    const cam = this._config?.cameras?.find(
-      (camera) => camera.entity === entity,
-    );
-    return normalizeAlertsAreaContent(cam?.alerts_content);
+    return slideshowReviewModeForCamera(this._config, entity);
   }
 
   _shouldHandleSlideshowReview(entity, severity) {
-    if (severity === "alert") return true;
-    return (
-      severity === "detection" &&
-      this._slideshowReviewModeForCamera(entity) === "all_reviews"
-    );
+    return shouldHandleSlideshowReview(this._config, entity, severity);
   }
 
   _cameraIndexForIncomingCamera(cameraId) {
-    const normalized = String(cameraId || "")
-      .trim()
-      .toLowerCase();
-    if (!normalized) return -1;
-    return (
-      this._config?.cameras?.findIndex((camera) => {
-        const entity = String(camera?.entity || "").toLowerCase();
-        const name = String(camera?.name || "").toLowerCase();
-        const discovered = String(
-          this._camCache[camera?.entity]?.cam || "",
-        ).toLowerCase();
-        return (
-          entity === normalized ||
-          name === normalized ||
-          discovered === normalized
-        );
-      }) ?? -1
-    );
+    return cameraIndexForIncomingCamera(this._config, this._camCache, cameraId);
   }
 
   _cameraEntityForIncomingCamera(cameraId) {
-    const idx = this._cameraIndexForIncomingCamera(cameraId);
-    return idx >= 0 ? this._config?.cameras?.[idx]?.entity || "" : "";
+    return cameraEntityForIncomingCamera(
+      this._config,
+      this._camCache,
+      cameraId,
+    );
   }
 
   _normalizeReviewSeverity(review) {
-    return String(review?.severity || review?.data?.severity || "")
-      .trim()
-      .toLowerCase();
+    return normalizeReviewSeverity(review);
   }
 
   _reviewStartTimeSec(review) {
-    const start = Number(review?.start_time || review?.after?.start_time || 0);
-    return Number.isFinite(start) ? start : 0;
+    return reviewStartTimeSec(review);
   }
 
   _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
@@ -3872,42 +3858,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _cameraIndexByEntity(entity) {
-    if (!entity) return -1;
-    return (
-      this._config?.cameras?.findIndex((camera) => camera.entity === entity) ??
-      -1
-    );
+    return cameraIndexByEntity(this._config, entity);
   }
 
   _extractRealtimeMessageCamera(msg) {
-    return String(
-      msg?.camera ||
-        msg?.event?.camera ||
-        msg?.review?.camera ||
-        msg?.after?.camera ||
-        msg?.before?.camera ||
-        "",
-    ).trim();
+    return extractRealtimeMessageCamera(msg);
   }
 
   _extractRealtimeMessageSeverity(msg) {
-    const type = String(msg?.type || "")
-      .trim()
-      .toLowerCase();
-    return String(
-      msg?.severity ||
-        msg?.event?.severity ||
-        msg?.event?.data?.severity ||
-        msg?.review?.severity ||
-        msg?.review?.data?.severity ||
-        msg?.after?.severity ||
-        msg?.after?.data?.severity ||
-        msg?.before?.severity ||
-        msg?.before?.data?.severity ||
-        (type.includes("detection") ? "detection" : ""),
-    )
-      .trim()
-      .toLowerCase();
+    return extractRealtimeMessageSeverity(msg);
   }
 
   _handleSlideshowRealtimeMessage(msg) {
