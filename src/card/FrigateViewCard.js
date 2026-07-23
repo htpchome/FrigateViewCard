@@ -185,7 +185,6 @@ export class FrigateViewCard extends HTMLElement {
     this._gridAlertExpiresByEntity = new Map();
     this._gridAlertSeverityByEntity = new Map();
     this._previewPageActive = false;
-    this._previewSnapshotRefreshT = null;
     this._previewLastRenderSignature = "";
     this._previewMediaState = null;
     this._previewAlertController = new PreviewAlertController(this, {
@@ -3130,14 +3129,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _clearPreviewTimers() {
-    if (this._previewSnapshotRefreshT)
-      clearTimeout(this._previewSnapshotRefreshT);
-    this._previewSnapshotRefreshT = null;
     this._previewAlertController.clearTimers();
-  }
-
-  _clearPreviewAlertTracking() {
-    this._previewAlertController.clearAlertTracking();
   }
 
   _isPreviewCameraAlertLive(entity) {
@@ -3357,31 +3349,6 @@ export class FrigateViewCard extends HTMLElement {
         fallbackOnLiveError: true,
       });
     });
-  }
-
-  _refreshPreviewSnapshots() {
-    if (!this._isPreviewPageActive() || this._previewLiveCamerasEnabled())
-      return;
-    const hosts = this.shadowRoot.querySelectorAll(
-      ".preview-media-host[data-preview-use-live='0']",
-    );
-    hosts.forEach((host) => {
-      const entity = host.dataset.previewMediaEntity || "";
-      const img = host.querySelector("img");
-      if (!entity || !img) return;
-      void (async () => {
-        const url = await this._streamFallbackUrl(entity);
-        if (!img.isConnected || !url) return;
-        img.src = url;
-      })();
-    });
-  }
-
-  _schedulePreviewSnapshotRefresh(delayMs = null) {
-    if (this._previewSnapshotRefreshT)
-      clearTimeout(this._previewSnapshotRefreshT);
-    this._previewSnapshotRefreshT = null;
-    void delayMs;
   }
 
   _startPreviewMode() {
@@ -6248,7 +6215,6 @@ export class FrigateViewCard extends HTMLElement {
   _scheduleResumeLive(reason = "") {
     if (this._isPreviewPageActive()) {
       this._renderPreviewPage();
-      this._schedulePreviewSnapshotRefresh(120);
       return;
     }
     if (this._viewMode === "grid") {

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.705";
+const VERSION = "1.0.706";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2046,7 +2046,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._gridAlertExpiresByEntity = new Map();
     this._gridAlertSeverityByEntity = new Map();
     this._previewPageActive = false;
-    this._previewSnapshotRefreshT = null;
     this._previewLastRenderSignature = "";
     this._previewMediaState = null;
     this._previewAlertController = new PreviewAlertController(this, {
@@ -4589,13 +4588,7 @@ const FrigateViewCard = class extends HTMLElement {
     card.classList.toggle("preview-active", this._isPreviewPageActive());
   }
   _clearPreviewTimers() {
-    if (this._previewSnapshotRefreshT)
-      clearTimeout(this._previewSnapshotRefreshT);
-    this._previewSnapshotRefreshT = null;
     this._previewAlertController.clearTimers();
-  }
-  _clearPreviewAlertTracking() {
-    this._previewAlertController.clearAlertTracking();
   }
   _isPreviewCameraAlertLive(entity) {
     return this._previewAlertController.isCameraAlertLive(entity);
@@ -4775,29 +4768,6 @@ const FrigateViewCard = class extends HTMLElement {
         fallbackOnLiveError: true
       });
     });
-  }
-  _refreshPreviewSnapshots() {
-    if (!this._isPreviewPageActive() || this._previewLiveCamerasEnabled())
-      return;
-    const hosts = this.shadowRoot.querySelectorAll(
-      ".preview-media-host[data-preview-use-live='0']"
-    );
-    hosts.forEach((host) => {
-      const entity = host.dataset.previewMediaEntity || "";
-      const img = host.querySelector("img");
-      if (!entity || !img) return;
-      void (async () => {
-        const url = await this._streamFallbackUrl(entity);
-        if (!img.isConnected || !url) return;
-        img.src = url;
-      })();
-    });
-  }
-  _schedulePreviewSnapshotRefresh(delayMs = null) {
-    if (this._previewSnapshotRefreshT)
-      clearTimeout(this._previewSnapshotRefreshT);
-    this._previewSnapshotRefreshT = null;
-    void delayMs;
   }
   _startPreviewMode() {
     this._previewPageController.startPreviewMode();
@@ -7291,7 +7261,6 @@ const FrigateViewCard = class extends HTMLElement {
   _scheduleResumeLive(reason = "") {
     if (this._isPreviewPageActive()) {
       this._renderPreviewPage();
-      this._schedulePreviewSnapshotRefresh(120);
       return;
     }
     if (this._viewMode === "grid") {
