@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.735";
+const VERSION = "1.0.736";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7826,6 +7826,9 @@ const FrigateViewCard = class extends HTMLElement {
         "mobile-rotate-popup",
         "mobile-rotate-popup-exit"
       );
+      card.classList.add("mobile-rotate-live");
+      this._rotateOverlayMode = "live";
+      this._rotateOverlayActive = true;
       if (fromPopup) this._setLiveNativeControls(false);
       this._setStreamLoading(false);
       this._setLiveNativeControls(true);
@@ -7873,23 +7876,23 @@ const FrigateViewCard = class extends HTMLElement {
           "mobile-rotate-popup-exit"
         );
       this._rotateOverlayExitT = null;
-      if (!force && this._resumeLiveT) return;
+      if (this._resumeLiveT) return;
       this._syncFullscreenButtonsVisibility();
     }, 260);
     this._syncFullscreenButtonsVisibility();
     this._showPopupControlsTemporarily();
   }
-  _kickLiveIfStale(force2 = false) {
+  _kickLiveIfStale(force = false) {
     if (!this._started || !this._hass || !this._config) return;
     if (this._isPreviewPageActive()) return;
     if (this._viewMode === "grid") return;
     if (!this._isCardVisible()) return;
     if (this._$("#myPopup")?.classList.contains("is-open")) return;
     if (this._mountInProgress) return;
-    if (!force2 && this._$("#stream-loading") && !this._$("#stream-loading").hidden)
+    if (!force && this._$("#stream-loading") && !this._$("#stream-loading").hidden)
       return;
     const now = Date.now();
-    if (!force2 && now - this._lastLiveKick < 4e3) return;
+    if (!force && now - this._lastLiveKick < 4e3) return;
     const recentMseTraffic = this._isFirefox() && (now - Number(this._mseConnectAt || 0) < 12e3 || now - Number(this._mseLastChunkAt || 0) < 3500);
     if (recentMseTraffic) return;
     const engineHost = this._$("#engine");
@@ -7905,7 +7908,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (stale) {
       this._lastLiveKick = now;
       this._ffDebug("Stale stream detected; remounting", {
-        force: force2,
+        force,
         readyState: Number(v?.readyState) || 0,
         ended: !!v?.ended,
         paused: !!v?.paused,

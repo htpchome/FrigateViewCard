@@ -5634,6 +5634,9 @@ export class FrigateViewCard extends HTMLElement {
         "mobile-rotate-popup",
         "mobile-rotate-popup-exit",
       );
+      card.classList.add("mobile-rotate-live");
+      this._rotateOverlayMode = "live";
+      this._rotateOverlayActive = true;
       if (fromPopup) this._setLiveNativeControls(false);
       this._setStreamLoading(false);
       this._setLiveNativeControls(true);
@@ -5684,7 +5687,7 @@ export class FrigateViewCard extends HTMLElement {
           "mobile-rotate-popup-exit",
         );
       this._rotateOverlayExitT = null;
-      if (!force && this._resumeLiveT) return;
+      if (this._resumeLiveT) return;
       this._syncFullscreenButtonsVisibility();
     }, 260);
     this._syncFullscreenButtonsVisibility();
