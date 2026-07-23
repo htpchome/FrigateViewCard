@@ -7,6 +7,7 @@ import {
   buildFallbackImageApplyPayload,
   buildFallbackImageWriteInput,
   buildFallbackRefreshOutcome,
+  buildFallbackRefreshWritePlan,
   canRefreshFallbackImage,
   getFallbackRefreshElements,
   issueFallbackRefreshToken,
@@ -257,6 +258,38 @@ test("runFallbackRefreshCycle skips write when both primary and alt sources are 
   assert.equal(activeRequestId, 2);
   assert.equal(handlerPayloads.length, 0);
   assert.equal(writes.length, 0);
+});
+
+test("buildFallbackRefreshWritePlan returns write input when a source is available", () => {
+  const imgEl = { id: "img" };
+  const statusEl = { id: "status" };
+  const plan = buildFallbackRefreshWritePlan({
+    entity: "camera.front",
+    primarySrc: "",
+    loadAlt: () => "https://ha.local/alt.jpg",
+    imgEl,
+    statusEl,
+  });
+
+  assert.equal(plan.shouldWrite, true);
+  assert.equal(plan.writeInput?.src, "https://ha.local/alt.jpg");
+  assert.equal(plan.writeInput?.applyPayload?.img, imgEl);
+  assert.equal(plan.writeInput?.applyPayload?.statusEl, statusEl);
+  assert.equal(plan.context?.entity, "camera.front");
+});
+
+test("buildFallbackRefreshWritePlan skips write input when no source is available", () => {
+  const plan = buildFallbackRefreshWritePlan({
+    entity: "camera.front",
+    primarySrc: "",
+    loadAlt: () => "",
+    imgEl: { id: "img" },
+    statusEl: { id: "status" },
+  });
+
+  assert.equal(plan.shouldWrite, false);
+  assert.equal(plan.writeInput, null);
+  assert.equal(plan.context?.sources?.hasSource, false);
 });
 
 test("getFallbackRefreshElements resolves fallback image and status elements", () => {

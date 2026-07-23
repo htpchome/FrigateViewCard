@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.790";
+const VERSION = "1.0.791";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2382,6 +2382,35 @@ const loadPrimaryWithStaleGate = async ({
     primarySrc
   };
 };
+const buildFallbackRefreshWritePlan = ({
+  entity,
+  primarySrc,
+  loadAlt,
+  imgEl,
+  statusEl
+}) => {
+  const context = buildFallbackRefreshContext({
+    entity,
+    primarySrc,
+    loadAlt
+  });
+  if (!shouldApplyFallbackRefreshSources({ sources: context.sources })) {
+    return {
+      shouldWrite: false,
+      writeInput: null,
+      context
+    };
+  }
+  return {
+    shouldWrite: true,
+    writeInput: buildFallbackImageWriteInput({
+      context,
+      imgEl,
+      statusEl
+    }),
+    context
+  };
+};
 const runFallbackRefreshCycle = async ({
   shadowRoot,
   currentRequestId,
@@ -2420,24 +2449,21 @@ const runFallbackRefreshCycle = async ({
       didWrite: false
     };
   }
-  const context = buildFallbackRefreshContext({
+  const writePlan = buildFallbackRefreshWritePlan({
     entity,
     primarySrc: primaryPhase.primarySrc,
-    loadAlt
+    loadAlt,
+    imgEl,
+    statusEl
   });
-  if (!shouldApplyFallbackRefreshSources({ sources: context.sources })) {
+  if (!writePlan.shouldWrite) {
     return {
       shouldAbort: false,
       didWrite: false
     };
   }
-  const writeInput = buildFallbackImageWriteInput({
-    context,
-    imgEl,
-    statusEl
-  });
   executeFallbackRefreshWrite({
-    writeInput,
+    writeInput: writePlan.writeInput,
     applyHandlers,
     applySource
   });

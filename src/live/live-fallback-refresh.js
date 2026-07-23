@@ -166,6 +166,36 @@ export const loadPrimaryWithStaleGate = async ({
   };
 };
 
+export const buildFallbackRefreshWritePlan = ({
+  entity,
+  primarySrc,
+  loadAlt,
+  imgEl,
+  statusEl,
+}) => {
+  const context = buildFallbackRefreshContext({
+    entity,
+    primarySrc,
+    loadAlt,
+  });
+  if (!shouldApplyFallbackRefreshSources({ sources: context.sources })) {
+    return {
+      shouldWrite: false,
+      writeInput: null,
+      context,
+    };
+  }
+  return {
+    shouldWrite: true,
+    writeInput: buildFallbackImageWriteInput({
+      context,
+      imgEl,
+      statusEl,
+    }),
+    context,
+  };
+};
+
 export const runFallbackRefreshCycle = async ({
   shadowRoot,
   currentRequestId,
@@ -207,25 +237,22 @@ export const runFallbackRefreshCycle = async ({
     };
   }
 
-  const context = buildFallbackRefreshContext({
+  const writePlan = buildFallbackRefreshWritePlan({
     entity,
     primarySrc: primaryPhase.primarySrc,
     loadAlt,
+    imgEl,
+    statusEl,
   });
-  if (!shouldApplyFallbackRefreshSources({ sources: context.sources })) {
+  if (!writePlan.shouldWrite) {
     return {
       shouldAbort: false,
       didWrite: false,
     };
   }
 
-  const writeInput = buildFallbackImageWriteInput({
-    context,
-    imgEl,
-    statusEl,
-  });
   executeFallbackRefreshWrite({
-    writeInput,
+    writeInput: writePlan.writeInput,
     applyHandlers,
     applySource,
   });
