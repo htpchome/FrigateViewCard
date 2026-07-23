@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.757";
+const VERSION = "1.0.758";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3581,7 +3581,6 @@ const FrigateViewCard = class extends HTMLElement {
     if (!this._isEditorPreviewContext()) return;
     if (!this._committedConfig) return;
     const base = this._cloneCardConfig(this._committedConfig);
-    const prevHiddenTabs = JSON.stringify(base.hidden_tabs || []);
     const next = previewConfig ? {
       ...base,
       title: previewConfig.title || null,
@@ -3629,16 +3628,15 @@ const FrigateViewCard = class extends HTMLElement {
     this._config = next;
     this._syncVisualStyleToggles();
     this._browseOpen = this._config.browse_expanded;
-    if (JSON.stringify(next.hidden_tabs || []) !== prevHiddenTabs) {
-      this._syncTabsShell();
-    }
+    this._syncTabsShell();
+    this._syncPageNavShell();
+    this._renderCamSwitcher();
     this._applyCardStyle();
     this._applyLayoutMode();
     if (this._isWideViewPageActive()) this._syncColHeight();
     this._syncStatus();
     this._renderSubtitle();
     this._renderStats();
-    this._renderCamSwitcher();
     this._renderListLabel();
     this._renderList();
     this._syncPageNavigationButtons();
@@ -5947,6 +5945,12 @@ const FrigateViewCard = class extends HTMLElement {
       activePageId: normalizePageRoute(this._pageId),
       getRouteLabel: (pageId) => this._pageRouteLabel(pageId)
     });
+  }
+  _syncPageNavShell() {
+    this.shadowRoot.querySelectorAll(".page-nav").forEach((nav) => {
+      nav.innerHTML = this._pageNavMarkup();
+    });
+    this._syncPageNavigationButtons();
   }
   _syncPageNavigationButtons() {
     this.shadowRoot.querySelectorAll("[data-page-route]").forEach((button) => {

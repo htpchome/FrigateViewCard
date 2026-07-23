@@ -371,7 +371,6 @@ export class FrigateViewCard extends HTMLElement {
     if (!this._committedConfig) return;
 
     const base = this._cloneCardConfig(this._committedConfig);
-    const prevHiddenTabs = JSON.stringify(base.hidden_tabs || []);
     const next = previewConfig
       ? {
           ...base,
@@ -449,16 +448,15 @@ export class FrigateViewCard extends HTMLElement {
     this._config = next;
     this._syncVisualStyleToggles();
     this._browseOpen = this._config.browse_expanded;
-    if (JSON.stringify(next.hidden_tabs || []) !== prevHiddenTabs) {
-      this._syncTabsShell();
-    }
+    this._syncTabsShell();
+    this._syncPageNavShell();
+    this._renderCamSwitcher();
     this._applyCardStyle();
     this._applyLayoutMode();
     if (this._isWideViewPageActive()) this._syncColHeight();
     this._syncStatus();
     this._renderSubtitle();
     this._renderStats();
-    this._renderCamSwitcher();
     this._renderListLabel();
     this._renderList();
     this._syncPageNavigationButtons();
@@ -3120,6 +3118,13 @@ export class FrigateViewCard extends HTMLElement {
       activePageId: normalizePageRoute(this._pageId),
       getRouteLabel: (pageId) => this._pageRouteLabel(pageId),
     });
+  }
+
+  _syncPageNavShell() {
+    this.shadowRoot.querySelectorAll(".page-nav").forEach((nav) => {
+      nav.innerHTML = this._pageNavMarkup();
+    });
+    this._syncPageNavigationButtons();
   }
 
   _syncPageNavigationButtons() {
