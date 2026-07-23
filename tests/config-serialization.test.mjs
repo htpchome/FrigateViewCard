@@ -2,7 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildEditorConfigFromDom,
   compactEditorConfigForYaml,
+  createEditorPreviewDraft,
   withCardTypeForYaml,
 } from "../src/helpers.js";
 
@@ -113,4 +115,46 @@ test("editor YAML payload preserves HA grid and visibility metadata", () => {
     grid_options: { rows: "auto", columns: "full" },
     visibility: [{ condition: "user", users: ["user-id"] }],
   });
+});
+
+test("buildEditorConfigFromDom prefers hiddenTabsOverride for hidden tabs", () => {
+  const root = {
+    querySelector: () => null,
+    querySelectorAll: () => [],
+  };
+
+  const result = buildEditorConfigFromDom({
+    root,
+    baseConfig: {},
+    cameras: [{ entity: "camera.front_door" }],
+    themeDraftCache: {},
+    hiddenTabsOverride: ["clips", "reviews", "invalid-tab"],
+  });
+
+  assert.deepEqual(result.hidden_tabs, ["clips", "alerts"]);
+});
+
+test("compact YAML keeps normalized hidden tabs when non-default", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    hidden_tabs: ["recordings", "reviews", "invalid-tab"],
+  });
+
+  assert.deepEqual(config, {
+    cameras: [{ entity: "camera.front_door" }],
+    hidden_tabs: ["recordings", "alerts"],
+  });
+});
+
+test("preview draft carries hidden tabs and page routes", () => {
+  const draft = createEditorPreviewDraft({
+    cameras: [{ entity: "camera.front_door" }],
+    hidden_tabs: ["clips", "snapshots"],
+    landing_page: "preview",
+    mobile_page: "single",
+  });
+
+  assert.deepEqual(draft.hidden_tabs, ["clips", "snapshots"]);
+  assert.equal(draft.landing_page, "preview");
+  assert.equal(draft.mobile_page, "single");
 });
