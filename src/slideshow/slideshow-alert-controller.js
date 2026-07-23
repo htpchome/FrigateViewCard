@@ -7,6 +7,7 @@ import {
   findFirstReviewCandidateForEntity,
   findNewestReviewCandidateAcrossCameras,
 } from "../data/review-candidate-utils.js";
+import { parseRealtimeAlertMessage } from "../data/realtime-alert-message-utils.js";
 
 export class SlideshowAlertController {
   constructor(host, constants) {
@@ -216,12 +217,9 @@ export class SlideshowAlertController {
       return;
     }
     this.scheduleReviewProbe();
-    const incomingCam = this._host._extractRealtimeMessageCamera(msg);
-    if (!incomingCam) return;
-    const cam = this._host._cameraEntityForIncomingCamera(incomingCam);
-    if (!cam) return;
-    const severity = this._host._extractRealtimeMessageSeverity(msg);
-    if (!this._host._shouldHandleSlideshowReview(cam, severity)) return;
+    const parsed = parseRealtimeAlertMessage({ host: this._host, msg });
+    if (!parsed) return;
+    const { cam, severity } = parsed;
 
     if (this._host._slideshowPopupPaused) {
       this._host._slideshowPendingAlertCam = cam;

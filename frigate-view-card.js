@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.731";
+const VERSION = "1.0.732";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1985,6 +1985,24 @@ async function findNewestReviewCandidateAcrossCameras({
   return selectNewestReviewCandidate(candidates);
 }
 
+// src/data/realtime-alert-message-utils.js
+function parseRealtimeAlertMessage({
+  host,
+  msg,
+  checkSeverity = true
+}) {
+  const incomingCam = host?._extractRealtimeMessageCamera(msg);
+  if (!incomingCam) return null;
+  const cam = host?._cameraEntityForIncomingCamera(incomingCam);
+  if (!cam) return null;
+  const severity = host?._extractRealtimeMessageSeverity(msg);
+  const type = String(msg?.type || "").trim().toLowerCase();
+  if (checkSeverity && !host?._shouldHandleSlideshowReview(cam, severity)) {
+    return null;
+  }
+  return { cam, severity, type };
+}
+
 // src/preview/preview-alert-controller.js
 const PreviewAlertController = class {
   constructor(host, constants) {
@@ -2106,12 +2124,13 @@ const PreviewAlertController = class {
   }
   handleRealtimeMessage(msg) {
     if (!this._host._isPreviewPageActive()) return;
-    const incomingCam = this._host._extractRealtimeMessageCamera(msg);
-    if (!incomingCam) return;
-    const cam = this._host._cameraEntityForIncomingCamera(incomingCam);
-    if (!cam) return;
-    const type = String(msg?.type || "").trim().toLowerCase();
-    const severity = this._host._extractRealtimeMessageSeverity(msg);
+    const parsed = parseRealtimeAlertMessage({
+      host: this._host,
+      msg,
+      checkSeverity: false
+    });
+    if (!parsed) return;
+    const { cam, severity, type } = parsed;
     if (type === "end") {
       if (this.isCameraAlertLive(cam)) {
         this.markAlertCamera(
@@ -2471,12 +2490,9 @@ const GridAlertController = class {
   handleRealtimeMessage(msg) {
     if (!this._host._isGridModeAvailable()) return;
     if (this._host._viewMode !== "grid") return;
-    const incomingCam = this._host._extractRealtimeMessageCamera(msg);
-    if (!incomingCam) return;
-    const severity = this._host._extractRealtimeMessageSeverity(msg);
-    const cam = this._host._cameraEntityForIncomingCamera(incomingCam);
-    if (!cam) return;
-    if (!this._host._shouldHandleSlideshowReview(cam, severity)) return;
+    const parsed = parseRealtimeAlertMessage({ host: this._host, msg });
+    if (!parsed) return;
+    const { cam, severity } = parsed;
     this.handleAlertCandidate(cam, severity || "alert");
   }
 };
@@ -2752,12 +2768,9 @@ const SlideshowAlertController = class {
       return;
     }
     this.scheduleReviewProbe();
-    const incomingCam = this._host._extractRealtimeMessageCamera(msg);
-    if (!incomingCam) return;
-    const cam = this._host._cameraEntityForIncomingCamera(incomingCam);
-    if (!cam) return;
-    const severity = this._host._extractRealtimeMessageSeverity(msg);
-    if (!this._host._shouldHandleSlideshowReview(cam, severity)) return;
+    const parsed = parseRealtimeAlertMessage({ host: this._host, msg });
+    if (!parsed) return;
+    const { cam, severity } = parsed;
     if (this._host._slideshowPopupPaused) {
       this._host._slideshowPendingAlertCam = cam;
       this._host._slideshowPendingAlertType = severity;

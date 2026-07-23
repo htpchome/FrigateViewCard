@@ -8,6 +8,7 @@ import {
   findFirstReviewCandidateForEntity,
   findNewestReviewCandidateAcrossCameras,
 } from "../data/review-candidate-utils.js";
+import { parseRealtimeAlertMessage } from "../data/realtime-alert-message-utils.js";
 
 export class GridAlertController {
   constructor(host, constants) {
@@ -222,12 +223,9 @@ export class GridAlertController {
   handleRealtimeMessage(msg) {
     if (!this._host._isGridModeAvailable()) return;
     if (this._host._viewMode !== "grid") return;
-    const incomingCam = this._host._extractRealtimeMessageCamera(msg);
-    if (!incomingCam) return;
-    const severity = this._host._extractRealtimeMessageSeverity(msg);
-    const cam = this._host._cameraEntityForIncomingCamera(incomingCam);
-    if (!cam) return;
-    if (!this._host._shouldHandleSlideshowReview(cam, severity)) return;
+    const parsed = parseRealtimeAlertMessage({ host: this._host, msg });
+    if (!parsed) return;
+    const { cam, severity } = parsed;
     this.handleAlertCandidate(cam, severity || "alert");
   }
 }

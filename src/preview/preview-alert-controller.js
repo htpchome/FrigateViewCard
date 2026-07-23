@@ -7,6 +7,7 @@ import {
   findFirstReviewCandidateForEntity,
   findNewestReviewCandidateAcrossCameras,
 } from "../data/review-candidate-utils.js";
+import { parseRealtimeAlertMessage } from "../data/realtime-alert-message-utils.js";
 
 export class PreviewAlertController {
   constructor(host, constants) {
@@ -146,14 +147,13 @@ export class PreviewAlertController {
 
   handleRealtimeMessage(msg) {
     if (!this._host._isPreviewPageActive()) return;
-    const incomingCam = this._host._extractRealtimeMessageCamera(msg);
-    if (!incomingCam) return;
-    const cam = this._host._cameraEntityForIncomingCamera(incomingCam);
-    if (!cam) return;
-    const type = String(msg?.type || "")
-      .trim()
-      .toLowerCase();
-    const severity = this._host._extractRealtimeMessageSeverity(msg);
+    const parsed = parseRealtimeAlertMessage({
+      host: this._host,
+      msg,
+      checkSeverity: false,
+    });
+    if (!parsed) return;
+    const { cam, severity, type } = parsed;
     if (type === "end") {
       if (this.isCameraAlertLive(cam)) {
         this.markAlertCamera(
