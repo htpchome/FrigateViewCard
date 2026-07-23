@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.702";
+const VERSION = "1.0.703";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1701,6 +1701,206 @@ function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
       <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
 }
 
+// src/preview/preview-alert-controller.js
+const PreviewAlertController = class {
+  constructor(host, constants) {
+    this._host = host;
+    this._constants = constants;
+    this._alertWatchT = null;
+    this._alertCleanupT = null;
+    this._alertExpiresByEntity = new Map();
+    this._alertSeverityByEntity = new Map();
+    this._handledReviewIds = new Set();
+    this._startedAtSec = 0;
+  }
+  clearTimers() {
+    if (this._alertWatchT) clearTimeout(this._alertWatchT);
+    if (this._alertCleanupT) clearTimeout(this._alertCleanupT);
+    this._alertWatchT = null;
+    this._alertCleanupT = null;
+  }
+  clearAlertTracking() {
+    this._alertExpiresByEntity.clear();
+    this._alertSeverityByEntity.clear();
+    this._handledReviewIds.clear();
+  }
+  isCameraAlertLive(entity) {
+    const until = Number(this._alertExpiresByEntity.get(entity) || 0);
+    return until > Date.now();
+  }
+  previewCellSeverity(entity) {
+    if (!this.isCameraAlertLive(entity)) {
+      this._alertSeverityByEntity.delete(entity);
+      return "";
+    }
+    return normalizePreviewCellSeverity(this._alertSeverityByEntity.get(entity));
+  }
+  markAlertCamera(entity, severity = "alert", holdMs = null) {
+    if (!entity) return;
+    const normalizedSeverity = normalizePreviewAlertSeverity(severity);
+    const defaultHoldMs = this._constants.PREVIEW_ALERT_HOLD_MS;
+    this._alertSeverityByEntity.set(entity, normalizedSeverity);
+    this._alertExpiresByEntity.set(
+      entity,
+      Date.now() + Math.max(1e3, Number(holdMs) || defaultHoldMs)
+    );
+    this._scheduleAlertCleanup();
+    if (this._host._isPreviewPageActive()) this._host._renderPreviewPage();
+  }
+  rememberHandledReview(reviewId) {
+    const id = String(reviewId || "").trim();
+    if (!id) return;
+    this._handledReviewIds.add(id);
+    if (this._handledReviewIds.size <= 200) return;
+    const oldest = this._handledReviewIds.values().next().value;
+    if (oldest) this._handledReviewIds.delete(oldest);
+  }
+  isReviewFresh(review) {
+    return isPreviewReviewFresh({
+      previewStartedAtSec: this._startedAtSec,
+      reviewStartSec: this._host._reviewStartTimeSec(review),
+      graceSec: this._constants.SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
+    });
+  }
+  async probeLatestAlert() {
+    if (!this._host._isPreviewPageActive()) return;
+    const before = Math.floor(Date.now() / 1e3);
+    const after = Math.max(
+      0,
+      Math.floor(
+        before - (this._host._config?.alerts_reviews_days || 3) * this._constants.DAY
+      )
+    );
+    const candidates = [];
+    for (const camera of this._host._config?.cameras || []) {
+      const entity = camera?.entity || "";
+      const cache = this._host._camCache[entity];
+      if (!entity || !cache?.clientId || !cache?.cam) continue;
+      let reviews = [];
+      try {
+        const batch = await this._host._ws({
+          type: "frigate/reviews/get",
+          instance_id: cache.clientId,
+          cameras: [cache.cam],
+          after,
+          before,
+          limit: 5
+        });
+        reviews = Array.isArray(batch) ? batch : [];
+      } catch (_) {
+        reviews = [];
+      }
+      cache.reviews = reviews;
+      for (const review of reviews) {
+        if (!this.isReviewFresh(review)) continue;
+        const severity = this._host._normalizeReviewSeverity(review);
+        if (!this._host._shouldHandleSlideshowReview(entity, severity)) {
+          continue;
+        }
+        const reviewId = String(review?.id || "").trim();
+        if (reviewId && this._handledReviewIds.has(reviewId)) continue;
+        candidates.push({
+          entity,
+          severity,
+          reviewId,
+          startTime: this._host._reviewStartTimeSec(review)
+        });
+        break;
+      }
+    }
+    if (!candidates.length) return;
+    candidates.sort((a, b) => b.startTime - a.startTime);
+    const next = candidates[0];
+    if (!next?.entity) return;
+    if (next.reviewId) this.rememberHandledReview(next.reviewId);
+    this.markAlertCamera(
+      next.entity,
+      next.severity,
+      this._constants.PREVIEW_ALERT_HOLD_MS
+    );
+  }
+  scheduleAlertWatch(delayMs = null) {
+    if (this._alertWatchT) clearTimeout(this._alertWatchT);
+    if (!this._host._isPreviewPageActive()) return;
+    const wait = delayMs == null ? Math.max(
+      1200,
+      Math.floor(this._host._effectiveRealtimePollSeconds() * 1e3)
+    ) : Math.max(0, Number(delayMs) || 0);
+    this._alertWatchT = setTimeout(() => {
+      this._alertWatchT = null;
+      void this.probeLatestAlert().finally(() => {
+        this.scheduleAlertWatch();
+      });
+    }, wait);
+  }
+  handleRealtimeMessage(msg) {
+    if (!this._host._isPreviewPageActive()) return;
+    const incomingCam = this._host._extractRealtimeMessageCamera(msg);
+    if (!incomingCam) return;
+    const cam = this._host._cameraEntityForIncomingCamera(incomingCam);
+    if (!cam) return;
+    const type = String(msg?.type || "").trim().toLowerCase();
+    const severity = this._host._extractRealtimeMessageSeverity(msg);
+    if (type === "end") {
+      if (this.isCameraAlertLive(cam)) {
+        this.markAlertCamera(
+          cam,
+          this.previewCellSeverity(cam),
+          this._constants.PREVIEW_ALERT_END_GRACE_MS
+        );
+      }
+      return;
+    }
+    if (!this._host._shouldHandleSlideshowReview(cam, severity)) return;
+    this.markAlertCamera(
+      cam,
+      severity || "alert",
+      this._constants.PREVIEW_ALERT_HOLD_MS
+    );
+  }
+  start() {
+    if (!this._host._isPreviewPageActive()) return;
+    this._startedAtSec = Math.floor(Date.now() / 1e3);
+    this.clearTimers();
+    this.clearAlertTracking();
+    this._host._renderPreviewPage();
+    this.scheduleAlertWatch(350);
+  }
+  stop() {
+    this.clearTimers();
+  }
+  _scheduleAlertCleanup() {
+    if (this._alertCleanupT) clearTimeout(this._alertCleanupT);
+    let nextExpiry = 0;
+    for (const until of this._alertExpiresByEntity.values()) {
+      const ts = Number(until || 0);
+      if (ts <= Date.now()) continue;
+      if (!nextExpiry || ts < nextExpiry) nextExpiry = ts;
+    }
+    if (!nextExpiry) {
+      this._alertCleanupT = null;
+      return;
+    }
+    const wait = Math.max(100, nextExpiry - Date.now() + 25);
+    this._alertCleanupT = setTimeout(() => {
+      this._alertCleanupT = null;
+      let changed = false;
+      const now = Date.now();
+      for (const [entity, until] of this._alertExpiresByEntity.entries()) {
+        if (Number(until || 0) <= now) {
+          this._alertExpiresByEntity.delete(entity);
+          this._alertSeverityByEntity.delete(entity);
+          changed = true;
+        }
+      }
+      if (changed && this._host._isPreviewPageActive()) {
+        this._host._renderPreviewPage();
+      }
+      this._scheduleAlertCleanup();
+    }, wait);
+  }
+};
+
 // src/card/FrigateViewCard.js
 const FrigateViewCard = class extends HTMLElement {
   constructor() {
@@ -1792,14 +1992,14 @@ const FrigateViewCard = class extends HTMLElement {
     this._gridAlertSeverityByEntity = new Map();
     this._previewPageActive = false;
     this._previewSnapshotRefreshT = null;
-    this._previewAlertWatchT = null;
-    this._previewAlertCleanupT = null;
-    this._previewHandledReviewIds = new Set();
-    this._previewStartedAtSec = 0;
     this._previewLastRenderSignature = "";
     this._previewMediaState = null;
-    this._previewAlertExpiresByEntity = new Map();
-    this._previewAlertSeverityByEntity = new Map();
+    this._previewAlertController = new PreviewAlertController(this, {
+      DAY,
+      PREVIEW_ALERT_HOLD_MS,
+      PREVIEW_ALERT_END_GRACE_MS,
+      SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
+    });
     this._domCache = {};
     this._go2rtcWsUrlCache = new Map();
     this._go2rtcHlsUrlCache = new Map();
@@ -4341,31 +4541,18 @@ const FrigateViewCard = class extends HTMLElement {
     card.classList.toggle("preview-active", this._isPreviewPageActive());
   }
   _clearPreviewTimers() {
-    if (this._previewSnapshotRefreshT)
-      clearTimeout(this._previewSnapshotRefreshT);
-    if (this._previewAlertWatchT) clearTimeout(this._previewAlertWatchT);
-    if (this._previewAlertCleanupT) clearTimeout(this._previewAlertCleanupT);
+    if (this._previewSnapshotRefreshT) clearTimeout(this._previewSnapshotRefreshT);
     this._previewSnapshotRefreshT = null;
-    this._previewAlertWatchT = null;
-    this._previewAlertCleanupT = null;
+    this._previewAlertController.clearTimers();
   }
   _clearPreviewAlertTracking() {
-    this._previewAlertExpiresByEntity.clear();
-    this._previewAlertSeverityByEntity.clear();
-    this._previewHandledReviewIds.clear();
+    this._previewAlertController.clearAlertTracking();
   }
   _isPreviewCameraAlertLive(entity) {
-    const until = Number(this._previewAlertExpiresByEntity.get(entity) || 0);
-    return until > Date.now();
+    return this._previewAlertController.isCameraAlertLive(entity);
   }
   _previewCellSeverity(entity) {
-    if (!this._isPreviewCameraAlertLive(entity)) {
-      this._previewAlertSeverityByEntity.delete(entity);
-      return "";
-    }
-    return normalizePreviewCellSeverity(
-      this._previewAlertSeverityByEntity.get(entity)
-    );
+    return this._previewAlertController.previewCellSeverity(entity);
   }
   _previewShouldUseLive(entity) {
     return this._previewLiveCamerasEnabled() || this._isPreviewCameraAlertLive(entity);
@@ -4564,161 +4751,27 @@ const FrigateViewCard = class extends HTMLElement {
     void delayMs;
   }
   _schedulePreviewAlertCleanup() {
-    if (this._previewAlertCleanupT) clearTimeout(this._previewAlertCleanupT);
-    let nextExpiry = 0;
-    for (const until of this._previewAlertExpiresByEntity.values()) {
-      const ts = Number(until || 0);
-      if (ts <= Date.now()) continue;
-      if (!nextExpiry || ts < nextExpiry) nextExpiry = ts;
-    }
-    if (!nextExpiry) {
-      this._previewAlertCleanupT = null;
-      return;
-    }
-    const wait = Math.max(100, nextExpiry - Date.now() + 25);
-    this._previewAlertCleanupT = setTimeout(() => {
-      this._previewAlertCleanupT = null;
-      let changed = false;
-      const now = Date.now();
-      for (const [
-        entity,
-        until
-      ] of this._previewAlertExpiresByEntity.entries()) {
-        if (Number(until || 0) <= now) {
-          this._previewAlertExpiresByEntity.delete(entity);
-          this._previewAlertSeverityByEntity.delete(entity);
-          changed = true;
-        }
-      }
-      if (changed && this._isPreviewPageActive()) this._renderPreviewPage();
-      this._schedulePreviewAlertCleanup();
-    }, wait);
   }
   _markPreviewAlertCamera(entity, severity = "alert", holdMs = PREVIEW_ALERT_HOLD_MS) {
-    if (!entity) return;
-    const normalizedSeverity = normalizePreviewAlertSeverity(severity);
-    this._previewAlertSeverityByEntity.set(entity, normalizedSeverity);
-    this._previewAlertExpiresByEntity.set(
-      entity,
-      Date.now() + Math.max(1e3, Number(holdMs) || PREVIEW_ALERT_HOLD_MS)
-    );
-    this._schedulePreviewAlertCleanup();
-    if (this._isPreviewPageActive()) this._renderPreviewPage();
+    this._previewAlertController.markAlertCamera(entity, severity, holdMs);
   }
   _rememberHandledPreviewReview(reviewId) {
-    const id = String(reviewId || "").trim();
-    if (!id) return;
-    this._previewHandledReviewIds.add(id);
-    if (this._previewHandledReviewIds.size <= 200) return;
-    const oldest = this._previewHandledReviewIds.values().next().value;
-    if (oldest) this._previewHandledReviewIds.delete(oldest);
+    this._previewAlertController.rememberHandledReview(reviewId);
   }
   _isPreviewReviewFresh(review) {
-    return isPreviewReviewFresh({
-      previewStartedAtSec: this._previewStartedAtSec,
-      reviewStartSec: this._reviewStartTimeSec(review),
-      graceSec: SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
-    });
+    return this._previewAlertController.isReviewFresh(review);
   }
   async _probeLatestPreviewAlert() {
-    if (!this._isPreviewPageActive()) return;
-    const before = Math.floor(Date.now() / 1e3);
-    const after = Math.max(
-      0,
-      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
-    );
-    const candidates = [];
-    for (const camera of this._config?.cameras || []) {
-      const entity = camera?.entity || "";
-      const cache = this._camCache[entity];
-      if (!entity || !cache?.clientId || !cache?.cam) continue;
-      let reviews = [];
-      try {
-        const batch = await this._ws({
-          type: "frigate/reviews/get",
-          instance_id: cache.clientId,
-          cameras: [cache.cam],
-          after,
-          before,
-          limit: 5
-        });
-        reviews = Array.isArray(batch) ? batch : [];
-      } catch (_) {
-        reviews = [];
-      }
-      cache.reviews = reviews;
-      for (const review of reviews) {
-        if (!this._isPreviewReviewFresh(review)) continue;
-        const severity = this._normalizeReviewSeverity(review);
-        if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
-        const reviewId = String(review?.id || "").trim();
-        if (reviewId && this._previewHandledReviewIds.has(reviewId)) continue;
-        candidates.push({
-          entity,
-          severity,
-          reviewId,
-          startTime: this._reviewStartTimeSec(review)
-        });
-        break;
-      }
-    }
-    if (!candidates.length) return;
-    candidates.sort((a, b) => b.startTime - a.startTime);
-    const next = candidates[0];
-    if (!next?.entity) return;
-    if (next.reviewId) this._rememberHandledPreviewReview(next.reviewId);
-    this._markPreviewAlertCamera(
-      next.entity,
-      next.severity,
-      PREVIEW_ALERT_HOLD_MS
-    );
+    await this._previewAlertController.probeLatestAlert();
   }
   _schedulePreviewAlertWatch(delayMs = null) {
-    if (this._previewAlertWatchT) clearTimeout(this._previewAlertWatchT);
-    if (!this._isPreviewPageActive()) return;
-    const wait = delayMs == null ? Math.max(
-      1200,
-      Math.floor(this._effectiveRealtimePollSeconds() * 1e3)
-    ) : Math.max(0, Number(delayMs) || 0);
-    this._previewAlertWatchT = setTimeout(() => {
-      this._previewAlertWatchT = null;
-      void this._probeLatestPreviewAlert().finally(() => {
-        this._schedulePreviewAlertWatch();
-      });
-    }, wait);
+    this._previewAlertController.scheduleAlertWatch(delayMs);
   }
   _handlePreviewRealtimeMessage(msg) {
-    if (!this._isPreviewPageActive()) return;
-    const incomingCam = this._extractRealtimeMessageCamera(msg);
-    if (!incomingCam) return;
-    const cam = this._cameraEntityForIncomingCamera(incomingCam);
-    if (!cam) return;
-    const type = String(msg?.type || "").trim().toLowerCase();
-    const severity = this._extractRealtimeMessageSeverity(msg);
-    if (type === "end") {
-      if (this._isPreviewCameraAlertLive(cam)) {
-        this._markPreviewAlertCamera(
-          cam,
-          this._previewCellSeverity(cam),
-          PREVIEW_ALERT_END_GRACE_MS
-        );
-      }
-      return;
-    }
-    if (!this._shouldHandleSlideshowReview(cam, severity)) return;
-    this._markPreviewAlertCamera(
-      cam,
-      severity || "alert",
-      PREVIEW_ALERT_HOLD_MS
-    );
+    this._previewAlertController.handleRealtimeMessage(msg);
   }
   _startPreviewMode() {
-    if (!this._isPreviewPageActive()) return;
-    this._previewStartedAtSec = Math.floor(Date.now() / 1e3);
-    this._clearPreviewTimers();
-    this._clearPreviewAlertTracking();
-    this._renderPreviewPage();
-    this._schedulePreviewAlertWatch(350);
+    this._previewAlertController.start();
   }
   _stopPreviewMode() {
     this._clearPreviewTimers();
