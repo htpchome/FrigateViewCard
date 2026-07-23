@@ -82,6 +82,13 @@ import {
   PAGE_IDS,
   resolveDeviceRouteBucket,
 } from "../router.js";
+import {
+  isPreviewReviewFresh,
+  normalizePreviewAlertSeverity,
+  normalizePreviewCellSeverity,
+  resolvePreviewLiveStreamHint,
+  resolvePreviewStreamSourceLabel,
+} from "../preview/preview-utils.js";
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -3149,10 +3156,9 @@ export class FrigateViewCard extends HTMLElement {
       this._previewAlertSeverityByEntity.delete(entity);
       return "";
     }
-    const sev = String(this._previewAlertSeverityByEntity.get(entity) || "")
-      .trim()
-      .toLowerCase();
-    return sev === "detection" ? "detection" : sev === "alert" ? "alert" : "";
+    return normalizePreviewCellSeverity(
+      this._previewAlertSeverityByEntity.get(entity),
+    );
   }
 
   _previewShouldUseLive(entity) {
@@ -3172,28 +3178,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _previewStreamSourceLabel(entity, useLive) {
-    if (!useLive) return "Snapshot";
-    const connectionType = this._cameraConnectionType(entity);
-    if (connectionType === "ha_direct") return "HA Live";
-    const hint = String(this._previewLiveStreamHint() || "").toUpperCase();
-    return hint ? `${hint} Live` : "Live";
+    return resolvePreviewStreamSourceLabel({
+      useLive,
+      connectionType: this._cameraConnectionType(entity),
+      liveStreamHint: this._previewLiveStreamHint(),
+    });
   }
 
   _previewLiveStreamHint() {
-    const active = String(this._activeStreamType || "")
-      .trim()
-      .toLowerCase();
-    if (active === "webrtc" || active === "mse" || active === "hls") {
-      return active;
-    }
-    const lastHint = String(this._lastLiveStreamHint || "")
-      .trim()
-      .toLowerCase();
-    if (lastHint === "webrtc" || lastHint === "mse" || lastHint === "hls") {
-      return lastHint;
-    }
-    if (DEVICE_PROFILE.isIOS) return "webrtc";
-    return "mse";
+    return resolvePreviewLiveStreamHint({
+      activeStreamType: this._activeStreamType,
+      lastLiveStreamHint: this._lastLiveStreamHint,
+      isIOS: DEVICE_PROFILE.isIOS,
+    });
   }
 
   _teardownPreviewMedia() {
@@ -3436,12 +3433,7 @@ export class FrigateViewCard extends HTMLElement {
     holdMs = PREVIEW_ALERT_HOLD_MS,
   ) {
     if (!entity) return;
-    const normalizedSeverity =
-      String(severity || "")
-        .trim()
-        .toLowerCase() === "detection"
-        ? "detection"
-        : "alert";
+    const normalizedSeverity = normalizePreviewAlertSeverity(severity);
     this._previewAlertSeverityByEntity.set(entity, normalizedSeverity);
     this._previewAlertExpiresByEntity.set(
       entity,
@@ -3461,11 +3453,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isPreviewReviewFresh(review) {
-    const startedAt = Number(this._previewStartedAtSec || 0);
-    if (startedAt <= 0) return true;
-    const reviewStart = this._reviewStartTimeSec(review);
-    if (reviewStart <= 0) return false;
-    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC;
+    return isPreviewReviewFresh({
+      previewStartedAtSec: this._previewStartedAtSec,
+      reviewStartSec: this._reviewStartTimeSec(review),
+      graceSec: SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
+    });
   }
 
   async _probeLatestPreviewAlert() {
