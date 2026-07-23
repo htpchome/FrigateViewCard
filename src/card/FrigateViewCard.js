@@ -101,6 +101,14 @@ import {
   normalizeGridAlertSeverity,
   normalizeGridCellSeverity,
 } from "../grid/grid-utils.js";
+import {
+  applyGridCellSeverityClass,
+  buildGridSignaturePart,
+  createGridCellElement,
+  createGridLabelElement,
+  createGridRootElement,
+  renderGridEmptyPlaceholder,
+} from "../grid/grid-markup.js";
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -3599,17 +3607,20 @@ export class FrigateViewCard extends HTMLElement {
     const gridState = { destroyed: false, cleanup: [] };
     const signatureParts = [];
     for (const idx of indices) {
-      if (idx < 0) {
-        signatureParts.push("-1");
-        continue;
-      }
-      const cam = this._config?.cameras?.[idx];
+      const cam = idx >= 0 ? this._config?.cameras?.[idx] : null;
       const entity = cam?.entity || "";
-      const severity = this._gridCellSeverity(entity);
+      const severity = idx >= 0 ? this._gridCellSeverity(entity) : "";
       const useLive =
-        this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
+        idx >= 0 &&
+        (this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity));
       signatureParts.push(
-        `${idx}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`,
+        buildGridSignaturePart({
+          index: idx,
+          entity,
+          severity,
+          useLive,
+          liveStreamHint,
+        }),
       );
     }
     const nextSignature = signatureParts.join("|");
@@ -3623,11 +3634,9 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._gridLastRenderSignature = nextSignature;
     slot.innerHTML = "";
-    const grid = document.createElement("div");
-    grid.className = "live-grid";
+    const grid = createGridRootElement();
     for (const idx of indices) {
-      const cell = document.createElement("div");
-      cell.className = "live-grid-cell";
+      const cell = createGridCellElement();
       if (idx >= 0) {
         const cam = this._config?.cameras?.[idx];
         const entity = cam?.entity || "";
@@ -3637,8 +3646,7 @@ export class FrigateViewCard extends HTMLElement {
             null
           : null;
         const severity = this._gridCellSeverity(entity);
-        if (severity === "alert") cell.classList.add("grid-alert");
-        if (severity === "detection") cell.classList.add("grid-detection");
+        applyGridCellSeverityClass(cell, severity);
         const useLive =
           this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
         if (entity) {
@@ -3654,15 +3662,13 @@ export class FrigateViewCard extends HTMLElement {
         }
         cell.dataset.gridCamidx = String(idx);
         cell.dataset.gridEntity = entity;
-        const label = document.createElement("div");
-        label.className = "live-grid-label";
-        label.textContent = cap(camDisplayName(cam));
+        const label = createGridLabelElement(cap(camDisplayName(cam)));
         cell.appendChild(label);
       } else {
         cell.classList.add("empty");
       }
       if (cell.classList.contains("empty")) {
-        cell.innerHTML = `<div class="ph">${ICONS.live}<span>Empty</span></div>`;
+        renderGridEmptyPlaceholder(cell, ICONS.live);
       }
       grid.appendChild(cell);
     }

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.707";
+const VERSION = "1.0.708";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1979,6 +1979,42 @@ function isGridReviewFresh({
 }
 function gridAlertWatchIntervalMs(realtimePollSeconds) {
   return Math.max(1e3, Math.floor(Number(realtimePollSeconds || 0) * 1e3));
+}
+
+// src/grid/grid-markup.js
+function buildGridSignaturePart({
+  index,
+  entity,
+  severity,
+  useLive,
+  liveStreamHint
+}) {
+  if (index < 0) return "-1";
+  return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
+}
+function createGridRootElement() {
+  const grid = document.createElement("div");
+  grid.className = "live-grid";
+  return grid;
+}
+function createGridCellElement() {
+  const cell = document.createElement("div");
+  cell.className = "live-grid-cell";
+  return cell;
+}
+function applyGridCellSeverityClass(cell, severity) {
+  if (severity === "alert") cell.classList.add("grid-alert");
+  if (severity === "detection") cell.classList.add("grid-detection");
+}
+function createGridLabelElement(labelText) {
+  const label = document.createElement("div");
+  label.className = "live-grid-label";
+  label.textContent = labelText;
+  return label;
+}
+function renderGridEmptyPlaceholder(cell, liveIconSvg) {
+  cell.classList.add("empty");
+  cell.innerHTML = `<div class="ph">${liveIconSvg}<span>Empty</span></div>`;
 }
 
 // src/card/FrigateViewCard.js
@@ -4997,16 +5033,18 @@ const FrigateViewCard = class extends HTMLElement {
     const gridState = { destroyed: false, cleanup: [] };
     const signatureParts = [];
     for (const idx of indices) {
-      if (idx < 0) {
-        signatureParts.push("-1");
-        continue;
-      }
-      const cam = this._config?.cameras?.[idx];
+      const cam = idx >= 0 ? this._config?.cameras?.[idx] : null;
       const entity = cam?.entity || "";
-      const severity = this._gridCellSeverity(entity);
-      const useLive = this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
+      const severity = idx >= 0 ? this._gridCellSeverity(entity) : "";
+      const useLive = idx >= 0 && (this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity));
       signatureParts.push(
-        `${idx}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`
+        buildGridSignaturePart({
+          index: idx,
+          entity,
+          severity,
+          useLive,
+          liveStreamHint
+        })
       );
     }
     const nextSignature = signatureParts.join("|");
@@ -5019,18 +5057,15 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._gridLastRenderSignature = nextSignature;
     slot.innerHTML = "";
-    const grid = document.createElement("div");
-    grid.className = "live-grid";
+    const grid = createGridRootElement();
     for (const idx of indices) {
-      const cell = document.createElement("div");
-      cell.className = "live-grid-cell";
+      const cell = createGridCellElement();
       if (idx >= 0) {
         const cam = this._config?.cameras?.[idx];
         const entity = cam?.entity || "";
         const stateObj = entity ? this._hlsStateObj(entity, liveStreamHint) || this._hass?.states?.[entity] || null : null;
         const severity = this._gridCellSeverity(entity);
-        if (severity === "alert") cell.classList.add("grid-alert");
-        if (severity === "detection") cell.classList.add("grid-detection");
+        applyGridCellSeverityClass(cell, severity);
         const useLive = this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
         if (entity) {
           this._mountGridCameraCellMedia(cell, {
@@ -5045,15 +5080,13 @@ const FrigateViewCard = class extends HTMLElement {
         }
         cell.dataset.gridCamidx = String(idx);
         cell.dataset.gridEntity = entity;
-        const label = document.createElement("div");
-        label.className = "live-grid-label";
-        label.textContent = cap(camDisplayName(cam));
+        const label = createGridLabelElement(cap(camDisplayName(cam)));
         cell.appendChild(label);
       } else {
         cell.classList.add("empty");
       }
       if (cell.classList.contains("empty")) {
-        cell.innerHTML = `<div class="ph">${ICONS.live}<span>Empty</span></div>`;
+        renderGridEmptyPlaceholder(cell, ICONS.live);
       }
       grid.appendChild(cell);
     }
