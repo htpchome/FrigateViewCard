@@ -38,3 +38,17 @@ export const applyStreamFallbackState = ({
   if (!visible) hideFallbackStatus(status);
   if (visible && refreshImage) onRefresh?.();
 };
+
+export const applyStreamFallbackVisibility = ({
+  shadowRoot,
+  visible,
+  refreshImage,
+  refreshFallbackImage,
+}) => {
+  applyStreamFallbackState({
+    shadowRoot,
+    visible,
+    refreshImage,
+    onRefresh: () => refreshFallbackImage?.(),
+  });
+};

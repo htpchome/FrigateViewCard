@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  applyStreamFallbackVisibility,
   applyStreamFallbackState,
   applyStreamLoadingState,
   isLiveTransportType,
@@ -86,4 +87,30 @@ test("applyStreamFallbackState updates placeholder and refreshes when requested"
 
   assert.equal(fallbackEl.hidden, true);
   assert.equal(statusEl.hidden, true);
+});
+
+test("applyStreamFallbackVisibility wires refresh callback for fallback image", () => {
+  const statusEl = { hidden: false };
+  const fallbackEl = { hidden: true };
+  let refreshCalls = 0;
+
+  const shadowRoot = {
+    querySelector: (selector) => {
+      if (selector === "#stream-fallback") return fallbackEl;
+      if (selector === "#stream-fallback-status") return statusEl;
+      return null;
+    },
+  };
+
+  applyStreamFallbackVisibility({
+    shadowRoot,
+    visible: true,
+    refreshImage: true,
+    refreshFallbackImage: () => {
+      refreshCalls += 1;
+    },
+  });
+
+  assert.equal(fallbackEl.hidden, false);
+  assert.equal(refreshCalls, 1);
 });
