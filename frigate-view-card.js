@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.781";
+const VERSION = "1.0.782";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2268,6 +2268,19 @@ const resolveFallbackRefreshSources = ({ primarySrc, altSrc }) => {
     hasSource: outcome.hasSource
   };
 };
+const shouldApplyFallbackRefreshSources = ({ sources }) => !!sources?.hasSource;
+const buildFallbackImageApplyPayload = ({
+  imgEl,
+  statusEl,
+  entity,
+  sources
+}) => ({
+  img: imgEl,
+  statusEl,
+  altSrc: sources?.altSrc || "",
+  entity,
+  src: sources?.src || ""
+});
 const isFallbackRefreshStale = ({ requestId, activeRequestId }) => requestId !== activeRequestId;
 const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   const src = resolveFallbackDisplaySource({
@@ -5765,16 +5778,17 @@ const FrigateViewCard = class extends HTMLElement {
       primarySrc,
       altSrc
     });
-    if (!sources.hasSource) return;
-    applyFallbackImageHandlers({
-      img: imgEl,
+    if (!shouldApplyFallbackRefreshSources({ sources })) return;
+    const applyPayload = buildFallbackImageApplyPayload({
+      imgEl,
       statusEl,
-      altSrc: sources.altSrc,
-      entity
+      entity,
+      sources
     });
+    applyFallbackImageHandlers(applyPayload);
     setFallbackImageSourceIfChanged({
-      img: imgEl,
-      src: sources.src
+      img: applyPayload.img,
+      src: applyPayload.src
     });
   }
   _cameraContext(entity) {

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildFallbackImageApplyPayload,
   buildFallbackRefreshOutcome,
   canRefreshFallbackImage,
   getFallbackRefreshElements,
@@ -11,6 +12,7 @@ import {
   resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
   resolveFallbackRefreshSources,
+  shouldApplyFallbackRefreshSources,
 } from "../src/live/live-fallback-refresh.js";
 
 test("nextFallbackRequestId increments from current id", () => {
@@ -131,6 +133,47 @@ test("resolveFallbackRefreshSources returns combined source outcome", () => {
   });
   assert.equal(empty.src, "");
   assert.equal(empty.hasSource, false);
+});
+
+test("shouldApplyFallbackRefreshSources follows hasSource", () => {
+  assert.equal(
+    shouldApplyFallbackRefreshSources({
+      sources: { hasSource: true },
+    }),
+    true,
+  );
+  assert.equal(
+    shouldApplyFallbackRefreshSources({
+      sources: { hasSource: false },
+    }),
+    false,
+  );
+  assert.equal(
+    shouldApplyFallbackRefreshSources({
+      sources: null,
+    }),
+    false,
+  );
+});
+
+test("buildFallbackImageApplyPayload maps source and element payload", () => {
+  const imgEl = { id: "img" };
+  const statusEl = { id: "status" };
+  const payload = buildFallbackImageApplyPayload({
+    imgEl,
+    statusEl,
+    entity: "camera.front",
+    sources: {
+      altSrc: "https://ha.local/alt.jpg",
+      src: "https://ha.local/primary.jpg",
+    },
+  });
+
+  assert.equal(payload.img, imgEl);
+  assert.equal(payload.statusEl, statusEl);
+  assert.equal(payload.entity, "camera.front");
+  assert.equal(payload.altSrc, "https://ha.local/alt.jpg");
+  assert.equal(payload.src, "https://ha.local/primary.jpg");
 });
 
 test("buildFallbackRefreshOutcome resolves source and hasSource", () => {

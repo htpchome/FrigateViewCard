@@ -36,6 +36,22 @@ export const resolveFallbackRefreshSources = ({ primarySrc, altSrc }) => {
   };
 };
 
+export const shouldApplyFallbackRefreshSources = ({ sources }) =>
+  !!sources?.hasSource;
+
+export const buildFallbackImageApplyPayload = ({
+  imgEl,
+  statusEl,
+  entity,
+  sources,
+}) => ({
+  img: imgEl,
+  statusEl,
+  altSrc: sources?.altSrc || "",
+  entity,
+  src: sources?.src || "",
+});
+
 export const isFallbackRefreshStale = ({ requestId, activeRequestId }) =>
   requestId !== activeRequestId;
 
