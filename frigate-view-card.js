@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.795";
+const VERSION = "1.0.796";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2134,6 +2134,19 @@ const applyStreamFallbackVisibility = ({
     visible,
     refreshImage,
     onRefresh: () => refreshFallbackImage?.()
+  });
+};
+const applyStreamFallbackVisibilityForCard = ({
+  card,
+  visible,
+  refreshImage
+}) => {
+  if (!card) return;
+  applyStreamFallbackVisibility({
+    shadowRoot: card.shadowRoot,
+    visible,
+    refreshImage,
+    refreshFallbackImage: () => card._refreshStreamFallbackImage?.()
   });
 };
 
@@ -5996,11 +6009,10 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderStats();
   }
   _setStreamFallbackVisible(visible, refreshImage = false) {
-    applyStreamFallbackVisibility({
-      shadowRoot: this.shadowRoot,
+    applyStreamFallbackVisibilityForCard({
+      card: this,
       visible,
-      refreshImage,
-      refreshFallbackImage: () => this._refreshStreamFallbackImage()
+      refreshImage
     });
   }
   async _streamFallbackUrl(entity) {

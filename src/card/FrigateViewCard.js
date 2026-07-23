@@ -123,7 +123,7 @@ import {
   isMountTokenCurrent,
 } from "../live/live-mount-result.js";
 import {
-  applyStreamFallbackVisibility,
+  applyStreamFallbackVisibilityForCard,
   applyStreamLoadingState,
   resolveActiveStreamTypeState,
 } from "../live/live-stream-state.js";
@@ -2172,11 +2172,10 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _setStreamFallbackVisible(visible, refreshImage = false) {
-    applyStreamFallbackVisibility({
-      shadowRoot: this.shadowRoot,
+    applyStreamFallbackVisibilityForCard({
+      card: this,
       visible,
       refreshImage,
-      refreshFallbackImage: () => this._refreshStreamFallbackImage(),
     });
   }
 

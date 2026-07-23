@@ -52,3 +52,17 @@ export const applyStreamFallbackVisibility = ({
     onRefresh: () => refreshFallbackImage?.(),
   });
 };
+
+export const applyStreamFallbackVisibilityForCard = ({
+  card,
+  visible,
+  refreshImage,
+}) => {
+  if (!card) return;
+  applyStreamFallbackVisibility({
+    shadowRoot: card.shadowRoot,
+    visible,
+    refreshImage,
+    refreshFallbackImage: () => card._refreshStreamFallbackImage?.(),
+  });
+};

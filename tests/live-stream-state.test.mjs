@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  applyStreamFallbackVisibilityForCard,
   applyStreamFallbackVisibility,
   applyStreamFallbackState,
   applyStreamLoadingState,
@@ -113,4 +114,37 @@ test("applyStreamFallbackVisibility wires refresh callback for fallback image", 
 
   assert.equal(fallbackEl.hidden, false);
   assert.equal(refreshCalls, 1);
+});
+
+test("applyStreamFallbackVisibilityForCard maps card runtime and triggers refresh", () => {
+  const statusEl = { hidden: false };
+  const fallbackEl = { hidden: true };
+  let refreshCalls = 0;
+  const card = {
+    shadowRoot: {
+      querySelector: (selector) => {
+        if (selector === "#stream-fallback") return fallbackEl;
+        if (selector === "#stream-fallback-status") return statusEl;
+        return null;
+      },
+    },
+    _refreshStreamFallbackImage: () => {
+      refreshCalls += 1;
+    },
+  };
+
+  applyStreamFallbackVisibilityForCard({
+    card,
+    visible: true,
+    refreshImage: true,
+  });
+
+  assert.equal(fallbackEl.hidden, false);
+  assert.equal(refreshCalls, 1);
+
+  applyStreamFallbackVisibilityForCard({
+    card: null,
+    visible: true,
+    refreshImage: true,
+  });
 });
