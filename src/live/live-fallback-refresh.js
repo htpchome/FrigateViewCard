@@ -94,11 +94,7 @@ export const buildFallbackImageApplyPayload = ({
   src: sources?.src || "",
 });
 
-export const buildFallbackImageWriteInput = ({
-  context,
-  imgEl,
-  statusEl,
-}) => {
+export const buildFallbackImageWriteInput = ({ context, imgEl, statusEl }) => {
   const sources = context?.sources || null;
   return {
     applyPayload: buildFallbackImageApplyPayload({

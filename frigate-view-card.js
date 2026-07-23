@@ -2320,11 +2320,7 @@ const buildFallbackImageApplyPayload = ({
   entity,
   src: sources?.src || ""
 });
-const buildFallbackImageWriteInput = ({
-  context,
-  imgEl,
-  statusEl
-}) => {
+const buildFallbackImageWriteInput = ({ context, imgEl, statusEl }) => {
   const sources = context?.sources || null;
   return {
     applyPayload: buildFallbackImageApplyPayload({
