@@ -114,8 +114,8 @@ import {
 import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
-  buildEmptyListMessageHtml,
   resolveActiveDayLabelFromScroll,
+  resolveListMarkup,
   runListPostRenderSync,
   resolveOlderHintMetrics,
   resolveOlderHintState,
@@ -8487,41 +8487,41 @@ export class FrigateViewCard extends HTMLElement {
   _renderKeptList(list) {
     const kept = this._filteredKept();
     this._renderListLabel();
-    if (!kept.length) {
-      this._setListHtmlIfChanged(
-        list,
-        buildEmptyListMessageHtml("No kept events", "star an event to keep it"),
-      );
+    const renderState = resolveListMarkup({
+      items: kept,
+      emptyMessage: "No kept events",
+      emptyHint: "star an event to keep it",
+      buildContentHtml: (items) =>
+        items.map((ev) => this._eventCardHTML(ev, false)).join(""),
+    });
+    this._setListHtmlIfChanged(list, renderState.html);
+    if (renderState.isEmpty) {
       this._syncOlderHint(false);
       return;
     }
-    this._setListHtmlIfChanged(
-      list,
-      kept.map((ev) => this._eventCardHTML(ev, false)).join(""),
-    );
     this._syncOlderHint(false);
   }
 
   _renderEventsList(list) {
     const events = this._filtered();
     this._renderListLabel(events[0]?.start_time || null);
-    if (!events.length) {
-      this._setListHtmlIfChanged(
-        list,
-        buildEmptyListMessageHtml("No events in this window"),
-      );
+    const renderState = resolveListMarkup({
+      items: events,
+      emptyMessage: "No events in this window",
+      buildContentHtml: (items) => {
+        const eventsHtml = this._showStickyDayHeaders()
+          ? this._renderStickyDaySections(items, (ev) =>
+              this._eventCardHTML(ev, false),
+            )
+          : items.map((ev) => this._eventCardHTML(ev, false)).join("");
+        return appendEndMarker(eventsHtml, this._exhausted);
+      },
+    });
+    this._setListHtmlIfChanged(list, renderState.html);
+    if (renderState.isEmpty) {
       this._syncOlderHint(false);
       return;
     }
-    const eventsHtml = this._showStickyDayHeaders()
-      ? this._renderStickyDaySections(events, (ev) =>
-          this._eventCardHTML(ev, false),
-        )
-      : events.map((ev) => this._eventCardHTML(ev, false)).join("");
-    this._setListHtmlIfChanged(
-      list,
-      appendEndMarker(eventsHtml, this._exhausted),
-    );
     runListPostRenderSync({
       syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
       syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
@@ -8590,29 +8590,23 @@ export class FrigateViewCard extends HTMLElement {
       : "No alerts in this window";
 
     this._renderListLabel(filteredReviews[0]?.start_time || null);
-    if (!filteredReviews.length) {
-      this._setListHtmlIfChanged(list, buildEmptyListMessageHtml(emptyText));
-      this._syncOlderHint(true);
-      return;
-    }
     const allRevs = [...filteredReviews].sort(
       (a, b) => b.start_time - a.start_time,
     );
     this._renderListLabel(allRevs[0]?.start_time || null);
-    if (!allRevs.length) {
-      this._setListHtmlIfChanged(
-        list,
-        buildEmptyListMessageHtml("No alerts in this window"),
-      );
+    const renderState = resolveListMarkup({
+      items: allRevs,
+      emptyMessage: emptyText,
+      buildContentHtml: (items) =>
+        this._renderStickyDaySections(items, (review) =>
+          this._reviewListItemHTML(review),
+        ),
+    });
+    this._setListHtmlIfChanged(list, renderState.html);
+    if (renderState.isEmpty) {
       this._syncOlderHint(true);
       return;
     }
-    this._setListHtmlIfChanged(
-      list,
-      this._renderStickyDaySections(allRevs, (review) =>
-        this._reviewListItemHTML(review),
-      ),
-    );
     runListPostRenderSync({
       syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
       syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),

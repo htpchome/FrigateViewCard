@@ -128,3 +128,25 @@ export function runListPostRenderSync({
   requestAnimationFrame(() => syncOlderHint(forceHide));
   setTimeout(() => syncOlderHint(forceHide), 200);
 }
+
+export function resolveListMarkup({
+  items,
+  emptyMessage,
+  emptyHint = "",
+  buildContentHtml,
+}) {
+  const hasItems = Array.isArray(items) && items.length > 0;
+  if (!hasItems) {
+    return {
+      isEmpty: true,
+      html: buildEmptyListMessageHtml(emptyMessage, emptyHint),
+    };
+  }
+
+  const html =
+    typeof buildContentHtml === "function" ? buildContentHtml(items) : "";
+  return {
+    isEmpty: false,
+    html: String(html || ""),
+  };
+}

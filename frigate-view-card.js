@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.748";
+const VERSION = "1.0.749";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2139,6 +2139,25 @@ function runListPostRenderSync({
   if (!scheduleDeferredOlderHint) return;
   requestAnimationFrame(() => syncOlderHint(forceHide));
   setTimeout(() => syncOlderHint(forceHide), 200);
+}
+function resolveListMarkup({
+  items,
+  emptyMessage,
+  emptyHint = "",
+  buildContentHtml
+}) {
+  const hasItems = Array.isArray(items) && items.length > 0;
+  if (!hasItems) {
+    return {
+      isEmpty: true,
+      html: buildEmptyListMessageHtml(emptyMessage, emptyHint)
+    };
+  }
+  const html = typeof buildContentHtml === "function" ? buildContentHtml(items) : "";
+  return {
+    isEmpty: false,
+    html: String(html || "")
+  };
 }
 
 // src/data/review-candidate-utils.js
@@ -10610,39 +10629,38 @@ const FrigateViewCard = class extends HTMLElement {
   _renderKeptList(list) {
     const kept = this._filteredKept();
     this._renderListLabel();
-    if (!kept.length) {
-      this._setListHtmlIfChanged(
-        list,
-        buildEmptyListMessageHtml("No kept events", "star an event to keep it")
-      );
+    const renderState = resolveListMarkup({
+      items: kept,
+      emptyMessage: "No kept events",
+      emptyHint: "star an event to keep it",
+      buildContentHtml: (items) => items.map((ev) => this._eventCardHTML(ev, false)).join("")
+    });
+    this._setListHtmlIfChanged(list, renderState.html);
+    if (renderState.isEmpty) {
       this._syncOlderHint(false);
       return;
     }
-    this._setListHtmlIfChanged(
-      list,
-      kept.map((ev) => this._eventCardHTML(ev, false)).join("")
-    );
     this._syncOlderHint(false);
   }
   _renderEventsList(list) {
     const events = this._filtered();
     this._renderListLabel(events[0]?.start_time || null);
-    if (!events.length) {
-      this._setListHtmlIfChanged(
-        list,
-        buildEmptyListMessageHtml("No events in this window")
-      );
+    const renderState = resolveListMarkup({
+      items: events,
+      emptyMessage: "No events in this window",
+      buildContentHtml: (items) => {
+        const eventsHtml = this._showStickyDayHeaders() ? this._renderStickyDaySections(
+          items,
+          (ev) => this._eventCardHTML(ev, false)
+        ) : items.map((ev) => this._eventCardHTML(ev, false)).join("");
+        return appendEndMarker(eventsHtml, this._exhausted);
+      }
+    });
+    this._setListHtmlIfChanged(list, renderState.html);
+    if (renderState.isEmpty) {
       this._syncOlderHint(false);
       return;
     }
-    const eventsHtml = this._showStickyDayHeaders() ? this._renderStickyDaySections(
-      events,
-      (ev) => this._eventCardHTML(ev, false)
-    ) : events.map((ev) => this._eventCardHTML(ev, false)).join("");
-    this._setListHtmlIfChanged(
-      list,
-      appendEndMarker(eventsHtml, this._exhausted)
-    );
     runListPostRenderSync({
       syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
       syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
@@ -10704,30 +10722,23 @@ const FrigateViewCard = class extends HTMLElement {
     const filteredReviews = this._filteredReviews();
     const emptyText = showAllReviews ? "No reviews in this window" : "No alerts in this window";
     this._renderListLabel(filteredReviews[0]?.start_time || null);
-    if (!filteredReviews.length) {
-      this._setListHtmlIfChanged(list, buildEmptyListMessageHtml(emptyText));
-      this._syncOlderHint(true);
-      return;
-    }
     const allRevs = [...filteredReviews].sort(
       (a, b) => b.start_time - a.start_time
     );
     this._renderListLabel(allRevs[0]?.start_time || null);
-    if (!allRevs.length) {
-      this._setListHtmlIfChanged(
-        list,
-        buildEmptyListMessageHtml("No alerts in this window")
-      );
+    const renderState = resolveListMarkup({
+      items: allRevs,
+      emptyMessage: emptyText,
+      buildContentHtml: (items) => this._renderStickyDaySections(
+        items,
+        (review) => this._reviewListItemHTML(review)
+      )
+    });
+    this._setListHtmlIfChanged(list, renderState.html);
+    if (renderState.isEmpty) {
       this._syncOlderHint(true);
       return;
     }
-    this._setListHtmlIfChanged(
-      list,
-      this._renderStickyDaySections(
-        allRevs,
-        (review) => this._reviewListItemHTML(review)
-      )
-    );
     runListPostRenderSync({
       syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
       syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
