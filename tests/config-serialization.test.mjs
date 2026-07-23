@@ -5,6 +5,7 @@ import {
   buildEditorConfigFromDom,
   compactEditorConfigForYaml,
   createEditorPreviewDraft,
+  resolveSwitchChecked,
   withCardTypeForYaml,
 } from "../src/helpers.js";
 
@@ -157,4 +158,37 @@ test("preview draft carries hidden tabs and page routes", () => {
   assert.deepEqual(draft.hidden_tabs, ["clips", "snapshots"]);
   assert.equal(draft.landing_page, "preview");
   assert.equal(draft.mobile_page, "single");
+});
+
+test("resolveSwitchChecked prefers live checked property over stale attribute", () => {
+  const switchElement = {
+    checked: false,
+    getAttribute: (key) => (key === "checked" ? "" : null),
+    shadowRoot: null,
+  };
+
+  assert.equal(resolveSwitchChecked(switchElement), false);
+});
+
+test("buildEditorConfigFromDom hides tabs from live switch state when unchecked", () => {
+  const tabSwitch = {
+    checked: false,
+    dataset: { activeTab: "clips" },
+    getAttribute: (key) => (key === "checked" ? "" : null),
+    shadowRoot: null,
+  };
+  const root = {
+    querySelector: () => null,
+    querySelectorAll: (selector) =>
+      selector === "[data-active-tab]" ? [tabSwitch] : [],
+  };
+
+  const result = buildEditorConfigFromDom({
+    root,
+    baseConfig: {},
+    cameras: [{ entity: "camera.front_door" }],
+    themeDraftCache: {},
+  });
+
+  assert.deepEqual(result.hidden_tabs, ["clips"]);
 });
