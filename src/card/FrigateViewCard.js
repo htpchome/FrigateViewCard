@@ -97,6 +97,7 @@ import {
   buildLiveEngineWrapMarkup,
   buildPageNavMarkup,
   buildPreviewShellHeaderMarkup,
+  buildRightColumnShellMarkup,
   buildTabsMarkup,
   resolveSubtitleText,
 } from "./shell-nav-markup.js";
@@ -4742,6 +4743,10 @@ export class FrigateViewCard extends HTMLElement {
       icons: ICONS,
       streamMuted: this._streamMuted,
     });
+    const rightColumnShell = buildRightColumnShellMarkup({
+      icons: ICONS,
+      tabsMarkup: this._buildTabsMarkup(),
+    });
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._cardStateClassNames()}" id="card" style="border-radius: var(--fvc-border-radius);">
 
@@ -4761,35 +4766,7 @@ export class FrigateViewCard extends HTMLElement {
             ${camSwitcher}
           </div>
           <div class="resize-handle" id="resize-handle"></div>
-          <div class="col-right" id="col-right">
-            <div class="frigate-view">${ICONS.frigateview}</div>
-            <div class="tabs-holder"> 
-              <div class="tabs shadow-small">            
-                ${this._buildTabsMarkup()}              
-              </div>
-              <div class="filter-panel" id="filter-panel" style="display:none"></div>
-              <div class="cal-panel" id="cal-panel" style="display:none"></div>
-            </div>
-            <div class="browse-head" id="browse-head" style="display:none">
-              <div class="browse-head-left">
-                <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${ICONS.left}Previous</button>
-              </div>
-              <div class="browse-head-middle" id="browse-head-label"></div>
-              <div class="browse-head-right">
-                <button class="prev-next" id="rec-day-next" data-rec-day-nav="1" title="Next day" aria-label="Next day" style="display:none">Next${ICONS.right}</button>
-              </div>
-            </div>
-        
-            <div class="browse" id="browse" style="display:none">
-              <div class="list-head">
-                <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
-              </div>
-              <div class="list" id="list">
-                <div class="empty">Loading…</div>
-              </div>
-            </div>
-            <div class="more" id="older-hint" hidden>scroll for older…</div>
-          </div>
+          ${rightColumnShell}
 
         </div>
         <!--<div class="toast" id="toast" style="display:none"></div>-->

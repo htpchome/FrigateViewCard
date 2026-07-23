@@ -147,3 +147,35 @@ export function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
                   </div>
               </div>`;
 }
+
+export function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
+  return `<div class="col-right" id="col-right">
+            <div class="frigate-view">${icons.frigateview}</div>
+            <div class="tabs-holder"> 
+              <div class="tabs shadow-small">            
+                ${tabsMarkup}              
+              </div>
+              <div class="filter-panel" id="filter-panel" style="display:none"></div>
+              <div class="cal-panel" id="cal-panel" style="display:none"></div>
+            </div>
+            <div class="browse-head" id="browse-head" style="display:none">
+              <div class="browse-head-left">
+                <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${icons.left}Previous</button>
+              </div>
+              <div class="browse-head-middle" id="browse-head-label"></div>
+              <div class="browse-head-right">
+                <button class="prev-next" id="rec-day-next" data-rec-day-nav="1" title="Next day" aria-label="Next day" style="display:none">Next${icons.right}</button>
+              </div>
+            </div>
+        
+            <div class="browse" id="browse" style="display:none">
+              <div class="list-head">
+                <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
+              </div>
+              <div class="list" id="list">
+                <div class="empty">Loading…</div>
+              </div>
+            </div>
+            <div class="more" id="older-hint" hidden>scroll for older…</div>
+          </div>`;
+}
