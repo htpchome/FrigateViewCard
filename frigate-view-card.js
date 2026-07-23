@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.751";
+const VERSION = "1.0.752";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2175,6 +2175,29 @@ function resolveListMarkup({
 function resolveListLabelTimestamp(items, fallbackTs = null) {
   const ts = items?.[0]?.start_time;
   return ts || fallbackTs || null;
+}
+function applyListMarkupWithOlderHint({
+  setHtml,
+  html,
+  isEmpty,
+  syncOlderHint,
+  emptyForceHide = null,
+  contentForceHide = null,
+  syncOnContent = true
+}) {
+  if (typeof setHtml === "function") {
+    setHtml(html);
+  }
+  if (isEmpty) {
+    if (typeof syncOlderHint === "function") {
+      syncOlderHint(emptyForceHide);
+    }
+    return false;
+  }
+  if (syncOnContent && typeof syncOlderHint === "function") {
+    syncOlderHint(contentForceHide);
+  }
+  return true;
 }
 
 // src/data/review-candidate-utils.js
@@ -10652,12 +10675,15 @@ const FrigateViewCard = class extends HTMLElement {
       emptyHint: "star an event to keep it",
       buildContentHtml: (items) => items.map((ev) => this._eventCardHTML(ev, false)).join("")
     });
-    this._setListHtmlIfChanged(list, renderState.html);
-    if (renderState.isEmpty) {
-      this._syncOlderHint(false);
-      return;
-    }
-    this._syncOlderHint(false);
+    applyListMarkupWithOlderHint({
+      setHtml: (html) => this._setListHtmlIfChanged(list, html),
+      html: renderState.html,
+      isEmpty: renderState.isEmpty,
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      emptyForceHide: false,
+      contentForceHide: false,
+      syncOnContent: true
+    });
   }
   _renderEventsList(list) {
     const events = this._filtered();
@@ -10673,9 +10699,16 @@ const FrigateViewCard = class extends HTMLElement {
         return appendEndMarker(eventsHtml, this._exhausted);
       }
     });
-    this._setListHtmlIfChanged(list, renderState.html);
-    if (renderState.isEmpty) {
-      this._syncOlderHint(false);
+    const hasContent = applyListMarkupWithOlderHint({
+      setHtml: (html) => this._setListHtmlIfChanged(list, html),
+      html: renderState.html,
+      isEmpty: renderState.isEmpty,
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      emptyForceHide: false,
+      contentForceHide: null,
+      syncOnContent: false
+    });
+    if (!hasContent) {
       return;
     }
     runListPostRenderSync({
@@ -10703,16 +10736,20 @@ const FrigateViewCard = class extends HTMLElement {
   _renderRecordings(list) {
     this._renderListLabel(this._winEnd);
     const recs = this._recordingsViewRows(this._recordings);
-    if (!recs.length) {
-      this._setListHtmlIfChanged(
-        list,
-        this._recordingsListMarkup(recs, "No recordings in the last 24 hours")
-      );
-      this._syncOlderHint(true);
-      return;
-    }
-    this._setListHtmlIfChanged(list, this._recordingsListMarkup(recs));
-    this._syncOlderHint(false);
+    const isEmpty = !recs.length;
+    const html = this._recordingsListMarkup(
+      recs,
+      "No recordings in the last 24 hours"
+    );
+    applyListMarkupWithOlderHint({
+      setHtml: (nextHtml) => this._setListHtmlIfChanged(list, nextHtml),
+      html,
+      isEmpty,
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      emptyForceHide: true,
+      contentForceHide: false,
+      syncOnContent: true
+    });
   }
   _reviewListItemHTML(review) {
     const model = buildReviewListItemModel(review, {
@@ -10742,9 +10779,16 @@ const FrigateViewCard = class extends HTMLElement {
         (review) => this._reviewListItemHTML(review)
       )
     });
-    this._setListHtmlIfChanged(list, renderState.html);
-    if (renderState.isEmpty) {
-      this._syncOlderHint(true);
+    const hasContent = applyListMarkupWithOlderHint({
+      setHtml: (html) => this._setListHtmlIfChanged(list, html),
+      html: renderState.html,
+      isEmpty: renderState.isEmpty,
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      emptyForceHide: true,
+      contentForceHide: false,
+      syncOnContent: false
+    });
+    if (!hasContent) {
       return;
     }
     runListPostRenderSync({

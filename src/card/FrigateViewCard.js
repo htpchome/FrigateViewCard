@@ -112,6 +112,7 @@ import {
   buildEventListItemModel,
 } from "./event-list-model.js";
 import {
+  applyListMarkupWithOlderHint,
   applyOlderHintDomState,
   appendEndMarker,
   buildStickyDaySectionsHtml,
@@ -8496,12 +8497,15 @@ export class FrigateViewCard extends HTMLElement {
       buildContentHtml: (items) =>
         items.map((ev) => this._eventCardHTML(ev, false)).join(""),
     });
-    this._setListHtmlIfChanged(list, renderState.html);
-    if (renderState.isEmpty) {
-      this._syncOlderHint(false);
-      return;
-    }
-    this._syncOlderHint(false);
+    applyListMarkupWithOlderHint({
+      setHtml: (html) => this._setListHtmlIfChanged(list, html),
+      html: renderState.html,
+      isEmpty: renderState.isEmpty,
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      emptyForceHide: false,
+      contentForceHide: false,
+      syncOnContent: true,
+    });
   }
 
   _renderEventsList(list) {
@@ -8519,9 +8523,16 @@ export class FrigateViewCard extends HTMLElement {
         return appendEndMarker(eventsHtml, this._exhausted);
       },
     });
-    this._setListHtmlIfChanged(list, renderState.html);
-    if (renderState.isEmpty) {
-      this._syncOlderHint(false);
+    const hasContent = applyListMarkupWithOlderHint({
+      setHtml: (html) => this._setListHtmlIfChanged(list, html),
+      html: renderState.html,
+      isEmpty: renderState.isEmpty,
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      emptyForceHide: false,
+      contentForceHide: null,
+      syncOnContent: false,
+    });
+    if (!hasContent) {
       return;
     }
     runListPostRenderSync({
@@ -8551,16 +8562,20 @@ export class FrigateViewCard extends HTMLElement {
   _renderRecordings(list) {
     this._renderListLabel(this._winEnd);
     const recs = this._recordingsViewRows(this._recordings);
-    if (!recs.length) {
-      this._setListHtmlIfChanged(
-        list,
-        this._recordingsListMarkup(recs, "No recordings in the last 24 hours"),
-      );
-      this._syncOlderHint(true);
-      return;
-    }
-    this._setListHtmlIfChanged(list, this._recordingsListMarkup(recs));
-    this._syncOlderHint(false);
+    const isEmpty = !recs.length;
+    const html = this._recordingsListMarkup(
+      recs,
+      "No recordings in the last 24 hours",
+    );
+    applyListMarkupWithOlderHint({
+      setHtml: (nextHtml) => this._setListHtmlIfChanged(list, nextHtml),
+      html,
+      isEmpty,
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      emptyForceHide: true,
+      contentForceHide: false,
+      syncOnContent: true,
+    });
   }
 
   _reviewListItemHTML(review) {
@@ -8595,9 +8610,16 @@ export class FrigateViewCard extends HTMLElement {
           this._reviewListItemHTML(review),
         ),
     });
-    this._setListHtmlIfChanged(list, renderState.html);
-    if (renderState.isEmpty) {
-      this._syncOlderHint(true);
+    const hasContent = applyListMarkupWithOlderHint({
+      setHtml: (html) => this._setListHtmlIfChanged(list, html),
+      html: renderState.html,
+      isEmpty: renderState.isEmpty,
+      syncOlderHint: (forceHide) => this._syncOlderHint(forceHide),
+      emptyForceHide: true,
+      contentForceHide: false,
+      syncOnContent: false,
+    });
+    if (!hasContent) {
       return;
     }
     runListPostRenderSync({

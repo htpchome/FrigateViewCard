@@ -172,3 +172,29 @@ export function resolveListLabelTimestamp(items, fallbackTs = null) {
   const ts = items?.[0]?.start_time;
   return ts || fallbackTs || null;
 }
+
+export function applyListMarkupWithOlderHint({
+  setHtml,
+  html,
+  isEmpty,
+  syncOlderHint,
+  emptyForceHide = null,
+  contentForceHide = null,
+  syncOnContent = true,
+}) {
+  if (typeof setHtml === "function") {
+    setHtml(html);
+  }
+
+  if (isEmpty) {
+    if (typeof syncOlderHint === "function") {
+      syncOlderHint(emptyForceHide);
+    }
+    return false;
+  }
+
+  if (syncOnContent && typeof syncOlderHint === "function") {
+    syncOlderHint(contentForceHide);
+  }
+  return true;
+}
