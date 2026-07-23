@@ -123,6 +123,11 @@ import {
   isMountTokenCurrent,
 } from "../live/live-mount-result.js";
 import {
+  applyStreamFallbackState,
+  applyStreamLoadingState,
+  resolveActiveStreamTypeState,
+} from "../live/live-stream-state.js";
+import {
   resolveHaDirectStartup,
   resolveHlsStartup,
   resolveMseStartup,
@@ -2143,30 +2148,30 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _setStreamLoading(loading, text = "Loading…") {
-    const el = this.shadowRoot?.querySelector("#stream-loading");
-    if (!el) return;
-    el.hidden = !loading;
-    const label = el.querySelector(".label");
-    if (label) label.textContent = text;
+    applyStreamLoadingState({
+      shadowRoot: this.shadowRoot,
+      loading,
+      text,
+    });
   }
 
   _setActiveStreamType(type) {
-    this._activeStreamType = type || "--";
-    const active = String(this._activeStreamType).trim().toLowerCase();
-    if (active === "webrtc" || active === "mse" || active === "hls") {
-      this._lastLiveStreamHint = active;
-    }
+    const nextState = resolveActiveStreamTypeState({
+      type,
+      lastLiveStreamHint: this._lastLiveStreamHint,
+    });
+    this._activeStreamType = nextState.activeStreamType;
+    this._lastLiveStreamHint = nextState.lastLiveStreamHint;
     this._renderStats();
   }
 
   _setStreamFallbackVisible(visible, refreshImage = false) {
-    const placeholder = this.shadowRoot?.querySelector("#stream-fallback");
-    const status = this.shadowRoot?.querySelector("#stream-fallback-status");
-    if (placeholder) {
-      placeholder.hidden = !visible;
-      if (!visible && status) status.hidden = true;
-      if (visible && refreshImage) this._refreshStreamFallbackImage();
-    }
+    applyStreamFallbackState({
+      shadowRoot: this.shadowRoot,
+      visible,
+      refreshImage,
+      onRefresh: () => this._refreshStreamFallbackImage(),
+    });
   }
 
   async _streamFallbackUrl(entity) {

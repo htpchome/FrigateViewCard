@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.772";
+const VERSION = "1.0.773";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2071,6 +2071,39 @@ const destroyLoserAttemptResults = async ({
     } catch (_) {
     }
   }
+};
+
+// src/live/live-stream-state.js
+const isLiveTransportType = (type) => {
+  const active = String(type || "").trim().toLowerCase();
+  return active === "webrtc" || active === "mse" || active === "hls";
+};
+const resolveActiveStreamTypeState = ({ type, lastLiveStreamHint }) => {
+  const activeStreamType = type || "--";
+  return {
+    activeStreamType,
+    lastLiveStreamHint: isLiveTransportType(activeStreamType) ? String(activeStreamType).trim().toLowerCase() : lastLiveStreamHint
+  };
+};
+const applyStreamLoadingState = ({ shadowRoot, loading, text }) => {
+  const el = shadowRoot?.querySelector?.("#stream-loading");
+  if (!el) return;
+  el.hidden = !loading;
+  const label = el.querySelector?.(".label");
+  if (label) label.textContent = text;
+};
+const applyStreamFallbackState = ({
+  shadowRoot,
+  visible,
+  refreshImage,
+  onRefresh
+}) => {
+  const placeholder = shadowRoot?.querySelector?.("#stream-fallback");
+  const status = shadowRoot?.querySelector?.("#stream-fallback-status");
+  if (!placeholder) return;
+  placeholder.hidden = !visible;
+  if (!visible && status) status.hidden = true;
+  if (visible && refreshImage) onRefresh?.();
 };
 
 // src/live/live-startup-policy.js
@@ -5493,28 +5526,28 @@ const FrigateViewCard = class extends HTMLElement {
     setTimeout(() => this._attachVideoFit(streamEl, retries - 1), 160);
   }
   _setStreamLoading(loading, text = "Loading\u2026") {
-    const el = this.shadowRoot?.querySelector("#stream-loading");
-    if (!el) return;
-    el.hidden = !loading;
-    const label = el.querySelector(".label");
-    if (label) label.textContent = text;
+    applyStreamLoadingState({
+      shadowRoot: this.shadowRoot,
+      loading,
+      text
+    });
   }
   _setActiveStreamType(type) {
-    this._activeStreamType = type || "--";
-    const active = String(this._activeStreamType).trim().toLowerCase();
-    if (active === "webrtc" || active === "mse" || active === "hls") {
-      this._lastLiveStreamHint = active;
-    }
+    const nextState = resolveActiveStreamTypeState({
+      type,
+      lastLiveStreamHint: this._lastLiveStreamHint
+    });
+    this._activeStreamType = nextState.activeStreamType;
+    this._lastLiveStreamHint = nextState.lastLiveStreamHint;
     this._renderStats();
   }
   _setStreamFallbackVisible(visible, refreshImage = false) {
-    const placeholder = this.shadowRoot?.querySelector("#stream-fallback");
-    const status = this.shadowRoot?.querySelector("#stream-fallback-status");
-    if (placeholder) {
-      placeholder.hidden = !visible;
-      if (!visible && status) status.hidden = true;
-      if (visible && refreshImage) this._refreshStreamFallbackImage();
-    }
+    applyStreamFallbackState({
+      shadowRoot: this.shadowRoot,
+      visible,
+      refreshImage,
+      onRefresh: () => this._refreshStreamFallbackImage()
+    });
   }
   async _streamFallbackUrl(entity) {
     if (!entity) return "";
