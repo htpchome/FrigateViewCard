@@ -377,11 +377,15 @@ export class FrigateViewCard extends HTMLElement {
           ...base,
           title: previewConfig.title || null,
           subtitle: previewConfig.subtitle || null,
+          cameras: Array.isArray(previewConfig.cameras)
+            ? previewConfig.cameras
+            : base.cameras,
           window_days: normalizePositiveInteger(previewConfig.window_days, 3),
           alerts_reviews_days: normalizePositiveInteger(
             previewConfig.alerts_reviews_days,
             normalizePositiveInteger(previewConfig.window_days, 3),
           ),
+          window_hours: Number(previewConfig.window_hours) || null,
           realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
             Number(previewConfig.realtime_poll_seconds),
           )
@@ -389,6 +393,14 @@ export class FrigateViewCard extends HTMLElement {
             : 5,
           mobile_poll_battery_saver:
             previewConfig.mobile_poll_battery_saver === true,
+          slideshow_rotation_enabled:
+            previewConfig.slideshow_rotation_enabled === true,
+          slideshow_rotation_seconds:
+            SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+              Number(previewConfig.slideshow_rotation_seconds),
+            )
+              ? Number(previewConfig.slideshow_rotation_seconds)
+              : 30,
           grid_mode_enabled: previewConfig.grid_mode_enabled === true,
           grid_start_in_grid_enabled:
             previewConfig.grid_start_in_grid_enabled === true,
@@ -399,6 +411,11 @@ export class FrigateViewCard extends HTMLElement {
           )
             ? Number(previewConfig.grid_rotation_seconds)
             : 30,
+          preview_page_enabled: previewConfig.preview_page_enabled === true,
+          preview_page_live_cameras:
+            previewConfig.preview_page_live_cameras === true,
+          preview_page_show_title_bars:
+            previewConfig.preview_page_show_title_bars !== false,
           hidden_tabs: Array.isArray(previewConfig.hidden_tabs)
             ? previewConfig.hidden_tabs
             : [],

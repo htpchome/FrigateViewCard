@@ -883,8 +883,12 @@ export const withCardTypeForYaml = (config, { sourceConfig = null } = {}) => {
 export const createEditorPreviewDraft = (config) => ({
   title: config.title,
   subtitle: config.subtitle,
+  cameras: Array.isArray(config.cameras)
+    ? config.cameras.map((camera) => ({ ...camera }))
+    : [],
   window_days: config.window_days,
   alerts_reviews_days: config.alerts_reviews_days,
+  window_hours: config.window_hours,
   realtime_poll_seconds: config.realtime_poll_seconds,
   mobile_poll_battery_saver: config.mobile_poll_battery_saver,
   slideshow_rotation_enabled: config.slideshow_rotation_enabled,

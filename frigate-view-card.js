@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.754";
+const VERSION = "1.0.755";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1494,8 +1494,10 @@ const withCardTypeForYaml = (config, { sourceConfig = null } = {}) => {
 const createEditorPreviewDraft = (config) => ({
   title: config.title,
   subtitle: config.subtitle,
+  cameras: Array.isArray(config.cameras) ? config.cameras.map((camera) => ({ ...camera })) : [],
   window_days: config.window_days,
   alerts_reviews_days: config.alerts_reviews_days,
+  window_hours: config.window_hours,
   realtime_poll_seconds: config.realtime_poll_seconds,
   mobile_poll_battery_saver: config.mobile_poll_battery_saver,
   slideshow_rotation_enabled: config.slideshow_rotation_enabled,
@@ -3584,21 +3586,30 @@ const FrigateViewCard = class extends HTMLElement {
       ...base,
       title: previewConfig.title || null,
       subtitle: previewConfig.subtitle || null,
+      cameras: Array.isArray(previewConfig.cameras) ? previewConfig.cameras : base.cameras,
       window_days: normalizePositiveInteger(previewConfig.window_days, 3),
       alerts_reviews_days: normalizePositiveInteger(
         previewConfig.alerts_reviews_days,
         normalizePositiveInteger(previewConfig.window_days, 3)
       ),
+      window_hours: Number(previewConfig.window_hours) || null,
       realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
         Number(previewConfig.realtime_poll_seconds)
       ) ? Number(previewConfig.realtime_poll_seconds) : 5,
       mobile_poll_battery_saver: previewConfig.mobile_poll_battery_saver === true,
+      slideshow_rotation_enabled: previewConfig.slideshow_rotation_enabled === true,
+      slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+        Number(previewConfig.slideshow_rotation_seconds)
+      ) ? Number(previewConfig.slideshow_rotation_seconds) : 30,
       grid_mode_enabled: previewConfig.grid_mode_enabled === true,
       grid_start_in_grid_enabled: previewConfig.grid_start_in_grid_enabled === true,
       grid_live_view_enabled: previewConfig.grid_live_view_enabled !== false,
       grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
         Number(previewConfig.grid_rotation_seconds)
       ) ? Number(previewConfig.grid_rotation_seconds) : 30,
+      preview_page_enabled: previewConfig.preview_page_enabled === true,
+      preview_page_live_cameras: previewConfig.preview_page_live_cameras === true,
+      preview_page_show_title_bars: previewConfig.preview_page_show_title_bars !== false,
       hidden_tabs: Array.isArray(previewConfig.hidden_tabs) ? previewConfig.hidden_tabs : [],
       theme: previewConfig.theme === "custom" ? "custom" : "default",
       theme_custom: previewConfig.theme_custom && typeof previewConfig.theme_custom === "object" ? previewConfig.theme_custom : {},
