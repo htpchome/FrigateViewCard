@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.703";
+const VERSION = "1.0.704";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1903,6 +1903,59 @@ const PreviewAlertController = class {
   }
 };
 
+// src/preview/preview-page-controller.js
+const PreviewPageController = class {
+  constructor(host, constants) {
+    this._host = host;
+    this._constants = constants;
+  }
+  activatePreviewPageRoute(context = {}) {
+    const PAGE_IDS2 = this._constants.PAGE_IDS;
+    if (context.previousPageId !== PAGE_IDS2.preview) {
+      if (this._host._$("#myPopup")?.classList.contains("is-open")) {
+        this._host._closePopup();
+      }
+      this._host._cancelPendingMount("page-route-preview");
+    }
+    this._host._applyPreviewShellVisibility();
+    this._host._applyCardStyle();
+    this._host._applyLayoutMode();
+    this.startPreviewMode();
+  }
+  startPreviewMode() {
+    this._host._previewAlertController.start();
+  }
+  stopPreviewMode() {
+    this._host._clearPreviewTimers();
+    this._host._teardownPreviewMedia();
+  }
+  exitPreviewPageToCamera(idx) {
+    if (!this._host._isPreviewPageActive()) return;
+    if (!Number.isInteger(idx) || idx < 0 || idx >= (this._host._config?.cameras?.length || 0)) {
+      return;
+    }
+    const PAGE_IDS2 = this._constants.PAGE_IDS;
+    const targetPageId = this._host._isPageRouteAvailable(
+      this._host._lastNonPreviewPageId
+    ) ? this._host._lastNonPreviewPageId : PAGE_IDS2.singleView;
+    this._host._navigateToPageRoute(targetPageId, {
+      source: "preview-camera-select",
+      deferCameraSwitch: true
+    });
+    if (this._host._activeCamIdx === idx) this._host._activeCamIdx = -1;
+    void this._host._switchCamera(idx, { source: "manual" });
+  }
+  returnToPreviewPage() {
+    const PAGE_IDS2 = this._constants.PAGE_IDS;
+    if (!this._host._isPreviewPageEnabled() || this._host._isPreviewPageActive()) {
+      return;
+    }
+    this._host._navigateToPageRoute(PAGE_IDS2.preview, {
+      source: "preview-page-return"
+    });
+  }
+};
+
 // src/card/FrigateViewCard.js
 const FrigateViewCard = class extends HTMLElement {
   constructor() {
@@ -2002,6 +2055,7 @@ const FrigateViewCard = class extends HTMLElement {
       PREVIEW_ALERT_END_GRACE_MS,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
+    this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._domCache = {};
     this._go2rtcWsUrlCache = new Map();
     this._go2rtcHlsUrlCache = new Map();
@@ -4518,15 +4572,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderAll();
   }
   _activatePreviewPageRoute(context = {}) {
-    if (context.previousPageId !== PAGE_IDS.preview) {
-      if (this._$("#myPopup")?.classList.contains("is-open"))
-        this._closePopup();
-      this._cancelPendingMount("page-route-preview");
-    }
-    this._applyPreviewShellVisibility();
-    this._applyCardStyle();
-    this._applyLayoutMode();
-    this._startPreviewMode();
+    this._previewPageController.activatePreviewPageRoute(context);
   }
   _hasPendingDeepLinkTarget() {
     return !!(this._deepLinkEventId || this._deepLinkReviewId || this._deepLinkCameraHint);
@@ -4774,30 +4820,16 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewAlertController.handleRealtimeMessage(msg);
   }
   _startPreviewMode() {
-    this._previewAlertController.start();
+    this._previewPageController.startPreviewMode();
   }
   _stopPreviewMode() {
-    this._clearPreviewTimers();
-    this._teardownPreviewMedia();
+    this._previewPageController.stopPreviewMode();
   }
   _exitPreviewPageToCamera(idx) {
-    if (!this._isPreviewPageActive()) return;
-    if (!Number.isInteger(idx) || idx < 0 || idx >= (this._config?.cameras?.length || 0)) {
-      return;
-    }
-    const targetPageId = this._isPageRouteAvailable(this._lastNonPreviewPageId) ? this._lastNonPreviewPageId : PAGE_IDS.singleView;
-    this._navigateToPageRoute(targetPageId, {
-      source: "preview-camera-select",
-      deferCameraSwitch: true
-    });
-    if (this._activeCamIdx === idx) this._activeCamIdx = -1;
-    void this._switchCamera(idx, { source: "manual" });
+    this._previewPageController.exitPreviewPageToCamera(idx);
   }
   _returnToPreviewPage() {
-    if (!this._isPreviewPageEnabled() || this._isPreviewPageActive()) return;
-    this._navigateToPageRoute(PAGE_IDS.preview, {
-      source: "preview-page-return"
-    });
+    this._previewPageController.returnToPreviewPage();
   }
   // ── view mode ─────────────────────────────────────────────
   _isGridModeAvailable() {
