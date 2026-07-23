@@ -307,11 +307,11 @@ export const bindSelectorSyncEvents = (element, syncValue) => {
 
 export const resolveSwitchChecked = (element) => {
   if (!element) return false;
-  if (element.checked === true) return true;
-  if (element.getAttribute?.("checked") != null) return true;
+  if (typeof element.checked === "boolean") return element.checked;
   if (element.getAttribute?.("aria-checked") === "true") return true;
+  if (element.getAttribute?.("aria-checked") === "false") return false;
   const shadowInput = element.shadowRoot?.querySelector?.("input");
-  if (shadowInput?.checked === true) return true;
+  if (typeof shadowInput?.checked === "boolean") return shadowInput.checked;
   return false;
 };
 

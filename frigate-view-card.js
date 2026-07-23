@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.761";
+const VERSION = "1.0.762";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1040,11 +1040,11 @@ const bindSelectorSyncEvents = (element, syncValue) => {
 };
 const resolveSwitchChecked = (element) => {
   if (!element) return false;
-  if (element.checked === true) return true;
-  if (element.getAttribute?.("checked") != null) return true;
+  if (typeof element.checked === "boolean") return element.checked;
   if (element.getAttribute?.("aria-checked") === "true") return true;
+  if (element.getAttribute?.("aria-checked") === "false") return false;
   const shadowInput = element.shadowRoot?.querySelector?.("input");
-  if (shadowInput?.checked === true) return true;
+  if (typeof shadowInput?.checked === "boolean") return shadowInput.checked;
   return false;
 };
 const setupSelectSelector = ({
