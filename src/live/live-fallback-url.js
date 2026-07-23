@@ -128,11 +128,8 @@ export const createFallbackSourceResolversForCard = ({ card, origin }) => {
   });
 };
 
-export const resolveFallbackSourceResolversForCard = ({ card, origin }) =>
-  createFallbackSourceResolversForCard({
-    card,
-    origin,
-  });
+export const resolveFallbackSourceResolversForCard =
+  createFallbackSourceResolversForCard;
 
 export const withFallbackSourceResolversForCard = ({ card, origin, run }) =>
   run(
@@ -143,10 +140,10 @@ export const withFallbackSourceResolversForCard = ({ card, origin, run }) =>
   );
 
 export const loadFallbackPrimaryForCard = async ({ card, entity, origin }) => {
-  return await withFallbackSourceResolversForCard({
+  return withFallbackSourceResolversForCard({
     card,
     origin,
-    run: async (resolvers) => await resolvers.loadPrimary(entity),
+    run: async (resolvers) => resolvers.loadPrimary(entity),
   });
 };
 
