@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.709";
+const VERSION = "1.0.710";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2229,6 +2229,84 @@ const GridAlertController = class {
   }
 };
 
+// src/grid/grid-page-controller.js
+const GridPageController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  shouldStartInGridMode() {
+    return this._host._config?.grid_start_in_grid_enabled === true && this._host._isGridModeAvailable();
+  }
+  applyStartInGridMode(_source = "") {
+    if (this._host._isPreviewPageActive()) return;
+    if (!this.shouldStartInGridMode()) return;
+    if (this._host._viewMode === "grid") return;
+    this._host._gridRotationStart = 0;
+    this._host._setViewMode("grid");
+  }
+  scheduleGridRotation() {
+    if (!this._host._isGridModeAvailable()) return;
+    if (this._host._viewMode !== "grid") return;
+    if ((this._host._config?.cameras?.length || 0) <= 4) {
+      if (this._host._gridRotationT) clearTimeout(this._host._gridRotationT);
+      this._host._gridRotationT = null;
+      return;
+    }
+    if (this._host._gridRotationT) clearTimeout(this._host._gridRotationT);
+    this._host._gridRotationT = setTimeout(() => {
+      this._host._gridRotationT = null;
+      this.advanceGridRotation();
+    }, this._host._gridRotationMs());
+  }
+  advanceGridRotation() {
+    if (!this._host._isGridModeAvailable()) return;
+    if (this._host._viewMode !== "grid") return;
+    const total = this._host._config?.cameras?.length || 0;
+    if (total <= 4) {
+      this._host._gridRotationStart = 0;
+      this.scheduleGridRotation();
+      return;
+    }
+    const totalPages = Math.max(1, Math.ceil(total / 4));
+    const currentPage = Math.min(
+      totalPages - 1,
+      Math.max(0, Math.floor((Number(this._host._gridRotationStart) || 0) / 4))
+    );
+    const nextPage = (currentPage + 1) % totalPages;
+    this._host._gridRotationStart = nextPage * 4;
+    this._host._mountEngine(null, { quiet: true });
+    this.scheduleGridRotation();
+  }
+  stopGridModeState() {
+    this._host._clearGridTimers();
+    this._host._gridResumePending = false;
+    this._host._gridPinnedRotationStart = Math.max(
+      0,
+      Number(this._host._gridRotationStart) || 0
+    );
+    this._host._gridAlertController.stopSession();
+    this._host._gridLastRenderSignature = "";
+    this._host._setSlideshowAlertState("");
+  }
+  toggleGridMode() {
+    if (this._host._isPreviewPageActive()) return;
+    if (this._host._viewMode === "grid" || this._host._gridResumePending) {
+      this._host._gridResumePending = false;
+      this.stopGridModeState();
+      if (this._host._viewMode === "grid") {
+        this._host._setViewMode("single");
+      } else {
+        this._host._syncToolbarButtons();
+      }
+      return;
+    }
+    this._host._gridRotationStart = 0;
+    this._host._gridPinnedRotationStart = 0;
+    this._host._clearGridAlertTracking();
+    this._host._setViewMode("grid");
+  }
+};
+
 // src/card/FrigateViewCard.js
 const FrigateViewCard = class extends HTMLElement {
   constructor() {
@@ -2314,6 +2392,7 @@ const FrigateViewCard = class extends HTMLElement {
       DAY,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
+    this._gridPageController = new GridPageController(this);
     this._previewPageActive = false;
     this._previewLastRenderSignature = "";
     this._previewMediaState = null;
@@ -5084,14 +5163,10 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _shouldStartInGridMode() {
-    return this._config?.grid_start_in_grid_enabled === true && this._isGridModeAvailable();
+    return this._gridPageController.shouldStartInGridMode();
   }
   _applyStartInGridMode(_source = "") {
-    if (this._isPreviewPageActive()) return;
-    if (!this._shouldStartInGridMode()) return;
-    if (this._viewMode === "grid") return;
-    this._gridRotationStart = 0;
-    this._setViewMode("grid");
+    this._gridPageController.applyStartInGridMode(_source);
   }
   _rememberHandledGridReview(reviewId) {
     this._gridAlertController.rememberHandledReview(reviewId);
@@ -5121,37 +5196,10 @@ const FrigateViewCard = class extends HTMLElement {
     return this._gridAlertController.markAlertCamera(entity, severity);
   }
   _scheduleGridRotation() {
-    if (!this._isGridModeAvailable()) return;
-    if (this._viewMode !== "grid") return;
-    if ((this._config?.cameras?.length || 0) <= 4) {
-      if (this._gridRotationT) clearTimeout(this._gridRotationT);
-      this._gridRotationT = null;
-      return;
-    }
-    if (this._gridRotationT) clearTimeout(this._gridRotationT);
-    this._gridRotationT = setTimeout(() => {
-      this._gridRotationT = null;
-      this._advanceGridRotation();
-    }, this._gridRotationMs());
+    this._gridPageController.scheduleGridRotation();
   }
   _advanceGridRotation() {
-    if (!this._isGridModeAvailable()) return;
-    if (this._viewMode !== "grid") return;
-    const total = this._config?.cameras?.length || 0;
-    if (total <= 4) {
-      this._gridRotationStart = 0;
-      this._scheduleGridRotation();
-      return;
-    }
-    const totalPages = Math.max(1, Math.ceil(total / 4));
-    const currentPage = Math.min(
-      totalPages - 1,
-      Math.max(0, Math.floor((Number(this._gridRotationStart) || 0) / 4))
-    );
-    const nextPage = (currentPage + 1) % totalPages;
-    this._gridRotationStart = nextPage * 4;
-    this._mountEngine(null, { quiet: true });
-    this._scheduleGridRotation();
+    this._gridPageController.advanceGridRotation();
   }
   _gridPageCameraIndices() {
     const total = this._config?.cameras?.length || 0;
@@ -5258,32 +5306,10 @@ const FrigateViewCard = class extends HTMLElement {
     this._gridAlertController.handleRealtimeMessage(msg);
   }
   _stopGridModeState() {
-    this._clearGridTimers();
-    this._gridResumePending = false;
-    this._gridPinnedRotationStart = Math.max(
-      0,
-      Number(this._gridRotationStart) || 0
-    );
-    this._gridAlertController.stopSession();
-    this._gridLastRenderSignature = "";
-    this._setSlideshowAlertState("");
+    this._gridPageController.stopGridModeState();
   }
   _toggleGridMode() {
-    if (this._isPreviewPageActive()) return;
-    if (this._viewMode === "grid" || this._gridResumePending) {
-      this._gridResumePending = false;
-      this._stopGridModeState();
-      if (this._viewMode === "grid") {
-        this._setViewMode("single");
-      } else {
-        this._syncToolbarButtons();
-      }
-      return;
-    }
-    this._gridRotationStart = 0;
-    this._gridPinnedRotationStart = 0;
-    this._clearGridAlertTracking();
-    this._setViewMode("grid");
+    this._gridPageController.toggleGridMode();
   }
   _setViewMode(mode) {
     if (this._isPreviewPageActive()) return;

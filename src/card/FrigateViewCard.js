@@ -104,6 +104,7 @@ import {
   renderGridEmptyPlaceholder,
 } from "../grid/grid-markup.js";
 import { GridAlertController } from "../grid/grid-alert-controller.js";
+import { GridPageController } from "../grid/grid-page-controller.js";
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -189,6 +190,7 @@ export class FrigateViewCard extends HTMLElement {
       DAY,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
     });
+    this._gridPageController = new GridPageController(this);
     this._previewPageActive = false;
     this._previewLastRenderSignature = "";
     this._previewMediaState = null;
@@ -3419,18 +3421,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _shouldStartInGridMode() {
-    return (
-      this._config?.grid_start_in_grid_enabled === true &&
-      this._isGridModeAvailable()
-    );
+    return this._gridPageController.shouldStartInGridMode();
   }
 
   _applyStartInGridMode(_source = "") {
-    if (this._isPreviewPageActive()) return;
-    if (!this._shouldStartInGridMode()) return;
-    if (this._viewMode === "grid") return;
-    this._gridRotationStart = 0;
-    this._setViewMode("grid");
+    this._gridPageController.applyStartInGridMode(_source);
   }
 
   _rememberHandledGridReview(reviewId) {
@@ -3470,38 +3465,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _scheduleGridRotation() {
-    if (!this._isGridModeAvailable()) return;
-    if (this._viewMode !== "grid") return;
-    if ((this._config?.cameras?.length || 0) <= 4) {
-      if (this._gridRotationT) clearTimeout(this._gridRotationT);
-      this._gridRotationT = null;
-      return;
-    }
-    if (this._gridRotationT) clearTimeout(this._gridRotationT);
-    this._gridRotationT = setTimeout(() => {
-      this._gridRotationT = null;
-      this._advanceGridRotation();
-    }, this._gridRotationMs());
+    this._gridPageController.scheduleGridRotation();
   }
 
   _advanceGridRotation() {
-    if (!this._isGridModeAvailable()) return;
-    if (this._viewMode !== "grid") return;
-    const total = this._config?.cameras?.length || 0;
-    if (total <= 4) {
-      this._gridRotationStart = 0;
-      this._scheduleGridRotation();
-      return;
-    }
-    const totalPages = Math.max(1, Math.ceil(total / 4));
-    const currentPage = Math.min(
-      totalPages - 1,
-      Math.max(0, Math.floor((Number(this._gridRotationStart) || 0) / 4)),
-    );
-    const nextPage = (currentPage + 1) % totalPages;
-    this._gridRotationStart = nextPage * 4;
-    this._mountEngine(null, { quiet: true });
-    this._scheduleGridRotation();
+    this._gridPageController.advanceGridRotation();
   }
 
   _gridPageCameraIndices() {
@@ -3620,33 +3588,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _stopGridModeState() {
-    this._clearGridTimers();
-    this._gridResumePending = false;
-    this._gridPinnedRotationStart = Math.max(
-      0,
-      Number(this._gridRotationStart) || 0,
-    );
-    this._gridAlertController.stopSession();
-    this._gridLastRenderSignature = "";
-    this._setSlideshowAlertState("");
+    this._gridPageController.stopGridModeState();
   }
 
   _toggleGridMode() {
-    if (this._isPreviewPageActive()) return;
-    if (this._viewMode === "grid" || this._gridResumePending) {
-      this._gridResumePending = false;
-      this._stopGridModeState();
-      if (this._viewMode === "grid") {
-        this._setViewMode("single");
-      } else {
-        this._syncToolbarButtons();
-      }
-      return;
-    }
-    this._gridRotationStart = 0;
-    this._gridPinnedRotationStart = 0;
-    this._clearGridAlertTracking();
-    this._setViewMode("grid");
+    this._gridPageController.toggleGridMode();
   }
 
   _setViewMode(mode) {
