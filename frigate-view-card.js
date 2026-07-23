@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.721";
+const VERSION = "1.0.722";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1699,6 +1699,17 @@ function buildPreviewCameraButtonMarkup({ index, name }) {
 function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
   return `<div class="preview-grid" id="preview-grid">${cellsMarkup}</div>
       <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
+}
+
+// src/card/shell-nav-markup.js
+function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
+  return `<div class="page-nav" aria-label="Page navigation">${routes.map((pageId) => {
+    const isActive = pageId === activePageId;
+    return `<button class="page-nav-btn${isActive ? " active" : ""}" type="button" data-page-route="${pageId}" aria-pressed="${isActive ? "true" : "false"}">${getRouteLabel(pageId)}</button>`;
+  }).join("")}</div>`;
+}
+function resolveSubtitleText(config) {
+  return config?.subtitle || "Frigate";
 }
 
 // src/preview/preview-alert-controller.js
@@ -5387,11 +5398,11 @@ const FrigateViewCard = class extends HTMLElement {
     return "Single View";
   }
   _pageNavMarkup() {
-    const activePageId = normalizePageRoute(this._pageId);
-    const routes = this._pageRouteOptions();
-    return `<div class="page-nav" aria-label="Page navigation">${routes.map(
-      (pageId) => `<button class="page-nav-btn${pageId === activePageId ? " active" : ""}" type="button" data-page-route="${pageId}" aria-pressed="${pageId === activePageId ? "true" : "false"}">${this._pageRouteLabel(pageId)}</button>`
-    ).join("")}</div>`;
+    return buildPageNavMarkup({
+      routes: this._pageRouteOptions(),
+      activePageId: normalizePageRoute(this._pageId),
+      getRouteLabel: (pageId) => this._pageRouteLabel(pageId)
+    });
   }
   _syncPageNavigationButtons() {
     this.shadowRoot.querySelectorAll("[data-page-route]").forEach((button) => {
@@ -9772,7 +9783,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (stream) stream.textContent = this._activeStreamType || "--";
   }
   _subtitleText() {
-    return this._config?.subtitle || "Frigate";
+    return resolveSubtitleText(this._config);
   }
   _renderSubtitle() {
     const el = this._$("#tl-range");

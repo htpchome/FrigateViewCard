@@ -92,6 +92,7 @@ import {
   buildPreviewShellMarkup,
   buildPreviewStatusMarkup,
 } from "../preview/preview-markup.js";
+import { buildPageNavMarkup, resolveSubtitleText } from "./shell-nav-markup.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import {
@@ -3068,18 +3069,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _pageNavMarkup() {
-    const activePageId = normalizePageRoute(this._pageId);
-    const routes = this._pageRouteOptions();
-    return `<div class="page-nav" aria-label="Page navigation">${routes
-      .map(
-        (pageId) =>
-          `<button class="page-nav-btn${
-            pageId === activePageId ? " active" : ""
-          }" type="button" data-page-route="${pageId}" aria-pressed="${
-            pageId === activePageId ? "true" : "false"
-          }">${this._pageRouteLabel(pageId)}</button>`,
-      )
-      .join("")}</div>`;
+    return buildPageNavMarkup({
+      routes: this._pageRouteOptions(),
+      activePageId: normalizePageRoute(this._pageId),
+      getRouteLabel: (pageId) => this._pageRouteLabel(pageId),
+    });
   }
 
   _syncPageNavigationButtons() {
@@ -8059,7 +8053,7 @@ export class FrigateViewCard extends HTMLElement {
     if (stream) stream.textContent = this._activeStreamType || "--";
   }
   _subtitleText() {
-    return this._config?.subtitle || "Frigate";
+    return resolveSubtitleText(this._config);
   }
   _renderSubtitle() {
     const el = this._$("#tl-range");
