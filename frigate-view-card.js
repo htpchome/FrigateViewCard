@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.730";
+const VERSION = "1.0.731";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1954,6 +1954,36 @@ function selectNewestReviewCandidate(candidates) {
   }
   return newest;
 }
+async function findNewestReviewCandidateAcrossCameras({
+  cameras,
+  getEntity,
+  getCache,
+  fetchReviews,
+  buildCandidate,
+  onReviewsFetched
+}) {
+  const list = Array.isArray(cameras) ? cameras : [];
+  const candidates = [];
+  for (const camera of list) {
+    const entity = String(getEntity?.(camera) || "").trim();
+    if (!entity) continue;
+    const cache = getCache?.(entity);
+    if (!cache?.clientId || !cache?.cam) continue;
+    let reviews = [];
+    try {
+      const batch = await fetchReviews?.({ entity, cache, camera });
+      reviews = Array.isArray(batch) ? batch : [];
+    } catch (_) {
+      reviews = [];
+    }
+    if (typeof onReviewsFetched === "function") {
+      onReviewsFetched({ entity, cache, camera, reviews });
+    }
+    const candidate = buildCandidate?.({ entity, cache, camera, reviews });
+    if (candidate) candidates.push(candidate);
+  }
+  return selectNewestReviewCandidate(candidates);
+}
 
 // src/preview/preview-alert-controller.js
 const PreviewAlertController = class {
@@ -2027,27 +2057,22 @@ const PreviewAlertController = class {
         before - (this._host._config?.alerts_reviews_days || 3) * this._constants.DAY
       )
     );
-    const candidates = [];
-    for (const camera of this._host._config?.cameras || []) {
-      const entity = camera?.entity || "";
-      const cache = this._host._camCache[entity];
-      if (!entity || !cache?.clientId || !cache?.cam) continue;
-      let reviews = [];
-      try {
-        const batch = await this._host._ws({
-          type: "frigate/reviews/get",
-          instance_id: cache.clientId,
-          cameras: [cache.cam],
-          after,
-          before,
-          limit: 5
-        });
-        reviews = Array.isArray(batch) ? batch : [];
-      } catch (_) {
-        reviews = [];
-      }
-      cache.reviews = reviews;
-      const candidate = findFirstReviewCandidateForEntity({
+    const next = await findNewestReviewCandidateAcrossCameras({
+      cameras: this._host._config?.cameras,
+      getEntity: (camera) => camera?.entity,
+      getCache: (entity) => this._host._camCache[entity],
+      fetchReviews: async ({ cache }) => this._host._ws({
+        type: "frigate/reviews/get",
+        instance_id: cache.clientId,
+        cameras: [cache.cam],
+        after,
+        before,
+        limit: 5
+      }),
+      onReviewsFetched: ({ cache, reviews }) => {
+        cache.reviews = reviews;
+      },
+      buildCandidate: ({ entity, reviews }) => findFirstReviewCandidateForEntity({
         reviews,
         entity,
         isReviewFresh: (review) => this.isReviewFresh(review),
@@ -2055,11 +2080,8 @@ const PreviewAlertController = class {
         shouldHandleSeverity: (targetEntity, severity) => this._host._shouldHandleSlideshowReview(targetEntity, severity),
         isHandledReviewId: (reviewId) => this._handledReviewIds.has(reviewId),
         reviewStartTime: (review) => this._host._reviewStartTimeSec(review)
-      });
-      if (candidate) candidates.push(candidate);
-    }
-    if (!candidates.length) return;
-    const next = selectNewestReviewCandidate(candidates);
+      })
+    });
     if (!next?.entity) return;
     if (next.reviewId) this.rememberHandledReview(next.reviewId);
     this.markAlertCamera(
@@ -2401,26 +2423,19 @@ const GridAlertController = class {
         before - (this._host._config?.alerts_reviews_days || 3) * this._constants.DAY
       )
     );
-    const candidates = [];
-    for (const camera of this._host._config?.cameras || []) {
-      const entity = camera?.entity || "";
-      const cache = this._host._camCache[entity];
-      if (!entity || !cache?.clientId || !cache?.cam) continue;
-      let reviews = [];
-      try {
-        const batch = await this._host._ws({
-          type: "frigate/reviews/get",
-          instance_id: cache.clientId,
-          cameras: [cache.cam],
-          after,
-          before,
-          limit: 5
-        });
-        reviews = Array.isArray(batch) ? batch : [];
-      } catch (_) {
-        reviews = [];
-      }
-      const candidate = findFirstReviewCandidateForEntity({
+    const next = await findNewestReviewCandidateAcrossCameras({
+      cameras: this._host._config?.cameras,
+      getEntity: (camera) => camera?.entity,
+      getCache: (entity) => this._host._camCache[entity],
+      fetchReviews: async ({ cache }) => this._host._ws({
+        type: "frigate/reviews/get",
+        instance_id: cache.clientId,
+        cameras: [cache.cam],
+        after,
+        before,
+        limit: 5
+      }),
+      buildCandidate: ({ entity, reviews }) => findFirstReviewCandidateForEntity({
         reviews,
         entity,
         isReviewFresh: (review) => this.isReviewFresh(review),
@@ -2428,11 +2443,8 @@ const GridAlertController = class {
         shouldHandleSeverity: (targetEntity, severity) => this._host._shouldHandleSlideshowReview(targetEntity, severity),
         isHandledReviewId: (reviewId) => this._handledReviewIds.has(reviewId),
         reviewStartTime: (review) => this._host._reviewStartTimeSec(review)
-      });
-      if (candidate) candidates.push(candidate);
-    }
-    if (!candidates.length) return;
-    const next = selectNewestReviewCandidate(candidates);
+      })
+    });
     if (!next?.entity) return;
     if (next.reviewId) this.rememberHandledReview(next.reviewId);
     this.handleAlertCandidate(next.entity, next.severity);
@@ -2649,26 +2661,19 @@ const SlideshowAlertController = class {
           before - (this._host._config?.alerts_reviews_days || 3) * this._constants.DAY
         )
       );
-      const candidates = [];
-      for (const camera of this._host._config?.cameras || []) {
-        const entity = camera?.entity || "";
-        const cache = this._host._camCache[entity];
-        if (!entity || !cache?.clientId || !cache?.cam) continue;
-        let reviews = [];
-        try {
-          const batch = await this._host._ws({
-            type: "frigate/reviews/get",
-            instance_id: cache.clientId,
-            cameras: [cache.cam],
-            after,
-            before,
-            limit: 5
-          });
-          reviews = Array.isArray(batch) ? batch : [];
-        } catch (_) {
-          reviews = [];
-        }
-        const candidate = findFirstReviewCandidateForEntity({
+      const next = await findNewestReviewCandidateAcrossCameras({
+        cameras: this._host._config?.cameras,
+        getEntity: (camera) => camera?.entity,
+        getCache: (entity) => this._host._camCache[entity],
+        fetchReviews: async ({ cache }) => this._host._ws({
+          type: "frigate/reviews/get",
+          instance_id: cache.clientId,
+          cameras: [cache.cam],
+          after,
+          before,
+          limit: 5
+        }),
+        buildCandidate: ({ entity, reviews }) => findFirstReviewCandidateForEntity({
           reviews,
           entity,
           isReviewFresh: (review) => this.isReviewFresh(review),
@@ -2676,11 +2681,8 @@ const SlideshowAlertController = class {
           shouldHandleSeverity: (targetEntity, severity) => this._host._shouldHandleSlideshowReview(targetEntity, severity),
           isHandledReviewId: (reviewId) => this._host._slideshowHandledReviewIds.has(reviewId),
           reviewStartTime: (review) => this._host._reviewStartTimeSec(review)
-        });
-        if (candidate) candidates.push(candidate);
-      }
-      if (!candidates.length) return;
-      const next = selectNewestReviewCandidate(candidates);
+        })
+      });
       if (!next?.entity) return;
       if (next.reviewId) this.rememberHandledReview(next.reviewId);
       if (this._host._slideshowPopupPaused) {

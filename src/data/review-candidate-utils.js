@@ -38,3 +38,34 @@ export function selectNewestReviewCandidate(candidates) {
   }
   return newest;
 }
+
+export async function findNewestReviewCandidateAcrossCameras({
+  cameras,
+  getEntity,
+  getCache,
+  fetchReviews,
+  buildCandidate,
+  onReviewsFetched,
+}) {
+  const list = Array.isArray(cameras) ? cameras : [];
+  const candidates = [];
+  for (const camera of list) {
+    const entity = String(getEntity?.(camera) || "").trim();
+    if (!entity) continue;
+    const cache = getCache?.(entity);
+    if (!cache?.clientId || !cache?.cam) continue;
+    let reviews = [];
+    try {
+      const batch = await fetchReviews?.({ entity, cache, camera });
+      reviews = Array.isArray(batch) ? batch : [];
+    } catch (_) {
+      reviews = [];
+    }
+    if (typeof onReviewsFetched === "function") {
+      onReviewsFetched({ entity, cache, camera, reviews });
+    }
+    const candidate = buildCandidate?.({ entity, cache, camera, reviews });
+    if (candidate) candidates.push(candidate);
+  }
+  return selectNewestReviewCandidate(candidates);
+}

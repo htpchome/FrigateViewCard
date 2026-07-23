@@ -5,7 +5,7 @@ import {
 } from "./preview-utils.js";
 import {
   findFirstReviewCandidateForEntity,
-  selectNewestReviewCandidate,
+  findNewestReviewCandidateAcrossCameras,
 } from "../data/review-candidate-utils.js";
 
 export class PreviewAlertController {
@@ -88,41 +88,35 @@ export class PreviewAlertController {
           (this._host._config?.alerts_reviews_days || 3) * this._constants.DAY,
       ),
     );
-    const candidates = [];
-    for (const camera of this._host._config?.cameras || []) {
-      const entity = camera?.entity || "";
-      const cache = this._host._camCache[entity];
-      if (!entity || !cache?.clientId || !cache?.cam) continue;
-      let reviews = [];
-      try {
-        const batch = await this._host._ws({
+    const next = await findNewestReviewCandidateAcrossCameras({
+      cameras: this._host._config?.cameras,
+      getEntity: (camera) => camera?.entity,
+      getCache: (entity) => this._host._camCache[entity],
+      fetchReviews: async ({ cache }) =>
+        this._host._ws({
           type: "frigate/reviews/get",
           instance_id: cache.clientId,
           cameras: [cache.cam],
           after,
           before,
           limit: 5,
-        });
-        reviews = Array.isArray(batch) ? batch : [];
-      } catch (_) {
-        reviews = [];
-      }
-      cache.reviews = reviews;
-      const candidate = findFirstReviewCandidateForEntity({
-        reviews,
-        entity,
-        isReviewFresh: (review) => this.isReviewFresh(review),
-        normalizeSeverity: (review) =>
-          this._host._normalizeReviewSeverity(review),
-        shouldHandleSeverity: (targetEntity, severity) =>
-          this._host._shouldHandleSlideshowReview(targetEntity, severity),
-        isHandledReviewId: (reviewId) => this._handledReviewIds.has(reviewId),
-        reviewStartTime: (review) => this._host._reviewStartTimeSec(review),
-      });
-      if (candidate) candidates.push(candidate);
-    }
-    if (!candidates.length) return;
-    const next = selectNewestReviewCandidate(candidates);
+        }),
+      onReviewsFetched: ({ cache, reviews }) => {
+        cache.reviews = reviews;
+      },
+      buildCandidate: ({ entity, reviews }) =>
+        findFirstReviewCandidateForEntity({
+          reviews,
+          entity,
+          isReviewFresh: (review) => this.isReviewFresh(review),
+          normalizeSeverity: (review) =>
+            this._host._normalizeReviewSeverity(review),
+          shouldHandleSeverity: (targetEntity, severity) =>
+            this._host._shouldHandleSlideshowReview(targetEntity, severity),
+          isHandledReviewId: (reviewId) => this._handledReviewIds.has(reviewId),
+          reviewStartTime: (review) => this._host._reviewStartTimeSec(review),
+        }),
+    });
     if (!next?.entity) return;
     if (next.reviewId) this.rememberHandledReview(next.reviewId);
     this.markAlertCamera(
