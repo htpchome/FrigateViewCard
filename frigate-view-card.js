@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.770";
+const VERSION = "1.0.771";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2029,6 +2029,45 @@ const applyMountWatchdogTimeout = ({ mountSeq }) => ({
   mountInProgress: false,
   mountStartedAt: 0,
   mountTargetEntity: ""
+});
+
+// src/live/live-startup-policy.js
+const MIN_WAIT_MS = 500;
+const normalizeWaitMs = (value, fallback) => Math.max(MIN_WAIT_MS, Number(value ?? fallback));
+const normalizeNumber = (value, fallback) => Number(value ?? fallback);
+const resolveHaDirectStartup = (startup = {}) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 8e3),
+  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
+  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
+  requireReadyState: normalizeNumber(startup.requireReadyState, 0),
+  strict: startup.strict ?? false,
+  streamType: startup.streamType
+});
+const resolveMseStartup = (startup = {}) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 8e3),
+  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.2),
+  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 2),
+  requireReadyState: normalizeNumber(startup.requireReadyState, 3),
+  strict: startup.strict !== false
+});
+const resolveWebRtcStartup = ({ startup = {}, isFirefox = false }) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 7e3),
+  minCurrentTime: normalizeNumber(
+    startup.minCurrentTime,
+    isFirefox ? 0.15 : 0.05
+  ),
+  minDecodedFrames: normalizeNumber(
+    startup.minDecodedFrames,
+    isFirefox ? 2 : 1
+  ),
+  requireReadyState: normalizeNumber(
+    startup.requireReadyState,
+    isFirefox ? 3 : 0
+  ),
+  strict: startup.strict ?? (isFirefox ? true : false)
+});
+const resolveHlsStartup = (startup = {}) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 5e3)
 });
 
 // src/preview/preview-markup.js
@@ -4890,17 +4929,20 @@ const FrigateViewCard = class extends HTMLElement {
     return { ...raw, attributes: attrs };
   }
   async _tryMountHaDirect(slot, startup = null, options = {}) {
-    const waitMs = Math.max(500, Number(startup?.waitMs ?? 8e3));
-    const minCurrentTime = Number(startup?.minCurrentTime ?? 0.05);
-    const minDecodedFrames = Number(startup?.minDecodedFrames ?? 1);
-    const requireReadyState = Number(startup?.requireReadyState ?? 0);
-    const strict = startup?.strict ?? false;
+    const startupPolicy = resolveHaDirectStartup(startup || {});
+    const {
+      waitMs,
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict
+    } = startupPolicy;
     const commit = options.commit !== false;
     const entity = this._activeCam?.entity;
     if (!entity) return false;
     const stateObj = this._hlsStateObj(
       entity,
-      startup?.streamType || this._preferredStreamType()
+      startupPolicy.streamType || this._preferredStreamType()
     );
     if (!stateObj) return false;
     const s = document.createElement("ha-camera-stream");
@@ -5613,11 +5655,13 @@ const FrigateViewCard = class extends HTMLElement {
     return probePromise;
   }
   async _tryMountGo2RTCMSE(slot, startup = null, options = {}) {
-    const waitMs = Math.max(500, Number(startup?.waitMs ?? 8e3));
-    const minCurrentTime = Number(startup?.minCurrentTime ?? 0.2);
-    const minDecodedFrames = Number(startup?.minDecodedFrames ?? 2);
-    const requireReadyState = Number(startup?.requireReadyState ?? 3);
-    const strict = startup?.strict !== false;
+    const {
+      waitMs,
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict
+    } = resolveMseStartup(startup || {});
     const commit = options.commit !== false;
     const entity = options?.entity || this._activeCam?.entity || "";
     const muted = options?.muted ?? this._streamMuted;
@@ -5893,17 +5937,16 @@ const FrigateViewCard = class extends HTMLElement {
     return this._mountGridSnapshotCell(cell, { entity, stateObj });
   }
   async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
-    const waitMs = Math.max(500, Number(startup?.waitMs ?? 7e3));
-    const minCurrentTime = Number(
-      startup?.minCurrentTime ?? (this._isFirefox() ? 0.15 : 0.05)
-    );
-    const minDecodedFrames = Number(
-      startup?.minDecodedFrames ?? (this._isFirefox() ? 2 : 1)
-    );
-    const requireReadyState = Number(
-      startup?.requireReadyState ?? (this._isFirefox() ? 3 : 0)
-    );
-    const strict = startup?.strict ?? (this._isFirefox() ? true : false);
+    const {
+      waitMs,
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict
+    } = resolveWebRtcStartup({
+      startup: startup || {},
+      isFirefox: this._isFirefox()
+    });
     const commit = options.commit !== false;
     if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
       return false;
@@ -6000,7 +6043,7 @@ const FrigateViewCard = class extends HTMLElement {
     return true;
   }
   async _tryMountGo2RTCHLS(slot, startup = null, options = {}) {
-    const waitMs = Math.max(500, Number(startup?.waitMs ?? 5e3));
+    const { waitMs } = resolveHlsStartup(startup || {});
     const commit = options.commit !== false;
     const hlsUrl = await this._go2rtcHlsUrl();
     if (!hlsUrl) return false;

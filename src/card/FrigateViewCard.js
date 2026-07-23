@@ -117,6 +117,12 @@ import {
   shouldRunMountWatchdog,
 } from "../live/live-mount-lifecycle.js";
 import {
+  resolveHaDirectStartup,
+  resolveHlsStartup,
+  resolveMseStartup,
+  resolveWebRtcStartup,
+} from "../live/live-startup-policy.js";
+import {
   buildPreviewCameraButtonMarkup,
   buildPreviewCellMarkup,
   buildPreviewMetaMarkup,
@@ -1533,18 +1539,21 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _tryMountHaDirect(slot, startup = null, options = {}) {
-    const waitMs = Math.max(500, Number(startup?.waitMs ?? 8000));
-    const minCurrentTime = Number(startup?.minCurrentTime ?? 0.05);
-    const minDecodedFrames = Number(startup?.minDecodedFrames ?? 1);
-    const requireReadyState = Number(startup?.requireReadyState ?? 0);
-    const strict = startup?.strict ?? false;
+    const startupPolicy = resolveHaDirectStartup(startup || {});
+    const {
+      waitMs,
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict,
+    } = startupPolicy;
     const commit = options.commit !== false;
     const entity = this._activeCam?.entity;
     if (!entity) return false;
 
     const stateObj = this._hlsStateObj(
       entity,
-      startup?.streamType || this._preferredStreamType(),
+      startupPolicy.streamType || this._preferredStreamType(),
     );
     if (!stateObj) return false;
 
@@ -2357,11 +2366,13 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _tryMountGo2RTCMSE(slot, startup = null, options = {}) {
-    const waitMs = Math.max(500, Number(startup?.waitMs ?? 8000));
-    const minCurrentTime = Number(startup?.minCurrentTime ?? 0.2);
-    const minDecodedFrames = Number(startup?.minDecodedFrames ?? 2);
-    const requireReadyState = Number(startup?.requireReadyState ?? 3);
-    const strict = startup?.strict !== false;
+    const {
+      waitMs,
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict,
+    } = resolveMseStartup(startup || {});
     const commit = options.commit !== false;
     const entity = options?.entity || this._activeCam?.entity || "";
     const muted = options?.muted ?? this._streamMuted;
@@ -2660,17 +2671,16 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
-    const waitMs = Math.max(500, Number(startup?.waitMs ?? 7000));
-    const minCurrentTime = Number(
-      startup?.minCurrentTime ?? (this._isFirefox() ? 0.15 : 0.05),
-    );
-    const minDecodedFrames = Number(
-      startup?.minDecodedFrames ?? (this._isFirefox() ? 2 : 1),
-    );
-    const requireReadyState = Number(
-      startup?.requireReadyState ?? (this._isFirefox() ? 3 : 0),
-    );
-    const strict = startup?.strict ?? (this._isFirefox() ? true : false);
+    const {
+      waitMs,
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict,
+    } = resolveWebRtcStartup({
+      startup: startup || {},
+      isFirefox: this._isFirefox(),
+    });
     const commit = options.commit !== false;
 
     if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
@@ -2776,7 +2786,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _tryMountGo2RTCHLS(slot, startup = null, options = {}) {
-    const waitMs = Math.max(500, Number(startup?.waitMs ?? 5000));
+    const { waitMs } = resolveHlsStartup(startup || {});
     const commit = options.commit !== false;
     const hlsUrl = await this._go2rtcHlsUrl();
     if (!hlsUrl) return false;
