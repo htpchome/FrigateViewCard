@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.755";
+const VERSION = "1.0.757";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11307,6 +11307,58 @@ const FrigateViewCardEditor = class extends HTMLElement {
     bindDialogActionButtons();
     this._dialogActionHooksBound = true;
   }
+  _wireLivePreviewUpdates() {
+    if (this._livePreviewHooksBound) return;
+    const previewUpdateSelectors = [
+      "#title",
+      "#subtitle",
+      "#window_days",
+      "#alerts_reviews_days",
+      "#realtime_poll_seconds",
+      "#slideshow_rotation_enabled",
+      "#slideshow_rotation_seconds",
+      "#grid_mode_enabled",
+      "#grid_start_in_grid_enabled",
+      "#grid_live_view_enabled",
+      "#grid_rotation_seconds",
+      "#preview_page_enabled",
+      "#preview_page_live_cameras",
+      "#preview_page_show_title_bars",
+      "#wide_view_page_enabled",
+      "#landing_page",
+      "#mobile_page",
+      "#stream_height",
+      "#stream_height_unit",
+      "#col_left_width_pct",
+      "#tight_margins",
+      "#shadows",
+      "#borders",
+      "#rounded_corners",
+      "#outer_shadows",
+      "#mobile_poll_battery_saver",
+      "[data-active-tab]",
+      "[data-theme-option]",
+      "[data-theme-color]",
+      "[data-theme-reset]",
+      "[data-theme-default]"
+    ];
+    const shouldPreviewUpdate = (event) => {
+      const path = Array.isArray(event.composedPath?.()) ? event.composedPath() : [];
+      return path.some(
+        (node) => node instanceof Element && previewUpdateSelectors.some((selector) => node.matches?.(selector))
+      );
+    };
+    const handlePreviewUpdate = (event) => {
+      if (!shouldPreviewUpdate(event)) return;
+      this._u({ dispatch: false, preview: true });
+    };
+    ["input", "change", "value-changed", "selected-changed", "click"].forEach(
+      (eventName) => {
+        this.addEventListener(eventName, handlePreviewUpdate, true);
+      }
+    );
+    this._livePreviewHooksBound = true;
+  }
   _setEditorFieldError(selector, message) {
     setFieldErrorState(this, selector, message);
   }
@@ -11999,6 +12051,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     this._wireCameraDragAndDrop();
     this._wireSettingsPanels();
     this._wireEditorDialogActions();
+    this._wireLivePreviewUpdates();
     bindEventsForIds({
       root: this,
       ids: ["title", "subtitle", "stream_height", "col_left_width_pct"],
@@ -12109,13 +12162,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const normalizedNextConfig = this._normalizeConfig(nextConfig);
     const nextOptionSignature = this._landingPageOptionSignature(normalizedNextConfig);
     this._config = normalizedNextConfig;
-    if (prevOptionSignature !== nextOptionSignature) {
-      this._render();
-      return;
-    }
     if (preview) {
       this._hasVisualDraft = true;
       this._emitPreviewDraft(createEditorPreviewDraft(normalizedNextConfig));
+    }
+    if (prevOptionSignature !== nextOptionSignature) {
+      this._render();
+      return;
     }
     if (dispatch) this._dispatch();
   }
