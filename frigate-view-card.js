@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.722";
+const VERSION = "1.0.723";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1710,6 +1710,43 @@ function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
 }
 function resolveSubtitleText(config) {
   return config?.subtitle || "Frigate";
+}
+function buildTabsMarkup({
+  tab,
+  hiddenTabs,
+  viewMode,
+  icons,
+  isGridModeAvailable,
+  isSlideshowRotationAvailable,
+  isSlideshowActive,
+  gridButtonIcon,
+  slideshowButtonIcon
+}) {
+  const ht = new Set(hiddenTabs || []);
+  const gridModeListOnly = viewMode === "grid";
+  const tabOrder = gridModeListOnly ? ["alerts", "kept"] : ["alerts", "clips", "snapshot", "recordings", "kept"];
+  const activeTab = resolveActiveTab(tab, ht, tabOrder);
+  const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
+  const filterDisabled = activeTab === "recordings";
+  const gridHidden = !isGridModeAvailable;
+  const gridActive = viewMode === "grid";
+  const gridButton = gridHidden ? "" : `<button class="tool${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}">${gridButtonIcon}</button>`;
+  const slideshowHidden = !isSlideshowRotationAvailable;
+  const slideshowActive = isSlideshowActive;
+  const slideshowButton = slideshowHidden ? "" : `<button class="tool slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}">${slideshowButtonIcon}</button>`;
+  const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
+      ${tabMarkup("clips", icons.clips, "Clips")}
+      ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
+      ${tabMarkup("recordings", icons.recordings, "Recordings")}
+      ${tabMarkup("kept", icons.star, "Kept events")}
+      <div class="tl-tools" style=" margin-left: auto;">
+        <button class="tool" id="now-btn" title="Today">${icons.bullseye}</button>
+        ${gridButton}
+        ${slideshowButton}
+        <button class="tool" id="filter-btn" title="Filter" ${filterDisabled ? "disabled" : ""}>${icons.filter}</button>
+        <button class="tool" id="cal-btn" title="Calendar">${icons.calendar}</button>
+      </div>`;
+  return { activeTab, markup };
 }
 
 // src/preview/preview-alert-controller.js
@@ -6670,31 +6707,19 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _buildTabsMarkup() {
-    const ht = new Set(this._config.hidden_tabs || []);
-    const gridModeListOnly = this._viewMode === "grid";
-    const tabOrder = gridModeListOnly ? ["alerts", "kept"] : ["alerts", "clips", "snapshot", "recordings", "kept"];
-    const activeTab = resolveActiveTab(this._tab, ht, tabOrder);
+    const { activeTab, markup } = buildTabsMarkup({
+      tab: this._tab,
+      hiddenTabs: this._config.hidden_tabs,
+      viewMode: this._viewMode,
+      icons: ICONS,
+      isGridModeAvailable: this._isGridModeAvailable(),
+      isSlideshowRotationAvailable: this._isSlideshowRotationAvailable(),
+      isSlideshowActive: this._slideshowActive,
+      gridButtonIcon: this._gridButtonIcon(),
+      slideshowButtonIcon: this._slideshowButtonIcon()
+    });
     this._tab = activeTab;
-    const tab = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
-    const filterDisabled = this._tab === "recordings";
-    const gridHidden = !this._isGridModeAvailable();
-    const gridActive = this._viewMode === "grid";
-    const gridButton = gridHidden ? "" : `<button class="tool${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}">${this._gridButtonIcon()}</button>`;
-    const slideshowHidden = !this._isSlideshowRotationAvailable();
-    const slideshowActive = this._slideshowActive;
-    const slideshowButton = slideshowHidden ? "" : `<button class="tool slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}">${this._slideshowButtonIcon()}</button>`;
-    return `${tab("alerts", ICONS.alerts, "Alerts")}
-      ${tab("clips", ICONS.clips, "Clips")}
-      ${tab("snapshot", ICONS.snapshot, "Snapshots")}
-      ${tab("recordings", ICONS.recordings, "Recordings")}
-      ${tab("kept", ICONS.star, "Kept events")}
-      <div class="tl-tools" style=" margin-left: auto;">
-        <button class="tool" id="now-btn" title="Today">${ICONS.bullseye}</button>
-        ${gridButton}
-        ${slideshowButton}
-        <button class="tool" id="filter-btn" title="Filter" ${filterDisabled ? "disabled" : ""}>${ICONS.filter}</button>
-        <button class="tool" id="cal-btn" title="Calendar">${ICONS.calendar}</button>
-      </div>`;
+    return markup;
   }
   _syncTabsShell() {
     const tabs = this._$(".tabs");

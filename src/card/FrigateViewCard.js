@@ -45,7 +45,6 @@ import {
   normalizeDisableHlsDesktop,
   normalizeHexColor,
   DIALOG_ACTION_SELECTOR,
-  resolveActiveTab,
   setSettingsPanelActiveState,
   dialogActionKindFromElement,
   dialogActionKindFromEvent,
@@ -92,7 +91,11 @@ import {
   buildPreviewShellMarkup,
   buildPreviewStatusMarkup,
 } from "../preview/preview-markup.js";
-import { buildPageNavMarkup, resolveSubtitleText } from "./shell-nav-markup.js";
+import {
+  buildPageNavMarkup,
+  buildTabsMarkup,
+  resolveSubtitleText,
+} from "./shell-nav-markup.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import {
@@ -4555,43 +4558,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _buildTabsMarkup() {
-    const ht = new Set(this._config.hidden_tabs || []);
-    const gridModeListOnly = this._viewMode === "grid";
-    const tabOrder = gridModeListOnly
-      ? ["alerts", "kept"]
-      : ["alerts", "clips", "snapshot", "recordings", "kept"];
-    const activeTab = resolveActiveTab(this._tab, ht, tabOrder);
+    const { activeTab, markup } = buildTabsMarkup({
+      tab: this._tab,
+      hiddenTabs: this._config.hidden_tabs,
+      viewMode: this._viewMode,
+      icons: ICONS,
+      isGridModeAvailable: this._isGridModeAvailable(),
+      isSlideshowRotationAvailable: this._isSlideshowRotationAvailable(),
+      isSlideshowActive: this._slideshowActive,
+      gridButtonIcon: this._gridButtonIcon(),
+      slideshowButtonIcon: this._slideshowButtonIcon(),
+    });
     this._tab = activeTab;
-    const tab = (id, icon, label) =>
-      ht.has(id) ||
-      (gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id))
-        ? ""
-        : id === activeTab
-          ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>`
-          : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
-    const filterDisabled = this._tab === "recordings";
-    const gridHidden = !this._isGridModeAvailable();
-    const gridActive = this._viewMode === "grid";
-    const gridButton = gridHidden
-      ? ""
-      : `<button class="tool${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}">${this._gridButtonIcon()}</button>`;
-    const slideshowHidden = !this._isSlideshowRotationAvailable();
-    const slideshowActive = this._slideshowActive;
-    const slideshowButton = slideshowHidden
-      ? ""
-      : `<button class=\"tool slideshow-btn${slideshowActive ? " active" : ""}\" id=\"slideshow-btn\" aria-pressed=\"${slideshowActive ? "true" : "false"}\" title=\"${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}\" aria-label=\"${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}\">${this._slideshowButtonIcon()}</button>`;
-    return `${tab("alerts", ICONS.alerts, "Alerts")}
-      ${tab("clips", ICONS.clips, "Clips")}
-      ${tab("snapshot", ICONS.snapshot, "Snapshots")}
-      ${tab("recordings", ICONS.recordings, "Recordings")}
-      ${tab("kept", ICONS.star, "Kept events")}
-      <div class="tl-tools" style=" margin-left: auto;">
-        <button class="tool" id="now-btn" title="Today">${ICONS.bullseye}</button>
-        ${gridButton}
-        ${slideshowButton}
-        <button class="tool" id="filter-btn" title="Filter" ${filterDisabled ? "disabled" : ""}>${ICONS.filter}</button>
-        <button class="tool" id="cal-btn" title="Calendar">${ICONS.calendar}</button>
-      </div>`;
+    return markup;
   }
 
   _syncTabsShell() {
