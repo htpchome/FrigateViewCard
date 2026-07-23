@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.788";
+const VERSION = "1.0.789";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2356,6 +2356,30 @@ const shouldAbortFallbackRefreshAfterPrimary = ({
   requestId: token?.requestId,
   activeRequestId
 });
+const loadPrimaryWithStaleGate = async ({
+  entity,
+  token,
+  activeRequestId,
+  loadPrimary
+}) => {
+  const primarySrc = await loadPrimaryFallbackSource({
+    entity,
+    loadPrimary
+  });
+  if (shouldAbortFallbackRefreshAfterPrimary({
+    token,
+    activeRequestId
+  })) {
+    return {
+      shouldAbort: true,
+      primarySrc: ""
+    };
+  }
+  return {
+    shouldAbort: false,
+    primarySrc
+  };
+};
 const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   const src = resolveFallbackDisplaySource({
     primarySrc,
@@ -5838,19 +5862,16 @@ const FrigateViewCard = class extends HTMLElement {
     const token = begin.token;
     this._fallbackReqId = token.nextRequestId;
     const entity = resolveFallbackRefreshEntity(this._activeCam);
-    const primarySrc = await loadPrimaryFallbackSource({
+    const primaryPhase = await loadPrimaryWithStaleGate({
       entity,
+      token,
+      activeRequestId: this._fallbackReqId,
       loadPrimary: async (nextEntity) => await this._streamFallbackUrl(nextEntity)
     });
-    if (shouldAbortFallbackRefreshAfterPrimary({
-      token,
-      activeRequestId: this._fallbackReqId
-    })) {
-      return;
-    }
+    if (primaryPhase.shouldAbort) return;
     const context = buildFallbackRefreshContext({
       entity,
-      primarySrc,
+      primarySrc: primaryPhase.primarySrc,
       loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity)
     });
     const sources = context.sources;

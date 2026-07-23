@@ -137,6 +137,33 @@ export const shouldAbortFallbackRefreshAfterPrimary = ({
     activeRequestId,
   });
 
+export const loadPrimaryWithStaleGate = async ({
+  entity,
+  token,
+  activeRequestId,
+  loadPrimary,
+}) => {
+  const primarySrc = await loadPrimaryFallbackSource({
+    entity,
+    loadPrimary,
+  });
+  if (
+    shouldAbortFallbackRefreshAfterPrimary({
+      token,
+      activeRequestId,
+    })
+  ) {
+    return {
+      shouldAbort: true,
+      primarySrc: "",
+    };
+  }
+  return {
+    shouldAbort: false,
+    primarySrc,
+  };
+};
+
 export const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   const src = resolveFallbackDisplaySource({
     primarySrc,

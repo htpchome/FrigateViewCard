@@ -142,10 +142,8 @@ import {
   buildFallbackImageWriteInput,
   executeFallbackRefreshWrite,
   getFallbackRefreshElements,
-  isFallbackRefreshStale,
-  loadPrimaryFallbackSource,
+  loadPrimaryWithStaleGate,
   resolveFallbackRefreshEntity,
-  shouldAbortFallbackRefreshAfterPrimary,
   shouldApplyFallbackRefreshSources,
 } from "../live/live-fallback-refresh.js";
 import {
@@ -2225,22 +2223,17 @@ export class FrigateViewCard extends HTMLElement {
     const token = begin.token;
     this._fallbackReqId = token.nextRequestId;
     const entity = resolveFallbackRefreshEntity(this._activeCam);
-    const primarySrc = await loadPrimaryFallbackSource({
+    const primaryPhase = await loadPrimaryWithStaleGate({
       entity,
+      token,
+      activeRequestId: this._fallbackReqId,
       loadPrimary: async (nextEntity) =>
         await this._streamFallbackUrl(nextEntity),
     });
-    if (
-      shouldAbortFallbackRefreshAfterPrimary({
-        token,
-        activeRequestId: this._fallbackReqId,
-      })
-    ) {
-      return;
-    }
+    if (primaryPhase.shouldAbort) return;
     const context = buildFallbackRefreshContext({
       entity,
-      primarySrc,
+      primarySrc: primaryPhase.primarySrc,
       loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity),
     });
     const sources = context.sources;

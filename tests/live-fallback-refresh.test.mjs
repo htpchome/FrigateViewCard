@@ -12,6 +12,7 @@ import {
   issueFallbackRefreshToken,
   isFallbackRefreshStale,
   loadPrimaryFallbackSource,
+  loadPrimaryWithStaleGate,
   nextFallbackRequestId,
   resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
@@ -103,6 +104,30 @@ test("shouldAbortFallbackRefreshAfterPrimary checks token request id against act
     }),
     true,
   );
+});
+
+test("loadPrimaryWithStaleGate returns primary source when token is current", async () => {
+  const result = await loadPrimaryWithStaleGate({
+    entity: "camera.front",
+    token: { requestId: 3 },
+    activeRequestId: 3,
+    loadPrimary: async () => "https://ha.local/primary.jpg",
+  });
+
+  assert.equal(result.shouldAbort, false);
+  assert.equal(result.primarySrc, "https://ha.local/primary.jpg");
+});
+
+test("loadPrimaryWithStaleGate aborts when token becomes stale", async () => {
+  const result = await loadPrimaryWithStaleGate({
+    entity: "camera.front",
+    token: { requestId: 3 },
+    activeRequestId: 4,
+    loadPrimary: async () => "https://ha.local/primary.jpg",
+  });
+
+  assert.equal(result.shouldAbort, true);
+  assert.equal(result.primarySrc, "");
 });
 
 test("getFallbackRefreshElements resolves fallback image and status elements", () => {
