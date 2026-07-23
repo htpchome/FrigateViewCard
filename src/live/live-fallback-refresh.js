@@ -18,6 +18,11 @@ export const loadPrimaryFallbackSource = async ({ entity, loadPrimary }) => {
   return await loadPrimary(entity);
 };
 
+export const resolveAltFallbackSource = ({ entity, loadAlt }) => {
+  if (!entity) return "";
+  return loadAlt(entity);
+};
+
 export const isFallbackRefreshStale = ({ requestId, activeRequestId }) =>
   requestId !== activeRequestId;
 

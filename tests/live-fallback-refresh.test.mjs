@@ -8,6 +8,7 @@ import {
   isFallbackRefreshStale,
   loadPrimaryFallbackSource,
   nextFallbackRequestId,
+  resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
 } from "../src/live/live-fallback-refresh.js";
 
@@ -82,6 +83,26 @@ test("loadPrimaryFallbackSource loads source only for valid entity", async () =>
   const skipped = await loadPrimaryFallbackSource({
     entity: "",
     loadPrimary: async () => "should-not-run",
+  });
+  assert.equal(skipped, "");
+});
+
+test("resolveAltFallbackSource resolves alt only for valid entity", () => {
+  let calledWith = "";
+  const alt = resolveAltFallbackSource({
+    entity: "camera.front",
+    loadAlt: (entity) => {
+      calledWith = entity;
+      return "https://ha.local/alt.jpg";
+    },
+  });
+
+  assert.equal(calledWith, "camera.front");
+  assert.equal(alt, "https://ha.local/alt.jpg");
+
+  const skipped = resolveAltFallbackSource({
+    entity: "",
+    loadAlt: () => "should-not-run",
   });
   assert.equal(skipped, "");
 });

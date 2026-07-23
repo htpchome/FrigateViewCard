@@ -143,6 +143,7 @@ import {
   isFallbackRefreshStale,
   loadPrimaryFallbackSource,
   nextFallbackRequestId,
+  resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
 } from "../live/live-fallback-refresh.js";
 import {
@@ -2231,7 +2232,10 @@ export class FrigateViewCard extends HTMLElement {
     ) {
       return;
     }
-    const altSrc = this._streamFallbackAltUrl(entity);
+    const altSrc = resolveAltFallbackSource({
+      entity,
+      loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity),
+    });
     const outcome = buildFallbackRefreshOutcome({
       primarySrc,
       altSrc,

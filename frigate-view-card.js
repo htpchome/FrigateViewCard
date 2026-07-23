@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.779";
+const VERSION = "1.0.780";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2251,6 +2251,10 @@ const resolveFallbackRefreshEntity = (activeCam) => String(activeCam?.entity || 
 const loadPrimaryFallbackSource = async ({ entity, loadPrimary }) => {
   if (!entity) return "";
   return await loadPrimary(entity);
+};
+const resolveAltFallbackSource = ({ entity, loadAlt }) => {
+  if (!entity) return "";
+  return loadAlt(entity);
 };
 const isFallbackRefreshStale = ({ requestId, activeRequestId }) => requestId !== activeRequestId;
 const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
@@ -5741,7 +5745,10 @@ const FrigateViewCard = class extends HTMLElement {
     })) {
       return;
     }
-    const altSrc = this._streamFallbackAltUrl(entity);
+    const altSrc = resolveAltFallbackSource({
+      entity,
+      loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity)
+    });
     const outcome = buildFallbackRefreshOutcome({
       primarySrc,
       altSrc
