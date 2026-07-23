@@ -115,6 +115,7 @@ import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
   buildEmptyListMessageHtml,
+  resolveActiveDayLabelFromScroll,
   resolveOlderHintMetrics,
   resolveOlderHintState,
 } from "./list-render-utils.js";
@@ -8224,22 +8225,7 @@ export class FrigateViewCard extends HTMLElement {
     const lbl = this._$("#browse-head-label");
     if (!list || !browse || !lbl) return;
 
-    const labels = Array.from(list.querySelectorAll(".list-day-label"));
-    if (!labels.length) return;
-
-    const listScrollable = list.scrollHeight > list.clientHeight + 2;
-    const scroller = listScrollable ? list : browse;
-    const anchorTop = scroller.getBoundingClientRect().top + 2;
-    let active = labels[0];
-    for (const dayLabel of labels) {
-      if (dayLabel.getBoundingClientRect().top <= anchorTop) {
-        active = dayLabel;
-      } else {
-        break;
-      }
-    }
-
-    const nextLabel = active.dataset.dayLabel || active.textContent || "";
+    const nextLabel = resolveActiveDayLabelFromScroll({ list, browse });
     if (nextLabel) {
       lbl.textContent = nextLabel;
     }

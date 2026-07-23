@@ -88,3 +88,25 @@ export function resolveOlderHintMetrics({ list, browse }) {
     itemHeight,
   };
 }
+
+export function resolveActiveDayLabelFromScroll({ list, browse }) {
+  if (!list || !browse) return "";
+
+  const labels = Array.from(list.querySelectorAll(".list-day-label"));
+  if (!labels.length) return "";
+
+  const listScrollable =
+    Number(list.scrollHeight || 0) > Number(list.clientHeight || 0) + 2;
+  const scroller = listScrollable ? list : browse;
+  const anchorTop = Number(scroller.getBoundingClientRect().top || 0) + 2;
+  let active = labels[0];
+  for (const dayLabel of labels) {
+    if (Number(dayLabel.getBoundingClientRect().top || 0) <= anchorTop) {
+      active = dayLabel;
+    } else {
+      break;
+    }
+  }
+
+  return String(active?.dataset?.dayLabel || active?.textContent || "");
+}

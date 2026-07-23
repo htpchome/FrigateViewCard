@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.746";
+const VERSION = "1.0.747";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2107,6 +2107,23 @@ function resolveOlderHintMetrics({ list, browse }) {
     scrollTop,
     itemHeight
   };
+}
+function resolveActiveDayLabelFromScroll({ list, browse }) {
+  if (!list || !browse) return "";
+  const labels = Array.from(list.querySelectorAll(".list-day-label"));
+  if (!labels.length) return "";
+  const listScrollable = Number(list.scrollHeight || 0) > Number(list.clientHeight || 0) + 2;
+  const scroller = listScrollable ? list : browse;
+  const anchorTop = Number(scroller.getBoundingClientRect().top || 0) + 2;
+  let active = labels[0];
+  for (const dayLabel of labels) {
+    if (Number(dayLabel.getBoundingClientRect().top || 0) <= anchorTop) {
+      active = dayLabel;
+    } else {
+      break;
+    }
+  }
+  return String(active?.dataset?.dayLabel || active?.textContent || "");
 }
 
 // src/data/review-candidate-utils.js
@@ -10343,20 +10360,7 @@ const FrigateViewCard = class extends HTMLElement {
     const browse = this._$("#browse");
     const lbl = this._$("#browse-head-label");
     if (!list || !browse || !lbl) return;
-    const labels = Array.from(list.querySelectorAll(".list-day-label"));
-    if (!labels.length) return;
-    const listScrollable = list.scrollHeight > list.clientHeight + 2;
-    const scroller = listScrollable ? list : browse;
-    const anchorTop = scroller.getBoundingClientRect().top + 2;
-    let active = labels[0];
-    for (const dayLabel of labels) {
-      if (dayLabel.getBoundingClientRect().top <= anchorTop) {
-        active = dayLabel;
-      } else {
-        break;
-      }
-    }
-    const nextLabel = active.dataset.dayLabel || active.textContent || "";
+    const nextLabel = resolveActiveDayLabelFromScroll({ list, browse });
     if (nextLabel) {
       lbl.textContent = nextLabel;
     }
