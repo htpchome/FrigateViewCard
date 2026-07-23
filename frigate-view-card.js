@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.724";
+const VERSION = "1.0.725";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1766,6 +1766,41 @@ function buildCamSwitcherMarkup({
     return `<button class="glass-btn cam-tab ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
   }).join("");
   return `${backButton}${cameraButtons}`;
+}
+function buildPreviewShellHeaderMarkup({ title, subtitle, pageNav }) {
+  return `<div class="preview-shell-header" id="preview-shell-header">
+            <div class="preview-shell-title">
+              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
+              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
+            </div>
+            ${pageNav}
+          </div>`;
+}
+function buildInfoRowMarkup({ title, subtitle, version }) {
+  return `<div class="info-row">
+              <div>
+                <div class="info-title" id="info-title">${title}</div>
+                <span class="section-label" id="tl-range">${subtitle}</span>
+              </div>
+              <div class="stats">
+                <div class="stat">
+                  <div class="sv">v${version}</div>
+                  <div class="sl">Version</div>
+                </div>
+                <div class="stat">
+                  <div class="sv stream-type" id="stream-type">--</div>
+                  <div class="sl">Stream</div>
+                </div>
+                <div class="stat">
+                  <div class="sv" id="ev-count">\u2014</div>
+                  <div class="sl">Events</div>
+                </div>
+                <div class="stat">
+                  <div class="sv" id="on-dot" style="color:var(--c-on)">\u25CF</div>
+                  <div class="sl" id="on-lbl">Online</div>
+                </div>
+              </div>
+            </div>`;
 }
 
 // src/preview/preview-alert-controller.js
@@ -6872,18 +6907,22 @@ const FrigateViewCard = class extends HTMLElement {
     const showCamSwitcher = this._config.cameras.length > 1 || this._isPreviewPageEnabled();
     const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
     const pageNav = this._pageNavMarkup();
+    const previewShellHeader = buildPreviewShellHeaderMarkup({
+      title,
+      subtitle,
+      pageNav
+    });
+    const infoRow = buildInfoRowMarkup({
+      title,
+      subtitle,
+      version: VERSION
+    });
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._cardStateClassNames()}" id="card" style="border-radius: var(--fvc-border-radius);">
 
         <div class="layout" id="layout">
 
-          <div class="preview-shell-header" id="preview-shell-header">
-            <div class="preview-shell-title">
-              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
-              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
-            </div>
-            ${pageNav}
-          </div>
+          ${previewShellHeader}
           <div class="preview-shell" id="preview-shell"></div>
           <div class="preview-shell-footer" id="preview-shell-footer">
             <div class="frigate-view">${ICONS.frigateview}</div>
@@ -6906,30 +6945,7 @@ const FrigateViewCard = class extends HTMLElement {
                   </div>
               </div>
 
-            <div class="info-row">
-              <div>
-                <div class="info-title" id="info-title">${title}</div>
-                <span class="section-label" id="tl-range">${subtitle}</span>
-              </div>
-              <div class="stats">
-                <div class="stat">
-                  <div class="sv">v${VERSION}</div>
-                  <div class="sl">Version</div>
-                </div>
-                <div class="stat">
-                  <div class="sv stream-type" id="stream-type">--</div>
-                  <div class="sl">Stream</div>
-                </div>
-                <div class="stat">
-                  <div class="sv" id="ev-count">\u2014</div>
-                  <div class="sl">Events</div>
-                </div>
-                <div class="stat">
-                  <div class="sv" id="on-dot" style="color:var(--c-on)">\u25CF</div>
-                  <div class="sl" id="on-lbl">Online</div>
-                </div>
-              </div>
-            </div>
+            ${infoRow}
             ${pageNav}
             ${camSwitcher}
           </div>

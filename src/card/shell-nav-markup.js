@@ -90,3 +90,40 @@ export function buildCamSwitcherMarkup({
     .join("");
   return `${backButton}${cameraButtons}`;
 }
+
+export function buildPreviewShellHeaderMarkup({ title, subtitle, pageNav }) {
+  return `<div class="preview-shell-header" id="preview-shell-header">
+            <div class="preview-shell-title">
+              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
+              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
+            </div>
+            ${pageNav}
+          </div>`;
+}
+
+export function buildInfoRowMarkup({ title, subtitle, version }) {
+  return `<div class="info-row">
+              <div>
+                <div class="info-title" id="info-title">${title}</div>
+                <span class="section-label" id="tl-range">${subtitle}</span>
+              </div>
+              <div class="stats">
+                <div class="stat">
+                  <div class="sv">v${version}</div>
+                  <div class="sl">Version</div>
+                </div>
+                <div class="stat">
+                  <div class="sv stream-type" id="stream-type">--</div>
+                  <div class="sl">Stream</div>
+                </div>
+                <div class="stat">
+                  <div class="sv" id="ev-count">—</div>
+                  <div class="sl">Events</div>
+                </div>
+                <div class="stat">
+                  <div class="sv" id="on-dot" style="color:var(--c-on)">●</div>
+                  <div class="sl" id="on-lbl">Online</div>
+                </div>
+              </div>
+            </div>`;
+}
