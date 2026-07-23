@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.763";
+const VERSION = "1.0.764";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -819,6 +819,97 @@ const createNavigationFactory = ({
   };
 };
 
+// src/config/editor-preview-mapper.js
+const normalizePositiveInteger = (value, fallback) => {
+  const parsed = parseInt(String(value ?? "").trim(), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+const createEditorPreviewDraft = (config) => ({
+  title: config.title,
+  subtitle: config.subtitle,
+  cameras: Array.isArray(config.cameras) ? config.cameras.map((camera) => ({ ...camera })) : [],
+  window_days: config.window_days,
+  alerts_reviews_days: config.alerts_reviews_days,
+  window_hours: config.window_hours,
+  realtime_poll_seconds: config.realtime_poll_seconds,
+  mobile_poll_battery_saver: config.mobile_poll_battery_saver,
+  slideshow_rotation_enabled: config.slideshow_rotation_enabled,
+  slideshow_rotation_seconds: config.slideshow_rotation_seconds,
+  grid_mode_enabled: config.grid_mode_enabled,
+  grid_start_in_grid_enabled: config.grid_start_in_grid_enabled,
+  grid_live_view_enabled: config.grid_live_view_enabled,
+  preview_page_enabled: config.preview_page_enabled,
+  preview_page_live_cameras: config.preview_page_live_cameras,
+  preview_page_show_title_bars: config.preview_page_show_title_bars,
+  wide_view_page_enabled: config.wide_view_page_enabled,
+  landing_page: config.landing_page,
+  mobile_page: config.mobile_page,
+  grid_rotation_seconds: config.grid_rotation_seconds,
+  hidden_tabs: config.hidden_tabs,
+  theme: config.theme,
+  theme_custom: config.theme_custom,
+  theme_custom_defaults: config.theme_custom_defaults,
+  stream_height: config.stream_height,
+  stream_height_unit: config.stream_height_unit,
+  tight_margins: config.tight_margins,
+  shadows: config.shadows,
+  borders: config.borders,
+  rounded_corners: config.rounded_corners,
+  outer_shadows: config.outer_shadows,
+  col_left_width_pct: config.col_left_width_pct
+});
+const applyEditorPreviewDraftToCardConfig = ({
+  baseConfig,
+  previewConfig
+}) => {
+  if (!previewConfig) return baseConfig;
+  const base = baseConfig && typeof baseConfig === "object" ? baseConfig : {};
+  return {
+    ...base,
+    title: previewConfig.title || null,
+    subtitle: previewConfig.subtitle || null,
+    cameras: Array.isArray(previewConfig.cameras) ? previewConfig.cameras : base.cameras,
+    window_days: normalizePositiveInteger(previewConfig.window_days, 3),
+    alerts_reviews_days: normalizePositiveInteger(
+      previewConfig.alerts_reviews_days,
+      normalizePositiveInteger(previewConfig.window_days, 3)
+    ),
+    window_hours: Number(previewConfig.window_hours) || null,
+    realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
+      Number(previewConfig.realtime_poll_seconds)
+    ) ? Number(previewConfig.realtime_poll_seconds) : 5,
+    mobile_poll_battery_saver: previewConfig.mobile_poll_battery_saver === true,
+    slideshow_rotation_enabled: previewConfig.slideshow_rotation_enabled === true,
+    slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+      Number(previewConfig.slideshow_rotation_seconds)
+    ) ? Number(previewConfig.slideshow_rotation_seconds) : 30,
+    grid_mode_enabled: previewConfig.grid_mode_enabled === true,
+    grid_start_in_grid_enabled: previewConfig.grid_start_in_grid_enabled === true,
+    grid_live_view_enabled: previewConfig.grid_live_view_enabled !== false,
+    grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
+      Number(previewConfig.grid_rotation_seconds)
+    ) ? Number(previewConfig.grid_rotation_seconds) : 30,
+    preview_page_enabled: previewConfig.preview_page_enabled === true,
+    preview_page_live_cameras: previewConfig.preview_page_live_cameras === true,
+    preview_page_show_title_bars: previewConfig.preview_page_show_title_bars !== false,
+    hidden_tabs: Array.isArray(previewConfig.hidden_tabs) ? previewConfig.hidden_tabs : [],
+    theme: previewConfig.theme === "custom" ? "custom" : "default",
+    theme_custom: previewConfig.theme_custom && typeof previewConfig.theme_custom === "object" ? previewConfig.theme_custom : {},
+    theme_custom_defaults: previewConfig.theme_custom_defaults && typeof previewConfig.theme_custom_defaults === "object" ? previewConfig.theme_custom_defaults : {},
+    stream_height: previewConfig.stream_height ? Number(previewConfig.stream_height) : null,
+    stream_height_unit: previewConfig.stream_height_unit || "vh",
+    tight_margins: previewConfig.tight_margins === true,
+    shadows: previewConfig.shadows !== false,
+    borders: previewConfig.borders !== false,
+    rounded_corners: previewConfig.rounded_corners !== false,
+    outer_shadows: previewConfig.outer_shadows !== false,
+    wide_view_page_enabled: previewConfig.wide_view_page_enabled === true,
+    landing_page: normalizePageRoute(previewConfig.landing_page),
+    mobile_page: normalizePageRoute(previewConfig.mobile_page),
+    col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50
+  };
+};
+
 // src/helpers.js
 function detectDeviceProfile() {
   const nav = typeof navigator !== "undefined" ? navigator : {};
@@ -870,7 +961,7 @@ function parseWs(r) {
   }
   return r;
 }
-function normalizePositiveInteger(value, fallback) {
+function normalizePositiveInteger2(value, fallback) {
   const parsed = parseInt(String(value ?? "").trim(), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
@@ -1225,11 +1316,11 @@ const buildEditorConfigFromDom = ({
   else delete nextConfig.title;
   if (subtitle) nextConfig.subtitle = subtitle;
   else delete nextConfig.subtitle;
-  nextConfig.window_days = normalizePositiveInteger(
+  nextConfig.window_days = normalizePositiveInteger2(
     root.querySelector("#window_days")?.dataset.value || root.querySelector("#window_days")?.value || "3",
     3
   );
-  nextConfig.alerts_reviews_days = normalizePositiveInteger(
+  nextConfig.alerts_reviews_days = normalizePositiveInteger2(
     root.querySelector("#alerts_reviews_days")?.dataset.value || root.querySelector("#alerts_reviews_days")?.value || String(nextConfig.window_days || 3),
     nextConfig.window_days || 3
   );
@@ -1355,9 +1446,9 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
   if (cameras.length) compact.cameras = cameras;
   addStringIfPresent(compact, "title", source.title);
   addStringIfPresent(compact, "subtitle", source.subtitle);
-  const windowDays = normalizePositiveInteger(source.window_days, 3);
+  const windowDays = normalizePositiveInteger2(source.window_days, 3);
   addIfNotDefault(compact, "window_days", windowDays, 3);
-  const alertsReviewsDays = normalizePositiveInteger(
+  const alertsReviewsDays = normalizePositiveInteger2(
     source.alerts_reviews_days,
     windowDays
   );
@@ -1516,40 +1607,7 @@ const withCardTypeForYaml = (config, { sourceConfig = null } = {}) => {
   }
   return payload;
 };
-const createEditorPreviewDraft = (config) => ({
-  title: config.title,
-  subtitle: config.subtitle,
-  cameras: Array.isArray(config.cameras) ? config.cameras.map((camera) => ({ ...camera })) : [],
-  window_days: config.window_days,
-  alerts_reviews_days: config.alerts_reviews_days,
-  window_hours: config.window_hours,
-  realtime_poll_seconds: config.realtime_poll_seconds,
-  mobile_poll_battery_saver: config.mobile_poll_battery_saver,
-  slideshow_rotation_enabled: config.slideshow_rotation_enabled,
-  slideshow_rotation_seconds: config.slideshow_rotation_seconds,
-  grid_mode_enabled: config.grid_mode_enabled,
-  grid_start_in_grid_enabled: config.grid_start_in_grid_enabled,
-  grid_live_view_enabled: config.grid_live_view_enabled,
-  preview_page_enabled: config.preview_page_enabled,
-  preview_page_live_cameras: config.preview_page_live_cameras,
-  preview_page_show_title_bars: config.preview_page_show_title_bars,
-  wide_view_page_enabled: config.wide_view_page_enabled,
-  landing_page: config.landing_page,
-  mobile_page: config.mobile_page,
-  grid_rotation_seconds: config.grid_rotation_seconds,
-  hidden_tabs: config.hidden_tabs,
-  theme: config.theme,
-  theme_custom: config.theme_custom,
-  theme_custom_defaults: config.theme_custom_defaults,
-  stream_height: config.stream_height,
-  stream_height_unit: config.stream_height_unit,
-  tight_margins: config.tight_margins,
-  shadows: config.shadows,
-  borders: config.borders,
-  rounded_corners: config.rounded_corners,
-  outer_shadows: config.outer_shadows,
-  col_left_width_pct: config.col_left_width_pct
-});
+const createEditorPreviewDraft2 = (config) => createEditorPreviewDraft(config);
 const LABEL_COLORS = {
   person: "#3b82f6",
   car: "#a855f7",
@@ -3606,50 +3664,10 @@ const FrigateViewCard = class extends HTMLElement {
     if (!this._isEditorPreviewContext()) return;
     if (!this._committedConfig) return;
     const base = this._cloneCardConfig(this._committedConfig);
-    const next = previewConfig ? {
-      ...base,
-      title: previewConfig.title || null,
-      subtitle: previewConfig.subtitle || null,
-      cameras: Array.isArray(previewConfig.cameras) ? previewConfig.cameras : base.cameras,
-      window_days: normalizePositiveInteger(previewConfig.window_days, 3),
-      alerts_reviews_days: normalizePositiveInteger(
-        previewConfig.alerts_reviews_days,
-        normalizePositiveInteger(previewConfig.window_days, 3)
-      ),
-      window_hours: Number(previewConfig.window_hours) || null,
-      realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
-        Number(previewConfig.realtime_poll_seconds)
-      ) ? Number(previewConfig.realtime_poll_seconds) : 5,
-      mobile_poll_battery_saver: previewConfig.mobile_poll_battery_saver === true,
-      slideshow_rotation_enabled: previewConfig.slideshow_rotation_enabled === true,
-      slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
-        Number(previewConfig.slideshow_rotation_seconds)
-      ) ? Number(previewConfig.slideshow_rotation_seconds) : 30,
-      grid_mode_enabled: previewConfig.grid_mode_enabled === true,
-      grid_start_in_grid_enabled: previewConfig.grid_start_in_grid_enabled === true,
-      grid_live_view_enabled: previewConfig.grid_live_view_enabled !== false,
-      grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
-        Number(previewConfig.grid_rotation_seconds)
-      ) ? Number(previewConfig.grid_rotation_seconds) : 30,
-      preview_page_enabled: previewConfig.preview_page_enabled === true,
-      preview_page_live_cameras: previewConfig.preview_page_live_cameras === true,
-      preview_page_show_title_bars: previewConfig.preview_page_show_title_bars !== false,
-      hidden_tabs: Array.isArray(previewConfig.hidden_tabs) ? previewConfig.hidden_tabs : [],
-      theme: previewConfig.theme === "custom" ? "custom" : "default",
-      theme_custom: previewConfig.theme_custom && typeof previewConfig.theme_custom === "object" ? previewConfig.theme_custom : {},
-      theme_custom_defaults: previewConfig.theme_custom_defaults && typeof previewConfig.theme_custom_defaults === "object" ? previewConfig.theme_custom_defaults : {},
-      stream_height: previewConfig.stream_height ? Number(previewConfig.stream_height) : null,
-      stream_height_unit: previewConfig.stream_height_unit || "vh",
-      tight_margins: previewConfig.tight_margins === true,
-      shadows: previewConfig.shadows !== false,
-      borders: previewConfig.borders !== false,
-      rounded_corners: previewConfig.rounded_corners !== false,
-      outer_shadows: previewConfig.outer_shadows !== false,
-      wide_view_page_enabled: previewConfig.wide_view_page_enabled === true,
-      landing_page: normalizePageRoute(previewConfig.landing_page),
-      mobile_page: normalizePageRoute(previewConfig.mobile_page),
-      col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50
-    } : base;
+    const next = applyEditorPreviewDraftToCardConfig({
+      baseConfig: base,
+      previewConfig
+    });
     this._config = next;
     this._syncVisualStyleToggles();
     this._browseOpen = this._config.browse_expanded;
@@ -3898,10 +3916,10 @@ const FrigateViewCard = class extends HTMLElement {
       cameras,
       title: config.title || null,
       subtitle: config.subtitle || null,
-      window_days: normalizePositiveInteger(config.window_days, null) || (Number.isFinite(legacyWindowHours) && legacyWindowHours > 0 ? Math.max(1, Math.ceil(legacyWindowHours / 24)) : 3),
-      alerts_reviews_days: normalizePositiveInteger(
+      window_days: normalizePositiveInteger2(config.window_days, null) || (Number.isFinite(legacyWindowHours) && legacyWindowHours > 0 ? Math.max(1, Math.ceil(legacyWindowHours / 24)) : 3),
+      alerts_reviews_days: normalizePositiveInteger2(
         config.alerts_reviews_days,
-        normalizePositiveInteger(config.window_days, 3)
+        normalizePositiveInteger2(config.window_days, 3)
       ),
       refresh_seconds: Math.max(15, config.refresh_seconds || 45),
       realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
@@ -10886,6 +10904,90 @@ const FrigateViewCard = class extends HTMLElement {
   }
 };
 
+// src/config/card-config-normalizer.js
+const normalizeCameras = (config) => {
+  let cameras = [];
+  if (Array.isArray(config?.cameras)) {
+    cameras = config.cameras;
+  } else if (config?.camera_entity) {
+    cameras = [
+      {
+        entity: config.camera_entity,
+        name: config.title || "",
+        connection_type: DEFAULT_CAMERA_CONNECTION_TYPE
+      }
+    ];
+  }
+  return cameras.map((camera) => normalizeCameraConfig(camera, { fallbackName: "" })).filter((camera) => camera.entity).slice(0, MAX_CAMERAS);
+};
+const normalizeCardConfig = (config) => {
+  const src = config && typeof config === "object" ? { ...config } : {};
+  const cameras = normalizeCameras(src);
+  if (Array.isArray(src.hidden_tabs)) {
+    src.hidden_tabs = src.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
+  }
+  delete src.camera_entity;
+  src.theme = src.theme === "custom" ? "custom" : "default";
+  if (src.theme_custom && typeof src.theme_custom === "object") {
+    src.theme_custom = Object.fromEntries(
+      Object.entries(src.theme_custom).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, normalizeHexColor(value)]).filter(([, value]) => !!value)
+    );
+  } else {
+    src.theme_custom = {};
+  }
+  if (src.theme_custom_defaults && typeof src.theme_custom_defaults === "object") {
+    src.theme_custom_defaults = Object.fromEntries(
+      Object.entries(src.theme_custom_defaults).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, value === true]).filter(([, value]) => value === true)
+    );
+  } else {
+    src.theme_custom_defaults = {};
+  }
+  src.shadows = src.shadows !== false;
+  src.borders = src.borders !== false;
+  src.rounded_corners = src.rounded_corners !== false;
+  src.outer_shadows = src.outer_shadows !== false;
+  src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
+    Number(src.realtime_poll_seconds)
+  ) ? Number(src.realtime_poll_seconds) : 5;
+  src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
+  src.slideshow_rotation_enabled = src.slideshow_rotation_enabled === true;
+  src.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
+    Number(src.slideshow_rotation_seconds)
+  ) ? Number(src.slideshow_rotation_seconds) : 30;
+  src.grid_mode_enabled = src.grid_mode_enabled === true;
+  src.grid_start_in_grid_enabled = src.grid_start_in_grid_enabled === true;
+  src.grid_live_view_enabled = src.grid_live_view_enabled !== false;
+  src.preview_page_enabled = src.preview_page_enabled === true;
+  src.preview_page_live_cameras = src.preview_page_live_cameras === true;
+  src.preview_page_show_title_bars = src.preview_page_show_title_bars !== false;
+  src.wide_view_page_enabled = src.wide_view_page_enabled === true || src.wide_view === true;
+  src.landing_page = normalizePageRoute(src.landing_page);
+  src.mobile_page = normalizePageRoute(src.mobile_page);
+  const landingPageOptions = getEnabledPageRoutes(
+    src,
+    DEVICE_ROUTE_BUCKETS.desktop
+  );
+  const mobilePageOptions = getEnabledPageRoutes(
+    src,
+    DEVICE_ROUTE_BUCKETS.mobile
+  );
+  if (!landingPageOptions.includes(src.landing_page)) {
+    src.landing_page = PAGE_IDS.singleView;
+  }
+  if (!mobilePageOptions.includes(src.mobile_page)) {
+    src.mobile_page = PAGE_IDS.singleView;
+  }
+  src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+    Number(src.grid_rotation_seconds)
+  ) ? Number(src.grid_rotation_seconds) : 30;
+  src.alerts_reviews_days = normalizePositiveInteger2(
+    src.alerts_reviews_days,
+    normalizePositiveInteger2(src.window_days, 3)
+  );
+  delete src.wide_view;
+  return { ...src, cameras };
+};
+
 // src/editor/FrigateViewCardEditor.js
 const FrigateViewCardEditor = class extends HTMLElement {
   _normalizeHiddenTabs(hiddenTabs) {
@@ -10964,88 +11066,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
       if (this._rendered) this._render();
     }
   }
-  _normalizeCameras(config) {
-    let cams = [];
-    if (Array.isArray(config?.cameras)) {
-      cams = config.cameras;
-    } else if (config?.camera_entity) {
-      cams = [
-        {
-          entity: config.camera_entity,
-          name: config.title || "",
-          connection_type: DEFAULT_CAMERA_CONNECTION_TYPE
-        }
-      ];
-    }
-    const normalized = cams.map((camera) => normalizeCameraConfig(camera, { fallbackName: "" })).filter((c) => c.entity).slice(0, MAX_CAMERAS);
-    return normalized;
-  }
   _normalizeConfig(config) {
-    const src = config && typeof config === "object" ? { ...config } : {};
-    const cameras = this._normalizeCameras(src);
-    if (Array.isArray(src.hidden_tabs)) {
-      src.hidden_tabs = src.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
-    }
-    delete src.camera_entity;
-    src.theme = src.theme === "custom" ? "custom" : "default";
-    if (src.theme_custom && typeof src.theme_custom === "object") {
-      src.theme_custom = Object.fromEntries(
-        Object.entries(src.theme_custom).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, normalizeHexColor(value)]).filter(([, value]) => !!value)
-      );
-    } else {
-      src.theme_custom = {};
-    }
-    if (src.theme_custom_defaults && typeof src.theme_custom_defaults === "object") {
-      src.theme_custom_defaults = Object.fromEntries(
-        Object.entries(src.theme_custom_defaults).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, value === true]).filter(([, value]) => value === true)
-      );
-    } else {
-      src.theme_custom_defaults = {};
-    }
-    src.shadows = src.shadows !== false;
-    src.borders = src.borders !== false;
-    src.rounded_corners = src.rounded_corners !== false;
-    src.outer_shadows = src.outer_shadows !== false;
-    src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
-      Number(src.realtime_poll_seconds)
-    ) ? Number(src.realtime_poll_seconds) : 5;
-    src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
-    src.slideshow_rotation_enabled = src.slideshow_rotation_enabled === true;
-    src.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
-      Number(src.slideshow_rotation_seconds)
-    ) ? Number(src.slideshow_rotation_seconds) : 30;
-    src.grid_mode_enabled = src.grid_mode_enabled === true;
-    src.grid_start_in_grid_enabled = src.grid_start_in_grid_enabled === true;
-    src.grid_live_view_enabled = src.grid_live_view_enabled !== false;
-    src.preview_page_enabled = src.preview_page_enabled === true;
-    src.preview_page_live_cameras = src.preview_page_live_cameras === true;
-    src.preview_page_show_title_bars = src.preview_page_show_title_bars !== false;
-    src.wide_view_page_enabled = src.wide_view_page_enabled === true || src.wide_view === true;
-    src.landing_page = normalizePageRoute(src.landing_page);
-    src.mobile_page = normalizePageRoute(src.mobile_page);
-    const landingPageOptions = getEnabledPageRoutes(
-      src,
-      DEVICE_ROUTE_BUCKETS.desktop
-    );
-    const mobilePageOptions = getEnabledPageRoutes(
-      src,
-      DEVICE_ROUTE_BUCKETS.mobile
-    );
-    if (!landingPageOptions.includes(src.landing_page)) {
-      src.landing_page = PAGE_IDS.singleView;
-    }
-    if (!mobilePageOptions.includes(src.mobile_page)) {
-      src.mobile_page = PAGE_IDS.singleView;
-    }
-    src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
-      Number(src.grid_rotation_seconds)
-    ) ? Number(src.grid_rotation_seconds) : 30;
-    src.alerts_reviews_days = normalizePositiveInteger(
-      src.alerts_reviews_days,
-      normalizePositiveInteger(src.window_days, 3)
-    );
-    delete src.wide_view;
-    return { ...src, cameras };
+    return normalizeCardConfig(config);
   }
   _landingPageOptionSignature(config) {
     const normalized = this._normalizeConfig(config);

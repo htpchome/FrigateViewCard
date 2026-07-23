@@ -84,6 +84,7 @@ import {
   resolvePreviewLiveStreamHint,
   resolvePreviewStreamSourceLabel,
 } from "../preview/preview-utils.js";
+import { applyEditorPreviewDraftToCardConfig } from "../config/editor-preview-mapper.js";
 import {
   buildPreviewCameraButtonMarkup,
   buildPreviewCellMarkup,
@@ -371,79 +372,10 @@ export class FrigateViewCard extends HTMLElement {
     if (!this._committedConfig) return;
 
     const base = this._cloneCardConfig(this._committedConfig);
-    const next = previewConfig
-      ? {
-          ...base,
-          title: previewConfig.title || null,
-          subtitle: previewConfig.subtitle || null,
-          cameras: Array.isArray(previewConfig.cameras)
-            ? previewConfig.cameras
-            : base.cameras,
-          window_days: normalizePositiveInteger(previewConfig.window_days, 3),
-          alerts_reviews_days: normalizePositiveInteger(
-            previewConfig.alerts_reviews_days,
-            normalizePositiveInteger(previewConfig.window_days, 3),
-          ),
-          window_hours: Number(previewConfig.window_hours) || null,
-          realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
-            Number(previewConfig.realtime_poll_seconds),
-          )
-            ? Number(previewConfig.realtime_poll_seconds)
-            : 5,
-          mobile_poll_battery_saver:
-            previewConfig.mobile_poll_battery_saver === true,
-          slideshow_rotation_enabled:
-            previewConfig.slideshow_rotation_enabled === true,
-          slideshow_rotation_seconds:
-            SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
-              Number(previewConfig.slideshow_rotation_seconds),
-            )
-              ? Number(previewConfig.slideshow_rotation_seconds)
-              : 30,
-          grid_mode_enabled: previewConfig.grid_mode_enabled === true,
-          grid_start_in_grid_enabled:
-            previewConfig.grid_start_in_grid_enabled === true,
-          grid_live_view_enabled:
-            previewConfig.grid_live_view_enabled !== false,
-          grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
-            Number(previewConfig.grid_rotation_seconds),
-          )
-            ? Number(previewConfig.grid_rotation_seconds)
-            : 30,
-          preview_page_enabled: previewConfig.preview_page_enabled === true,
-          preview_page_live_cameras:
-            previewConfig.preview_page_live_cameras === true,
-          preview_page_show_title_bars:
-            previewConfig.preview_page_show_title_bars !== false,
-          hidden_tabs: Array.isArray(previewConfig.hidden_tabs)
-            ? previewConfig.hidden_tabs
-            : [],
-          theme: previewConfig.theme === "custom" ? "custom" : "default",
-          theme_custom:
-            previewConfig.theme_custom &&
-            typeof previewConfig.theme_custom === "object"
-              ? previewConfig.theme_custom
-              : {},
-          theme_custom_defaults:
-            previewConfig.theme_custom_defaults &&
-            typeof previewConfig.theme_custom_defaults === "object"
-              ? previewConfig.theme_custom_defaults
-              : {},
-          stream_height: previewConfig.stream_height
-            ? Number(previewConfig.stream_height)
-            : null,
-          stream_height_unit: previewConfig.stream_height_unit || "vh",
-          tight_margins: previewConfig.tight_margins === true,
-          shadows: previewConfig.shadows !== false,
-          borders: previewConfig.borders !== false,
-          rounded_corners: previewConfig.rounded_corners !== false,
-          outer_shadows: previewConfig.outer_shadows !== false,
-          wide_view_page_enabled: previewConfig.wide_view_page_enabled === true,
-          landing_page: normalizePageRoute(previewConfig.landing_page),
-          mobile_page: normalizePageRoute(previewConfig.mobile_page),
-          col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
-        }
-      : base;
+    const next = applyEditorPreviewDraftToCardConfig({
+      baseConfig: base,
+      previewConfig,
+    });
 
     this._config = next;
     this._syncVisualStyleToggles();
