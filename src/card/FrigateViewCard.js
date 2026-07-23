@@ -8513,23 +8513,30 @@ export class FrigateViewCard extends HTMLElement {
       return this._renderReviews(list);
     }
     if (this._tab === "kept") {
-      const kept = this._filteredKept();
-      this._renderListLabel();
-      if (!kept.length) {
-        this._setListHtmlIfChanged(
-          list,
-          `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
-        );
-        this._syncOlderHint(false);
-        return;
-      }
+      return this._renderKeptList(list);
+    }
+    this._renderEventsList(list);
+  }
+
+  _renderKeptList(list) {
+    const kept = this._filteredKept();
+    this._renderListLabel();
+    if (!kept.length) {
       this._setListHtmlIfChanged(
         list,
-        kept.map((ev) => this._eventCardHTML(ev, false)).join(""),
+        `<div class="empty">No kept events<br><span style="opacity:.6">star an event to keep it</span></div>`,
       );
       this._syncOlderHint(false);
       return;
     }
+    this._setListHtmlIfChanged(
+      list,
+      kept.map((ev) => this._eventCardHTML(ev, false)).join(""),
+    );
+    this._syncOlderHint(false);
+  }
+
+  _renderEventsList(list) {
     const events = this._filtered();
     this._renderListLabel(events[0]?.start_time || null);
     if (!events.length) {
@@ -8540,14 +8547,14 @@ export class FrigateViewCard extends HTMLElement {
       this._syncOlderHint(false);
       return;
     }
+    const eventsHtml = this._showStickyDayHeaders()
+      ? this._renderStickyDaySections(events, (ev) =>
+          this._eventCardHTML(ev, false),
+        )
+      : events.map((ev) => this._eventCardHTML(ev, false)).join("");
     this._setListHtmlIfChanged(
       list,
-      (this._showStickyDayHeaders()
-        ? this._renderStickyDaySections(events, (ev) =>
-            this._eventCardHTML(ev, false),
-          )
-        : events.map((ev) => this._eventCardHTML(ev, false)).join("")) +
-        (this._exhausted ? '<div class="end">— end —</div>' : ""),
+      eventsHtml + (this._exhausted ? '<div class="end">— end —</div>' : ""),
     );
     this._syncBrowseHeadFromScroll();
     this._syncOlderHint();
