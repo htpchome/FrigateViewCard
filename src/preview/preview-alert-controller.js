@@ -39,7 +39,9 @@ export class PreviewAlertController {
       this._alertSeverityByEntity.delete(entity);
       return "";
     }
-    return normalizePreviewCellSeverity(this._alertSeverityByEntity.get(entity));
+    return normalizePreviewCellSeverity(
+      this._alertSeverityByEntity.get(entity),
+    );
   }
 
   markAlertCamera(entity, severity = "alert", holdMs = null) {

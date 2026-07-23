@@ -3136,7 +3136,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _clearPreviewTimers() {
-    if (this._previewSnapshotRefreshT) clearTimeout(this._previewSnapshotRefreshT);
+    if (this._previewSnapshotRefreshT)
+      clearTimeout(this._previewSnapshotRefreshT);
     this._previewSnapshotRefreshT = null;
     this._previewAlertController.clearTimers();
   }

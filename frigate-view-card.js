@@ -1733,7 +1733,9 @@ const PreviewAlertController = class {
       this._alertSeverityByEntity.delete(entity);
       return "";
     }
-    return normalizePreviewCellSeverity(this._alertSeverityByEntity.get(entity));
+    return normalizePreviewCellSeverity(
+      this._alertSeverityByEntity.get(entity)
+    );
   }
   markAlertCamera(entity, severity = "alert", holdMs = null) {
     if (!entity) return;
@@ -4541,7 +4543,8 @@ const FrigateViewCard = class extends HTMLElement {
     card.classList.toggle("preview-active", this._isPreviewPageActive());
   }
   _clearPreviewTimers() {
-    if (this._previewSnapshotRefreshT) clearTimeout(this._previewSnapshotRefreshT);
+    if (this._previewSnapshotRefreshT)
+      clearTimeout(this._previewSnapshotRefreshT);
     this._previewSnapshotRefreshT = null;
     this._previewAlertController.clearTimers();
   }
