@@ -363,7 +363,10 @@ test("withFallbackSourceResolversForCard executes callback with resolved adapter
     result.primary,
     "https://ha.local/api/camera_proxy/camera.front?token=ghi",
   );
-  assert.equal(result.alt, "https://ha.local/api/camera_proxy/camera.front?x=7");
+  assert.equal(
+    result.alt,
+    "https://ha.local/api/camera_proxy/camera.front?x=7",
+  );
 });
 
 test("loadFallbackPrimaryForCard resolves primary via card adapter", async () => {
