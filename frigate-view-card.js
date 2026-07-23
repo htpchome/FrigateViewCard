@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.743";
+const VERSION = "1.0.744";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2039,6 +2039,29 @@ function buildEmptyListMessageHtml(message, hint = "") {
 }
 function appendEndMarker(html, isExhausted) {
   return `${String(html || "")}${isExhausted ? '<div class="end">\u2014 end \u2014</div>' : ""}`;
+}
+function buildStickyDaySectionsHtml(items, deps) {
+  const { getStartTime, getDayKey, getLabel, renderItem } = deps || {};
+  let currentDay = null;
+  const sections = [];
+  for (const item of items || []) {
+    const ts = getStartTime(item);
+    const dayKey = getDayKey(ts || 0);
+    if (dayKey !== currentDay) {
+      currentDay = dayKey;
+      sections.push({
+        ts: Math.floor(ts || 0),
+        label: getLabel(ts || null),
+        rows: []
+      });
+    }
+    sections[sections.length - 1].rows.push(renderItem(item));
+  }
+  return sections.map((section, idx) => {
+    const extraClass = idx === 0 ? " list-day-label-first" : "";
+    const ts = Number.isFinite(section.ts) ? Math.floor(section.ts) : 0;
+    return `<section class="list-day-sec"><div class="list-day-label${extraClass}" data-day-ts="${ts}" data-day-label="${section.label}">${section.label}</div>${section.rows.join("")}</section>`;
+  }).join("");
 }
 
 // src/data/review-candidate-utils.js
@@ -10165,26 +10188,12 @@ const FrigateViewCard = class extends HTMLElement {
     return `${pick("year")}-${pick("month")}-${pick("day")}`;
   }
   _renderStickyDaySections(items, renderItem) {
-    let currentDay = null;
-    const sections = [];
-    for (const item of items) {
-      const ts = item?.start_time;
-      const dayKey = this._dayKey(ts || 0);
-      if (dayKey !== currentDay) {
-        currentDay = dayKey;
-        sections.push({
-          ts: Math.floor(ts || 0),
-          label: this._listHeadingLabel(ts || null),
-          rows: []
-        });
-      }
-      sections[sections.length - 1].rows.push(renderItem(item));
-    }
-    return sections.map((section, idx) => {
-      const extraClass = idx === 0 ? " list-day-label-first" : "";
-      const ts = Number.isFinite(section.ts) ? Math.floor(section.ts) : 0;
-      return `<section class="list-day-sec"><div class="list-day-label${extraClass}" data-day-ts="${ts}" data-day-label="${section.label}">${section.label}</div>${section.rows.join("")}</section>`;
-    }).join("");
+    return buildStickyDaySectionsHtml(items, {
+      getStartTime: (item) => item?.start_time,
+      getDayKey: (ts) => this._dayKey(ts),
+      getLabel: (ts) => this._listHeadingLabel(ts),
+      renderItem
+    });
   }
   _recordingsDayBounds(tsSec = null) {
     const target = Math.floor(tsSec || this._winEnd || Date.now() / 1e3);

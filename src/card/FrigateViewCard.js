@@ -113,6 +113,7 @@ import {
 } from "./event-list-model.js";
 import {
   appendEndMarker,
+  buildStickyDaySectionsHtml,
   buildEmptyListMessageHtml,
 } from "./list-render-utils.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
@@ -8099,28 +8100,12 @@ export class FrigateViewCard extends HTMLElement {
     return `${pick("year")}-${pick("month")}-${pick("day")}`;
   }
   _renderStickyDaySections(items, renderItem) {
-    let currentDay = null;
-    const sections = [];
-    for (const item of items) {
-      const ts = item?.start_time;
-      const dayKey = this._dayKey(ts || 0);
-      if (dayKey !== currentDay) {
-        currentDay = dayKey;
-        sections.push({
-          ts: Math.floor(ts || 0),
-          label: this._listHeadingLabel(ts || null),
-          rows: [],
-        });
-      }
-      sections[sections.length - 1].rows.push(renderItem(item));
-    }
-    return sections
-      .map((section, idx) => {
-        const extraClass = idx === 0 ? " list-day-label-first" : "";
-        const ts = Number.isFinite(section.ts) ? Math.floor(section.ts) : 0;
-        return `<section class="list-day-sec"><div class="list-day-label${extraClass}" data-day-ts="${ts}" data-day-label="${section.label}">${section.label}</div>${section.rows.join("")}</section>`;
-      })
-      .join("");
+    return buildStickyDaySectionsHtml(items, {
+      getStartTime: (item) => item?.start_time,
+      getDayKey: (ts) => this._dayKey(ts),
+      getLabel: (ts) => this._listHeadingLabel(ts),
+      renderItem,
+    });
   }
 
   _recordingsDayBounds(tsSec = null) {

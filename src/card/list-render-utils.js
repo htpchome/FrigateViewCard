@@ -8,3 +8,31 @@ export function buildEmptyListMessageHtml(message, hint = "") {
 export function appendEndMarker(html, isExhausted) {
   return `${String(html || "")}${isExhausted ? '<div class="end">— end —</div>' : ""}`;
 }
+
+export function buildStickyDaySectionsHtml(items, deps) {
+  const { getStartTime, getDayKey, getLabel, renderItem } = deps || {};
+
+  let currentDay = null;
+  const sections = [];
+  for (const item of items || []) {
+    const ts = getStartTime(item);
+    const dayKey = getDayKey(ts || 0);
+    if (dayKey !== currentDay) {
+      currentDay = dayKey;
+      sections.push({
+        ts: Math.floor(ts || 0),
+        label: getLabel(ts || null),
+        rows: [],
+      });
+    }
+    sections[sections.length - 1].rows.push(renderItem(item));
+  }
+
+  return sections
+    .map((section, idx) => {
+      const extraClass = idx === 0 ? " list-day-label-first" : "";
+      const ts = Number.isFinite(section.ts) ? Math.floor(section.ts) : 0;
+      return `<section class="list-day-sec"><div class="list-day-label${extraClass}" data-day-ts="${ts}" data-day-label="${section.label}">${section.label}</div>${section.rows.join("")}</section>`;
+    })
+    .join("");
+}
