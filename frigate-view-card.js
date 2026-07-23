@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.801";
+const VERSION = "1.0.802";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2257,7 +2257,13 @@ const createFallbackSourceResolvers = ({
     origin
   })
 });
+const resolveFallbackOrigin = ({ origin, defaultOrigin }) => origin || defaultOrigin || "";
+const resolveFallbackOriginForCard = ({ card, origin }) => resolveFallbackOrigin({
+  origin,
+  defaultOrigin: card?._fallbackOrigin
+});
 const createFallbackSourceResolversForCard = ({ card, origin }) => {
+  const resolvedOrigin = resolveFallbackOriginForCard({ card, origin });
   if (!card) {
     return {
       loadPrimary: async () => "",
@@ -2269,7 +2275,7 @@ const createFallbackSourceResolversForCard = ({ card, origin }) => {
     signedPathResolver: async (path) => await card._signed(path),
     cacheMap: card._fallbackImgUrlCache,
     stateMap: card._hass?.states,
-    origin
+    origin: resolvedOrigin
   });
 };
 const resolveFallbackSourceResolversForCard = ({ card, origin }) => createFallbackSourceResolversForCard({
@@ -6049,17 +6055,19 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _streamFallbackUrl(entity) {
+    this._fallbackOrigin = window.location.origin;
     return await loadFallbackPrimaryForCard({
       card: this,
       entity,
-      origin: window.location.origin
+      origin: this._fallbackOrigin
     });
   }
   _streamFallbackAltUrl(entity) {
+    this._fallbackOrigin = window.location.origin;
     return loadFallbackAltForCard({
       card: this,
       entity,
-      origin: window.location.origin
+      origin: this._fallbackOrigin
     });
   }
   async _refreshStreamFallbackImage() {

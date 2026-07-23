@@ -8,6 +8,8 @@ import {
   isAbsoluteOrDataUrl,
   loadFallbackAltForCard,
   loadFallbackPrimaryForCard,
+  resolveFallbackOrigin,
+  resolveFallbackOriginForCard,
   resolveFallbackSourceResolversForCard,
   resolveEntityPictureFallbackUrl,
   resolveSignedFallbackUrl,
@@ -255,6 +257,51 @@ test("createFallbackSourceResolversForCard returns empty resolvers without card"
   assert.equal(resolvers.loadAlt("camera.front"), "");
 });
 
+test("resolveFallbackOrigin prefers explicit origin then fallback default", () => {
+  assert.equal(
+    resolveFallbackOrigin({
+      origin: "https://ha.local",
+      defaultOrigin: "https://fallback.local",
+    }),
+    "https://ha.local",
+  );
+  assert.equal(
+    resolveFallbackOrigin({
+      origin: "",
+      defaultOrigin: "https://fallback.local",
+    }),
+    "https://fallback.local",
+  );
+  assert.equal(
+    resolveFallbackOrigin({
+      origin: "",
+      defaultOrigin: "",
+    }),
+    "",
+  );
+});
+
+test("resolveFallbackOriginForCard reads card fallback origin when explicit origin is missing", () => {
+  const card = {
+    _fallbackOrigin: "https://from-card.local",
+  };
+
+  assert.equal(
+    resolveFallbackOriginForCard({
+      card,
+      origin: "https://explicit.local",
+    }),
+    "https://explicit.local",
+  );
+  assert.equal(
+    resolveFallbackOriginForCard({
+      card,
+      origin: "",
+    }),
+    "https://from-card.local",
+  );
+});
+
 test("resolveFallbackSourceResolversForCard returns reusable card resolvers", async () => {
   const card = {
     _hass: {
@@ -331,4 +378,30 @@ test("loadFallbackAltForCard resolves alt via card adapter", () => {
   });
 
   assert.equal(alt, "https://ha.local/api/camera_proxy/camera.front?x=4");
+});
+
+test("loadFallbackAltForCard falls back to card-provided origin", () => {
+  const card = {
+    _fallbackOrigin: "https://from-card.local",
+    _hass: {
+      callWS: () => {},
+      states: {
+        "camera.front": {
+          attributes: {
+            entity_picture: "/api/camera_proxy/camera.front?x=6",
+          },
+        },
+      },
+    },
+    _signed: async (path) => `${path}?token=abc`,
+    _fallbackImgUrlCache: new Map(),
+  };
+
+  const alt = loadFallbackAltForCard({
+    card,
+    entity: "camera.front",
+    origin: "",
+  });
+
+  assert.equal(alt, "https://from-card.local/api/camera_proxy/camera.front?x=6");
 });

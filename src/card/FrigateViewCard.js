@@ -2180,18 +2180,20 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _streamFallbackUrl(entity) {
+    this._fallbackOrigin = window.location.origin;
     return await loadFallbackPrimaryForCard({
       card: this,
       entity,
-      origin: window.location.origin,
+      origin: this._fallbackOrigin,
     });
   }
 
   _streamFallbackAltUrl(entity) {
+    this._fallbackOrigin = window.location.origin;
     return loadFallbackAltForCard({
       card: this,
       entity,
-      origin: window.location.origin,
+      origin: this._fallbackOrigin,
     });
   }
 

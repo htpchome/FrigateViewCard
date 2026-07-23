@@ -101,7 +101,17 @@ export const createFallbackSourceResolvers = ({
     }),
 });
 
+export const resolveFallbackOrigin = ({ origin, defaultOrigin }) =>
+  origin || defaultOrigin || "";
+
+export const resolveFallbackOriginForCard = ({ card, origin }) =>
+  resolveFallbackOrigin({
+    origin,
+    defaultOrigin: card?._fallbackOrigin,
+  });
+
 export const createFallbackSourceResolversForCard = ({ card, origin }) => {
+  const resolvedOrigin = resolveFallbackOriginForCard({ card, origin });
   if (!card) {
     return {
       loadPrimary: async () => "",
@@ -114,7 +124,7 @@ export const createFallbackSourceResolversForCard = ({ card, origin }) => {
     signedPathResolver: async (path) => await card._signed(path),
     cacheMap: card._fallbackImgUrlCache,
     stateMap: card._hass?.states,
-    origin,
+    origin: resolvedOrigin,
   });
 };
 
