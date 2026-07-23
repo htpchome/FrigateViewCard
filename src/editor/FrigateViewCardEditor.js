@@ -65,6 +65,7 @@ import {
   compactEditorConfigForYaml,
   withCardTypeForYaml,
   createEditorPreviewDraft,
+  resolveSwitchChecked,
   LABEL_COLORS,
   PALETTE,
   labelColor,
@@ -83,6 +84,32 @@ import {
   PAGE_IDS,
 } from "../router.js";
 export class FrigateViewCardEditor extends HTMLElement {
+  _normalizeHiddenTabs(hiddenTabs) {
+    if (!Array.isArray(hiddenTabs)) return [];
+    return hiddenTabs
+      .map((id) => (id === "reviews" ? "alerts" : id))
+      .filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
+  }
+
+  _syncHiddenTabsDraftFromConfig(config = this._config) {
+    this._hiddenTabsDraft = this._normalizeHiddenTabs(config?.hidden_tabs);
+  }
+
+  _isTabVisibleFromEvent(event) {
+    const detailValue = event?.detail?.value;
+    if (typeof detailValue === "boolean") return detailValue;
+    const target = event?.currentTarget || event?.target;
+    return resolveSwitchChecked(target);
+  }
+
+  _setHiddenTabFromToggle(tabId, isVisible) {
+    if (!ALLOWED_HIDDEN_TABS.includes(tabId)) return;
+    const hidden = new Set(this._normalizeHiddenTabs(this._hiddenTabsDraft));
+    if (isVisible) hidden.delete(tabId);
+    else hidden.add(tabId);
+    this._hiddenTabsDraft = [...hidden];
+  }
+
   disconnectedCallback() {
     if (Array.isArray(this._boundDialogActionButtons)) {
       this._boundDialogActionButtons.forEach(({ element, handler }) => {
@@ -118,6 +145,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
   setConfig(config) {
     const normalized = this._normalizeConfig(config);
+    this._syncHiddenTabsDraftFromConfig(normalized);
     if (this._activeSettingsPanelId === undefined) {
       this._activeSettingsPanelId = "camera";
     }
@@ -762,7 +790,11 @@ export class FrigateViewCardEditor extends HTMLElement {
     const cams = this._getCams();
     const canAddCamera = cams.length < MAX_CAMERAS;
     const timezoneDisplay = this._timezoneDisplay();
-    const hiddenTabs = new Set(this._config?.hidden_tabs || []);
+    const hiddenTabs = new Set(
+      this._normalizeHiddenTabs(
+        this._hiddenTabsDraft ?? this._config?.hidden_tabs,
+      ),
+    );
     this._ensureThemeDraftCache();
     const activeTheme = this._config?.theme === "custom" ? "custom" : "default";
     const themeCustom = this._config?.theme_custom || {};
@@ -1503,7 +1535,13 @@ export class FrigateViewCardEditor extends HTMLElement {
       root: this,
       selector: "[data-active-tab]",
       events: ["change", "value-changed"],
-      handler: () => scheduleUpdate(),
+      handler: (event) => {
+        const tabId = event.currentTarget?.dataset?.activeTab;
+        if (!tabId) return;
+        const isVisible = this._isTabVisibleFromEvent(event);
+        this._setHiddenTabFromToggle(tabId, isVisible);
+        scheduleUpdate();
+      },
     });
 
     const wideCb = this.querySelector("#wide_view_page_enabled");
@@ -1574,12 +1612,14 @@ export class FrigateViewCardEditor extends HTMLElement {
       baseConfig: this._config,
       cameras,
       themeDraftCache: this._themeDraftCache,
+      hiddenTabsOverride: this._hiddenTabsDraft,
     });
     const normalizedNextConfig = this._normalizeConfig(nextConfig);
     const nextOptionSignature =
       this._landingPageOptionSignature(normalizedNextConfig);
 
     this._config = normalizedNextConfig;
+    this._syncHiddenTabsDraftFromConfig(normalizedNextConfig);
     if (preview) {
       this._hasVisualDraft = true;
       this._emitPreviewDraft(createEditorPreviewDraft(normalizedNextConfig));
@@ -1593,12 +1633,16 @@ export class FrigateViewCardEditor extends HTMLElement {
 
   _dispatch() {
     const cameras = this._getCams();
-    this._config = buildEditorConfigFromDom({
-      root: this,
-      baseConfig: this._config,
-      cameras,
-      themeDraftCache: this._themeDraftCache,
-    });
+    this._config = this._normalizeConfig(
+      buildEditorConfigFromDom({
+        root: this,
+        baseConfig: this._config,
+        cameras,
+        themeDraftCache: this._themeDraftCache,
+        hiddenTabsOverride: this._hiddenTabsDraft,
+      }),
+    );
+    this._syncHiddenTabsDraftFromConfig(this._config);
     const config = withCardTypeForYaml(
       compactEditorConfigForYaml(this._config, {
         themeDefaultColors: this._themeDefaultHexMap(),

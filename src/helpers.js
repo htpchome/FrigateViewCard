@@ -493,6 +493,7 @@ export const buildEditorConfigFromDom = ({
   baseConfig,
   cameras,
   themeDraftCache,
+  hiddenTabsOverride,
 }) => {
   const readTrimmed = (id) => root.querySelector(`#${id}`)?.value?.trim() || "";
   const nextConfig = { ...baseConfig, cameras };
@@ -614,10 +615,14 @@ export const buildEditorConfigFromDom = ({
   nextConfig.theme_custom = themeCustom;
   nextConfig.theme_custom_defaults = themeCustomDefaults;
 
-  const hiddenTabs = [...root.querySelectorAll("[data-active-tab]")]
-    .filter((element) => !resolveSwitchChecked(element))
-    .map((element) => element.dataset.activeTab)
-    .filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
+  const hiddenTabs = Array.isArray(hiddenTabsOverride)
+    ? hiddenTabsOverride
+        .map((id) => (id === "reviews" ? "alerts" : id))
+        .filter((id) => ALLOWED_HIDDEN_TABS.includes(id))
+    : [...root.querySelectorAll("[data-active-tab]")]
+        .filter((element) => !resolveSwitchChecked(element))
+        .map((element) => element.dataset.activeTab)
+        .filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
   nextConfig.hidden_tabs = hiddenTabs.length ? hiddenTabs : [];
 
   const streamHeight = root.querySelector("#stream_height")?.value;
