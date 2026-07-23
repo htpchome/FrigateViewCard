@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.797";
+const VERSION = "1.0.798";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2109,6 +2109,14 @@ const applyStreamLoadingState = ({ shadowRoot, loading, text }) => {
   el.hidden = !loading;
   const label = el.querySelector?.(".label");
   if (label) label.textContent = text;
+};
+const applyStreamLoadingStateForCard = ({ card, loading, text }) => {
+  if (!card) return;
+  applyStreamLoadingState({
+    shadowRoot: card.shadowRoot,
+    loading,
+    text
+  });
 };
 const applyStreamFallbackState = ({
   shadowRoot,
@@ -6003,8 +6011,8 @@ const FrigateViewCard = class extends HTMLElement {
     setTimeout(() => this._attachVideoFit(streamEl, retries - 1), 160);
   }
   _setStreamLoading(loading, text = "Loading\u2026") {
-    applyStreamLoadingState({
-      shadowRoot: this.shadowRoot,
+    applyStreamLoadingStateForCard({
+      card: this,
       loading,
       text
     });

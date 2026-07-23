@@ -6,6 +6,7 @@ import {
   applyStreamFallbackVisibilityForCard,
   applyStreamFallbackVisibility,
   applyStreamFallbackState,
+  applyStreamLoadingStateForCard,
   applyStreamLoadingState,
   isLiveTransportType,
   resolveActiveStreamTypeState,
@@ -87,6 +88,35 @@ test("applyStreamLoadingState toggles hidden and updates label", () => {
 
   assert.equal(loadingEl.hidden, false);
   assert.equal(label.textContent, "Connecting");
+});
+
+test("applyStreamLoadingStateForCard maps card runtime to loading state", () => {
+  const label = { textContent: "" };
+  const loadingEl = {
+    hidden: true,
+    querySelector: (selector) => (selector === ".label" ? label : null),
+  };
+  const card = {
+    shadowRoot: {
+      querySelector: (selector) =>
+        selector === "#stream-loading" ? loadingEl : null,
+    },
+  };
+
+  applyStreamLoadingStateForCard({
+    card,
+    loading: true,
+    text: "Buffering",
+  });
+
+  assert.equal(loadingEl.hidden, false);
+  assert.equal(label.textContent, "Buffering");
+
+  applyStreamLoadingStateForCard({
+    card: null,
+    loading: false,
+    text: "Ignored",
+  });
 });
 
 test("applyStreamFallbackState updates placeholder and refreshes when requested", () => {

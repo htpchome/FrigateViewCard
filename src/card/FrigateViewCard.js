@@ -125,7 +125,7 @@ import {
 import {
   applyActiveStreamTypeForCard,
   applyStreamFallbackVisibilityForCard,
-  applyStreamLoadingState,
+  applyStreamLoadingStateForCard,
 } from "../live/live-stream-state.js";
 import { createFallbackSourceResolversForCard } from "../live/live-fallback-url.js";
 import {
@@ -2154,8 +2154,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _setStreamLoading(loading, text = "Loading…") {
-    applyStreamLoadingState({
-      shadowRoot: this.shadowRoot,
+    applyStreamLoadingStateForCard({
+      card: this,
       loading,
       text,
     });

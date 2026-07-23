@@ -25,6 +25,15 @@ export const applyStreamLoadingState = ({ shadowRoot, loading, text }) => {
   if (label) label.textContent = text;
 };
 
+export const applyStreamLoadingStateForCard = ({ card, loading, text }) => {
+  if (!card) return;
+  applyStreamLoadingState({
+    shadowRoot: card.shadowRoot,
+    loading,
+    text,
+  });
+};
+
 export const applyStreamFallbackState = ({
   shadowRoot,
   visible,
