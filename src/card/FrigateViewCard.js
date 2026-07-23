@@ -132,6 +132,11 @@ import {
   resolveSignedFallbackUrl,
 } from "../live/live-fallback-url.js";
 import {
+  applyFallbackImageHandlers,
+  resolveFallbackDisplaySource,
+  setFallbackImageSourceIfChanged,
+} from "../live/live-fallback-image.js";
+import {
   resolveHaDirectStartup,
   resolveHlsStartup,
   resolveMseStartup,
@@ -2207,31 +2212,21 @@ export class FrigateViewCard extends HTMLElement {
     const primarySrc = await this._streamFallbackUrl(entity);
     if (reqId !== this._fallbackReqId) return;
     const altSrc = this._streamFallbackAltUrl(entity);
-    const src = primarySrc || altSrc;
+    const src = resolveFallbackDisplaySource({
+      primarySrc,
+      altSrc,
+    });
     if (!src) return;
-    if (status) status.hidden = true;
-    img.onerror = () => {
-      if (altSrc && img.src !== altSrc) {
-        img.src = altSrc;
-        return;
-      }
-      if (status) status.hidden = false;
-    };
-    img.onload = () => {
-      if (status) status.hidden = true;
-      const w = Number(img.naturalWidth) || 0;
-      const h = Number(img.naturalHeight) || 0;
-      const ar = h > 0 ? w / h : 0;
-      const host = img.parentElement;
-      const cw = Number(host?.clientWidth) || 0;
-      const ch = Number(host?.clientHeight) || 0;
-      const car = ch > 0 ? cw / ch : 0;
-      const near169 = ar > 0 && Math.abs(ar - 16 / 9) < 0.08;
-      const nearPanel = ar > 0 && car > 0 && Math.abs(ar - car) < 0.06;
-      img.style.objectFit = near169 && nearPanel ? "cover" : "contain";
-    };
-    if (img.src !== src) img.src = src;
-    img.alt = entity ? `${entity} snapshot` : "Camera snapshot";
+    applyFallbackImageHandlers({
+      img,
+      statusEl: status,
+      altSrc,
+      entity,
+    });
+    setFallbackImageSourceIfChanged({
+      img,
+      src,
+    });
   }
 
   _cameraContext(entity) {

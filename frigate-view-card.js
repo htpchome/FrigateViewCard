@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.774";
+const VERSION = "1.0.775";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2169,6 +2169,56 @@ const resolveEntityPictureFallbackUrl = ({
     url: pic,
     origin
   });
+};
+
+// src/live/live-fallback-image.js
+const resolveFallbackDisplaySource = ({ primarySrc, altSrc }) => primarySrc || altSrc || "";
+const resolveFallbackObjectFit = ({
+  naturalWidth,
+  naturalHeight,
+  containerWidth,
+  containerHeight
+}) => {
+  const w = Number(naturalWidth) || 0;
+  const h = Number(naturalHeight) || 0;
+  const ar = h > 0 ? w / h : 0;
+  const cw = Number(containerWidth) || 0;
+  const ch = Number(containerHeight) || 0;
+  const car = ch > 0 ? cw / ch : 0;
+  const near169 = ar > 0 && Math.abs(ar - 16 / 9) < 0.08;
+  const nearPanel = ar > 0 && car > 0 && Math.abs(ar - car) < 0.06;
+  return near169 && nearPanel ? "cover" : "contain";
+};
+const applyFallbackImageHandlers = ({
+  img,
+  statusEl,
+  altSrc,
+  entity
+}) => {
+  if (!img) return;
+  if (statusEl) statusEl.hidden = true;
+  img.onerror = () => {
+    if (altSrc && img.src !== altSrc) {
+      img.src = altSrc;
+      return;
+    }
+    if (statusEl) statusEl.hidden = false;
+  };
+  img.onload = () => {
+    if (statusEl) statusEl.hidden = true;
+    const host = img.parentElement;
+    img.style.objectFit = resolveFallbackObjectFit({
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight,
+      containerWidth: host?.clientWidth,
+      containerHeight: host?.clientHeight
+    });
+  };
+  img.alt = entity ? `${entity} snapshot` : "Camera snapshot";
+};
+const setFallbackImageSourceIfChanged = ({ img, src }) => {
+  if (!img || !src) return;
+  if (img.src !== src) img.src = src;
 };
 
 // src/live/live-startup-policy.js
@@ -5641,31 +5691,21 @@ const FrigateViewCard = class extends HTMLElement {
     const primarySrc = await this._streamFallbackUrl(entity);
     if (reqId !== this._fallbackReqId) return;
     const altSrc = this._streamFallbackAltUrl(entity);
-    const src = primarySrc || altSrc;
+    const src = resolveFallbackDisplaySource({
+      primarySrc,
+      altSrc
+    });
     if (!src) return;
-    if (status) status.hidden = true;
-    img.onerror = () => {
-      if (altSrc && img.src !== altSrc) {
-        img.src = altSrc;
-        return;
-      }
-      if (status) status.hidden = false;
-    };
-    img.onload = () => {
-      if (status) status.hidden = true;
-      const w = Number(img.naturalWidth) || 0;
-      const h = Number(img.naturalHeight) || 0;
-      const ar = h > 0 ? w / h : 0;
-      const host = img.parentElement;
-      const cw = Number(host?.clientWidth) || 0;
-      const ch = Number(host?.clientHeight) || 0;
-      const car = ch > 0 ? cw / ch : 0;
-      const near169 = ar > 0 && Math.abs(ar - 16 / 9) < 0.08;
-      const nearPanel = ar > 0 && car > 0 && Math.abs(ar - car) < 0.06;
-      img.style.objectFit = near169 && nearPanel ? "cover" : "contain";
-    };
-    if (img.src !== src) img.src = src;
-    img.alt = entity ? `${entity} snapshot` : "Camera snapshot";
+    applyFallbackImageHandlers({
+      img,
+      statusEl: status,
+      altSrc,
+      entity
+    });
+    setFallbackImageSourceIfChanged({
+      img,
+      src
+    });
   }
   _cameraContext(entity) {
     return this._camCache[entity] || mkCamState();
