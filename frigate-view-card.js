@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.750";
+const VERSION = "1.0.751";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2171,6 +2171,10 @@ function resolveListMarkup({
     isEmpty: false,
     html: String(html || "")
   };
+}
+function resolveListLabelTimestamp(items, fallbackTs = null) {
+  const ts = items?.[0]?.start_time;
+  return ts || fallbackTs || null;
 }
 
 // src/data/review-candidate-utils.js
@@ -10657,7 +10661,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _renderEventsList(list) {
     const events = this._filtered();
-    this._renderListLabel(events[0]?.start_time || null);
+    this._renderListLabel(resolveListLabelTimestamp(events));
     const renderState = resolveListMarkup({
       items: events,
       emptyMessage: "No events in this window",
@@ -10725,11 +10729,11 @@ const FrigateViewCard = class extends HTMLElement {
     const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
     const filteredReviews = this._filteredReviews();
     const emptyText = showAllReviews ? "No reviews in this window" : "No alerts in this window";
-    this._renderListLabel(filteredReviews[0]?.start_time || null);
+    this._renderListLabel(resolveListLabelTimestamp(filteredReviews));
     const allRevs = [...filteredReviews].sort(
       (a, b) => b.start_time - a.start_time
     );
-    this._renderListLabel(allRevs[0]?.start_time || null);
+    this._renderListLabel(resolveListLabelTimestamp(allRevs));
     const renderState = resolveListMarkup({
       items: allRevs,
       emptyMessage: emptyText,

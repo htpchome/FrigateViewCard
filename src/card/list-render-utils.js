@@ -167,3 +167,8 @@ export function resolveListMarkup({
     html: String(html || ""),
   };
 }
+
+export function resolveListLabelTimestamp(items, fallbackTs = null) {
+  const ts = items?.[0]?.start_time;
+  return ts || fallbackTs || null;
+}

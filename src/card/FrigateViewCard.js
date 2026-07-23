@@ -116,6 +116,7 @@ import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
   resolveActiveDayLabelFromScroll,
+  resolveListLabelTimestamp,
   resolveListMarkup,
   runListPostRenderSync,
   resolveOlderHintMetrics,
@@ -8505,7 +8506,7 @@ export class FrigateViewCard extends HTMLElement {
 
   _renderEventsList(list) {
     const events = this._filtered();
-    this._renderListLabel(events[0]?.start_time || null);
+    this._renderListLabel(resolveListLabelTimestamp(events));
     const renderState = resolveListMarkup({
       items: events,
       emptyMessage: "No events in this window",
@@ -8581,11 +8582,11 @@ export class FrigateViewCard extends HTMLElement {
       ? "No reviews in this window"
       : "No alerts in this window";
 
-    this._renderListLabel(filteredReviews[0]?.start_time || null);
+    this._renderListLabel(resolveListLabelTimestamp(filteredReviews));
     const allRevs = [...filteredReviews].sort(
       (a, b) => b.start_time - a.start_time,
     );
-    this._renderListLabel(allRevs[0]?.start_time || null);
+    this._renderListLabel(resolveListLabelTimestamp(allRevs));
     const renderState = resolveListMarkup({
       items: allRevs,
       emptyMessage: emptyText,
