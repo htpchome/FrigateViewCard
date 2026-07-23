@@ -5110,9 +5110,9 @@ export class FrigateViewCard extends HTMLElement {
     };
   }
 
-  _recordingsListMarkup(recs) {
+  _recordingsListMarkup(recs, emptyText = "No recordings in this day") {
     if (!Array.isArray(recs) || !recs.length) {
-      return '<div class="empty">No recordings in this day</div>';
+      return `<div class="empty">${emptyText}</div>`;
     }
     return recs
       .map((r) => {
@@ -8596,38 +8596,16 @@ export class FrigateViewCard extends HTMLElement {
   }
   _renderRecordings(list) {
     this._renderListLabel(this._winEnd);
-    const recs = this._splitRecsHourly(this._recordings).sort(
-      (a, b) => b.start_time - a.start_time,
-    );
+    const recs = this._recordingsViewRows(this._recordings);
     if (!recs.length) {
       this._setListHtmlIfChanged(
         list,
-        '<div class="empty">No recordings in the last 24 hours</div>',
+        this._recordingsListMarkup(recs, "No recordings in the last 24 hours"),
       );
       this._syncOlderHint(true);
       return;
     }
-    this._setListHtmlIfChanged(
-      list,
-      recs
-        .map((r) => {
-          const rs = Math.floor(r.start_time),
-            re = Math.floor(r.end_time || Date.now() / 1000);
-          const d = Math.max(1, re - rs);
-          const mm = Math.floor(d / 60),
-            ss = d % 60;
-          const dur = `${mm ? mm + "m " : ""}${ss}s`;
-          return `<div class="list-item shadow-xform shadow-small" data-rs="${rs}" data-re="${re}">
-        <div class="ric">${ICONS.recordings}</div>
-        <div class="rinf">
-          <div class="rt">${this._time(r.start_time)} – ${this._time(r.end_time || Date.now() / 1000)}</div>
-          <div class="rsub">${dur}${r.events ? " · " + r.events + " ev" : ""}</div>
-        </div>
-        <button class="rp" data-rec-dl-start="${rs}" data-rec-dl-end="${re}" title="Download recording" aria-label="Download recording">${ICONS.download}</button>
-      </div>`;
-        })
-        .join(""),
-    );
+    this._setListHtmlIfChanged(list, this._recordingsListMarkup(recs));
     this._syncOlderHint(false);
   }
   _renderReviews(list) {
