@@ -140,12 +140,13 @@ import {
   buildFallbackImageApplyPayload,
   canRefreshFallbackImage,
   getFallbackRefreshElements,
+  issueFallbackRefreshToken,
   isFallbackRefreshStale,
   loadPrimaryFallbackSource,
-  nextFallbackRequestId,
   resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
   resolveFallbackRefreshSources,
+  shouldAbortStaleFallbackRefresh,
   shouldApplyFallbackRefreshSources,
 } from "../live/live-fallback-refresh.js";
 import {
@@ -2218,8 +2219,10 @@ export class FrigateViewCard extends HTMLElement {
   async _refreshStreamFallbackImage() {
     const { imgEl, statusEl } = getFallbackRefreshElements(this.shadowRoot);
     if (!canRefreshFallbackImage({ imgEl })) return;
-    const reqId = nextFallbackRequestId(this._fallbackReqId);
-    this._fallbackReqId = reqId;
+    const token = issueFallbackRefreshToken({
+      currentRequestId: this._fallbackReqId,
+    });
+    this._fallbackReqId = token.nextRequestId;
     const entity = resolveFallbackRefreshEntity(this._activeCam);
     const primarySrc = await loadPrimaryFallbackSource({
       entity,
@@ -2227,8 +2230,8 @@ export class FrigateViewCard extends HTMLElement {
         await this._streamFallbackUrl(nextEntity),
     });
     if (
-      isFallbackRefreshStale({
-        requestId: reqId,
+      shouldAbortStaleFallbackRefresh({
+        requestId: token.requestId,
         activeRequestId: this._fallbackReqId,
       })
     ) {

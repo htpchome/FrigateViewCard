@@ -3,6 +3,14 @@ import { resolveFallbackDisplaySource } from "./live-fallback-image.js";
 export const nextFallbackRequestId = (currentRequestId) =>
   Number(currentRequestId || 0) + 1;
 
+export const issueFallbackRefreshToken = ({ currentRequestId }) => {
+  const requestId = nextFallbackRequestId(currentRequestId);
+  return {
+    requestId,
+    nextRequestId: requestId,
+  };
+};
+
 export const getFallbackRefreshElements = (shadowRoot) => ({
   imgEl: shadowRoot?.querySelector?.("#stream-fallback-img") || null,
   statusEl: shadowRoot?.querySelector?.("#stream-fallback-status") || null,
@@ -54,6 +62,11 @@ export const buildFallbackImageApplyPayload = ({
 
 export const isFallbackRefreshStale = ({ requestId, activeRequestId }) =>
   requestId !== activeRequestId;
+
+export const shouldAbortStaleFallbackRefresh = ({
+  requestId,
+  activeRequestId,
+}) => isFallbackRefreshStale({ requestId, activeRequestId });
 
 export const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   const src = resolveFallbackDisplaySource({

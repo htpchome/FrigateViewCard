@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.782";
+const VERSION = "1.0.783";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2242,6 +2242,13 @@ const setFallbackImageSourceIfChanged = ({ img, src }) => {
 
 // src/live/live-fallback-refresh.js
 const nextFallbackRequestId = (currentRequestId) => Number(currentRequestId || 0) + 1;
+const issueFallbackRefreshToken = ({ currentRequestId }) => {
+  const requestId = nextFallbackRequestId(currentRequestId);
+  return {
+    requestId,
+    nextRequestId: requestId
+  };
+};
 const getFallbackRefreshElements = (shadowRoot) => ({
   imgEl: shadowRoot?.querySelector?.("#stream-fallback-img") || null,
   statusEl: shadowRoot?.querySelector?.("#stream-fallback-status") || null
@@ -2282,6 +2289,10 @@ const buildFallbackImageApplyPayload = ({
   src: sources?.src || ""
 });
 const isFallbackRefreshStale = ({ requestId, activeRequestId }) => requestId !== activeRequestId;
+const shouldAbortStaleFallbackRefresh = ({
+  requestId,
+  activeRequestId
+}) => isFallbackRefreshStale({ requestId, activeRequestId });
 const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   const src = resolveFallbackDisplaySource({
     primarySrc,
@@ -5757,15 +5768,17 @@ const FrigateViewCard = class extends HTMLElement {
   async _refreshStreamFallbackImage() {
     const { imgEl, statusEl } = getFallbackRefreshElements(this.shadowRoot);
     if (!canRefreshFallbackImage({ imgEl })) return;
-    const reqId = nextFallbackRequestId(this._fallbackReqId);
-    this._fallbackReqId = reqId;
+    const token = issueFallbackRefreshToken({
+      currentRequestId: this._fallbackReqId
+    });
+    this._fallbackReqId = token.nextRequestId;
     const entity = resolveFallbackRefreshEntity(this._activeCam);
     const primarySrc = await loadPrimaryFallbackSource({
       entity,
       loadPrimary: async (nextEntity) => await this._streamFallbackUrl(nextEntity)
     });
-    if (isFallbackRefreshStale({
-      requestId: reqId,
+    if (shouldAbortStaleFallbackRefresh({
+      requestId: token.requestId,
       activeRequestId: this._fallbackReqId
     })) {
       return;

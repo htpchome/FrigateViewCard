@@ -6,12 +6,14 @@ import {
   buildFallbackRefreshOutcome,
   canRefreshFallbackImage,
   getFallbackRefreshElements,
+  issueFallbackRefreshToken,
   isFallbackRefreshStale,
   loadPrimaryFallbackSource,
   nextFallbackRequestId,
   resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
   resolveFallbackRefreshSources,
+  shouldAbortStaleFallbackRefresh,
   shouldApplyFallbackRefreshSources,
 } from "../src/live/live-fallback-refresh.js";
 
@@ -19,6 +21,14 @@ test("nextFallbackRequestId increments from current id", () => {
   assert.equal(nextFallbackRequestId(0), 1);
   assert.equal(nextFallbackRequestId(4), 5);
   assert.equal(nextFallbackRequestId(undefined), 1);
+});
+
+test("issueFallbackRefreshToken returns request and next ids", () => {
+  const token = issueFallbackRefreshToken({
+    currentRequestId: 7,
+  });
+  assert.equal(token.requestId, 8);
+  assert.equal(token.nextRequestId, 8);
 });
 
 test("isFallbackRefreshStale checks request id equality", () => {
@@ -31,6 +41,23 @@ test("isFallbackRefreshStale checks request id equality", () => {
   );
   assert.equal(
     isFallbackRefreshStale({
+      requestId: 2,
+      activeRequestId: 3,
+    }),
+    true,
+  );
+});
+
+test("shouldAbortStaleFallbackRefresh mirrors stale check", () => {
+  assert.equal(
+    shouldAbortStaleFallbackRefresh({
+      requestId: 2,
+      activeRequestId: 2,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldAbortStaleFallbackRefresh({
       requestId: 2,
       activeRequestId: 3,
     }),
