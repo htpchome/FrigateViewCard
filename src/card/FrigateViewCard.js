@@ -107,6 +107,10 @@ import {
   buildReviewListItemHtml,
   buildReviewListItemModel,
 } from "./review-list-model.js";
+import {
+  buildEventListItemHtml,
+  buildEventListItemModel,
+} from "./event-list-model.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import {
@@ -8453,69 +8457,24 @@ export class FrigateViewCard extends HTMLElement {
 
     return out;
   }
-  _favIcon(ev) {
-    return ev.retain_indefinitely
-      ? `<button class="ico fav on" data-fav="${ev.id}">${ICONS.star}</button>`
-      : `<button class="ico fav" data-fav="${ev.id}">${ICONS.starO}</button>`;
-  }
-
   _eventCardHTML(ev, expanded, compact = false) {
-    const col = labelColor(ev.label);
-    const score =
-      ev.top_score != null ? Math.round(ev.top_score * 100) + "%" : "";
-    const reviewSev =
-      ev.severity === "alert"
-        ? "alert"
-        : ev.severity === "detection"
-          ? "detection"
-          : "";
-    const reviewBar =
-      this._tab === "kept" && reviewSev
-        ? `<div class="rev-sev ${reviewSev}"></div>`
-        : "";
-    const zone = ev.zones && ev.zones.length ? ev.zones[0] : "";
-    const subl = ev.sub_label
-      ? `<span class="subl">${ev.sub_label}</span>`
-      : "";
-    const desc =
-      expanded && ev.data?.description
-        ? `<div class="desc">${ev.data.description}</div>`
-        : "";
-    const thumbFile = "thumbnail.jpg";
-    const thumbSrc = this._media(ev.id, thumbFile);
-    const thumb =
-      ev.has_snapshot || ev.has_clip
-        ? `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`
-        : `<div class="tph">${ICONS.person}</div>`;
-    const badge = ev.has_clip
-      ? '<span class="bc">clip</span>'
-      : ev.has_snapshot
-        ? '<span class="bs">snap</span>'
-        : "";
-    const dlClip = ev.has_clip
-      ? `<button class="ico" data-dl="${ev.id}" data-dl-file="clip.mp4" title="Download clip">${ICONS.download}</button>`
-      : "";
-    const dlSnap = ev.has_snapshot
-      ? `<button class="ico" data-dl="${ev.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${ICONS.snapshot}</button>`
-      : "";
-    // show camera name in multi-cam all-events mode
-    const camLabel =
-      (this._eventsMode === "all" || this._isGridMixedListMode()) &&
-      this._config.cameras.length > 1
-        ? `<span class="cam-badge">${(ev.camera || "").replace(/_/g, " ")}</span>`
-        : "";
-    // compact: wrap everything in a tighter layout, actions horizontal
-    return `
-    <div class="list-item${compact ? " compact" : ""} shadow-small xform" data-ev="${ev.id}">
-      ${reviewBar}
-      <div class="et">${thumb}<div class="ed">${this._dur(ev)}s</div></div>
-      <div class="ei">
-        <div class="etop"><span class="tb" style="background:${col}33;color:${col}">${cap(ev.label)}</span>${subl}${badge}${camLabel}${score ? `<span class="esc">${score}</span>` : ""}</div>
-        <div class="em"><span>${ICONS.clock}${this._dateTimeLabel(ev.start_time)}</span>${zone ? `<span>${ICONS.pin}${zone}</span>` : ""}</div>
-        ${desc}
-      </div>
-      <div class="eact${compact ? " h" : ""}">${this._favIcon(ev)}${dlClip}${dlSnap}</div>
-    </div>`;
+    const model = buildEventListItemModel(ev, {
+      cap,
+      labelColor,
+      icons: ICONS,
+      media: (id, file) => this._media(id, file),
+      durationLabel: (value) => this._dur(value),
+      dateTimeLabel: (ts) => this._dateTimeLabel(ts),
+      isKeptTab: this._tab === "kept",
+      showCameraLabel:
+        (this._eventsMode === "all" || this._isGridMixedListMode()) &&
+        this._config.cameras.length > 1,
+    });
+    return buildEventListItemHtml(model, {
+      icons: ICONS,
+      expanded,
+      compact,
+    });
   }
 
   _setListHtmlIfChanged(list, html) {

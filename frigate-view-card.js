@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.741";
+const VERSION = "1.0.742";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1970,6 +1970,64 @@ function buildReviewListItemHtml(model, deps) {
         </div>
         ${model.favBtn}
       </div>`;
+}
+
+// src/card/event-list-model.js
+function buildEventListItemModel(eventItem, deps) {
+  const {
+    cap: cap2,
+    labelColor: labelColor2,
+    icons,
+    media,
+    durationLabel,
+    dateTimeLabel,
+    isKeptTab,
+    showCameraLabel
+  } = deps || {};
+  const score = eventItem?.top_score != null ? `${Math.round(eventItem.top_score * 100)}%` : "";
+  const reviewSev = eventItem?.severity === "alert" ? "alert" : eventItem?.severity === "detection" ? "detection" : "";
+  const reviewBar = isKeptTab && reviewSev ? `<div class="rev-sev ${reviewSev}"></div>` : "";
+  const zone = eventItem?.zones && eventItem.zones.length ? eventItem.zones[0] : "";
+  const subl = eventItem?.sub_label ? `<span class="subl">${eventItem.sub_label}</span>` : "";
+  const thumbSrc = media(eventItem?.id, "thumbnail.jpg");
+  const thumb = eventItem?.has_snapshot || eventItem?.has_clip ? `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${eventItem.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${icons.person}</div>` : `<div class="tph">${icons.person}</div>`;
+  const badge = eventItem?.has_clip ? '<span class="bc">clip</span>' : eventItem?.has_snapshot ? '<span class="bs">snap</span>' : "";
+  const dlClip = eventItem?.has_clip ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
+  const dlSnap = eventItem?.has_snapshot ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>` : "";
+  const camLabel = showCameraLabel ? `<span class="cam-badge">${String(eventItem?.camera || "").replace(/_/g, " ")}</span>` : "";
+  const favBtn = eventItem?.retain_indefinitely ? `<button class="ico fav on" data-fav="${eventItem.id}">${icons.star}</button>` : `<button class="ico fav" data-fav="${eventItem.id}">${icons.starO}</button>`;
+  return {
+    id: eventItem?.id,
+    labelColorValue: labelColor2(eventItem?.label),
+    labelText: cap2(eventItem?.label),
+    score,
+    reviewBar,
+    zone,
+    subl,
+    thumb,
+    badge,
+    dlClip,
+    dlSnap,
+    camLabel,
+    favBtn,
+    duration: durationLabel(eventItem),
+    timeLabel: dateTimeLabel(eventItem?.start_time),
+    description: eventItem?.data?.description || ""
+  };
+}
+function buildEventListItemHtml(model, { icons, expanded, compact }) {
+  const desc = expanded && model.description ? `<div class="desc">${model.description}</div>` : "";
+  return `
+    <div class="list-item${compact ? " compact" : ""} shadow-small xform" data-ev="${model.id}">
+      ${model.reviewBar}
+      <div class="et">${model.thumb}<div class="ed">${model.duration}s</div></div>
+      <div class="ei">
+        <div class="etop"><span class="tb" style="background:${model.labelColorValue}33;color:${model.labelColorValue}">${model.labelText}</span>${model.subl}${model.badge}${model.camLabel}${model.score ? `<span class="esc">${model.score}</span>` : ""}</div>
+        <div class="em"><span>${icons.clock}${model.timeLabel}</span>${model.zone ? `<span>${icons.pin}${model.zone}</span>` : ""}</div>
+        ${desc}
+      </div>
+      <div class="eact${compact ? " h" : ""}">${model.favBtn}${model.dlClip}${model.dlSnap}</div>
+    </div>`;
 }
 
 // src/data/review-candidate-utils.js
@@ -10422,35 +10480,22 @@ const FrigateViewCard = class extends HTMLElement {
     }
     return out;
   }
-  _favIcon(ev) {
-    return ev.retain_indefinitely ? `<button class="ico fav on" data-fav="${ev.id}">${ICONS.star}</button>` : `<button class="ico fav" data-fav="${ev.id}">${ICONS.starO}</button>`;
-  }
   _eventCardHTML(ev, expanded, compact = false) {
-    const col = labelColor(ev.label);
-    const score = ev.top_score != null ? Math.round(ev.top_score * 100) + "%" : "";
-    const reviewSev = ev.severity === "alert" ? "alert" : ev.severity === "detection" ? "detection" : "";
-    const reviewBar = this._tab === "kept" && reviewSev ? `<div class="rev-sev ${reviewSev}"></div>` : "";
-    const zone = ev.zones && ev.zones.length ? ev.zones[0] : "";
-    const subl = ev.sub_label ? `<span class="subl">${ev.sub_label}</span>` : "";
-    const desc = expanded && ev.data?.description ? `<div class="desc">${ev.data.description}</div>` : "";
-    const thumbFile = "thumbnail.jpg";
-    const thumbSrc = this._media(ev.id, thumbFile);
-    const thumb = ev.has_snapshot || ev.has_clip ? `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>` : `<div class="tph">${ICONS.person}</div>`;
-    const badge = ev.has_clip ? '<span class="bc">clip</span>' : ev.has_snapshot ? '<span class="bs">snap</span>' : "";
-    const dlClip = ev.has_clip ? `<button class="ico" data-dl="${ev.id}" data-dl-file="clip.mp4" title="Download clip">${ICONS.download}</button>` : "";
-    const dlSnap = ev.has_snapshot ? `<button class="ico" data-dl="${ev.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${ICONS.snapshot}</button>` : "";
-    const camLabel = (this._eventsMode === "all" || this._isGridMixedListMode()) && this._config.cameras.length > 1 ? `<span class="cam-badge">${(ev.camera || "").replace(/_/g, " ")}</span>` : "";
-    return `
-    <div class="list-item${compact ? " compact" : ""} shadow-small xform" data-ev="${ev.id}">
-      ${reviewBar}
-      <div class="et">${thumb}<div class="ed">${this._dur(ev)}s</div></div>
-      <div class="ei">
-        <div class="etop"><span class="tb" style="background:${col}33;color:${col}">${cap(ev.label)}</span>${subl}${badge}${camLabel}${score ? `<span class="esc">${score}</span>` : ""}</div>
-        <div class="em"><span>${ICONS.clock}${this._dateTimeLabel(ev.start_time)}</span>${zone ? `<span>${ICONS.pin}${zone}</span>` : ""}</div>
-        ${desc}
-      </div>
-      <div class="eact${compact ? " h" : ""}">${this._favIcon(ev)}${dlClip}${dlSnap}</div>
-    </div>`;
+    const model = buildEventListItemModel(ev, {
+      cap,
+      labelColor,
+      icons: ICONS,
+      media: (id, file) => this._media(id, file),
+      durationLabel: (value) => this._dur(value),
+      dateTimeLabel: (ts) => this._dateTimeLabel(ts),
+      isKeptTab: this._tab === "kept",
+      showCameraLabel: (this._eventsMode === "all" || this._isGridMixedListMode()) && this._config.cameras.length > 1
+    });
+    return buildEventListItemHtml(model, {
+      icons: ICONS,
+      expanded,
+      compact
+    });
   }
   _setListHtmlIfChanged(list, html) {
     if (!list) return false;
