@@ -132,7 +132,7 @@ import {
   applyFallbackImageHandlers,
   setFallbackImageSourceIfChanged,
 } from "../live/live-fallback-image.js";
-import { runFallbackRefreshCycle } from "../live/live-fallback-refresh.js";
+import { runFallbackRefreshCycleForCard } from "../live/live-fallback-refresh.js";
 import {
   resolveHaDirectStartup,
   resolveHlsStartup,
@@ -2201,19 +2201,10 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _refreshStreamFallbackImage() {
-    await runFallbackRefreshCycle({
-      shadowRoot: this.shadowRoot,
-      currentRequestId: this._fallbackReqId,
-      activeCam: this._activeCam,
-      setActiveRequestId: (nextRequestId) => {
-        this._fallbackReqId = nextRequestId;
-      },
-      readActiveRequestId: () => this._fallbackReqId,
-      loadPrimary: async (nextEntity) =>
-        await this._streamFallbackUrl(nextEntity),
-      loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity),
-      applyHandlers: (payload) => applyFallbackImageHandlers(payload),
-      applySource: (next) => setFallbackImageSourceIfChanged(next),
+    await runFallbackRefreshCycleForCard({
+      card: this,
+      applyHandlers: applyFallbackImageHandlers,
+      applySource: setFallbackImageSourceIfChanged,
     });
   }
 

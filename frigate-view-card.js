@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.793";
+const VERSION = "1.0.794";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2508,6 +2508,31 @@ const runFallbackRefreshCycle = async ({
     shouldAbort: false,
     didWrite: true
   };
+};
+const runFallbackRefreshCycleForCard = async ({
+  card,
+  applyHandlers,
+  applySource
+}) => {
+  if (!card) {
+    return {
+      shouldAbort: true,
+      didWrite: false
+    };
+  }
+  return await runFallbackRefreshCycle({
+    shadowRoot: card.shadowRoot,
+    currentRequestId: card._fallbackReqId,
+    activeCam: card._activeCam,
+    setActiveRequestId: (nextRequestId) => {
+      card._fallbackReqId = nextRequestId;
+    },
+    readActiveRequestId: () => card._fallbackReqId,
+    loadPrimary: async (nextEntity) => await card._streamFallbackUrl(nextEntity),
+    loadAlt: (nextEntity) => card._streamFallbackAltUrl(nextEntity),
+    applyHandlers,
+    applySource
+  });
 };
 const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   const src = resolveFallbackDisplaySource({
@@ -5981,18 +6006,10 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _refreshStreamFallbackImage() {
-    await runFallbackRefreshCycle({
-      shadowRoot: this.shadowRoot,
-      currentRequestId: this._fallbackReqId,
-      activeCam: this._activeCam,
-      setActiveRequestId: (nextRequestId) => {
-        this._fallbackReqId = nextRequestId;
-      },
-      readActiveRequestId: () => this._fallbackReqId,
-      loadPrimary: async (nextEntity) => await this._streamFallbackUrl(nextEntity),
-      loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity),
-      applyHandlers: (payload) => applyFallbackImageHandlers(payload),
-      applySource: (next) => setFallbackImageSourceIfChanged(next)
+    await runFallbackRefreshCycleForCard({
+      card: this,
+      applyHandlers: applyFallbackImageHandlers,
+      applySource: setFallbackImageSourceIfChanged
     });
   }
   _cameraContext(entity) {

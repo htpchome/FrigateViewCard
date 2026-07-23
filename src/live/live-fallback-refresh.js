@@ -263,6 +263,34 @@ export const runFallbackRefreshCycle = async ({
   };
 };
 
+export const runFallbackRefreshCycleForCard = async ({
+  card,
+  applyHandlers,
+  applySource,
+}) => {
+  if (!card) {
+    return {
+      shouldAbort: true,
+      didWrite: false,
+    };
+  }
+
+  return await runFallbackRefreshCycle({
+    shadowRoot: card.shadowRoot,
+    currentRequestId: card._fallbackReqId,
+    activeCam: card._activeCam,
+    setActiveRequestId: (nextRequestId) => {
+      card._fallbackReqId = nextRequestId;
+    },
+    readActiveRequestId: () => card._fallbackReqId,
+    loadPrimary: async (nextEntity) =>
+      await card._streamFallbackUrl(nextEntity),
+    loadAlt: (nextEntity) => card._streamFallbackAltUrl(nextEntity),
+    applyHandlers,
+    applySource,
+  });
+};
+
 export const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   const src = resolveFallbackDisplaySource({
     primarySrc,

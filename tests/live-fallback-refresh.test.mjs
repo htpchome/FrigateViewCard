@@ -19,6 +19,7 @@ import {
   resolveFallbackRefreshEntity,
   resolveFallbackRefreshSources,
   runFallbackRefreshCycle,
+  runFallbackRefreshCycleForCard,
   shouldAbortFallbackRefreshAfterPrimary,
   shouldAbortStaleFallbackRefresh,
   shouldApplyFallbackRefreshSources,
@@ -258,6 +259,42 @@ test("runFallbackRefreshCycle skips write when both primary and alt sources are 
   assert.equal(activeRequestId, 2);
   assert.equal(handlerPayloads.length, 0);
   assert.equal(writes.length, 0);
+});
+
+test("runFallbackRefreshCycleForCard maps card runtime into cycle execution", async () => {
+  const imgEl = { id: "img" };
+  const statusEl = { id: "status" };
+  const handlerPayloads = [];
+  const writes = [];
+  const card = {
+    shadowRoot: {
+      querySelector: (selector) => {
+        if (selector === "#stream-fallback-img") return imgEl;
+        if (selector === "#stream-fallback-status") return statusEl;
+        return null;
+      },
+    },
+    _fallbackReqId: 3,
+    _activeCam: { entity: "camera.front" },
+    _streamFallbackUrl: async () => "https://ha.local/primary.jpg",
+    _streamFallbackAltUrl: () => "https://ha.local/alt.jpg",
+  };
+
+  const result = await runFallbackRefreshCycleForCard({
+    card,
+    applyHandlers: (payload) => handlerPayloads.push(payload),
+    applySource: (entry) => writes.push(entry),
+  });
+
+  assert.equal(result.shouldAbort, false);
+  assert.equal(result.didWrite, true);
+  assert.equal(card._fallbackReqId, 4);
+  assert.equal(handlerPayloads.length, 1);
+  assert.equal(handlerPayloads[0].img, imgEl);
+  assert.equal(handlerPayloads[0].statusEl, statusEl);
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].img, imgEl);
+  assert.equal(writes[0].src, "https://ha.local/primary.jpg");
 });
 
 test("buildFallbackRefreshWritePlan returns write input when a source is available", () => {
