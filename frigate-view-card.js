@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.701";
+const VERSION = "1.0.702";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1655,6 +1655,50 @@ function isPreviewReviewFresh({
   const reviewStart = Number(reviewStartSec || 0);
   if (reviewStart <= 0) return false;
   return reviewStart >= startedAt - Number(graceSec || 0);
+}
+
+// src/preview/preview-markup.js
+function previewMediaSeverityClass(severity) {
+  if (severity === "alert") return "grid-alert";
+  if (severity === "detection") return "grid-detection";
+  return "";
+}
+function buildPreviewStatusMarkup(online) {
+  return `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">\u25CF</span>${online ? "Online" : "Offline"}`;
+}
+function buildPreviewMetaMarkup({
+  showTitleBars,
+  name,
+  online,
+  sourceLabel,
+  eventsCount
+}) {
+  if (!showTitleBars) return "";
+  return `<div class="preview-meta">
+              <div class="preview-meta-name">${name}</div>
+              <div class="preview-meta-status">${buildPreviewStatusMarkup(online)}</div>
+              <div class="preview-meta-source">Stream Source: ${sourceLabel}</div>
+              <div class="preview-meta-events">Events: ${eventsCount}</div>
+            </div>`;
+}
+function buildPreviewCellMarkup({
+  index,
+  entity,
+  severity,
+  useLive,
+  metaMarkup
+}) {
+  return `<div class="preview-cell shadow-medium" data-preview-camidx="${index}">
+          <div class="preview-media-host ${previewMediaSeverityClass(severity)}" data-preview-media-entity="${entity}" data-preview-use-live="${useLive ? "1" : "0"}"></div>
+          ${metaMarkup}
+        </div>`;
+}
+function buildPreviewCameraButtonMarkup({ index, name }) {
+  return `<button class="glass-btn preview-cam-btn" type="button" data-preview-select-camidx="${index}">${name}</button>`;
+}
+function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
+  return `<div class="preview-grid" id="preview-grid">${cellsMarkup}</div>
+      <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
 }
 
 // src/card/FrigateViewCard.js
@@ -4418,22 +4462,28 @@ const FrigateViewCard = class extends HTMLElement {
       const sourceLabel = this._previewStreamSourceLabel(entity, useLive);
       const eventsCount = this._previewEventsCount(entity);
       const name = cap(camDisplayName(camera));
-      return `<div class="preview-cell shadow-medium" data-preview-camidx="${index}">
-          <div class="preview-media-host ${severity === "alert" ? "grid-alert" : severity === "detection" ? "grid-detection" : ""}" data-preview-media-entity="${entity}" data-preview-use-live="${useLive ? "1" : "0"}"></div>
-          ${showTitleBars ? `<div class="preview-meta">
-              <div class="preview-meta-name">${name}</div>
-              <div class="preview-meta-status"><span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">\u25CF</span>${online ? "Online" : "Offline"}</div>
-              <div class="preview-meta-source">Stream Source: ${sourceLabel}</div>
-              <div class="preview-meta-events">Events: ${eventsCount}</div>
-            </div>` : ""}
-        </div>`;
+      return buildPreviewCellMarkup({
+        index,
+        entity,
+        severity,
+        useLive,
+        metaMarkup: buildPreviewMetaMarkup({
+          showTitleBars,
+          name,
+          online,
+          sourceLabel,
+          eventsCount
+        })
+      });
     }).join("");
     const buttons = cameras.map((camera, index) => {
       const name = cap(camDisplayName(camera));
-      return `<button class="glass-btn preview-cam-btn" type="button" data-preview-select-camidx="${index}">${name}</button>`;
+      return buildPreviewCameraButtonMarkup({ index, name });
     }).join("");
-    shell.innerHTML = `<div class="preview-grid" id="preview-grid">${cells}</div>
-      <div class="preview-cam-buttons">${buttons}</div>`;
+    shell.innerHTML = buildPreviewShellMarkup({
+      cellsMarkup: cells,
+      buttonsMarkup: buttons
+    });
     this._mountPreviewMedia();
     this._applyPreviewShellVisibility();
   }
@@ -4448,7 +4498,7 @@ const FrigateViewCard = class extends HTMLElement {
       const useLive = this._previewShouldUseLive(entity);
       const status = cell.querySelector(".preview-meta-status");
       if (status) {
-        status.innerHTML = `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">\u25CF</span>${online ? "Online" : "Offline"}`;
+        status.innerHTML = buildPreviewStatusMarkup(online);
       }
       const source = cell.querySelector(".preview-meta-source");
       if (source) {
