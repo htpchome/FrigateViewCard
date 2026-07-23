@@ -90,6 +90,13 @@ import {
   raceMountAttempts,
 } from "../live/live-attempt-planner.js";
 import {
+  applyMountWatchdogTimeout,
+  beginMountTracking,
+  clearMountTrackingIfCurrent,
+  invalidateMountTrackingIfActive,
+  shouldRunMountWatchdog,
+} from "../live/live-mount-lifecycle.js";
+import {
   buildPreviewCameraButtonMarkup,
   buildPreviewCellMarkup,
   buildPreviewMetaMarkup,
@@ -1747,13 +1754,68 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _cancelPendingMount(reason = "", options = {}) {
-    if (this._mountInProgress) {
-      this._mountSeq += 1;
-      this._mountInProgress = false;
-      this._mountStartedAt = 0;
-      this._mountTargetEntity = "";
-    }
+    this._applyMountTrackingState(
+      invalidateMountTrackingIfActive({
+        mountSeq: this._mountSeq,
+        mountInProgress: this._mountInProgress,
+        mountStartedAt: this._mountStartedAt,
+        mountTargetEntity: this._mountTargetEntity,
+      }),
+    );
     this._cleanupEngineWithOptions(options);
+  }
+
+  _applyMountTrackingState(nextState) {
+    this._mountSeq = nextState.mountSeq;
+    this._mountInProgress = nextState.mountInProgress;
+    this._mountStartedAt = nextState.mountStartedAt;
+    this._mountTargetEntity = nextState.mountTargetEntity;
+  }
+
+  _beginMountTracking(entity) {
+    const { mountToken, nextState } = beginMountTracking({
+      mountSeq: this._mountSeq,
+      entity,
+      nowMs: Date.now(),
+    });
+    this._applyMountTrackingState(nextState);
+    return mountToken;
+  }
+
+  _clearMountTrackingIfCurrent(mountToken) {
+    this._applyMountTrackingState(
+      clearMountTrackingIfCurrent({
+        mountSeq: this._mountSeq,
+        mountToken,
+        mountInProgress: this._mountInProgress,
+        mountStartedAt: this._mountStartedAt,
+        mountTargetEntity: this._mountTargetEntity,
+      }),
+    );
+  }
+
+  _onMountWatchdogTimeout(mountToken) {
+    if (
+      !shouldRunMountWatchdog({
+        mountInProgress: this._mountInProgress,
+        mountSeq: this._mountSeq,
+        mountToken,
+      })
+    ) {
+      return;
+    }
+    this._ffDebug("Mount watchdog timeout; forcing recovery", {
+      mountToken,
+      mountTarget: this._mountTargetEntity,
+    });
+    this._applyMountTrackingState(
+      applyMountWatchdogTimeout({ mountSeq: this._mountSeq }),
+    );
+    this._cleanupEngine();
+    this._setStreamLoading(false);
+    this._setStreamFallbackVisible(true);
+    this._setActiveStreamType("snapshot");
+    this._scheduleResumeLive("mount-watchdog-timeout");
   }
 
   _streamAttemptSlot(host = null) {
@@ -2776,34 +2838,14 @@ export class FrigateViewCard extends HTMLElement {
         if (this._adoptGraceMseEngine(slot, graceMseEntry.engine)) return;
       } else if (graceMseEntry?.promise) {
         this._engineMountedMuted = this._streamMuted;
-        const mountToken = ++this._mountSeq;
-        this._mountInProgress = true;
-        this._mountStartedAt = Date.now();
-        this._mountTargetEntity = entity;
-        const mountWatchdogT = setTimeout(() => {
-          if (!this._mountInProgress) return;
-          if (this._mountSeq !== mountToken) return;
-          this._ffDebug("Mount watchdog timeout; forcing recovery", {
-            mountToken,
-            mountTarget: this._mountTargetEntity,
-          });
-          this._mountSeq += 1;
-          this._mountInProgress = false;
-          this._mountStartedAt = 0;
-          this._mountTargetEntity = "";
-          this._cleanupEngine();
-          this._setStreamLoading(false);
-          this._setStreamFallbackVisible(true);
-          this._setActiveStreamType("snapshot");
-          this._scheduleResumeLive("mount-watchdog-timeout");
-        }, 9000);
+        const mountToken = this._beginMountTracking(entity);
+        const mountWatchdogT = setTimeout(
+          () => this._onMountWatchdogTimeout(mountToken),
+          9000,
+        );
         const clearMountState = () => {
           clearTimeout(mountWatchdogT);
-          if (this._mountSeq === mountToken) {
-            this._mountInProgress = false;
-            this._mountStartedAt = 0;
-            this._mountTargetEntity = "";
-          }
+          this._clearMountTrackingIfCurrent(mountToken);
         };
         const graceResultPromise = (async () => {
           const graceMseEngine = await graceMseEntry.promise;
@@ -2858,27 +2900,11 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
     this._engineMountedMuted = this._streamMuted;
-    const mountToken = ++this._mountSeq;
-    this._mountInProgress = true;
-    this._mountStartedAt = Date.now();
-    this._mountTargetEntity = entity;
-    const mountWatchdogT = setTimeout(() => {
-      if (!this._mountInProgress) return;
-      if (this._mountSeq !== mountToken) return;
-      this._ffDebug("Mount watchdog timeout; forcing recovery", {
-        mountToken,
-        mountTarget: this._mountTargetEntity,
-      });
-      this._mountSeq += 1;
-      this._mountInProgress = false;
-      this._mountStartedAt = 0;
-      this._mountTargetEntity = "";
-      this._cleanupEngine();
-      this._setStreamLoading(false);
-      this._setStreamFallbackVisible(true);
-      this._setActiveStreamType("snapshot");
-      this._scheduleResumeLive("mount-watchdog-timeout");
-    }, 9000);
+    const mountToken = this._beginMountTracking(entity);
+    const mountWatchdogT = setTimeout(
+      () => this._onMountWatchdogTimeout(mountToken),
+      9000,
+    );
     try {
       this._cleanupEngine();
       slot.innerHTML = "";
@@ -2952,11 +2978,7 @@ export class FrigateViewCard extends HTMLElement {
       this._setStreamFallbackVisible(true);
     } finally {
       clearTimeout(mountWatchdogT);
-      if (mountToken === this._mountSeq) {
-        this._mountInProgress = false;
-        this._mountStartedAt = 0;
-        this._mountTargetEntity = "";
-      }
+      this._clearMountTrackingIfCurrent(mountToken);
     }
   }
 
