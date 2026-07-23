@@ -221,20 +221,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       src.preview_page_show_title_bars !== false;
     src.wide_view_page_enabled =
       src.wide_view_page_enabled === true || src.wide_view === true;
-    src.side_by_side_page_enabled = src.side_by_side_page_enabled === true;
-    const configuredEntities = new Set(cameras.map((camera) => camera.entity));
-    const defaultLeftCamera = cameras[0]?.entity || "";
-    const defaultRightCamera = cameras[1]?.entity || defaultLeftCamera;
-    src.side_by_side_left_camera = configuredEntities.has(
-      src.side_by_side_left_camera,
-    )
-      ? src.side_by_side_left_camera
-      : defaultLeftCamera;
-    src.side_by_side_right_camera = configuredEntities.has(
-      src.side_by_side_right_camera,
-    )
-      ? src.side_by_side_right_camera
-      : defaultRightCamera;
     src.landing_page = normalizePageRoute(src.landing_page);
     src.mobile_page = normalizePageRoute(src.mobile_page);
     const landingPageOptions = getEnabledPageRoutes(
@@ -591,8 +577,10 @@ export class FrigateViewCardEditor extends HTMLElement {
             if (!kind) return;
             const handler = () => {
               if (kind === "primary") {
-                this._dispatch();
-                this._hasVisualDraft = false;
+                if (this._hasVisualDraft) {
+                  this._dispatch();
+                  this._hasVisualDraft = false;
+                }
                 this._emitPreviewDraft(null);
                 return;
               }
@@ -610,8 +598,10 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     this._onDialogPrimaryActionClick = (ev) => {
       if (dialogActionKindFromEvent(ev) !== "primary") return;
-      this._dispatch();
-      this._hasVisualDraft = false;
+      if (this._hasVisualDraft) {
+        this._dispatch();
+        this._hasVisualDraft = false;
+      }
       this._emitPreviewDraft(null);
     };
 
@@ -714,13 +704,8 @@ export class FrigateViewCardEditor extends HTMLElement {
     const pageRouteLabel = (pageId) => {
       if (pageId === PAGE_IDS.preview) return "Preview";
       if (pageId === PAGE_IDS.wideView) return "Wide View";
-      if (pageId === PAGE_IDS.sideBySide) return "Side-by-Side";
       return "Single View";
     };
-    const cameraEntityOptions = cams.map((camera) => ({
-      value: camera.entity,
-      label: cap(this._cameraLabel(camera)),
-    }));
     const landingPageOptions = getEnabledPageRoutes(
       this._config,
       DEVICE_ROUTE_BUCKETS.desktop,
@@ -954,25 +939,6 @@ export class FrigateViewCardEditor extends HTMLElement {
         <span style="font-size:11px;color:var(--c-text2)">%</span>
       </div>
       <div class="field-helper" id="col_left_width_pct-helper">Controls the left column width when the Wide View page is active.</div>`;
-    const sideBySidePanelContent = `
-      <div class="section" style="border-top:none;padding-top:0">
-        <div class="layout-row">
-          <span class="field-label" style="margin:0">Enable Side-by-Side Page</span>
-          <ha-switch id="side_by_side_page_enabled" ${this._config?.side_by_side_page_enabled ? "checked" : ""}></ha-switch>
-        </div>
-        <div class="field-helper">When enabled, Side-by-Side becomes available in navigation and as a desktop/tablet landing page option.</div>
-      </div>
-      <div id="side-by-side-cameras" style="display:${this._config?.side_by_side_page_enabled ? "grid" : "none"};grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:8px">
-        <div>
-          <span class="field-label">Left Pane Camera</span>
-          <ha-selector id="side_by_side_left_camera" style="width:100%"></ha-selector>
-        </div>
-        <div>
-          <span class="field-label">Right Pane Camera</span>
-          <ha-selector id="side_by_side_right_camera" style="width:100%"></ha-selector>
-        </div>
-      </div>
-      <div class="field-helper">Each pane keeps independent camera and tab state during runtime.</div>`;
     const landingPanelContent = `
       <div class="section" style="border-top:none;padding-top:0">
         <span class="field-label">Landing Page</span>
@@ -1030,7 +996,6 @@ export class FrigateViewCardEditor extends HTMLElement {
         ${this._renderSettingsPanel({ id: "gridview", title: "Grid View", icon: "mdi:view-grid-outline", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
         ${this._renderSettingsPanel({ id: "preview", title: "Preview Page", icon: "mdi:view-grid", content: previewPanelContent, active: activeSettingsPanel === "preview" })}
         ${this._renderSettingsPanel({ id: "wideview", title: "Wide View Page", icon: "mdi:view-split-vertical", content: wideViewPanelContent, active: activeSettingsPanel === "wideview" })}
-        ${this._renderSettingsPanel({ id: "sidebyside", title: "Side-by-Side Page", icon: "mdi:view-split-horizontal", content: sideBySidePanelContent, active: activeSettingsPanel === "sidebyside" })}
         ${this._renderSettingsPanel({ id: "landing", title: "Landing Page", icon: "mdi:home-import-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
 
@@ -1344,36 +1309,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       onChange: () => update(),
     });
 
-    setupSelectSelector({
-      element: this.querySelector("#side_by_side_left_camera"),
-      hass: this._hass,
-      options: cameraEntityOptions,
-      initialValue:
-        this._config?.side_by_side_left_camera ||
-        this._config?.cameras?.[0]?.entity ||
-        "",
-      fallbackValue: this._config?.cameras?.[0]?.entity || "",
-      normalize: (value) => String(value || "").trim(),
-      onChange: () => update(),
-    });
-
-    setupSelectSelector({
-      element: this.querySelector("#side_by_side_right_camera"),
-      hass: this._hass,
-      options: cameraEntityOptions,
-      initialValue:
-        this._config?.side_by_side_right_camera ||
-        this._config?.cameras?.[1]?.entity ||
-        this._config?.cameras?.[0]?.entity ||
-        "",
-      fallbackValue:
-        this._config?.cameras?.[1]?.entity ||
-        this._config?.cameras?.[0]?.entity ||
-        "",
-      normalize: (value) => String(value || "").trim(),
-      onChange: () => update(),
-    });
-
     setupEntitySelector({
       element: this.querySelector("#camera-modal-entity"),
       hass: this._hass,
@@ -1452,7 +1387,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       ids: [
         "tight_margins",
         "wide_view_page_enabled",
-        "side_by_side_page_enabled",
         "shadows",
         "borders",
         "rounded_corners",
@@ -1466,23 +1400,16 @@ export class FrigateViewCardEditor extends HTMLElement {
         "preview_page_live_cameras",
         "preview_page_show_title_bars",
       ],
-      events: ["change", "value-changed", "checked-changed"],
+      events: ["change", "value-changed"],
       handler: () => {
-        const isSwitchOn = (element) => {
-          if (!element) return false;
-          if (element.checked === true) return true;
-          return element.getAttribute?.("checked") != null;
-        };
         const slideshowRow = this.querySelector("#slideshow_rotation_row");
-        const enabled = isSwitchOn(
-          this.querySelector("#slideshow_rotation_enabled"),
-        );
+        const enabled =
+          this.querySelector("#slideshow_rotation_enabled")?.checked === true;
         const gridRow = this.querySelector("#grid_rotation_row");
         const gridStartRow = this.querySelector("#grid_start_row");
         const gridLiveRow = this.querySelector("#grid_live_row");
-        const gridEnabled = isSwitchOn(
-          this.querySelector("#grid_mode_enabled"),
-        );
+        const gridEnabled =
+          this.querySelector("#grid_mode_enabled")?.checked === true;
         if (slideshowRow)
           slideshowRow.style.display = enabled ? "flex" : "none";
         if (gridStartRow)
@@ -1492,13 +1419,6 @@ export class FrigateViewCardEditor extends HTMLElement {
         if (gridRow)
           gridRow.style.display =
             gridEnabled && cams.length > 4 ? "flex" : "none";
-        const sideBySideCameras = this.querySelector("#side-by-side-cameras");
-        const sideBySideEnabled = isSwitchOn(
-          this.querySelector("#side_by_side_page_enabled"),
-        );
-        if (sideBySideCameras) {
-          sideBySideCameras.style.display = sideBySideEnabled ? "grid" : "none";
-        }
         update();
       },
     });
@@ -1596,14 +1516,12 @@ export class FrigateViewCardEditor extends HTMLElement {
 
   _dispatch() {
     const cameras = this._getCams();
-    this._config = this._normalizeConfig(
-      buildEditorConfigFromDom({
-        root: this,
-        baseConfig: this._config,
-        cameras,
-        themeDraftCache: this._themeDraftCache,
-      }),
-    );
+    this._config = buildEditorConfigFromDom({
+      root: this,
+      baseConfig: this._config,
+      cameras,
+      themeDraftCache: this._themeDraftCache,
+    });
     const config = withCardTypeForYaml(
       compactEditorConfigForYaml(this._config, {
         themeDefaultColors: this._themeDefaultHexMap(),
