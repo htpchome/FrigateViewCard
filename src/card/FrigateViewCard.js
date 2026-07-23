@@ -106,6 +106,7 @@ import {
 import { GridAlertController } from "../grid/grid-alert-controller.js";
 import { GridPageController } from "../grid/grid-page-controller.js";
 import { SlideshowAlertController } from "../slideshow/slideshow-alert-controller.js";
+import { SlideshowPageController } from "../slideshow/slideshow-page-controller.js";
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -198,6 +199,7 @@ export class FrigateViewCard extends HTMLElement {
       SLIDESHOW_REVIEW_WATCH_MIN_MS,
       SLIDESHOW_REVIEW_WATCH_MAX_MS,
     });
+    this._slideshowPageController = new SlideshowPageController(this);
     this._previewPageActive = false;
     this._previewLastRenderSignature = "";
     this._previewMediaState = null;
@@ -3642,16 +3644,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _clearSlideshowTimers() {
-    if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
-    if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
-    if (this._slideshowFadeT) clearTimeout(this._slideshowFadeT);
-    if (this._slideshowReviewProbeT) clearTimeout(this._slideshowReviewProbeT);
-    if (this._slideshowReviewWatchT) clearTimeout(this._slideshowReviewWatchT);
-    this._slideshowSwitchT = null;
-    this._slideshowPauseT = null;
-    this._slideshowFadeT = null;
-    this._slideshowReviewProbeT = null;
-    this._slideshowReviewWatchT = null;
+    this._slideshowPageController.clearTimers();
   }
 
   _clearSlideshowCountdownOverlay() {
@@ -3751,119 +3744,31 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _stopSlideshowRotation(reason = "manual-stop", sync = true) {
-    this._clearSlideshowTimers();
-    this._clearSlideshowCountdownOverlay();
-    this._slideshowActive = false;
-    this._slideshowPopupPaused = false;
-    this._slideshowPausedUntil = 0;
-    this._slideshowPendingAlertCam = "";
-    this._slideshowPendingAlertType = "";
-    this._slideshowLastAlertAt = 0;
-    this._slideshowLastAlertCam = "";
-    this._slideshowAttentionType = "";
-    this._slideshowHandledReviewIds.clear();
-    this._slideshowStartedAtSec = 0;
-    this._slideshowReviewProbeInFlight = false;
-    const engWrap = this._$("#eng-wrap");
-    if (engWrap) {
-      engWrap.classList.remove(
-        "slideshow-switching",
-        "slideshow-alert",
-        "slideshow-detection",
-      );
-    }
-    void reason;
-    if (sync) this._syncToolbarButtons();
+    this._slideshowPageController.stopRotation(reason, sync);
   }
 
   _startSlideshowRotation(source = "manual") {
-    if (!this._isSlideshowRotationAvailable()) return false;
-    this._slideshowActive = true;
-    this._slideshowPopupPaused =
-      this._$("#myPopup")?.classList.contains("is-open") === true;
-    this._slideshowPausedUntil = 0;
-    this._slideshowPendingAlertCam = "";
-    this._slideshowPendingAlertType = "";
-    this._slideshowAttentionType = "";
-    this._slideshowHandledReviewIds.clear();
-    this._slideshowStartedAtSec = Math.floor(Date.now() / 1000);
-    this._scheduleSlideshowReviewWatch(300);
-    this._scheduleSlideshowRotation(source);
-    this._syncToolbarButtons();
-    return true;
+    return this._slideshowPageController.startRotation(source);
   }
 
   _pauseSlideshowForPopup() {
-    if (!this._slideshowActive) return;
-    this._slideshowPopupPaused = true;
-    this._syncSlideshowCountdownOverlay();
-    if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
-    if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
-    this._slideshowSwitchT = null;
-    this._slideshowPauseT = null;
+    this._slideshowPageController.pauseForPopup();
   }
 
   _resumeSlideshowAfterPopup() {
-    if (!this._slideshowActive) return;
-    this._slideshowPopupPaused = false;
-    this._slideshowPausedUntil = Date.now() + this._slideshowRotationMs();
-    this._scheduleSlideshowRotation("popup-close");
+    this._slideshowPageController.resumeAfterPopup();
   }
 
   _toggleSlideshowRotation() {
-    if (this._slideshowActive) {
-      this._stopSlideshowRotation("manual-stop");
-      return;
-    }
-    let startedFromGrid = false;
-    if (this._viewMode === "grid" || this._gridResumePending) {
-      this._gridResumePending = false;
-      this._stopGridModeState();
-      this._setViewMode("single");
-      startedFromGrid = true;
-    }
-    const started = this._startSlideshowRotation("manual-start");
-    if (started && startedFromGrid) {
-      if (this._slideshowSwitchT) {
-        clearTimeout(this._slideshowSwitchT);
-        this._slideshowSwitchT = null;
-      }
-      void this._advanceSlideshowRotation();
-    }
+    this._slideshowPageController.toggleRotation();
   }
 
   _pauseSlideshowForInteraction() {
-    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
-    this._slideshowPausedUntil = Date.now() + this._slideshowRotationMs();
-    this._setSlideshowCountdown(this._slideshowRotationMs());
-    if (this._slideshowPauseT) clearTimeout(this._slideshowPauseT);
-    if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
-    this._slideshowPauseT = setTimeout(() => {
-      this._slideshowPauseT = null;
-      this._scheduleSlideshowRotation("pause-expired");
-    }, this._slideshowRotationMs());
+    this._slideshowPageController.pauseForInteraction();
   }
 
   _scheduleSlideshowRotation(_reason = "") {
-    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) {
-      this._clearSlideshowCountdownOverlay();
-      return;
-    }
-    if (this._slideshowPopupPaused) {
-      this._syncSlideshowCountdownOverlay();
-      return;
-    }
-    if (this._slideshowSwitchT) clearTimeout(this._slideshowSwitchT);
-    const delay = Math.max(250, this._slideshowPausedUntil - Date.now());
-    const wait =
-      this._slideshowPausedUntil > Date.now()
-        ? delay
-        : this._slideshowRotationMs();
-    this._setSlideshowCountdown(wait);
-    this._slideshowSwitchT = setTimeout(() => {
-      this._slideshowSwitchT = null;
-      void this._advanceSlideshowRotation();
-    }, wait);
+    this._slideshowPageController.scheduleRotation(_reason);
   }
 
   _setSlideshowAlertState(type = "") {
@@ -3974,32 +3879,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _advanceSlideshowRotation() {
-    if (!this._slideshowActive || !this._isSlideshowRotationAvailable()) return;
-    if (this._slideshowPopupPaused) return;
-    const pendingAlertCam = this._slideshowPendingAlertCam;
-    const pendingAlertType = this._slideshowPendingAlertType;
-    this._slideshowPendingAlertCam = "";
-    this._slideshowPendingAlertType = "";
-    const activeEntity = this._activeCam?.entity || "";
-    const currentIndex = this._cameraIndexByEntity(activeEntity);
-    const nextIndex =
-      pendingAlertCam && pendingAlertCam !== activeEntity
-        ? this._cameraIndexByEntity(pendingAlertCam)
-        : currentIndex >= 0
-          ? (currentIndex + 1) % this._config.cameras.length
-          : 0;
-    const targetIndex = nextIndex >= 0 ? nextIndex : 0;
-    const targetEntity = this._config?.cameras?.[targetIndex]?.entity || "";
-    if (!targetEntity) {
-      this._scheduleSlideshowRotation("missing-target");
-      return;
-    }
-    await this._switchCamera(targetIndex, {
-      source: pendingAlertCam ? "alert" : "slideshow",
-    });
-    this._slideshowPausedUntil = Date.now() + this._slideshowRotationMs();
-    this._setSlideshowAlertState(pendingAlertCam ? pendingAlertType : "");
-    this._scheduleSlideshowRotation("advance");
+    await this._slideshowPageController.advanceRotation();
   }
 
   _extractRealtimeMessageCamera(msg) {
