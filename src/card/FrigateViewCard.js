@@ -138,13 +138,12 @@ import {
 } from "../live/live-fallback-image.js";
 import {
   beginFallbackRefresh,
+  buildFallbackRefreshContext,
   buildFallbackImageApplyPayload,
   getFallbackRefreshElements,
   isFallbackRefreshStale,
   loadPrimaryFallbackSource,
-  resolveAltFallbackSource,
   resolveFallbackRefreshEntity,
-  resolveFallbackRefreshSources,
   shouldAbortStaleFallbackRefresh,
   shouldApplyFallbackRefreshSources,
 } from "../live/live-fallback-refresh.js";
@@ -2238,19 +2237,17 @@ export class FrigateViewCard extends HTMLElement {
     ) {
       return;
     }
-    const altSrc = resolveAltFallbackSource({
+    const context = buildFallbackRefreshContext({
       entity,
+      primarySrc,
       loadAlt: (nextEntity) => this._streamFallbackAltUrl(nextEntity),
     });
-    const sources = resolveFallbackRefreshSources({
-      primarySrc,
-      altSrc,
-    });
+    const sources = context.sources;
     if (!shouldApplyFallbackRefreshSources({ sources })) return;
     const applyPayload = buildFallbackImageApplyPayload({
       imgEl,
       statusEl,
-      entity,
+      entity: context.entity,
       sources,
     });
     applyFallbackImageHandlers(applyPayload);

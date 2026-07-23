@@ -57,6 +57,27 @@ export const resolveFallbackRefreshSources = ({ primarySrc, altSrc }) => {
   };
 };
 
+export const buildFallbackRefreshContext = ({
+  entity,
+  primarySrc,
+  loadAlt,
+}) => {
+  const altSrc = resolveAltFallbackSource({
+    entity,
+    loadAlt,
+  });
+  const sources = resolveFallbackRefreshSources({
+    primarySrc,
+    altSrc,
+  });
+  return {
+    entity,
+    primarySrc,
+    altSrc,
+    sources,
+  };
+};
+
 export const shouldApplyFallbackRefreshSources = ({ sources }) =>
   !!sources?.hasSource;
 

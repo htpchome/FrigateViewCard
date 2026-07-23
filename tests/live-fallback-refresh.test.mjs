@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   beginFallbackRefresh,
+  buildFallbackRefreshContext,
   buildFallbackImageApplyPayload,
   buildFallbackRefreshOutcome,
   canRefreshFallbackImage,
@@ -180,6 +181,20 @@ test("resolveFallbackRefreshSources returns combined source outcome", () => {
   });
   assert.equal(empty.src, "");
   assert.equal(empty.hasSource, false);
+});
+
+test("buildFallbackRefreshContext composes alt source and packaged sources", () => {
+  const context = buildFallbackRefreshContext({
+    entity: "camera.front",
+    primarySrc: "https://ha.local/primary.jpg",
+    loadAlt: (entity) => `https://ha.local/${entity}/alt.jpg`,
+  });
+
+  assert.equal(context.entity, "camera.front");
+  assert.equal(context.primarySrc, "https://ha.local/primary.jpg");
+  assert.equal(context.altSrc, "https://ha.local/camera.front/alt.jpg");
+  assert.equal(context.sources.src, "https://ha.local/primary.jpg");
+  assert.equal(context.sources.hasSource, true);
 });
 
 test("shouldApplyFallbackRefreshSources follows hasSource", () => {
