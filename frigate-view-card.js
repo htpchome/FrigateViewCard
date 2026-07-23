@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.706";
+const VERSION = "1.0.707";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1955,6 +1955,31 @@ const PreviewPageController = class {
     });
   }
 };
+
+// src/grid/grid-utils.js
+function normalizeGridAlertSeverity(value) {
+  return String(value || "").trim().toLowerCase() === "detection" ? "detection" : "alert";
+}
+function normalizeGridCellSeverity(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "detection") return "detection";
+  if (normalized === "alert") return "alert";
+  return "";
+}
+function isGridReviewFresh({
+  gridStartedAtSec,
+  reviewStartSec,
+  graceSec
+}) {
+  const startedAt = Number(gridStartedAtSec || 0);
+  if (startedAt <= 0) return true;
+  const reviewStart = Number(reviewStartSec || 0);
+  if (reviewStart <= 0) return false;
+  return reviewStart >= startedAt - Number(graceSec || 0);
+}
+function gridAlertWatchIntervalMs(realtimePollSeconds) {
+  return Math.max(1e3, Math.floor(Number(realtimePollSeconds || 0) * 1e3));
+}
 
 // src/card/FrigateViewCard.js
 const FrigateViewCard = class extends HTMLElement {
@@ -4839,17 +4864,14 @@ const FrigateViewCard = class extends HTMLElement {
     if (oldest) this._gridHandledReviewIds.delete(oldest);
   }
   _isGridReviewFresh(review) {
-    const startedAt = Number(this._gridStartedAtSec || 0);
-    if (startedAt <= 0) return true;
-    const reviewStart = this._reviewStartTimeSec(review);
-    if (reviewStart <= 0) return false;
-    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC;
+    return isGridReviewFresh({
+      gridStartedAtSec: this._gridStartedAtSec,
+      reviewStartSec: this._reviewStartTimeSec(review),
+      graceSec: SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
+    });
   }
   _gridAlertWatchIntervalMs() {
-    return Math.max(
-      1e3,
-      Math.floor(this._effectiveRealtimePollSeconds() * 1e3)
-    );
+    return gridAlertWatchIntervalMs(this._effectiveRealtimePollSeconds());
   }
   _scheduleGridAlertWatch(delayMs = null) {
     if (!this._isGridModeAvailable()) return;
@@ -4875,8 +4897,9 @@ const FrigateViewCard = class extends HTMLElement {
       this._gridAlertSeverityByEntity.delete(entity);
       return "";
     }
-    const sev = String(this._gridAlertSeverityByEntity.get(entity) || "").trim().toLowerCase();
-    return sev === "detection" ? "detection" : sev === "alert" ? "alert" : "";
+    return normalizeGridCellSeverity(
+      this._gridAlertSeverityByEntity.get(entity)
+    );
   }
   _scheduleGridAlertCleanup() {
     if (this._gridAlertCleanupT) clearTimeout(this._gridAlertCleanupT);
@@ -4914,7 +4937,7 @@ const FrigateViewCard = class extends HTMLElement {
     const prevSeverity = String(
       this._gridAlertSeverityByEntity.get(entity) || ""
     ).trim().toLowerCase();
-    const normalizedSeverity = String(severity || "").trim().toLowerCase() === "detection" ? "detection" : "alert";
+    const normalizedSeverity = normalizeGridAlertSeverity(severity);
     this._gridAlertSeverityByEntity.set(entity, normalizedSeverity);
     this._gridAlertExpiresByEntity.set(
       entity,

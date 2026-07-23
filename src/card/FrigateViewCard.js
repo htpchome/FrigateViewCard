@@ -95,6 +95,12 @@ import {
 } from "../preview/preview-markup.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
+import {
+  gridAlertWatchIntervalMs,
+  isGridReviewFresh,
+  normalizeGridAlertSeverity,
+  normalizeGridCellSeverity,
+} from "../grid/grid-utils.js";
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -3444,18 +3450,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isGridReviewFresh(review) {
-    const startedAt = Number(this._gridStartedAtSec || 0);
-    if (startedAt <= 0) return true;
-    const reviewStart = this._reviewStartTimeSec(review);
-    if (reviewStart <= 0) return false;
-    return reviewStart >= startedAt - SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC;
+    return isGridReviewFresh({
+      gridStartedAtSec: this._gridStartedAtSec,
+      reviewStartSec: this._reviewStartTimeSec(review),
+      graceSec: SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
+    });
   }
 
   _gridAlertWatchIntervalMs() {
-    return Math.max(
-      1000,
-      Math.floor(this._effectiveRealtimePollSeconds() * 1000),
-    );
+    return gridAlertWatchIntervalMs(this._effectiveRealtimePollSeconds());
   }
 
   _scheduleGridAlertWatch(delayMs = null) {
@@ -3488,10 +3491,9 @@ export class FrigateViewCard extends HTMLElement {
       this._gridAlertSeverityByEntity.delete(entity);
       return "";
     }
-    const sev = String(this._gridAlertSeverityByEntity.get(entity) || "")
-      .trim()
-      .toLowerCase();
-    return sev === "detection" ? "detection" : sev === "alert" ? "alert" : "";
+    return normalizeGridCellSeverity(
+      this._gridAlertSeverityByEntity.get(entity),
+    );
   }
 
   _scheduleGridAlertCleanup() {
@@ -3533,12 +3535,7 @@ export class FrigateViewCard extends HTMLElement {
     )
       .trim()
       .toLowerCase();
-    const normalizedSeverity =
-      String(severity || "")
-        .trim()
-        .toLowerCase() === "detection"
-        ? "detection"
-        : "alert";
+    const normalizedSeverity = normalizeGridAlertSeverity(severity);
     this._gridAlertSeverityByEntity.set(entity, normalizedSeverity);
     this._gridAlertExpiresByEntity.set(
       entity,
