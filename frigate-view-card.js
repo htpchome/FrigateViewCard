@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.773";
+const VERSION = "1.0.774";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2104,6 +2104,71 @@ const applyStreamFallbackState = ({
   placeholder.hidden = !visible;
   if (!visible && status) status.hidden = true;
   if (visible && refreshImage) onRefresh?.();
+};
+
+// src/live/live-fallback-url.js
+const isAbsoluteOrDataUrl = (url) => /^https?:\/\//i.test(url) || String(url || "").startsWith("data:");
+const toAbsoluteLocalUrl = ({ url, origin }) => {
+  if (!url) return "";
+  return isAbsoluteOrDataUrl(url) ? url : `${origin}${url}`;
+};
+const getCachedEntityUrl = ({ cacheMap, entity, nowMs }) => {
+  const cached = cacheMap?.get?.(entity);
+  if (cached && cached.url && cached.exp > nowMs) return cached.url;
+  return "";
+};
+const setCachedEntityUrl = ({ cacheMap, entity, url, ttlMs, nowMs }) => {
+  if (!cacheMap || !entity || !url) return;
+  cacheMap.set(entity, {
+    url,
+    exp: nowMs + ttlMs
+  });
+};
+const resolveSignedFallbackUrl = async ({
+  entity,
+  canCallWs,
+  signedPathResolver,
+  cacheMap,
+  nowMs,
+  origin,
+  ttlMs = 55 * 60 * 1e3
+}) => {
+  if (!entity) return "";
+  if (!canCallWs) return "";
+  const cached = getCachedEntityUrl({
+    cacheMap,
+    entity,
+    nowMs
+  });
+  if (cached) return cached;
+  const basePath = `/api/camera_proxy/${entity}`;
+  const signedPath = await signedPathResolver(basePath);
+  const abs = toAbsoluteLocalUrl({
+    url: signedPath,
+    origin
+  });
+  setCachedEntityUrl({
+    cacheMap,
+    entity,
+    url: abs,
+    ttlMs,
+    nowMs
+  });
+  return abs;
+};
+const resolveEntityPictureFallbackUrl = ({
+  entity,
+  stateMap,
+  origin
+}) => {
+  if (!entity) return "";
+  const state = stateMap?.[entity];
+  const pic = state?.attributes?.entity_picture || "";
+  if (!pic) return "";
+  return toAbsoluteLocalUrl({
+    url: pic,
+    origin
+  });
 };
 
 // src/live/live-startup-policy.js
@@ -5550,25 +5615,22 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _streamFallbackUrl(entity) {
-    if (!entity) return "";
-    if (!this._hass?.callWS) return "";
-    const cached = this._fallbackImgUrlCache.get(entity);
-    if (cached && cached.url && cached.exp > Date.now()) return cached.url;
-    const base = `/api/camera_proxy/${entity}`;
-    const signed = await this._signed(base);
-    const abs = /^https?:\/\//i.test(signed) || signed.startsWith("data:") ? signed : `${window.location.origin}${signed}`;
-    this._fallbackImgUrlCache.set(entity, {
-      url: abs,
-      exp: Date.now() + 55 * 60 * 1e3
+    return await resolveSignedFallbackUrl({
+      entity,
+      canCallWs: !!this._hass?.callWS,
+      signedPathResolver: async (path) => await this._signed(path),
+      cacheMap: this._fallbackImgUrlCache,
+      nowMs: Date.now(),
+      origin: window.location.origin,
+      ttlMs: 55 * 60 * 1e3
     });
-    return abs;
   }
   _streamFallbackAltUrl(entity) {
-    if (!entity) return "";
-    const state = this._hass?.states?.[entity];
-    const pic = state?.attributes?.entity_picture || "";
-    if (!pic) return "";
-    return /^https?:\/\//i.test(pic) || pic.startsWith("data:") ? pic : `${window.location.origin}${pic}`;
+    return resolveEntityPictureFallbackUrl({
+      entity,
+      stateMap: this._hass?.states,
+      origin: window.location.origin
+    });
   }
   async _refreshStreamFallbackImage() {
     const img = this.shadowRoot?.querySelector("#stream-fallback-img");

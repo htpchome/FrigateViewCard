@@ -128,6 +128,10 @@ import {
   resolveActiveStreamTypeState,
 } from "../live/live-stream-state.js";
 import {
+  resolveEntityPictureFallbackUrl,
+  resolveSignedFallbackUrl,
+} from "../live/live-fallback-url.js";
+import {
   resolveHaDirectStartup,
   resolveHlsStartup,
   resolveMseStartup,
@@ -2175,33 +2179,23 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _streamFallbackUrl(entity) {
-    if (!entity) return "";
-    if (!this._hass?.callWS) return "";
-    const cached = this._fallbackImgUrlCache.get(entity);
-    if (cached && cached.url && cached.exp > Date.now()) return cached.url;
-
-    const base = `/api/camera_proxy/${entity}`;
-    const signed = await this._signed(base);
-
-    const abs =
-      /^https?:\/\//i.test(signed) || signed.startsWith("data:")
-        ? signed
-        : `${window.location.origin}${signed}`;
-    this._fallbackImgUrlCache.set(entity, {
-      url: abs,
-      exp: Date.now() + 55 * 60 * 1000,
+    return await resolveSignedFallbackUrl({
+      entity,
+      canCallWs: !!this._hass?.callWS,
+      signedPathResolver: async (path) => await this._signed(path),
+      cacheMap: this._fallbackImgUrlCache,
+      nowMs: Date.now(),
+      origin: window.location.origin,
+      ttlMs: 55 * 60 * 1000,
     });
-    return abs;
   }
 
   _streamFallbackAltUrl(entity) {
-    if (!entity) return "";
-    const state = this._hass?.states?.[entity];
-    const pic = state?.attributes?.entity_picture || "";
-    if (!pic) return "";
-    return /^https?:\/\//i.test(pic) || pic.startsWith("data:")
-      ? pic
-      : `${window.location.origin}${pic}`;
+    return resolveEntityPictureFallbackUrl({
+      entity,
+      stateMap: this._hass?.states,
+      origin: window.location.origin,
+    });
   }
 
   async _refreshStreamFallbackImage() {
