@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.765";
+const VERSION = "1.0.766";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1798,6 +1798,50 @@ function isPreviewReviewFresh({
   if (reviewStart <= 0) return false;
   return reviewStart >= startedAt - Number(graceSec || 0);
 }
+
+// src/live/live-attempt-planner.js
+const DEFAULT_LIVE_ORDER = Object.freeze(["webrtc", "mse", "hls"]);
+const buildLiveAttemptPlan = ({
+  connectionType,
+  forcedType = null,
+  disableHlsOnDesktop = false,
+  builders = {}
+}) => {
+  if (connectionType === "ha_direct") return [];
+  const order = forcedType ? [forcedType] : DEFAULT_LIVE_ORDER;
+  return order.filter((type) => !(type === "hls" && disableHlsOnDesktop)).filter((type) => typeof builders[type] === "function").map((type) => ({ type, start: builders[type] }));
+};
+const raceMountAttempts = async (attempts) => {
+  return await new Promise((resolve) => {
+    if (!attempts.length) {
+      resolve(null);
+      return;
+    }
+    let settled = 0;
+    let resolved = false;
+    const finish = (result) => {
+      if (resolved) return;
+      resolved = true;
+      resolve(result);
+    };
+    for (const attempt of attempts) {
+      void (async () => {
+        try {
+          const result = await attempt;
+          settled += 1;
+          if (result?.ok) {
+            finish(result);
+            return;
+          }
+          if (settled >= attempts.length) finish(null);
+        } catch (_) {
+          settled += 1;
+          if (settled >= attempts.length) finish(null);
+        }
+      })();
+    }
+  });
+};
 
 // src/preview/preview-markup.js
 function previewMediaSeverityClass(severity) {
@@ -4913,38 +4957,9 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
   async _raceMountAttempts(attempts) {
-    return await new Promise((resolve) => {
-      if (!attempts.length) {
-        resolve(null);
-        return;
-      }
-      let settled = 0;
-      let resolved = false;
-      const finish = (result) => {
-        if (resolved) return;
-        resolved = true;
-        resolve(result);
-      };
-      for (const attempt of attempts) {
-        void (async () => {
-          try {
-            const result = await attempt;
-            settled += 1;
-            if (result?.ok) {
-              finish(result);
-              return;
-            }
-            if (settled >= attempts.length) finish(null);
-          } catch (_) {
-            settled += 1;
-            if (settled >= attempts.length) finish(null);
-          }
-        })();
-      }
-    });
+    return await raceMountAttempts(attempts);
   }
   _buildLiveStreamAttempts(connectionType, forcedType = null, hostSlot = null) {
-    if (connectionType === "ha_direct") return [];
     const disableHlsOnDesktop = DEVICE_PROFILE.isDesktop && this._cameraDisableHlsDesktop(this._activeCam?.entity);
     const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
     const build = {
@@ -4976,7 +4991,12 @@ const FrigateViewCard = class extends HTMLElement {
       order,
       connectionType
     });
-    return order.filter((type) => !(type === "hls" && disableHlsOnDesktop)).filter((type) => typeof build[type] === "function").map((type) => ({ type, start: build[type] }));
+    return buildLiveAttemptPlan({
+      connectionType,
+      forcedType,
+      disableHlsOnDesktop,
+      builders: build
+    });
   }
   async _mountLiveWithRace(slot, attempts, mountToken, targetEntity) {
     const activeAttempts = attempts.map((attempt) => {
