@@ -112,6 +112,7 @@ import {
   buildEventListItemModel,
 } from "./event-list-model.js";
 import {
+  applyOlderHintDomState,
   appendEndMarker,
   buildStickyDaySectionsHtml,
   resolveActiveDayLabelFromScroll,
@@ -8544,16 +8545,7 @@ export class FrigateViewCard extends HTMLElement {
       itemHeight: metrics.itemHeight,
     });
 
-    hint.hidden = !!nextState.hidden;
-    hint.classList.toggle("to-top", !!nextState.isToTop);
-    hint.textContent = nextState.text;
-    if (nextState.isButton) {
-      hint.setAttribute("role", "button");
-      hint.setAttribute("tabindex", "0");
-    } else {
-      hint.removeAttribute("role");
-      hint.removeAttribute("tabindex");
-    }
+    applyOlderHintDomState(hint, nextState);
   }
   _renderRecordings(list) {
     this._renderListLabel(this._winEnd);

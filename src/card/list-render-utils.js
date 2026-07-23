@@ -89,6 +89,23 @@ export function resolveOlderHintMetrics({ list, browse }) {
   };
 }
 
+export function applyOlderHintDomState(hintEl, state) {
+  if (!hintEl || !state) return;
+
+  hintEl.hidden = !!state.hidden;
+  hintEl.classList.toggle("to-top", !!state.isToTop);
+  hintEl.textContent = String(state.text || "");
+
+  if (state.isButton) {
+    hintEl.setAttribute("role", "button");
+    hintEl.setAttribute("tabindex", "0");
+    return;
+  }
+
+  hintEl.removeAttribute("role");
+  hintEl.removeAttribute("tabindex");
+}
+
 export function resolveActiveDayLabelFromScroll({ list, browse }) {
   if (!list || !browse) return "";
 

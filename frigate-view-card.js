@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.749";
+const VERSION = "1.0.750";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2107,6 +2107,19 @@ function resolveOlderHintMetrics({ list, browse }) {
     scrollTop,
     itemHeight
   };
+}
+function applyOlderHintDomState(hintEl, state) {
+  if (!hintEl || !state) return;
+  hintEl.hidden = !!state.hidden;
+  hintEl.classList.toggle("to-top", !!state.isToTop);
+  hintEl.textContent = String(state.text || "");
+  if (state.isButton) {
+    hintEl.setAttribute("role", "button");
+    hintEl.setAttribute("tabindex", "0");
+    return;
+  }
+  hintEl.removeAttribute("role");
+  hintEl.removeAttribute("tabindex");
 }
 function resolveActiveDayLabelFromScroll({ list, browse }) {
   if (!list || !browse) return "";
@@ -10681,16 +10694,7 @@ const FrigateViewCard = class extends HTMLElement {
       scrollTop: metrics.scrollTop,
       itemHeight: metrics.itemHeight
     });
-    hint.hidden = !!nextState.hidden;
-    hint.classList.toggle("to-top", !!nextState.isToTop);
-    hint.textContent = nextState.text;
-    if (nextState.isButton) {
-      hint.setAttribute("role", "button");
-      hint.setAttribute("tabindex", "0");
-    } else {
-      hint.removeAttribute("role");
-      hint.removeAttribute("tabindex");
-    }
+    applyOlderHintDomState(hint, nextState);
   }
   _renderRecordings(list) {
     this._renderListLabel(this._winEnd);
