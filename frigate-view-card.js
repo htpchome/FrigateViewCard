@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.863";
+const VERSION = "1.0.864";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3558,8 +3558,7 @@ const PreviewPageController = class {
       this._host._cancelPendingMount("page-route-preview");
     }
     this._host._applyPreviewShellVisibility();
-    this._host._applyCardStyle();
-    this._host._wideViewPageController.applyLayoutModeForCard();
+    this._host._wideViewPageController.applyStyleLayoutForCard();
     this.startPreviewMode();
   }
   startPreviewMode() {
@@ -4238,8 +4237,7 @@ const SingleViewPageController = class {
     this.applyStyleLayoutForCurrentRoute();
   }
   applyStyleLayoutForCurrentRoute() {
-    this._host._applyCardStyle();
-    this._host._wideViewPageController.applyLayoutModeForCard();
+    this._host._wideViewPageController.applyStyleLayoutForCard();
     this._host._wideViewPageController.syncColHeightIfWideView();
   }
   _mountEngineQuietly() {
@@ -4336,8 +4334,7 @@ const SingleViewPageController = class {
     previewModeConfigChanged = false,
     realtimePollChanged = false
   } = {}) {
-    this._host._applyCardStyle();
-    this._host._wideViewPageController.applyLayoutModeForCard();
+    this._host._wideViewPageController.applyStyleLayoutForCard();
     this._host._renderPreviewPage();
     if (previewModeConfigChanged || realtimePollChanged) {
       this._host._clearPreviewTimers();
@@ -4413,9 +4410,12 @@ const WideViewPageController = class {
   }
   _applyWideViewRouteFrame() {
     this._host._applyPreviewShellVisibility();
+    this.applyStyleLayoutForCard();
+    this.syncColHeightIfWideView();
+  }
+  applyStyleLayoutForCard() {
     this._host._applyCardStyle();
     this.applyLayoutModeForCard();
-    this.syncColHeightIfWideView();
   }
   applyLayoutModeForCard() {
     const layout = this._host.shadowRoot?.querySelector("#layout");

@@ -17,9 +17,13 @@ export class WideViewPageController {
 
   _applyWideViewRouteFrame() {
     this._host._applyPreviewShellVisibility();
+    this.applyStyleLayoutForCard();
+    this.syncColHeightIfWideView();
+  }
+
+  applyStyleLayoutForCard() {
     this._host._applyCardStyle();
     this.applyLayoutModeForCard();
-    this.syncColHeightIfWideView();
   }
 
   applyLayoutModeForCard() {

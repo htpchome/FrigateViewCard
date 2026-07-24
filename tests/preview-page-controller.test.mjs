@@ -40,6 +40,10 @@ const createHost = ({
       calls.push(["applyPreviewShellVisibility"]),
     _applyCardStyle: () => calls.push(["applyCardStyle"]),
     _wideViewPageController: {
+      applyStyleLayoutForCard: () => {
+        calls.push(["applyCardStyle"]);
+        calls.push(["applyLayoutMode"]);
+      },
       applyLayoutModeForCard: () => calls.push(["applyLayoutMode"]),
     },
     _closePopup: () => calls.push(["closePopup"]),

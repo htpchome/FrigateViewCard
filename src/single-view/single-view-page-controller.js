@@ -25,8 +25,7 @@ export class SingleViewPageController {
   }
 
   applyStyleLayoutForCurrentRoute() {
-    this._host._applyCardStyle();
-    this._host._wideViewPageController.applyLayoutModeForCard();
+    this._host._wideViewPageController.applyStyleLayoutForCard();
     this._host._wideViewPageController.syncColHeightIfWideView();
   }
 
@@ -138,8 +137,7 @@ export class SingleViewPageController {
     previewModeConfigChanged = false,
     realtimePollChanged = false,
   } = {}) {
-    this._host._applyCardStyle();
-    this._host._wideViewPageController.applyLayoutModeForCard();
+    this._host._wideViewPageController.applyStyleLayoutForCard();
     this._host._renderPreviewPage();
     if (previewModeConfigChanged || realtimePollChanged) {
       this._host._clearPreviewTimers();
