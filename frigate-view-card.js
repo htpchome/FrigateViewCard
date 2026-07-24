@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.807";
+const VERSION = "1.0.808";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3876,6 +3876,43 @@ const GridPageController = class {
   }
 };
 
+// src/single-view/single-view-page-controller.js
+const SingleViewPageController = class {
+  constructor(host, constants) {
+    this._host = host;
+    this._constants = constants;
+  }
+  activateStandardPageRoute(context = {}) {
+    const PAGE_IDS2 = this._constants.PAGE_IDS;
+    const leavingPreview = context.previousPageId === PAGE_IDS2.preview;
+    if (leavingPreview) {
+      this._host._stopPreviewMode();
+      if (this._host._$("#myPopup")?.classList.contains("is-open")) {
+        this._host._closePopup();
+      }
+      this._host._cancelPendingMount(`page-route-${this._host._pageId}`);
+    }
+    this._host._applyPreviewShellVisibility();
+    this._host._applyCardStyle();
+    this._host._applyLayoutMode();
+    if (this._host._isWideViewPageActive()) this._host._syncColHeight();
+    if (context.startup === true) {
+      if (context.startInGrid === true) {
+        this._host._setViewMode("grid");
+      } else {
+        this._host._mountEngine();
+      }
+      return;
+    }
+    if (context.deferCameraSwitch === true) return;
+    if (leavingPreview) {
+      this._host._mountEngine(null, { quiet: true });
+    }
+    this._host._syncTabsShell();
+    this._host._renderAll();
+  }
+};
+
 // src/slideshow/slideshow-utils.js
 function isSlideshowReviewFresh({
   slideshowStartedAtSec,
@@ -4447,6 +4484,9 @@ const FrigateViewCard = class extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
     this._gridPageController = new GridPageController(this);
+    this._singleViewPageController = new SingleViewPageController(this, {
+      PAGE_IDS
+    });
     this._slideshowAlertController = new SlideshowAlertController(this, {
       DAY,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
@@ -6878,31 +6918,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._navigateToPageRoute(nextPageId, context);
   }
   _activateStandardPageRoute(context = {}) {
-    const leavingPreview = context.previousPageId === PAGE_IDS.preview;
-    if (leavingPreview) {
-      this._stopPreviewMode();
-      if (this._$("#myPopup")?.classList.contains("is-open"))
-        this._closePopup();
-      this._cancelPendingMount(`page-route-${this._pageId}`);
-    }
-    this._applyPreviewShellVisibility();
-    this._applyCardStyle();
-    this._applyLayoutMode();
-    if (this._isWideViewPageActive()) this._syncColHeight();
-    if (context.startup === true) {
-      if (context.startInGrid === true) {
-        this._setViewMode("grid");
-      } else {
-        this._mountEngine();
-      }
-      return;
-    }
-    if (context.deferCameraSwitch === true) return;
-    if (leavingPreview) {
-      this._mountEngine(null, { quiet: true });
-    }
-    this._syncTabsShell();
-    this._renderAll();
+    this._singleViewPageController.activateStandardPageRoute(context);
   }
   _activatePreviewPageRoute(context = {}) {
     this._previewPageController.activatePreviewPageRoute(context);

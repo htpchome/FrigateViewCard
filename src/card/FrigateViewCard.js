@@ -192,6 +192,7 @@ import {
 } from "../grid/grid-markup.js";
 import { GridAlertController } from "../grid/grid-alert-controller.js";
 import { GridPageController } from "../grid/grid-page-controller.js";
+import { SingleViewPageController } from "../single-view/single-view-page-controller.js";
 import { SlideshowAlertController } from "../slideshow/slideshow-alert-controller.js";
 import { SlideshowPageController } from "../slideshow/slideshow-page-controller.js";
 import {
@@ -292,6 +293,9 @@ export class FrigateViewCard extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
     });
     this._gridPageController = new GridPageController(this);
+    this._singleViewPageController = new SingleViewPageController(this, {
+      PAGE_IDS,
+    });
     this._slideshowAlertController = new SlideshowAlertController(this, {
       DAY,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
@@ -3085,31 +3089,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _activateStandardPageRoute(context = {}) {
-    const leavingPreview = context.previousPageId === PAGE_IDS.preview;
-    if (leavingPreview) {
-      this._stopPreviewMode();
-      if (this._$("#myPopup")?.classList.contains("is-open"))
-        this._closePopup();
-      this._cancelPendingMount(`page-route-${this._pageId}`);
-    }
-    this._applyPreviewShellVisibility();
-    this._applyCardStyle();
-    this._applyLayoutMode();
-    if (this._isWideViewPageActive()) this._syncColHeight();
-    if (context.startup === true) {
-      if (context.startInGrid === true) {
-        this._setViewMode("grid");
-      } else {
-        this._mountEngine();
-      }
-      return;
-    }
-    if (context.deferCameraSwitch === true) return;
-    if (leavingPreview) {
-      this._mountEngine(null, { quiet: true });
-    }
-    this._syncTabsShell();
-    this._renderAll();
+    this._singleViewPageController.activateStandardPageRoute(context);
   }
 
   _activatePreviewPageRoute(context = {}) {
