@@ -1143,19 +1143,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _deepLinkCameraHintIndex() {
-    if (!this._deepLinkCameraHint) return -1;
-    return this._config.cameras.findIndex((camera) => {
-      const entity = String(camera.entity || "").toLowerCase();
-      const name = String(camera.name || "").toLowerCase();
-      const cacheCam = String(
-        this._camCache[camera.entity]?.cam || "",
-      ).toLowerCase();
-      return (
-        entity === this._deepLinkCameraHint ||
-        name === this._deepLinkCameraHint ||
-        cacheCam === this._deepLinkCameraHint
-      );
-    });
+    return this._deepLinkController.deepLinkCameraHintIndex();
   }
 
   _applyDeepLinkCameraHint() {

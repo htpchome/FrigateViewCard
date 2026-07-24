@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.819";
+const VERSION = "1.0.820";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5472,15 +5472,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._deepLinkController.initDeepLinkFromUrl();
   }
   _deepLinkCameraHintIndex() {
-    if (!this._deepLinkCameraHint) return -1;
-    return this._config.cameras.findIndex((camera) => {
-      const entity = String(camera.entity || "").toLowerCase();
-      const name = String(camera.name || "").toLowerCase();
-      const cacheCam = String(
-        this._camCache[camera.entity]?.cam || ""
-      ).toLowerCase();
-      return entity === this._deepLinkCameraHint || name === this._deepLinkCameraHint || cacheCam === this._deepLinkCameraHint;
-    });
+    return this._deepLinkController.deepLinkCameraHintIndex();
   }
   _applyDeepLinkCameraHint() {
     if (!this._deepLinkCameraHint) return;
