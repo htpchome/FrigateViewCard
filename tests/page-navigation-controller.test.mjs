@@ -14,6 +14,25 @@ const createHarness = () => {
   let capturedFactoryInput = null;
   let createCount = 0;
   const returnedFactory = { id: "factory" };
+  const navContainer = { innerHTML: "" };
+  const activeButton = {
+    dataset: { pageRoute: PAGE_IDS.singleView },
+    classList: {
+      toggle: (className, value) =>
+        calls.push(["toggle", className, value, PAGE_IDS.singleView]),
+    },
+    setAttribute: (name, value) =>
+      calls.push(["setAttribute", name, value, PAGE_IDS.singleView]),
+  };
+  const inactiveButton = {
+    dataset: { pageRoute: PAGE_IDS.wideView },
+    classList: {
+      toggle: (className, value) =>
+        calls.push(["toggle", className, value, PAGE_IDS.wideView]),
+    },
+    setAttribute: (name, value) =>
+      calls.push(["setAttribute", name, value, PAGE_IDS.wideView]),
+  };
 
   const host = {
     _navigationFactory: null,
@@ -26,9 +45,24 @@ const createHarness = () => {
     _activateWideViewPageRoute: (context) => calls.push(["wide", context]),
     _deviceRouteBucket: () => "desktop",
     _syncPageNavigationButtons: () => calls.push(["syncButtons"]),
+    shadowRoot: {
+      querySelectorAll: (selector) => {
+        if (selector === ".page-nav") return [navContainer];
+        if (selector === "[data-page-route]")
+          return [activeButton, inactiveButton];
+        return [];
+      },
+    },
   };
 
   const constants = {
+    buildPageNavMarkup: ({ routes, activePageId, getRouteLabel }) =>
+      `${routes.join("|")}:${activePageId}:${getRouteLabel(PAGE_IDS.preview)}`,
+    getEnabledPageRoutes: () => [PAGE_IDS.singleView, PAGE_IDS.preview],
+    normalizePageRoute: (value) =>
+      String(value || "")
+        .trim()
+        .toLowerCase(),
     PAGE_IDS,
     createNavigationFactory: (input) => {
       createCount += 1;
@@ -41,6 +75,7 @@ const createHarness = () => {
     host,
     calls,
     constants,
+    navContainer,
     returnedFactory,
     getCreateCount: () => createCount,
     getInput: () => capturedFactoryInput,
@@ -106,4 +141,51 @@ test("factory delegates config and device bucket readers to host", () => {
 
   assert.equal(input.getDeviceBucket(), "desktop");
   assert.equal(input.getConfig(), h.host._config);
+});
+
+test("pageRouteOptions and isPageRouteAvailable use routed constants", () => {
+  const h = createHarness();
+  const controller = new PageNavigationController(h.host, h.constants);
+
+  assert.deepEqual(controller.pageRouteOptions(), [
+    PAGE_IDS.singleView,
+    PAGE_IDS.preview,
+  ]);
+  assert.equal(controller.isPageRouteAvailable(PAGE_IDS.preview), true);
+  assert.equal(controller.isPageRouteAvailable(PAGE_IDS.wideView), false);
+});
+
+test("pageRouteLabel returns expected labels", () => {
+  const h = createHarness();
+  const controller = new PageNavigationController(h.host, h.constants);
+
+  assert.equal(controller.pageRouteLabel(PAGE_IDS.preview), "Preview");
+  assert.equal(controller.pageRouteLabel(PAGE_IDS.wideView), "Wide View");
+  assert.equal(controller.pageRouteLabel(PAGE_IDS.singleView), "Single View");
+});
+
+test("pageNavMarkup builds markup from route helpers", () => {
+  const h = createHarness();
+  const controller = new PageNavigationController(h.host, h.constants);
+
+  const markup = controller.pageNavMarkup();
+  assert.equal(markup, "single-view|preview:single-view:Preview");
+});
+
+test("syncPageNavShell writes markup and updates nav buttons", () => {
+  const h = createHarness();
+  const controller = new PageNavigationController(h.host, h.constants);
+
+  controller.syncPageNavShell();
+
+  assert.equal(
+    h.navContainer.innerHTML,
+    "single-view|preview:single-view:Preview",
+  );
+  assert.deepEqual(h.calls, [
+    ["toggle", "active", true, PAGE_IDS.singleView],
+    ["setAttribute", "aria-pressed", "true", PAGE_IDS.singleView],
+    ["toggle", "active", false, PAGE_IDS.wideView],
+    ["setAttribute", "aria-pressed", "false", PAGE_IDS.wideView],
+  ]);
 });

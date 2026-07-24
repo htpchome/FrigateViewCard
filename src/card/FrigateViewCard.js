@@ -75,8 +75,6 @@ import {
 } from "../helpers.js";
 import {
   createNavigationFactory,
-  getEnabledPageRoutes,
-  normalizePageRoute,
   PAGE_IDS,
   resolveDeviceRouteBucket,
 } from "../router.js";
@@ -154,7 +152,6 @@ import {
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
   buildMainLayoutShellMarkup,
-  buildPageNavMarkup,
   buildPopupShellMarkup,
   buildPreviewShellHeaderMarkup,
   buildRightColumnShellMarkup,
@@ -298,7 +295,10 @@ export class FrigateViewCard extends HTMLElement {
       PAGE_IDS,
     });
     this._pageNavigationController = new PageNavigationController(this, {
+      buildPageNavMarkup,
       createNavigationFactory,
+      getEnabledPageRoutes,
+      normalizePageRoute,
       PAGE_IDS,
     });
     this._slideshowAlertController = new SlideshowAlertController(this, {
@@ -3018,41 +3018,27 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _pageRouteOptions() {
-    return getEnabledPageRoutes(this._config || {}, this._deviceRouteBucket());
+    return this._pageNavigationController.pageRouteOptions();
   }
 
   _isPageRouteAvailable(pageId) {
-    return this._pageRouteOptions().includes(normalizePageRoute(pageId));
+    return this._pageNavigationController.isPageRouteAvailable(pageId);
   }
 
   _pageRouteLabel(pageId) {
-    if (pageId === PAGE_IDS.preview) return "Preview";
-    if (pageId === PAGE_IDS.wideView) return "Wide View";
-    return "Single View";
+    return this._pageNavigationController.pageRouteLabel(pageId);
   }
 
   _pageNavMarkup() {
-    return buildPageNavMarkup({
-      routes: this._pageRouteOptions(),
-      activePageId: normalizePageRoute(this._pageId),
-      getRouteLabel: (pageId) => this._pageRouteLabel(pageId),
-    });
+    return this._pageNavigationController.pageNavMarkup();
   }
 
   _syncPageNavShell() {
-    this.shadowRoot.querySelectorAll(".page-nav").forEach((nav) => {
-      nav.innerHTML = this._pageNavMarkup();
-    });
-    this._syncPageNavigationButtons();
+    this._pageNavigationController.syncPageNavShell();
   }
 
   _syncPageNavigationButtons() {
-    this.shadowRoot.querySelectorAll("[data-page-route]").forEach((button) => {
-      const isActive =
-        button.dataset.pageRoute === normalizePageRoute(this._pageId);
-      button.classList.toggle("active", isActive);
-      button.setAttribute("aria-pressed", isActive ? "true" : "false");
-    });
+    this._pageNavigationController.syncPageNavigationButtons();
   }
 
   _navigateToPageRoute(pageId, context = {}) {

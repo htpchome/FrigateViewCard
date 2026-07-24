@@ -4,6 +4,53 @@ export class PageNavigationController {
     this._constants = constants;
   }
 
+  pageRouteOptions() {
+    return this._constants.getEnabledPageRoutes(
+      this._host._config || {},
+      this._host._deviceRouteBucket(),
+    );
+  }
+
+  isPageRouteAvailable(pageId) {
+    return this.pageRouteOptions().includes(
+      this._constants.normalizePageRoute(pageId),
+    );
+  }
+
+  pageRouteLabel(pageId) {
+    const { PAGE_IDS } = this._constants;
+    if (pageId === PAGE_IDS.preview) return "Preview";
+    if (pageId === PAGE_IDS.wideView) return "Wide View";
+    return "Single View";
+  }
+
+  pageNavMarkup() {
+    return this._constants.buildPageNavMarkup({
+      routes: this.pageRouteOptions(),
+      activePageId: this._constants.normalizePageRoute(this._host._pageId),
+      getRouteLabel: (pageId) => this.pageRouteLabel(pageId),
+    });
+  }
+
+  syncPageNavShell() {
+    this._host.shadowRoot.querySelectorAll(".page-nav").forEach((nav) => {
+      nav.innerHTML = this.pageNavMarkup();
+    });
+    this.syncPageNavigationButtons();
+  }
+
+  syncPageNavigationButtons() {
+    this._host.shadowRoot
+      .querySelectorAll("[data-page-route]")
+      .forEach((button) => {
+        const isActive =
+          button.dataset.pageRoute ===
+          this._constants.normalizePageRoute(this._host._pageId);
+        button.classList.toggle("active", isActive);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
+  }
+
   ensureNavigationFactory() {
     if (this._host._navigationFactory) return this._host._navigationFactory;
 
