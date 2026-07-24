@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.849";
+const VERSION = "1.0.850";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4325,6 +4325,17 @@ const SingleViewPageController = class {
     this._host._renderList();
     this._host._syncPageNavigationButtons();
   }
+  applyCameraSetChange({
+    needsEngineRemount = false,
+    nextCameraCount = 0
+  } = {}) {
+    if (!needsEngineRemount) return;
+    this._host._cleanupEngine();
+    this._host._activeCamIdx = Math.min(
+      this._host._activeCamIdx,
+      Math.max(0, Number(nextCameraCount) - 1)
+    );
+  }
 };
 
 // src/slideshow/slideshow-utils.js
@@ -5355,13 +5366,10 @@ const FrigateViewCard = class extends HTMLElement {
     const needsEngineRemount = camerasChanged;
     const realtimePollChanged = prevConfig.realtime_poll_seconds !== nextConfig.realtime_poll_seconds || prevConfig.mobile_poll_battery_saver !== nextConfig.mobile_poll_battery_saver;
     const activePageInvalid = !this._isPageRouteAvailable(this._pageId);
-    if (needsEngineRemount) {
-      this._cleanupEngine();
-      this._activeCamIdx = Math.min(
-        this._activeCamIdx,
-        Math.max(0, nextCams.length - 1)
-      );
-    }
+    this._singleViewPageController.applyCameraSetChange({
+      needsEngineRemount,
+      nextCameraCount: nextCams.length
+    });
     if (needsShellRerender) {
       this._singleViewPageController.applyConfigShellRerender({
         activePageInvalid,

@@ -9,6 +9,7 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
   const calls = [];
   const host = {
     _pageId: isWide ? "wide-view" : "single-view",
+    _activeCamIdx: 0,
     _stopPreviewMode: () => calls.push(["stopPreview"]),
     _$: (selector) => {
       if (selector === "#myPopup" && popupOpen) {
@@ -450,4 +451,32 @@ test("applyEditorPreviewDraftRefresh orchestrates editor preview refresh order",
     ["renderList"],
     ["syncPageNavigationButtons"],
   ]);
+});
+
+test("applyCameraSetChange cleans up engine and clamps active camera index", () => {
+  const { host, calls } = createHost();
+  host._activeCamIdx = 5;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyCameraSetChange({
+    needsEngineRemount: true,
+    nextCameraCount: 2,
+  });
+
+  assert.deepEqual(calls, [["cleanupEngine"]]);
+  assert.equal(host._activeCamIdx, 1);
+});
+
+test("applyCameraSetChange is a no-op when remount is not needed", () => {
+  const { host, calls } = createHost();
+  host._activeCamIdx = 2;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyCameraSetChange({
+    needsEngineRemount: false,
+    nextCameraCount: 1,
+  });
+
+  assert.deepEqual(calls, []);
+  assert.equal(host._activeCamIdx, 2);
 });

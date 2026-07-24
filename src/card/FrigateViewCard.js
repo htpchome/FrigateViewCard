@@ -847,13 +847,10 @@ export class FrigateViewCard extends HTMLElement {
         nextConfig.mobile_poll_battery_saver;
     const activePageInvalid = !this._isPageRouteAvailable(this._pageId);
 
-    if (needsEngineRemount) {
-      this._cleanupEngine();
-      this._activeCamIdx = Math.min(
-        this._activeCamIdx,
-        Math.max(0, nextCams.length - 1),
-      );
-    }
+    this._singleViewPageController.applyCameraSetChange({
+      needsEngineRemount,
+      nextCameraCount: nextCams.length,
+    });
 
     if (needsShellRerender) {
       this._singleViewPageController.applyConfigShellRerender({

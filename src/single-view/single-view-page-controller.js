@@ -185,4 +185,17 @@ export class SingleViewPageController {
     this._host._renderList();
     this._host._syncPageNavigationButtons();
   }
+
+  applyCameraSetChange({
+    needsEngineRemount = false,
+    nextCameraCount = 0,
+  } = {}) {
+    if (!needsEngineRemount) return;
+
+    this._host._cleanupEngine();
+    this._host._activeCamIdx = Math.min(
+      this._host._activeCamIdx,
+      Math.max(0, Number(nextCameraCount) - 1),
+    );
+  }
 }
