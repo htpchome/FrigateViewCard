@@ -100,3 +100,36 @@ test("deep-link helpers delegate through the controller wrappers", () => {
     true,
   );
 });
+
+test("preview helpers delegate through the preview page controller", () => {
+  assert.equal(
+    source.includes(
+      "_previewLiveCamerasEnabled() {\n    return this._previewPageController.previewLiveCamerasEnabled();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_previewShowTitleBarsEnabled() {\n    return this._previewPageController.previewShowTitleBarsEnabled();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_previewShouldUseLive(entity) {\n    return this._previewPageController.previewShouldUseLive(entity);\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_previewEventsCount(entity) {\n    return this._previewPageController.previewEventsCount(entity);\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_previewLiveStreamHint() {\n    return this._previewPageController.previewLiveStreamHint();\n  }",
+    ),
+    true,
+  );
+});

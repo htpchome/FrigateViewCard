@@ -2921,11 +2921,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _previewLiveCamerasEnabled() {
-    return this._config?.preview_page_live_cameras === true;
+    return this._previewPageController.previewLiveCamerasEnabled();
   }
 
   _previewShowTitleBarsEnabled() {
-    return this._config?.preview_page_show_title_bars !== false;
+    return this._previewPageController.previewShowTitleBarsEnabled();
   }
 
   _applyPreviewShellVisibility() {
@@ -2947,19 +2947,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _previewShouldUseLive(entity) {
-    return (
-      this._previewLiveCamerasEnabled() ||
-      this._isPreviewCameraAlertLive(entity)
-    );
+    return this._previewPageController.previewShouldUseLive(entity);
   }
 
   _previewEventsCount(entity) {
-    const cache = this._camCache[entity];
-    const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
-    const reviewsCount = Array.isArray(cache?.reviews)
-      ? cache.reviews.length
-      : 0;
-    return eventsCount + reviewsCount;
+    return this._previewPageController.previewEventsCount(entity);
   }
 
   _previewStreamSourceLabel(entity, useLive) {
@@ -2971,11 +2963,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _previewLiveStreamHint() {
-    return resolvePreviewLiveStreamHint({
-      activeStreamType: this._activeStreamType,
-      lastLiveStreamHint: this._lastLiveStreamHint,
-      isIOS: DEVICE_PROFILE.isIOS,
-    });
+    return this._previewPageController.previewLiveStreamHint();
   }
 
   _teardownPreviewMedia() {

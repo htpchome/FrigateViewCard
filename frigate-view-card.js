@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.826";
+const VERSION = "1.0.827";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3503,6 +3503,28 @@ const PreviewPageController = class {
   constructor(host, constants) {
     this._host = host;
     this._constants = constants;
+  }
+  previewLiveCamerasEnabled() {
+    return this._host._config?.preview_page_live_cameras === true;
+  }
+  previewShowTitleBarsEnabled() {
+    return this._host._config?.preview_page_show_title_bars !== false;
+  }
+  previewShouldUseLive(entity) {
+    return this.previewLiveCamerasEnabled() || this._host._isPreviewCameraAlertLive(entity);
+  }
+  previewEventsCount(entity) {
+    const cache = this._host._camCache[entity];
+    const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
+    const reviewsCount = Array.isArray(cache?.reviews) ? cache.reviews.length : 0;
+    return eventsCount + reviewsCount;
+  }
+  previewLiveStreamHint() {
+    return resolvePreviewLiveStreamHint({
+      activeStreamType: this._host._activeStreamType,
+      lastLiveStreamHint: this._host._lastLiveStreamHint,
+      isIOS: DEVICE_PROFILE.isIOS
+    });
   }
   activatePreviewPageRoute(context = {}) {
     const PAGE_IDS2 = this._constants.PAGE_IDS;
@@ -7029,10 +7051,10 @@ const FrigateViewCard = class extends HTMLElement {
     return this._deepLinkController.isDeepLinkHandlingEnabled();
   }
   _previewLiveCamerasEnabled() {
-    return this._config?.preview_page_live_cameras === true;
+    return this._previewPageController.previewLiveCamerasEnabled();
   }
   _previewShowTitleBarsEnabled() {
-    return this._config?.preview_page_show_title_bars !== false;
+    return this._previewPageController.previewShowTitleBarsEnabled();
   }
   _applyPreviewShellVisibility() {
     const card = this._$("#card");
@@ -7049,13 +7071,10 @@ const FrigateViewCard = class extends HTMLElement {
     return this._previewAlertController.previewCellSeverity(entity);
   }
   _previewShouldUseLive(entity) {
-    return this._previewLiveCamerasEnabled() || this._isPreviewCameraAlertLive(entity);
+    return this._previewPageController.previewShouldUseLive(entity);
   }
   _previewEventsCount(entity) {
-    const cache = this._camCache[entity];
-    const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
-    const reviewsCount = Array.isArray(cache?.reviews) ? cache.reviews.length : 0;
-    return eventsCount + reviewsCount;
+    return this._previewPageController.previewEventsCount(entity);
   }
   _previewStreamSourceLabel(entity, useLive) {
     return resolvePreviewStreamSourceLabel({
@@ -7065,11 +7084,7 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _previewLiveStreamHint() {
-    return resolvePreviewLiveStreamHint({
-      activeStreamType: this._activeStreamType,
-      lastLiveStreamHint: this._lastLiveStreamHint,
-      isIOS: DEVICE_PROFILE.isIOS
-    });
+    return this._previewPageController.previewLiveStreamHint();
   }
   _teardownPreviewMedia() {
     if (this._previewMediaState) {

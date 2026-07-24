@@ -1,7 +1,42 @@
+import { resolvePreviewLiveStreamHint } from "./preview-utils.js";
+import { DEVICE_PROFILE } from "../helpers.js";
+
 export class PreviewPageController {
   constructor(host, constants) {
     this._host = host;
     this._constants = constants;
+  }
+
+  previewLiveCamerasEnabled() {
+    return this._host._config?.preview_page_live_cameras === true;
+  }
+
+  previewShowTitleBarsEnabled() {
+    return this._host._config?.preview_page_show_title_bars !== false;
+  }
+
+  previewShouldUseLive(entity) {
+    return (
+      this.previewLiveCamerasEnabled() ||
+      this._host._isPreviewCameraAlertLive(entity)
+    );
+  }
+
+  previewEventsCount(entity) {
+    const cache = this._host._camCache[entity];
+    const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
+    const reviewsCount = Array.isArray(cache?.reviews)
+      ? cache.reviews.length
+      : 0;
+    return eventsCount + reviewsCount;
+  }
+
+  previewLiveStreamHint() {
+    return resolvePreviewLiveStreamHint({
+      activeStreamType: this._host._activeStreamType,
+      lastLiveStreamHint: this._host._lastLiveStreamHint,
+      isIOS: DEVICE_PROFILE.isIOS,
+    });
   }
 
   activatePreviewPageRoute(context = {}) {
