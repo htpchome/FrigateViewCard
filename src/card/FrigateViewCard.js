@@ -469,7 +469,7 @@ export class FrigateViewCard extends HTMLElement {
         ? "auto"
         : "100%";
       this._applyTightMargins();
-      this._applyLayoutMode();
+      this._wideViewPageController.applyLayoutModeForCard();
       this._wideViewPageController.syncColHeightIfWideView();
     }
     this._syncVisualStyleToggles();
@@ -579,15 +579,6 @@ export class FrigateViewCard extends HTMLElement {
       }
       element = element.parentNode || element.host;
     }
-  }
-
-  _applyLayoutMode() {
-    const layout = this.shadowRoot.querySelector("#layout");
-    if (!layout) return;
-    this._wideViewPageController.applyWideLayoutMode(
-      layout,
-      this._config?.col_left_width_pct,
-    );
   }
 
   _isPanelView() {
@@ -4452,7 +4443,7 @@ export class FrigateViewCard extends HTMLElement {
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
-    this._applyLayoutMode();
+    this._wideViewPageController.applyLayoutModeForCard();
     this._syncBrowseHeadModeClass();
     this._bindListScroll();
     this._bindRecordingsSwipe();

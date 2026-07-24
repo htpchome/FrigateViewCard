@@ -81,7 +81,7 @@ export class PreviewPageController {
     }
     this._host._applyPreviewShellVisibility();
     this._host._applyCardStyle();
-    this._host._applyLayoutMode();
+    this._host._wideViewPageController.applyLayoutModeForCard();
     this.startPreviewMode();
   }
 

@@ -25,7 +25,6 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _applyPreviewShellVisibility: () =>
       calls.push(["applyPreviewShellVisibility"]),
     _applyCardStyle: () => calls.push(["applyCardStyle"]),
-    _applyLayoutMode: () => calls.push(["applyLayoutMode"]),
     _setViewMode: (mode) => calls.push(["setViewMode", mode]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
     _syncTabsShell: () => calls.push(["syncTabsShell"]),
@@ -37,6 +36,7 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
 test("activateWideViewPageRoute handles startup and mounts engine", () => {
   const { host, calls } = createHost({ isWide: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
+  controller.applyLayoutModeForCard = () => calls.push(["applyLayoutMode"]);
   controller.syncColHeight = () => calls.push(["syncColHeight"]);
 
   controller.activateWideViewPageRoute({ startup: true });
@@ -53,6 +53,7 @@ test("activateWideViewPageRoute handles startup and mounts engine", () => {
 test("activateWideViewPageRoute startup grid chooses grid mode", () => {
   const { host, calls } = createHost({ isWide: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
+  controller.applyLayoutModeForCard = () => calls.push(["applyLayoutMode"]);
   controller.syncColHeight = () => calls.push(["syncColHeight"]);
 
   controller.activateWideViewPageRoute({ startup: true, startInGrid: true });
@@ -69,6 +70,7 @@ test("activateWideViewPageRoute startup grid chooses grid mode", () => {
 test("activateWideViewPageRoute leaves preview and remounts quietly", () => {
   const { host, calls } = createHost({ isWide: true, popupOpen: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
+  controller.applyLayoutModeForCard = () => calls.push(["applyLayoutMode"]);
   controller.syncColHeight = () => calls.push(["syncColHeight"]);
 
   controller.activateWideViewPageRoute({ previousPageId: "preview" });
@@ -90,6 +92,7 @@ test("activateWideViewPageRoute leaves preview and remounts quietly", () => {
 test("activateWideViewPageRoute honors deferCameraSwitch", () => {
   const { host, calls } = createHost({ isWide: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
+  controller.applyLayoutModeForCard = () => calls.push(["applyLayoutMode"]);
   controller.syncColHeight = () => calls.push(["syncColHeight"]);
 
   controller.activateWideViewPageRoute({ deferCameraSwitch: true });
@@ -182,6 +185,28 @@ test("applyWideLayoutMode applies wide class and widths", () => {
   assert.deepEqual(toggles, [["wide-view", true]]);
   assert.equal(colL.style.width, "65%");
   assert.equal(colR.style.width, "35%");
+});
+
+test("applyLayoutModeForCard resolves layout and applies widths", () => {
+  const { host } = createHost({ isWide: true });
+  host._config = { col_left_width_pct: "61" };
+  const controller = new WideViewPageController(host, { PAGE_IDS });
+  const layout = { marker: "layout" };
+  host.shadowRoot = {
+    querySelector: (selector) => (selector === "#layout" ? layout : null),
+  };
+
+  let capturedLayout = null;
+  let capturedPct = null;
+  controller.applyWideLayoutMode = (nextLayout, leftWidthPct) => {
+    capturedLayout = nextLayout;
+    capturedPct = leftWidthPct;
+  };
+
+  controller.applyLayoutModeForCard();
+
+  assert.equal(capturedLayout, layout);
+  assert.equal(capturedPct, "61");
 });
 
 test("applyWideLayoutMode clears widths for non-wide route", () => {

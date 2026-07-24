@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.862";
+const VERSION = "1.0.863";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3559,7 +3559,7 @@ const PreviewPageController = class {
     }
     this._host._applyPreviewShellVisibility();
     this._host._applyCardStyle();
-    this._host._applyLayoutMode();
+    this._host._wideViewPageController.applyLayoutModeForCard();
     this.startPreviewMode();
   }
   startPreviewMode() {
@@ -4239,7 +4239,7 @@ const SingleViewPageController = class {
   }
   applyStyleLayoutForCurrentRoute() {
     this._host._applyCardStyle();
-    this._host._applyLayoutMode();
+    this._host._wideViewPageController.applyLayoutModeForCard();
     this._host._wideViewPageController.syncColHeightIfWideView();
   }
   _mountEngineQuietly() {
@@ -4337,7 +4337,7 @@ const SingleViewPageController = class {
     realtimePollChanged = false
   } = {}) {
     this._host._applyCardStyle();
-    this._host._applyLayoutMode();
+    this._host._wideViewPageController.applyLayoutModeForCard();
     this._host._renderPreviewPage();
     if (previewModeConfigChanged || realtimePollChanged) {
       this._host._clearPreviewTimers();
@@ -4414,8 +4414,13 @@ const WideViewPageController = class {
   _applyWideViewRouteFrame() {
     this._host._applyPreviewShellVisibility();
     this._host._applyCardStyle();
-    this._host._applyLayoutMode();
+    this.applyLayoutModeForCard();
     this.syncColHeightIfWideView();
+  }
+  applyLayoutModeForCard() {
+    const layout = this._host.shadowRoot?.querySelector("#layout");
+    if (!layout) return;
+    this.applyWideLayoutMode(layout, this._host._config?.col_left_width_pct);
   }
   syncColHeightIfWideView() {
     if (!this.isWideViewPageActive()) return;
@@ -5249,7 +5254,7 @@ const FrigateViewCard = class extends HTMLElement {
       };
       this.parentElement.style.height = this._isPreviewContext() ? "auto" : "100%";
       this._applyTightMargins();
-      this._applyLayoutMode();
+      this._wideViewPageController.applyLayoutModeForCard();
       this._wideViewPageController.syncColHeightIfWideView();
     }
     this._syncVisualStyleToggles();
@@ -5343,14 +5348,6 @@ const FrigateViewCard = class extends HTMLElement {
       }
       element = element.parentNode || element.host;
     }
-  }
-  _applyLayoutMode() {
-    const layout = this.shadowRoot.querySelector("#layout");
-    if (!layout) return;
-    this._wideViewPageController.applyWideLayoutMode(
-      layout,
-      this._config?.col_left_width_pct
-    );
   }
   _isPanelView() {
     let el = this;
@@ -8694,7 +8691,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
-    this._applyLayoutMode();
+    this._wideViewPageController.applyLayoutModeForCard();
     this._syncBrowseHeadModeClass();
     this._bindListScroll();
     this._bindRecordingsSwipe();

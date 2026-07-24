@@ -26,8 +26,8 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _applyPreviewShellVisibility: () =>
       calls.push(["applyPreviewShellVisibility"]),
     _applyCardStyle: () => calls.push(["applyCardStyle"]),
-    _applyLayoutMode: () => calls.push(["applyLayoutMode"]),
     _wideViewPageController: {
+      applyLayoutModeForCard: () => calls.push(["applyLayoutMode"]),
       syncColHeightIfWideView: () => {
         if (host._pageId === "wide-view") {
           calls.push(["syncColHeightIfWideView"]);

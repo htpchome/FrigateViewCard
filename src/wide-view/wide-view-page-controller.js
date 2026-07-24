@@ -18,8 +18,14 @@ export class WideViewPageController {
   _applyWideViewRouteFrame() {
     this._host._applyPreviewShellVisibility();
     this._host._applyCardStyle();
-    this._host._applyLayoutMode();
+    this.applyLayoutModeForCard();
     this.syncColHeightIfWideView();
+  }
+
+  applyLayoutModeForCard() {
+    const layout = this._host.shadowRoot?.querySelector("#layout");
+    if (!layout) return;
+    this.applyWideLayoutMode(layout, this._host._config?.col_left_width_pct);
   }
 
   syncColHeightIfWideView() {

@@ -39,7 +39,9 @@ const createHost = ({
     _applyPreviewShellVisibility: () =>
       calls.push(["applyPreviewShellVisibility"]),
     _applyCardStyle: () => calls.push(["applyCardStyle"]),
-    _applyLayoutMode: () => calls.push(["applyLayoutMode"]),
+    _wideViewPageController: {
+      applyLayoutModeForCard: () => calls.push(["applyLayoutMode"]),
+    },
     _closePopup: () => calls.push(["closePopup"]),
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
     _navigateToPageRoute: (pageId, context) =>
