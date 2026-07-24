@@ -1108,13 +1108,11 @@ export class FrigateViewCard extends HTMLElement {
     const initialLoad = this._loadWindow(true);
     this._scheduleWarmOtherCamerasEvents();
     const startInGrid = this._shouldStartInGridMode();
-    const startupPageId = this._ensureNavigationFactory().resolveStartupPage({
-      hasPendingDeepLinkTarget: this._hasPendingDeepLinkTarget(),
-    });
-    this._navigateToPageRoute(startupPageId, {
+    this._navigateToConfiguredLandingPage({
       source: "startup",
       startup: true,
       startInGrid,
+      hasPendingDeepLinkTarget: this._hasPendingDeepLinkTarget(),
     });
     await initialLoad;
     void this._prefetchCalendarActivityForActiveCamera();

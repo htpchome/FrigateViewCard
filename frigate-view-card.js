@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.813";
+const VERSION = "1.0.814";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5279,13 +5279,11 @@ const FrigateViewCard = class extends HTMLElement {
     const initialLoad = this._loadWindow(true);
     this._scheduleWarmOtherCamerasEvents();
     const startInGrid = this._shouldStartInGridMode();
-    const startupPageId = this._ensureNavigationFactory().resolveStartupPage({
-      hasPendingDeepLinkTarget: this._hasPendingDeepLinkTarget()
-    });
-    this._navigateToPageRoute(startupPageId, {
+    this._navigateToConfiguredLandingPage({
       source: "startup",
       startup: true,
-      startInGrid
+      startInGrid,
+      hasPendingDeepLinkTarget: this._hasPendingDeepLinkTarget()
     });
     await initialLoad;
     void this._prefetchCalendarActivityForActiveCamera();
