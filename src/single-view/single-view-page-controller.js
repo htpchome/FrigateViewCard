@@ -90,4 +90,16 @@ export class SingleViewPageController {
     this._host._syncTabsShell();
     this._host._renderAll();
   }
+
+  applyNonPreviewSchemaSoftUpdate() {
+    this._host._applyCardStyle();
+    this._host._applyLayoutMode();
+    this.syncColHeightIfWideView();
+    this._host._syncStatus();
+    this._host._renderSubtitle();
+    this._host._renderStats();
+    this._host._renderCamSwitcher();
+    this._host._syncToolbarButtons();
+    this._host._syncPageNavigationButtons();
+  }
 }

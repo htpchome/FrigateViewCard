@@ -27,6 +27,12 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _applyCardStyle: () => calls.push(["applyCardStyle"]),
     _applyLayoutMode: () => calls.push(["applyLayoutMode"]),
     _syncColHeight: () => calls.push(["syncColHeight"]),
+    _syncStatus: () => calls.push(["syncStatus"]),
+    _renderSubtitle: () => calls.push(["renderSubtitle"]),
+    _renderStats: () => calls.push(["renderStats"]),
+    _renderCamSwitcher: () => calls.push(["renderCamSwitcher"]),
+    _syncToolbarButtons: () => calls.push(["syncToolbarButtons"]),
+    _syncPageNavigationButtons: () => calls.push(["syncPageNavigationButtons"]),
     _setViewMode: (mode) => calls.push(["setViewMode", mode]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
     _syncTabsShell: () => calls.push(["syncTabsShell"]),
@@ -190,4 +196,23 @@ test("wideViewLayoutState resolves wide layout widths with clamping", () => {
     leftWidth: "",
     rightWidth: "",
   });
+});
+
+test("applyNonPreviewSchemaSoftUpdate orchestrates non-preview refresh", () => {
+  const wide = createHost({ isWide: true });
+  const wideController = new SingleViewPageController(wide.host, { PAGE_IDS });
+
+  wideController.applyNonPreviewSchemaSoftUpdate();
+
+  assert.deepEqual(wide.calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeight"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderCamSwitcher"],
+    ["syncToolbarButtons"],
+    ["syncPageNavigationButtons"],
+  ]);
 });

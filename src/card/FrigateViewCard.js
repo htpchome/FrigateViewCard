@@ -895,15 +895,7 @@ export class FrigateViewCard extends HTMLElement {
     }
 
     // Soft-update preview for schema edits without remounting live stream.
-    this._applyCardStyle();
-    this._applyLayoutMode();
-    this._singleViewPageController.syncColHeightIfWideView();
-    this._syncStatus();
-    this._renderSubtitle();
-    this._renderStats();
-    this._renderCamSwitcher();
-    this._syncToolbarButtons();
-    this._syncPageNavigationButtons();
+    this._singleViewPageController.applyNonPreviewSchemaSoftUpdate();
 
     // Keep stream engine stable for visual-only config edits.
     // Resume logic for editor close/visibility transitions is handled elsewhere.
