@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.809";
+const VERSION = "1.0.810";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3551,6 +3551,45 @@ const PreviewPageController = class {
   }
 };
 
+// src/navigation/page-navigation-controller.js
+const PageNavigationController = class {
+  constructor(host, constants) {
+    this._host = host;
+    this._constants = constants;
+  }
+  ensureNavigationFactory() {
+    if (this._host._navigationFactory) return this._host._navigationFactory;
+    const { createNavigationFactory: createNavigationFactory2, PAGE_IDS: PAGE_IDS2 } = this._constants;
+    this._host._navigationFactory = createNavigationFactory2({
+      pages: {
+        [PAGE_IDS2.singleView]: {
+          activate: (context) => this._host._activateSingleViewPageRoute(context)
+        },
+        [PAGE_IDS2.preview]: {
+          activate: (context) => this._host._activatePreviewPageRoute(context)
+        },
+        [PAGE_IDS2.wideView]: {
+          activate: (context) => this._host._activateWideViewPageRoute(context)
+        }
+      },
+      getDeviceBucket: () => this._host._deviceRouteBucket(),
+      getConfig: () => this._host._config || {},
+      onBeforeNavigate: (nextPageId, context) => {
+        context.previousPageId = this._host._pageId || PAGE_IDS2.singleView;
+        this._host._pageId = nextPageId;
+        this._host._previewPageActive = nextPageId === PAGE_IDS2.preview;
+      },
+      onAfterNavigate: (nextPageId) => {
+        if (nextPageId !== PAGE_IDS2.preview) {
+          this._host._lastNonPreviewPageId = nextPageId;
+        }
+        this._host._syncPageNavigationButtons();
+      }
+    });
+    return this._host._navigationFactory;
+  }
+};
+
 // src/grid/grid-markup.js
 function buildGridSignaturePart({
   index,
@@ -4492,6 +4531,10 @@ const FrigateViewCard = class extends HTMLElement {
     });
     this._gridPageController = new GridPageController(this);
     this._singleViewPageController = new SingleViewPageController(this, {
+      PAGE_IDS
+    });
+    this._pageNavigationController = new PageNavigationController(this, {
+      createNavigationFactory,
       PAGE_IDS
     });
     this._slideshowAlertController = new SlideshowAlertController(this, {
@@ -6855,34 +6898,7 @@ const FrigateViewCard = class extends HTMLElement {
     return resolveDeviceRouteBucket(DEVICE_PROFILE);
   }
   _ensureNavigationFactory() {
-    if (this._navigationFactory) return this._navigationFactory;
-    this._navigationFactory = createNavigationFactory({
-      pages: {
-        [PAGE_IDS.singleView]: {
-          activate: (context) => this._activateSingleViewPageRoute(context)
-        },
-        [PAGE_IDS.preview]: {
-          activate: (context) => this._activatePreviewPageRoute(context)
-        },
-        [PAGE_IDS.wideView]: {
-          activate: (context) => this._activateWideViewPageRoute(context)
-        }
-      },
-      getDeviceBucket: () => this._deviceRouteBucket(),
-      getConfig: () => this._config || {},
-      onBeforeNavigate: (nextPageId, context) => {
-        context.previousPageId = this._pageId || PAGE_IDS.singleView;
-        this._pageId = nextPageId;
-        this._previewPageActive = nextPageId === PAGE_IDS.preview;
-      },
-      onAfterNavigate: (nextPageId) => {
-        if (nextPageId !== PAGE_IDS.preview) {
-          this._lastNonPreviewPageId = nextPageId;
-        }
-        this._syncPageNavigationButtons();
-      }
-    });
-    return this._navigationFactory;
+    return this._pageNavigationController.ensureNavigationFactory();
   }
   _pageRouteOptions() {
     return getEnabledPageRoutes(this._config || {}, this._deviceRouteBucket());
@@ -12857,8 +12873,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
-            <button type="button" id="camera-modal-cancel" class="btn-secondary">Cancel</button>
-            <button type="button" id="camera-modal-save" class="btn-primary">Add</button>
+            <button type="button" id="camera-modal-cancel" class=".cam-btn">Cancel</button>
+            <button type="button" id="camera-modal-save" class="cam-btn primary">Add</button>
           </div>
         </div>
       </div>

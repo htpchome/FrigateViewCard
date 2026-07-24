@@ -182,6 +182,7 @@ import {
 } from "./list-render-utils.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
+import { PageNavigationController } from "../navigation/page-navigation-controller.js";
 import {
   applyGridCellSeverityClass,
   buildGridSignaturePart,
@@ -294,6 +295,10 @@ export class FrigateViewCard extends HTMLElement {
     });
     this._gridPageController = new GridPageController(this);
     this._singleViewPageController = new SingleViewPageController(this, {
+      PAGE_IDS,
+    });
+    this._pageNavigationController = new PageNavigationController(this, {
+      createNavigationFactory,
       PAGE_IDS,
     });
     this._slideshowAlertController = new SlideshowAlertController(this, {
@@ -3009,34 +3014,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _ensureNavigationFactory() {
-    if (this._navigationFactory) return this._navigationFactory;
-    this._navigationFactory = createNavigationFactory({
-      pages: {
-        [PAGE_IDS.singleView]: {
-          activate: (context) => this._activateSingleViewPageRoute(context),
-        },
-        [PAGE_IDS.preview]: {
-          activate: (context) => this._activatePreviewPageRoute(context),
-        },
-        [PAGE_IDS.wideView]: {
-          activate: (context) => this._activateWideViewPageRoute(context),
-        },
-      },
-      getDeviceBucket: () => this._deviceRouteBucket(),
-      getConfig: () => this._config || {},
-      onBeforeNavigate: (nextPageId, context) => {
-        context.previousPageId = this._pageId || PAGE_IDS.singleView;
-        this._pageId = nextPageId;
-        this._previewPageActive = nextPageId === PAGE_IDS.preview;
-      },
-      onAfterNavigate: (nextPageId) => {
-        if (nextPageId !== PAGE_IDS.preview) {
-          this._lastNonPreviewPageId = nextPageId;
-        }
-        this._syncPageNavigationButtons();
-      },
-    });
-    return this._navigationFactory;
+    return this._pageNavigationController.ensureNavigationFactory();
   }
 
   _pageRouteOptions() {

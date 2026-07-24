@@ -1189,8 +1189,8 @@ export class FrigateViewCardEditor extends HTMLElement {
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
-            <button type="button" id="camera-modal-cancel" class="btn-secondary">Cancel</button>
-            <button type="button" id="camera-modal-save" class="btn-primary">Add</button>
+            <button type="button" id="camera-modal-cancel" class=".cam-btn">Cancel</button>
+            <button type="button" id="camera-modal-save" class="cam-btn primary">Add</button>
           </div>
         </div>
       </div>
