@@ -25,8 +25,15 @@ test("window loads use loading-state guard", () => {
 });
 
 test("startup resolves initial page through the navigation factory", () => {
-  assert.match(
-    source,
-    /const\s+initialLoad\s*=\s*this\._loadWindow\(true\);[\s\S]*this\._navigateToConfiguredLandingPage\([\s\S]*hasPendingDeepLinkTarget:\s*this\._hasPendingDeepLinkTarget\(\),[\s\S]*await\s+initialLoad;/,
+  const initialLoadIndex = source.indexOf(
+    "const initialLoad = this._loadWindow(true);",
   );
+  const landingPageIndex = source.indexOf(
+    'this._navigateToConfiguredLandingPage({\n      source: "startup",\n      startup: true,\n      startInGrid,\n      hasPendingDeepLinkTarget: this._hasPendingDeepLinkTarget()\n    });',
+  );
+  const awaitIndex = source.indexOf("await initialLoad;", landingPageIndex);
+
+  assert.ok(initialLoadIndex >= 0);
+  assert.ok(landingPageIndex > initialLoadIndex);
+  assert.ok(awaitIndex > landingPageIndex);
 });

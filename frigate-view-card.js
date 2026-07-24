@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.814";
+const VERSION = "1.0.815";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3636,6 +3636,169 @@ const PageNavigationController = class {
   }
 };
 
+// src/navigation/deep-link-controller.js
+const DeepLinkController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  isDeepLinkHandlingEnabled() {
+    return this._host._config?.deep_link_enabled !== false;
+  }
+  mergedUrlSearchParams() {
+    const params = new URLSearchParams(window.location?.search || "");
+    const hash = String(window.location?.hash || "");
+    const queryIndex = hash.indexOf("?");
+    if (queryIndex >= 0) {
+      const hashParams = new URLSearchParams(hash.slice(queryIndex + 1));
+      for (const [key, value] of hashParams.entries()) {
+        if (value != null && value !== "") params.set(key, value);
+      }
+    }
+    return params;
+  }
+  clearDeepLinkParamsFromUrl() {
+    if (!this.isDeepLinkHandlingEnabled()) return;
+    const deepLinkKeys = new Set([
+      "event",
+      "event_id",
+      "frigate_event",
+      "frigate_event_id",
+      "review",
+      "review_id",
+      "frigate_review",
+      "frigate_review_id",
+      "media",
+      "view",
+      "open",
+      "camera",
+      "cam",
+      "camera_entity"
+    ]);
+    try {
+      const url = new URL(window.location.href);
+      for (const key of [...url.searchParams.keys()]) {
+        if (deepLinkKeys.has(key)) url.searchParams.delete(key);
+      }
+      const rawHash = String(url.hash || "");
+      const queryIndex = rawHash.indexOf("?");
+      if (queryIndex >= 0) {
+        const hashPath = rawHash.slice(0, queryIndex);
+        const hashQuery = new URLSearchParams(rawHash.slice(queryIndex + 1));
+        for (const key of [...hashQuery.keys()]) {
+          if (deepLinkKeys.has(key)) hashQuery.delete(key);
+        }
+        const nextHashQuery = hashQuery.toString();
+        url.hash = nextHashQuery ? `${hashPath}?${nextHashQuery}` : hashPath;
+      }
+      const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+      window.history.replaceState(window.history.state, "", nextUrl);
+    } catch (_) {
+    }
+  }
+  initDeepLinkFromUrl() {
+    const params = this.mergedUrlSearchParams();
+    const eventId = params.get("event") || params.get("event_id") || params.get("frigate_event") || params.get("frigate_event_id") || "";
+    const reviewId = params.get("review") || params.get("review_id") || params.get("frigate_review") || params.get("frigate_review_id") || "";
+    const cameraHint = params.get("camera") || params.get("cam") || params.get("camera_entity") || "";
+    const mediaHint = params.get("media") || params.get("view") || params.get("open") || "";
+    this._host._deepLinkEventId = String(eventId || "").trim();
+    this._host._deepLinkReviewId = String(reviewId || "").trim();
+    this._host._deepLinkMediaHint = String(mediaHint || "").trim().toLowerCase();
+    this._host._deepLinkCameraHint = String(cameraHint || "").trim().toLowerCase();
+    this._host._deepLinkApplied = false;
+    this._host._deepLinkEventLookupTried = false;
+    this._host._deepLinkReviewLookupTried = false;
+  }
+  deepLinkCameraHintIndex() {
+    if (!this._host._deepLinkCameraHint) return -1;
+    return this._host._config.cameras.findIndex((camera) => {
+      const entity = String(camera.entity || "").toLowerCase();
+      const name = String(camera.name || "").toLowerCase();
+      const cacheCam = String(
+        this._host._camCache[camera.entity]?.cam || ""
+      ).toLowerCase();
+      return entity === this._host._deepLinkCameraHint || name === this._host._deepLinkCameraHint || cacheCam === this._host._deepLinkCameraHint;
+    });
+  }
+  applyDeepLinkCameraHint() {
+    if (!this._host._deepLinkCameraHint) return;
+    const idx = this.deepLinkCameraHintIndex();
+    if (idx >= 0) this._host._activeCamIdx = idx;
+  }
+  isDeepLinkCandidateForCard() {
+    if (!this.isDeepLinkHandlingEnabled()) return false;
+    if (!this._host._deepLinkCameraHint) return true;
+    return this.deepLinkCameraHintIndex() >= 0;
+  }
+  consumeDeepLinkEventOpen() {
+    if (!this.isDeepLinkHandlingEnabled()) return;
+    if (!this.isDeepLinkCandidateForCard()) return;
+    if (!this._host._deepLinkEventId || this._host._deepLinkApplied) return;
+    const event = this._host._findEventById(this._host._deepLinkEventId);
+    if (!event) {
+      this._host._deepLinkEventLookupTried = true;
+      this.consumeDeepLinkReviewOpen();
+      return;
+    }
+    this._host._deepLinkEventLookupTried = true;
+    const eventCam = String(event.camera || "").toLowerCase();
+    if (eventCam) {
+      const idx = this._host._config.cameras.findIndex((camera) => {
+        const cacheCam = String(
+          this._host._camCache[camera.entity]?.cam || ""
+        ).toLowerCase();
+        return cacheCam === eventCam;
+      });
+      if (idx >= 0 && idx !== this._host._activeCamIdx) {
+        this._host._switchCamera(idx);
+        return;
+      }
+    }
+    this._host._deepLinkApplied = true;
+    if (this._host._deepLinkMediaHint === "snapshot") {
+      this._host._showSnapshot(event);
+      this.clearDeepLinkParamsFromUrl();
+      return;
+    }
+    if (this._host._deepLinkMediaHint === "clip" && event.has_clip) {
+      this._host._showClip(event, { mediaType: "clip" });
+      this.clearDeepLinkParamsFromUrl();
+      return;
+    }
+    this._host._open(this._host._deepLinkEventId);
+    this.clearDeepLinkParamsFromUrl();
+  }
+  consumeDeepLinkReviewOpen() {
+    if (!this.isDeepLinkHandlingEnabled()) return;
+    if (!this.isDeepLinkCandidateForCard()) return;
+    if (this._host._deepLinkApplied) return;
+    if (this._host._deepLinkEventId && !this._host._deepLinkEventLookupTried)
+      return;
+    if (!this._host._deepLinkReviewId) return;
+    const review = (this._host._reviews || []).find(
+      (item) => String(item?.id || "") === this._host._deepLinkReviewId
+    );
+    const reviewEventId = String(review?.data?.detections?.[0] || "");
+    if (reviewEventId) {
+      this._host._deepLinkEventId = reviewEventId;
+      this._host._deepLinkEventLookupTried = false;
+      this.consumeDeepLinkEventOpen();
+      return;
+    }
+    if (this._host._deepLinkReviewLookupTried) return;
+    this._host._deepLinkReviewLookupTried = true;
+    void this._host._loadReviews().catch(() => {
+    }).finally(() => {
+      this.consumeDeepLinkReviewOpen();
+      this.consumeDeepLinkEventOpen();
+    });
+  }
+  hasPendingDeepLinkTarget() {
+    if (!this.isDeepLinkCandidateForCard()) return false;
+    return !!(this._host._deepLinkEventId || this._host._deepLinkReviewId || this._host._deepLinkCameraHint);
+  }
+};
+
 // src/grid/grid-markup.js
 function buildGridSignaturePart({
   index,
@@ -4586,6 +4749,7 @@ const FrigateViewCard = class extends HTMLElement {
       normalizePageRoute,
       PAGE_IDS
     });
+    this._deepLinkController = new DeepLinkController(this);
     this._slideshowAlertController = new SlideshowAlertController(this, {
       DAY,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
@@ -5269,8 +5433,8 @@ const FrigateViewCard = class extends HTMLElement {
   async _start() {
     await this._discoverAll();
     if (this._isDeepLinkHandlingEnabled()) {
-      this._initDeepLinkFromUrl();
-      this._applyDeepLinkCameraHint();
+      this._deepLinkController.initDeepLinkFromUrl();
+      this._deepLinkController.applyDeepLinkCameraHint();
     }
     const now = Math.floor(Date.now() / 1e3);
     this._followNowWindow = true;
@@ -5299,152 +5463,28 @@ const FrigateViewCard = class extends HTMLElement {
     this._setupResizeObserver();
   }
   _mergedUrlSearchParams() {
-    const params = new URLSearchParams(window.location?.search || "");
-    const hash = String(window.location?.hash || "");
-    const queryIndex = hash.indexOf("?");
-    if (queryIndex >= 0) {
-      const hashParams = new URLSearchParams(hash.slice(queryIndex + 1));
-      for (const [key, value] of hashParams.entries()) {
-        if (value != null && value !== "") params.set(key, value);
-      }
-    }
-    return params;
+    return this._deepLinkController.mergedUrlSearchParams();
   }
   _clearDeepLinkParamsFromUrl() {
-    if (!this._isDeepLinkHandlingEnabled()) return;
-    const deepLinkKeys = new Set([
-      "event",
-      "event_id",
-      "frigate_event",
-      "frigate_event_id",
-      "review",
-      "review_id",
-      "frigate_review",
-      "frigate_review_id",
-      "media",
-      "view",
-      "open",
-      "camera",
-      "cam",
-      "camera_entity"
-    ]);
-    try {
-      const url = new URL(window.location.href);
-      for (const key of [...url.searchParams.keys()]) {
-        if (deepLinkKeys.has(key)) url.searchParams.delete(key);
-      }
-      const rawHash = String(url.hash || "");
-      const queryIndex = rawHash.indexOf("?");
-      if (queryIndex >= 0) {
-        const hashPath = rawHash.slice(0, queryIndex);
-        const hashQuery = new URLSearchParams(rawHash.slice(queryIndex + 1));
-        for (const key of [...hashQuery.keys()]) {
-          if (deepLinkKeys.has(key)) hashQuery.delete(key);
-        }
-        const nextHashQuery = hashQuery.toString();
-        url.hash = nextHashQuery ? `${hashPath}?${nextHashQuery}` : hashPath;
-      }
-      const nextUrl = `${url.pathname}${url.search}${url.hash}`;
-      window.history.replaceState(window.history.state, "", nextUrl);
-    } catch (_) {
-    }
+    this._deepLinkController.clearDeepLinkParamsFromUrl();
   }
   _initDeepLinkFromUrl() {
-    const params = this._mergedUrlSearchParams();
-    const eventId = params.get("event") || params.get("event_id") || params.get("frigate_event") || params.get("frigate_event_id") || "";
-    const reviewId = params.get("review") || params.get("review_id") || params.get("frigate_review") || params.get("frigate_review_id") || "";
-    const cameraHint = params.get("camera") || params.get("cam") || params.get("camera_entity") || "";
-    const mediaHint = params.get("media") || params.get("view") || params.get("open") || "";
-    this._deepLinkEventId = String(eventId || "").trim();
-    this._deepLinkReviewId = String(reviewId || "").trim();
-    this._deepLinkMediaHint = String(mediaHint || "").trim().toLowerCase();
-    this._deepLinkCameraHint = String(cameraHint || "").trim().toLowerCase();
-    this._deepLinkApplied = false;
-    this._deepLinkEventLookupTried = false;
-    this._deepLinkReviewLookupTried = false;
+    this._deepLinkController.initDeepLinkFromUrl();
   }
   _deepLinkCameraHintIndex() {
-    if (!this._deepLinkCameraHint) return -1;
-    return this._config.cameras.findIndex((camera) => {
-      const entity = String(camera.entity || "").toLowerCase();
-      const name = String(camera.name || "").toLowerCase();
-      const cacheCam = String(
-        this._camCache[camera.entity]?.cam || ""
-      ).toLowerCase();
-      return entity === this._deepLinkCameraHint || name === this._deepLinkCameraHint || cacheCam === this._deepLinkCameraHint;
-    });
+    return this._deepLinkController.deepLinkCameraHintIndex();
   }
   _applyDeepLinkCameraHint() {
-    if (!this._deepLinkCameraHint) return;
-    const idx = this._deepLinkCameraHintIndex();
-    if (idx >= 0) this._activeCamIdx = idx;
+    this._deepLinkController.applyDeepLinkCameraHint();
   }
   _isDeepLinkCandidateForCard() {
-    if (!this._isDeepLinkHandlingEnabled()) return false;
-    if (!this._deepLinkCameraHint) return true;
-    return this._deepLinkCameraHintIndex() >= 0;
+    return this._deepLinkController.isDeepLinkCandidateForCard();
   }
   _consumeDeepLinkEventOpen() {
-    if (!this._isDeepLinkHandlingEnabled()) return;
-    if (!this._isDeepLinkCandidateForCard()) return;
-    if (!this._deepLinkEventId || this._deepLinkApplied) return;
-    const event = this._findEventById(this._deepLinkEventId);
-    if (!event) {
-      this._deepLinkEventLookupTried = true;
-      this._consumeDeepLinkReviewOpen();
-      return;
-    }
-    this._deepLinkEventLookupTried = true;
-    const eventCam = String(event.camera || "").toLowerCase();
-    if (eventCam) {
-      const idx = this._config.cameras.findIndex((camera) => {
-        const cacheCam = String(
-          this._camCache[camera.entity]?.cam || ""
-        ).toLowerCase();
-        return cacheCam === eventCam;
-      });
-      if (idx >= 0 && idx !== this._activeCamIdx) {
-        this._switchCamera(idx);
-        return;
-      }
-    }
-    this._deepLinkApplied = true;
-    if (this._deepLinkMediaHint === "snapshot") {
-      this._showSnapshot(event);
-      this._clearDeepLinkParamsFromUrl();
-      return;
-    }
-    if (this._deepLinkMediaHint === "clip" && event.has_clip) {
-      this._showClip(event, { mediaType: "clip" });
-      this._clearDeepLinkParamsFromUrl();
-      return;
-    }
-    this._open(this._deepLinkEventId);
-    this._clearDeepLinkParamsFromUrl();
+    this._deepLinkController.consumeDeepLinkEventOpen();
   }
   _consumeDeepLinkReviewOpen() {
-    if (!this._isDeepLinkHandlingEnabled()) return;
-    if (!this._isDeepLinkCandidateForCard()) return;
-    if (this._deepLinkApplied) return;
-    if (this._deepLinkEventId && !this._deepLinkEventLookupTried) return;
-    if (!this._deepLinkReviewId) return;
-    const review = (this._reviews || []).find(
-      (item) => String(item?.id || "") === this._deepLinkReviewId
-    );
-    const reviewEventId = String(review?.data?.detections?.[0] || "");
-    if (reviewEventId) {
-      this._deepLinkEventId = reviewEventId;
-      this._deepLinkEventLookupTried = false;
-      this._consumeDeepLinkEventOpen();
-      return;
-    }
-    if (this._deepLinkReviewLookupTried) return;
-    this._deepLinkReviewLookupTried = true;
-    void this._loadReviews().catch(() => {
-    }).finally(() => {
-      this._consumeDeepLinkReviewOpen();
-      this._consumeDeepLinkEventOpen();
-    });
+    this._deepLinkController.consumeDeepLinkReviewOpen();
   }
   _isLikelyMobileClient() {
     return DEVICE_PROFILE.isMobile;
@@ -6983,11 +7023,10 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewPageController.activatePreviewPageRoute(context);
   }
   _hasPendingDeepLinkTarget() {
-    if (!this._isDeepLinkCandidateForCard()) return false;
-    return !!(this._deepLinkEventId || this._deepLinkReviewId || this._deepLinkCameraHint);
+    return this._deepLinkController.hasPendingDeepLinkTarget();
   }
   _isDeepLinkHandlingEnabled() {
-    return this._config?.deep_link_enabled !== false;
+    return this._deepLinkController.isDeepLinkHandlingEnabled();
   }
   _previewLiveCamerasEnabled() {
     return this._config?.preview_page_live_cameras === true;
@@ -7534,159 +7573,14 @@ const FrigateViewCard = class extends HTMLElement {
   _shouldHandleSlideshowReview(entity, severity) {
     return shouldHandleSlideshowReview(this._config, entity, severity);
   }
-  _cameraIndexForIncomingCamera(cameraId) {
-    return cameraIndexForIncomingCamera(this._config, this._camCache, cameraId);
-  }
-  _cameraEntityForIncomingCamera(cameraId) {
-    return cameraEntityForIncomingCamera(
-      this._config,
-      this._camCache,
-      cameraId
-    );
-  }
-  _normalizeReviewSeverity(review) {
-    return normalizeReviewSeverity(review);
-  }
-  _reviewStartTimeSec(review) {
-    return reviewStartTimeSec(review);
-  }
-  _handleSlideshowReviewsUpdated(entity, reviews, source = "reviews-update") {
-    this._slideshowAlertController.handleReviewsUpdated(
-      entity,
-      reviews,
-      source
-    );
-  }
-  async _probeLatestSlideshowReview() {
-    await this._slideshowAlertController.probeLatestReview();
-  }
-  _scheduleSlideshowReviewProbe(delayMs = 180) {
-    this._slideshowAlertController.scheduleReviewProbe(delayMs);
-  }
-  _scheduleSlideshowReviewWatch(delayMs = null) {
-    this._slideshowAlertController.scheduleReviewWatch(delayMs);
-  }
-  async _advanceSlideshowRotation() {
-    await this._slideshowPageController.advanceRotation();
-  }
-  _cameraIndexByEntity(entity) {
-    return cameraIndexByEntity(this._config, entity);
-  }
   _extractRealtimeMessageCamera(msg) {
     return extractRealtimeMessageCamera(msg);
   }
   _extractRealtimeMessageSeverity(msg) {
     return extractRealtimeMessageSeverity(msg);
   }
-  _handleSlideshowRealtimeMessage(msg) {
-    this._slideshowAlertController.handleRealtimeMessage(msg);
-  }
-  // ── camera switching ──────────────────────────────────────
-  async _switchCamera(idx, opts = {}) {
-    const source = String(opts?.source || "manual");
-    if (source === "manual") {
-      if (this._slideshowActive) {
-        this._stopSlideshowRotation("manual-camera-select");
-      } else {
-        this._pauseSlideshowForInteraction();
-      }
-    }
-    if (this._viewMode === "grid") {
-      if (this._gridRotationT) clearTimeout(this._gridRotationT);
-      this._gridRotationT = null;
-      this._gridAlertController.clearWatchTimer();
-      if (opts?.keepGridResume !== true) {
-        this._gridResumePending = false;
-        if (this._gridAlertReturnT) clearTimeout(this._gridAlertReturnT);
-        this._gridAlertReturnT = null;
-        this._setSlideshowAlertState("");
-      }
-    }
-    const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
-    if (idx === this._activeCamIdx && this._viewMode === "single" && !popupOpen)
-      return;
-    const useTransition = source === "slideshow" || source === "alert";
-    const engWrap = this._$("#eng-wrap");
-    if (useTransition && engWrap) {
-      engWrap.classList.add("slideshow-switching");
-      clearTimeout(this._slideshowFadeT);
-      this._slideshowFadeT = setTimeout(() => {
-        engWrap.classList.remove("slideshow-switching");
-        this._slideshowFadeT = null;
-      }, 260);
-    }
-    const prevEnt = this._activeCam?.entity;
-    if (prevEnt && this._camCache[prevEnt]) {
-      this._camCache[prevEnt].events = this._events;
-      this._camCache[prevEnt].recordings = this._recordings;
-      this._camCache[prevEnt].reviews = this._reviews;
-      this._camCache[prevEnt].kept = this._kept;
-    }
-    this._activeCamIdx = idx;
-    const newEnt = this._activeCam?.entity;
-    if (!this._camCache[newEnt]) this._camCache[newEnt] = mkCamState();
-    if (!this._camCache[newEnt].discovered) this._discoverOne(newEnt);
-    const cached = this._camCache[newEnt];
-    this._events = cached.events || [];
-    this._recordings = cached.recordings || [];
-    this._reviews = cached.reviews || [];
-    this._kept = cached.kept || [];
-    this._viewMode = "single";
-    if (popupOpen) this._closePopup();
-    if (engWrap) engWrap.style.display = "";
-    this.shadowRoot.querySelectorAll("[data-viewmode]").forEach(
-      (p) => p.classList.toggle("active", p.dataset.viewmode === "single")
-    );
-    this._syncTabsShell();
-    this._renderCamSwitcher();
-    this._syncStatus();
-    this._renderStats();
-    this._normalizeFilterSelections();
-    if (this._$("#filter-panel")?.style.display !== "none") {
-      this._renderFilter();
-    }
-    this._renderList();
-    this._streamMuted = true;
-    this._renderMuteButton();
-    this._cancelPendingMount("switch-camera", { preserveMseEntity: prevEnt });
-    this._mountEngine();
-    clearTimeout(this._switchLoadT);
-    this._loadWindow(true);
-    this._applyCalendarActivityCacheForActiveCamera();
-    void this._prefetchCalendarActivityForActiveCamera();
-    if (this._$("cal-panel")?.style.display !== "none") {
-      this._renderCal();
-    }
-    this._syncToolbarButtons();
-  }
-  // ── data ─────────────────────────────────────────────────
-  _cc() {
-    return this._camCache[this._activeCam?.entity] || mkCamState();
-  }
   async _ws(p) {
     return parseWs(await this._hass.callWS(p));
-  }
-  _isNowWindow() {
-    return this._followNowWindow;
-  }
-  async _fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
-    return fetchWindowedItems({
-      after,
-      before,
-      opts,
-      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
-      defaultBatchLimit: EVENT_FETCH_BATCH,
-      useOptionLimit: true,
-      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._ws({
-        type: "frigate/events/get",
-        instance_id: clientId,
-        cameras: [cam],
-        after: afterTs,
-        before: beforeTs,
-        limit
-      }),
-      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
-    });
   }
   async _warmOtherCamerasEvents() {
     const token = ++this._warmCamsToken;

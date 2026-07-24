@@ -16,13 +16,14 @@ test("camera switching preserves recent MSE engines for short switch-back reuse"
   assert.equal(source.includes("_takeGraceMseEntry"), true);
   assert.equal(source.includes("_adoptGraceMseEngine"), true);
   assert.equal(source.includes("_ensureMseGraceHost"), true);
-  assert.equal(source.includes("preserveMseEntity: prevEnt"), true);
+  assert.equal(source.includes("splitPendingDestroyersByGraceMse"), true);
 });
 
 test("switch-camera cleanup preserves MSE while regular live startup stays unified", () => {
-  assert.match(
-    source,
-    /_cancelPendingMount\("switch-camera",\s*\{\s*preserveMseEntity:\s*prevEnt\s*\}\)/,
+  assert.equal(source.includes("preserveMseEntity"), true);
+  assert.equal(
+    source.includes("pendingAttempt?.entity === preserveMseEntity"),
+    true,
   );
   assert.match(
     source,
