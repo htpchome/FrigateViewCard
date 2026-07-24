@@ -101,6 +101,21 @@ test("deep-link helpers delegate through the controller wrappers", () => {
   );
 });
 
+test("single-view helpers delegate through the controller wrappers", () => {
+  assert.equal(
+    source.includes(
+      "_activateSingleViewPageRoute(context = {}) {\n    this._singleViewPageController.activateSingleViewPageRoute(context);\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_activateWideViewPageRoute(context = {}) {\n    this._singleViewPageController.activateWideViewPageRoute(context);\n  }",
+    ),
+    true,
+  );
+});
+
 test("preview helpers delegate through the preview page controller", () => {
   assert.equal(
     source.includes(

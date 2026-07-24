@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.832";
+const VERSION = "1.0.833";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4177,31 +4177,45 @@ const SingleViewPageController = class {
     this.activateStandardPageRoute(context);
   }
   activateStandardPageRoute(context = {}) {
-    const PAGE_IDS2 = this._constants.PAGE_IDS;
-    const leavingPreview = context.previousPageId === PAGE_IDS2.preview;
-    if (leavingPreview) {
-      this._host._stopPreviewMode();
-      if (this._host._$("#myPopup")?.classList.contains("is-open")) {
-        this._host._closePopup();
-      }
-      this._host._cancelPendingMount(`page-route-${this._host._pageId}`);
+    const leavingPreview = this._isLeavingPreviewPage(context);
+    this._handlePreviewExit(leavingPreview);
+    this._applyStandardPageRouteFrame();
+    if (context.startup === true) {
+      this._activateStartupRoute(context);
+      return;
     }
+    if (context.deferCameraSwitch === true) return;
+    if (leavingPreview) this._mountEngineQuietly();
+    this._syncStandardPageRouteShell();
+  }
+  _isLeavingPreviewPage(context) {
+    return context.previousPageId === this._constants.PAGE_IDS.preview;
+  }
+  _handlePreviewExit(leavingPreview) {
+    if (!leavingPreview) return;
+    this._host._stopPreviewMode();
+    if (this._host._$("#myPopup")?.classList.contains("is-open")) {
+      this._host._closePopup();
+    }
+    this._host._cancelPendingMount(`page-route-${this._host._pageId}`);
+  }
+  _applyStandardPageRouteFrame() {
     this._host._applyPreviewShellVisibility();
     this._host._applyCardStyle();
     this._host._applyLayoutMode();
     if (this._host._isWideViewPageActive()) this._host._syncColHeight();
-    if (context.startup === true) {
-      if (context.startInGrid === true) {
-        this._host._setViewMode("grid");
-      } else {
-        this._host._mountEngine();
-      }
+  }
+  _activateStartupRoute(context) {
+    if (context.startInGrid === true) {
+      this._host._setViewMode("grid");
       return;
     }
-    if (context.deferCameraSwitch === true) return;
-    if (leavingPreview) {
-      this._host._mountEngine(null, { quiet: true });
-    }
+    this._host._mountEngine();
+  }
+  _mountEngineQuietly() {
+    this._host._mountEngine(null, { quiet: true });
+  }
+  _syncStandardPageRouteShell() {
     this._host._syncTabsShell();
     this._host._renderAll();
   }

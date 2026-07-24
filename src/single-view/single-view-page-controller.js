@@ -13,37 +13,58 @@ export class SingleViewPageController {
   }
 
   activateStandardPageRoute(context = {}) {
-    const PAGE_IDS = this._constants.PAGE_IDS;
-    const leavingPreview = context.previousPageId === PAGE_IDS.preview;
+    const leavingPreview = this._isLeavingPreviewPage(context);
 
-    if (leavingPreview) {
-      this._host._stopPreviewMode();
-      if (this._host._$("#myPopup")?.classList.contains("is-open")) {
-        this._host._closePopup();
-      }
-      this._host._cancelPendingMount(`page-route-${this._host._pageId}`);
-    }
-
-    this._host._applyPreviewShellVisibility();
-    this._host._applyCardStyle();
-    this._host._applyLayoutMode();
-    if (this._host._isWideViewPageActive()) this._host._syncColHeight();
+    this._handlePreviewExit(leavingPreview);
+    this._applyStandardPageRouteFrame();
 
     if (context.startup === true) {
-      if (context.startInGrid === true) {
-        this._host._setViewMode("grid");
-      } else {
-        this._host._mountEngine();
-      }
+      this._activateStartupRoute(context);
       return;
     }
 
     if (context.deferCameraSwitch === true) return;
 
-    if (leavingPreview) {
-      this._host._mountEngine(null, { quiet: true });
+    if (leavingPreview) this._mountEngineQuietly();
+
+    this._syncStandardPageRouteShell();
+  }
+
+  _isLeavingPreviewPage(context) {
+    return context.previousPageId === this._constants.PAGE_IDS.preview;
+  }
+
+  _handlePreviewExit(leavingPreview) {
+    if (!leavingPreview) return;
+
+    this._host._stopPreviewMode();
+    if (this._host._$("#myPopup")?.classList.contains("is-open")) {
+      this._host._closePopup();
+    }
+    this._host._cancelPendingMount(`page-route-${this._host._pageId}`);
+  }
+
+  _applyStandardPageRouteFrame() {
+    this._host._applyPreviewShellVisibility();
+    this._host._applyCardStyle();
+    this._host._applyLayoutMode();
+    if (this._host._isWideViewPageActive()) this._host._syncColHeight();
+  }
+
+  _activateStartupRoute(context) {
+    if (context.startInGrid === true) {
+      this._host._setViewMode("grid");
+      return;
     }
 
+    this._host._mountEngine();
+  }
+
+  _mountEngineQuietly() {
+    this._host._mountEngine(null, { quiet: true });
+  }
+
+  _syncStandardPageRouteShell() {
     this._host._syncTabsShell();
     this._host._renderAll();
   }
