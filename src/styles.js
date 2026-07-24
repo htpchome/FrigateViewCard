@@ -294,40 +294,38 @@ export const STYLES = `
 
 
 
-  .glass-btn {
-    position: fixed;
-    top: 50%;
-    left: 40%;
-      display: inline-flex; 
-    padding: 5px;
-    font-size: 1.0rem;
-    font-weight:600;
+  .glass-btn{  display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 3px; 
+    border-radius: 2rem; 
+    color: black; 
+    font-size: 1.0rem; 
+    cursor:pointer;  
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(2px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.8);
-    border-radius: 50%;
     box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2), 
-                    inset 0 4px 20px rgba(255, 255, 255, 0.3);
+    inset 0 4px 20px rgba(255, 255, 255, 0.3); 
   }
-  .glass-btn::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
+  .glass-btn::after {  content: ""; /* Added missing quotes */
+    position: absolute; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
     height: 100%;
+    opacity: 0.4; 
+    z-index: -1;  
+    border-radius: 2rem;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
     backdrop-filter: blur(1px);
     box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 1),
                 inset 0px -9px 0px -8px rgba(255, 255, 255, 1);
-    opacity: 0.6;
-    z-index: -1;
     filter: blur(1px) drop-shadow(10px 4px 6px black) brightness(115%);
-  } 
+    }
   .glass-btn:hover{background:rgba(255, 255, 255, 0.3);} 
-  .glass-btn svg {width:30px;height:30px;opacity: 0.8; }
-  .glass-btn:hover svg {width:30px;height:30px;opacity: 0.95; }
+  .glass-btn svg{width:30px;height:30px;opacity: 0.8; }
+  .glass-btn:hover svg{width:30px;height:30px;opacity: 0.95; }
 
   .mute-btn {position:absolute;right:8px;bottom:8px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
