@@ -1,4 +1,7 @@
-import { resolvePreviewLiveStreamHint } from "./preview-utils.js";
+import {
+  resolvePreviewLiveStreamHint,
+  resolvePreviewStreamSourceLabel,
+} from "./preview-utils.js";
 import { DEVICE_PROFILE } from "../helpers.js";
 
 export class PreviewPageController {
@@ -36,6 +39,14 @@ export class PreviewPageController {
       activeStreamType: this._host._activeStreamType,
       lastLiveStreamHint: this._host._lastLiveStreamHint,
       isIOS: DEVICE_PROFILE.isIOS,
+    });
+  }
+
+  previewStreamSourceLabel(entity, useLive) {
+    return resolvePreviewStreamSourceLabel({
+      useLive,
+      connectionType: this._host._cameraConnectionType(entity),
+      liveStreamHint: this.previewLiveStreamHint(),
     });
   }
 

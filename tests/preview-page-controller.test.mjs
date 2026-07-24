@@ -30,6 +30,8 @@ const createHost = ({
     _activeCamIdx: 0,
     _$: () => null,
     _isPreviewCameraAlertLive: () => alertLive,
+    _cameraConnectionType: (entity) =>
+      entity === "camera.front_door" ? "ha_direct" : "webrtc",
     _clearPreviewTimers: () => calls.push(["clearPreviewTimers"]),
     _teardownPreviewMedia: () => calls.push(["teardownPreviewMedia"]),
     _applyPreviewShellVisibility: () =>
@@ -68,6 +70,23 @@ test("preview live stream hint prefers current active stream", () => {
   const { controller } = createHost({ activeStreamType: "webrtc" });
 
   assert.equal(controller.previewLiveStreamHint(), "webrtc");
+});
+
+test("preview stream source label derives from connection type and live hint", () => {
+  const { controller } = createHost({ activeStreamType: "mse" });
+
+  assert.equal(
+    controller.previewStreamSourceLabel("camera.front_door", true),
+    "HA Live",
+  );
+  assert.equal(
+    controller.previewStreamSourceLabel("camera.driveway", true),
+    "MSE Live",
+  );
+  assert.equal(
+    controller.previewStreamSourceLabel("camera.driveway", false),
+    "Snapshot",
+  );
 });
 
 test("activatePreviewPageRoute keeps preview path behavior intact", () => {

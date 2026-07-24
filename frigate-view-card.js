@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.827";
+const VERSION = "1.0.828";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1756,50 +1756,6 @@ const hassThemeSignature = (hass) => {
 };
 const hassEntityStateSignature = (hass, entities) => entities.map((entity) => `${entity}:${hass?.states?.[entity]?.state ?? "missing"}`).join("|");
 
-// src/preview/preview-utils.js
-const LIVE_STREAM_HINTS = new Set(["webrtc", "mse", "hls"]);
-function normalizePreviewAlertSeverity(value) {
-  return String(value || "").trim().toLowerCase() === "detection" ? "detection" : "alert";
-}
-function normalizePreviewCellSeverity(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "detection") return "detection";
-  if (normalized === "alert") return "alert";
-  return "";
-}
-function resolvePreviewLiveStreamHint({
-  activeStreamType,
-  lastLiveStreamHint,
-  isIOS: isIOS2
-}) {
-  const active = String(activeStreamType || "").trim().toLowerCase();
-  if (LIVE_STREAM_HINTS.has(active)) return active;
-  const lastHint = String(lastLiveStreamHint || "").trim().toLowerCase();
-  if (LIVE_STREAM_HINTS.has(lastHint)) return lastHint;
-  return isIOS2 ? "webrtc" : "mse";
-}
-function resolvePreviewStreamSourceLabel({
-  useLive,
-  connectionType,
-  liveStreamHint
-}) {
-  if (!useLive) return "Snapshot";
-  if (connectionType === "ha_direct") return "HA Live";
-  const hint = String(liveStreamHint || "").trim().toUpperCase();
-  return hint ? `${hint} Live` : "Live";
-}
-function isPreviewReviewFresh({
-  previewStartedAtSec,
-  reviewStartSec,
-  graceSec
-}) {
-  const startedAt = Number(previewStartedAtSec || 0);
-  if (startedAt <= 0) return true;
-  const reviewStart = Number(reviewStartSec || 0);
-  if (reviewStart <= 0) return false;
-  return reviewStart >= startedAt - Number(graceSec || 0);
-}
-
 // src/live/live-attempt-planner.js
 const DEFAULT_LIVE_ORDER = Object.freeze(["webrtc", "mse", "hls"]);
 const buildLiveAttemptPlan = ({
@@ -3225,6 +3181,50 @@ function createOlderHintSyncer(syncOlderHint) {
   };
 }
 
+// src/preview/preview-utils.js
+const LIVE_STREAM_HINTS = new Set(["webrtc", "mse", "hls"]);
+function normalizePreviewAlertSeverity(value) {
+  return String(value || "").trim().toLowerCase() === "detection" ? "detection" : "alert";
+}
+function normalizePreviewCellSeverity(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "detection") return "detection";
+  if (normalized === "alert") return "alert";
+  return "";
+}
+function resolvePreviewLiveStreamHint({
+  activeStreamType,
+  lastLiveStreamHint,
+  isIOS: isIOS2
+}) {
+  const active = String(activeStreamType || "").trim().toLowerCase();
+  if (LIVE_STREAM_HINTS.has(active)) return active;
+  const lastHint = String(lastLiveStreamHint || "").trim().toLowerCase();
+  if (LIVE_STREAM_HINTS.has(lastHint)) return lastHint;
+  return isIOS2 ? "webrtc" : "mse";
+}
+function resolvePreviewStreamSourceLabel({
+  useLive,
+  connectionType,
+  liveStreamHint
+}) {
+  if (!useLive) return "Snapshot";
+  if (connectionType === "ha_direct") return "HA Live";
+  const hint = String(liveStreamHint || "").trim().toUpperCase();
+  return hint ? `${hint} Live` : "Live";
+}
+function isPreviewReviewFresh({
+  previewStartedAtSec,
+  reviewStartSec,
+  graceSec
+}) {
+  const startedAt = Number(previewStartedAtSec || 0);
+  if (startedAt <= 0) return true;
+  const reviewStart = Number(reviewStartSec || 0);
+  if (reviewStart <= 0) return false;
+  return reviewStart >= startedAt - Number(graceSec || 0);
+}
+
 // src/data/review-candidate-utils.js
 function findFirstReviewCandidateForEntity({
   reviews,
@@ -3524,6 +3524,13 @@ const PreviewPageController = class {
       activeStreamType: this._host._activeStreamType,
       lastLiveStreamHint: this._host._lastLiveStreamHint,
       isIOS: DEVICE_PROFILE.isIOS
+    });
+  }
+  previewStreamSourceLabel(entity, useLive) {
+    return resolvePreviewStreamSourceLabel({
+      useLive,
+      connectionType: this._host._cameraConnectionType(entity),
+      liveStreamHint: this.previewLiveStreamHint()
     });
   }
   activatePreviewPageRoute(context = {}) {
@@ -7077,11 +7084,10 @@ const FrigateViewCard = class extends HTMLElement {
     return this._previewPageController.previewEventsCount(entity);
   }
   _previewStreamSourceLabel(entity, useLive) {
-    return resolvePreviewStreamSourceLabel({
-      useLive,
-      connectionType: this._cameraConnectionType(entity),
-      liveStreamHint: this._previewLiveStreamHint()
-    });
+    return this._previewPageController.previewStreamSourceLabel(
+      entity,
+      useLive
+    );
   }
   _previewLiveStreamHint() {
     return this._previewPageController.previewLiveStreamHint();

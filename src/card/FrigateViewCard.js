@@ -80,10 +80,6 @@ import {
   PAGE_IDS,
   resolveDeviceRouteBucket,
 } from "../router.js";
-import {
-  resolvePreviewLiveStreamHint,
-  resolvePreviewStreamSourceLabel,
-} from "../preview/preview-utils.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/editor-preview-mapper.js";
 import {
   buildLiveAttemptPlan,
@@ -2955,11 +2951,10 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _previewStreamSourceLabel(entity, useLive) {
-    return resolvePreviewStreamSourceLabel({
+    return this._previewPageController.previewStreamSourceLabel(
+      entity,
       useLive,
-      connectionType: this._cameraConnectionType(entity),
-      liveStreamHint: this._previewLiveStreamHint(),
-    });
+    );
   }
 
   _previewLiveStreamHint() {

@@ -132,4 +132,10 @@ test("preview helpers delegate through the preview page controller", () => {
     ),
     true,
   );
+  assert.equal(
+    source.includes(
+      "_previewStreamSourceLabel(entity, useLive) {\n    return this._previewPageController.previewStreamSourceLabel(entity, useLive);\n  }",
+    ),
+    true,
+  );
 });
