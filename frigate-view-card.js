@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.856";
+const VERSION = "1.0.857";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4435,6 +4435,22 @@ const WideViewPageController = class {
       rightWidth: `${100 - pct}%`
     };
   }
+  applyWideLayoutMode(layout, leftWidthPct) {
+    if (!layout) return;
+    const wideLayout = this.wideViewLayoutState(leftWidthPct);
+    layout.classList.toggle("wide-view", wideLayout.isWide);
+    const colL = layout.querySelector(".col-left");
+    const colR = layout.querySelector(".col-right");
+    if (colL && colR) {
+      if (wideLayout.isWide) {
+        colL.style.width = wideLayout.leftWidth;
+        colR.style.width = wideLayout.rightWidth;
+      } else {
+        colL.style.width = "";
+        colR.style.width = "";
+      }
+    }
+  }
 };
 
 // src/slideshow/slideshow-utils.js
@@ -5284,21 +5300,10 @@ const FrigateViewCard = class extends HTMLElement {
   _applyLayoutMode() {
     const layout = this.shadowRoot.querySelector("#layout");
     if (!layout) return;
-    const wideLayout = this._wideViewPageController.wideViewLayoutState(
+    this._wideViewPageController.applyWideLayoutMode(
+      layout,
       this._config?.col_left_width_pct
     );
-    layout.classList.toggle("wide-view", wideLayout.isWide);
-    const colL = layout.querySelector(".col-left");
-    const colR = layout.querySelector(".col-right");
-    if (colL && colR) {
-      if (wideLayout.isWide) {
-        colL.style.width = wideLayout.leftWidth;
-        colR.style.width = wideLayout.rightWidth;
-      } else {
-        colL.style.width = "";
-        colR.style.width = "";
-      }
-    }
   }
   _isPanelView() {
     let el = this;

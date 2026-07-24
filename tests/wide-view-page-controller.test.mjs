@@ -153,3 +153,53 @@ test("wideViewLayoutState resolves wide layout widths with clamping", () => {
     rightWidth: "",
   });
 });
+
+test("applyWideLayoutMode applies wide class and widths", () => {
+  const { host } = createHost({ isWide: true });
+  const controller = new WideViewPageController(host, { PAGE_IDS });
+
+  const colL = { style: { width: "" } };
+  const colR = { style: { width: "" } };
+  const toggles = [];
+  const layout = {
+    classList: {
+      toggle: (className, enabled) => toggles.push([className, enabled]),
+    },
+    querySelector: (selector) => {
+      if (selector === ".col-left") return colL;
+      if (selector === ".col-right") return colR;
+      return null;
+    },
+  };
+
+  controller.applyWideLayoutMode(layout, "65");
+
+  assert.deepEqual(toggles, [["wide-view", true]]);
+  assert.equal(colL.style.width, "65%");
+  assert.equal(colR.style.width, "35%");
+});
+
+test("applyWideLayoutMode clears widths for non-wide route", () => {
+  const { host } = createHost({ isWide: false });
+  const controller = new WideViewPageController(host, { PAGE_IDS });
+
+  const colL = { style: { width: "77%" } };
+  const colR = { style: { width: "23%" } };
+  const toggles = [];
+  const layout = {
+    classList: {
+      toggle: (className, enabled) => toggles.push([className, enabled]),
+    },
+    querySelector: (selector) => {
+      if (selector === ".col-left") return colL;
+      if (selector === ".col-right") return colR;
+      return null;
+    },
+  };
+
+  controller.applyWideLayoutMode(layout, "65");
+
+  assert.deepEqual(toggles, [["wide-view", false]]);
+  assert.equal(colL.style.width, "");
+  assert.equal(colR.style.width, "");
+});

@@ -43,4 +43,23 @@ export class WideViewPageController {
       rightWidth: `${100 - pct}%`,
     };
   }
+
+  applyWideLayoutMode(layout, leftWidthPct) {
+    if (!layout) return;
+
+    const wideLayout = this.wideViewLayoutState(leftWidthPct);
+    layout.classList.toggle("wide-view", wideLayout.isWide);
+
+    const colL = layout.querySelector(".col-left");
+    const colR = layout.querySelector(".col-right");
+    if (colL && colR) {
+      if (wideLayout.isWide) {
+        colL.style.width = wideLayout.leftWidth;
+        colR.style.width = wideLayout.rightWidth;
+      } else {
+        colL.style.width = "";
+        colR.style.width = "";
+      }
+    }
+  }
 }
