@@ -452,7 +452,7 @@ export class FrigateViewCard extends HTMLElement {
     this._renderCamSwitcher();
     this._applyCardStyle();
     this._applyLayoutMode();
-    this._syncColHeightIfWideView();
+    this._singleViewPageController.syncColHeightIfWideView();
     this._syncStatus();
     this._renderSubtitle();
     this._renderStats();
@@ -477,7 +477,7 @@ export class FrigateViewCard extends HTMLElement {
         : "100%";
       this._applyTightMargins();
       this._applyLayoutMode();
-      this._syncColHeightIfWideView();
+      this._singleViewPageController.syncColHeightIfWideView();
     }
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
@@ -897,7 +897,7 @@ export class FrigateViewCard extends HTMLElement {
     // Soft-update preview for schema edits without remounting live stream.
     this._applyCardStyle();
     this._applyLayoutMode();
-    this._syncColHeightIfWideView();
+    this._singleViewPageController.syncColHeightIfWideView();
     this._syncStatus();
     this._renderSubtitle();
     this._renderStats();
@@ -2844,10 +2844,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _isPreviewPageActive() {
     return this._previewPageController.isPreviewPageActive();
-  }
-
-  _syncColHeightIfWideView() {
-    this._singleViewPageController.syncColHeightIfWideView();
   }
 
   _deviceRouteBucket() {

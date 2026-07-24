@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.840";
+const VERSION = "1.0.841";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4971,7 +4971,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderCamSwitcher();
     this._applyCardStyle();
     this._applyLayoutMode();
-    this._syncColHeightIfWideView();
+    this._singleViewPageController.syncColHeightIfWideView();
     this._syncStatus();
     this._renderSubtitle();
     this._renderStats();
@@ -4994,7 +4994,7 @@ const FrigateViewCard = class extends HTMLElement {
       this.parentElement.style.height = this._isPreviewContext() ? "auto" : "100%";
       this._applyTightMargins();
       this._applyLayoutMode();
-      this._syncColHeightIfWideView();
+      this._singleViewPageController.syncColHeightIfWideView();
     }
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
@@ -5318,7 +5318,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._applyCardStyle();
     this._applyLayoutMode();
-    this._syncColHeightIfWideView();
+    this._singleViewPageController.syncColHeightIfWideView();
     this._syncStatus();
     this._renderSubtitle();
     this._renderStats();
@@ -7050,9 +7050,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _isPreviewPageActive() {
     return this._previewPageController.isPreviewPageActive();
-  }
-  _syncColHeightIfWideView() {
-    this._singleViewPageController.syncColHeightIfWideView();
   }
   _deviceRouteBucket() {
     return resolveDeviceRouteBucket(DEVICE_PROFILE);
