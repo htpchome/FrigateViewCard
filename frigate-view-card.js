@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.822";
+const VERSION = "1.0.823";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5481,42 +5481,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._deepLinkController.isDeepLinkCandidateForCard();
   }
   _consumeDeepLinkEventOpen() {
-    if (!this._isDeepLinkHandlingEnabled()) return;
-    if (!this._isDeepLinkCandidateForCard()) return;
-    if (!this._deepLinkEventId || this._deepLinkApplied) return;
-    const event = this._findEventById(this._deepLinkEventId);
-    if (!event) {
-      this._deepLinkEventLookupTried = true;
-      this._consumeDeepLinkReviewOpen();
-      return;
-    }
-    this._deepLinkEventLookupTried = true;
-    const eventCam = String(event.camera || "").toLowerCase();
-    if (eventCam) {
-      const idx = this._config.cameras.findIndex((camera) => {
-        const cacheCam = String(
-          this._camCache[camera.entity]?.cam || ""
-        ).toLowerCase();
-        return cacheCam === eventCam;
-      });
-      if (idx >= 0 && idx !== this._activeCamIdx) {
-        this._switchCamera(idx);
-        return;
-      }
-    }
-    this._deepLinkApplied = true;
-    if (this._deepLinkMediaHint === "snapshot") {
-      this._showSnapshot(event);
-      this._clearDeepLinkParamsFromUrl();
-      return;
-    }
-    if (this._deepLinkMediaHint === "clip" && event.has_clip) {
-      this._showClip(event, { mediaType: "clip" });
-      this._clearDeepLinkParamsFromUrl();
-      return;
-    }
-    this._open(this._deepLinkEventId);
-    this._clearDeepLinkParamsFromUrl();
+    this._deepLinkController.consumeDeepLinkEventOpen();
   }
   _consumeDeepLinkReviewOpen() {
     if (!this._isDeepLinkHandlingEnabled()) return;
