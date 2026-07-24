@@ -1151,9 +1151,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isDeepLinkCandidateForCard() {
-    if (!this._isDeepLinkHandlingEnabled()) return false;
-    if (!this._deepLinkCameraHint) return true;
-    return this._deepLinkCameraHintIndex() >= 0;
+    return this._deepLinkController.isDeepLinkCandidateForCard();
   }
 
   _consumeDeepLinkEventOpen() {
