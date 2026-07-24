@@ -1159,31 +1159,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _consumeDeepLinkReviewOpen() {
-    if (!this._isDeepLinkHandlingEnabled()) return;
-    if (!this._isDeepLinkCandidateForCard()) return;
-    if (this._deepLinkApplied) return;
-    if (this._deepLinkEventId && !this._deepLinkEventLookupTried) return;
-    if (!this._deepLinkReviewId) return;
-
-    const review = (this._reviews || []).find(
-      (item) => String(item?.id || "") === this._deepLinkReviewId,
-    );
-    const reviewEventId = String(review?.data?.detections?.[0] || "");
-    if (reviewEventId) {
-      this._deepLinkEventId = reviewEventId;
-      this._deepLinkEventLookupTried = false;
-      this._consumeDeepLinkEventOpen();
-      return;
-    }
-
-    if (this._deepLinkReviewLookupTried) return;
-    this._deepLinkReviewLookupTried = true;
-    void this._loadReviews()
-      .catch(() => {})
-      .finally(() => {
-        this._consumeDeepLinkReviewOpen();
-        this._consumeDeepLinkEventOpen();
-      });
+    this._deepLinkController.consumeDeepLinkReviewOpen();
   }
 
   _isLikelyMobileClient() {
