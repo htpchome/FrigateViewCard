@@ -1139,37 +1139,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _initDeepLinkFromUrl() {
-    const params = this._mergedUrlSearchParams();
-    const eventId =
-      params.get("event") ||
-      params.get("event_id") ||
-      params.get("frigate_event") ||
-      params.get("frigate_event_id") ||
-      "";
-    const reviewId =
-      params.get("review") ||
-      params.get("review_id") ||
-      params.get("frigate_review") ||
-      params.get("frigate_review_id") ||
-      "";
-    const cameraHint =
-      params.get("camera") ||
-      params.get("cam") ||
-      params.get("camera_entity") ||
-      "";
-    const mediaHint =
-      params.get("media") || params.get("view") || params.get("open") || "";
-    this._deepLinkEventId = String(eventId || "").trim();
-    this._deepLinkReviewId = String(reviewId || "").trim();
-    this._deepLinkMediaHint = String(mediaHint || "")
-      .trim()
-      .toLowerCase();
-    this._deepLinkCameraHint = String(cameraHint || "")
-      .trim()
-      .toLowerCase();
-    this._deepLinkApplied = false;
-    this._deepLinkEventLookupTried = false;
-    this._deepLinkReviewLookupTried = false;
+    this._deepLinkController.initDeepLinkFromUrl();
   }
 
   _deepLinkCameraHintIndex() {
