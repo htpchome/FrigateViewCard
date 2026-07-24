@@ -120,6 +120,12 @@ test("single-view helpers delegate through the controller wrappers", () => {
     ),
     true,
   );
+  assert.equal(
+    source.includes(
+      "_syncColHeightIfWideView() {\n    this._singleViewPageController.syncColHeightIfWideView();\n  }",
+    ),
+    true,
+  );
 });
 
 test("preview helpers delegate through the preview page controller", () => {

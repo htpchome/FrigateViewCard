@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.836";
+const VERSION = "1.0.837";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4209,7 +4209,11 @@ const SingleViewPageController = class {
     this._host._applyPreviewShellVisibility();
     this._host._applyCardStyle();
     this._host._applyLayoutMode();
-    if (this.isWideViewPageActive()) this._host._syncColHeight();
+    this.syncColHeightIfWideView();
+  }
+  syncColHeightIfWideView() {
+    if (!this.isWideViewPageActive()) return;
+    this._host._syncColHeight();
   }
   isWideViewPageActive() {
     return this._host._pageId === this._constants.PAGE_IDS.wideView;
@@ -4956,7 +4960,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderCamSwitcher();
     this._applyCardStyle();
     this._applyLayoutMode();
-    if (this._isWideViewPageActive()) this._syncColHeight();
+    this._syncColHeightIfWideView();
     this._syncStatus();
     this._renderSubtitle();
     this._renderStats();
@@ -4979,9 +4983,7 @@ const FrigateViewCard = class extends HTMLElement {
       this.parentElement.style.height = this._isPreviewContext() ? "auto" : "100%";
       this._applyTightMargins();
       this._applyLayoutMode();
-      if (this._isWideViewPageActive()) {
-        this._syncColHeight();
-      }
+      this._syncColHeightIfWideView();
     }
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
@@ -5307,7 +5309,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._applyCardStyle();
     this._applyLayoutMode();
-    if (this._isWideViewPageActive()) this._syncColHeight();
+    this._syncColHeightIfWideView();
     this._syncStatus();
     this._renderSubtitle();
     this._renderStats();
@@ -7042,6 +7044,9 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _isWideViewPageActive() {
     return this._singleViewPageController.isWideViewPageActive();
+  }
+  _syncColHeightIfWideView() {
+    this._singleViewPageController.syncColHeightIfWideView();
   }
   _deviceRouteBucket() {
     return resolveDeviceRouteBucket(DEVICE_PROFILE);

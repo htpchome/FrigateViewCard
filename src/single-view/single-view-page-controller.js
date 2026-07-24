@@ -48,7 +48,12 @@ export class SingleViewPageController {
     this._host._applyPreviewShellVisibility();
     this._host._applyCardStyle();
     this._host._applyLayoutMode();
-    if (this.isWideViewPageActive()) this._host._syncColHeight();
+    this.syncColHeightIfWideView();
+  }
+
+  syncColHeightIfWideView() {
+    if (!this.isWideViewPageActive()) return;
+    this._host._syncColHeight();
   }
 
   isWideViewPageActive() {

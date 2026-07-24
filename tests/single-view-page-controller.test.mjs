@@ -145,3 +145,17 @@ test("isWideViewPageActive derives state from host page id", () => {
   host._pageId = "single-view";
   assert.equal(controller.isWideViewPageActive(), false);
 });
+
+test("syncColHeightIfWideView syncs only for wide view route", () => {
+  const wide = createHost({ isWide: true });
+  const wideController = new SingleViewPageController(wide.host, { PAGE_IDS });
+  wideController.syncColHeightIfWideView();
+  assert.deepEqual(wide.calls, [["syncColHeight"]]);
+
+  const single = createHost({ isWide: false });
+  const singleController = new SingleViewPageController(single.host, {
+    PAGE_IDS,
+  });
+  singleController.syncColHeightIfWideView();
+  assert.deepEqual(single.calls, []);
+});
