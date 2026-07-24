@@ -198,6 +198,24 @@ test("wideViewLayoutState resolves wide layout widths with clamping", () => {
   });
 });
 
+test("applyStyleLayoutForCurrentRoute applies style, layout, and wide sync", () => {
+  const wide = createHost({ isWide: true });
+  const wideController = new SingleViewPageController(wide.host, { PAGE_IDS });
+  wideController.applyStyleLayoutForCurrentRoute();
+  assert.deepEqual(wide.calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeight"],
+  ]);
+
+  const single = createHost({ isWide: false });
+  const singleController = new SingleViewPageController(single.host, {
+    PAGE_IDS,
+  });
+  singleController.applyStyleLayoutForCurrentRoute();
+  assert.deepEqual(single.calls, [["applyCardStyle"], ["applyLayoutMode"]]);
+});
+
 test("applyNonPreviewSchemaSoftUpdate orchestrates non-preview refresh", () => {
   const wide = createHost({ isWide: true });
   const wideController = new SingleViewPageController(wide.host, { PAGE_IDS });

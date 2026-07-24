@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.843";
+const VERSION = "1.0.844";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4207,6 +4207,9 @@ const SingleViewPageController = class {
   }
   _applyStandardPageRouteFrame() {
     this._host._applyPreviewShellVisibility();
+    this.applyStyleLayoutForCurrentRoute();
+  }
+  applyStyleLayoutForCurrentRoute() {
     this._host._applyCardStyle();
     this._host._applyLayoutMode();
     this.syncColHeightIfWideView();
@@ -4251,9 +4254,7 @@ const SingleViewPageController = class {
     this._host._renderAll();
   }
   applyNonPreviewSchemaSoftUpdate() {
-    this._host._applyCardStyle();
-    this._host._applyLayoutMode();
-    this.syncColHeightIfWideView();
+    this.applyStyleLayoutForCurrentRoute();
     this._host._syncStatus();
     this._host._renderSubtitle();
     this._host._renderStats();
@@ -4987,9 +4988,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncTabsShell();
     this._syncPageNavShell();
     this._renderCamSwitcher();
-    this._applyCardStyle();
-    this._applyLayoutMode();
-    this._singleViewPageController.syncColHeightIfWideView();
+    this._singleViewPageController.applyStyleLayoutForCurrentRoute();
     this._syncStatus();
     this._renderSubtitle();
     this._renderStats();

@@ -46,6 +46,10 @@ export class SingleViewPageController {
 
   _applyStandardPageRouteFrame() {
     this._host._applyPreviewShellVisibility();
+    this.applyStyleLayoutForCurrentRoute();
+  }
+
+  applyStyleLayoutForCurrentRoute() {
     this._host._applyCardStyle();
     this._host._applyLayoutMode();
     this.syncColHeightIfWideView();
@@ -101,9 +105,7 @@ export class SingleViewPageController {
   }
 
   applyNonPreviewSchemaSoftUpdate() {
-    this._host._applyCardStyle();
-    this._host._applyLayoutMode();
-    this.syncColHeightIfWideView();
+    this.applyStyleLayoutForCurrentRoute();
     this._host._syncStatus();
     this._host._renderSubtitle();
     this._host._renderStats();

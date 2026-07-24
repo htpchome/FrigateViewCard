@@ -450,9 +450,7 @@ export class FrigateViewCard extends HTMLElement {
     this._syncTabsShell();
     this._syncPageNavShell();
     this._renderCamSwitcher();
-    this._applyCardStyle();
-    this._applyLayoutMode();
-    this._singleViewPageController.syncColHeightIfWideView();
+    this._singleViewPageController.applyStyleLayoutForCurrentRoute();
     this._syncStatus();
     this._renderSubtitle();
     this._renderStats();
