@@ -3013,13 +3013,13 @@ export class FrigateViewCard extends HTMLElement {
     this._navigationFactory = createNavigationFactory({
       pages: {
         [PAGE_IDS.singleView]: {
-          activate: (context) => this._activateStandardPageRoute(context),
+          activate: (context) => this._activateSingleViewPageRoute(context),
         },
         [PAGE_IDS.preview]: {
           activate: (context) => this._activatePreviewPageRoute(context),
         },
         [PAGE_IDS.wideView]: {
-          activate: (context) => this._activateStandardPageRoute(context),
+          activate: (context) => this._activateWideViewPageRoute(context),
         },
       },
       getDeviceBucket: () => this._deviceRouteBucket(),
@@ -3088,8 +3088,12 @@ export class FrigateViewCard extends HTMLElement {
     return this._navigateToPageRoute(nextPageId, context);
   }
 
-  _activateStandardPageRoute(context = {}) {
-    this._singleViewPageController.activateStandardPageRoute(context);
+  _activateSingleViewPageRoute(context = {}) {
+    this._singleViewPageController.activateSingleViewPageRoute(context);
+  }
+
+  _activateWideViewPageRoute(context = {}) {
+    this._singleViewPageController.activateWideViewPageRoute(context);
   }
 
   _activatePreviewPageRoute(context = {}) {

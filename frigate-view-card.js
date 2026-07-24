@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.808";
+const VERSION = "1.0.809";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3883,6 +3883,12 @@ const SingleViewPageController = class {
     this._host = host;
     this._constants = constants;
   }
+  activateSingleViewPageRoute(context = {}) {
+    this.activateStandardPageRoute(context);
+  }
+  activateWideViewPageRoute(context = {}) {
+    this.activateStandardPageRoute(context);
+  }
   activateStandardPageRoute(context = {}) {
     const PAGE_IDS2 = this._constants.PAGE_IDS;
     const leavingPreview = context.previousPageId === PAGE_IDS2.preview;
@@ -6853,13 +6859,13 @@ const FrigateViewCard = class extends HTMLElement {
     this._navigationFactory = createNavigationFactory({
       pages: {
         [PAGE_IDS.singleView]: {
-          activate: (context) => this._activateStandardPageRoute(context)
+          activate: (context) => this._activateSingleViewPageRoute(context)
         },
         [PAGE_IDS.preview]: {
           activate: (context) => this._activatePreviewPageRoute(context)
         },
         [PAGE_IDS.wideView]: {
-          activate: (context) => this._activateStandardPageRoute(context)
+          activate: (context) => this._activateWideViewPageRoute(context)
         }
       },
       getDeviceBucket: () => this._deviceRouteBucket(),
@@ -6918,8 +6924,11 @@ const FrigateViewCard = class extends HTMLElement {
     });
     return this._navigateToPageRoute(nextPageId, context);
   }
-  _activateStandardPageRoute(context = {}) {
-    this._singleViewPageController.activateStandardPageRoute(context);
+  _activateSingleViewPageRoute(context = {}) {
+    this._singleViewPageController.activateSingleViewPageRoute(context);
+  }
+  _activateWideViewPageRoute(context = {}) {
+    this._singleViewPageController.activateWideViewPageRoute(context);
   }
   _activatePreviewPageRoute(context = {}) {
     this._previewPageController.activatePreviewPageRoute(context);

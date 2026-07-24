@@ -113,3 +113,37 @@ test("activateStandardPageRoute honors deferCameraSwitch", () => {
     ["applyLayoutMode"],
   ]);
 });
+
+test("activateSingleViewPageRoute delegates to standard activation", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, {
+    PAGE_IDS: { preview: "preview" },
+  });
+
+  controller.activateSingleViewPageRoute({ startup: true });
+
+  assert.deepEqual(calls, [
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["mountEngine"],
+  ]);
+});
+
+test("activateWideViewPageRoute delegates to standard activation", () => {
+  const { host, calls } = createHost({ isWide: true });
+  const controller = new SingleViewPageController(host, {
+    PAGE_IDS: { preview: "preview" },
+  });
+
+  controller.activateWideViewPageRoute({});
+
+  assert.deepEqual(calls, [
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeight"],
+    ["syncTabsShell"],
+    ["renderAll"],
+  ]);
+});

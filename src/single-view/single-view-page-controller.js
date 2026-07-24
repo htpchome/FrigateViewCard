@@ -4,6 +4,14 @@ export class SingleViewPageController {
     this._constants = constants;
   }
 
+  activateSingleViewPageRoute(context = {}) {
+    this.activateStandardPageRoute(context);
+  }
+
+  activateWideViewPageRoute(context = {}) {
+    this.activateStandardPageRoute(context);
+  }
+
   activateStandardPageRoute(context = {}) {
     const PAGE_IDS = this._constants.PAGE_IDS;
     const leavingPreview = context.previousPageId === PAGE_IDS.preview;
