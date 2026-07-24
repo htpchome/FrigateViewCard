@@ -203,3 +203,56 @@ test("applyWideLayoutMode clears widths for non-wide route", () => {
   assert.equal(colL.style.width, "");
   assert.equal(colR.style.width, "");
 });
+
+test("syncColHeight applies right-column maxHeight from left-column height", () => {
+  const { host } = createHost({ isWide: true });
+  const controller = new WideViewPageController(host, { PAGE_IDS });
+  const left = { offsetHeight: 240 };
+  const right = { style: { maxHeight: "" } };
+  host.shadowRoot = {
+    querySelector: (selector) => {
+      if (selector === ".col-left") return left;
+      if (selector === ".col-right") return right;
+      return null;
+    },
+  };
+
+  const previousRaf = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = (callback) => {
+    callback();
+    return 0;
+  };
+  try {
+    controller.syncColHeight();
+  } finally {
+    globalThis.requestAnimationFrame = previousRaf;
+  }
+
+  assert.equal(right.style.maxHeight, "240px");
+});
+
+test("syncColHeight is a no-op when columns are missing", () => {
+  const { host } = createHost({ isWide: true });
+  const controller = new WideViewPageController(host, { PAGE_IDS });
+  const right = { style: { maxHeight: "88px" } };
+  host.shadowRoot = {
+    querySelector: (selector) => {
+      if (selector === ".col-left") return null;
+      if (selector === ".col-right") return right;
+      return null;
+    },
+  };
+
+  const previousRaf = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = (callback) => {
+    callback();
+    return 0;
+  };
+  try {
+    controller.syncColHeight();
+  } finally {
+    globalThis.requestAnimationFrame = previousRaf;
+  }
+
+  assert.equal(right.style.maxHeight, "88px");
+});

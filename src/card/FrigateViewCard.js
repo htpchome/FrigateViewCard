@@ -548,13 +548,7 @@ export class FrigateViewCard extends HTMLElement {
     return resolved || value;
   }
   _syncColHeight() {
-    requestAnimationFrame(() => {
-      const l = this.shadowRoot.querySelector(".col-left");
-      const r = this.shadowRoot.querySelector(".col-right");
-      if (!l || !r) return;
-      const h = l.offsetHeight;
-      if (h > 0) r.style.maxHeight = h + "px";
-    });
+    this._wideViewPageController.syncColHeight();
   }
 
   _applyTightMargins() {
@@ -4543,55 +4537,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _initResizeHandle() {
-    const handle = this._$("#resize-handle");
-    if (!handle) return;
-    let dragging = false;
-    let startX = 0;
-    let startLeftWidth = 0;
-    let layoutWidth = 0;
-    let colL = null;
-    let colR = null;
-
-    const onMouseDown = (e) => {
-      e.preventDefault();
-      dragging = true;
-      startX = e.clientX;
-      const layout = this._$("#layout");
-      colL = this._$(".col-left");
-      colR = this._$(".col-right");
-      if (!layout || !colL || !colR) {
-        dragging = false;
-        return;
-      }
-      layoutWidth = layout.getBoundingClientRect().width;
-      startLeftWidth = colL.getBoundingClientRect().width;
-      handle.classList.add("active");
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
-    };
-
-    const onMouseMove = (e) => {
-      if (!dragging) return;
-      if (!colL || !colR || !layoutWidth) return;
-      const minPct = 10;
-      const maxPct = 90;
-      const dx = e.clientX - startX;
-      let newLeftWidth = startLeftWidth + dx;
-      let pct = (newLeftWidth / layoutWidth) * 100;
-      pct = Math.max(minPct, Math.min(maxPct, pct));
-      if (colL) colL.style.width = pct + "%";
-      if (colR) colR.style.width = 100 - pct + "%";
-      this._syncColHeight();
-    };
-
-    const onMouseUp = () => {
-      dragging = false;
-      handle.classList.remove("active");
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
-
-    handle.addEventListener("mousedown", onMouseDown);
+    this._wideViewPageController.initResizeHandle();
   }
 
   _bindListScroll() {

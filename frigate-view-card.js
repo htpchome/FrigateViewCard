@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.857";
+const VERSION = "1.0.859";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4421,6 +4421,15 @@ const WideViewPageController = class {
     if (!this.isWideViewPageActive()) return;
     this._host._syncColHeight();
   }
+  syncColHeight() {
+    requestAnimationFrame(() => {
+      const l = this._host.shadowRoot?.querySelector(".col-left");
+      const r = this._host.shadowRoot?.querySelector(".col-right");
+      if (!l || !r) return;
+      const h = l.offsetHeight;
+      if (h > 0) r.style.maxHeight = h + "px";
+    });
+  }
   isWideViewPageActive() {
     return this._host._pageId === this._constants.PAGE_IDS.wideView;
   }
@@ -4450,6 +4459,53 @@ const WideViewPageController = class {
         colR.style.width = "";
       }
     }
+  }
+  initResizeHandle() {
+    const handle = this._host._$("#resize-handle");
+    if (!handle) return;
+    let dragging = false;
+    let startX = 0;
+    let startLeftWidth = 0;
+    let layoutWidth = 0;
+    let colL = null;
+    let colR = null;
+    const onMouseDown = (e) => {
+      e.preventDefault();
+      dragging = true;
+      startX = e.clientX;
+      const layout = this._host._$("#layout");
+      colL = this._host._$(".col-left");
+      colR = this._host._$(".col-right");
+      if (!layout || !colL || !colR) {
+        dragging = false;
+        return;
+      }
+      layoutWidth = layout.getBoundingClientRect().width;
+      startLeftWidth = colL.getBoundingClientRect().width;
+      handle.classList.add("active");
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    };
+    const onMouseMove = (e) => {
+      if (!dragging) return;
+      if (!colL || !colR || !layoutWidth) return;
+      const minPct = 10;
+      const maxPct = 90;
+      const dx = e.clientX - startX;
+      let newLeftWidth = startLeftWidth + dx;
+      let pct = newLeftWidth / layoutWidth * 100;
+      pct = Math.max(minPct, Math.min(maxPct, pct));
+      if (colL) colL.style.width = pct + "%";
+      if (colR) colR.style.width = 100 - pct + "%";
+      this.syncColHeight();
+    };
+    const onMouseUp = () => {
+      dragging = false;
+      handle.classList.remove("active");
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+    handle.addEventListener("mousedown", onMouseDown);
   }
 };
 
@@ -5258,13 +5314,7 @@ const FrigateViewCard = class extends HTMLElement {
     return resolved || value;
   }
   _syncColHeight() {
-    requestAnimationFrame(() => {
-      const l = this.shadowRoot.querySelector(".col-left");
-      const r = this.shadowRoot.querySelector(".col-right");
-      if (!l || !r) return;
-      const h = l.offsetHeight;
-      if (h > 0) r.style.maxHeight = h + "px";
-    });
+    this._wideViewPageController.syncColHeight();
   }
   _applyTightMargins() {
     const tightMarginsEnabled = this._config?.tight_margins === true;
@@ -8725,51 +8775,7 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _initResizeHandle() {
-    const handle = this._$("#resize-handle");
-    if (!handle) return;
-    let dragging = false;
-    let startX = 0;
-    let startLeftWidth = 0;
-    let layoutWidth = 0;
-    let colL = null;
-    let colR = null;
-    const onMouseDown = (e) => {
-      e.preventDefault();
-      dragging = true;
-      startX = e.clientX;
-      const layout = this._$("#layout");
-      colL = this._$(".col-left");
-      colR = this._$(".col-right");
-      if (!layout || !colL || !colR) {
-        dragging = false;
-        return;
-      }
-      layoutWidth = layout.getBoundingClientRect().width;
-      startLeftWidth = colL.getBoundingClientRect().width;
-      handle.classList.add("active");
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
-    };
-    const onMouseMove = (e) => {
-      if (!dragging) return;
-      if (!colL || !colR || !layoutWidth) return;
-      const minPct = 10;
-      const maxPct = 90;
-      const dx = e.clientX - startX;
-      let newLeftWidth = startLeftWidth + dx;
-      let pct = newLeftWidth / layoutWidth * 100;
-      pct = Math.max(minPct, Math.min(maxPct, pct));
-      if (colL) colL.style.width = pct + "%";
-      if (colR) colR.style.width = 100 - pct + "%";
-      this._syncColHeight();
-    };
-    const onMouseUp = () => {
-      dragging = false;
-      handle.classList.remove("active");
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
-    handle.addEventListener("mousedown", onMouseDown);
+    this._wideViewPageController.initResizeHandle();
   }
   _bindListScroll() {
     const list = this._$("#list");
