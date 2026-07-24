@@ -216,3 +216,24 @@ test("applyNonPreviewSchemaSoftUpdate orchestrates non-preview refresh", () => {
     ["syncPageNavigationButtons"],
   ]);
 });
+
+test("mountEngineQuietly remounts live engine without render", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.mountEngineQuietly();
+
+  assert.deepEqual(calls, [["mountEngine", null, { quiet: true }]]);
+});
+
+test("mountEngineQuietlyAndRenderAll remounts then renders", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.mountEngineQuietlyAndRenderAll();
+
+  assert.deepEqual(calls, [
+    ["mountEngine", null, { quiet: true }],
+    ["renderAll"],
+  ]);
+});

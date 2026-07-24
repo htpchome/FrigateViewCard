@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.842";
+const VERSION = "1.0.843";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4239,6 +4239,13 @@ const SingleViewPageController = class {
   _mountEngineQuietly() {
     this._host._mountEngine(null, { quiet: true });
   }
+  mountEngineQuietly() {
+    this._mountEngineQuietly();
+  }
+  mountEngineQuietlyAndRenderAll() {
+    this._mountEngineQuietly();
+    this._host._renderAll();
+  }
   _syncStandardPageRouteShell() {
     this._host._syncTabsShell();
     this._host._renderAll();
@@ -5312,8 +5319,7 @@ const FrigateViewCard = class extends HTMLElement {
       } else if (this._isPreviewPageActive()) {
         this._startPreviewMode();
       } else {
-        this._mountEngine(null, { quiet: true });
-        this._renderAll();
+        this._singleViewPageController.mountEngineQuietlyAndRenderAll();
       }
       return;
     }
@@ -5329,7 +5335,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._singleViewPageController.applyNonPreviewSchemaSoftUpdate();
     if (needsEngineRemount) {
-      this._mountEngine(null, { quiet: true });
+      this._singleViewPageController.mountEngineQuietly();
     }
     if (realtimePollChanged) {
       this._restartRealtimeHeadPollTimer();

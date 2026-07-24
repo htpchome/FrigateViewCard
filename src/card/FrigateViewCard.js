@@ -877,8 +877,7 @@ export class FrigateViewCard extends HTMLElement {
       } else if (this._isPreviewPageActive()) {
         this._startPreviewMode();
       } else {
-        this._mountEngine(null, { quiet: true });
-        this._renderAll();
+        this._singleViewPageController.mountEngineQuietlyAndRenderAll();
       }
       return;
     }
@@ -901,7 +900,7 @@ export class FrigateViewCard extends HTMLElement {
     // Resume logic for editor close/visibility transitions is handled elsewhere.
 
     if (needsEngineRemount) {
-      this._mountEngine(null, { quiet: true });
+      this._singleViewPageController.mountEngineQuietly();
     }
     if (realtimePollChanged) {
       this._restartRealtimeHeadPollTimer();

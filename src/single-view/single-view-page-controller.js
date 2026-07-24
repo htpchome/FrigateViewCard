@@ -86,6 +86,15 @@ export class SingleViewPageController {
     this._host._mountEngine(null, { quiet: true });
   }
 
+  mountEngineQuietly() {
+    this._mountEngineQuietly();
+  }
+
+  mountEngineQuietlyAndRenderAll() {
+    this._mountEngineQuietly();
+    this._host._renderAll();
+  }
+
   _syncStandardPageRouteShell() {
     this._host._syncTabsShell();
     this._host._renderAll();
