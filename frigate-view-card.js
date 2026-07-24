@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.838";
+const VERSION = "1.0.839";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7048,9 +7048,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _isPreviewPageActive() {
     return this._previewPageController.isPreviewPageActive();
-  }
-  _isWideViewPageActive() {
-    return this._singleViewPageController.isWideViewPageActive();
   }
   _wideViewLayoutState() {
     return this._singleViewPageController.wideViewLayoutState(

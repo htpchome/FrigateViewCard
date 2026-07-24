@@ -2844,10 +2844,6 @@ export class FrigateViewCard extends HTMLElement {
     return this._previewPageController.isPreviewPageActive();
   }
 
-  _isWideViewPageActive() {
-    return this._singleViewPageController.isWideViewPageActive();
-  }
-
   _wideViewLayoutState() {
     return this._singleViewPageController.wideViewLayoutState(
       this._config?.col_left_width_pct,

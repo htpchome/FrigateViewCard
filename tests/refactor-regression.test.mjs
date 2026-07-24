@@ -116,12 +116,6 @@ test("single-view helpers delegate through the controller wrappers", () => {
   );
   assert.equal(
     source.includes(
-      "_isWideViewPageActive() {\n    return this._singleViewPageController.isWideViewPageActive();\n  }",
-    ),
-    true,
-  );
-  assert.equal(
-    source.includes(
       "_syncColHeightIfWideView() {\n    this._singleViewPageController.syncColHeightIfWideView();\n  }",
     ),
     true,
