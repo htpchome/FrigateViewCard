@@ -30,6 +30,7 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _syncColHeight: () => calls.push(["syncColHeight"]),
     _syncStatus: () => calls.push(["syncStatus"]),
     _kickLiveIfStale: () => calls.push(["kickLiveIfStale"]),
+    _renderPreviewPage: () => calls.push(["renderPreviewPage"]),
     _renderSubtitle: () => calls.push(["renderSubtitle"]),
     _renderStats: () => calls.push(["renderStats"]),
     _renderCamSwitcher: () => calls.push(["renderCamSwitcher"]),
@@ -42,6 +43,7 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
       calls.push(["navigateToConfiguredLandingPage", context]),
     _startPreviewMode: () => calls.push(["startPreviewMode"]),
     _cleanupEngine: () => calls.push(["cleanupEngine"]),
+    _clearPreviewTimers: () => calls.push(["clearPreviewTimers"]),
     _renderShell: () => calls.push(["renderShell"]),
     _setViewMode: (mode) => calls.push(["setViewMode", mode]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
@@ -49,6 +51,10 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _renderListLabel: () => calls.push(["renderListLabel"]),
     _renderList: () => calls.push(["renderList"]),
     _renderAll: () => calls.push(["renderAll"]),
+    _previewAlertController: {
+      scheduleAlertWatch: (delayMs) =>
+        calls.push(["schedulePreviewAlertWatch", delayMs]),
+    },
   };
   return { host, calls };
 };
@@ -429,6 +435,72 @@ test("applyNonPreviewHassUpdate is a no-op when flags are false", () => {
   });
 
   assert.deepEqual(calls, []);
+});
+
+test("applyHassUpdateRouteFlow handles preview-page branch", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const outcome = controller.applyHassUpdateRouteFlow({
+    cameraStateChanged: true,
+    themeChanged: true,
+    previewPageActive: true,
+  });
+
+  assert.equal(outcome, "preview");
+  assert.deepEqual(calls, [["renderPreviewPage"], ["applyCardStyle"]]);
+});
+
+test("applyHassUpdateRouteFlow handles non-preview branch", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const outcome = controller.applyHassUpdateRouteFlow({
+    cameraStateChanged: true,
+    themeChanged: true,
+    previewPageActive: false,
+  });
+
+  assert.equal(outcome, "non-preview");
+  assert.deepEqual(calls, [
+    ["syncStatus"],
+    ["kickLiveIfStale"],
+    ["applyCardStyle"],
+  ]);
+});
+
+test("applyPreviewConfigUpdateTail refreshes preview without timer reset", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyPreviewConfigUpdateTail({
+    previewModeConfigChanged: false,
+    realtimePollChanged: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["renderPreviewPage"],
+  ]);
+});
+
+test("applyPreviewConfigUpdateTail resets preview timers when needed", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyPreviewConfigUpdateTail({
+    previewModeConfigChanged: true,
+    realtimePollChanged: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["renderPreviewPage"],
+    ["clearPreviewTimers"],
+    ["schedulePreviewAlertWatch", 300],
+  ]);
 });
 
 test("applyEditorPreviewDraftRefresh orchestrates editor preview refresh order", () => {

@@ -173,6 +173,41 @@ export class SingleViewPageController {
     }
   }
 
+  applyHassUpdateRouteFlow({
+    cameraStateChanged = false,
+    themeChanged = false,
+    previewPageActive = false,
+  } = {}) {
+    if (previewPageActive) {
+      if (cameraStateChanged) {
+        this._host._renderPreviewPage();
+      }
+      if (themeChanged) {
+        this._host._applyCardStyle();
+      }
+      return "preview";
+    }
+
+    this.applyNonPreviewHassUpdate({
+      cameraStateChanged,
+      themeChanged,
+    });
+    return "non-preview";
+  }
+
+  applyPreviewConfigUpdateTail({
+    previewModeConfigChanged = false,
+    realtimePollChanged = false,
+  } = {}) {
+    this._host._applyCardStyle();
+    this._host._applyLayoutMode();
+    this._host._renderPreviewPage();
+    if (previewModeConfigChanged || realtimePollChanged) {
+      this._host._clearPreviewTimers();
+      this._host._previewAlertController.scheduleAlertWatch(300);
+    }
+  }
+
   applyEditorPreviewDraftRefresh() {
     this._host._syncTabsShell();
     this._host._syncPageNavShell();

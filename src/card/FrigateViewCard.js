@@ -858,13 +858,10 @@ export class FrigateViewCard extends HTMLElement {
       });
 
     if (routeFlowOutcome === "preview") {
-      this._applyCardStyle();
-      this._applyLayoutMode();
-      this._renderPreviewPage();
-      if (previewModeConfigChanged || realtimePollChanged) {
-        this._clearPreviewTimers();
-        this._previewAlertController.scheduleAlertWatch(300);
-      }
+      this._singleViewPageController.applyPreviewConfigUpdateTail({
+        previewModeConfigChanged,
+        realtimePollChanged,
+      });
       return;
     }
 
@@ -894,14 +891,10 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._lastEditorPreviewContext = inEditorPreview;
     if (!cameraStateChanged && !themeChanged) return;
-    if (this._isPreviewPageActive()) {
-      if (cameraStateChanged) this._renderPreviewPage();
-      if (themeChanged) this._applyCardStyle();
-      return;
-    }
-    this._singleViewPageController.applyNonPreviewHassUpdate({
+    this._singleViewPageController.applyHassUpdateRouteFlow({
       cameraStateChanged,
       themeChanged,
+      previewPageActive: this._isPreviewPageActive(),
     });
   }
   get _activeCam() {

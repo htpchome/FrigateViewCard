@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.851";
+const VERSION = "1.0.853";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4313,6 +4313,38 @@ const SingleViewPageController = class {
       this._host._applyCardStyle();
     }
   }
+  applyHassUpdateRouteFlow({
+    cameraStateChanged = false,
+    themeChanged = false,
+    previewPageActive = false
+  } = {}) {
+    if (previewPageActive) {
+      if (cameraStateChanged) {
+        this._host._renderPreviewPage();
+      }
+      if (themeChanged) {
+        this._host._applyCardStyle();
+      }
+      return "preview";
+    }
+    this.applyNonPreviewHassUpdate({
+      cameraStateChanged,
+      themeChanged
+    });
+    return "non-preview";
+  }
+  applyPreviewConfigUpdateTail({
+    previewModeConfigChanged = false,
+    realtimePollChanged = false
+  } = {}) {
+    this._host._applyCardStyle();
+    this._host._applyLayoutMode();
+    this._host._renderPreviewPage();
+    if (previewModeConfigChanged || realtimePollChanged) {
+      this._host._clearPreviewTimers();
+      this._host._previewAlertController.scheduleAlertWatch(300);
+    }
+  }
   applyEditorPreviewDraftRefresh() {
     this._host._syncTabsShell();
     this._host._syncPageNavShell();
@@ -5403,13 +5435,10 @@ const FrigateViewCard = class extends HTMLElement {
       realtimePollChanged
     });
     if (routeFlowOutcome === "preview") {
-      this._applyCardStyle();
-      this._applyLayoutMode();
-      this._renderPreviewPage();
-      if (previewModeConfigChanged || realtimePollChanged) {
-        this._clearPreviewTimers();
-        this._previewAlertController.scheduleAlertWatch(300);
-      }
+      this._singleViewPageController.applyPreviewConfigUpdateTail({
+        previewModeConfigChanged,
+        realtimePollChanged
+      });
       return;
     }
     if (routeFlowOutcome === "handled") return;
@@ -5437,14 +5466,10 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._lastEditorPreviewContext = inEditorPreview;
     if (!cameraStateChanged && !themeChanged) return;
-    if (this._isPreviewPageActive()) {
-      if (cameraStateChanged) this._renderPreviewPage();
-      if (themeChanged) this._applyCardStyle();
-      return;
-    }
-    this._singleViewPageController.applyNonPreviewHassUpdate({
+    this._singleViewPageController.applyHassUpdateRouteFlow({
       cameraStateChanged,
-      themeChanged
+      themeChanged,
+      previewPageActive: this._isPreviewPageActive()
     });
   }
   get _activeCam() {
