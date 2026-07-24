@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.804";
+const VERSION = "1.0.807";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4854,6 +4854,7 @@ const FrigateViewCard = class extends HTMLElement {
       wide_view_page_enabled: config.wide_view_page_enabled === true || config.wide_view === true,
       landing_page: normalizePageRoute(config.landing_page),
       mobile_page: normalizePageRoute(config.mobile_page),
+      deep_link_enabled: config.deep_link_enabled !== false,
       grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
         Number(config.grid_rotation_seconds)
       ) ? Number(config.grid_rotation_seconds) : 30,
@@ -5128,8 +5129,10 @@ const FrigateViewCard = class extends HTMLElement {
   // ── init ─────────────────────────────────────────────────
   async _start() {
     await this._discoverAll();
-    this._initDeepLinkFromUrl();
-    this._applyDeepLinkCameraHint();
+    if (this._isDeepLinkHandlingEnabled()) {
+      this._initDeepLinkFromUrl();
+      this._applyDeepLinkCameraHint();
+    }
     const now = Math.floor(Date.now() / 1e3);
     this._followNowWindow = true;
     this._winEnd = now;
@@ -5171,6 +5174,7 @@ const FrigateViewCard = class extends HTMLElement {
     return params;
   }
   _clearDeepLinkParamsFromUrl() {
+    if (!this._isDeepLinkHandlingEnabled()) return;
     const deepLinkKeys = new Set([
       "event",
       "event_id",
@@ -5222,9 +5226,9 @@ const FrigateViewCard = class extends HTMLElement {
     this._deepLinkEventLookupTried = false;
     this._deepLinkReviewLookupTried = false;
   }
-  _applyDeepLinkCameraHint() {
-    if (!this._deepLinkCameraHint) return;
-    const idx = this._config.cameras.findIndex((camera) => {
+  _deepLinkCameraHintIndex() {
+    if (!this._deepLinkCameraHint) return -1;
+    return this._config.cameras.findIndex((camera) => {
       const entity = String(camera.entity || "").toLowerCase();
       const name = String(camera.name || "").toLowerCase();
       const cacheCam = String(
@@ -5232,9 +5236,20 @@ const FrigateViewCard = class extends HTMLElement {
       ).toLowerCase();
       return entity === this._deepLinkCameraHint || name === this._deepLinkCameraHint || cacheCam === this._deepLinkCameraHint;
     });
+  }
+  _applyDeepLinkCameraHint() {
+    if (!this._deepLinkCameraHint) return;
+    const idx = this._deepLinkCameraHintIndex();
     if (idx >= 0) this._activeCamIdx = idx;
   }
+  _isDeepLinkCandidateForCard() {
+    if (!this._isDeepLinkHandlingEnabled()) return false;
+    if (!this._deepLinkCameraHint) return true;
+    return this._deepLinkCameraHintIndex() >= 0;
+  }
   _consumeDeepLinkEventOpen() {
+    if (!this._isDeepLinkHandlingEnabled()) return;
+    if (!this._isDeepLinkCandidateForCard()) return;
     if (!this._deepLinkEventId || this._deepLinkApplied) return;
     const event = this._findEventById(this._deepLinkEventId);
     if (!event) {
@@ -5271,6 +5286,8 @@ const FrigateViewCard = class extends HTMLElement {
     this._clearDeepLinkParamsFromUrl();
   }
   _consumeDeepLinkReviewOpen() {
+    if (!this._isDeepLinkHandlingEnabled()) return;
+    if (!this._isDeepLinkCandidateForCard()) return;
     if (this._deepLinkApplied) return;
     if (this._deepLinkEventId && !this._deepLinkEventLookupTried) return;
     if (!this._deepLinkReviewId) return;
@@ -6891,7 +6908,11 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewPageController.activatePreviewPageRoute(context);
   }
   _hasPendingDeepLinkTarget() {
+    if (!this._isDeepLinkCandidateForCard()) return false;
     return !!(this._deepLinkEventId || this._deepLinkReviewId || this._deepLinkCameraHint);
+  }
+  _isDeepLinkHandlingEnabled() {
+    return this._config?.deep_link_enabled !== false;
   }
   _previewLiveCamerasEnabled() {
     return this._config?.preview_page_live_cameras === true;

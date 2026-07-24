@@ -1,4 +1,4 @@
-##### Under Construction
+# Under Construction
 
 Use at your own risk while this card is being built.
 
@@ -29,14 +29,6 @@ This project originally started as a fork of [frigate-modern-hass-card](https://
     In your Lovelace dashboard, go to "Manage Resources" and add a new resource:
         URL: /local/frigate-view-card.js
         Resource Type: JavaScript Module
-    Example YAML:
-
-```yaml
-type: custom:frigate-view-card
-cameras:
-  - entity: camera.front_door
-title: Frigate
-```
 
 ## YAML Configuration
 
@@ -52,35 +44,36 @@ cameras:
 
 ### Top-Level Options
 
-| Variable                       | Type    | Default                  | Description                                                                                                     |
-| ------------------------------ | ------- | ------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `cameras`                      | list    | required                 | Camera definitions. Up to 8 cameras are supported.                                                              |
-| `title`                        | string  | camera name or `Cameras` | Main card title.                                                                                                |
-| `subtitle`                     | string  | `Frigate`                | Secondary title text.                                                                                           |
-| `window_days`                  | number  | `3`                      | Number of days to load for Clips, Snapshots, Recordings, and Kept views.                                        |
-| `alerts_reviews_days`          | number  | same as `window_days`    | Number of days to load for the Alerts view.                                                                     |
-| `realtime_poll_seconds`        | number  | `5`                      | Real-time Frigate polling interval. Valid values: `2`, `5`, `10`, `15`.                                         |
-| `mobile_poll_battery_saver`    | boolean | `false`                  | Uses a slower mobile polling interval to reduce battery usage.                                                  |
-| `slideshow_rotation_enabled`   | boolean | `false`                  | Enables automatic live-camera rotation on non-phone devices.                                                    |
-| `slideshow_rotation_seconds`   | number  | `30`                     | Slideshow rotation interval. Valid values: `10`, `20`, `30`, `60`.                                              |
-| `grid_mode_enabled`            | boolean | `false`                  | Enables the 2x2 grid mode controls.                                                                             |
-| `grid_start_in_grid_enabled`   | boolean | `false`                  | Starts in grid mode and returns to grid mode when re-entering the dashboard.                                    |
-| `grid_live_view_enabled`       | boolean | `true`                   | Uses live streams in grid mode. Set to `false` for snapshot-first grid tiles.                                   |
-| `grid_rotation_seconds`        | number  | `30`                     | Grid camera rotation interval when more than four cameras are configured. Valid values: `10`, `20`, `30`, `60`. |
-| `preview_page_enabled`         | boolean | `false`                  | Enables the Preview page as a navigation and landing-page option.                                               |
-| `preview_page_live_cameras`    | boolean | `false`                  | Uses live streams on Preview page camera tiles.                                                                 |
-| `preview_page_show_title_bars` | boolean | `true`                   | Shows title bars on Preview page camera tiles.                                                                  |
-| `hidden_tabs`                  | list    | `[]`                     | Tabs to hide. Valid values: `alerts`, `clips`, `snapshot`, `recordings`, `kept`.                                |
-| `theme`                        | string  | `default`                | Use `default` for Home Assistant theme variables or `custom` for color overrides.                               |
-| `theme_custom`                 | map     | `{}`                     | Custom theme color overrides. Only values different from the resolved defaults need to be saved.                |
-| `stream_height`                | number  | unset                    | Maximum media/card height. When unset, the card uses its automatic height.                                      |
-| `stream_height_unit`           | string  | `vh`                     | Unit for `stream_height`. Valid values: `vh`, `em`, `px`. Only useful when `stream_height` is set.              |
-| `tight_margins`                | boolean | `false`                  | Reduces outer card margins.                                                                                     |
-| `shadows`                      | boolean | `true`                   | Enables card shadows.                                                                                           |
-| `wide_view_page_enabled`       | boolean | `false`                  | Enables the Wide View page as a navigation and desktop/tablet landing-page option.                              |
-| `landing_page`                 | string  | `single-view`            | Default starting page for desktop and tablet. Valid values depend on enabled pages.                             |
-| `mobile_page`                  | string  | `single-view`            | Default starting page for phones. Valid values: `single-view`, `preview`.                                       |
-| `col_left_width_pct`           | number  | `50`                     | Left column width percentage for the Wide View page. Valid range: `10` to `90`.                                 |
+| Variable                       | Type    | Default                  | Description                                                                                                                                                                               |
+| ------------------------------ | ------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cameras`                      | list    | required                 | Camera definitions. Up to 8 cameras are supported.                                                                                                                                        |
+| `title`                        | string  | camera name or `Cameras` | Main card title.                                                                                                                                                                          |
+| `subtitle`                     | string  | `Frigate`                | Secondary title text.                                                                                                                                                                     |
+| `window_days`                  | number  | `3`                      | Number of days to load for Clips, Snapshots, Recordings, and Kept views.                                                                                                                  |
+| `alerts_reviews_days`          | number  | same as `window_days`    | Number of days to load for the Alerts view.                                                                                                                                               |
+| `realtime_poll_seconds`        | number  | `5`                      | Real-time Frigate polling interval. Valid values: `2`, `5`, `10`, `15`.                                                                                                                   |
+| `mobile_poll_battery_saver`    | boolean | `false`                  | Uses a slower mobile polling interval to reduce battery usage.                                                                                                                            |
+| `slideshow_rotation_enabled`   | boolean | `false`                  | Enables automatic live-camera rotation on non-phone devices.                                                                                                                              |
+| `slideshow_rotation_seconds`   | number  | `30`                     | Slideshow rotation interval. Valid values: `10`, `20`, `30`, `60`.                                                                                                                        |
+| `grid_mode_enabled`            | boolean | `false`                  | Enables the 2x2 grid mode controls.                                                                                                                                                       |
+| `grid_start_in_grid_enabled`   | boolean | `false`                  | Starts in grid mode and returns to grid mode when re-entering the dashboard.                                                                                                              |
+| `grid_live_view_enabled`       | boolean | `true`                   | Uses live streams in grid mode. Set to `false` for snapshot-first grid tiles.                                                                                                             |
+| `grid_rotation_seconds`        | number  | `30`                     | Grid camera rotation interval when more than four cameras are configured. Valid values: `10`, `20`, `30`, `60`.                                                                           |
+| `preview_page_enabled`         | boolean | `false`                  | Enables the Preview page as a navigation and landing-page option.                                                                                                                         |
+| `preview_page_live_cameras`    | boolean | `false`                  | Uses live streams on Preview page camera tiles.                                                                                                                                           |
+| `preview_page_show_title_bars` | boolean | `true`                   | Shows title bars on Preview page camera tiles.                                                                                                                                            |
+| `hidden_tabs`                  | list    | `[]`                     | Tabs to hide. Valid values: `alerts`, `clips`, `snapshot`, `recordings`, `kept`.                                                                                                          |
+| `theme`                        | string  | `default`                | Use `default` for Home Assistant theme variables or `custom` for color overrides.                                                                                                         |
+| `theme_custom`                 | map     | `{}`                     | Custom theme color overrides. Only values different from the resolved defaults need to be saved.                                                                                          |
+| `stream_height`                | number  | unset                    | Maximum media/card height. When unset, the card uses its automatic height.                                                                                                                |
+| `stream_height_unit`           | string  | `vh`                     | Unit for `stream_height`. Valid values: `vh`, `em`, `px`. Only useful when `stream_height` is set.                                                                                        |
+| `tight_margins`                | boolean | `false`                  | Reduces outer card margins.                                                                                                                                                               |
+| `shadows`                      | boolean | `true`                   | Enables card shadows.                                                                                                                                                                     |
+| `wide_view_page_enabled`       | boolean | `false`                  | Enables the Wide View page as a navigation and desktop/tablet landing-page option.                                                                                                        |
+| `landing_page`                 | string  | `single-view`            | Default starting page for desktop and tablet. Valid values depend on enabled pages.                                                                                                       |
+| `mobile_page`                  | string  | `single-view`            | Default starting page for phones. Valid values: `single-view`, `preview`.                                                                                                                 |
+| `deep_link_enabled`            | boolean | `true`                   | Enables URL deep-link handling (`event`, `review`, `camera`, `media`) for this card instance. Set `false` for multi-card dashboards to prevent one card from consuming shared URL params. |
+| `col_left_width_pct`           | number  | `50`                     | Left column width percentage for the Wide View page. Valid range: `10` to `90`.                                                                                                           |
 
 ### Camera Options
 
@@ -197,6 +190,7 @@ Behavior:
 - `media=snapshot` forces snapshot popup when an event/review resolves.
 - `media=clip` prefers clip popup when a clip exists.
 - If a camera hint is provided, the card switches to that camera first.
+- On dashboards with multiple FrigateView cards, links with a camera hint are consumed by the card that has that camera configured.
 
 Tap Action URL examples (Frigate Notifications blueprint variables):
 

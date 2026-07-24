@@ -757,6 +757,7 @@ export class FrigateViewCard extends HTMLElement {
         config.wide_view_page_enabled === true || config.wide_view === true,
       landing_page: normalizePageRoute(config.landing_page),
       mobile_page: normalizePageRoute(config.mobile_page),
+      deep_link_enabled: config.deep_link_enabled !== false,
       grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
         Number(config.grid_rotation_seconds),
       )
@@ -1083,8 +1084,10 @@ export class FrigateViewCard extends HTMLElement {
   // ── init ─────────────────────────────────────────────────
   async _start() {
     await this._discoverAll();
-    this._initDeepLinkFromUrl();
-    this._applyDeepLinkCameraHint();
+    if (this._isDeepLinkHandlingEnabled()) {
+      this._initDeepLinkFromUrl();
+      this._applyDeepLinkCameraHint();
+    }
     const now = Math.floor(Date.now() / 1000);
     this._followNowWindow = true;
     this._winEnd = now;
@@ -1129,6 +1132,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _clearDeepLinkParamsFromUrl() {
+    if (!this._isDeepLinkHandlingEnabled()) return;
     const deepLinkKeys = new Set([
       "event",
       "event_id",
@@ -1203,9 +1207,9 @@ export class FrigateViewCard extends HTMLElement {
     this._deepLinkReviewLookupTried = false;
   }
 
-  _applyDeepLinkCameraHint() {
-    if (!this._deepLinkCameraHint) return;
-    const idx = this._config.cameras.findIndex((camera) => {
+  _deepLinkCameraHintIndex() {
+    if (!this._deepLinkCameraHint) return -1;
+    return this._config.cameras.findIndex((camera) => {
       const entity = String(camera.entity || "").toLowerCase();
       const name = String(camera.name || "").toLowerCase();
       const cacheCam = String(
@@ -1217,10 +1221,23 @@ export class FrigateViewCard extends HTMLElement {
         cacheCam === this._deepLinkCameraHint
       );
     });
+  }
+
+  _applyDeepLinkCameraHint() {
+    if (!this._deepLinkCameraHint) return;
+    const idx = this._deepLinkCameraHintIndex();
     if (idx >= 0) this._activeCamIdx = idx;
   }
 
+  _isDeepLinkCandidateForCard() {
+    if (!this._isDeepLinkHandlingEnabled()) return false;
+    if (!this._deepLinkCameraHint) return true;
+    return this._deepLinkCameraHintIndex() >= 0;
+  }
+
   _consumeDeepLinkEventOpen() {
+    if (!this._isDeepLinkHandlingEnabled()) return;
+    if (!this._isDeepLinkCandidateForCard()) return;
     if (!this._deepLinkEventId || this._deepLinkApplied) return;
     const event = this._findEventById(this._deepLinkEventId);
     if (!event) {
@@ -1260,6 +1277,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _consumeDeepLinkReviewOpen() {
+    if (!this._isDeepLinkHandlingEnabled()) return;
+    if (!this._isDeepLinkCandidateForCard()) return;
     if (this._deepLinkApplied) return;
     if (this._deepLinkEventId && !this._deepLinkEventLookupTried) return;
     if (!this._deepLinkReviewId) return;
@@ -3098,11 +3117,16 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _hasPendingDeepLinkTarget() {
+    if (!this._isDeepLinkCandidateForCard()) return false;
     return !!(
       this._deepLinkEventId ||
       this._deepLinkReviewId ||
       this._deepLinkCameraHint
     );
+  }
+
+  _isDeepLinkHandlingEnabled() {
+    return this._config?.deep_link_enabled !== false;
   }
 
   _previewLiveCamerasEnabled() {
