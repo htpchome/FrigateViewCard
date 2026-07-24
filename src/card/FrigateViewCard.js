@@ -600,18 +600,14 @@ export class FrigateViewCard extends HTMLElement {
   _applyLayoutMode() {
     const layout = this.shadowRoot.querySelector("#layout");
     if (!layout) return;
-    const isWide = this._isWideViewPageActive();
-    layout.classList.toggle("wide-view", isWide);
+    const wideLayout = this._wideViewLayoutState();
+    layout.classList.toggle("wide-view", wideLayout.isWide);
     const colL = layout.querySelector(".col-left");
     const colR = layout.querySelector(".col-right");
     if (colL && colR) {
-      if (isWide) {
-        const pct = Math.min(
-          Math.max(parseInt(this._config?.col_left_width_pct, 10) || 50, 10),
-          90,
-        );
-        colL.style.width = pct + "%";
-        colR.style.width = 100 - pct + "%";
+      if (wideLayout.isWide) {
+        colL.style.width = wideLayout.leftWidth;
+        colR.style.width = wideLayout.rightWidth;
       } else {
         colL.style.width = "";
         colR.style.width = "";
@@ -2850,6 +2846,12 @@ export class FrigateViewCard extends HTMLElement {
 
   _isWideViewPageActive() {
     return this._singleViewPageController.isWideViewPageActive();
+  }
+
+  _wideViewLayoutState() {
+    return this._singleViewPageController.wideViewLayoutState(
+      this._config?.col_left_width_pct,
+    );
   }
 
   _syncColHeightIfWideView() {

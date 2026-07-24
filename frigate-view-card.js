@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.837";
+const VERSION = "1.0.838";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4218,6 +4218,17 @@ const SingleViewPageController = class {
   isWideViewPageActive() {
     return this._host._pageId === this._constants.PAGE_IDS.wideView;
   }
+  wideViewLayoutState(leftWidthPct) {
+    if (!this.isWideViewPageActive()) {
+      return { isWide: false, leftWidth: "", rightWidth: "" };
+    }
+    const pct = Math.min(Math.max(parseInt(leftWidthPct, 10) || 50, 10), 90);
+    return {
+      isWide: true,
+      leftWidth: `${pct}%`,
+      rightWidth: `${100 - pct}%`
+    };
+  }
   _activateStartupRoute(context) {
     if (context.startInGrid === true) {
       this._host._setViewMode("grid");
@@ -5089,18 +5100,14 @@ const FrigateViewCard = class extends HTMLElement {
   _applyLayoutMode() {
     const layout = this.shadowRoot.querySelector("#layout");
     if (!layout) return;
-    const isWide = this._isWideViewPageActive();
-    layout.classList.toggle("wide-view", isWide);
+    const wideLayout = this._wideViewLayoutState();
+    layout.classList.toggle("wide-view", wideLayout.isWide);
     const colL = layout.querySelector(".col-left");
     const colR = layout.querySelector(".col-right");
     if (colL && colR) {
-      if (isWide) {
-        const pct = Math.min(
-          Math.max(parseInt(this._config?.col_left_width_pct, 10) || 50, 10),
-          90
-        );
-        colL.style.width = pct + "%";
-        colR.style.width = 100 - pct + "%";
+      if (wideLayout.isWide) {
+        colL.style.width = wideLayout.leftWidth;
+        colR.style.width = wideLayout.rightWidth;
       } else {
         colL.style.width = "";
         colR.style.width = "";
@@ -7044,6 +7051,11 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _isWideViewPageActive() {
     return this._singleViewPageController.isWideViewPageActive();
+  }
+  _wideViewLayoutState() {
+    return this._singleViewPageController.wideViewLayoutState(
+      this._config?.col_left_width_pct
+    );
   }
   _syncColHeightIfWideView() {
     this._singleViewPageController.syncColHeightIfWideView();

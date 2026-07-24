@@ -60,6 +60,19 @@ export class SingleViewPageController {
     return this._host._pageId === this._constants.PAGE_IDS.wideView;
   }
 
+  wideViewLayoutState(leftWidthPct) {
+    if (!this.isWideViewPageActive()) {
+      return { isWide: false, leftWidth: "", rightWidth: "" };
+    }
+
+    const pct = Math.min(Math.max(parseInt(leftWidthPct, 10) || 50, 10), 90);
+    return {
+      isWide: true,
+      leftWidth: `${pct}%`,
+      rightWidth: `${100 - pct}%`,
+    };
+  }
+
   _activateStartupRoute(context) {
     if (context.startInGrid === true) {
       this._host._setViewMode("grid");

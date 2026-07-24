@@ -159,3 +159,35 @@ test("syncColHeightIfWideView syncs only for wide view route", () => {
   singleController.syncColHeightIfWideView();
   assert.deepEqual(single.calls, []);
 });
+
+test("wideViewLayoutState resolves wide layout widths with clamping", () => {
+  const wide = createHost({ isWide: true });
+  wide.host._config = { col_left_width_pct: "120" };
+  const wideController = new SingleViewPageController(wide.host, { PAGE_IDS });
+
+  assert.deepEqual(wideController.wideViewLayoutState("120"), {
+    isWide: true,
+    leftWidth: "90%",
+    rightWidth: "10%",
+  });
+  assert.deepEqual(wideController.wideViewLayoutState("5"), {
+    isWide: true,
+    leftWidth: "10%",
+    rightWidth: "90%",
+  });
+  assert.deepEqual(wideController.wideViewLayoutState("65"), {
+    isWide: true,
+    leftWidth: "65%",
+    rightWidth: "35%",
+  });
+
+  const single = createHost({ isWide: false });
+  const singleController = new SingleViewPageController(single.host, {
+    PAGE_IDS,
+  });
+  assert.deepEqual(singleController.wideViewLayoutState("65"), {
+    isWide: false,
+    leftWidth: "",
+    rightWidth: "",
+  });
+});
