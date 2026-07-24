@@ -447,16 +447,7 @@ export class FrigateViewCard extends HTMLElement {
     this._config = next;
     this._syncVisualStyleToggles();
     this._browseOpen = this._config.browse_expanded;
-    this._syncTabsShell();
-    this._syncPageNavShell();
-    this._renderCamSwitcher();
-    this._singleViewPageController.applyStyleLayoutForCurrentRoute();
-    this._syncStatus();
-    this._renderSubtitle();
-    this._renderStats();
-    this._renderListLabel();
-    this._renderList();
-    this._syncPageNavigationButtons();
+    this._singleViewPageController.applyEditorPreviewDraftRefresh();
   }
   connectedCallback() {
     if (this._disconnectTeardownT) {

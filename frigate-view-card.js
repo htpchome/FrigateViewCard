@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.847";
+const VERSION = "1.0.848";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4302,6 +4302,18 @@ const SingleViewPageController = class {
       this._host._applyCardStyle();
     }
   }
+  applyEditorPreviewDraftRefresh() {
+    this._host._syncTabsShell();
+    this._host._syncPageNavShell();
+    this._host._renderCamSwitcher();
+    this.applyStyleLayoutForCurrentRoute();
+    this._host._syncStatus();
+    this._host._renderSubtitle();
+    this._host._renderStats();
+    this._host._renderListLabel();
+    this._host._renderList();
+    this._host._syncPageNavigationButtons();
+  }
 };
 
 // src/slideshow/slideshow-utils.js
@@ -5025,16 +5037,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._config = next;
     this._syncVisualStyleToggles();
     this._browseOpen = this._config.browse_expanded;
-    this._syncTabsShell();
-    this._syncPageNavShell();
-    this._renderCamSwitcher();
-    this._singleViewPageController.applyStyleLayoutForCurrentRoute();
-    this._syncStatus();
-    this._renderSubtitle();
-    this._renderStats();
-    this._renderListLabel();
-    this._renderList();
-    this._syncPageNavigationButtons();
+    this._singleViewPageController.applyEditorPreviewDraftRefresh();
   }
   connectedCallback() {
     if (this._disconnectTeardownT) {

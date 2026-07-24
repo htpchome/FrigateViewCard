@@ -34,6 +34,7 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _renderCamSwitcher: () => calls.push(["renderCamSwitcher"]),
     _syncToolbarButtons: () => calls.push(["syncToolbarButtons"]),
     _syncPageNavigationButtons: () => calls.push(["syncPageNavigationButtons"]),
+    _syncPageNavShell: () => calls.push(["syncPageNavShell"]),
     _restartRealtimeHeadPollTimer: () =>
       calls.push(["restartRealtimeHeadPollTimer"]),
     _navigateToConfiguredLandingPage: (context) =>
@@ -42,6 +43,8 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _setViewMode: (mode) => calls.push(["setViewMode", mode]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
     _syncTabsShell: () => calls.push(["syncTabsShell"]),
+    _renderListLabel: () => calls.push(["renderListLabel"]),
+    _renderList: () => calls.push(["renderList"]),
     _renderAll: () => calls.push(["renderAll"]),
   };
   return { host, calls };
@@ -374,4 +377,26 @@ test("applyNonPreviewHassUpdate is a no-op when flags are false", () => {
   });
 
   assert.deepEqual(calls, []);
+});
+
+test("applyEditorPreviewDraftRefresh orchestrates editor preview refresh order", () => {
+  const { host, calls } = createHost({ isWide: true });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyEditorPreviewDraftRefresh();
+
+  assert.deepEqual(calls, [
+    ["syncTabsShell"],
+    ["syncPageNavShell"],
+    ["renderCamSwitcher"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeight"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderListLabel"],
+    ["renderList"],
+    ["syncPageNavigationButtons"],
+  ]);
 });

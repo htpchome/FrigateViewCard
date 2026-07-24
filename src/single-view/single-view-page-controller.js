@@ -159,4 +159,17 @@ export class SingleViewPageController {
       this._host._applyCardStyle();
     }
   }
+
+  applyEditorPreviewDraftRefresh() {
+    this._host._syncTabsShell();
+    this._host._syncPageNavShell();
+    this._host._renderCamSwitcher();
+    this.applyStyleLayoutForCurrentRoute();
+    this._host._syncStatus();
+    this._host._renderSubtitle();
+    this._host._renderStats();
+    this._host._renderListLabel();
+    this._host._renderList();
+    this._host._syncPageNavigationButtons();
+  }
 }
