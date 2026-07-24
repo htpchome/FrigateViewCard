@@ -1147,9 +1147,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _applyDeepLinkCameraHint() {
-    if (!this._deepLinkCameraHint) return;
-    const idx = this._deepLinkCameraHintIndex();
-    if (idx >= 0) this._activeCamIdx = idx;
+    this._deepLinkController.applyDeepLinkCameraHint();
   }
 
   _isDeepLinkCandidateForCard() {
