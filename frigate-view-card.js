@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.853";
+const VERSION = "1.0.854";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4179,9 +4179,6 @@ const SingleViewPageController = class {
   activateSingleViewPageRoute(context = {}) {
     this.activateStandardPageRoute(context);
   }
-  activateWideViewPageRoute(context = {}) {
-    this.activateStandardPageRoute(context);
-  }
   activateStandardPageRoute(context = {}) {
     const leavingPreview = this._isLeavingPreviewPage(context);
     this._handlePreviewExit(leavingPreview);
@@ -4212,25 +4209,7 @@ const SingleViewPageController = class {
   applyStyleLayoutForCurrentRoute() {
     this._host._applyCardStyle();
     this._host._applyLayoutMode();
-    this.syncColHeightIfWideView();
-  }
-  syncColHeightIfWideView() {
-    if (!this.isWideViewPageActive()) return;
-    this._host._syncColHeight();
-  }
-  isWideViewPageActive() {
-    return this._host._pageId === this._constants.PAGE_IDS.wideView;
-  }
-  wideViewLayoutState(leftWidthPct) {
-    if (!this.isWideViewPageActive()) {
-      return { isWide: false, leftWidth: "", rightWidth: "" };
-    }
-    const pct = Math.min(Math.max(parseInt(leftWidthPct, 10) || 50, 10), 90);
-    return {
-      isWide: true,
-      leftWidth: `${pct}%`,
-      rightWidth: `${100 - pct}%`
-    };
+    this._host._syncColHeightIfWideView();
   }
   _activateStartupRoute(context) {
     if (context.startInGrid === true) {
@@ -4395,6 +4374,35 @@ const SingleViewPageController = class {
       this._host._activeCamIdx,
       Math.max(0, Number(nextCameraCount) - 1)
     );
+  }
+};
+
+// src/wide-view/wide-view-page-controller.js
+const WideViewPageController = class {
+  constructor(host, constants) {
+    this._host = host;
+    this._constants = constants;
+  }
+  activateWideViewPageRoute(context = {}) {
+    this._host._singleViewPageController.activateStandardPageRoute(context);
+  }
+  syncColHeightIfWideView() {
+    if (!this.isWideViewPageActive()) return;
+    this._host._syncColHeight();
+  }
+  isWideViewPageActive() {
+    return this._host._pageId === this._constants.PAGE_IDS.wideView;
+  }
+  wideViewLayoutState(leftWidthPct) {
+    if (!this.isWideViewPageActive()) {
+      return { isWide: false, leftWidth: "", rightWidth: "" };
+    }
+    const pct = Math.min(Math.max(parseInt(leftWidthPct, 10) || 50, 10), 90);
+    return {
+      isWide: true,
+      leftWidth: `${pct}%`,
+      rightWidth: `${100 - pct}%`
+    };
   }
 };
 
@@ -4972,6 +4980,9 @@ const FrigateViewCard = class extends HTMLElement {
     this._singleViewPageController = new SingleViewPageController(this, {
       PAGE_IDS
     });
+    this._wideViewPageController = new WideViewPageController(this, {
+      PAGE_IDS
+    });
     this._pageNavigationController = new PageNavigationController(this, {
       buildPageNavMarkup,
       createNavigationFactory,
@@ -5136,7 +5147,7 @@ const FrigateViewCard = class extends HTMLElement {
       this.parentElement.style.height = this._isPreviewContext() ? "auto" : "100%";
       this._applyTightMargins();
       this._applyLayoutMode();
-      this._singleViewPageController.syncColHeightIfWideView();
+      this._syncColHeightIfWideView();
     }
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
@@ -5242,7 +5253,7 @@ const FrigateViewCard = class extends HTMLElement {
   _applyLayoutMode() {
     const layout = this.shadowRoot.querySelector("#layout");
     if (!layout) return;
-    const wideLayout = this._singleViewPageController.wideViewLayoutState(
+    const wideLayout = this._wideViewPageController.wideViewLayoutState(
       this._config?.col_left_width_pct
     );
     layout.classList.toggle("wide-view", wideLayout.isWide);
@@ -7191,7 +7202,10 @@ const FrigateViewCard = class extends HTMLElement {
     this._singleViewPageController.activateSingleViewPageRoute(context);
   }
   _activateWideViewPageRoute(context = {}) {
-    this._singleViewPageController.activateWideViewPageRoute(context);
+    this._wideViewPageController.activateWideViewPageRoute(context);
+  }
+  _syncColHeightIfWideView() {
+    this._wideViewPageController.syncColHeightIfWideView();
   }
   _activatePreviewPageRoute(context = {}) {
     this._previewPageController.activatePreviewPageRoute(context);

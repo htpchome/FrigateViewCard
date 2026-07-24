@@ -27,6 +27,9 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
       calls.push(["applyPreviewShellVisibility"]),
     _applyCardStyle: () => calls.push(["applyCardStyle"]),
     _applyLayoutMode: () => calls.push(["applyLayoutMode"]),
+    _syncColHeightIfWideView: () => {
+      if (host._pageId === "wide-view") calls.push(["syncColHeightIfWideView"]);
+    },
     _syncColHeight: () => calls.push(["syncColHeight"]),
     _syncStatus: () => calls.push(["syncStatus"]),
     _kickLiveIfStale: () => calls.push(["kickLiveIfStale"]),
@@ -101,20 +104,11 @@ test("activateStandardPageRoute leaves preview and remounts quietly", () => {
     ["applyPreviewShellVisibility"],
     ["applyCardStyle"],
     ["applyLayoutMode"],
-    ["syncColHeight"],
+    ["syncColHeightIfWideView"],
     ["mountEngine", null, { quiet: true }],
     ["syncTabsShell"],
     ["renderAll"],
   ]);
-});
-
-test("activateStandardPageRoute in wide view syncs column height", () => {
-  const { host, calls } = createHost({ isWide: true });
-  const controller = new SingleViewPageController(host, { PAGE_IDS });
-
-  controller.activateStandardPageRoute({});
-
-  assert.deepEqual(calls[3], ["syncColHeight"]);
 });
 
 test("activateStandardPageRoute honors deferCameraSwitch", () => {
@@ -144,78 +138,6 @@ test("activateSingleViewPageRoute delegates to standard activation", () => {
   ]);
 });
 
-test("activateWideViewPageRoute delegates to standard activation", () => {
-  const { host, calls } = createHost({ isWide: true });
-  const controller = new SingleViewPageController(host, { PAGE_IDS });
-
-  controller.activateWideViewPageRoute({});
-
-  assert.deepEqual(calls, [
-    ["applyPreviewShellVisibility"],
-    ["applyCardStyle"],
-    ["applyLayoutMode"],
-    ["syncColHeight"],
-    ["syncTabsShell"],
-    ["renderAll"],
-  ]);
-});
-
-test("isWideViewPageActive derives state from host page id", () => {
-  const { host } = createHost({ isWide: true });
-  const controller = new SingleViewPageController(host, { PAGE_IDS });
-
-  assert.equal(controller.isWideViewPageActive(), true);
-
-  host._pageId = "single-view";
-  assert.equal(controller.isWideViewPageActive(), false);
-});
-
-test("syncColHeightIfWideView syncs only for wide view route", () => {
-  const wide = createHost({ isWide: true });
-  const wideController = new SingleViewPageController(wide.host, { PAGE_IDS });
-  wideController.syncColHeightIfWideView();
-  assert.deepEqual(wide.calls, [["syncColHeight"]]);
-
-  const single = createHost({ isWide: false });
-  const singleController = new SingleViewPageController(single.host, {
-    PAGE_IDS,
-  });
-  singleController.syncColHeightIfWideView();
-  assert.deepEqual(single.calls, []);
-});
-
-test("wideViewLayoutState resolves wide layout widths with clamping", () => {
-  const wide = createHost({ isWide: true });
-  wide.host._config = { col_left_width_pct: "120" };
-  const wideController = new SingleViewPageController(wide.host, { PAGE_IDS });
-
-  assert.deepEqual(wideController.wideViewLayoutState("120"), {
-    isWide: true,
-    leftWidth: "90%",
-    rightWidth: "10%",
-  });
-  assert.deepEqual(wideController.wideViewLayoutState("5"), {
-    isWide: true,
-    leftWidth: "10%",
-    rightWidth: "90%",
-  });
-  assert.deepEqual(wideController.wideViewLayoutState("65"), {
-    isWide: true,
-    leftWidth: "65%",
-    rightWidth: "35%",
-  });
-
-  const single = createHost({ isWide: false });
-  const singleController = new SingleViewPageController(single.host, {
-    PAGE_IDS,
-  });
-  assert.deepEqual(singleController.wideViewLayoutState("65"), {
-    isWide: false,
-    leftWidth: "",
-    rightWidth: "",
-  });
-});
-
 test("applyStyleLayoutForCurrentRoute applies style, layout, and wide sync", () => {
   const wide = createHost({ isWide: true });
   const wideController = new SingleViewPageController(wide.host, { PAGE_IDS });
@@ -223,7 +145,7 @@ test("applyStyleLayoutForCurrentRoute applies style, layout, and wide sync", () 
   assert.deepEqual(wide.calls, [
     ["applyCardStyle"],
     ["applyLayoutMode"],
-    ["syncColHeight"],
+    ["syncColHeightIfWideView"],
   ]);
 
   const single = createHost({ isWide: false });
@@ -243,7 +165,7 @@ test("applyNonPreviewSchemaSoftUpdate orchestrates non-preview refresh", () => {
   assert.deepEqual(wide.calls, [
     ["applyCardStyle"],
     ["applyLayoutMode"],
-    ["syncColHeight"],
+    ["syncColHeightIfWideView"],
     ["syncStatus"],
     ["renderSubtitle"],
     ["renderStats"],
@@ -376,7 +298,7 @@ test("applyNonPreviewConfigUpdateTail performs optional remount and poll restart
   assert.deepEqual(calls, [
     ["applyCardStyle"],
     ["applyLayoutMode"],
-    ["syncColHeight"],
+    ["syncColHeightIfWideView"],
     ["syncStatus"],
     ["renderSubtitle"],
     ["renderStats"],
@@ -515,7 +437,7 @@ test("applyEditorPreviewDraftRefresh orchestrates editor preview refresh order",
     ["renderCamSwitcher"],
     ["applyCardStyle"],
     ["applyLayoutMode"],
-    ["syncColHeight"],
+    ["syncColHeightIfWideView"],
     ["syncStatus"],
     ["renderSubtitle"],
     ["renderStats"],
@@ -612,7 +534,7 @@ test("applyConfigUpdateRouteFlow handles non-preview tail branch", () => {
     ["cleanupEngine"],
     ["applyCardStyle"],
     ["applyLayoutMode"],
-    ["syncColHeight"],
+    ["syncColHeightIfWideView"],
     ["syncStatus"],
     ["renderSubtitle"],
     ["renderStats"],

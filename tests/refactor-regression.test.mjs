@@ -103,14 +103,14 @@ test("deep-link helpers delegate through the controller wrappers", () => {
 
 test("single-view helpers delegate through the controller wrappers", () => {
   assert.equal(
-    source.includes(
-      "_activateSingleViewPageRoute(context = {}) {\n    this._singleViewPageController.activateSingleViewPageRoute(context);\n  }",
+    /_activateSingleViewPageRoute\(context = \{\}\) \{\s*this\._singleViewPageController\.activateSingleViewPageRoute\(context\);\s*\}/s.test(
+      source,
     ),
     true,
   );
   assert.equal(
-    source.includes(
-      "_activateWideViewPageRoute(context = {}) {\n    this._singleViewPageController.activateWideViewPageRoute(context);\n  }",
+    /_activateWideViewPageRoute\(context = \{\}\) \{\s*this\._wideViewPageController\.activateWideViewPageRoute\(context\);\s*\}/s.test(
+      source,
     ),
     true,
   );

@@ -191,6 +191,7 @@ import {
 import { GridAlertController } from "../grid/grid-alert-controller.js";
 import { GridPageController } from "../grid/grid-page-controller.js";
 import { SingleViewPageController } from "../single-view/single-view-page-controller.js";
+import { WideViewPageController } from "../wide-view/wide-view-page-controller.js";
 import { SlideshowAlertController } from "../slideshow/slideshow-alert-controller.js";
 import { SlideshowPageController } from "../slideshow/slideshow-page-controller.js";
 import {
@@ -292,6 +293,9 @@ export class FrigateViewCard extends HTMLElement {
     });
     this._gridPageController = new GridPageController(this);
     this._singleViewPageController = new SingleViewPageController(this, {
+      PAGE_IDS,
+    });
+    this._wideViewPageController = new WideViewPageController(this, {
       PAGE_IDS,
     });
     this._pageNavigationController = new PageNavigationController(this, {
@@ -466,7 +470,7 @@ export class FrigateViewCard extends HTMLElement {
         : "100%";
       this._applyTightMargins();
       this._applyLayoutMode();
-      this._singleViewPageController.syncColHeightIfWideView();
+      this._syncColHeightIfWideView();
     }
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
@@ -589,7 +593,7 @@ export class FrigateViewCard extends HTMLElement {
   _applyLayoutMode() {
     const layout = this.shadowRoot.querySelector("#layout");
     if (!layout) return;
-    const wideLayout = this._singleViewPageController.wideViewLayoutState(
+    const wideLayout = this._wideViewPageController.wideViewLayoutState(
       this._config?.col_left_width_pct,
     );
     layout.classList.toggle("wide-view", wideLayout.isWide);
@@ -2838,7 +2842,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _activateWideViewPageRoute(context = {}) {
-    this._singleViewPageController.activateWideViewPageRoute(context);
+    this._wideViewPageController.activateWideViewPageRoute(context);
+  }
+
+  _syncColHeightIfWideView() {
+    this._wideViewPageController.syncColHeightIfWideView();
   }
 
   _activatePreviewPageRoute(context = {}) {
