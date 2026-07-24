@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.860";
+const VERSION = "1.0.861";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4419,7 +4419,7 @@ const WideViewPageController = class {
   }
   syncColHeightIfWideView() {
     if (!this.isWideViewPageActive()) return;
-    this._host._syncColHeight();
+    this.syncColHeight();
   }
   syncColHeight() {
     requestAnimationFrame(() => {
@@ -5312,9 +5312,6 @@ const FrigateViewCard = class extends HTMLElement {
     const resolved = getComputedStyle(probe).getPropertyValue(cssProperty).trim();
     probe.remove();
     return resolved || value;
-  }
-  _syncColHeight() {
-    this._wideViewPageController.syncColHeight();
   }
   _applyTightMargins() {
     const tightMarginsEnabled = this._config?.tight_margins === true;

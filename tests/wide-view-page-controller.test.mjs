@@ -30,7 +30,6 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
     _syncTabsShell: () => calls.push(["syncTabsShell"]),
     _renderAll: () => calls.push(["renderAll"]),
-    _syncColHeight: () => calls.push(["syncColHeight"]),
   };
   return { host, calls };
 };
@@ -38,6 +37,7 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
 test("activateWideViewPageRoute handles startup and mounts engine", () => {
   const { host, calls } = createHost({ isWide: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
+  controller.syncColHeight = () => calls.push(["syncColHeight"]);
 
   controller.activateWideViewPageRoute({ startup: true });
 
@@ -53,6 +53,7 @@ test("activateWideViewPageRoute handles startup and mounts engine", () => {
 test("activateWideViewPageRoute startup grid chooses grid mode", () => {
   const { host, calls } = createHost({ isWide: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
+  controller.syncColHeight = () => calls.push(["syncColHeight"]);
 
   controller.activateWideViewPageRoute({ startup: true, startInGrid: true });
 
@@ -68,6 +69,7 @@ test("activateWideViewPageRoute startup grid chooses grid mode", () => {
 test("activateWideViewPageRoute leaves preview and remounts quietly", () => {
   const { host, calls } = createHost({ isWide: true, popupOpen: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
+  controller.syncColHeight = () => calls.push(["syncColHeight"]);
 
   controller.activateWideViewPageRoute({ previousPageId: "preview" });
 
@@ -88,6 +90,7 @@ test("activateWideViewPageRoute leaves preview and remounts quietly", () => {
 test("activateWideViewPageRoute honors deferCameraSwitch", () => {
   const { host, calls } = createHost({ isWide: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
+  controller.syncColHeight = () => calls.push(["syncColHeight"]);
 
   controller.activateWideViewPageRoute({ deferCameraSwitch: true });
 
@@ -112,6 +115,7 @@ test("isWideViewPageActive derives state from host page id", () => {
 test("syncColHeightIfWideView syncs only for wide route", () => {
   const wide = createHost({ isWide: true });
   const wideController = new WideViewPageController(wide.host, { PAGE_IDS });
+  wideController.syncColHeight = () => wide.calls.push(["syncColHeight"]);
   wideController.syncColHeightIfWideView();
   assert.deepEqual(wide.calls, [["syncColHeight"]]);
 
@@ -119,6 +123,7 @@ test("syncColHeightIfWideView syncs only for wide route", () => {
   const singleController = new WideViewPageController(single.host, {
     PAGE_IDS,
   });
+  singleController.syncColHeight = () => single.calls.push(["syncColHeight"]);
   singleController.syncColHeightIfWideView();
   assert.deepEqual(single.calls, []);
 });

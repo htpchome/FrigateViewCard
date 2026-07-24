@@ -24,7 +24,7 @@ export class WideViewPageController {
 
   syncColHeightIfWideView() {
     if (!this.isWideViewPageActive()) return;
-    this._host._syncColHeight();
+    this.syncColHeight();
   }
 
   syncColHeight() {

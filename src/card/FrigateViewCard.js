@@ -547,9 +547,6 @@ export class FrigateViewCard extends HTMLElement {
     probe.remove();
     return resolved || value;
   }
-  _syncColHeight() {
-    this._wideViewPageController.syncColHeight();
-  }
 
   _applyTightMargins() {
     const tightMarginsEnabled = this._config?.tight_margins === true;
