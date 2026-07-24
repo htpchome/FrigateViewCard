@@ -3,10 +3,12 @@ import assert from "node:assert/strict";
 
 import { SingleViewPageController } from "../src/single-view/single-view-page-controller.js";
 
+const PAGE_IDS = { preview: "preview", wideView: "wide-view" };
+
 const createHost = ({ isWide = false, popupOpen = false } = {}) => {
   const calls = [];
   const host = {
-    _pageId: "single-view",
+    _pageId: isWide ? "wide-view" : "single-view",
     _stopPreviewMode: () => calls.push(["stopPreview"]),
     _$: (selector) => {
       if (selector === "#myPopup" && popupOpen) {
@@ -24,7 +26,6 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
       calls.push(["applyPreviewShellVisibility"]),
     _applyCardStyle: () => calls.push(["applyCardStyle"]),
     _applyLayoutMode: () => calls.push(["applyLayoutMode"]),
-    _isWideViewPageActive: () => isWide,
     _syncColHeight: () => calls.push(["syncColHeight"]),
     _setViewMode: (mode) => calls.push(["setViewMode", mode]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
@@ -36,9 +37,7 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
 
 test("activateStandardPageRoute handles startup and mounts engine", () => {
   const { host, calls } = createHost();
-  const controller = new SingleViewPageController(host, {
-    PAGE_IDS: { preview: "preview" },
-  });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
 
   controller.activateStandardPageRoute({ startup: true });
 
@@ -52,9 +51,7 @@ test("activateStandardPageRoute handles startup and mounts engine", () => {
 
 test("activateStandardPageRoute startup grid chooses grid mode", () => {
   const { host, calls } = createHost();
-  const controller = new SingleViewPageController(host, {
-    PAGE_IDS: { preview: "preview" },
-  });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
 
   controller.activateStandardPageRoute({ startup: true, startInGrid: true });
 
@@ -69,9 +66,7 @@ test("activateStandardPageRoute startup grid chooses grid mode", () => {
 test("activateStandardPageRoute leaves preview and remounts quietly", () => {
   const { host, calls } = createHost({ popupOpen: true });
   host._pageId = "wide-view";
-  const controller = new SingleViewPageController(host, {
-    PAGE_IDS: { preview: "preview" },
-  });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
 
   controller.activateStandardPageRoute({ previousPageId: "preview" });
 
@@ -82,6 +77,7 @@ test("activateStandardPageRoute leaves preview and remounts quietly", () => {
     ["applyPreviewShellVisibility"],
     ["applyCardStyle"],
     ["applyLayoutMode"],
+    ["syncColHeight"],
     ["mountEngine", null, { quiet: true }],
     ["syncTabsShell"],
     ["renderAll"],
@@ -90,9 +86,7 @@ test("activateStandardPageRoute leaves preview and remounts quietly", () => {
 
 test("activateStandardPageRoute in wide view syncs column height", () => {
   const { host, calls } = createHost({ isWide: true });
-  const controller = new SingleViewPageController(host, {
-    PAGE_IDS: { preview: "preview" },
-  });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
 
   controller.activateStandardPageRoute({});
 
@@ -101,9 +95,7 @@ test("activateStandardPageRoute in wide view syncs column height", () => {
 
 test("activateStandardPageRoute honors deferCameraSwitch", () => {
   const { host, calls } = createHost();
-  const controller = new SingleViewPageController(host, {
-    PAGE_IDS: { preview: "preview" },
-  });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
 
   controller.activateStandardPageRoute({ deferCameraSwitch: true });
 
@@ -116,9 +108,7 @@ test("activateStandardPageRoute honors deferCameraSwitch", () => {
 
 test("activateSingleViewPageRoute delegates to standard activation", () => {
   const { host, calls } = createHost();
-  const controller = new SingleViewPageController(host, {
-    PAGE_IDS: { preview: "preview" },
-  });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
 
   controller.activateSingleViewPageRoute({ startup: true });
 
@@ -132,9 +122,7 @@ test("activateSingleViewPageRoute delegates to standard activation", () => {
 
 test("activateWideViewPageRoute delegates to standard activation", () => {
   const { host, calls } = createHost({ isWide: true });
-  const controller = new SingleViewPageController(host, {
-    PAGE_IDS: { preview: "preview" },
-  });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
 
   controller.activateWideViewPageRoute({});
 

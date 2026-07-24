@@ -48,7 +48,11 @@ export class SingleViewPageController {
     this._host._applyPreviewShellVisibility();
     this._host._applyCardStyle();
     this._host._applyLayoutMode();
-    if (this._host._isWideViewPageActive()) this._host._syncColHeight();
+    if (this._isWideViewPageActive()) this._host._syncColHeight();
+  }
+
+  _isWideViewPageActive() {
+    return this._host._pageId === this._constants.PAGE_IDS.wideView;
   }
 
   _activateStartupRoute(context) {
