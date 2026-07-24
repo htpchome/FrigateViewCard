@@ -2939,7 +2939,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _previewCellSeverity(entity) {
-    return this._previewAlertController.previewCellSeverity(entity);
+    return this._previewPageController.previewCellSeverity(entity);
   }
 
   _previewShouldUseLive(entity) {

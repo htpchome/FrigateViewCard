@@ -116,6 +116,12 @@ test("preview helpers delegate through the preview page controller", () => {
   );
   assert.equal(
     source.includes(
+      "_previewCellSeverity(entity) {\n    return this._previewPageController.previewCellSeverity(entity);\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
       "_previewShouldUseLive(entity) {\n    return this._previewPageController.previewShouldUseLive(entity);\n  }",
     ),
     true,
@@ -133,8 +139,8 @@ test("preview helpers delegate through the preview page controller", () => {
     true,
   );
   assert.equal(
-    source.includes(
-      "_previewStreamSourceLabel(entity, useLive) {\n    return this._previewPageController.previewStreamSourceLabel(entity, useLive);\n  }",
+    /_previewStreamSourceLabel\(entity, useLive\) \{\s*return this\._previewPageController\.previewStreamSourceLabel\(\s*entity,\s*useLive\s*\);\s*\}/s.test(
+      source,
     ),
     true,
   );

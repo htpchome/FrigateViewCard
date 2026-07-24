@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.830";
+const VERSION = "1.0.831";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3520,6 +3520,9 @@ const PreviewPageController = class {
     const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
     const reviewsCount = Array.isArray(cache?.reviews) ? cache.reviews.length : 0;
     return eventsCount + reviewsCount;
+  }
+  previewCellSeverity(entity) {
+    return this._host._previewAlertController.previewCellSeverity(entity);
   }
   previewLiveStreamHint() {
     return resolvePreviewLiveStreamHint({
@@ -7077,7 +7080,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._previewAlertController.isCameraAlertLive(entity);
   }
   _previewCellSeverity(entity) {
-    return this._previewAlertController.previewCellSeverity(entity);
+    return this._previewPageController.previewCellSeverity(entity);
   }
   _previewShouldUseLive(entity) {
     return this._previewPageController.previewShouldUseLive(entity);

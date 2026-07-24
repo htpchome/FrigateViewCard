@@ -45,6 +45,8 @@ const createHost = ({
     _switchCamera: (idx, context) => calls.push(["switchCamera", idx, context]),
     _previewAlertController: {
       start: () => calls.push(["previewAlertStart"]),
+      previewCellSeverity: (entity) =>
+        entity === "camera.front_door" ? "alert" : "detection",
     },
   };
   return {
@@ -61,6 +63,7 @@ test("preview helpers derive values from host state", () => {
 
   assert.equal(controller.previewLiveCamerasEnabled(), true);
   assert.equal(controller.previewShowTitleBarsEnabled(), false);
+  assert.equal(controller.previewCellSeverity("camera.front_door"), "alert");
   assert.equal(controller.previewShouldUseLive("camera.front_door"), true);
   assert.equal(controller.previewEventsCount("camera.front_door"), 3);
   assert.equal(controller.previewEventsCount("camera.driveway"), 2);

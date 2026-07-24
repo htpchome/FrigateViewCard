@@ -34,6 +34,10 @@ export class PreviewPageController {
     return eventsCount + reviewsCount;
   }
 
+  previewCellSeverity(entity) {
+    return this._host._previewAlertController.previewCellSeverity(entity);
+  }
+
   previewLiveStreamHint() {
     return resolvePreviewLiveStreamHint({
       activeStreamType: this._host._activeStreamType,
