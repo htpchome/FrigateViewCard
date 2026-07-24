@@ -1,3 +1,5 @@
+import { activateStandardPageRouteLifecycle } from "../navigation/standard-page-route-lifecycle.js";
+
 export class SingleViewPageController {
   constructor(host, constants) {
     this._host = host;
@@ -9,35 +11,12 @@ export class SingleViewPageController {
   }
 
   activateStandardPageRoute(context = {}) {
-    const leavingPreview = this._isLeavingPreviewPage(context);
-
-    this._handlePreviewExit(leavingPreview);
-    this._applyStandardPageRouteFrame();
-
-    if (context.startup === true) {
-      this._activateStartupRoute(context);
-      return;
-    }
-
-    if (context.deferCameraSwitch === true) return;
-
-    if (leavingPreview) this._mountEngineQuietly();
-
-    this._syncStandardPageRouteShell();
-  }
-
-  _isLeavingPreviewPage(context) {
-    return context.previousPageId === this._constants.PAGE_IDS.preview;
-  }
-
-  _handlePreviewExit(leavingPreview) {
-    if (!leavingPreview) return;
-
-    this._host._stopPreviewMode();
-    if (this._host._$("#myPopup")?.classList.contains("is-open")) {
-      this._host._closePopup();
-    }
-    this._host._cancelPendingMount(`page-route-${this._host._pageId}`);
+    activateStandardPageRouteLifecycle({
+      host: this._host,
+      context,
+      previewPageId: this._constants.PAGE_IDS.preview,
+      applyRouteFrame: () => this._applyStandardPageRouteFrame(),
+    });
   }
 
   _applyStandardPageRouteFrame() {
@@ -49,15 +28,6 @@ export class SingleViewPageController {
     this._host._applyCardStyle();
     this._host._applyLayoutMode();
     this._host._syncColHeightIfWideView();
-  }
-
-  _activateStartupRoute(context) {
-    if (context.startInGrid === true) {
-      this._host._setViewMode("grid");
-      return;
-    }
-
-    this._host._mountEngine();
   }
 
   _mountEngineQuietly() {
@@ -103,11 +73,6 @@ export class SingleViewPageController {
       activePageInvalid,
       previewPageActive,
     });
-  }
-
-  _syncStandardPageRouteShell() {
-    this._host._syncTabsShell();
-    this._host._renderAll();
   }
 
   applyNonPreviewSchemaSoftUpdate() {
