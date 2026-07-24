@@ -186,6 +186,38 @@ export class SingleViewPageController {
     this._host._syncPageNavigationButtons();
   }
 
+  applyConfigUpdateRouteFlow({
+    needsEngineRemount = false,
+    nextCameraCount = 0,
+    needsShellRerender = false,
+    activePageInvalid = false,
+    previewPageActive = false,
+    realtimePollChanged = false,
+  } = {}) {
+    this.applyCameraSetChange({
+      needsEngineRemount,
+      nextCameraCount,
+    });
+
+    if (needsShellRerender) {
+      this.applyConfigShellRerender({
+        activePageInvalid,
+        previewPageActive,
+      });
+      return "handled";
+    }
+
+    if (previewPageActive) {
+      return "preview";
+    }
+
+    this.applyNonPreviewConfigUpdateTail({
+      needsEngineRemount,
+      realtimePollChanged,
+    });
+    return "handled";
+  }
+
   applyCameraSetChange({
     needsEngineRemount = false,
     nextCameraCount = 0,

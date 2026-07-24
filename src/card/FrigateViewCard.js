@@ -847,20 +847,17 @@ export class FrigateViewCard extends HTMLElement {
         nextConfig.mobile_poll_battery_saver;
     const activePageInvalid = !this._isPageRouteAvailable(this._pageId);
 
-    this._singleViewPageController.applyCameraSetChange({
-      needsEngineRemount,
-      nextCameraCount: nextCams.length,
-    });
-
-    if (needsShellRerender) {
-      this._singleViewPageController.applyConfigShellRerender({
+    const routeFlowOutcome =
+      this._singleViewPageController.applyConfigUpdateRouteFlow({
+        needsEngineRemount,
+        nextCameraCount: nextCams.length,
+        needsShellRerender,
         activePageInvalid,
         previewPageActive: this._isPreviewPageActive(),
+        realtimePollChanged,
       });
-      return;
-    }
 
-    if (this._isPreviewPageActive()) {
+    if (routeFlowOutcome === "preview") {
       this._applyCardStyle();
       this._applyLayoutMode();
       this._renderPreviewPage();
@@ -871,12 +868,7 @@ export class FrigateViewCard extends HTMLElement {
       return;
     }
 
-    // Soft-update preview for schema edits without remounting live stream.
-    // Resume logic for editor close/visibility transitions is handled elsewhere.
-    this._singleViewPageController.applyNonPreviewConfigUpdateTail({
-      needsEngineRemount,
-      realtimePollChanged,
-    });
+    if (routeFlowOutcome === "handled") return;
   }
   set hass(hass) {
     this._hass = hass;

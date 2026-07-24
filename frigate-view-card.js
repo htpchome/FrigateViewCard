@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.850";
+const VERSION = "1.0.851";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4325,6 +4325,34 @@ const SingleViewPageController = class {
     this._host._renderList();
     this._host._syncPageNavigationButtons();
   }
+  applyConfigUpdateRouteFlow({
+    needsEngineRemount = false,
+    nextCameraCount = 0,
+    needsShellRerender = false,
+    activePageInvalid = false,
+    previewPageActive = false,
+    realtimePollChanged = false
+  } = {}) {
+    this.applyCameraSetChange({
+      needsEngineRemount,
+      nextCameraCount
+    });
+    if (needsShellRerender) {
+      this.applyConfigShellRerender({
+        activePageInvalid,
+        previewPageActive
+      });
+      return "handled";
+    }
+    if (previewPageActive) {
+      return "preview";
+    }
+    this.applyNonPreviewConfigUpdateTail({
+      needsEngineRemount,
+      realtimePollChanged
+    });
+    return "handled";
+  }
   applyCameraSetChange({
     needsEngineRemount = false,
     nextCameraCount = 0
@@ -5366,18 +5394,15 @@ const FrigateViewCard = class extends HTMLElement {
     const needsEngineRemount = camerasChanged;
     const realtimePollChanged = prevConfig.realtime_poll_seconds !== nextConfig.realtime_poll_seconds || prevConfig.mobile_poll_battery_saver !== nextConfig.mobile_poll_battery_saver;
     const activePageInvalid = !this._isPageRouteAvailable(this._pageId);
-    this._singleViewPageController.applyCameraSetChange({
+    const routeFlowOutcome = this._singleViewPageController.applyConfigUpdateRouteFlow({
       needsEngineRemount,
-      nextCameraCount: nextCams.length
+      nextCameraCount: nextCams.length,
+      needsShellRerender,
+      activePageInvalid,
+      previewPageActive: this._isPreviewPageActive(),
+      realtimePollChanged
     });
-    if (needsShellRerender) {
-      this._singleViewPageController.applyConfigShellRerender({
-        activePageInvalid,
-        previewPageActive: this._isPreviewPageActive()
-      });
-      return;
-    }
-    if (this._isPreviewPageActive()) {
+    if (routeFlowOutcome === "preview") {
       this._applyCardStyle();
       this._applyLayoutMode();
       this._renderPreviewPage();
@@ -5387,10 +5412,7 @@ const FrigateViewCard = class extends HTMLElement {
       }
       return;
     }
-    this._singleViewPageController.applyNonPreviewConfigUpdateTail({
-      needsEngineRemount,
-      realtimePollChanged
-    });
+    if (routeFlowOutcome === "handled") return;
   }
   set hass(hass) {
     this._hass = hass;

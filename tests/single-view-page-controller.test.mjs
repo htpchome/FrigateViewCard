@@ -480,3 +480,75 @@ test("applyCameraSetChange is a no-op when remount is not needed", () => {
   assert.deepEqual(calls, []);
   assert.equal(host._activeCamIdx, 2);
 });
+
+test("applyConfigUpdateRouteFlow returns preview outcome without non-preview updates", () => {
+  const { host, calls } = createHost({ isWide: false });
+  host._activeCamIdx = 3;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const outcome = controller.applyConfigUpdateRouteFlow({
+    needsEngineRemount: true,
+    nextCameraCount: 2,
+    needsShellRerender: false,
+    activePageInvalid: false,
+    previewPageActive: true,
+    realtimePollChanged: true,
+  });
+
+  assert.equal(outcome, "preview");
+  assert.deepEqual(calls, [["cleanupEngine"]]);
+  assert.equal(host._activeCamIdx, 1);
+});
+
+test("applyConfigUpdateRouteFlow handles shell rerender branch", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const outcome = controller.applyConfigUpdateRouteFlow({
+    needsEngineRemount: false,
+    nextCameraCount: 2,
+    needsShellRerender: true,
+    activePageInvalid: true,
+    previewPageActive: false,
+    realtimePollChanged: false,
+  });
+
+  assert.equal(outcome, "handled");
+  assert.deepEqual(calls, [
+    ["cleanupEngine"],
+    ["renderShell"],
+    ["navigateToConfiguredLandingPage", { source: "config-page-fallback" }],
+  ]);
+});
+
+test("applyConfigUpdateRouteFlow handles non-preview tail branch", () => {
+  const { host, calls } = createHost({ isWide: true });
+  host._activeCamIdx = 4;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const outcome = controller.applyConfigUpdateRouteFlow({
+    needsEngineRemount: true,
+    nextCameraCount: 3,
+    needsShellRerender: false,
+    activePageInvalid: false,
+    previewPageActive: false,
+    realtimePollChanged: true,
+  });
+
+  assert.equal(outcome, "handled");
+  assert.deepEqual(calls, [
+    ["cleanupEngine"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeight"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderCamSwitcher"],
+    ["syncToolbarButtons"],
+    ["syncPageNavigationButtons"],
+    ["mountEngine", null, { quiet: true }],
+    ["restartRealtimeHeadPollTimer"],
+  ]);
+  assert.equal(host._activeCamIdx, 2);
+});
