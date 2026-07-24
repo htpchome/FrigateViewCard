@@ -3,28 +3,100 @@ import assert from "node:assert/strict";
 
 import { WideViewPageController } from "../src/wide-view/wide-view-page-controller.js";
 
-const PAGE_IDS = { wideView: "wide-view" };
+const PAGE_IDS = { preview: "preview", wideView: "wide-view" };
 
-const createHost = ({ isWide = false } = {}) => {
+const createHost = ({ isWide = false, popupOpen = false } = {}) => {
   const calls = [];
   const host = {
     _pageId: isWide ? "wide-view" : "single-view",
-    _syncColHeight: () => calls.push(["syncColHeight"]),
-    _singleViewPageController: {
-      activateStandardPageRoute: (context) =>
-        calls.push(["activateStandardPageRoute", context]),
+    _stopPreviewMode: () => calls.push(["stopPreview"]),
+    _$: (selector) => {
+      if (selector === "#myPopup" && popupOpen) {
+        return {
+          classList: {
+            contains: (className) => className === "is-open",
+          },
+        };
+      }
+      return null;
     },
+    _closePopup: () => calls.push(["closePopup"]),
+    _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
+    _applyPreviewShellVisibility: () =>
+      calls.push(["applyPreviewShellVisibility"]),
+    _applyCardStyle: () => calls.push(["applyCardStyle"]),
+    _applyLayoutMode: () => calls.push(["applyLayoutMode"]),
+    _setViewMode: (mode) => calls.push(["setViewMode", mode]),
+    _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
+    _syncTabsShell: () => calls.push(["syncTabsShell"]),
+    _renderAll: () => calls.push(["renderAll"]),
+    _syncColHeight: () => calls.push(["syncColHeight"]),
   };
   return { host, calls };
 };
 
-test("activateWideViewPageRoute delegates through standard route activation", () => {
+test("activateWideViewPageRoute handles startup and mounts engine", () => {
   const { host, calls } = createHost({ isWide: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
 
   controller.activateWideViewPageRoute({ startup: true });
 
-  assert.deepEqual(calls, [["activateStandardPageRoute", { startup: true }]]);
+  assert.deepEqual(calls, [
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeight"],
+    ["mountEngine"],
+  ]);
+});
+
+test("activateWideViewPageRoute startup grid chooses grid mode", () => {
+  const { host, calls } = createHost({ isWide: true });
+  const controller = new WideViewPageController(host, { PAGE_IDS });
+
+  controller.activateWideViewPageRoute({ startup: true, startInGrid: true });
+
+  assert.deepEqual(calls, [
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeight"],
+    ["setViewMode", "grid"],
+  ]);
+});
+
+test("activateWideViewPageRoute leaves preview and remounts quietly", () => {
+  const { host, calls } = createHost({ isWide: true, popupOpen: true });
+  const controller = new WideViewPageController(host, { PAGE_IDS });
+
+  controller.activateWideViewPageRoute({ previousPageId: "preview" });
+
+  assert.deepEqual(calls, [
+    ["stopPreview"],
+    ["closePopup"],
+    ["cancelPendingMount", "page-route-wide-view"],
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeight"],
+    ["mountEngine", null, { quiet: true }],
+    ["syncTabsShell"],
+    ["renderAll"],
+  ]);
+});
+
+test("activateWideViewPageRoute honors deferCameraSwitch", () => {
+  const { host, calls } = createHost({ isWide: true });
+  const controller = new WideViewPageController(host, { PAGE_IDS });
+
+  controller.activateWideViewPageRoute({ deferCameraSwitch: true });
+
+  assert.deepEqual(calls, [
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeight"],
+  ]);
 });
 
 test("isWideViewPageActive derives state from host page id", () => {

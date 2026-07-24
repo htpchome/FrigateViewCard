@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.854";
+const VERSION = "1.0.855";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4384,7 +4384,47 @@ const WideViewPageController = class {
     this._constants = constants;
   }
   activateWideViewPageRoute(context = {}) {
-    this._host._singleViewPageController.activateStandardPageRoute(context);
+    const leavingPreview = this._isLeavingPreviewPage(context);
+    this._handlePreviewExit(leavingPreview);
+    this._applyWideViewRouteFrame();
+    if (context.startup === true) {
+      this._activateStartupRoute(context);
+      return;
+    }
+    if (context.deferCameraSwitch === true) return;
+    if (leavingPreview) this._mountEngineQuietly();
+    this._syncWideViewRouteShell();
+  }
+  _isLeavingPreviewPage(context) {
+    return context.previousPageId === this._constants.PAGE_IDS.preview;
+  }
+  _handlePreviewExit(leavingPreview) {
+    if (!leavingPreview) return;
+    this._host._stopPreviewMode();
+    if (this._host._$("#myPopup")?.classList.contains("is-open")) {
+      this._host._closePopup();
+    }
+    this._host._cancelPendingMount(`page-route-${this._host._pageId}`);
+  }
+  _applyWideViewRouteFrame() {
+    this._host._applyPreviewShellVisibility();
+    this._host._applyCardStyle();
+    this._host._applyLayoutMode();
+    this.syncColHeightIfWideView();
+  }
+  _activateStartupRoute(context) {
+    if (context.startInGrid === true) {
+      this._host._setViewMode("grid");
+      return;
+    }
+    this._host._mountEngine();
+  }
+  _mountEngineQuietly() {
+    this._host._mountEngine(null, { quiet: true });
+  }
+  _syncWideViewRouteShell() {
+    this._host._syncTabsShell();
+    this._host._renderAll();
   }
   syncColHeightIfWideView() {
     if (!this.isWideViewPageActive()) return;
