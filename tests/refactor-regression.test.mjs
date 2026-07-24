@@ -37,3 +37,66 @@ test("startup resolves initial page through the navigation factory", () => {
   assert.ok(landingPageIndex > initialLoadIndex);
   assert.ok(awaitIndex > landingPageIndex);
 });
+
+test("deep-link helpers delegate through the controller wrappers", () => {
+  assert.equal(
+    source.includes(
+      "_mergedUrlSearchParams() {\n    return this._deepLinkController.mergedUrlSearchParams();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_clearDeepLinkParamsFromUrl() {\n    this._deepLinkController.clearDeepLinkParamsFromUrl();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_initDeepLinkFromUrl() {\n    this._deepLinkController.initDeepLinkFromUrl();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_deepLinkCameraHintIndex() {\n    return this._deepLinkController.deepLinkCameraHintIndex();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_applyDeepLinkCameraHint() {\n    this._deepLinkController.applyDeepLinkCameraHint();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_isDeepLinkCandidateForCard() {\n    return this._deepLinkController.isDeepLinkCandidateForCard();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_consumeDeepLinkEventOpen() {\n    this._deepLinkController.consumeDeepLinkEventOpen();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_consumeDeepLinkReviewOpen() {\n    this._deepLinkController.consumeDeepLinkReviewOpen();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_hasPendingDeepLinkTarget() {\n    return this._deepLinkController.hasPendingDeepLinkTarget();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_isDeepLinkHandlingEnabled() {\n    return this._deepLinkController.isDeepLinkHandlingEnabled();\n  }",
+    ),
+    true,
+  );
+});
