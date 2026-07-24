@@ -27,8 +27,12 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
       calls.push(["applyPreviewShellVisibility"]),
     _applyCardStyle: () => calls.push(["applyCardStyle"]),
     _applyLayoutMode: () => calls.push(["applyLayoutMode"]),
-    _syncColHeightIfWideView: () => {
-      if (host._pageId === "wide-view") calls.push(["syncColHeightIfWideView"]);
+    _wideViewPageController: {
+      syncColHeightIfWideView: () => {
+        if (host._pageId === "wide-view") {
+          calls.push(["syncColHeightIfWideView"]);
+        }
+      },
     },
     _syncColHeight: () => calls.push(["syncColHeight"]),
     _syncStatus: () => calls.push(["syncStatus"]),

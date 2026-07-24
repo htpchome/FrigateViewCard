@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.859";
+const VERSION = "1.0.860";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4240,7 +4240,7 @@ const SingleViewPageController = class {
   applyStyleLayoutForCurrentRoute() {
     this._host._applyCardStyle();
     this._host._applyLayoutMode();
-    this._host._syncColHeightIfWideView();
+    this._host._wideViewPageController.syncColHeightIfWideView();
   }
   _mountEngineQuietly() {
     this._host._mountEngine(null, { quiet: true });
@@ -5250,7 +5250,7 @@ const FrigateViewCard = class extends HTMLElement {
       this.parentElement.style.height = this._isPreviewContext() ? "auto" : "100%";
       this._applyTightMargins();
       this._applyLayoutMode();
-      this._syncColHeightIfWideView();
+      this._wideViewPageController.syncColHeightIfWideView();
     }
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
@@ -7290,9 +7290,6 @@ const FrigateViewCard = class extends HTMLElement {
   _activateWideViewPageRoute(context = {}) {
     this._wideViewPageController.activateWideViewPageRoute(context);
   }
-  _syncColHeightIfWideView() {
-    this._wideViewPageController.syncColHeightIfWideView();
-  }
   _activatePreviewPageRoute(context = {}) {
     this._previewPageController.activatePreviewPageRoute(context);
   }
@@ -8704,7 +8701,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncBrowseHeadModeClass();
     this._bindListScroll();
     this._bindRecordingsSwipe();
-    this._initResizeHandle();
+    this._wideViewPageController.initResizeHandle();
     this._initLiveOverlayControls();
     this._syncSlideshowCountdownOverlay();
     this._renderPreviewPage();
@@ -8773,9 +8770,6 @@ const FrigateViewCard = class extends HTMLElement {
       "recordings-browse-head-tall",
       this._tab === "recordings"
     );
-  }
-  _initResizeHandle() {
-    this._wideViewPageController.initResizeHandle();
   }
   _bindListScroll() {
     const list = this._$("#list");

@@ -470,7 +470,7 @@ export class FrigateViewCard extends HTMLElement {
         : "100%";
       this._applyTightMargins();
       this._applyLayoutMode();
-      this._syncColHeightIfWideView();
+      this._wideViewPageController.syncColHeightIfWideView();
     }
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
@@ -2828,10 +2828,6 @@ export class FrigateViewCard extends HTMLElement {
     this._wideViewPageController.activateWideViewPageRoute(context);
   }
 
-  _syncColHeightIfWideView() {
-    this._wideViewPageController.syncColHeightIfWideView();
-  }
-
   _activatePreviewPageRoute(context = {}) {
     this._previewPageController.activatePreviewPageRoute(context);
   }
@@ -4463,7 +4459,7 @@ export class FrigateViewCard extends HTMLElement {
     this._syncBrowseHeadModeClass();
     this._bindListScroll();
     this._bindRecordingsSwipe();
-    this._initResizeHandle();
+    this._wideViewPageController.initResizeHandle();
     this._initLiveOverlayControls();
     this._syncSlideshowCountdownOverlay();
     this._renderPreviewPage();
@@ -4534,10 +4530,6 @@ export class FrigateViewCard extends HTMLElement {
       "recordings-browse-head-tall",
       this._tab === "recordings",
     );
-  }
-
-  _initResizeHandle() {
-    this._wideViewPageController.initResizeHandle();
   }
 
   _bindListScroll() {

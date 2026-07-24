@@ -27,7 +27,7 @@ export class SingleViewPageController {
   applyStyleLayoutForCurrentRoute() {
     this._host._applyCardStyle();
     this._host._applyLayoutMode();
-    this._host._syncColHeightIfWideView();
+    this._host._wideViewPageController.syncColHeightIfWideView();
   }
 
   _mountEngineQuietly() {
