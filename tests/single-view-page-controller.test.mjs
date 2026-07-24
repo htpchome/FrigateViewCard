@@ -31,6 +31,13 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
         calls.push(["applyCardStyle"]);
         calls.push(["applyLayoutMode"]);
       },
+      applyStyleLayoutAndWideSyncForCard: () => {
+        calls.push(["applyCardStyle"]);
+        calls.push(["applyLayoutMode"]);
+        if (host._pageId === "wide-view") {
+          calls.push(["syncColHeightIfWideView"]);
+        }
+      },
       applyLayoutModeForCard: () => calls.push(["applyLayoutMode"]),
       syncColHeightIfWideView: () => {
         if (host._pageId === "wide-view") {

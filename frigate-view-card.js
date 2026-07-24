@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.864";
+const VERSION = "1.0.865";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4237,8 +4237,7 @@ const SingleViewPageController = class {
     this.applyStyleLayoutForCurrentRoute();
   }
   applyStyleLayoutForCurrentRoute() {
-    this._host._wideViewPageController.applyStyleLayoutForCard();
-    this._host._wideViewPageController.syncColHeightIfWideView();
+    this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
   }
   _mountEngineQuietly() {
     this._host._mountEngine(null, { quiet: true });
@@ -4410,12 +4409,19 @@ const WideViewPageController = class {
   }
   _applyWideViewRouteFrame() {
     this._host._applyPreviewShellVisibility();
-    this.applyStyleLayoutForCard();
-    this.syncColHeightIfWideView();
+    this.applyStyleLayoutAndWideSyncForCard();
   }
   applyStyleLayoutForCard() {
     this._host._applyCardStyle();
     this.applyLayoutModeForCard();
+  }
+  applyLayoutAndWideSyncForCard() {
+    this.applyLayoutModeForCard();
+    this.syncColHeightIfWideView();
+  }
+  applyStyleLayoutAndWideSyncForCard() {
+    this.applyStyleLayoutForCard();
+    this.syncColHeightIfWideView();
   }
   applyLayoutModeForCard() {
     const layout = this._host.shadowRoot?.querySelector("#layout");
@@ -5254,8 +5260,7 @@ const FrigateViewCard = class extends HTMLElement {
       };
       this.parentElement.style.height = this._isPreviewContext() ? "auto" : "100%";
       this._applyTightMargins();
-      this._wideViewPageController.applyLayoutModeForCard();
-      this._wideViewPageController.syncColHeightIfWideView();
+      this._wideViewPageController.applyLayoutAndWideSyncForCard();
     }
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();

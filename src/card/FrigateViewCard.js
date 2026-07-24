@@ -469,8 +469,7 @@ export class FrigateViewCard extends HTMLElement {
         ? "auto"
         : "100%";
       this._applyTightMargins();
-      this._wideViewPageController.applyLayoutModeForCard();
-      this._wideViewPageController.syncColHeightIfWideView();
+      this._wideViewPageController.applyLayoutAndWideSyncForCard();
     }
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
