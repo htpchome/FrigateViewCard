@@ -38,6 +38,12 @@ export class PreviewPageController {
     return this._host._previewAlertController.previewCellSeverity(entity);
   }
 
+  applyPreviewShellVisibility() {
+    const card = this._host._$("#card");
+    if (!card) return;
+    card.classList.toggle("preview-active", this._host._isPreviewPageActive());
+  }
+
   previewLiveStreamHint() {
     return resolvePreviewLiveStreamHint({
       activeStreamType: this._host._activeStreamType,

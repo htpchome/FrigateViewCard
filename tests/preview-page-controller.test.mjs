@@ -105,3 +105,19 @@ test("activatePreviewPageRoute keeps preview path behavior intact", () => {
     ["previewAlertStart"],
   ]);
 });
+
+test("applyPreviewShellVisibility toggles preview active class when card exists", () => {
+  const classListCalls = [];
+  const { controller } = createHost();
+  controller._host._$ = () => ({
+    classList: {
+      toggle: (className, isActive) =>
+        classListCalls.push([className, isActive]),
+    },
+  });
+  controller._host._isPreviewPageActive = () => true;
+
+  controller.applyPreviewShellVisibility();
+
+  assert.deepEqual(classListCalls, [["preview-active", true]]);
+});

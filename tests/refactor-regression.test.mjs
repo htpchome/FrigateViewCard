@@ -122,6 +122,12 @@ test("preview helpers delegate through the preview page controller", () => {
   );
   assert.equal(
     source.includes(
+      "_applyPreviewShellVisibility() {\n    this._previewPageController.applyPreviewShellVisibility();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
       "_previewShouldUseLive(entity) {\n    return this._previewPageController.previewShouldUseLive(entity);\n  }",
     ),
     true,

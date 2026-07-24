@@ -2925,9 +2925,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _applyPreviewShellVisibility() {
-    const card = this._$("#card");
-    if (!card) return;
-    card.classList.toggle("preview-active", this._isPreviewPageActive());
+    this._previewPageController.applyPreviewShellVisibility();
   }
 
   _clearPreviewTimers() {
