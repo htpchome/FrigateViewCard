@@ -120,12 +120,6 @@ test("single-view helpers delegate through the controller wrappers", () => {
     ),
     true,
   );
-  assert.equal(
-    source.includes(
-      "_wideViewLayoutState() {\n    return this._singleViewPageController.wideViewLayoutState(\n      this._config?.col_left_width_pct\n    );\n  }",
-    ),
-    true,
-  );
 });
 
 test("preview helpers delegate through the preview page controller", () => {

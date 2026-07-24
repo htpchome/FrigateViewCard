@@ -600,7 +600,9 @@ export class FrigateViewCard extends HTMLElement {
   _applyLayoutMode() {
     const layout = this.shadowRoot.querySelector("#layout");
     if (!layout) return;
-    const wideLayout = this._wideViewLayoutState();
+    const wideLayout = this._singleViewPageController.wideViewLayoutState(
+      this._config?.col_left_width_pct,
+    );
     layout.classList.toggle("wide-view", wideLayout.isWide);
     const colL = layout.querySelector(".col-left");
     const colR = layout.querySelector(".col-right");
@@ -2842,12 +2844,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _isPreviewPageActive() {
     return this._previewPageController.isPreviewPageActive();
-  }
-
-  _wideViewLayoutState() {
-    return this._singleViewPageController.wideViewLayoutState(
-      this._config?.col_left_width_pct,
-    );
   }
 
   _syncColHeightIfWideView() {
