@@ -99,6 +99,25 @@ export class SingleViewPageController {
     this._host._renderAll();
   }
 
+  applyPostShellRerenderRouteBehavior({
+    activePageInvalid = false,
+    previewPageActive = false,
+  } = {}) {
+    if (activePageInvalid) {
+      this._host._navigateToConfiguredLandingPage({
+        source: "config-page-fallback",
+      });
+      return;
+    }
+
+    if (previewPageActive) {
+      this._host._startPreviewMode();
+      return;
+    }
+
+    this.mountEngineQuietlyAndRenderAll();
+  }
+
   _syncStandardPageRouteShell() {
     this._host._syncTabsShell();
     this._host._renderAll();

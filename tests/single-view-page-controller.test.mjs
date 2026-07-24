@@ -33,6 +33,9 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _renderCamSwitcher: () => calls.push(["renderCamSwitcher"]),
     _syncToolbarButtons: () => calls.push(["syncToolbarButtons"]),
     _syncPageNavigationButtons: () => calls.push(["syncPageNavigationButtons"]),
+    _navigateToConfiguredLandingPage: (context) =>
+      calls.push(["navigateToConfiguredLandingPage", context]),
+    _startPreviewMode: () => calls.push(["startPreviewMode"]),
     _setViewMode: (mode) => calls.push(["setViewMode", mode]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
     _syncTabsShell: () => calls.push(["syncTabsShell"]),
@@ -249,6 +252,47 @@ test("mountEngineQuietlyAndRenderAll remounts then renders", () => {
   const controller = new SingleViewPageController(host, { PAGE_IDS });
 
   controller.mountEngineQuietlyAndRenderAll();
+
+  assert.deepEqual(calls, [
+    ["mountEngine", null, { quiet: true }],
+    ["renderAll"],
+  ]);
+});
+
+test("applyPostShellRerenderRouteBehavior navigates when active page is invalid", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyPostShellRerenderRouteBehavior({
+    activePageInvalid: true,
+    previewPageActive: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["navigateToConfiguredLandingPage", { source: "config-page-fallback" }],
+  ]);
+});
+
+test("applyPostShellRerenderRouteBehavior restarts preview when preview page is active", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyPostShellRerenderRouteBehavior({
+    activePageInvalid: false,
+    previewPageActive: true,
+  });
+
+  assert.deepEqual(calls, [["startPreviewMode"]]);
+});
+
+test("applyPostShellRerenderRouteBehavior remounts and renders for non-preview pages", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyPostShellRerenderRouteBehavior({
+    activePageInvalid: false,
+    previewPageActive: false,
+  });
 
   assert.deepEqual(calls, [
     ["mountEngine", null, { quiet: true }],

@@ -868,15 +868,10 @@ export class FrigateViewCard extends HTMLElement {
       // Shell rebuild replaces media host nodes, so always tear down first.
       this._cleanupEngine();
       this._renderShell();
-      if (activePageInvalid) {
-        this._navigateToConfiguredLandingPage({
-          source: "config-page-fallback",
-        });
-      } else if (this._isPreviewPageActive()) {
-        this._startPreviewMode();
-      } else {
-        this._singleViewPageController.mountEngineQuietlyAndRenderAll();
-      }
+      this._singleViewPageController.applyPostShellRerenderRouteBehavior({
+        activePageInvalid,
+        previewPageActive: this._isPreviewPageActive(),
+      });
       return;
     }
 

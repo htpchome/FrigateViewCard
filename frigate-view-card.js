@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.844";
+const VERSION = "1.0.845";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4249,6 +4249,22 @@ const SingleViewPageController = class {
     this._mountEngineQuietly();
     this._host._renderAll();
   }
+  applyPostShellRerenderRouteBehavior({
+    activePageInvalid = false,
+    previewPageActive = false
+  } = {}) {
+    if (activePageInvalid) {
+      this._host._navigateToConfiguredLandingPage({
+        source: "config-page-fallback"
+      });
+      return;
+    }
+    if (previewPageActive) {
+      this._host._startPreviewMode();
+      return;
+    }
+    this.mountEngineQuietlyAndRenderAll();
+  }
   _syncStandardPageRouteShell() {
     this._host._syncTabsShell();
     this._host._renderAll();
@@ -5311,15 +5327,10 @@ const FrigateViewCard = class extends HTMLElement {
     if (needsShellRerender) {
       this._cleanupEngine();
       this._renderShell();
-      if (activePageInvalid) {
-        this._navigateToConfiguredLandingPage({
-          source: "config-page-fallback"
-        });
-      } else if (this._isPreviewPageActive()) {
-        this._startPreviewMode();
-      } else {
-        this._singleViewPageController.mountEngineQuietlyAndRenderAll();
-      }
+      this._singleViewPageController.applyPostShellRerenderRouteBehavior({
+        activePageInvalid,
+        previewPageActive: this._isPreviewPageActive()
+      });
       return;
     }
     if (this._isPreviewPageActive()) {
