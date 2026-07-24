@@ -51,6 +51,17 @@ export class PageNavigationController {
       });
   }
 
+  navigateToPageRoute(pageId, context = {}) {
+    return this.ensureNavigationFactory().navigateTo(pageId, context);
+  }
+
+  navigateToConfiguredLandingPage(context = {}) {
+    const nextPageId = this.ensureNavigationFactory().resolveStartupPage({
+      hasPendingDeepLinkTarget: context.hasPendingDeepLinkTarget === true,
+    });
+    return this.navigateToPageRoute(nextPageId, context);
+  }
+
   ensureNavigationFactory() {
     if (this._host._navigationFactory) return this._host._navigationFactory;
 

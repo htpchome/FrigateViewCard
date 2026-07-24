@@ -3045,14 +3045,13 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _navigateToPageRoute(pageId, context = {}) {
-    return this._ensureNavigationFactory().navigateTo(pageId, context);
+    return this._pageNavigationController.navigateToPageRoute(pageId, context);
   }
 
   _navigateToConfiguredLandingPage(context = {}) {
-    const nextPageId = this._ensureNavigationFactory().resolveStartupPage({
-      hasPendingDeepLinkTarget: context.hasPendingDeepLinkTarget === true,
-    });
-    return this._navigateToPageRoute(nextPageId, context);
+    return this._pageNavigationController.navigateToConfiguredLandingPage(
+      context,
+    );
   }
 
   _activateSingleViewPageRoute(context = {}) {

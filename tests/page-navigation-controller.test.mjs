@@ -13,7 +13,19 @@ const createHarness = () => {
   const calls = [];
   let capturedFactoryInput = null;
   let createCount = 0;
-  const returnedFactory = { id: "factory" };
+  let lastNavigateCall = null;
+  let lastStartupCall = null;
+  const returnedFactory = {
+    id: "factory",
+    navigateTo: (pageId, context) => {
+      lastNavigateCall = { pageId, context };
+      return `navigated:${pageId}`;
+    },
+    resolveStartupPage: (input) => {
+      lastStartupCall = input;
+      return PAGE_IDS.wideView;
+    },
+  };
   const navContainer = { innerHTML: "" };
   const activeButton = {
     dataset: { pageRoute: PAGE_IDS.singleView },
@@ -79,6 +91,8 @@ const createHarness = () => {
     returnedFactory,
     getCreateCount: () => createCount,
     getInput: () => capturedFactoryInput,
+    getLastNavigateCall: () => lastNavigateCall,
+    getLastStartupCall: () => lastStartupCall,
   };
 };
 
@@ -188,4 +202,35 @@ test("syncPageNavShell writes markup and updates nav buttons", () => {
     ["toggle", "active", false, PAGE_IDS.wideView],
     ["setAttribute", "aria-pressed", "false", PAGE_IDS.wideView],
   ]);
+});
+
+test("navigateToPageRoute delegates to factory navigateTo", () => {
+  const h = createHarness();
+  const controller = new PageNavigationController(h.host, h.constants);
+  const context = { source: "test" };
+
+  const result = controller.navigateToPageRoute(PAGE_IDS.preview, context);
+
+  assert.equal(result, "navigated:preview");
+  assert.deepEqual(h.getLastNavigateCall(), {
+    pageId: PAGE_IDS.preview,
+    context,
+  });
+});
+
+test("navigateToConfiguredLandingPage resolves startup page and navigates", () => {
+  const h = createHarness();
+  const controller = new PageNavigationController(h.host, h.constants);
+  const context = { hasPendingDeepLinkTarget: true, source: "config-fallback" };
+
+  const result = controller.navigateToConfiguredLandingPage(context);
+
+  assert.equal(result, "navigated:wide-view");
+  assert.deepEqual(h.getLastStartupCall(), {
+    hasPendingDeepLinkTarget: true,
+  });
+  assert.deepEqual(h.getLastNavigateCall(), {
+    pageId: PAGE_IDS.wideView,
+    context,
+  });
 });

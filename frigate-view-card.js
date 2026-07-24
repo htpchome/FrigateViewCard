@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.812";
+const VERSION = "1.0.813";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3594,6 +3594,15 @@ const PageNavigationController = class {
       button.setAttribute("aria-pressed", isActive ? "true" : "false");
     });
   }
+  navigateToPageRoute(pageId, context = {}) {
+    return this.ensureNavigationFactory().navigateTo(pageId, context);
+  }
+  navigateToConfiguredLandingPage(context = {}) {
+    const nextPageId = this.ensureNavigationFactory().resolveStartupPage({
+      hasPendingDeepLinkTarget: context.hasPendingDeepLinkTarget === true
+    });
+    return this.navigateToPageRoute(nextPageId, context);
+  }
   ensureNavigationFactory() {
     if (this._host._navigationFactory) return this._host._navigationFactory;
     const { createNavigationFactory: createNavigationFactory2, PAGE_IDS: PAGE_IDS2 } = this._constants;
@@ -6959,13 +6968,12 @@ const FrigateViewCard = class extends HTMLElement {
     this._pageNavigationController.syncPageNavigationButtons();
   }
   _navigateToPageRoute(pageId, context = {}) {
-    return this._ensureNavigationFactory().navigateTo(pageId, context);
+    return this._pageNavigationController.navigateToPageRoute(pageId, context);
   }
   _navigateToConfiguredLandingPage(context = {}) {
-    const nextPageId = this._ensureNavigationFactory().resolveStartupPage({
-      hasPendingDeepLinkTarget: context.hasPendingDeepLinkTarget === true
-    });
-    return this._navigateToPageRoute(nextPageId, context);
+    return this._pageNavigationController.navigateToConfiguredLandingPage(
+      context
+    );
   }
   _activateSingleViewPageRoute(context = {}) {
     this._singleViewPageController.activateSingleViewPageRoute(context);
