@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.845";
+const VERSION = "1.0.846";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4278,6 +4278,18 @@ const SingleViewPageController = class {
     this._host._syncToolbarButtons();
     this._host._syncPageNavigationButtons();
   }
+  applyNonPreviewConfigUpdateTail({
+    needsEngineRemount = false,
+    realtimePollChanged = false
+  } = {}) {
+    this.applyNonPreviewSchemaSoftUpdate();
+    if (needsEngineRemount) {
+      this.mountEngineQuietly();
+    }
+    if (realtimePollChanged) {
+      this._host._restartRealtimeHeadPollTimer();
+    }
+  }
 };
 
 // src/slideshow/slideshow-utils.js
@@ -5343,13 +5355,10 @@ const FrigateViewCard = class extends HTMLElement {
       }
       return;
     }
-    this._singleViewPageController.applyNonPreviewSchemaSoftUpdate();
-    if (needsEngineRemount) {
-      this._singleViewPageController.mountEngineQuietly();
-    }
-    if (realtimePollChanged) {
-      this._restartRealtimeHeadPollTimer();
-    }
+    this._singleViewPageController.applyNonPreviewConfigUpdateTail({
+      needsEngineRemount,
+      realtimePollChanged
+    });
   }
   set hass(hass) {
     this._hass = hass;

@@ -132,4 +132,18 @@ export class SingleViewPageController {
     this._host._syncToolbarButtons();
     this._host._syncPageNavigationButtons();
   }
+
+  applyNonPreviewConfigUpdateTail({
+    needsEngineRemount = false,
+    realtimePollChanged = false,
+  } = {}) {
+    this.applyNonPreviewSchemaSoftUpdate();
+
+    if (needsEngineRemount) {
+      this.mountEngineQuietly();
+    }
+    if (realtimePollChanged) {
+      this._host._restartRealtimeHeadPollTimer();
+    }
+  }
 }

@@ -887,17 +887,11 @@ export class FrigateViewCard extends HTMLElement {
     }
 
     // Soft-update preview for schema edits without remounting live stream.
-    this._singleViewPageController.applyNonPreviewSchemaSoftUpdate();
-
-    // Keep stream engine stable for visual-only config edits.
     // Resume logic for editor close/visibility transitions is handled elsewhere.
-
-    if (needsEngineRemount) {
-      this._singleViewPageController.mountEngineQuietly();
-    }
-    if (realtimePollChanged) {
-      this._restartRealtimeHeadPollTimer();
-    }
+    this._singleViewPageController.applyNonPreviewConfigUpdateTail({
+      needsEngineRemount,
+      realtimePollChanged,
+    });
   }
   set hass(hass) {
     this._hass = hass;

@@ -33,6 +33,8 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _renderCamSwitcher: () => calls.push(["renderCamSwitcher"]),
     _syncToolbarButtons: () => calls.push(["syncToolbarButtons"]),
     _syncPageNavigationButtons: () => calls.push(["syncPageNavigationButtons"]),
+    _restartRealtimeHeadPollTimer: () =>
+      calls.push(["restartRealtimeHeadPollTimer"]),
     _navigateToConfiguredLandingPage: (context) =>
       calls.push(["navigateToConfiguredLandingPage", context]),
     _startPreviewMode: () => calls.push(["startPreviewMode"]),
@@ -297,5 +299,50 @@ test("applyPostShellRerenderRouteBehavior remounts and renders for non-preview p
   assert.deepEqual(calls, [
     ["mountEngine", null, { quiet: true }],
     ["renderAll"],
+  ]);
+});
+
+test("applyNonPreviewConfigUpdateTail performs optional remount and poll restart", () => {
+  const { host, calls } = createHost({ isWide: true });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewConfigUpdateTail({
+    needsEngineRemount: true,
+    realtimePollChanged: true,
+  });
+
+  assert.deepEqual(calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeight"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderCamSwitcher"],
+    ["syncToolbarButtons"],
+    ["syncPageNavigationButtons"],
+    ["mountEngine", null, { quiet: true }],
+    ["restartRealtimeHeadPollTimer"],
+  ]);
+});
+
+test("applyNonPreviewConfigUpdateTail skips optional steps when disabled", () => {
+  const { host, calls } = createHost({ isWide: false });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewConfigUpdateTail({
+    needsEngineRemount: false,
+    realtimePollChanged: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderCamSwitcher"],
+    ["syncToolbarButtons"],
+    ["syncPageNavigationButtons"],
   ]);
 });
