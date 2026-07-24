@@ -2917,7 +2917,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isDeepLinkHandlingEnabled() {
-    return this._config?.deep_link_enabled !== false;
+    return this._deepLinkController.isDeepLinkHandlingEnabled();
   }
 
   _previewLiveCamerasEnabled() {
