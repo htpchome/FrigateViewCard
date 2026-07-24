@@ -75,6 +75,8 @@ import {
 } from "../helpers.js";
 import {
   createNavigationFactory,
+  getEnabledPageRoutes,
+  normalizePageRoute,
   PAGE_IDS,
   resolveDeviceRouteBucket,
 } from "../router.js";
@@ -152,6 +154,7 @@ import {
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
   buildMainLayoutShellMarkup,
+  buildPageNavMarkup,
   buildPopupShellMarkup,
   buildPreviewShellHeaderMarkup,
   buildRightColumnShellMarkup,
