@@ -118,6 +118,19 @@ export class SingleViewPageController {
     this.mountEngineQuietlyAndRenderAll();
   }
 
+  applyConfigShellRerender({
+    activePageInvalid = false,
+    previewPageActive = false,
+  } = {}) {
+    // Shell rebuild replaces media host nodes, so always tear down first.
+    this._host._cleanupEngine();
+    this._host._renderShell();
+    this.applyPostShellRerenderRouteBehavior({
+      activePageInvalid,
+      previewPageActive,
+    });
+  }
+
   _syncStandardPageRouteShell() {
     this._host._syncTabsShell();
     this._host._renderAll();

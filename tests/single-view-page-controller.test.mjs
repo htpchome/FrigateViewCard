@@ -40,6 +40,8 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _navigateToConfiguredLandingPage: (context) =>
       calls.push(["navigateToConfiguredLandingPage", context]),
     _startPreviewMode: () => calls.push(["startPreviewMode"]),
+    _cleanupEngine: () => calls.push(["cleanupEngine"]),
+    _renderShell: () => calls.push(["renderShell"]),
     _setViewMode: (mode) => calls.push(["setViewMode", mode]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
     _syncTabsShell: () => calls.push(["syncTabsShell"]),
@@ -301,6 +303,55 @@ test("applyPostShellRerenderRouteBehavior remounts and renders for non-preview p
   });
 
   assert.deepEqual(calls, [
+    ["mountEngine", null, { quiet: true }],
+    ["renderAll"],
+  ]);
+});
+
+test("applyConfigShellRerender navigates on invalid route", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyConfigShellRerender({
+    activePageInvalid: true,
+    previewPageActive: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["cleanupEngine"],
+    ["renderShell"],
+    ["navigateToConfiguredLandingPage", { source: "config-page-fallback" }],
+  ]);
+});
+
+test("applyConfigShellRerender restarts preview when preview page is active", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyConfigShellRerender({
+    activePageInvalid: false,
+    previewPageActive: true,
+  });
+
+  assert.deepEqual(calls, [
+    ["cleanupEngine"],
+    ["renderShell"],
+    ["startPreviewMode"],
+  ]);
+});
+
+test("applyConfigShellRerender remounts and renders for non-preview routes", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyConfigShellRerender({
+    activePageInvalid: false,
+    previewPageActive: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["cleanupEngine"],
+    ["renderShell"],
     ["mountEngine", null, { quiet: true }],
     ["renderAll"],
   ]);

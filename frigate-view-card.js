@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.848";
+const VERSION = "1.0.849";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4265,6 +4265,17 @@ const SingleViewPageController = class {
     }
     this.mountEngineQuietlyAndRenderAll();
   }
+  applyConfigShellRerender({
+    activePageInvalid = false,
+    previewPageActive = false
+  } = {}) {
+    this._host._cleanupEngine();
+    this._host._renderShell();
+    this.applyPostShellRerenderRouteBehavior({
+      activePageInvalid,
+      previewPageActive
+    });
+  }
   _syncStandardPageRouteShell() {
     this._host._syncTabsShell();
     this._host._renderAll();
@@ -5352,9 +5363,7 @@ const FrigateViewCard = class extends HTMLElement {
       );
     }
     if (needsShellRerender) {
-      this._cleanupEngine();
-      this._renderShell();
-      this._singleViewPageController.applyPostShellRerenderRouteBehavior({
+      this._singleViewPageController.applyConfigShellRerender({
         activePageInvalid,
         previewPageActive: this._isPreviewPageActive()
       });
