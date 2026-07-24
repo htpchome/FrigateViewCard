@@ -2851,7 +2851,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isWideViewPageActive() {
-    return this._pageId === PAGE_IDS.wideView;
+    return this._singleViewPageController.isWideViewPageActive();
   }
 
   _deviceRouteBucket() {

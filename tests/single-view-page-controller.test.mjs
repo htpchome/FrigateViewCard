@@ -135,3 +135,13 @@ test("activateWideViewPageRoute delegates to standard activation", () => {
     ["renderAll"],
   ]);
 });
+
+test("isWideViewPageActive derives state from host page id", () => {
+  const { host } = createHost({ isWide: true });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  assert.equal(controller.isWideViewPageActive(), true);
+
+  host._pageId = "single-view";
+  assert.equal(controller.isWideViewPageActive(), false);
+});

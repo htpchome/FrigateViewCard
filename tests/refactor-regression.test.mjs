@@ -114,6 +114,12 @@ test("single-view helpers delegate through the controller wrappers", () => {
     ),
     true,
   );
+  assert.equal(
+    source.includes(
+      "_isWideViewPageActive() {\n    return this._singleViewPageController.isWideViewPageActive();\n  }",
+    ),
+    true,
+  );
 });
 
 test("preview helpers delegate through the preview page controller", () => {
