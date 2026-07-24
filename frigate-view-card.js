@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.824";
+const VERSION = "1.0.825";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7023,8 +7023,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewPageController.activatePreviewPageRoute(context);
   }
   _hasPendingDeepLinkTarget() {
-    if (!this._isDeepLinkCandidateForCard()) return false;
-    return !!(this._deepLinkEventId || this._deepLinkReviewId || this._deepLinkCameraHint);
+    return this._deepLinkController.hasPendingDeepLinkTarget();
   }
   _isDeepLinkHandlingEnabled() {
     return this._config?.deep_link_enabled !== false;

@@ -2913,12 +2913,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _hasPendingDeepLinkTarget() {
-    if (!this._isDeepLinkCandidateForCard()) return false;
-    return !!(
-      this._deepLinkEventId ||
-      this._deepLinkReviewId ||
-      this._deepLinkCameraHint
-    );
+    return this._deepLinkController.hasPendingDeepLinkTarget();
   }
 
   _isDeepLinkHandlingEnabled() {
