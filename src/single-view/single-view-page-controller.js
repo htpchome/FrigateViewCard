@@ -146,4 +146,17 @@ export class SingleViewPageController {
       this._host._restartRealtimeHeadPollTimer();
     }
   }
+
+  applyNonPreviewHassUpdate({
+    cameraStateChanged = false,
+    themeChanged = false,
+  } = {}) {
+    if (cameraStateChanged) {
+      this._host._syncStatus();
+      this._host._kickLiveIfStale();
+    }
+    if (themeChanged) {
+      this._host._applyCardStyle();
+    }
+  }
 }

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.846";
+const VERSION = "1.0.847";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4290,6 +4290,18 @@ const SingleViewPageController = class {
       this._host._restartRealtimeHeadPollTimer();
     }
   }
+  applyNonPreviewHassUpdate({
+    cameraStateChanged = false,
+    themeChanged = false
+  } = {}) {
+    if (cameraStateChanged) {
+      this._host._syncStatus();
+      this._host._kickLiveIfStale();
+    }
+    if (themeChanged) {
+      this._host._applyCardStyle();
+    }
+  }
 };
 
 // src/slideshow/slideshow-utils.js
@@ -5388,13 +5400,10 @@ const FrigateViewCard = class extends HTMLElement {
       if (themeChanged) this._applyCardStyle();
       return;
     }
-    if (cameraStateChanged) {
-      this._syncStatus();
-      this._kickLiveIfStale();
-    }
-    if (themeChanged) {
-      this._applyCardStyle();
-    }
+    this._singleViewPageController.applyNonPreviewHassUpdate({
+      cameraStateChanged,
+      themeChanged
+    });
   }
   get _activeCam() {
     return this._config?.cameras[this._activeCamIdx] || this._config?.cameras[0];

@@ -28,6 +28,7 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _applyLayoutMode: () => calls.push(["applyLayoutMode"]),
     _syncColHeight: () => calls.push(["syncColHeight"]),
     _syncStatus: () => calls.push(["syncStatus"]),
+    _kickLiveIfStale: () => calls.push(["kickLiveIfStale"]),
     _renderSubtitle: () => calls.push(["renderSubtitle"]),
     _renderStats: () => calls.push(["renderStats"]),
     _renderCamSwitcher: () => calls.push(["renderCamSwitcher"]),
@@ -345,4 +346,32 @@ test("applyNonPreviewConfigUpdateTail skips optional steps when disabled", () =>
     ["syncToolbarButtons"],
     ["syncPageNavigationButtons"],
   ]);
+});
+
+test("applyNonPreviewHassUpdate applies status, live kick, and style by flags", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewHassUpdate({
+    cameraStateChanged: true,
+    themeChanged: true,
+  });
+
+  assert.deepEqual(calls, [
+    ["syncStatus"],
+    ["kickLiveIfStale"],
+    ["applyCardStyle"],
+  ]);
+});
+
+test("applyNonPreviewHassUpdate is a no-op when flags are false", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewHassUpdate({
+    cameraStateChanged: false,
+    themeChanged: false,
+  });
+
+  assert.deepEqual(calls, []);
 });

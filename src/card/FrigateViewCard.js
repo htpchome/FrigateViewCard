@@ -922,13 +922,10 @@ export class FrigateViewCard extends HTMLElement {
       if (themeChanged) this._applyCardStyle();
       return;
     }
-    if (cameraStateChanged) {
-      this._syncStatus();
-      this._kickLiveIfStale();
-    }
-    if (themeChanged) {
-      this._applyCardStyle();
-    }
+    this._singleViewPageController.applyNonPreviewHassUpdate({
+      cameraStateChanged,
+      themeChanged,
+    });
   }
   get _activeCam() {
     return (
