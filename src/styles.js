@@ -327,7 +327,8 @@ export const STYLES = `
 
   .mute-btn {position:absolute;right:8px;bottom:8px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
-
+  .btn-secondary{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
+  .btn-primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
   .cam-tab{font-size: 1rem;padding:0.4em;line-height: 1;font-weight:600;padding:6px;white-space:nowrap;}  
   .cam-tab:hover{color:var(--c-primary-d);}
   .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
