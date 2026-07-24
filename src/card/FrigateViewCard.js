@@ -183,6 +183,7 @@ import {
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import { PageNavigationController } from "../navigation/page-navigation-controller.js";
+import { DeepLinkController } from "../navigation/deep-link-controller.js";
 import {
   applyGridCellSeverityClass,
   buildGridSignaturePart,
@@ -304,6 +305,7 @@ export class FrigateViewCard extends HTMLElement {
       normalizePageRoute,
       PAGE_IDS,
     });
+    this._deepLinkController = new DeepLinkController(this);
     this._slideshowAlertController = new SlideshowAlertController(this, {
       DAY,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
@@ -1129,58 +1131,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _mergedUrlSearchParams() {
-    const params = new URLSearchParams(window.location?.search || "");
-    const hash = String(window.location?.hash || "");
-    const queryIndex = hash.indexOf("?");
-    if (queryIndex >= 0) {
-      const hashParams = new URLSearchParams(hash.slice(queryIndex + 1));
-      for (const [key, value] of hashParams.entries()) {
-        if (value != null && value !== "") params.set(key, value);
-      }
-    }
-    return params;
+    return this._deepLinkController.mergedUrlSearchParams();
   }
 
   _clearDeepLinkParamsFromUrl() {
-    if (!this._isDeepLinkHandlingEnabled()) return;
-    const deepLinkKeys = new Set([
-      "event",
-      "event_id",
-      "frigate_event",
-      "frigate_event_id",
-      "review",
-      "review_id",
-      "frigate_review",
-      "frigate_review_id",
-      "media",
-      "view",
-      "open",
-      "camera",
-      "cam",
-      "camera_entity",
-    ]);
-
-    try {
-      const url = new URL(window.location.href);
-      for (const key of [...url.searchParams.keys()]) {
-        if (deepLinkKeys.has(key)) url.searchParams.delete(key);
-      }
-
-      const rawHash = String(url.hash || "");
-      const queryIndex = rawHash.indexOf("?");
-      if (queryIndex >= 0) {
-        const hashPath = rawHash.slice(0, queryIndex);
-        const hashQuery = new URLSearchParams(rawHash.slice(queryIndex + 1));
-        for (const key of [...hashQuery.keys()]) {
-          if (deepLinkKeys.has(key)) hashQuery.delete(key);
-        }
-        const nextHashQuery = hashQuery.toString();
-        url.hash = nextHashQuery ? `${hashPath}?${nextHashQuery}` : hashPath;
-      }
-
-      const nextUrl = `${url.pathname}${url.search}${url.hash}`;
-      window.history.replaceState(window.history.state, "", nextUrl);
-    } catch (_) {}
+    this._deepLinkController.clearDeepLinkParamsFromUrl();
   }
 
   _initDeepLinkFromUrl() {
