@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.835";
+const VERSION = "1.0.836";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3509,6 +3509,12 @@ const PreviewPageController = class {
   previewLiveCamerasEnabled() {
     return this._host._config?.preview_page_live_cameras === true;
   }
+  isPreviewPageEnabled() {
+    return this._host._config?.preview_page_enabled === true;
+  }
+  isPreviewPageActive() {
+    return this.isPreviewPageEnabled() && this._host._pageId === this._constants.PAGE_IDS.preview;
+  }
   previewShowTitleBarsEnabled() {
     return this._host._config?.preview_page_show_title_bars !== false;
   }
@@ -3527,7 +3533,7 @@ const PreviewPageController = class {
   applyPreviewShellVisibility() {
     const card = this._host._$("#card");
     if (!card) return;
-    card.classList.toggle("preview-active", this._host._isPreviewPageActive());
+    card.classList.toggle("preview-active", this.isPreviewPageActive());
   }
   previewLiveStreamHint() {
     return resolvePreviewLiveStreamHint({
@@ -3564,7 +3570,7 @@ const PreviewPageController = class {
     this._host._teardownPreviewMedia();
   }
   exitPreviewPageToCamera(idx) {
-    if (!this._host._isPreviewPageActive()) return;
+    if (!this.isPreviewPageActive()) return;
     if (!Number.isInteger(idx) || idx < 0 || idx >= (this._host._config?.cameras?.length || 0)) {
       return;
     }
@@ -3581,7 +3587,7 @@ const PreviewPageController = class {
   }
   returnToPreviewPage() {
     const PAGE_IDS2 = this._constants.PAGE_IDS;
-    if (!this._host._isPreviewPageEnabled() || this._host._isPreviewPageActive()) {
+    if (!this.isPreviewPageEnabled() || this.isPreviewPageActive()) {
       return;
     }
     this._host._navigateToPageRoute(PAGE_IDS2.preview, {
@@ -7029,10 +7035,10 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   _isPreviewPageEnabled() {
-    return this._config?.preview_page_enabled === true;
+    return this._previewPageController.isPreviewPageEnabled();
   }
   _isPreviewPageActive() {
-    return this._isPreviewPageEnabled() && this._pageId === PAGE_IDS.preview;
+    return this._previewPageController.isPreviewPageActive();
   }
   _isWideViewPageActive() {
     return this._singleViewPageController.isWideViewPageActive();

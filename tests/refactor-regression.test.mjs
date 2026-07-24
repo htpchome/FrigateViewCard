@@ -125,6 +125,18 @@ test("single-view helpers delegate through the controller wrappers", () => {
 test("preview helpers delegate through the preview page controller", () => {
   assert.equal(
     source.includes(
+      "_isPreviewPageEnabled() {\n    return this._previewPageController.isPreviewPageEnabled();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
+      "_isPreviewPageActive() {\n    return this._previewPageController.isPreviewPageActive();\n  }",
+    ),
+    true,
+  );
+  assert.equal(
+    source.includes(
       "_previewLiveCamerasEnabled() {\n    return this._previewPageController.previewLiveCamerasEnabled();\n  }",
     ),
     true,

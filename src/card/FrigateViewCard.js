@@ -2843,11 +2843,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isPreviewPageEnabled() {
-    return this._config?.preview_page_enabled === true;
+    return this._previewPageController.isPreviewPageEnabled();
   }
 
   _isPreviewPageActive() {
-    return this._isPreviewPageEnabled() && this._pageId === PAGE_IDS.preview;
+    return this._previewPageController.isPreviewPageActive();
   }
 
   _isWideViewPageActive() {

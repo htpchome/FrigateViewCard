@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import { PreviewPageController } from "../src/preview/preview-page-controller.js";
 
 const createHost = ({
+  previewEnabled = true,
+  pageId = "single-view",
   liveCameras = false,
   titleBars = true,
   alertLive = false,
@@ -13,6 +15,7 @@ const createHost = ({
   const calls = [];
   const host = {
     _config: {
+      preview_page_enabled: previewEnabled,
       preview_page_live_cameras: liveCameras,
       preview_page_show_title_bars: titleBars,
       cameras: [{ entity: "camera.front_door" }, { entity: "camera.driveway" }],
@@ -23,8 +26,7 @@ const createHost = ({
     },
     _activeStreamType: activeStreamType,
     _lastLiveStreamHint: lastLiveStreamHint,
-    _isPreviewPageActive: () => false,
-    _isPreviewPageEnabled: () => true,
+    _pageId: pageId,
     _isPageRouteAvailable: () => true,
     _lastNonPreviewPageId: "single-view",
     _activeCamIdx: 0,
@@ -67,6 +69,22 @@ test("preview helpers derive values from host state", () => {
   assert.equal(controller.previewShouldUseLive("camera.front_door"), true);
   assert.equal(controller.previewEventsCount("camera.front_door"), 3);
   assert.equal(controller.previewEventsCount("camera.driveway"), 2);
+});
+
+test("preview page active state derives from config and current page id", () => {
+  const { controller } = createHost({
+    previewEnabled: true,
+    pageId: "preview",
+  });
+  assert.equal(controller.isPreviewPageEnabled(), true);
+  assert.equal(controller.isPreviewPageActive(), true);
+
+  const disabled = createHost({
+    previewEnabled: false,
+    pageId: "preview",
+  }).controller;
+  assert.equal(disabled.isPreviewPageEnabled(), false);
+  assert.equal(disabled.isPreviewPageActive(), false);
 });
 
 test("preview live stream hint prefers current active stream", () => {
@@ -115,7 +133,8 @@ test("applyPreviewShellVisibility toggles preview active class when card exists"
         classListCalls.push([className, isActive]),
     },
   });
-  controller._host._isPreviewPageActive = () => true;
+  controller._host._config.preview_page_enabled = true;
+  controller._host._pageId = "preview";
 
   controller.applyPreviewShellVisibility();
 

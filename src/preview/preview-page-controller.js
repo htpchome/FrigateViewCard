@@ -14,6 +14,17 @@ export class PreviewPageController {
     return this._host._config?.preview_page_live_cameras === true;
   }
 
+  isPreviewPageEnabled() {
+    return this._host._config?.preview_page_enabled === true;
+  }
+
+  isPreviewPageActive() {
+    return (
+      this.isPreviewPageEnabled() &&
+      this._host._pageId === this._constants.PAGE_IDS.preview
+    );
+  }
+
   previewShowTitleBarsEnabled() {
     return this._host._config?.preview_page_show_title_bars !== false;
   }
@@ -41,7 +52,7 @@ export class PreviewPageController {
   applyPreviewShellVisibility() {
     const card = this._host._$("#card");
     if (!card) return;
-    card.classList.toggle("preview-active", this._host._isPreviewPageActive());
+    card.classList.toggle("preview-active", this.isPreviewPageActive());
   }
 
   previewLiveStreamHint() {
@@ -84,7 +95,7 @@ export class PreviewPageController {
   }
 
   exitPreviewPageToCamera(idx) {
-    if (!this._host._isPreviewPageActive()) return;
+    if (!this.isPreviewPageActive()) return;
     if (
       !Number.isInteger(idx) ||
       idx < 0 ||
@@ -111,10 +122,7 @@ export class PreviewPageController {
 
   returnToPreviewPage() {
     const PAGE_IDS = this._constants.PAGE_IDS;
-    if (
-      !this._host._isPreviewPageEnabled() ||
-      this._host._isPreviewPageActive()
-    ) {
+    if (!this.isPreviewPageEnabled() || this.isPreviewPageActive()) {
       return;
     }
     this._host._navigateToPageRoute(PAGE_IDS.preview, {
