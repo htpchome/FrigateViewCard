@@ -410,59 +410,54 @@ export class FrigateViewCard extends HTMLElement {
     };
 //=============================
 (function () {
-  function initGlobalLayoutFix() {
-    // 1. Grab the highest level reactive wrapper in the Home Assistant DOM tree
-    const root = document.querySelector('home-assistant')?.shadowRoot;
-    const main = root?.querySelector('home-assistant-main')?.shadowRoot;
-    const haDrawer = main?.querySelector('ha-drawer');
-    const partialsContainer = main?.querySelector('.content') || haDrawer || main;
-
-    if (!partialsContainer) return;
-
+  function initFocusReset() {
     let touchStartY = 0;
 
-    // Track when the user starts a pull gesture
+    // 1. Intercept raw browser touch down coordinates
     window.addEventListener('touchstart', (e) => {
       touchStartY = e.touches.clientY;
     }, { passive: true });
 
-    // Track when the user releases the pull gesture
+    // 2. Intercept raw browser touch up coordinates
     window.addEventListener('touchend', (e) => {
       const touchEndY = e.changedTouches.clientY;
       
-      // A downward pull threshold indicating a pull-to-refresh action
-      if (touchEndY - touchStartY > 100) {
+      // Check if the user initiated a downward pull-to-refresh swipe
+      if (touchEndY - touchStartY > 80) {
         
-        // Wait exactly long enough for HA's loading animation to finish clearing
+        // Wait long enough for HA's loading animation to finish collapsing
         setTimeout(() => {
-          // Force a hardware rendering re-evaluation by modulating the scale
-          // This breaks the hardware-cached position and forces a redraw
-          partialsContainer.style.transform = 'scale(0.9999)';
           
-          // Force browser engine style paint
-          partialsContainer.offsetHeight;
-
-          // Restore normal scale, forcing everything to recalculate positions
+          // NUKE: Create a temporary dummy input element off-screen
+          const dummyEl = document.createElement('input');
+          dummyEl.style.position = 'fixed';
+          dummyEl.style.top = '-9999px';
+          dummyEl.style.left = '-9999px';
+          document.body.appendChild(dummyEl);
+          
+          // Force the webview to change active application focus state
+          dummyEl.focus();
+          
+          // Immediately blur the focus back to the window environment
           setTimeout(() => {
-            partialsContainer.style.transform = '';
+            dummyEl.blur();
+            dummyEl.remove();
             
-            // Dispatch a native resize event directly to the window context 
-            // to update any individual cards running reactive internal sizes
+            // Dispatch native resize hooks to wake up stale Lit element properties
             window.dispatchEvent(new Event('resize'));
-          }, 50);
+          }, 10);
 
-        }, 1200); 
+        }, 1100); // Triggers immediately after the refresh action resolves
       }
     }, { passive: true });
   }
 
-  // Deep poll until Home Assistant's master framework engine settles in the browser
-  const interval = setInterval(() => {
-    if (document.querySelector('home-assistant')?.shadowRoot?.querySelector('home-assistant-main')) {
-      clearInterval(interval);
-      initGlobalLayoutFix();
-    }
-  }, 1000);
+  // Fast check until document body is active
+  if (document.body) {
+    initFocusReset();
+  } else {
+    document.addEventListener('DOMContentLoaded', initFocusReset);
+  }
 })();
 //============================
     document.addEventListener("visibilitychange", this._onDocVisibility);

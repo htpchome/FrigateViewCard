@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.899";
+const VERSION = "1.0.900";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5533,36 +5533,35 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
     (function() {
-      function initGlobalLayoutFix() {
-        const root = document.querySelector("home-assistant")?.shadowRoot;
-        const main = root?.querySelector("home-assistant-main")?.shadowRoot;
-        const haDrawer = main?.querySelector("ha-drawer");
-        const partialsContainer = main?.querySelector(".content") || haDrawer || main;
-        if (!partialsContainer) return;
+      function initFocusReset() {
         let touchStartY = 0;
         window.addEventListener("touchstart", (e) => {
           touchStartY = e.touches.clientY;
         }, { passive: true });
         window.addEventListener("touchend", (e) => {
           const touchEndY = e.changedTouches.clientY;
-          if (touchEndY - touchStartY > 100) {
+          if (touchEndY - touchStartY > 80) {
             setTimeout(() => {
-              partialsContainer.style.transform = "scale(0.9999)";
-              partialsContainer.offsetHeight;
+              const dummyEl = document.createElement("input");
+              dummyEl.style.position = "fixed";
+              dummyEl.style.top = "-9999px";
+              dummyEl.style.left = "-9999px";
+              document.body.appendChild(dummyEl);
+              dummyEl.focus();
               setTimeout(() => {
-                partialsContainer.style.transform = "";
+                dummyEl.blur();
+                dummyEl.remove();
                 window.dispatchEvent(new Event("resize"));
-              }, 50);
-            }, 1200);
+              }, 10);
+            }, 1100);
           }
         }, { passive: true });
       }
-      const interval = setInterval(() => {
-        if (document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")) {
-          clearInterval(interval);
-          initGlobalLayoutFix();
-        }
-      }, 1e3);
+      if (document.body) {
+        initFocusReset();
+      } else {
+        document.addEventListener("DOMContentLoaded", initFocusReset);
+      }
     })();
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
