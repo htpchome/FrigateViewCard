@@ -410,44 +410,53 @@ export class FrigateViewCard extends HTMLElement {
     };
 //=============================
 (function () {
-  function initHardResetFix() {
+  function initEngineReset() {
     const root = document.querySelector('home-assistant')?.shadowRoot;
     const main = root?.querySelector('home-assistant-main')?.shadowRoot;
     const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
     const hui = panel?.querySelector('hui-root')?.shadowRoot;
     
-    // Target the highest level dashboard view container possible
-    const viewContainer = hui?.querySelector('hui-view') || hui?.querySelector('hui-view-container');
-    if (!viewContainer) return;
+    // Target the core polymer/lit element handling header layout
+    const headerLayout = hui?.querySelector('app-header-layout');
+    const header = hui?.querySelector('app-header');
+    
+    if (!headerLayout && !header) return;
 
     let touchStartY = 0;
 
-    // Listen to native touch gestures
     window.addEventListener('touchstart', (e) => {
-      touchStartY = e.touches[0].clientY;
+      touchStartY = e.touches.clientY;
     }, { passive: true });
 
     window.addEventListener('touchend', (e) => {
-      const touchEndY = e.changedTouches[0].clientY;
+      const touchEndY = e.changedTouches.clientY;
       
-      // If user performs a definitive downward pull gesture (Pull to refresh)
-      if (touchEndY - touchStartY > 120) {
+      // Look for a pull-down refresh gesture
+      if (touchEndY - touchStartY > 100) {
         
-        // Wait for the pull down animation and spinner to conclude
+        // Wait for the pull-down spinner to dissolve completely
         setTimeout(() => {
-          // Store original display property (usually 'block', 'flex' or 'grid')
-          const originalDisplay = viewContainer.style.display; 
           
-          // NUKE: Force the browser to completely unrender the view layer
-          viewContainer.style.display = 'none';
+          // 1. Force the layout component to refresh its internal calculation lifecycle
+          if (typeof headerLayout.updateStyles === 'function') {
+            headerLayout.updateStyles();
+          }
+          if (typeof headerLayout._updateContentMargins === 'function') {
+            headerLayout._updateContentMargins();
+          }
+
+          // 2. Force the header component to recalculate its precise pixel bounding box
+          if (header && typeof header._updateHeaderPosition === 'function') {
+            header._updateHeaderPosition();
+          }
+          if (header && typeof header.notifyResize === 'function') {
+            header.notifyResize();
+          }
+
+          // 3. Dispatch a native global resize event to force stock cards to redraw
+          window.dispatchEvent(new Event('resize'));
           
-          // Force a structural browser layout recalculation (reflow)
-          viewContainer.offsetHeight; 
-          
-          // RESTORE: Force the browser to render it fresh from scratch
-          viewContainer.style.display = originalDisplay;
-          
-        }, 1100); // 1.1s allows the native pull-to-refresh to finish its snapback animation
+        }, 1200); // Trigger immediately after the visual snapback concludes
       }
     }, { passive: true });
   }
@@ -459,12 +468,12 @@ export class FrigateViewCard extends HTMLElement {
     const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
     const hui = panel?.querySelector('hui-root')?.shadowRoot;
     
-    if (hui?.querySelector('hui-view') || hui?.querySelector('hui-view-container')) {
+    if (hui?.querySelector('app-header-layout') || hui?.querySelector('app-header')) {
       clearInterval(interval);
-      initHardResetFix();
+      initEngineReset();
     }
   }, 1000);
-})()
+})();
 
 //============================
     document.addEventListener("visibilitychange", this._onDocVisibility);

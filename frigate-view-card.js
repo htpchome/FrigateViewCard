@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.895";
+const VERSION = "1.0.896";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5533,26 +5533,36 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
     (function() {
-      function initHardResetFix() {
+      function initEngineReset() {
         const root = document.querySelector("home-assistant")?.shadowRoot;
         const main = root?.querySelector("home-assistant-main")?.shadowRoot;
         const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
         const hui = panel?.querySelector("hui-root")?.shadowRoot;
-        const viewContainer = hui?.querySelector("hui-view") || hui?.querySelector("hui-view-container");
-        if (!viewContainer) return;
+        const headerLayout = hui?.querySelector("app-header-layout");
+        const header = hui?.querySelector("app-header");
+        if (!headerLayout && !header) return;
         let touchStartY = 0;
         window.addEventListener("touchstart", (e) => {
-          touchStartY = e.touches[0].clientY;
+          touchStartY = e.touches.clientY;
         }, { passive: true });
         window.addEventListener("touchend", (e) => {
-          const touchEndY = e.changedTouches[0].clientY;
-          if (touchEndY - touchStartY > 120) {
+          const touchEndY = e.changedTouches.clientY;
+          if (touchEndY - touchStartY > 100) {
             setTimeout(() => {
-              const originalDisplay = viewContainer.style.display;
-              viewContainer.style.display = "none";
-              viewContainer.offsetHeight;
-              viewContainer.style.display = originalDisplay;
-            }, 1100);
+              if (typeof headerLayout.updateStyles === "function") {
+                headerLayout.updateStyles();
+              }
+              if (typeof headerLayout._updateContentMargins === "function") {
+                headerLayout._updateContentMargins();
+              }
+              if (header && typeof header._updateHeaderPosition === "function") {
+                header._updateHeaderPosition();
+              }
+              if (header && typeof header.notifyResize === "function") {
+                header.notifyResize();
+              }
+              window.dispatchEvent(new Event("resize"));
+            }, 1200);
           }
         }, { passive: true });
       }
@@ -5561,9 +5571,9 @@ const FrigateViewCard = class extends HTMLElement {
         const main = root?.querySelector("home-assistant-main")?.shadowRoot;
         const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
         const hui = panel?.querySelector("hui-root")?.shadowRoot;
-        if (hui?.querySelector("hui-view") || hui?.querySelector("hui-view-container")) {
+        if (hui?.querySelector("app-header-layout") || hui?.querySelector("app-header")) {
           clearInterval(interval);
-          initHardResetFix();
+          initEngineReset();
         }
       }, 1e3);
     })();
