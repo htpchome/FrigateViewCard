@@ -127,6 +127,7 @@ import {
   configureVideoElement,
   createVideoElement,
   mountNodeIntoSlot,
+  supportsNativeHlsPlayback,
 } from "../live/live-video-factory.js";
 import {
   loadFallbackAltForCard,
@@ -1247,11 +1248,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _supportsNativeHlsPlayback() {
-    const video = document.createElement("video");
-    return !!(
-      video.canPlayType?.("application/vnd.apple.mpegurl") ||
-      video.canPlayType?.("application/x-mpegURL")
-    );
+    return supportsNativeHlsPlayback();
   }
 
   _useHaDirectStreamPath() {

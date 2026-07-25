@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.871";
+const VERSION = "1.0.872";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2275,6 +2275,10 @@ function createVideoElement(options = {}) {
     video.src = options.src;
   }
   return video;
+}
+function supportsNativeHlsPlayback() {
+  const video = document.createElement("video");
+  return !!(video.canPlayType?.("application/vnd.apple.mpegurl") || video.canPlayType?.("application/x-mpegURL"));
 }
 function mountNodeIntoSlot(slot, node) {
   if (!slot || !node) return;
@@ -6056,8 +6060,7 @@ const FrigateViewCard = class extends HTMLElement {
     return /safari/i.test(ua) && !/chrome|chromium|crios|fxios|edg\//i.test(ua);
   }
   _supportsNativeHlsPlayback() {
-    const video = document.createElement("video");
-    return !!(video.canPlayType?.("application/vnd.apple.mpegurl") || video.canPlayType?.("application/x-mpegURL"));
+    return supportsNativeHlsPlayback();
   }
   _useHaDirectStreamPath() {
     return this._cameraConnectionType(this._activeCam?.entity) === "ha_direct";

@@ -6,6 +6,7 @@ import {
   createVideoElement,
   mountNodeIntoSlot,
   resolveVideoProfileNameForView,
+  supportsNativeHlsPlayback,
 } from "../src/live/live-video-factory.js";
 
 function createFakeVideoElement() {
@@ -239,4 +240,43 @@ test("configureVideoElement applies class and dataset hooks", () => {
   assert.equal(video.dataset.view, "popup");
   assert.equal(video.dataset.overlay, "1");
   assert.equal("stale" in video.dataset, false);
+});
+
+test("supportsNativeHlsPlayback returns true when HLS MIME type is supported", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    createElement: (tag) => {
+      if (String(tag).toLowerCase() !== "video") {
+        throw new Error("Unexpected tag: " + tag);
+      }
+      return {
+        canPlayType: (mime) =>
+          mime === "application/vnd.apple.mpegurl" ? "probably" : "",
+      };
+    },
+  };
+  try {
+    assert.equal(supportsNativeHlsPlayback(), true);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("supportsNativeHlsPlayback returns false when HLS MIME types are unsupported", () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    createElement: (tag) => {
+      if (String(tag).toLowerCase() !== "video") {
+        throw new Error("Unexpected tag: " + tag);
+      }
+      return {
+        canPlayType: () => "",
+      };
+    },
+  };
+  try {
+    assert.equal(supportsNativeHlsPlayback(), false);
+  } finally {
+    globalThis.document = previousDocument;
+  }
 });

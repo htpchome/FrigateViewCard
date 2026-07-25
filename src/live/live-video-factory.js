@@ -181,6 +181,17 @@ export function createVideoElement(options = {}) {
 }
 
 /**
+ * Determines whether the runtime supports native HLS playback.
+ */
+export function supportsNativeHlsPlayback() {
+  const video = document.createElement("video");
+  return !!(
+    video.canPlayType?.("application/vnd.apple.mpegurl") ||
+    video.canPlayType?.("application/x-mpegURL")
+  );
+}
+
+/**
  * Replaces slot content and mounts the provided node.
  */
 export function mountNodeIntoSlot(slot, node) {
