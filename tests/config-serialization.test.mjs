@@ -201,6 +201,36 @@ test("compact YAML preserves video default config objects", () => {
   });
 });
 
+test("compact YAML omits empty video default config objects", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    video_defaults: {},
+    video_live_defaults: {},
+    video_popup_defaults: {},
+    video_recording_defaults: {},
+  });
+
+  assert.equal("video_defaults" in config, false);
+  assert.equal("video_live_defaults" in config, false);
+  assert.equal("video_popup_defaults" in config, false);
+  assert.equal("video_recording_defaults" in config, false);
+});
+
+test("compact YAML omits invalid video default payload types", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    video_defaults: "invalid",
+    video_live_defaults: ["invalid"],
+    video_popup_defaults: null,
+    video_recording_defaults: 123,
+  });
+
+  assert.equal("video_defaults" in config, false);
+  assert.equal("video_live_defaults" in config, false);
+  assert.equal("video_popup_defaults" in config, false);
+  assert.equal("video_recording_defaults" in config, false);
+});
+
 test("preview draft preserves video default config objects", () => {
   const draft = createEditorPreviewDraft({
     cameras: [{ entity: "camera.front_door" }],
