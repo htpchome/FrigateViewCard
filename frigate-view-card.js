@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.884";
+const VERSION = "1.0.885";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5532,7 +5532,7 @@ const FrigateViewCard = class extends HTMLElement {
         this._scheduleResumeLive("doc-visible");
       }
     };
-    const card = document.querySelector("#card");
+    const card = document.querySelector("home-assistant").shadowRoot.querySelector("home-assistant-main").shadowRoot.querySelector("hui-root").shadowRoot.querySelector("ha-card");
     let startY = 0;
     let currentY = 0;
     let isDragging = false;
