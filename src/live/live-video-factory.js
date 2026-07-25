@@ -90,7 +90,11 @@ function applyVideoClassOptions(video, options = {}) {
 }
 
 function applyVideoDatasetOptions(video, options = {}) {
-  if (!video?.dataset || !options?.dataset || typeof options.dataset !== "object") {
+  if (
+    !video?.dataset ||
+    !options?.dataset ||
+    typeof options.dataset !== "object"
+  ) {
     return;
   }
 
