@@ -409,10 +409,10 @@ export class FrigateViewCard extends HTMLElement {
       }
     };
 //=============================
-const card = document.querySelector("home-assistant")
-  .shadowRoot.querySelector("home-assistant-main")
-  .shadowRoot.querySelector("hui-root")
-  .shadowRoot.querySelector("ha-card");
+const app = document.querySelector("home-assistant");
+const main = app?.shadowRoot?.querySelector("home-assistant-main");
+const root = main?.shadowRoot?.querySelector("hui-root");
+const card = root?.shadowRoot?.querySelector("ha-card");
 let startY = 0;
 let currentY = 0;
 let isDragging = false;
