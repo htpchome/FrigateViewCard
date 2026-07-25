@@ -408,58 +408,7 @@ export class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("doc-visible");
       }
     };
-//=============================
-(function () {
-  function initFocusReset() {
-    let touchStartY = 0;
 
-    // 1. Intercept raw browser touch down coordinates
-    window.addEventListener('touchstart', (e) => {
-      touchStartY = e.touches.clientY;
-    }, { passive: true });
-
-    // 2. Intercept raw browser touch up coordinates
-    window.addEventListener('touchend', (e) => {
-      const touchEndY = e.changedTouches.clientY;
-      
-      // Check if the user initiated a downward pull-to-refresh swipe
-      if (touchEndY - touchStartY > 80) {
-        
-        // Wait long enough for HA's loading animation to finish collapsing
-        setTimeout(() => {
-          
-          // NUKE: Create a temporary dummy input element off-screen
-          const dummyEl = document.createElement('input');
-          dummyEl.style.position = 'fixed';
-          dummyEl.style.top = '-9999px';
-          dummyEl.style.left = '-9999px';
-          document.body.appendChild(dummyEl);
-          
-          // Force the webview to change active application focus state
-          dummyEl.focus();
-          
-          // Immediately blur the focus back to the window environment
-          setTimeout(() => {
-            dummyEl.blur();
-            dummyEl.remove();
-            
-            // Dispatch native resize hooks to wake up stale Lit element properties
-            window.dispatchEvent(new Event('resize'));
-          }, 10);
-
-        }, 1100); // Triggers immediately after the refresh action resolves
-      }
-    }, { passive: true });
-  }
-
-  // Fast check until document body is active
-  if (document.body) {
-    initFocusReset();
-  } else {
-    document.addEventListener('DOMContentLoaded', initFocusReset);
-  }
-})();
-//============================
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
