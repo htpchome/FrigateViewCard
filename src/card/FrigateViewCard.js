@@ -410,61 +410,50 @@ export class FrigateViewCard extends HTMLElement {
     };
 //=============================
 (function () {
-  function initPaddingStripper() {
+  function disablePullToRefreshGlitches() {
+    // 1. Target the absolute top level document elements
+    const htmlElement = document.documentElement;
+    const bodyElement = document.body;
+    
+    if (htmlElement && bodyElement) {
+      // Force native containment on overscroll physics
+      htmlElement.style.setProperty('overscroll-behavior-y', 'contain', 'important');
+      bodyElement.style.setProperty('overscroll-behavior-y', 'contain', 'important');
+    }
+
+    // 2. Drill deep into the Home Assistant view shadow nodes
     const root = document.querySelector('home-assistant')?.shadowRoot;
     const main = root?.querySelector('home-assistant-main')?.shadowRoot;
     const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
     const hui = panel?.querySelector('hui-root')?.shadowRoot;
     
-    // Target the core wrapper layout container where HA injects inline padding
-    const headerLayout = hui?.querySelector('app-header-layout');
-    if (!headerLayout) return;
-
-    // Target the specific inner content div where the inline padding-top is forced
-    const contentWrapper = headerLayout.shadowRoot?.querySelector('#contentContainer') || 
-                           headerLayout.querySelector('div') || 
-                           headerLayout;
-
-    // Observe changes strictly made to the element's style attribute
-    const styleObserver = new MutationObserver(() => {
-      const currentPadding = contentWrapper.style.paddingTop;
+    // Target the core scroll containers
+    const appLayout = hui?.querySelector('ha-app-layout') || hui?.querySelector('app-header-layout');
+    
+    if (appLayout) {
+      appLayout.style.setProperty('overscroll-behavior-y', 'contain', 'important');
       
-      // If Home Assistant froze the layout down by a header's height (usually ~112px or ~64px during a refresh)
-      if (currentPadding && currentPadding !== '0px' && currentPadding !== '') {
-        
-        // Fetch the genuine header height right now
-        const header = hui.querySelector('app-header');
-        const trueHeaderHeight = header ? header.getBoundingClientRect().height : 56;
-
-        // If the applied padding is larger than the true header layout size, strip it
-        if (parseFloat(currentPadding) > trueHeaderHeight) {
-          styleObserver.disconnect(); // Prevent infinite loops during correction
-          
-          contentWrapper.style.setProperty('padding-top', `${trueHeaderHeight}px`, 'important');
-          
-          // Re-engage the layout tracker
-          styleObserver.observe(contentWrapper, { attributes: true, attributeFilter: ['style'] });
-        }
+      // Also apply directly to the implicit inner container div
+      const innerScrollDiv = appLayout.shadowRoot?.querySelector('#contentContainer') || appLayout.querySelector('div');
+      if (innerScrollDiv) {
+        innerScrollDiv.style.setProperty('overscroll-behavior-y', 'contain', 'important');
       }
-    });
-
-    styleObserver.observe(contentWrapper, { attributes: true, attributeFilter: ['style'] });
+    }
   }
 
-  // Poll reliably until the element layer maps into the DOM
+  // Poll reliably until the element layer is completely initialized
   const interval = setInterval(() => {
-    const root = document.querySelector('home-assistant')?.shadowRoot;
-    const main = root?.querySelector('home-assistant-main')?.shadowRoot;
-    const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
-    const hui = panel?.querySelector('hui-root')?.shadowRoot;
-    
-    if (hui?.querySelector('app-header-layout')) {
+    const isLoaded = document.querySelector('home-assistant')
+      ?.shadowRoot?.querySelector('home-assistant-main')
+      ?.shadowRoot?.querySelector('ha-panel-lovelace')
+      ?.shadowRoot?.querySelector('hui-root')?.shadowRoot;
+
+    if (isLoaded) {
       clearInterval(interval);
-      initPaddingStripper();
+      disablePullToRefreshGlitches();
     }
   }, 1000);
 })();
-
 //============================
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
