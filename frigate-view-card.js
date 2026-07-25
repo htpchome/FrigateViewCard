@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.896";
+const VERSION = "1.0.897";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5533,47 +5533,36 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
     (function() {
-      function initEngineReset() {
+      function initPaddingStripper() {
         const root = document.querySelector("home-assistant")?.shadowRoot;
         const main = root?.querySelector("home-assistant-main")?.shadowRoot;
         const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
         const hui = panel?.querySelector("hui-root")?.shadowRoot;
         const headerLayout = hui?.querySelector("app-header-layout");
-        const header = hui?.querySelector("app-header");
-        if (!headerLayout && !header) return;
-        let touchStartY = 0;
-        window.addEventListener("touchstart", (e) => {
-          touchStartY = e.touches.clientY;
-        }, { passive: true });
-        window.addEventListener("touchend", (e) => {
-          const touchEndY = e.changedTouches.clientY;
-          if (touchEndY - touchStartY > 100) {
-            setTimeout(() => {
-              if (typeof headerLayout.updateStyles === "function") {
-                headerLayout.updateStyles();
-              }
-              if (typeof headerLayout._updateContentMargins === "function") {
-                headerLayout._updateContentMargins();
-              }
-              if (header && typeof header._updateHeaderPosition === "function") {
-                header._updateHeaderPosition();
-              }
-              if (header && typeof header.notifyResize === "function") {
-                header.notifyResize();
-              }
-              window.dispatchEvent(new Event("resize"));
-            }, 1200);
+        if (!headerLayout) return;
+        const contentWrapper = headerLayout.shadowRoot?.querySelector("#contentContainer") || headerLayout.querySelector("div") || headerLayout;
+        const styleObserver = new MutationObserver(() => {
+          const currentPadding = contentWrapper.style.paddingTop;
+          if (currentPadding && currentPadding !== "0px" && currentPadding !== "") {
+            const header = hui.querySelector("app-header");
+            const trueHeaderHeight = header ? header.getBoundingClientRect().height : 56;
+            if (parseFloat(currentPadding) > trueHeaderHeight) {
+              styleObserver.disconnect();
+              contentWrapper.style.setProperty("padding-top", `${trueHeaderHeight}px`, "important");
+              styleObserver.observe(contentWrapper, { attributes: true, attributeFilter: ["style"] });
+            }
           }
-        }, { passive: true });
+        });
+        styleObserver.observe(contentWrapper, { attributes: true, attributeFilter: ["style"] });
       }
       const interval = setInterval(() => {
         const root = document.querySelector("home-assistant")?.shadowRoot;
         const main = root?.querySelector("home-assistant-main")?.shadowRoot;
         const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
         const hui = panel?.querySelector("hui-root")?.shadowRoot;
-        if (hui?.querySelector("app-header-layout") || hui?.querySelector("app-header")) {
+        if (hui?.querySelector("app-header-layout")) {
           clearInterval(interval);
-          initEngineReset();
+          initPaddingStripper();
         }
       }, 1e3);
     })();

@@ -410,67 +410,57 @@ export class FrigateViewCard extends HTMLElement {
     };
 //=============================
 (function () {
-  function initEngineReset() {
+  function initPaddingStripper() {
     const root = document.querySelector('home-assistant')?.shadowRoot;
     const main = root?.querySelector('home-assistant-main')?.shadowRoot;
     const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
     const hui = panel?.querySelector('hui-root')?.shadowRoot;
     
-    // Target the core polymer/lit element handling header layout
+    // Target the core wrapper layout container where HA injects inline padding
     const headerLayout = hui?.querySelector('app-header-layout');
-    const header = hui?.querySelector('app-header');
-    
-    if (!headerLayout && !header) return;
+    if (!headerLayout) return;
 
-    let touchStartY = 0;
+    // Target the specific inner content div where the inline padding-top is forced
+    const contentWrapper = headerLayout.shadowRoot?.querySelector('#contentContainer') || 
+                           headerLayout.querySelector('div') || 
+                           headerLayout;
 
-    window.addEventListener('touchstart', (e) => {
-      touchStartY = e.touches.clientY;
-    }, { passive: true });
-
-    window.addEventListener('touchend', (e) => {
-      const touchEndY = e.changedTouches.clientY;
+    // Observe changes strictly made to the element's style attribute
+    const styleObserver = new MutationObserver(() => {
+      const currentPadding = contentWrapper.style.paddingTop;
       
-      // Look for a pull-down refresh gesture
-      if (touchEndY - touchStartY > 100) {
+      // If Home Assistant froze the layout down by a header's height (usually ~112px or ~64px during a refresh)
+      if (currentPadding && currentPadding !== '0px' && currentPadding !== '') {
         
-        // Wait for the pull-down spinner to dissolve completely
-        setTimeout(() => {
-          
-          // 1. Force the layout component to refresh its internal calculation lifecycle
-          if (typeof headerLayout.updateStyles === 'function') {
-            headerLayout.updateStyles();
-          }
-          if (typeof headerLayout._updateContentMargins === 'function') {
-            headerLayout._updateContentMargins();
-          }
+        // Fetch the genuine header height right now
+        const header = hui.querySelector('app-header');
+        const trueHeaderHeight = header ? header.getBoundingClientRect().height : 56;
 
-          // 2. Force the header component to recalculate its precise pixel bounding box
-          if (header && typeof header._updateHeaderPosition === 'function') {
-            header._updateHeaderPosition();
-          }
-          if (header && typeof header.notifyResize === 'function') {
-            header.notifyResize();
-          }
-
-          // 3. Dispatch a native global resize event to force stock cards to redraw
-          window.dispatchEvent(new Event('resize'));
+        // If the applied padding is larger than the true header layout size, strip it
+        if (parseFloat(currentPadding) > trueHeaderHeight) {
+          styleObserver.disconnect(); // Prevent infinite loops during correction
           
-        }, 1200); // Trigger immediately after the visual snapback concludes
+          contentWrapper.style.setProperty('padding-top', `${trueHeaderHeight}px`, 'important');
+          
+          // Re-engage the layout tracker
+          styleObserver.observe(contentWrapper, { attributes: true, attributeFilter: ['style'] });
+        }
       }
-    }, { passive: true });
+    });
+
+    styleObserver.observe(contentWrapper, { attributes: true, attributeFilter: ['style'] });
   }
 
-  // Poll until the elements exist in the DOM
+  // Poll reliably until the element layer maps into the DOM
   const interval = setInterval(() => {
     const root = document.querySelector('home-assistant')?.shadowRoot;
     const main = root?.querySelector('home-assistant-main')?.shadowRoot;
     const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
     const hui = panel?.querySelector('hui-root')?.shadowRoot;
     
-    if (hui?.querySelector('app-header-layout') || hui?.querySelector('app-header')) {
+    if (hui?.querySelector('app-header-layout')) {
       clearInterval(interval);
-      initEngineReset();
+      initPaddingStripper();
     }
   }, 1000);
 })();
