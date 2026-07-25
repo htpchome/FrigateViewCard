@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.886";
+const VERSION = "1.0.887";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5535,28 +5535,31 @@ const FrigateViewCard = class extends HTMLElement {
     const app = document.querySelector("home-assistant");
     const main = app?.shadowRoot?.querySelector("home-assistant-main");
     const root = main?.shadowRoot?.querySelector("hui-root");
-    const card = root?.shadowRoot?.querySelector("ha-card");
+    const view = root?.shadowRoot?.querySelector("hui-view");
+    const card = view?.shadowRoot?.querySelector("ha-card");
     let startY = 0;
     let currentY = 0;
     let isDragging = false;
-    card.addEventListener("touchstart", (e) => {
-      startY = e.touches[0].clientY;
-      card.style.transition = "none";
-    }, { passive: true });
-    card.addEventListener("touchmove", (e) => {
-      currentY = e.touches[0].clientY;
-      const diff = currentY - startY;
-      if (card.scrollTop <= 0 && diff > 0) {
-        isDragging = true;
-        card.style.transform = `translateY(${diff * 0.4}px)`;
-      }
-    }, { passive: false });
-    card.addEventListener("touchend", () => {
-      if (!isDragging) return;
-      isDragging = false;
-      card.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-      card.style.transform = "translateY(0px)";
-    });
+    if (card) {
+      card.addEventListener("touchstart", (e) => {
+        startY = e.touches[0].clientY;
+        card.style.transition = "none";
+      }, { passive: true });
+      card.addEventListener("touchmove", (e) => {
+        currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+        if (card.scrollTop <= 0 && diff > 0) {
+          isDragging = true;
+          card.style.transform = `translateY(${diff * 0.4}px)`;
+        }
+      }, { passive: false });
+      card.addEventListener("touchend", () => {
+        if (!isDragging) return;
+        isDragging = false;
+        card.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+        card.style.transform = "translateY(0px)";
+      });
+    }
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);

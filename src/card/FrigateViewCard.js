@@ -412,37 +412,38 @@ export class FrigateViewCard extends HTMLElement {
 const app = document.querySelector("home-assistant");
 const main = app?.shadowRoot?.querySelector("home-assistant-main");
 const root = main?.shadowRoot?.querySelector("hui-root");
-const card = root?.shadowRoot?.querySelector("ha-card");
+
+// Broaden your search or target a specific card ID/class inside the view
+const view = root?.shadowRoot?.querySelector("hui-view");
+const card = view?.shadowRoot?.querySelector("ha-card");
+
 let startY = 0;
 let currentY = 0;
 let isDragging = false;
 
-card.addEventListener('touchstart', (e) => {
+// Stop here if the card does not exist yet
+if (card) {
+  card.addEventListener('touchstart', (e) => {
     startY = e.touches[0].clientY;
-    card.style.transition = 'none'; // Turn off transition while dragging
-}, { passive: true });
+    card.style.transition = 'none'; 
+  }, { passive: true });
 
-card.addEventListener('touchmove', (e) => {
+  card.addEventListener('touchmove', (e) => {
     currentY = e.touches[0].clientY;
-    const diff = currentY - startY;
-
-    // Only pull down if at the top of the scroll container
+    const diff = currentY - startY; 
     if (card.scrollTop <= 0 && diff > 0) {
-        isDragging = true;
-        // Dampen the drag motion so it feels like rubber
-        card.style.transform = `translateY(${diff * 0.4}px)`;
+      isDragging = true; 
+      card.style.transform = `translateY(${diff * 0.4}px)`;
     }
-}, { passive: false });
+  }, { passive: false });
 
-card.addEventListener('touchend', () => {
+  card.addEventListener('touchend', () => {
     if (!isDragging) return;
-    isDragging = false;
-    
-    // Smoothly bounce back to original position
+    isDragging = false; 
     card.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
     card.style.transform = 'translateY(0px)';
-});
-
+  });
+}
 
 //============================
     document.addEventListener("visibilitychange", this._onDocVisibility);
