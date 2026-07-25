@@ -410,44 +410,27 @@ export class FrigateViewCard extends HTMLElement {
     };
 //=============================
 (function () {
-  function initRefreshFix() {
-    const root = document.querySelector('home-assistant')?.shadowRoot;
-    const main = root?.querySelector('home-assistant-main')?.shadowRoot;
-    const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
-    const hui = panel?.querySelector('hui-root')?.shadowRoot;
-    
-    // Find the main scrollable container handling the cards
-    const scrollContainer = panel?.querySelector('ch-header-layout') || window;
+  const styleId = 'global-ha-refresh-fix';
+  if (document.getElementById(styleId)) return;
 
-    let touchStart = 0;
-
-    window.addEventListener('touchstart', (e) => {
-      touchStart = e.touches[0].clientY;
-    }, { passive: true });
-
-    window.addEventListener('touchend', (e) => {
-      const touchEnd = e.changedTouches[0].clientY;
-      
-      // If the user pulled downward significantly (Pull-to-refresh gesture)
-      if (touchEnd - touchStart > 100) {
-        // Wait briefly for HA's loading spinner to vanish, then force a layout re-draw
-        setTimeout(() => {
-          if (window.scrollY === 0) {
-            window.scrollTo({ top: 1 });
-            setTimeout(() => window.scrollTo({ top: 0 }), 10);
-          }
-        }, 800); // Adjust this delay if your pull-to-refresh takes longer to resolve
-      }
-    }, { passive: true });
-  }
-
-  // Poll until the panel structure is ready
-  const interval = setInterval(() => {
-    if (document.querySelector('home-assistant')?.shadowRoot?.querySelector('home-assistant-main')) {
-      clearInterval(interval);
-      initRefreshFix();
+  const style = document.createElement('style');
+  style.id = styleId;
+  style.textContent = `
+    /* 1. Reset the entire layout wrapper layout properties */
+    ha-app-layout, app-header-layout, hui-view, hui-view-container {
+      contain: layout size style !important;
     }
-  }, 1000);
+    
+    /* 2. Target the fallback content containers by element structure rather than ID */
+    app-header-layout > div,
+    .content,
+    hui-view-container,
+    [has-scrolling-region] > div {
+      position: relative !important;
+      will-change: transform, scroll-position !important;
+    }
+  `;
+  document.head.appendChild(style);
 })();
 
 //============================

@@ -5533,34 +5533,26 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
     (function() {
-      function initRefreshFix() {
-        const root = document.querySelector("home-assistant")?.shadowRoot;
-        const main = root?.querySelector("home-assistant-main")?.shadowRoot;
-        const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
-        const hui = panel?.querySelector("hui-root")?.shadowRoot;
-        const scrollContainer = panel?.querySelector("ch-header-layout") || window;
-        let touchStart = 0;
-        window.addEventListener("touchstart", (e) => {
-          touchStart = e.touches[0].clientY;
-        }, { passive: true });
-        window.addEventListener("touchend", (e) => {
-          const touchEnd = e.changedTouches[0].clientY;
-          if (touchEnd - touchStart > 100) {
-            setTimeout(() => {
-              if (window.scrollY === 0) {
-                window.scrollTo({ top: 1 });
-                setTimeout(() => window.scrollTo({ top: 0 }), 10);
-              }
-            }, 800);
-          }
-        }, { passive: true });
-      }
-      const interval = setInterval(() => {
-        if (document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")) {
-          clearInterval(interval);
-          initRefreshFix();
-        }
-      }, 1e3);
+      const styleId = "global-ha-refresh-fix";
+      if (document.getElementById(styleId)) return;
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = `
+    /* 1. Reset the entire layout wrapper layout properties */
+    ha-app-layout, app-header-layout, hui-view, hui-view-container {
+      contain: layout size style !important;
+    }
+    
+    /* 2. Target the fallback content containers by element structure rather than ID */
+    app-header-layout > div,
+    .content,
+    hui-view-container,
+    [has-scrolling-region] > div {
+      position: relative !important;
+      will-change: transform, scroll-position !important;
+    }
+  `;
+      document.head.appendChild(style);
     })();
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
