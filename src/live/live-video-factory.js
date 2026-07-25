@@ -33,6 +33,32 @@ function applyVideoBooleanProperty(video, key, value) {
   }
 }
 
+function applyVideoStyleProperty(video, styleKey, value) {
+  if (!video?.style || !styleKey) return;
+  if (value === null) {
+    video.style[styleKey] = "";
+    return;
+  }
+  if (value === undefined) return;
+  video.style[styleKey] = String(value);
+}
+
+function applyVideoStyleOptions(video, options = {}) {
+  const styleOptions = {
+    objectFit: options.objectFit,
+    objectPosition: options.objectPosition,
+    aspectRatio: options.aspectRatio,
+    filter: options.filter,
+    borderRadius: options.borderRadius,
+    boxShadow: options.boxShadow,
+    ...(options.style && typeof options.style === "object" ? options.style : {}),
+  };
+
+  for (const [styleKey, value] of Object.entries(styleOptions)) {
+    applyVideoStyleProperty(video, styleKey, value);
+  }
+}
+
 /**
  * Applies a named video profile with optional per-view overrides.
  */
@@ -67,6 +93,7 @@ export function configureVideoElement(video, options = {}) {
   if (styleText) {
     video.style.cssText = styleText;
   }
+  applyVideoStyleOptions(video, options);
 
   // Keep iOS inline playback behavior stable for all profiles.
   video.setAttribute("playsinline", "");

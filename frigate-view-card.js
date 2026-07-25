@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.868";
+const VERSION = "1.0.869";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2159,6 +2159,29 @@ function applyVideoBooleanProperty(video, key, value) {
     video[key] = value;
   }
 }
+function applyVideoStyleProperty(video, styleKey, value) {
+  if (!video?.style || !styleKey) return;
+  if (value === null) {
+    video.style[styleKey] = "";
+    return;
+  }
+  if (value === void 0) return;
+  video.style[styleKey] = String(value);
+}
+function applyVideoStyleOptions(video, options = {}) {
+  const styleOptions = {
+    objectFit: options.objectFit,
+    objectPosition: options.objectPosition,
+    aspectRatio: options.aspectRatio,
+    filter: options.filter,
+    borderRadius: options.borderRadius,
+    boxShadow: options.boxShadow,
+    ...options.style && typeof options.style === "object" ? options.style : {}
+  };
+  for (const [styleKey, value] of Object.entries(styleOptions)) {
+    applyVideoStyleProperty(video, styleKey, value);
+  }
+}
 function configureVideoElement(video, options = {}) {
   if (!video) return video;
   const profile = resolveVideoProfile(options.profile);
@@ -2188,6 +2211,7 @@ function configureVideoElement(video, options = {}) {
   if (styleText) {
     video.style.cssText = styleText;
   }
+  applyVideoStyleOptions(video, options);
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
   if (options.attributes && typeof options.attributes === "object") {

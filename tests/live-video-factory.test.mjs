@@ -108,6 +108,34 @@ test("configureVideoElement applies attribute overrides and removals", () => {
   assert.equal(video.hasAttribute("data-stale"), false);
 });
 
+test("configureVideoElement supports visual style configuration", () => {
+  const video = createFakeVideoElement();
+
+  configureVideoElement(video, {
+    profile: "liveEngine",
+    objectFit: "cover",
+    aspectRatio: "16 / 9",
+    filter: "brightness(1.1)",
+    borderRadius: "12px",
+    boxShadow: "0 0 10px rgba(0,0,0,0.35)",
+  });
+
+  assert.equal(video.style.objectFit, "cover");
+  assert.equal(video.style.aspectRatio, "16 / 9");
+  assert.equal(video.style.filter, "brightness(1.1)");
+  assert.equal(video.style.borderRadius, "12px");
+  assert.equal(video.style.boxShadow, "0 0 10px rgba(0,0,0,0.35)");
+
+  configureVideoElement(video, {
+    profile: "liveEngine",
+    borderRadius: null,
+    boxShadow: null,
+  });
+
+  assert.equal(video.style.borderRadius, "");
+  assert.equal(video.style.boxShadow, "");
+});
+
 test("mountNodeIntoSlot replaces slot contents before append", () => {
   const appendCalls = [];
   const slot = {
