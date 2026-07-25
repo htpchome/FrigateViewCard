@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.866";
+const VERSION = "1.0.867";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2126,6 +2126,82 @@ const applyActiveStreamTypeForCard = ({ card, type }) => {
   card._lastLiveStreamHint = nextState.lastLiveStreamHint;
   card._renderStats?.();
 };
+
+// src/live/live-video-factory.js
+const VIDEO_PROFILES = Object.freeze({
+  liveEngine: Object.freeze({
+    styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)",
+    autoplay: true,
+    playsInline: true,
+    controls: false,
+    preload: ""
+  })
+});
+function resolveVideoProfile(profile) {
+  return VIDEO_PROFILES[profile] || VIDEO_PROFILES.liveEngine;
+}
+function applyVideoBooleanProperty(video, key, value) {
+  if (typeof value === "boolean") {
+    video[key] = value;
+  }
+}
+function configureVideoElement(video, options = {}) {
+  if (!video) return video;
+  const profile = resolveVideoProfile(options.profile);
+  const styleText = options.styleText || profile.styleText;
+  applyVideoBooleanProperty(
+    video,
+    "autoplay",
+    options.autoplay ?? profile.autoplay
+  );
+  applyVideoBooleanProperty(
+    video,
+    "playsInline",
+    options.playsInline ?? profile.playsInline
+  );
+  applyVideoBooleanProperty(video, "muted", options.muted);
+  applyVideoBooleanProperty(
+    video,
+    "controls",
+    options.controls ?? profile.controls
+  );
+  if (options.defaultMuted !== void 0) {
+    applyVideoBooleanProperty(video, "defaultMuted", options.defaultMuted);
+  }
+  if (options.preload || profile.preload) {
+    video.preload = options.preload || profile.preload;
+  }
+  if (styleText) {
+    video.style.cssText = styleText;
+  }
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  if (options.attributes && typeof options.attributes === "object") {
+    for (const [name, value] of Object.entries(options.attributes)) {
+      if (value === null || value === void 0 || value === false) {
+        video.removeAttribute(name);
+      } else if (value === true) {
+        video.setAttribute(name, "");
+      } else {
+        video.setAttribute(name, String(value));
+      }
+    }
+  }
+  return video;
+}
+function createVideoElement(options = {}) {
+  const video = document.createElement("video");
+  configureVideoElement(video, options);
+  if (typeof options.src === "string") {
+    video.src = options.src;
+  }
+  return video;
+}
+function mountNodeIntoSlot(slot, node) {
+  if (!slot || !node) return;
+  slot.innerHTML = "";
+  slot.appendChild(node);
+}
 
 // src/live/live-fallback-url.js
 const isAbsoluteOrDataUrl = (url) => /^https?:\/\//i.test(url) || String(url || "").startsWith("data:");
@@ -6141,11 +6217,12 @@ const FrigateViewCard = class extends HTMLElement {
       }
       return false;
     }
-    engine.video.muted = this._streamMuted;
-    engine.video.controls = false;
-    engine.video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
-    slot.innerHTML = "";
-    slot.appendChild(engine.video);
+    configureVideoElement(engine.video, {
+      profile: "liveEngine",
+      muted: this._streamMuted,
+      controls: false
+    });
+    mountNodeIntoSlot(slot, engine.video);
     this._attachVideoFit(engine.video);
     this._engine = engine;
     this._engineMountedMuted = this._streamMuted;
@@ -6678,16 +6755,14 @@ const FrigateViewCard = class extends HTMLElement {
       return false;
     }
     this._ffDebug("Attempting direct go2rtc MSE stream mount");
-    const video = document.createElement("video");
-    video.autoplay = true;
-    video.playsInline = true;
-    video.muted = muted;
-    video.controls = false;
-    video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+    const video = createVideoElement({
+      profile: "liveEngine",
+      muted,
+      controls: false
+    });
     const ms = new MediaSource();
     video.src = URL.createObjectURL(ms);
-    slot.innerHTML = "";
-    slot.appendChild(video);
+    mountNodeIntoSlot(slot, video);
     this._attachVideoFit(video);
     const ws = new WebSocket(wsUrl);
     ws.binaryType = "arraybuffer";
@@ -6953,14 +7028,12 @@ const FrigateViewCard = class extends HTMLElement {
     }
     const wsUrl = await this._go2rtcWebSocketUrl();
     if (!wsUrl) return false;
-    const video = document.createElement("video");
-    video.autoplay = true;
-    video.playsInline = true;
-    video.muted = this._streamMuted;
-    video.controls = false;
-    video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
-    slot.innerHTML = "";
-    slot.appendChild(video);
+    const video = createVideoElement({
+      profile: "liveEngine",
+      muted: this._streamMuted,
+      controls: false
+    });
+    mountNodeIntoSlot(slot, video);
     this._attachVideoFit(video);
     const pc = new RTCPeerConnection({
       bundlePolicy: "max-bundle",
@@ -7047,15 +7120,13 @@ const FrigateViewCard = class extends HTMLElement {
     const commit = options.commit !== false;
     const hlsUrl = await this._go2rtcHlsUrl();
     if (!hlsUrl) return false;
-    const video = document.createElement("video");
-    video.autoplay = true;
-    video.playsInline = true;
-    video.muted = this._streamMuted;
-    video.controls = false;
-    video.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
-    video.src = hlsUrl;
-    slot.innerHTML = "";
-    slot.appendChild(video);
+    const video = createVideoElement({
+      profile: "liveEngine",
+      muted: this._streamMuted,
+      controls: false,
+      src: hlsUrl
+    });
+    mountNodeIntoSlot(slot, video);
     this._attachVideoFit(video);
     const destroy = () => {
       try {

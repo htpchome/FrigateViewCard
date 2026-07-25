@@ -124,6 +124,11 @@ import {
   applyStreamLoadingStateForCard,
 } from "../live/live-stream-state.js";
 import {
+  configureVideoElement,
+  createVideoElement,
+  mountNodeIntoSlot,
+} from "../live/live-video-factory.js";
+import {
   loadFallbackAltForCard,
   loadFallbackPrimaryForCard,
 } from "../live/live-fallback-url.js";
@@ -1516,12 +1521,12 @@ export class FrigateViewCard extends HTMLElement {
       } catch (_) {}
       return false;
     }
-    engine.video.muted = this._streamMuted;
-    engine.video.controls = false;
-    engine.video.style.cssText =
-      "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
-    slot.innerHTML = "";
-    slot.appendChild(engine.video);
+    configureVideoElement(engine.video, {
+      profile: "liveEngine",
+      muted: this._streamMuted,
+      controls: false,
+    });
+    mountNodeIntoSlot(slot, engine.video);
     this._attachVideoFit(engine.video);
     this._engine = engine;
     this._engineMountedMuted = this._streamMuted;
@@ -2143,19 +2148,16 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._ffDebug("Attempting direct go2rtc MSE stream mount");
 
-    const video = document.createElement("video");
-    video.autoplay = true;
-    video.playsInline = true;
-    video.muted = muted;
-    video.controls = false;
-    video.style.cssText =
-      "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+    const video = createVideoElement({
+      profile: "liveEngine",
+      muted,
+      controls: false,
+    });
 
     const ms = new MediaSource();
     video.src = URL.createObjectURL(ms);
 
-    slot.innerHTML = "";
-    slot.appendChild(video);
+    mountNodeIntoSlot(slot, video);
     this._attachVideoFit(video);
 
     const ws = new WebSocket(wsUrl);
@@ -2442,16 +2444,13 @@ export class FrigateViewCard extends HTMLElement {
     const wsUrl = await this._go2rtcWebSocketUrl();
     if (!wsUrl) return false;
 
-    const video = document.createElement("video");
-    video.autoplay = true;
-    video.playsInline = true;
-    video.muted = this._streamMuted;
-    video.controls = false;
-    video.style.cssText =
-      "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+    const video = createVideoElement({
+      profile: "liveEngine",
+      muted: this._streamMuted,
+      controls: false,
+    });
 
-    slot.innerHTML = "";
-    slot.appendChild(video);
+    mountNodeIntoSlot(slot, video);
     this._attachVideoFit(video);
 
     const pc = new RTCPeerConnection({
@@ -2543,17 +2542,14 @@ export class FrigateViewCard extends HTMLElement {
     const hlsUrl = await this._go2rtcHlsUrl();
     if (!hlsUrl) return false;
 
-    const video = document.createElement("video");
-    video.autoplay = true;
-    video.playsInline = true;
-    video.muted = this._streamMuted;
-    video.controls = false;
-    video.style.cssText =
-      "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
-    video.src = hlsUrl;
+    const video = createVideoElement({
+      profile: "liveEngine",
+      muted: this._streamMuted,
+      controls: false,
+      src: hlsUrl,
+    });
 
-    slot.innerHTML = "";
-    slot.appendChild(video);
+    mountNodeIntoSlot(slot, video);
     this._attachVideoFit(video);
 
     const destroy = () => {
