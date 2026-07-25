@@ -418,3 +418,46 @@ test("buildVideoOptionsForView applies scoped defaults over global defaults", ()
   assert.deepEqual(merged.style, { objectFit: "cover" });
   assert.deepEqual(merged.classNames, ["scope-class", "override-class"]);
 });
+
+test("buildVideoOptionsForView merges global scoped and override object layers", () => {
+  const scope = {};
+  resetVideoViewDefaultOptions();
+  resetScopedVideoViewDefaultOptions(null, { scopeKey: scope });
+
+  setVideoViewDefaultOptions("popup", {
+    style: { objectFit: "contain" },
+    dataset: { source: "global" },
+    attributes: { controlslist: "nodownload" },
+    classNames: ["global-class"],
+  });
+  setScopedVideoViewDefaultOptions(
+    "popup",
+    {
+      style: { borderRadius: "8px" },
+      dataset: { source: "scoped" },
+      classNames: ["scoped-class"],
+    },
+    { scopeKey: scope },
+  );
+
+  const merged = buildVideoOptionsForView(
+    "popup",
+    {
+      style: { objectFit: "cover" },
+      classNames: ["override-class"],
+    },
+    { scopeKey: scope },
+  );
+
+  assert.deepEqual(merged.style, {
+    objectFit: "cover",
+    borderRadius: "8px",
+  });
+  assert.deepEqual(merged.dataset, { source: "scoped" });
+  assert.deepEqual(merged.attributes, { controlslist: "nodownload" });
+  assert.deepEqual(merged.classNames, [
+    "global-class",
+    "scoped-class",
+    "override-class",
+  ]);
+});

@@ -100,10 +100,11 @@ function resolveRuntimeDefaultsForView(viewKey, context = {}) {
     globalRuntimeVideoViewDefaultOptions[viewKey] || EMPTY_OPTIONS;
   const scopedStore = resolveScopedRuntimeStore(context.scopeKey);
   const scopedDefaults = scopedStore?.[viewKey] || EMPTY_OPTIONS;
-  return {
-    ...normalizeOptionsObject(globalDefaults),
-    ...normalizeOptionsObject(scopedDefaults),
-  };
+  return mergeOptionLayers(
+    EMPTY_OPTIONS,
+    normalizeOptionsObject(globalDefaults),
+    normalizeOptionsObject(scopedDefaults),
+  );
 }
 
 function mergeOptionLayers(base, runtimeDefaults, overrides) {

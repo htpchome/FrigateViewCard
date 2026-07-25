@@ -128,6 +128,7 @@ import {
   configureVideoElement,
   createVideoElement,
   mountNodeIntoSlot,
+  setScopedVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
 } from "../live/live-video-factory.js";
 import {
@@ -443,6 +444,74 @@ export class FrigateViewCard extends HTMLElement {
     } catch (_) {
       return { ...(config || {}) };
     }
+  }
+
+  _normalizeVideoFactoryDefaults(value) {
+    return value && typeof value === "object" ? value : {};
+  }
+
+  _mergeVideoFactoryDefaults(commonDefaults, viewDefaults) {
+    const common = this._normalizeVideoFactoryDefaults(commonDefaults);
+    const view = this._normalizeVideoFactoryDefaults(viewDefaults);
+    const merged = {
+      ...common,
+      ...view,
+    };
+
+    if (common.style || view.style) {
+      merged.style = {
+        ...this._normalizeVideoFactoryDefaults(common.style),
+        ...this._normalizeVideoFactoryDefaults(view.style),
+      };
+    }
+    if (common.dataset || view.dataset) {
+      merged.dataset = {
+        ...this._normalizeVideoFactoryDefaults(common.dataset),
+        ...this._normalizeVideoFactoryDefaults(view.dataset),
+      };
+    }
+    if (common.attributes || view.attributes) {
+      merged.attributes = {
+        ...this._normalizeVideoFactoryDefaults(common.attributes),
+        ...this._normalizeVideoFactoryDefaults(view.attributes),
+      };
+    }
+    if (common.classNames || view.classNames) {
+      const tokens = [
+        ...(Array.isArray(common.classNames) ? common.classNames : []),
+        ...(Array.isArray(view.classNames) ? view.classNames : []),
+      ]
+        .map((token) => String(token || "").trim())
+        .filter(Boolean);
+      merged.classNames = [...new Set(tokens)];
+    }
+
+    return merged;
+  }
+
+  _applyScopedVideoFactoryDefaultsFromConfig(config = this._config) {
+    const cfg = config || {};
+    const commonDefaults = this._normalizeVideoFactoryDefaults(cfg.video_defaults);
+    const scopeContext = { scopeKey: this };
+
+    setScopedVideoViewDefaultOptions(
+      "live",
+      this._mergeVideoFactoryDefaults(commonDefaults, cfg.video_live_defaults),
+      scopeContext,
+    );
+    setScopedVideoViewDefaultOptions(
+      "popup",
+      this._mergeVideoFactoryDefaults(commonDefaults, cfg.video_popup_defaults),
+      scopeContext,
+    );
+    setScopedVideoViewDefaultOptions(
+      "recording",
+      this._mergeVideoFactoryDefaults(
+        commonDefaults,
+        cfg.video_recording_defaults,
+      ),
+      scopeContext,
+    );
   }
 
   _applyEditorPreviewDraft(previewConfig) {
@@ -774,6 +843,16 @@ export class FrigateViewCard extends HTMLElement {
       rounded_corners: config.rounded_corners !== false,
       outer_shadows: config.outer_shadows !== false,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
+      video_defaults: this._normalizeVideoFactoryDefaults(config.video_defaults),
+      video_live_defaults: this._normalizeVideoFactoryDefaults(
+        config.video_live_defaults,
+      ),
+      video_popup_defaults: this._normalizeVideoFactoryDefaults(
+        config.video_popup_defaults,
+      ),
+      video_recording_defaults: this._normalizeVideoFactoryDefaults(
+        config.video_recording_defaults,
+      ),
     };
     const previewEnabledChanged =
       !!prevConfig &&
@@ -792,6 +871,7 @@ export class FrigateViewCard extends HTMLElement {
 
     this._committedConfig = this._cloneCardConfig(nextConfig);
     this._config = nextConfig;
+    this._applyScopedVideoFactoryDefaultsFromConfig(nextConfig);
     this._navigationFactory = null;
     if (!this._isSlideshowRotationAvailable()) {
       this._stopSlideshowRotation("config-change");
