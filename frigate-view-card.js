@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.889";
+const VERSION = "1.0.890";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5541,25 +5541,20 @@ const FrigateViewCard = class extends HTMLElement {
         const hui = panel?.querySelector("hui-root")?.shadowRoot;
         if (!hui) return;
         const header = hui.querySelector("app-header");
-        const spinner = hui.querySelector("ha-circular-progress") || hui.querySelector("paper-spinner");
         const targetCard = hui.querySelector("your-custom-card-tag");
-        const observer = new MutationObserver(() => {
-          const spinnerGone = !spinner || spinner.hasAttribute("hidden") || window.getComputedStyle(spinner).display === "none";
-          if (spinnerGone && header && targetCard) {
-            const headerHeight = header.getBoundingClientRect().height;
-            targetCard.style.position = "sticky";
-            targetCard.style.top = `${headerHeight}px`;
-            targetCard.style.zIndex = "10";
-          }
-        });
-        observer.observe(hui, { childList: true, subtree: true, attributes: true });
+        if (!header || !targetCard) return;
+        const headerHeight = header.getBoundingClientRect().height || 56;
+        targetCard.style.position = "sticky";
+        targetCard.style.top = `${headerHeight}px`;
+        targetCard.style.zIndex = "10";
       }
       const interval = setInterval(() => {
-        if (document.querySelector("home-assistant")?.shadowRoot) {
+        const isLoaded = document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")?.shadowRoot?.querySelector("ha-panel-lovelace")?.shadowRoot?.querySelector("hui-root")?.shadowRoot;
+        if (isLoaded) {
           clearInterval(interval);
           initSnapping();
         }
-      }, 500);
+      }, 1e3);
     })();
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();

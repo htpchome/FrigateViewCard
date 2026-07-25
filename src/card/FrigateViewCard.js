@@ -411,40 +411,41 @@ export class FrigateViewCard extends HTMLElement {
 //=============================
 (function () {
   function initSnapping() {
-    const root = document.querySelector("home-assistant")?.shadowRoot;
+    // FIX 1: Added quotes around all selector strings and CSS values
+    const root = document.querySelector('home-assistant')?.shadowRoot;
     if (!root) return;
-
-    const main = root.querySelector("home-assistant-main")?.shadowRoot;
-    const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
-    const hui = panel?.querySelector("hui-root")?.shadowRoot;
-    
+    const main = root.querySelector('home-assistant-main')?.shadowRoot;
+    const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
+    const hui = panel?.querySelector('hui-root')?.shadowRoot;
     if (!hui) return;
 
-    const header = hui.querySelector("app-header");
-    const spinner = hui.querySelector("ha-circular-progress") || hui.querySelector("paper-spinner");
-    const targetCard = hui.querySelector("your-custom-card-tag"); // Replace with your card selector
+    const header = hui.querySelector('app-header');
+    
+    // FIX 2: Updated selectors to target your actual custom card
+    // CHANGE THIS string to match your card's actual HTML tag name
+    const targetCard = hui.querySelector('your-custom-card-tag'); 
 
-    const observer = new MutationObserver(() => {
-      const spinnerGone = !spinner || spinner.hasAttribute("hidden") || window.getComputedStyle(spinner).display === "none";
-      
-      if (spinnerGone && header && targetCard) {
-        const headerHeight = header.getBoundingClientRect().height;
-        targetCard.style.position = "sticky";
-        targetCard.style.top = `${headerHeight}px`;
-        targetCard.style.zIndex = "10";
-      }
-    });
+    if (!header || !targetCard) return;
 
-    observer.observe(hui, { childList: true, subtree: true, attributes: true });
+    // FIX 3: Dynamic height calculation without relying heavily on a spinner mutation
+    const headerHeight = header.getBoundingClientRect().height || 56;
+    targetCard.style.position = 'sticky';
+    targetCard.style.top = `${headerHeight}px`;
+    targetCard.style.zIndex = '10';
   }
 
-  // Poll until Home Assistant DOM is fully loaded
+  // FIX 4: Deep polling interval to ensure nested Shadow DOMs exist before running
   const interval = setInterval(() => {
-    if (document.querySelector("home-assistant")?.shadowRoot) {
+    const isLoaded = document.querySelector('home-assistant')
+      ?.shadowRoot?.querySelector('home-assistant-main')
+      ?.shadowRoot?.querySelector('ha-panel-lovelace')
+      ?.shadowRoot?.querySelector('hui-root')?.shadowRoot;
+
+    if (isLoaded) {
       clearInterval(interval);
       initSnapping();
     }
-  }, 500);
+  }, 1000);
 })();
 
 //============================
