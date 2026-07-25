@@ -71,8 +71,10 @@ function normalizeOptionsObject(value) {
 }
 
 function isObjectScopeKey(scopeKey) {
-  return scopeKey !== null &&
-    (typeof scopeKey === "object" || typeof scopeKey === "function");
+  return (
+    scopeKey !== null &&
+    (typeof scopeKey === "object" || typeof scopeKey === "function")
+  );
 }
 
 function resolveScopedRuntimeStore(scopeKey, { create = false } = {}) {
@@ -209,7 +211,10 @@ export function getScopedVideoViewDefaultOptions(viewType, context = {}) {
 /**
  * Resets runtime default options for a scope (one view or all views).
  */
-export function resetScopedVideoViewDefaultOptions(viewType = null, context = {}) {
+export function resetScopedVideoViewDefaultOptions(
+  viewType = null,
+  context = {},
+) {
   const scopeKey = context?.scopeKey;
   const store = resolveScopedRuntimeStore(scopeKey);
   if (!store) return;
@@ -228,7 +233,11 @@ export function resetScopedVideoViewDefaultOptions(viewType = null, context = {}
 /**
  * Builds per-view video options with deterministic override merging.
  */
-export function buildVideoOptionsForView(viewType, overrides = {}, context = {}) {
+export function buildVideoOptionsForView(
+  viewType,
+  overrides = {},
+  context = {},
+) {
   const viewKey = resolveViewKey(viewType);
   const base =
     VIDEO_VIEW_DEFAULT_OPTIONS[viewKey] || VIDEO_VIEW_DEFAULT_OPTIONS.live;

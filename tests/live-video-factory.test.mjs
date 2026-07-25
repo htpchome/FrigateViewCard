@@ -377,10 +377,16 @@ test("scoped runtime defaults are isolated per scope key", () => {
     { scopeKey: scopeA },
   );
 
-  assert.deepEqual(getScopedVideoViewDefaultOptions("popup", { scopeKey: scopeA }), {
-    controls: false,
-  });
-  assert.deepEqual(getScopedVideoViewDefaultOptions("popup", { scopeKey: scopeB }), {});
+  assert.deepEqual(
+    getScopedVideoViewDefaultOptions("popup", { scopeKey: scopeA }),
+    {
+      controls: false,
+    },
+  );
+  assert.deepEqual(
+    getScopedVideoViewDefaultOptions("popup", { scopeKey: scopeB }),
+    {},
+  );
 });
 
 test("buildVideoOptionsForView applies scoped defaults over global defaults", () => {

@@ -1521,10 +1521,14 @@ export class FrigateViewCard extends HTMLElement {
     }
     configureVideoElement(
       engine.video,
-      buildVideoOptionsForView("live", {
-        muted: this._streamMuted,
-        controls: false,
-      }, { scopeKey: this }),
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted: this._streamMuted,
+          controls: false,
+        },
+        { scopeKey: this },
+      ),
     );
     mountNodeIntoSlot(slot, engine.video);
     this._attachVideoFit(engine.video);
@@ -2149,10 +2153,14 @@ export class FrigateViewCard extends HTMLElement {
     this._ffDebug("Attempting direct go2rtc MSE stream mount");
 
     const video = createVideoElement(
-      buildVideoOptionsForView("live", {
-        muted,
-        controls: false,
-      }, { scopeKey: this }),
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted,
+          controls: false,
+        },
+        { scopeKey: this },
+      ),
     );
 
     const ms = new MediaSource();
@@ -2446,10 +2454,14 @@ export class FrigateViewCard extends HTMLElement {
     if (!wsUrl) return false;
 
     const video = createVideoElement(
-      buildVideoOptionsForView("live", {
-        muted: this._streamMuted,
-        controls: false,
-      }, { scopeKey: this }),
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted: this._streamMuted,
+          controls: false,
+        },
+        { scopeKey: this },
+      ),
     );
 
     mountNodeIntoSlot(slot, video);
@@ -2545,11 +2557,15 @@ export class FrigateViewCard extends HTMLElement {
     if (!hlsUrl) return false;
 
     const video = createVideoElement(
-      buildVideoOptionsForView("live", {
-        muted: this._streamMuted,
-        controls: false,
-        src: hlsUrl,
-      }, { scopeKey: this }),
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted: this._streamMuted,
+          controls: false,
+          src: hlsUrl,
+        },
+        { scopeKey: this },
+      ),
     );
 
     mountNodeIntoSlot(slot, video);
@@ -6985,11 +7001,15 @@ export class FrigateViewCard extends HTMLElement {
   }
   _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
     return createVideoElement(
-      buildVideoOptionsForView("popup", {
-        autoplay,
-        muted,
-        src,
-      }, { scopeKey: this }),
+      buildVideoOptionsForView(
+        "popup",
+        {
+          autoplay,
+          muted,
+          src,
+        },
+        { scopeKey: this },
+      ),
     );
   }
   _showClip(ev, opts = {}) {
@@ -7145,9 +7165,13 @@ export class FrigateViewCard extends HTMLElement {
     viewer.innerHTML = '<div class="ld">Loading…</div>';
     if (this._playSeq !== token) return;
     const video = createVideoElement(
-      buildVideoOptionsForView("recording", {
-        muted: true,
-      }, { scopeKey: this }),
+      buildVideoOptionsForView(
+        "recording",
+        {
+          muted: true,
+        },
+        { scopeKey: this },
+      ),
     );
     mountNodeIntoSlot(viewer, video);
     let playable = false;
