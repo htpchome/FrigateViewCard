@@ -5,6 +5,7 @@ import {
   configureVideoElement,
   createVideoElement,
   mountNodeIntoSlot,
+  resolveVideoProfileNameForView,
 } from "../src/live/live-video-factory.js";
 
 function createFakeVideoElement() {
@@ -151,4 +152,33 @@ test("mountNodeIntoSlot replaces slot contents before append", () => {
   assert.equal(slot.innerHTML, "");
   assert.equal(appendCalls.length, 1);
   assert.equal(appendCalls[0], node);
+});
+
+test("resolveVideoProfileNameForView maps view keys with safe fallback", () => {
+  assert.equal(resolveVideoProfileNameForView("live"), "liveEngine");
+  assert.equal(resolveVideoProfileNameForView("popup"), "popupPlayback");
+  assert.equal(
+    resolveVideoProfileNameForView("recording"),
+    "recordingPlayback",
+  );
+  assert.equal(resolveVideoProfileNameForView("unknown"), "liveEngine");
+});
+
+test("createVideoElement supports viewType-based profile selection", () => {
+  withFakeDocument(() => {
+    const popupVideo = createVideoElement({
+      viewType: "popup",
+      autoplay: false,
+      muted: true,
+    });
+    assert.equal(popupVideo.controls, true);
+    assert.equal(popupVideo.preload, "metadata");
+
+    const recordingVideo = createVideoElement({
+      viewType: "recording",
+      muted: true,
+    });
+    assert.equal(recordingVideo.controls, true);
+    assert.equal(recordingVideo.preload, "metadata");
+  });
 });

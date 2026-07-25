@@ -23,8 +23,22 @@ const VIDEO_PROFILES = Object.freeze({
   }),
 });
 
-function resolveVideoProfile(profile) {
-  return VIDEO_PROFILES[profile] || VIDEO_PROFILES.liveEngine;
+const VIDEO_VIEW_PROFILE_MAP = Object.freeze({
+  live: "liveEngine",
+  popup: "popupPlayback",
+  recording: "recordingPlayback",
+});
+
+export function resolveVideoProfileNameForView(viewType) {
+  const key = String(viewType || "")
+    .trim()
+    .toLowerCase();
+  return VIDEO_VIEW_PROFILE_MAP[key] || VIDEO_VIEW_PROFILE_MAP.live;
+}
+
+function resolveVideoProfile({ profile, viewType } = {}) {
+  const profileName = profile || resolveVideoProfileNameForView(viewType);
+  return VIDEO_PROFILES[profileName] || VIDEO_PROFILES.liveEngine;
 }
 
 function applyVideoBooleanProperty(video, key, value) {
@@ -66,7 +80,10 @@ function applyVideoStyleOptions(video, options = {}) {
  */
 export function configureVideoElement(video, options = {}) {
   if (!video) return video;
-  const profile = resolveVideoProfile(options.profile);
+  const profile = resolveVideoProfile({
+    profile: options.profile,
+    viewType: options.viewType,
+  });
   const styleText = options.styleText || profile.styleText;
 
   applyVideoBooleanProperty(

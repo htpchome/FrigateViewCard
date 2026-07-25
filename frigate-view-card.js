@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.869";
+const VERSION = "1.0.870";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2151,8 +2151,18 @@ const VIDEO_PROFILES = Object.freeze({
     preload: "metadata"
   })
 });
-function resolveVideoProfile(profile) {
-  return VIDEO_PROFILES[profile] || VIDEO_PROFILES.liveEngine;
+const VIDEO_VIEW_PROFILE_MAP = Object.freeze({
+  live: "liveEngine",
+  popup: "popupPlayback",
+  recording: "recordingPlayback"
+});
+function resolveVideoProfileNameForView(viewType) {
+  const key = String(viewType || "").trim().toLowerCase();
+  return VIDEO_VIEW_PROFILE_MAP[key] || VIDEO_VIEW_PROFILE_MAP.live;
+}
+function resolveVideoProfile({ profile, viewType } = {}) {
+  const profileName = profile || resolveVideoProfileNameForView(viewType);
+  return VIDEO_PROFILES[profileName] || VIDEO_PROFILES.liveEngine;
 }
 function applyVideoBooleanProperty(video, key, value) {
   if (typeof value === "boolean") {
@@ -2184,7 +2194,10 @@ function applyVideoStyleOptions(video, options = {}) {
 }
 function configureVideoElement(video, options = {}) {
   if (!video) return video;
-  const profile = resolveVideoProfile(options.profile);
+  const profile = resolveVideoProfile({
+    profile: options.profile,
+    viewType: options.viewType
+  });
   const styleText = options.styleText || profile.styleText;
   applyVideoBooleanProperty(
     video,
@@ -6256,7 +6269,7 @@ const FrigateViewCard = class extends HTMLElement {
       return false;
     }
     configureVideoElement(engine.video, {
-      profile: "liveEngine",
+      viewType: "live",
       muted: this._streamMuted,
       controls: false
     });
@@ -6794,7 +6807,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._ffDebug("Attempting direct go2rtc MSE stream mount");
     const video = createVideoElement({
-      profile: "liveEngine",
+      viewType: "live",
       muted,
       controls: false
     });
@@ -7067,7 +7080,7 @@ const FrigateViewCard = class extends HTMLElement {
     const wsUrl = await this._go2rtcWebSocketUrl();
     if (!wsUrl) return false;
     const video = createVideoElement({
-      profile: "liveEngine",
+      viewType: "live",
       muted: this._streamMuted,
       controls: false
     });
@@ -7159,7 +7172,7 @@ const FrigateViewCard = class extends HTMLElement {
     const hlsUrl = await this._go2rtcHlsUrl();
     if (!hlsUrl) return false;
     const video = createVideoElement({
-      profile: "liveEngine",
+      viewType: "live",
       muted: this._streamMuted,
       controls: false,
       src: hlsUrl
@@ -11052,7 +11065,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
     return createVideoElement({
-      profile: "popupPlayback",
+      viewType: "popup",
       autoplay,
       muted,
       src
@@ -11198,7 +11211,7 @@ const FrigateViewCard = class extends HTMLElement {
     viewer.innerHTML = '<div class="ld">Loading\u2026</div>';
     if (this._playSeq !== token) return;
     const video = createVideoElement({
-      profile: "recordingPlayback",
+      viewType: "recording",
       muted: true
     });
     mountNodeIntoSlot(viewer, video);

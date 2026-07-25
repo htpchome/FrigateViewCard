@@ -1522,7 +1522,7 @@ export class FrigateViewCard extends HTMLElement {
       return false;
     }
     configureVideoElement(engine.video, {
-      profile: "liveEngine",
+      viewType: "live",
       muted: this._streamMuted,
       controls: false,
     });
@@ -2149,7 +2149,7 @@ export class FrigateViewCard extends HTMLElement {
     this._ffDebug("Attempting direct go2rtc MSE stream mount");
 
     const video = createVideoElement({
-      profile: "liveEngine",
+      viewType: "live",
       muted,
       controls: false,
     });
@@ -2445,7 +2445,7 @@ export class FrigateViewCard extends HTMLElement {
     if (!wsUrl) return false;
 
     const video = createVideoElement({
-      profile: "liveEngine",
+      viewType: "live",
       muted: this._streamMuted,
       controls: false,
     });
@@ -2543,7 +2543,7 @@ export class FrigateViewCard extends HTMLElement {
     if (!hlsUrl) return false;
 
     const video = createVideoElement({
-      profile: "liveEngine",
+      viewType: "live",
       muted: this._streamMuted,
       controls: false,
       src: hlsUrl,
@@ -6982,7 +6982,7 @@ export class FrigateViewCard extends HTMLElement {
   }
   _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
     return createVideoElement({
-      profile: "popupPlayback",
+      viewType: "popup",
       autoplay,
       muted,
       src,
@@ -7141,7 +7141,7 @@ export class FrigateViewCard extends HTMLElement {
     viewer.innerHTML = '<div class="ld">Loading…</div>';
     if (this._playSeq !== token) return;
     const video = createVideoElement({
-      profile: "recordingPlayback",
+      viewType: "recording",
       muted: true,
     });
     mountNodeIntoSlot(viewer, video);
