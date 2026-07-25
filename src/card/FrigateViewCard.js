@@ -410,47 +410,57 @@ export class FrigateViewCard extends HTMLElement {
     };
 //=============================
 (function () {
-  function disablePullToRefreshGlitches() {
-    // 1. Target the absolute top level document elements
-    const htmlElement = document.documentElement;
-    const bodyElement = document.body;
-    
-    if (htmlElement && bodyElement) {
-      // Force native containment on overscroll physics
-      htmlElement.style.setProperty('overscroll-behavior-y', 'contain', 'important');
-      bodyElement.style.setProperty('overscroll-behavior-y', 'contain', 'important');
-    }
-
-    // 2. Drill deep into the Home Assistant view shadow nodes
+  function initGlobalLayoutFix() {
+    // 1. Grab the highest level reactive wrapper in the Home Assistant DOM tree
     const root = document.querySelector('home-assistant')?.shadowRoot;
     const main = root?.querySelector('home-assistant-main')?.shadowRoot;
-    const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
-    const hui = panel?.querySelector('hui-root')?.shadowRoot;
-    
-    // Target the core scroll containers
-    const appLayout = hui?.querySelector('ha-app-layout') || hui?.querySelector('app-header-layout');
-    
-    if (appLayout) {
-      appLayout.style.setProperty('overscroll-behavior-y', 'contain', 'important');
+    const haDrawer = main?.querySelector('ha-drawer');
+    const partialsContainer = main?.querySelector('.content') || haDrawer || main;
+
+    if (!partialsContainer) return;
+
+    let touchStartY = 0;
+
+    // Track when the user starts a pull gesture
+    window.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches.clientY;
+    }, { passive: true });
+
+    // Track when the user releases the pull gesture
+    window.addEventListener('touchend', (e) => {
+      const touchEndY = e.changedTouches.clientY;
       
-      // Also apply directly to the implicit inner container div
-      const innerScrollDiv = appLayout.shadowRoot?.querySelector('#contentContainer') || appLayout.querySelector('div');
-      if (innerScrollDiv) {
-        innerScrollDiv.style.setProperty('overscroll-behavior-y', 'contain', 'important');
+      // A downward pull threshold indicating a pull-to-refresh action
+      if (touchEndY - touchStartY > 100) {
+        
+        // Wait exactly long enough for HA's loading animation to finish clearing
+        setTimeout(() => {
+          // Force a hardware rendering re-evaluation by modulating the scale
+          // This breaks the hardware-cached position and forces a redraw
+          partialsContainer.style.transform = 'scale(0.9999)';
+          
+          // Force browser engine style paint
+          partialsContainer.offsetHeight;
+
+          // Restore normal scale, forcing everything to recalculate positions
+          setTimeout(() => {
+            partialsContainer.style.transform = '';
+            
+            // Dispatch a native resize event directly to the window context 
+            // to update any individual cards running reactive internal sizes
+            window.dispatchEvent(new Event('resize'));
+          }, 50);
+
+        }, 1200); 
       }
-    }
+    }, { passive: true });
   }
 
-  // Poll reliably until the element layer is completely initialized
+  // Deep poll until Home Assistant's master framework engine settles in the browser
   const interval = setInterval(() => {
-    const isLoaded = document.querySelector('home-assistant')
-      ?.shadowRoot?.querySelector('home-assistant-main')
-      ?.shadowRoot?.querySelector('ha-panel-lovelace')
-      ?.shadowRoot?.querySelector('hui-root')?.shadowRoot;
-
-    if (isLoaded) {
+    if (document.querySelector('home-assistant')?.shadowRoot?.querySelector('home-assistant-main')) {
       clearInterval(interval);
-      disablePullToRefreshGlitches();
+      initGlobalLayoutFix();
     }
   }, 1000);
 })();

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.898";
+const VERSION = "1.0.899";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5533,31 +5533,34 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
     (function() {
-      function disablePullToRefreshGlitches() {
-        const htmlElement = document.documentElement;
-        const bodyElement = document.body;
-        if (htmlElement && bodyElement) {
-          htmlElement.style.setProperty("overscroll-behavior-y", "contain", "important");
-          bodyElement.style.setProperty("overscroll-behavior-y", "contain", "important");
-        }
+      function initGlobalLayoutFix() {
         const root = document.querySelector("home-assistant")?.shadowRoot;
         const main = root?.querySelector("home-assistant-main")?.shadowRoot;
-        const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
-        const hui = panel?.querySelector("hui-root")?.shadowRoot;
-        const appLayout = hui?.querySelector("ha-app-layout") || hui?.querySelector("app-header-layout");
-        if (appLayout) {
-          appLayout.style.setProperty("overscroll-behavior-y", "contain", "important");
-          const innerScrollDiv = appLayout.shadowRoot?.querySelector("#contentContainer") || appLayout.querySelector("div");
-          if (innerScrollDiv) {
-            innerScrollDiv.style.setProperty("overscroll-behavior-y", "contain", "important");
+        const haDrawer = main?.querySelector("ha-drawer");
+        const partialsContainer = main?.querySelector(".content") || haDrawer || main;
+        if (!partialsContainer) return;
+        let touchStartY = 0;
+        window.addEventListener("touchstart", (e) => {
+          touchStartY = e.touches.clientY;
+        }, { passive: true });
+        window.addEventListener("touchend", (e) => {
+          const touchEndY = e.changedTouches.clientY;
+          if (touchEndY - touchStartY > 100) {
+            setTimeout(() => {
+              partialsContainer.style.transform = "scale(0.9999)";
+              partialsContainer.offsetHeight;
+              setTimeout(() => {
+                partialsContainer.style.transform = "";
+                window.dispatchEvent(new Event("resize"));
+              }, 50);
+            }, 1200);
           }
-        }
+        }, { passive: true });
       }
       const interval = setInterval(() => {
-        const isLoaded = document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")?.shadowRoot?.querySelector("ha-panel-lovelace")?.shadowRoot?.querySelector("hui-root")?.shadowRoot;
-        if (isLoaded) {
+        if (document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")) {
           clearInterval(interval);
-          disablePullToRefreshGlitches();
+          initGlobalLayoutFix();
         }
       }, 1e3);
     })();
