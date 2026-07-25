@@ -409,43 +409,85 @@ export class FrigateViewCard extends HTMLElement {
       }
     };
 //=============================
-(function () {
-  function initSnapping() {
-    // FIX 1: Added quotes around all selector strings and CSS values
-    const root = document.querySelector('home-assistant')?.shadowRoot;
-    if (!root) return;
-    const main = root.querySelector('home-assistant-main')?.shadowRoot;
-    const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
-    const hui = panel?.querySelector('hui-root')?.shadowRoot;
-    if (!hui) return;
+(function() {
+    let retryCount = 0;
+    const maxRetries = 40; // Stop checking after 20 seconds
 
-    const header = hui.querySelector('app-header');
-    
-    // FIX 2: Updated selectors to target your actual custom card
-    // CHANGE THIS string to match your card's actual HTML tag name
-    const targetCard = hui.querySelector('your-custom-card-tag'); 
+    function initPullUpToHeader() {
+        const app = document.querySelector("home-assistant");
+        
+        // Check if Home Assistant core and its connection state exist
+        const isLoaded = app?.hass?.connected;
+        
+        // Also verify the progress spinner is gone from the main DOM
+        const spinner = document.querySelector("ha-init-progress") || app?.shadowRoot?.querySelector("ha-init-progress");
 
-    if (!header || !targetCard) return;
+        if (!isLoaded || spinner) {
+            if (retryCount < maxRetries) {
+                retryCount++;
+                setTimeout(initPullUpToHeader, 500); // Retry every 500ms
+            }
+            return;
+        }
 
-    // FIX 3: Dynamic height calculation without relying heavily on a spinner mutation
-    const headerHeight = header.getBoundingClientRect().height || 56;
-    targetCard.style.position = 'sticky';
-    targetCard.style.top = `${headerHeight}px`;
-    targetCard.style.zIndex = '10';
-  }
+        // Home Assistant is loaded. Now let's traverse down carefully.
+        const main = app?.shadowRoot?.querySelector("home-assistant-main");
+        const root = main?.shadowRoot?.querySelector("hui-root");
+        
+        // Target the toolbar/header container inside the dashboard layout
+        const toolbar = root?.shadowRoot?.querySelector("app-header") || root?.shadowRoot?.querySelector(".header");
+        const view = root?.shadowRoot?.querySelector("#view");
+        
+        // Find the card inside the active view container
+        const card = view?.querySelector("ha-card") || view?.shadowRoot?.querySelector("ha-card");
 
-  // FIX 4: Deep polling interval to ensure nested Shadow DOMs exist before running
-  const interval = setInterval(() => {
-    const isLoaded = document.querySelector('home-assistant')
-      ?.shadowRoot?.querySelector('home-assistant-main')
-      ?.shadowRoot?.querySelector('ha-panel-lovelace')
-      ?.shadowRoot?.querySelector('hui-root')?.shadowRoot;
+        if (!card || !toolbar) {
+            // Elements aren't rendered in the shadow DOM yet, retry shortly
+            setTimeout(initPullUpToHeader, 200);
+            return;
+        }
 
-    if (isLoaded) {
-      clearInterval(interval);
-      initSnapping();
+        let startY = 0;
+        let currentY = 0;
+        let isDragging = false;
+
+        card.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+            card.style.transition = 'none'; 
+        }, { passive: true });
+
+        card.addEventListener('touchmove', (e) => {
+            currentY = e.touches[0].clientY;
+            const diff = currentY - startY;
+
+            // Only trigger if pulling UP (diff is negative)
+            if (diff < 0) {
+                isDragging = true;
+                
+                // Calculate the distance between the card's current top and the toolbar's bottom
+                const cardRect = card.getBoundingClientRect();
+                const toolbarRect = toolbar.getBoundingClientRect();
+                const maxPullDistance = cardRect.top - toolbarRect.bottom;
+
+                // Restrict the pull up distance so it cannot pass the bottom of the toolbar
+                const dragAmount = Math.max(diff * 0.4, -maxPullDistance);
+                
+                card.style.transform = `translateY(${dragAmount}px)`;
+            }
+        }, { passive: false });
+
+        card.addEventListener('touchend', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            // Snap back down safely
+            card.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            card.style.transform = 'translateY(0px)';
+        });
     }
-  }, 1000);
+
+    // Begin execution loop
+    initPullUpToHeader();
 })();
 
 //============================
