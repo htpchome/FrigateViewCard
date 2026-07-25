@@ -29,11 +29,75 @@ const VIDEO_VIEW_PROFILE_MAP = Object.freeze({
   recording: "recordingPlayback",
 });
 
+const VIDEO_VIEW_DEFAULT_OPTIONS = Object.freeze({
+  live: Object.freeze({ viewType: "live" }),
+  popup: Object.freeze({ viewType: "popup" }),
+  recording: Object.freeze({ viewType: "recording" }),
+});
+
 export function resolveVideoProfileNameForView(viewType) {
   const key = String(viewType || "")
     .trim()
     .toLowerCase();
   return VIDEO_VIEW_PROFILE_MAP[key] || VIDEO_VIEW_PROFILE_MAP.live;
+}
+
+function resolveViewKey(viewType) {
+  const key = String(viewType || "")
+    .trim()
+    .toLowerCase();
+  return VIDEO_VIEW_DEFAULT_OPTIONS[key] ? key : "live";
+}
+
+/**
+ * Builds per-view video options with deterministic override merging.
+ */
+export function buildVideoOptionsForView(viewType, overrides = {}) {
+  const viewKey = resolveViewKey(viewType);
+  const base = VIDEO_VIEW_DEFAULT_OPTIONS[viewKey] ||
+    VIDEO_VIEW_DEFAULT_OPTIONS.live;
+
+  const merged = {
+    ...base,
+    ...(overrides && typeof overrides === "object" ? overrides : {}),
+  };
+
+  if (base.style || overrides?.style) {
+    merged.style = {
+      ...(base.style && typeof base.style === "object" ? base.style : {}),
+      ...(overrides?.style && typeof overrides.style === "object"
+        ? overrides.style
+        : {}),
+    };
+  }
+  if (base.dataset || overrides?.dataset) {
+    merged.dataset = {
+      ...(base.dataset && typeof base.dataset === "object" ? base.dataset : {}),
+      ...(overrides?.dataset && typeof overrides.dataset === "object"
+        ? overrides.dataset
+        : {}),
+    };
+  }
+  if (base.attributes || overrides?.attributes) {
+    merged.attributes = {
+      ...(base.attributes && typeof base.attributes === "object"
+        ? base.attributes
+        : {}),
+      ...(overrides?.attributes && typeof overrides.attributes === "object"
+        ? overrides.attributes
+        : {}),
+    };
+  }
+  if (base.classNames || overrides?.classNames) {
+    const tokens = [
+      ...(Array.isArray(base.classNames) ? base.classNames : []),
+      ...(Array.isArray(overrides?.classNames) ? overrides.classNames : []),
+    ].map((token) => String(token || "").trim())
+      .filter(Boolean);
+    merged.classNames = [...new Set(tokens)];
+  }
+
+  return merged;
 }
 
 function resolveVideoProfile({ profile, viewType } = {}) {

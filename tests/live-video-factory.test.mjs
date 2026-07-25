@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildVideoOptionsForView,
   configureVideoElement,
   createVideoElement,
   mountNodeIntoSlot,
@@ -279,4 +280,32 @@ test("supportsNativeHlsPlayback returns false when HLS MIME types are unsupporte
   } finally {
     globalThis.document = previousDocument;
   }
+});
+
+test("buildVideoOptionsForView returns per-view defaults with safe fallback", () => {
+  assert.deepEqual(buildVideoOptionsForView("live"), { viewType: "live" });
+  assert.deepEqual(buildVideoOptionsForView("popup"), { viewType: "popup" });
+  assert.deepEqual(buildVideoOptionsForView("recording"), {
+    viewType: "recording",
+  });
+  assert.deepEqual(buildVideoOptionsForView("unknown"), {
+    viewType: "live",
+  });
+});
+
+test("buildVideoOptionsForView merges style/dataset/attributes/classNames", () => {
+  const merged = buildVideoOptionsForView("popup", {
+    muted: true,
+    style: { objectFit: "cover" },
+    dataset: { overlay: "1" },
+    attributes: { controlslist: "nodownload" },
+    classNames: ["rounded", "overlay-enabled"],
+  });
+
+  assert.equal(merged.viewType, "popup");
+  assert.equal(merged.muted, true);
+  assert.deepEqual(merged.style, { objectFit: "cover" });
+  assert.deepEqual(merged.dataset, { overlay: "1" });
+  assert.deepEqual(merged.attributes, { controlslist: "nodownload" });
+  assert.deepEqual(merged.classNames, ["rounded", "overlay-enabled"]);
 });
