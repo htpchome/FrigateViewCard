@@ -971,14 +971,14 @@ export class FrigateViewCard extends HTMLElement {
     if (this._isPreviewContext() || this._config?.compact_preview === true) {
       return 3;
     }
-    return 6;
+    return 12;
   }
   getGridOptions() {
     return {
-      columns: 3,
-      rows: 6,
-      min_rows: 4,
-      min_columns: 3,
+      columns: 12,
+      rows: 12,
+      min_rows: 6,
+      min_columns: 6,
     };
   }
   disconnectedCallback() {
