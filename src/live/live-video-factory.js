@@ -7,6 +7,20 @@ const VIDEO_PROFILES = Object.freeze({
     controls: false,
     preload: "",
   }),
+  popupPlayback: Object.freeze({
+    styleText: "",
+    autoplay: true,
+    playsInline: true,
+    controls: true,
+    preload: "metadata",
+  }),
+  recordingPlayback: Object.freeze({
+    styleText: "",
+    autoplay: false,
+    playsInline: true,
+    controls: true,
+    preload: "metadata",
+  }),
 });
 
 function resolveVideoProfile(profile) {

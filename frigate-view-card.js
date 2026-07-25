@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.867";
+const VERSION = "1.0.868";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2135,6 +2135,20 @@ const VIDEO_PROFILES = Object.freeze({
     playsInline: true,
     controls: false,
     preload: ""
+  }),
+  popupPlayback: Object.freeze({
+    styleText: "",
+    autoplay: true,
+    playsInline: true,
+    controls: true,
+    preload: "metadata"
+  }),
+  recordingPlayback: Object.freeze({
+    styleText: "",
+    autoplay: false,
+    playsInline: true,
+    controls: true,
+    preload: "metadata"
   })
 });
 function resolveVideoProfile(profile) {
@@ -11013,16 +11027,12 @@ const FrigateViewCard = class extends HTMLElement {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
   }
   _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
-    const video = document.createElement("video");
-    video.controls = true;
-    video.playsInline = true;
-    video.setAttribute("playsinline", "");
-    video.setAttribute("webkit-playsinline", "");
-    video.preload = "metadata";
-    video.muted = muted;
-    if (autoplay) video.autoplay = true;
-    video.src = src;
-    return video;
+    return createVideoElement({
+      profile: "popupPlayback",
+      autoplay,
+      muted,
+      src
+    });
   }
   _showClip(ev, opts = {}) {
     const src = this._media(ev.id, isIOS ? "master.m3u8" : "clip.mp4");
@@ -11163,8 +11173,11 @@ const FrigateViewCard = class extends HTMLElement {
     const viewer = this.shadowRoot.querySelector("#viewer");
     viewer.innerHTML = '<div class="ld">Loading\u2026</div>';
     if (this._playSeq !== token) return;
-    viewer.innerHTML = `<video controls playsinline webkit-playsinline preload="metadata" muted></video>`;
-    const video = viewer.querySelector("video");
+    const video = createVideoElement({
+      profile: "recordingPlayback",
+      muted: true
+    });
+    mountNodeIntoSlot(viewer, video);
     let playable = false;
     let activeSource = "";
     const mediaCleanup = [];

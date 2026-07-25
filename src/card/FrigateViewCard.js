@@ -6981,16 +6981,12 @@ export class FrigateViewCard extends HTMLElement {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
   }
   _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
-    const video = document.createElement("video");
-    video.controls = true;
-    video.playsInline = true;
-    video.setAttribute("playsinline", "");
-    video.setAttribute("webkit-playsinline", "");
-    video.preload = "metadata";
-    video.muted = muted;
-    if (autoplay) video.autoplay = true;
-    video.src = src;
-    return video;
+    return createVideoElement({
+      profile: "popupPlayback",
+      autoplay,
+      muted,
+      src,
+    });
   }
   _showClip(ev, opts = {}) {
     const src = this._media(ev.id, isIOS ? "master.m3u8" : "clip.mp4");
@@ -7144,8 +7140,11 @@ export class FrigateViewCard extends HTMLElement {
     const viewer = this.shadowRoot.querySelector("#viewer");
     viewer.innerHTML = '<div class="ld">Loading…</div>';
     if (this._playSeq !== token) return;
-    viewer.innerHTML = `<video controls playsinline webkit-playsinline preload="metadata" muted></video>`;
-    const video = viewer.querySelector("video");
+    const video = createVideoElement({
+      profile: "recordingPlayback",
+      muted: true,
+    });
+    mountNodeIntoSlot(viewer, video);
     let playable = false;
     let activeSource = "";
     const mediaCleanup = [];
