@@ -409,41 +409,27 @@ export class FrigateViewCard extends HTMLElement {
       }
     };
 //=============================
-const app = document.querySelector("home-assistant");
-const main = app?.shadowRoot?.querySelector("home-assistant-main");
-const root = main?.shadowRoot?.querySelector("hui-root");
+(function suppressLoader() {
+  const hideSpinners = () => {
+    // Access the main HA root element
+    const root = document.querySelector('home-assistant');
+    if (!root || !root.shadowRoot) return;
 
-// Broaden your search or target a specific card ID/class inside the view
-const view = root?.shadowRoot?.querySelector("hui-view");
-const card = view?.shadowRoot?.querySelector("ha-card");
+    const main = root.shadowRoot.querySelector('home-assistant-main');
+    if (!main || !main.shadowRoot) return;
 
-let startY = 0;
-let currentY = 0;
-let isDragging = false;
+    // Search for progress/circular loaders inside the shadow boundaries
+    const loaders = main.shadowRoot.querySelectorAll('ha-circular-loader, mce-circular-progress, paper-spinner');
+    loaders.forEach(loader => {
+      loader.style.display = 'none';
+    });
+  };
 
-// Stop here if the card does not exist yet
-if (card) {
-  card.addEventListener('touchstart', (e) => {
-    startY = e.touches[0].clientY;
-    card.style.transition = 'none'; 
-  }, { passive: true });
-
-  card.addEventListener('touchmove', (e) => {
-    currentY = e.touches[0].clientY;
-    const diff = currentY - startY; 
-    if (card.scrollTop <= 0 && diff > 0) {
-      isDragging = true; 
-      card.style.transform = `translateY(${diff * 0.4}px)`;
-    }
-  }, { passive: false });
-
-  card.addEventListener('touchend', () => {
-    if (!isDragging) return;
-    isDragging = false; 
-    card.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-    card.style.transform = 'translateY(0px)';
-  });
-}
+  // Run immediately and observe future DOM changes
+  hideSpinners();
+  const observer = new MutationObserver(hideSpinners);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+})();
 
 //============================
     document.addEventListener("visibilitychange", this._onDocVisibility);
