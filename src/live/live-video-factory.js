@@ -51,7 +51,9 @@ function applyVideoStyleOptions(video, options = {}) {
     filter: options.filter,
     borderRadius: options.borderRadius,
     boxShadow: options.boxShadow,
-    ...(options.style && typeof options.style === "object" ? options.style : {}),
+    ...(options.style && typeof options.style === "object"
+      ? options.style
+      : {}),
   };
 
   for (const [styleKey, value] of Object.entries(styleOptions)) {
