@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.894";
+const VERSION = "1.0.895";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5533,23 +5533,39 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
     (function() {
-      const styleId = "global-ha-refresh-fix";
-      if (document.getElementById(styleId)) return;
-      const style = document.createElement("style");
-      style.id = styleId;
-      style.textContent = `
-    /* Force the main layout container to correctly contain its layout boundaries during overscroll */
-    ha-app-layout, app-header-layout {
-      contain: layout size style !important;
-    }
-    
-    /* Ensure the main scrollable section correctly resets its position after a pull-to-refresh event */
-    #contentContainer {
-      position: relative !important;
-      will-change: transform, scroll-position !important;
-    }
-  `;
-      document.head.appendChild(style);
+      function initHardResetFix() {
+        const root = document.querySelector("home-assistant")?.shadowRoot;
+        const main = root?.querySelector("home-assistant-main")?.shadowRoot;
+        const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
+        const hui = panel?.querySelector("hui-root")?.shadowRoot;
+        const viewContainer = hui?.querySelector("hui-view") || hui?.querySelector("hui-view-container");
+        if (!viewContainer) return;
+        let touchStartY = 0;
+        window.addEventListener("touchstart", (e) => {
+          touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        window.addEventListener("touchend", (e) => {
+          const touchEndY = e.changedTouches[0].clientY;
+          if (touchEndY - touchStartY > 120) {
+            setTimeout(() => {
+              const originalDisplay = viewContainer.style.display;
+              viewContainer.style.display = "none";
+              viewContainer.offsetHeight;
+              viewContainer.style.display = originalDisplay;
+            }, 1100);
+          }
+        }, { passive: true });
+      }
+      const interval = setInterval(() => {
+        const root = document.querySelector("home-assistant")?.shadowRoot;
+        const main = root?.querySelector("home-assistant-main")?.shadowRoot;
+        const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
+        const hui = panel?.querySelector("hui-root")?.shadowRoot;
+        if (hui?.querySelector("hui-view") || hui?.querySelector("hui-view-container")) {
+          clearInterval(interval);
+          initHardResetFix();
+        }
+      }, 1e3);
     })();
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();

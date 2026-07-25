@@ -410,25 +410,61 @@ export class FrigateViewCard extends HTMLElement {
     };
 //=============================
 (function () {
-  const styleId = 'global-ha-refresh-fix';
-  if (document.getElementById(styleId)) return;
-
-  const style = document.createElement('style');
-  style.id = styleId;
-  style.textContent = `
-    /* Force the main layout container to correctly contain its layout boundaries during overscroll */
-    ha-app-layout, app-header-layout {
-      contain: layout size style !important;
-    }
+  function initHardResetFix() {
+    const root = document.querySelector('home-assistant')?.shadowRoot;
+    const main = root?.querySelector('home-assistant-main')?.shadowRoot;
+    const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
+    const hui = panel?.querySelector('hui-root')?.shadowRoot;
     
-    /* Ensure the main scrollable section correctly resets its position after a pull-to-refresh event */
-    #contentContainer {
-      position: relative !important;
-      will-change: transform, scroll-position !important;
+    // Target the highest level dashboard view container possible
+    const viewContainer = hui?.querySelector('hui-view') || hui?.querySelector('hui-view-container');
+    if (!viewContainer) return;
+
+    let touchStartY = 0;
+
+    // Listen to native touch gestures
+    window.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    window.addEventListener('touchend', (e) => {
+      const touchEndY = e.changedTouches[0].clientY;
+      
+      // If user performs a definitive downward pull gesture (Pull to refresh)
+      if (touchEndY - touchStartY > 120) {
+        
+        // Wait for the pull down animation and spinner to conclude
+        setTimeout(() => {
+          // Store original display property (usually 'block', 'flex' or 'grid')
+          const originalDisplay = viewContainer.style.display; 
+          
+          // NUKE: Force the browser to completely unrender the view layer
+          viewContainer.style.display = 'none';
+          
+          // Force a structural browser layout recalculation (reflow)
+          viewContainer.offsetHeight; 
+          
+          // RESTORE: Force the browser to render it fresh from scratch
+          viewContainer.style.display = originalDisplay;
+          
+        }, 1100); // 1.1s allows the native pull-to-refresh to finish its snapback animation
+      }
+    }, { passive: true });
+  }
+
+  // Poll until the elements exist in the DOM
+  const interval = setInterval(() => {
+    const root = document.querySelector('home-assistant')?.shadowRoot;
+    const main = root?.querySelector('home-assistant-main')?.shadowRoot;
+    const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
+    const hui = panel?.querySelector('hui-root')?.shadowRoot;
+    
+    if (hui?.querySelector('hui-view') || hui?.querySelector('hui-view-container')) {
+      clearInterval(interval);
+      initHardResetFix();
     }
-  `;
-  document.head.appendChild(style);
-})();
+  }, 1000);
+})()
 
 //============================
     document.addEventListener("visibilitychange", this._onDocVisibility);
