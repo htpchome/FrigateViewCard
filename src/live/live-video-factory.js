@@ -54,8 +54,8 @@ function resolveViewKey(viewType) {
  */
 export function buildVideoOptionsForView(viewType, overrides = {}) {
   const viewKey = resolveViewKey(viewType);
-  const base = VIDEO_VIEW_DEFAULT_OPTIONS[viewKey] ||
-    VIDEO_VIEW_DEFAULT_OPTIONS.live;
+  const base =
+    VIDEO_VIEW_DEFAULT_OPTIONS[viewKey] || VIDEO_VIEW_DEFAULT_OPTIONS.live;
 
   const merged = {
     ...base,
@@ -92,7 +92,8 @@ export function buildVideoOptionsForView(viewType, overrides = {}) {
     const tokens = [
       ...(Array.isArray(base.classNames) ? base.classNames : []),
       ...(Array.isArray(overrides?.classNames) ? overrides.classNames : []),
-    ].map((token) => String(token || "").trim())
+    ]
+      .map((token) => String(token || "").trim())
       .filter(Boolean);
     merged.classNames = [...new Set(tokens)];
   }
