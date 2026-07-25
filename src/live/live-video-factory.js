@@ -75,6 +75,35 @@ function applyVideoStyleOptions(video, options = {}) {
   }
 }
 
+function applyVideoClassOptions(video, options = {}) {
+  const { className, classNames } = options;
+  if (className !== undefined) {
+    video.className = className == null ? "" : String(className);
+  }
+  if (Array.isArray(classNames) && video.classList) {
+    for (const classToken of classNames) {
+      const token = String(classToken || "").trim();
+      if (!token) continue;
+      video.classList.add(token);
+    }
+  }
+}
+
+function applyVideoDatasetOptions(video, options = {}) {
+  if (!video?.dataset || !options?.dataset || typeof options.dataset !== "object") {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(options.dataset)) {
+    if (!key) continue;
+    if (value === null || value === undefined || value === false) {
+      delete video.dataset[key];
+      continue;
+    }
+    video.dataset[key] = value === true ? "1" : String(value);
+  }
+}
+
 /**
  * Applies a named video profile with optional per-view overrides.
  */
@@ -113,6 +142,8 @@ export function configureVideoElement(video, options = {}) {
     video.style.cssText = styleText;
   }
   applyVideoStyleOptions(video, options);
+  applyVideoClassOptions(video, options);
+  applyVideoDatasetOptions(video, options);
 
   // Keep iOS inline playback behavior stable for all profiles.
   video.setAttribute("playsinline", "");

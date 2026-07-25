@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.870";
+const VERSION = "1.0.871";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2192,6 +2192,32 @@ function applyVideoStyleOptions(video, options = {}) {
     applyVideoStyleProperty(video, styleKey, value);
   }
 }
+function applyVideoClassOptions(video, options = {}) {
+  const { className, classNames } = options;
+  if (className !== void 0) {
+    video.className = className == null ? "" : String(className);
+  }
+  if (Array.isArray(classNames) && video.classList) {
+    for (const classToken of classNames) {
+      const token = String(classToken || "").trim();
+      if (!token) continue;
+      video.classList.add(token);
+    }
+  }
+}
+function applyVideoDatasetOptions(video, options = {}) {
+  if (!video?.dataset || !options?.dataset || typeof options.dataset !== "object") {
+    return;
+  }
+  for (const [key, value] of Object.entries(options.dataset)) {
+    if (!key) continue;
+    if (value === null || value === void 0 || value === false) {
+      delete video.dataset[key];
+      continue;
+    }
+    video.dataset[key] = value === true ? "1" : String(value);
+  }
+}
 function configureVideoElement(video, options = {}) {
   if (!video) return video;
   const profile = resolveVideoProfile({
@@ -2225,6 +2251,8 @@ function configureVideoElement(video, options = {}) {
     video.style.cssText = styleText;
   }
   applyVideoStyleOptions(video, options);
+  applyVideoClassOptions(video, options);
+  applyVideoDatasetOptions(video, options);
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
   if (options.attributes && typeof options.attributes === "object") {

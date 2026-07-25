@@ -10,6 +10,15 @@ import {
 
 function createFakeVideoElement() {
   const attrs = new Map();
+  const classSet = new Set();
+  const dataset = {};
+  const style = { cssText: "" };
+  let classNameValue = "";
+
+  const syncClassNameFromSet = () => {
+    classNameValue = [...classSet].join(" ");
+  };
+
   return {
     autoplay: false,
     playsInline: false,
@@ -18,7 +27,34 @@ function createFakeVideoElement() {
     controls: false,
     preload: "",
     src: "",
-    style: { cssText: "" },
+    style,
+    dataset,
+    get className() {
+      return classNameValue;
+    },
+    set className(value) {
+      classSet.clear();
+      const text = String(value || "").trim();
+      if (text) {
+        for (const token of text.split(/\s+/)) {
+          classSet.add(token);
+        }
+      }
+      syncClassNameFromSet();
+    },
+    classList: {
+      add(...tokens) {
+        for (const token of tokens) {
+          const next = String(token || "").trim();
+          if (!next) continue;
+          classSet.add(next);
+        }
+        syncClassNameFromSet();
+      },
+      contains(token) {
+        return classSet.has(String(token || "").trim());
+      },
+    },
     setAttribute(name, value) {
       attrs.set(name, String(value));
     },
@@ -181,4 +217,26 @@ test("createVideoElement supports viewType-based profile selection", () => {
     assert.equal(recordingVideo.controls, true);
     assert.equal(recordingVideo.preload, "metadata");
   });
+});
+
+test("configureVideoElement applies class and dataset hooks", () => {
+  const video = createFakeVideoElement();
+  video.dataset.overlay = "old";
+
+  configureVideoElement(video, {
+    viewType: "popup",
+    className: "fvc-video",
+    classNames: ["overlay-enabled", "rounded"],
+    dataset: {
+      view: "popup",
+      overlay: true,
+      stale: null,
+    },
+  });
+
+  assert.equal(video.className, "fvc-video overlay-enabled rounded");
+  assert.equal(video.classList.contains("overlay-enabled"), true);
+  assert.equal(video.dataset.view, "popup");
+  assert.equal(video.dataset.overlay, "1");
+  assert.equal("stale" in video.dataset, false);
 });
