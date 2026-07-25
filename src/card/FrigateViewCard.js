@@ -705,11 +705,10 @@ export class FrigateViewCard extends HTMLElement {
       title: "Frigate Preview",
       subtitle: "Compact preview",
       compact_preview: true,
-      stream_height: 42,
-      stream_height_unit: "vh",
+      stream_height: 100,
+      stream_height_unit: "%",
       window_days: 1,
       alerts_reviews_days: 1,
-      tight_margins: true,
     };
   }
   setConfig(config) {

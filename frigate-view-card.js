@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.879";
+const VERSION = "1.0.880";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5785,11 +5785,10 @@ const FrigateViewCard = class extends HTMLElement {
       title: "Frigate Preview",
       subtitle: "Compact preview",
       compact_preview: true,
-      stream_height: 42,
-      stream_height_unit: "vh",
+      stream_height: 100,
+      stream_height_unit: "%",
       window_days: 1,
-      alerts_reviews_days: 1,
-      tight_margins: true
+      alerts_reviews_days: 1
     };
   }
   setConfig(config) {
