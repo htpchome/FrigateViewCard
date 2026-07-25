@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.888";
+const VERSION = "1.0.889";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5532,20 +5532,34 @@ const FrigateViewCard = class extends HTMLElement {
         this._scheduleResumeLive("doc-visible");
       }
     };
-    (function suppressLoader() {
-      const hideSpinners = () => {
-        const root = document.querySelector("home-assistant");
-        if (!root || !root.shadowRoot) return;
-        const main = root.shadowRoot.querySelector("home-assistant-main");
-        if (!main || !main.shadowRoot) return;
-        const loaders = main.shadowRoot.querySelectorAll("ha-circular-loader, mce-circular-progress, paper-spinner");
-        loaders.forEach((loader) => {
-          loader.style.display = "none";
+    (function() {
+      function initSnapping() {
+        const root = document.querySelector("home-assistant")?.shadowRoot;
+        if (!root) return;
+        const main = root.querySelector("home-assistant-main")?.shadowRoot;
+        const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
+        const hui = panel?.querySelector("hui-root")?.shadowRoot;
+        if (!hui) return;
+        const header = hui.querySelector("app-header");
+        const spinner = hui.querySelector("ha-circular-progress") || hui.querySelector("paper-spinner");
+        const targetCard = hui.querySelector("your-custom-card-tag");
+        const observer = new MutationObserver(() => {
+          const spinnerGone = !spinner || spinner.hasAttribute("hidden") || window.getComputedStyle(spinner).display === "none";
+          if (spinnerGone && header && targetCard) {
+            const headerHeight = header.getBoundingClientRect().height;
+            targetCard.style.position = "sticky";
+            targetCard.style.top = `${headerHeight}px`;
+            targetCard.style.zIndex = "10";
+          }
         });
-      };
-      hideSpinners();
-      const observer = new MutationObserver(hideSpinners);
-      observer.observe(document.documentElement, { childList: true, subtree: true });
+        observer.observe(hui, { childList: true, subtree: true, attributes: true });
+      }
+      const interval = setInterval(() => {
+        if (document.querySelector("home-assistant")?.shadowRoot) {
+          clearInterval(interval);
+          initSnapping();
+        }
+      }, 500);
     })();
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();

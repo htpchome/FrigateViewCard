@@ -409,26 +409,42 @@ export class FrigateViewCard extends HTMLElement {
       }
     };
 //=============================
-(function suppressLoader() {
-  const hideSpinners = () => {
-    // Access the main HA root element
-    const root = document.querySelector('home-assistant');
-    if (!root || !root.shadowRoot) return;
+(function () {
+  function initSnapping() {
+    const root = document.querySelector("home-assistant")?.shadowRoot;
+    if (!root) return;
 
-    const main = root.shadowRoot.querySelector('home-assistant-main');
-    if (!main || !main.shadowRoot) return;
+    const main = root.querySelector("home-assistant-main")?.shadowRoot;
+    const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
+    const hui = panel?.querySelector("hui-root")?.shadowRoot;
+    
+    if (!hui) return;
 
-    // Search for progress/circular loaders inside the shadow boundaries
-    const loaders = main.shadowRoot.querySelectorAll('ha-circular-loader, mce-circular-progress, paper-spinner');
-    loaders.forEach(loader => {
-      loader.style.display = 'none';
+    const header = hui.querySelector("app-header");
+    const spinner = hui.querySelector("ha-circular-progress") || hui.querySelector("paper-spinner");
+    const targetCard = hui.querySelector("your-custom-card-tag"); // Replace with your card selector
+
+    const observer = new MutationObserver(() => {
+      const spinnerGone = !spinner || spinner.hasAttribute("hidden") || window.getComputedStyle(spinner).display === "none";
+      
+      if (spinnerGone && header && targetCard) {
+        const headerHeight = header.getBoundingClientRect().height;
+        targetCard.style.position = "sticky";
+        targetCard.style.top = `${headerHeight}px`;
+        targetCard.style.zIndex = "10";
+      }
     });
-  };
 
-  // Run immediately and observe future DOM changes
-  hideSpinners();
-  const observer = new MutationObserver(hideSpinners);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+    observer.observe(hui, { childList: true, subtree: true, attributes: true });
+  }
+
+  // Poll until Home Assistant DOM is fully loaded
+  const interval = setInterval(() => {
+    if (document.querySelector("home-assistant")?.shadowRoot) {
+      clearInterval(interval);
+      initSnapping();
+    }
+  }, 500);
 })();
 
 //============================
