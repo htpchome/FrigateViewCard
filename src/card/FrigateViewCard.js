@@ -409,85 +409,45 @@ export class FrigateViewCard extends HTMLElement {
       }
     };
 //=============================
-(function() {
-    let retryCount = 0;
-    const maxRetries = 40; // Stop checking after 20 seconds
+(function () {
+  function initRefreshFix() {
+    const root = document.querySelector('home-assistant')?.shadowRoot;
+    const main = root?.querySelector('home-assistant-main')?.shadowRoot;
+    const panel = main?.querySelector('ha-panel-lovelace')?.shadowRoot;
+    const hui = panel?.querySelector('hui-root')?.shadowRoot;
+    
+    // Find the main scrollable container handling the cards
+    const scrollContainer = panel?.querySelector('ch-header-layout') || window;
 
-    function initPullUpToHeader() {
-        const app = document.querySelector("home-assistant");
-        
-        // Check if Home Assistant core and its connection state exist
-        const isLoaded = app?.hass?.connected;
-        
-        // Also verify the progress spinner is gone from the main DOM
-        const spinner = document.querySelector("ha-init-progress") || app?.shadowRoot?.querySelector("ha-init-progress");
+    let touchStart = 0;
 
-        if (!isLoaded || spinner) {
-            if (retryCount < maxRetries) {
-                retryCount++;
-                setTimeout(initPullUpToHeader, 500); // Retry every 500ms
-            }
-            return;
-        }
+    window.addEventListener('touchstart', (e) => {
+      touchStart = e.touches[0].clientY;
+    }, { passive: true });
 
-        // Home Assistant is loaded. Now let's traverse down carefully.
-        const main = app?.shadowRoot?.querySelector("home-assistant-main");
-        const root = main?.shadowRoot?.querySelector("hui-root");
-        
-        // Target the toolbar/header container inside the dashboard layout
-        const toolbar = root?.shadowRoot?.querySelector("app-header") || root?.shadowRoot?.querySelector(".header");
-        const view = root?.shadowRoot?.querySelector("#view");
-        
-        // Find the card inside the active view container
-        const card = view?.querySelector("ha-card") || view?.shadowRoot?.querySelector("ha-card");
+    window.addEventListener('touchend', (e) => {
+      const touchEnd = e.changedTouches[0].clientY;
+      
+      // If the user pulled downward significantly (Pull-to-refresh gesture)
+      if (touchEnd - touchStart > 100) {
+        // Wait briefly for HA's loading spinner to vanish, then force a layout re-draw
+        setTimeout(() => {
+          if (window.scrollY === 0) {
+            window.scrollTo({ top: 1 });
+            setTimeout(() => window.scrollTo({ top: 0 }), 10);
+          }
+        }, 800); // Adjust this delay if your pull-to-refresh takes longer to resolve
+      }
+    }, { passive: true });
+  }
 
-        if (!card || !toolbar) {
-            // Elements aren't rendered in the shadow DOM yet, retry shortly
-            setTimeout(initPullUpToHeader, 200);
-            return;
-        }
-
-        let startY = 0;
-        let currentY = 0;
-        let isDragging = false;
-
-        card.addEventListener('touchstart', (e) => {
-            startY = e.touches[0].clientY;
-            card.style.transition = 'none'; 
-        }, { passive: true });
-
-        card.addEventListener('touchmove', (e) => {
-            currentY = e.touches[0].clientY;
-            const diff = currentY - startY;
-
-            // Only trigger if pulling UP (diff is negative)
-            if (diff < 0) {
-                isDragging = true;
-                
-                // Calculate the distance between the card's current top and the toolbar's bottom
-                const cardRect = card.getBoundingClientRect();
-                const toolbarRect = toolbar.getBoundingClientRect();
-                const maxPullDistance = cardRect.top - toolbarRect.bottom;
-
-                // Restrict the pull up distance so it cannot pass the bottom of the toolbar
-                const dragAmount = Math.max(diff * 0.4, -maxPullDistance);
-                
-                card.style.transform = `translateY(${dragAmount}px)`;
-            }
-        }, { passive: false });
-
-        card.addEventListener('touchend', () => {
-            if (!isDragging) return;
-            isDragging = false;
-            
-            // Snap back down safely
-            card.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            card.style.transform = 'translateY(0px)';
-        });
+  // Poll until the panel structure is ready
+  const interval = setInterval(() => {
+    if (document.querySelector('home-assistant')?.shadowRoot?.querySelector('home-assistant-main')) {
+      clearInterval(interval);
+      initRefreshFix();
     }
-
-    // Begin execution loop
-    initPullUpToHeader();
+  }, 1000);
 })();
 
 //============================

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.891";
+const VERSION = "1.0.892";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5533,55 +5533,34 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
     (function() {
-      let retryCount = 0;
-      const maxRetries = 40;
-      function initPullUpToHeader() {
-        const app = document.querySelector("home-assistant");
-        const isLoaded = app?.hass?.connected;
-        const spinner = document.querySelector("ha-init-progress") || app?.shadowRoot?.querySelector("ha-init-progress");
-        if (!isLoaded || spinner) {
-          if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(initPullUpToHeader, 500);
-          }
-          return;
-        }
-        const main = app?.shadowRoot?.querySelector("home-assistant-main");
-        const root = main?.shadowRoot?.querySelector("hui-root");
-        const toolbar = root?.shadowRoot?.querySelector("app-header") || root?.shadowRoot?.querySelector(".header");
-        const view = root?.shadowRoot?.querySelector("#view");
-        const card = view?.querySelector("ha-card") || view?.shadowRoot?.querySelector("ha-card");
-        if (!card || !toolbar) {
-          setTimeout(initPullUpToHeader, 200);
-          return;
-        }
-        let startY = 0;
-        let currentY = 0;
-        let isDragging = false;
-        card.addEventListener("touchstart", (e) => {
-          startY = e.touches[0].clientY;
-          card.style.transition = "none";
+      function initRefreshFix() {
+        const root = document.querySelector("home-assistant")?.shadowRoot;
+        const main = root?.querySelector("home-assistant-main")?.shadowRoot;
+        const panel = main?.querySelector("ha-panel-lovelace")?.shadowRoot;
+        const hui = panel?.querySelector("hui-root")?.shadowRoot;
+        const scrollContainer = panel?.querySelector("ch-header-layout") || window;
+        let touchStart = 0;
+        window.addEventListener("touchstart", (e) => {
+          touchStart = e.touches[0].clientY;
         }, { passive: true });
-        card.addEventListener("touchmove", (e) => {
-          currentY = e.touches[0].clientY;
-          const diff = currentY - startY;
-          if (diff < 0) {
-            isDragging = true;
-            const cardRect = card.getBoundingClientRect();
-            const toolbarRect = toolbar.getBoundingClientRect();
-            const maxPullDistance = cardRect.top - toolbarRect.bottom;
-            const dragAmount = Math.max(diff * 0.4, -maxPullDistance);
-            card.style.transform = `translateY(${dragAmount}px)`;
+        window.addEventListener("touchend", (e) => {
+          const touchEnd = e.changedTouches[0].clientY;
+          if (touchEnd - touchStart > 100) {
+            setTimeout(() => {
+              if (window.scrollY === 0) {
+                window.scrollTo({ top: 1 });
+                setTimeout(() => window.scrollTo({ top: 0 }), 10);
+              }
+            }, 800);
           }
-        }, { passive: false });
-        card.addEventListener("touchend", () => {
-          if (!isDragging) return;
-          isDragging = false;
-          card.style.transition = "transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
-          card.style.transform = "translateY(0px)";
-        });
+        }, { passive: true });
       }
-      initPullUpToHeader();
+      const interval = setInterval(() => {
+        if (document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")) {
+          clearInterval(interval);
+          initRefreshFix();
+        }
+      }, 1e3);
     })();
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
