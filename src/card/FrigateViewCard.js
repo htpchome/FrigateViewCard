@@ -709,7 +709,6 @@ export class FrigateViewCard extends HTMLElement {
       stream_height_unit: "vh",
       window_days: 1,
       alerts_reviews_days: 1,
-      hidden_tabs: ["clips", "snapshot", "recordings", "kept"],
       tight_margins: true,
     };
   }

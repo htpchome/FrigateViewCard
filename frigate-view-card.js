@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.878";
+const VERSION = "1.0.879";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5789,7 +5789,6 @@ const FrigateViewCard = class extends HTMLElement {
       stream_height_unit: "vh",
       window_days: 1,
       alerts_reviews_days: 1,
-      hidden_tabs: ["clips", "snapshot", "recordings", "kept"],
       tight_margins: true
     };
   }
