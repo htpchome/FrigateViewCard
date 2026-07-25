@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.893";
+const VERSION = "1.0.894";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5538,16 +5538,13 @@ const FrigateViewCard = class extends HTMLElement {
       const style = document.createElement("style");
       style.id = styleId;
       style.textContent = `
-    /* 1. Reset the entire layout wrapper layout properties */
-    ha-app-layout, app-header-layout, hui-view, hui-view-container {
+    /* Force the main layout container to correctly contain its layout boundaries during overscroll */
+    ha-app-layout, app-header-layout {
       contain: layout size style !important;
     }
     
-    /* 2. Target the fallback content containers by element structure rather than ID */
-    app-header-layout > div,
-    .content,
-    hui-view-container,
-    [has-scrolling-region] > div {
+    /* Ensure the main scrollable section correctly resets its position after a pull-to-refresh event */
+    #contentContainer {
       position: relative !important;
       will-change: transform, scroll-position !important;
     }
