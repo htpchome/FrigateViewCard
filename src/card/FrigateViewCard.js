@@ -4442,7 +4442,7 @@ export class FrigateViewCard extends HTMLElement {
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
-    this._wideViewPageController.applyLayoutModeForCard();
+    this._wideViewPageController.applyLayoutAndWideSyncForCard();
     this._syncBrowseHeadModeClass();
     this._bindListScroll();
     this._bindRecordingsSwipe();

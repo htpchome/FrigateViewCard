@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.865";
+const VERSION = "1.0.866";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3558,7 +3558,7 @@ const PreviewPageController = class {
       this._host._cancelPendingMount("page-route-preview");
     }
     this._host._applyPreviewShellVisibility();
-    this._host._wideViewPageController.applyStyleLayoutForCard();
+    this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
     this.startPreviewMode();
   }
   startPreviewMode() {
@@ -4333,7 +4333,7 @@ const SingleViewPageController = class {
     previewModeConfigChanged = false,
     realtimePollChanged = false
   } = {}) {
-    this._host._wideViewPageController.applyStyleLayoutForCard();
+    this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
     this._host._renderPreviewPage();
     if (previewModeConfigChanged || realtimePollChanged) {
       this._host._clearPreviewTimers();
@@ -8696,7 +8696,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
-    this._wideViewPageController.applyLayoutModeForCard();
+    this._wideViewPageController.applyLayoutAndWideSyncForCard();
     this._syncBrowseHeadModeClass();
     this._bindListScroll();
     this._bindRecordingsSwipe();

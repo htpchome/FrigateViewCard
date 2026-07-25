@@ -44,6 +44,10 @@ const createHost = ({
         calls.push(["applyCardStyle"]);
         calls.push(["applyLayoutMode"]);
       },
+      applyStyleLayoutAndWideSyncForCard: () => {
+        calls.push(["applyCardStyle"]);
+        calls.push(["applyLayoutMode"]);
+      },
       applyLayoutModeForCard: () => calls.push(["applyLayoutMode"]),
     },
     _closePopup: () => calls.push(["closePopup"]),

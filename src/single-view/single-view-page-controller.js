@@ -136,7 +136,7 @@ export class SingleViewPageController {
     previewModeConfigChanged = false,
     realtimePollChanged = false,
   } = {}) {
-    this._host._wideViewPageController.applyStyleLayoutForCard();
+    this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
     this._host._renderPreviewPage();
     if (previewModeConfigChanged || realtimePollChanged) {
       this._host._clearPreviewTimers();

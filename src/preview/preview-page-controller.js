@@ -80,7 +80,7 @@ export class PreviewPageController {
       this._host._cancelPendingMount("page-route-preview");
     }
     this._host._applyPreviewShellVisibility();
-    this._host._wideViewPageController.applyStyleLayoutForCard();
+    this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
     this.startPreviewMode();
   }
 
