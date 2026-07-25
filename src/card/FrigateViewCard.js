@@ -491,7 +491,9 @@ export class FrigateViewCard extends HTMLElement {
 
   _applyScopedVideoFactoryDefaultsFromConfig(config = this._config) {
     const cfg = config || {};
-    const commonDefaults = this._normalizeVideoFactoryDefaults(cfg.video_defaults);
+    const commonDefaults = this._normalizeVideoFactoryDefaults(
+      cfg.video_defaults,
+    );
     const scopeContext = { scopeKey: this };
 
     setScopedVideoViewDefaultOptions(
@@ -843,7 +845,9 @@ export class FrigateViewCard extends HTMLElement {
       rounded_corners: config.rounded_corners !== false,
       outer_shadows: config.outer_shadows !== false,
       col_left_width_pct: Number(config.col_left_width_pct) || 50,
-      video_defaults: this._normalizeVideoFactoryDefaults(config.video_defaults),
+      video_defaults: this._normalizeVideoFactoryDefaults(
+        config.video_defaults,
+      ),
       video_live_defaults: this._normalizeVideoFactoryDefaults(
         config.video_live_defaults,
       ),
