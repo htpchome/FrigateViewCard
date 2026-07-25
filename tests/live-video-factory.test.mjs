@@ -6,9 +6,12 @@ import {
   configureVideoElement,
   createVideoElement,
   getVideoViewDefaultOptions,
+  getScopedVideoViewDefaultOptions,
   mountNodeIntoSlot,
   resetVideoViewDefaultOptions,
+  resetScopedVideoViewDefaultOptions,
   resolveVideoProfileNameForView,
+  setScopedVideoViewDefaultOptions,
   setVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
 } from "../src/live/live-video-factory.js";
@@ -360,4 +363,52 @@ test("resetVideoViewDefaultOptions clears one view or all views", () => {
 
   resetVideoViewDefaultOptions();
   assert.deepEqual(getVideoViewDefaultOptions("recording"), {});
+});
+
+test("scoped runtime defaults are isolated per scope key", () => {
+  const scopeA = {};
+  const scopeB = {};
+  resetScopedVideoViewDefaultOptions(null, { scopeKey: scopeA });
+  resetScopedVideoViewDefaultOptions(null, { scopeKey: scopeB });
+
+  setScopedVideoViewDefaultOptions(
+    "popup",
+    { controls: false },
+    { scopeKey: scopeA },
+  );
+
+  assert.deepEqual(getScopedVideoViewDefaultOptions("popup", { scopeKey: scopeA }), {
+    controls: false,
+  });
+  assert.deepEqual(getScopedVideoViewDefaultOptions("popup", { scopeKey: scopeB }), {});
+});
+
+test("buildVideoOptionsForView applies scoped defaults over global defaults", () => {
+  const scope = {};
+  resetVideoViewDefaultOptions();
+  resetScopedVideoViewDefaultOptions(null, { scopeKey: scope });
+
+  setVideoViewDefaultOptions("popup", {
+    controls: false,
+    style: { objectFit: "contain" },
+  });
+  setScopedVideoViewDefaultOptions(
+    "popup",
+    {
+      controls: true,
+      style: { objectFit: "cover" },
+      classNames: ["scope-class"],
+    },
+    { scopeKey: scope },
+  );
+
+  const merged = buildVideoOptionsForView(
+    "popup",
+    { classNames: ["override-class"] },
+    { scopeKey: scope },
+  );
+
+  assert.equal(merged.controls, true);
+  assert.deepEqual(merged.style, { objectFit: "cover" });
+  assert.deepEqual(merged.classNames, ["scope-class", "override-class"]);
 });

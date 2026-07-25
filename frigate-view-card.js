@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.874";
+const VERSION = "1.0.875";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2162,11 +2162,20 @@ const VIDEO_VIEW_DEFAULT_OPTIONS = Object.freeze({
   recording: Object.freeze({ viewType: "recording" })
 });
 const EMPTY_OPTIONS = Object.freeze({});
-const runtimeVideoViewDefaultOptions = {
+const globalRuntimeVideoViewDefaultOptions = {
   live: {},
   popup: {},
   recording: {}
 };
+const scopedRuntimeVideoViewDefaultsWeak = new WeakMap();
+const scopedRuntimeVideoViewDefaultsMap = new Map();
+function createRuntimeDefaultsStore() {
+  return {
+    live: {},
+    popup: {},
+    recording: {}
+  };
+}
 function resolveVideoProfileNameForView(viewType) {
   const key = String(viewType || "").trim().toLowerCase();
   return VIDEO_VIEW_PROFILE_MAP[key] || VIDEO_VIEW_PROFILE_MAP.live;
@@ -2177,6 +2186,33 @@ function resolveViewKey(viewType) {
 }
 function normalizeOptionsObject(value) {
   return value && typeof value === "object" ? value : EMPTY_OPTIONS;
+}
+function isObjectScopeKey(scopeKey) {
+  return scopeKey !== null && (typeof scopeKey === "object" || typeof scopeKey === "function");
+}
+function resolveScopedRuntimeStore(scopeKey, { create = false } = {}) {
+  if (scopeKey === null || scopeKey === void 0) return null;
+  if (isObjectScopeKey(scopeKey)) {
+    const existing2 = scopedRuntimeVideoViewDefaultsWeak.get(scopeKey);
+    if (existing2 || !create) return existing2 || null;
+    const next2 = createRuntimeDefaultsStore();
+    scopedRuntimeVideoViewDefaultsWeak.set(scopeKey, next2);
+    return next2;
+  }
+  const existing = scopedRuntimeVideoViewDefaultsMap.get(scopeKey);
+  if (existing || !create) return existing || null;
+  const next = createRuntimeDefaultsStore();
+  scopedRuntimeVideoViewDefaultsMap.set(scopeKey, next);
+  return next;
+}
+function resolveRuntimeDefaultsForView(viewKey, context = {}) {
+  const globalDefaults = globalRuntimeVideoViewDefaultOptions[viewKey] || EMPTY_OPTIONS;
+  const scopedStore = resolveScopedRuntimeStore(context.scopeKey);
+  const scopedDefaults = scopedStore?.[viewKey] || EMPTY_OPTIONS;
+  return {
+    ...normalizeOptionsObject(globalDefaults),
+    ...normalizeOptionsObject(scopedDefaults)
+  };
 }
 function mergeOptionLayers(base, runtimeDefaults, overrides) {
   const merged = {
@@ -2208,28 +2244,62 @@ function mergeOptionLayers(base, runtimeDefaults, overrides) {
 }
 function setVideoViewDefaultOptions(viewType, defaults = {}) {
   const viewKey = resolveViewKey(viewType);
-  runtimeVideoViewDefaultOptions[viewKey] = {
+  globalRuntimeVideoViewDefaultOptions[viewKey] = {
     ...normalizeOptionsObject(defaults)
   };
 }
 function getVideoViewDefaultOptions(viewType) {
   const viewKey = resolveViewKey(viewType);
-  return { ...normalizeOptionsObject(runtimeVideoViewDefaultOptions[viewKey]) };
+  return {
+    ...normalizeOptionsObject(globalRuntimeVideoViewDefaultOptions[viewKey])
+  };
 }
 function resetVideoViewDefaultOptions(viewType = null) {
   if (viewType == null) {
-    for (const key of Object.keys(runtimeVideoViewDefaultOptions)) {
-      runtimeVideoViewDefaultOptions[key] = {};
+    for (const key of Object.keys(globalRuntimeVideoViewDefaultOptions)) {
+      globalRuntimeVideoViewDefaultOptions[key] = {};
     }
     return;
   }
   const viewKey = resolveViewKey(viewType);
-  runtimeVideoViewDefaultOptions[viewKey] = {};
+  globalRuntimeVideoViewDefaultOptions[viewKey] = {};
 }
-function buildVideoOptionsForView(viewType, overrides = {}) {
+function setScopedVideoViewDefaultOptions(viewType, defaults = {}, context = {}) {
+  const viewKey = resolveViewKey(viewType);
+  const scopeKey = context?.scopeKey;
+  const store = resolveScopedRuntimeStore(scopeKey, { create: true });
+  if (!store) {
+    setVideoViewDefaultOptions(viewType, defaults);
+    return;
+  }
+  store[viewKey] = {
+    ...normalizeOptionsObject(defaults)
+  };
+}
+function getScopedVideoViewDefaultOptions(viewType, context = {}) {
+  const viewKey = resolveViewKey(viewType);
+  const scopeKey = context?.scopeKey;
+  const store = resolveScopedRuntimeStore(scopeKey);
+  if (!store) return {};
+  return { ...normalizeOptionsObject(store[viewKey]) };
+}
+function resetScopedVideoViewDefaultOptions(viewType = null, context = {}) {
+  const scopeKey = context?.scopeKey;
+  const store = resolveScopedRuntimeStore(scopeKey);
+  if (!store) return;
+  if (viewType == null) {
+    for (const key of Object.keys(store)) {
+      store[key] = {};
+    }
+    return;
+  }
+  const viewKey = resolveViewKey(viewType);
+  store[viewKey] = {};
+}
+function buildVideoOptionsForView(viewType, overrides = {}, context = {}) {
   const viewKey = resolveViewKey(viewType);
   const base = VIDEO_VIEW_DEFAULT_OPTIONS[viewKey] || VIDEO_VIEW_DEFAULT_OPTIONS.live;
-  const runtimeDefaults = runtimeVideoViewDefaultOptions[viewKey] || EMPTY_OPTIONS;
+  const runtimeDefaults = resolveRuntimeDefaultsForView(viewKey, context);
   const safeOverrides = normalizeOptionsObject(overrides);
   return mergeOptionLayers(base, runtimeDefaults, safeOverrides);
 }
@@ -6374,10 +6444,14 @@ const FrigateViewCard = class extends HTMLElement {
     }
     configureVideoElement(
       engine.video,
-      buildVideoOptionsForView("live", {
-        muted: this._streamMuted,
-        controls: false
-      })
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted: this._streamMuted,
+          controls: false
+        },
+        { scopeKey: this }
+      )
     );
     mountNodeIntoSlot(slot, engine.video);
     this._attachVideoFit(engine.video);
@@ -6913,10 +6987,14 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._ffDebug("Attempting direct go2rtc MSE stream mount");
     const video = createVideoElement(
-      buildVideoOptionsForView("live", {
-        muted,
-        controls: false
-      })
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted,
+          controls: false
+        },
+        { scopeKey: this }
+      )
     );
     const ms = new MediaSource();
     video.src = URL.createObjectURL(ms);
@@ -7187,10 +7265,14 @@ const FrigateViewCard = class extends HTMLElement {
     const wsUrl = await this._go2rtcWebSocketUrl();
     if (!wsUrl) return false;
     const video = createVideoElement(
-      buildVideoOptionsForView("live", {
-        muted: this._streamMuted,
-        controls: false
-      })
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted: this._streamMuted,
+          controls: false
+        },
+        { scopeKey: this }
+      )
     );
     mountNodeIntoSlot(slot, video);
     this._attachVideoFit(video);
@@ -7280,11 +7362,15 @@ const FrigateViewCard = class extends HTMLElement {
     const hlsUrl = await this._go2rtcHlsUrl();
     if (!hlsUrl) return false;
     const video = createVideoElement(
-      buildVideoOptionsForView("live", {
-        muted: this._streamMuted,
-        controls: false,
-        src: hlsUrl
-      })
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted: this._streamMuted,
+          controls: false,
+          src: hlsUrl
+        },
+        { scopeKey: this }
+      )
     );
     mountNodeIntoSlot(slot, video);
     this._attachVideoFit(video);
@@ -11174,11 +11260,15 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
     return createVideoElement(
-      buildVideoOptionsForView("popup", {
-        autoplay,
-        muted,
-        src
-      })
+      buildVideoOptionsForView(
+        "popup",
+        {
+          autoplay,
+          muted,
+          src
+        },
+        { scopeKey: this }
+      )
     );
   }
   _showClip(ev, opts = {}) {
@@ -11321,9 +11411,13 @@ const FrigateViewCard = class extends HTMLElement {
     viewer.innerHTML = '<div class="ld">Loading\u2026</div>';
     if (this._playSeq !== token) return;
     const video = createVideoElement(
-      buildVideoOptionsForView("recording", {
-        muted: true
-      })
+      buildVideoOptionsForView(
+        "recording",
+        {
+          muted: true
+        },
+        { scopeKey: this }
+      )
     );
     mountNodeIntoSlot(viewer, video);
     let playable = false;

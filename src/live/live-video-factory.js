@@ -36,11 +36,21 @@ const VIDEO_VIEW_DEFAULT_OPTIONS = Object.freeze({
 });
 
 const EMPTY_OPTIONS = Object.freeze({});
-const runtimeVideoViewDefaultOptions = {
+const globalRuntimeVideoViewDefaultOptions = {
   live: {},
   popup: {},
   recording: {},
 };
+const scopedRuntimeVideoViewDefaultsWeak = new WeakMap();
+const scopedRuntimeVideoViewDefaultsMap = new Map();
+
+function createRuntimeDefaultsStore() {
+  return {
+    live: {},
+    popup: {},
+    recording: {},
+  };
+}
 
 export function resolveVideoProfileNameForView(viewType) {
   const key = String(viewType || "")
@@ -58,6 +68,40 @@ function resolveViewKey(viewType) {
 
 function normalizeOptionsObject(value) {
   return value && typeof value === "object" ? value : EMPTY_OPTIONS;
+}
+
+function isObjectScopeKey(scopeKey) {
+  return scopeKey !== null &&
+    (typeof scopeKey === "object" || typeof scopeKey === "function");
+}
+
+function resolveScopedRuntimeStore(scopeKey, { create = false } = {}) {
+  if (scopeKey === null || scopeKey === undefined) return null;
+
+  if (isObjectScopeKey(scopeKey)) {
+    const existing = scopedRuntimeVideoViewDefaultsWeak.get(scopeKey);
+    if (existing || !create) return existing || null;
+    const next = createRuntimeDefaultsStore();
+    scopedRuntimeVideoViewDefaultsWeak.set(scopeKey, next);
+    return next;
+  }
+
+  const existing = scopedRuntimeVideoViewDefaultsMap.get(scopeKey);
+  if (existing || !create) return existing || null;
+  const next = createRuntimeDefaultsStore();
+  scopedRuntimeVideoViewDefaultsMap.set(scopeKey, next);
+  return next;
+}
+
+function resolveRuntimeDefaultsForView(viewKey, context = {}) {
+  const globalDefaults =
+    globalRuntimeVideoViewDefaultOptions[viewKey] || EMPTY_OPTIONS;
+  const scopedStore = resolveScopedRuntimeStore(context.scopeKey);
+  const scopedDefaults = scopedStore?.[viewKey] || EMPTY_OPTIONS;
+  return {
+    ...normalizeOptionsObject(globalDefaults),
+    ...normalizeOptionsObject(scopedDefaults),
+  };
 }
 
 function mergeOptionLayers(base, runtimeDefaults, overrides) {
@@ -102,7 +146,7 @@ function mergeOptionLayers(base, runtimeDefaults, overrides) {
  */
 export function setVideoViewDefaultOptions(viewType, defaults = {}) {
   const viewKey = resolveViewKey(viewType);
-  runtimeVideoViewDefaultOptions[viewKey] = {
+  globalRuntimeVideoViewDefaultOptions[viewKey] = {
     ...normalizeOptionsObject(defaults),
   };
 }
@@ -112,7 +156,9 @@ export function setVideoViewDefaultOptions(viewType, defaults = {}) {
  */
 export function getVideoViewDefaultOptions(viewType) {
   const viewKey = resolveViewKey(viewType);
-  return { ...normalizeOptionsObject(runtimeVideoViewDefaultOptions[viewKey]) };
+  return {
+    ...normalizeOptionsObject(globalRuntimeVideoViewDefaultOptions[viewKey]),
+  };
 }
 
 /**
@@ -120,24 +166,73 @@ export function getVideoViewDefaultOptions(viewType) {
  */
 export function resetVideoViewDefaultOptions(viewType = null) {
   if (viewType == null) {
-    for (const key of Object.keys(runtimeVideoViewDefaultOptions)) {
-      runtimeVideoViewDefaultOptions[key] = {};
+    for (const key of Object.keys(globalRuntimeVideoViewDefaultOptions)) {
+      globalRuntimeVideoViewDefaultOptions[key] = {};
     }
     return;
   }
   const viewKey = resolveViewKey(viewType);
-  runtimeVideoViewDefaultOptions[viewKey] = {};
+  globalRuntimeVideoViewDefaultOptions[viewKey] = {};
+}
+
+/**
+ * Sets runtime default options for a view type within a specific scope.
+ */
+export function setScopedVideoViewDefaultOptions(
+  viewType,
+  defaults = {},
+  context = {},
+) {
+  const viewKey = resolveViewKey(viewType);
+  const scopeKey = context?.scopeKey;
+  const store = resolveScopedRuntimeStore(scopeKey, { create: true });
+  if (!store) {
+    setVideoViewDefaultOptions(viewType, defaults);
+    return;
+  }
+  store[viewKey] = {
+    ...normalizeOptionsObject(defaults),
+  };
+}
+
+/**
+ * Gets runtime default options for a view type within a specific scope.
+ */
+export function getScopedVideoViewDefaultOptions(viewType, context = {}) {
+  const viewKey = resolveViewKey(viewType);
+  const scopeKey = context?.scopeKey;
+  const store = resolveScopedRuntimeStore(scopeKey);
+  if (!store) return {};
+  return { ...normalizeOptionsObject(store[viewKey]) };
+}
+
+/**
+ * Resets runtime default options for a scope (one view or all views).
+ */
+export function resetScopedVideoViewDefaultOptions(viewType = null, context = {}) {
+  const scopeKey = context?.scopeKey;
+  const store = resolveScopedRuntimeStore(scopeKey);
+  if (!store) return;
+
+  if (viewType == null) {
+    for (const key of Object.keys(store)) {
+      store[key] = {};
+    }
+    return;
+  }
+
+  const viewKey = resolveViewKey(viewType);
+  store[viewKey] = {};
 }
 
 /**
  * Builds per-view video options with deterministic override merging.
  */
-export function buildVideoOptionsForView(viewType, overrides = {}) {
+export function buildVideoOptionsForView(viewType, overrides = {}, context = {}) {
   const viewKey = resolveViewKey(viewType);
   const base =
     VIDEO_VIEW_DEFAULT_OPTIONS[viewKey] || VIDEO_VIEW_DEFAULT_OPTIONS.live;
-  const runtimeDefaults =
-    runtimeVideoViewDefaultOptions[viewKey] || EMPTY_OPTIONS;
+  const runtimeDefaults = resolveRuntimeDefaultsForView(viewKey, context);
   const safeOverrides = normalizeOptionsObject(overrides);
   return mergeOptionLayers(base, runtimeDefaults, safeOverrides);
 }
