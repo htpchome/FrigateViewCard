@@ -83,6 +83,18 @@ const addIfNotDefault = (target, key, value, defaultValue) => {
   if (value !== defaultValue) target[key] = value;
 };
 
+const cloneObjectIfPresent = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const keys = Object.keys(value);
+  if (!keys.length) return null;
+
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return { ...value };
+  }
+};
+
 const compactCameraConfigForYaml = (camera) => {
   const normalized = normalizeCameraConfig(camera, { fallbackName: "" });
   if (!normalized.entity) return null;
@@ -282,6 +294,22 @@ export const compactEditorConfigForYaml = (
   );
   const leftWidth = Number(source.col_left_width_pct) || 50;
   addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
+
+  const videoDefaults = cloneObjectIfPresent(source.video_defaults);
+  if (videoDefaults) compact.video_defaults = videoDefaults;
+
+  const videoLiveDefaults = cloneObjectIfPresent(source.video_live_defaults);
+  if (videoLiveDefaults) compact.video_live_defaults = videoLiveDefaults;
+
+  const videoPopupDefaults = cloneObjectIfPresent(source.video_popup_defaults);
+  if (videoPopupDefaults) compact.video_popup_defaults = videoPopupDefaults;
+
+  const videoRecordingDefaults = cloneObjectIfPresent(
+    source.video_recording_defaults,
+  );
+  if (videoRecordingDefaults) {
+    compact.video_recording_defaults = videoRecordingDefaults;
+  }
 
   return compact;
 };

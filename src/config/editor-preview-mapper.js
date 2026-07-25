@@ -45,6 +45,10 @@ export const createEditorPreviewDraft = (config) => ({
   rounded_corners: config.rounded_corners,
   outer_shadows: config.outer_shadows,
   col_left_width_pct: config.col_left_width_pct,
+  video_defaults: config.video_defaults,
+  video_live_defaults: config.video_live_defaults,
+  video_popup_defaults: config.video_popup_defaults,
+  video_recording_defaults: config.video_recording_defaults,
 });
 
 export const applyEditorPreviewDraftToCardConfig = ({
@@ -120,5 +124,29 @@ export const applyEditorPreviewDraftToCardConfig = ({
     landing_page: normalizePageRoute(previewConfig.landing_page),
     mobile_page: normalizePageRoute(previewConfig.mobile_page),
     col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
+    video_defaults:
+      previewConfig.video_defaults &&
+      typeof previewConfig.video_defaults === "object" &&
+      !Array.isArray(previewConfig.video_defaults)
+        ? previewConfig.video_defaults
+        : base.video_defaults,
+    video_live_defaults:
+      previewConfig.video_live_defaults &&
+      typeof previewConfig.video_live_defaults === "object" &&
+      !Array.isArray(previewConfig.video_live_defaults)
+        ? previewConfig.video_live_defaults
+        : base.video_live_defaults,
+    video_popup_defaults:
+      previewConfig.video_popup_defaults &&
+      typeof previewConfig.video_popup_defaults === "object" &&
+      !Array.isArray(previewConfig.video_popup_defaults)
+        ? previewConfig.video_popup_defaults
+        : base.video_popup_defaults,
+    video_recording_defaults:
+      previewConfig.video_recording_defaults &&
+      typeof previewConfig.video_recording_defaults === "object" &&
+      !Array.isArray(previewConfig.video_recording_defaults)
+        ? previewConfig.video_recording_defaults
+        : base.video_recording_defaults,
   };
 };

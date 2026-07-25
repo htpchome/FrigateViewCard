@@ -162,6 +162,62 @@ test("preview draft carries hidden tabs and page routes", () => {
   assert.equal(draft.mobile_page, "single");
 });
 
+test("compact YAML preserves video default config objects", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    video_defaults: {
+      classNames: ["shared-video"],
+      style: { borderRadius: "10px" },
+    },
+    video_live_defaults: {
+      controls: false,
+      objectFit: "cover",
+    },
+    video_popup_defaults: {
+      controls: true,
+      style: { boxShadow: "0 0 10px #000" },
+    },
+    video_recording_defaults: {
+      controls: true,
+      filter: "saturate(1.2)",
+    },
+  });
+
+  assert.deepEqual(config.video_defaults, {
+    classNames: ["shared-video"],
+    style: { borderRadius: "10px" },
+  });
+  assert.deepEqual(config.video_live_defaults, {
+    controls: false,
+    objectFit: "cover",
+  });
+  assert.deepEqual(config.video_popup_defaults, {
+    controls: true,
+    style: { boxShadow: "0 0 10px #000" },
+  });
+  assert.deepEqual(config.video_recording_defaults, {
+    controls: true,
+    filter: "saturate(1.2)",
+  });
+});
+
+test("preview draft preserves video default config objects", () => {
+  const draft = createEditorPreviewDraft({
+    cameras: [{ entity: "camera.front_door" }],
+    video_defaults: { className: "video-default" },
+    video_live_defaults: { objectPosition: "center center" },
+    video_popup_defaults: { controls: true },
+    video_recording_defaults: { aspectRatio: "16 / 9" },
+  });
+
+  assert.deepEqual(draft.video_defaults, { className: "video-default" });
+  assert.deepEqual(draft.video_live_defaults, {
+    objectPosition: "center center",
+  });
+  assert.deepEqual(draft.video_popup_defaults, { controls: true });
+  assert.deepEqual(draft.video_recording_defaults, { aspectRatio: "16 / 9" });
+});
+
 test("resolveSwitchChecked prefers live checked property over stale attribute", () => {
   const switchElement = {
     checked: false,

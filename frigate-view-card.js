@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.876";
+const VERSION = "1.0.877";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -859,7 +859,11 @@ const createEditorPreviewDraft = (config) => ({
   borders: config.borders,
   rounded_corners: config.rounded_corners,
   outer_shadows: config.outer_shadows,
-  col_left_width_pct: config.col_left_width_pct
+  col_left_width_pct: config.col_left_width_pct,
+  video_defaults: config.video_defaults,
+  video_live_defaults: config.video_live_defaults,
+  video_popup_defaults: config.video_popup_defaults,
+  video_recording_defaults: config.video_recording_defaults
 });
 const applyEditorPreviewDraftToCardConfig = ({
   baseConfig,
@@ -909,7 +913,11 @@ const applyEditorPreviewDraftToCardConfig = ({
     wide_view_page_enabled: previewConfig.wide_view_page_enabled === true,
     landing_page: normalizePageRoute(previewConfig.landing_page),
     mobile_page: normalizePageRoute(previewConfig.mobile_page),
-    col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50
+    col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
+    video_defaults: previewConfig.video_defaults && typeof previewConfig.video_defaults === "object" && !Array.isArray(previewConfig.video_defaults) ? previewConfig.video_defaults : base.video_defaults,
+    video_live_defaults: previewConfig.video_live_defaults && typeof previewConfig.video_live_defaults === "object" && !Array.isArray(previewConfig.video_live_defaults) ? previewConfig.video_live_defaults : base.video_live_defaults,
+    video_popup_defaults: previewConfig.video_popup_defaults && typeof previewConfig.video_popup_defaults === "object" && !Array.isArray(previewConfig.video_popup_defaults) ? previewConfig.video_popup_defaults : base.video_popup_defaults,
+    video_recording_defaults: previewConfig.video_recording_defaults && typeof previewConfig.video_recording_defaults === "object" && !Array.isArray(previewConfig.video_recording_defaults) ? previewConfig.video_recording_defaults : base.video_recording_defaults
   };
 };
 
@@ -973,6 +981,16 @@ const addStringIfPresent = (target, key, value) => {
 };
 const addIfNotDefault = (target, key, value, defaultValue) => {
   if (value !== defaultValue) target[key] = value;
+};
+const cloneObjectIfPresent = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const keys = Object.keys(value);
+  if (!keys.length) return null;
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return { ...value };
+  }
 };
 const compactCameraConfigForYaml = (camera) => {
   const normalized = normalizeCameraConfig(camera, { fallbackName: "" });
@@ -1140,6 +1158,18 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
   );
   const leftWidth = Number(source.col_left_width_pct) || 50;
   addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
+  const videoDefaults = cloneObjectIfPresent(source.video_defaults);
+  if (videoDefaults) compact.video_defaults = videoDefaults;
+  const videoLiveDefaults = cloneObjectIfPresent(source.video_live_defaults);
+  if (videoLiveDefaults) compact.video_live_defaults = videoLiveDefaults;
+  const videoPopupDefaults = cloneObjectIfPresent(source.video_popup_defaults);
+  if (videoPopupDefaults) compact.video_popup_defaults = videoPopupDefaults;
+  const videoRecordingDefaults = cloneObjectIfPresent(
+    source.video_recording_defaults
+  );
+  if (videoRecordingDefaults) {
+    compact.video_recording_defaults = videoRecordingDefaults;
+  }
   return compact;
 };
 const withCardTypeForYaml = (config, { sourceConfig = null } = {}) => {
