@@ -408,7 +408,40 @@ export class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("doc-visible");
       }
     };
+//=============================
+const card = document.querySelector('#card');
+let startY = 0;
+let currentY = 0;
+let isDragging = false;
 
+card.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    card.style.transition = 'none'; // Turn off transition while dragging
+}, { passive: true });
+
+card.addEventListener('touchmove', (e) => {
+    currentY = e.touches[0].clientY;
+    const diff = currentY - startY;
+
+    // Only pull down if at the top of the scroll container
+    if (card.scrollTop <= 0 && diff > 0) {
+        isDragging = true;
+        // Dampen the drag motion so it feels like rubber
+        card.style.transform = `translateY(${diff * 0.4}px)`;
+    }
+}, { passive: false });
+
+card.addEventListener('touchend', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    // Smoothly bounce back to original position
+    card.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    card.style.transform = 'translateY(0px)';
+});
+
+
+//============================
     document.addEventListener("visibilitychange", this._onDocVisibility);
     this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
