@@ -1,6 +1,7 @@
 const VIDEO_PROFILES = Object.freeze({
   liveEngine: Object.freeze({
-    styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)",
+    styleText:
+      "width:100%;height:100%;display:block;background:var(--c-bg-deep)",
     autoplay: true,
     playsInline: true,
     controls: false,
