@@ -5,8 +5,11 @@ import {
   buildVideoOptionsForView,
   configureVideoElement,
   createVideoElement,
+  getVideoViewDefaultOptions,
   mountNodeIntoSlot,
+  resetVideoViewDefaultOptions,
   resolveVideoProfileNameForView,
+  setVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
 } from "../src/live/live-video-factory.js";
 
@@ -308,4 +311,53 @@ test("buildVideoOptionsForView merges style/dataset/attributes/classNames", () =
   assert.deepEqual(merged.dataset, { overlay: "1" });
   assert.deepEqual(merged.attributes, { controlslist: "nodownload" });
   assert.deepEqual(merged.classNames, ["rounded", "overlay-enabled"]);
+});
+
+test("runtime view defaults can be set and read per view", () => {
+  resetVideoViewDefaultOptions();
+  setVideoViewDefaultOptions("popup", {
+    controls: false,
+    style: { objectFit: "contain" },
+  });
+
+  const runtime = getVideoViewDefaultOptions("popup");
+  assert.equal(runtime.controls, false);
+  assert.deepEqual(runtime.style, { objectFit: "contain" });
+});
+
+test("buildVideoOptionsForView applies runtime defaults before overrides", () => {
+  resetVideoViewDefaultOptions();
+  setVideoViewDefaultOptions("popup", {
+    controls: false,
+    style: { objectFit: "contain", borderRadius: "8px" },
+    dataset: { source: "runtime" },
+    classNames: ["runtime-class"],
+  });
+
+  const merged = buildVideoOptionsForView("popup", {
+    style: { objectFit: "cover" },
+    dataset: { source: "override" },
+    classNames: ["override-class"],
+  });
+
+  assert.equal(merged.controls, false);
+  assert.deepEqual(merged.style, {
+    objectFit: "cover",
+    borderRadius: "8px",
+  });
+  assert.deepEqual(merged.dataset, { source: "override" });
+  assert.deepEqual(merged.classNames, ["runtime-class", "override-class"]);
+});
+
+test("resetVideoViewDefaultOptions clears one view or all views", () => {
+  resetVideoViewDefaultOptions();
+  setVideoViewDefaultOptions("popup", { controls: false });
+  setVideoViewDefaultOptions("recording", { muted: false });
+
+  resetVideoViewDefaultOptions("popup");
+  assert.deepEqual(getVideoViewDefaultOptions("popup"), {});
+  assert.deepEqual(getVideoViewDefaultOptions("recording"), { muted: false });
+
+  resetVideoViewDefaultOptions();
+  assert.deepEqual(getVideoViewDefaultOptions("recording"), {});
 });

@@ -35,6 +35,13 @@ const VIDEO_VIEW_DEFAULT_OPTIONS = Object.freeze({
   recording: Object.freeze({ viewType: "recording" }),
 });
 
+const EMPTY_OPTIONS = Object.freeze({});
+const runtimeVideoViewDefaultOptions = {
+  live: {},
+  popup: {},
+  recording: {},
+};
+
 export function resolveVideoProfileNameForView(viewType) {
   const key = String(viewType || "")
     .trim()
@@ -49,49 +56,38 @@ function resolveViewKey(viewType) {
   return VIDEO_VIEW_DEFAULT_OPTIONS[key] ? key : "live";
 }
 
-/**
- * Builds per-view video options with deterministic override merging.
- */
-export function buildVideoOptionsForView(viewType, overrides = {}) {
-  const viewKey = resolveViewKey(viewType);
-  const base =
-    VIDEO_VIEW_DEFAULT_OPTIONS[viewKey] || VIDEO_VIEW_DEFAULT_OPTIONS.live;
+function normalizeOptionsObject(value) {
+  return value && typeof value === "object" ? value : EMPTY_OPTIONS;
+}
 
+function mergeOptionLayers(base, runtimeDefaults, overrides) {
   const merged = {
     ...base,
-    ...(overrides && typeof overrides === "object" ? overrides : {}),
+    ...runtimeDefaults,
+    ...overrides,
   };
 
-  if (base.style || overrides?.style) {
-    merged.style = {
-      ...(base.style && typeof base.style === "object" ? base.style : {}),
-      ...(overrides?.style && typeof overrides.style === "object"
-        ? overrides.style
-        : {}),
-    };
-  }
-  if (base.dataset || overrides?.dataset) {
-    merged.dataset = {
-      ...(base.dataset && typeof base.dataset === "object" ? base.dataset : {}),
-      ...(overrides?.dataset && typeof overrides.dataset === "object"
-        ? overrides.dataset
-        : {}),
-    };
-  }
-  if (base.attributes || overrides?.attributes) {
-    merged.attributes = {
-      ...(base.attributes && typeof base.attributes === "object"
-        ? base.attributes
-        : {}),
-      ...(overrides?.attributes && typeof overrides.attributes === "object"
-        ? overrides.attributes
-        : {}),
-    };
-  }
-  if (base.classNames || overrides?.classNames) {
+  const mergeObjectKey = (key) => {
+    if (base[key] || runtimeDefaults[key] || overrides[key]) {
+      merged[key] = {
+        ...normalizeOptionsObject(base[key]),
+        ...normalizeOptionsObject(runtimeDefaults[key]),
+        ...normalizeOptionsObject(overrides[key]),
+      };
+    }
+  };
+
+  mergeObjectKey("style");
+  mergeObjectKey("dataset");
+  mergeObjectKey("attributes");
+
+  if (base.classNames || runtimeDefaults.classNames || overrides.classNames) {
     const tokens = [
       ...(Array.isArray(base.classNames) ? base.classNames : []),
-      ...(Array.isArray(overrides?.classNames) ? overrides.classNames : []),
+      ...(Array.isArray(runtimeDefaults.classNames)
+        ? runtimeDefaults.classNames
+        : []),
+      ...(Array.isArray(overrides.classNames) ? overrides.classNames : []),
     ]
       .map((token) => String(token || "").trim())
       .filter(Boolean);
@@ -99,6 +95,51 @@ export function buildVideoOptionsForView(viewType, overrides = {}) {
   }
 
   return merged;
+}
+
+/**
+ * Sets runtime default options for a view type.
+ */
+export function setVideoViewDefaultOptions(viewType, defaults = {}) {
+  const viewKey = resolveViewKey(viewType);
+  runtimeVideoViewDefaultOptions[viewKey] = {
+    ...normalizeOptionsObject(defaults),
+  };
+}
+
+/**
+ * Gets runtime default options for a view type.
+ */
+export function getVideoViewDefaultOptions(viewType) {
+  const viewKey = resolveViewKey(viewType);
+  return { ...normalizeOptionsObject(runtimeVideoViewDefaultOptions[viewKey]) };
+}
+
+/**
+ * Resets runtime default options for one view type or all view types.
+ */
+export function resetVideoViewDefaultOptions(viewType = null) {
+  if (viewType == null) {
+    for (const key of Object.keys(runtimeVideoViewDefaultOptions)) {
+      runtimeVideoViewDefaultOptions[key] = {};
+    }
+    return;
+  }
+  const viewKey = resolveViewKey(viewType);
+  runtimeVideoViewDefaultOptions[viewKey] = {};
+}
+
+/**
+ * Builds per-view video options with deterministic override merging.
+ */
+export function buildVideoOptionsForView(viewType, overrides = {}) {
+  const viewKey = resolveViewKey(viewType);
+  const base =
+    VIDEO_VIEW_DEFAULT_OPTIONS[viewKey] || VIDEO_VIEW_DEFAULT_OPTIONS.live;
+  const runtimeDefaults =
+    runtimeVideoViewDefaultOptions[viewKey] || EMPTY_OPTIONS;
+  const safeOverrides = normalizeOptionsObject(overrides);
+  return mergeOptionLayers(base, runtimeDefaults, safeOverrides);
 }
 
 function resolveVideoProfile({ profile, viewType } = {}) {
