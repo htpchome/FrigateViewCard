@@ -49,6 +49,21 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     ),
     true,
   );
+  assert.equal(
+    /_go2rtcHlsUrlForEntity\([\s\S]*?if \(!targetEntity\) return null;/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_go2rtcHlsUrlForEntity\([\s\S]*?return await this\._go2rtcHlsUrl\(\);/.test(
+      source,
+    ),
+    false,
+  );
+  assert.equal(/async _go2rtcWebSocketUrl\(\)/.test(source), false);
+  assert.equal(/async _go2rtcWebSocketUrlForMountEntity\(/.test(source), false);
+  assert.equal(/async _go2rtcHlsUrl\(\)/.test(source), false);
 });
 
 test("event list thumbnails use browser lazy loading", () => {

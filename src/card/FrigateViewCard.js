@@ -2155,85 +2155,9 @@ export class FrigateViewCard extends HTMLElement {
     return wsUrl;
   }
 
-  async _go2rtcWebSocketUrl() {
-    return await this._go2rtcWebSocketUrlForEntity(this._activeCam?.entity);
-  }
-
-  async _go2rtcWebSocketUrlForMountEntity(entity = "") {
-    return await this._go2rtcWebSocketUrlForEntity(
-      entity || this._activeCam?.entity,
-    );
-  }
-
-  async _go2rtcHlsUrl() {
-    if (!this._supportsNativeHlsPlayback()) return null;
-    const { clientId, cam } = this._cc();
-    if (!clientId || !cam) return null;
-    const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
-    const nowMs = Date.now();
-    const cachedUrl = getFreshCachedValue({
-      cacheMap: this._go2rtcHlsUrlCache,
-      cacheKey,
-      nowMs,
-    });
-    if (cachedUrl !== undefined) return cachedUrl;
-
-    const inFlight = this._go2rtcHlsProbeInFlight.get(cacheKey);
-    if (inFlight) return inFlight;
-
-    const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
-
-    const probePromise = (async () => {
-      for (const p of candidates) {
-        const signed = await this._signed(p);
-        const abs = toAbsoluteSignedUrl({
-          signedPath: signed,
-          origin: window.location.origin,
-        });
-        try {
-          const resp = await fetch(abs, {
-            method: "GET",
-            cache: "no-store",
-            credentials: "same-origin",
-          });
-          if (!resp.ok) continue;
-          if (
-            isM3u8Response({
-              contentType: resp.headers.get("content-type") || "",
-              url: abs,
-            })
-          ) {
-            setCachedValue({
-              cacheMap: this._go2rtcHlsUrlCache,
-              cacheKey,
-              url: abs,
-              ttlMs: 30 * 60 * 1000,
-              nowMs: Date.now(),
-            });
-            return abs;
-          }
-        } catch (_) {}
-      }
-      // Negative cache to avoid hammering known-missing endpoints every mount.
-      setCachedValue({
-        cacheMap: this._go2rtcHlsUrlCache,
-        cacheKey,
-        url: null,
-        ttlMs: 2 * 60 * 1000,
-        nowMs: Date.now(),
-      });
-      return null;
-    })().finally(() => {
-      this._go2rtcHlsProbeInFlight.delete(cacheKey);
-    });
-
-    this._go2rtcHlsProbeInFlight.set(cacheKey, probePromise);
-    return probePromise;
-  }
-
   async _go2rtcHlsUrlForEntity(entity = "") {
-    const targetEntity = String(entity || "").trim();
-    if (!targetEntity) return await this._go2rtcHlsUrl();
+    const targetEntity = String(entity || this._activeCam?.entity || "").trim();
+    if (!targetEntity) return null;
     if (!this._shouldUseGo2RtcForEntity(targetEntity)) return null;
     if (!this._supportsNativeHlsPlayback()) return null;
 
@@ -2648,7 +2572,7 @@ export class FrigateViewCard extends HTMLElement {
 
     const entity = options?.entity || this._activeCam?.entity || "";
     if (!this._shouldUseGo2RtcForEntity(entity)) return false;
-    const wsUrl = await this._go2rtcWebSocketUrlForMountEntity(entity);
+    const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) return false;
 
     const video = createVideoElement(
