@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.933";
+const VERSION = "1.0.934";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -117,10 +117,10 @@ const ICONS = {
 // src/styles.js
 const STYLES = `
   :host {
-    height: 100% !important;
-    max-height: 100% !important;
+    height: var(--card-host-height, 100%) !important;
+    max-height: var(--card-host-height, 100%) !important;
     --rotate-vw: 100vw;
-    --rotate-vh: 100%; /* Replaced 100dvh with percentage */
+    --rotate-vh: 100%; 
     --rotate-ox: 0px;
     --rotate-oy: 0px;
     min-height: 0;
@@ -162,14 +162,14 @@ const STYLES = `
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
     background: var(--c-bg-main) !important;
+    min-height: 0 !important;
     height: 100% !important;
     max-height: 100% !important;
-    display: flex !important; /* Added to connect the 100% height chain */
+    display: flex !important; /* Establishes the vertical link */
     flex-direction: column;
     overflow: hidden !important;
     padding: 0 !important;
     margin: 0 !important;
-    min-height: 0 !important;
   }
 
   .card {
@@ -199,14 +199,16 @@ const STYLES = `
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;}
 
+  /* FIX: Cleared max-height viewport tracking completely */
   .card .layout {
     display: flex;
     flex-direction: column;
     height: 100%;
+    max-height: 100% !important; /* Changed from 100dvh to 100% */
     width: 100%;
     overflow: hidden !important;
-  }
-  .card .layout.wide-view { flex-direction: row; }
+}
+  .card .layout.wide-view{flex-direction:row;}
   
   .card .col-left {
     flex: 0 1 auto; 
@@ -220,34 +222,28 @@ const STYLES = `
   .card .col-left > * { flex: 0 0 auto; }
   .card .col-left > .feed-area { flex: 1 1 auto; min-height: 0; }
 
-  /* FIX: Forces the column to stay locked to the card boundaries */
+  /* FIX: Forces the right panel to obey card container size limits */
   .card .col-right {
-    flex: 1 1 0%;          /* Forces layout to share space precisely */
+    flex: 1 1 0%;          /* Fills space but allows inner contents to contract */
     display: flex;
     flex-direction: column;
-    min-height: 0;         /* Allows shrinking smaller than the list items */
-    height: 0;             /* Baseline trick to stop content expansion */
+    min-height: 0;         /* Crucial: overrides default content height expansion */
+    height: 100%; 
     width: 100%; 
     position: relative;
   }
-
-  .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
-  .layout:not(.wide-view) .resize-handle{display:none;}
-  .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
-  .resize-handle::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:2px;background:rgba(255,255,255,.4);border-radius:1px;}
-  .layout.wide-view .resize-handle{width:6px;height:auto;cursor:col-resize;}
-  .layout.wide-view .resize-handle::after{width:2px;height:32px;}
+  
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
 
-  /* FIX: Cleaned up conflicting metrics to let native scrolling run */
+  /* FIX: Cleaned up the conflicting height rules so the bar triggers */
   .card .browse {
-    flex: 1 1 0%;                  /* Automatically claim remaining space under browse-head */
-    display: block !important;     /* Block is required for native scroll mechanics */
+    flex: 1 1 0%;                  /* Automatically claim all remaining space below the header */
+    display: block !important;     /* Essential for standard browser scrolling */
     padding: 0 10px;
     margin: 0;
     min-height: 0;
-    height: auto !important;       /* Removed rigid 95% which broke flex models */
-    overflow-y: auto !important;   /* Spawns the scrollbar instantly when list clips */
+    height: auto !important;       /* Stripped out rigid 95% which broke the flex chain */
+    overflow-y: auto !important;   /* Spawns the scrollbar the millisecond content clips */
     position: relative;
   }
 
