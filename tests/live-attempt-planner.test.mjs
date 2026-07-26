@@ -40,6 +40,19 @@ test("buildLiveAttemptPlan honors forced type", () => {
   );
 });
 
+test("buildLiveAttemptPlan returns no attempts for ha_direct", () => {
+  const attempts = buildLiveAttemptPlan({
+    connectionType: "ha_direct",
+    builders: {
+      webrtc: () => ({ ok: true }),
+      mse: () => ({ ok: true }),
+      hls: () => ({ ok: true }),
+    },
+  });
+
+  assert.deepEqual(attempts, []);
+});
+
 test("raceMountAttempts resolves first successful result", async () => {
   const loser = Promise.resolve({ ok: false, type: "webrtc" });
   const winner = Promise.resolve({ ok: true, type: "mse" });

@@ -55,6 +55,41 @@ test("editor YAML config omits normalized default values", () => {
   });
 });
 
+test("camera connection type defaults to go2rtc and is omitted in compact YAML", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [
+      {
+        entity: "camera.driveway",
+        connection_type: "invalid-value",
+      },
+    ],
+  });
+
+  assert.deepEqual(config, {
+    cameras: [{ entity: "camera.driveway" }],
+  });
+});
+
+test("camera connection type normalizes HA aliases to ha_direct", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [
+      {
+        entity: "camera.garage",
+        connection_type: "home_assistant",
+      },
+    ],
+  });
+
+  assert.deepEqual(config, {
+    cameras: [
+      {
+        entity: "camera.garage",
+        connection_type: "ha_direct",
+      },
+    ],
+  });
+});
+
 test("custom theme YAML config only keeps colors different from defaults", () => {
   const config = compactEditorConfigForYaml(
     {
