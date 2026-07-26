@@ -2,8 +2,8 @@ export const STYLES = `
   :host {
     height: 100% !important;
     max-height: 100% !important;
-    display: flex !important;
-    flex-direction: column;
+    display: grid !important; /* Changed from flex to grid */
+    grid-template-rows: 100%;
     --rotate-vw: 100vw;
     --rotate-vh: 100%; 
     --rotate-ox: 0px;
@@ -42,8 +42,8 @@ ha-card {
     background: var(--c-bg-main) !important;
     height: 100% !important;
     max-height: 100% !important;
-    display: flex !important;
-    flex-direction: column;
+    display: grid !important; /* Changed from flex to grid */
+    grid-template-rows: 100%;
     overflow: hidden;
 }
 .card {
@@ -62,8 +62,8 @@ ha-card {
     width: 100%;
     overflow: hidden;
     border-radius: 18px;
-    display: flex;
-    flex-direction: column;
+    display: grid; /* Changed from flex to grid */
+    grid-template-rows: 100%;
 }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
@@ -75,10 +75,13 @@ ha-card {
     flex-direction: column;
     width: 100%;
     height: 100%;
-    max-height:100%;
+    max-height: 100%;
     overflow: hidden !important;
+    position: relative; 
 }
-  .card .layout.wide-view{flex-direction:row;}
+  .card .layout.wide-view{
+    flex-direction:row;
+  }
 .card .col-left {
     flex-shrink: 0;
 }
@@ -88,10 +91,11 @@ ha-card {
     flex: 1 1 0%;           
     min-height: 0;         
     height: 100%; 
-    width:100%;          
+    width: 100%;          
     max-height: 100%;
     background: #ffcc33;
-    overflow: hidden; 
+    overflow: hidden;
+    position: relative;
 }
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
@@ -106,13 +110,15 @@ ha-card {
 }
 .card .browse {
     display: block !important; 
-    flex: 1 1 0%;                  
-    height: auto !important;       
-    min-height: 0;                 
-    overflow-y: auto !important;   
+    position: absolute;   
+    top: 2.2rem;          
+    bottom: 0;            
+    left: 0;
+    right: 0;
+    overflow-y: scroll !important; 
     overflow-x: hidden;
     padding: 10px;
-    width:100%;
+    width: 100%;
 }
 
 .card .browse-head {
