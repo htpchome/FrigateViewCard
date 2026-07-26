@@ -5177,23 +5177,30 @@ export class FrigateViewCard extends HTMLElement {
       if (isPercentHeight) {
         const ratio = Math.max(0.01, numericHeight / 100);
         const pxFromCssLength = (value) => {
-          const match = /^(-?\d+(?:\.\d+)?)px$/i.exec(String(value || "").trim());
+          const match = /^(-?\d+(?:\.\d+)?)px$/i.exec(
+            String(value || "").trim(),
+          );
           if (!match) return null;
           const parsed = Number(match[1]);
           return Number.isFinite(parsed) ? parsed : null;
         };
         const headerHeightPx =
-          pxFromCssLength(getComputedStyle(this).getPropertyValue("--header-height")) ??
-          56;
+          pxFromCssLength(
+            getComputedStyle(this).getPropertyValue("--header-height"),
+          ) ?? 56;
         const viewportHeightPx = Math.max(
           0,
           (window.visualViewport?.height || window.innerHeight || 0) -
             headerHeightPx,
         );
         const referenceHeightPx =
-          pxFromCssLength(haCardH) ?? (viewportHeightPx > 0 ? viewportHeightPx : null);
+          pxFromCssLength(haCardH) ??
+          (viewportHeightPx > 0 ? viewportHeightPx : null);
         if (referenceHeightPx != null) {
-          const resolvedPercentHeightPx = Math.max(1, referenceHeightPx * ratio);
+          const resolvedPercentHeightPx = Math.max(
+            1,
+            referenceHeightPx * ratio,
+          );
           this.style.setProperty(
             "--card-host-height",
             `${resolvedPercentHeightPx}px`,
