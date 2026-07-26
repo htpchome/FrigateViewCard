@@ -1,4 +1,4 @@
-export const VERSION = "1.0.960";
+export const VERSION = "1.0.961";
 
 export const CARD_TAG = "frigate-view-card";
 export const DAY = 86400;
