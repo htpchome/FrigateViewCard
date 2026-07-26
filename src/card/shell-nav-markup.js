@@ -132,9 +132,9 @@ export function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
   const muteLabel = streamMuted ? "Unmute live view" : "Mute live view";
   const muteIcon = streamMuted ? icons.volOff : icons.volOn;
   return `<div id="eng-wrap">
-                <div id="engine">
+                <frigate-live-stream id="engine">
                   <div class="ph">${icons.live}<span>Connecting…</span></div>
-                </div>
+                </frigate-live-stream>
                   <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
                   <button class="glass-btn mute-btn" id="mute-btn" title="${muteLabel}" aria-label="${muteLabel}">${muteIcon}</button>
                   <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>

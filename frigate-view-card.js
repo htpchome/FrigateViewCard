@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.959";
+const VERSION = "1.0.960";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1833,6 +1833,143 @@ const raceMountAttempts = async (attempts) => {
   });
 };
 
+// src/live/live-stream-orchestrator.js
+const StreamOrchestrator = class {
+  constructor(options = {}) {
+    const strategies = Array.isArray(options) ? options : options?.strategies || [];
+    this._strategies = Array.isArray(strategies) ? [...strategies] : [];
+    this._preferredType = String(options?.preferredType || "").trim().toLowerCase();
+    this._preferredWaitMs = Math.max(0, Number(options?.preferredWaitMs) || 0);
+    this._attempts = [];
+  }
+  get attempts() {
+    return this._attempts;
+  }
+  async start() {
+    if (!this._strategies.length) return null;
+    this._attempts = this._strategies.map((strategy) => ({
+      type: strategy.type,
+      strategy,
+      promise: strategy.connect()
+    }));
+    const candidates = this._attempts.map(
+      (attempt) => attempt.promise.then((result) => ({
+        type: attempt.type,
+        strategy: attempt.strategy,
+        result
+      }))
+    );
+    const preferredCandidate = this._attempts.find(
+      (attempt) => attempt.type === this._preferredType
+    );
+    try {
+      let winner = null;
+      if (!preferredCandidate) {
+        winner = await Promise.any(candidates);
+      } else {
+        const fallbackWinner = await Promise.any(candidates);
+        if (fallbackWinner.type === this._preferredType) {
+          winner = fallbackWinner;
+        } else if (this._preferredWaitMs <= 0) {
+          winner = fallbackWinner;
+        } else {
+          const preferredWithTimeout = await Promise.race([
+            preferredCandidate.promise.then((result) => ({
+              type: preferredCandidate.type,
+              strategy: preferredCandidate.strategy,
+              result
+            })).catch(() => null),
+            new Promise((resolve) => {
+              setTimeout(() => resolve(null), this._preferredWaitMs);
+            })
+          ]);
+          winner = preferredWithTimeout || fallbackWinner;
+        }
+      }
+      await this.stop({ exclude: winner.strategy });
+      return winner.result;
+    } catch (_) {
+      await this.stop();
+      return null;
+    }
+  }
+  async stop({ exclude = null } = {}) {
+    await Promise.all(
+      (this._strategies || []).map(async (strategy) => {
+        if (exclude && strategy === exclude) return;
+        await strategy.disconnect();
+      })
+    );
+  }
+};
+
+// src/live/live-stream-strategies.js
+const StreamStrategy = class {
+  constructor({ type, connect }) {
+    this.type = String(type || "").trim().toLowerCase();
+    this._connectImpl = typeof connect === "function" ? connect : null;
+    this._abortController = null;
+    this._connectPromise = null;
+    this._disconnectStarted = false;
+  }
+  get connectPromise() {
+    return this._connectPromise;
+  }
+  async connect() {
+    if (!this._connectImpl) {
+      throw new Error(`Missing connect implementation for ${this.type}`);
+    }
+    if (this._connectPromise) return this._connectPromise;
+    const abortController = new AbortController();
+    this._abortController = abortController;
+    this._connectPromise = (async () => {
+      const result = await this._connectImpl({
+        abortSignal: abortController.signal
+      });
+      if (!result?.ok) {
+        throw new Error(`${this.type} strategy failed`);
+      }
+      return result;
+    })();
+    return this._connectPromise;
+  }
+  async disconnect() {
+    if (this._disconnectStarted) return;
+    this._disconnectStarted = true;
+    try {
+      this._abortController?.abort();
+    } catch (_) {
+    }
+    const result = await this._connectPromise?.catch(() => null);
+    try {
+      result?.engine?.destroy?.();
+    } catch (_) {
+    }
+  }
+};
+const WebRtcStrategy = class extends StreamStrategy {
+  constructor(connect) {
+    super({ type: "webrtc", connect });
+  }
+};
+const MseStrategy = class extends StreamStrategy {
+  constructor(connect) {
+    super({ type: "mse", connect });
+  }
+};
+const HlsStrategy = class extends StreamStrategy {
+  constructor(connect) {
+    super({ type: "hls", connect });
+  }
+};
+const createStrategyForType = ({ type, connect }) => {
+  const key = String(type || "").trim().toLowerCase();
+  if (key === "webrtc") return new WebRtcStrategy(connect);
+  if (key === "mse") return new MseStrategy(connect);
+  if (key === "hls") return new HlsStrategy(connect);
+  return new StreamStrategy({ type: key || "unknown", connect });
+};
+
 // src/live/live-pending-destroyers.js
 const createPendingMountDestroyers = ({
   activeAttempts,
@@ -3099,9 +3236,9 @@ function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
   const muteLabel = streamMuted ? "Unmute live view" : "Mute live view";
   const muteIcon = streamMuted ? icons.volOff : icons.volOn;
   return `<div id="eng-wrap">
-                <div id="engine">
+                <frigate-live-stream id="engine">
                   <div class="ph">${icons.live}<span>Connecting\u2026</span></div>
-                </div>
+                </frigate-live-stream>
                   <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
                   <button class="glass-btn mute-btn" id="mute-btn" title="${muteLabel}" aria-label="${muteLabel}">${muteIcon}</button>
                   <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
@@ -6685,19 +6822,16 @@ const FrigateViewCard = class extends HTMLElement {
     this._setStreamFallbackVisible(false);
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
-  async _raceMountAttempts(attempts) {
-    return await raceMountAttempts(attempts);
-  }
   _buildLiveStreamAttempts(connectionType, forcedType = null, hostSlot = null) {
     const disableHlsOnDesktop = DEVICE_PROFILE.isDesktop && this._cameraDisableHlsDesktop(this._activeCam?.entity);
     const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
     const build = {
-      webrtc: () => this._tryMountGo2RTCWebRTC(
+      webrtc: (attemptOptions = {}) => this._tryMountGo2RTCWebRTC(
         hiddenSlot(),
         { waitMs: 7e3 },
-        { commit: false }
+        { commit: false, ...attemptOptions }
       ),
-      mse: () => this._tryMountGo2RTCMSE(
+      mse: (attemptOptions = {}) => this._tryMountGo2RTCMSE(
         hiddenSlot(),
         {
           waitMs: 4e3,
@@ -6706,12 +6840,12 @@ const FrigateViewCard = class extends HTMLElement {
           requireReadyState: 2,
           strict: true
         },
-        { commit: false }
+        { commit: false, ...attemptOptions }
       ),
-      hls: () => this._tryMountGo2RTCHLS(
+      hls: (attemptOptions = {}) => this._tryMountGo2RTCHLS(
         hiddenSlot(),
         { waitMs: 5e3 },
-        { commit: false }
+        { commit: false, ...attemptOptions }
       )
     };
     const order = forcedType ? [forcedType] : ["webrtc", "mse", "hls"];
@@ -6728,25 +6862,40 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _mountLiveWithRace(slot, attempts, mountToken, targetEntity) {
-    const activeAttempts = attempts.map((attempt) => {
-      const promise = (async () => {
-        try {
-          return await attempt.start();
-        } catch (_) {
-          return false;
+    const strategies = attempts.map(
+      (attempt) => createStrategyForType({
+        type: attempt.type,
+        connect: async ({ abortSignal }) => {
+          try {
+            return await attempt.start({ abortSignal, entity: targetEntity });
+          } catch (_) {
+            return false;
+          }
         }
-      })();
-      return { type: attempt.type, promise };
-    });
-    this._pendingMountDestroyers = createPendingMountDestroyers({
-      activeAttempts,
-      targetEntity
-    });
-    const winner = await this._raceMountAttempts(
-      activeAttempts.map((attempt) => attempt.promise)
+      })
     );
+    const orchestrator = new StreamOrchestrator({
+      strategies,
+      preferredType: "webrtc",
+      preferredWaitMs: 1200
+    });
+    slot?.attachOrchestrator?.(orchestrator);
+    const activeAttempts = strategies.map((strategy) => ({
+      type: strategy.type,
+      promise: strategy.connect()
+    }));
+    this._pendingMountDestroyers = strategies.map((strategy) => ({
+      type: strategy.type,
+      entity: targetEntity,
+      promise: strategy.connectPromise,
+      destroy: () => {
+        void strategy.disconnect();
+      }
+    }));
+    const winner = await orchestrator.start();
     if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
       cleanupStaleWinnerResult(winner);
+      slot?.clearOrchestrator?.(orchestrator);
       return false;
     }
     const destroyLosers = async () => {
@@ -6755,6 +6904,7 @@ const FrigateViewCard = class extends HTMLElement {
         winnerType: winner?.type
       });
       this._pendingMountDestroyers = [];
+      slot?.clearOrchestrator?.(orchestrator);
     };
     if (winner?.ok) {
       this._pendingMountDestroyers = this._pendingMountDestroyers.filter(
@@ -7009,9 +7159,76 @@ const FrigateViewCard = class extends HTMLElement {
   async _go2rtcWebSocketUrl() {
     return await this._go2rtcWebSocketUrlForEntity(this._activeCam?.entity);
   }
+  async _go2rtcWebSocketUrlForMountEntity(entity = "") {
+    return await this._go2rtcWebSocketUrlForEntity(
+      entity || this._activeCam?.entity
+    );
+  }
   async _go2rtcHlsUrl() {
     if (!this._supportsNativeHlsPlayback()) return null;
     const { clientId, cam } = this._cc();
+    if (!clientId || !cam) return null;
+    const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
+    const nowMs = Date.now();
+    const cachedUrl = getFreshCachedValue({
+      cacheMap: this._go2rtcHlsUrlCache,
+      cacheKey,
+      nowMs
+    });
+    if (cachedUrl !== void 0) return cachedUrl;
+    const inFlight = this._go2rtcHlsProbeInFlight.get(cacheKey);
+    if (inFlight) return inFlight;
+    const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
+    const probePromise = (async () => {
+      for (const p of candidates) {
+        const signed = await this._signed(p);
+        const abs = toAbsoluteSignedUrl({
+          signedPath: signed,
+          origin: window.location.origin
+        });
+        try {
+          const resp = await fetch(abs, {
+            method: "GET",
+            cache: "no-store",
+            credentials: "same-origin"
+          });
+          if (!resp.ok) continue;
+          if (isM3u8Response({
+            contentType: resp.headers.get("content-type") || "",
+            url: abs
+          })) {
+            setCachedValue({
+              cacheMap: this._go2rtcHlsUrlCache,
+              cacheKey,
+              url: abs,
+              ttlMs: 30 * 60 * 1e3,
+              nowMs: Date.now()
+            });
+            return abs;
+          }
+        } catch (_) {
+        }
+      }
+      setCachedValue({
+        cacheMap: this._go2rtcHlsUrlCache,
+        cacheKey,
+        url: null,
+        ttlMs: 2 * 60 * 1e3,
+        nowMs: Date.now()
+      });
+      return null;
+    })().finally(() => {
+      this._go2rtcHlsProbeInFlight.delete(cacheKey);
+    });
+    this._go2rtcHlsProbeInFlight.set(cacheKey, probePromise);
+    return probePromise;
+  }
+  async _go2rtcHlsUrlForEntity(entity = "") {
+    const targetEntity = String(entity || "").trim();
+    if (!targetEntity) return await this._go2rtcHlsUrl();
+    if (!this._supportsNativeHlsPlayback()) return null;
+    await this._discoverOne(targetEntity);
+    const { clientId, cam } = this._cameraContext(targetEntity);
     if (!clientId || !cam) return null;
     const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
     const nowMs = Date.now();
@@ -7077,8 +7294,10 @@ const FrigateViewCard = class extends HTMLElement {
       strict
     } = resolveMseStartup(startup || {});
     const commit = options.commit !== false;
+    const abortSignal = options?.abortSignal || null;
     const entity = options?.entity || this._activeCam?.entity || "";
     const muted = options?.muted ?? this._streamMuted;
+    if (abortSignal?.aborted) return false;
     if (!("WebSocket" in window) || !("MediaSource" in window)) {
       this._ffDebug("MSE unavailable in browser", {
         hasWebSocket: "WebSocket" in window,
@@ -7109,6 +7328,7 @@ const FrigateViewCard = class extends HTMLElement {
     const ws = new WebSocket(wsUrl);
     ws.binaryType = "arraybuffer";
     const startupAbort = new AbortController();
+    let abortBound = false;
     let streamStarted = false;
     this._mseConnectAt = Date.now();
     this._mseLastChunkAt = 0;
@@ -7150,7 +7370,18 @@ const FrigateViewCard = class extends HTMLElement {
         if (video.src) URL.revokeObjectURL(video.src);
       } catch (_) {
       }
+      if (abortSignal && abortBound) {
+        abortSignal.removeEventListener("abort", onAbort);
+        abortBound = false;
+      }
     };
+    const onAbort = () => {
+      destroy();
+    };
+    if (abortSignal) {
+      abortSignal.addEventListener("abort", onAbort, { once: true });
+      abortBound = true;
+    }
     const engine = { video, ws, destroy };
     if (commit) this._engine = engine;
     ms.addEventListener(
@@ -7365,10 +7596,13 @@ const FrigateViewCard = class extends HTMLElement {
       isFirefox: this._isFirefox()
     });
     const commit = options.commit !== false;
+    const abortSignal = options?.abortSignal || null;
+    if (abortSignal?.aborted) return false;
     if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
       return false;
     }
-    const wsUrl = await this._go2rtcWebSocketUrl();
+    const entity = options?.entity || this._activeCam?.entity || "";
+    const wsUrl = await this._go2rtcWebSocketUrlForMountEntity(entity);
     if (!wsUrl) return false;
     const video = createVideoElement(
       buildVideoOptionsForView(
@@ -7388,6 +7622,7 @@ const FrigateViewCard = class extends HTMLElement {
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
     });
     const ws = new WebSocket(wsUrl);
+    let abortBound = false;
     const destroy = () => {
       try {
         ws.close();
@@ -7397,7 +7632,18 @@ const FrigateViewCard = class extends HTMLElement {
         pc.close();
       } catch (_) {
       }
+      if (abortSignal && abortBound) {
+        abortSignal.removeEventListener("abort", onAbort);
+        abortBound = false;
+      }
     };
+    const onAbort = () => {
+      destroy();
+    };
+    if (abortSignal) {
+      abortSignal.addEventListener("abort", onAbort, { once: true });
+      abortBound = true;
+    }
     const engine = { video, pc, ws, destroy };
     if (commit) this._engine = engine;
     pc.addTransceiver("video", { direction: "recvonly" });
@@ -7450,7 +7696,8 @@ const FrigateViewCard = class extends HTMLElement {
       minCurrentTime,
       minDecodedFrames,
       requireReadyState,
-      strict
+      strict,
+      abortSignal
     });
     if (!started) {
       destroy();
@@ -7465,7 +7712,10 @@ const FrigateViewCard = class extends HTMLElement {
   async _tryMountGo2RTCHLS(slot, startup = null, options = {}) {
     const { waitMs } = resolveHlsStartup(startup || {});
     const commit = options.commit !== false;
-    const hlsUrl = await this._go2rtcHlsUrl();
+    const abortSignal = options?.abortSignal || null;
+    if (abortSignal?.aborted) return false;
+    const entity = options?.entity || this._activeCam?.entity || "";
+    const hlsUrl = await this._go2rtcHlsUrlForEntity(entity);
     if (!hlsUrl) return false;
     const video = createVideoElement(
       buildVideoOptionsForView(
@@ -7487,14 +7737,27 @@ const FrigateViewCard = class extends HTMLElement {
         video.load();
       } catch (_) {
       }
+      if (abortSignal && abortBound) {
+        abortSignal.removeEventListener("abort", onAbort);
+        abortBound = false;
+      }
     };
+    let abortBound = false;
+    const onAbort = () => {
+      destroy();
+    };
+    if (abortSignal) {
+      abortSignal.addEventListener("abort", onAbort, { once: true });
+      abortBound = true;
+    }
     const engine = { video, destroy };
     if (commit) this._engine = engine;
     const started = await this._waitForStreamStart(video, waitMs, {
       minCurrentTime: 0.05,
       minDecodedFrames: 1,
       requireReadyState: 2,
-      strict: false
+      strict: false,
+      abortSignal
     });
     if (!started) {
       destroy();
@@ -13999,11 +14262,44 @@ const FrigateViewCardEditor = class extends HTMLElement {
   }
 };
 
+// src/live/live-stream-element.js
+const LIVE_STREAM_HOST_TAG = "frigate-live-stream";
+const FrigateLiveStreamElement = class extends HTMLElement {
+  constructor() {
+    super();
+    this._orchestrator = null;
+  }
+  attachOrchestrator(orchestrator) {
+    if (this._orchestrator && this._orchestrator !== orchestrator) {
+      void this._orchestrator.stop().catch(() => {
+      });
+    }
+    this._orchestrator = orchestrator || null;
+  }
+  clearOrchestrator(orchestrator = null) {
+    if (!orchestrator || this._orchestrator === orchestrator) {
+      this._orchestrator = null;
+    }
+  }
+  disconnectedCallback() {
+    if (!this._orchestrator) return;
+    void this._orchestrator.stop().catch(() => {
+    });
+    this._orchestrator = null;
+  }
+};
+const registerLiveStreamHostElement = () => {
+  if (!customElements.get(LIVE_STREAM_HOST_TAG)) {
+    customElements.define(LIVE_STREAM_HOST_TAG, FrigateLiveStreamElement);
+  }
+};
+
 // src/index.js
 if (!customElements.get(CARD_TAG))
   customElements.define(CARD_TAG, FrigateViewCard);
 if (!customElements.get(CARD_TAG + "-editor"))
   customElements.define(CARD_TAG + "-editor", FrigateViewCardEditor);
+registerLiveStreamHostElement();
 window.customCards = window.customCards || [];
 if (!window.customCards.find((c) => c.type === CARD_TAG))
   window.customCards.push({

@@ -1,12 +1,14 @@
 import { CARD_TAG, VERSION } from "./constants.js";
 import { FrigateViewCard } from "./card/FrigateViewCard.js";
 import { FrigateViewCardEditor } from "./editor/FrigateViewCardEditor.js";
+import { registerLiveStreamHostElement } from "./live/live-stream-element.js";
 
 // index.js — registers custom elements and announces card to HA
 if (!customElements.get(CARD_TAG))
   customElements.define(CARD_TAG, FrigateViewCard);
 if (!customElements.get(CARD_TAG + "-editor"))
   customElements.define(CARD_TAG + "-editor", FrigateViewCardEditor);
+registerLiveStreamHostElement();
 window.customCards = window.customCards || [];
 
 if (!window.customCards.find((c) => c.type === CARD_TAG))
