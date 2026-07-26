@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.936";
+const VERSION = "1.0.937";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -117,10 +117,10 @@ const ICONS = {
 // src/styles.js
 const STYLES = `
   :host {
-    height: 100% !important;
-    max-height: 100% !important;
+    height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
+    max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     --rotate-vw: 100vw;
-    --rotate-vh: 100%; 
+    --rotate-vh: 100dvh;
     --rotate-ox: 0px;
     --rotate-oy: 0px;
     min-height: 0;
@@ -128,7 +128,7 @@ const STYLES = `
     overflow: hidden;
     box-sizing: border-box !important;
     position: relative;
-    border: 1px solid var(--secondary-background-color,#7a7a7a);
+    border:1px solid var(--secondary-background-color,#7a7a7a);
   }
   :host {
     --popup-z-index: 1000;
@@ -136,8 +136,8 @@ const STYLES = `
     --handle-color: #e0e0e0;
   }
 
-  /* \u2500\u2500 theme variables \u2500\u2500 */
-  .card {
+  /* \u2500\u2500 theme variables (dark = default) \u2500\u2500 */
+    .card {
         --c-bg-main:   var(--card-background-color);
         --c-bg-panel:  var(--secondary-background-color);
         --c-bg-deep:   #111111;
@@ -156,25 +156,21 @@ const STYLES = `
         --c-off:       #FCA5A5;
         --c-bg-scrub:  #c2f2c1;
         --c-bg-alert:  #dc3146;
-  }
-
-  /* \u2500\u2500 responsive layout \u2500\u2500 */
+    }
+  /* \u2500\u2500 responsive layout    \u2500\u2500 */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-    background: var(--c-bg-main) !important;
     min-height: 0 !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    height: 100%;
+    overflow:hidden !important;
     padding: 0 !important;
     margin: 0 !important;
-    
-    /* 1. CRITICAL: Pass percentage heights down to the inner card */
-    display: flex !important;
-    flex-direction: column;
-  }
+    min-height: 0 !important;
+    height: 100%;
+    overflow:hidden !important;
 
-  .card {
+    }
+  .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
     --fvc-outer-shadow-m: var(--ha-box-shadow-m);
@@ -183,69 +179,48 @@ const STYLES = `
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: 15px;
     --fvc-outer-border-radius: 15px;
-    color: var(--c-text);
+    color:var(--c-text);
+    overflow:hidden;
     box-sizing: border-box;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    position: relative;
-    top: 0;
-    left: 0;
-    overflow: hidden !important;
-    border: 1px solid var(--secondary-background-color,#7a7a7a);
-  }
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    position:relative;
+    top:0;
+    left:0;
+    overflow:hidden !important;
+    border:1px solid var(--secondary-background-color,#7a7a7a);
+    }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;}
 
-  .card .layout {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    overflow: hidden !important;
-  }
-  .card .layout.wide-view { flex-direction: row; }
-  
-  .card .col-left {
-    flex: 0 1 auto; 
-    min-height: 0; 
-    align-self: start;
-    flex-direction: column;
-    width: 100%; 
-    display: flex;
-    overflow: none;
-  }
-  .card .col-left > * { flex: 0 0 auto; }
-  .card .col-left > .feed-area { flex: 1 1 auto; min-height: 0; }
-
-  /* 2. CRITICAL: Lock the right panel container to the remaining card space */
-  .card .col-right {
-    flex: 1 1 0%;          
-    display: flex;
-    flex-direction: column;
-    min-height: 0;         /* Allows shrinking smaller than the dynamic text components */
-    height: 100%; 
-    width: 100%; 
-    position: relative;
-  }
-  
+  .card .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
+    overflow: hidden !important;}
+  .card .layout.wide-view{flex-direction:row;}
+  .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
+  .card .col-left > *{flex:0 0 auto;}
+  .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
+  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
+  .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
+  .layout:not(.wide-view) .resize-handle{display:none;}
+  .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
+  .resize-handle::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:2px;background:rgba(255,255,255,.4);border-radius:1px;}
+  .layout.wide-view .resize-handle{width:6px;height:auto;cursor:col-resize;}
+  .layout.wide-view .resize-handle::after{width:2px;height:32px;}
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
-
-  /* 3. CRITICAL: Enforce standard scrolling on browse bounds */
-  .card .browse {
-    flex: 1 1 0%;                  /* Fills exactly what remains inside col-right */
-    display: block !important;     /* Restores native browser block scroll tracking */
-    padding: 0 10px;
-    margin: 0;
-    min-height: 0;
-    height: auto !important;       /* Removed the hardcoded 95% causing the layout leak */
-    overflow-y: auto !important;   /* Triggers scrollbars the moment your lists overflow */
-    position: relative;
-  }
+  .card .browse{
+    flex:1 1 0;
+    flex-direction: column; 
+    padding:0 10px;
+    margin:0;
+    min-height:0;
+    height:95%;
+    overflow-y:auto;
+    position:relative}
 
   .card .browse-head{display:flex;align-items:center;justify-content:center;min-height:1.5rem;max-height:1.65em;flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;padding:1px 8px;}
   .card.recordings-browse-head-tall:not(.mobile) .browse-head{min-height:3.5rem;max-height:none;}
