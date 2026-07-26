@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.952";
+const VERSION = "1.0.954";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9660,6 +9660,16 @@ const FrigateViewCard = class extends HTMLElement {
     const configuredHeightValue = vh != null ? `${vh}${configuredHeightUnit}` : "";
     const numericHeight = Number(vh);
     const isPercentHeight = configuredHeightUnit === "%" && Number.isFinite(numericHeight) && numericHeight > 0;
+    const tightMarginsEnabled = this._config?.tight_margins === true;
+    const cssPx = (value) => {
+      const parsed = Number.parseFloat(String(value || "").trim());
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const parentStyle = this.parentElement ? getComputedStyle(this.parentElement) : null;
+    const nonTightMarginHeightPenaltyPx = !tightMarginsEnabled && parentStyle ? Math.max(
+      0,
+      cssPx(parentStyle.marginTop) + cssPx(parentStyle.marginBottom) + cssPx(parentStyle.paddingTop) + cssPx(parentStyle.paddingBottom)
+    ) : 0;
     const haCardH = getComputedStyle(this).getPropertyValue("--ha-card-height").trim();
     if (vh) {
       if (isPercentHeight) {
@@ -9681,9 +9691,13 @@ const FrigateViewCard = class extends HTMLElement {
         );
         const referenceHeightPx = pxFromCssLength(haCardH) ?? (viewportHeightPx > 0 ? viewportHeightPx : null);
         if (referenceHeightPx != null) {
+          const adjustedReferenceHeightPx = Math.max(
+            1,
+            referenceHeightPx - nonTightMarginHeightPenaltyPx
+          );
           const resolvedPercentHeightPx = Math.max(
             1,
-            referenceHeightPx * ratio
+            adjustedReferenceHeightPx * ratio
           );
           this.style.setProperty(
             "--card-host-height",

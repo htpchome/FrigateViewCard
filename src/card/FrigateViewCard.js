@@ -5178,6 +5178,24 @@ export class FrigateViewCard extends HTMLElement {
       configuredHeightUnit === "%" &&
       Number.isFinite(numericHeight) &&
       numericHeight > 0;
+    const tightMarginsEnabled = this._config?.tight_margins === true;
+    const cssPx = (value) => {
+      const parsed = Number.parseFloat(String(value || "").trim());
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const parentStyle = this.parentElement
+      ? getComputedStyle(this.parentElement)
+      : null;
+    const nonTightMarginHeightPenaltyPx =
+      !tightMarginsEnabled && parentStyle
+        ? Math.max(
+            0,
+            cssPx(parentStyle.marginTop) +
+              cssPx(parentStyle.marginBottom) +
+              cssPx(parentStyle.paddingTop) +
+              cssPx(parentStyle.paddingBottom),
+          )
+        : 0;
     const haCardH = getComputedStyle(this)
       .getPropertyValue("--ha-card-height")
       .trim();
@@ -5205,9 +5223,13 @@ export class FrigateViewCard extends HTMLElement {
           pxFromCssLength(haCardH) ??
           (viewportHeightPx > 0 ? viewportHeightPx : null);
         if (referenceHeightPx != null) {
+          const adjustedReferenceHeightPx = Math.max(
+            1,
+            referenceHeightPx - nonTightMarginHeightPenaltyPx,
+          );
           const resolvedPercentHeightPx = Math.max(
             1,
-            referenceHeightPx * ratio,
+            adjustedReferenceHeightPx * ratio,
           );
           this.style.setProperty(
             "--card-host-height",
