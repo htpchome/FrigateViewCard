@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.940";
+const VERSION = "1.0.941";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -213,6 +213,7 @@ const STYLES = `
   .layout.wide-view .resize-handle::after{width:2px;height:32px;}
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
   .card .browse{
+    display:flex;
     flex:1 1 0;
     flex-direction: column; 
     padding:0 10px;
@@ -269,7 +270,7 @@ const STYLES = `
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;}
 
   /* \u2500\u2500 event list \u2500\u2500 */
-  .list{flex:1;flex-direction: column;min-height:0;} 
+  .list{display:flex;flex:1;flex-direction:column;min-height:0;} 
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
   .list-day-label{position:relative;z-index:1;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-main);border:none;text-align: center;}
@@ -9655,12 +9656,17 @@ const FrigateViewCard = class extends HTMLElement {
     const previewHeightFallback = isCompactPreview && !vh ? "320px" : "";
     const configuredHeightUnit = this._config.stream_height_unit || "vh";
     const configuredHeightValue = vh != null ? `${vh}${configuredHeightUnit}` : "";
+    const isFullPercentHeight = configuredHeightUnit === "%" && Number(vh) === 100;
     const haCardH = getComputedStyle(this).getPropertyValue("--ha-card-height").trim();
     if (vh) {
-      const shouldResolvePercentToHaCardHeight = configuredHeightUnit === "%" && Number(vh) === 100 && !!haCardH;
+      const shouldResolvePercentToHaCardHeight = isFullPercentHeight && !!haCardH;
       const resolvedHeight = shouldResolvePercentToHaCardHeight ? haCardH : configuredHeightValue;
       this.style.setProperty("--card-host-height", resolvedHeight);
-      card.style.setProperty("--view-height", resolvedHeight);
+      if (isFullPercentHeight) {
+        card.style.removeProperty("--view-height");
+      } else {
+        card.style.setProperty("--view-height", resolvedHeight);
+      }
     } else if (previewHeightFallback) {
       this.style.setProperty("--card-host-height", previewHeightFallback);
       card.style.setProperty("--view-height", previewHeightFallback);

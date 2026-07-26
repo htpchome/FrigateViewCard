@@ -5165,18 +5165,25 @@ export class FrigateViewCard extends HTMLElement {
     const configuredHeightUnit = this._config.stream_height_unit || "vh";
     const configuredHeightValue =
       vh != null ? `${vh}${configuredHeightUnit}` : "";
+    const isFullPercentHeight =
+      configuredHeightUnit === "%" && Number(vh) === 100;
     const haCardH = getComputedStyle(this)
       .getPropertyValue("--ha-card-height")
       .trim();
     if (vh) {
       const shouldResolvePercentToHaCardHeight =
-        configuredHeightUnit === "%" && Number(vh) === 100 && !!haCardH;
+        isFullPercentHeight && !!haCardH;
       const resolvedHeight = shouldResolvePercentToHaCardHeight
         ? haCardH
         : configuredHeightValue;
 
       this.style.setProperty("--card-host-height", resolvedHeight);
-      card.style.setProperty("--view-height", resolvedHeight);
+      if (isFullPercentHeight) {
+        // Keep full-height card while letting browse retain vertical room.
+        card.style.removeProperty("--view-height");
+      } else {
+        card.style.setProperty("--view-height", resolvedHeight);
+      }
     } else if (previewHeightFallback) {
       this.style.setProperty("--card-host-height", previewHeightFallback);
       card.style.setProperty("--view-height", previewHeightFallback);
