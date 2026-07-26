@@ -43,15 +43,14 @@ export const STYLES = `
   /* ── responsive layout    ── */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-    background: var(--c-bg-main) !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    display: flex !important;        
-    flex-direction: column !important;
-    overflow: hidden !important;
+    min-height: 0 !important;
+    height: 100%;
+    overflow:hidden !important;
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
+    height: 100%;
+    overflow:hidden !important;
 
     }
   .card{
@@ -63,43 +62,32 @@ export const STYLES = `
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: 15px;
     --fvc-outer-border-radius: 15px;
-    color: var(--c-text);
+    color:var(--c-text);
+    overflow:hidden;
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    display: flex;
-    flex-direction: column;
-    height: 100%;          /* Claims 100% of ha-card */
-    width: 100%;
-    flex-grow: 1;          /* Forces expansion into empty space */
-    min-height: 0;         /* Prevents content from bulging out */
-    overflow: hidden !important;
-    border: 1px solid var(--secondary-background-color, #7a7a7a);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    position:relative;
+    top:0;
+    left:0;
+    overflow:hidden !important;
+    border:1px solid var(--secondary-background-color,#7a7a7a);
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;}
 
-  .card .layout{    
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 0;              
-    flex: 1 1 100%;         
-    min-height: 0;          
-    overflow: hidden !important;
-    }
+  .card .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
+    overflow: hidden !important;}
   .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
   .card .col-left > *{flex:0 0 auto;}
   .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
-  .card .col-right{
-    display: grid !important;
-    grid-template-rows: auto 1fr; 
-    height: 100%; 
-    width: 100%;
-    min-height: 0;                
-    overflow: hidden;            
-    position: relative;}
+  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
@@ -108,15 +96,14 @@ export const STYLES = `
   .layout.wide-view .resize-handle::after{width:2px;height:32px;}
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
   .card .browse{
-    display: block !important; 
-    height: 100%;
-    width: 100%;
-    min-height: 0;                
-    overflow-y: auto !important;  
-    overflow-x: hidden;
-    padding: 0 10px;
-    margin: 0;
-    }
+    flex:1 1 0;
+    flex-direction: column; 
+    padding:0 10px;
+    margin:0;
+    min-height:0;
+    height:95%;
+    overflow-y:auto;
+    position:relative}
 
   .card .browse-head{display:flex;align-items:center;justify-content:center;min-height:1.5rem;max-height:1.65em;flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;padding:1px 8px;}
   .card.recordings-browse-head-tall:not(.mobile) .browse-head{min-height:3.5rem;max-height:none;}
@@ -617,7 +604,5 @@ export const STYLES = `
   @media (max-width: 720px){
     .popup-info-grid{grid-template-columns:minmax(0,1fr);}
   }
-
-
-
+    
 `; 
