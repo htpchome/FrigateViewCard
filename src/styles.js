@@ -71,14 +71,17 @@ ha-card {
   .card.corners-off{--fvc-border-radius:0px;}
 
 .card .layout {
-  height: 100%;
-  max-height: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* Keeps layout from ballooning past 100% */
+    background: var(--c-bg-main);
+    display: grid !important;
+    grid-template-rows: auto 1fr; /* Header takes what it needs, Column takes exactly the rest */
+    width: 100%;
+    height: 100%;
+    overflow: hidden !important;
 }
 .card .layout.wide-view {
-  flex-direction: row;
+    display: grid !important;
+    grid-template-rows: none;
+    grid-template-columns: auto 1fr;
 }
 
 .card .layout.wide-view .col-left {
@@ -99,13 +102,12 @@ ha-card {
   min-height: 0;
 }
 .card .col-right {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  flex-shrink: 1;
-  min-height: 0; 
-  width: 100%;
-  overflow: hidden; /* Caps inner structural creep */
+    display: grid !important;
+    grid-template-rows: auto 1fr; /* Header element, then the scroll pane */
+    height: 100%;
+    width: 100%;          
+    background: #ffcc33;
+    overflow: hidden; 
 }
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
@@ -120,12 +122,9 @@ ha-card {
 }
 .card .browse {
     display: block !important; 
-    position: absolute;   
-    top: 2.2rem;          
-    bottom: 0;            
-    left: 0;
-    right: 0;
-    overflow-y: scroll !important; 
+    height: 100%;
+    min-height: 0; /* Lets grid squash it to fit the viewport space */
+    overflow-y: scroll !important;   
     overflow-x: hidden;
     padding: 10px;
     width: 100%;
