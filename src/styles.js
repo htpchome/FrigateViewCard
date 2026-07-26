@@ -1,9 +1,10 @@
 export const STYLES = `
   :host {
-    height: 100% !important;
-    max-height: 100% !important;
-    display: grid !important; /* Changed from flex to grid */
-    grid-template-rows: 100%;
+  height: var(--card-host-height, 100%) !important;
+  max-height: var(--card-host-height, 100%) !important;
+  display: block; /* Essential for custom web components to honor height rules */
+  border: 1px solid var(--secondary-background-color,#7a7a7a);
+  margin: 0;
     --rotate-vw: 100vw;
     --rotate-vh: 100%; 
     --rotate-ox: 0px;
@@ -70,32 +71,41 @@ ha-card {
   .card.corners-off{--fvc-border-radius:0px;}
 
 .card .layout {
-    background: var(--c-bg-main);
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    max-height: 100%;
-    overflow: hidden !important;
-    position: relative; 
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Keeps layout from ballooning past 100% */
 }
-  .card .layout.wide-view{
-    flex-direction:row;
-  }
+.card .layout.wide-view {
+  flex-direction: row;
+}
+
+.card .layout.wide-view .col-left {
+  width: auto; 
+  height: 100%;
+  max-height: 100%;
+}
+
+.card .layout.wide-view .col-right {
+  width: 0; /* Standard flexbox trick to force calculation inside remaining space */
+  flex-grow: 1;
+  height: 100%;
+}
 .card .col-left {
-    flex-shrink: 0;
+  flex-shrink: 0;
+  flex-grow: 0;
+  width: 100%;
+  min-height: 0;
 }
 .card .col-right {
-    display: flex;
-    flex-direction: column; 
-    flex: 1 1 0%;           
-    min-height: 0;         
-    height: 100%; 
-    width: 100%;          
-    max-height: 100%;
-    background: #ffcc33;
-    overflow: hidden;
-    position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: 0; 
+  width: 100%;
+  overflow: hidden; /* Caps inner structural creep */
 }
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
