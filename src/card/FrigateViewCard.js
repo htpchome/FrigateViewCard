@@ -5183,6 +5183,22 @@ export class FrigateViewCard extends HTMLElement {
       const parsed = Number.parseFloat(String(value || "").trim());
       return Number.isFinite(parsed) ? parsed : 0;
     };
+    const sectionsRowGapPx = (() => {
+      if (tightMarginsEnabled || this._isPanelView()) return 0;
+      let element = this;
+      while (element) {
+        if (element.tagName === "HUI-SECTIONS-VIEW") {
+          const style = getComputedStyle(element);
+          const explicitGap = cssPx(
+            style.getPropertyValue("--ha-view-sections-row-gap"),
+          );
+          if (explicitGap > 0) return explicitGap;
+          return Math.max(0, cssPx(style.rowGap));
+        }
+        element = element.parentNode || element.host;
+      }
+      return 0;
+    })();
     const parentStyle = this.parentElement
       ? getComputedStyle(this.parentElement)
       : null;
@@ -5193,7 +5209,8 @@ export class FrigateViewCard extends HTMLElement {
             cssPx(parentStyle.marginTop) +
               cssPx(parentStyle.marginBottom) +
               cssPx(parentStyle.paddingTop) +
-              cssPx(parentStyle.paddingBottom),
+              cssPx(parentStyle.paddingBottom) +
+              sectionsRowGapPx,
           )
         : 0;
     const haCardH = getComputedStyle(this)

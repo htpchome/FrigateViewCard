@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.954";
+const VERSION = "1.0.955";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9665,10 +9665,26 @@ const FrigateViewCard = class extends HTMLElement {
       const parsed = Number.parseFloat(String(value || "").trim());
       return Number.isFinite(parsed) ? parsed : 0;
     };
+    const sectionsRowGapPx = (() => {
+      if (tightMarginsEnabled || this._isPanelView()) return 0;
+      let element = this;
+      while (element) {
+        if (element.tagName === "HUI-SECTIONS-VIEW") {
+          const style = getComputedStyle(element);
+          const explicitGap = cssPx(
+            style.getPropertyValue("--ha-view-sections-row-gap")
+          );
+          if (explicitGap > 0) return explicitGap;
+          return Math.max(0, cssPx(style.rowGap));
+        }
+        element = element.parentNode || element.host;
+      }
+      return 0;
+    })();
     const parentStyle = this.parentElement ? getComputedStyle(this.parentElement) : null;
     const nonTightMarginHeightPenaltyPx = !tightMarginsEnabled && parentStyle ? Math.max(
       0,
-      cssPx(parentStyle.marginTop) + cssPx(parentStyle.marginBottom) + cssPx(parentStyle.paddingTop) + cssPx(parentStyle.paddingBottom)
+      cssPx(parentStyle.marginTop) + cssPx(parentStyle.marginBottom) + cssPx(parentStyle.paddingTop) + cssPx(parentStyle.paddingBottom) + sectionsRowGapPx
     ) : 0;
     const haCardH = getComputedStyle(this).getPropertyValue("--ha-card-height").trim();
     if (vh) {
