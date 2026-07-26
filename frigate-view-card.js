@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.946";
+const VERSION = "1.0.947";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9661,7 +9661,11 @@ const FrigateViewCard = class extends HTMLElement {
     if (vh) {
       const shouldResolvePercentToHaCardHeight = isFullPercentHeight && !!haCardH;
       const resolvedHeight = shouldResolvePercentToHaCardHeight ? haCardH : configuredHeightValue;
-      this.style.setProperty("--card-host-height", resolvedHeight);
+      if (isFullPercentHeight && !haCardH) {
+        this.style.removeProperty("--card-host-height");
+      } else {
+        this.style.setProperty("--card-host-height", resolvedHeight);
+      }
       if (isFullPercentHeight) {
         card.style.removeProperty("--view-height");
       } else {

@@ -5177,7 +5177,13 @@ export class FrigateViewCard extends HTMLElement {
         ? haCardH
         : configuredHeightValue;
 
-      this.style.setProperty("--card-host-height", resolvedHeight);
+      if (isFullPercentHeight && !haCardH) {
+        // In non-panel dashboard layouts, unresolved 100% can collapse.
+        // Fall back to the default host-height chain instead of forcing 100%.
+        this.style.removeProperty("--card-host-height");
+      } else {
+        this.style.setProperty("--card-host-height", resolvedHeight);
+      }
       if (isFullPercentHeight) {
         // Keep full-height card while letting browse retain vertical room.
         card.style.removeProperty("--view-height");
