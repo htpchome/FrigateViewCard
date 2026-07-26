@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.951";
+const VERSION = "1.0.952";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9651,10 +9651,12 @@ const FrigateViewCard = class extends HTMLElement {
     const card = this.shadowRoot.querySelector(".card");
     if (!card) return;
     this._applyTightMargins();
-    const vh = this._config.stream_height;
+    const vhRaw = this._config.stream_height;
     const isCompactPreview = this._config?.compact_preview === true || this._isPreviewContext();
-    const previewHeightFallback = isCompactPreview && !vh ? "320px" : "";
     const configuredHeightUnit = this._config.stream_height_unit || "vh";
+    const isDefaultStubPreview = this._isPreviewContext() && this._config?.compact_preview === true && configuredHeightUnit === "%" && Number(vhRaw) === 100 && this._config?.title === "Frigate Preview" && this._config?.subtitle === "Compact preview";
+    const vh = isDefaultStubPreview ? 50 : vhRaw;
+    const previewHeightFallback = isCompactPreview && !vh ? "320px" : "";
     const configuredHeightValue = vh != null ? `${vh}${configuredHeightUnit}` : "";
     const numericHeight = Number(vh);
     const isPercentHeight = configuredHeightUnit === "%" && Number.isFinite(numericHeight) && numericHeight > 0;
