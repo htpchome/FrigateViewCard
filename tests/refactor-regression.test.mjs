@@ -148,8 +148,8 @@ test("preview helpers delegate through the preview page controller", () => {
     true,
   );
   assert.equal(
-    source.includes(
-      "_applyPreviewShellVisibility() {\n    this._previewPageController.applyPreviewShellVisibility();\n  }",
+    /_applyPreviewShellVisibility\(\) \{\s*if \(this\._isPreviewPageEnabled\(\) && this\._isPreviewPageActive\(\)\) \{\s*this\._ensurePreviewLayoutShell\(\);\s*\} else \{\s*this\._removePreviewLayoutShell\(\);\s*\}\s*this\._previewPageController\.applyPreviewShellVisibility\(\);\s*\}/s.test(
+      source,
     ),
     true,
   );

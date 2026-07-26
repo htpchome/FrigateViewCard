@@ -217,8 +217,6 @@ export function buildPopupShellMarkup({ icons, version }) {
 }
 
 export function buildMainLayoutShellMarkup({
-  previewShellHeader,
-  previewFooterIcon,
   liveEngineWrap,
   infoRow,
   pageNav,
@@ -226,13 +224,6 @@ export function buildMainLayoutShellMarkup({
   rightColumnShell,
 }) {
   return `<div class="layout" id="layout">
-
-          ${previewShellHeader}
-          <div class="preview-shell" id="preview-shell"></div>
-          <div class="preview-shell-footer" id="preview-shell-footer">
-            <div class="frigate-view">${previewFooterIcon}</div>
-          </div>
-
           <div class="col-left" id="col-left">
             ${liveEngineWrap}
 
@@ -244,4 +235,15 @@ export function buildMainLayoutShellMarkup({
           ${rightColumnShell}
 
         </div>`;
+}
+
+export function buildPreviewLayoutShellMarkup({
+  previewShellHeader,
+  previewFooterIcon,
+}) {
+  return `${previewShellHeader}
+          <div class="preview-shell" id="preview-shell"></div>
+          <div class="preview-shell-footer" id="preview-shell-footer">
+            <div class="frigate-view">${previewFooterIcon}</div>
+          </div>`;
 }

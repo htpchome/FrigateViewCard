@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.931";
+const VERSION = "1.0.932";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3180,8 +3180,6 @@ function buildPopupShellMarkup({ icons, version }) {
           </div>`;
 }
 function buildMainLayoutShellMarkup({
-  previewShellHeader,
-  previewFooterIcon,
   liveEngineWrap,
   infoRow,
   pageNav,
@@ -3189,13 +3187,6 @@ function buildMainLayoutShellMarkup({
   rightColumnShell
 }) {
   return `<div class="layout" id="layout">
-
-          ${previewShellHeader}
-          <div class="preview-shell" id="preview-shell"></div>
-          <div class="preview-shell-footer" id="preview-shell-footer">
-            <div class="frigate-view">${previewFooterIcon}</div>
-          </div>
-
           <div class="col-left" id="col-left">
             ${liveEngineWrap}
 
@@ -3207,6 +3198,16 @@ function buildMainLayoutShellMarkup({
           ${rightColumnShell}
 
         </div>`;
+}
+function buildPreviewLayoutShellMarkup({
+  previewShellHeader,
+  previewFooterIcon
+}) {
+  return `${previewShellHeader}
+          <div class="preview-shell" id="preview-shell"></div>
+          <div class="preview-shell-footer" id="preview-shell-footer">
+            <div class="frigate-view">${previewFooterIcon}</div>
+          </div>`;
 }
 
 // src/card/review-list-model.js
@@ -7726,7 +7727,48 @@ const FrigateViewCard = class extends HTMLElement {
     return this._previewPageController.previewShowTitleBarsEnabled();
   }
   _applyPreviewShellVisibility() {
+    if (this._isPreviewPageEnabled() && this._isPreviewPageActive()) {
+      this._ensurePreviewLayoutShell();
+    } else {
+      this._removePreviewLayoutShell();
+    }
     this._previewPageController.applyPreviewShellVisibility();
+  }
+  _buildPreviewLayoutShellMarkup() {
+    const title = this._config.title || (this._config.cameras.length === 1 ? cap(camDisplayName(this._config.cameras[0])) : "Cameras") || "Camera";
+    const subtitle = this._subtitleText();
+    const pageNav = this._pageNavMarkup();
+    const previewShellHeader = buildPreviewShellHeaderMarkup({
+      title,
+      subtitle,
+      pageNav
+    });
+    return buildPreviewLayoutShellMarkup({
+      previewShellHeader,
+      previewFooterIcon: ICONS.frigateview
+    });
+  }
+  _ensurePreviewLayoutShell() {
+    const existingShell = this._$("#preview-shell");
+    if (existingShell) return existingShell;
+    const layout = this._$("#layout");
+    const leftColumn = this._$("#col-left");
+    if (!layout || !leftColumn) return null;
+    leftColumn.insertAdjacentHTML(
+      "beforebegin",
+      this._buildPreviewLayoutShellMarkup()
+    );
+    this._domCache = {};
+    return this._$("#preview-shell");
+  }
+  _removePreviewLayoutShell() {
+    let removed = false;
+    ["#preview-shell-header", "#preview-shell", "#preview-shell-footer"].map((selector) => this._$(selector)).forEach((el) => {
+      if (!el) return;
+      el.remove();
+      removed = true;
+    });
+    if (removed) this._domCache = {};
   }
   _clearPreviewTimers() {
     this._previewAlertController.clearTimers();
@@ -7778,7 +7820,17 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _renderPreviewPage() {
-    const shell = this._$("#preview-shell");
+    if (!this._isPreviewPageEnabled()) {
+      this._teardownPreviewMedia();
+      this._applyPreviewShellVisibility();
+      return;
+    }
+    if (!this._isPreviewPageActive()) {
+      this._teardownPreviewMedia();
+      this._applyPreviewShellVisibility();
+      return;
+    }
+    const shell = this._ensurePreviewLayoutShell();
     if (!shell) return;
     const titleEl = this._$("#preview-shell-title");
     const subtitleEl = this._$("#preview-shell-subtitle");
@@ -7786,15 +7838,6 @@ const FrigateViewCard = class extends HTMLElement {
       titleEl.textContent = this._config.title || (this._config.cameras.length === 1 ? cap(camDisplayName(this._config.cameras[0])) : "Cameras") || "Camera";
     }
     if (subtitleEl) subtitleEl.textContent = this._subtitleText();
-    if (!this._isPreviewPageEnabled()) {
-      shell.innerHTML = "";
-      this._applyPreviewShellVisibility();
-      return;
-    }
-    if (!this._isPreviewPageActive()) {
-      this._applyPreviewShellVisibility();
-      return;
-    }
     const cameras = Array.isArray(this._config?.cameras) ? this._config.cameras.slice(0, 9) : [];
     const showTitleBars = this._previewShowTitleBarsEnabled();
     const liveStreamHint = this._previewLiveStreamHint();
@@ -9072,11 +9115,6 @@ const FrigateViewCard = class extends HTMLElement {
     const showCamSwitcher = this._config.cameras.length > 1 || this._isPreviewPageEnabled();
     const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
     const pageNav = this._pageNavMarkup();
-    const previewShellHeader = buildPreviewShellHeaderMarkup({
-      title,
-      subtitle,
-      pageNav
-    });
     const infoRow = buildInfoRowMarkup({
       title,
       subtitle,
@@ -9091,8 +9129,6 @@ const FrigateViewCard = class extends HTMLElement {
       tabsMarkup: this._buildTabsMarkup()
     });
     const mainLayoutShell = buildMainLayoutShellMarkup({
-      previewShellHeader,
-      previewFooterIcon: ICONS.frigateview,
       liveEngineWrap,
       infoRow,
       pageNav,
