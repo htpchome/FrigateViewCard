@@ -7565,7 +7565,7 @@ export class FrigateViewCard extends HTMLElement {
   // ── browse / filter ───────────────────────────────────────
   _applyBrowse() {
     const b = this._$("#browse");
-    if (b) b.style.display = "block";
+    if (b) b.style.display = "flex";
   }
   _toggleBrowse() {
     this._browseOpen = !this._browseOpen;

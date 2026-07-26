@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.942";
+const VERSION = "1.0.943";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11791,7 +11791,7 @@ const FrigateViewCard = class extends HTMLElement {
   // ── browse / filter ───────────────────────────────────────
   _applyBrowse() {
     const b = this._$("#browse");
-    if (b) b.style.display = "block";
+    if (b) b.style.display = "flex";
   }
   _toggleBrowse() {
     this._browseOpen = !this._browseOpen;
