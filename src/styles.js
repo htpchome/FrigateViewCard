@@ -1,7 +1,7 @@
 export const STYLES = `
   :host {
-    height: var(--card-host-height, 100%) !important;
-    max-height: var(--card-host-height, 100%) !important;
+    height: 100% !important;
+    max-height: 100% !important;
     --rotate-vw: 100vw;
     --rotate-vh: 100%; 
     --rotate-ox: 0px;
@@ -19,7 +19,7 @@ export const STYLES = `
     --handle-color: #e0e0e0;
   }
 
-  /* ── theme variables (dark = default) ── */
+  /* ── theme variables ── */
   .card {
         --c-bg-main:   var(--card-background-color);
         --c-bg-panel:  var(--secondary-background-color);
@@ -48,11 +48,13 @@ export const STYLES = `
     min-height: 0 !important;
     height: 100% !important;
     max-height: 100% !important;
-    display: flex !important; /* Establishes the vertical link */
-    flex-direction: column;
     overflow: hidden !important;
     padding: 0 !important;
     margin: 0 !important;
+    
+    /* 1. CRITICAL: Pass percentage heights down to the inner card */
+    display: flex !important;
+    flex-direction: column;
   }
 
   .card {
@@ -82,16 +84,14 @@ export const STYLES = `
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;}
 
-  /* FIX: Cleared max-height viewport tracking completely */
   .card .layout {
     display: flex;
     flex-direction: column;
     height: 100%;
-    max-height: 100% !important; /* Changed from 100dvh to 100% */
     width: 100%;
     overflow: hidden !important;
-}
-  .card .layout.wide-view{flex-direction:row;}
+  }
+  .card .layout.wide-view { flex-direction: row; }
   
   .card .col-left {
     flex: 0 1 auto; 
@@ -105,12 +105,12 @@ export const STYLES = `
   .card .col-left > * { flex: 0 0 auto; }
   .card .col-left > .feed-area { flex: 1 1 auto; min-height: 0; }
 
-  /* FIX: Forces the right panel to obey card container size limits */
+  /* 2. CRITICAL: Lock the right panel container to the remaining card space */
   .card .col-right {
-    flex: 1 1 0%;          /* Fills space but allows inner contents to contract */
+    flex: 1 1 0%;          
     display: flex;
     flex-direction: column;
-    min-height: 0;         /* Crucial: overrides default content height expansion */
+    min-height: 0;         /* Allows shrinking smaller than the dynamic text components */
     height: 100%; 
     width: 100%; 
     position: relative;
@@ -118,15 +118,15 @@ export const STYLES = `
   
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
 
-  /* FIX: Cleaned up the conflicting height rules so the bar triggers */
+  /* 3. CRITICAL: Enforce standard scrolling on browse bounds */
   .card .browse {
-    flex: 1 1 0%;                  /* Automatically claim all remaining space below the header */
-    display: block !important;     /* Essential for standard browser scrolling */
+    flex: 1 1 0%;                  /* Fills exactly what remains inside col-right */
+    display: block !important;     /* Restores native browser block scroll tracking */
     padding: 0 10px;
     margin: 0;
     min-height: 0;
-    height: auto !important;       /* Stripped out rigid 95% which broke the flex chain */
-    overflow-y: auto !important;   /* Spawns the scrollbar the millisecond content clips */
+    height: auto !important;       /* Removed the hardcoded 95% causing the layout leak */
+    overflow-y: auto !important;   /* Triggers scrollbars the moment your lists overflow */
     position: relative;
   }
 
