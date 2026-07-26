@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.918";
+const VERSION = "1.0.919";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -203,11 +203,12 @@ ha-card {
     display: flex;
     flex-direction: column; 
     flex: 1 1 0%;           
-    min-height: 0;          
-    height: 100%;           
+    min-height: 0;         
+    height: 100%; 
+    width:100%;          
     max-height: 100%;
     background: #ffcc33;
-    overflow: hidden;  
+    overflow: hidden; 
 }
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
@@ -228,6 +229,7 @@ ha-card {
     overflow-y: auto !important;   
     overflow-x: hidden;
     padding: 10px;
+    width:100%;
 }
 
 .card .browse-head {
@@ -268,7 +270,9 @@ ha-card {
     letter-spacing: 0.02em;
     line-height: 1.4;
 }
-
+  .card .browse::-webkit-scrollbar{width:8px;}
+  .card .browse::-webkit-scrollbar-track{background:transparent;}
+  .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;}
 
 
   .prev-next{display:inline-flex;align-items:center;gap:4px;font-size: 0.85rem;padding-inline: 0.3em;padding-block: 0.3em;line-height: 1;  border-radius: 999em;
@@ -307,10 +311,7 @@ ha-card {
     100% { transform: translateX(0); }
   }
   
-  .card .browse::-webkit-scrollbar{width:8px;}
-  .card .browse::-webkit-scrollbar-track{background:transparent;}
-  .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;}
-
+ 
   /* \u2500\u2500 event list \u2500\u2500 */
 .list {
     height: auto;
