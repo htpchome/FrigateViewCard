@@ -75,7 +75,7 @@ ha-card {
     flex-direction: column;
     flex-grow: 1;
     min-height: 0;
-    height:100%;
+    max-height:100%;
 }
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
