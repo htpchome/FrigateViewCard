@@ -86,3 +86,41 @@ test("StreamOrchestrator stop disconnects all strategies", async () => {
   assert.ok(webrtc.state.disconnectCalls >= 1);
   assert.ok(mse.state.disconnectCalls >= 1);
 });
+
+test("StreamOrchestrator returns null and stops all strategies when all fail", async () => {
+  const state = {
+    webrtcDisconnects: 0,
+    mseDisconnects: 0,
+  };
+
+  const orchestrator = new StreamOrchestrator({
+    strategies: [
+      {
+        type: "webrtc",
+        connect: async () => {
+          throw new Error("webrtc failed");
+        },
+        disconnect: async () => {
+          state.webrtcDisconnects += 1;
+        },
+      },
+      {
+        type: "mse",
+        connect: async () => {
+          throw new Error("mse failed");
+        },
+        disconnect: async () => {
+          state.mseDisconnects += 1;
+        },
+      },
+    ],
+    preferredType: "webrtc",
+    preferredWaitMs: 40,
+  });
+
+  const winner = await orchestrator.start();
+
+  assert.equal(winner, null);
+  assert.equal(state.webrtcDisconnects, 1);
+  assert.equal(state.mseDisconnects, 1);
+});

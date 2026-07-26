@@ -84,3 +84,18 @@ test("StreamStrategy disconnect aborts and destroys once", async () => {
   assert.equal(sawAbort, true);
   assert.equal(destroyCalls, 1);
 });
+
+test("StreamStrategy disconnect before connect is a no-op", async () => {
+  let connectCalls = 0;
+  const strategy = new StreamStrategy({
+    type: "hls",
+    connect: async () => {
+      connectCalls += 1;
+      return { ok: true, type: "hls", engine: { destroy: () => {} } };
+    },
+  });
+
+  await strategy.disconnect();
+
+  assert.equal(connectCalls, 0);
+});
