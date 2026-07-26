@@ -74,7 +74,7 @@ export const STYLES = `
     }
   .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex-shrink: 0;}
-  .card .col-right{  display:flex;flex-direction:column;flex-grow:1;flex-shrink: 1;min-height: 0;}
+  .card .col-right{display:flex;flex-direction:column;flex-grow:1;flex-shrink: 1;min-height: 0;overflow: hidden;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
