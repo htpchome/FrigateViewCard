@@ -1,10 +1,11 @@
 export const STYLES = `
   :host {
-    height: inherit !important;
+    height: 100% !important;
     max-height: 100% !important;
-    display: block;
+    display: flex !important;
+    flex-direction: column;
     --rotate-vw: 100vw;
-    --rotate-vh: 100dvh;
+    --rotate-vh: 100%; 
     --rotate-ox: 0px;
     --rotate-oy: 0px;
   }
@@ -39,6 +40,11 @@ export const STYLES = `
 ha-card {
     --ha-card-background: var(--c-bg-main) !important;
     background: var(--c-bg-main) !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden;
 }
 .card {
     --fvc-shadow-s: var(--ha-box-shadow-s);
@@ -77,14 +83,14 @@ ha-card {
     flex-shrink: 0;
 }
 .card .col-right {
-  display: flex;
-  flex-direction: column; 
-  flex: 1 1 auto;           
-  min-height: 0;          
-  height: calc(100% - var(--header-height, 56px)); 
-  max-height: 100%;
-  background: #ffcc33;
-  overflow: hidden;
+    display: flex;
+    flex-direction: column; 
+    flex: 1 1 0%;           
+    min-height: 0;          
+    height: 100%;           
+    max-height: 100%;
+    background: #ffcc33;
+    overflow: hidden;  
 }
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
@@ -98,11 +104,13 @@ ha-card {
     width: 100%;
 }
 .card .browse {
-  display: block !important; 
-  height: 100%;
-  overflow-y: scroll !important;
-  overflow-x: hidden;
-  padding: 10px;
+    display: block !important; 
+    flex: 1 1 0%;                  
+    height: auto !important;       
+    min-height: 0;                 
+    overflow-y: auto !important;   
+    overflow-x: hidden;
+    padding: 10px;
 }
 
 .card .browse-head {
