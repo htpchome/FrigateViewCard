@@ -1,6 +1,6 @@
 export const STYLES = `
   :host {
-    height: 100% !important;
+    height: inherit !important;
     max-height: 100% !important;
     display: block;
     --rotate-vw: 100vw;
@@ -79,9 +79,9 @@ ha-card {
 .card .col-right {
     display: flex;
     flex-direction: column;
-    flex-grow: 1;
-    min-height: 0;
-    height: 0; 
+    flex: 1 1 auto; 
+    min-height: 0;   
+    height: auto;   
     max-height: 100%;
 }
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
@@ -97,9 +97,10 @@ ha-card {
 }
 .card .browse {
     flex-grow: 1;
-    flex-shrink:1;
-    min-height:0;
-    overflow-y: scroll;
+    flex-shrink: 1;
+    flex-basis: auto;
+    height: 100%; 
+    overflow-y: auto !important;
     padding: 10px;
 }
 
