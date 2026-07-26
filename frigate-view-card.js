@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.926";
+const VERSION = "1.0.927";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -163,7 +163,7 @@ const STYLES = `
     background: var(--c-bg-main) !important;
     height: 100% !important;
     max-height: 100% !important;
-    display: flex !important;        /* CRITICAL: Starts the height pass-down */
+    display: flex !important;        
     flex-direction: column !important;
     overflow: hidden !important;
     padding: 0 !important;
@@ -200,9 +200,9 @@ const STYLES = `
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 0;              /* CRITICAL: Breaks infinite content stretching */
-    flex: 1 1 100%;         /* Forces it to exactly match the card boundaries */
-    min-height: 0;          /* Allows child elements to shrink safely [1] */
+    height: 0;              
+    flex: 1 1 100%;         
+    min-height: 0;          
     overflow: hidden !important;
     }
   .card .layout.wide-view{flex-direction:row;}
@@ -210,14 +210,13 @@ const STYLES = `
   .card .col-left > *{flex:0 0 auto;}
   .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
   .card .col-right{
-    display: flex;
-    flex-direction: column;
+    display: grid !important;
+    grid-template-rows: auto 1fr; 
+    height: 100%; 
     width: 100%;
-    height: 100%;           /* Pin to parent layout bounds */
-    min-height: 0;          /* Overrides min-height: auto content bloat [1] */
-    flex: 1 1 0%;           /* Claims space but allows truncation */
-    position: relative;
-    overflow: hidden;       /* Safely boxes in inner components */}
+    min-height: 0;                
+    overflow: hidden;            
+    position: relative;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
@@ -226,12 +225,11 @@ const STYLES = `
   .layout.wide-view .resize-handle::after{width:2px;height:32px;}
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
   .card .browse{
-    display: block !important; /* Block is required for native browser scroll tracking mechanics */
+    display: block !important; 
+    height: 100%;
     width: 100%;
-    height: 0;                 /* Tells the layout engine to ignore content dimensions */
-    flex: 1 1 100%;            /* Fills remaining spaces right to the bottom pixel */
-    min-height: 0;             /* Forces truncation boundary markers */
-    overflow-y: auto !important; /* Triggers scroll mechanics precisely at the cutoff point */
+    min-height: 0;                
+    overflow-y: auto !important;  
     overflow-x: hidden;
     padding: 0 10px;
     margin: 0;
