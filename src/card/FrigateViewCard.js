@@ -345,6 +345,8 @@ export class FrigateViewCard extends HTMLElement {
     this._reloadPending = false;
     this._reloadAfterLoad = false;
     this._realtimeHeadPollT = null;
+    this._nonTightPenaltyRetryRaf = 0;
+    this._nonTightPenaltyRetryCount = 0;
     this._switchLoadT = null;
     this._popupDrag = null;
     this._popupHandlers = null;
@@ -981,6 +983,10 @@ export class FrigateViewCard extends HTMLElement {
     };
   }
   disconnectedCallback() {
+    if (this._nonTightPenaltyRetryRaf) {
+      cancelAnimationFrame(this._nonTightPenaltyRetryRaf);
+      this._nonTightPenaltyRetryRaf = 0;
+    }
     if (this._disconnectTeardownT) clearTimeout(this._disconnectTeardownT);
     this._disconnectTeardownT = setTimeout(() => {
       this._disconnectTeardownT = null;
@@ -5179,7 +5185,8 @@ export class FrigateViewCard extends HTMLElement {
       Number.isFinite(numericHeight) &&
       numericHeight > 0;
     const tightMarginsEnabled = this._config?.tight_margins === true;
-    const nonTightMarginHeightPenaltyPx = tightMarginsEnabled ? 0 : 20;
+    const nonTightMarginHeightPenaltyPx =
+      this._resolveNonTightMarginHeightPenaltyPx(tightMarginsEnabled);
     const haCardH = getComputedStyle(this)
       .getPropertyValue("--ha-card-height")
       .trim();
@@ -5264,6 +5271,68 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._syncHostOuterStyles();
   }
+
+  _resolveNonTightMarginHeightPenaltyPx(tightMarginsEnabled) {
+    if (tightMarginsEnabled) {
+      this._nonTightPenaltyRetryCount = 0;
+      return 0;
+    }
+
+    const px = (value) => {
+      const parsed = Number.parseFloat(String(value || "").trim());
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    let penalty = 0;
+    const parentStyle = this.parentElement
+      ? getComputedStyle(this.parentElement)
+      : null;
+    if (parentStyle) {
+      penalty +=
+        px(parentStyle.marginTop) +
+        px(parentStyle.marginBottom) +
+        px(parentStyle.paddingTop) +
+        px(parentStyle.paddingBottom);
+    }
+
+    let element = this;
+    while (element) {
+      if (element.tagName === "HUI-SECTIONS-VIEW") {
+        const style = getComputedStyle(element);
+        const explicitGap = px(
+          style.getPropertyValue("--ha-view-sections-row-gap"),
+        );
+        const rowGap = px(style.rowGap);
+        penalty += Math.max(explicitGap, rowGap, 0);
+        break;
+      }
+      element = element.parentNode || element.host;
+    }
+
+    const resolvedPenalty = Math.max(0, penalty);
+    if (resolvedPenalty > 0) {
+      this._nonTightPenaltyRetryCount = 0;
+      return resolvedPenalty;
+    }
+
+    if (
+      this.isConnected &&
+      !this._nonTightPenaltyRetryRaf &&
+      this._nonTightPenaltyRetryCount < 2
+    ) {
+      this._nonTightPenaltyRetryCount += 1;
+      this._nonTightPenaltyRetryRaf = requestAnimationFrame(() => {
+        this._nonTightPenaltyRetryRaf = 0;
+        requestAnimationFrame(() => {
+          if (!this.isConnected || this._config?.tight_margins === true) return;
+          this._applyCardStyle();
+        });
+      });
+    }
+
+    return 0;
+  }
+
   _isCardVisible() {
     if (!this.isConnected) return false;
     if (document.visibilityState === "hidden") return false;
