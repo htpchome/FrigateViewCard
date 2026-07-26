@@ -83,6 +83,7 @@ ha-card {
     min-height: 0;   
     height: auto;   
     max-height: 100%;
+    background:#ffcc33;
 }
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
