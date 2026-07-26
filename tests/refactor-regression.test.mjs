@@ -24,6 +24,33 @@ test("live mount attempts pass the target entity through strategy start", () => 
   );
 });
 
+test("go2rtc helpers honor per-camera HA direct policy guard", () => {
+  assert.equal(
+    /_shouldUseGo2RtcForEntity\(entity\) \{[\s\S]*?_cameraConnectionType\(key\) !== "ha_direct";[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_tryMountGo2RTCMSE\([\s\S]*?!this\._shouldUseGo2RtcForEntity\(entity\)\) return false;/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_tryMountGo2RTCWebRTC\([\s\S]*?!this\._shouldUseGo2RtcForEntity\(entity\)\) return false;/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_tryMountGo2RTCHLS\([\s\S]*?!this\._shouldUseGo2RtcForEntity\(entity\)\) return false;/.test(
+      source,
+    ),
+    true,
+  );
+});
+
 test("event list thumbnails use browser lazy loading", () => {
   assert.equal((source.match(/loading="lazy"/g) || []).length >= 3, true);
 });

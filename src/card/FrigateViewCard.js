@@ -1341,6 +1341,12 @@ export class FrigateViewCard extends HTMLElement {
     return normalizeCameraConnectionType(cam?.connection_type);
   }
 
+  _shouldUseGo2RtcForEntity(entity) {
+    const key = String(entity || "").trim();
+    if (!key) return false;
+    return this._cameraConnectionType(key) !== "ha_direct";
+  }
+
   _cameraDisableHlsDesktop(entity) {
     if (!entity) return false;
     const cam = this._config?.cameras?.find((c) => c?.entity === entity);
@@ -2103,7 +2109,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcWebSocketUrlForEntity(entity) {
-    if (!entity) return null;
+    if (!entity || !this._shouldUseGo2RtcForEntity(entity)) return null;
     await this._discoverOne(entity);
     const { clientId, cam } = this._cameraContext(entity);
     if (!clientId || !cam) return null;
@@ -2228,6 +2234,7 @@ export class FrigateViewCard extends HTMLElement {
   async _go2rtcHlsUrlForEntity(entity = "") {
     const targetEntity = String(entity || "").trim();
     if (!targetEntity) return await this._go2rtcHlsUrl();
+    if (!this._shouldUseGo2RtcForEntity(targetEntity)) return null;
     if (!this._supportsNativeHlsPlayback()) return null;
 
     await this._discoverOne(targetEntity);
@@ -2308,6 +2315,7 @@ export class FrigateViewCard extends HTMLElement {
     const abortSignal = options?.abortSignal || null;
     const entity = options?.entity || this._activeCam?.entity || "";
     const muted = options?.muted ?? this._streamMuted;
+    if (!this._shouldUseGo2RtcForEntity(entity)) return false;
     if (abortSignal?.aborted) return false;
     if (!("WebSocket" in window) || !("MediaSource" in window)) {
       this._ffDebug("MSE unavailable in browser", {
@@ -2639,6 +2647,7 @@ export class FrigateViewCard extends HTMLElement {
     }
 
     const entity = options?.entity || this._activeCam?.entity || "";
+    if (!this._shouldUseGo2RtcForEntity(entity)) return false;
     const wsUrl = await this._go2rtcWebSocketUrlForMountEntity(entity);
     if (!wsUrl) return false;
 
@@ -2759,6 +2768,7 @@ export class FrigateViewCard extends HTMLElement {
     const abortSignal = options?.abortSignal || null;
     if (abortSignal?.aborted) return false;
     const entity = options?.entity || this._activeCam?.entity || "";
+    if (!this._shouldUseGo2RtcForEntity(entity)) return false;
     const hlsUrl = await this._go2rtcHlsUrlForEntity(entity);
     if (!hlsUrl) return false;
 
