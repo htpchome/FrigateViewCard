@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.930";
+const VERSION = "1.0.931";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -117,19 +117,18 @@ const ICONS = {
 // src/styles.js
 const STYLES = `
   :host {
-    /* 1. Force the custom element host wrapper to hold a rigid viewport block */
-    display: block !important;
-    height: var(--card-host-height, calc(100vh - var(--header-height, 56px))) !important;
-    max-height: var(--card-host-height, calc(100vh - var(--header-height, 56px))) !important;
+    height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
+    max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
+    --rotate-vw: 100vw;
+    --rotate-vh: 100dvh;
+    --rotate-ox: 0px;
+    --rotate-oy: 0px;
     min-height: 0;
+    display: block !important;
     overflow: hidden;
     box-sizing: border-box !important;
     position: relative;
-    border: 1px solid var(--secondary-background-color,#7a7a7a);
-    --rotate-vw: 100vw;
-    --rotate-vh: 100vh;
-    --rotate-ox: 0px;
-    --rotate-oy: 0px;
+    border:1px solid var(--secondary-background-color,#7a7a7a);
   }
   :host {
     --popup-z-index: 1000;
@@ -138,7 +137,7 @@ const STYLES = `
   }
 
   /* \u2500\u2500 theme variables (dark = default) \u2500\u2500 */
-  .card {
+    .card {
         --c-bg-main:   var(--card-background-color);
         --c-bg-panel:  var(--secondary-background-color);
         --c-bg-deep:   #111111;
@@ -157,22 +156,21 @@ const STYLES = `
         --c-off:       #FCA5A5;
         --c-bg-scrub:  #c2f2c1;
         --c-bg-alert:  #dc3146;
-  }
-
-  /* \u2500\u2500 responsive layout \u2500\u2500 */
+    }
+  /* \u2500\u2500 responsive layout    \u2500\u2500 */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-    background: var(--c-bg-main) !important;
-    display: block !important;
-    height: 100% !important;
-    max-height: 100% !important;
     min-height: 0 !important;
-    overflow: hidden !important;
+    height: 100%;
+    overflow:hidden !important;
     padding: 0 !important;
     margin: 0 !important;
-  }
+    min-height: 0 !important;
+    height: 100%;
+    overflow:hidden !important;
 
-  .card {
+    }
+  .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
     --fvc-shadow-m: var(--ha-box-shadow-m);
     --fvc-outer-shadow-m: var(--ha-box-shadow-m);
@@ -181,57 +179,32 @@ const STYLES = `
     --fvc-border-active:  1px solid var(--c-primary);
     --fvc-border-radius: 15px;
     --fvc-outer-border-radius: 15px;
-    color: var(--c-text);
+    color:var(--c-text);
+    overflow:hidden;
     box-sizing: border-box;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    
-    /* 2. Anchor the card wrapper to the explicit host constraints */
-    display: block !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
-    border: 1px solid var(--secondary-background-color,#7a7a7a);
-    position: relative;
-  }
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    display:flex;
+    flex-direction:column;
+    height:100%;
+    position:relative;
+    top:0;
+    left:0;
+    overflow:hidden !important;
+    border:1px solid var(--secondary-background-color,#7a7a7a);
+    }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;}
 
-  /* 3. Reconfigure the layouts into CSS Grids to handle explicit row calculations */
-  .card .layout {
-    background: var(--c-bg-main);
-    display: grid !important;
-    grid-template-rows: 100%; /* Vertical layout containment */
-    width: 100%;
-    height: 100%;
-    max-height: 100%;
-    overflow: hidden !important;
-  }
-  
-  .card .layout.wide-view {
-    grid-template-rows: none;
-    grid-template-columns: 1fr 1fr; /* Handles horizontal split view templates */
-  }
-
-  .card .col-left {
-    display: none; /* Auto-managed if active, keeps layout clear */
-  }
-
-  /* 4. Force the right panel column into a grid framework */
-  .card .col-right {
-    display: grid !important;
-    grid-template-rows: auto 1fr; /* Header element is calculated first, browse fills exactly what remains */
-    height: 100%; 
-    width: 100%;
-    min-height: 0;
-    max-height: 100%;
-    background: #ffcc33;
-    overflow: hidden;
-    position: relative;
-  }
-
+  .card .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
+    overflow: hidden !important;}
+  .card .layout.wide-view{flex-direction:row;}
+  .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
+  .card .col-left > *{flex:0 0 auto;}
+  .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
+  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
@@ -239,24 +212,20 @@ const STYLES = `
   .layout.wide-view .resize-handle{width:6px;height:auto;cursor:col-resize;}
   .layout.wide-view .resize-handle::after{width:2px;height:32px;}
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
-
-  /* 5. Clean, rigid scrollpane parameters */
-  .card .browse {
-    display: block !important; 
-    height: 100%;
-    width: 100%;
-    min-height: 0;               /* Critical marker: stops list cards from blowing past grid container limits */
-    overflow-y: scroll !important; /* Force displays scrollbar layout lines instantly */
-    overflow-x: hidden;
-    padding: 0 10px;
-    margin: 0;
-    position: relative;
-  }
+  .card .browse{
+    flex:1 1 0;
+    flex-direction: column; 
+    padding:0 10px;
+    margin:0;
+    min-height:0;
+    height:95%;
+    overflow-y:auto;
+    position:relative}
 
   .card .browse-head{display:flex;align-items:center;justify-content:center;min-height:1.5rem;max-height:1.65em;flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;padding:1px 8px;}
   .card.recordings-browse-head-tall:not(.mobile) .browse-head{min-height:3.5rem;max-height:none;}
   .browse-head-left {display:flex;flex:1;justify-content:center;align-items:center;flex: 0 0 auto; }
-  .browse-head-right {display:flex;justify-content: center;align-items: center;flex: 0 0 auto;}
+  .browse-head-right {display:flex;justify-content center;align-items: center;flex: 0 0 auto;}
   .browse-head-middle {flex:1;text-align:center;font-weight:700;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
 
   .prev-next{display:inline-flex;align-items:center;gap:4px;font-size: 0.85rem;padding-inline: 0.3em;padding-block: 0.3em;line-height: 1;  border-radius: 999em;
@@ -267,7 +236,7 @@ const STYLES = `
     cursor:pointer;
     white-space:nowrap;
     box-shadow: var(--fvc-shadow-s);
-  }
+    }
   
   .prev-next:hover{color:var(--c-primary-d);}
   .prev-next.active{background:var(--c-primary-d);color:var(--c-text-rev);}
@@ -300,11 +269,12 @@ const STYLES = `
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;}
 
   /* \u2500\u2500 event list \u2500\u2500 */
-  .list{display: block; height: auto; min-height:0;} 
+  .list{flex:1;flex-direction: column;min-height:0;} 
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
   .list-day-label{position:relative;z-index:1;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-main);border:none;text-align: center;}
   .list-day-label-first{display:none;}
+
 
   .list-item{position: relative;display:flex;flex-wrap:wrap;gap:9px;align-items:center;
     background:var(--c-bg-panel-main);margin-bottom:5px; border: var(--fvc-border-s);
@@ -319,8 +289,7 @@ const STYLES = `
   .et img{width:160px;height:90px;object-fit:cover;display:block;}
   .alert{outline: 2px solid var(--c-bg-alert);} 
   .detection{outline: 2px solid var(--c-accent);}
-  .eact{display:flex;flex-direction:row;align-items:center;gap:4px;flex-shrink:0;padding-right:10px;}
-
+  .eact{display:flex;flex-direction:row;align-items:center;gap:4px;flex-shrink:0;padding:right:10px}
   .tph{width:160px;height:90px;display:flex;align-items:center;justify-content:center;border-radius:var(--fvc-border-radius);background:linear-gradient(135deg,#1a2840,#0d1520);
     color:var(--c-primary-d);} 
   .tph svg{width:20px;height:20px;}
@@ -752,6 +721,8 @@ const STYLES = `
   @media (max-width: 720px){
     .popup-info-grid{grid-template-columns:minmax(0,1fr);}
   }
+
+
 
 `;
 
