@@ -25,11 +25,11 @@ export class StreamOrchestrator {
     }));
 
     const candidates = this._attempts.map((attempt) =>
-      attempt.promise.then((result) => ({
+      (async () => ({
         type: attempt.type,
         strategy: attempt.strategy,
-        result,
-      })),
+        result: await attempt.promise,
+      }))(),
     );
 
     const preferredCandidate = this._attempts.find(
@@ -47,17 +47,26 @@ export class StreamOrchestrator {
         } else if (this._preferredWaitMs <= 0) {
           winner = fallbackWinner;
         } else {
-          const preferredWithTimeout = await Promise.race([
-            preferredCandidate.promise
-              .then((result) => ({
+          const preferredWinnerPromise = (async () => {
+            try {
+              const result = await preferredCandidate.promise;
+              return {
                 type: preferredCandidate.type,
                 strategy: preferredCandidate.strategy,
                 result,
-              }))
-              .catch(() => null),
-            new Promise((resolve) => {
-              setTimeout(() => resolve(null), this._preferredWaitMs);
-            }),
+              };
+            } catch (_) {
+              return null;
+            }
+          })();
+
+          const timeoutPromise = new Promise((resolve) => {
+            setTimeout(() => resolve(null), this._preferredWaitMs);
+          });
+
+          const preferredWithTimeout = await Promise.race([
+            preferredWinnerPromise,
+            timeoutPromise,
           ]);
           winner = preferredWithTimeout || fallbackWinner;
         }
