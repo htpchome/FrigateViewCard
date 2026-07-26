@@ -1,4 +1,8 @@
 export const STYLES = `
+  body,html {
+  height: 100%;
+  margin: 0;
+  }
   :host {
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
@@ -56,7 +60,6 @@ export const STYLES = `
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     height: 100%;
     width: 100%;
-    overflow: hidden;
     border-radius:18px;
 
     }
@@ -71,7 +74,7 @@ export const STYLES = `
     }
   .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex-shrink: 0;}
-  .card .col-right{  display: flex;flex-direction: column; flex-grow: 1; min-height: 0;}
+  .card .col-right{  display:flex;flex-direction:column;flex-grow:1;flex-shrink: 1;min-height: 0;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}

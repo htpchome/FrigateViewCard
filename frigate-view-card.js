@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.902";
+const VERSION = "1.0.903";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -116,6 +116,10 @@ const ICONS = {
 
 // src/styles.js
 const STYLES = `
+  body,html {
+  height: 100%;
+  margin: 0;
+  }
   :host {
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
@@ -173,7 +177,6 @@ const STYLES = `
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     height: 100%;
     width: 100%;
-    overflow: hidden;
     border-radius:18px;
 
     }
@@ -188,7 +191,7 @@ const STYLES = `
     }
   .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex-shrink: 0;}
-  .card .col-right{  display: flex;flex-direction: column; flex-grow: 1; min-height: 0;}
+  .card .col-right{  display:flex;flex-direction:column;flex-grow:1;flex-shrink: 1;min-height: 0;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
