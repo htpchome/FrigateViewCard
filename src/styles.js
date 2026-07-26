@@ -62,6 +62,7 @@ ha-card {
     background: var(--c-bg-main);
     display: flex;
     flex-direction: column;
+    width: 100%;
     height: 100%;
     max-height:100%;
     overflow: hidden !important;
