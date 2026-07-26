@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.921";
+const VERSION = "1.0.922";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -119,7 +119,7 @@ const STYLES = `
   :host {
   height: var(--card-host-height, 100%) !important;
   max-height: var(--card-host-height, 100%) !important;
-  display: block; /* Essential for custom web components to honor height rules */
+  display: block; 
   border: 1px solid var(--secondary-background-color,#7a7a7a);
   margin: 0;
     --rotate-vw: 100vw;

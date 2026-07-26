@@ -2,7 +2,7 @@ export const STYLES = `
   :host {
   height: var(--card-host-height, 100%) !important;
   max-height: var(--card-host-height, 100%) !important;
-  display: block; /* Essential for custom web components to honor height rules */
+  display: block; 
   border: 1px solid var(--secondary-background-color,#7a7a7a);
   margin: 0;
     --rotate-vw: 100vw;
