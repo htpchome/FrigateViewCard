@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.947";
+const VERSION = "1.0.949";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9656,20 +9656,44 @@ const FrigateViewCard = class extends HTMLElement {
     const previewHeightFallback = isCompactPreview && !vh ? "320px" : "";
     const configuredHeightUnit = this._config.stream_height_unit || "vh";
     const configuredHeightValue = vh != null ? `${vh}${configuredHeightUnit}` : "";
-    const isFullPercentHeight = configuredHeightUnit === "%" && Number(vh) === 100;
+    const numericHeight = Number(vh);
+    const isPercentHeight = configuredHeightUnit === "%" && Number.isFinite(numericHeight) && numericHeight > 0;
     const haCardH = getComputedStyle(this).getPropertyValue("--ha-card-height").trim();
     if (vh) {
-      const shouldResolvePercentToHaCardHeight = isFullPercentHeight && !!haCardH;
-      const resolvedHeight = shouldResolvePercentToHaCardHeight ? haCardH : configuredHeightValue;
-      if (isFullPercentHeight && !haCardH) {
-        this.style.removeProperty("--card-host-height");
-      } else {
-        this.style.setProperty("--card-host-height", resolvedHeight);
-      }
-      if (isFullPercentHeight) {
+      if (isPercentHeight) {
+        const ratio = Math.max(0.01, numericHeight / 100);
+        const pxFromCssLength = (value) => {
+          const match = /^(-?\d+(?:\.\d+)?)px$/i.exec(
+            String(value || "").trim()
+          );
+          if (!match) return null;
+          const parsed = Number(match[1]);
+          return Number.isFinite(parsed) ? parsed : null;
+        };
+        const headerHeightPx = pxFromCssLength(
+          getComputedStyle(this).getPropertyValue("--header-height")
+        ) ?? 56;
+        const viewportHeightPx = Math.max(
+          0,
+          (window.visualViewport?.height || window.innerHeight || 0) - headerHeightPx
+        );
+        const referenceHeightPx = pxFromCssLength(haCardH) ?? (viewportHeightPx > 0 ? viewportHeightPx : null);
+        if (referenceHeightPx != null) {
+          const resolvedPercentHeightPx = Math.max(
+            1,
+            referenceHeightPx * ratio
+          );
+          this.style.setProperty(
+            "--card-host-height",
+            `${resolvedPercentHeightPx}px`
+          );
+        } else {
+          this.style.removeProperty("--card-host-height");
+        }
         card.style.removeProperty("--view-height");
       } else {
-        card.style.setProperty("--view-height", resolvedHeight);
+        this.style.setProperty("--card-host-height", configuredHeightValue);
+        card.style.setProperty("--view-height", configuredHeightValue);
       }
     } else if (previewHeightFallback) {
       this.style.setProperty("--card-host-height", previewHeightFallback);

@@ -5165,30 +5165,47 @@ export class FrigateViewCard extends HTMLElement {
     const configuredHeightUnit = this._config.stream_height_unit || "vh";
     const configuredHeightValue =
       vh != null ? `${vh}${configuredHeightUnit}` : "";
-    const isFullPercentHeight =
-      configuredHeightUnit === "%" && Number(vh) === 100;
+    const numericHeight = Number(vh);
+    const isPercentHeight =
+      configuredHeightUnit === "%" &&
+      Number.isFinite(numericHeight) &&
+      numericHeight > 0;
     const haCardH = getComputedStyle(this)
       .getPropertyValue("--ha-card-height")
       .trim();
     if (vh) {
-      const shouldResolvePercentToHaCardHeight =
-        isFullPercentHeight && !!haCardH;
-      const resolvedHeight = shouldResolvePercentToHaCardHeight
-        ? haCardH
-        : configuredHeightValue;
-
-      if (isFullPercentHeight && !haCardH) {
-        // In non-panel dashboard layouts, unresolved 100% can collapse.
-        // Fall back to the default host-height chain instead of forcing 100%.
-        this.style.removeProperty("--card-host-height");
-      } else {
-        this.style.setProperty("--card-host-height", resolvedHeight);
-      }
-      if (isFullPercentHeight) {
-        // Keep full-height card while letting browse retain vertical room.
+      if (isPercentHeight) {
+        const ratio = Math.max(0.01, numericHeight / 100);
+        const pxFromCssLength = (value) => {
+          const match = /^(-?\d+(?:\.\d+)?)px$/i.exec(String(value || "").trim());
+          if (!match) return null;
+          const parsed = Number(match[1]);
+          return Number.isFinite(parsed) ? parsed : null;
+        };
+        const headerHeightPx =
+          pxFromCssLength(getComputedStyle(this).getPropertyValue("--header-height")) ??
+          56;
+        const viewportHeightPx = Math.max(
+          0,
+          (window.visualViewport?.height || window.innerHeight || 0) -
+            headerHeightPx,
+        );
+        const referenceHeightPx =
+          pxFromCssLength(haCardH) ?? (viewportHeightPx > 0 ? viewportHeightPx : null);
+        if (referenceHeightPx != null) {
+          const resolvedPercentHeightPx = Math.max(1, referenceHeightPx * ratio);
+          this.style.setProperty(
+            "--card-host-height",
+            `${resolvedPercentHeightPx}px`,
+          );
+        } else {
+          this.style.removeProperty("--card-host-height");
+        }
+        // Percent card-height limits should not also clamp live engine max-height.
         card.style.removeProperty("--view-height");
       } else {
-        card.style.setProperty("--view-height", resolvedHeight);
+        this.style.setProperty("--card-host-height", configuredHeightValue);
+        card.style.setProperty("--view-height", configuredHeightValue);
       }
     } else if (previewHeightFallback) {
       this.style.setProperty("--card-host-height", previewHeightFallback);
