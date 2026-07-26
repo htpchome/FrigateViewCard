@@ -15,6 +15,15 @@ test("no .then chains remain after async/await refactor", () => {
   assert.equal(/\.then\(/.test(source), false);
 });
 
+test("live mount attempts pass the target entity through strategy start", () => {
+  assert.equal(
+    /attempt\.start\(\{\s*abortSignal,\s*entity:\s*targetEntity\s*\}\)/.test(
+      source,
+    ),
+    true,
+  );
+});
+
 test("event list thumbnails use browser lazy loading", () => {
   assert.equal((source.match(/loading="lazy"/g) || []).length >= 3, true);
 });
