@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.901";
+const VERSION = "1.0.902";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -123,12 +123,9 @@ const STYLES = `
     --rotate-vh: 100dvh;
     --rotate-ox: 0px;
     --rotate-oy: 0px;
-    min-height: 0;
-    display: block !important;
-    overflow: hidden;
-    box-sizing: border-box !important;
-    position: relative;
     border:1px solid var(--secondary-background-color,#7a7a7a);
+    height:100%;
+    margin:0;
   }
   :host {
     --popup-z-index: 1000;
@@ -160,15 +157,6 @@ const STYLES = `
   /* \u2500\u2500 responsive layout    \u2500\u2500 */
   ha-card {
     --ha-card-background: var(--c-bg-main) !important;
-    min-height: 0 !important;
-    height: 100%;
-    overflow:hidden !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    min-height: 0 !important;
-    height: 100%;
-    overflow:hidden !important;
-
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
@@ -180,31 +168,27 @@ const STYLES = `
     --fvc-border-radius: 15px;
     --fvc-outer-border-radius: 15px;
     color:var(--c-text);
-    overflow:hidden;
-    box-sizing: border-box;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-    display:flex;
-    flex-direction:column;
-    height:100%;
-    position:relative;
-    top:0;
-    left:0;
-    overflow:hidden !important;
-    border:1px solid var(--secondary-background-color,#7a7a7a);
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    border-radius:18px;
+
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;}
 
-  .card .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
-    overflow: hidden !important;}
+  .card .layout{
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    }
   .card .layout.wide-view{flex-direction:row;}
-  .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
-  .card .col-left > *{flex:0 0 auto;}
-  .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
-  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
+  .card .col-left{flex-shrink: 0;}
+  .card .col-right{  display: flex;flex-direction: column; flex-grow: 1; min-height: 0;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
@@ -213,14 +197,9 @@ const STYLES = `
   .layout.wide-view .resize-handle::after{width:2px;height:32px;}
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
   .card .browse{
-    flex:1 1 0;
-    flex-direction: column; 
-    padding:0 10px;
-    margin:0;
-    min-height:0;
-    height:95%;
-    overflow-y:auto;
-    position:relative}
+  flex-grow: 1;
+  overflow-y: scroll;
+  padding:10px;}
 
   .card .browse-head{display:flex;align-items:center;justify-content:center;min-height:1.5rem;max-height:1.65em;flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;padding:1px 8px;}
   .card.recordings-browse-head-tall:not(.mobile) .browse-head{min-height:3.5rem;max-height:none;}
@@ -269,7 +248,7 @@ const STYLES = `
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;}
 
   /* \u2500\u2500 event list \u2500\u2500 */
-  .list{flex:1;flex-direction: column;min-height:0;} 
+  .list{height:auto;display:block;} 
   .list-head{justify-content:space-between;align-items:center;margin-bottom:8px;}
   .list-day-sec{position:relative;}
   .list-day-label{position:relative;z-index:1;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-main);border:none;text-align: center;}
