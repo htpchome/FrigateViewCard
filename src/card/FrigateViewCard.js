@@ -5170,9 +5170,7 @@ export class FrigateViewCard extends HTMLElement {
       .trim();
     if (vh) {
       const shouldResolvePercentToHaCardHeight =
-        configuredHeightUnit === "%" &&
-        Number(vh) === 100 &&
-        !!haCardH;
+        configuredHeightUnit === "%" && Number(vh) === 100 && !!haCardH;
       const resolvedHeight = shouldResolvePercentToHaCardHeight
         ? haCardH
         : configuredHeightValue;
