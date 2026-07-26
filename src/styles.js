@@ -82,9 +82,10 @@ export const STYLES = `
   .card .layout{    
     display: flex;
     flex-direction: column;
-    height: 100%;          /* Fills the card perfectly */
     width: 100%;
-    min-height: 0;         /* Allows shrinking inside dashboard boundaries */
+    height: 0;              /* CRITICAL: Breaks infinite content stretching */
+    flex: 1 1 100%;         /* Forces it to exactly match the card boundaries */
+    min-height: 0;          /* Allows child elements to shrink safely [1] */
     overflow: hidden !important;
     }
   .card .layout.wide-view{flex-direction:row;}
@@ -92,12 +93,14 @@ export const STYLES = `
   .card .col-left > *{flex:0 0 auto;}
   .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
   .card .col-right{
-    flex: 1 1 0%;          /* Dynamically claims all remaining layout space */
     display: flex;
     flex-direction: column;
-    min-height: 0;         /* Critical for forcing inner scroll behavior */
     width: 100%;
-    position: relative;}
+    height: 100%;           /* Pin to parent layout bounds */
+    min-height: 0;          /* Overrides min-height: auto content bloat [1] */
+    flex: 1 1 0%;           /* Claims space but allows truncation */
+    position: relative;
+    overflow: hidden;       /* Safely boxes in inner components */}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
@@ -106,15 +109,15 @@ export const STYLES = `
   .layout.wide-view .resize-handle::after{width:2px;height:32px;}
   .card #eng-wrap{min-height:0;flex-shrink: 0;}
   .card .browse{
-    flex: 1 1 0%;          /* Claims 100% of remaining right-column height */
-    display: flex;
-    flex-direction: column; 
+    display: block !important; /* Block is required for native browser scroll tracking mechanics */
+    width: 100%;
+    height: 0;                 /* Tells the layout engine to ignore content dimensions */
+    flex: 1 1 100%;            /* Fills remaining spaces right to the bottom pixel */
+    min-height: 0;             /* Forces truncation boundary markers */
+    overflow-y: auto !important; /* Triggers scroll mechanics precisely at the cutoff point */
+    overflow-x: hidden;
     padding: 0 10px;
     margin: 0;
-    min-height: 0;         /* Allows container to truncate list items */
-    height: auto !important; /* [FIXED] Stripped 95% which caused the height to shrink */
-    overflow-y: auto !important; /* Displays scrollbar only when items overflow */
-    position: relative;
     }
 
   .card .browse-head{display:flex;align-items:center;justify-content:center;min-height:1.5rem;max-height:1.65em;flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;padding:1px 8px;}
