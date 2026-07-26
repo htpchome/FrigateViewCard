@@ -77,13 +77,14 @@ ha-card {
     flex-shrink: 0;
 }
 .card .col-right {
-    display: flex;
-    flex-direction: column; 
-    flex: 1 1 0%;           
-    min-height: 0;          
-    height: 0;              
-    max-height: 100%;
-    background: #ffcc33;
+  display: flex;
+  flex-direction: column; 
+  flex: 1 1 auto;           
+  min-height: 0;          
+  height: calc(100% - var(--header-height, 56px)); 
+  max-height: 100%;
+  background: #ffcc33;
+  overflow: hidden;
 }
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
@@ -97,11 +98,11 @@ ha-card {
     width: 100%;
 }
 .card .browse {
-    flex: 1 1 0%;                  
-    min-height: 0;                
-    overflow-y: auto !important;   
-    touch-action: auto !important; 
-    padding: 10px;
+  display: block !important; 
+  height: 100%;
+  overflow-y: scroll !important;
+  overflow-x: hidden;
+  padding: 10px;
 }
 
 .card .browse-head {
