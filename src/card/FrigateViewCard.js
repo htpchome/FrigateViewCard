@@ -5162,19 +5162,29 @@ export class FrigateViewCard extends HTMLElement {
     const isCompactPreview =
       this._config?.compact_preview === true || this._isPreviewContext();
     const previewHeightFallback = isCompactPreview && !vh ? "320px" : "";
+    const configuredHeightUnit = this._config.stream_height_unit || "vh";
+    const configuredHeightValue =
+      vh != null ? `${vh}${configuredHeightUnit}` : "";
+    const haCardH = getComputedStyle(this)
+      .getPropertyValue("--ha-card-height")
+      .trim();
     if (vh) {
-      const unit = this._config.stream_height_unit || "vh";
-      this.style.setProperty("--card-host-height", `${vh}${unit}`);
-      card.style.setProperty("--view-height", `${vh}${unit}`);
+      const shouldResolvePercentToHaCardHeight =
+        configuredHeightUnit === "%" &&
+        Number(vh) === 100 &&
+        !!haCardH;
+      const resolvedHeight = shouldResolvePercentToHaCardHeight
+        ? haCardH
+        : configuredHeightValue;
+
+      this.style.setProperty("--card-host-height", resolvedHeight);
+      card.style.setProperty("--view-height", resolvedHeight);
     } else if (previewHeightFallback) {
       this.style.setProperty("--card-host-height", previewHeightFallback);
       card.style.setProperty("--view-height", previewHeightFallback);
     } else {
       this.style.removeProperty("--card-host-height");
-      // Check if HA Sections injected a card height on the host element
-      const haCardH = getComputedStyle(this)
-        .getPropertyValue("--ha-card-height")
-        .trim();
+      // Check if HA Sections injected a card height on the host element.
       if (haCardH) {
         card.style.setProperty("--view-height", haCardH);
       } else {

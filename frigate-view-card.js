@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.939";
+const VERSION = "1.0.940";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -198,13 +198,13 @@ const STYLES = `
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;}
 
-  .card .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
-    overflow: hidden !important;}
+  .card .layout{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;width:100%;
+    overflow:hidden !important;}
   .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
   .card .col-left > *{flex:0 0 auto;}
   .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
-  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
+  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;overflow:hidden;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
@@ -218,7 +218,7 @@ const STYLES = `
     padding:0 10px;
     margin:0;
     min-height:0;
-    height:95%;
+    height:auto;
     overflow-y:auto;
     position:relative}
 
@@ -9653,16 +9653,19 @@ const FrigateViewCard = class extends HTMLElement {
     const vh = this._config.stream_height;
     const isCompactPreview = this._config?.compact_preview === true || this._isPreviewContext();
     const previewHeightFallback = isCompactPreview && !vh ? "320px" : "";
+    const configuredHeightUnit = this._config.stream_height_unit || "vh";
+    const configuredHeightValue = vh != null ? `${vh}${configuredHeightUnit}` : "";
+    const haCardH = getComputedStyle(this).getPropertyValue("--ha-card-height").trim();
     if (vh) {
-      const unit = this._config.stream_height_unit || "vh";
-      this.style.setProperty("--card-host-height", `${vh}${unit}`);
-      card.style.setProperty("--view-height", `${vh}${unit}`);
+      const shouldResolvePercentToHaCardHeight = configuredHeightUnit === "%" && Number(vh) === 100 && !!haCardH;
+      const resolvedHeight = shouldResolvePercentToHaCardHeight ? haCardH : configuredHeightValue;
+      this.style.setProperty("--card-host-height", resolvedHeight);
+      card.style.setProperty("--view-height", resolvedHeight);
     } else if (previewHeightFallback) {
       this.style.setProperty("--card-host-height", previewHeightFallback);
       card.style.setProperty("--view-height", previewHeightFallback);
     } else {
       this.style.removeProperty("--card-host-height");
-      const haCardH = getComputedStyle(this).getPropertyValue("--ha-card-height").trim();
       if (haCardH) {
         card.style.setProperty("--view-height", haCardH);
       } else {

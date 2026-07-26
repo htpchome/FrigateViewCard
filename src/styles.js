@@ -81,13 +81,13 @@ export const STYLES = `
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;}
 
-  .card .layout{display:flex;flex-direction:column;max-height:100dvh;height: 100%;width:100%;
-    overflow: hidden !important;}
+  .card .layout{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;width:100%;
+    overflow:hidden !important;}
   .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
   .card .col-left > *{flex:0 0 auto;}
   .card .col-left > .feed-area{flex:1 1 auto;min-height:0;}
-  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;}
+  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;overflow:hidden;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
@@ -101,7 +101,7 @@ export const STYLES = `
     padding:0 10px;
     margin:0;
     min-height:0;
-    height:95%;
+    height:auto;
     overflow-y:auto;
     position:relative}
 
