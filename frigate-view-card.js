@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.996";
+const VERSION = "1.0.997";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6892,6 +6892,20 @@ const FrigateViewCard = class extends HTMLElement {
         try {
           const result = await deferredAttempt.promise.catch(() => null);
           if (!result?.ok || result.type !== "webrtc") return;
+          const takeoverStable = await this._waitForStreamStart(
+            result.slot,
+            1500,
+            {
+              minCurrentTime: 0.1,
+              minDecodedFrames: 2,
+              requireReadyState: 2,
+              strict: true
+            }
+          );
+          if (!takeoverStable) {
+            cleanupStaleWinnerResult(result);
+            return;
+          }
           if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
             cleanupStaleWinnerResult(result);
             return;
@@ -6900,11 +6914,11 @@ const FrigateViewCard = class extends HTMLElement {
             cleanupStaleWinnerResult(result);
             return;
           }
+          this._adoptMountedAttempt(slot, result);
           try {
             winnerEngine?.destroy?.();
           } catch (_) {
           }
-          this._adoptMountedAttempt(slot, result);
         } finally {
           this._pendingMountDestroyers = (this._pendingMountDestroyers || []).filter((attempt) => attempt?.type !== "webrtc");
           this._pendingWebRTCTakeoverTimer = null;
