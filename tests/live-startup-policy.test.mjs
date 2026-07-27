@@ -34,7 +34,7 @@ test("resolveWebRtcStartup applies browser-agnostic defaults", () => {
   assert.equal(policy.minCurrentTime, 0.05);
   assert.equal(policy.minDecodedFrames, 1);
   assert.equal(policy.requireReadyState, 0);
-  assert.equal(policy.strict, false);
+  assert.equal(policy.strict, true);
 });
 
 test("resolveHlsStartup applies default wait and floor", () => {

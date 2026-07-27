@@ -27,7 +27,7 @@ export const resolveWebRtcStartup = ({ startup = {} }) => ({
   minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
   minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
   requireReadyState: normalizeNumber(startup.requireReadyState, 0),
-  strict: startup.strict ?? false,
+  strict: startup.strict !== false,
 });
 
 export const resolveHlsStartup = (startup = {}) => ({

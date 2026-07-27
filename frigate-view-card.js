@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1003";
+const VERSION = "1.0.1004";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3104,7 +3104,7 @@ const resolveWebRtcStartup = ({ startup = {} }) => ({
   minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
   minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
   requireReadyState: normalizeNumber(startup.requireReadyState, 0),
-  strict: startup.strict ?? false
+  strict: startup.strict !== false
 });
 const resolveHlsStartup = (startup = {}) => ({
   waitMs: normalizeWaitMs(startup.waitMs, 5e3)
@@ -7871,21 +7871,6 @@ const FrigateViewCard = class extends HTMLElement {
     let wsOpenLogged = false;
     let firstIceCandidateSent = false;
     let firstRemoteIceLogged = false;
-    let firstTrackSeen = false;
-    let transportConnected = false;
-    let resolveQuickStart = null;
-    const quickStartPromise = new Promise((resolve) => {
-      resolveQuickStart = resolve;
-    });
-    const maybeResolveQuickStart = () => {
-      if (!firstTrackSeen || !transportConnected) return;
-      if (!resolveQuickStart) return;
-      resolveQuickStart(true);
-      resolveQuickStart = null;
-      this._ffDebug("WebRTC quick-start condition met", {
-        elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-      });
-    };
     pc.addEventListener("track", (ev) => {
       if (ev.streams && ev.streams[0]) {
         video.srcObject = ev.streams[0];
@@ -7903,15 +7888,9 @@ const FrigateViewCard = class extends HTMLElement {
           kind: ev?.track?.kind || "unknown"
         });
       }
-      firstTrackSeen = true;
-      maybeResolveQuickStart();
     });
     pc.addEventListener("connectionstatechange", () => {
       const state = String(pc.connectionState || "");
-      if (state === "connected") {
-        transportConnected = true;
-        maybeResolveQuickStart();
-      }
       this._ffDebug("WebRTC connection state", {
         state,
         elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
@@ -7919,10 +7898,6 @@ const FrigateViewCard = class extends HTMLElement {
     });
     pc.addEventListener("iceconnectionstatechange", () => {
       const state = String(pc.iceConnectionState || "");
-      if (state === "connected" || state === "completed") {
-        transportConnected = true;
-        maybeResolveQuickStart();
-      }
       this._ffDebug("WebRTC ICE state", {
         state,
         elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
@@ -8002,19 +7977,13 @@ const FrigateViewCard = class extends HTMLElement {
       }
     });
     const startupGateStartMs = this._ffNowMs();
-    const started = await Promise.race([
-      this._waitForStreamStart(video, waitMs, {
-        minCurrentTime,
-        minDecodedFrames,
-        requireReadyState,
-        strict,
-        abortSignal
-      }),
-      quickStartPromise
-    ]);
-    if (resolveQuickStart) {
-      resolveQuickStart = null;
-    }
+    const started = await this._waitForStreamStart(video, waitMs, {
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict,
+      abortSignal
+    });
     this._ffDebug("WebRTC startup gate finished", {
       started,
       gateElapsedMs: Math.round(this._ffNowMs() - startupGateStartMs),

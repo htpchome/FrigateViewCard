@@ -2901,22 +2901,6 @@ export class FrigateViewCard extends HTMLElement {
     let wsOpenLogged = false;
     let firstIceCandidateSent = false;
     let firstRemoteIceLogged = false;
-    let firstTrackSeen = false;
-    let transportConnected = false;
-    let resolveQuickStart = null;
-    const quickStartPromise = new Promise((resolve) => {
-      resolveQuickStart = resolve;
-    });
-
-    const maybeResolveQuickStart = () => {
-      if (!firstTrackSeen || !transportConnected) return;
-      if (!resolveQuickStart) return;
-      resolveQuickStart(true);
-      resolveQuickStart = null;
-      this._ffDebug("WebRTC quick-start condition met", {
-        elapsedMs: Math.round(this._ffNowMs() - traceStartMs),
-      });
-    };
 
     pc.addEventListener("track", (ev) => {
       if (ev.streams && ev.streams[0]) {
@@ -2934,16 +2918,10 @@ export class FrigateViewCard extends HTMLElement {
           kind: ev?.track?.kind || "unknown",
         });
       }
-      firstTrackSeen = true;
-      maybeResolveQuickStart();
     });
 
     pc.addEventListener("connectionstatechange", () => {
       const state = String(pc.connectionState || "");
-      if (state === "connected") {
-        transportConnected = true;
-        maybeResolveQuickStart();
-      }
       this._ffDebug("WebRTC connection state", {
         state,
         elapsedMs: Math.round(this._ffNowMs() - traceStartMs),
@@ -2952,10 +2930,6 @@ export class FrigateViewCard extends HTMLElement {
 
     pc.addEventListener("iceconnectionstatechange", () => {
       const state = String(pc.iceConnectionState || "");
-      if (state === "connected" || state === "completed") {
-        transportConnected = true;
-        maybeResolveQuickStart();
-      }
       this._ffDebug("WebRTC ICE state", {
         state,
         elapsedMs: Math.round(this._ffNowMs() - traceStartMs),
@@ -3038,19 +3012,13 @@ export class FrigateViewCard extends HTMLElement {
     });
 
     const startupGateStartMs = this._ffNowMs();
-    const started = await Promise.race([
-      this._waitForStreamStart(video, waitMs, {
-        minCurrentTime,
-        minDecodedFrames,
-        requireReadyState,
-        strict,
-        abortSignal,
-      }),
-      quickStartPromise,
-    ]);
-    if (resolveQuickStart) {
-      resolveQuickStart = null;
-    }
+    const started = await this._waitForStreamStart(video, waitMs, {
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict,
+      abortSignal,
+    });
     this._ffDebug("WebRTC startup gate finished", {
       started,
       gateElapsedMs: Math.round(this._ffNowMs() - startupGateStartMs),
