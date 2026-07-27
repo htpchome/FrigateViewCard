@@ -116,6 +116,24 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
+    /_getGo2RtcHlsInFlight\([^)]*\) \{[\s\S]*?_go2rtcHlsProbeInFlight\.get\(cacheKey\)[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_setGo2RtcHlsInFlight\([^)]*\) \{[\s\S]*?_go2rtcHlsProbeInFlight\.set\(cacheKey, probePromise\)[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_clearGo2RtcHlsInFlight\([^)]*\) \{[\s\S]*?_go2rtcHlsProbeInFlight\.delete\(cacheKey\)[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
     /GO2RTC_CACHE_TTL_MS\s*=\s*Object\.freeze\([\s\S]*?wsSignedPath[\s\S]*?hlsPlaylist[\s\S]*?hlsNegative[\s\S]*?\)/.test(
       source,
     ),
@@ -163,6 +181,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     ),
     true,
   );
+  assert.equal(source.includes("this._getGo2RtcHlsInFlight(cacheKey)"), true);
+  assert.equal(
+    source.includes("this._setGo2RtcHlsInFlight(cacheKey, probePromise)"),
+    true,
+  );
+  assert.equal(source.includes("this._clearGo2RtcHlsInFlight(cacheKey)"), true);
   assert.equal(
     /GO2RTC_CACHE_TTL_MS\.hlsPlaylist/.test(source) &&
       /GO2RTC_CACHE_TTL_MS\.hlsNegative/.test(source) &&

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.983";
+const VERSION = "1.0.984";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7254,6 +7254,15 @@ const FrigateViewCard = class extends HTMLElement {
       nowMs
     });
   }
+  _getGo2RtcHlsInFlight(cacheKey) {
+    return this._go2rtcHlsProbeInFlight.get(cacheKey);
+  }
+  _setGo2RtcHlsInFlight(cacheKey, probePromise) {
+    this._go2rtcHlsProbeInFlight.set(cacheKey, probePromise);
+  }
+  _clearGo2RtcHlsInFlight(cacheKey) {
+    this._go2rtcHlsProbeInFlight.delete(cacheKey);
+  }
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
@@ -7281,16 +7290,16 @@ const FrigateViewCard = class extends HTMLElement {
     const nowMs = Date.now();
     const cachedUrl = this._getGo2RtcHlsCachedUrl(cacheKey, nowMs);
     if (cachedUrl !== void 0) return cachedUrl;
-    const inFlight = this._go2rtcHlsProbeInFlight.get(cacheKey);
+    const inFlight = this._getGo2RtcHlsInFlight(cacheKey);
     if (inFlight) return inFlight;
     const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
     const probePromise = this._probeGo2RtcHlsCandidates(
       candidates,
       cacheKey
     ).finally(() => {
-      this._go2rtcHlsProbeInFlight.delete(cacheKey);
+      this._clearGo2RtcHlsInFlight(cacheKey);
     });
-    this._go2rtcHlsProbeInFlight.set(cacheKey, probePromise);
+    this._setGo2RtcHlsInFlight(cacheKey, probePromise);
     return probePromise;
   }
   async _tryMountGo2RTCMSE(slot, startup = null, options = {}) {

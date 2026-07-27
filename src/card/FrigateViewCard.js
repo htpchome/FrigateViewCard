@@ -2235,6 +2235,18 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
+  _getGo2RtcHlsInFlight(cacheKey) {
+    return this._go2rtcHlsProbeInFlight.get(cacheKey);
+  }
+
+  _setGo2RtcHlsInFlight(cacheKey, probePromise) {
+    this._go2rtcHlsProbeInFlight.set(cacheKey, probePromise);
+  }
+
+  _clearGo2RtcHlsInFlight(cacheKey) {
+    this._go2rtcHlsProbeInFlight.delete(cacheKey);
+  }
+
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
@@ -2267,7 +2279,7 @@ export class FrigateViewCard extends HTMLElement {
     const cachedUrl = this._getGo2RtcHlsCachedUrl(cacheKey, nowMs);
     if (cachedUrl !== undefined) return cachedUrl;
 
-    const inFlight = this._go2rtcHlsProbeInFlight.get(cacheKey);
+    const inFlight = this._getGo2RtcHlsInFlight(cacheKey);
     if (inFlight) return inFlight;
 
     const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
@@ -2276,10 +2288,10 @@ export class FrigateViewCard extends HTMLElement {
       candidates,
       cacheKey,
     ).finally(() => {
-      this._go2rtcHlsProbeInFlight.delete(cacheKey);
+      this._clearGo2RtcHlsInFlight(cacheKey);
     });
 
-    this._go2rtcHlsProbeInFlight.set(cacheKey, probePromise);
+    this._setGo2RtcHlsInFlight(cacheKey, probePromise);
     return probePromise;
   }
 
