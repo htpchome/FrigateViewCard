@@ -86,6 +86,18 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
+    /_getGo2RtcWsCachedUrl\([^)]*\) \{[\s\S]*?getFreshCachedValue\([\s\S]*?_go2rtcWsUrlCache[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_cacheGo2RtcWsUrl\([^)]*\) \{[\s\S]*?setCachedValue\([\s\S]*?_go2rtcWsUrlCache[\s\S]*?GO2RTC_CACHE_TTL_MS\.wsSignedPath[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
     /GO2RTC_CACHE_TTL_MS\s*=\s*Object\.freeze\([\s\S]*?wsSignedPath[\s\S]*?hlsPlaylist[\s\S]*?hlsNegative[\s\S]*?\)/.test(
       source,
     ),
@@ -116,7 +128,7 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
-    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const signedPath = await this\._signedGo2RtcWsPath\(path\);[\s\S]*?this\._toAbsoluteSignedPath\(signedPath\)/.test(
+    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?this\._getGo2RtcWsCachedUrl\(cacheKey, nowMs\)[\s\S]*?const signedPath = await this\._signedGo2RtcWsPath\(path\);[\s\S]*?this\._toAbsoluteSignedPath\(signedPath\)[\s\S]*?this\._cacheGo2RtcWsUrl\(cacheKey, wsUrl, nowMs\)/.test(
       source,
     ),
     true,

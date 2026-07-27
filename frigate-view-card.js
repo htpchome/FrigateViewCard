@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.979";
+const VERSION = "1.0.980";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7212,23 +7212,14 @@ const FrigateViewCard = class extends HTMLElement {
       return path;
     }
   }
-  async _go2rtcWebSocketUrlForEntity(entity) {
-    const targetEntity = this._resolveGo2RtcEntity(entity);
-    if (!targetEntity) return null;
-    const ctx = await this._go2rtcContextForEntity(targetEntity);
-    if (!ctx) return null;
-    const { clientId, cam, cacheKey } = ctx;
-    const nowMs = Date.now();
-    const cachedUrl = getFreshCachedValue({
+  _getGo2RtcWsCachedUrl(cacheKey, nowMs) {
+    return getFreshCachedValue({
       cacheMap: this._go2rtcWsUrlCache,
       cacheKey,
       nowMs
     });
-    if (cachedUrl) return cachedUrl;
-    const path = buildGo2rtcWsPath({ clientId, cam });
-    const signedPath = await this._signedGo2RtcWsPath(path);
-    const abs = this._toAbsoluteSignedPath(signedPath);
-    const wsUrl = toWebSocketUrl(abs);
+  }
+  _cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs) {
     setCachedValue({
       cacheMap: this._go2rtcWsUrlCache,
       cacheKey,
@@ -7236,6 +7227,21 @@ const FrigateViewCard = class extends HTMLElement {
       ttlMs: GO2RTC_CACHE_TTL_MS.wsSignedPath,
       nowMs
     });
+  }
+  async _go2rtcWebSocketUrlForEntity(entity) {
+    const targetEntity = this._resolveGo2RtcEntity(entity);
+    if (!targetEntity) return null;
+    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    if (!ctx) return null;
+    const { clientId, cam, cacheKey } = ctx;
+    const nowMs = Date.now();
+    const cachedUrl = this._getGo2RtcWsCachedUrl(cacheKey, nowMs);
+    if (cachedUrl) return cachedUrl;
+    const path = buildGo2rtcWsPath({ clientId, cam });
+    const signedPath = await this._signedGo2RtcWsPath(path);
+    const abs = this._toAbsoluteSignedPath(signedPath);
+    const wsUrl = toWebSocketUrl(abs);
+    this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
     this._ffDebug("go2rtc websocket url", wsUrl);
     return wsUrl;
   }

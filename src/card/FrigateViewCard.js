@@ -2200,6 +2200,24 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
 
+  _getGo2RtcWsCachedUrl(cacheKey, nowMs) {
+    return getFreshCachedValue({
+      cacheMap: this._go2rtcWsUrlCache,
+      cacheKey,
+      nowMs,
+    });
+  }
+
+  _cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs) {
+    setCachedValue({
+      cacheMap: this._go2rtcWsUrlCache,
+      cacheKey,
+      url: wsUrl,
+      ttlMs: GO2RTC_CACHE_TTL_MS.wsSignedPath,
+      nowMs,
+    });
+  }
+
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
@@ -2207,11 +2225,7 @@ export class FrigateViewCard extends HTMLElement {
     if (!ctx) return null;
     const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
-    const cachedUrl = getFreshCachedValue({
-      cacheMap: this._go2rtcWsUrlCache,
-      cacheKey,
-      nowMs,
-    });
+    const cachedUrl = this._getGo2RtcWsCachedUrl(cacheKey, nowMs);
     if (cachedUrl) return cachedUrl;
 
     const path = buildGo2rtcWsPath({ clientId, cam });
@@ -2220,13 +2234,7 @@ export class FrigateViewCard extends HTMLElement {
     const abs = this._toAbsoluteSignedPath(signedPath);
     const wsUrl = toWebSocketUrl(abs);
     // Signed path expires in 1h; refresh a bit early.
-    setCachedValue({
-      cacheMap: this._go2rtcWsUrlCache,
-      cacheKey,
-      url: wsUrl,
-      ttlMs: GO2RTC_CACHE_TTL_MS.wsSignedPath,
-      nowMs,
-    });
+    this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
     this._ffDebug("go2rtc websocket url", wsUrl);
     return wsUrl;
   }
