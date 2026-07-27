@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1006";
+const VERSION = "1.0.1009";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4582,11 +4582,6 @@ const GridAlertController = class {
     this._lastAlertAt = now;
     this._lastAlertCam = entity;
     const changed = this.markAlertCamera(entity, severity || "alert");
-    this._host._ffDebug("Grid alert candidate", {
-      entity,
-      severity,
-      changed
-    });
     if (changed) this._host._scheduleGridRefresh();
   }
   handleRealtimeMessage(msg) {
@@ -5826,7 +5821,6 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._disconnectTeardownT) {
       clearTimeout(this._disconnectTeardownT);
       this._disconnectTeardownT = null;
-      this._ffDebug("Reconnect during disconnect grace; preserving engine");
     }
     if (this.parentElement) {
       this._parentOrigStyle = {
@@ -6177,7 +6171,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._disconnectTeardownT = setTimeout(() => {
       this._disconnectTeardownT = null;
       if (this.isConnected) return;
-      this._ffDebug("Running deferred disconnect teardown");
       this._teardownDisconnected();
     }, 2500);
   }
@@ -6374,24 +6367,12 @@ const FrigateViewCard = class extends HTMLElement {
       const dialogOpen = this._isCardEditorDialogOpen();
       const dashboardEdit = this._isDashboardEditMode();
       if (this._editorDialogOpenLast && !dialogOpen) {
-        this._ffDebug("Watchdog detected card editor close", {
-          prevOpen: this._editorDialogOpenLast,
-          nowOpen: dialogOpen
-        });
         this._scheduleResumeLive("watchdog-dialog-close");
       }
       if (this._lastEditorPreviewContext === true && !inEditorPreview) {
-        this._ffDebug("Watchdog detected editor preview exit", {
-          prevPreview: this._lastEditorPreviewContext,
-          nowPreview: inEditorPreview
-        });
         this._scheduleResumeLive("watchdog-edit-exit");
       }
       if (this._dashboardEditLast !== dashboardEdit) {
-        this._ffDebug("Watchdog detected dashboard edit toggle", {
-          prevDashboardEdit: this._dashboardEditLast,
-          nowDashboardEdit: dashboardEdit
-        });
         this._scheduleResumeLive(
           dashboardEdit ? "watchdog-dashboard-edit-on" : "watchdog-dashboard-edit-off"
         );
@@ -6554,37 +6535,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _isPreviewContext() {
     return this._isEditorPreviewContext() || this._isCardPickerPreviewContext();
-  }
-  _isLiveTraceEnabled() {
-    const cfg = this._config || {};
-    if (cfg?.debug_live_trace === true) return true;
-    if (cfg?.debug?.live_trace === true) return true;
-    if (cfg?.debug?.liveTrace === true) return true;
-    try {
-      const queryFlag = new URLSearchParams(window.location.search).get(
-        "frigate_view_card_debug"
-      );
-      if (queryFlag === "1" || queryFlag === "true") return true;
-    } catch (_) {
-    }
-    try {
-      const localFlag = window.localStorage?.getItem("frigateViewCardDebug");
-      if (localFlag === "1" || localFlag === "true") return true;
-    } catch (_) {
-    }
-    return false;
-  }
-  _ffNowMs() {
-    return Number(globalThis.performance?.now?.() || Date.now());
-  }
-  _ffDebug(msg, data = null) {
-    if (!this._isLiveTraceEnabled()) return;
-    const prefix = `[FrigateViewCard ${VERSION}]`;
-    if (data === null || data === void 0) {
-      console.debug(prefix, msg);
-      return;
-    }
-    console.debug(prefix, msg, data);
   }
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";
@@ -6872,10 +6822,6 @@ const FrigateViewCard = class extends HTMLElement {
     })) {
       return;
     }
-    this._ffDebug("Mount watchdog timeout; forcing recovery", {
-      mountToken,
-      mountTarget: this._mountTargetEntity
-    });
     this._applyMountTrackingState(
       applyMountWatchdogTimeout({ mountSeq: this._mountSeq })
     );
@@ -6919,19 +6865,10 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._pendingWebRTCTakeoverTimer = setTimeout(() => {
       void (async () => {
-        const takeoverStartMs = this._ffNowMs();
+        const takeoverStartMs = this.Date.now();
         try {
-          this._ffDebug("Deferred WebRTC takeover started", {
-            winnerType,
-            mountToken
-          });
           const result = await deferredAttempt.promise.catch(() => null);
           if (!result?.ok || result.type !== "webrtc") {
-            this._ffDebug("Deferred WebRTC takeover skipped (no result)", {
-              ok: Boolean(result?.ok),
-              type: result?.type || "",
-              elapsedMs: Math.round(this._ffNowMs() - takeoverStartMs)
-            });
             return;
           }
           const takeoverStable = await this._waitForStreamStart(
@@ -6945,32 +6882,18 @@ const FrigateViewCard = class extends HTMLElement {
             }
           );
           if (!takeoverStable) {
-            this._ffDebug("Deferred WebRTC takeover failed stability gate", {
-              elapsedMs: Math.round(this._ffNowMs() - takeoverStartMs)
-            });
             cleanupStaleWinnerResult(result);
             return;
           }
           if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
-            this._ffDebug("Deferred WebRTC takeover ignored (stale mount)", {
-              mountToken,
-              mountSeq: this._mountSeq,
-              elapsedMs: Math.round(this._ffNowMs() - takeoverStartMs)
-            });
             cleanupStaleWinnerResult(result);
             return;
           }
           if (this._engine !== winnerEngine) {
-            this._ffDebug("Deferred WebRTC takeover ignored (winner changed)", {
-              elapsedMs: Math.round(this._ffNowMs() - takeoverStartMs)
-            });
             cleanupStaleWinnerResult(result);
             return;
           }
           this._adoptMountedAttempt(slot, result);
-          this._ffDebug("Deferred WebRTC takeover committed", {
-            elapsedMs: Math.round(this._ffNowMs() - takeoverStartMs)
-          });
           try {
             winnerEngine?.destroy?.();
           } catch (_) {
@@ -7011,12 +6934,6 @@ const FrigateViewCard = class extends HTMLElement {
       )
     };
     const order = forcedType ? [forcedType] : ["webrtc", "mse", "hls"];
-    this._ffDebug("Live attempt order", {
-      forcedType: forcedType || "",
-      order,
-      entity: targetEntity,
-      connectionType
-    });
     return buildLiveAttemptPlan({
       connectionType,
       forcedType,
@@ -7025,7 +6942,7 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _mountLiveWithRace(slot, attempts, mountToken, targetEntity) {
-    const raceStartMs = this._ffNowMs();
+    const raceStartMs = this.Date.now();
     const strategies = attempts.map(
       (attempt) => createStrategyForType({
         type: attempt.type,
@@ -7060,13 +6977,6 @@ const FrigateViewCard = class extends HTMLElement {
     const winner = await orchestrator.start();
     const deferredPreferredAttempt = orchestrator.deferredPreferredAttempt;
     const deferredPreferredType = deferredPreferredAttempt?.type || "";
-    this._ffDebug("Live race resolved", {
-      winnerType: winner?.type || "",
-      winnerOk: Boolean(winner?.ok),
-      deferredPreferredType,
-      elapsedMs: Math.round(this._ffNowMs() - raceStartMs),
-      entity: targetEntity
-    });
     if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
       cleanupStaleWinnerResult(winner);
       slot?.clearOrchestrator?.(orchestrator);
@@ -7373,10 +7283,8 @@ const FrigateViewCard = class extends HTMLElement {
         expires: 3600
       });
       const signedPath = r?.path || path;
-      this._ffDebug("Signed go2rtc ws path", signedPath);
       return signedPath;
     } catch (e) {
-      this._ffDebug("Failed to sign go2rtc ws path", e?.message || String(e));
       return path;
     }
   }
@@ -7453,7 +7361,6 @@ const FrigateViewCard = class extends HTMLElement {
       const abs = this._toAbsoluteSignedPath(signedPath);
       const wsUrl = toWebSocketUrl(abs);
       this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
-      this._ffDebug("go2rtc websocket url", wsUrl);
       return wsUrl;
     })().finally(() => {
       this._clearGo2RtcWsInFlight(cacheKey);
@@ -7493,18 +7400,12 @@ const FrigateViewCard = class extends HTMLElement {
     if (!entity) return false;
     if (abortSignal?.aborted) return false;
     if (!("WebSocket" in window) || !("MediaSource" in window)) {
-      this._ffDebug("MSE unavailable in browser", {
-        hasWebSocket: "WebSocket" in window,
-        hasMediaSource: "MediaSource" in window
-      });
       return false;
     }
     const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) {
-      this._ffDebug("Missing go2rtc websocket URL");
       return false;
     }
-    this._ffDebug("Attempting direct go2rtc MSE stream mount");
     const video = createVideoElement(
       buildVideoOptionsForView(
         "live",
@@ -7544,7 +7445,6 @@ const FrigateViewCard = class extends HTMLElement {
       if (ws.readyState !== WebSocket.OPEN) return;
       const codecs = this._go2rtcCodecs(MediaSource.isTypeSupported);
       mseRequested = true;
-      this._ffDebug("Sending MSE codecs", codecs || "<empty>");
       ws.send(JSON.stringify({ type: "mse", value: codecs }));
     };
     const destroy = () => {
@@ -7581,33 +7481,19 @@ const FrigateViewCard = class extends HTMLElement {
     ms.addEventListener(
       "sourceopen",
       () => {
-        this._ffDebug("MediaSource opened", {
-          wsReadyState: ws.readyState
-        });
         requestMSE();
       },
       { once: true }
     );
     ws.addEventListener("open", () => {
-      this._ffDebug("go2rtc websocket opened");
       if (ms.readyState === "open") requestMSE();
     });
     ws.addEventListener("error", () => {
-      this._ffDebug("go2rtc websocket error");
       if (!startupAbort.signal.aborted) startupAbort.abort();
     });
     ws.addEventListener("close", (ev) => {
-      this._ffDebug("go2rtc websocket closed", {
-        code: ev.code,
-        reason: ev.reason,
-        wasClean: ev.wasClean
-      });
       if (!startupAbort.signal.aborted) startupAbort.abort();
       if (streamStarted && commit && this._engine === engine) {
-        this._ffDebug("Active MSE stream closed; scheduling recovery", {
-          code: ev.code,
-          reason: ev.reason
-        });
         this._scheduleResumeLive("mse-ws-closed");
       }
     });
@@ -7617,33 +7503,22 @@ const FrigateViewCard = class extends HTMLElement {
         try {
           msg = JSON.parse(ev.data);
         } catch (_) {
-          this._ffDebug("Received non-JSON text message");
           return;
         }
-        this._ffDebug("Received go2rtc JSON message", msg?.type || "<unknown>");
         if (msg?.type === "mse" && msg.value && ms.readyState === "open") {
           if (sb) return;
           try {
             const codecs = this._normalizeGo2RTCCodecs(msg.value);
             if (!codecs) {
-              this._ffDebug(
-                "Could not parse codecs from go2rtc mse message",
-                msg.value
-              );
               return;
             }
             const mime = `video/mp4; codecs="${codecs}"`;
-            this._ffDebug("Creating SourceBuffer", mime);
             if (!MediaSource.isTypeSupported(mime)) return;
             sb = ms.addSourceBuffer(mime);
             sb.mode = "segments";
             sb.addEventListener("updateend", appendNext);
             appendNext();
           } catch (e) {
-            this._ffDebug(
-              "SourceBuffer creation failed",
-              e?.message || String(e)
-            );
           }
         }
         return;
@@ -7651,7 +7526,6 @@ const FrigateViewCard = class extends HTMLElement {
       if (!(ev.data instanceof ArrayBuffer)) return;
       this._mseLastChunkAt = Date.now();
       this._mseChunkCount += 1;
-      this._ffDebug("Received binary MSE chunk", ev.data.byteLength);
       queue.push(ev.data);
       appendNext();
     });
@@ -7663,14 +7537,12 @@ const FrigateViewCard = class extends HTMLElement {
       abortSignal: startupAbort.signal
     });
     if (!started) {
-      this._ffDebug("Direct go2rtc MSE did not start within timeout");
       destroy();
       return false;
     }
     streamStarted = true;
     if (!commit) return { ok: true, type: "mse", engine, slot };
     this._setActiveStreamType("mse");
-    this._ffDebug("Direct go2rtc MSE started successfully");
     this._setStreamLoading(false);
     this._setStreamFallbackVisible(false);
     return true;
@@ -7778,7 +7650,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._mountGridSnapshotCell(cell, { entity, stateObj });
   }
   async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
-    const traceStartMs = this._ffNowMs();
+    const traceStartMs = this.Date.now();
     const {
       waitMs,
       minCurrentTime,
@@ -7789,28 +7661,14 @@ const FrigateViewCard = class extends HTMLElement {
       startup: startup || {}
     });
     const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
-    this._ffDebug("WebRTC mount attempt started", {
-      entity,
-      commit,
-      waitMs,
-      minCurrentTime,
-      minDecodedFrames,
-      requireReadyState,
-      strict
-    });
     if (abortSignal?.aborted) return false;
     if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
       return false;
     }
     if (!entity) return false;
-    const wsUrlStartMs = this._ffNowMs();
+    const wsUrlStartMs = this.Date.now();
     const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) return false;
-    this._ffDebug("WebRTC URL resolved", {
-      entity,
-      elapsedMs: Math.round(this._ffNowMs() - wsUrlStartMs),
-      totalMs: Math.round(this._ffNowMs() - traceStartMs)
-    });
     const video = createVideoElement(
       buildVideoOptionsForView(
         "live",
@@ -7876,33 +7734,18 @@ const FrigateViewCard = class extends HTMLElement {
       });
       if (!firstTrackLogged) {
         firstTrackLogged = true;
-        this._ffDebug("WebRTC first track received", {
-          elapsedMs: Math.round(this._ffNowMs() - traceStartMs),
-          kind: ev?.track?.kind || "unknown"
-        });
         if (video.requestVideoFrameCallback) {
           video.requestVideoFrameCallback(() => {
             if (!resolveFirstRenderedFrame) return;
             resolveFirstRenderedFrame(true);
             resolveFirstRenderedFrame = null;
-            this._ffDebug("WebRTC first rendered frame", {
-              elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-            });
           });
         }
       }
     });
     pc.addEventListener("connectionstatechange", () => {
-      this._ffDebug("WebRTC connection state", {
-        state: pc.connectionState,
-        elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-      });
     });
     pc.addEventListener("iceconnectionstatechange", () => {
-      this._ffDebug("WebRTC ICE state", {
-        state: pc.iceConnectionState,
-        elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-      });
     });
     pc.addEventListener("icecandidate", (ev) => {
       if (ws.readyState !== WebSocket.OPEN) return;
@@ -7910,9 +7753,6 @@ const FrigateViewCard = class extends HTMLElement {
       ws.send(JSON.stringify({ type: "webrtc/candidate", value: candidate }));
       if (!firstIceCandidateSent && candidate) {
         firstIceCandidateSent = true;
-        this._ffDebug("WebRTC first local ICE sent", {
-          elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-        });
       }
     });
     ws.addEventListener("message", (ev) => {
@@ -7925,9 +7765,6 @@ const FrigateViewCard = class extends HTMLElement {
       if (msg?.type === "webrtc/answer") {
         if (!answerLogged) {
           answerLogged = true;
-          this._ffDebug("WebRTC answer received", {
-            elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-          });
         }
         pc.setRemoteDescription({
           type: "answer",
@@ -7937,9 +7774,6 @@ const FrigateViewCard = class extends HTMLElement {
       } else if (msg?.type === "webrtc/candidate") {
         if (!firstRemoteIceLogged) {
           firstRemoteIceLogged = true;
-          this._ffDebug("WebRTC first remote ICE received", {
-            elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-          });
         }
         pc.addIceCandidate({ candidate: msg.value, sdpMid: "0" }).catch(
           () => {
@@ -7948,36 +7782,21 @@ const FrigateViewCard = class extends HTMLElement {
       }
     });
     ws.addEventListener("error", () => {
-      this._ffDebug("WebRTC websocket error", {
-        elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-      });
     });
     ws.addEventListener("close", (ev) => {
-      this._ffDebug("WebRTC websocket closed", {
-        code: ev.code,
-        reason: ev.reason,
-        wasClean: ev.wasClean,
-        elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-      });
     });
     ws.addEventListener("open", async () => {
       if (!wsOpenLogged) {
         wsOpenLogged = true;
-        this._ffDebug("WebRTC websocket opened", {
-          elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-        });
       }
       try {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         ws.send(JSON.stringify({ type: "webrtc/offer", value: offer.sdp }));
-        this._ffDebug("WebRTC offer sent", {
-          elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-        });
       } catch (_) {
       }
     });
-    const startupGateStartMs = this._ffNowMs();
+    const startupGateStartMs = this.Date.now();
     const started = await Promise.race([
       this._waitForStreamStart(video, waitMs, {
         minCurrentTime,
@@ -7989,11 +7808,6 @@ const FrigateViewCard = class extends HTMLElement {
       firstRenderedFramePromise
     ]);
     resolveFirstRenderedFrame = null;
-    this._ffDebug("WebRTC startup gate finished", {
-      started,
-      gateElapsedMs: Math.round(this._ffNowMs() - startupGateStartMs),
-      totalElapsedMs: Math.round(this._ffNowMs() - traceStartMs)
-    });
     if (!started) {
       destroy();
       return false;
@@ -10292,7 +10106,6 @@ const FrigateViewCard = class extends HTMLElement {
       return;
     }
     if (this._viewMode === "grid") {
-      this._ffDebug("Grid resume mapped to grid refresh", { reason });
       this._scheduleGridRefresh(120);
       return;
     }
@@ -10301,7 +10114,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._resumeLiveT = setTimeout(() => {
       this._resumeLiveIfNeeded(reason);
     }, delay);
-    this._ffDebug("Scheduled resume live", { reason, delay });
     if (this._isFirefox() && this._viewMode !== "grid") {
       setTimeout(() => this._kickLiveIfStale(true), 900);
     }
@@ -10524,14 +10336,6 @@ const FrigateViewCard = class extends HTMLElement {
     }
     if (stale) {
       this._lastLiveKick = now;
-      this._ffDebug("Stale stream detected; remounting", {
-        force,
-        readyState: Number(v?.readyState) || 0,
-        ended: !!v?.ended,
-        paused: !!v?.paused,
-        currentTime: Number(v?.currentTime) || 0,
-        mseChunkCount: Number(this._mseChunkCount || 0)
-      });
       this._mountEngine();
     }
   }
@@ -10542,11 +10346,6 @@ const FrigateViewCard = class extends HTMLElement {
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     const mountStuckMs = this._mountStartedAt ? Date.now() - this._mountStartedAt : 0;
     if (this._mountInProgress && mountStuckMs > 12e3) {
-      this._ffDebug("Mount appears stuck; forcing recovery", {
-        reason: _reason,
-        mountTarget: this._mountTargetEntity,
-        mountStuckMs
-      });
       this._mountSeq += 1;
       this._mountInProgress = false;
       this._mountStartedAt = 0;
@@ -10555,13 +10354,6 @@ const FrigateViewCard = class extends HTMLElement {
     }
     if (!visible || popupOpen || this._mountInProgress) {
       if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
-      this._ffDebug("Resume deferred", {
-        reason: _reason,
-        visible,
-        popupOpen,
-        mountInProgress: this._mountInProgress,
-        mountStuckMs
-      });
       this._resumeLiveT = setTimeout(() => {
         this._resumeLiveIfNeeded("wait-ready");
       }, 450);
@@ -10571,7 +10363,6 @@ const FrigateViewCard = class extends HTMLElement {
     if (engWrap) engWrap.style.display = "";
     this._kickLiveIfStale(true);
     setTimeout(() => this._kickLiveIfStale(true), 900);
-    this._ffDebug("Resume executed", { reason: _reason });
   }
   _setupResizeObserver() {
     if (this._ro) this._ro.disconnect();
