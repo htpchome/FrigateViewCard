@@ -21,15 +21,21 @@ export class StreamOrchestrator {
     this._attempts = this._strategies.map((strategy) => ({
       type: strategy.type,
       strategy,
-      promise: strategy.connect(),
+      promise: strategy.connect().catch(() => null),
     }));
 
     const candidates = this._attempts.map((attempt) =>
-      (async () => ({
-        type: attempt.type,
-        strategy: attempt.strategy,
-        result: await attempt.promise,
-      }))(),
+      (async () => {
+        const result = await attempt.promise;
+        if (!result?.ok) {
+          throw new Error(`${attempt.type} strategy failed`);
+        }
+        return {
+          type: attempt.type,
+          strategy: attempt.strategy,
+          result,
+        };
+      })(),
     );
 
     const preferredCandidate = this._attempts.find(
@@ -50,6 +56,7 @@ export class StreamOrchestrator {
           const preferredWinnerPromise = (async () => {
             try {
               const result = await preferredCandidate.promise;
+              if (!result?.ok) return null;
               return {
                 type: preferredCandidate.type,
                 strategy: preferredCandidate.strategy,

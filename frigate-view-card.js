@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.991";
+const VERSION = "1.0.992";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1850,14 +1850,20 @@ const StreamOrchestrator = class {
     this._attempts = this._strategies.map((strategy) => ({
       type: strategy.type,
       strategy,
-      promise: strategy.connect()
+      promise: strategy.connect().catch(() => null)
     }));
     const candidates = this._attempts.map(
-      (attempt) => (async () => ({
-        type: attempt.type,
-        strategy: attempt.strategy,
-        result: await attempt.promise
-      }))()
+      (attempt) => (async () => {
+        const result = await attempt.promise;
+        if (!result?.ok) {
+          throw new Error(`${attempt.type} strategy failed`);
+        }
+        return {
+          type: attempt.type,
+          strategy: attempt.strategy,
+          result
+        };
+      })()
     );
     const preferredCandidate = this._attempts.find(
       (attempt) => attempt.type === this._preferredType
@@ -1876,6 +1882,7 @@ const StreamOrchestrator = class {
           const preferredWinnerPromise = (async () => {
             try {
               const result = await preferredCandidate.promise;
+              if (!result?.ok) return null;
               return {
                 type: preferredCandidate.type,
                 strategy: preferredCandidate.strategy,
