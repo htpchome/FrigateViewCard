@@ -76,10 +76,7 @@ export function resolveOlderHintState({
 }
 
 export function resolveOlderHintMetrics({ list, browse }) {
-  const listScrollable =
-    !!list &&
-    Number(list.scrollHeight || 0) > Number(list.clientHeight || 0) + 2;
-  const scroller = listScrollable ? list : browse;
+  const scroller = resolveActiveListScroller({ list, browse });
   const scrollTop = Number(scroller?.scrollTop || 0);
   const sample = list?.querySelector(".list-item, .rev, .rec");
   const itemHeight = Number(sample?.getBoundingClientRect?.().height || 60);
@@ -132,9 +129,8 @@ export function resolveActiveDayLabelFromScroll({ list, browse }) {
   const labels = Array.from(list.querySelectorAll(".list-day-label"));
   if (!labels.length) return "";
 
-  const listScrollable =
-    Number(list.scrollHeight || 0) > Number(list.clientHeight || 0) + 2;
-  const scroller = listScrollable ? list : browse;
+  const scroller = resolveActiveListScroller({ list, browse });
+  if (!scroller) return "";
   const anchorTop = Number(scroller.getBoundingClientRect().top || 0) + 2;
   let active = labels[0];
   for (const dayLabel of labels) {
@@ -146,6 +142,30 @@ export function resolveActiveDayLabelFromScroll({ list, browse }) {
   }
 
   return String(active?.dataset?.dayLabel || active?.textContent || "");
+}
+
+export function resolveActiveListScroller({ list, browse }) {
+  if (!list) return browse || null;
+  if (!browse) return list;
+
+  const listHeight = Number(list.scrollHeight || 0);
+  const listClient = Number(list.clientHeight || 0);
+  const listCanOverflow = listHeight > listClient + 2;
+  const listScrollTop = Number(list.scrollTop || 0);
+
+  // If list is already moving, keep using it as the source of truth.
+  if (listScrollTop > 0) return list;
+
+  const styleReader =
+    typeof globalThis.getComputedStyle === "function"
+      ? globalThis.getComputedStyle
+      : null;
+  const overflowY = String(styleReader?.(list)?.overflowY || "").toLowerCase();
+  const listIsScrollContainer =
+    overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay";
+
+  if (listCanOverflow && listIsScrollContainer) return list;
+  return browse;
 }
 
 export function runListPostRenderSync({
