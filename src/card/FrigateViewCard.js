@@ -175,6 +175,7 @@ import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
   createOlderHintSyncer,
+  resolveActiveListScroller,
   resolveActiveDayLabelFromScroll,
   resolveListLabelTimestamp,
   resolveListMarkup,
@@ -5249,10 +5250,13 @@ export class FrigateViewCard extends HTMLElement {
   _scrollEventsToTop() {
     const list = this._$("#list");
     const browse = this._$("#browse");
-    const listScrollable = list && list.scrollHeight > list.clientHeight + 2;
-    const scroller = listScrollable ? list : browse;
+    const scroller = resolveActiveListScroller({ list, browse });
     if (!scroller) return;
-    scroller.scrollTo({ top: 0, behavior: "smooth" });
+    if (typeof scroller.scrollTo === "function") {
+      scroller.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      scroller.scrollTop = 0;
+    }
   }
 
   _applyCardStyle() {

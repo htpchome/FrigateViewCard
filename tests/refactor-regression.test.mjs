@@ -175,6 +175,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     ),
     true,
   );
+  assert.equal(
+    /_scrollEventsToTop\(\) \{[\s\S]*?resolveActiveListScroller\(\{ list, browse \}\)[\s\S]*?scrollTo\(\{ top: 0, behavior: "smooth" \}\)/.test(
+      source,
+    ),
+    true,
+  );
   assert.equal(/async _go2rtcWebSocketUrl\(\)/.test(source), false);
   assert.equal(/async _go2rtcWebSocketUrlForMountEntity\(/.test(source), false);
   assert.equal(/async _go2rtcHlsUrl\(\)/.test(source), false);

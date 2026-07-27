@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.981";
+const VERSION = "1.0.982";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9902,10 +9902,13 @@ const FrigateViewCard = class extends HTMLElement {
   _scrollEventsToTop() {
     const list = this._$("#list");
     const browse = this._$("#browse");
-    const listScrollable = list && list.scrollHeight > list.clientHeight + 2;
-    const scroller = listScrollable ? list : browse;
+    const scroller = resolveActiveListScroller({ list, browse });
     if (!scroller) return;
-    scroller.scrollTo({ top: 0, behavior: "smooth" });
+    if (typeof scroller.scrollTo === "function") {
+      scroller.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      scroller.scrollTop = 0;
+    }
   }
   _applyCardStyle() {
     const card = this.shadowRoot.querySelector(".card");
