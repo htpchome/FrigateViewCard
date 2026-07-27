@@ -2149,6 +2149,12 @@ export class FrigateViewCard extends HTMLElement {
     return this._go2rtcUrlContextForEntity(entity);
   }
 
+  async _go2rtcTransportStateForEntity(entity) {
+    const ctx = await this._go2rtcTransportContextForEntity(entity);
+    if (!ctx) return null;
+    return { ...ctx, nowMs: Date.now() };
+  }
+
   _resolveGo2RtcMountEntity(options = {}) {
     return this._resolveGo2RtcEntity(options?.entity);
   }
@@ -2264,10 +2270,9 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcWebSocketUrlForEntity(entity) {
-    const ctx = await this._go2rtcTransportContextForEntity(entity);
-    if (!ctx) return null;
-    const { clientId, cam, cacheKey } = ctx;
-    const nowMs = Date.now();
+    const state = await this._go2rtcTransportStateForEntity(entity);
+    if (!state) return null;
+    const { clientId, cam, cacheKey, nowMs } = state;
     const cachedUrl = this._getGo2RtcWsCachedUrl(cacheKey, nowMs);
     if (cachedUrl) return cachedUrl;
 
@@ -2283,11 +2288,10 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcHlsUrlForEntity(entity = "") {
-    const ctx = await this._go2rtcTransportContextForEntity(entity);
-    if (!ctx) return null;
+    const state = await this._go2rtcTransportStateForEntity(entity);
+    if (!state) return null;
     if (!this._supportsNativeHlsPlayback()) return null;
-    const { clientId, cam, cacheKey } = ctx;
-    const nowMs = Date.now();
+    const { clientId, cam, cacheKey, nowMs } = state;
     const cachedUrl = this._getGo2RtcHlsCachedUrl(cacheKey, nowMs);
     if (cachedUrl !== undefined) return cachedUrl;
 

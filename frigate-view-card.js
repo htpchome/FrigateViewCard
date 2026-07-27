@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.987";
+const VERSION = "1.0.988";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7178,6 +7178,11 @@ const FrigateViewCard = class extends HTMLElement {
   async _go2rtcTransportContextForEntity(entity) {
     return this._go2rtcUrlContextForEntity(entity);
   }
+  async _go2rtcTransportStateForEntity(entity) {
+    const ctx = await this._go2rtcTransportContextForEntity(entity);
+    if (!ctx) return null;
+    return { ...ctx, nowMs: Date.now() };
+  }
   _resolveGo2RtcMountEntity(options = {}) {
     return this._resolveGo2RtcEntity(options?.entity);
   }
@@ -7277,10 +7282,9 @@ const FrigateViewCard = class extends HTMLElement {
     this._go2rtcHlsProbeInFlight.delete(cacheKey);
   }
   async _go2rtcWebSocketUrlForEntity(entity) {
-    const ctx = await this._go2rtcTransportContextForEntity(entity);
-    if (!ctx) return null;
-    const { clientId, cam, cacheKey } = ctx;
-    const nowMs = Date.now();
+    const state = await this._go2rtcTransportStateForEntity(entity);
+    if (!state) return null;
+    const { clientId, cam, cacheKey, nowMs } = state;
     const cachedUrl = this._getGo2RtcWsCachedUrl(cacheKey, nowMs);
     if (cachedUrl) return cachedUrl;
     const path = buildGo2rtcWsPath({ clientId, cam });
@@ -7292,11 +7296,10 @@ const FrigateViewCard = class extends HTMLElement {
     return wsUrl;
   }
   async _go2rtcHlsUrlForEntity(entity = "") {
-    const ctx = await this._go2rtcTransportContextForEntity(entity);
-    if (!ctx) return null;
+    const state = await this._go2rtcTransportStateForEntity(entity);
+    if (!state) return null;
     if (!this._supportsNativeHlsPlayback()) return null;
-    const { clientId, cam, cacheKey } = ctx;
-    const nowMs = Date.now();
+    const { clientId, cam, cacheKey, nowMs } = state;
     const cachedUrl = this._getGo2RtcHlsCachedUrl(cacheKey, nowMs);
     if (cachedUrl !== void 0) return cachedUrl;
     const inFlight = this._getGo2RtcHlsInFlight(cacheKey);

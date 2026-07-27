@@ -58,6 +58,7 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     source.includes("_go2rtcTransportContextForEntity(entity)"),
     true,
   );
+  assert.equal(source.includes("_go2rtcTransportStateForEntity(entity)"), true);
   assert.equal(
     /_go2rtcContextForEntity\([^)]*\) \{[\s\S]*?_discoverOne\([^)]*\);[\s\S]*?makeGo2rtcCacheKey\(\{[\s\S]*?clientId[\s\S]*?cam[\s\S]*?\}\);[\s\S]*?\}/.test(
       source,
@@ -65,13 +66,7 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
-    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const ctx = await this\._go2rtcUrlContextForEntity\(entity\);/.test(
-      source,
-    ),
-    false,
-  );
-  assert.equal(
-    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const ctx = await this\._go2rtcTransportContextForEntity\(entity\);/.test(
+    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const state = await this\._go2rtcTransportStateForEntity\(entity\);/.test(
       source,
     ),
     true,
@@ -137,19 +132,7 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
-    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const targetEntity = this\._resolveGo2RtcEntity\(entity\);/.test(
-      source,
-    ),
-    false,
-  );
-  assert.equal(
-    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const ctx = await this\._go2rtcUrlContextForEntity\(entity\);/.test(
-      source,
-    ),
-    false,
-  );
-  assert.equal(
-    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const ctx = await this\._go2rtcTransportContextForEntity\(entity\);/.test(
+    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const state = await this\._go2rtcTransportStateForEntity\(entity\);/.test(
       source,
     ),
     true,
