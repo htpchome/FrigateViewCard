@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1010";
+const VERSION = "1.0.1011";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6536,9 +6536,6 @@ const FrigateViewCard = class extends HTMLElement {
   _isPreviewContext() {
     return this._isEditorPreviewContext() || this._isCardPickerPreviewContext();
   }
-  _ffNowMs() {
-    return Number(globalThis.performance?.now?.() || Date.now());
-  }
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";
     return "webrtc";
@@ -6868,7 +6865,6 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._pendingWebRTCTakeoverTimer = setTimeout(() => {
       void (async () => {
-        const takeoverStartMs = this._ffNowMs();
         try {
           const result = await deferredAttempt.promise.catch(() => null);
           if (!result?.ok || result.type !== "webrtc") {
@@ -6945,7 +6941,6 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _mountLiveWithRace(slot, attempts, mountToken, targetEntity) {
-    const raceStartMs = this._ffNowMs();
     const strategies = attempts.map(
       (attempt) => createStrategyForType({
         type: attempt.type,
@@ -7653,7 +7648,6 @@ const FrigateViewCard = class extends HTMLElement {
     return this._mountGridSnapshotCell(cell, { entity, stateObj });
   }
   async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
-    const traceStartMs = this._ffNowMs();
     const {
       waitMs,
       minCurrentTime,
@@ -7669,7 +7663,6 @@ const FrigateViewCard = class extends HTMLElement {
       return false;
     }
     if (!entity) return false;
-    const wsUrlStartMs = this._ffNowMs();
     const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) return false;
     const video = createVideoElement(
@@ -7799,7 +7792,6 @@ const FrigateViewCard = class extends HTMLElement {
       } catch (_) {
       }
     });
-    const startupGateStartMs = this._ffNowMs();
     const started = await Promise.race([
       this._waitForStreamStart(video, waitMs, {
         minCurrentTime,

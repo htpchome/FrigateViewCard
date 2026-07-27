@@ -1405,10 +1405,6 @@ export class FrigateViewCard extends HTMLElement {
     return this._isEditorPreviewContext() || this._isCardPickerPreviewContext();
   }
 
-  _ffNowMs() {
-    return Number(globalThis.performance?.now?.() || Date.now());
-  }
-
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";
     return "webrtc";
@@ -1775,7 +1771,6 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._pendingWebRTCTakeoverTimer = setTimeout(() => {
       void (async () => {
-        const takeoverStartMs = this._ffNowMs();
         try {
           const result = await deferredAttempt.promise.catch(() => null);
           if (!result?.ok || result.type !== "webrtc") {
@@ -1860,7 +1855,6 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _mountLiveWithRace(slot, attempts, mountToken, targetEntity) {
-    const raceStartMs = this._ffNowMs();
     const strategies = attempts.map((attempt) =>
       createStrategyForType({
         type: attempt.type,
@@ -2674,7 +2668,6 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
-    const traceStartMs = this._ffNowMs();
     const {
       waitMs,
       minCurrentTime,
@@ -2693,7 +2686,6 @@ export class FrigateViewCard extends HTMLElement {
     }
 
     if (!entity) return false;
-    const wsUrlStartMs = this._ffNowMs();
     const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) return false;
 
@@ -2830,7 +2822,6 @@ export class FrigateViewCard extends HTMLElement {
       } catch (_) {}
     });
 
-    const startupGateStartMs = this._ffNowMs();
     const started = await Promise.race([
       this._waitForStreamStart(video, waitMs, {
         minCurrentTime,
