@@ -1775,6 +1775,46 @@ export class FrigateViewCard extends HTMLElement {
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
 
+  _scheduleDeferredWebRtcTakeover({
+    slot,
+    deferredAttempt,
+    mountToken,
+    winnerEngine,
+    winnerType,
+  }) {
+    if (!slot || !deferredAttempt || deferredAttempt.type !== "webrtc") return;
+    if (winnerType !== "mse") return;
+    if (this._pendingWebRTCTakeoverTimer) {
+      clearTimeout(this._pendingWebRTCTakeoverTimer);
+      this._pendingWebRTCTakeoverTimer = null;
+    }
+    this._pendingWebRTCTakeoverTimer = setTimeout(() => {
+      void (async () => {
+        try {
+          const result = await deferredAttempt.promise.catch(() => null);
+          if (!result?.ok || result.type !== "webrtc") return;
+          if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
+            cleanupStaleWinnerResult(result);
+            return;
+          }
+          if (this._engine !== winnerEngine) {
+            cleanupStaleWinnerResult(result);
+            return;
+          }
+          try {
+            winnerEngine?.destroy?.();
+          } catch (_) {}
+          this._adoptMountedAttempt(slot, result);
+        } finally {
+          this._pendingMountDestroyers = (
+            this._pendingMountDestroyers || []
+          ).filter((attempt) => attempt?.type !== "webrtc");
+          this._pendingWebRTCTakeoverTimer = null;
+        }
+      })();
+    }, 0);
+  }
+
   _buildLiveStreamAttempts(entity = "", forcedType = null, hostSlot = null) {
     const targetEntity = String(entity || this._activeCam?.entity || "").trim();
     const connectionType = this._cameraConnectionType(targetEntity);
@@ -1840,7 +1880,8 @@ export class FrigateViewCard extends HTMLElement {
     const orchestrator = new StreamOrchestrator({
       strategies,
       preferredType: "webrtc",
-      preferredWaitMs: 1200,
+      preferredWaitMs: 0,
+      retainPreferredOnFallback: true,
     });
     slot?.attachOrchestrator?.(orchestrator);
 
@@ -1859,6 +1900,8 @@ export class FrigateViewCard extends HTMLElement {
     }));
 
     const winner = await orchestrator.start();
+    const deferredPreferredAttempt = orchestrator.deferredPreferredAttempt;
+    const deferredPreferredType = deferredPreferredAttempt?.type || "";
 
     if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
       cleanupStaleWinnerResult(winner);
@@ -1868,10 +1911,14 @@ export class FrigateViewCard extends HTMLElement {
 
     const destroyLosers = async () => {
       await destroyLoserAttemptResults({
-        activeAttempts,
+        activeAttempts: activeAttempts.filter(
+          (attempt) => attempt?.type !== deferredPreferredType,
+        ),
         winnerType: winner?.type,
       });
-      this._pendingMountDestroyers = [];
+      this._pendingMountDestroyers = (
+        this._pendingMountDestroyers || []
+      ).filter((attempt) => attempt?.type === deferredPreferredType);
       slot?.clearOrchestrator?.(orchestrator);
     };
 
@@ -1881,6 +1928,13 @@ export class FrigateViewCard extends HTMLElement {
       );
       this._adoptMountedAttempt(slot, winner);
       await destroyLosers();
+      this._scheduleDeferredWebRtcTakeover({
+        slot,
+        deferredAttempt: deferredPreferredAttempt,
+        mountToken,
+        winnerEngine: winner.engine,
+        winnerType: winner.type,
+      });
       return true;
     }
 

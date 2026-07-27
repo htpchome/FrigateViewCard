@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.993";
+const VERSION = "1.0.994";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1840,13 +1840,19 @@ const StreamOrchestrator = class {
     this._strategies = Array.isArray(strategies) ? [...strategies] : [];
     this._preferredType = String(options?.preferredType || "").trim().toLowerCase();
     this._preferredWaitMs = Math.max(0, Number(options?.preferredWaitMs) || 0);
+    this._retainPreferredOnFallback = options?.retainPreferredOnFallback === true;
     this._attempts = [];
+    this._deferredPreferredAttempt = null;
   }
   get attempts() {
     return this._attempts;
   }
+  get deferredPreferredAttempt() {
+    return this._deferredPreferredAttempt;
+  }
   async start() {
     if (!this._strategies.length) return null;
+    this._deferredPreferredAttempt = null;
     this._attempts = this._strategies.map((strategy) => ({
       type: strategy.type,
       strategy,
@@ -1902,7 +1908,15 @@ const StreamOrchestrator = class {
           winner = preferredWithTimeout || fallbackWinner;
         }
       }
-      await this.stop({ exclude: winner.strategy });
+      const shouldRetainPreferred = this._retainPreferredOnFallback && preferredCandidate && winner?.type !== preferredCandidate.type;
+      if (shouldRetainPreferred) {
+        this._deferredPreferredAttempt = preferredCandidate;
+        await this.stop({
+          exclude: [winner.strategy, preferredCandidate.strategy]
+        });
+      } else {
+        await this.stop({ exclude: winner.strategy });
+      }
       return winner.result;
     } catch (_) {
       await this.stop();
@@ -1910,9 +1924,10 @@ const StreamOrchestrator = class {
     }
   }
   async stop({ exclude = null } = {}) {
+    const excluded = Array.isArray(exclude) ? new Set(exclude) : exclude ? new Set([exclude]) : null;
     await Promise.all(
       (this._strategies || []).map(async (strategy) => {
-        if (exclude && strategy === exclude) return;
+        if (excluded?.has(strategy)) return;
         await strategy.disconnect();
       })
     );
@@ -6868,6 +6883,44 @@ const FrigateViewCard = class extends HTMLElement {
     this._setStreamFallbackVisible(false);
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
+  _scheduleDeferredWebRtcTakeover({
+    slot,
+    deferredAttempt,
+    mountToken,
+    winnerEngine,
+    winnerType
+  }) {
+    if (!slot || !deferredAttempt || deferredAttempt.type !== "webrtc") return;
+    if (winnerType !== "mse") return;
+    if (this._pendingWebRTCTakeoverTimer) {
+      clearTimeout(this._pendingWebRTCTakeoverTimer);
+      this._pendingWebRTCTakeoverTimer = null;
+    }
+    this._pendingWebRTCTakeoverTimer = setTimeout(() => {
+      void (async () => {
+        try {
+          const result = await deferredAttempt.promise.catch(() => null);
+          if (!result?.ok || result.type !== "webrtc") return;
+          if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
+            cleanupStaleWinnerResult(result);
+            return;
+          }
+          if (this._engine !== winnerEngine) {
+            cleanupStaleWinnerResult(result);
+            return;
+          }
+          try {
+            winnerEngine?.destroy?.();
+          } catch (_) {
+          }
+          this._adoptMountedAttempt(slot, result);
+        } finally {
+          this._pendingMountDestroyers = (this._pendingMountDestroyers || []).filter((attempt) => attempt?.type !== "webrtc");
+          this._pendingWebRTCTakeoverTimer = null;
+        }
+      })();
+    }, 0);
+  }
   _buildLiveStreamAttempts(entity = "", forcedType = null, hostSlot = null) {
     const targetEntity = String(entity || this._activeCam?.entity || "").trim();
     const connectionType = this._cameraConnectionType(targetEntity);
@@ -6926,7 +6979,8 @@ const FrigateViewCard = class extends HTMLElement {
     const orchestrator = new StreamOrchestrator({
       strategies,
       preferredType: "webrtc",
-      preferredWaitMs: 1200
+      preferredWaitMs: 0,
+      retainPreferredOnFallback: true
     });
     slot?.attachOrchestrator?.(orchestrator);
     const activeAttempts = strategies.map((strategy) => ({
@@ -6942,6 +6996,8 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }));
     const winner = await orchestrator.start();
+    const deferredPreferredAttempt = orchestrator.deferredPreferredAttempt;
+    const deferredPreferredType = deferredPreferredAttempt?.type || "";
     if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
       cleanupStaleWinnerResult(winner);
       slot?.clearOrchestrator?.(orchestrator);
@@ -6949,10 +7005,12 @@ const FrigateViewCard = class extends HTMLElement {
     }
     const destroyLosers = async () => {
       await destroyLoserAttemptResults({
-        activeAttempts,
+        activeAttempts: activeAttempts.filter(
+          (attempt) => attempt?.type !== deferredPreferredType
+        ),
         winnerType: winner?.type
       });
-      this._pendingMountDestroyers = [];
+      this._pendingMountDestroyers = (this._pendingMountDestroyers || []).filter((attempt) => attempt?.type === deferredPreferredType);
       slot?.clearOrchestrator?.(orchestrator);
     };
     if (winner?.ok) {
@@ -6961,6 +7019,13 @@ const FrigateViewCard = class extends HTMLElement {
       );
       this._adoptMountedAttempt(slot, winner);
       await destroyLosers();
+      this._scheduleDeferredWebRtcTakeover({
+        slot,
+        deferredAttempt: deferredPreferredAttempt,
+        mountToken,
+        winnerEngine: winner.engine,
+        winnerType: winner.type
+      });
       return true;
     }
     await destroyLosers();

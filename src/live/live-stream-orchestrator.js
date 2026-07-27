@@ -8,15 +8,23 @@ export class StreamOrchestrator {
       .trim()
       .toLowerCase();
     this._preferredWaitMs = Math.max(0, Number(options?.preferredWaitMs) || 0);
+    this._retainPreferredOnFallback =
+      options?.retainPreferredOnFallback === true;
     this._attempts = [];
+    this._deferredPreferredAttempt = null;
   }
 
   get attempts() {
     return this._attempts;
   }
 
+  get deferredPreferredAttempt() {
+    return this._deferredPreferredAttempt;
+  }
+
   async start() {
     if (!this._strategies.length) return null;
+    this._deferredPreferredAttempt = null;
 
     this._attempts = this._strategies.map((strategy) => ({
       type: strategy.type,
@@ -79,7 +87,19 @@ export class StreamOrchestrator {
         }
       }
 
-      await this.stop({ exclude: winner.strategy });
+      const shouldRetainPreferred =
+        this._retainPreferredOnFallback &&
+        preferredCandidate &&
+        winner?.type !== preferredCandidate.type;
+
+      if (shouldRetainPreferred) {
+        this._deferredPreferredAttempt = preferredCandidate;
+        await this.stop({
+          exclude: [winner.strategy, preferredCandidate.strategy],
+        });
+      } else {
+        await this.stop({ exclude: winner.strategy });
+      }
       return winner.result;
     } catch (_) {
       await this.stop();
@@ -88,9 +108,14 @@ export class StreamOrchestrator {
   }
 
   async stop({ exclude = null } = {}) {
+    const excluded = Array.isArray(exclude)
+      ? new Set(exclude)
+      : exclude
+        ? new Set([exclude])
+        : null;
     await Promise.all(
       (this._strategies || []).map(async (strategy) => {
-        if (exclude && strategy === exclude) return;
+        if (excluded?.has(strategy)) return;
         await strategy.disconnect();
       }),
     );

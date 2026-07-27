@@ -72,6 +72,27 @@ test("StreamOrchestrator keeps faster fallback when preferred misses window", as
   assert.equal(webrtc.state.disconnectCalls, 1);
 });
 
+test("StreamOrchestrator can retain preferred strategy after fallback wins", async () => {
+  const mse = makeStrategy({ type: "mse", connectDelayMs: 10 });
+  const webrtc = makeStrategy({ type: "webrtc", connectDelayMs: 120 });
+
+  const orchestrator = new StreamOrchestrator({
+    strategies: [mse.strategy, webrtc.strategy],
+    preferredType: "webrtc",
+    preferredWaitMs: 0,
+    retainPreferredOnFallback: true,
+  });
+
+  const winner = await orchestrator.start();
+
+  assert.equal(winner?.type, "mse");
+  assert.equal(mse.state.disconnectCalls, 0);
+  assert.equal(webrtc.state.disconnectCalls, 0);
+  assert.equal(orchestrator.deferredPreferredAttempt?.type, "webrtc");
+  await orchestrator.stop();
+  assert.equal(webrtc.state.disconnectCalls, 1);
+});
+
 test("StreamOrchestrator stop disconnects all strategies", async () => {
   const webrtc = makeStrategy({ type: "webrtc" });
   const mse = makeStrategy({ type: "mse" });
