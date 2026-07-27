@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.985";
+const VERSION = "1.0.986";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7175,6 +7175,9 @@ const FrigateViewCard = class extends HTMLElement {
     if (!ctx) return null;
     return { targetEntity, ...ctx };
   }
+  _resolveGo2RtcMountEntity(options = {}) {
+    return this._resolveGo2RtcEntity(options?.entity);
+  }
   _toAbsoluteSignedPath(signedPath) {
     return toAbsoluteSignedUrl({
       signedPath,
@@ -7315,7 +7318,7 @@ const FrigateViewCard = class extends HTMLElement {
     } = resolveMseStartup(startup || {});
     const commit = options.commit !== false;
     const abortSignal = options?.abortSignal || null;
-    const entity = this._resolveGo2RtcEntity(options?.entity);
+    const entity = this._resolveGo2RtcMountEntity(options);
     const muted = options?.muted ?? this._streamMuted;
     if (!entity) return false;
     if (abortSignal?.aborted) return false;
@@ -7621,7 +7624,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
       return false;
     }
-    const entity = this._resolveGo2RtcEntity(options?.entity);
+    const entity = this._resolveGo2RtcMountEntity(options);
     if (!entity) return false;
     const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) return false;
@@ -7735,7 +7738,7 @@ const FrigateViewCard = class extends HTMLElement {
     const commit = options.commit !== false;
     const abortSignal = options?.abortSignal || null;
     if (abortSignal?.aborted) return false;
-    const entity = this._resolveGo2RtcEntity(options?.entity);
+    const entity = this._resolveGo2RtcMountEntity(options);
     if (!entity) return false;
     const hlsUrl = await this._go2rtcHlsUrlForEntity(entity);
     if (!hlsUrl) return false;

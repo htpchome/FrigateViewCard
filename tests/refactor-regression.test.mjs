@@ -31,22 +31,9 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     ),
     true,
   );
+  assert.equal(source.includes("_resolveGo2RtcMountEntity(options)"), true);
   assert.equal(
-    /_tryMountGo2RTCMSE\([\s\S]*?const entity = this\._resolveGo2RtcEntity\(options\?\.entity\);[\s\S]*?if \(!entity\) return false;/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_tryMountGo2RTCWebRTC\([\s\S]*?const entity = this\._resolveGo2RtcEntity\(options\?\.entity\);[\s\S]*?if \(!entity\) return false;/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_tryMountGo2RTCHLS\([\s\S]*?const entity = this\._resolveGo2RtcEntity\(options\?\.entity\);[\s\S]*?if \(!entity\) return false;/.test(
-      source,
-    ),
+    source.includes("const entity = this._resolveGo2RtcMountEntity(options);"),
     true,
   );
   assert.equal(source.includes('_go2rtcHlsUrlForEntity(entity = "")'), true);

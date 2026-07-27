@@ -2145,6 +2145,10 @@ export class FrigateViewCard extends HTMLElement {
     return { targetEntity, ...ctx };
   }
 
+  _resolveGo2RtcMountEntity(options = {}) {
+    return this._resolveGo2RtcEntity(options?.entity);
+  }
+
   _toAbsoluteSignedPath(signedPath) {
     return toAbsoluteSignedUrl({
       signedPath,
@@ -2309,7 +2313,7 @@ export class FrigateViewCard extends HTMLElement {
     } = resolveMseStartup(startup || {});
     const commit = options.commit !== false;
     const abortSignal = options?.abortSignal || null;
-    const entity = this._resolveGo2RtcEntity(options?.entity);
+    const entity = this._resolveGo2RtcMountEntity(options);
     const muted = options?.muted ?? this._streamMuted;
     if (!entity) return false;
     if (abortSignal?.aborted) return false;
@@ -2641,7 +2645,7 @@ export class FrigateViewCard extends HTMLElement {
       return false;
     }
 
-    const entity = this._resolveGo2RtcEntity(options?.entity);
+    const entity = this._resolveGo2RtcMountEntity(options);
     if (!entity) return false;
     const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) return false;
@@ -2762,7 +2766,7 @@ export class FrigateViewCard extends HTMLElement {
     const commit = options.commit !== false;
     const abortSignal = options?.abortSignal || null;
     if (abortSignal?.aborted) return false;
-    const entity = this._resolveGo2RtcEntity(options?.entity);
+    const entity = this._resolveGo2RtcMountEntity(options);
     if (!entity) return false;
     const hlsUrl = await this._go2rtcHlsUrlForEntity(entity);
     if (!hlsUrl) return false;
