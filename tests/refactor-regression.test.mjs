@@ -80,6 +80,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
+    /_signedGo2RtcWsPath\([^)]*\) \{[\s\S]*?auth\/sign_path[\s\S]*?_ffDebug\("Signed go2rtc ws path"[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
     /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const targetEntity = this\._resolveGo2RtcEntity\(entity\);/.test(
       source,
     ),
@@ -104,7 +110,7 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
-    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?this\._toAbsoluteSignedPath\(path\)/.test(
+    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const signedPath = await this\._signedGo2RtcWsPath\(path\);[\s\S]*?this\._toAbsoluteSignedPath\(signedPath\)/.test(
       source,
     ),
     true,

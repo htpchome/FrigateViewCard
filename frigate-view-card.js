@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.977";
+const VERSION = "1.0.978";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7192,6 +7192,21 @@ const FrigateViewCard = class extends HTMLElement {
     });
     return null;
   }
+  async _signedGo2RtcWsPath(path) {
+    try {
+      const r = await this._hass.callWS({
+        type: "auth/sign_path",
+        path,
+        expires: 3600
+      });
+      const signedPath = r?.path || path;
+      this._ffDebug("Signed go2rtc ws path", signedPath);
+      return signedPath;
+    } catch (e) {
+      this._ffDebug("Failed to sign go2rtc ws path", e?.message || String(e));
+      return path;
+    }
+  }
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
@@ -7205,19 +7220,9 @@ const FrigateViewCard = class extends HTMLElement {
       nowMs
     });
     if (cachedUrl) return cachedUrl;
-    let path = buildGo2rtcWsPath({ clientId, cam });
-    try {
-      const r = await this._hass.callWS({
-        type: "auth/sign_path",
-        path,
-        expires: 3600
-      });
-      if (r?.path) path = r.path;
-      this._ffDebug("Signed go2rtc ws path", path);
-    } catch (e) {
-      this._ffDebug("Failed to sign go2rtc ws path", e?.message || String(e));
-    }
-    const abs = this._toAbsoluteSignedPath(path);
+    const path = buildGo2rtcWsPath({ clientId, cam });
+    const signedPath = await this._signedGo2RtcWsPath(path);
+    const abs = this._toAbsoluteSignedPath(signedPath);
     const wsUrl = toWebSocketUrl(abs);
     setCachedValue({
       cacheMap: this._go2rtcWsUrlCache,

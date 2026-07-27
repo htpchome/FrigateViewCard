@@ -2175,6 +2175,24 @@ export class FrigateViewCard extends HTMLElement {
     return null;
   }
 
+  async _signedGo2RtcWsPath(path) {
+    // Frigate go2rtc websocket may require a signed HA path when accessed via
+    // remote URLs/reverse proxies (seen as ws close 1006 in Firefox).
+    try {
+      const r = await this._hass.callWS({
+        type: "auth/sign_path",
+        path,
+        expires: 3600,
+      });
+      const signedPath = r?.path || path;
+      this._ffDebug("Signed go2rtc ws path", signedPath);
+      return signedPath;
+    } catch (e) {
+      this._ffDebug("Failed to sign go2rtc ws path", e?.message || String(e));
+      return path;
+    }
+  }
+
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
@@ -2189,23 +2207,10 @@ export class FrigateViewCard extends HTMLElement {
     });
     if (cachedUrl) return cachedUrl;
 
-    let path = buildGo2rtcWsPath({ clientId, cam });
+    const path = buildGo2rtcWsPath({ clientId, cam });
+    const signedPath = await this._signedGo2RtcWsPath(path);
 
-    // Frigate go2rtc websocket may require a signed HA path when accessed via
-    // remote URLs/reverse proxies (seen as ws close 1006 in Firefox).
-    try {
-      const r = await this._hass.callWS({
-        type: "auth/sign_path",
-        path,
-        expires: 3600,
-      });
-      if (r?.path) path = r.path;
-      this._ffDebug("Signed go2rtc ws path", path);
-    } catch (e) {
-      this._ffDebug("Failed to sign go2rtc ws path", e?.message || String(e));
-    }
-
-    const abs = this._toAbsoluteSignedPath(path);
+    const abs = this._toAbsoluteSignedPath(signedPath);
     const wsUrl = toWebSocketUrl(abs);
     // Signed path expires in 1h; refresh a bit early.
     setCachedValue({
