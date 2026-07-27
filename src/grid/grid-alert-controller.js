@@ -208,6 +208,11 @@ export class GridAlertController {
     this._lastAlertAt = now;
     this._lastAlertCam = entity;
     const changed = this.markAlertCamera(entity, severity || "alert");
+    this._host._ffDebug("Grid alert candidate", {
+      entity,
+      severity,
+      changed,
+    });
     if (changed) this._host._scheduleGridRefresh();
   }
 
