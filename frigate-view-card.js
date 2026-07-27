@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1009";
+const VERSION = "1.0.1010";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4582,11 +4582,6 @@ const GridAlertController = class {
     this._lastAlertAt = now;
     this._lastAlertCam = entity;
     const changed = this.markAlertCamera(entity, severity || "alert");
-    this._host._ffDebug("Grid alert candidate", {
-      entity,
-      severity,
-      changed
-    });
     if (changed) this._host._scheduleGridRefresh();
   }
   handleRealtimeMessage(msg) {
@@ -6543,8 +6538,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _ffNowMs() {
     return Number(globalThis.performance?.now?.() || Date.now());
-  }
-  _ffDebug(msg, data = null) {
   }
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";

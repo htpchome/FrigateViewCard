@@ -1409,8 +1409,6 @@ export class FrigateViewCard extends HTMLElement {
     return Number(globalThis.performance?.now?.() || Date.now());
   }
 
-  _ffDebug(msg, data = null) {}
-
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";
     return "webrtc";
@@ -2535,8 +2533,7 @@ export class FrigateViewCard extends HTMLElement {
             sb.mode = "segments";
             sb.addEventListener("updateend", appendNext);
             appendNext();
-          } catch (e) {
-          }
+          } catch (e) {}
         }
         return;
       }
@@ -2780,11 +2777,9 @@ export class FrigateViewCard extends HTMLElement {
       }
     });
 
-    pc.addEventListener("connectionstatechange", () => {
-    });
+    pc.addEventListener("connectionstatechange", () => {});
 
-    pc.addEventListener("iceconnectionstatechange", () => {
-    });
+    pc.addEventListener("iceconnectionstatechange", () => {});
 
     pc.addEventListener("icecandidate", (ev) => {
       if (ws.readyState !== WebSocket.OPEN) return;
@@ -2820,11 +2815,9 @@ export class FrigateViewCard extends HTMLElement {
       }
     });
 
-    ws.addEventListener("error", () => {
-    });
+    ws.addEventListener("error", () => {});
 
-    ws.addEventListener("close", (ev) => {
-    });
+    ws.addEventListener("close", (ev) => {});
 
     ws.addEventListener("open", async () => {
       if (!wsOpenLogged) {
