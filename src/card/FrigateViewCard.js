@@ -2155,6 +2155,14 @@ export class FrigateViewCard extends HTMLElement {
     return { ...ctx, nowMs: Date.now() };
   }
 
+  _go2rtcMountRequest(options = {}) {
+    return {
+      entity: this._resolveGo2RtcMountEntity(options),
+      abortSignal: options?.abortSignal || null,
+      commit: options.commit !== false,
+    };
+  }
+
   _resolveGo2RtcMountEntity(options = {}) {
     return this._resolveGo2RtcEntity(options?.entity);
   }
@@ -2319,9 +2327,7 @@ export class FrigateViewCard extends HTMLElement {
       requireReadyState,
       strict,
     } = resolveMseStartup(startup || {});
-    const commit = options.commit !== false;
-    const abortSignal = options?.abortSignal || null;
-    const entity = this._resolveGo2RtcMountEntity(options);
+    const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
     const muted = options?.muted ?? this._streamMuted;
     if (!entity) return false;
     if (abortSignal?.aborted) return false;
@@ -2644,8 +2650,7 @@ export class FrigateViewCard extends HTMLElement {
       startup: startup || {},
       isFirefox: this._isFirefox(),
     });
-    const commit = options.commit !== false;
-    const abortSignal = options?.abortSignal || null;
+    const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
 
     if (abortSignal?.aborted) return false;
 
@@ -2653,7 +2658,6 @@ export class FrigateViewCard extends HTMLElement {
       return false;
     }
 
-    const entity = this._resolveGo2RtcMountEntity(options);
     if (!entity) return false;
     const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) return false;
@@ -2771,10 +2775,8 @@ export class FrigateViewCard extends HTMLElement {
 
   async _tryMountGo2RTCHLS(slot, startup = null, options = {}) {
     const { waitMs } = resolveHlsStartup(startup || {});
-    const commit = options.commit !== false;
-    const abortSignal = options?.abortSignal || null;
+    const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
     if (abortSignal?.aborted) return false;
-    const entity = this._resolveGo2RtcMountEntity(options);
     if (!entity) return false;
     const hlsUrl = await this._go2rtcHlsUrlForEntity(entity);
     if (!hlsUrl) return false;
