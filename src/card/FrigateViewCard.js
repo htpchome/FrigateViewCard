@@ -1767,10 +1767,11 @@ export class FrigateViewCard extends HTMLElement {
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
 
-  _buildLiveStreamAttempts(connectionType, forcedType = null, hostSlot = null) {
+  _buildLiveStreamAttempts(entity = "", forcedType = null, hostSlot = null) {
+    const targetEntity = String(entity || this._activeCam?.entity || "").trim();
+    const connectionType = this._cameraConnectionType(targetEntity);
     const disableHlsOnDesktop =
-      DEVICE_PROFILE.isDesktop &&
-      this._cameraDisableHlsDesktop(this._activeCam?.entity);
+      DEVICE_PROFILE.isDesktop && this._cameraDisableHlsDesktop(targetEntity);
     const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
     const build = {
       webrtc: (attemptOptions = {}) =>
@@ -1803,6 +1804,7 @@ export class FrigateViewCard extends HTMLElement {
     this._ffDebug("Live attempt order", {
       forcedType: forcedType || "",
       order,
+      entity: targetEntity,
       connectionType,
     });
     return buildLiveAttemptPlan({
@@ -2774,7 +2776,6 @@ export class FrigateViewCard extends HTMLElement {
     const entity = this._activeCam?.entity;
     if (!entity) return;
     if (this._mountInProgress && this._mountTargetEntity === entity) return;
-    const connectionType = this._cameraConnectionType(entity);
     const useGo2Rtc = this._shouldUseGo2RtcForEntity(entity);
     if (useGo2Rtc && (!forcedType || forcedType === "mse")) {
       const graceMseEntry = this._takeGraceMseEntry(entity);
@@ -2911,11 +2912,7 @@ export class FrigateViewCard extends HTMLElement {
         }, 1200);
         return;
       }
-      const attempts = this._buildLiveStreamAttempts(
-        connectionType,
-        forcedType,
-        slot,
-      );
+      const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);
       if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
         return;
 

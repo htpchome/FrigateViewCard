@@ -19,7 +19,7 @@ test("per-camera desktop HLS disable config is wired through card and editor", (
 test("desktop HLS disable only removes the HLS attempt on desktop devices", () => {
   assert.match(
     source,
-    /const\s+disableHlsOnDesktop\s*=\s*DEVICE_PROFILE\.isDesktop[\s\S]*_cameraDisableHlsDesktop\(this\._activeCam\?\.entity\)/,
+    /const\s+disableHlsOnDesktop\s*=\s*DEVICE_PROFILE\.isDesktop[\s\S]*_cameraDisableHlsDesktop\(targetEntity\)/,
   );
   assert.match(
     source,

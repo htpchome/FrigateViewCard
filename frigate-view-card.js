@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.973";
+const VERSION = "1.0.974";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6842,8 +6842,10 @@ const FrigateViewCard = class extends HTMLElement {
     this._setStreamFallbackVisible(false);
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
-  _buildLiveStreamAttempts(connectionType, forcedType = null, hostSlot = null) {
-    const disableHlsOnDesktop = DEVICE_PROFILE.isDesktop && this._cameraDisableHlsDesktop(this._activeCam?.entity);
+  _buildLiveStreamAttempts(entity = "", forcedType = null, hostSlot = null) {
+    const targetEntity = String(entity || this._activeCam?.entity || "").trim();
+    const connectionType = this._cameraConnectionType(targetEntity);
+    const disableHlsOnDesktop = DEVICE_PROFILE.isDesktop && this._cameraDisableHlsDesktop(targetEntity);
     const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
     const build = {
       webrtc: (attemptOptions = {}) => this._tryMountGo2RTCWebRTC(
@@ -6872,6 +6874,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._ffDebug("Live attempt order", {
       forcedType: forcedType || "",
       order,
+      entity: targetEntity,
       connectionType
     });
     return buildLiveAttemptPlan({
@@ -7742,7 +7745,6 @@ const FrigateViewCard = class extends HTMLElement {
     const entity = this._activeCam?.entity;
     if (!entity) return;
     if (this._mountInProgress && this._mountTargetEntity === entity) return;
-    const connectionType = this._cameraConnectionType(entity);
     const useGo2Rtc = this._shouldUseGo2RtcForEntity(entity);
     if (useGo2Rtc && (!forcedType || forcedType === "mse")) {
       const graceMseEntry = this._takeGraceMseEntry(entity);
@@ -7873,11 +7875,7 @@ const FrigateViewCard = class extends HTMLElement {
         }, 1200);
         return;
       }
-      const attempts = this._buildLiveStreamAttempts(
-        connectionType,
-        forcedType,
-        slot
-      );
+      const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);
       if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
         return;
       this._setActiveStreamType("snapshot");
