@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1000";
+const VERSION = "1.0.1003";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5637,6 +5637,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._domCache = {};
     this._go2rtcWsUrlCache = new Map();
+    this._go2rtcWsUrlInFlight = new Map();
     this._go2rtcHlsUrlCache = new Map();
     this._go2rtcHlsProbeInFlight = new Map();
     this._fallbackImgUrlCache = new Map();
@@ -7401,6 +7402,15 @@ const FrigateViewCard = class extends HTMLElement {
       nowMs
     });
   }
+  _getGo2RtcWsInFlight(cacheKey) {
+    return this._go2rtcWsUrlInFlight.get(cacheKey);
+  }
+  _setGo2RtcWsInFlight(cacheKey, wsUrlPromise) {
+    this._go2rtcWsUrlInFlight.set(cacheKey, wsUrlPromise);
+  }
+  _clearGo2RtcWsInFlight(cacheKey) {
+    this._go2rtcWsUrlInFlight.delete(cacheKey);
+  }
   _getGo2RtcHlsCachedUrl(cacheKey, nowMs) {
     return getFreshCachedValue({
       cacheMap: this._go2rtcHlsUrlCache,
@@ -7441,13 +7451,26 @@ const FrigateViewCard = class extends HTMLElement {
     const { clientId, cam, cacheKey, nowMs } = state;
     const cachedUrl = this._getGo2RtcWsCachedUrl(cacheKey, nowMs);
     if (cachedUrl) return cachedUrl;
-    const path = buildGo2rtcWsPath({ clientId, cam });
-    const signedPath = await this._signedGo2RtcWsPath(path);
-    const abs = this._toAbsoluteSignedPath(signedPath);
-    const wsUrl = toWebSocketUrl(abs);
-    this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
-    this._ffDebug("go2rtc websocket url", wsUrl);
-    return wsUrl;
+    const inFlight = this._getGo2RtcWsInFlight(cacheKey);
+    if (inFlight) {
+      this._ffDebug("Joining in-flight go2rtc websocket URL request", {
+        cacheKey
+      });
+      return inFlight;
+    }
+    const wsUrlPromise = (async () => {
+      const path = buildGo2rtcWsPath({ clientId, cam });
+      const signedPath = await this._signedGo2RtcWsPath(path);
+      const abs = this._toAbsoluteSignedPath(signedPath);
+      const wsUrl = toWebSocketUrl(abs);
+      this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
+      this._ffDebug("go2rtc websocket url", wsUrl);
+      return wsUrl;
+    })().finally(() => {
+      this._clearGo2RtcWsInFlight(cacheKey);
+    });
+    this._setGo2RtcWsInFlight(cacheKey, wsUrlPromise);
+    return wsUrlPromise;
   }
   async _go2rtcHlsUrlForEntity(entity = "") {
     const state = await this._go2rtcTransportStateForEntity(entity);
@@ -8091,6 +8114,7 @@ const FrigateViewCard = class extends HTMLElement {
       } else if (graceMseEntry?.promise) {
         this._engineMountedMuted = this._streamMuted;
         const mountToken2 = this._beginMountTracking(entity);
+        let delayedFallbackT2 = null;
         const mountWatchdogT2 = setTimeout(
           () => this._onMountWatchdogTimeout(mountToken2),
           9e3
@@ -8126,9 +8150,20 @@ const FrigateViewCard = class extends HTMLElement {
         ];
         slot.innerHTML = "";
         if (!quiet) {
-          this._setActiveStreamType("--");
-          this._setStreamFallbackVisible(true, true);
+          this._setStreamFallbackVisible(false);
           this._setStreamLoading(true);
+          delayedFallbackT2 = setTimeout(() => {
+            if (!isMountTokenCurrent({ mountToken: mountToken2, mountSeq: this._mountSeq })) {
+              return;
+            }
+            if (!this._mountInProgress) return;
+            this._setActiveStreamType("--");
+            this._setStreamFallbackVisible(true, true);
+            this._ffDebug("Delayed fallback revealed", {
+              mountToken: mountToken2,
+              reason: "grace-pending"
+            });
+          }, 360);
         } else {
           this._setStreamFallbackVisible(false);
           this._setStreamLoading(false);
@@ -8143,6 +8178,7 @@ const FrigateViewCard = class extends HTMLElement {
             return;
           }
         } finally {
+          if (delayedFallbackT2) clearTimeout(delayedFallbackT2);
           clearMountState();
           if (shouldClearPendingDestroyersForPromise({
             pendingDestroyers: this._pendingMountDestroyers,
@@ -8159,16 +8195,46 @@ const FrigateViewCard = class extends HTMLElement {
       () => this._onMountWatchdogTimeout(mountToken),
       9e3
     );
+    const previousEngine = this._engine;
+    let delayedFallbackT = null;
+    const hadPreviousEngine = !!previousEngine;
+    const canPreserveVisibleEngine = useGo2Rtc && !quiet && !!previousEngine && !!this._findVideoDeep(slot);
     try {
-      this._cleanupEngine();
-      slot.innerHTML = "";
-      if (!quiet) {
-        this._setActiveStreamType("--");
-        this._setStreamFallbackVisible(true, true);
+      if (canPreserveVisibleEngine) {
+        this._ffDebug("Preserving visible engine during remount", {
+          entity,
+          forcedType: forcedType || ""
+        });
+        this._setStreamFallbackVisible(false);
         this._setStreamLoading(true);
       } else {
-        this._setStreamFallbackVisible(false);
-        this._setStreamLoading(false);
+        this._cleanupEngine();
+        slot.innerHTML = "";
+        if (!quiet) {
+          if (!hadPreviousEngine) {
+            this._setActiveStreamType("--");
+            this._setStreamFallbackVisible(true, true);
+            this._setStreamLoading(true);
+          } else {
+            this._setStreamFallbackVisible(false);
+            this._setStreamLoading(true);
+            delayedFallbackT = setTimeout(() => {
+              if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
+                return;
+              }
+              if (!this._mountInProgress) return;
+              this._setActiveStreamType("--");
+              this._setStreamFallbackVisible(true, true);
+              this._ffDebug("Delayed fallback revealed", {
+                mountToken,
+                reason: "mount-start"
+              });
+            }, 360);
+          }
+        } else {
+          this._setStreamFallbackVisible(false);
+          this._setStreamLoading(false);
+        }
       }
       if (!useGo2Rtc) {
         const streamType = forcedType || this._preferredStreamType();
@@ -8214,12 +8280,36 @@ const FrigateViewCard = class extends HTMLElement {
         return;
       }
       const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);
-      if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
+      if (await this._mountLiveWithRace(slot, attempts, mountToken, entity)) {
+        if (canPreserveVisibleEngine && previousEngine !== this._engine) {
+          try {
+            if (typeof previousEngine?.destroy === "function") {
+              previousEngine.destroy();
+            }
+            if (previousEngine?.ws?.close) previousEngine.ws.close();
+            if (previousEngine?.pc?.close) previousEngine.pc.close();
+          } catch (_) {
+          }
+        }
         return;
+      }
+      if (canPreserveVisibleEngine) {
+        try {
+          if (typeof previousEngine?.destroy === "function") {
+            previousEngine.destroy();
+          }
+          if (previousEngine?.ws?.close) previousEngine.ws.close();
+          if (previousEngine?.pc?.close) previousEngine.pc.close();
+        } catch (_) {
+        }
+        this._engine = null;
+        slot.innerHTML = "";
+      }
       this._setActiveStreamType("snapshot");
       this._setStreamLoading(false);
       this._setStreamFallbackVisible(true);
     } finally {
+      if (delayedFallbackT) clearTimeout(delayedFallbackT);
       clearTimeout(mountWatchdogT);
       this._clearMountTrackingIfCurrent(mountToken);
     }

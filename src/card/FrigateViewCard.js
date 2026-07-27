@@ -338,6 +338,7 @@ export class FrigateViewCard extends HTMLElement {
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._domCache = {};
     this._go2rtcWsUrlCache = new Map();
+    this._go2rtcWsUrlInFlight = new Map();
     this._go2rtcHlsUrlCache = new Map();
     this._go2rtcHlsProbeInFlight = new Map();
     this._fallbackImgUrlCache = new Map();
@@ -2379,6 +2380,18 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
+  _getGo2RtcWsInFlight(cacheKey) {
+    return this._go2rtcWsUrlInFlight.get(cacheKey);
+  }
+
+  _setGo2RtcWsInFlight(cacheKey, wsUrlPromise) {
+    this._go2rtcWsUrlInFlight.set(cacheKey, wsUrlPromise);
+  }
+
+  _clearGo2RtcWsInFlight(cacheKey) {
+    this._go2rtcWsUrlInFlight.delete(cacheKey);
+  }
+
   _getGo2RtcHlsCachedUrl(cacheKey, nowMs) {
     return getFreshCachedValue({
       cacheMap: this._go2rtcHlsUrlCache,
@@ -2426,15 +2439,30 @@ export class FrigateViewCard extends HTMLElement {
     const cachedUrl = this._getGo2RtcWsCachedUrl(cacheKey, nowMs);
     if (cachedUrl) return cachedUrl;
 
-    const path = buildGo2rtcWsPath({ clientId, cam });
-    const signedPath = await this._signedGo2RtcWsPath(path);
+    const inFlight = this._getGo2RtcWsInFlight(cacheKey);
+    if (inFlight) {
+      this._ffDebug("Joining in-flight go2rtc websocket URL request", {
+        cacheKey,
+      });
+      return inFlight;
+    }
 
-    const abs = this._toAbsoluteSignedPath(signedPath);
-    const wsUrl = toWebSocketUrl(abs);
-    // Signed path expires in 1h; refresh a bit early.
-    this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
-    this._ffDebug("go2rtc websocket url", wsUrl);
-    return wsUrl;
+    const wsUrlPromise = (async () => {
+      const path = buildGo2rtcWsPath({ clientId, cam });
+      const signedPath = await this._signedGo2RtcWsPath(path);
+
+      const abs = this._toAbsoluteSignedPath(signedPath);
+      const wsUrl = toWebSocketUrl(abs);
+      // Signed path expires in 1h; refresh a bit early.
+      this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
+      this._ffDebug("go2rtc websocket url", wsUrl);
+      return wsUrl;
+    })().finally(() => {
+      this._clearGo2RtcWsInFlight(cacheKey);
+    });
+
+    this._setGo2RtcWsInFlight(cacheKey, wsUrlPromise);
+    return wsUrlPromise;
   }
 
   async _go2rtcHlsUrlForEntity(entity = "") {
@@ -3127,6 +3155,7 @@ export class FrigateViewCard extends HTMLElement {
       } else if (graceMseEntry?.promise) {
         this._engineMountedMuted = this._streamMuted;
         const mountToken = this._beginMountTracking(entity);
+        let delayedFallbackT = null;
         const mountWatchdogT = setTimeout(
           () => this._onMountWatchdogTimeout(mountToken),
           9000,
@@ -3161,9 +3190,22 @@ export class FrigateViewCard extends HTMLElement {
         ];
         slot.innerHTML = "";
         if (!quiet) {
-          this._setActiveStreamType("--");
-          this._setStreamFallbackVisible(true, true);
+          this._setStreamFallbackVisible(false);
           this._setStreamLoading(true);
+          delayedFallbackT = setTimeout(() => {
+            if (
+              !isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })
+            ) {
+              return;
+            }
+            if (!this._mountInProgress) return;
+            this._setActiveStreamType("--");
+            this._setStreamFallbackVisible(true, true);
+            this._ffDebug("Delayed fallback revealed", {
+              mountToken,
+              reason: "grace-pending",
+            });
+          }, 360);
         } else {
           this._setStreamFallbackVisible(false);
           this._setStreamLoading(false);
@@ -3178,6 +3220,7 @@ export class FrigateViewCard extends HTMLElement {
             return;
           }
         } finally {
+          if (delayedFallbackT) clearTimeout(delayedFallbackT);
           clearMountState();
           if (
             shouldClearPendingDestroyersForPromise({
@@ -3196,16 +3239,51 @@ export class FrigateViewCard extends HTMLElement {
       () => this._onMountWatchdogTimeout(mountToken),
       9000,
     );
+    const previousEngine = this._engine;
+    let delayedFallbackT = null;
+    const hadPreviousEngine = !!previousEngine;
+    const canPreserveVisibleEngine =
+      useGo2Rtc && !quiet && !!previousEngine && !!this._findVideoDeep(slot);
     try {
-      this._cleanupEngine();
-      slot.innerHTML = "";
-      if (!quiet) {
-        this._setActiveStreamType("--");
-        this._setStreamFallbackVisible(true, true);
+      if (canPreserveVisibleEngine) {
+        this._ffDebug("Preserving visible engine during remount", {
+          entity,
+          forcedType: forcedType || "",
+        });
+        this._setStreamFallbackVisible(false);
         this._setStreamLoading(true);
       } else {
-        this._setStreamFallbackVisible(false);
-        this._setStreamLoading(false);
+        this._cleanupEngine();
+        slot.innerHTML = "";
+        if (!quiet) {
+          if (!hadPreviousEngine) {
+            // Initial load should show placeholder immediately.
+            this._setActiveStreamType("--");
+            this._setStreamFallbackVisible(true, true);
+            this._setStreamLoading(true);
+          } else {
+            // Camera switches can delay fallback briefly to reduce visual flashing.
+            this._setStreamFallbackVisible(false);
+            this._setStreamLoading(true);
+            delayedFallbackT = setTimeout(() => {
+              if (
+                !isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })
+              ) {
+                return;
+              }
+              if (!this._mountInProgress) return;
+              this._setActiveStreamType("--");
+              this._setStreamFallbackVisible(true, true);
+              this._ffDebug("Delayed fallback revealed", {
+                mountToken,
+                reason: "mount-start",
+              });
+            }, 360);
+          }
+        } else {
+          this._setStreamFallbackVisible(false);
+          this._setStreamLoading(false);
+        }
       }
 
       if (!useGo2Rtc) {
@@ -3256,14 +3334,37 @@ export class FrigateViewCard extends HTMLElement {
         return;
       }
       const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);
-      if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
+      if (await this._mountLiveWithRace(slot, attempts, mountToken, entity)) {
+        if (canPreserveVisibleEngine && previousEngine !== this._engine) {
+          try {
+            if (typeof previousEngine?.destroy === "function") {
+              previousEngine.destroy();
+            }
+            if (previousEngine?.ws?.close) previousEngine.ws.close();
+            if (previousEngine?.pc?.close) previousEngine.pc.close();
+          } catch (_) {}
+        }
         return;
+      }
+
+      if (canPreserveVisibleEngine) {
+        try {
+          if (typeof previousEngine?.destroy === "function") {
+            previousEngine.destroy();
+          }
+          if (previousEngine?.ws?.close) previousEngine.ws.close();
+          if (previousEngine?.pc?.close) previousEngine.pc.close();
+        } catch (_) {}
+        this._engine = null;
+        slot.innerHTML = "";
+      }
 
       // go2rtc attempts failed: show snapshot placeholder.
       this._setActiveStreamType("snapshot");
       this._setStreamLoading(false);
       this._setStreamFallbackVisible(true);
     } finally {
+      if (delayedFallbackT) clearTimeout(delayedFallbackT);
       clearTimeout(mountWatchdogT);
       this._clearMountTrackingIfCurrent(mountToken);
     }
