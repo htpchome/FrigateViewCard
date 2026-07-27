@@ -338,7 +338,6 @@ export class FrigateViewCard extends HTMLElement {
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._domCache = {};
     this._go2rtcWsUrlCache = new Map();
-    this._go2rtcWsUrlInFlight = new Map();
     this._go2rtcHlsUrlCache = new Map();
     this._go2rtcHlsProbeInFlight = new Map();
     this._fallbackImgUrlCache = new Map();
@@ -386,7 +385,6 @@ export class FrigateViewCard extends HTMLElement {
     this._dashboardEditLast = false;
     this._lastEditorPreviewContext = null;
     this._lastLiveKick = 0;
-    this._staleCheckGraceUntil = 0;
     this._rotateOverlayActive = false;
     this._rotateOverlayMode = "none";
     this._rotateOverlayRaf = 0;
@@ -1455,10 +1453,6 @@ export class FrigateViewCard extends HTMLElement {
     console.debug(prefix, msg, data);
   }
 
-  _markLiveMountHealthy(graceMs = 1400) {
-    this._staleCheckGraceUntil = Date.now() + Math.max(0, Number(graceMs) || 0);
-  }
-
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";
     return "webrtc";
@@ -1676,7 +1670,6 @@ export class FrigateViewCard extends HTMLElement {
     this._setActiveStreamType("mse");
     this._setStreamLoading(false);
     this._setStreamFallbackVisible(false);
-    this._markLiveMountHealthy();
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
     void engine.video.play?.().catch?.(() => {});
     return true;
@@ -1812,7 +1805,6 @@ export class FrigateViewCard extends HTMLElement {
     this._setActiveStreamType(result.type);
     this._setStreamLoading(false);
     this._setStreamFallbackVisible(false);
-    this._markLiveMountHealthy();
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
 
@@ -2380,18 +2372,6 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
-  _getGo2RtcWsInFlight(cacheKey) {
-    return this._go2rtcWsUrlInFlight.get(cacheKey);
-  }
-
-  _setGo2RtcWsInFlight(cacheKey, wsUrlPromise) {
-    this._go2rtcWsUrlInFlight.set(cacheKey, wsUrlPromise);
-  }
-
-  _clearGo2RtcWsInFlight(cacheKey) {
-    this._go2rtcWsUrlInFlight.delete(cacheKey);
-  }
-
   _getGo2RtcHlsCachedUrl(cacheKey, nowMs) {
     return getFreshCachedValue({
       cacheMap: this._go2rtcHlsUrlCache,
@@ -2439,30 +2419,15 @@ export class FrigateViewCard extends HTMLElement {
     const cachedUrl = this._getGo2RtcWsCachedUrl(cacheKey, nowMs);
     if (cachedUrl) return cachedUrl;
 
-    const inFlight = this._getGo2RtcWsInFlight(cacheKey);
-    if (inFlight) {
-      this._ffDebug("Joining in-flight go2rtc websocket URL request", {
-        cacheKey,
-      });
-      return inFlight;
-    }
+    const path = buildGo2rtcWsPath({ clientId, cam });
+    const signedPath = await this._signedGo2RtcWsPath(path);
 
-    const wsUrlPromise = (async () => {
-      const path = buildGo2rtcWsPath({ clientId, cam });
-      const signedPath = await this._signedGo2RtcWsPath(path);
-
-      const abs = this._toAbsoluteSignedPath(signedPath);
-      const wsUrl = toWebSocketUrl(abs);
-      // Signed path expires in 1h; refresh a bit early.
-      this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
-      this._ffDebug("go2rtc websocket url", wsUrl);
-      return wsUrl;
-    })().finally(() => {
-      this._clearGo2RtcWsInFlight(cacheKey);
-    });
-
-    this._setGo2RtcWsInFlight(cacheKey, wsUrlPromise);
-    return wsUrlPromise;
+    const abs = this._toAbsoluteSignedPath(signedPath);
+    const wsUrl = toWebSocketUrl(abs);
+    // Signed path expires in 1h; refresh a bit early.
+    this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
+    this._ffDebug("go2rtc websocket url", wsUrl);
+    return wsUrl;
   }
 
   async _go2rtcHlsUrlForEntity(entity = "") {
@@ -2921,17 +2886,15 @@ export class FrigateViewCard extends HTMLElement {
     });
 
     pc.addEventListener("connectionstatechange", () => {
-      const state = String(pc.connectionState || "");
       this._ffDebug("WebRTC connection state", {
-        state,
+        state: pc.connectionState,
         elapsedMs: Math.round(this._ffNowMs() - traceStartMs),
       });
     });
 
     pc.addEventListener("iceconnectionstatechange", () => {
-      const state = String(pc.iceConnectionState || "");
       this._ffDebug("WebRTC ICE state", {
-        state,
+        state: pc.iceConnectionState,
         elapsedMs: Math.round(this._ffNowMs() - traceStartMs),
       });
     });
@@ -3012,7 +2975,7 @@ export class FrigateViewCard extends HTMLElement {
     });
 
     const startupGateStartMs = this._ffNowMs();
-    const started = await this._waitForStreamStart(video, waitMs, {
+    const started = await this._waitForStreamStart(slot, waitMs, {
       minCurrentTime,
       minDecodedFrames,
       requireReadyState,
@@ -3123,7 +3086,6 @@ export class FrigateViewCard extends HTMLElement {
       } else if (graceMseEntry?.promise) {
         this._engineMountedMuted = this._streamMuted;
         const mountToken = this._beginMountTracking(entity);
-        let delayedFallbackT = null;
         const mountWatchdogT = setTimeout(
           () => this._onMountWatchdogTimeout(mountToken),
           9000,
@@ -3158,22 +3120,9 @@ export class FrigateViewCard extends HTMLElement {
         ];
         slot.innerHTML = "";
         if (!quiet) {
-          this._setStreamFallbackVisible(false);
+          this._setActiveStreamType("--");
+          this._setStreamFallbackVisible(true, true);
           this._setStreamLoading(true);
-          delayedFallbackT = setTimeout(() => {
-            if (
-              !isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })
-            ) {
-              return;
-            }
-            if (!this._mountInProgress) return;
-            this._setActiveStreamType("--");
-            this._setStreamFallbackVisible(true, true);
-            this._ffDebug("Delayed fallback revealed", {
-              mountToken,
-              reason: "grace-pending",
-            });
-          }, 360);
         } else {
           this._setStreamFallbackVisible(false);
           this._setStreamLoading(false);
@@ -3188,7 +3137,6 @@ export class FrigateViewCard extends HTMLElement {
             return;
           }
         } finally {
-          if (delayedFallbackT) clearTimeout(delayedFallbackT);
           clearMountState();
           if (
             shouldClearPendingDestroyersForPromise({
@@ -3207,51 +3155,16 @@ export class FrigateViewCard extends HTMLElement {
       () => this._onMountWatchdogTimeout(mountToken),
       9000,
     );
-    const previousEngine = this._engine;
-    let delayedFallbackT = null;
-    const hadPreviousEngine = !!previousEngine;
-    const canPreserveVisibleEngine =
-      useGo2Rtc && !quiet && !!previousEngine && !!this._findVideoDeep(slot);
     try {
-      if (canPreserveVisibleEngine) {
-        this._ffDebug("Preserving visible engine during remount", {
-          entity,
-          forcedType: forcedType || "",
-        });
-        this._setStreamFallbackVisible(false);
+      this._cleanupEngine();
+      slot.innerHTML = "";
+      if (!quiet) {
+        this._setActiveStreamType("--");
+        this._setStreamFallbackVisible(true, true);
         this._setStreamLoading(true);
       } else {
-        this._cleanupEngine();
-        slot.innerHTML = "";
-        if (!quiet) {
-          if (!hadPreviousEngine) {
-            // Initial load should show placeholder immediately.
-            this._setActiveStreamType("--");
-            this._setStreamFallbackVisible(true, true);
-            this._setStreamLoading(true);
-          } else {
-            // Camera switches can delay fallback briefly to reduce visual flashing.
-            this._setStreamFallbackVisible(false);
-            this._setStreamLoading(true);
-            delayedFallbackT = setTimeout(() => {
-              if (
-                !isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })
-              ) {
-                return;
-              }
-              if (!this._mountInProgress) return;
-              this._setActiveStreamType("--");
-              this._setStreamFallbackVisible(true, true);
-              this._ffDebug("Delayed fallback revealed", {
-                mountToken,
-                reason: "mount-start",
-              });
-            }, 360);
-          }
-        } else {
-          this._setStreamFallbackVisible(false);
-          this._setStreamLoading(false);
-        }
+        this._setStreamFallbackVisible(false);
+        this._setStreamLoading(false);
       }
 
       if (!useGo2Rtc) {
@@ -3302,37 +3215,14 @@ export class FrigateViewCard extends HTMLElement {
         return;
       }
       const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);
-      if (await this._mountLiveWithRace(slot, attempts, mountToken, entity)) {
-        if (canPreserveVisibleEngine && previousEngine !== this._engine) {
-          try {
-            if (typeof previousEngine?.destroy === "function") {
-              previousEngine.destroy();
-            }
-            if (previousEngine?.ws?.close) previousEngine.ws.close();
-            if (previousEngine?.pc?.close) previousEngine.pc.close();
-          } catch (_) {}
-        }
+      if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
         return;
-      }
-
-      if (canPreserveVisibleEngine) {
-        try {
-          if (typeof previousEngine?.destroy === "function") {
-            previousEngine.destroy();
-          }
-          if (previousEngine?.ws?.close) previousEngine.ws.close();
-          if (previousEngine?.pc?.close) previousEngine.pc.close();
-        } catch (_) {}
-        this._engine = null;
-        slot.innerHTML = "";
-      }
 
       // go2rtc attempts failed: show snapshot placeholder.
       this._setActiveStreamType("snapshot");
       this._setStreamLoading(false);
       this._setStreamFallbackVisible(true);
     } finally {
-      if (delayedFallbackT) clearTimeout(delayedFallbackT);
       clearTimeout(mountWatchdogT);
       this._clearMountTrackingIfCurrent(mountToken);
     }
@@ -6013,13 +5903,6 @@ export class FrigateViewCard extends HTMLElement {
       return;
     const now = Date.now();
     if (!force && now - this._lastLiveKick < 4000) return;
-    if (now < Number(this._staleCheckGraceUntil || 0)) {
-      this._ffDebug("Skipping stale check during mount grace", {
-        force,
-        remainingMs: Math.max(0, Number(this._staleCheckGraceUntil || 0) - now),
-      });
-      return;
-    }
     const recentMseTraffic =
       this._isFirefox() &&
       (now - Number(this._mseConnectAt || 0) < 12000 ||
@@ -6041,19 +5924,7 @@ export class FrigateViewCard extends HTMLElement {
       const hasFrames =
         (Number(v.currentTime) || 0) > 0.05 ||
         (Number(v.webkitDecodedFrameCount) || 0) > 0;
-      const activeType = String(this._activeStreamType || "")
-        .trim()
-        .toLowerCase();
-      const peerConn = this._engine?.pc || null;
-      const webrtcConnected =
-        activeType === "webrtc" &&
-        (peerConn?.connectionState === "connected" ||
-          peerConn?.iceConnectionState === "connected" ||
-          peerConn?.iceConnectionState === "completed");
       stale = ended || ready < 2 || (paused && hasFrames);
-      if (stale && webrtcConnected && !ended && ready < 2 && !hasFrames) {
-        stale = false;
-      }
     }
 
     if (stale) {
