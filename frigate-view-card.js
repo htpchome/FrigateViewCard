@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.990";
+const VERSION = "1.0.991";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6924,12 +6924,12 @@ const FrigateViewCard = class extends HTMLElement {
     slot?.attachOrchestrator?.(orchestrator);
     const activeAttempts = strategies.map((strategy) => ({
       type: strategy.type,
-      promise: strategy.connect()
+      promise: strategy.connect().catch(() => null)
     }));
     this._pendingMountDestroyers = strategies.map((strategy) => ({
       type: strategy.type,
       entity: targetEntity,
-      promise: strategy.connectPromise,
+      promise: strategy.connectPromise?.catch(() => null),
       destroy: () => {
         void strategy.disconnect();
       }

@@ -1846,13 +1846,13 @@ export class FrigateViewCard extends HTMLElement {
 
     const activeAttempts = strategies.map((strategy) => ({
       type: strategy.type,
-      promise: strategy.connect(),
+      promise: strategy.connect().catch(() => null),
     }));
 
     this._pendingMountDestroyers = strategies.map((strategy) => ({
       type: strategy.type,
       entity: targetEntity,
-      promise: strategy.connectPromise,
+      promise: strategy.connectPromise?.catch(() => null),
       destroy: () => {
         void strategy.disconnect();
       },
