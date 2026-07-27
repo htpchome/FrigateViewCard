@@ -1423,14 +1423,7 @@ export class FrigateViewCard extends HTMLElement {
     return Number(globalThis.performance?.now?.() || Date.now());
   }
 
-  _ffDebug(msg, data = null) {
-    const prefix = `[FrigateViewCard ${VERSION}]`;
-    if (data === null || data === undefined) {
-      console.debug(prefix, msg);
-      return;
-    }
-    console.debug(prefix, msg, data);
-  }
+  _ffDebug(msg, data = null) {}
 
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1007";
+const VERSION = "1.0.1008";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6559,12 +6559,6 @@ const FrigateViewCard = class extends HTMLElement {
     return Number(globalThis.performance?.now?.() || Date.now());
   }
   _ffDebug(msg, data = null) {
-    const prefix = `[FrigateViewCard ${VERSION}]`;
-    if (data === null || data === void 0) {
-      console.debug(prefix, msg);
-      return;
-    }
-    console.debug(prefix, msg, data);
   }
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";
