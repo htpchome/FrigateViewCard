@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.975";
+const VERSION = "1.0.976";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7150,6 +7150,12 @@ const FrigateViewCard = class extends HTMLElement {
       cacheKey: makeGo2rtcCacheKey({ clientId, cam })
     };
   }
+  _toAbsoluteSignedPath(signedPath) {
+    return toAbsoluteSignedUrl({
+      signedPath,
+      origin: window.location.origin
+    });
+  }
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
@@ -7175,10 +7181,7 @@ const FrigateViewCard = class extends HTMLElement {
     } catch (e) {
       this._ffDebug("Failed to sign go2rtc ws path", e?.message || String(e));
     }
-    const abs = toAbsoluteSignedUrl({
-      signedPath: path,
-      origin: window.location.origin
-    });
+    const abs = this._toAbsoluteSignedPath(path);
     const wsUrl = toWebSocketUrl(abs);
     setCachedValue({
       cacheMap: this._go2rtcWsUrlCache,
@@ -7210,10 +7213,7 @@ const FrigateViewCard = class extends HTMLElement {
     const probePromise = (async () => {
       for (const p of candidates) {
         const signed = await this._signed(p);
-        const abs = toAbsoluteSignedUrl({
-          signedPath: signed,
-          origin: window.location.origin
-        });
+        const abs = this._toAbsoluteSignedPath(signed);
         try {
           const resp = await fetch(abs, {
             method: "GET",
