@@ -1419,33 +1419,11 @@ export class FrigateViewCard extends HTMLElement {
     return this._isEditorPreviewContext() || this._isCardPickerPreviewContext();
   }
 
-  _isLiveTraceEnabled() {
-    const cfg = this._config || {};
-    if (cfg?.debug_live_trace === true) return true;
-    if (cfg?.debug?.live_trace === true) return true;
-    if (cfg?.debug?.liveTrace === true) return true;
-
-    try {
-      const queryFlag = new URLSearchParams(window.location.search).get(
-        "frigate_view_card_debug",
-      );
-      if (queryFlag === "1" || queryFlag === "true") return true;
-    } catch (_) {}
-
-    try {
-      const localFlag = window.localStorage?.getItem("frigateViewCardDebug");
-      if (localFlag === "1" || localFlag === "true") return true;
-    } catch (_) {}
-
-    return false;
-  }
-
   _ffNowMs() {
     return Number(globalThis.performance?.now?.() || Date.now());
   }
 
   _ffDebug(msg, data = null) {
-    if (!this._isLiveTraceEnabled()) return;
     const prefix = `[FrigateViewCard ${VERSION}]`;
     if (data === null || data === undefined) {
       console.debug(prefix, msg);
