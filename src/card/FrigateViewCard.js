@@ -385,6 +385,7 @@ export class FrigateViewCard extends HTMLElement {
     this._dashboardEditLast = false;
     this._lastEditorPreviewContext = null;
     this._lastLiveKick = 0;
+    this._staleCheckGraceUntil = 0;
     this._rotateOverlayActive = false;
     this._rotateOverlayMode = "none";
     this._rotateOverlayRaf = 0;
@@ -1453,6 +1454,10 @@ export class FrigateViewCard extends HTMLElement {
     console.debug(prefix, msg, data);
   }
 
+  _markLiveMountHealthy(graceMs = 1400) {
+    this._staleCheckGraceUntil = Date.now() + Math.max(0, Number(graceMs) || 0);
+  }
+
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";
     return "webrtc";
@@ -1670,6 +1675,7 @@ export class FrigateViewCard extends HTMLElement {
     this._setActiveStreamType("mse");
     this._setStreamLoading(false);
     this._setStreamFallbackVisible(false);
+    this._markLiveMountHealthy();
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
     void engine.video.play?.().catch?.(() => {});
     return true;
@@ -1805,6 +1811,7 @@ export class FrigateViewCard extends HTMLElement {
     this._setActiveStreamType(result.type);
     this._setStreamLoading(false);
     this._setStreamFallbackVisible(false);
+    this._markLiveMountHealthy();
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
 
@@ -5937,6 +5944,13 @@ export class FrigateViewCard extends HTMLElement {
       return;
     const now = Date.now();
     if (!force && now - this._lastLiveKick < 4000) return;
+    if (now < Number(this._staleCheckGraceUntil || 0)) {
+      this._ffDebug("Skipping stale check during mount grace", {
+        force,
+        remainingMs: Math.max(0, Number(this._staleCheckGraceUntil || 0) - now),
+      });
+      return;
+    }
     const recentMseTraffic =
       this._isFirefox() &&
       (now - Number(this._mseConnectAt || 0) < 12000 ||
@@ -5958,7 +5972,19 @@ export class FrigateViewCard extends HTMLElement {
       const hasFrames =
         (Number(v.currentTime) || 0) > 0.05 ||
         (Number(v.webkitDecodedFrameCount) || 0) > 0;
+      const activeType = String(this._activeStreamType || "")
+        .trim()
+        .toLowerCase();
+      const peerConn = this._engine?.pc || null;
+      const webrtcConnected =
+        activeType === "webrtc" &&
+        (peerConn?.connectionState === "connected" ||
+          peerConn?.iceConnectionState === "connected" ||
+          peerConn?.iceConnectionState === "completed");
       stale = ended || ready < 2 || (paused && hasFrames);
+      if (stale && webrtcConnected && !ended && ready < 2 && !hasFrames) {
+        stale = false;
+      }
     }
 
     if (stale) {
