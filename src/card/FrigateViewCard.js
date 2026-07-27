@@ -211,6 +211,13 @@ import {
   extractRealtimeMessageSeverity,
 } from "../slideshow/slideshow-routing-utils.js";
 import { fetchWindowedItems } from "../data/window-fetch-utils.js";
+
+const GO2RTC_CACHE_TTL_MS = Object.freeze({
+  wsSignedPath: 55 * 60 * 1000,
+  hlsPlaylist: 30 * 60 * 1000,
+  hlsNegative: 2 * 60 * 1000,
+});
+
 export class FrigateViewCard extends HTMLElement {
   constructor() {
     super();
@@ -2157,7 +2164,7 @@ export class FrigateViewCard extends HTMLElement {
             cacheMap: this._go2rtcHlsUrlCache,
             cacheKey,
             url: abs,
-            ttlMs: 30 * 60 * 1000,
+            ttlMs: GO2RTC_CACHE_TTL_MS.hlsPlaylist,
             nowMs: Date.now(),
           });
           return abs;
@@ -2169,7 +2176,7 @@ export class FrigateViewCard extends HTMLElement {
       cacheMap: this._go2rtcHlsUrlCache,
       cacheKey,
       url: null,
-      ttlMs: 2 * 60 * 1000,
+      ttlMs: GO2RTC_CACHE_TTL_MS.hlsNegative,
       nowMs: Date.now(),
     });
     return null;
@@ -2217,7 +2224,7 @@ export class FrigateViewCard extends HTMLElement {
       cacheMap: this._go2rtcWsUrlCache,
       cacheKey,
       url: wsUrl,
-      ttlMs: 55 * 60 * 1000,
+      ttlMs: GO2RTC_CACHE_TTL_MS.wsSignedPath,
       nowMs,
     });
     this._ffDebug("go2rtc websocket url", wsUrl);

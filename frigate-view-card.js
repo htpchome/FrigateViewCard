@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.978";
+const VERSION = "1.0.979";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5487,6 +5487,11 @@ async function fetchWindowedItems({
 }
 
 // src/card/FrigateViewCard.js
+const GO2RTC_CACHE_TTL_MS = Object.freeze({
+  wsSignedPath: 55 * 60 * 1e3,
+  hlsPlaylist: 30 * 60 * 1e3,
+  hlsNegative: 2 * 60 * 1e3
+});
 const FrigateViewCard = class extends HTMLElement {
   constructor() {
     super();
@@ -7175,7 +7180,7 @@ const FrigateViewCard = class extends HTMLElement {
             cacheMap: this._go2rtcHlsUrlCache,
             cacheKey,
             url: abs,
-            ttlMs: 30 * 60 * 1e3,
+            ttlMs: GO2RTC_CACHE_TTL_MS.hlsPlaylist,
             nowMs: Date.now()
           });
           return abs;
@@ -7187,7 +7192,7 @@ const FrigateViewCard = class extends HTMLElement {
       cacheMap: this._go2rtcHlsUrlCache,
       cacheKey,
       url: null,
-      ttlMs: 2 * 60 * 1e3,
+      ttlMs: GO2RTC_CACHE_TTL_MS.hlsNegative,
       nowMs: Date.now()
     });
     return null;
@@ -7228,7 +7233,7 @@ const FrigateViewCard = class extends HTMLElement {
       cacheMap: this._go2rtcWsUrlCache,
       cacheKey,
       url: wsUrl,
-      ttlMs: 55 * 60 * 1e3,
+      ttlMs: GO2RTC_CACHE_TTL_MS.wsSignedPath,
       nowMs
     });
     this._ffDebug("go2rtc websocket url", wsUrl);

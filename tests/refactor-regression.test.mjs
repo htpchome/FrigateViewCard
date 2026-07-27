@@ -86,6 +86,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
+    /GO2RTC_CACHE_TTL_MS\s*=\s*Object\.freeze\([\s\S]*?wsSignedPath[\s\S]*?hlsPlaylist[\s\S]*?hlsNegative[\s\S]*?\)/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
     /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const targetEntity = this\._resolveGo2RtcEntity\(entity\);/.test(
       source,
     ),
@@ -119,6 +125,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?this\._probeGo2RtcHlsCandidates\([\s\S]*?cacheKey/.test(
       source,
     ),
+    true,
+  );
+  assert.equal(
+    /GO2RTC_CACHE_TTL_MS\.hlsPlaylist/.test(source) &&
+      /GO2RTC_CACHE_TTL_MS\.hlsNegative/.test(source) &&
+      /GO2RTC_CACHE_TTL_MS\.wsSignedPath/.test(source),
     true,
   );
   assert.equal(
