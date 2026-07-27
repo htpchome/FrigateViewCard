@@ -75,7 +75,7 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
-    /_signedGo2RtcWsPath\([^)]*\) \{[\s\S]*?auth\/sign_path[\s\S]*?_ffDebug\("Signed go2rtc ws path"[\s\S]*?\}/.test(
+    /_signedGo2RtcWsPath\([^)]*\) \{[\s\S]*?auth\/sign_path[\s\S]*?const signedPath = r\?\.path \|\| path;[\s\S]*?return signedPath;[\s\S]*?\}/.test(
       source,
     ),
     true,
