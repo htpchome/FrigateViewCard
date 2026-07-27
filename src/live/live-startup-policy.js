@@ -22,21 +22,12 @@ export const resolveMseStartup = (startup = {}) => ({
   strict: startup.strict !== false,
 });
 
-export const resolveWebRtcStartup = ({ startup = {}, isFirefox = false }) => ({
+export const resolveWebRtcStartup = ({ startup = {} }) => ({
   waitMs: normalizeWaitMs(startup.waitMs, 7000),
-  minCurrentTime: normalizeNumber(
-    startup.minCurrentTime,
-    isFirefox ? 0.15 : 0.05,
-  ),
-  minDecodedFrames: normalizeNumber(
-    startup.minDecodedFrames,
-    isFirefox ? 2 : 1,
-  ),
-  requireReadyState: normalizeNumber(
-    startup.requireReadyState,
-    isFirefox ? 3 : 0,
-  ),
-  strict: startup.strict ?? (isFirefox ? true : false),
+  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
+  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
+  requireReadyState: normalizeNumber(startup.requireReadyState, 0),
+  strict: startup.strict ?? false,
 });
 
 export const resolveHlsStartup = (startup = {}) => ({

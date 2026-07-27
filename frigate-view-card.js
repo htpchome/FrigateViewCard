@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.994";
+const VERSION = "1.0.996";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3099,21 +3099,12 @@ const resolveMseStartup = (startup = {}) => ({
   requireReadyState: normalizeNumber(startup.requireReadyState, 3),
   strict: startup.strict !== false
 });
-const resolveWebRtcStartup = ({ startup = {}, isFirefox = false }) => ({
+const resolveWebRtcStartup = ({ startup = {} }) => ({
   waitMs: normalizeWaitMs(startup.waitMs, 7e3),
-  minCurrentTime: normalizeNumber(
-    startup.minCurrentTime,
-    isFirefox ? 0.15 : 0.05
-  ),
-  minDecodedFrames: normalizeNumber(
-    startup.minDecodedFrames,
-    isFirefox ? 2 : 1
-  ),
-  requireReadyState: normalizeNumber(
-    startup.requireReadyState,
-    isFirefox ? 3 : 0
-  ),
-  strict: startup.strict ?? (isFirefox ? true : false)
+  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
+  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
+  requireReadyState: normalizeNumber(startup.requireReadyState, 0),
+  strict: startup.strict ?? false
 });
 const resolveHlsStartup = (startup = {}) => ({
   waitMs: normalizeWaitMs(startup.waitMs, 5e3)
@@ -7699,8 +7690,7 @@ const FrigateViewCard = class extends HTMLElement {
       requireReadyState,
       strict
     } = resolveWebRtcStartup({
-      startup: startup || {},
-      isFirefox: this._isFirefox()
+      startup: startup || {}
     });
     const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
     if (abortSignal?.aborted) return false;

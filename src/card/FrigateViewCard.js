@@ -2702,7 +2702,6 @@ export class FrigateViewCard extends HTMLElement {
       strict,
     } = resolveWebRtcStartup({
       startup: startup || {},
-      isFirefox: this._isFirefox(),
     });
     const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
 
