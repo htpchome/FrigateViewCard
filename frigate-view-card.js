@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.997";
+const VERSION = "1.0.998";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6554,7 +6554,36 @@ const FrigateViewCard = class extends HTMLElement {
   _isPreviewContext() {
     return this._isEditorPreviewContext() || this._isCardPickerPreviewContext();
   }
-  _ffDebug(_msg, _data = null) {
+  _isLiveTraceEnabled() {
+    const cfg = this._config || {};
+    if (cfg?.debug_live_trace === true) return true;
+    if (cfg?.debug?.live_trace === true) return true;
+    if (cfg?.debug?.liveTrace === true) return true;
+    try {
+      const queryFlag = new URLSearchParams(window.location.search).get(
+        "frigate_view_card_debug"
+      );
+      if (queryFlag === "1" || queryFlag === "true") return true;
+    } catch (_) {
+    }
+    try {
+      const localFlag = window.localStorage?.getItem("frigateViewCardDebug");
+      if (localFlag === "1" || localFlag === "true") return true;
+    } catch (_) {
+    }
+    return false;
+  }
+  _ffNowMs() {
+    return Number(globalThis.performance?.now?.() || Date.now());
+  }
+  _ffDebug(msg, data = null) {
+    if (!this._isLiveTraceEnabled()) return;
+    const prefix = `[FrigateViewCard ${VERSION}]`;
+    if (data === null || data === void 0) {
+      console.debug(prefix, msg);
+      return;
+    }
+    console.debug(prefix, msg, data);
   }
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";
@@ -6889,9 +6918,21 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._pendingWebRTCTakeoverTimer = setTimeout(() => {
       void (async () => {
+        const takeoverStartMs = this._ffNowMs();
         try {
+          this._ffDebug("Deferred WebRTC takeover started", {
+            winnerType,
+            mountToken
+          });
           const result = await deferredAttempt.promise.catch(() => null);
-          if (!result?.ok || result.type !== "webrtc") return;
+          if (!result?.ok || result.type !== "webrtc") {
+            this._ffDebug("Deferred WebRTC takeover skipped (no result)", {
+              ok: Boolean(result?.ok),
+              type: result?.type || "",
+              elapsedMs: Math.round(this._ffNowMs() - takeoverStartMs)
+            });
+            return;
+          }
           const takeoverStable = await this._waitForStreamStart(
             result.slot,
             1500,
@@ -6903,18 +6944,32 @@ const FrigateViewCard = class extends HTMLElement {
             }
           );
           if (!takeoverStable) {
+            this._ffDebug("Deferred WebRTC takeover failed stability gate", {
+              elapsedMs: Math.round(this._ffNowMs() - takeoverStartMs)
+            });
             cleanupStaleWinnerResult(result);
             return;
           }
           if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
+            this._ffDebug("Deferred WebRTC takeover ignored (stale mount)", {
+              mountToken,
+              mountSeq: this._mountSeq,
+              elapsedMs: Math.round(this._ffNowMs() - takeoverStartMs)
+            });
             cleanupStaleWinnerResult(result);
             return;
           }
           if (this._engine !== winnerEngine) {
+            this._ffDebug("Deferred WebRTC takeover ignored (winner changed)", {
+              elapsedMs: Math.round(this._ffNowMs() - takeoverStartMs)
+            });
             cleanupStaleWinnerResult(result);
             return;
           }
           this._adoptMountedAttempt(slot, result);
+          this._ffDebug("Deferred WebRTC takeover committed", {
+            elapsedMs: Math.round(this._ffNowMs() - takeoverStartMs)
+          });
           try {
             winnerEngine?.destroy?.();
           } catch (_) {
@@ -6969,6 +7024,7 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _mountLiveWithRace(slot, attempts, mountToken, targetEntity) {
+    const raceStartMs = this._ffNowMs();
     const strategies = attempts.map(
       (attempt) => createStrategyForType({
         type: attempt.type,
@@ -7003,6 +7059,13 @@ const FrigateViewCard = class extends HTMLElement {
     const winner = await orchestrator.start();
     const deferredPreferredAttempt = orchestrator.deferredPreferredAttempt;
     const deferredPreferredType = deferredPreferredAttempt?.type || "";
+    this._ffDebug("Live race resolved", {
+      winnerType: winner?.type || "",
+      winnerOk: Boolean(winner?.ok),
+      deferredPreferredType,
+      elapsedMs: Math.round(this._ffNowMs() - raceStartMs),
+      entity: targetEntity
+    });
     if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
       cleanupStaleWinnerResult(winner);
       slot?.clearOrchestrator?.(orchestrator);
@@ -7697,6 +7760,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._mountGridSnapshotCell(cell, { entity, stateObj });
   }
   async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
+    const traceStartMs = this._ffNowMs();
     const {
       waitMs,
       minCurrentTime,
@@ -7707,13 +7771,28 @@ const FrigateViewCard = class extends HTMLElement {
       startup: startup || {}
     });
     const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
+    this._ffDebug("WebRTC mount attempt started", {
+      entity,
+      commit,
+      waitMs,
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict
+    });
     if (abortSignal?.aborted) return false;
     if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
       return false;
     }
     if (!entity) return false;
+    const wsUrlStartMs = this._ffNowMs();
     const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) return false;
+    this._ffDebug("WebRTC URL resolved", {
+      entity,
+      elapsedMs: Math.round(this._ffNowMs() - wsUrlStartMs),
+      totalMs: Math.round(this._ffNowMs() - traceStartMs)
+    });
     const video = createVideoElement(
       buildVideoOptionsForView(
         "live",
@@ -7758,6 +7837,11 @@ const FrigateViewCard = class extends HTMLElement {
     if (commit) this._engine = engine;
     pc.addTransceiver("video", { direction: "recvonly" });
     pc.addTransceiver("audio", { direction: "recvonly" });
+    let firstTrackLogged = false;
+    let answerLogged = false;
+    let wsOpenLogged = false;
+    let firstIceCandidateSent = false;
+    let firstRemoteIceLogged = false;
     pc.addEventListener("track", (ev) => {
       if (ev.streams && ev.streams[0]) {
         video.srcObject = ev.streams[0];
@@ -7768,11 +7852,36 @@ const FrigateViewCard = class extends HTMLElement {
       }
       video.play().catch(() => {
       });
+      if (!firstTrackLogged) {
+        firstTrackLogged = true;
+        this._ffDebug("WebRTC first track received", {
+          elapsedMs: Math.round(this._ffNowMs() - traceStartMs),
+          kind: ev?.track?.kind || "unknown"
+        });
+      }
+    });
+    pc.addEventListener("connectionstatechange", () => {
+      this._ffDebug("WebRTC connection state", {
+        state: pc.connectionState,
+        elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
+      });
+    });
+    pc.addEventListener("iceconnectionstatechange", () => {
+      this._ffDebug("WebRTC ICE state", {
+        state: pc.iceConnectionState,
+        elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
+      });
     });
     pc.addEventListener("icecandidate", (ev) => {
       if (ws.readyState !== WebSocket.OPEN) return;
       const candidate = ev.candidate ? ev.candidate.toJSON().candidate : "";
       ws.send(JSON.stringify({ type: "webrtc/candidate", value: candidate }));
+      if (!firstIceCandidateSent && candidate) {
+        firstIceCandidateSent = true;
+        this._ffDebug("WebRTC first local ICE sent", {
+          elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
+        });
+      }
     });
     ws.addEventListener("message", (ev) => {
       let msg;
@@ -7782,32 +7891,72 @@ const FrigateViewCard = class extends HTMLElement {
         return;
       }
       if (msg?.type === "webrtc/answer") {
+        if (!answerLogged) {
+          answerLogged = true;
+          this._ffDebug("WebRTC answer received", {
+            elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
+          });
+        }
         pc.setRemoteDescription({
           type: "answer",
           sdp: msg.value
         }).catch(() => {
         });
       } else if (msg?.type === "webrtc/candidate") {
+        if (!firstRemoteIceLogged) {
+          firstRemoteIceLogged = true;
+          this._ffDebug("WebRTC first remote ICE received", {
+            elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
+          });
+        }
         pc.addIceCandidate({ candidate: msg.value, sdpMid: "0" }).catch(
           () => {
           }
         );
       }
     });
+    ws.addEventListener("error", () => {
+      this._ffDebug("WebRTC websocket error", {
+        elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
+      });
+    });
+    ws.addEventListener("close", (ev) => {
+      this._ffDebug("WebRTC websocket closed", {
+        code: ev.code,
+        reason: ev.reason,
+        wasClean: ev.wasClean,
+        elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
+      });
+    });
     ws.addEventListener("open", async () => {
+      if (!wsOpenLogged) {
+        wsOpenLogged = true;
+        this._ffDebug("WebRTC websocket opened", {
+          elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
+        });
+      }
       try {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         ws.send(JSON.stringify({ type: "webrtc/offer", value: offer.sdp }));
+        this._ffDebug("WebRTC offer sent", {
+          elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
+        });
       } catch (_) {
       }
     });
+    const startupGateStartMs = this._ffNowMs();
     const started = await this._waitForStreamStart(slot, waitMs, {
       minCurrentTime,
       minDecodedFrames,
       requireReadyState,
       strict,
       abortSignal
+    });
+    this._ffDebug("WebRTC startup gate finished", {
+      started,
+      gateElapsedMs: Math.round(this._ffNowMs() - startupGateStartMs),
+      totalElapsedMs: Math.round(this._ffNowMs() - traceStartMs)
     });
     if (!started) {
       destroy();
