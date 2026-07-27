@@ -1347,6 +1347,12 @@ export class FrigateViewCard extends HTMLElement {
     return this._cameraConnectionType(key) !== "ha_direct";
   }
 
+  _resolveGo2RtcEntity(entity = "") {
+    const targetEntity = String(entity || this._activeCam?.entity || "").trim();
+    if (!targetEntity) return "";
+    return this._shouldUseGo2RtcForEntity(targetEntity) ? targetEntity : "";
+  }
+
   _cameraDisableHlsDesktop(entity) {
     if (!entity) return false;
     const cam = this._config?.cameras?.find((c) => c?.entity === entity);
@@ -2109,9 +2115,10 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcWebSocketUrlForEntity(entity) {
-    if (!entity || !this._shouldUseGo2RtcForEntity(entity)) return null;
-    await this._discoverOne(entity);
-    const { clientId, cam } = this._cameraContext(entity);
+    const targetEntity = this._resolveGo2RtcEntity(entity);
+    if (!targetEntity) return null;
+    await this._discoverOne(targetEntity);
+    const { clientId, cam } = this._cameraContext(targetEntity);
     if (!clientId || !cam) return null;
     const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
     const nowMs = Date.now();
@@ -2156,9 +2163,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcHlsUrlForEntity(entity = "") {
-    const targetEntity = String(entity || this._activeCam?.entity || "").trim();
+    const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
-    if (!this._shouldUseGo2RtcForEntity(targetEntity)) return null;
     if (!this._supportsNativeHlsPlayback()) return null;
 
     await this._discoverOne(targetEntity);
@@ -2237,9 +2243,9 @@ export class FrigateViewCard extends HTMLElement {
     } = resolveMseStartup(startup || {});
     const commit = options.commit !== false;
     const abortSignal = options?.abortSignal || null;
-    const entity = options?.entity || this._activeCam?.entity || "";
+    const entity = this._resolveGo2RtcEntity(options?.entity);
     const muted = options?.muted ?? this._streamMuted;
-    if (!this._shouldUseGo2RtcForEntity(entity)) return false;
+    if (!entity) return false;
     if (abortSignal?.aborted) return false;
     if (!("WebSocket" in window) || !("MediaSource" in window)) {
       this._ffDebug("MSE unavailable in browser", {
@@ -2570,8 +2576,8 @@ export class FrigateViewCard extends HTMLElement {
       return false;
     }
 
-    const entity = options?.entity || this._activeCam?.entity || "";
-    if (!this._shouldUseGo2RtcForEntity(entity)) return false;
+    const entity = this._resolveGo2RtcEntity(options?.entity);
+    if (!entity) return false;
     const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
     if (!wsUrl) return false;
 
@@ -2691,8 +2697,8 @@ export class FrigateViewCard extends HTMLElement {
     const commit = options.commit !== false;
     const abortSignal = options?.abortSignal || null;
     if (abortSignal?.aborted) return false;
-    const entity = options?.entity || this._activeCam?.entity || "";
-    if (!this._shouldUseGo2RtcForEntity(entity)) return false;
+    const entity = this._resolveGo2RtcEntity(options?.entity);
+    if (!entity) return false;
     const hlsUrl = await this._go2rtcHlsUrlForEntity(entity);
     if (!hlsUrl) return false;
 

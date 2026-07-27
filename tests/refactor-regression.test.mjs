@@ -32,25 +32,43 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
-    /_tryMountGo2RTCMSE\([\s\S]*?!this\._shouldUseGo2RtcForEntity\(entity\)\) return false;/.test(
+    /_tryMountGo2RTCMSE\([\s\S]*?const entity = this\._resolveGo2RtcEntity\(options\?\.entity\);[\s\S]*?if \(!entity\) return false;/.test(
       source,
     ),
     true,
   );
   assert.equal(
-    /_tryMountGo2RTCWebRTC\([\s\S]*?!this\._shouldUseGo2RtcForEntity\(entity\)\) return false;/.test(
+    /_tryMountGo2RTCWebRTC\([\s\S]*?const entity = this\._resolveGo2RtcEntity\(options\?\.entity\);[\s\S]*?if \(!entity\) return false;/.test(
       source,
     ),
     true,
   );
   assert.equal(
-    /_tryMountGo2RTCHLS\([\s\S]*?!this\._shouldUseGo2RtcForEntity\(entity\)\) return false;/.test(
+    /_tryMountGo2RTCHLS\([\s\S]*?const entity = this\._resolveGo2RtcEntity\(options\?\.entity\);[\s\S]*?if \(!entity\) return false;/.test(
       source,
     ),
     true,
   );
   assert.equal(
     /_go2rtcHlsUrlForEntity\([\s\S]*?if \(!targetEntity\) return null;/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_resolveGo2RtcEntity\(entity = ""\) \{[\s\S]*?_shouldUseGo2RtcForEntity\(targetEntity\) \? targetEntity : "";[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const targetEntity = this\._resolveGo2RtcEntity\(entity\);/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const targetEntity = this\._resolveGo2RtcEntity\(entity\);/.test(
       source,
     ),
     true,
