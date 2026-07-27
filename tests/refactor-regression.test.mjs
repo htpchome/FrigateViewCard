@@ -91,6 +91,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     ),
     true,
   );
+  assert.equal(
+    /_mountEngine\([\s\S]*?const connectionType = this\._cameraConnectionType\(entity\);[\s\S]*?_buildLiveStreamAttempts\(\s*connectionType,/.test(
+      source,
+    ),
+    true,
+  );
   assert.equal(/async _go2rtcWebSocketUrl\(\)/.test(source), false);
   assert.equal(/async _go2rtcWebSocketUrlForMountEntity\(/.test(source), false);
   assert.equal(/async _go2rtcHlsUrl\(\)/.test(source), false);
