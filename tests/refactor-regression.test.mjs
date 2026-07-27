@@ -79,6 +79,18 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     ),
     false,
   );
+  assert.equal(
+    /_mountGridCameraCellMedia\([\s\S]*?liveStreamHint === "mse" && this\._shouldUseGo2RtcForEntity\(entity\)/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_mountEngine\([\s\S]*?const useGo2Rtc = this\._shouldUseGo2RtcForEntity\(entity\);[\s\S]*?if \(\s*useGo2Rtc\s*&&/.test(
+      source,
+    ),
+    true,
+  );
   assert.equal(/async _go2rtcWebSocketUrl\(\)/.test(source), false);
   assert.equal(/async _go2rtcWebSocketUrlForMountEntity\(/.test(source), false);
   assert.equal(/async _go2rtcHlsUrl\(\)/.test(source), false);

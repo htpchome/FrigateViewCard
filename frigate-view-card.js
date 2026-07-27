@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.969";
+const VERSION = "1.0.970";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1792,12 +1792,12 @@ const hassEntityStateSignature = (hass, entities) => entities.map((entity) => `$
 // src/live/live-attempt-planner.js
 const DEFAULT_LIVE_ORDER = Object.freeze(["webrtc", "mse", "hls"]);
 const buildLiveAttemptPlan = ({
-  connectionType,
+  connectionType: connectionType2,
   forcedType = null,
   disableHlsOnDesktop = false,
   builders = {}
 }) => {
-  if (connectionType === "ha_direct") return [];
+  if (connectionType2 === "ha_direct") return [];
   const order = forcedType ? [forcedType] : DEFAULT_LIVE_ORDER;
   return order.filter((type) => !(type === "hls" && disableHlsOnDesktop)).filter((type) => typeof builders[type] === "function").map((type) => ({ type, start: builders[type] }));
 };
@@ -3688,11 +3688,11 @@ function resolvePreviewLiveStreamHint({
 }
 function resolvePreviewStreamSourceLabel({
   useLive,
-  connectionType,
+  connectionType: connectionType2,
   liveStreamHint
 }) {
   if (!useLive) return "Snapshot";
-  if (connectionType === "ha_direct") return "HA Live";
+  if (connectionType2 === "ha_direct") return "HA Live";
   const hint = String(liveStreamHint || "").trim().toUpperCase();
   return hint ? `${hint} Live` : "Live";
 }
@@ -6458,7 +6458,8 @@ const FrigateViewCard = class extends HTMLElement {
     return supportsNativeHlsPlayback();
   }
   _useHaDirectStreamPath() {
-    return this._cameraConnectionType(this._activeCam?.entity) === "ha_direct";
+    const entity = this._activeCam?.entity;
+    return !!entity && !this._shouldUseGo2RtcForEntity(entity);
   }
   _cameraConnectionType(entity) {
     if (!entity) return DEFAULT_CAMERA_CONNECTION_TYPE;
@@ -6841,7 +6842,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._setStreamFallbackVisible(false);
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
-  _buildLiveStreamAttempts(connectionType, forcedType = null, hostSlot = null) {
+  _buildLiveStreamAttempts(connectionType2, forcedType = null, hostSlot = null) {
     const disableHlsOnDesktop = DEVICE_PROFILE.isDesktop && this._cameraDisableHlsDesktop(this._activeCam?.entity);
     const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
     const build = {
@@ -6871,10 +6872,10 @@ const FrigateViewCard = class extends HTMLElement {
     this._ffDebug("Live attempt order", {
       forcedType: forcedType || "",
       order,
-      connectionType
+      connectionType: connectionType2
     });
     return buildLiveAttemptPlan({
-      connectionType,
+      connectionType: connectionType2,
       forcedType,
       disableHlsOnDesktop,
       builders: build
@@ -7517,8 +7518,7 @@ const FrigateViewCard = class extends HTMLElement {
   }) {
     if (!cell || !entity) return false;
     if (stateObj && useLive) {
-      const connectionType = this._cameraConnectionType(entity);
-      if (liveStreamHint === "mse" && connectionType !== "ha_direct") {
+      if (liveStreamHint === "mse" && this._shouldUseGo2RtcForEntity(entity)) {
         this._mountGridDirectMSECell(cell, entity, gridState, {
           fallbackOnFailure: fallbackOnLiveError,
           stateObj
@@ -7742,8 +7742,8 @@ const FrigateViewCard = class extends HTMLElement {
     const entity = this._activeCam?.entity;
     if (!entity) return;
     if (this._mountInProgress && this._mountTargetEntity === entity) return;
-    const connectionType = this._cameraConnectionType(entity);
-    if (connectionType !== "ha_direct" && (!forcedType || forcedType === "mse")) {
+    const useGo2Rtc = this._shouldUseGo2RtcForEntity(entity);
+    if (useGo2Rtc && (!forcedType || forcedType === "mse")) {
       const graceMseEntry = this._takeGraceMseEntry(entity);
       if (graceMseEntry?.engine) {
         if (this._adoptGraceMseEngine(slot, graceMseEntry.engine)) return;
@@ -7829,7 +7829,7 @@ const FrigateViewCard = class extends HTMLElement {
         this._setStreamFallbackVisible(false);
         this._setStreamLoading(false);
       }
-      if (connectionType === "ha_direct") {
+      if (!useGo2Rtc) {
         const streamType = forcedType || this._preferredStreamType();
         this._setActiveStreamType(streamType);
         const stateObj = this._hlsStateObj(entity, streamType);
@@ -13113,7 +13113,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const modal = this.querySelector("#camera-modal");
     const name = this.querySelector("#camera-modal-name");
     const entity = this.querySelector("#camera-modal-entity");
-    const connectionType = this.querySelector("#camera-modal-connection-type");
+    const connectionType2 = this.querySelector("#camera-modal-connection-type");
     const alertsContentAllReviews = this.querySelector(
       "#camera-modal-all-reviews"
     );
@@ -13128,10 +13128,10 @@ const FrigateViewCardEditor = class extends HTMLElement {
       entity.value = cam?.entity || "";
       entity.dataset.value = cam?.entity || "";
     }
-    if (connectionType) {
+    if (connectionType2) {
       const nextType = normalizeCameraConnectionType2(cam?.connection_type);
-      connectionType.value = nextType;
-      connectionType.dataset.value = nextType;
+      connectionType2.value = nextType;
+      connectionType2.dataset.value = nextType;
     }
     if (alertsContentAllReviews) {
       alertsContentAllReviews.checked = normalizeAlertsAreaContent2(cam?.alerts_content) === "all_reviews";
@@ -13154,7 +13154,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
   _saveCameraModal() {
     const entity = this._cameraModalEntityValue();
     const name = (this.querySelector("#camera-modal-name")?.value || "").toString();
-    const connectionType = normalizeCameraConnectionType2(
+    const connectionType2 = normalizeCameraConnectionType2(
       this.querySelector("#camera-modal-connection-type")?.dataset?.value || this.querySelector("#camera-modal-connection-type")?.value || DEFAULT_CAMERA_CONNECTION_TYPE
     );
     const alertsContent = this.querySelector("#camera-modal-all-reviews")?.checked === true ? "all_reviews" : "alerts_only";
@@ -13173,7 +13173,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       cur.push({
         entity,
         name,
-        connection_type: connectionType,
+        connection_type: connectionType2,
         alerts_content: alertsContent,
         disable_hls_desktop: disableHlsDesktop
       });
@@ -13181,7 +13181,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       cur[this._editingCamIndex] = {
         entity,
         name,
-        connection_type: connectionType,
+        connection_type: connectionType2,
         alerts_content: alertsContent,
         disable_hls_desktop: disableHlsDesktop
       };

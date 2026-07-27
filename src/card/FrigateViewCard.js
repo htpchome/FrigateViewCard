@@ -1332,7 +1332,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _useHaDirectStreamPath() {
-    return this._cameraConnectionType(this._activeCam?.entity) === "ha_direct";
+    const entity = this._activeCam?.entity;
+    return !!entity && !this._shouldUseGo2RtcForEntity(entity);
   }
 
   _cameraConnectionType(entity) {
@@ -2533,8 +2534,7 @@ export class FrigateViewCard extends HTMLElement {
   ) {
     if (!cell || !entity) return false;
     if (stateObj && useLive) {
-      const connectionType = this._cameraConnectionType(entity);
-      if (liveStreamHint === "mse" && connectionType !== "ha_direct") {
+      if (liveStreamHint === "mse" && this._shouldUseGo2RtcForEntity(entity)) {
         this._mountGridDirectMSECell(cell, entity, gridState, {
           fallbackOnFailure: fallbackOnLiveError,
           stateObj,
@@ -2774,11 +2774,8 @@ export class FrigateViewCard extends HTMLElement {
     const entity = this._activeCam?.entity;
     if (!entity) return;
     if (this._mountInProgress && this._mountTargetEntity === entity) return;
-    const connectionType = this._cameraConnectionType(entity);
-    if (
-      connectionType !== "ha_direct" &&
-      (!forcedType || forcedType === "mse")
-    ) {
+    const useGo2Rtc = this._shouldUseGo2RtcForEntity(entity);
+    if (useGo2Rtc && (!forcedType || forcedType === "mse")) {
       const graceMseEntry = this._takeGraceMseEntry(entity);
       if (graceMseEntry?.engine) {
         if (this._adoptGraceMseEngine(slot, graceMseEntry.engine)) return;
@@ -2866,7 +2863,7 @@ export class FrigateViewCard extends HTMLElement {
         this._setStreamLoading(false);
       }
 
-      if (connectionType === "ha_direct") {
+      if (!useGo2Rtc) {
         const streamType = forcedType || this._preferredStreamType();
         this._setActiveStreamType(streamType);
         const stateObj = this._hlsStateObj(entity, streamType);
