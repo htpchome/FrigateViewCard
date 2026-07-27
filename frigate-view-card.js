@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.989";
+const VERSION = "1.0.990";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1940,6 +1940,7 @@ const StreamStrategy = class {
       }
       return result;
     })();
+    this._connectPromise.catch(() => null);
     return this._connectPromise;
   }
   async disconnect() {

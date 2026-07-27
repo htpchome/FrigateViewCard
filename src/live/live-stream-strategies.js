@@ -34,6 +34,8 @@ export class StreamStrategy {
       return result;
     })();
 
+    this._connectPromise.catch(() => null);
+
     return this._connectPromise;
   }
 
