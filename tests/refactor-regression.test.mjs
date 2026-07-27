@@ -39,7 +39,7 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
   assert.equal(source.includes('_go2rtcHlsUrlForEntity(entity = "")'), true);
   assert.equal(
     source.includes(
-      "const ctx = await this._go2rtcUrlContextForEntity(entity);",
+      "const ctx = await this._go2rtcTransportContextForEntity(entity);",
     ),
     true,
   );
@@ -55,9 +55,7 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
-    source.includes(
-      "const ctx = await this._go2rtcUrlContextForEntity(entity);",
-    ),
+    source.includes("_go2rtcTransportContextForEntity(entity)"),
     true,
   );
   assert.equal(
@@ -68,6 +66,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
   );
   assert.equal(
     /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const ctx = await this\._go2rtcUrlContextForEntity\(entity\);/.test(
+      source,
+    ),
+    false,
+  );
+  assert.equal(
+    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const ctx = await this\._go2rtcTransportContextForEntity\(entity\);/.test(
       source,
     ),
     true,
@@ -140,6 +144,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
   );
   assert.equal(
     /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const ctx = await this\._go2rtcUrlContextForEntity\(entity\);/.test(
+      source,
+    ),
+    false,
+  );
+  assert.equal(
+    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const ctx = await this\._go2rtcTransportContextForEntity\(entity\);/.test(
       source,
     ),
     true,

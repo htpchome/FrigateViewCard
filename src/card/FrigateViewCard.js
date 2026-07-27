@@ -2145,6 +2145,10 @@ export class FrigateViewCard extends HTMLElement {
     return { targetEntity, ...ctx };
   }
 
+  async _go2rtcTransportContextForEntity(entity) {
+    return this._go2rtcUrlContextForEntity(entity);
+  }
+
   _resolveGo2RtcMountEntity(options = {}) {
     return this._resolveGo2RtcEntity(options?.entity);
   }
@@ -2260,7 +2264,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcWebSocketUrlForEntity(entity) {
-    const ctx = await this._go2rtcUrlContextForEntity(entity);
+    const ctx = await this._go2rtcTransportContextForEntity(entity);
     if (!ctx) return null;
     const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
@@ -2279,7 +2283,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcHlsUrlForEntity(entity = "") {
-    const ctx = await this._go2rtcUrlContextForEntity(entity);
+    const ctx = await this._go2rtcTransportContextForEntity(entity);
     if (!ctx) return null;
     if (!this._supportsNativeHlsPlayback()) return null;
     const { clientId, cam, cacheKey } = ctx;
