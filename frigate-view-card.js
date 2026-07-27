@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.976";
+const VERSION = "1.0.977";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7156,6 +7156,42 @@ const FrigateViewCard = class extends HTMLElement {
       origin: window.location.origin
     });
   }
+  async _probeGo2RtcHlsCandidates(candidates, cacheKey) {
+    for (const p of candidates) {
+      const signed = await this._signed(p);
+      const abs = this._toAbsoluteSignedPath(signed);
+      try {
+        const resp = await fetch(abs, {
+          method: "GET",
+          cache: "no-store",
+          credentials: "same-origin"
+        });
+        if (!resp.ok) continue;
+        if (isM3u8Response({
+          contentType: resp.headers.get("content-type") || "",
+          url: abs
+        })) {
+          setCachedValue({
+            cacheMap: this._go2rtcHlsUrlCache,
+            cacheKey,
+            url: abs,
+            ttlMs: 30 * 60 * 1e3,
+            nowMs: Date.now()
+          });
+          return abs;
+        }
+      } catch (_) {
+      }
+    }
+    setCachedValue({
+      cacheMap: this._go2rtcHlsUrlCache,
+      cacheKey,
+      url: null,
+      ttlMs: 2 * 60 * 1e3,
+      nowMs: Date.now()
+    });
+    return null;
+  }
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
@@ -7210,42 +7246,10 @@ const FrigateViewCard = class extends HTMLElement {
     const inFlight = this._go2rtcHlsProbeInFlight.get(cacheKey);
     if (inFlight) return inFlight;
     const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
-    const probePromise = (async () => {
-      for (const p of candidates) {
-        const signed = await this._signed(p);
-        const abs = this._toAbsoluteSignedPath(signed);
-        try {
-          const resp = await fetch(abs, {
-            method: "GET",
-            cache: "no-store",
-            credentials: "same-origin"
-          });
-          if (!resp.ok) continue;
-          if (isM3u8Response({
-            contentType: resp.headers.get("content-type") || "",
-            url: abs
-          })) {
-            setCachedValue({
-              cacheMap: this._go2rtcHlsUrlCache,
-              cacheKey,
-              url: abs,
-              ttlMs: 30 * 60 * 1e3,
-              nowMs: Date.now()
-            });
-            return abs;
-          }
-        } catch (_) {
-        }
-      }
-      setCachedValue({
-        cacheMap: this._go2rtcHlsUrlCache,
-        cacheKey,
-        url: null,
-        ttlMs: 2 * 60 * 1e3,
-        nowMs: Date.now()
-      });
-      return null;
-    })().finally(() => {
+    const probePromise = this._probeGo2RtcHlsCandidates(
+      candidates,
+      cacheKey
+    ).finally(() => {
       this._go2rtcHlsProbeInFlight.delete(cacheKey);
     });
     this._go2rtcHlsProbeInFlight.set(cacheKey, probePromise);

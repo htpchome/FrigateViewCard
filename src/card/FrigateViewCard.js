@@ -2136,6 +2136,45 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
+  async _probeGo2RtcHlsCandidates(candidates, cacheKey) {
+    for (const p of candidates) {
+      const signed = await this._signed(p);
+      const abs = this._toAbsoluteSignedPath(signed);
+      try {
+        const resp = await fetch(abs, {
+          method: "GET",
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (!resp.ok) continue;
+        if (
+          isM3u8Response({
+            contentType: resp.headers.get("content-type") || "",
+            url: abs,
+          })
+        ) {
+          setCachedValue({
+            cacheMap: this._go2rtcHlsUrlCache,
+            cacheKey,
+            url: abs,
+            ttlMs: 30 * 60 * 1000,
+            nowMs: Date.now(),
+          });
+          return abs;
+        }
+      } catch (_) {}
+    }
+
+    setCachedValue({
+      cacheMap: this._go2rtcHlsUrlCache,
+      cacheKey,
+      url: null,
+      ttlMs: 2 * 60 * 1000,
+      nowMs: Date.now(),
+    });
+    return null;
+  }
+
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
@@ -2200,44 +2239,10 @@ export class FrigateViewCard extends HTMLElement {
 
     const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
 
-    const probePromise = (async () => {
-      for (const p of candidates) {
-        const signed = await this._signed(p);
-        const abs = this._toAbsoluteSignedPath(signed);
-        try {
-          const resp = await fetch(abs, {
-            method: "GET",
-            cache: "no-store",
-            credentials: "same-origin",
-          });
-          if (!resp.ok) continue;
-          if (
-            isM3u8Response({
-              contentType: resp.headers.get("content-type") || "",
-              url: abs,
-            })
-          ) {
-            setCachedValue({
-              cacheMap: this._go2rtcHlsUrlCache,
-              cacheKey,
-              url: abs,
-              ttlMs: 30 * 60 * 1000,
-              nowMs: Date.now(),
-            });
-            return abs;
-          }
-        } catch (_) {}
-      }
-
-      setCachedValue({
-        cacheMap: this._go2rtcHlsUrlCache,
-        cacheKey,
-        url: null,
-        ttlMs: 2 * 60 * 1000,
-        nowMs: Date.now(),
-      });
-      return null;
-    })().finally(() => {
+    const probePromise = this._probeGo2RtcHlsCandidates(
+      candidates,
+      cacheKey,
+    ).finally(() => {
       this._go2rtcHlsProbeInFlight.delete(cacheKey);
     });
 

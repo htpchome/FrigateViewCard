@@ -92,6 +92,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
+    /_probeGo2RtcHlsCandidates\([^)]*\) \{[\s\S]*?isM3u8Response\([\s\S]*?setCachedValue\([\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
     /_toAbsoluteSignedPath\([^)]*\) \{[\s\S]*?toAbsoluteSignedUrl\(\{[\s\S]*?origin: window\.location\.origin[\s\S]*?\}\);[\s\S]*?\}/.test(
       source,
     ),
@@ -104,7 +110,7 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
-    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?this\._toAbsoluteSignedPath\(signed\)/.test(
+    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?this\._probeGo2RtcHlsCandidates\([\s\S]*?cacheKey/.test(
       source,
     ),
     true,
