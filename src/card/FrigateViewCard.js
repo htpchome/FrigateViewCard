@@ -216,7 +216,7 @@ import { fetchWindowedItems } from "../data/window-fetch-utils.js";
 const GO2RTC_CACHE_TTL_MS = Object.freeze({
   wsSignedPath: 55 * 60 * 1000,
   hlsPlaylist: 30 * 60 * 1000,
-  hlsNegative: 2 * 60 * 1000,
+  hlsNegative: 30 * 60 * 1000,
 });
 
 export class FrigateViewCard extends HTMLElement {

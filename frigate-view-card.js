@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.992";
+const VERSION = "1.0.993";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5511,7 +5511,7 @@ async function fetchWindowedItems({
 const GO2RTC_CACHE_TTL_MS = Object.freeze({
   wsSignedPath: 55 * 60 * 1e3,
   hlsPlaylist: 30 * 60 * 1e3,
-  hlsNegative: 2 * 60 * 1e3
+  hlsNegative: 30 * 60 * 1e3
 });
 const FrigateViewCard = class extends HTMLElement {
   constructor() {
