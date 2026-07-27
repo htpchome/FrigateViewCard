@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.974";
+const VERSION = "1.0.975";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7139,13 +7139,23 @@ const FrigateViewCard = class extends HTMLElement {
   _cameraContext(entity) {
     return this._camCache[entity] || mkCamState();
   }
+  async _go2rtcContextForEntity(entity) {
+    if (!entity) return null;
+    await this._discoverOne(entity);
+    const { clientId, cam } = this._cameraContext(entity);
+    if (!clientId || !cam) return null;
+    return {
+      clientId,
+      cam,
+      cacheKey: makeGo2rtcCacheKey({ clientId, cam })
+    };
+  }
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
-    await this._discoverOne(targetEntity);
-    const { clientId, cam } = this._cameraContext(targetEntity);
-    if (!clientId || !cam) return null;
-    const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
+    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    if (!ctx) return null;
+    const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
     const cachedUrl = getFreshCachedValue({
       cacheMap: this._go2rtcWsUrlCache,
@@ -7184,10 +7194,9 @@ const FrigateViewCard = class extends HTMLElement {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
     if (!this._supportsNativeHlsPlayback()) return null;
-    await this._discoverOne(targetEntity);
-    const { clientId, cam } = this._cameraContext(targetEntity);
-    if (!clientId || !cam) return null;
-    const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
+    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    if (!ctx) return null;
+    const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
     const cachedUrl = getFreshCachedValue({
       cacheMap: this._go2rtcHlsUrlCache,

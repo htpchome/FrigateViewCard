@@ -2117,13 +2117,24 @@ export class FrigateViewCard extends HTMLElement {
     return this._camCache[entity] || mkCamState();
   }
 
+  async _go2rtcContextForEntity(entity) {
+    if (!entity) return null;
+    await this._discoverOne(entity);
+    const { clientId, cam } = this._cameraContext(entity);
+    if (!clientId || !cam) return null;
+    return {
+      clientId,
+      cam,
+      cacheKey: makeGo2rtcCacheKey({ clientId, cam }),
+    };
+  }
+
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
-    await this._discoverOne(targetEntity);
-    const { clientId, cam } = this._cameraContext(targetEntity);
-    if (!clientId || !cam) return null;
-    const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
+    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    if (!ctx) return null;
+    const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
     const cachedUrl = getFreshCachedValue({
       cacheMap: this._go2rtcWsUrlCache,
@@ -2169,12 +2180,9 @@ export class FrigateViewCard extends HTMLElement {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
     if (!this._supportsNativeHlsPlayback()) return null;
-
-    await this._discoverOne(targetEntity);
-    const { clientId, cam } = this._cameraContext(targetEntity);
-    if (!clientId || !cam) return null;
-
-    const cacheKey = makeGo2rtcCacheKey({ clientId, cam });
+    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    if (!ctx) return null;
+    const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
     const cachedUrl = getFreshCachedValue({
       cacheMap: this._go2rtcHlsUrlCache,
