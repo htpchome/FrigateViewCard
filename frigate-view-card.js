@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1005";
+const VERSION = "1.0.1006";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5637,6 +5637,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._domCache = {};
     this._go2rtcWsUrlCache = new Map();
+    this._go2rtcWsUrlInFlight = new Map();
     this._go2rtcHlsUrlCache = new Map();
     this._go2rtcHlsProbeInFlight = new Map();
     this._fallbackImgUrlCache = new Map();
@@ -7395,6 +7396,15 @@ const FrigateViewCard = class extends HTMLElement {
       nowMs
     });
   }
+  _getGo2RtcWsInFlight(cacheKey) {
+    return this._go2rtcWsUrlInFlight.get(cacheKey);
+  }
+  _setGo2RtcWsInFlight(cacheKey, wsUrlPromise) {
+    this._go2rtcWsUrlInFlight.set(cacheKey, wsUrlPromise);
+  }
+  _clearGo2RtcWsInFlight(cacheKey) {
+    this._go2rtcWsUrlInFlight.delete(cacheKey);
+  }
   _getGo2RtcHlsCachedUrl(cacheKey, nowMs) {
     return getFreshCachedValue({
       cacheMap: this._go2rtcHlsUrlCache,
@@ -7435,13 +7445,21 @@ const FrigateViewCard = class extends HTMLElement {
     const { clientId, cam, cacheKey, nowMs } = state;
     const cachedUrl = this._getGo2RtcWsCachedUrl(cacheKey, nowMs);
     if (cachedUrl) return cachedUrl;
-    const path = buildGo2rtcWsPath({ clientId, cam });
-    const signedPath = await this._signedGo2RtcWsPath(path);
-    const abs = this._toAbsoluteSignedPath(signedPath);
-    const wsUrl = toWebSocketUrl(abs);
-    this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
-    this._ffDebug("go2rtc websocket url", wsUrl);
-    return wsUrl;
+    const inFlight = this._getGo2RtcWsInFlight(cacheKey);
+    if (inFlight) return inFlight;
+    const wsUrlPromise = (async () => {
+      const path = buildGo2rtcWsPath({ clientId, cam });
+      const signedPath = await this._signedGo2RtcWsPath(path);
+      const abs = this._toAbsoluteSignedPath(signedPath);
+      const wsUrl = toWebSocketUrl(abs);
+      this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
+      this._ffDebug("go2rtc websocket url", wsUrl);
+      return wsUrl;
+    })().finally(() => {
+      this._clearGo2RtcWsInFlight(cacheKey);
+    });
+    this._setGo2RtcWsInFlight(cacheKey, wsUrlPromise);
+    return wsUrlPromise;
   }
   async _go2rtcHlsUrlForEntity(entity = "") {
     const state = await this._go2rtcTransportStateForEntity(entity);
@@ -7842,6 +7860,10 @@ const FrigateViewCard = class extends HTMLElement {
     let wsOpenLogged = false;
     let firstIceCandidateSent = false;
     let firstRemoteIceLogged = false;
+    let resolveFirstRenderedFrame = null;
+    const firstRenderedFramePromise = new Promise((resolve) => {
+      resolveFirstRenderedFrame = resolve;
+    });
     pc.addEventListener("track", (ev) => {
       if (ev.streams && ev.streams[0]) {
         video.srcObject = ev.streams[0];
@@ -7858,6 +7880,16 @@ const FrigateViewCard = class extends HTMLElement {
           elapsedMs: Math.round(this._ffNowMs() - traceStartMs),
           kind: ev?.track?.kind || "unknown"
         });
+        if (video.requestVideoFrameCallback) {
+          video.requestVideoFrameCallback(() => {
+            if (!resolveFirstRenderedFrame) return;
+            resolveFirstRenderedFrame(true);
+            resolveFirstRenderedFrame = null;
+            this._ffDebug("WebRTC first rendered frame", {
+              elapsedMs: Math.round(this._ffNowMs() - traceStartMs)
+            });
+          });
+        }
       }
     });
     pc.addEventListener("connectionstatechange", () => {
@@ -7946,13 +7978,17 @@ const FrigateViewCard = class extends HTMLElement {
       }
     });
     const startupGateStartMs = this._ffNowMs();
-    const started = await this._waitForStreamStart(slot, waitMs, {
-      minCurrentTime,
-      minDecodedFrames,
-      requireReadyState,
-      strict,
-      abortSignal
-    });
+    const started = await Promise.race([
+      this._waitForStreamStart(video, waitMs, {
+        minCurrentTime,
+        minDecodedFrames,
+        requireReadyState,
+        strict,
+        abortSignal
+      }),
+      firstRenderedFramePromise
+    ]);
+    resolveFirstRenderedFrame = null;
     this._ffDebug("WebRTC startup gate finished", {
       started,
       gateElapsedMs: Math.round(this._ffNowMs() - startupGateStartMs),
