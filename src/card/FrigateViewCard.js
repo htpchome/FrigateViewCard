@@ -2161,25 +2161,13 @@ export class FrigateViewCard extends HTMLElement {
             url: abs,
           })
         ) {
-          setCachedValue({
-            cacheMap: this._go2rtcHlsUrlCache,
-            cacheKey,
-            url: abs,
-            ttlMs: GO2RTC_CACHE_TTL_MS.hlsPlaylist,
-            nowMs: Date.now(),
-          });
+          this._cacheGo2RtcHlsUrl(cacheKey, abs, Date.now());
           return abs;
         }
       } catch (_) {}
     }
 
-    setCachedValue({
-      cacheMap: this._go2rtcHlsUrlCache,
-      cacheKey,
-      url: null,
-      ttlMs: GO2RTC_CACHE_TTL_MS.hlsNegative,
-      nowMs: Date.now(),
-    });
+    this._cacheMissingGo2RtcHlsUrl(cacheKey, Date.now());
     return null;
   }
 
@@ -2219,6 +2207,34 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
+  _getGo2RtcHlsCachedUrl(cacheKey, nowMs) {
+    return getFreshCachedValue({
+      cacheMap: this._go2rtcHlsUrlCache,
+      cacheKey,
+      nowMs,
+    });
+  }
+
+  _cacheGo2RtcHlsUrl(cacheKey, url, nowMs) {
+    setCachedValue({
+      cacheMap: this._go2rtcHlsUrlCache,
+      cacheKey,
+      url,
+      ttlMs: GO2RTC_CACHE_TTL_MS.hlsPlaylist,
+      nowMs,
+    });
+  }
+
+  _cacheMissingGo2RtcHlsUrl(cacheKey, nowMs) {
+    setCachedValue({
+      cacheMap: this._go2rtcHlsUrlCache,
+      cacheKey,
+      url: null,
+      ttlMs: GO2RTC_CACHE_TTL_MS.hlsNegative,
+      nowMs,
+    });
+  }
+
   async _go2rtcWebSocketUrlForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
@@ -2248,11 +2264,7 @@ export class FrigateViewCard extends HTMLElement {
     if (!ctx) return null;
     const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
-    const cachedUrl = getFreshCachedValue({
-      cacheMap: this._go2rtcHlsUrlCache,
-      cacheKey,
-      nowMs,
-    });
+    const cachedUrl = this._getGo2RtcHlsCachedUrl(cacheKey, nowMs);
     if (cachedUrl !== undefined) return cachedUrl;
 
     const inFlight = this._go2rtcHlsProbeInFlight.get(cacheKey);

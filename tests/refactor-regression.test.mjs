@@ -98,6 +98,24 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
+    /_getGo2RtcHlsCachedUrl\([^)]*\) \{[\s\S]*?getFreshCachedValue\([\s\S]*?_go2rtcHlsUrlCache[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_cacheGo2RtcHlsUrl\([^)]*\) \{[\s\S]*?setCachedValue\([\s\S]*?_go2rtcHlsUrlCache[\s\S]*?GO2RTC_CACHE_TTL_MS\.hlsPlaylist[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_cacheMissingGo2RtcHlsUrl\([^)]*\) \{[\s\S]*?setCachedValue\([\s\S]*?_go2rtcHlsUrlCache[\s\S]*?GO2RTC_CACHE_TTL_MS\.hlsNegative[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
     /GO2RTC_CACHE_TTL_MS\s*=\s*Object\.freeze\([\s\S]*?wsSignedPath[\s\S]*?hlsPlaylist[\s\S]*?hlsNegative[\s\S]*?\)/.test(
       source,
     ),
@@ -135,6 +153,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
   );
   assert.equal(
     /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?this\._probeGo2RtcHlsCandidates\([\s\S]*?cacheKey/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
+    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?this\._getGo2RtcHlsCachedUrl\(cacheKey, nowMs\)/.test(
       source,
     ),
     true,
