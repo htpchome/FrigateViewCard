@@ -2137,6 +2137,14 @@ export class FrigateViewCard extends HTMLElement {
     };
   }
 
+  async _go2rtcUrlContextForEntity(entity) {
+    const targetEntity = this._resolveGo2RtcEntity(entity);
+    if (!targetEntity) return null;
+    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    if (!ctx) return null;
+    return { targetEntity, ...ctx };
+  }
+
   _toAbsoluteSignedPath(signedPath) {
     return toAbsoluteSignedUrl({
       signedPath,
@@ -2248,9 +2256,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcWebSocketUrlForEntity(entity) {
-    const targetEntity = this._resolveGo2RtcEntity(entity);
-    if (!targetEntity) return null;
-    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    const ctx = await this._go2rtcUrlContextForEntity(entity);
     if (!ctx) return null;
     const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
@@ -2269,11 +2275,9 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcHlsUrlForEntity(entity = "") {
-    const targetEntity = this._resolveGo2RtcEntity(entity);
-    if (!targetEntity) return null;
-    if (!this._supportsNativeHlsPlayback()) return null;
-    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    const ctx = await this._go2rtcUrlContextForEntity(entity);
     if (!ctx) return null;
+    if (!this._supportsNativeHlsPlayback()) return null;
     const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
     const cachedUrl = this._getGo2RtcHlsCachedUrl(cacheKey, nowMs);

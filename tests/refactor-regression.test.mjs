@@ -49,12 +49,18 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     ),
     true,
   );
+  assert.equal(source.includes('_go2rtcHlsUrlForEntity(entity = "")'), true);
   assert.equal(
-    /_go2rtcHlsUrlForEntity\([\s\S]*?if \(!targetEntity\) return null;/.test(
-      source,
+    source.includes(
+      "const ctx = await this._go2rtcUrlContextForEntity(entity);",
     ),
     true,
   );
+  assert.equal(
+    source.includes("const targetEntity = this._resolveGo2RtcEntity(entity);"),
+    true,
+  );
+  assert.equal(source.includes("return { targetEntity, ...ctx };"), true);
   assert.equal(
     /_resolveGo2RtcEntity\(entity = ""\) \{[\s\S]*?_shouldUseGo2RtcForEntity\(targetEntity\) \? targetEntity : "";[\s\S]*?\}/.test(
       source,
@@ -62,8 +68,8 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
-    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const targetEntity = this\._resolveGo2RtcEntity\(entity\);/.test(
-      source,
+    source.includes(
+      "const ctx = await this._go2rtcUrlContextForEntity(entity);",
     ),
     true,
   );
@@ -74,7 +80,7 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
-    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const ctx = await this\._go2rtcContextForEntity\(targetEntity\);/.test(
+    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const ctx = await this\._go2rtcUrlContextForEntity\(entity\);/.test(
       source,
     ),
     true,
@@ -143,10 +149,10 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const targetEntity = this\._resolveGo2RtcEntity\(entity\);/.test(
       source,
     ),
-    true,
+    false,
   );
   assert.equal(
-    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const ctx = await this\._go2rtcContextForEntity\(targetEntity\);/.test(
+    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const ctx = await this\._go2rtcUrlContextForEntity\(entity\);/.test(
       source,
     ),
     true,

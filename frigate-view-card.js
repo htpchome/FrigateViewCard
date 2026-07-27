@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.984";
+const VERSION = "1.0.985";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7168,6 +7168,13 @@ const FrigateViewCard = class extends HTMLElement {
       cacheKey: makeGo2rtcCacheKey({ clientId, cam })
     };
   }
+  async _go2rtcUrlContextForEntity(entity) {
+    const targetEntity = this._resolveGo2RtcEntity(entity);
+    if (!targetEntity) return null;
+    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    if (!ctx) return null;
+    return { targetEntity, ...ctx };
+  }
   _toAbsoluteSignedPath(signedPath) {
     return toAbsoluteSignedUrl({
       signedPath,
@@ -7264,9 +7271,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._go2rtcHlsProbeInFlight.delete(cacheKey);
   }
   async _go2rtcWebSocketUrlForEntity(entity) {
-    const targetEntity = this._resolveGo2RtcEntity(entity);
-    if (!targetEntity) return null;
-    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    const ctx = await this._go2rtcUrlContextForEntity(entity);
     if (!ctx) return null;
     const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
@@ -7281,11 +7286,9 @@ const FrigateViewCard = class extends HTMLElement {
     return wsUrl;
   }
   async _go2rtcHlsUrlForEntity(entity = "") {
-    const targetEntity = this._resolveGo2RtcEntity(entity);
-    if (!targetEntity) return null;
-    if (!this._supportsNativeHlsPlayback()) return null;
-    const ctx = await this._go2rtcContextForEntity(targetEntity);
+    const ctx = await this._go2rtcUrlContextForEntity(entity);
     if (!ctx) return null;
+    if (!this._supportsNativeHlsPlayback()) return null;
     const { clientId, cam, cacheKey } = ctx;
     const nowMs = Date.now();
     const cachedUrl = this._getGo2RtcHlsCachedUrl(cacheKey, nowMs);
