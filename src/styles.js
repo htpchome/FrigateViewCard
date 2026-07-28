@@ -302,7 +302,11 @@ export const STYLES = `
     border-radius: 50%; 
     color: black; 
     font-size: 1.0rem; 
-    cursor:pointer;  
+    cursor:pointer;
+    transform: rotate(0.01deg);
+    backface-visibility: hidden;
+    overflow: hidden;
+    background-clip: padding-box;  
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(2px) saturate(180%);
     border: none; 
