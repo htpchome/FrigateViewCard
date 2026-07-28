@@ -305,7 +305,8 @@ export const STYLES = `
     cursor:pointer;  
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(2px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: none; 
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8); 
     box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2), 
     inset 0 4px 20px rgba(255, 255, 255, 0.3); 
   }
