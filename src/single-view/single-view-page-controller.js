@@ -8,6 +8,7 @@ import {
   renderStandardPageStickyDaySections,
   renderStandardPageStats,
   renderStandardPageSubtitle,
+  syncStandardPageBrowseHeadFromScroll,
   standardPageListHeadingLabel,
   standardPageRecordingsHeadingLabel,
   standardPageShowStickyDayHeaders,
@@ -79,6 +80,10 @@ export class SingleViewPageController {
 
   renderReviewsContent(items) {
     return renderStandardPageReviewsContent(this._host, items);
+  }
+
+  syncBrowseHeadFromScroll() {
+    syncStandardPageBrowseHeadFromScroll(this._host);
   }
 
   activateSingleViewPageRoute(context = {}) {

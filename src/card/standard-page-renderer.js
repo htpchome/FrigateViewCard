@@ -6,6 +6,7 @@ import {
 import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
+  resolveActiveDayLabelFromScroll,
 } from "./list-render-utils.js";
 import {
   buildMobileViewCamSwitcherMarkup,
@@ -194,6 +195,20 @@ export function renderStandardPageReviewsContent(host, items) {
   return renderStandardPageStickyDaySections(host, items, (item) =>
     host._reviewListItemHTML(item),
   );
+}
+
+export function syncStandardPageBrowseHeadFromScroll(host) {
+  if (!standardPageShowStickyDayHeaders(host)) return;
+
+  const list = host._$("#list");
+  const browse = host._$("#browse");
+  const label = host._$("#browse-head-label");
+  if (!list || !browse || !label) return;
+
+  const nextLabel = resolveActiveDayLabelFromScroll({ list, browse });
+  if (nextLabel) {
+    label.textContent = nextLabel;
+  }
 }
 
 export function renderStandardPageLegend(host) {

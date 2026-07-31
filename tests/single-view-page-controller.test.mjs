@@ -760,3 +760,38 @@ test("single-view review content helper builds grouped markup", () => {
   assert.equal(html.includes("list-day-sec"), true);
   assert.equal(html.includes('<article class="review">7</article>'), true);
 });
+
+test("single-view browse-head sync follows active sticky day label", () => {
+  const labelOne = {
+    dataset: { dayLabel: "Wed - Jul 31st - Recent Alerts" },
+    textContent: "Wed - Jul 31st - Recent Alerts",
+    getBoundingClientRect: () => ({ top: 90 }),
+  };
+  const labelTwo = {
+    dataset: { dayLabel: "Tue - Jul 30th - Recent Alerts" },
+    textContent: "Tue - Jul 30th - Recent Alerts",
+    getBoundingClientRect: () => ({ top: 110 }),
+  };
+  const nodes = {
+    "#list": {
+      scrollHeight: 0,
+      clientHeight: 0,
+      scrollTop: 0,
+      querySelectorAll: () => [labelOne, labelTwo],
+    },
+    "#browse": {
+      scrollTop: 0,
+      getBoundingClientRect: () => ({ top: 100 }),
+    },
+    "#browse-head-label": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.syncBrowseHeadFromScroll();
+
+  assert.equal(
+    nodes["#browse-head-label"].textContent,
+    "Wed - Jul 31st - Recent Alerts",
+  );
+});

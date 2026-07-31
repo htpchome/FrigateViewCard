@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1030";
+const VERSION = "1.0.1031";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5785,6 +5785,17 @@ function renderStandardPageReviewsContent(host, items) {
     (item) => host._reviewListItemHTML(item)
   );
 }
+function syncStandardPageBrowseHeadFromScroll(host) {
+  if (!standardPageShowStickyDayHeaders(host)) return;
+  const list = host._$("#list");
+  const browse = host._$("#browse");
+  const label = host._$("#browse-head-label");
+  if (!list || !browse || !label) return;
+  const nextLabel = resolveActiveDayLabelFromScroll({ list, browse });
+  if (nextLabel) {
+    label.textContent = nextLabel;
+  }
+}
 function renderStandardPageLegend(host) {
   const el = host._$("#legend");
   if (!el) return;
@@ -5866,6 +5877,9 @@ const MobileViewPageController = class {
   renderReviewsContent(items) {
     return renderStandardPageReviewsContent(this._host, items);
   }
+  syncBrowseHeadFromScroll() {
+    syncStandardPageBrowseHeadFromScroll(this._host);
+  }
   syncMobileViewPageMarkup() {
     applyMobileViewPageMarkup({
       host: this._host,
@@ -5924,6 +5938,9 @@ const SingleViewPageController = class {
   }
   renderReviewsContent(items) {
     return renderStandardPageReviewsContent(this._host, items);
+  }
+  syncBrowseHeadFromScroll() {
+    syncStandardPageBrowseHeadFromScroll(this._host);
   }
   activateSingleViewPageRoute(context = {}) {
     this.activateStandardPageRoute(context);
@@ -13662,15 +13679,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._navigateRecordingsDayAnimated(dir);
   }
   _syncBrowseHeadFromScroll() {
-    if (!this._showStickyDayHeaders()) return;
-    const list = this._$("#list");
-    const browse = this._$("#browse");
-    const lbl = this._$("#browse-head-label");
-    if (!list || !browse || !lbl) return;
-    const nextLabel = resolveActiveDayLabelFromScroll({ list, browse });
-    if (nextLabel) {
-      lbl.textContent = nextLabel;
-    }
+    this._activeStandardPageController().syncBrowseHeadFromScroll();
   }
   _dur(ev) {
     return Math.max(

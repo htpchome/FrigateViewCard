@@ -8112,16 +8112,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _syncBrowseHeadFromScroll() {
-    if (!this._showStickyDayHeaders()) return;
-    const list = this._$("#list");
-    const browse = this._$("#browse");
-    const lbl = this._$("#browse-head-label");
-    if (!list || !browse || !lbl) return;
-
-    const nextLabel = resolveActiveDayLabelFromScroll({ list, browse });
-    if (nextLabel) {
-      lbl.textContent = nextLabel;
-    }
+    this._activeStandardPageController().syncBrowseHeadFromScroll();
   }
   _dur(ev) {
     return Math.max(

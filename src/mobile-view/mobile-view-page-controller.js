@@ -9,6 +9,7 @@ import {
   renderStandardPageStickyDaySections,
   renderStandardPageStats,
   renderStandardPageSubtitle,
+  syncStandardPageBrowseHeadFromScroll,
   standardPageListHeadingLabel,
   standardPageRecordingsHeadingLabel,
   standardPageShowStickyDayHeaders,
@@ -95,6 +96,10 @@ export class MobileViewPageController {
 
   renderReviewsContent(items) {
     return renderStandardPageReviewsContent(this._host, items);
+  }
+
+  syncBrowseHeadFromScroll() {
+    syncStandardPageBrowseHeadFromScroll(this._host);
   }
 
   syncMobileViewPageMarkup() {
