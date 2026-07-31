@@ -7923,24 +7923,9 @@ export class FrigateViewCard extends HTMLElement {
   _renderSubtitle() {
     this._activeStandardPageController().renderSubtitle();
   }
+
   _renderLegend() {
-    const el = this._$("#legend");
-    if (!el) return;
-    const labels = this._labels();
-    let html = labels
-      .map(
-        (l) =>
-          `<span class="lg"><i style="background:${labelColor(l)}"></i>${cap(l)}</span>`,
-      )
-      .join("");
-    if (this._eventsMode === "all") {
-      this._config.cameras.forEach((c, i) => {
-        html += `<span class="lg"><i style="background:${CAM_COLORS[i % CAM_COLORS.length].replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")")}"></i>${cap(camDisplayName(c))} rec</span>`;
-      });
-    } else {
-      html += `<span class="lg"><i style="background:${CAM_COLORS[0].replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")")}"></i>Rec</span>`;
-    }
-    el.innerHTML = html;
+    this._activeStandardPageController().renderLegend();
   }
   _time(ts) {
     return new Date(ts * 1000)

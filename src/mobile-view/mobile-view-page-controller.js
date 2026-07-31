@@ -2,6 +2,7 @@ import { activateStandardPageRouteLifecycle } from "../navigation/standard-page-
 import {
   buildStandardPageCamSwitcherMarkup,
   renderStandardPageCamSwitcher,
+  renderStandardPageLegend,
   renderStandardPageStats,
   renderStandardPageSubtitle,
   standardPageSubtitleText,
@@ -55,6 +56,10 @@ export class MobileViewPageController {
 
   renderSubtitle() {
     renderStandardPageSubtitle(this._host, { mobile: true });
+  }
+
+  renderLegend() {
+    renderStandardPageLegend(this._host);
   }
 
   syncMobileViewPageMarkup() {

@@ -1,6 +1,7 @@
 import {
   buildStandardPageCamSwitcherMarkup,
   renderStandardPageCamSwitcher,
+  renderStandardPageLegend,
   renderStandardPageStats,
   renderStandardPageSubtitle,
   standardPageSubtitleText,
@@ -39,6 +40,10 @@ export class SingleViewPageController {
 
   renderSubtitle() {
     renderStandardPageSubtitle(this._host, { mobile: false });
+  }
+
+  renderLegend() {
+    renderStandardPageLegend(this._host);
   }
 
   activateSingleViewPageRoute(context = {}) {

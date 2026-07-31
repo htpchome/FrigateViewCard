@@ -34,6 +34,7 @@ const createHost = ({
     },
     _activeCam: { entity: "camera.front_door", name: "Front Door" },
     _activeStreamType: "webrtc",
+    _eventsMode: "all",
     _hass: {
       states: {
         "camera.front_door": { state: "streaming" },
@@ -41,6 +42,7 @@ const createHost = ({
       },
     },
     _allDisplayEvents: () => [{ id: 1 }, { id: 2 }],
+    _labels: () => ["person", "car"],
     _isPreviewPageEnabled: () => previewPageEnabled,
     _isMobileViewPageActive: () => mobileViewActive,
     _stopPreviewMode: () => calls.push(["stopPreview"]),
@@ -650,4 +652,18 @@ test("single-view camera switcher markup includes preview back button when enabl
   assert.equal(markup.includes("data-preview-back"), true);
   assert.equal(markup.includes('data-camidx="0"'), true);
   assert.equal(markup.includes("Front Door"), true);
+});
+
+test("single-view renderLegend populates deterministic legend markup", () => {
+  const nodes = {
+    "#legend": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderLegend();
+
+  assert.equal(nodes["#legend"].innerHTML.includes("Person"), true);
+  assert.equal(nodes["#legend"].innerHTML.includes("Car"), true);
+  assert.equal(nodes["#legend"].innerHTML.includes("Front Door rec"), true);
 });

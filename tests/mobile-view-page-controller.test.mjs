@@ -31,7 +31,9 @@ const createHost = ({ popupOpen = false, domNodes = {} } = {}) => {
     _activeCamIdx: 0,
     _activeCam: { entity: "camera.front_door", name: "Front Door" },
     _activeStreamType: "webrtc",
+    _eventsMode: "all",
     _allDisplayEvents: () => [{ id: 1 }, { id: 2 }],
+    _labels: () => ["person", "car"],
     _isPreviewPageEnabled: () => false,
     _hass: {
       states: {
@@ -171,4 +173,18 @@ test("mobile-view camera switcher markup includes camera buttons", () => {
 
   assert.equal(markup.includes('data-camidx="0"'), true);
   assert.equal(markup.includes("Front Door"), true);
+});
+
+test("mobile-view renderLegend populates deterministic legend markup", () => {
+  const nodes = {
+    "#legend": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes });
+  const controller = new MobileViewPageController(host, { PAGE_IDS });
+
+  controller.renderLegend();
+
+  assert.equal(nodes["#legend"].innerHTML.includes("Person"), true);
+  assert.equal(nodes["#legend"].innerHTML.includes("Car"), true);
+  assert.equal(nodes["#legend"].innerHTML.includes("Front Door rec"), true);
 });

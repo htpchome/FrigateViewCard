@@ -1,4 +1,4 @@
-import { cap, camDisplayName } from "../helpers.js";
+import { CAM_COLORS, cap, camDisplayName, labelColor } from "../helpers.js";
 import {
   buildCamSwitcherMarkup,
   resolveSubtitleText,
@@ -117,4 +117,24 @@ export function renderStandardPageSubtitle(host, { mobile = false } = {}) {
   const el = host._$("#tl-range");
   if (!el) return;
   el.textContent = standardPageSubtitleText(host, { mobile });
+}
+
+export function renderStandardPageLegend(host) {
+  const el = host._$("#legend");
+  if (!el) return;
+  const labels = host._labels();
+  let html = labels
+    .map(
+      (label) =>
+        `<span class="lg"><i style="background:${labelColor(label)}"></i>${cap(label)}</span>`,
+    )
+    .join("");
+  if (host._eventsMode === "all") {
+    host._config.cameras.forEach((camera, index) => {
+      html += `<span class="lg"><i style="background:${CAM_COLORS[index % CAM_COLORS.length].replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")")}"></i>${cameraName(camera)} rec</span>`;
+    });
+  } else {
+    html += `<span class="lg"><i style="background:${CAM_COLORS[0].replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")")}"></i>Rec</span>`;
+  }
+  el.innerHTML = html;
 }

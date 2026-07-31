@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1026";
+const VERSION = "1.0.1027";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5720,6 +5720,22 @@ function renderStandardPageSubtitle(host, { mobile = false } = {}) {
   if (!el) return;
   el.textContent = standardPageSubtitleText(host, { mobile });
 }
+function renderStandardPageLegend(host) {
+  const el = host._$("#legend");
+  if (!el) return;
+  const labels = host._labels();
+  let html = labels.map(
+    (label) => `<span class="lg"><i style="background:${labelColor(label)}"></i>${cap(label)}</span>`
+  ).join("");
+  if (host._eventsMode === "all") {
+    host._config.cameras.forEach((camera, index) => {
+      html += `<span class="lg"><i style="background:${CAM_COLORS[index % CAM_COLORS.length].replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")")}"></i>${cameraName(camera)} rec</span>`;
+    });
+  } else {
+    html += `<span class="lg"><i style="background:${CAM_COLORS[0].replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")")}"></i>Rec</span>`;
+  }
+  el.innerHTML = html;
+}
 
 // src/mobile-view/mobile-view-page-controller.js
 const MobileViewPageController = class {
@@ -5761,6 +5777,9 @@ const MobileViewPageController = class {
   renderSubtitle() {
     renderStandardPageSubtitle(this._host, { mobile: true });
   }
+  renderLegend() {
+    renderStandardPageLegend(this._host);
+  }
   syncMobileViewPageMarkup() {
     applyMobileViewPageMarkup({
       host: this._host,
@@ -5795,6 +5814,9 @@ const SingleViewPageController = class {
   }
   renderSubtitle() {
     renderStandardPageSubtitle(this._host, { mobile: false });
+  }
+  renderLegend() {
+    renderStandardPageLegend(this._host);
   }
   activateSingleViewPageRoute(context = {}) {
     this.activateStandardPageRoute(context);
@@ -13363,20 +13385,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._activeStandardPageController().renderSubtitle();
   }
   _renderLegend() {
-    const el = this._$("#legend");
-    if (!el) return;
-    const labels = this._labels();
-    let html = labels.map(
-      (l) => `<span class="lg"><i style="background:${labelColor(l)}"></i>${cap(l)}</span>`
-    ).join("");
-    if (this._eventsMode === "all") {
-      this._config.cameras.forEach((c, i) => {
-        html += `<span class="lg"><i style="background:${CAM_COLORS[i % CAM_COLORS.length].replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")")}"></i>${cap(camDisplayName(c))} rec</span>`;
-      });
-    } else {
-      html += `<span class="lg"><i style="background:${CAM_COLORS[0].replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")")}"></i>Rec</span>`;
-    }
-    el.innerHTML = html;
+    this._activeStandardPageController().renderLegend();
   }
   _time(ts) {
     return new Date(ts * 1e3).toLocaleTimeString([], {
