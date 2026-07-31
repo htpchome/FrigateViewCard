@@ -8360,13 +8360,20 @@ export class FrigateViewCard extends HTMLElement {
       return this._renderControlsSection(list);
     }
     if (this._tab === "recordings") {
-      // Don't blow away the recording list while the user is watching a recording
-      const viewerActive = this._$("#viewer")?.style.display !== "none";
-      if (viewerActive && this._playing?.rec != null) return;
-      this._syncOlderHint(false);
-      return this._renderRecordings(list);
+      return this._renderRecordingsTabList(list);
     }
     return this._renderStandardTabList(list);
+  }
+
+  _renderRecordingsTabList(list) {
+    // Don't blow away the recording list while the user is watching a recording.
+    if (this._isRecordingViewerActive() && this._playing?.rec != null) return;
+    this._syncOlderHint(false);
+    return this._renderRecordings(list);
+  }
+
+  _isRecordingViewerActive() {
+    return this._$("#viewer")?.style.display !== "none";
   }
 
   _renderStandardTabList(list) {
