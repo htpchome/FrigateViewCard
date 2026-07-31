@@ -182,6 +182,21 @@ export function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
           </div>`;
 }
 
+export function buildControlsSectionMarkup() {
+  return `<div class="controls-section">
+            <div class="controls-pad-wrap">
+              <circle-pad-control id="controls-pad"></circle-pad-control>
+            </div>
+            <div class="controls-readout">
+              <div class="controls-readout-head">
+                <span class="controls-readout-label">Readout</span>
+                <button class="controls-readout-clear" id="controls-readout-clear" type="button">Clear</button>
+              </div>
+              <div class="controls-readout-lines" id="controls-readout-lines"></div>
+            </div>
+          </div>`;
+}
+
 export function buildPopupShellMarkup({ icons, version }) {
   return `<div id="myPopup" class="popup-content">
             <div class="popup-close-row">

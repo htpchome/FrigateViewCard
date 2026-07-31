@@ -144,6 +144,7 @@ import {
   resolveWebRtcStartup,
 } from "../live/live-startup-policy.js";
 import {
+  buildControlsSectionMarkup,
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
   buildMainLayoutShellMarkup,
@@ -8393,10 +8394,7 @@ export class FrigateViewCard extends HTMLElement {
 
   _renderControlsSection(list) {
     this._renderListLabel();
-    this._setListHtmlIfChanged(
-      list,
-      '<div class="controls-section"><h3 class="controls-section-title">Controls</h3><div class="controls-pad-wrap"><circle-pad-control id="controls-pad"></circle-pad-control></div><div class="controls-readout"><div class="controls-readout-head"><span class="controls-readout-label">Readout</span><button class="controls-readout-clear" id="controls-readout-clear" type="button">Clear</button></div><div class="controls-readout-lines" id="controls-readout-lines"></div></div></div>',
-    );
+    this._setListHtmlIfChanged(list, buildControlsSectionMarkup());
     this._renderControlsReadout();
   }
 

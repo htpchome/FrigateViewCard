@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1036";
+const VERSION = "1.0.1037";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3911,6 +3911,20 @@ function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
               </div>
             </div>
             <div class="more" id="older-hint" hidden>scroll for older\u2026</div>
+          </div>`;
+}
+function buildControlsSectionMarkup() {
+  return `<div class="controls-section">
+            <div class="controls-pad-wrap">
+              <circle-pad-control id="controls-pad"></circle-pad-control>
+            </div>
+            <div class="controls-readout">
+              <div class="controls-readout-head">
+                <span class="controls-readout-label">Readout</span>
+                <button class="controls-readout-clear" id="controls-readout-clear" type="button">Clear</button>
+              </div>
+              <div class="controls-readout-lines" id="controls-readout-lines"></div>
+            </div>
           </div>`;
 }
 function buildPopupShellMarkup({ icons, version }) {
@@ -13937,10 +13951,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _renderControlsSection(list) {
     this._renderListLabel();
-    this._setListHtmlIfChanged(
-      list,
-      '<div class="controls-section"><h3 class="controls-section-title">Controls</h3><div class="controls-pad-wrap"><circle-pad-control id="controls-pad"></circle-pad-control></div><div class="controls-readout"><div class="controls-readout-head"><span class="controls-readout-label">Readout</span><button class="controls-readout-clear" id="controls-readout-clear" type="button">Clear</button></div><div class="controls-readout-lines" id="controls-readout-lines"></div></div></div>'
-    );
+    this._setListHtmlIfChanged(list, buildControlsSectionMarkup());
     this._renderControlsReadout();
   }
   _isControlsPadEvent(event) {
