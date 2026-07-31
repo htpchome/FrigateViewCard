@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1014";
+const VERSION = "1.0.1015";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -614,10 +614,13 @@ const STYLES = `
   .frow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px;} .frow:last-child{margin-bottom:0;} .frow-l{font-size:0.75rem;color:var(--c-text3);width:38px;text-transform:uppercase;flex-shrink:0;}
   .chip{background:var(--c-bg-panel);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:10px;padding:3.6px 10.8px;font-size:0.825rem;cursor:pointer;}
   .chip.on{background:var(--c-primary-l);border-color:var(--c-primary-d);color:var(--c-primary-d);}
+  .cal-top{display:flex;justify-content:center;margin-bottom:6px;}
+  .cal-today-btn{background:var(--c-bg-panel);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:8px;cursor:pointer;padding:3.6px 10.8px;font-size:0.78rem;font-weight:600;transition:all .2s ease;}
+  .cal-today-btn:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);background:var(--c-primary-l);}
   .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;} .cal-head b{font-size:0.9rem;} .cal-head button{background:none;border:none;color:var(--c-primary-d);font-size:1.275rem;cursor:pointer;padding:0 6px;}
   .cal-dow,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;}
   .cal-dow span{font-size:0.675rem;color:var(--c-text2);padding:2px 0;}
-  .cday{position:relative;background:none;border:none;color:var(--c-text);font-size:0.825rem;padding:6px 0;border-radius:4px;cursor:pointer;} .cday:hover{background:var(--c-primary-l);} .cdot{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#ef4444;}
+  .cday{position:relative;background:none;border:none;color:var(--c-text);font-size:0.825rem;padding:6px 0;border-radius:4px;cursor:pointer;} .cday:hover,.cday.active{background:var(--c-primary-l);} .cdot{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#ef4444;}
 
   .frigate-view{position:absolute;bottom:2px;left:6px;max-height:24px;pointer-events: none;
       fill: #ff5733;stroke: #000000;stroke-width: 2px;}
@@ -5566,6 +5569,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._filterZone = "all";
     this._favOnly = false;
     this._calMonth = null;
+    this._calSelectedDay = null;
     this._engine = null;
     this._unsub = null;
     this._rotateTimer = null;
@@ -10702,6 +10706,11 @@ const FrigateViewCard = class extends HTMLElement {
       this._calNav(Number(calNav.dataset.calNav));
       return true;
     }
+    const calToday = target.closest("[data-cal-today]");
+    if (calToday) {
+      this._goTodayInCalendar();
+      return true;
+    }
     const fopt = target.closest("[data-flabel]");
     if (fopt) {
       this._filterLabel = fopt.dataset.flabel;
@@ -12102,6 +12111,7 @@ const FrigateViewCard = class extends HTMLElement {
     const now = Math.floor(Date.now() / 1e3);
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
+    this._calSelectedDay = this._formatTzDateString(this._tzParts(now));
     this._exhausted = false;
     this._calMonth = null;
     this._pruneNonActiveCamWindowCaches();
@@ -12212,6 +12222,24 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   // ── calendar ──────────────────────────────────────────────
+  _formatTzDateString(parts) {
+    return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+  }
+  _calendarTodayDateString() {
+    return this._formatTzDateString(
+      this._tzParts(Math.floor(Date.now() / 1e3))
+    );
+  }
+  _activeCalendarDayDateString() {
+    return this._calSelectedDay || this._calendarTodayDateString();
+  }
+  _goTodayInCalendar() {
+    const now = Math.floor(Date.now() / 1e3);
+    const z = this._tzParts(now);
+    this._calSelectedDay = this._formatTzDateString(z);
+    this._calMonth = this._createCalendarMonthDate(z.year, z.month - 1);
+    this._pickDay(this._calSelectedDay);
+  }
   _createCalendarMonthDate(year, monthIndex) {
     return new Date(Date.UTC(year, monthIndex, 15, 12, 0, 0));
   }
@@ -12230,6 +12258,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _pickDay(ds) {
     this._followNowWindow = false;
+    this._calSelectedDay = ds;
     const [y, mo, da] = ds.split("-").map(Number);
     this._winStart = this._tzDateTimeToEpochSeconds(y, mo, da, 0, 0, 0);
     this._winEnd = Math.min(
@@ -12247,6 +12276,7 @@ const FrigateViewCard = class extends HTMLElement {
     const p = this.shadowRoot.querySelector("#cal-panel");
     if (!p) return;
     const m = this._resolveCalendarMonthDate();
+    const activeDayDateString = this._activeCalendarDayDateString();
     const y = m.getUTCFullYear(), mo = m.getUTCMonth();
     const first = new Date(Date.UTC(y, mo, 1, 12, 0, 0));
     const startDow = (first.getUTCDay() + 6) % 7;
@@ -12255,14 +12285,15 @@ const FrigateViewCard = class extends HTMLElement {
     for (let i = 0; i < startDow; i++) cells += "<span></span>";
     for (let d = 1; d <= days; d++) {
       const ds = `${y}-${String(mo + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      cells += `<button class="cday" data-cal-day="${ds}">${d}${this._daysWithActivity.has(ds) ? '<i class="cdot"></i>' : ""}</button>`;
+      cells += `<button class="cday ${ds === activeDayDateString ? "active" : ""}" data-cal-day="${ds}">${d}${this._daysWithActivity.has(ds) ? '<i class="cdot"></i>' : ""}</button>`;
     }
     const monthLabel = new Intl.DateTimeFormat([], {
       month: "long",
       year: "numeric",
       timeZone: this._tz()
     }).format(m);
-    p.innerHTML = `<div class="cal-head"><button data-cal-nav="-1">\u2039</button><b>${monthLabel}</b><button data-cal-nav="1">\u203A</button></div>
+    p.innerHTML = `<div class="cal-top"><button class="cal-today-btn" data-cal-today>Today</button></div>
+      <div class="cal-head"><button data-cal-nav="-1">\u2039</button><b>${monthLabel}</b><button data-cal-nav="1">\u203A</button></div>
       <div class="cal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
       <div class="cal-grid">${cells}</div>`;
   }
