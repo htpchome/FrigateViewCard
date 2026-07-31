@@ -3824,7 +3824,7 @@ function buildCamSwitcherMarkup({
     const name = getCameraName(camera);
     const active = isSingleView && index === activeCamIdx;
     const ok = !includeStatus || isCameraAvailable(camera);
-    return `<button class="glass-btn cam-tab ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
+    return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
   }).join("");
   return `${backButton}${cameraButtons}`;
 }
