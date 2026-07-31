@@ -4,10 +4,12 @@ import {
   renderStandardPageCamSwitcher,
   renderStandardPageLegend,
   renderStandardPageListLabel,
+  renderStandardPageStickyDaySections,
   renderStandardPageStats,
   renderStandardPageSubtitle,
   standardPageListHeadingLabel,
   standardPageRecordingsHeadingLabel,
+  standardPageShowStickyDayHeaders,
   standardPageSubtitleText,
   syncStandardPageStatus,
 } from "../card/standard-page-renderer.js";
@@ -75,6 +77,14 @@ export class MobileViewPageController {
 
   renderListLabel(ts = null) {
     renderStandardPageListLabel(this._host, ts);
+  }
+
+  showStickyDayHeaders() {
+    return standardPageShowStickyDayHeaders(this._host);
+  }
+
+  renderStickyDaySections(items, renderItem) {
+    return renderStandardPageStickyDaySections(this._host, items, renderItem);
   }
 
   syncMobileViewPageMarkup() {

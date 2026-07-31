@@ -38,6 +38,7 @@ const createHost = ({ popupOpen = false, domNodes = {} } = {}) => {
     _labels: () => ["person", "car"],
     _weekday: () => "Wed",
     _monthDay: () => "Jul 31st",
+    _dayKey: () => "2026-07-31",
     _updateRecordingsBrowseNav: () => calls.push(["updateRecordingsBrowseNav"]),
     _isPreviewPageEnabled: () => false,
     _hass: {
@@ -232,4 +233,19 @@ test("mobile-view list label helpers format alerts and recordings headings", () 
   assert.equal(nodes["#rec-day-prev"].style.display, "none");
   assert.equal(nodes["#rec-day-next"].style.display, "none");
   assert.deepEqual(calls.slice(-1), [["updateRecordingsBrowseNav"]]);
+});
+
+test("mobile-view sticky-day helpers expose grouped section rendering", () => {
+  const { host } = createHost();
+  const controller = new MobileViewPageController(host, { PAGE_IDS });
+
+  assert.equal(controller.showStickyDayHeaders(), true);
+
+  const html = controller.renderStickyDaySections(
+    [{ start_time: 1722470400, id: 1 }],
+    (item) => `<article>${item.id}</article>`,
+  );
+
+  assert.equal(html.includes("Wed - Jul 31st - Recent Alerts"), true);
+  assert.equal(html.includes("<article>1</article>"), true);
 });

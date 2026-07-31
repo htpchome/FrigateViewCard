@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1028";
+const VERSION = "1.0.1029";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5759,6 +5759,17 @@ function renderStandardPageListLabel(host, ts = null) {
   if (next) next.style.display = "none";
   labelEl.textContent = standardPageListHeadingLabel(host, ts);
 }
+function standardPageShowStickyDayHeaders(host) {
+  return ["alerts", "clips", "snapshot"].includes(host._tab);
+}
+function renderStandardPageStickyDaySections(host, items, renderItem) {
+  return buildStickyDaySectionsHtml(items, {
+    getStartTime: (item) => item?.start_time,
+    getDayKey: (ts) => host._dayKey(ts),
+    getLabel: (ts) => standardPageListHeadingLabel(host, ts),
+    renderItem
+  });
+}
 function renderStandardPageLegend(host) {
   const el = host._$("#legend");
   if (!el) return;
@@ -5828,6 +5839,12 @@ const MobileViewPageController = class {
   renderListLabel(ts = null) {
     renderStandardPageListLabel(this._host, ts);
   }
+  showStickyDayHeaders() {
+    return standardPageShowStickyDayHeaders(this._host);
+  }
+  renderStickyDaySections(items, renderItem) {
+    return renderStandardPageStickyDaySections(this._host, items, renderItem);
+  }
   syncMobileViewPageMarkup() {
     applyMobileViewPageMarkup({
       host: this._host,
@@ -5874,6 +5891,12 @@ const SingleViewPageController = class {
   }
   renderListLabel(ts = null) {
     renderStandardPageListLabel(this._host, ts);
+  }
+  showStickyDayHeaders() {
+    return standardPageShowStickyDayHeaders(this._host);
+  }
+  renderStickyDaySections(items, renderItem) {
+    return renderStandardPageStickyDaySections(this._host, items, renderItem);
   }
   activateSingleViewPageRoute(context = {}) {
     this.activateStandardPageRoute(context);
@@ -13487,7 +13510,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._activeStandardPageController().recordingsHeadingLabel(ts);
   }
   _showStickyDayHeaders() {
-    return ["alerts", "clips", "snapshot"].includes(this._tab);
+    return this._activeStandardPageController().showStickyDayHeaders();
   }
   _renderListLabel(ts = null) {
     this._activeStandardPageController().renderListLabel(ts);
@@ -13503,12 +13526,10 @@ const FrigateViewCard = class extends HTMLElement {
     return `${pick("year")}-${pick("month")}-${pick("day")}`;
   }
   _renderStickyDaySections(items, renderItem) {
-    return buildStickyDaySectionsHtml(items, {
-      getStartTime: (item) => item?.start_time,
-      getDayKey: (ts) => this._dayKey(ts),
-      getLabel: (ts) => this._listHeadingLabel(ts),
+    return this._activeStandardPageController().renderStickyDaySections(
+      items,
       renderItem
-    });
+    );
   }
   _recordingsDayBounds(tsSec = null) {
     const target = Math.floor(tsSec || this._winEnd || Date.now() / 1e3);

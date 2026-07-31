@@ -163,7 +163,6 @@ import {
 import {
   applyListMarkupWithOlderHint,
   appendEndMarker,
-  buildStickyDaySectionsHtml,
   createOlderHintSyncer,
   resolveActiveListScroller,
   resolveActiveDayLabelFromScroll,
@@ -7974,7 +7973,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _showStickyDayHeaders() {
-    return ["alerts", "clips", "snapshot"].includes(this._tab);
+    return this._activeStandardPageController().showStickyDayHeaders();
   }
 
   _renderListLabel(ts = null) {
@@ -7991,12 +7990,10 @@ export class FrigateViewCard extends HTMLElement {
     return `${pick("year")}-${pick("month")}-${pick("day")}`;
   }
   _renderStickyDaySections(items, renderItem) {
-    return buildStickyDaySectionsHtml(items, {
-      getStartTime: (item) => item?.start_time,
-      getDayKey: (ts) => this._dayKey(ts),
-      getLabel: (ts) => this._listHeadingLabel(ts),
+    return this._activeStandardPageController().renderStickyDaySections(
+      items,
       renderItem,
-    });
+    );
   }
 
   _recordingsDayBounds(tsSec = null) {
