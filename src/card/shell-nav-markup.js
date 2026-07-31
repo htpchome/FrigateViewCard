@@ -22,6 +22,8 @@ export function buildTabsMarkup({
   hiddenTabs,
   viewMode,
   icons,
+  isFilterPanelOpen,
+  isCalendarPanelOpen,
   isGridModeAvailable,
   isSlideshowRotationAvailable,
   isSlideshowActive,
@@ -61,8 +63,8 @@ export function buildTabsMarkup({
         <button class="tool${activeTab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${activeTab === "controls" ? "true" : "false"}">${icons.bullseye}</button>
         ${gridButton}
         ${slideshowButton}
-        <button class="tool" id="filter-btn" title="Filter" ${filterDisabled ? "disabled" : ""}>${icons.filter}</button>
-        <button class="tool" id="cal-btn" title="Calendar">${icons.calendar}</button>
+        <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${filterDisabled ? "disabled" : ""}>${icons.filter}</button>
+        <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}">${icons.calendar}</button>
       </div>`;
   return { activeTab, markup };
 }

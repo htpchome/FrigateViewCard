@@ -3807,29 +3807,57 @@ export class FrigateViewCard extends HTMLElement {
     }
 
     const slideshowBtn = this._$("#slideshow-btn");
-    if (!slideshowBtn) return;
-    const available = this._isSlideshowRotationAvailable();
-    slideshowBtn.hidden = !available;
-    slideshowBtn.style.display = available ? "" : "none";
-    slideshowBtn.classList.toggle("active", this._slideshowActive && available);
-    slideshowBtn.setAttribute(
-      "aria-pressed",
-      this._slideshowActive && available ? "true" : "false",
-    );
-    slideshowBtn.setAttribute(
-      "title",
-      this._slideshowActive
-        ? "Stop slideshow rotation"
-        : "Start slideshow rotation",
-    );
-    slideshowBtn.setAttribute(
-      "aria-label",
-      this._slideshowActive
-        ? "Stop slideshow rotation"
-        : "Start slideshow rotation",
-    );
-    slideshowBtn.innerHTML = this._slideshowButtonIcon();
-    if (!available) this._stopSlideshowRotation("unavailable", false);
+    if (slideshowBtn) {
+      const available = this._isSlideshowRotationAvailable();
+      slideshowBtn.hidden = !available;
+      slideshowBtn.style.display = available ? "" : "none";
+      slideshowBtn.classList.toggle(
+        "active",
+        this._slideshowActive && available,
+      );
+      slideshowBtn.setAttribute(
+        "aria-pressed",
+        this._slideshowActive && available ? "true" : "false",
+      );
+      slideshowBtn.setAttribute(
+        "title",
+        this._slideshowActive
+          ? "Stop slideshow rotation"
+          : "Start slideshow rotation",
+      );
+      slideshowBtn.setAttribute(
+        "aria-label",
+        this._slideshowActive
+          ? "Stop slideshow rotation"
+          : "Start slideshow rotation",
+      );
+      slideshowBtn.innerHTML = this._slideshowButtonIcon();
+      if (!available) this._stopSlideshowRotation("unavailable", false);
+    }
+
+    const controlsBtn = this._$("#controls-btn");
+    if (controlsBtn) {
+      const controlsActive = this._tab === "controls";
+      controlsBtn.classList.toggle("active", controlsActive);
+      controlsBtn.setAttribute(
+        "aria-pressed",
+        controlsActive ? "true" : "false",
+      );
+    }
+
+    const filterBtn = this._$("#filter-btn");
+    if (filterBtn) {
+      const filterOpen = this._$("#filter-panel")?.style.display !== "none";
+      filterBtn.classList.toggle("active", filterOpen);
+      filterBtn.setAttribute("aria-pressed", filterOpen ? "true" : "false");
+    }
+
+    const calBtn = this._$("#cal-btn");
+    if (calBtn) {
+      const calOpen = this._$("#cal-panel")?.style.display !== "none";
+      calBtn.classList.toggle("active", calOpen);
+      calBtn.setAttribute("aria-pressed", calOpen ? "true" : "false");
+    }
   }
 
   _stopSlideshowRotation(reason = "manual-stop", sync = true) {
@@ -4630,11 +4658,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _buildTabsMarkup() {
+    const filterPanelOpen = this._$("#filter-panel")?.style.display !== "none";
+    const calendarPanelOpen = this._$("#cal-panel")?.style.display !== "none";
     const { activeTab, markup } = buildTabsMarkup({
       tab: this._tab,
       hiddenTabs: this._config.hidden_tabs,
       viewMode: this._viewMode,
       icons: ICONS,
+      isFilterPanelOpen: filterPanelOpen,
+      isCalendarPanelOpen: calendarPanelOpen,
       isGridModeAvailable: this._isGridModeAvailable(),
       isSlideshowRotationAvailable: this._isSlideshowRotationAvailable(),
       isSlideshowActive: this._slideshowActive,
@@ -6316,6 +6348,7 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
     this._syncBrowseHeadModeClass();
+    this._syncToolbarButtons();
     this._renderListLabel();
     void this._loadTabData(tab);
     this._renderList();
@@ -7896,6 +7929,7 @@ export class FrigateViewCard extends HTMLElement {
     const cal = this._$("#cal-panel");
     if (cal) cal.style.display = "none";
     p.style.display = open ? "block" : "none";
+    this._syncToolbarButtons();
     if (open) this._renderFilter();
   }
   _toggleCal() {
@@ -7905,6 +7939,7 @@ export class FrigateViewCard extends HTMLElement {
     const filter = this._$("#filter-panel");
     if (filter) filter.style.display = "none";
     p.style.display = open ? "block" : "none";
+    this._syncToolbarButtons();
     if (open) {
       if (!this._calMonth) {
         const z = this._tzParts(this._winEnd);
@@ -7961,6 +7996,7 @@ export class FrigateViewCard extends HTMLElement {
       Math.floor(Date.now() / 1000),
     );
     this.shadowRoot.querySelector("#cal-panel").style.display = "none";
+    this._syncToolbarButtons();
     this._pruneNonActiveCamWindowCaches();
     void (async () => {
       await this._loadWindow(true);
