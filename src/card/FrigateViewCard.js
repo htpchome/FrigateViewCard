@@ -33,6 +33,7 @@ import {
 } from "../constants.js";
 import { ICONS } from "../icons.js";
 import { STYLES } from "../styles.js";
+import "../circle-pad.js";
 import {
   detectDeviceProfile,
   DEVICE_PROFILE,
@@ -236,6 +237,28 @@ export class FrigateViewCard extends HTMLElement {
     };
 
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
+    this._controlsReadoutLines = [];
+    this._onCirclePadPress = (event) => {
+      if (!this._isControlsPadEvent(event)) return;
+      const action = event?.detail?.action;
+      if (!action) return;
+      this._appendControlsReadoutEntry(`[${action}]`);
+    };
+    this._onCirclePadToggle = (event) => {
+      if (!this._isControlsPadEvent(event)) return;
+      if (event?.detail?.action !== "mic") return;
+      this._appendControlsReadoutEntry(
+        event?.detail?.active ? "[mic:on]" : "[mic:off]",
+      );
+    };
+    this.shadowRoot.addEventListener(
+      "circle-pad-press",
+      this._onCirclePadPress,
+    );
+    this.shadowRoot.addEventListener(
+      "circle-pad-toggle",
+      this._onCirclePadToggle,
+    );
     this._hass = null;
     this._lastHassCameraStateSignature = "";
     this._lastHassThemeSignature = "";
@@ -6193,6 +6216,12 @@ export class FrigateViewCard extends HTMLElement {
   }
   _handleListClick(e, target) {
     this._pauseSlideshowForInteraction();
+    const controlsReadoutClear = target.closest("#controls-readout-clear");
+    if (controlsReadoutClear) {
+      e.stopPropagation();
+      this._clearControlsReadout();
+      return true;
+    }
     const dl = target.closest("[data-dl]");
     if (dl) {
       e.stopPropagation();
@@ -8534,8 +8563,53 @@ export class FrigateViewCard extends HTMLElement {
     this._renderListLabel();
     this._setListHtmlIfChanged(
       list,
-      '<div class="controls-section"><h3 class="controls-section-title">Controls</h3></div>',
+      '<div class="controls-section"><h3 class="controls-section-title">Controls</h3><div class="controls-pad-wrap"><circle-pad-control id="controls-pad"></circle-pad-control></div><div class="controls-readout"><div class="controls-readout-head"><span class="controls-readout-label">Readout</span><button class="controls-readout-clear" id="controls-readout-clear" type="button">Clear</button></div><div class="controls-readout-lines" id="controls-readout-lines"></div></div></div>',
     );
+    this._renderControlsReadout();
+  }
+
+  _isControlsPadEvent(event) {
+    const target = event?.target;
+    return target instanceof Element && target.id === "controls-pad";
+  }
+
+  _appendControlsReadoutEntry(text) {
+    const line = String(text || "").trim();
+    if (!line) return;
+    this._controlsReadoutLines.push(line);
+    if (this._controlsReadoutLines.length > 200) {
+      this._controlsReadoutLines.shift();
+    }
+    this._renderControlsReadout();
+  }
+
+  _clearControlsReadout() {
+    this._controlsReadoutLines = [];
+    this._renderControlsReadout();
+  }
+
+  _escapeControlsReadoutText(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  _renderControlsReadout() {
+    const el = this._$("#controls-readout-lines");
+    if (!el) return;
+    if (!this._controlsReadoutLines.length) {
+      el.innerHTML =
+        '<div class="controls-readout-empty">Press a control to log input.</div>';
+      return;
+    }
+    el.innerHTML = this._controlsReadoutLines
+      .map(
+        (line) =>
+          `<div class="controls-readout-line">${this._escapeControlsReadoutText(line)}</div>`,
+      )
+      .join("");
+    el.scrollTop = el.scrollHeight;
   }
 
   _renderKeptList(list) {
