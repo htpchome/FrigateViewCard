@@ -31,8 +31,8 @@ export function buildTabsMarkup({
   const ht = new Set(hiddenTabs || []);
   const gridModeListOnly = viewMode === "grid";
   const tabOrder = gridModeListOnly
-    ? ["alerts", "kept"]
-    : ["alerts", "clips", "snapshot", "recordings", "kept"];
+    ? ["alerts", "kept", "controls"]
+    : ["alerts", "clips", "snapshot", "recordings", "kept", "controls"];
   const activeTab = resolveActiveTab(tab, ht, tabOrder);
   const tabMarkup = (id, icon, label) =>
     ht.has(id) ||
@@ -58,7 +58,7 @@ export function buildTabsMarkup({
       ${tabMarkup("recordings", icons.recordings, "Recordings")}
       ${tabMarkup("kept", icons.star, "Kept events")}
       <div class="tl-tools" style=" margin-left: auto;">
-        <button class="tool" id="now-btn" title="Today">${icons.bullseye}</button>
+        <button class="tool${activeTab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-pressed="${activeTab === "controls" ? "true" : "false"}">Controls</button>
         ${gridButton}
         ${slideshowButton}
         <button class="tool" id="filter-btn" title="Filter" ${filterDisabled ? "disabled" : ""}>${icons.filter}</button>

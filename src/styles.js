@@ -505,6 +505,9 @@ export const STYLES = `
   .cal-dow span{font-size:0.675rem;color:var(--c-text2);padding:2px 0;}
   .cday{position:relative;background:none;border:none;color:var(--c-text);font-size:0.825rem;padding:6px 0;border-radius:4px;cursor:pointer;} .cday:hover,.cday.active{background:var(--c-primary-l);} .cdot{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#ef4444;}
 
+  .controls-section{padding:6px 2px 0;}
+  .controls-section-title{margin:0;color:var(--c-text);font-size:0.95rem;font-weight:700;text-align:left;}
+
   .frigate-view{position:absolute;bottom:2px;left:6px;max-height:24px;pointer-events: none;
       fill: #ff5733;stroke: #000000;stroke-width: 2px;}
   .frigate-view svg{height:24px;pointer-events: none;}

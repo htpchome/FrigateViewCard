@@ -4631,7 +4631,7 @@ export class FrigateViewCard extends HTMLElement {
       "#slideshow-btn",
       "#filter-btn",
       "#cal-btn",
-      "#now-btn",
+      "#controls-btn",
     ].forEach((sel) => {
       delete this._domCache[sel];
     });
@@ -4641,7 +4641,13 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _loadTabData(tab) {
-    if (tab !== "alerts" && tab !== "kept" && tab !== "recordings") return;
+    if (
+      tab !== "alerts" &&
+      tab !== "kept" &&
+      tab !== "recordings" &&
+      tab !== "controls"
+    )
+      return;
     try {
       if (tab === "alerts") await this._loadReviews();
       if (tab === "kept") await this._loadKept();
@@ -6083,8 +6089,8 @@ export class FrigateViewCard extends HTMLElement {
       this._toggleCal();
       return true;
     }
-    if (target.closest("#now-btn")) {
-      this._goNow();
+    if (target.closest("#controls-btn")) {
+      this._setTab("controls");
       return true;
     }
     const recDayNav = target.closest("[data-rec-day-nav]");
@@ -6261,8 +6267,9 @@ export class FrigateViewCard extends HTMLElement {
       .querySelectorAll("[data-tab]")
       .forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
     const filterBtn = this._$("#filter-btn");
-    if (filterBtn) filterBtn.disabled = tab === "recordings";
-    if (tab === "recordings") {
+    if (filterBtn)
+      filterBtn.disabled = tab === "recordings" || tab === "controls";
+    if (tab === "recordings" || tab === "controls") {
       const filterPanel = this._$("#filter-panel");
       if (filterPanel) filterPanel.style.display = "none";
     } else {
@@ -8502,6 +8509,10 @@ export class FrigateViewCard extends HTMLElement {
   _renderList() {
     const list = this._$("#list");
     if (!list) return;
+    if (this._tab === "controls") {
+      this._syncOlderHint(true);
+      return this._renderControlsSection(list);
+    }
     if (this._tab === "recordings") {
       // Don't blow away the recording list while the user is watching a recording
       const viewerActive = this._$("#viewer")?.style.display !== "none";
@@ -8517,6 +8528,14 @@ export class FrigateViewCard extends HTMLElement {
       return this._renderKeptList(list);
     }
     this._renderEventsList(list);
+  }
+
+  _renderControlsSection(list) {
+    this._renderListLabel();
+    this._setListHtmlIfChanged(
+      list,
+      '<div class="controls-section"><h3 class="controls-section-title">Controls</h3></div>',
+    );
   }
 
   _renderKeptList(list) {

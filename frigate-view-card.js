@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1015";
+const VERSION = "1.0.1016";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -621,6 +621,9 @@ const STYLES = `
   .cal-dow,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;}
   .cal-dow span{font-size:0.675rem;color:var(--c-text2);padding:2px 0;}
   .cday{position:relative;background:none;border:none;color:var(--c-text);font-size:0.825rem;padding:6px 0;border-radius:4px;cursor:pointer;} .cday:hover,.cday.active{background:var(--c-primary-l);} .cdot{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#ef4444;}
+
+  .controls-section{padding:6px 2px 0;}
+  .controls-section-title{margin:0;color:var(--c-text);font-size:0.95rem;font-weight:700;text-align:left;}
 
   .frigate-view{position:absolute;bottom:2px;left:6px;max-height:24px;pointer-events: none;
       fill: #ff5733;stroke: #000000;stroke-width: 2px;}
@@ -3185,7 +3188,7 @@ function buildTabsMarkup({
 }) {
   const ht = new Set(hiddenTabs || []);
   const gridModeListOnly = viewMode === "grid";
-  const tabOrder = gridModeListOnly ? ["alerts", "kept"] : ["alerts", "clips", "snapshot", "recordings", "kept"];
+  const tabOrder = gridModeListOnly ? ["alerts", "kept", "controls"] : ["alerts", "clips", "snapshot", "recordings", "kept", "controls"];
   const activeTab = resolveActiveTab(tab, ht, tabOrder);
   const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
   const filterDisabled = activeTab === "recordings";
@@ -3201,7 +3204,7 @@ function buildTabsMarkup({
       ${tabMarkup("recordings", icons.recordings, "Recordings")}
       ${tabMarkup("kept", icons.star, "Kept events")}
       <div class="tl-tools" style=" margin-left: auto;">
-        <button class="tool" id="now-btn" title="Today">${icons.bullseye}</button>
+        <button class="tool${activeTab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-pressed="${activeTab === "controls" ? "true" : "false"}">Controls</button>
         ${gridButton}
         ${slideshowButton}
         <button class="tool" id="filter-btn" title="Filter" ${filterDisabled ? "disabled" : ""}>${icons.filter}</button>
@@ -9365,7 +9368,7 @@ const FrigateViewCard = class extends HTMLElement {
       "#slideshow-btn",
       "#filter-btn",
       "#cal-btn",
-      "#now-btn"
+      "#controls-btn"
     ].forEach((sel) => {
       delete this._domCache[sel];
     });
@@ -9374,7 +9377,8 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   async _loadTabData(tab) {
-    if (tab !== "alerts" && tab !== "kept" && tab !== "recordings") return;
+    if (tab !== "alerts" && tab !== "kept" && tab !== "recordings" && tab !== "controls")
+      return;
     try {
       if (tab === "alerts") await this._loadReviews();
       if (tab === "kept") await this._loadKept();
@@ -10632,8 +10636,8 @@ const FrigateViewCard = class extends HTMLElement {
       this._toggleCal();
       return true;
     }
-    if (target.closest("#now-btn")) {
-      this._goNow();
+    if (target.closest("#controls-btn")) {
+      this._setTab("controls");
       return true;
     }
     const recDayNav = target.closest("[data-rec-day-nav]");
@@ -10808,8 +10812,9 @@ const FrigateViewCard = class extends HTMLElement {
     this._tab = tab;
     this.shadowRoot.querySelectorAll("[data-tab]").forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
     const filterBtn = this._$("#filter-btn");
-    if (filterBtn) filterBtn.disabled = tab === "recordings";
-    if (tab === "recordings") {
+    if (filterBtn)
+      filterBtn.disabled = tab === "recordings" || tab === "controls";
+    if (tab === "recordings" || tab === "controls") {
       const filterPanel = this._$("#filter-panel");
       if (filterPanel) filterPanel.style.display = "none";
     } else {
@@ -12813,6 +12818,10 @@ const FrigateViewCard = class extends HTMLElement {
   _renderList() {
     const list = this._$("#list");
     if (!list) return;
+    if (this._tab === "controls") {
+      this._syncOlderHint(true);
+      return this._renderControlsSection(list);
+    }
     if (this._tab === "recordings") {
       const viewerActive = this._$("#viewer")?.style.display !== "none";
       if (viewerActive && this._playing?.rec != null) return;
@@ -12827,6 +12836,13 @@ const FrigateViewCard = class extends HTMLElement {
       return this._renderKeptList(list);
     }
     this._renderEventsList(list);
+  }
+  _renderControlsSection(list) {
+    this._renderListLabel();
+    this._setListHtmlIfChanged(
+      list,
+      '<div class="controls-section"><h3 class="controls-section-title">Controls</h3></div>'
+    );
   }
   _renderKeptList(list) {
     const kept = this._filteredKept();
