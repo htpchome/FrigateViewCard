@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1018";
+const VERSION = "1.0.1019";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6200,6 +6200,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._reviews = [];
     this._kept = [];
     this._tab = "alerts";
+    this._lastNonControlsTab = "alerts";
     this._playing = null;
     this._browseOpen = false;
     this._winEnd = 0;
@@ -11279,7 +11280,11 @@ const FrigateViewCard = class extends HTMLElement {
       return true;
     }
     if (target.closest("#controls-btn")) {
-      this._setTab("controls");
+      if (this._tab === "controls") {
+        this._setTab(this._resolveControlsReturnTab());
+      } else {
+        this._setTab("controls");
+      }
       return true;
     }
     const recDayNav = target.closest("[data-rec-day-nav]");
@@ -11458,6 +11463,9 @@ const FrigateViewCard = class extends HTMLElement {
   _setTab(tab) {
     const prevTab = this._tab;
     this._tab = tab;
+    if (tab !== "controls") {
+      this._lastNonControlsTab = tab;
+    }
     this.shadowRoot.querySelectorAll("[data-tab]").forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
     const filterBtn = this._$("#filter-btn");
     if (filterBtn)
@@ -11482,6 +11490,19 @@ const FrigateViewCard = class extends HTMLElement {
   _shouldPreserveScrollOnTabSwitch(prevTab, nextTab) {
     if (!prevTab || !nextTab || prevTab === nextTab) return true;
     return prevTab === "clips" && nextTab === "snapshot" || prevTab === "snapshot" && nextTab === "clips";
+  }
+  _availableNonControlsTabs() {
+    const hidden = new Set(this._config?.hidden_tabs || []);
+    const tabs = this._viewMode === "grid" ? ["alerts", "kept"] : ["alerts", "clips", "snapshot", "recordings", "kept"];
+    return tabs.filter((tabId) => !hidden.has(tabId));
+  }
+  _resolveControlsReturnTab() {
+    const available = this._availableNonControlsTabs();
+    if (!available.length) return "alerts";
+    if (available.includes(this._lastNonControlsTab)) {
+      return this._lastNonControlsTab;
+    }
+    return available[0];
   }
   _resetBrowseScrollTop() {
     const list = this._$("#list");

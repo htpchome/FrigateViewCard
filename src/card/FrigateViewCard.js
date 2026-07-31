@@ -276,6 +276,7 @@ export class FrigateViewCard extends HTMLElement {
     this._reviews = [];
     this._kept = [];
     this._tab = "alerts";
+    this._lastNonControlsTab = "alerts";
     this._playing = null;
     this._browseOpen = false;
     this._winEnd = 0;
@@ -6113,7 +6114,11 @@ export class FrigateViewCard extends HTMLElement {
       return true;
     }
     if (target.closest("#controls-btn")) {
-      this._setTab("controls");
+      if (this._tab === "controls") {
+        this._setTab(this._resolveControlsReturnTab());
+      } else {
+        this._setTab("controls");
+      }
       return true;
     }
     const recDayNav = target.closest("[data-rec-day-nav]");
@@ -6292,6 +6297,9 @@ export class FrigateViewCard extends HTMLElement {
   _setTab(tab) {
     const prevTab = this._tab;
     this._tab = tab;
+    if (tab !== "controls") {
+      this._lastNonControlsTab = tab;
+    }
     this.shadowRoot
       .querySelectorAll("[data-tab]")
       .forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
@@ -6322,6 +6330,24 @@ export class FrigateViewCard extends HTMLElement {
       (prevTab === "clips" && nextTab === "snapshot") ||
       (prevTab === "snapshot" && nextTab === "clips")
     );
+  }
+
+  _availableNonControlsTabs() {
+    const hidden = new Set(this._config?.hidden_tabs || []);
+    const tabs =
+      this._viewMode === "grid"
+        ? ["alerts", "kept"]
+        : ["alerts", "clips", "snapshot", "recordings", "kept"];
+    return tabs.filter((tabId) => !hidden.has(tabId));
+  }
+
+  _resolveControlsReturnTab() {
+    const available = this._availableNonControlsTabs();
+    if (!available.length) return "alerts";
+    if (available.includes(this._lastNonControlsTab)) {
+      return this._lastNonControlsTab;
+    }
+    return available[0];
   }
 
   _resetBrowseScrollTop() {
