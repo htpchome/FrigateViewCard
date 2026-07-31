@@ -8432,20 +8432,11 @@ export class FrigateViewCard extends HTMLElement {
   _renderKeptList(list) {
     const kept = this._filteredKept();
     this._renderListLabel();
-    const syncOlderHint = createOlderHintSyncer((forceHide) =>
-      this._syncOlderHint(forceHide),
-    );
-    const renderState = resolveListMarkup({
+    this._renderStandardListMarkup(list, {
       items: kept,
       emptyMessage: "No kept events",
       emptyHint: "star an event to keep it",
       buildContentHtml: (items) => this._renderKeptContent(items),
-    });
-    applyListMarkupWithOlderHint({
-      setHtml: (html) => this._setListHtmlIfChanged(list, html),
-      html: renderState.html,
-      isEmpty: renderState.isEmpty,
-      syncOlderHint,
       emptyForceHide: false,
       contentForceHide: false,
       syncOnContent: true,
@@ -8455,33 +8446,66 @@ export class FrigateViewCard extends HTMLElement {
   _renderEventsList(list) {
     const events = this._filtered();
     this._renderListLabel(resolveListLabelTimestamp(events));
+    this._renderStandardListMarkup(list, {
+      items: events,
+      emptyMessage: "No events in this window",
+      buildContentHtml: (items) => this._renderEventsContent(items),
+      emptyForceHide: false,
+      contentForceHide: null,
+      syncOnContent: false,
+      syncBrowseHead: true,
+      scheduleDeferredOlderHint: true,
+    });
+  }
+
+  _renderStandardListMarkup(
+    list,
+    {
+      items,
+      emptyMessage,
+      emptyHint = "",
+      buildContentHtml,
+      emptyForceHide = null,
+      contentForceHide = null,
+      syncOnContent = true,
+      syncBrowseHead = false,
+      scheduleDeferredOlderHint = false,
+    } = {},
+  ) {
     const syncOlderHint = createOlderHintSyncer((forceHide) =>
       this._syncOlderHint(forceHide),
     );
     const renderState = resolveListMarkup({
-      items: events,
-      emptyMessage: "No events in this window",
-      buildContentHtml: (items) => this._renderEventsContent(items),
+      items,
+      emptyMessage,
+      emptyHint,
+      buildContentHtml,
     });
     const hasContent = applyListMarkupWithOlderHint({
       setHtml: (html) => this._setListHtmlIfChanged(list, html),
       html: renderState.html,
       isEmpty: renderState.isEmpty,
       syncOlderHint,
-      emptyForceHide: false,
-      contentForceHide: null,
-      syncOnContent: false,
+      emptyForceHide,
+      contentForceHide,
+      syncOnContent,
     });
     if (!hasContent) {
       return;
     }
+
+    if (!syncBrowseHead) {
+      return;
+    }
+
     runListPostRenderSync({
       syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
       syncOlderHint,
-      forceHide: null,
-      scheduleDeferredOlderHint: true,
+      forceHide: contentForceHide,
+      scheduleDeferredOlderHint,
     });
   }
+
   _syncOlderHint(forceHide = null) {
     syncOlderHintFromScroll({
       hintEl: this._$("#older-hint"),
@@ -8533,35 +8557,19 @@ export class FrigateViewCard extends HTMLElement {
       : "No alerts in this window";
 
     this._renderListLabel(resolveListLabelTimestamp(filteredReviews));
-    const syncOlderHint = createOlderHintSyncer((forceHide) =>
-      this._syncOlderHint(forceHide),
-    );
     const allRevs = [...filteredReviews].sort(
       (a, b) => b.start_time - a.start_time,
     );
     this._renderListLabel(resolveListLabelTimestamp(allRevs));
-    const renderState = resolveListMarkup({
+    this._renderStandardListMarkup(list, {
       items: allRevs,
       emptyMessage: emptyText,
       buildContentHtml: (items) => this._renderReviewsContent(items),
-    });
-    const hasContent = applyListMarkupWithOlderHint({
-      setHtml: (html) => this._setListHtmlIfChanged(list, html),
-      html: renderState.html,
-      isEmpty: renderState.isEmpty,
-      syncOlderHint,
       emptyForceHide: true,
       contentForceHide: false,
       syncOnContent: false,
-    });
-    if (!hasContent) {
-      return;
-    }
-    runListPostRenderSync({
-      syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
-      syncOlderHint,
-      forceHide: false,
       scheduleDeferredOlderHint: false,
+      syncBrowseHead: true,
     });
   }
   // ── clip download range ───────────────────────────────────
