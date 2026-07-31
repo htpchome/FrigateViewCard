@@ -158,6 +158,8 @@ import {
 import {
   appendControlsReadoutLine,
   clearControlsReadoutLines,
+  isControlsPadTarget,
+  isControlsReadoutClearTarget,
   resolveControlsReadoutMarkup,
 } from "./controls-readout-utils.js";
 import {
@@ -6073,8 +6075,7 @@ export class FrigateViewCard extends HTMLElement {
   }
   _handleListClick(e, target) {
     this._pauseSlideshowForInteraction();
-    const controlsReadoutClear = target.closest("#controls-readout-clear");
-    if (controlsReadoutClear) {
+    if (isControlsReadoutClearTarget(target)) {
       e.stopPropagation();
       this._clearControlsReadout();
       return true;
@@ -8406,8 +8407,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isControlsPadEvent(event) {
-    const target = event?.target;
-    return target instanceof Element && target.id === "controls-pad";
+    return isControlsPadTarget(event?.target);
   }
 
   _appendControlsReadoutEntry(text) {

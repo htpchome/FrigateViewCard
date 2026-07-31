@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1040";
+const VERSION = "1.0.1041";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4013,6 +4013,12 @@ function appendControlsReadoutLine(lines, text, maxLines = 200) {
 }
 function clearControlsReadoutLines() {
   return [];
+}
+function isControlsPadTarget(target) {
+  return target instanceof Element && target.id === "controls-pad";
+}
+function isControlsReadoutClearTarget(target) {
+  return target instanceof Element && !!target.closest("#controls-readout-clear");
 }
 function resolveControlsReadoutMarkup(lines, escapeText) {
   if (!Array.isArray(lines) || lines.length === 0) {
@@ -11902,8 +11908,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _handleListClick(e, target) {
     this._pauseSlideshowForInteraction();
-    const controlsReadoutClear = target.closest("#controls-readout-clear");
-    if (controlsReadoutClear) {
+    if (isControlsReadoutClearTarget(target)) {
       e.stopPropagation();
       this._clearControlsReadout();
       return true;
@@ -13986,8 +13991,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderControlsReadout();
   }
   _isControlsPadEvent(event) {
-    const target = event?.target;
-    return target instanceof Element && target.id === "controls-pad";
+    return isControlsPadTarget(event?.target);
   }
   _appendControlsReadoutEntry(text) {
     this._controlsReadoutLines = appendControlsReadoutLine(

@@ -21,6 +21,16 @@ export function clearControlsReadoutLines() {
   return [];
 }
 
+export function isControlsPadTarget(target) {
+  return target instanceof Element && target.id === "controls-pad";
+}
+
+export function isControlsReadoutClearTarget(target) {
+  return (
+    target instanceof Element && !!target.closest("#controls-readout-clear")
+  );
+}
+
 export function resolveControlsReadoutMarkup(lines, escapeText) {
   if (!Array.isArray(lines) || lines.length === 0) {
     return buildControlsReadoutEmptyMarkup();
