@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1024";
+const VERSION = "1.0.1025";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3760,50 +3760,6 @@ const resolveHlsStartup = (startup = {}) => ({
   waitMs: normalizeWaitMs(startup.waitMs, 5e3)
 });
 
-// src/preview/preview-markup.js
-function previewMediaSeverityClass(severity) {
-  if (severity === "alert") return "grid-alert";
-  if (severity === "detection") return "grid-detection";
-  return "";
-}
-function buildPreviewStatusMarkup(online) {
-  return `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">\u25CF</span>${online ? "Online" : "Offline"}`;
-}
-function buildPreviewMetaMarkup({
-  showTitleBars,
-  name,
-  online,
-  sourceLabel,
-  eventsCount
-}) {
-  if (!showTitleBars) return "";
-  return `<div class="preview-meta">
-              <div class="preview-meta-name">${name}</div>
-              <div class="preview-meta-status">${buildPreviewStatusMarkup(online)}</div>
-              <div class="preview-meta-source">Stream Source: ${sourceLabel}</div>
-              <div class="preview-meta-events">Events: ${eventsCount}</div>
-            </div>`;
-}
-function buildPreviewCellMarkup({
-  index,
-  entity,
-  severity,
-  useLive,
-  metaMarkup
-}) {
-  return `<div class="preview-cell shadow-medium" data-preview-camidx="${index}">
-          <div class="preview-media-host ${previewMediaSeverityClass(severity)}" data-preview-media-entity="${entity}" data-preview-use-live="${useLive ? "1" : "0"}"></div>
-          ${metaMarkup}
-        </div>`;
-}
-function buildPreviewCameraButtonMarkup({ index, name }) {
-  return `<button class="glass-btn preview-cam-btn" type="button" data-preview-select-camidx="${index}">${name}</button>`;
-}
-function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
-  return `<div class="preview-grid" id="preview-grid">${cellsMarkup}</div>
-      <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
-}
-
 // src/card/shell-nav-markup.js
 function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
   return `<div class="page-nav" aria-label="Page navigation">${routes.map((pageId) => {
@@ -4660,6 +4616,50 @@ const PreviewAlertController = class {
   }
 };
 
+// src/preview/preview-markup.js
+function previewMediaSeverityClass(severity) {
+  if (severity === "alert") return "grid-alert";
+  if (severity === "detection") return "grid-detection";
+  return "";
+}
+function buildPreviewStatusMarkup(online) {
+  return `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">\u25CF</span>${online ? "Online" : "Offline"}`;
+}
+function buildPreviewMetaMarkup({
+  showTitleBars,
+  name,
+  online,
+  sourceLabel,
+  eventsCount
+}) {
+  if (!showTitleBars) return "";
+  return `<div class="preview-meta">
+              <div class="preview-meta-name">${name}</div>
+              <div class="preview-meta-status">${buildPreviewStatusMarkup(online)}</div>
+              <div class="preview-meta-source">Stream Source: ${sourceLabel}</div>
+              <div class="preview-meta-events">Events: ${eventsCount}</div>
+            </div>`;
+}
+function buildPreviewCellMarkup({
+  index,
+  entity,
+  severity,
+  useLive,
+  metaMarkup
+}) {
+  return `<div class="preview-cell shadow-medium" data-preview-camidx="${index}">
+          <div class="preview-media-host ${previewMediaSeverityClass(severity)}" data-preview-media-entity="${entity}" data-preview-use-live="${useLive ? "1" : "0"}"></div>
+          ${metaMarkup}
+        </div>`;
+}
+function buildPreviewCameraButtonMarkup({ index, name }) {
+  return `<button class="glass-btn preview-cam-btn" type="button" data-preview-select-camidx="${index}">${name}</button>`;
+}
+function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
+  return `<div class="preview-grid" id="preview-grid">${cellsMarkup}</div>
+      <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
+}
+
 // src/preview/preview-page-controller.js
 const PreviewPageController = class {
   constructor(host, constants) {
@@ -4690,9 +4690,50 @@ const PreviewPageController = class {
   previewCellSeverity(entity) {
     return this._host._previewAlertController.previewCellSeverity(entity);
   }
+  _previewPageTitle() {
+    return this._host._config.title || (this._host._config.cameras.length === 1 ? cap(camDisplayName(this._host._config.cameras[0])) : "Cameras") || "Camera";
+  }
+  buildPreviewLayoutShellMarkup() {
+    const previewShellHeader = buildPreviewShellHeaderMarkup({
+      title: this._previewPageTitle(),
+      subtitle: this._host._subtitleText(),
+      pageNav: this._host._pageNavMarkup()
+    });
+    return buildPreviewLayoutShellMarkup({
+      previewShellHeader,
+      previewFooterIcon: ICONS.frigateview
+    });
+  }
+  ensurePreviewLayoutShell() {
+    const existingShell = this._host._$("#preview-shell");
+    if (existingShell) return existingShell;
+    const layout = this._host._$("#layout");
+    const leftColumn = this._host._$("#col-left");
+    if (!layout || !leftColumn) return null;
+    leftColumn.insertAdjacentHTML(
+      "beforebegin",
+      this.buildPreviewLayoutShellMarkup()
+    );
+    this._host._domCache = {};
+    return this._host._$("#preview-shell");
+  }
+  removePreviewLayoutShell() {
+    let removed = false;
+    ["#preview-shell-header", "#preview-shell", "#preview-shell-footer"].map((selector) => this._host._$(selector)).forEach((el) => {
+      if (!el) return;
+      el.remove();
+      removed = true;
+    });
+    if (removed) this._host._domCache = {};
+  }
   applyPreviewShellVisibility() {
     const card = this._host._$("#card");
     if (!card) return;
+    if (this.isPreviewPageEnabled() && this.isPreviewPageActive()) {
+      this.ensurePreviewLayoutShell();
+    } else {
+      this.removePreviewLayoutShell();
+    }
     card.classList.toggle("preview-active", this.isPreviewPageActive());
   }
   previewLiveStreamHint() {
@@ -4707,6 +4748,158 @@ const PreviewPageController = class {
       useLive,
       connectionType: this._host._cameraConnectionType(entity),
       liveStreamHint: this.previewLiveStreamHint()
+    });
+  }
+  teardownPreviewMedia() {
+    if (this._host._previewMediaState) {
+      this._host._previewMediaState.destroyed = true;
+      for (const cleanup of this._host._previewMediaState.cleanup || []) {
+        try {
+          cleanup();
+        } catch (_) {
+        }
+      }
+    }
+    this._host._previewMediaState = null;
+    this._host._previewLastRenderSignature = "";
+    const hosts = this._host.shadowRoot.querySelectorAll(".preview-media-host");
+    hosts.forEach((host) => {
+      host.querySelectorAll("video").forEach((video) => {
+        try {
+          video.pause();
+          video.removeAttribute("src");
+          video.load();
+        } catch (_) {
+        }
+      });
+      host.innerHTML = "";
+    });
+  }
+  renderPreviewPage() {
+    if (!this.isPreviewPageEnabled()) {
+      this.teardownPreviewMedia();
+      this.applyPreviewShellVisibility();
+      return;
+    }
+    if (!this.isPreviewPageActive()) {
+      this.teardownPreviewMedia();
+      this.applyPreviewShellVisibility();
+      return;
+    }
+    const shell = this.ensurePreviewLayoutShell();
+    if (!shell) return;
+    const titleEl = this._host._$("#preview-shell-title");
+    const subtitleEl = this._host._$("#preview-shell-subtitle");
+    if (titleEl) titleEl.textContent = this._previewPageTitle();
+    if (subtitleEl) subtitleEl.textContent = this._host._subtitleText();
+    const cameras = Array.isArray(this._host._config?.cameras) ? this._host._config.cameras.slice(0, 9) : [];
+    const showTitleBars = this.previewShowTitleBarsEnabled();
+    const liveStreamHint = this.previewLiveStreamHint();
+    const hassReady = !!this._host._hass?.states;
+    const nextSignature = cameras.map((camera, index) => {
+      const entity = camera?.entity || "";
+      const severity = this.previewCellSeverity(entity);
+      const useLive = this.previewShouldUseLive(entity);
+      return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
+    }).concat([
+      `titles:${showTitleBars ? "1" : "0"}`,
+      `hass:${hassReady ? "1" : "0"}`
+    ]).join("|");
+    if (shell.firstElementChild?.classList?.contains("preview-grid") && this._host._previewLastRenderSignature === nextSignature) {
+      this.updatePreviewMeta();
+      this.applyPreviewShellVisibility();
+      return;
+    }
+    this.teardownPreviewMedia();
+    this._host._previewLastRenderSignature = nextSignature;
+    const cellsMarkup = cameras.map((camera, index) => {
+      const entity = camera?.entity || "";
+      const entState = this._host._hass?.states?.[entity];
+      const online = entState?.state !== "unavailable";
+      const severity = this.previewCellSeverity(entity);
+      const useLive = this.previewShouldUseLive(entity);
+      const sourceLabel = this.previewStreamSourceLabel(entity, useLive);
+      const eventsCount = this.previewEventsCount(entity);
+      const name = cap(camDisplayName(camera));
+      return buildPreviewCellMarkup({
+        index,
+        entity,
+        severity,
+        useLive,
+        metaMarkup: buildPreviewMetaMarkup({
+          showTitleBars,
+          name,
+          online,
+          sourceLabel,
+          eventsCount
+        })
+      });
+    }).join("");
+    const buttonsMarkup = cameras.map(
+      (camera, index) => buildPreviewCameraButtonMarkup({
+        index,
+        name: cap(camDisplayName(camera))
+      })
+    ).join("");
+    shell.innerHTML = buildPreviewShellMarkup({
+      cellsMarkup,
+      buttonsMarkup
+    });
+    this.mountPreviewMedia();
+    this.applyPreviewShellVisibility();
+  }
+  updatePreviewMeta() {
+    if (!this.previewShowTitleBarsEnabled()) return;
+    this._host.shadowRoot.querySelectorAll("[data-preview-camidx]").forEach((cell) => {
+      const idx = Number(cell.dataset.previewCamidx);
+      const camera = this._host._config?.cameras?.[idx];
+      const entity = camera?.entity || "";
+      if (!entity) return;
+      const online = this._host._hass?.states?.[entity]?.state !== "unavailable";
+      const useLive = this.previewShouldUseLive(entity);
+      const status = cell.querySelector(".preview-meta-status");
+      if (status) {
+        status.innerHTML = buildPreviewStatusMarkup(online);
+      }
+      const source = cell.querySelector(".preview-meta-source");
+      if (source) {
+        source.textContent = `Stream Source: ${this.previewStreamSourceLabel(entity, useLive)}`;
+      }
+      const events = cell.querySelector(".preview-meta-events");
+      if (events) {
+        events.textContent = `Events: ${this.previewEventsCount(entity)}`;
+      }
+    });
+  }
+  mountPreviewMedia() {
+    if (!this.isPreviewPageActive()) return;
+    const hosts = this._host.shadowRoot.querySelectorAll(".preview-media-host");
+    if (!this._host._hass?.states) {
+      hosts.forEach((host) => {
+        host.innerHTML = `<div class="ph">${ICONS.live}<span>Loading\u2026</span></div>`;
+      });
+      return;
+    }
+    const liveStreamHint = this.previewLiveStreamHint();
+    const previewState = { destroyed: false, cleanup: [] };
+    this._host._previewMediaState = previewState;
+    hosts.forEach((host) => {
+      const entity = host.dataset.previewMediaEntity || "";
+      const useLive = host.dataset.previewUseLive === "1";
+      const stateObj = entity ? this._host._hlsStateObj(entity, liveStreamHint) || this._host._hass?.states?.[entity] || null : null;
+      host.innerHTML = "";
+      if (!entity) {
+        host.innerHTML = `<div class="ph">${ICONS.live}<span>Unavailable</span></div>`;
+        return;
+      }
+      this._host._mountGridCameraCellMedia(host, {
+        entity,
+        stateObj,
+        useLive,
+        liveStreamHint,
+        gridState: previewState,
+        fallbackOnLiveError: true
+      });
     });
   }
   activatePreviewPageRoute(context = {}) {
@@ -4726,7 +4919,7 @@ const PreviewPageController = class {
   }
   stopPreviewMode() {
     this._host._clearPreviewTimers();
-    this._host._teardownPreviewMedia();
+    this.teardownPreviewMedia();
   }
   exitPreviewPageToCamera(idx) {
     if (!this.isPreviewPageActive()) return;
@@ -8899,40 +9092,13 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewPageController.applyPreviewShellVisibility();
   }
   _buildPreviewLayoutShellMarkup() {
-    const title = this._config.title || (this._config.cameras.length === 1 ? cap(camDisplayName(this._config.cameras[0])) : "Cameras") || "Camera";
-    const subtitle = this._subtitleText();
-    const pageNav = this._pageNavMarkup();
-    const previewShellHeader = buildPreviewShellHeaderMarkup({
-      title,
-      subtitle,
-      pageNav
-    });
-    return buildPreviewLayoutShellMarkup({
-      previewShellHeader,
-      previewFooterIcon: ICONS.frigateview
-    });
+    return this._previewPageController.buildPreviewLayoutShellMarkup();
   }
   _ensurePreviewLayoutShell() {
-    const existingShell = this._$("#preview-shell");
-    if (existingShell) return existingShell;
-    const layout = this._$("#layout");
-    const leftColumn = this._$("#col-left");
-    if (!layout || !leftColumn) return null;
-    leftColumn.insertAdjacentHTML(
-      "beforebegin",
-      this._buildPreviewLayoutShellMarkup()
-    );
-    this._domCache = {};
-    return this._$("#preview-shell");
+    return this._previewPageController.ensurePreviewLayoutShell();
   }
   _removePreviewLayoutShell() {
-    let removed = false;
-    ["#preview-shell-header", "#preview-shell", "#preview-shell-footer"].map((selector) => this._$(selector)).forEach((el) => {
-      if (!el) return;
-      el.remove();
-      removed = true;
-    });
-    if (removed) this._domCache = {};
+    this._previewPageController.removePreviewLayoutShell();
   }
   _clearPreviewTimers() {
     this._previewAlertController.clearTimers();
@@ -8959,155 +9125,16 @@ const FrigateViewCard = class extends HTMLElement {
     return this._previewPageController.previewLiveStreamHint();
   }
   _teardownPreviewMedia() {
-    if (this._previewMediaState) {
-      this._previewMediaState.destroyed = true;
-      for (const cleanup of this._previewMediaState.cleanup || []) {
-        try {
-          cleanup();
-        } catch (_) {
-        }
-      }
-    }
-    this._previewMediaState = null;
-    this._previewLastRenderSignature = "";
-    const hosts = this.shadowRoot.querySelectorAll(".preview-media-host");
-    hosts.forEach((host) => {
-      host.querySelectorAll("video").forEach((video) => {
-        try {
-          video.pause();
-          video.removeAttribute("src");
-          video.load();
-        } catch (_) {
-        }
-      });
-      host.innerHTML = "";
-    });
+    this._previewPageController.teardownPreviewMedia();
   }
   _renderPreviewPage() {
-    if (!this._isPreviewPageEnabled()) {
-      this._teardownPreviewMedia();
-      this._applyPreviewShellVisibility();
-      return;
-    }
-    if (!this._isPreviewPageActive()) {
-      this._teardownPreviewMedia();
-      this._applyPreviewShellVisibility();
-      return;
-    }
-    const shell = this._ensurePreviewLayoutShell();
-    if (!shell) return;
-    const titleEl = this._$("#preview-shell-title");
-    const subtitleEl = this._$("#preview-shell-subtitle");
-    if (titleEl) {
-      titleEl.textContent = this._config.title || (this._config.cameras.length === 1 ? cap(camDisplayName(this._config.cameras[0])) : "Cameras") || "Camera";
-    }
-    if (subtitleEl) subtitleEl.textContent = this._subtitleText();
-    const cameras = Array.isArray(this._config?.cameras) ? this._config.cameras.slice(0, 9) : [];
-    const showTitleBars = this._previewShowTitleBarsEnabled();
-    const liveStreamHint = this._previewLiveStreamHint();
-    const hassReady = !!this._hass?.states;
-    const nextSignature = cameras.map((camera, index) => {
-      const entity = camera?.entity || "";
-      const severity = this._previewCellSeverity(entity);
-      const useLive = this._previewShouldUseLive(entity);
-      return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
-    }).concat([
-      `titles:${showTitleBars ? "1" : "0"}`,
-      `hass:${hassReady ? "1" : "0"}`
-    ]).join("|");
-    if (shell.firstElementChild?.classList?.contains("preview-grid") && this._previewLastRenderSignature === nextSignature) {
-      this._updatePreviewMeta();
-      this._applyPreviewShellVisibility();
-      return;
-    }
-    this._teardownPreviewMedia();
-    this._previewLastRenderSignature = nextSignature;
-    const cells = cameras.map((camera, index) => {
-      const entity = camera?.entity || "";
-      const entState = this._hass?.states?.[entity];
-      const online = entState?.state !== "unavailable";
-      const severity = this._previewCellSeverity(entity);
-      const useLive = this._previewShouldUseLive(entity);
-      const sourceLabel = this._previewStreamSourceLabel(entity, useLive);
-      const eventsCount = this._previewEventsCount(entity);
-      const name = cap(camDisplayName(camera));
-      return buildPreviewCellMarkup({
-        index,
-        entity,
-        severity,
-        useLive,
-        metaMarkup: buildPreviewMetaMarkup({
-          showTitleBars,
-          name,
-          online,
-          sourceLabel,
-          eventsCount
-        })
-      });
-    }).join("");
-    const buttons = cameras.map((camera, index) => {
-      const name = cap(camDisplayName(camera));
-      return buildPreviewCameraButtonMarkup({ index, name });
-    }).join("");
-    shell.innerHTML = buildPreviewShellMarkup({
-      cellsMarkup: cells,
-      buttonsMarkup: buttons
-    });
-    this._mountPreviewMedia();
-    this._applyPreviewShellVisibility();
+    this._previewPageController.renderPreviewPage();
   }
   _updatePreviewMeta() {
-    if (!this._previewShowTitleBarsEnabled()) return;
-    this.shadowRoot.querySelectorAll("[data-preview-camidx]").forEach((cell) => {
-      const idx = Number(cell.dataset.previewCamidx);
-      const camera = this._config?.cameras?.[idx];
-      const entity = camera?.entity || "";
-      if (!entity) return;
-      const online = this._hass?.states?.[entity]?.state !== "unavailable";
-      const useLive = this._previewShouldUseLive(entity);
-      const status = cell.querySelector(".preview-meta-status");
-      if (status) {
-        status.innerHTML = buildPreviewStatusMarkup(online);
-      }
-      const source = cell.querySelector(".preview-meta-source");
-      if (source) {
-        source.textContent = `Stream Source: ${this._previewStreamSourceLabel(entity, useLive)}`;
-      }
-      const events = cell.querySelector(".preview-meta-events");
-      if (events)
-        events.textContent = `Events: ${this._previewEventsCount(entity)}`;
-    });
+    this._previewPageController.updatePreviewMeta();
   }
   _mountPreviewMedia() {
-    if (!this._isPreviewPageActive()) return;
-    const hosts = this.shadowRoot.querySelectorAll(".preview-media-host");
-    if (!this._hass?.states) {
-      hosts.forEach((host) => {
-        host.innerHTML = `<div class="ph">${ICONS.live}<span>Loading\u2026</span></div>`;
-      });
-      return;
-    }
-    const liveStreamHint = this._previewLiveStreamHint();
-    const previewState = { destroyed: false, cleanup: [] };
-    this._previewMediaState = previewState;
-    hosts.forEach((host) => {
-      const entity = host.dataset.previewMediaEntity || "";
-      const useLive = host.dataset.previewUseLive === "1";
-      const stateObj = entity ? this._hlsStateObj(entity, liveStreamHint) || this._hass?.states?.[entity] || null : null;
-      host.innerHTML = "";
-      if (!entity) {
-        host.innerHTML = `<div class="ph">${ICONS.live}<span>Unavailable</span></div>`;
-        return;
-      }
-      this._mountGridCameraCellMedia(host, {
-        entity,
-        stateObj,
-        useLive,
-        liveStreamHint,
-        gridState: previewState,
-        fallbackOnLiveError: true
-      });
-    });
+    this._previewPageController.mountPreviewMedia();
   }
   _startPreviewMode() {
     this._previewPageController.startPreviewMode();

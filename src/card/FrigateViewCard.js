@@ -144,21 +144,12 @@ import {
   resolveWebRtcStartup,
 } from "../live/live-startup-policy.js";
 import {
-  buildPreviewCameraButtonMarkup,
-  buildPreviewCellMarkup,
-  buildPreviewMetaMarkup,
-  buildPreviewShellMarkup,
-  buildPreviewStatusMarkup,
-} from "../preview/preview-markup.js";
-import {
   buildCamSwitcherMarkup,
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
   buildMainLayoutShellMarkup,
   buildPageNavMarkup,
-  buildPreviewLayoutShellMarkup,
   buildPopupShellMarkup,
-  buildPreviewShellHeaderMarkup,
   buildRightColumnShellMarkup,
   buildTabsMarkup,
   resolveSubtitleText,
@@ -3221,53 +3212,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _buildPreviewLayoutShellMarkup() {
-    const title =
-      this._config.title ||
-      (this._config.cameras.length === 1
-        ? cap(camDisplayName(this._config.cameras[0]))
-        : "Cameras") ||
-      "Camera";
-    const subtitle = this._subtitleText();
-    const pageNav = this._pageNavMarkup();
-    const previewShellHeader = buildPreviewShellHeaderMarkup({
-      title,
-      subtitle,
-      pageNav,
-    });
-
-    return buildPreviewLayoutShellMarkup({
-      previewShellHeader,
-      previewFooterIcon: ICONS.frigateview,
-    });
+    return this._previewPageController.buildPreviewLayoutShellMarkup();
   }
 
   _ensurePreviewLayoutShell() {
-    const existingShell = this._$("#preview-shell");
-    if (existingShell) return existingShell;
-
-    const layout = this._$("#layout");
-    const leftColumn = this._$("#col-left");
-    if (!layout || !leftColumn) return null;
-
-    leftColumn.insertAdjacentHTML(
-      "beforebegin",
-      this._buildPreviewLayoutShellMarkup(),
-    );
-    this._domCache = {};
-    return this._$("#preview-shell");
+    return this._previewPageController.ensurePreviewLayoutShell();
   }
 
   _removePreviewLayoutShell() {
-    let removed = false;
-    ["#preview-shell-header", "#preview-shell", "#preview-shell-footer"]
-      .map((selector) => this._$(selector))
-      .forEach((el) => {
-        if (!el) return;
-        el.remove();
-        removed = true;
-      });
-
-    if (removed) this._domCache = {};
+    this._previewPageController.removePreviewLayoutShell();
   }
 
   _clearPreviewTimers() {
@@ -3302,184 +3255,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _teardownPreviewMedia() {
-    if (this._previewMediaState) {
-      this._previewMediaState.destroyed = true;
-      for (const cleanup of this._previewMediaState.cleanup || []) {
-        try {
-          cleanup();
-        } catch (_) {}
-      }
-    }
-    this._previewMediaState = null;
-    this._previewLastRenderSignature = "";
-    const hosts = this.shadowRoot.querySelectorAll(".preview-media-host");
-    hosts.forEach((host) => {
-      host.querySelectorAll("video").forEach((video) => {
-        try {
-          video.pause();
-          video.removeAttribute("src");
-          video.load();
-        } catch (_) {}
-      });
-      host.innerHTML = "";
-    });
+    this._previewPageController.teardownPreviewMedia();
   }
 
   _renderPreviewPage() {
-    if (!this._isPreviewPageEnabled()) {
-      this._teardownPreviewMedia();
-      this._applyPreviewShellVisibility();
-      return;
-    }
-    if (!this._isPreviewPageActive()) {
-      this._teardownPreviewMedia();
-      this._applyPreviewShellVisibility();
-      return;
-    }
-
-    const shell = this._ensurePreviewLayoutShell();
-    if (!shell) return;
-    const titleEl = this._$("#preview-shell-title");
-    const subtitleEl = this._$("#preview-shell-subtitle");
-    if (titleEl) {
-      titleEl.textContent =
-        this._config.title ||
-        (this._config.cameras.length === 1
-          ? cap(camDisplayName(this._config.cameras[0]))
-          : "Cameras") ||
-        "Camera";
-    }
-    if (subtitleEl) subtitleEl.textContent = this._subtitleText();
-
-    const cameras = Array.isArray(this._config?.cameras)
-      ? this._config.cameras.slice(0, 9)
-      : [];
-    const showTitleBars = this._previewShowTitleBarsEnabled();
-    const liveStreamHint = this._previewLiveStreamHint();
-    const hassReady = !!this._hass?.states;
-    const nextSignature = cameras
-      .map((camera, index) => {
-        const entity = camera?.entity || "";
-        const severity = this._previewCellSeverity(entity);
-        const useLive = this._previewShouldUseLive(entity);
-        return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
-      })
-      .concat([
-        `titles:${showTitleBars ? "1" : "0"}`,
-        `hass:${hassReady ? "1" : "0"}`,
-      ])
-      .join("|");
-    if (
-      shell.firstElementChild?.classList?.contains("preview-grid") &&
-      this._previewLastRenderSignature === nextSignature
-    ) {
-      this._updatePreviewMeta();
-      this._applyPreviewShellVisibility();
-      return;
-    }
-    this._teardownPreviewMedia();
-    this._previewLastRenderSignature = nextSignature;
-
-    const cells = cameras
-      .map((camera, index) => {
-        const entity = camera?.entity || "";
-        const entState = this._hass?.states?.[entity];
-        const online = entState?.state !== "unavailable";
-        const severity = this._previewCellSeverity(entity);
-        const useLive = this._previewShouldUseLive(entity);
-        const sourceLabel = this._previewStreamSourceLabel(entity, useLive);
-        const eventsCount = this._previewEventsCount(entity);
-        const name = cap(camDisplayName(camera));
-        return buildPreviewCellMarkup({
-          index,
-          entity,
-          severity,
-          useLive,
-          metaMarkup: buildPreviewMetaMarkup({
-            showTitleBars,
-            name,
-            online,
-            sourceLabel,
-            eventsCount,
-          }),
-        });
-      })
-      .join("");
-
-    const buttons = cameras
-      .map((camera, index) => {
-        const name = cap(camDisplayName(camera));
-        return buildPreviewCameraButtonMarkup({ index, name });
-      })
-      .join("");
-
-    shell.innerHTML = buildPreviewShellMarkup({
-      cellsMarkup: cells,
-      buttonsMarkup: buttons,
-    });
-    this._mountPreviewMedia();
-    this._applyPreviewShellVisibility();
+    this._previewPageController.renderPreviewPage();
   }
 
   _updatePreviewMeta() {
-    if (!this._previewShowTitleBarsEnabled()) return;
-    this.shadowRoot
-      .querySelectorAll("[data-preview-camidx]")
-      .forEach((cell) => {
-        const idx = Number(cell.dataset.previewCamidx);
-        const camera = this._config?.cameras?.[idx];
-        const entity = camera?.entity || "";
-        if (!entity) return;
-        const online = this._hass?.states?.[entity]?.state !== "unavailable";
-        const useLive = this._previewShouldUseLive(entity);
-        const status = cell.querySelector(".preview-meta-status");
-        if (status) {
-          status.innerHTML = buildPreviewStatusMarkup(online);
-        }
-        const source = cell.querySelector(".preview-meta-source");
-        if (source) {
-          source.textContent = `Stream Source: ${this._previewStreamSourceLabel(entity, useLive)}`;
-        }
-        const events = cell.querySelector(".preview-meta-events");
-        if (events)
-          events.textContent = `Events: ${this._previewEventsCount(entity)}`;
-      });
+    this._previewPageController.updatePreviewMeta();
   }
 
   _mountPreviewMedia() {
-    if (!this._isPreviewPageActive()) return;
-    const hosts = this.shadowRoot.querySelectorAll(".preview-media-host");
-    if (!this._hass?.states) {
-      hosts.forEach((host) => {
-        host.innerHTML = `<div class="ph">${ICONS.live}<span>Loading…</span></div>`;
-      });
-      return;
-    }
-    const liveStreamHint = this._previewLiveStreamHint();
-    const previewState = { destroyed: false, cleanup: [] };
-    this._previewMediaState = previewState;
-    hosts.forEach((host) => {
-      const entity = host.dataset.previewMediaEntity || "";
-      const useLive = host.dataset.previewUseLive === "1";
-      const stateObj = entity
-        ? this._hlsStateObj(entity, liveStreamHint) ||
-          this._hass?.states?.[entity] ||
-          null
-        : null;
-      host.innerHTML = "";
-      if (!entity) {
-        host.innerHTML = `<div class="ph">${ICONS.live}<span>Unavailable</span></div>`;
-        return;
-      }
-      this._mountGridCameraCellMedia(host, {
-        entity,
-        stateObj,
-        useLive,
-        liveStreamHint,
-        gridState: previewState,
-        fallbackOnLiveError: true,
-      });
-    });
+    this._previewPageController.mountPreviewMedia();
   }
 
   _startPreviewMode() {
