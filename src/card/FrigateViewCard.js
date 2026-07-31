@@ -158,6 +158,7 @@ import {
 import {
   appendControlsReadoutLine,
   clearControlsReadoutLines,
+  resolveControlsReadoutMarkup,
 } from "./controls-readout-utils.js";
 import {
   buildReviewListItemHtml,
@@ -8433,15 +8434,11 @@ export class FrigateViewCard extends HTMLElement {
   _renderControlsReadout() {
     const el = this._$("#controls-readout-lines");
     if (!el) return;
-    if (!this._controlsReadoutLines.length) {
-      el.innerHTML = buildControlsReadoutEmptyMarkup();
-      return;
-    }
-    el.innerHTML = buildControlsReadoutLinesMarkup(
-      this._controlsReadoutLines.map((line) =>
-        this._escapeControlsReadoutText(line),
-      ),
+    el.innerHTML = resolveControlsReadoutMarkup(
+      this._controlsReadoutLines,
+      (line) => this._escapeControlsReadoutText(line),
     );
+    if (!this._controlsReadoutLines.length) return;
     el.scrollTop = el.scrollHeight;
   }
 

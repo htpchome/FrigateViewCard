@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1039";
+const VERSION = "1.0.1040";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4013,6 +4013,15 @@ function appendControlsReadoutLine(lines, text, maxLines = 200) {
 }
 function clearControlsReadoutLines() {
   return [];
+}
+function resolveControlsReadoutMarkup(lines, escapeText) {
+  if (!Array.isArray(lines) || lines.length === 0) {
+    return buildControlsReadoutEmptyMarkup();
+  }
+  const escapedLines = lines.map(
+    (line) => typeof escapeText === "function" ? escapeText(line) : String(line || "")
+  );
+  return buildControlsReadoutLinesMarkup(escapedLines);
 }
 
 // src/card/review-list-model.js
@@ -13998,15 +14007,11 @@ const FrigateViewCard = class extends HTMLElement {
   _renderControlsReadout() {
     const el = this._$("#controls-readout-lines");
     if (!el) return;
-    if (!this._controlsReadoutLines.length) {
-      el.innerHTML = buildControlsReadoutEmptyMarkup();
-      return;
-    }
-    el.innerHTML = buildControlsReadoutLinesMarkup(
-      this._controlsReadoutLines.map(
-        (line) => this._escapeControlsReadoutText(line)
-      )
+    el.innerHTML = resolveControlsReadoutMarkup(
+      this._controlsReadoutLines,
+      (line) => this._escapeControlsReadoutText(line)
     );
+    if (!this._controlsReadoutLines.length) return;
     el.scrollTop = el.scrollHeight;
   }
   _renderKeptList(list) {
