@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1016";
+const VERSION = "1.0.1017";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3204,7 +3204,7 @@ function buildTabsMarkup({
       ${tabMarkup("recordings", icons.recordings, "Recordings")}
       ${tabMarkup("kept", icons.star, "Kept events")}
       <div class="tl-tools" style=" margin-left: auto;">
-        <button class="tool${activeTab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-pressed="${activeTab === "controls" ? "true" : "false"}">Controls</button>
+        <button class="tool${activeTab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${activeTab === "controls" ? "true" : "false"}">${icons.bullseye}</button>
         ${gridButton}
         ${slideshowButton}
         <button class="tool" id="filter-btn" title="Filter" ${filterDisabled ? "disabled" : ""}>${icons.filter}</button>
