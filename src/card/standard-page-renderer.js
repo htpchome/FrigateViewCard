@@ -191,6 +191,10 @@ export function renderStandardPageEventsContent(host, items) {
   return appendEndMarker(content, host._exhausted);
 }
 
+export function renderStandardPageKeptContent(host, items) {
+  return items.map((item) => host._eventCardHTML(item, false)).join("");
+}
+
 export function renderStandardPageReviewsContent(host, items) {
   return renderStandardPageStickyDaySections(host, items, (item) =>
     host._reviewListItemHTML(item),

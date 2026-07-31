@@ -2,6 +2,7 @@ import {
   buildStandardPageCamSwitcherMarkup,
   renderStandardPageCamSwitcher,
   renderStandardPageEventsContent,
+  renderStandardPageKeptContent,
   renderStandardPageLegend,
   renderStandardPageListLabel,
   renderStandardPageReviewsContent,
@@ -76,6 +77,10 @@ export class SingleViewPageController {
 
   renderEventsContent(items) {
     return renderStandardPageEventsContent(this._host, items);
+  }
+
+  renderKeptContent(items) {
+    return renderStandardPageKeptContent(this._host, items);
   }
 
   renderReviewsContent(items) {

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1031";
+const VERSION = "1.0.1032";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5778,6 +5778,9 @@ function renderStandardPageEventsContent(host, items) {
   ) : items.map((item) => host._eventCardHTML(item, false)).join("");
   return appendEndMarker(content, host._exhausted);
 }
+function renderStandardPageKeptContent(host, items) {
+  return items.map((item) => host._eventCardHTML(item, false)).join("");
+}
 function renderStandardPageReviewsContent(host, items) {
   return renderStandardPageStickyDaySections(
     host,
@@ -5874,6 +5877,9 @@ const MobileViewPageController = class {
   renderEventsContent(items) {
     return renderStandardPageEventsContent(this._host, items);
   }
+  renderKeptContent(items) {
+    return renderStandardPageKeptContent(this._host, items);
+  }
   renderReviewsContent(items) {
     return renderStandardPageReviewsContent(this._host, items);
   }
@@ -5935,6 +5941,9 @@ const SingleViewPageController = class {
   }
   renderEventsContent(items) {
     return renderStandardPageEventsContent(this._host, items);
+  }
+  renderKeptContent(items) {
+    return renderStandardPageKeptContent(this._host, items);
   }
   renderReviewsContent(items) {
     return renderStandardPageReviewsContent(this._host, items);
@@ -13578,6 +13587,9 @@ const FrigateViewCard = class extends HTMLElement {
   _renderEventsContent(items) {
     return this._activeStandardPageController().renderEventsContent(items);
   }
+  _renderKeptContent(items) {
+    return this._activeStandardPageController().renderKeptContent(items);
+  }
   _renderReviewsContent(items) {
     return this._activeStandardPageController().renderReviewsContent(items);
   }
@@ -13962,7 +13974,7 @@ const FrigateViewCard = class extends HTMLElement {
       items: kept,
       emptyMessage: "No kept events",
       emptyHint: "star an event to keep it",
-      buildContentHtml: (items) => items.map((ev) => this._eventCardHTML(ev, false)).join("")
+      buildContentHtml: (items) => this._renderKeptContent(items)
     });
     applyListMarkupWithOlderHint({
       setHtml: (html) => this._setListHtmlIfChanged(list, html),

@@ -8000,6 +8000,10 @@ export class FrigateViewCard extends HTMLElement {
     return this._activeStandardPageController().renderEventsContent(items);
   }
 
+  _renderKeptContent(items) {
+    return this._activeStandardPageController().renderKeptContent(items);
+  }
+
   _renderReviewsContent(items) {
     return this._activeStandardPageController().renderReviewsContent(items);
   }
@@ -8435,8 +8439,7 @@ export class FrigateViewCard extends HTMLElement {
       items: kept,
       emptyMessage: "No kept events",
       emptyHint: "star an event to keep it",
-      buildContentHtml: (items) =>
-        items.map((ev) => this._eventCardHTML(ev, false)).join(""),
+      buildContentHtml: (items) => this._renderKeptContent(items),
     });
     applyListMarkupWithOlderHint({
       setHtml: (html) => this._setListHtmlIfChanged(list, html),

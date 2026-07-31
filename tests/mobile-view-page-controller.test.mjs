@@ -271,6 +271,19 @@ test("mobile-view event content helper builds flat and grouped markup", () => {
   assert.equal(html.includes('<div class="end">— end —</div>'), true);
 });
 
+test("mobile-view kept content helper builds flat markup without end marker", () => {
+  const { host } = createHost();
+  const controller = new MobileViewPageController(host, { PAGE_IDS });
+
+  host._exhausted = true;
+  const html = controller.renderKeptContent([{ id: 3 }, { id: 4 }]);
+
+  assert.equal(html.includes('<article class="event">3</article>'), true);
+  assert.equal(html.includes('<article class="event">4</article>'), true);
+  assert.equal(html.includes("list-day-sec"), false);
+  assert.equal(html.includes('<div class="end">— end —</div>'), false);
+});
+
 test("mobile-view review content helper builds grouped markup", () => {
   const { host } = createHost();
   const controller = new MobileViewPageController(host, { PAGE_IDS });
