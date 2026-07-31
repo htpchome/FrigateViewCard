@@ -563,6 +563,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       "#grid_start_in_grid_enabled",
       "#grid_live_view_enabled",
       "#grid_rotation_seconds",
+      "#mobile_view_page_enabled",
       "#preview_page_enabled",
       "#preview_page_live_cameras",
       "#preview_page_show_title_bars",
@@ -699,6 +700,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     const themeCustom = this._config?.theme_custom || {};
     const themeCustomDefaults = this._config?.theme_custom_defaults || {};
     const pageRouteLabel = (pageId) => {
+      if (pageId === PAGE_IDS.mobileView) return "Mobile";
       if (pageId === PAGE_IDS.preview) return "Preview";
       if (pageId === PAGE_IDS.wideView) return "Wide View";
       return "Single View";
@@ -936,6 +938,14 @@ export class FrigateViewCardEditor extends HTMLElement {
         <span style="font-size:11px;color:var(--c-text2)">%</span>
       </div>
       <div class="field-helper" id="col_left_width_pct-helper">Controls the left column width when the Wide View page is active.</div>`;
+    const mobileViewPanelContent = `
+      <div class="section" style="border-top:none;padding-top:0">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Enable Mobile View Page</span>
+          <ha-switch id="mobile_view_page_enabled" ${this._config?.mobile_view_page_enabled ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">When enabled, Mobile appears in navigation and as a landing page option for both desktop/tablet and phone devices.</div>
+      </div>`;
     const landingPanelContent = `
       <div class="section" style="border-top:none;padding-top:0">
         <span class="field-label">Landing Page</span>
@@ -993,6 +1003,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         ${this._renderSettingsPanel({ id: "gridview", title: "Grid View", icon: "mdi:view-grid-outline", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
         ${this._renderSettingsPanel({ id: "preview", title: "Preview Page", icon: "mdi:view-grid", content: previewPanelContent, active: activeSettingsPanel === "preview" })}
         ${this._renderSettingsPanel({ id: "wideview", title: "Wide View Page", icon: "mdi:view-split-vertical", content: wideViewPanelContent, active: activeSettingsPanel === "wideview" })}
+        ${this._renderSettingsPanel({ id: "mobileview", title: "Mobile View", icon: "mdi:cellphone", content: mobileViewPanelContent, active: activeSettingsPanel === "mobileview" })}
         ${this._renderSettingsPanel({ id: "landing", title: "Landing Page", icon: "mdi:home-import-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
 
@@ -1395,6 +1406,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       ids: [
         "tight_margins",
         "wide_view_page_enabled",
+        "mobile_view_page_enabled",
         "shadows",
         "borders",
         "rounded_corners",

@@ -563,6 +563,9 @@ export const buildEditorConfigFromDom = ({
   nextConfig.grid_live_view_enabled =
     resolveSwitchChecked(root.querySelector("#grid_live_view_enabled")) !==
     false;
+  nextConfig.mobile_view_page_enabled = resolveSwitchChecked(
+    root.querySelector("#mobile_view_page_enabled"),
+  );
   nextConfig.preview_page_enabled = resolveSwitchChecked(
     root.querySelector("#preview_page_enabled"),
   );

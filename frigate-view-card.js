@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1021";
+const VERSION = "1.0.1022";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1361,6 +1361,7 @@ if (typeof customElements !== "undefined" && !customElements.get("circle-pad-con
 // src/router.js
 const PAGE_IDS = Object.freeze({
   singleView: "single-view",
+  mobileView: "mobile-view",
   preview: "preview",
   wideView: "wide-view"
 });
@@ -1371,6 +1372,7 @@ const DEVICE_ROUTE_BUCKETS = Object.freeze({
 });
 const PAGE_ROUTE_ORDER = Object.freeze([
   PAGE_IDS.singleView,
+  PAGE_IDS.mobileView,
   PAGE_IDS.preview,
   PAGE_IDS.wideView
 ]);
@@ -1378,6 +1380,9 @@ const PAGE_ROUTE_SET = new Set(PAGE_ROUTE_ORDER);
 const normalizePageRoute = (value) => {
   const route = String(value || "").trim().toLowerCase();
   if (route === "normal" || route === "single") return PAGE_IDS.singleView;
+  if (route === "mobile" || route === "mobile_view") {
+    return PAGE_IDS.mobileView;
+  }
   if (route === "wide" || route === "wide_view") return PAGE_IDS.wideView;
   if (route === "preview") return PAGE_IDS.preview;
   return PAGE_ROUTE_SET.has(route) ? route : PAGE_IDS.singleView;
@@ -1389,6 +1394,9 @@ const resolveDeviceRouteBucket = (deviceProfile = {}) => {
 };
 const isPageEnabled = (config, pageId) => {
   if (pageId === PAGE_IDS.singleView) return true;
+  if (pageId === PAGE_IDS.mobileView) {
+    return config?.mobile_view_page_enabled === true;
+  }
   if (pageId === PAGE_IDS.preview) return config?.preview_page_enabled === true;
   if (pageId === PAGE_IDS.wideView) {
     return config?.wide_view_page_enabled === true;
@@ -1473,6 +1481,7 @@ const createEditorPreviewDraft = (config) => ({
   grid_mode_enabled: config.grid_mode_enabled,
   grid_start_in_grid_enabled: config.grid_start_in_grid_enabled,
   grid_live_view_enabled: config.grid_live_view_enabled,
+  mobile_view_page_enabled: config.mobile_view_page_enabled,
   preview_page_enabled: config.preview_page_enabled,
   preview_page_live_cameras: config.preview_page_live_cameras,
   preview_page_show_title_bars: config.preview_page_show_title_bars,
@@ -1528,6 +1537,7 @@ const applyEditorPreviewDraftToCardConfig = ({
     grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
       Number(previewConfig.grid_rotation_seconds)
     ) ? Number(previewConfig.grid_rotation_seconds) : 30,
+    mobile_view_page_enabled: previewConfig.mobile_view_page_enabled === true,
     preview_page_enabled: previewConfig.preview_page_enabled === true,
     preview_page_live_cameras: previewConfig.preview_page_live_cameras === true,
     preview_page_show_title_bars: previewConfig.preview_page_show_title_bars !== false,
@@ -1701,6 +1711,12 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     "grid_live_view_enabled",
     source.grid_live_view_enabled !== false,
     true
+  );
+  addIfNotDefault(
+    compact,
+    "mobile_view_page_enabled",
+    source.mobile_view_page_enabled === true,
+    false
   );
   addIfNotDefault(
     compact,
@@ -2262,6 +2278,9 @@ const buildEditorConfigFromDom = ({
     root.querySelector("#grid_start_in_grid_enabled")
   );
   nextConfig.grid_live_view_enabled = resolveSwitchChecked(root.querySelector("#grid_live_view_enabled")) !== false;
+  nextConfig.mobile_view_page_enabled = resolveSwitchChecked(
+    root.querySelector("#mobile_view_page_enabled")
+  );
   nextConfig.preview_page_enabled = resolveSwitchChecked(
     root.querySelector("#preview_page_enabled")
   );
@@ -4755,6 +4774,7 @@ const PageNavigationController = class {
   }
   pageRouteLabel(pageId) {
     const { PAGE_IDS: PAGE_IDS2 } = this._constants;
+    if (pageId === PAGE_IDS2.mobileView) return "Mobile";
     if (pageId === PAGE_IDS2.preview) return "Preview";
     if (pageId === PAGE_IDS2.wideView) return "Wide View";
     return "Single View";
@@ -4796,6 +4816,9 @@ const PageNavigationController = class {
         [PAGE_IDS2.singleView]: {
           activate: (context) => this._host._activateSingleViewPageRoute(context)
         },
+        [PAGE_IDS2.mobileView]: {
+          activate: (context) => this._host._activateMobileViewPageRoute(context)
+        },
         [PAGE_IDS2.preview]: {
           activate: (context) => this._host._activatePreviewPageRoute(context)
         },
@@ -4814,6 +4837,7 @@ const PageNavigationController = class {
         if (nextPageId !== PAGE_IDS2.preview) {
           this._host._lastNonPreviewPageId = nextPageId;
         }
+        this._host._syncMobileViewPageMarkup();
         this._host._syncPageNavigationButtons();
       }
     });
@@ -5350,6 +5374,49 @@ function activateStandardPageRouteLifecycle({
   }
   syncStandardRouteShell(host);
 }
+
+// src/mobile-view/mobile-view-utils.js
+const MOBILE_VIEW_ACTIVE_CLASS = "mobile-view-active";
+function isMobileViewRoute(pageId, pageIds) {
+  return pageId === pageIds.mobileView;
+}
+
+// src/mobile-view/mobile-view-page-markup.js
+function applyMobileViewPageMarkup({ host, pageIds }) {
+  const card = host?._$("#card");
+  if (!card) return;
+  card.classList.toggle(
+    MOBILE_VIEW_ACTIVE_CLASS,
+    isMobileViewRoute(host._pageId, pageIds)
+  );
+}
+
+// src/mobile-view/mobile-view-page-controller.js
+const MobileViewPageController = class {
+  constructor(host, constants) {
+    this._host = host;
+    this._constants = constants;
+  }
+  activateMobileViewPageRoute(context = {}) {
+    activateStandardPageRouteLifecycle({
+      host: this._host,
+      context,
+      previewPageId: this._constants.PAGE_IDS.preview,
+      applyRouteFrame: () => this._applyMobileViewRouteFrame()
+    });
+  }
+  _applyMobileViewRouteFrame() {
+    this._host._applyPreviewShellVisibility();
+    this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
+    this.syncMobileViewPageMarkup();
+  }
+  syncMobileViewPageMarkup() {
+    applyMobileViewPageMarkup({
+      host: this._host,
+      pageIds: this._constants.PAGE_IDS
+    });
+  }
+};
 
 // src/single-view/single-view-page-controller.js
 const SingleViewPageController = class {
@@ -6256,6 +6323,9 @@ const FrigateViewCard = class extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
     this._gridPageController = new GridPageController(this);
+    this._mobileViewPageController = new MobileViewPageController(this, {
+      PAGE_IDS
+    });
     this._singleViewPageController = new SingleViewPageController(this, {
       PAGE_IDS
     });
@@ -6687,6 +6757,7 @@ const FrigateViewCard = class extends HTMLElement {
       grid_mode_enabled: config.grid_mode_enabled === true,
       grid_start_in_grid_enabled: config.grid_start_in_grid_enabled === true,
       grid_live_view_enabled: config.grid_live_view_enabled !== false,
+      mobile_view_page_enabled: config.mobile_view_page_enabled === true,
       preview_page_enabled: config.preview_page_enabled === true,
       preview_page_live_cameras: config.preview_page_live_cameras === true,
       preview_page_show_title_bars: config.preview_page_show_title_bars !== false,
@@ -6729,6 +6800,7 @@ const FrigateViewCard = class extends HTMLElement {
       )
     };
     const previewEnabledChanged = !!prevConfig && prevConfig.preview_page_enabled !== nextConfig.preview_page_enabled;
+    const mobileViewPageEnabledChanged = !!prevConfig && prevConfig.mobile_view_page_enabled !== nextConfig.mobile_view_page_enabled;
     const wideViewPageEnabledChanged = !!prevConfig && prevConfig.wide_view_page_enabled !== nextConfig.wide_view_page_enabled;
     const previewVisualChanged = !!prevConfig && (prevConfig.preview_page_live_cameras !== nextConfig.preview_page_live_cameras || prevConfig.preview_page_show_title_bars !== nextConfig.preview_page_show_title_bars);
     const previewModeConfigChanged = previewEnabledChanged || previewVisualChanged;
@@ -6756,7 +6828,7 @@ const FrigateViewCard = class extends HTMLElement {
     const nextCams = nextConfig.cameras || [];
     const camerasChanged = prevCams.length !== nextCams.length || prevCams.some((c, i) => c?.entity !== nextCams[i]?.entity);
     const hiddenTabsChanged = JSON.stringify(prevConfig.hidden_tabs || []) !== JSON.stringify(nextConfig.hidden_tabs || []);
-    const needsShellRerender = hiddenTabsChanged || previewEnabledChanged || wideViewPageEnabledChanged;
+    const needsShellRerender = hiddenTabsChanged || previewEnabledChanged || mobileViewPageEnabledChanged || wideViewPageEnabledChanged;
     const needsEngineRemount = camerasChanged;
     const realtimePollChanged = prevConfig.realtime_poll_seconds !== nextConfig.realtime_poll_seconds || prevConfig.mobile_poll_battery_saver !== nextConfig.mobile_poll_battery_saver;
     const activePageInvalid = !this._isPageRouteAvailable(this._pageId);
@@ -8728,6 +8800,12 @@ const FrigateViewCard = class extends HTMLElement {
   _activateSingleViewPageRoute(context = {}) {
     this._singleViewPageController.activateSingleViewPageRoute(context);
   }
+  _activateMobileViewPageRoute(context = {}) {
+    this._mobileViewPageController.activateMobileViewPageRoute(context);
+  }
+  _syncMobileViewPageMarkup() {
+    this._mobileViewPageController.syncMobileViewPageMarkup();
+  }
   _activateWideViewPageRoute(context = {}) {
     this._wideViewPageController.activateWideViewPageRoute(context);
   }
@@ -10212,6 +10290,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncSlideshowCountdownOverlay();
     this._renderPreviewPage();
     this._applyPreviewShellVisibility();
+    this._syncMobileViewPageMarkup();
   }
   _initLiveOverlayControls() {
     const wrap = this._$("#eng-wrap");
@@ -13790,6 +13869,7 @@ const normalizeCardConfig = (config) => {
   src.grid_mode_enabled = src.grid_mode_enabled === true;
   src.grid_start_in_grid_enabled = src.grid_start_in_grid_enabled === true;
   src.grid_live_view_enabled = src.grid_live_view_enabled !== false;
+  src.mobile_view_page_enabled = src.mobile_view_page_enabled === true;
   src.preview_page_enabled = src.preview_page_enabled === true;
   src.preview_page_live_cameras = src.preview_page_live_cameras === true;
   src.preview_page_show_title_bars = src.preview_page_show_title_bars !== false;
@@ -14226,6 +14306,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       "#grid_start_in_grid_enabled",
       "#grid_live_view_enabled",
       "#grid_rotation_seconds",
+      "#mobile_view_page_enabled",
       "#preview_page_enabled",
       "#preview_page_live_cameras",
       "#preview_page_show_title_bars",
@@ -14318,6 +14399,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const themeCustom = this._config?.theme_custom || {};
     const themeCustomDefaults = this._config?.theme_custom_defaults || {};
     const pageRouteLabel = (pageId) => {
+      if (pageId === PAGE_IDS.mobileView) return "Mobile";
       if (pageId === PAGE_IDS.preview) return "Preview";
       if (pageId === PAGE_IDS.wideView) return "Wide View";
       return "Single View";
@@ -14547,6 +14629,14 @@ const FrigateViewCardEditor = class extends HTMLElement {
         <span style="font-size:11px;color:var(--c-text2)">%</span>
       </div>
       <div class="field-helper" id="col_left_width_pct-helper">Controls the left column width when the Wide View page is active.</div>`;
+    const mobileViewPanelContent = `
+      <div class="section" style="border-top:none;padding-top:0">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Enable Mobile View Page</span>
+          <ha-switch id="mobile_view_page_enabled" ${this._config?.mobile_view_page_enabled ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">When enabled, Mobile appears in navigation and as a landing page option for both desktop/tablet and phone devices.</div>
+      </div>`;
     const landingPanelContent = `
       <div class="section" style="border-top:none;padding-top:0">
         <span class="field-label">Landing Page</span>
@@ -14599,6 +14689,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
         ${this._renderSettingsPanel({ id: "gridview", title: "Grid View", icon: "mdi:view-grid-outline", content: gridviewPanelContent, active: activeSettingsPanel === "gridview" })}
         ${this._renderSettingsPanel({ id: "preview", title: "Preview Page", icon: "mdi:view-grid", content: previewPanelContent, active: activeSettingsPanel === "preview" })}
         ${this._renderSettingsPanel({ id: "wideview", title: "Wide View Page", icon: "mdi:view-split-vertical", content: wideViewPanelContent, active: activeSettingsPanel === "wideview" })}
+        ${this._renderSettingsPanel({ id: "mobileview", title: "Mobile View", icon: "mdi:cellphone", content: mobileViewPanelContent, active: activeSettingsPanel === "mobileview" })}
         ${this._renderSettingsPanel({ id: "landing", title: "Landing Page", icon: "mdi:home-import-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
     this.innerHTML = `<style>
@@ -14986,6 +15077,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       ids: [
         "tight_margins",
         "wide_view_page_enabled",
+        "mobile_view_page_enabled",
         "shadows",
         "borders",
         "rounded_corners",

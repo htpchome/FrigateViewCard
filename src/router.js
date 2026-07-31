@@ -1,5 +1,6 @@
 export const PAGE_IDS = Object.freeze({
   singleView: "single-view",
+  mobileView: "mobile-view",
   preview: "preview",
   wideView: "wide-view",
 });
@@ -12,6 +13,7 @@ export const DEVICE_ROUTE_BUCKETS = Object.freeze({
 
 const PAGE_ROUTE_ORDER = Object.freeze([
   PAGE_IDS.singleView,
+  PAGE_IDS.mobileView,
   PAGE_IDS.preview,
   PAGE_IDS.wideView,
 ]);
@@ -23,6 +25,9 @@ export const normalizePageRoute = (value) => {
     .trim()
     .toLowerCase();
   if (route === "normal" || route === "single") return PAGE_IDS.singleView;
+  if (route === "mobile" || route === "mobile_view") {
+    return PAGE_IDS.mobileView;
+  }
   if (route === "wide" || route === "wide_view") return PAGE_IDS.wideView;
   if (route === "preview") return PAGE_IDS.preview;
   return PAGE_ROUTE_SET.has(route) ? route : PAGE_IDS.singleView;
@@ -36,6 +41,9 @@ export const resolveDeviceRouteBucket = (deviceProfile = {}) => {
 
 export const isPageEnabled = (config, pageId) => {
   if (pageId === PAGE_IDS.singleView) return true;
+  if (pageId === PAGE_IDS.mobileView) {
+    return config?.mobile_view_page_enabled === true;
+  }
   if (pageId === PAGE_IDS.preview) return config?.preview_page_enabled === true;
   if (pageId === PAGE_IDS.wideView) {
     return config?.wide_view_page_enabled === true;

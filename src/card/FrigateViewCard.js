@@ -197,6 +197,7 @@ import {
 } from "../grid/grid-markup.js";
 import { GridAlertController } from "../grid/grid-alert-controller.js";
 import { GridPageController } from "../grid/grid-page-controller.js";
+import { MobileViewPageController } from "../mobile-view/mobile-view-page-controller.js";
 import { SingleViewPageController } from "../single-view/single-view-page-controller.js";
 import { WideViewPageController } from "../wide-view/wide-view-page-controller.js";
 import { SlideshowAlertController } from "../slideshow/slideshow-alert-controller.js";
@@ -330,6 +331,9 @@ export class FrigateViewCard extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
     });
     this._gridPageController = new GridPageController(this);
+    this._mobileViewPageController = new MobileViewPageController(this, {
+      PAGE_IDS,
+    });
     this._singleViewPageController = new SingleViewPageController(this, {
       PAGE_IDS,
     });
@@ -824,6 +828,7 @@ export class FrigateViewCard extends HTMLElement {
       grid_mode_enabled: config.grid_mode_enabled === true,
       grid_start_in_grid_enabled: config.grid_start_in_grid_enabled === true,
       grid_live_view_enabled: config.grid_live_view_enabled !== false,
+      mobile_view_page_enabled: config.mobile_view_page_enabled === true,
       preview_page_enabled: config.preview_page_enabled === true,
       preview_page_live_cameras: config.preview_page_live_cameras === true,
       preview_page_show_title_bars:
@@ -889,6 +894,10 @@ export class FrigateViewCard extends HTMLElement {
     const previewEnabledChanged =
       !!prevConfig &&
       prevConfig.preview_page_enabled !== nextConfig.preview_page_enabled;
+    const mobileViewPageEnabledChanged =
+      !!prevConfig &&
+      prevConfig.mobile_view_page_enabled !==
+        nextConfig.mobile_view_page_enabled;
     const wideViewPageEnabledChanged =
       !!prevConfig &&
       prevConfig.wide_view_page_enabled !== nextConfig.wide_view_page_enabled;
@@ -932,7 +941,10 @@ export class FrigateViewCard extends HTMLElement {
       JSON.stringify(prevConfig.hidden_tabs || []) !==
       JSON.stringify(nextConfig.hidden_tabs || []);
     const needsShellRerender =
-      hiddenTabsChanged || previewEnabledChanged || wideViewPageEnabledChanged;
+      hiddenTabsChanged ||
+      previewEnabledChanged ||
+      mobileViewPageEnabledChanged ||
+      wideViewPageEnabledChanged;
     const needsEngineRemount = camerasChanged;
     const realtimePollChanged =
       prevConfig.realtime_poll_seconds !== nextConfig.realtime_poll_seconds ||
@@ -3153,6 +3165,14 @@ export class FrigateViewCard extends HTMLElement {
     this._singleViewPageController.activateSingleViewPageRoute(context);
   }
 
+  _activateMobileViewPageRoute(context = {}) {
+    this._mobileViewPageController.activateMobileViewPageRoute(context);
+  }
+
+  _syncMobileViewPageMarkup() {
+    this._mobileViewPageController.syncMobileViewPageMarkup();
+  }
+
   _activateWideViewPageRoute(context = {}) {
     this._wideViewPageController.activateWideViewPageRoute(context);
   }
@@ -4881,6 +4901,7 @@ export class FrigateViewCard extends HTMLElement {
     this._syncSlideshowCountdownOverlay();
     this._renderPreviewPage();
     this._applyPreviewShellVisibility();
+    this._syncMobileViewPageMarkup();
   }
 
   _initLiveOverlayControls() {

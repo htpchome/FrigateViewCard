@@ -187,14 +187,28 @@ test("compact YAML keeps normalized hidden tabs when non-default", () => {
 test("preview draft carries hidden tabs and page routes", () => {
   const draft = createEditorPreviewDraft({
     cameras: [{ entity: "camera.front_door" }],
+    mobile_view_page_enabled: true,
     hidden_tabs: ["clips", "snapshots"],
     landing_page: "preview",
     mobile_page: "single",
   });
 
+  assert.equal(draft.mobile_view_page_enabled, true);
   assert.deepEqual(draft.hidden_tabs, ["clips", "snapshots"]);
   assert.equal(draft.landing_page, "preview");
   assert.equal(draft.mobile_page, "single");
+});
+
+test("compact YAML includes mobile view page toggle when enabled", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    mobile_view_page_enabled: true,
+  });
+
+  assert.deepEqual(config, {
+    cameras: [{ entity: "camera.front_door" }],
+    mobile_view_page_enabled: true,
+  });
 });
 
 test("compact YAML preserves video default config objects", () => {

@@ -5,6 +5,7 @@ import { PageNavigationController } from "../src/navigation/page-navigation-cont
 
 const PAGE_IDS = {
   singleView: "single-view",
+  mobileView: "mobile-view",
   preview: "preview",
   wideView: "wide-view",
 };
@@ -53,8 +54,10 @@ const createHarness = () => {
     _lastNonPreviewPageId: PAGE_IDS.singleView,
     _config: { a: 1 },
     _activateSingleViewPageRoute: (context) => calls.push(["single", context]),
+    _activateMobileViewPageRoute: (context) => calls.push(["mobile", context]),
     _activatePreviewPageRoute: (context) => calls.push(["preview", context]),
     _activateWideViewPageRoute: (context) => calls.push(["wide", context]),
+    _syncMobileViewPageMarkup: () => calls.push(["syncMobileViewMarkup"]),
     _deviceRouteBucket: () => "desktop",
     _syncPageNavigationButtons: () => calls.push(["syncButtons"]),
     shadowRoot: {
@@ -122,7 +125,7 @@ test("factory callbacks update page state and sync nav buttons", () => {
 
   input.onAfterNavigate(PAGE_IDS.preview);
   assert.equal(h.host._lastNonPreviewPageId, PAGE_IDS.singleView);
-  assert.deepEqual(h.calls, [["syncButtons"]]);
+  assert.deepEqual(h.calls, [["syncMobileViewMarkup"], ["syncButtons"]]);
 
   input.onBeforeNavigate(PAGE_IDS.wideView, context);
   input.onAfterNavigate(PAGE_IDS.wideView);
@@ -137,11 +140,13 @@ test("factory page activators route to host handlers", () => {
 
   const context = { source: "test" };
   input.pages[PAGE_IDS.singleView].activate(context);
+  input.pages[PAGE_IDS.mobileView].activate(context);
   input.pages[PAGE_IDS.preview].activate(context);
   input.pages[PAGE_IDS.wideView].activate(context);
 
   assert.deepEqual(h.calls, [
     ["single", context],
+    ["mobile", context],
     ["preview", context],
     ["wide", context],
   ]);
@@ -173,6 +178,7 @@ test("pageRouteLabel returns expected labels", () => {
   const h = createHarness();
   const controller = new PageNavigationController(h.host, h.constants);
 
+  assert.equal(controller.pageRouteLabel(PAGE_IDS.mobileView), "Mobile");
   assert.equal(controller.pageRouteLabel(PAGE_IDS.preview), "Preview");
   assert.equal(controller.pageRouteLabel(PAGE_IDS.wideView), "Wide View");
   assert.equal(controller.pageRouteLabel(PAGE_IDS.singleView), "Single View");

@@ -99,6 +99,7 @@ export const normalizeCardConfig = (config) => {
   src.grid_mode_enabled = src.grid_mode_enabled === true;
   src.grid_start_in_grid_enabled = src.grid_start_in_grid_enabled === true;
   src.grid_live_view_enabled = src.grid_live_view_enabled !== false;
+  src.mobile_view_page_enabled = src.mobile_view_page_enabled === true;
   src.preview_page_enabled = src.preview_page_enabled === true;
   src.preview_page_live_cameras = src.preview_page_live_cameras === true;
   src.preview_page_show_title_bars = src.preview_page_show_title_bars !== false;

@@ -53,6 +53,7 @@ test("mobile landing page excludes wide-view even when enabled", () => {
 
 test("deep links force single-view startup", () => {
   const config = {
+    mobile_view_page_enabled: true,
     preview_page_enabled: true,
     wide_view_page_enabled: true,
     landing_page: PAGE_IDS.preview,
@@ -66,5 +67,38 @@ test("deep links force single-view startup", () => {
       hasPendingDeepLinkTarget: true,
     }),
     PAGE_IDS.singleView,
+  );
+});
+
+test("mobile view route is available on desktop and mobile when enabled", () => {
+  const config = {
+    mobile_view_page_enabled: true,
+    preview_page_enabled: false,
+    wide_view_page_enabled: false,
+    landing_page: PAGE_IDS.mobileView,
+    mobile_page: PAGE_IDS.mobileView,
+  };
+
+  assert.deepEqual(getEnabledPageRoutes(config, DEVICE_ROUTE_BUCKETS.desktop), [
+    PAGE_IDS.singleView,
+    PAGE_IDS.mobileView,
+  ]);
+  assert.deepEqual(getEnabledPageRoutes(config, DEVICE_ROUTE_BUCKETS.mobile), [
+    PAGE_IDS.singleView,
+    PAGE_IDS.mobileView,
+  ]);
+  assert.equal(
+    resolveStartupPageRoute({
+      config,
+      deviceBucket: DEVICE_ROUTE_BUCKETS.desktop,
+    }),
+    PAGE_IDS.mobileView,
+  );
+  assert.equal(
+    resolveStartupPageRoute({
+      config,
+      deviceBucket: DEVICE_ROUTE_BUCKETS.mobile,
+    }),
+    PAGE_IDS.mobileView,
   );
 });

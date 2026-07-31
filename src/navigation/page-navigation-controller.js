@@ -19,6 +19,7 @@ export class PageNavigationController {
 
   pageRouteLabel(pageId) {
     const { PAGE_IDS } = this._constants;
+    if (pageId === PAGE_IDS.mobileView) return "Mobile";
     if (pageId === PAGE_IDS.preview) return "Preview";
     if (pageId === PAGE_IDS.wideView) return "Wide View";
     return "Single View";
@@ -72,6 +73,10 @@ export class PageNavigationController {
           activate: (context) =>
             this._host._activateSingleViewPageRoute(context),
         },
+        [PAGE_IDS.mobileView]: {
+          activate: (context) =>
+            this._host._activateMobileViewPageRoute(context),
+        },
         [PAGE_IDS.preview]: {
           activate: (context) => this._host._activatePreviewPageRoute(context),
         },
@@ -90,6 +95,7 @@ export class PageNavigationController {
         if (nextPageId !== PAGE_IDS.preview) {
           this._host._lastNonPreviewPageId = nextPageId;
         }
+        this._host._syncMobileViewPageMarkup();
         this._host._syncPageNavigationButtons();
       },
     });

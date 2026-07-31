@@ -189,6 +189,12 @@ export const compactEditorConfigForYaml = (
   );
   addIfNotDefault(
     compact,
+    "mobile_view_page_enabled",
+    source.mobile_view_page_enabled === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
     "preview_page_enabled",
     source.preview_page_enabled === true,
     false,
