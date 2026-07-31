@@ -299,7 +299,7 @@ export const STYLES = `
     align-items: center; 
     justify-content: center; 
     padding: 3px; 
-    border-radius: 50%; 
+    border-radius: 999rem; 
     color: black; 
     font-size: 1.0rem; 
     cursor:pointer;
@@ -322,7 +322,7 @@ export const STYLES = `
     height: 100%;
     opacity: 0.4; 
     z-index: -1;  
-    border-radius: 50%;
+    border-radius: 999rem;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(1px);
     box-shadow: inset -10px -8px 0px -11px rgba(255, 255, 255, 1),
