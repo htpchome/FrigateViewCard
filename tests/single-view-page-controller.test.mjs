@@ -35,6 +35,8 @@ const createHost = ({
     _activeCam: { entity: "camera.front_door", name: "Front Door" },
     _activeStreamType: "webrtc",
     _eventsMode: "all",
+    _tab: "alerts",
+    _winEnd: 1722470400,
     _hass: {
       states: {
         "camera.front_door": { state: "streaming" },
@@ -43,6 +45,9 @@ const createHost = ({
     },
     _allDisplayEvents: () => [{ id: 1 }, { id: 2 }],
     _labels: () => ["person", "car"],
+    _weekday: () => "Wed",
+    _monthDay: () => "Jul 31st",
+    _updateRecordingsBrowseNav: () => calls.push(["updateRecordingsBrowseNav"]),
     _isPreviewPageEnabled: () => previewPageEnabled,
     _isMobileViewPageActive: () => mobileViewActive,
     _stopPreviewMode: () => calls.push(["stopPreview"]),
@@ -666,4 +671,43 @@ test("single-view renderLegend populates deterministic legend markup", () => {
   assert.equal(nodes["#legend"].innerHTML.includes("Person"), true);
   assert.equal(nodes["#legend"].innerHTML.includes("Car"), true);
   assert.equal(nodes["#legend"].innerHTML.includes("Front Door rec"), true);
+});
+
+test("single-view list label helpers format alerts and recordings headings", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  assert.equal(
+    controller.listHeadingLabel(1722470400),
+    "Wed - Jul 31st - Recent Alerts",
+  );
+  assert.equal(
+    controller.recordingsHeadingLabel(1722470400),
+    "Wed - Jul 31st - Recordings",
+  );
+
+  host._tab = "recordings";
+  const nodes = {
+    "#browse-head-label": createNode(),
+    "#browse-head": createNode(),
+    "#rec-day-prev": createNode(),
+    "#rec-day-next": createNode(),
+    "#card": {
+      classList: {
+        contains: () => false,
+      },
+    },
+  };
+  host._$ = (selector) => nodes[selector] || null;
+
+  controller.renderListLabel(1722470400);
+
+  assert.equal(nodes["#browse-head"].style.display, "flex");
+  assert.equal(
+    nodes["#browse-head-label"].textContent,
+    "Wed - Jul 31st - Recordings",
+  );
+  assert.equal(nodes["#rec-day-prev"].style.display, "inline-flex");
+  assert.equal(nodes["#rec-day-next"].style.display, "inline-flex");
+  assert.deepEqual(calls.slice(-1), [["updateRecordingsBrowseNav"]]);
 });

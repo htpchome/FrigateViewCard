@@ -119,6 +119,51 @@ export function renderStandardPageSubtitle(host, { mobile = false } = {}) {
   el.textContent = standardPageSubtitleText(host, { mobile });
 }
 
+export function standardPageListHeadingLabel(host, ts = null) {
+  const fallback =
+    {
+      recordings: "Recordings",
+      clips: "Recent Clips",
+      snapshot: "Recent Snaps",
+      alerts: "Recent Alerts",
+      kept: "Kept",
+    }[host._tab] || cap(host._tab || "");
+  if (!ts || !["alerts", "clips", "snapshot"].includes(host._tab)) {
+    return fallback;
+  }
+  return `${host._weekday(ts)} - ${host._monthDay(ts, { ordinal: true })} - ${fallback}`;
+}
+
+export function standardPageRecordingsHeadingLabel(host, ts = null) {
+  const target = Math.floor(ts || host._winEnd || Date.now() / 1000);
+  return `${host._weekday(target)} - ${host._monthDay(target, { ordinal: true })} - Recordings`;
+}
+
+export function renderStandardPageListLabel(host, ts = null) {
+  const labelEl = host._$("#browse-head-label");
+  const browseHead = host._$("#browse-head");
+  const prev = host._$("#rec-day-prev");
+  const next = host._$("#rec-day-next");
+  if (!labelEl || !browseHead) return;
+
+  browseHead.style.display = "flex";
+  if (host._tab === "recordings") {
+    labelEl.textContent = standardPageRecordingsHeadingLabel(
+      host,
+      ts || host._winEnd,
+    );
+    const showButtons = !host._$("#card")?.classList.contains("mobile");
+    if (prev) prev.style.display = showButtons ? "inline-flex" : "none";
+    if (next) next.style.display = showButtons ? "inline-flex" : "none";
+    void host._updateRecordingsBrowseNav();
+    return;
+  }
+
+  if (prev) prev.style.display = "none";
+  if (next) next.style.display = "none";
+  labelEl.textContent = standardPageListHeadingLabel(host, ts);
+}
+
 export function renderStandardPageLegend(host) {
   const el = host._$("#legend");
   if (!el) return;

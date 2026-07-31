@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1027";
+const VERSION = "1.0.1028";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5720,6 +5720,45 @@ function renderStandardPageSubtitle(host, { mobile = false } = {}) {
   if (!el) return;
   el.textContent = standardPageSubtitleText(host, { mobile });
 }
+function standardPageListHeadingLabel(host, ts = null) {
+  const fallback = {
+    recordings: "Recordings",
+    clips: "Recent Clips",
+    snapshot: "Recent Snaps",
+    alerts: "Recent Alerts",
+    kept: "Kept"
+  }[host._tab] || cap(host._tab || "");
+  if (!ts || !["alerts", "clips", "snapshot"].includes(host._tab)) {
+    return fallback;
+  }
+  return `${host._weekday(ts)} - ${host._monthDay(ts, { ordinal: true })} - ${fallback}`;
+}
+function standardPageRecordingsHeadingLabel(host, ts = null) {
+  const target = Math.floor(ts || host._winEnd || Date.now() / 1e3);
+  return `${host._weekday(target)} - ${host._monthDay(target, { ordinal: true })} - Recordings`;
+}
+function renderStandardPageListLabel(host, ts = null) {
+  const labelEl = host._$("#browse-head-label");
+  const browseHead = host._$("#browse-head");
+  const prev = host._$("#rec-day-prev");
+  const next = host._$("#rec-day-next");
+  if (!labelEl || !browseHead) return;
+  browseHead.style.display = "flex";
+  if (host._tab === "recordings") {
+    labelEl.textContent = standardPageRecordingsHeadingLabel(
+      host,
+      ts || host._winEnd
+    );
+    const showButtons = !host._$("#card")?.classList.contains("mobile");
+    if (prev) prev.style.display = showButtons ? "inline-flex" : "none";
+    if (next) next.style.display = showButtons ? "inline-flex" : "none";
+    void host._updateRecordingsBrowseNav();
+    return;
+  }
+  if (prev) prev.style.display = "none";
+  if (next) next.style.display = "none";
+  labelEl.textContent = standardPageListHeadingLabel(host, ts);
+}
 function renderStandardPageLegend(host) {
   const el = host._$("#legend");
   if (!el) return;
@@ -5780,6 +5819,15 @@ const MobileViewPageController = class {
   renderLegend() {
     renderStandardPageLegend(this._host);
   }
+  listHeadingLabel(ts = null) {
+    return standardPageListHeadingLabel(this._host, ts);
+  }
+  recordingsHeadingLabel(ts = null) {
+    return standardPageRecordingsHeadingLabel(this._host, ts);
+  }
+  renderListLabel(ts = null) {
+    renderStandardPageListLabel(this._host, ts);
+  }
   syncMobileViewPageMarkup() {
     applyMobileViewPageMarkup({
       host: this._host,
@@ -5817,6 +5865,15 @@ const SingleViewPageController = class {
   }
   renderLegend() {
     renderStandardPageLegend(this._host);
+  }
+  listHeadingLabel(ts = null) {
+    return standardPageListHeadingLabel(this._host, ts);
+  }
+  recordingsHeadingLabel(ts = null) {
+    return standardPageRecordingsHeadingLabel(this._host, ts);
+  }
+  renderListLabel(ts = null) {
+    renderStandardPageListLabel(this._host, ts);
   }
   activateSingleViewPageRoute(context = {}) {
     this.activateStandardPageRoute(context);
@@ -13424,43 +13481,16 @@ const FrigateViewCard = class extends HTMLElement {
     return `${this._weekday(ts)} - ${this._monthDay(ts)} - ${this._time(ts)}`;
   }
   _listHeadingLabel(ts = null) {
-    const fallback = {
-      recordings: "Recordings",
-      clips: "Recent Clips",
-      snapshot: "Recent Snaps",
-      alerts: "Recent Alerts",
-      kept: "Kept"
-    }[this._tab] || cap(this._tab || "");
-    if (!ts || !["alerts", "clips", "snapshot"].includes(this._tab)) {
-      return fallback;
-    }
-    return `${this._weekday(ts)} - ${this._monthDay(ts, { ordinal: true })} - ${fallback}`;
+    return this._activeStandardPageController().listHeadingLabel(ts);
   }
   _recordingsHeadingLabel(ts = null) {
-    const target = Math.floor(ts || this._winEnd || Date.now() / 1e3);
-    return `${this._weekday(target)} - ${this._monthDay(target, { ordinal: true })} - Recordings`;
+    return this._activeStandardPageController().recordingsHeadingLabel(ts);
   }
   _showStickyDayHeaders() {
     return ["alerts", "clips", "snapshot"].includes(this._tab);
   }
   _renderListLabel(ts = null) {
-    const lbl = this._$("#browse-head-label");
-    const browseHead = this._$("#browse-head");
-    const prev = this._$("#rec-day-prev");
-    const next = this._$("#rec-day-next");
-    if (!lbl || !browseHead) return;
-    browseHead.style.display = "flex";
-    if (this._tab === "recordings") {
-      lbl.textContent = this._recordingsHeadingLabel(ts || this._winEnd);
-      const showButtons = !this._$("#card")?.classList.contains("mobile");
-      if (prev) prev.style.display = showButtons ? "inline-flex" : "none";
-      if (next) next.style.display = showButtons ? "inline-flex" : "none";
-      void this._updateRecordingsBrowseNav();
-      return;
-    }
-    if (prev) prev.style.display = "none";
-    if (next) next.style.display = "none";
-    lbl.textContent = this._listHeadingLabel(ts);
+    this._activeStandardPageController().renderListLabel(ts);
   }
   _dayKey(ts) {
     const parts = new Intl.DateTimeFormat("en-US", {

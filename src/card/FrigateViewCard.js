@@ -7966,46 +7966,19 @@ export class FrigateViewCard extends HTMLElement {
     return `${this._weekday(ts)} - ${this._monthDay(ts)} - ${this._time(ts)}`;
   }
   _listHeadingLabel(ts = null) {
-    const fallback =
-      {
-        recordings: "Recordings",
-        clips: "Recent Clips",
-        snapshot: "Recent Snaps",
-        alerts: "Recent Alerts",
-        kept: "Kept",
-      }[this._tab] || cap(this._tab || "");
-    if (!ts || !["alerts", "clips", "snapshot"].includes(this._tab)) {
-      return fallback;
-    }
-    return `${this._weekday(ts)} - ${this._monthDay(ts, { ordinal: true })} - ${fallback}`;
+    return this._activeStandardPageController().listHeadingLabel(ts);
   }
+
   _recordingsHeadingLabel(ts = null) {
-    const target = Math.floor(ts || this._winEnd || Date.now() / 1000);
-    return `${this._weekday(target)} - ${this._monthDay(target, { ordinal: true })} - Recordings`;
+    return this._activeStandardPageController().recordingsHeadingLabel(ts);
   }
+
   _showStickyDayHeaders() {
     return ["alerts", "clips", "snapshot"].includes(this._tab);
   }
+
   _renderListLabel(ts = null) {
-    const lbl = this._$("#browse-head-label");
-    const browseHead = this._$("#browse-head");
-    const prev = this._$("#rec-day-prev");
-    const next = this._$("#rec-day-next");
-    if (!lbl || !browseHead) return;
-
-    browseHead.style.display = "flex";
-    if (this._tab === "recordings") {
-      lbl.textContent = this._recordingsHeadingLabel(ts || this._winEnd);
-      const showButtons = !this._$("#card")?.classList.contains("mobile");
-      if (prev) prev.style.display = showButtons ? "inline-flex" : "none";
-      if (next) next.style.display = showButtons ? "inline-flex" : "none";
-      void this._updateRecordingsBrowseNav();
-      return;
-    }
-
-    if (prev) prev.style.display = "none";
-    if (next) next.style.display = "none";
-    lbl.textContent = this._listHeadingLabel(ts);
+    this._activeStandardPageController().renderListLabel(ts);
   }
   _dayKey(ts) {
     const parts = new Intl.DateTimeFormat("en-US", {

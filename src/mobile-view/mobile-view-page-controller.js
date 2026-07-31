@@ -3,8 +3,11 @@ import {
   buildStandardPageCamSwitcherMarkup,
   renderStandardPageCamSwitcher,
   renderStandardPageLegend,
+  renderStandardPageListLabel,
   renderStandardPageStats,
   renderStandardPageSubtitle,
+  standardPageListHeadingLabel,
+  standardPageRecordingsHeadingLabel,
   standardPageSubtitleText,
   syncStandardPageStatus,
 } from "../card/standard-page-renderer.js";
@@ -60,6 +63,18 @@ export class MobileViewPageController {
 
   renderLegend() {
     renderStandardPageLegend(this._host);
+  }
+
+  listHeadingLabel(ts = null) {
+    return standardPageListHeadingLabel(this._host, ts);
+  }
+
+  recordingsHeadingLabel(ts = null) {
+    return standardPageRecordingsHeadingLabel(this._host, ts);
+  }
+
+  renderListLabel(ts = null) {
+    renderStandardPageListLabel(this._host, ts);
   }
 
   syncMobileViewPageMarkup() {
