@@ -1,5 +1,6 @@
 export const VERSION = "1.0.1024";
 
+
 export const CARD_TAG = "frigate-view-card";
 export const DAY = 86400;
 export const RECORDINGS_WINDOW = 24 * 3600;
