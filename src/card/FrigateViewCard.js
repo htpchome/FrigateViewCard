@@ -198,6 +198,16 @@ import {
 import { GridAlertController } from "../grid/grid-alert-controller.js";
 import { GridPageController } from "../grid/grid-page-controller.js";
 import { MobileViewPageController } from "../mobile-view/mobile-view-page-controller.js";
+import {
+  buildMobileViewCamSwitcherMarkup,
+  buildMobileViewInfoRowMarkup,
+  resolveMobileViewEventsCountText,
+  resolveMobileViewOnlineLabel,
+  resolveMobileViewStatusColor,
+  resolveMobileViewStreamTypeText,
+  resolveMobileViewSubtitleText,
+  resolveMobileViewTitleText,
+} from "../mobile-view/mobile-view-page-markup.js";
 import { SingleViewPageController } from "../single-view/single-view-page-controller.js";
 import { WideViewPageController } from "../wide-view/wide-view-page-controller.js";
 import { SlideshowAlertController } from "../slideshow/slideshow-alert-controller.js";
@@ -3169,6 +3179,10 @@ export class FrigateViewCard extends HTMLElement {
     this._mobileViewPageController.activateMobileViewPageRoute(context);
   }
 
+  _isMobileViewPageActive() {
+    return normalizePageRoute(this._pageId) === PAGE_IDS.mobileView;
+  }
+
   _syncMobileViewPageMarkup() {
     this._mobileViewPageController.syncMobileViewPageMarkup();
   }
@@ -4854,11 +4868,22 @@ export class FrigateViewCard extends HTMLElement {
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     const pageNav = this._pageNavMarkup();
-    const infoRow = buildInfoRowMarkup({
-      title,
-      subtitle,
-      version: VERSION,
-    });
+    const infoRow = this._isMobileViewPageActive()
+      ? buildMobileViewInfoRowMarkup({
+          title,
+          subtitle,
+          version: VERSION,
+          streamType: this._activeStreamType,
+          eventsCount: this._allDisplayEvents().length,
+          online:
+            this._hass?.states?.[this._activeCam?.entity]?.state !==
+            "unavailable",
+        })
+      : buildInfoRowMarkup({
+          title,
+          subtitle,
+          version: VERSION,
+        });
     const liveEngineWrap = buildLiveEngineWrapMarkup({
       icons: ICONS,
       streamMuted: this._streamMuted,
@@ -5929,7 +5954,7 @@ export class FrigateViewCard extends HTMLElement {
   }
   // ── cam switcher ──────────────────────────────────────────
   _camSwitcherMarkup({ includeStatus = true } = {}) {
-    return buildCamSwitcherMarkup({
+    const args = {
       previewPageEnabled: this._isPreviewPageEnabled(),
       includeStatus,
       cameras: this._config.cameras,
@@ -5939,7 +5964,10 @@ export class FrigateViewCard extends HTMLElement {
       getCameraName: (camera) => cap(camDisplayName(camera)),
       isCameraAvailable: (camera) =>
         this._hass?.states?.[camera.entity]?.state !== "unavailable",
-    });
+    };
+    return this._isMobileViewPageActive()
+      ? buildMobileViewCamSwitcherMarkup(args)
+      : buildCamSwitcherMarkup(args);
   }
 
   _renderCamSwitcher() {
@@ -8102,13 +8130,31 @@ export class FrigateViewCard extends HTMLElement {
       lbl = this._$("#on-lbl"),
       title = this._$("#info-title");
     const ok = ent.state !== "unavailable";
-    if (dot) dot.style.color = ok ? "#4ade80" : "#ef4444";
-    if (lbl) lbl.textContent = ok ? "Online" : "Offline";
+    if (dot) {
+      dot.style.color = this._isMobileViewPageActive()
+        ? resolveMobileViewStatusColor(ok)
+        : ok
+          ? "#4ade80"
+          : "#ef4444";
+    }
+    if (lbl) {
+      lbl.textContent = this._isMobileViewPageActive()
+        ? resolveMobileViewOnlineLabel(ok)
+        : ok
+          ? "Online"
+          : "Offline";
+    }
     if (title) {
       const c = this._activeCam;
-      const n =
-        this._config.title ||
-        (this._config.cameras.length > 1 ? cap(camDisplayName(c)) : "Camera");
+      const n = this._isMobileViewPageActive()
+        ? resolveMobileViewTitleText({
+            title: this._config.title,
+            cameras: this._config.cameras,
+            activeCamera: c,
+            getCameraName: (camera) => cap(camDisplayName(camera)),
+          })
+        : this._config.title ||
+          (this._config.cameras.length > 1 ? cap(camDisplayName(c)) : "Camera");
       title.textContent = n;
     }
   }
@@ -8136,12 +8182,22 @@ export class FrigateViewCard extends HTMLElement {
   }
   _renderStats() {
     const el = this._$("#ev-count");
-    if (el) el.textContent = String(this._allDisplayEvents().length);
+    if (el) {
+      el.textContent = this._isMobileViewPageActive()
+        ? resolveMobileViewEventsCountText(this._allDisplayEvents().length)
+        : String(this._allDisplayEvents().length);
+    }
     const stream = this._$("#stream-type");
-    if (stream) stream.textContent = this._activeStreamType || "--";
+    if (stream) {
+      stream.textContent = this._isMobileViewPageActive()
+        ? resolveMobileViewStreamTypeText(this._activeStreamType)
+        : this._activeStreamType || "--";
+    }
   }
   _subtitleText() {
-    return resolveSubtitleText(this._config);
+    return this._isMobileViewPageActive()
+      ? resolveMobileViewSubtitleText(this._config)
+      : resolveSubtitleText(this._config);
   }
   _renderSubtitle() {
     const el = this._$("#tl-range");
