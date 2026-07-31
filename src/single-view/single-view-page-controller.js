@@ -1,9 +1,44 @@
+import {
+  buildStandardPageCamSwitcherMarkup,
+  renderStandardPageCamSwitcher,
+  renderStandardPageStats,
+  renderStandardPageSubtitle,
+  standardPageSubtitleText,
+  syncStandardPageStatus,
+} from "../card/standard-page-renderer.js";
 import { activateStandardPageRouteLifecycle } from "../navigation/standard-page-route-lifecycle.js";
 
 export class SingleViewPageController {
   constructor(host, constants) {
     this._host = host;
     this._constants = constants;
+  }
+
+  camSwitcherMarkup({ includeStatus = true } = {}) {
+    return buildStandardPageCamSwitcherMarkup(this._host, {
+      includeStatus,
+      mobile: false,
+    });
+  }
+
+  renderCamSwitcher() {
+    renderStandardPageCamSwitcher(this._host, { mobile: false });
+  }
+
+  syncStatus() {
+    syncStandardPageStatus(this._host, { mobile: false });
+  }
+
+  renderStats() {
+    renderStandardPageStats(this._host, { mobile: false });
+  }
+
+  subtitleText() {
+    return standardPageSubtitleText(this._host, { mobile: false });
+  }
+
+  renderSubtitle() {
+    renderStandardPageSubtitle(this._host, { mobile: false });
   }
 
   activateSingleViewPageRoute(context = {}) {

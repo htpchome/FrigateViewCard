@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1025";
+const VERSION = "1.0.1026";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5647,6 +5647,80 @@ function applyMobileViewPageMarkup({ host, pageIds }) {
   );
 }
 
+// src/card/standard-page-renderer.js
+function cameraName(camera) {
+  return cap(camDisplayName(camera));
+}
+function buildStandardPageCamSwitcherMarkup(host, { includeStatus = true, mobile = false } = {}) {
+  const args = {
+    previewPageEnabled: host._isPreviewPageEnabled?.() === true,
+    includeStatus,
+    cameras: host._config.cameras,
+    activeCamIdx: host._activeCamIdx,
+    isSingleView: host._viewMode === "single",
+    icons: ICONS,
+    getCameraName: cameraName,
+    isCameraAvailable: (camera) => host._hass?.states?.[camera.entity]?.state !== "unavailable"
+  };
+  return mobile ? buildMobileViewCamSwitcherMarkup(args) : buildCamSwitcherMarkup(args);
+}
+function renderStandardPageCamSwitcher(host, { mobile = false } = {}) {
+  const el = host._$("#cam-switcher");
+  if (!el) return;
+  if (host._config.cameras.length < 2 && host._isPreviewPageEnabled?.() !== true) {
+    el.style.display = "none";
+    return;
+  }
+  el.style.display = "";
+  el.innerHTML = `${buildStandardPageCamSwitcherMarkup(host, {
+    includeStatus: true,
+    mobile
+  })}`;
+}
+function syncStandardPageStatus(host, { mobile = false } = {}) {
+  const ent = host._hass?.states?.[host._activeCam?.entity];
+  if (!ent) return;
+  const dot = host._$("#on-dot");
+  const lbl = host._$("#on-lbl");
+  const title = host._$("#info-title");
+  const ok = ent.state !== "unavailable";
+  if (dot) {
+    dot.style.color = mobile ? resolveMobileViewStatusColor(ok) : ok ? "#4ade80" : "#ef4444";
+  }
+  if (lbl) {
+    lbl.textContent = mobile ? resolveMobileViewOnlineLabel(ok) : ok ? "Online" : "Offline";
+  }
+  if (title) {
+    const activeCamera = host._activeCam;
+    const titleText = mobile ? resolveMobileViewTitleText({
+      title: host._config.title,
+      cameras: host._config.cameras,
+      activeCamera,
+      getCameraName: cameraName
+    }) : host._config.title || (host._config.cameras.length > 1 ? cameraName(activeCamera) : "Camera");
+    title.textContent = titleText;
+  }
+}
+function renderStandardPageStats(host, { mobile = false } = {}) {
+  const eventsCount = host._allDisplayEvents().length;
+  const eventCountEl = host._$("#ev-count");
+  if (eventCountEl) {
+    eventCountEl.textContent = mobile ? resolveMobileViewEventsCountText(eventsCount) : String(eventsCount);
+  }
+  const streamEl = host._$("#stream-type");
+  if (streamEl) {
+    streamEl.textContent = mobile ? resolveMobileViewStreamTypeText(host._activeStreamType) : host._activeStreamType || "--";
+  }
+}
+function standardPageSubtitleText(host, { mobile = false } = {}) {
+  return mobile ? resolveMobileViewSubtitleText(host._config) : resolveSubtitleText(host._config);
+}
+function renderStandardPageSubtitle(host, { mobile = false } = {}) {
+  const el = host._$("#tl-range");
+  if (!el) return;
+  el.textContent = standardPageSubtitleText(host, { mobile });
+}
+
 // src/mobile-view/mobile-view-page-controller.js
 const MobileViewPageController = class {
   constructor(host, constants) {
@@ -5666,6 +5740,27 @@ const MobileViewPageController = class {
     this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
     this.syncMobileViewPageMarkup();
   }
+  camSwitcherMarkup({ includeStatus = true } = {}) {
+    return buildStandardPageCamSwitcherMarkup(this._host, {
+      includeStatus,
+      mobile: true
+    });
+  }
+  renderCamSwitcher() {
+    renderStandardPageCamSwitcher(this._host, { mobile: true });
+  }
+  syncStatus() {
+    syncStandardPageStatus(this._host, { mobile: true });
+  }
+  renderStats() {
+    renderStandardPageStats(this._host, { mobile: true });
+  }
+  subtitleText() {
+    return standardPageSubtitleText(this._host, { mobile: true });
+  }
+  renderSubtitle() {
+    renderStandardPageSubtitle(this._host, { mobile: true });
+  }
   syncMobileViewPageMarkup() {
     applyMobileViewPageMarkup({
       host: this._host,
@@ -5679,6 +5774,27 @@ const SingleViewPageController = class {
   constructor(host, constants) {
     this._host = host;
     this._constants = constants;
+  }
+  camSwitcherMarkup({ includeStatus = true } = {}) {
+    return buildStandardPageCamSwitcherMarkup(this._host, {
+      includeStatus,
+      mobile: false
+    });
+  }
+  renderCamSwitcher() {
+    renderStandardPageCamSwitcher(this._host, { mobile: false });
+  }
+  syncStatus() {
+    syncStandardPageStatus(this._host, { mobile: false });
+  }
+  renderStats() {
+    renderStandardPageStats(this._host, { mobile: false });
+  }
+  subtitleText() {
+    return standardPageSubtitleText(this._host, { mobile: false });
+  }
+  renderSubtitle() {
+    renderStandardPageSubtitle(this._host, { mobile: false });
   }
   activateSingleViewPageRoute(context = {}) {
     this.activateStandardPageRoute(context);
@@ -9062,6 +9178,9 @@ const FrigateViewCard = class extends HTMLElement {
   _isMobileViewPageActive() {
     return normalizePageRoute(this._pageId) === PAGE_IDS.mobileView;
   }
+  _activeStandardPageController() {
+    return this._isMobileViewPageActive() ? this._mobileViewPageController : this._singleViewPageController;
+  }
   _syncMobileViewPageMarkup() {
     this._mobileViewPageController.syncMobileViewPageMarkup();
   }
@@ -11262,27 +11381,12 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── cam switcher ──────────────────────────────────────────
   _camSwitcherMarkup({ includeStatus = true } = {}) {
-    const args = {
-      previewPageEnabled: this._isPreviewPageEnabled(),
-      includeStatus,
-      cameras: this._config.cameras,
-      activeCamIdx: this._activeCamIdx,
-      isSingleView: this._viewMode === "single",
-      icons: ICONS,
-      getCameraName: (camera) => cap(camDisplayName(camera)),
-      isCameraAvailable: (camera) => this._hass?.states?.[camera.entity]?.state !== "unavailable"
-    };
-    return this._isMobileViewPageActive() ? buildMobileViewCamSwitcherMarkup(args) : buildCamSwitcherMarkup(args);
+    return this._activeStandardPageController().camSwitcherMarkup({
+      includeStatus
+    });
   }
   _renderCamSwitcher() {
-    const el = this.shadowRoot.querySelector("#cam-switcher");
-    if (!el) return;
-    if (this._config.cameras.length < 2 && !this._isPreviewPageEnabled()) {
-      el.style.display = "none";
-      return;
-    }
-    el.style.display = "";
-    el.innerHTML = `${this._camSwitcherMarkup({ includeStatus: true })}`;
+    this._activeStandardPageController().renderCamSwitcher();
   }
   // ── interactions ──────────────────────────────────────────
   _openPopup() {
@@ -13228,26 +13332,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── render ────────────────────────────────────────────────
   _syncStatus() {
-    const ent = this._hass?.states?.[this._activeCam?.entity];
-    if (!ent) return;
-    const dot = this._$("#on-dot"), lbl = this._$("#on-lbl"), title = this._$("#info-title");
-    const ok = ent.state !== "unavailable";
-    if (dot) {
-      dot.style.color = this._isMobileViewPageActive() ? resolveMobileViewStatusColor(ok) : ok ? "#4ade80" : "#ef4444";
-    }
-    if (lbl) {
-      lbl.textContent = this._isMobileViewPageActive() ? resolveMobileViewOnlineLabel(ok) : ok ? "Online" : "Offline";
-    }
-    if (title) {
-      const c = this._activeCam;
-      const n = this._isMobileViewPageActive() ? resolveMobileViewTitleText({
-        title: this._config.title,
-        cameras: this._config.cameras,
-        activeCamera: c,
-        getCameraName: (camera) => cap(camDisplayName(camera))
-      }) : this._config.title || (this._config.cameras.length > 1 ? cap(camDisplayName(c)) : "Camera");
-      title.textContent = n;
-    }
+    this._activeStandardPageController().syncStatus();
   }
   // Cached querySelector — avoids repeated DOM lookups on every render tick
   _$(sel) {
@@ -13269,22 +13354,13 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncStatus();
   }
   _renderStats() {
-    const el = this._$("#ev-count");
-    if (el) {
-      el.textContent = this._isMobileViewPageActive() ? resolveMobileViewEventsCountText(this._allDisplayEvents().length) : String(this._allDisplayEvents().length);
-    }
-    const stream = this._$("#stream-type");
-    if (stream) {
-      stream.textContent = this._isMobileViewPageActive() ? resolveMobileViewStreamTypeText(this._activeStreamType) : this._activeStreamType || "--";
-    }
+    this._activeStandardPageController().renderStats();
   }
   _subtitleText() {
-    return this._isMobileViewPageActive() ? resolveMobileViewSubtitleText(this._config) : resolveSubtitleText(this._config);
+    return this._activeStandardPageController().subtitleText();
   }
   _renderSubtitle() {
-    const el = this._$("#tl-range");
-    if (!el) return;
-    el.textContent = this._subtitleText();
+    this._activeStandardPageController().renderSubtitle();
   }
   _renderLegend() {
     const el = this._$("#legend");

@@ -5,11 +5,44 @@ import { SingleViewPageController } from "../src/single-view/single-view-page-co
 
 const PAGE_IDS = { preview: "preview", wideView: "wide-view" };
 
-const createHost = ({ isWide = false, popupOpen = false } = {}) => {
+const createNode = () => ({
+  style: {},
+  textContent: "",
+  innerHTML: "",
+});
+
+const createHost = ({
+  isWide = false,
+  popupOpen = false,
+  domNodes = {},
+  previewPageEnabled = false,
+  mobileViewActive = false,
+} = {}) => {
   const calls = [];
+  const nodeMap = domNodes;
   const host = {
     _pageId: isWide ? "wide-view" : "single-view",
     _activeCamIdx: 0,
+    _viewMode: "single",
+    _config: {
+      title: "",
+      subtitle: "Front Patio",
+      cameras: [
+        { entity: "camera.front_door", name: "Front Door" },
+        { entity: "camera.driveway", name: "Driveway" },
+      ],
+    },
+    _activeCam: { entity: "camera.front_door", name: "Front Door" },
+    _activeStreamType: "webrtc",
+    _hass: {
+      states: {
+        "camera.front_door": { state: "streaming" },
+        "camera.driveway": { state: "streaming" },
+      },
+    },
+    _allDisplayEvents: () => [{ id: 1 }, { id: 2 }],
+    _isPreviewPageEnabled: () => previewPageEnabled,
+    _isMobileViewPageActive: () => mobileViewActive,
     _stopPreviewMode: () => calls.push(["stopPreview"]),
     _$: (selector) => {
       if (selector === "#myPopup" && popupOpen) {
@@ -19,7 +52,7 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
           },
         };
       }
-      return null;
+      return nodeMap[selector] || null;
     },
     _closePopup: () => calls.push(["closePopup"]),
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
@@ -560,4 +593,61 @@ test("applyConfigUpdateRouteFlow handles non-preview tail branch", () => {
     ["restartRealtimeHeadPollTimer"],
   ]);
   assert.equal(host._activeCamIdx, 2);
+});
+
+test("single-view render helpers update subtitle and stats through the controller", () => {
+  const nodes = {
+    "#tl-range": createNode(),
+    "#ev-count": createNode(),
+    "#stream-type": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderSubtitle();
+  controller.renderStats();
+
+  assert.equal(nodes["#tl-range"].textContent, "Front Patio");
+  assert.equal(nodes["#ev-count"].textContent, "2");
+  assert.equal(nodes["#stream-type"].textContent, "webrtc");
+});
+
+test("single-view render helpers update status and title through the controller", () => {
+  const nodes = {
+    "#on-dot": createNode(),
+    "#on-lbl": createNode(),
+    "#info-title": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.syncStatus();
+
+  assert.equal(nodes["#on-dot"].style.color, "#4ade80");
+  assert.equal(nodes["#on-lbl"].textContent, "Online");
+  assert.equal(nodes["#info-title"].textContent, "Front Door");
+});
+
+test("single-view camera switcher render hides for a single camera when preview is disabled", () => {
+  const nodes = {
+    "#cam-switcher": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes, previewPageEnabled: false });
+  host._config.cameras = [{ entity: "camera.front_door", name: "Front Door" }];
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderCamSwitcher();
+
+  assert.equal(nodes["#cam-switcher"].style.display, "none");
+});
+
+test("single-view camera switcher markup includes preview back button when enabled", () => {
+  const { host } = createHost({ previewPageEnabled: true });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const markup = controller.camSwitcherMarkup({ includeStatus: true });
+
+  assert.equal(markup.includes("data-preview-back"), true);
+  assert.equal(markup.includes('data-camidx="0"'), true);
+  assert.equal(markup.includes("Front Door"), true);
 });
