@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1035";
+const VERSION = "1.0.1036";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -13906,13 +13906,16 @@ const FrigateViewCard = class extends HTMLElement {
     const list = this._$("#list");
     if (!list) return;
     if (this._tab === "controls") {
-      this._syncOlderHint(true);
-      return this._renderControlsSection(list);
+      return this._renderControlsTabList(list);
     }
     if (this._tab === "recordings") {
       return this._renderRecordingsTabList(list);
     }
     return this._renderStandardTabList(list);
+  }
+  _renderControlsTabList(list) {
+    this._syncOlderHint(true);
+    return this._renderControlsSection(list);
   }
   _renderRecordingsTabList(list) {
     if (this._isRecordingViewerActive() && this._playing?.rec != null) return;

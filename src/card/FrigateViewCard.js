@@ -8356,13 +8356,17 @@ export class FrigateViewCard extends HTMLElement {
     const list = this._$("#list");
     if (!list) return;
     if (this._tab === "controls") {
-      this._syncOlderHint(true);
-      return this._renderControlsSection(list);
+      return this._renderControlsTabList(list);
     }
     if (this._tab === "recordings") {
       return this._renderRecordingsTabList(list);
     }
     return this._renderStandardTabList(list);
+  }
+
+  _renderControlsTabList(list) {
+    this._syncOlderHint(true);
+    return this._renderControlsSection(list);
   }
 
   _renderRecordingsTabList(list) {
