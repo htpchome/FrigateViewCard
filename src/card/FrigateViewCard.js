@@ -8366,6 +8366,10 @@ export class FrigateViewCard extends HTMLElement {
       this._syncOlderHint(false);
       return this._renderRecordings(list);
     }
+    return this._renderStandardTabList(list);
+  }
+
+  _renderStandardTabList(list) {
     if (this._tab === "alerts") {
       this._syncOlderHint(false);
       return this._renderReviews(list);
@@ -8373,7 +8377,7 @@ export class FrigateViewCard extends HTMLElement {
     if (this._tab === "kept") {
       return this._renderKeptList(list);
     }
-    this._renderEventsList(list);
+    return this._renderEventsList(list);
   }
 
   _renderControlsSection(list) {
