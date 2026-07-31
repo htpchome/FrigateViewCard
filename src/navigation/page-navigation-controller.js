@@ -90,10 +90,6 @@ export class PageNavigationController {
         context.previousPageId = this._host._pageId || PAGE_IDS.singleView;
         this._host._pageId = nextPageId;
         this._host._previewPageActive = nextPageId === PAGE_IDS.preview;
-        this._host._syncRouteShellForPageRouteTransition?.(
-          context.previousPageId,
-          nextPageId,
-        );
       },
       onAfterNavigate: (nextPageId) => {
         if (nextPageId !== PAGE_IDS.preview) {

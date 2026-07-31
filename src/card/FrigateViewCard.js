@@ -197,7 +197,6 @@ import {
 } from "../grid/grid-markup.js";
 import { GridAlertController } from "../grid/grid-alert-controller.js";
 import { GridPageController } from "../grid/grid-page-controller.js";
-import { buildMobileViewLayoutShellMarkup } from "../mobile-view/mobile-view-markup.js";
 import { MobileViewPageController } from "../mobile-view/mobile-view-page-controller.js";
 import { SingleViewPageController } from "../single-view/single-view-page-controller.js";
 import { WideViewPageController } from "../wide-view/wide-view-page-controller.js";
@@ -3170,22 +3169,6 @@ export class FrigateViewCard extends HTMLElement {
     this._mobileViewPageController.activateMobileViewPageRoute(context);
   }
 
-  _usesDedicatedMobileViewShell(pageId = this._pageId) {
-    return normalizePageRoute(pageId) === PAGE_IDS.mobileView;
-  }
-
-  _syncRouteShellForPageRouteTransition(previousPageId, nextPageId) {
-    if (
-      this._usesDedicatedMobileViewShell(previousPageId) ===
-      this._usesDedicatedMobileViewShell(nextPageId)
-    ) {
-      return;
-    }
-
-    this._cleanupEngine();
-    this._renderShell();
-  }
-
   _syncMobileViewPageMarkup() {
     this._mobileViewPageController.syncMobileViewPageMarkup();
   }
@@ -4884,21 +4867,13 @@ export class FrigateViewCard extends HTMLElement {
       icons: ICONS,
       tabsMarkup: this._buildTabsMarkup(),
     });
-    const mainLayoutShell = this._usesDedicatedMobileViewShell()
-      ? buildMobileViewLayoutShellMarkup({
-          liveEngineWrap,
-          infoRow,
-          pageNav,
-          camSwitcher,
-          rightColumnShell,
-        })
-      : buildMainLayoutShellMarkup({
-          liveEngineWrap,
-          infoRow,
-          pageNav,
-          camSwitcher,
-          rightColumnShell,
-        });
+    const mainLayoutShell = buildMainLayoutShellMarkup({
+      liveEngineWrap,
+      infoRow,
+      pageNav,
+      camSwitcher,
+      rightColumnShell,
+    });
     const popupShell = buildPopupShellMarkup({
       icons: ICONS,
       version: VERSION,
