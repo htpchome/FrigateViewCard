@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1038";
+const VERSION = "1.0.1039";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3997,6 +3997,22 @@ function buildPreviewLayoutShellMarkup({
           <div class="preview-shell-footer" id="preview-shell-footer">
             <div class="frigate-view">${previewFooterIcon}</div>
           </div>`;
+}
+
+// src/card/controls-readout-utils.js
+function normalizeControlsReadoutLine(text) {
+  return String(text || "").trim();
+}
+function appendControlsReadoutLine(lines, text, maxLines = 200) {
+  const line = normalizeControlsReadoutLine(text);
+  if (!line) {
+    return lines || [];
+  }
+  const nextLines = [...lines || [], line];
+  return nextLines.slice(-Math.max(1, Number(maxLines) || 1));
+}
+function clearControlsReadoutLines() {
+  return [];
 }
 
 // src/card/review-list-model.js
@@ -13965,16 +13981,15 @@ const FrigateViewCard = class extends HTMLElement {
     return target instanceof Element && target.id === "controls-pad";
   }
   _appendControlsReadoutEntry(text) {
-    const line = String(text || "").trim();
-    if (!line) return;
-    this._controlsReadoutLines.push(line);
-    if (this._controlsReadoutLines.length > 200) {
-      this._controlsReadoutLines.shift();
-    }
+    this._controlsReadoutLines = appendControlsReadoutLine(
+      this._controlsReadoutLines,
+      text,
+      200
+    );
     this._renderControlsReadout();
   }
   _clearControlsReadout() {
-    this._controlsReadoutLines = [];
+    this._controlsReadoutLines = clearControlsReadoutLines();
     this._renderControlsReadout();
   }
   _escapeControlsReadoutText(value) {

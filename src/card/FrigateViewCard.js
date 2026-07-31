@@ -156,6 +156,10 @@ import {
   buildTabsMarkup,
 } from "./shell-nav-markup.js";
 import {
+  appendControlsReadoutLine,
+  clearControlsReadoutLines,
+} from "./controls-readout-utils.js";
+import {
   buildReviewListItemHtml,
   buildReviewListItemModel,
 } from "./review-list-model.js";
@@ -8406,17 +8410,16 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _appendControlsReadoutEntry(text) {
-    const line = String(text || "").trim();
-    if (!line) return;
-    this._controlsReadoutLines.push(line);
-    if (this._controlsReadoutLines.length > 200) {
-      this._controlsReadoutLines.shift();
-    }
+    this._controlsReadoutLines = appendControlsReadoutLine(
+      this._controlsReadoutLines,
+      text,
+      200,
+    );
     this._renderControlsReadout();
   }
 
   _clearControlsReadout() {
-    this._controlsReadoutLines = [];
+    this._controlsReadoutLines = clearControlsReadoutLines();
     this._renderControlsReadout();
   }
 
