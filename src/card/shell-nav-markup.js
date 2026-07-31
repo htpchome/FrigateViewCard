@@ -197,6 +197,16 @@ export function buildControlsSectionMarkup() {
           </div>`;
 }
 
+export function buildControlsReadoutEmptyMarkup() {
+  return '<div class="controls-readout-empty">Press a control to log input.</div>';
+}
+
+export function buildControlsReadoutLinesMarkup(lines) {
+  return (lines || [])
+    .map((line) => `<div class="controls-readout-line">${line}</div>`)
+    .join("");
+}
+
 export function buildPopupShellMarkup({ icons, version }) {
   return `<div id="myPopup" class="popup-content">
             <div class="popup-close-row">

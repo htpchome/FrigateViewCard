@@ -145,6 +145,8 @@ import {
 } from "../live/live-startup-policy.js";
 import {
   buildControlsSectionMarkup,
+  buildControlsReadoutEmptyMarkup,
+  buildControlsReadoutLinesMarkup,
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
   buildMainLayoutShellMarkup,
@@ -8429,16 +8431,14 @@ export class FrigateViewCard extends HTMLElement {
     const el = this._$("#controls-readout-lines");
     if (!el) return;
     if (!this._controlsReadoutLines.length) {
-      el.innerHTML =
-        '<div class="controls-readout-empty">Press a control to log input.</div>';
+      el.innerHTML = buildControlsReadoutEmptyMarkup();
       return;
     }
-    el.innerHTML = this._controlsReadoutLines
-      .map(
-        (line) =>
-          `<div class="controls-readout-line">${this._escapeControlsReadoutText(line)}</div>`,
-      )
-      .join("");
+    el.innerHTML = buildControlsReadoutLinesMarkup(
+      this._controlsReadoutLines.map((line) =>
+        this._escapeControlsReadoutText(line),
+      ),
+    );
     el.scrollTop = el.scrollHeight;
   }
 

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1037";
+const VERSION = "1.0.1038";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3926,6 +3926,12 @@ function buildControlsSectionMarkup() {
               <div class="controls-readout-lines" id="controls-readout-lines"></div>
             </div>
           </div>`;
+}
+function buildControlsReadoutEmptyMarkup() {
+  return '<div class="controls-readout-empty">Press a control to log input.</div>';
+}
+function buildControlsReadoutLinesMarkup(lines) {
+  return (lines || []).map((line) => `<div class="controls-readout-line">${line}</div>`).join("");
 }
 function buildPopupShellMarkup({ icons, version }) {
   return `<div id="myPopup" class="popup-content">
@@ -13978,12 +13984,14 @@ const FrigateViewCard = class extends HTMLElement {
     const el = this._$("#controls-readout-lines");
     if (!el) return;
     if (!this._controlsReadoutLines.length) {
-      el.innerHTML = '<div class="controls-readout-empty">Press a control to log input.</div>';
+      el.innerHTML = buildControlsReadoutEmptyMarkup();
       return;
     }
-    el.innerHTML = this._controlsReadoutLines.map(
-      (line) => `<div class="controls-readout-line">${this._escapeControlsReadoutText(line)}</div>`
-    ).join("");
+    el.innerHTML = buildControlsReadoutLinesMarkup(
+      this._controlsReadoutLines.map(
+        (line) => this._escapeControlsReadoutText(line)
+      )
+    );
     el.scrollTop = el.scrollHeight;
   }
   _renderKeptList(list) {
