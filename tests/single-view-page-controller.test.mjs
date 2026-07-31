@@ -48,6 +48,10 @@ const createHost = ({
     _weekday: () => "Wed",
     _monthDay: () => "Jul 31st",
     _dayKey: () => "2026-07-31",
+    _eventCardHTML: (item) => `<article class="event">${item.id}</article>`,
+    _reviewListItemHTML: (item) =>
+      `<article class="review">${item.id}</article>`,
+    _exhausted: false,
     _updateRecordingsBrowseNav: () => calls.push(["updateRecordingsBrowseNav"]),
     _isPreviewPageEnabled: () => previewPageEnabled,
     _isMobileViewPageActive: () => mobileViewActive,
@@ -726,4 +730,33 @@ test("single-view sticky-day helpers expose grouped section rendering", () => {
 
   assert.equal(html.includes("Wed - Jul 31st - Recent Alerts"), true);
   assert.equal(html.includes("<article>1</article>"), true);
+});
+
+test("single-view event content helper builds flat and grouped markup", () => {
+  const { host } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  host._tab = "kept";
+  let html = controller.renderEventsContent([{ id: 1 }]);
+  assert.equal(html.includes('<article class="event">1</article>'), true);
+  assert.equal(html.includes("list-day-sec"), false);
+
+  host._tab = "alerts";
+  host._exhausted = true;
+  html = controller.renderEventsContent([{ id: 2, start_time: 1722470400 }]);
+  assert.equal(html.includes("list-day-sec"), true);
+  assert.equal(html.includes("Wed - Jul 31st - Recent Alerts"), true);
+  assert.equal(html.includes('<div class="end">— end —</div>'), true);
+});
+
+test("single-view review content helper builds grouped markup", () => {
+  const { host } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const html = controller.renderReviewsContent([
+    { id: 7, start_time: 1722470400 },
+  ]);
+
+  assert.equal(html.includes("list-day-sec"), true);
+  assert.equal(html.includes('<article class="review">7</article>'), true);
 });

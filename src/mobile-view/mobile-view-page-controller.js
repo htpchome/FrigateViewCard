@@ -2,8 +2,10 @@ import { activateStandardPageRouteLifecycle } from "../navigation/standard-page-
 import {
   buildStandardPageCamSwitcherMarkup,
   renderStandardPageCamSwitcher,
+  renderStandardPageEventsContent,
   renderStandardPageLegend,
   renderStandardPageListLabel,
+  renderStandardPageReviewsContent,
   renderStandardPageStickyDaySections,
   renderStandardPageStats,
   renderStandardPageSubtitle,
@@ -85,6 +87,14 @@ export class MobileViewPageController {
 
   renderStickyDaySections(items, renderItem) {
     return renderStandardPageStickyDaySections(this._host, items, renderItem);
+  }
+
+  renderEventsContent(items) {
+    return renderStandardPageEventsContent(this._host, items);
+  }
+
+  renderReviewsContent(items) {
+    return renderStandardPageReviewsContent(this._host, items);
   }
 
   syncMobileViewPageMarkup() {

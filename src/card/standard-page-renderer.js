@@ -3,7 +3,10 @@ import {
   buildCamSwitcherMarkup,
   resolveSubtitleText,
 } from "./shell-nav-markup.js";
-import { buildStickyDaySectionsHtml } from "./list-render-utils.js";
+import {
+  appendEndMarker,
+  buildStickyDaySectionsHtml,
+} from "./list-render-utils.js";
 import {
   buildMobileViewCamSwitcherMarkup,
   resolveMobileViewEventsCountText,
@@ -176,6 +179,21 @@ export function renderStandardPageStickyDaySections(host, items, renderItem) {
     getLabel: (ts) => standardPageListHeadingLabel(host, ts),
     renderItem,
   });
+}
+
+export function renderStandardPageEventsContent(host, items) {
+  const content = standardPageShowStickyDayHeaders(host)
+    ? renderStandardPageStickyDaySections(host, items, (item) =>
+        host._eventCardHTML(item, false),
+      )
+    : items.map((item) => host._eventCardHTML(item, false)).join("");
+  return appendEndMarker(content, host._exhausted);
+}
+
+export function renderStandardPageReviewsContent(host, items) {
+  return renderStandardPageStickyDaySections(host, items, (item) =>
+    host._reviewListItemHTML(item),
+  );
 }
 
 export function renderStandardPageLegend(host) {

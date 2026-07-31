@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1029";
+const VERSION = "1.0.1030";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5770,6 +5770,21 @@ function renderStandardPageStickyDaySections(host, items, renderItem) {
     renderItem
   });
 }
+function renderStandardPageEventsContent(host, items) {
+  const content = standardPageShowStickyDayHeaders(host) ? renderStandardPageStickyDaySections(
+    host,
+    items,
+    (item) => host._eventCardHTML(item, false)
+  ) : items.map((item) => host._eventCardHTML(item, false)).join("");
+  return appendEndMarker(content, host._exhausted);
+}
+function renderStandardPageReviewsContent(host, items) {
+  return renderStandardPageStickyDaySections(
+    host,
+    items,
+    (item) => host._reviewListItemHTML(item)
+  );
+}
 function renderStandardPageLegend(host) {
   const el = host._$("#legend");
   if (!el) return;
@@ -5845,6 +5860,12 @@ const MobileViewPageController = class {
   renderStickyDaySections(items, renderItem) {
     return renderStandardPageStickyDaySections(this._host, items, renderItem);
   }
+  renderEventsContent(items) {
+    return renderStandardPageEventsContent(this._host, items);
+  }
+  renderReviewsContent(items) {
+    return renderStandardPageReviewsContent(this._host, items);
+  }
   syncMobileViewPageMarkup() {
     applyMobileViewPageMarkup({
       host: this._host,
@@ -5897,6 +5918,12 @@ const SingleViewPageController = class {
   }
   renderStickyDaySections(items, renderItem) {
     return renderStandardPageStickyDaySections(this._host, items, renderItem);
+  }
+  renderEventsContent(items) {
+    return renderStandardPageEventsContent(this._host, items);
+  }
+  renderReviewsContent(items) {
+    return renderStandardPageReviewsContent(this._host, items);
   }
   activateSingleViewPageRoute(context = {}) {
     this.activateStandardPageRoute(context);
@@ -13531,6 +13558,12 @@ const FrigateViewCard = class extends HTMLElement {
       renderItem
     );
   }
+  _renderEventsContent(items) {
+    return this._activeStandardPageController().renderEventsContent(items);
+  }
+  _renderReviewsContent(items) {
+    return this._activeStandardPageController().renderReviewsContent(items);
+  }
   _recordingsDayBounds(tsSec = null) {
     const target = Math.floor(tsSec || this._winEnd || Date.now() / 1e3);
     const z = this._tzParts(target);
@@ -13941,13 +13974,7 @@ const FrigateViewCard = class extends HTMLElement {
     const renderState = resolveListMarkup({
       items: events,
       emptyMessage: "No events in this window",
-      buildContentHtml: (items) => {
-        const eventsHtml = this._showStickyDayHeaders() ? this._renderStickyDaySections(
-          items,
-          (ev) => this._eventCardHTML(ev, false)
-        ) : items.map((ev) => this._eventCardHTML(ev, false)).join("");
-        return appendEndMarker(eventsHtml, this._exhausted);
-      }
+      buildContentHtml: (items) => this._renderEventsContent(items)
     });
     const hasContent = applyListMarkupWithOlderHint({
       setHtml: (html) => this._setListHtmlIfChanged(list, html),
@@ -14024,10 +14051,7 @@ const FrigateViewCard = class extends HTMLElement {
     const renderState = resolveListMarkup({
       items: allRevs,
       emptyMessage: emptyText,
-      buildContentHtml: (items) => this._renderStickyDaySections(
-        items,
-        (review) => this._reviewListItemHTML(review)
-      )
+      buildContentHtml: (items) => this._renderReviewsContent(items)
     });
     const hasContent = applyListMarkupWithOlderHint({
       setHtml: (html) => this._setListHtmlIfChanged(list, html),

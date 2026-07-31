@@ -1,8 +1,10 @@
 import {
   buildStandardPageCamSwitcherMarkup,
   renderStandardPageCamSwitcher,
+  renderStandardPageEventsContent,
   renderStandardPageLegend,
   renderStandardPageListLabel,
+  renderStandardPageReviewsContent,
   renderStandardPageStickyDaySections,
   renderStandardPageStats,
   renderStandardPageSubtitle,
@@ -69,6 +71,14 @@ export class SingleViewPageController {
 
   renderStickyDaySections(items, renderItem) {
     return renderStandardPageStickyDaySections(this._host, items, renderItem);
+  }
+
+  renderEventsContent(items) {
+    return renderStandardPageEventsContent(this._host, items);
+  }
+
+  renderReviewsContent(items) {
+    return renderStandardPageReviewsContent(this._host, items);
   }
 
   activateSingleViewPageRoute(context = {}) {
