@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1022";
+const VERSION = "1.0.1023";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4832,6 +4832,10 @@ const PageNavigationController = class {
         context.previousPageId = this._host._pageId || PAGE_IDS2.singleView;
         this._host._pageId = nextPageId;
         this._host._previewPageActive = nextPageId === PAGE_IDS2.preview;
+        this._host._syncRouteShellForPageRouteTransition?.(
+          context.previousPageId,
+          nextPageId
+        );
       },
       onAfterNavigate: (nextPageId) => {
         if (nextPageId !== PAGE_IDS2.preview) {
@@ -5328,6 +5332,28 @@ const GridPageController = class {
     this._host._setViewMode("grid");
   }
 };
+
+// src/mobile-view/mobile-view-markup.js
+function buildMobileViewLayoutShellMarkup({
+  liveEngineWrap,
+  infoRow,
+  pageNav,
+  camSwitcher,
+  rightColumnShell
+}) {
+  return `<div class="layout mobile-view-layout" id="layout">
+          <div class="col-left" id="col-left">
+            ${liveEngineWrap}
+
+            ${infoRow}
+            ${pageNav}
+            ${camSwitcher}
+          </div>
+          <div class="resize-handle" id="resize-handle"></div>
+          ${rightColumnShell}
+
+        </div>`;
+}
 
 // src/navigation/standard-page-route-lifecycle.js
 function isLeavingPreviewPage(context = {}, previewPageId) {
@@ -8803,6 +8829,16 @@ const FrigateViewCard = class extends HTMLElement {
   _activateMobileViewPageRoute(context = {}) {
     this._mobileViewPageController.activateMobileViewPageRoute(context);
   }
+  _usesDedicatedMobileViewShell(pageId = this._pageId) {
+    return normalizePageRoute(pageId) === PAGE_IDS.mobileView;
+  }
+  _syncRouteShellForPageRouteTransition(previousPageId, nextPageId) {
+    if (this._usesDedicatedMobileViewShell(previousPageId) === this._usesDedicatedMobileViewShell(nextPageId)) {
+      return;
+    }
+    this._cleanupEngine();
+    this._renderShell();
+  }
   _syncMobileViewPageMarkup() {
     this._mobileViewPageController.syncMobileViewPageMarkup();
   }
@@ -10256,7 +10292,13 @@ const FrigateViewCard = class extends HTMLElement {
       icons: ICONS,
       tabsMarkup: this._buildTabsMarkup()
     });
-    const mainLayoutShell = buildMainLayoutShellMarkup({
+    const mainLayoutShell = this._usesDedicatedMobileViewShell() ? buildMobileViewLayoutShellMarkup({
+      liveEngineWrap,
+      infoRow,
+      pageNav,
+      camSwitcher,
+      rightColumnShell
+    }) : buildMainLayoutShellMarkup({
       liveEngineWrap,
       infoRow,
       pageNav,

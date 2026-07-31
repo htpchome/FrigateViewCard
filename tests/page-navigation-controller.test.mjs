@@ -57,6 +57,8 @@ const createHarness = () => {
     _activateMobileViewPageRoute: (context) => calls.push(["mobile", context]),
     _activatePreviewPageRoute: (context) => calls.push(["preview", context]),
     _activateWideViewPageRoute: (context) => calls.push(["wide", context]),
+    _syncRouteShellForPageRouteTransition: (previousPageId, nextPageId) =>
+      calls.push(["syncRouteShell", previousPageId, nextPageId]),
     _syncMobileViewPageMarkup: () => calls.push(["syncMobileViewMarkup"]),
     _deviceRouteBucket: () => "desktop",
     _syncPageNavigationButtons: () => calls.push(["syncButtons"]),
@@ -122,10 +124,17 @@ test("factory callbacks update page state and sync nav buttons", () => {
   assert.equal(context.previousPageId, PAGE_IDS.singleView);
   assert.equal(h.host._pageId, PAGE_IDS.preview);
   assert.equal(h.host._previewPageActive, true);
+  assert.deepEqual(h.calls, [
+    ["syncRouteShell", PAGE_IDS.singleView, PAGE_IDS.preview],
+  ]);
 
   input.onAfterNavigate(PAGE_IDS.preview);
   assert.equal(h.host._lastNonPreviewPageId, PAGE_IDS.singleView);
-  assert.deepEqual(h.calls, [["syncMobileViewMarkup"], ["syncButtons"]]);
+  assert.deepEqual(h.calls, [
+    ["syncRouteShell", PAGE_IDS.singleView, PAGE_IDS.preview],
+    ["syncMobileViewMarkup"],
+    ["syncButtons"],
+  ]);
 
   input.onBeforeNavigate(PAGE_IDS.wideView, context);
   input.onAfterNavigate(PAGE_IDS.wideView);
