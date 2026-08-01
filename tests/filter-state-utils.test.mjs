@@ -12,6 +12,7 @@ import {
   matchesEventFilters,
   matchesReviewFilters,
   normalizeFilterSelections,
+  selectFilterOptionSourceEvents,
 } from "../src/card/filter-state-utils.js";
 
 test("buildReviewFilterLabels combines source event and review objects uniquely", () => {
@@ -100,6 +101,56 @@ test("collectUniqueSourceEventsFromReviews dedupes by source event id", () => {
   });
 
   assert.deepEqual(events, [eventA, eventB]);
+});
+
+test("selectFilterOptionSourceEvents uses unique source events for alerts", () => {
+  const eventA = { id: "event-a" };
+  const eventB = { id: "event-b" };
+  const reviews = [{ id: 1 }, { id: 2 }, { id: 3 }];
+
+  const events = selectFilterOptionSourceEvents({
+    tab: "alerts",
+    reviews,
+    keptEvents: [{ id: "kept-a" }],
+    displayEvents: [{ id: "display-a" }],
+    getSourceEvent: (review) => {
+      if (review.id === 1) return eventA;
+      if (review.id === 2) return eventA;
+      return eventB;
+    },
+  });
+
+  assert.deepEqual(events, [eventA, eventB]);
+});
+
+test("selectFilterOptionSourceEvents uses kept events for kept tab", () => {
+  const keptEvents = [{ id: "kept-a" }, { id: "kept-b" }];
+
+  const events = selectFilterOptionSourceEvents({
+    tab: "kept",
+    reviews: [{ id: 1 }],
+    keptEvents,
+    displayEvents: [{ id: "display-a" }],
+    getSourceEvent: () => ({ id: "event-a" }),
+  });
+
+  assert.deepEqual(events, keptEvents);
+  assert.notEqual(events, keptEvents);
+});
+
+test("selectFilterOptionSourceEvents uses display events for other tabs", () => {
+  const displayEvents = [{ id: "display-a" }, { id: "display-b" }];
+
+  const events = selectFilterOptionSourceEvents({
+    tab: "clips",
+    reviews: [{ id: 1 }],
+    keptEvents: [{ id: "kept-a" }],
+    displayEvents,
+    getSourceEvent: () => ({ id: "event-a" }),
+  });
+
+  assert.deepEqual(events, displayEvents);
+  assert.notEqual(events, displayEvents);
 });
 
 test("normalizeFilterSelections resets missing label and zone to all", () => {

@@ -170,6 +170,7 @@ import {
   matchesEventFilters,
   matchesReviewFilters,
   normalizeFilterSelections,
+  selectFilterOptionSourceEvents,
 } from "./filter-state-utils.js";
 import {
   appendControlsReadoutLine,
@@ -8199,18 +8200,15 @@ export class FrigateViewCard extends HTMLElement {
     return firstDet ? this._findEventById(firstDet) : null;
   }
   _filterOptionSourceEvents() {
-    if (this._tab === "alerts") {
-      return collectUniqueSourceEventsFromReviews(
-        this._reviewsForTabBase(),
-        (review) => this._reviewSourceEvent(review),
-      );
-    }
-    if (this._tab === "kept") {
-      return this._isGridMixedListMode()
+    return selectFilterOptionSourceEvents({
+      tab: this._tab,
+      reviews: this._reviewsForTabBase(),
+      keptEvents: this._isGridMixedListMode()
         ? this._allGridKeptEvents()
-        : [...(this._kept || [])];
-    }
-    return this._allDisplayEvents();
+        : this._kept || [],
+      displayEvents: this._allDisplayEvents(),
+      getSourceEvent: (review) => this._reviewSourceEvent(review),
+    });
   }
   _matchesEventFilters(ev) {
     return matchesEventFilters(ev, {

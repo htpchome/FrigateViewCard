@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1063";
+const VERSION = "1.0.1064";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4108,6 +4108,21 @@ function collectUniqueSourceEventsFromReviews(reviews, getSourceEvent) {
     out.push(sourceEvent);
   });
   return out;
+}
+function selectFilterOptionSourceEvents({
+  tab,
+  reviews = [],
+  keptEvents = [],
+  displayEvents = [],
+  getSourceEvent = () => null
+}) {
+  if (tab === "alerts") {
+    return collectUniqueSourceEventsFromReviews(reviews, getSourceEvent);
+  }
+  if (tab === "kept") {
+    return [...keptEvents];
+  }
+  return [...displayEvents];
 }
 function normalizeFilterSelections({
   filterLabel,
@@ -13958,16 +13973,13 @@ const FrigateViewCard = class extends HTMLElement {
     return firstDet ? this._findEventById(firstDet) : null;
   }
   _filterOptionSourceEvents() {
-    if (this._tab === "alerts") {
-      return collectUniqueSourceEventsFromReviews(
-        this._reviewsForTabBase(),
-        (review) => this._reviewSourceEvent(review)
-      );
-    }
-    if (this._tab === "kept") {
-      return this._isGridMixedListMode() ? this._allGridKeptEvents() : [...this._kept || []];
-    }
-    return this._allDisplayEvents();
+    return selectFilterOptionSourceEvents({
+      tab: this._tab,
+      reviews: this._reviewsForTabBase(),
+      keptEvents: this._isGridMixedListMode() ? this._allGridKeptEvents() : this._kept || [],
+      displayEvents: this._allDisplayEvents(),
+      getSourceEvent: (review) => this._reviewSourceEvent(review)
+    });
   }
   _matchesEventFilters(ev) {
     return matchesEventFilters(ev, {

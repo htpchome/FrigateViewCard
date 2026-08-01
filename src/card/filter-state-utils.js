@@ -68,6 +68,22 @@ export function collectUniqueSourceEventsFromReviews(reviews, getSourceEvent) {
   return out;
 }
 
+export function selectFilterOptionSourceEvents({
+  tab,
+  reviews = [],
+  keptEvents = [],
+  displayEvents = [],
+  getSourceEvent = () => null,
+}) {
+  if (tab === "alerts") {
+    return collectUniqueSourceEventsFromReviews(reviews, getSourceEvent);
+  }
+  if (tab === "kept") {
+    return [...keptEvents];
+  }
+  return [...displayEvents];
+}
+
 export function normalizeFilterSelections({
   filterLabel,
   filterZone,
