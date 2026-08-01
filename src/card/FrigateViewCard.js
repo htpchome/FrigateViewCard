@@ -158,7 +158,6 @@ import {
 import {
   appendControlsReadoutLine,
   clearControlsReadoutLines,
-  isControlsPadTarget,
   isControlsReadoutClearTarget,
   resolveControlsPadPressReadoutEntry,
   resolveControlsPadToggleReadoutEntry,
@@ -8403,10 +8402,6 @@ export class FrigateViewCard extends HTMLElement {
     this._renderListLabel();
     this._setListHtmlIfChanged(list, buildControlsSectionMarkup());
     this._renderControlsReadout();
-  }
-
-  _isControlsPadEvent(event) {
-    return isControlsPadTarget(event?.target);
   }
 
   _appendControlsReadoutEntry(text) {

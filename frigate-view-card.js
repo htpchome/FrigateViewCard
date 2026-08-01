@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1042";
+const VERSION = "1.0.1043";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -13996,9 +13996,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderListLabel();
     this._setListHtmlIfChanged(list, buildControlsSectionMarkup());
     this._renderControlsReadout();
-  }
-  _isControlsPadEvent(event) {
-    return isControlsPadTarget(event?.target);
   }
   _appendControlsReadoutEntry(text) {
     this._controlsReadoutLines = appendControlsReadoutLine(
