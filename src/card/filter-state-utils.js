@@ -165,3 +165,16 @@ export function selectFilteredKeptEvents({
   const source = isGridMixedListMode ? gridKeptEvents : keptEvents;
   return [...(source || [])].filter((event) => matchesEvent(event));
 }
+
+export function selectReviewsForFilterTab({
+  reviews = [],
+  gridReviews = [],
+  isGridMixedListMode = false,
+  showAllReviews = false,
+}) {
+  const reviewSource = isGridMixedListMode ? gridReviews : reviews;
+  const safeReviews = [...(reviewSource || [])];
+  return showAllReviews
+    ? safeReviews
+    : safeReviews.filter((review) => review?.severity === "alert");
+}

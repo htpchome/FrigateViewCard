@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1067";
+const VERSION = "1.0.1068";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4187,6 +4187,16 @@ function selectFilteredKeptEvents({
 }) {
   const source = isGridMixedListMode ? gridKeptEvents : keptEvents;
   return [...source || []].filter((event) => matchesEvent(event));
+}
+function selectReviewsForFilterTab({
+  reviews = [],
+  gridReviews = [],
+  isGridMixedListMode = false,
+  showAllReviews = false
+}) {
+  const reviewSource = isGridMixedListMode ? gridReviews : reviews;
+  const safeReviews = [...reviewSource || []];
+  return showAllReviews ? safeReviews : safeReviews.filter((review) => review?.severity === "alert");
 }
 
 // src/card/controls-readout-utils.js
@@ -13988,9 +13998,12 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _reviewsForTabBase() {
-    const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
-    const reviewSource = this._isGridMixedListMode() ? this._allGridReviews() : this._reviews;
-    return showAllReviews ? [...reviewSource] : reviewSource.filter((review) => review?.severity === "alert");
+    return selectReviewsForFilterTab({
+      reviews: this._reviews,
+      gridReviews: this._allGridReviews(),
+      isGridMixedListMode: this._isGridMixedListMode(),
+      showAllReviews: this._activeCam?.alerts_content === "all_reviews"
+    });
   }
   _reviewSourceEvent(review) {
     const firstDet = review?.data?.detections && review.data.detections[0] || "";

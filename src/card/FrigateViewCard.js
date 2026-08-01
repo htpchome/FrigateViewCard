@@ -173,6 +173,7 @@ import {
   selectFilteredEvents,
   selectFilteredKeptEvents,
   selectFilterOptionSourceEvents,
+  selectReviewsForFilterTab,
 } from "./filter-state-utils.js";
 import {
   appendControlsReadoutLine,
@@ -8192,13 +8193,12 @@ export class FrigateViewCard extends HTMLElement {
     );
   }
   _reviewsForTabBase() {
-    const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
-    const reviewSource = this._isGridMixedListMode()
-      ? this._allGridReviews()
-      : this._reviews;
-    return showAllReviews
-      ? [...reviewSource]
-      : reviewSource.filter((review) => review?.severity === "alert");
+    return selectReviewsForFilterTab({
+      reviews: this._reviews,
+      gridReviews: this._allGridReviews(),
+      isGridMixedListMode: this._isGridMixedListMode(),
+      showAllReviews: this._activeCam?.alerts_content === "all_reviews",
+    });
   }
   _reviewSourceEvent(review) {
     const firstDet =

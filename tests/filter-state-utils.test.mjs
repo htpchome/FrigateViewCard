@@ -15,6 +15,7 @@ import {
   selectFilteredEvents,
   selectFilteredKeptEvents,
   selectFilterOptionSourceEvents,
+  selectReviewsForFilterTab,
 } from "../src/card/filter-state-utils.js";
 
 test("buildReviewFilterLabels combines source event and review objects uniquely", () => {
@@ -224,6 +225,56 @@ test("selectFilteredKeptEvents uses grid kept events in grid mixed mode", () => 
 
   assert.deepEqual(events, [{ id: "grid-b" }]);
   assert.notEqual(events, gridKeptEvents);
+});
+
+test("selectReviewsForFilterTab returns all reviews when configured", () => {
+  const reviews = [
+    { id: "alert-review", severity: "alert" },
+    { id: "detection-review", severity: "detection" },
+  ];
+
+  const selected = selectReviewsForFilterTab({
+    reviews,
+    gridReviews: [{ id: "grid-review", severity: "alert" }],
+    isGridMixedListMode: false,
+    showAllReviews: true,
+  });
+
+  assert.deepEqual(selected, reviews);
+  assert.notEqual(selected, reviews);
+});
+
+test("selectReviewsForFilterTab filters to alert reviews by default", () => {
+  const reviews = [
+    { id: "alert-review", severity: "alert" },
+    { id: "detection-review", severity: "detection" },
+    { id: "missing-severity" },
+  ];
+
+  const selected = selectReviewsForFilterTab({
+    reviews,
+    gridReviews: [],
+    isGridMixedListMode: false,
+    showAllReviews: false,
+  });
+
+  assert.deepEqual(selected, [{ id: "alert-review", severity: "alert" }]);
+});
+
+test("selectReviewsForFilterTab uses grid reviews in mixed grid mode", () => {
+  const gridReviews = [
+    { id: "grid-alert", severity: "alert" },
+    { id: "grid-detection", severity: "detection" },
+  ];
+
+  const selected = selectReviewsForFilterTab({
+    reviews: [{ id: "camera-alert", severity: "alert" }],
+    gridReviews,
+    isGridMixedListMode: true,
+    showAllReviews: false,
+  });
+
+  assert.deepEqual(selected, [{ id: "grid-alert", severity: "alert" }]);
 });
 
 test("normalizeFilterSelections resets missing label and zone to all", () => {
