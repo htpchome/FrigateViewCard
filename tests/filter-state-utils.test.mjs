@@ -14,8 +14,10 @@ import {
   normalizeFilterSelections,
   selectFilteredEvents,
   selectFilteredKeptEvents,
+  selectFilterLabels,
   selectFilterOptionSourceEvents,
   selectReviewsForFilterTab,
+  selectFilterZones,
 } from "../src/card/filter-state-utils.js";
 
 test("buildReviewFilterLabels combines source event and review objects uniquely", () => {
@@ -104,6 +106,58 @@ test("collectUniqueSourceEventsFromReviews dedupes by source event id", () => {
   });
 
   assert.deepEqual(events, [eventA, eventB]);
+});
+
+test("selectFilterLabels uses review labels for alerts tab", () => {
+  const labels = selectFilterLabels({
+    tab: "alerts",
+    reviews: [{ id: 1 }, { id: 2 }, { id: 3 }],
+    events: [{ label: "ignored" }],
+    getLabels: (review) => {
+      if (review.id === 1) return ["person", "car"];
+      if (review.id === 2) return ["car", "dog"];
+      return [];
+    },
+  });
+
+  assert.deepEqual(labels.sort(), ["car", "dog", "person"]);
+});
+
+test("selectFilterLabels uses event labels outside alerts tab", () => {
+  const labels = selectFilterLabels({
+    tab: "clips",
+    reviews: [{ id: 1 }],
+    events: [{ label: "person" }, { label: "car" }, { label: "person" }],
+    getLabels: () => ["ignored"],
+  });
+
+  assert.deepEqual(labels.sort(), ["car", "person"]);
+});
+
+test("selectFilterZones uses review zones for alerts tab", () => {
+  const zones = selectFilterZones({
+    tab: "alerts",
+    reviews: [{ id: 1 }, { id: 2 }, { id: 3 }],
+    events: [{ zones: ["ignored"] }],
+    getZones: (review) => {
+      if (review.id === 1) return ["front", "yard"];
+      if (review.id === 2) return ["yard", "driveway"];
+      return [];
+    },
+  });
+
+  assert.deepEqual(zones.sort(), ["driveway", "front", "yard"]);
+});
+
+test("selectFilterZones uses event zones outside alerts tab", () => {
+  const zones = selectFilterZones({
+    tab: "snapshot",
+    reviews: [{ id: 1 }],
+    events: [{ zones: ["front", "yard"] }, { zones: ["front"] }],
+    getZones: () => ["ignored"],
+  });
+
+  assert.deepEqual(zones.sort(), ["front", "yard"]);
 });
 
 test("selectFilterOptionSourceEvents uses unique source events for alerts", () => {

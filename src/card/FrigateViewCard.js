@@ -172,9 +172,12 @@ import {
   normalizeFilterSelections,
   selectFilteredEvents,
   selectFilteredKeptEvents,
+  selectFilterLabels,
   selectFilterOptionSourceEvents,
   selectReviewsForFilterTab,
+  selectFilterZones,
 } from "./filter-state-utils.js";
+import { splitRecordingsHourly } from "./recordings-segment-utils.js";
 import {
   appendControlsReadoutLine,
   clearControlsReadoutLines,
@@ -5039,7 +5042,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _recordingsViewRows(recs) {
-    return this._splitRecsHourly(recs).sort(
+    return splitRecordingsHourly(recs, this._winEnd || Date.now() / 1000).sort(
       (a, b) => b.start_time - a.start_time,
     );
   }
@@ -8256,29 +8259,27 @@ export class FrigateViewCard extends HTMLElement {
     this._filterZone = normalized.filterZone;
   }
   _zones() {
-    if (this._tab === "alerts") {
-      return collectFilterZonesFromReviews(
-        this._reviewsForTabBase(),
-        (review) => {
-          const sourceEvent = this._reviewSourceEvent(review);
-          return this._reviewFilterZones(review, sourceEvent);
-        },
-      );
-    }
-    return collectFilterZonesFromEvents(this._filterOptionSourceEvents());
+    return selectFilterZones({
+      tab: this._tab,
+      reviews: this._reviewsForTabBase(),
+      events: this._filterOptionSourceEvents(),
+      getZones: (review) => {
+        const sourceEvent = this._reviewSourceEvent(review);
+        return this._reviewFilterZones(review, sourceEvent);
+      },
+    });
   }
 
   _labels() {
-    if (this._tab === "alerts") {
-      return collectFilterLabelsFromReviews(
-        this._reviewsForTabBase(),
-        (review) => {
-          const sourceEvent = this._reviewSourceEvent(review);
-          return this._reviewFilterLabels(review, sourceEvent);
-        },
-      );
-    }
-    return collectFilterLabelsFromEvents(this._filterOptionSourceEvents());
+    return selectFilterLabels({
+      tab: this._tab,
+      reviews: this._reviewsForTabBase(),
+      events: this._filterOptionSourceEvents(),
+      getLabels: (review) => {
+        const sourceEvent = this._reviewSourceEvent(review);
+        return this._reviewFilterLabels(review, sourceEvent);
+      },
+    });
   }
 
   _reviewFilterLabels(review, sourceEvent = null) {
@@ -8294,64 +8295,6 @@ export class FrigateViewCard extends HTMLElement {
       events: this._allDisplayEvents(),
       matchesEvent: (event) => this._matchesEventFilters(event),
     });
-  }
-  _mergeRecs(recs) {
-    if (!recs.length) return [];
-    const segs = [...recs].sort((a, b) => a.start_time - b.start_time);
-    const out = [];
-    let cur = { ...segs[0] };
-    for (let i = 1; i < segs.length; i++) {
-      const s = segs[i];
-      const ce = cur.end_time || cur.start_time;
-      if (s.start_time - ce <= 60) {
-        cur.end_time = Math.max(ce, s.end_time || s.start_time);
-        cur.events = (cur.events || 0) + (s.events || 0);
-      } else {
-        out.push(cur);
-        cur = { ...s };
-      }
-    }
-    out.push(cur);
-    return out;
-  }
-  _splitRecsHourly(recs) {
-    const merged = this._mergeRecs(recs).sort(
-      (a, b) => a.start_time - b.start_time,
-    );
-    if (!merged.length) return [];
-
-    const now = Math.floor(this._winEnd || Date.now() / 1000);
-    const currentHourStart = Math.floor(now / 3600) * 3600;
-    const firstHourStart = currentHourStart - 23 * 3600;
-    const out = [];
-
-    for (let i = 0; i < 24; i++) {
-      const bucketStart = firstHourStart + i * 3600;
-      const bucketEnd = bucketStart + 3600;
-      const rowEnd = Math.min(bucketEnd, now);
-
-      // Keep only buckets that actually overlap recordings.
-      let overlap = false;
-      let events = 0;
-      for (const r of merged) {
-        const rs = Math.floor(r.start_time);
-        const re = Math.floor(r.end_time || now);
-        if (rs < bucketEnd && re > bucketStart) {
-          overlap = true;
-          events += r.events || 0;
-        }
-      }
-
-      if (overlap && rowEnd > bucketStart) {
-        out.push({
-          start_time: bucketStart,
-          end_time: rowEnd,
-          events,
-        });
-      }
-    }
-
-    return out;
   }
   _eventCardHTML(ev, expanded, compact = false) {
     const model = buildEventListItemModel(ev, {

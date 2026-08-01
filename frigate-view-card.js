@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1068";
+const VERSION = "1.0.1070";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4109,6 +4109,28 @@ function collectUniqueSourceEventsFromReviews(reviews, getSourceEvent) {
   });
   return out;
 }
+function selectFilterLabels({
+  tab,
+  reviews = [],
+  events = [],
+  getLabels = () => []
+}) {
+  if (tab === "alerts") {
+    return collectFilterLabelsFromReviews(reviews, getLabels);
+  }
+  return collectFilterLabelsFromEvents(events);
+}
+function selectFilterZones({
+  tab,
+  reviews = [],
+  events = [],
+  getZones = () => []
+}) {
+  if (tab === "alerts") {
+    return collectFilterZonesFromReviews(reviews, getZones);
+  }
+  return collectFilterZonesFromEvents(events);
+}
 function selectFilterOptionSourceEvents({
   tab,
   reviews = [],
@@ -4197,6 +4219,63 @@ function selectReviewsForFilterTab({
   const reviewSource = isGridMixedListMode ? gridReviews : reviews;
   const safeReviews = [...reviewSource || []];
   return showAllReviews ? safeReviews : safeReviews.filter((review) => review?.severity === "alert");
+}
+
+// src/card/recordings-segment-utils.js
+function mergeRecordingSegments(recordings = []) {
+  if (!recordings.length) return [];
+  const segments = [...recordings].sort((a, b) => a.start_time - b.start_time);
+  const merged = [];
+  let current = { ...segments[0] };
+  for (let i = 1; i < segments.length; i++) {
+    const segment = segments[i];
+    const currentEnd = current.end_time || current.start_time;
+    if (segment.start_time - currentEnd <= 60) {
+      current.end_time = Math.max(
+        currentEnd,
+        segment.end_time || segment.start_time
+      );
+      current.events = (current.events || 0) + (segment.events || 0);
+      continue;
+    }
+    merged.push(current);
+    current = { ...segment };
+  }
+  merged.push(current);
+  return merged;
+}
+function splitRecordingsHourly(recordings = [], nowSec = Date.now() / 1e3) {
+  const merged = mergeRecordingSegments(recordings).sort(
+    (a, b) => a.start_time - b.start_time
+  );
+  if (!merged.length) return [];
+  const now = Math.floor(nowSec || Date.now() / 1e3);
+  const currentHourStart = Math.floor(now / 3600) * 3600;
+  const firstHourStart = currentHourStart - 23 * 3600;
+  const buckets = [];
+  for (let i = 0; i < 24; i++) {
+    const bucketStart = firstHourStart + i * 3600;
+    const bucketEnd = bucketStart + 3600;
+    const rowEnd = Math.min(bucketEnd, now);
+    let overlapsRecording = false;
+    let events = 0;
+    for (const recording of merged) {
+      const recordingStart = Math.floor(recording.start_time);
+      const recordingEnd = Math.floor(recording.end_time || now);
+      if (recordingStart < bucketEnd && recordingEnd > bucketStart) {
+        overlapsRecording = true;
+        events += recording.events || 0;
+      }
+    }
+    if (overlapsRecording && rowEnd > bucketStart) {
+      buckets.push({
+        start_time: bucketStart,
+        end_time: rowEnd,
+        events
+      });
+    }
+  }
+  return buckets;
 }
 
 // src/card/controls-readout-utils.js
@@ -11187,7 +11266,7 @@ const FrigateViewCard = class extends HTMLElement {
     }).join("");
   }
   _recordingsViewRows(recs) {
-    return this._splitRecsHourly(recs).sort(
+    return splitRecordingsHourly(recs, this._winEnd || Date.now() / 1e3).sort(
       (a, b) => b.start_time - a.start_time
     );
   }
@@ -14056,28 +14135,26 @@ const FrigateViewCard = class extends HTMLElement {
     this._filterZone = normalized.filterZone;
   }
   _zones() {
-    if (this._tab === "alerts") {
-      return collectFilterZonesFromReviews(
-        this._reviewsForTabBase(),
-        (review) => {
-          const sourceEvent = this._reviewSourceEvent(review);
-          return this._reviewFilterZones(review, sourceEvent);
-        }
-      );
-    }
-    return collectFilterZonesFromEvents(this._filterOptionSourceEvents());
+    return selectFilterZones({
+      tab: this._tab,
+      reviews: this._reviewsForTabBase(),
+      events: this._filterOptionSourceEvents(),
+      getZones: (review) => {
+        const sourceEvent = this._reviewSourceEvent(review);
+        return this._reviewFilterZones(review, sourceEvent);
+      }
+    });
   }
   _labels() {
-    if (this._tab === "alerts") {
-      return collectFilterLabelsFromReviews(
-        this._reviewsForTabBase(),
-        (review) => {
-          const sourceEvent = this._reviewSourceEvent(review);
-          return this._reviewFilterLabels(review, sourceEvent);
-        }
-      );
-    }
-    return collectFilterLabelsFromEvents(this._filterOptionSourceEvents());
+    return selectFilterLabels({
+      tab: this._tab,
+      reviews: this._reviewsForTabBase(),
+      events: this._filterOptionSourceEvents(),
+      getLabels: (review) => {
+        const sourceEvent = this._reviewSourceEvent(review);
+        return this._reviewFilterLabels(review, sourceEvent);
+      }
+    });
   }
   _reviewFilterLabels(review, sourceEvent = null) {
     return buildReviewFilterLabels(review, sourceEvent);
@@ -14091,58 +14168,6 @@ const FrigateViewCard = class extends HTMLElement {
       events: this._allDisplayEvents(),
       matchesEvent: (event) => this._matchesEventFilters(event)
     });
-  }
-  _mergeRecs(recs) {
-    if (!recs.length) return [];
-    const segs = [...recs].sort((a, b) => a.start_time - b.start_time);
-    const out = [];
-    let cur = { ...segs[0] };
-    for (let i = 1; i < segs.length; i++) {
-      const s = segs[i];
-      const ce = cur.end_time || cur.start_time;
-      if (s.start_time - ce <= 60) {
-        cur.end_time = Math.max(ce, s.end_time || s.start_time);
-        cur.events = (cur.events || 0) + (s.events || 0);
-      } else {
-        out.push(cur);
-        cur = { ...s };
-      }
-    }
-    out.push(cur);
-    return out;
-  }
-  _splitRecsHourly(recs) {
-    const merged = this._mergeRecs(recs).sort(
-      (a, b) => a.start_time - b.start_time
-    );
-    if (!merged.length) return [];
-    const now = Math.floor(this._winEnd || Date.now() / 1e3);
-    const currentHourStart = Math.floor(now / 3600) * 3600;
-    const firstHourStart = currentHourStart - 23 * 3600;
-    const out = [];
-    for (let i = 0; i < 24; i++) {
-      const bucketStart = firstHourStart + i * 3600;
-      const bucketEnd = bucketStart + 3600;
-      const rowEnd = Math.min(bucketEnd, now);
-      let overlap = false;
-      let events = 0;
-      for (const r of merged) {
-        const rs = Math.floor(r.start_time);
-        const re = Math.floor(r.end_time || now);
-        if (rs < bucketEnd && re > bucketStart) {
-          overlap = true;
-          events += r.events || 0;
-        }
-      }
-      if (overlap && rowEnd > bucketStart) {
-        out.push({
-          start_time: bucketStart,
-          end_time: rowEnd,
-          events
-        });
-      }
-    }
-    return out;
   }
   _eventCardHTML(ev, expanded, compact = false) {
     const model = buildEventListItemModel(ev, {

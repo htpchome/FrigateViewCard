@@ -68,6 +68,30 @@ export function collectUniqueSourceEventsFromReviews(reviews, getSourceEvent) {
   return out;
 }
 
+export function selectFilterLabels({
+  tab,
+  reviews = [],
+  events = [],
+  getLabels = () => [],
+}) {
+  if (tab === "alerts") {
+    return collectFilterLabelsFromReviews(reviews, getLabels);
+  }
+  return collectFilterLabelsFromEvents(events);
+}
+
+export function selectFilterZones({
+  tab,
+  reviews = [],
+  events = [],
+  getZones = () => [],
+}) {
+  if (tab === "alerts") {
+    return collectFilterZonesFromReviews(reviews, getZones);
+  }
+  return collectFilterZonesFromEvents(events);
+}
+
 export function selectFilterOptionSourceEvents({
   tab,
   reviews = [],
