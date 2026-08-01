@@ -160,9 +160,11 @@ import {
   buildFilterPanelMarkup,
 } from "./calendar-filter-markup.js";
 import {
+  collectFilterLabelsFromReviews,
   buildReviewFilterLabels,
   buildReviewFilterZones,
   collectFilterLabelsFromEvents,
+  collectFilterZonesFromReviews,
   collectFilterZonesFromEvents,
   matchesEventFilters,
   normalizeFilterSelections,
@@ -5943,6 +5945,10 @@ export class FrigateViewCard extends HTMLElement {
       return true;
     }
     if (this._handlePopupMediaToolbarClick(target)) return true;
+    if (this._handleBrowseToolbarClick(target)) return true;
+    return false;
+  }
+  _handleBrowseToolbarClick(target) {
     if (target.closest("#filter-btn")) {
       this._toggleFilter();
       return true;
@@ -8237,28 +8243,26 @@ export class FrigateViewCard extends HTMLElement {
   }
   _zones() {
     if (this._tab === "alerts") {
-      const zones = new Set();
-      this._reviewsForTabBase().forEach((review) => {
-        const sourceEvent = this._reviewSourceEvent(review);
-        this._reviewFilterZones(review, sourceEvent).forEach((zone) =>
-          zones.add(zone),
-        );
-      });
-      return [...zones];
+      return collectFilterZonesFromReviews(
+        this._reviewsForTabBase(),
+        (review) => {
+          const sourceEvent = this._reviewSourceEvent(review);
+          return this._reviewFilterZones(review, sourceEvent);
+        },
+      );
     }
     return collectFilterZonesFromEvents(this._filterOptionSourceEvents());
   }
 
   _labels() {
     if (this._tab === "alerts") {
-      const labels = new Set();
-      this._reviewsForTabBase().forEach((review) => {
-        const sourceEvent = this._reviewSourceEvent(review);
-        this._reviewFilterLabels(review, sourceEvent).forEach((label) =>
-          labels.add(label),
-        );
-      });
-      return [...labels];
+      return collectFilterLabelsFromReviews(
+        this._reviewsForTabBase(),
+        (review) => {
+          const sourceEvent = this._reviewSourceEvent(review);
+          return this._reviewFilterLabels(review, sourceEvent);
+        },
+      );
     }
     return collectFilterLabelsFromEvents(this._filterOptionSourceEvents());
   }

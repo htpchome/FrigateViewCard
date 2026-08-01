@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1057";
+const VERSION = "1.0.1059";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4075,6 +4075,24 @@ function collectFilterZonesFromEvents(events) {
   const zones = new Set();
   (events || []).forEach((event) => {
     (event?.zones || []).forEach((zone) => {
+      if (zone) zones.add(zone);
+    });
+  });
+  return [...zones];
+}
+function collectFilterLabelsFromReviews(reviews, getLabels) {
+  const labels = new Set();
+  (reviews || []).forEach((review) => {
+    (getLabels(review) || []).forEach((label) => {
+      if (label) labels.add(label);
+    });
+  });
+  return [...labels];
+}
+function collectFilterZonesFromReviews(reviews, getZones) {
+  const zones = new Set();
+  (reviews || []).forEach((review) => {
+    (getZones(review) || []).forEach((zone) => {
       if (zone) zones.add(zone);
     });
   });
@@ -11879,6 +11897,10 @@ const FrigateViewCard = class extends HTMLElement {
       return true;
     }
     if (this._handlePopupMediaToolbarClick(target)) return true;
+    if (this._handleBrowseToolbarClick(target)) return true;
+    return false;
+  }
+  _handleBrowseToolbarClick(target) {
     if (target.closest("#filter-btn")) {
       this._toggleFilter();
       return true;
@@ -13949,27 +13971,25 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _zones() {
     if (this._tab === "alerts") {
-      const zones = new Set();
-      this._reviewsForTabBase().forEach((review) => {
-        const sourceEvent = this._reviewSourceEvent(review);
-        this._reviewFilterZones(review, sourceEvent).forEach(
-          (zone) => zones.add(zone)
-        );
-      });
-      return [...zones];
+      return collectFilterZonesFromReviews(
+        this._reviewsForTabBase(),
+        (review) => {
+          const sourceEvent = this._reviewSourceEvent(review);
+          return this._reviewFilterZones(review, sourceEvent);
+        }
+      );
     }
     return collectFilterZonesFromEvents(this._filterOptionSourceEvents());
   }
   _labels() {
     if (this._tab === "alerts") {
-      const labels = new Set();
-      this._reviewsForTabBase().forEach((review) => {
-        const sourceEvent = this._reviewSourceEvent(review);
-        this._reviewFilterLabels(review, sourceEvent).forEach(
-          (label) => labels.add(label)
-        );
-      });
-      return [...labels];
+      return collectFilterLabelsFromReviews(
+        this._reviewsForTabBase(),
+        (review) => {
+          const sourceEvent = this._reviewSourceEvent(review);
+          return this._reviewFilterLabels(review, sourceEvent);
+        }
+      );
     }
     return collectFilterLabelsFromEvents(this._filterOptionSourceEvents());
   }

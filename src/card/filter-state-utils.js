@@ -36,6 +36,26 @@ export function collectFilterZonesFromEvents(events) {
   return [...zones];
 }
 
+export function collectFilterLabelsFromReviews(reviews, getLabels) {
+  const labels = new Set();
+  (reviews || []).forEach((review) => {
+    (getLabels(review) || []).forEach((label) => {
+      if (label) labels.add(label);
+    });
+  });
+  return [...labels];
+}
+
+export function collectFilterZonesFromReviews(reviews, getZones) {
+  const zones = new Set();
+  (reviews || []).forEach((review) => {
+    (getZones(review) || []).forEach((zone) => {
+      if (zone) zones.add(zone);
+    });
+  });
+  return [...zones];
+}
+
 export function normalizeFilterSelections({
   filterLabel,
   filterZone,
