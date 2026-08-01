@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1055";
+const VERSION = "1.0.1057";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4043,6 +4043,66 @@ function buildFilterPanelMarkup({
       <div class="frow"><span class="frow-l">Show</span>
         <button class="chip ${!favOnly ? "on" : ""}" data-favonly="0">All</button>
         <button class="chip ${favOnly ? "on" : ""}" data-favonly="1">\u2605 Favorites</button></div>`;
+}
+
+// src/card/filter-state-utils.js
+function buildReviewFilterLabels(review, sourceEvent = null) {
+  const labels = new Set();
+  if (sourceEvent?.label) labels.add(sourceEvent.label);
+  (review?.data?.objects || []).forEach((label) => {
+    if (label) labels.add(label);
+  });
+  return [...labels];
+}
+function buildReviewFilterZones(review, sourceEvent = null) {
+  const zones = new Set();
+  (sourceEvent?.zones || []).forEach((zone) => {
+    if (zone) zones.add(zone);
+  });
+  (review?.data?.zones || []).forEach((zone) => {
+    if (zone) zones.add(zone);
+  });
+  return [...zones];
+}
+function collectFilterLabelsFromEvents(events) {
+  const labels = new Set();
+  (events || []).forEach((event) => {
+    if (event?.label) labels.add(event.label);
+  });
+  return [...labels];
+}
+function collectFilterZonesFromEvents(events) {
+  const zones = new Set();
+  (events || []).forEach((event) => {
+    (event?.zones || []).forEach((zone) => {
+      if (zone) zones.add(zone);
+    });
+  });
+  return [...zones];
+}
+function normalizeFilterSelections({
+  filterLabel,
+  filterZone,
+  labels,
+  zones
+}) {
+  return {
+    filterLabel: filterLabel !== "all" && !(labels || []).includes(filterLabel) ? "all" : filterLabel,
+    filterZone: filterZone !== "all" && !(zones || []).includes(filterZone) ? "all" : filterZone
+  };
+}
+function matchesEventFilters(event, { filterLabel = "all", filterZone = "all", favOnly = false } = {}) {
+  if (!event) return false;
+  if (filterLabel !== "all" && event.label !== filterLabel) {
+    return false;
+  }
+  if (filterZone !== "all" && !(event.zones || []).includes(filterZone)) {
+    return false;
+  }
+  if (favOnly && !event.retain_indefinitely) {
+    return false;
+  }
+  return true;
 }
 
 // src/card/controls-readout-utils.js
@@ -11818,6 +11878,34 @@ const FrigateViewCard = class extends HTMLElement {
       this._fullscreen(this._$("#eng-wrap"), { preferLive: true });
       return true;
     }
+    if (this._handlePopupMediaToolbarClick(target)) return true;
+    if (target.closest("#filter-btn")) {
+      this._toggleFilter();
+      return true;
+    }
+    if (target.closest("#cal-btn")) {
+      this._toggleCal();
+      return true;
+    }
+    if (target.closest("#controls-btn")) {
+      if (this._tab === "controls") {
+        this._setTab(this._resolveControlsReturnTab());
+      } else {
+        this._setTab("controls");
+      }
+      return true;
+    }
+    const recDayNav = target.closest("[data-rec-day-nav]");
+    if (recDayNav) {
+      const dir = Number(recDayNav.dataset.recDayNav || 0);
+      if (dir) {
+        void this._navigateRecordingsDayAnimated(dir);
+      }
+      return true;
+    }
+    return false;
+  }
+  _handlePopupMediaToolbarClick(target) {
     if (target.closest("#popup-fs-btn")) {
       this._fullscreen(this._$("#viewer"));
       return true;
@@ -11843,30 +11931,6 @@ const FrigateViewCard = class extends HTMLElement {
     if (carouselNav) {
       const dir = Number(carouselNav.dataset.carouselDir || 0);
       if (dir) this._scrollPopupCarousel(dir);
-      return true;
-    }
-    if (target.closest("#filter-btn")) {
-      this._toggleFilter();
-      return true;
-    }
-    if (target.closest("#cal-btn")) {
-      this._toggleCal();
-      return true;
-    }
-    if (target.closest("#controls-btn")) {
-      if (this._tab === "controls") {
-        this._setTab(this._resolveControlsReturnTab());
-      } else {
-        this._setTab("controls");
-      }
-      return true;
-    }
-    const recDayNav = target.closest("[data-rec-day-nav]");
-    if (recDayNav) {
-      const dir = Number(recDayNav.dataset.recDayNav || 0);
-      if (dir) {
-        void this._navigateRecordingsDayAnimated(dir);
-      }
       return true;
     }
     return false;
@@ -13848,17 +13912,11 @@ const FrigateViewCard = class extends HTMLElement {
     return this._allDisplayEvents();
   }
   _matchesEventFilters(ev) {
-    if (!ev) return false;
-    if (this._filterLabel !== "all" && ev.label !== this._filterLabel) {
-      return false;
-    }
-    if (this._filterZone !== "all" && !(ev.zones || []).includes(this._filterZone)) {
-      return false;
-    }
-    if (this._favOnly && !ev.retain_indefinitely) {
-      return false;
-    }
-    return true;
+    return matchesEventFilters(ev, {
+      filterLabel: this._filterLabel,
+      filterZone: this._filterZone,
+      favOnly: this._favOnly
+    });
   }
   _filteredReviews() {
     return this._reviewsForTabBase().filter((review) => {
@@ -13880,14 +13938,14 @@ const FrigateViewCard = class extends HTMLElement {
     return source.filter((ev) => this._matchesEventFilters(ev));
   }
   _normalizeFilterSelections() {
-    const labels = this._labels();
-    const zones = this._zones();
-    if (this._filterLabel !== "all" && !labels.includes(this._filterLabel)) {
-      this._filterLabel = "all";
-    }
-    if (this._filterZone !== "all" && !zones.includes(this._filterZone)) {
-      this._filterZone = "all";
-    }
+    const normalized = normalizeFilterSelections({
+      filterLabel: this._filterLabel,
+      filterZone: this._filterZone,
+      labels: this._labels(),
+      zones: this._zones()
+    });
+    this._filterLabel = normalized.filterLabel;
+    this._filterZone = normalized.filterZone;
   }
   _zones() {
     if (this._tab === "alerts") {
@@ -13900,11 +13958,7 @@ const FrigateViewCard = class extends HTMLElement {
       });
       return [...zones];
     }
-    const z = new Set();
-    this._filterOptionSourceEvents().forEach(
-      (e) => (e.zones || []).forEach((x) => z.add(x))
-    );
-    return [...z];
+    return collectFilterZonesFromEvents(this._filterOptionSourceEvents());
   }
   _labels() {
     if (this._tab === "alerts") {
@@ -13917,27 +13971,13 @@ const FrigateViewCard = class extends HTMLElement {
       });
       return [...labels];
     }
-    const l = new Set();
-    this._filterOptionSourceEvents().forEach((e) => e.label && l.add(e.label));
-    return [...l];
+    return collectFilterLabelsFromEvents(this._filterOptionSourceEvents());
   }
   _reviewFilterLabels(review, sourceEvent = null) {
-    const labels = new Set();
-    if (sourceEvent?.label) labels.add(sourceEvent.label);
-    (review?.data?.objects || []).forEach((label) => {
-      if (label) labels.add(label);
-    });
-    return [...labels];
+    return buildReviewFilterLabels(review, sourceEvent);
   }
   _reviewFilterZones(review, sourceEvent = null) {
-    const zones = new Set();
-    (sourceEvent?.zones || []).forEach((zone) => {
-      if (zone) zones.add(zone);
-    });
-    (review?.data?.zones || []).forEach((zone) => {
-      if (zone) zones.add(zone);
-    });
-    return [...zones];
+    return buildReviewFilterZones(review, sourceEvent);
   }
   _filtered() {
     let list = this._allDisplayEvents();
