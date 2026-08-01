@@ -12,6 +12,7 @@ import {
   matchesEventFilters,
   matchesReviewFilters,
   normalizeFilterSelections,
+  selectFilteredEvents,
   selectFilterOptionSourceEvents,
 } from "../src/card/filter-state-utils.js";
 
@@ -151,6 +152,50 @@ test("selectFilterOptionSourceEvents uses display events for other tabs", () => 
 
   assert.deepEqual(events, displayEvents);
   assert.notEqual(events, displayEvents);
+});
+
+test("selectFilteredEvents filters clips before applying event matcher", () => {
+  const events = selectFilteredEvents({
+    tab: "clips",
+    events: [
+      { id: "a", has_clip: true, has_snapshot: false },
+      { id: "b", has_clip: false, has_snapshot: true },
+      { id: "c", has_clip: true, has_snapshot: true },
+    ],
+    matchesEvent: (event) => event.id !== "c",
+  });
+
+  assert.deepEqual(events, [{ id: "a", has_clip: true, has_snapshot: false }]);
+});
+
+test("selectFilteredEvents filters snapshots before applying event matcher", () => {
+  const events = selectFilteredEvents({
+    tab: "snapshot",
+    events: [
+      { id: "a", has_clip: true, has_snapshot: false },
+      { id: "b", has_clip: false, has_snapshot: true },
+      { id: "c", has_clip: true, has_snapshot: true },
+    ],
+    matchesEvent: (event) => event.id !== "b",
+  });
+
+  assert.deepEqual(events, [{ id: "c", has_clip: true, has_snapshot: true }]);
+});
+
+test("selectFilteredEvents applies matcher directly for non-media tabs", () => {
+  const source = [
+    { id: "a", has_clip: true, has_snapshot: false },
+    { id: "b", has_clip: false, has_snapshot: true },
+  ];
+
+  const events = selectFilteredEvents({
+    tab: "alerts",
+    events: source,
+    matchesEvent: (event) => event.id === "b",
+  });
+
+  assert.deepEqual(events, [{ id: "b", has_clip: false, has_snapshot: true }]);
+  assert.notEqual(events, source);
 });
 
 test("normalizeFilterSelections resets missing label and zone to all", () => {

@@ -141,3 +141,17 @@ export function matchesReviewFilters(
   }
   return true;
 }
+
+export function selectFilteredEvents({
+  tab,
+  events = [],
+  matchesEvent = () => true,
+}) {
+  let filteredEvents = [...(events || [])];
+  if (tab === "clips") {
+    filteredEvents = filteredEvents.filter((event) => event?.has_clip);
+  } else if (tab === "snapshot") {
+    filteredEvents = filteredEvents.filter((event) => event?.has_snapshot);
+  }
+  return filteredEvents.filter((event) => matchesEvent(event));
+}

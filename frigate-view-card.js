@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1064";
+const VERSION = "1.0.1065";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4165,6 +4165,19 @@ function matchesReviewFilters(review, sourceEvent, {
     if (!zones.includes(filterZone)) return false;
   }
   return true;
+}
+function selectFilteredEvents({
+  tab,
+  events = [],
+  matchesEvent = () => true
+}) {
+  let filteredEvents = [...events || []];
+  if (tab === "clips") {
+    filteredEvents = filteredEvents.filter((event) => event?.has_clip);
+  } else if (tab === "snapshot") {
+    filteredEvents = filteredEvents.filter((event) => event?.has_snapshot);
+  }
+  return filteredEvents.filter((event) => matchesEvent(event));
 }
 
 // src/card/controls-readout-utils.js
@@ -14045,12 +14058,11 @@ const FrigateViewCard = class extends HTMLElement {
     return buildReviewFilterZones(review, sourceEvent);
   }
   _filtered() {
-    let list = this._allDisplayEvents();
-    if (this._tab === "clips") list = list.filter((e) => e.has_clip);
-    else if (this._tab === "snapshot")
-      list = list.filter((e) => e.has_snapshot);
-    list = list.filter((e) => this._matchesEventFilters(e));
-    return list;
+    return selectFilteredEvents({
+      tab: this._tab,
+      events: this._allDisplayEvents(),
+      matchesEvent: (event) => this._matchesEventFilters(event)
+    });
   }
   _mergeRecs(recs) {
     if (!recs.length) return [];

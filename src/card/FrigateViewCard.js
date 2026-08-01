@@ -170,6 +170,7 @@ import {
   matchesEventFilters,
   matchesReviewFilters,
   normalizeFilterSelections,
+  selectFilteredEvents,
   selectFilterOptionSourceEvents,
 } from "./filter-state-utils.js";
 import {
@@ -8281,12 +8282,11 @@ export class FrigateViewCard extends HTMLElement {
     return buildReviewFilterZones(review, sourceEvent);
   }
   _filtered() {
-    let list = this._allDisplayEvents();
-    if (this._tab === "clips") list = list.filter((e) => e.has_clip);
-    else if (this._tab === "snapshot")
-      list = list.filter((e) => e.has_snapshot);
-    list = list.filter((e) => this._matchesEventFilters(e));
-    return list;
+    return selectFilteredEvents({
+      tab: this._tab,
+      events: this._allDisplayEvents(),
+      matchesEvent: (event) => this._matchesEventFilters(event),
+    });
   }
   _mergeRecs(recs) {
     if (!recs.length) return [];
