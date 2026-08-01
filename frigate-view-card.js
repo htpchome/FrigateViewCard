@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1076";
+const VERSION = "1.0.1077";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -610,7 +610,7 @@ const STYLES = `
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 
   /* \u2500\u2500 filter + cal \u2500\u2500 */
-  .filter-panel,.cal-panel{display: none;position: absolute;right:0;background-color: #f1f1f1;min-width: 300px;overflow: auto;box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 3;padding:20px;}
+  .filter-panel,.cal-panel{display: none;position: absolute;right:0;background-color: #f1f1f1;min-width: 300px;overflow: auto;border-top: 1px solid var(--c-primary);box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 3;padding:20px;}
   .frow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px;} .frow:last-child{margin-bottom:0;} .frow-l{font-size:0.75rem;color:var(--c-text3);width:38px;text-transform:uppercase;flex-shrink:0;}
   .chip{background:var(--c-bg-panel);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:10px;padding:3.6px 10.8px;font-size:0.825rem;cursor:pointer;}
   .chip.on{background:var(--c-primary-l);border-color:var(--c-primary-d);color:var(--c-primary-d);}
@@ -4817,6 +4817,29 @@ function buildRecordingsListMarkup({
 // src/card/recordings-swipe-utils.js
 const RECORDINGS_SWIPE_LOADING_HTML = '<div class="empty">Loading day\u2026</div>';
 const RECORDINGS_SWIPE_EMPTY_HTML = '<div class="empty">No recordings in this day</div>';
+function resolveRecordingsSwipeStageMetrics({
+  list = null,
+  lastRenderedListHtml = ""
+}) {
+  return {
+    width: Math.max(1, Math.round(Number(list?.clientWidth || 1))),
+    currentHtml: String(list?.innerHTML || lastRenderedListHtml || ""),
+    minHeight: Math.max(
+      220,
+      Number(list?.scrollHeight || list?.clientHeight || 220)
+    )
+  };
+}
+function resolveRecordingsSwipeStageTransforms({
+  offset = 0,
+  direction = 0,
+  width = 0
+}) {
+  return {
+    currentTransform: `translateX(${offset}px)`,
+    incomingTransform: `translateX(${offset + direction * width}px)`
+  };
+}
 function createRecordingsSwipeGestureState(direction, stage = null) {
   return {
     direction,
@@ -11476,14 +11499,16 @@ const FrigateViewCard = class extends HTMLElement {
   _createRecordingsSwipeStage(direction, incomingHtml) {
     const list = this._$("#list");
     if (!list) return null;
-    const width = Math.max(1, Math.round(list.clientWidth || 1));
-    const currentHtml = list.innerHTML || this._lastRenderedListHtml || "";
+    const metrics = resolveRecordingsSwipeStageMetrics({
+      list,
+      lastRenderedListHtml: this._lastRenderedListHtml
+    });
     const stage = document.createElement("div");
     stage.className = "rec-swipe-stage";
-    stage.style.minHeight = `${Math.max(220, list.scrollHeight || list.clientHeight || 220)}px`;
+    stage.style.minHeight = `${metrics.minHeight}px`;
     const current = document.createElement("div");
     current.className = "rec-swipe-pane current";
-    current.innerHTML = currentHtml;
+    current.innerHTML = metrics.currentHtml;
     const incoming = document.createElement("div");
     incoming.className = "rec-swipe-pane incoming";
     incoming.innerHTML = incomingHtml;
@@ -11498,7 +11523,7 @@ const FrigateViewCard = class extends HTMLElement {
       current,
       incoming,
       direction,
-      width,
+      width: metrics.width,
       offset: 0
     };
     this._setRecordingsSwipeStageOffset(state, 0);
@@ -11509,8 +11534,13 @@ const FrigateViewCard = class extends HTMLElement {
     state.offset = offset;
     state.current.style.transition = transition;
     state.incoming.style.transition = transition;
-    state.current.style.transform = `translateX(${offset}px)`;
-    state.incoming.style.transform = `translateX(${offset + state.direction * state.width}px)`;
+    const transforms = resolveRecordingsSwipeStageTransforms({
+      offset,
+      direction: state.direction,
+      width: state.width
+    });
+    state.current.style.transform = transforms.currentTransform;
+    state.incoming.style.transform = transforms.incomingTransform;
   }
   _animateRecordingsSwipeStageTo(state, offset, duration = 260, easing = "cubic-bezier(0.18, 0.5, 0.2, 1)") {
     if (!state) return Promise.resolve();

@@ -224,6 +224,8 @@ import {
   RECORDINGS_SWIPE_LOADING_HTML,
   resolveFailedRecordingsSwipeState,
   resolvePreparedRecordingsSwipeState,
+  resolveRecordingsSwipeStageMetrics,
+  resolveRecordingsSwipeStageTransforms,
 } from "./recordings-swipe-utils.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
@@ -5057,15 +5059,17 @@ export class FrigateViewCard extends HTMLElement {
   _createRecordingsSwipeStage(direction, incomingHtml) {
     const list = this._$("#list");
     if (!list) return null;
-    const width = Math.max(1, Math.round(list.clientWidth || 1));
-    const currentHtml = list.innerHTML || this._lastRenderedListHtml || "";
+    const metrics = resolveRecordingsSwipeStageMetrics({
+      list,
+      lastRenderedListHtml: this._lastRenderedListHtml,
+    });
     const stage = document.createElement("div");
     stage.className = "rec-swipe-stage";
-    stage.style.minHeight = `${Math.max(220, list.scrollHeight || list.clientHeight || 220)}px`;
+    stage.style.minHeight = `${metrics.minHeight}px`;
 
     const current = document.createElement("div");
     current.className = "rec-swipe-pane current";
-    current.innerHTML = currentHtml;
+    current.innerHTML = metrics.currentHtml;
 
     const incoming = document.createElement("div");
     incoming.className = "rec-swipe-pane incoming";
@@ -5083,7 +5087,7 @@ export class FrigateViewCard extends HTMLElement {
       current,
       incoming,
       direction,
-      width,
+      width: metrics.width,
       offset: 0,
     };
     this._setRecordingsSwipeStageOffset(state, 0);
@@ -5095,8 +5099,13 @@ export class FrigateViewCard extends HTMLElement {
     state.offset = offset;
     state.current.style.transition = transition;
     state.incoming.style.transition = transition;
-    state.current.style.transform = `translateX(${offset}px)`;
-    state.incoming.style.transform = `translateX(${offset + state.direction * state.width}px)`;
+    const transforms = resolveRecordingsSwipeStageTransforms({
+      offset,
+      direction: state.direction,
+      width: state.width,
+    });
+    state.current.style.transform = transforms.currentTransform;
+    state.incoming.style.transform = transforms.incomingTransform;
   }
 
   _animateRecordingsSwipeStageTo(

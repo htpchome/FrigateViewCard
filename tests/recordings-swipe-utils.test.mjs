@@ -7,7 +7,59 @@ import {
   RECORDINGS_SWIPE_LOADING_HTML,
   resolveFailedRecordingsSwipeState,
   resolvePreparedRecordingsSwipeState,
+  resolveRecordingsSwipeStageMetrics,
+  resolveRecordingsSwipeStageTransforms,
 } from "../src/card/recordings-swipe-utils.js";
+
+test("resolveRecordingsSwipeStageMetrics derives width, current HTML, and minimum height", () => {
+  const metrics = resolveRecordingsSwipeStageMetrics({
+    list: {
+      clientWidth: 212.4,
+      innerHTML: "<div>current</div>",
+      scrollHeight: 180,
+      clientHeight: 150,
+    },
+    lastRenderedListHtml: "<div>fallback</div>",
+  });
+
+  assert.deepEqual(metrics, {
+    width: 212,
+    currentHtml: "<div>current</div>",
+    minHeight: 220,
+  });
+});
+
+test("resolveRecordingsSwipeStageMetrics falls back to cached HTML and client height", () => {
+  const metrics = resolveRecordingsSwipeStageMetrics({
+    list: {
+      clientWidth: 0,
+      innerHTML: "",
+      scrollHeight: 0,
+      clientHeight: 260,
+    },
+    lastRenderedListHtml: "<div>fallback</div>",
+  });
+
+  assert.deepEqual(metrics, {
+    width: 1,
+    currentHtml: "<div>fallback</div>",
+    minHeight: 260,
+  });
+});
+
+test("resolveRecordingsSwipeStageTransforms derives current and incoming offsets", () => {
+  assert.deepEqual(
+    resolveRecordingsSwipeStageTransforms({
+      offset: -40,
+      direction: 1,
+      width: 240,
+    }),
+    {
+      currentTransform: "translateX(-40px)",
+      incomingTransform: "translateX(200px)",
+    },
+  );
+});
 
 test("createRecordingsSwipeGestureState builds the initial gesture shape", () => {
   const stage = { incoming: {} };
