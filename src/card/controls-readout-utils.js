@@ -31,6 +31,18 @@ export function isControlsReadoutClearTarget(target) {
   );
 }
 
+export function resolveControlsPadPressReadoutEntry(event) {
+  if (!isControlsPadTarget(event?.target)) return "";
+  const action = event?.detail?.action;
+  return action ? `[${action}]` : "";
+}
+
+export function resolveControlsPadToggleReadoutEntry(event) {
+  if (!isControlsPadTarget(event?.target)) return "";
+  if (event?.detail?.action !== "mic") return "";
+  return event?.detail?.active ? "[mic:on]" : "[mic:off]";
+}
+
 export function resolveControlsReadoutMarkup(lines, escapeText) {
   if (!Array.isArray(lines) || lines.length === 0) {
     return buildControlsReadoutEmptyMarkup();

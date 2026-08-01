@@ -160,6 +160,8 @@ import {
   clearControlsReadoutLines,
   isControlsPadTarget,
   isControlsReadoutClearTarget,
+  resolveControlsPadPressReadoutEntry,
+  resolveControlsPadToggleReadoutEntry,
   resolveControlsReadoutMarkup,
 } from "./controls-readout-utils.js";
 import {
@@ -239,17 +241,14 @@ export class FrigateViewCard extends HTMLElement {
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
     this._controlsReadoutLines = [];
     this._onCirclePadPress = (event) => {
-      if (!this._isControlsPadEvent(event)) return;
-      const action = event?.detail?.action;
-      if (!action) return;
-      this._appendControlsReadoutEntry(`[${action}]`);
+      const entry = resolveControlsPadPressReadoutEntry(event);
+      if (!entry) return;
+      this._appendControlsReadoutEntry(entry);
     };
     this._onCirclePadToggle = (event) => {
-      if (!this._isControlsPadEvent(event)) return;
-      if (event?.detail?.action !== "mic") return;
-      this._appendControlsReadoutEntry(
-        event?.detail?.active ? "[mic:on]" : "[mic:off]",
-      );
+      const entry = resolveControlsPadToggleReadoutEntry(event);
+      if (!entry) return;
+      this._appendControlsReadoutEntry(entry);
     };
     this.shadowRoot.addEventListener(
       "circle-pad-press",

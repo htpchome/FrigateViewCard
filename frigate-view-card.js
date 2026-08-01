@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1041";
+const VERSION = "1.0.1042";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4020,6 +4020,16 @@ function isControlsPadTarget(target) {
 function isControlsReadoutClearTarget(target) {
   return target instanceof Element && !!target.closest("#controls-readout-clear");
 }
+function resolveControlsPadPressReadoutEntry(event) {
+  if (!isControlsPadTarget(event?.target)) return "";
+  const action = event?.detail?.action;
+  return action ? `[${action}]` : "";
+}
+function resolveControlsPadToggleReadoutEntry(event) {
+  if (!isControlsPadTarget(event?.target)) return "";
+  if (event?.detail?.action !== "mic") return "";
+  return event?.detail?.active ? "[mic:on]" : "[mic:off]";
+}
 function resolveControlsReadoutMarkup(lines, escapeText) {
   if (!Array.isArray(lines) || lines.length === 0) {
     return buildControlsReadoutEmptyMarkup();
@@ -6810,17 +6820,14 @@ const FrigateViewCard = class extends HTMLElement {
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
     this._controlsReadoutLines = [];
     this._onCirclePadPress = (event) => {
-      if (!this._isControlsPadEvent(event)) return;
-      const action = event?.detail?.action;
-      if (!action) return;
-      this._appendControlsReadoutEntry(`[${action}]`);
+      const entry = resolveControlsPadPressReadoutEntry(event);
+      if (!entry) return;
+      this._appendControlsReadoutEntry(entry);
     };
     this._onCirclePadToggle = (event) => {
-      if (!this._isControlsPadEvent(event)) return;
-      if (event?.detail?.action !== "mic") return;
-      this._appendControlsReadoutEntry(
-        event?.detail?.active ? "[mic:on]" : "[mic:off]"
-      );
+      const entry = resolveControlsPadToggleReadoutEntry(event);
+      if (!entry) return;
+      this._appendControlsReadoutEntry(entry);
     };
     this.shadowRoot.addEventListener(
       "circle-pad-press",
