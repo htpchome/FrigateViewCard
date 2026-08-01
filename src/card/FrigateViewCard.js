@@ -6073,11 +6073,7 @@ export class FrigateViewCard extends HTMLElement {
   }
   _handleListClick(e, target) {
     this._pauseSlideshowForInteraction();
-    if (isControlsReadoutClearTarget(target)) {
-      e.stopPropagation();
-      this._clearControlsReadout();
-      return true;
-    }
+    if (this._handleControlsListClick(e, target)) return true;
     const dl = target.closest("[data-dl]");
     if (dl) {
       e.stopPropagation();
@@ -6138,6 +6134,12 @@ export class FrigateViewCard extends HTMLElement {
       return true;
     }
     return false;
+  }
+  _handleControlsListClick(e, target) {
+    if (!isControlsReadoutClearTarget(target)) return false;
+    e.stopPropagation();
+    this._clearControlsReadout();
+    return true;
   }
   _handleEventClick(target) {
     const card = target.closest("[data-ev]");
