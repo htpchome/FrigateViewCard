@@ -218,6 +218,13 @@ import {
 } from "./recordings-availability-utils.js";
 import { resolveRecordingsBrowseNavState } from "./recordings-browse-nav-utils.js";
 import { buildRecordingsListMarkup } from "./recordings-list-markup.js";
+import {
+  createRecordingsSwipeGestureState,
+  RECORDINGS_SWIPE_EMPTY_HTML,
+  RECORDINGS_SWIPE_LOADING_HTML,
+  resolveFailedRecordingsSwipeState,
+  resolvePreparedRecordingsSwipeState,
+} from "./recordings-swipe-utils.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import { PageNavigationController } from "../navigation/page-navigation-controller.js";
@@ -5117,39 +5124,31 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _startRecordingsSwipeGesture(direction) {
-    const loadingHtml = '<div class="empty">Loading day…</div>';
-    const stage = this._createRecordingsSwipeStage(direction, loadingHtml);
-    const gesture = {
+    const stage = this._createRecordingsSwipeStage(
       direction,
-      stage,
-      hasData: false,
-      ready: false,
-      bounds: null,
-      recs: [],
-      prepPromise: null,
-    };
+      RECORDINGS_SWIPE_LOADING_HTML,
+    );
+    const gesture = createRecordingsSwipeGestureState(direction, stage);
     gesture.prepPromise = (async () => {
       try {
         const prep = await this._prepareRecordingsDayTransition(direction);
-        gesture.ready = true;
-        gesture.hasData = prep.hasData;
-        gesture.bounds = prep.bounds;
-        gesture.recs = prep.recs;
+        Object.assign(
+          gesture,
+          resolvePreparedRecordingsSwipeState({
+            prep,
+            renderRecordings: (recordings) =>
+              this._recordingsListMarkup(this._recordingsViewRows(recordings)),
+          }),
+        );
         if (gesture.stage?.incoming) {
           gesture.stage.incoming.classList.remove("loading");
-          gesture.stage.incoming.innerHTML = prep.hasData
-            ? this._recordingsListMarkup(this._recordingsViewRows(prep.recs))
-            : '<div class="empty">No recordings in this day</div>';
+          gesture.stage.incoming.innerHTML = gesture.incomingHtml;
         }
       } catch (_) {
-        gesture.ready = true;
-        gesture.hasData = false;
-        gesture.bounds = null;
-        gesture.recs = [];
+        Object.assign(gesture, resolveFailedRecordingsSwipeState());
         if (gesture.stage?.incoming) {
           gesture.stage.incoming.classList.remove("loading");
-          gesture.stage.incoming.innerHTML =
-            '<div class="empty">No recordings in this day</div>';
+          gesture.stage.incoming.innerHTML = RECORDINGS_SWIPE_EMPTY_HTML;
         }
       }
     })();

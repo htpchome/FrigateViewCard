@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1075";
+const VERSION = "1.0.1076";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4812,6 +4812,45 @@ function buildRecordingsListMarkup({
         <button class="rp" data-rec-dl-start="${recordingStart}" data-rec-dl-end="${recordingEnd}" title="Download recording" aria-label="Download recording">${downloadIcon}</button>
       </div>`;
   }).join("");
+}
+
+// src/card/recordings-swipe-utils.js
+const RECORDINGS_SWIPE_LOADING_HTML = '<div class="empty">Loading day\u2026</div>';
+const RECORDINGS_SWIPE_EMPTY_HTML = '<div class="empty">No recordings in this day</div>';
+function createRecordingsSwipeGestureState(direction, stage = null) {
+  return {
+    direction,
+    stage,
+    hasData: false,
+    ready: false,
+    bounds: null,
+    recs: [],
+    prepPromise: null
+  };
+}
+function resolvePreparedRecordingsSwipeState({
+  prep = null,
+  renderRecordings = () => ""
+}) {
+  const safePrep = prep || {};
+  const recordings = Array.isArray(safePrep.recs) ? safePrep.recs : [];
+  const hasData = !!safePrep.hasData;
+  return {
+    ready: true,
+    hasData,
+    bounds: safePrep.bounds || null,
+    recs: recordings,
+    incomingHtml: hasData ? renderRecordings(recordings) : RECORDINGS_SWIPE_EMPTY_HTML
+  };
+}
+function resolveFailedRecordingsSwipeState() {
+  return {
+    ready: true,
+    hasData: false,
+    bounds: null,
+    recs: [],
+    incomingHtml: RECORDINGS_SWIPE_EMPTY_HTML
+  };
 }
 
 // src/preview/preview-utils.js
@@ -11491,36 +11530,30 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderList();
   }
   _startRecordingsSwipeGesture(direction) {
-    const loadingHtml = '<div class="empty">Loading day\u2026</div>';
-    const stage = this._createRecordingsSwipeStage(direction, loadingHtml);
-    const gesture = {
+    const stage = this._createRecordingsSwipeStage(
       direction,
-      stage,
-      hasData: false,
-      ready: false,
-      bounds: null,
-      recs: [],
-      prepPromise: null
-    };
+      RECORDINGS_SWIPE_LOADING_HTML
+    );
+    const gesture = createRecordingsSwipeGestureState(direction, stage);
     gesture.prepPromise = (async () => {
       try {
         const prep = await this._prepareRecordingsDayTransition(direction);
-        gesture.ready = true;
-        gesture.hasData = prep.hasData;
-        gesture.bounds = prep.bounds;
-        gesture.recs = prep.recs;
+        Object.assign(
+          gesture,
+          resolvePreparedRecordingsSwipeState({
+            prep,
+            renderRecordings: (recordings) => this._recordingsListMarkup(this._recordingsViewRows(recordings))
+          })
+        );
         if (gesture.stage?.incoming) {
           gesture.stage.incoming.classList.remove("loading");
-          gesture.stage.incoming.innerHTML = prep.hasData ? this._recordingsListMarkup(this._recordingsViewRows(prep.recs)) : '<div class="empty">No recordings in this day</div>';
+          gesture.stage.incoming.innerHTML = gesture.incomingHtml;
         }
       } catch (_) {
-        gesture.ready = true;
-        gesture.hasData = false;
-        gesture.bounds = null;
-        gesture.recs = [];
+        Object.assign(gesture, resolveFailedRecordingsSwipeState());
         if (gesture.stage?.incoming) {
           gesture.stage.incoming.classList.remove("loading");
-          gesture.stage.incoming.innerHTML = '<div class="empty">No recordings in this day</div>';
+          gesture.stage.incoming.innerHTML = RECORDINGS_SWIPE_EMPTY_HTML;
         }
       }
     })();
