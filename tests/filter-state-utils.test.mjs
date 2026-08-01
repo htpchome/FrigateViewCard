@@ -9,6 +9,7 @@ import {
   collectFilterZonesFromEvents,
   collectFilterZonesFromReviews,
   matchesEventFilters,
+  matchesReviewFilters,
   normalizeFilterSelections,
 } from "../src/card/filter-state-utils.js";
 
@@ -168,4 +169,63 @@ test("matchesEventFilters handles label, zone, and favorite checks", () => {
 
 test("matchesEventFilters rejects missing events", () => {
   assert.equal(matchesEventFilters(null), false);
+});
+
+test("matchesReviewFilters prefers favorite-only source event retention", () => {
+  assert.equal(
+    matchesReviewFilters(
+      { id: "review-1" },
+      { retain_indefinitely: true },
+      {
+        favOnly: true,
+      },
+    ),
+    true,
+  );
+
+  assert.equal(
+    matchesReviewFilters(
+      { id: "review-1" },
+      { retain_indefinitely: false },
+      {
+        favOnly: true,
+      },
+    ),
+    false,
+  );
+});
+
+test("matchesReviewFilters checks labels and zones through callbacks", () => {
+  const review = { id: "review-2" };
+  const sourceEvent = { id: "event-2", retain_indefinitely: false };
+
+  assert.equal(
+    matchesReviewFilters(review, sourceEvent, {
+      filterLabel: "person",
+      filterZone: "yard",
+      getLabels: () => ["person", "car"],
+      getZones: () => ["yard", "front"],
+    }),
+    true,
+  );
+
+  assert.equal(
+    matchesReviewFilters(review, sourceEvent, {
+      filterLabel: "dog",
+      filterZone: "yard",
+      getLabels: () => ["person", "car"],
+      getZones: () => ["yard", "front"],
+    }),
+    false,
+  );
+
+  assert.equal(
+    matchesReviewFilters(review, sourceEvent, {
+      filterLabel: "person",
+      filterZone: "driveway",
+      getLabels: () => ["person", "car"],
+      getZones: () => ["yard", "front"],
+    }),
+    false,
+  );
 });

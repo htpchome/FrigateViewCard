@@ -90,3 +90,26 @@ export function matchesEventFilters(
   }
   return true;
 }
+
+export function matchesReviewFilters(
+  review,
+  sourceEvent,
+  {
+    filterLabel = "all",
+    filterZone = "all",
+    favOnly = false,
+    getLabels = () => [],
+    getZones = () => [],
+  } = {},
+) {
+  if (favOnly) return !!sourceEvent?.retain_indefinitely;
+  if (filterLabel !== "all") {
+    const labels = getLabels(review, sourceEvent);
+    if (!labels.includes(filterLabel)) return false;
+  }
+  if (filterZone !== "all") {
+    const zones = getZones(review, sourceEvent);
+    if (!zones.includes(filterZone)) return false;
+  }
+  return true;
+}

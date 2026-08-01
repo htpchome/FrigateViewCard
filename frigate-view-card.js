@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1061";
+const VERSION = "1.0.1062";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4119,6 +4119,24 @@ function matchesEventFilters(event, { filterLabel = "all", filterZone = "all", f
   }
   if (favOnly && !event.retain_indefinitely) {
     return false;
+  }
+  return true;
+}
+function matchesReviewFilters(review, sourceEvent, {
+  filterLabel = "all",
+  filterZone = "all",
+  favOnly = false,
+  getLabels = () => [],
+  getZones = () => []
+} = {}) {
+  if (favOnly) return !!sourceEvent?.retain_indefinitely;
+  if (filterLabel !== "all") {
+    const labels = getLabels(review, sourceEvent);
+    if (!labels.includes(filterLabel)) return false;
+  }
+  if (filterZone !== "all") {
+    const zones = getZones(review, sourceEvent);
+    if (!zones.includes(filterZone)) return false;
   }
   return true;
 }
@@ -13955,16 +13973,13 @@ const FrigateViewCard = class extends HTMLElement {
   _filteredReviews() {
     return this._reviewsForTabBase().filter((review) => {
       const sourceEvent = this._reviewSourceEvent(review);
-      if (this._favOnly) return !!sourceEvent?.retain_indefinitely;
-      if (this._filterLabel !== "all") {
-        const labels = this._reviewFilterLabels(review, sourceEvent);
-        if (!labels.includes(this._filterLabel)) return false;
-      }
-      if (this._filterZone !== "all") {
-        const zones = this._reviewFilterZones(review, sourceEvent);
-        if (!zones.includes(this._filterZone)) return false;
-      }
-      return true;
+      return matchesReviewFilters(review, sourceEvent, {
+        filterLabel: this._filterLabel,
+        filterZone: this._filterZone,
+        favOnly: this._favOnly,
+        getLabels: (candidateReview, candidateSourceEvent) => this._reviewFilterLabels(candidateReview, candidateSourceEvent),
+        getZones: (candidateReview, candidateSourceEvent) => this._reviewFilterZones(candidateReview, candidateSourceEvent)
+      });
     });
   }
   _filteredKept() {

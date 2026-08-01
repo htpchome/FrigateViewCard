@@ -167,6 +167,7 @@ import {
   collectFilterZonesFromReviews,
   collectFilterZonesFromEvents,
   matchesEventFilters,
+  matchesReviewFilters,
   normalizeFilterSelections,
 } from "./filter-state-utils.js";
 import {
@@ -8225,16 +8226,15 @@ export class FrigateViewCard extends HTMLElement {
   _filteredReviews() {
     return this._reviewsForTabBase().filter((review) => {
       const sourceEvent = this._reviewSourceEvent(review);
-      if (this._favOnly) return !!sourceEvent?.retain_indefinitely;
-      if (this._filterLabel !== "all") {
-        const labels = this._reviewFilterLabels(review, sourceEvent);
-        if (!labels.includes(this._filterLabel)) return false;
-      }
-      if (this._filterZone !== "all") {
-        const zones = this._reviewFilterZones(review, sourceEvent);
-        if (!zones.includes(this._filterZone)) return false;
-      }
-      return true;
+      return matchesReviewFilters(review, sourceEvent, {
+        filterLabel: this._filterLabel,
+        filterZone: this._filterZone,
+        favOnly: this._favOnly,
+        getLabels: (candidateReview, candidateSourceEvent) =>
+          this._reviewFilterLabels(candidateReview, candidateSourceEvent),
+        getZones: (candidateReview, candidateSourceEvent) =>
+          this._reviewFilterZones(candidateReview, candidateSourceEvent),
+      });
     });
   }
   _filteredKept() {
