@@ -209,6 +209,11 @@ import {
   resolveOffsetRecordingsDayBounds,
   resolveRecordingsDayBounds,
 } from "./recordings-day-utils.js";
+import {
+  buildRecordingsDayCacheKey,
+  normalizeFetchedRecordingsAvailability,
+  resolveCachedRecordingsAvailability,
+} from "./recordings-availability-utils.js";
 import { resolveRecordingsBrowseNavState } from "./recordings-browse-nav-utils.js";
 import { buildRecordingsListMarkup } from "./recordings-list-markup.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
@@ -8093,15 +8098,17 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _hasRecordingsInBounds(bounds, clientId, cam) {
-    const key = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
-    if (this._recordingsDayDataCache.has(key)) {
-      const cached = this._recordingsDayDataCache.get(key) || [];
-      const hasCached = cached.length > 0;
-      this._recordingsDayAvailabilityCache.set(key, hasCached);
-      return hasCached;
-    }
-    if (this._recordingsDayAvailabilityCache.has(key)) {
-      return this._recordingsDayAvailabilityCache.get(key);
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    const cached = resolveCachedRecordingsAvailability({
+      key,
+      dataCache: this._recordingsDayDataCache,
+      availabilityCache: this._recordingsDayAvailabilityCache,
+    });
+    if (cached.found) {
+      if (cached.shouldSyncAvailability) {
+        this._recordingsDayAvailabilityCache.set(key, cached.hasRecordings);
+      }
+      return cached.hasRecordings;
     }
     try {
       const recs = await this._ws({
@@ -8111,10 +8118,10 @@ export class FrigateViewCard extends HTMLElement {
         after: Math.max(0, bounds.start),
         before: bounds.end,
       });
-      const has = Array.isArray(recs) && recs.length > 0;
-      this._recordingsDayDataCache.set(key, Array.isArray(recs) ? recs : []);
-      this._recordingsDayAvailabilityCache.set(key, has);
-      return has;
+      const normalized = normalizeFetchedRecordingsAvailability(recs);
+      this._recordingsDayDataCache.set(key, normalized.recordings);
+      this._recordingsDayAvailabilityCache.set(key, normalized.hasRecordings);
+      return normalized.hasRecordings;
     } catch (_) {
       this._recordingsDayAvailabilityCache.set(key, false);
       return false;

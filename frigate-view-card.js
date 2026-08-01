@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1073";
+const VERSION = "1.0.1074";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4670,6 +4670,44 @@ function resolveOffsetRecordingsDayBounds({
   return {
     start: toEpochSeconds(year, month, day, 0, 0, 0),
     end: toEpochSeconds(year, month, day, 23, 59, 59)
+  };
+}
+
+// src/card/recordings-availability-utils.js
+function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
+  return `${clientId}|${camera}|${bounds.start}|${bounds.end}`;
+}
+function resolveCachedRecordingsAvailability({
+  key = "",
+  dataCache = null,
+  availabilityCache = null
+}) {
+  if (dataCache?.has(key)) {
+    const recordings = dataCache.get(key) || [];
+    return {
+      found: true,
+      hasRecordings: recordings.length > 0,
+      shouldSyncAvailability: true
+    };
+  }
+  if (availabilityCache?.has(key)) {
+    return {
+      found: true,
+      hasRecordings: !!availabilityCache.get(key),
+      shouldSyncAvailability: false
+    };
+  }
+  return {
+    found: false,
+    hasRecordings: false,
+    shouldSyncAvailability: false
+  };
+}
+function normalizeFetchedRecordingsAvailability(recordings) {
+  const safeRecordings = Array.isArray(recordings) ? recordings : [];
+  return {
+    recordings: safeRecordings,
+    hasRecordings: safeRecordings.length > 0
   };
 }
 
@@ -14059,15 +14097,17 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _hasRecordingsInBounds(bounds, clientId, cam) {
-    const key = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
-    if (this._recordingsDayDataCache.has(key)) {
-      const cached = this._recordingsDayDataCache.get(key) || [];
-      const hasCached = cached.length > 0;
-      this._recordingsDayAvailabilityCache.set(key, hasCached);
-      return hasCached;
-    }
-    if (this._recordingsDayAvailabilityCache.has(key)) {
-      return this._recordingsDayAvailabilityCache.get(key);
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    const cached = resolveCachedRecordingsAvailability({
+      key,
+      dataCache: this._recordingsDayDataCache,
+      availabilityCache: this._recordingsDayAvailabilityCache
+    });
+    if (cached.found) {
+      if (cached.shouldSyncAvailability) {
+        this._recordingsDayAvailabilityCache.set(key, cached.hasRecordings);
+      }
+      return cached.hasRecordings;
     }
     try {
       const recs = await this._ws({
@@ -14077,10 +14117,10 @@ const FrigateViewCard = class extends HTMLElement {
         after: Math.max(0, bounds.start),
         before: bounds.end
       });
-      const has = Array.isArray(recs) && recs.length > 0;
-      this._recordingsDayDataCache.set(key, Array.isArray(recs) ? recs : []);
-      this._recordingsDayAvailabilityCache.set(key, has);
-      return has;
+      const normalized = normalizeFetchedRecordingsAvailability(recs);
+      this._recordingsDayDataCache.set(key, normalized.recordings);
+      this._recordingsDayAvailabilityCache.set(key, normalized.hasRecordings);
+      return normalized.hasRecordings;
     } catch (_) {
       this._recordingsDayAvailabilityCache.set(key, false);
       return false;
