@@ -205,6 +205,7 @@ import {
   runListPostRenderSync,
   syncOlderHintFromScroll,
 } from "./list-render-utils.js";
+import { buildRecordingsListMarkup } from "./recordings-list-markup.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import { PageNavigationController } from "../navigation/page-navigation-controller.js";
@@ -5018,27 +5019,14 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _recordingsListMarkup(recs, emptyText = "No recordings in this day") {
-    if (!Array.isArray(recs) || !recs.length) {
-      return `<div class="empty">${emptyText}</div>`;
-    }
-    return recs
-      .map((r) => {
-        const rs = Math.floor(r.start_time);
-        const re = Math.floor(r.end_time || Date.now() / 1000);
-        const d = Math.max(1, re - rs);
-        const mm = Math.floor(d / 60);
-        const ss = d % 60;
-        const dur = `${mm ? `${mm}m ` : ""}${ss}s`;
-        return `<div class="list-item shadow-xform shadow-small" data-rs="${rs}" data-re="${re}">
-        <div class="ric">${ICONS.recordings}</div>
-        <div class="rinf">
-          <div class="rt">${this._time(r.start_time)} – ${this._time(r.end_time || Date.now() / 1000)}</div>
-          <div class="rsub">${dur}${r.events ? ` · ${r.events} ev` : ""}</div>
-        </div>
-        <button class="rp" data-rec-dl-start="${rs}" data-rec-dl-end="${re}" title="Download recording" aria-label="Download recording">${ICONS.download}</button>
-      </div>`;
-      })
-      .join("");
+    return buildRecordingsListMarkup({
+      recordings: recs,
+      emptyText,
+      recordingsIcon: ICONS.recordings,
+      downloadIcon: ICONS.download,
+      formatTime: (ts) => this._time(ts),
+      nowSec: this._winEnd || Date.now() / 1000,
+    });
   }
 
   _recordingsViewRows(recs) {

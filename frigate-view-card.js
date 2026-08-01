@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1070";
+const VERSION = "1.0.1071";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4637,6 +4637,37 @@ function createOlderHintSyncer(syncOlderHint) {
       syncOlderHint(forceHide);
     }
   };
+}
+
+// src/card/recordings-list-markup.js
+function buildRecordingsListMarkup({
+  recordings = [],
+  emptyText = "No recordings in this day",
+  recordingsIcon = "",
+  downloadIcon = "",
+  formatTime = () => "",
+  nowSec = Date.now() / 1e3
+}) {
+  if (!Array.isArray(recordings) || !recordings.length) {
+    return `<div class="empty">${emptyText}</div>`;
+  }
+  const safeNowSec = Math.floor(nowSec || Date.now() / 1e3);
+  return recordings.map((recording) => {
+    const recordingStart = Math.floor(recording.start_time);
+    const recordingEnd = Math.floor(recording.end_time || safeNowSec);
+    const durationSec = Math.max(1, recordingEnd - recordingStart);
+    const minutes = Math.floor(durationSec / 60);
+    const seconds = durationSec % 60;
+    const durationLabel = `${minutes ? `${minutes}m ` : ""}${seconds}s`;
+    return `<div class="list-item shadow-xform shadow-small" data-rs="${recordingStart}" data-re="${recordingEnd}">
+        <div class="ric">${recordingsIcon}</div>
+        <div class="rinf">
+          <div class="rt">${formatTime(recording.start_time)} \u2013 ${formatTime(recording.end_time || safeNowSec)}</div>
+          <div class="rsub">${durationLabel}${recording.events ? ` \xB7 ${recording.events} ev` : ""}</div>
+        </div>
+        <button class="rp" data-rec-dl-start="${recordingStart}" data-rec-dl-end="${recordingEnd}" title="Download recording" aria-label="Download recording">${downloadIcon}</button>
+      </div>`;
+  }).join("");
 }
 
 // src/preview/preview-utils.js
@@ -11245,25 +11276,14 @@ const FrigateViewCard = class extends HTMLElement {
     };
   }
   _recordingsListMarkup(recs, emptyText = "No recordings in this day") {
-    if (!Array.isArray(recs) || !recs.length) {
-      return `<div class="empty">${emptyText}</div>`;
-    }
-    return recs.map((r) => {
-      const rs = Math.floor(r.start_time);
-      const re = Math.floor(r.end_time || Date.now() / 1e3);
-      const d = Math.max(1, re - rs);
-      const mm = Math.floor(d / 60);
-      const ss = d % 60;
-      const dur = `${mm ? `${mm}m ` : ""}${ss}s`;
-      return `<div class="list-item shadow-xform shadow-small" data-rs="${rs}" data-re="${re}">
-        <div class="ric">${ICONS.recordings}</div>
-        <div class="rinf">
-          <div class="rt">${this._time(r.start_time)} \u2013 ${this._time(r.end_time || Date.now() / 1e3)}</div>
-          <div class="rsub">${dur}${r.events ? ` \xB7 ${r.events} ev` : ""}</div>
-        </div>
-        <button class="rp" data-rec-dl-start="${rs}" data-rec-dl-end="${re}" title="Download recording" aria-label="Download recording">${ICONS.download}</button>
-      </div>`;
-    }).join("");
+    return buildRecordingsListMarkup({
+      recordings: recs,
+      emptyText,
+      recordingsIcon: ICONS.recordings,
+      downloadIcon: ICONS.download,
+      formatTime: (ts) => this._time(ts),
+      nowSec: this._winEnd || Date.now() / 1e3
+    });
   }
   _recordingsViewRows(recs) {
     return splitRecordingsHourly(recs, this._winEnd || Date.now() / 1e3).sort(
