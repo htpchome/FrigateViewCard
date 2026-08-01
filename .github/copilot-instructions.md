@@ -1,129 +1,79 @@
-# GitHub Copilot Instructions - JS & Home Assistant
+# GitHub Copilot Instructions - FrigateView Card
 
-## Project Overview
+## Project Scope
 
-You are an expert full-stack developer assisting with JavaScript (ES6+) and Home Assistant customizations (e.g., Lovelace dashboards, custom cards, AppDaemon, or REST integrations).
+This repository is a modern JavaScript custom card for Home Assistant.
 
-## 1. Core Principles
+For architectural rationale and refactor strategy, see `docs/refactor-guidelines.md`. Keep this file focused on hard repository rules.
 
-- Language: Modern JavaScript (ESM)
-- Target Environment: Home Assistant Frontend.
-- Styling: Use CSS custom properties matching the HA theme (e.g., `--primary-color`, `--accent-color`).
-- Use standard modern JavaScript (ES6+), leveraging `import` and `export` over CommonJS.
-- Semicolons are required at the end of statements.
-- Stick to standard JavaScript and modern browser features (Custom Elements, Shadow DOM, CSS custom properties).
-- Avoid non-standard TypeScript features (like namespaces) unless explicitly required by the project.
-- The Version should be bumped up for each change.
+- Language: JavaScript (ES modules), not TypeScript.
+- UI stack: plain Custom Elements, Shadow DOM, and CSS custom properties, not Lit.
+- Build output: `frigate-view-card.js` is a generated bundle and must stay aligned with source changes.
+- Versioning: bump `src/constants.js` `VERSION` for every behavioral or structural code change.
 
-## 2. Technology Stack & Environments
+## Core Coding Standards
 
-- **Language:** JavaScript (ES6+, async/await, Fetch API)
-- **Home Assistant Context:** You are working with a running Home Assistant instance.
-- **Frontend:** Lit-based Web Components are preferred for custom Home Assistant UI elements.
+- Use standard modern JavaScript with `import` and `export`.
+- End statements with semicolons.
+- Prefer `const`; use `let` only when reassignment is required.
+- Use camelCase for variables, functions, and methods.
+- Use kebab-case for custom element names and filename patterns that represent elements or page modules.
+- Prefer `async` and `await` over promise chains for primary control flow.
+- Use guard clauses instead of deep nesting.
+- Keep comments short and focused on why a block exists, not what each line does.
+- Add documentation comments only where public API or unusually complex logic benefits from them; do not add JSDoc mechanically.
 
-## 3. Home Assistant & JavaScript Standards
+## Architecture Boundaries
 
-- **Entity Identification:** Never hallucinate entity IDs. When providing example code, use placeholders like `light.living_room` or `sensor.temperature`.
-- **API Communication:** When writing JS that interacts with Home Assistant, rely on `home-assistant-js-websocket` patterns. Use the `hass` object's `.callService()` or `.callApi()` method when possible, but code may also call Frigate directly when that is the most reliable path.
-- **State Access:** Prefer directly reading from the `hass.states` object context rather than attempting to bypass the `hass` integration layer.
-- **Async/Await:** All calls to Home Assistant's backend and fetch requests must use `async/await` with proper `try...catch` blocks for error handling.
-
-## 4. Coding & Formatting Guidelines
-
-- **Variables:** Use `const` by default; use `let` only if reassignments are absolutely necessary.
-- **Naming Conventions:** Use camelCase for variables and functions. Use kebab-case for custom component element names (e.g., `my-custom-card.js`).
-- **Functions:** Prefer arrow functions by default for callbacks and array methods, but avoid them for class/object methods, constructors, and any function that relies on hoisting or dynamic `this` binding.
-- **Error Handling:** Log errors explicitly using `console.error('Home Assistant Error:', error);` so they appear properly in the Home Assistant logs.
-- **Comments:** Explain _why_ a block of code is doing something, especially when parsing Home Assistant states (e.g., converting a state to a number or checking for domain availability).
-
-## 5. Examples / Reference Formats
-
-### Service Call Example
-
-```javascript
-async function toggleLivingRoomLight(hass) {
-  try {
-    await hass.callService(
-      "light",
-      "toggle",
-      {},
-      { entity_id: "light.living_room" },
-    );
-  } catch (error) {
-    console.error("Failed to toggle light:", error);
-  }
-}
-```
-
-## 6. Automation Rules
-
-- Use `homeassistant-jsengine` package conventions when appropriate.
-- When writing scripts, always handle real-time state changes by subscribing to Home Assistant's event stream (e.g., `state_changed`).
-- Prefer the use of JS `async/await` patterns over nested callbacks to keep automation logic readable.
-
-## 7. Formatting & Code Quality
-
-- Add JSDoc comments for all major functions, explaining their purpose, parameters, and return values.
-- Adhere strictly to the requested asynchronous paradigm—do not block the event loop with synchronous state polling.
-
-## 8. Component Design
-
-- Keep components small, focused, and compliant with the Single Responsibility Principle.
-- Name custom elements using kebab-case (e.g., `<user-profile>`).
-- Use descriptive property names and camelCase for property definitions.
-- Write JSDoc comments for public APIs and complex custom methods.
-
-## 9. Security
-
-- Never expose sensitive private keys or seed phrases in the code.
-- Always sanitize user input before rendering it in the DOM (to prevent XSS attacks).
-- Handle asynchronous operations (such as API calls or promises) safely with proper error boundaries and loading states in templates.
-
-## 10. FrigateView Refactor Standards (Project-Specific)
-
-These standards are mandatory for changes to `frigate-view-card.js`.
-
-- **Versioning:** Bump `VERSION` for every behavioral or structural change.
-- **Live View Safety:** Do not modify live view mount/playback internals unless the change is explicitly requested or directly fixes a proven conflict.
-- **Startup Ordering:** Keep startup list-first for perceived performance: initial event window load must complete before live mount.
-
-### Event List & Thumbnail Stability
-
-- **Single-pass list rendering:** Prefer one complete list paint per data update over progressive chunk growth.
-- **No redundant list rewrites:** Do not call `innerHTML` repeatedly with equivalent content.
-- **Thumbnail nodes must remain stable:** Avoid patterns that remount thumbnail `<img>` elements during idle refreshes, tab switches, or camera switches.
-- **Avoid over-tuned render loops:** Do not introduce extra render timers/idle growth cycles for alerts/clips/snapshots unless explicitly requested.
-- **Keep fallback behavior simple:** Thumbnail fallback should only activate on actual image error, not via speculative toggling.
-
-### Camera/Tab Interaction Rules
-
-- **Camera switch:** Render cached list data immediately, then refresh in background.
-- **Tab switch:** Update only what changed; avoid forcing global rerenders that rebuild the same list markup.
-- **Refresh behavior:** Periodic refresh should not reset list state if the active window/camera is unchanged.
-
-### iOS Media Rules
-
-- **Alerts/Clips on iOS:** Must use `master.m3u8` playback path.
-- **Recordings on iOS:** Must use m3u8 recording sources only (no MP4 fallback path on iOS).
-
-### Code Hygiene Expectations
-
+- Keep `src/card/FrigateViewCard.js` as the top-level runtime owner for shared shell orchestration, live engine lifecycle, playback, data loading, and other safety-critical behavior.
+- Move deterministic rendering and pure derivation logic into focused helper modules or page controllers.
+- Name new files by stable responsibility, not by temporary placement in the DOM or layout.
 - Prefer small, composable helpers over large coupled methods.
-- Use async/await with explicit error handling.
-- Keep DOM work minimal and intentional; avoid unnecessary query/write churn.
-- When fixing regressions, remove complexity before adding new mechanisms.
+- Keep public behavior unchanged unless the task explicitly requests a behavior change.
 
-## 11. Refactoring Standards (Mandatory)
+## Live View And Startup Safety
 
-These rules reflect the JS refactor completed in this project and must be preserved.
+- Do not modify live view mount or playback internals unless the change is explicitly requested or directly fixes a proven defect.
+- Preserve startup ordering: initial event window load should complete before live mount.
+- Keep Firefox/WebRTC/MSE ordering and fallback race behavior intact unless the task is specifically about that flow.
+- Preserve thin compatibility wrappers in `FrigateViewCard` when regressions or built-output checks depend on exact method names or literals.
 
-- **SRP boundaries:** Keep data loading, normalization, view-state transitions, and DOM rendering in separate helpers/methods.
-- **Pure utilities first:** Move deterministic logic (formatting, URL/source selection, filtering/sorting, state derivation) into pure utility functions that do not read/write `this`.
-- **Class methods for orchestration only:** Component/class methods should primarily coordinate calls, update minimal state, and trigger focused renders.
-- **No Promise chains in new code:** Use `async/await` with `try...catch`; avoid `.then()` / `.catch()` flow for primary control paths.
-- **Guard clauses over deep nesting:** Use early returns for invalid state, missing config, unsupported tabs/windows, and empty payloads.
-- **Avoid hidden side effects:** Prefer explicit inputs/outputs over mutation-heavy flows; do not mutate fetched payloads in-place unless required and documented.
-- **Stable render contracts:** Rendering helpers should accept explicit data and produce deterministic markup for the same input.
-- **DOM writes are intentional:** Coalesce render updates and skip equivalent rewrites to prevent unnecessary remounting and browser churn.
-- **Keep public behavior unchanged unless requested:** Refactors must preserve user-facing behavior and media/startup contracts unless the task explicitly asks to change behavior.
-- **Refactor validation:** For behavioral refactors, run syntax and regression checks (for this repo: `node --check frigate-view-card.js` and `node --test tests/refactor-regression.test.mjs` when the test file exists).
+## Rendering And Interaction Rules
+
+- Keep DOM writes intentional and minimal.
+- Avoid redundant `innerHTML` rewrites when the rendered result is effectively unchanged.
+- Keep thumbnail and media host nodes stable across refreshes, tab switches, and camera switches.
+- Camera switches should render cached list data immediately, then refresh in the background.
+- Tab switches should update only the affected surface rather than forcing broad rerenders.
+- Periodic refresh should not reset browse state when the active window and camera are unchanged.
+
+## Media And Platform Rules
+
+- On iOS, alerts and clips must use the `master.m3u8` playback path.
+- On iOS, recordings must use m3u8 recording sources only.
+- Do not introduce MP4 fallback for iOS recordings.
+
+## Refactor Standards
+
+- Separate data loading, normalization, view-state transitions, and DOM rendering.
+- Move deterministic logic into pure utilities that do not read or write `this` when practical.
+- Keep class methods primarily for orchestration, minimal state updates, and focused render triggers.
+- Avoid hidden side effects and mutation-heavy flows unless they are necessary and well contained.
+- Rendering helpers should accept explicit inputs and produce deterministic output for the same inputs.
+- When fixing regressions, remove unnecessary complexity before adding new mechanisms.
+
+## Repository Validation
+
+Use the narrowest validation that matches the change.
+
+- For touched source files, prefer `node --check <file>` first.
+- After structural or behavioral source changes, run `npm run build`.
+- For refactor safety, run `node --test tests/refactor-regression.test.mjs`.
+- When a focused test file exists for the changed surface, run that test in addition to or before the broader regression suite.
+
+## Change Planning Guidance
+
+- Prefer incremental refactor slices over broad rewrites.
+- Validate immediately after each meaningful structural edit.
+- Do not move risky orchestration code into page modules just to satisfy file-splitting goals.
+- If a new helper or file is introduced, keep its ownership boundary obvious from the name and exported API.

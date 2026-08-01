@@ -156,3 +156,7 @@ vite.config.ts.timestamp-*
 
 # Misc generated local artifacts
 wget-log
+
+# Local crash dumps
+core
+core.*
