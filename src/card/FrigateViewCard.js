@@ -144,11 +144,9 @@ import {
   resolveWebRtcStartup,
 } from "../live/live-startup-policy.js";
 import {
-  buildCalendarPanelMarkup,
   buildControlsSectionMarkup,
   buildControlsReadoutEmptyMarkup,
   buildControlsReadoutLinesMarkup,
-  buildFilterPanelMarkup,
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
   buildMainLayoutShellMarkup,
@@ -157,6 +155,10 @@ import {
   buildRightColumnShellMarkup,
   buildTabsMarkup,
 } from "./shell-nav-markup.js";
+import {
+  buildCalendarPanelMarkup,
+  buildFilterPanelMarkup,
+} from "./calendar-filter-markup.js";
 import {
   appendControlsReadoutLine,
   clearControlsReadoutLines,
