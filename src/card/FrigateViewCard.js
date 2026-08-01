@@ -5932,6 +5932,12 @@ export class FrigateViewCard extends HTMLElement {
     if (this._handleEventClick(target)) return;
   }
   _handleToolbarClick(target) {
+    if (this._handleTopToolbarClick(target)) return true;
+    if (this._handlePopupMediaToolbarClick(target)) return true;
+    if (this._handleBrowseToolbarClick(target)) return true;
+    return false;
+  }
+  _handleTopToolbarClick(target) {
     if (target.closest("#grid-btn")) {
       this._toggleGridMode();
       return true;
@@ -5944,8 +5950,6 @@ export class FrigateViewCard extends HTMLElement {
       this._fullscreen(this._$("#eng-wrap"), { preferLive: true });
       return true;
     }
-    if (this._handlePopupMediaToolbarClick(target)) return true;
-    if (this._handleBrowseToolbarClick(target)) return true;
     return false;
   }
   _handleBrowseToolbarClick(target) {

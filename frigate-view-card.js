@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1059";
+const VERSION = "1.0.1060";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11884,6 +11884,12 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._handleEventClick(target)) return;
   }
   _handleToolbarClick(target) {
+    if (this._handleTopToolbarClick(target)) return true;
+    if (this._handlePopupMediaToolbarClick(target)) return true;
+    if (this._handleBrowseToolbarClick(target)) return true;
+    return false;
+  }
+  _handleTopToolbarClick(target) {
     if (target.closest("#grid-btn")) {
       this._toggleGridMode();
       return true;
@@ -11896,8 +11902,6 @@ const FrigateViewCard = class extends HTMLElement {
       this._fullscreen(this._$("#eng-wrap"), { preferLive: true });
       return true;
     }
-    if (this._handlePopupMediaToolbarClick(target)) return true;
-    if (this._handleBrowseToolbarClick(target)) return true;
     return false;
   }
   _handleBrowseToolbarClick(target) {
