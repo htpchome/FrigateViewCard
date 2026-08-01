@@ -7,6 +7,8 @@ import {
   normalizeFetchedRecordingsAvailability,
   resolvePreparedRecordingsDayTransition,
   resolveCachedRecordingsAvailability,
+  resolveFailedRecordingsAvailabilityState,
+  resolveFetchedRecordingsAvailabilityState,
 } from "../../src/card/recordings/availability-utils.js";
 
 test("buildRecordingsDayCacheKey combines client, camera, and bounds", () => {
@@ -155,6 +157,24 @@ test("normalizeFetchedRecordingsAvailability preserves array responses", () => {
   assert.deepEqual(normalizeFetchedRecordingsAvailability(recordings), {
     recordings,
     hasRecordings: true,
+  });
+});
+
+test("resolveFetchedRecordingsAvailabilityState exposes normalized recordings and cache value", () => {
+  const recordings = [{ id: 1 }];
+
+  assert.deepEqual(resolveFetchedRecordingsAvailabilityState(recordings), {
+    recordings,
+    hasRecordings: true,
+    availabilityValue: true,
+  });
+});
+
+test("resolveFailedRecordingsAvailabilityState disables availability without cache data", () => {
+  assert.deepEqual(resolveFailedRecordingsAvailabilityState(), {
+    recordings: null,
+    hasRecordings: false,
+    availabilityValue: false,
   });
 });
 

@@ -93,6 +93,23 @@ export function normalizeFetchedRecordingsAvailability(recordings) {
   };
 }
 
+export function resolveFetchedRecordingsAvailabilityState(recordings) {
+  const normalized = normalizeFetchedRecordingsAvailability(recordings);
+  return {
+    recordings: normalized.recordings,
+    hasRecordings: normalized.hasRecordings,
+    availabilityValue: normalized.hasRecordings,
+  };
+}
+
+export function resolveFailedRecordingsAvailabilityState() {
+  return {
+    recordings: null,
+    hasRecordings: false,
+    availabilityValue: false,
+  };
+}
+
 export function buildPreparedRecordingsDayResult(bounds, recordings) {
   const normalized = normalizeFetchedRecordingsAvailability(recordings);
   return {

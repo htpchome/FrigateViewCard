@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1082";
+const VERSION = "1.0.1083";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4302,6 +4302,21 @@ function normalizeFetchedRecordingsAvailability(recordings) {
   return {
     recordings: safeRecordings,
     hasRecordings: safeRecordings.length > 0
+  };
+}
+function resolveFetchedRecordingsAvailabilityState(recordings) {
+  const normalized = normalizeFetchedRecordingsAvailability(recordings);
+  return {
+    recordings: normalized.recordings,
+    hasRecordings: normalized.hasRecordings,
+    availabilityValue: normalized.hasRecordings
+  };
+}
+function resolveFailedRecordingsAvailabilityState() {
+  return {
+    recordings: null,
+    hasRecordings: false,
+    availabilityValue: false
   };
 }
 function buildPreparedRecordingsDayResult(bounds, recordings) {
@@ -14286,13 +14301,14 @@ const FrigateViewCard = class extends HTMLElement {
         after: Math.max(0, bounds.start),
         before: bounds.end
       });
-      const normalized = normalizeFetchedRecordingsAvailability(recs);
-      this._recordingsDayDataCache.set(key, normalized.recordings);
-      this._recordingsDayAvailabilityCache.set(key, normalized.hasRecordings);
-      return normalized.hasRecordings;
+      const fetched = resolveFetchedRecordingsAvailabilityState(recs);
+      this._recordingsDayDataCache.set(key, fetched.recordings);
+      this._recordingsDayAvailabilityCache.set(key, fetched.availabilityValue);
+      return fetched.hasRecordings;
     } catch (_) {
-      this._recordingsDayAvailabilityCache.set(key, false);
-      return false;
+      const failed = resolveFailedRecordingsAvailabilityState();
+      this._recordingsDayAvailabilityCache.set(key, failed.availabilityValue);
+      return failed.hasRecordings;
     }
   }
   async _updateRecordingsBrowseNav() {

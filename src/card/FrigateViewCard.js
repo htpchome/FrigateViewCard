@@ -186,6 +186,8 @@ import {
   RECORDINGS_SWIPE_EMPTY_HTML,
   RECORDINGS_SWIPE_LOADING_HTML,
   resolveCachedRecordingsAvailability,
+  resolveFailedRecordingsAvailabilityState,
+  resolveFetchedRecordingsAvailabilityState,
   resolveFailedRecordingsSwipeState,
   resolveOffsetRecordingsDayBounds,
   resolvePreparedRecordingsDayTransition,
@@ -8140,13 +8142,14 @@ export class FrigateViewCard extends HTMLElement {
         after: Math.max(0, bounds.start),
         before: bounds.end,
       });
-      const normalized = normalizeFetchedRecordingsAvailability(recs);
-      this._recordingsDayDataCache.set(key, normalized.recordings);
-      this._recordingsDayAvailabilityCache.set(key, normalized.hasRecordings);
-      return normalized.hasRecordings;
+      const fetched = resolveFetchedRecordingsAvailabilityState(recs);
+      this._recordingsDayDataCache.set(key, fetched.recordings);
+      this._recordingsDayAvailabilityCache.set(key, fetched.availabilityValue);
+      return fetched.hasRecordings;
     } catch (_) {
-      this._recordingsDayAvailabilityCache.set(key, false);
-      return false;
+      const failed = resolveFailedRecordingsAvailabilityState();
+      this._recordingsDayAvailabilityCache.set(key, failed.availabilityValue);
+      return failed.hasRecordings;
     }
   }
 

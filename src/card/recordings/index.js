@@ -2,6 +2,8 @@ export {
   buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
   normalizeFetchedRecordingsAvailability,
+  resolveFailedRecordingsAvailabilityState,
+  resolveFetchedRecordingsAvailabilityState,
   resolvePreparedRecordingsDayTransition,
   resolveCachedRecordingsAvailability,
 } from "./availability-utils.js";
