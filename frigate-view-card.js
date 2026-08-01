@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1084";
+const VERSION = "1.0.1085";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4560,6 +4560,21 @@ function resolvePreparedRecordingsIncomingState({
     bounds: safePrep.bounds || null,
     recs: recordings,
     incomingHtml: hasData ? renderRecordings(recordings) : emptyHtml
+  };
+}
+function resolvePreparedRecordingsDayNavigationState({
+  prep = null,
+  renderRecordings = () => ""
+}) {
+  const incoming = resolvePreparedRecordingsIncomingState({
+    prep,
+    renderRecordings,
+    emptyHtml: ""
+  });
+  return {
+    ...incoming,
+    shouldBounce: !incoming.hasData,
+    shouldCommit: incoming.hasData
   };
 }
 function resolvePreparedRecordingsSwipeState({
@@ -11701,12 +11716,11 @@ const FrigateViewCard = class extends HTMLElement {
     this._recordingsDayNavAnimating = true;
     try {
       const prep = await this._prepareRecordingsDayTransition(dir);
-      const navigation = resolvePreparedRecordingsIncomingState({
+      const navigation = resolvePreparedRecordingsDayNavigationState({
         prep,
-        renderRecordings: (recordings) => this._recordingsListMarkup(this._recordingsViewRows(recordings)),
-        emptyHtml: ""
+        renderRecordings: (recordings) => this._recordingsListMarkup(this._recordingsViewRows(recordings))
       });
-      if (!navigation.hasData) {
+      if (navigation.shouldBounce) {
         this._bounceRecordingsArea(dir);
         void this._updateRecordingsBrowseNav();
         return false;

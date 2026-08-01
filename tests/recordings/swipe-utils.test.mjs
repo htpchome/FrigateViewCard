@@ -6,6 +6,7 @@ import {
   RECORDINGS_SWIPE_EMPTY_HTML,
   RECORDINGS_SWIPE_LOADING_HTML,
   resolveFailedRecordingsSwipeState,
+  resolvePreparedRecordingsDayNavigationState,
   resolvePreparedRecordingsIncomingState,
   resolvePreparedRecordingsSwipeState,
   resolveRecordingsSwipeStageMetrics,
@@ -112,6 +113,47 @@ test("resolvePreparedRecordingsIncomingState falls back to the provided empty HT
     bounds: { start: 100, end: 200 },
     recs: [],
     incomingHtml: "",
+  });
+});
+
+test("resolvePreparedRecordingsDayNavigationState marks prepared data as committable", () => {
+  const recs = [{ id: 1 }];
+  const state = resolvePreparedRecordingsDayNavigationState({
+    prep: {
+      hasData: true,
+      bounds: { start: 100, end: 200 },
+      recs,
+    },
+    renderRecordings: (recordings) => `rows:${recordings.length}`,
+  });
+
+  assert.deepEqual(state, {
+    hasData: true,
+    bounds: { start: 100, end: 200 },
+    recs,
+    incomingHtml: "rows:1",
+    shouldBounce: false,
+    shouldCommit: true,
+  });
+});
+
+test("resolvePreparedRecordingsDayNavigationState marks empty prepared data as bounce-only", () => {
+  const state = resolvePreparedRecordingsDayNavigationState({
+    prep: {
+      hasData: false,
+      bounds: { start: 100, end: 200 },
+      recs: null,
+    },
+    renderRecordings: () => "unused",
+  });
+
+  assert.deepEqual(state, {
+    hasData: false,
+    bounds: { start: 100, end: 200 },
+    recs: [],
+    incomingHtml: "",
+    shouldBounce: true,
+    shouldCommit: false,
   });
 });
 

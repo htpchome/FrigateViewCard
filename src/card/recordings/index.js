@@ -28,6 +28,7 @@ export {
   RECORDINGS_SWIPE_EMPTY_HTML,
   RECORDINGS_SWIPE_LOADING_HTML,
   resolveFailedRecordingsSwipeState,
+  resolvePreparedRecordingsDayNavigationState,
   resolvePreparedRecordingsIncomingState,
   resolvePreparedRecordingsSwipeState,
   resolveRecordingsSwipeStageMetrics,

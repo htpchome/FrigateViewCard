@@ -190,6 +190,7 @@ import {
   resolveFailedRecordingsAvailabilityState,
   resolveFetchedRecordingsAvailabilityState,
   resolveFailedRecordingsSwipeState,
+  resolvePreparedRecordingsDayNavigationState,
   resolveOffsetRecordingsDayBounds,
   resolvePreparedRecordingsDayTransition,
   resolvePreparedRecordingsIncomingState,
@@ -5211,13 +5212,12 @@ export class FrigateViewCard extends HTMLElement {
     this._recordingsDayNavAnimating = true;
     try {
       const prep = await this._prepareRecordingsDayTransition(dir);
-      const navigation = resolvePreparedRecordingsIncomingState({
+      const navigation = resolvePreparedRecordingsDayNavigationState({
         prep,
         renderRecordings: (recordings) =>
           this._recordingsListMarkup(this._recordingsViewRows(recordings)),
-        emptyHtml: "",
       });
-      if (!navigation.hasData) {
+      if (navigation.shouldBounce) {
         this._bounceRecordingsArea(dir);
         void this._updateRecordingsBrowseNav();
         return false;

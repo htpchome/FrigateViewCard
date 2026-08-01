@@ -57,6 +57,23 @@ export function resolvePreparedRecordingsIncomingState({
   };
 }
 
+export function resolvePreparedRecordingsDayNavigationState({
+  prep = null,
+  renderRecordings = () => "",
+}) {
+  const incoming = resolvePreparedRecordingsIncomingState({
+    prep,
+    renderRecordings,
+    emptyHtml: "",
+  });
+
+  return {
+    ...incoming,
+    shouldBounce: !incoming.hasData,
+    shouldCommit: incoming.hasData,
+  };
+}
+
 export function resolvePreparedRecordingsSwipeState({
   prep = null,
   renderRecordings = () => "",
