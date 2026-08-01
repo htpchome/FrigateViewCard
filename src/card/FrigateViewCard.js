@@ -177,7 +177,25 @@ import {
   selectReviewsForFilterTab,
   selectFilterZones,
 } from "./filter-state-utils.js";
-import { splitRecordingsHourly } from "./recordings/segment-utils.js";
+import {
+  buildPreparedRecordingsDayResult,
+  buildRecordingsDayCacheKey,
+  buildRecordingsListMarkup,
+  createRecordingsSwipeGestureState,
+  normalizeFetchedRecordingsAvailability,
+  RECORDINGS_SWIPE_EMPTY_HTML,
+  RECORDINGS_SWIPE_LOADING_HTML,
+  resolveCachedRecordingsAvailability,
+  resolveFailedRecordingsSwipeState,
+  resolveOffsetRecordingsDayBounds,
+  resolvePreparedRecordingsDayTransition,
+  resolvePreparedRecordingsSwipeState,
+  resolveRecordingsBrowseNavState,
+  resolveRecordingsDayBounds,
+  resolveRecordingsSwipeStageMetrics,
+  resolveRecordingsSwipeStageTransforms,
+  splitRecordingsHourly,
+} from "./recordings/index.js";
 import {
   appendControlsReadoutLine,
   clearControlsReadoutLines,
@@ -205,28 +223,6 @@ import {
   runListPostRenderSync,
   syncOlderHintFromScroll,
 } from "./list-render-utils.js";
-import {
-  resolveOffsetRecordingsDayBounds,
-  resolveRecordingsDayBounds,
-} from "./recordings/day-utils.js";
-import {
-  buildPreparedRecordingsDayResult,
-  buildRecordingsDayCacheKey,
-  normalizeFetchedRecordingsAvailability,
-  resolvePreparedRecordingsDayTransition,
-  resolveCachedRecordingsAvailability,
-} from "./recordings/availability-utils.js";
-import { resolveRecordingsBrowseNavState } from "./recordings/browse-nav-utils.js";
-import { buildRecordingsListMarkup } from "./recordings/list-markup.js";
-import {
-  createRecordingsSwipeGestureState,
-  RECORDINGS_SWIPE_EMPTY_HTML,
-  RECORDINGS_SWIPE_LOADING_HTML,
-  resolveFailedRecordingsSwipeState,
-  resolvePreparedRecordingsSwipeState,
-  resolveRecordingsSwipeStageMetrics,
-  resolveRecordingsSwipeStageTransforms,
-} from "./recordings/swipe-utils.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import { PageNavigationController } from "../navigation/page-navigation-controller.js";

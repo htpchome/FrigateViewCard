@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1078";
+const VERSION = "1.0.1079";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4221,6 +4221,181 @@ function selectReviewsForFilterTab({
   return showAllReviews ? safeReviews : safeReviews.filter((review) => review?.severity === "alert");
 }
 
+// src/card/recordings/availability-utils.js
+function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
+  return `${clientId}|${camera}|${bounds.start}|${bounds.end}`;
+}
+function resolvePreparedRecordingsDayTransition({
+  direction = 0,
+  bounds = null,
+  todayBounds = null,
+  clientId = "",
+  camera = "",
+  dataCache = null
+}) {
+  const emptyResult = {
+    hasData: false,
+    bounds,
+    recs: []
+  };
+  if (direction > 0 && Number(bounds?.end || 0) > Number(todayBounds?.end || 0)) {
+    return {
+      done: true,
+      key: "",
+      result: emptyResult
+    };
+  }
+  if (!clientId || !camera) {
+    return {
+      done: true,
+      key: "",
+      result: emptyResult
+    };
+  }
+  const key = buildRecordingsDayCacheKey(clientId, camera, bounds);
+  if (dataCache?.has(key)) {
+    const recordings = dataCache.get(key) || [];
+    return {
+      done: true,
+      key,
+      result: {
+        hasData: recordings.length > 0,
+        bounds,
+        recs: recordings
+      }
+    };
+  }
+  return {
+    done: false,
+    key,
+    result: null
+  };
+}
+function resolveCachedRecordingsAvailability({
+  key = "",
+  dataCache = null,
+  availabilityCache = null
+}) {
+  if (dataCache?.has(key)) {
+    const recordings = dataCache.get(key) || [];
+    return {
+      found: true,
+      hasRecordings: recordings.length > 0,
+      shouldSyncAvailability: true
+    };
+  }
+  if (availabilityCache?.has(key)) {
+    return {
+      found: true,
+      hasRecordings: !!availabilityCache.get(key),
+      shouldSyncAvailability: false
+    };
+  }
+  return {
+    found: false,
+    hasRecordings: false,
+    shouldSyncAvailability: false
+  };
+}
+function normalizeFetchedRecordingsAvailability(recordings) {
+  const safeRecordings = Array.isArray(recordings) ? recordings : [];
+  return {
+    recordings: safeRecordings,
+    hasRecordings: safeRecordings.length > 0
+  };
+}
+function buildPreparedRecordingsDayResult(bounds, recordings) {
+  const normalized = normalizeFetchedRecordingsAvailability(recordings);
+  return {
+    hasData: normalized.hasRecordings,
+    bounds,
+    recs: normalized.recordings
+  };
+}
+
+// src/card/recordings/browse-nav-utils.js
+function resolveRecordingsBrowseNavState({
+  currentBounds = null,
+  todayBounds = null,
+  hasPrev = false,
+  hasNext = false
+}) {
+  const currentEnd = Number(currentBounds?.end || 0);
+  const todayEnd = Number(todayBounds?.end || 0);
+  const isTodayOrFuture = currentEnd >= todayEnd;
+  return {
+    isTodayOrFuture,
+    shouldProbeNext: !isTodayOrFuture,
+    prevDisabled: !hasPrev,
+    nextDisabled: isTodayOrFuture || !hasNext
+  };
+}
+
+// src/card/recordings/day-utils.js
+function resolveRecordingsDayBounds({
+  tsSec = null,
+  fallbackSec = null,
+  getTzParts = () => ({}),
+  toEpochSeconds = () => 0,
+  nowSec = Date.now() / 1e3
+}) {
+  const target = Math.floor(tsSec || fallbackSec || nowSec);
+  const parts = getTzParts(target);
+  const start = toEpochSeconds(parts.year, parts.month, parts.day, 0, 0, 0);
+  const end = toEpochSeconds(parts.year, parts.month, parts.day, 23, 59, 59);
+  return { start, end };
+}
+function resolveOffsetRecordingsDayBounds({
+  offsetDays = 0,
+  fallbackSec = null,
+  getTzParts = () => ({}),
+  toEpochSeconds = () => 0,
+  nowSec = Date.now() / 1e3
+}) {
+  const base = getTzParts(fallbackSec || nowSec);
+  const shifted = new Date(
+    Date.UTC(base.year, base.month - 1, base.day + offsetDays, 12, 0, 0)
+  );
+  const year = shifted.getUTCFullYear();
+  const month = shifted.getUTCMonth() + 1;
+  const day = shifted.getUTCDate();
+  return {
+    start: toEpochSeconds(year, month, day, 0, 0, 0),
+    end: toEpochSeconds(year, month, day, 23, 59, 59)
+  };
+}
+
+// src/card/recordings/list-markup.js
+function buildRecordingsListMarkup({
+  recordings = [],
+  emptyText = "No recordings in this day",
+  recordingsIcon = "",
+  downloadIcon = "",
+  formatTime = () => "",
+  nowSec = Date.now() / 1e3
+}) {
+  if (!Array.isArray(recordings) || !recordings.length) {
+    return `<div class="empty">${emptyText}</div>`;
+  }
+  const safeNowSec = Math.floor(nowSec || Date.now() / 1e3);
+  return recordings.map((recording) => {
+    const recordingStart = Math.floor(recording.start_time);
+    const recordingEnd = Math.floor(recording.end_time || safeNowSec);
+    const durationSec = Math.max(1, recordingEnd - recordingStart);
+    const minutes = Math.floor(durationSec / 60);
+    const seconds = durationSec % 60;
+    const durationLabel = `${minutes ? `${minutes}m ` : ""}${seconds}s`;
+    return `<div class="list-item shadow-xform shadow-small" data-rs="${recordingStart}" data-re="${recordingEnd}">
+        <div class="ric">${recordingsIcon}</div>
+        <div class="rinf">
+          <div class="rt">${formatTime(recording.start_time)} \u2013 ${formatTime(recording.end_time || safeNowSec)}</div>
+          <div class="rsub">${durationLabel}${recording.events ? ` \xB7 ${recording.events} ev` : ""}</div>
+        </div>
+        <button class="rp" data-rec-dl-start="${recordingStart}" data-rec-dl-end="${recordingEnd}" title="Download recording" aria-label="Download recording">${downloadIcon}</button>
+      </div>`;
+  }).join("");
+}
+
 // src/card/recordings/segment-utils.js
 function mergeRecordingSegments(recordings = []) {
   if (!recordings.length) return [];
@@ -4276,6 +4451,68 @@ function splitRecordingsHourly(recordings = [], nowSec = Date.now() / 1e3) {
     }
   }
   return buckets;
+}
+
+// src/card/recordings/swipe-utils.js
+const RECORDINGS_SWIPE_LOADING_HTML = '<div class="empty">Loading day\u2026</div>';
+const RECORDINGS_SWIPE_EMPTY_HTML = '<div class="empty">No recordings in this day</div>';
+function resolveRecordingsSwipeStageMetrics({
+  list = null,
+  lastRenderedListHtml = ""
+}) {
+  return {
+    width: Math.max(1, Math.round(Number(list?.clientWidth || 1))),
+    currentHtml: String(list?.innerHTML || lastRenderedListHtml || ""),
+    minHeight: Math.max(
+      220,
+      Number(list?.scrollHeight || list?.clientHeight || 220)
+    )
+  };
+}
+function resolveRecordingsSwipeStageTransforms({
+  offset = 0,
+  direction = 0,
+  width = 0
+}) {
+  return {
+    currentTransform: `translateX(${offset}px)`,
+    incomingTransform: `translateX(${offset + direction * width}px)`
+  };
+}
+function createRecordingsSwipeGestureState(direction, stage = null) {
+  return {
+    direction,
+    stage,
+    hasData: false,
+    ready: false,
+    bounds: null,
+    recs: [],
+    prepPromise: null
+  };
+}
+function resolvePreparedRecordingsSwipeState({
+  prep = null,
+  renderRecordings = () => ""
+}) {
+  const safePrep = prep || {};
+  const recordings = Array.isArray(safePrep.recs) ? safePrep.recs : [];
+  const hasData = !!safePrep.hasData;
+  return {
+    ready: true,
+    hasData,
+    bounds: safePrep.bounds || null,
+    recs: recordings,
+    incomingHtml: hasData ? renderRecordings(recordings) : RECORDINGS_SWIPE_EMPTY_HTML
+  };
+}
+function resolveFailedRecordingsSwipeState() {
+  return {
+    ready: true,
+    hasData: false,
+    bounds: null,
+    recs: [],
+    incomingHtml: RECORDINGS_SWIPE_EMPTY_HTML
+  };
 }
 
 // src/card/controls-readout-utils.js
@@ -4636,243 +4873,6 @@ function createOlderHintSyncer(syncOlderHint) {
     if (typeof syncOlderHint === "function") {
       syncOlderHint(forceHide);
     }
-  };
-}
-
-// src/card/recordings/day-utils.js
-function resolveRecordingsDayBounds({
-  tsSec = null,
-  fallbackSec = null,
-  getTzParts = () => ({}),
-  toEpochSeconds = () => 0,
-  nowSec = Date.now() / 1e3
-}) {
-  const target = Math.floor(tsSec || fallbackSec || nowSec);
-  const parts = getTzParts(target);
-  const start = toEpochSeconds(parts.year, parts.month, parts.day, 0, 0, 0);
-  const end = toEpochSeconds(parts.year, parts.month, parts.day, 23, 59, 59);
-  return { start, end };
-}
-function resolveOffsetRecordingsDayBounds({
-  offsetDays = 0,
-  fallbackSec = null,
-  getTzParts = () => ({}),
-  toEpochSeconds = () => 0,
-  nowSec = Date.now() / 1e3
-}) {
-  const base = getTzParts(fallbackSec || nowSec);
-  const shifted = new Date(
-    Date.UTC(base.year, base.month - 1, base.day + offsetDays, 12, 0, 0)
-  );
-  const year = shifted.getUTCFullYear();
-  const month = shifted.getUTCMonth() + 1;
-  const day = shifted.getUTCDate();
-  return {
-    start: toEpochSeconds(year, month, day, 0, 0, 0),
-    end: toEpochSeconds(year, month, day, 23, 59, 59)
-  };
-}
-
-// src/card/recordings/availability-utils.js
-function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
-  return `${clientId}|${camera}|${bounds.start}|${bounds.end}`;
-}
-function resolvePreparedRecordingsDayTransition({
-  direction = 0,
-  bounds = null,
-  todayBounds = null,
-  clientId = "",
-  camera = "",
-  dataCache = null
-}) {
-  const emptyResult = {
-    hasData: false,
-    bounds,
-    recs: []
-  };
-  if (direction > 0 && Number(bounds?.end || 0) > Number(todayBounds?.end || 0)) {
-    return {
-      done: true,
-      key: "",
-      result: emptyResult
-    };
-  }
-  if (!clientId || !camera) {
-    return {
-      done: true,
-      key: "",
-      result: emptyResult
-    };
-  }
-  const key = buildRecordingsDayCacheKey(clientId, camera, bounds);
-  if (dataCache?.has(key)) {
-    const recordings = dataCache.get(key) || [];
-    return {
-      done: true,
-      key,
-      result: {
-        hasData: recordings.length > 0,
-        bounds,
-        recs: recordings
-      }
-    };
-  }
-  return {
-    done: false,
-    key,
-    result: null
-  };
-}
-function resolveCachedRecordingsAvailability({
-  key = "",
-  dataCache = null,
-  availabilityCache = null
-}) {
-  if (dataCache?.has(key)) {
-    const recordings = dataCache.get(key) || [];
-    return {
-      found: true,
-      hasRecordings: recordings.length > 0,
-      shouldSyncAvailability: true
-    };
-  }
-  if (availabilityCache?.has(key)) {
-    return {
-      found: true,
-      hasRecordings: !!availabilityCache.get(key),
-      shouldSyncAvailability: false
-    };
-  }
-  return {
-    found: false,
-    hasRecordings: false,
-    shouldSyncAvailability: false
-  };
-}
-function normalizeFetchedRecordingsAvailability(recordings) {
-  const safeRecordings = Array.isArray(recordings) ? recordings : [];
-  return {
-    recordings: safeRecordings,
-    hasRecordings: safeRecordings.length > 0
-  };
-}
-function buildPreparedRecordingsDayResult(bounds, recordings) {
-  const normalized = normalizeFetchedRecordingsAvailability(recordings);
-  return {
-    hasData: normalized.hasRecordings,
-    bounds,
-    recs: normalized.recordings
-  };
-}
-
-// src/card/recordings/browse-nav-utils.js
-function resolveRecordingsBrowseNavState({
-  currentBounds = null,
-  todayBounds = null,
-  hasPrev = false,
-  hasNext = false
-}) {
-  const currentEnd = Number(currentBounds?.end || 0);
-  const todayEnd = Number(todayBounds?.end || 0);
-  const isTodayOrFuture = currentEnd >= todayEnd;
-  return {
-    isTodayOrFuture,
-    shouldProbeNext: !isTodayOrFuture,
-    prevDisabled: !hasPrev,
-    nextDisabled: isTodayOrFuture || !hasNext
-  };
-}
-
-// src/card/recordings/list-markup.js
-function buildRecordingsListMarkup({
-  recordings = [],
-  emptyText = "No recordings in this day",
-  recordingsIcon = "",
-  downloadIcon = "",
-  formatTime = () => "",
-  nowSec = Date.now() / 1e3
-}) {
-  if (!Array.isArray(recordings) || !recordings.length) {
-    return `<div class="empty">${emptyText}</div>`;
-  }
-  const safeNowSec = Math.floor(nowSec || Date.now() / 1e3);
-  return recordings.map((recording) => {
-    const recordingStart = Math.floor(recording.start_time);
-    const recordingEnd = Math.floor(recording.end_time || safeNowSec);
-    const durationSec = Math.max(1, recordingEnd - recordingStart);
-    const minutes = Math.floor(durationSec / 60);
-    const seconds = durationSec % 60;
-    const durationLabel = `${minutes ? `${minutes}m ` : ""}${seconds}s`;
-    return `<div class="list-item shadow-xform shadow-small" data-rs="${recordingStart}" data-re="${recordingEnd}">
-        <div class="ric">${recordingsIcon}</div>
-        <div class="rinf">
-          <div class="rt">${formatTime(recording.start_time)} \u2013 ${formatTime(recording.end_time || safeNowSec)}</div>
-          <div class="rsub">${durationLabel}${recording.events ? ` \xB7 ${recording.events} ev` : ""}</div>
-        </div>
-        <button class="rp" data-rec-dl-start="${recordingStart}" data-rec-dl-end="${recordingEnd}" title="Download recording" aria-label="Download recording">${downloadIcon}</button>
-      </div>`;
-  }).join("");
-}
-
-// src/card/recordings/swipe-utils.js
-const RECORDINGS_SWIPE_LOADING_HTML = '<div class="empty">Loading day\u2026</div>';
-const RECORDINGS_SWIPE_EMPTY_HTML = '<div class="empty">No recordings in this day</div>';
-function resolveRecordingsSwipeStageMetrics({
-  list = null,
-  lastRenderedListHtml = ""
-}) {
-  return {
-    width: Math.max(1, Math.round(Number(list?.clientWidth || 1))),
-    currentHtml: String(list?.innerHTML || lastRenderedListHtml || ""),
-    minHeight: Math.max(
-      220,
-      Number(list?.scrollHeight || list?.clientHeight || 220)
-    )
-  };
-}
-function resolveRecordingsSwipeStageTransforms({
-  offset = 0,
-  direction = 0,
-  width = 0
-}) {
-  return {
-    currentTransform: `translateX(${offset}px)`,
-    incomingTransform: `translateX(${offset + direction * width}px)`
-  };
-}
-function createRecordingsSwipeGestureState(direction, stage = null) {
-  return {
-    direction,
-    stage,
-    hasData: false,
-    ready: false,
-    bounds: null,
-    recs: [],
-    prepPromise: null
-  };
-}
-function resolvePreparedRecordingsSwipeState({
-  prep = null,
-  renderRecordings = () => ""
-}) {
-  const safePrep = prep || {};
-  const recordings = Array.isArray(safePrep.recs) ? safePrep.recs : [];
-  const hasData = !!safePrep.hasData;
-  return {
-    ready: true,
-    hasData,
-    bounds: safePrep.bounds || null,
-    recs: recordings,
-    incomingHtml: hasData ? renderRecordings(recordings) : RECORDINGS_SWIPE_EMPTY_HTML
-  };
-}
-function resolveFailedRecordingsSwipeState() {
-  return {
-    ready: true,
-    hasData: false,
-    bounds: null,
-    recs: [],
-    incomingHtml: RECORDINGS_SWIPE_EMPTY_HTML
   };
 }
 
