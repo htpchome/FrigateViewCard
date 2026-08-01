@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1045";
+const VERSION = "1.0.1046";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11917,22 +11917,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._pauseSlideshowForInteraction();
     if (this._handleControlsListClick(e, target)) return true;
     if (this._handlePrimaryListItemClick(e, target)) return true;
-    const donut = target.closest("[data-tab]");
-    if (donut) {
-      this._setTab(donut.dataset.tab);
-      return true;
-    }
-    const olderHint = target.closest("#older-hint");
-    if (olderHint && olderHint.classList.contains("to-top")) {
-      e.stopPropagation();
-      this._scrollEventsToTop();
-      return true;
-    }
-    const tick = target.closest("[data-tick]");
-    if (tick) {
-      this._open(tick.dataset.tick);
-      return true;
-    }
+    if (this._handleListNavigationClick(e, target)) return true;
     const recDl = target.closest("[data-rec-dl-start]");
     if (recDl) {
       e.stopPropagation();
@@ -11951,6 +11936,25 @@ const FrigateViewCard = class extends HTMLElement {
         return true;
       }
       this._showRecording(+recRow.dataset.rs, +recRow.dataset.re);
+      return true;
+    }
+    return false;
+  }
+  _handleListNavigationClick(e, target) {
+    const donut = target.closest("[data-tab]");
+    if (donut) {
+      this._setTab(donut.dataset.tab);
+      return true;
+    }
+    const olderHint = target.closest("#older-hint");
+    if (olderHint && olderHint.classList.contains("to-top")) {
+      e.stopPropagation();
+      this._scrollEventsToTop();
+      return true;
+    }
+    const tick = target.closest("[data-tick]");
+    if (tick) {
+      this._open(tick.dataset.tick);
       return true;
     }
     return false;
