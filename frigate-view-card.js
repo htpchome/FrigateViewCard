@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1047";
+const VERSION = "1.0.1048";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11826,23 +11826,7 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handleSidebarClick(target) {
-    const previewButton = target.closest("[data-preview-select-camidx]");
-    if (previewButton && this._isPreviewPageActive()) {
-      this._exitPreviewPageToCamera(
-        Number(previewButton.dataset.previewSelectCamidx)
-      );
-      return true;
-    }
-    const previewCell = target.closest("[data-preview-camidx]");
-    if (previewCell && this._isPreviewPageActive()) {
-      this._exitPreviewPageToCamera(Number(previewCell.dataset.previewCamidx));
-      return true;
-    }
-    const previewBack = target.closest("[data-preview-back]");
-    if (previewBack) {
-      this._returnToPreviewPage();
-      return true;
-    }
+    if (this._handlePreviewSidebarClick(target)) return true;
     const pageRoute = target.closest("[data-page-route]");
     if (pageRoute) {
       this._navigateToPageRoute(pageRoute.dataset.pageRoute, {
@@ -11909,6 +11893,26 @@ const FrigateViewCard = class extends HTMLElement {
       this._favOnly = favo.dataset.favonly === "1";
       this._renderFilter();
       this._renderList();
+      return true;
+    }
+    return false;
+  }
+  _handlePreviewSidebarClick(target) {
+    const previewButton = target.closest("[data-preview-select-camidx]");
+    if (previewButton && this._isPreviewPageActive()) {
+      this._exitPreviewPageToCamera(
+        Number(previewButton.dataset.previewSelectCamidx)
+      );
+      return true;
+    }
+    const previewCell = target.closest("[data-preview-camidx]");
+    if (previewCell && this._isPreviewPageActive()) {
+      this._exitPreviewPageToCamera(Number(previewCell.dataset.previewCamidx));
+      return true;
+    }
+    const previewBack = target.closest("[data-preview-back]");
+    if (previewBack) {
+      this._returnToPreviewPage();
       return true;
     }
     return false;
