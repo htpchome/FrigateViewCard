@@ -210,8 +210,10 @@ import {
   resolveRecordingsDayBounds,
 } from "./recordings-day-utils.js";
 import {
+  buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
   normalizeFetchedRecordingsAvailability,
+  resolvePreparedRecordingsDayTransition,
   resolveCachedRecordingsAvailability,
 } from "./recordings-availability-utils.js";
 import { resolveRecordingsBrowseNavState } from "./recordings-browse-nav-utils.js";
@@ -5160,18 +5162,20 @@ export class FrigateViewCard extends HTMLElement {
   async _prepareRecordingsDayTransition(direction) {
     const bounds = this._recordingsOffsetDayBounds(direction);
     const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
-    if (direction > 0 && bounds.end > today.end) {
-      return { hasData: false, bounds, recs: [] };
-    }
     const { clientId, cam } = this._cc();
-    if (!clientId || !cam) {
-      return { hasData: false, bounds, recs: [] };
+    const prepared = resolvePreparedRecordingsDayTransition({
+      direction,
+      bounds,
+      todayBounds: today,
+      clientId,
+      camera: cam,
+      dataCache: this._recordingsDayDataCache,
+    });
+    if (prepared.done) {
+      return prepared.result;
     }
-    const key = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
-    if (this._recordingsDayDataCache.has(key)) {
-      const cached = this._recordingsDayDataCache.get(key) || [];
-      return { hasData: cached.length > 0, bounds, recs: cached };
-    }
+
+    const key = prepared.key;
     const hasData = await this._hasRecordingsInBounds(bounds, clientId, cam);
     if (!hasData) {
       return { hasData: false, bounds, recs: [] };
@@ -5183,10 +5187,10 @@ export class FrigateViewCard extends HTMLElement {
       after: Math.max(0, bounds.start),
       before: bounds.end,
     });
-    const safe = Array.isArray(recs) ? recs : [];
-    this._recordingsDayDataCache.set(key, safe);
-    this._recordingsDayAvailabilityCache.set(key, safe.length > 0);
-    return { hasData: safe.length > 0, bounds, recs: safe };
+    const result = buildPreparedRecordingsDayResult(bounds, recs);
+    this._recordingsDayDataCache.set(key, result.recs);
+    this._recordingsDayAvailabilityCache.set(key, result.hasData);
+    return result;
   }
 
   async _navigateRecordingsDayAnimated(direction) {

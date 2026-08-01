@@ -2,6 +2,60 @@ export function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
   return `${clientId}|${camera}|${bounds.start}|${bounds.end}`;
 }
 
+export function resolvePreparedRecordingsDayTransition({
+  direction = 0,
+  bounds = null,
+  todayBounds = null,
+  clientId = "",
+  camera = "",
+  dataCache = null,
+}) {
+  const emptyResult = {
+    hasData: false,
+    bounds,
+    recs: [],
+  };
+
+  if (
+    direction > 0 &&
+    Number(bounds?.end || 0) > Number(todayBounds?.end || 0)
+  ) {
+    return {
+      done: true,
+      key: "",
+      result: emptyResult,
+    };
+  }
+
+  if (!clientId || !camera) {
+    return {
+      done: true,
+      key: "",
+      result: emptyResult,
+    };
+  }
+
+  const key = buildRecordingsDayCacheKey(clientId, camera, bounds);
+  if (dataCache?.has(key)) {
+    const recordings = dataCache.get(key) || [];
+    return {
+      done: true,
+      key,
+      result: {
+        hasData: recordings.length > 0,
+        bounds,
+        recs: recordings,
+      },
+    };
+  }
+
+  return {
+    done: false,
+    key,
+    result: null,
+  };
+}
+
 export function resolveCachedRecordingsAvailability({
   key = "",
   dataCache = null,
@@ -36,5 +90,14 @@ export function normalizeFetchedRecordingsAvailability(recordings) {
   return {
     recordings: safeRecordings,
     hasRecordings: safeRecordings.length > 0,
+  };
+}
+
+export function buildPreparedRecordingsDayResult(bounds, recordings) {
+  const normalized = normalizeFetchedRecordingsAvailability(recordings);
+  return {
+    hasData: normalized.hasRecordings,
+    bounds,
+    recs: normalized.recordings,
   };
 }
