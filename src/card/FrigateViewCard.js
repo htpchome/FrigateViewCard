@@ -5953,6 +5953,11 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handleBrowseToolbarClick(target) {
+    if (this._handleBrowsePanelToolbarClick(target)) return true;
+    if (this._handleRecordingsBrowseToolbarClick(target)) return true;
+    return false;
+  }
+  _handleBrowsePanelToolbarClick(target) {
     if (target.closest("#filter-btn")) {
       this._toggleFilter();
       return true;
@@ -5969,6 +5974,9 @@ export class FrigateViewCard extends HTMLElement {
       }
       return true;
     }
+    return false;
+  }
+  _handleRecordingsBrowseToolbarClick(target) {
     const recDayNav = target.closest("[data-rec-day-nav]");
     if (recDayNav) {
       const dir = Number(recDayNav.dataset.recDayNav || 0);

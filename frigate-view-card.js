@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1060";
+const VERSION = "1.0.1061";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11905,6 +11905,11 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handleBrowseToolbarClick(target) {
+    if (this._handleBrowsePanelToolbarClick(target)) return true;
+    if (this._handleRecordingsBrowseToolbarClick(target)) return true;
+    return false;
+  }
+  _handleBrowsePanelToolbarClick(target) {
     if (target.closest("#filter-btn")) {
       this._toggleFilter();
       return true;
@@ -11921,6 +11926,9 @@ const FrigateViewCard = class extends HTMLElement {
       }
       return true;
     }
+    return false;
+  }
+  _handleRecordingsBrowseToolbarClick(target) {
     const recDayNav = target.closest("[data-rec-day-nav]");
     if (recDayNav) {
       const dir = Number(recDayNav.dataset.recDayNav || 0);
