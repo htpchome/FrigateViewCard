@@ -6074,29 +6074,7 @@ export class FrigateViewCard extends HTMLElement {
   _handleListClick(e, target) {
     this._pauseSlideshowForInteraction();
     if (this._handleControlsListClick(e, target)) return true;
-    const dl = target.closest("[data-dl]");
-    if (dl) {
-      e.stopPropagation();
-      this._download(dl.dataset.dl, dl.dataset.dlFile);
-      return true;
-    }
-    const fav = target.closest("[data-fav]");
-    if (fav) {
-      e.stopPropagation();
-      this._toggleFav(fav.dataset.fav);
-      return true;
-    }
-    const revOpen = target.closest("[data-review-open]");
-    if (revOpen) {
-      const rid = revOpen.closest("[data-review-id]")?.dataset.reviewId;
-      const review = rid ? this._findReviewById(rid) : null;
-      this._showClipById(revOpen.dataset.reviewOpen, {
-        mediaType: "alert",
-        startTime: review?.start_time,
-        camera: review?.camera,
-      });
-      return true;
-    }
+    if (this._handlePrimaryListItemClick(e, target)) return true;
     const donut = target.closest("[data-tab]");
     if (donut) {
       this._setTab(donut.dataset.tab);
@@ -6131,6 +6109,32 @@ export class FrigateViewCard extends HTMLElement {
         return true;
       }
       this._showRecording(+recRow.dataset.rs, +recRow.dataset.re);
+      return true;
+    }
+    return false;
+  }
+  _handlePrimaryListItemClick(e, target) {
+    const dl = target.closest("[data-dl]");
+    if (dl) {
+      e.stopPropagation();
+      this._download(dl.dataset.dl, dl.dataset.dlFile);
+      return true;
+    }
+    const fav = target.closest("[data-fav]");
+    if (fav) {
+      e.stopPropagation();
+      this._toggleFav(fav.dataset.fav);
+      return true;
+    }
+    const revOpen = target.closest("[data-review-open]");
+    if (revOpen) {
+      const rid = revOpen.closest("[data-review-id]")?.dataset.reviewId;
+      const review = rid ? this._findReviewById(rid) : null;
+      this._showClipById(revOpen.dataset.reviewOpen, {
+        mediaType: "alert",
+        startTime: review?.start_time,
+        camera: review?.camera,
+      });
       return true;
     }
     return false;
