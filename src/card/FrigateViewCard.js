@@ -205,6 +205,10 @@ import {
   runListPostRenderSync,
   syncOlderHintFromScroll,
 } from "./list-render-utils.js";
+import {
+  resolveOffsetRecordingsDayBounds,
+  resolveRecordingsDayBounds,
+} from "./recordings-day-utils.js";
 import { buildRecordingsListMarkup } from "./recordings-list-markup.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
@@ -8068,38 +8072,23 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _recordingsDayBounds(tsSec = null) {
-    const target = Math.floor(tsSec || this._winEnd || Date.now() / 1000);
-    const z = this._tzParts(target);
-    const start = this._tzDateTimeToEpochSeconds(
-      z.year,
-      z.month,
-      z.day,
-      0,
-      0,
-      0,
-    );
-    const end = this._tzDateTimeToEpochSeconds(
-      z.year,
-      z.month,
-      z.day,
-      23,
-      59,
-      59,
-    );
-    return { start, end };
+    return resolveRecordingsDayBounds({
+      tsSec,
+      fallbackSec: this._winEnd,
+      getTzParts: (target) => this._tzParts(target),
+      toEpochSeconds: (year, month, day, hour, minute, second) =>
+        this._tzDateTimeToEpochSeconds(year, month, day, hour, minute, second),
+    });
   }
 
   _recordingsOffsetDayBounds(offsetDays = 0) {
-    const base = this._tzParts(this._winEnd || Date.now() / 1000);
-    const shifted = new Date(
-      Date.UTC(base.year, base.month - 1, base.day + offsetDays, 12, 0, 0),
-    );
-    const y = shifted.getUTCFullYear();
-    const mo = shifted.getUTCMonth() + 1;
-    const d = shifted.getUTCDate();
-    const start = this._tzDateTimeToEpochSeconds(y, mo, d, 0, 0, 0);
-    const end = this._tzDateTimeToEpochSeconds(y, mo, d, 23, 59, 59);
-    return { start, end };
+    return resolveOffsetRecordingsDayBounds({
+      offsetDays,
+      fallbackSec: this._winEnd,
+      getTzParts: (target) => this._tzParts(target),
+      toEpochSeconds: (year, month, day, hour, minute, second) =>
+        this._tzDateTimeToEpochSeconds(year, month, day, hour, minute, second),
+    });
   }
 
   async _hasRecordingsInBounds(bounds, clientId, cam) {

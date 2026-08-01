@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1071";
+const VERSION = "1.0.1072";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4636,6 +4636,40 @@ function createOlderHintSyncer(syncOlderHint) {
     if (typeof syncOlderHint === "function") {
       syncOlderHint(forceHide);
     }
+  };
+}
+
+// src/card/recordings-day-utils.js
+function resolveRecordingsDayBounds({
+  tsSec = null,
+  fallbackSec = null,
+  getTzParts = () => ({}),
+  toEpochSeconds = () => 0,
+  nowSec = Date.now() / 1e3
+}) {
+  const target = Math.floor(tsSec || fallbackSec || nowSec);
+  const parts = getTzParts(target);
+  const start = toEpochSeconds(parts.year, parts.month, parts.day, 0, 0, 0);
+  const end = toEpochSeconds(parts.year, parts.month, parts.day, 23, 59, 59);
+  return { start, end };
+}
+function resolveOffsetRecordingsDayBounds({
+  offsetDays = 0,
+  fallbackSec = null,
+  getTzParts = () => ({}),
+  toEpochSeconds = () => 0,
+  nowSec = Date.now() / 1e3
+}) {
+  const base = getTzParts(fallbackSec || nowSec);
+  const shifted = new Date(
+    Date.UTC(base.year, base.month - 1, base.day + offsetDays, 12, 0, 0)
+  );
+  const year = shifted.getUTCFullYear();
+  const month = shifted.getUTCMonth() + 1;
+  const day = shifted.getUTCDate();
+  return {
+    start: toEpochSeconds(year, month, day, 0, 0, 0),
+    end: toEpochSeconds(year, month, day, 23, 59, 59)
   };
 }
 
@@ -13991,37 +14025,20 @@ const FrigateViewCard = class extends HTMLElement {
     return this._activeStandardPageController().renderReviewsContent(items);
   }
   _recordingsDayBounds(tsSec = null) {
-    const target = Math.floor(tsSec || this._winEnd || Date.now() / 1e3);
-    const z = this._tzParts(target);
-    const start = this._tzDateTimeToEpochSeconds(
-      z.year,
-      z.month,
-      z.day,
-      0,
-      0,
-      0
-    );
-    const end = this._tzDateTimeToEpochSeconds(
-      z.year,
-      z.month,
-      z.day,
-      23,
-      59,
-      59
-    );
-    return { start, end };
+    return resolveRecordingsDayBounds({
+      tsSec,
+      fallbackSec: this._winEnd,
+      getTzParts: (target) => this._tzParts(target),
+      toEpochSeconds: (year, month, day, hour, minute, second) => this._tzDateTimeToEpochSeconds(year, month, day, hour, minute, second)
+    });
   }
   _recordingsOffsetDayBounds(offsetDays = 0) {
-    const base = this._tzParts(this._winEnd || Date.now() / 1e3);
-    const shifted = new Date(
-      Date.UTC(base.year, base.month - 1, base.day + offsetDays, 12, 0, 0)
-    );
-    const y = shifted.getUTCFullYear();
-    const mo = shifted.getUTCMonth() + 1;
-    const d = shifted.getUTCDate();
-    const start = this._tzDateTimeToEpochSeconds(y, mo, d, 0, 0, 0);
-    const end = this._tzDateTimeToEpochSeconds(y, mo, d, 23, 59, 59);
-    return { start, end };
+    return resolveOffsetRecordingsDayBounds({
+      offsetDays,
+      fallbackSec: this._winEnd,
+      getTzParts: (target) => this._tzParts(target),
+      toEpochSeconds: (year, month, day, hour, minute, second) => this._tzDateTimeToEpochSeconds(year, month, day, hour, minute, second)
+    });
   }
   async _hasRecordingsInBounds(bounds, clientId, cam) {
     const key = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
