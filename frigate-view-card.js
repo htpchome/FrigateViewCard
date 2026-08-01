@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1048";
+const VERSION = "1.0.1052";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11827,53 +11827,13 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _handleSidebarClick(target) {
     if (this._handlePreviewSidebarClick(target)) return true;
-    const pageRoute = target.closest("[data-page-route]");
-    if (pageRoute) {
-      this._navigateToPageRoute(pageRoute.dataset.pageRoute, {
-        source: "page-nav"
-      });
-      return true;
-    }
-    const setvm = target.closest("[data-setviewmode]");
-    if (setvm) {
-      this._setViewMode(setvm.dataset.setviewmode);
-      return true;
-    }
-    const viewm = target.closest("[data-viewmode]");
-    if (viewm) {
-      this._setViewMode(viewm.dataset.viewmode);
-      return true;
-    }
-    const camTab = target.closest("[data-camidx]");
-    if (camTab) {
-      this._pauseSlideshowForInteraction();
-      this._switchCamera(Number(camTab.dataset.camidx));
-      return true;
-    }
-    const gridCell = target.closest("[data-grid-camidx]");
-    if (gridCell && this._viewMode === "grid") {
-      const idx = Number(gridCell.dataset.gridCamidx);
-      if (Number.isInteger(idx) && idx >= 0) {
-        this._pauseSlideshowForInteraction();
-        this._switchCamera(idx);
-        return true;
-      }
-    }
-    const calDay = target.closest("[data-cal-day]");
-    if (calDay) {
-      this._pickDay(calDay.dataset.calDay);
-      return true;
-    }
-    const calNav = target.closest("[data-cal-nav]");
-    if (calNav) {
-      this._calNav(Number(calNav.dataset.calNav));
-      return true;
-    }
-    const calToday = target.closest("[data-cal-today]");
-    if (calToday) {
-      this._goTodayInCalendar();
-      return true;
-    }
+    if (this._handleSidebarNavigationClick(target)) return true;
+    if (this._handleSidebarCameraClick(target)) return true;
+    if (this._handleSidebarCalendarClick(target)) return true;
+    if (this._handleSidebarFilterClick(target)) return true;
+    return false;
+  }
+  _handleSidebarFilterClick(target) {
     const fopt = target.closest("[data-flabel]");
     if (fopt) {
       this._filterLabel = fopt.dataset.flabel;
@@ -11893,6 +11853,62 @@ const FrigateViewCard = class extends HTMLElement {
       this._favOnly = favo.dataset.favonly === "1";
       this._renderFilter();
       this._renderList();
+      return true;
+    }
+    return false;
+  }
+  _handleSidebarCalendarClick(target) {
+    const calDay = target.closest("[data-cal-day]");
+    if (calDay) {
+      this._pickDay(calDay.dataset.calDay);
+      return true;
+    }
+    const calNav = target.closest("[data-cal-nav]");
+    if (calNav) {
+      this._calNav(Number(calNav.dataset.calNav));
+      return true;
+    }
+    const calToday = target.closest("[data-cal-today]");
+    if (calToday) {
+      this._goTodayInCalendar();
+      return true;
+    }
+    return false;
+  }
+  _handleSidebarCameraClick(target) {
+    const camTab = target.closest("[data-camidx]");
+    if (camTab) {
+      this._pauseSlideshowForInteraction();
+      this._switchCamera(Number(camTab.dataset.camidx));
+      return true;
+    }
+    const gridCell = target.closest("[data-grid-camidx]");
+    if (gridCell && this._viewMode === "grid") {
+      const idx = Number(gridCell.dataset.gridCamidx);
+      if (Number.isInteger(idx) && idx >= 0) {
+        this._pauseSlideshowForInteraction();
+        this._switchCamera(idx);
+        return true;
+      }
+    }
+    return false;
+  }
+  _handleSidebarNavigationClick(target) {
+    const pageRoute = target.closest("[data-page-route]");
+    if (pageRoute) {
+      this._navigateToPageRoute(pageRoute.dataset.pageRoute, {
+        source: "page-nav"
+      });
+      return true;
+    }
+    const setvm = target.closest("[data-setviewmode]");
+    if (setvm) {
+      this._setViewMode(setvm.dataset.setviewmode);
+      return true;
+    }
+    const viewm = target.closest("[data-viewmode]");
+    if (viewm) {
+      this._setViewMode(viewm.dataset.viewmode);
       return true;
     }
     return false;
