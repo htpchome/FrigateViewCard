@@ -13,6 +13,7 @@ import {
   matchesReviewFilters,
   normalizeFilterSelections,
   selectFilteredEvents,
+  selectFilteredKeptEvents,
   selectFilterOptionSourceEvents,
 } from "../src/card/filter-state-utils.js";
 
@@ -196,6 +197,33 @@ test("selectFilteredEvents applies matcher directly for non-media tabs", () => {
 
   assert.deepEqual(events, [{ id: "b", has_clip: false, has_snapshot: true }]);
   assert.notEqual(events, source);
+});
+
+test("selectFilteredKeptEvents uses kept events when not in grid mixed mode", () => {
+  const keptEvents = [{ id: "kept-a" }, { id: "kept-b" }];
+
+  const events = selectFilteredKeptEvents({
+    keptEvents,
+    gridKeptEvents: [{ id: "grid-a" }],
+    isGridMixedListMode: false,
+    matchesEvent: (event) => event.id === "kept-b",
+  });
+
+  assert.deepEqual(events, [{ id: "kept-b" }]);
+});
+
+test("selectFilteredKeptEvents uses grid kept events in grid mixed mode", () => {
+  const gridKeptEvents = [{ id: "grid-a" }, { id: "grid-b" }];
+
+  const events = selectFilteredKeptEvents({
+    keptEvents: [{ id: "kept-a" }],
+    gridKeptEvents,
+    isGridMixedListMode: true,
+    matchesEvent: (event) => event.id !== "grid-a",
+  });
+
+  assert.deepEqual(events, [{ id: "grid-b" }]);
+  assert.notEqual(events, gridKeptEvents);
 });
 
 test("normalizeFilterSelections resets missing label and zone to all", () => {

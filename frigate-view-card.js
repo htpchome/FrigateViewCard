@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1066";
+const VERSION = "1.0.1067";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4178,6 +4178,15 @@ function selectFilteredEvents({
     filteredEvents = filteredEvents.filter((event) => event?.has_snapshot);
   }
   return filteredEvents.filter((event) => matchesEvent(event));
+}
+function selectFilteredKeptEvents({
+  keptEvents = [],
+  gridKeptEvents = [],
+  isGridMixedListMode = false,
+  matchesEvent = () => true
+}) {
+  const source = isGridMixedListMode ? gridKeptEvents : keptEvents;
+  return [...source || []].filter((event) => matchesEvent(event));
 }
 
 // src/card/controls-readout-utils.js
@@ -14016,8 +14025,12 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _filteredKept() {
-    const source = this._isGridMixedListMode() ? this._allGridKeptEvents() : this._kept || [];
-    return source.filter((ev) => this._matchesEventFilters(ev));
+    return selectFilteredKeptEvents({
+      keptEvents: this._kept || [],
+      gridKeptEvents: this._allGridKeptEvents(),
+      isGridMixedListMode: this._isGridMixedListMode(),
+      matchesEvent: (event) => this._matchesEventFilters(event)
+    });
   }
   _normalizeFilterSelections() {
     const normalized = normalizeFilterSelections({

@@ -155,3 +155,13 @@ export function selectFilteredEvents({
   }
   return filteredEvents.filter((event) => matchesEvent(event));
 }
+
+export function selectFilteredKeptEvents({
+  keptEvents = [],
+  gridKeptEvents = [],
+  isGridMixedListMode = false,
+  matchesEvent = () => true,
+}) {
+  const source = isGridMixedListMode ? gridKeptEvents : keptEvents;
+  return [...(source || [])].filter((event) => matchesEvent(event));
+}

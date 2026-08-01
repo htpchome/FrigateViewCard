@@ -171,6 +171,7 @@ import {
   matchesReviewFilters,
   normalizeFilterSelections,
   selectFilteredEvents,
+  selectFilteredKeptEvents,
   selectFilterOptionSourceEvents,
 } from "./filter-state-utils.js";
 import {
@@ -8237,10 +8238,12 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
   _filteredKept() {
-    const source = this._isGridMixedListMode()
-      ? this._allGridKeptEvents()
-      : this._kept || [];
-    return source.filter((ev) => this._matchesEventFilters(ev));
+    return selectFilteredKeptEvents({
+      keptEvents: this._kept || [],
+      gridKeptEvents: this._allGridKeptEvents(),
+      isGridMixedListMode: this._isGridMixedListMode(),
+      matchesEvent: (event) => this._matchesEventFilters(event),
+    });
   }
   _normalizeFilterSelections() {
     const normalized = normalizeFilterSelections({
