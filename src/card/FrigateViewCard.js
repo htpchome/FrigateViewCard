@@ -209,6 +209,7 @@ import {
   resolveOffsetRecordingsDayBounds,
   resolveRecordingsDayBounds,
 } from "./recordings-day-utils.js";
+import { resolveRecordingsBrowseNavState } from "./recordings-browse-nav-utils.js";
 import { buildRecordingsListMarkup } from "./recordings-list-markup.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
@@ -8139,7 +8140,6 @@ export class FrigateViewCard extends HTMLElement {
 
     const current = this._recordingsDayBounds();
     const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
-    const isTodayOrFuture = current.end >= today.end;
     const prevBounds = this._recordingsOffsetDayBounds(-1);
     const hasPrev = await this._hasRecordingsInBounds(
       prevBounds,
@@ -8149,14 +8149,26 @@ export class FrigateViewCard extends HTMLElement {
     if (token !== this._recordingsNavUpdateToken) return;
 
     let hasNext = false;
-    if (!isTodayOrFuture) {
+    const navState = resolveRecordingsBrowseNavState({
+      currentBounds: current,
+      todayBounds: today,
+      hasPrev,
+      hasNext,
+    });
+    if (navState.shouldProbeNext) {
       const nextBounds = this._recordingsOffsetDayBounds(1);
       hasNext = await this._hasRecordingsInBounds(nextBounds, clientId, cam);
       if (token !== this._recordingsNavUpdateToken) return;
     }
 
-    prev.disabled = !hasPrev;
-    next.disabled = isTodayOrFuture || !hasNext;
+    const resolvedNavState = resolveRecordingsBrowseNavState({
+      currentBounds: current,
+      todayBounds: today,
+      hasPrev,
+      hasNext,
+    });
+    prev.disabled = resolvedNavState.prevDisabled;
+    next.disabled = resolvedNavState.nextDisabled;
   }
 
   async _stepRecordingsDay(dir) {

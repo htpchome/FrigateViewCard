@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1072";
+const VERSION = "1.0.1073";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4670,6 +4670,24 @@ function resolveOffsetRecordingsDayBounds({
   return {
     start: toEpochSeconds(year, month, day, 0, 0, 0),
     end: toEpochSeconds(year, month, day, 23, 59, 59)
+  };
+}
+
+// src/card/recordings-browse-nav-utils.js
+function resolveRecordingsBrowseNavState({
+  currentBounds = null,
+  todayBounds = null,
+  hasPrev = false,
+  hasNext = false
+}) {
+  const currentEnd = Number(currentBounds?.end || 0);
+  const todayEnd = Number(todayBounds?.end || 0);
+  const isTodayOrFuture = currentEnd >= todayEnd;
+  return {
+    isTodayOrFuture,
+    shouldProbeNext: !isTodayOrFuture,
+    prevDisabled: !hasPrev,
+    nextDisabled: isTodayOrFuture || !hasNext
   };
 }
 
@@ -14084,7 +14102,6 @@ const FrigateViewCard = class extends HTMLElement {
     next.disabled = true;
     const current = this._recordingsDayBounds();
     const today = this._recordingsDayBounds(Math.floor(Date.now() / 1e3));
-    const isTodayOrFuture = current.end >= today.end;
     const prevBounds = this._recordingsOffsetDayBounds(-1);
     const hasPrev = await this._hasRecordingsInBounds(
       prevBounds,
@@ -14093,13 +14110,25 @@ const FrigateViewCard = class extends HTMLElement {
     );
     if (token !== this._recordingsNavUpdateToken) return;
     let hasNext = false;
-    if (!isTodayOrFuture) {
+    const navState = resolveRecordingsBrowseNavState({
+      currentBounds: current,
+      todayBounds: today,
+      hasPrev,
+      hasNext
+    });
+    if (navState.shouldProbeNext) {
       const nextBounds = this._recordingsOffsetDayBounds(1);
       hasNext = await this._hasRecordingsInBounds(nextBounds, clientId, cam);
       if (token !== this._recordingsNavUpdateToken) return;
     }
-    prev.disabled = !hasPrev;
-    next.disabled = isTodayOrFuture || !hasNext;
+    const resolvedNavState = resolveRecordingsBrowseNavState({
+      currentBounds: current,
+      todayBounds: today,
+      hasPrev,
+      hasNext
+    });
+    prev.disabled = resolvedNavState.prevDisabled;
+    next.disabled = resolvedNavState.nextDisabled;
   }
   async _stepRecordingsDay(dir) {
     return this._navigateRecordingsDayAnimated(dir);
