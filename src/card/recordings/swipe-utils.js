@@ -40,22 +40,33 @@ export function createRecordingsSwipeGestureState(direction, stage = null) {
   };
 }
 
-export function resolvePreparedRecordingsSwipeState({
+export function resolvePreparedRecordingsIncomingState({
   prep = null,
   renderRecordings = () => "",
+  emptyHtml = RECORDINGS_SWIPE_EMPTY_HTML,
 }) {
   const safePrep = prep || {};
   const recordings = Array.isArray(safePrep.recs) ? safePrep.recs : [];
   const hasData = !!safePrep.hasData;
 
   return {
-    ready: true,
     hasData,
     bounds: safePrep.bounds || null,
     recs: recordings,
-    incomingHtml: hasData
-      ? renderRecordings(recordings)
-      : RECORDINGS_SWIPE_EMPTY_HTML,
+    incomingHtml: hasData ? renderRecordings(recordings) : emptyHtml,
+  };
+}
+
+export function resolvePreparedRecordingsSwipeState({
+  prep = null,
+  renderRecordings = () => "",
+}) {
+  return {
+    ready: true,
+    ...resolvePreparedRecordingsIncomingState({
+      prep,
+      renderRecordings,
+    }),
   };
 }
 

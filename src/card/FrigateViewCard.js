@@ -189,6 +189,7 @@ import {
   resolveFailedRecordingsSwipeState,
   resolveOffsetRecordingsDayBounds,
   resolvePreparedRecordingsDayTransition,
+  resolvePreparedRecordingsIncomingState,
   resolvePreparedRecordingsSwipeState,
   resolveRecordingsBrowseNavState,
   resolveRecordingsDayBounds,
@@ -5206,18 +5207,27 @@ export class FrigateViewCard extends HTMLElement {
     this._recordingsDayNavAnimating = true;
     try {
       const prep = await this._prepareRecordingsDayTransition(dir);
-      if (!prep.hasData) {
+      const navigation = resolvePreparedRecordingsIncomingState({
+        prep,
+        renderRecordings: (recordings) =>
+          this._recordingsListMarkup(this._recordingsViewRows(recordings)),
+        emptyHtml: "",
+      });
+      if (!navigation.hasData) {
         this._bounceRecordingsArea(dir);
         void this._updateRecordingsBrowseNav();
         return false;
       }
 
-      const incomingHtml = this._recordingsListMarkup(
-        this._recordingsViewRows(prep.recs),
+      const stage = this._createRecordingsSwipeStage(
+        dir,
+        navigation.incomingHtml,
       );
-      const stage = this._createRecordingsSwipeStage(dir, incomingHtml);
       if (!stage) {
-        await this._commitRecordingsDayTransition(prep.bounds, prep.recs);
+        await this._commitRecordingsDayTransition(
+          navigation.bounds,
+          navigation.recs,
+        );
         return true;
       }
 
@@ -5230,7 +5240,10 @@ export class FrigateViewCard extends HTMLElement {
         320,
         "cubic-bezier(0.28, 0.02, 0.18, 1)",
       );
-      await this._commitRecordingsDayTransition(prep.bounds, prep.recs);
+      await this._commitRecordingsDayTransition(
+        navigation.bounds,
+        navigation.recs,
+      );
       return true;
     } finally {
       this._recordingsDayNavAnimating = false;

@@ -6,6 +6,7 @@ import {
   RECORDINGS_SWIPE_EMPTY_HTML,
   RECORDINGS_SWIPE_LOADING_HTML,
   resolveFailedRecordingsSwipeState,
+  resolvePreparedRecordingsIncomingState,
   resolvePreparedRecordingsSwipeState,
   resolveRecordingsSwipeStageMetrics,
   resolveRecordingsSwipeStageTransforms,
@@ -72,6 +73,45 @@ test("createRecordingsSwipeGestureState builds the initial gesture shape", () =>
     bounds: null,
     recs: [],
     prepPromise: null,
+  });
+});
+
+test("resolvePreparedRecordingsIncomingState renders incoming HTML when data exists", () => {
+  const recs = [{ id: 1 }];
+  const state = resolvePreparedRecordingsIncomingState({
+    prep: {
+      hasData: true,
+      bounds: { start: 100, end: 200 },
+      recs,
+    },
+    renderRecordings: (recordings) => `rows:${recordings.length}`,
+    emptyHtml: "unused",
+  });
+
+  assert.deepEqual(state, {
+    hasData: true,
+    bounds: { start: 100, end: 200 },
+    recs,
+    incomingHtml: "rows:1",
+  });
+});
+
+test("resolvePreparedRecordingsIncomingState falls back to the provided empty HTML", () => {
+  const state = resolvePreparedRecordingsIncomingState({
+    prep: {
+      hasData: false,
+      bounds: { start: 100, end: 200 },
+      recs: null,
+    },
+    renderRecordings: () => "unused",
+    emptyHtml: "",
+  });
+
+  assert.deepEqual(state, {
+    hasData: false,
+    bounds: { start: 100, end: 200 },
+    recs: [],
+    incomingHtml: "",
   });
 });
 

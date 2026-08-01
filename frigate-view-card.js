@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1080";
+const VERSION = "1.0.1081";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4490,19 +4490,31 @@ function createRecordingsSwipeGestureState(direction, stage = null) {
     prepPromise: null
   };
 }
-function resolvePreparedRecordingsSwipeState({
+function resolvePreparedRecordingsIncomingState({
   prep = null,
-  renderRecordings = () => ""
+  renderRecordings = () => "",
+  emptyHtml = RECORDINGS_SWIPE_EMPTY_HTML
 }) {
   const safePrep = prep || {};
   const recordings = Array.isArray(safePrep.recs) ? safePrep.recs : [];
   const hasData = !!safePrep.hasData;
   return {
-    ready: true,
     hasData,
     bounds: safePrep.bounds || null,
     recs: recordings,
-    incomingHtml: hasData ? renderRecordings(recordings) : RECORDINGS_SWIPE_EMPTY_HTML
+    incomingHtml: hasData ? renderRecordings(recordings) : emptyHtml
+  };
+}
+function resolvePreparedRecordingsSwipeState({
+  prep = null,
+  renderRecordings = () => ""
+}) {
+  return {
+    ready: true,
+    ...resolvePreparedRecordingsIncomingState({
+      prep,
+      renderRecordings
+    })
   };
 }
 function resolveFailedRecordingsSwipeState() {
@@ -11632,17 +11644,25 @@ const FrigateViewCard = class extends HTMLElement {
     this._recordingsDayNavAnimating = true;
     try {
       const prep = await this._prepareRecordingsDayTransition(dir);
-      if (!prep.hasData) {
+      const navigation = resolvePreparedRecordingsIncomingState({
+        prep,
+        renderRecordings: (recordings) => this._recordingsListMarkup(this._recordingsViewRows(recordings)),
+        emptyHtml: ""
+      });
+      if (!navigation.hasData) {
         this._bounceRecordingsArea(dir);
         void this._updateRecordingsBrowseNav();
         return false;
       }
-      const incomingHtml = this._recordingsListMarkup(
-        this._recordingsViewRows(prep.recs)
+      const stage = this._createRecordingsSwipeStage(
+        dir,
+        navigation.incomingHtml
       );
-      const stage = this._createRecordingsSwipeStage(dir, incomingHtml);
       if (!stage) {
-        await this._commitRecordingsDayTransition(prep.bounds, prep.recs);
+        await this._commitRecordingsDayTransition(
+          navigation.bounds,
+          navigation.recs
+        );
         return true;
       }
       await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -11653,7 +11673,10 @@ const FrigateViewCard = class extends HTMLElement {
         320,
         "cubic-bezier(0.28, 0.02, 0.18, 1)"
       );
-      await this._commitRecordingsDayTransition(prep.bounds, prep.recs);
+      await this._commitRecordingsDayTransition(
+        navigation.bounds,
+        navigation.recs
+      );
       return true;
     } finally {
       this._recordingsDayNavAnimating = false;
