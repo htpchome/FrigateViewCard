@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1077";
+const VERSION = "1.0.1078";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -610,7 +610,7 @@ const STYLES = `
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 
   /* \u2500\u2500 filter + cal \u2500\u2500 */
-  .filter-panel,.cal-panel{display: none;position: absolute;right:0;background-color: #f1f1f1;min-width: 300px;overflow: auto;border-top: 1px solid var(--c-primary);box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 3;padding:20px;}
+  .filter-panel,.cal-panel{display: none;position: absolute;right:0;background-color: #f1f1f1;min-width: 300px;overflow: auto;border-top: 2px solid var(--c-primary);box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 3;padding:20px;}
   .frow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px;} .frow:last-child{margin-bottom:0;} .frow-l{font-size:0.75rem;color:var(--c-text3);width:38px;text-transform:uppercase;flex-shrink:0;}
   .chip{background:var(--c-bg-panel);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:10px;padding:3.6px 10.8px;font-size:0.825rem;cursor:pointer;}
   .chip.on{background:var(--c-primary-l);border-color:var(--c-primary-d);color:var(--c-primary-d);}
@@ -4221,7 +4221,7 @@ function selectReviewsForFilterTab({
   return showAllReviews ? safeReviews : safeReviews.filter((review) => review?.severity === "alert");
 }
 
-// src/card/recordings-segment-utils.js
+// src/card/recordings/segment-utils.js
 function mergeRecordingSegments(recordings = []) {
   if (!recordings.length) return [];
   const segments = [...recordings].sort((a, b) => a.start_time - b.start_time);
@@ -4639,7 +4639,7 @@ function createOlderHintSyncer(syncOlderHint) {
   };
 }
 
-// src/card/recordings-day-utils.js
+// src/card/recordings/day-utils.js
 function resolveRecordingsDayBounds({
   tsSec = null,
   fallbackSec = null,
@@ -4673,7 +4673,7 @@ function resolveOffsetRecordingsDayBounds({
   };
 }
 
-// src/card/recordings-availability-utils.js
+// src/card/recordings/availability-utils.js
 function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
   return `${clientId}|${camera}|${bounds.start}|${bounds.end}`;
 }
@@ -4765,7 +4765,7 @@ function buildPreparedRecordingsDayResult(bounds, recordings) {
   };
 }
 
-// src/card/recordings-browse-nav-utils.js
+// src/card/recordings/browse-nav-utils.js
 function resolveRecordingsBrowseNavState({
   currentBounds = null,
   todayBounds = null,
@@ -4783,7 +4783,7 @@ function resolveRecordingsBrowseNavState({
   };
 }
 
-// src/card/recordings-list-markup.js
+// src/card/recordings/list-markup.js
 function buildRecordingsListMarkup({
   recordings = [],
   emptyText = "No recordings in this day",
@@ -4814,7 +4814,7 @@ function buildRecordingsListMarkup({
   }).join("");
 }
 
-// src/card/recordings-swipe-utils.js
+// src/card/recordings/swipe-utils.js
 const RECORDINGS_SWIPE_LOADING_HTML = '<div class="empty">Loading day\u2026</div>';
 const RECORDINGS_SWIPE_EMPTY_HTML = '<div class="empty">No recordings in this day</div>';
 function resolveRecordingsSwipeStageMetrics({

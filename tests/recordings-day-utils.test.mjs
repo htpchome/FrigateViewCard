@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   resolveOffsetRecordingsDayBounds,
   resolveRecordingsDayBounds,
-} from "../src/card/recordings-day-utils.js";
+} from "../src/card/recordings/day-utils.js";
 
 function makeEpochStub() {
   return (year, month, day, hour, minute, second) =>

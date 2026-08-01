@@ -177,7 +177,7 @@ import {
   selectReviewsForFilterTab,
   selectFilterZones,
 } from "./filter-state-utils.js";
-import { splitRecordingsHourly } from "./recordings-segment-utils.js";
+import { splitRecordingsHourly } from "./recordings/segment-utils.js";
 import {
   appendControlsReadoutLine,
   clearControlsReadoutLines,
@@ -208,16 +208,16 @@ import {
 import {
   resolveOffsetRecordingsDayBounds,
   resolveRecordingsDayBounds,
-} from "./recordings-day-utils.js";
+} from "./recordings/day-utils.js";
 import {
   buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
   normalizeFetchedRecordingsAvailability,
   resolvePreparedRecordingsDayTransition,
   resolveCachedRecordingsAvailability,
-} from "./recordings-availability-utils.js";
-import { resolveRecordingsBrowseNavState } from "./recordings-browse-nav-utils.js";
-import { buildRecordingsListMarkup } from "./recordings-list-markup.js";
+} from "./recordings/availability-utils.js";
+import { resolveRecordingsBrowseNavState } from "./recordings/browse-nav-utils.js";
+import { buildRecordingsListMarkup } from "./recordings/list-markup.js";
 import {
   createRecordingsSwipeGestureState,
   RECORDINGS_SWIPE_EMPTY_HTML,
@@ -226,7 +226,7 @@ import {
   resolvePreparedRecordingsSwipeState,
   resolveRecordingsSwipeStageMetrics,
   resolveRecordingsSwipeStageTransforms,
-} from "./recordings-swipe-utils.js";
+} from "./recordings/swipe-utils.js";
 import { PreviewAlertController } from "../preview/preview-alert-controller.js";
 import { PreviewPageController } from "../preview/preview-page-controller.js";
 import { PageNavigationController } from "../navigation/page-navigation-controller.js";

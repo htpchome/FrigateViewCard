@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { resolveRecordingsBrowseNavState } from "../src/card/recordings-browse-nav-utils.js";
+import { resolveRecordingsBrowseNavState } from "../src/card/recordings/browse-nav-utils.js";
 
 test("resolveRecordingsBrowseNavState disables next and skips probing on today", () => {
   const state = resolveRecordingsBrowseNavState({

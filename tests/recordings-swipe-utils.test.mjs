@@ -9,7 +9,7 @@ import {
   resolvePreparedRecordingsSwipeState,
   resolveRecordingsSwipeStageMetrics,
   resolveRecordingsSwipeStageTransforms,
-} from "../src/card/recordings-swipe-utils.js";
+} from "../src/card/recordings/swipe-utils.js";
 
 test("resolveRecordingsSwipeStageMetrics derives width, current HTML, and minimum height", () => {
   const metrics = resolveRecordingsSwipeStageMetrics({

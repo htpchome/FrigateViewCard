@@ -7,7 +7,7 @@ import {
   normalizeFetchedRecordingsAvailability,
   resolvePreparedRecordingsDayTransition,
   resolveCachedRecordingsAvailability,
-} from "../src/card/recordings-availability-utils.js";
+} from "../src/card/recordings/availability-utils.js";
 
 test("buildRecordingsDayCacheKey combines client, camera, and bounds", () => {
   assert.equal(
