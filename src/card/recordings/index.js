@@ -2,6 +2,7 @@ export {
   buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
   normalizeFetchedRecordingsAvailability,
+  resolveCommittedRecordingsDayState,
   resolveFailedRecordingsAvailabilityState,
   resolveFetchedRecordingsAvailabilityState,
   resolvePreparedRecordingsDayTransition,

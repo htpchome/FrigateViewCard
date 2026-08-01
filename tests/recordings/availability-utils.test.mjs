@@ -5,6 +5,7 @@ import {
   buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
   normalizeFetchedRecordingsAvailability,
+  resolveCommittedRecordingsDayState,
   resolvePreparedRecordingsDayTransition,
   resolveCachedRecordingsAvailability,
   resolveFailedRecordingsAvailabilityState,
@@ -176,6 +177,42 @@ test("resolveFailedRecordingsAvailabilityState disables availability without cac
     hasRecordings: false,
     availabilityValue: false,
   });
+});
+
+test("resolveCommittedRecordingsDayState normalizes recordings and builds a cache key", () => {
+  const recordings = [{ id: 1 }];
+
+  assert.deepEqual(
+    resolveCommittedRecordingsDayState({
+      bounds: { start: 100, end: 200 },
+      recordings,
+      clientId: "client-a",
+      camera: "front",
+    }),
+    {
+      bounds: { start: 100, end: 200 },
+      recordings,
+      hasRecordings: true,
+      key: "client-a|front|100|200",
+    },
+  );
+});
+
+test("resolveCommittedRecordingsDayState omits the key when camera context is missing", () => {
+  assert.deepEqual(
+    resolveCommittedRecordingsDayState({
+      bounds: { start: 100, end: 200 },
+      recordings: null,
+      clientId: "",
+      camera: "front",
+    }),
+    {
+      bounds: { start: 100, end: 200 },
+      recordings: [],
+      hasRecordings: false,
+      key: "",
+    },
+  );
 });
 
 test("buildPreparedRecordingsDayResult normalizes prepared recordings payloads", () => {

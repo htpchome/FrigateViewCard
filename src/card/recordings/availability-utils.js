@@ -110,6 +110,24 @@ export function resolveFailedRecordingsAvailabilityState() {
   };
 }
 
+export function resolveCommittedRecordingsDayState({
+  bounds = null,
+  recordings = null,
+  clientId = "",
+  camera = "",
+}) {
+  const safeRecordings = Array.isArray(recordings) ? recordings : [];
+  return {
+    bounds,
+    recordings: safeRecordings,
+    hasRecordings: safeRecordings.length > 0,
+    key:
+      clientId && camera && bounds
+        ? buildRecordingsDayCacheKey(clientId, camera, bounds)
+        : "",
+  };
+}
+
 export function buildPreparedRecordingsDayResult(bounds, recordings) {
   const normalized = normalizeFetchedRecordingsAvailability(recordings);
   return {

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1083";
+const VERSION = "1.0.1084";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4317,6 +4317,20 @@ function resolveFailedRecordingsAvailabilityState() {
     recordings: null,
     hasRecordings: false,
     availabilityValue: false
+  };
+}
+function resolveCommittedRecordingsDayState({
+  bounds = null,
+  recordings = null,
+  clientId = "",
+  camera = ""
+}) {
+  const safeRecordings = Array.isArray(recordings) ? recordings : [];
+  return {
+    bounds,
+    recordings: safeRecordings,
+    hasRecordings: safeRecordings.length > 0,
+    key: clientId && camera && bounds ? buildRecordingsDayCacheKey(clientId, camera, bounds) : ""
   };
 }
 function buildPreparedRecordingsDayResult(bounds, recordings) {
@@ -11744,18 +11758,23 @@ const FrigateViewCard = class extends HTMLElement {
   async _commitRecordingsDayTransition(bounds, recs) {
     if (!bounds) return;
     const { clientId, cam } = this._cc();
-    const key = clientId && cam ? `${clientId}|${cam}|${bounds.start}|${bounds.end}` : "";
+    const committed = resolveCommittedRecordingsDayState({
+      bounds,
+      recordings: recs,
+      clientId,
+      camera: cam
+    });
     this._followNowWindow = false;
-    this._winStart = bounds.start;
-    this._winEnd = bounds.end;
+    this._winStart = committed.bounds.start;
+    this._winEnd = committed.bounds.end;
     this._exhausted = false;
     this._pruneNonActiveCamWindowCaches();
-    this._recordings = Array.isArray(recs) ? recs : [];
-    if (key) {
-      this._recordingsDayDataCache.set(key, this._recordings);
+    this._recordings = committed.recordings;
+    if (committed.key) {
+      this._recordingsDayDataCache.set(committed.key, this._recordings);
       this._recordingsDayAvailabilityCache.set(
-        key,
-        this._recordings.length > 0
+        committed.key,
+        committed.hasRecordings
       );
     }
     this._cacheActiveCamSlice("recordings", this._recordings);
