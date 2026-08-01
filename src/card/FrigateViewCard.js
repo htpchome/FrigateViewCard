@@ -164,6 +164,7 @@ import {
   buildReviewFilterLabels,
   buildReviewFilterZones,
   collectFilterLabelsFromEvents,
+  collectUniqueSourceEventsFromReviews,
   collectFilterZonesFromReviews,
   collectFilterZonesFromEvents,
   matchesEventFilters,
@@ -8199,15 +8200,10 @@ export class FrigateViewCard extends HTMLElement {
   }
   _filterOptionSourceEvents() {
     if (this._tab === "alerts") {
-      const seen = new Set();
-      const out = [];
-      this._reviewsForTabBase().forEach((review) => {
-        const sourceEvent = this._reviewSourceEvent(review);
-        if (!sourceEvent?.id || seen.has(sourceEvent.id)) return;
-        seen.add(sourceEvent.id);
-        out.push(sourceEvent);
-      });
-      return out;
+      return collectUniqueSourceEventsFromReviews(
+        this._reviewsForTabBase(),
+        (review) => this._reviewSourceEvent(review),
+      );
     }
     if (this._tab === "kept") {
       return this._isGridMixedListMode()

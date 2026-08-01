@@ -56,6 +56,18 @@ export function collectFilterZonesFromReviews(reviews, getZones) {
   return [...zones];
 }
 
+export function collectUniqueSourceEventsFromReviews(reviews, getSourceEvent) {
+  const seen = new Set();
+  const out = [];
+  (reviews || []).forEach((review) => {
+    const sourceEvent = getSourceEvent(review);
+    if (!sourceEvent?.id || seen.has(sourceEvent.id)) return;
+    seen.add(sourceEvent.id);
+    out.push(sourceEvent);
+  });
+  return out;
+}
+
 export function normalizeFilterSelections({
   filterLabel,
   filterZone,

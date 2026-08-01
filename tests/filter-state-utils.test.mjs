@@ -8,6 +8,7 @@ import {
   collectFilterLabelsFromReviews,
   collectFilterZonesFromEvents,
   collectFilterZonesFromReviews,
+  collectUniqueSourceEventsFromReviews,
   matchesEventFilters,
   matchesReviewFilters,
   normalizeFilterSelections,
@@ -84,6 +85,21 @@ test("collectFilterZonesFromReviews merges callback results uniquely", () => {
   );
 
   assert.deepEqual(zones.sort(), ["driveway", "front", "yard"]);
+});
+
+test("collectUniqueSourceEventsFromReviews dedupes by source event id", () => {
+  const eventA = { id: "event-a", label: "person" };
+  const eventB = { id: "event-b", label: "car" };
+  const reviews = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }];
+
+  const events = collectUniqueSourceEventsFromReviews(reviews, (review) => {
+    if (review.id === 1) return eventA;
+    if (review.id === 2) return eventA;
+    if (review.id === 3) return eventB;
+    return null;
+  });
+
+  assert.deepEqual(events, [eventA, eventB]);
 });
 
 test("normalizeFilterSelections resets missing label and zone to all", () => {

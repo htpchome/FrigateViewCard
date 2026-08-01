@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1062";
+const VERSION = "1.0.1063";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4097,6 +4097,17 @@ function collectFilterZonesFromReviews(reviews, getZones) {
     });
   });
   return [...zones];
+}
+function collectUniqueSourceEventsFromReviews(reviews, getSourceEvent) {
+  const seen = new Set();
+  const out = [];
+  (reviews || []).forEach((review) => {
+    const sourceEvent = getSourceEvent(review);
+    if (!sourceEvent?.id || seen.has(sourceEvent.id)) return;
+    seen.add(sourceEvent.id);
+    out.push(sourceEvent);
+  });
+  return out;
 }
 function normalizeFilterSelections({
   filterLabel,
@@ -13948,15 +13959,10 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _filterOptionSourceEvents() {
     if (this._tab === "alerts") {
-      const seen = new Set();
-      const out = [];
-      this._reviewsForTabBase().forEach((review) => {
-        const sourceEvent = this._reviewSourceEvent(review);
-        if (!sourceEvent?.id || seen.has(sourceEvent.id)) return;
-        seen.add(sourceEvent.id);
-        out.push(sourceEvent);
-      });
-      return out;
+      return collectUniqueSourceEventsFromReviews(
+        this._reviewsForTabBase(),
+        (review) => this._reviewSourceEvent(review)
+      );
     }
     if (this._tab === "kept") {
       return this._isGridMixedListMode() ? this._allGridKeptEvents() : [...this._kept || []];
