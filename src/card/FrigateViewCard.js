@@ -6076,6 +6076,9 @@ export class FrigateViewCard extends HTMLElement {
     if (this._handleControlsListClick(e, target)) return true;
     if (this._handlePrimaryListItemClick(e, target)) return true;
     if (this._handleListNavigationClick(e, target)) return true;
+    return this._handleRecordingsListClick(e, target);
+  }
+  _handleRecordingsListClick(e, target) {
     const recDl = target.closest("[data-rec-dl-start]");
     if (recDl) {
       e.stopPropagation();

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1046";
+const VERSION = "1.0.1047";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11918,6 +11918,9 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._handleControlsListClick(e, target)) return true;
     if (this._handlePrimaryListItemClick(e, target)) return true;
     if (this._handleListNavigationClick(e, target)) return true;
+    return this._handleRecordingsListClick(e, target);
+  }
+  _handleRecordingsListClick(e, target) {
     const recDl = target.closest("[data-rec-dl-start]");
     if (recDl) {
       e.stopPropagation();
