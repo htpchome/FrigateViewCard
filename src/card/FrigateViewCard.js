@@ -144,9 +144,11 @@ import {
   resolveWebRtcStartup,
 } from "../live/live-startup-policy.js";
 import {
+  buildCalendarPanelMarkup,
   buildControlsSectionMarkup,
   buildControlsReadoutEmptyMarkup,
   buildControlsReadoutLinesMarkup,
+  buildFilterPanelMarkup,
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
   buildMainLayoutShellMarkup,
@@ -7860,40 +7862,24 @@ export class FrigateViewCard extends HTMLElement {
     if (!p) return;
     const m = this._resolveCalendarMonthDate();
     const activeDayDateString = this._activeCalendarDayDateString();
-    const y = m.getUTCFullYear(),
-      mo = m.getUTCMonth();
-    const first = new Date(Date.UTC(y, mo, 1, 12, 0, 0));
-    const startDow = (first.getUTCDay() + 6) % 7;
-    const days = new Date(Date.UTC(y, mo + 1, 0, 12, 0, 0)).getUTCDate();
-    let cells = "";
-    for (let i = 0; i < startDow; i++) cells += "<span></span>";
-    for (let d = 1; d <= days; d++) {
-      const ds = `${y}-${String(mo + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      cells += `<button class="cday ${ds === activeDayDateString ? "active" : ""}" data-cal-day="${ds}">${d}${this._daysWithActivity.has(ds) ? '<i class="cdot"></i>' : ""}</button>`;
-    }
-    const monthLabel = new Intl.DateTimeFormat([], {
-      month: "long",
-      year: "numeric",
+    p.innerHTML = buildCalendarPanelMarkup({
+      monthDate: m,
+      activeDayDateString,
+      daysWithActivity: this._daysWithActivity,
       timeZone: this._tz(),
-    }).format(m);
-    p.innerHTML = `<div class="cal-top"><button class="cal-today-btn" data-cal-today>Today</button></div>
-      <div class="cal-head"><button data-cal-nav="-1">‹</button><b>${monthLabel}</b><button data-cal-nav="1">›</button></div>
-      <div class="cal-dow"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
-      <div class="cal-grid">${cells}</div>`;
+    });
   }
   _renderFilter() {
     const p = this.shadowRoot.querySelector("#filter-panel");
     if (!p) return;
     this._normalizeFilterSelections();
-    const lbls = ["all", ...this._labels()];
-    const zones = ["all", ...this._zones()];
-    const chip = (val, cur, attr) =>
-      `<button class="chip ${val === cur ? "on" : ""}" data-${attr}="${val}">${val === "all" ? "All" : cap(val)}</button>`;
-    p.innerHTML = `<div class="frow"><span class="frow-l">Label</span>${lbls.map((l) => chip(l, this._filterLabel, "flabel")).join("")}</div>
-      <div class="frow"><span class="frow-l">Zone</span>${zones.map((z) => chip(z, this._filterZone, "fzone")).join("")}</div>
-      <div class="frow"><span class="frow-l">Show</span>
-        <button class="chip ${!this._favOnly ? "on" : ""}" data-favonly="0">All</button>
-        <button class="chip ${this._favOnly ? "on" : ""}" data-favonly="1">★ Favorites</button></div>`;
+    p.innerHTML = buildFilterPanelMarkup({
+      labels: ["all", ...this._labels()],
+      zones: ["all", ...this._zones()],
+      filterLabel: this._filterLabel,
+      filterZone: this._filterZone,
+      favOnly: this._favOnly,
+    });
   }
   async _loadOlder() {
     const before = this._events.length
