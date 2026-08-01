@@ -191,6 +191,7 @@ import {
   resolvePreparedRecordingsDayTransition,
   resolvePreparedRecordingsIncomingState,
   resolvePreparedRecordingsSwipeState,
+  resolveRecordingsBrowseNavContextState,
   resolveRecordingsBrowseNavState,
   resolveRecordingsDayBounds,
   resolveRecordingsSwipeStageMetrics,
@@ -8156,18 +8157,23 @@ export class FrigateViewCard extends HTMLElement {
     if (!prev || !next) return;
 
     const { clientId, cam } = this._cc();
-    if (!clientId || !cam) {
-      prev.disabled = true;
-      next.disabled = true;
+    const current = this._recordingsDayBounds();
+    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
+    const initialNavState = resolveRecordingsBrowseNavContextState({
+      clientId,
+      camera: cam,
+      currentBounds: current,
+      todayBounds: today,
+    });
+    if (!initialNavState.hasContext) {
+      prev.disabled = initialNavState.prevDisabled;
+      next.disabled = initialNavState.nextDisabled;
       return;
     }
 
     const token = ++this._recordingsNavUpdateToken;
     prev.disabled = true;
     next.disabled = true;
-
-    const current = this._recordingsDayBounds();
-    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
     const prevBounds = this._recordingsOffsetDayBounds(-1);
     const hasPrev = await this._hasRecordingsInBounds(
       prevBounds,

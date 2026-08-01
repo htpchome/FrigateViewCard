@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1081";
+const VERSION = "1.0.1082";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4314,6 +4314,34 @@ function buildPreparedRecordingsDayResult(bounds, recordings) {
 }
 
 // src/card/recordings/browse-nav-utils.js
+function resolveRecordingsBrowseNavContextState({
+  clientId = "",
+  camera = "",
+  currentBounds = null,
+  todayBounds = null,
+  hasPrev = false,
+  hasNext = false
+}) {
+  const hasContext = !!clientId && !!camera;
+  if (!hasContext) {
+    return {
+      hasContext: false,
+      isTodayOrFuture: false,
+      shouldProbeNext: false,
+      prevDisabled: true,
+      nextDisabled: true
+    };
+  }
+  return {
+    hasContext: true,
+    ...resolveRecordingsBrowseNavState({
+      currentBounds,
+      todayBounds,
+      hasPrev,
+      hasNext
+    })
+  };
+}
 function resolveRecordingsBrowseNavState({
   currentBounds = null,
   todayBounds = null,
@@ -14273,16 +14301,22 @@ const FrigateViewCard = class extends HTMLElement {
     const next = this._$("#rec-day-next");
     if (!prev || !next) return;
     const { clientId, cam } = this._cc();
-    if (!clientId || !cam) {
-      prev.disabled = true;
-      next.disabled = true;
+    const current = this._recordingsDayBounds();
+    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1e3));
+    const initialNavState = resolveRecordingsBrowseNavContextState({
+      clientId,
+      camera: cam,
+      currentBounds: current,
+      todayBounds: today
+    });
+    if (!initialNavState.hasContext) {
+      prev.disabled = initialNavState.prevDisabled;
+      next.disabled = initialNavState.nextDisabled;
       return;
     }
     const token = ++this._recordingsNavUpdateToken;
     prev.disabled = true;
     next.disabled = true;
-    const current = this._recordingsDayBounds();
-    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1e3));
     const prevBounds = this._recordingsOffsetDayBounds(-1);
     const hasPrev = await this._hasRecordingsInBounds(
       prevBounds,

@@ -6,7 +6,10 @@ export {
   resolveCachedRecordingsAvailability,
 } from "./availability-utils.js";
 
-export { resolveRecordingsBrowseNavState } from "./browse-nav-utils.js";
+export {
+  resolveRecordingsBrowseNavContextState,
+  resolveRecordingsBrowseNavState,
+} from "./browse-nav-utils.js";
 
 export {
   resolveOffsetRecordingsDayBounds,
