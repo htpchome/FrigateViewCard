@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1065";
+const VERSION = "1.0.1066";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10698,8 +10698,10 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _buildTabsMarkup() {
-    const filterPanelOpen = this._$("#filter-panel")?.style.display !== "none";
-    const calendarPanelOpen = this._$("#cal-panel")?.style.display !== "none";
+    const filterPanel = this._$("#filter-panel");
+    const calendarPanel = this._$("#cal-panel");
+    const filterPanelOpen = !!filterPanel && filterPanel.style.display !== "none";
+    const calendarPanelOpen = !!calendarPanel && calendarPanel.style.display !== "none";
     const { activeTab, markup } = buildTabsMarkup({
       tab: this._tab,
       hiddenTabs: this._config.hidden_tabs,

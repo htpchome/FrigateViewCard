@@ -4500,8 +4500,12 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _buildTabsMarkup() {
-    const filterPanelOpen = this._$("#filter-panel")?.style.display !== "none";
-    const calendarPanelOpen = this._$("#cal-panel")?.style.display !== "none";
+    const filterPanel = this._$("#filter-panel");
+    const calendarPanel = this._$("#cal-panel");
+    const filterPanelOpen =
+      !!filterPanel && filterPanel.style.display !== "none";
+    const calendarPanelOpen =
+      !!calendarPanel && calendarPanel.style.display !== "none";
     const { activeTab, markup } = buildTabsMarkup({
       tab: this._tab,
       hiddenTabs: this._config.hidden_tabs,
