@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   buildPopupCarouselEvents,
+  resolvePopupCarouselActiveScrollLeft,
+  resolvePopupCarouselRenderPlan,
   shouldShowPopupCarousel,
 } from "../src/card/popup-carousel-utils.js";
 
@@ -74,5 +76,60 @@ test("buildPopupCarouselEvents filters snapshot and clip media from display even
       displayEvents,
     }).map((event) => event.id),
     ["both", "clip-only"],
+  );
+});
+
+test("resolvePopupCarouselRenderPlan hides unsupported and empty carousel states", () => {
+  assert.deepEqual(
+    resolvePopupCarouselRenderPlan({
+      mediaType: "recording",
+      eventCount: 3,
+      isTouchUi: true,
+    }),
+    {
+      shouldRender: false,
+      shouldClear: true,
+      hidden: true,
+      touch: false,
+    },
+  );
+
+  assert.deepEqual(
+    resolvePopupCarouselRenderPlan({
+      mediaType: "clip",
+      eventCount: 0,
+      isTouchUi: true,
+    }),
+    {
+      shouldRender: false,
+      shouldClear: true,
+      hidden: true,
+      touch: false,
+    },
+  );
+
+  assert.deepEqual(
+    resolvePopupCarouselRenderPlan({
+      mediaType: "clip",
+      eventCount: 2,
+      isTouchUi: true,
+    }),
+    {
+      shouldRender: true,
+      shouldClear: false,
+      hidden: false,
+      touch: true,
+    },
+  );
+});
+
+test("resolvePopupCarouselActiveScrollLeft clamps the active item target", () => {
+  assert.equal(
+    resolvePopupCarouselActiveScrollLeft({ activeOffsetLeft: 40 }),
+    32,
+  );
+  assert.equal(
+    resolvePopupCarouselActiveScrollLeft({ activeOffsetLeft: 4 }),
+    0,
   );
 });

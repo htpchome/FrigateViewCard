@@ -190,6 +190,8 @@ import {
 } from "./popup-media-controls-utils.js";
 import {
   buildPopupCarouselEvents,
+  resolvePopupCarouselActiveScrollLeft,
+  resolvePopupCarouselRenderPlan,
   shouldShowPopupCarousel,
 } from "./popup-carousel-utils.js";
 import {
@@ -7333,28 +7335,30 @@ export class FrigateViewCard extends HTMLElement {
     const wrap = this._$("#popup-carousel-wrap");
     const row = this._$("#popup-carousel");
     if (!wrap || !row) return;
-    const show = shouldShowPopupCarousel(mediaType);
-    if (!show) {
-      wrap.hidden = true;
-      row.innerHTML = "";
-      return;
-    }
     const events = this._popupCarouselEvents(mediaType).slice(0, 200);
-    if (!events.length) {
-      wrap.hidden = true;
+    const renderPlan = resolvePopupCarouselRenderPlan({
+      mediaType,
+      eventCount: events.length,
+      isTouchUi: this._isTouchPopupUi(),
+    });
+    if (renderPlan.shouldClear) {
       row.innerHTML = "";
+    }
+    wrap.hidden = renderPlan.hidden;
+    if (!renderPlan.shouldRender) {
       return;
     }
     row.innerHTML = events
       .map((ev) => this._carouselEventItem(ev, activeId))
       .join("");
     row.scrollLeft = 0;
-    wrap.hidden = false;
-    wrap.classList.toggle("touch", this._isTouchPopupUi());
+    wrap.classList.toggle("touch", renderPlan.touch);
     requestAnimationFrame(() => {
       const active = row.querySelector(".popup-carousel-item.active");
       if (active) {
-        const left = Math.max(0, active.offsetLeft - 8);
+        const left = resolvePopupCarouselActiveScrollLeft({
+          activeOffsetLeft: active.offsetLeft,
+        });
         row.scrollLeft = left;
       }
     });

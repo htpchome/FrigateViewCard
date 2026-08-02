@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1112";
+const VERSION = "1.0.1113";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4624,6 +4624,38 @@ const buildPopupCarouselEvents = ({
   if (type === "snapshot") return all.filter((event) => event.has_snapshot);
   return all.filter((event) => event.has_clip);
 };
+const resolvePopupCarouselRenderPlan = ({
+  mediaType = "",
+  eventCount = 0,
+  isTouchUi = false
+}) => {
+  if (!shouldShowPopupCarousel(mediaType)) {
+    return {
+      shouldRender: false,
+      shouldClear: true,
+      hidden: true,
+      touch: false
+    };
+  }
+  if (!(Number(eventCount || 0) > 0)) {
+    return {
+      shouldRender: false,
+      shouldClear: true,
+      hidden: true,
+      touch: false
+    };
+  }
+  return {
+    shouldRender: true,
+    shouldClear: false,
+    hidden: false,
+    touch: Boolean(isTouchUi)
+  };
+};
+const resolvePopupCarouselActiveScrollLeft = ({
+  activeOffsetLeft = 0,
+  padding = 8
+}) => Math.max(0, Number(activeOffsetLeft || 0) - Number(padding || 0));
 
 // src/card/filter-state-utils.js
 function buildReviewFilterLabels(review, sourceEvent = null) {
@@ -14349,26 +14381,28 @@ const FrigateViewCard = class extends HTMLElement {
     const wrap = this._$("#popup-carousel-wrap");
     const row = this._$("#popup-carousel");
     if (!wrap || !row) return;
-    const show = shouldShowPopupCarousel(mediaType);
-    if (!show) {
-      wrap.hidden = true;
-      row.innerHTML = "";
-      return;
-    }
     const events = this._popupCarouselEvents(mediaType).slice(0, 200);
-    if (!events.length) {
-      wrap.hidden = true;
+    const renderPlan = resolvePopupCarouselRenderPlan({
+      mediaType,
+      eventCount: events.length,
+      isTouchUi: this._isTouchPopupUi()
+    });
+    if (renderPlan.shouldClear) {
       row.innerHTML = "";
+    }
+    wrap.hidden = renderPlan.hidden;
+    if (!renderPlan.shouldRender) {
       return;
     }
     row.innerHTML = events.map((ev) => this._carouselEventItem(ev, activeId)).join("");
     row.scrollLeft = 0;
-    wrap.hidden = false;
-    wrap.classList.toggle("touch", this._isTouchPopupUi());
+    wrap.classList.toggle("touch", renderPlan.touch);
     requestAnimationFrame(() => {
       const active = row.querySelector(".popup-carousel-item.active");
       if (active) {
-        const left = Math.max(0, active.offsetLeft - 8);
+        const left = resolvePopupCarouselActiveScrollLeft({
+          activeOffsetLeft: active.offsetLeft
+        });
         row.scrollLeft = left;
       }
     });

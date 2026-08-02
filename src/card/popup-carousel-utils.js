@@ -37,3 +37,39 @@ export const buildPopupCarouselEvents = ({
   if (type === "snapshot") return all.filter((event) => event.has_snapshot);
   return all.filter((event) => event.has_clip);
 };
+
+export const resolvePopupCarouselRenderPlan = ({
+  mediaType = "",
+  eventCount = 0,
+  isTouchUi = false,
+}) => {
+  if (!shouldShowPopupCarousel(mediaType)) {
+    return {
+      shouldRender: false,
+      shouldClear: true,
+      hidden: true,
+      touch: false,
+    };
+  }
+
+  if (!(Number(eventCount || 0) > 0)) {
+    return {
+      shouldRender: false,
+      shouldClear: true,
+      hidden: true,
+      touch: false,
+    };
+  }
+
+  return {
+    shouldRender: true,
+    shouldClear: false,
+    hidden: false,
+    touch: Boolean(isTouchUi),
+  };
+};
+
+export const resolvePopupCarouselActiveScrollLeft = ({
+  activeOffsetLeft = 0,
+  padding = 8,
+}) => Math.max(0, Number(activeOffsetLeft || 0) - Number(padding || 0));
