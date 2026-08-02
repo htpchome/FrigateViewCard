@@ -8,6 +8,8 @@ import {
   invalidateMountTrackingIfActive,
   isLiveVideoStale,
   resolveLiveKickIfStaleAction,
+  resolveLiveMountEntryAction,
+  resolveLiveMountUiState,
   resolveLiveResumeAction,
   shouldRunMountWatchdog,
 } from "../src/live/live-mount-lifecycle.js";
@@ -267,5 +269,101 @@ test("resolveLiveKickIfStaleAction kicks stale video and updates kick timestamp"
   assert.deepEqual(action, {
     shouldKick: true,
     nextLastLiveKick: 7000,
+  });
+});
+
+test("resolveLiveMountEntryAction classifies pre-mount early returns", () => {
+  assert.deepEqual(
+    resolveLiveMountEntryAction({
+      hasSlot: false,
+      previewPageActive: false,
+      viewMode: "single",
+      gridModeAvailable: false,
+      entity: "camera.front",
+      mountInProgress: false,
+      mountTargetEntity: "",
+    }),
+    { type: "missing-slot" },
+  );
+  assert.deepEqual(
+    resolveLiveMountEntryAction({
+      hasSlot: true,
+      previewPageActive: true,
+      viewMode: "single",
+      gridModeAvailable: false,
+      entity: "camera.front",
+      mountInProgress: false,
+      mountTargetEntity: "",
+    }),
+    { type: "preview" },
+  );
+  assert.deepEqual(
+    resolveLiveMountEntryAction({
+      hasSlot: true,
+      previewPageActive: false,
+      viewMode: "grid",
+      gridModeAvailable: true,
+      entity: "camera.front",
+      mountInProgress: false,
+      mountTargetEntity: "",
+    }),
+    { type: "grid" },
+  );
+  assert.deepEqual(
+    resolveLiveMountEntryAction({
+      hasSlot: true,
+      previewPageActive: false,
+      viewMode: "single",
+      gridModeAvailable: false,
+      entity: "",
+      mountInProgress: false,
+      mountTargetEntity: "",
+    }),
+    { type: "missing-entity" },
+  );
+  assert.deepEqual(
+    resolveLiveMountEntryAction({
+      hasSlot: true,
+      previewPageActive: false,
+      viewMode: "single",
+      gridModeAvailable: false,
+      entity: "camera.front",
+      mountInProgress: true,
+      mountTargetEntity: "camera.front",
+    }),
+    { type: "duplicate" },
+  );
+});
+
+test("resolveLiveMountEntryAction proceeds with entity when mount can continue", () => {
+  assert.deepEqual(
+    resolveLiveMountEntryAction({
+      hasSlot: true,
+      previewPageActive: false,
+      viewMode: "single",
+      gridModeAvailable: false,
+      entity: "camera.front",
+      mountInProgress: true,
+      mountTargetEntity: "camera.side",
+    }),
+    {
+      type: "proceed",
+      entity: "camera.front",
+    },
+  );
+});
+
+test("resolveLiveMountUiState shapes loading and fallback state for quiet and normal mounts", () => {
+  assert.deepEqual(resolveLiveMountUiState(), {
+    activeStreamType: "--",
+    fallbackVisible: true,
+    refreshFallbackImage: true,
+    loading: true,
+  });
+  assert.deepEqual(resolveLiveMountUiState({ quiet: true }), {
+    activeStreamType: null,
+    fallbackVisible: false,
+    refreshFallbackImage: false,
+    loading: false,
   });
 });

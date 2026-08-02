@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1095";
+const VERSION = "1.0.1096";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2940,6 +2940,51 @@ const resolveLiveKickIfStaleAction = ({
   return {
     shouldKick: stale,
     nextLastLiveKick: stale ? nowMs : lastLiveKick
+  };
+};
+const resolveLiveMountEntryAction = ({
+  hasSlot,
+  previewPageActive,
+  viewMode,
+  gridModeAvailable,
+  entity,
+  mountInProgress,
+  mountTargetEntity
+}) => {
+  if (!hasSlot) {
+    return { type: "missing-slot" };
+  }
+  if (previewPageActive) {
+    return { type: "preview" };
+  }
+  if (viewMode === "grid" && gridModeAvailable) {
+    return { type: "grid" };
+  }
+  if (!entity) {
+    return { type: "missing-entity" };
+  }
+  if (mountInProgress && mountTargetEntity === entity) {
+    return { type: "duplicate" };
+  }
+  return {
+    type: "proceed",
+    entity
+  };
+};
+const resolveLiveMountUiState = ({ quiet = false } = {}) => {
+  if (quiet) {
+    return {
+      activeStreamType: null,
+      fallbackVisible: false,
+      refreshFallbackImage: false,
+      loading: false
+    };
+  }
+  return {
+    activeStreamType: "--",
+    fallbackVisible: true,
+    refreshFallbackImage: true,
+    loading: true
   };
 };
 
@@ -10116,20 +10161,30 @@ const FrigateViewCard = class extends HTMLElement {
   async _mountEngine(forcedType = null, options = {}) {
     const quiet = options?.quiet === true;
     const slot = this.shadowRoot.querySelector("#engine");
-    if (!slot) return;
-    if (this._isPreviewPageActive()) {
+    const mountEntry = resolveLiveMountEntryAction({
+      hasSlot: !!slot,
+      previewPageActive: this._isPreviewPageActive(),
+      viewMode: this._viewMode,
+      gridModeAvailable: this._isGridModeAvailable(),
+      entity: this._activeCam?.entity || "",
+      mountInProgress: this._mountInProgress,
+      mountTargetEntity: this._mountTargetEntity
+    });
+    if (mountEntry.type === "missing-slot") return;
+    if (mountEntry.type === "preview") {
       this._setStreamLoading(false);
       this._setStreamFallbackVisible(false);
       return;
     }
-    if (this._viewMode === "grid" && this._isGridModeAvailable()) {
+    if (mountEntry.type === "grid") {
       this._cancelPendingMount("grid-mode");
       this._mountGridEngine(slot);
       return;
     }
-    const entity = this._activeCam?.entity;
-    if (!entity) return;
-    if (this._mountInProgress && this._mountTargetEntity === entity) return;
+    if (mountEntry.type === "missing-entity" || mountEntry.type === "duplicate") {
+      return;
+    }
+    const entity = mountEntry.entity;
     const useGo2Rtc = this._shouldUseGo2RtcForEntity(entity);
     if (useGo2Rtc && (!forcedType || forcedType === "mse")) {
       const graceMseEntry = this._takeGraceMseEntry(entity);
@@ -10172,14 +10227,15 @@ const FrigateViewCard = class extends HTMLElement {
           }
         ];
         slot.innerHTML = "";
-        if (!quiet) {
-          this._setActiveStreamType("--");
-          this._setStreamFallbackVisible(true, true);
-          this._setStreamLoading(true);
-        } else {
-          this._setStreamFallbackVisible(false);
-          this._setStreamLoading(false);
+        const mountUi = resolveLiveMountUiState({ quiet });
+        if (mountUi.activeStreamType != null) {
+          this._setActiveStreamType(mountUi.activeStreamType);
         }
+        this._setStreamFallbackVisible(
+          mountUi.fallbackVisible,
+          mountUi.refreshFallbackImage
+        );
+        this._setStreamLoading(mountUi.loading);
         try {
           const graceResult = await graceResultPromise;
           if (!graceResult?.engine) return;
@@ -10209,14 +10265,15 @@ const FrigateViewCard = class extends HTMLElement {
     try {
       this._cleanupEngine();
       slot.innerHTML = "";
-      if (!quiet) {
-        this._setActiveStreamType("--");
-        this._setStreamFallbackVisible(true, true);
-        this._setStreamLoading(true);
-      } else {
-        this._setStreamFallbackVisible(false);
-        this._setStreamLoading(false);
+      const mountUi = resolveLiveMountUiState({ quiet });
+      if (mountUi.activeStreamType != null) {
+        this._setActiveStreamType(mountUi.activeStreamType);
       }
+      this._setStreamFallbackVisible(
+        mountUi.fallbackVisible,
+        mountUi.refreshFallbackImage
+      );
+      this._setStreamLoading(mountUi.loading);
       if (!useGo2Rtc) {
         const streamType = forcedType || this._preferredStreamType();
         this._setActiveStreamType(streamType);

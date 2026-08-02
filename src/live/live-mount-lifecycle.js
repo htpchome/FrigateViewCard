@@ -192,3 +192,51 @@ export const resolveLiveKickIfStaleAction = ({
     nextLastLiveKick: stale ? nowMs : lastLiveKick,
   };
 };
+
+export const resolveLiveMountEntryAction = ({
+  hasSlot,
+  previewPageActive,
+  viewMode,
+  gridModeAvailable,
+  entity,
+  mountInProgress,
+  mountTargetEntity,
+}) => {
+  if (!hasSlot) {
+    return { type: "missing-slot" };
+  }
+  if (previewPageActive) {
+    return { type: "preview" };
+  }
+  if (viewMode === "grid" && gridModeAvailable) {
+    return { type: "grid" };
+  }
+  if (!entity) {
+    return { type: "missing-entity" };
+  }
+  if (mountInProgress && mountTargetEntity === entity) {
+    return { type: "duplicate" };
+  }
+  return {
+    type: "proceed",
+    entity,
+  };
+};
+
+export const resolveLiveMountUiState = ({ quiet = false } = {}) => {
+  if (quiet) {
+    return {
+      activeStreamType: null,
+      fallbackVisible: false,
+      refreshFallbackImage: false,
+      loading: false,
+    };
+  }
+
+  return {
+    activeStreamType: "--",
+    fallbackVisible: true,
+    refreshFallbackImage: true,
+    loading: true,
+  };
+};
