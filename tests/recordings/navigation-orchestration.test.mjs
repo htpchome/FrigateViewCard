@@ -134,6 +134,52 @@ function createCommitContext({
   };
 }
 
+function createNavigateContext({
+  tab = "recordings",
+  direction = 1,
+  prep = { hasData: true, bounds: { start: 100, end: 200 }, recs: [{ id: 1 }] },
+  stage = null,
+} = {}) {
+  const calls = [];
+
+  return {
+    calls,
+    direction,
+    ctx: {
+      _tab: tab,
+      _recordingsDayNavAnimating: false,
+      async _prepareRecordingsDayTransition(dir) {
+        calls.push(["prepare", dir]);
+        return prep;
+      },
+      _recordingsViewRows(recordings) {
+        calls.push(["viewRows", recordings]);
+        return recordings;
+      },
+      _recordingsListMarkup(recordings) {
+        calls.push(["listMarkup", recordings]);
+        return `rows:${recordings.length}`;
+      },
+      _bounceRecordingsArea(dir) {
+        calls.push(["bounce", dir]);
+      },
+      async _updateRecordingsBrowseNav() {
+        calls.push(["updateBrowseNav"]);
+      },
+      _createRecordingsSwipeStage(dir, incomingHtml) {
+        calls.push(["createStage", dir, incomingHtml]);
+        return stage;
+      },
+      async _commitRecordingsDayTransition(bounds, recs) {
+        calls.push(["commit", bounds, recs]);
+      },
+      async _animateRecordingsSwipeStageTo(...args) {
+        calls.push(["animate", ...args]);
+      },
+    },
+  };
+}
+
 test("_updateRecordingsBrowseNav disables both buttons without camera context", async () => {
   const { ctx, prev, next, probes } = createBrowseNavContext({
     clientId: "",
@@ -241,5 +287,53 @@ test("_commitRecordingsDayTransition skips cache writes without camera context",
     ["cacheActiveCamSlice", "recordings", []],
     ["renderListLabel", 400],
     ["renderList"],
+  ]);
+});
+
+test("_navigateRecordingsDayAnimated bounces and refreshes browse nav when no data is prepared", async () => {
+  const bounds = { start: 100, end: 200 };
+  const { ctx, calls, direction } = createNavigateContext({
+    direction: -1,
+    prep: { hasData: false, bounds, recs: [] },
+  });
+
+  const result =
+    await FrigateViewCard.prototype._navigateRecordingsDayAnimated.call(
+      ctx,
+      direction,
+    );
+
+  assert.equal(result, false);
+  assert.equal(ctx._recordingsDayNavAnimating, false);
+  assert.deepEqual(calls, [
+    ["prepare", -1],
+    ["bounce", -1],
+    ["updateBrowseNav"],
+  ]);
+});
+
+test("_navigateRecordingsDayAnimated commits immediately when no swipe stage is created", async () => {
+  const bounds = { start: 100, end: 200 };
+  const recs = [{ id: 1 }];
+  const { ctx, calls, direction } = createNavigateContext({
+    direction: 1,
+    prep: { hasData: true, bounds, recs },
+    stage: null,
+  });
+
+  const result =
+    await FrigateViewCard.prototype._navigateRecordingsDayAnimated.call(
+      ctx,
+      direction,
+    );
+
+  assert.equal(result, true);
+  assert.equal(ctx._recordingsDayNavAnimating, false);
+  assert.deepEqual(calls, [
+    ["prepare", 1],
+    ["viewRows", recs],
+    ["listMarkup", recs],
+    ["createStage", 1, "rows:1"],
+    ["commit", bounds, recs],
   ]);
 });
