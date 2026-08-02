@@ -185,6 +185,8 @@ import {
   buildRecordingsListMarkup,
   createRecordingsSwipeGestureState,
   formatRecordingScrubTime,
+  isRecordingSeekTargetInRange,
+  isRecordingSeekVerified,
   normalizeFetchedRecordingsAvailability,
   RECORDINGS_SWIPE_EMPTY_HTML,
   RECORDINGS_SWIPE_LOADING_HTML,
@@ -194,6 +196,7 @@ import {
   resolveFetchedRecordingsAvailabilityState,
   resolveFailedRecordingsSwipeState,
   resolveClosestRecordingAlertStart,
+  resolveRecordingSeekExecutionPlan,
   resolvePreparedRecordingsDayNavigationState,
   resolveOffsetRecordingsDayBounds,
   resolvePreparedRecordingsDayTransition,
@@ -6431,23 +6434,14 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isRecordingTimeSeekable(video, targetSec, toleranceSec = 0.35) {
-    if (!video || !Number.isFinite(targetSec)) return false;
-    const ranges = video.seekable;
-    if (!ranges || !ranges.length) return false;
-    for (let i = 0; i < ranges.length; i++) {
-      const start = Number(ranges.start(i));
-      const end = Number(ranges.end(i));
-      if (
-        Number.isFinite(start) &&
-        Number.isFinite(end) &&
-        targetSec >= start - toleranceSec &&
-        targetSec <= end + toleranceSec
-      ) {
-        return true;
-      }
-    }
-    return false;
+    if (!video) return false;
+    return isRecordingSeekTargetInRange({
+      targetSec,
+      seekable: video.seekable,
+      toleranceSec,
+    });
   }
+
   async _attemptRecordingSeek(video, targetSec, timeoutMs = 2500) {
     if (!video || !Number.isFinite(targetSec)) return false;
     return await new Promise((resolve) => {
@@ -6459,9 +6453,12 @@ export class FrigateViewCard extends HTMLElement {
         resolve(ok);
       };
       const verify = () => {
-        const cur = Number(video.currentTime || 0);
-        const diff = Math.abs(cur - targetSec);
-        finish(diff <= 1.5);
+        finish(
+          isRecordingSeekVerified({
+            currentTime: video.currentTime,
+            targetSec,
+          }),
+        );
       };
       const onDone = () => verify();
       const onError = () => finish(false);
@@ -6478,7 +6475,12 @@ export class FrigateViewCard extends HTMLElement {
       video.addEventListener("error", onError, { once: true });
 
       try {
-        if (typeof video.fastSeek === "function" && !this._isEdge() && !isIOS) {
+        const plan = resolveRecordingSeekExecutionPlan({
+          hasFastSeek: typeof video.fastSeek === "function",
+          isEdge: this._isEdge(),
+          isIOS,
+        });
+        if (plan.shouldUseFastSeek) {
           video.fastSeek(targetSec);
         } else {
           video.currentTime = targetSec;

@@ -105,6 +105,48 @@ export function resolveRecordingSeekTimeout({
   return isFirefox || isEdge ? 4200 : 2500;
 }
 
+export function isRecordingSeekTargetInRange({
+  targetSec,
+  seekable,
+  toleranceSec = 0.35,
+}) {
+  if (!Number.isFinite(targetSec) || !seekable || !seekable.length)
+    return false;
+  for (let index = 0; index < seekable.length; index++) {
+    const start = Number(seekable.start(index));
+    const end = Number(seekable.end(index));
+    if (
+      Number.isFinite(start) &&
+      Number.isFinite(end) &&
+      targetSec >= start - toleranceSec &&
+      targetSec <= end + toleranceSec
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export function resolveRecordingSeekExecutionPlan({
+  hasFastSeek = false,
+  isEdge = false,
+  isIOS = false,
+}) {
+  return {
+    shouldUseFastSeek: Boolean(hasFastSeek && !isEdge && !isIOS),
+  };
+}
+
+export function isRecordingSeekVerified({
+  currentTime = 0,
+  targetSec,
+  toleranceSec = 1.5,
+}) {
+  if (!Number.isFinite(targetSec)) return false;
+  const diff = Math.abs((Number(currentTime) || 0) - targetSec);
+  return diff <= toleranceSec;
+}
+
 export function resolveRecordingSeekOutcome({
   isFirefox = false,
   isEdge = false,

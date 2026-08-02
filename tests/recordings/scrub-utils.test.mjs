@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 import {
   buildRecordingScrubDecorations,
   formatRecordingScrubTime,
+  isRecordingSeekTargetInRange,
+  isRecordingSeekVerified,
   resolveClosestRecordingAlertStart,
+  resolveRecordingSeekExecutionPlan,
   resolveRecordingScrubTarget,
   resolveRecordingSeekOutcome,
   resolveRecordingSeekTimeout,
@@ -120,6 +123,73 @@ test("resolveRecordingSeekTimeout extends timeout for Firefox and Edge", () => {
   assert.equal(resolveRecordingSeekTimeout({ isFirefox: true }), 4200);
   assert.equal(resolveRecordingSeekTimeout({ isEdge: true }), 4200);
   assert.equal(resolveRecordingSeekTimeout({}), 2500);
+});
+
+test("isRecordingSeekTargetInRange matches seekable windows with tolerance", () => {
+  const seekable = {
+    length: 2,
+    start(index) {
+      return index === 0 ? 5 : 20;
+    },
+    end(index) {
+      return index === 0 ? 10 : 30;
+    },
+  };
+
+  assert.equal(
+    isRecordingSeekTargetInRange({
+      targetSec: 10.2,
+      seekable,
+      toleranceSec: 0.25,
+    }),
+    true,
+  );
+  assert.equal(
+    isRecordingSeekTargetInRange({
+      targetSec: 19,
+      seekable,
+      toleranceSec: 0.25,
+    }),
+    false,
+  );
+});
+
+test("resolveRecordingSeekExecutionPlan only uses fastSeek when platform allows it", () => {
+  assert.deepEqual(
+    resolveRecordingSeekExecutionPlan({
+      hasFastSeek: true,
+      isEdge: false,
+      isIOS: false,
+    }),
+    { shouldUseFastSeek: true },
+  );
+  assert.deepEqual(
+    resolveRecordingSeekExecutionPlan({
+      hasFastSeek: true,
+      isEdge: true,
+      isIOS: false,
+    }),
+    { shouldUseFastSeek: false },
+  );
+  assert.deepEqual(
+    resolveRecordingSeekExecutionPlan({
+      hasFastSeek: true,
+      isEdge: false,
+      isIOS: true,
+    }),
+    { shouldUseFastSeek: false },
+  );
+});
+
+test("isRecordingSeekVerified checks current time against the target tolerance", () => {
+  assert.equal(
+    isRecordingSeekVerified({ currentTime: 9.2, targetSec: 10.5 }),
+    true,
+  );
+  assert.equal(
+    isRecordingSeekVerified({ currentTime: 8.8, targetSec: 10.5 }),
+    false,
+  );
 });
 
 test("resolveRecordingSeekOutcome resumes on Firefox-family browsers without fallback", () => {

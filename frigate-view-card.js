@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1093";
+const VERSION = "1.0.1094";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4557,6 +4557,40 @@ function resolveRecordingSeekTimeout({
   isEdge = false
 }) {
   return isFirefox || isEdge ? 4200 : 2500;
+}
+function isRecordingSeekTargetInRange({
+  targetSec,
+  seekable,
+  toleranceSec = 0.35
+}) {
+  if (!Number.isFinite(targetSec) || !seekable || !seekable.length)
+    return false;
+  for (let index = 0; index < seekable.length; index++) {
+    const start = Number(seekable.start(index));
+    const end = Number(seekable.end(index));
+    if (Number.isFinite(start) && Number.isFinite(end) && targetSec >= start - toleranceSec && targetSec <= end + toleranceSec) {
+      return true;
+    }
+  }
+  return false;
+}
+function resolveRecordingSeekExecutionPlan({
+  hasFastSeek = false,
+  isEdge = false,
+  isIOS: isIOS2 = false
+}) {
+  return {
+    shouldUseFastSeek: Boolean(hasFastSeek && !isEdge && !isIOS2)
+  };
+}
+function isRecordingSeekVerified({
+  currentTime = 0,
+  targetSec,
+  toleranceSec = 1.5
+}) {
+  if (!Number.isFinite(targetSec)) return false;
+  const diff = Math.abs((Number(currentTime) || 0) - targetSec);
+  return diff <= toleranceSec;
 }
 function resolveRecordingSeekOutcome({
   isFirefox = false,
@@ -12987,17 +13021,12 @@ const FrigateViewCard = class extends HTMLElement {
     void this._commitRecordingSeek(state, rel, target.absTarget);
   }
   _isRecordingTimeSeekable(video, targetSec, toleranceSec = 0.35) {
-    if (!video || !Number.isFinite(targetSec)) return false;
-    const ranges = video.seekable;
-    if (!ranges || !ranges.length) return false;
-    for (let i = 0; i < ranges.length; i++) {
-      const start = Number(ranges.start(i));
-      const end = Number(ranges.end(i));
-      if (Number.isFinite(start) && Number.isFinite(end) && targetSec >= start - toleranceSec && targetSec <= end + toleranceSec) {
-        return true;
-      }
-    }
-    return false;
+    if (!video) return false;
+    return isRecordingSeekTargetInRange({
+      targetSec,
+      seekable: video.seekable,
+      toleranceSec
+    });
   }
   async _attemptRecordingSeek(video, targetSec, timeoutMs = 2500) {
     if (!video || !Number.isFinite(targetSec)) return false;
@@ -13010,9 +13039,12 @@ const FrigateViewCard = class extends HTMLElement {
         resolve(ok);
       };
       const verify = () => {
-        const cur = Number(video.currentTime || 0);
-        const diff = Math.abs(cur - targetSec);
-        finish(diff <= 1.5);
+        finish(
+          isRecordingSeekVerified({
+            currentTime: video.currentTime,
+            targetSec
+          })
+        );
       };
       const onDone = () => verify();
       const onError = () => finish(false);
@@ -13027,7 +13059,12 @@ const FrigateViewCard = class extends HTMLElement {
       video.addEventListener("timeupdate", onDone, { once: true });
       video.addEventListener("error", onError, { once: true });
       try {
-        if (typeof video.fastSeek === "function" && !this._isEdge() && !isIOS) {
+        const plan = resolveRecordingSeekExecutionPlan({
+          hasFastSeek: typeof video.fastSeek === "function",
+          isEdge: this._isEdge(),
+          isIOS
+        });
+        if (plan.shouldUseFastSeek) {
           video.fastSeek(targetSec);
         } else {
           video.currentTime = targetSec;
