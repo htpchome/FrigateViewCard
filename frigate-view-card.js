@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1096";
+const VERSION = "1.0.1097";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2672,6 +2672,20 @@ const createPendingMountDestroyers = ({
     })();
   }
 }));
+const createGracePendingMountDestroyer = ({ entity, promise }) => ({
+  type: "mse",
+  entity,
+  promise,
+  destroy: () => {
+    void (async () => {
+      const result = await promise;
+      try {
+        result?.engine?.destroy?.();
+      } catch (_) {
+      }
+    })();
+  }
+});
 const filterPendingDestroyersForWinner = ({
   pendingDestroyers,
   winnerType
@@ -2990,6 +3004,14 @@ const resolveLiveMountUiState = ({ quiet = false } = {}) => {
 
 // src/live/live-mount-result.js
 const isMountTokenCurrent = ({ mountToken, mountSeq }) => mountToken === mountSeq;
+const resolveGraceMseMountResult = ({ engine }) => {
+  if (!engine) return false;
+  return {
+    ok: true,
+    type: "mse",
+    engine
+  };
+};
 const cleanupStaleWinnerResult = (winner) => {
   if (!winner) return;
   if (winner?.engine?.destroy) winner.engine.destroy();
@@ -10202,29 +10224,15 @@ const FrigateViewCard = class extends HTMLElement {
           this._clearMountTrackingIfCurrent(mountToken2);
         };
         const graceResultPromise = (async () => {
-          const graceMseEngine = await graceMseEntry.promise;
-          if (!graceMseEngine) return false;
-          return {
-            ok: true,
-            type: "mse",
-            engine: graceMseEngine
-          };
+          return resolveGraceMseMountResult({
+            engine: await graceMseEntry.promise
+          });
         })();
         this._pendingMountDestroyers = [
-          {
-            type: "mse",
+          createGracePendingMountDestroyer({
             entity,
-            promise: graceResultPromise,
-            destroy: () => {
-              void (async () => {
-                const result = await graceResultPromise;
-                try {
-                  result?.engine?.destroy?.();
-                } catch (_) {
-                }
-              })();
-            }
-          }
+            promise: graceResultPromise
+          })
         ];
         slot.innerHTML = "";
         const mountUi = resolveLiveMountUiState({ quiet });

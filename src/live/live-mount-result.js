@@ -1,6 +1,15 @@
 export const isMountTokenCurrent = ({ mountToken, mountSeq }) =>
   mountToken === mountSeq;
 
+export const resolveGraceMseMountResult = ({ engine }) => {
+  if (!engine) return false;
+  return {
+    ok: true,
+    type: "mse",
+    engine,
+  };
+};
+
 export const cleanupStaleWinnerResult = (winner) => {
   if (!winner) return;
   if (winner?.engine?.destroy) winner.engine.destroy();

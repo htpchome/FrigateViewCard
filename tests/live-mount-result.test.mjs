@@ -6,11 +6,22 @@ import {
   cleanupStaleWinnerResult,
   destroyLoserAttemptResults,
   isMountTokenCurrent,
+  resolveGraceMseMountResult,
 } from "../src/live/live-mount-result.js";
 
 test("isMountTokenCurrent matches tokens", () => {
   assert.equal(isMountTokenCurrent({ mountToken: 2, mountSeq: 2 }), true);
   assert.equal(isMountTokenCurrent({ mountToken: 2, mountSeq: 3 }), false);
+});
+
+test("resolveGraceMseMountResult normalizes missing and valid grace engines", () => {
+  const engine = { destroy() {} };
+  assert.equal(resolveGraceMseMountResult({ engine: null }), false);
+  assert.deepEqual(resolveGraceMseMountResult({ engine }), {
+    ok: true,
+    type: "mse",
+    engine,
+  });
 });
 
 test("cleanupStaleWinnerResult destroys and removes winner", () => {

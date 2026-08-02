@@ -18,6 +18,20 @@ export const createPendingMountDestroyers = ({
     },
   }));
 
+export const createGracePendingMountDestroyer = ({ entity, promise }) => ({
+  type: "mse",
+  entity,
+  promise,
+  destroy: () => {
+    void (async () => {
+      const result = await promise;
+      try {
+        result?.engine?.destroy?.();
+      } catch (_) {}
+    })();
+  },
+});
+
 export const filterPendingDestroyersForWinner = ({
   pendingDestroyers,
   winnerType,

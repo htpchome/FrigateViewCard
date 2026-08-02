@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  createGracePendingMountDestroyer,
   createPendingMountDestroyers,
   filterPendingDestroyersForWinner,
   shouldClearPendingDestroyersForPromise,
@@ -73,4 +74,24 @@ test("shouldClearPendingDestroyersForPromise checks identity match", () => {
     }),
     false,
   );
+});
+
+test("createGracePendingMountDestroyer builds an mse destroyer around the grace promise", async () => {
+  let destroyed = false;
+  const promise = Promise.resolve({
+    engine: { destroy: () => (destroyed = true) },
+  });
+
+  const pending = createGracePendingMountDestroyer({
+    entity: "camera.front",
+    promise,
+  });
+
+  assert.equal(pending.type, "mse");
+  assert.equal(pending.entity, "camera.front");
+  assert.equal(pending.promise, promise);
+  pending.destroy();
+  await promise;
+  await Promise.resolve();
+  assert.equal(destroyed, true);
 });

@@ -85,7 +85,10 @@ import { applyEditorPreviewDraftToCardConfig } from "../config/editor-preview-ma
 import { buildLiveAttemptPlan } from "../live/live-attempt-planner.js";
 import { StreamOrchestrator } from "../live/live-stream-orchestrator.js";
 import { createStrategyForType } from "../live/live-stream-strategies.js";
-import { shouldClearPendingDestroyersForPromise } from "../live/live-pending-destroyers.js";
+import {
+  createGracePendingMountDestroyer,
+  shouldClearPendingDestroyersForPromise,
+} from "../live/live-pending-destroyers.js";
 import {
   createGraceEngineEntry,
   createGracePendingEntry,
@@ -119,6 +122,7 @@ import {
   cleanupStaleWinnerResult,
   destroyLoserAttemptResults,
   isMountTokenCurrent,
+  resolveGraceMseMountResult,
 } from "../live/live-mount-result.js";
 import {
   applyActiveStreamTypeForCard,
@@ -3052,28 +3056,15 @@ export class FrigateViewCard extends HTMLElement {
           this._clearMountTrackingIfCurrent(mountToken);
         };
         const graceResultPromise = (async () => {
-          const graceMseEngine = await graceMseEntry.promise;
-          if (!graceMseEngine) return false;
-          return {
-            ok: true,
-            type: "mse",
-            engine: graceMseEngine,
-          };
+          return resolveGraceMseMountResult({
+            engine: await graceMseEntry.promise,
+          });
         })();
         this._pendingMountDestroyers = [
-          {
-            type: "mse",
+          createGracePendingMountDestroyer({
             entity,
             promise: graceResultPromise,
-            destroy: () => {
-              void (async () => {
-                const result = await graceResultPromise;
-                try {
-                  result?.engine?.destroy?.();
-                } catch (_) {}
-              })();
-            },
-          },
+          }),
         ];
         slot.innerHTML = "";
         const mountUi = resolveLiveMountUiState({ quiet });
