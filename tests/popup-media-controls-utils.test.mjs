@@ -1,0 +1,62 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  buildPopupMediaControlState,
+  resolvePopupMediaSeekTarget,
+} from "../src/card/popup-media-controls-utils.js";
+
+test("buildPopupMediaControlState formats progress, icons, and time text", () => {
+  assert.deepEqual(
+    buildPopupMediaControlState({
+      duration: 120,
+      currentTime: 30,
+      paused: false,
+      muted: true,
+      formatTime: (value) => `${value}s`,
+    }),
+    {
+      progressValue: "250",
+      showPauseIcon: true,
+      showMutedIcon: true,
+      timeText: "30s/120s",
+    },
+  );
+});
+
+test("buildPopupMediaControlState clamps progress when time exceeds duration", () => {
+  assert.deepEqual(
+    buildPopupMediaControlState({
+      duration: 10,
+      currentTime: 15,
+      paused: true,
+      muted: false,
+      formatTime: (value) => `${value}`,
+    }),
+    {
+      progressValue: "1000",
+      showPauseIcon: false,
+      showMutedIcon: false,
+      timeText: "15/10",
+    },
+  );
+});
+
+test("resolvePopupMediaSeekTarget clamps slider input and rejects invalid durations", () => {
+  assert.equal(
+    resolvePopupMediaSeekTarget({ progressValue: 250, duration: 120 }),
+    30,
+  );
+  assert.equal(
+    resolvePopupMediaSeekTarget({ progressValue: 1500, duration: 120 }),
+    120,
+  );
+  assert.equal(
+    resolvePopupMediaSeekTarget({ progressValue: -50, duration: 120 }),
+    0,
+  );
+  assert.equal(
+    resolvePopupMediaSeekTarget({ progressValue: 500, duration: 0 }),
+    null,
+  );
+});

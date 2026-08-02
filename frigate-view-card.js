@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1105";
+const VERSION = "1.0.1106";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4474,6 +4474,36 @@ function buildFilterPanelMarkup({
         <button class="chip ${!favOnly ? "on" : ""}" data-favonly="0">All</button>
         <button class="chip ${favOnly ? "on" : ""}" data-favonly="1">\u2605 Favorites</button></div>`;
 }
+
+// src/card/popup-media-controls-utils.js
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const buildPopupMediaControlState = ({
+  duration = 0,
+  currentTime = 0,
+  paused = true,
+  muted = false,
+  formatTime
+}) => {
+  const safeDuration = Number(duration || 0);
+  const safeCurrentTime = Number(currentTime || 0);
+  const ratio = safeDuration > 0 ? clamp(safeCurrentTime / safeDuration, 0, 1) : 0;
+  return {
+    progressValue: String(Math.round(ratio * 1e3)),
+    showPauseIcon: !paused,
+    showMutedIcon: Boolean(muted),
+    timeText: `${formatTime(safeCurrentTime)}/${formatTime(safeDuration)}`
+  };
+};
+const resolvePopupMediaSeekTarget = ({
+  progressValue = 0,
+  duration = 0
+}) => {
+  const safeDuration = Number(duration || 0);
+  if (!(safeDuration > 0)) return null;
+  const next = Number(progressValue || 0) / 1e3 * safeDuration;
+  if (!Number.isFinite(next)) return null;
+  return clamp(next, 0, safeDuration);
+};
 
 // src/card/filter-state-utils.js
 function buildReviewFilterLabels(review, sourceEvent = null) {
@@ -14041,13 +14071,17 @@ const FrigateViewCard = class extends HTMLElement {
     const progress = this._$("#popup-media-progress");
     const time = this._$("#popup-media-time");
     if (!playBtn || !muteBtn || !progress || !time) return;
-    const dur = Number(video?.duration || 0);
-    const cur = Number(video?.currentTime || 0);
-    const ratio = dur > 0 ? Math.max(0, Math.min(1, cur / dur)) : 0;
-    progress.value = String(Math.round(ratio * 1e3));
-    playBtn.innerHTML = video && !video.paused ? ICONS.pause : ICONS.play;
-    muteBtn.innerHTML = video?.muted ? ICONS.volOff : ICONS.volOn;
-    time.textContent = `${this._fmtScrubTime(cur)}/${this._fmtScrubTime(dur)}`;
+    const controlState = buildPopupMediaControlState({
+      duration: video?.duration,
+      currentTime: video?.currentTime,
+      paused: video?.paused,
+      muted: video?.muted,
+      formatTime: (value) => this._fmtScrubTime(value)
+    });
+    progress.value = controlState.progressValue;
+    playBtn.innerHTML = controlState.showPauseIcon ? ICONS.pause : ICONS.play;
+    muteBtn.innerHTML = controlState.showMutedIcon ? ICONS.volOff : ICONS.volOn;
+    time.textContent = controlState.timeText;
   }
   _togglePopupMediaPlay() {
     const v = this._popupMediaVideo();
@@ -14086,20 +14120,28 @@ const FrigateViewCard = class extends HTMLElement {
       const playBtn = this._$("#popup-media-play");
       const muteBtn = this._$("#popup-media-mute");
       const time = this._$("#popup-media-time");
-      if (playBtn) playBtn.innerHTML = !video.paused ? ICONS.pause : ICONS.play;
-      if (muteBtn) muteBtn.innerHTML = video.muted ? ICONS.volOff : ICONS.volOn;
-      if (time)
-        time.textContent = `${this._fmtScrubTime(video.currentTime || 0)}/${this._fmtScrubTime(video.duration || 0)}`;
+      const controlState = buildPopupMediaControlState({
+        duration: video.duration,
+        currentTime: video.currentTime,
+        paused: video.paused,
+        muted: video.muted,
+        formatTime: (value) => this._fmtScrubTime(value)
+      });
+      if (playBtn)
+        playBtn.innerHTML = controlState.showPauseIcon ? ICONS.pause : ICONS.play;
+      if (muteBtn)
+        muteBtn.innerHTML = controlState.showMutedIcon ? ICONS.volOff : ICONS.volOn;
+      if (time) time.textContent = controlState.timeText;
       if (!progressDragging) this._updatePopupMediaButtons(video);
     };
     if (progress) {
       bind(progress, "input", () => {
         progressDragging = true;
-        const dur = Number(video.duration || 0);
-        const next = Number(progress.value || 0) / 1e3 * dur;
-        if (Number.isFinite(next) && dur > 0) {
-          video.currentTime = Math.max(0, Math.min(dur, next));
-        }
+        const next = resolvePopupMediaSeekTarget({
+          progressValue: progress.value,
+          duration: video.duration
+        });
+        if (next !== null) video.currentTime = next;
         this._showPopupControlsTemporarily();
         sync();
       });

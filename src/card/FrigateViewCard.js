@@ -182,6 +182,10 @@ import {
   buildFilterPanelMarkup,
 } from "./calendar-filter-markup.js";
 import {
+  buildPopupMediaControlState,
+  resolvePopupMediaSeekTarget,
+} from "./popup-media-controls-utils.js";
+import {
   collectFilterLabelsFromReviews,
   buildReviewFilterLabels,
   buildReviewFilterZones,
@@ -7152,13 +7156,17 @@ export class FrigateViewCard extends HTMLElement {
     const progress = this._$("#popup-media-progress");
     const time = this._$("#popup-media-time");
     if (!playBtn || !muteBtn || !progress || !time) return;
-    const dur = Number(video?.duration || 0);
-    const cur = Number(video?.currentTime || 0);
-    const ratio = dur > 0 ? Math.max(0, Math.min(1, cur / dur)) : 0;
-    progress.value = String(Math.round(ratio * 1000));
-    playBtn.innerHTML = video && !video.paused ? ICONS.pause : ICONS.play;
-    muteBtn.innerHTML = video?.muted ? ICONS.volOff : ICONS.volOn;
-    time.textContent = `${this._fmtScrubTime(cur)}/${this._fmtScrubTime(dur)}`;
+    const controlState = buildPopupMediaControlState({
+      duration: video?.duration,
+      currentTime: video?.currentTime,
+      paused: video?.paused,
+      muted: video?.muted,
+      formatTime: (value) => this._fmtScrubTime(value),
+    });
+    progress.value = controlState.progressValue;
+    playBtn.innerHTML = controlState.showPauseIcon ? ICONS.pause : ICONS.play;
+    muteBtn.innerHTML = controlState.showMutedIcon ? ICONS.volOff : ICONS.volOn;
+    time.textContent = controlState.timeText;
   }
   _togglePopupMediaPlay() {
     const v = this._popupMediaVideo();
@@ -7197,21 +7205,33 @@ export class FrigateViewCard extends HTMLElement {
       const playBtn = this._$("#popup-media-play");
       const muteBtn = this._$("#popup-media-mute");
       const time = this._$("#popup-media-time");
-      if (playBtn) playBtn.innerHTML = !video.paused ? ICONS.pause : ICONS.play;
-      if (muteBtn) muteBtn.innerHTML = video.muted ? ICONS.volOff : ICONS.volOn;
-      if (time)
-        time.textContent = `${this._fmtScrubTime(video.currentTime || 0)}/${this._fmtScrubTime(video.duration || 0)}`;
+      const controlState = buildPopupMediaControlState({
+        duration: video.duration,
+        currentTime: video.currentTime,
+        paused: video.paused,
+        muted: video.muted,
+        formatTime: (value) => this._fmtScrubTime(value),
+      });
+      if (playBtn)
+        playBtn.innerHTML = controlState.showPauseIcon
+          ? ICONS.pause
+          : ICONS.play;
+      if (muteBtn)
+        muteBtn.innerHTML = controlState.showMutedIcon
+          ? ICONS.volOff
+          : ICONS.volOn;
+      if (time) time.textContent = controlState.timeText;
       if (!progressDragging) this._updatePopupMediaButtons(video);
     };
 
     if (progress) {
       bind(progress, "input", () => {
         progressDragging = true;
-        const dur = Number(video.duration || 0);
-        const next = (Number(progress.value || 0) / 1000) * dur;
-        if (Number.isFinite(next) && dur > 0) {
-          video.currentTime = Math.max(0, Math.min(dur, next));
-        }
+        const next = resolvePopupMediaSeekTarget({
+          progressValue: progress.value,
+          duration: video.duration,
+        });
+        if (next !== null) video.currentTime = next;
         this._showPopupControlsTemporarily();
         sync();
       });
