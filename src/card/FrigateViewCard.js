@@ -149,6 +149,7 @@ import {
 } from "../live/live-fallback-image.js";
 import { runFallbackRefreshCycleForCard } from "../live/live-fallback-refresh.js";
 import {
+  buildHaDirectMountPlan,
   resolveHaDirectStartup,
   resolveHaDirectMountUnavailableState,
   resolveHaDirectReadyState,
@@ -1541,22 +1542,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _tryMountHaDirect(slot, startup = null, options = {}) {
-    const startupPolicy = resolveHaDirectStartup(startup || {});
-    const {
-      waitMs,
-      minCurrentTime,
-      minDecodedFrames,
-      requireReadyState,
-      strict,
-    } = startupPolicy;
+    const haDirectPlan = buildHaDirectMountPlan({
+      startup: startup || {},
+      preferredStreamType: this._preferredStreamType(),
+    });
     const commit = options.commit !== false;
     const entity = this._activeCam?.entity;
     if (!entity) return false;
 
-    const stateObj = this._hlsStateObj(
-      entity,
-      startupPolicy.streamType || this._preferredStreamType(),
-    );
+    const stateObj = this._hlsStateObj(entity, haDirectPlan.streamType);
     if (!stateObj) return false;
 
     const s = document.createElement("ha-camera-stream");
@@ -1576,12 +1570,11 @@ export class FrigateViewCard extends HTMLElement {
       } catch (_) {}
     };
 
-    const started = await this._waitForStreamStart(s, waitMs, {
-      minCurrentTime,
-      minDecodedFrames,
-      requireReadyState,
-      strict,
-    });
+    const started = await this._waitForStreamStart(
+      s,
+      haDirectPlan.waitMs,
+      haDirectPlan.waitOptions,
+    );
     if (!started) {
       destroy();
       return false;
@@ -3129,7 +3122,11 @@ export class FrigateViewCard extends HTMLElement {
       });
 
       if (transportPlan.mode === "ha-direct") {
-        const streamType = transportPlan.streamType;
+        const haDirectPlan = buildHaDirectMountPlan({
+          startup: { streamType: transportPlan.streamType },
+          preferredStreamType: this._preferredStreamType(),
+        });
+        const streamType = haDirectPlan.streamType;
         this._setActiveStreamType(streamType);
         const stateObj = this._hlsStateObj(entity, streamType);
         if (!stateObj) {
@@ -3158,12 +3155,11 @@ export class FrigateViewCard extends HTMLElement {
         if (this._rotateOverlayActive) this._setLiveNativeControls(true);
 
         void (async () => {
-          const ok = await this._waitForStreamStart(s, 8000, {
-            minCurrentTime: 0.05,
-            minDecodedFrames: 1,
-            requireReadyState: 0,
-            strict: false,
-          });
+          const ok = await this._waitForStreamStart(
+            s,
+            haDirectPlan.waitMs,
+            haDirectPlan.waitOptions,
+          );
           const readyState = resolveHaDirectReadyState({
             rotateOverlayActive: this._rotateOverlayActive,
             isCurrentEngine: this._engine === s,

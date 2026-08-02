@@ -14,6 +14,23 @@ export const resolveHaDirectStartup = (startup = {}) => ({
   streamType: startup.streamType,
 });
 
+export const buildHaDirectMountPlan = ({
+  startup = {},
+  preferredStreamType,
+}) => {
+  const policy = resolveHaDirectStartup(startup);
+  return {
+    streamType: policy.streamType || preferredStreamType,
+    waitOptions: {
+      minCurrentTime: policy.minCurrentTime,
+      minDecodedFrames: policy.minDecodedFrames,
+      requireReadyState: policy.requireReadyState,
+      strict: policy.strict,
+    },
+    waitMs: policy.waitMs,
+  };
+};
+
 export const resolveMseStartup = (startup = {}) => ({
   waitMs: normalizeWaitMs(startup.waitMs, 8000),
   minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.2),
