@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1106";
+const VERSION = "1.0.1107";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -13912,7 +13912,7 @@ const FrigateViewCard = class extends HTMLElement {
       popupControlsFsBtn.hidden = visibility.popupControlsFullscreenHidden;
   }
   _open(id) {
-    const ev = this._allDisplayEvents().find((e) => e.id === id);
+    const ev = this._allDisplayEvents().find((e) => e.id === id) || (this._tab === "kept" ? (this._kept || []).find((e) => e.id === id) : null);
     if (!ev) return;
     if (this._tab === "kept") {
       if (ev.has_clip) this._showClip(ev, { mediaType: "kept" });
@@ -14303,6 +14303,7 @@ const FrigateViewCard = class extends HTMLElement {
     infoOpts
   }) {
     this._enter();
+    this._clearPopupMediaCleanup();
     if (this._popupMediaStopTimer) {
       clearTimeout(this._popupMediaStopTimer);
       this._popupMediaStopTimer = null;

@@ -6985,7 +6985,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _open(id) {
-    const ev = this._allDisplayEvents().find((e) => e.id === id);
+    const ev =
+      this._allDisplayEvents().find((e) => e.id === id) ||
+      (this._tab === "kept"
+        ? (this._kept || []).find((e) => e.id === id)
+        : null);
     if (!ev) return;
     if (this._tab === "kept") {
       if (ev.has_clip) this._showClip(ev, { mediaType: "kept" });
@@ -7398,6 +7402,7 @@ export class FrigateViewCard extends HTMLElement {
     infoOpts,
   }) {
     this._enter();
+    this._clearPopupMediaCleanup();
     if (this._popupMediaStopTimer) {
       clearTimeout(this._popupMediaStopTimer);
       this._popupMediaStopTimer = null;
