@@ -93,6 +93,47 @@ function createBrowseNavContext({
   };
 }
 
+function createCommitContext({
+  clientId = "client-a",
+  camera = "front",
+  recordings = [{ id: 1 }],
+} = {}) {
+  const dataCache = new Map();
+  const availabilityCache = new Map();
+  const calls = [];
+
+  return {
+    dataCache,
+    availabilityCache,
+    calls,
+    ctx: {
+      _followNowWindow: true,
+      _winStart: 0,
+      _winEnd: 0,
+      _exhausted: true,
+      _recordings: [],
+      _recordingsDayDataCache: dataCache,
+      _recordingsDayAvailabilityCache: availabilityCache,
+      _cc() {
+        return { clientId, cam: camera };
+      },
+      _pruneNonActiveCamWindowCaches() {
+        calls.push(["prune"]);
+      },
+      _cacheActiveCamSlice(tab, recs) {
+        calls.push(["cacheActiveCamSlice", tab, recs]);
+      },
+      _renderListLabel(ts) {
+        calls.push(["renderListLabel", ts]);
+      },
+      _renderList() {
+        calls.push(["renderList"]);
+      },
+    },
+    recordings,
+  };
+}
+
 test("_updateRecordingsBrowseNav disables both buttons without camera context", async () => {
   const { ctx, prev, next, probes } = createBrowseNavContext({
     clientId: "",
@@ -141,4 +182,64 @@ test("_updateRecordingsBrowseNav skips next-day probing on today", async () => {
   assert.deepEqual(probes, [prevBounds]);
   assert.equal(prev.disabled, true);
   assert.equal(next.disabled, true);
+});
+
+test("_commitRecordingsDayTransition updates caches and render state with camera context", async () => {
+  const bounds = { start: 100, end: 200 };
+  const { ctx, calls, dataCache, availabilityCache, recordings } =
+    createCommitContext({
+      clientId: "client-a",
+      camera: "front",
+      recordings: [{ id: 1 }],
+    });
+
+  await FrigateViewCard.prototype._commitRecordingsDayTransition.call(
+    ctx,
+    bounds,
+    recordings,
+  );
+
+  assert.equal(ctx._followNowWindow, false);
+  assert.equal(ctx._winStart, 100);
+  assert.equal(ctx._winEnd, 200);
+  assert.equal(ctx._exhausted, false);
+  assert.equal(ctx._lastRenderedListHtml, "");
+  assert.deepEqual(ctx._recordings, recordings);
+  assert.deepEqual(dataCache.get("client-a|front|100|200"), recordings);
+  assert.equal(availabilityCache.get("client-a|front|100|200"), true);
+  assert.deepEqual(calls, [
+    ["prune"],
+    ["cacheActiveCamSlice", "recordings", recordings],
+    ["renderListLabel", 200],
+    ["renderList"],
+  ]);
+});
+
+test("_commitRecordingsDayTransition skips cache writes without camera context", async () => {
+  const bounds = { start: 300, end: 400 };
+  const { ctx, calls, dataCache, availabilityCache } = createCommitContext({
+    clientId: "",
+    camera: "front",
+    recordings: null,
+  });
+
+  await FrigateViewCard.prototype._commitRecordingsDayTransition.call(
+    ctx,
+    bounds,
+    null,
+  );
+
+  assert.equal(ctx._followNowWindow, false);
+  assert.equal(ctx._winStart, 300);
+  assert.equal(ctx._winEnd, 400);
+  assert.equal(ctx._exhausted, false);
+  assert.deepEqual(ctx._recordings, []);
+  assert.equal(dataCache.size, 0);
+  assert.equal(availabilityCache.size, 0);
+  assert.deepEqual(calls, [
+    ["prune"],
+    ["cacheActiveCamSlice", "recordings", []],
+    ["renderListLabel", 400],
+    ["renderList"],
+  ]);
 });
