@@ -184,6 +184,7 @@ import {
 import {
   buildPopupMediaUrl,
   buildPopupMediaControlState,
+  resolvePopupMediaControlsInitPlan,
   resolvePopupMediaSeekTarget,
 } from "./popup-media-controls-utils.js";
 import {
@@ -7191,13 +7192,21 @@ export class FrigateViewCard extends HTMLElement {
   _initPopupMediaControls(video, mediaType) {
     const controls = this._$("#popup-media-controls");
     if (!controls || !video) return;
-    const shouldUse = this._usePopupCustomControls(mediaType);
-    video.controls = !shouldUse;
-    if (shouldUse) video.removeAttribute("controls");
-    else video.setAttribute("controls", "");
-    controls.hidden = !shouldUse;
-    controls.classList.remove("is-hidden");
-    if (!shouldUse) return;
+    const controlsPlan = resolvePopupMediaControlsInitPlan({
+      shouldUseCustomControls: this._usePopupCustomControls(mediaType),
+    });
+    video.controls = controlsPlan.videoControlsEnabled;
+    if (controlsPlan.removeVideoControlsAttribute) {
+      video.removeAttribute("controls");
+    }
+    if (controlsPlan.setVideoControlsAttribute) {
+      video.setAttribute("controls", "");
+    }
+    controls.hidden = controlsPlan.controlsHidden;
+    if (controlsPlan.resetControlsHiddenClass) {
+      controls.classList.remove("is-hidden");
+    }
+    if (!controlsPlan.shouldBindCustomControls) return;
 
     const progress = this._$("#popup-media-progress");
     let progressDragging = false;
@@ -7428,9 +7437,14 @@ export class FrigateViewCard extends HTMLElement {
       this._initPopupMediaControls(video, this._popupMediaType);
     } else {
       const controls = this._$("#popup-media-controls");
+      const controlsPlan = resolvePopupMediaControlsInitPlan({
+        hasVideo: false,
+      });
       if (controls) {
-        controls.hidden = true;
-        controls.classList.remove("is-hidden");
+        controls.hidden = controlsPlan.controlsHidden;
+        if (controlsPlan.resetControlsHiddenClass) {
+          controls.classList.remove("is-hidden");
+        }
       }
     }
     this._renderPopupCarousel(

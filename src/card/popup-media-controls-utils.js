@@ -10,6 +10,18 @@ export const buildPopupMediaUrl = ({ baseUrl = "", cacheKey }) => {
   return `${normalizedBaseUrl}${separator}fvc=${encodeURIComponent(String(cacheKey))}`;
 };
 
+export const resolvePopupMediaControlsInitPlan = ({
+  shouldUseCustomControls = false,
+  hasVideo = true,
+}) => ({
+  videoControlsEnabled: Boolean(hasVideo && !shouldUseCustomControls),
+  removeVideoControlsAttribute: Boolean(hasVideo && shouldUseCustomControls),
+  setVideoControlsAttribute: Boolean(hasVideo && !shouldUseCustomControls),
+  controlsHidden: !shouldUseCustomControls,
+  resetControlsHiddenClass: true,
+  shouldBindCustomControls: Boolean(hasVideo && shouldUseCustomControls),
+});
+
 export const buildPopupMediaControlState = ({
   duration = 0,
   currentTime = 0,

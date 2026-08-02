@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildPopupMediaUrl,
   buildPopupMediaControlState,
+  resolvePopupMediaControlsInitPlan,
   resolvePopupMediaSeekTarget,
 } from "../src/card/popup-media-controls-utils.js";
 
@@ -28,6 +29,51 @@ test("buildPopupMediaUrl appends cache key without disturbing existing query str
       cacheKey: "",
     }),
     "/api/frigate/a/notifications/id/clip.mp4",
+  );
+});
+
+test("resolvePopupMediaControlsInitPlan separates native and custom popup control setup", () => {
+  assert.deepEqual(
+    resolvePopupMediaControlsInitPlan({
+      shouldUseCustomControls: true,
+      hasVideo: true,
+    }),
+    {
+      videoControlsEnabled: false,
+      removeVideoControlsAttribute: true,
+      setVideoControlsAttribute: false,
+      controlsHidden: false,
+      resetControlsHiddenClass: true,
+      shouldBindCustomControls: true,
+    },
+  );
+  assert.deepEqual(
+    resolvePopupMediaControlsInitPlan({
+      shouldUseCustomControls: false,
+      hasVideo: true,
+    }),
+    {
+      videoControlsEnabled: true,
+      removeVideoControlsAttribute: false,
+      setVideoControlsAttribute: true,
+      controlsHidden: true,
+      resetControlsHiddenClass: true,
+      shouldBindCustomControls: false,
+    },
+  );
+  assert.deepEqual(
+    resolvePopupMediaControlsInitPlan({
+      shouldUseCustomControls: false,
+      hasVideo: false,
+    }),
+    {
+      videoControlsEnabled: false,
+      removeVideoControlsAttribute: false,
+      setVideoControlsAttribute: false,
+      controlsHidden: true,
+      resetControlsHiddenClass: true,
+      shouldBindCustomControls: false,
+    },
   );
 });
 
