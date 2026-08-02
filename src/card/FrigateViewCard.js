@@ -178,6 +178,7 @@ import {
   selectFilterZones,
 } from "./filter-state-utils.js";
 import {
+  buildRecordingPlaybackPlan,
   buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
   buildRecordingsListMarkup,
@@ -7560,15 +7561,18 @@ export class FrigateViewCard extends HTMLElement {
     this._popupMediaType = "recording";
     this._playing = { rec: s };
     const { clientId, cam } = this._cc();
-    const maxChunk = 3600;
-    const chunkEnd = Math.min(e, start + maxChunk);
-    const clipDur = chunkEnd - start; // real clip length in seconds
-    const recCam = (cam || "").replace(/_/g, " ");
+    const playbackPlan = buildRecordingPlaybackPlan({
+      clientId,
+      camera: cam,
+      start,
+      end: e,
+      preferHls: this._recordingPreferHls(),
+    });
     this._renderPopupInfo(null, {
       mediaType: "recording",
       startTime: start,
-      durationSec: clipDur,
-      camera: recCam,
+      durationSec: playbackPlan.clipDurationSec,
+      camera: playbackPlan.displayCamera,
       objects: "-",
       zone: "-",
       score: "-",
@@ -7610,13 +7614,7 @@ export class FrigateViewCard extends HTMLElement {
       mediaCleanup.push(() => video.removeEventListener("seeking", onSeeking));
       mediaCleanup.push(() => video.removeEventListener("seeked", onSeeked));
 
-      const recPath = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
-      const vodBase = `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
-      const sourceCandidates = this._recordingPreferHls()
-        ? [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`, recPath]
-        : [recPath, `${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`];
-
-      for (const path of sourceCandidates) {
+      for (const path of playbackPlan.sourceCandidates) {
         if (this._playSeq !== token) return;
         const signed = await this._signed(path);
         if (this._playSeq !== token) return;
@@ -7650,7 +7648,7 @@ export class FrigateViewCard extends HTMLElement {
         clientId,
         cam,
         start: s,
-        end: chunkEnd,
+        end: playbackPlan.chunkEnd,
         video,
         token,
         sourceUrl: activeSource || video.currentSrc || video.src,

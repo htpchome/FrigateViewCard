@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1090";
+const VERSION = "1.0.1091";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4440,6 +4440,29 @@ function resolveOffsetRecordingsDayBounds({
   return {
     start: toEpochSeconds(year, month, day, 0, 0, 0),
     end: toEpochSeconds(year, month, day, 23, 59, 59)
+  };
+}
+
+// src/card/recordings/playback-utils.js
+function buildRecordingPlaybackPlan({
+  clientId = "",
+  camera = "",
+  start = 0,
+  end = 0,
+  preferHls = false,
+  maxChunkSeconds = 3600
+}) {
+  const safeStart = Number(start) || 0;
+  const safeEnd = Number(end) || 0;
+  const chunkEnd = Math.min(safeEnd, safeStart + maxChunkSeconds);
+  const recPath = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(camera)}/start/${safeStart}/end/${chunkEnd}`;
+  const vodBase = `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(camera)}/start/${safeStart}/end/${chunkEnd}`;
+  const hlsCandidates = [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`];
+  return {
+    chunkEnd,
+    clipDurationSec: chunkEnd - safeStart,
+    displayCamera: String(camera || "").replace(/_/g, " "),
+    sourceCandidates: preferHls ? [...hlsCandidates, recPath] : [recPath, ...hlsCandidates]
   };
 }
 
@@ -13811,15 +13834,18 @@ const FrigateViewCard = class extends HTMLElement {
     this._popupMediaType = "recording";
     this._playing = { rec: s };
     const { clientId, cam } = this._cc();
-    const maxChunk = 3600;
-    const chunkEnd = Math.min(e, start + maxChunk);
-    const clipDur = chunkEnd - start;
-    const recCam = (cam || "").replace(/_/g, " ");
+    const playbackPlan = buildRecordingPlaybackPlan({
+      clientId,
+      camera: cam,
+      start,
+      end: e,
+      preferHls: this._recordingPreferHls()
+    });
     this._renderPopupInfo(null, {
       mediaType: "recording",
       startTime: start,
-      durationSec: clipDur,
-      camera: recCam,
+      durationSec: playbackPlan.clipDurationSec,
+      camera: playbackPlan.displayCamera,
       objects: "-",
       zone: "-",
       score: "-",
@@ -13861,10 +13887,7 @@ const FrigateViewCard = class extends HTMLElement {
       video.addEventListener("seeked", onSeeked);
       mediaCleanup.push(() => video.removeEventListener("seeking", onSeeking));
       mediaCleanup.push(() => video.removeEventListener("seeked", onSeeked));
-      const recPath = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
-      const vodBase = `/api/frigate/${encodeURIComponent(clientId)}/vod/${encodeURIComponent(cam)}/start/${start}/end/${chunkEnd}`;
-      const sourceCandidates = this._recordingPreferHls() ? [`${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`, recPath] : [recPath, `${vodBase}/index.m3u8`, `${vodBase}/master.m3u8`];
-      for (const path of sourceCandidates) {
+      for (const path of playbackPlan.sourceCandidates) {
         if (this._playSeq !== token) return;
         const signed = await this._signed(path);
         if (this._playSeq !== token) return;
@@ -13898,7 +13921,7 @@ const FrigateViewCard = class extends HTMLElement {
         clientId,
         cam,
         start: s,
-        end: chunkEnd,
+        end: playbackPlan.chunkEnd,
         video,
         token,
         sourceUrl: activeSource || video.currentSrc || video.src

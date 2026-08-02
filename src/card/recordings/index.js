@@ -20,6 +20,8 @@ export {
   resolveRecordingsDayBounds,
 } from "./day-utils.js";
 
+export { buildRecordingPlaybackPlan } from "./playback-utils.js";
+
 export { buildRecordingsListMarkup } from "./list-markup.js";
 
 export { splitRecordingsHourly } from "./segment-utils.js";
