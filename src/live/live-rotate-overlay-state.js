@@ -82,3 +82,102 @@ export const resolveFullscreenButtonVisibility = ({
     popupControlsFullscreenHidden: Boolean(popupRotateActive),
   };
 };
+
+export const resolveRotateOverlayUiPlan = ({
+  action = "idle",
+  mode = "none",
+  active = false,
+  fromPopup = false,
+  fromLive = false,
+  exitMode = "none",
+}) => {
+  if (action === "activate-live") {
+    return {
+      active,
+      mode,
+      removeClasses: [
+        "mobile-rotate-live-exit",
+        "mobile-rotate-popup",
+        "mobile-rotate-popup-exit",
+      ],
+      addClasses: ["mobile-rotate-live"],
+      disableNativeControls: Boolean(fromPopup),
+      enableNativeControls: true,
+      clearLiveControlsVisible: false,
+      clearLoading: true,
+      syncFullscreenButtons: true,
+      showLiveControls: true,
+      showPopupControls: true,
+    };
+  }
+
+  if (action === "activate-popup") {
+    return {
+      active,
+      mode,
+      removeClasses: [
+        "mobile-rotate-popup-exit",
+        "mobile-rotate-live",
+        "mobile-rotate-live-exit",
+      ],
+      addClasses: ["mobile-rotate-popup"],
+      disableNativeControls: Boolean(fromLive),
+      enableNativeControls: false,
+      clearLiveControlsVisible: true,
+      clearLoading: false,
+      syncFullscreenButtons: true,
+      showLiveControls: false,
+      showPopupControls: true,
+    };
+  }
+
+  if (action === "idle") {
+    return {
+      active,
+      mode,
+      removeClasses: [
+        "mobile-rotate-live",
+        "mobile-rotate-live-exit",
+        "mobile-rotate-popup",
+        "mobile-rotate-popup-exit",
+      ],
+      addClasses: [],
+      disableNativeControls: false,
+      enableNativeControls: false,
+      clearLiveControlsVisible: true,
+      clearLoading: false,
+      syncFullscreenButtons: false,
+      showLiveControls: false,
+      showPopupControls: false,
+    };
+  }
+
+  return {
+    active,
+    mode,
+    removeClasses: ["mobile-rotate-live", "mobile-rotate-popup"],
+    addClasses: [
+      exitMode === "popup"
+        ? "mobile-rotate-popup-exit"
+        : "mobile-rotate-live-exit",
+    ],
+    disableNativeControls: exitMode === "live",
+    enableNativeControls: false,
+    clearLiveControlsVisible: false,
+    clearLoading: false,
+    syncFullscreenButtons: true,
+    showLiveControls: false,
+    showPopupControls: true,
+  };
+};
+
+export const resolveRotateOverlayNativeControlsPlan = ({
+  enabled = false,
+}) => ({
+  expectedActive: Boolean(enabled),
+  clearAudioSyncFirst: !enabled,
+  clearFullscreenStyleFirst: !enabled,
+  applyFullscreenStyle: Boolean(enabled),
+  bindAudioSync: Boolean(enabled),
+  retryDelaysMs: [120, 420, 900],
+});

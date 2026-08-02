@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1102";
+const VERSION = "1.0.1104";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3250,6 +3250,98 @@ const resolveFullscreenButtonVisibility = ({
     popupControlsFullscreenHidden: Boolean(popupRotateActive)
   };
 };
+const resolveRotateOverlayUiPlan = ({
+  action = "idle",
+  mode = "none",
+  active = false,
+  fromPopup = false,
+  fromLive = false,
+  exitMode = "none"
+}) => {
+  if (action === "activate-live") {
+    return {
+      active,
+      mode,
+      removeClasses: [
+        "mobile-rotate-live-exit",
+        "mobile-rotate-popup",
+        "mobile-rotate-popup-exit"
+      ],
+      addClasses: ["mobile-rotate-live"],
+      disableNativeControls: Boolean(fromPopup),
+      enableNativeControls: true,
+      clearLiveControlsVisible: false,
+      clearLoading: true,
+      syncFullscreenButtons: true,
+      showLiveControls: true,
+      showPopupControls: true
+    };
+  }
+  if (action === "activate-popup") {
+    return {
+      active,
+      mode,
+      removeClasses: [
+        "mobile-rotate-popup-exit",
+        "mobile-rotate-live",
+        "mobile-rotate-live-exit"
+      ],
+      addClasses: ["mobile-rotate-popup"],
+      disableNativeControls: Boolean(fromLive),
+      enableNativeControls: false,
+      clearLiveControlsVisible: true,
+      clearLoading: false,
+      syncFullscreenButtons: true,
+      showLiveControls: false,
+      showPopupControls: true
+    };
+  }
+  if (action === "idle") {
+    return {
+      active,
+      mode,
+      removeClasses: [
+        "mobile-rotate-live",
+        "mobile-rotate-live-exit",
+        "mobile-rotate-popup",
+        "mobile-rotate-popup-exit"
+      ],
+      addClasses: [],
+      disableNativeControls: false,
+      enableNativeControls: false,
+      clearLiveControlsVisible: true,
+      clearLoading: false,
+      syncFullscreenButtons: false,
+      showLiveControls: false,
+      showPopupControls: false
+    };
+  }
+  return {
+    active,
+    mode,
+    removeClasses: ["mobile-rotate-live", "mobile-rotate-popup"],
+    addClasses: [
+      exitMode === "popup" ? "mobile-rotate-popup-exit" : "mobile-rotate-live-exit"
+    ],
+    disableNativeControls: exitMode === "live",
+    enableNativeControls: false,
+    clearLiveControlsVisible: false,
+    clearLoading: false,
+    syncFullscreenButtons: true,
+    showLiveControls: false,
+    showPopupControls: true
+  };
+};
+const resolveRotateOverlayNativeControlsPlan = ({
+  enabled = false
+}) => ({
+  expectedActive: Boolean(enabled),
+  clearAudioSyncFirst: !enabled,
+  clearFullscreenStyleFirst: !enabled,
+  applyFullscreenStyle: Boolean(enabled),
+  bindAudioSync: Boolean(enabled),
+  retryDelaysMs: [120, 420, 900]
+});
 
 // src/live/live-video-factory.js
 const VIDEO_PROFILES = Object.freeze({
@@ -12562,7 +12654,8 @@ const FrigateViewCard = class extends HTMLElement {
     video.addEventListener("volumechange", this._onRotateOverlayVolumeChange);
   }
   _setLiveNativeControls(enabled) {
-    const expected = !!enabled;
+    const controlsPlan = resolveRotateOverlayNativeControlsPlan({ enabled });
+    const expected = controlsPlan.expectedActive;
     const apply = () => {
       if (!!this._rotateOverlayActive !== expected) return;
       const host = this._$("#engine");
@@ -12572,16 +12665,19 @@ const FrigateViewCard = class extends HTMLElement {
       if (!expected) v.removeAttribute("controls");
       v.setAttribute("playsinline", "");
       v.setAttribute("webkit-playsinline", "true");
-      if (expected) this._applyRotateVideoFullscreenStyle(v);
+      if (controlsPlan.applyFullscreenStyle)
+        this._applyRotateVideoFullscreenStyle(v);
       else this._clearRotateVideoFullscreenStyle();
-      if (expected) this._bindRotateOverlayAudioSync(v);
+      if (controlsPlan.bindAudioSync) this._bindRotateOverlayAudioSync(v);
     };
-    if (!expected) {
+    if (controlsPlan.clearAudioSyncFirst) {
       this._clearRotateOverlayAudioSync();
+    }
+    if (controlsPlan.clearFullscreenStyleFirst) {
       this._clearRotateVideoFullscreenStyle();
     }
     apply();
-    [120, 420, 900].forEach((delay) => setTimeout(apply, delay));
+    controlsPlan.retryDelaysMs.forEach((delay) => setTimeout(apply, delay));
   }
   _scheduleRotateOverlayUpdate() {
     if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
@@ -12613,60 +12709,33 @@ const FrigateViewCard = class extends HTMLElement {
       currentMode: this._rotateOverlayMode,
       isActive: this._rotateOverlayActive
     });
+    const uiPlan = resolveRotateOverlayUiPlan(rotateState);
     if (this._rotateOverlayExitT) {
       clearTimeout(this._rotateOverlayExitT);
       this._rotateOverlayExitT = null;
     }
+    if (uiPlan.removeClasses.length)
+      card.classList.remove(...uiPlan.removeClasses);
+    if (uiPlan.addClasses.length) card.classList.add(...uiPlan.addClasses);
+    this._rotateOverlayActive = uiPlan.active;
+    this._rotateOverlayMode = uiPlan.mode;
+    if (uiPlan.disableNativeControls) this._setLiveNativeControls(false);
+    if (uiPlan.clearLiveControlsVisible)
+      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
+    if (uiPlan.clearLoading) this._setStreamLoading(false);
+    if (uiPlan.enableNativeControls) this._setLiveNativeControls(true);
+    if (uiPlan.syncFullscreenButtons) this._syncFullscreenButtonsVisibility();
+    if (uiPlan.showLiveControls) this._showLiveControlsTemporarily();
+    if (uiPlan.showPopupControls) this._showPopupControlsTemporarily();
     if (rotateState.action === "activate-live") {
-      card.classList.remove(
-        "mobile-rotate-live-exit",
-        "mobile-rotate-popup",
-        "mobile-rotate-popup-exit"
-      );
-      card.classList.add("mobile-rotate-live");
-      this._rotateOverlayMode = rotateState.mode;
-      this._rotateOverlayActive = rotateState.active;
-      if (rotateState.fromPopup) this._setLiveNativeControls(false);
-      this._setStreamLoading(false);
-      this._setLiveNativeControls(true);
-      this._syncFullscreenButtonsVisibility();
-      this._showLiveControlsTemporarily();
-      this._showPopupControlsTemporarily();
       return;
     }
     if (rotateState.action === "activate-popup") {
-      card.classList.remove(
-        "mobile-rotate-popup-exit",
-        "mobile-rotate-live",
-        "mobile-rotate-live-exit"
-      );
-      card.classList.add("mobile-rotate-popup");
-      this._rotateOverlayMode = rotateState.mode;
-      this._rotateOverlayActive = rotateState.active;
-      if (rotateState.fromLive) this._setLiveNativeControls(false);
-      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
-      this._syncFullscreenButtonsVisibility();
-      this._showPopupControlsTemporarily();
       return;
     }
     if (rotateState.action === "idle") {
-      card.classList.remove(
-        "mobile-rotate-live",
-        "mobile-rotate-live-exit",
-        "mobile-rotate-popup",
-        "mobile-rotate-popup-exit"
-      );
-      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
-      this._rotateOverlayMode = rotateState.mode;
       return;
     }
-    const exitMode = rotateState.exitMode;
-    this._rotateOverlayActive = rotateState.active;
-    this._rotateOverlayMode = rotateState.mode;
-    if (exitMode === "live") this._setLiveNativeControls(false);
-    card.classList.remove("mobile-rotate-live", "mobile-rotate-popup");
-    if (exitMode === "popup") card.classList.add("mobile-rotate-popup-exit");
-    else card.classList.add("mobile-rotate-live-exit");
     this._rotateOverlayExitT = setTimeout(() => {
       const c = this._$("#card");
       if (c)
@@ -12678,8 +12747,6 @@ const FrigateViewCard = class extends HTMLElement {
       if (this._resumeLiveT) return;
       this._syncFullscreenButtonsVisibility();
     }, 260);
-    this._syncFullscreenButtonsVisibility();
-    this._showPopupControlsTemporarily();
   }
   _kickLiveIfStale(force = false) {
     const now = Date.now();

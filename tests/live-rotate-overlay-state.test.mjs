@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 
 import {
   resolveFullscreenButtonVisibility,
+  resolveRotateOverlayNativeControlsPlan,
   resolveRotateOverlayState,
   resolveRotateOverlayTargetMode,
+  resolveRotateOverlayUiPlan,
 } from "../src/live/live-rotate-overlay-state.js";
 
 test("resolveRotateOverlayTargetMode keeps overlay off outside eligible viewport", () => {
@@ -169,4 +171,100 @@ test("resolveFullscreenButtonVisibility hides controls for popup rotation and fu
       popupControlsFullscreenHidden: false,
     },
   );
+});
+
+test("resolveRotateOverlayUiPlan shapes class mutations and side effects per action", () => {
+  assert.deepEqual(
+    resolveRotateOverlayUiPlan({
+      action: "activate-live",
+      active: true,
+      mode: "live",
+      fromPopup: true,
+    }),
+    {
+      active: true,
+      mode: "live",
+      removeClasses: [
+        "mobile-rotate-live-exit",
+        "mobile-rotate-popup",
+        "mobile-rotate-popup-exit",
+      ],
+      addClasses: ["mobile-rotate-live"],
+      disableNativeControls: true,
+      enableNativeControls: true,
+      clearLiveControlsVisible: false,
+      clearLoading: true,
+      syncFullscreenButtons: true,
+      showLiveControls: true,
+      showPopupControls: true,
+    },
+  );
+
+  assert.deepEqual(
+    resolveRotateOverlayUiPlan({
+      action: "activate-popup",
+      active: true,
+      mode: "popup",
+      fromLive: true,
+    }),
+    {
+      active: true,
+      mode: "popup",
+      removeClasses: [
+        "mobile-rotate-popup-exit",
+        "mobile-rotate-live",
+        "mobile-rotate-live-exit",
+      ],
+      addClasses: ["mobile-rotate-popup"],
+      disableNativeControls: true,
+      enableNativeControls: false,
+      clearLiveControlsVisible: true,
+      clearLoading: false,
+      syncFullscreenButtons: true,
+      showLiveControls: false,
+      showPopupControls: true,
+    },
+  );
+
+  assert.deepEqual(
+    resolveRotateOverlayUiPlan({
+      action: "deactivate",
+      active: false,
+      mode: "none",
+      exitMode: "popup",
+    }),
+    {
+      active: false,
+      mode: "none",
+      removeClasses: ["mobile-rotate-live", "mobile-rotate-popup"],
+      addClasses: ["mobile-rotate-popup-exit"],
+      disableNativeControls: false,
+      enableNativeControls: false,
+      clearLiveControlsVisible: false,
+      clearLoading: false,
+      syncFullscreenButtons: true,
+      showLiveControls: false,
+      showPopupControls: true,
+    },
+  );
+});
+
+test("resolveRotateOverlayNativeControlsPlan keeps retry timing and cleanup behavior stable", () => {
+  assert.deepEqual(resolveRotateOverlayNativeControlsPlan({ enabled: true }), {
+    expectedActive: true,
+    clearAudioSyncFirst: false,
+    clearFullscreenStyleFirst: false,
+    applyFullscreenStyle: true,
+    bindAudioSync: true,
+    retryDelaysMs: [120, 420, 900],
+  });
+
+  assert.deepEqual(resolveRotateOverlayNativeControlsPlan({ enabled: false }), {
+    expectedActive: false,
+    clearAudioSyncFirst: true,
+    clearFullscreenStyleFirst: true,
+    applyFullscreenStyle: false,
+    bindAudioSync: false,
+    retryDelaysMs: [120, 420, 900],
+  });
 });
