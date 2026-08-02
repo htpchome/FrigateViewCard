@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1104";
+const VERSION = "1.0.1105";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3342,6 +3342,28 @@ const resolveRotateOverlayNativeControlsPlan = ({
   bindAudioSync: Boolean(enabled),
   retryDelaysMs: [120, 420, 900]
 });
+const resolveRotateOverlayViewportVariables = ({
+  visualViewport = null,
+  innerWidth = 0,
+  innerHeight = 0
+}) => {
+  const width = Math.max(
+    1,
+    Math.round(visualViewport?.width || innerWidth || 0)
+  );
+  const height = Math.max(
+    1,
+    Math.round(visualViewport?.height || innerHeight || 0)
+  );
+  const offsetLeft = Math.round(visualViewport?.offsetLeft || 0);
+  const offsetTop = Math.round(visualViewport?.offsetTop || 0);
+  return {
+    widthPx: `${width}px`,
+    heightPx: `${height}px`,
+    offsetLeftPx: `${offsetLeft}px`,
+    offsetTopPx: `${offsetTop}px`
+  };
+};
 
 // src/live/live-video-factory.js
 const VIDEO_PROFILES = Object.freeze({
@@ -12683,15 +12705,15 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
     this._rotateOverlayRaf = requestAnimationFrame(() => {
       this._rotateOverlayRaf = 0;
-      const vv = window.visualViewport;
-      const vw = Math.max(1, Math.round(vv?.width || window.innerWidth || 0));
-      const vh = Math.max(1, Math.round(vv?.height || window.innerHeight || 0));
-      const ox = Math.round(vv?.offsetLeft || 0);
-      const oy = Math.round(vv?.offsetTop || 0);
-      this.style.setProperty("--rotate-vw", `${vw}px`);
-      this.style.setProperty("--rotate-vh", `${vh}px`);
-      this.style.setProperty("--rotate-ox", `${ox}px`);
-      this.style.setProperty("--rotate-oy", `${oy}px`);
+      const viewportVars = resolveRotateOverlayViewportVariables({
+        visualViewport: window.visualViewport,
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight
+      });
+      this.style.setProperty("--rotate-vw", viewportVars.widthPx);
+      this.style.setProperty("--rotate-vh", viewportVars.heightPx);
+      this.style.setProperty("--rotate-ox", viewportVars.offsetLeftPx);
+      this.style.setProperty("--rotate-oy", viewportVars.offsetTopPx);
       this._updateRotateOverlayState();
     });
   }

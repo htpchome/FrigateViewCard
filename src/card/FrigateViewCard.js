@@ -136,6 +136,7 @@ import {
   resolveRotateOverlayNativeControlsPlan,
   resolveRotateOverlayState,
   resolveRotateOverlayUiPlan,
+  resolveRotateOverlayViewportVariables,
 } from "../live/live-rotate-overlay-state.js";
 import {
   buildVideoOptionsForView,
@@ -5646,15 +5647,15 @@ export class FrigateViewCard extends HTMLElement {
     if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
     this._rotateOverlayRaf = requestAnimationFrame(() => {
       this._rotateOverlayRaf = 0;
-      const vv = window.visualViewport;
-      const vw = Math.max(1, Math.round(vv?.width || window.innerWidth || 0));
-      const vh = Math.max(1, Math.round(vv?.height || window.innerHeight || 0));
-      const ox = Math.round(vv?.offsetLeft || 0);
-      const oy = Math.round(vv?.offsetTop || 0);
-      this.style.setProperty("--rotate-vw", `${vw}px`);
-      this.style.setProperty("--rotate-vh", `${vh}px`);
-      this.style.setProperty("--rotate-ox", `${ox}px`);
-      this.style.setProperty("--rotate-oy", `${oy}px`);
+      const viewportVars = resolveRotateOverlayViewportVariables({
+        visualViewport: window.visualViewport,
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+      });
+      this.style.setProperty("--rotate-vw", viewportVars.widthPx);
+      this.style.setProperty("--rotate-vh", viewportVars.heightPx);
+      this.style.setProperty("--rotate-ox", viewportVars.offsetLeftPx);
+      this.style.setProperty("--rotate-oy", viewportVars.offsetTopPx);
       this._updateRotateOverlayState();
     });
   }

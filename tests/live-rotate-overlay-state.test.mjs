@@ -7,6 +7,7 @@ import {
   resolveRotateOverlayState,
   resolveRotateOverlayTargetMode,
   resolveRotateOverlayUiPlan,
+  resolveRotateOverlayViewportVariables,
 } from "../src/live/live-rotate-overlay-state.js";
 
 test("resolveRotateOverlayTargetMode keeps overlay off outside eligible viewport", () => {
@@ -267,4 +268,39 @@ test("resolveRotateOverlayNativeControlsPlan keeps retry timing and cleanup beha
     bindAudioSync: false,
     retryDelaysMs: [120, 420, 900],
   });
+});
+
+test("resolveRotateOverlayViewportVariables prefers visual viewport and clamps minimum size", () => {
+  assert.deepEqual(
+    resolveRotateOverlayViewportVariables({
+      visualViewport: {
+        width: 390.2,
+        height: 844.7,
+        offsetLeft: 12.4,
+        offsetTop: 8.6,
+      },
+      innerWidth: 100,
+      innerHeight: 200,
+    }),
+    {
+      widthPx: "390px",
+      heightPx: "845px",
+      offsetLeftPx: "12px",
+      offsetTopPx: "9px",
+    },
+  );
+
+  assert.deepEqual(
+    resolveRotateOverlayViewportVariables({
+      visualViewport: null,
+      innerWidth: 0,
+      innerHeight: -5,
+    }),
+    {
+      widthPx: "1px",
+      heightPx: "1px",
+      offsetLeftPx: "0px",
+      offsetTopPx: "0px",
+    },
+  );
 });

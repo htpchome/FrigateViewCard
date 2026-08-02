@@ -181,3 +181,26 @@ export const resolveRotateOverlayNativeControlsPlan = ({
   bindAudioSync: Boolean(enabled),
   retryDelaysMs: [120, 420, 900],
 });
+
+export const resolveRotateOverlayViewportVariables = ({
+  visualViewport = null,
+  innerWidth = 0,
+  innerHeight = 0,
+}) => {
+  const width = Math.max(
+    1,
+    Math.round(visualViewport?.width || innerWidth || 0),
+  );
+  const height = Math.max(
+    1,
+    Math.round(visualViewport?.height || innerHeight || 0),
+  );
+  const offsetLeft = Math.round(visualViewport?.offsetLeft || 0);
+  const offsetTop = Math.round(visualViewport?.offsetTop || 0);
+  return {
+    widthPx: `${width}px`,
+    heightPx: `${height}px`,
+    offsetLeftPx: `${offsetLeft}px`,
+    offsetTopPx: `${offsetTop}px`,
+  };
+};
