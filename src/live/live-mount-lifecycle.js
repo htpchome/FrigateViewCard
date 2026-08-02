@@ -240,3 +240,21 @@ export const resolveLiveMountUiState = ({ quiet = false } = {}) => {
     loading: true,
   };
 };
+
+export const resolveLiveMountTransportPlan = ({
+  useGo2Rtc,
+  forcedType,
+  preferredStreamType,
+}) => {
+  if (useGo2Rtc) {
+    return {
+      mode: "go2rtc",
+      streamType: null,
+    };
+  }
+
+  return {
+    mode: "ha-direct",
+    streamType: forcedType || preferredStreamType,
+  };
+};

@@ -113,6 +113,7 @@ import {
   isLiveVideoStale,
   resolveLiveKickIfStaleAction,
   resolveLiveMountEntryAction,
+  resolveLiveMountTransportPlan,
   resolveLiveMountUiState,
   resolveLiveResumeAction,
   shouldRunMountWatchdog,
@@ -128,6 +129,7 @@ import {
   applyActiveStreamTypeForCard,
   applyStreamFallbackVisibilityForCard,
   applyStreamLoadingStateForCard,
+  resolveSnapshotFallbackState,
 } from "../live/live-stream-state.js";
 import {
   buildVideoOptionsForView,
@@ -3117,8 +3119,14 @@ export class FrigateViewCard extends HTMLElement {
       );
       this._setStreamLoading(mountUi.loading);
 
-      if (!useGo2Rtc) {
-        const streamType = forcedType || this._preferredStreamType();
+      const transportPlan = resolveLiveMountTransportPlan({
+        useGo2Rtc,
+        forcedType,
+        preferredStreamType: this._preferredStreamType(),
+      });
+
+      if (transportPlan.mode === "ha-direct") {
+        const streamType = transportPlan.streamType;
         this._setActiveStreamType(streamType);
         const stateObj = this._hlsStateObj(entity, streamType);
         if (!stateObj) {
@@ -3169,9 +3177,13 @@ export class FrigateViewCard extends HTMLElement {
         return;
 
       // go2rtc attempts failed: show snapshot placeholder.
-      this._setActiveStreamType("snapshot");
-      this._setStreamLoading(false);
-      this._setStreamFallbackVisible(true);
+      const fallbackState = resolveSnapshotFallbackState();
+      this._setActiveStreamType(fallbackState.activeStreamType);
+      this._setStreamLoading(fallbackState.loading);
+      this._setStreamFallbackVisible(
+        fallbackState.fallbackVisible,
+        fallbackState.refreshFallbackImage,
+      );
     } finally {
       clearTimeout(mountWatchdogT);
       this._clearMountTrackingIfCurrent(mountToken);

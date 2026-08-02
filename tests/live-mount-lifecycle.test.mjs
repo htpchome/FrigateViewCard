@@ -9,6 +9,7 @@ import {
   isLiveVideoStale,
   resolveLiveKickIfStaleAction,
   resolveLiveMountEntryAction,
+  resolveLiveMountTransportPlan,
   resolveLiveMountUiState,
   resolveLiveResumeAction,
   shouldRunMountWatchdog,
@@ -366,4 +367,40 @@ test("resolveLiveMountUiState shapes loading and fallback state for quiet and no
     refreshFallbackImage: false,
     loading: false,
   });
+});
+
+test("resolveLiveMountTransportPlan selects ha-direct stream type or go2rtc mode", () => {
+  assert.deepEqual(
+    resolveLiveMountTransportPlan({
+      useGo2Rtc: false,
+      forcedType: "hls",
+      preferredStreamType: "webrtc",
+    }),
+    {
+      mode: "ha-direct",
+      streamType: "hls",
+    },
+  );
+  assert.deepEqual(
+    resolveLiveMountTransportPlan({
+      useGo2Rtc: false,
+      forcedType: null,
+      preferredStreamType: "webrtc",
+    }),
+    {
+      mode: "ha-direct",
+      streamType: "webrtc",
+    },
+  );
+  assert.deepEqual(
+    resolveLiveMountTransportPlan({
+      useGo2Rtc: true,
+      forcedType: "mse",
+      preferredStreamType: "webrtc",
+    }),
+    {
+      mode: "go2rtc",
+      streamType: null,
+    },
+  );
 });

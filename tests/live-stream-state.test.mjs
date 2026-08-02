@@ -10,6 +10,7 @@ import {
   applyStreamLoadingState,
   isLiveTransportType,
   resolveActiveStreamTypeState,
+  resolveSnapshotFallbackState,
 } from "../src/live/live-stream-state.js";
 
 test("isLiveTransportType matches known live transports", () => {
@@ -211,5 +212,20 @@ test("applyStreamFallbackVisibilityForCard maps card runtime and triggers refres
     card: null,
     visible: true,
     refreshImage: true,
+  });
+});
+
+test("resolveSnapshotFallbackState shapes snapshot UI state", () => {
+  assert.deepEqual(resolveSnapshotFallbackState(), {
+    activeStreamType: "snapshot",
+    loading: false,
+    fallbackVisible: true,
+    refreshFallbackImage: false,
+  });
+  assert.deepEqual(resolveSnapshotFallbackState({ refreshImage: true }), {
+    activeStreamType: "snapshot",
+    loading: false,
+    fallbackVisible: true,
+    refreshFallbackImage: true,
   });
 });

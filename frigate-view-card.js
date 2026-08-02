@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1097";
+const VERSION = "1.0.1098";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3001,6 +3001,22 @@ const resolveLiveMountUiState = ({ quiet = false } = {}) => {
     loading: true
   };
 };
+const resolveLiveMountTransportPlan = ({
+  useGo2Rtc,
+  forcedType,
+  preferredStreamType
+}) => {
+  if (useGo2Rtc) {
+    return {
+      mode: "go2rtc",
+      streamType: null
+    };
+  }
+  return {
+    mode: "ha-direct",
+    streamType: forcedType || preferredStreamType
+  };
+};
 
 // src/live/live-mount-result.js
 const isMountTokenCurrent = ({ mountToken, mountSeq }) => mountToken === mountSeq;
@@ -3146,6 +3162,14 @@ const applyActiveStreamTypeForCard = ({ card, type }) => {
   card._lastLiveStreamHint = nextState.lastLiveStreamHint;
   card._renderStats?.();
 };
+const resolveSnapshotFallbackState = ({
+  refreshImage = false
+} = {}) => ({
+  activeStreamType: "snapshot",
+  loading: false,
+  fallbackVisible: true,
+  refreshFallbackImage: refreshImage === true
+});
 
 // src/live/live-video-factory.js
 const VIDEO_PROFILES = Object.freeze({
@@ -10282,8 +10306,13 @@ const FrigateViewCard = class extends HTMLElement {
         mountUi.refreshFallbackImage
       );
       this._setStreamLoading(mountUi.loading);
-      if (!useGo2Rtc) {
-        const streamType = forcedType || this._preferredStreamType();
+      const transportPlan = resolveLiveMountTransportPlan({
+        useGo2Rtc,
+        forcedType,
+        preferredStreamType: this._preferredStreamType()
+      });
+      if (transportPlan.mode === "ha-direct") {
+        const streamType = transportPlan.streamType;
         this._setActiveStreamType(streamType);
         const stateObj = this._hlsStateObj(entity, streamType);
         if (!stateObj) {
@@ -10328,9 +10357,13 @@ const FrigateViewCard = class extends HTMLElement {
       const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);
       if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
         return;
-      this._setActiveStreamType("snapshot");
-      this._setStreamLoading(false);
-      this._setStreamFallbackVisible(true);
+      const fallbackState = resolveSnapshotFallbackState();
+      this._setActiveStreamType(fallbackState.activeStreamType);
+      this._setStreamLoading(fallbackState.loading);
+      this._setStreamFallbackVisible(
+        fallbackState.fallbackVisible,
+        fallbackState.refreshFallbackImage
+      );
     } finally {
       clearTimeout(mountWatchdogT);
       this._clearMountTrackingIfCurrent(mountToken);

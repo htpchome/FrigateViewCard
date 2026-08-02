@@ -86,3 +86,12 @@ export const applyActiveStreamTypeForCard = ({ card, type }) => {
   card._lastLiveStreamHint = nextState.lastLiveStreamHint;
   card._renderStats?.();
 };
+
+export const resolveSnapshotFallbackState = ({
+  refreshImage = false,
+} = {}) => ({
+  activeStreamType: "snapshot",
+  loading: false,
+  fallbackVisible: true,
+  refreshFallbackImage: refreshImage === true,
+});
