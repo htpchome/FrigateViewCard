@@ -11,6 +11,7 @@ export {
 
 export {
   resolveRecordingsBrowseNavContextState,
+  resolveRecordingsBrowseNavProbePlan,
   resolveRecordingsBrowseNavState,
 } from "./browse-nav-utils.js";
 

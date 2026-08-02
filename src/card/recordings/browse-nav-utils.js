@@ -28,6 +28,29 @@ export function resolveRecordingsBrowseNavContextState({
   };
 }
 
+export function resolveRecordingsBrowseNavProbePlan({
+  clientId = "",
+  camera = "",
+  currentBounds = null,
+  todayBounds = null,
+  prevBounds = null,
+  nextBounds = null,
+}) {
+  const initialState = resolveRecordingsBrowseNavContextState({
+    clientId,
+    camera,
+    currentBounds,
+    todayBounds,
+  });
+
+  return {
+    hasContext: initialState.hasContext,
+    initialState,
+    prevProbeBounds: initialState.hasContext ? prevBounds : null,
+    nextProbeBounds: initialState.shouldProbeNext ? nextBounds : null,
+  };
+}
+
 export function resolveRecordingsBrowseNavState({
   currentBounds = null,
   todayBounds = null,

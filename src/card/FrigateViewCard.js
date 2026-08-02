@@ -196,6 +196,7 @@ import {
   resolvePreparedRecordingsIncomingState,
   resolvePreparedRecordingsSwipeState,
   resolveRecordingsBrowseNavContextState,
+  resolveRecordingsBrowseNavProbePlan,
   resolveRecordingsBrowseNavState,
   resolveRecordingsDayBounds,
   resolveRecordingsSwipeStageMetrics,
@@ -8167,39 +8168,37 @@ export class FrigateViewCard extends HTMLElement {
     const { clientId, cam } = this._cc();
     const current = this._recordingsDayBounds();
     const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
-    const initialNavState = resolveRecordingsBrowseNavContextState({
+    const probePlan = resolveRecordingsBrowseNavProbePlan({
       clientId,
       camera: cam,
       currentBounds: current,
       todayBounds: today,
+      prevBounds: this._recordingsOffsetDayBounds(-1),
+      nextBounds: this._recordingsOffsetDayBounds(1),
     });
-    if (!initialNavState.hasContext) {
-      prev.disabled = initialNavState.prevDisabled;
-      next.disabled = initialNavState.nextDisabled;
+    if (!probePlan.hasContext) {
+      prev.disabled = probePlan.initialState.prevDisabled;
+      next.disabled = probePlan.initialState.nextDisabled;
       return;
     }
 
     const token = ++this._recordingsNavUpdateToken;
     prev.disabled = true;
     next.disabled = true;
-    const prevBounds = this._recordingsOffsetDayBounds(-1);
     const hasPrev = await this._hasRecordingsInBounds(
-      prevBounds,
+      probePlan.prevProbeBounds,
       clientId,
       cam,
     );
     if (token !== this._recordingsNavUpdateToken) return;
 
     let hasNext = false;
-    const navState = resolveRecordingsBrowseNavState({
-      currentBounds: current,
-      todayBounds: today,
-      hasPrev,
-      hasNext,
-    });
-    if (navState.shouldProbeNext) {
-      const nextBounds = this._recordingsOffsetDayBounds(1);
-      hasNext = await this._hasRecordingsInBounds(nextBounds, clientId, cam);
+    if (probePlan.nextProbeBounds) {
+      hasNext = await this._hasRecordingsInBounds(
+        probePlan.nextProbeBounds,
+        clientId,
+        cam,
+      );
       if (token !== this._recordingsNavUpdateToken) return;
     }
 
