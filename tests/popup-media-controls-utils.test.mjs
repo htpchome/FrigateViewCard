@@ -5,6 +5,7 @@ import {
   buildPopupMediaUrl,
   buildPopupMediaControlState,
   resolvePopupMediaControlsInitPlan,
+  resolvePopupMediaControlsListenerPlan,
   resolvePopupMediaSeekTarget,
 } from "../src/card/popup-media-controls-utils.js";
 
@@ -74,6 +75,49 @@ test("resolvePopupMediaControlsInitPlan separates native and custom popup contro
       resetControlsHiddenClass: true,
       shouldBindCustomControls: false,
     },
+  );
+});
+
+test("resolvePopupMediaControlsListenerPlan returns stable event groups for popup controls", () => {
+  assert.deepEqual(
+    resolvePopupMediaControlsListenerPlan({ hasProgressControl: true }),
+    {
+      progressEvents: [
+        { type: "input" },
+        { type: "change" },
+        { type: "pointerdown" },
+        { type: "pointerup" },
+        { type: "touchstart", options: { passive: true } },
+        { type: "touchend", options: { passive: true } },
+      ],
+      controlsEvents: [
+        { type: "pointerdown" },
+        { type: "pointerup" },
+        { type: "touchstart", options: { passive: true } },
+        { type: "touchend", options: { passive: true } },
+      ],
+      syncVideoEvents: [
+        "play",
+        "pause",
+        "timeupdate",
+        "durationchange",
+        "loadedmetadata",
+        "volumechange",
+        "seeking",
+        "seeked",
+      ],
+      interactionVideoEvents: [
+        { type: "touchstart", options: { passive: true } },
+        { type: "pointerdown", options: { passive: true } },
+        { type: "mousemove", options: { passive: true } },
+        { type: "click", options: { passive: true } },
+      ],
+    },
+  );
+  assert.equal(
+    resolvePopupMediaControlsListenerPlan({ hasProgressControl: false })
+      .progressEvents.length,
+    0,
   );
 });
 

@@ -22,6 +22,43 @@ export const resolvePopupMediaControlsInitPlan = ({
   shouldBindCustomControls: Boolean(hasVideo && shouldUseCustomControls),
 });
 
+export const resolvePopupMediaControlsListenerPlan = ({
+  hasProgressControl = false,
+}) => ({
+  progressEvents: hasProgressControl
+    ? [
+        { type: "input" },
+        { type: "change" },
+        { type: "pointerdown" },
+        { type: "pointerup" },
+        { type: "touchstart", options: { passive: true } },
+        { type: "touchend", options: { passive: true } },
+      ]
+    : [],
+  controlsEvents: [
+    { type: "pointerdown" },
+    { type: "pointerup" },
+    { type: "touchstart", options: { passive: true } },
+    { type: "touchend", options: { passive: true } },
+  ],
+  syncVideoEvents: [
+    "play",
+    "pause",
+    "timeupdate",
+    "durationchange",
+    "loadedmetadata",
+    "volumechange",
+    "seeking",
+    "seeked",
+  ],
+  interactionVideoEvents: [
+    { type: "touchstart", options: { passive: true } },
+    { type: "pointerdown", options: { passive: true } },
+    { type: "mousemove", options: { passive: true } },
+    { type: "click", options: { passive: true } },
+  ],
+});
+
 export const buildPopupMediaControlState = ({
   duration = 0,
   currentTime = 0,

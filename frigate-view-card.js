@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1109";
+const VERSION = "1.0.1110";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4496,6 +4496,40 @@ const resolvePopupMediaControlsInitPlan = ({
   controlsHidden: !shouldUseCustomControls,
   resetControlsHiddenClass: true,
   shouldBindCustomControls: Boolean(hasVideo && shouldUseCustomControls)
+});
+const resolvePopupMediaControlsListenerPlan = ({
+  hasProgressControl = false
+}) => ({
+  progressEvents: hasProgressControl ? [
+    { type: "input" },
+    { type: "change" },
+    { type: "pointerdown" },
+    { type: "pointerup" },
+    { type: "touchstart", options: { passive: true } },
+    { type: "touchend", options: { passive: true } }
+  ] : [],
+  controlsEvents: [
+    { type: "pointerdown" },
+    { type: "pointerup" },
+    { type: "touchstart", options: { passive: true } },
+    { type: "touchend", options: { passive: true } }
+  ],
+  syncVideoEvents: [
+    "play",
+    "pause",
+    "timeupdate",
+    "durationchange",
+    "loadedmetadata",
+    "volumechange",
+    "seeking",
+    "seeked"
+  ],
+  interactionVideoEvents: [
+    { type: "touchstart", options: { passive: true } },
+    { type: "pointerdown", options: { passive: true } },
+    { type: "mousemove", options: { passive: true } },
+    { type: "click", options: { passive: true } }
+  ]
 });
 const buildPopupMediaControlState = ({
   duration = 0,
@@ -14138,6 +14172,9 @@ const FrigateViewCard = class extends HTMLElement {
     }
     if (!controlsPlan.shouldBindCustomControls) return;
     const progress = this._$("#popup-media-progress");
+    const listenerPlan = resolvePopupMediaControlsListenerPlan({
+      hasProgressControl: !!progress
+    });
     let progressDragging = false;
     const removers = [];
     const bind = (t, e, h, o) => {
@@ -14163,80 +14200,107 @@ const FrigateViewCard = class extends HTMLElement {
       if (!progressDragging) this._updatePopupMediaButtons(video);
     };
     if (progress) {
-      bind(progress, "input", () => {
-        progressDragging = true;
-        const next = resolvePopupMediaSeekTarget({
-          progressValue: progress.value,
-          duration: video.duration
-        });
-        if (next !== null) video.currentTime = next;
-        this._showPopupControlsTemporarily();
-        sync();
+      listenerPlan.progressEvents.forEach(({ type, options }) => {
+        if (type === "input") {
+          bind(
+            progress,
+            type,
+            () => {
+              progressDragging = true;
+              const next = resolvePopupMediaSeekTarget({
+                progressValue: progress.value,
+                duration: video.duration
+              });
+              if (next !== null) video.currentTime = next;
+              this._showPopupControlsTemporarily();
+              sync();
+            },
+            options
+          );
+          return;
+        }
+        if (type === "change") {
+          bind(
+            progress,
+            type,
+            () => {
+              progressDragging = false;
+              this._showPopupControlsTemporarily();
+              sync();
+            },
+            options
+          );
+          return;
+        }
+        if (type === "pointerdown") {
+          bind(
+            progress,
+            type,
+            () => {
+              progressDragging = true;
+              if (this._popupControlsHideTimer)
+                clearTimeout(this._popupControlsHideTimer);
+            },
+            options
+          );
+          return;
+        }
+        if (type === "pointerup") {
+          bind(
+            progress,
+            type,
+            () => {
+              progressDragging = false;
+              this._showPopupControlsTemporarily();
+            },
+            options
+          );
+          return;
+        }
+        if (type === "touchstart") {
+          bind(
+            progress,
+            type,
+            () => {
+              progressDragging = true;
+            },
+            options
+          );
+          return;
+        }
+        if (type === "touchend") {
+          bind(
+            progress,
+            type,
+            () => {
+              progressDragging = false;
+              this._showPopupControlsTemporarily();
+            },
+            options
+          );
+        }
       });
-      bind(progress, "change", () => {
-        progressDragging = false;
-        this._showPopupControlsTemporarily();
-        sync();
-      });
-      bind(progress, "pointerdown", () => {
-        progressDragging = true;
-        if (this._popupControlsHideTimer)
-          clearTimeout(this._popupControlsHideTimer);
-      });
-      bind(progress, "pointerup", () => {
-        progressDragging = false;
-        this._showPopupControlsTemporarily();
-      });
-      bind(
-        progress,
-        "touchstart",
-        () => {
-          progressDragging = true;
-        },
-        { passive: true }
-      );
-      bind(
-        progress,
-        "touchend",
-        () => {
-          progressDragging = false;
-          this._showPopupControlsTemporarily();
-        },
-        { passive: true }
-      );
     }
-    bind(controls, "pointerdown", () => {
-      if (this._popupControlsHideTimer)
-        clearTimeout(this._popupControlsHideTimer);
-      controls.classList.remove("is-hidden");
+    listenerPlan.controlsEvents.forEach(({ type, options }) => {
+      if (type === "pointerdown" || type === "touchstart") {
+        bind(
+          controls,
+          type,
+          () => {
+            if (this._popupControlsHideTimer)
+              clearTimeout(this._popupControlsHideTimer);
+            controls.classList.remove("is-hidden");
+          },
+          options
+        );
+        return;
+      }
+      bind(controls, type, () => this._showPopupControlsTemporarily(), options);
     });
-    bind(controls, "pointerup", () => this._showPopupControlsTemporarily());
-    bind(
-      controls,
-      "touchstart",
-      () => {
-        if (this._popupControlsHideTimer)
-          clearTimeout(this._popupControlsHideTimer);
-        controls.classList.remove("is-hidden");
-      },
-      { passive: true }
-    );
-    bind(controls, "touchend", () => this._showPopupControlsTemporarily(), {
-      passive: true
-    });
-    [
-      "play",
-      "pause",
-      "timeupdate",
-      "durationchange",
-      "loadedmetadata",
-      "volumechange",
-      "seeking",
-      "seeked"
-    ].forEach((evt) => bind(video, evt, sync));
+    listenerPlan.syncVideoEvents.forEach((evt) => bind(video, evt, sync));
     const showOnInteraction = () => this._showPopupControlsTemporarily();
-    ["touchstart", "pointerdown", "mousemove", "click"].forEach(
-      (evt) => bind(video, evt, showOnInteraction, { passive: true })
+    listenerPlan.interactionVideoEvents.forEach(
+      ({ type, options }) => bind(video, type, showOnInteraction, options)
     );
     sync();
     this._popupMediaControlsCleanup = () => {
