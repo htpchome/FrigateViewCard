@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1100";
+const VERSION = "1.0.1102";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3170,6 +3170,86 @@ const resolveSnapshotFallbackState = ({
   fallbackVisible: true,
   refreshFallbackImage: refreshImage === true
 });
+
+// src/live/live-rotate-overlay-state.js
+const resolveRotateOverlayTargetMode = ({
+  isMobileTabletViewport = false,
+  isLandscapeViewport = false,
+  popupOpen = false,
+  popupMediaVisible = false
+}) => {
+  const rotateEligible = Boolean(isMobileTabletViewport && isLandscapeViewport);
+  if (!rotateEligible) return "none";
+  if (popupMediaVisible) return "popup";
+  if (!popupOpen) return "live";
+  return "none";
+};
+const resolveRotateOverlayState = ({
+  isMobileTabletViewport = false,
+  isLandscapeViewport = false,
+  popupOpen = false,
+  popupMediaVisible = false,
+  currentMode = "none",
+  isActive = false
+}) => {
+  const nextMode = resolveRotateOverlayTargetMode({
+    isMobileTabletViewport,
+    isLandscapeViewport,
+    popupOpen,
+    popupMediaVisible
+  });
+  if (nextMode === "live") {
+    return {
+      action: "activate-live",
+      active: true,
+      fromPopup: currentMode === "popup",
+      mode: "live",
+      nextMode
+    };
+  }
+  if (nextMode === "popup") {
+    return {
+      action: "activate-popup",
+      active: true,
+      fromLive: currentMode === "live",
+      mode: "popup",
+      nextMode
+    };
+  }
+  if (!isActive) {
+    return {
+      action: "idle",
+      active: false,
+      mode: "none",
+      nextMode
+    };
+  }
+  return {
+    action: "deactivate",
+    active: false,
+    exitMode: currentMode,
+    mode: "none",
+    nextMode
+  };
+};
+const resolveFullscreenButtonVisibility = ({
+  popupOpen = false,
+  isFullscreen = false,
+  inGridMode = false,
+  rotateOverlayMode = "none",
+  suppressPopupButton = false
+}) => {
+  const popupRotateActive = rotateOverlayMode === "popup";
+  return {
+    liveButtonHidden: Boolean(
+      popupOpen || isFullscreen || inGridMode || popupRotateActive
+    ),
+    popupButtonHidden: Boolean(
+      isFullscreen || popupRotateActive || suppressPopupButton
+    ),
+    popupControlsFullscreenHidden: Boolean(popupRotateActive)
+  };
+};
 
 // src/live/live-video-factory.js
 const VIDEO_PROFILES = Object.freeze({
@@ -12525,23 +12605,28 @@ const FrigateViewCard = class extends HTMLElement {
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     const viewer = this._$("#viewer");
     const popupMediaVisible = !!popupOpen && !!viewer && viewer.style.display !== "none" && viewer.childElementCount > 0;
-    const rotateEligible = this._isMobileTabletViewport() && this._isLandscapeViewport();
-    const nextMode = rotateEligible ? popupMediaVisible ? "popup" : !popupOpen ? "live" : "none" : "none";
+    const rotateState = resolveRotateOverlayState({
+      isMobileTabletViewport: this._isMobileTabletViewport(),
+      isLandscapeViewport: this._isLandscapeViewport(),
+      popupOpen,
+      popupMediaVisible,
+      currentMode: this._rotateOverlayMode,
+      isActive: this._rotateOverlayActive
+    });
     if (this._rotateOverlayExitT) {
       clearTimeout(this._rotateOverlayExitT);
       this._rotateOverlayExitT = null;
     }
-    if (nextMode === "live") {
-      const fromPopup = this._rotateOverlayMode === "popup";
+    if (rotateState.action === "activate-live") {
       card.classList.remove(
         "mobile-rotate-live-exit",
         "mobile-rotate-popup",
         "mobile-rotate-popup-exit"
       );
       card.classList.add("mobile-rotate-live");
-      this._rotateOverlayMode = "live";
-      this._rotateOverlayActive = true;
-      if (fromPopup) this._setLiveNativeControls(false);
+      this._rotateOverlayMode = rotateState.mode;
+      this._rotateOverlayActive = rotateState.active;
+      if (rotateState.fromPopup) this._setLiveNativeControls(false);
       this._setStreamLoading(false);
       this._setLiveNativeControls(true);
       this._syncFullscreenButtonsVisibility();
@@ -12549,23 +12634,22 @@ const FrigateViewCard = class extends HTMLElement {
       this._showPopupControlsTemporarily();
       return;
     }
-    if (nextMode === "popup") {
-      const fromLive = this._rotateOverlayMode === "live";
+    if (rotateState.action === "activate-popup") {
       card.classList.remove(
         "mobile-rotate-popup-exit",
         "mobile-rotate-live",
         "mobile-rotate-live-exit"
       );
       card.classList.add("mobile-rotate-popup");
-      this._rotateOverlayMode = "popup";
-      this._rotateOverlayActive = true;
-      if (fromLive) this._setLiveNativeControls(false);
+      this._rotateOverlayMode = rotateState.mode;
+      this._rotateOverlayActive = rotateState.active;
+      if (rotateState.fromLive) this._setLiveNativeControls(false);
       this._$("#eng-wrap")?.classList.remove("live-controls-visible");
       this._syncFullscreenButtonsVisibility();
       this._showPopupControlsTemporarily();
       return;
     }
-    if (!this._rotateOverlayActive) {
+    if (rotateState.action === "idle") {
       card.classList.remove(
         "mobile-rotate-live",
         "mobile-rotate-live-exit",
@@ -12573,12 +12657,12 @@ const FrigateViewCard = class extends HTMLElement {
         "mobile-rotate-popup-exit"
       );
       this._$("#eng-wrap")?.classList.remove("live-controls-visible");
-      this._rotateOverlayMode = "none";
+      this._rotateOverlayMode = rotateState.mode;
       return;
     }
-    const exitMode = this._rotateOverlayMode;
-    this._rotateOverlayActive = false;
-    this._rotateOverlayMode = "none";
+    const exitMode = rotateState.exitMode;
+    this._rotateOverlayActive = rotateState.active;
+    this._rotateOverlayMode = rotateState.mode;
     if (exitMode === "live") this._setLiveNativeControls(false);
     card.classList.remove("mobile-rotate-live", "mobile-rotate-popup");
     if (exitMode === "popup") card.classList.add("mobile-rotate-popup-exit");
@@ -13696,14 +13780,17 @@ const FrigateViewCard = class extends HTMLElement {
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
     const inGridMode = this._viewMode === "grid";
-    const hideLiveForPopupRotate = this._rotateOverlayMode === "popup";
-    if (liveBtn)
-      liveBtn.hidden = !!popupOpen || isFullscreen || inGridMode || hideLiveForPopupRotate;
-    const suppressPopupBtn = this._usePopupCustomControls(this._popupMediaType);
-    if (popupBtn)
-      popupBtn.hidden = isFullscreen || this._rotateOverlayMode === "popup" || suppressPopupBtn;
+    const visibility = resolveFullscreenButtonVisibility({
+      popupOpen: !!popupOpen,
+      isFullscreen,
+      inGridMode,
+      rotateOverlayMode: this._rotateOverlayMode,
+      suppressPopupButton: this._usePopupCustomControls(this._popupMediaType)
+    });
+    if (liveBtn) liveBtn.hidden = visibility.liveButtonHidden;
+    if (popupBtn) popupBtn.hidden = visibility.popupButtonHidden;
     if (popupControlsFsBtn)
-      popupControlsFsBtn.hidden = this._rotateOverlayMode === "popup";
+      popupControlsFsBtn.hidden = visibility.popupControlsFullscreenHidden;
   }
   _open(id) {
     const ev = this._allDisplayEvents().find((e) => e.id === id);
