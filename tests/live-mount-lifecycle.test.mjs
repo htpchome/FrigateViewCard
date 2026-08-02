@@ -6,6 +6,9 @@ import {
   beginMountTracking,
   clearMountTrackingIfCurrent,
   invalidateMountTrackingIfActive,
+  isLiveVideoStale,
+  resolveLiveKickIfStaleAction,
+  resolveLiveResumeAction,
   shouldRunMountWatchdog,
 } from "../src/live/live-mount-lifecycle.js";
 
@@ -112,5 +115,157 @@ test("watchdog helpers respect active token and timeout transition", () => {
     mountInProgress: false,
     mountStartedAt: 0,
     mountTargetEntity: "",
+  });
+});
+
+test("resolveLiveResumeAction invalidates stuck mounts and kicks when visible", () => {
+  const action = resolveLiveResumeAction({
+    started: true,
+    hass: {},
+    config: {},
+    previewPageActive: false,
+    visible: true,
+    popupOpen: false,
+    mountSeq: 8,
+    mountInProgress: true,
+    mountStartedAt: 1000,
+    mountTargetEntity: "camera.front",
+    nowMs: 14050,
+  });
+
+  assert.deepEqual(action, {
+    shouldRetry: false,
+    shouldKickNow: true,
+    shouldRevealEngineWrap: true,
+    nextMountState: {
+      mountSeq: 9,
+      mountInProgress: false,
+      mountStartedAt: 0,
+      mountTargetEntity: "",
+    },
+  });
+});
+
+test("resolveLiveResumeAction retries while hidden or blocked", () => {
+  const action = resolveLiveResumeAction({
+    started: true,
+    hass: {},
+    config: {},
+    previewPageActive: false,
+    visible: false,
+    popupOpen: false,
+    mountSeq: 4,
+    mountInProgress: false,
+    mountStartedAt: 0,
+    mountTargetEntity: "",
+  });
+
+  assert.deepEqual(action, {
+    shouldRetry: true,
+    shouldKickNow: false,
+    shouldRevealEngineWrap: false,
+    nextMountState: null,
+  });
+});
+
+test("isLiveVideoStale treats missing readiness and paused decoded frames as stale", () => {
+  assert.equal(
+    isLiveVideoStale({ readyState: 1, ended: false, paused: false }),
+    true,
+  );
+  assert.equal(
+    isLiveVideoStale({
+      readyState: 3,
+      ended: false,
+      paused: true,
+      currentTime: 0.5,
+      decodedFrames: 3,
+    }),
+    true,
+  );
+  assert.equal(
+    isLiveVideoStale({
+      readyState: 3,
+      ended: false,
+      paused: false,
+      currentTime: 0.5,
+      decodedFrames: 3,
+    }),
+    false,
+  );
+});
+
+test("resolveLiveKickIfStaleAction gates on cooldown and MSE traffic", () => {
+  const coolingDown = resolveLiveKickIfStaleAction({
+    started: true,
+    hass: {},
+    config: {},
+    previewPageActive: false,
+    viewMode: "single",
+    visible: true,
+    popupOpen: false,
+    mountInProgress: false,
+    force: false,
+    streamLoadingVisible: false,
+    lastLiveKick: 9000,
+    nowMs: 12000,
+    hasVideo: false,
+  });
+  assert.deepEqual(coolingDown, {
+    shouldKick: false,
+    nextLastLiveKick: 9000,
+  });
+
+  const recentMse = resolveLiveKickIfStaleAction({
+    started: true,
+    hass: {},
+    config: {},
+    previewPageActive: false,
+    viewMode: "single",
+    visible: true,
+    popupOpen: false,
+    mountInProgress: false,
+    force: false,
+    streamLoadingVisible: false,
+    lastLiveKick: 0,
+    nowMs: 12000,
+    isFirefox: true,
+    mseConnectAt: 1000,
+    mseLastChunkAt: 11000,
+    hasVideo: false,
+  });
+  assert.deepEqual(recentMse, {
+    shouldKick: false,
+    nextLastLiveKick: 0,
+  });
+});
+
+test("resolveLiveKickIfStaleAction kicks stale video and updates kick timestamp", () => {
+  const action = resolveLiveKickIfStaleAction({
+    started: true,
+    hass: {},
+    config: {},
+    previewPageActive: false,
+    viewMode: "single",
+    visible: true,
+    popupOpen: false,
+    mountInProgress: false,
+    force: false,
+    streamLoadingVisible: false,
+    lastLiveKick: 1000,
+    nowMs: 7000,
+    hasVideo: true,
+    videoState: {
+      readyState: 1,
+      ended: false,
+      paused: false,
+      currentTime: 0,
+      decodedFrames: 0,
+    },
+  });
+
+  assert.deepEqual(action, {
+    shouldKick: true,
+    nextLastLiveKick: 7000,
   });
 });

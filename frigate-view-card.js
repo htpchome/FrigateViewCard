@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1094";
+const VERSION = "1.0.1095";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2839,6 +2839,109 @@ const applyMountWatchdogTimeout = ({ mountSeq }) => ({
   mountStartedAt: 0,
   mountTargetEntity: ""
 });
+const resolveLiveResumeAction = ({
+  started,
+  hass,
+  config,
+  previewPageActive,
+  visible,
+  popupOpen,
+  mountSeq,
+  mountInProgress,
+  mountStartedAt,
+  mountTargetEntity,
+  nowMs = Date.now(),
+  stuckThresholdMs = 12e3
+}) => {
+  if (!started || !hass || !config || previewPageActive) {
+    return {
+      shouldRetry: false,
+      shouldKickNow: false,
+      shouldRevealEngineWrap: false,
+      nextMountState: null
+    };
+  }
+  let nextMountState = null;
+  let nextMountInProgress = mountInProgress;
+  const mountStuckMs = mountStartedAt ? nowMs - mountStartedAt : 0;
+  if (mountInProgress && mountStuckMs > stuckThresholdMs) {
+    nextMountState = invalidateMountTrackingIfActive({
+      mountSeq,
+      mountInProgress,
+      mountStartedAt,
+      mountTargetEntity
+    });
+    nextMountInProgress = nextMountState.mountInProgress;
+  }
+  if (!visible || popupOpen || nextMountInProgress) {
+    return {
+      shouldRetry: true,
+      shouldKickNow: false,
+      shouldRevealEngineWrap: false,
+      nextMountState
+    };
+  }
+  return {
+    shouldRetry: false,
+    shouldKickNow: true,
+    shouldRevealEngineWrap: true,
+    nextMountState
+  };
+};
+const isLiveVideoStale = ({
+  readyState = 0,
+  ended = false,
+  paused = false,
+  currentTime = 0,
+  decodedFrames = 0
+} = {}) => {
+  const hasFrames = (Number(currentTime) || 0) > 0.05 || (Number(decodedFrames) || 0) > 0;
+  return Boolean(ended) || Number(readyState) < 2 || Boolean(paused) && hasFrames;
+};
+const resolveLiveKickIfStaleAction = ({
+  started,
+  hass,
+  config,
+  previewPageActive,
+  viewMode,
+  visible,
+  popupOpen,
+  mountInProgress,
+  force = false,
+  streamLoadingVisible = false,
+  lastLiveKick = 0,
+  nowMs = Date.now(),
+  isFirefox = false,
+  mseConnectAt = 0,
+  mseLastChunkAt = 0,
+  hasVideo = false,
+  videoState = null,
+  kickCooldownMs = 4e3,
+  mseConnectGraceMs = 12e3,
+  mseChunkGraceMs = 3500
+}) => {
+  if (!started || !hass || !config || previewPageActive) {
+    return { shouldKick: false, nextLastLiveKick: lastLiveKick };
+  }
+  if (viewMode === "grid" || !visible || popupOpen || mountInProgress) {
+    return { shouldKick: false, nextLastLiveKick: lastLiveKick };
+  }
+  if (!force && streamLoadingVisible) {
+    return { shouldKick: false, nextLastLiveKick: lastLiveKick };
+  }
+  if (!force && nowMs - lastLiveKick < kickCooldownMs) {
+    return { shouldKick: false, nextLastLiveKick: lastLiveKick };
+  }
+  const recentMseTraffic = isFirefox && (nowMs - Number(mseConnectAt || 0) < mseConnectGraceMs || nowMs - Number(mseLastChunkAt || 0) < mseChunkGraceMs);
+  if (recentMseTraffic) {
+    return { shouldKick: false, nextLastLiveKick: lastLiveKick };
+  }
+  const stale = !hasVideo || isLiveVideoStale(videoState || {});
+  return {
+    shouldKick: stale,
+    nextLastLiveKick: stale ? nowMs : lastLiveKick
+  };
+};
 
 // src/live/live-mount-result.js
 const isMountTokenCurrent = ({ mountToken, mountSeq }) => mountToken === mountSeq;
@@ -12337,56 +12440,71 @@ const FrigateViewCard = class extends HTMLElement {
     this._showPopupControlsTemporarily();
   }
   _kickLiveIfStale(force = false) {
-    if (!this._started || !this._hass || !this._config) return;
-    if (this._isPreviewPageActive()) return;
-    if (this._viewMode === "grid") return;
-    if (!this._isCardVisible()) return;
-    if (this._$("#myPopup")?.classList.contains("is-open")) return;
-    if (this._mountInProgress) return;
-    if (!force && this._$("#stream-loading") && !this._$("#stream-loading").hidden)
-      return;
     const now = Date.now();
-    if (!force && now - this._lastLiveKick < 4e3) return;
-    const recentMseTraffic = this._isFirefox() && (now - Number(this._mseConnectAt || 0) < 12e3 || now - Number(this._mseLastChunkAt || 0) < 3500);
-    if (recentMseTraffic) return;
     const engineHost = this._$("#engine");
     const v = this._findVideoDeep(engineHost) || this._findVideoDeep(this._engine) || this._engine?.video || null;
-    let stale = !v;
-    if (v) {
-      const ready = Number(v.readyState) || 0;
-      const ended = !!v.ended;
-      const paused = !!v.paused;
-      const hasFrames = (Number(v.currentTime) || 0) > 0.05 || (Number(v.webkitDecodedFrameCount) || 0) > 0;
-      stale = ended || ready < 2 || paused && hasFrames;
-    }
-    if (stale) {
-      this._lastLiveKick = now;
+    const action = resolveLiveKickIfStaleAction({
+      started: this._started,
+      hass: this._hass,
+      config: this._config,
+      previewPageActive: this._isPreviewPageActive(),
+      viewMode: this._viewMode,
+      visible: this._isCardVisible(),
+      popupOpen: this._$("#myPopup")?.classList.contains("is-open"),
+      mountInProgress: this._mountInProgress,
+      force,
+      streamLoadingVisible: !!(this._$("#stream-loading") && !this._$("#stream-loading").hidden),
+      lastLiveKick: this._lastLiveKick,
+      nowMs: now,
+      isFirefox: this._isFirefox(),
+      mseConnectAt: this._mseConnectAt,
+      mseLastChunkAt: this._mseLastChunkAt,
+      hasVideo: !!v,
+      videoState: v ? {
+        readyState: v.readyState,
+        ended: v.ended,
+        paused: v.paused,
+        currentTime: v.currentTime,
+        decodedFrames: v.webkitDecodedFrameCount
+      } : null
+    });
+    if (action.shouldKick) {
+      this._lastLiveKick = action.nextLastLiveKick;
       this._mountEngine();
     }
   }
   _resumeLiveIfNeeded(_reason = "") {
-    if (!this._started || !this._hass || !this._config) return;
-    if (this._isPreviewPageActive()) return;
-    const visible = this._isCardVisible();
-    const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
-    const mountStuckMs = this._mountStartedAt ? Date.now() - this._mountStartedAt : 0;
-    if (this._mountInProgress && mountStuckMs > 12e3) {
-      this._mountSeq += 1;
-      this._mountInProgress = false;
-      this._mountStartedAt = 0;
-      this._mountTargetEntity = "";
+    const action = resolveLiveResumeAction({
+      started: this._started,
+      hass: this._hass,
+      config: this._config,
+      previewPageActive: this._isPreviewPageActive(),
+      visible: this._isCardVisible(),
+      popupOpen: this._$("#myPopup")?.classList.contains("is-open"),
+      mountSeq: this._mountSeq,
+      mountInProgress: this._mountInProgress,
+      mountStartedAt: this._mountStartedAt,
+      mountTargetEntity: this._mountTargetEntity,
+      nowMs: Date.now()
+    });
+    if (action.nextMountState) {
+      this._applyMountTrackingState(action.nextMountState);
       this._cleanupEngine();
     }
-    if (!visible || popupOpen || this._mountInProgress) {
+    if (action.shouldRetry) {
       if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
       this._resumeLiveT = setTimeout(() => {
         this._resumeLiveIfNeeded("wait-ready");
       }, 450);
       return;
     }
-    const engWrap = this._$("#eng-wrap");
-    if (engWrap) engWrap.style.display = "";
-    this._kickLiveIfStale(true);
+    if (action.shouldRevealEngineWrap) {
+      const engWrap = this._$("#eng-wrap");
+      if (engWrap) engWrap.style.display = "";
+    }
+    if (action.shouldKickNow) {
+      this._kickLiveIfStale(true);
+    }
     setTimeout(() => this._kickLiveIfStale(true), 900);
   }
   _setupResizeObserver() {

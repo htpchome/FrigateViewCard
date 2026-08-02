@@ -107,6 +107,9 @@ import {
   beginMountTracking,
   clearMountTrackingIfCurrent,
   invalidateMountTrackingIfActive,
+  isLiveVideoStale,
+  resolveLiveKickIfStaleAction,
+  resolveLiveResumeAction,
   shouldRunMountWatchdog,
 } from "../live/live-mount-lifecycle.js";
 import {
@@ -5697,26 +5700,7 @@ export class FrigateViewCard extends HTMLElement {
     this._showPopupControlsTemporarily();
   }
   _kickLiveIfStale(force = false) {
-    if (!this._started || !this._hass || !this._config) return;
-    if (this._isPreviewPageActive()) return;
-    if (this._viewMode === "grid") return;
-    if (!this._isCardVisible()) return;
-    if (this._$("#myPopup")?.classList.contains("is-open")) return;
-    if (this._mountInProgress) return;
-    if (
-      !force &&
-      this._$("#stream-loading") &&
-      !this._$("#stream-loading").hidden
-    )
-      return;
     const now = Date.now();
-    if (!force && now - this._lastLiveKick < 4000) return;
-    const recentMseTraffic =
-      this._isFirefox() &&
-      (now - Number(this._mseConnectAt || 0) < 12000 ||
-        now - Number(this._mseLastChunkAt || 0) < 3500);
-    if (recentMseTraffic) return;
-
     const engineHost = this._$("#engine");
     const v =
       this._findVideoDeep(engineHost) ||
@@ -5724,40 +5708,63 @@ export class FrigateViewCard extends HTMLElement {
       this._engine?.video ||
       null;
 
-    let stale = !v;
-    if (v) {
-      const ready = Number(v.readyState) || 0;
-      const ended = !!v.ended;
-      const paused = !!v.paused;
-      const hasFrames =
-        (Number(v.currentTime) || 0) > 0.05 ||
-        (Number(v.webkitDecodedFrameCount) || 0) > 0;
-      stale = ended || ready < 2 || (paused && hasFrames);
-    }
+    const action = resolveLiveKickIfStaleAction({
+      started: this._started,
+      hass: this._hass,
+      config: this._config,
+      previewPageActive: this._isPreviewPageActive(),
+      viewMode: this._viewMode,
+      visible: this._isCardVisible(),
+      popupOpen: this._$("#myPopup")?.classList.contains("is-open"),
+      mountInProgress: this._mountInProgress,
+      force,
+      streamLoadingVisible: !!(
+        this._$("#stream-loading") && !this._$("#stream-loading").hidden
+      ),
+      lastLiveKick: this._lastLiveKick,
+      nowMs: now,
+      isFirefox: this._isFirefox(),
+      mseConnectAt: this._mseConnectAt,
+      mseLastChunkAt: this._mseLastChunkAt,
+      hasVideo: !!v,
+      videoState: v
+        ? {
+            readyState: v.readyState,
+            ended: v.ended,
+            paused: v.paused,
+            currentTime: v.currentTime,
+            decodedFrames: v.webkitDecodedFrameCount,
+          }
+        : null,
+    });
 
-    if (stale) {
-      this._lastLiveKick = now;
+    if (action.shouldKick) {
+      this._lastLiveKick = action.nextLastLiveKick;
       this._mountEngine();
     }
   }
-  _resumeLiveIfNeeded(_reason = "") {
-    if (!this._started || !this._hass || !this._config) return;
-    if (this._isPreviewPageActive()) return;
-    const visible = this._isCardVisible();
-    const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
-    const mountStuckMs = this._mountStartedAt
-      ? Date.now() - this._mountStartedAt
-      : 0;
 
-    if (this._mountInProgress && mountStuckMs > 12000) {
-      this._mountSeq += 1;
-      this._mountInProgress = false;
-      this._mountStartedAt = 0;
-      this._mountTargetEntity = "";
+  _resumeLiveIfNeeded(_reason = "") {
+    const action = resolveLiveResumeAction({
+      started: this._started,
+      hass: this._hass,
+      config: this._config,
+      previewPageActive: this._isPreviewPageActive(),
+      visible: this._isCardVisible(),
+      popupOpen: this._$("#myPopup")?.classList.contains("is-open"),
+      mountSeq: this._mountSeq,
+      mountInProgress: this._mountInProgress,
+      mountStartedAt: this._mountStartedAt,
+      mountTargetEntity: this._mountTargetEntity,
+      nowMs: Date.now(),
+    });
+
+    if (action.nextMountState) {
+      this._applyMountTrackingState(action.nextMountState);
       this._cleanupEngine();
     }
 
-    if (!visible || popupOpen || this._mountInProgress) {
+    if (action.shouldRetry) {
       // Layout transitions are async. Keep retrying until mount is possible.
       if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
       this._resumeLiveT = setTimeout(() => {
@@ -5765,9 +5772,14 @@ export class FrigateViewCard extends HTMLElement {
       }, 450);
       return;
     }
-    const engWrap = this._$("#eng-wrap");
-    if (engWrap) engWrap.style.display = "";
-    this._kickLiveIfStale(true);
+
+    if (action.shouldRevealEngineWrap) {
+      const engWrap = this._$("#eng-wrap");
+      if (engWrap) engWrap.style.display = "";
+    }
+    if (action.shouldKickNow) {
+      this._kickLiveIfStale(true);
+    }
     // Safety follow-up: some browsers finalize media attachment one frame later.
     setTimeout(() => this._kickLiveIfStale(true), 900);
   }

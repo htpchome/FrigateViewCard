@@ -74,3 +74,121 @@ export const applyMountWatchdogTimeout = ({ mountSeq }) => ({
   mountStartedAt: 0,
   mountTargetEntity: "",
 });
+
+export const resolveLiveResumeAction = ({
+  started,
+  hass,
+  config,
+  previewPageActive,
+  visible,
+  popupOpen,
+  mountSeq,
+  mountInProgress,
+  mountStartedAt,
+  mountTargetEntity,
+  nowMs = Date.now(),
+  stuckThresholdMs = 12000,
+}) => {
+  if (!started || !hass || !config || previewPageActive) {
+    return {
+      shouldRetry: false,
+      shouldKickNow: false,
+      shouldRevealEngineWrap: false,
+      nextMountState: null,
+    };
+  }
+
+  let nextMountState = null;
+  let nextMountInProgress = mountInProgress;
+  const mountStuckMs = mountStartedAt ? nowMs - mountStartedAt : 0;
+
+  if (mountInProgress && mountStuckMs > stuckThresholdMs) {
+    nextMountState = invalidateMountTrackingIfActive({
+      mountSeq,
+      mountInProgress,
+      mountStartedAt,
+      mountTargetEntity,
+    });
+    nextMountInProgress = nextMountState.mountInProgress;
+  }
+
+  if (!visible || popupOpen || nextMountInProgress) {
+    return {
+      shouldRetry: true,
+      shouldKickNow: false,
+      shouldRevealEngineWrap: false,
+      nextMountState,
+    };
+  }
+
+  return {
+    shouldRetry: false,
+    shouldKickNow: true,
+    shouldRevealEngineWrap: true,
+    nextMountState,
+  };
+};
+
+export const isLiveVideoStale = ({
+  readyState = 0,
+  ended = false,
+  paused = false,
+  currentTime = 0,
+  decodedFrames = 0,
+} = {}) => {
+  const hasFrames =
+    (Number(currentTime) || 0) > 0.05 || (Number(decodedFrames) || 0) > 0;
+  return (
+    Boolean(ended) || Number(readyState) < 2 || (Boolean(paused) && hasFrames)
+  );
+};
+
+export const resolveLiveKickIfStaleAction = ({
+  started,
+  hass,
+  config,
+  previewPageActive,
+  viewMode,
+  visible,
+  popupOpen,
+  mountInProgress,
+  force = false,
+  streamLoadingVisible = false,
+  lastLiveKick = 0,
+  nowMs = Date.now(),
+  isFirefox = false,
+  mseConnectAt = 0,
+  mseLastChunkAt = 0,
+  hasVideo = false,
+  videoState = null,
+  kickCooldownMs = 4000,
+  mseConnectGraceMs = 12000,
+  mseChunkGraceMs = 3500,
+}) => {
+  if (!started || !hass || !config || previewPageActive) {
+    return { shouldKick: false, nextLastLiveKick: lastLiveKick };
+  }
+  if (viewMode === "grid" || !visible || popupOpen || mountInProgress) {
+    return { shouldKick: false, nextLastLiveKick: lastLiveKick };
+  }
+  if (!force && streamLoadingVisible) {
+    return { shouldKick: false, nextLastLiveKick: lastLiveKick };
+  }
+  if (!force && nowMs - lastLiveKick < kickCooldownMs) {
+    return { shouldKick: false, nextLastLiveKick: lastLiveKick };
+  }
+
+  const recentMseTraffic =
+    isFirefox &&
+    (nowMs - Number(mseConnectAt || 0) < mseConnectGraceMs ||
+      nowMs - Number(mseLastChunkAt || 0) < mseChunkGraceMs);
+  if (recentMseTraffic) {
+    return { shouldKick: false, nextLastLiveKick: lastLiveKick };
+  }
+
+  const stale = !hasVideo || isLiveVideoStale(videoState || {});
+  return {
+    shouldKick: stale,
+    nextLastLiveKick: stale ? nowMs : lastLiveKick,
+  };
+};
