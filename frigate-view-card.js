@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1111";
+const VERSION = "1.0.1112";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4589,6 +4589,40 @@ const resolvePopupMediaSeekTarget = ({
   const next = Number(progressValue || 0) / 1e3 * safeDuration;
   if (!Number.isFinite(next)) return null;
   return clamp(next, 0, safeDuration);
+};
+
+// src/card/popup-carousel-utils.js
+const sortByStartTimeDesc = (items = []) => [...items].sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0));
+const shouldShowPopupCarousel = (mediaType = "") => ["alert", "clip", "snapshot", "kept"].includes(
+  String(mediaType || "").toLowerCase()
+);
+const buildPopupCarouselEvents = ({
+  mediaType = "",
+  kept = [],
+  reviews = [],
+  displayEvents = [],
+  findEventById = () => null
+}) => {
+  const type = String(mediaType || "").toLowerCase();
+  if (type === "kept") {
+    return sortByStartTimeDesc(kept);
+  }
+  if (type === "alert") {
+    const out = [];
+    const seen = new Set();
+    for (const review of sortByStartTimeDesc(reviews)) {
+      const firstDetection = review?.data?.detections?.[0] || "";
+      if (!firstDetection || seen.has(firstDetection)) continue;
+      const event = findEventById(firstDetection);
+      if (!event) continue;
+      seen.add(firstDetection);
+      out.push(event);
+    }
+    return out;
+  }
+  const all = sortByStartTimeDesc(displayEvents);
+  if (type === "snapshot") return all.filter((event) => event.has_snapshot);
+  return all.filter((event) => event.has_clip);
 };
 
 // src/card/filter-state-utils.js
@@ -14303,41 +14337,19 @@ const FrigateViewCard = class extends HTMLElement {
     return `<button class="popup-carousel-item${active}" data-ev="${ev.id}" title="${this._dateTimeLabel(ev.start_time || 0)}"><div class="et">${thumb}</div><div class="popup-carousel-meta"><span>${cap(ev.label || "event")}</span><span>${this._time(ev.start_time || 0)}</span></div></button>`;
   }
   _popupCarouselEvents(mediaType) {
-    const type = String(mediaType || "").toLowerCase();
-    if (type === "kept") {
-      return [...this._kept || []].sort(
-        (a, b) => b.start_time - a.start_time
-      );
-    }
-    if (type === "alert") {
-      const out = [];
-      const seen = new Set();
-      const reviews = [...this._reviews || []].sort(
-        (a, b) => b.start_time - a.start_time
-      );
-      for (const r of reviews) {
-        const firstDet = r.data?.detections && r.data.detections[0] || "";
-        if (!firstDet || seen.has(firstDet)) continue;
-        const ev = this._findEventById(firstDet);
-        if (!ev) continue;
-        seen.add(firstDet);
-        out.push(ev);
-      }
-      return out;
-    }
-    const all = this._allDisplayEvents().sort(
-      (a, b) => b.start_time - a.start_time
-    );
-    if (type === "snapshot") return all.filter((e) => e.has_snapshot);
-    return all.filter((e) => e.has_clip);
+    return buildPopupCarouselEvents({
+      mediaType,
+      kept: this._kept || [],
+      reviews: this._reviews || [],
+      displayEvents: this._allDisplayEvents(),
+      findEventById: (id) => this._findEventById(id)
+    });
   }
   _renderPopupCarousel(mediaType, activeId = "") {
     const wrap = this._$("#popup-carousel-wrap");
     const row = this._$("#popup-carousel");
     if (!wrap || !row) return;
-    const show = ["alert", "clip", "snapshot", "kept"].includes(
-      String(mediaType || "").toLowerCase()
-    );
+    const show = shouldShowPopupCarousel(mediaType);
     if (!show) {
       wrap.hidden = true;
       row.innerHTML = "";
