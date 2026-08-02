@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1107";
+const VERSION = "1.0.1108";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4477,6 +4477,15 @@ function buildFilterPanelMarkup({
 
 // src/card/popup-media-controls-utils.js
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const buildPopupMediaUrl = ({ baseUrl = "", cacheKey }) => {
+  const normalizedBaseUrl = String(baseUrl || "");
+  if (!normalizedBaseUrl) return "";
+  if (cacheKey === null || cacheKey === void 0 || cacheKey === "") {
+    return normalizedBaseUrl;
+  }
+  const separator = normalizedBaseUrl.includes("?") ? "&" : "?";
+  return `${normalizedBaseUrl}${separator}fvc=${encodeURIComponent(String(cacheKey))}`;
+};
 const buildPopupMediaControlState = ({
   duration = 0,
   currentTime = 0,
@@ -14356,8 +14365,17 @@ const FrigateViewCard = class extends HTMLElement {
       )
     );
   }
+  _buildPopupClipSrc(id, file) {
+    return buildPopupMediaUrl({
+      baseUrl: this._media(id, file),
+      cacheKey: `${id}:${Date.now()}`
+    });
+  }
   _showClip(ev, opts = {}) {
-    const src = this._media(ev.id, isIOS ? "master.m3u8" : "clip.mp4");
+    const src = this._buildPopupClipSrc(
+      ev.id,
+      isIOS ? "master.m3u8" : "clip.mp4"
+    );
     const mediaType = opts.mediaType || "clip";
     this._renderPopupMedia({
       playingId: ev.id,
@@ -14369,7 +14387,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _showClipById(id, opts = {}) {
     if (!id) return;
-    const src = this._media(id, isIOS ? "master.m3u8" : "clip.mp4");
+    const src = this._buildPopupClipSrc(id, isIOS ? "master.m3u8" : "clip.mp4");
     this._renderPopupMedia({
       playingId: id,
       mediaElement: this._buildPopupVideo(src),

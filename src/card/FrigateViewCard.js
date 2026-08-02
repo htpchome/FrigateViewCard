@@ -182,6 +182,7 @@ import {
   buildFilterPanelMarkup,
 } from "./calendar-filter-markup.js";
 import {
+  buildPopupMediaUrl,
   buildPopupMediaControlState,
   resolvePopupMediaSeekTarget,
 } from "./popup-media-controls-utils.js";
@@ -7455,8 +7456,17 @@ export class FrigateViewCard extends HTMLElement {
       ),
     );
   }
+  _buildPopupClipSrc(id, file) {
+    return buildPopupMediaUrl({
+      baseUrl: this._media(id, file),
+      cacheKey: `${id}:${Date.now()}`,
+    });
+  }
   _showClip(ev, opts = {}) {
-    const src = this._media(ev.id, isIOS ? "master.m3u8" : "clip.mp4");
+    const src = this._buildPopupClipSrc(
+      ev.id,
+      isIOS ? "master.m3u8" : "clip.mp4",
+    );
     const mediaType = opts.mediaType || "clip";
     this._renderPopupMedia({
       playingId: ev.id,
@@ -7468,7 +7478,7 @@ export class FrigateViewCard extends HTMLElement {
   }
   _showClipById(id, opts = {}) {
     if (!id) return;
-    const src = this._media(id, isIOS ? "master.m3u8" : "clip.mp4");
+    const src = this._buildPopupClipSrc(id, isIOS ? "master.m3u8" : "clip.mp4");
     this._renderPopupMedia({
       playingId: id,
       mediaElement: this._buildPopupVideo(src),

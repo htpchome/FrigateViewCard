@@ -2,9 +2,34 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildPopupMediaUrl,
   buildPopupMediaControlState,
   resolvePopupMediaSeekTarget,
 } from "../src/card/popup-media-controls-utils.js";
+
+test("buildPopupMediaUrl appends cache key without disturbing existing query strings", () => {
+  assert.equal(
+    buildPopupMediaUrl({
+      baseUrl: "/api/frigate/a/notifications/id/clip.mp4",
+      cacheKey: "abc",
+    }),
+    "/api/frigate/a/notifications/id/clip.mp4?fvc=abc",
+  );
+  assert.equal(
+    buildPopupMediaUrl({
+      baseUrl: "/api/frigate/a/notifications/id/clip.mp4?download=true",
+      cacheKey: "abc:def",
+    }),
+    "/api/frigate/a/notifications/id/clip.mp4?download=true&fvc=abc%3Adef",
+  );
+  assert.equal(
+    buildPopupMediaUrl({
+      baseUrl: "/api/frigate/a/notifications/id/clip.mp4",
+      cacheKey: "",
+    }),
+    "/api/frigate/a/notifications/id/clip.mp4",
+  );
+});
 
 test("buildPopupMediaControlState formats progress, icons, and time text", () => {
   assert.deepEqual(

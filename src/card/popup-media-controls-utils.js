@@ -1,5 +1,15 @@
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+export const buildPopupMediaUrl = ({ baseUrl = "", cacheKey }) => {
+  const normalizedBaseUrl = String(baseUrl || "");
+  if (!normalizedBaseUrl) return "";
+  if (cacheKey === null || cacheKey === undefined || cacheKey === "") {
+    return normalizedBaseUrl;
+  }
+  const separator = normalizedBaseUrl.includes("?") ? "&" : "?";
+  return `${normalizedBaseUrl}${separator}fvc=${encodeURIComponent(String(cacheKey))}`;
+};
+
 export const buildPopupMediaControlState = ({
   duration = 0,
   currentTime = 0,
