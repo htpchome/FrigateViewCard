@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1098";
+const VERSION = "1.0.1099";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3952,6 +3952,32 @@ const resolveWebRtcStartup = ({ startup = {} }) => ({
 });
 const resolveHlsStartup = (startup = {}) => ({
   waitMs: normalizeWaitMs(startup.waitMs, 5e3)
+});
+const resolveHaDirectMountUnavailableState = () => ({
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false
+});
+const resolveHaDirectReadyState = ({
+  rotateOverlayActive = false,
+  isCurrentEngine = false,
+  waitSucceeded = false
+}) => ({
+  shouldApply: Boolean(isCurrentEngine && waitSucceeded),
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false,
+  enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine)
+});
+const resolveHaDirectStabilizedState = ({
+  rotateOverlayActive = false,
+  isCurrentEngine = false
+}) => ({
+  shouldApply: Boolean(isCurrentEngine),
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false,
+  enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine)
 });
 
 // src/card/shell-nav-markup.js
@@ -10316,8 +10342,12 @@ const FrigateViewCard = class extends HTMLElement {
         this._setActiveStreamType(streamType);
         const stateObj = this._hlsStateObj(entity, streamType);
         if (!stateObj) {
-          this._setStreamLoading(false);
-          this._setStreamFallbackVisible(false);
+          const unavailableState = resolveHaDirectMountUnavailableState();
+          this._setStreamLoading(unavailableState.loading);
+          this._setStreamFallbackVisible(
+            unavailableState.fallbackVisible,
+            unavailableState.refreshFallbackImage
+          );
           return;
         }
         const s = document.createElement("ha-camera-stream");
@@ -10339,17 +10369,36 @@ const FrigateViewCard = class extends HTMLElement {
             requireReadyState: 0,
             strict: false
           });
-          if (ok && this._engine === s) {
-            this._setStreamLoading(false);
-            this._setStreamFallbackVisible(false);
-            if (this._rotateOverlayActive) this._setLiveNativeControls(true);
+          const readyState = resolveHaDirectReadyState({
+            rotateOverlayActive: this._rotateOverlayActive,
+            isCurrentEngine: this._engine === s,
+            waitSucceeded: ok
+          });
+          if (readyState.shouldApply) {
+            this._setStreamLoading(readyState.loading);
+            this._setStreamFallbackVisible(
+              readyState.fallbackVisible,
+              readyState.refreshFallbackImage
+            );
+            if (readyState.enableNativeControls) {
+              this._setLiveNativeControls(true);
+            }
           }
         })();
         setTimeout(() => {
-          if (this._engine === s) {
-            this._setStreamLoading(false);
-            this._setStreamFallbackVisible(false);
-            if (this._rotateOverlayActive) this._setLiveNativeControls(true);
+          const stabilizedState = resolveHaDirectStabilizedState({
+            rotateOverlayActive: this._rotateOverlayActive,
+            isCurrentEngine: this._engine === s
+          });
+          if (stabilizedState.shouldApply) {
+            this._setStreamLoading(stabilizedState.loading);
+            this._setStreamFallbackVisible(
+              stabilizedState.fallbackVisible,
+              stabilizedState.refreshFallbackImage
+            );
+            if (stabilizedState.enableNativeControls) {
+              this._setLiveNativeControls(true);
+            }
           }
         }, 1200);
         return;

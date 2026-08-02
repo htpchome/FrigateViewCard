@@ -150,6 +150,9 @@ import {
 import { runFallbackRefreshCycleForCard } from "../live/live-fallback-refresh.js";
 import {
   resolveHaDirectStartup,
+  resolveHaDirectMountUnavailableState,
+  resolveHaDirectReadyState,
+  resolveHaDirectStabilizedState,
   resolveHlsStartup,
   resolveMseStartup,
   resolveWebRtcStartup,
@@ -3130,8 +3133,12 @@ export class FrigateViewCard extends HTMLElement {
         this._setActiveStreamType(streamType);
         const stateObj = this._hlsStateObj(entity, streamType);
         if (!stateObj) {
-          this._setStreamLoading(false);
-          this._setStreamFallbackVisible(false);
+          const unavailableState = resolveHaDirectMountUnavailableState();
+          this._setStreamLoading(unavailableState.loading);
+          this._setStreamFallbackVisible(
+            unavailableState.fallbackVisible,
+            unavailableState.refreshFallbackImage,
+          );
           return;
         }
 
@@ -3157,17 +3164,36 @@ export class FrigateViewCard extends HTMLElement {
             requireReadyState: 0,
             strict: false,
           });
-          if (ok && this._engine === s) {
-            this._setStreamLoading(false);
-            this._setStreamFallbackVisible(false);
-            if (this._rotateOverlayActive) this._setLiveNativeControls(true);
+          const readyState = resolveHaDirectReadyState({
+            rotateOverlayActive: this._rotateOverlayActive,
+            isCurrentEngine: this._engine === s,
+            waitSucceeded: ok,
+          });
+          if (readyState.shouldApply) {
+            this._setStreamLoading(readyState.loading);
+            this._setStreamFallbackVisible(
+              readyState.fallbackVisible,
+              readyState.refreshFallbackImage,
+            );
+            if (readyState.enableNativeControls) {
+              this._setLiveNativeControls(true);
+            }
           }
         })();
         setTimeout(() => {
-          if (this._engine === s) {
-            this._setStreamLoading(false);
-            this._setStreamFallbackVisible(false);
-            if (this._rotateOverlayActive) this._setLiveNativeControls(true);
+          const stabilizedState = resolveHaDirectStabilizedState({
+            rotateOverlayActive: this._rotateOverlayActive,
+            isCurrentEngine: this._engine === s,
+          });
+          if (stabilizedState.shouldApply) {
+            this._setStreamLoading(stabilizedState.loading);
+            this._setStreamFallbackVisible(
+              stabilizedState.fallbackVisible,
+              stabilizedState.refreshFallbackImage,
+            );
+            if (stabilizedState.enableNativeControls) {
+              this._setLiveNativeControls(true);
+            }
           }
         }, 1200);
         return;

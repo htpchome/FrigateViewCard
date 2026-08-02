@@ -2,6 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  resolveHaDirectMountUnavailableState,
+  resolveHaDirectReadyState,
+  resolveHaDirectStabilizedState,
   resolveHaDirectStartup,
   resolveHlsStartup,
   resolveMseStartup,
@@ -40,4 +43,72 @@ test("resolveWebRtcStartup applies browser-agnostic defaults", () => {
 test("resolveHlsStartup applies default wait and floor", () => {
   assert.equal(resolveHlsStartup({}).waitMs, 5000);
   assert.equal(resolveHlsStartup({ waitMs: 1 }).waitMs, 500);
+});
+
+test("resolveHaDirectMountUnavailableState clears loading and fallback", () => {
+  assert.deepEqual(resolveHaDirectMountUnavailableState(), {
+    loading: false,
+    fallbackVisible: false,
+    refreshFallbackImage: false,
+  });
+});
+
+test("resolveHaDirectReadyState applies only for the current engine after a successful wait", () => {
+  assert.deepEqual(
+    resolveHaDirectReadyState({
+      rotateOverlayActive: true,
+      isCurrentEngine: true,
+      waitSucceeded: true,
+    }),
+    {
+      shouldApply: true,
+      loading: false,
+      fallbackVisible: false,
+      refreshFallbackImage: false,
+      enableNativeControls: true,
+    },
+  );
+  assert.deepEqual(
+    resolveHaDirectReadyState({
+      rotateOverlayActive: true,
+      isCurrentEngine: false,
+      waitSucceeded: true,
+    }),
+    {
+      shouldApply: false,
+      loading: false,
+      fallbackVisible: false,
+      refreshFallbackImage: false,
+      enableNativeControls: false,
+    },
+  );
+});
+
+test("resolveHaDirectStabilizedState applies for current engine even without wait result", () => {
+  assert.deepEqual(
+    resolveHaDirectStabilizedState({
+      rotateOverlayActive: false,
+      isCurrentEngine: true,
+    }),
+    {
+      shouldApply: true,
+      loading: false,
+      fallbackVisible: false,
+      refreshFallbackImage: false,
+      enableNativeControls: false,
+    },
+  );
+  assert.deepEqual(
+    resolveHaDirectStabilizedState({
+      rotateOverlayActive: true,
+      isCurrentEngine: false,
+    }),
+    {
+      shouldApply: false,
+      loading: false,
+      fallbackVisible: false,
+      refreshFallbackImage: false,
+      enableNativeControls: false,
+    },
+  );
 });

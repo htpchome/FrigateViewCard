@@ -33,3 +33,32 @@ export const resolveWebRtcStartup = ({ startup = {} }) => ({
 export const resolveHlsStartup = (startup = {}) => ({
   waitMs: normalizeWaitMs(startup.waitMs, 5000),
 });
+
+export const resolveHaDirectMountUnavailableState = () => ({
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false,
+});
+
+export const resolveHaDirectReadyState = ({
+  rotateOverlayActive = false,
+  isCurrentEngine = false,
+  waitSucceeded = false,
+}) => ({
+  shouldApply: Boolean(isCurrentEngine && waitSucceeded),
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false,
+  enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine),
+});
+
+export const resolveHaDirectStabilizedState = ({
+  rotateOverlayActive = false,
+  isCurrentEngine = false,
+}) => ({
+  shouldApply: Boolean(isCurrentEngine),
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false,
+  enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine),
+});
