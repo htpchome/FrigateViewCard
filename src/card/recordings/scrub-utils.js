@@ -50,6 +50,54 @@ export function resolveRecordingScrubTarget({
   return { absTarget, relTarget };
 }
 
+export function formatRecordingScrubTime(sec) {
+  const total = Math.max(0, Math.floor(Number(sec) || 0));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+export function buildRecordingScrubDecorations({
+  start = 0,
+  end = 0,
+  alerts = [],
+  tickStepSec = 10 * 60,
+}) {
+  const safeStart = Number(start) || 0;
+  const safeEnd = Number(end) || 0;
+  const span = Math.max(1, safeEnd - safeStart);
+
+  let tickMarkup = "";
+  for (let time = tickStepSec; time < span; time += tickStepSec) {
+    const left = (time / span) * 100;
+    tickMarkup += `<span class="recording-scrub-tick" style="left:${left}%"></span>`;
+  }
+
+  let markerMarkup = "";
+  for (const alert of alerts) {
+    const left = ((alert.start - safeStart) / span) * 100;
+    const width = Math.max(0.75, ((alert.end - alert.start) / span) * 100);
+    const markerClass =
+      String(alert.severity || "").toLowerCase() === "alert"
+        ? "recording-scrub-alert"
+        : "recording-scrub-detection";
+    markerMarkup += `<span class="${markerClass}" style="left:${Math.max(0, left)}%;width:${Math.min(100, width)}%"></span>`;
+  }
+
+  return {
+    span,
+    labelStart: "0:00",
+    labelEnd: formatRecordingScrubTime(span),
+    labelNow: `${formatRecordingScrubTime(0)} / ${formatRecordingScrubTime(span)}`,
+    tickMarkup,
+    markerMarkup,
+  };
+}
+
 export function resolveRecordingSeekTimeout({
   isFirefox = false,
   isEdge = false,

@@ -23,6 +23,8 @@ export {
 export { buildRecordingPlaybackPlan } from "./playback-utils.js";
 
 export {
+  buildRecordingScrubDecorations,
+  formatRecordingScrubTime,
   resolveClosestRecordingAlertStart,
   resolveRecordingScrubTarget,
   resolveRecordingSeekOutcome,

@@ -179,10 +179,12 @@ import {
 } from "./filter-state-utils.js";
 import {
   buildRecordingPlaybackPlan,
+  buildRecordingScrubDecorations,
   buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
   buildRecordingsListMarkup,
   createRecordingsSwipeGestureState,
+  formatRecordingScrubTime,
   normalizeFetchedRecordingsAvailability,
   RECORDINGS_SWIPE_EMPTY_HTML,
   RECORDINGS_SWIPE_LOADING_HTML,
@@ -6393,14 +6395,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _fmtScrubTime(sec) {
-    const total = Math.max(0, Math.floor(Number(sec) || 0));
-    const h = Math.floor(total / 3600);
-    const m = Math.floor((total % 3600) / 60);
-    const s = total % 60;
-    if (h > 0) {
-      return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    }
-    return `${m}:${String(s).padStart(2, "0")}`;
+    return formatRecordingScrubTime(sec);
   }
 
   _closestRecordingAlertStart(targetSec, alerts, thresholdSec) {
@@ -6603,29 +6598,19 @@ export class FrigateViewCard extends HTMLElement {
     ).catch(() => []);
     if (token !== this._playSeq) return;
 
-    const span = Math.max(1, end - start);
-    if (labelStart) labelStart.textContent = "0:00";
-    if (labelEnd) labelEnd.textContent = this._fmtScrubTime(span);
-    if (labelNow)
-      labelNow.textContent = `${this._fmtScrubTime(0)} / ${this._fmtScrubTime(span)}`;
+    const decorations = buildRecordingScrubDecorations({
+      start,
+      end,
+      alerts,
+    });
+    const span = decorations.span;
+    if (labelStart) labelStart.textContent = decorations.labelStart;
+    if (labelEnd) labelEnd.textContent = decorations.labelEnd;
+    if (labelNow) labelNow.textContent = decorations.labelNow;
 
-    // Add 10-minute tick marks for visual time reference.
-    const tickStep = 10 * 60;
     const tickLayer = ticks || markers;
-    for (let t = tickStep; t < span; t += tickStep) {
-      const left = (t / span) * 100;
-      tickLayer.innerHTML += `<span class="recording-scrub-tick" style="left:${left}%"></span>`;
-    }
-
-    for (const a of alerts) {
-      const left = ((a.start - start) / span) * 100;
-      const width = Math.max(0.75, ((a.end - a.start) / span) * 100);
-      const markerClass =
-        String(a.severity || "").toLowerCase() === "alert"
-          ? "recording-scrub-alert"
-          : "recording-scrub-detection";
-      markers.innerHTML += `<span class="${markerClass}" style="left:${Math.max(0, left)}%;width:${Math.min(100, width)}%"></span>`;
-    }
+    tickLayer.innerHTML = decorations.tickMarkup;
+    markers.innerHTML = decorations.markerMarkup;
 
     const clientXToRatio = (clientX) => {
       const rect = track.getBoundingClientRect();

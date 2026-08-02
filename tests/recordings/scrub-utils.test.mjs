@@ -2,11 +2,61 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildRecordingScrubDecorations,
+  formatRecordingScrubTime,
   resolveClosestRecordingAlertStart,
   resolveRecordingScrubTarget,
   resolveRecordingSeekOutcome,
   resolveRecordingSeekTimeout,
 } from "../../src/card/recordings/scrub-utils.js";
+
+test("formatRecordingScrubTime formats minute and hour ranges", () => {
+  assert.equal(formatRecordingScrubTime(5), "0:05");
+  assert.equal(formatRecordingScrubTime(125), "2:05");
+  assert.equal(formatRecordingScrubTime(3723), "1:02:03");
+});
+
+test("buildRecordingScrubDecorations creates labels and tick markup", () => {
+  const decorations = buildRecordingScrubDecorations({
+    start: 100,
+    end: 1900,
+    alerts: [],
+  });
+
+  assert.equal(decorations.span, 1800);
+  assert.equal(decorations.labelStart, "0:00");
+  assert.equal(decorations.labelEnd, "30:00");
+  assert.equal(decorations.labelNow, "0:00 / 30:00");
+  assert.match(
+    decorations.tickMarkup,
+    /recording-scrub-tick" style="left:33\.33333333333333%"/,
+  );
+  assert.match(
+    decorations.tickMarkup,
+    /recording-scrub-tick" style="left:66\.66666666666666%"/,
+  );
+  assert.equal(decorations.markerMarkup, "");
+});
+
+test("buildRecordingScrubDecorations creates alert and detection marker markup", () => {
+  const decorations = buildRecordingScrubDecorations({
+    start: 100,
+    end: 300,
+    alerts: [
+      { start: 120, end: 130, severity: "alert" },
+      { start: 160, end: 161, severity: "detection" },
+    ],
+  });
+
+  assert.match(
+    decorations.markerMarkup,
+    /recording-scrub-alert" style="left:10%;width:5%"/,
+  );
+  assert.match(
+    decorations.markerMarkup,
+    /recording-scrub-detection" style="left:30%;width:0\.75%"/,
+  );
+});
 
 test("resolveClosestRecordingAlertStart snaps to the start of short alerts", () => {
   assert.equal(

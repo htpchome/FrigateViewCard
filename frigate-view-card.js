@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1092";
+const VERSION = "1.0.1093";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4511,6 +4511,46 @@ function resolveRecordingScrubTarget({
     Math.min(safeEnd - safeStart, absTarget - safeStart)
   );
   return { absTarget, relTarget };
+}
+function formatRecordingScrubTime(sec) {
+  const total = Math.max(0, Math.floor(Number(sec) || 0));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor(total % 3600 / 60);
+  const s = total % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+function buildRecordingScrubDecorations({
+  start = 0,
+  end = 0,
+  alerts = [],
+  tickStepSec = 10 * 60
+}) {
+  const safeStart = Number(start) || 0;
+  const safeEnd = Number(end) || 0;
+  const span = Math.max(1, safeEnd - safeStart);
+  let tickMarkup = "";
+  for (let time = tickStepSec; time < span; time += tickStepSec) {
+    const left = time / span * 100;
+    tickMarkup += `<span class="recording-scrub-tick" style="left:${left}%"></span>`;
+  }
+  let markerMarkup = "";
+  for (const alert of alerts) {
+    const left = (alert.start - safeStart) / span * 100;
+    const width = Math.max(0.75, (alert.end - alert.start) / span * 100);
+    const markerClass = String(alert.severity || "").toLowerCase() === "alert" ? "recording-scrub-alert" : "recording-scrub-detection";
+    markerMarkup += `<span class="${markerClass}" style="left:${Math.max(0, left)}%;width:${Math.min(100, width)}%"></span>`;
+  }
+  return {
+    span,
+    labelStart: "0:00",
+    labelEnd: formatRecordingScrubTime(span),
+    labelNow: `${formatRecordingScrubTime(0)} / ${formatRecordingScrubTime(span)}`,
+    tickMarkup,
+    markerMarkup
+  };
 }
 function resolveRecordingSeekTimeout({
   isFirefox = false,
@@ -12918,14 +12958,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   _fmtScrubTime(sec) {
-    const total = Math.max(0, Math.floor(Number(sec) || 0));
-    const h = Math.floor(total / 3600);
-    const m = Math.floor(total % 3600 / 60);
-    const s = total % 60;
-    if (h > 0) {
-      return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    }
-    return `${m}:${String(s).padStart(2, "0")}`;
+    return formatRecordingScrubTime(sec);
   }
   _closestRecordingAlertStart(targetSec, alerts, thresholdSec) {
     return resolveClosestRecordingAlertStart(targetSec, alerts, thresholdSec);
@@ -13097,23 +13130,18 @@ const FrigateViewCard = class extends HTMLElement {
       end
     ).catch(() => []);
     if (token !== this._playSeq) return;
-    const span = Math.max(1, end - start);
-    if (labelStart) labelStart.textContent = "0:00";
-    if (labelEnd) labelEnd.textContent = this._fmtScrubTime(span);
-    if (labelNow)
-      labelNow.textContent = `${this._fmtScrubTime(0)} / ${this._fmtScrubTime(span)}`;
-    const tickStep = 10 * 60;
+    const decorations = buildRecordingScrubDecorations({
+      start,
+      end,
+      alerts
+    });
+    const span = decorations.span;
+    if (labelStart) labelStart.textContent = decorations.labelStart;
+    if (labelEnd) labelEnd.textContent = decorations.labelEnd;
+    if (labelNow) labelNow.textContent = decorations.labelNow;
     const tickLayer = ticks || markers;
-    for (let t = tickStep; t < span; t += tickStep) {
-      const left = t / span * 100;
-      tickLayer.innerHTML += `<span class="recording-scrub-tick" style="left:${left}%"></span>`;
-    }
-    for (const a of alerts) {
-      const left = (a.start - start) / span * 100;
-      const width = Math.max(0.75, (a.end - a.start) / span * 100);
-      const markerClass = String(a.severity || "").toLowerCase() === "alert" ? "recording-scrub-alert" : "recording-scrub-detection";
-      markers.innerHTML += `<span class="${markerClass}" style="left:${Math.max(0, left)}%;width:${Math.min(100, width)}%"></span>`;
-    }
+    tickLayer.innerHTML = decorations.tickMarkup;
+    markers.innerHTML = decorations.markerMarkup;
     const clientXToRatio = (clientX) => {
       const rect = track.getBoundingClientRect();
       if (!rect.width) return 0;
