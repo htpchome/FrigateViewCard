@@ -7241,112 +7241,62 @@ export class FrigateViewCard extends HTMLElement {
       if (time) time.textContent = controlState.timeText;
       if (!progressDragging) this._updatePopupMediaButtons(video);
     };
+    const progressHandlers = {
+      scrubPreview: () => {
+        progressDragging = true;
+        const next = resolvePopupMediaSeekTarget({
+          progressValue: progress.value,
+          duration: video.duration,
+        });
+        if (next !== null) video.currentTime = next;
+        this._showPopupControlsTemporarily();
+        sync();
+      },
+      scrubCommit: () => {
+        progressDragging = false;
+        this._showPopupControlsTemporarily();
+        sync();
+      },
+      dragStart: () => {
+        progressDragging = true;
+        if (this._popupControlsHideTimer)
+          clearTimeout(this._popupControlsHideTimer);
+      },
+      dragEnd: () => {
+        progressDragging = false;
+        this._showPopupControlsTemporarily();
+      },
+      touchDragStart: () => {
+        progressDragging = true;
+      },
+      touchDragEnd: () => {
+        progressDragging = false;
+        this._showPopupControlsTemporarily();
+      },
+    };
+    const controlsHandlers = {
+      showNow: () => {
+        if (this._popupControlsHideTimer)
+          clearTimeout(this._popupControlsHideTimer);
+        controls.classList.remove("is-hidden");
+      },
+      showTemporarily: () => this._showPopupControlsTemporarily(),
+    };
 
     if (progress) {
-      listenerPlan.progressEvents.forEach(({ type, options }) => {
-        if (type === "input") {
-          bind(
-            progress,
-            type,
-            () => {
-              progressDragging = true;
-              const next = resolvePopupMediaSeekTarget({
-                progressValue: progress.value,
-                duration: video.duration,
-              });
-              if (next !== null) video.currentTime = next;
-              this._showPopupControlsTemporarily();
-              sync();
-            },
-            options,
-          );
-          return;
-        }
-        if (type === "change") {
-          bind(
-            progress,
-            type,
-            () => {
-              progressDragging = false;
-              this._showPopupControlsTemporarily();
-              sync();
-            },
-            options,
-          );
-          return;
-        }
-        if (type === "pointerdown") {
-          bind(
-            progress,
-            type,
-            () => {
-              progressDragging = true;
-              if (this._popupControlsHideTimer)
-                clearTimeout(this._popupControlsHideTimer);
-            },
-            options,
-          );
-          return;
-        }
-        if (type === "pointerup") {
-          bind(
-            progress,
-            type,
-            () => {
-              progressDragging = false;
-              this._showPopupControlsTemporarily();
-            },
-            options,
-          );
-          return;
-        }
-        if (type === "touchstart") {
-          bind(
-            progress,
-            type,
-            () => {
-              progressDragging = true;
-            },
-            options,
-          );
-          return;
-        }
-        if (type === "touchend") {
-          bind(
-            progress,
-            type,
-            () => {
-              progressDragging = false;
-              this._showPopupControlsTemporarily();
-            },
-            options,
-          );
-        }
-      });
+      listenerPlan.progressEvents.forEach(({ type, action, options }) =>
+        bind(progress, type, progressHandlers[action], options),
+      );
     }
 
-    listenerPlan.controlsEvents.forEach(({ type, options }) => {
-      if (type === "pointerdown" || type === "touchstart") {
-        bind(
-          controls,
-          type,
-          () => {
-            if (this._popupControlsHideTimer)
-              clearTimeout(this._popupControlsHideTimer);
-            controls.classList.remove("is-hidden");
-          },
-          options,
-        );
-        return;
-      }
-      bind(controls, type, () => this._showPopupControlsTemporarily(), options);
-    });
+    listenerPlan.controlsEvents.forEach(({ type, action, options }) =>
+      bind(controls, type, controlsHandlers[action], options),
+    );
 
     listenerPlan.syncVideoEvents.forEach((evt) => bind(video, evt, sync));
 
-    const showOnInteraction = () => this._showPopupControlsTemporarily();
-    listenerPlan.interactionVideoEvents.forEach(({ type, options }) =>
-      bind(video, type, showOnInteraction, options),
+    listenerPlan.interactionVideoEvents.forEach(({ type, action, options }) =>
+      bind(video, type, controlsHandlers[action], options),
     );
 
     sync();

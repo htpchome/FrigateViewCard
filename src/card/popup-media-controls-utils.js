@@ -27,19 +27,35 @@ export const resolvePopupMediaControlsListenerPlan = ({
 }) => ({
   progressEvents: hasProgressControl
     ? [
-        { type: "input" },
-        { type: "change" },
-        { type: "pointerdown" },
-        { type: "pointerup" },
-        { type: "touchstart", options: { passive: true } },
-        { type: "touchend", options: { passive: true } },
+        { type: "input", action: "scrubPreview" },
+        { type: "change", action: "scrubCommit" },
+        { type: "pointerdown", action: "dragStart" },
+        { type: "pointerup", action: "dragEnd" },
+        {
+          type: "touchstart",
+          action: "touchDragStart",
+          options: { passive: true },
+        },
+        {
+          type: "touchend",
+          action: "touchDragEnd",
+          options: { passive: true },
+        },
       ]
     : [],
   controlsEvents: [
-    { type: "pointerdown" },
-    { type: "pointerup" },
-    { type: "touchstart", options: { passive: true } },
-    { type: "touchend", options: { passive: true } },
+    { type: "pointerdown", action: "showNow" },
+    { type: "pointerup", action: "showTemporarily" },
+    {
+      type: "touchstart",
+      action: "showNow",
+      options: { passive: true },
+    },
+    {
+      type: "touchend",
+      action: "showTemporarily",
+      options: { passive: true },
+    },
   ],
   syncVideoEvents: [
     "play",
@@ -52,10 +68,26 @@ export const resolvePopupMediaControlsListenerPlan = ({
     "seeked",
   ],
   interactionVideoEvents: [
-    { type: "touchstart", options: { passive: true } },
-    { type: "pointerdown", options: { passive: true } },
-    { type: "mousemove", options: { passive: true } },
-    { type: "click", options: { passive: true } },
+    {
+      type: "touchstart",
+      action: "showTemporarily",
+      options: { passive: true },
+    },
+    {
+      type: "pointerdown",
+      action: "showTemporarily",
+      options: { passive: true },
+    },
+    {
+      type: "mousemove",
+      action: "showTemporarily",
+      options: { passive: true },
+    },
+    {
+      type: "click",
+      action: "showTemporarily",
+      options: { passive: true },
+    },
   ],
 });
 
