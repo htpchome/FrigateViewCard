@@ -337,3 +337,40 @@ test("_navigateRecordingsDayAnimated commits immediately when no swipe stage is 
     ["commit", bounds, recs],
   ]);
 });
+
+test("_navigateRecordingsDayAnimated animates and commits when a swipe stage is created", async () => {
+  const bounds = { start: 100, end: 200 };
+  const recs = [{ id: 1 }];
+  const stage = { width: 240 };
+  const { ctx, calls, direction } = createNavigateContext({
+    direction: 1,
+    prep: { hasData: true, bounds, recs },
+    stage,
+  });
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = (cb) => {
+    cb();
+    return 1;
+  };
+
+  try {
+    const result =
+      await FrigateViewCard.prototype._navigateRecordingsDayAnimated.call(
+        ctx,
+        direction,
+      );
+
+    assert.equal(result, true);
+    assert.equal(ctx._recordingsDayNavAnimating, false);
+    assert.deepEqual(calls, [
+      ["prepare", 1],
+      ["viewRows", recs],
+      ["listMarkup", recs],
+      ["createStage", 1, "rows:1"],
+      ["animate", stage, -240, 320, "cubic-bezier(0.28, 0.02, 0.18, 1)"],
+      ["commit", bounds, recs],
+    ]);
+  } finally {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+  }
+});
