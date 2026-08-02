@@ -5,6 +5,7 @@ import {
   buildPopupClipRenderPlan,
   buildPopupMediaUrl,
   buildPopupMediaControlState,
+  buildPopupRecordingRenderPlan,
   buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
   resolvePopupMediaControlsInitPlan,
@@ -179,6 +180,40 @@ test("buildPopupSnapshotRenderPlan resolves snapshot defaults", () => {
       fullscreenKind: "snapshot",
       infoEvent: { id: "snap-1" },
       infoOpts: { mediaType: "snapshot" },
+    },
+  );
+});
+
+test("buildPopupRecordingRenderPlan resolves popup recording state and info options", () => {
+  assert.deepEqual(
+    buildPopupRecordingRenderPlan({
+      start: 100,
+      end: 160,
+      playbackPlan: {
+        clipDurationSec: 60,
+        displayCamera: "front-yard",
+        chunkEnd: 180,
+        sourceCandidates: ["/a.m3u8", "/a.mp4"],
+      },
+    }),
+    {
+      popupMediaType: "recording",
+      playing: { rec: 100 },
+      fullscreenKind: "recording",
+      infoEvent: null,
+      infoOpts: {
+        mediaType: "recording",
+        startTime: 100,
+        durationSec: 60,
+        camera: "front-yard",
+        objects: "-",
+        zone: "-",
+        score: "-",
+        recStart: 100,
+        recEnd: 160,
+      },
+      chunkEnd: 180,
+      sourceCandidates: ["/a.m3u8", "/a.mp4"],
     },
   );
 });

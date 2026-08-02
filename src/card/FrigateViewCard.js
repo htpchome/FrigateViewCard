@@ -185,6 +185,7 @@ import {
   buildPopupClipRenderPlan,
   buildPopupMediaUrl,
   buildPopupMediaControlState,
+  buildPopupRecordingRenderPlan,
   buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
   resolvePopupMediaControlsInitPlan,
@@ -7586,8 +7587,6 @@ export class FrigateViewCard extends HTMLElement {
     const token = ++this._playSeq; // cancel any in-flight load
     this._enter();
     this._clearPopupMediaCleanup();
-    this._popupMediaType = "recording";
-    this._playing = { rec: s };
     const { clientId, cam } = this._cc();
     const playbackPlan = buildRecordingPlaybackPlan({
       clientId,
@@ -7596,17 +7595,14 @@ export class FrigateViewCard extends HTMLElement {
       end: e,
       preferHls: this._recordingPreferHls(),
     });
-    this._renderPopupInfo(null, {
-      mediaType: "recording",
-      startTime: start,
-      durationSec: playbackPlan.clipDurationSec,
-      camera: playbackPlan.displayCamera,
-      objects: "-",
-      zone: "-",
-      score: "-",
-      recStart: s,
-      recEnd: e,
+    const renderPlan = buildPopupRecordingRenderPlan({
+      start,
+      end: e,
+      playbackPlan,
     });
+    this._popupMediaType = renderPlan.popupMediaType;
+    this._playing = renderPlan.playing;
+    this._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
     const viewer = this.shadowRoot.querySelector("#viewer");
     viewer.innerHTML = '<div class="ld">Loading…</div>';
     if (this._playSeq !== token) return;
@@ -7642,7 +7638,7 @@ export class FrigateViewCard extends HTMLElement {
       mediaCleanup.push(() => video.removeEventListener("seeking", onSeeking));
       mediaCleanup.push(() => video.removeEventListener("seeked", onSeeked));
 
-      for (const path of playbackPlan.sourceCandidates) {
+      for (const path of renderPlan.sourceCandidates) {
         if (this._playSeq !== token) return;
         const signed = await this._signed(path);
         if (this._playSeq !== token) return;
@@ -7668,15 +7664,15 @@ export class FrigateViewCard extends HTMLElement {
         return;
       }
     }
-    this._ensurePopupFullscreenButton("recording");
+    this._ensurePopupFullscreenButton(renderPlan.fullscreenKind);
     this._scheduleRotateOverlayUpdate();
     if (video && playable) {
-      this._initPopupMediaControls(video, "recording");
+      this._initPopupMediaControls(video, renderPlan.popupMediaType);
       this._initRecordingScrub({
         clientId,
         cam,
         start: s,
-        end: playbackPlan.chunkEnd,
+        end: renderPlan.chunkEnd,
         video,
         token,
         sourceUrl: activeSource || video.currentSrc || video.src,

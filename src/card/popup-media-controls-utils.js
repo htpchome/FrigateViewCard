@@ -65,6 +65,30 @@ export const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
   };
 };
 
+export const buildPopupRecordingRenderPlan = ({
+  start = 0,
+  end = 0,
+  playbackPlan = {},
+}) => ({
+  popupMediaType: "recording",
+  playing: { rec: start },
+  fullscreenKind: "recording",
+  infoEvent: null,
+  infoOpts: {
+    mediaType: "recording",
+    startTime: start,
+    durationSec: playbackPlan.clipDurationSec,
+    camera: playbackPlan.displayCamera,
+    objects: "-",
+    zone: "-",
+    score: "-",
+    recStart: start,
+    recEnd: end,
+  },
+  chunkEnd: playbackPlan.chunkEnd,
+  sourceCandidates: playbackPlan.sourceCandidates || [],
+});
+
 export const resolvePopupMediaControlsInitPlan = ({
   shouldUseCustomControls = false,
   hasVideo = true,

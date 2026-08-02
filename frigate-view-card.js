@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1115";
+const VERSION = "1.0.1116";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4534,6 +4534,29 @@ const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
     infoOpts: { mediaType }
   };
 };
+const buildPopupRecordingRenderPlan = ({
+  start = 0,
+  end = 0,
+  playbackPlan = {}
+}) => ({
+  popupMediaType: "recording",
+  playing: { rec: start },
+  fullscreenKind: "recording",
+  infoEvent: null,
+  infoOpts: {
+    mediaType: "recording",
+    startTime: start,
+    durationSec: playbackPlan.clipDurationSec,
+    camera: playbackPlan.displayCamera,
+    objects: "-",
+    zone: "-",
+    score: "-",
+    recStart: start,
+    recEnd: end
+  },
+  chunkEnd: playbackPlan.chunkEnd,
+  sourceCandidates: playbackPlan.sourceCandidates || []
+});
 const resolvePopupMediaControlsInitPlan = ({
   shouldUseCustomControls = false,
   hasVideo = true
@@ -14662,8 +14685,6 @@ const FrigateViewCard = class extends HTMLElement {
     const token = ++this._playSeq;
     this._enter();
     this._clearPopupMediaCleanup();
-    this._popupMediaType = "recording";
-    this._playing = { rec: s };
     const { clientId, cam } = this._cc();
     const playbackPlan = buildRecordingPlaybackPlan({
       clientId,
@@ -14672,17 +14693,14 @@ const FrigateViewCard = class extends HTMLElement {
       end: e,
       preferHls: this._recordingPreferHls()
     });
-    this._renderPopupInfo(null, {
-      mediaType: "recording",
-      startTime: start,
-      durationSec: playbackPlan.clipDurationSec,
-      camera: playbackPlan.displayCamera,
-      objects: "-",
-      zone: "-",
-      score: "-",
-      recStart: s,
-      recEnd: e
+    const renderPlan = buildPopupRecordingRenderPlan({
+      start,
+      end: e,
+      playbackPlan
     });
+    this._popupMediaType = renderPlan.popupMediaType;
+    this._playing = renderPlan.playing;
+    this._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
     const viewer = this.shadowRoot.querySelector("#viewer");
     viewer.innerHTML = '<div class="ld">Loading\u2026</div>';
     if (this._playSeq !== token) return;
@@ -14718,7 +14736,7 @@ const FrigateViewCard = class extends HTMLElement {
       video.addEventListener("seeked", onSeeked);
       mediaCleanup.push(() => video.removeEventListener("seeking", onSeeking));
       mediaCleanup.push(() => video.removeEventListener("seeked", onSeeked));
-      for (const path of playbackPlan.sourceCandidates) {
+      for (const path of renderPlan.sourceCandidates) {
         if (this._playSeq !== token) return;
         const signed = await this._signed(path);
         if (this._playSeq !== token) return;
@@ -14744,15 +14762,15 @@ const FrigateViewCard = class extends HTMLElement {
         return;
       }
     }
-    this._ensurePopupFullscreenButton("recording");
+    this._ensurePopupFullscreenButton(renderPlan.fullscreenKind);
     this._scheduleRotateOverlayUpdate();
     if (video && playable) {
-      this._initPopupMediaControls(video, "recording");
+      this._initPopupMediaControls(video, renderPlan.popupMediaType);
       this._initRecordingScrub({
         clientId,
         cam,
         start: s,
-        end: playbackPlan.chunkEnd,
+        end: renderPlan.chunkEnd,
         video,
         token,
         sourceUrl: activeSource || video.currentSrc || video.src
