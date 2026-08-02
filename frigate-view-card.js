@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1091";
+const VERSION = "1.0.1092";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4463,6 +4463,112 @@ function buildRecordingPlaybackPlan({
     clipDurationSec: chunkEnd - safeStart,
     displayCamera: String(camera || "").replace(/_/g, " "),
     sourceCandidates: preferHls ? [...hlsCandidates, recPath] : [recPath, ...hlsCandidates]
+  };
+}
+
+// src/card/recordings/scrub-utils.js
+function resolveClosestRecordingAlertStart(targetSec, alerts = [], thresholdSec = 0) {
+  let nearest = null;
+  let best = Infinity;
+  for (const alert of alerts) {
+    const inAlert = targetSec >= alert.start && targetSec <= alert.end;
+    const duration = Math.max(
+      0,
+      Number(alert.end || 0) - Number(alert.start || 0)
+    );
+    if (inAlert) {
+      if (duration > 20) return null;
+      return alert.start;
+    }
+    const distance = Math.abs(targetSec - alert.start);
+    if (distance < best) {
+      best = distance;
+      nearest = alert.start;
+    }
+  }
+  return best <= thresholdSec ? nearest : null;
+}
+function resolveRecordingScrubTarget({
+  ratio = 0,
+  start = 0,
+  end = 0,
+  alerts = []
+}) {
+  const safeStart = Number(start) || 0;
+  const safeEnd = Number(end) || 0;
+  const span = Math.max(1, safeEnd - safeStart);
+  const clampedRatio = Math.max(0, Math.min(1, Number(ratio) || 0));
+  const rawTarget = safeStart + clampedRatio * span;
+  const snapThreshold = Math.min(12, Math.max(3, span * 5e-3));
+  const snapped = resolveClosestRecordingAlertStart(
+    rawTarget,
+    alerts,
+    snapThreshold
+  );
+  const absTarget = Number.isFinite(snapped) ? snapped : rawTarget;
+  const relTarget = Math.max(
+    0,
+    Math.min(safeEnd - safeStart, absTarget - safeStart)
+  );
+  return { absTarget, relTarget };
+}
+function resolveRecordingSeekTimeout({
+  isFirefox = false,
+  isEdge = false
+}) {
+  return isFirefox || isEdge ? 4200 : 2500;
+}
+function resolveRecordingSeekOutcome({
+  isFirefox = false,
+  isEdge = false,
+  seekOk = false,
+  currentTime = 0,
+  relTarget,
+  absTarget,
+  start = 0,
+  end = 0,
+  resumeAfterScrub = false,
+  isFallbackLoading = false,
+  toleranceSec = 2
+}) {
+  if (isFirefox || isEdge) {
+    return {
+      shouldResumePlayback: Boolean(resumeAfterScrub),
+      shouldFallback: false,
+      blockedByFallbackLoading: false,
+      fallbackStart: null,
+      fallbackEnd: null
+    };
+  }
+  const diff = Math.abs((Number(currentTime) || 0) - (Number(relTarget) || 0));
+  const shouldFallback = !seekOk || diff > toleranceSec;
+  if (!shouldFallback) {
+    return {
+      shouldResumePlayback: Boolean(resumeAfterScrub),
+      shouldFallback: false,
+      blockedByFallbackLoading: false,
+      fallbackStart: null,
+      fallbackEnd: null
+    };
+  }
+  if (isFallbackLoading) {
+    return {
+      shouldResumePlayback: false,
+      shouldFallback: false,
+      blockedByFallbackLoading: true,
+      fallbackStart: null,
+      fallbackEnd: null
+    };
+  }
+  const safeStart = Number(start) || 0;
+  const safeEnd = Number(end) || 0;
+  const span = Math.max(1, safeEnd - safeStart);
+  return {
+    shouldResumePlayback: false,
+    shouldFallback: true,
+    blockedByFallbackLoading: false,
+    fallbackStart: Math.floor(Number(absTarget) || 0),
+    fallbackEnd: Math.floor((Number(absTarget) || 0) + span)
   };
 }
 
@@ -12822,40 +12928,17 @@ const FrigateViewCard = class extends HTMLElement {
     return `${m}:${String(s).padStart(2, "0")}`;
   }
   _closestRecordingAlertStart(targetSec, alerts, thresholdSec) {
-    let nearest = null;
-    let best = Infinity;
-    for (const a of alerts) {
-      const inAlert = targetSec >= a.start && targetSec <= a.end;
-      const duration = Math.max(0, Number(a.end || 0) - Number(a.start || 0));
-      if (inAlert) {
-        if (duration > 20) return null;
-        return a.start;
-      }
-      const d = Math.abs(targetSec - a.start);
-      if (d < best) {
-        best = d;
-        nearest = a.start;
-      }
-    }
-    return best <= thresholdSec ? nearest : null;
+    return resolveClosestRecordingAlertStart(targetSec, alerts, thresholdSec);
   }
   _resolveRecordingScrubTarget(ratio) {
     const state = this._recordingScrubState;
     if (!state?.video) return null;
-    const span = Math.max(1, state.end - state.start);
-    const rawTarget = state.start + Math.max(0, Math.min(1, ratio)) * span;
-    const snapThreshold = Math.min(12, Math.max(3, span * 5e-3));
-    const snapped = this._closestRecordingAlertStart(
-      rawTarget,
-      state.alerts,
-      snapThreshold
-    );
-    const absTarget = Number.isFinite(snapped) ? snapped : rawTarget;
-    const relTarget = Math.max(
-      0,
-      Math.min(state.end - state.start, absTarget - state.start)
-    );
-    return { absTarget, relTarget };
+    return resolveRecordingScrubTarget({
+      ratio,
+      start: state.start,
+      end: state.end,
+      alerts: state.alerts
+    });
   }
   _seekRecordingScrubToRatio(ratio, { commit = false } = {}) {
     const state = this._recordingScrubState;
@@ -12927,37 +13010,37 @@ const FrigateViewCard = class extends HTMLElement {
     state.seekNonce = Number(state.seekNonce || 0) + 1;
     const nonce = state.seekNonce;
     const video = state.video;
-    const seekTimeout = this._isFirefox() || this._isEdge() ? 4200 : 2500;
+    const isFirefox = this._isFirefox();
+    const isEdge = this._isEdge();
+    const seekTimeout = resolveRecordingSeekTimeout({ isFirefox, isEdge });
     const seekOk = await this._attemptRecordingSeek(
       video,
       relTarget,
       seekTimeout
     );
     if (nonce !== state.seekNonce) return;
-    if (this._isFirefox() || this._isEdge()) {
-      if (state.resumeAfterScrub) {
-        video.play?.().catch(() => {
-        });
-      }
-      return;
-    }
-    const cur = Number(video.currentTime || 0);
-    const diff = Math.abs(cur - relTarget);
-    const shouldFallback = !seekOk || diff > 2;
-    if (shouldFallback) {
-      if (state.isFallbackLoading) return;
+    const outcome = resolveRecordingSeekOutcome({
+      isFirefox,
+      isEdge,
+      seekOk,
+      currentTime: video.currentTime,
+      relTarget,
+      absTarget,
+      start: state.start,
+      end: state.end,
+      resumeAfterScrub: state.resumeAfterScrub,
+      isFallbackLoading: state.isFallbackLoading
+    });
+    if (outcome.shouldFallback) {
       state.isFallbackLoading = true;
       try {
-        const span = Math.max(1, state.end - state.start);
-        const fallbackStart = Math.floor(absTarget);
-        const fallbackEnd = Math.floor(absTarget + span);
-        await this._showRecording(fallbackStart, fallbackEnd);
+        await this._showRecording(outcome.fallbackStart, outcome.fallbackEnd);
       } finally {
         state.isFallbackLoading = false;
       }
       return;
     }
-    if (state.resumeAfterScrub) {
+    if (outcome.shouldResumePlayback) {
       video.play?.().catch(() => {
       });
     }
