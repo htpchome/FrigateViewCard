@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1113";
+const VERSION = "1.0.1114";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4486,6 +4486,22 @@ const buildPopupMediaUrl = ({ baseUrl = "", cacheKey }) => {
   const separator = normalizedBaseUrl.includes("?") ? "&" : "?";
   return `${normalizedBaseUrl}${separator}fvc=${encodeURIComponent(String(cacheKey))}`;
 };
+const resolvePopupMediaRenderPlan = ({
+  infoOpts = null,
+  fullscreenKind = "",
+  hasMediaElement = false,
+  html = "",
+  hasVideo = false
+}) => ({
+  popupMediaType: String(
+    infoOpts?.mediaType || fullscreenKind || ""
+  ).toLowerCase(),
+  shouldAppendMediaElement: Boolean(hasMediaElement),
+  viewerHtml: hasMediaElement ? "" : String(html || ""),
+  controlsPlan: hasVideo ? null : resolvePopupMediaControlsInitPlan({
+    hasVideo: false
+  })
+});
 const resolvePopupMediaControlsInitPlan = ({
   shouldUseCustomControls = false,
   hasVideo = true
@@ -14428,16 +14444,20 @@ const FrigateViewCard = class extends HTMLElement {
       clearTimeout(this._popupMediaStopTimer);
       this._popupMediaStopTimer = null;
     }
+    const renderPlan = resolvePopupMediaRenderPlan({
+      infoOpts,
+      fullscreenKind,
+      hasMediaElement: mediaElement instanceof Element,
+      html
+    });
     this._playing = playingId ? { id: playingId } : null;
-    this._popupMediaType = String(
-      infoOpts?.mediaType || fullscreenKind || ""
-    ).toLowerCase();
+    this._popupMediaType = renderPlan.popupMediaType;
     const viewer = this._$("#viewer");
     viewer.innerHTML = "";
-    if (mediaElement instanceof Element) {
+    if (renderPlan.shouldAppendMediaElement) {
       viewer.appendChild(mediaElement);
     } else {
-      viewer.innerHTML = html || "";
+      viewer.innerHTML = renderPlan.viewerHtml;
     }
     const body = this._$("#myPopup")?.querySelector(".popup-body");
     if (body) body.scrollTop = 0;
@@ -14448,9 +14468,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._initPopupMediaControls(video, this._popupMediaType);
     } else {
       const controls = this._$("#popup-media-controls");
-      const controlsPlan = resolvePopupMediaControlsInitPlan({
-        hasVideo: false
-      });
+      const controlsPlan = renderPlan.controlsPlan;
       if (controls) {
         controls.hidden = controlsPlan.controlsHidden;
         if (controlsPlan.resetControlsHiddenClass) {

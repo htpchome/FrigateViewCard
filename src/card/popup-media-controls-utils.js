@@ -10,6 +10,25 @@ export const buildPopupMediaUrl = ({ baseUrl = "", cacheKey }) => {
   return `${normalizedBaseUrl}${separator}fvc=${encodeURIComponent(String(cacheKey))}`;
 };
 
+export const resolvePopupMediaRenderPlan = ({
+  infoOpts = null,
+  fullscreenKind = "",
+  hasMediaElement = false,
+  html = "",
+  hasVideo = false,
+}) => ({
+  popupMediaType: String(
+    infoOpts?.mediaType || fullscreenKind || "",
+  ).toLowerCase(),
+  shouldAppendMediaElement: Boolean(hasMediaElement),
+  viewerHtml: hasMediaElement ? "" : String(html || ""),
+  controlsPlan: hasVideo
+    ? null
+    : resolvePopupMediaControlsInitPlan({
+        hasVideo: false,
+      }),
+});
+
 export const resolvePopupMediaControlsInitPlan = ({
   shouldUseCustomControls = false,
   hasVideo = true,

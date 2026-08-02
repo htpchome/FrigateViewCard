@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildPopupMediaUrl,
   buildPopupMediaControlState,
+  resolvePopupMediaRenderPlan,
   resolvePopupMediaControlsInitPlan,
   resolvePopupMediaControlsListenerPlan,
   resolvePopupMediaSeekTarget,
@@ -74,6 +75,47 @@ test("resolvePopupMediaControlsInitPlan separates native and custom popup contro
       controlsHidden: true,
       resetControlsHiddenClass: true,
       shouldBindCustomControls: false,
+    },
+  );
+});
+
+test("resolvePopupMediaRenderPlan normalizes popup media rendering state", () => {
+  assert.deepEqual(
+    resolvePopupMediaRenderPlan({
+      infoOpts: { mediaType: "Alert" },
+      fullscreenKind: "clip",
+      hasMediaElement: true,
+      html: "<img>",
+      hasVideo: true,
+    }),
+    {
+      popupMediaType: "alert",
+      shouldAppendMediaElement: true,
+      viewerHtml: "",
+      controlsPlan: null,
+    },
+  );
+
+  assert.deepEqual(
+    resolvePopupMediaRenderPlan({
+      infoOpts: null,
+      fullscreenKind: "Snapshot",
+      hasMediaElement: false,
+      html: '<img class="snap">',
+      hasVideo: false,
+    }),
+    {
+      popupMediaType: "snapshot",
+      shouldAppendMediaElement: false,
+      viewerHtml: '<img class="snap">',
+      controlsPlan: {
+        videoControlsEnabled: false,
+        removeVideoControlsAttribute: false,
+        setVideoControlsAttribute: false,
+        controlsHidden: true,
+        resetControlsHiddenClass: true,
+        shouldBindCustomControls: false,
+      },
     },
   );
 });
