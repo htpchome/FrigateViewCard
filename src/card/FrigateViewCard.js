@@ -182,8 +182,10 @@ import {
   buildFilterPanelMarkup,
 } from "./calendar-filter-markup.js";
 import {
+  buildPopupClipRenderPlan,
   buildPopupMediaUrl,
   buildPopupMediaControlState,
+  buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
   resolvePopupMediaControlsInitPlan,
   resolvePopupMediaControlsListenerPlan,
@@ -7447,43 +7449,47 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
   _showClip(ev, opts = {}) {
-    const src = this._buildPopupClipSrc(
-      ev.id,
-      isIOS ? "master.m3u8" : "clip.mp4",
-    );
-    const mediaType = opts.mediaType || "clip";
-    this._renderPopupMedia({
-      playingId: ev.id,
-      mediaElement: this._buildPopupVideo(src),
-      fullscreenKind: mediaType,
+    const renderPlan = buildPopupClipRenderPlan({
+      id: ev.id,
+      opts,
       infoEvent: ev,
-      infoOpts: { mediaType },
+      isIos: isIOS,
+    });
+    const src = this._buildPopupClipSrc(ev.id, renderPlan.mediaFile);
+    this._renderPopupMedia({
+      playingId: renderPlan.playingId,
+      mediaElement: this._buildPopupVideo(src),
+      fullscreenKind: renderPlan.fullscreenKind,
+      infoEvent: renderPlan.infoEvent,
+      infoOpts: renderPlan.infoOpts,
     });
   }
   _showClipById(id, opts = {}) {
     if (!id) return;
-    const src = this._buildPopupClipSrc(id, isIOS ? "master.m3u8" : "clip.mp4");
-    this._renderPopupMedia({
-      playingId: id,
-      mediaElement: this._buildPopupVideo(src),
-      fullscreenKind: opts.mediaType || "clip",
+    const renderPlan = buildPopupClipRenderPlan({
+      id,
+      opts,
       infoEvent: this._findEventById(id),
-      infoOpts: {
-        id,
-        mediaType: opts.mediaType || "clip",
-        startTime: opts.startTime,
-        camera: opts.camera,
-      },
+      isIos: isIOS,
+      includeLookupInfo: true,
+    });
+    const src = this._buildPopupClipSrc(id, renderPlan.mediaFile);
+    this._renderPopupMedia({
+      playingId: renderPlan.playingId,
+      mediaElement: this._buildPopupVideo(src),
+      fullscreenKind: renderPlan.fullscreenKind,
+      infoEvent: renderPlan.infoEvent,
+      infoOpts: renderPlan.infoOpts,
     });
   }
   _showSnapshot(ev, opts = {}) {
-    const mediaType = opts.mediaType || "snapshot";
+    const renderPlan = buildPopupSnapshotRenderPlan({ event: ev, opts });
     this._renderPopupMedia({
-      playingId: ev.id,
+      playingId: renderPlan.playingId,
       html: `<img class="snap" src="${this._media(ev.id, "snapshot.jpg")}">`,
-      fullscreenKind: mediaType,
-      infoEvent: ev,
-      infoOpts: { mediaType },
+      fullscreenKind: renderPlan.fullscreenKind,
+      infoEvent: renderPlan.infoEvent,
+      infoOpts: renderPlan.infoOpts,
     });
   }
 

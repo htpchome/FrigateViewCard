@@ -29,6 +29,42 @@ export const resolvePopupMediaRenderPlan = ({
       }),
 });
 
+export const buildPopupClipRenderPlan = ({
+  id = "",
+  opts = {},
+  infoEvent = null,
+  isIos = false,
+  includeLookupInfo = false,
+}) => {
+  const mediaType = opts.mediaType || "clip";
+  return {
+    playingId: id,
+    mediaFile: isIos ? "master.m3u8" : "clip.mp4",
+    mediaType,
+    fullscreenKind: mediaType,
+    infoEvent,
+    infoOpts: includeLookupInfo
+      ? {
+          id,
+          mediaType,
+          startTime: opts.startTime,
+          camera: opts.camera,
+        }
+      : { mediaType },
+  };
+};
+
+export const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
+  const mediaType = opts.mediaType || "snapshot";
+  return {
+    playingId: event?.id || "",
+    mediaType,
+    fullscreenKind: mediaType,
+    infoEvent: event,
+    infoOpts: { mediaType },
+  };
+};
+
 export const resolvePopupMediaControlsInitPlan = ({
   shouldUseCustomControls = false,
   hasVideo = true,

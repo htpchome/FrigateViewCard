@@ -2,8 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildPopupClipRenderPlan,
   buildPopupMediaUrl,
   buildPopupMediaControlState,
+  buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
   resolvePopupMediaControlsInitPlan,
   resolvePopupMediaControlsListenerPlan,
@@ -116,6 +118,67 @@ test("resolvePopupMediaRenderPlan normalizes popup media rendering state", () =>
         resetControlsHiddenClass: true,
         shouldBindCustomControls: false,
       },
+    },
+  );
+});
+
+test("buildPopupClipRenderPlan resolves clip defaults and iOS media file selection", () => {
+  assert.deepEqual(
+    buildPopupClipRenderPlan({
+      id: "abc",
+      infoEvent: { id: "abc" },
+      isIos: true,
+    }),
+    {
+      playingId: "abc",
+      mediaFile: "master.m3u8",
+      mediaType: "clip",
+      fullscreenKind: "clip",
+      infoEvent: { id: "abc" },
+      infoOpts: { mediaType: "clip" },
+    },
+  );
+
+  assert.deepEqual(
+    buildPopupClipRenderPlan({
+      id: "xyz",
+      opts: {
+        mediaType: "alert",
+        startTime: 42,
+        camera: "front",
+      },
+      infoEvent: null,
+      isIos: false,
+      includeLookupInfo: true,
+    }),
+    {
+      playingId: "xyz",
+      mediaFile: "clip.mp4",
+      mediaType: "alert",
+      fullscreenKind: "alert",
+      infoEvent: null,
+      infoOpts: {
+        id: "xyz",
+        mediaType: "alert",
+        startTime: 42,
+        camera: "front",
+      },
+    },
+  );
+});
+
+test("buildPopupSnapshotRenderPlan resolves snapshot defaults", () => {
+  assert.deepEqual(
+    buildPopupSnapshotRenderPlan({
+      event: { id: "snap-1" },
+      opts: {},
+    }),
+    {
+      playingId: "snap-1",
+      mediaType: "snapshot",
+      fullscreenKind: "snapshot",
+      infoEvent: { id: "snap-1" },
+      infoOpts: { mediaType: "snapshot" },
     },
   );
 });
