@@ -42,6 +42,40 @@ test("resolveActiveListScroller uses list when it is a scroll container", () => 
   }
 });
 
+test("resolveActiveListScroller falls back to browse when list overflow is hidden", () => {
+  const list = {
+    scrollTop: 0,
+    scrollHeight: 1000,
+    clientHeight: 400,
+  };
+  const browse = { scrollTop: 40 };
+
+  const originalGetComputedStyle = globalThis.getComputedStyle;
+  globalThis.getComputedStyle = () => ({ overflowY: "hidden" });
+  try {
+    assert.equal(resolveActiveListScroller({ list, browse }), browse);
+  } finally {
+    globalThis.getComputedStyle = originalGetComputedStyle;
+  }
+});
+
+test("resolveActiveListScroller returns to list after overflow auto is restored", () => {
+  const list = {
+    scrollTop: 0,
+    scrollHeight: 1000,
+    clientHeight: 400,
+  };
+  const browse = { scrollTop: 40 };
+
+  const originalGetComputedStyle = globalThis.getComputedStyle;
+  globalThis.getComputedStyle = () => ({ overflowY: "auto" });
+  try {
+    assert.equal(resolveActiveListScroller({ list, browse }), list);
+  } finally {
+    globalThis.getComputedStyle = originalGetComputedStyle;
+  }
+});
+
 test("resolveOlderHintMetrics tracks browse scroll when browse is active scroller", () => {
   const list = {
     scrollTop: 0,
