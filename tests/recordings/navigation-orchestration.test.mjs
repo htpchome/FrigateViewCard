@@ -345,6 +345,85 @@ test("_commitRecordingsDayTransition clears swipe-active state across repeated d
   ]);
 });
 
+test("mixed swipe and button recordings transitions both clear swipe-active state", async () => {
+  const firstBounds = { start: 100, end: 200 };
+  const secondBounds = { start: 200, end: 300 };
+  const calls = [];
+  const { ctx, removedClasses } = createCommitContext({
+    clientId: "client-a",
+    camera: "front",
+    recordings: [{ id: 1 }],
+    swipeActive: true,
+  });
+
+  ctx._tab = "recordings";
+  ctx._recordingsDayNavAnimating = false;
+  ctx._animateRecordingsSwipeStageTo = async (...args) => {
+    calls.push(["animate", ...args]);
+  };
+  ctx._commitRecordingsDayTransition =
+    FrigateViewCard.prototype._commitRecordingsDayTransition;
+  ctx._prepareRecordingsDayTransition = async (dir) => {
+    calls.push(["prepare", dir]);
+    return { hasData: true, bounds: secondBounds, recs: [{ id: 2 }] };
+  };
+  ctx._recordingsViewRows = (recordings) => recordings;
+  ctx._recordingsListMarkup = (recordings) => `rows:${recordings.length}`;
+  ctx._bounceRecordingsArea = (dir) => {
+    calls.push(["bounce", dir]);
+  };
+  ctx._updateRecordingsBrowseNav = async () => {
+    calls.push(["updateBrowseNav"]);
+  };
+  ctx._createRecordingsSwipeStage = (dir, incomingHtml) => {
+    calls.push(["createStage", dir, incomingHtml]);
+    return null;
+  };
+
+  const gesture = {
+    prepPromise: Promise.resolve(),
+    ready: true,
+    hasData: true,
+    direction: -1,
+    bounds: firstBounds,
+    recs: [{ id: 1 }],
+    stage: { width: 240 },
+  };
+
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = (cb) => {
+    cb();
+    return 1;
+  };
+
+  try {
+    const swipeResult =
+      await FrigateViewCard.prototype._completeRecordingsSwipeGesture.call(
+        ctx,
+        gesture,
+      );
+    const buttonResult =
+      await FrigateViewCard.prototype._navigateRecordingsDayAnimated.call(
+        ctx,
+        1,
+      );
+
+    assert.equal(swipeResult, true);
+    assert.equal(buttonResult, true);
+    assert.deepEqual(removedClasses, [
+      "recordings-swipe-active",
+      "recordings-swipe-active",
+    ]);
+    assert.deepEqual(calls, [
+      ["animate", gesture.stage, 240, 300, "cubic-bezier(0.28, 0.02, 0.18, 1)"],
+      ["prepare", 1],
+      ["createStage", 1, "rows:1"],
+    ]);
+  } finally {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+  }
+});
+
 test("_navigateRecordingsDayAnimated bounces and refreshes browse nav when no data is prepared", async () => {
   const bounds = { start: 100, end: 200 };
   const { ctx, calls, direction } = createNavigateContext({

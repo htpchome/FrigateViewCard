@@ -5761,11 +5761,6 @@ export class FrigateViewCard extends HTMLElement {
     const viewer = this._$("#viewer");
     if (!viewer) return;
 
-    if (this._popupMediaStopTimer) {
-      clearTimeout(this._popupMediaStopTimer);
-      this._popupMediaStopTimer = null;
-    }
-
     const cleanupVideos = (dropSources) => {
       viewer.querySelectorAll("video").forEach((v) => {
         try {
@@ -6837,6 +6832,10 @@ export class FrigateViewCard extends HTMLElement {
       clearTimeout(this._popupControlsHideTimer);
       this._popupControlsHideTimer = null;
     }
+    if (this._popupMediaStopTimer) {
+      clearTimeout(this._popupMediaStopTimer);
+      this._popupMediaStopTimer = null;
+    }
     if (this._popupMediaControlsController) {
       try {
         this._popupMediaControlsController.dispose();
@@ -7089,10 +7088,6 @@ export class FrigateViewCard extends HTMLElement {
   }) {
     this._enter();
     this._clearPopupMediaCleanup();
-    if (this._popupMediaStopTimer) {
-      clearTimeout(this._popupMediaStopTimer);
-      this._popupMediaStopTimer = null;
-    }
     const renderPlan = resolvePopupMediaRenderPlan({
       infoOpts,
       fullscreenKind,

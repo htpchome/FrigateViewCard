@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1143";
+const VERSION = "1.0.1144";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -14055,10 +14055,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._clearPopupMediaCleanup();
     const viewer = this._$("#viewer");
     if (!viewer) return;
-    if (this._popupMediaStopTimer) {
-      clearTimeout(this._popupMediaStopTimer);
-      this._popupMediaStopTimer = null;
-    }
     const cleanupVideos = (dropSources) => {
       viewer.querySelectorAll("video").forEach((v) => {
         try {
@@ -14992,6 +14988,10 @@ const FrigateViewCard = class extends HTMLElement {
       clearTimeout(this._popupControlsHideTimer);
       this._popupControlsHideTimer = null;
     }
+    if (this._popupMediaStopTimer) {
+      clearTimeout(this._popupMediaStopTimer);
+      this._popupMediaStopTimer = null;
+    }
     if (this._popupMediaControlsController) {
       try {
         this._popupMediaControlsController.dispose();
@@ -15237,10 +15237,6 @@ const FrigateViewCard = class extends HTMLElement {
   }) {
     this._enter();
     this._clearPopupMediaCleanup();
-    if (this._popupMediaStopTimer) {
-      clearTimeout(this._popupMediaStopTimer);
-      this._popupMediaStopTimer = null;
-    }
     const renderPlan = resolvePopupMediaRenderPlan({
       infoOpts,
       fullscreenKind,
