@@ -129,11 +129,7 @@ test("buildPopupCarouselContentPlan limits rendering and reuses render plan sema
   const rendered = [];
   const plan = buildPopupCarouselContentPlan({
     mediaType: "clip",
-    events: [
-      { id: "one" },
-      { id: "two" },
-      { id: "three" },
-    ],
+    events: [{ id: "one" }, { id: "two" }, { id: "three" }],
     activeId: "two",
     isTouchUi: true,
     limit: 2,
@@ -157,10 +153,10 @@ test("buildPopupCarouselContentPlan limits rendering and reuses render plan sema
 });
 
 test("buildPopupCarouselScrollPlan uses measured width or fallback", () => {
-  assert.deepEqual(
-    buildPopupCarouselScrollPlan({ itemWidth: 140, dir: -1 }),
-    { left: -148, behavior: "smooth" },
-  );
+  assert.deepEqual(buildPopupCarouselScrollPlan({ itemWidth: 140, dir: -1 }), {
+    left: -148,
+    behavior: "smooth",
+  });
   assert.deepEqual(buildPopupCarouselScrollPlan({ itemWidth: 0, dir: 1 }), {
     left: 140,
     behavior: "smooth",
