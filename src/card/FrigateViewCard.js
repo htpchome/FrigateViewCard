@@ -3042,6 +3042,21 @@ export class FrigateViewCard extends HTMLElement {
     this._setStreamLoading(mountUi.loading);
   }
 
+  _beginLiveMountSession(entity) {
+    const mountToken = this._beginMountTracking(entity);
+    const mountWatchdogT = setTimeout(
+      () => this._onMountWatchdogTimeout(mountToken),
+      9000,
+    );
+    return {
+      mountToken,
+      clearMountState: () => {
+        clearTimeout(mountWatchdogT);
+        this._clearMountTrackingIfCurrent(mountToken);
+      },
+    };
+  }
+
   async _mountEngine(forcedType = null, options = {}) {
     const quiet = options?.quiet === true;
     const slot = this.shadowRoot.querySelector("#engine");
@@ -3090,15 +3105,8 @@ export class FrigateViewCard extends HTMLElement {
         const graceMseEntry = graceMseAction.graceMseEntry;
         if (graceMseEntry?.promise) {
           this._engineMountedMuted = this._streamMuted;
-          const mountToken = this._beginMountTracking(entity);
-          const mountWatchdogT = setTimeout(
-            () => this._onMountWatchdogTimeout(mountToken),
-            9000,
-          );
-          const clearMountState = () => {
-            clearTimeout(mountWatchdogT);
-            this._clearMountTrackingIfCurrent(mountToken);
-          };
+          const { mountToken, clearMountState } =
+            this._beginLiveMountSession(entity);
           const graceResultPromise = (async () => {
             return resolveGraceMseMountResult({
               engine: await graceMseEntry.promise,
@@ -3141,11 +3149,7 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
     this._engineMountedMuted = this._streamMuted;
-    const mountToken = this._beginMountTracking(entity);
-    const mountWatchdogT = setTimeout(
-      () => this._onMountWatchdogTimeout(mountToken),
-      9000,
-    );
+    const { mountToken, clearMountState } = this._beginLiveMountSession(entity);
     try {
       this._cleanupEngine();
       slot.innerHTML = "";

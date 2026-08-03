@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1126";
+const VERSION = "1.0.1127";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10828,6 +10828,20 @@ const FrigateViewCard = class extends HTMLElement {
     );
     this._setStreamLoading(mountUi.loading);
   }
+  _beginLiveMountSession(entity) {
+    const mountToken = this._beginMountTracking(entity);
+    const mountWatchdogT2 = setTimeout(
+      () => this._onMountWatchdogTimeout(mountToken),
+      9e3
+    );
+    return {
+      mountToken,
+      clearMountState: () => {
+        clearTimeout(mountWatchdogT2);
+        this._clearMountTrackingIfCurrent(mountToken);
+      }
+    };
+  }
   async _mountEngine(forcedType = null, options = {}) {
     const quiet = options?.quiet === true;
     const slot = this.shadowRoot.querySelector("#engine");
@@ -10870,15 +10884,7 @@ const FrigateViewCard = class extends HTMLElement {
         const graceMseEntry = graceMseAction.graceMseEntry;
         if (graceMseEntry?.promise) {
           this._engineMountedMuted = this._streamMuted;
-          const mountToken2 = this._beginMountTracking(entity);
-          const mountWatchdogT2 = setTimeout(
-            () => this._onMountWatchdogTimeout(mountToken2),
-            9e3
-          );
-          const clearMountState = () => {
-            clearTimeout(mountWatchdogT2);
-            this._clearMountTrackingIfCurrent(mountToken2);
-          };
+          const { mountToken: mountToken2, clearMountState: clearMountState2 } = this._beginLiveMountSession(entity);
           const graceResultPromise = (async () => {
             return resolveGraceMseMountResult({
               engine: await graceMseEntry.promise
@@ -10903,11 +10909,11 @@ const FrigateViewCard = class extends HTMLElement {
             if (pendingOutcome.type === "stale-token") return;
             this._pendingMountDestroyers = [];
             if (this._adoptGraceMseEngine(slot, pendingOutcome.engine)) {
-              clearMountState();
+              clearMountState2();
               return;
             }
           } finally {
-            clearMountState();
+            clearMountState2();
             if (shouldClearPendingDestroyersForPromise({
               pendingDestroyers: this._pendingMountDestroyers,
               promise: graceResultPromise
@@ -10919,11 +10925,7 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._engineMountedMuted = this._streamMuted;
-    const mountToken = this._beginMountTracking(entity);
-    const mountWatchdogT = setTimeout(
-      () => this._onMountWatchdogTimeout(mountToken),
-      9e3
-    );
+    const { mountToken, clearMountState } = this._beginLiveMountSession(entity);
     try {
       this._cleanupEngine();
       slot.innerHTML = "";
