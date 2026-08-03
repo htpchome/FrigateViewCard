@@ -213,6 +213,12 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     true,
   );
   assert.equal(
+    /_mountEngine\([\s\S]*?const \{ mountToken, clearMountState \} = this\._beginLiveMountSession\(entity\);[\s\S]*?finally \{[\s\S]*?clearMountState\(\);[\s\S]*?\}/.test(
+      source,
+    ),
+    true,
+  );
+  assert.equal(
     /_scrollEventsToTop\(\) \{[\s\S]*?resolveActiveListScroller\(\{ list, browse \}\)[\s\S]*?scrollTo\(\{ top: 0, behavior: "smooth" \}\)/.test(
       source,
     ),
