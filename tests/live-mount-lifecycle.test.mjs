@@ -7,6 +7,7 @@ import {
   clearMountTrackingIfCurrent,
   invalidateMountTrackingIfActive,
   isLiveVideoStale,
+  resolveLiveKickProbeState,
   resolveLiveKickIfStaleAction,
   resolveLiveMountEntryAction,
   resolveLiveMountTransportPlan,
@@ -224,6 +225,35 @@ test("isLiveVideoStale treats missing readiness and paused decoded frames as sta
     }),
     false,
   );
+});
+
+test("resolveLiveKickProbeState maps live video fields for stale checks", () => {
+  assert.deepEqual(
+    resolveLiveKickProbeState({
+      video: {
+        readyState: 3,
+        ended: false,
+        paused: true,
+        currentTime: 1.25,
+        webkitDecodedFrameCount: 9,
+      },
+    }),
+    {
+      hasVideo: true,
+      videoState: {
+        readyState: 3,
+        ended: false,
+        paused: true,
+        currentTime: 1.25,
+        decodedFrames: 9,
+      },
+    },
+  );
+
+  assert.deepEqual(resolveLiveKickProbeState({ video: null }), {
+    hasVideo: false,
+    videoState: null,
+  });
 });
 
 test("resolveLiveKickIfStaleAction gates on cooldown and MSE traffic", () => {

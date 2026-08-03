@@ -112,6 +112,7 @@ import {
   invalidateMountTrackingIfActive,
   isLiveVideoStale,
   resolveLiveKickIfStaleAction,
+  resolveLiveKickProbeState,
   resolveLiveMountEntryAction,
   resolveLiveMountTransportPlan,
   resolveLiveMountUiState,
@@ -5744,6 +5745,7 @@ export class FrigateViewCard extends HTMLElement {
       this._findVideoDeep(this._engine) ||
       this._engine?.video ||
       null;
+    const probeState = resolveLiveKickProbeState({ video: v });
 
     const action = resolveLiveKickIfStaleAction({
       started: this._started,
@@ -5763,16 +5765,8 @@ export class FrigateViewCard extends HTMLElement {
       isFirefox: this._isFirefox(),
       mseConnectAt: this._mseConnectAt,
       mseLastChunkAt: this._mseLastChunkAt,
-      hasVideo: !!v,
-      videoState: v
-        ? {
-            readyState: v.readyState,
-            ended: v.ended,
-            paused: v.paused,
-            currentTime: v.currentTime,
-            decodedFrames: v.webkitDecodedFrameCount,
-          }
-        : null,
+      hasVideo: probeState.hasVideo,
+      videoState: probeState.videoState,
     });
 
     if (action.shouldKick) {

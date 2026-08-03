@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1122";
+const VERSION = "1.0.1123";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2920,6 +2920,16 @@ const isLiveVideoStale = ({
   const hasFrames = (Number(currentTime) || 0) > 0.05 || (Number(decodedFrames) || 0) > 0;
   return Boolean(ended) || Number(readyState) < 2 || Boolean(paused) && hasFrames;
 };
+const resolveLiveKickProbeState = ({ video = null } = {}) => ({
+  hasVideo: Boolean(video),
+  videoState: video ? {
+    readyState: video.readyState,
+    ended: video.ended,
+    paused: video.paused,
+    currentTime: video.currentTime,
+    decodedFrames: video.webkitDecodedFrameCount
+  } : null
+});
 const resolveLiveKickIfStaleAction = ({
   started,
   hass,
@@ -13120,6 +13130,7 @@ const FrigateViewCard = class extends HTMLElement {
     const now = Date.now();
     const engineHost = this._$("#engine");
     const v = this._findVideoDeep(engineHost) || this._findVideoDeep(this._engine) || this._engine?.video || null;
+    const probeState = resolveLiveKickProbeState({ video: v });
     const action = resolveLiveKickIfStaleAction({
       started: this._started,
       hass: this._hass,
@@ -13136,14 +13147,8 @@ const FrigateViewCard = class extends HTMLElement {
       isFirefox: this._isFirefox(),
       mseConnectAt: this._mseConnectAt,
       mseLastChunkAt: this._mseLastChunkAt,
-      hasVideo: !!v,
-      videoState: v ? {
-        readyState: v.readyState,
-        ended: v.ended,
-        paused: v.paused,
-        currentTime: v.currentTime,
-        decodedFrames: v.webkitDecodedFrameCount
-      } : null
+      hasVideo: probeState.hasVideo,
+      videoState: probeState.videoState
     });
     if (action.shouldKick) {
       this._lastLiveKick = action.nextLastLiveKick;

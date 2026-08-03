@@ -151,6 +151,19 @@ export const isLiveVideoStale = ({
   );
 };
 
+export const resolveLiveKickProbeState = ({ video = null } = {}) => ({
+  hasVideo: Boolean(video),
+  videoState: video
+    ? {
+        readyState: video.readyState,
+        ended: video.ended,
+        paused: video.paused,
+        currentTime: video.currentTime,
+        decodedFrames: video.webkitDecodedFrameCount,
+      }
+    : null,
+});
+
 export const resolveLiveKickIfStaleAction = ({
   started,
   hass,
