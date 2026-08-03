@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1134";
+const VERSION = "1.0.1135";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4984,6 +4984,38 @@ const resolvePopupCarouselRenderPlan = ({
     shouldClear: false,
     hidden: false,
     touch: Boolean(isTouchUi)
+  };
+};
+const buildPopupCarouselContentPlan = ({
+  mediaType = "",
+  events = [],
+  activeId = "",
+  isTouchUi = false,
+  limit = 200,
+  renderEvent = () => ""
+}) => {
+  const limitedEvents = [...events || []].slice(0, Number(limit || 0) || 0);
+  const renderPlan = resolvePopupCarouselRenderPlan({
+    mediaType,
+    eventCount: limitedEvents.length,
+    isTouchUi
+  });
+  return {
+    ...renderPlan,
+    html: renderPlan.shouldRender ? limitedEvents.map((event) => renderEvent(event, activeId)).join("") : ""
+  };
+};
+const buildPopupCarouselScrollPlan = ({
+  itemWidth = 0,
+  dir = 1,
+  gap = 8,
+  fallbackWidth = 132
+}) => {
+  const width = Number(itemWidth || 0) || Number(fallbackWidth || 0);
+  const step = width + Number(gap || 0);
+  return {
+    left: step * (Number(dir || 0) < 0 ? -1 : 1),
+    behavior: "smooth"
   };
 };
 const resolvePopupCarouselActiveScrollLeft = ({
@@ -14732,22 +14764,23 @@ const FrigateViewCard = class extends HTMLElement {
     const wrap = this._$("#popup-carousel-wrap");
     const row = this._$("#popup-carousel");
     if (!wrap || !row) return;
-    const events = this._popupCarouselEvents(mediaType).slice(0, 200);
-    const renderPlan = resolvePopupCarouselRenderPlan({
+    const contentPlan = buildPopupCarouselContentPlan({
       mediaType,
-      eventCount: events.length,
-      isTouchUi: this._isTouchPopupUi()
+      events: this._popupCarouselEvents(mediaType),
+      activeId,
+      isTouchUi: this._isTouchPopupUi(),
+      renderEvent: (ev, currentActiveId) => this._carouselEventItem(ev, currentActiveId)
     });
-    if (renderPlan.shouldClear) {
+    if (contentPlan.shouldClear) {
       row.innerHTML = "";
     }
-    wrap.hidden = renderPlan.hidden;
-    if (!renderPlan.shouldRender) {
+    wrap.hidden = contentPlan.hidden;
+    if (!contentPlan.shouldRender) {
       return;
     }
-    row.innerHTML = events.map((ev) => this._carouselEventItem(ev, activeId)).join("");
+    row.innerHTML = contentPlan.html;
     row.scrollLeft = 0;
-    wrap.classList.toggle("touch", renderPlan.touch);
+    wrap.classList.toggle("touch", contentPlan.touch);
     requestAnimationFrame(() => {
       const active = row.querySelector(".popup-carousel-item.active");
       if (active) {
@@ -14762,8 +14795,12 @@ const FrigateViewCard = class extends HTMLElement {
     const row = this._$("#popup-carousel");
     if (!row) return;
     const item = row.querySelector(".popup-carousel-item");
-    const step = (item?.getBoundingClientRect?.().width || 132) + 8;
-    row.scrollBy({ left: step * (dir < 0 ? -1 : 1), behavior: "smooth" });
+    row.scrollBy(
+      buildPopupCarouselScrollPlan({
+        itemWidth: item?.getBoundingClientRect?.().width,
+        dir
+      })
+    );
   }
   _renderPopupMedia({
     playingId,

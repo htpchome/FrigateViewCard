@@ -69,6 +69,43 @@ export const resolvePopupCarouselRenderPlan = ({
   };
 };
 
+export const buildPopupCarouselContentPlan = ({
+  mediaType = "",
+  events = [],
+  activeId = "",
+  isTouchUi = false,
+  limit = 200,
+  renderEvent = () => "",
+}) => {
+  const limitedEvents = [...(events || [])].slice(0, Number(limit || 0) || 0);
+  const renderPlan = resolvePopupCarouselRenderPlan({
+    mediaType,
+    eventCount: limitedEvents.length,
+    isTouchUi,
+  });
+
+  return {
+    ...renderPlan,
+    html: renderPlan.shouldRender
+      ? limitedEvents.map((event) => renderEvent(event, activeId)).join("")
+      : "",
+  };
+};
+
+export const buildPopupCarouselScrollPlan = ({
+  itemWidth = 0,
+  dir = 1,
+  gap = 8,
+  fallbackWidth = 132,
+}) => {
+  const width = Number(itemWidth || 0) || Number(fallbackWidth || 0);
+  const step = width + Number(gap || 0);
+  return {
+    left: step * (Number(dir || 0) < 0 ? -1 : 1),
+    behavior: "smooth",
+  };
+};
+
 export const resolvePopupCarouselActiveScrollLeft = ({
   activeOffsetLeft = 0,
   padding = 8,
