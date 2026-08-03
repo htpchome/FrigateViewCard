@@ -3271,8 +3271,7 @@ export class FrigateViewCard extends HTMLElement {
       // go2rtc attempts failed: show snapshot placeholder.
       this._applySnapshotFallbackState();
     } finally {
-      clearTimeout(mountWatchdogT);
-      this._clearMountTrackingIfCurrent(mountToken);
+      clearMountState();
     }
   }
 

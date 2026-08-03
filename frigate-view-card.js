@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1131";
+const VERSION = "1.0.1132";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10870,14 +10870,14 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _beginLiveMountSession(entity) {
     const mountToken = this._beginMountTracking(entity);
-    const mountWatchdogT2 = setTimeout(
+    const mountWatchdogT = setTimeout(
       () => this._onMountWatchdogTimeout(mountToken),
       9e3
     );
     return {
       mountToken,
       clearMountState: () => {
-        clearTimeout(mountWatchdogT2);
+        clearTimeout(mountWatchdogT);
         this._clearMountTrackingIfCurrent(mountToken);
       }
     };
@@ -11034,8 +11034,7 @@ const FrigateViewCard = class extends HTMLElement {
         return;
       this._applySnapshotFallbackState();
     } finally {
-      clearTimeout(mountWatchdogT);
-      this._clearMountTrackingIfCurrent(mountToken);
+      clearMountState();
     }
   }
   _isPreviewPageEnabled() {
