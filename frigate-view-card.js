@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1116";
+const VERSION = "1.0.1117";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4557,6 +4557,44 @@ const buildPopupRecordingRenderPlan = ({
   chunkEnd: playbackPlan.chunkEnd,
   sourceCandidates: playbackPlan.sourceCandidates || []
 });
+const resolvePopupRecordingLoadOutcomePlan = ({
+  playable = false,
+  popupMediaType = "recording",
+  fullscreenKind = "recording"
+}) => {
+  if (!playable) {
+    return {
+      shouldShowError: true,
+      errorHtml: '<div class="ld">Unable to load recording</div>',
+      shouldTeardownScrub: true,
+      shouldHideScrub: true,
+      shouldEnsureFullscreenButton: false,
+      shouldScheduleRotateOverlay: false,
+      shouldInitPopupMediaControls: false,
+      shouldRenderCarousel: false,
+      shouldShowPopupControls: false,
+      popupMediaType,
+      fullscreenKind,
+      carouselMediaType: "recording",
+      carouselActiveId: ""
+    };
+  }
+  return {
+    shouldShowError: false,
+    errorHtml: "",
+    shouldTeardownScrub: false,
+    shouldHideScrub: false,
+    shouldEnsureFullscreenButton: true,
+    shouldScheduleRotateOverlay: true,
+    shouldInitPopupMediaControls: true,
+    shouldRenderCarousel: true,
+    shouldShowPopupControls: true,
+    popupMediaType,
+    fullscreenKind,
+    carouselMediaType: "recording",
+    carouselActiveId: ""
+  };
+};
 const resolvePopupMediaControlsInitPlan = ({
   shouldUseCustomControls = false,
   hasVideo = true
@@ -14749,22 +14787,38 @@ const FrigateViewCard = class extends HTMLElement {
         }
       }
       if (!playable) {
+        const outcomePlan2 = resolvePopupRecordingLoadOutcomePlan({
+          playable,
+          popupMediaType: renderPlan.popupMediaType,
+          fullscreenKind: renderPlan.fullscreenKind
+        });
         for (const fn of mediaCleanup) {
           try {
             fn();
           } catch (_) {
           }
         }
-        viewer.innerHTML = '<div class="ld">Unable to load recording</div>';
-        this._teardownRecordingScrub();
+        if (outcomePlan2.shouldShowError) {
+          viewer.innerHTML = outcomePlan2.errorHtml;
+        }
+        if (outcomePlan2.shouldTeardownScrub) this._teardownRecordingScrub();
         const scrub = this._$("#recording-scrub");
-        if (scrub) scrub.hidden = true;
+        if (scrub && outcomePlan2.shouldHideScrub) scrub.hidden = true;
         return;
       }
     }
-    this._ensurePopupFullscreenButton(renderPlan.fullscreenKind);
-    this._scheduleRotateOverlayUpdate();
-    if (video && playable) {
+    const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
+      playable,
+      popupMediaType: renderPlan.popupMediaType,
+      fullscreenKind: renderPlan.fullscreenKind
+    });
+    if (outcomePlan.shouldEnsureFullscreenButton) {
+      this._ensurePopupFullscreenButton(outcomePlan.fullscreenKind);
+    }
+    if (outcomePlan.shouldScheduleRotateOverlay) {
+      this._scheduleRotateOverlayUpdate();
+    }
+    if (video && outcomePlan.shouldInitPopupMediaControls) {
       this._initPopupMediaControls(video, renderPlan.popupMediaType);
       this._initRecordingScrub({
         clientId,
@@ -14776,8 +14830,15 @@ const FrigateViewCard = class extends HTMLElement {
         sourceUrl: activeSource || video.currentSrc || video.src
       });
     }
-    this._renderPopupCarousel("recording", "");
-    this._showPopupControlsTemporarily();
+    if (outcomePlan.shouldRenderCarousel) {
+      this._renderPopupCarousel(
+        outcomePlan.carouselMediaType,
+        outcomePlan.carouselActiveId
+      );
+    }
+    if (outcomePlan.shouldShowPopupControls) {
+      this._showPopupControlsTemporarily();
+    }
     this._popupMediaCleanup = () => {
       for (const fn of mediaCleanup) {
         try {

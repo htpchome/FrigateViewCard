@@ -188,6 +188,7 @@ import {
   buildPopupRecordingRenderPlan,
   buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
+  resolvePopupRecordingLoadOutcomePlan,
   resolvePopupMediaControlsInitPlan,
   resolvePopupMediaControlsListenerPlan,
   resolvePopupMediaSeekTarget,
@@ -644,7 +645,6 @@ export class FrigateViewCard extends HTMLElement {
       scopeContext,
     );
   }
-
   _applyEditorPreviewDraft(previewConfig) {
     if (!this._isEditorPreviewContext()) return;
     if (!this._committedConfig) return;
@@ -2104,7 +2104,6 @@ export class FrigateViewCard extends HTMLElement {
         }
         resolve(ok);
       };
-
       if (abortSignal) {
         onAbort = () => done(false);
         if (abortSignal.aborted) {
@@ -2113,9 +2112,7 @@ export class FrigateViewCard extends HTMLElement {
         }
         abortSignal.addEventListener("abort", onAbort, { once: true });
       }
-
       const tick = setInterval(() => {
-        // stream elements often host the video inside shadow DOM.
         const v =
           streamEl.querySelector("video") ||
           streamEl.shadowRoot?.querySelector("video");
@@ -2124,8 +2121,6 @@ export class FrigateViewCard extends HTMLElement {
           frameCallbackBound = true;
           v.requestVideoFrameCallback(() => done(true));
         }
-
-        // Placeholder-ready signals for browsers without requestVideoFrameCallback.
         if (!eventBound) {
           eventBound = true;
           const finish = () => {
@@ -2136,7 +2131,6 @@ export class FrigateViewCard extends HTMLElement {
           v.addEventListener("playing", finish, { once: true });
           v.addEventListener("timeupdate", finish, { once: true });
         }
-
         const decoded =
           Number(v.webkitDecodedFrameCount) ||
           Number(v.getVideoPlaybackQuality?.().totalVideoFrames) ||
@@ -2146,7 +2140,6 @@ export class FrigateViewCard extends HTMLElement {
         const decodeOk = decoded >= minDecodedFrames;
         if (ready >= requireReadyState && (timeOk || decodeOk)) done(true);
       }, 180);
-
       const to = setTimeout(() => done(false), timeoutMs);
     });
   }
@@ -7652,21 +7645,37 @@ export class FrigateViewCard extends HTMLElement {
       }
 
       if (!playable) {
+        const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
+          playable,
+          popupMediaType: renderPlan.popupMediaType,
+          fullscreenKind: renderPlan.fullscreenKind,
+        });
         for (const fn of mediaCleanup) {
           try {
             fn();
           } catch (_) {}
         }
-        viewer.innerHTML = '<div class="ld">Unable to load recording</div>';
-        this._teardownRecordingScrub();
+        if (outcomePlan.shouldShowError) {
+          viewer.innerHTML = outcomePlan.errorHtml;
+        }
+        if (outcomePlan.shouldTeardownScrub) this._teardownRecordingScrub();
         const scrub = this._$("#recording-scrub");
-        if (scrub) scrub.hidden = true;
+        if (scrub && outcomePlan.shouldHideScrub) scrub.hidden = true;
         return;
       }
     }
-    this._ensurePopupFullscreenButton(renderPlan.fullscreenKind);
-    this._scheduleRotateOverlayUpdate();
-    if (video && playable) {
+    const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
+      playable,
+      popupMediaType: renderPlan.popupMediaType,
+      fullscreenKind: renderPlan.fullscreenKind,
+    });
+    if (outcomePlan.shouldEnsureFullscreenButton) {
+      this._ensurePopupFullscreenButton(outcomePlan.fullscreenKind);
+    }
+    if (outcomePlan.shouldScheduleRotateOverlay) {
+      this._scheduleRotateOverlayUpdate();
+    }
+    if (video && outcomePlan.shouldInitPopupMediaControls) {
       this._initPopupMediaControls(video, renderPlan.popupMediaType);
       this._initRecordingScrub({
         clientId,
@@ -7678,8 +7687,15 @@ export class FrigateViewCard extends HTMLElement {
         sourceUrl: activeSource || video.currentSrc || video.src,
       });
     }
-    this._renderPopupCarousel("recording", "");
-    this._showPopupControlsTemporarily();
+    if (outcomePlan.shouldRenderCarousel) {
+      this._renderPopupCarousel(
+        outcomePlan.carouselMediaType,
+        outcomePlan.carouselActiveId,
+      );
+    }
+    if (outcomePlan.shouldShowPopupControls) {
+      this._showPopupControlsTemporarily();
+    }
     this._popupMediaCleanup = () => {
       for (const fn of mediaCleanup) {
         try {

@@ -8,6 +8,7 @@ import {
   buildPopupRecordingRenderPlan,
   buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
+  resolvePopupRecordingLoadOutcomePlan,
   resolvePopupMediaControlsInitPlan,
   resolvePopupMediaControlsListenerPlan,
   resolvePopupMediaSeekTarget,
@@ -214,6 +215,47 @@ test("buildPopupRecordingRenderPlan resolves popup recording state and info opti
       },
       chunkEnd: 180,
       sourceCandidates: ["/a.m3u8", "/a.mp4"],
+    },
+  );
+});
+
+test("resolvePopupRecordingLoadOutcomePlan separates failure and success UI follow-up", () => {
+  assert.deepEqual(resolvePopupRecordingLoadOutcomePlan({ playable: false }), {
+    shouldShowError: true,
+    errorHtml: '<div class="ld">Unable to load recording</div>',
+    shouldTeardownScrub: true,
+    shouldHideScrub: true,
+    shouldEnsureFullscreenButton: false,
+    shouldScheduleRotateOverlay: false,
+    shouldInitPopupMediaControls: false,
+    shouldRenderCarousel: false,
+    shouldShowPopupControls: false,
+    popupMediaType: "recording",
+    fullscreenKind: "recording",
+    carouselMediaType: "recording",
+    carouselActiveId: "",
+  });
+
+  assert.deepEqual(
+    resolvePopupRecordingLoadOutcomePlan({
+      playable: true,
+      popupMediaType: "recording",
+      fullscreenKind: "recording",
+    }),
+    {
+      shouldShowError: false,
+      errorHtml: "",
+      shouldTeardownScrub: false,
+      shouldHideScrub: false,
+      shouldEnsureFullscreenButton: true,
+      shouldScheduleRotateOverlay: true,
+      shouldInitPopupMediaControls: true,
+      shouldRenderCarousel: true,
+      shouldShowPopupControls: true,
+      popupMediaType: "recording",
+      fullscreenKind: "recording",
+      carouselMediaType: "recording",
+      carouselActiveId: "",
     },
   );
 });

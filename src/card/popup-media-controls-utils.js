@@ -89,6 +89,46 @@ export const buildPopupRecordingRenderPlan = ({
   sourceCandidates: playbackPlan.sourceCandidates || [],
 });
 
+export const resolvePopupRecordingLoadOutcomePlan = ({
+  playable = false,
+  popupMediaType = "recording",
+  fullscreenKind = "recording",
+}) => {
+  if (!playable) {
+    return {
+      shouldShowError: true,
+      errorHtml: '<div class="ld">Unable to load recording</div>',
+      shouldTeardownScrub: true,
+      shouldHideScrub: true,
+      shouldEnsureFullscreenButton: false,
+      shouldScheduleRotateOverlay: false,
+      shouldInitPopupMediaControls: false,
+      shouldRenderCarousel: false,
+      shouldShowPopupControls: false,
+      popupMediaType,
+      fullscreenKind,
+      carouselMediaType: "recording",
+      carouselActiveId: "",
+    };
+  }
+
+  return {
+    shouldShowError: false,
+    errorHtml: "",
+    shouldTeardownScrub: false,
+    shouldHideScrub: false,
+    shouldEnsureFullscreenButton: true,
+    shouldScheduleRotateOverlay: true,
+    shouldInitPopupMediaControls: true,
+    shouldRenderCarousel: true,
+    shouldShowPopupControls: true,
+    popupMediaType,
+    fullscreenKind,
+    carouselMediaType: "recording",
+    carouselActiveId: "",
+  };
+};
+
 export const resolvePopupMediaControlsInitPlan = ({
   shouldUseCustomControls = false,
   hasVideo = true,
