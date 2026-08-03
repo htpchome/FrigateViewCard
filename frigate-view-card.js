@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1130";
+const VERSION = "1.0.1131";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10848,6 +10848,26 @@ const FrigateViewCard = class extends HTMLElement {
       fallbackState.refreshFallbackImage
     );
   }
+  _applyRotateOverlayUiPlan(card, uiPlan) {
+    if (!card || !uiPlan) return;
+    if (uiPlan.removeClasses.length) {
+      card.classList.remove(...uiPlan.removeClasses);
+    }
+    if (uiPlan.addClasses.length) {
+      card.classList.add(...uiPlan.addClasses);
+    }
+    this._rotateOverlayActive = uiPlan.active;
+    this._rotateOverlayMode = uiPlan.mode;
+    if (uiPlan.disableNativeControls) this._setLiveNativeControls(false);
+    if (uiPlan.clearLiveControlsVisible) {
+      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
+    }
+    if (uiPlan.clearLoading) this._setStreamLoading(false);
+    if (uiPlan.enableNativeControls) this._setLiveNativeControls(true);
+    if (uiPlan.syncFullscreenButtons) this._syncFullscreenButtonsVisibility();
+    if (uiPlan.showLiveControls) this._showLiveControlsTemporarily();
+    if (uiPlan.showPopupControls) this._showPopupControlsTemporarily();
+  }
   _beginLiveMountSession(entity) {
     const mountToken = this._beginMountTracking(entity);
     const mountWatchdogT2 = setTimeout(
@@ -13131,19 +13151,7 @@ const FrigateViewCard = class extends HTMLElement {
       clearTimeout(this._rotateOverlayExitT);
       this._rotateOverlayExitT = null;
     }
-    if (uiPlan.removeClasses.length)
-      card.classList.remove(...uiPlan.removeClasses);
-    if (uiPlan.addClasses.length) card.classList.add(...uiPlan.addClasses);
-    this._rotateOverlayActive = uiPlan.active;
-    this._rotateOverlayMode = uiPlan.mode;
-    if (uiPlan.disableNativeControls) this._setLiveNativeControls(false);
-    if (uiPlan.clearLiveControlsVisible)
-      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
-    if (uiPlan.clearLoading) this._setStreamLoading(false);
-    if (uiPlan.enableNativeControls) this._setLiveNativeControls(true);
-    if (uiPlan.syncFullscreenButtons) this._syncFullscreenButtonsVisibility();
-    if (uiPlan.showLiveControls) this._showLiveControlsTemporarily();
-    if (uiPlan.showPopupControls) this._showPopupControlsTemporarily();
+    this._applyRotateOverlayUiPlan(card, uiPlan);
     if (rotateState.action === "activate-live") {
       return;
     }

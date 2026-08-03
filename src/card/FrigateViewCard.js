@@ -3064,6 +3064,27 @@ export class FrigateViewCard extends HTMLElement {
     );
   }
 
+  _applyRotateOverlayUiPlan(card, uiPlan) {
+    if (!card || !uiPlan) return;
+    if (uiPlan.removeClasses.length) {
+      card.classList.remove(...uiPlan.removeClasses);
+    }
+    if (uiPlan.addClasses.length) {
+      card.classList.add(...uiPlan.addClasses);
+    }
+    this._rotateOverlayActive = uiPlan.active;
+    this._rotateOverlayMode = uiPlan.mode;
+    if (uiPlan.disableNativeControls) this._setLiveNativeControls(false);
+    if (uiPlan.clearLiveControlsVisible) {
+      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
+    }
+    if (uiPlan.clearLoading) this._setStreamLoading(false);
+    if (uiPlan.enableNativeControls) this._setLiveNativeControls(true);
+    if (uiPlan.syncFullscreenButtons) this._syncFullscreenButtonsVisibility();
+    if (uiPlan.showLiveControls) this._showLiveControlsTemporarily();
+    if (uiPlan.showPopupControls) this._showPopupControlsTemporarily();
+  }
+
   _beginLiveMountSession(entity) {
     const mountToken = this._beginMountTracking(entity);
     const mountWatchdogT = setTimeout(
@@ -5720,19 +5741,7 @@ export class FrigateViewCard extends HTMLElement {
       this._rotateOverlayExitT = null;
     }
 
-    if (uiPlan.removeClasses.length)
-      card.classList.remove(...uiPlan.removeClasses);
-    if (uiPlan.addClasses.length) card.classList.add(...uiPlan.addClasses);
-    this._rotateOverlayActive = uiPlan.active;
-    this._rotateOverlayMode = uiPlan.mode;
-    if (uiPlan.disableNativeControls) this._setLiveNativeControls(false);
-    if (uiPlan.clearLiveControlsVisible)
-      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
-    if (uiPlan.clearLoading) this._setStreamLoading(false);
-    if (uiPlan.enableNativeControls) this._setLiveNativeControls(true);
-    if (uiPlan.syncFullscreenButtons) this._syncFullscreenButtonsVisibility();
-    if (uiPlan.showLiveControls) this._showLiveControlsTemporarily();
-    if (uiPlan.showPopupControls) this._showPopupControlsTemporarily();
+    this._applyRotateOverlayUiPlan(card, uiPlan);
 
     if (rotateState.action === "activate-live") {
       return;
