@@ -214,6 +214,26 @@ export const resolveLiveKickIfStaleAction = ({
   };
 };
 
+export const resolveGraceMseReuseAction = ({
+  useGo2Rtc,
+  forcedType,
+  graceMseEntry,
+}) => {
+  if (!useGo2Rtc || (forcedType && forcedType !== "mse")) {
+    return { type: "skip", graceMseEntry: null };
+  }
+
+  if (graceMseEntry?.engine) {
+    return { type: "adopt-engine", graceMseEntry };
+  }
+
+  if (graceMseEntry?.promise) {
+    return { type: "await-promise", graceMseEntry };
+  }
+
+  return { type: "skip", graceMseEntry: null };
+};
+
 export const resolveLiveMountEntryAction = ({
   hasSlot,
   previewPageActive,

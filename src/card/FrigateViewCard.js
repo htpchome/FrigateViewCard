@@ -111,6 +111,7 @@ import {
   clearMountTrackingIfCurrent,
   invalidateMountTrackingIfActive,
   isLiveVideoStale,
+  resolveGraceMseReuseAction,
   resolveLiveKickIfStaleAction,
   resolveLiveKickProbeState,
   resolveLiveMountEntryAction,
@@ -3061,59 +3062,70 @@ export class FrigateViewCard extends HTMLElement {
     const entity = mountEntry.entity;
     const useGo2Rtc = this._shouldUseGo2RtcForEntity(entity);
     if (useGo2Rtc && (!forcedType || forcedType === "mse")) {
-      const graceMseEntry = this._takeGraceMseEntry(entity);
-      if (graceMseEntry?.engine) {
-        if (this._adoptGraceMseEngine(slot, graceMseEntry.engine)) return;
-      } else if (graceMseEntry?.promise) {
-        this._engineMountedMuted = this._streamMuted;
-        const mountToken = this._beginMountTracking(entity);
-        const mountWatchdogT = setTimeout(
-          () => this._onMountWatchdogTimeout(mountToken),
-          9000,
-        );
-        const clearMountState = () => {
-          clearTimeout(mountWatchdogT);
-          this._clearMountTrackingIfCurrent(mountToken);
-        };
-        const graceResultPromise = (async () => {
-          return resolveGraceMseMountResult({
-            engine: await graceMseEntry.promise,
-          });
-        })();
-        this._pendingMountDestroyers = [
-          createGracePendingMountDestroyer({
-            entity,
-            promise: graceResultPromise,
-          }),
-        ];
-        slot.innerHTML = "";
-        const mountUi = resolveLiveMountUiState({ quiet });
-        if (mountUi.activeStreamType != null) {
-          this._setActiveStreamType(mountUi.activeStreamType);
+      const graceMseAction = resolveGraceMseReuseAction({
+        useGo2Rtc,
+        forcedType,
+        graceMseEntry: this._takeGraceMseEntry(entity),
+      });
+      if (graceMseAction.type === "adopt-engine") {
+        if (
+          this._adoptGraceMseEngine(slot, graceMseAction.graceMseEntry.engine)
+        ) {
+          return;
         }
-        this._setStreamFallbackVisible(
-          mountUi.fallbackVisible,
-          mountUi.refreshFallbackImage,
-        );
-        this._setStreamLoading(mountUi.loading);
-        try {
-          const graceResult = await graceResultPromise;
-          if (!graceResult?.engine) return;
-          if (this._mountSeq !== mountToken) return;
-          this._pendingMountDestroyers = [];
-          if (this._adoptGraceMseEngine(slot, graceResult.engine)) {
-            clearMountState();
-            return;
-          }
-        } finally {
-          clearMountState();
-          if (
-            shouldClearPendingDestroyersForPromise({
-              pendingDestroyers: this._pendingMountDestroyers,
+      } else if (graceMseAction.type === "await-promise") {
+        const graceMseEntry = graceMseAction.graceMseEntry;
+        if (graceMseEntry?.promise) {
+          this._engineMountedMuted = this._streamMuted;
+          const mountToken = this._beginMountTracking(entity);
+          const mountWatchdogT = setTimeout(
+            () => this._onMountWatchdogTimeout(mountToken),
+            9000,
+          );
+          const clearMountState = () => {
+            clearTimeout(mountWatchdogT);
+            this._clearMountTrackingIfCurrent(mountToken);
+          };
+          const graceResultPromise = (async () => {
+            return resolveGraceMseMountResult({
+              engine: await graceMseEntry.promise,
+            });
+          })();
+          this._pendingMountDestroyers = [
+            createGracePendingMountDestroyer({
+              entity,
               promise: graceResultPromise,
-            })
-          ) {
+            }),
+          ];
+          slot.innerHTML = "";
+          const mountUi = resolveLiveMountUiState({ quiet });
+          if (mountUi.activeStreamType != null) {
+            this._setActiveStreamType(mountUi.activeStreamType);
+          }
+          this._setStreamFallbackVisible(
+            mountUi.fallbackVisible,
+            mountUi.refreshFallbackImage,
+          );
+          this._setStreamLoading(mountUi.loading);
+          try {
+            const graceResult = await graceResultPromise;
+            if (!graceResult?.engine) return;
+            if (this._mountSeq !== mountToken) return;
             this._pendingMountDestroyers = [];
+            if (this._adoptGraceMseEngine(slot, graceResult.engine)) {
+              clearMountState();
+              return;
+            }
+          } finally {
+            clearMountState();
+            if (
+              shouldClearPendingDestroyersForPromise({
+                pendingDestroyers: this._pendingMountDestroyers,
+                promise: graceResultPromise,
+              })
+            ) {
+              this._pendingMountDestroyers = [];
+            }
           }
         }
       }

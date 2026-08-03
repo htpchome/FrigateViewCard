@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1123";
+const VERSION = "1.0.1124";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2973,6 +2973,22 @@ const resolveLiveKickIfStaleAction = ({
     shouldKick: stale,
     nextLastLiveKick: stale ? nowMs : lastLiveKick
   };
+};
+const resolveGraceMseReuseAction = ({
+  useGo2Rtc,
+  forcedType,
+  graceMseEntry
+}) => {
+  if (!useGo2Rtc || forcedType && forcedType !== "mse") {
+    return { type: "skip", graceMseEntry: null };
+  }
+  if (graceMseEntry?.engine) {
+    return { type: "adopt-engine", graceMseEntry };
+  }
+  if (graceMseEntry?.promise) {
+    return { type: "await-promise", graceMseEntry };
+  }
+  return { type: "skip", graceMseEntry: null };
 };
 const resolveLiveMountEntryAction = ({
   hasSlot,
@@ -10817,57 +10833,66 @@ const FrigateViewCard = class extends HTMLElement {
     const entity = mountEntry.entity;
     const useGo2Rtc = this._shouldUseGo2RtcForEntity(entity);
     if (useGo2Rtc && (!forcedType || forcedType === "mse")) {
-      const graceMseEntry = this._takeGraceMseEntry(entity);
-      if (graceMseEntry?.engine) {
-        if (this._adoptGraceMseEngine(slot, graceMseEntry.engine)) return;
-      } else if (graceMseEntry?.promise) {
-        this._engineMountedMuted = this._streamMuted;
-        const mountToken2 = this._beginMountTracking(entity);
-        const mountWatchdogT2 = setTimeout(
-          () => this._onMountWatchdogTimeout(mountToken2),
-          9e3
-        );
-        const clearMountState = () => {
-          clearTimeout(mountWatchdogT2);
-          this._clearMountTrackingIfCurrent(mountToken2);
-        };
-        const graceResultPromise = (async () => {
-          return resolveGraceMseMountResult({
-            engine: await graceMseEntry.promise
-          });
-        })();
-        this._pendingMountDestroyers = [
-          createGracePendingMountDestroyer({
-            entity,
-            promise: graceResultPromise
-          })
-        ];
-        slot.innerHTML = "";
-        const mountUi = resolveLiveMountUiState({ quiet });
-        if (mountUi.activeStreamType != null) {
-          this._setActiveStreamType(mountUi.activeStreamType);
+      const graceMseAction = resolveGraceMseReuseAction({
+        useGo2Rtc,
+        forcedType,
+        graceMseEntry: this._takeGraceMseEntry(entity)
+      });
+      if (graceMseAction.type === "adopt-engine") {
+        if (this._adoptGraceMseEngine(slot, graceMseAction.graceMseEntry.engine)) {
+          return;
         }
-        this._setStreamFallbackVisible(
-          mountUi.fallbackVisible,
-          mountUi.refreshFallbackImage
-        );
-        this._setStreamLoading(mountUi.loading);
-        try {
-          const graceResult = await graceResultPromise;
-          if (!graceResult?.engine) return;
-          if (this._mountSeq !== mountToken2) return;
-          this._pendingMountDestroyers = [];
-          if (this._adoptGraceMseEngine(slot, graceResult.engine)) {
-            clearMountState();
-            return;
+      } else if (graceMseAction.type === "await-promise") {
+        const graceMseEntry = graceMseAction.graceMseEntry;
+        if (graceMseEntry?.promise) {
+          this._engineMountedMuted = this._streamMuted;
+          const mountToken2 = this._beginMountTracking(entity);
+          const mountWatchdogT2 = setTimeout(
+            () => this._onMountWatchdogTimeout(mountToken2),
+            9e3
+          );
+          const clearMountState = () => {
+            clearTimeout(mountWatchdogT2);
+            this._clearMountTrackingIfCurrent(mountToken2);
+          };
+          const graceResultPromise = (async () => {
+            return resolveGraceMseMountResult({
+              engine: await graceMseEntry.promise
+            });
+          })();
+          this._pendingMountDestroyers = [
+            createGracePendingMountDestroyer({
+              entity,
+              promise: graceResultPromise
+            })
+          ];
+          slot.innerHTML = "";
+          const mountUi = resolveLiveMountUiState({ quiet });
+          if (mountUi.activeStreamType != null) {
+            this._setActiveStreamType(mountUi.activeStreamType);
           }
-        } finally {
-          clearMountState();
-          if (shouldClearPendingDestroyersForPromise({
-            pendingDestroyers: this._pendingMountDestroyers,
-            promise: graceResultPromise
-          })) {
+          this._setStreamFallbackVisible(
+            mountUi.fallbackVisible,
+            mountUi.refreshFallbackImage
+          );
+          this._setStreamLoading(mountUi.loading);
+          try {
+            const graceResult = await graceResultPromise;
+            if (!graceResult?.engine) return;
+            if (this._mountSeq !== mountToken2) return;
             this._pendingMountDestroyers = [];
+            if (this._adoptGraceMseEngine(slot, graceResult.engine)) {
+              clearMountState();
+              return;
+            }
+          } finally {
+            clearMountState();
+            if (shouldClearPendingDestroyersForPromise({
+              pendingDestroyers: this._pendingMountDestroyers,
+              promise: graceResultPromise
+            })) {
+              this._pendingMountDestroyers = [];
+            }
           }
         }
       }

@@ -7,6 +7,7 @@ import {
   clearMountTrackingIfCurrent,
   invalidateMountTrackingIfActive,
   isLiveVideoStale,
+  resolveGraceMseReuseAction,
   resolveLiveKickProbeState,
   resolveLiveKickIfStaleAction,
   resolveLiveMountEntryAction,
@@ -329,6 +330,58 @@ test("resolveLiveKickIfStaleAction kicks stale video and updates kick timestamp"
     shouldKick: true,
     nextLastLiveKick: 7000,
   });
+});
+
+test("resolveGraceMseReuseAction classifies grace reuse branches", () => {
+  assert.deepEqual(
+    resolveGraceMseReuseAction({
+      useGo2Rtc: false,
+      forcedType: null,
+      graceMseEntry: { engine: {} },
+    }),
+    {
+      type: "skip",
+      graceMseEntry: null,
+    },
+  );
+
+  const engineEntry = { engine: { video: {} } };
+  assert.deepEqual(
+    resolveGraceMseReuseAction({
+      useGo2Rtc: true,
+      forcedType: null,
+      graceMseEntry: engineEntry,
+    }),
+    {
+      type: "adopt-engine",
+      graceMseEntry: engineEntry,
+    },
+  );
+
+  const promiseEntry = { promise: Promise.resolve(null) };
+  assert.deepEqual(
+    resolveGraceMseReuseAction({
+      useGo2Rtc: true,
+      forcedType: "mse",
+      graceMseEntry: promiseEntry,
+    }),
+    {
+      type: "await-promise",
+      graceMseEntry: promiseEntry,
+    },
+  );
+
+  assert.deepEqual(
+    resolveGraceMseReuseAction({
+      useGo2Rtc: true,
+      forcedType: "webrtc",
+      graceMseEntry: engineEntry,
+    }),
+    {
+      type: "skip",
+      graceMseEntry: null,
+    },
+  );
 });
 
 test("resolveLiveMountEntryAction classifies pre-mount early returns", () => {
