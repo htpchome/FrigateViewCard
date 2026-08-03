@@ -111,6 +111,7 @@ import {
   clearMountTrackingIfCurrent,
   invalidateMountTrackingIfActive,
   isLiveVideoStale,
+  resolveGraceMsePendingMountOutcome,
   resolveGraceMseReuseAction,
   resolveLiveKickIfStaleAction,
   resolveLiveKickProbeState,
@@ -3109,10 +3110,15 @@ export class FrigateViewCard extends HTMLElement {
           this._setStreamLoading(mountUi.loading);
           try {
             const graceResult = await graceResultPromise;
-            if (!graceResult?.engine) return;
-            if (this._mountSeq !== mountToken) return;
+            const pendingOutcome = resolveGraceMsePendingMountOutcome({
+              graceResult,
+              mountSeq: this._mountSeq,
+              mountToken,
+            });
+            if (pendingOutcome.type === "missing-engine") return;
+            if (pendingOutcome.type === "stale-token") return;
             this._pendingMountDestroyers = [];
-            if (this._adoptGraceMseEngine(slot, graceResult.engine)) {
+            if (this._adoptGraceMseEngine(slot, pendingOutcome.engine)) {
               clearMountState();
               return;
             }

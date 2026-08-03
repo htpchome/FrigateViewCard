@@ -234,6 +234,22 @@ export const resolveGraceMseReuseAction = ({
   return { type: "skip", graceMseEntry: null };
 };
 
+export const resolveGraceMsePendingMountOutcome = ({
+  graceResult,
+  mountSeq,
+  mountToken,
+}) => {
+  if (!graceResult?.engine) {
+    return { type: "missing-engine" };
+  }
+
+  if (mountSeq !== mountToken) {
+    return { type: "stale-token" };
+  }
+
+  return { type: "adopt-engine", engine: graceResult.engine };
+};
+
 export const resolveLiveMountEntryAction = ({
   hasSlot,
   previewPageActive,

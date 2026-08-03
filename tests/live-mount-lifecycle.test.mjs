@@ -7,6 +7,7 @@ import {
   clearMountTrackingIfCurrent,
   invalidateMountTrackingIfActive,
   isLiveVideoStale,
+  resolveGraceMsePendingMountOutcome,
   resolveGraceMseReuseAction,
   resolveLiveKickProbeState,
   resolveLiveKickIfStaleAction,
@@ -380,6 +381,39 @@ test("resolveGraceMseReuseAction classifies grace reuse branches", () => {
     {
       type: "skip",
       graceMseEntry: null,
+    },
+  );
+});
+
+test("resolveGraceMsePendingMountOutcome classifies awaited grace results", () => {
+  assert.deepEqual(
+    resolveGraceMsePendingMountOutcome({
+      graceResult: null,
+      mountSeq: 4,
+      mountToken: 4,
+    }),
+    { type: "missing-engine" },
+  );
+
+  assert.deepEqual(
+    resolveGraceMsePendingMountOutcome({
+      graceResult: { engine: { video: {} } },
+      mountSeq: 5,
+      mountToken: 4,
+    }),
+    { type: "stale-token" },
+  );
+
+  const engine = { video: {} };
+  assert.deepEqual(
+    resolveGraceMsePendingMountOutcome({
+      graceResult: { engine },
+      mountSeq: 4,
+      mountToken: 4,
+    }),
+    {
+      type: "adopt-engine",
+      engine,
     },
   );
 });

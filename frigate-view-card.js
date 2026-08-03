@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1124";
+const VERSION = "1.0.1125";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2989,6 +2989,19 @@ const resolveGraceMseReuseAction = ({
     return { type: "await-promise", graceMseEntry };
   }
   return { type: "skip", graceMseEntry: null };
+};
+const resolveGraceMsePendingMountOutcome = ({
+  graceResult,
+  mountSeq,
+  mountToken
+}) => {
+  if (!graceResult?.engine) {
+    return { type: "missing-engine" };
+  }
+  if (mountSeq !== mountToken) {
+    return { type: "stale-token" };
+  }
+  return { type: "adopt-engine", engine: graceResult.engine };
 };
 const resolveLiveMountEntryAction = ({
   hasSlot,
@@ -10878,10 +10891,15 @@ const FrigateViewCard = class extends HTMLElement {
           this._setStreamLoading(mountUi.loading);
           try {
             const graceResult = await graceResultPromise;
-            if (!graceResult?.engine) return;
-            if (this._mountSeq !== mountToken2) return;
+            const pendingOutcome = resolveGraceMsePendingMountOutcome({
+              graceResult,
+              mountSeq: this._mountSeq,
+              mountToken: mountToken2
+            });
+            if (pendingOutcome.type === "missing-engine") return;
+            if (pendingOutcome.type === "stale-token") return;
             this._pendingMountDestroyers = [];
-            if (this._adoptGraceMseEngine(slot, graceResult.engine)) {
+            if (this._adoptGraceMseEngine(slot, pendingOutcome.engine)) {
               clearMountState();
               return;
             }
