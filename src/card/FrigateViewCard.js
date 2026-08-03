@@ -3042,6 +3042,18 @@ export class FrigateViewCard extends HTMLElement {
     this._setStreamLoading(mountUi.loading);
   }
 
+  _applyResolvedStreamUiState(streamState) {
+    if (!streamState) return;
+    this._setStreamLoading(streamState.loading);
+    this._setStreamFallbackVisible(
+      streamState.fallbackVisible,
+      streamState.refreshFallbackImage,
+    );
+    if (streamState.enableNativeControls) {
+      this._setLiveNativeControls(true);
+    }
+  }
+
   _beginLiveMountSession(entity) {
     const mountToken = this._beginMountTracking(entity);
     const mountWatchdogT = setTimeout(
@@ -3171,11 +3183,7 @@ export class FrigateViewCard extends HTMLElement {
         const stateObj = this._hlsStateObj(entity, streamType);
         if (!stateObj) {
           const unavailableState = resolveHaDirectMountUnavailableState();
-          this._setStreamLoading(unavailableState.loading);
-          this._setStreamFallbackVisible(
-            unavailableState.fallbackVisible,
-            unavailableState.refreshFallbackImage,
-          );
+          this._applyResolvedStreamUiState(unavailableState);
           return;
         }
 
@@ -3206,14 +3214,7 @@ export class FrigateViewCard extends HTMLElement {
             waitSucceeded: ok,
           });
           if (readyState.shouldApply) {
-            this._setStreamLoading(readyState.loading);
-            this._setStreamFallbackVisible(
-              readyState.fallbackVisible,
-              readyState.refreshFallbackImage,
-            );
-            if (readyState.enableNativeControls) {
-              this._setLiveNativeControls(true);
-            }
+            this._applyResolvedStreamUiState(readyState);
           }
         })();
         setTimeout(() => {
@@ -3222,14 +3223,7 @@ export class FrigateViewCard extends HTMLElement {
             isCurrentEngine: this._engine === s,
           });
           if (stabilizedState.shouldApply) {
-            this._setStreamLoading(stabilizedState.loading);
-            this._setStreamFallbackVisible(
-              stabilizedState.fallbackVisible,
-              stabilizedState.refreshFallbackImage,
-            );
-            if (stabilizedState.enableNativeControls) {
-              this._setLiveNativeControls(true);
-            }
+            this._applyResolvedStreamUiState(stabilizedState);
           }
         }, 1200);
         return;
