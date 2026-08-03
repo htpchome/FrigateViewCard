@@ -1,7 +1,10 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
+const __defProp = Object.defineProperty;
+const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1136";
+const VERSION = "1.0.1137";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5724,6 +5727,273 @@ function splitRecordingsHourly(recordings = [], nowSec = Date.now() / 1e3) {
   return buckets;
 }
 
+// src/card/cleanup-controller.js
+const CleanupController = class {
+  constructor() {
+    this._abortController = new AbortController();
+    this._cleanups = [];
+    this._disposed = false;
+  }
+  get signal() {
+    return this._abortController.signal;
+  }
+  addEventListener(target, type, listener, options = {}) {
+    if (this._disposed || !target?.addEventListener || !listener) return;
+    const normalizedOptions = typeof options === "boolean" ? { capture: options } : { ...options };
+    target.addEventListener(type, listener, {
+      ...normalizedOptions,
+      signal: this.signal
+    });
+  }
+  addCleanup(cleanup) {
+    if (typeof cleanup !== "function") return;
+    if (this._disposed) {
+      try {
+        cleanup();
+      } catch (_) {
+      }
+      return;
+    }
+    this._cleanups.push(cleanup);
+  }
+  dispose() {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._abortController.abort();
+    for (const cleanup of this._cleanups.splice(0).reverse()) {
+      try {
+        cleanup();
+      } catch (_) {
+      }
+    }
+  }
+};
+
+// src/card/recordings/swipe-controller.js
+const RecordingsSwipeController = class {
+  constructor({
+    browse,
+    getTab,
+    isMobileTabletViewport,
+    isDayNavAnimating,
+    getGesture,
+    setGesture,
+    setTapBlocked,
+    destroyGestureStage,
+    startGestureStage,
+    setStageOffset,
+    animateStageTo,
+    completeGesture,
+    bounceArea
+  }) {
+    __publicField(this, "_canSwipe", () => this._getTab?.() === "recordings" && this._isMobileTabletViewport?.() && !this._isDayNavAnimating?.());
+    __publicField(this, "_resetGesture", ({ clearTapBlock = true } = {}) => {
+      if (this._getGesture?.()?.stage) {
+        this._destroyGestureStage?.();
+      }
+      this._setGesture?.(null);
+      if (clearTapBlock) this._setTapBlocked?.(false);
+      this._tracking = false;
+      this._horizontal = false;
+      this._direction = 0;
+      this._deltaX = 0;
+      this._deltaY = 0;
+      if (this._pointerId != null && this._browse?.hasPointerCapture?.(this._pointerId)) {
+        try {
+          this._browse.releasePointerCapture(this._pointerId);
+        } catch (_) {
+        }
+      }
+      this._pointerId = null;
+      if (this._browse) {
+        this._browse.classList.remove("recordings-swipe");
+        this._browse.style.transform = "";
+      }
+    });
+    __publicField(this, "_finishSwipe", async () => {
+      if (!this._tracking) return;
+      const absX = Math.abs(this._deltaX);
+      const absY = Math.abs(this._deltaY);
+      const direction = this._direction;
+      const gesture = this._getGesture?.();
+      const stage = gesture?.stage;
+      this._tracking = false;
+      this._pointerId = null;
+      this._browse.classList.remove("recordings-swipe");
+      this._browse.style.transform = "";
+      if (!this._horizontal || !stage || !gesture || !direction || absX <= absY) {
+        this._resetGesture();
+        return;
+      }
+      const threshold = Math.max(34, stage.width * 0.12);
+      if (absX < threshold) {
+        await this._animateStageTo?.(
+          stage,
+          0,
+          140,
+          "cubic-bezier(0.16, 0.64, 0.2, 1)"
+        );
+        if (this._disposed) return;
+        this._resetGesture({ clearTapBlock: false });
+        return;
+      }
+      const moved = await this._completeGesture?.(gesture);
+      if (this._disposed) return;
+      if (!moved) {
+        await this._animateStageTo?.(
+          stage,
+          0,
+          150,
+          "cubic-bezier(0.16, 0.64, 0.2, 1)"
+        );
+        if (this._disposed) return;
+        this._bounceArea?.(direction);
+      }
+      this._scheduleTapBlockClear();
+      this._resetGesture({ clearTapBlock: false });
+    });
+    __publicField(this, "_onPointerDown", (event) => {
+      if (!this._canSwipe()) return;
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      if (this._pointerId != null) return;
+      this._pointerId = event.pointerId;
+      this._startGesture(event.clientX, event.clientY);
+    });
+    __publicField(this, "_onPointerMove", (event) => {
+      if (event.pointerId !== this._pointerId) return;
+      this._moveGesture(event.clientX, event.clientY, event);
+    });
+    __publicField(this, "_onPointerUp", (event) => {
+      if (event.pointerId !== this._pointerId) return;
+      void this._finishSwipe();
+    });
+    __publicField(this, "_onPointerCancel", () => {
+      this._resetGesture();
+    });
+    this._browse = browse;
+    this._getTab = getTab;
+    this._isMobileTabletViewport = isMobileTabletViewport;
+    this._isDayNavAnimating = isDayNavAnimating;
+    this._getGesture = getGesture;
+    this._setGesture = setGesture;
+    this._setTapBlocked = setTapBlocked;
+    this._destroyGestureStage = destroyGestureStage;
+    this._startGestureStage = startGestureStage;
+    this._setStageOffset = setStageOffset;
+    this._animateStageTo = animateStageTo;
+    this._completeGesture = completeGesture;
+    this._bounceArea = bounceArea;
+    this._cleanup = new CleanupController();
+    this._tracking = false;
+    this._horizontal = false;
+    this._direction = 0;
+    this._pointerId = null;
+    this._startX = 0;
+    this._startY = 0;
+    this._deltaX = 0;
+    this._deltaY = 0;
+    this._disposed = false;
+    this._tapBlockTimer = null;
+    this._axisLockThreshold = this._isMobileTabletViewport() ? 6 : 8;
+    this._dragFollowFactor = this._isMobileTabletViewport() ? 1 : 0.85;
+  }
+  bind() {
+    if (!this._browse) return;
+    this._cleanup.addEventListener(
+      this._browse,
+      "pointerdown",
+      this._onPointerDown
+    );
+    this._cleanup.addEventListener(
+      this._browse,
+      "pointermove",
+      this._onPointerMove
+    );
+    this._cleanup.addEventListener(
+      this._browse,
+      "pointerup",
+      this._onPointerUp
+    );
+    this._cleanup.addEventListener(
+      this._browse,
+      "pointercancel",
+      this._onPointerCancel
+    );
+  }
+  dispose() {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._clearTapBlockTimer();
+    this._resetGesture();
+    this._cleanup.dispose();
+  }
+  _clearTapBlockTimer() {
+    if (!this._tapBlockTimer) return;
+    clearTimeout(this._tapBlockTimer);
+    this._tapBlockTimer = null;
+  }
+  _scheduleTapBlockClear() {
+    this._clearTapBlockTimer();
+    this._tapBlockTimer = setTimeout(() => {
+      this._tapBlockTimer = null;
+      if (this._disposed) return;
+      this._setTapBlocked?.(false);
+    }, 320);
+    this._cleanup.addCleanup(() => this._clearTapBlockTimer());
+  }
+  _ensureGestureStage(direction) {
+    if (this._getGesture?.()?.direction === direction) return;
+    this._setGesture?.(this._startGestureStage?.(direction) || null);
+  }
+  _startGesture(clientX, clientY) {
+    this._startX = clientX;
+    this._startY = clientY;
+    this._deltaX = 0;
+    this._deltaY = 0;
+    this._tracking = true;
+    this._horizontal = false;
+    this._direction = 0;
+    this._setTapBlocked?.(false);
+  }
+  _moveGesture(clientX, clientY, event) {
+    if (!this._tracking || !this._canSwipe()) return;
+    this._deltaX = clientX - this._startX;
+    this._deltaY = clientY - this._startY;
+    const absX = Math.abs(this._deltaX);
+    const absY = Math.abs(this._deltaY);
+    if (!this._horizontal) {
+      if (absX < this._axisLockThreshold && absY < this._axisLockThreshold) {
+        return;
+      }
+      if (absY >= this._axisLockThreshold && absY > absX) {
+        this._resetGesture();
+        return;
+      }
+      if (absX < this._axisLockThreshold || absX <= absY * 1.15) return;
+      this._horizontal = true;
+      this._browse.classList.add("recordings-swipe");
+      if (this._pointerId != null && !this._browse.hasPointerCapture?.(this._pointerId)) {
+        try {
+          this._browse.setPointerCapture(this._pointerId);
+        } catch (_) {
+        }
+      }
+    }
+    event.preventDefault?.();
+    this._direction = this._deltaX < 0 ? 1 : -1;
+    if (absX >= 3) this._setTapBlocked?.(true);
+    this._ensureGestureStage(this._direction);
+    const stage = this._getGesture?.()?.stage;
+    if (!stage) return;
+    const max = stage.width;
+    const x = Math.max(-max, Math.min(max, this._deltaX));
+    const clampedAbsX = Math.abs(x);
+    const followFactor = clampedAbsX < 60 ? 1 : this._dragFollowFactor;
+    const follow = Math.sign(x) * Math.min(clampedAbsX * followFactor, max);
+    this._setStageOffset?.(stage, follow);
+  }
+};
+
 // src/card/recordings/swipe-utils.js
 const RECORDINGS_SWIPE_LOADING_HTML = '<div class="empty">Loading day\u2026</div>';
 const RECORDINGS_SWIPE_EMPTY_HTML = '<div class="empty">No recordings in this day</div>';
@@ -8789,7 +9059,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._recordingsDayNavAnimating = false;
     this._recordingsSwipeGesture = null;
     this._recordingsSwipeBlockTap = false;
-    this._recordingsSwipeCleanup = null;
+    this._recordingsSwipeController = null;
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
@@ -9344,9 +9614,9 @@ const FrigateViewCard = class extends HTMLElement {
       }
       this._liveOverlayControlsCleanup = null;
     }
-    if (this._recordingsSwipeCleanup) {
-      this._recordingsSwipeCleanup();
-      this._recordingsSwipeCleanup = null;
+    if (this._recordingsSwipeController) {
+      this._recordingsSwipeController.dispose();
+      this._recordingsSwipeController = null;
     }
     this._clearPopupMediaCleanup();
     if (this._onDocVisibility) {
@@ -12678,160 +12948,32 @@ const FrigateViewCard = class extends HTMLElement {
       browse.addEventListener("scroll", onScroll, { passive: true });
   }
   _bindRecordingsSwipe() {
-    if (this._recordingsSwipeCleanup) {
-      this._recordingsSwipeCleanup();
-      this._recordingsSwipeCleanup = null;
+    if (this._recordingsSwipeController) {
+      this._recordingsSwipeController.dispose();
+      this._recordingsSwipeController = null;
     }
     const browse = this._$("#browse");
     if (!browse) return;
-    let startX = 0;
-    let startY = 0;
-    let deltaX = 0;
-    let deltaY = 0;
-    let tracking = false;
-    let horizontal = false;
-    let direction = 0;
-    let pointerId = null;
-    const axisLockThreshold = this._isMobileTabletViewport() ? 6 : 8;
-    const dragFollowFactor = this._isMobileTabletViewport() ? 1 : 0.85;
-    const canSwipe = () => this._tab === "recordings" && this._isMobileTabletViewport() && !this._recordingsDayNavAnimating;
-    const resetGesture = ({ clearTapBlock = true } = {}) => {
-      if (this._recordingsSwipeGesture?.stage) {
-        this._destroyRecordingsSwipeStage();
-      }
-      this._recordingsSwipeGesture = null;
-      if (clearTapBlock) this._recordingsSwipeBlockTap = false;
-      tracking = false;
-      horizontal = false;
-      direction = 0;
-      deltaX = 0;
-      deltaY = 0;
-      if (pointerId != null && browse.hasPointerCapture?.(pointerId)) {
-        try {
-          browse.releasePointerCapture(pointerId);
-        } catch (_) {
-        }
-      }
-      pointerId = null;
-      browse.classList.remove("recordings-swipe");
-      browse.style.transform = "";
-    };
-    const ensureGestureStage = (dir) => {
-      if (this._recordingsSwipeGesture?.direction === dir) return;
-      this._recordingsSwipeGesture = this._startRecordingsSwipeGesture(dir);
-    };
-    const startGesture = (clientX, clientY) => {
-      startX = clientX;
-      startY = clientY;
-      deltaX = 0;
-      deltaY = 0;
-      tracking = true;
-      horizontal = false;
-      direction = 0;
-      this._recordingsSwipeBlockTap = false;
-    };
-    const moveGesture = (clientX, clientY, e) => {
-      if (!tracking || !canSwipe()) return;
-      deltaX = clientX - startX;
-      deltaY = clientY - startY;
-      const absX = Math.abs(deltaX);
-      const absY = Math.abs(deltaY);
-      if (!horizontal) {
-        if (absX < axisLockThreshold && absY < axisLockThreshold) return;
-        if (absY >= axisLockThreshold && absY > absX) {
-          resetGesture();
-          return;
-        }
-        if (absX < axisLockThreshold || absX <= absY * 1.15) return;
-        horizontal = true;
-        browse.classList.add("recordings-swipe");
-        if (pointerId != null && !browse.hasPointerCapture?.(pointerId)) {
-          try {
-            browse.setPointerCapture(pointerId);
-          } catch (_) {
-          }
-        }
-      }
-      e.preventDefault();
-      direction = deltaX < 0 ? 1 : -1;
-      if (absX >= 3) this._recordingsSwipeBlockTap = true;
-      ensureGestureStage(direction);
-      const stage = this._recordingsSwipeGesture?.stage;
-      if (!stage) return;
-      const max = stage.width;
-      const x = Math.max(-max, Math.min(max, deltaX));
-      const clampedAbsX = Math.abs(x);
-      const followFactor = clampedAbsX < 60 ? 1 : dragFollowFactor;
-      const follow = Math.sign(x) * Math.min(clampedAbsX * followFactor, max);
-      this._setRecordingsSwipeStageOffset(stage, follow);
-    };
-    const onPointerDown = (e) => {
-      if (!canSwipe()) return;
-      if (e.pointerType === "mouse" && e.button !== 0) return;
-      if (pointerId != null) return;
-      pointerId = e.pointerId;
-      startGesture(e.clientX, e.clientY);
-    };
-    const onPointerMove = (e) => {
-      if (e.pointerId !== pointerId) return;
-      moveGesture(e.clientX, e.clientY, e);
-    };
-    const finishSwipe = async () => {
-      if (!tracking) return;
-      const absX = Math.abs(deltaX);
-      const absY = Math.abs(deltaY);
-      const dir = direction;
-      const gesture = this._recordingsSwipeGesture;
-      const stage = gesture?.stage;
-      tracking = false;
-      pointerId = null;
-      browse.classList.remove("recordings-swipe");
-      browse.style.transform = "";
-      if (!horizontal || !stage || !gesture || !dir || absX <= absY) {
-        resetGesture();
-        return;
-      }
-      const threshold = Math.max(34, stage.width * 0.12);
-      const shouldAdvance = absX >= threshold;
-      if (!shouldAdvance) {
-        await this._animateRecordingsSwipeStageTo(
-          stage,
-          0,
-          140,
-          "cubic-bezier(0.16, 0.64, 0.2, 1)"
-        );
-        resetGesture({ clearTapBlock: false });
-        return;
-      }
-      const moved = await this._completeRecordingsSwipeGesture(gesture);
-      if (!moved) {
-        await this._animateRecordingsSwipeStageTo(
-          stage,
-          0,
-          150,
-          "cubic-bezier(0.16, 0.64, 0.2, 1)"
-        );
-        this._bounceRecordingsArea(dir);
-      }
-      setTimeout(() => {
-        this._recordingsSwipeBlockTap = false;
-      }, 320);
-      resetGesture({ clearTapBlock: false });
-    };
-    const onPointerUp = (e) => {
-      if (e.pointerId !== pointerId) return;
-      void finishSwipe();
-    };
-    browse.addEventListener("pointerdown", onPointerDown);
-    browse.addEventListener("pointermove", onPointerMove);
-    browse.addEventListener("pointerup", onPointerUp);
-    browse.addEventListener("pointercancel", resetGesture);
-    this._recordingsSwipeCleanup = () => {
-      browse.removeEventListener("pointerdown", onPointerDown);
-      browse.removeEventListener("pointermove", onPointerMove);
-      browse.removeEventListener("pointerup", onPointerUp);
-      browse.removeEventListener("pointercancel", resetGesture);
-    };
+    this._recordingsSwipeController = new RecordingsSwipeController({
+      browse,
+      getTab: () => this._tab,
+      isMobileTabletViewport: () => this._isMobileTabletViewport(),
+      isDayNavAnimating: () => this._recordingsDayNavAnimating,
+      getGesture: () => this._recordingsSwipeGesture,
+      setGesture: (gesture) => {
+        this._recordingsSwipeGesture = gesture;
+      },
+      setTapBlocked: (blocked) => {
+        this._recordingsSwipeBlockTap = blocked;
+      },
+      destroyGestureStage: () => this._destroyRecordingsSwipeStage(),
+      startGestureStage: (direction) => this._startRecordingsSwipeGesture(direction),
+      setStageOffset: (stage, offset) => this._setRecordingsSwipeStageOffset(stage, offset),
+      animateStageTo: (stage, offset, duration, easing) => this._animateRecordingsSwipeStageTo(stage, offset, duration, easing),
+      completeGesture: (gesture) => this._completeRecordingsSwipeGesture(gesture),
+      bounceArea: (direction) => this._bounceRecordingsArea(direction)
+    });
+    this._recordingsSwipeController.bind();
   }
   _recordingsListMarkup(recs, emptyText = "No recordings in this day") {
     return buildRecordingsListMarkup({

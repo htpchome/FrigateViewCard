@@ -38,6 +38,8 @@ export { buildRecordingsListMarkup } from "./list-markup.js";
 
 export { splitRecordingsHourly } from "./segment-utils.js";
 
+export { RecordingsSwipeController } from "./swipe-controller.js";
+
 export {
   createRecordingsSwipeGestureState,
   RECORDINGS_SWIPE_EMPTY_HTML,
