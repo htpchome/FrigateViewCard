@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1139";
+const VERSION = "1.0.1140";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5083,6 +5083,114 @@ const resolvePopupMediaSeekTarget = ({
   return clamp(next, 0, safeDuration);
 };
 
+// src/card/popup-media-controls-controller.js
+const PopupMediaControlsController = class {
+  constructor({
+    controls,
+    progress,
+    video,
+    listenerPlan,
+    onShowNow,
+    onShowTemporarily,
+    onSync
+  }) {
+    __publicField(this, "_sync", () => {
+      this._onSync?.({ progressDragging: this._progressDragging });
+    });
+    __publicField(this, "_progressHandlers", {
+      scrubPreview: () => {
+        this._progressDragging = true;
+        const next = resolvePopupMediaSeekTarget({
+          progressValue: this._progress?.value,
+          duration: this._video?.duration
+        });
+        if (next !== null && this._video) {
+          this._video.currentTime = next;
+        }
+        this._onShowTemporarily?.();
+        this._sync();
+      },
+      scrubCommit: () => {
+        this._progressDragging = false;
+        this._onShowTemporarily?.();
+        this._sync();
+      },
+      dragStart: () => {
+        this._progressDragging = true;
+        this._onShowNow?.();
+      },
+      dragEnd: () => {
+        this._progressDragging = false;
+        this._onShowTemporarily?.();
+      },
+      touchDragStart: () => {
+        this._progressDragging = true;
+      },
+      touchDragEnd: () => {
+        this._progressDragging = false;
+        this._onShowTemporarily?.();
+      }
+    });
+    __publicField(this, "_controlsHandlers", {
+      showNow: () => {
+        this._onShowNow?.();
+      },
+      showTemporarily: () => {
+        this._onShowTemporarily?.();
+      }
+    });
+    this._controls = controls;
+    this._progress = progress;
+    this._video = video;
+    this._listenerPlan = listenerPlan;
+    this._onShowNow = onShowNow;
+    this._onShowTemporarily = onShowTemporarily;
+    this._onSync = onSync;
+    this._cleanup = new CleanupController();
+    this._progressDragging = false;
+  }
+  bind() {
+    if (!this._controls || !this._video || !this._listenerPlan) return;
+    if (this._progress) {
+      this._listenerPlan.progressEvents.forEach(({ type, action, options }) => {
+        this._cleanup.addEventListener(
+          this._progress,
+          type,
+          this._progressHandlers[action],
+          options
+        );
+      });
+    }
+    this._listenerPlan.controlsEvents.forEach(({ type, action, options }) => {
+      this._cleanup.addEventListener(
+        this._controls,
+        type,
+        this._controlsHandlers[action],
+        options
+      );
+    });
+    this._listenerPlan.syncVideoEvents.forEach((type) => {
+      this._cleanup.addEventListener(this._video, type, this._sync);
+    });
+    this._listenerPlan.interactionVideoEvents.forEach(
+      ({ type, action, options }) => {
+        this._cleanup.addEventListener(
+          this._video,
+          type,
+          this._controlsHandlers[action],
+          options
+        );
+      }
+    );
+    this._sync();
+  }
+  dispose() {
+    this._cleanup.dispose();
+    this._progressDragging = false;
+    this._controls?.classList?.remove("is-hidden");
+  }
+};
+
 // src/card/popup-carousel-utils.js
 const sortByStartTimeDesc = (items = []) => [...items].sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0));
 const buildPopupCarouselItemMarkup = ({
@@ -9271,7 +9379,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._popupMediaCleanup = null;
     this._popupMediaType = "";
     this._popupMediaStopTimer = null;
-    this._popupMediaControlsCleanup = null;
+    this._popupMediaControlsController = null;
     this._popupControlsHideTimer = null;
     this._liveControlsHideTimer = null;
     this._liveOverlayControlsCleanup = null;
@@ -14775,13 +14883,13 @@ const FrigateViewCard = class extends HTMLElement {
       clearTimeout(this._popupControlsHideTimer);
       this._popupControlsHideTimer = null;
     }
-    if (this._popupMediaControlsCleanup) {
+    if (this._popupMediaControlsController) {
       try {
-        this._popupMediaControlsCleanup();
+        this._popupMediaControlsController.dispose();
       } catch (_) {
       }
     }
-    this._popupMediaControlsCleanup = null;
+    this._popupMediaControlsController = null;
     if (!this._popupMediaCleanup) return;
     try {
       this._popupMediaCleanup();
@@ -14815,11 +14923,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _recordingPreferHls() {
     return DEVICE_PROFILE.isIOS || this._isFirefox() || this._isEdge();
-  }
-  _bindPopupMediaListener(target, type, handler, options) {
-    if (!target) return null;
-    target.addEventListener(type, handler, options);
-    return () => target.removeEventListener(type, handler, options);
   }
   _popupMediaVideo() {
     const viewer = this._$("#viewer");
@@ -14915,12 +15018,6 @@ const FrigateViewCard = class extends HTMLElement {
     const listenerPlan = resolvePopupMediaControlsListenerPlan({
       hasProgressControl: !!progress
     });
-    let progressDragging = false;
-    const removers = [];
-    const bind = (t, e, h, o) => {
-      const off = this._bindPopupMediaListener(t, e, h, o);
-      if (off) removers.push(off);
-    };
     const sync = () => {
       const playBtn = this._$("#popup-media-play");
       const muteBtn = this._$("#popup-media-mute");
@@ -14937,71 +15034,25 @@ const FrigateViewCard = class extends HTMLElement {
       if (muteBtn)
         muteBtn.innerHTML = controlState.showMutedIcon ? ICONS.volOff : ICONS.volOn;
       if (time) time.textContent = controlState.timeText;
+    };
+    const syncButtons = ({ progressDragging = false } = {}) => {
+      sync();
       if (!progressDragging) this._updatePopupMediaButtons(video);
     };
-    const progressHandlers = {
-      scrubPreview: () => {
-        progressDragging = true;
-        const next = resolvePopupMediaSeekTarget({
-          progressValue: progress.value,
-          duration: video.duration
-        });
-        if (next !== null) video.currentTime = next;
-        this._showPopupControlsTemporarily();
-        sync();
-      },
-      scrubCommit: () => {
-        progressDragging = false;
-        this._showPopupControlsTemporarily();
-        sync();
-      },
-      dragStart: () => {
-        progressDragging = true;
-        if (this._popupControlsHideTimer)
-          clearTimeout(this._popupControlsHideTimer);
-      },
-      dragEnd: () => {
-        progressDragging = false;
-        this._showPopupControlsTemporarily();
-      },
-      touchDragStart: () => {
-        progressDragging = true;
-      },
-      touchDragEnd: () => {
-        progressDragging = false;
-        this._showPopupControlsTemporarily();
-      }
-    };
-    const controlsHandlers = {
-      showNow: () => {
+    this._popupMediaControlsController = new PopupMediaControlsController({
+      controls,
+      progress,
+      video,
+      listenerPlan,
+      onShowNow: () => {
         if (this._popupControlsHideTimer)
           clearTimeout(this._popupControlsHideTimer);
         controls.classList.remove("is-hidden");
       },
-      showTemporarily: () => this._showPopupControlsTemporarily()
-    };
-    if (progress) {
-      listenerPlan.progressEvents.forEach(
-        ({ type, action, options }) => bind(progress, type, progressHandlers[action], options)
-      );
-    }
-    listenerPlan.controlsEvents.forEach(
-      ({ type, action, options }) => bind(controls, type, controlsHandlers[action], options)
-    );
-    listenerPlan.syncVideoEvents.forEach((evt) => bind(video, evt, sync));
-    listenerPlan.interactionVideoEvents.forEach(
-      ({ type, action, options }) => bind(video, type, controlsHandlers[action], options)
-    );
-    sync();
-    this._popupMediaControlsCleanup = () => {
-      removers.forEach((off) => {
-        try {
-          off();
-        } catch (_) {
-        }
-      });
-      controls.classList.remove("is-hidden");
-    };
+      onShowTemporarily: () => this._showPopupControlsTemporarily(),
+      onSync: syncButtons
+    });
+    this._popupMediaControlsController.bind();
   }
   _carouselEventItem(ev, activeId = "") {
     if (!ev?.id) return "";

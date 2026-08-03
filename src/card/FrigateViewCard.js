@@ -190,6 +190,7 @@ import {
   buildFavoriteRollbackMutation,
 } from "./favorites-mutation-utils.js";
 import { PopupDragController } from "./popup-drag-controller.js";
+import { PopupMediaControlsController } from "./popup-media-controls-controller.js";
 import {
   buildPopupClipRenderPlan,
   buildPopupMediaUrl,
@@ -497,7 +498,7 @@ export class FrigateViewCard extends HTMLElement {
     this._popupMediaCleanup = null;
     this._popupMediaType = "";
     this._popupMediaStopTimer = null;
-    this._popupMediaControlsCleanup = null;
+    this._popupMediaControlsController = null;
     this._popupControlsHideTimer = null;
     this._liveControlsHideTimer = null;
     this._liveOverlayControlsCleanup = null;
@@ -6850,12 +6851,12 @@ export class FrigateViewCard extends HTMLElement {
       clearTimeout(this._popupControlsHideTimer);
       this._popupControlsHideTimer = null;
     }
-    if (this._popupMediaControlsCleanup) {
+    if (this._popupMediaControlsController) {
       try {
-        this._popupMediaControlsCleanup();
+        this._popupMediaControlsController.dispose();
       } catch (_) {}
     }
-    this._popupMediaControlsCleanup = null;
+    this._popupMediaControlsController = null;
     if (!this._popupMediaCleanup) return;
     try {
       this._popupMediaCleanup();
@@ -6891,11 +6892,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _recordingPreferHls() {
     return DEVICE_PROFILE.isIOS || this._isFirefox() || this._isEdge();
-  }
-  _bindPopupMediaListener(target, type, handler, options) {
-    if (!target) return null;
-    target.addEventListener(type, handler, options);
-    return () => target.removeEventListener(type, handler, options);
   }
   _popupMediaVideo() {
     const viewer = this._$("#viewer");
@@ -6992,12 +6988,6 @@ export class FrigateViewCard extends HTMLElement {
     const listenerPlan = resolvePopupMediaControlsListenerPlan({
       hasProgressControl: !!progress,
     });
-    let progressDragging = false;
-    const removers = [];
-    const bind = (t, e, h, o) => {
-      const off = this._bindPopupMediaListener(t, e, h, o);
-      if (off) removers.push(off);
-    };
     const sync = () => {
       const playBtn = this._$("#popup-media-play");
       const muteBtn = this._$("#popup-media-mute");
@@ -7018,75 +7008,25 @@ export class FrigateViewCard extends HTMLElement {
           ? ICONS.volOff
           : ICONS.volOn;
       if (time) time.textContent = controlState.timeText;
+    };
+    const syncButtons = ({ progressDragging = false } = {}) => {
+      sync();
       if (!progressDragging) this._updatePopupMediaButtons(video);
     };
-    const progressHandlers = {
-      scrubPreview: () => {
-        progressDragging = true;
-        const next = resolvePopupMediaSeekTarget({
-          progressValue: progress.value,
-          duration: video.duration,
-        });
-        if (next !== null) video.currentTime = next;
-        this._showPopupControlsTemporarily();
-        sync();
-      },
-      scrubCommit: () => {
-        progressDragging = false;
-        this._showPopupControlsTemporarily();
-        sync();
-      },
-      dragStart: () => {
-        progressDragging = true;
-        if (this._popupControlsHideTimer)
-          clearTimeout(this._popupControlsHideTimer);
-      },
-      dragEnd: () => {
-        progressDragging = false;
-        this._showPopupControlsTemporarily();
-      },
-      touchDragStart: () => {
-        progressDragging = true;
-      },
-      touchDragEnd: () => {
-        progressDragging = false;
-        this._showPopupControlsTemporarily();
-      },
-    };
-    const controlsHandlers = {
-      showNow: () => {
+    this._popupMediaControlsController = new PopupMediaControlsController({
+      controls,
+      progress,
+      video,
+      listenerPlan,
+      onShowNow: () => {
         if (this._popupControlsHideTimer)
           clearTimeout(this._popupControlsHideTimer);
         controls.classList.remove("is-hidden");
       },
-      showTemporarily: () => this._showPopupControlsTemporarily(),
-    };
-
-    if (progress) {
-      listenerPlan.progressEvents.forEach(({ type, action, options }) =>
-        bind(progress, type, progressHandlers[action], options),
-      );
-    }
-
-    listenerPlan.controlsEvents.forEach(({ type, action, options }) =>
-      bind(controls, type, controlsHandlers[action], options),
-    );
-
-    listenerPlan.syncVideoEvents.forEach((evt) => bind(video, evt, sync));
-
-    listenerPlan.interactionVideoEvents.forEach(({ type, action, options }) =>
-      bind(video, type, controlsHandlers[action], options),
-    );
-
-    sync();
-    this._popupMediaControlsCleanup = () => {
-      removers.forEach((off) => {
-        try {
-          off();
-        } catch (_) {}
-      });
-      controls.classList.remove("is-hidden");
-    };
+      onShowTemporarily: () => this._showPopupControlsTemporarily(),
+      onSync: syncButtons,
+    });
+    this._popupMediaControlsController.bind();
   }
   _carouselEventItem(ev, activeId = "") {
     if (!ev?.id) return "";
