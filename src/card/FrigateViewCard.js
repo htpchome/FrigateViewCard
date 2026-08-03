@@ -189,6 +189,7 @@ import {
   buildFavoriteOptimisticMutation,
   buildFavoriteRollbackMutation,
 } from "./favorites-mutation-utils.js";
+import { PopupDragController } from "./popup-drag-controller.js";
 import {
   buildPopupClipRenderPlan,
   buildPopupMediaUrl,
@@ -491,8 +492,7 @@ export class FrigateViewCard extends HTMLElement {
     this._reloadAfterLoad = false;
     this._realtimeHeadPollT = null;
     this._switchLoadT = null;
-    this._popupDrag = null;
-    this._popupHandlers = null;
+    this._popupDragController = null;
     this._popupMediaCleanup = null;
     this._popupMediaType = "";
     this._popupMediaStopTimer = null;
@@ -1191,15 +1191,9 @@ export class FrigateViewCard extends HTMLElement {
     if (this._onShadowError) {
       this.shadowRoot.removeEventListener("error", this._onShadowError, true);
     }
-    if (this._popupHandlers) {
-      const h = this._popupHandlers;
-      h.popup.removeEventListener("mousedown", h.onMouseDown);
-      h.popup.removeEventListener("touchstart", h.onTouchStart);
-      document.removeEventListener("mousemove", h.onMouseMove);
-      document.removeEventListener("touchmove", h.onTouchMove);
-      document.removeEventListener("mouseup", h.onMouseUp);
-      document.removeEventListener("touchend", h.onTouchEnd);
-      this._popupHandlers = null;
+    if (this._popupDragController) {
+      this._popupDragController.dispose();
+      this._popupDragController = null;
     }
     if (this._onFullscreenChange) {
       document.removeEventListener(
@@ -5842,80 +5836,18 @@ export class FrigateViewCard extends HTMLElement {
   _initPopupInteractions() {
     const popup = this._$("#myPopup");
     if (!popup) return;
-    if (this._popupHandlers) {
-      const h = this._popupHandlers;
-      h.popup.removeEventListener("mousedown", h.onMouseDown);
-      h.popup.removeEventListener("touchstart", h.onTouchStart);
-      document.removeEventListener("mousemove", h.onMouseMove);
-      document.removeEventListener("touchmove", h.onTouchMove);
-      document.removeEventListener("mouseup", h.onMouseUp);
-      document.removeEventListener("touchend", h.onTouchEnd);
-      this._popupHandlers = null;
+    if (this._popupDragController) {
+      this._popupDragController.dispose();
+      this._popupDragController = null;
     }
-    this._popupDrag = { isDragging: false, startY: 0, currentY: 0 };
-    const drag = this._popupDrag;
-    const dragThreshold = 100;
-    const start = (clientY) => {
-      drag.isDragging = true;
-      drag.startY = clientY;
-      drag.currentY = 0;
-      popup.style.transition = "none";
-    };
-    const shouldIgnoreDragStart = (target) => {
-      if (!target || !(target instanceof Element)) return false;
-      return !!target.closest(
-        "#popup-media-controls, #popup-carousel-wrap, #recording-scrub, .popup-info, .viewer, input, button, a, [data-ev]",
-      );
-    };
-    const move = (clientY, ev = null) => {
-      const popup = this._$("#myPopup");
-      if (!popup) return;
-      if (!drag.isDragging || !popup.classList.contains("is-open")) return;
-      if (ev?.cancelable) ev.preventDefault();
-      drag.currentY = clientY - drag.startY;
-      if (drag.currentY > 0) {
-        popup.style.transform = `translateY(${drag.currentY}px)`;
-      }
-    };
-    const end = () => {
-      const popup = this._$("#myPopup");
-      if (!popup) return;
-      if (!drag.isDragging) return;
-      drag.isDragging = false;
-      popup.style.transition = "";
-      if (drag.currentY > dragThreshold) this._closePopup();
-      else popup.style.transform = "translateY(0)";
-      drag.currentY = 0;
-    };
-    const onMouseDown = (e) => {
-      if (shouldIgnoreDragStart(e.target)) return;
-      start(e.clientY);
-    };
-    const onTouchStart = (e) => {
-      if (shouldIgnoreDragStart(e.target)) return;
-      start(e.touches[0].clientY);
-    };
-    const onMouseMove = (e) => move(e.clientY);
-    const onTouchMove = (e) => move(e.touches[0].clientY, e);
-    const onMouseUp = () => end();
-    const onTouchEnd = () => end();
-    popup.addEventListener("mousedown", onMouseDown);
-    popup.addEventListener("touchstart", onTouchStart);
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("touchmove", onTouchMove, {
-      passive: false,
-    });
-    document.addEventListener("mouseup", onMouseUp);
-    document.addEventListener("touchend", onTouchEnd);
-    this._popupHandlers = {
+    this._popupDragController = new PopupDragController({
       popup,
-      onMouseDown,
-      onTouchStart,
-      onMouseMove,
-      onTouchMove,
-      onMouseUp,
-      onTouchEnd,
-    };
+      eventTarget: document,
+      closeThreshold: 100,
+      closePopup: () => this._closePopup(),
+      isPopupOpen: () => popup.classList.contains("is-open"),
+    });
+    this._popupDragController.bind();
   }
   _click(e) {
     const target = e.target;
