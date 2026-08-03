@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1125";
+const VERSION = "1.0.1126";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10817,6 +10817,17 @@ const FrigateViewCard = class extends HTMLElement {
     this._setStreamFallbackVisible(false);
     return true;
   }
+  _applyLiveMountUiState(quiet = false) {
+    const mountUi = resolveLiveMountUiState({ quiet });
+    if (mountUi.activeStreamType != null) {
+      this._setActiveStreamType(mountUi.activeStreamType);
+    }
+    this._setStreamFallbackVisible(
+      mountUi.fallbackVisible,
+      mountUi.refreshFallbackImage
+    );
+    this._setStreamLoading(mountUi.loading);
+  }
   async _mountEngine(forcedType = null, options = {}) {
     const quiet = options?.quiet === true;
     const slot = this.shadowRoot.querySelector("#engine");
@@ -10880,15 +10891,7 @@ const FrigateViewCard = class extends HTMLElement {
             })
           ];
           slot.innerHTML = "";
-          const mountUi = resolveLiveMountUiState({ quiet });
-          if (mountUi.activeStreamType != null) {
-            this._setActiveStreamType(mountUi.activeStreamType);
-          }
-          this._setStreamFallbackVisible(
-            mountUi.fallbackVisible,
-            mountUi.refreshFallbackImage
-          );
-          this._setStreamLoading(mountUi.loading);
+          this._applyLiveMountUiState(quiet);
           try {
             const graceResult = await graceResultPromise;
             const pendingOutcome = resolveGraceMsePendingMountOutcome({
@@ -10924,15 +10927,7 @@ const FrigateViewCard = class extends HTMLElement {
     try {
       this._cleanupEngine();
       slot.innerHTML = "";
-      const mountUi = resolveLiveMountUiState({ quiet });
-      if (mountUi.activeStreamType != null) {
-        this._setActiveStreamType(mountUi.activeStreamType);
-      }
-      this._setStreamFallbackVisible(
-        mountUi.fallbackVisible,
-        mountUi.refreshFallbackImage
-      );
-      this._setStreamLoading(mountUi.loading);
+      this._applyLiveMountUiState(quiet);
       const transportPlan = resolveLiveMountTransportPlan({
         useGo2Rtc,
         forcedType,

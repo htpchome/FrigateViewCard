@@ -3030,6 +3030,18 @@ export class FrigateViewCard extends HTMLElement {
     return true;
   }
 
+  _applyLiveMountUiState(quiet = false) {
+    const mountUi = resolveLiveMountUiState({ quiet });
+    if (mountUi.activeStreamType != null) {
+      this._setActiveStreamType(mountUi.activeStreamType);
+    }
+    this._setStreamFallbackVisible(
+      mountUi.fallbackVisible,
+      mountUi.refreshFallbackImage,
+    );
+    this._setStreamLoading(mountUi.loading);
+  }
+
   async _mountEngine(forcedType = null, options = {}) {
     const quiet = options?.quiet === true;
     const slot = this.shadowRoot.querySelector("#engine");
@@ -3099,15 +3111,7 @@ export class FrigateViewCard extends HTMLElement {
             }),
           ];
           slot.innerHTML = "";
-          const mountUi = resolveLiveMountUiState({ quiet });
-          if (mountUi.activeStreamType != null) {
-            this._setActiveStreamType(mountUi.activeStreamType);
-          }
-          this._setStreamFallbackVisible(
-            mountUi.fallbackVisible,
-            mountUi.refreshFallbackImage,
-          );
-          this._setStreamLoading(mountUi.loading);
+          this._applyLiveMountUiState(quiet);
           try {
             const graceResult = await graceResultPromise;
             const pendingOutcome = resolveGraceMsePendingMountOutcome({
@@ -3145,15 +3149,7 @@ export class FrigateViewCard extends HTMLElement {
     try {
       this._cleanupEngine();
       slot.innerHTML = "";
-      const mountUi = resolveLiveMountUiState({ quiet });
-      if (mountUi.activeStreamType != null) {
-        this._setActiveStreamType(mountUi.activeStreamType);
-      }
-      this._setStreamFallbackVisible(
-        mountUi.fallbackVisible,
-        mountUi.refreshFallbackImage,
-      );
-      this._setStreamLoading(mountUi.loading);
+      this._applyLiveMountUiState(quiet);
 
       const transportPlan = resolveLiveMountTransportPlan({
         useGo2Rtc,
