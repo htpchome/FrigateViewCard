@@ -9,6 +9,7 @@ import {
   buildPopupRecordingScrubInitPlan,
   buildPopupRecordingSourceAttemptPlan,
   buildPopupSnapshotRenderPlan,
+  resolvePopupMediaPostRenderPlan,
   resolvePopupMediaRenderPlan,
   resolvePopupRecordingSeekListenerPlan,
   resolvePopupRecordingLoadOutcomePlan,
@@ -123,6 +124,50 @@ test("resolvePopupMediaRenderPlan normalizes popup media rendering state", () =>
         resetControlsHiddenClass: true,
         shouldBindCustomControls: false,
       },
+    },
+  );
+});
+
+test("resolvePopupMediaPostRenderPlan shapes popup follow-up work after viewer mount", () => {
+  assert.deepEqual(
+    resolvePopupMediaPostRenderPlan({
+      popupMediaType: "clip",
+      fullscreenKind: "clip",
+      activeId: "ev-1",
+      hasVideo: true,
+    }),
+    {
+      shouldEnsureFullscreenButton: true,
+      fullscreenKind: "clip",
+      shouldRenderInfo: true,
+      shouldInitPopupMediaControls: true,
+      shouldResetControlsWithoutVideo: false,
+      shouldRenderCarousel: true,
+      carouselMediaType: "clip",
+      carouselActiveId: "ev-1",
+      shouldScheduleRotateOverlay: true,
+      shouldShowPopupControls: true,
+    },
+  );
+
+  assert.deepEqual(
+    resolvePopupMediaPostRenderPlan({
+      popupMediaType: "snapshot",
+      fullscreenKind: "snapshot",
+      activeId: "",
+      hasVideo: false,
+    }),
+    {
+      shouldEnsureFullscreenButton: true,
+      fullscreenKind: "snapshot",
+      shouldRenderInfo: true,
+      shouldInitPopupMediaControls: false,
+      shouldResetControlsWithoutVideo: true,
+      shouldRenderCarousel: true,
+      carouselMediaType: "snapshot",
+      carouselActiveId: "",
+      shouldScheduleRotateOverlay: true,
+      shouldShowPopupControls: true,
     },
   );
 });

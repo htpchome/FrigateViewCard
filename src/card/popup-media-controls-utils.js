@@ -29,6 +29,24 @@ export const resolvePopupMediaRenderPlan = ({
       }),
 });
 
+export const resolvePopupMediaPostRenderPlan = ({
+  popupMediaType = "",
+  fullscreenKind = "",
+  activeId = "",
+  hasVideo = false,
+}) => ({
+  shouldEnsureFullscreenButton: true,
+  fullscreenKind,
+  shouldRenderInfo: true,
+  shouldInitPopupMediaControls: Boolean(hasVideo),
+  shouldResetControlsWithoutVideo: !hasVideo,
+  shouldRenderCarousel: true,
+  carouselMediaType: popupMediaType,
+  carouselActiveId: activeId,
+  shouldScheduleRotateOverlay: true,
+  shouldShowPopupControls: true,
+});
+
 export const buildPopupClipRenderPlan = ({
   id = "",
   opts = {},

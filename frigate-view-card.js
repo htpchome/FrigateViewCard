@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1120";
+const VERSION = "1.0.1121";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4501,6 +4501,23 @@ const resolvePopupMediaRenderPlan = ({
   controlsPlan: hasVideo ? null : resolvePopupMediaControlsInitPlan({
     hasVideo: false
   })
+});
+const resolvePopupMediaPostRenderPlan = ({
+  popupMediaType = "",
+  fullscreenKind = "",
+  activeId = "",
+  hasVideo = false
+}) => ({
+  shouldEnsureFullscreenButton: true,
+  fullscreenKind,
+  shouldRenderInfo: true,
+  shouldInitPopupMediaControls: Boolean(hasVideo),
+  shouldResetControlsWithoutVideo: !hasVideo,
+  shouldRenderCarousel: true,
+  carouselMediaType: popupMediaType,
+  carouselActiveId: activeId,
+  shouldScheduleRotateOverlay: true,
+  shouldShowPopupControls: true
 });
 const buildPopupClipRenderPlan = ({
   id = "",
@@ -14584,12 +14601,22 @@ const FrigateViewCard = class extends HTMLElement {
     }
     const body = this._$("#myPopup")?.querySelector(".popup-body");
     if (body) body.scrollTop = 0;
-    this._ensurePopupFullscreenButton(fullscreenKind);
-    this._renderPopupInfo(infoEvent, infoOpts);
     const video = viewer.querySelector("video");
-    if (video) {
+    const postRenderPlan = resolvePopupMediaPostRenderPlan({
+      popupMediaType: this._popupMediaType,
+      fullscreenKind,
+      activeId: this._popupMediaCurrentId(),
+      hasVideo: !!video
+    });
+    if (postRenderPlan.shouldEnsureFullscreenButton) {
+      this._ensurePopupFullscreenButton(postRenderPlan.fullscreenKind);
+    }
+    if (postRenderPlan.shouldRenderInfo) {
+      this._renderPopupInfo(infoEvent, infoOpts);
+    }
+    if (postRenderPlan.shouldInitPopupMediaControls) {
       this._initPopupMediaControls(video, this._popupMediaType);
-    } else {
+    } else if (postRenderPlan.shouldResetControlsWithoutVideo) {
       const controls = this._$("#popup-media-controls");
       const controlsPlan = renderPlan.controlsPlan;
       if (controls) {
@@ -14599,12 +14626,18 @@ const FrigateViewCard = class extends HTMLElement {
         }
       }
     }
-    this._renderPopupCarousel(
-      this._popupMediaType,
-      this._popupMediaCurrentId()
-    );
-    this._scheduleRotateOverlayUpdate();
-    this._showPopupControlsTemporarily();
+    if (postRenderPlan.shouldRenderCarousel) {
+      this._renderPopupCarousel(
+        postRenderPlan.carouselMediaType,
+        postRenderPlan.carouselActiveId
+      );
+    }
+    if (postRenderPlan.shouldScheduleRotateOverlay) {
+      this._scheduleRotateOverlayUpdate();
+    }
+    if (postRenderPlan.shouldShowPopupControls) {
+      this._showPopupControlsTemporarily();
+    }
   }
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;

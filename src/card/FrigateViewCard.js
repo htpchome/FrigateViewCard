@@ -189,6 +189,7 @@ import {
   buildPopupRecordingScrubInitPlan,
   buildPopupRecordingSourceAttemptPlan,
   buildPopupSnapshotRenderPlan,
+  resolvePopupMediaPostRenderPlan,
   resolvePopupMediaRenderPlan,
   resolvePopupRecordingSeekListenerPlan,
   resolvePopupRecordingLoadOutcomePlan,
@@ -7401,12 +7402,22 @@ export class FrigateViewCard extends HTMLElement {
     }
     const body = this._$("#myPopup")?.querySelector(".popup-body");
     if (body) body.scrollTop = 0;
-    this._ensurePopupFullscreenButton(fullscreenKind);
-    this._renderPopupInfo(infoEvent, infoOpts);
     const video = viewer.querySelector("video");
-    if (video) {
+    const postRenderPlan = resolvePopupMediaPostRenderPlan({
+      popupMediaType: this._popupMediaType,
+      fullscreenKind,
+      activeId: this._popupMediaCurrentId(),
+      hasVideo: !!video,
+    });
+    if (postRenderPlan.shouldEnsureFullscreenButton) {
+      this._ensurePopupFullscreenButton(postRenderPlan.fullscreenKind);
+    }
+    if (postRenderPlan.shouldRenderInfo) {
+      this._renderPopupInfo(infoEvent, infoOpts);
+    }
+    if (postRenderPlan.shouldInitPopupMediaControls) {
       this._initPopupMediaControls(video, this._popupMediaType);
-    } else {
+    } else if (postRenderPlan.shouldResetControlsWithoutVideo) {
       const controls = this._$("#popup-media-controls");
       const controlsPlan = renderPlan.controlsPlan;
       if (controls) {
@@ -7416,12 +7427,18 @@ export class FrigateViewCard extends HTMLElement {
         }
       }
     }
-    this._renderPopupCarousel(
-      this._popupMediaType,
-      this._popupMediaCurrentId(),
-    );
-    this._scheduleRotateOverlayUpdate();
-    this._showPopupControlsTemporarily();
+    if (postRenderPlan.shouldRenderCarousel) {
+      this._renderPopupCarousel(
+        postRenderPlan.carouselMediaType,
+        postRenderPlan.carouselActiveId,
+      );
+    }
+    if (postRenderPlan.shouldScheduleRotateOverlay) {
+      this._scheduleRotateOverlayUpdate();
+    }
+    if (postRenderPlan.shouldShowPopupControls) {
+      this._showPopupControlsTemporarily();
+    }
   }
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
