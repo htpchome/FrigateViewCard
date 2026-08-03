@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1133";
+const VERSION = "1.0.1134";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4537,6 +4537,121 @@ function buildFilterPanelMarkup({
         <button class="chip ${!favOnly ? "on" : ""}" data-favonly="0">All</button>
         <button class="chip ${favOnly ? "on" : ""}" data-favonly="1">\u2605 Favorites</button></div>`;
 }
+
+// src/card/favorites-mutation-utils.js
+const updateEventRetention = ({ events = [], id, retained }) => {
+  let changed = false;
+  const nextEvents = events.map((event) => {
+    if (event?.id !== id) return event;
+    changed = true;
+    return {
+      ...event,
+      retain_indefinitely: retained
+    };
+  });
+  return {
+    events: changed ? nextEvents : events,
+    changed
+  };
+};
+const updateKeptEvents = ({ kept = [], id, retained, event }) => {
+  const nextEvent = {
+    ...event,
+    retain_indefinitely: retained
+  };
+  if (!retained) {
+    return kept.filter((item) => item.id !== id);
+  }
+  let found = false;
+  const nextKept = kept.map((item) => {
+    if (item.id !== id) return item;
+    found = true;
+    return {
+      ...item,
+      retain_indefinitely: true
+    };
+  });
+  return found ? nextKept : [nextEvent, ...nextKept];
+};
+const applyFavoriteMutationState = ({
+  id,
+  retained,
+  event,
+  events = [],
+  camCache = {},
+  kept = [],
+  activeEntity = ""
+}) => {
+  const nextEventsResult = updateEventRetention({ events, id, retained });
+  const nextKept = updateKeptEvents({ kept, id, retained, event });
+  let nextCamCache = camCache;
+  let cacheChanged = false;
+  for (const [entity, state] of Object.entries(camCache || {})) {
+    const eventResult = updateEventRetention({
+      events: state?.events || [],
+      id,
+      retained
+    });
+    const shouldSyncKept = entity === activeEntity && state?.kept !== nextKept;
+    if (!eventResult.changed && !shouldSyncKept) {
+      continue;
+    }
+    if (!cacheChanged) {
+      nextCamCache = { ...camCache };
+      cacheChanged = true;
+    }
+    nextCamCache[entity] = {
+      ...state,
+      ...eventResult.changed ? { events: eventResult.events } : null,
+      ...shouldSyncKept ? { kept: nextKept } : null
+    };
+  }
+  return {
+    events: nextEventsResult.events,
+    camCache: nextCamCache,
+    kept: nextKept
+  };
+};
+const buildFavoriteOptimisticMutation = ({
+  id,
+  event,
+  events = [],
+  camCache = {},
+  kept = [],
+  activeEntity = ""
+}) => {
+  const nextRetained = !Boolean(event?.retain_indefinitely);
+  return {
+    nextRetained,
+    previousRetained: Boolean(event?.retain_indefinitely),
+    ...applyFavoriteMutationState({
+      id,
+      retained: nextRetained,
+      event,
+      events,
+      camCache,
+      kept,
+      activeEntity
+    })
+  };
+};
+const buildFavoriteRollbackMutation = ({
+  id,
+  event,
+  previousRetained = false,
+  events = [],
+  camCache = {},
+  kept = [],
+  activeEntity = ""
+}) => applyFavoriteMutationState({
+  id,
+  retained: previousRetained,
+  event,
+  events,
+  camCache,
+  kept,
+  activeEntity
+});
 
 // src/card/popup-media-controls-utils.js
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -15110,44 +15225,38 @@ const FrigateViewCard = class extends HTMLElement {
   _toggleFav(id) {
     const ev = this._findEventById(id);
     if (!ev) return;
-    const next = !ev.retain_indefinitely;
-    this._events.forEach((item) => {
-      if (item.id === id) item.retain_indefinitely = next;
+    const ent = this._activeCam?.entity || "";
+    const optimistic = buildFavoriteOptimisticMutation({
+      id,
+      event: ev,
+      events: this._events,
+      camCache: this._camCache,
+      kept: this._kept,
+      activeEntity: ent
     });
-    Object.values(this._camCache).forEach((state) => {
-      (state?.events || []).forEach((item) => {
-        if (item.id === id) item.retain_indefinitely = next;
-      });
-    });
-    if (next) {
-      if (!this._kept.find((e) => e.id === id))
-        this._kept = [{ ...ev }, ...this._kept];
-    } else {
-      this._kept = this._kept.filter((e) => e.id !== id);
-    }
-    const ent = this._activeCam?.entity;
-    if (ent && this._camCache[ent]) this._camCache[ent].kept = this._kept;
+    this._events = optimistic.events;
+    this._camCache = optimistic.camCache;
+    this._kept = optimistic.kept;
     this._renderList();
     const { clientId } = this._cc();
     this._hass.callWS({
       type: "frigate/event/retain",
       instance_id: clientId,
       event_id: id,
-      retain: next
+      retain: optimistic.nextRetained
     }).catch((err) => {
-      this._events.forEach((item) => {
-        if (item.id === id) item.retain_indefinitely = !next;
+      const rollback = buildFavoriteRollbackMutation({
+        id,
+        event: ev,
+        previousRetained: optimistic.previousRetained,
+        events: this._events,
+        camCache: this._camCache,
+        kept: this._kept,
+        activeEntity: ent
       });
-      Object.values(this._camCache).forEach((state) => {
-        (state?.events || []).forEach((item) => {
-          if (item.id === id) item.retain_indefinitely = !next;
-        });
-      });
-      if (next) {
-        this._kept = this._kept.filter((e) => e.id !== id);
-      } else if (!this._kept.find((e) => e.id === id)) {
-        this._kept = [{ ...ev, retain_indefinitely: false }, ...this._kept];
-      }
+      this._events = rollback.events;
+      this._camCache = rollback.camCache;
+      this._kept = rollback.kept;
       this._renderList();
       console.warn("[Frigate] retain failed", err);
       this._toast("Could not save \u2014 check Frigate port config.");

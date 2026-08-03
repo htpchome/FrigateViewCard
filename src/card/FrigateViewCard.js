@@ -186,6 +186,10 @@ import {
   buildFilterPanelMarkup,
 } from "./calendar-filter-markup.js";
 import {
+  buildFavoriteOptimisticMutation,
+  buildFavoriteRollbackMutation,
+} from "./favorites-mutation-utils.js";
+import {
   buildPopupClipRenderPlan,
   buildPopupMediaUrl,
   buildPopupMediaControlState,
@@ -7887,25 +7891,19 @@ export class FrigateViewCard extends HTMLElement {
   _toggleFav(id) {
     const ev = this._findEventById(id);
     if (!ev) return;
-    const next = !ev.retain_indefinitely;
-
-    this._events.forEach((item) => {
-      if (item.id === id) item.retain_indefinitely = next;
+    const ent = this._activeCam?.entity || "";
+    const optimistic = buildFavoriteOptimisticMutation({
+      id,
+      event: ev,
+      events: this._events,
+      camCache: this._camCache,
+      kept: this._kept,
+      activeEntity: ent,
     });
-    Object.values(this._camCache).forEach((state) => {
-      (state?.events || []).forEach((item) => {
-        if (item.id === id) item.retain_indefinitely = next;
-      });
-    });
 
-    if (next) {
-      if (!this._kept.find((e) => e.id === id))
-        this._kept = [{ ...ev }, ...this._kept];
-    } else {
-      this._kept = this._kept.filter((e) => e.id !== id);
-    }
-    const ent = this._activeCam?.entity;
-    if (ent && this._camCache[ent]) this._camCache[ent].kept = this._kept;
+    this._events = optimistic.events;
+    this._camCache = optimistic.camCache;
+    this._kept = optimistic.kept;
     this._renderList();
     const { clientId } = this._cc();
     this._hass
@@ -7913,22 +7911,21 @@ export class FrigateViewCard extends HTMLElement {
         type: "frigate/event/retain",
         instance_id: clientId,
         event_id: id,
-        retain: next,
+        retain: optimistic.nextRetained,
       })
       .catch((err) => {
-        this._events.forEach((item) => {
-          if (item.id === id) item.retain_indefinitely = !next;
+        const rollback = buildFavoriteRollbackMutation({
+          id,
+          event: ev,
+          previousRetained: optimistic.previousRetained,
+          events: this._events,
+          camCache: this._camCache,
+          kept: this._kept,
+          activeEntity: ent,
         });
-        Object.values(this._camCache).forEach((state) => {
-          (state?.events || []).forEach((item) => {
-            if (item.id === id) item.retain_indefinitely = !next;
-          });
-        });
-        if (next) {
-          this._kept = this._kept.filter((e) => e.id !== id);
-        } else if (!this._kept.find((e) => e.id === id)) {
-          this._kept = [{ ...ev, retain_indefinitely: false }, ...this._kept];
-        }
+        this._events = rollback.events;
+        this._camCache = rollback.camCache;
+        this._kept = rollback.kept;
         this._renderList();
         console.warn("[Frigate] retain failed", err);
         this._toast("Could not save — check Frigate port config.");
