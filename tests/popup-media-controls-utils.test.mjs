@@ -6,6 +6,7 @@ import {
   buildPopupMediaUrl,
   buildPopupMediaControlState,
   buildPopupRecordingRenderPlan,
+  buildPopupRecordingSourceAttemptPlan,
   buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
   resolvePopupRecordingLoadOutcomePlan,
@@ -215,6 +216,30 @@ test("buildPopupRecordingRenderPlan resolves popup recording state and info opti
       },
       chunkEnd: 180,
       sourceCandidates: ["/a.m3u8", "/a.mp4"],
+    },
+  );
+});
+
+test("buildPopupRecordingSourceAttemptPlan preserves source order and autoplay policy", () => {
+  assert.deepEqual(
+    buildPopupRecordingSourceAttemptPlan({
+      sourceCandidates: ["/a.m3u8", "/a.mp4"],
+    }),
+    {
+      attempts: [
+        { path: "/a.m3u8", autoplay: true },
+        { path: "/a.mp4", autoplay: true },
+      ],
+    },
+  );
+
+  assert.deepEqual(
+    buildPopupRecordingSourceAttemptPlan({
+      sourceCandidates: ["/clip.mp4"],
+      autoplay: false,
+    }),
+    {
+      attempts: [{ path: "/clip.mp4", autoplay: false }],
     },
   );
 });

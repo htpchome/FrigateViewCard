@@ -89,6 +89,16 @@ export const buildPopupRecordingRenderPlan = ({
   sourceCandidates: playbackPlan.sourceCandidates || [],
 });
 
+export const buildPopupRecordingSourceAttemptPlan = ({
+  sourceCandidates = [],
+  autoplay = true,
+}) => ({
+  attempts: sourceCandidates.map((path) => ({
+    path,
+    autoplay: Boolean(autoplay),
+  })),
+});
+
 export const resolvePopupRecordingLoadOutcomePlan = ({
   playable = false,
   popupMediaType = "recording",

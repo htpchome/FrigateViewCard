@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1117";
+const VERSION = "1.0.1118";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4556,6 +4556,15 @@ const buildPopupRecordingRenderPlan = ({
   },
   chunkEnd: playbackPlan.chunkEnd,
   sourceCandidates: playbackPlan.sourceCandidates || []
+});
+const buildPopupRecordingSourceAttemptPlan = ({
+  sourceCandidates = [],
+  autoplay = true
+}) => ({
+  attempts: sourceCandidates.map((path) => ({
+    path,
+    autoplay: Boolean(autoplay)
+  }))
 });
 const resolvePopupRecordingLoadOutcomePlan = ({
   playable = false,
@@ -14736,6 +14745,9 @@ const FrigateViewCard = class extends HTMLElement {
       end: e,
       playbackPlan
     });
+    const sourceAttemptPlan = buildPopupRecordingSourceAttemptPlan({
+      sourceCandidates: renderPlan.sourceCandidates
+    });
     this._popupMediaType = renderPlan.popupMediaType;
     this._playing = renderPlan.playing;
     this._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
@@ -14774,12 +14786,12 @@ const FrigateViewCard = class extends HTMLElement {
       video.addEventListener("seeked", onSeeked);
       mediaCleanup.push(() => video.removeEventListener("seeking", onSeeking));
       mediaCleanup.push(() => video.removeEventListener("seeked", onSeeked));
-      for (const path of renderPlan.sourceCandidates) {
+      for (const attempt of sourceAttemptPlan.attempts) {
         if (this._playSeq !== token) return;
-        const signed = await this._signed(path);
+        const signed = await this._signed(attempt.path);
         if (this._playSeq !== token) return;
         playable = await this._tryRecordingSource(video, signed, {
-          autoplay: true
+          autoplay: attempt.autoplay
         });
         if (playable) {
           activeSource = signed;

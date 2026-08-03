@@ -186,6 +186,7 @@ import {
   buildPopupMediaUrl,
   buildPopupMediaControlState,
   buildPopupRecordingRenderPlan,
+  buildPopupRecordingSourceAttemptPlan,
   buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
   resolvePopupRecordingLoadOutcomePlan,
@@ -7593,6 +7594,9 @@ export class FrigateViewCard extends HTMLElement {
       end: e,
       playbackPlan,
     });
+    const sourceAttemptPlan = buildPopupRecordingSourceAttemptPlan({
+      sourceCandidates: renderPlan.sourceCandidates,
+    });
     this._popupMediaType = renderPlan.popupMediaType;
     this._playing = renderPlan.playing;
     this._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
@@ -7631,12 +7635,12 @@ export class FrigateViewCard extends HTMLElement {
       mediaCleanup.push(() => video.removeEventListener("seeking", onSeeking));
       mediaCleanup.push(() => video.removeEventListener("seeked", onSeeked));
 
-      for (const path of renderPlan.sourceCandidates) {
+      for (const attempt of sourceAttemptPlan.attempts) {
         if (this._playSeq !== token) return;
-        const signed = await this._signed(path);
+        const signed = await this._signed(attempt.path);
         if (this._playSeq !== token) return;
         playable = await this._tryRecordingSource(video, signed, {
-          autoplay: true,
+          autoplay: attempt.autoplay,
         });
         if (playable) {
           activeSource = signed;
