@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1138";
+const VERSION = "1.0.1139";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5794,6 +5794,119 @@ function resolveRecordingSeekOutcome({
   };
 }
 
+// src/card/recordings/scrub-controller.js
+const RecordingScrubController = class {
+  constructor({ track, video, ticks, markers, state, setCursor, seekToRatio }) {
+    __publicField(this, "_onPointerDown", (event) => {
+      this._consumeGesture(event);
+      this._dragging = true;
+      this._state.isScrubbing = true;
+      this._state.resumeAfterScrub = !this._video.paused;
+      this._video.pause?.();
+      this._track.setPointerCapture?.(event.pointerId);
+      this._lastRatio = this._clientXToRatio(event.clientX);
+      this._seekToRatio?.(this._lastRatio);
+    });
+    __publicField(this, "_onPointerMove", (event) => {
+      if (!this._dragging) return;
+      this._consumeGesture(event);
+      this._lastRatio = this._clientXToRatio(event.clientX);
+      this._seekToRatio?.(this._lastRatio);
+    });
+    __publicField(this, "_onPointerUp", (event) => {
+      if (!this._dragging) return;
+      this._consumeGesture(event);
+      this._dragging = false;
+      this._state.isScrubbing = false;
+      this._track.releasePointerCapture?.(event.pointerId);
+      this._seekToRatio?.(this._lastRatio, { commit: true });
+    });
+    __publicField(this, "_onTouchConsume", (event) => {
+      this._consumeGesture(event);
+    });
+    __publicField(this, "_onTimeUpdate", () => {
+      if (this._state?.isScrubbing) return;
+      this._setCursor?.(
+        Number(this._state.start || 0) + Number(this._video.currentTime || 0)
+      );
+    });
+    this._track = track;
+    this._video = video;
+    this._ticks = ticks;
+    this._markers = markers;
+    this._state = state;
+    this._setCursor = setCursor;
+    this._seekToRatio = seekToRatio;
+    this._cleanup = new CleanupController();
+    this._dragging = false;
+    this._lastRatio = 0;
+  }
+  bind() {
+    if (!this._track || !this._video || !this._state) return;
+    this._cleanup.addEventListener(
+      this._track,
+      "pointerdown",
+      this._onPointerDown
+    );
+    this._cleanup.addEventListener(
+      this._track,
+      "pointermove",
+      this._onPointerMove
+    );
+    this._cleanup.addEventListener(this._track, "pointerup", this._onPointerUp);
+    this._cleanup.addEventListener(
+      this._track,
+      "pointercancel",
+      this._onPointerUp
+    );
+    this._cleanup.addEventListener(
+      this._track,
+      "touchstart",
+      this._onTouchConsume,
+      {
+        passive: false
+      }
+    );
+    this._cleanup.addEventListener(
+      this._track,
+      "touchmove",
+      this._onTouchConsume,
+      {
+        passive: false
+      }
+    );
+    this._cleanup.addEventListener(
+      this._track,
+      "touchend",
+      this._onTouchConsume,
+      {
+        passive: false
+      }
+    );
+    this._cleanup.addEventListener(
+      this._video,
+      "timeupdate",
+      this._onTimeUpdate
+    );
+  }
+  dispose() {
+    this._dragging = false;
+    this._state.isScrubbing = false;
+    this._cleanup.dispose();
+    if (this._ticks) this._ticks.innerHTML = "";
+    if (this._markers) this._markers.innerHTML = "";
+  }
+  _clientXToRatio(clientX) {
+    const rect = this._track.getBoundingClientRect();
+    if (!rect.width) return 0;
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  }
+  _consumeGesture(event) {
+    event.preventDefault?.();
+    event.stopPropagation?.();
+  }
+};
+
 // src/card/recordings/list-markup.js
 function buildRecordingsListMarkup({
   recordings = [],
@@ -9162,7 +9275,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._popupControlsHideTimer = null;
     this._liveControlsHideTimer = null;
     this._liveOverlayControlsCleanup = null;
-    this._recordingScrubCleanup = null;
+    this._recordingScrubController = null;
     this._recordingScrubState = null;
     this._recordingAlertCache = new Map();
     this._recordingsDayAvailabilityCache = new Map();
@@ -14183,13 +14296,13 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   _teardownRecordingScrub() {
-    if (this._recordingScrubCleanup) {
+    if (this._recordingScrubController) {
       try {
-        this._recordingScrubCleanup();
+        this._recordingScrubController.dispose();
       } catch (_) {
       }
     }
-    this._recordingScrubCleanup = null;
+    this._recordingScrubController = null;
     this._recordingScrubState = null;
   }
   _setRecordingScrubCursor(timeSec) {
@@ -14391,48 +14504,6 @@ const FrigateViewCard = class extends HTMLElement {
     const tickLayer = ticks || markers;
     tickLayer.innerHTML = decorations.tickMarkup;
     markers.innerHTML = decorations.markerMarkup;
-    const clientXToRatio = (clientX) => {
-      const rect = track.getBoundingClientRect();
-      if (!rect.width) return 0;
-      return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    };
-    let dragging = false;
-    let lastRatio = 0;
-    const consumeGesture = (ev) => {
-      ev.preventDefault?.();
-      ev.stopPropagation?.();
-    };
-    const onPointerDown = (ev) => {
-      consumeGesture(ev);
-      dragging = true;
-      state.isScrubbing = true;
-      state.resumeAfterScrub = !video.paused;
-      video.pause?.();
-      track.setPointerCapture?.(ev.pointerId);
-      lastRatio = clientXToRatio(ev.clientX);
-      this._seekRecordingScrubToRatio(lastRatio);
-    };
-    const onPointerMove = (ev) => {
-      if (!dragging) return;
-      consumeGesture(ev);
-      lastRatio = clientXToRatio(ev.clientX);
-      this._seekRecordingScrubToRatio(lastRatio);
-    };
-    const onPointerUp = (ev) => {
-      if (!dragging) return;
-      consumeGesture(ev);
-      dragging = false;
-      state.isScrubbing = false;
-      track.releasePointerCapture?.(ev.pointerId);
-      this._seekRecordingScrubToRatio(lastRatio, { commit: true });
-    };
-    const onTouchConsume = (ev) => {
-      consumeGesture(ev);
-    };
-    const onTime = () => {
-      if (this._recordingScrubState?.isScrubbing) return;
-      this._setRecordingScrubCursor(start + Number(video.currentTime || 0));
-    };
     const state = {
       start,
       end,
@@ -14449,28 +14520,18 @@ const FrigateViewCard = class extends HTMLElement {
       sourceUrl: sourceUrl || "",
       sourceUrlNoHash: String(sourceUrl || "").split("#")[0]
     };
-    track.addEventListener("pointerdown", onPointerDown);
-    track.addEventListener("pointermove", onPointerMove);
-    track.addEventListener("pointerup", onPointerUp);
-    track.addEventListener("pointercancel", onPointerUp);
-    track.addEventListener("touchstart", onTouchConsume, { passive: false });
-    track.addEventListener("touchmove", onTouchConsume, { passive: false });
-    track.addEventListener("touchend", onTouchConsume, { passive: false });
-    video.addEventListener("timeupdate", onTime);
     this._recordingScrubState = state;
     this._setRecordingScrubCursor(start);
-    this._recordingScrubCleanup = () => {
-      track.removeEventListener("pointerdown", onPointerDown);
-      track.removeEventListener("pointermove", onPointerMove);
-      track.removeEventListener("pointerup", onPointerUp);
-      track.removeEventListener("pointercancel", onPointerUp);
-      track.removeEventListener("touchstart", onTouchConsume);
-      track.removeEventListener("touchmove", onTouchConsume);
-      track.removeEventListener("touchend", onTouchConsume);
-      video.removeEventListener("timeupdate", onTime);
-      if (ticks) ticks.innerHTML = "";
-      markers.innerHTML = "";
-    };
+    this._recordingScrubController = new RecordingScrubController({
+      track,
+      video,
+      ticks,
+      markers,
+      state,
+      setCursor: (timeSec) => this._setRecordingScrubCursor(timeSec),
+      seekToRatio: (ratio, options) => this._seekRecordingScrubToRatio(ratio, options)
+    });
+    this._recordingScrubController.bind();
   }
   _popupInfoModel(ev = null, opts = {}) {
     const id = ev?.id || opts.id || "";

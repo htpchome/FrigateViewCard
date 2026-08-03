@@ -34,6 +34,8 @@ export {
   resolveRecordingSeekTimeout,
 } from "./scrub-utils.js";
 
+export { RecordingScrubController } from "./scrub-controller.js";
+
 export { buildRecordingsListMarkup } from "./list-markup.js";
 
 export { splitRecordingsHourly } from "./segment-utils.js";
