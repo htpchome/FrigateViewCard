@@ -97,15 +97,27 @@ function createCommitContext({
   clientId = "client-a",
   camera = "front",
   recordings = [{ id: 1 }],
+  swipeActive = false,
 } = {}) {
   const dataCache = new Map();
   const availabilityCache = new Map();
   const calls = [];
+  const removedClasses = [];
+  const list = {
+    classList: {
+      remove: (...tokens) => {
+        removedClasses.push(...tokens);
+      },
+      contains: (token) => swipeActive && token === "recordings-swipe-active",
+    },
+  };
 
   return {
     dataCache,
     availabilityCache,
     calls,
+    list,
+    removedClasses,
     ctx: {
       _followNowWindow: true,
       _winStart: 0,
@@ -117,6 +129,11 @@ function createCommitContext({
       _cc() {
         return { clientId, cam: camera };
       },
+      _$(selector) {
+        return selector === "#list" ? list : null;
+      },
+      _clearRecordingsSwipeListState:
+        FrigateViewCard.prototype._clearRecordingsSwipeListState,
       _pruneNonActiveCamWindowCaches() {
         calls.push(["prune"]);
       },
@@ -232,12 +249,19 @@ test("_updateRecordingsBrowseNav skips next-day probing on today", async () => {
 
 test("_commitRecordingsDayTransition updates caches and render state with camera context", async () => {
   const bounds = { start: 100, end: 200 };
-  const { ctx, calls, dataCache, availabilityCache, recordings } =
-    createCommitContext({
-      clientId: "client-a",
-      camera: "front",
-      recordings: [{ id: 1 }],
-    });
+  const {
+    ctx,
+    calls,
+    dataCache,
+    availabilityCache,
+    recordings,
+    removedClasses,
+  } = createCommitContext({
+    clientId: "client-a",
+    camera: "front",
+    recordings: [{ id: 1 }],
+    swipeActive: true,
+  });
 
   await FrigateViewCard.prototype._commitRecordingsDayTransition.call(
     ctx,
@@ -253,6 +277,7 @@ test("_commitRecordingsDayTransition updates caches and render state with camera
   assert.deepEqual(ctx._recordings, recordings);
   assert.deepEqual(dataCache.get("client-a|front|100|200"), recordings);
   assert.equal(availabilityCache.get("client-a|front|100|200"), true);
+  assert.deepEqual(removedClasses, ["recordings-swipe-active"]);
   assert.deepEqual(calls, [
     ["prune"],
     ["cacheActiveCamSlice", "recordings", recordings],
@@ -263,11 +288,13 @@ test("_commitRecordingsDayTransition updates caches and render state with camera
 
 test("_commitRecordingsDayTransition skips cache writes without camera context", async () => {
   const bounds = { start: 300, end: 400 };
-  const { ctx, calls, dataCache, availabilityCache } = createCommitContext({
-    clientId: "",
-    camera: "front",
-    recordings: null,
-  });
+  const { ctx, calls, dataCache, availabilityCache, removedClasses } =
+    createCommitContext({
+      clientId: "",
+      camera: "front",
+      recordings: null,
+      swipeActive: true,
+    });
 
   await FrigateViewCard.prototype._commitRecordingsDayTransition.call(
     ctx,
@@ -282,6 +309,7 @@ test("_commitRecordingsDayTransition skips cache writes without camera context",
   assert.deepEqual(ctx._recordings, []);
   assert.equal(dataCache.size, 0);
   assert.equal(availabilityCache.size, 0);
+  assert.deepEqual(removedClasses, ["recordings-swipe-active"]);
   assert.deepEqual(calls, [
     ["prune"],
     ["cacheActiveCamSlice", "recordings", []],

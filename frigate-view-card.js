@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1140";
+const VERSION = "1.0.1141";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -13376,9 +13376,13 @@ const FrigateViewCard = class extends HTMLElement {
   _destroyRecordingsSwipeStage() {
     const state = this._recordingsSwipeGesture?.stage;
     if (!state?.list) return;
-    state.list.classList.remove("recordings-swipe-active");
+    this._clearRecordingsSwipeListState(state.list);
     this._lastRenderedListHtml = "";
     this._renderList();
+  }
+  _clearRecordingsSwipeListState(list = null) {
+    const targetList = list || this._$("#list");
+    targetList?.classList?.remove("recordings-swipe-active");
   }
   _startRecordingsSwipeGesture(direction) {
     const stage = this._createRecordingsSwipeStage(
@@ -13530,6 +13534,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._cacheActiveCamSlice("recordings", this._recordings);
     this._renderListLabel(this._winEnd);
+    this._clearRecordingsSwipeListState();
     this._lastRenderedListHtml = "";
     this._renderList();
   }

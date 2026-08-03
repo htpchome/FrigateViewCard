@@ -5111,9 +5111,14 @@ export class FrigateViewCard extends HTMLElement {
   _destroyRecordingsSwipeStage() {
     const state = this._recordingsSwipeGesture?.stage;
     if (!state?.list) return;
-    state.list.classList.remove("recordings-swipe-active");
+    this._clearRecordingsSwipeListState(state.list);
     this._lastRenderedListHtml = "";
     this._renderList();
+  }
+
+  _clearRecordingsSwipeListState(list = null) {
+    const targetList = list || this._$("#list");
+    targetList?.classList?.remove("recordings-swipe-active");
   }
 
   _startRecordingsSwipeGesture(direction) {
@@ -5279,6 +5284,7 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._cacheActiveCamSlice("recordings", this._recordings);
     this._renderListLabel(this._winEnd);
+    this._clearRecordingsSwipeListState();
     this._lastRenderedListHtml = "";
     this._renderList();
   }
