@@ -3054,6 +3054,16 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
 
+  _applySnapshotFallbackState(refreshImage = false) {
+    const fallbackState = resolveSnapshotFallbackState({ refreshImage });
+    this._setActiveStreamType(fallbackState.activeStreamType);
+    this._setStreamLoading(fallbackState.loading);
+    this._setStreamFallbackVisible(
+      fallbackState.fallbackVisible,
+      fallbackState.refreshFallbackImage,
+    );
+  }
+
   _beginLiveMountSession(entity) {
     const mountToken = this._beginMountTracking(entity);
     const mountWatchdogT = setTimeout(
@@ -3238,13 +3248,7 @@ export class FrigateViewCard extends HTMLElement {
         return;
 
       // go2rtc attempts failed: show snapshot placeholder.
-      const fallbackState = resolveSnapshotFallbackState();
-      this._setActiveStreamType(fallbackState.activeStreamType);
-      this._setStreamLoading(fallbackState.loading);
-      this._setStreamFallbackVisible(
-        fallbackState.fallbackVisible,
-        fallbackState.refreshFallbackImage,
-      );
+      this._applySnapshotFallbackState();
     } finally {
       clearTimeout(mountWatchdogT);
       this._clearMountTrackingIfCurrent(mountToken);

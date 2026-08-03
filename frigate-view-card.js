@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1129";
+const VERSION = "1.0.1130";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10839,6 +10839,15 @@ const FrigateViewCard = class extends HTMLElement {
       this._setLiveNativeControls(true);
     }
   }
+  _applySnapshotFallbackState(refreshImage = false) {
+    const fallbackState = resolveSnapshotFallbackState({ refreshImage });
+    this._setActiveStreamType(fallbackState.activeStreamType);
+    this._setStreamLoading(fallbackState.loading);
+    this._setStreamFallbackVisible(
+      fallbackState.fallbackVisible,
+      fallbackState.refreshFallbackImage
+    );
+  }
   _beginLiveMountSession(entity) {
     const mountToken = this._beginMountTracking(entity);
     const mountWatchdogT2 = setTimeout(
@@ -11003,13 +11012,7 @@ const FrigateViewCard = class extends HTMLElement {
       const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);
       if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
         return;
-      const fallbackState = resolveSnapshotFallbackState();
-      this._setActiveStreamType(fallbackState.activeStreamType);
-      this._setStreamLoading(fallbackState.loading);
-      this._setStreamFallbackVisible(
-        fallbackState.fallbackVisible,
-        fallbackState.refreshFallbackImage
-      );
+      this._applySnapshotFallbackState();
     } finally {
       clearTimeout(mountWatchdogT);
       this._clearMountTrackingIfCurrent(mountToken);
