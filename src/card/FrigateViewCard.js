@@ -5806,7 +5806,7 @@ export class FrigateViewCard extends HTMLElement {
       if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
       this._resumeLiveT = setTimeout(() => {
         this._resumeLiveIfNeeded("wait-ready");
-      }, 450);
+      }, action.retryDelayMs);
       return;
     }
 
@@ -5818,7 +5818,9 @@ export class FrigateViewCard extends HTMLElement {
       this._kickLiveIfStale(true);
     }
     // Safety follow-up: some browsers finalize media attachment one frame later.
-    setTimeout(() => this._kickLiveIfStale(true), 900);
+    if (action.safetyKickDelayMs > 0) {
+      setTimeout(() => this._kickLiveIfStale(true), action.safetyKickDelayMs);
+    }
   }
   _setupResizeObserver() {
     if (this._ro) this._ro.disconnect();

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1121";
+const VERSION = "1.0.1122";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2865,13 +2865,17 @@ const resolveLiveResumeAction = ({
   mountStartedAt,
   mountTargetEntity,
   nowMs = Date.now(),
-  stuckThresholdMs = 12e3
+  stuckThresholdMs = 12e3,
+  retryDelayMs = 450,
+  safetyKickDelayMs = 900
 }) => {
   if (!started || !hass || !config || previewPageActive) {
     return {
       shouldRetry: false,
       shouldKickNow: false,
       shouldRevealEngineWrap: false,
+      retryDelayMs: 0,
+      safetyKickDelayMs: 0,
       nextMountState: null
     };
   }
@@ -2892,6 +2896,8 @@ const resolveLiveResumeAction = ({
       shouldRetry: true,
       shouldKickNow: false,
       shouldRevealEngineWrap: false,
+      retryDelayMs,
+      safetyKickDelayMs: 0,
       nextMountState
     };
   }
@@ -2899,6 +2905,8 @@ const resolveLiveResumeAction = ({
     shouldRetry: false,
     shouldKickNow: true,
     shouldRevealEngineWrap: true,
+    retryDelayMs: 0,
+    safetyKickDelayMs,
     nextMountState
   };
 };
@@ -13164,7 +13172,7 @@ const FrigateViewCard = class extends HTMLElement {
       if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
       this._resumeLiveT = setTimeout(() => {
         this._resumeLiveIfNeeded("wait-ready");
-      }, 450);
+      }, action.retryDelayMs);
       return;
     }
     if (action.shouldRevealEngineWrap) {
@@ -13174,7 +13182,9 @@ const FrigateViewCard = class extends HTMLElement {
     if (action.shouldKickNow) {
       this._kickLiveIfStale(true);
     }
-    setTimeout(() => this._kickLiveIfStale(true), 900);
+    if (action.safetyKickDelayMs > 0) {
+      setTimeout(() => this._kickLiveIfStale(true), action.safetyKickDelayMs);
+    }
   }
   _setupResizeObserver() {
     if (this._ro) this._ro.disconnect();

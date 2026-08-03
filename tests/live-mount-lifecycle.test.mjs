@@ -140,6 +140,8 @@ test("resolveLiveResumeAction invalidates stuck mounts and kicks when visible", 
     shouldRetry: false,
     shouldKickNow: true,
     shouldRevealEngineWrap: true,
+    retryDelayMs: 0,
+    safetyKickDelayMs: 900,
     nextMountState: {
       mountSeq: 9,
       mountInProgress: false,
@@ -167,6 +169,32 @@ test("resolveLiveResumeAction retries while hidden or blocked", () => {
     shouldRetry: true,
     shouldKickNow: false,
     shouldRevealEngineWrap: false,
+    retryDelayMs: 450,
+    safetyKickDelayMs: 0,
+    nextMountState: null,
+  });
+});
+
+test("resolveLiveResumeAction suppresses timing outputs when resume cannot run", () => {
+  const action = resolveLiveResumeAction({
+    started: false,
+    hass: {},
+    config: {},
+    previewPageActive: false,
+    visible: true,
+    popupOpen: false,
+    mountSeq: 1,
+    mountInProgress: false,
+    mountStartedAt: 0,
+    mountTargetEntity: "",
+  });
+
+  assert.deepEqual(action, {
+    shouldRetry: false,
+    shouldKickNow: false,
+    shouldRevealEngineWrap: false,
+    retryDelayMs: 0,
+    safetyKickDelayMs: 0,
     nextMountState: null,
   });
 });

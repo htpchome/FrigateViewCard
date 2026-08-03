@@ -88,12 +88,16 @@ export const resolveLiveResumeAction = ({
   mountTargetEntity,
   nowMs = Date.now(),
   stuckThresholdMs = 12000,
+  retryDelayMs = 450,
+  safetyKickDelayMs = 900,
 }) => {
   if (!started || !hass || !config || previewPageActive) {
     return {
       shouldRetry: false,
       shouldKickNow: false,
       shouldRevealEngineWrap: false,
+      retryDelayMs: 0,
+      safetyKickDelayMs: 0,
       nextMountState: null,
     };
   }
@@ -117,6 +121,8 @@ export const resolveLiveResumeAction = ({
       shouldRetry: true,
       shouldKickNow: false,
       shouldRevealEngineWrap: false,
+      retryDelayMs,
+      safetyKickDelayMs: 0,
       nextMountState,
     };
   }
@@ -125,6 +131,8 @@ export const resolveLiveResumeAction = ({
     shouldRetry: false,
     shouldKickNow: true,
     shouldRevealEngineWrap: true,
+    retryDelayMs: 0,
+    safetyKickDelayMs,
     nextMountState,
   };
 };
