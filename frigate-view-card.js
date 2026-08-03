@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1141";
+const VERSION = "1.0.1142";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -28,6 +28,7 @@ const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
 const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 const SLIDESHOW_ALERT_HOLD_MS = 1e4;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
+1142;
 const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
 const SLIDESHOW_REVIEW_WATCH_MAX_MS = 15e3;
 const PREVIEW_ALERT_HOLD_MS = 6e3;
@@ -4695,6 +4696,66 @@ const CleanupController = class {
       } catch (_) {
       }
     }
+  }
+};
+
+// src/card/live-overlay-controls-controller.js
+const LiveOverlayControlsController = class {
+  constructor({ wrap, show, hideNow, hideSoon }) {
+    __publicField(this, "_onPointerEnter", (event) => {
+      if (event?.pointerType === "mouse") this._show?.();
+    });
+    __publicField(this, "_onPointerLeave", (event) => {
+      if (event?.pointerType === "mouse") this._hideNow?.();
+    });
+    __publicField(this, "_onPointerDown", (event) => {
+      const pointerType = String(event?.pointerType || "").toLowerCase();
+      if (pointerType === "mouse") return;
+      this._show?.();
+      this._hideSoon?.(1300);
+    });
+    __publicField(this, "_onTouchStart", () => {
+      this._show?.();
+      this._hideSoon?.(1300);
+    });
+    this._wrap = wrap;
+    this._show = show;
+    this._hideNow = hideNow;
+    this._hideSoon = hideSoon;
+    this._cleanup = new CleanupController();
+  }
+  bind() {
+    if (!this._wrap) return;
+    this._cleanup.addEventListener(
+      this._wrap,
+      "pointerenter",
+      this._onPointerEnter,
+      { passive: true }
+    );
+    this._cleanup.addEventListener(
+      this._wrap,
+      "pointerleave",
+      this._onPointerLeave,
+      { passive: true }
+    );
+    this._cleanup.addEventListener(
+      this._wrap,
+      "pointerdown",
+      this._onPointerDown,
+      { passive: true }
+    );
+    this._cleanup.addEventListener(
+      this._wrap,
+      "touchstart",
+      this._onTouchStart,
+      {
+        passive: true
+      }
+    );
+  }
+  dispose() {
+    this._cleanup.dispose();
+    this._hideNow?.();
   }
 };
 
@@ -9382,7 +9443,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._popupMediaControlsController = null;
     this._popupControlsHideTimer = null;
     this._liveControlsHideTimer = null;
-    this._liveOverlayControlsCleanup = null;
+    this._liveOverlayControlsController = null;
     this._recordingScrubController = null;
     this._recordingScrubState = null;
     this._recordingAlertCache = new Map();
@@ -9940,12 +10001,12 @@ const FrigateViewCard = class extends HTMLElement {
       clearTimeout(this._popupControlsHideTimer);
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._popupMediaStopTimer) clearTimeout(this._popupMediaStopTimer);
-    if (this._liveOverlayControlsCleanup) {
+    if (this._liveOverlayControlsController) {
       try {
-        this._liveOverlayControlsCleanup();
+        this._liveOverlayControlsController.dispose();
       } catch (_) {
       }
-      this._liveOverlayControlsCleanup = null;
+      this._liveOverlayControlsController = null;
     }
     if (this._recordingsSwipeController) {
       this._recordingsSwipeController.dispose();
@@ -13194,12 +13255,12 @@ const FrigateViewCard = class extends HTMLElement {
   _initLiveOverlayControls() {
     const wrap = this._$("#eng-wrap");
     if (!wrap) return;
-    if (this._liveOverlayControlsCleanup) {
+    if (this._liveOverlayControlsController) {
       try {
-        this._liveOverlayControlsCleanup();
+        this._liveOverlayControlsController.dispose();
       } catch (_) {
       }
-      this._liveOverlayControlsCleanup = null;
+      this._liveOverlayControlsController = null;
     }
     const show = () => {
       wrap.classList.add("live-controls-visible");
@@ -13219,33 +13280,13 @@ const FrigateViewCard = class extends HTMLElement {
         this._liveControlsHideTimer = null;
       }, ms);
     };
-    const onPointerEnter = (event) => {
-      if (event?.pointerType === "mouse") show();
-    };
-    const onPointerLeave = (event) => {
-      if (event?.pointerType === "mouse") hideNow();
-    };
-    const onPointerDown = (event) => {
-      const pointerType = String(event?.pointerType || "").toLowerCase();
-      if (pointerType === "mouse") return;
-      show();
-      hideSoon(1300);
-    };
-    const onTouchStart = () => {
-      show();
-      hideSoon(1300);
-    };
-    wrap.addEventListener("pointerenter", onPointerEnter, { passive: true });
-    wrap.addEventListener("pointerleave", onPointerLeave, { passive: true });
-    wrap.addEventListener("pointerdown", onPointerDown, { passive: true });
-    wrap.addEventListener("touchstart", onTouchStart, { passive: true });
-    this._liveOverlayControlsCleanup = () => {
-      wrap.removeEventListener("pointerenter", onPointerEnter);
-      wrap.removeEventListener("pointerleave", onPointerLeave);
-      wrap.removeEventListener("pointerdown", onPointerDown);
-      wrap.removeEventListener("touchstart", onTouchStart);
-      hideNow();
-    };
+    this._liveOverlayControlsController = new LiveOverlayControlsController({
+      wrap,
+      show,
+      hideNow,
+      hideSoon
+    });
+    this._liveOverlayControlsController.bind();
   }
   _syncBrowseHeadModeClass() {
     const card = this._$("#card");

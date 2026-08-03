@@ -189,6 +189,7 @@ import {
   buildFavoriteOptimisticMutation,
   buildFavoriteRollbackMutation,
 } from "./favorites-mutation-utils.js";
+import { LiveOverlayControlsController } from "./live-overlay-controls-controller.js";
 import { PopupDragController } from "./popup-drag-controller.js";
 import { PopupMediaControlsController } from "./popup-media-controls-controller.js";
 import {
@@ -501,7 +502,7 @@ export class FrigateViewCard extends HTMLElement {
     this._popupMediaControlsController = null;
     this._popupControlsHideTimer = null;
     this._liveControlsHideTimer = null;
-    this._liveOverlayControlsCleanup = null;
+    this._liveOverlayControlsController = null;
     this._recordingScrubController = null;
     this._recordingScrubState = null;
     this._recordingAlertCache = new Map();
@@ -1176,11 +1177,11 @@ export class FrigateViewCard extends HTMLElement {
       clearTimeout(this._popupControlsHideTimer);
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._popupMediaStopTimer) clearTimeout(this._popupMediaStopTimer);
-    if (this._liveOverlayControlsCleanup) {
+    if (this._liveOverlayControlsController) {
       try {
-        this._liveOverlayControlsCleanup();
+        this._liveOverlayControlsController.dispose();
       } catch (_) {}
-      this._liveOverlayControlsCleanup = null;
+      this._liveOverlayControlsController = null;
     }
     if (this._recordingsSwipeController) {
       this._recordingsSwipeController.dispose();
@@ -4898,11 +4899,11 @@ export class FrigateViewCard extends HTMLElement {
   _initLiveOverlayControls() {
     const wrap = this._$("#eng-wrap");
     if (!wrap) return;
-    if (this._liveOverlayControlsCleanup) {
+    if (this._liveOverlayControlsController) {
       try {
-        this._liveOverlayControlsCleanup();
+        this._liveOverlayControlsController.dispose();
       } catch (_) {}
-      this._liveOverlayControlsCleanup = null;
+      this._liveOverlayControlsController = null;
     }
     const show = () => {
       wrap.classList.add("live-controls-visible");
@@ -4922,34 +4923,13 @@ export class FrigateViewCard extends HTMLElement {
         this._liveControlsHideTimer = null;
       }, ms);
     };
-    const onPointerEnter = (event) => {
-      if (event?.pointerType === "mouse") show();
-    };
-    const onPointerLeave = (event) => {
-      if (event?.pointerType === "mouse") hideNow();
-    };
-    const onPointerDown = (event) => {
-      const pointerType = String(event?.pointerType || "").toLowerCase();
-      if (pointerType === "mouse") return;
-      show();
-      hideSoon(1300);
-    };
-    const onTouchStart = () => {
-      // Fallback for environments that do not emit pointer events consistently.
-      show();
-      hideSoon(1300);
-    };
-    wrap.addEventListener("pointerenter", onPointerEnter, { passive: true });
-    wrap.addEventListener("pointerleave", onPointerLeave, { passive: true });
-    wrap.addEventListener("pointerdown", onPointerDown, { passive: true });
-    wrap.addEventListener("touchstart", onTouchStart, { passive: true });
-    this._liveOverlayControlsCleanup = () => {
-      wrap.removeEventListener("pointerenter", onPointerEnter);
-      wrap.removeEventListener("pointerleave", onPointerLeave);
-      wrap.removeEventListener("pointerdown", onPointerDown);
-      wrap.removeEventListener("touchstart", onTouchStart);
-      hideNow();
-    };
+    this._liveOverlayControlsController = new LiveOverlayControlsController({
+      wrap,
+      show,
+      hideNow,
+      hideSoon,
+    });
+    this._liveOverlayControlsController.bind();
   }
 
   _syncBrowseHeadModeClass() {
