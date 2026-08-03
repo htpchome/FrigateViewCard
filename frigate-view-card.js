@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1119";
+const VERSION = "1.0.1120";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4571,6 +4571,21 @@ const resolvePopupRecordingSeekListenerPlan = () => ({
     { type: "seeking", action: "pauseForSeek" },
     { type: "seeked", action: "resumeAfterSeek" }
   ]
+});
+const buildPopupRecordingScrubInitPlan = ({
+  clientId = "",
+  cam = "",
+  start = 0,
+  chunkEnd = 0,
+  token = 0,
+  sourceUrl = ""
+}) => ({
+  clientId,
+  cam,
+  start,
+  end: chunkEnd,
+  token,
+  sourceUrl
 });
 const resolvePopupRecordingLoadOutcomePlan = ({
   playable = false,
@@ -14844,15 +14859,23 @@ const FrigateViewCard = class extends HTMLElement {
       this._scheduleRotateOverlayUpdate();
     }
     if (video && outcomePlan.shouldInitPopupMediaControls) {
-      this._initPopupMediaControls(video, renderPlan.popupMediaType);
-      this._initRecordingScrub({
+      const scrubInitPlan = buildPopupRecordingScrubInitPlan({
         clientId,
         cam,
         start: s,
-        end: renderPlan.chunkEnd,
-        video,
+        chunkEnd: renderPlan.chunkEnd,
         token,
         sourceUrl: activeSource || video.currentSrc || video.src
+      });
+      this._initPopupMediaControls(video, renderPlan.popupMediaType);
+      this._initRecordingScrub({
+        clientId: scrubInitPlan.clientId,
+        cam: scrubInitPlan.cam,
+        start: scrubInitPlan.start,
+        end: scrubInitPlan.end,
+        video,
+        token: scrubInitPlan.token,
+        sourceUrl: scrubInitPlan.sourceUrl
       });
     }
     if (outcomePlan.shouldRenderCarousel) {

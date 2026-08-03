@@ -186,6 +186,7 @@ import {
   buildPopupMediaUrl,
   buildPopupMediaControlState,
   buildPopupRecordingRenderPlan,
+  buildPopupRecordingScrubInitPlan,
   buildPopupRecordingSourceAttemptPlan,
   buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
@@ -7688,15 +7689,23 @@ export class FrigateViewCard extends HTMLElement {
       this._scheduleRotateOverlayUpdate();
     }
     if (video && outcomePlan.shouldInitPopupMediaControls) {
-      this._initPopupMediaControls(video, renderPlan.popupMediaType);
-      this._initRecordingScrub({
+      const scrubInitPlan = buildPopupRecordingScrubInitPlan({
         clientId,
         cam,
         start: s,
-        end: renderPlan.chunkEnd,
-        video,
+        chunkEnd: renderPlan.chunkEnd,
         token,
         sourceUrl: activeSource || video.currentSrc || video.src,
+      });
+      this._initPopupMediaControls(video, renderPlan.popupMediaType);
+      this._initRecordingScrub({
+        clientId: scrubInitPlan.clientId,
+        cam: scrubInitPlan.cam,
+        start: scrubInitPlan.start,
+        end: scrubInitPlan.end,
+        video,
+        token: scrubInitPlan.token,
+        sourceUrl: scrubInitPlan.sourceUrl,
       });
     }
     if (outcomePlan.shouldRenderCarousel) {

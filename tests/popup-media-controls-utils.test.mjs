@@ -6,6 +6,7 @@ import {
   buildPopupMediaUrl,
   buildPopupMediaControlState,
   buildPopupRecordingRenderPlan,
+  buildPopupRecordingScrubInitPlan,
   buildPopupRecordingSourceAttemptPlan,
   buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
@@ -241,6 +242,27 @@ test("buildPopupRecordingSourceAttemptPlan preserves source order and autoplay p
     }),
     {
       attempts: [{ path: "/clip.mp4", autoplay: false }],
+    },
+  );
+});
+
+test("buildPopupRecordingScrubInitPlan shapes recording scrub init payload", () => {
+  assert.deepEqual(
+    buildPopupRecordingScrubInitPlan({
+      clientId: "client-a",
+      cam: "front-yard",
+      start: 100,
+      chunkEnd: 180,
+      token: 7,
+      sourceUrl: "/api/recording.m3u8",
+    }),
+    {
+      clientId: "client-a",
+      cam: "front-yard",
+      start: 100,
+      end: 180,
+      token: 7,
+      sourceUrl: "/api/recording.m3u8",
     },
   );
 });

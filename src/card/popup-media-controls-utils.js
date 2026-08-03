@@ -106,6 +106,22 @@ export const resolvePopupRecordingSeekListenerPlan = () => ({
   ],
 });
 
+export const buildPopupRecordingScrubInitPlan = ({
+  clientId = "",
+  cam = "",
+  start = 0,
+  chunkEnd = 0,
+  token = 0,
+  sourceUrl = "",
+}) => ({
+  clientId,
+  cam,
+  start,
+  end: chunkEnd,
+  token,
+  sourceUrl,
+});
+
 export const resolvePopupRecordingLoadOutcomePlan = ({
   playable = false,
   popupMediaType = "recording",
