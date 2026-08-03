@@ -3069,6 +3069,34 @@ export class FrigateViewCard extends HTMLElement {
     };
   }
 
+  _scheduleHaDirectMountFollowUp(streamEl, haDirectPlan) {
+    void (async () => {
+      const ok = await this._waitForStreamStart(
+        streamEl,
+        haDirectPlan.waitMs,
+        haDirectPlan.waitOptions,
+      );
+      const readyState = resolveHaDirectReadyState({
+        rotateOverlayActive: this._rotateOverlayActive,
+        isCurrentEngine: this._engine === streamEl,
+        waitSucceeded: ok,
+      });
+      if (readyState.shouldApply) {
+        this._applyResolvedStreamUiState(readyState);
+      }
+    })();
+
+    setTimeout(() => {
+      const stabilizedState = resolveHaDirectStabilizedState({
+        rotateOverlayActive: this._rotateOverlayActive,
+        isCurrentEngine: this._engine === streamEl,
+      });
+      if (stabilizedState.shouldApply) {
+        this._applyResolvedStreamUiState(stabilizedState);
+      }
+    }, 1200);
+  }
+
   async _mountEngine(forcedType = null, options = {}) {
     const quiet = options?.quiet === true;
     const slot = this.shadowRoot.querySelector("#engine");
@@ -3202,30 +3230,7 @@ export class FrigateViewCard extends HTMLElement {
         this._attachVideoFit(s);
         if (this._rotateOverlayActive) this._setLiveNativeControls(true);
 
-        void (async () => {
-          const ok = await this._waitForStreamStart(
-            s,
-            haDirectPlan.waitMs,
-            haDirectPlan.waitOptions,
-          );
-          const readyState = resolveHaDirectReadyState({
-            rotateOverlayActive: this._rotateOverlayActive,
-            isCurrentEngine: this._engine === s,
-            waitSucceeded: ok,
-          });
-          if (readyState.shouldApply) {
-            this._applyResolvedStreamUiState(readyState);
-          }
-        })();
-        setTimeout(() => {
-          const stabilizedState = resolveHaDirectStabilizedState({
-            rotateOverlayActive: this._rotateOverlayActive,
-            isCurrentEngine: this._engine === s,
-          });
-          if (stabilizedState.shouldApply) {
-            this._applyResolvedStreamUiState(stabilizedState);
-          }
-        }, 1200);
+        this._scheduleHaDirectMountFollowUp(s, haDirectPlan);
         return;
       }
       const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);

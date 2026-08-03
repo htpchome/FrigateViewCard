@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1128";
+const VERSION = "1.0.1129";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10853,6 +10853,32 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
   }
+  _scheduleHaDirectMountFollowUp(streamEl, haDirectPlan) {
+    void (async () => {
+      const ok = await this._waitForStreamStart(
+        streamEl,
+        haDirectPlan.waitMs,
+        haDirectPlan.waitOptions
+      );
+      const readyState = resolveHaDirectReadyState({
+        rotateOverlayActive: this._rotateOverlayActive,
+        isCurrentEngine: this._engine === streamEl,
+        waitSucceeded: ok
+      });
+      if (readyState.shouldApply) {
+        this._applyResolvedStreamUiState(readyState);
+      }
+    })();
+    setTimeout(() => {
+      const stabilizedState = resolveHaDirectStabilizedState({
+        rotateOverlayActive: this._rotateOverlayActive,
+        isCurrentEngine: this._engine === streamEl
+      });
+      if (stabilizedState.shouldApply) {
+        this._applyResolvedStreamUiState(stabilizedState);
+      }
+    }, 1200);
+  }
   async _mountEngine(forcedType = null, options = {}) {
     const quiet = options?.quiet === true;
     const slot = this.shadowRoot.querySelector("#engine");
@@ -10971,30 +10997,7 @@ const FrigateViewCard = class extends HTMLElement {
         this._engineMountedMuted = this._streamMuted;
         this._attachVideoFit(s);
         if (this._rotateOverlayActive) this._setLiveNativeControls(true);
-        void (async () => {
-          const ok = await this._waitForStreamStart(
-            s,
-            haDirectPlan.waitMs,
-            haDirectPlan.waitOptions
-          );
-          const readyState = resolveHaDirectReadyState({
-            rotateOverlayActive: this._rotateOverlayActive,
-            isCurrentEngine: this._engine === s,
-            waitSucceeded: ok
-          });
-          if (readyState.shouldApply) {
-            this._applyResolvedStreamUiState(readyState);
-          }
-        })();
-        setTimeout(() => {
-          const stabilizedState = resolveHaDirectStabilizedState({
-            rotateOverlayActive: this._rotateOverlayActive,
-            isCurrentEngine: this._engine === s
-          });
-          if (stabilizedState.shouldApply) {
-            this._applyResolvedStreamUiState(stabilizedState);
-          }
-        }, 1200);
+        this._scheduleHaDirectMountFollowUp(s, haDirectPlan);
         return;
       }
       const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);
