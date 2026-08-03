@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1132";
+const VERSION = "1.0.1133";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3377,6 +3377,22 @@ const resolveRotateOverlayUiPlan = ({
     syncFullscreenButtons: true,
     showLiveControls: false,
     showPopupControls: true
+  };
+};
+const resolveRotateOverlayExitPlan = ({ action = "idle" } = {}) => {
+  if (action !== "deactivate") {
+    return {
+      shouldSchedule: false,
+      delayMs: 0,
+      removeClasses: [],
+      syncFullscreenButtons: false
+    };
+  }
+  return {
+    shouldSchedule: true,
+    delayMs: 260,
+    removeClasses: ["mobile-rotate-live-exit", "mobile-rotate-popup-exit"],
+    syncFullscreenButtons: true
   };
 };
 const resolveRotateOverlayNativeControlsPlan = ({
@@ -13151,6 +13167,9 @@ const FrigateViewCard = class extends HTMLElement {
       this._rotateOverlayExitT = null;
     }
     this._applyRotateOverlayUiPlan(card, uiPlan);
+    const exitPlan = resolveRotateOverlayExitPlan({
+      action: rotateState.action
+    });
     if (rotateState.action === "activate-live") {
       return;
     }
@@ -13162,15 +13181,15 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._rotateOverlayExitT = setTimeout(() => {
       const c = this._$("#card");
-      if (c)
-        c.classList.remove(
-          "mobile-rotate-live-exit",
-          "mobile-rotate-popup-exit"
-        );
+      if (c && exitPlan.removeClasses.length) {
+        c.classList.remove(...exitPlan.removeClasses);
+      }
       this._rotateOverlayExitT = null;
       if (this._resumeLiveT) return;
-      this._syncFullscreenButtonsVisibility();
-    }, 260);
+      if (exitPlan.syncFullscreenButtons) {
+        this._syncFullscreenButtonsVisibility();
+      }
+    }, exitPlan.delayMs);
   }
   _kickLiveIfStale(force = false) {
     const now = Date.now();

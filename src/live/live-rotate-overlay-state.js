@@ -171,6 +171,24 @@ export const resolveRotateOverlayUiPlan = ({
   };
 };
 
+export const resolveRotateOverlayExitPlan = ({ action = "idle" } = {}) => {
+  if (action !== "deactivate") {
+    return {
+      shouldSchedule: false,
+      delayMs: 0,
+      removeClasses: [],
+      syncFullscreenButtons: false,
+    };
+  }
+
+  return {
+    shouldSchedule: true,
+    delayMs: 260,
+    removeClasses: ["mobile-rotate-live-exit", "mobile-rotate-popup-exit"],
+    syncFullscreenButtons: true,
+  };
+};
+
 export const resolveRotateOverlayNativeControlsPlan = ({
   enabled = false,
 }) => ({

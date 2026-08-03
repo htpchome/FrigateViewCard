@@ -135,6 +135,7 @@ import {
   resolveSnapshotFallbackState,
 } from "../live/live-stream-state.js";
 import {
+  resolveRotateOverlayExitPlan,
   resolveFullscreenButtonVisibility,
   resolveRotateOverlayNativeControlsPlan,
   resolveRotateOverlayState,
@@ -5741,6 +5742,9 @@ export class FrigateViewCard extends HTMLElement {
     }
 
     this._applyRotateOverlayUiPlan(card, uiPlan);
+    const exitPlan = resolveRotateOverlayExitPlan({
+      action: rotateState.action,
+    });
 
     if (rotateState.action === "activate-live") {
       return;
@@ -5756,15 +5760,15 @@ export class FrigateViewCard extends HTMLElement {
 
     this._rotateOverlayExitT = setTimeout(() => {
       const c = this._$("#card");
-      if (c)
-        c.classList.remove(
-          "mobile-rotate-live-exit",
-          "mobile-rotate-popup-exit",
-        );
+      if (c && exitPlan.removeClasses.length) {
+        c.classList.remove(...exitPlan.removeClasses);
+      }
       this._rotateOverlayExitT = null;
       if (this._resumeLiveT) return;
-      this._syncFullscreenButtonsVisibility();
-    }, 260);
+      if (exitPlan.syncFullscreenButtons) {
+        this._syncFullscreenButtonsVisibility();
+      }
+    }, exitPlan.delayMs);
   }
   _kickLiveIfStale(force = false) {
     const now = Date.now();

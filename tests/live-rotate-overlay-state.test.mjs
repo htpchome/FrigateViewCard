@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  resolveRotateOverlayExitPlan,
   resolveFullscreenButtonVisibility,
   resolveRotateOverlayNativeControlsPlan,
   resolveRotateOverlayState,
@@ -248,6 +249,22 @@ test("resolveRotateOverlayUiPlan shapes class mutations and side effects per act
       showPopupControls: true,
     },
   );
+});
+
+test("resolveRotateOverlayExitPlan only schedules cleanup for deactivate", () => {
+  assert.deepEqual(resolveRotateOverlayExitPlan({ action: "idle" }), {
+    shouldSchedule: false,
+    delayMs: 0,
+    removeClasses: [],
+    syncFullscreenButtons: false,
+  });
+
+  assert.deepEqual(resolveRotateOverlayExitPlan({ action: "deactivate" }), {
+    shouldSchedule: true,
+    delayMs: 260,
+    removeClasses: ["mobile-rotate-live-exit", "mobile-rotate-popup-exit"],
+    syncFullscreenButtons: true,
+  });
 });
 
 test("resolveRotateOverlayNativeControlsPlan keeps retry timing and cleanup behavior stable", () => {
