@@ -22,6 +22,7 @@ export const STYLES = `
   /* ── theme variables (dark = default) ── */
     .card {
         --c-bg-main:   var(--card-background-color);
+        --c-bg-primary:var(--primary-background-color); 
         --c-bg-panel:  var(--secondary-background-color);
         --c-bg-deep:   #111111;
         --c-text:      var(--primary-text-color);

@@ -5786,6 +5786,10 @@ export class FrigateViewCard extends HTMLElement {
       cleanupVideos(true);
     }
 
+    this._resetPopupMediaSurfaceState(viewer);
+  }
+
+  _resetPopupMediaSurfaceState(viewer) {
     viewer.style.display = "none";
     const controls = this._$("#popup-media-controls");
     if (controls) {
@@ -5800,6 +5804,7 @@ export class FrigateViewCard extends HTMLElement {
     this._popupMediaType = "";
     this._playing = null;
   }
+
   _closePopup() {
     const popup = this._$("#myPopup");
     if (!popup) return;

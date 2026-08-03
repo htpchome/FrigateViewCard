@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1145";
+const VERSION = "1.0.1146";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -143,6 +143,7 @@ const STYLES = `
   /* \u2500\u2500 theme variables (dark = default) \u2500\u2500 */
     .card {
         --c-bg-main:   var(--card-background-color);
+        --c-bg-primary:var(--primary-background-color); 
         --c-bg-panel:  var(--secondary-background-color);
         --c-bg-deep:   #111111;
         --c-text:      var(--primary-text-color);
@@ -14076,6 +14077,9 @@ const FrigateViewCard = class extends HTMLElement {
     } else {
       cleanupVideos(true);
     }
+    this._resetPopupMediaSurfaceState(viewer);
+  }
+  _resetPopupMediaSurfaceState(viewer) {
     viewer.style.display = "none";
     const controls = this._$("#popup-media-controls");
     if (controls) {

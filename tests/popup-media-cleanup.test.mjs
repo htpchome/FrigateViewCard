@@ -153,3 +153,83 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
     globalThis.clearTimeout = originalClearTimeout;
   }
 });
+
+test("_stopPopupMedia resets popup media surfaces after shared cleanup", () => {
+  const calls = [];
+  const video = {
+    pause() {
+      calls.push(["pauseVideo"]);
+    },
+    removeAttribute(name) {
+      calls.push(["removeAttribute", name]);
+    },
+    querySelectorAll(selector) {
+      assert.equal(selector, "source");
+      return [
+        {
+          remove() {
+            calls.push(["removeSource"]);
+          },
+        },
+      ];
+    },
+  };
+  const viewer = {
+    style: { display: "block" },
+    innerHTML: "video markup",
+    querySelectorAll(selector) {
+      assert.equal(selector, "video");
+      return [video];
+    },
+  };
+  const controls = {
+    hidden: false,
+    classList: {
+      remove(token) {
+        calls.push(["removeClass", token]);
+      },
+    },
+  };
+  const carouselWrap = { hidden: false };
+  const carousel = { innerHTML: "items" };
+  const ctx = {
+    _popupMediaType: "clip",
+    _playing: { id: "abc" },
+    _clearPopupMediaCleanup() {
+      calls.push(["clearPopupMediaCleanup"]);
+    },
+    _isFirefox() {
+      return false;
+    },
+    _hidePopupInfo() {
+      calls.push(["hidePopupInfo"]);
+    },
+    _$(selector) {
+      if (selector === "#viewer") return viewer;
+      if (selector === "#popup-media-controls") return controls;
+      if (selector === "#popup-carousel-wrap") return carouselWrap;
+      if (selector === "#popup-carousel") return carousel;
+      return null;
+    },
+    _resetPopupMediaSurfaceState:
+      FrigateViewCard.prototype._resetPopupMediaSurfaceState,
+  };
+
+  FrigateViewCard.prototype._stopPopupMedia.call(ctx);
+
+  assert.deepEqual(calls, [
+    ["clearPopupMediaCleanup"],
+    ["pauseVideo"],
+    ["removeAttribute", "src"],
+    ["removeSource"],
+    ["removeClass", "is-hidden"],
+    ["hidePopupInfo"],
+  ]);
+  assert.equal(viewer.innerHTML, "");
+  assert.equal(viewer.style.display, "none");
+  assert.equal(controls.hidden, true);
+  assert.equal(carouselWrap.hidden, true);
+  assert.equal(carousel.innerHTML, "");
+  assert.equal(ctx._popupMediaType, "");
+  assert.equal(ctx._playing, null);
+});
