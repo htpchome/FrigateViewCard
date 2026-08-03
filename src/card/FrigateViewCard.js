@@ -206,6 +206,7 @@ import {
   resolvePopupMediaSeekTarget,
 } from "./popup-media-controls-utils.js";
 import {
+  buildPopupCarouselItemMarkup,
   buildPopupCarouselContentPlan,
   buildPopupCarouselEvents,
   buildPopupCarouselScrollPlan,
@@ -7355,8 +7356,14 @@ export class FrigateViewCard extends HTMLElement {
     if (!ev?.id) return "";
     const thumbFile = "thumbnail.jpg";
     const thumb = `<img src="${this._media(ev.id, thumbFile)}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
-    const active = ev.id === activeId ? " active" : "";
-    return `<button class="popup-carousel-item${active}" data-ev="${ev.id}" title="${this._dateTimeLabel(ev.start_time || 0)}"><div class="et">${thumb}</div><div class="popup-carousel-meta"><span>${cap(ev.label || "event")}</span><span>${this._time(ev.start_time || 0)}</span></div></button>`;
+    return buildPopupCarouselItemMarkup({
+      event: ev,
+      activeId,
+      thumbnailHtml: thumb,
+      title: this._dateTimeLabel(ev.start_time || 0),
+      label: cap(ev.label || "event"),
+      time: this._time(ev.start_time || 0),
+    });
   }
   _popupCarouselEvents(mediaType) {
     return buildPopupCarouselEvents({

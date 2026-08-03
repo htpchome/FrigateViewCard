@@ -1,6 +1,19 @@
 const sortByStartTimeDesc = (items = []) =>
   [...items].sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0));
 
+export const buildPopupCarouselItemMarkup = ({
+  event = null,
+  activeId = "",
+  thumbnailHtml = "",
+  title = "",
+  label = "",
+  time = "",
+}) => {
+  if (!event?.id) return "";
+  const active = event.id === activeId ? " active" : "";
+  return `<button class="popup-carousel-item${active}" data-ev="${event.id}" title="${title}"><div class="et">${thumbnailHtml}</div><div class="popup-carousel-meta"><span>${label}</span><span>${time}</span></div></button>`;
+};
+
 export const shouldShowPopupCarousel = (mediaType = "") =>
   ["alert", "clip", "snapshot", "kept"].includes(
     String(mediaType || "").toLowerCase(),

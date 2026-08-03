@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1135";
+const VERSION = "1.0.1136";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4927,6 +4927,18 @@ const resolvePopupMediaSeekTarget = ({
 
 // src/card/popup-carousel-utils.js
 const sortByStartTimeDesc = (items = []) => [...items].sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0));
+const buildPopupCarouselItemMarkup = ({
+  event = null,
+  activeId = "",
+  thumbnailHtml = "",
+  title = "",
+  label = "",
+  time = ""
+}) => {
+  if (!event?.id) return "";
+  const active = event.id === activeId ? " active" : "";
+  return `<button class="popup-carousel-item${active}" data-ev="${event.id}" title="${title}"><div class="et">${thumbnailHtml}</div><div class="popup-carousel-meta"><span>${label}</span><span>${time}</span></div></button>`;
+};
 const shouldShowPopupCarousel = (mediaType = "") => ["alert", "clip", "snapshot", "kept"].includes(
   String(mediaType || "").toLowerCase()
 );
@@ -14748,8 +14760,14 @@ const FrigateViewCard = class extends HTMLElement {
     if (!ev?.id) return "";
     const thumbFile = "thumbnail.jpg";
     const thumb = `<img src="${this._media(ev.id, thumbFile)}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
-    const active = ev.id === activeId ? " active" : "";
-    return `<button class="popup-carousel-item${active}" data-ev="${ev.id}" title="${this._dateTimeLabel(ev.start_time || 0)}"><div class="et">${thumb}</div><div class="popup-carousel-meta"><span>${cap(ev.label || "event")}</span><span>${this._time(ev.start_time || 0)}</span></div></button>`;
+    return buildPopupCarouselItemMarkup({
+      event: ev,
+      activeId,
+      thumbnailHtml: thumb,
+      title: this._dateTimeLabel(ev.start_time || 0),
+      label: cap(ev.label || "event"),
+      time: this._time(ev.start_time || 0)
+    });
   }
   _popupCarouselEvents(mediaType) {
     return buildPopupCarouselEvents({

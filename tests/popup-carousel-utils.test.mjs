@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildPopupCarouselItemMarkup,
   buildPopupCarouselEvents,
   buildPopupCarouselContentPlan,
   buildPopupCarouselScrollPlan,
@@ -161,6 +162,22 @@ test("buildPopupCarouselScrollPlan uses measured width or fallback", () => {
     left: 140,
     behavior: "smooth",
   });
+});
+
+test("buildPopupCarouselItemMarkup builds active carousel button markup", () => {
+  assert.equal(
+    buildPopupCarouselItemMarkup({
+      event: { id: "ev-1" },
+      activeId: "ev-1",
+      thumbnailHtml: "<img>",
+      title: "Front Door",
+      label: "Person",
+      time: "12:00",
+    }),
+    '<button class="popup-carousel-item active" data-ev="ev-1" title="Front Door"><div class="et"><img></div><div class="popup-carousel-meta"><span>Person</span><span>12:00</span></div></button>',
+  );
+
+  assert.equal(buildPopupCarouselItemMarkup({ event: null }), "");
 });
 
 test("resolvePopupCarouselActiveScrollLeft clamps the active item target", () => {
