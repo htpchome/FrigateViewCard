@@ -189,6 +189,7 @@ import {
   buildFavoriteOptimisticMutation,
   buildFavoriteRollbackMutation,
 } from "./favorites-mutation-utils.js";
+import { ListScrollController } from "./list-scroll-controller.js";
 import { LiveOverlayControlsController } from "./live-overlay-controls-controller.js";
 import { PopupDragController } from "./popup-drag-controller.js";
 import { PopupMediaControlsController } from "./popup-media-controls-controller.js";
@@ -495,6 +496,7 @@ export class FrigateViewCard extends HTMLElement {
     this._reloadAfterLoad = false;
     this._realtimeHeadPollT = null;
     this._switchLoadT = null;
+    this._listScrollController = null;
     this._popupDragController = null;
     this._popupMediaCleanup = null;
     this._popupMediaType = "";
@@ -1182,6 +1184,12 @@ export class FrigateViewCard extends HTMLElement {
         this._liveOverlayControlsController.dispose();
       } catch (_) {}
       this._liveOverlayControlsController = null;
+    }
+    if (this._listScrollController) {
+      try {
+        this._listScrollController.dispose();
+      } catch (_) {}
+      this._listScrollController = null;
     }
     if (this._recordingsSwipeController) {
       this._recordingsSwipeController.dispose();
@@ -4945,29 +4953,21 @@ export class FrigateViewCard extends HTMLElement {
     const list = this._$("#list");
     const browse = this._$("#browse");
     if (!list && !browse) return;
-
-    const onScroll = () => {
-      this._syncOlderHint();
-      this._syncBrowseHeadFromScroll();
-      if (
-        (this._tab === "clips" || this._tab === "snapshot") &&
-        !this._loading &&
-        !this._exhausted
-      ) {
-        const listScrollable =
-          list && list.scrollHeight > list.clientHeight + 2;
-        const scroller = listScrollable ? list : browse;
-        if (!scroller) return;
-        const nearBottom =
-          scroller.scrollTop + scroller.clientHeight >=
-          scroller.scrollHeight - 80;
-        if (nearBottom) this._loadOlder();
-      }
-    };
-
-    if (list) list.addEventListener("scroll", onScroll, { passive: true });
-    if (browse && browse !== list)
-      browse.addEventListener("scroll", onScroll, { passive: true });
+    if (this._listScrollController) {
+      this._listScrollController.dispose();
+      this._listScrollController = null;
+    }
+    this._listScrollController = new ListScrollController({
+      list,
+      browse,
+      syncOlderHint: () => this._syncOlderHint(),
+      syncBrowseHeadFromScroll: () => this._syncBrowseHeadFromScroll(),
+      getTab: () => this._tab,
+      isLoading: () => this._loading,
+      isExhausted: () => this._exhausted,
+      loadOlder: () => this._loadOlder(),
+    });
+    this._listScrollController.bind();
   }
 
   _bindRecordingsSwipe() {

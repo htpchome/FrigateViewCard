@@ -318,6 +318,33 @@ test("_commitRecordingsDayTransition skips cache writes without camera context",
   ]);
 });
 
+test("_commitRecordingsDayTransition clears swipe-active state across repeated day transitions", async () => {
+  const firstBounds = { start: 100, end: 200 };
+  const secondBounds = { start: 200, end: 300 };
+  const { ctx, removedClasses } = createCommitContext({
+    clientId: "client-a",
+    camera: "front",
+    recordings: [{ id: 1 }],
+    swipeActive: true,
+  });
+
+  await FrigateViewCard.prototype._commitRecordingsDayTransition.call(
+    ctx,
+    firstBounds,
+    [{ id: 1 }],
+  );
+  await FrigateViewCard.prototype._commitRecordingsDayTransition.call(
+    ctx,
+    secondBounds,
+    [{ id: 2 }],
+  );
+
+  assert.deepEqual(removedClasses, [
+    "recordings-swipe-active",
+    "recordings-swipe-active",
+  ]);
+});
+
 test("_navigateRecordingsDayAnimated bounces and refreshes browse nav when no data is prepared", async () => {
   const bounds = { start: 100, end: 200 };
   const { ctx, calls, direction } = createNavigateContext({
