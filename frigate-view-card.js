@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1144";
+const VERSION = "1.0.1145";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10052,10 +10052,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._editModeWatchdogT = null;
     if (this._editorDialogObserver) this._editorDialogObserver.disconnect();
     this._editorDialogObserver = null;
-    if (this._popupControlsHideTimer)
-      clearTimeout(this._popupControlsHideTimer);
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
-    if (this._popupMediaStopTimer) clearTimeout(this._popupMediaStopTimer);
     if (this._liveOverlayControlsController) {
       try {
         this._liveOverlayControlsController.dispose();

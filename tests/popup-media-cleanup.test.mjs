@@ -87,3 +87,69 @@ test("_clearPopupMediaCleanup clears timers, disposes controllers, and destroys 
     globalThis.clearTimeout = originalClearTimeout;
   }
 });
+
+test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCleanup", () => {
+  const clearTimeoutCalls = [];
+  const calls = [];
+  const originalClearTimeout = globalThis.clearTimeout;
+  globalThis.clearTimeout = (value) => {
+    clearTimeoutCalls.push(value);
+  };
+
+  try {
+    const ctx = {
+      _popupControlsHideTimer: 11,
+      _popupMediaStopTimer: 22,
+      _liveControlsHideTimer: 33,
+      _rotateOverlayRaf: 0,
+      _rotateOverlayExitT: null,
+      _mseGracePool: new Map(),
+      _parentOrigStyle: null,
+      parentElement: null,
+      _stopSlideshowRotation() {
+        calls.push(["stopSlideshowRotation"]);
+      },
+      _stopGridModeState() {
+        calls.push(["stopGridModeState"]);
+      },
+      _stopPreviewMode() {
+        calls.push(["stopPreviewMode"]);
+      },
+      _clearPopupMediaCleanup() {
+        calls.push([
+          "clearPopupMediaCleanup",
+          this._popupControlsHideTimer,
+          this._popupMediaStopTimer,
+        ]);
+      },
+      _clearRotateOverlayAudioSync() {
+        calls.push(["clearRotateOverlayAudioSync"]);
+      },
+      _clearRotateVideoFullscreenStyle() {
+        calls.push(["clearRotateVideoFullscreenStyle"]);
+      },
+      _setSectionsRowGap(value) {
+        calls.push(["setSectionsRowGap", value]);
+      },
+      _cleanupEngine() {
+        calls.push(["cleanupEngine"]);
+      },
+    };
+
+    FrigateViewCard.prototype._teardownDisconnected.call(ctx);
+
+    assert.deepEqual(clearTimeoutCalls, [33]);
+    assert.deepEqual(calls, [
+      ["stopSlideshowRotation"],
+      ["stopGridModeState"],
+      ["stopPreviewMode"],
+      ["clearPopupMediaCleanup", 11, 22],
+      ["clearRotateOverlayAudioSync"],
+      ["clearRotateVideoFullscreenStyle"],
+      ["setSectionsRowGap", false],
+      ["cleanupEngine"],
+    ]);
+  } finally {
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+});

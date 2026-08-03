@@ -1175,10 +1175,7 @@ export class FrigateViewCard extends HTMLElement {
     this._editModeWatchdogT = null;
     if (this._editorDialogObserver) this._editorDialogObserver.disconnect();
     this._editorDialogObserver = null;
-    if (this._popupControlsHideTimer)
-      clearTimeout(this._popupControlsHideTimer);
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
-    if (this._popupMediaStopTimer) clearTimeout(this._popupMediaStopTimer);
     if (this._liveOverlayControlsController) {
       try {
         this._liveOverlayControlsController.dispose();
