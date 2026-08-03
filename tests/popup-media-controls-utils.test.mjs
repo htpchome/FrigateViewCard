@@ -9,6 +9,7 @@ import {
   buildPopupRecordingSourceAttemptPlan,
   buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
+  resolvePopupRecordingSeekListenerPlan,
   resolvePopupRecordingLoadOutcomePlan,
   resolvePopupMediaControlsInitPlan,
   resolvePopupMediaControlsListenerPlan,
@@ -242,6 +243,15 @@ test("buildPopupRecordingSourceAttemptPlan preserves source order and autoplay p
       attempts: [{ path: "/clip.mp4", autoplay: false }],
     },
   );
+});
+
+test("resolvePopupRecordingSeekListenerPlan keeps recording seek listener order stable", () => {
+  assert.deepEqual(resolvePopupRecordingSeekListenerPlan(), {
+    listeners: [
+      { type: "seeking", action: "pauseForSeek" },
+      { type: "seeked", action: "resumeAfterSeek" },
+    ],
+  });
 });
 
 test("resolvePopupRecordingLoadOutcomePlan separates failure and success UI follow-up", () => {

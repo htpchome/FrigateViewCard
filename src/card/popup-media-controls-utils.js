@@ -99,6 +99,13 @@ export const buildPopupRecordingSourceAttemptPlan = ({
   })),
 });
 
+export const resolvePopupRecordingSeekListenerPlan = () => ({
+  listeners: [
+    { type: "seeking", action: "pauseForSeek" },
+    { type: "seeked", action: "resumeAfterSeek" },
+  ],
+});
+
 export const resolvePopupRecordingLoadOutcomePlan = ({
   playable = false,
   popupMediaType = "recording",

@@ -1,7 +1,7 @@
 /** FrigateView Card - generated file. Edit src/ instead. */
 
 // src/constants.js
-const VERSION = "1.0.1118";
+const VERSION = "1.0.1119";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4565,6 +4565,12 @@ const buildPopupRecordingSourceAttemptPlan = ({
     path,
     autoplay: Boolean(autoplay)
   }))
+});
+const resolvePopupRecordingSeekListenerPlan = () => ({
+  listeners: [
+    { type: "seeking", action: "pauseForSeek" },
+    { type: "seeked", action: "resumeAfterSeek" }
+  ]
 });
 const resolvePopupRecordingLoadOutcomePlan = ({
   playable = false,
@@ -14748,6 +14754,7 @@ const FrigateViewCard = class extends HTMLElement {
     const sourceAttemptPlan = buildPopupRecordingSourceAttemptPlan({
       sourceCandidates: renderPlan.sourceCandidates
     });
+    const seekListenerPlan = resolvePopupRecordingSeekListenerPlan();
     this._popupMediaType = renderPlan.popupMediaType;
     this._playing = renderPlan.playing;
     this._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
@@ -14782,10 +14789,16 @@ const FrigateViewCard = class extends HTMLElement {
         video.play?.().catch(() => {
         });
       };
-      video.addEventListener("seeking", onSeeking);
-      video.addEventListener("seeked", onSeeked);
-      mediaCleanup.push(() => video.removeEventListener("seeking", onSeeking));
-      mediaCleanup.push(() => video.removeEventListener("seeked", onSeeked));
+      const seekHandlers = {
+        pauseForSeek: onSeeking,
+        resumeAfterSeek: onSeeked
+      };
+      seekListenerPlan.listeners.forEach(({ type, action }) => {
+        video.addEventListener(type, seekHandlers[action]);
+        mediaCleanup.push(
+          () => video.removeEventListener(type, seekHandlers[action])
+        );
+      });
       for (const attempt of sourceAttemptPlan.attempts) {
         if (this._playSeq !== token) return;
         const signed = await this._signed(attempt.path);

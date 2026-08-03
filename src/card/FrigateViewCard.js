@@ -189,6 +189,7 @@ import {
   buildPopupRecordingSourceAttemptPlan,
   buildPopupSnapshotRenderPlan,
   resolvePopupMediaRenderPlan,
+  resolvePopupRecordingSeekListenerPlan,
   resolvePopupRecordingLoadOutcomePlan,
   resolvePopupMediaControlsInitPlan,
   resolvePopupMediaControlsListenerPlan,
@@ -7597,6 +7598,7 @@ export class FrigateViewCard extends HTMLElement {
     const sourceAttemptPlan = buildPopupRecordingSourceAttemptPlan({
       sourceCandidates: renderPlan.sourceCandidates,
     });
+    const seekListenerPlan = resolvePopupRecordingSeekListenerPlan();
     this._popupMediaType = renderPlan.popupMediaType;
     this._playing = renderPlan.playing;
     this._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
@@ -7630,10 +7632,16 @@ export class FrigateViewCard extends HTMLElement {
         resumeAfterNativeSeek = false;
         video.play?.().catch(() => {});
       };
-      video.addEventListener("seeking", onSeeking);
-      video.addEventListener("seeked", onSeeked);
-      mediaCleanup.push(() => video.removeEventListener("seeking", onSeeking));
-      mediaCleanup.push(() => video.removeEventListener("seeked", onSeeked));
+      const seekHandlers = {
+        pauseForSeek: onSeeking,
+        resumeAfterSeek: onSeeked,
+      };
+      seekListenerPlan.listeners.forEach(({ type, action }) => {
+        video.addEventListener(type, seekHandlers[action]);
+        mediaCleanup.push(() =>
+          video.removeEventListener(type, seekHandlers[action]),
+        );
+      });
 
       for (const attempt of sourceAttemptPlan.attempts) {
         if (this._playSeq !== token) return;
