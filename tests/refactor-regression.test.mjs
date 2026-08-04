@@ -168,6 +168,12 @@ test("go2rtc ownership is pulled out of the card shell", () => {
   assert.equal(cardSource.includes("_ensureMseGraceHost("), false);
   assert.equal(cardSource.includes("_adoptGraceMseEngine("), false);
   assert.equal(cardSource.includes("_cleanupEngineWithOptions("), false);
+  assert.equal(cardSource.includes("_beginMountTracking("), false);
+  assert.equal(cardSource.includes("_clearMountTrackingIfCurrent("), false);
+  assert.equal(cardSource.includes("_onMountWatchdogTimeout("), false);
+  assert.equal(cardSource.includes("_applyLiveMountUiState("), false);
+  assert.equal(cardSource.includes("_applySnapshotFallbackState("), false);
+  assert.equal(cardSource.includes("_beginLiveMountSession("), false);
   assert.equal(go2rtcResolverSource.includes("GO2RTC_CACHE_TTL_MS"), true);
   assert.equal(
     go2rtcResolverSource.includes("buildSignedGo2RtcWebSocketUrl"),
@@ -259,6 +265,21 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     liveMountControllerSource.includes("createGracePendingMountDestroyer"),
     true,
   );
+  assert.equal(liveMountControllerSource.includes("beginMountTracking"), true);
+  assert.equal(
+    liveMountControllerSource.includes("clearMountTrackingIfCurrent"),
+    true,
+  );
+  assert.equal(
+    liveMountControllerSource.includes("applyMountWatchdogTimeout"),
+    true,
+  );
+  assert.equal(liveMountControllerSource.includes("shouldRunMountWatchdog"), true);
+  assert.equal(liveMountControllerSource.includes("resolveLiveMountUiState"), true);
+  assert.equal(
+    liveMountControllerSource.includes("resolveSnapshotFallbackState"),
+    true,
+  );
   assert.equal(frigateUrlSource.includes("buildGo2rtcWsPath"), true);
   assert.equal(sharedUrlSource.includes("toAbsoluteSignedUrl"), true);
   assert.equal(
@@ -314,6 +335,12 @@ test("go2rtc ownership is pulled out of the card shell", () => {
   );
   assert.equal(
     /mount\s*=\s*async\s*\(\{[\s\S]*?const \{ mountToken, clearMountState \} = beginLiveMountSession\(targetEntity\);[\s\S]*?finally \{[\s\S]*?clearMountState\(\);[\s\S]*?\}/.test(
+      liveMountControllerSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /const beginLiveMountSession = \(entity\) => \{[\s\S]*?beginMountTracking\([\s\S]*?setTimeout\([\s\S]*?onMountWatchdogTimeout\(mountToken\)/.test(
       liveMountControllerSource,
     ),
     true,

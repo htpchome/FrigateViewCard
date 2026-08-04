@@ -6,6 +6,12 @@ import { createLiveMountController } from "../src/features/live/mount-controller
 test("live mount controller delegates ha-direct mounts outside the card shell", async () => {
   const calls = [];
   const slot = { innerHTML: "occupied" };
+  let mountState = {
+    mountSeq: 6,
+    mountInProgress: false,
+    mountStartedAt: 0,
+    mountTargetEntity: "",
+  };
   const controller = createLiveMountController({
     getSlot: () => slot,
     isPreviewPageActive: () => false,
@@ -13,26 +19,19 @@ test("live mount controller delegates ha-direct mounts outside the card shell", 
     isGridModeAvailable: () => true,
     getMountInProgress: () => false,
     getMountTargetEntity: () => "",
+    getMountState: () => mountState,
+    applyMountTrackingState: (nextState) => {
+      mountState = nextState;
+      calls.push(["applyMountTrackingState", nextState]);
+    },
     cancelPendingMount: () => {
       calls.push(["cancelPendingMount"]);
     },
     mountGridEngine: () => {
       calls.push(["mountGridEngine"]);
     },
-    beginLiveMountSession: () => ({
-      mountToken: 7,
-      clearMountState: () => {
-        calls.push(["clearMountState"]);
-      },
-    }),
     cleanupEngine: () => {
       calls.push(["cleanupEngine"]);
-    },
-    applyLiveMountUiState: (quiet) => {
-      calls.push(["applyLiveMountUiState", quiet]);
-    },
-    applySnapshotFallbackState: () => {
-      calls.push(["applySnapshotFallbackState"]);
     },
     getStreamMuted: () => true,
     setEngineMountedMuted: (muted) => {
@@ -42,7 +41,6 @@ test("live mount controller delegates ha-direct mounts outside the card shell", 
       takeGraceMseEntry: () => null,
       adoptGraceMseEngine: () => false,
     },
-    getMountSeq: () => 7,
     getPendingMountDestroyers: () => [],
     setPendingMountDestroyers: () => {},
     haDirectMounter: {
@@ -61,30 +59,55 @@ test("live mount controller delegates ha-direct mounts outside the card shell", 
     setActiveStreamType: (type) => {
       calls.push(["setActiveStreamType", type]);
     },
+    setStreamLoading: (loading) => {
+      calls.push(["setStreamLoading", loading]);
+    },
+    setStreamFallbackVisible: (visible, refreshImage = false) => {
+      calls.push(["setStreamFallbackVisible", visible, refreshImage]);
+    },
+    scheduleResumeLive: (reason) => {
+      calls.push(["scheduleResumeLive", reason]);
+    },
     resolveUseGo2Rtc: () => false,
   });
 
   await controller.mount({ entity: "camera.front", quiet: true });
 
-  assert.deepEqual(calls, [
-    ["setEngineMountedMuted", true],
-    ["cleanupEngine"],
-    ["applyLiveMountUiState", true],
-    ["setActiveStreamType", "webrtc"],
-    [
-      "haDirectTryMount",
-      slot,
-      { streamType: "webrtc" },
-      { entity: "camera.front", commit: true },
-    ],
-    ["setEngineMountedMuted", true],
-    ["clearMountState"],
+  assert.deepEqual(calls[0], ["setEngineMountedMuted", true]);
+  assert.equal(calls[1][0], "applyMountTrackingState");
+  assert.equal(calls[1][1].mountSeq, 7);
+  assert.equal(calls[1][1].mountInProgress, true);
+  assert.equal(calls[1][1].mountTargetEntity, "camera.front");
+  assert.equal(calls[1][1].mountStartedAt > 0, true);
+  assert.deepEqual(calls[2], ["cleanupEngine"]);
+  assert.deepEqual(calls[3], ["setStreamFallbackVisible", false, false]);
+  assert.deepEqual(calls[4], ["setStreamLoading", false]);
+  assert.deepEqual(calls[5], ["setActiveStreamType", "webrtc"]);
+  assert.deepEqual(calls[6], [
+    "haDirectTryMount",
+    slot,
+    { streamType: "webrtc" },
+    { entity: "camera.front", commit: true },
   ]);
+  assert.deepEqual(calls[7], ["setEngineMountedMuted", true]);
+  assert.equal(calls[8][0], "applyMountTrackingState");
+  assert.equal(calls[8][1].mountSeq, 7);
+  assert.equal(calls[8][1].mountInProgress, false);
+  assert.equal(calls[8][1].mountStartedAt, 0);
+  assert.equal(calls[8][1].mountTargetEntity, "");
+  assert.equal(mountState.mountSeq, 7);
+  assert.equal(mountState.mountInProgress, false);
 });
 
 test("live mount controller delegates go2rtc race mounts outside the card shell", async () => {
   const calls = [];
   const slot = { innerHTML: "occupied" };
+  let mountState = {
+    mountSeq: 8,
+    mountInProgress: false,
+    mountStartedAt: 0,
+    mountTargetEntity: "",
+  };
   const controller = createLiveMountController({
     getSlot: () => slot,
     isPreviewPageActive: () => false,
@@ -92,22 +115,15 @@ test("live mount controller delegates go2rtc race mounts outside the card shell"
     isGridModeAvailable: () => true,
     getMountInProgress: () => false,
     getMountTargetEntity: () => "",
+    getMountState: () => mountState,
+    applyMountTrackingState: (nextState) => {
+      mountState = nextState;
+      calls.push(["applyMountTrackingState", nextState]);
+    },
     cancelPendingMount: () => {},
     mountGridEngine: () => {},
-    beginLiveMountSession: () => ({
-      mountToken: 9,
-      clearMountState: () => {
-        calls.push(["clearMountState"]);
-      },
-    }),
     cleanupEngine: () => {
       calls.push(["cleanupEngine"]);
-    },
-    applyLiveMountUiState: (quiet) => {
-      calls.push(["applyLiveMountUiState", quiet]);
-    },
-    applySnapshotFallbackState: () => {
-      calls.push(["applySnapshotFallbackState"]);
     },
     getStreamMuted: () => false,
     setEngineMountedMuted: (muted) => {
@@ -117,7 +133,6 @@ test("live mount controller delegates go2rtc race mounts outside the card shell"
       takeGraceMseEntry: () => null,
       adoptGraceMseEngine: () => false,
     },
-    getMountSeq: () => 9,
     getPendingMountDestroyers: () => [],
     setPendingMountDestroyers: () => {},
     haDirectMounter: {
@@ -130,25 +145,45 @@ test("live mount controller delegates go2rtc race mounts outside the card shell"
       },
     },
     preferredStreamType: () => "webrtc",
-    setActiveStreamType: () => {},
+    setActiveStreamType: (type) => {
+      calls.push(["setActiveStreamType", type]);
+    },
+    setStreamLoading: (loading) => {
+      calls.push(["setStreamLoading", loading]);
+    },
+    setStreamFallbackVisible: (visible, refreshImage = false) => {
+      calls.push(["setStreamFallbackVisible", visible, refreshImage]);
+    },
+    scheduleResumeLive: (reason) => {
+      calls.push(["scheduleResumeLive", reason]);
+    },
     resolveUseGo2Rtc: () => true,
   });
 
   await controller.mount({ entity: "camera.front", forcedType: "webrtc" });
 
-  assert.deepEqual(calls, [
-    ["setEngineMountedMuted", false],
-    ["cleanupEngine"],
-    ["applyLiveMountUiState", false],
-    [
-      "go2rtcRaceMount",
-      {
-        slot,
-        entity: "camera.front",
-        forcedType: "webrtc",
-        mountToken: 9,
-      },
-    ],
-    ["clearMountState"],
+  assert.deepEqual(calls[0], ["setEngineMountedMuted", false]);
+  assert.equal(calls[1][0], "applyMountTrackingState");
+  assert.equal(calls[1][1].mountSeq, 9);
+  assert.equal(calls[1][1].mountInProgress, true);
+  assert.equal(calls[1][1].mountTargetEntity, "camera.front");
+  assert.equal(calls[1][1].mountStartedAt > 0, true);
+  assert.deepEqual(calls[2], ["cleanupEngine"]);
+  assert.deepEqual(calls[3], ["setActiveStreamType", "--"]);
+  assert.deepEqual(calls[4], ["setStreamFallbackVisible", true, true]);
+  assert.deepEqual(calls[5], ["setStreamLoading", true]);
+  assert.deepEqual(calls[6], [
+    "go2rtcRaceMount",
+    {
+      slot,
+      entity: "camera.front",
+      forcedType: "webrtc",
+      mountToken: 9,
+    },
   ]);
+  assert.equal(calls[7][0], "applyMountTrackingState");
+  assert.equal(calls[7][1].mountSeq, 9);
+  assert.equal(calls[7][1].mountInProgress, false);
+  assert.equal(calls[7][1].mountStartedAt, 0);
+  assert.equal(calls[7][1].mountTargetEntity, "");
 });

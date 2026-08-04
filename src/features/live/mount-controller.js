@@ -1,14 +1,20 @@
 import {
-  createGracePendingMountDestroyer,
-  shouldClearPendingDestroyersForPromise,
-} from "./pending-destroyers.js";
-import {
+  applyMountWatchdogTimeout,
+  beginMountTracking,
+  clearMountTrackingIfCurrent,
   resolveGraceMsePendingMountOutcome,
   resolveGraceMseReuseAction,
   resolveLiveMountEntryAction,
   resolveLiveMountTransportPlan,
+  resolveLiveMountUiState,
+  shouldRunMountWatchdog,
 } from "./mount-lifecycle.js";
 import { resolveGraceMseMountResult } from "./mount-result.js";
+import {
+  createGracePendingMountDestroyer,
+  shouldClearPendingDestroyersForPromise,
+} from "./pending-destroyers.js";
+import { resolveSnapshotFallbackState } from "./stream.state.js";
 
 export function createLiveMountController({
   getSlot,
@@ -17,24 +23,101 @@ export function createLiveMountController({
   isGridModeAvailable,
   getMountInProgress,
   getMountTargetEntity,
+  getMountState,
+  applyMountTrackingState,
   cancelPendingMount,
   mountGridEngine,
-  beginLiveMountSession,
   cleanupEngine,
-  applyLiveMountUiState,
-  applySnapshotFallbackState,
   getStreamMuted,
   setEngineMountedMuted,
   mseGraceController,
-  getMountSeq,
   getPendingMountDestroyers,
   setPendingMountDestroyers,
   haDirectMounter,
   go2rtcRaceMounter,
   preferredStreamType,
   setActiveStreamType,
+  setStreamLoading,
+  setStreamFallbackVisible,
+  scheduleResumeLive,
   resolveUseGo2Rtc,
 }) {
+  const applyLiveMountUiState = (quiet = false) => {
+    const mountUi = resolveLiveMountUiState({ quiet });
+    if (mountUi.activeStreamType != null) {
+      setActiveStreamType?.(mountUi.activeStreamType);
+    }
+    setStreamFallbackVisible?.(
+      mountUi.fallbackVisible,
+      mountUi.refreshFallbackImage,
+    );
+    setStreamLoading?.(mountUi.loading);
+  };
+
+  const applySnapshotFallbackState = (refreshImage = false) => {
+    const fallbackState = resolveSnapshotFallbackState({ refreshImage });
+    setActiveStreamType?.(fallbackState.activeStreamType);
+    setStreamLoading?.(fallbackState.loading);
+    setStreamFallbackVisible?.(
+      fallbackState.fallbackVisible,
+      fallbackState.refreshFallbackImage,
+    );
+  };
+
+  const clearMountTracking = (mountToken) => {
+    const mountState = getMountState?.();
+    applyMountTrackingState?.(
+      clearMountTrackingIfCurrent({
+        mountSeq: mountState?.mountSeq,
+        mountToken,
+        mountInProgress: mountState?.mountInProgress,
+        mountStartedAt: mountState?.mountStartedAt,
+        mountTargetEntity: mountState?.mountTargetEntity,
+      }),
+    );
+  };
+
+  const onMountWatchdogTimeout = (mountToken) => {
+    if (
+      !shouldRunMountWatchdog({
+        mountInProgress: getMountInProgress?.(),
+        mountSeq: getMountState?.()?.mountSeq,
+        mountToken,
+      })
+    ) {
+      return;
+    }
+    applyMountTrackingState?.(
+      applyMountWatchdogTimeout({ mountSeq: getMountState?.()?.mountSeq }),
+    );
+    cleanupEngine?.();
+    setStreamLoading?.(false);
+    setStreamFallbackVisible?.(true);
+    setActiveStreamType?.("snapshot");
+    scheduleResumeLive?.("mount-watchdog-timeout");
+  };
+
+  const beginLiveMountSession = (entity) => {
+    const mountState = getMountState?.();
+    const { mountToken, nextState } = beginMountTracking({
+      mountSeq: mountState?.mountSeq,
+      entity,
+      nowMs: Date.now(),
+    });
+    applyMountTrackingState?.(nextState);
+    const mountWatchdogT = setTimeout(
+      () => onMountWatchdogTimeout(mountToken),
+      9000,
+    );
+    return {
+      mountToken,
+      clearMountState: () => {
+        clearTimeout(mountWatchdogT);
+        clearMountTracking(mountToken);
+      },
+    };
+  };
+
   const mount = async ({ forcedType = null, quiet = false, entity = "" }) => {
     const slot = getSlot?.();
     const mountEntry = resolveLiveMountEntryAction({
@@ -105,7 +188,7 @@ export function createLiveMountController({
             const graceResult = await graceResultPromise;
             const pendingOutcome = resolveGraceMsePendingMountOutcome({
               graceResult,
-              mountSeq: getMountSeq?.(),
+              mountSeq: getMountState?.()?.mountSeq,
               mountToken,
             });
             if (pendingOutcome.type === "missing-engine") return;
@@ -180,6 +263,9 @@ export function createLiveMountController({
   };
 
   return {
+    applySnapshotFallbackState,
+    applyLiveMountUiState,
+    beginLiveMountSession,
     mount,
   };
 }

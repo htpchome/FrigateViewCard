@@ -93,16 +93,11 @@ import {
 import { createGo2RtcResolver } from "../integrations/frigate/go2rtc-resolver.js";
 import { createGo2RtcMounter } from "../features/live/go2rtc-mounter.js";
 import {
-  applyMountWatchdogTimeout,
-  beginMountTracking,
-  clearMountTrackingIfCurrent,
   invalidateMountTrackingIfActive,
   isLiveVideoStale,
   resolveLiveKickIfStaleAction,
   resolveLiveKickProbeState,
-  resolveLiveMountUiState,
   resolveLiveResumeAction,
-  shouldRunMountWatchdog,
 } from "../features/live/mount-lifecycle.js";
 import {
   adoptMountedAttemptSlot,
@@ -112,7 +107,6 @@ import {
   applyActiveStreamTypeForCard,
   applyStreamFallbackVisibilityForCard,
   applyStreamLoadingStateForCard,
-  resolveSnapshotFallbackState,
 } from "../features/live/stream.state.js";
 import {
   resolveRotateOverlayExitPlan,
@@ -635,14 +629,19 @@ export class FrigateViewCard extends HTMLElement {
       isGridModeAvailable: () => this._isGridModeAvailable(),
       getMountInProgress: () => this._mountInProgress,
       getMountTargetEntity: () => this._mountTargetEntity,
+      getMountState: () => ({
+        mountSeq: this._mountSeq,
+        mountInProgress: this._mountInProgress,
+        mountStartedAt: this._mountStartedAt,
+        mountTargetEntity: this._mountTargetEntity,
+      }),
+      applyMountTrackingState: (nextState) =>
+        this._applyMountTrackingState(nextState),
       cancelPendingMount: (reason, options) =>
         this._cancelPendingMount(reason, options),
       mountGridEngine: (slot) =>
         this._gridMediaController.mountGridEngine(slot),
-      beginLiveMountSession: (entity) => this._beginLiveMountSession(entity),
       cleanupEngine: () => this._cleanupEngine(),
-      applyLiveMountUiState: (quiet) => this._applyLiveMountUiState(quiet),
-      applySnapshotFallbackState: () => this._applySnapshotFallbackState(),
       getStreamMuted: () => this._streamMuted,
       setEngineMountedMuted: (muted) => {
         this._engineMountedMuted = muted;
@@ -657,6 +656,10 @@ export class FrigateViewCard extends HTMLElement {
       go2rtcRaceMounter: this._go2rtcRaceMounter,
       preferredStreamType: () => this._preferredStreamType(),
       setActiveStreamType: (type) => this._setActiveStreamType(type),
+      setStreamLoading: (loading) => this._setStreamLoading(loading),
+      setStreamFallbackVisible: (visible, refreshImage = false) =>
+        this._setStreamFallbackVisible(visible, refreshImage),
+      scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
       resolveUseGo2Rtc: (entity) => this._shouldUseGo2RtcForEntity(entity),
     });
     this._wasVisible = false;
@@ -1743,48 +1746,6 @@ export class FrigateViewCard extends HTMLElement {
     this._mountTargetEntity = nextState.mountTargetEntity;
   }
 
-  _beginMountTracking(entity) {
-    const { mountToken, nextState } = beginMountTracking({
-      mountSeq: this._mountSeq,
-      entity,
-      nowMs: Date.now(),
-    });
-    this._applyMountTrackingState(nextState);
-    return mountToken;
-  }
-
-  _clearMountTrackingIfCurrent(mountToken) {
-    this._applyMountTrackingState(
-      clearMountTrackingIfCurrent({
-        mountSeq: this._mountSeq,
-        mountToken,
-        mountInProgress: this._mountInProgress,
-        mountStartedAt: this._mountStartedAt,
-        mountTargetEntity: this._mountTargetEntity,
-      }),
-    );
-  }
-
-  _onMountWatchdogTimeout(mountToken) {
-    if (
-      !shouldRunMountWatchdog({
-        mountInProgress: this._mountInProgress,
-        mountSeq: this._mountSeq,
-        mountToken,
-      })
-    ) {
-      return;
-    }
-    this._applyMountTrackingState(
-      applyMountWatchdogTimeout({ mountSeq: this._mountSeq }),
-    );
-    this._cleanupEngine();
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(true);
-    this._setActiveStreamType("snapshot");
-    this._scheduleResumeLive("mount-watchdog-timeout");
-  }
-
   _streamAttemptSlot(host = null) {
     const slot = document.createElement("div");
     slot.style.cssText =
@@ -1965,18 +1926,6 @@ export class FrigateViewCard extends HTMLElement {
     return this._camCache[entity] || mkCamState();
   }
 
-  _applyLiveMountUiState(quiet = false) {
-    const mountUi = resolveLiveMountUiState({ quiet });
-    if (mountUi.activeStreamType != null) {
-      this._setActiveStreamType(mountUi.activeStreamType);
-    }
-    this._setStreamFallbackVisible(
-      mountUi.fallbackVisible,
-      mountUi.refreshFallbackImage,
-    );
-    this._setStreamLoading(mountUi.loading);
-  }
-
   _applyResolvedStreamUiState(streamState) {
     if (!streamState) return;
     this._setStreamLoading(streamState.loading);
@@ -1987,16 +1936,6 @@ export class FrigateViewCard extends HTMLElement {
     if (streamState.enableNativeControls) {
       this._setLiveNativeControls(true);
     }
-  }
-
-  _applySnapshotFallbackState(refreshImage = false) {
-    const fallbackState = resolveSnapshotFallbackState({ refreshImage });
-    this._setActiveStreamType(fallbackState.activeStreamType);
-    this._setStreamLoading(fallbackState.loading);
-    this._setStreamFallbackVisible(
-      fallbackState.fallbackVisible,
-      fallbackState.refreshFallbackImage,
-    );
   }
 
   _applyRotateOverlayUiPlan(card, uiPlan) {
@@ -2018,21 +1957,6 @@ export class FrigateViewCard extends HTMLElement {
     if (uiPlan.syncFullscreenButtons) this._syncFullscreenButtonsVisibility();
     if (uiPlan.showLiveControls) this._showLiveControlsTemporarily();
     if (uiPlan.showPopupControls) this._showPopupControlsTemporarily();
-  }
-
-  _beginLiveMountSession(entity) {
-    const mountToken = this._beginMountTracking(entity);
-    const mountWatchdogT = setTimeout(
-      () => this._onMountWatchdogTimeout(mountToken),
-      9000,
-    );
-    return {
-      mountToken,
-      clearMountState: () => {
-        clearTimeout(mountWatchdogT);
-        this._clearMountTrackingIfCurrent(mountToken);
-      },
-    };
   }
 
   async _mountEngine(forcedType = null, options = {}) {
