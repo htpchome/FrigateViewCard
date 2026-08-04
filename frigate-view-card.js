@@ -168,7 +168,6 @@ const STYLES = `
     min-height: 0 !important;
     height: 100%;
     overflow:hidden !important;
-    border-radius: var(--fvc-border-radius) !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
@@ -191,7 +190,6 @@ const STYLES = `
     position:relative;
     top:0;
     left:0;
-    border-radius: var(--fvc-border-radius) !important; 
     overflow:hidden !important;
     border:1px solid var(--secondary-background-color,#7a7a7a);
     }
