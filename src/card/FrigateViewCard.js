@@ -109,6 +109,16 @@ import {
   toWebSocketUrl,
 } from "../features/live/url-provider.js";
 import {
+  buildGo2RtcCameraContext,
+  buildGo2RtcTransportState,
+  buildGo2RtcUrlContext,
+  discoverFrigateCameraState,
+  resolveCameraConnectionType,
+  resolveCameraDisableHlsDesktop,
+  resolveGo2RtcEntity,
+  shouldUseGo2RtcForEntity,
+} from "../integrations/frigate/camera-context.js";
+import {
   applyMountWatchdogTimeout,
   beginMountTracking,
   clearMountTrackingIfCurrent,
@@ -1521,27 +1531,39 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _cameraConnectionType(entity) {
-    if (!entity) return DEFAULT_CAMERA_CONNECTION_TYPE;
-    const cam = this._config?.cameras?.find((c) => c?.entity === entity);
-    return normalizeCameraConnectionType(cam?.connection_type);
+    return resolveCameraConnectionType({
+      config: this._config,
+      entity,
+      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
+      normalizeCameraConnectionType,
+    });
   }
 
   _shouldUseGo2RtcForEntity(entity) {
-    const key = String(entity || "").trim();
-    if (!key) return false;
-    return this._cameraConnectionType(key) !== "ha_direct";
+    return shouldUseGo2RtcForEntity({
+      config: this._config,
+      entity,
+      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
+      normalizeCameraConnectionType,
+    });
   }
 
   _resolveGo2RtcEntity(entity = "") {
-    const targetEntity = String(entity || this._activeCam?.entity || "").trim();
-    if (!targetEntity) return "";
-    return this._shouldUseGo2RtcForEntity(targetEntity) ? targetEntity : "";
+    return resolveGo2RtcEntity({
+      entity,
+      activeEntity: this._activeCam?.entity || "",
+      config: this._config,
+      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
+      normalizeCameraConnectionType,
+    });
   }
 
   _cameraDisableHlsDesktop(entity) {
-    if (!entity) return false;
-    const cam = this._config?.cameras?.find((c) => c?.entity === entity);
-    return normalizeDisableHlsDesktop(cam?.disable_hls_desktop);
+    return resolveCameraDisableHlsDesktop({
+      config: this._config,
+      entity,
+      normalizeDisableHlsDesktop,
+    });
   }
 
   _isEditorPreviewContext() {
@@ -2346,21 +2368,28 @@ export class FrigateViewCard extends HTMLElement {
   async _go2rtcContextForEntity(entity) {
     if (!entity) return null;
     await this._discoverOne(entity);
-    const { clientId, cam } = this._cameraContext(entity);
-    if (!clientId || !cam) return null;
-    return {
-      clientId,
-      cam,
-      cacheKey: makeGo2rtcCacheKey({ clientId, cam }),
-    };
+    return buildGo2RtcCameraContext({
+      entity,
+      camCache: this._camCache,
+      createCameraState: mkCamState,
+      makeGo2rtcCacheKey,
+    });
   }
 
   async _go2rtcUrlContextForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
     if (!targetEntity) return null;
-    const ctx = await this._go2rtcContextForEntity(targetEntity);
-    if (!ctx) return null;
-    return { targetEntity, ...ctx };
+    await this._discoverOne(targetEntity);
+    return buildGo2RtcUrlContext({
+      entity,
+      activeEntity: this._activeCam?.entity || "",
+      config: this._config,
+      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
+      normalizeCameraConnectionType,
+      camCache: this._camCache,
+      createCameraState: mkCamState,
+      makeGo2rtcCacheKey,
+    });
   }
 
   async _go2rtcTransportContextForEntity(entity) {
@@ -2368,9 +2397,20 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcTransportStateForEntity(entity) {
-    const ctx = await this._go2rtcTransportContextForEntity(entity);
-    if (!ctx) return null;
-    return { ...ctx, nowMs: Date.now() };
+    const targetEntity = this._resolveGo2RtcEntity(entity);
+    if (!targetEntity) return null;
+    await this._discoverOne(targetEntity);
+    return buildGo2RtcTransportState({
+      entity,
+      activeEntity: this._activeCam?.entity || "",
+      config: this._config,
+      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
+      normalizeCameraConnectionType,
+      camCache: this._camCache,
+      createCameraState: mkCamState,
+      makeGo2rtcCacheKey,
+      nowMs: Date.now(),
+    });
   }
 
   _go2rtcMountRequest(options = {}) {
