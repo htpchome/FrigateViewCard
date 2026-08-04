@@ -9,7 +9,7 @@ import {
   resolveRotateOverlayTargetMode,
   resolveRotateOverlayUiPlan,
   resolveRotateOverlayViewportVariables,
-} from "../src/live/live-rotate-overlay-state.js";
+} from "../src/features/live/rotate-overlay-state.js";
 
 test("resolveRotateOverlayTargetMode keeps overlay off outside eligible viewport", () => {
   assert.equal(

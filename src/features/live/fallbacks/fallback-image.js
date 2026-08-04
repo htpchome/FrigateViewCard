@@ -1,7 +1,4 @@
-import {
-  hideFallbackStatus,
-  showFallbackStatus,
-} from "./live-fallback-status.js";
+import { hideFallbackStatus, showFallbackStatus } from "./fallback-status.js";
 
 export const resolveFallbackDisplaySource = ({ primarySrc, altSrc }) =>
   primarySrc || altSrc || "";

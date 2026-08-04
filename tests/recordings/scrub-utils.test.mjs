@@ -11,7 +11,7 @@ import {
   resolveRecordingScrubTarget,
   resolveRecordingSeekOutcome,
   resolveRecordingSeekTimeout,
-} from "../../src/card/recordings/scrub-utils.js";
+} from "../../src/features/recordings/utils/scrub.js";
 
 test("formatRecordingScrubTime formats minute and hour ranges", () => {
   assert.equal(formatRecordingScrubTime(5), "0:05");

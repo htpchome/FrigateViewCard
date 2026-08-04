@@ -23,7 +23,7 @@ import {
   shouldAbortFallbackRefreshAfterPrimary,
   shouldAbortStaleFallbackRefresh,
   shouldApplyFallbackRefreshSources,
-} from "../src/live/live-fallback-refresh.js";
+} from "../src/features/live/fallbacks/fallback-refresh.js";
 
 test("nextFallbackRequestId increments from current id", () => {
   assert.equal(nextFallbackRequestId(0), 1);

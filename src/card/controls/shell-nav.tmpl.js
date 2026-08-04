@@ -1,4 +1,4 @@
-import { resolveActiveTab } from "../helpers.js";
+import { resolveActiveTab } from "../../helpers.js";
 
 export function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
   return `<div class="page-nav" aria-label="Page navigation">${routes

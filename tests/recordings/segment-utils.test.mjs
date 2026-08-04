@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   mergeRecordingSegments,
   splitRecordingsHourly,
-} from "../../src/card/recordings/segment-utils.js";
+} from "../../src/features/recordings/utils/segment.js";
 
 test("mergeRecordingSegments merges segments separated by at most one minute", () => {
   const merged = mergeRecordingSegments([

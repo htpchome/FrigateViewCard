@@ -14,7 +14,7 @@ import {
   setScopedVideoViewDefaultOptions,
   setVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
-} from "../src/live/live-video-factory.js";
+} from "../src/features/live/video-factory.js";
 
 function createFakeVideoElement() {
   const attrs = new Map();

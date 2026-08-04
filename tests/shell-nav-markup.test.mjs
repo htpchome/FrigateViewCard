@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { buildTabsMarkup } from "../src/card/shell-nav-markup.js";
+import { buildTabsMarkup } from "../src/card/controls/shell-nav.tmpl.js";
 
 const icons = {
   alerts: "A",

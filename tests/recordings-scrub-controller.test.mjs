@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { RecordingScrubController } from "../src/card/recordings/scrub-controller.js";
+import { RecordingScrubController } from "../src/features/recordings/scrub.ctrl.js";
 
 function createTarget() {
   const listeners = new Map();

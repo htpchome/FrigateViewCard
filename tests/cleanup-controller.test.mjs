@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { CleanupController } from "../src/card/cleanup-controller.js";
+import { CleanupController } from "../src/card/cleanup.ctrl.js";
 
 test("CleanupController aborts listeners and runs registered cleanups once", () => {
   const controller = new CleanupController();

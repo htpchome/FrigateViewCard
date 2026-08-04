@@ -9,8 +9,8 @@ import {
   buildPreviewShellMarkup,
   buildPreviewStatusMarkup,
 } from "./page.tmpl.js";
-import { ICONS } from "../icons.js";
-import { cap, camDisplayName, DEVICE_PROFILE } from "../helpers.js";
+import { ICONS } from "../../icons.js";
+import { cap, camDisplayName, DEVICE_PROFILE } from "../../helpers.js";
 import {
   buildPreviewLayoutShellMarkup,
   buildPreviewShellHeaderMarkup,

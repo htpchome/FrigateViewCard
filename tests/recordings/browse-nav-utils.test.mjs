@@ -5,7 +5,7 @@ import {
   resolveRecordingsBrowseNavContextState,
   resolveRecordingsBrowseNavProbePlan,
   resolveRecordingsBrowseNavState,
-} from "../../src/card/recordings/browse-nav-utils.js";
+} from "../../src/features/recordings/utils/browse-nav.js";
 
 test("resolveRecordingsBrowseNavContextState disables both directions without camera context", () => {
   const state = resolveRecordingsBrowseNavContextState({

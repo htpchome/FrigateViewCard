@@ -2,12 +2,12 @@ import {
   isSlideshowReviewFresh,
   rememberHandledSlideshowReview,
   slideshowReviewWatchIntervalMs,
-} from "./slideshow-utils.js";
+} from "./utils.js";
 import {
   findFirstReviewCandidateForEntity,
   findNewestReviewCandidateAcrossCameras,
-} from "../data/review-candidate-utils.js";
-import { parseRealtimeAlertMessage } from "../data/realtime-alert-message-utils.js";
+} from "../../data/review-candidate.js";
+import { parseRealtimeAlertMessage } from "../../data/realtime-alert.js";
 
 export class SlideshowAlertController {
   constructor(host, constants) {

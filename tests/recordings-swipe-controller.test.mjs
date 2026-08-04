@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { RecordingsSwipeController } from "../src/card/recordings/swipe-controller.js";
+import { RecordingsSwipeController } from "../src/features/recordings/swipe.ctrl.js";
 
 const createFakeBrowse = () => {
   const listeners = new Map();

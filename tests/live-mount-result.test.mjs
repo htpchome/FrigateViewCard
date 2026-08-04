@@ -7,7 +7,7 @@ import {
   destroyLoserAttemptResults,
   isMountTokenCurrent,
   resolveGraceMseMountResult,
-} from "../src/live/live-mount-result.js";
+} from "../src/features/live/mount-result.js";
 
 test("isMountTokenCurrent matches tokens", () => {
   assert.equal(isMountTokenCurrent({ mountToken: 2, mountSeq: 2 }), true);

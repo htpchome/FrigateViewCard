@@ -16,7 +16,7 @@ import {
   resolveSignedFallbackUrl,
   setCachedEntityUrl,
   toAbsoluteLocalUrl,
-} from "../src/live/live-fallback-url.js";
+} from "../src/features/live/fallbacks/fallback-url.js";
 
 test("isAbsoluteOrDataUrl detects absolute and data URLs", () => {
   assert.equal(isAbsoluteOrDataUrl("https://example.com/a.jpg"), true);

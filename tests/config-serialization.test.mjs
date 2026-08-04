@@ -5,11 +5,11 @@ import {
   buildEditorConfigFromDom,
   resolveSwitchChecked,
 } from "../src/helpers.js";
-import { createEditorPreviewDraft } from "../src/config/editor-preview-mapper.js";
+import { createEditorPreviewDraft } from "../src/config/preview-mapper.js";
 import {
   compactEditorConfigForYaml,
   withCardTypeForYaml,
-} from "../src/config/yaml-config-mapper.js";
+} from "../src/config/yaml-mapper.js";
 
 test("editor YAML config omits normalized default values", () => {
   const config = compactEditorConfigForYaml({

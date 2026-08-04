@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { PreviewPageController } from "../src/preview/preview-page-controller.js";
+import { PreviewPageController } from "../src/features/preview/page.ctrl.js";
 
 const createHost = ({
   previewEnabled = true,

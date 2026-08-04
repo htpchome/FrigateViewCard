@@ -10,7 +10,7 @@ import {
   resolveMobileViewStreamTypeText,
   resolveMobileViewSubtitleText,
   resolveMobileViewTitleText,
-} from "../src/mobile-view/mobile-view-page-markup.js";
+} from "../src/features/mobile-view/page.tmpl.js";
 
 test("mobile view title resolver falls back like single-view", () => {
   assert.equal(

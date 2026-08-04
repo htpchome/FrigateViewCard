@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { MobileViewPageController } from "../src/mobile-view/mobile-view-page-controller.js";
+import { MobileViewPageController } from "../src/features/mobile-view/page.ctrl.js";
 
 const PAGE_IDS = {
   preview: "preview",

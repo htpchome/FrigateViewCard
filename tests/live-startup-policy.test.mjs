@@ -10,7 +10,7 @@ import {
   resolveHlsStartup,
   resolveMseStartup,
   resolveWebRtcStartup,
-} from "../src/live/live-startup-policy.js";
+} from "../src/features/live/startup-policy.js";
 
 test("resolveHaDirectStartup applies defaults and keeps stream type", () => {
   const policy = resolveHaDirectStartup({ streamType: "webrtc" });

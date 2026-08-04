@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { SingleViewPageController } from "../src/single-view/single-view-page-controller.js";
+import { SingleViewPageController } from "../src/features/single-view/page.ctrl.js";
 
 const PAGE_IDS = { preview: "preview", wideView: "wide-view" };
 

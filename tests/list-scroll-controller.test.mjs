@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { ListScrollController } from "../src/card/list-scroll-controller.js";
+import { ListScrollController } from "../src/card/list-scroll.ctrl.js";
 
 function createTarget({
   scrollTop = 0,

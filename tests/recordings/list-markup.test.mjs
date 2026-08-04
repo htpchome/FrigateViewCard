@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { buildRecordingsListMarkup } from "../../src/card/recordings/list-markup.js";
+import { buildRecordingsListMarkup } from "../../src/features/recordings/recordings.tmpl.js";
 
 test("buildRecordingsListMarkup returns empty markup when there are no recordings", () => {
   assert.equal(

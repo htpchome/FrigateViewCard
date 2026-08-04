@@ -7,7 +7,7 @@ import {
   filterPendingDestroyersForWinner,
   shouldClearPendingDestroyersForPromise,
   splitPendingDestroyersByGraceMse,
-} from "../src/live/live-pending-destroyers.js";
+} from "../src/features/live/pending-destroyers.js";
 
 test("createPendingMountDestroyers maps attempts with entity and destroy handler", async () => {
   const activeAttempts = [

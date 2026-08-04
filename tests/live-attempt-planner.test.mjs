@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildLiveAttemptPlan,
   raceMountAttempts,
-} from "../src/live/live-attempt-planner.js";
+} from "../src/features/live/attempt-planner.js";
 
 test("buildLiveAttemptPlan uses default order and filters desktop HLS when disabled", () => {
   const attempts = buildLiveAttemptPlan({

@@ -7,7 +7,7 @@ import {
   MseStrategy,
   HlsStrategy,
   createStrategyForType,
-} from "../src/live/live-stream-strategies.js";
+} from "../src/features/live/stream.strategies.js";
 
 test("createStrategyForType returns protocol strategy classes", () => {
   assert.ok(

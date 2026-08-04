@@ -10,7 +10,7 @@ import {
   resolveCachedRecordingsAvailability,
   resolveFailedRecordingsAvailabilityState,
   resolveFetchedRecordingsAvailabilityState,
-} from "../../src/card/recordings/availability-utils.js";
+} from "../../src/features/recordings/utils/availability.js";
 
 test("buildRecordingsDayCacheKey combines client, camera, and bounds", () => {
   assert.equal(

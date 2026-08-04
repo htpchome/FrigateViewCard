@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { PopupDragController } from "../src/card/popup-drag-controller.js";
+import { PopupDragController } from "../src/card/popup/drag.ctrl.js";
 
 function createEventTargetLike() {
   const listeners = new Map();

@@ -6,7 +6,7 @@ import {
   resolveFallbackDisplaySource,
   resolveFallbackObjectFit,
   setFallbackImageSourceIfChanged,
-} from "../src/live/live-fallback-image.js";
+} from "../src/features/live/fallbacks/fallback-image.js";
 
 test("resolveFallbackDisplaySource prefers primary then alt", () => {
   assert.equal(

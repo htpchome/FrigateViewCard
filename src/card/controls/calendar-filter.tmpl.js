@@ -1,4 +1,4 @@
-import { cap } from "../helpers.js";
+import { cap } from "../../helpers.js";
 
 export function buildCalendarPanelMarkup({
   monthDate,

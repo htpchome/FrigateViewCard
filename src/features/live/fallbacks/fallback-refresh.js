@@ -1,4 +1,4 @@
-import { resolveFallbackDisplaySource } from "./live-fallback-image.js";
+import { resolveFallbackDisplaySource } from "./fallback-image.js";
 
 export const nextFallbackRequestId = (currentRequestId) =>
   Number(currentRequestId || 0) + 1;

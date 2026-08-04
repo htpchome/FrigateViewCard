@@ -1,4 +1,4 @@
-import { hideFallbackStatus } from "./live-fallback-status.js";
+import { hideFallbackStatus } from "./fallbacks/fallback-status.js";
 
 export const isLiveTransportType = (type) => {
   const active = String(type || "")

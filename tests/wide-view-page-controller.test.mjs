@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { WideViewPageController } from "../src/wide-view/wide-view-page-controller.js";
+import { WideViewPageController } from "../src/features/wide-view/page.ctrl.js";
 
 const PAGE_IDS = { preview: "preview", wideView: "wide-view" };
 

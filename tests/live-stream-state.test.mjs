@@ -11,7 +11,7 @@ import {
   isLiveTransportType,
   resolveActiveStreamTypeState,
   resolveSnapshotFallbackState,
-} from "../src/live/live-stream-state.js";
+} from "../src/features/live/stream.state.js";
 
 test("isLiveTransportType matches known live transports", () => {
   assert.equal(isLiveTransportType("webrtc"), true);

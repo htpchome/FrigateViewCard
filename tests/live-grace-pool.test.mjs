@@ -6,7 +6,7 @@ import {
   createGracePendingEntry,
   normalizeGraceEntityKey,
   prepareEngineVideoForGraceHost,
-} from "../src/live/live-grace-pool.js";
+} from "../src/features/live/grace-pool.js";
 
 test("normalizeGraceEntityKey trims and stringifies", () => {
   assert.equal(normalizeGraceEntityKey(" camera.front "), "camera.front");

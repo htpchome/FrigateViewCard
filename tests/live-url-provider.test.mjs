@@ -10,7 +10,7 @@ import {
   setCachedValue,
   toAbsoluteSignedUrl,
   toWebSocketUrl,
-} from "../src/live/live-url-provider.js";
+} from "../src/features/live/url-provider.js";
 
 test("makeGo2rtcCacheKey composes client and camera", () => {
   assert.equal(

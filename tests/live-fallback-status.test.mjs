@@ -5,7 +5,7 @@ import {
   hideFallbackStatus,
   setFallbackStatusVisible,
   showFallbackStatus,
-} from "../src/live/live-fallback-status.js";
+} from "../src/features/live/fallbacks/fallback-status.js";
 
 test("setFallbackStatusVisible toggles hidden state", () => {
   const statusEl = { hidden: true };

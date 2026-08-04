@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { StreamOrchestrator } from "../src/live/live-stream-orchestrator.js";
+import { StreamOrchestrator } from "../src/features/live/stream.orchestrator.js";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

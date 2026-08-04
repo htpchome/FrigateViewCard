@@ -16,7 +16,7 @@ import {
   resolveLiveMountUiState,
   resolveLiveResumeAction,
   shouldRunMountWatchdog,
-} from "../src/live/live-mount-lifecycle.js";
+} from "../src/features/live/mount-lifecycle.js";
 
 test("beginMountTracking increments token and sets active state", () => {
   const result = beginMountTracking({ mountSeq: 4, entity: "camera.front" });

@@ -33,7 +33,7 @@ import {
 } from "../constants.js";
 import { ICONS } from "../icons.js";
 import { STYLES } from "../styles.js";
-import "../circle-pad.js";
+import "../components/circle-pad/circle-pad.js";
 import {
   detectDeviceProfile,
   DEVICE_PROFILE,
@@ -81,20 +81,20 @@ import {
   PAGE_IDS,
   resolveDeviceRouteBucket,
 } from "../router.js";
-import { applyEditorPreviewDraftToCardConfig } from "../config/editor-preview-mapper.js";
-import { buildLiveAttemptPlan } from "../live/live-attempt-planner.js";
-import { StreamOrchestrator } from "../live/live-stream-orchestrator.js";
-import { createStrategyForType } from "../live/live-stream-strategies.js";
+import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
+import { buildLiveAttemptPlan } from "../features/live/attempt-planner.js";
+import { StreamOrchestrator } from "../features/live/stream.orchestrator.js";
+import { createStrategyForType } from "../features/live/stream.strategies.js";
 import {
   createGracePendingMountDestroyer,
   shouldClearPendingDestroyersForPromise,
-} from "../live/live-pending-destroyers.js";
+} from "../features/live/pending-destroyers.js";
 import {
   createGraceEngineEntry,
   createGracePendingEntry,
   normalizeGraceEntityKey,
   prepareEngineVideoForGraceHost,
-} from "../live/live-grace-pool.js";
+} from "../features/live/grace-pool.js";
 import {
   buildGo2rtcHlsCandidates,
   buildGo2rtcWsPath,
@@ -104,7 +104,7 @@ import {
   setCachedValue,
   toAbsoluteSignedUrl,
   toWebSocketUrl,
-} from "../live/live-url-provider.js";
+} from "../features/live/url-provider.js";
 import {
   applyMountWatchdogTimeout,
   beginMountTracking,
@@ -120,20 +120,20 @@ import {
   resolveLiveMountUiState,
   resolveLiveResumeAction,
   shouldRunMountWatchdog,
-} from "../live/live-mount-lifecycle.js";
+} from "../features/live/mount-lifecycle.js";
 import {
   adoptMountedAttemptSlot,
   cleanupStaleWinnerResult,
   destroyLoserAttemptResults,
   isMountTokenCurrent,
   resolveGraceMseMountResult,
-} from "../live/live-mount-result.js";
+} from "../features/live/mount-result.js";
 import {
   applyActiveStreamTypeForCard,
   applyStreamFallbackVisibilityForCard,
   applyStreamLoadingStateForCard,
   resolveSnapshotFallbackState,
-} from "../live/live-stream-state.js";
+} from "../features/live/stream.state.js";
 import {
   resolveRotateOverlayExitPlan,
   resolveFullscreenButtonVisibility,
@@ -141,7 +141,7 @@ import {
   resolveRotateOverlayState,
   resolveRotateOverlayUiPlan,
   resolveRotateOverlayViewportVariables,
-} from "../live/live-rotate-overlay-state.js";
+} from "../features/live/rotate-overlay-state.js";
 import {
   buildVideoOptionsForView,
   configureVideoElement,
@@ -149,16 +149,16 @@ import {
   mountNodeIntoSlot,
   setScopedVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
-} from "../live/live-video-factory.js";
+} from "../features/live/video-factory.js";
 import {
   loadFallbackAltForCard,
   loadFallbackPrimaryForCard,
-} from "../live/live-fallback-url.js";
+} from "../features/live/fallbacks/fallback-url.js";
 import {
   applyFallbackImageHandlers,
   setFallbackImageSourceIfChanged,
-} from "../live/live-fallback-image.js";
-import { runFallbackRefreshCycleForCard } from "../live/live-fallback-refresh.js";
+} from "../features/live/fallbacks/fallback-image.js";
+import { runFallbackRefreshCycleForCard } from "../features/live/fallbacks/fallback-refresh.js";
 import {
   buildHaDirectMountPlan,
   resolveHaDirectStartup,
@@ -168,7 +168,7 @@ import {
   resolveHlsStartup,
   resolveMseStartup,
   resolveWebRtcStartup,
-} from "../live/live-startup-policy.js";
+} from "../features/live/startup-policy.js";
 import {
   buildControlsSectionMarkup,
   buildControlsReadoutEmptyMarkup,
@@ -180,19 +180,19 @@ import {
   buildPopupShellMarkup,
   buildRightColumnShellMarkup,
   buildTabsMarkup,
-} from "./shell-nav-markup.js";
+} from "./controls/shell-nav.tmpl.js";
 import {
   buildCalendarPanelMarkup,
   buildFilterPanelMarkup,
-} from "./calendar-filter-markup.js";
+} from "./controls/calendar-filter.tmpl.js";
 import {
   buildFavoriteOptimisticMutation,
   buildFavoriteRollbackMutation,
 } from "./favorites-mutation-utils.js";
-import { ListScrollController } from "./list-scroll-controller.js";
-import { LiveOverlayControlsController } from "./live-overlay-controls-controller.js";
-import { PopupDragController } from "./popup-drag-controller.js";
-import { PopupMediaControlsController } from "./popup-media-controls-controller.js";
+import { ListScrollController } from "./list-scroll.ctrl.js";
+import { LiveOverlayControlsController } from "./controls/live-overlay.ctrl.js";
+import { PopupDragController } from "./popup/drag.ctrl.js";
+import { PopupMediaControlsController } from "./popup/media.ctrl.js";
 import {
   buildPopupClipRenderPlan,
   buildPopupMediaUrl,
@@ -208,7 +208,7 @@ import {
   resolvePopupMediaControlsInitPlan,
   resolvePopupMediaControlsListenerPlan,
   resolvePopupMediaSeekTarget,
-} from "./popup-media-controls-utils.js";
+} from "./popup/media.js";
 import {
   buildPopupCarouselItemMarkup,
   buildPopupCarouselContentPlan,
@@ -217,7 +217,7 @@ import {
   resolvePopupCarouselActiveScrollLeft,
   resolvePopupCarouselRenderPlan,
   shouldShowPopupCarousel,
-} from "./popup-carousel-utils.js";
+} from "./popup/carousel.js";
 import {
   collectFilterLabelsFromReviews,
   buildReviewFilterLabels,
@@ -273,7 +273,7 @@ import {
   resolveRecordingsSwipeStageMetrics,
   resolveRecordingsSwipeStageTransforms,
   splitRecordingsHourly,
-} from "./recordings/index.js";
+} from "../features/recordings/index.js";
 import {
   appendControlsReadoutLine,
   clearControlsReadoutLines,
@@ -281,15 +281,15 @@ import {
   resolveControlsPadPressReadoutEntry,
   resolveControlsPadToggleReadoutEntry,
   resolveControlsReadoutMarkup,
-} from "./controls-readout-utils.js";
+} from "./controls/readout.js";
 import {
   buildReviewListItemHtml,
   buildReviewListItemModel,
-} from "./review-list-model.js";
+} from "../data/review-list.model.js";
 import {
   buildEventListItemHtml,
   buildEventListItemModel,
-} from "./event-list-model.js";
+} from "../data/event-list.model.js";
 import {
   applyListMarkupWithOlderHint,
   appendEndMarker,
@@ -301,10 +301,10 @@ import {
   runListPostRenderSync,
   syncOlderHintFromScroll,
 } from "./list-render-utils.js";
-import { PreviewAlertController } from "../preview/preview-alert-controller.js";
-import { PreviewPageController } from "../preview/preview-page-controller.js";
-import { PageNavigationController } from "../navigation/page-navigation-controller.js";
-import { DeepLinkController } from "../navigation/deep-link-controller.js";
+import { PreviewAlertController } from "../features/preview/alert.ctrl.js";
+import { PreviewPageController } from "../features/preview/page.ctrl.js";
+import { PageNavigationController } from "../navigation/page-navigation.ctrl.js";
+import { DeepLinkController } from "../navigation/deep-link.ctrl.js";
 import {
   applyGridCellSeverityClass,
   buildGridSignaturePart,
@@ -312,15 +312,15 @@ import {
   createGridLabelElement,
   createGridRootElement,
   renderGridEmptyPlaceholder,
-} from "../grid/grid-markup.js";
-import { GridAlertController } from "../grid/grid-alert-controller.js";
-import { GridPageController } from "../grid/grid-page-controller.js";
-import { MobileViewPageController } from "../mobile-view/mobile-view-page-controller.js";
-import { buildMobileViewInfoRowMarkup } from "../mobile-view/mobile-view-page-markup.js";
-import { SingleViewPageController } from "../single-view/single-view-page-controller.js";
-import { WideViewPageController } from "../wide-view/wide-view-page-controller.js";
-import { SlideshowAlertController } from "../slideshow/slideshow-alert-controller.js";
-import { SlideshowPageController } from "../slideshow/slideshow-page-controller.js";
+} from "../features/grid/page.tmpl.js";
+import { GridAlertController } from "../features/grid/alert.ctrl.js";
+import { GridPageController } from "../features/grid/page.ctrl.js";
+import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
+import { buildMobileViewInfoRowMarkup } from "../features/mobile-view/page.tmpl.js";
+import { SingleViewPageController } from "../features/single-view/page.ctrl.js";
+import { WideViewPageController } from "../features/wide-view/page.ctrl.js";
+import { SlideshowAlertController } from "../features/slideshow/alert.ctrl.js";
+import { SlideshowPageController } from "../features/slideshow/page.ctrl.js";
 import {
   slideshowReviewModeForCamera,
   shouldHandleSlideshowReview,
@@ -331,8 +331,8 @@ import {
   cameraIndexByEntity,
   extractRealtimeMessageCamera,
   extractRealtimeMessageSeverity,
-} from "../slideshow/slideshow-routing-utils.js";
-import { fetchWindowedItems } from "../data/window-fetch-utils.js";
+} from "../features/slideshow/routing.js";
+import { fetchWindowedItems } from "../data/window-fetch.js";
 
 const GO2RTC_CACHE_TTL_MS = Object.freeze({
   wsSignedPath: 55 * 60 * 1000,

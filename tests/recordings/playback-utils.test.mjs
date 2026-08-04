@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { buildRecordingPlaybackPlan } from "../../src/card/recordings/playback-utils.js";
+import { buildRecordingPlaybackPlan } from "../../src/features/recordings/utils/playback.js";
 
 test("buildRecordingPlaybackPlan caps recording chunk length and formats camera name", () => {
   assert.deepEqual(

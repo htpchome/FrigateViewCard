@@ -3,13 +3,13 @@ import {
   isGridReviewFresh,
   normalizeGridAlertSeverity,
   normalizeGridCellSeverity,
-} from "./grid-utils.js";
+} from "./utils.js";
 import {
   findFirstReviewCandidateForEntity,
   findNewestReviewCandidateAcrossCameras,
   rememberHandledReviewId,
-} from "../data/review-candidate-utils.js";
-import { parseRealtimeAlertMessage } from "../data/realtime-alert-message-utils.js";
+} from "../../data/review-candidate.js";
+import { parseRealtimeAlertMessage } from "../../data/realtime-alert.js";
 
 export class GridAlertController {
   constructor(host, constants) {

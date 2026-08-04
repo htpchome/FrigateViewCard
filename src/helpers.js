@@ -32,11 +32,11 @@ import {
   THEME_CUSTOM_KEYS,
 } from "./constants.js";
 import { normalizePageRoute, PAGE_IDS } from "./router.js";
-import { createEditorPreviewDraft as mapEditorPreviewDraft } from "./config/editor-preview-mapper.js";
+import { createEditorPreviewDraft as mapEditorPreviewDraft } from "./config/preview-mapper.js";
 import {
   compactEditorConfigForYaml as mapCompactEditorConfigForYaml,
   withCardTypeForYaml as mapWithCardTypeForYaml,
-} from "./config/yaml-config-mapper.js";
+} from "./config/yaml-mapper.js";
 
 export function detectDeviceProfile() {
   const nav = typeof navigator !== "undefined" ? navigator : {};

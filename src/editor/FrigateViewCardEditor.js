@@ -80,12 +80,12 @@ import {
   normalizePageRoute,
   PAGE_IDS,
 } from "../router.js";
-import { normalizeCardConfig } from "../config/card-config-normalizer.js";
-import { createEditorPreviewDraft } from "../config/editor-preview-mapper.js";
+import { normalizeCardConfig } from "../config/card-config.js";
+import { createEditorPreviewDraft } from "../config/preview-mapper.js";
 import {
   compactEditorConfigForYaml,
   withCardTypeForYaml,
-} from "../config/yaml-config-mapper.js";
+} from "../config/yaml-mapper.js";
 export class FrigateViewCardEditor extends HTMLElement {
   _normalizeHiddenTabs(hiddenTabs) {
     if (!Array.isArray(hiddenTabs)) return [];

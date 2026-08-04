@@ -1,4 +1,4 @@
-import { normalizeAlertsAreaContent } from "../helpers.js";
+import { normalizeAlertsAreaContent } from "../../helpers.js";
 
 export function slideshowReviewModeForCamera(config, entity) {
   const cam = config?.cameras?.find((camera) => camera.entity === entity);

@@ -2,13 +2,13 @@ import {
   isPreviewReviewFresh,
   normalizePreviewAlertSeverity,
   normalizePreviewCellSeverity,
-} from "./preview-utils.js";
+} from "./utils.js";
 import {
   findFirstReviewCandidateForEntity,
   findNewestReviewCandidateAcrossCameras,
   rememberHandledReviewId,
-} from "../data/review-candidate-utils.js";
-import { parseRealtimeAlertMessage } from "../data/realtime-alert-message-utils.js";
+} from "../../data/review-candidate.js";
+import { parseRealtimeAlertMessage } from "../../data/realtime-alert.js";
 
 export class PreviewAlertController {
   constructor(host, constants) {
