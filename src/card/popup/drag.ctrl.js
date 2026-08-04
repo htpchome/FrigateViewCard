@@ -1,4 +1,4 @@
-import { CleanupController } from "./cleanup-controller.js";
+import { CleanupController } from "../cleanup.ctrl.js";
 
 const POPUP_DRAG_IGNORE_SELECTOR =
   "#popup-media-controls, #popup-carousel-wrap, #recording-scrub, .popup-info, .viewer, input, button, a, [data-ev]";

@@ -7,20 +7,20 @@ export {
   resolveFetchedRecordingsAvailabilityState,
   resolvePreparedRecordingsDayTransition,
   resolveCachedRecordingsAvailability,
-} from "./availability-utils.js";
+} from "./utils/availability.js";
 
 export {
   resolveRecordingsBrowseNavContextState,
   resolveRecordingsBrowseNavProbePlan,
   resolveRecordingsBrowseNavState,
-} from "./browse-nav-utils.js";
+} from "./utils/browse-nav.js";
 
 export {
   resolveOffsetRecordingsDayBounds,
   resolveRecordingsDayBounds,
-} from "./day-utils.js";
+} from "./utils/day.js";
 
-export { buildRecordingPlaybackPlan } from "./playback-utils.js";
+export { buildRecordingPlaybackPlan } from "./utils/playback.js";
 
 export {
   buildRecordingScrubDecorations,
@@ -32,15 +32,15 @@ export {
   resolveRecordingScrubTarget,
   resolveRecordingSeekOutcome,
   resolveRecordingSeekTimeout,
-} from "./scrub-utils.js";
+} from "./utils/scrub.js";
 
-export { RecordingScrubController } from "./scrub-controller.js";
+export { RecordingScrubController } from "./scrub.ctrl.js";
 
-export { buildRecordingsListMarkup } from "./list-markup.js";
+export { buildRecordingsListMarkup } from "./recordings.tmpl.js";
 
-export { splitRecordingsHourly } from "./segment-utils.js";
+export { splitRecordingsHourly } from "./utils/segment.js";
 
-export { RecordingsSwipeController } from "./swipe-controller.js";
+export { RecordingsSwipeController } from "./swipe.ctrl.js";
 
 export {
   createRecordingsSwipeGestureState,
@@ -52,4 +52,4 @@ export {
   resolvePreparedRecordingsSwipeState,
   resolveRecordingsSwipeStageMetrics,
   resolveRecordingsSwipeStageTransforms,
-} from "./swipe-utils.js";
+} from "./utils/swipe.js";

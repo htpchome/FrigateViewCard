@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1146";
+const VERSION = "1.0.1149";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -28,7 +28,6 @@ const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
 const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 const SLIDESHOW_ALERT_HOLD_MS = 1e4;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
-1142;
 const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
 const SLIDESHOW_REVIEW_WATCH_MAX_MS = 15e3;
 const PREVIEW_ALERT_HOLD_MS = 6e3;
@@ -752,7 +751,7 @@ const STYLES = `
 
 `;
 
-// src/circle-pad.js
+// src/components/circle-pad/circle-pad.js
 const CIRCLE_PAD_CLASS = "circle-pad";
 const CIRCLE_PAD_DATA_ACTION = "data-circle-pad-action";
 const CIRCLE_PAD_ACTIONS = Object.freeze({
@@ -1467,7 +1466,7 @@ const createNavigationFactory = ({
   };
 };
 
-// src/config/editor-preview-mapper.js
+// src/config/preview-mapper.js
 const normalizePositiveInteger = (value, fallback) => {
   const parsed = parseInt(String(value ?? "").trim(), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -1568,7 +1567,7 @@ const applyEditorPreviewDraftToCardConfig = ({
   };
 };
 
-// src/config/yaml-config-mapper.js
+// src/config/yaml-mapper.js
 const normalizePositiveInteger2 = (value, fallback) => {
   const parsed = parseInt(String(value ?? "").trim(), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -2444,7 +2443,7 @@ const hassThemeSignature = (hass) => {
 };
 const hassEntityStateSignature = (hass, entities) => entities.map((entity) => `${entity}:${hass?.states?.[entity]?.state ?? "missing"}`).join("|");
 
-// src/live/live-attempt-planner.js
+// src/features/live/attempt-planner.js
 const DEFAULT_LIVE_ORDER = Object.freeze(["webrtc", "mse", "hls"]);
 const buildLiveAttemptPlan = ({
   connectionType,
@@ -2488,7 +2487,7 @@ const raceMountAttempts = async (attempts) => {
   });
 };
 
-// src/live/live-stream-orchestrator.js
+// src/features/live/stream.orchestrator.js
 const StreamOrchestrator = class {
   constructor(options = {}) {
     const strategies = Array.isArray(options) ? options : options?.strategies || [];
@@ -2589,7 +2588,7 @@ const StreamOrchestrator = class {
   }
 };
 
-// src/live/live-stream-strategies.js
+// src/features/live/stream.strategies.js
 const StreamStrategy = class {
   constructor({ type, connect }) {
     this.type = String(type || "").trim().toLowerCase();
@@ -2657,7 +2656,7 @@ const createStrategyForType = ({ type, connect }) => {
   return new StreamStrategy({ type: key || "unknown", connect });
 };
 
-// src/live/live-pending-destroyers.js
+// src/features/live/pending-destroyers.js
 const createPendingMountDestroyers = ({
   activeAttempts,
   targetEntity
@@ -2722,7 +2721,7 @@ const shouldClearPendingDestroyersForPromise = ({
   promise
 }) => (pendingDestroyers || []).some((attempt) => attempt?.promise === promise);
 
-// src/live/live-grace-pool.js
+// src/features/live/grace-pool.js
 const OFFSCREEN_VIDEO_STYLE = "width:1px;height:1px;display:block;opacity:0;pointer-events:none;position:absolute;left:-9999px;top:-9999px;background:var(--c-bg-deep)";
 const normalizeGraceEntityKey = (entity) => String(entity || "").trim();
 const createGraceEngineEntry = ({ engine, onExpire, graceMs }) => {
@@ -2757,7 +2756,7 @@ const prepareEngineVideoForGraceHost = (video) => {
   });
 };
 
-// src/live/live-url-provider.js
+// src/features/live/url-provider.js
 const makeGo2rtcCacheKey = ({ clientId, cam }) => `${clientId}:${cam}`;
 const buildGo2rtcWsPath = ({ clientId, cam }) => `/api/frigate/${encodeURIComponent(clientId)}/mse/api/ws?src=${encodeURIComponent(cam)}`;
 const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
@@ -2787,7 +2786,7 @@ const isM3u8Response = ({ contentType, url }) => {
   return ct.includes("application/vnd.apple.mpegurl") || ct.includes("application/x-mpegurl") || ct.includes("audio/mpegurl") || String(url || "").toLowerCase().includes(".m3u8");
 };
 
-// src/live/live-mount-lifecycle.js
+// src/features/live/mount-lifecycle.js
 const beginMountTracking = ({
   mountSeq,
   entity,
@@ -3070,7 +3069,7 @@ const resolveLiveMountTransportPlan = ({
   };
 };
 
-// src/live/live-mount-result.js
+// src/features/live/mount-result.js
 const isMountTokenCurrent = ({ mountToken, mountSeq }) => mountToken === mountSeq;
 const resolveGraceMseMountResult = ({ engine }) => {
   if (!engine) return false;
@@ -3120,7 +3119,7 @@ const destroyLoserAttemptResults = async ({
   }
 };
 
-// src/live/live-fallback-status.js
+// src/features/live/fallbacks/fallback-status.js
 const setFallbackStatusVisible = ({ statusEl, visible }) => {
   if (!statusEl) return;
   statusEl.hidden = !visible;
@@ -3138,7 +3137,7 @@ const showFallbackStatus = (statusEl) => {
   });
 };
 
-// src/live/live-stream-state.js
+// src/features/live/stream.state.js
 const isLiveTransportType = (type) => {
   const active = String(type || "").trim().toLowerCase();
   return active === "webrtc" || active === "mse" || active === "hls";
@@ -3223,7 +3222,7 @@ const resolveSnapshotFallbackState = ({
   refreshFallbackImage: refreshImage === true
 });
 
-// src/live/live-rotate-overlay-state.js
+// src/features/live/rotate-overlay-state.js
 const resolveRotateOverlayTargetMode = ({
   isMobileTabletViewport = false,
   isLandscapeViewport = false,
@@ -3433,7 +3432,7 @@ const resolveRotateOverlayViewportVariables = ({
   };
 };
 
-// src/live/live-video-factory.js
+// src/features/live/video-factory.js
 const VIDEO_PROFILES = Object.freeze({
   liveEngine: Object.freeze({
     styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)",
@@ -3736,7 +3735,7 @@ function mountNodeIntoSlot(slot, node) {
   slot.appendChild(node);
 }
 
-// src/live/live-fallback-url.js
+// src/features/live/fallbacks/fallback-url.js
 const isAbsoluteOrDataUrl = (url) => /^https?:\/\//i.test(url) || String(url || "").startsWith("data:");
 const FALLBACK_SIGNED_URL_TTL_MS = 55 * 60 * 1e3;
 const toAbsoluteLocalUrl = ({ url, origin }) => {
@@ -3868,7 +3867,7 @@ const loadFallbackAltForCard = ({ card, entity, origin }) => {
   });
 };
 
-// src/live/live-fallback-image.js
+// src/features/live/fallbacks/fallback-image.js
 const resolveFallbackDisplaySource = ({ primarySrc, altSrc }) => primarySrc || altSrc || "";
 const resolveFallbackObjectFit = ({
   naturalWidth,
@@ -3918,7 +3917,7 @@ const setFallbackImageSourceIfChanged = ({ img, src }) => {
   if (img.src !== src) img.src = src;
 };
 
-// src/live/live-fallback-refresh.js
+// src/features/live/fallbacks/fallback-refresh.js
 const nextFallbackRequestId = (currentRequestId) => Number(currentRequestId || 0) + 1;
 const issueFallbackRefreshToken = ({ currentRequestId }) => {
   const requestId = nextFallbackRequestId(currentRequestId);
@@ -4186,7 +4185,7 @@ const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   };
 };
 
-// src/live/live-startup-policy.js
+// src/features/live/startup-policy.js
 const MIN_WAIT_MS = 500;
 const normalizeWaitMs = (value, fallback) => Math.max(MIN_WAIT_MS, Number(value ?? fallback));
 const normalizeNumber = (value, fallback) => Number(value ?? fallback);
@@ -4258,7 +4257,7 @@ const resolveHaDirectStabilizedState = ({
   enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine)
 });
 
-// src/card/shell-nav-markup.js
+// src/card/controls/shell-nav.tmpl.js
 function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
   return `<div class="page-nav" aria-label="Page navigation">${routes.map((pageId) => {
     const isActive = pageId === activePageId;
@@ -4497,7 +4496,7 @@ function buildPreviewLayoutShellMarkup({
           </div>`;
 }
 
-// src/card/calendar-filter-markup.js
+// src/card/controls/calendar-filter.tmpl.js
 function buildCalendarPanelMarkup({
   monthDate,
   activeDayDateString,
@@ -4658,7 +4657,7 @@ const buildFavoriteRollbackMutation = ({
   activeEntity
 });
 
-// src/card/cleanup-controller.js
+// src/card/cleanup.ctrl.js
 const CleanupController = class {
   constructor() {
     this._abortController = new AbortController();
@@ -4700,7 +4699,7 @@ const CleanupController = class {
   }
 };
 
-// src/card/list-scroll-controller.js
+// src/card/list-scroll.ctrl.js
 const ListScrollController = class {
   constructor({
     list,
@@ -4754,7 +4753,7 @@ const ListScrollController = class {
   }
 };
 
-// src/card/live-overlay-controls-controller.js
+// src/card/controls/live-overlay.ctrl.js
 const LiveOverlayControlsController = class {
   constructor({ wrap, show, hideNow, hideSoon }) {
     __publicField(this, "_onPointerEnter", (event) => {
@@ -4814,7 +4813,7 @@ const LiveOverlayControlsController = class {
   }
 };
 
-// src/card/popup-drag-controller.js
+// src/card/popup/drag.ctrl.js
 const POPUP_DRAG_IGNORE_SELECTOR = "#popup-media-controls, #popup-carousel-wrap, #recording-scrub, .popup-info, .viewer, input, button, a, [data-ev]";
 const PopupDragController = class {
   constructor({
@@ -4927,7 +4926,7 @@ const PopupDragController = class {
   }
 };
 
-// src/card/popup-media-controls-utils.js
+// src/card/popup/media.js
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const buildPopupMediaUrl = ({ baseUrl = "", cacheKey }) => {
   const normalizedBaseUrl = String(baseUrl || "");
@@ -5199,7 +5198,7 @@ const resolvePopupMediaSeekTarget = ({
   return clamp(next, 0, safeDuration);
 };
 
-// src/card/popup-media-controls-controller.js
+// src/card/popup/media.ctrl.js
 const PopupMediaControlsController = class {
   constructor({
     controls,
@@ -5307,7 +5306,7 @@ const PopupMediaControlsController = class {
   }
 };
 
-// src/card/popup-carousel-utils.js
+// src/card/popup/carousel.js
 const sortByStartTimeDesc = (items = []) => [...items].sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0));
 const buildPopupCarouselItemMarkup = ({
   event = null,
@@ -5593,7 +5592,7 @@ function selectReviewsForFilterTab({
   return showAllReviews ? safeReviews : safeReviews.filter((review) => review?.severity === "alert");
 }
 
-// src/card/recordings/availability-utils.js
+// src/features/recordings/utils/availability.js
 function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
   return `${clientId}|${camera}|${bounds.start}|${bounds.end}`;
 }
@@ -5714,7 +5713,7 @@ function buildPreparedRecordingsDayResult(bounds, recordings) {
   };
 }
 
-// src/card/recordings/browse-nav-utils.js
+// src/features/recordings/utils/browse-nav.js
 function resolveRecordingsBrowseNavContextState({
   clientId = "",
   camera = "",
@@ -5781,7 +5780,7 @@ function resolveRecordingsBrowseNavState({
   };
 }
 
-// src/card/recordings/day-utils.js
+// src/features/recordings/utils/day.js
 function resolveRecordingsDayBounds({
   tsSec = null,
   fallbackSec = null,
@@ -5815,7 +5814,7 @@ function resolveOffsetRecordingsDayBounds({
   };
 }
 
-// src/card/recordings/playback-utils.js
+// src/features/recordings/utils/playback.js
 function buildRecordingPlaybackPlan({
   clientId = "",
   camera = "",
@@ -5838,7 +5837,7 @@ function buildRecordingPlaybackPlan({
   };
 }
 
-// src/card/recordings/scrub-utils.js
+// src/features/recordings/utils/scrub.js
 function resolveClosestRecordingAlertStart(targetSec, alerts = [], thresholdSec = 0) {
   let nearest = null;
   let best = Infinity;
@@ -6018,7 +6017,7 @@ function resolveRecordingSeekOutcome({
   };
 }
 
-// src/card/recordings/scrub-controller.js
+// src/features/recordings/scrub.ctrl.js
 const RecordingScrubController = class {
   constructor({ track, video, ticks, markers, state, setCursor, seekToRatio }) {
     __publicField(this, "_onPointerDown", (event) => {
@@ -6131,7 +6130,7 @@ const RecordingScrubController = class {
   }
 };
 
-// src/card/recordings/list-markup.js
+// src/features/recordings/recordings.tmpl.js
 function buildRecordingsListMarkup({
   recordings = [],
   emptyText = "No recordings in this day",
@@ -6162,7 +6161,7 @@ function buildRecordingsListMarkup({
   }).join("");
 }
 
-// src/card/recordings/segment-utils.js
+// src/features/recordings/utils/segment.js
 function mergeRecordingSegments(recordings = []) {
   if (!recordings.length) return [];
   const segments = [...recordings].sort((a, b) => a.start_time - b.start_time);
@@ -6219,7 +6218,7 @@ function splitRecordingsHourly(recordings = [], nowSec = Date.now() / 1e3) {
   return buckets;
 }
 
-// src/card/recordings/swipe-controller.js
+// src/features/recordings/swipe.ctrl.js
 const RecordingsSwipeController = class {
   constructor({
     browse,
@@ -6444,7 +6443,7 @@ const RecordingsSwipeController = class {
   }
 };
 
-// src/card/recordings/swipe-utils.js
+// src/features/recordings/utils/swipe.js
 const RECORDINGS_SWIPE_LOADING_HTML = '<div class="empty">Loading day\u2026</div>';
 const RECORDINGS_SWIPE_EMPTY_HTML = '<div class="empty">No recordings in this day</div>';
 function resolveRecordingsSwipeStageMetrics({
@@ -6533,7 +6532,7 @@ function resolveFailedRecordingsSwipeState() {
   };
 }
 
-// src/card/controls-readout-utils.js
+// src/card/controls/readout.js
 function normalizeControlsReadoutLine(text) {
   return String(text || "").trim();
 }
@@ -6574,7 +6573,7 @@ function resolveControlsReadoutMarkup(lines, escapeText) {
   return buildControlsReadoutLinesMarkup(escapedLines);
 }
 
-// src/card/review-list-model.js
+// src/data/review-list.model.js
 function buildReviewListItemModel(review, deps) {
   const {
     cap: cap2,
@@ -6629,7 +6628,7 @@ function buildReviewListItemHtml(model, deps) {
       </div>`;
 }
 
-// src/card/event-list-model.js
+// src/data/event-list.model.js
 function buildEventListItemModel(eventItem, deps) {
   const {
     cap: cap2,
@@ -6894,7 +6893,7 @@ function createOlderHintSyncer(syncOlderHint) {
   };
 }
 
-// src/preview/preview-utils.js
+// src/features/preview/utils.js
 const LIVE_STREAM_HINTS = new Set(["webrtc", "mse", "hls"]);
 function normalizePreviewAlertSeverity(value) {
   return String(value || "").trim().toLowerCase() === "detection" ? "detection" : "alert";
@@ -6938,7 +6937,7 @@ function isPreviewReviewFresh({
   return reviewStart >= startedAt - Number(graceSec || 0);
 }
 
-// src/data/review-candidate-utils.js
+// src/data/review-candidate.js
 function findFirstReviewCandidateForEntity({
   reviews,
   entity,
@@ -7014,7 +7013,7 @@ async function findNewestReviewCandidateAcrossCameras({
   return selectNewestReviewCandidate(candidates);
 }
 
-// src/data/realtime-alert-message-utils.js
+// src/data/realtime-alert.js
 function parseRealtimeAlertMessage({ host, msg, checkSeverity = true }) {
   const incomingCam = host?._extractRealtimeMessageCamera(msg);
   if (!incomingCam) return null;
@@ -7028,7 +7027,7 @@ function parseRealtimeAlertMessage({ host, msg, checkSeverity = true }) {
   return { cam, severity, type };
 }
 
-// src/preview/preview-alert-controller.js
+// src/features/preview/alert.ctrl.js
 const PreviewAlertController = class {
   constructor(host, constants) {
     this._host = host;
@@ -7211,7 +7210,7 @@ const PreviewAlertController = class {
   }
 };
 
-// src/preview/preview-markup.js
+// src/features/preview/page.tmpl.js
 function previewMediaSeverityClass(severity) {
   if (severity === "alert") return "grid-alert";
   if (severity === "detection") return "grid-detection";
@@ -7255,7 +7254,7 @@ function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
       <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
 }
 
-// src/preview/preview-page-controller.js
+// src/features/preview/page.ctrl.js
 const PreviewPageController = class {
   constructor(host, constants) {
     this._host = host;
@@ -7543,7 +7542,7 @@ const PreviewPageController = class {
   }
 };
 
-// src/navigation/page-navigation-controller.js
+// src/navigation/page-navigation.ctrl.js
 const PageNavigationController = class {
   constructor(host, constants) {
     this._host = host;
@@ -7633,7 +7632,7 @@ const PageNavigationController = class {
   }
 };
 
-// src/navigation/deep-link-controller.js
+// src/navigation/deep-link.ctrl.js
 const DeepLinkController = class {
   constructor(host) {
     this._host = host;
@@ -7796,7 +7795,7 @@ const DeepLinkController = class {
   }
 };
 
-// src/grid/grid-markup.js
+// src/features/grid/page.tmpl.js
 function buildGridSignaturePart({
   index,
   entity,
@@ -7832,7 +7831,7 @@ function renderGridEmptyPlaceholder(cell, liveIconSvg) {
   cell.innerHTML = `<div class="ph">${liveIconSvg}<span>Empty</span></div>`;
 }
 
-// src/grid/grid-utils.js
+// src/features/grid/utils.js
 function normalizeGridAlertSeverity(value) {
   return String(value || "").trim().toLowerCase() === "detection" ? "detection" : "alert";
 }
@@ -7857,7 +7856,7 @@ function gridAlertWatchIntervalMs(realtimePollSeconds) {
   return Math.max(1e3, Math.floor(Number(realtimePollSeconds || 0) * 1e3));
 }
 
-// src/grid/grid-alert-controller.js
+// src/features/grid/alert.ctrl.js
 const GridAlertController = class {
   constructor(host, constants) {
     this._host = host;
@@ -8039,7 +8038,7 @@ const GridAlertController = class {
   }
 };
 
-// src/grid/grid-page-controller.js
+// src/features/grid/page.ctrl.js
 const GridPageController = class {
   constructor(host) {
     this._host = host;
@@ -8117,7 +8116,7 @@ const GridPageController = class {
   }
 };
 
-// src/navigation/standard-page-route-lifecycle.js
+// src/navigation/route-lifecycle.js
 function isLeavingPreviewPage(context = {}, previewPageId) {
   return context.previousPageId === previewPageId;
 }
@@ -8163,13 +8162,13 @@ function activateStandardPageRouteLifecycle({
   syncStandardRouteShell(host);
 }
 
-// src/mobile-view/mobile-view-utils.js
+// src/features/mobile-view/utils.js
 const MOBILE_VIEW_ACTIVE_CLASS = "mobile-view-active";
 function isMobileViewRoute(pageId, pageIds) {
   return pageId === pageIds.mobileView;
 }
 
-// src/mobile-view/mobile-view-page-markup.js
+// src/features/mobile-view/page.tmpl.js
 function buildMobileViewInfoRowMarkup({
   title,
   subtitle,
@@ -8242,7 +8241,7 @@ function applyMobileViewPageMarkup({ host, pageIds }) {
   );
 }
 
-// src/card/standard-page-renderer.js
+// src/card/standard-renderer.js
 function cameraName(camera) {
   return cap(camDisplayName(camera));
 }
@@ -8411,7 +8410,7 @@ function renderStandardPageLegend(host) {
   el.innerHTML = html;
 }
 
-// src/mobile-view/mobile-view-page-controller.js
+// src/features/mobile-view/page.ctrl.js
 const MobileViewPageController = class {
   constructor(host, constants) {
     this._host = host;
@@ -8489,7 +8488,7 @@ const MobileViewPageController = class {
   }
 };
 
-// src/single-view/single-view-page-controller.js
+// src/features/single-view/page.ctrl.js
 const SingleViewPageController = class {
   constructor(host, constants) {
     this._host = host;
@@ -8718,7 +8717,7 @@ const SingleViewPageController = class {
   }
 };
 
-// src/wide-view/wide-view-page-controller.js
+// src/features/wide-view/page.ctrl.js
 const WideViewPageController = class {
   constructor(host, constants) {
     this._host = host;
@@ -8845,7 +8844,7 @@ const WideViewPageController = class {
   }
 };
 
-// src/slideshow/slideshow-utils.js
+// src/features/slideshow/utils.js
 function isSlideshowReviewFresh({
   slideshowStartedAtSec,
   reviewStartSec,
@@ -8876,7 +8875,7 @@ function slideshowReviewWatchIntervalMs({
   return Math.max(min, Math.min(max, realtimePollMs));
 }
 
-// src/slideshow/slideshow-alert-controller.js
+// src/features/slideshow/alert.ctrl.js
 const SlideshowAlertController = class {
   constructor(host, constants) {
     this._host = host;
@@ -9070,7 +9069,7 @@ const SlideshowAlertController = class {
   }
 };
 
-// src/slideshow/slideshow-page-controller.js
+// src/features/slideshow/page.ctrl.js
 const SlideshowPageController = class {
   constructor(host) {
     this._host = host;
@@ -9229,7 +9228,7 @@ const SlideshowPageController = class {
   }
 };
 
-// src/slideshow/slideshow-routing-utils.js
+// src/features/slideshow/routing.js
 function slideshowReviewModeForCamera(config, entity) {
   const cam = config?.cameras?.find((camera) => camera.entity === entity);
   return normalizeAlertsAreaContent2(cam?.alerts_content);
@@ -9277,7 +9276,7 @@ function extractRealtimeMessageSeverity(msg) {
   ).trim().toLowerCase();
 }
 
-// src/data/window-fetch-utils.js
+// src/data/window-fetch.js
 async function fetchWindowedItems({
   after,
   before,
@@ -16416,7 +16415,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
 };
 
-// src/config/card-config-normalizer.js
+// src/config/card-config.js
 const normalizeCameras = (config) => {
   let cameras = [];
   if (Array.isArray(config?.cameras)) {
@@ -17822,7 +17821,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
   }
 };
 
-// src/live/live-stream-element.js
+// src/features/live/stream.element.js
 const LIVE_STREAM_HOST_TAG = "frigate-live-stream";
 const FrigateLiveStreamElement = class extends HTMLElement {
   constructor() {

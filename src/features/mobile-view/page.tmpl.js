@@ -1,8 +1,5 @@
-import {
-  MOBILE_VIEW_ACTIVE_CLASS,
-  isMobileViewRoute,
-} from "./mobile-view-utils.js";
-import { buildCamSwitcherMarkup } from "../card/shell-nav-markup.js";
+import { MOBILE_VIEW_ACTIVE_CLASS, isMobileViewRoute } from "./utils.js";
+import { buildCamSwitcherMarkup } from "../../card/controls/shell-nav.tmpl.js";
 
 export function buildMobileViewInfoRowMarkup({
   title,

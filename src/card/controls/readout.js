@@ -1,7 +1,7 @@
 import {
   buildControlsReadoutEmptyMarkup,
   buildControlsReadoutLinesMarkup,
-} from "./shell-nav-markup.js";
+} from "./shell-nav.tmpl.js";
 
 export function normalizeControlsReadoutLine(text) {
   return String(text || "").trim();

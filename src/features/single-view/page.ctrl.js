@@ -15,8 +15,8 @@ import {
   standardPageShowStickyDayHeaders,
   standardPageSubtitleText,
   syncStandardPageStatus,
-} from "../card/standard-page-renderer.js";
-import { activateStandardPageRouteLifecycle } from "../navigation/standard-page-route-lifecycle.js";
+} from "../../card/standard-renderer.js";
+import { activateStandardPageRouteLifecycle } from "../../navigation/route-lifecycle.js";
 
 export class SingleViewPageController {
   constructor(host, constants) {

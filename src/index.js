@@ -1,7 +1,7 @@
 import { CARD_TAG, VERSION } from "./constants.js";
 import { FrigateViewCard } from "./card/FrigateViewCard.js";
 import { FrigateViewCardEditor } from "./editor/FrigateViewCardEditor.js";
-import { registerLiveStreamHostElement } from "./live/live-stream-element.js";
+import { registerLiveStreamHostElement } from "./features/live/live-stream-element.js";
 
 // index.js — registers custom elements and announces card to HA
 if (!customElements.get(CARD_TAG))

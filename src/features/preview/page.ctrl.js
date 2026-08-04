@@ -1,20 +1,20 @@
 import {
   resolvePreviewLiveStreamHint,
   resolvePreviewStreamSourceLabel,
-} from "./preview-utils.js";
+} from "./utils.js";
 import {
   buildPreviewCameraButtonMarkup,
   buildPreviewCellMarkup,
   buildPreviewMetaMarkup,
   buildPreviewShellMarkup,
   buildPreviewStatusMarkup,
-} from "./preview-markup.js";
+} from "./page.tmpl.js";
 import { ICONS } from "../icons.js";
 import { cap, camDisplayName, DEVICE_PROFILE } from "../helpers.js";
 import {
   buildPreviewLayoutShellMarkup,
   buildPreviewShellHeaderMarkup,
-} from "../card/shell-nav-markup.js";
+} from "../../card/controls/shell-nav.tmpl.js";
 
 export class PreviewPageController {
   constructor(host, constants) {

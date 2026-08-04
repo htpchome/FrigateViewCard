@@ -1,4 +1,4 @@
-import { activateStandardPageRouteLifecycle } from "../navigation/standard-page-route-lifecycle.js";
+import { activateStandardPageRouteLifecycle } from "../../navigation/route-lifecycle.js";
 import {
   buildStandardPageCamSwitcherMarkup,
   renderStandardPageCamSwitcher,
@@ -16,8 +16,8 @@ import {
   standardPageShowStickyDayHeaders,
   standardPageSubtitleText,
   syncStandardPageStatus,
-} from "../card/standard-page-renderer.js";
-import { applyMobileViewPageMarkup } from "./mobile-view-page-markup.js";
+} from "../../card/standard-renderer.js";
+import { applyMobileViewPageMarkup } from "./page.tmpl.js";
 
 export class MobileViewPageController {
   constructor(host, constants) {

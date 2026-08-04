@@ -1,4 +1,4 @@
-import { CleanupController } from "./cleanup-controller.js";
+import { CleanupController } from "../cleanup.ctrl.js";
 
 export class LiveOverlayControlsController {
   constructor({ wrap, show, hideNow, hideSoon }) {

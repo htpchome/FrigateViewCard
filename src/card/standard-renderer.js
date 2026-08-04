@@ -2,7 +2,7 @@ import { CAM_COLORS, cap, camDisplayName, labelColor } from "../helpers.js";
 import {
   buildCamSwitcherMarkup,
   resolveSubtitleText,
-} from "./shell-nav-markup.js";
+} from "./controls/shell-nav.tmpl.js";
 import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
@@ -16,7 +16,7 @@ import {
   resolveMobileViewStreamTypeText,
   resolveMobileViewSubtitleText,
   resolveMobileViewTitleText,
-} from "../mobile-view/mobile-view-page-markup.js";
+} from "../features/mobile-view/page.tmpl.js";
 import { ICONS } from "../icons.js";
 
 function cameraName(camera) {

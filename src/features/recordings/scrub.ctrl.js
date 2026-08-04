@@ -1,4 +1,4 @@
-import { CleanupController } from "../cleanup-controller.js";
+import { CleanupController } from "../../card/cleanup.ctrl.js";
 
 export class RecordingScrubController {
   constructor({ track, video, ticks, markers, state, setCursor, seekToRatio }) {
