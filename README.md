@@ -79,14 +79,14 @@ cameras:
 
 Each item under `cameras` supports these fields:
 
-| Variable              | Type           | Default             | Description                                                                                                                                     |
-| --------------------- | -------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `entity`              | string         | required            | Home Assistant camera entity, for example `camera.front_door`.                                                                                  |
-| `name`                | string         | entity-derived name | Display name for the camera.                                                                                                                    |
-| `connection_type`     | string         | `frigate_go2rtc`    | Playback source. Valid values: `frigate_go2rtc`, `ha_direct`.                                                                                   |
-| `alerts_content`      | string         | `alerts_only`       | Alerts tab content for this camera. Valid values: `alerts_only`, `all_reviews`.                                                                 |
-| `disable_hls_desktop` | boolean        | `false`             | Disables HLS fallback for this camera on desktop.                                                                                               |
-| `ptz`                 | boolean or map | `false`             | Enables circle-pad PTZ for this camera. `frigate_go2rtc` cameras use the Frigate PTZ API; `ha_direct` cameras use Home Assistant `frigate.ptz`. |
+| Variable              | Type           | Default             | Description                                                                                                                                                |
+| --------------------- | -------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entity`              | string         | required            | Home Assistant camera entity, for example `camera.front_door`.                                                                                             |
+| `name`                | string         | entity-derived name | Display name for the camera.                                                                                                                               |
+| `connection_type`     | string         | `frigate_go2rtc`    | Playback source. Valid values: `frigate_go2rtc`, `ha_direct`.                                                                                              |
+| `alerts_content`      | string         | `alerts_only`       | Alerts tab content for this camera. Valid values: `alerts_only`, `all_reviews`.                                                                            |
+| `disable_hls_desktop` | boolean        | `false`             | Disables HLS fallback for this camera on desktop.                                                                                                          |
+| `ptz`                 | boolean or map | `false`             | Enables circle-pad PTZ for this camera. PTZ control uses Home Assistant's Frigate integration service, while Frigate still provides the capability lookup. |
 
 Camera example with non-default values:
 
@@ -108,7 +108,7 @@ title: Frigate
 PTZ notes:
 
 - Use `ptz: true` to enable the default PTZ behavior. It normalizes to `enabled: true`, `move_mode: ContinuousMove`, and `speed: 0.5`.
-- PTZ transport follows the camera `connection_type`: `frigate_go2rtc` uses the Frigate PTZ API, while `ha_direct` uses the Home Assistant `frigate.ptz` service.
+- PTZ control uses the Home Assistant `frigate.ptz` service because that is the control surface the Frigate integration exposes to cards. Frigate's PTZ API is still used for capability detection via `frigate/ptz/info`.
 - Diagonal presses start both axes together and rely on release to stop continuous movement.
 - The controls tab now asks Frigate for PTZ capability data and only enables movement when Frigate reports pan/tilt support for that camera.
 - Diagonal circle-pad slices are faked by sending the two matching cardinal `move` actions, for example `up-right` sends both `up` and `right`.

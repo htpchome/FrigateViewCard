@@ -28,7 +28,7 @@ test("normalizeCameraPtzConfig applies the default PTZ speed for enabled objects
   });
 });
 
-test("resolvePtzServicePlan maps press to the Frigate PTZ move service", () => {
+test("resolvePtzServicePlan maps press to the Frigate integration PTZ service", () => {
   const request = resolvePtzServicePlan({
     camera: {
       entity: "camera.driveway",
@@ -48,16 +48,18 @@ test("resolvePtzServicePlan maps press to the Frigate PTZ move service", () => {
     executionMode: "sequential",
     requests: [
       {
-        type: "frigate_api",
-        method: "GET",
-        path: "/api/frigate/frigate/api/driveway/ptz/move_up",
+        type: "home_assistant_service",
+        domain: "frigate",
+        service: "ptz",
+        serviceData: { action: "move", argument: "up" },
+        target: { entity_id: "camera.driveway" },
       },
     ],
     readout: "[ptz:up]",
   });
 });
 
-test("resolvePtzServicePlan fans out diagonal moves into parallel Frigate API calls", () => {
+test("resolvePtzServicePlan fans out diagonal moves into parallel Frigate integration PTZ calls", () => {
   const request = resolvePtzServicePlan({
     camera: {
       entity: "camera.driveway",
@@ -73,21 +75,25 @@ test("resolvePtzServicePlan fans out diagonal moves into parallel Frigate API ca
     executionMode: "parallel",
     requests: [
       {
-        type: "frigate_api",
-        method: "GET",
-        path: "/api/frigate/frigate/api/driveway/ptz/move_up",
+        type: "home_assistant_service",
+        domain: "frigate",
+        service: "ptz",
+        serviceData: { action: "move", argument: "up" },
+        target: { entity_id: "camera.driveway" },
       },
       {
-        type: "frigate_api",
-        method: "GET",
-        path: "/api/frigate/frigate/api/driveway/ptz/move_right",
+        type: "home_assistant_service",
+        domain: "frigate",
+        service: "ptz",
+        serviceData: { action: "move", argument: "right" },
+        target: { entity_id: "camera.driveway" },
       },
     ],
     readout: "[ptz:up-right]",
   });
 });
 
-test("resolvePtzServicePlan stops direct Frigate API moves on release", () => {
+test("resolvePtzServicePlan stops continuous PTZ moves on release", () => {
   const request = resolvePtzServicePlan({
     camera: {
       entity: "camera.driveway",
@@ -103,9 +109,11 @@ test("resolvePtzServicePlan stops direct Frigate API moves on release", () => {
     executionMode: "sequential",
     requests: [
       {
-        type: "frigate_api",
-        method: "GET",
-        path: "/api/frigate/frigate/api/driveway/ptz/move_stop",
+        type: "home_assistant_service",
+        domain: "frigate",
+        service: "ptz",
+        serviceData: { action: "stop" },
+        target: { entity_id: "camera.driveway" },
       },
     ],
     readout: "[ptz:stop]",
@@ -146,7 +154,6 @@ test("resolvePtzServicePlan ignores PTZ when Frigate has no pan tilt capability"
       ptz: true,
     },
     ptzInfo: { features: ["zoom"] },
-    ptzContext: { clientId: "frigate", cameraName: "driveway" },
     action: "up-right",
     eventType: "press",
   });
@@ -165,7 +172,6 @@ test("resolvePtzServicePlan ignores release for relative moves", () => {
       },
     },
     ptzInfo: { features: ["pt"] },
-    ptzContext: { clientId: "frigate", cameraName: "driveway" },
     action: "left",
     eventType: "release",
   });

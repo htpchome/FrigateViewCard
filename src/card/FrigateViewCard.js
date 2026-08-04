@@ -8285,20 +8285,10 @@ export class FrigateViewCard extends HTMLElement {
     this._appendControlsReadoutEntry(plan.readout);
     try {
       const executeRequest = async (request) => {
-        if (request?.type === "frigate_api") {
-          const signedPath = await this._signed(request.path);
-          const url = this._toAbsoluteSignedPath(signedPath);
-          const response = await fetch(url, {
-            method: request.method || "GET",
-            cache: "no-store",
-            credentials: "same-origin",
-          });
-          if (!response.ok) {
-            throw new Error(
-              `Frigate PTZ API request failed: ${response.status}`,
-            );
-          }
-          return response;
+        if (request?.type !== "home_assistant_service") {
+          throw new Error(
+            `Unsupported PTZ request type: ${request?.type || "unknown"}`,
+          );
         }
 
         return this._hass?.callService(

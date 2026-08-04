@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1159";
+const VERSION = "1.0.1160";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1576,8 +1576,6 @@ const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
 const PTZ_SERVICE_DOMAIN = "frigate";
 const PTZ_SERVICE_NAME = "ptz";
 const PTZ_DEFAULT_SPEED = 0.5;
-const PTZ_CONNECTION_HA_DIRECT = "ha_direct";
-const PTZ_CONNECTION_FRIGATE = "frigate_go2rtc";
 const PTZ_DIRECTIONS = Object.freeze({
   up: Object.freeze(["up"]),
   "up-right": Object.freeze(["up", "right"]),
@@ -1595,26 +1593,12 @@ const normalizePtzNumber = (value) => {
   if (parsed < 0 || parsed > 1) return null;
   return parsed;
 };
-const normalizePtzConnectionType = (value) => {
-  const type = String(value || "").trim().toLowerCase();
-  if (type === PTZ_CONNECTION_HA_DIRECT || type === "ha" || type === "home_assistant") {
-    return PTZ_CONNECTION_HA_DIRECT;
-  }
-  return PTZ_CONNECTION_FRIGATE;
-};
-const shouldUseHomeAssistantPtz = (camera) => normalizePtzConnectionType(camera?.connection_type) === PTZ_CONNECTION_HA_DIRECT;
-const buildFrigatePtzApiPath = ({ clientId, cameraName: cameraName2, command }) => `/api/frigate/${encodeURIComponent(clientId)}/api/${encodeURIComponent(cameraName2)}/ptz/${command}`;
 const buildHomeAssistantPtzRequest = ({ camera, action, argument = null }) => ({
   type: "home_assistant_service",
   domain: PTZ_SERVICE_DOMAIN,
   service: PTZ_SERVICE_NAME,
   serviceData: argument ? { action, argument } : { action },
   target: { entity_id: camera.entity }
-});
-const buildFrigateApiPtzRequest = ({ clientId, cameraName: cameraName2, command }) => ({
-  type: "frigate_api",
-  method: "GET",
-  path: buildFrigatePtzApiPath({ clientId, cameraName: cameraName2, command })
 });
 const normalizePtzMoveMode = (value) => {
   const normalized = String(value || "").trim().toLowerCase();
@@ -1655,7 +1639,6 @@ const resolvePtzEmptyStateMessage = (camera, ptzInfo, { loading = false } = {}) 
 const resolvePtzServicePlan = ({
   camera,
   ptzInfo,
-  ptzContext,
   action,
   eventType
 }) => {
@@ -1663,23 +1646,11 @@ const resolvePtzServicePlan = ({
   if (!ptz || !camera?.entity || !hasPtzPanTiltCapability(ptzInfo)) {
     return null;
   }
-  const useHomeAssistant = shouldUseHomeAssistantPtz(camera);
-  const clientId = ptzContext?.clientId || "";
-  const cameraName2 = ptzContext?.cameraName || ptzContext?.cam || "";
-  if (!useHomeAssistant && (!clientId || !cameraName2)) {
-    return null;
-  }
   if (eventType === "release") {
     if (ptz.move_mode !== PTZ_MOVE_MODE_CONTINUOUS) return null;
     return {
       executionMode: "sequential",
-      requests: [
-        useHomeAssistant ? buildHomeAssistantPtzRequest({ camera, action: "stop" }) : buildFrigateApiPtzRequest({
-          clientId,
-          cameraName: cameraName2,
-          command: "move_stop"
-        })
-      ],
+      requests: [buildHomeAssistantPtzRequest({ camera, action: "stop" })],
       readout: "[ptz:stop]"
     };
   }
@@ -1688,14 +1659,10 @@ const resolvePtzServicePlan = ({
   return {
     executionMode: directions.length > 1 ? "parallel" : "sequential",
     requests: directions.map(
-      (direction) => useHomeAssistant ? buildHomeAssistantPtzRequest({
+      (direction) => buildHomeAssistantPtzRequest({
         camera,
         action: "move",
         argument: direction
-      }) : buildFrigateApiPtzRequest({
-        clientId,
-        cameraName: cameraName2,
-        command: `move_${direction}`
       })
     ),
     readout: `[ptz:${action}]`
@@ -16494,20 +16461,10 @@ const FrigateViewCard = class extends HTMLElement {
     this._appendControlsReadoutEntry(plan.readout);
     try {
       const executeRequest = async (request) => {
-        if (request?.type === "frigate_api") {
-          const signedPath = await this._signed(request.path);
-          const url = this._toAbsoluteSignedPath(signedPath);
-          const response = await fetch(url, {
-            method: request.method || "GET",
-            cache: "no-store",
-            credentials: "same-origin"
-          });
-          if (!response.ok) {
-            throw new Error(
-              `Frigate PTZ API request failed: ${response.status}`
-            );
-          }
-          return response;
+        if (request?.type !== "home_assistant_service") {
+          throw new Error(
+            `Unsupported PTZ request type: ${request?.type || "unknown"}`
+          );
         }
         return this._hass?.callService(
           request.domain,
