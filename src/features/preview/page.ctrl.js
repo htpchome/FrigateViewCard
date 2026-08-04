@@ -307,7 +307,7 @@ export class PreviewPageController {
         host.innerHTML = `<div class="ph">${ICONS.live}<span>Unavailable</span></div>`;
         return;
       }
-      this._host._mountGridCameraCellMedia(host, {
+      this._host._gridMediaController.mountCameraCellMedia(host, {
         entity,
         stateObj,
         useLive,

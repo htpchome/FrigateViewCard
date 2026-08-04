@@ -147,6 +147,10 @@ export class GridMediaController {
     return this._mountGridSnapshotCell(cell, { entity, stateObj });
   }
 
+  mountCameraCellMedia(cell, options = {}) {
+    return this._mountGridCameraCellMedia(cell, options);
+  }
+
   mountGridEngine(slot) {
     const indices = this.pageCameraIndices();
     const liveStreamHint = this._host._currentLiveStreamHint();

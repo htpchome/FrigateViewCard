@@ -50,6 +50,14 @@ const gridMediaControllerSource = fs.readFileSync(
   new URL("../src/features/grid/media.ctrl.js", import.meta.url),
   "utf8",
 );
+const previewPageControllerSource = fs.readFileSync(
+  new URL("../src/features/preview/page.ctrl.js", import.meta.url),
+  "utf8",
+);
+const editorSource = fs.readFileSync(
+  new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
+  "utf8",
+);
 
 test("no legacy var declarations remain", () => {
   assert.equal(/\bvar\s+[A-Za-z_$]/.test(source), false);
@@ -478,6 +486,25 @@ test("preview helpers delegate through the preview page controller", () => {
   assert.equal(
     /_previewStreamSourceLabel\(entity, useLive\) \{\s*return this\._previewPageController\.previewStreamSourceLabel\(\s*entity,\s*useLive\s*\);\s*\}/s.test(
       source,
+    ),
+    true,
+  );
+  assert.equal(
+    /mountPreviewMedia\(\) \{[\s\S]*?_host\._gridMediaController\.mountCameraCellMedia\(/.test(
+      previewPageControllerSource,
+    ),
+    true,
+  );
+});
+
+test("editor stylesheet keeps core config surface variables intact", () => {
+  assert.equal(
+    editorSource.includes("--editor-border: var(--divider-color);"),
+    true,
+  );
+  assert.equal(
+    editorSource.includes(
+      "--editor-icon: var(--icon-color, var(--secondary-text-color));",
     ),
     true,
   );

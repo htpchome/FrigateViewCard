@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1186";
+const VERSION = "1.0.1187";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6314,6 +6314,9 @@ const GridMediaController = class {
     }
     return this._mountGridSnapshotCell(cell, { entity, stateObj });
   }
+  mountCameraCellMedia(cell, options = {}) {
+    return this._mountGridCameraCellMedia(cell, options);
+  }
   mountGridEngine(slot) {
     const indices = this.pageCameraIndices();
     const liveStreamHint = this._host._currentLiveStreamHint();
@@ -9671,7 +9674,7 @@ const PreviewPageController = class {
         host.innerHTML = `<div class="ph">${ICONS.live}<span>Unavailable</span></div>`;
         return;
       }
-      this._host._mountGridCameraCellMedia(host, {
+      this._host._gridMediaController.mountCameraCellMedia(host, {
         entity,
         stateObj,
         useLive,
@@ -18506,10 +18509,10 @@ const FrigateViewCardEditor = class extends HTMLElement {
                 --editor-primary: var(--primary-color);
                 --editor-primary-d: var(--dark-primary-color);
                 --editor-primary-l: var(--light-primary-color);
-                --editor-border: var( var(--divider-color);
+                --editor-border: var(--divider-color);
                 --editor-border-width: var(--ha-card-border-width);
                 --editor-shadow: var(--ha-card-box-shadow);
-                --editor-icon: var(--icon-color, var(--secondary-text-color);
+                --editor-icon: var(--icon-color, var(--secondary-text-color));
               --c-bg-main: var(--editor-primary-bg);
               --c-bg-panel: var(--editor-card-bg);
               --c-text: var(--editor-text);

@@ -1202,10 +1202,10 @@ export class FrigateViewCardEditor extends HTMLElement {
                 --editor-primary: var(--primary-color);
                 --editor-primary-d: var(--dark-primary-color);
                 --editor-primary-l: var(--light-primary-color);
-                --editor-border: var( var(--divider-color);
+                --editor-border: var(--divider-color);
                 --editor-border-width: var(--ha-card-border-width);
                 --editor-shadow: var(--ha-card-box-shadow);
-                --editor-icon: var(--icon-color, var(--secondary-text-color);
+                --editor-icon: var(--icon-color, var(--secondary-text-color));
               --c-bg-main: var(--editor-primary-bg);
               --c-bg-panel: var(--editor-card-bg);
               --c-text: var(--editor-text);

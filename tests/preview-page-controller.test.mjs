@@ -150,3 +150,45 @@ test("applyPreviewShellVisibility toggles preview active class when card exists"
 
   assert.deepEqual(classListCalls, [["preview-active", true]]);
 });
+
+test("mountPreviewMedia delegates preview cells through grid media ownership", () => {
+  const hosts = [
+    {
+      dataset: {
+        previewMediaEntity: "camera.front_door",
+        previewUseLive: "0",
+      },
+      innerHTML: "",
+    },
+  ];
+  const { controller, host } = createHost({
+    previewEnabled: true,
+    pageId: "preview",
+  });
+  const calls = [];
+
+  host._hass = {
+    states: {
+      "camera.front_door": { state: "recording", attributes: {} },
+    },
+  };
+  host._hlsStateObj = () => null;
+  host._gridMediaController = {
+    mountCameraCellMedia: (cell, options) => {
+      calls.push([cell, options]);
+      return true;
+    },
+  };
+  host.shadowRoot = {
+    querySelectorAll: (selector) =>
+      selector === ".preview-media-host" ? hosts : [],
+  };
+
+  controller.mountPreviewMedia();
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], hosts[0]);
+  assert.equal(calls[0][1].entity, "camera.front_door");
+  assert.equal(calls[0][1].fallbackOnLiveError, true);
+  assert.equal(host._previewMediaState?.destroyed, false);
+});
