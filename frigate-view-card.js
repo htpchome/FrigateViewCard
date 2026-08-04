@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1180";
+const VERSION = "1.0.1181";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4696,37 +4696,6 @@ const resolveRotateOverlayViewportVariables = ({
   };
 };
 
-// src/integrations/home-assistant/playback.js
-function buildHaCameraStreamState(hass, entity, streamType = null, fallbackStreamType = "webrtc") {
-  const raw = hass?.states?.[entity];
-  if (!raw) return null;
-  const attrs = { ...raw.attributes };
-  attrs.frontend_stream_type = streamType || fallbackStreamType;
-  return { ...raw, attributes: attrs };
-}
-function createHaCameraStreamElement({
-  hass,
-  stateObj,
-  muted = false,
-  controls = false,
-  defaultMuted,
-  styleText = ""
-} = {}) {
-  if (!hass || !stateObj) return null;
-  const stream = document.createElement("ha-camera-stream");
-  stream.hass = hass;
-  stream.stateObj = stateObj;
-  stream.controls = controls;
-  stream.muted = muted;
-  if (defaultMuted !== void 0) {
-    stream.defaultMuted = defaultMuted;
-  }
-  if (styleText) {
-    stream.style.cssText = styleText;
-  }
-  return stream;
-}
-
 // src/features/live/fallbacks/fallback-url.js
 const isAbsoluteOrDataUrl = (url) => /^https?:\/\//i.test(url) || String(url || "").startsWith("data:");
 const FALLBACK_SIGNED_URL_TTL_MS = 55 * 60 * 1e3;
@@ -5177,6 +5146,37 @@ const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
   };
 };
 
+// src/integrations/home-assistant/playback.js
+function buildHaCameraStreamState(hass, entity, streamType = null, fallbackStreamType = "webrtc") {
+  const raw = hass?.states?.[entity];
+  if (!raw) return null;
+  const attrs = { ...raw.attributes };
+  attrs.frontend_stream_type = streamType || fallbackStreamType;
+  return { ...raw, attributes: attrs };
+}
+function createHaCameraStreamElement({
+  hass,
+  stateObj,
+  muted = false,
+  controls = false,
+  defaultMuted,
+  styleText = ""
+} = {}) {
+  if (!hass || !stateObj) return null;
+  const stream = document.createElement("ha-camera-stream");
+  stream.hass = hass;
+  stream.stateObj = stateObj;
+  stream.controls = controls;
+  stream.muted = muted;
+  if (defaultMuted !== void 0) {
+    stream.defaultMuted = defaultMuted;
+  }
+  if (styleText) {
+    stream.style.cssText = styleText;
+  }
+  return stream;
+}
+
 // src/features/live/ha-direct-mounter.js
 function createHaDirectMounter({
   getHass,
@@ -5499,7 +5499,10 @@ function createGo2RtcRaceMounter({
   setPendingMountDestroyers,
   isMountTokenCurrent: isMountTokenCurrent2,
   adoptMountedAttempt,
-  scheduleDeferredWebRtcTakeover
+  waitForStreamStart,
+  isCurrentWinnerEngine,
+  getPendingWebRtcTakeoverTimer,
+  setPendingWebRtcTakeoverTimer
 }) {
   const buildAttempts = (entity = "", forcedType = null, hostSlot = null) => {
     const targetEntity = String(entity || "").trim();
@@ -5573,14 +5576,13 @@ function createGo2RtcRaceMounter({
       promise: strategy.connect().catch(() => null)
     }));
     setPendingMountDestroyers(
-      strategies.map((strategy) => ({
-        type: strategy.type,
-        entity,
-        promise: strategy.connectPromise?.catch(() => null),
-        destroy: () => {
-          void strategy.disconnect();
-        }
-      }))
+      createPendingMountDestroyers({
+        activeAttempts: strategies.map((strategy) => ({
+          type: strategy.type,
+          promise: strategy.connectPromise?.catch(() => null)
+        })),
+        targetEntity: entity
+      })
     );
     const winner = await orchestrator.start();
     const deferredPreferredAttempt = orchestrator.deferredPreferredAttempt;
@@ -5606,9 +5608,10 @@ function createGo2RtcRaceMounter({
     };
     if (winner?.ok) {
       setPendingMountDestroyers(
-        (getPendingMountDestroyers() || []).filter(
-          (attempt) => attempt?.type !== winner.type
-        )
+        filterPendingDestroyersForWinner({
+          pendingDestroyers: getPendingMountDestroyers(),
+          winnerType: winner.type
+        })
       );
       adoptMountedAttempt(slot, winner);
       await destroyLosers();
@@ -5628,7 +5631,310 @@ function createGo2RtcRaceMounter({
     buildAttempts,
     mountWithRace
   };
+  function scheduleDeferredWebRtcTakeover({
+    slot,
+    deferredAttempt,
+    mountToken,
+    winnerEngine,
+    winnerType
+  }) {
+    if (!slot || !deferredAttempt || deferredAttempt.type !== "webrtc") return;
+    if (winnerType !== "mse") return;
+    const pendingTimer = getPendingWebRtcTakeoverTimer?.();
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      setPendingWebRtcTakeoverTimer(null);
+    }
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const result = await deferredAttempt.promise.catch(() => null);
+          if (!result?.ok || result.type !== "webrtc") return;
+          const takeoverStable = await waitForStreamStart(result.slot, 1500, {
+            minCurrentTime: 0.1,
+            minDecodedFrames: 2,
+            requireReadyState: 2,
+            strict: true
+          });
+          if (!takeoverStable) {
+            cleanupStaleWinnerResult(result);
+            return;
+          }
+          if (!isMountTokenCurrent2(mountToken)) {
+            cleanupStaleWinnerResult(result);
+            return;
+          }
+          if (!isCurrentWinnerEngine(winnerEngine)) {
+            cleanupStaleWinnerResult(result);
+            return;
+          }
+          adoptMountedAttempt(slot, result);
+          try {
+            winnerEngine?.destroy?.();
+          } catch (_) {
+          }
+        } finally {
+          setPendingMountDestroyers(
+            (getPendingMountDestroyers() || []).filter(
+              (attempt) => attempt?.type !== "webrtc"
+            )
+          );
+          setPendingWebRtcTakeoverTimer(null);
+        }
+      })();
+    }, 0);
+    setPendingWebRtcTakeoverTimer(timer);
+  }
 }
+
+// src/features/grid/page.tmpl.js
+function buildGridSignaturePart({
+  index,
+  entity,
+  severity,
+  useLive,
+  liveStreamHint
+}) {
+  if (index < 0) return "-1";
+  return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
+}
+function createGridRootElement() {
+  const grid = document.createElement("div");
+  grid.className = "live-grid";
+  return grid;
+}
+function createGridCellElement() {
+  const cell = document.createElement("div");
+  cell.className = "live-grid-cell";
+  return cell;
+}
+function applyGridCellSeverityClass(cell, severity) {
+  if (severity === "alert") cell.classList.add("grid-alert");
+  if (severity === "detection") cell.classList.add("grid-detection");
+}
+function createGridLabelElement(labelText) {
+  const label = document.createElement("div");
+  label.className = "live-grid-label";
+  label.textContent = labelText;
+  return label;
+}
+function renderGridEmptyPlaceholder(cell, liveIconSvg) {
+  cell.classList.add("empty");
+  cell.innerHTML = `<div class="ph">${liveIconSvg}<span>Empty</span></div>`;
+}
+
+// src/features/grid/media.ctrl.js
+const GridMediaController = class {
+  constructor(host, options = {}) {
+    this._host = host;
+    this._buildLabelText = typeof options.buildLabelText === "function" ? options.buildLabelText : () => "";
+    this._liveIconSvg = String(options.liveIconSvg || "");
+  }
+  pageCameraIndices() {
+    const total = this._host._config?.cameras?.length || 0;
+    if (!total) return [];
+    const maxStart = Math.max(0, (Math.ceil(total / 4) - 1) * 4);
+    const rawStart = Math.max(0, Number(this._host._gridRotationStart) || 0);
+    const start = Math.min(maxStart, Math.floor(rawStart / 4) * 4);
+    this._host._gridRotationStart = start;
+    return [0, 1, 2, 3].map((offset) => {
+      const idx = start + offset;
+      return idx < total ? idx : -1;
+    });
+  }
+  _mountGridSnapshotCell(cell, { entity, stateObj }) {
+    if (!cell || !entity) return false;
+    const img = document.createElement("img");
+    const entityPicture = stateObj?.attributes?.entity_picture || "";
+    img.alt = `${entity} snapshot`;
+    img.loading = "lazy";
+    img.decoding = "async";
+    void (async () => {
+      const primaryUrl = await this._host._streamFallbackUrl(entity);
+      if (!img.isConnected) return;
+      if (primaryUrl) {
+        img.src = primaryUrl;
+        return;
+      }
+      if (entityPicture) {
+        img.src = /^https?:\/\//i.test(entityPicture) ? entityPicture : `${window.location.origin}${entityPicture}`;
+      }
+    })();
+    cell.appendChild(img);
+    return true;
+  }
+  _mountGridDirectMseCell(cell, entity, gridState, options = {}) {
+    const host = document.createElement("div");
+    host.style.cssText = "width:100%;height:100%;display:block";
+    cell.appendChild(host);
+    void (async () => {
+      const result = await this._host._go2rtcMounter.tryMountMse(
+        host,
+        {
+          waitMs: 4e3,
+          minCurrentTime: 0.05,
+          minDecodedFrames: 1,
+          requireReadyState: 2,
+          strict: true
+        },
+        {
+          commit: false,
+          entity,
+          muted: true
+        }
+      );
+      if (!result?.ok) {
+        if (host.isConnected) {
+          host.remove();
+          if (!gridState.destroyed && options.fallbackOnFailure) {
+            this._mountGridSnapshotCell(cell, {
+              entity,
+              stateObj: options.stateObj || null
+            });
+          }
+        }
+        return;
+      }
+      if (gridState.destroyed || !host.isConnected) {
+        try {
+          result.engine?.destroy?.();
+        } catch (_) {
+        }
+        return;
+      }
+      gridState.cleanup.push(() => {
+        try {
+          result.engine?.destroy?.();
+        } catch (_) {
+        }
+        try {
+          host.innerHTML = "";
+        } catch (_) {
+        }
+      });
+    })();
+  }
+  _mountGridCameraCellMedia(cell, {
+    entity,
+    stateObj,
+    useLive,
+    liveStreamHint,
+    gridState,
+    fallbackOnLiveError = false
+  }) {
+    if (!cell || !entity) return false;
+    if (stateObj && useLive) {
+      if (liveStreamHint === "mse" && this._host._shouldUseGo2RtcForEntity(entity)) {
+        this._mountGridDirectMseCell(cell, entity, gridState, {
+          fallbackOnFailure: fallbackOnLiveError,
+          stateObj
+        });
+      } else {
+        const stream = createHaCameraStreamElement({
+          hass: this._host._hass,
+          stateObj,
+          controls: false,
+          muted: true,
+          defaultMuted: true,
+          styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)"
+        });
+        if (!stream) return false;
+        cell.appendChild(stream);
+        this._host._attachVideoFit(stream);
+      }
+      return true;
+    }
+    return this._mountGridSnapshotCell(cell, { entity, stateObj });
+  }
+  mountGridEngine(slot) {
+    const indices = this.pageCameraIndices();
+    const liveStreamHint = this._host._currentLiveStreamHint();
+    const gridState = { destroyed: false, cleanup: [] };
+    const signatureParts = [];
+    for (const idx of indices) {
+      const cam = idx >= 0 ? this._host._config?.cameras?.[idx] : null;
+      const entity = cam?.entity || "";
+      const severity = idx >= 0 ? this._host._gridCellSeverity(entity) : "";
+      const useLive = idx >= 0 && (this._host._gridLiveViewEnabled() || this._host._isGridCameraAlertLive(entity));
+      signatureParts.push(
+        buildGridSignaturePart({
+          index: idx,
+          entity,
+          severity,
+          useLive,
+          liveStreamHint
+        })
+      );
+    }
+    const nextSignature = signatureParts.join("|");
+    const hasExistingGrid = slot.firstElementChild?.classList?.contains("live-grid");
+    if (hasExistingGrid && this._host._gridLastRenderSignature === nextSignature) {
+      this._host._setActiveStreamType("grid");
+      this._host._setStreamLoading(false);
+      this._host._setStreamFallbackVisible(false);
+      return;
+    }
+    this._host._gridLastRenderSignature = nextSignature;
+    slot.innerHTML = "";
+    const grid = createGridRootElement();
+    for (const idx of indices) {
+      const cell = createGridCellElement();
+      if (idx >= 0) {
+        const cam = this._host._config?.cameras?.[idx];
+        const entity = cam?.entity || "";
+        const stateObj = entity ? buildHaCameraStreamState(
+          this._host._hass,
+          entity,
+          liveStreamHint,
+          this._host._preferredStreamType()
+        ) || this._host._hass?.states?.[entity] || null : null;
+        const severity = this._host._gridCellSeverity(entity);
+        applyGridCellSeverityClass(cell, severity);
+        const useLive = this._host._gridLiveViewEnabled() || this._host._isGridCameraAlertLive(entity);
+        if (entity) {
+          this._mountGridCameraCellMedia(cell, {
+            entity,
+            stateObj,
+            useLive,
+            liveStreamHint,
+            gridState
+          });
+        } else {
+          cell.classList.add("empty");
+        }
+        cell.dataset.gridCamidx = String(idx);
+        cell.dataset.gridEntity = entity;
+        const label = createGridLabelElement(this._buildLabelText(cam));
+        cell.appendChild(label);
+      } else {
+        cell.classList.add("empty");
+      }
+      if (cell.classList.contains("empty")) {
+        renderGridEmptyPlaceholder(cell, this._liveIconSvg);
+      }
+      grid.appendChild(cell);
+    }
+    slot.appendChild(grid);
+    this._host._engine = {
+      destroy: () => {
+        gridState.destroyed = true;
+        for (const cleanup of gridState.cleanup) {
+          try {
+            cleanup();
+          } catch (_) {
+          }
+        }
+        try {
+          slot.innerHTML = "";
+        } catch (_) {
+        }
+      }
+    };
+    this._host._setActiveStreamType("grid");
+    this._host._setStreamLoading(false);
+    this._host._setStreamFallbackVisible(false);
+  }
+};
 
 // src/card/controls/shell-nav.tmpl.js
 function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
@@ -9206,42 +9512,6 @@ const DeepLinkController = class {
   }
 };
 
-// src/features/grid/page.tmpl.js
-function buildGridSignaturePart({
-  index,
-  entity,
-  severity,
-  useLive,
-  liveStreamHint
-}) {
-  if (index < 0) return "-1";
-  return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
-}
-function createGridRootElement() {
-  const grid = document.createElement("div");
-  grid.className = "live-grid";
-  return grid;
-}
-function createGridCellElement() {
-  const cell = document.createElement("div");
-  cell.className = "live-grid-cell";
-  return cell;
-}
-function applyGridCellSeverityClass(cell, severity) {
-  if (severity === "alert") cell.classList.add("grid-alert");
-  if (severity === "detection") cell.classList.add("grid-detection");
-}
-function createGridLabelElement(labelText) {
-  const label = document.createElement("div");
-  label.className = "live-grid-label";
-  label.textContent = labelText;
-  return label;
-}
-function renderGridEmptyPlaceholder(cell, liveIconSvg) {
-  cell.classList.add("empty");
-  cell.innerHTML = `<div class="ph">${liveIconSvg}<span>Empty</span></div>`;
-}
-
 // src/features/grid/utils.js
 function normalizeGridAlertSeverity(value) {
   return String(value || "").trim().toLowerCase() === "detection" ? "detection" : "alert";
@@ -10874,7 +11144,12 @@ const FrigateViewCard = class extends HTMLElement {
       },
       isMountTokenCurrent: (mountToken) => isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq }),
       adoptMountedAttempt: (slot, winner) => this._adoptMountedAttempt(slot, winner),
-      scheduleDeferredWebRtcTakeover: (options) => this._scheduleDeferredWebRtcTakeover(options)
+      waitForStreamStart: (streamEl, timeoutMs, opts) => this._waitForStreamStart(streamEl, timeoutMs, opts),
+      isCurrentWinnerEngine: (engine) => this._engine === engine,
+      getPendingWebRtcTakeoverTimer: () => this._pendingWebRTCTakeoverTimer,
+      setPendingWebRtcTakeoverTimer: (timer) => {
+        this._pendingWebRTCTakeoverTimer = timer;
+      }
     });
     this._viewMode = "single";
     this._eventsMode = "camera";
@@ -10939,6 +11214,10 @@ const FrigateViewCard = class extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
     this._gridPageController = new GridPageController(this);
+    this._gridMediaController = new GridMediaController(this, {
+      buildLabelText: (cam) => cap(camDisplayName(cam)),
+      liveIconSvg: ICONS.live
+    });
     this._mobileViewPageController = new MobileViewPageController(this, {
       PAGE_IDS
     });
@@ -12142,60 +12421,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._setStreamFallbackVisible(false);
     if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
-  _scheduleDeferredWebRtcTakeover({
-    slot,
-    deferredAttempt,
-    mountToken,
-    winnerEngine,
-    winnerType
-  }) {
-    if (!slot || !deferredAttempt || deferredAttempt.type !== "webrtc") return;
-    if (winnerType !== "mse") return;
-    if (this._pendingWebRTCTakeoverTimer) {
-      clearTimeout(this._pendingWebRTCTakeoverTimer);
-      this._pendingWebRTCTakeoverTimer = null;
-    }
-    this._pendingWebRTCTakeoverTimer = setTimeout(() => {
-      void (async () => {
-        try {
-          const result = await deferredAttempt.promise.catch(() => null);
-          if (!result?.ok || result.type !== "webrtc") {
-            return;
-          }
-          const takeoverStable = await this._waitForStreamStart(
-            result.slot,
-            1500,
-            {
-              minCurrentTime: 0.1,
-              minDecodedFrames: 2,
-              requireReadyState: 2,
-              strict: true
-            }
-          );
-          if (!takeoverStable) {
-            cleanupStaleWinnerResult(result);
-            return;
-          }
-          if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
-            cleanupStaleWinnerResult(result);
-            return;
-          }
-          if (this._engine !== winnerEngine) {
-            cleanupStaleWinnerResult(result);
-            return;
-          }
-          this._adoptMountedAttempt(slot, result);
-          try {
-            winnerEngine?.destroy?.();
-          } catch (_) {
-          }
-        } finally {
-          this._pendingMountDestroyers = (this._pendingMountDestroyers || []).filter((attempt) => attempt?.type !== "webrtc");
-          this._pendingWebRTCTakeoverTimer = null;
-        }
-      })();
-    }, 0);
-  }
   _waitForStreamStart(streamEl, timeoutMs = 3500, opts = {}) {
     const minCurrentTime = Number(opts.minCurrentTime ?? 0.05);
     const minDecodedFrames = Number(opts.minDecodedFrames ?? 1);
@@ -12333,110 +12558,6 @@ const FrigateViewCard = class extends HTMLElement {
   _cameraContext(entity) {
     return this._camCache[entity] || mkCamState();
   }
-  _mountGridSnapshotCell(cell, { entity, stateObj }) {
-    if (!cell || !entity) return false;
-    const img = document.createElement("img");
-    const entityPicture = stateObj?.attributes?.entity_picture || "";
-    img.alt = `${entity} snapshot`;
-    img.loading = "lazy";
-    img.decoding = "async";
-    void (async () => {
-      const primaryUrl = await this._streamFallbackUrl(entity);
-      if (!img.isConnected) return;
-      if (primaryUrl) {
-        img.src = primaryUrl;
-        return;
-      }
-      if (entityPicture) {
-        img.src = /^https?:\/\//i.test(entityPicture) ? entityPicture : `${window.location.origin}${entityPicture}`;
-      }
-    })();
-    cell.appendChild(img);
-    return true;
-  }
-  _mountGridDirectMSECell(cell, entity, gridState, options = {}) {
-    const host = document.createElement("div");
-    host.style.cssText = "width:100%;height:100%;display:block";
-    cell.appendChild(host);
-    void (async () => {
-      const result = await this._go2rtcMounter.tryMountMse(
-        host,
-        {
-          waitMs: 4e3,
-          minCurrentTime: 0.05,
-          minDecodedFrames: 1,
-          requireReadyState: 2,
-          strict: true
-        },
-        {
-          commit: false,
-          entity,
-          muted: true
-        }
-      );
-      if (!result?.ok) {
-        if (host.isConnected) {
-          host.remove();
-          if (!gridState.destroyed && options.fallbackOnFailure) {
-            this._mountGridSnapshotCell(cell, {
-              entity,
-              stateObj: options.stateObj || null
-            });
-          }
-        }
-        return;
-      }
-      if (gridState.destroyed || !host.isConnected) {
-        try {
-          result.engine?.destroy?.();
-        } catch (_) {
-        }
-        return;
-      }
-      gridState.cleanup.push(() => {
-        try {
-          result.engine?.destroy?.();
-        } catch (_) {
-        }
-        try {
-          host.innerHTML = "";
-        } catch (_) {
-        }
-      });
-    })();
-  }
-  _mountGridCameraCellMedia(cell, {
-    entity,
-    stateObj,
-    useLive,
-    liveStreamHint,
-    gridState,
-    fallbackOnLiveError = false
-  }) {
-    if (!cell || !entity) return false;
-    if (stateObj && useLive) {
-      if (liveStreamHint === "mse" && this._shouldUseGo2RtcForEntity(entity)) {
-        this._mountGridDirectMSECell(cell, entity, gridState, {
-          fallbackOnFailure: fallbackOnLiveError,
-          stateObj
-        });
-      } else {
-        const stream = createHaCameraStreamElement({
-          hass: this._hass,
-          stateObj,
-          controls: false,
-          muted: true,
-          defaultMuted: true,
-          styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)"
-        });
-        if (!stream) return false;
-        cell.appendChild(stream);
-        this._attachVideoFit(stream);
-      }
-      return true;
-    }
-    return this._mountGridSnapshotCell(cell, { entity, stateObj });
-  }
   _applyLiveMountUiState(quiet = false) {
     const mountUi = resolveLiveMountUiState({ quiet });
     if (mountUi.activeStreamType != null) {
@@ -12522,7 +12643,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     if (mountEntry.type === "grid") {
       this._cancelPendingMount("grid-mode");
-      this._mountGridEngine(slot);
+      this._gridMediaController.mountGridEngine(slot);
       return;
     }
     if (mountEntry.type === "missing-entity" || mountEntry.type === "duplicate") {
@@ -12819,106 +12940,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _handleGridRealtimeMessage(msg) {
     this._gridAlertController.handleRealtimeMessage(msg);
-  }
-  _gridPageCameraIndices() {
-    const total = this._config?.cameras?.length || 0;
-    if (!total) return [];
-    const maxStart = Math.max(0, (Math.ceil(total / 4) - 1) * 4);
-    const rawStart = Math.max(0, Number(this._gridRotationStart) || 0);
-    const start = Math.min(maxStart, Math.floor(rawStart / 4) * 4);
-    this._gridRotationStart = start;
-    return [0, 1, 2, 3].map((offset) => {
-      const idx = start + offset;
-      return idx < total ? idx : -1;
-    });
-  }
-  _mountGridEngine(slot) {
-    const indices = this._gridPageCameraIndices();
-    const liveStreamHint = this._currentLiveStreamHint();
-    const gridState = { destroyed: false, cleanup: [] };
-    const signatureParts = [];
-    for (const idx of indices) {
-      const cam = idx >= 0 ? this._config?.cameras?.[idx] : null;
-      const entity = cam?.entity || "";
-      const severity = idx >= 0 ? this._gridCellSeverity(entity) : "";
-      const useLive = idx >= 0 && (this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity));
-      signatureParts.push(
-        buildGridSignaturePart({
-          index: idx,
-          entity,
-          severity,
-          useLive,
-          liveStreamHint
-        })
-      );
-    }
-    const nextSignature = signatureParts.join("|");
-    const hasExistingGrid = slot.firstElementChild?.classList?.contains("live-grid");
-    if (hasExistingGrid && this._gridLastRenderSignature === nextSignature) {
-      this._setActiveStreamType("grid");
-      this._setStreamLoading(false);
-      this._setStreamFallbackVisible(false);
-      return;
-    }
-    this._gridLastRenderSignature = nextSignature;
-    slot.innerHTML = "";
-    const grid = createGridRootElement();
-    for (const idx of indices) {
-      const cell = createGridCellElement();
-      if (idx >= 0) {
-        const cam = this._config?.cameras?.[idx];
-        const entity = cam?.entity || "";
-        const stateObj = entity ? buildHaCameraStreamState(
-          this._hass,
-          entity,
-          liveStreamHint,
-          this._preferredStreamType()
-        ) || this._hass?.states?.[entity] || null : null;
-        const severity = this._gridCellSeverity(entity);
-        applyGridCellSeverityClass(cell, severity);
-        const useLive = this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
-        if (entity) {
-          this._mountGridCameraCellMedia(cell, {
-            entity,
-            stateObj,
-            useLive,
-            liveStreamHint,
-            gridState
-          });
-        } else {
-          cell.classList.add("empty");
-        }
-        cell.dataset.gridCamidx = String(idx);
-        cell.dataset.gridEntity = entity;
-        const label = createGridLabelElement(cap(camDisplayName(cam)));
-        cell.appendChild(label);
-      } else {
-        cell.classList.add("empty");
-      }
-      if (cell.classList.contains("empty")) {
-        renderGridEmptyPlaceholder(cell, ICONS.live);
-      }
-      grid.appendChild(cell);
-    }
-    slot.appendChild(grid);
-    this._engine = {
-      destroy: () => {
-        gridState.destroyed = true;
-        for (const cleanup of gridState.cleanup) {
-          try {
-            cleanup();
-          } catch (_) {
-          }
-        }
-        try {
-          slot.innerHTML = "";
-        } catch (_) {
-        }
-      }
-    };
-    this._setActiveStreamType("grid");
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
   }
   _stopGridModeState() {
     this._gridPageController.stopGridModeState();

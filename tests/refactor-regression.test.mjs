@@ -38,6 +38,10 @@ const go2rtcRaceMounterSource = fs.readFileSync(
   new URL("../src/features/live/go2rtc-race-mounter.js", import.meta.url),
   "utf8",
 );
+const gridMediaControllerSource = fs.readFileSync(
+  new URL("../src/features/grid/media.ctrl.js", import.meta.url),
+  "utf8",
+);
 
 test("no legacy var declarations remain", () => {
   assert.equal(/\bvar\s+[A-Za-z_$]/.test(source), false);
@@ -176,17 +180,50 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     go2rtcRaceMounterSource.includes("new StreamOrchestrator"),
     true,
   );
+  assert.equal(
+    go2rtcRaceMounterSource.includes("function scheduleDeferredWebRtcTakeover"),
+    true,
+  );
+  assert.equal(
+    go2rtcRaceMounterSource.includes("createPendingMountDestroyers"),
+    true,
+  );
+  assert.equal(
+    go2rtcRaceMounterSource.includes("filterPendingDestroyersForWinner"),
+    true,
+  );
   assert.equal(frigateUrlSource.includes("buildGo2rtcWsPath"), true);
   assert.equal(sharedUrlSource.includes("toAbsoluteSignedUrl"), true);
   assert.equal(
-    /_mountGridCameraCellMedia\([\s\S]*?liveStreamHint === "mse" && this\._shouldUseGo2RtcForEntity\(entity\)/.test(
-      source,
+    cardSource.includes(
+      'import { GridMediaController } from "../features/grid/media.ctrl.js";',
     ),
     true,
   );
   assert.equal(
+    /this\._gridMediaController\s*=\s*new GridMediaController\(this,/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("_mountGridCameraCellMedia("), false);
+  assert.equal(cardSource.includes("_mountGridDirectMSECell("), false);
+  assert.equal(cardSource.includes("_mountGridEngine("), false);
+  assert.equal(cardSource.includes("_gridPageCameraIndices("), false);
+  assert.equal(cardSource.includes("_scheduleDeferredWebRtcTakeover("), false);
+  assert.equal(
+    /_mountGridCameraCellMedia\([\s\S]*?liveStreamHint === "mse" &&[\s\S]*?_host\._shouldUseGo2RtcForEntity\(entity\)/.test(
+      gridMediaControllerSource,
+    ),
+    true,
+  );
+  assert.equal(
+    gridMediaControllerSource.includes("createHaCameraStreamElement"),
+    true,
+  );
+  assert.equal(
     /_mountEngine\([\s\S]*?const useGo2Rtc = this\._shouldUseGo2RtcForEntity\(entity\);[\s\S]*?if \(\s*useGo2Rtc\s*&&/.test(
-      source,
+      cardSource,
     ),
     true,
   );
@@ -210,7 +247,7 @@ test("go2rtc ownership is pulled out of the card shell", () => {
   );
   assert.equal(
     /_mountEngine\([\s\S]*?const \{ mountToken, clearMountState \} = this\._beginLiveMountSession\(entity\);[\s\S]*?finally \{[\s\S]*?clearMountState\(\);[\s\S]*?\}/.test(
-      source,
+      cardSource,
     ),
     true,
   );

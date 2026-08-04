@@ -20,7 +20,10 @@ test("go2rtc race mounter builds attempts with desktop HLS filtering", () => {
     setPendingMountDestroyers: () => {},
     isMountTokenCurrent: () => true,
     adoptMountedAttempt: () => {},
-    scheduleDeferredWebRtcTakeover: () => {},
+    waitForStreamStart: async () => true,
+    isCurrentWinnerEngine: () => true,
+    getPendingWebRtcTakeoverTimer: () => null,
+    setPendingWebRtcTakeoverTimer: () => {},
   });
 
   const attempts = raceMounter.buildAttempts("camera.front");
@@ -33,7 +36,8 @@ test("go2rtc race mounter builds attempts with desktop HLS filtering", () => {
 test("go2rtc race mounter adopts the fallback winner and retains deferred webrtc", async () => {
   let pendingDestroyers = [];
   let adopted = null;
-  let deferred = null;
+  let pendingTimer = null;
+  let winnerDestroyed = false;
   const raceMounter = createGo2RtcRaceMounter({
     mounter: {
       tryMountWebRtc: async (slot) => {
@@ -49,7 +53,11 @@ test("go2rtc race mounter adopts the fallback winner and retains deferred webrtc
         ok: true,
         type: "mse",
         slot,
-        engine: { destroy() {} },
+        engine: {
+          destroy() {
+            winnerDestroyed = true;
+          },
+        },
       }),
       tryMountHls: async () => false,
     },
@@ -68,8 +76,11 @@ test("go2rtc race mounter adopts the fallback winner and retains deferred webrtc
     adoptMountedAttempt: (slot, winner) => {
       adopted = { slot, winner };
     },
-    scheduleDeferredWebRtcTakeover: (options) => {
-      deferred = options;
+    waitForStreamStart: async () => true,
+    isCurrentWinnerEngine: () => true,
+    getPendingWebRtcTakeoverTimer: () => pendingTimer,
+    setPendingWebRtcTakeoverTimer: (timer) => {
+      pendingTimer = timer;
     },
   });
 
@@ -92,12 +103,17 @@ test("go2rtc race mounter adopts the fallback winner and retains deferred webrtc
 
   assert.equal(result, true);
   assert.equal(adopted?.winner?.type, "mse");
-  assert.equal(deferred?.deferredAttempt?.type, "webrtc");
-  assert.equal(deferred?.winnerType, "mse");
   assert.deepEqual(
     pendingDestroyers.map((attempt) => attempt.type),
     ["webrtc"],
   );
   assert.ok(slot.attachedOrchestrator);
   assert.equal(slot.clearedOrchestrator, slot.attachedOrchestrator);
+
+  await delay(40);
+
+  assert.equal(adopted?.winner?.type, "webrtc");
+  assert.equal(winnerDestroyed, true);
+  assert.equal(pendingTimer, null);
+  assert.deepEqual(pendingDestroyers, []);
 });
