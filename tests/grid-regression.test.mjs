@@ -52,13 +52,16 @@ test("grid mode toolbar and runtime hooks are present", () => {
     true,
   );
   assert.equal(cardSource.includes("_mountGridEngine("), false);
-  assert.equal(gridMediaControllerSource.includes("mountGridEngine(slot)"), true);
+  assert.equal(
+    gridMediaControllerSource.includes("mountGridEngine(slot)"),
+    true,
+  );
   assert.equal(
     gridMediaControllerSource.includes("createHaCameraStreamElement"),
     true,
   );
   assert.equal(
-    gridMediaControllerSource.includes("liveStreamHint === \"mse\""),
+    gridMediaControllerSource.includes('liveStreamHint === "mse"'),
     true,
   );
 });

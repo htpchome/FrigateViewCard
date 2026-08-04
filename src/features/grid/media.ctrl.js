@@ -175,7 +175,10 @@ export class GridMediaController {
     const nextSignature = signatureParts.join("|");
     const hasExistingGrid =
       slot.firstElementChild?.classList?.contains("live-grid");
-    if (hasExistingGrid && this._host._gridLastRenderSignature === nextSignature) {
+    if (
+      hasExistingGrid &&
+      this._host._gridLastRenderSignature === nextSignature
+    ) {
       this._host._setActiveStreamType("grid");
       this._host._setStreamLoading(false);
       this._host._setStreamFallbackVisible(false);
