@@ -1200,6 +1200,8 @@ export class FrigateViewCardEditor extends HTMLElement {
                 --editor-text: var(--primary-text-color, #1f2937);
                 --editor-muted: var(--secondary-text-color, #6b7280);
                 --editor-primary: var(--primary-color, #03a9f4);
+                --editor-primary-d: var(--dark-primary-color);
+                --editir-primary-l: var(--light-primary-color);
                 --editor-border: var(--ha-card-border-color, var(--divider-color, #d1d5db));
                 --editor-border-width: var(--ha-card-border-width, 1px);
                 --editor-shadow: var(--ha-card-box-shadow, 0 2px 10px rgba(0,0,0,.14));
@@ -1212,7 +1214,6 @@ export class FrigateViewCardEditor extends HTMLElement {
               --c-border: var(--editor-border);
               --c-border2: var(--divider-color, var(--editor-border));
               --c-primary: var(--editor-primary);
-              --c-primary-l: var(--light-primary-color, var(--editor-primary));
               --c-accent: var(--accent-color, var(--editor-primary));
               --c-alert: var(--error-color, #b91c1c);
                 display:flex;
@@ -1345,8 +1346,11 @@ export class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-field{margin-bottom:8px;}
             .cam-modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
             .cam-btn{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
+            .cam-btn:hover{background:var(--editor-primary-l }
             .cam-btn.primary{background:var(--editor-primary, #03a9f4);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
+            .cam-btn.primary:hover{background:var(--editor-primary-d}
             .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
+
         </style>
     <div class="ed-wrap">
       ${settingsPanelsMarkup}

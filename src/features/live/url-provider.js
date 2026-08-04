@@ -6,11 +6,11 @@ export const buildGo2rtcWsPath = ({ clientId, cam }) =>
 export const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
   const encClient = encodeURIComponent(clientId);
   const encCam = encodeURIComponent(cam);
-  return [
-    `/api/frigate/${encClient}/hls/${encCam}/index.m3u8`,
-    `/api/frigate/${encClient}/live/${encCam}/index.m3u8`,
-    `/api/frigate/${encClient}/vod/${encCam}/index.m3u8`,
-  ];
+  // Home Assistant's Frigate integration proxies go2rtc HTTP endpoints through
+  // /api/frigate/<instance>/go2rtc/*. Use the supported go2rtc HLS playlist
+  // endpoint instead of probing nonexistent /hls|live|vod camera manifest
+  // routes on the integration proxy.
+  return [`/api/frigate/${encClient}/go2rtc/api/stream.m3u8?src=${encCam}&mp4`];
 };
 
 export const toAbsoluteSignedUrl = ({ signedPath, origin }) =>

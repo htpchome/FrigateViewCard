@@ -24,12 +24,10 @@ test("buildGo2rtcWsPath URL-encodes client and camera", () => {
   assert.equal(path, "/api/frigate/frig%20ate/mse/api/ws?src=front%2Fdoor");
 });
 
-test("buildGo2rtcHlsCandidates returns expected ordered candidates", () => {
+test("buildGo2rtcHlsCandidates returns the supported HA go2rtc HLS candidate", () => {
   const candidates = buildGo2rtcHlsCandidates({ clientId: "c", cam: "x" });
   assert.deepEqual(candidates, [
-    "/api/frigate/c/hls/x/index.m3u8",
-    "/api/frigate/c/live/x/index.m3u8",
-    "/api/frigate/c/vod/x/index.m3u8",
+    "/api/frigate/c/go2rtc/api/stream.m3u8?src=x&mp4",
   ]);
 });
 
