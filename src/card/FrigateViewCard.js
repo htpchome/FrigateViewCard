@@ -188,8 +188,8 @@ import {
 import {
   buildFavoriteOptimisticMutation,
   buildFavoriteRollbackMutation,
-} from "./favorites-mutation-utils.js";
-import { ListScrollController } from "./list-scroll.ctrl.js";
+} from "../shared/favorite-mutation.js";
+import { ListScrollController } from "../features/list/scroll.ctrl.js";
 import { LiveOverlayControlsController } from "./controls/live-overlay.ctrl.js";
 import { PopupDragController } from "./popup/drag.ctrl.js";
 import { PopupMediaControlsController } from "./popup/media.ctrl.js";
@@ -235,7 +235,7 @@ import {
   selectFilterOptionSourceEvents,
   selectReviewsForFilterTab,
   selectFilterZones,
-} from "./filter-state-utils.js";
+} from "../shared/filter-state.js";
 import {
   buildRecordingPlaybackPlan,
   RecordingScrubController,
@@ -300,7 +300,7 @@ import {
   resolveListMarkup,
   runListPostRenderSync,
   syncOlderHintFromScroll,
-} from "./list-render-utils.js";
+} from "../shared/list-render.js";
 import { PreviewAlertController } from "../features/preview/alert.ctrl.js";
 import { PreviewPageController } from "../features/preview/page.ctrl.js";
 import { PageNavigationController } from "../navigation/page-navigation.ctrl.js";

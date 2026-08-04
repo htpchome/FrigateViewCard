@@ -18,7 +18,7 @@ import {
   selectFilterOptionSourceEvents,
   selectReviewsForFilterTab,
   selectFilterZones,
-} from "../src/card/filter-state-utils.js";
+} from "../src/shared/filter-state.js";
 
 test("buildReviewFilterLabels combines source event and review objects uniquely", () => {
   const labels = buildReviewFilterLabels(

@@ -1,4 +1,4 @@
-import { CleanupController } from "../../card/cleanup.ctrl.js";
+import { CleanupController } from "../../shared/cleanup.js";
 
 export class RecordingsSwipeController {
   constructor({

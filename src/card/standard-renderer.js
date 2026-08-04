@@ -7,7 +7,7 @@ import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
   resolveActiveDayLabelFromScroll,
-} from "./list-render-utils.js";
+} from "../shared/list-render.js";
 import {
   buildMobileViewCamSwitcherMarkup,
   resolveMobileViewEventsCountText,

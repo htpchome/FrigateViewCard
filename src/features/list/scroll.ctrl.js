@@ -1,4 +1,4 @@
-import { CleanupController } from "./cleanup.ctrl.js";
+import { CleanupController } from "../../shared/cleanup.js";
 
 export class ListScrollController {
   constructor({

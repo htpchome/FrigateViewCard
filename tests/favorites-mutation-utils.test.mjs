@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildFavoriteOptimisticMutation,
   buildFavoriteRollbackMutation,
-} from "../src/card/favorites-mutation-utils.js";
+} from "../src/shared/favorite-mutation.js";
 
 test("buildFavoriteOptimisticMutation retains matching events and prepends kept entry", () => {
   const target = { id: "event-1", retain_indefinitely: false, label: "front" };

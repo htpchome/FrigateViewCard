@@ -6,7 +6,7 @@ import {
   resolveActiveListScroller,
   resolveOlderHintMetrics,
   resolveOlderHintState,
-} from "../src/card/list-render-utils.js";
+} from "../src/shared/list-render.js";
 
 test("resolveActiveListScroller prefers browse when list is not a scroll container", () => {
   const list = {

@@ -1,5 +1,5 @@
 import { resolvePopupMediaSeekTarget } from "./media.js";
-import { CleanupController } from "../cleanup.ctrl.js";
+import { CleanupController } from "../../shared/cleanup.js";
 
 export class PopupMediaControlsController {
   constructor({

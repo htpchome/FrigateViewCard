@@ -9,6 +9,12 @@ This document captures the architectural rationale behind the current refactor d
 - Page controllers should own page-specific deterministic rendering and route-local orchestration.
 - Pure helpers should own deterministic markup builders, formatting, selection derivation, and other logic that can run without reading or mutating `this`.
 
+## Controller vs Shared Rule
+
+- If a file needs knowledge of both layout behavior and server-backed application state, treat it as a controller or model and keep it under `src/features/`.
+- If a file is blind to app context and only manipulates data, events, or DOM mechanics, treat it as a shared utility and keep it under `src/shared/`.
+- Do not leave context-blind utilities under `src/card/` just because the main card currently imports them.
+
 ## What Belongs Outside The Main Card
 
 - Deterministic markup builders.

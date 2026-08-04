@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1149";
+const VERSION = "1.0.1150";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4542,7 +4542,7 @@ function buildFilterPanelMarkup({
         <button class="chip ${favOnly ? "on" : ""}" data-favonly="1">\u2605 Favorites</button></div>`;
 }
 
-// src/card/favorites-mutation-utils.js
+// src/shared/favorite-mutation.js
 const updateEventRetention = ({ events = [], id, retained }) => {
   let changed = false;
   const nextEvents = events.map((event) => {
@@ -4657,7 +4657,7 @@ const buildFavoriteRollbackMutation = ({
   activeEntity
 });
 
-// src/card/cleanup.ctrl.js
+// src/shared/cleanup.js
 const CleanupController = class {
   constructor() {
     this._abortController = new AbortController();
@@ -4699,7 +4699,7 @@ const CleanupController = class {
   }
 };
 
-// src/card/list-scroll.ctrl.js
+// src/features/list/scroll.ctrl.js
 const ListScrollController = class {
   constructor({
     list,
@@ -5416,7 +5416,7 @@ const resolvePopupCarouselActiveScrollLeft = ({
   padding = 8
 }) => Math.max(0, Number(activeOffsetLeft || 0) - Number(padding || 0));
 
-// src/card/filter-state-utils.js
+// src/shared/filter-state.js
 function buildReviewFilterLabels(review, sourceEvent = null) {
   const labels = new Set();
   if (sourceEvent?.label) labels.add(sourceEvent.label);
@@ -6686,7 +6686,7 @@ function buildEventListItemHtml(model, { icons, expanded, compact }) {
     </div>`;
 }
 
-// src/card/list-render-utils.js
+// src/shared/list-render.js
 function buildEmptyListMessageHtml(message, hint = "") {
   const base = String(message || "").trim();
   const extra = String(hint || "").trim();
