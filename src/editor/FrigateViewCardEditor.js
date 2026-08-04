@@ -1336,10 +1336,10 @@ export class FrigateViewCardEditor extends HTMLElement {
 
             .cam-modal.hidden{display:none;}
             .cam-modal{position:fixed;inset:0;background:rgba(0,0,0,.30);display:flex;align-items:center;justify-content:center;z-index:10;}
-            .cam-modal-card{width:min(640px,calc(100vw - 24px));background:#fff;background:var(--editor-card-bg, #fff);color:var(--editor-text);border:var(--editor-border-width) solid var(--editor-border);border-radius:16px;padding:16px;box-shadow:var(--editor-shadow);}
+            .cam-modal-card{width:min(640px,calc(100vw - 24px));background:#fff;background:var(--editor-card-bg);color:var(--editor-text);border:var(--editor-border-width) solid var(--editor-border);border-radius:16px;padding:16px;box-shadow:var(--editor-shadow);}
             .cam-modal-card ha-input,
             .cam-modal-card ha-selector,
-            .cam-modal-card ha-switch{--ha-card-background:var(--editor-card-bg, #fff);}
+            .cam-modal-card ha-switch{--ha-card-background:var(--editor-card-bg);}
             .cam-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
             .cam-modal-title{font-size:30px;line-height:1;color:var(--editor-text);cursor:pointer;border:none;background:transparent;}
             .cam-modal-label{font-size:12px;font-weight:600;color:var(--editor-text);margin-bottom:6px;display:block;}
@@ -1347,9 +1347,9 @@ export class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
             .cam-btn{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
             .cam-btn:hover{background:var(--editor-primary-l) }
-            .cam-btn.primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
+            .cam-btn.primary{background:var(--editor-primary);color:var(--text-primary-color);border-radius:999px;padding:8px 18px;}
             .cam-btn.primary:hover{background:var(--editor-primary-d)}
-            .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
+            .cam-modal-helper{font-size:11px;color:var(--error-color);min-height:16px;}
 
         </style>
     <div class="ed-wrap">
