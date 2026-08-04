@@ -8232,7 +8232,9 @@ export class FrigateViewCard extends HTMLElement {
           instance_id: cache.clientId,
           camera: cache.cam,
         });
-        cache.ptzInfo = Array.isArray(result) ? result[0] || null : result || null;
+        cache.ptzInfo = Array.isArray(result)
+          ? result[0] || null
+          : result || null;
       } catch (error) {
         console.warn("[Frigate] PTZ info fetch failed", error);
         cache.ptzInfo = null;
@@ -8240,7 +8242,10 @@ export class FrigateViewCard extends HTMLElement {
         cache.ptzInfoFetched = true;
         cache.ptzInfoPromise = null;
         this._camCache[targetEntity] = cache;
-        if (this._tab === "controls" && this._activeCam?.entity === targetEntity) {
+        if (
+          this._tab === "controls" &&
+          this._activeCam?.entity === targetEntity
+        ) {
           this._renderList();
         }
       }
@@ -8305,9 +8310,13 @@ export class FrigateViewCard extends HTMLElement {
     el.innerHTML = resolveControlsReadoutMarkup(
       this._controlsReadoutLines,
       (line) => this._escapeControlsReadoutText(line),
-      resolvePtzEmptyStateMessage(this._activeCam, this._activeCameraPtzInfo(), {
-        loading: this._activeCameraPtzInfoLoading(),
-      }),
+      resolvePtzEmptyStateMessage(
+        this._activeCam,
+        this._activeCameraPtzInfo(),
+        {
+          loading: this._activeCameraPtzInfoLoading(),
+        },
+      ),
     );
     if (!this._controlsReadoutLines.length) return;
     el.scrollTop = el.scrollHeight;

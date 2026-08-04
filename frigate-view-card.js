@@ -16476,9 +16476,13 @@ const FrigateViewCard = class extends HTMLElement {
     el.innerHTML = resolveControlsReadoutMarkup(
       this._controlsReadoutLines,
       (line) => this._escapeControlsReadoutText(line),
-      resolvePtzEmptyStateMessage(this._activeCam, this._activeCameraPtzInfo(), {
-        loading: this._activeCameraPtzInfoLoading()
-      })
+      resolvePtzEmptyStateMessage(
+        this._activeCam,
+        this._activeCameraPtzInfo(),
+        {
+          loading: this._activeCameraPtzInfoLoading()
+        }
+      )
     );
     if (!this._controlsReadoutLines.length) return;
     el.scrollTop = el.scrollHeight;
