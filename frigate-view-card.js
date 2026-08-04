@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1177";
+const VERSION = "1.0.1178";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2929,60 +2929,6 @@ const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
   return [`/api/frigate/${encClient}/go2rtc/api/stream.m3u8?src=${encCam}&mp4`];
 };
 
-// src/shared/media/url-utils.js
-const toAbsoluteSignedUrl = ({ signedPath, origin }) => signedPath.startsWith("http") ? signedPath : `${origin}${signedPath}`;
-const toWebSocketUrl = (httpUrl) => httpUrl.replace(/^http/i, "ws");
-const requiresNestedSignedHlsRequests = ({ rawPath, signedPath }) => {
-  const raw = String(rawPath || "").trim();
-  const signed = String(signedPath || "").trim();
-  if (!raw || !signed) return false;
-  if (raw === signed) return false;
-  return signed.includes("authSig=");
-};
-const isM3u8Url = (url = "") => String(url || "").toLowerCase().includes(".m3u8");
-const rewriteM3u8Manifest = async ({ manifestText, rewriteUri }) => {
-  const lines = String(manifestText || "").split(/\r?\n/);
-  const rewritten = [];
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      rewritten.push(line);
-      continue;
-    }
-    if (!trimmed.startsWith("#")) {
-      rewritten.push(await rewriteUri(trimmed));
-      continue;
-    }
-    let nextLine = line;
-    const matches = [...line.matchAll(/URI="([^"]+)"/g)];
-    for (const match of matches) {
-      const originalUri = match[1];
-      const replacementUri = await rewriteUri(originalUri);
-      nextLine = nextLine.replace(
-        `URI="${originalUri}"`,
-        `URI="${replacementUri}"`
-      );
-    }
-    rewritten.push(nextLine);
-  }
-  return rewritten.join("\n");
-};
-const getFreshCachedValue = ({ cacheMap, cacheKey, nowMs }) => {
-  const entry = cacheMap.get(cacheKey);
-  if (entry && entry.exp > nowMs) return entry.url ?? null;
-  return void 0;
-};
-const setCachedValue = ({ cacheMap, cacheKey, url, ttlMs, nowMs }) => {
-  cacheMap.set(cacheKey, {
-    url,
-    exp: nowMs + ttlMs
-  });
-};
-const isM3u8Response = ({ contentType, url }) => {
-  const ct = String(contentType || "").toLowerCase();
-  return ct.includes("application/vnd.apple.mpegurl") || ct.includes("application/x-mpegurl") || ct.includes("audio/mpegurl") || String(url || "").toLowerCase().includes(".m3u8");
-};
-
 // src/integrations/frigate/camera-context.js
 function findCameraConfig(config, entity) {
   return config?.cameras?.find((camera) => camera?.entity === entity) || null;
@@ -3122,6 +3068,60 @@ function buildGo2RtcTransportState({
   return { ...ctx, nowMs };
 }
 
+// src/shared/media/url-utils.js
+const toAbsoluteSignedUrl = ({ signedPath, origin }) => signedPath.startsWith("http") ? signedPath : `${origin}${signedPath}`;
+const toWebSocketUrl = (httpUrl) => httpUrl.replace(/^http/i, "ws");
+const requiresNestedSignedHlsRequests = ({ rawPath, signedPath }) => {
+  const raw = String(rawPath || "").trim();
+  const signed = String(signedPath || "").trim();
+  if (!raw || !signed) return false;
+  if (raw === signed) return false;
+  return signed.includes("authSig=");
+};
+const isM3u8Url = (url = "") => String(url || "").toLowerCase().includes(".m3u8");
+const rewriteM3u8Manifest = async ({ manifestText, rewriteUri }) => {
+  const lines = String(manifestText || "").split(/\r?\n/);
+  const rewritten = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      rewritten.push(line);
+      continue;
+    }
+    if (!trimmed.startsWith("#")) {
+      rewritten.push(await rewriteUri(trimmed));
+      continue;
+    }
+    let nextLine = line;
+    const matches = [...line.matchAll(/URI="([^"]+)"/g)];
+    for (const match of matches) {
+      const originalUri = match[1];
+      const replacementUri = await rewriteUri(originalUri);
+      nextLine = nextLine.replace(
+        `URI="${originalUri}"`,
+        `URI="${replacementUri}"`
+      );
+    }
+    rewritten.push(nextLine);
+  }
+  return rewritten.join("\n");
+};
+const getFreshCachedValue = ({ cacheMap, cacheKey, nowMs }) => {
+  const entry = cacheMap.get(cacheKey);
+  if (entry && entry.exp > nowMs) return entry.url ?? null;
+  return void 0;
+};
+const setCachedValue = ({ cacheMap, cacheKey, url, ttlMs, nowMs }) => {
+  cacheMap.set(cacheKey, {
+    url,
+    exp: nowMs + ttlMs
+  });
+};
+const isM3u8Response = ({ contentType, url }) => {
+  const ct = String(contentType || "").toLowerCase();
+  return ct.includes("application/vnd.apple.mpegurl") || ct.includes("application/x-mpegurl") || ct.includes("audio/mpegurl") || String(url || "").toLowerCase().includes(".m3u8");
+};
+
 // src/integrations/frigate/bootstrap.js
 async function signHomeAssistantPath({ hass, path, expires = 3600 }) {
   try {
@@ -3237,6 +3237,191 @@ async function buildGo2RtcHlsProbeResult({
     destroy: () => {
       blobUrls.forEach((blobUrl) => revokeObjectUrl(blobUrl));
     }
+  };
+}
+
+// src/integrations/frigate/go2rtc-resolver.js
+const GO2RTC_CACHE_TTL_MS = Object.freeze({
+  wsSignedPath: 55 * 60 * 1e3,
+  hlsPlaylist: 30 * 60 * 1e3,
+  hlsNegative: 30 * 60 * 1e3
+});
+function createGo2RtcResolver({
+  getHass,
+  getConfig,
+  getActiveEntity,
+  getCamCache,
+  defaultConnectionType,
+  normalizeCameraConnectionType: normalizeCameraConnectionType3,
+  createCameraState,
+  discoverEntity,
+  supportsNativeHlsPlayback: supportsNativeHlsPlayback2,
+  getOrigin = () => window.location.origin,
+  getNowMs = () => Date.now(),
+  fetchImpl = fetch
+}) {
+  const wsUrlCache = new Map();
+  const wsUrlInFlight = new Map();
+  const hlsUrlCache = new Map();
+  const hlsProbeInFlight = new Map();
+  const resolveEntity = (entity = "") => {
+    return resolveGo2RtcEntity({
+      entity,
+      activeEntity: getActiveEntity(),
+      config: getConfig(),
+      defaultConnectionType,
+      normalizeCameraConnectionType: normalizeCameraConnectionType3
+    });
+  };
+  const resolveMountRequest = (options = {}) => {
+    return {
+      entity: resolveEntity(options?.entity),
+      abortSignal: options?.abortSignal || null,
+      commit: options.commit !== false
+    };
+  };
+  const resolveTransportStateForEntity = async (entity) => {
+    const targetEntity = resolveEntity(entity);
+    if (!targetEntity) return null;
+    await discoverEntity(targetEntity);
+    return buildGo2RtcTransportState({
+      entity,
+      activeEntity: getActiveEntity(),
+      config: getConfig(),
+      defaultConnectionType,
+      normalizeCameraConnectionType: normalizeCameraConnectionType3,
+      camCache: getCamCache(),
+      createCameraState,
+      makeGo2rtcCacheKey,
+      nowMs: getNowMs()
+    });
+  };
+  const signedAbsoluteUrl = async (url) => {
+    return await signSameOriginAbsoluteUrl({
+      hass: getHass(),
+      url,
+      origin: getOrigin()
+    });
+  };
+  const rewriteManifestSource = async (manifestUrl, blobUrls, depth = 0) => {
+    return await rewriteSignedHlsManifestSource({
+      manifestUrl,
+      blobUrls,
+      depth,
+      fetchImpl,
+      signAbsoluteUrl: async (url) => {
+        return await signedAbsoluteUrl(url);
+      }
+    });
+  };
+  const probeHlsCandidates = async (candidates, cacheKey) => {
+    for (const path of candidates) {
+      const signedPath = await signHomeAssistantPath({
+        hass: getHass(),
+        path
+      });
+      const manifestUrl = `${getOrigin()}${signedPath}`;
+      try {
+        const resp = await fetchImpl(manifestUrl, {
+          method: "GET",
+          cache: "no-store",
+          credentials: "same-origin"
+        });
+        if (!resp.ok) continue;
+        if (isM3u8Response({
+          contentType: resp.headers.get("content-type") || "",
+          url: manifestUrl
+        })) {
+          const result = await buildGo2RtcHlsProbeResult({
+            rawPath: path,
+            signedPath,
+            manifestUrl,
+            rewriteManifestSource
+          });
+          if (result?.cacheable) {
+            setCachedValue({
+              cacheMap: hlsUrlCache,
+              cacheKey,
+              url: result.url,
+              ttlMs: GO2RTC_CACHE_TTL_MS.hlsPlaylist,
+              nowMs: getNowMs()
+            });
+          }
+          return result;
+        }
+      } catch (_) {
+      }
+    }
+    setCachedValue({
+      cacheMap: hlsUrlCache,
+      cacheKey,
+      url: null,
+      ttlMs: GO2RTC_CACHE_TTL_MS.hlsNegative,
+      nowMs: getNowMs()
+    });
+    return null;
+  };
+  const websocketUrlForEntity = async (entity) => {
+    const state = await resolveTransportStateForEntity(entity);
+    if (!state) return null;
+    const { clientId, cam, cacheKey, nowMs } = state;
+    const cachedUrl = getFreshCachedValue({
+      cacheMap: wsUrlCache,
+      cacheKey,
+      nowMs
+    });
+    if (cachedUrl) return cachedUrl;
+    const inFlight = wsUrlInFlight.get(cacheKey);
+    if (inFlight) return inFlight;
+    const wsUrlPromise = (async () => {
+      const path = buildGo2rtcWsPath({ clientId, cam });
+      const wsUrl = await buildSignedGo2RtcWebSocketUrl({
+        hass: getHass(),
+        path,
+        origin: getOrigin()
+      });
+      setCachedValue({
+        cacheMap: wsUrlCache,
+        cacheKey,
+        url: wsUrl,
+        ttlMs: GO2RTC_CACHE_TTL_MS.wsSignedPath,
+        nowMs
+      });
+      return wsUrl;
+    })().finally(() => {
+      wsUrlInFlight.delete(cacheKey);
+    });
+    wsUrlInFlight.set(cacheKey, wsUrlPromise);
+    return wsUrlPromise;
+  };
+  const hlsUrlForEntity = async (entity = "") => {
+    const state = await resolveTransportStateForEntity(entity);
+    if (!state) return null;
+    if (!supportsNativeHlsPlayback2()) return null;
+    const { clientId, cam, cacheKey, nowMs } = state;
+    const cachedUrl = getFreshCachedValue({
+      cacheMap: hlsUrlCache,
+      cacheKey,
+      nowMs
+    });
+    if (cachedUrl !== void 0) {
+      return cachedUrl == null ? null : { url: cachedUrl, destroy: null };
+    }
+    const inFlight = hlsProbeInFlight.get(cacheKey);
+    if (inFlight) return inFlight;
+    const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
+    const probePromise = probeHlsCandidates(candidates, cacheKey).finally(
+      () => {
+        hlsProbeInFlight.delete(cacheKey);
+      }
+    );
+    hlsProbeInFlight.set(cacheKey, probePromise);
+    return probePromise;
+  };
+  return {
+    resolveMountRequest,
+    websocketUrlForEntity,
+    hlsUrlForEntity
   };
 }
 
@@ -9853,11 +10038,6 @@ async function fetchWindowedItems({
 }
 
 // src/card/FrigateViewCard.js
-const GO2RTC_CACHE_TTL_MS = Object.freeze({
-  wsSignedPath: 55 * 60 * 1e3,
-  hlsPlaylist: 30 * 60 * 1e3,
-  hlsNegative: 30 * 60 * 1e3
-});
 const FrigateViewCard = class extends HTMLElement {
   constructor() {
     super();
@@ -9926,6 +10106,19 @@ const FrigateViewCard = class extends HTMLElement {
     this._started = false;
     this._activeCamIdx = 0;
     this._camCache = {};
+    this._go2rtcResolver = createGo2RtcResolver({
+      getHass: () => this._hass,
+      getConfig: () => this._config,
+      getActiveEntity: () => this._activeCam?.entity || "",
+      getCamCache: () => this._camCache,
+      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
+      normalizeCameraConnectionType: normalizeCameraConnectionType2,
+      createCameraState: mkCamState,
+      discoverEntity: async (entity) => {
+        await this._discoverOne(entity);
+      },
+      supportsNativeHlsPlayback: () => this._supportsNativeHlsPlayback()
+    });
     this._viewMode = "single";
     this._eventsMode = "camera";
     this._events = [];
@@ -10024,10 +10217,6 @@ const FrigateViewCard = class extends HTMLElement {
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._domCache = {};
-    this._go2rtcWsUrlCache = new Map();
-    this._go2rtcWsUrlInFlight = new Map();
-    this._go2rtcHlsUrlCache = new Map();
-    this._go2rtcHlsProbeInFlight = new Map();
     this._fallbackImgUrlCache = new Map();
     this._fallbackReqId = 0;
     this._eventsLoadToken = 0;
@@ -11602,236 +11791,6 @@ const FrigateViewCard = class extends HTMLElement {
   _cameraContext(entity) {
     return this._camCache[entity] || mkCamState();
   }
-  async _go2rtcContextForEntity(entity) {
-    if (!entity) return null;
-    await this._discoverOne(entity);
-    const ctx = buildGo2RtcCameraContext({
-      entity,
-      camCache: this._camCache,
-      createCameraState: mkCamState,
-      makeGo2rtcCacheKey
-    });
-    if (!ctx) return null;
-    const { clientId, cam } = ctx;
-    return {
-      clientId,
-      cam,
-      cacheKey: makeGo2rtcCacheKey({ clientId, cam })
-    };
-  }
-  async _go2rtcUrlContextForEntity(entity) {
-    const targetEntity = this._resolveGo2RtcEntity(entity);
-    if (!targetEntity) return null;
-    await this._discoverOne(targetEntity);
-    return buildGo2RtcUrlContext({
-      entity,
-      activeEntity: this._activeCam?.entity || "",
-      config: this._config,
-      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
-      normalizeCameraConnectionType: normalizeCameraConnectionType2,
-      camCache: this._camCache,
-      createCameraState: mkCamState,
-      makeGo2rtcCacheKey
-    });
-  }
-  async _go2rtcTransportContextForEntity(entity) {
-    return this._go2rtcUrlContextForEntity(entity);
-  }
-  async _go2rtcTransportStateForEntity(entity) {
-    const ctx = await this._go2rtcTransportContextForEntity(entity);
-    if (!ctx) return null;
-    return {
-      ...ctx,
-      nowMs: Date.now()
-    };
-  }
-  _go2rtcMountRequest(options) {
-    options = options || {};
-    return {
-      entity: this._resolveGo2RtcMountEntity(options),
-      abortSignal: options?.abortSignal || null,
-      commit: options.commit !== false
-    };
-  }
-  _resolveGo2RtcMountEntity(options) {
-    options = options || {};
-    return this._resolveGo2RtcEntity(options?.entity);
-  }
-  _toAbsoluteSignedPath(signedPath) {
-    return toAbsoluteSignedUrl({
-      signedPath,
-      origin: window.location.origin
-    });
-  }
-  async _signedAbsoluteUrl(url) {
-    return await signSameOriginAbsoluteUrl({
-      hass: this._hass,
-      url,
-      origin: window.location.origin
-    });
-  }
-  async _rewriteGo2RtcHlsManifestSource(manifestUrl, blobUrls, depth = 0) {
-    return await rewriteSignedHlsManifestSource({
-      manifestUrl,
-      blobUrls,
-      depth,
-      signAbsoluteUrl: async (url) => {
-        return await this._signedAbsoluteUrl(url);
-      }
-    });
-  }
-  async _probeGo2RtcHlsCandidates(candidates, cacheKey) {
-    for (const p of candidates) {
-      const signed = await this._signed(p);
-      const abs = this._toAbsoluteSignedPath(signed);
-      try {
-        const resp = await fetch(abs, {
-          method: "GET",
-          cache: "no-store",
-          credentials: "same-origin"
-        });
-        if (!resp.ok) continue;
-        if (isM3u8Response({
-          contentType: resp.headers.get("content-type") || "",
-          url: abs
-        })) {
-          const result = await buildGo2RtcHlsProbeResult({
-            rawPath: p,
-            signedPath: signed,
-            manifestUrl: abs,
-            rewriteManifestSource: async (manifestUrl, blobUrls) => {
-              return await this._rewriteGo2RtcHlsManifestSource(
-                manifestUrl,
-                blobUrls
-              );
-            }
-          });
-          if (result) return result;
-        }
-      } catch (_) {
-      }
-    }
-    return null;
-  }
-  async _signedGo2RtcWsPath(path) {
-    try {
-      const r = await this._hass.callWS({
-        type: "auth/sign_path",
-        path,
-        expires: 3600
-      });
-      const signedPath = r?.path || path;
-      return signedPath;
-    } catch (e) {
-      return path;
-    }
-  }
-  _getGo2RtcWsCachedUrl(cacheKey, nowMs) {
-    return getFreshCachedValue({
-      cacheMap: this._go2rtcWsUrlCache,
-      cacheKey,
-      nowMs
-    });
-  }
-  _cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs) {
-    setCachedValue({
-      cacheMap: this._go2rtcWsUrlCache,
-      cacheKey,
-      url: wsUrl,
-      ttlMs: GO2RTC_CACHE_TTL_MS.wsSignedPath,
-      nowMs
-    });
-  }
-  _getGo2RtcWsInFlight(cacheKey) {
-    return this._go2rtcWsUrlInFlight.get(cacheKey);
-  }
-  _setGo2RtcWsInFlight(cacheKey, wsUrlPromise) {
-    this._go2rtcWsUrlInFlight.set(cacheKey, wsUrlPromise);
-  }
-  _clearGo2RtcWsInFlight(cacheKey) {
-    this._go2rtcWsUrlInFlight.delete(cacheKey);
-  }
-  _getGo2RtcHlsCachedUrl(cacheKey, nowMs) {
-    return getFreshCachedValue({
-      cacheMap: this._go2rtcHlsUrlCache,
-      cacheKey,
-      nowMs
-    });
-  }
-  _cacheGo2RtcHlsUrl(cacheKey, url, nowMs) {
-    setCachedValue({
-      cacheMap: this._go2rtcHlsUrlCache,
-      cacheKey,
-      url,
-      ttlMs: GO2RTC_CACHE_TTL_MS.hlsPlaylist,
-      nowMs
-    });
-  }
-  _cacheMissingGo2RtcHlsUrl(cacheKey, nowMs) {
-    setCachedValue({
-      cacheMap: this._go2rtcHlsUrlCache,
-      cacheKey,
-      url: null,
-      ttlMs: GO2RTC_CACHE_TTL_MS.hlsNegative,
-      nowMs
-    });
-  }
-  _getGo2RtcHlsInFlight(cacheKey) {
-    return this._go2rtcHlsProbeInFlight.get(cacheKey);
-  }
-  _setGo2RtcHlsInFlight(cacheKey, probePromise) {
-    this._go2rtcHlsProbeInFlight.set(cacheKey, probePromise);
-  }
-  _clearGo2RtcHlsInFlight(cacheKey) {
-    this._go2rtcHlsProbeInFlight.delete(cacheKey);
-  }
-  async _go2rtcWebSocketUrlForEntity(entity) {
-    const state = await this._go2rtcTransportStateForEntity(entity);
-    if (!state) return null;
-    const { clientId, cam, cacheKey, nowMs } = state;
-    const cachedUrl = this._getGo2RtcWsCachedUrl(cacheKey, nowMs);
-    if (cachedUrl) return cachedUrl;
-    const inFlight = this._getGo2RtcWsInFlight(cacheKey);
-    if (inFlight) return inFlight;
-    const wsUrlPromise = (async () => {
-      const path = buildGo2rtcWsPath({ clientId, cam });
-      const signedPath = await this._signedGo2RtcWsPath(path);
-      const abs = this._toAbsoluteSignedPath(signedPath);
-      const wsUrl = toWebSocketUrl(abs);
-      this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
-      return wsUrl;
-    })().finally(() => {
-      this._clearGo2RtcWsInFlight(cacheKey);
-    });
-    this._setGo2RtcWsInFlight(cacheKey, wsUrlPromise);
-    return wsUrlPromise;
-  }
-  async _go2rtcHlsUrlForEntity(entity = "") {
-    const state = await this._go2rtcTransportStateForEntity(entity);
-    if (!state) return null;
-    if (!this._supportsNativeHlsPlayback()) return null;
-    const { clientId, cam, cacheKey, nowMs } = state;
-    const cachedUrl = this._getGo2RtcHlsCachedUrl(cacheKey, nowMs);
-    if (cachedUrl !== void 0) {
-      return cachedUrl == null ? null : { url: cachedUrl, destroy: null };
-    }
-    const inFlight = this._getGo2RtcHlsInFlight(cacheKey);
-    if (inFlight) return inFlight;
-    const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
-    const probePromise = (async () => {
-      const result = await this._probeGo2RtcHlsCandidates(candidates, cacheKey);
-      if (result?.cacheable) {
-        this._cacheGo2RtcHlsUrl(cacheKey, result.url, Date.now());
-      } else if (!result) {
-        this._cacheMissingGo2RtcHlsUrl(cacheKey, Date.now());
-      }
-      return result;
-    })().finally(() => {
-      this._clearGo2RtcHlsInFlight(cacheKey);
-    });
-    this._setGo2RtcHlsInFlight(cacheKey, probePromise);
-    return probePromise;
-  }
   async _tryMountGo2RTCMSE(slot, startup = null, options = {}) {
     const {
       waitMs,
@@ -11840,14 +11799,14 @@ const FrigateViewCard = class extends HTMLElement {
       requireReadyState,
       strict
     } = resolveMseStartup(startup || {});
-    const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
+    const { entity, abortSignal, commit } = this._go2rtcResolver.resolveMountRequest(options);
     const muted = options?.muted ?? this._streamMuted;
     if (!entity) return false;
     if (abortSignal?.aborted) return false;
     if (!("WebSocket" in window) || !("MediaSource" in window)) {
       return false;
     }
-    const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
+    const wsUrl = await this._go2rtcResolver.websocketUrlForEntity(entity);
     if (!wsUrl) {
       return false;
     }
@@ -12106,13 +12065,13 @@ const FrigateViewCard = class extends HTMLElement {
     } = resolveWebRtcStartup({
       startup: startup || {}
     });
-    const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
+    const { entity, abortSignal, commit } = this._go2rtcResolver.resolveMountRequest(options);
     if (abortSignal?.aborted) return false;
     if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
       return false;
     }
     if (!entity) return false;
-    const wsUrl = await this._go2rtcWebSocketUrlForEntity(entity);
+    const wsUrl = await this._go2rtcResolver.websocketUrlForEntity(entity);
     if (!wsUrl) return false;
     const video = createVideoElement(
       buildVideoOptionsForView(
@@ -12264,10 +12223,10 @@ const FrigateViewCard = class extends HTMLElement {
   }
   async _tryMountGo2RTCHLS(slot, startup = null, options = {}) {
     const { waitMs } = resolveHlsStartup(startup || {});
-    const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
+    const { entity, abortSignal, commit } = this._go2rtcResolver.resolveMountRequest(options);
     if (abortSignal?.aborted) return false;
     if (!entity) return false;
-    const hlsSource = await this._go2rtcHlsUrlForEntity(entity);
+    const hlsSource = await this._go2rtcResolver.hlsUrlForEntity(entity);
     if (!hlsSource?.url) return false;
     const video = createVideoElement(
       buildVideoOptionsForView(

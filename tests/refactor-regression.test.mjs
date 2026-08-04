@@ -6,6 +6,26 @@ const source = fs.readFileSync(
   new URL("../frigate-view-card.js", import.meta.url),
   "utf8",
 );
+const cardSource = fs.readFileSync(
+  new URL("../src/card/FrigateViewCard.js", import.meta.url),
+  "utf8",
+);
+const go2rtcResolverSource = fs.readFileSync(
+  new URL("../src/integrations/frigate/go2rtc-resolver.js", import.meta.url),
+  "utf8",
+);
+const frigateUrlSource = fs.readFileSync(
+  new URL("../src/integrations/frigate/url.js", import.meta.url),
+  "utf8",
+);
+const sharedUrlSource = fs.readFileSync(
+  new URL("../src/shared/media/url-utils.js", import.meta.url),
+  "utf8",
+);
+const frigateBootstrapSource = fs.readFileSync(
+  new URL("../src/integrations/frigate/bootstrap.js", import.meta.url),
+  "utf8",
+);
 
 test("no legacy var declarations remain", () => {
   assert.equal(/\bvar\s+[A-Za-z_$]/.test(source), false);
@@ -24,170 +44,66 @@ test("live mount attempts pass the target entity through strategy start", () => 
   );
 });
 
-test("go2rtc helpers honor per-camera HA direct policy guard", () => {
+test("go2rtc ownership is pulled out of the card shell", () => {
   assert.equal(
     /_shouldUseGo2RtcForEntity\(entity\) \{[\s\S]*?_cameraConnectionType\(key\) !== "ha_direct";[\s\S]*?\}/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(source.includes("_resolveGo2RtcMountEntity(options)"), true);
-  assert.equal(source.includes("_go2rtcMountRequest(options)"), true);
-  assert.equal(
-    source.includes(
-      "const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);",
-    ),
-    true,
-  );
-  assert.equal(source.includes('_go2rtcHlsUrlForEntity(entity = "")'), true);
-  assert.equal(
-    source.includes(
-      "const ctx = await this._go2rtcTransportContextForEntity(entity);",
+      cardSource,
     ),
     true,
   );
   assert.equal(
-    source.includes("const targetEntity = this._resolveGo2RtcEntity(entity);"),
-    true,
-  );
-  assert.equal(source.includes("return { targetEntity, ...ctx };"), true);
-  assert.equal(
-    /_resolveGo2RtcEntity\(entity = ""\) \{[\s\S]*?_shouldUseGo2RtcForEntity\(targetEntity\) \? targetEntity : "";[\s\S]*?\}/.test(
-      source,
+    cardSource.includes(
+      'import { createGo2RtcResolver } from "../integrations/frigate/go2rtc-resolver.js";',
     ),
     true,
   );
   assert.equal(
-    source.includes("_go2rtcTransportContextForEntity(entity)"),
-    true,
-  );
-  assert.equal(source.includes("_go2rtcTransportStateForEntity(entity)"), true);
-  assert.equal(
-    /_go2rtcContextForEntity\([^)]*\) \{[\s\S]*?_discoverOne\([^)]*\);[\s\S]*?makeGo2rtcCacheKey\(\{[\s\S]*?clientId[\s\S]*?cam[\s\S]*?\}\);[\s\S]*?\}/.test(
-      source,
-    ),
+    /this\._go2rtcResolver\s*=\s*createGo2RtcResolver\(/.test(cardSource),
     true,
   );
   assert.equal(
-    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?const state = await this\._go2rtcTransportStateForEntity\(entity\);/.test(
-      source,
-    ),
+    cardSource.includes("this._go2rtcResolver.resolveMountRequest(options)"),
     true,
   );
   assert.equal(
-    /_signedGo2RtcWsPath\([^)]*\) \{[\s\S]*?auth\/sign_path[\s\S]*?const signedPath = r\?\.path \|\| path;[\s\S]*?return signedPath;[\s\S]*?\}/.test(
-      source,
-    ),
+    cardSource.includes("this._go2rtcResolver.websocketUrlForEntity(entity)"),
     true,
   );
   assert.equal(
-    /_getGo2RtcWsCachedUrl\([^)]*\) \{[\s\S]*?getFreshCachedValue\([\s\S]*?_go2rtcWsUrlCache[\s\S]*?\}/.test(
-      source,
-    ),
+    cardSource.includes("this._go2rtcResolver.hlsUrlForEntity(entity)"),
+    true,
+  );
+  assert.equal(cardSource.includes("_go2rtcWsUrlCache"), false);
+  assert.equal(cardSource.includes("_go2rtcHlsUrlCache"), false);
+  assert.equal(cardSource.includes("_go2rtcWsUrlInFlight"), false);
+  assert.equal(cardSource.includes("_go2rtcHlsProbeInFlight"), false);
+  assert.equal(cardSource.includes("_go2rtcMountRequest("), false);
+  assert.equal(cardSource.includes("_go2rtcTransportStateForEntity("), false);
+  assert.equal(cardSource.includes("_probeGo2RtcHlsCandidates("), false);
+  assert.equal(cardSource.includes("_signedGo2RtcWsPath("), false);
+  assert.equal(cardSource.includes("_go2rtcWebSocketUrlForEntity("), false);
+  assert.equal(cardSource.includes("_go2rtcHlsUrlForEntity("), false);
+  assert.equal(go2rtcResolverSource.includes("GO2RTC_CACHE_TTL_MS"), true);
+  assert.equal(
+    go2rtcResolverSource.includes("buildSignedGo2RtcWebSocketUrl"),
     true,
   );
   assert.equal(
-    /_cacheGo2RtcWsUrl\([^)]*\) \{[\s\S]*?setCachedValue\([\s\S]*?_go2rtcWsUrlCache[\s\S]*?GO2RTC_CACHE_TTL_MS\.wsSignedPath[\s\S]*?\}/.test(
-      source,
-    ),
+    go2rtcResolverSource.includes("rewriteSignedHlsManifestSource"),
     true,
   );
   assert.equal(
-    /_getGo2RtcHlsCachedUrl\([^)]*\) \{[\s\S]*?getFreshCachedValue\([\s\S]*?_go2rtcHlsUrlCache[\s\S]*?\}/.test(
-      source,
-    ),
+    go2rtcResolverSource.includes("buildGo2RtcHlsProbeResult"),
     true,
   );
+  assert.equal(go2rtcResolverSource.includes("buildGo2rtcWsPath"), true);
+  assert.equal(go2rtcResolverSource.includes("buildGo2rtcHlsCandidates"), true);
   assert.equal(
-    /_cacheGo2RtcHlsUrl\([^)]*\) \{[\s\S]*?setCachedValue\([\s\S]*?_go2rtcHlsUrlCache[\s\S]*?GO2RTC_CACHE_TTL_MS\.hlsPlaylist[\s\S]*?\}/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_cacheMissingGo2RtcHlsUrl\([^)]*\) \{[\s\S]*?setCachedValue\([\s\S]*?_go2rtcHlsUrlCache[\s\S]*?GO2RTC_CACHE_TTL_MS\.hlsNegative[\s\S]*?\}/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_getGo2RtcHlsInFlight\([^)]*\) \{[\s\S]*?_go2rtcHlsProbeInFlight\.get\(cacheKey\)[\s\S]*?\}/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_setGo2RtcHlsInFlight\([^)]*\) \{[\s\S]*?_go2rtcHlsProbeInFlight\.set\(cacheKey, probePromise\)[\s\S]*?\}/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_clearGo2RtcHlsInFlight\([^)]*\) \{[\s\S]*?_go2rtcHlsProbeInFlight\.delete\(cacheKey\)[\s\S]*?\}/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /GO2RTC_CACHE_TTL_MS\s*=\s*Object\.freeze\([\s\S]*?wsSignedPath[\s\S]*?hlsPlaylist[\s\S]*?hlsNegative[\s\S]*?\)/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?const state = await this\._go2rtcTransportStateForEntity\(entity\);/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_probeGo2RtcHlsCandidates\([^)]*\) \{[\s\S]*?isM3u8Response\([\s\S]*?setCachedValue\([\s\S]*?\}/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_toAbsoluteSignedPath\([^)]*\) \{[\s\S]*?toAbsoluteSignedUrl\(\{[\s\S]*?origin: window\.location\.origin[\s\S]*?\}\);[\s\S]*?\}/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_go2rtcWebSocketUrlForEntity\(entity\) \{[\s\S]*?this\._getGo2RtcWsCachedUrl\(cacheKey, nowMs\)[\s\S]*?const signedPath = await this\._signedGo2RtcWsPath\(path\);[\s\S]*?this\._toAbsoluteSignedPath\(signedPath\)[\s\S]*?this\._cacheGo2RtcWsUrl\(cacheKey, wsUrl, nowMs\)/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?this\._probeGo2RtcHlsCandidates\([\s\S]*?cacheKey/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(
-    /_go2rtcHlsUrlForEntity\(entity = ""\) \{[\s\S]*?this\._getGo2RtcHlsCachedUrl\(cacheKey, nowMs\)/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(source.includes("this._getGo2RtcHlsInFlight(cacheKey)"), true);
-  assert.equal(
-    source.includes("this._setGo2RtcHlsInFlight(cacheKey, probePromise)"),
-    true,
-  );
-  assert.equal(source.includes("this._clearGo2RtcHlsInFlight(cacheKey)"), true);
-  assert.equal(
-    /GO2RTC_CACHE_TTL_MS\.hlsPlaylist/.test(source) &&
-      /GO2RTC_CACHE_TTL_MS\.hlsNegative/.test(source) &&
-      /GO2RTC_CACHE_TTL_MS\.wsSignedPath/.test(source),
-    true,
-  );
-  assert.equal(
-    /_go2rtcHlsUrlForEntity\([\s\S]*?return await this\._go2rtcHlsUrl\(\);/.test(
-      source,
-    ),
+    frigateBootstrapSource.includes("../../features/live/url-provider.js"),
     false,
   );
+  assert.equal(frigateUrlSource.includes("buildGo2rtcWsPath"), true);
+  assert.equal(sharedUrlSource.includes("toAbsoluteSignedUrl"), true);
   assert.equal(
     /_mountGridCameraCellMedia\([\s\S]*?liveStreamHint === "mse" && this\._shouldUseGo2RtcForEntity\(entity\)/.test(
       source,
@@ -218,15 +134,6 @@ test("go2rtc helpers honor per-camera HA direct policy guard", () => {
     ),
     true,
   );
-  assert.equal(
-    /_scrollEventsToTop\(\) \{[\s\S]*?resolveActiveListScroller\(\{ list, browse \}\)[\s\S]*?scrollTo\(\{ top: 0, behavior: "smooth" \}\)/.test(
-      source,
-    ),
-    true,
-  );
-  assert.equal(/async _go2rtcWebSocketUrl\(\)/.test(source), false);
-  assert.equal(/async _go2rtcWebSocketUrlForMountEntity\(/.test(source), false);
-  assert.equal(/async _go2rtcHlsUrl\(\)/.test(source), false);
 });
 
 test("event list thumbnails use browser lazy loading", () => {
@@ -245,7 +152,6 @@ test("startup resolves initial page through the navigation factory", () => {
   const landingPageIndex = source.indexOf(
     'this._navigateToConfiguredLandingPage({\n      source: "startup",\n      startup: true,\n      startInGrid,\n      hasPendingDeepLinkTarget: this._hasPendingDeepLinkTarget()\n    });',
   );
-  const awaitIndex = source.indexOf("await initialLoad;", landingPageIndex);
 
   assert.ok(initialLoadIndex >= 0);
   assert.ok(landingPageIndex > initialLoadIndex);
