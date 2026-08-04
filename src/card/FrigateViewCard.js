@@ -285,6 +285,9 @@ import {
 import {
   canCameraUsePtz,
   hasCameraPtz,
+  hasPtzFocusCapability,
+  hasPtzPanTiltCapability,
+  hasPtzZoomCapability,
   resolvePtzServicePlan,
   resolvePtzEmptyStateMessage,
 } from "../shared/ptz.js";
@@ -375,6 +378,12 @@ export class FrigateViewCard extends HTMLElement {
       if (!entry) return;
       this._appendControlsReadoutEntry(entry);
     };
+    this._onPtzControlPointerDown = (event) => {
+      void this._handlePtzControlPointerDown(event);
+    };
+    this._onPtzControlPointerStop = (event) => {
+      void this._handlePtzControlPointerStop(event);
+    };
     this.shadowRoot.addEventListener(
       "circle-pad-press",
       this._onCirclePadPress,
@@ -386,6 +395,18 @@ export class FrigateViewCard extends HTMLElement {
     this.shadowRoot.addEventListener(
       "circle-pad-toggle",
       this._onCirclePadToggle,
+    );
+    this.shadowRoot.addEventListener(
+      "pointerdown",
+      this._onPtzControlPointerDown,
+    );
+    this.shadowRoot.addEventListener(
+      "pointerup",
+      this._onPtzControlPointerStop,
+    );
+    this.shadowRoot.addEventListener(
+      "pointercancel",
+      this._onPtzControlPointerStop,
     );
     this._hass = null;
     this._lastHassCameraStateSignature = "";
@@ -428,6 +449,8 @@ export class FrigateViewCard extends HTMLElement {
     this._streamMuted = true;
     this._activeStreamType = "--";
     this._lastLiveStreamHint = "";
+    this._activePtzButtonAction = "";
+    this._activePtzButtonPointerId = null;
     this._slideshowActive = false;
     this._slideshowPausedUntil = 0;
     this._slideshowPendingAlertCam = "";
@@ -8183,11 +8206,19 @@ export class FrigateViewCard extends HTMLElement {
   _renderControlsSection(list) {
     void this._ensureActiveCameraPtzInfo();
     this._renderListLabel();
+    const ptzInfo = this._activeCameraPtzInfo();
+    const ptzConfigured = hasCameraPtz(this._activeCam);
+    const panTiltEnabled = ptzConfigured && hasPtzPanTiltCapability(ptzInfo);
+    const zoomEnabled = ptzConfigured && hasPtzZoomCapability(ptzInfo);
+    const focusEnabled = ptzConfigured && hasPtzFocusCapability(ptzInfo);
     this._setListHtmlIfChanged(
       list,
       buildControlsSectionMarkup({
         cameraName: cap(camDisplayName(this._activeCam || {})),
-        ptzEnabled: this._activeCameraHasPtz(),
+        ptzReady: panTiltEnabled || zoomEnabled || focusEnabled,
+        panTiltEnabled,
+        zoomEnabled,
+        focusEnabled,
       }),
     );
     this._renderControlsReadout();
@@ -8259,6 +8290,10 @@ export class FrigateViewCard extends HTMLElement {
 
   async _handleCirclePadPtzEvent(event, eventType) {
     if (!isControlsPadTarget(event)) return;
+    await this._handlePtzAction(event?.detail?.action, eventType);
+  }
+
+  async _handlePtzAction(action, eventType) {
     const ptzInfo =
       this._activeCameraPtzInfo() || (await this._ensureActiveCameraPtzInfo());
     const plan = resolvePtzServicePlan({
@@ -8268,7 +8303,7 @@ export class FrigateViewCard extends HTMLElement {
         clientId: this._cc().clientId,
         cameraName: this._cc().cam,
       },
-      action: event?.detail?.action,
+      action,
       eventType,
     });
     if (!plan) {
@@ -8312,6 +8347,41 @@ export class FrigateViewCard extends HTMLElement {
       console.warn("[Frigate] PTZ call failed", error);
       this._appendControlsReadoutEntry("[ptz:error]");
     }
+  }
+
+  async _handlePtzControlPointerDown(event) {
+    const button = event.target?.closest?.("[data-ptz-control]");
+    if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+
+    const action = String(button.dataset.ptzControl || "").trim();
+    if (!action) return;
+
+    event.preventDefault();
+    this._activePtzButtonAction = action;
+    this._activePtzButtonPointerId =
+      typeof event.pointerId === "number" ? event.pointerId : null;
+
+    try {
+      button.setPointerCapture?.(event.pointerId);
+    } catch (_) {}
+
+    await this._handlePtzAction(action, "press");
+  }
+
+  async _handlePtzControlPointerStop(event) {
+    if (!this._activePtzButtonAction) return;
+    if (
+      typeof event.pointerId === "number" &&
+      this._activePtzButtonPointerId != null &&
+      event.pointerId !== this._activePtzButtonPointerId
+    ) {
+      return;
+    }
+
+    const action = this._activePtzButtonAction;
+    this._activePtzButtonAction = "";
+    this._activePtzButtonPointerId = null;
+    await this._handlePtzAction(action, "release");
   }
 
   _appendControlsReadoutEntry(text) {

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1160";
+const VERSION = "1.0.1161";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -632,6 +632,15 @@ const STYLES = `
   .controls-section-subtitle{color:var(--c-text2);font-size:0.8rem;line-height:1.35;}
   .controls-pad-wrap{max-width:280px;margin:10px auto 12px;}
   .controls-pad-wrap.is-disabled{opacity:.45;pointer-events:none;filter:saturate(.5);}
+  .controls-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px;}
+  .controls-action-group{background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:10px;padding:10px;}
+  .controls-action-group.is-disabled{opacity:.55;filter:saturate(.55);}
+  .controls-action-group-label{font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--c-text2);margin-bottom:8px;}
+  .controls-action-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .controls-action-btn{appearance:none;background:var(--c-bg-main);border:1px solid var(--c-border2);color:var(--c-text);border-radius:10px;padding:10px 8px;font-size:0.82rem;font-weight:700;cursor:pointer;transition:transform .12s ease,background .2s ease,border-color .2s ease,color .2s ease;}
+  .controls-action-btn:hover:not(:disabled),.controls-action-btn:focus-visible:not(:disabled){border-color:var(--c-primary-d);background:var(--c-primary-l);color:var(--c-primary-d);outline:none;}
+  .controls-action-btn:active:not(:disabled){transform:translateY(1px) scale(.99);}
+  .controls-action-btn:disabled{cursor:not-allowed;color:var(--c-text4);background:var(--c-bg-panel);}
   .controls-readout{background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:10px;overflow:hidden;}
   .controls-readout-head{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--c-border2);}
   .controls-readout-label{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--c-text2);}
@@ -1586,6 +1595,12 @@ const PTZ_DIRECTIONS = Object.freeze({
   left: Object.freeze(["left"]),
   "up-left": Object.freeze(["up", "left"])
 });
+const PTZ_SINGLE_ACTIONS = Object.freeze({
+  "zoom-in": Object.freeze({ action: "zoom", argument: "in" }),
+  "zoom-out": Object.freeze({ action: "zoom", argument: "out" }),
+  "focus-in": Object.freeze({ action: "focus", argument: "in" }),
+  "focus-out": Object.freeze({ action: "focus", argument: "out" })
+});
 const normalizePtzNumber = (value) => {
   if (value == null || value === "") return null;
   const parsed = Number(value);
@@ -1623,6 +1638,8 @@ const normalizeCameraPtzConfig = (value) => {
 };
 const hasCameraPtz = (camera) => normalizeCameraPtzConfig(camera?.ptz)?.enabled === true;
 const hasPtzPanTiltCapability = (ptzInfo) => Array.isArray(ptzInfo?.features) && (ptzInfo.features.includes("pt") || ptzInfo.features.includes("pt-r"));
+const hasPtzZoomCapability = (ptzInfo) => Array.isArray(ptzInfo?.features) && ptzInfo.features.includes("zoom");
+const hasPtzFocusCapability = (ptzInfo) => Array.isArray(ptzInfo?.features) && ptzInfo.features.includes("focus");
 const canCameraUsePtz = (camera, ptzInfo) => hasCameraPtz(camera) && hasPtzPanTiltCapability(ptzInfo);
 const resolvePtzEmptyStateMessage = (camera, ptzInfo, { loading = false } = {}) => {
   if (!hasCameraPtz(camera)) {
@@ -1631,10 +1648,29 @@ const resolvePtzEmptyStateMessage = (camera, ptzInfo, { loading = false } = {}) 
   if (loading) {
     return "Checking Frigate PTZ support for the active camera.";
   }
-  if (!hasPtzPanTiltCapability(ptzInfo)) {
-    return "Frigate did not report PTZ pan/tilt support for the active camera.";
+  const hasPanTilt = hasPtzPanTiltCapability(ptzInfo);
+  const hasZoom = hasPtzZoomCapability(ptzInfo);
+  const hasFocus = hasPtzFocusCapability(ptzInfo);
+  if (!hasPanTilt && !hasZoom && !hasFocus) {
+    return "Frigate did not report PTZ support for the active camera.";
   }
+  if (hasPanTilt && (hasZoom || hasFocus)) {
+    return "Use the circle pad or PTZ buttons to control the active camera.";
+  }
+  if (hasPanTilt) return "Use the circle pad to move the active camera.";
+  if (hasZoom || hasFocus)
+    return "Use the PTZ buttons to control the active camera.";
   return "Use the circle pad to move the active camera.";
+};
+const canUsePtzAction = (action, ptzInfo) => {
+  if (PTZ_DIRECTIONS[action]) return hasPtzPanTiltCapability(ptzInfo);
+  if (action === "zoom-in" || action === "zoom-out") {
+    return hasPtzZoomCapability(ptzInfo);
+  }
+  if (action === "focus-in" || action === "focus-out") {
+    return hasPtzFocusCapability(ptzInfo);
+  }
+  return false;
 };
 const resolvePtzServicePlan = ({
   camera,
@@ -1643,7 +1679,7 @@ const resolvePtzServicePlan = ({
   eventType
 }) => {
   const ptz = normalizeCameraPtzConfig(camera?.ptz);
-  if (!ptz || !camera?.entity || !hasPtzPanTiltCapability(ptzInfo)) {
+  if (!ptz || !camera?.entity || !canUsePtzAction(action, ptzInfo)) {
     return null;
   }
   if (eventType === "release") {
@@ -1655,16 +1691,30 @@ const resolvePtzServicePlan = ({
     };
   }
   const directions = PTZ_DIRECTIONS[action];
-  if (!directions?.length) return null;
+  if (directions?.length) {
+    return {
+      executionMode: directions.length > 1 ? "parallel" : "sequential",
+      requests: directions.map(
+        (direction) => buildHomeAssistantPtzRequest({
+          camera,
+          action: "move",
+          argument: direction
+        })
+      ),
+      readout: `[ptz:${action}]`
+    };
+  }
+  const singleAction = PTZ_SINGLE_ACTIONS[action];
+  if (!singleAction) return null;
   return {
-    executionMode: directions.length > 1 ? "parallel" : "sequential",
-    requests: directions.map(
-      (direction) => buildHomeAssistantPtzRequest({
+    executionMode: "sequential",
+    requests: [
+      buildHomeAssistantPtzRequest({
         camera,
-        action: "move",
-        argument: direction
+        action: singleAction.action,
+        argument: singleAction.argument
       })
-    ),
+    ],
     readout: `[ptz:${action}]`
   };
 };
@@ -4526,15 +4576,41 @@ function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
 }
 function buildControlsSectionMarkup({
   cameraName: cameraName2 = "Active Camera",
-  ptzEnabled = false
+  ptzReady = false,
+  panTiltEnabled = false,
+  zoomEnabled = false,
+  focusEnabled = false
 } = {}) {
+  const buildPtzButton = (action, label, enabled) => `<button
+                class="controls-action-btn"
+                type="button"
+                data-ptz-control="${action}"
+                aria-label="${label}"
+                ${enabled ? "" : "disabled"}
+              >${label}</button>`;
   return `<div class="controls-section">
             <div class="controls-section-head">
               <h3 class="controls-section-title">PTZ Controls</h3>
-              <div class="controls-section-subtitle">${cameraName2} \xB7 ${ptzEnabled ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
+              <div class="controls-section-subtitle">${cameraName2} \xB7 ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
             </div>
-            <div class="controls-pad-wrap${ptzEnabled ? "" : " is-disabled"}">
+            <div class="controls-pad-wrap${panTiltEnabled ? "" : " is-disabled"}">
               <circle-pad-control id="controls-pad"></circle-pad-control>
+            </div>
+            <div class="controls-actions" aria-label="PTZ auxiliary controls">
+              <div class="controls-action-group${zoomEnabled ? "" : " is-disabled"}">
+                <div class="controls-action-group-label">Zoom</div>
+                <div class="controls-action-row">
+                  ${buildPtzButton("zoom-in", "Zoom In", zoomEnabled)}
+                  ${buildPtzButton("zoom-out", "Zoom Out", zoomEnabled)}
+                </div>
+              </div>
+              <div class="controls-action-group${focusEnabled ? "" : " is-disabled"}">
+                <div class="controls-action-group-label">Focus</div>
+                <div class="controls-action-row">
+                  ${buildPtzButton("focus-in", "Focus In", focusEnabled)}
+                  ${buildPtzButton("focus-out", "Focus Out", focusEnabled)}
+                </div>
+              </div>
             </div>
             <div class="controls-readout">
               <div class="controls-readout-head">
@@ -9489,6 +9565,12 @@ const FrigateViewCard = class extends HTMLElement {
       if (!entry) return;
       this._appendControlsReadoutEntry(entry);
     };
+    this._onPtzControlPointerDown = (event) => {
+      void this._handlePtzControlPointerDown(event);
+    };
+    this._onPtzControlPointerStop = (event) => {
+      void this._handlePtzControlPointerStop(event);
+    };
     this.shadowRoot.addEventListener(
       "circle-pad-press",
       this._onCirclePadPress
@@ -9500,6 +9582,18 @@ const FrigateViewCard = class extends HTMLElement {
     this.shadowRoot.addEventListener(
       "circle-pad-toggle",
       this._onCirclePadToggle
+    );
+    this.shadowRoot.addEventListener(
+      "pointerdown",
+      this._onPtzControlPointerDown
+    );
+    this.shadowRoot.addEventListener(
+      "pointerup",
+      this._onPtzControlPointerStop
+    );
+    this.shadowRoot.addEventListener(
+      "pointercancel",
+      this._onPtzControlPointerStop
     );
     this._hass = null;
     this._lastHassCameraStateSignature = "";
@@ -9542,6 +9636,8 @@ const FrigateViewCard = class extends HTMLElement {
     this._streamMuted = true;
     this._activeStreamType = "--";
     this._lastLiveStreamHint = "";
+    this._activePtzButtonAction = "";
+    this._activePtzButtonPointerId = null;
     this._slideshowActive = false;
     this._slideshowPausedUntil = 0;
     this._slideshowPendingAlertCam = "";
@@ -16375,11 +16471,19 @@ const FrigateViewCard = class extends HTMLElement {
   _renderControlsSection(list) {
     void this._ensureActiveCameraPtzInfo();
     this._renderListLabel();
+    const ptzInfo = this._activeCameraPtzInfo();
+    const ptzConfigured = hasCameraPtz(this._activeCam);
+    const panTiltEnabled = ptzConfigured && hasPtzPanTiltCapability(ptzInfo);
+    const zoomEnabled = ptzConfigured && hasPtzZoomCapability(ptzInfo);
+    const focusEnabled = ptzConfigured && hasPtzFocusCapability(ptzInfo);
     this._setListHtmlIfChanged(
       list,
       buildControlsSectionMarkup({
         cameraName: cap(camDisplayName(this._activeCam || {})),
-        ptzEnabled: this._activeCameraHasPtz()
+        ptzReady: panTiltEnabled || zoomEnabled || focusEnabled,
+        panTiltEnabled,
+        zoomEnabled,
+        focusEnabled
       })
     );
     this._renderControlsReadout();
@@ -16437,6 +16541,9 @@ const FrigateViewCard = class extends HTMLElement {
   }
   async _handleCirclePadPtzEvent(event, eventType) {
     if (!isControlsPadTarget(event)) return;
+    await this._handlePtzAction(event?.detail?.action, eventType);
+  }
+  async _handlePtzAction(action, eventType) {
     const ptzInfo = this._activeCameraPtzInfo() || await this._ensureActiveCameraPtzInfo();
     const plan = resolvePtzServicePlan({
       camera: this._activeCam,
@@ -16445,7 +16552,7 @@ const FrigateViewCard = class extends HTMLElement {
         clientId: this._cc().clientId,
         cameraName: this._cc().cam
       },
-      action: event?.detail?.action,
+      action,
       eventType
     });
     if (!plan) {
@@ -16486,6 +16593,30 @@ const FrigateViewCard = class extends HTMLElement {
       console.warn("[Frigate] PTZ call failed", error);
       this._appendControlsReadoutEntry("[ptz:error]");
     }
+  }
+  async _handlePtzControlPointerDown(event) {
+    const button = event.target?.closest?.("[data-ptz-control]");
+    if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+    const action = String(button.dataset.ptzControl || "").trim();
+    if (!action) return;
+    event.preventDefault();
+    this._activePtzButtonAction = action;
+    this._activePtzButtonPointerId = typeof event.pointerId === "number" ? event.pointerId : null;
+    try {
+      button.setPointerCapture?.(event.pointerId);
+    } catch (_) {
+    }
+    await this._handlePtzAction(action, "press");
+  }
+  async _handlePtzControlPointerStop(event) {
+    if (!this._activePtzButtonAction) return;
+    if (typeof event.pointerId === "number" && this._activePtzButtonPointerId != null && event.pointerId !== this._activePtzButtonPointerId) {
+      return;
+    }
+    const action = this._activePtzButtonAction;
+    this._activePtzButtonAction = "";
+    this._activePtzButtonPointerId = null;
+    await this._handlePtzAction(action, "release");
   }
   _appendControlsReadoutEntry(text) {
     this._controlsReadoutLines = appendControlsReadoutLine(

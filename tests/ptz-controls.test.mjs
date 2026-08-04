@@ -120,6 +120,94 @@ test("resolvePtzServicePlan stops continuous PTZ moves on release", () => {
   });
 });
 
+test("resolvePtzServicePlan maps zoom in to the Frigate integration PTZ service", () => {
+  const request = resolvePtzServicePlan({
+    camera: {
+      entity: "camera.driveway",
+      ptz: true,
+    },
+    ptzInfo: { features: ["pt", "zoom"] },
+    action: "zoom-in",
+    eventType: "press",
+  });
+
+  assert.deepEqual(request, {
+    executionMode: "sequential",
+    requests: [
+      {
+        type: "home_assistant_service",
+        domain: "frigate",
+        service: "ptz",
+        serviceData: { action: "zoom", argument: "in" },
+        target: { entity_id: "camera.driveway" },
+      },
+    ],
+    readout: "[ptz:zoom-in]",
+  });
+});
+
+test("resolvePtzServicePlan maps focus out to the Frigate integration PTZ service", () => {
+  const request = resolvePtzServicePlan({
+    camera: {
+      entity: "camera.driveway",
+      ptz: true,
+    },
+    ptzInfo: { features: ["pt", "focus"] },
+    action: "focus-out",
+    eventType: "press",
+  });
+
+  assert.deepEqual(request, {
+    executionMode: "sequential",
+    requests: [
+      {
+        type: "home_assistant_service",
+        domain: "frigate",
+        service: "ptz",
+        serviceData: { action: "focus", argument: "out" },
+        target: { entity_id: "camera.driveway" },
+      },
+    ],
+    readout: "[ptz:focus-out]",
+  });
+});
+
+test("resolvePtzServicePlan stops zoom and focus actions on release", () => {
+  const zoomStop = resolvePtzServicePlan({
+    camera: {
+      entity: "camera.driveway",
+      ptz: true,
+    },
+    ptzInfo: { features: ["pt", "zoom"] },
+    action: "zoom-in",
+    eventType: "release",
+  });
+  const focusStop = resolvePtzServicePlan({
+    camera: {
+      entity: "camera.driveway",
+      ptz: true,
+    },
+    ptzInfo: { features: ["pt", "focus"] },
+    action: "focus-in",
+    eventType: "release",
+  });
+
+  assert.deepEqual(zoomStop, {
+    executionMode: "sequential",
+    requests: [
+      {
+        type: "home_assistant_service",
+        domain: "frigate",
+        service: "ptz",
+        serviceData: { action: "stop" },
+        target: { entity_id: "camera.driveway" },
+      },
+    ],
+    readout: "[ptz:stop]",
+  });
+  assert.deepEqual(focusStop, zoomStop);
+});
+
 test("resolvePtzServicePlan uses Home Assistant PTZ service for ha_direct cameras", () => {
   const request = resolvePtzServicePlan({
     camera: {

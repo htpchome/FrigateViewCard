@@ -184,15 +184,41 @@ export function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
 
 export function buildControlsSectionMarkup({
   cameraName = "Active Camera",
-  ptzEnabled = false,
+  ptzReady = false,
+  panTiltEnabled = false,
+  zoomEnabled = false,
+  focusEnabled = false,
 } = {}) {
+  const buildPtzButton = (action, label, enabled) => `<button
+                class="controls-action-btn"
+                type="button"
+                data-ptz-control="${action}"
+                aria-label="${label}"
+                ${enabled ? "" : "disabled"}
+              >${label}</button>`;
   return `<div class="controls-section">
             <div class="controls-section-head">
               <h3 class="controls-section-title">PTZ Controls</h3>
-              <div class="controls-section-subtitle">${cameraName} · ${ptzEnabled ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
+              <div class="controls-section-subtitle">${cameraName} · ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
             </div>
-            <div class="controls-pad-wrap${ptzEnabled ? "" : " is-disabled"}">
+            <div class="controls-pad-wrap${panTiltEnabled ? "" : " is-disabled"}">
               <circle-pad-control id="controls-pad"></circle-pad-control>
+            </div>
+            <div class="controls-actions" aria-label="PTZ auxiliary controls">
+              <div class="controls-action-group${zoomEnabled ? "" : " is-disabled"}">
+                <div class="controls-action-group-label">Zoom</div>
+                <div class="controls-action-row">
+                  ${buildPtzButton("zoom-in", "Zoom In", zoomEnabled)}
+                  ${buildPtzButton("zoom-out", "Zoom Out", zoomEnabled)}
+                </div>
+              </div>
+              <div class="controls-action-group${focusEnabled ? "" : " is-disabled"}">
+                <div class="controls-action-group-label">Focus</div>
+                <div class="controls-action-row">
+                  ${buildPtzButton("focus-in", "Focus In", focusEnabled)}
+                  ${buildPtzButton("focus-out", "Focus Out", focusEnabled)}
+                </div>
+              </div>
             </div>
             <div class="controls-readout">
               <div class="controls-readout-head">

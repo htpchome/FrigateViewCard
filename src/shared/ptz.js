@@ -13,6 +13,12 @@ const PTZ_DIRECTIONS = Object.freeze({
   left: Object.freeze(["left"]),
   "up-left": Object.freeze(["up", "left"]),
 });
+const PTZ_SINGLE_ACTIONS = Object.freeze({
+  "zoom-in": Object.freeze({ action: "zoom", argument: "in" }),
+  "zoom-out": Object.freeze({ action: "zoom", argument: "out" }),
+  "focus-in": Object.freeze({ action: "focus", argument: "in" }),
+  "focus-out": Object.freeze({ action: "focus", argument: "out" }),
+});
 
 const normalizePtzNumber = (value) => {
   if (value == null || value === "") return null;
@@ -67,6 +73,12 @@ export const hasPtzPanTiltCapability = (ptzInfo) =>
   Array.isArray(ptzInfo?.features) &&
   (ptzInfo.features.includes("pt") || ptzInfo.features.includes("pt-r"));
 
+export const hasPtzZoomCapability = (ptzInfo) =>
+  Array.isArray(ptzInfo?.features) && ptzInfo.features.includes("zoom");
+
+export const hasPtzFocusCapability = (ptzInfo) =>
+  Array.isArray(ptzInfo?.features) && ptzInfo.features.includes("focus");
+
 export const canCameraUsePtz = (camera, ptzInfo) =>
   hasCameraPtz(camera) && hasPtzPanTiltCapability(ptzInfo);
 
@@ -81,10 +93,30 @@ export const resolvePtzEmptyStateMessage = (
   if (loading) {
     return "Checking Frigate PTZ support for the active camera.";
   }
-  if (!hasPtzPanTiltCapability(ptzInfo)) {
-    return "Frigate did not report PTZ pan/tilt support for the active camera.";
+  const hasPanTilt = hasPtzPanTiltCapability(ptzInfo);
+  const hasZoom = hasPtzZoomCapability(ptzInfo);
+  const hasFocus = hasPtzFocusCapability(ptzInfo);
+  if (!hasPanTilt && !hasZoom && !hasFocus) {
+    return "Frigate did not report PTZ support for the active camera.";
   }
+  if (hasPanTilt && (hasZoom || hasFocus)) {
+    return "Use the circle pad or PTZ buttons to control the active camera.";
+  }
+  if (hasPanTilt) return "Use the circle pad to move the active camera.";
+  if (hasZoom || hasFocus)
+    return "Use the PTZ buttons to control the active camera.";
   return "Use the circle pad to move the active camera.";
+};
+
+const canUsePtzAction = (action, ptzInfo) => {
+  if (PTZ_DIRECTIONS[action]) return hasPtzPanTiltCapability(ptzInfo);
+  if (action === "zoom-in" || action === "zoom-out") {
+    return hasPtzZoomCapability(ptzInfo);
+  }
+  if (action === "focus-in" || action === "focus-out") {
+    return hasPtzFocusCapability(ptzInfo);
+  }
+  return false;
 };
 
 export const resolvePtzServicePlan = ({
@@ -94,7 +126,7 @@ export const resolvePtzServicePlan = ({
   eventType,
 }) => {
   const ptz = normalizeCameraPtzConfig(camera?.ptz);
-  if (!ptz || !camera?.entity || !hasPtzPanTiltCapability(ptzInfo)) {
+  if (!ptz || !camera?.entity || !canUsePtzAction(action, ptzInfo)) {
     return null;
   }
 
@@ -108,17 +140,32 @@ export const resolvePtzServicePlan = ({
   }
 
   const directions = PTZ_DIRECTIONS[action];
-  if (!directions?.length) return null;
+  if (directions?.length) {
+    return {
+      executionMode: directions.length > 1 ? "parallel" : "sequential",
+      requests: directions.map((direction) =>
+        buildHomeAssistantPtzRequest({
+          camera,
+          action: "move",
+          argument: direction,
+        }),
+      ),
+      readout: `[ptz:${action}]`,
+    };
+  }
+
+  const singleAction = PTZ_SINGLE_ACTIONS[action];
+  if (!singleAction) return null;
 
   return {
-    executionMode: directions.length > 1 ? "parallel" : "sequential",
-    requests: directions.map((direction) =>
+    executionMode: "sequential",
+    requests: [
       buildHomeAssistantPtzRequest({
         camera,
-        action: "move",
-        argument: direction,
+        action: singleAction.action,
+        argument: singleAction.argument,
       }),
-    ),
+    ],
     readout: `[ptz:${action}]`,
   };
 };
