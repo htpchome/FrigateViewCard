@@ -1,5 +1,6 @@
 import {
   isM3u8Url,
+  requiresNestedSignedHlsRequests,
   rewriteM3u8Manifest,
   toAbsoluteSignedUrl,
   toWebSocketUrl,
@@ -105,4 +106,32 @@ export async function rewriteSignedHlsManifestSource({
   );
   blobUrls.push(blobUrl);
   return blobUrl;
+}
+
+export async function buildGo2RtcHlsProbeResult({
+  rawPath,
+  signedPath,
+  manifestUrl,
+  rewriteManifestSource,
+  revokeObjectUrl = (url) => URL.revokeObjectURL(url),
+  requiresNestedSignedHlsRequestsImpl = requiresNestedSignedHlsRequests,
+}) {
+  if (!requiresNestedSignedHlsRequestsImpl({ rawPath, signedPath })) {
+    return { url: manifestUrl, cacheable: true, destroy: null };
+  }
+
+  const blobUrls = [];
+  const rewrittenUrl = await rewriteManifestSource(manifestUrl, blobUrls);
+  if (!rewrittenUrl) {
+    blobUrls.forEach((blobUrl) => revokeObjectUrl(blobUrl));
+    return null;
+  }
+
+  return {
+    url: rewrittenUrl,
+    cacheable: false,
+    destroy: () => {
+      blobUrls.forEach((blobUrl) => revokeObjectUrl(blobUrl));
+    },
+  };
 }

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1175";
+const VERSION = "1.0.1176";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3211,6 +3211,31 @@ async function rewriteSignedHlsManifestSource({
   );
   blobUrls.push(blobUrl);
   return blobUrl;
+}
+async function buildGo2RtcHlsProbeResult({
+  rawPath,
+  signedPath,
+  manifestUrl,
+  rewriteManifestSource,
+  revokeObjectUrl = (url) => URL.revokeObjectURL(url),
+  requiresNestedSignedHlsRequestsImpl = requiresNestedSignedHlsRequests
+}) {
+  if (!requiresNestedSignedHlsRequestsImpl({ rawPath, signedPath })) {
+    return { url: manifestUrl, cacheable: true, destroy: null };
+  }
+  const blobUrls = [];
+  const rewrittenUrl = await rewriteManifestSource(manifestUrl, blobUrls);
+  if (!rewrittenUrl) {
+    blobUrls.forEach((blobUrl) => revokeObjectUrl(blobUrl));
+    return null;
+  }
+  return {
+    url: rewrittenUrl,
+    cacheable: false,
+    destroy: () => {
+      blobUrls.forEach((blobUrl) => revokeObjectUrl(blobUrl));
+    }
+  };
 }
 
 // src/features/live/mount-lifecycle.js
@@ -11668,25 +11693,18 @@ const FrigateViewCard = class extends HTMLElement {
           contentType: resp.headers.get("content-type") || "",
           url: abs
         })) {
-          if (requiresNestedSignedHlsRequests({ rawPath: p, signedPath: signed })) {
-            const blobUrls = [];
-            const rewrittenUrl = await this._rewriteGo2RtcHlsManifestSource(
-              abs,
-              blobUrls
-            );
-            if (!rewrittenUrl) {
-              blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
-              continue;
+          const result = await buildGo2RtcHlsProbeResult({
+            rawPath: p,
+            signedPath: signed,
+            manifestUrl: abs,
+            rewriteManifestSource: async (manifestUrl, blobUrls) => {
+              return await this._rewriteGo2RtcHlsManifestSource(
+                manifestUrl,
+                blobUrls
+              );
             }
-            return {
-              url: rewrittenUrl,
-              cacheable: false,
-              destroy: () => {
-                blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
-              }
-            };
-          }
-          return { url: abs, cacheable: true, destroy: null };
+          });
+          if (result) return result;
         }
       } catch (_) {
       }

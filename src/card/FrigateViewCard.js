@@ -116,6 +116,7 @@ import {
   shouldUseGo2RtcForEntity,
 } from "../integrations/frigate/camera-context.js";
 import {
+  buildGo2RtcHlsProbeResult,
   rewriteSignedHlsManifestSource,
   signSameOriginAbsoluteUrl,
 } from "../integrations/frigate/bootstrap.js";
@@ -2468,27 +2469,18 @@ export class FrigateViewCard extends HTMLElement {
             url: abs,
           })
         ) {
-          if (
-            requiresNestedSignedHlsRequests({ rawPath: p, signedPath: signed })
-          ) {
-            const blobUrls = [];
-            const rewrittenUrl = await this._rewriteGo2RtcHlsManifestSource(
-              abs,
-              blobUrls,
-            );
-            if (!rewrittenUrl) {
-              blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
-              continue;
-            }
-            return {
-              url: rewrittenUrl,
-              cacheable: false,
-              destroy: () => {
-                blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
-              },
-            };
-          }
-          return { url: abs, cacheable: true, destroy: null };
+          const result = await buildGo2RtcHlsProbeResult({
+            rawPath: p,
+            signedPath: signed,
+            manifestUrl: abs,
+            rewriteManifestSource: async (manifestUrl, blobUrls) => {
+              return await this._rewriteGo2RtcHlsManifestSource(
+                manifestUrl,
+                blobUrls,
+              );
+            },
+          });
+          if (result) return result;
         }
       } catch (_) {}
     }
