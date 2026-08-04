@@ -4,7 +4,7 @@ import {
   rewriteM3u8Manifest,
   toAbsoluteSignedUrl,
   toWebSocketUrl,
-} from "../../features/live/url-provider.js";
+} from "../../shared/media/url-utils.js";
 
 export async function signHomeAssistantPath({ hass, path, expires = 3600 }) {
   try {

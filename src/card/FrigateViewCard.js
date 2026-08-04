@@ -98,14 +98,16 @@ import {
 import {
   buildGo2rtcHlsCandidates,
   buildGo2rtcWsPath,
+  makeGo2rtcCacheKey,
+} from "../integrations/frigate/url.js";
+import {
   getFreshCachedValue,
   isM3u8Response,
-  makeGo2rtcCacheKey,
   requiresNestedSignedHlsRequests,
   setCachedValue,
   toAbsoluteSignedUrl,
   toWebSocketUrl,
-} from "../features/live/url-provider.js";
+} from "../shared/media/url-utils.js";
 import {
   buildGo2RtcCameraContext,
   buildGo2RtcUrlContext,

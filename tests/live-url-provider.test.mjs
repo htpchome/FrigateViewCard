@@ -4,16 +4,18 @@ import assert from "node:assert/strict";
 import {
   buildGo2rtcHlsCandidates,
   buildGo2rtcWsPath,
+  makeGo2rtcCacheKey,
+} from "../src/integrations/frigate/url.js";
+import {
   getFreshCachedValue,
   isM3u8Response,
   isM3u8Url,
-  makeGo2rtcCacheKey,
   requiresNestedSignedHlsRequests,
   rewriteM3u8Manifest,
   setCachedValue,
   toAbsoluteSignedUrl,
   toWebSocketUrl,
-} from "../src/features/live/url-provider.js";
+} from "../src/shared/media/url-utils.js";
 
 test("makeGo2rtcCacheKey composes client and camera", () => {
   assert.equal(

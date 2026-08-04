@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1176";
+const VERSION = "1.0.1177";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2920,7 +2920,7 @@ const prepareEngineVideoForGraceHost = (video) => {
   });
 };
 
-// src/features/live/url-provider.js
+// src/integrations/frigate/url.js
 const makeGo2rtcCacheKey = ({ clientId, cam }) => `${clientId}:${cam}`;
 const buildGo2rtcWsPath = ({ clientId, cam }) => `/api/frigate/${encodeURIComponent(clientId)}/mse/api/ws?src=${encodeURIComponent(cam)}`;
 const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
@@ -2928,6 +2928,8 @@ const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
   const encCam = encodeURIComponent(cam);
   return [`/api/frigate/${encClient}/go2rtc/api/stream.m3u8?src=${encCam}&mp4`];
 };
+
+// src/shared/media/url-utils.js
 const toAbsoluteSignedUrl = ({ signedPath, origin }) => signedPath.startsWith("http") ? signedPath : `${origin}${signedPath}`;
 const toWebSocketUrl = (httpUrl) => httpUrl.replace(/^http/i, "ws");
 const requiresNestedSignedHlsRequests = ({ rawPath, signedPath }) => {
