@@ -113,16 +113,16 @@
 │   ├── styles.js
 │   └── tree.txt
 ├── tests
-│   ├── cleanup-controller.test.mjs
+│   ├── cleanup.test.mjs
 │   ├── config-serialization.test.mjs
 │   ├── deep-link-controller.test.mjs
 │   ├── device-detection.test.mjs
-│   ├── favorites-mutation-utils.test.mjs
-│   ├── filter-state-utils.test.mjs
+│   ├── favorite-mutation.test.mjs
+│   ├── filter-state.test.mjs
 │   ├── grid-regression.test.mjs
 │   ├── hls-config-regression.test.mjs
-│   ├── list-render-utils.test.mjs
-│   ├── list-scroll-controller.test.mjs
+│   ├── list-render.test.mjs
+│   ├── list-scroll.ctrl.test.mjs
 │   ├── live-attempt-planner.test.mjs
 │   ├── live-fallback-image.test.mjs
 │   ├── live-fallback-refresh.test.mjs
