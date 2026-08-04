@@ -144,9 +144,6 @@ function mergeOptionLayers(base, runtimeDefaults, overrides) {
   return merged;
 }
 
-/**
- * Sets runtime default options for a view type.
- */
 export function setVideoViewDefaultOptions(viewType, defaults = {}) {
   const viewKey = resolveViewKey(viewType);
   globalRuntimeVideoViewDefaultOptions[viewKey] = {
@@ -154,9 +151,6 @@ export function setVideoViewDefaultOptions(viewType, defaults = {}) {
   };
 }
 
-/**
- * Gets runtime default options for a view type.
- */
 export function getVideoViewDefaultOptions(viewType) {
   const viewKey = resolveViewKey(viewType);
   return {
@@ -164,9 +158,6 @@ export function getVideoViewDefaultOptions(viewType) {
   };
 }
 
-/**
- * Resets runtime default options for one view type or all view types.
- */
 export function resetVideoViewDefaultOptions(viewType = null) {
   if (viewType == null) {
     for (const key of Object.keys(globalRuntimeVideoViewDefaultOptions)) {
@@ -178,9 +169,6 @@ export function resetVideoViewDefaultOptions(viewType = null) {
   globalRuntimeVideoViewDefaultOptions[viewKey] = {};
 }
 
-/**
- * Sets runtime default options for a view type within a specific scope.
- */
 export function setScopedVideoViewDefaultOptions(
   viewType,
   defaults = {},
@@ -198,9 +186,6 @@ export function setScopedVideoViewDefaultOptions(
   };
 }
 
-/**
- * Gets runtime default options for a view type within a specific scope.
- */
 export function getScopedVideoViewDefaultOptions(viewType, context = {}) {
   const viewKey = resolveViewKey(viewType);
   const scopeKey = context?.scopeKey;
@@ -209,9 +194,6 @@ export function getScopedVideoViewDefaultOptions(viewType, context = {}) {
   return { ...normalizeOptionsObject(store[viewKey]) };
 }
 
-/**
- * Resets runtime default options for a scope (one view or all views).
- */
 export function resetScopedVideoViewDefaultOptions(
   viewType = null,
   context = {},
@@ -231,9 +213,6 @@ export function resetScopedVideoViewDefaultOptions(
   store[viewKey] = {};
 }
 
-/**
- * Builds per-view video options with deterministic override merging.
- */
 export function buildVideoOptionsForView(
   viewType,
   overrides = {},
@@ -319,9 +298,6 @@ function applyVideoDatasetOptions(video, options = {}) {
   }
 }
 
-/**
- * Applies a named video profile with optional per-view overrides.
- */
 export function configureVideoElement(video, options = {}) {
   if (!video) return video;
   const profile = resolveVideoProfile({
@@ -360,7 +336,6 @@ export function configureVideoElement(video, options = {}) {
   applyVideoClassOptions(video, options);
   applyVideoDatasetOptions(video, options);
 
-  // Keep iOS inline playback behavior stable for all profiles.
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
 
@@ -379,9 +354,6 @@ export function configureVideoElement(video, options = {}) {
   return video;
 }
 
-/**
- * Creates a configured <video> element for a given view profile.
- */
 export function createVideoElement(options = {}) {
   const video = document.createElement("video");
   configureVideoElement(video, options);
@@ -391,9 +363,6 @@ export function createVideoElement(options = {}) {
   return video;
 }
 
-/**
- * Determines whether the runtime supports native HLS playback.
- */
 export function supportsNativeHlsPlayback() {
   const video = document.createElement("video");
   return !!(
@@ -402,9 +371,6 @@ export function supportsNativeHlsPlayback() {
   );
 }
 
-/**
- * Replaces slot content and mounts the provided node.
- */
 export function mountNodeIntoSlot(slot, node) {
   if (!slot || !node) return;
   slot.innerHTML = "";

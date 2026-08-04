@@ -152,7 +152,11 @@ import {
   mountNodeIntoSlot,
   setScopedVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
-} from "../features/live/video-factory.js";
+} from "../shared/media/video-factory.js";
+import {
+  buildHaCameraStreamState,
+  createHaCameraStreamElement,
+} from "../integrations/home-assistant/playback.js";
 import {
   loadFallbackAltForCard,
   loadFallbackPrimaryForCard,
@@ -164,7 +168,6 @@ import {
 import { runFallbackRefreshCycleForCard } from "../features/live/fallbacks/fallback-refresh.js";
 import {
   buildHaDirectMountPlan,
-  resolveHaDirectStartup,
   resolveHaDirectMountUnavailableState,
   resolveHaDirectReadyState,
   resolveHaDirectStabilizedState,
@@ -1612,14 +1615,6 @@ export class FrigateViewCard extends HTMLElement {
     return this._preferredStreamType();
   }
 
-  _hlsStateObj(entity, streamType = null) {
-    const raw = this._hass?.states?.[entity];
-    if (!raw) return null;
-    const attrs = { ...raw.attributes };
-    attrs.frontend_stream_type = streamType || this._preferredStreamType();
-    return { ...raw, attributes: attrs };
-  }
-
   async _tryMountHaDirect(slot, startup = null, options = {}) {
     const haDirectPlan = buildHaDirectMountPlan({
       startup: startup || {},
@@ -1629,15 +1624,22 @@ export class FrigateViewCard extends HTMLElement {
     const entity = this._activeCam?.entity;
     if (!entity) return false;
 
-    const stateObj = this._hlsStateObj(entity, haDirectPlan.streamType);
+    const stateObj = buildHaCameraStreamState(
+      this._hass,
+      entity,
+      haDirectPlan.streamType,
+      this._preferredStreamType(),
+    );
     if (!stateObj) return false;
 
-    const s = document.createElement("ha-camera-stream");
-    s.hass = this._hass;
-    s.stateObj = stateObj;
-    s.controls = false;
-    s.muted = this._streamMuted;
-    s.style.cssText = "width:100%;height:100%;display:block";
+    const s = createHaCameraStreamElement({
+      hass: this._hass,
+      stateObj,
+      controls: false,
+      muted: this._streamMuted,
+      styleText: "width:100%;height:100%;display:block",
+    });
+    if (!s) return false;
 
     slot.innerHTML = "";
     slot.appendChild(s);
@@ -2900,14 +2902,16 @@ export class FrigateViewCard extends HTMLElement {
           stateObj,
         });
       } else {
-        const stream = document.createElement("ha-camera-stream");
-        stream.hass = this._hass;
-        stream.stateObj = stateObj;
-        stream.controls = false;
-        stream.muted = true;
-        stream.defaultMuted = true;
-        stream.style.cssText =
-          "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+        const stream = createHaCameraStreamElement({
+          hass: this._hass,
+          stateObj,
+          controls: false,
+          muted: true,
+          defaultMuted: true,
+          styleText:
+            "width:100%;height:100%;display:block;background:var(--c-bg-deep)",
+        });
+        if (!stream) return false;
         cell.appendChild(stream);
         this._attachVideoFit(stream);
       }
@@ -3371,20 +3375,27 @@ export class FrigateViewCard extends HTMLElement {
         });
         const streamType = haDirectPlan.streamType;
         this._setActiveStreamType(streamType);
-        const stateObj = this._hlsStateObj(entity, streamType);
+        const stateObj = buildHaCameraStreamState(
+          this._hass,
+          entity,
+          streamType,
+          this._preferredStreamType(),
+        );
         if (!stateObj) {
           const unavailableState = resolveHaDirectMountUnavailableState();
           this._applyResolvedStreamUiState(unavailableState);
           return;
         }
 
-        const s = document.createElement("ha-camera-stream");
-        s.hass = this._hass;
-        s.stateObj = stateObj;
-        s.controls = false;
-        s.muted = this._streamMuted;
-        s.style.cssText =
-          "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+        const s = createHaCameraStreamElement({
+          hass: this._hass,
+          stateObj,
+          controls: false,
+          muted: this._streamMuted,
+          styleText:
+            "width:100%;height:100%;display:block;background:var(--c-bg-deep)",
+        });
+        if (!s) return;
 
         slot.innerHTML = "";
         slot.appendChild(s);
@@ -3726,7 +3737,12 @@ export class FrigateViewCard extends HTMLElement {
         const cam = this._config?.cameras?.[idx];
         const entity = cam?.entity || "";
         const stateObj = entity
-          ? this._hlsStateObj(entity, liveStreamHint) ||
+          ? buildHaCameraStreamState(
+              this._hass,
+              entity,
+              liveStreamHint,
+              this._preferredStreamType(),
+            ) ||
             this._hass?.states?.[entity] ||
             null
           : null;

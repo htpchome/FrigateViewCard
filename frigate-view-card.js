@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1170";
+const VERSION = "1.0.1171";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3627,7 +3627,7 @@ const resolveRotateOverlayViewportVariables = ({
   };
 };
 
-// src/features/live/video-factory.js
+// src/shared/media/video-factory.js
 const VIDEO_PROFILES = Object.freeze({
   liveEngine: Object.freeze({
     styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)",
@@ -3928,6 +3928,37 @@ function mountNodeIntoSlot(slot, node) {
   if (!slot || !node) return;
   slot.innerHTML = "";
   slot.appendChild(node);
+}
+
+// src/integrations/home-assistant/playback.js
+function buildHaCameraStreamState(hass, entity, streamType = null, fallbackStreamType = "webrtc") {
+  const raw = hass?.states?.[entity];
+  if (!raw) return null;
+  const attrs = { ...raw.attributes };
+  attrs.frontend_stream_type = streamType || fallbackStreamType;
+  return { ...raw, attributes: attrs };
+}
+function createHaCameraStreamElement({
+  hass,
+  stateObj,
+  muted = false,
+  controls = false,
+  defaultMuted,
+  styleText = ""
+} = {}) {
+  if (!hass || !stateObj) return null;
+  const stream = document.createElement("ha-camera-stream");
+  stream.hass = hass;
+  stream.stateObj = stateObj;
+  stream.controls = controls;
+  stream.muted = muted;
+  if (defaultMuted !== void 0) {
+    stream.defaultMuted = defaultMuted;
+  }
+  if (styleText) {
+    stream.style.cssText = styleText;
+  }
+  return stream;
 }
 
 // src/features/live/fallbacks/fallback-url.js
@@ -10654,13 +10685,6 @@ const FrigateViewCard = class extends HTMLElement {
     }
     return this._preferredStreamType();
   }
-  _hlsStateObj(entity, streamType = null) {
-    const raw = this._hass?.states?.[entity];
-    if (!raw) return null;
-    const attrs = { ...raw.attributes };
-    attrs.frontend_stream_type = streamType || this._preferredStreamType();
-    return { ...raw, attributes: attrs };
-  }
   async _tryMountHaDirect(slot, startup = null, options = {}) {
     const haDirectPlan = buildHaDirectMountPlan({
       startup: startup || {},
@@ -10669,14 +10693,21 @@ const FrigateViewCard = class extends HTMLElement {
     const commit = options.commit !== false;
     const entity = this._activeCam?.entity;
     if (!entity) return false;
-    const stateObj = this._hlsStateObj(entity, haDirectPlan.streamType);
+    const stateObj = buildHaCameraStreamState(
+      this._hass,
+      entity,
+      haDirectPlan.streamType,
+      this._preferredStreamType()
+    );
     if (!stateObj) return false;
-    const s = document.createElement("ha-camera-stream");
-    s.hass = this._hass;
-    s.stateObj = stateObj;
-    s.controls = false;
-    s.muted = this._streamMuted;
-    s.style.cssText = "width:100%;height:100%;display:block";
+    const s = createHaCameraStreamElement({
+      hass: this._hass,
+      stateObj,
+      controls: false,
+      muted: this._streamMuted,
+      styleText: "width:100%;height:100%;display:block"
+    });
+    if (!s) return false;
     slot.innerHTML = "";
     slot.appendChild(s);
     this._attachVideoFit(s);
@@ -11800,13 +11831,15 @@ const FrigateViewCard = class extends HTMLElement {
           stateObj
         });
       } else {
-        const stream = document.createElement("ha-camera-stream");
-        stream.hass = this._hass;
-        stream.stateObj = stateObj;
-        stream.controls = false;
-        stream.muted = true;
-        stream.defaultMuted = true;
-        stream.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+        const stream = createHaCameraStreamElement({
+          hass: this._hass,
+          stateObj,
+          controls: false,
+          muted: true,
+          defaultMuted: true,
+          styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)"
+        });
+        if (!stream) return false;
         cell.appendChild(stream);
         this._attachVideoFit(stream);
       }
@@ -12238,18 +12271,25 @@ const FrigateViewCard = class extends HTMLElement {
         });
         const streamType = haDirectPlan.streamType;
         this._setActiveStreamType(streamType);
-        const stateObj = this._hlsStateObj(entity, streamType);
+        const stateObj = buildHaCameraStreamState(
+          this._hass,
+          entity,
+          streamType,
+          this._preferredStreamType()
+        );
         if (!stateObj) {
           const unavailableState = resolveHaDirectMountUnavailableState();
           this._applyResolvedStreamUiState(unavailableState);
           return;
         }
-        const s = document.createElement("ha-camera-stream");
-        s.hass = this._hass;
-        s.stateObj = stateObj;
-        s.controls = false;
-        s.muted = this._streamMuted;
-        s.style.cssText = "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+        const s = createHaCameraStreamElement({
+          hass: this._hass,
+          stateObj,
+          controls: false,
+          muted: this._streamMuted,
+          styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)"
+        });
+        if (!s) return;
         slot.innerHTML = "";
         slot.appendChild(s);
         this._engine = s;
@@ -12514,7 +12554,12 @@ const FrigateViewCard = class extends HTMLElement {
       if (idx >= 0) {
         const cam = this._config?.cameras?.[idx];
         const entity = cam?.entity || "";
-        const stateObj = entity ? this._hlsStateObj(entity, liveStreamHint) || this._hass?.states?.[entity] || null : null;
+        const stateObj = entity ? buildHaCameraStreamState(
+          this._hass,
+          entity,
+          liveStreamHint,
+          this._preferredStreamType()
+        ) || this._hass?.states?.[entity] || null : null;
         const severity = this._gridCellSeverity(entity);
         applyGridCellSeverityClass(cell, severity);
         const useLive = this._gridLiveViewEnabled() || this._isGridCameraAlertLive(entity);
