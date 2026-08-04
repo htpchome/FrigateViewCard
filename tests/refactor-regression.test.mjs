@@ -26,6 +26,10 @@ const frigateBootstrapSource = fs.readFileSync(
   new URL("../src/integrations/frigate/bootstrap.js", import.meta.url),
   "utf8",
 );
+const go2rtcMounterSource = fs.readFileSync(
+  new URL("../src/features/live/go2rtc-mounter.js", import.meta.url),
+  "utf8",
+);
 
 test("no legacy var declarations remain", () => {
   assert.equal(/\bvar\s+[A-Za-z_$]/.test(source), false);
@@ -62,15 +66,13 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     true,
   );
   assert.equal(
-    cardSource.includes("this._go2rtcResolver.resolveMountRequest(options)"),
+    cardSource.includes(
+      'import { createGo2RtcMounter } from "../features/live/go2rtc-mounter.js";',
+    ),
     true,
   );
   assert.equal(
-    cardSource.includes("this._go2rtcResolver.websocketUrlForEntity(entity)"),
-    true,
-  );
-  assert.equal(
-    cardSource.includes("this._go2rtcResolver.hlsUrlForEntity(entity)"),
+    /this\._go2rtcMounter\s*=\s*createGo2RtcMounter\(/.test(cardSource),
     true,
   );
   assert.equal(cardSource.includes("_go2rtcWsUrlCache"), false);
@@ -83,6 +85,12 @@ test("go2rtc ownership is pulled out of the card shell", () => {
   assert.equal(cardSource.includes("_signedGo2RtcWsPath("), false);
   assert.equal(cardSource.includes("_go2rtcWebSocketUrlForEntity("), false);
   assert.equal(cardSource.includes("_go2rtcHlsUrlForEntity("), false);
+  assert.equal(cardSource.includes("_go2rtcCodecs("), false);
+  assert.equal(cardSource.includes("_normalizeGo2RTCCodecs("), false);
+  assert.equal(cardSource.includes("_startFirefoxLiveCatchup("), false);
+  assert.equal(cardSource.includes("_tryMountGo2RTCMSE("), false);
+  assert.equal(cardSource.includes("_tryMountGo2RTCWebRTC("), false);
+  assert.equal(cardSource.includes("_tryMountGo2RTCHLS("), false);
   assert.equal(go2rtcResolverSource.includes("GO2RTC_CACHE_TTL_MS"), true);
   assert.equal(
     go2rtcResolverSource.includes("buildSignedGo2RtcWebSocketUrl"),
@@ -101,6 +109,22 @@ test("go2rtc ownership is pulled out of the card shell", () => {
   assert.equal(
     frigateBootstrapSource.includes("../../features/live/url-provider.js"),
     false,
+  );
+  assert.equal(
+    go2rtcMounterSource.includes("export function createGo2RtcMounter"),
+    true,
+  );
+  assert.equal(
+    go2rtcMounterSource.includes("resolver.resolveMountRequest(options)"),
+    true,
+  );
+  assert.equal(
+    go2rtcMounterSource.includes("resolver.websocketUrlForEntity(entity)"),
+    true,
+  );
+  assert.equal(
+    go2rtcMounterSource.includes("resolver.hlsUrlForEntity(entity)"),
+    true,
   );
   assert.equal(frigateUrlSource.includes("buildGo2rtcWsPath"), true);
   assert.equal(sharedUrlSource.includes("toAbsoluteSignedUrl"), true);

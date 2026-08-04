@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1178";
+const VERSION = "1.0.1179";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3425,6 +3425,844 @@ function createGo2RtcResolver({
   };
 }
 
+// src/features/live/startup-policy.js
+const MIN_WAIT_MS = 500;
+const normalizeWaitMs = (value, fallback) => Math.max(MIN_WAIT_MS, Number(value ?? fallback));
+const normalizeNumber = (value, fallback) => Number(value ?? fallback);
+const resolveHaDirectStartup = (startup = {}) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 8e3),
+  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
+  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
+  requireReadyState: normalizeNumber(startup.requireReadyState, 0),
+  strict: startup.strict ?? false,
+  streamType: startup.streamType
+});
+const buildHaDirectMountPlan = ({
+  startup = {},
+  preferredStreamType
+}) => {
+  const policy = resolveHaDirectStartup(startup);
+  return {
+    streamType: policy.streamType || preferredStreamType,
+    waitOptions: {
+      minCurrentTime: policy.minCurrentTime,
+      minDecodedFrames: policy.minDecodedFrames,
+      requireReadyState: policy.requireReadyState,
+      strict: policy.strict
+    },
+    waitMs: policy.waitMs
+  };
+};
+const resolveMseStartup = (startup = {}) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 8e3),
+  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.2),
+  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 2),
+  requireReadyState: normalizeNumber(startup.requireReadyState, 3),
+  strict: startup.strict !== false
+});
+const resolveWebRtcStartup = ({ startup = {} }) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 7e3),
+  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
+  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
+  requireReadyState: normalizeNumber(startup.requireReadyState, 0),
+  strict: startup.strict !== false
+});
+const resolveHlsStartup = (startup = {}) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 5e3)
+});
+const resolveHaDirectMountUnavailableState = () => ({
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false
+});
+const resolveHaDirectReadyState = ({
+  rotateOverlayActive = false,
+  isCurrentEngine = false,
+  waitSucceeded = false
+}) => ({
+  shouldApply: Boolean(isCurrentEngine && waitSucceeded),
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false,
+  enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine)
+});
+const resolveHaDirectStabilizedState = ({
+  rotateOverlayActive = false,
+  isCurrentEngine = false
+}) => ({
+  shouldApply: Boolean(isCurrentEngine),
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false,
+  enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine)
+});
+
+// src/shared/media/video-factory.js
+const VIDEO_PROFILES = Object.freeze({
+  liveEngine: Object.freeze({
+    styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)",
+    autoplay: true,
+    playsInline: true,
+    controls: false,
+    preload: ""
+  }),
+  popupPlayback: Object.freeze({
+    styleText: "",
+    autoplay: true,
+    playsInline: true,
+    controls: true,
+    preload: "metadata"
+  }),
+  recordingPlayback: Object.freeze({
+    styleText: "",
+    autoplay: false,
+    playsInline: true,
+    controls: true,
+    preload: "metadata"
+  })
+});
+const VIDEO_VIEW_PROFILE_MAP = Object.freeze({
+  live: "liveEngine",
+  popup: "popupPlayback",
+  recording: "recordingPlayback"
+});
+const VIDEO_VIEW_DEFAULT_OPTIONS = Object.freeze({
+  live: Object.freeze({ viewType: "live" }),
+  popup: Object.freeze({ viewType: "popup" }),
+  recording: Object.freeze({ viewType: "recording" })
+});
+const EMPTY_OPTIONS = Object.freeze({});
+const globalRuntimeVideoViewDefaultOptions = {
+  live: {},
+  popup: {},
+  recording: {}
+};
+const scopedRuntimeVideoViewDefaultsWeak = new WeakMap();
+const scopedRuntimeVideoViewDefaultsMap = new Map();
+function createRuntimeDefaultsStore() {
+  return {
+    live: {},
+    popup: {},
+    recording: {}
+  };
+}
+function resolveVideoProfileNameForView(viewType) {
+  const key = String(viewType || "").trim().toLowerCase();
+  return VIDEO_VIEW_PROFILE_MAP[key] || VIDEO_VIEW_PROFILE_MAP.live;
+}
+function resolveViewKey(viewType) {
+  const key = String(viewType || "").trim().toLowerCase();
+  return VIDEO_VIEW_DEFAULT_OPTIONS[key] ? key : "live";
+}
+function normalizeOptionsObject(value) {
+  return value && typeof value === "object" ? value : EMPTY_OPTIONS;
+}
+function isObjectScopeKey(scopeKey) {
+  return scopeKey !== null && (typeof scopeKey === "object" || typeof scopeKey === "function");
+}
+function resolveScopedRuntimeStore(scopeKey, { create = false } = {}) {
+  if (scopeKey === null || scopeKey === void 0) return null;
+  if (isObjectScopeKey(scopeKey)) {
+    const existing2 = scopedRuntimeVideoViewDefaultsWeak.get(scopeKey);
+    if (existing2 || !create) return existing2 || null;
+    const next2 = createRuntimeDefaultsStore();
+    scopedRuntimeVideoViewDefaultsWeak.set(scopeKey, next2);
+    return next2;
+  }
+  const existing = scopedRuntimeVideoViewDefaultsMap.get(scopeKey);
+  if (existing || !create) return existing || null;
+  const next = createRuntimeDefaultsStore();
+  scopedRuntimeVideoViewDefaultsMap.set(scopeKey, next);
+  return next;
+}
+function resolveRuntimeDefaultsForView(viewKey, context = {}) {
+  const globalDefaults = globalRuntimeVideoViewDefaultOptions[viewKey] || EMPTY_OPTIONS;
+  const scopedStore = resolveScopedRuntimeStore(context.scopeKey);
+  const scopedDefaults = scopedStore?.[viewKey] || EMPTY_OPTIONS;
+  return mergeOptionLayers(
+    EMPTY_OPTIONS,
+    normalizeOptionsObject(globalDefaults),
+    normalizeOptionsObject(scopedDefaults)
+  );
+}
+function mergeOptionLayers(base, runtimeDefaults, overrides) {
+  const merged = {
+    ...base,
+    ...runtimeDefaults,
+    ...overrides
+  };
+  const mergeObjectKey = (key) => {
+    if (base[key] || runtimeDefaults[key] || overrides[key]) {
+      merged[key] = {
+        ...normalizeOptionsObject(base[key]),
+        ...normalizeOptionsObject(runtimeDefaults[key]),
+        ...normalizeOptionsObject(overrides[key])
+      };
+    }
+  };
+  mergeObjectKey("style");
+  mergeObjectKey("dataset");
+  mergeObjectKey("attributes");
+  if (base.classNames || runtimeDefaults.classNames || overrides.classNames) {
+    const tokens = [
+      ...Array.isArray(base.classNames) ? base.classNames : [],
+      ...Array.isArray(runtimeDefaults.classNames) ? runtimeDefaults.classNames : [],
+      ...Array.isArray(overrides.classNames) ? overrides.classNames : []
+    ].map((token) => String(token || "").trim()).filter(Boolean);
+    merged.classNames = [...new Set(tokens)];
+  }
+  return merged;
+}
+function setVideoViewDefaultOptions(viewType, defaults = {}) {
+  const viewKey = resolveViewKey(viewType);
+  globalRuntimeVideoViewDefaultOptions[viewKey] = {
+    ...normalizeOptionsObject(defaults)
+  };
+}
+function getVideoViewDefaultOptions(viewType) {
+  const viewKey = resolveViewKey(viewType);
+  return {
+    ...normalizeOptionsObject(globalRuntimeVideoViewDefaultOptions[viewKey])
+  };
+}
+function resetVideoViewDefaultOptions(viewType = null) {
+  if (viewType == null) {
+    for (const key of Object.keys(globalRuntimeVideoViewDefaultOptions)) {
+      globalRuntimeVideoViewDefaultOptions[key] = {};
+    }
+    return;
+  }
+  const viewKey = resolveViewKey(viewType);
+  globalRuntimeVideoViewDefaultOptions[viewKey] = {};
+}
+function setScopedVideoViewDefaultOptions(viewType, defaults = {}, context = {}) {
+  const viewKey = resolveViewKey(viewType);
+  const scopeKey = context?.scopeKey;
+  const store = resolveScopedRuntimeStore(scopeKey, { create: true });
+  if (!store) {
+    setVideoViewDefaultOptions(viewType, defaults);
+    return;
+  }
+  store[viewKey] = {
+    ...normalizeOptionsObject(defaults)
+  };
+}
+function getScopedVideoViewDefaultOptions(viewType, context = {}) {
+  const viewKey = resolveViewKey(viewType);
+  const scopeKey = context?.scopeKey;
+  const store = resolveScopedRuntimeStore(scopeKey);
+  if (!store) return {};
+  return { ...normalizeOptionsObject(store[viewKey]) };
+}
+function resetScopedVideoViewDefaultOptions(viewType = null, context = {}) {
+  const scopeKey = context?.scopeKey;
+  const store = resolveScopedRuntimeStore(scopeKey);
+  if (!store) return;
+  if (viewType == null) {
+    for (const key of Object.keys(store)) {
+      store[key] = {};
+    }
+    return;
+  }
+  const viewKey = resolveViewKey(viewType);
+  store[viewKey] = {};
+}
+function buildVideoOptionsForView(viewType, overrides = {}, context = {}) {
+  const viewKey = resolveViewKey(viewType);
+  const base = VIDEO_VIEW_DEFAULT_OPTIONS[viewKey] || VIDEO_VIEW_DEFAULT_OPTIONS.live;
+  const runtimeDefaults = resolveRuntimeDefaultsForView(viewKey, context);
+  const safeOverrides = normalizeOptionsObject(overrides);
+  return mergeOptionLayers(base, runtimeDefaults, safeOverrides);
+}
+function resolveVideoProfile({ profile, viewType } = {}) {
+  const profileName = profile || resolveVideoProfileNameForView(viewType);
+  return VIDEO_PROFILES[profileName] || VIDEO_PROFILES.liveEngine;
+}
+function applyVideoBooleanProperty(video, key, value) {
+  if (typeof value === "boolean") {
+    video[key] = value;
+  }
+}
+function applyVideoStyleProperty(video, styleKey, value) {
+  if (!video?.style || !styleKey) return;
+  if (value === null) {
+    video.style[styleKey] = "";
+    return;
+  }
+  if (value === void 0) return;
+  video.style[styleKey] = String(value);
+}
+function applyVideoStyleOptions(video, options = {}) {
+  const styleOptions = {
+    objectFit: options.objectFit,
+    objectPosition: options.objectPosition,
+    aspectRatio: options.aspectRatio,
+    filter: options.filter,
+    borderRadius: options.borderRadius,
+    boxShadow: options.boxShadow,
+    ...options.style && typeof options.style === "object" ? options.style : {}
+  };
+  for (const [styleKey, value] of Object.entries(styleOptions)) {
+    applyVideoStyleProperty(video, styleKey, value);
+  }
+}
+function applyVideoClassOptions(video, options = {}) {
+  const { className, classNames } = options;
+  if (className !== void 0) {
+    video.className = className == null ? "" : String(className);
+  }
+  if (Array.isArray(classNames) && video.classList) {
+    for (const classToken of classNames) {
+      const token = String(classToken || "").trim();
+      if (!token) continue;
+      video.classList.add(token);
+    }
+  }
+}
+function applyVideoDatasetOptions(video, options = {}) {
+  if (!video?.dataset || !options?.dataset || typeof options.dataset !== "object") {
+    return;
+  }
+  for (const [key, value] of Object.entries(options.dataset)) {
+    if (!key) continue;
+    if (value === null || value === void 0 || value === false) {
+      delete video.dataset[key];
+      continue;
+    }
+    video.dataset[key] = value === true ? "1" : String(value);
+  }
+}
+function configureVideoElement(video, options = {}) {
+  if (!video) return video;
+  const profile = resolveVideoProfile({
+    profile: options.profile,
+    viewType: options.viewType
+  });
+  const styleText = options.styleText || profile.styleText;
+  applyVideoBooleanProperty(
+    video,
+    "autoplay",
+    options.autoplay ?? profile.autoplay
+  );
+  applyVideoBooleanProperty(
+    video,
+    "playsInline",
+    options.playsInline ?? profile.playsInline
+  );
+  applyVideoBooleanProperty(video, "muted", options.muted);
+  applyVideoBooleanProperty(
+    video,
+    "controls",
+    options.controls ?? profile.controls
+  );
+  if (options.defaultMuted !== void 0) {
+    applyVideoBooleanProperty(video, "defaultMuted", options.defaultMuted);
+  }
+  if (options.preload || profile.preload) {
+    video.preload = options.preload || profile.preload;
+  }
+  if (styleText) {
+    video.style.cssText = styleText;
+  }
+  applyVideoStyleOptions(video, options);
+  applyVideoClassOptions(video, options);
+  applyVideoDatasetOptions(video, options);
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  if (options.attributes && typeof options.attributes === "object") {
+    for (const [name, value] of Object.entries(options.attributes)) {
+      if (value === null || value === void 0 || value === false) {
+        video.removeAttribute(name);
+      } else if (value === true) {
+        video.setAttribute(name, "");
+      } else {
+        video.setAttribute(name, String(value));
+      }
+    }
+  }
+  return video;
+}
+function createVideoElement(options = {}) {
+  const video = document.createElement("video");
+  configureVideoElement(video, options);
+  if (typeof options.src === "string") {
+    video.src = options.src;
+  }
+  return video;
+}
+function supportsNativeHlsPlayback() {
+  const video = document.createElement("video");
+  return !!(video.canPlayType?.("application/vnd.apple.mpegurl") || video.canPlayType?.("application/x-mpegURL"));
+}
+function mountNodeIntoSlot(slot, node) {
+  if (!slot || !node) return;
+  slot.innerHTML = "";
+  slot.appendChild(node);
+}
+
+// src/features/live/go2rtc-mounter.js
+function resolveGo2RtcCodecs(isSupported) {
+  const codecs = [
+    "avc1.640029",
+    "avc1.64002A",
+    "avc1.640033",
+    "hvc1.1.6.L153.B0",
+    "mp4a.40.2",
+    "mp4a.40.5",
+    "flac",
+    "opus"
+  ];
+  return codecs.filter((codec) => isSupported(`video/mp4; codecs="${codec}"`)).join(",");
+}
+function normalizeGo2RtcCodecs(value) {
+  if (!value) return "";
+  const source = String(value).trim();
+  const match = source.match(/codecs\s*=\s*"([^"]+)"/i);
+  if (match && match[1]) return match[1].trim();
+  if (/^video\//i.test(source)) return "";
+  return source;
+}
+function startFirefoxLiveCatchup(video, isFirefox) {
+  if (!video || !isFirefox()) return () => {
+  };
+  let firstFrameAt = 0;
+  let hardSeekUsed = false;
+  const timer = setInterval(() => {
+    try {
+      const buffered = video.buffered;
+      if (!buffered || !buffered.length) return;
+      const end = buffered.end(buffered.length - 1);
+      const current = Number(video.currentTime) || 0;
+      if (current > 0.05 && !firstFrameAt) firstFrameAt = Date.now();
+      const lag = end - current;
+      if (!Number.isFinite(lag) || lag <= 0) return;
+      const sinceFirstFrame = firstFrameAt ? Date.now() - firstFrameAt : 0;
+      if (sinceFirstFrame > 0 && sinceFirstFrame < 4e3) {
+        if (lag > 3 && !hardSeekUsed) {
+          video.currentTime = Math.max(0, end - 0.08);
+          video.playbackRate = 1;
+          hardSeekUsed = true;
+        } else if (lag > 1.5) {
+          video.playbackRate = 1.08;
+        } else if (lag > 0.7) {
+          video.playbackRate = 1.04;
+        } else {
+          video.playbackRate = 1;
+        }
+        return;
+      }
+      if (lag > 2.8 && !hardSeekUsed && sinceFirstFrame >= 4e3) {
+        video.currentTime = Math.max(0, end - 0.2);
+        video.playbackRate = 1;
+        hardSeekUsed = true;
+      } else if (lag > 2) {
+        video.playbackRate = 1.05;
+      } else if (lag > 1) {
+        video.playbackRate = 1.02;
+      } else {
+        video.playbackRate = 1;
+      }
+    } catch (_) {
+    }
+  }, 500);
+  return () => clearInterval(timer);
+}
+function resolveCommittedResult({
+  commit,
+  type,
+  engine,
+  slot,
+  onCommittedStream
+}) {
+  if (!commit) return { ok: true, type, engine, slot };
+  onCommittedStream(type);
+  return true;
+}
+function createGo2RtcMounter({
+  resolver,
+  getStreamMuted,
+  waitForStreamStart,
+  attachVideoFit,
+  assignCommittedEngine,
+  onCommittedStream,
+  scheduleResumeLive,
+  isFirefox,
+  scopeKey,
+  resetMseDiagnostics,
+  markMseChunk,
+  nowMs = () => Date.now()
+}) {
+  const tryMountMse = async (slot, startup = null, options = {}) => {
+    const {
+      waitMs,
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict
+    } = resolveMseStartup(startup || {});
+    const { entity, abortSignal, commit } = resolver.resolveMountRequest(options);
+    const muted = options?.muted ?? getStreamMuted();
+    if (!entity) return false;
+    if (abortSignal?.aborted) return false;
+    if (!("WebSocket" in window) || !("MediaSource" in window)) {
+      return false;
+    }
+    const wsUrl = await resolver.websocketUrlForEntity(entity);
+    if (!wsUrl) return false;
+    const video = createVideoElement(
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted,
+          controls: false
+        },
+        { scopeKey }
+      )
+    );
+    const mediaSource = new MediaSource();
+    video.src = URL.createObjectURL(mediaSource);
+    mountNodeIntoSlot(slot, video);
+    attachVideoFit(video);
+    const ws = new WebSocket(wsUrl);
+    ws.binaryType = "arraybuffer";
+    const startupAbort = new AbortController();
+    let abortBound = false;
+    let streamStarted = false;
+    resetMseDiagnostics(nowMs());
+    let sourceBuffer = null;
+    let mseRequested = false;
+    let queue = [];
+    const appendNext = () => {
+      if (!sourceBuffer || sourceBuffer.updating || !queue.length) return;
+      try {
+        sourceBuffer.appendBuffer(queue.shift());
+      } catch (_) {
+        queue = [];
+      }
+    };
+    const stopCatchup = startFirefoxLiveCatchup(video, isFirefox);
+    const requestMse = () => {
+      if (mseRequested) return;
+      if (ws.readyState !== WebSocket.OPEN) return;
+      const codecs = resolveGo2RtcCodecs(MediaSource.isTypeSupported);
+      mseRequested = true;
+      ws.send(JSON.stringify({ type: "mse", value: codecs }));
+    };
+    const destroy = () => {
+      try {
+        if (!startupAbort.signal.aborted) startupAbort.abort();
+      } catch (_) {
+      }
+      try {
+        ws.close();
+      } catch (_) {
+      }
+      try {
+        stopCatchup();
+      } catch (_) {
+      }
+      try {
+        if (video.src) URL.revokeObjectURL(video.src);
+      } catch (_) {
+      }
+      if (abortSignal && abortBound) {
+        abortSignal.removeEventListener("abort", onAbort);
+        abortBound = false;
+      }
+    };
+    const onAbort = () => {
+      destroy();
+    };
+    if (abortSignal) {
+      abortSignal.addEventListener("abort", onAbort, { once: true });
+      abortBound = true;
+    }
+    const engine = { video, ws, destroy };
+    if (commit) assignCommittedEngine(engine);
+    mediaSource.addEventListener(
+      "sourceopen",
+      () => {
+        requestMse();
+      },
+      { once: true }
+    );
+    ws.addEventListener("open", () => {
+      if (mediaSource.readyState === "open") requestMse();
+    });
+    ws.addEventListener("error", () => {
+      if (!startupAbort.signal.aborted) startupAbort.abort();
+    });
+    ws.addEventListener("close", () => {
+      if (!startupAbort.signal.aborted) startupAbort.abort();
+      if (streamStarted && commit) {
+        scheduleResumeLive("mse-ws-closed");
+      }
+    });
+    ws.addEventListener("message", (event) => {
+      if (typeof event.data === "string") {
+        let msg;
+        try {
+          msg = JSON.parse(event.data);
+        } catch (_) {
+          return;
+        }
+        if (msg?.type === "mse" && msg.value && mediaSource.readyState === "open") {
+          if (sourceBuffer) return;
+          try {
+            const codecs = normalizeGo2RtcCodecs(msg.value);
+            if (!codecs) return;
+            const mime = `video/mp4; codecs="${codecs}"`;
+            if (!MediaSource.isTypeSupported(mime)) return;
+            sourceBuffer = mediaSource.addSourceBuffer(mime);
+            sourceBuffer.mode = "segments";
+            sourceBuffer.addEventListener("updateend", appendNext);
+            appendNext();
+          } catch (_) {
+          }
+        }
+        return;
+      }
+      if (!(event.data instanceof ArrayBuffer)) return;
+      markMseChunk(nowMs());
+      queue.push(event.data);
+      appendNext();
+    });
+    const started = await waitForStreamStart(slot, waitMs, {
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict,
+      abortSignal: startupAbort.signal
+    });
+    if (!started) {
+      destroy();
+      return false;
+    }
+    streamStarted = true;
+    return resolveCommittedResult({
+      commit,
+      type: "mse",
+      engine,
+      slot,
+      onCommittedStream
+    });
+  };
+  const tryMountWebRtc = async (slot, startup = null, options = {}) => {
+    const {
+      waitMs,
+      minCurrentTime,
+      minDecodedFrames,
+      requireReadyState,
+      strict
+    } = resolveWebRtcStartup({
+      startup: startup || {}
+    });
+    const { entity, abortSignal, commit } = resolver.resolveMountRequest(options);
+    if (abortSignal?.aborted) return false;
+    if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
+      return false;
+    }
+    if (!entity) return false;
+    const wsUrl = await resolver.websocketUrlForEntity(entity);
+    if (!wsUrl) return false;
+    const video = createVideoElement(
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted: getStreamMuted(),
+          controls: false
+        },
+        { scopeKey }
+      )
+    );
+    mountNodeIntoSlot(slot, video);
+    attachVideoFit(video);
+    const pc = new RTCPeerConnection({
+      bundlePolicy: "max-bundle",
+      sdpSemantics: "unified-plan",
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    });
+    const ws = new WebSocket(wsUrl);
+    let abortBound = false;
+    const destroy = () => {
+      try {
+        ws.close();
+      } catch (_) {
+      }
+      try {
+        pc.close();
+      } catch (_) {
+      }
+      if (abortSignal && abortBound) {
+        abortSignal.removeEventListener("abort", onAbort);
+        abortBound = false;
+      }
+    };
+    const onAbort = () => {
+      destroy();
+    };
+    if (abortSignal) {
+      abortSignal.addEventListener("abort", onAbort, { once: true });
+      abortBound = true;
+    }
+    const engine = { video, pc, ws, destroy };
+    if (commit) assignCommittedEngine(engine);
+    pc.addTransceiver("video", { direction: "recvonly" });
+    pc.addTransceiver("audio", { direction: "recvonly" });
+    let resolveFirstRenderedFrame = null;
+    const firstRenderedFramePromise = new Promise((resolve) => {
+      resolveFirstRenderedFrame = resolve;
+    });
+    pc.addEventListener("track", (event) => {
+      if (event.streams && event.streams[0]) {
+        video.srcObject = event.streams[0];
+      } else {
+        const mediaStream = video.srcObject || new MediaStream();
+        mediaStream.addTrack(event.track);
+        video.srcObject = mediaStream;
+      }
+      video.play().catch(() => {
+      });
+      if (video.requestVideoFrameCallback) {
+        video.requestVideoFrameCallback(() => {
+          if (!resolveFirstRenderedFrame) return;
+          resolveFirstRenderedFrame(true);
+          resolveFirstRenderedFrame = null;
+        });
+      }
+    });
+    pc.addEventListener("icecandidate", (event) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      const candidate = event.candidate ? event.candidate.toJSON().candidate : "";
+      ws.send(JSON.stringify({ type: "webrtc/candidate", value: candidate }));
+    });
+    ws.addEventListener("message", (event) => {
+      let msg;
+      try {
+        msg = JSON.parse(event.data);
+      } catch (_) {
+        return;
+      }
+      if (msg?.type === "webrtc/answer") {
+        pc.setRemoteDescription({
+          type: "answer",
+          sdp: msg.value
+        }).catch(() => {
+        });
+      } else if (msg?.type === "webrtc/candidate") {
+        pc.addIceCandidate({ candidate: msg.value, sdpMid: "0" }).catch(
+          () => {
+          }
+        );
+      }
+    });
+    ws.addEventListener("open", async () => {
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        ws.send(JSON.stringify({ type: "webrtc/offer", value: offer.sdp }));
+      } catch (_) {
+      }
+    });
+    const started = await Promise.race([
+      waitForStreamStart(video, waitMs, {
+        minCurrentTime,
+        minDecodedFrames,
+        requireReadyState,
+        strict,
+        abortSignal
+      }),
+      firstRenderedFramePromise
+    ]);
+    resolveFirstRenderedFrame = null;
+    if (!started) {
+      destroy();
+      return false;
+    }
+    return resolveCommittedResult({
+      commit,
+      type: "webrtc",
+      engine,
+      slot,
+      onCommittedStream
+    });
+  };
+  const tryMountHls = async (slot, startup = null, options = {}) => {
+    const { waitMs } = resolveHlsStartup(startup || {});
+    const { entity, abortSignal, commit } = resolver.resolveMountRequest(options);
+    if (abortSignal?.aborted) return false;
+    if (!entity) return false;
+    const hlsSource = await resolver.hlsUrlForEntity(entity);
+    if (!hlsSource?.url) return false;
+    const video = createVideoElement(
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted: getStreamMuted(),
+          controls: false,
+          src: hlsSource.url
+        },
+        { scopeKey }
+      )
+    );
+    mountNodeIntoSlot(slot, video);
+    attachVideoFit(video);
+    let abortBound = false;
+    const destroy = () => {
+      try {
+        video.pause();
+        video.removeAttribute("src");
+        video.load();
+      } catch (_) {
+      }
+      try {
+        hlsSource.destroy?.();
+      } catch (_) {
+      }
+      try {
+        if (video.src?.startsWith("blob:")) URL.revokeObjectURL(video.src);
+      } catch (_) {
+      }
+      if (abortSignal && abortBound) {
+        abortSignal.removeEventListener("abort", onAbort);
+        abortBound = false;
+      }
+    };
+    const onAbort = () => {
+      destroy();
+    };
+    if (abortSignal) {
+      abortSignal.addEventListener("abort", onAbort, { once: true });
+      abortBound = true;
+    }
+    const engine = { video, destroy };
+    if (commit) assignCommittedEngine(engine);
+    const started = await waitForStreamStart(video, waitMs, {
+      minCurrentTime: 0.05,
+      minDecodedFrames: 1,
+      requireReadyState: 2,
+      strict: false,
+      abortSignal
+    });
+    if (!started) {
+      destroy();
+      return false;
+    }
+    return resolveCommittedResult({
+      commit,
+      type: "hls",
+      engine,
+      slot,
+      onCommittedStream
+    });
+  };
+  return {
+    tryMountMse,
+    tryMountWebRtc,
+    tryMountHls
+  };
+}
+
 // src/features/live/mount-lifecycle.js
 const beginMountTracking = ({
   mountSeq,
@@ -4071,309 +4909,6 @@ const resolveRotateOverlayViewportVariables = ({
   };
 };
 
-// src/shared/media/video-factory.js
-const VIDEO_PROFILES = Object.freeze({
-  liveEngine: Object.freeze({
-    styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)",
-    autoplay: true,
-    playsInline: true,
-    controls: false,
-    preload: ""
-  }),
-  popupPlayback: Object.freeze({
-    styleText: "",
-    autoplay: true,
-    playsInline: true,
-    controls: true,
-    preload: "metadata"
-  }),
-  recordingPlayback: Object.freeze({
-    styleText: "",
-    autoplay: false,
-    playsInline: true,
-    controls: true,
-    preload: "metadata"
-  })
-});
-const VIDEO_VIEW_PROFILE_MAP = Object.freeze({
-  live: "liveEngine",
-  popup: "popupPlayback",
-  recording: "recordingPlayback"
-});
-const VIDEO_VIEW_DEFAULT_OPTIONS = Object.freeze({
-  live: Object.freeze({ viewType: "live" }),
-  popup: Object.freeze({ viewType: "popup" }),
-  recording: Object.freeze({ viewType: "recording" })
-});
-const EMPTY_OPTIONS = Object.freeze({});
-const globalRuntimeVideoViewDefaultOptions = {
-  live: {},
-  popup: {},
-  recording: {}
-};
-const scopedRuntimeVideoViewDefaultsWeak = new WeakMap();
-const scopedRuntimeVideoViewDefaultsMap = new Map();
-function createRuntimeDefaultsStore() {
-  return {
-    live: {},
-    popup: {},
-    recording: {}
-  };
-}
-function resolveVideoProfileNameForView(viewType) {
-  const key = String(viewType || "").trim().toLowerCase();
-  return VIDEO_VIEW_PROFILE_MAP[key] || VIDEO_VIEW_PROFILE_MAP.live;
-}
-function resolveViewKey(viewType) {
-  const key = String(viewType || "").trim().toLowerCase();
-  return VIDEO_VIEW_DEFAULT_OPTIONS[key] ? key : "live";
-}
-function normalizeOptionsObject(value) {
-  return value && typeof value === "object" ? value : EMPTY_OPTIONS;
-}
-function isObjectScopeKey(scopeKey) {
-  return scopeKey !== null && (typeof scopeKey === "object" || typeof scopeKey === "function");
-}
-function resolveScopedRuntimeStore(scopeKey, { create = false } = {}) {
-  if (scopeKey === null || scopeKey === void 0) return null;
-  if (isObjectScopeKey(scopeKey)) {
-    const existing2 = scopedRuntimeVideoViewDefaultsWeak.get(scopeKey);
-    if (existing2 || !create) return existing2 || null;
-    const next2 = createRuntimeDefaultsStore();
-    scopedRuntimeVideoViewDefaultsWeak.set(scopeKey, next2);
-    return next2;
-  }
-  const existing = scopedRuntimeVideoViewDefaultsMap.get(scopeKey);
-  if (existing || !create) return existing || null;
-  const next = createRuntimeDefaultsStore();
-  scopedRuntimeVideoViewDefaultsMap.set(scopeKey, next);
-  return next;
-}
-function resolveRuntimeDefaultsForView(viewKey, context = {}) {
-  const globalDefaults = globalRuntimeVideoViewDefaultOptions[viewKey] || EMPTY_OPTIONS;
-  const scopedStore = resolveScopedRuntimeStore(context.scopeKey);
-  const scopedDefaults = scopedStore?.[viewKey] || EMPTY_OPTIONS;
-  return mergeOptionLayers(
-    EMPTY_OPTIONS,
-    normalizeOptionsObject(globalDefaults),
-    normalizeOptionsObject(scopedDefaults)
-  );
-}
-function mergeOptionLayers(base, runtimeDefaults, overrides) {
-  const merged = {
-    ...base,
-    ...runtimeDefaults,
-    ...overrides
-  };
-  const mergeObjectKey = (key) => {
-    if (base[key] || runtimeDefaults[key] || overrides[key]) {
-      merged[key] = {
-        ...normalizeOptionsObject(base[key]),
-        ...normalizeOptionsObject(runtimeDefaults[key]),
-        ...normalizeOptionsObject(overrides[key])
-      };
-    }
-  };
-  mergeObjectKey("style");
-  mergeObjectKey("dataset");
-  mergeObjectKey("attributes");
-  if (base.classNames || runtimeDefaults.classNames || overrides.classNames) {
-    const tokens = [
-      ...Array.isArray(base.classNames) ? base.classNames : [],
-      ...Array.isArray(runtimeDefaults.classNames) ? runtimeDefaults.classNames : [],
-      ...Array.isArray(overrides.classNames) ? overrides.classNames : []
-    ].map((token) => String(token || "").trim()).filter(Boolean);
-    merged.classNames = [...new Set(tokens)];
-  }
-  return merged;
-}
-function setVideoViewDefaultOptions(viewType, defaults = {}) {
-  const viewKey = resolveViewKey(viewType);
-  globalRuntimeVideoViewDefaultOptions[viewKey] = {
-    ...normalizeOptionsObject(defaults)
-  };
-}
-function getVideoViewDefaultOptions(viewType) {
-  const viewKey = resolveViewKey(viewType);
-  return {
-    ...normalizeOptionsObject(globalRuntimeVideoViewDefaultOptions[viewKey])
-  };
-}
-function resetVideoViewDefaultOptions(viewType = null) {
-  if (viewType == null) {
-    for (const key of Object.keys(globalRuntimeVideoViewDefaultOptions)) {
-      globalRuntimeVideoViewDefaultOptions[key] = {};
-    }
-    return;
-  }
-  const viewKey = resolveViewKey(viewType);
-  globalRuntimeVideoViewDefaultOptions[viewKey] = {};
-}
-function setScopedVideoViewDefaultOptions(viewType, defaults = {}, context = {}) {
-  const viewKey = resolveViewKey(viewType);
-  const scopeKey = context?.scopeKey;
-  const store = resolveScopedRuntimeStore(scopeKey, { create: true });
-  if (!store) {
-    setVideoViewDefaultOptions(viewType, defaults);
-    return;
-  }
-  store[viewKey] = {
-    ...normalizeOptionsObject(defaults)
-  };
-}
-function getScopedVideoViewDefaultOptions(viewType, context = {}) {
-  const viewKey = resolveViewKey(viewType);
-  const scopeKey = context?.scopeKey;
-  const store = resolveScopedRuntimeStore(scopeKey);
-  if (!store) return {};
-  return { ...normalizeOptionsObject(store[viewKey]) };
-}
-function resetScopedVideoViewDefaultOptions(viewType = null, context = {}) {
-  const scopeKey = context?.scopeKey;
-  const store = resolveScopedRuntimeStore(scopeKey);
-  if (!store) return;
-  if (viewType == null) {
-    for (const key of Object.keys(store)) {
-      store[key] = {};
-    }
-    return;
-  }
-  const viewKey = resolveViewKey(viewType);
-  store[viewKey] = {};
-}
-function buildVideoOptionsForView(viewType, overrides = {}, context = {}) {
-  const viewKey = resolveViewKey(viewType);
-  const base = VIDEO_VIEW_DEFAULT_OPTIONS[viewKey] || VIDEO_VIEW_DEFAULT_OPTIONS.live;
-  const runtimeDefaults = resolveRuntimeDefaultsForView(viewKey, context);
-  const safeOverrides = normalizeOptionsObject(overrides);
-  return mergeOptionLayers(base, runtimeDefaults, safeOverrides);
-}
-function resolveVideoProfile({ profile, viewType } = {}) {
-  const profileName = profile || resolveVideoProfileNameForView(viewType);
-  return VIDEO_PROFILES[profileName] || VIDEO_PROFILES.liveEngine;
-}
-function applyVideoBooleanProperty(video, key, value) {
-  if (typeof value === "boolean") {
-    video[key] = value;
-  }
-}
-function applyVideoStyleProperty(video, styleKey, value) {
-  if (!video?.style || !styleKey) return;
-  if (value === null) {
-    video.style[styleKey] = "";
-    return;
-  }
-  if (value === void 0) return;
-  video.style[styleKey] = String(value);
-}
-function applyVideoStyleOptions(video, options = {}) {
-  const styleOptions = {
-    objectFit: options.objectFit,
-    objectPosition: options.objectPosition,
-    aspectRatio: options.aspectRatio,
-    filter: options.filter,
-    borderRadius: options.borderRadius,
-    boxShadow: options.boxShadow,
-    ...options.style && typeof options.style === "object" ? options.style : {}
-  };
-  for (const [styleKey, value] of Object.entries(styleOptions)) {
-    applyVideoStyleProperty(video, styleKey, value);
-  }
-}
-function applyVideoClassOptions(video, options = {}) {
-  const { className, classNames } = options;
-  if (className !== void 0) {
-    video.className = className == null ? "" : String(className);
-  }
-  if (Array.isArray(classNames) && video.classList) {
-    for (const classToken of classNames) {
-      const token = String(classToken || "").trim();
-      if (!token) continue;
-      video.classList.add(token);
-    }
-  }
-}
-function applyVideoDatasetOptions(video, options = {}) {
-  if (!video?.dataset || !options?.dataset || typeof options.dataset !== "object") {
-    return;
-  }
-  for (const [key, value] of Object.entries(options.dataset)) {
-    if (!key) continue;
-    if (value === null || value === void 0 || value === false) {
-      delete video.dataset[key];
-      continue;
-    }
-    video.dataset[key] = value === true ? "1" : String(value);
-  }
-}
-function configureVideoElement(video, options = {}) {
-  if (!video) return video;
-  const profile = resolveVideoProfile({
-    profile: options.profile,
-    viewType: options.viewType
-  });
-  const styleText = options.styleText || profile.styleText;
-  applyVideoBooleanProperty(
-    video,
-    "autoplay",
-    options.autoplay ?? profile.autoplay
-  );
-  applyVideoBooleanProperty(
-    video,
-    "playsInline",
-    options.playsInline ?? profile.playsInline
-  );
-  applyVideoBooleanProperty(video, "muted", options.muted);
-  applyVideoBooleanProperty(
-    video,
-    "controls",
-    options.controls ?? profile.controls
-  );
-  if (options.defaultMuted !== void 0) {
-    applyVideoBooleanProperty(video, "defaultMuted", options.defaultMuted);
-  }
-  if (options.preload || profile.preload) {
-    video.preload = options.preload || profile.preload;
-  }
-  if (styleText) {
-    video.style.cssText = styleText;
-  }
-  applyVideoStyleOptions(video, options);
-  applyVideoClassOptions(video, options);
-  applyVideoDatasetOptions(video, options);
-  video.setAttribute("playsinline", "");
-  video.setAttribute("webkit-playsinline", "");
-  if (options.attributes && typeof options.attributes === "object") {
-    for (const [name, value] of Object.entries(options.attributes)) {
-      if (value === null || value === void 0 || value === false) {
-        video.removeAttribute(name);
-      } else if (value === true) {
-        video.setAttribute(name, "");
-      } else {
-        video.setAttribute(name, String(value));
-      }
-    }
-  }
-  return video;
-}
-function createVideoElement(options = {}) {
-  const video = document.createElement("video");
-  configureVideoElement(video, options);
-  if (typeof options.src === "string") {
-    video.src = options.src;
-  }
-  return video;
-}
-function supportsNativeHlsPlayback() {
-  const video = document.createElement("video");
-  return !!(video.canPlayType?.("application/vnd.apple.mpegurl") || video.canPlayType?.("application/x-mpegURL"));
-}
-function mountNodeIntoSlot(slot, node) {
-  if (!slot || !node) return;
-  slot.innerHTML = "";
-  slot.appendChild(node);
-}
-
 // src/integrations/home-assistant/playback.js
 function buildHaCameraStreamState(hass, entity, streamType = null, fallbackStreamType = "webrtc") {
   const raw = hass?.states?.[entity];
@@ -4854,78 +5389,6 @@ const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
     hasSource: !!src
   };
 };
-
-// src/features/live/startup-policy.js
-const MIN_WAIT_MS = 500;
-const normalizeWaitMs = (value, fallback) => Math.max(MIN_WAIT_MS, Number(value ?? fallback));
-const normalizeNumber = (value, fallback) => Number(value ?? fallback);
-const resolveHaDirectStartup = (startup = {}) => ({
-  waitMs: normalizeWaitMs(startup.waitMs, 8e3),
-  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
-  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
-  requireReadyState: normalizeNumber(startup.requireReadyState, 0),
-  strict: startup.strict ?? false,
-  streamType: startup.streamType
-});
-const buildHaDirectMountPlan = ({
-  startup = {},
-  preferredStreamType
-}) => {
-  const policy = resolveHaDirectStartup(startup);
-  return {
-    streamType: policy.streamType || preferredStreamType,
-    waitOptions: {
-      minCurrentTime: policy.minCurrentTime,
-      minDecodedFrames: policy.minDecodedFrames,
-      requireReadyState: policy.requireReadyState,
-      strict: policy.strict
-    },
-    waitMs: policy.waitMs
-  };
-};
-const resolveMseStartup = (startup = {}) => ({
-  waitMs: normalizeWaitMs(startup.waitMs, 8e3),
-  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.2),
-  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 2),
-  requireReadyState: normalizeNumber(startup.requireReadyState, 3),
-  strict: startup.strict !== false
-});
-const resolveWebRtcStartup = ({ startup = {} }) => ({
-  waitMs: normalizeWaitMs(startup.waitMs, 7e3),
-  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
-  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
-  requireReadyState: normalizeNumber(startup.requireReadyState, 0),
-  strict: startup.strict !== false
-});
-const resolveHlsStartup = (startup = {}) => ({
-  waitMs: normalizeWaitMs(startup.waitMs, 5e3)
-});
-const resolveHaDirectMountUnavailableState = () => ({
-  loading: false,
-  fallbackVisible: false,
-  refreshFallbackImage: false
-});
-const resolveHaDirectReadyState = ({
-  rotateOverlayActive = false,
-  isCurrentEngine = false,
-  waitSucceeded = false
-}) => ({
-  shouldApply: Boolean(isCurrentEngine && waitSucceeded),
-  loading: false,
-  fallbackVisible: false,
-  refreshFallbackImage: false,
-  enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine)
-});
-const resolveHaDirectStabilizedState = ({
-  rotateOverlayActive = false,
-  isCurrentEngine = false
-}) => ({
-  shouldApply: Boolean(isCurrentEngine),
-  loading: false,
-  fallbackVisible: false,
-  refreshFallbackImage: false,
-  enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine)
-});
 
 // src/card/controls/shell-nav.tmpl.js
 function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
@@ -10119,6 +10582,32 @@ const FrigateViewCard = class extends HTMLElement {
       },
       supportsNativeHlsPlayback: () => this._supportsNativeHlsPlayback()
     });
+    this._go2rtcMounter = createGo2RtcMounter({
+      resolver: this._go2rtcResolver,
+      getStreamMuted: () => this._streamMuted,
+      waitForStreamStart: (streamEl, timeoutMs, opts) => this._waitForStreamStart(streamEl, timeoutMs, opts),
+      attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
+      assignCommittedEngine: (engine) => {
+        this._engine = engine;
+      },
+      onCommittedStream: (type) => {
+        this._setActiveStreamType(type);
+        this._setStreamLoading(false);
+        this._setStreamFallbackVisible(false);
+      },
+      scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
+      isFirefox: () => this._isFirefox(),
+      scopeKey: this,
+      resetMseDiagnostics: (connectedAt) => {
+        this._mseConnectAt = connectedAt;
+        this._mseLastChunkAt = 0;
+        this._mseChunkCount = 0;
+      },
+      markMseChunk: (chunkAt) => {
+        this._mseLastChunkAt = chunkAt;
+        this._mseChunkCount += 1;
+      }
+    });
     this._viewMode = "single";
     this._eventsMode = "camera";
     this._events = [];
@@ -11494,12 +11983,12 @@ const FrigateViewCard = class extends HTMLElement {
     const disableHlsOnDesktop = DEVICE_PROFILE.isDesktop && this._cameraDisableHlsDesktop(targetEntity);
     const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
     const build = {
-      webrtc: (attemptOptions = {}) => this._tryMountGo2RTCWebRTC(
+      webrtc: (attemptOptions = {}) => this._go2rtcMounter.tryMountWebRtc(
         hiddenSlot(),
         { waitMs: 7e3 },
         { commit: false, ...attemptOptions }
       ),
-      mse: (attemptOptions = {}) => this._tryMountGo2RTCMSE(
+      mse: (attemptOptions = {}) => this._go2rtcMounter.tryMountMse(
         hiddenSlot(),
         {
           waitMs: 4e3,
@@ -11510,7 +11999,7 @@ const FrigateViewCard = class extends HTMLElement {
         },
         { commit: false, ...attemptOptions }
       ),
-      hls: (attemptOptions = {}) => this._tryMountGo2RTCHLS(
+      hls: (attemptOptions = {}) => this._go2rtcMounter.tryMountHls(
         hiddenSlot(),
         { waitMs: 5e3 },
         { commit: false, ...attemptOptions }
@@ -11592,27 +12081,6 @@ const FrigateViewCard = class extends HTMLElement {
     await destroyLosers();
     return false;
   }
-  _go2rtcCodecs(isSupported) {
-    const codecs = [
-      "avc1.640029",
-      "avc1.64002A",
-      "avc1.640033",
-      "hvc1.1.6.L153.B0",
-      "mp4a.40.2",
-      "mp4a.40.5",
-      "flac",
-      "opus"
-    ];
-    return codecs.filter((c) => isSupported(`video/mp4; codecs="${c}"`)).join(",");
-  }
-  _normalizeGo2RTCCodecs(value) {
-    if (!value) return "";
-    const s = String(value).trim();
-    const m = s.match(/codecs\s*=\s*"([^"]+)"/i);
-    if (m && m[1]) return m[1].trim();
-    if (/^video\//i.test(s)) return "";
-    return s;
-  }
   _waitForStreamStart(streamEl, timeoutMs = 3500, opts = {}) {
     const minCurrentTime = Number(opts.minCurrentTime ?? 0.05);
     const minDecodedFrames = Number(opts.minDecodedFrames ?? 1);
@@ -11670,47 +12138,6 @@ const FrigateViewCard = class extends HTMLElement {
       }, 180);
       const to = setTimeout(() => done(false), timeoutMs);
     });
-  }
-  _startFirefoxLiveCatchup(video) {
-    if (!video || !this._isFirefox()) return () => {
-    };
-    let firstFrameAt = 0;
-    let hardSeekUsed = false;
-    const t = setInterval(() => {
-      try {
-        const b = video.buffered;
-        if (!b || !b.length) return;
-        const end = b.end(b.length - 1);
-        const cur = Number(video.currentTime) || 0;
-        if (cur > 0.05 && !firstFrameAt) firstFrameAt = Date.now();
-        const lag = end - cur;
-        if (!Number.isFinite(lag) || lag <= 0) return;
-        const sinceFirstFrame = firstFrameAt ? Date.now() - firstFrameAt : 0;
-        if (sinceFirstFrame > 0 && sinceFirstFrame < 4e3) {
-          if (lag > 3 && !hardSeekUsed) {
-            video.currentTime = Math.max(0, end - 0.08);
-            video.playbackRate = 1;
-            hardSeekUsed = true;
-          } else if (lag > 1.5) video.playbackRate = 1.08;
-          else if (lag > 0.7) video.playbackRate = 1.04;
-          else video.playbackRate = 1;
-          return;
-        }
-        if (lag > 2.8 && !hardSeekUsed && sinceFirstFrame >= 4e3) {
-          video.currentTime = Math.max(0, end - 0.2);
-          video.playbackRate = 1;
-          hardSeekUsed = true;
-        } else if (lag > 2) {
-          video.playbackRate = 1.05;
-        } else if (lag > 1) {
-          video.playbackRate = 1.02;
-        } else {
-          video.playbackRate = 1;
-        }
-      } catch (_) {
-      }
-    }, 500);
-    return () => clearInterval(t);
   }
   _applyVideoFit(videoEl) {
     if (!videoEl) return;
@@ -11791,166 +12218,6 @@ const FrigateViewCard = class extends HTMLElement {
   _cameraContext(entity) {
     return this._camCache[entity] || mkCamState();
   }
-  async _tryMountGo2RTCMSE(slot, startup = null, options = {}) {
-    const {
-      waitMs,
-      minCurrentTime,
-      minDecodedFrames,
-      requireReadyState,
-      strict
-    } = resolveMseStartup(startup || {});
-    const { entity, abortSignal, commit } = this._go2rtcResolver.resolveMountRequest(options);
-    const muted = options?.muted ?? this._streamMuted;
-    if (!entity) return false;
-    if (abortSignal?.aborted) return false;
-    if (!("WebSocket" in window) || !("MediaSource" in window)) {
-      return false;
-    }
-    const wsUrl = await this._go2rtcResolver.websocketUrlForEntity(entity);
-    if (!wsUrl) {
-      return false;
-    }
-    const video = createVideoElement(
-      buildVideoOptionsForView(
-        "live",
-        {
-          muted,
-          controls: false
-        },
-        { scopeKey: this }
-      )
-    );
-    const ms = new MediaSource();
-    video.src = URL.createObjectURL(ms);
-    mountNodeIntoSlot(slot, video);
-    this._attachVideoFit(video);
-    const ws = new WebSocket(wsUrl);
-    ws.binaryType = "arraybuffer";
-    const startupAbort = new AbortController();
-    let abortBound = false;
-    let streamStarted = false;
-    this._mseConnectAt = Date.now();
-    this._mseLastChunkAt = 0;
-    this._mseChunkCount = 0;
-    let sb = null;
-    let mseRequested = false;
-    let queue = [];
-    const appendNext = () => {
-      if (!sb || sb.updating || !queue.length) return;
-      try {
-        sb.appendBuffer(queue.shift());
-      } catch (_) {
-        queue = [];
-      }
-    };
-    const stopCatchup = this._startFirefoxLiveCatchup(video);
-    const requestMSE = () => {
-      if (mseRequested) return;
-      if (ws.readyState !== WebSocket.OPEN) return;
-      const codecs = this._go2rtcCodecs(MediaSource.isTypeSupported);
-      mseRequested = true;
-      ws.send(JSON.stringify({ type: "mse", value: codecs }));
-    };
-    const destroy = () => {
-      try {
-        if (!startupAbort.signal.aborted) startupAbort.abort();
-      } catch (_) {
-      }
-      try {
-        ws.close();
-      } catch (_) {
-      }
-      try {
-        stopCatchup();
-      } catch (_) {
-      }
-      try {
-        if (video.src) URL.revokeObjectURL(video.src);
-      } catch (_) {
-      }
-      if (abortSignal && abortBound) {
-        abortSignal.removeEventListener("abort", onAbort);
-        abortBound = false;
-      }
-    };
-    const onAbort = () => {
-      destroy();
-    };
-    if (abortSignal) {
-      abortSignal.addEventListener("abort", onAbort, { once: true });
-      abortBound = true;
-    }
-    const engine = { video, ws, destroy };
-    if (commit) this._engine = engine;
-    ms.addEventListener(
-      "sourceopen",
-      () => {
-        requestMSE();
-      },
-      { once: true }
-    );
-    ws.addEventListener("open", () => {
-      if (ms.readyState === "open") requestMSE();
-    });
-    ws.addEventListener("error", () => {
-      if (!startupAbort.signal.aborted) startupAbort.abort();
-    });
-    ws.addEventListener("close", (ev) => {
-      if (!startupAbort.signal.aborted) startupAbort.abort();
-      if (streamStarted && commit && this._engine === engine) {
-        this._scheduleResumeLive("mse-ws-closed");
-      }
-    });
-    ws.addEventListener("message", (ev) => {
-      if (typeof ev.data === "string") {
-        let msg;
-        try {
-          msg = JSON.parse(ev.data);
-        } catch (_) {
-          return;
-        }
-        if (msg?.type === "mse" && msg.value && ms.readyState === "open") {
-          if (sb) return;
-          try {
-            const codecs = this._normalizeGo2RTCCodecs(msg.value);
-            if (!codecs) {
-              return;
-            }
-            const mime = `video/mp4; codecs="${codecs}"`;
-            if (!MediaSource.isTypeSupported(mime)) return;
-            sb = ms.addSourceBuffer(mime);
-            sb.mode = "segments";
-            sb.addEventListener("updateend", appendNext);
-            appendNext();
-          } catch (e) {
-          }
-        }
-        return;
-      }
-      if (!(ev.data instanceof ArrayBuffer)) return;
-      this._mseLastChunkAt = Date.now();
-      this._mseChunkCount += 1;
-      queue.push(ev.data);
-      appendNext();
-    });
-    const started = await this._waitForStreamStart(slot, waitMs, {
-      minCurrentTime,
-      minDecodedFrames,
-      requireReadyState,
-      strict,
-      abortSignal: startupAbort.signal
-    });
-    if (!started) {
-      destroy();
-      return false;
-    }
-    streamStarted = true;
-    if (!commit) return { ok: true, type: "mse", engine, slot };
-    this._setActiveStreamType("mse");
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    return true;
-  }
   _mountGridSnapshotCell(cell, { entity, stateObj }) {
     if (!cell || !entity) return false;
     const img = document.createElement("img");
@@ -11977,7 +12244,7 @@ const FrigateViewCard = class extends HTMLElement {
     host.style.cssText = "width:100%;height:100%;display:block";
     cell.appendChild(host);
     void (async () => {
-      const result = await this._tryMountGo2RTCMSE(
+      const result = await this._go2rtcMounter.tryMountMse(
         host,
         {
           waitMs: 4e3,
@@ -12054,239 +12321,6 @@ const FrigateViewCard = class extends HTMLElement {
       return true;
     }
     return this._mountGridSnapshotCell(cell, { entity, stateObj });
-  }
-  async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
-    const {
-      waitMs,
-      minCurrentTime,
-      minDecodedFrames,
-      requireReadyState,
-      strict
-    } = resolveWebRtcStartup({
-      startup: startup || {}
-    });
-    const { entity, abortSignal, commit } = this._go2rtcResolver.resolveMountRequest(options);
-    if (abortSignal?.aborted) return false;
-    if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
-      return false;
-    }
-    if (!entity) return false;
-    const wsUrl = await this._go2rtcResolver.websocketUrlForEntity(entity);
-    if (!wsUrl) return false;
-    const video = createVideoElement(
-      buildVideoOptionsForView(
-        "live",
-        {
-          muted: this._streamMuted,
-          controls: false
-        },
-        { scopeKey: this }
-      )
-    );
-    mountNodeIntoSlot(slot, video);
-    this._attachVideoFit(video);
-    const pc = new RTCPeerConnection({
-      bundlePolicy: "max-bundle",
-      sdpSemantics: "unified-plan",
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-    });
-    const ws = new WebSocket(wsUrl);
-    let abortBound = false;
-    const destroy = () => {
-      try {
-        ws.close();
-      } catch (_) {
-      }
-      try {
-        pc.close();
-      } catch (_) {
-      }
-      if (abortSignal && abortBound) {
-        abortSignal.removeEventListener("abort", onAbort);
-        abortBound = false;
-      }
-    };
-    const onAbort = () => {
-      destroy();
-    };
-    if (abortSignal) {
-      abortSignal.addEventListener("abort", onAbort, { once: true });
-      abortBound = true;
-    }
-    const engine = { video, pc, ws, destroy };
-    if (commit) this._engine = engine;
-    pc.addTransceiver("video", { direction: "recvonly" });
-    pc.addTransceiver("audio", { direction: "recvonly" });
-    let firstTrackLogged = false;
-    let answerLogged = false;
-    let wsOpenLogged = false;
-    let firstIceCandidateSent = false;
-    let firstRemoteIceLogged = false;
-    let resolveFirstRenderedFrame = null;
-    const firstRenderedFramePromise = new Promise((resolve) => {
-      resolveFirstRenderedFrame = resolve;
-    });
-    pc.addEventListener("track", (ev) => {
-      if (ev.streams && ev.streams[0]) {
-        video.srcObject = ev.streams[0];
-      } else {
-        const ms = video.srcObject || new MediaStream();
-        ms.addTrack(ev.track);
-        video.srcObject = ms;
-      }
-      video.play().catch(() => {
-      });
-      if (!firstTrackLogged) {
-        firstTrackLogged = true;
-        if (video.requestVideoFrameCallback) {
-          video.requestVideoFrameCallback(() => {
-            if (!resolveFirstRenderedFrame) return;
-            resolveFirstRenderedFrame(true);
-            resolveFirstRenderedFrame = null;
-          });
-        }
-      }
-    });
-    pc.addEventListener("connectionstatechange", () => {
-    });
-    pc.addEventListener("iceconnectionstatechange", () => {
-    });
-    pc.addEventListener("icecandidate", (ev) => {
-      if (ws.readyState !== WebSocket.OPEN) return;
-      const candidate = ev.candidate ? ev.candidate.toJSON().candidate : "";
-      ws.send(JSON.stringify({ type: "webrtc/candidate", value: candidate }));
-      if (!firstIceCandidateSent && candidate) {
-        firstIceCandidateSent = true;
-      }
-    });
-    ws.addEventListener("message", (ev) => {
-      let msg;
-      try {
-        msg = JSON.parse(ev.data);
-      } catch (_) {
-        return;
-      }
-      if (msg?.type === "webrtc/answer") {
-        if (!answerLogged) {
-          answerLogged = true;
-        }
-        pc.setRemoteDescription({
-          type: "answer",
-          sdp: msg.value
-        }).catch(() => {
-        });
-      } else if (msg?.type === "webrtc/candidate") {
-        if (!firstRemoteIceLogged) {
-          firstRemoteIceLogged = true;
-        }
-        pc.addIceCandidate({ candidate: msg.value, sdpMid: "0" }).catch(
-          () => {
-          }
-        );
-      }
-    });
-    ws.addEventListener("error", () => {
-    });
-    ws.addEventListener("close", (ev) => {
-    });
-    ws.addEventListener("open", async () => {
-      if (!wsOpenLogged) {
-        wsOpenLogged = true;
-      }
-      try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        ws.send(JSON.stringify({ type: "webrtc/offer", value: offer.sdp }));
-      } catch (_) {
-      }
-    });
-    const started = await Promise.race([
-      this._waitForStreamStart(video, waitMs, {
-        minCurrentTime,
-        minDecodedFrames,
-        requireReadyState,
-        strict,
-        abortSignal
-      }),
-      firstRenderedFramePromise
-    ]);
-    resolveFirstRenderedFrame = null;
-    if (!started) {
-      destroy();
-      return false;
-    }
-    if (!commit) return { ok: true, type: "webrtc", engine, slot };
-    this._setActiveStreamType("webrtc");
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    return true;
-  }
-  async _tryMountGo2RTCHLS(slot, startup = null, options = {}) {
-    const { waitMs } = resolveHlsStartup(startup || {});
-    const { entity, abortSignal, commit } = this._go2rtcResolver.resolveMountRequest(options);
-    if (abortSignal?.aborted) return false;
-    if (!entity) return false;
-    const hlsSource = await this._go2rtcResolver.hlsUrlForEntity(entity);
-    if (!hlsSource?.url) return false;
-    const video = createVideoElement(
-      buildVideoOptionsForView(
-        "live",
-        {
-          muted: this._streamMuted,
-          controls: false,
-          src: hlsSource.url
-        },
-        { scopeKey: this }
-      )
-    );
-    mountNodeIntoSlot(slot, video);
-    this._attachVideoFit(video);
-    const destroy = () => {
-      try {
-        video.pause();
-        video.removeAttribute("src");
-        video.load();
-      } catch (_) {
-      }
-      try {
-        hlsSource.destroy?.();
-      } catch (_) {
-      }
-      try {
-        if (video.src?.startsWith("blob:")) URL.revokeObjectURL(video.src);
-      } catch (_) {
-      }
-      if (abortSignal && abortBound) {
-        abortSignal.removeEventListener("abort", onAbort);
-        abortBound = false;
-      }
-    };
-    let abortBound = false;
-    const onAbort = () => {
-      destroy();
-    };
-    if (abortSignal) {
-      abortSignal.addEventListener("abort", onAbort, { once: true });
-      abortBound = true;
-    }
-    const engine = { video, destroy };
-    if (commit) this._engine = engine;
-    const started = await this._waitForStreamStart(video, waitMs, {
-      minCurrentTime: 0.05,
-      minDecodedFrames: 1,
-      requireReadyState: 2,
-      strict: false,
-      abortSignal
-    });
-    if (!started) {
-      destroy();
-      return false;
-    }
-    if (!commit) return { ok: true, type: "hls", engine, slot };
-    this._setActiveStreamType("hls");
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    return true;
   }
   _applyLiveMountUiState(quiet = false) {
     const mountUi = resolveLiveMountUiState({ quiet });

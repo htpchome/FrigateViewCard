@@ -104,6 +104,7 @@ import {
   shouldUseGo2RtcForEntity,
 } from "../integrations/frigate/camera-context.js";
 import { createGo2RtcResolver } from "../integrations/frigate/go2rtc-resolver.js";
+import { createGo2RtcMounter } from "../features/live/go2rtc-mounter.js";
 import {
   applyMountWatchdogTimeout,
   beginMountTracking,
@@ -167,9 +168,6 @@ import {
   resolveHaDirectMountUnavailableState,
   resolveHaDirectReadyState,
   resolveHaDirectStabilizedState,
-  resolveHlsStartup,
-  resolveMseStartup,
-  resolveWebRtcStartup,
 } from "../features/live/startup-policy.js";
 import {
   buildControlsSectionMarkup,
@@ -426,6 +424,33 @@ export class FrigateViewCard extends HTMLElement {
         await this._discoverOne(entity);
       },
       supportsNativeHlsPlayback: () => this._supportsNativeHlsPlayback(),
+    });
+    this._go2rtcMounter = createGo2RtcMounter({
+      resolver: this._go2rtcResolver,
+      getStreamMuted: () => this._streamMuted,
+      waitForStreamStart: (streamEl, timeoutMs, opts) =>
+        this._waitForStreamStart(streamEl, timeoutMs, opts),
+      attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
+      assignCommittedEngine: (engine) => {
+        this._engine = engine;
+      },
+      onCommittedStream: (type) => {
+        this._setActiveStreamType(type);
+        this._setStreamLoading(false);
+        this._setStreamFallbackVisible(false);
+      },
+      scheduleResumeLive: (reason) => this._scheduleResumeLive(reason),
+      isFirefox: () => this._isFirefox(),
+      scopeKey: this,
+      resetMseDiagnostics: (connectedAt) => {
+        this._mseConnectAt = connectedAt;
+        this._mseLastChunkAt = 0;
+        this._mseChunkCount = 0;
+      },
+      markMseChunk: (chunkAt) => {
+        this._mseLastChunkAt = chunkAt;
+        this._mseChunkCount += 1;
+      },
     });
     this._viewMode = "single";
     this._eventsMode = "camera";
@@ -2009,13 +2034,13 @@ export class FrigateViewCard extends HTMLElement {
     const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
     const build = {
       webrtc: (attemptOptions = {}) =>
-        this._tryMountGo2RTCWebRTC(
+        this._go2rtcMounter.tryMountWebRtc(
           hiddenSlot(),
           { waitMs: 7000 },
           { commit: false, ...attemptOptions },
         ),
       mse: (attemptOptions = {}) =>
-        this._tryMountGo2RTCMSE(
+        this._go2rtcMounter.tryMountMse(
           hiddenSlot(),
           {
             waitMs: 4000,
@@ -2027,7 +2052,7 @@ export class FrigateViewCard extends HTMLElement {
           { commit: false, ...attemptOptions },
         ),
       hls: (attemptOptions = {}) =>
-        this._tryMountGo2RTCHLS(
+        this._go2rtcMounter.tryMountHls(
           hiddenSlot(),
           { waitMs: 5000 },
           { commit: false, ...attemptOptions },
@@ -2122,31 +2147,6 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
 
-  _go2rtcCodecs(isSupported) {
-    const codecs = [
-      "avc1.640029",
-      "avc1.64002A",
-      "avc1.640033",
-      "hvc1.1.6.L153.B0",
-      "mp4a.40.2",
-      "mp4a.40.5",
-      "flac",
-      "opus",
-    ];
-    return codecs
-      .filter((c) => isSupported(`video/mp4; codecs=\"${c}\"`))
-      .join(",");
-  }
-
-  _normalizeGo2RTCCodecs(value) {
-    if (!value) return "";
-    const s = String(value).trim();
-    const m = s.match(/codecs\s*=\s*"([^"]+)"/i);
-    if (m && m[1]) return m[1].trim();
-    if (/^video\//i.test(s)) return "";
-    return s;
-  }
-
   _waitForStreamStart(streamEl, timeoutMs = 3500, opts = {}) {
     const minCurrentTime = Number(opts.minCurrentTime ?? 0.05);
     const minDecodedFrames = Number(opts.minDecodedFrames ?? 1);
@@ -2208,53 +2208,6 @@ export class FrigateViewCard extends HTMLElement {
       }, 180);
       const to = setTimeout(() => done(false), timeoutMs);
     });
-  }
-
-  _startFirefoxLiveCatchup(video) {
-    if (!video || !this._isFirefox()) return () => {};
-    let firstFrameAt = 0;
-    let hardSeekUsed = false;
-    const t = setInterval(() => {
-      try {
-        const b = video.buffered;
-        if (!b || !b.length) return;
-        const end = b.end(b.length - 1);
-        const cur = Number(video.currentTime) || 0;
-        if (cur > 0.05 && !firstFrameAt) firstFrameAt = Date.now();
-        const lag = end - cur;
-        if (!Number.isFinite(lag) || lag <= 0) return;
-
-        const sinceFirstFrame = firstFrameAt ? Date.now() - firstFrameAt : 0;
-
-        // Startup phase: bias harder toward live edge so Firefox does
-        // not sit behind by a few seconds after initial connect.
-        if (sinceFirstFrame > 0 && sinceFirstFrame < 4000) {
-          if (lag > 3.0 && !hardSeekUsed) {
-            video.currentTime = Math.max(0, end - 0.08);
-            video.playbackRate = 1.0;
-            hardSeekUsed = true;
-          } else if (lag > 1.5) video.playbackRate = 1.08;
-          else if (lag > 0.7) video.playbackRate = 1.04;
-          else video.playbackRate = 1.0;
-          return;
-        }
-
-        // Steady state: keep near live edge with mild catch-up;
-        // allow one hard correction only if still far behind.
-        if (lag > 2.8 && !hardSeekUsed && sinceFirstFrame >= 4000) {
-          video.currentTime = Math.max(0, end - 0.2);
-          video.playbackRate = 1.0;
-          hardSeekUsed = true;
-        } else if (lag > 2.0) {
-          video.playbackRate = 1.05;
-        } else if (lag > 1.0) {
-          video.playbackRate = 1.02;
-        } else {
-          video.playbackRate = 1.0;
-        }
-      } catch (_) {}
-    }, 500);
-    return () => clearInterval(t);
   }
 
   _applyVideoFit(videoEl) {
@@ -2352,183 +2305,6 @@ export class FrigateViewCard extends HTMLElement {
     return this._camCache[entity] || mkCamState();
   }
 
-  async _tryMountGo2RTCMSE(slot, startup = null, options = {}) {
-    const {
-      waitMs,
-      minCurrentTime,
-      minDecodedFrames,
-      requireReadyState,
-      strict,
-    } = resolveMseStartup(startup || {});
-    const { entity, abortSignal, commit } =
-      this._go2rtcResolver.resolveMountRequest(options);
-    const muted = options?.muted ?? this._streamMuted;
-    if (!entity) return false;
-    if (abortSignal?.aborted) return false;
-    if (!("WebSocket" in window) || !("MediaSource" in window)) {
-      return false;
-    }
-
-    const wsUrl = await this._go2rtcResolver.websocketUrlForEntity(entity);
-    if (!wsUrl) {
-      return false;
-    }
-
-    const video = createVideoElement(
-      buildVideoOptionsForView(
-        "live",
-        {
-          muted,
-          controls: false,
-        },
-        { scopeKey: this },
-      ),
-    );
-
-    const ms = new MediaSource();
-    video.src = URL.createObjectURL(ms);
-
-    mountNodeIntoSlot(slot, video);
-    this._attachVideoFit(video);
-
-    const ws = new WebSocket(wsUrl);
-    ws.binaryType = "arraybuffer";
-    const startupAbort = new AbortController();
-    let abortBound = false;
-    let streamStarted = false;
-    this._mseConnectAt = Date.now();
-    this._mseLastChunkAt = 0;
-    this._mseChunkCount = 0;
-
-    let sb = null;
-    let mseRequested = false;
-    let queue = [];
-
-    const appendNext = () => {
-      if (!sb || sb.updating || !queue.length) return;
-      try {
-        sb.appendBuffer(queue.shift());
-      } catch (_) {
-        queue = [];
-      }
-    };
-
-    const stopCatchup = this._startFirefoxLiveCatchup(video);
-    const requestMSE = () => {
-      if (mseRequested) return;
-      if (ws.readyState !== WebSocket.OPEN) return;
-      const codecs = this._go2rtcCodecs(MediaSource.isTypeSupported);
-      mseRequested = true;
-      ws.send(JSON.stringify({ type: "mse", value: codecs }));
-    };
-
-    const destroy = () => {
-      try {
-        if (!startupAbort.signal.aborted) startupAbort.abort();
-      } catch (_) {}
-      try {
-        ws.close();
-      } catch (_) {}
-      try {
-        stopCatchup();
-      } catch (_) {}
-      try {
-        if (video.src) URL.revokeObjectURL(video.src);
-      } catch (_) {}
-      if (abortSignal && abortBound) {
-        abortSignal.removeEventListener("abort", onAbort);
-        abortBound = false;
-      }
-    };
-
-    const onAbort = () => {
-      destroy();
-    };
-    if (abortSignal) {
-      abortSignal.addEventListener("abort", onAbort, { once: true });
-      abortBound = true;
-    }
-
-    const engine = { video, ws, destroy };
-    if (commit) this._engine = engine;
-
-    ms.addEventListener(
-      "sourceopen",
-      () => {
-        requestMSE();
-      },
-      { once: true },
-    );
-
-    ws.addEventListener("open", () => {
-      if (ms.readyState === "open") requestMSE();
-    });
-
-    ws.addEventListener("error", () => {
-      if (!startupAbort.signal.aborted) startupAbort.abort();
-    });
-
-    ws.addEventListener("close", (ev) => {
-      if (!startupAbort.signal.aborted) startupAbort.abort();
-      if (streamStarted && commit && this._engine === engine) {
-        this._scheduleResumeLive("mse-ws-closed");
-      }
-    });
-
-    ws.addEventListener("message", (ev) => {
-      if (typeof ev.data === "string") {
-        let msg;
-        try {
-          msg = JSON.parse(ev.data);
-        } catch (_) {
-          return;
-        }
-
-        if (msg?.type === "mse" && msg.value && ms.readyState === "open") {
-          if (sb) return;
-          try {
-            const codecs = this._normalizeGo2RTCCodecs(msg.value);
-            if (!codecs) {
-              return;
-            }
-            const mime = `video/mp4; codecs=\"${codecs}\"`;
-            if (!MediaSource.isTypeSupported(mime)) return;
-            sb = ms.addSourceBuffer(mime);
-            sb.mode = "segments";
-            sb.addEventListener("updateend", appendNext);
-            appendNext();
-          } catch (e) {}
-        }
-        return;
-      }
-
-      if (!(ev.data instanceof ArrayBuffer)) return;
-      this._mseLastChunkAt = Date.now();
-      this._mseChunkCount += 1;
-      queue.push(ev.data);
-      appendNext();
-    });
-
-    const started = await this._waitForStreamStart(slot, waitMs, {
-      minCurrentTime,
-      minDecodedFrames,
-      requireReadyState,
-      strict,
-      abortSignal: startupAbort.signal,
-    });
-    if (!started) {
-      destroy();
-      return false;
-    }
-    streamStarted = true;
-
-    if (!commit) return { ok: true, type: "mse", engine, slot };
-    this._setActiveStreamType("mse");
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    return true;
-  }
-
   _mountGridSnapshotCell(cell, { entity, stateObj }) {
     if (!cell || !entity) return false;
     const img = document.createElement("img");
@@ -2558,7 +2334,7 @@ export class FrigateViewCard extends HTMLElement {
     host.style.cssText = "width:100%;height:100%;display:block";
     cell.appendChild(host);
     void (async () => {
-      const result = await this._tryMountGo2RTCMSE(
+      const result = await this._go2rtcMounter.tryMountMse(
         host,
         {
           waitMs: 4000,
@@ -2637,254 +2413,6 @@ export class FrigateViewCard extends HTMLElement {
       return true;
     }
     return this._mountGridSnapshotCell(cell, { entity, stateObj });
-  }
-
-  async _tryMountGo2RTCWebRTC(slot, startup = null, options = {}) {
-    const {
-      waitMs,
-      minCurrentTime,
-      minDecodedFrames,
-      requireReadyState,
-      strict,
-    } = resolveWebRtcStartup({
-      startup: startup || {},
-    });
-    const { entity, abortSignal, commit } =
-      this._go2rtcResolver.resolveMountRequest(options);
-
-    if (abortSignal?.aborted) return false;
-
-    if (!("RTCPeerConnection" in window) || !("WebSocket" in window)) {
-      return false;
-    }
-
-    if (!entity) return false;
-    const wsUrl = await this._go2rtcResolver.websocketUrlForEntity(entity);
-    if (!wsUrl) return false;
-
-    const video = createVideoElement(
-      buildVideoOptionsForView(
-        "live",
-        {
-          muted: this._streamMuted,
-          controls: false,
-        },
-        { scopeKey: this },
-      ),
-    );
-
-    mountNodeIntoSlot(slot, video);
-    this._attachVideoFit(video);
-
-    const pc = new RTCPeerConnection({
-      bundlePolicy: "max-bundle",
-      sdpSemantics: "unified-plan",
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
-    const ws = new WebSocket(wsUrl);
-    let abortBound = false;
-
-    const destroy = () => {
-      try {
-        ws.close();
-      } catch (_) {}
-      try {
-        pc.close();
-      } catch (_) {}
-      if (abortSignal && abortBound) {
-        abortSignal.removeEventListener("abort", onAbort);
-        abortBound = false;
-      }
-    };
-
-    const onAbort = () => {
-      destroy();
-    };
-    if (abortSignal) {
-      abortSignal.addEventListener("abort", onAbort, { once: true });
-      abortBound = true;
-    }
-
-    const engine = { video, pc, ws, destroy };
-    if (commit) this._engine = engine;
-
-    pc.addTransceiver("video", { direction: "recvonly" });
-    pc.addTransceiver("audio", { direction: "recvonly" });
-
-    let firstTrackLogged = false;
-    let answerLogged = false;
-    let wsOpenLogged = false;
-    let firstIceCandidateSent = false;
-    let firstRemoteIceLogged = false;
-    let resolveFirstRenderedFrame = null;
-    const firstRenderedFramePromise = new Promise((resolve) => {
-      resolveFirstRenderedFrame = resolve;
-    });
-
-    pc.addEventListener("track", (ev) => {
-      if (ev.streams && ev.streams[0]) {
-        video.srcObject = ev.streams[0];
-      } else {
-        const ms = video.srcObject || new MediaStream();
-        ms.addTrack(ev.track);
-        video.srcObject = ms;
-      }
-      video.play().catch(() => {});
-      if (!firstTrackLogged) {
-        firstTrackLogged = true;
-        if (video.requestVideoFrameCallback) {
-          video.requestVideoFrameCallback(() => {
-            if (!resolveFirstRenderedFrame) return;
-            resolveFirstRenderedFrame(true);
-            resolveFirstRenderedFrame = null;
-          });
-        }
-      }
-    });
-
-    pc.addEventListener("connectionstatechange", () => {});
-
-    pc.addEventListener("iceconnectionstatechange", () => {});
-
-    pc.addEventListener("icecandidate", (ev) => {
-      if (ws.readyState !== WebSocket.OPEN) return;
-      const candidate = ev.candidate ? ev.candidate.toJSON().candidate : "";
-      ws.send(JSON.stringify({ type: "webrtc/candidate", value: candidate }));
-      if (!firstIceCandidateSent && candidate) {
-        firstIceCandidateSent = true;
-      }
-    });
-
-    ws.addEventListener("message", (ev) => {
-      let msg;
-      try {
-        msg = JSON.parse(ev.data);
-      } catch (_) {
-        return;
-      }
-      if (msg?.type === "webrtc/answer") {
-        if (!answerLogged) {
-          answerLogged = true;
-        }
-        pc.setRemoteDescription({
-          type: "answer",
-          sdp: msg.value,
-        }).catch(() => {});
-      } else if (msg?.type === "webrtc/candidate") {
-        if (!firstRemoteIceLogged) {
-          firstRemoteIceLogged = true;
-        }
-        pc.addIceCandidate({ candidate: msg.value, sdpMid: "0" }).catch(
-          () => {},
-        );
-      }
-    });
-
-    ws.addEventListener("error", () => {});
-
-    ws.addEventListener("close", (ev) => {});
-
-    ws.addEventListener("open", async () => {
-      if (!wsOpenLogged) {
-        wsOpenLogged = true;
-      }
-      try {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        ws.send(JSON.stringify({ type: "webrtc/offer", value: offer.sdp }));
-      } catch (_) {}
-    });
-
-    const started = await Promise.race([
-      this._waitForStreamStart(video, waitMs, {
-        minCurrentTime,
-        minDecodedFrames,
-        requireReadyState,
-        strict,
-        abortSignal,
-      }),
-      firstRenderedFramePromise,
-    ]);
-    resolveFirstRenderedFrame = null;
-    if (!started) {
-      destroy();
-      return false;
-    }
-    if (!commit) return { ok: true, type: "webrtc", engine, slot };
-    this._setActiveStreamType("webrtc");
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    return true;
-  }
-
-  async _tryMountGo2RTCHLS(slot, startup = null, options = {}) {
-    const { waitMs } = resolveHlsStartup(startup || {});
-    const { entity, abortSignal, commit } =
-      this._go2rtcResolver.resolveMountRequest(options);
-    if (abortSignal?.aborted) return false;
-    if (!entity) return false;
-    const hlsSource = await this._go2rtcResolver.hlsUrlForEntity(entity);
-    if (!hlsSource?.url) return false;
-
-    const video = createVideoElement(
-      buildVideoOptionsForView(
-        "live",
-        {
-          muted: this._streamMuted,
-          controls: false,
-          src: hlsSource.url,
-        },
-        { scopeKey: this },
-      ),
-    );
-
-    mountNodeIntoSlot(slot, video);
-    this._attachVideoFit(video);
-
-    const destroy = () => {
-      try {
-        video.pause();
-        video.removeAttribute("src");
-        video.load();
-      } catch (_) {}
-      try {
-        hlsSource.destroy?.();
-      } catch (_) {}
-      try {
-        if (video.src?.startsWith("blob:")) URL.revokeObjectURL(video.src);
-      } catch (_) {}
-      if (abortSignal && abortBound) {
-        abortSignal.removeEventListener("abort", onAbort);
-        abortBound = false;
-      }
-    };
-    let abortBound = false;
-    const onAbort = () => {
-      destroy();
-    };
-    if (abortSignal) {
-      abortSignal.addEventListener("abort", onAbort, { once: true });
-      abortBound = true;
-    }
-    const engine = { video, destroy };
-    if (commit) this._engine = engine;
-
-    const started = await this._waitForStreamStart(video, waitMs, {
-      minCurrentTime: 0.05,
-      minDecodedFrames: 1,
-      requireReadyState: 2,
-      strict: false,
-      abortSignal,
-    });
-    if (!started) {
-      destroy();
-      return false;
-    }
-    if (!commit) return { ok: true, type: "hls", engine, slot };
-    this._setActiveStreamType("hls");
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    return true;
   }
 
   _applyLiveMountUiState(quiet = false) {
