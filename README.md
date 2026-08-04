@@ -79,14 +79,14 @@ cameras:
 
 Each item under `cameras` supports these fields:
 
-| Variable              | Type           | Default             | Description                                                                     |
-| --------------------- | -------------- | ------------------- | ------------------------------------------------------------------------------- |
-| `entity`              | string         | required            | Home Assistant camera entity, for example `camera.front_door`.                  |
-| `name`                | string         | entity-derived name | Display name for the camera.                                                    |
-| `connection_type`     | string         | `frigate_go2rtc`    | Playback source. Valid values: `frigate_go2rtc`, `ha_direct`.                   |
-| `alerts_content`      | string         | `alerts_only`       | Alerts tab content for this camera. Valid values: `alerts_only`, `all_reviews`. |
-| `disable_hls_desktop` | boolean        | `false`             | Disables HLS fallback for this camera on desktop.                               |
-| `ptz`                 | boolean or map | `false`             | Enables circle-pad PTZ for this camera through Home Assistant `frigate.ptz`.    |
+| Variable              | Type           | Default             | Description                                                                                                                                     |
+| --------------------- | -------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entity`              | string         | required            | Home Assistant camera entity, for example `camera.front_door`.                                                                                  |
+| `name`                | string         | entity-derived name | Display name for the camera.                                                                                                                    |
+| `connection_type`     | string         | `frigate_go2rtc`    | Playback source. Valid values: `frigate_go2rtc`, `ha_direct`.                                                                                   |
+| `alerts_content`      | string         | `alerts_only`       | Alerts tab content for this camera. Valid values: `alerts_only`, `all_reviews`.                                                                 |
+| `disable_hls_desktop` | boolean        | `false`             | Disables HLS fallback for this camera on desktop.                                                                                               |
+| `ptz`                 | boolean or map | `false`             | Enables circle-pad PTZ for this camera. `frigate_go2rtc` cameras use the Frigate PTZ API; `ha_direct` cameras use Home Assistant `frigate.ptz`. |
 
 Camera example with non-default values:
 
@@ -107,13 +107,14 @@ title: Frigate
 
 PTZ notes:
 
-- Use `ptz: true` to enable the default Frigate PTZ service behavior. It normalizes to `enabled: true`, `move_mode: ContinuousMove`, and `speed: 0.5`.
-- The Frigate Home Assistant integration PTZ service supports `move`, `stop`, `zoom`, and `preset`; this card currently uses `move` and `stop` for the circle pad.
+- Use `ptz: true` to enable the default PTZ behavior. It normalizes to `enabled: true`, `move_mode: ContinuousMove`, and `speed: 0.5`.
+- PTZ transport follows the camera `connection_type`: `frigate_go2rtc` uses the Frigate PTZ API, while `ha_direct` uses the Home Assistant `frigate.ptz` service.
+- Diagonal presses start both axes together and rely on release to stop continuous movement.
 - The controls tab now asks Frigate for PTZ capability data and only enables movement when Frigate reports pan/tilt support for that camera.
 - Diagonal circle-pad slices are faked by sending the two matching cardinal `move` actions, for example `up-right` sends both `up` and `right`.
 - Use a PTZ object when you need to flag a camera as PTZ-enabled now, and to preserve room for future PTZ options in YAML.
 - The controls tab targets the active camera entity, so only cameras with `ptz` enabled respond to the circle pad.
-- The visual editor now exposes a simple per-camera PTZ on/off toggle.
+- The visual editor exposes per-camera PTZ enablement plus `move_mode` and `speed` controls when the selected camera reports PTZ support.
 
 ### Custom Theme Colors
 

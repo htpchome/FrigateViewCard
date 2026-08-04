@@ -8263,6 +8263,10 @@ export class FrigateViewCard extends HTMLElement {
     const plan = resolvePtzServicePlan({
       camera: this._activeCam,
       ptzInfo,
+      ptzContext: {
+        clientId: this._cc().clientId,
+        cameraName: this._cc().cam,
+      },
       action: event?.detail?.action,
       eventType,
     });
@@ -8279,21 +8283,38 @@ export class FrigateViewCard extends HTMLElement {
 
     this._appendControlsReadoutEntry(plan.readout);
     try {
-      for (let index = 0; index < plan.requests.length; index += 1) {
-        const request = plan.requests[index];
-        await this._hass?.callService(
+      const executeRequest = async (request) => {
+        if (request?.type === "frigate_api") {
+          const signedPath = await this._signed(request.path);
+          const url = this._toAbsoluteSignedPath(signedPath);
+          const response = await fetch(url, {
+            method: request.method || "GET",
+            cache: "no-store",
+            credentials: "same-origin",
+          });
+          if (!response.ok) {
+            throw new Error(
+              `Frigate PTZ API request failed: ${response.status}`,
+            );
+          }
+          return response;
+        }
+
+        return this._hass?.callService(
           request.domain,
           request.service,
           request.serviceData,
           request.target,
         );
-        if (
-          plan.delayMsBetweenRequests > 0 &&
-          index < plan.requests.length - 1
-        ) {
-          await new Promise((resolve) => {
-            setTimeout(resolve, plan.delayMsBetweenRequests);
-          });
+      };
+
+      if (plan.executionMode === "parallel") {
+        await Promise.all(
+          plan.requests.map((request) => executeRequest(request)),
+        );
+      } else {
+        for (let index = 0; index < plan.requests.length; index += 1) {
+          await executeRequest(plan.requests[index]);
         }
       }
     } catch (error) {

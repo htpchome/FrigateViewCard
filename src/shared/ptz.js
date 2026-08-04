@@ -3,7 +3,8 @@ const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
 const PTZ_SERVICE_DOMAIN = "frigate";
 const PTZ_SERVICE_NAME = "ptz";
 const PTZ_DEFAULT_SPEED = 0.5;
-const PTZ_DIAGONAL_STEP_DELAY_MS = 100;
+const PTZ_CONNECTION_HA_DIRECT = "ha_direct";
+const PTZ_CONNECTION_FRIGATE = "frigate_go2rtc";
 const PTZ_DIRECTIONS = Object.freeze({
   up: Object.freeze(["up"]),
   "up-right": Object.freeze(["up", "right"]),
@@ -22,6 +23,41 @@ const normalizePtzNumber = (value) => {
   if (parsed < 0 || parsed > 1) return null;
   return parsed;
 };
+
+const normalizePtzConnectionType = (value) => {
+  const type = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (
+    type === PTZ_CONNECTION_HA_DIRECT ||
+    type === "ha" ||
+    type === "home_assistant"
+  ) {
+    return PTZ_CONNECTION_HA_DIRECT;
+  }
+  return PTZ_CONNECTION_FRIGATE;
+};
+
+const shouldUseHomeAssistantPtz = (camera) =>
+  normalizePtzConnectionType(camera?.connection_type) ===
+  PTZ_CONNECTION_HA_DIRECT;
+
+const buildFrigatePtzApiPath = ({ clientId, cameraName, command }) =>
+  `/api/frigate/${encodeURIComponent(clientId)}/api/${encodeURIComponent(cameraName)}/ptz/${command}`;
+
+const buildHomeAssistantPtzRequest = ({ camera, action, argument = null }) => ({
+  type: "home_assistant_service",
+  domain: PTZ_SERVICE_DOMAIN,
+  service: PTZ_SERVICE_NAME,
+  serviceData: argument ? { action, argument } : { action },
+  target: { entity_id: camera.entity },
+});
+
+const buildFrigateApiPtzRequest = ({ clientId, cameraName, command }) => ({
+  type: "frigate_api",
+  method: "GET",
+  path: buildFrigatePtzApiPath({ clientId, cameraName, command }),
+});
 
 export const normalizePtzMoveMode = (value) => {
   const normalized = String(value || "")
@@ -83,6 +119,7 @@ export const resolvePtzEmptyStateMessage = (
 export const resolvePtzServicePlan = ({
   camera,
   ptzInfo,
+  ptzContext,
   action,
   eventType,
 }) => {
@@ -91,16 +128,26 @@ export const resolvePtzServicePlan = ({
     return null;
   }
 
+  const useHomeAssistant = shouldUseHomeAssistantPtz(camera);
+  const clientId = ptzContext?.clientId || "";
+  const cameraName = ptzContext?.cameraName || ptzContext?.cam || "";
+
+  if (!useHomeAssistant && (!clientId || !cameraName)) {
+    return null;
+  }
+
   if (eventType === "release") {
     if (ptz.move_mode !== PTZ_MOVE_MODE_CONTINUOUS) return null;
     return {
+      executionMode: "sequential",
       requests: [
-        {
-          domain: PTZ_SERVICE_DOMAIN,
-          service: PTZ_SERVICE_NAME,
-          serviceData: { action: "stop" },
-          target: { entity_id: camera.entity },
-        },
+        useHomeAssistant
+          ? buildHomeAssistantPtzRequest({ camera, action: "stop" })
+          : buildFrigateApiPtzRequest({
+              clientId,
+              cameraName,
+              command: "move_stop",
+            }),
       ],
       readout: "[ptz:stop]",
     };
@@ -110,17 +157,20 @@ export const resolvePtzServicePlan = ({
   if (!directions?.length) return null;
 
   return {
-    requests: directions.map((direction) => ({
-      domain: PTZ_SERVICE_DOMAIN,
-      service: PTZ_SERVICE_NAME,
-      serviceData: {
-        action: "move",
-        argument: direction,
-      },
-      target: { entity_id: camera.entity },
-    })),
-    delayMsBetweenRequests:
-      directions.length > 1 ? PTZ_DIAGONAL_STEP_DELAY_MS : 0,
+    executionMode: directions.length > 1 ? "parallel" : "sequential",
+    requests: directions.map((direction) =>
+      useHomeAssistant
+        ? buildHomeAssistantPtzRequest({
+            camera,
+            action: "move",
+            argument: direction,
+          })
+        : buildFrigateApiPtzRequest({
+            clientId,
+            cameraName,
+            command: `move_${direction}`,
+          }),
+    ),
     readout: `[ptz:${action}]`,
   };
 };

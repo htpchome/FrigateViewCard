@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1157";
+const VERSION = "1.0.1158";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1576,7 +1576,8 @@ const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
 const PTZ_SERVICE_DOMAIN = "frigate";
 const PTZ_SERVICE_NAME = "ptz";
 const PTZ_DEFAULT_SPEED = 0.5;
-const PTZ_DIAGONAL_STEP_DELAY_MS = 100;
+const PTZ_CONNECTION_HA_DIRECT = "ha_direct";
+const PTZ_CONNECTION_FRIGATE = "frigate_go2rtc";
 const PTZ_DIRECTIONS = Object.freeze({
   up: Object.freeze(["up"]),
   "up-right": Object.freeze(["up", "right"]),
@@ -1594,6 +1595,27 @@ const normalizePtzNumber = (value) => {
   if (parsed < 0 || parsed > 1) return null;
   return parsed;
 };
+const normalizePtzConnectionType = (value) => {
+  const type = String(value || "").trim().toLowerCase();
+  if (type === PTZ_CONNECTION_HA_DIRECT || type === "ha" || type === "home_assistant") {
+    return PTZ_CONNECTION_HA_DIRECT;
+  }
+  return PTZ_CONNECTION_FRIGATE;
+};
+const shouldUseHomeAssistantPtz = (camera) => normalizePtzConnectionType(camera?.connection_type) === PTZ_CONNECTION_HA_DIRECT;
+const buildFrigatePtzApiPath = ({ clientId, cameraName: cameraName2, command }) => `/api/frigate/${encodeURIComponent(clientId)}/api/${encodeURIComponent(cameraName2)}/ptz/${command}`;
+const buildHomeAssistantPtzRequest = ({ camera, action, argument = null }) => ({
+  type: "home_assistant_service",
+  domain: PTZ_SERVICE_DOMAIN,
+  service: PTZ_SERVICE_NAME,
+  serviceData: argument ? { action, argument } : { action },
+  target: { entity_id: camera.entity }
+});
+const buildFrigateApiPtzRequest = ({ clientId, cameraName: cameraName2, command }) => ({
+  type: "frigate_api",
+  method: "GET",
+  path: buildFrigatePtzApiPath({ clientId, cameraName: cameraName2, command })
+});
 const normalizePtzMoveMode = (value) => {
   const normalized = String(value || "").trim().toLowerCase();
   return normalized === "relativemove" ? PTZ_MOVE_MODE_RELATIVE : PTZ_MOVE_MODE_CONTINUOUS;
@@ -1633,6 +1655,7 @@ const resolvePtzEmptyStateMessage = (camera, ptzInfo, { loading = false } = {}) 
 const resolvePtzServicePlan = ({
   camera,
   ptzInfo,
+  ptzContext,
   action,
   eventType
 }) => {
@@ -1640,16 +1663,22 @@ const resolvePtzServicePlan = ({
   if (!ptz || !camera?.entity || !hasPtzPanTiltCapability(ptzInfo)) {
     return null;
   }
+  const useHomeAssistant = shouldUseHomeAssistantPtz(camera);
+  const clientId = ptzContext?.clientId || "";
+  const cameraName2 = ptzContext?.cameraName || ptzContext?.cam || "";
+  if (!useHomeAssistant && (!clientId || !cameraName2)) {
+    return null;
+  }
   if (eventType === "release") {
     if (ptz.move_mode !== PTZ_MOVE_MODE_CONTINUOUS) return null;
     return {
+      executionMode: "sequential",
       requests: [
-        {
-          domain: PTZ_SERVICE_DOMAIN,
-          service: PTZ_SERVICE_NAME,
-          serviceData: { action: "stop" },
-          target: { entity_id: camera.entity }
-        }
+        useHomeAssistant ? buildHomeAssistantPtzRequest({ camera, action: "stop" }) : buildFrigateApiPtzRequest({
+          clientId,
+          cameraName: cameraName2,
+          command: "move_stop"
+        })
       ],
       readout: "[ptz:stop]"
     };
@@ -1657,16 +1686,18 @@ const resolvePtzServicePlan = ({
   const directions = PTZ_DIRECTIONS[action];
   if (!directions?.length) return null;
   return {
-    requests: directions.map((direction) => ({
-      domain: PTZ_SERVICE_DOMAIN,
-      service: PTZ_SERVICE_NAME,
-      serviceData: {
+    executionMode: directions.length > 1 ? "parallel" : "sequential",
+    requests: directions.map(
+      (direction) => useHomeAssistant ? buildHomeAssistantPtzRequest({
+        camera,
         action: "move",
         argument: direction
-      },
-      target: { entity_id: camera.entity }
-    })),
-    delayMsBetweenRequests: directions.length > 1 ? PTZ_DIAGONAL_STEP_DELAY_MS : 0,
+      }) : buildFrigateApiPtzRequest({
+        clientId,
+        cameraName: cameraName2,
+        command: `move_${direction}`
+      })
+    ),
     readout: `[ptz:${action}]`
   };
 };
@@ -16443,6 +16474,10 @@ const FrigateViewCard = class extends HTMLElement {
     const plan = resolvePtzServicePlan({
       camera: this._activeCam,
       ptzInfo,
+      ptzContext: {
+        clientId: this._cc().clientId,
+        cameraName: this._cc().cam
+      },
       action: event?.detail?.action,
       eventType
     });
@@ -16458,18 +16493,36 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._appendControlsReadoutEntry(plan.readout);
     try {
-      for (let index = 0; index < plan.requests.length; index += 1) {
-        const request = plan.requests[index];
-        await this._hass?.callService(
+      const executeRequest = async (request) => {
+        if (request?.type === "frigate_api") {
+          const signedPath = await this._signed(request.path);
+          const url = this._toAbsoluteSignedPath(signedPath);
+          const response = await fetch(url, {
+            method: request.method || "GET",
+            cache: "no-store",
+            credentials: "same-origin"
+          });
+          if (!response.ok) {
+            throw new Error(
+              `Frigate PTZ API request failed: ${response.status}`
+            );
+          }
+          return response;
+        }
+        return this._hass?.callService(
           request.domain,
           request.service,
           request.serviceData,
           request.target
         );
-        if (plan.delayMsBetweenRequests > 0 && index < plan.requests.length - 1) {
-          await new Promise((resolve) => {
-            setTimeout(resolve, plan.delayMsBetweenRequests);
-          });
+      };
+      if (plan.executionMode === "parallel") {
+        await Promise.all(
+          plan.requests.map((request) => executeRequest(request))
+        );
+      } else {
+        for (let index = 0; index < plan.requests.length; index += 1) {
+          await executeRequest(plan.requests[index]);
         }
       }
     } catch (error) {
