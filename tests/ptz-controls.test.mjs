@@ -44,6 +44,7 @@ test("resolvePtzServicePlan maps press to the Frigate PTZ move service", () => {
   });
 
   assert.deepEqual(request, {
+    delayMsBetweenRequests: 0,
     requests: [
       {
         domain: "frigate",
@@ -71,6 +72,7 @@ test("resolvePtzServicePlan fans out diagonal moves into two Frigate move calls"
   });
 
   assert.deepEqual(request, {
+    delayMsBetweenRequests: 100,
     requests: [
       {
         domain: "frigate",
@@ -152,5 +154,5 @@ test("hasCameraPtz requires an enabled PTZ camera config", () => {
 
 test("canCameraUsePtz requires Frigate pan tilt capability", () => {
   assert.equal(canCameraUsePtz({ ptz: true }, { features: ["pt"] }), true);
-  assert.equal(canCameraUsePtz({ ptz: true }, { features: ["pt-r"] }), false);
+  assert.equal(canCameraUsePtz({ ptz: true }, { features: ["pt-r"] }), true);
 });

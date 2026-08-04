@@ -3,6 +3,7 @@ const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
 const PTZ_SERVICE_DOMAIN = "frigate";
 const PTZ_SERVICE_NAME = "ptz";
 const PTZ_DEFAULT_SPEED = 0.5;
+const PTZ_DIAGONAL_STEP_DELAY_MS = 100;
 const PTZ_DIRECTIONS = Object.freeze({
   up: Object.freeze(["up"]),
   "up-right": Object.freeze(["up", "right"]),
@@ -56,7 +57,8 @@ export const hasCameraPtz = (camera) =>
   normalizeCameraPtzConfig(camera?.ptz)?.enabled === true;
 
 export const hasPtzPanTiltCapability = (ptzInfo) =>
-  Array.isArray(ptzInfo?.features) && ptzInfo.features.includes("pt");
+  Array.isArray(ptzInfo?.features) &&
+  (ptzInfo.features.includes("pt") || ptzInfo.features.includes("pt-r"));
 
 export const canCameraUsePtz = (camera, ptzInfo) =>
   hasCameraPtz(camera) && hasPtzPanTiltCapability(ptzInfo);
@@ -117,6 +119,8 @@ export const resolvePtzServicePlan = ({
       },
       target: { entity_id: camera.entity },
     })),
+    delayMsBetweenRequests:
+      directions.length > 1 ? PTZ_DIAGONAL_STEP_DELAY_MS : 0,
     readout: `[ptz:${action}]`,
   };
 };

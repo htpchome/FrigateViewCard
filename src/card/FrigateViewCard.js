@@ -8257,9 +8257,11 @@ export class FrigateViewCard extends HTMLElement {
 
   async _handleCirclePadPtzEvent(event, eventType) {
     if (event?.target?.id !== "controls-pad") return;
+    const ptzInfo =
+      this._activeCameraPtzInfo() || (await this._ensureActiveCameraPtzInfo());
     const plan = resolvePtzServicePlan({
       camera: this._activeCam,
-      ptzInfo: this._activeCameraPtzInfo(),
+      ptzInfo,
       action: event?.detail?.action,
       eventType,
     });
@@ -8267,16 +8269,23 @@ export class FrigateViewCard extends HTMLElement {
 
     this._appendControlsReadoutEntry(plan.readout);
     try {
-      await Promise.all(
-        plan.requests.map((request) =>
-          this._hass?.callService(
-            request.domain,
-            request.service,
-            request.serviceData,
-            request.target,
-          ),
-        ),
-      );
+      for (let index = 0; index < plan.requests.length; index += 1) {
+        const request = plan.requests[index];
+        await this._hass?.callService(
+          request.domain,
+          request.service,
+          request.serviceData,
+          request.target,
+        );
+        if (
+          plan.delayMsBetweenRequests > 0 &&
+          index < plan.requests.length - 1
+        ) {
+          await new Promise((resolve) => {
+            setTimeout(resolve, plan.delayMsBetweenRequests);
+          });
+        }
+      }
     } catch (error) {
       console.warn("[Frigate] PTZ call failed", error);
       this._appendControlsReadoutEntry("[ptz:error]");

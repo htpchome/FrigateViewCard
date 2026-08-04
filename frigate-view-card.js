@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1154";
+const VERSION = "1.0.1155";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1577,6 +1577,7 @@ const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
 const PTZ_SERVICE_DOMAIN = "frigate";
 const PTZ_SERVICE_NAME = "ptz";
 const PTZ_DEFAULT_SPEED = 0.5;
+const PTZ_DIAGONAL_STEP_DELAY_MS = 100;
 const PTZ_DIRECTIONS = Object.freeze({
   up: Object.freeze(["up"]),
   "up-right": Object.freeze(["up", "right"]),
@@ -1616,7 +1617,7 @@ const normalizeCameraPtzConfig = (value) => {
   };
 };
 const hasCameraPtz = (camera) => normalizeCameraPtzConfig(camera?.ptz)?.enabled === true;
-const hasPtzPanTiltCapability = (ptzInfo) => Array.isArray(ptzInfo?.features) && ptzInfo.features.includes("pt");
+const hasPtzPanTiltCapability = (ptzInfo) => Array.isArray(ptzInfo?.features) && (ptzInfo.features.includes("pt") || ptzInfo.features.includes("pt-r"));
 const canCameraUsePtz = (camera, ptzInfo) => hasCameraPtz(camera) && hasPtzPanTiltCapability(ptzInfo);
 const resolvePtzEmptyStateMessage = (camera, ptzInfo, { loading = false } = {}) => {
   if (!hasCameraPtz(camera)) {
@@ -1666,6 +1667,7 @@ const resolvePtzServicePlan = ({
       },
       target: { entity_id: camera.entity }
     })),
+    delayMsBetweenRequests: directions.length > 1 ? PTZ_DIAGONAL_STEP_DELAY_MS : 0,
     readout: `[ptz:${action}]`
   };
 };
@@ -16431,25 +16433,30 @@ const FrigateViewCard = class extends HTMLElement {
   }
   async _handleCirclePadPtzEvent(event, eventType) {
     if (event?.target?.id !== "controls-pad") return;
+    const ptzInfo = this._activeCameraPtzInfo() || await this._ensureActiveCameraPtzInfo();
     const plan = resolvePtzServicePlan({
       camera: this._activeCam,
-      ptzInfo: this._activeCameraPtzInfo(),
+      ptzInfo,
       action: event?.detail?.action,
       eventType
     });
     if (!plan) return;
     this._appendControlsReadoutEntry(plan.readout);
     try {
-      await Promise.all(
-        plan.requests.map(
-          (request) => this._hass?.callService(
-            request.domain,
-            request.service,
-            request.serviceData,
-            request.target
-          )
-        )
-      );
+      for (let index = 0; index < plan.requests.length; index += 1) {
+        const request = plan.requests[index];
+        await this._hass?.callService(
+          request.domain,
+          request.service,
+          request.serviceData,
+          request.target
+        );
+        if (plan.delayMsBetweenRequests > 0 && index < plan.requests.length - 1) {
+          await new Promise((resolve) => {
+            setTimeout(resolve, plan.delayMsBetweenRequests);
+          });
+        }
+      }
     } catch (error) {
       console.warn("[Frigate] PTZ call failed", error);
       this._appendControlsReadoutEntry("[ptz:error]");
@@ -16722,6 +16729,108 @@ const normalizeCardConfig = (config) => {
 
 // src/editor/FrigateViewCardEditor.js
 const FrigateViewCardEditor = class extends HTMLElement {
+  _ensurePtzCapabilityCache() {
+    if (!(this._ptzCapabilityCache instanceof Map)) {
+      this._ptzCapabilityCache = new Map();
+    }
+  }
+  _cameraEntityPtzLookupContext(entity) {
+    const state = this._hass?.states?.[entity];
+    if (!state) return null;
+    const attrs = state.attributes || {};
+    const instanceId = attrs.client_id || attrs.mqtt_client_id || "";
+    const cameraName2 = attrs.camera_name || entity.replace(/^camera\./, "");
+    if (!instanceId || !cameraName2) return null;
+    return { instanceId, cameraName: cameraName2 };
+  }
+  async _fetchPtzCapabilityForEntity(entity) {
+    const targetEntity = String(entity || "").trim();
+    if (!targetEntity || !this._hass?.callWS) return null;
+    this._ensurePtzCapabilityCache();
+    const cached = this._ptzCapabilityCache.get(targetEntity);
+    if (cached?.resolved) return cached.info;
+    if (cached?.promise) return cached.promise;
+    const context = this._cameraEntityPtzLookupContext(targetEntity);
+    if (!context) {
+      const empty = { resolved: true, info: null, promise: null };
+      this._ptzCapabilityCache.set(targetEntity, empty);
+      return null;
+    }
+    const entry = { resolved: false, info: null, promise: null };
+    entry.promise = (async () => {
+      try {
+        const result = parseWs(
+          await this._hass.callWS({
+            type: "frigate/ptz/info",
+            instance_id: context.instanceId,
+            camera: context.cameraName
+          })
+        );
+        entry.info = Array.isArray(result) ? result[0] || null : result || null;
+      } catch (error) {
+        console.warn("[Frigate] Editor PTZ info fetch failed", error);
+        entry.info = null;
+      } finally {
+        entry.resolved = true;
+        entry.promise = null;
+      }
+      return entry.info;
+    })();
+    this._ptzCapabilityCache.set(targetEntity, entry);
+    return entry.promise;
+  }
+  _setCameraModalPtzSpeedOutput(value) {
+    const output = this.querySelector("#camera-modal-ptz-speed-output");
+    if (!output) return;
+    const numeric = Number(value);
+    output.textContent = Number.isFinite(numeric) ? `Current speed: ${numeric.toFixed(1)}` : "Current speed: 0.5";
+  }
+  _syncCameraModalPtzVisibility({ supported = false, loading = false } = {}) {
+    const toggleRow = this.querySelector("#camera-modal-ptz-toggle-row");
+    const configRow = this.querySelector("#camera-modal-ptz-config");
+    const stateMessage = this.querySelector("#camera-modal-ptz-state");
+    const ptzEnabled = this.querySelector("#camera-modal-ptz-enabled");
+    const moveModeRow = this.querySelector("#camera-modal-ptz-move-mode-row");
+    const speedRow = this.querySelector("#camera-modal-ptz-speed-row");
+    if (toggleRow) toggleRow.style.display = supported ? "block" : "none";
+    if (ptzEnabled) {
+      ptzEnabled.disabled = !supported || loading;
+      ptzEnabled.dataset.supported = supported ? "true" : "false";
+      if (!supported) ptzEnabled.checked = false;
+    }
+    if (stateMessage) {
+      if (loading) {
+        stateMessage.style.display = "block";
+        stateMessage.textContent = "Checking Frigate PTZ support for this camera.";
+      } else if (!supported) {
+        stateMessage.style.display = "block";
+        stateMessage.textContent = "Frigate did not report PTZ pan/tilt support for this camera.";
+      } else {
+        stateMessage.style.display = "none";
+        stateMessage.textContent = "";
+      }
+    }
+    const showConfig = supported && ptzEnabled?.checked === true;
+    if (configRow) configRow.style.display = showConfig ? "block" : "none";
+    if (moveModeRow) moveModeRow.style.display = showConfig ? "block" : "none";
+    if (speedRow) speedRow.style.display = showConfig ? "block" : "none";
+  }
+  async _refreshCameraModalPtzSupport() {
+    const entity = this._cameraModalEntityValue();
+    if (!entity) {
+      this._syncCameraModalPtzVisibility({ supported: false, loading: false });
+      return;
+    }
+    this._syncCameraModalPtzVisibility({ supported: false, loading: true });
+    const token = (this._cameraModalPtzToken || 0) + 1;
+    this._cameraModalPtzToken = token;
+    const info = await this._fetchPtzCapabilityForEntity(entity);
+    if (this._cameraModalPtzToken !== token) return;
+    this._syncCameraModalPtzVisibility({
+      supported: hasPtzPanTiltCapability(info),
+      loading: false
+    });
+  }
   _normalizeHiddenTabs(hiddenTabs) {
     if (!Array.isArray(hiddenTabs)) return [];
     return hiddenTabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
@@ -16791,6 +16900,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
   }
   set hass(hass) {
     this._hass = hass;
+    if (this._ptzCapabilityCache instanceof Map) {
+      this._ptzCapabilityCache.clear();
+    }
     const modeKey = this._hass?.themes?.darkMode ? "dark" : "light";
     const key = `${this._frigateEntities().join(",")}|${modeKey}`;
     if (key !== this._lastEntityKey) {
@@ -16936,7 +17048,10 @@ const FrigateViewCardEditor = class extends HTMLElement {
       "#camera-modal-disable-hls-desktop"
     );
     const ptzEnabled = this.querySelector("#camera-modal-ptz-enabled");
+    const ptzMoveMode = this.querySelector("#camera-modal-ptz-move-mode");
+    const ptzSpeed = this.querySelector("#camera-modal-ptz-speed");
     const helper = this.querySelector("#camera-modal-helper");
+    const normalizedPtz = normalizeCameraPtzConfig(cam?.ptz);
     if (title) title.textContent = index == null ? "Add" : "Edit";
     if (save) save.textContent = index == null ? "Add" : "Save";
     if (name) name.value = cam?.name || "";
@@ -16958,8 +17073,21 @@ const FrigateViewCardEditor = class extends HTMLElement {
     if (ptzEnabled) {
       ptzEnabled.checked = hasCameraPtz(cam);
     }
+    if (ptzMoveMode) {
+      ptzMoveMode.value = normalizedPtz?.move_mode || "ContinuousMove";
+      ptzMoveMode.dataset.value = normalizedPtz?.move_mode || "ContinuousMove";
+    }
+    if (ptzSpeed) {
+      ptzSpeed.value = String(normalizedPtz?.speed ?? 0.5);
+      this._setCameraModalPtzSpeedOutput(ptzSpeed.value);
+    }
     if (helper) helper.textContent = "";
     if (modal) modal.classList.remove("hidden");
+    this._syncCameraModalPtzVisibility({
+      supported: false,
+      loading: !!cam?.entity
+    });
+    void this._refreshCameraModalPtzSupport();
   }
   _closeCameraModal() {
     const modal = this.querySelector("#camera-modal");
@@ -16978,7 +17106,15 @@ const FrigateViewCardEditor = class extends HTMLElement {
     );
     const alertsContent = this.querySelector("#camera-modal-all-reviews")?.checked === true ? "all_reviews" : "alerts_only";
     const disableHlsDesktop = this.querySelector("#camera-modal-disable-hls-desktop")?.checked === true;
-    const ptz = this.querySelector("#camera-modal-ptz-enabled")?.checked ? normalizeCameraPtzConfig(true) : null;
+    const ptzSupported = this.querySelector("#camera-modal-ptz-enabled")?.dataset?.supported === "true";
+    const ptzEnabled = ptzSupported && this.querySelector("#camera-modal-ptz-enabled")?.checked === true;
+    const ptzMoveMode = this.querySelector("#camera-modal-ptz-move-mode")?.dataset?.value || this.querySelector("#camera-modal-ptz-move-mode")?.value || "ContinuousMove";
+    const ptzSpeed = this.querySelector("#camera-modal-ptz-speed")?.value || "0.5";
+    const ptz = ptzEnabled ? normalizeCameraPtzConfig({
+      enabled: true,
+      move_mode: ptzMoveMode,
+      speed: ptzSpeed
+    }) : null;
     const helper = this.querySelector("#camera-modal-helper");
     if (!entity) {
       if (helper) helper.textContent = "Camera is required.";
@@ -17714,11 +17850,25 @@ const FrigateViewCardEditor = class extends HTMLElement {
             <div class="field-helper">Only affects non-mobile, non-tablet devices. WebRTC and MSE stay enabled; only the HLS fallback attempt is removed for this camera.</div>
           </div>
           <div class="cam-modal-field">
+            <div id="camera-modal-ptz-toggle-row">
             <div class="layout-row" style="justify-content:flex-start;gap:8px">
               <span class="cam-modal-label" style="margin:0">Enable PTZ Controls</span>
               <ha-switch id="camera-modal-ptz-enabled"></ha-switch>
             </div>
             <div class="field-helper">Turns on circle-pad PTZ for this camera using the Frigate Home Assistant integration PTZ service.</div>
+            </div>
+            <div class="field-helper" id="camera-modal-ptz-state" style="display:none"></div>
+          </div>
+          <div class="cam-modal-field" id="camera-modal-ptz-config" style="display:none">
+            <div class="cam-modal-field" id="camera-modal-ptz-move-mode-row" style="padding:0">
+              <span class="cam-modal-label">Move Mode</span>
+              <ha-selector id="camera-modal-ptz-move-mode"></ha-selector>
+            </div>
+            <div class="cam-modal-field" id="camera-modal-ptz-speed-row" style="padding:0">
+              <span class="cam-modal-label">Move Speed</span>
+              <input id="camera-modal-ptz-speed" type="range" min="0.1" max="1" step="0.1" value="0.5" style="width:100%">
+              <div class="field-helper" id="camera-modal-ptz-speed-output">Current speed: 0.5</div>
+            </div>
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
@@ -17855,6 +18005,17 @@ const FrigateViewCardEditor = class extends HTMLElement {
       fallbackValue: DEFAULT_CAMERA_CONNECTION_TYPE,
       normalize: (value) => normalizeCameraConnectionType2(value)
     });
+    setupSelectSelector({
+      element: this.querySelector("#camera-modal-ptz-move-mode"),
+      hass: this._hass,
+      options: [
+        { value: "ContinuousMove", label: "Continuous" },
+        { value: "RelativeMove", label: "Relative" }
+      ],
+      initialValue: "ContinuousMove",
+      fallbackValue: "ContinuousMove",
+      normalize: (value) => String(value || "ContinuousMove") === "RelativeMove" ? "RelativeMove" : "ContinuousMove"
+    });
     bindClickHandlers(this, [
       {
         selector: "#camera-add",
@@ -17897,6 +18058,38 @@ const FrigateViewCardEditor = class extends HTMLElement {
           ev.preventDefault();
           this._saveCameraModal();
         }
+      }
+    );
+    this.querySelector("#camera-modal-entity")?.addEventListener(
+      "value-changed",
+      () => {
+        void this._refreshCameraModalPtzSupport();
+      }
+    );
+    this.querySelector("#camera-modal-entity")?.addEventListener(
+      "change",
+      () => {
+        void this._refreshCameraModalPtzSupport();
+      }
+    );
+    this.querySelector("#camera-modal-ptz-enabled")?.addEventListener(
+      "value-changed",
+      () => this._syncCameraModalPtzVisibility({
+        supported: this.querySelector("#camera-modal-ptz-enabled")?.dataset?.supported === "true",
+        loading: false
+      })
+    );
+    this.querySelector("#camera-modal-ptz-enabled")?.addEventListener(
+      "change",
+      () => this._syncCameraModalPtzVisibility({
+        supported: this.querySelector("#camera-modal-ptz-enabled")?.dataset?.supported === "true",
+        loading: false
+      })
+    );
+    this.querySelector("#camera-modal-ptz-speed")?.addEventListener(
+      "input",
+      (event) => {
+        this._setCameraModalPtzSpeedOutput(event.currentTarget?.value);
       }
     );
     this._wireCameraDragAndDrop();
