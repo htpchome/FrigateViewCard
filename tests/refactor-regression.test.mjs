@@ -38,6 +38,10 @@ const go2rtcRaceMounterSource = fs.readFileSync(
   new URL("../src/features/live/go2rtc-race-mounter.js", import.meta.url),
   "utf8",
 );
+const mseGraceControllerSource = fs.readFileSync(
+  new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
+  "utf8",
+);
 const gridMediaControllerSource = fs.readFileSync(
   new URL("../src/features/grid/media.ctrl.js", import.meta.url),
   "utf8",
@@ -107,6 +111,18 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     /this\._go2rtcRaceMounter\s*=\s*createGo2RtcRaceMounter\(/.test(cardSource),
     true,
   );
+  assert.equal(
+    cardSource.includes(
+      'import { createMseGraceController } from "../features/live/mse-grace-controller.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._mseGraceController\s*=\s*createMseGraceController\(\{/.test(
+      cardSource,
+    ),
+    true,
+  );
   assert.equal(cardSource.includes("_go2rtcWsUrlCache"), false);
   assert.equal(cardSource.includes("_go2rtcHlsUrlCache"), false);
   assert.equal(cardSource.includes("_go2rtcWsUrlInFlight"), false);
@@ -127,6 +143,15 @@ test("go2rtc ownership is pulled out of the card shell", () => {
   assert.equal(cardSource.includes("_buildLiveStreamAttempts("), false);
   assert.equal(cardSource.includes("_mountLiveWithRace("), false);
   assert.equal(cardSource.includes("_scheduleHaDirectMountFollowUp("), false);
+  assert.equal(cardSource.includes("_mseGracePool = new Map()"), false);
+  assert.equal(cardSource.includes("_evictGraceMseEntry("), false);
+  assert.equal(cardSource.includes("_trimGraceMsePool("), false);
+  assert.equal(cardSource.includes("_stashMseEngineForGrace("), false);
+  assert.equal(cardSource.includes("_stashPendingMsePromiseForGrace("), false);
+  assert.equal(cardSource.includes("_takeGraceMseEntry("), false);
+  assert.equal(cardSource.includes("_ensureMseGraceHost("), false);
+  assert.equal(cardSource.includes("_adoptGraceMseEngine("), false);
+  assert.equal(cardSource.includes("_cleanupEngineWithOptions("), false);
   assert.equal(go2rtcResolverSource.includes("GO2RTC_CACHE_TTL_MS"), true);
   assert.equal(
     go2rtcResolverSource.includes("buildSignedGo2RtcWebSocketUrl"),
@@ -190,6 +215,14 @@ test("go2rtc ownership is pulled out of the card shell", () => {
   );
   assert.equal(
     go2rtcRaceMounterSource.includes("filterPendingDestroyersForWinner"),
+    true,
+  );
+  assert.equal(
+    mseGraceControllerSource.includes("splitPendingDestroyersByGraceMse"),
+    true,
+  );
+  assert.equal(
+    mseGraceControllerSource.includes("const mseGracePool = new Map()"),
     true,
   );
   assert.equal(frigateUrlSource.includes("buildGo2rtcWsPath"), true);

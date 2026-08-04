@@ -103,7 +103,11 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
       _liveControlsHideTimer: 33,
       _rotateOverlayRaf: 0,
       _rotateOverlayExitT: null,
-      _mseGracePool: new Map(),
+      _mseGraceController: {
+        clearGracePool() {
+          calls.push(["clearGracePool"]);
+        },
+      },
       _parentOrigStyle: null,
       parentElement: null,
       _stopSlideshowRotation() {
@@ -146,6 +150,7 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
       ["clearPopupMediaCleanup", 11, 22],
       ["clearRotateOverlayAudioSync"],
       ["clearRotateVideoFullscreenStyle"],
+      ["clearGracePool"],
       ["setSectionsRowGap", false],
       ["cleanupEngine"],
     ]);

@@ -14,6 +14,10 @@ const go2rtcRaceMounterSource = fs.readFileSync(
   new URL("../src/features/live/go2rtc-race-mounter.js", import.meta.url),
   "utf8",
 );
+const mseGraceControllerSource = fs.readFileSync(
+  new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
+  "utf8",
+);
 const pendingDestroyersSource = fs.readFileSync(
   new URL("../src/features/live/pending-destroyers.js", import.meta.url),
   "utf8",
@@ -24,14 +28,31 @@ const attemptPlannerSource = fs.readFileSync(
 );
 
 test("camera switching preserves recent MSE engines for short switch-back reuse", () => {
-  assert.equal(cardSource.includes("MSE_SWITCH_GRACE_MS"), true);
-  assert.equal(cardSource.includes("MSE_SWITCH_GRACE_MAX"), true);
-  assert.equal(cardSource.includes("_mseGracePool = new Map()"), true);
-  assert.equal(cardSource.includes("_stashMseEngineForGrace"), true);
-  assert.equal(cardSource.includes("_stashPendingMsePromiseForGrace"), true);
-  assert.equal(cardSource.includes("_takeGraceMseEntry"), true);
-  assert.equal(cardSource.includes("_adoptGraceMseEngine"), true);
-  assert.equal(cardSource.includes("_ensureMseGraceHost"), true);
+  assert.equal(
+    cardSource.includes(
+      'import { createMseGraceController } from "../features/live/mse-grace-controller.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._mseGraceController\s*=\s*createMseGraceController\(\{/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("_mseGracePool = new Map()"), false);
+  assert.equal(cardSource.includes("_stashMseEngineForGrace"), false);
+  assert.equal(cardSource.includes("_stashPendingMsePromiseForGrace"), false);
+  assert.equal(cardSource.includes("_takeGraceMseEntry"), false);
+  assert.equal(cardSource.includes("_adoptGraceMseEngine"), false);
+  assert.equal(cardSource.includes("_ensureMseGraceHost"), false);
+  assert.equal(
+    mseGraceControllerSource.includes("const mseGracePool = new Map()"),
+    true,
+  );
+  assert.equal(mseGraceControllerSource.includes("takeGraceMseEntry"), true);
+  assert.equal(mseGraceControllerSource.includes("adoptGraceMseEngine"), true);
+  assert.equal(mseGraceControllerSource.includes("clearGracePool"), true);
   assert.equal(
     pendingDestroyersSource.includes("splitPendingDestroyersByGraceMse"),
     true,
@@ -40,18 +61,28 @@ test("camera switching preserves recent MSE engines for short switch-back reuse"
 
 test("switch-camera cleanup keeps shell grace coordination and live race takeover separated", () => {
   assert.equal(cardSource.includes("preserveMseEntity"), true);
+  assert.equal(cardSource.includes("cleanupEngine(options)"), true);
+  assert.match(
+    mseGraceControllerSource,
+    /String\(getActiveStreamType\?\.\(\)\s*\|\|\s*""\)[\s\S]*?toLowerCase\(\)[\s\S]*?===\s*"mse"/,
+  );
   assert.equal(
-    cardSource.includes("pendingAttempt?.entity === preserveMseEntity"),
+    mseGraceControllerSource.includes('pendingAttempt?.type === "mse"'),
+    false,
+  );
+  assert.equal(
+    mseGraceControllerSource.includes("splitPendingDestroyersByGraceMse"),
     true,
   );
-  assert.match(
-    cardSource,
-    /String\(this\._activeStreamType\s*\|\|\s*""\)[\s\S]*?toLowerCase\(\)[\s\S]*?===\s*"mse"/,
+  assert.equal(
+    mseGraceControllerSource.includes("appendChild(engine.video)"),
+    true,
   );
-  assert.equal(cardSource.includes('pendingAttempt?.type === "mse"'), true);
-  assert.equal(cardSource.includes("_stashPendingMsePromiseForGrace"), true);
-  assert.equal(cardSource.includes("appendChild(engine.video)"), true);
-  assert.equal(cardSource.includes("appendChild(result.engine.video)"), true);
+  assert.equal(
+    mseGraceControllerSource.includes("appendChild(result.engine.video)"),
+    true,
+  );
+  assert.equal(mseGraceControllerSource.includes("preserveMseEntity"), true);
   assert.equal(cardSource.includes("_scheduleDeferredWebRtcTakeover"), false);
   assert.equal(
     go2rtcRaceMounterSource.includes("function scheduleDeferredWebRtcTakeover"),

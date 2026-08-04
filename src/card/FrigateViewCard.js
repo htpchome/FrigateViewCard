@@ -86,12 +86,6 @@ import {
   createGracePendingMountDestroyer,
   shouldClearPendingDestroyersForPromise,
 } from "../features/live/pending-destroyers.js";
-import {
-  createGraceEngineEntry,
-  createGracePendingEntry,
-  normalizeGraceEntityKey,
-  prepareEngineVideoForGraceHost,
-} from "../features/live/grace-pool.js";
 import {} from "../integrations/frigate/url.js";
 import {
   discoverFrigateCameraState,
@@ -156,6 +150,7 @@ import {
 import { runFallbackRefreshCycleForCard } from "../features/live/fallbacks/fallback-refresh.js";
 import { createHaDirectMounter } from "../features/live/ha-direct-mounter.js";
 import { createGo2RtcRaceMounter } from "../features/live/go2rtc-race-mounter.js";
+import { createMseGraceController } from "../features/live/mse-grace-controller.js";
 import { GridMediaController } from "../features/grid/media.ctrl.js";
 import {
   buildControlsSectionMarkup,
@@ -608,7 +603,39 @@ export class FrigateViewCard extends HTMLElement {
     this._lastRenderedListHtml = "";
     this._pendingMountDestroyers = [];
     this._pendingWebRTCTakeoverTimer = null;
-    this._mseGracePool = new Map();
+    this._mseGraceController = createMseGraceController({
+      graceMs: MSE_SWITCH_GRACE_MS,
+      graceMax: MSE_SWITCH_GRACE_MAX,
+      getShadowRoot: () => this.shadowRoot,
+      getScopeKey: () => this,
+      getPendingMountDestroyers: () => this._pendingMountDestroyers || [],
+      setPendingMountDestroyers: (pendingDestroyers) => {
+        this._pendingMountDestroyers = pendingDestroyers;
+      },
+      getPendingWebRtcTakeoverTimer: () => this._pendingWebRTCTakeoverTimer,
+      setPendingWebRtcTakeoverTimer: (timer) => {
+        this._pendingWebRTCTakeoverTimer = timer;
+      },
+      clearRotateOverlayAudioSync: () => this._clearRotateOverlayAudioSync(),
+      clearRotateVideoFullscreenStyle: () =>
+        this._clearRotateVideoFullscreenStyle(),
+      getEngine: () => this._engine,
+      setEngine: (engine) => {
+        this._engine = engine;
+      },
+      getActiveStreamType: () => this._activeStreamType,
+      getStreamMuted: () => this._streamMuted,
+      setEngineMountedMuted: (muted) => {
+        this._engineMountedMuted = muted;
+      },
+      getRotateOverlayActive: () => this._rotateOverlayActive,
+      attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
+      setActiveStreamType: (type) => this._setActiveStreamType(type),
+      setStreamLoading: (loading) => this._setStreamLoading(loading),
+      setStreamFallbackVisible: (visible) =>
+        this._setStreamFallbackVisible(visible),
+      setLiveNativeControls: (enabled) => this._setLiveNativeControls(enabled),
+    });
     this._wasVisible = false;
     this._resumeLiveT = null;
     this._disconnectTeardownT = null;
@@ -1324,9 +1351,7 @@ export class FrigateViewCard extends HTMLElement {
     this._rotateOverlayExitT = null;
     this._clearRotateOverlayAudioSync();
     this._clearRotateVideoFullscreenStyle();
-    for (const entity of [...this._mseGracePool.keys()]) {
-      this._evictGraceMseEntry(entity);
-    }
+    this._mseGraceController.clearGracePool();
     if (this._parentOrigStyle && this.parentElement) {
       this.parentElement.style.height = this._parentOrigStyle.height;
       this.parentElement.style.margin = this._parentOrigStyle.margin;
@@ -1673,186 +1698,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _cleanupEngine() {
-    return this._cleanupEngineWithOptions();
-  }
-
-  _evictGraceMseEntry(entity) {
-    const key = normalizeGraceEntityKey(entity);
-    if (!key) return;
-    const entry = this._mseGracePool.get(key);
-    if (!entry) return;
-    entry.cancelled = true;
-    if (entry.timer) clearTimeout(entry.timer);
-    this._mseGracePool.delete(key);
-    try {
-      entry.engine?.destroy?.();
-    } catch (_) {}
-  }
-
-  _trimGraceMsePool() {
-    while (this._mseGracePool.size > MSE_SWITCH_GRACE_MAX) {
-      const oldestKey = this._mseGracePool.keys().next().value;
-      if (!oldestKey) break;
-      this._evictGraceMseEntry(oldestKey);
-    }
-  }
-
-  _stashMseEngineForGrace(entity, engine) {
-    const key = normalizeGraceEntityKey(entity);
-    if (!key || !engine?.video || !engine?.ws) return false;
-    this._evictGraceMseEntry(key);
-    this._ensureMseGraceHost().appendChild(engine.video);
-    prepareEngineVideoForGraceHost(engine.video);
-    const entry = createGraceEngineEntry({
-      engine,
-      graceMs: MSE_SWITCH_GRACE_MS,
-      onExpire: () => {
-        if (this._mseGracePool.get(key) !== entry) return;
-        this._evictGraceMseEntry(key);
-      },
-    });
-    this._mseGracePool.set(key, entry);
-    this._trimGraceMsePool();
-    return true;
-  }
-
-  _stashPendingMsePromiseForGrace(entity, promise) {
-    const key = normalizeGraceEntityKey(entity);
-    if (!key || !promise) return false;
-    this._evictGraceMseEntry(key);
-    const entry = createGracePendingEntry({
-      graceMs: MSE_SWITCH_GRACE_MS,
-      onExpire: () => {
-        if (this._mseGracePool.get(key) !== entry) return;
-        this._evictGraceMseEntry(key);
-      },
-    });
-    entry.promise = (async () => {
-      try {
-        const result = await promise;
-        if (entry.cancelled) {
-          try {
-            result?.engine?.destroy?.();
-          } catch (_) {}
-          return null;
-        }
-        if (!result?.ok || result.type !== "mse" || !result.engine) {
-          this._evictGraceMseEntry(key);
-          return null;
-        }
-        this._ensureMseGraceHost().appendChild(result.engine.video);
-        prepareEngineVideoForGraceHost(result.engine.video);
-        entry.engine = result.engine;
-        entry.promise = null;
-        return result.engine;
-      } catch (_) {
-        if (this._mseGracePool.get(key) === entry) {
-          this._evictGraceMseEntry(key);
-        }
-        return null;
-      }
-    })();
-    this._mseGracePool.set(key, entry);
-    this._trimGraceMsePool();
-    return true;
-  }
-
-  _takeGraceMseEntry(entity) {
-    const key = normalizeGraceEntityKey(entity);
-    if (!key) return null;
-    const entry = this._mseGracePool.get(key);
-    if (!entry) return null;
-    if (entry.timer) clearTimeout(entry.timer);
-    this._mseGracePool.delete(key);
-    return entry;
-  }
-
-  _ensureMseGraceHost() {
-    if (this._mseGraceHost?.isConnected) return this._mseGraceHost;
-    const host = document.createElement("div");
-    host.setAttribute("aria-hidden", "true");
-    host.style.cssText =
-      "position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;left:-9999px;top:-9999px";
-    this.shadowRoot.appendChild(host);
-    this._mseGraceHost = host;
-    return host;
-  }
-
-  _adoptGraceMseEngine(slot, engine) {
-    if (!slot || !engine?.video || !engine?.ws) return false;
-    if (engine.ws.readyState > WebSocket.OPEN) {
-      try {
-        engine.destroy?.();
-      } catch (_) {}
-      return false;
-    }
-    configureVideoElement(
-      engine.video,
-      buildVideoOptionsForView(
-        "live",
-        {
-          muted: this._streamMuted,
-          controls: false,
-        },
-        { scopeKey: this },
-      ),
-    );
-    mountNodeIntoSlot(slot, engine.video);
-    this._attachVideoFit(engine.video);
-    this._engine = engine;
-    this._engineMountedMuted = this._streamMuted;
-    this._setActiveStreamType("mse");
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    if (this._rotateOverlayActive) this._setLiveNativeControls(true);
-    void engine.video.play?.().catch?.(() => {});
-    return true;
-  }
-
-  _cleanupEngineWithOptions(options = {}) {
-    if (this._pendingWebRTCTakeoverTimer) {
-      clearTimeout(this._pendingWebRTCTakeoverTimer);
-      this._pendingWebRTCTakeoverTimer = null;
-    }
-    this._clearRotateOverlayAudioSync();
-    this._clearRotateVideoFullscreenStyle();
-    const pending = this._pendingMountDestroyers || [];
-    this._pendingMountDestroyers = [];
-    const preserveMseEntity = String(options?.preserveMseEntity || "").trim();
-    for (const pendingAttempt of pending) {
-      if (
-        preserveMseEntity &&
-        pendingAttempt?.type === "mse" &&
-        pendingAttempt?.entity === preserveMseEntity
-      ) {
-        this._stashPendingMsePromiseForGrace(
-          preserveMseEntity,
-          pendingAttempt.promise,
-        );
-        continue;
-      }
-      try {
-        pendingAttempt?.destroy?.();
-      } catch (_) {}
-    }
-    const eng = this._engine;
-    if (!eng) return;
-    if (
-      preserveMseEntity &&
-      String(this._activeStreamType || "")
-        .trim()
-        .toLowerCase() === "mse" &&
-      this._stashMseEngineForGrace(preserveMseEntity, eng)
-    ) {
-      this._engine = null;
-      return;
-    }
-    try {
-      if (typeof eng.destroy === "function") eng.destroy();
-      if (eng.ws && typeof eng.ws.close === "function") eng.ws.close();
-      if (eng.pc && typeof eng.pc.close === "function") eng.pc.close();
-    } catch (_) {}
-    this._engine = null;
+    return this._mseGraceController.cleanupEngine();
   }
 
   _cancelPendingMount(reason = "", options = {}) {
@@ -1864,7 +1710,7 @@ export class FrigateViewCard extends HTMLElement {
         mountTargetEntity: this._mountTargetEntity,
       }),
     );
-    this._cleanupEngineWithOptions(options);
+    this._mseGraceController.cleanupEngine(options);
   }
 
   _applyMountTrackingState(nextState) {
@@ -2202,11 +2048,14 @@ export class FrigateViewCard extends HTMLElement {
       const graceMseAction = resolveGraceMseReuseAction({
         useGo2Rtc,
         forcedType,
-        graceMseEntry: this._takeGraceMseEntry(entity),
+        graceMseEntry: this._mseGraceController.takeGraceMseEntry(entity),
       });
       if (graceMseAction.type === "adopt-engine") {
         if (
-          this._adoptGraceMseEngine(slot, graceMseAction.graceMseEntry.engine)
+          this._mseGraceController.adoptGraceMseEngine(
+            slot,
+            graceMseAction.graceMseEntry.engine,
+          )
         ) {
           return;
         }
@@ -2239,7 +2088,12 @@ export class FrigateViewCard extends HTMLElement {
             if (pendingOutcome.type === "missing-engine") return;
             if (pendingOutcome.type === "stale-token") return;
             this._pendingMountDestroyers = [];
-            if (this._adoptGraceMseEngine(slot, pendingOutcome.engine)) {
+            if (
+              this._mseGraceController.adoptGraceMseEngine(
+                slot,
+                pendingOutcome.engine,
+              )
+            ) {
               clearMountState();
               return;
             }
