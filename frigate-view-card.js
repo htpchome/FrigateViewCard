@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1161";
+const VERSION = "1.0.1162";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -19,12 +19,7 @@ const REALTIME_HEAD_POLL_MS = 5e3;
 const REALTIME_RELOAD_DEBOUNCE_MS = 450;
 const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
 const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
-const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
-  10,
-  20,
-  30,
-  60
-]);
+const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 const SLIDESHOW_ALERT_HOLD_MS = 1e4;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
@@ -172,7 +167,7 @@ const STYLES = `
     min-height: 0 !important;
     height: 100%;
     overflow:hidden !important;
-
+    border-radius: var(--fvc-border-radius) !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
@@ -195,6 +190,7 @@ const STYLES = `
     position:relative;
     top:0;
     left:0;
+    border-radius: var(--fvc-border-radius) !important; 
     overflow:hidden !important;
     border:1px solid var(--secondary-background-color,#7a7a7a);
     }
