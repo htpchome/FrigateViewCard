@@ -105,10 +105,11 @@ import {
   requiresNestedSignedHlsRequests,
   rewriteM3u8Manifest,
   setCachedValue,
+  toAbsoluteSignedUrl,
+  toWebSocketUrl,
 } from "../features/live/url-provider.js";
 import {
   buildGo2RtcCameraContext,
-  buildGo2RtcTransportState,
   buildGo2RtcUrlContext,
   discoverFrigateCameraState,
   resolveCameraConnectionType,
@@ -116,12 +117,7 @@ import {
   resolveGo2RtcEntity,
   shouldUseGo2RtcForEntity,
 } from "../integrations/frigate/camera-context.js";
-import {
-  buildSignedGo2RtcWebSocketUrl,
-  resolveAbsoluteSignedPath,
-  signHomeAssistantPath,
-  signSameOriginAbsoluteUrl,
-} from "../integrations/frigate/bootstrap.js";
+import { signSameOriginAbsoluteUrl } from "../integrations/frigate/bootstrap.js";
 import {
   applyMountWatchdogTimeout,
   beginMountTracking,
@@ -1544,22 +1540,20 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _shouldUseGo2RtcForEntity(entity) {
-    return shouldUseGo2RtcForEntity({
-      config: this._config,
-      entity,
-      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
-      normalizeCameraConnectionType,
-    });
+    const key = entity || this._activeCam?.entity || "";
+    if (!key) return true;
+    return this._cameraConnectionType(key) !== "ha_direct";
   }
 
   _resolveGo2RtcEntity(entity = "") {
-    return resolveGo2RtcEntity({
+    const targetEntity = resolveGo2RtcEntity({
       entity,
       activeEntity: this._activeCam?.entity || "",
       config: this._config,
       defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
       normalizeCameraConnectionType,
     });
+    return this._shouldUseGo2RtcForEntity(targetEntity) ? targetEntity : "";
   }
 
   _cameraDisableHlsDesktop(entity) {
@@ -2372,12 +2366,19 @@ export class FrigateViewCard extends HTMLElement {
   async _go2rtcContextForEntity(entity) {
     if (!entity) return null;
     await this._discoverOne(entity);
-    return buildGo2RtcCameraContext({
+    const ctx = buildGo2RtcCameraContext({
       entity,
       camCache: this._camCache,
       createCameraState: mkCamState,
       makeGo2rtcCacheKey,
     });
+    if (!ctx) return null;
+    const { clientId, cam } = ctx;
+    return {
+      clientId,
+      cam,
+      cacheKey: makeGo2rtcCacheKey({ clientId, cam }),
+    };
   }
 
   async _go2rtcUrlContextForEntity(entity) {
@@ -2401,23 +2402,16 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _go2rtcTransportStateForEntity(entity) {
-    const targetEntity = this._resolveGo2RtcEntity(entity);
-    if (!targetEntity) return null;
-    await this._discoverOne(targetEntity);
-    return buildGo2RtcTransportState({
-      entity,
-      activeEntity: this._activeCam?.entity || "",
-      config: this._config,
-      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
-      normalizeCameraConnectionType,
-      camCache: this._camCache,
-      createCameraState: mkCamState,
-      makeGo2rtcCacheKey,
+    const ctx = await this._go2rtcTransportContextForEntity(entity);
+    if (!ctx) return null;
+    return {
+      ...ctx,
       nowMs: Date.now(),
-    });
+    };
   }
 
-  _go2rtcMountRequest(options = {}) {
+  _go2rtcMountRequest(options) {
+    options = options || {};
     return {
       entity: this._resolveGo2RtcMountEntity(options),
       abortSignal: options?.abortSignal || null,
@@ -2425,12 +2419,13 @@ export class FrigateViewCard extends HTMLElement {
     };
   }
 
-  _resolveGo2RtcMountEntity(options = {}) {
+  _resolveGo2RtcMountEntity(options) {
+    options = options || {};
     return this._resolveGo2RtcEntity(options?.entity);
   }
 
   _toAbsoluteSignedPath(signedPath) {
-    return resolveAbsoluteSignedPath({
+    return toAbsoluteSignedUrl({
       signedPath,
       origin: window.location.origin,
     });
@@ -2529,11 +2524,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _signedGo2RtcWsPath(path) {
-    return await signHomeAssistantPath({
-      hass: this._hass,
-      path,
-      expires: 3600,
-    });
+    // Frigate go2rtc websocket may require a signed HA path when accessed via
+    // remote URLs/reverse proxies (seen as ws close 1006 in Firefox).
+    try {
+      const r = await this._hass.callWS({
+        type: "auth/sign_path",
+        path,
+        expires: 3600,
+      });
+      const signedPath = r?.path || path;
+      return signedPath;
+    } catch (e) {
+      return path;
+    }
   }
 
   _getGo2RtcWsCachedUrl(cacheKey, nowMs) {
@@ -2618,11 +2621,9 @@ export class FrigateViewCard extends HTMLElement {
 
     const wsUrlPromise = (async () => {
       const path = buildGo2rtcWsPath({ clientId, cam });
-      const wsUrl = await buildSignedGo2RtcWebSocketUrl({
-        hass: this._hass,
-        path,
-        origin: window.location.origin,
-      });
+      const signedPath = await this._signedGo2RtcWsPath(path);
+      const abs = this._toAbsoluteSignedPath(signedPath);
+      const wsUrl = toWebSocketUrl(abs);
       // Signed path expires in 1h; refresh a bit early.
       this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
       return wsUrl;
@@ -8717,5 +8718,3 @@ export class FrigateViewCard extends HTMLElement {
     a.remove();
   }
 }
-//=========================================================================
-// editor.js — FrigateViewCardEditor config panel

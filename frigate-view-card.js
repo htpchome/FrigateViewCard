@@ -10806,21 +10806,19 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _shouldUseGo2RtcForEntity(entity) {
-    return shouldUseGo2RtcForEntity({
-      config: this._config,
-      entity,
-      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
-      normalizeCameraConnectionType: normalizeCameraConnectionType2
-    });
+    const key = entity || this._activeCam?.entity || "";
+    if (!key) return true;
+    return this._cameraConnectionType(key) !== "ha_direct";
   }
   _resolveGo2RtcEntity(entity = "") {
-    return resolveGo2RtcEntity({
+    const targetEntity = resolveGo2RtcEntity({
       entity,
       activeEntity: this._activeCam?.entity || "",
       config: this._config,
       defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
       normalizeCameraConnectionType: normalizeCameraConnectionType2
     });
+    return this._shouldUseGo2RtcForEntity(targetEntity) ? targetEntity : "";
   }
   _cameraDisableHlsDesktop(entity) {
     return resolveCameraDisableHlsDesktop({
@@ -11536,12 +11534,19 @@ const FrigateViewCard = class extends HTMLElement {
   async _go2rtcContextForEntity(entity) {
     if (!entity) return null;
     await this._discoverOne(entity);
-    return buildGo2RtcCameraContext({
+    const ctx = buildGo2RtcCameraContext({
       entity,
       camCache: this._camCache,
       createCameraState: mkCamState,
       makeGo2rtcCacheKey
     });
+    if (!ctx) return null;
+    const { clientId, cam } = ctx;
+    return {
+      clientId,
+      cam,
+      cacheKey: makeGo2rtcCacheKey({ clientId, cam })
+    };
   }
   async _go2rtcUrlContextForEntity(entity) {
     const targetEntity = this._resolveGo2RtcEntity(entity);
@@ -11562,33 +11567,27 @@ const FrigateViewCard = class extends HTMLElement {
     return this._go2rtcUrlContextForEntity(entity);
   }
   async _go2rtcTransportStateForEntity(entity) {
-    const targetEntity = this._resolveGo2RtcEntity(entity);
-    if (!targetEntity) return null;
-    await this._discoverOne(targetEntity);
-    return buildGo2RtcTransportState({
-      entity,
-      activeEntity: this._activeCam?.entity || "",
-      config: this._config,
-      defaultConnectionType: DEFAULT_CAMERA_CONNECTION_TYPE,
-      normalizeCameraConnectionType: normalizeCameraConnectionType2,
-      camCache: this._camCache,
-      createCameraState: mkCamState,
-      makeGo2rtcCacheKey,
+    const ctx = await this._go2rtcTransportContextForEntity(entity);
+    if (!ctx) return null;
+    return {
+      ...ctx,
       nowMs: Date.now()
-    });
+    };
   }
-  _go2rtcMountRequest(options = {}) {
+  _go2rtcMountRequest(options) {
+    options = options || {};
     return {
       entity: this._resolveGo2RtcMountEntity(options),
       abortSignal: options?.abortSignal || null,
       commit: options.commit !== false
     };
   }
-  _resolveGo2RtcMountEntity(options = {}) {
+  _resolveGo2RtcMountEntity(options) {
+    options = options || {};
     return this._resolveGo2RtcEntity(options?.entity);
   }
   _toAbsoluteSignedPath(signedPath) {
-    return resolveAbsoluteSignedPath({
+    return toAbsoluteSignedUrl({
       signedPath,
       origin: window.location.origin
     });
@@ -11677,11 +11676,17 @@ const FrigateViewCard = class extends HTMLElement {
     return null;
   }
   async _signedGo2RtcWsPath(path) {
-    return await signHomeAssistantPath({
-      hass: this._hass,
-      path,
-      expires: 3600
-    });
+    try {
+      const r = await this._hass.callWS({
+        type: "auth/sign_path",
+        path,
+        expires: 3600
+      });
+      const signedPath = r?.path || path;
+      return signedPath;
+    } catch (e) {
+      return path;
+    }
   }
   _getGo2RtcWsCachedUrl(cacheKey, nowMs) {
     return getFreshCachedValue({
@@ -11752,11 +11757,9 @@ const FrigateViewCard = class extends HTMLElement {
     if (inFlight) return inFlight;
     const wsUrlPromise = (async () => {
       const path = buildGo2rtcWsPath({ clientId, cam });
-      const wsUrl = await buildSignedGo2RtcWebSocketUrl({
-        hass: this._hass,
-        path,
-        origin: window.location.origin
-      });
+      const signedPath = await this._signedGo2RtcWsPath(path);
+      const abs = this._toAbsoluteSignedPath(signedPath);
+      const wsUrl = toWebSocketUrl(abs);
       this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
       return wsUrl;
     })().finally(() => {
