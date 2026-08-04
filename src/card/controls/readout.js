@@ -21,8 +21,13 @@ export function clearControlsReadoutLines() {
   return [];
 }
 
-export function isControlsPadTarget(target) {
-  return target instanceof Element && target.id === "controls-pad";
+const eventTargetMatchesControlsPad = (target) =>
+  target instanceof Element && target.id === "controls-pad";
+
+export function isControlsPadTarget(targetOrEvent) {
+  if (eventTargetMatchesControlsPad(targetOrEvent)) return true;
+  const path = targetOrEvent?.composedPath?.();
+  return Array.isArray(path) && path.some(eventTargetMatchesControlsPad);
 }
 
 export function isControlsReadoutClearTarget(target) {
@@ -32,13 +37,13 @@ export function isControlsReadoutClearTarget(target) {
 }
 
 export function resolveControlsPadPressReadoutEntry(event) {
-  if (!isControlsPadTarget(event?.target)) return "";
+  if (!isControlsPadTarget(event)) return "";
   const action = event?.detail?.action;
   return action ? `[${action}]` : "";
 }
 
 export function resolveControlsPadToggleReadoutEntry(event) {
-  if (!isControlsPadTarget(event?.target)) return "";
+  if (!isControlsPadTarget(event)) return "";
   if (event?.detail?.action !== "mic") return "";
   return event?.detail?.active ? "[mic:on]" : "[mic:off]";
 }

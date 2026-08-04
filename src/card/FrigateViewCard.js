@@ -7774,10 +7774,11 @@ export class FrigateViewCard extends HTMLElement {
   }
   // Cached querySelector — avoids repeated DOM lookups on every render tick
   _$(sel) {
-    return (
-      this._domCache[sel] ||
-      (this._domCache[sel] = this.shadowRoot.querySelector(sel))
-    );
+    const cached = this._domCache[sel];
+    if (cached?.isConnected) return cached;
+    const next = this.shadowRoot.querySelector(sel);
+    this._domCache[sel] = next;
+    return next;
   }
   _renderAll() {
     if (this._isPreviewPageActive()) {
@@ -8256,7 +8257,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _handleCirclePadPtzEvent(event, eventType) {
-    if (event?.target?.id !== "controls-pad") return;
+    if (!isControlsPadTarget(event)) return;
     const ptzInfo =
       this._activeCameraPtzInfo() || (await this._ensureActiveCameraPtzInfo());
     const plan = resolvePtzServicePlan({

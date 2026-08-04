@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1156";
+const VERSION = "1.0.1157";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6670,19 +6670,22 @@ function appendControlsReadoutLine(lines, text, maxLines = 200) {
 function clearControlsReadoutLines() {
   return [];
 }
-function isControlsPadTarget(target) {
-  return target instanceof Element && target.id === "controls-pad";
+const eventTargetMatchesControlsPad = (target) => target instanceof Element && target.id === "controls-pad";
+function isControlsPadTarget2(targetOrEvent) {
+  if (eventTargetMatchesControlsPad(targetOrEvent)) return true;
+  const path = targetOrEvent?.composedPath?.();
+  return Array.isArray(path) && path.some(eventTargetMatchesControlsPad);
 }
 function isControlsReadoutClearTarget(target) {
   return target instanceof Element && !!target.closest("#controls-readout-clear");
 }
 function resolveControlsPadPressReadoutEntry(event) {
-  if (!isControlsPadTarget(event?.target)) return "";
+  if (!isControlsPadTarget2(event)) return "";
   const action = event?.detail?.action;
   return action ? `[${action}]` : "";
 }
 function resolveControlsPadToggleReadoutEntry(event) {
-  if (!isControlsPadTarget(event?.target)) return "";
+  if (!isControlsPadTarget2(event)) return "";
   if (event?.detail?.action !== "mic") return "";
   return event?.detail?.active ? "[mic:on]" : "[mic:off]";
 }
@@ -16007,7 +16010,11 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // Cached querySelector — avoids repeated DOM lookups on every render tick
   _$(sel) {
-    return this._domCache[sel] || (this._domCache[sel] = this.shadowRoot.querySelector(sel));
+    const cached = this._domCache[sel];
+    if (cached?.isConnected) return cached;
+    const next = this.shadowRoot.querySelector(sel);
+    this._domCache[sel] = next;
+    return next;
   }
   _renderAll() {
     if (this._isPreviewPageActive()) {
@@ -16431,7 +16438,7 @@ const FrigateViewCard = class extends HTMLElement {
     return cache.ptzInfoPromise;
   }
   async _handleCirclePadPtzEvent(event, eventType) {
-    if (event?.target?.id !== "controls-pad") return;
+    if (!isControlsPadTarget(event)) return;
     const ptzInfo = this._activeCameraPtzInfo() || await this._ensureActiveCameraPtzInfo();
     const plan = resolvePtzServicePlan({
       camera: this._activeCam,
