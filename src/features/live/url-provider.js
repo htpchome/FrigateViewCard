@@ -10,7 +10,7 @@ export const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
   // /api/frigate/<instance>/go2rtc/*. Use the supported go2rtc HLS playlist
   // endpoint instead of probing nonexistent /hls|live|vod camera manifest
   // routes on the integration proxy.
-  return [`/api/frigate/${encClient}/go2rtc/api/stream.m3u8?src=${encCam}&mp4`];
+  return [`http://192.168.180.80:30059/api/stream.m3u8?src=${encCam}`];
 };
 
 export const toAbsoluteSignedUrl = ({ signedPath, origin }) =>
