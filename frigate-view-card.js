@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1167";
+const VERSION = "1.0.1168";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2926,7 +2926,7 @@ const buildGo2rtcWsPath = ({ clientId, cam }) => `/api/frigate/${encodeURICompon
 const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
   const encClient = encodeURIComponent(clientId);
   const encCam = encodeURIComponent(cam);
-  return [`http://192.168.180.80:30059/api/stream.m3u8?src=${encCam}`];
+  return [`/api/frigate/${encClient}/go2rtc/api/stream.m3u8?src=${encCam}&mp4`];
 };
 const toAbsoluteSignedUrl = ({ signedPath, origin }) => signedPath.startsWith("http") ? signedPath : `${origin}${signedPath}`;
 const toWebSocketUrl = (httpUrl) => httpUrl.replace(/^http/i, "ws");
