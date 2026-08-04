@@ -12,6 +12,7 @@ export const STYLES = `
     box-sizing: border-box !important;
     position: relative;
     border:1px solid var(--secondary-background-color,#7a7a7a);
+    border-radius: var(--fvc-border-radius) !important;
   }
   :host {
     --popup-z-index: 1000;

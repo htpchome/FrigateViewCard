@@ -1345,7 +1345,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-field{margin-bottom:8px;}
             .cam-modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
             .cam-btn{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
-            .cam-btn .primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
+            .cam-btn.primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
             .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
         </style>
     <div class="ed-wrap">

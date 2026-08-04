@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1162";
+const VERSION = "1.0.1163";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -127,6 +127,7 @@ const STYLES = `
     box-sizing: border-box !important;
     position: relative;
     border:1px solid var(--secondary-background-color,#7a7a7a);
+    border-radius: var(--fvc-border-radius) !important;
   }
   :host {
     --popup-z-index: 1000;
@@ -17976,7 +17977,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
             .cam-modal-field{margin-bottom:8px;}
             .cam-modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
             .cam-btn{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
-            .cam-btn .primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
+            .cam-btn.primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
             .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
         </style>
     <div class="ed-wrap">
