@@ -18,7 +18,6 @@ export const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
   10, 20, 30, 60,
 ]);
 export const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
-1154;
 export const SLIDESHOW_ALERT_HOLD_MS = 10000;
 export const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 export const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
