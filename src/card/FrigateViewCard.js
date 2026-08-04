@@ -100,10 +100,8 @@ import {
   buildGo2rtcWsPath,
   getFreshCachedValue,
   isM3u8Response,
-  isM3u8Url,
   makeGo2rtcCacheKey,
   requiresNestedSignedHlsRequests,
-  rewriteM3u8Manifest,
   setCachedValue,
   toAbsoluteSignedUrl,
   toWebSocketUrl,
@@ -117,7 +115,10 @@ import {
   resolveGo2RtcEntity,
   shouldUseGo2RtcForEntity,
 } from "../integrations/frigate/camera-context.js";
-import { signSameOriginAbsoluteUrl } from "../integrations/frigate/bootstrap.js";
+import {
+  rewriteSignedHlsManifestSource,
+  signSameOriginAbsoluteUrl,
+} from "../integrations/frigate/bootstrap.js";
 import {
   applyMountWatchdogTimeout,
   beginMountTracking,
@@ -2440,42 +2441,14 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _rewriteGo2RtcHlsManifestSource(manifestUrl, blobUrls, depth = 0) {
-    if (depth > 3) return null;
-    let resp;
-    try {
-      resp = await fetch(manifestUrl, {
-        method: "GET",
-        cache: "no-store",
-        credentials: "same-origin",
-      });
-    } catch (_) {
-      return null;
-    }
-    if (!resp.ok) return null;
-
-    const manifestText = await resp.text();
-    const rewritten = await rewriteM3u8Manifest({
-      manifestText,
-      rewriteUri: async (uri) => {
-        const resolvedUrl = new URL(uri, manifestUrl).toString();
-        if (isM3u8Url(resolvedUrl)) {
-          const nestedManifestUrl = await this._signedAbsoluteUrl(resolvedUrl);
-          const nestedBlobUrl = await this._rewriteGo2RtcHlsManifestSource(
-            nestedManifestUrl,
-            blobUrls,
-            depth + 1,
-          );
-          return nestedBlobUrl || nestedManifestUrl;
-        }
-        return await this._signedAbsoluteUrl(resolvedUrl);
+    return await rewriteSignedHlsManifestSource({
+      manifestUrl,
+      blobUrls,
+      depth,
+      signAbsoluteUrl: async (url) => {
+        return await this._signedAbsoluteUrl(url);
       },
     });
-
-    const blobUrl = URL.createObjectURL(
-      new Blob([rewritten], { type: "application/vnd.apple.mpegurl" }),
-    );
-    blobUrls.push(blobUrl);
-    return blobUrl;
   }
 
   async _probeGo2RtcHlsCandidates(candidates, cacheKey) {

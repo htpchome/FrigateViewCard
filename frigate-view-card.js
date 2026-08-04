@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1174";
+const VERSION = "1.0.1175";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3167,6 +3167,50 @@ async function buildSignedGo2RtcWebSocketUrl({
   const signedPath = await signHomeAssistantPath({ hass, path, expires });
   const abs = resolveAbsoluteSignedPath({ signedPath, origin });
   return toWebSocketUrl(abs);
+}
+async function rewriteSignedHlsManifestSource({
+  manifestUrl,
+  blobUrls,
+  signAbsoluteUrl,
+  fetchImpl = fetch,
+  depth = 0
+}) {
+  if (depth > 3) return null;
+  let resp;
+  try {
+    resp = await fetchImpl(manifestUrl, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin"
+    });
+  } catch (_) {
+    return null;
+  }
+  if (!resp.ok) return null;
+  const manifestText = await resp.text();
+  const rewritten = await rewriteM3u8Manifest({
+    manifestText,
+    rewriteUri: async (uri) => {
+      const resolvedUrl = new URL(uri, manifestUrl).toString();
+      if (isM3u8Url(resolvedUrl)) {
+        const nestedManifestUrl = await signAbsoluteUrl(resolvedUrl);
+        const nestedBlobUrl = await rewriteSignedHlsManifestSource({
+          manifestUrl: nestedManifestUrl,
+          blobUrls,
+          signAbsoluteUrl,
+          fetchImpl,
+          depth: depth + 1
+        });
+        return nestedBlobUrl || nestedManifestUrl;
+      }
+      return await signAbsoluteUrl(resolvedUrl);
+    }
+  });
+  const blobUrl = URL.createObjectURL(
+    new Blob([rewritten], { type: "application/vnd.apple.mpegurl" })
+  );
+  blobUrls.push(blobUrl);
+  return blobUrl;
 }
 
 // src/features/live/mount-lifecycle.js
@@ -11600,40 +11644,14 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   async _rewriteGo2RtcHlsManifestSource(manifestUrl, blobUrls, depth = 0) {
-    if (depth > 3) return null;
-    let resp;
-    try {
-      resp = await fetch(manifestUrl, {
-        method: "GET",
-        cache: "no-store",
-        credentials: "same-origin"
-      });
-    } catch (_) {
-      return null;
-    }
-    if (!resp.ok) return null;
-    const manifestText = await resp.text();
-    const rewritten = await rewriteM3u8Manifest({
-      manifestText,
-      rewriteUri: async (uri) => {
-        const resolvedUrl = new URL(uri, manifestUrl).toString();
-        if (isM3u8Url(resolvedUrl)) {
-          const nestedManifestUrl = await this._signedAbsoluteUrl(resolvedUrl);
-          const nestedBlobUrl = await this._rewriteGo2RtcHlsManifestSource(
-            nestedManifestUrl,
-            blobUrls,
-            depth + 1
-          );
-          return nestedBlobUrl || nestedManifestUrl;
-        }
-        return await this._signedAbsoluteUrl(resolvedUrl);
+    return await rewriteSignedHlsManifestSource({
+      manifestUrl,
+      blobUrls,
+      depth,
+      signAbsoluteUrl: async (url) => {
+        return await this._signedAbsoluteUrl(url);
       }
     });
-    const blobUrl = URL.createObjectURL(
-      new Blob([rewritten], { type: "application/vnd.apple.mpegurl" })
-    );
-    blobUrls.push(blobUrl);
-    return blobUrl;
   }
   async _probeGo2RtcHlsCandidates(candidates, cacheKey) {
     for (const p of candidates) {

@@ -1,4 +1,6 @@
 import {
+  isM3u8Url,
+  rewriteM3u8Manifest,
   toAbsoluteSignedUrl,
   toWebSocketUrl,
 } from "../../features/live/url-provider.js";
@@ -55,4 +57,52 @@ export async function buildSignedGo2RtcWebSocketUrl({
   const signedPath = await signHomeAssistantPath({ hass, path, expires });
   const abs = resolveAbsoluteSignedPath({ signedPath, origin });
   return toWebSocketUrl(abs);
+}
+
+export async function rewriteSignedHlsManifestSource({
+  manifestUrl,
+  blobUrls,
+  signAbsoluteUrl,
+  fetchImpl = fetch,
+  depth = 0,
+}) {
+  if (depth > 3) return null;
+
+  let resp;
+  try {
+    resp = await fetchImpl(manifestUrl, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+  } catch (_) {
+    return null;
+  }
+  if (!resp.ok) return null;
+
+  const manifestText = await resp.text();
+  const rewritten = await rewriteM3u8Manifest({
+    manifestText,
+    rewriteUri: async (uri) => {
+      const resolvedUrl = new URL(uri, manifestUrl).toString();
+      if (isM3u8Url(resolvedUrl)) {
+        const nestedManifestUrl = await signAbsoluteUrl(resolvedUrl);
+        const nestedBlobUrl = await rewriteSignedHlsManifestSource({
+          manifestUrl: nestedManifestUrl,
+          blobUrls,
+          signAbsoluteUrl,
+          fetchImpl,
+          depth: depth + 1,
+        });
+        return nestedBlobUrl || nestedManifestUrl;
+      }
+      return await signAbsoluteUrl(resolvedUrl);
+    },
+  });
+
+  const blobUrl = URL.createObjectURL(
+    new Blob([rewritten], { type: "application/vnd.apple.mpegurl" }),
+  );
+  blobUrls.push(blobUrl);
+  return blobUrl;
 }
