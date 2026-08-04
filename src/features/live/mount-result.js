@@ -32,6 +32,32 @@ export const adoptMountedAttemptSlot = ({ targetSlot, resultSlot }) => {
   resultSlot.style.overflow = "hidden";
 };
 
+export const adoptMountedAttemptResult = ({
+  targetSlot,
+  result,
+  streamMuted,
+  rotateOverlayActive,
+  assignEngine,
+  setEngineMountedMuted,
+  setActiveStreamType,
+  setStreamLoading,
+  setStreamFallbackVisible,
+  setLiveNativeControls,
+}) => {
+  if (!targetSlot || !result?.slot || !result?.engine) return false;
+  adoptMountedAttemptSlot({
+    targetSlot,
+    resultSlot: result.slot,
+  });
+  assignEngine?.(result.engine);
+  setEngineMountedMuted?.(streamMuted);
+  setActiveStreamType?.(result.type);
+  setStreamLoading?.(false);
+  setStreamFallbackVisible?.(false);
+  if (rotateOverlayActive) setLiveNativeControls?.(true);
+  return true;
+};
+
 export const destroyLoserAttemptResults = async ({
   activeAttempts,
   winnerType,

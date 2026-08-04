@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1185";
+const VERSION = "1.0.1186";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4265,6 +4265,31 @@ const adoptMountedAttemptSlot = ({ targetSlot, resultSlot }) => {
   resultSlot.style.pointerEvents = "auto";
   resultSlot.style.overflow = "hidden";
 };
+const adoptMountedAttemptResult = ({
+  targetSlot,
+  result,
+  streamMuted,
+  rotateOverlayActive,
+  assignEngine,
+  setEngineMountedMuted,
+  setActiveStreamType,
+  setStreamLoading,
+  setStreamFallbackVisible,
+  setLiveNativeControls
+}) => {
+  if (!targetSlot || !result?.slot || !result?.engine) return false;
+  adoptMountedAttemptSlot({
+    targetSlot,
+    resultSlot: result.slot
+  });
+  assignEngine?.(result.engine);
+  setEngineMountedMuted?.(streamMuted);
+  setActiveStreamType?.(result.type);
+  setStreamLoading?.(false);
+  setStreamFallbackVisible?.(false);
+  if (rotateOverlayActive) setLiveNativeControls?.(true);
+  return true;
+};
 const destroyLoserAttemptResults = async ({
   activeAttempts,
   winnerType
@@ -5686,7 +5711,6 @@ function createGo2RtcRaceMounter({
   isDesktop,
   resolveConnectionType,
   disableHlsDesktopForEntity,
-  createAttemptSlot,
   getPendingMountDestroyers,
   setPendingMountDestroyers,
   isMountTokenCurrent: isMountTokenCurrent2,
@@ -5823,6 +5847,12 @@ function createGo2RtcRaceMounter({
     buildAttempts,
     mountWithRace
   };
+  function createAttemptSlot(host = null) {
+    const slot = document.createElement("div");
+    slot.style.cssText = "position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden;";
+    if (host) host.appendChild(slot);
+    return slot;
+  }
   function scheduleDeferredWebRtcTakeover({
     slot,
     deferredAttempt,
@@ -11575,13 +11605,27 @@ const FrigateViewCard = class extends HTMLElement {
       isDesktop: DEVICE_PROFILE.isDesktop,
       resolveConnectionType: (entity) => this._cameraConnectionType(entity),
       disableHlsDesktopForEntity: (entity) => this._cameraDisableHlsDesktop(entity),
-      createAttemptSlot: (hostSlot) => this._streamAttemptSlot(hostSlot),
       getPendingMountDestroyers: () => this._pendingMountDestroyers || [],
       setPendingMountDestroyers: (pendingDestroyers) => {
         this._pendingMountDestroyers = pendingDestroyers;
       },
       isMountTokenCurrent: (mountToken) => isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq }),
-      adoptMountedAttempt: (slot, winner) => this._adoptMountedAttempt(slot, winner),
+      adoptMountedAttempt: (slot, winner) => adoptMountedAttemptResult({
+        targetSlot: slot,
+        result: winner,
+        streamMuted: this._streamMuted,
+        rotateOverlayActive: this._rotateOverlayActive,
+        assignEngine: (engine) => {
+          this._engine = engine;
+        },
+        setEngineMountedMuted: (muted) => {
+          this._engineMountedMuted = muted;
+        },
+        setActiveStreamType: (type) => this._setActiveStreamType(type),
+        setStreamLoading: (loading) => this._setStreamLoading(loading),
+        setStreamFallbackVisible: (visible) => this._setStreamFallbackVisible(visible),
+        setLiveNativeControls: (enabled) => this._setLiveNativeControls(enabled)
+      }),
       waitForStreamStart: (streamEl, timeoutMs, opts) => this._waitForStreamStart(streamEl, timeoutMs, opts),
       isCurrentWinnerEngine: (engine) => this._engine === engine,
       getPendingWebRtcTakeoverTimer: () => this._pendingWebRTCTakeoverTimer,
@@ -12700,25 +12744,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._mountInProgress = nextState.mountInProgress;
     this._mountStartedAt = nextState.mountStartedAt;
     this._mountTargetEntity = nextState.mountTargetEntity;
-  }
-  _streamAttemptSlot(host = null) {
-    const slot = document.createElement("div");
-    slot.style.cssText = "position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden;";
-    if (host) host.appendChild(slot);
-    return slot;
-  }
-  _adoptMountedAttempt(targetSlot, result) {
-    if (!targetSlot || !result?.slot || !result?.engine) return;
-    adoptMountedAttemptSlot({
-      targetSlot,
-      resultSlot: result.slot
-    });
-    this._engine = result.engine;
-    this._engineMountedMuted = this._streamMuted;
-    this._setActiveStreamType(result.type);
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
   _waitForStreamStart(streamEl, timeoutMs = 3500, opts = {}) {
     const minCurrentTime = Number(opts.minCurrentTime ?? 0.05);

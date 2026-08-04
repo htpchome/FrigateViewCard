@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  adoptMountedAttemptResult,
   adoptMountedAttemptSlot,
   cleanupStaleWinnerResult,
   destroyLoserAttemptResults,
@@ -55,6 +56,47 @@ test("adoptMountedAttemptSlot keeps winner slot and styles it", () => {
   assert.equal(winner.style.opacity, "1");
   assert.equal(winner.style.pointerEvents, "auto");
   assert.equal(winner.style.overflow, "hidden");
+});
+
+test("adoptMountedAttemptResult commits engine and stream ui state", () => {
+  const winner = { style: {} };
+  const engine = { id: "engine-1" };
+  const target = {
+    children: [winner],
+  };
+  const calls = [];
+
+  const adopted = adoptMountedAttemptResult({
+    targetSlot: target,
+    result: {
+      ok: true,
+      type: "mse",
+      slot: winner,
+      engine,
+    },
+    streamMuted: true,
+    rotateOverlayActive: true,
+    assignEngine: (value) => calls.push(["assignEngine", value]),
+    setEngineMountedMuted: (value) =>
+      calls.push(["setEngineMountedMuted", value]),
+    setActiveStreamType: (value) => calls.push(["setActiveStreamType", value]),
+    setStreamLoading: (value) => calls.push(["setStreamLoading", value]),
+    setStreamFallbackVisible: (value) =>
+      calls.push(["setStreamFallbackVisible", value]),
+    setLiveNativeControls: (value) =>
+      calls.push(["setLiveNativeControls", value]),
+  });
+
+  assert.equal(adopted, true);
+  assert.deepEqual(calls, [
+    ["assignEngine", engine],
+    ["setEngineMountedMuted", true],
+    ["setActiveStreamType", "mse"],
+    ["setStreamLoading", false],
+    ["setStreamFallbackVisible", false],
+    ["setLiveNativeControls", true],
+  ]);
+  assert.equal(winner.style.opacity, "1");
 });
 
 test("destroyLoserAttemptResults destroys only non-winner successful attempts", async () => {

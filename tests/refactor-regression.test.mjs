@@ -174,6 +174,8 @@ test("go2rtc ownership is pulled out of the card shell", () => {
   assert.equal(cardSource.includes("_applyLiveMountUiState("), false);
   assert.equal(cardSource.includes("_applySnapshotFallbackState("), false);
   assert.equal(cardSource.includes("_beginLiveMountSession("), false);
+  assert.equal(cardSource.includes("_streamAttemptSlot("), false);
+  assert.equal(cardSource.includes("_adoptMountedAttempt("), false);
   assert.equal(go2rtcResolverSource.includes("GO2RTC_CACHE_TTL_MS"), true);
   assert.equal(
     go2rtcResolverSource.includes("buildSignedGo2RtcWebSocketUrl"),
@@ -240,6 +242,10 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     true,
   );
   assert.equal(
+    go2rtcRaceMounterSource.includes("function createAttemptSlot"),
+    true,
+  );
+  assert.equal(
     mseGraceControllerSource.includes("splitPendingDestroyersByGraceMse"),
     true,
   );
@@ -274,12 +280,25 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     liveMountControllerSource.includes("applyMountWatchdogTimeout"),
     true,
   );
-  assert.equal(liveMountControllerSource.includes("shouldRunMountWatchdog"), true);
-  assert.equal(liveMountControllerSource.includes("resolveLiveMountUiState"), true);
+  assert.equal(
+    liveMountControllerSource.includes("shouldRunMountWatchdog"),
+    true,
+  );
+  assert.equal(
+    liveMountControllerSource.includes("resolveLiveMountUiState"),
+    true,
+  );
   assert.equal(
     liveMountControllerSource.includes("resolveSnapshotFallbackState"),
     true,
   );
+  assert.equal(
+    /adoptMountedAttempt:\s*\(slot, winner\)\s*=>\s*adoptMountedAttemptResult\(/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("adoptMountedAttemptResult"), true);
   assert.equal(frigateUrlSource.includes("buildGo2rtcWsPath"), true);
   assert.equal(sharedUrlSource.includes("toAbsoluteSignedUrl"), true);
   assert.equal(

@@ -15,7 +15,6 @@ export function createGo2RtcRaceMounter({
   isDesktop,
   resolveConnectionType,
   disableHlsDesktopForEntity,
-  createAttemptSlot,
   getPendingMountDestroyers,
   setPendingMountDestroyers,
   isMountTokenCurrent,
@@ -167,6 +166,14 @@ export function createGo2RtcRaceMounter({
     buildAttempts,
     mountWithRace,
   };
+
+  function createAttemptSlot(host = null) {
+    const slot = document.createElement("div");
+    slot.style.cssText =
+      "position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden;";
+    if (host) host.appendChild(slot);
+    return slot;
+  }
 
   function scheduleDeferredWebRtcTakeover({
     slot,

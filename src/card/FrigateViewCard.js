@@ -100,6 +100,7 @@ import {
   resolveLiveResumeAction,
 } from "../features/live/mount-lifecycle.js";
 import {
+  adoptMountedAttemptResult,
   adoptMountedAttemptSlot,
   isMountTokenCurrent,
 } from "../features/live/mount-result.js";
@@ -435,7 +436,6 @@ export class FrigateViewCard extends HTMLElement {
       resolveConnectionType: (entity) => this._cameraConnectionType(entity),
       disableHlsDesktopForEntity: (entity) =>
         this._cameraDisableHlsDesktop(entity),
-      createAttemptSlot: (hostSlot) => this._streamAttemptSlot(hostSlot),
       getPendingMountDestroyers: () => this._pendingMountDestroyers || [],
       setPendingMountDestroyers: (pendingDestroyers) => {
         this._pendingMountDestroyers = pendingDestroyers;
@@ -443,7 +443,24 @@ export class FrigateViewCard extends HTMLElement {
       isMountTokenCurrent: (mountToken) =>
         isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq }),
       adoptMountedAttempt: (slot, winner) =>
-        this._adoptMountedAttempt(slot, winner),
+        adoptMountedAttemptResult({
+          targetSlot: slot,
+          result: winner,
+          streamMuted: this._streamMuted,
+          rotateOverlayActive: this._rotateOverlayActive,
+          assignEngine: (engine) => {
+            this._engine = engine;
+          },
+          setEngineMountedMuted: (muted) => {
+            this._engineMountedMuted = muted;
+          },
+          setActiveStreamType: (type) => this._setActiveStreamType(type),
+          setStreamLoading: (loading) => this._setStreamLoading(loading),
+          setStreamFallbackVisible: (visible) =>
+            this._setStreamFallbackVisible(visible),
+          setLiveNativeControls: (enabled) =>
+            this._setLiveNativeControls(enabled),
+        }),
       waitForStreamStart: (streamEl, timeoutMs, opts) =>
         this._waitForStreamStart(streamEl, timeoutMs, opts),
       isCurrentWinnerEngine: (engine) => this._engine === engine,
@@ -1744,28 +1761,6 @@ export class FrigateViewCard extends HTMLElement {
     this._mountInProgress = nextState.mountInProgress;
     this._mountStartedAt = nextState.mountStartedAt;
     this._mountTargetEntity = nextState.mountTargetEntity;
-  }
-
-  _streamAttemptSlot(host = null) {
-    const slot = document.createElement("div");
-    slot.style.cssText =
-      "position:absolute;inset:0;opacity:0;pointer-events:none;overflow:hidden;";
-    if (host) host.appendChild(slot);
-    return slot;
-  }
-
-  _adoptMountedAttempt(targetSlot, result) {
-    if (!targetSlot || !result?.slot || !result?.engine) return;
-    adoptMountedAttemptSlot({
-      targetSlot,
-      resultSlot: result.slot,
-    });
-    this._engine = result.engine;
-    this._engineMountedMuted = this._streamMuted;
-    this._setActiveStreamType(result.type);
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    if (this._rotateOverlayActive) this._setLiveNativeControls(true);
   }
 
   _waitForStreamStart(streamEl, timeoutMs = 3500, opts = {}) {
