@@ -27,6 +27,8 @@ For architectural rationale and refactor strategy, see `docs/refactor-guidelines
 
 - Keep `src/card/FrigateViewCard.js` as the top-level runtime owner for shared shell orchestration, live engine lifecycle, playback, data loading, and other safety-critical behavior.
 - Move deterministic rendering and pure derivation logic into focused helper modules or page controllers.
+- If a file needs both layout behavior and server-backed application state, treat it as a controller or model and keep it under `src/features/`.
+- If a file is blind to app context and only manipulates data, events, or DOM mechanics, treat it as a shared utility and keep it under `src/shared/`.
 - Name new files by stable responsibility, not by temporary placement in the DOM or layout.
 - Prefer small, composable helpers over large coupled methods.
 - Keep public behavior unchanged unless the task explicitly requests a behavior change.
@@ -67,9 +69,9 @@ For architectural rationale and refactor strategy, see `docs/refactor-guidelines
 Use the narrowest validation that matches the change.
 
 - For touched source files, prefer `node --check <file>` first.
+- When a focused test file exists for the changed surface, run that test before broader validation.
 - After structural or behavioral source changes, run `npm run build`.
-- For refactor safety, run `node --test tests/refactor-regression.test.mjs`.
-- When a focused test file exists for the changed surface, run that test in addition to or before the broader regression suite.
+- For refactor safety, run `node --test tests/refactor-regression.test.mjs` after focused tests and build when the change is compatibility-sensitive.
 
 ## Change Planning Guidance
 
