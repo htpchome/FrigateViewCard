@@ -345,6 +345,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     const disableHlsDesktop = this.querySelector(
       "#camera-modal-disable-hls-desktop",
     );
+    const ptzEnabled = this.querySelector("#camera-modal-ptz-enabled");
     const helper = this.querySelector("#camera-modal-helper");
     if (title) title.textContent = index == null ? "Add" : "Edit";
     if (save) save.textContent = index == null ? "Add" : "Save";
@@ -365,6 +366,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (disableHlsDesktop) {
       disableHlsDesktop.checked =
         normalizeDisableHlsDesktop(cam?.disable_hls_desktop) === true;
+    }
+    if (ptzEnabled) {
+      ptzEnabled.checked = hasCameraPtz(cam);
     }
     if (helper) helper.textContent = "";
     if (modal) modal.classList.remove("hidden");
@@ -399,6 +403,9 @@ export class FrigateViewCardEditor extends HTMLElement {
         : "alerts_only";
     const disableHlsDesktop =
       this.querySelector("#camera-modal-disable-hls-desktop")?.checked === true;
+    const ptz = this.querySelector("#camera-modal-ptz-enabled")?.checked
+      ? true
+      : null;
     const helper = this.querySelector("#camera-modal-helper");
     if (!entity) {
       if (helper) helper.textContent = "Camera is required.";
@@ -416,7 +423,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         connection_type: connectionType,
         alerts_content: alertsContent,
         disable_hls_desktop: disableHlsDesktop,
-        ptz: null,
+        ptz,
       });
     } else if (cur[this._editingCamIndex]) {
       cur[this._editingCamIndex] = {
@@ -425,8 +432,11 @@ export class FrigateViewCardEditor extends HTMLElement {
         connection_type: connectionType,
         alerts_content: alertsContent,
         disable_hls_desktop: disableHlsDesktop,
-        ptz: normalizeCameraPtzConfig(cur[this._editingCamIndex]?.ptz),
+        ptz: ptz || normalizeCameraPtzConfig(cur[this._editingCamIndex]?.ptz),
       };
+      if (!ptz) {
+        cur[this._editingCamIndex].ptz = null;
+      }
     }
     this._config = { ...this._config, cameras: cur.slice(0, MAX_CAMERAS) };
     this._closeCameraModal();
@@ -1205,6 +1215,13 @@ export class FrigateViewCardEditor extends HTMLElement {
               <ha-switch id="camera-modal-disable-hls-desktop"></ha-switch>
             </div>
             <div class="field-helper">Only affects non-mobile, non-tablet devices. WebRTC and MSE stay enabled; only the HLS fallback attempt is removed for this camera.</div>
+          </div>
+          <div class="cam-modal-field">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="cam-modal-label" style="margin:0">Enable PTZ Controls</span>
+              <ha-switch id="camera-modal-ptz-enabled"></ha-switch>
+            </div>
+            <div class="field-helper">Turns on circle-pad PTZ for this camera using the Home Assistant onvif.ptz action.</div>
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">

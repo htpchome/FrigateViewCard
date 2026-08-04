@@ -121,6 +121,32 @@ test("compact YAML preserves per-camera PTZ config", () => {
   });
 });
 
+test("compact YAML preserves boolean PTZ enablement", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [
+      {
+        entity: "camera.front_door",
+        ptz: true,
+      },
+    ],
+  });
+
+  assert.deepEqual(config, {
+    cameras: [
+      {
+        entity: "camera.front_door",
+        ptz: {
+          enabled: true,
+          move_mode: "ContinuousMove",
+          speed: null,
+          distance: null,
+          continuous_duration: null,
+        },
+      },
+    ],
+  });
+});
+
 test("custom theme YAML config only keeps colors different from defaults", () => {
   const config = compactEditorConfigForYaml(
     {

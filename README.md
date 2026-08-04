@@ -110,7 +110,7 @@ PTZ notes:
 - Use `ptz: true` for the default `onvif.ptz` behavior.
 - Use a PTZ object when you need `move_mode`, `speed`, `distance`, or `continuous_duration` overrides.
 - The controls tab targets the active camera entity, so only cameras with `ptz` enabled respond to the circle pad.
-- The visual editor preserves PTZ YAML but does not yet expose PTZ fields directly.
+- The visual editor now exposes a simple per-camera PTZ on/off toggle. Advanced PTZ overrides still require YAML.
 
 ### Custom Theme Colors
 
