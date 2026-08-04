@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1172";
+const VERSION = "1.0.1173";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3118,6 +3118,55 @@ function buildGo2RtcTransportState({
   });
   if (!ctx) return null;
   return { ...ctx, nowMs };
+}
+
+// src/integrations/frigate/bootstrap.js
+async function signHomeAssistantPath({ hass, path, expires = 3600 }) {
+  try {
+    const result = await hass.callWS({
+      type: "auth/sign_path",
+      path,
+      expires
+    });
+    return result?.path || path;
+  } catch (_) {
+    return path;
+  }
+}
+function resolveAbsoluteSignedPath({ signedPath, origin }) {
+  return toAbsoluteSignedUrl({ signedPath, origin });
+}
+async function signSameOriginAbsoluteUrl({
+  hass,
+  url,
+  origin,
+  expires = 3600
+}) {
+  const abs = String(url || "").trim();
+  if (!abs) return abs;
+  let parsed;
+  try {
+    parsed = new URL(abs, origin);
+  } catch (_) {
+    return abs;
+  }
+  if (parsed.origin !== origin) return parsed.toString();
+  const signedPath = await signHomeAssistantPath({
+    hass,
+    path: `${parsed.pathname}${parsed.search}`,
+    expires
+  });
+  return resolveAbsoluteSignedPath({ signedPath, origin });
+}
+async function buildSignedGo2RtcWebSocketUrl({
+  hass,
+  path,
+  origin,
+  expires = 3600
+}) {
+  const signedPath = await signHomeAssistantPath({ hass, path, expires });
+  const abs = resolveAbsoluteSignedPath({ signedPath, origin });
+  return toWebSocketUrl(abs);
 }
 
 // src/features/live/mount-lifecycle.js
@@ -11539,23 +11588,17 @@ const FrigateViewCard = class extends HTMLElement {
     return this._resolveGo2RtcEntity(options?.entity);
   }
   _toAbsoluteSignedPath(signedPath) {
-    return toAbsoluteSignedUrl({
+    return resolveAbsoluteSignedPath({
       signedPath,
       origin: window.location.origin
     });
   }
   async _signedAbsoluteUrl(url) {
-    const abs = String(url || "").trim();
-    if (!abs) return abs;
-    let parsed;
-    try {
-      parsed = new URL(abs, window.location.origin);
-    } catch (_) {
-      return abs;
-    }
-    if (parsed.origin !== window.location.origin) return parsed.toString();
-    const signedPath = await this._signed(`${parsed.pathname}${parsed.search}`);
-    return this._toAbsoluteSignedPath(signedPath);
+    return await signSameOriginAbsoluteUrl({
+      hass: this._hass,
+      url,
+      origin: window.location.origin
+    });
   }
   async _rewriteGo2RtcHlsManifestSource(manifestUrl, blobUrls, depth = 0) {
     if (depth > 3) return null;
@@ -11634,17 +11677,11 @@ const FrigateViewCard = class extends HTMLElement {
     return null;
   }
   async _signedGo2RtcWsPath(path) {
-    try {
-      const r = await this._hass.callWS({
-        type: "auth/sign_path",
-        path,
-        expires: 3600
-      });
-      const signedPath = r?.path || path;
-      return signedPath;
-    } catch (e) {
-      return path;
-    }
+    return await signHomeAssistantPath({
+      hass: this._hass,
+      path,
+      expires: 3600
+    });
   }
   _getGo2RtcWsCachedUrl(cacheKey, nowMs) {
     return getFreshCachedValue({
@@ -11715,9 +11752,11 @@ const FrigateViewCard = class extends HTMLElement {
     if (inFlight) return inFlight;
     const wsUrlPromise = (async () => {
       const path = buildGo2rtcWsPath({ clientId, cam });
-      const signedPath = await this._signedGo2RtcWsPath(path);
-      const abs = this._toAbsoluteSignedPath(signedPath);
-      const wsUrl = toWebSocketUrl(abs);
+      const wsUrl = await buildSignedGo2RtcWebSocketUrl({
+        hass: this._hass,
+        path,
+        origin: window.location.origin
+      });
       this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
       return wsUrl;
     })().finally(() => {

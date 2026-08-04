@@ -105,8 +105,6 @@ import {
   requiresNestedSignedHlsRequests,
   rewriteM3u8Manifest,
   setCachedValue,
-  toAbsoluteSignedUrl,
-  toWebSocketUrl,
 } from "../features/live/url-provider.js";
 import {
   buildGo2RtcCameraContext,
@@ -118,6 +116,12 @@ import {
   resolveGo2RtcEntity,
   shouldUseGo2RtcForEntity,
 } from "../integrations/frigate/camera-context.js";
+import {
+  buildSignedGo2RtcWebSocketUrl,
+  resolveAbsoluteSignedPath,
+  signHomeAssistantPath,
+  signSameOriginAbsoluteUrl,
+} from "../integrations/frigate/bootstrap.js";
 import {
   applyMountWatchdogTimeout,
   beginMountTracking,
@@ -2426,24 +2430,18 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _toAbsoluteSignedPath(signedPath) {
-    return toAbsoluteSignedUrl({
+    return resolveAbsoluteSignedPath({
       signedPath,
       origin: window.location.origin,
     });
   }
 
   async _signedAbsoluteUrl(url) {
-    const abs = String(url || "").trim();
-    if (!abs) return abs;
-    let parsed;
-    try {
-      parsed = new URL(abs, window.location.origin);
-    } catch (_) {
-      return abs;
-    }
-    if (parsed.origin !== window.location.origin) return parsed.toString();
-    const signedPath = await this._signed(`${parsed.pathname}${parsed.search}`);
-    return this._toAbsoluteSignedPath(signedPath);
+    return await signSameOriginAbsoluteUrl({
+      hass: this._hass,
+      url,
+      origin: window.location.origin,
+    });
   }
 
   async _rewriteGo2RtcHlsManifestSource(manifestUrl, blobUrls, depth = 0) {
@@ -2531,19 +2529,11 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _signedGo2RtcWsPath(path) {
-    // Frigate go2rtc websocket may require a signed HA path when accessed via
-    // remote URLs/reverse proxies (seen as ws close 1006 in Firefox).
-    try {
-      const r = await this._hass.callWS({
-        type: "auth/sign_path",
-        path,
-        expires: 3600,
-      });
-      const signedPath = r?.path || path;
-      return signedPath;
-    } catch (e) {
-      return path;
-    }
+    return await signHomeAssistantPath({
+      hass: this._hass,
+      path,
+      expires: 3600,
+    });
   }
 
   _getGo2RtcWsCachedUrl(cacheKey, nowMs) {
@@ -2628,10 +2618,11 @@ export class FrigateViewCard extends HTMLElement {
 
     const wsUrlPromise = (async () => {
       const path = buildGo2rtcWsPath({ clientId, cam });
-      const signedPath = await this._signedGo2RtcWsPath(path);
-
-      const abs = this._toAbsoluteSignedPath(signedPath);
-      const wsUrl = toWebSocketUrl(abs);
+      const wsUrl = await buildSignedGo2RtcWebSocketUrl({
+        hass: this._hass,
+        path,
+        origin: window.location.origin,
+      });
       // Signed path expires in 1h; refresh a bit early.
       this._cacheGo2RtcWsUrl(cacheKey, wsUrl, nowMs);
       return wsUrl;
