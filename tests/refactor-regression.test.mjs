@@ -42,6 +42,10 @@ const mseGraceControllerSource = fs.readFileSync(
   new URL("../src/features/live/mse-grace-controller.js", import.meta.url),
   "utf8",
 );
+const liveMountControllerSource = fs.readFileSync(
+  new URL("../src/features/live/mount-controller.js", import.meta.url),
+  "utf8",
+);
 const gridMediaControllerSource = fs.readFileSync(
   new URL("../src/features/grid/media.ctrl.js", import.meta.url),
   "utf8",
@@ -118,7 +122,19 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     true,
   );
   assert.equal(
+    cardSource.includes(
+      'import { createLiveMountController } from "../features/live/mount-controller.js";',
+    ),
+    true,
+  );
+  assert.equal(
     /this\._mseGraceController\s*=\s*createMseGraceController\(\{/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._liveMountController\s*=\s*createLiveMountController\(\{/.test(
       cardSource,
     ),
     true,
@@ -225,6 +241,24 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     mseGraceControllerSource.includes("const mseGracePool = new Map()"),
     true,
   );
+  assert.equal(
+    liveMountControllerSource.includes(
+      "export function createLiveMountController",
+    ),
+    true,
+  );
+  assert.equal(
+    liveMountControllerSource.includes("resolveLiveMountEntryAction"),
+    true,
+  );
+  assert.equal(
+    liveMountControllerSource.includes("resolveLiveMountTransportPlan"),
+    true,
+  );
+  assert.equal(
+    liveMountControllerSource.includes("createGracePendingMountDestroyer"),
+    true,
+  );
   assert.equal(frigateUrlSource.includes("buildGo2rtcWsPath"), true);
   assert.equal(sharedUrlSource.includes("toAbsoluteSignedUrl"), true);
   assert.equal(
@@ -255,7 +289,7 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     true,
   );
   assert.equal(
-    /_mountEngine\([\s\S]*?const useGo2Rtc = this\._shouldUseGo2RtcForEntity\(entity\);[\s\S]*?if \(\s*useGo2Rtc\s*&&/.test(
+    /_mountEngine\([\s\S]*?return this\._liveMountController\.mount\(\{[\s\S]*?entity: this\._activeCam\?\.entity \|\| ""/.test(
       cardSource,
     ),
     true,
@@ -267,20 +301,20 @@ test("go2rtc ownership is pulled out of the card shell", () => {
     true,
   );
   assert.equal(
-    /_mountEngine\([\s\S]*?_go2rtcRaceMounter\.mountWithRace\(\{[\s\S]*?entity,[\s\S]*?forcedType,[\s\S]*?mountToken,[\s\S]*?\}\)/.test(
-      cardSource,
+    /mount\s*=\s*async\s*\(\{[\s\S]*?go2rtcRaceMounter\.mountWithRace\(\{[\s\S]*?entity:\s*targetEntity,[\s\S]*?forcedType,[\s\S]*?mountToken,[\s\S]*?\}\)/.test(
+      liveMountControllerSource,
     ),
     true,
   );
   assert.equal(
-    /_mountEngine\([\s\S]*?_haDirectMounter\.tryMount\([\s\S]*?streamType: transportPlan\.streamType/.test(
-      cardSource,
+    /mount\s*=\s*async\s*\(\{[\s\S]*?haDirectMounter\.tryMount\([\s\S]*?streamType: transportPlan\.streamType/.test(
+      liveMountControllerSource,
     ),
     true,
   );
   assert.equal(
-    /_mountEngine\([\s\S]*?const \{ mountToken, clearMountState \} = this\._beginLiveMountSession\(entity\);[\s\S]*?finally \{[\s\S]*?clearMountState\(\);[\s\S]*?\}/.test(
-      cardSource,
+    /mount\s*=\s*async\s*\(\{[\s\S]*?const \{ mountToken, clearMountState \} = beginLiveMountSession\(targetEntity\);[\s\S]*?finally \{[\s\S]*?clearMountState\(\);[\s\S]*?\}/.test(
+      liveMountControllerSource,
     ),
     true,
   );

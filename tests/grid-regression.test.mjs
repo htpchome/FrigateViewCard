@@ -14,6 +14,10 @@ const gridMediaControllerSource = fs.readFileSync(
   new URL("../src/features/grid/media.ctrl.js", import.meta.url),
   "utf8",
 );
+const liveMountControllerSource = fs.readFileSync(
+  new URL("../src/features/live/mount-controller.js", import.meta.url),
+  "utf8",
+);
 
 test("grid mode config is wired through card and editor", () => {
   assert.equal(source.includes("grid_mode_enabled"), true);
@@ -46,12 +50,18 @@ test("grid mode toolbar and runtime hooks are present", () => {
     true,
   );
   assert.equal(
-    /mountEntry\.type === "grid"[\s\S]*?_gridMediaController\.mountGridEngine\(slot\)/.test(
+    /this\._liveMountController\s*=\s*createLiveMountController\(\{/.test(
       cardSource,
     ),
     true,
   );
   assert.equal(cardSource.includes("_mountGridEngine("), false);
+  assert.equal(
+    /mountEntry\.type === "grid"[\s\S]*?mountGridEngine\?\.\(slot\)/.test(
+      liveMountControllerSource,
+    ),
+    true,
+  );
   assert.equal(
     gridMediaControllerSource.includes("mountGridEngine(slot)"),
     true,
