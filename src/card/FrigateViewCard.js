@@ -277,6 +277,7 @@ import {
 import {
   appendControlsReadoutLine,
   clearControlsReadoutLines,
+  isControlsPadTarget,
   isControlsReadoutClearTarget,
   resolveControlsPadToggleReadoutEntry,
   resolveControlsReadoutMarkup,

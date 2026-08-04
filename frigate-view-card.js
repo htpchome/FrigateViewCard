@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1158";
+const VERSION = "1.0.1159";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6702,7 +6702,7 @@ function clearControlsReadoutLines() {
   return [];
 }
 const eventTargetMatchesControlsPad = (target) => target instanceof Element && target.id === "controls-pad";
-function isControlsPadTarget2(targetOrEvent) {
+function isControlsPadTarget(targetOrEvent) {
   if (eventTargetMatchesControlsPad(targetOrEvent)) return true;
   const path = targetOrEvent?.composedPath?.();
   return Array.isArray(path) && path.some(eventTargetMatchesControlsPad);
@@ -6711,12 +6711,12 @@ function isControlsReadoutClearTarget(target) {
   return target instanceof Element && !!target.closest("#controls-readout-clear");
 }
 function resolveControlsPadPressReadoutEntry(event) {
-  if (!isControlsPadTarget2(event)) return "";
+  if (!isControlsPadTarget(event)) return "";
   const action = event?.detail?.action;
   return action ? `[${action}]` : "";
 }
 function resolveControlsPadToggleReadoutEntry(event) {
-  if (!isControlsPadTarget2(event)) return "";
+  if (!isControlsPadTarget(event)) return "";
   if (event?.detail?.action !== "mic") return "";
   return event?.detail?.active ? "[mic:on]" : "[mic:off]";
 }
