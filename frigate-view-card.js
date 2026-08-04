@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1179";
+const VERSION = "1.0.1180";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2607,219 +2607,6 @@ const hassThemeSignature = (hass) => {
 };
 const hassEntityStateSignature = (hass, entities) => entities.map((entity) => `${entity}:${hass?.states?.[entity]?.state ?? "missing"}`).join("|");
 
-// src/features/live/attempt-planner.js
-const DEFAULT_LIVE_ORDER = Object.freeze(["webrtc", "mse", "hls"]);
-const buildLiveAttemptPlan = ({
-  connectionType,
-  forcedType = null,
-  disableHlsOnDesktop = false,
-  builders = {}
-}) => {
-  if (connectionType === "ha_direct") return [];
-  const order = forcedType ? [forcedType] : DEFAULT_LIVE_ORDER;
-  return order.filter((type) => !(type === "hls" && disableHlsOnDesktop)).filter((type) => typeof builders[type] === "function").map((type) => ({ type, start: builders[type] }));
-};
-const raceMountAttempts = async (attempts) => {
-  return await new Promise((resolve) => {
-    if (!attempts.length) {
-      resolve(null);
-      return;
-    }
-    let settled = 0;
-    let resolved = false;
-    const finish = (result) => {
-      if (resolved) return;
-      resolved = true;
-      resolve(result);
-    };
-    for (const attempt of attempts) {
-      void (async () => {
-        try {
-          const result = await attempt;
-          settled += 1;
-          if (result?.ok) {
-            finish(result);
-            return;
-          }
-          if (settled >= attempts.length) finish(null);
-        } catch (_) {
-          settled += 1;
-          if (settled >= attempts.length) finish(null);
-        }
-      })();
-    }
-  });
-};
-
-// src/features/live/stream.orchestrator.js
-const StreamOrchestrator = class {
-  constructor(options = {}) {
-    const strategies = Array.isArray(options) ? options : options?.strategies || [];
-    this._strategies = Array.isArray(strategies) ? [...strategies] : [];
-    this._preferredType = String(options?.preferredType || "").trim().toLowerCase();
-    this._preferredWaitMs = Math.max(0, Number(options?.preferredWaitMs) || 0);
-    this._retainPreferredOnFallback = options?.retainPreferredOnFallback === true;
-    this._attempts = [];
-    this._deferredPreferredAttempt = null;
-  }
-  get attempts() {
-    return this._attempts;
-  }
-  get deferredPreferredAttempt() {
-    return this._deferredPreferredAttempt;
-  }
-  async start() {
-    if (!this._strategies.length) return null;
-    this._deferredPreferredAttempt = null;
-    this._attempts = this._strategies.map((strategy) => ({
-      type: strategy.type,
-      strategy,
-      promise: strategy.connect().catch(() => null)
-    }));
-    const candidates = this._attempts.map(
-      (attempt) => (async () => {
-        const result = await attempt.promise;
-        if (!result?.ok) {
-          throw new Error(`${attempt.type} strategy failed`);
-        }
-        return {
-          type: attempt.type,
-          strategy: attempt.strategy,
-          result
-        };
-      })()
-    );
-    const preferredCandidate = this._attempts.find(
-      (attempt) => attempt.type === this._preferredType
-    );
-    try {
-      let winner = null;
-      if (!preferredCandidate) {
-        winner = await Promise.any(candidates);
-      } else {
-        const fallbackWinner = await Promise.any(candidates);
-        if (fallbackWinner.type === this._preferredType) {
-          winner = fallbackWinner;
-        } else if (this._preferredWaitMs <= 0) {
-          winner = fallbackWinner;
-        } else {
-          const preferredWinnerPromise = (async () => {
-            try {
-              const result = await preferredCandidate.promise;
-              if (!result?.ok) return null;
-              return {
-                type: preferredCandidate.type,
-                strategy: preferredCandidate.strategy,
-                result
-              };
-            } catch (_) {
-              return null;
-            }
-          })();
-          const timeoutPromise = new Promise((resolve) => {
-            setTimeout(() => resolve(null), this._preferredWaitMs);
-          });
-          const preferredWithTimeout = await Promise.race([
-            preferredWinnerPromise,
-            timeoutPromise
-          ]);
-          winner = preferredWithTimeout || fallbackWinner;
-        }
-      }
-      const shouldRetainPreferred = this._retainPreferredOnFallback && preferredCandidate && winner?.type !== preferredCandidate.type;
-      if (shouldRetainPreferred) {
-        this._deferredPreferredAttempt = preferredCandidate;
-        await this.stop({
-          exclude: [winner.strategy, preferredCandidate.strategy]
-        });
-      } else {
-        await this.stop({ exclude: winner.strategy });
-      }
-      return winner.result;
-    } catch (_) {
-      await this.stop();
-      return null;
-    }
-  }
-  async stop({ exclude = null } = {}) {
-    const excluded = Array.isArray(exclude) ? new Set(exclude) : exclude ? new Set([exclude]) : null;
-    await Promise.all(
-      (this._strategies || []).map(async (strategy) => {
-        if (excluded?.has(strategy)) return;
-        await strategy.disconnect();
-      })
-    );
-  }
-};
-
-// src/features/live/stream.strategies.js
-const StreamStrategy = class {
-  constructor({ type, connect }) {
-    this.type = String(type || "").trim().toLowerCase();
-    this._connectImpl = typeof connect === "function" ? connect : null;
-    this._abortController = null;
-    this._connectPromise = null;
-    this._disconnectStarted = false;
-  }
-  get connectPromise() {
-    return this._connectPromise;
-  }
-  async connect() {
-    if (!this._connectImpl) {
-      throw new Error(`Missing connect implementation for ${this.type}`);
-    }
-    if (this._connectPromise) return this._connectPromise;
-    const abortController = new AbortController();
-    this._abortController = abortController;
-    this._connectPromise = (async () => {
-      const result = await this._connectImpl({
-        abortSignal: abortController.signal
-      });
-      if (!result?.ok) {
-        throw new Error(`${this.type} strategy failed`);
-      }
-      return result;
-    })();
-    this._connectPromise.catch(() => null);
-    return this._connectPromise;
-  }
-  async disconnect() {
-    if (this._disconnectStarted) return;
-    this._disconnectStarted = true;
-    try {
-      this._abortController?.abort();
-    } catch (_) {
-    }
-    const result = await this._connectPromise?.catch(() => null);
-    try {
-      result?.engine?.destroy?.();
-    } catch (_) {
-    }
-  }
-};
-const WebRtcStrategy = class extends StreamStrategy {
-  constructor(connect) {
-    super({ type: "webrtc", connect });
-  }
-};
-const MseStrategy = class extends StreamStrategy {
-  constructor(connect) {
-    super({ type: "mse", connect });
-  }
-};
-const HlsStrategy = class extends StreamStrategy {
-  constructor(connect) {
-    super({ type: "hls", connect });
-  }
-};
-const createStrategyForType = ({ type, connect }) => {
-  const key = String(type || "").trim().toLowerCase();
-  if (key === "webrtc") return new WebRtcStrategy(connect);
-  if (key === "mse") return new MseStrategy(connect);
-  if (key === "hls") return new HlsStrategy(connect);
-  return new StreamStrategy({ type: key || "unknown", connect });
-};
-
 // src/features/live/pending-destroyers.js
 const createPendingMountDestroyers = ({
   activeAttempts,
@@ -5389,6 +5176,459 @@ const buildFallbackRefreshOutcome = ({ primarySrc, altSrc }) => {
     hasSource: !!src
   };
 };
+
+// src/features/live/ha-direct-mounter.js
+function createHaDirectMounter({
+  getHass,
+  getPreferredStreamType,
+  getStreamMuted,
+  getRotateOverlayActive,
+  isCurrentEngine,
+  waitForStreamStart,
+  attachVideoFit,
+  assignCommittedEngine,
+  applyResolvedStreamUiState,
+  setLiveNativeControls
+}) {
+  const scheduleFollowUp = (streamEl, haDirectPlan) => {
+    void (async () => {
+      const ok = await waitForStreamStart(
+        streamEl,
+        haDirectPlan.waitMs,
+        haDirectPlan.waitOptions
+      );
+      const readyState = resolveHaDirectReadyState({
+        rotateOverlayActive: getRotateOverlayActive(),
+        isCurrentEngine: isCurrentEngine(streamEl),
+        waitSucceeded: ok
+      });
+      if (readyState.shouldApply) {
+        applyResolvedStreamUiState(readyState);
+      }
+    })();
+    setTimeout(() => {
+      const stabilizedState = resolveHaDirectStabilizedState({
+        rotateOverlayActive: getRotateOverlayActive(),
+        isCurrentEngine: isCurrentEngine(streamEl)
+      });
+      if (stabilizedState.shouldApply) {
+        applyResolvedStreamUiState(stabilizedState);
+      }
+    }, 1200);
+  };
+  const tryMount = async (slot, startup = null, options = {}) => {
+    const preferredStreamType = getPreferredStreamType();
+    const haDirectPlan = buildHaDirectMountPlan({
+      startup: startup || {},
+      preferredStreamType
+    });
+    const commit = options.commit !== false;
+    const entity = String(options.entity || "").trim();
+    if (!entity) return false;
+    const stateObj = buildHaCameraStreamState(
+      getHass(),
+      entity,
+      haDirectPlan.streamType,
+      preferredStreamType
+    );
+    if (!stateObj) {
+      if (commit) {
+        applyResolvedStreamUiState(resolveHaDirectMountUnavailableState());
+      }
+      return false;
+    }
+    const streamEl = createHaCameraStreamElement({
+      hass: getHass(),
+      stateObj,
+      controls: false,
+      muted: options?.muted ?? getStreamMuted(),
+      defaultMuted: options.defaultMuted,
+      styleText: options.styleText || "width:100%;height:100%;display:block;background:var(--c-bg-deep)"
+    });
+    if (!streamEl) return false;
+    slot.innerHTML = "";
+    slot.appendChild(streamEl);
+    attachVideoFit(streamEl);
+    const engine = streamEl;
+    if (!commit) {
+      return {
+        ok: true,
+        type: haDirectPlan.streamType,
+        engine,
+        slot
+      };
+    }
+    assignCommittedEngine(engine);
+    if (getRotateOverlayActive()) {
+      setLiveNativeControls(true);
+    }
+    scheduleFollowUp(streamEl, haDirectPlan);
+    return {
+      ok: true,
+      type: haDirectPlan.streamType,
+      engine,
+      slot
+    };
+  };
+  return {
+    tryMount
+  };
+}
+
+// src/features/live/attempt-planner.js
+const DEFAULT_LIVE_ORDER = Object.freeze(["webrtc", "mse", "hls"]);
+const buildLiveAttemptPlan = ({
+  connectionType,
+  forcedType = null,
+  disableHlsOnDesktop = false,
+  builders = {}
+}) => {
+  if (connectionType === "ha_direct") return [];
+  const order = forcedType ? [forcedType] : DEFAULT_LIVE_ORDER;
+  return order.filter((type) => !(type === "hls" && disableHlsOnDesktop)).filter((type) => typeof builders[type] === "function").map((type) => ({ type, start: builders[type] }));
+};
+const raceMountAttempts = async (attempts) => {
+  return await new Promise((resolve) => {
+    if (!attempts.length) {
+      resolve(null);
+      return;
+    }
+    let settled = 0;
+    let resolved = false;
+    const finish = (result) => {
+      if (resolved) return;
+      resolved = true;
+      resolve(result);
+    };
+    for (const attempt of attempts) {
+      void (async () => {
+        try {
+          const result = await attempt;
+          settled += 1;
+          if (result?.ok) {
+            finish(result);
+            return;
+          }
+          if (settled >= attempts.length) finish(null);
+        } catch (_) {
+          settled += 1;
+          if (settled >= attempts.length) finish(null);
+        }
+      })();
+    }
+  });
+};
+
+// src/features/live/stream.strategies.js
+const StreamStrategy = class {
+  constructor({ type, connect }) {
+    this.type = String(type || "").trim().toLowerCase();
+    this._connectImpl = typeof connect === "function" ? connect : null;
+    this._abortController = null;
+    this._connectPromise = null;
+    this._disconnectStarted = false;
+  }
+  get connectPromise() {
+    return this._connectPromise;
+  }
+  async connect() {
+    if (!this._connectImpl) {
+      throw new Error(`Missing connect implementation for ${this.type}`);
+    }
+    if (this._connectPromise) return this._connectPromise;
+    const abortController = new AbortController();
+    this._abortController = abortController;
+    this._connectPromise = (async () => {
+      const result = await this._connectImpl({
+        abortSignal: abortController.signal
+      });
+      if (!result?.ok) {
+        throw new Error(`${this.type} strategy failed`);
+      }
+      return result;
+    })();
+    this._connectPromise.catch(() => null);
+    return this._connectPromise;
+  }
+  async disconnect() {
+    if (this._disconnectStarted) return;
+    this._disconnectStarted = true;
+    try {
+      this._abortController?.abort();
+    } catch (_) {
+    }
+    const result = await this._connectPromise?.catch(() => null);
+    try {
+      result?.engine?.destroy?.();
+    } catch (_) {
+    }
+  }
+};
+const WebRtcStrategy = class extends StreamStrategy {
+  constructor(connect) {
+    super({ type: "webrtc", connect });
+  }
+};
+const MseStrategy = class extends StreamStrategy {
+  constructor(connect) {
+    super({ type: "mse", connect });
+  }
+};
+const HlsStrategy = class extends StreamStrategy {
+  constructor(connect) {
+    super({ type: "hls", connect });
+  }
+};
+const createStrategyForType = ({ type, connect }) => {
+  const key = String(type || "").trim().toLowerCase();
+  if (key === "webrtc") return new WebRtcStrategy(connect);
+  if (key === "mse") return new MseStrategy(connect);
+  if (key === "hls") return new HlsStrategy(connect);
+  return new StreamStrategy({ type: key || "unknown", connect });
+};
+
+// src/features/live/stream.orchestrator.js
+const StreamOrchestrator = class {
+  constructor(options = {}) {
+    const strategies = Array.isArray(options) ? options : options?.strategies || [];
+    this._strategies = Array.isArray(strategies) ? [...strategies] : [];
+    this._preferredType = String(options?.preferredType || "").trim().toLowerCase();
+    this._preferredWaitMs = Math.max(0, Number(options?.preferredWaitMs) || 0);
+    this._retainPreferredOnFallback = options?.retainPreferredOnFallback === true;
+    this._attempts = [];
+    this._deferredPreferredAttempt = null;
+  }
+  get attempts() {
+    return this._attempts;
+  }
+  get deferredPreferredAttempt() {
+    return this._deferredPreferredAttempt;
+  }
+  async start() {
+    if (!this._strategies.length) return null;
+    this._deferredPreferredAttempt = null;
+    this._attempts = this._strategies.map((strategy) => ({
+      type: strategy.type,
+      strategy,
+      promise: strategy.connect().catch(() => null)
+    }));
+    const candidates = this._attempts.map(
+      (attempt) => (async () => {
+        const result = await attempt.promise;
+        if (!result?.ok) {
+          throw new Error(`${attempt.type} strategy failed`);
+        }
+        return {
+          type: attempt.type,
+          strategy: attempt.strategy,
+          result
+        };
+      })()
+    );
+    const preferredCandidate = this._attempts.find(
+      (attempt) => attempt.type === this._preferredType
+    );
+    try {
+      let winner = null;
+      if (!preferredCandidate) {
+        winner = await Promise.any(candidates);
+      } else {
+        const fallbackWinner = await Promise.any(candidates);
+        if (fallbackWinner.type === this._preferredType) {
+          winner = fallbackWinner;
+        } else if (this._preferredWaitMs <= 0) {
+          winner = fallbackWinner;
+        } else {
+          const preferredWinnerPromise = (async () => {
+            try {
+              const result = await preferredCandidate.promise;
+              if (!result?.ok) return null;
+              return {
+                type: preferredCandidate.type,
+                strategy: preferredCandidate.strategy,
+                result
+              };
+            } catch (_) {
+              return null;
+            }
+          })();
+          const timeoutPromise = new Promise((resolve) => {
+            setTimeout(() => resolve(null), this._preferredWaitMs);
+          });
+          const preferredWithTimeout = await Promise.race([
+            preferredWinnerPromise,
+            timeoutPromise
+          ]);
+          winner = preferredWithTimeout || fallbackWinner;
+        }
+      }
+      const shouldRetainPreferred = this._retainPreferredOnFallback && preferredCandidate && winner?.type !== preferredCandidate.type;
+      if (shouldRetainPreferred) {
+        this._deferredPreferredAttempt = preferredCandidate;
+        await this.stop({
+          exclude: [winner.strategy, preferredCandidate.strategy]
+        });
+      } else {
+        await this.stop({ exclude: winner.strategy });
+      }
+      return winner.result;
+    } catch (_) {
+      await this.stop();
+      return null;
+    }
+  }
+  async stop({ exclude = null } = {}) {
+    const excluded = Array.isArray(exclude) ? new Set(exclude) : exclude ? new Set([exclude]) : null;
+    await Promise.all(
+      (this._strategies || []).map(async (strategy) => {
+        if (excluded?.has(strategy)) return;
+        await strategy.disconnect();
+      })
+    );
+  }
+};
+
+// src/features/live/go2rtc-race-mounter.js
+function createGo2RtcRaceMounter({
+  mounter,
+  isDesktop,
+  resolveConnectionType,
+  disableHlsDesktopForEntity,
+  createAttemptSlot,
+  getPendingMountDestroyers,
+  setPendingMountDestroyers,
+  isMountTokenCurrent: isMountTokenCurrent2,
+  adoptMountedAttempt,
+  scheduleDeferredWebRtcTakeover
+}) {
+  const buildAttempts = (entity = "", forcedType = null, hostSlot = null) => {
+    const targetEntity = String(entity || "").trim();
+    const connectionType = resolveConnectionType(targetEntity);
+    const disableHlsOnDesktop = isDesktop && disableHlsDesktopForEntity(targetEntity);
+    const hiddenSlot = () => createAttemptSlot(hostSlot);
+    const builders = {
+      webrtc: (attemptOptions = {}) => mounter.tryMountWebRtc(
+        hiddenSlot(),
+        { waitMs: 7e3 },
+        {
+          commit: false,
+          ...attemptOptions
+        }
+      ),
+      mse: (attemptOptions = {}) => mounter.tryMountMse(
+        hiddenSlot(),
+        {
+          waitMs: 4e3,
+          minCurrentTime: 0.05,
+          minDecodedFrames: 1,
+          requireReadyState: 2,
+          strict: true
+        },
+        { commit: false, ...attemptOptions }
+      ),
+      hls: (attemptOptions = {}) => mounter.tryMountHls(
+        hiddenSlot(),
+        { waitMs: 5e3 },
+        {
+          commit: false,
+          ...attemptOptions
+        }
+      )
+    };
+    return buildLiveAttemptPlan({
+      connectionType,
+      forcedType,
+      disableHlsOnDesktop,
+      builders
+    });
+  };
+  const mountWithRace = async ({
+    slot,
+    entity,
+    forcedType = null,
+    mountToken
+  }) => {
+    const attempts = buildAttempts(entity, forcedType, slot);
+    const strategies = attempts.map(
+      (attempt) => createStrategyForType({
+        type: attempt.type,
+        connect: async ({ abortSignal }) => {
+          try {
+            return await attempt.start({ abortSignal, entity });
+          } catch (_) {
+            return false;
+          }
+        }
+      })
+    );
+    const orchestrator = new StreamOrchestrator({
+      strategies,
+      preferredType: "webrtc",
+      preferredWaitMs: 0,
+      retainPreferredOnFallback: true
+    });
+    slot?.attachOrchestrator?.(orchestrator);
+    const activeAttempts = strategies.map((strategy) => ({
+      type: strategy.type,
+      promise: strategy.connect().catch(() => null)
+    }));
+    setPendingMountDestroyers(
+      strategies.map((strategy) => ({
+        type: strategy.type,
+        entity,
+        promise: strategy.connectPromise?.catch(() => null),
+        destroy: () => {
+          void strategy.disconnect();
+        }
+      }))
+    );
+    const winner = await orchestrator.start();
+    const deferredPreferredAttempt = orchestrator.deferredPreferredAttempt;
+    const deferredPreferredType = deferredPreferredAttempt?.type || "";
+    if (!isMountTokenCurrent2(mountToken)) {
+      cleanupStaleWinnerResult(winner);
+      slot?.clearOrchestrator?.(orchestrator);
+      return false;
+    }
+    const destroyLosers = async () => {
+      await destroyLoserAttemptResults({
+        activeAttempts: activeAttempts.filter(
+          (attempt) => attempt?.type !== deferredPreferredType
+        ),
+        winnerType: winner?.type
+      });
+      setPendingMountDestroyers(
+        (getPendingMountDestroyers() || []).filter(
+          (attempt) => attempt?.type === deferredPreferredType
+        )
+      );
+      slot?.clearOrchestrator?.(orchestrator);
+    };
+    if (winner?.ok) {
+      setPendingMountDestroyers(
+        (getPendingMountDestroyers() || []).filter(
+          (attempt) => attempt?.type !== winner.type
+        )
+      );
+      adoptMountedAttempt(slot, winner);
+      await destroyLosers();
+      scheduleDeferredWebRtcTakeover({
+        slot,
+        deferredAttempt: deferredPreferredAttempt,
+        mountToken,
+        winnerEngine: winner.engine,
+        winnerType: winner.type
+      });
+      return true;
+    }
+    await destroyLosers();
+    return false;
+  };
+  return {
+    buildAttempts,
+    mountWithRace
+  };
+}
 
 // src/card/controls/shell-nav.tmpl.js
 function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
@@ -10608,6 +10848,34 @@ const FrigateViewCard = class extends HTMLElement {
         this._mseChunkCount += 1;
       }
     });
+    this._haDirectMounter = createHaDirectMounter({
+      getHass: () => this._hass,
+      getPreferredStreamType: () => this._preferredStreamType(),
+      getStreamMuted: () => this._streamMuted,
+      getRotateOverlayActive: () => this._rotateOverlayActive,
+      isCurrentEngine: (streamEl) => this._engine === streamEl,
+      waitForStreamStart: (streamEl, timeoutMs, opts) => this._waitForStreamStart(streamEl, timeoutMs, opts),
+      attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
+      assignCommittedEngine: (engine) => {
+        this._engine = engine;
+      },
+      applyResolvedStreamUiState: (streamState) => this._applyResolvedStreamUiState(streamState),
+      setLiveNativeControls: (enabled) => this._setLiveNativeControls(enabled)
+    });
+    this._go2rtcRaceMounter = createGo2RtcRaceMounter({
+      mounter: this._go2rtcMounter,
+      isDesktop: DEVICE_PROFILE.isDesktop,
+      resolveConnectionType: (entity) => this._cameraConnectionType(entity),
+      disableHlsDesktopForEntity: (entity) => this._cameraDisableHlsDesktop(entity),
+      createAttemptSlot: (hostSlot) => this._streamAttemptSlot(hostSlot),
+      getPendingMountDestroyers: () => this._pendingMountDestroyers || [],
+      setPendingMountDestroyers: (pendingDestroyers) => {
+        this._pendingMountDestroyers = pendingDestroyers;
+      },
+      isMountTokenCurrent: (mountToken) => isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq }),
+      adoptMountedAttempt: (slot, winner) => this._adoptMountedAttempt(slot, winner),
+      scheduleDeferredWebRtcTakeover: (options) => this._scheduleDeferredWebRtcTakeover(options)
+    });
     this._viewMode = "single";
     this._eventsMode = "camera";
     this._events = [];
@@ -11632,55 +11900,6 @@ const FrigateViewCard = class extends HTMLElement {
     }
     return this._preferredStreamType();
   }
-  async _tryMountHaDirect(slot, startup = null, options = {}) {
-    const haDirectPlan = buildHaDirectMountPlan({
-      startup: startup || {},
-      preferredStreamType: this._preferredStreamType()
-    });
-    const commit = options.commit !== false;
-    const entity = this._activeCam?.entity;
-    if (!entity) return false;
-    const stateObj = buildHaCameraStreamState(
-      this._hass,
-      entity,
-      haDirectPlan.streamType,
-      this._preferredStreamType()
-    );
-    if (!stateObj) return false;
-    const s = createHaCameraStreamElement({
-      hass: this._hass,
-      stateObj,
-      controls: false,
-      muted: this._streamMuted,
-      styleText: "width:100%;height:100%;display:block"
-    });
-    if (!s) return false;
-    slot.innerHTML = "";
-    slot.appendChild(s);
-    this._attachVideoFit(s);
-    const destroy = () => {
-      try {
-        s.remove();
-      } catch (_) {
-      }
-    };
-    const started = await this._waitForStreamStart(
-      s,
-      haDirectPlan.waitMs,
-      haDirectPlan.waitOptions
-    );
-    if (!started) {
-      destroy();
-      return false;
-    }
-    const engine = s;
-    if (!commit) return { ok: true, type: "ha", engine, slot };
-    this._engine = engine;
-    this._setActiveStreamType("ha");
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    return true;
-  }
   _cleanupEngine() {
     return this._cleanupEngineWithOptions();
   }
@@ -11976,110 +12195,6 @@ const FrigateViewCard = class extends HTMLElement {
         }
       })();
     }, 0);
-  }
-  _buildLiveStreamAttempts(entity = "", forcedType = null, hostSlot = null) {
-    const targetEntity = String(entity || this._activeCam?.entity || "").trim();
-    const connectionType = this._cameraConnectionType(targetEntity);
-    const disableHlsOnDesktop = DEVICE_PROFILE.isDesktop && this._cameraDisableHlsDesktop(targetEntity);
-    const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
-    const build = {
-      webrtc: (attemptOptions = {}) => this._go2rtcMounter.tryMountWebRtc(
-        hiddenSlot(),
-        { waitMs: 7e3 },
-        { commit: false, ...attemptOptions }
-      ),
-      mse: (attemptOptions = {}) => this._go2rtcMounter.tryMountMse(
-        hiddenSlot(),
-        {
-          waitMs: 4e3,
-          minCurrentTime: 0.05,
-          minDecodedFrames: 1,
-          requireReadyState: 2,
-          strict: true
-        },
-        { commit: false, ...attemptOptions }
-      ),
-      hls: (attemptOptions = {}) => this._go2rtcMounter.tryMountHls(
-        hiddenSlot(),
-        { waitMs: 5e3 },
-        { commit: false, ...attemptOptions }
-      )
-    };
-    const order = forcedType ? [forcedType] : ["webrtc", "mse", "hls"];
-    return buildLiveAttemptPlan({
-      connectionType,
-      forcedType,
-      disableHlsOnDesktop,
-      builders: build
-    });
-  }
-  async _mountLiveWithRace(slot, attempts, mountToken, targetEntity) {
-    const strategies = attempts.map(
-      (attempt) => createStrategyForType({
-        type: attempt.type,
-        connect: async ({ abortSignal }) => {
-          try {
-            return await attempt.start({ abortSignal, entity: targetEntity });
-          } catch (_) {
-            return false;
-          }
-        }
-      })
-    );
-    const orchestrator = new StreamOrchestrator({
-      strategies,
-      preferredType: "webrtc",
-      preferredWaitMs: 0,
-      retainPreferredOnFallback: true
-    });
-    slot?.attachOrchestrator?.(orchestrator);
-    const activeAttempts = strategies.map((strategy) => ({
-      type: strategy.type,
-      promise: strategy.connect().catch(() => null)
-    }));
-    this._pendingMountDestroyers = strategies.map((strategy) => ({
-      type: strategy.type,
-      entity: targetEntity,
-      promise: strategy.connectPromise?.catch(() => null),
-      destroy: () => {
-        void strategy.disconnect();
-      }
-    }));
-    const winner = await orchestrator.start();
-    const deferredPreferredAttempt = orchestrator.deferredPreferredAttempt;
-    const deferredPreferredType = deferredPreferredAttempt?.type || "";
-    if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
-      cleanupStaleWinnerResult(winner);
-      slot?.clearOrchestrator?.(orchestrator);
-      return false;
-    }
-    const destroyLosers = async () => {
-      await destroyLoserAttemptResults({
-        activeAttempts: activeAttempts.filter(
-          (attempt) => attempt?.type !== deferredPreferredType
-        ),
-        winnerType: winner?.type
-      });
-      this._pendingMountDestroyers = (this._pendingMountDestroyers || []).filter((attempt) => attempt?.type === deferredPreferredType);
-      slot?.clearOrchestrator?.(orchestrator);
-    };
-    if (winner?.ok) {
-      this._pendingMountDestroyers = this._pendingMountDestroyers.filter(
-        (attempt) => attempt?.type !== winner.type
-      );
-      this._adoptMountedAttempt(slot, winner);
-      await destroyLosers();
-      this._scheduleDeferredWebRtcTakeover({
-        slot,
-        deferredAttempt: deferredPreferredAttempt,
-        mountToken,
-        winnerEngine: winner.engine,
-        winnerType: winner.type
-      });
-      return true;
-    }
-    await destroyLosers();
-    return false;
   }
   _waitForStreamStart(streamEl, timeoutMs = 3500, opts = {}) {
     const minCurrentTime = Number(opts.minCurrentTime ?? 0.05);
@@ -12387,32 +12502,6 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
   }
-  _scheduleHaDirectMountFollowUp(streamEl, haDirectPlan) {
-    void (async () => {
-      const ok = await this._waitForStreamStart(
-        streamEl,
-        haDirectPlan.waitMs,
-        haDirectPlan.waitOptions
-      );
-      const readyState = resolveHaDirectReadyState({
-        rotateOverlayActive: this._rotateOverlayActive,
-        isCurrentEngine: this._engine === streamEl,
-        waitSucceeded: ok
-      });
-      if (readyState.shouldApply) {
-        this._applyResolvedStreamUiState(readyState);
-      }
-    })();
-    setTimeout(() => {
-      const stabilizedState = resolveHaDirectStabilizedState({
-        rotateOverlayActive: this._rotateOverlayActive,
-        isCurrentEngine: this._engine === streamEl
-      });
-      if (stabilizedState.shouldApply) {
-        this._applyResolvedStreamUiState(stabilizedState);
-      }
-    }, 1200);
-  }
   async _mountEngine(forcedType = null, options = {}) {
     const quiet = options?.quiet === true;
     const slot = this.shadowRoot.querySelector("#engine");
@@ -12507,43 +12596,26 @@ const FrigateViewCard = class extends HTMLElement {
         preferredStreamType: this._preferredStreamType()
       });
       if (transportPlan.mode === "ha-direct") {
-        const haDirectPlan = buildHaDirectMountPlan({
-          startup: { streamType: transportPlan.streamType },
-          preferredStreamType: this._preferredStreamType()
-        });
-        const streamType = haDirectPlan.streamType;
-        this._setActiveStreamType(streamType);
-        const stateObj = buildHaCameraStreamState(
-          this._hass,
-          entity,
-          streamType,
-          this._preferredStreamType()
+        this._setActiveStreamType(transportPlan.streamType);
+        const haDirectResult = await this._haDirectMounter.tryMount(
+          slot,
+          { streamType: transportPlan.streamType },
+          { entity, commit: true }
         );
-        if (!stateObj) {
-          const unavailableState = resolveHaDirectMountUnavailableState();
-          this._applyResolvedStreamUiState(unavailableState);
+        if (!haDirectResult?.ok) {
           return;
         }
-        const s = createHaCameraStreamElement({
-          hass: this._hass,
-          stateObj,
-          controls: false,
-          muted: this._streamMuted,
-          styleText: "width:100%;height:100%;display:block;background:var(--c-bg-deep)"
-        });
-        if (!s) return;
-        slot.innerHTML = "";
-        slot.appendChild(s);
-        this._engine = s;
         this._engineMountedMuted = this._streamMuted;
-        this._attachVideoFit(s);
-        if (this._rotateOverlayActive) this._setLiveNativeControls(true);
-        this._scheduleHaDirectMountFollowUp(s, haDirectPlan);
         return;
       }
-      const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);
-      if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
+      if (await this._go2rtcRaceMounter.mountWithRace({
+        slot,
+        entity,
+        forcedType,
+        mountToken
+      })) {
         return;
+      }
       this._applySnapshotFallbackState();
     } finally {
       clearMountState();

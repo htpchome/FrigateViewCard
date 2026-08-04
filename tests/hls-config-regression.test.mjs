@@ -6,6 +6,18 @@ const source = fs.readFileSync(
   new URL("../frigate-view-card.js", import.meta.url),
   "utf8",
 );
+const cardSource = fs.readFileSync(
+  new URL("../src/card/FrigateViewCard.js", import.meta.url),
+  "utf8",
+);
+const go2rtcRaceMounterSource = fs.readFileSync(
+  new URL("../src/features/live/go2rtc-race-mounter.js", import.meta.url),
+  "utf8",
+);
+const attemptPlannerSource = fs.readFileSync(
+  new URL("../src/features/live/attempt-planner.js", import.meta.url),
+  "utf8",
+);
 
 test("per-camera desktop HLS disable config is wired through card and editor", () => {
   assert.equal(source.includes("disable_hls_desktop"), true);
@@ -18,15 +30,19 @@ test("per-camera desktop HLS disable config is wired through card and editor", (
 
 test("desktop HLS disable only removes the HLS attempt on desktop devices", () => {
   assert.match(
-    source,
-    /const\s+disableHlsOnDesktop\s*=\s*DEVICE_PROFILE\.isDesktop[\s\S]*_cameraDisableHlsDesktop\(targetEntity\)/,
+    cardSource,
+    /createGo2RtcRaceMounter\([\s\S]*?isDesktop:\s*DEVICE_PROFILE\.isDesktop,[\s\S]*?disableHlsDesktopForEntity:\s*\(entity\)\s*=>[\s\S]*?_cameraDisableHlsDesktop\(entity\)/,
   );
   assert.match(
-    source,
-    /return\s+order[\s\S]*\.filter\(\(type\)\s*=>\s*!\(type\s*===\s*"hls"\s*&&\s*disableHlsOnDesktop\)\)/,
+    go2rtcRaceMounterSource,
+    /const\s+disableHlsOnDesktop\s*=\s*isDesktop\s*&&\s*disableHlsDesktopForEntity\(targetEntity\)/,
   );
   assert.match(
-    source,
-    /const\s+order\s*=\s*forcedType\s*\?\s*\[forcedType\]\s*:\s*\["webrtc",\s*"mse",\s*"hls"\]/,
+    go2rtcRaceMounterSource,
+    /return\s+buildLiveAttemptPlan\([\s\S]*?disableHlsOnDesktop,[\s\S]*?builders/s,
+  );
+  assert.match(
+    attemptPlannerSource,
+    /const\s+DEFAULT_LIVE_ORDER\s*=\s*Object\.freeze\(\["webrtc",\s*"mse",\s*"hls"\]\)[\s\S]*?const\s+order\s*=\s*forcedType\s*\?\s*\[forcedType\]\s*:\s*DEFAULT_LIVE_ORDER/s,
   );
 });

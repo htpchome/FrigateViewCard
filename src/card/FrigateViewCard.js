@@ -82,9 +82,6 @@ import {
   resolveDeviceRouteBucket,
 } from "../router.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
-import { buildLiveAttemptPlan } from "../features/live/attempt-planner.js";
-import { StreamOrchestrator } from "../features/live/stream.orchestrator.js";
-import { createStrategyForType } from "../features/live/stream.strategies.js";
 import {
   createGracePendingMountDestroyer,
   shouldClearPendingDestroyersForPromise,
@@ -124,7 +121,6 @@ import {
 import {
   adoptMountedAttemptSlot,
   cleanupStaleWinnerResult,
-  destroyLoserAttemptResults,
   isMountTokenCurrent,
   resolveGraceMseMountResult,
 } from "../features/live/mount-result.js";
@@ -163,12 +159,8 @@ import {
   setFallbackImageSourceIfChanged,
 } from "../features/live/fallbacks/fallback-image.js";
 import { runFallbackRefreshCycleForCard } from "../features/live/fallbacks/fallback-refresh.js";
-import {
-  buildHaDirectMountPlan,
-  resolveHaDirectMountUnavailableState,
-  resolveHaDirectReadyState,
-  resolveHaDirectStabilizedState,
-} from "../features/live/startup-policy.js";
+import { createHaDirectMounter } from "../features/live/ha-direct-mounter.js";
+import { createGo2RtcRaceMounter } from "../features/live/go2rtc-race-mounter.js";
 import {
   buildControlsSectionMarkup,
   buildControlsReadoutEmptyMarkup,
@@ -451,6 +443,40 @@ export class FrigateViewCard extends HTMLElement {
         this._mseLastChunkAt = chunkAt;
         this._mseChunkCount += 1;
       },
+    });
+    this._haDirectMounter = createHaDirectMounter({
+      getHass: () => this._hass,
+      getPreferredStreamType: () => this._preferredStreamType(),
+      getStreamMuted: () => this._streamMuted,
+      getRotateOverlayActive: () => this._rotateOverlayActive,
+      isCurrentEngine: (streamEl) => this._engine === streamEl,
+      waitForStreamStart: (streamEl, timeoutMs, opts) =>
+        this._waitForStreamStart(streamEl, timeoutMs, opts),
+      attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
+      assignCommittedEngine: (engine) => {
+        this._engine = engine;
+      },
+      applyResolvedStreamUiState: (streamState) =>
+        this._applyResolvedStreamUiState(streamState),
+      setLiveNativeControls: (enabled) => this._setLiveNativeControls(enabled),
+    });
+    this._go2rtcRaceMounter = createGo2RtcRaceMounter({
+      mounter: this._go2rtcMounter,
+      isDesktop: DEVICE_PROFILE.isDesktop,
+      resolveConnectionType: (entity) => this._cameraConnectionType(entity),
+      disableHlsDesktopForEntity: (entity) =>
+        this._cameraDisableHlsDesktop(entity),
+      createAttemptSlot: (hostSlot) => this._streamAttemptSlot(hostSlot),
+      getPendingMountDestroyers: () => this._pendingMountDestroyers || [],
+      setPendingMountDestroyers: (pendingDestroyers) => {
+        this._pendingMountDestroyers = pendingDestroyers;
+      },
+      isMountTokenCurrent: (mountToken) =>
+        isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq }),
+      adoptMountedAttempt: (slot, winner) =>
+        this._adoptMountedAttempt(slot, winner),
+      scheduleDeferredWebRtcTakeover: (options) =>
+        this._scheduleDeferredWebRtcTakeover(options),
     });
     this._viewMode = "single";
     this._eventsMode = "camera";
@@ -1649,61 +1675,6 @@ export class FrigateViewCard extends HTMLElement {
     return this._preferredStreamType();
   }
 
-  async _tryMountHaDirect(slot, startup = null, options = {}) {
-    const haDirectPlan = buildHaDirectMountPlan({
-      startup: startup || {},
-      preferredStreamType: this._preferredStreamType(),
-    });
-    const commit = options.commit !== false;
-    const entity = this._activeCam?.entity;
-    if (!entity) return false;
-
-    const stateObj = buildHaCameraStreamState(
-      this._hass,
-      entity,
-      haDirectPlan.streamType,
-      this._preferredStreamType(),
-    );
-    if (!stateObj) return false;
-
-    const s = createHaCameraStreamElement({
-      hass: this._hass,
-      stateObj,
-      controls: false,
-      muted: this._streamMuted,
-      styleText: "width:100%;height:100%;display:block",
-    });
-    if (!s) return false;
-
-    slot.innerHTML = "";
-    slot.appendChild(s);
-    this._attachVideoFit(s);
-
-    const destroy = () => {
-      try {
-        s.remove();
-      } catch (_) {}
-    };
-
-    const started = await this._waitForStreamStart(
-      s,
-      haDirectPlan.waitMs,
-      haDirectPlan.waitOptions,
-    );
-    if (!started) {
-      destroy();
-      return false;
-    }
-
-    const engine = s;
-    if (!commit) return { ok: true, type: "ha", engine, slot };
-    this._engine = engine;
-    this._setActiveStreamType("ha");
-    this._setStreamLoading(false);
-    this._setStreamFallbackVisible(false);
-    return true;
-  }
-
   _cleanupEngine() {
     return this._cleanupEngineWithOptions();
   }
@@ -2024,127 +1995,6 @@ export class FrigateViewCard extends HTMLElement {
         }
       })();
     }, 0);
-  }
-
-  _buildLiveStreamAttempts(entity = "", forcedType = null, hostSlot = null) {
-    const targetEntity = String(entity || this._activeCam?.entity || "").trim();
-    const connectionType = this._cameraConnectionType(targetEntity);
-    const disableHlsOnDesktop =
-      DEVICE_PROFILE.isDesktop && this._cameraDisableHlsDesktop(targetEntity);
-    const hiddenSlot = () => this._streamAttemptSlot(hostSlot);
-    const build = {
-      webrtc: (attemptOptions = {}) =>
-        this._go2rtcMounter.tryMountWebRtc(
-          hiddenSlot(),
-          { waitMs: 7000 },
-          { commit: false, ...attemptOptions },
-        ),
-      mse: (attemptOptions = {}) =>
-        this._go2rtcMounter.tryMountMse(
-          hiddenSlot(),
-          {
-            waitMs: 4000,
-            minCurrentTime: 0.05,
-            minDecodedFrames: 1,
-            requireReadyState: 2,
-            strict: true,
-          },
-          { commit: false, ...attemptOptions },
-        ),
-      hls: (attemptOptions = {}) =>
-        this._go2rtcMounter.tryMountHls(
-          hiddenSlot(),
-          { waitMs: 5000 },
-          { commit: false, ...attemptOptions },
-        ),
-    };
-
-    const order = forcedType ? [forcedType] : ["webrtc", "mse", "hls"];
-    return buildLiveAttemptPlan({
-      connectionType,
-      forcedType,
-      disableHlsOnDesktop,
-      builders: build,
-    });
-  }
-
-  async _mountLiveWithRace(slot, attempts, mountToken, targetEntity) {
-    const strategies = attempts.map((attempt) =>
-      createStrategyForType({
-        type: attempt.type,
-        connect: async ({ abortSignal }) => {
-          try {
-            return await attempt.start({ abortSignal, entity: targetEntity });
-          } catch (_) {
-            return false;
-          }
-        },
-      }),
-    );
-
-    const orchestrator = new StreamOrchestrator({
-      strategies,
-      preferredType: "webrtc",
-      preferredWaitMs: 0,
-      retainPreferredOnFallback: true,
-    });
-    slot?.attachOrchestrator?.(orchestrator);
-
-    const activeAttempts = strategies.map((strategy) => ({
-      type: strategy.type,
-      promise: strategy.connect().catch(() => null),
-    }));
-
-    this._pendingMountDestroyers = strategies.map((strategy) => ({
-      type: strategy.type,
-      entity: targetEntity,
-      promise: strategy.connectPromise?.catch(() => null),
-      destroy: () => {
-        void strategy.disconnect();
-      },
-    }));
-
-    const winner = await orchestrator.start();
-    const deferredPreferredAttempt = orchestrator.deferredPreferredAttempt;
-    const deferredPreferredType = deferredPreferredAttempt?.type || "";
-
-    if (!isMountTokenCurrent({ mountToken, mountSeq: this._mountSeq })) {
-      cleanupStaleWinnerResult(winner);
-      slot?.clearOrchestrator?.(orchestrator);
-      return false;
-    }
-
-    const destroyLosers = async () => {
-      await destroyLoserAttemptResults({
-        activeAttempts: activeAttempts.filter(
-          (attempt) => attempt?.type !== deferredPreferredType,
-        ),
-        winnerType: winner?.type,
-      });
-      this._pendingMountDestroyers = (
-        this._pendingMountDestroyers || []
-      ).filter((attempt) => attempt?.type === deferredPreferredType);
-      slot?.clearOrchestrator?.(orchestrator);
-    };
-
-    if (winner?.ok) {
-      this._pendingMountDestroyers = this._pendingMountDestroyers.filter(
-        (attempt) => attempt?.type !== winner.type,
-      );
-      this._adoptMountedAttempt(slot, winner);
-      await destroyLosers();
-      this._scheduleDeferredWebRtcTakeover({
-        slot,
-        deferredAttempt: deferredPreferredAttempt,
-        mountToken,
-        winnerEngine: winner.engine,
-        winnerType: winner.type,
-      });
-      return true;
-    }
-
-    await destroyLosers();
-    return false;
   }
 
   _waitForStreamStart(streamEl, timeoutMs = 3500, opts = {}) {
@@ -2485,34 +2335,6 @@ export class FrigateViewCard extends HTMLElement {
     };
   }
 
-  _scheduleHaDirectMountFollowUp(streamEl, haDirectPlan) {
-    void (async () => {
-      const ok = await this._waitForStreamStart(
-        streamEl,
-        haDirectPlan.waitMs,
-        haDirectPlan.waitOptions,
-      );
-      const readyState = resolveHaDirectReadyState({
-        rotateOverlayActive: this._rotateOverlayActive,
-        isCurrentEngine: this._engine === streamEl,
-        waitSucceeded: ok,
-      });
-      if (readyState.shouldApply) {
-        this._applyResolvedStreamUiState(readyState);
-      }
-    })();
-
-    setTimeout(() => {
-      const stabilizedState = resolveHaDirectStabilizedState({
-        rotateOverlayActive: this._rotateOverlayActive,
-        isCurrentEngine: this._engine === streamEl,
-      });
-      if (stabilizedState.shouldApply) {
-        this._applyResolvedStreamUiState(stabilizedState);
-      }
-    }, 1200);
-  }
-
   async _mountEngine(forcedType = null, options = {}) {
     const quiet = options?.quiet === true;
     const slot = this.shadowRoot.querySelector("#engine");
@@ -2618,47 +2440,28 @@ export class FrigateViewCard extends HTMLElement {
       });
 
       if (transportPlan.mode === "ha-direct") {
-        const haDirectPlan = buildHaDirectMountPlan({
-          startup: { streamType: transportPlan.streamType },
-          preferredStreamType: this._preferredStreamType(),
-        });
-        const streamType = haDirectPlan.streamType;
-        this._setActiveStreamType(streamType);
-        const stateObj = buildHaCameraStreamState(
-          this._hass,
-          entity,
-          streamType,
-          this._preferredStreamType(),
+        this._setActiveStreamType(transportPlan.streamType);
+        const haDirectResult = await this._haDirectMounter.tryMount(
+          slot,
+          { streamType: transportPlan.streamType },
+          { entity, commit: true },
         );
-        if (!stateObj) {
-          const unavailableState = resolveHaDirectMountUnavailableState();
-          this._applyResolvedStreamUiState(unavailableState);
+        if (!haDirectResult?.ok) {
           return;
         }
-
-        const s = createHaCameraStreamElement({
-          hass: this._hass,
-          stateObj,
-          controls: false,
-          muted: this._streamMuted,
-          styleText:
-            "width:100%;height:100%;display:block;background:var(--c-bg-deep)",
-        });
-        if (!s) return;
-
-        slot.innerHTML = "";
-        slot.appendChild(s);
-        this._engine = s;
         this._engineMountedMuted = this._streamMuted;
-        this._attachVideoFit(s);
-        if (this._rotateOverlayActive) this._setLiveNativeControls(true);
-
-        this._scheduleHaDirectMountFollowUp(s, haDirectPlan);
         return;
       }
-      const attempts = this._buildLiveStreamAttempts(entity, forcedType, slot);
-      if (await this._mountLiveWithRace(slot, attempts, mountToken, entity))
+      if (
+        await this._go2rtcRaceMounter.mountWithRace({
+          slot,
+          entity,
+          forcedType,
+          mountToken,
+        })
+      ) {
         return;
+      }
 
       // go2rtc attempts failed: show snapshot placeholder.
       this._applySnapshotFallbackState();
