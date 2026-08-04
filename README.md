@@ -86,7 +86,7 @@ Each item under `cameras` supports these fields:
 | `connection_type`     | string         | `frigate_go2rtc`    | Playback source. Valid values: `frigate_go2rtc`, `ha_direct`.                   |
 | `alerts_content`      | string         | `alerts_only`       | Alerts tab content for this camera. Valid values: `alerts_only`, `all_reviews`. |
 | `disable_hls_desktop` | boolean        | `false`             | Disables HLS fallback for this camera on desktop.                               |
-| `ptz`                 | boolean or map | `false`             | Enables circle-pad PTZ for this camera through Home Assistant `onvif.ptz`.      |
+| `ptz`                 | boolean or map | `false`             | Enables circle-pad PTZ for this camera through Home Assistant `frigate.ptz`.    |
 
 Camera example with non-default values:
 
@@ -107,10 +107,12 @@ title: Frigate
 
 PTZ notes:
 
-- Use `ptz: true` for the default `onvif.ptz` behavior.
-- Use a PTZ object when you need `move_mode`, `speed`, `distance`, or `continuous_duration` overrides.
+- Use `ptz: true` to enable the default Frigate PTZ service behavior.
+- The Frigate Home Assistant integration PTZ service supports `move`, `stop`, `zoom`, and `preset`; this card currently uses `move` and `stop` for the circle pad.
+- Diagonal circle-pad slices are not sent because the Frigate PTZ service documents cardinal `move` arguments only: `left`, `right`, `up`, `down`.
+- Use a PTZ object when you need to flag a camera as PTZ-enabled now, and to preserve room for future PTZ options in YAML.
 - The controls tab targets the active camera entity, so only cameras with `ptz` enabled respond to the circle pad.
-- The visual editor now exposes a simple per-camera PTZ on/off toggle. Advanced PTZ overrides still require YAML.
+- The visual editor now exposes a simple per-camera PTZ on/off toggle.
 
 ### Custom Theme Colors
 

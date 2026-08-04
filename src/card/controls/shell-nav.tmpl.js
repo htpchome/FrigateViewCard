@@ -189,7 +189,7 @@ export function buildControlsSectionMarkup({
   return `<div class="controls-section">
             <div class="controls-section-head">
               <h3 class="controls-section-title">PTZ Controls</h3>
-              <div class="controls-section-subtitle">${cameraName} · ${ptzEnabled ? "ONVIF PTZ ready" : "PTZ unavailable"}</div>
+              <div class="controls-section-subtitle">${cameraName} · ${ptzEnabled ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
             </div>
             <div class="controls-pad-wrap${ptzEnabled ? "" : " is-disabled"}">
               <circle-pad-control id="controls-pad"></circle-pad-control>

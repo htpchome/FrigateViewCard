@@ -1,16 +1,12 @@
 const PTZ_MOVE_MODE_CONTINUOUS = "ContinuousMove";
 const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
-const PTZ_SERVICE_DOMAIN = "onvif";
+const PTZ_SERVICE_DOMAIN = "frigate";
 const PTZ_SERVICE_NAME = "ptz";
 const PTZ_DIRECTIONS = Object.freeze({
-  up: Object.freeze({ tilt: "UP" }),
-  "up-right": Object.freeze({ pan: "RIGHT", tilt: "UP" }),
-  right: Object.freeze({ pan: "RIGHT" }),
-  "down-right": Object.freeze({ pan: "RIGHT", tilt: "DOWN" }),
-  down: Object.freeze({ tilt: "DOWN" }),
-  "down-left": Object.freeze({ pan: "LEFT", tilt: "DOWN" }),
-  left: Object.freeze({ pan: "LEFT" }),
-  "up-left": Object.freeze({ pan: "LEFT", tilt: "UP" }),
+  up: "up",
+  right: "right",
+  down: "down",
+  left: "left",
 });
 
 const normalizePtzNumber = (value) => {
@@ -68,7 +64,7 @@ export const resolvePtzServiceRequest = ({ camera, action, eventType }) => {
     return {
       domain: PTZ_SERVICE_DOMAIN,
       service: PTZ_SERVICE_NAME,
-      serviceData: { move_mode: "Stop" },
+      serviceData: { action: "stop" },
       target: { entity_id: camera.entity },
       readout: "[ptz:stop]",
     };
@@ -77,27 +73,13 @@ export const resolvePtzServiceRequest = ({ camera, action, eventType }) => {
   const direction = PTZ_DIRECTIONS[action];
   if (!direction) return null;
 
-  const serviceData = {
-    move_mode: ptz.move_mode,
-    ...direction,
-  };
-  if (ptz.speed != null) {
-    serviceData.speed = ptz.speed;
-  }
-  if (ptz.move_mode === PTZ_MOVE_MODE_RELATIVE && ptz.distance != null) {
-    serviceData.distance = ptz.distance;
-  }
-  if (
-    ptz.move_mode === PTZ_MOVE_MODE_CONTINUOUS &&
-    ptz.continuous_duration != null
-  ) {
-    serviceData.continuous_duration = ptz.continuous_duration;
-  }
-
   return {
     domain: PTZ_SERVICE_DOMAIN,
     service: PTZ_SERVICE_NAME,
-    serviceData,
+    serviceData: {
+      action: "move",
+      argument: direction,
+    },
     target: { entity_id: camera.entity },
     readout: `[ptz:${action}]`,
   };

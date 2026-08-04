@@ -17,7 +17,7 @@ test("normalizeCameraPtzConfig enables boolean PTZ config with continuous move d
   });
 });
 
-test("resolvePtzServiceRequest maps diagonal press to ONVIF pan and tilt", () => {
+test("resolvePtzServiceRequest maps press to the Frigate PTZ move service", () => {
   const request = resolvePtzServiceRequest({
     camera: {
       entity: "camera.driveway",
@@ -27,21 +27,19 @@ test("resolvePtzServiceRequest maps diagonal press to ONVIF pan and tilt", () =>
         speed: 0.5,
       },
     },
-    action: "up-right",
+    action: "up",
     eventType: "press",
   });
 
   assert.deepEqual(request, {
-    domain: "onvif",
+    domain: "frigate",
     service: "ptz",
     serviceData: {
-      move_mode: "ContinuousMove",
-      pan: "RIGHT",
-      tilt: "UP",
-      speed: 0.5,
+      action: "move",
+      argument: "up",
     },
     target: { entity_id: "camera.driveway" },
-    readout: "[ptz:up-right]",
+    readout: "[ptz:up]",
   });
 });
 
@@ -56,12 +54,25 @@ test("resolvePtzServiceRequest stops continuous moves on release", () => {
   });
 
   assert.deepEqual(request, {
-    domain: "onvif",
+    domain: "frigate",
     service: "ptz",
-    serviceData: { move_mode: "Stop" },
+    serviceData: { action: "stop" },
     target: { entity_id: "camera.driveway" },
     readout: "[ptz:stop]",
   });
+});
+
+test("resolvePtzServiceRequest ignores unsupported diagonal Frigate moves", () => {
+  const request = resolvePtzServiceRequest({
+    camera: {
+      entity: "camera.driveway",
+      ptz: true,
+    },
+    action: "up-right",
+    eventType: "press",
+  });
+
+  assert.equal(request, null);
 });
 
 test("resolvePtzServiceRequest ignores release for relative moves", () => {

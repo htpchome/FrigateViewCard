@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1152";
+const VERSION = "1.0.1153";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1573,17 +1573,13 @@ const applyEditorPreviewDraftToCardConfig = ({
 // src/shared/ptz.js
 const PTZ_MOVE_MODE_CONTINUOUS = "ContinuousMove";
 const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
-const PTZ_SERVICE_DOMAIN = "onvif";
+const PTZ_SERVICE_DOMAIN = "frigate";
 const PTZ_SERVICE_NAME = "ptz";
 const PTZ_DIRECTIONS = Object.freeze({
-  up: Object.freeze({ tilt: "UP" }),
-  "up-right": Object.freeze({ pan: "RIGHT", tilt: "UP" }),
-  right: Object.freeze({ pan: "RIGHT" }),
-  "down-right": Object.freeze({ pan: "RIGHT", tilt: "DOWN" }),
-  down: Object.freeze({ tilt: "DOWN" }),
-  "down-left": Object.freeze({ pan: "LEFT", tilt: "DOWN" }),
-  left: Object.freeze({ pan: "LEFT" }),
-  "up-left": Object.freeze({ pan: "LEFT", tilt: "UP" })
+  up: "up",
+  right: "right",
+  down: "down",
+  left: "left"
 });
 const normalizePtzNumber = (value) => {
   const parsed = Number(value);
@@ -1624,30 +1620,20 @@ const resolvePtzServiceRequest = ({ camera, action, eventType }) => {
     return {
       domain: PTZ_SERVICE_DOMAIN,
       service: PTZ_SERVICE_NAME,
-      serviceData: { move_mode: "Stop" },
+      serviceData: { action: "stop" },
       target: { entity_id: camera.entity },
       readout: "[ptz:stop]"
     };
   }
   const direction = PTZ_DIRECTIONS[action];
   if (!direction) return null;
-  const serviceData = {
-    move_mode: ptz.move_mode,
-    ...direction
-  };
-  if (ptz.speed != null) {
-    serviceData.speed = ptz.speed;
-  }
-  if (ptz.move_mode === PTZ_MOVE_MODE_RELATIVE && ptz.distance != null) {
-    serviceData.distance = ptz.distance;
-  }
-  if (ptz.move_mode === PTZ_MOVE_MODE_CONTINUOUS && ptz.continuous_duration != null) {
-    serviceData.continuous_duration = ptz.continuous_duration;
-  }
   return {
     domain: PTZ_SERVICE_DOMAIN,
     service: PTZ_SERVICE_NAME,
-    serviceData,
+    serviceData: {
+      action: "move",
+      argument: direction
+    },
     target: { entity_id: camera.entity },
     readout: `[ptz:${action}]`
   };
@@ -4512,7 +4498,7 @@ function buildControlsSectionMarkup({
   return `<div class="controls-section">
             <div class="controls-section-head">
               <h3 class="controls-section-title">PTZ Controls</h3>
-              <div class="controls-section-subtitle">${cameraName2} \xB7 ${ptzEnabled ? "ONVIF PTZ ready" : "PTZ unavailable"}</div>
+              <div class="controls-section-subtitle">${cameraName2} \xB7 ${ptzEnabled ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
             </div>
             <div class="controls-pad-wrap${ptzEnabled ? "" : " is-disabled"}">
               <circle-pad-control id="controls-pad"></circle-pad-control>
@@ -17641,7 +17627,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
               <span class="cam-modal-label" style="margin:0">Enable PTZ Controls</span>
               <ha-switch id="camera-modal-ptz-enabled"></ha-switch>
             </div>
-            <div class="field-helper">Turns on circle-pad PTZ for this camera using the Home Assistant onvif.ptz action.</div>
+            <div class="field-helper">Turns on circle-pad PTZ for this camera using the Frigate Home Assistant integration PTZ service.</div>
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">

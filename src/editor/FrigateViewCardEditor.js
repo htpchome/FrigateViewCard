@@ -1221,7 +1221,7 @@ export class FrigateViewCardEditor extends HTMLElement {
               <span class="cam-modal-label" style="margin:0">Enable PTZ Controls</span>
               <ha-switch id="camera-modal-ptz-enabled"></ha-switch>
             </div>
-            <div class="field-helper">Turns on circle-pad PTZ for this camera using the Home Assistant onvif.ptz action.</div>
+            <div class="field-helper">Turns on circle-pad PTZ for this camera using the Frigate Home Assistant integration PTZ service.</div>
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
