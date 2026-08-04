@@ -90,6 +90,37 @@ test("camera connection type normalizes HA aliases to ha_direct", () => {
   });
 });
 
+test("compact YAML preserves per-camera PTZ config", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [
+      {
+        entity: "camera.driveway",
+        ptz: {
+          enabled: true,
+          move_mode: "RelativeMove",
+          speed: 0.4,
+          distance: 0.2,
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(config, {
+    cameras: [
+      {
+        entity: "camera.driveway",
+        ptz: {
+          enabled: true,
+          move_mode: "RelativeMove",
+          speed: 0.4,
+          distance: 0.2,
+          continuous_duration: null,
+        },
+      },
+    ],
+  });
+});
+
 test("custom theme YAML config only keeps colors different from defaults", () => {
   const config = compactEditorConfigForYaml(
     {

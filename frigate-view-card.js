@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1150";
+const VERSION = "1.0.1151";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -627,8 +627,11 @@ const STYLES = `
   .cday{position:relative;background:none;border:none;color:var(--c-text);font-size:0.825rem;padding:6px 0;border-radius:4px;cursor:pointer;} .cday:hover,.cday.active{background:var(--c-primary-l);} .cdot{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#ef4444;}
 
   .controls-section{padding:6px 2px 0;}
+  .controls-section-head{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;}
   .controls-section-title{margin:0;color:var(--c-text);font-size:0.95rem;font-weight:700;text-align:left;}
+  .controls-section-subtitle{color:var(--c-text2);font-size:0.8rem;line-height:1.35;}
   .controls-pad-wrap{max-width:280px;margin:10px auto 12px;}
+  .controls-pad-wrap.is-disabled{opacity:.45;pointer-events:none;filter:saturate(.5);}
   .controls-readout{background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:10px;overflow:hidden;}
   .controls-readout-head{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--c-border2);}
   .controls-readout-label{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--c-text2);}
@@ -1567,6 +1570,89 @@ const applyEditorPreviewDraftToCardConfig = ({
   };
 };
 
+// src/shared/ptz.js
+const PTZ_MOVE_MODE_CONTINUOUS = "ContinuousMove";
+const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
+const PTZ_SERVICE_DOMAIN = "onvif";
+const PTZ_SERVICE_NAME = "ptz";
+const PTZ_DIRECTIONS = Object.freeze({
+  up: Object.freeze({ tilt: "UP" }),
+  "up-right": Object.freeze({ pan: "RIGHT", tilt: "UP" }),
+  right: Object.freeze({ pan: "RIGHT" }),
+  "down-right": Object.freeze({ pan: "RIGHT", tilt: "DOWN" }),
+  down: Object.freeze({ tilt: "DOWN" }),
+  "down-left": Object.freeze({ pan: "LEFT", tilt: "DOWN" }),
+  left: Object.freeze({ pan: "LEFT" }),
+  "up-left": Object.freeze({ pan: "LEFT", tilt: "UP" })
+});
+const normalizePtzNumber = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  if (parsed < 0 || parsed > 1) return null;
+  return parsed;
+};
+const normalizePtzMoveMode = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "relativemove" ? PTZ_MOVE_MODE_RELATIVE : PTZ_MOVE_MODE_CONTINUOUS;
+};
+const normalizeCameraPtzConfig = (value) => {
+  if (value !== true && (!value || typeof value !== "object")) {
+    return null;
+  }
+  const source = value === true ? { enabled: true } : value;
+  if (source.enabled === false) return null;
+  const speed = normalizePtzNumber(source.speed);
+  const distance = normalizePtzNumber(source.distance);
+  const continuousDuration = normalizePtzNumber(source.continuous_duration);
+  return {
+    enabled: true,
+    move_mode: normalizePtzMoveMode(source.move_mode),
+    speed,
+    distance,
+    continuous_duration: continuousDuration
+  };
+};
+const hasCameraPtz = (camera) => normalizeCameraPtzConfig(camera?.ptz)?.enabled === true;
+const resolvePtzEmptyStateMessage = (camera) => {
+  return hasCameraPtz(camera) ? "Use the circle pad to move the active camera." : "PTZ is not configured for the active camera.";
+};
+const resolvePtzServiceRequest = ({ camera, action, eventType }) => {
+  const ptz = normalizeCameraPtzConfig(camera?.ptz);
+  if (!ptz || !camera?.entity) return null;
+  if (eventType === "release") {
+    if (ptz.move_mode !== PTZ_MOVE_MODE_CONTINUOUS) return null;
+    return {
+      domain: PTZ_SERVICE_DOMAIN,
+      service: PTZ_SERVICE_NAME,
+      serviceData: { move_mode: "Stop" },
+      target: { entity_id: camera.entity },
+      readout: "[ptz:stop]"
+    };
+  }
+  const direction = PTZ_DIRECTIONS[action];
+  if (!direction) return null;
+  const serviceData = {
+    move_mode: ptz.move_mode,
+    ...direction
+  };
+  if (ptz.speed != null) {
+    serviceData.speed = ptz.speed;
+  }
+  if (ptz.move_mode === PTZ_MOVE_MODE_RELATIVE && ptz.distance != null) {
+    serviceData.distance = ptz.distance;
+  }
+  if (ptz.move_mode === PTZ_MOVE_MODE_CONTINUOUS && ptz.continuous_duration != null) {
+    serviceData.continuous_duration = ptz.continuous_duration;
+  }
+  return {
+    domain: PTZ_SERVICE_DOMAIN,
+    service: PTZ_SERVICE_NAME,
+    serviceData,
+    target: { entity_id: camera.entity },
+    readout: `[ptz:${action}]`
+  };
+};
+
 // src/config/yaml-mapper.js
 const normalizePositiveInteger2 = (value, fallback) => {
   const parsed = parseInt(String(value ?? "").trim(), 10);
@@ -1599,7 +1685,8 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
       name: fallbackName,
       connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
       alerts_content: "alerts_only",
-      disable_hls_desktop: false
+      disable_hls_desktop: false,
+      ptz: null
     };
   }
   if (camera && typeof camera === "object") {
@@ -1610,7 +1697,8 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
       alerts_content: normalizeAlertsAreaContent(camera.alerts_content),
       disable_hls_desktop: normalizeDisableHlsDesktop(
         camera.disable_hls_desktop
-      )
+      ),
+      ptz: normalizeCameraPtzConfig(camera.ptz)
     };
   }
   return {
@@ -1618,7 +1706,8 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
     name: fallbackName,
     connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
     alerts_content: "alerts_only",
-    disable_hls_desktop: false
+    disable_hls_desktop: false,
+    ptz: null
   };
 };
 const addStringIfPresent = (target, key, value) => {
@@ -1651,6 +1740,9 @@ const compactCameraConfigForYaml = (camera) => {
   }
   if (normalized.disable_hls_desktop === true) {
     compact.disable_hls_desktop = true;
+  }
+  if (normalized.ptz) {
+    compact.ptz = { ...normalized.ptz };
   }
   return compact;
 };
@@ -2414,7 +2506,8 @@ function normalizeCameraConfig2(camera, { fallbackName = null } = {}) {
       name: fallbackName,
       connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
       alerts_content: "alerts_only",
-      disable_hls_desktop: false
+      disable_hls_desktop: false,
+      ptz: null
     };
   }
   if (camera && typeof camera === "object") {
@@ -2425,7 +2518,8 @@ function normalizeCameraConfig2(camera, { fallbackName = null } = {}) {
       alerts_content: normalizeAlertsAreaContent2(camera.alerts_content),
       disable_hls_desktop: normalizeDisableHlsDesktop2(
         camera.disable_hls_desktop
-      )
+      ),
+      ptz: normalizeCameraPtzConfig(camera.ptz)
     };
   }
   return {
@@ -2433,7 +2527,8 @@ function normalizeCameraConfig2(camera, { fallbackName = null } = {}) {
     name: fallbackName,
     connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
     alerts_content: "alerts_only",
-    disable_hls_desktop: false
+    disable_hls_desktop: false,
+    ptz: null
   };
 }
 const configuredCameraEntities = (config) => (config?.cameras || []).map(({ entity }) => entity).filter(Boolean);
@@ -4410,9 +4505,16 @@ function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
             <div class="more" id="older-hint" hidden>scroll for older\u2026</div>
           </div>`;
 }
-function buildControlsSectionMarkup() {
+function buildControlsSectionMarkup({
+  cameraName: cameraName2 = "Active Camera",
+  ptzEnabled = false
+} = {}) {
   return `<div class="controls-section">
-            <div class="controls-pad-wrap">
+            <div class="controls-section-head">
+              <h3 class="controls-section-title">PTZ Controls</h3>
+              <div class="controls-section-subtitle">${cameraName2} \xB7 ${ptzEnabled ? "ONVIF PTZ ready" : "PTZ unavailable"}</div>
+            </div>
+            <div class="controls-pad-wrap${ptzEnabled ? "" : " is-disabled"}">
               <circle-pad-control id="controls-pad"></circle-pad-control>
             </div>
             <div class="controls-readout">
@@ -4424,8 +4526,8 @@ function buildControlsSectionMarkup() {
             </div>
           </div>`;
 }
-function buildControlsReadoutEmptyMarkup() {
-  return '<div class="controls-readout-empty">Press a control to log input.</div>';
+function buildControlsReadoutEmptyMarkup(message = "Use the circle pad to move the active camera.") {
+  return `<div class="controls-readout-empty">${message}</div>`;
 }
 function buildControlsReadoutLinesMarkup(lines) {
   return (lines || []).map((line) => `<div class="controls-readout-line">${line}</div>`).join("");
@@ -6563,9 +6665,11 @@ function resolveControlsPadToggleReadoutEntry(event) {
   if (event?.detail?.action !== "mic") return "";
   return event?.detail?.active ? "[mic:on]" : "[mic:off]";
 }
-function resolveControlsReadoutMarkup(lines, escapeText) {
+function resolveControlsReadoutMarkup(lines, escapeText, emptyMessage) {
   if (!Array.isArray(lines) || lines.length === 0) {
-    return buildControlsReadoutEmptyMarkup();
+    return buildControlsReadoutEmptyMarkup(
+      typeof emptyMessage === "string" ? emptyMessage : void 0
+    );
   }
   const escapedLines = lines.map(
     (line) => typeof escapeText === "function" ? escapeText(line) : String(line || "")
@@ -9353,9 +9457,10 @@ const FrigateViewCard = class extends HTMLElement {
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
     this._controlsReadoutLines = [];
     this._onCirclePadPress = (event) => {
-      const entry = resolveControlsPadPressReadoutEntry(event);
-      if (!entry) return;
-      this._appendControlsReadoutEntry(entry);
+      void this._handleCirclePadPtzEvent(event, "press");
+    };
+    this._onCirclePadRelease = (event) => {
+      void this._handleCirclePadPtzEvent(event, "release");
     };
     this._onCirclePadToggle = (event) => {
       const entry = resolveControlsPadToggleReadoutEntry(event);
@@ -9365,6 +9470,10 @@ const FrigateViewCard = class extends HTMLElement {
     this.shadowRoot.addEventListener(
       "circle-pad-press",
       this._onCirclePadPress
+    );
+    this.shadowRoot.addEventListener(
+      "circle-pad-release",
+      this._onCirclePadRelease
     );
     this.shadowRoot.addEventListener(
       "circle-pad-toggle",
@@ -16239,8 +16348,38 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _renderControlsSection(list) {
     this._renderListLabel();
-    this._setListHtmlIfChanged(list, buildControlsSectionMarkup());
+    this._setListHtmlIfChanged(
+      list,
+      buildControlsSectionMarkup({
+        cameraName: cap(camDisplayName(this._activeCam || {})),
+        ptzEnabled: this._activeCameraHasPtz()
+      })
+    );
     this._renderControlsReadout();
+  }
+  _activeCameraHasPtz() {
+    return hasCameraPtz(this._activeCam);
+  }
+  async _handleCirclePadPtzEvent(event, eventType) {
+    if (event?.target?.id !== "controls-pad") return;
+    const request = resolvePtzServiceRequest({
+      camera: this._activeCam,
+      action: event?.detail?.action,
+      eventType
+    });
+    if (!request) return;
+    this._appendControlsReadoutEntry(request.readout);
+    try {
+      await this._hass?.callService(
+        request.domain,
+        request.service,
+        request.serviceData,
+        request.target
+      );
+    } catch (error) {
+      console.warn("[Frigate] PTZ call failed", error);
+      this._appendControlsReadoutEntry("[ptz:error]");
+    }
   }
   _appendControlsReadoutEntry(text) {
     this._controlsReadoutLines = appendControlsReadoutLine(
@@ -16262,7 +16401,8 @@ const FrigateViewCard = class extends HTMLElement {
     if (!el) return;
     el.innerHTML = resolveControlsReadoutMarkup(
       this._controlsReadoutLines,
-      (line) => this._escapeControlsReadoutText(line)
+      (line) => this._escapeControlsReadoutText(line),
+      resolvePtzEmptyStateMessage(this._activeCam)
     );
     if (!this._controlsReadoutLines.length) return;
     el.scrollTop = el.scrollHeight;
@@ -16679,6 +16819,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
   _cameraDesktopHlsLabel(value) {
     return normalizeDisableHlsDesktop2(value) ? "Desktop HLS off" : "Desktop HLS on";
   }
+  _cameraPtzLabel(value) {
+    return hasCameraPtz({ ptz: value }) ? "PTZ on" : "PTZ off";
+  }
   _reorderCameras(from, to) {
     if (from === to || from < 0 || to < 0) return;
     const cur = [...this._getCams()];
@@ -16696,7 +16839,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
       name: "",
       connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
       alerts_content: "alerts_only",
-      disable_hls_desktop: false
+      disable_hls_desktop: false,
+      ptz: null
     } : cams[index] || {};
     this._editingCamIndex = index;
     const title = this.querySelector("#camera-modal-title");
@@ -16766,7 +16910,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
         name,
         connection_type: connectionType,
         alerts_content: alertsContent,
-        disable_hls_desktop: disableHlsDesktop
+        disable_hls_desktop: disableHlsDesktop,
+        ptz: null
       });
     } else if (cur[this._editingCamIndex]) {
       cur[this._editingCamIndex] = {
@@ -16774,7 +16919,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
         name,
         connection_type: connectionType,
         alerts_content: alertsContent,
-        disable_hls_desktop: disableHlsDesktop
+        disable_hls_desktop: disableHlsDesktop,
+        ptz: normalizeCameraPtzConfig(cur[this._editingCamIndex]?.ptz)
       };
     }
     this._config = { ...this._config, cameras: cur.slice(0, MAX_CAMERAS) };
@@ -17051,7 +17197,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       (cam, i) => `
       <div class="cam-row" draggable="true" data-row="${i}">
         <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
-        <div><div class="cam-name">${this._cameraLabel(cam)}</div><div class="cam-meta">${this._cameraConnectionLabel(cam.connection_type)} \xB7 ${this._cameraAlertsContentLabel(cam.alerts_content)} \xB7 ${this._cameraDesktopHlsLabel(cam.disable_hls_desktop)}</div></div>
+        <div><div class="cam-name">${this._cameraLabel(cam)}</div><div class="cam-meta">${this._cameraConnectionLabel(cam.connection_type)} \xB7 ${this._cameraAlertsContentLabel(cam.alerts_content)} \xB7 ${this._cameraDesktopHlsLabel(cam.disable_hls_desktop)} \xB7 ${this._cameraPtzLabel(cam.ptz)}</div></div>
                 <button class="cam-action" type="button" title="Edit" aria-label="Edit" data-edit-cam="${i}"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg></button>
                 <button class="cam-action" type="button" title="Delete" aria-label="Delete" data-remove-cam="${i}"><svg viewBox="0 0 24 24" style="width:24px; height:24px" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg></button>
       </div>`
@@ -17756,7 +17902,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
       alerts_content: normalizeAlertsAreaContent2(c?.alerts_content),
       disable_hls_desktop: normalizeDisableHlsDesktop2(
         c?.disable_hls_desktop
-      )
+      ),
+      ptz: normalizeCameraPtzConfig(c?.ptz)
     })).filter((c) => c.entity).slice(0, MAX_CAMERAS) : [];
   }
   _emitPreviewDraft(config) {

@@ -8,6 +8,7 @@ import {
   THEME_CUSTOM_KEYS,
 } from "../constants.js";
 import { normalizePageRoute, PAGE_IDS } from "../router.js";
+import { normalizeCameraPtzConfig } from "../shared/ptz.js";
 
 const normalizePositiveInteger = (value, fallback) => {
   const parsed = parseInt(String(value ?? "").trim(), 10);
@@ -52,6 +53,7 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
       connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
       alerts_content: "alerts_only",
       disable_hls_desktop: false,
+      ptz: null,
     };
   }
   if (camera && typeof camera === "object") {
@@ -63,6 +65,7 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
       disable_hls_desktop: normalizeDisableHlsDesktop(
         camera.disable_hls_desktop,
       ),
+      ptz: normalizeCameraPtzConfig(camera.ptz),
     };
   }
   return {
@@ -71,6 +74,7 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
     connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
     alerts_content: "alerts_only",
     disable_hls_desktop: false,
+    ptz: null,
   };
 };
 
@@ -108,6 +112,9 @@ const compactCameraConfigForYaml = (camera) => {
   }
   if (normalized.disable_hls_desktop === true) {
     compact.disable_hls_desktop = true;
+  }
+  if (normalized.ptz) {
+    compact.ptz = { ...normalized.ptz };
   }
   return compact;
 };

@@ -37,6 +37,7 @@ import {
   compactEditorConfigForYaml as mapCompactEditorConfigForYaml,
   withCardTypeForYaml as mapWithCardTypeForYaml,
 } from "./config/yaml-mapper.js";
+import { normalizeCameraPtzConfig } from "./shared/ptz.js";
 
 export function detectDeviceProfile() {
   const nav = typeof navigator !== "undefined" ? navigator : {};
@@ -747,6 +748,7 @@ export function normalizeCameraConfig(camera, { fallbackName = null } = {}) {
       connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
       alerts_content: "alerts_only",
       disable_hls_desktop: false,
+      ptz: null,
     };
   }
   if (camera && typeof camera === "object") {
@@ -758,6 +760,7 @@ export function normalizeCameraConfig(camera, { fallbackName = null } = {}) {
       disable_hls_desktop: normalizeDisableHlsDesktop(
         camera.disable_hls_desktop,
       ),
+      ptz: normalizeCameraPtzConfig(camera.ptz),
     };
   }
   return {
@@ -766,6 +769,7 @@ export function normalizeCameraConfig(camera, { fallbackName = null } = {}) {
     connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
     alerts_content: "alerts_only",
     disable_hls_desktop: false,
+    ptz: null,
   };
 }
 

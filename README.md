@@ -79,13 +79,14 @@ cameras:
 
 Each item under `cameras` supports these fields:
 
-| Variable              | Type    | Default             | Description                                                                     |
-| --------------------- | ------- | ------------------- | ------------------------------------------------------------------------------- |
-| `entity`              | string  | required            | Home Assistant camera entity, for example `camera.front_door`.                  |
-| `name`                | string  | entity-derived name | Display name for the camera.                                                    |
-| `connection_type`     | string  | `frigate_go2rtc`    | Playback source. Valid values: `frigate_go2rtc`, `ha_direct`.                   |
-| `alerts_content`      | string  | `alerts_only`       | Alerts tab content for this camera. Valid values: `alerts_only`, `all_reviews`. |
-| `disable_hls_desktop` | boolean | `false`             | Disables HLS fallback for this camera on desktop.                               |
+| Variable              | Type           | Default             | Description                                                                     |
+| --------------------- | -------------- | ------------------- | ------------------------------------------------------------------------------- |
+| `entity`              | string         | required            | Home Assistant camera entity, for example `camera.front_door`.                  |
+| `name`                | string         | entity-derived name | Display name for the camera.                                                    |
+| `connection_type`     | string         | `frigate_go2rtc`    | Playback source. Valid values: `frigate_go2rtc`, `ha_direct`.                   |
+| `alerts_content`      | string         | `alerts_only`       | Alerts tab content for this camera. Valid values: `alerts_only`, `all_reviews`. |
+| `disable_hls_desktop` | boolean        | `false`             | Disables HLS fallback for this camera on desktop.                               |
+| `ptz`                 | boolean or map | `false`             | Enables circle-pad PTZ for this camera through Home Assistant `onvif.ptz`.      |
 
 Camera example with non-default values:
 
@@ -97,8 +98,19 @@ cameras:
     alerts_content: all_reviews
   - entity: camera.driveway
     connection_type: ha_direct
+    ptz:
+      enabled: true
+      move_mode: ContinuousMove
+      speed: 0.5
 title: Frigate
 ```
+
+PTZ notes:
+
+- Use `ptz: true` for the default `onvif.ptz` behavior.
+- Use a PTZ object when you need `move_mode`, `speed`, `distance`, or `continuous_duration` overrides.
+- The controls tab targets the active camera entity, so only cameras with `ptz` enabled respond to the circle pad.
+- The visual editor preserves PTZ YAML but does not yet expose PTZ fields directly.
 
 ### Custom Theme Colors
 

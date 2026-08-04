@@ -278,10 +278,14 @@ import {
   appendControlsReadoutLine,
   clearControlsReadoutLines,
   isControlsReadoutClearTarget,
-  resolveControlsPadPressReadoutEntry,
   resolveControlsPadToggleReadoutEntry,
   resolveControlsReadoutMarkup,
 } from "./controls/readout.js";
+import {
+  hasCameraPtz,
+  resolvePtzEmptyStateMessage,
+  resolvePtzServiceRequest,
+} from "../shared/ptz.js";
 import {
   buildReviewListItemHtml,
   buildReviewListItemModel,
@@ -359,9 +363,10 @@ export class FrigateViewCard extends HTMLElement {
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
     this._controlsReadoutLines = [];
     this._onCirclePadPress = (event) => {
-      const entry = resolveControlsPadPressReadoutEntry(event);
-      if (!entry) return;
-      this._appendControlsReadoutEntry(entry);
+      void this._handleCirclePadPtzEvent(event, "press");
+    };
+    this._onCirclePadRelease = (event) => {
+      void this._handleCirclePadPtzEvent(event, "release");
     };
     this._onCirclePadToggle = (event) => {
       const entry = resolveControlsPadToggleReadoutEntry(event);
@@ -371,6 +376,10 @@ export class FrigateViewCard extends HTMLElement {
     this.shadowRoot.addEventListener(
       "circle-pad-press",
       this._onCirclePadPress,
+    );
+    this.shadowRoot.addEventListener(
+      "circle-pad-release",
+      this._onCirclePadRelease,
     );
     this.shadowRoot.addEventListener(
       "circle-pad-toggle",
@@ -8170,8 +8179,41 @@ export class FrigateViewCard extends HTMLElement {
 
   _renderControlsSection(list) {
     this._renderListLabel();
-    this._setListHtmlIfChanged(list, buildControlsSectionMarkup());
+    this._setListHtmlIfChanged(
+      list,
+      buildControlsSectionMarkup({
+        cameraName: cap(camDisplayName(this._activeCam || {})),
+        ptzEnabled: this._activeCameraHasPtz(),
+      }),
+    );
     this._renderControlsReadout();
+  }
+
+  _activeCameraHasPtz() {
+    return hasCameraPtz(this._activeCam);
+  }
+
+  async _handleCirclePadPtzEvent(event, eventType) {
+    if (event?.target?.id !== "controls-pad") return;
+    const request = resolvePtzServiceRequest({
+      camera: this._activeCam,
+      action: event?.detail?.action,
+      eventType,
+    });
+    if (!request) return;
+
+    this._appendControlsReadoutEntry(request.readout);
+    try {
+      await this._hass?.callService(
+        request.domain,
+        request.service,
+        request.serviceData,
+        request.target,
+      );
+    } catch (error) {
+      console.warn("[Frigate] PTZ call failed", error);
+      this._appendControlsReadoutEntry("[ptz:error]");
+    }
   }
 
   _appendControlsReadoutEntry(text) {
@@ -8201,6 +8243,7 @@ export class FrigateViewCard extends HTMLElement {
     el.innerHTML = resolveControlsReadoutMarkup(
       this._controlsReadoutLines,
       (line) => this._escapeControlsReadoutText(line),
+      resolvePtzEmptyStateMessage(this._activeCam),
     );
     if (!this._controlsReadoutLines.length) return;
     el.scrollTop = el.scrollHeight;

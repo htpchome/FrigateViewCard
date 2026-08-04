@@ -182,9 +182,16 @@ export function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
           </div>`;
 }
 
-export function buildControlsSectionMarkup() {
+export function buildControlsSectionMarkup({
+  cameraName = "Active Camera",
+  ptzEnabled = false,
+} = {}) {
   return `<div class="controls-section">
-            <div class="controls-pad-wrap">
+            <div class="controls-section-head">
+              <h3 class="controls-section-title">PTZ Controls</h3>
+              <div class="controls-section-subtitle">${cameraName} · ${ptzEnabled ? "ONVIF PTZ ready" : "PTZ unavailable"}</div>
+            </div>
+            <div class="controls-pad-wrap${ptzEnabled ? "" : " is-disabled"}">
               <circle-pad-control id="controls-pad"></circle-pad-control>
             </div>
             <div class="controls-readout">
@@ -197,8 +204,10 @@ export function buildControlsSectionMarkup() {
           </div>`;
 }
 
-export function buildControlsReadoutEmptyMarkup() {
-  return '<div class="controls-readout-empty">Press a control to log input.</div>';
+export function buildControlsReadoutEmptyMarkup(
+  message = "Use the circle pad to move the active camera.",
+) {
+  return `<div class="controls-readout-empty">${message}</div>`;
 }
 
 export function buildControlsReadoutLinesMarkup(lines) {

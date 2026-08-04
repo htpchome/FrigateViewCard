@@ -74,6 +74,7 @@ import {
   hassThemeSignature,
   hassEntityStateSignature,
 } from "../helpers.js";
+import { hasCameraPtz, normalizeCameraPtzConfig } from "../shared/ptz.js";
 import {
   DEVICE_ROUTE_BUCKETS,
   getEnabledPageRoutes,
@@ -303,6 +304,10 @@ export class FrigateViewCardEditor extends HTMLElement {
       : "Desktop HLS on";
   }
 
+  _cameraPtzLabel(value) {
+    return hasCameraPtz({ ptz: value }) ? "PTZ on" : "PTZ off";
+  }
+
   _reorderCameras(from, to) {
     if (from === to || from < 0 || to < 0) return;
     const cur = [...this._getCams()];
@@ -324,6 +329,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
             alerts_content: "alerts_only",
             disable_hls_desktop: false,
+            ptz: null,
           }
         : cams[index] || {};
     this._editingCamIndex = index;
@@ -410,6 +416,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         connection_type: connectionType,
         alerts_content: alertsContent,
         disable_hls_desktop: disableHlsDesktop,
+        ptz: null,
       });
     } else if (cur[this._editingCamIndex]) {
       cur[this._editingCamIndex] = {
@@ -418,6 +425,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         connection_type: connectionType,
         alerts_content: alertsContent,
         disable_hls_desktop: disableHlsDesktop,
+        ptz: normalizeCameraPtzConfig(cur[this._editingCamIndex]?.ptz),
       };
     }
     this._config = { ...this._config, cameras: cur.slice(0, MAX_CAMERAS) };
@@ -755,7 +763,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         (cam, i) => `
       <div class="cam-row" draggable="true" data-row="${i}">
         <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
-        <div><div class="cam-name">${this._cameraLabel(cam)}</div><div class="cam-meta">${this._cameraConnectionLabel(cam.connection_type)} · ${this._cameraAlertsContentLabel(cam.alerts_content)} · ${this._cameraDesktopHlsLabel(cam.disable_hls_desktop)}</div></div>
+        <div><div class="cam-name">${this._cameraLabel(cam)}</div><div class="cam-meta">${this._cameraConnectionLabel(cam.connection_type)} · ${this._cameraAlertsContentLabel(cam.alerts_content)} · ${this._cameraDesktopHlsLabel(cam.disable_hls_desktop)} · ${this._cameraPtzLabel(cam.ptz)}</div></div>
                 <button class="cam-action" type="button" title="Edit" aria-label="Edit" data-edit-cam="${i}"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg></button>
                 <button class="cam-action" type="button" title="Delete" aria-label="Delete" data-remove-cam="${i}"><svg viewBox="0 0 24 24" style="width:24px; height:24px" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg></button>
       </div>`,
@@ -1497,6 +1505,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             disable_hls_desktop: normalizeDisableHlsDesktop(
               c?.disable_hls_desktop,
             ),
+            ptz: normalizeCameraPtzConfig(c?.ptz),
           }))
           .filter((c) => c.entity)
           .slice(0, MAX_CAMERAS)

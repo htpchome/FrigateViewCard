@@ -43,9 +43,11 @@ export function resolveControlsPadToggleReadoutEntry(event) {
   return event?.detail?.active ? "[mic:on]" : "[mic:off]";
 }
 
-export function resolveControlsReadoutMarkup(lines, escapeText) {
+export function resolveControlsReadoutMarkup(lines, escapeText, emptyMessage) {
   if (!Array.isArray(lines) || lines.length === 0) {
-    return buildControlsReadoutEmptyMarkup();
+    return buildControlsReadoutEmptyMarkup(
+      typeof emptyMessage === "string" ? emptyMessage : undefined,
+    );
   }
 
   const escapedLines = lines.map((line) =>
