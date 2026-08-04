@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1168";
+const VERSION = "1.0.1170";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2930,6 +2930,41 @@ const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
 };
 const toAbsoluteSignedUrl = ({ signedPath, origin }) => signedPath.startsWith("http") ? signedPath : `${origin}${signedPath}`;
 const toWebSocketUrl = (httpUrl) => httpUrl.replace(/^http/i, "ws");
+const requiresNestedSignedHlsRequests = ({ rawPath, signedPath }) => {
+  const raw = String(rawPath || "").trim();
+  const signed = String(signedPath || "").trim();
+  if (!raw || !signed) return false;
+  if (raw === signed) return false;
+  return signed.includes("authSig=");
+};
+const isM3u8Url = (url = "") => String(url || "").toLowerCase().includes(".m3u8");
+const rewriteM3u8Manifest = async ({ manifestText, rewriteUri }) => {
+  const lines = String(manifestText || "").split(/\r?\n/);
+  const rewritten = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      rewritten.push(line);
+      continue;
+    }
+    if (!trimmed.startsWith("#")) {
+      rewritten.push(await rewriteUri(trimmed));
+      continue;
+    }
+    let nextLine = line;
+    const matches = [...line.matchAll(/URI="([^"]+)"/g)];
+    for (const match of matches) {
+      const originalUri = match[1];
+      const replacementUri = await rewriteUri(originalUri);
+      nextLine = nextLine.replace(
+        `URI="${originalUri}"`,
+        `URI="${replacementUri}"`
+      );
+    }
+    rewritten.push(nextLine);
+  }
+  return rewritten.join("\n");
+};
 const getFreshCachedValue = ({ cacheMap, cacheKey, nowMs }) => {
   const entry = cacheMap.get(cacheKey);
   if (entry && entry.exp > nowMs) return entry.url ?? null;
@@ -11309,6 +11344,55 @@ const FrigateViewCard = class extends HTMLElement {
       origin: window.location.origin
     });
   }
+  async _signedAbsoluteUrl(url) {
+    const abs = String(url || "").trim();
+    if (!abs) return abs;
+    let parsed;
+    try {
+      parsed = new URL(abs, window.location.origin);
+    } catch (_) {
+      return abs;
+    }
+    if (parsed.origin !== window.location.origin) return parsed.toString();
+    const signedPath = await this._signed(`${parsed.pathname}${parsed.search}`);
+    return this._toAbsoluteSignedPath(signedPath);
+  }
+  async _rewriteGo2RtcHlsManifestSource(manifestUrl, blobUrls, depth = 0) {
+    if (depth > 3) return null;
+    let resp;
+    try {
+      resp = await fetch(manifestUrl, {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin"
+      });
+    } catch (_) {
+      return null;
+    }
+    if (!resp.ok) return null;
+    const manifestText = await resp.text();
+    const rewritten = await rewriteM3u8Manifest({
+      manifestText,
+      rewriteUri: async (uri) => {
+        const resolvedUrl = new URL(uri, manifestUrl).toString();
+        if (isM3u8Url(resolvedUrl)) {
+          const nestedManifestUrl = await this._signedAbsoluteUrl(resolvedUrl);
+          const nestedBlobUrl = await this._rewriteGo2RtcHlsManifestSource(
+            nestedManifestUrl,
+            blobUrls,
+            depth + 1
+          );
+          return nestedBlobUrl || nestedManifestUrl;
+        }
+        return await this._signedAbsoluteUrl(resolvedUrl);
+      }
+    });
+    const blobUrl = URL.createObjectURL(
+      new Blob([rewritten], { type: "application/vnd.apple.mpegurl" })
+    );
+    blobUrls.push(blobUrl);
+    return blobUrl;
+  }
   async _probeGo2RtcHlsCandidates(candidates, cacheKey) {
     for (const p of candidates) {
       const signed = await this._signed(p);
@@ -11324,13 +11408,29 @@ const FrigateViewCard = class extends HTMLElement {
           contentType: resp.headers.get("content-type") || "",
           url: abs
         })) {
-          this._cacheGo2RtcHlsUrl(cacheKey, abs, Date.now());
-          return abs;
+          if (requiresNestedSignedHlsRequests({ rawPath: p, signedPath: signed })) {
+            const blobUrls = [];
+            const rewrittenUrl = await this._rewriteGo2RtcHlsManifestSource(
+              abs,
+              blobUrls
+            );
+            if (!rewrittenUrl) {
+              blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
+              continue;
+            }
+            return {
+              url: rewrittenUrl,
+              cacheable: false,
+              destroy: () => {
+                blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
+              }
+            };
+          }
+          return { url: abs, cacheable: true, destroy: null };
         }
       } catch (_) {
       }
     }
-    this._cacheMissingGo2RtcHlsUrl(cacheKey, Date.now());
     return null;
   }
   async _signedGo2RtcWsPath(path) {
@@ -11432,14 +11532,21 @@ const FrigateViewCard = class extends HTMLElement {
     if (!this._supportsNativeHlsPlayback()) return null;
     const { clientId, cam, cacheKey, nowMs } = state;
     const cachedUrl = this._getGo2RtcHlsCachedUrl(cacheKey, nowMs);
-    if (cachedUrl !== void 0) return cachedUrl;
+    if (cachedUrl !== void 0) {
+      return cachedUrl == null ? null : { url: cachedUrl, destroy: null };
+    }
     const inFlight = this._getGo2RtcHlsInFlight(cacheKey);
     if (inFlight) return inFlight;
     const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
-    const probePromise = this._probeGo2RtcHlsCandidates(
-      candidates,
-      cacheKey
-    ).finally(() => {
+    const probePromise = (async () => {
+      const result = await this._probeGo2RtcHlsCandidates(candidates, cacheKey);
+      if (result?.cacheable) {
+        this._cacheGo2RtcHlsUrl(cacheKey, result.url, Date.now());
+      } else if (!result) {
+        this._cacheMissingGo2RtcHlsUrl(cacheKey, Date.now());
+      }
+      return result;
+    })().finally(() => {
       this._clearGo2RtcHlsInFlight(cacheKey);
     });
     this._setGo2RtcHlsInFlight(cacheKey, probePromise);
@@ -11878,15 +11985,15 @@ const FrigateViewCard = class extends HTMLElement {
     const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
     if (abortSignal?.aborted) return false;
     if (!entity) return false;
-    const hlsUrl = await this._go2rtcHlsUrlForEntity(entity);
-    if (!hlsUrl) return false;
+    const hlsSource = await this._go2rtcHlsUrlForEntity(entity);
+    if (!hlsSource?.url) return false;
     const video = createVideoElement(
       buildVideoOptionsForView(
         "live",
         {
           muted: this._streamMuted,
           controls: false,
-          src: hlsUrl
+          src: hlsSource.url
         },
         { scopeKey: this }
       )
@@ -11898,6 +12005,14 @@ const FrigateViewCard = class extends HTMLElement {
         video.pause();
         video.removeAttribute("src");
         video.load();
+      } catch (_) {
+      }
+      try {
+        hlsSource.destroy?.();
+      } catch (_) {
+      }
+      try {
+        if (video.src?.startsWith("blob:")) URL.revokeObjectURL(video.src);
       } catch (_) {
       }
       if (abortSignal && abortBound) {

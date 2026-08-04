@@ -100,7 +100,10 @@ import {
   buildGo2rtcWsPath,
   getFreshCachedValue,
   isM3u8Response,
+  isM3u8Url,
   makeGo2rtcCacheKey,
+  requiresNestedSignedHlsRequests,
+  rewriteM3u8Manifest,
   setCachedValue,
   toAbsoluteSignedUrl,
   toWebSocketUrl,
@@ -2387,6 +2390,59 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
 
+  async _signedAbsoluteUrl(url) {
+    const abs = String(url || "").trim();
+    if (!abs) return abs;
+    let parsed;
+    try {
+      parsed = new URL(abs, window.location.origin);
+    } catch (_) {
+      return abs;
+    }
+    if (parsed.origin !== window.location.origin) return parsed.toString();
+    const signedPath = await this._signed(`${parsed.pathname}${parsed.search}`);
+    return this._toAbsoluteSignedPath(signedPath);
+  }
+
+  async _rewriteGo2RtcHlsManifestSource(manifestUrl, blobUrls, depth = 0) {
+    if (depth > 3) return null;
+    let resp;
+    try {
+      resp = await fetch(manifestUrl, {
+        method: "GET",
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+    } catch (_) {
+      return null;
+    }
+    if (!resp.ok) return null;
+
+    const manifestText = await resp.text();
+    const rewritten = await rewriteM3u8Manifest({
+      manifestText,
+      rewriteUri: async (uri) => {
+        const resolvedUrl = new URL(uri, manifestUrl).toString();
+        if (isM3u8Url(resolvedUrl)) {
+          const nestedManifestUrl = await this._signedAbsoluteUrl(resolvedUrl);
+          const nestedBlobUrl = await this._rewriteGo2RtcHlsManifestSource(
+            nestedManifestUrl,
+            blobUrls,
+            depth + 1,
+          );
+          return nestedBlobUrl || nestedManifestUrl;
+        }
+        return await this._signedAbsoluteUrl(resolvedUrl);
+      },
+    });
+
+    const blobUrl = URL.createObjectURL(
+      new Blob([rewritten], { type: "application/vnd.apple.mpegurl" }),
+    );
+    blobUrls.push(blobUrl);
+    return blobUrl;
+  }
+
   async _probeGo2RtcHlsCandidates(candidates, cacheKey) {
     for (const p of candidates) {
       const signed = await this._signed(p);
@@ -2404,13 +2460,31 @@ export class FrigateViewCard extends HTMLElement {
             url: abs,
           })
         ) {
-          this._cacheGo2RtcHlsUrl(cacheKey, abs, Date.now());
-          return abs;
+          if (
+            requiresNestedSignedHlsRequests({ rawPath: p, signedPath: signed })
+          ) {
+            const blobUrls = [];
+            const rewrittenUrl = await this._rewriteGo2RtcHlsManifestSource(
+              abs,
+              blobUrls,
+            );
+            if (!rewrittenUrl) {
+              blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
+              continue;
+            }
+            return {
+              url: rewrittenUrl,
+              cacheable: false,
+              destroy: () => {
+                blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
+              },
+            };
+          }
+          return { url: abs, cacheable: true, destroy: null };
         }
       } catch (_) {}
     }
 
-    this._cacheMissingGo2RtcHlsUrl(cacheKey, Date.now());
     return null;
   }
 
@@ -2533,17 +2607,24 @@ export class FrigateViewCard extends HTMLElement {
     if (!this._supportsNativeHlsPlayback()) return null;
     const { clientId, cam, cacheKey, nowMs } = state;
     const cachedUrl = this._getGo2RtcHlsCachedUrl(cacheKey, nowMs);
-    if (cachedUrl !== undefined) return cachedUrl;
+    if (cachedUrl !== undefined) {
+      return cachedUrl == null ? null : { url: cachedUrl, destroy: null };
+    }
 
     const inFlight = this._getGo2RtcHlsInFlight(cacheKey);
     if (inFlight) return inFlight;
 
     const candidates = buildGo2rtcHlsCandidates({ clientId, cam });
 
-    const probePromise = this._probeGo2RtcHlsCandidates(
-      candidates,
-      cacheKey,
-    ).finally(() => {
+    const probePromise = (async () => {
+      const result = await this._probeGo2RtcHlsCandidates(candidates, cacheKey);
+      if (result?.cacheable) {
+        this._cacheGo2RtcHlsUrl(cacheKey, result.url, Date.now());
+      } else if (!result) {
+        this._cacheMissingGo2RtcHlsUrl(cacheKey, Date.now());
+      }
+      return result;
+    })().finally(() => {
       this._clearGo2RtcHlsInFlight(cacheKey);
     });
 
@@ -3017,8 +3098,8 @@ export class FrigateViewCard extends HTMLElement {
     const { entity, abortSignal, commit } = this._go2rtcMountRequest(options);
     if (abortSignal?.aborted) return false;
     if (!entity) return false;
-    const hlsUrl = await this._go2rtcHlsUrlForEntity(entity);
-    if (!hlsUrl) return false;
+    const hlsSource = await this._go2rtcHlsUrlForEntity(entity);
+    if (!hlsSource?.url) return false;
 
     const video = createVideoElement(
       buildVideoOptionsForView(
@@ -3026,7 +3107,7 @@ export class FrigateViewCard extends HTMLElement {
         {
           muted: this._streamMuted,
           controls: false,
-          src: hlsUrl,
+          src: hlsSource.url,
         },
         { scopeKey: this },
       ),
@@ -3040,6 +3121,12 @@ export class FrigateViewCard extends HTMLElement {
         video.pause();
         video.removeAttribute("src");
         video.load();
+      } catch (_) {}
+      try {
+        hlsSource.destroy?.();
+      } catch (_) {}
+      try {
+        if (video.src?.startsWith("blob:")) URL.revokeObjectURL(video.src);
       } catch (_) {}
       if (abortSignal && abortBound) {
         abortSignal.removeEventListener("abort", onAbort);

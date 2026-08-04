@@ -6,7 +6,10 @@ import {
   buildGo2rtcWsPath,
   getFreshCachedValue,
   isM3u8Response,
+  isM3u8Url,
   makeGo2rtcCacheKey,
+  requiresNestedSignedHlsRequests,
+  rewriteM3u8Manifest,
   setCachedValue,
   toAbsoluteSignedUrl,
   toWebSocketUrl,
@@ -44,6 +47,55 @@ test("URL helpers convert signed and websocket URLs", () => {
     "https://edge/a",
   );
   assert.equal(toWebSocketUrl("https://ha.local/a"), "wss://ha.local/a");
+});
+
+test("requiresNestedSignedHlsRequests detects signed HA manifest paths", () => {
+  assert.equal(
+    requiresNestedSignedHlsRequests({
+      rawPath: "/api/frigate/frigate/go2rtc/api/stream.m3u8?src=front&mp4",
+      signedPath:
+        "/api/frigate/frigate/go2rtc/api/stream.m3u8?src=front&mp4&authSig=abc",
+    }),
+    true,
+  );
+  assert.equal(
+    requiresNestedSignedHlsRequests({
+      rawPath: "/api/frigate/frigate/go2rtc/api/stream.m3u8?src=front&mp4",
+      signedPath: "/api/frigate/frigate/go2rtc/api/stream.m3u8?src=front&mp4",
+    }),
+    false,
+  );
+});
+
+test("isM3u8Url recognizes playlist URLs", () => {
+  assert.equal(isM3u8Url("https://ha.local/a/master.m3u8"), true);
+  assert.equal(isM3u8Url("https://ha.local/a/video.mp4"), false);
+});
+
+test("rewriteM3u8Manifest rewrites line and attribute URIs", async () => {
+  const manifest = [
+    "#EXTM3U",
+    '#EXT-X-KEY:METHOD=AES-128,URI="key.bin"',
+    "media/playlist.m3u8?id=abc",
+    "#EXTINF:2.0,",
+    "segment.ts?part=1",
+  ].join("\n");
+
+  const rewritten = await rewriteM3u8Manifest({
+    manifestText: manifest,
+    rewriteUri: async (uri) => `signed:${uri}`,
+  });
+
+  assert.equal(
+    rewritten,
+    [
+      "#EXTM3U",
+      '#EXT-X-KEY:METHOD=AES-128,URI="signed:key.bin"',
+      "signed:media/playlist.m3u8?id=abc",
+      "#EXTINF:2.0,",
+      "signed:segment.ts?part=1",
+    ].join("\n"),
+  );
 });
 
 test("cache helpers read and write with expiry", () => {
