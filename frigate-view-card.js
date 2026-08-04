@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1153";
+const VERSION = "1.0.1154";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -26,6 +26,7 @@ const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
   60
 ]);
 const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
+1154;
 const SLIDESHOW_ALERT_HOLD_MS = 1e4;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
@@ -1575,13 +1576,19 @@ const PTZ_MOVE_MODE_CONTINUOUS = "ContinuousMove";
 const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
 const PTZ_SERVICE_DOMAIN = "frigate";
 const PTZ_SERVICE_NAME = "ptz";
+const PTZ_DEFAULT_SPEED = 0.5;
 const PTZ_DIRECTIONS = Object.freeze({
-  up: "up",
-  right: "right",
-  down: "down",
-  left: "left"
+  up: Object.freeze(["up"]),
+  "up-right": Object.freeze(["up", "right"]),
+  right: Object.freeze(["right"]),
+  "down-right": Object.freeze(["down", "right"]),
+  down: Object.freeze(["down"]),
+  "down-left": Object.freeze(["down", "left"]),
+  left: Object.freeze(["left"]),
+  "up-left": Object.freeze(["up", "left"])
 });
 const normalizePtzNumber = (value) => {
+  if (value == null || value === "") return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return null;
   if (parsed < 0 || parsed > 1) return null;
@@ -1597,7 +1604,7 @@ const normalizeCameraPtzConfig = (value) => {
   }
   const source = value === true ? { enabled: true } : value;
   if (source.enabled === false) return null;
-  const speed = normalizePtzNumber(source.speed);
+  const speed = normalizePtzNumber(source.speed) ?? PTZ_DEFAULT_SPEED;
   const distance = normalizePtzNumber(source.distance);
   const continuousDuration = normalizePtzNumber(source.continuous_duration);
   return {
@@ -1609,32 +1616,56 @@ const normalizeCameraPtzConfig = (value) => {
   };
 };
 const hasCameraPtz = (camera) => normalizeCameraPtzConfig(camera?.ptz)?.enabled === true;
-const resolvePtzEmptyStateMessage = (camera) => {
-  return hasCameraPtz(camera) ? "Use the circle pad to move the active camera." : "PTZ is not configured for the active camera.";
+const hasPtzPanTiltCapability = (ptzInfo) => Array.isArray(ptzInfo?.features) && ptzInfo.features.includes("pt");
+const canCameraUsePtz = (camera, ptzInfo) => hasCameraPtz(camera) && hasPtzPanTiltCapability(ptzInfo);
+const resolvePtzEmptyStateMessage = (camera, ptzInfo, { loading = false } = {}) => {
+  if (!hasCameraPtz(camera)) {
+    return "PTZ is not configured for the active camera.";
+  }
+  if (loading) {
+    return "Checking Frigate PTZ support for the active camera.";
+  }
+  if (!hasPtzPanTiltCapability(ptzInfo)) {
+    return "Frigate did not report PTZ pan/tilt support for the active camera.";
+  }
+  return "Use the circle pad to move the active camera.";
 };
-const resolvePtzServiceRequest = ({ camera, action, eventType }) => {
+const resolvePtzServicePlan = ({
+  camera,
+  ptzInfo,
+  action,
+  eventType
+}) => {
   const ptz = normalizeCameraPtzConfig(camera?.ptz);
-  if (!ptz || !camera?.entity) return null;
+  if (!ptz || !camera?.entity || !hasPtzPanTiltCapability(ptzInfo)) {
+    return null;
+  }
   if (eventType === "release") {
     if (ptz.move_mode !== PTZ_MOVE_MODE_CONTINUOUS) return null;
     return {
-      domain: PTZ_SERVICE_DOMAIN,
-      service: PTZ_SERVICE_NAME,
-      serviceData: { action: "stop" },
-      target: { entity_id: camera.entity },
+      requests: [
+        {
+          domain: PTZ_SERVICE_DOMAIN,
+          service: PTZ_SERVICE_NAME,
+          serviceData: { action: "stop" },
+          target: { entity_id: camera.entity }
+        }
+      ],
       readout: "[ptz:stop]"
     };
   }
-  const direction = PTZ_DIRECTIONS[action];
-  if (!direction) return null;
+  const directions = PTZ_DIRECTIONS[action];
+  if (!directions?.length) return null;
   return {
-    domain: PTZ_SERVICE_DOMAIN,
-    service: PTZ_SERVICE_NAME,
-    serviceData: {
-      action: "move",
-      argument: direction
-    },
-    target: { entity_id: camera.entity },
+    requests: directions.map((direction) => ({
+      domain: PTZ_SERVICE_DOMAIN,
+      service: PTZ_SERVICE_NAME,
+      serviceData: {
+        action: "move",
+        argument: direction
+      },
+      target: { entity_id: camera.entity }
+    })),
     readout: `[ptz:${action}]`
   };
 };
@@ -2479,6 +2510,9 @@ function mkCamState() {
     recordings: [],
     reviews: [],
     kept: [],
+    ptzInfo: null,
+    ptzInfoFetched: false,
+    ptzInfoPromise: null,
     discovered: false
   };
 }
@@ -16333,6 +16367,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._renderEventsList(list);
   }
   _renderControlsSection(list) {
+    void this._ensureActiveCameraPtzInfo();
     this._renderListLabel();
     this._setListHtmlIfChanged(
       list,
@@ -16344,23 +16379,76 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderControlsReadout();
   }
   _activeCameraHasPtz() {
-    return hasCameraPtz(this._activeCam);
+    return canCameraUsePtz(this._activeCam, this._activeCameraPtzInfo());
+  }
+  _activeCameraPtzInfo() {
+    return this._cc().ptzInfo || null;
+  }
+  _activeCameraPtzInfoLoading() {
+    return !!this._cc().ptzInfoPromise;
+  }
+  async _ensureActiveCameraPtzInfo() {
+    const entity = this._activeCam?.entity;
+    if (!entity || !hasCameraPtz(this._activeCam)) return null;
+    return this._ensurePtzInfoForEntity(entity);
+  }
+  async _ensurePtzInfoForEntity(entity) {
+    const targetEntity = String(entity || "").trim();
+    if (!targetEntity) return null;
+    if (!this._camCache[targetEntity]) {
+      this._camCache[targetEntity] = mkCamState();
+    }
+    const cache = this._camCache[targetEntity];
+    if (cache.ptzInfoFetched) return cache.ptzInfo;
+    if (cache.ptzInfoPromise) return cache.ptzInfoPromise;
+    await this._discoverOne(targetEntity);
+    if (!cache.discovered || !cache.clientId || !cache.cam) {
+      cache.ptzInfoFetched = true;
+      return null;
+    }
+    cache.ptzInfoPromise = (async () => {
+      try {
+        const result = await this._ws({
+          type: "frigate/ptz/info",
+          instance_id: cache.clientId,
+          camera: cache.cam
+        });
+        cache.ptzInfo = Array.isArray(result) ? result[0] || null : result || null;
+      } catch (error) {
+        console.warn("[Frigate] PTZ info fetch failed", error);
+        cache.ptzInfo = null;
+      } finally {
+        cache.ptzInfoFetched = true;
+        cache.ptzInfoPromise = null;
+        this._camCache[targetEntity] = cache;
+        if (this._tab === "controls" && this._activeCam?.entity === targetEntity) {
+          this._renderList();
+        }
+      }
+      return cache.ptzInfo;
+    })();
+    return cache.ptzInfoPromise;
   }
   async _handleCirclePadPtzEvent(event, eventType) {
     if (event?.target?.id !== "controls-pad") return;
-    const request = resolvePtzServiceRequest({
+    const plan = resolvePtzServicePlan({
       camera: this._activeCam,
+      ptzInfo: this._activeCameraPtzInfo(),
       action: event?.detail?.action,
       eventType
     });
-    if (!request) return;
-    this._appendControlsReadoutEntry(request.readout);
+    if (!plan) return;
+    this._appendControlsReadoutEntry(plan.readout);
     try {
-      await this._hass?.callService(
-        request.domain,
-        request.service,
-        request.serviceData,
-        request.target
+      await Promise.all(
+        plan.requests.map(
+          (request) => this._hass?.callService(
+            request.domain,
+            request.service,
+            request.serviceData,
+            request.target
+          )
+        )
       );
     } catch (error) {
       console.warn("[Frigate] PTZ call failed", error);
@@ -16388,7 +16476,9 @@ const FrigateViewCard = class extends HTMLElement {
     el.innerHTML = resolveControlsReadoutMarkup(
       this._controlsReadoutLines,
       (line) => this._escapeControlsReadoutText(line),
-      resolvePtzEmptyStateMessage(this._activeCam)
+      resolvePtzEmptyStateMessage(this._activeCam, this._activeCameraPtzInfo(), {
+        loading: this._activeCameraPtzInfoLoading()
+      })
     );
     if (!this._controlsReadoutLines.length) return;
     el.scrollTop = el.scrollHeight;
@@ -16884,7 +16974,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     );
     const alertsContent = this.querySelector("#camera-modal-all-reviews")?.checked === true ? "all_reviews" : "alerts_only";
     const disableHlsDesktop = this.querySelector("#camera-modal-disable-hls-desktop")?.checked === true;
-    const ptz = this.querySelector("#camera-modal-ptz-enabled")?.checked ? true : null;
+    const ptz = this.querySelector("#camera-modal-ptz-enabled")?.checked ? normalizeCameraPtzConfig(true) : null;
     const helper = this.querySelector("#camera-modal-helper");
     if (!entity) {
       if (helper) helper.textContent = "Camera is required.";
@@ -16911,11 +17001,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
         connection_type: connectionType,
         alerts_content: alertsContent,
         disable_hls_desktop: disableHlsDesktop,
-        ptz: ptz || normalizeCameraPtzConfig(cur[this._editingCamIndex]?.ptz)
+        ptz
       };
-      if (!ptz) {
-        cur[this._editingCamIndex].ptz = null;
-      }
     }
     this._config = { ...this._config, cameras: cur.slice(0, MAX_CAMERAS) };
     this._closeCameraModal();
@@ -17584,7 +17671,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
             .cam-modal-field{margin-bottom:8px;}
             .cam-modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
             .cam-btn{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
-            .cam-btn.primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
+            .cam-btn .primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
             .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
         </style>
     <div class="ed-wrap">
@@ -17631,7 +17718,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
-            <button type="button" id="camera-modal-cancel" class=".cam-btn">Cancel</button>
+            <button type="button" id="camera-modal-cancel" class="cam-btn">Cancel</button>
             <button type="button" id="camera-modal-save" class="cam-btn primary">Add</button>
           </div>
         </div>

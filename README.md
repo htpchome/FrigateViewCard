@@ -107,9 +107,10 @@ title: Frigate
 
 PTZ notes:
 
-- Use `ptz: true` to enable the default Frigate PTZ service behavior.
+- Use `ptz: true` to enable the default Frigate PTZ service behavior. It normalizes to `enabled: true`, `move_mode: ContinuousMove`, and `speed: 0.5`.
 - The Frigate Home Assistant integration PTZ service supports `move`, `stop`, `zoom`, and `preset`; this card currently uses `move` and `stop` for the circle pad.
-- Diagonal circle-pad slices are not sent because the Frigate PTZ service documents cardinal `move` arguments only: `left`, `right`, `up`, `down`.
+- The controls tab now asks Frigate for PTZ capability data and only enables movement when Frigate reports pan/tilt support for that camera.
+- Diagonal circle-pad slices are faked by sending the two matching cardinal `move` actions, for example `up-right` sends both `up` and `right`.
 - Use a PTZ object when you need to flag a camera as PTZ-enabled now, and to preserve room for future PTZ options in YAML.
 - The controls tab targets the active camera entity, so only cameras with `ptz` enabled respond to the circle pad.
 - The visual editor now exposes a simple per-camera PTZ on/off toggle.

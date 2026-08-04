@@ -733,6 +733,9 @@ export function mkCamState() {
     recordings: [],
     reviews: [],
     kept: [],
+    ptzInfo: null,
+    ptzInfoFetched: false,
+    ptzInfoPromise: null,
     discovered: false,
   };
 }

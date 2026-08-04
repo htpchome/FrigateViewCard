@@ -138,7 +138,7 @@ test("compact YAML preserves boolean PTZ enablement", () => {
         ptz: {
           enabled: true,
           move_mode: "ContinuousMove",
-          speed: null,
+          speed: 0.5,
           distance: null,
           continuous_duration: null,
         },

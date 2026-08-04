@@ -404,7 +404,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     const disableHlsDesktop =
       this.querySelector("#camera-modal-disable-hls-desktop")?.checked === true;
     const ptz = this.querySelector("#camera-modal-ptz-enabled")?.checked
-      ? true
+      ? normalizeCameraPtzConfig(true)
       : null;
     const helper = this.querySelector("#camera-modal-helper");
     if (!entity) {
@@ -432,11 +432,8 @@ export class FrigateViewCardEditor extends HTMLElement {
         connection_type: connectionType,
         alerts_content: alertsContent,
         disable_hls_desktop: disableHlsDesktop,
-        ptz: ptz || normalizeCameraPtzConfig(cur[this._editingCamIndex]?.ptz),
+        ptz,
       };
-      if (!ptz) {
-        cur[this._editingCamIndex].ptz = null;
-      }
     }
     this._config = { ...this._config, cameras: cur.slice(0, MAX_CAMERAS) };
     this._closeCameraModal();
@@ -1178,7 +1175,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-field{margin-bottom:8px;}
             .cam-modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
             .cam-btn{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
-            .cam-btn.primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
+            .cam-btn .primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
             .cam-modal-helper{font-size:11px;color:var(--error-color, #b91c1c);min-height:16px;}
         </style>
     <div class="ed-wrap">
@@ -1225,7 +1222,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
-            <button type="button" id="camera-modal-cancel" class=".cam-btn">Cancel</button>
+            <button type="button" id="camera-modal-cancel" class="cam-btn">Cancel</button>
             <button type="button" id="camera-modal-save" class="cam-btn primary">Add</button>
           </div>
         </div>

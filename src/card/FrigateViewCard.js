@@ -282,9 +282,10 @@ import {
   resolveControlsReadoutMarkup,
 } from "./controls/readout.js";
 import {
+  canCameraUsePtz,
   hasCameraPtz,
+  resolvePtzServicePlan,
   resolvePtzEmptyStateMessage,
-  resolvePtzServiceRequest,
 } from "../shared/ptz.js";
 import {
   buildReviewListItemHtml,
@@ -8178,6 +8179,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _renderControlsSection(list) {
+    void this._ensureActiveCameraPtzInfo();
     this._renderListLabel();
     this._setListHtmlIfChanged(
       list,
@@ -8190,25 +8192,85 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _activeCameraHasPtz() {
-    return hasCameraPtz(this._activeCam);
+    return canCameraUsePtz(this._activeCam, this._activeCameraPtzInfo());
+  }
+
+  _activeCameraPtzInfo() {
+    return this._cc().ptzInfo || null;
+  }
+
+  _activeCameraPtzInfoLoading() {
+    return !!this._cc().ptzInfoPromise;
+  }
+
+  async _ensureActiveCameraPtzInfo() {
+    const entity = this._activeCam?.entity;
+    if (!entity || !hasCameraPtz(this._activeCam)) return null;
+    return this._ensurePtzInfoForEntity(entity);
+  }
+
+  async _ensurePtzInfoForEntity(entity) {
+    const targetEntity = String(entity || "").trim();
+    if (!targetEntity) return null;
+    if (!this._camCache[targetEntity]) {
+      this._camCache[targetEntity] = mkCamState();
+    }
+    const cache = this._camCache[targetEntity];
+    if (cache.ptzInfoFetched) return cache.ptzInfo;
+    if (cache.ptzInfoPromise) return cache.ptzInfoPromise;
+
+    await this._discoverOne(targetEntity);
+    if (!cache.discovered || !cache.clientId || !cache.cam) {
+      cache.ptzInfoFetched = true;
+      return null;
+    }
+
+    cache.ptzInfoPromise = (async () => {
+      try {
+        const result = await this._ws({
+          type: "frigate/ptz/info",
+          instance_id: cache.clientId,
+          camera: cache.cam,
+        });
+        cache.ptzInfo = Array.isArray(result) ? result[0] || null : result || null;
+      } catch (error) {
+        console.warn("[Frigate] PTZ info fetch failed", error);
+        cache.ptzInfo = null;
+      } finally {
+        cache.ptzInfoFetched = true;
+        cache.ptzInfoPromise = null;
+        this._camCache[targetEntity] = cache;
+        if (this._tab === "controls" && this._activeCam?.entity === targetEntity) {
+          this._renderList();
+        }
+      }
+      return cache.ptzInfo;
+    })();
+
+    return cache.ptzInfoPromise;
   }
 
   async _handleCirclePadPtzEvent(event, eventType) {
     if (event?.target?.id !== "controls-pad") return;
-    const request = resolvePtzServiceRequest({
+    const plan = resolvePtzServicePlan({
       camera: this._activeCam,
+      ptzInfo: this._activeCameraPtzInfo(),
       action: event?.detail?.action,
       eventType,
     });
-    if (!request) return;
+    if (!plan) return;
 
-    this._appendControlsReadoutEntry(request.readout);
+    this._appendControlsReadoutEntry(plan.readout);
     try {
-      await this._hass?.callService(
-        request.domain,
-        request.service,
-        request.serviceData,
-        request.target,
+      await Promise.all(
+        plan.requests.map((request) =>
+          this._hass?.callService(
+            request.domain,
+            request.service,
+            request.serviceData,
+            request.target,
+          ),
+        ),
       );
     } catch (error) {
       console.warn("[Frigate] PTZ call failed", error);
@@ -8243,7 +8305,9 @@ export class FrigateViewCard extends HTMLElement {
     el.innerHTML = resolveControlsReadoutMarkup(
       this._controlsReadoutLines,
       (line) => this._escapeControlsReadoutText(line),
-      resolvePtzEmptyStateMessage(this._activeCam),
+      resolvePtzEmptyStateMessage(this._activeCam, this._activeCameraPtzInfo(), {
+        loading: this._activeCameraPtzInfoLoading(),
+      }),
     );
     if (!this._controlsReadoutLines.length) return;
     el.scrollTop = el.scrollHeight;
