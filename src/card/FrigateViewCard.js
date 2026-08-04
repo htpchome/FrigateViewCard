@@ -8265,7 +8265,16 @@ export class FrigateViewCard extends HTMLElement {
       action: event?.detail?.action,
       eventType,
     });
-    if (!plan) return;
+    if (!plan) {
+      if (eventType === "press") {
+        this._appendControlsReadoutEntry(
+          resolvePtzEmptyStateMessage(this._activeCam, ptzInfo, {
+            loading: this._activeCameraPtzInfoLoading(),
+          }),
+        );
+      }
+      return;
+    }
 
     this._appendControlsReadoutEntry(plan.readout);
     try {

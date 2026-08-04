@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1155";
+const VERSION = "1.0.1156";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -16439,7 +16439,16 @@ const FrigateViewCard = class extends HTMLElement {
       action: event?.detail?.action,
       eventType
     });
-    if (!plan) return;
+    if (!plan) {
+      if (eventType === "press") {
+        this._appendControlsReadoutEntry(
+          resolvePtzEmptyStateMessage(this._activeCam, ptzInfo, {
+            loading: this._activeCameraPtzInfoLoading()
+          })
+        );
+      }
+      return;
+    }
     this._appendControlsReadoutEntry(plan.readout);
     try {
       for (let index = 0; index < plan.requests.length; index += 1) {
@@ -16784,18 +16793,25 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const numeric = Number(value);
     output.textContent = Number.isFinite(numeric) ? `Current speed: ${numeric.toFixed(1)}` : "Current speed: 0.5";
   }
-  _syncCameraModalPtzVisibility({ supported = false, loading = false } = {}) {
+  _syncCameraModalPtzVisibility({
+    supported = false,
+    loading = false,
+    preserveSelection = false
+  } = {}) {
     const toggleRow = this.querySelector("#camera-modal-ptz-toggle-row");
     const configRow = this.querySelector("#camera-modal-ptz-config");
     const stateMessage = this.querySelector("#camera-modal-ptz-state");
     const ptzEnabled = this.querySelector("#camera-modal-ptz-enabled");
     const moveModeRow = this.querySelector("#camera-modal-ptz-move-mode-row");
     const speedRow = this.querySelector("#camera-modal-ptz-speed-row");
-    if (toggleRow) toggleRow.style.display = supported ? "block" : "none";
+    if (toggleRow) {
+      toggleRow.style.display = supported || loading ? "block" : "none";
+    }
     if (ptzEnabled) {
       ptzEnabled.disabled = !supported || loading;
       ptzEnabled.dataset.supported = supported ? "true" : "false";
-      if (!supported) ptzEnabled.checked = false;
+      if (!supported && !loading && !preserveSelection)
+        ptzEnabled.checked = false;
     }
     if (stateMessage) {
       if (loading) {
@@ -16809,7 +16825,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
         stateMessage.textContent = "";
       }
     }
-    const showConfig = supported && ptzEnabled?.checked === true;
+    const showConfig = (supported || loading) && ptzEnabled?.checked === true;
     if (configRow) configRow.style.display = showConfig ? "block" : "none";
     if (moveModeRow) moveModeRow.style.display = showConfig ? "block" : "none";
     if (speedRow) speedRow.style.display = showConfig ? "block" : "none";
@@ -16820,14 +16836,19 @@ const FrigateViewCardEditor = class extends HTMLElement {
       this._syncCameraModalPtzVisibility({ supported: false, loading: false });
       return;
     }
-    this._syncCameraModalPtzVisibility({ supported: false, loading: true });
+    this._syncCameraModalPtzVisibility({
+      supported: false,
+      loading: true,
+      preserveSelection: true
+    });
     const token = (this._cameraModalPtzToken || 0) + 1;
     this._cameraModalPtzToken = token;
     const info = await this._fetchPtzCapabilityForEntity(entity);
     if (this._cameraModalPtzToken !== token) return;
     this._syncCameraModalPtzVisibility({
       supported: hasPtzPanTiltCapability(info),
-      loading: false
+      loading: false,
+      preserveSelection: hasPtzPanTiltCapability(info)
     });
   }
   _normalizeHiddenTabs(hiddenTabs) {
@@ -17083,8 +17104,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
     if (helper) helper.textContent = "";
     if (modal) modal.classList.remove("hidden");
     this._syncCameraModalPtzVisibility({
-      supported: false,
-      loading: !!cam?.entity
+      supported: hasCameraPtz(cam),
+      loading: !!cam?.entity,
+      preserveSelection: hasCameraPtz(cam)
     });
     void this._refreshCameraModalPtzSupport();
   }

@@ -157,7 +157,11 @@ export class FrigateViewCardEditor extends HTMLElement {
       : "Current speed: 0.5";
   }
 
-  _syncCameraModalPtzVisibility({ supported = false, loading = false } = {}) {
+  _syncCameraModalPtzVisibility({
+    supported = false,
+    loading = false,
+    preserveSelection = false,
+  } = {}) {
     const toggleRow = this.querySelector("#camera-modal-ptz-toggle-row");
     const configRow = this.querySelector("#camera-modal-ptz-config");
     const stateMessage = this.querySelector("#camera-modal-ptz-state");
@@ -165,11 +169,14 @@ export class FrigateViewCardEditor extends HTMLElement {
     const moveModeRow = this.querySelector("#camera-modal-ptz-move-mode-row");
     const speedRow = this.querySelector("#camera-modal-ptz-speed-row");
 
-    if (toggleRow) toggleRow.style.display = supported ? "block" : "none";
+    if (toggleRow) {
+      toggleRow.style.display = supported || loading ? "block" : "none";
+    }
     if (ptzEnabled) {
       ptzEnabled.disabled = !supported || loading;
       ptzEnabled.dataset.supported = supported ? "true" : "false";
-      if (!supported) ptzEnabled.checked = false;
+      if (!supported && !loading && !preserveSelection)
+        ptzEnabled.checked = false;
     }
     if (stateMessage) {
       if (loading) {
@@ -186,7 +193,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       }
     }
 
-    const showConfig = supported && ptzEnabled?.checked === true;
+    const showConfig = (supported || loading) && ptzEnabled?.checked === true;
     if (configRow) configRow.style.display = showConfig ? "block" : "none";
     if (moveModeRow) moveModeRow.style.display = showConfig ? "block" : "none";
     if (speedRow) speedRow.style.display = showConfig ? "block" : "none";
@@ -199,7 +206,11 @@ export class FrigateViewCardEditor extends HTMLElement {
       return;
     }
 
-    this._syncCameraModalPtzVisibility({ supported: false, loading: true });
+    this._syncCameraModalPtzVisibility({
+      supported: false,
+      loading: true,
+      preserveSelection: true,
+    });
     const token = (this._cameraModalPtzToken || 0) + 1;
     this._cameraModalPtzToken = token;
     const info = await this._fetchPtzCapabilityForEntity(entity);
@@ -207,6 +218,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._syncCameraModalPtzVisibility({
       supported: hasPtzPanTiltCapability(info),
       loading: false,
+      preserveSelection: hasPtzPanTiltCapability(info),
     });
   }
 
@@ -509,8 +521,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (helper) helper.textContent = "";
     if (modal) modal.classList.remove("hidden");
     this._syncCameraModalPtzVisibility({
-      supported: false,
+      supported: hasCameraPtz(cam),
       loading: !!cam?.entity,
+      preserveSelection: hasCameraPtz(cam),
     });
     void this._refreshCameraModalPtzSupport();
   }
