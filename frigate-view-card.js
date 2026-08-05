@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1221";
+const VERSION = "1.0.1222";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -12462,6 +12462,25 @@ function isMobileViewRoute(pageId, pageIds) {
 }
 
 // src/features/mobile-view/page.tmpl.js
+function buildCamSwitcherMarkup2({
+  previewPageEnabled,
+  includeStatus,
+  cameras,
+  activeCamIdx,
+  isSingleView,
+  icons,
+  getCameraName,
+  isCameraAvailable
+}) {
+  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
+  const cameraButtons = (cameras || []).map((camera, index) => {
+    const name = getCameraName(camera);
+    const active = isSingleView && index === activeCamIdx;
+    const ok = !includeStatus || isCameraAvailable(camera);
+    return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
+  }).join("");
+  return `${backButton}${cameraButtons}`;
+}
 function buildMobileViewInfoRowMarkup({
   title,
   subtitle,
@@ -12496,7 +12515,7 @@ function buildMobileViewInfoRowMarkup({
             </div>`;
 }
 function buildMobileViewCamSwitcherMarkup(args) {
-  return buildCamSwitcherMarkup(args);
+  return buildCamSwitcherMarkup2(args);
 }
 function resolveMobileViewTitleText({
   title,
@@ -12538,6 +12557,25 @@ function applyMobileViewPageMarkup({ host, pageIds }) {
 function cameraName(camera) {
   return cap(camDisplayName(camera));
 }
+function buildStandardCamSwitcherButtons({
+  previewPageEnabled,
+  includeStatus,
+  cameras,
+  activeCamIdx,
+  isSingleView,
+  icons,
+  getCameraName,
+  isCameraAvailable
+}) {
+  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
+  const cameraButtons = (cameras || []).map((camera, index) => {
+    const name = getCameraName(camera);
+    const active = isSingleView && index === activeCamIdx;
+    const ok = !includeStatus || isCameraAvailable(camera);
+    return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
+  }).join("");
+  return `${backButton}${cameraButtons}`;
+}
 function buildStandardPageCamSwitcherMarkup(host, { includeStatus = true, mobile = false } = {}) {
   const args = {
     previewPageEnabled: host._isPreviewPageEnabled?.() === true,
@@ -12549,7 +12587,7 @@ function buildStandardPageCamSwitcherMarkup(host, { includeStatus = true, mobile
     getCameraName: cameraName,
     isCameraAvailable: (camera) => host._hass?.states?.[camera.entity]?.state !== "unavailable"
   };
-  return mobile ? buildMobileViewCamSwitcherMarkup(args) : buildCamSwitcherMarkup(args);
+  return mobile ? buildMobileViewCamSwitcherMarkup(args) : buildStandardCamSwitcherButtons(args);
 }
 function renderStandardPageCamSwitcher(host, { mobile = false } = {}) {
   const el = host._$("#cam-switcher");
@@ -12600,7 +12638,7 @@ function renderStandardPageStats(host, { mobile = false } = {}) {
   }
 }
 function standardPageSubtitleText(host, { mobile = false } = {}) {
-  return mobile ? resolveMobileViewSubtitleText(host._config) : resolveSubtitleText(host._config);
+  return mobile ? resolveMobileViewSubtitleText(host._config) : host._config?.subtitle || "Frigate";
 }
 function renderStandardPageSubtitle(host, { mobile = false } = {}) {
   const el = host._$("#tl-range");

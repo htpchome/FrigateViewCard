@@ -1,9 +1,5 @@
 import { CAM_COLORS, cap, camDisplayName, labelColor } from "../../helpers.js";
 import {
-  buildCamSwitcherMarkup,
-  resolveSubtitleText,
-} from "../../card/controls/shell-nav.tmpl.js";
-import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
   resolveActiveDayLabelFromScroll,
@@ -23,6 +19,30 @@ function cameraName(camera) {
   return cap(camDisplayName(camera));
 }
 
+function buildStandardCamSwitcherButtons({
+  previewPageEnabled,
+  includeStatus,
+  cameras,
+  activeCamIdx,
+  isSingleView,
+  icons,
+  getCameraName,
+  isCameraAvailable,
+}) {
+  const backButton = previewPageEnabled
+    ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>`
+    : "";
+  const cameraButtons = (cameras || [])
+    .map((camera, index) => {
+      const name = getCameraName(camera);
+      const active = isSingleView && index === activeCamIdx;
+      const ok = !includeStatus || isCameraAvailable(camera);
+      return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
+    })
+    .join("");
+  return `${backButton}${cameraButtons}`;
+}
+
 export function buildStandardPageCamSwitcherMarkup(
   host,
   { includeStatus = true, mobile = false } = {},
@@ -40,7 +60,7 @@ export function buildStandardPageCamSwitcherMarkup(
   };
   return mobile
     ? buildMobileViewCamSwitcherMarkup(args)
-    : buildCamSwitcherMarkup(args);
+    : buildStandardCamSwitcherButtons(args);
 }
 
 export function renderStandardPageCamSwitcher(host, { mobile = false } = {}) {
@@ -115,7 +135,7 @@ export function renderStandardPageStats(host, { mobile = false } = {}) {
 export function standardPageSubtitleText(host, { mobile = false } = {}) {
   return mobile
     ? resolveMobileViewSubtitleText(host._config)
-    : resolveSubtitleText(host._config);
+    : host._config?.subtitle || "Frigate";
 }
 
 export function renderStandardPageSubtitle(host, { mobile = false } = {}) {

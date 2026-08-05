@@ -14,6 +14,10 @@ const browseStandardRendererSource = fs.readFileSync(
   new URL("../src/features/browse/standard-renderer.js", import.meta.url),
   "utf8",
 );
+const mobileViewPageTemplateSource = fs.readFileSync(
+  new URL("../src/features/mobile-view/page.tmpl.js", import.meta.url),
+  "utf8",
+);
 const go2rtcResolverSource = fs.readFileSync(
   new URL("../src/integrations/frigate/go2rtc-resolver.js", import.meta.url),
   "utf8",
@@ -1214,6 +1218,12 @@ test("standard browse rendering support does not live in the card folder", () =>
   assert.equal(cardSource.includes("renderStandardPageEventsContent("), false);
   assert.equal(
     browseStandardRendererSource.includes(
+      '../../card/controls/shell-nav.tmpl.js',
+    ),
+    false,
+  );
+  assert.equal(
+    browseStandardRendererSource.includes(
       "export function renderStandardPageEventsContent",
     ),
     true,
@@ -1229,6 +1239,12 @@ test("standard browse rendering support does not live in the card folder", () =>
       "export function renderStandardPageListLabel",
     ),
     true,
+  );
+  assert.equal(
+    mobileViewPageTemplateSource.includes(
+      '../../card/controls/shell-nav.tmpl.js',
+    ),
+    false,
   );
 });
 
