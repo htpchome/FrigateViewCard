@@ -56,7 +56,11 @@ test("handleHaStatusCandidate switches slideshow camera and applies hold window"
     _slideshowPausedUntil: 0,
     _shouldHandleSlideshowReview: () => true,
     _cameraIndexByEntity: (entity) =>
-      entity === "camera.driveway" ? 1 : entity === "camera.front_door" ? 0 : -1,
+      entity === "camera.driveway"
+        ? 1
+        : entity === "camera.front_door"
+          ? 0
+          : -1,
     _setSlideshowAlertState: (severity) => {
       calls.push(["state", severity]);
     },

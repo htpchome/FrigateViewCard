@@ -2292,7 +2292,9 @@ export class FrigateViewCard extends HTMLElement {
       );
     }
 
-    const gridAlertEntity = activeCameraAlerted ? activeEntity : firstAlertEntity;
+    const gridAlertEntity = activeCameraAlerted
+      ? activeEntity
+      : firstAlertEntity;
     let gridFocused = false;
     if (this._viewMode === "grid" && gridAlertEntity) {
       gridFocused = this._focusGridPageForCamera(gridAlertEntity) === true;
