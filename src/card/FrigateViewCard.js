@@ -2144,48 +2144,23 @@ export class FrigateViewCard extends HTMLElement {
 
   // ── view mode ─────────────────────────────────────────────
   _isGridModeAvailable() {
-    return (
-      this._config?.grid_mode_enabled === true &&
-      !DEVICE_PROFILE.isPhone &&
-      !this._isMobilePhoneViewport() &&
-      Array.isArray(this._config?.cameras) &&
-      this._config.cameras.length > 1
-    );
+    return this._gridPageController.isGridModeAvailable();
   }
 
   _gridRotationMs() {
-    const seconds = Number(this._config?.grid_rotation_seconds);
-    return GRID_ROTATION_OPTIONS_SECONDS.includes(seconds)
-      ? seconds * 1000
-      : 30000;
+    return this._gridPageController.gridRotationMs();
   }
 
   _clearGridTimers() {
-    if (this._gridRotationT) clearTimeout(this._gridRotationT);
-    if (this._gridAlertReturnT) clearTimeout(this._gridAlertReturnT);
-    if (this._gridRefreshT) clearTimeout(this._gridRefreshT);
-    this._gridRotationT = null;
-    this._gridAlertReturnT = null;
-    this._gridRefreshT = null;
-    this._gridAlertController.clearTimers();
+    this._gridPageController.clearGridTimers();
   }
 
   _clearGridAlertTracking() {
-    this._gridAlertController.clearAlertTracking();
-    this._gridLastRenderSignature = "";
+    this._gridPageController.clearGridAlertTracking();
   }
 
   _scheduleGridRefresh(delayMs = 80) {
-    if (this._gridRefreshT) clearTimeout(this._gridRefreshT);
-    if (this._viewMode !== "grid") return;
-    this._gridRefreshT = setTimeout(
-      () => {
-        this._gridRefreshT = null;
-        if (this._viewMode !== "grid") return;
-        this._mountEngine(null, { quiet: true });
-      },
-      Math.max(0, Number(delayMs) || 0),
-    );
+    this._gridPageController.scheduleGridRefresh(delayMs);
   }
 
   _shouldStartInGridMode() {

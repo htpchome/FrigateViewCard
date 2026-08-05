@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1194";
+const VERSION = "1.0.1195";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -25,7 +25,7 @@ const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
   30,
   60
 ]);
-const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
+const GRID_ROTATION_OPTIONS_SECONDS2 = Object.freeze([10, 20, 30, 60]);
 const SLIDESHOW_ALERT_HOLD_MS = 1e4;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
@@ -1550,7 +1550,7 @@ const applyEditorPreviewDraftToCardConfig = ({
     grid_mode_enabled: previewConfig.grid_mode_enabled === true,
     grid_start_in_grid_enabled: previewConfig.grid_start_in_grid_enabled === true,
     grid_live_view_enabled: previewConfig.grid_live_view_enabled !== false,
-    grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
+    grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS2.includes(
       Number(previewConfig.grid_rotation_seconds)
     ) ? Number(previewConfig.grid_rotation_seconds) : 30,
     mobile_view_page_enabled: previewConfig.mobile_view_page_enabled === true,
@@ -1916,7 +1916,7 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     normalizePageRoute(source.mobile_page),
     PAGE_IDS.singleView
   );
-  const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+  const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS2.includes(
     Number(source.grid_rotation_seconds)
   ) ? Number(source.grid_rotation_seconds) : 30;
   addIfNotDefault(compact, "grid_rotation_seconds", gridRotationSeconds, 30);
@@ -2034,9 +2034,9 @@ function detectDeviceProfile() {
     os: isAndroid2 ? "Android" : isIOS2 ? "iOS" : "Desktop/Other"
   };
 }
-const DEVICE_PROFILE = detectDeviceProfile();
-const isIOS = DEVICE_PROFILE.isIOS;
-const isAndroid = DEVICE_PROFILE.isAndroid;
+const DEVICE_PROFILE2 = detectDeviceProfile();
+const isIOS = DEVICE_PROFILE2.isIOS;
+const isAndroid = DEVICE_PROFILE2.isAndroid;
 function cap(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
@@ -2455,7 +2455,7 @@ const buildEditorConfigFromDom = ({
   nextConfig.wide_view_page_enabled = resolveSwitchChecked(
     root.querySelector("#wide_view_page_enabled")
   );
-  nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+  nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS2.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value || root.querySelector("#grid_rotation_seconds")?.value || "30"
     )
@@ -9522,7 +9522,7 @@ const PreviewPageController = class {
     return resolvePreviewLiveStreamHint({
       activeStreamType: this._host._activeStreamType,
       lastLiveStreamHint: this._host._lastLiveStreamHint,
-      isIOS: DEVICE_PROFILE.isIOS
+      isIOS: DEVICE_PROFILE2.isIOS
     });
   }
   previewStreamSourceLabel(entity, useLive) {
@@ -10200,8 +10200,41 @@ const GridPageController = class {
   constructor(host) {
     this._host = host;
   }
+  isGridModeAvailable() {
+    return this._host._config?.grid_mode_enabled === true && !DEVICE_PROFILE.isPhone && !this._host._isMobilePhoneViewport() && Array.isArray(this._host._config?.cameras) && this._host._config.cameras.length > 1;
+  }
+  gridRotationMs() {
+    const seconds = Number(this._host._config?.grid_rotation_seconds);
+    return GRID_ROTATION_OPTIONS_SECONDS.includes(seconds) ? seconds * 1e3 : 3e4;
+  }
+  clearGridTimers() {
+    if (this._host._gridRotationT) clearTimeout(this._host._gridRotationT);
+    if (this._host._gridAlertReturnT)
+      clearTimeout(this._host._gridAlertReturnT);
+    if (this._host._gridRefreshT) clearTimeout(this._host._gridRefreshT);
+    this._host._gridRotationT = null;
+    this._host._gridAlertReturnT = null;
+    this._host._gridRefreshT = null;
+    this._host._gridAlertController.clearTimers();
+  }
+  clearGridAlertTracking() {
+    this._host._gridAlertController.clearAlertTracking();
+    this._host._gridLastRenderSignature = "";
+  }
+  scheduleGridRefresh(delayMs = 80) {
+    if (this._host._gridRefreshT) clearTimeout(this._host._gridRefreshT);
+    if (this._host._viewMode !== "grid") return;
+    this._host._gridRefreshT = setTimeout(
+      () => {
+        this._host._gridRefreshT = null;
+        if (this._host._viewMode !== "grid") return;
+        this._host._mountEngine(null, { quiet: true });
+      },
+      Math.max(0, Number(delayMs) || 0)
+    );
+  }
   shouldStartInGridMode() {
-    return this._host._config?.grid_start_in_grid_enabled === true && this._host._isGridModeAvailable();
+    return this._host._config?.grid_start_in_grid_enabled === true && this.isGridModeAvailable();
   }
   applyStartInGridMode(_source = "") {
     if (this._host._isPreviewPageActive()) return;
@@ -10211,7 +10244,7 @@ const GridPageController = class {
     this._host._setViewMode("grid");
   }
   scheduleGridRotation() {
-    if (!this._host._isGridModeAvailable()) return;
+    if (!this.isGridModeAvailable()) return;
     if (this._host._viewMode !== "grid") return;
     if ((this._host._config?.cameras?.length || 0) <= 4) {
       if (this._host._gridRotationT) clearTimeout(this._host._gridRotationT);
@@ -10222,10 +10255,10 @@ const GridPageController = class {
     this._host._gridRotationT = setTimeout(() => {
       this._host._gridRotationT = null;
       this.advanceGridRotation();
-    }, this._host._gridRotationMs());
+    }, this.gridRotationMs());
   }
   advanceGridRotation() {
-    if (!this._host._isGridModeAvailable()) return;
+    if (!this.isGridModeAvailable()) return;
     if (this._host._viewMode !== "grid") return;
     const total = this._host._config?.cameras?.length || 0;
     if (total <= 4) {
@@ -10244,7 +10277,7 @@ const GridPageController = class {
     this.scheduleGridRotation();
   }
   stopGridModeState() {
-    this._host._clearGridTimers();
+    this.clearGridTimers();
     this._host._gridResumePending = false;
     this._host._gridPinnedRotationStart = Math.max(
       0,
@@ -10268,7 +10301,7 @@ const GridPageController = class {
     }
     this._host._gridRotationStart = 0;
     this._host._gridPinnedRotationStart = 0;
-    this._host._clearGridAlertTracking();
+    this.clearGridAlertTracking();
     this._host._setViewMode("grid");
   }
 };
@@ -11610,7 +11643,7 @@ const FrigateViewCard = class extends HTMLElement {
     });
     this._go2rtcRaceMounter = createGo2RtcRaceMounter({
       mounter: this._go2rtcMounter,
-      isDesktop: DEVICE_PROFILE.isDesktop,
+      isDesktop: DEVICE_PROFILE2.isDesktop,
       resolveConnectionType: (entity) => this._cameraConnectionType(entity),
       disableHlsDesktopForEntity: (entity) => this._cameraDisableHlsDesktop(entity),
       getPendingMountDestroyers: () => this._pendingMountDestroyers || [],
@@ -12212,7 +12245,7 @@ const FrigateViewCard = class extends HTMLElement {
       landing_page: normalizePageRoute(config.landing_page),
       mobile_page: normalizePageRoute(config.mobile_page),
       deep_link_enabled: config.deep_link_enabled !== false,
-      grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
+      grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS2.includes(
         Number(config.grid_rotation_seconds)
       ) ? Number(config.grid_rotation_seconds) : 30,
       browse_expanded: config.browse_expanded === true,
@@ -12512,7 +12545,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._deepLinkController.consumeDeepLinkReviewOpen();
   }
   _isLikelyMobileClient() {
-    return DEVICE_PROFILE.isMobile;
+    return DEVICE_PROFILE2.isMobile;
   }
   _effectiveRealtimePollSeconds() {
     if (this._config?.mobile_poll_battery_saver === true && this._isLikelyMobileClient()) {
@@ -12719,7 +12752,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._isEditorPreviewContext() || this._isCardPickerPreviewContext();
   }
   _preferredStreamType() {
-    if (DEVICE_PROFILE.isIOS) return "webrtc";
+    if (DEVICE_PROFILE2.isIOS) return "webrtc";
     return "webrtc";
   }
   _currentLiveStreamHint() {
@@ -12935,7 +12968,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._previewPageController.isPreviewPageActive();
   }
   _deviceRouteBucket() {
-    return resolveDeviceRouteBucket(DEVICE_PROFILE);
+    return resolveDeviceRouteBucket(DEVICE_PROFILE2);
   }
   _ensureNavigationFactory() {
     return this._pageNavigationController.ensureNavigationFactory();
@@ -13066,36 +13099,19 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── view mode ─────────────────────────────────────────────
   _isGridModeAvailable() {
-    return this._config?.grid_mode_enabled === true && !DEVICE_PROFILE.isPhone && !this._isMobilePhoneViewport() && Array.isArray(this._config?.cameras) && this._config.cameras.length > 1;
+    return this._gridPageController.isGridModeAvailable();
   }
   _gridRotationMs() {
-    const seconds = Number(this._config?.grid_rotation_seconds);
-    return GRID_ROTATION_OPTIONS_SECONDS.includes(seconds) ? seconds * 1e3 : 3e4;
+    return this._gridPageController.gridRotationMs();
   }
   _clearGridTimers() {
-    if (this._gridRotationT) clearTimeout(this._gridRotationT);
-    if (this._gridAlertReturnT) clearTimeout(this._gridAlertReturnT);
-    if (this._gridRefreshT) clearTimeout(this._gridRefreshT);
-    this._gridRotationT = null;
-    this._gridAlertReturnT = null;
-    this._gridRefreshT = null;
-    this._gridAlertController.clearTimers();
+    this._gridPageController.clearGridTimers();
   }
   _clearGridAlertTracking() {
-    this._gridAlertController.clearAlertTracking();
-    this._gridLastRenderSignature = "";
+    this._gridPageController.clearGridAlertTracking();
   }
   _scheduleGridRefresh(delayMs = 80) {
-    if (this._gridRefreshT) clearTimeout(this._gridRefreshT);
-    if (this._viewMode !== "grid") return;
-    this._gridRefreshT = setTimeout(
-      () => {
-        this._gridRefreshT = null;
-        if (this._viewMode !== "grid") return;
-        this._mountEngine(null, { quiet: true });
-      },
-      Math.max(0, Number(delayMs) || 0)
-    );
+    this._gridPageController.scheduleGridRefresh(delayMs);
   }
   _shouldStartInGridMode() {
     return this._gridPageController.shouldStartInGridMode();
@@ -13171,7 +13187,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncToolbarButtons();
   }
   _isSlideshowRotationAvailable() {
-    return this._config?.slideshow_rotation_enabled === true && !DEVICE_PROFILE.isPhone && !this._isMobilePhoneViewport() && Array.isArray(this._config?.cameras) && this._config.cameras.length > 1;
+    return this._config?.slideshow_rotation_enabled === true && !DEVICE_PROFILE2.isPhone && !this._isMobilePhoneViewport() && Array.isArray(this._config?.cameras) && this._config.cameras.length > 1;
   }
   _isMobilePhoneViewport() {
     const width = Number(this._cardWidth || window.innerWidth || 0);
@@ -15849,10 +15865,10 @@ const FrigateViewCard = class extends HTMLElement {
     engWrap.classList.toggle("popup-covered", !!covered);
   }
   _isTouchPopupUi() {
-    return DEVICE_PROFILE.hasTouch || this._isMobileTabletViewport();
+    return DEVICE_PROFILE2.hasTouch || this._isMobileTabletViewport();
   }
   _isPhonePopupUi() {
-    if (DEVICE_PROFILE.isPhone) return true;
+    if (DEVICE_PROFILE2.isPhone) return true;
     const coarse = window.matchMedia?.("(pointer: coarse)")?.matches || window.matchMedia?.("(any-pointer: coarse)")?.matches || false;
     return coarse && Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 560;
   }
@@ -15935,7 +15951,7 @@ const FrigateViewCard = class extends HTMLElement {
     return await this._hlsJsCtorPromise;
   }
   _recordingPreferHls() {
-    return DEVICE_PROFILE.isIOS || this._isFirefox() || this._isEdge();
+    return DEVICE_PROFILE2.isIOS || this._isFirefox() || this._isEdge();
   }
   _popupMediaVideo() {
     const viewer = this._$("#viewer");
@@ -17549,7 +17565,7 @@ const normalizeCardConfig = (config) => {
   if (!mobilePageOptions.includes(src.mobile_page)) {
     src.mobile_page = PAGE_IDS.singleView;
   }
-  src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
+  src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS2.includes(
     Number(src.grid_rotation_seconds)
   ) ? Number(src.grid_rotation_seconds) : 30;
   src.alerts_reviews_days = normalizePositiveInteger3(

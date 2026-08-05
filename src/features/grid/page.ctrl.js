@@ -3,10 +3,56 @@ export class GridPageController {
     this._host = host;
   }
 
+  isGridModeAvailable() {
+    return (
+      this._host._config?.grid_mode_enabled === true &&
+      !DEVICE_PROFILE.isPhone &&
+      !this._host._isMobilePhoneViewport() &&
+      Array.isArray(this._host._config?.cameras) &&
+      this._host._config.cameras.length > 1
+    );
+  }
+
+  gridRotationMs() {
+    const seconds = Number(this._host._config?.grid_rotation_seconds);
+    return GRID_ROTATION_OPTIONS_SECONDS.includes(seconds)
+      ? seconds * 1000
+      : 30000;
+  }
+
+  clearGridTimers() {
+    if (this._host._gridRotationT) clearTimeout(this._host._gridRotationT);
+    if (this._host._gridAlertReturnT)
+      clearTimeout(this._host._gridAlertReturnT);
+    if (this._host._gridRefreshT) clearTimeout(this._host._gridRefreshT);
+    this._host._gridRotationT = null;
+    this._host._gridAlertReturnT = null;
+    this._host._gridRefreshT = null;
+    this._host._gridAlertController.clearTimers();
+  }
+
+  clearGridAlertTracking() {
+    this._host._gridAlertController.clearAlertTracking();
+    this._host._gridLastRenderSignature = "";
+  }
+
+  scheduleGridRefresh(delayMs = 80) {
+    if (this._host._gridRefreshT) clearTimeout(this._host._gridRefreshT);
+    if (this._host._viewMode !== "grid") return;
+    this._host._gridRefreshT = setTimeout(
+      () => {
+        this._host._gridRefreshT = null;
+        if (this._host._viewMode !== "grid") return;
+        this._host._mountEngine(null, { quiet: true });
+      },
+      Math.max(0, Number(delayMs) || 0),
+    );
+  }
+
   shouldStartInGridMode() {
     return (
       this._host._config?.grid_start_in_grid_enabled === true &&
-      this._host._isGridModeAvailable()
+      this.isGridModeAvailable()
     );
   }
 
@@ -19,7 +65,7 @@ export class GridPageController {
   }
 
   scheduleGridRotation() {
-    if (!this._host._isGridModeAvailable()) return;
+    if (!this.isGridModeAvailable()) return;
     if (this._host._viewMode !== "grid") return;
     if ((this._host._config?.cameras?.length || 0) <= 4) {
       if (this._host._gridRotationT) clearTimeout(this._host._gridRotationT);
@@ -30,11 +76,11 @@ export class GridPageController {
     this._host._gridRotationT = setTimeout(() => {
       this._host._gridRotationT = null;
       this.advanceGridRotation();
-    }, this._host._gridRotationMs());
+    }, this.gridRotationMs());
   }
 
   advanceGridRotation() {
-    if (!this._host._isGridModeAvailable()) return;
+    if (!this.isGridModeAvailable()) return;
     if (this._host._viewMode !== "grid") return;
     const total = this._host._config?.cameras?.length || 0;
     if (total <= 4) {
@@ -54,7 +100,7 @@ export class GridPageController {
   }
 
   stopGridModeState() {
-    this._host._clearGridTimers();
+    this.clearGridTimers();
     this._host._gridResumePending = false;
     this._host._gridPinnedRotationStart = Math.max(
       0,
@@ -79,7 +125,7 @@ export class GridPageController {
     }
     this._host._gridRotationStart = 0;
     this._host._gridPinnedRotationStart = 0;
-    this._host._clearGridAlertTracking();
+    this.clearGridAlertTracking();
     this._host._setViewMode("grid");
   }
 }

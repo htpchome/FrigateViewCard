@@ -10,6 +10,10 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
+const gridPageControllerSource = fs.readFileSync(
+  new URL("../src/features/grid/page.ctrl.js", import.meta.url),
+  "utf8",
+);
 const gridMediaControllerSource = fs.readFileSync(
   new URL("../src/features/grid/media.ctrl.js", import.meta.url),
   "utf8",
@@ -50,6 +54,33 @@ test("grid mode toolbar and runtime hooks are present", () => {
     true,
   );
   assert.equal(
+    /_clearGridTimers\(\) \{\s*this\._gridPageController\.clearGridTimers\(\);\s*\}/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_clearGridAlertTracking\(\) \{\s*this\._gridPageController\.clearGridAlertTracking\(\);\s*\}/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_scheduleGridRefresh\(delayMs = 80\) \{\s*this\._gridPageController\.scheduleGridRefresh\(delayMs\);\s*\}/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(gridPageControllerSource.includes("clearGridTimers()"), true);
+  assert.equal(
+    gridPageControllerSource.includes("clearGridAlertTracking()"),
+    true,
+  );
+  assert.equal(
+    gridPageControllerSource.includes("scheduleGridRefresh(delayMs = 80)"),
+    true,
+  );
+  assert.equal(
     /this\._liveMountController\s*=\s*createLiveMountController\(\{/.test(
       cardSource,
     ),
@@ -78,7 +109,7 @@ test("grid mode toolbar and runtime hooks are present", () => {
 
 test("mobile live camera tiles avoid iOS MSE startup and cropping", () => {
   assert.equal(
-    source.includes('if (DEVICE_PROFILE.isIOS) return "webrtc";'),
+    /if \(DEVICE_PROFILE\d*\.isIOS\) return "webrtc";/.test(source),
     true,
   );
   assert.equal(
