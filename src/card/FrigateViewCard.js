@@ -286,6 +286,7 @@ import { PageNavigationController } from "../navigation/page-navigation.ctrl.js"
 import { DeepLinkController } from "../navigation/deep-link.ctrl.js";
 import { GridAlertController } from "../features/grid/alert.ctrl.js";
 import { GridPageController } from "../features/grid/page.ctrl.js";
+import { EditorPreviewContextController } from "../features/editor-preview/context.ctrl.js";
 import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
 import { buildMobileViewInfoRowMarkup } from "../features/mobile-view/page.tmpl.js";
 import { SingleViewPageController } from "../features/single-view/page.ctrl.js";
@@ -570,6 +571,7 @@ export class FrigateViewCard extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
+    this._editorPreviewController = new EditorPreviewContextController(this);
     this._domCache = {};
     this._fallbackImgUrlCache = new Map();
     this._fallbackReqId = 0;
@@ -682,11 +684,6 @@ export class FrigateViewCard extends HTMLElement {
     this._wasVisible = false;
     this._resumeLiveT = null;
     this._disconnectTeardownT = null;
-    this._editModeWatchdogT = null;
-    this._editorDialogObserver = null;
-    this._editorDialogOpenLast = false;
-    this._dashboardEditLast = false;
-    this._lastEditorPreviewContext = null;
     this._lastLiveKick = 0;
     this._rotateOverlayActive = false;
     this._rotateOverlayMode = "none";
@@ -1262,11 +1259,7 @@ export class FrigateViewCard extends HTMLElement {
       this._start();
       return;
     }
-    const inEditorPreview = this._isEditorPreviewContext();
-    if (this._lastEditorPreviewContext === true && !inEditorPreview) {
-      this._scheduleResumeLive("hass-edit-exit");
-    }
-    this._lastEditorPreviewContext = inEditorPreview;
+    this._editorPreviewController.syncHassPreviewContext();
     if (!cameraStateChanged && !themeChanged) return;
     this._singleViewPageController.applyHassUpdateRouteFlow({
       cameraStateChanged,
@@ -1328,10 +1321,7 @@ export class FrigateViewCard extends HTMLElement {
     if (this._warmOtherCamsDelayT) clearTimeout(this._warmOtherCamsDelayT);
     this._warmOtherCamsDelayT = null;
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
-    if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
-    this._editModeWatchdogT = null;
-    if (this._editorDialogObserver) this._editorDialogObserver.disconnect();
-    this._editorDialogObserver = null;
+    this._editorPreviewController.dispose();
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._liveOverlayControlsController) {
       try {
@@ -1496,100 +1486,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _startEditModeWatchdog() {
-    if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
-    this._lastEditorPreviewContext = this._isEditorPreviewContext();
-    this._editorDialogOpenLast = this._isCardEditorDialogOpen();
-    this._dashboardEditLast = this._isDashboardEditMode();
-    this._editModeWatchdogT = setInterval(() => {
-      if (!this.isConnected) return;
-      const inEditorPreview = this._isEditorPreviewContext();
-      const dialogOpen = this._isCardEditorDialogOpen();
-      const dashboardEdit = this._isDashboardEditMode();
-      if (this._editorDialogOpenLast && !dialogOpen) {
-        this._scheduleResumeLive("watchdog-dialog-close");
-      }
-      if (this._lastEditorPreviewContext === true && !inEditorPreview) {
-        this._scheduleResumeLive("watchdog-edit-exit");
-      }
-      if (this._dashboardEditLast !== dashboardEdit) {
-        this._scheduleResumeLive(
-          dashboardEdit
-            ? "watchdog-dashboard-edit-on"
-            : "watchdog-dashboard-edit-off",
-        );
-      }
-      if (dashboardEdit) {
-        // Some browsers suspend pipelines in dashboard edit mode.
-        this._kickLiveIfStale(true);
-      }
-      this._editorDialogOpenLast = dialogOpen;
-      this._dashboardEditLast = dashboardEdit;
-      this._lastEditorPreviewContext = inEditorPreview;
-    }, 600);
+    this._editorPreviewController.startEditModeWatchdog();
   }
 
   _isDashboardEditMode() {
-    try {
-      const href = String(window.location?.href || "");
-      if (!href) return false;
-      const url = new URL(href, window.location.origin);
-      const edit =
-        url.searchParams.get("edit") ||
-        url.searchParams.get("dashboard_edit") ||
-        "";
-      return /^(1|true|yes|on)$/i.test(String(edit));
-    } catch (_) {
-      return false;
-    }
+    return this._editorPreviewController.isDashboardEditMode();
   }
 
   _isCardEditorDialogOpen() {
-    const dialogHost = document.querySelector("hui-dialog-edit-card");
-    if (!dialogHost) return false;
-    const root = dialogHost.shadowRoot;
-    const haDialog =
-      root?.querySelector?.("ha-dialog") ||
-      dialogHost.querySelector?.("ha-dialog") ||
-      null;
-    if (haDialog) {
-      if (haDialog.opened === true) return true;
-      if (haDialog.hasAttribute?.("open")) return true;
-      if (haDialog.hasAttribute?.("opened")) return true;
-      if (haDialog.getAttribute?.("aria-hidden") === "false") return true;
-      if (haDialog.getAttribute?.("aria-hidden") === "true") return false;
-      if (haDialog.hidden === true) return false;
-      const dStyle = window.getComputedStyle?.(haDialog);
-      if (dStyle?.display === "none" || dStyle?.visibility === "hidden")
-        return false;
-      return true;
-    }
-    const hostStyle = window.getComputedStyle?.(dialogHost);
-    if (hostStyle?.display === "none" || hostStyle?.visibility === "hidden")
-      return false;
-    if (dialogHost.hidden === true) return false;
-    if (dialogHost.getAttribute?.("aria-hidden") === "true") return false;
-    return true;
+    return this._editorPreviewController.isCardEditorDialogOpen();
   }
 
   _startEditorDialogCloseObserver() {
-    if (this._editorDialogObserver) this._editorDialogObserver.disconnect();
-    this._editorDialogObserver = null;
-    this._editorDialogOpenLast = this._isCardEditorDialogOpen();
-    if (!("MutationObserver" in window) || !document.body) return;
-    this._editorDialogObserver = new MutationObserver(() => {
-      const openNow = this._isCardEditorDialogOpen();
-      if (this._editorDialogOpenLast && !openNow) {
-        // Save/Cancel closed the card editor dialog; resume immediately.
-        this._scheduleResumeLive("card-editor-close");
-      }
-      this._editorDialogOpenLast = openNow;
-    });
-    this._editorDialogObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["open", "opened", "hidden", "class", "style"],
-    });
+    this._editorPreviewController.startEditorDialogCloseObserver();
   }
 
   // Discover all cameras in parallel for faster startup
@@ -1670,53 +1579,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isEditorPreviewContext() {
-    // In Lovelace card editor preview, avoid opening live stream sessions.
-    let el = this;
-    let depth = 0;
-    while (el && depth < 48) {
-      const tag = String(el.tagName || "").toUpperCase();
-      if (tag === "HUI-CARD-PREVIEW" || tag === "HUI-DIALOG-EDIT-CARD") {
-        return true;
-      }
-      const root = el.getRootNode?.();
-      if (root?.host && root.host !== el) {
-        el = root.host;
-        depth += 1;
-        continue;
-      }
-      el = el.parentNode || el.host;
-      depth += 1;
-    }
-    return false;
+    return this._editorPreviewController.isEditorPreviewContext();
   }
 
   _isCardPickerPreviewContext() {
-    // Card picker preview context can mount outside editor preview tags.
-    let el = this;
-    let depth = 0;
-    while (el && depth < 64) {
-      const tag = String(el.tagName || "").toUpperCase();
-      if (
-        tag === "HUI-CARD-PICKER" ||
-        tag === "HUI-DIALOG-CREATE-CARD" ||
-        tag === "HUI-CARD-OPTIONS"
-      ) {
-        return true;
-      }
-      const root = el.getRootNode?.();
-      if (root?.host && root.host !== el) {
-        el = root.host;
-        depth += 1;
-        continue;
-      }
-      el = el.parentNode || el.host;
-      depth += 1;
-    }
-    return false;
+    return this._editorPreviewController.isCardPickerPreviewContext();
   }
 
   _isPreviewContext() {
-    return this._isEditorPreviewContext() || this._isCardPickerPreviewContext();
+    return this._editorPreviewController.isPreviewContext();
   }
 
   _preferredStreamType() {

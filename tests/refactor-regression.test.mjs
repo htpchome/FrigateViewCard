@@ -54,6 +54,10 @@ const previewPageControllerSource = fs.readFileSync(
   new URL("../src/features/preview/page.ctrl.js", import.meta.url),
   "utf8",
 );
+const editorPreviewContextControllerSource = fs.readFileSync(
+  new URL("../src/features/editor-preview/context.ctrl.js", import.meta.url),
+  "utf8",
+);
 const editorSource = fs.readFileSync(
   new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
   "utf8",
@@ -493,6 +497,70 @@ test("preview helpers delegate through the preview page controller", () => {
     /mountPreviewMedia\(\) \{[\s\S]*?_host\._gridMediaController\.mountCameraCellMedia\(/.test(
       previewPageControllerSource,
     ),
+    true,
+  );
+});
+
+test("editor preview helpers delegate through the context controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { EditorPreviewContextController } from "../features/editor-preview/context.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._editorPreviewController\s*=\s*new EditorPreviewContextController\(this\);/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("_editModeWatchdogT = setInterval("), false);
+  assert.equal(
+    cardSource.includes("this._editorDialogObserver = new MutationObserver("),
+    false,
+  );
+  assert.equal(
+    cardSource.includes(
+      "_lastEditorPreviewContext = this._isEditorPreviewContext()",
+    ),
+    false,
+  );
+  assert.equal(
+    /_startEditModeWatchdog\(\) \{\s*this\._editorPreviewController\.startEditModeWatchdog\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_isPreviewContext\(\) \{\s*return this\._editorPreviewController\.isPreviewContext\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._editorPreviewController\.syncHassPreviewContext\(\);/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    editorPreviewContextControllerSource.includes(
+      "export class EditorPreviewContextController",
+    ),
+    true,
+  );
+  assert.equal(
+    editorPreviewContextControllerSource.includes("startEditModeWatchdog()"),
+    true,
+  );
+  assert.equal(
+    editorPreviewContextControllerSource.includes(
+      "startEditorDialogCloseObserver()",
+    ),
+    true,
+  );
+  assert.equal(
+    editorPreviewContextControllerSource.includes("syncHassPreviewContext()"),
     true,
   );
 });

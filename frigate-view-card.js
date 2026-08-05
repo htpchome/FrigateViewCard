@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1196";
+const VERSION = "1.0.1197";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10306,6 +10306,158 @@ const GridPageController = class {
   }
 };
 
+// src/features/editor-preview/context.ctrl.js
+const EditorPreviewContextController = class {
+  constructor(host) {
+    this._host = host;
+    this._watchdogTimer = null;
+    this._dialogObserver = null;
+    this._dialogOpenLast = false;
+    this._dashboardEditLast = false;
+    this._lastEditorPreviewContext = null;
+  }
+  dispose() {
+    if (this._watchdogTimer) clearInterval(this._watchdogTimer);
+    this._watchdogTimer = null;
+    if (this._dialogObserver) this._dialogObserver.disconnect();
+    this._dialogObserver = null;
+  }
+  syncHassPreviewContext() {
+    const inEditorPreview = this.isEditorPreviewContext();
+    if (this._lastEditorPreviewContext === true && !inEditorPreview) {
+      this._host._scheduleResumeLive("hass-edit-exit");
+    }
+    this._lastEditorPreviewContext = inEditorPreview;
+    return inEditorPreview;
+  }
+  startEditModeWatchdog() {
+    if (this._watchdogTimer) clearInterval(this._watchdogTimer);
+    this._lastEditorPreviewContext = this.isEditorPreviewContext();
+    this._dialogOpenLast = this.isCardEditorDialogOpen();
+    this._dashboardEditLast = this.isDashboardEditMode();
+    this._watchdogTimer = setInterval(() => {
+      if (!this._host.isConnected) return;
+      const inEditorPreview = this.isEditorPreviewContext();
+      const dialogOpen = this.isCardEditorDialogOpen();
+      const dashboardEdit = this.isDashboardEditMode();
+      if (this._dialogOpenLast && !dialogOpen) {
+        this._host._scheduleResumeLive("watchdog-dialog-close");
+      }
+      if (this._lastEditorPreviewContext === true && !inEditorPreview) {
+        this._host._scheduleResumeLive("watchdog-edit-exit");
+      }
+      if (this._dashboardEditLast !== dashboardEdit) {
+        this._host._scheduleResumeLive(
+          dashboardEdit ? "watchdog-dashboard-edit-on" : "watchdog-dashboard-edit-off"
+        );
+      }
+      if (dashboardEdit) {
+        this._host._kickLiveIfStale(true);
+      }
+      this._dialogOpenLast = dialogOpen;
+      this._dashboardEditLast = dashboardEdit;
+      this._lastEditorPreviewContext = inEditorPreview;
+    }, 600);
+  }
+  isDashboardEditMode() {
+    try {
+      const href = String(window.location?.href || "");
+      if (!href) return false;
+      const url = new URL(href, window.location.origin);
+      const edit = url.searchParams.get("edit") || url.searchParams.get("dashboard_edit") || "";
+      return /^(1|true|yes|on)$/i.test(String(edit));
+    } catch (_) {
+      return false;
+    }
+  }
+  isCardEditorDialogOpen() {
+    const dialogHost = document.querySelector("hui-dialog-edit-card");
+    if (!dialogHost) return false;
+    const root = dialogHost.shadowRoot;
+    const haDialog = root?.querySelector?.("ha-dialog") || dialogHost.querySelector?.("ha-dialog") || null;
+    if (haDialog) {
+      if (haDialog.opened === true) return true;
+      if (haDialog.hasAttribute?.("open")) return true;
+      if (haDialog.hasAttribute?.("opened")) return true;
+      if (haDialog.getAttribute?.("aria-hidden") === "false") return true;
+      if (haDialog.getAttribute?.("aria-hidden") === "true") return false;
+      if (haDialog.hidden === true) return false;
+      const dialogStyle = window.getComputedStyle?.(haDialog);
+      if (dialogStyle?.display === "none" || dialogStyle?.visibility === "hidden") {
+        return false;
+      }
+      return true;
+    }
+    const hostStyle = window.getComputedStyle?.(dialogHost);
+    if (hostStyle?.display === "none" || hostStyle?.visibility === "hidden") {
+      return false;
+    }
+    if (dialogHost.hidden === true) return false;
+    if (dialogHost.getAttribute?.("aria-hidden") === "true") return false;
+    return true;
+  }
+  startEditorDialogCloseObserver() {
+    if (this._dialogObserver) this._dialogObserver.disconnect();
+    this._dialogObserver = null;
+    this._dialogOpenLast = this.isCardEditorDialogOpen();
+    if (!("MutationObserver" in window) || !document.body) return;
+    this._dialogObserver = new MutationObserver(() => {
+      const openNow = this.isCardEditorDialogOpen();
+      if (this._dialogOpenLast && !openNow) {
+        this._host._scheduleResumeLive("card-editor-close");
+      }
+      this._dialogOpenLast = openNow;
+    });
+    this._dialogObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["open", "opened", "hidden", "class", "style"]
+    });
+  }
+  isEditorPreviewContext() {
+    let el = this._host;
+    let depth = 0;
+    while (el && depth < 48) {
+      const tag = String(el.tagName || "").toUpperCase();
+      if (tag === "HUI-CARD-PREVIEW" || tag === "HUI-DIALOG-EDIT-CARD") {
+        return true;
+      }
+      const root = el.getRootNode?.();
+      if (root?.host && root.host !== el) {
+        el = root.host;
+        depth += 1;
+        continue;
+      }
+      el = el.parentNode || el.host;
+      depth += 1;
+    }
+    return false;
+  }
+  isCardPickerPreviewContext() {
+    let el = this._host;
+    let depth = 0;
+    while (el && depth < 64) {
+      const tag = String(el.tagName || "").toUpperCase();
+      if (tag === "HUI-CARD-PICKER" || tag === "HUI-DIALOG-CREATE-CARD" || tag === "HUI-CARD-OPTIONS") {
+        return true;
+      }
+      const root = el.getRootNode?.();
+      if (root?.host && root.host !== el) {
+        el = root.host;
+        depth += 1;
+        continue;
+      }
+      el = el.parentNode || el.host;
+      depth += 1;
+    }
+    return false;
+  }
+  isPreviewContext() {
+    return this.isEditorPreviewContext() || this.isCardPickerPreviewContext();
+  }
+};
+
 // src/navigation/route-lifecycle.js
 function isLeavingPreviewPage(context = {}, previewPageId) {
   return context.previousPageId === previewPageId;
@@ -11775,6 +11927,7 @@ const FrigateViewCard = class extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
+    this._editorPreviewController = new EditorPreviewContextController(this);
     this._domCache = {};
     this._fallbackImgUrlCache = new Map();
     this._fallbackReqId = 0;
@@ -11881,11 +12034,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._wasVisible = false;
     this._resumeLiveT = null;
     this._disconnectTeardownT = null;
-    this._editModeWatchdogT = null;
-    this._editorDialogObserver = null;
-    this._editorDialogOpenLast = false;
-    this._dashboardEditLast = false;
-    this._lastEditorPreviewContext = null;
     this._lastLiveKick = 0;
     this._rotateOverlayActive = false;
     this._rotateOverlayMode = "none";
@@ -12346,11 +12494,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._start();
       return;
     }
-    const inEditorPreview = this._isEditorPreviewContext();
-    if (this._lastEditorPreviewContext === true && !inEditorPreview) {
-      this._scheduleResumeLive("hass-edit-exit");
-    }
-    this._lastEditorPreviewContext = inEditorPreview;
+    this._editorPreviewController.syncHassPreviewContext();
     if (!cameraStateChanged && !themeChanged) return;
     this._singleViewPageController.applyHassUpdateRouteFlow({
       cameraStateChanged,
@@ -12410,10 +12554,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._warmOtherCamsDelayT) clearTimeout(this._warmOtherCamsDelayT);
     this._warmOtherCamsDelayT = null;
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
-    if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
-    this._editModeWatchdogT = null;
-    if (this._editorDialogObserver) this._editorDialogObserver.disconnect();
-    this._editorDialogObserver = null;
+    this._editorPreviewController.dispose();
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._liveOverlayControlsController) {
       try {
@@ -12562,87 +12703,16 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _startEditModeWatchdog() {
-    if (this._editModeWatchdogT) clearInterval(this._editModeWatchdogT);
-    this._lastEditorPreviewContext = this._isEditorPreviewContext();
-    this._editorDialogOpenLast = this._isCardEditorDialogOpen();
-    this._dashboardEditLast = this._isDashboardEditMode();
-    this._editModeWatchdogT = setInterval(() => {
-      if (!this.isConnected) return;
-      const inEditorPreview = this._isEditorPreviewContext();
-      const dialogOpen = this._isCardEditorDialogOpen();
-      const dashboardEdit = this._isDashboardEditMode();
-      if (this._editorDialogOpenLast && !dialogOpen) {
-        this._scheduleResumeLive("watchdog-dialog-close");
-      }
-      if (this._lastEditorPreviewContext === true && !inEditorPreview) {
-        this._scheduleResumeLive("watchdog-edit-exit");
-      }
-      if (this._dashboardEditLast !== dashboardEdit) {
-        this._scheduleResumeLive(
-          dashboardEdit ? "watchdog-dashboard-edit-on" : "watchdog-dashboard-edit-off"
-        );
-      }
-      if (dashboardEdit) {
-        this._kickLiveIfStale(true);
-      }
-      this._editorDialogOpenLast = dialogOpen;
-      this._dashboardEditLast = dashboardEdit;
-      this._lastEditorPreviewContext = inEditorPreview;
-    }, 600);
+    this._editorPreviewController.startEditModeWatchdog();
   }
   _isDashboardEditMode() {
-    try {
-      const href = String(window.location?.href || "");
-      if (!href) return false;
-      const url = new URL(href, window.location.origin);
-      const edit = url.searchParams.get("edit") || url.searchParams.get("dashboard_edit") || "";
-      return /^(1|true|yes|on)$/i.test(String(edit));
-    } catch (_) {
-      return false;
-    }
+    return this._editorPreviewController.isDashboardEditMode();
   }
   _isCardEditorDialogOpen() {
-    const dialogHost = document.querySelector("hui-dialog-edit-card");
-    if (!dialogHost) return false;
-    const root = dialogHost.shadowRoot;
-    const haDialog = root?.querySelector?.("ha-dialog") || dialogHost.querySelector?.("ha-dialog") || null;
-    if (haDialog) {
-      if (haDialog.opened === true) return true;
-      if (haDialog.hasAttribute?.("open")) return true;
-      if (haDialog.hasAttribute?.("opened")) return true;
-      if (haDialog.getAttribute?.("aria-hidden") === "false") return true;
-      if (haDialog.getAttribute?.("aria-hidden") === "true") return false;
-      if (haDialog.hidden === true) return false;
-      const dStyle = window.getComputedStyle?.(haDialog);
-      if (dStyle?.display === "none" || dStyle?.visibility === "hidden")
-        return false;
-      return true;
-    }
-    const hostStyle = window.getComputedStyle?.(dialogHost);
-    if (hostStyle?.display === "none" || hostStyle?.visibility === "hidden")
-      return false;
-    if (dialogHost.hidden === true) return false;
-    if (dialogHost.getAttribute?.("aria-hidden") === "true") return false;
-    return true;
+    return this._editorPreviewController.isCardEditorDialogOpen();
   }
   _startEditorDialogCloseObserver() {
-    if (this._editorDialogObserver) this._editorDialogObserver.disconnect();
-    this._editorDialogObserver = null;
-    this._editorDialogOpenLast = this._isCardEditorDialogOpen();
-    if (!("MutationObserver" in window) || !document.body) return;
-    this._editorDialogObserver = new MutationObserver(() => {
-      const openNow = this._isCardEditorDialogOpen();
-      if (this._editorDialogOpenLast && !openNow) {
-        this._scheduleResumeLive("card-editor-close");
-      }
-      this._editorDialogOpenLast = openNow;
-    });
-    this._editorDialogObserver.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["open", "opened", "hidden", "class", "style"]
-    });
+    this._editorPreviewController.startEditorDialogCloseObserver();
   }
   // Discover all cameras in parallel for faster startup
   async _discoverAll() {
@@ -12711,45 +12781,13 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _isEditorPreviewContext() {
-    let el = this;
-    let depth = 0;
-    while (el && depth < 48) {
-      const tag = String(el.tagName || "").toUpperCase();
-      if (tag === "HUI-CARD-PREVIEW" || tag === "HUI-DIALOG-EDIT-CARD") {
-        return true;
-      }
-      const root = el.getRootNode?.();
-      if (root?.host && root.host !== el) {
-        el = root.host;
-        depth += 1;
-        continue;
-      }
-      el = el.parentNode || el.host;
-      depth += 1;
-    }
-    return false;
+    return this._editorPreviewController.isEditorPreviewContext();
   }
   _isCardPickerPreviewContext() {
-    let el = this;
-    let depth = 0;
-    while (el && depth < 64) {
-      const tag = String(el.tagName || "").toUpperCase();
-      if (tag === "HUI-CARD-PICKER" || tag === "HUI-DIALOG-CREATE-CARD" || tag === "HUI-CARD-OPTIONS") {
-        return true;
-      }
-      const root = el.getRootNode?.();
-      if (root?.host && root.host !== el) {
-        el = root.host;
-        depth += 1;
-        continue;
-      }
-      el = el.parentNode || el.host;
-      depth += 1;
-    }
-    return false;
+    return this._editorPreviewController.isCardPickerPreviewContext();
   }
   _isPreviewContext() {
-    return this._isEditorPreviewContext() || this._isCardPickerPreviewContext();
+    return this._editorPreviewController.isPreviewContext();
   }
   _preferredStreamType() {
     if (DEVICE_PROFILE.isIOS) return "webrtc";
