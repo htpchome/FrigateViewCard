@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1206";
+const VERSION = "1.0.1207";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6725,6 +6725,107 @@ function buildFilterPanelMarkup({
         <button class="chip ${favOnly ? "on" : ""}" data-favonly="1">\u2605 Favorites</button></div>`;
 }
 
+// src/features/browse/calendar-panel.ctrl.js
+const BrowseCalendarPanelController = class {
+  constructor(host, deps = {}) {
+    this._host = host;
+    this._deps = {
+      buildCalendarPanelMarkup: () => "",
+      nowEpochSeconds: () => Math.floor(Date.now() / 1e3),
+      ...deps
+    };
+  }
+  handleSidebarCalendarClick(target) {
+    const calendarDay = target.closest("[data-cal-day]");
+    if (calendarDay) {
+      this.pickDay(calendarDay.dataset.calDay);
+      return true;
+    }
+    const calendarNav = target.closest("[data-cal-nav]");
+    if (calendarNav) {
+      this.calNav(Number(calendarNav.dataset.calNav));
+      return true;
+    }
+    const calendarToday = target.closest("[data-cal-today]");
+    if (calendarToday) {
+      this.goTodayInCalendar();
+      return true;
+    }
+    return false;
+  }
+  formatTzDateString(parts) {
+    return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+  }
+  calendarTodayDateString() {
+    return this.formatTzDateString(
+      this._host._tzParts(this._deps.nowEpochSeconds())
+    );
+  }
+  activeCalendarDayDateString() {
+    return this._host._calSelectedDay || this.calendarTodayDateString();
+  }
+  goTodayInCalendar() {
+    const now = this._deps.nowEpochSeconds();
+    const parts = this._host._tzParts(now);
+    this._host._calSelectedDay = this.formatTzDateString(parts);
+    this._host._calMonth = this.createCalendarMonthDate(
+      parts.year,
+      parts.month - 1
+    );
+    this.pickDay(this._host._calSelectedDay);
+  }
+  createCalendarMonthDate(year, monthIndex) {
+    return new Date(Date.UTC(year, monthIndex, 15, 12, 0, 0));
+  }
+  resolveCalendarMonthDate() {
+    if (this._host._calMonth instanceof Date) {
+      return new Date(this._host._calMonth);
+    }
+    const parts = this._host._tzParts(this._host._winEnd);
+    return this.createCalendarMonthDate(parts.year, parts.month - 1);
+  }
+  calNav(delta) {
+    const monthDate = this.resolveCalendarMonthDate();
+    monthDate.setUTCMonth(monthDate.getUTCMonth() + delta);
+    this._host._calMonth = new Date(monthDate);
+    this.renderCal();
+  }
+  pickDay(dateString) {
+    this._host._followNowWindow = false;
+    this._host._calSelectedDay = dateString;
+    const [year, month, day] = dateString.split("-").map(Number);
+    this._host._winStart = this._host._tzDateTimeToEpochSeconds(
+      year,
+      month,
+      day,
+      0,
+      0,
+      0
+    );
+    this._host._winEnd = Math.min(
+      this._host._tzDateTimeToEpochSeconds(year, month, day, 23, 59, 59),
+      this._deps.nowEpochSeconds()
+    );
+    this._host.shadowRoot.querySelector("#cal-panel").style.display = "none";
+    this._host._syncToolbarButtons();
+    this._host._pruneNonActiveCamWindowCaches();
+    void (async () => {
+      await this._host._loadWindow(true);
+      this._host._scheduleWarmOtherCamerasEvents();
+    })();
+  }
+  renderCal() {
+    const panel = this._host.shadowRoot.querySelector("#cal-panel");
+    if (!panel) return;
+    panel.innerHTML = this._deps.buildCalendarPanelMarkup({
+      monthDate: this.resolveCalendarMonthDate(),
+      activeDayDateString: this.activeCalendarDayDateString(),
+      daysWithActivity: this._host._daysWithActivity,
+      timeZone: this._host._tz()
+    });
+  }
+};
+
 // src/shared/favorite-mutation.js
 const updateEventRetention = ({ events = [], id, retained }) => {
   let changed = false;
@@ -13215,6 +13316,12 @@ const FrigateViewCard = class extends HTMLElement {
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._browseCalendarActivityController = new BrowseCalendarActivityController(this);
+    this._browseCalendarPanelController = new BrowseCalendarPanelController(
+      this,
+      {
+        buildCalendarPanelMarkup
+      }
+    );
     this._browseCollectionController = new BrowseCollectionController(this);
     this._browseFilterController = new BrowseFilterController(this);
     this._browseTabDataController = new BrowseTabDataController(this);
@@ -15930,22 +16037,9 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handleSidebarCalendarClick(target) {
-    const calDay = target.closest("[data-cal-day]");
-    if (calDay) {
-      this._pickDay(calDay.dataset.calDay);
-      return true;
-    }
-    const calNav = target.closest("[data-cal-nav]");
-    if (calNav) {
-      this._calNav(Number(calNav.dataset.calNav));
-      return true;
-    }
-    const calToday = target.closest("[data-cal-today]");
-    if (calToday) {
-      this._goTodayInCalendar();
-      return true;
-    }
-    return false;
+    return this._browseCalendarPanelController.handleSidebarCalendarClick(
+      target
+    );
   }
   _handleSidebarCameraClick(target) {
     const camTab = target.closest("[data-camidx]");
@@ -17121,67 +17215,34 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── calendar ──────────────────────────────────────────────
   _formatTzDateString(parts) {
-    return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+    return this._browseCalendarPanelController.formatTzDateString(parts);
   }
   _calendarTodayDateString() {
-    return this._formatTzDateString(
-      this._tzParts(Math.floor(Date.now() / 1e3))
-    );
+    return this._browseCalendarPanelController.calendarTodayDateString();
   }
   _activeCalendarDayDateString() {
-    return this._calSelectedDay || this._calendarTodayDateString();
+    return this._browseCalendarPanelController.activeCalendarDayDateString();
   }
   _goTodayInCalendar() {
-    const now = Math.floor(Date.now() / 1e3);
-    const z = this._tzParts(now);
-    this._calSelectedDay = this._formatTzDateString(z);
-    this._calMonth = this._createCalendarMonthDate(z.year, z.month - 1);
-    this._pickDay(this._calSelectedDay);
+    this._browseCalendarPanelController.goTodayInCalendar();
   }
   _createCalendarMonthDate(year, monthIndex) {
-    return new Date(Date.UTC(year, monthIndex, 15, 12, 0, 0));
+    return this._browseCalendarPanelController.createCalendarMonthDate(
+      year,
+      monthIndex
+    );
   }
   _resolveCalendarMonthDate() {
-    if (this._calMonth instanceof Date) {
-      return new Date(this._calMonth);
-    }
-    const z = this._tzParts(this._winEnd);
-    return this._createCalendarMonthDate(z.year, z.month - 1);
+    return this._browseCalendarPanelController.resolveCalendarMonthDate();
   }
   _calNav(d) {
-    const m = this._resolveCalendarMonthDate();
-    m.setUTCMonth(m.getUTCMonth() + d);
-    this._calMonth = new Date(m);
-    this._renderCal();
+    this._browseCalendarPanelController.calNav(d);
   }
   _pickDay(ds) {
-    this._followNowWindow = false;
-    this._calSelectedDay = ds;
-    const [y, mo, da] = ds.split("-").map(Number);
-    this._winStart = this._tzDateTimeToEpochSeconds(y, mo, da, 0, 0, 0);
-    this._winEnd = Math.min(
-      this._tzDateTimeToEpochSeconds(y, mo, da, 23, 59, 59),
-      Math.floor(Date.now() / 1e3)
-    );
-    this.shadowRoot.querySelector("#cal-panel").style.display = "none";
-    this._syncToolbarButtons();
-    this._pruneNonActiveCamWindowCaches();
-    void (async () => {
-      await this._loadWindow(true);
-      this._scheduleWarmOtherCamerasEvents();
-    })();
+    this._browseCalendarPanelController.pickDay(ds);
   }
   _renderCal() {
-    const p = this.shadowRoot.querySelector("#cal-panel");
-    if (!p) return;
-    const m = this._resolveCalendarMonthDate();
-    const activeDayDateString = this._activeCalendarDayDateString();
-    p.innerHTML = buildCalendarPanelMarkup({
-      monthDate: m,
-      activeDayDateString,
-      daysWithActivity: this._daysWithActivity,
-      timeZone: this._tz()
-    });
+    this._browseCalendarPanelController.renderCal();
   }
   _renderFilter() {
     const p = this.shadowRoot.querySelector("#filter-panel");

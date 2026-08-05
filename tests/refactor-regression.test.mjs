@@ -70,6 +70,10 @@ const browseCalendarActivityControllerSource = fs.readFileSync(
   new URL("../src/features/browse/calendar-activity.ctrl.js", import.meta.url),
   "utf8",
 );
+const browseCalendarPanelControllerSource = fs.readFileSync(
+  new URL("../src/features/browse/calendar-panel.ctrl.js", import.meta.url),
+  "utf8",
+);
 const browseCollectionControllerSource = fs.readFileSync(
   new URL("../src/features/browse/collection.ctrl.js", import.meta.url),
   "utf8",
@@ -779,6 +783,95 @@ test("browse calendar activity helpers delegate through the browse calendar acti
     browseCalendarActivityControllerSource.includes(
       "async prefetchCalendarActivityForActiveCamera()",
     ),
+    true,
+  );
+});
+
+test("browse calendar panel helpers delegate through the browse calendar panel controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { BrowseCalendarPanelController } from "../features/browse/calendar-panel.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._browseCalendarPanelController\s*=\s*new BrowseCalendarPanelController\(this, \{/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_handleSidebarCalendarClick\(target\) \{\s*return this\._browseCalendarPanelController\.handleSidebarCalendarClick\(/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_formatTzDateString\(parts\) \{\s*return this\._browseCalendarPanelController\.formatTzDateString\(parts\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_calendarTodayDateString\(\) \{\s*return this\._browseCalendarPanelController\.calendarTodayDateString\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_activeCalendarDayDateString\(\) \{\s*return this\._browseCalendarPanelController\.activeCalendarDayDateString\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_goTodayInCalendar\(\) \{\s*this\._browseCalendarPanelController\.goTodayInCalendar\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_createCalendarMonthDate\(year, monthIndex\) \{\s*return this\._browseCalendarPanelController\.createCalendarMonthDate\(/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_resolveCalendarMonthDate\(\) \{\s*return this\._browseCalendarPanelController\.resolveCalendarMonthDate\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_calNav\(d\) \{\s*this\._browseCalendarPanelController\.calNav\(d\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_pickDay\(ds\) \{\s*this\._browseCalendarPanelController\.pickDay\(ds\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_renderCal\(\) \{\s*this\._browseCalendarPanelController\.renderCal\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    browseCalendarPanelControllerSource.includes(
+      "export class BrowseCalendarPanelController",
+    ),
+    true,
+  );
+  assert.equal(
+    browseCalendarPanelControllerSource.includes("pickDay(dateString)"),
+    true,
+  );
+  assert.equal(
+    browseCalendarPanelControllerSource.includes("renderCal()"),
     true,
   );
 });
