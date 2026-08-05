@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1252";
+const VERSION = "1.0.1253";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -18549,6 +18549,12 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const numeric = Number(value);
     output.textContent = Number.isFinite(numeric) ? `Current speed: ${numeric.toFixed(1)}` : "Current speed: 0.5";
   }
+  _setRangeValueOutput(selector, value, suffix = "") {
+    const output = this.querySelector(`${selector}-output`);
+    if (!output) return;
+    const numeric = Number(value);
+    output.textContent = Number.isFinite(numeric) ? `${numeric}${suffix}` : output.textContent;
+  }
   _syncCameraModalPtzVisibility({
     supported = false,
     loading = false,
@@ -19904,6 +19910,19 @@ const FrigateViewCardEditor = class extends HTMLElement {
         this._setCameraModalPtzSpeedOutput(event.currentTarget?.value);
       }
     );
+    [
+      "#slideshow_alert_hold_seconds",
+      "#grid_alert_hold_seconds",
+      "#preview_page_alert_live_duration_seconds"
+    ].forEach((selector) => {
+      this.querySelector(selector)?.addEventListener("input", (event) => {
+        this._setRangeValueOutput(
+          selector,
+          event.currentTarget?.value,
+          " seconds"
+        );
+      });
+    });
     this._wireCameraDragAndDrop();
     this._wireSettingsPanels();
     this._wireEditorDialogActions();

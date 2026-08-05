@@ -158,6 +158,15 @@ export class FrigateViewCardEditor extends HTMLElement {
       : "Current speed: 0.5";
   }
 
+  _setRangeValueOutput(selector, value, suffix = "") {
+    const output = this.querySelector(`${selector}-output`);
+    if (!output) return;
+    const numeric = Number(value);
+    output.textContent = Number.isFinite(numeric)
+      ? `${numeric}${suffix}`
+      : output.textContent;
+  }
+
   _syncCameraModalPtzVisibility({
     supported = false,
     loading = false,
@@ -1689,6 +1698,19 @@ export class FrigateViewCardEditor extends HTMLElement {
         this._setCameraModalPtzSpeedOutput(event.currentTarget?.value);
       },
     );
+    [
+      "#slideshow_alert_hold_seconds",
+      "#grid_alert_hold_seconds",
+      "#preview_page_alert_live_duration_seconds",
+    ].forEach((selector) => {
+      this.querySelector(selector)?.addEventListener("input", (event) => {
+        this._setRangeValueOutput(
+          selector,
+          event.currentTarget?.value,
+          " seconds",
+        );
+      });
+    });
     this._wireCameraDragAndDrop();
     this._wireSettingsPanels();
     this._wireEditorDialogActions();
