@@ -21,6 +21,10 @@ export class PreviewPageController {
     this._constants = constants;
   }
 
+  _pageNavigation() {
+    return this._host._pageNavigationController || null;
+  }
+
   previewLiveCamerasEnabled() {
     return this._host._config?.preview_page_live_cameras === true;
   }
@@ -74,7 +78,10 @@ export class PreviewPageController {
     const previewShellHeader = buildPreviewShellHeaderMarkup({
       title: this._previewPageTitle(),
       subtitle: this._host._subtitleText(),
-      pageNav: this._host._pageNavMarkup(),
+      pageNav:
+        this._pageNavigation()?.pageNavMarkup?.() ||
+        this._host._pageNavMarkup?.() ||
+        "",
     });
 
     return buildPreviewLayoutShellMarkup({
@@ -355,16 +362,22 @@ export class PreviewPageController {
     }
 
     const PAGE_IDS = this._constants.PAGE_IDS;
-    const targetPageId = this._host._isPageRouteAvailable(
-      this._host._lastNonPreviewPageId,
-    )
-      ? this._host._lastNonPreviewPageId
-      : PAGE_IDS.singleView;
+    const pageNavigation = this._pageNavigation();
+    const targetPageId =
+      (pageNavigation?.isPageRouteAvailable?.(
+        this._host._lastNonPreviewPageId,
+      ) ?? this._host._isPageRouteAvailable?.(this._host._lastNonPreviewPageId))
+        ? this._host._lastNonPreviewPageId
+        : PAGE_IDS.singleView;
 
-    this._host._navigateToPageRoute(targetPageId, {
+    pageNavigation?.navigateToPageRoute?.(targetPageId, {
       source: "preview-camera-select",
       deferCameraSwitch: true,
-    });
+    }) ??
+      this._host._navigateToPageRoute?.(targetPageId, {
+        source: "preview-camera-select",
+        deferCameraSwitch: true,
+      });
 
     if (this._host._activeCamIdx === idx) this._host._activeCamIdx = -1;
     void this._host._switchCamera(idx, { source: "manual" });
@@ -375,8 +388,11 @@ export class PreviewPageController {
     if (!this.isPreviewPageEnabled() || this.isPreviewPageActive()) {
       return;
     }
-    this._host._navigateToPageRoute(PAGE_IDS.preview, {
+    this._pageNavigation()?.navigateToPageRoute?.(PAGE_IDS.preview, {
       source: "preview-page-return",
-    });
+    }) ??
+      this._host._navigateToPageRoute?.(PAGE_IDS.preview, {
+        source: "preview-page-return",
+      });
   }
 }

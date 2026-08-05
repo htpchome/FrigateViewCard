@@ -173,8 +173,10 @@ export class BrowseWindowLoaderController {
       this._host._reloadAfterLoad = false;
       this._host._scheduleReload();
     }
-    this._host._consumeDeepLinkReviewOpen();
-    this._host._consumeDeepLinkEventOpen();
+    this._host._deepLinkController?.consumeDeepLinkReviewOpen?.() ??
+      this._host._consumeDeepLinkReviewOpen?.();
+    this._host._deepLinkController?.consumeDeepLinkEventOpen?.() ??
+      this._host._consumeDeepLinkEventOpen?.();
     if (this._host._eventsMode === "all") this._host._loadAllCamsBackground();
     this._host._renderAll();
   }

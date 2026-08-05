@@ -471,31 +471,27 @@ test("window loads use loading-state guard", () => {
 });
 
 test("startup resolves initial page through the navigation factory", () => {
-  const initialLoadIndex = source.indexOf(
+  const initialLoadIndex = cardSource.indexOf(
     "const initialLoad = this._loadWindow(true);",
   );
-  const landingPageIndex = source.indexOf(
-    'this._navigateToConfiguredLandingPage({\n      source: "startup",\n      startup: true,\n      startInGrid,\n      hasPendingDeepLinkTarget: this._hasPendingDeepLinkTarget()\n    });',
+  const landingPageIndex = cardSource.search(
+    /this\._pageNavigationController\.navigateToConfiguredLandingPage\([\s\S]*?source:\s*"startup"[\s\S]*?startup:\s*true[\s\S]*?startInGrid,[\s\S]*?hasPendingDeepLinkTarget:[\s\S]*?this\._deepLinkController\.hasPendingDeepLinkTarget\(\)/,
   );
 
   assert.ok(initialLoadIndex >= 0);
   assert.ok(landingPageIndex > initialLoadIndex);
   assert.equal(
-    source.includes(
-      "_consumeDeepLinkReviewOpen() {\n    this._deepLinkController.consumeDeepLinkReviewOpen();\n  }",
+    cardSource.includes(
+      "this._deepLinkController.consumeDeepLinkReviewOpen();",
     ),
     true,
   );
   assert.equal(
-    source.includes(
-      "_hasPendingDeepLinkTarget() {\n    return this._deepLinkController.hasPendingDeepLinkTarget();\n  }",
-    ),
+    cardSource.includes("this._deepLinkController.consumeDeepLinkEventOpen();"),
     true,
   );
   assert.equal(
-    source.includes(
-      "_isDeepLinkHandlingEnabled() {\n    return this._deepLinkController.isDeepLinkHandlingEnabled();\n  }",
-    ),
+    cardSource.includes("this._deepLinkController.isDeepLinkHandlingEnabled()"),
     true,
   );
 });
@@ -575,6 +571,11 @@ test("preview helpers delegate through the preview page controller", () => {
       source,
     ),
     true,
+  );
+  assert.equal(cardSource.includes("_pageNavMarkup() {"), false);
+  assert.equal(
+    cardSource.includes("_navigateToPageRoute(pageId, context = {}) {"),
+    false,
   );
   assert.equal(
     /mountPreviewMedia\(\) \{[\s\S]*?_host\._gridMediaController\.mountCameraCellMedia\(/.test(
@@ -1610,6 +1611,8 @@ test("navigation helpers live under the navigation feature owner", () => {
   );
   assert.equal(cardSource.includes("../navigation/deep-link.ctrl.js"), false);
   assert.equal(cardSource.includes("../router.js"), false);
+  assert.equal(cardSource.includes("_ensureNavigationFactory() {"), false);
+  assert.equal(cardSource.includes("_isDeepLinkHandlingEnabled() {"), false);
   assert.equal(navigationRouterSource.includes("export const PAGE_IDS"), true);
   assert.equal(
     navigationPageControllerSource.includes(

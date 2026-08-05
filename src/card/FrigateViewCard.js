@@ -1129,7 +1129,8 @@ export class FrigateViewCard extends HTMLElement {
       prevConfig.realtime_poll_seconds !== nextConfig.realtime_poll_seconds ||
       prevConfig.mobile_poll_battery_saver !==
         nextConfig.mobile_poll_battery_saver;
-    const activePageInvalid = !this._isPageRouteAvailable(this._pageId);
+    const activePageInvalid =
+      !this._pageNavigationController.isPageRouteAvailable(this._pageId);
 
     const routeFlowOutcome =
       this._singleViewPageController.applyConfigUpdateRouteFlow({
@@ -1306,9 +1307,9 @@ export class FrigateViewCard extends HTMLElement {
   // ── init ─────────────────────────────────────────────────
   async _start() {
     await this._discoverAll();
-    if (this._isDeepLinkHandlingEnabled()) {
-      this._initDeepLinkFromUrl();
-      this._applyDeepLinkCameraHint();
+    if (this._deepLinkController.isDeepLinkHandlingEnabled()) {
+      this._deepLinkController.initDeepLinkFromUrl();
+      this._deepLinkController.applyDeepLinkCameraHint();
     }
     const now = Math.floor(Date.now() / 1000);
     this._followNowWindow = true;
@@ -1318,56 +1319,25 @@ export class FrigateViewCard extends HTMLElement {
     const initialLoad = this._loadWindow(true);
     this._scheduleWarmOtherCamerasEvents();
     const startInGrid = this._shouldStartInGridMode();
-    this._navigateToConfiguredLandingPage({
+    this._pageNavigationController.navigateToConfiguredLandingPage({
       source: "startup",
       startup: true,
       startInGrid,
-      hasPendingDeepLinkTarget: this._hasPendingDeepLinkTarget(),
+      hasPendingDeepLinkTarget:
+        this._deepLinkController.hasPendingDeepLinkTarget(),
     });
     await initialLoad;
     void this._prefetchCalendarActivityForActiveCamera();
     this._subscribe();
     this._startEditModeWatchdog();
     this._startEditorDialogCloseObserver();
-    this._consumeDeepLinkReviewOpen();
-    this._consumeDeepLinkEventOpen();
+    this._deepLinkController.consumeDeepLinkReviewOpen();
+    this._deepLinkController.consumeDeepLinkEventOpen();
     this._refresh = setInterval(() => {
       if (this._isNowWindow()) this._loadWindow(true);
     }, this._config.refresh_seconds * 1000);
     this._restartRealtimeHeadPollTimer();
     this._setupResizeObserver();
-  }
-
-  _mergedUrlSearchParams() {
-    return this._deepLinkController.mergedUrlSearchParams();
-  }
-
-  _clearDeepLinkParamsFromUrl() {
-    this._deepLinkController.clearDeepLinkParamsFromUrl();
-  }
-
-  _initDeepLinkFromUrl() {
-    this._deepLinkController.initDeepLinkFromUrl();
-  }
-
-  _deepLinkCameraHintIndex() {
-    return this._deepLinkController.deepLinkCameraHintIndex();
-  }
-
-  _applyDeepLinkCameraHint() {
-    this._deepLinkController.applyDeepLinkCameraHint();
-  }
-
-  _isDeepLinkCandidateForCard() {
-    return this._deepLinkController.isDeepLinkCandidateForCard();
-  }
-
-  _consumeDeepLinkEventOpen() {
-    this._deepLinkController.consumeDeepLinkEventOpen();
-  }
-
-  _consumeDeepLinkReviewOpen() {
-    this._deepLinkController.consumeDeepLinkReviewOpen();
   }
 
   _isLikelyMobileClient() {
@@ -1755,44 +1725,6 @@ export class FrigateViewCard extends HTMLElement {
     return resolveDeviceRouteBucket(DEVICE_PROFILE);
   }
 
-  _ensureNavigationFactory() {
-    return this._pageNavigationController.ensureNavigationFactory();
-  }
-
-  _pageRouteOptions() {
-    return this._pageNavigationController.pageRouteOptions();
-  }
-
-  _isPageRouteAvailable(pageId) {
-    return this._pageNavigationController.isPageRouteAvailable(pageId);
-  }
-
-  _pageRouteLabel(pageId) {
-    return this._pageNavigationController.pageRouteLabel(pageId);
-  }
-
-  _pageNavMarkup() {
-    return this._pageNavigationController.pageNavMarkup();
-  }
-
-  _syncPageNavShell() {
-    this._pageNavigationController.syncPageNavShell();
-  }
-
-  _syncPageNavigationButtons() {
-    this._pageNavigationController.syncPageNavigationButtons();
-  }
-
-  _navigateToPageRoute(pageId, context = {}) {
-    return this._pageNavigationController.navigateToPageRoute(pageId, context);
-  }
-
-  _navigateToConfiguredLandingPage(context = {}) {
-    return this._pageNavigationController.navigateToConfiguredLandingPage(
-      context,
-    );
-  }
-
   _activateSingleViewPageRoute(context = {}) {
     this._singleViewPageController.activateSingleViewPageRoute(context);
   }
@@ -1821,14 +1753,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _activatePreviewPageRoute(context = {}) {
     this._previewPageController.activatePreviewPageRoute(context);
-  }
-
-  _hasPendingDeepLinkTarget() {
-    return this._deepLinkController.hasPendingDeepLinkTarget();
-  }
-
-  _isDeepLinkHandlingEnabled() {
-    return this._deepLinkController.isDeepLinkHandlingEnabled();
   }
 
   _previewLiveCamerasEnabled() {
@@ -2712,7 +2636,7 @@ export class FrigateViewCard extends HTMLElement {
     const camSwitcher = showCamSwitcher
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
-    const pageNav = this._pageNavMarkup();
+    const pageNav = this._pageNavigationController.pageNavMarkup();
     const infoRow = this._isMobileViewPageActive()
       ? buildMobileViewInfoRowMarkup({
           title,
@@ -3521,9 +3445,12 @@ export class FrigateViewCard extends HTMLElement {
   _handleSidebarNavigationClick(target) {
     const pageRoute = target.closest("[data-page-route]");
     if (pageRoute) {
-      this._navigateToPageRoute(pageRoute.dataset.pageRoute, {
-        source: "page-nav",
-      });
+      this._pageNavigationController.navigateToPageRoute(
+        pageRoute.dataset.pageRoute,
+        {
+          source: "page-nav",
+        },
+      );
       return true;
     }
     const setvm = target.closest("[data-setviewmode]");

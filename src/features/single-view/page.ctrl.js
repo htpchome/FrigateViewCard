@@ -24,6 +24,10 @@ export class SingleViewPageController {
     this._constants = constants;
   }
 
+  _pageNavigation() {
+    return this._host._pageNavigationController || null;
+  }
+
   camSwitcherMarkup({ includeStatus = true } = {}) {
     return buildStandardPageCamSwitcherMarkup(this._host, {
       includeStatus,
@@ -131,9 +135,12 @@ export class SingleViewPageController {
     previewPageActive = false,
   } = {}) {
     if (activePageInvalid) {
-      this._host._navigateToConfiguredLandingPage({
+      this._pageNavigation()?.navigateToConfiguredLandingPage?.({
         source: "config-page-fallback",
-      });
+      }) ??
+        this._host._navigateToConfiguredLandingPage?.({
+          source: "config-page-fallback",
+        });
       return;
     }
 
@@ -165,7 +172,8 @@ export class SingleViewPageController {
     this._host._renderStats();
     this._host._renderCamSwitcher();
     this._host._syncToolbarButtons();
-    this._host._syncPageNavigationButtons();
+    this._pageNavigation()?.syncPageNavigationButtons?.() ??
+      this._host._syncPageNavigationButtons?.();
   }
 
   applyNonPreviewConfigUpdateTail({
@@ -231,7 +239,8 @@ export class SingleViewPageController {
 
   applyEditorPreviewDraftRefresh() {
     this._host._syncTabsShell();
-    this._host._syncPageNavShell();
+    this._pageNavigation()?.syncPageNavShell?.() ??
+      this._host._syncPageNavShell?.();
     this._host._renderCamSwitcher();
     this.applyStyleLayoutForCurrentRoute();
     this._host._syncStatus();
@@ -239,7 +248,8 @@ export class SingleViewPageController {
     this._host._renderStats();
     this._host._renderListLabel();
     this._host._renderList();
-    this._host._syncPageNavigationButtons();
+    this._pageNavigation()?.syncPageNavigationButtons?.() ??
+      this._host._syncPageNavigationButtons?.();
   }
 
   applyConfigUpdateRouteFlow({
