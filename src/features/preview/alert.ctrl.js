@@ -148,7 +148,12 @@ export class PreviewAlertController {
       msg,
       checkSeverity: false,
     });
-    if (!parsed) return;
+    if (!parsed) {
+      if (this._host._isRealtimeEventMessage?.(msg)) {
+        this.scheduleAlertWatch(180);
+      }
+      return;
+    }
     const { cam, severity, type } = parsed;
     const normalizedSeverity = String(severity || "")
       .trim()

@@ -1,49 +1,57 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { PreviewAlertController } from "../src/features/preview/alert.ctrl.js";
+import { GridAlertController } from "../src/features/grid/alert.ctrl.js";
 
 function createHost({
-  previewActive = true,
+  gridAvailable = true,
+  viewMode = "grid",
   severityByMessage = "alert",
   shouldHandle = true,
 } = {}) {
   return {
-    _isPreviewPageActive: () => previewActive,
+    _viewMode: viewMode,
+    _config: { alerts_reviews_days: 3 },
+    _isGridModeAvailable: () => gridAvailable,
     _extractRealtimeMessageCamera: () => "front_door",
     _cameraEntityForIncomingCamera: () => "camera.front_door",
     _extractRealtimeMessageSeverity: () => severityByMessage,
     _shouldHandleSlideshowReview: () => shouldHandle,
+    _isRealtimeEventMessage: () => true,
+    _cameraIndexByEntity: () => 0,
+    _scheduleGridRefresh: () => {},
+    _effectiveRealtimePollSeconds: () => 5,
+    _gridRotationMs: () => 30000,
   };
 }
 
-test("handleRealtimeMessage marks camera live when alert severity is present", () => {
+test("handleRealtimeMessage forwards parsed severity to alert candidate", () => {
   const host = createHost({ severityByMessage: "alert", shouldHandle: true });
-  const controller = new PreviewAlertController(host, {
-    PREVIEW_ALERT_HOLD_MS: 6000,
-    PREVIEW_ALERT_END_GRACE_MS: 3500,
+  const controller = new GridAlertController(host, {
+    DAY: 86400,
+    SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC: 10,
   });
   const calls = [];
 
-  controller.markAlertCamera = (entity, severity, holdMs) => {
-    calls.push([entity, severity, holdMs]);
+  controller.handleAlertCandidate = (entity, severity) => {
+    calls.push([entity, severity]);
   };
 
   controller.handleRealtimeMessage({ type: "new", camera: "front_door" });
 
-  assert.deepEqual(calls, [["camera.front_door", "alert", 6000]]);
+  assert.deepEqual(calls, [["camera.front_door", "alert"]]);
 });
 
-test("handleRealtimeMessage schedules probe when realtime severity is missing", () => {
+test("handleRealtimeMessage schedules probe when severity is missing", () => {
   const host = createHost({ severityByMessage: "", shouldHandle: true });
-  const controller = new PreviewAlertController(host, {
-    PREVIEW_ALERT_HOLD_MS: 6000,
-    PREVIEW_ALERT_END_GRACE_MS: 3500,
+  const controller = new GridAlertController(host, {
+    DAY: 86400,
+    SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC: 10,
   });
   const calls = [];
 
-  controller.markAlertCamera = () => {
-    calls.push(["mark"]);
+  controller.handleAlertCandidate = () => {
+    calls.push(["candidate"]);
   };
   controller.scheduleAlertWatch = (delayMs) => {
     calls.push(["watch", delayMs]);
@@ -54,13 +62,12 @@ test("handleRealtimeMessage schedules probe when realtime severity is missing", 
   assert.deepEqual(calls, [["watch", 180]]);
 });
 
-test("handleRealtimeMessage schedules probe when realtime camera cannot be resolved", () => {
+test("handleRealtimeMessage schedules probe when camera parsing fails", () => {
   const host = createHost({ severityByMessage: "alert", shouldHandle: true });
   host._extractRealtimeMessageCamera = () => "";
-  host._isRealtimeEventMessage = () => true;
-  const controller = new PreviewAlertController(host, {
-    PREVIEW_ALERT_HOLD_MS: 6000,
-    PREVIEW_ALERT_END_GRACE_MS: 3500,
+  const controller = new GridAlertController(host, {
+    DAY: 86400,
+    SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC: 10,
   });
   const calls = [];
 

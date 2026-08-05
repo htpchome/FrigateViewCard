@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1238";
+const VERSION = "1.0.1239";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10725,7 +10725,12 @@ const PreviewAlertController = class {
       msg,
       checkSeverity: false
     });
-    if (!parsed) return;
+    if (!parsed) {
+      if (this._host._isRealtimeEventMessage?.(msg)) {
+        this.scheduleAlertWatch(180);
+      }
+      return;
+    }
     const { cam, severity, type } = parsed;
     const normalizedSeverity = String(severity || "").trim().toLowerCase();
     if (type !== "end" && !normalizedSeverity) {
@@ -11615,9 +11620,19 @@ const GridAlertController = class {
     if (!this._host._isGridModeAvailable()) return;
     if (this._host._viewMode !== "grid") return;
     const parsed = parseRealtimeAlertMessage({ host: this._host, msg });
-    if (!parsed) return;
+    if (!parsed) {
+      if (this._host._isRealtimeEventMessage?.(msg)) {
+        this.scheduleAlertWatch(180);
+      }
+      return;
+    }
     const { cam, severity } = parsed;
-    this.handleAlertCandidate(cam, severity || "alert");
+    const normalizedSeverity = String(severity || "").trim().toLowerCase();
+    if (!normalizedSeverity) {
+      this.scheduleAlertWatch(180);
+      return;
+    }
+    this.handleAlertCandidate(cam, normalizedSeverity);
   }
 };
 
