@@ -2,22 +2,22 @@ export const STYLES = `
   :host {
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
-    --rotate-vw: 100vw;
-    --rotate-vh: 100dvh;
-    --rotate-ox: 0px;
-    --rotate-oy: 0px;
     min-height: 0;
-    display: block !important;
     overflow: hidden;
-    box-sizing: border-box !important;
     position: relative;
-    border:1px solid var(--secondary-background-color,#7a7a7a);
+    box-sizing: border-box !important;
+    display: block !important;
+    border:1px solid var(--secondary-background-color,#7a7a7a) !important;
     border-radius: var(--fvc-border-radius) !important;
   }
   :host {
     --popup-z-index: 1000;
     --popup-bg: white;
     --handle-color: #e0e0e0;
+    --rotate-vw: 100vw;
+    --rotate-vh: 100dvh;
+    --rotate-ox: 0px;
+    --rotate-oy: 0px;
   }
 
   /* ── theme variables (dark = default) ── */

@@ -66,6 +66,10 @@ const viewportContextControllerSource = fs.readFileSync(
   new URL("../src/features/viewport/context.ctrl.js", import.meta.url),
   "utf8",
 );
+const browseCalendarActivityControllerSource = fs.readFileSync(
+  new URL("../src/features/browse/calendar-activity.ctrl.js", import.meta.url),
+  "utf8",
+);
 const browseCollectionControllerSource = fs.readFileSync(
   new URL("../src/features/browse/collection.ctrl.js", import.meta.url),
   "utf8",
@@ -724,6 +728,57 @@ test("viewport helpers delegate through the viewport context controller", () => 
   );
   assert.equal(
     viewportContextControllerSource.includes("isMobileTabletViewport()"),
+    true,
+  );
+});
+
+test("browse calendar activity helpers delegate through the browse calendar activity controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { BrowseCalendarActivityController } from "../features/browse/calendar-activity.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._browseCalendarActivityController\s*=\s*new BrowseCalendarActivityController\(this\);/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _loadCalendar\(\) \{\s*await this\._browseCalendarActivityController\.loadCalendar\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_calendarActivityCacheKey\(clientId, cam, tz = this\._tz\(\)\) \{\s*return this\._browseCalendarActivityController\.calendarActivityCacheKey\(/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_applyCalendarActivityCacheForActiveCamera\(\) \{\s*this\._browseCalendarActivityController\.applyCalendarActivityCacheForActiveCamera\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _prefetchCalendarActivityForActiveCamera\(\) \{\s*await this\._browseCalendarActivityController\.prefetchCalendarActivityForActiveCamera\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    browseCalendarActivityControllerSource.includes(
+      "export class BrowseCalendarActivityController",
+    ),
+    true,
+  );
+  assert.equal(
+    browseCalendarActivityControllerSource.includes(
+      "async prefetchCalendarActivityForActiveCamera()",
+    ),
     true,
   );
 });

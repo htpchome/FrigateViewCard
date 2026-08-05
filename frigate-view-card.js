@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1205";
+const VERSION = "1.0.1206";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -122,22 +122,22 @@ const STYLES = `
   :host {
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
-    --rotate-vw: 100vw;
-    --rotate-vh: 100dvh;
-    --rotate-ox: 0px;
-    --rotate-oy: 0px;
     min-height: 0;
-    display: block !important;
     overflow: hidden;
-    box-sizing: border-box !important;
     position: relative;
-    border:1px solid var(--secondary-background-color,#7a7a7a);
+    box-sizing: border-box !important;
+    display: block !important;
+    border:1px solid var(--secondary-background-color,#7a7a7a) !important;
     border-radius: var(--fvc-border-radius) !important;
   }
   :host {
     --popup-z-index: 1000;
     --popup-bg: white;
     --handle-color: #e0e0e0;
+    --rotate-vw: 100vw;
+    --rotate-vh: 100dvh;
+    --rotate-ox: 0px;
+    --rotate-oy: 0px;
   }
 
   /* \u2500\u2500 theme variables (dark = default) \u2500\u2500 */
@@ -7723,6 +7723,76 @@ const BrowseCollectionController = class {
   }
 };
 
+// src/features/browse/calendar-activity.ctrl.js
+const BrowseCalendarActivityController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  async loadCalendar() {
+    await this.prefetchCalendarActivityForActiveCamera();
+  }
+  calendarActivityCacheKey(clientId, cam, tz = this._host._tz()) {
+    return `${clientId || ""}|${cam || ""}|${tz || "UTC"}`;
+  }
+  applyCalendarActivityCacheForActiveCamera() {
+    const { clientId, cam } = this._host._cc();
+    const key = this.calendarActivityCacheKey(clientId, cam);
+    const cached = this._host._calendarActivityByCam.get(key);
+    this._host._daysWithActivity = cached ? new Set(cached) : new Set();
+  }
+  async prefetchCalendarActivityForActiveCamera() {
+    const { clientId, cam } = this._host._cc();
+    if (!clientId || !cam) {
+      this._host._daysWithActivity = new Set();
+      return;
+    }
+    const tz = this._host._tz();
+    const key = this.calendarActivityCacheKey(clientId, cam, tz);
+    const cached = this._host._calendarActivityByCam.get(key);
+    if (cached) {
+      this._host._daysWithActivity = new Set(cached);
+      return;
+    }
+    const existing = this._host._calendarActivityInFlight.get(key);
+    if (existing) {
+      await existing;
+      return;
+    }
+    const task = (async () => {
+      try {
+        const summary = await this._host._ws({
+          type: "frigate/events/summary",
+          instance_id: clientId,
+          timezone: tz
+        });
+        const days = Array.isArray(summary) ? new Set(
+          summary.filter((item) => item.camera === cam && item.day).map((item) => item.day)
+        ) : new Set();
+        this._host._calendarActivityByCam.set(key, days);
+        const active = this._host._cc();
+        const activeKey = this.calendarActivityCacheKey(
+          active.clientId,
+          active.cam,
+          tz
+        );
+        if (activeKey === key) {
+          this._host._daysWithActivity = new Set(days);
+          if (this._host._$("cal-panel")?.style.display !== "none") {
+            this._host._renderCal();
+          }
+        }
+      } catch (_) {
+      }
+    })();
+    this._host._calendarActivityInFlight.set(key, task);
+    try {
+      await task;
+    } finally {
+      this._host._calendarActivityInFlight.delete(key);
+    }
+  }
+};
+
 // src/features/browse/filter-state.js
 function buildReviewFilterLabels(review, sourceEvent = null) {
   const labels = new Set();
@@ -13144,6 +13214,7 @@ const FrigateViewCard = class extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
+    this._browseCalendarActivityController = new BrowseCalendarActivityController(this);
     this._browseCollectionController = new BrowseCollectionController(this);
     this._browseFilterController = new BrowseFilterController(this);
     this._browseTabDataController = new BrowseTabDataController(this);
@@ -14739,67 +14810,20 @@ const FrigateViewCard = class extends HTMLElement {
     await this._browseTabDataController.loadReviews();
   }
   async _loadCalendar() {
-    await this._prefetchCalendarActivityForActiveCamera();
+    await this._browseCalendarActivityController.loadCalendar();
   }
   _calendarActivityCacheKey(clientId, cam, tz = this._tz()) {
-    return `${clientId || ""}|${cam || ""}|${tz || "UTC"}`;
+    return this._browseCalendarActivityController.calendarActivityCacheKey(
+      clientId,
+      cam,
+      tz
+    );
   }
   _applyCalendarActivityCacheForActiveCamera() {
-    const { clientId, cam } = this._cc();
-    const key = this._calendarActivityCacheKey(clientId, cam);
-    const cached = this._calendarActivityByCam.get(key);
-    this._daysWithActivity = cached ? new Set(cached) : new Set();
+    this._browseCalendarActivityController.applyCalendarActivityCacheForActiveCamera();
   }
   async _prefetchCalendarActivityForActiveCamera() {
-    const { clientId, cam } = this._cc();
-    if (!clientId || !cam) {
-      this._daysWithActivity = new Set();
-      return;
-    }
-    const tz = this._tz();
-    const key = this._calendarActivityCacheKey(clientId, cam, tz);
-    const cached = this._calendarActivityByCam.get(key);
-    if (cached) {
-      this._daysWithActivity = new Set(cached);
-      return;
-    }
-    const existing = this._calendarActivityInFlight.get(key);
-    if (existing) {
-      await existing;
-      return;
-    }
-    const task = (async () => {
-      try {
-        const sum = await this._ws({
-          type: "frigate/events/summary",
-          instance_id: clientId,
-          timezone: tz
-        });
-        const days = Array.isArray(sum) ? new Set(
-          sum.filter((s) => s.camera === cam && s.day).map((s) => s.day)
-        ) : new Set();
-        this._calendarActivityByCam.set(key, days);
-        const active = this._cc();
-        const activeKey = this._calendarActivityCacheKey(
-          active.clientId,
-          active.cam,
-          tz
-        );
-        if (activeKey === key) {
-          this._daysWithActivity = new Set(days);
-          if (this._$("cal-panel")?.style.display !== "none") {
-            this._renderCal();
-          }
-        }
-      } catch (_) {
-      }
-    })();
-    this._calendarActivityInFlight.set(key, task);
-    try {
-      await task;
-    } finally {
-      this._calendarActivityInFlight.delete(key);
-    }
+    await this._browseCalendarActivityController.prefetchCalendarActivityForActiveCamera();
   }
   _tz() {
     return this._hass?.config?.time_zone || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
