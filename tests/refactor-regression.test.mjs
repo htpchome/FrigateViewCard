@@ -611,6 +611,13 @@ test("card style helpers delegate through the style context controller", () => {
     true,
   );
   assert.equal(
+    /_applyCardStyle\(\) \{\s*this\._cardStyleController\.applyCardStyle\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("const customTheme ="), false);
+  assert.equal(
     cardStyleContextControllerSource.includes(
       "export class CardStyleContextController",
     ),
@@ -622,6 +629,10 @@ test("card style helpers delegate through the style context controller", () => {
   );
   assert.equal(
     cardStyleContextControllerSource.includes("applyTightMargins()"),
+    true,
+  );
+  assert.equal(
+    cardStyleContextControllerSource.includes("applyCardStyle()"),
     true,
   );
   assert.equal(

@@ -6,13 +6,16 @@ import { CardStyleContextController } from "../src/features/card-style/context.c
 const withGlobals = (overrides, fn) => {
   const originalDocument = global.document;
   const originalGetComputedStyle = global.getComputedStyle;
+  const originalWindow = global.window;
   global.document = overrides.document;
   global.getComputedStyle = overrides.getComputedStyle;
+  global.window = overrides.window;
   try {
     fn();
   } finally {
     global.document = originalDocument;
     global.getComputedStyle = originalGetComputedStyle;
+    global.window = originalWindow;
   }
 };
 
@@ -139,5 +142,126 @@ test("resolveCardTokenForHost measures resolved token values", () => {
         "24px",
       );
     },
+  );
+});
+
+test("applyCardStyle resolves percent host height and clears view-height", () => {
+  const hostStyleCalls = [];
+  const cardStyleCalls = [];
+  const card = {
+    style: {
+      setProperty: (name, value) => cardStyleCalls.push(["set", name, value]),
+      removeProperty: (name) => cardStyleCalls.push(["remove", name]),
+    },
+  };
+  const host = {
+    _config: {
+      stream_height: 50,
+      stream_height_unit: "%",
+      compact_preview: false,
+      theme: "default",
+    },
+    _isPreviewContext: () => false,
+    shadowRoot: {
+      querySelector: () => card,
+    },
+    style: {
+      setProperty: (name, value) => hostStyleCalls.push(["set", name, value]),
+      removeProperty: (name) => hostStyleCalls.push(["remove", name]),
+    },
+  };
+  const controller = new CardStyleContextController(host);
+  controller.applyTightMargins = () => {};
+  controller.syncHostOuterStyles = () => {};
+
+  withGlobals(
+    {
+      document: global.document,
+      window: {
+        innerHeight: 900,
+        visualViewport: null,
+      },
+      getComputedStyle: () => ({
+        getPropertyValue: (name) => {
+          if (name === "--ha-card-height") return "400px";
+          if (name === "--header-height") return "56px";
+          return "";
+        },
+      }),
+    },
+    () => {
+      controller.applyCardStyle();
+    },
+  );
+
+  assert.deepEqual(hostStyleCalls, [["set", "--card-host-height", "200px"]]);
+  assert.equal(
+    cardStyleCalls.some(
+      ([action, name]) => action === "remove" && name === "--view-height",
+    ),
+    true,
+  );
+});
+
+test("applyCardStyle applies custom theme overrides and default removals", () => {
+  const cardCalls = [];
+  const card = {
+    style: {
+      setProperty: (name, value) => cardCalls.push(["set", name, value]),
+      removeProperty: (name) => cardCalls.push(["remove", name]),
+    },
+  };
+  const host = {
+    _config: {
+      theme: "custom",
+      theme_custom: {
+        "--c-bg-main": "#abcdef",
+        "--c-bg-panel": "#bad",
+      },
+      theme_custom_defaults: {
+        "--c-bg-panel": true,
+      },
+    },
+    _isPreviewContext: () => false,
+    shadowRoot: {
+      querySelector: () => card,
+    },
+    style: {
+      setProperty: () => {},
+      removeProperty: () => {},
+    },
+  };
+  const controller = new CardStyleContextController(host);
+  controller.applyTightMargins = () => {};
+  controller.syncHostOuterStyles = () => {};
+
+  withGlobals(
+    {
+      document: global.document,
+      window: {
+        innerHeight: 900,
+        visualViewport: null,
+      },
+      getComputedStyle: () => ({
+        getPropertyValue: () => "",
+      }),
+    },
+    () => {
+      controller.applyCardStyle();
+    },
+  );
+
+  assert.equal(
+    cardCalls.some(
+      ([action, name, value]) =>
+        action === "set" && name === "--c-bg-main" && value === "#abcdef",
+    ),
+    true,
+  );
+  assert.equal(
+    cardCalls.some(
+      ([action, name]) => action === "remove" && name === "--c-bg-panel",
+    ),
+    true,
   );
 });
