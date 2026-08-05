@@ -302,6 +302,52 @@ test("hasRecordingsInBounds syncs cache hits and fetches uncached availability",
   assert.equal(availabilityCache.get("client-a|front|100|199"), true);
 });
 
+test("prepareDayTransition reuses cached transitions and fetches uncached day data", async () => {
+  const cachedBounds = { start: 0, end: 99 };
+  const fetchedBounds = { start: 100, end: 199 };
+  const dataCache = new Map([["client-a|front|0|99", [{ id: "cached" }]]]);
+  const availabilityCache = new Map();
+  const calls = [];
+  const host = {
+    _recordingsDayDataCache: dataCache,
+    _recordingsDayAvailabilityCache: availabilityCache,
+    _recordingsOffsetDayBounds: (direction) =>
+      direction < 0 ? cachedBounds : fetchedBounds,
+    _recordingsDayBounds: () => ({ start: 200, end: 299 }),
+    _cc: () => ({ clientId: "client-a", cam: "front" }),
+    _ws: async ({ before }) => {
+      calls.push(["ws", before]);
+      return before === 199 ? [{ id: "fetched" }] : [];
+    },
+  };
+  const controller = new RecordingsBrowseNavController(host);
+  controller.hasRecordingsInBounds = async (bounds) => {
+    calls.push(["hasRecordingsInBounds", bounds]);
+    return bounds === fetchedBounds;
+  };
+
+  assert.deepEqual(await controller.prepareDayTransition(-1), {
+    hasData: true,
+    bounds: cachedBounds,
+    recs: [{ id: "cached" }],
+  });
+  assert.deepEqual(calls, []);
+
+  assert.deepEqual(await controller.prepareDayTransition(1), {
+    hasData: true,
+    bounds: fetchedBounds,
+    recs: [{ id: "fetched" }],
+  });
+  assert.deepEqual(calls, [
+    ["hasRecordingsInBounds", fetchedBounds],
+    ["ws", 199],
+  ]);
+  assert.deepEqual(dataCache.get("client-a|front|100|199"), [
+    { id: "fetched" },
+  ]);
+  assert.equal(availabilityCache.get("client-a|front|100|199"), true);
+});
+
 test("_commitRecordingsDayTransition updates caches and render state with camera context", async () => {
   const bounds = { start: 100, end: 200 };
   const {

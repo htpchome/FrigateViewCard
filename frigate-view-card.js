@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1211";
+const VERSION = "1.0.1212";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9629,6 +9629,40 @@ const RecordingsBrowseNavController = class {
       return failed.hasRecordings;
     }
   }
+  async prepareDayTransition(direction) {
+    const bounds = this._host._recordingsOffsetDayBounds(direction);
+    const today = this._host._recordingsDayBounds(
+      Math.floor(Date.now() / 1e3)
+    );
+    const { clientId, cam } = this._host._cc();
+    const prepared = resolvePreparedRecordingsDayTransition({
+      direction,
+      bounds,
+      todayBounds: today,
+      clientId,
+      camera: cam,
+      dataCache: this._host._recordingsDayDataCache
+    });
+    if (prepared.done) {
+      return prepared.result;
+    }
+    const key = prepared.key;
+    const hasData = await this.hasRecordingsInBounds(bounds, clientId, cam);
+    if (!hasData) {
+      return { hasData: false, bounds, recs: [] };
+    }
+    const recordings = await this._host._ws({
+      type: "frigate/recordings/get",
+      instance_id: clientId,
+      camera: cam,
+      after: Math.max(0, bounds.start),
+      before: bounds.end
+    });
+    const result = buildPreparedRecordingsDayResult(bounds, recordings);
+    this._host._recordingsDayDataCache.set(key, result.recs);
+    this._host._recordingsDayAvailabilityCache.set(key, result.hasData);
+    return result;
+  }
   async updateBrowseNav() {
     if (this._host._tab !== "recordings") return;
     const prev = this._host._$("#rec-day-prev");
@@ -15594,36 +15628,7 @@ const FrigateViewCard = class extends HTMLElement {
     return gesture;
   }
   async _prepareRecordingsDayTransition(direction) {
-    const bounds = this._recordingsOffsetDayBounds(direction);
-    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1e3));
-    const { clientId, cam } = this._cc();
-    const prepared = resolvePreparedRecordingsDayTransition({
-      direction,
-      bounds,
-      todayBounds: today,
-      clientId,
-      camera: cam,
-      dataCache: this._recordingsDayDataCache
-    });
-    if (prepared.done) {
-      return prepared.result;
-    }
-    const key = prepared.key;
-    const hasData = await this._hasRecordingsInBounds(bounds, clientId, cam);
-    if (!hasData) {
-      return { hasData: false, bounds, recs: [] };
-    }
-    const recs = await this._ws({
-      type: "frigate/recordings/get",
-      instance_id: clientId,
-      camera: cam,
-      after: Math.max(0, bounds.start),
-      before: bounds.end
-    });
-    const result = buildPreparedRecordingsDayResult(bounds, recs);
-    this._recordingsDayDataCache.set(key, result.recs);
-    this._recordingsDayAvailabilityCache.set(key, result.hasData);
-    return result;
+    return this._recordingsBrowseNavController.prepareDayTransition(direction);
   }
   async _navigateRecordingsDayAnimated(direction) {
     if (this._tab !== "recordings") return false;

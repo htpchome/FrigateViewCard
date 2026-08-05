@@ -198,7 +198,6 @@ import {
   buildRecordingPlaybackPlan,
   RecordingScrubController,
   buildRecordingScrubDecorations,
-  buildPreparedRecordingsDayResult,
   buildRecordingsListMarkup,
   RecordingsBrowseNavController,
   RecordingsSwipeController,
@@ -215,7 +214,6 @@ import {
   resolveRecordingSeekExecutionPlan,
   resolvePreparedRecordingsDayNavigationState,
   resolveOffsetRecordingsDayBounds,
-  resolvePreparedRecordingsDayTransition,
   resolvePreparedRecordingsIncomingState,
   resolvePreparedRecordingsSwipeState,
   resolveRecordingScrubTarget,
@@ -3016,37 +3014,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _prepareRecordingsDayTransition(direction) {
-    const bounds = this._recordingsOffsetDayBounds(direction);
-    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
-    const { clientId, cam } = this._cc();
-    const prepared = resolvePreparedRecordingsDayTransition({
-      direction,
-      bounds,
-      todayBounds: today,
-      clientId,
-      camera: cam,
-      dataCache: this._recordingsDayDataCache,
-    });
-    if (prepared.done) {
-      return prepared.result;
-    }
-
-    const key = prepared.key;
-    const hasData = await this._hasRecordingsInBounds(bounds, clientId, cam);
-    if (!hasData) {
-      return { hasData: false, bounds, recs: [] };
-    }
-    const recs = await this._ws({
-      type: "frigate/recordings/get",
-      instance_id: clientId,
-      camera: cam,
-      after: Math.max(0, bounds.start),
-      before: bounds.end,
-    });
-    const result = buildPreparedRecordingsDayResult(bounds, recs);
-    this._recordingsDayDataCache.set(key, result.recs);
-    this._recordingsDayAvailabilityCache.set(key, result.hasData);
-    return result;
+    return this._recordingsBrowseNavController.prepareDayTransition(direction);
   }
 
   async _navigateRecordingsDayAnimated(direction) {
