@@ -94,6 +94,10 @@ const recordingsBrowseNavControllerSource = fs.readFileSync(
   new URL("../src/features/recordings/browse-nav.ctrl.js", import.meta.url),
   "utf8",
 );
+const recordingsSwipeControllerSource = fs.readFileSync(
+  new URL("../src/features/recordings/swipe.ctrl.js", import.meta.url),
+  "utf8",
+);
 const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
@@ -1224,7 +1228,7 @@ test("recordings browse nav delegates through the recordings browse nav controll
     true,
   );
   assert.equal(
-    /async _commitRecordingsDayTransition\(bounds, recs\) \{\s*return this\._recordingsBrowseNavController\.commitDayTransition\(bounds, recs\);\s*\}/s.test(
+    /async _commitRecordingsDayTransition\(bounds, recs\) \{\s*return this\._recordingsBrowseNavController\.commitDayTransition\([\s\S]*?bounds,[\s\S]*?recs,[\s\S]*?\);\s*\}/s.test(
       cardSource,
     ),
     true,
@@ -1289,6 +1293,66 @@ test("recordings browse nav delegates through the recordings browse nav controll
   );
   assert.equal(
     recordingsBrowseNavControllerSource.includes("async updateBrowseNav()"),
+    true,
+  );
+});
+
+test("recordings swipe stage helpers delegate through the recordings swipe controller", () => {
+  assert.equal(cardSource.includes("RecordingsSwipeController,"), true);
+  assert.equal(
+    /this\._recordingsSwipeController\s*=\s*new RecordingsSwipeController\(\{/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_createRecordingsSwipeStage\(direction, incomingHtml\) \{\s*return this\._recordingsSwipeController\?\.createStage\(direction, incomingHtml\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_setRecordingsSwipeStageOffset\(state, offset, transition = ""\) \{\s*this\._recordingsSwipeController\?\.setStageOffset\(state, offset, transition\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_animateRecordingsSwipeStageTo\([\s\S]*?this\._recordingsSwipeController\?\.animateStageTo\(/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_destroyRecordingsSwipeStage\(\) \{\s*this\._recordingsSwipeController\?\.destroyGestureStage\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_startRecordingsSwipeGesture\(direction\) \{\s*return this\._recordingsSwipeController\?\.startGestureStage\(direction\) \|\| null;\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    recordingsSwipeControllerSource.includes(
+      "export class RecordingsSwipeController",
+    ),
+    true,
+  );
+  assert.equal(
+    recordingsSwipeControllerSource.includes(
+      "createStage(direction, incomingHtml)",
+    ),
+    true,
+  );
+  assert.equal(
+    recordingsSwipeControllerSource.includes("animateStageTo("),
+    true,
+  );
+  assert.equal(
+    recordingsSwipeControllerSource.includes("startGestureStage(direction)"),
     true,
   );
 });

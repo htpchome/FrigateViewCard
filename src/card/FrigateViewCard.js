@@ -207,7 +207,6 @@ import {
   isRecordingSeekVerified,
   normalizeFetchedRecordingsAvailability,
   RECORDINGS_SWIPE_EMPTY_HTML,
-  RECORDINGS_SWIPE_LOADING_HTML,
   resolveFailedRecordingsSwipeState,
   resolveClosestRecordingAlertStart,
   resolveRecordingSeekExecutionPlan,
@@ -221,8 +220,6 @@ import {
   resolveRecordingsBrowseNavProbePlan,
   resolveRecordingsBrowseNavState,
   resolveRecordingsDayBounds,
-  resolveRecordingsSwipeStageMetrics,
-  resolveRecordingsSwipeStageTransforms,
   splitRecordingsHourly,
 } from "../features/recordings/index.js";
 import {
@@ -2864,13 +2861,17 @@ export class FrigateViewCard extends HTMLElement {
       setTapBlocked: (blocked) => {
         this._recordingsSwipeBlockTap = blocked;
       },
-      destroyGestureStage: () => this._destroyRecordingsSwipeStage(),
-      startGestureStage: (direction) =>
-        this._startRecordingsSwipeGesture(direction),
-      setStageOffset: (stage, offset) =>
-        this._setRecordingsSwipeStageOffset(stage, offset),
-      animateStageTo: (stage, offset, duration, easing) =>
-        this._animateRecordingsSwipeStageTo(stage, offset, duration, easing),
+      getList: () => this._$("#list"),
+      clearListState: (list) => this._clearRecordingsSwipeListState(list),
+      getLastRenderedListHtml: () => this._lastRenderedListHtml,
+      setLastRenderedListHtml: (html) => {
+        this._lastRenderedListHtml = html;
+      },
+      renderList: () => this._renderList(),
+      prepareDayTransition: (direction) =>
+        this._prepareRecordingsDayTransition(direction),
+      renderRecordings: (recordings) =>
+        this._recordingsListMarkup(this._recordingsViewRows(recordings)),
       completeGesture: (gesture) =>
         this._completeRecordingsSwipeGesture(gesture),
       bounceArea: (direction) => this._bounceRecordingsArea(direction),
@@ -2896,55 +2897,14 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _createRecordingsSwipeStage(direction, incomingHtml) {
-    const list = this._$("#list");
-    if (!list) return null;
-    const metrics = resolveRecordingsSwipeStageMetrics({
-      list,
-      lastRenderedListHtml: this._lastRenderedListHtml,
-    });
-    const stage = document.createElement("div");
-    stage.className = "rec-swipe-stage";
-    stage.style.minHeight = `${metrics.minHeight}px`;
-
-    const current = document.createElement("div");
-    current.className = "rec-swipe-pane current";
-    current.innerHTML = metrics.currentHtml;
-
-    const incoming = document.createElement("div");
-    incoming.className = "rec-swipe-pane incoming";
-    incoming.innerHTML = incomingHtml;
-
-    stage.appendChild(current);
-    stage.appendChild(incoming);
-    list.classList.add("recordings-swipe-active");
-    list.innerHTML = "";
-    list.appendChild(stage);
-
-    const state = {
-      list,
-      stage,
-      current,
-      incoming,
+    return this._recordingsSwipeController?.createStage(
       direction,
-      width: metrics.width,
-      offset: 0,
-    };
-    this._setRecordingsSwipeStageOffset(state, 0);
-    return state;
+      incomingHtml,
+    );
   }
 
   _setRecordingsSwipeStageOffset(state, offset, transition = "") {
-    if (!state) return;
-    state.offset = offset;
-    state.current.style.transition = transition;
-    state.incoming.style.transition = transition;
-    const transforms = resolveRecordingsSwipeStageTransforms({
-      offset,
-      direction: state.direction,
-      width: state.width,
-    });
-    state.current.style.transform = transforms.currentTransform;
-    state.incoming.style.transform = transforms.incomingTransform;
+    this._recordingsSwipeController?.setStageOffset(state, offset, transition);
   }
 
   _animateRecordingsSwipeStageTo(
@@ -2953,22 +2913,18 @@ export class FrigateViewCard extends HTMLElement {
     duration = 260,
     easing = "cubic-bezier(0.18, 0.5, 0.2, 1)",
   ) {
-    if (!state) return Promise.resolve();
-    return new Promise((resolve) => {
-      void state.stage?.getBoundingClientRect?.();
-      void state.current?.offsetWidth;
-      const transition = `transform ${duration}ms ${easing}`;
-      this._setRecordingsSwipeStageOffset(state, offset, transition);
-      setTimeout(resolve, duration + 16);
-    });
+    return (
+      this._recordingsSwipeController?.animateStageTo(
+        state,
+        offset,
+        duration,
+        easing,
+      ) || Promise.resolve()
+    );
   }
 
   _destroyRecordingsSwipeStage() {
-    const state = this._recordingsSwipeGesture?.stage;
-    if (!state?.list) return;
-    this._clearRecordingsSwipeListState(state.list);
-    this._lastRenderedListHtml = "";
-    this._renderList();
+    this._recordingsSwipeController?.destroyGestureStage();
   }
 
   _clearRecordingsSwipeListState(list = null) {
@@ -2977,38 +2933,9 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _startRecordingsSwipeGesture(direction) {
-    const stage = this._createRecordingsSwipeStage(
-      direction,
-      RECORDINGS_SWIPE_LOADING_HTML,
+    return (
+      this._recordingsSwipeController?.startGestureStage(direction) || null
     );
-    const gesture = createRecordingsSwipeGestureState(direction, stage);
-    gesture.prepPromise = (async () => {
-      try {
-        const prep = await this._prepareRecordingsDayTransition(direction);
-        Object.assign(
-          gesture,
-          resolvePreparedRecordingsSwipeState({
-            prep,
-            renderRecordings: (recordings) =>
-              this._recordingsListMarkup(this._recordingsViewRows(recordings)),
-          }),
-        );
-        if (gesture.stage?.incoming) {
-          gesture.stage.incoming.classList.remove("loading");
-          gesture.stage.incoming.innerHTML = gesture.incomingHtml;
-        }
-      } catch (_) {
-        Object.assign(gesture, resolveFailedRecordingsSwipeState());
-        if (gesture.stage?.incoming) {
-          gesture.stage.incoming.classList.remove("loading");
-          gesture.stage.incoming.innerHTML = RECORDINGS_SWIPE_EMPTY_HTML;
-        }
-      }
-    })();
-    if (gesture.stage?.incoming) {
-      gesture.stage.incoming.classList.add("loading");
-    }
-    return gesture;
   }
 
   async _prepareRecordingsDayTransition(direction) {

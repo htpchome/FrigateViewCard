@@ -1,4 +1,13 @@
 import { CleanupController } from "../../shared/cleanup.js";
+import {
+  createRecordingsSwipeGestureState,
+  RECORDINGS_SWIPE_EMPTY_HTML,
+  RECORDINGS_SWIPE_LOADING_HTML,
+  resolveFailedRecordingsSwipeState,
+  resolvePreparedRecordingsSwipeState,
+  resolveRecordingsSwipeStageMetrics,
+  resolveRecordingsSwipeStageTransforms,
+} from "./utils/swipe.js";
 
 export class RecordingsSwipeController {
   constructor({
@@ -9,10 +18,13 @@ export class RecordingsSwipeController {
     getGesture,
     setGesture,
     setTapBlocked,
-    destroyGestureStage,
-    startGestureStage,
-    setStageOffset,
-    animateStageTo,
+    getList,
+    clearListState,
+    getLastRenderedListHtml,
+    setLastRenderedListHtml,
+    renderList,
+    prepareDayTransition,
+    renderRecordings,
     completeGesture,
     bounceArea,
   }) {
@@ -23,10 +35,13 @@ export class RecordingsSwipeController {
     this._getGesture = getGesture;
     this._setGesture = setGesture;
     this._setTapBlocked = setTapBlocked;
-    this._destroyGestureStage = destroyGestureStage;
-    this._startGestureStage = startGestureStage;
-    this._setStageOffset = setStageOffset;
-    this._animateStageTo = animateStageTo;
+    this._getList = getList;
+    this._clearListState = clearListState;
+    this._getLastRenderedListHtml = getLastRenderedListHtml;
+    this._setLastRenderedListHtml = setLastRenderedListHtml;
+    this._renderList = renderList;
+    this._prepareDayTransition = prepareDayTransition;
+    this._renderRecordings = renderRecordings;
     this._completeGesture = completeGesture;
     this._bounceArea = bounceArea;
     this._cleanup = new CleanupController();
@@ -99,7 +114,7 @@ export class RecordingsSwipeController {
 
   _resetGesture = ({ clearTapBlock = true } = {}) => {
     if (this._getGesture?.()?.stage) {
-      this._destroyGestureStage?.();
+      this.destroyGestureStage();
     }
     this._setGesture?.(null);
     if (clearTapBlock) this._setTapBlocked?.(false);
@@ -125,7 +140,115 @@ export class RecordingsSwipeController {
 
   _ensureGestureStage(direction) {
     if (this._getGesture?.()?.direction === direction) return;
-    this._setGesture?.(this._startGestureStage?.(direction) || null);
+    this._setGesture?.(this.startGestureStage(direction) || null);
+  }
+
+  createStage(direction, incomingHtml) {
+    const list = this._getList?.();
+    if (!list) return null;
+    const metrics = resolveRecordingsSwipeStageMetrics({
+      list,
+      lastRenderedListHtml: this._getLastRenderedListHtml?.() || "",
+    });
+    const stage = document.createElement("div");
+    stage.className = "rec-swipe-stage";
+    stage.style.minHeight = `${metrics.minHeight}px`;
+
+    const current = document.createElement("div");
+    current.className = "rec-swipe-pane current";
+    current.innerHTML = metrics.currentHtml;
+
+    const incoming = document.createElement("div");
+    incoming.className = "rec-swipe-pane incoming";
+    incoming.innerHTML = incomingHtml;
+
+    stage.appendChild(current);
+    stage.appendChild(incoming);
+    list.classList.add("recordings-swipe-active");
+    list.innerHTML = "";
+    list.appendChild(stage);
+
+    const state = {
+      list,
+      stage,
+      current,
+      incoming,
+      direction,
+      width: metrics.width,
+      offset: 0,
+    };
+    this.setStageOffset(state, 0);
+    return state;
+  }
+
+  setStageOffset(state, offset, transition = "") {
+    if (!state) return;
+    state.offset = offset;
+    state.current.style.transition = transition;
+    state.incoming.style.transition = transition;
+    const transforms = resolveRecordingsSwipeStageTransforms({
+      offset,
+      direction: state.direction,
+      width: state.width,
+    });
+    state.current.style.transform = transforms.currentTransform;
+    state.incoming.style.transform = transforms.incomingTransform;
+  }
+
+  animateStageTo(
+    state,
+    offset,
+    duration = 260,
+    easing = "cubic-bezier(0.18, 0.5, 0.2, 1)",
+  ) {
+    if (!state) return Promise.resolve();
+    return new Promise((resolve) => {
+      void state.stage?.getBoundingClientRect?.();
+      void state.current?.offsetWidth;
+      const transition = `transform ${duration}ms ${easing}`;
+      this.setStageOffset(state, offset, transition);
+      setTimeout(resolve, duration + 16);
+    });
+  }
+
+  destroyGestureStage() {
+    const state = this._getGesture?.()?.stage;
+    if (!state?.list) return;
+    this._clearListState?.(state.list);
+    this._setLastRenderedListHtml?.("");
+    this._renderList?.();
+  }
+
+  startGestureStage(direction) {
+    const stage = this.createStage(direction, RECORDINGS_SWIPE_LOADING_HTML);
+    const gesture = createRecordingsSwipeGestureState(direction, stage);
+    gesture.prepPromise = (async () => {
+      try {
+        const prep = await this._prepareDayTransition?.(direction);
+        Object.assign(
+          gesture,
+          resolvePreparedRecordingsSwipeState({
+            prep,
+            renderRecordings: (recordings) =>
+              this._renderRecordings?.(recordings) || "",
+          }),
+        );
+        if (gesture.stage?.incoming) {
+          gesture.stage.incoming.classList.remove("loading");
+          gesture.stage.incoming.innerHTML = gesture.incomingHtml;
+        }
+      } catch (_) {
+        Object.assign(gesture, resolveFailedRecordingsSwipeState());
+        if (gesture.stage?.incoming) {
+          gesture.stage.incoming.classList.remove("loading");
+          gesture.stage.incoming.innerHTML = RECORDINGS_SWIPE_EMPTY_HTML;
+        }
+      }
+    })();
+    if (gesture.stage?.incoming) {
+      gesture.stage.incoming.classList.add("loading");
+    }
+    return gesture;
   }
 
   _startGesture(clientX, clientY) {
@@ -179,7 +302,7 @@ export class RecordingsSwipeController {
     const clampedAbsX = Math.abs(x);
     const followFactor = clampedAbsX < 60 ? 1 : this._dragFollowFactor;
     const follow = Math.sign(x) * Math.min(clampedAbsX * followFactor, max);
-    this._setStageOffset?.(stage, follow);
+    this.setStageOffset(stage, follow);
   }
 
   _finishSwipe = async () => {
@@ -202,7 +325,7 @@ export class RecordingsSwipeController {
 
     const threshold = Math.max(34, stage.width * 0.12);
     if (absX < threshold) {
-      await this._animateStageTo?.(
+      await this.animateStageTo(
         stage,
         0,
         140,
@@ -216,7 +339,7 @@ export class RecordingsSwipeController {
     const moved = await this._completeGesture?.(gesture);
     if (this._disposed) return;
     if (!moved) {
-      await this._animateStageTo?.(
+      await this.animateStageTo(
         stage,
         0,
         150,
