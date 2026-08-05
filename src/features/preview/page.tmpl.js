@@ -89,3 +89,24 @@ export function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
   return `<div class="preview-grid" id="preview-grid">${cellsMarkup}</div>
       <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
 }
+
+export function buildPreviewShellHeaderMarkup({ title, subtitle, pageNav }) {
+  return `<div class="preview-shell-header" id="preview-shell-header">
+            <div class="preview-shell-title">
+              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
+              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
+            </div>
+            ${pageNav}
+          </div>`;
+}
+
+export function buildPreviewLayoutShellMarkup({
+  previewShellHeader,
+  previewFooterIcon,
+}) {
+  return `${previewShellHeader}
+          <div class="preview-shell" id="preview-shell"></div>
+          <div class="preview-shell-footer" id="preview-shell-footer">
+            <div class="frigate-view">${previewFooterIcon}</div>
+          </div>`;
+}

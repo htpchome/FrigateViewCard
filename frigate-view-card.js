@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1222";
+const VERSION = "1.0.1223";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6475,15 +6475,6 @@ function buildCamSwitcherMarkup({
   }).join("");
   return `${backButton}${cameraButtons}`;
 }
-function buildPreviewShellHeaderMarkup({ title, subtitle, pageNav }) {
-  return `<div class="preview-shell-header" id="preview-shell-header">
-            <div class="preview-shell-title">
-              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
-              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
-            </div>
-            ${pageNav}
-          </div>`;
-}
 function buildInfoRowMarkup({ title, subtitle, version }) {
   return `<div class="info-row">
               <div>
@@ -6667,16 +6658,6 @@ function buildMainLayoutShellMarkup({
           ${rightColumnShell}
 
         </div>`;
-}
-function buildPreviewLayoutShellMarkup({
-  previewShellHeader,
-  previewFooterIcon
-}) {
-  return `${previewShellHeader}
-          <div class="preview-shell" id="preview-shell"></div>
-          <div class="preview-shell-footer" id="preview-shell-footer">
-            <div class="frigate-view">${previewFooterIcon}</div>
-          </div>`;
 }
 
 // src/card/controls/calendar-filter.tmpl.js
@@ -10806,6 +10787,25 @@ function buildPreviewCameraButtonMarkup({ index, name }) {
 function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
   return `<div class="preview-grid" id="preview-grid">${cellsMarkup}</div>
       <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
+}
+function buildPreviewShellHeaderMarkup({ title, subtitle, pageNav }) {
+  return `<div class="preview-shell-header" id="preview-shell-header">
+            <div class="preview-shell-title">
+              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
+              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
+            </div>
+            ${pageNav}
+          </div>`;
+}
+function buildPreviewLayoutShellMarkup({
+  previewShellHeader,
+  previewFooterIcon
+}) {
+  return `${previewShellHeader}
+          <div class="preview-shell" id="preview-shell"></div>
+          <div class="preview-shell-footer" id="preview-shell-footer">
+            <div class="frigate-view">${previewFooterIcon}</div>
+          </div>`;
 }
 
 // src/features/preview/page.ctrl.js

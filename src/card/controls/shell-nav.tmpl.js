@@ -93,16 +93,6 @@ export function buildCamSwitcherMarkup({
   return `${backButton}${cameraButtons}`;
 }
 
-export function buildPreviewShellHeaderMarkup({ title, subtitle, pageNav }) {
-  return `<div class="preview-shell-header" id="preview-shell-header">
-            <div class="preview-shell-title">
-              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
-              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
-            </div>
-            ${pageNav}
-          </div>`;
-}
-
 export function buildInfoRowMarkup({ title, subtitle, version }) {
   return `<div class="info-row">
               <div>
@@ -297,15 +287,4 @@ export function buildMainLayoutShellMarkup({
           ${rightColumnShell}
 
         </div>`;
-}
-
-export function buildPreviewLayoutShellMarkup({
-  previewShellHeader,
-  previewFooterIcon,
-}) {
-  return `${previewShellHeader}
-          <div class="preview-shell" id="preview-shell"></div>
-          <div class="preview-shell-footer" id="preview-shell-footer">
-            <div class="frigate-view">${previewFooterIcon}</div>
-          </div>`;
 }

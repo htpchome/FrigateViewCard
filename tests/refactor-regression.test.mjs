@@ -62,6 +62,10 @@ const previewPageControllerSource = fs.readFileSync(
   new URL("../src/features/preview/page.ctrl.js", import.meta.url),
   "utf8",
 );
+const previewPageTemplateSource = fs.readFileSync(
+  new URL("../src/features/preview/page.tmpl.js", import.meta.url),
+  "utf8",
+);
 const editorPreviewContextControllerSource = fs.readFileSync(
   new URL("../src/features/editor-preview/context.ctrl.js", import.meta.url),
   "utf8",
@@ -556,6 +560,24 @@ test("preview helpers delegate through the preview page controller", () => {
   assert.equal(
     /mountPreviewMedia\(\) \{[\s\S]*?_host\._gridMediaController\.mountCameraCellMedia\(/.test(
       previewPageControllerSource,
+    ),
+    true,
+  );
+  assert.equal(
+    previewPageControllerSource.includes(
+      "../../card/controls/shell-nav.tmpl.js",
+    ),
+    false,
+  );
+  assert.equal(
+    previewPageTemplateSource.includes(
+      "export function buildPreviewShellHeaderMarkup",
+    ),
+    true,
+  );
+  assert.equal(
+    previewPageTemplateSource.includes(
+      "export function buildPreviewLayoutShellMarkup",
     ),
     true,
   );

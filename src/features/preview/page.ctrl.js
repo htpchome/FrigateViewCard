@@ -5,16 +5,14 @@ import {
 import {
   buildPreviewCameraButtonMarkup,
   buildPreviewCellMarkup,
+  buildPreviewLayoutShellMarkup,
   buildPreviewMetaMarkup,
+  buildPreviewShellHeaderMarkup,
   buildPreviewShellMarkup,
   buildPreviewStatusMarkup,
 } from "./page.tmpl.js";
 import { ICONS } from "../../icons.js";
 import { cap, camDisplayName, DEVICE_PROFILE } from "../../helpers.js";
-import {
-  buildPreviewLayoutShellMarkup,
-  buildPreviewShellHeaderMarkup,
-} from "../../card/controls/shell-nav.tmpl.js";
 import { buildHaCameraStreamState } from "../../integrations/home-assistant/playback.js";
 
 export class PreviewPageController {
