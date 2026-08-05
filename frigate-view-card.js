@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1250";
+const VERSION = "1.0.1251";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -493,7 +493,7 @@ const STYLES = `
   .ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--c-text2);background:linear-gradient(145deg,#1a2540,#0d1520);}
   .ph svg{width:40px;height:40px;opacity:.35;}
   .live-grid{width:100%;height:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:6px;padding:6px;box-sizing:border-box;}
-  .live-grid-cell{position:relative;overflow:hidden;border-radius:calc(var(--c-border-radius) / 2);background:var(--c-bg-deep);border:1px solid var(--c-border2);}
+  .live-grid-cell{position:relative;overflow:hidden;border-radius:calc(var(--fvc-border-radius) / 2);background:var(--c-bg-deep);border:1px solid var(--c-border2);}
   .live-grid-cell.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
   .live-grid-cell.grid-detection{border-color:var(--warning-color, var(--c-accent));box-shadow:inset 0 0 0 2px var(--warning-color, var(--c-accent));}
   .live-grid-cell.empty{display:flex;align-items:center;justify-content:center;cursor:default;}
