@@ -11,6 +11,10 @@ import {
   resolveRecordingsBrowseNavProbePlan,
   resolveRecordingsBrowseNavState,
 } from "./utils/browse-nav.js";
+import {
+  resolveOffsetRecordingsDayBounds,
+  resolveRecordingsDayBounds,
+} from "./utils/day.js";
 import { resolvePreparedRecordingsDayNavigationState } from "./utils/swipe.js";
 
 export class RecordingsBrowseNavController {
@@ -20,6 +24,46 @@ export class RecordingsBrowseNavController {
 
   _swipeController() {
     return this._host._recordingsSwipeController || null;
+  }
+
+  _recordingsDayBounds(tsSec = null) {
+    if (this._host._recordingsDayBounds) {
+      return this._host._recordingsDayBounds(tsSec);
+    }
+    return resolveRecordingsDayBounds({
+      tsSec,
+      fallbackSec: this._host._winEnd,
+      getTzParts: (target) => this._host._tzParts(target),
+      toEpochSeconds: (year, month, day, hour, minute, second) =>
+        this._host._tzDateTimeToEpochSeconds(
+          year,
+          month,
+          day,
+          hour,
+          minute,
+          second,
+        ),
+    });
+  }
+
+  _recordingsOffsetDayBounds(offsetDays = 0) {
+    if (this._host._recordingsOffsetDayBounds) {
+      return this._host._recordingsOffsetDayBounds(offsetDays);
+    }
+    return resolveOffsetRecordingsDayBounds({
+      offsetDays,
+      fallbackSec: this._host._winEnd,
+      getTzParts: (target) => this._host._tzParts(target),
+      toEpochSeconds: (year, month, day, hour, minute, second) =>
+        this._host._tzDateTimeToEpochSeconds(
+          year,
+          month,
+          day,
+          hour,
+          minute,
+          second,
+        ),
+    });
   }
 
   async hasRecordingsInBounds(bounds, clientId, cam) {
@@ -64,10 +108,8 @@ export class RecordingsBrowseNavController {
   }
 
   async prepareDayTransition(direction) {
-    const bounds = this._host._recordingsOffsetDayBounds(direction);
-    const today = this._host._recordingsDayBounds(
-      Math.floor(Date.now() / 1000),
-    );
+    const bounds = this._recordingsOffsetDayBounds(direction);
+    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
     const { clientId, cam } = this._host._cc();
     const prepared = resolvePreparedRecordingsDayTransition({
       direction,
@@ -240,17 +282,15 @@ export class RecordingsBrowseNavController {
     if (!prev || !next) return;
 
     const { clientId, cam } = this._host._cc();
-    const current = this._host._recordingsDayBounds();
-    const today = this._host._recordingsDayBounds(
-      Math.floor(Date.now() / 1000),
-    );
+    const current = this._recordingsDayBounds();
+    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
     const probePlan = resolveRecordingsBrowseNavProbePlan({
       clientId,
       camera: cam,
       currentBounds: current,
       todayBounds: today,
-      prevBounds: this._host._recordingsOffsetDayBounds(-1),
-      nextBounds: this._host._recordingsOffsetDayBounds(1),
+      prevBounds: this._recordingsOffsetDayBounds(-1),
+      nextBounds: this._recordingsOffsetDayBounds(1),
     });
     if (!probePlan.hasContext) {
       prev.disabled = probePlan.initialState.prevDisabled;

@@ -9,6 +9,7 @@ import {
   WINDOW_BACKGROUND_PAGE_LIMIT,
 } from "../../constants.js";
 import { fetchWindowedItems } from "../../data/window-fetch.js";
+import { resolveRecordingsDayBounds } from "../recordings/utils/day.js";
 
 export class BrowseWindowLoaderController {
   constructor(host, deps = {}) {
@@ -304,7 +305,22 @@ export class BrowseWindowLoaderController {
   }
 
   async loadWindowRecordings(clientId, cam, before) {
-    const bounds = this._host._recordingsDayBounds(before);
+    const bounds = this._host._recordingsDayBounds
+      ? this._host._recordingsDayBounds(before)
+      : resolveRecordingsDayBounds({
+          tsSec: before,
+          fallbackSec: this._host._winEnd,
+          getTzParts: (target) => this._host._tzParts(target),
+          toEpochSeconds: (year, month, day, hour, minute, second) =>
+            this._host._tzDateTimeToEpochSeconds(
+              year,
+              month,
+              day,
+              hour,
+              minute,
+              second,
+            ),
+        });
     const cacheKey = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
     try {
       const recordings = await this._host._ws({

@@ -210,7 +210,6 @@ import {
   resolveFailedRecordingsSwipeState,
   resolveClosestRecordingAlertStart,
   resolveRecordingSeekExecutionPlan,
-  resolveOffsetRecordingsDayBounds,
   resolvePreparedRecordingsIncomingState,
   resolvePreparedRecordingsSwipeState,
   resolveRecordingScrubTarget,
@@ -219,7 +218,6 @@ import {
   resolveRecordingsBrowseNavContextState,
   resolveRecordingsBrowseNavProbePlan,
   resolveRecordingsBrowseNavState,
-  resolveRecordingsDayBounds,
   splitRecordingsHourly,
 } from "../features/recordings/index.js";
 import {
@@ -4937,10 +4935,6 @@ export class FrigateViewCard extends HTMLElement {
     return this._activeStandardPageController().listHeadingLabel(ts);
   }
 
-  _recordingsHeadingLabel(ts = null) {
-    return this._activeStandardPageController().recordingsHeadingLabel(ts);
-  }
-
   _showStickyDayHeaders() {
     return this._activeStandardPageController().showStickyDayHeaders();
   }
@@ -4975,26 +4969,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _renderReviewsContent(items) {
     return this._activeStandardPageController().renderReviewsContent(items);
-  }
-
-  _recordingsDayBounds(tsSec = null) {
-    return resolveRecordingsDayBounds({
-      tsSec,
-      fallbackSec: this._winEnd,
-      getTzParts: (target) => this._tzParts(target),
-      toEpochSeconds: (year, month, day, hour, minute, second) =>
-        this._tzDateTimeToEpochSeconds(year, month, day, hour, minute, second),
-    });
-  }
-
-  _recordingsOffsetDayBounds(offsetDays = 0) {
-    return resolveOffsetRecordingsDayBounds({
-      offsetDays,
-      fallbackSec: this._winEnd,
-      getTzParts: (target) => this._tzParts(target),
-      toEpochSeconds: (year, month, day, hour, minute, second) =>
-        this._tzDateTimeToEpochSeconds(year, month, day, hour, minute, second),
-    });
   }
 
   async _hasRecordingsInBounds(bounds, clientId, cam) {

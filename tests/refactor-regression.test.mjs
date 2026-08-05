@@ -1199,6 +1199,10 @@ test("browse window loading delegates through the browse window loader controlle
     browseWindowLoaderControllerSource.includes("async loadOlder()"),
     true,
   );
+  assert.equal(
+    browseWindowLoaderControllerSource.includes("resolveRecordingsDayBounds"),
+    true,
+  );
 });
 
 test("recordings browse nav delegates through the recordings browse nav controller", () => {
@@ -1252,6 +1256,14 @@ test("recordings browse nav delegates through the recordings browse nav controll
     true,
   );
   assert.equal(
+    cardSource.includes("_recordingsDayBounds(tsSec = null)"),
+    false,
+  );
+  assert.equal(
+    cardSource.includes("_recordingsOffsetDayBounds(offsetDays = 0)"),
+    false,
+  );
+  assert.equal(
     recordingsBrowseNavControllerSource.includes(
       "export class RecordingsBrowseNavController",
     ),
@@ -1277,6 +1289,18 @@ test("recordings browse nav delegates through the recordings browse nav controll
   );
   assert.equal(
     recordingsBrowseNavControllerSource.includes("_swipeController()"),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes(
+      "_recordingsDayBounds(tsSec = null)",
+    ),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes(
+      "_recordingsOffsetDayBounds(offsetDays = 0)",
+    ),
     true,
   );
   assert.equal(
