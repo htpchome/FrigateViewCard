@@ -570,7 +570,9 @@ export class FrigateViewCard extends HTMLElement {
       },
     );
     this._browseCollectionController = new BrowseCollectionController(this);
-    this._browseFilterController = new BrowseFilterController(this);
+    this._browseFilterController = new BrowseFilterController(this, {
+      buildFilterPanelMarkup,
+    });
     this._browseTabDataController = new BrowseTabDataController(this);
     this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
     this._cardStyleController = new CardStyleContextController(this);
@@ -3695,28 +3697,7 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handleSidebarFilterClick(target) {
-    const fopt = target.closest("[data-flabel]");
-    if (fopt) {
-      this._filterLabel = fopt.dataset.flabel;
-      this._renderFilter();
-      this._renderList();
-      return true;
-    }
-    const zopt = target.closest("[data-fzone]");
-    if (zopt) {
-      this._filterZone = zopt.dataset.fzone;
-      this._renderFilter();
-      this._renderList();
-      return true;
-    }
-    const favo = target.closest("[data-favonly]");
-    if (favo) {
-      this._favOnly = favo.dataset.favonly === "1";
-      this._renderFilter();
-      this._renderList();
-      return true;
-    }
-    return false;
+    return this._browseFilterController.handleSidebarFilterClick(target);
   }
   _handleSidebarCalendarClick(target) {
     return this._browseCalendarPanelController.handleSidebarCalendarClick(
@@ -5032,15 +5013,7 @@ export class FrigateViewCard extends HTMLElement {
     }, ms);
   }
   _toggleFilter() {
-    if (this._tab === "recordings") return;
-    const p = this._$("#filter-panel");
-    if (!p) return;
-    const open = p.style.display === "none";
-    const cal = this._$("#cal-panel");
-    if (cal) cal.style.display = "none";
-    p.style.display = open ? "block" : "none";
-    this._syncToolbarButtons();
-    if (open) this._renderFilter();
+    this._browseFilterController.toggleFilter();
   }
   _toggleCal() {
     const p = this._$("#cal-panel");
@@ -5092,16 +5065,7 @@ export class FrigateViewCard extends HTMLElement {
     this._browseCalendarPanelController.renderCal();
   }
   _renderFilter() {
-    const p = this.shadowRoot.querySelector("#filter-panel");
-    if (!p) return;
-    this._normalizeFilterSelections();
-    p.innerHTML = buildFilterPanelMarkup({
-      labels: ["all", ...this._labels()],
-      zones: ["all", ...this._zones()],
-      filterLabel: this._filterLabel,
-      filterZone: this._filterZone,
-      favOnly: this._favOnly,
-    });
+    this._browseFilterController.renderFilter();
   }
   async _loadOlder() {
     const before = this._events.length

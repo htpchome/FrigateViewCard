@@ -543,3 +543,88 @@ test("BrowseFilterController delegates filter state decisions from host state", 
   assert.equal(host._filterLabel, "all");
   assert.equal(host._filterZone, "all");
 });
+
+test("BrowseFilterController handles filter panel interactions and rendering", () => {
+  const filterPanel = { style: { display: "none" }, innerHTML: "" };
+  const calendarPanel = { style: { display: "block" } };
+  const calls = [];
+  const host = {
+    _tab: "clips",
+    _reviews: [],
+    _kept: [],
+    _filterLabel: "missing",
+    _filterZone: "gone",
+    _favOnly: false,
+    _activeCam: { alerts_content: "alerts_only" },
+    _allGridReviews: () => [],
+    _allGridKeptEvents: () => [],
+    _allDisplayEvents: () => [
+      { id: "event-a", label: "person", zones: ["front"], has_clip: true },
+      { id: "event-b", label: "car", zones: ["driveway"], has_clip: true },
+    ],
+    _isGridMixedListMode: () => false,
+    shadowRoot: {
+      querySelector: (selector) =>
+        selector === "#filter-panel" ? filterPanel : null,
+    },
+    _$: (selector) => {
+      if (selector === "#filter-panel") return filterPanel;
+      if (selector === "#cal-panel") return calendarPanel;
+      return null;
+    },
+    _syncToolbarButtons: () => calls.push("syncToolbar"),
+    _renderList: () => calls.push("renderList"),
+  };
+  const controller = new BrowseFilterController(host, {
+    buildFilterPanelMarkup: (state) => JSON.stringify(state),
+  });
+
+  controller.toggleFilter();
+
+  assert.equal(filterPanel.style.display, "block");
+  assert.equal(calendarPanel.style.display, "none");
+  assert.deepEqual(calls, ["syncToolbar"]);
+  assert.deepEqual(JSON.parse(filterPanel.innerHTML), {
+    labels: ["all", "person", "car"],
+    zones: ["all", "front", "driveway"],
+    filterLabel: "all",
+    filterZone: "all",
+    favOnly: false,
+  });
+
+  calls.length = 0;
+  assert.equal(
+    controller.handleSidebarFilterClick({
+      closest: (selector) =>
+        selector === "[data-flabel]" ? { dataset: { flabel: "car" } } : null,
+    }),
+    true,
+  );
+  assert.equal(host._filterLabel, "car");
+  assert.deepEqual(calls, ["renderList"]);
+  assert.equal(JSON.parse(filterPanel.innerHTML).filterLabel, "car");
+
+  calls.length = 0;
+  assert.equal(
+    controller.handleSidebarFilterClick({
+      closest: (selector) =>
+        selector === "[data-fzone]" ? { dataset: { fzone: "front" } } : null,
+    }),
+    true,
+  );
+  assert.equal(host._filterZone, "front");
+  assert.deepEqual(calls, ["renderList"]);
+  assert.equal(JSON.parse(filterPanel.innerHTML).filterZone, "front");
+
+  calls.length = 0;
+  assert.equal(
+    controller.handleSidebarFilterClick({
+      closest: (selector) =>
+        selector === "[data-favonly]" ? { dataset: { favonly: "1" } } : null,
+    }),
+    true,
+  );
+  assert.equal(host._favOnly, true);
+  assert.deepEqual(calls, ["renderList"]);
+  assert.equal(JSON.parse(filterPanel.innerHTML).favOnly, true);
+});

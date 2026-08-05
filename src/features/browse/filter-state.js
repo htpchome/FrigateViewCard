@@ -204,8 +204,59 @@ export function selectReviewsForFilterTab({
 }
 
 export class BrowseFilterController {
-  constructor(host) {
+  constructor(host, { buildFilterPanelMarkup } = {}) {
     this._host = host;
+    this._buildFilterPanelMarkup = buildFilterPanelMarkup;
+  }
+
+  handleSidebarFilterClick(target) {
+    const filterLabelOption = target.closest("[data-flabel]");
+    if (filterLabelOption) {
+      this._host._filterLabel = filterLabelOption.dataset.flabel;
+      this.renderFilter();
+      this._host._renderList();
+      return true;
+    }
+    const filterZoneOption = target.closest("[data-fzone]");
+    if (filterZoneOption) {
+      this._host._filterZone = filterZoneOption.dataset.fzone;
+      this.renderFilter();
+      this._host._renderList();
+      return true;
+    }
+    const favoriteOnlyOption = target.closest("[data-favonly]");
+    if (favoriteOnlyOption) {
+      this._host._favOnly = favoriteOnlyOption.dataset.favonly === "1";
+      this.renderFilter();
+      this._host._renderList();
+      return true;
+    }
+    return false;
+  }
+
+  toggleFilter() {
+    if (this._host._tab === "recordings") return;
+    const filterPanel = this._host._$("#filter-panel");
+    if (!filterPanel) return;
+    const open = filterPanel.style.display === "none";
+    const calendarPanel = this._host._$("#cal-panel");
+    if (calendarPanel) calendarPanel.style.display = "none";
+    filterPanel.style.display = open ? "block" : "none";
+    this._host._syncToolbarButtons();
+    if (open) this.renderFilter();
+  }
+
+  renderFilter() {
+    const filterPanel = this._host.shadowRoot.querySelector("#filter-panel");
+    if (!filterPanel || !this._buildFilterPanelMarkup) return;
+    this.normalizeFilterSelections();
+    filterPanel.innerHTML = this._buildFilterPanelMarkup({
+      labels: ["all", ...this.labels()],
+      zones: ["all", ...this.zones()],
+      filterLabel: this._host._filterLabel,
+      filterZone: this._host._filterZone,
+      favOnly: this._host._favOnly,
+    });
   }
 
   reviewsForTabBase() {

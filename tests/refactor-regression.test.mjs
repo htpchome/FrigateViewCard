@@ -795,7 +795,7 @@ test("browse calendar panel helpers delegate through the browse calendar panel c
     true,
   );
   assert.equal(
-    /this\._browseCalendarPanelController\s*=\s*new BrowseCalendarPanelController\(this, \{/.test(
+    /this\._browseCalendarPanelController\s*=\s*new BrowseCalendarPanelController\(\s*this,\s*\{/.test(
       cardSource,
     ),
     true,
@@ -951,12 +951,30 @@ test("browse filter helpers delegate through the browse filter controller", () =
     true,
   );
   assert.equal(
-    /this\._browseFilterController\s*=\s*new BrowseFilterController\(this\);/.test(
+    /this\._browseFilterController\s*=\s*new BrowseFilterController\(\s*this,\s*\{/.test(
       cardSource,
     ),
     true,
   );
   assert.equal(cardSource.includes("../shared/filter-state.js"), false);
+  assert.equal(
+    /_handleSidebarFilterClick\(target\) \{\s*return this\._browseFilterController\.handleSidebarFilterClick\(target\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_toggleFilter\(\) \{\s*this\._browseFilterController\.toggleFilter\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_renderFilter\(\) \{\s*this\._browseFilterController\.renderFilter\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
   assert.equal(
     /_reviewSourceEvent\(review\) \{\s*return this\._browseFilterController\.reviewSourceEvent\(review\);\s*\}/s.test(
       cardSource,
@@ -1005,6 +1023,12 @@ test("browse filter helpers delegate through the browse filter controller", () =
     ),
     true,
   );
+  assert.equal(
+    browseFilterControllerSource.includes("handleSidebarFilterClick(target)"),
+    true,
+  );
+  assert.equal(browseFilterControllerSource.includes("toggleFilter()"), true);
+  assert.equal(browseFilterControllerSource.includes("renderFilter()"), true);
   assert.equal(
     browseFilterControllerSource.includes(
       "export function selectFilteredEvents",

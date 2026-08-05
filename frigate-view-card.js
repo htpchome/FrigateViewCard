@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1207";
+const VERSION = "1.0.1208";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -8070,8 +8070,56 @@ function selectReviewsForFilterTab({
   return showAllReviews ? safeReviews : safeReviews.filter((review) => review?.severity === "alert");
 }
 const BrowseFilterController = class {
-  constructor(host) {
+  constructor(host, { buildFilterPanelMarkup: buildFilterPanelMarkup2 } = {}) {
     this._host = host;
+    this._buildFilterPanelMarkup = buildFilterPanelMarkup2;
+  }
+  handleSidebarFilterClick(target) {
+    const filterLabelOption = target.closest("[data-flabel]");
+    if (filterLabelOption) {
+      this._host._filterLabel = filterLabelOption.dataset.flabel;
+      this.renderFilter();
+      this._host._renderList();
+      return true;
+    }
+    const filterZoneOption = target.closest("[data-fzone]");
+    if (filterZoneOption) {
+      this._host._filterZone = filterZoneOption.dataset.fzone;
+      this.renderFilter();
+      this._host._renderList();
+      return true;
+    }
+    const favoriteOnlyOption = target.closest("[data-favonly]");
+    if (favoriteOnlyOption) {
+      this._host._favOnly = favoriteOnlyOption.dataset.favonly === "1";
+      this.renderFilter();
+      this._host._renderList();
+      return true;
+    }
+    return false;
+  }
+  toggleFilter() {
+    if (this._host._tab === "recordings") return;
+    const filterPanel = this._host._$("#filter-panel");
+    if (!filterPanel) return;
+    const open = filterPanel.style.display === "none";
+    const calendarPanel = this._host._$("#cal-panel");
+    if (calendarPanel) calendarPanel.style.display = "none";
+    filterPanel.style.display = open ? "block" : "none";
+    this._host._syncToolbarButtons();
+    if (open) this.renderFilter();
+  }
+  renderFilter() {
+    const filterPanel = this._host.shadowRoot.querySelector("#filter-panel");
+    if (!filterPanel || !this._buildFilterPanelMarkup) return;
+    this.normalizeFilterSelections();
+    filterPanel.innerHTML = this._buildFilterPanelMarkup({
+      labels: ["all", ...this.labels()],
+      zones: ["all", ...this.zones()],
+      filterLabel: this._host._filterLabel,
+      filterZone: this._host._filterZone,
+      favOnly: this._host._favOnly
+    });
   }
   reviewsForTabBase() {
     return selectReviewsForFilterTab({
@@ -13323,7 +13371,9 @@ const FrigateViewCard = class extends HTMLElement {
       }
     );
     this._browseCollectionController = new BrowseCollectionController(this);
-    this._browseFilterController = new BrowseFilterController(this);
+    this._browseFilterController = new BrowseFilterController(this, {
+      buildFilterPanelMarkup
+    });
     this._browseTabDataController = new BrowseTabDataController(this);
     this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
     this._cardStyleController = new CardStyleContextController(this);
@@ -16013,28 +16063,7 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handleSidebarFilterClick(target) {
-    const fopt = target.closest("[data-flabel]");
-    if (fopt) {
-      this._filterLabel = fopt.dataset.flabel;
-      this._renderFilter();
-      this._renderList();
-      return true;
-    }
-    const zopt = target.closest("[data-fzone]");
-    if (zopt) {
-      this._filterZone = zopt.dataset.fzone;
-      this._renderFilter();
-      this._renderList();
-      return true;
-    }
-    const favo = target.closest("[data-favonly]");
-    if (favo) {
-      this._favOnly = favo.dataset.favonly === "1";
-      this._renderFilter();
-      this._renderList();
-      return true;
-    }
-    return false;
+    return this._browseFilterController.handleSidebarFilterClick(target);
   }
   _handleSidebarCalendarClick(target) {
     return this._browseCalendarPanelController.handleSidebarCalendarClick(
@@ -17185,15 +17214,7 @@ const FrigateViewCard = class extends HTMLElement {
     }, ms);
   }
   _toggleFilter() {
-    if (this._tab === "recordings") return;
-    const p = this._$("#filter-panel");
-    if (!p) return;
-    const open = p.style.display === "none";
-    const cal = this._$("#cal-panel");
-    if (cal) cal.style.display = "none";
-    p.style.display = open ? "block" : "none";
-    this._syncToolbarButtons();
-    if (open) this._renderFilter();
+    this._browseFilterController.toggleFilter();
   }
   _toggleCal() {
     const p = this._$("#cal-panel");
@@ -17245,16 +17266,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._browseCalendarPanelController.renderCal();
   }
   _renderFilter() {
-    const p = this.shadowRoot.querySelector("#filter-panel");
-    if (!p) return;
-    this._normalizeFilterSelections();
-    p.innerHTML = buildFilterPanelMarkup({
-      labels: ["all", ...this._labels()],
-      zones: ["all", ...this._zones()],
-      filterLabel: this._filterLabel,
-      filterZone: this._filterZone,
-      favOnly: this._favOnly
-    });
+    this._browseFilterController.renderFilter();
   }
   async _loadOlder() {
     const before = this._events.length ? Math.floor(Math.min(...this._events.map((e) => e.start_time))) : this._winStart;
