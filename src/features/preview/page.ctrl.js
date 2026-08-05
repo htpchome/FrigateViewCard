@@ -15,6 +15,7 @@ import {
   buildPreviewLayoutShellMarkup,
   buildPreviewShellHeaderMarkup,
 } from "../../card/controls/shell-nav.tmpl.js";
+import { buildHaCameraStreamState } from "../../integrations/home-assistant/playback.js";
 
 export class PreviewPageController {
   constructor(host, constants) {
@@ -298,7 +299,12 @@ export class PreviewPageController {
       const entity = host.dataset.previewMediaEntity || "";
       const useLive = host.dataset.previewUseLive === "1";
       const stateObj = entity
-        ? this._host._hlsStateObj(entity, liveStreamHint) ||
+        ? buildHaCameraStreamState(
+            this._host._hass,
+            entity,
+            liveStreamHint,
+            this._host._preferredStreamType(),
+          ) ||
           this._host._hass?.states?.[entity] ||
           null
         : null;

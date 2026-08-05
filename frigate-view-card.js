@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1187";
+const VERSION = "1.0.1188";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9668,7 +9668,12 @@ const PreviewPageController = class {
     hosts.forEach((host) => {
       const entity = host.dataset.previewMediaEntity || "";
       const useLive = host.dataset.previewUseLive === "1";
-      const stateObj = entity ? this._host._hlsStateObj(entity, liveStreamHint) || this._host._hass?.states?.[entity] || null : null;
+      const stateObj = entity ? buildHaCameraStreamState(
+        this._host._hass,
+        entity,
+        liveStreamHint,
+        this._host._preferredStreamType()
+      ) || this._host._hass?.states?.[entity] || null : null;
       host.innerHTML = "";
       if (!entity) {
         host.innerHTML = `<div class="ph">${ICONS.live}<span>Unavailable</span></div>`;

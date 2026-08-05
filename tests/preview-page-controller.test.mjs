@@ -172,7 +172,7 @@ test("mountPreviewMedia delegates preview cells through grid media ownership", (
       "camera.front_door": { state: "recording", attributes: {} },
     },
   };
-  host._hlsStateObj = () => null;
+  host._preferredStreamType = () => "webrtc";
   host._gridMediaController = {
     mountCameraCellMedia: (cell, options) => {
       calls.push([cell, options]);
@@ -190,5 +190,6 @@ test("mountPreviewMedia delegates preview cells through grid media ownership", (
   assert.equal(calls[0][0], hosts[0]);
   assert.equal(calls[0][1].entity, "camera.front_door");
   assert.equal(calls[0][1].fallbackOnLiveError, true);
+  assert.equal(calls[0][1].stateObj?.attributes?.frontend_stream_type, "mse");
   assert.equal(host._previewMediaState?.destroyed, false);
 });
