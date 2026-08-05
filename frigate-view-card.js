@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1193";
+const VERSION = "1.0.1194";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -18505,7 +18505,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
         ${this._renderSettingsPanel({ id: "landing", title: "Landing Page", icon: "mdi:home-import-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
     this.innerHTML = `<style>
-            .ed-wrap{
+          :host{
                 --editor-primary-bg: var(--primary-background-color);
                 --editor-secondary-bg: var(--secondary-background-color);
                 --editor-card-bg: var(--card-background-color);
@@ -18528,6 +18528,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
               --c-primary: var(--editor-primary);
               --c-accent: var(--accent-color, var(--editor-primary));
               --c-alert: var(--error-color);
+            }
+            .ed-wrap{
                 display:flex;
                 flex-direction:column;
                 gap:16px;

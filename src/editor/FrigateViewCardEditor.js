@@ -1193,7 +1193,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       </div>`;
 
     this.innerHTML = `<style>
-            .ed-wrap{
+          :host{
                 --editor-primary-bg: var(--primary-background-color);
                 --editor-secondary-bg: var(--secondary-background-color);
                 --editor-card-bg: var(--card-background-color);
@@ -1216,6 +1216,8 @@ export class FrigateViewCardEditor extends HTMLElement {
               --c-primary: var(--editor-primary);
               --c-accent: var(--accent-color, var(--editor-primary));
               --c-alert: var(--error-color);
+            }
+            .ed-wrap{
                 display:flex;
                 flex-direction:column;
                 gap:16px;

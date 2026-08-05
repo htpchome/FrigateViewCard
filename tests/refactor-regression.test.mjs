@@ -499,16 +499,26 @@ test("preview helpers delegate through the preview page controller", () => {
 
 test("editor stylesheet keeps core config surface variables intact", () => {
   assert.equal(
-    editorSource.includes("--editor-card-bg: var(--card-background-color);"),
+    /:host\s*\{[\s\S]*?--editor-card-bg: var\(--card-background-color\);/.test(
+      editorSource,
+    ),
     true,
   );
   assert.equal(
-    editorSource.includes("--editor-border: var(--divider-color);"),
+    /:host\s*\{[\s\S]*?--editor-border: var\(--divider-color\);/.test(
+      editorSource,
+    ),
     true,
   );
   assert.equal(
-    editorSource.includes(
-      "--editor-icon: var(--icon-color, var(--secondary-text-color));",
+    /:host\s*\{[\s\S]*?--editor-icon: var\(--icon-color, var\(--secondary-text-color\)\);/.test(
+      editorSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /:host\s*\{[\s\S]*?--c-bg-panel: var\(--editor-card-bg\);/.test(
+      editorSource,
     ),
     true,
   );
