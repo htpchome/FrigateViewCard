@@ -504,9 +504,8 @@ test("mixed swipe and button recordings transitions both clear swipe-active stat
   };
 
   try {
-    const swipeResult = await recordingsBrowseNavController.completeSwipeGesture(
-      gesture,
-    );
+    const swipeResult =
+      await recordingsBrowseNavController.completeSwipeGesture(gesture);
     const buttonResult = await recordingsBrowseNavController.stepDay(1);
 
     assert.equal(swipeResult, true);
