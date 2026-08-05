@@ -532,53 +532,21 @@ test("preview helpers delegate through the preview page controller", () => {
     ),
     true,
   );
-  assert.equal(
-    source.includes(
-      "_previewLiveCamerasEnabled() {\n    return this._previewPageController.previewLiveCamerasEnabled();\n  }",
-    ),
-    true,
-  );
-  assert.equal(
-    source.includes(
-      "_previewShowTitleBarsEnabled() {\n    return this._previewPageController.previewShowTitleBarsEnabled();\n  }",
-    ),
-    true,
-  );
-  assert.equal(
-    source.includes(
-      "_previewCellSeverity(entity) {\n    return this._previewPageController.previewCellSeverity(entity);\n  }",
-    ),
-    true,
-  );
+  assert.equal(cardSource.includes("_previewLiveCamerasEnabled() {"), false);
+  assert.equal(cardSource.includes("_previewShowTitleBarsEnabled() {"), false);
+  assert.equal(cardSource.includes("_previewCellSeverity(entity) {"), false);
   assert.equal(
     /_applyPreviewShellVisibility\(\) \{\s*if \(this\._isPreviewPageEnabled\(\) && this\._isPreviewPageActive\(\)\) \{\s*this\._ensurePreviewLayoutShell\(\);\s*\} else \{\s*this\._removePreviewLayoutShell\(\);\s*\}\s*this\._previewPageController\.applyPreviewShellVisibility\(\);\s*\}/s.test(
       source,
     ),
     true,
   );
+  assert.equal(cardSource.includes("_previewShouldUseLive(entity) {"), false);
+  assert.equal(cardSource.includes("_previewEventsCount(entity) {"), false);
+  assert.equal(cardSource.includes("_previewLiveStreamHint() {"), false);
   assert.equal(
-    source.includes(
-      "_previewShouldUseLive(entity) {\n    return this._previewPageController.previewShouldUseLive(entity);\n  }",
-    ),
-    true,
-  );
-  assert.equal(
-    source.includes(
-      "_previewEventsCount(entity) {\n    return this._previewPageController.previewEventsCount(entity);\n  }",
-    ),
-    true,
-  );
-  assert.equal(
-    source.includes(
-      "_previewLiveStreamHint() {\n    return this._previewPageController.previewLiveStreamHint();\n  }",
-    ),
-    true,
-  );
-  assert.equal(
-    /_previewStreamSourceLabel\(entity, useLive\) \{\s*return this\._previewPageController\.previewStreamSourceLabel\(\s*entity,\s*useLive\s*\);\s*\}/s.test(
-      source,
-    ),
-    true,
+    cardSource.includes("_previewStreamSourceLabel(entity, useLive) {"),
+    false,
   );
   assert.equal(cardSource.includes("_pageNavMarkup() {"), false);
   assert.equal(

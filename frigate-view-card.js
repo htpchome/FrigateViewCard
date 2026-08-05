@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1232";
+const VERSION = "1.0.1233";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -14946,12 +14946,6 @@ const FrigateViewCard = class extends HTMLElement {
   _activatePreviewPageRoute(context = {}) {
     this._previewPageController.activatePreviewPageRoute(context);
   }
-  _previewLiveCamerasEnabled() {
-    return this._previewPageController.previewLiveCamerasEnabled();
-  }
-  _previewShowTitleBarsEnabled() {
-    return this._previewPageController.previewShowTitleBarsEnabled();
-  }
   _applyPreviewShellVisibility() {
     if (this._isPreviewPageEnabled() && this._isPreviewPageActive()) {
       this._ensurePreviewLayoutShell();
@@ -14974,24 +14968,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _isPreviewCameraAlertLive(entity) {
     return this._previewAlertController.isCameraAlertLive(entity);
-  }
-  _previewCellSeverity(entity) {
-    return this._previewPageController.previewCellSeverity(entity);
-  }
-  _previewShouldUseLive(entity) {
-    return this._previewPageController.previewShouldUseLive(entity);
-  }
-  _previewEventsCount(entity) {
-    return this._previewPageController.previewEventsCount(entity);
-  }
-  _previewStreamSourceLabel(entity, useLive) {
-    return this._previewPageController.previewStreamSourceLabel(
-      entity,
-      useLive
-    );
-  }
-  _previewLiveStreamHint() {
-    return this._previewPageController.previewLiveStreamHint();
   }
   _teardownPreviewMedia() {
     this._previewPageController.teardownPreviewMedia();

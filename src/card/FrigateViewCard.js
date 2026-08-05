@@ -1759,14 +1759,6 @@ export class FrigateViewCard extends HTMLElement {
     this._previewPageController.activatePreviewPageRoute(context);
   }
 
-  _previewLiveCamerasEnabled() {
-    return this._previewPageController.previewLiveCamerasEnabled();
-  }
-
-  _previewShowTitleBarsEnabled() {
-    return this._previewPageController.previewShowTitleBarsEnabled();
-  }
-
   _applyPreviewShellVisibility() {
     if (this._isPreviewPageEnabled() && this._isPreviewPageActive()) {
       this._ensurePreviewLayoutShell();
@@ -1794,29 +1786,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _isPreviewCameraAlertLive(entity) {
     return this._previewAlertController.isCameraAlertLive(entity);
-  }
-
-  _previewCellSeverity(entity) {
-    return this._previewPageController.previewCellSeverity(entity);
-  }
-
-  _previewShouldUseLive(entity) {
-    return this._previewPageController.previewShouldUseLive(entity);
-  }
-
-  _previewEventsCount(entity) {
-    return this._previewPageController.previewEventsCount(entity);
-  }
-
-  _previewStreamSourceLabel(entity, useLive) {
-    return this._previewPageController.previewStreamSourceLabel(
-      entity,
-      useLive,
-    );
-  }
-
-  _previewLiveStreamHint() {
-    return this._previewPageController.previewLiveStreamHint();
   }
 
   _teardownPreviewMedia() {
