@@ -15,7 +15,7 @@ import {
   resolvePopupMediaRenderPlan,
   resolvePopupRecordingLoadOutcomePlan,
   resolvePopupRecordingSeekListenerPlan,
-} from "../../card/popup/media.js";
+} from "./media.js";
 import { buildRecordingPlaybackPlan } from "../recordings/index.js";
 
 export class PopupMediaLoaderController {

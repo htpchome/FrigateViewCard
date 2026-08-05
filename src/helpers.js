@@ -31,13 +31,13 @@ import {
   THEME_CUSTOM_ROWS,
   THEME_CUSTOM_KEYS,
 } from "./constants.js";
-import { normalizePageRoute, PAGE_IDS } from "./router.js";
+import { normalizePageRoute, PAGE_IDS } from "./features/navigation/router.js";
 import { createEditorPreviewDraft as mapEditorPreviewDraft } from "./config/preview-mapper.js";
 import {
   compactEditorConfigForYaml as mapCompactEditorConfigForYaml,
   withCardTypeForYaml as mapWithCardTypeForYaml,
 } from "./config/yaml-mapper.js";
-import { normalizeCameraPtzConfig } from "./shared/ptz.js";
+import { normalizeCameraPtzConfig } from "./features/ptz/index.js";
 
 export function detectDeviceProfile() {
   const nav = typeof navigator !== "undefined" ? navigator : {};

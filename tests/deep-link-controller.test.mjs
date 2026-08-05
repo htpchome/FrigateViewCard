@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { DeepLinkController } from "../src/navigation/deep-link.ctrl.js";
+import { DeepLinkController } from "../src/features/navigation/deep-link.ctrl.js";
 
 const createHarness = () => {
   const calls = [];

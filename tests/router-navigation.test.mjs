@@ -6,7 +6,7 @@ import {
   getEnabledPageRoutes,
   PAGE_IDS,
   resolveStartupPageRoute,
-} from "../src/router.js";
+} from "../src/features/navigation/router.js";
 
 test("desktop landing page honors enabled wide-view route", () => {
   const config = {

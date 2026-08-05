@@ -78,13 +78,13 @@ import {
   hasCameraPtz,
   hasPtzPanTiltCapability,
   normalizeCameraPtzConfig,
-} from "../shared/ptz.js";
+} from "../features/ptz/index.js";
 import {
   DEVICE_ROUTE_BUCKETS,
   getEnabledPageRoutes,
   normalizePageRoute,
   PAGE_IDS,
-} from "../router.js";
+} from "../features/navigation/router.js";
 import { normalizeCardConfig } from "../config/card-config.js";
 import { createEditorPreviewDraft } from "../config/preview-mapper.js";
 import {

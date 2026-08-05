@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { PageNavigationController } from "../src/navigation/page-navigation.ctrl.js";
+import { PageNavigationController } from "../src/features/navigation/page-navigation.ctrl.js";
 
 const PAGE_IDS = {
   singleView: "single-view",

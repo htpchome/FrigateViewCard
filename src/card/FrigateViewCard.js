@@ -80,7 +80,7 @@ import {
   normalizePageRoute,
   PAGE_IDS,
   resolveDeviceRouteBucket,
-} from "../router.js";
+} from "../features/navigation/router.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
 import {} from "../integrations/frigate/url.js";
 import {
@@ -179,7 +179,7 @@ import {
   resolvePopupMediaControlsInitPlan,
   resolvePopupMediaControlsListenerPlan,
   resolvePopupMediaSeekTarget,
-} from "./popup/media.js";
+} from "../features/popup/media.js";
 import {
   buildPopupCarouselItemMarkup,
   buildPopupCarouselContentPlan,
@@ -236,7 +236,7 @@ import {
   hasPtzZoomCapability,
   resolvePtzServicePlan,
   resolvePtzEmptyStateMessage,
-} from "../shared/ptz.js";
+} from "../features/ptz/index.js";
 import {
   buildReviewListItemHtml,
   buildReviewListItemModel,
@@ -258,8 +258,8 @@ import {
 } from "../shared/list-render.js";
 import { PreviewAlertController } from "../features/preview/alert.ctrl.js";
 import { PreviewPageController } from "../features/preview/page.ctrl.js";
-import { PageNavigationController } from "../navigation/page-navigation.ctrl.js";
-import { DeepLinkController } from "../navigation/deep-link.ctrl.js";
+import { PageNavigationController } from "../features/navigation/page-navigation.ctrl.js";
+import { DeepLinkController } from "../features/navigation/deep-link.ctrl.js";
 import { GridAlertController } from "../features/grid/alert.ctrl.js";
 import { GridPageController } from "../features/grid/page.ctrl.js";
 import { CardStyleContextController } from "../features/card-style/context.ctrl.js";

@@ -6,7 +6,7 @@ import {
   hasCameraPtz,
   normalizeCameraPtzConfig,
   resolvePtzServicePlan,
-} from "../src/shared/ptz.js";
+} from "../src/features/ptz/index.js";
 
 test("normalizeCameraPtzConfig enables boolean PTZ config with continuous move defaults", () => {
   assert.deepEqual(normalizeCameraPtzConfig(true), {

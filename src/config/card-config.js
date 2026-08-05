@@ -17,7 +17,7 @@ import {
   getEnabledPageRoutes,
   normalizePageRoute,
   PAGE_IDS,
-} from "../router.js";
+} from "../features/navigation/router.js";
 
 const normalizeCameras = (config) => {
   let cameras = [];

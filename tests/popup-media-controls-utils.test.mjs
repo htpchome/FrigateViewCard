@@ -16,7 +16,7 @@ import {
   resolvePopupMediaControlsInitPlan,
   resolvePopupMediaControlsListenerPlan,
   resolvePopupMediaSeekTarget,
-} from "../src/card/popup/media.js";
+} from "../src/features/popup/media.js";
 
 test("buildPopupMediaUrl appends cache key without disturbing existing query strings", () => {
   assert.equal(

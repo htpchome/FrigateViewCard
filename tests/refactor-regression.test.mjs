@@ -114,6 +114,25 @@ const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
 );
+const navigationRouterSource = fs.readFileSync(
+  new URL("../src/features/navigation/router.js", import.meta.url),
+  "utf8",
+);
+const navigationPageControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/navigation/page-navigation.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const deepLinkControllerSource = fs.readFileSync(
+  new URL("../src/features/navigation/deep-link.ctrl.js", import.meta.url),
+  "utf8",
+);
+const ptzFeatureSource = fs.readFileSync(
+  new URL("../src/features/ptz/index.js", import.meta.url),
+  "utf8",
+);
 const editorSource = fs.readFileSync(
   new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
   "utf8",
@@ -1552,6 +1571,14 @@ test("popup media loading delegates through the popup media loader controller", 
     true,
   );
   assert.equal(
+    popupMediaLoaderControllerSource.includes("../../card/popup/media.js"),
+    false,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes('from "./media.js"'),
+    true,
+  );
+  assert.equal(
     popupMediaLoaderControllerSource.includes("showRecording(start, end)"),
     true,
   );
@@ -1559,6 +1586,39 @@ test("popup media loading delegates through the popup media loader controller", 
     /async tryRecordingSource\(\s*video,\s*src,/.test(
       popupMediaLoaderControllerSource,
     ),
+    true,
+  );
+});
+
+test("ptz helpers live under the ptz feature owner", () => {
+  assert.equal(cardSource.includes("../shared/ptz.js"), false);
+  assert.equal(editorSource.includes("../shared/ptz.js"), false);
+  assert.equal(
+    ptzFeatureSource.includes("export const normalizeCameraPtzConfig"),
+    true,
+  );
+  assert.equal(
+    ptzFeatureSource.includes("export const resolvePtzServicePlan"),
+    true,
+  );
+});
+
+test("navigation helpers live under the navigation feature owner", () => {
+  assert.equal(
+    cardSource.includes("../navigation/page-navigation.ctrl.js"),
+    false,
+  );
+  assert.equal(cardSource.includes("../navigation/deep-link.ctrl.js"), false);
+  assert.equal(cardSource.includes("../router.js"), false);
+  assert.equal(navigationRouterSource.includes("export const PAGE_IDS"), true);
+  assert.equal(
+    navigationPageControllerSource.includes(
+      "export class PageNavigationController",
+    ),
+    true,
+  );
+  assert.equal(
+    deepLinkControllerSource.includes("export class DeepLinkController"),
     true,
   );
 });

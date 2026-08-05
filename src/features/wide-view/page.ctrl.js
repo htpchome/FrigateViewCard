@@ -1,4 +1,4 @@
-import { activateStandardPageRouteLifecycle } from "../../navigation/route-lifecycle.js";
+import { activateStandardPageRouteLifecycle } from "../navigation/route-lifecycle.js";
 
 export class WideViewPageController {
   constructor(host, constants) {

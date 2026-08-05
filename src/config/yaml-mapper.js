@@ -7,8 +7,8 @@ import {
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   THEME_CUSTOM_KEYS,
 } from "../constants.js";
-import { normalizePageRoute, PAGE_IDS } from "../router.js";
-import { normalizeCameraPtzConfig } from "../shared/ptz.js";
+import { normalizePageRoute, PAGE_IDS } from "../features/navigation/router.js";
+import { normalizeCameraPtzConfig } from "../features/ptz/index.js";
 
 const normalizePositiveInteger = (value, fallback) => {
   const parsed = parseInt(String(value ?? "").trim(), 10);

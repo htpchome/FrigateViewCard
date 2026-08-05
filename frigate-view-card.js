@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1223";
+const VERSION = "1.0.1226";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1374,7 +1374,7 @@ if (typeof customElements !== "undefined" && !customElements.get("circle-pad-con
   customElements.define("circle-pad-control", CirclePadControl);
 }
 
-// src/router.js
+// src/features/navigation/router.js
 const PAGE_IDS = Object.freeze({
   singleView: "single-view",
   mobileView: "mobile-view",
@@ -1579,7 +1579,7 @@ const applyEditorPreviewDraftToCardConfig = ({
   };
 };
 
-// src/shared/ptz.js
+// src/features/ptz/index.js
 const PTZ_MOVE_MODE_CONTINUOUS = "ContinuousMove";
 const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
 const PTZ_SERVICE_DOMAIN = "frigate";
@@ -7211,7 +7211,7 @@ const PopupDragController = class {
   }
 };
 
-// src/card/popup/media.js
+// src/features/popup/media.js
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const buildPopupMediaUrl = ({ baseUrl = "", cacheKey }) => {
   const normalizedBaseUrl = String(baseUrl || "");
@@ -11101,7 +11101,7 @@ const PreviewPageController = class {
   }
 };
 
-// src/navigation/page-navigation.ctrl.js
+// src/features/navigation/page-navigation.ctrl.js
 const PageNavigationController = class {
   constructor(host, constants) {
     this._host = host;
@@ -11191,7 +11191,7 @@ const PageNavigationController = class {
   }
 };
 
-// src/navigation/deep-link.ctrl.js
+// src/features/navigation/deep-link.ctrl.js
 const DeepLinkController = class {
   constructor(host) {
     this._host = host;
@@ -12409,7 +12409,7 @@ const ViewportContextController = class {
   }
 };
 
-// src/navigation/route-lifecycle.js
+// src/features/navigation/route-lifecycle.js
 function isLeavingPreviewPage(context = {}, previewPageId) {
   return context.previousPageId === previewPageId;
 }

@@ -16,7 +16,7 @@ import {
   standardPageSubtitleText,
   syncStandardPageStatus,
 } from "../browse/standard-renderer.js";
-import { activateStandardPageRouteLifecycle } from "../../navigation/route-lifecycle.js";
+import { activateStandardPageRouteLifecycle } from "../navigation/route-lifecycle.js";
 
 export class SingleViewPageController {
   constructor(host, constants) {

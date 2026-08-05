@@ -3,7 +3,7 @@ import {
   REALTIME_POLL_OPTIONS_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
 } from "../constants.js";
-import { normalizePageRoute } from "../router.js";
+import { normalizePageRoute } from "../features/navigation/router.js";
 
 const normalizePositiveInteger = (value, fallback) => {
   const parsed = parseInt(String(value ?? "").trim(), 10);
