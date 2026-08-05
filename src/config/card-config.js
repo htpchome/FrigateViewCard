@@ -1,14 +1,17 @@
 import {
   ALLOWED_HIDDEN_TABS,
   DEFAULT_CAMERA_CONNECTION_TYPE,
+  GRID_ALERT_HOLD_MS,
   GRID_ROTATION_OPTIONS_SECONDS,
   MAX_CAMERAS,
   REALTIME_POLL_OPTIONS_SECONDS,
+  SLIDESHOW_ALERT_HOLD_MS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   THEME_CUSTOM_KEYS,
 } from "../constants.js";
 import {
   normalizeCameraConfig,
+  normalizeBoundedPositiveInteger,
   normalizeHexColor,
   normalizePositiveInteger,
 } from "../helpers.js";
@@ -95,14 +98,33 @@ export const normalizeCardConfig = (config) => {
   )
     ? Number(src.slideshow_rotation_seconds)
     : 30;
+  src.slideshow_alert_hold_seconds = normalizeBoundedPositiveInteger(
+    src.slideshow_alert_hold_seconds,
+    Math.round(SLIDESHOW_ALERT_HOLD_MS / 1000),
+    5,
+    60,
+  );
 
   src.grid_mode_enabled = src.grid_mode_enabled === true;
   src.grid_start_in_grid_enabled = src.grid_start_in_grid_enabled === true;
   src.grid_live_view_enabled = src.grid_live_view_enabled !== false;
+  src.grid_alert_hold_seconds = normalizeBoundedPositiveInteger(
+    src.grid_alert_hold_seconds,
+    Math.round(GRID_ALERT_HOLD_MS / 1000),
+    5,
+    60,
+  );
   src.mobile_view_page_enabled = src.mobile_view_page_enabled === true;
   src.preview_page_enabled = src.preview_page_enabled === true;
   src.preview_page_live_cameras = src.preview_page_live_cameras === true;
   src.preview_page_show_title_bars = src.preview_page_show_title_bars !== false;
+  src.preview_page_alert_live_duration_seconds =
+    normalizeBoundedPositiveInteger(
+      src.preview_page_alert_live_duration_seconds,
+      10,
+      5,
+      60,
+    );
 
   src.wide_view_page_enabled =
     src.wide_view_page_enabled === true || src.wide_view === true;

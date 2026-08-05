@@ -16,7 +16,11 @@ export class SlideshowAlertController {
   }
 
   alertHoldMs() {
-    return Math.max(1000, Number(this._constants.SLIDESHOW_ALERT_HOLD_MS) || 0);
+    const holdMs = this._host._slideshowAlertHoldMs?.();
+    return Math.max(
+      1000,
+      Number(holdMs) || Number(this._constants.SLIDESHOW_ALERT_HOLD_MS) || 0,
+    );
   }
 
   isReviewFresh(review) {

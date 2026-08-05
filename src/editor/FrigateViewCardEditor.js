@@ -20,6 +20,7 @@ import {
   SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
   SLIDESHOW_REVIEW_WATCH_MIN_MS,
   SLIDESHOW_REVIEW_WATCH_MAX_MS,
+  GRID_ALERT_HOLD_MS,
   PREVIEW_ALERT_HOLD_MS,
   PREVIEW_ALERT_END_GRACE_MS,
   MSE_SWITCH_GRACE_MS,
@@ -744,13 +745,16 @@ export class FrigateViewCardEditor extends HTMLElement {
       "#realtime_poll_seconds",
       "#slideshow_rotation_enabled",
       "#slideshow_rotation_seconds",
+      "#slideshow_alert_hold_seconds",
       "#grid_mode_enabled",
       "#grid_start_in_grid_enabled",
       "#grid_live_view_enabled",
       "#grid_rotation_seconds",
+      "#grid_alert_hold_seconds",
       "#mobile_view_page_enabled",
       "#preview_page_enabled",
       "#preview_page_live_cameras",
+      "#preview_page_alert_live_duration_seconds",
       "#preview_page_show_title_bars",
       "#wide_view_page_enabled",
       "#landing_page",
@@ -1085,6 +1089,13 @@ export class FrigateViewCardEditor extends HTMLElement {
             <ha-selector id="slideshow_rotation_seconds" style="width:210px"></ha-selector>
           </div>
         </div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
+          <div id="slideshow_alert_hold_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <span class="field-label" style="margin:0">Slideshow Alert Hold Duration</span>
+            <input id="slideshow_alert_hold_seconds" type="range" min="5" max="60" step="1" value="${this._config?.slideshow_alert_hold_seconds ?? Math.round(SLIDESHOW_ALERT_HOLD_MS / 1000)}" style="width:100%">
+            <div class="field-helper" id="slideshow_alert_hold_seconds-output">${this._config?.slideshow_alert_hold_seconds ?? Math.round(SLIDESHOW_ALERT_HOLD_MS / 1000)} seconds</div>
+          </div>
+        </div>
       </div>`;
 
     const previewPanelContent = `
@@ -1102,6 +1113,15 @@ export class FrigateViewCardEditor extends HTMLElement {
         </div>
         <div class="field-helper">On = all preview cameras load live. Off = snapshots, with alert/review cameras promoted to temporary live view.</div>
       </div>
+      <div id="preview_alert_live_duration_row" class="section" style="display:${this._config?.preview_page_live_cameras ? "none" : "block"}">
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <span class="field-label" style="margin:0">Preview Alert Live Duration</span>
+            <input id="preview_page_alert_live_duration_seconds" type="range" min="5" max="60" step="1" value="${this._config?.preview_page_alert_live_duration_seconds ?? 10}" style="width:100%">
+            <div class="field-helper" id="preview_page_alert_live_duration_seconds-output">${this._config?.preview_page_alert_live_duration_seconds ?? 10} seconds</div>
+          </div>
+        </div>
+      </div>
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Show Title Bars</span>
@@ -1109,6 +1129,12 @@ export class FrigateViewCardEditor extends HTMLElement {
         </div>
         <div class="field-helper">Shows per-camera metadata under each preview tile (name, source, events, and online status).</div>
       </div>`;
+    const gridAlertHoldSeconds =
+      this._config?.grid_alert_hold_seconds ??
+      Math.round(GRID_ALERT_HOLD_MS / 1000);
+    const slideshowAlertHoldSeconds =
+      this._config?.slideshow_alert_hold_seconds ??
+      Math.round(SLIDESHOW_ALERT_HOLD_MS / 1000);
     const wideViewPanelContent = `
       <div class="section" style="border-top:none;padding-top:0">
         <div class="layout-row">
@@ -1169,6 +1195,13 @@ export class FrigateViewCardEditor extends HTMLElement {
           <div id="grid_rotation_row" style="min-width:210px;display:${this._config?.grid_mode_enabled && cams.length > 4 ? "flex" : "none"};flex-direction:column;gap:6px">
             <span class="field-label" style="margin:0">Grid Rotation Frequency</span>
             <ha-selector id="grid_rotation_seconds" style="width:210px"></ha-selector>
+          </div>
+        </div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
+          <div id="grid_alert_hold_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <span class="field-label" style="margin:0">Grid Alert Hold Duration</span>
+            <input id="grid_alert_hold_seconds" type="range" min="5" max="60" step="1" value="${gridAlertHoldSeconds}" style="width:100%">
+            <div class="field-helper" id="grid_alert_hold_seconds-output">${gridAlertHoldSeconds} seconds</div>
           </div>
         </div>
       </div>`;
@@ -1682,13 +1715,19 @@ export class FrigateViewCardEditor extends HTMLElement {
         "grid_mode_enabled",
         "grid_start_in_grid_enabled",
         "grid_live_view_enabled",
+        "slideshow_alert_hold_seconds",
+        "grid_alert_hold_seconds",
         "preview_page_enabled",
         "preview_page_live_cameras",
+        "preview_page_alert_live_duration_seconds",
         "preview_page_show_title_bars",
       ],
-      events: ["change", "value-changed"],
+      events: ["input", "change", "value-changed"],
       handler: () => {
         const slideshowRow = this.querySelector("#slideshow_rotation_row");
+        const previewDurationRow = this.querySelector(
+          "#preview_alert_live_duration_row",
+        );
         const enabled =
           this.querySelector("#slideshow_rotation_enabled")?.checked === true;
         const gridRow = this.querySelector("#grid_rotation_row");
@@ -1696,8 +1735,14 @@ export class FrigateViewCardEditor extends HTMLElement {
         const gridLiveRow = this.querySelector("#grid_live_row");
         const gridEnabled =
           this.querySelector("#grid_mode_enabled")?.checked === true;
+        const liveCamerasEnabled =
+          this.querySelector("#preview_page_live_cameras")?.checked === true;
         if (slideshowRow)
           slideshowRow.style.display = enabled ? "flex" : "none";
+        if (previewDurationRow)
+          previewDurationRow.style.display = liveCamerasEnabled
+            ? "none"
+            : "block";
         if (gridStartRow)
           gridStartRow.style.display = gridEnabled ? "flex" : "none";
         if (gridLiveRow)

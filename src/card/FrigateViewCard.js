@@ -20,6 +20,7 @@ import {
   SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
   SLIDESHOW_REVIEW_WATCH_MIN_MS,
   SLIDESHOW_REVIEW_WATCH_MAX_MS,
+  GRID_ALERT_HOLD_MS,
   PREVIEW_ALERT_HOLD_MS,
   PREVIEW_ALERT_END_GRACE_MS,
   MSE_SWITCH_GRACE_MS,
@@ -1896,6 +1897,29 @@ export class FrigateViewCard extends HTMLElement {
     return this._config?.grid_live_view_enabled !== false;
   }
 
+  _previewAlertHoldMs() {
+    const seconds = Number(
+      this._config?.preview_page_alert_live_duration_seconds,
+    );
+    return Number.isFinite(seconds) && seconds > 0
+      ? Math.max(1000, Math.round(seconds * 1000))
+      : PREVIEW_ALERT_HOLD_MS;
+  }
+
+  _slideshowAlertHoldMs() {
+    const seconds = Number(this._config?.slideshow_alert_hold_seconds);
+    return Number.isFinite(seconds) && seconds > 0
+      ? Math.max(1000, Math.round(seconds * 1000))
+      : SLIDESHOW_ALERT_HOLD_MS;
+  }
+
+  _gridAlertHoldMs() {
+    const seconds = Number(this._config?.grid_alert_hold_seconds);
+    return Number.isFinite(seconds) && seconds > 0
+      ? Math.max(1000, Math.round(seconds * 1000))
+      : GRID_ALERT_HOLD_MS;
+  }
+
   _isGridCameraAlertLive(entity) {
     return this._gridAlertController.isCameraAlertLive(entity);
   }
@@ -2281,7 +2305,7 @@ export class FrigateViewCard extends HTMLElement {
       this._previewAlertController.markAlertCamera(
         entity,
         severity,
-        PREVIEW_ALERT_HOLD_MS,
+        this._previewAlertHoldMs(),
       );
     }
 

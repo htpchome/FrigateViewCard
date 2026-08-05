@@ -16,6 +16,7 @@ import {
   MOBILE_BATTERY_SAVER_POLL_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   GRID_ROTATION_OPTIONS_SECONDS,
+  GRID_ALERT_HOLD_MS,
   SLIDESHOW_ALERT_HOLD_MS,
   SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
   SLIDESHOW_REVIEW_WATCH_MIN_MS,
@@ -101,6 +102,13 @@ export function parseWs(r) {
 export function normalizePositiveInteger(value, fallback) {
   const parsed = parseInt(String(value ?? "").trim(), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export function normalizeBoundedPositiveInteger(value, fallback, min, max) {
+  const parsed = normalizePositiveInteger(value, fallback);
+  const lower = Math.max(1, Number(min) || 1);
+  const upper = Math.max(lower, Number(max) || lower);
+  return Math.min(upper, Math.max(lower, parsed));
 }
 
 export function normalizeCameraConnectionType(value) {
@@ -555,6 +563,14 @@ export const buildEditorConfigFromDom = ({
             "30",
         )
       : 30;
+  nextConfig.slideshow_alert_hold_seconds = normalizeBoundedPositiveInteger(
+    root.querySelector("#slideshow_alert_hold_seconds")?.dataset.value ||
+      root.querySelector("#slideshow_alert_hold_seconds")?.value ||
+      String(Math.round(SLIDESHOW_ALERT_HOLD_MS / 1000)),
+    Math.round(SLIDESHOW_ALERT_HOLD_MS / 1000),
+    5,
+    60,
+  );
   nextConfig.grid_mode_enabled = resolveSwitchChecked(
     root.querySelector("#grid_mode_enabled"),
   );
@@ -564,6 +580,14 @@ export const buildEditorConfigFromDom = ({
   nextConfig.grid_live_view_enabled =
     resolveSwitchChecked(root.querySelector("#grid_live_view_enabled")) !==
     false;
+  nextConfig.grid_alert_hold_seconds = normalizeBoundedPositiveInteger(
+    root.querySelector("#grid_alert_hold_seconds")?.dataset.value ||
+      root.querySelector("#grid_alert_hold_seconds")?.value ||
+      String(Math.round(GRID_ALERT_HOLD_MS / 1000)),
+    Math.round(GRID_ALERT_HOLD_MS / 1000),
+    5,
+    60,
+  );
   nextConfig.mobile_view_page_enabled = resolveSwitchChecked(
     root.querySelector("#mobile_view_page_enabled"),
   );
@@ -573,6 +597,17 @@ export const buildEditorConfigFromDom = ({
   nextConfig.preview_page_live_cameras = resolveSwitchChecked(
     root.querySelector("#preview_page_live_cameras"),
   );
+  nextConfig.preview_page_alert_live_duration_seconds =
+    normalizeBoundedPositiveInteger(
+      root.querySelector("#preview_page_alert_live_duration_seconds")?.dataset
+        .value ||
+        root.querySelector("#preview_page_alert_live_duration_seconds")
+          ?.value ||
+        "10",
+      10,
+      5,
+      60,
+    );
   nextConfig.preview_page_show_title_bars =
     resolveSwitchChecked(
       root.querySelector("#preview_page_show_title_bars"),

@@ -1,9 +1,12 @@
 import {
   GRID_ROTATION_OPTIONS_SECONDS,
   REALTIME_POLL_OPTIONS_SECONDS,
+  GRID_ALERT_HOLD_MS,
+  SLIDESHOW_ALERT_HOLD_MS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
 } from "../constants.js";
 import { normalizePageRoute } from "../features/navigation/router.js";
+import { normalizeBoundedPositiveInteger } from "../helpers.js";
 
 const normalizePositiveInteger = (value, fallback) => {
   const parsed = parseInt(String(value ?? "").trim(), 10);
@@ -23,12 +26,16 @@ export const createEditorPreviewDraft = (config) => ({
   mobile_poll_battery_saver: config.mobile_poll_battery_saver,
   slideshow_rotation_enabled: config.slideshow_rotation_enabled,
   slideshow_rotation_seconds: config.slideshow_rotation_seconds,
+  slideshow_alert_hold_seconds: config.slideshow_alert_hold_seconds,
   grid_mode_enabled: config.grid_mode_enabled,
   grid_start_in_grid_enabled: config.grid_start_in_grid_enabled,
   grid_live_view_enabled: config.grid_live_view_enabled,
+  grid_alert_hold_seconds: config.grid_alert_hold_seconds,
   mobile_view_page_enabled: config.mobile_view_page_enabled,
   preview_page_enabled: config.preview_page_enabled,
   preview_page_live_cameras: config.preview_page_live_cameras,
+  preview_page_alert_live_duration_seconds:
+    config.preview_page_alert_live_duration_seconds,
   preview_page_show_title_bars: config.preview_page_show_title_bars,
   wide_view_page_enabled: config.wide_view_page_enabled,
   landing_page: config.landing_page,
@@ -85,10 +92,22 @@ export const applyEditorPreviewDraftToCardConfig = ({
     )
       ? Number(previewConfig.slideshow_rotation_seconds)
       : 30,
+    slideshow_alert_hold_seconds: normalizeBoundedPositiveInteger(
+      previewConfig.slideshow_alert_hold_seconds,
+      Math.round(SLIDESHOW_ALERT_HOLD_MS / 1000),
+      5,
+      60,
+    ),
     grid_mode_enabled: previewConfig.grid_mode_enabled === true,
     grid_start_in_grid_enabled:
       previewConfig.grid_start_in_grid_enabled === true,
     grid_live_view_enabled: previewConfig.grid_live_view_enabled !== false,
+    grid_alert_hold_seconds: normalizeBoundedPositiveInteger(
+      previewConfig.grid_alert_hold_seconds,
+      Math.round(GRID_ALERT_HOLD_MS / 1000),
+      5,
+      60,
+    ),
     grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
       Number(previewConfig.grid_rotation_seconds),
     )
@@ -97,6 +116,12 @@ export const applyEditorPreviewDraftToCardConfig = ({
     mobile_view_page_enabled: previewConfig.mobile_view_page_enabled === true,
     preview_page_enabled: previewConfig.preview_page_enabled === true,
     preview_page_live_cameras: previewConfig.preview_page_live_cameras === true,
+    preview_page_alert_live_duration_seconds: normalizeBoundedPositiveInteger(
+      previewConfig.preview_page_alert_live_duration_seconds,
+      10,
+      5,
+      60,
+    ),
     preview_page_show_title_bars:
       previewConfig.preview_page_show_title_bars !== false,
     hidden_tabs: Array.isArray(previewConfig.hidden_tabs)

@@ -34,10 +34,12 @@ test("editor YAML config omits normalized default values", () => {
     grid_mode_enabled: false,
     grid_start_in_grid_enabled: false,
     grid_live_view_enabled: true,
+    grid_alert_hold_seconds: 10,
     landing_page_enabled: false,
     landing_page_live_cameras: false,
     landing_page_show_title_bars: true,
     grid_rotation_seconds: 30,
+    slideshow_alert_hold_seconds: 10,
     window_hours: 72,
     stream_height_unit: "vh",
     tight_margins: false,
@@ -46,6 +48,7 @@ test("editor YAML config omits normalized default values", () => {
     outer_rounded_corners: true,
     wide_view: false,
     col_left_width_pct: 50,
+    preview_page_alert_live_duration_seconds: 10,
     hidden_tabs: [],
   });
 
@@ -248,12 +251,34 @@ test("preview draft carries hidden tabs and page routes", () => {
     hidden_tabs: ["clips", "snapshots"],
     landing_page: "preview",
     mobile_page: "single",
+    preview_page_alert_live_duration_seconds: 12,
+    slideshow_alert_hold_seconds: 14,
+    grid_alert_hold_seconds: 16,
   });
 
   assert.equal(draft.mobile_view_page_enabled, true);
   assert.deepEqual(draft.hidden_tabs, ["clips", "snapshots"]);
   assert.equal(draft.landing_page, "preview");
   assert.equal(draft.mobile_page, "single");
+  assert.equal(draft.preview_page_alert_live_duration_seconds, 12);
+  assert.equal(draft.slideshow_alert_hold_seconds, 14);
+  assert.equal(draft.grid_alert_hold_seconds, 16);
+});
+
+test("compact YAML preserves custom alert duration settings", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    preview_page_alert_live_duration_seconds: 18,
+    slideshow_alert_hold_seconds: 22,
+    grid_alert_hold_seconds: 26,
+  });
+
+  assert.deepEqual(config, {
+    cameras: [{ entity: "camera.front_door" }],
+    preview_page_alert_live_duration_seconds: 18,
+    slideshow_alert_hold_seconds: 22,
+    grid_alert_hold_seconds: 26,
+  });
 });
 
 test("compact YAML includes mobile view page toggle when enabled", () => {

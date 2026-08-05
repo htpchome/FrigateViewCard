@@ -53,7 +53,9 @@ export class PreviewAlertController {
   markAlertCamera(entity, severity = "alert", holdMs = null) {
     if (!entity) return;
     const normalizedSeverity = normalizePreviewAlertSeverity(severity);
-    const defaultHoldMs = this._constants.PREVIEW_ALERT_HOLD_MS;
+    const defaultHoldMs =
+      this._host._previewAlertHoldMs?.() ||
+      this._constants.PREVIEW_ALERT_HOLD_MS;
     this._alertSeverityByEntity.set(entity, normalizedSeverity);
     this._alertExpiresByEntity.set(
       entity,
@@ -119,7 +121,7 @@ export class PreviewAlertController {
     this.markAlertCamera(
       next.entity,
       next.severity,
-      this._constants.PREVIEW_ALERT_HOLD_MS,
+      this._host._previewAlertHoldMs?.(),
     );
   }
 
@@ -162,7 +164,7 @@ export class PreviewAlertController {
     // Some realtime payloads do not carry severity in-message. Treat those
     // mapped realtime updates as alert immediately, then schedule a probe.
     if (type !== "end" && !normalizedSeverity) {
-      this.markAlertCamera(cam, "alert", this._constants.PREVIEW_ALERT_HOLD_MS);
+      this.markAlertCamera(cam, "alert", this._host._previewAlertHoldMs?.());
       this.scheduleAlertWatch(180);
       return;
     }
@@ -183,7 +185,7 @@ export class PreviewAlertController {
     this.markAlertCamera(
       cam,
       normalizedSeverity,
-      this._constants.PREVIEW_ALERT_HOLD_MS,
+      this._host._previewAlertHoldMs?.(),
     );
   }
 

@@ -142,10 +142,12 @@ export class GridAlertController {
       .trim()
       .toLowerCase();
     const normalizedSeverity = normalizeGridAlertSeverity(severity);
+    const holdMs =
+      this._host._gridAlertHoldMs?.() || this._host._gridRotationMs();
     this._alertSeverityByEntity.set(entity, normalizedSeverity);
     this._alertExpiresByEntity.set(
       entity,
-      Date.now() + this._host._gridRotationMs(),
+      Date.now() + Math.max(1000, Number(holdMs) || 0),
     );
     this.scheduleAlertCleanup();
     return !wasLive || prevSeverity !== normalizedSeverity;

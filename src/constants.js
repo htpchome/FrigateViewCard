@@ -1,4 +1,4 @@
-export const VERSION = "1.0.1251";
+export const VERSION = "1.0.1252";
 
 export const CARD_TAG = "frigate-view-card";
 export const DAY = 86400;
@@ -19,10 +19,11 @@ export const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
 ]);
 export const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 export const SLIDESHOW_ALERT_HOLD_MS = 10000;
+export const GRID_ALERT_HOLD_MS = 10000;
 export const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 export const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
 export const SLIDESHOW_REVIEW_WATCH_MAX_MS = 15000;
-export const PREVIEW_ALERT_HOLD_MS = 6000;
+export const PREVIEW_ALERT_HOLD_MS = 10000;
 export const PREVIEW_ALERT_END_GRACE_MS = 3500;
 export const MSE_SWITCH_GRACE_MS = 20000;
 export const MSE_SWITCH_GRACE_MAX = 3;

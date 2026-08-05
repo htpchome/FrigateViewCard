@@ -2,12 +2,15 @@ import {
   ALLOWED_HIDDEN_TABS,
   CARD_TAG,
   DEFAULT_CAMERA_CONNECTION_TYPE,
+  GRID_ALERT_HOLD_MS,
   GRID_ROTATION_OPTIONS_SECONDS,
   REALTIME_POLL_OPTIONS_SECONDS,
+  SLIDESHOW_ALERT_HOLD_MS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   THEME_CUSTOM_KEYS,
 } from "../constants.js";
 import { normalizePageRoute, PAGE_IDS } from "../features/navigation/router.js";
+import { normalizeBoundedPositiveInteger } from "../helpers.js";
 import { normalizeCameraPtzConfig } from "../features/ptz/index.js";
 
 const normalizePositiveInteger = (value, fallback) => {
@@ -176,6 +179,18 @@ export const compactEditorConfigForYaml = (
     slideshowRotationSeconds,
     30,
   );
+  const slideshowAlertHoldSeconds = normalizeBoundedPositiveInteger(
+    source.slideshow_alert_hold_seconds,
+    Math.round(SLIDESHOW_ALERT_HOLD_MS / 1000),
+    5,
+    60,
+  );
+  addIfNotDefault(
+    compact,
+    "slideshow_alert_hold_seconds",
+    slideshowAlertHoldSeconds,
+    Math.round(SLIDESHOW_ALERT_HOLD_MS / 1000),
+  );
   addIfNotDefault(
     compact,
     "grid_mode_enabled",
@@ -243,6 +258,30 @@ export const compactEditorConfigForYaml = (
     ? Number(source.grid_rotation_seconds)
     : 30;
   addIfNotDefault(compact, "grid_rotation_seconds", gridRotationSeconds, 30);
+  const gridAlertHoldSeconds = normalizeBoundedPositiveInteger(
+    source.grid_alert_hold_seconds,
+    Math.round(GRID_ALERT_HOLD_MS / 1000),
+    5,
+    60,
+  );
+  addIfNotDefault(
+    compact,
+    "grid_alert_hold_seconds",
+    gridAlertHoldSeconds,
+    Math.round(GRID_ALERT_HOLD_MS / 1000),
+  );
+  const previewAlertLiveDurationSeconds = normalizeBoundedPositiveInteger(
+    source.preview_page_alert_live_duration_seconds,
+    10,
+    5,
+    60,
+  );
+  addIfNotDefault(
+    compact,
+    "preview_page_alert_live_duration_seconds",
+    previewAlertLiveDurationSeconds,
+    10,
+  );
 
   const hiddenTabs = Array.isArray(source.hidden_tabs)
     ? source.hidden_tabs

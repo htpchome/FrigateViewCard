@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1251";
+const VERSION = "1.0.1252";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -27,10 +27,11 @@ const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
 ]);
 const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 const SLIDESHOW_ALERT_HOLD_MS = 1e4;
+const GRID_ALERT_HOLD_MS = 1e4;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
 const SLIDESHOW_REVIEW_WATCH_MAX_MS = 15e3;
-const PREVIEW_ALERT_HOLD_MS = 6e3;
+const PREVIEW_ALERT_HOLD_MS = 1e4;
 const PREVIEW_ALERT_END_GRACE_MS = 3500;
 const MSE_SWITCH_GRACE_MS = 2e4;
 const MSE_SWITCH_GRACE_MAX = 3;
@@ -1499,12 +1500,15 @@ const createEditorPreviewDraft = (config) => ({
   mobile_poll_battery_saver: config.mobile_poll_battery_saver,
   slideshow_rotation_enabled: config.slideshow_rotation_enabled,
   slideshow_rotation_seconds: config.slideshow_rotation_seconds,
+  slideshow_alert_hold_seconds: config.slideshow_alert_hold_seconds,
   grid_mode_enabled: config.grid_mode_enabled,
   grid_start_in_grid_enabled: config.grid_start_in_grid_enabled,
   grid_live_view_enabled: config.grid_live_view_enabled,
+  grid_alert_hold_seconds: config.grid_alert_hold_seconds,
   mobile_view_page_enabled: config.mobile_view_page_enabled,
   preview_page_enabled: config.preview_page_enabled,
   preview_page_live_cameras: config.preview_page_live_cameras,
+  preview_page_alert_live_duration_seconds: config.preview_page_alert_live_duration_seconds,
   preview_page_show_title_bars: config.preview_page_show_title_bars,
   wide_view_page_enabled: config.wide_view_page_enabled,
   landing_page: config.landing_page,
@@ -1552,15 +1556,33 @@ const applyEditorPreviewDraftToCardConfig = ({
     slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
       Number(previewConfig.slideshow_rotation_seconds)
     ) ? Number(previewConfig.slideshow_rotation_seconds) : 30,
+    slideshow_alert_hold_seconds: normalizeBoundedPositiveInteger(
+      previewConfig.slideshow_alert_hold_seconds,
+      Math.round(SLIDESHOW_ALERT_HOLD_MS / 1e3),
+      5,
+      60
+    ),
     grid_mode_enabled: previewConfig.grid_mode_enabled === true,
     grid_start_in_grid_enabled: previewConfig.grid_start_in_grid_enabled === true,
     grid_live_view_enabled: previewConfig.grid_live_view_enabled !== false,
+    grid_alert_hold_seconds: normalizeBoundedPositiveInteger(
+      previewConfig.grid_alert_hold_seconds,
+      Math.round(GRID_ALERT_HOLD_MS / 1e3),
+      5,
+      60
+    ),
     grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
       Number(previewConfig.grid_rotation_seconds)
     ) ? Number(previewConfig.grid_rotation_seconds) : 30,
     mobile_view_page_enabled: previewConfig.mobile_view_page_enabled === true,
     preview_page_enabled: previewConfig.preview_page_enabled === true,
     preview_page_live_cameras: previewConfig.preview_page_live_cameras === true,
+    preview_page_alert_live_duration_seconds: normalizeBoundedPositiveInteger(
+      previewConfig.preview_page_alert_live_duration_seconds,
+      10,
+      5,
+      60
+    ),
     preview_page_show_title_bars: previewConfig.preview_page_show_title_bars !== false,
     hidden_tabs: Array.isArray(previewConfig.hidden_tabs) ? previewConfig.hidden_tabs : [],
     theme: previewConfig.theme === "custom" ? "custom" : "default",
@@ -1861,6 +1883,18 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     slideshowRotationSeconds,
     30
   );
+  const slideshowAlertHoldSeconds = normalizeBoundedPositiveInteger(
+    source.slideshow_alert_hold_seconds,
+    Math.round(SLIDESHOW_ALERT_HOLD_MS / 1e3),
+    5,
+    60
+  );
+  addIfNotDefault(
+    compact,
+    "slideshow_alert_hold_seconds",
+    slideshowAlertHoldSeconds,
+    Math.round(SLIDESHOW_ALERT_HOLD_MS / 1e3)
+  );
   addIfNotDefault(
     compact,
     "grid_mode_enabled",
@@ -1925,6 +1959,30 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     Number(source.grid_rotation_seconds)
   ) ? Number(source.grid_rotation_seconds) : 30;
   addIfNotDefault(compact, "grid_rotation_seconds", gridRotationSeconds, 30);
+  const gridAlertHoldSeconds = normalizeBoundedPositiveInteger(
+    source.grid_alert_hold_seconds,
+    Math.round(GRID_ALERT_HOLD_MS / 1e3),
+    5,
+    60
+  );
+  addIfNotDefault(
+    compact,
+    "grid_alert_hold_seconds",
+    gridAlertHoldSeconds,
+    Math.round(GRID_ALERT_HOLD_MS / 1e3)
+  );
+  const previewAlertLiveDurationSeconds = normalizeBoundedPositiveInteger(
+    source.preview_page_alert_live_duration_seconds,
+    10,
+    5,
+    60
+  );
+  addIfNotDefault(
+    compact,
+    "preview_page_alert_live_duration_seconds",
+    previewAlertLiveDurationSeconds,
+    10
+  );
   const hiddenTabs = Array.isArray(source.hidden_tabs) ? source.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [];
   if (hiddenTabs.length) compact.hidden_tabs = hiddenTabs;
   if (source.theme === "custom") {
@@ -2058,6 +2116,12 @@ function parseWs(r) {
 function normalizePositiveInteger3(value, fallback) {
   const parsed = parseInt(String(value ?? "").trim(), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+function normalizeBoundedPositiveInteger(value, fallback, min, max) {
+  const parsed = normalizePositiveInteger3(value, fallback);
+  const lower = Math.max(1, Number(min) || 1);
+  const upper = Math.max(lower, Number(max) || lower);
+  return Math.min(upper, Math.max(lower, parsed));
 }
 function normalizeCameraConnectionType2(value) {
   const type = String(value ?? "").trim().toLowerCase();
@@ -2438,6 +2502,12 @@ const buildEditorConfigFromDom = ({
   ) ? Number(
     root.querySelector("#slideshow_rotation_seconds")?.dataset.value || root.querySelector("#slideshow_rotation_seconds")?.value || "30"
   ) : 30;
+  nextConfig.slideshow_alert_hold_seconds = normalizeBoundedPositiveInteger(
+    root.querySelector("#slideshow_alert_hold_seconds")?.dataset.value || root.querySelector("#slideshow_alert_hold_seconds")?.value || String(Math.round(SLIDESHOW_ALERT_HOLD_MS / 1e3)),
+    Math.round(SLIDESHOW_ALERT_HOLD_MS / 1e3),
+    5,
+    60
+  );
   nextConfig.grid_mode_enabled = resolveSwitchChecked(
     root.querySelector("#grid_mode_enabled")
   );
@@ -2445,6 +2515,12 @@ const buildEditorConfigFromDom = ({
     root.querySelector("#grid_start_in_grid_enabled")
   );
   nextConfig.grid_live_view_enabled = resolveSwitchChecked(root.querySelector("#grid_live_view_enabled")) !== false;
+  nextConfig.grid_alert_hold_seconds = normalizeBoundedPositiveInteger(
+    root.querySelector("#grid_alert_hold_seconds")?.dataset.value || root.querySelector("#grid_alert_hold_seconds")?.value || String(Math.round(GRID_ALERT_HOLD_MS / 1e3)),
+    Math.round(GRID_ALERT_HOLD_MS / 1e3),
+    5,
+    60
+  );
   nextConfig.mobile_view_page_enabled = resolveSwitchChecked(
     root.querySelector("#mobile_view_page_enabled")
   );
@@ -2453,6 +2529,12 @@ const buildEditorConfigFromDom = ({
   );
   nextConfig.preview_page_live_cameras = resolveSwitchChecked(
     root.querySelector("#preview_page_live_cameras")
+  );
+  nextConfig.preview_page_alert_live_duration_seconds = normalizeBoundedPositiveInteger(
+    root.querySelector("#preview_page_alert_live_duration_seconds")?.dataset.value || root.querySelector("#preview_page_alert_live_duration_seconds")?.value || "10",
+    10,
+    5,
+    60
   );
   nextConfig.preview_page_show_title_bars = resolveSwitchChecked(
     root.querySelector("#preview_page_show_title_bars")
@@ -10713,7 +10795,7 @@ const PreviewAlertController = class {
   markAlertCamera(entity, severity = "alert", holdMs = null) {
     if (!entity) return;
     const normalizedSeverity = normalizePreviewAlertSeverity(severity);
-    const defaultHoldMs = this._constants.PREVIEW_ALERT_HOLD_MS;
+    const defaultHoldMs = this._host._previewAlertHoldMs?.() || this._constants.PREVIEW_ALERT_HOLD_MS;
     this._alertSeverityByEntity.set(entity, normalizedSeverity);
     this._alertExpiresByEntity.set(
       entity,
@@ -10771,7 +10853,7 @@ const PreviewAlertController = class {
     this.markAlertCamera(
       next.entity,
       next.severity,
-      this._constants.PREVIEW_ALERT_HOLD_MS
+      this._host._previewAlertHoldMs?.()
     );
   }
   scheduleAlertWatch(delayMs = null) {
@@ -10804,7 +10886,7 @@ const PreviewAlertController = class {
     const { cam, severity, type } = parsed;
     const normalizedSeverity = String(severity || "").trim().toLowerCase();
     if (type !== "end" && !normalizedSeverity) {
-      this.markAlertCamera(cam, "alert", this._constants.PREVIEW_ALERT_HOLD_MS);
+      this.markAlertCamera(cam, "alert", this._host._previewAlertHoldMs?.());
       this.scheduleAlertWatch(180);
       return;
     }
@@ -10824,7 +10906,7 @@ const PreviewAlertController = class {
     this.markAlertCamera(
       cam,
       normalizedSeverity,
-      this._constants.PREVIEW_ALERT_HOLD_MS
+      this._host._previewAlertHoldMs?.()
     );
   }
   start() {
@@ -11629,10 +11711,11 @@ const GridAlertController = class {
     const wasLive = this.isCameraAlertLive(entity);
     const prevSeverity = String(this._alertSeverityByEntity.get(entity) || "").trim().toLowerCase();
     const normalizedSeverity = normalizeGridAlertSeverity(severity);
+    const holdMs = this._host._gridAlertHoldMs?.() || this._host._gridRotationMs();
     this._alertSeverityByEntity.set(entity, normalizedSeverity);
     this._alertExpiresByEntity.set(
       entity,
-      Date.now() + this._host._gridRotationMs()
+      Date.now() + Math.max(1e3, Number(holdMs) || 0)
     );
     this.scheduleAlertCleanup();
     return !wasLive || prevSeverity !== normalizedSeverity;
@@ -13399,7 +13482,11 @@ const SlideshowAlertController = class {
     this._constants = constants;
   }
   alertHoldMs() {
-    return Math.max(1e3, Number(this._constants.SLIDESHOW_ALERT_HOLD_MS) || 0);
+    const holdMs = this._host._slideshowAlertHoldMs?.();
+    return Math.max(
+      1e3,
+      Number(holdMs) || Number(this._constants.SLIDESHOW_ALERT_HOLD_MS) || 0
+    );
   }
   isReviewFresh(review) {
     return isSlideshowReviewFresh({
@@ -15272,6 +15359,20 @@ const FrigateViewCard = class extends HTMLElement {
   _gridLiveViewEnabled() {
     return this._config?.grid_live_view_enabled !== false;
   }
+  _previewAlertHoldMs() {
+    const seconds = Number(
+      this._config?.preview_page_alert_live_duration_seconds
+    );
+    return Number.isFinite(seconds) && seconds > 0 ? Math.max(1e3, Math.round(seconds * 1e3)) : PREVIEW_ALERT_HOLD_MS;
+  }
+  _slideshowAlertHoldMs() {
+    const seconds = Number(this._config?.slideshow_alert_hold_seconds);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.max(1e3, Math.round(seconds * 1e3)) : SLIDESHOW_ALERT_HOLD_MS;
+  }
+  _gridAlertHoldMs() {
+    const seconds = Number(this._config?.grid_alert_hold_seconds);
+    return Number.isFinite(seconds) && seconds > 0 ? Math.max(1e3, Math.round(seconds * 1e3)) : GRID_ALERT_HOLD_MS;
+  }
   _isGridCameraAlertLive(entity) {
     return this._gridAlertController.isCameraAlertLive(entity);
   }
@@ -15586,7 +15687,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._previewAlertController.markAlertCamera(
         entity,
         severity,
-        PREVIEW_ALERT_HOLD_MS
+        this._previewAlertHoldMs()
       );
     }
     const slideshowAlertEntity = activeCameraAlerted ? activeEntity : firstAlertEntity;
@@ -18337,13 +18438,31 @@ const normalizeCardConfig = (config) => {
   src.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
     Number(src.slideshow_rotation_seconds)
   ) ? Number(src.slideshow_rotation_seconds) : 30;
+  src.slideshow_alert_hold_seconds = normalizeBoundedPositiveInteger(
+    src.slideshow_alert_hold_seconds,
+    Math.round(SLIDESHOW_ALERT_HOLD_MS / 1e3),
+    5,
+    60
+  );
   src.grid_mode_enabled = src.grid_mode_enabled === true;
   src.grid_start_in_grid_enabled = src.grid_start_in_grid_enabled === true;
   src.grid_live_view_enabled = src.grid_live_view_enabled !== false;
+  src.grid_alert_hold_seconds = normalizeBoundedPositiveInteger(
+    src.grid_alert_hold_seconds,
+    Math.round(GRID_ALERT_HOLD_MS / 1e3),
+    5,
+    60
+  );
   src.mobile_view_page_enabled = src.mobile_view_page_enabled === true;
   src.preview_page_enabled = src.preview_page_enabled === true;
   src.preview_page_live_cameras = src.preview_page_live_cameras === true;
   src.preview_page_show_title_bars = src.preview_page_show_title_bars !== false;
+  src.preview_page_alert_live_duration_seconds = normalizeBoundedPositiveInteger(
+    src.preview_page_alert_live_duration_seconds,
+    10,
+    5,
+    60
+  );
   src.wide_view_page_enabled = src.wide_view_page_enabled === true || src.wide_view === true;
   src.landing_page = normalizePageRoute(src.landing_page);
   src.mobile_page = normalizePageRoute(src.mobile_page);
@@ -18926,13 +19045,16 @@ const FrigateViewCardEditor = class extends HTMLElement {
       "#realtime_poll_seconds",
       "#slideshow_rotation_enabled",
       "#slideshow_rotation_seconds",
+      "#slideshow_alert_hold_seconds",
       "#grid_mode_enabled",
       "#grid_start_in_grid_enabled",
       "#grid_live_view_enabled",
       "#grid_rotation_seconds",
+      "#grid_alert_hold_seconds",
       "#mobile_view_page_enabled",
       "#preview_page_enabled",
       "#preview_page_live_cameras",
+      "#preview_page_alert_live_duration_seconds",
       "#preview_page_show_title_bars",
       "#wide_view_page_enabled",
       "#landing_page",
@@ -19216,6 +19338,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
             <ha-selector id="slideshow_rotation_seconds" style="width:210px"></ha-selector>
           </div>
         </div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
+          <div id="slideshow_alert_hold_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <span class="field-label" style="margin:0">Slideshow Alert Hold Duration</span>
+            <input id="slideshow_alert_hold_seconds" type="range" min="5" max="60" step="1" value="${this._config?.slideshow_alert_hold_seconds ?? Math.round(SLIDESHOW_ALERT_HOLD_MS / 1e3)}" style="width:100%">
+            <div class="field-helper" id="slideshow_alert_hold_seconds-output">${this._config?.slideshow_alert_hold_seconds ?? Math.round(SLIDESHOW_ALERT_HOLD_MS / 1e3)} seconds</div>
+          </div>
+        </div>
       </div>`;
     const previewPanelContent = `
       <div class="section" style="border-top:none;padding-top:0">
@@ -19232,6 +19361,15 @@ const FrigateViewCardEditor = class extends HTMLElement {
         </div>
         <div class="field-helper">On = all preview cameras load live. Off = snapshots, with alert/review cameras promoted to temporary live view.</div>
       </div>
+      <div id="preview_alert_live_duration_row" class="section" style="display:${this._config?.preview_page_live_cameras ? "none" : "block"}">
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
+          <div style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <span class="field-label" style="margin:0">Preview Alert Live Duration</span>
+            <input id="preview_page_alert_live_duration_seconds" type="range" min="5" max="60" step="1" value="${this._config?.preview_page_alert_live_duration_seconds ?? 10}" style="width:100%">
+            <div class="field-helper" id="preview_page_alert_live_duration_seconds-output">${this._config?.preview_page_alert_live_duration_seconds ?? 10} seconds</div>
+          </div>
+        </div>
+      </div>
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Show Title Bars</span>
@@ -19239,6 +19377,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
         </div>
         <div class="field-helper">Shows per-camera metadata under each preview tile (name, source, events, and online status).</div>
       </div>`;
+    const gridAlertHoldSeconds = this._config?.grid_alert_hold_seconds ?? Math.round(GRID_ALERT_HOLD_MS / 1e3);
+    const slideshowAlertHoldSeconds = this._config?.slideshow_alert_hold_seconds ?? Math.round(SLIDESHOW_ALERT_HOLD_MS / 1e3);
     const wideViewPanelContent = `
       <div class="section" style="border-top:none;padding-top:0">
         <div class="layout-row">
@@ -19299,6 +19439,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
           <div id="grid_rotation_row" style="min-width:210px;display:${this._config?.grid_mode_enabled && cams.length > 4 ? "flex" : "none"};flex-direction:column;gap:6px">
             <span class="field-label" style="margin:0">Grid Rotation Frequency</span>
             <ha-selector id="grid_rotation_seconds" style="width:210px"></ha-selector>
+          </div>
+        </div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
+          <div id="grid_alert_hold_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <span class="field-label" style="margin:0">Grid Alert Hold Duration</span>
+            <input id="grid_alert_hold_seconds" type="range" min="5" max="60" step="1" value="${gridAlertHoldSeconds}" style="width:100%">
+            <div class="field-helper" id="grid_alert_hold_seconds-output">${gridAlertHoldSeconds} seconds</div>
           </div>
         </div>
       </div>`;
@@ -19782,20 +19929,29 @@ const FrigateViewCardEditor = class extends HTMLElement {
         "grid_mode_enabled",
         "grid_start_in_grid_enabled",
         "grid_live_view_enabled",
+        "slideshow_alert_hold_seconds",
+        "grid_alert_hold_seconds",
         "preview_page_enabled",
         "preview_page_live_cameras",
+        "preview_page_alert_live_duration_seconds",
         "preview_page_show_title_bars"
       ],
-      events: ["change", "value-changed"],
+      events: ["input", "change", "value-changed"],
       handler: () => {
         const slideshowRow = this.querySelector("#slideshow_rotation_row");
+        const previewDurationRow = this.querySelector(
+          "#preview_alert_live_duration_row"
+        );
         const enabled = this.querySelector("#slideshow_rotation_enabled")?.checked === true;
         const gridRow = this.querySelector("#grid_rotation_row");
         const gridStartRow = this.querySelector("#grid_start_row");
         const gridLiveRow = this.querySelector("#grid_live_row");
         const gridEnabled = this.querySelector("#grid_mode_enabled")?.checked === true;
+        const liveCamerasEnabled = this.querySelector("#preview_page_live_cameras")?.checked === true;
         if (slideshowRow)
           slideshowRow.style.display = enabled ? "flex" : "none";
+        if (previewDurationRow)
+          previewDurationRow.style.display = liveCamerasEnabled ? "none" : "block";
         if (gridStartRow)
           gridStartRow.style.display = gridEnabled ? "flex" : "none";
         if (gridLiveRow)
