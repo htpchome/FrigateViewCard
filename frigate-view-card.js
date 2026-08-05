@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1203";
+const VERSION = "1.0.1204";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7599,6 +7599,130 @@ const resolvePopupCarouselActiveScrollLeft = ({
   padding = 8
 }) => Math.max(0, Number(activeOffsetLeft || 0) - Number(padding || 0));
 
+// src/features/browse/collection.ctrl.js
+const BrowseCollectionController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  allGridReviews() {
+    const reviews = [];
+    const seen = new Set();
+    for (const camera of this._host._config.cameras || []) {
+      const cache = this._host._camCache[camera.entity];
+      for (const review of cache?.reviews || []) {
+        const id = String(review?.id || "");
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        reviews.push(review);
+      }
+    }
+    return reviews;
+  }
+  allGridKeptEvents() {
+    const events = [];
+    const seen = new Set();
+    for (const camera of this._host._config.cameras || []) {
+      const cache = this._host._camCache[camera.entity];
+      for (const event of cache?.kept || []) {
+        const id = String(event?.id || "");
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        events.push(event);
+      }
+    }
+    return events;
+  }
+  findReviewById(id) {
+    if (!id) return null;
+    const target = String(id);
+    if (this._host._isGridMixedListMode()) {
+      return this.allGridReviews().find(
+        (review) => String(review?.id || "") === target
+      ) || null;
+    }
+    return (this._host._reviews || []).find(
+      (review) => String(review?.id || "") === target
+    ) || null;
+  }
+  async loadGridMixedTabData(tab) {
+    const before = this._host._winEnd;
+    const reviewsAfter = Math.max(
+      0,
+      Math.floor(
+        before - (this._host._config?.alerts_reviews_days || 3) * 86400
+      )
+    );
+    for (const camera of this._host._config.cameras || []) {
+      const entity = camera.entity;
+      if (!entity) continue;
+      try {
+        if (!this._host._camCache[entity]?.discovered) {
+          await this._host._discoverOne(entity);
+        }
+      } catch (_) {
+        continue;
+      }
+      const cache = this._host._camCache[entity];
+      const clientId = cache?.clientId;
+      const cam = cache?.cam;
+      if (!clientId || !cam) continue;
+      try {
+        if (tab === "alerts") {
+          const reviews = await this._host._fetchWindowedReviews(
+            clientId,
+            cam,
+            reviewsAfter,
+            before,
+            { debugLabel: "grid-alerts-tab" }
+          );
+          cache.reviews = Array.isArray(reviews) ? reviews : [];
+        }
+        if (tab === "kept") {
+          const kept = await this._host._ws({
+            type: "frigate/events/get",
+            instance_id: clientId,
+            cameras: [cam],
+            favorites: true,
+            limit: 50
+          });
+          cache.kept = Array.isArray(kept) ? kept : [];
+        }
+      } catch (_) {
+      }
+    }
+  }
+  allDisplayEvents() {
+    if (this._host._eventsMode === "all") {
+      const seen = new Set();
+      const all = [];
+      for (const camera of this._host._config.cameras) {
+        const cache = this._host._camCache[camera.entity];
+        if (!cache) continue;
+        for (const event of cache.events || []) {
+          if (seen.has(event.id)) continue;
+          seen.add(event.id);
+          all.push(event);
+        }
+      }
+      return all.sort((a, b) => b.start_time - a.start_time);
+    }
+    return this._host._events;
+  }
+  findEventById(id) {
+    if (!id) return null;
+    const all = this.allDisplayEvents();
+    let event = all.find((candidate) => candidate.id === id);
+    if (event) return event;
+    for (const camera of this._host._config.cameras) {
+      const cache = this._host._camCache[camera.entity];
+      event = (cache?.events || []).find((candidate) => candidate.id === id);
+      if (event) return event;
+    }
+    event = (this._host._kept || []).find((candidate) => candidate.id === id);
+    return event || null;
+  }
+};
+
 // src/features/browse/filter-state.js
 function buildReviewFilterLabels(review, sourceEvent = null) {
   const labels = new Set();
@@ -12938,6 +13062,7 @@ const FrigateViewCard = class extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
+    this._browseCollectionController = new BrowseCollectionController(this);
     this._browseFilterController = new BrowseFilterController(this);
     this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
     this._cardStyleController = new CardStyleContextController(this);
@@ -14820,88 +14945,16 @@ const FrigateViewCard = class extends HTMLElement {
     return this._viewMode === "grid";
   }
   _allGridReviews() {
-    const reviews = [];
-    const seen = new Set();
-    for (const camera of this._config.cameras || []) {
-      const cache = this._camCache[camera.entity];
-      for (const review of cache?.reviews || []) {
-        const id = String(review?.id || "");
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-        reviews.push(review);
-      }
-    }
-    return reviews;
+    return this._browseCollectionController.allGridReviews();
   }
   _allGridKeptEvents() {
-    const events = [];
-    const seen = new Set();
-    for (const camera of this._config.cameras || []) {
-      const cache = this._camCache[camera.entity];
-      for (const event of cache?.kept || []) {
-        const id = String(event?.id || "");
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-        events.push(event);
-      }
-    }
-    return events;
+    return this._browseCollectionController.allGridKeptEvents();
   }
   _findReviewById(id) {
-    if (!id) return null;
-    const target = String(id);
-    if (this._isGridMixedListMode()) {
-      return this._allGridReviews().find(
-        (review) => String(review?.id || "") === target
-      ) || null;
-    }
-    return (this._reviews || []).find(
-      (review) => String(review?.id || "") === target
-    ) || null;
+    return this._browseCollectionController.findReviewById(id);
   }
   async _loadGridMixedTabData(tab) {
-    const before = this._winEnd;
-    const reviewsAfter = Math.max(
-      0,
-      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
-    );
-    for (const camera of this._config.cameras || []) {
-      const entity = camera.entity;
-      if (!entity) continue;
-      try {
-        if (!this._camCache[entity]?.discovered)
-          await this._discoverOne(entity);
-      } catch (_) {
-        continue;
-      }
-      const cache = this._camCache[entity];
-      const clientId = cache?.clientId;
-      const cam = cache?.cam;
-      if (!clientId || !cam) continue;
-      try {
-        if (tab === "alerts") {
-          const reviews = await this._fetchWindowedReviews(
-            clientId,
-            cam,
-            reviewsAfter,
-            before,
-            { debugLabel: "grid-alerts-tab" }
-          );
-          cache.reviews = Array.isArray(reviews) ? reviews : [];
-        }
-        if (tab === "kept") {
-          const kept = await this._ws({
-            type: "frigate/events/get",
-            instance_id: clientId,
-            cameras: [cam],
-            favorites: true,
-            limit: 50
-          });
-          cache.kept = Array.isArray(kept) ? kept : [];
-        }
-      } catch (_) {
-      }
-    }
+    await this._browseCollectionController.loadGridMixedTabData(tab);
   }
   // =======================Render Shell===================================
   _renderShell() {
@@ -16036,35 +16089,10 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── playback ──────────────────────────────────────────────
   _allDisplayEvents() {
-    if (this._eventsMode === "all") {
-      const seen = new Set();
-      const all = [];
-      for (const c of this._config.cameras) {
-        const cc = this._camCache[c.entity];
-        if (cc) {
-          for (const ev of cc.events || [])
-            if (!seen.has(ev.id)) {
-              seen.add(ev.id);
-              all.push(ev);
-            }
-        }
-      }
-      return all.sort((a, b) => b.start_time - a.start_time);
-    }
-    return this._events;
+    return this._browseCollectionController.allDisplayEvents();
   }
   _findEventById(id) {
-    if (!id) return null;
-    const all = this._allDisplayEvents();
-    let ev = all.find((e) => e.id === id);
-    if (ev) return ev;
-    for (const c of this._config.cameras) {
-      const cc = this._camCache[c.entity];
-      ev = (cc?.events || []).find((e) => e.id === id);
-      if (ev) return ev;
-    }
-    ev = (this._kept || []).find((e) => e.id === id);
-    return ev || null;
+    return this._browseCollectionController.findEventById(id);
   }
   _hidePopupInfo() {
     const head = this._$("#popup-info-head");

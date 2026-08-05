@@ -66,6 +66,10 @@ const viewportContextControllerSource = fs.readFileSync(
   new URL("../src/features/viewport/context.ctrl.js", import.meta.url),
   "utf8",
 );
+const browseCollectionControllerSource = fs.readFileSync(
+  new URL("../src/features/browse/collection.ctrl.js", import.meta.url),
+  "utf8",
+);
 const browseFilterControllerSource = fs.readFileSync(
   new URL("../src/features/browse/filter-state.js", import.meta.url),
   "utf8",
@@ -716,6 +720,73 @@ test("viewport helpers delegate through the viewport context controller", () => 
   );
   assert.equal(
     viewportContextControllerSource.includes("isMobileTabletViewport()"),
+    true,
+  );
+});
+
+test("browse collection helpers delegate through the browse collection controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { BrowseCollectionController } from "../features/browse/collection.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._browseCollectionController\s*=\s*new BrowseCollectionController\(this\);/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_allGridReviews\(\) \{\s*return this\._browseCollectionController\.allGridReviews\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_allGridKeptEvents\(\) \{\s*return this\._browseCollectionController\.allGridKeptEvents\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_findReviewById\(id\) \{\s*return this\._browseCollectionController\.findReviewById\(id\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _loadGridMixedTabData\(tab\) \{\s*await this\._browseCollectionController\.loadGridMixedTabData\(tab\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_allDisplayEvents\(\) \{\s*return this\._browseCollectionController\.allDisplayEvents\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_findEventById\(id\) \{\s*return this\._browseCollectionController\.findEventById\(id\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    browseCollectionControllerSource.includes(
+      "export class BrowseCollectionController",
+    ),
+    true,
+  );
+  assert.equal(
+    browseCollectionControllerSource.includes(
+      "async loadGridMixedTabData(tab)",
+    ),
+    true,
+  );
+  assert.equal(
+    browseCollectionControllerSource.includes("allDisplayEvents()"),
     true,
   );
 });
