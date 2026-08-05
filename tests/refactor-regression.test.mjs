@@ -1224,7 +1224,19 @@ test("recordings browse nav delegates through the recordings browse nav controll
     true,
   );
   assert.equal(
+    /async _completeRecordingsSwipeGesture\(gesture\) \{\s*return this\._recordingsBrowseNavController\.completeSwipeGesture\(gesture\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
     /async _updateRecordingsBrowseNav\(\) \{\s*await this\._recordingsBrowseNavController\.updateBrowseNav\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _stepRecordingsDay\(dir\) \{\s*return this\._recordingsBrowseNavController\.stepDay\(dir\);\s*\}/s.test(
       cardSource,
     ),
     true,
@@ -1251,6 +1263,16 @@ test("recordings browse nav delegates through the recordings browse nav controll
     recordingsBrowseNavControllerSource.includes(
       "async navigateDayAnimated(direction)",
     ),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes(
+      "async completeSwipeGesture(gesture)",
+    ),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes("async stepDay(direction)"),
     true,
   );
   assert.equal(

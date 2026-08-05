@@ -147,6 +147,32 @@ export class RecordingsBrowseNavController {
     }
   }
 
+  async completeSwipeGesture(gesture) {
+    if (!gesture) return false;
+    await gesture.prepPromise;
+    if (!gesture.ready || !gesture.hasData || !gesture.stage) return false;
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    const target = -gesture.direction * gesture.stage.width;
+    await this._host._animateRecordingsSwipeStageTo(
+      gesture.stage,
+      target,
+      300,
+      "cubic-bezier(0.28, 0.02, 0.18, 1)",
+    );
+    await this._host._commitRecordingsDayTransition(
+      gesture.bounds,
+      gesture.recs,
+    );
+    return true;
+  }
+
+  async stepDay(direction) {
+    return this.navigateDayAnimated(direction);
+  }
+
   async updateBrowseNav() {
     if (this._host._tab !== "recordings") return;
     const prev = this._host._$("#rec-day-prev");

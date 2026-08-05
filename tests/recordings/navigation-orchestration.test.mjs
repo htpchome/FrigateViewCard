@@ -473,9 +473,6 @@ test("mixed swipe and button recordings transitions both clear swipe-active stat
   ctx._bounceRecordingsArea = (dir) => {
     calls.push(["bounce", dir]);
   };
-  ctx._updateRecordingsBrowseNav = async () => {
-    calls.push(["updateBrowseNav"]);
-  };
   ctx._createRecordingsSwipeStage = (dir, incomingHtml) => {
     calls.push(["createStage", dir, incomingHtml]);
     return null;
@@ -484,6 +481,9 @@ test("mixed swipe and button recordings transitions both clear swipe-active stat
   recordingsBrowseNavController.prepareDayTransition = async (dir) => {
     calls.push(["prepare", dir]);
     return { hasData: true, bounds: secondBounds, recs: [{ id: 2 }] };
+  };
+  recordingsBrowseNavController.updateBrowseNav = async () => {
+    calls.push(["updateBrowseNav"]);
   };
   ctx._recordingsBrowseNavController = recordingsBrowseNavController;
 
@@ -504,16 +504,10 @@ test("mixed swipe and button recordings transitions both clear swipe-active stat
   };
 
   try {
-    const swipeResult =
-      await FrigateViewCard.prototype._completeRecordingsSwipeGesture.call(
-        ctx,
-        gesture,
-      );
-    const buttonResult =
-      await FrigateViewCard.prototype._navigateRecordingsDayAnimated.call(
-        ctx,
-        1,
-      );
+    const swipeResult = await recordingsBrowseNavController.completeSwipeGesture(
+      gesture,
+    );
+    const buttonResult = await recordingsBrowseNavController.stepDay(1);
 
     assert.equal(swipeResult, true);
     assert.equal(buttonResult, true);

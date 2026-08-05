@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1213";
+const VERSION = "1.0.1214";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9799,6 +9799,28 @@ const RecordingsBrowseNavController = class {
       this._host._recordingsDayNavAnimating = false;
     }
   }
+  async completeSwipeGesture(gesture) {
+    if (!gesture) return false;
+    await gesture.prepPromise;
+    if (!gesture.ready || !gesture.hasData || !gesture.stage) return false;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const target = -gesture.direction * gesture.stage.width;
+    await this._host._animateRecordingsSwipeStageTo(
+      gesture.stage,
+      target,
+      300,
+      "cubic-bezier(0.28, 0.02, 0.18, 1)"
+    );
+    await this._host._commitRecordingsDayTransition(
+      gesture.bounds,
+      gesture.recs
+    );
+    return true;
+  }
+  async stepDay(direction) {
+    return this.navigateDayAnimated(direction);
+  }
   async updateBrowseNav() {
     if (this._host._tab !== "recordings") return;
     const prev = this._host._$("#rec-day-prev");
@@ -15681,20 +15703,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._recordingsBrowseNavController.navigateDayAnimated(direction);
   }
   async _completeRecordingsSwipeGesture(gesture) {
-    if (!gesture) return false;
-    await gesture.prepPromise;
-    if (!gesture.ready || !gesture.hasData || !gesture.stage) return false;
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    const target = -gesture.direction * gesture.stage.width;
-    await this._animateRecordingsSwipeStageTo(
-      gesture.stage,
-      target,
-      300,
-      "cubic-bezier(0.28, 0.02, 0.18, 1)"
-    );
-    await this._commitRecordingsDayTransition(gesture.bounds, gesture.recs);
-    return true;
+    return this._recordingsBrowseNavController.completeSwipeGesture(gesture);
   }
   async _commitRecordingsDayTransition(bounds, recs) {
     if (!bounds) return;
@@ -17559,7 +17568,7 @@ const FrigateViewCard = class extends HTMLElement {
     await this._recordingsBrowseNavController.updateBrowseNav();
   }
   async _stepRecordingsDay(dir) {
-    return this._navigateRecordingsDayAnimated(dir);
+    return this._recordingsBrowseNavController.stepDay(dir);
   }
   _syncBrowseHeadFromScroll() {
     this._activeStandardPageController().syncBrowseHeadFromScroll();

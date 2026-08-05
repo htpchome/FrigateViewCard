@@ -3021,22 +3021,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _completeRecordingsSwipeGesture(gesture) {
-    if (!gesture) return false;
-    await gesture.prepPromise;
-    if (!gesture.ready || !gesture.hasData || !gesture.stage) return false;
-
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-
-    const target = -gesture.direction * gesture.stage.width;
-    await this._animateRecordingsSwipeStageTo(
-      gesture.stage,
-      target,
-      300,
-      "cubic-bezier(0.28, 0.02, 0.18, 1)",
-    );
-    await this._commitRecordingsDayTransition(gesture.bounds, gesture.recs);
-    return true;
+    return this._recordingsBrowseNavController.completeSwipeGesture(gesture);
   }
 
   async _commitRecordingsDayTransition(bounds, recs) {
@@ -5132,7 +5117,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _stepRecordingsDay(dir) {
-    return this._navigateRecordingsDayAnimated(dir);
+    return this._recordingsBrowseNavController.stepDay(dir);
   }
 
   _syncBrowseHeadFromScroll() {
