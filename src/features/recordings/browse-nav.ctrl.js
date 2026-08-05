@@ -10,6 +10,7 @@ import {
   resolveRecordingsBrowseNavProbePlan,
   resolveRecordingsBrowseNavState,
 } from "./utils/browse-nav.js";
+import { resolvePreparedRecordingsDayNavigationState } from "./utils/swipe.js";
 
 export class RecordingsBrowseNavController {
   constructor(host) {
@@ -91,6 +92,59 @@ export class RecordingsBrowseNavController {
     this._host._recordingsDayDataCache.set(key, result.recs);
     this._host._recordingsDayAvailabilityCache.set(key, result.hasData);
     return result;
+  }
+
+  async navigateDayAnimated(direction) {
+    if (this._host._tab !== "recordings") return false;
+    const dir = Number(direction);
+    if (dir !== -1 && dir !== 1) return false;
+    if (this._host._recordingsDayNavAnimating) return false;
+
+    this._host._recordingsDayNavAnimating = true;
+    try {
+      const prep = await this.prepareDayTransition(dir);
+      const navigation = resolvePreparedRecordingsDayNavigationState({
+        prep,
+        renderRecordings: (recordings) =>
+          this._host._recordingsListMarkup(
+            this._host._recordingsViewRows(recordings),
+          ),
+      });
+      if (navigation.shouldBounce) {
+        this._host._bounceRecordingsArea(dir);
+        void this.updateBrowseNav();
+        return false;
+      }
+
+      const stage = this._host._createRecordingsSwipeStage(
+        dir,
+        navigation.incomingHtml,
+      );
+      if (!stage) {
+        await this._host._commitRecordingsDayTransition(
+          navigation.bounds,
+          navigation.recs,
+        );
+        return true;
+      }
+
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      await this._host._animateRecordingsSwipeStageTo(
+        stage,
+        -dir * stage.width,
+        320,
+        "cubic-bezier(0.28, 0.02, 0.18, 1)",
+      );
+      await this._host._commitRecordingsDayTransition(
+        navigation.bounds,
+        navigation.recs,
+      );
+      return true;
+    } finally {
+      this._host._recordingsDayNavAnimating = false;
+    }
   }
 
   async updateBrowseNav() {

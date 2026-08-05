@@ -1218,6 +1218,12 @@ test("recordings browse nav delegates through the recordings browse nav controll
     true,
   );
   assert.equal(
+    /async _navigateRecordingsDayAnimated\(direction\) \{\s*return this\._recordingsBrowseNavController\.navigateDayAnimated\(direction\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
     /async _updateRecordingsBrowseNav\(\) \{\s*await this\._recordingsBrowseNavController\.updateBrowseNav\(\);\s*\}/s.test(
       cardSource,
     ),
@@ -1238,6 +1244,12 @@ test("recordings browse nav delegates through the recordings browse nav controll
   assert.equal(
     recordingsBrowseNavControllerSource.includes(
       "async prepareDayTransition(direction)",
+    ),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes(
+      "async navigateDayAnimated(direction)",
     ),
     true,
   );

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1212";
+const VERSION = "1.0.1213";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9584,137 +9584,6 @@ const RecordingsSwipeController = class {
   }
 };
 
-// src/features/recordings/browse-nav.ctrl.js
-const RecordingsBrowseNavController = class {
-  constructor(host) {
-    this._host = host;
-  }
-  async hasRecordingsInBounds(bounds, clientId, cam) {
-    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
-    const cached = resolveCachedRecordingsAvailability({
-      key,
-      dataCache: this._host._recordingsDayDataCache,
-      availabilityCache: this._host._recordingsDayAvailabilityCache
-    });
-    if (cached.found) {
-      if (cached.shouldSyncAvailability) {
-        this._host._recordingsDayAvailabilityCache.set(
-          key,
-          cached.hasRecordings
-        );
-      }
-      return cached.hasRecordings;
-    }
-    try {
-      const recordings = await this._host._ws({
-        type: "frigate/recordings/get",
-        instance_id: clientId,
-        camera: cam,
-        after: Math.max(0, bounds.start),
-        before: bounds.end
-      });
-      const fetched = resolveFetchedRecordingsAvailabilityState(recordings);
-      this._host._recordingsDayDataCache.set(key, fetched.recordings);
-      this._host._recordingsDayAvailabilityCache.set(
-        key,
-        fetched.availabilityValue
-      );
-      return fetched.hasRecordings;
-    } catch (_) {
-      const failed = resolveFailedRecordingsAvailabilityState();
-      this._host._recordingsDayAvailabilityCache.set(
-        key,
-        failed.availabilityValue
-      );
-      return failed.hasRecordings;
-    }
-  }
-  async prepareDayTransition(direction) {
-    const bounds = this._host._recordingsOffsetDayBounds(direction);
-    const today = this._host._recordingsDayBounds(
-      Math.floor(Date.now() / 1e3)
-    );
-    const { clientId, cam } = this._host._cc();
-    const prepared = resolvePreparedRecordingsDayTransition({
-      direction,
-      bounds,
-      todayBounds: today,
-      clientId,
-      camera: cam,
-      dataCache: this._host._recordingsDayDataCache
-    });
-    if (prepared.done) {
-      return prepared.result;
-    }
-    const key = prepared.key;
-    const hasData = await this.hasRecordingsInBounds(bounds, clientId, cam);
-    if (!hasData) {
-      return { hasData: false, bounds, recs: [] };
-    }
-    const recordings = await this._host._ws({
-      type: "frigate/recordings/get",
-      instance_id: clientId,
-      camera: cam,
-      after: Math.max(0, bounds.start),
-      before: bounds.end
-    });
-    const result = buildPreparedRecordingsDayResult(bounds, recordings);
-    this._host._recordingsDayDataCache.set(key, result.recs);
-    this._host._recordingsDayAvailabilityCache.set(key, result.hasData);
-    return result;
-  }
-  async updateBrowseNav() {
-    if (this._host._tab !== "recordings") return;
-    const prev = this._host._$("#rec-day-prev");
-    const next = this._host._$("#rec-day-next");
-    if (!prev || !next) return;
-    const { clientId, cam } = this._host._cc();
-    const current = this._host._recordingsDayBounds();
-    const today = this._host._recordingsDayBounds(
-      Math.floor(Date.now() / 1e3)
-    );
-    const probePlan = resolveRecordingsBrowseNavProbePlan({
-      clientId,
-      camera: cam,
-      currentBounds: current,
-      todayBounds: today,
-      prevBounds: this._host._recordingsOffsetDayBounds(-1),
-      nextBounds: this._host._recordingsOffsetDayBounds(1)
-    });
-    if (!probePlan.hasContext) {
-      prev.disabled = probePlan.initialState.prevDisabled;
-      next.disabled = probePlan.initialState.nextDisabled;
-      return;
-    }
-    const token = ++this._host._recordingsNavUpdateToken;
-    prev.disabled = true;
-    next.disabled = true;
-    const hasPrev = await this.hasRecordingsInBounds(
-      probePlan.prevProbeBounds,
-      clientId,
-      cam
-    );
-    if (token !== this._host._recordingsNavUpdateToken) return;
-    let hasNext = false;
-    if (probePlan.nextProbeBounds) {
-      hasNext = await this.hasRecordingsInBounds(
-        probePlan.nextProbeBounds,
-        clientId,
-        cam
-      );
-      if (token !== this._host._recordingsNavUpdateToken) return;
-    }
-    const resolvedNavState = resolveRecordingsBrowseNavState({
-      currentBounds: current,
-      todayBounds: today,
-      hasPrev,
-      hasNext
-    });
-    prev.disabled = resolvedNavState.prevDisabled;
-    next.disabled = resolvedNavState.nextDisabled;
-  }
-};
-
 // src/features/recordings/utils/swipe.js
 const RECORDINGS_SWIPE_LOADING_HTML = '<div class="empty">Loading day\u2026</div>';
 const RECORDINGS_SWIPE_EMPTY_HTML = '<div class="empty">No recordings in this day</div>';
@@ -9803,6 +9672,184 @@ function resolveFailedRecordingsSwipeState() {
     incomingHtml: RECORDINGS_SWIPE_EMPTY_HTML
   };
 }
+
+// src/features/recordings/browse-nav.ctrl.js
+const RecordingsBrowseNavController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  async hasRecordingsInBounds(bounds, clientId, cam) {
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    const cached = resolveCachedRecordingsAvailability({
+      key,
+      dataCache: this._host._recordingsDayDataCache,
+      availabilityCache: this._host._recordingsDayAvailabilityCache
+    });
+    if (cached.found) {
+      if (cached.shouldSyncAvailability) {
+        this._host._recordingsDayAvailabilityCache.set(
+          key,
+          cached.hasRecordings
+        );
+      }
+      return cached.hasRecordings;
+    }
+    try {
+      const recordings = await this._host._ws({
+        type: "frigate/recordings/get",
+        instance_id: clientId,
+        camera: cam,
+        after: Math.max(0, bounds.start),
+        before: bounds.end
+      });
+      const fetched = resolveFetchedRecordingsAvailabilityState(recordings);
+      this._host._recordingsDayDataCache.set(key, fetched.recordings);
+      this._host._recordingsDayAvailabilityCache.set(
+        key,
+        fetched.availabilityValue
+      );
+      return fetched.hasRecordings;
+    } catch (_) {
+      const failed = resolveFailedRecordingsAvailabilityState();
+      this._host._recordingsDayAvailabilityCache.set(
+        key,
+        failed.availabilityValue
+      );
+      return failed.hasRecordings;
+    }
+  }
+  async prepareDayTransition(direction) {
+    const bounds = this._host._recordingsOffsetDayBounds(direction);
+    const today = this._host._recordingsDayBounds(
+      Math.floor(Date.now() / 1e3)
+    );
+    const { clientId, cam } = this._host._cc();
+    const prepared = resolvePreparedRecordingsDayTransition({
+      direction,
+      bounds,
+      todayBounds: today,
+      clientId,
+      camera: cam,
+      dataCache: this._host._recordingsDayDataCache
+    });
+    if (prepared.done) {
+      return prepared.result;
+    }
+    const key = prepared.key;
+    const hasData = await this.hasRecordingsInBounds(bounds, clientId, cam);
+    if (!hasData) {
+      return { hasData: false, bounds, recs: [] };
+    }
+    const recordings = await this._host._ws({
+      type: "frigate/recordings/get",
+      instance_id: clientId,
+      camera: cam,
+      after: Math.max(0, bounds.start),
+      before: bounds.end
+    });
+    const result = buildPreparedRecordingsDayResult(bounds, recordings);
+    this._host._recordingsDayDataCache.set(key, result.recs);
+    this._host._recordingsDayAvailabilityCache.set(key, result.hasData);
+    return result;
+  }
+  async navigateDayAnimated(direction) {
+    if (this._host._tab !== "recordings") return false;
+    const dir = Number(direction);
+    if (dir !== -1 && dir !== 1) return false;
+    if (this._host._recordingsDayNavAnimating) return false;
+    this._host._recordingsDayNavAnimating = true;
+    try {
+      const prep = await this.prepareDayTransition(dir);
+      const navigation = resolvePreparedRecordingsDayNavigationState({
+        prep,
+        renderRecordings: (recordings) => this._host._recordingsListMarkup(
+          this._host._recordingsViewRows(recordings)
+        )
+      });
+      if (navigation.shouldBounce) {
+        this._host._bounceRecordingsArea(dir);
+        void this.updateBrowseNav();
+        return false;
+      }
+      const stage = this._host._createRecordingsSwipeStage(
+        dir,
+        navigation.incomingHtml
+      );
+      if (!stage) {
+        await this._host._commitRecordingsDayTransition(
+          navigation.bounds,
+          navigation.recs
+        );
+        return true;
+      }
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await this._host._animateRecordingsSwipeStageTo(
+        stage,
+        -dir * stage.width,
+        320,
+        "cubic-bezier(0.28, 0.02, 0.18, 1)"
+      );
+      await this._host._commitRecordingsDayTransition(
+        navigation.bounds,
+        navigation.recs
+      );
+      return true;
+    } finally {
+      this._host._recordingsDayNavAnimating = false;
+    }
+  }
+  async updateBrowseNav() {
+    if (this._host._tab !== "recordings") return;
+    const prev = this._host._$("#rec-day-prev");
+    const next = this._host._$("#rec-day-next");
+    if (!prev || !next) return;
+    const { clientId, cam } = this._host._cc();
+    const current = this._host._recordingsDayBounds();
+    const today = this._host._recordingsDayBounds(
+      Math.floor(Date.now() / 1e3)
+    );
+    const probePlan = resolveRecordingsBrowseNavProbePlan({
+      clientId,
+      camera: cam,
+      currentBounds: current,
+      todayBounds: today,
+      prevBounds: this._host._recordingsOffsetDayBounds(-1),
+      nextBounds: this._host._recordingsOffsetDayBounds(1)
+    });
+    if (!probePlan.hasContext) {
+      prev.disabled = probePlan.initialState.prevDisabled;
+      next.disabled = probePlan.initialState.nextDisabled;
+      return;
+    }
+    const token = ++this._host._recordingsNavUpdateToken;
+    prev.disabled = true;
+    next.disabled = true;
+    const hasPrev = await this.hasRecordingsInBounds(
+      probePlan.prevProbeBounds,
+      clientId,
+      cam
+    );
+    if (token !== this._host._recordingsNavUpdateToken) return;
+    let hasNext = false;
+    if (probePlan.nextProbeBounds) {
+      hasNext = await this.hasRecordingsInBounds(
+        probePlan.nextProbeBounds,
+        clientId,
+        cam
+      );
+      if (token !== this._host._recordingsNavUpdateToken) return;
+    }
+    const resolvedNavState = resolveRecordingsBrowseNavState({
+      currentBounds: current,
+      todayBounds: today,
+      hasPrev,
+      hasNext
+    });
+    prev.disabled = resolvedNavState.prevDisabled;
+    next.disabled = resolvedNavState.nextDisabled;
+  }
+};
 
 // src/card/controls/readout.js
 function normalizeControlsReadoutLine(text) {
@@ -15631,49 +15678,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._recordingsBrowseNavController.prepareDayTransition(direction);
   }
   async _navigateRecordingsDayAnimated(direction) {
-    if (this._tab !== "recordings") return false;
-    const dir = Number(direction);
-    if (dir !== -1 && dir !== 1) return false;
-    if (this._recordingsDayNavAnimating) return false;
-    this._recordingsDayNavAnimating = true;
-    try {
-      const prep = await this._prepareRecordingsDayTransition(dir);
-      const navigation = resolvePreparedRecordingsDayNavigationState({
-        prep,
-        renderRecordings: (recordings) => this._recordingsListMarkup(this._recordingsViewRows(recordings))
-      });
-      if (navigation.shouldBounce) {
-        this._bounceRecordingsArea(dir);
-        void this._updateRecordingsBrowseNav();
-        return false;
-      }
-      const stage = this._createRecordingsSwipeStage(
-        dir,
-        navigation.incomingHtml
-      );
-      if (!stage) {
-        await this._commitRecordingsDayTransition(
-          navigation.bounds,
-          navigation.recs
-        );
-        return true;
-      }
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      await this._animateRecordingsSwipeStageTo(
-        stage,
-        -dir * stage.width,
-        320,
-        "cubic-bezier(0.28, 0.02, 0.18, 1)"
-      );
-      await this._commitRecordingsDayTransition(
-        navigation.bounds,
-        navigation.recs
-      );
-      return true;
-    } finally {
-      this._recordingsDayNavAnimating = false;
-    }
+    return this._recordingsBrowseNavController.navigateDayAnimated(direction);
   }
   async _completeRecordingsSwipeGesture(gesture) {
     if (!gesture) return false;

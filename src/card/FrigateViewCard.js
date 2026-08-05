@@ -212,7 +212,6 @@ import {
   resolveFailedRecordingsSwipeState,
   resolveClosestRecordingAlertStart,
   resolveRecordingSeekExecutionPlan,
-  resolvePreparedRecordingsDayNavigationState,
   resolveOffsetRecordingsDayBounds,
   resolvePreparedRecordingsIncomingState,
   resolvePreparedRecordingsSwipeState,
@@ -3018,54 +3017,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _navigateRecordingsDayAnimated(direction) {
-    if (this._tab !== "recordings") return false;
-    const dir = Number(direction);
-    if (dir !== -1 && dir !== 1) return false;
-    if (this._recordingsDayNavAnimating) return false;
-
-    this._recordingsDayNavAnimating = true;
-    try {
-      const prep = await this._prepareRecordingsDayTransition(dir);
-      const navigation = resolvePreparedRecordingsDayNavigationState({
-        prep,
-        renderRecordings: (recordings) =>
-          this._recordingsListMarkup(this._recordingsViewRows(recordings)),
-      });
-      if (navigation.shouldBounce) {
-        this._bounceRecordingsArea(dir);
-        void this._updateRecordingsBrowseNav();
-        return false;
-      }
-
-      const stage = this._createRecordingsSwipeStage(
-        dir,
-        navigation.incomingHtml,
-      );
-      if (!stage) {
-        await this._commitRecordingsDayTransition(
-          navigation.bounds,
-          navigation.recs,
-        );
-        return true;
-      }
-
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-
-      await this._animateRecordingsSwipeStageTo(
-        stage,
-        -dir * stage.width,
-        320,
-        "cubic-bezier(0.28, 0.02, 0.18, 1)",
-      );
-      await this._commitRecordingsDayTransition(
-        navigation.bounds,
-        navigation.recs,
-      );
-      return true;
-    } finally {
-      this._recordingsDayNavAnimating = false;
-    }
+    return this._recordingsBrowseNavController.navigateDayAnimated(direction);
   }
 
   async _completeRecordingsSwipeGesture(gesture) {

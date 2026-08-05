@@ -480,6 +480,12 @@ test("mixed swipe and button recordings transitions both clear swipe-active stat
     calls.push(["createStage", dir, incomingHtml]);
     return null;
   };
+  const recordingsBrowseNavController = new RecordingsBrowseNavController(ctx);
+  recordingsBrowseNavController.prepareDayTransition = async (dir) => {
+    calls.push(["prepare", dir]);
+    return { hasData: true, bounds: secondBounds, recs: [{ id: 2 }] };
+  };
+  ctx._recordingsBrowseNavController = recordingsBrowseNavController;
 
   const gesture = {
     prepPromise: Promise.resolve(),
@@ -531,12 +537,16 @@ test("_navigateRecordingsDayAnimated bounces and refreshes browse nav when no da
     direction: -1,
     prep: { hasData: false, bounds, recs: [] },
   });
+  const controller = new RecordingsBrowseNavController(ctx);
+  controller.prepareDayTransition = async (dir) => {
+    calls.push(["prepare", dir]);
+    return { hasData: false, bounds, recs: [] };
+  };
+  controller.updateBrowseNav = async () => {
+    calls.push(["updateBrowseNav"]);
+  };
 
-  const result =
-    await FrigateViewCard.prototype._navigateRecordingsDayAnimated.call(
-      ctx,
-      direction,
-    );
+  const result = await controller.navigateDayAnimated(direction);
 
   assert.equal(result, false);
   assert.equal(ctx._recordingsDayNavAnimating, false);
@@ -555,12 +565,13 @@ test("_navigateRecordingsDayAnimated commits immediately when no swipe stage is 
     prep: { hasData: true, bounds, recs },
     stage: null,
   });
+  const controller = new RecordingsBrowseNavController(ctx);
+  controller.prepareDayTransition = async (dir) => {
+    calls.push(["prepare", dir]);
+    return { hasData: true, bounds, recs };
+  };
 
-  const result =
-    await FrigateViewCard.prototype._navigateRecordingsDayAnimated.call(
-      ctx,
-      direction,
-    );
+  const result = await controller.navigateDayAnimated(direction);
 
   assert.equal(result, true);
   assert.equal(ctx._recordingsDayNavAnimating, false);
@@ -582,6 +593,11 @@ test("_navigateRecordingsDayAnimated animates and commits when a swipe stage is 
     prep: { hasData: true, bounds, recs },
     stage,
   });
+  const controller = new RecordingsBrowseNavController(ctx);
+  controller.prepareDayTransition = async (dir) => {
+    calls.push(["prepare", dir]);
+    return { hasData: true, bounds, recs };
+  };
   const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
   globalThis.requestAnimationFrame = (cb) => {
     cb();
@@ -589,11 +605,7 @@ test("_navigateRecordingsDayAnimated animates and commits when a swipe stage is 
   };
 
   try {
-    const result =
-      await FrigateViewCard.prototype._navigateRecordingsDayAnimated.call(
-        ctx,
-        direction,
-      );
+    const result = await controller.navigateDayAnimated(direction);
 
     assert.equal(result, true);
     assert.equal(ctx._recordingsDayNavAnimating, false);
