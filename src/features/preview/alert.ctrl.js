@@ -159,9 +159,10 @@ export class PreviewAlertController {
       .trim()
       .toLowerCase();
 
-    // Some realtime payloads do not carry severity in-message. Schedule
-    // a near-term probe so preview alert/live promotion still occurs.
+    // Some realtime payloads do not carry severity in-message. Treat those
+    // mapped realtime updates as alert immediately, then schedule a probe.
     if (type !== "end" && !normalizedSeverity) {
+      this.markAlertCamera(cam, "alert", this._constants.PREVIEW_ALERT_HOLD_MS);
       this.scheduleAlertWatch(180);
       return;
     }

@@ -42,7 +42,7 @@ test("handleRealtimeMessage forwards parsed severity to alert candidate", () => 
   assert.deepEqual(calls, [["camera.front_door", "alert"]]);
 });
 
-test("handleRealtimeMessage schedules probe when severity is missing", () => {
+test("handleRealtimeMessage marks alert and schedules probe when severity is missing", () => {
   const host = createHost({ severityByMessage: "", shouldHandle: true });
   const controller = new GridAlertController(host, {
     DAY: 86400,
@@ -59,7 +59,7 @@ test("handleRealtimeMessage schedules probe when severity is missing", () => {
 
   controller.handleRealtimeMessage({ type: "update", camera: "front_door" });
 
-  assert.deepEqual(calls, [["watch", 180]]);
+  assert.deepEqual(calls, [["candidate"], ["watch", 180]]);
 });
 
 test("handleRealtimeMessage schedules probe when camera parsing fails", () => {

@@ -214,18 +214,24 @@ export class GridAlertController {
   handleRealtimeMessage(msg) {
     if (!this._host._isGridModeAvailable()) return;
     if (this._host._viewMode !== "grid") return;
-    const parsed = parseRealtimeAlertMessage({ host: this._host, msg });
+    const parsed = parseRealtimeAlertMessage({
+      host: this._host,
+      msg,
+      checkSeverity: false,
+    });
     if (!parsed) {
       if (this._host._isRealtimeEventMessage?.(msg)) {
         this.scheduleAlertWatch(180);
       }
       return;
     }
-    const { cam, severity } = parsed;
+    const { cam, severity, type } = parsed;
     const normalizedSeverity = String(severity || "")
       .trim()
       .toLowerCase();
+    if (type === "end") return;
     if (!normalizedSeverity) {
+      this.handleAlertCandidate(cam, "alert");
       this.scheduleAlertWatch(180);
       return;
     }
