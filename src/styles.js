@@ -8,7 +8,7 @@ export const STYLES = `
     box-sizing: border-box !important;
     display: block !important;
     border:1px solid var(--secondary-background-color) !important;
-    border-radius: var(--fvc-border-radius) !important;
+    border-radius: 0;
   }
   :host {
     --popup-z-index: 1000;
@@ -77,10 +77,11 @@ export const STYLES = `
     left:0;
     overflow:hidden !important;
     border:1px solid var(--secondary-background-color,#7a7a7a);
+    border-radius: var(--fvc-border-radius);
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
-  .card.corners-off{--fvc-border-radius:0px;}
+  .card.corners-off{--fvc-border-radius:0px;--fvc-outer-border-radius:0px;}
 
   .card .layout{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;width:100%;
     overflow:hidden !important;}
