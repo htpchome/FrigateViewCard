@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1217";
+const VERSION = "1.0.1218";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15718,9 +15718,9 @@ const FrigateViewCard = class extends HTMLElement {
         this._lastRenderedListHtml = html;
       },
       renderList: () => this._renderList(),
-      prepareDayTransition: (direction) => this._prepareRecordingsDayTransition(direction),
+      prepareDayTransition: (direction) => this._recordingsBrowseNavController.prepareDayTransition(direction),
       renderRecordings: (recordings) => this._recordingsListMarkup(this._recordingsViewRows(recordings)),
-      completeGesture: (gesture) => this._completeRecordingsSwipeGesture(gesture)
+      completeGesture: (gesture) => this._recordingsBrowseNavController.completeSwipeGesture(gesture)
     });
     this._recordingsSwipeController.bind();
   }

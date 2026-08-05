@@ -2868,11 +2868,11 @@ export class FrigateViewCard extends HTMLElement {
       },
       renderList: () => this._renderList(),
       prepareDayTransition: (direction) =>
-        this._prepareRecordingsDayTransition(direction),
+        this._recordingsBrowseNavController.prepareDayTransition(direction),
       renderRecordings: (recordings) =>
         this._recordingsListMarkup(this._recordingsViewRows(recordings)),
       completeGesture: (gesture) =>
-        this._completeRecordingsSwipeGesture(gesture),
+        this._recordingsBrowseNavController.completeSwipeGesture(gesture),
     });
     this._recordingsSwipeController.bind();
   }

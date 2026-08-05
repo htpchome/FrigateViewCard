@@ -1306,6 +1306,18 @@ test("recordings swipe stage helpers delegate through the recordings swipe contr
     true,
   );
   assert.equal(
+    /prepareDayTransition:\s*\(direction\)\s*=>\s*this\._recordingsBrowseNavController\.prepareDayTransition\(direction\)/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /completeGesture:\s*\(gesture\)\s*=>\s*this\._recordingsBrowseNavController\.completeSwipeGesture\(gesture\)/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
     /_createRecordingsSwipeStage\(direction, incomingHtml\) \{\s*return this\._recordingsSwipeController\?\.createStage\([\s\S]*?direction,[\s\S]*?incomingHtml,[\s\S]*?\);\s*\}/s.test(
       cardSource,
     ),
