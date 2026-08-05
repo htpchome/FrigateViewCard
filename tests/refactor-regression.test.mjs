@@ -1284,11 +1284,15 @@ test("recordings browse nav delegates through the recordings browse nav controll
     true,
   );
   assert.equal(
-    recordingsBrowseNavControllerSource.includes("swipeController.animateStageTo"),
+    recordingsBrowseNavControllerSource.includes(
+      "swipeController.animateStageTo",
+    ),
     true,
   );
   assert.equal(
-    recordingsBrowseNavControllerSource.includes("swipeController.clearListState"),
+    recordingsBrowseNavControllerSource.includes(
+      "swipeController.clearListState",
+    ),
     true,
   );
   assert.equal(
