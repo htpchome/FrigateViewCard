@@ -15,6 +15,10 @@ export class SlideshowAlertController {
     this._constants = constants;
   }
 
+  alertHoldMs() {
+    return Math.max(1000, Number(this._constants.SLIDESHOW_ALERT_HOLD_MS) || 0);
+  }
+
   isReviewFresh(review) {
     return isSlideshowReviewFresh({
       slideshowStartedAtSec: this._host._slideshowStartedAtSec,
@@ -65,7 +69,7 @@ export class SlideshowAlertController {
     const activeEntity = this._host._activeCam?.entity || "";
     this._host._slideshowLastAlertAt = now;
     this._host._slideshowLastAlertCam = nextReview.entity;
-    this._host._slideshowPausedUntil = now + this._host._slideshowRotationMs();
+    this._host._slideshowPausedUntil = now + this.alertHoldMs();
     this._host._setSlideshowAlertState(nextReview.severity);
 
     if (nextReview.entity === activeEntity) {
@@ -140,8 +144,7 @@ export class SlideshowAlertController {
       const activeEntity = this._host._activeCam?.entity || "";
       this._host._slideshowLastAlertAt = Date.now();
       this._host._slideshowLastAlertCam = next.entity;
-      this._host._slideshowPausedUntil =
-        Date.now() + this._host._slideshowRotationMs();
+      this._host._slideshowPausedUntil = Date.now() + this.alertHoldMs();
       this._host._setSlideshowAlertState(next.severity);
 
       if (next.entity === activeEntity) {
@@ -185,6 +188,52 @@ export class SlideshowAlertController {
       minMs: this._constants.SLIDESHOW_REVIEW_WATCH_MIN_MS,
       maxMs: this._constants.SLIDESHOW_REVIEW_WATCH_MAX_MS,
     });
+  }
+
+  handleHaStatusCandidate(cam, severity = "alert") {
+    if (
+      !this._host._slideshowActive ||
+      !this._host._isSlideshowRotationAvailable()
+    ) {
+      return;
+    }
+    if (!cam) return;
+    const normalizedSeverity = String(severity || "")
+      .trim()
+      .toLowerCase();
+    if (!this._host._shouldHandleSlideshowReview(cam, normalizedSeverity)) {
+      return;
+    }
+
+    if (this._host._slideshowPopupPaused) {
+      this._host._slideshowPendingAlertCam = cam;
+      this._host._slideshowPendingAlertType = normalizedSeverity || "alert";
+      this._host._setSlideshowAlertState(normalizedSeverity || "alert");
+      return;
+    }
+
+    const now = Date.now();
+    const activeEntity = this._host._activeCam?.entity || "";
+    this._host._slideshowLastAlertAt = now;
+    this._host._slideshowLastAlertCam = cam;
+
+    if (cam === activeEntity) {
+      this._host._slideshowPendingAlertCam = "";
+      this._host._slideshowPendingAlertType = "";
+      this._host._slideshowPausedUntil = now + this.alertHoldMs();
+      this._host._setSlideshowAlertState(normalizedSeverity || "alert");
+      this._host._scheduleSlideshowRotation("ha-active-alert");
+      return;
+    }
+
+    const idx = this._host._cameraIndexByEntity(cam);
+    if (idx < 0) return;
+    this._host._slideshowPausedUntil = now + this.alertHoldMs();
+    this._host._slideshowPendingAlertCam = "";
+    this._host._slideshowPendingAlertType = "";
+    this._host._setSlideshowAlertState(normalizedSeverity || "alert");
+    void this._host._switchCamera(idx, { source: "alert" });
+    this._host._scheduleSlideshowRotation("ha-alert-switch");
   }
 
   scheduleReviewWatch(delayMs = null) {
@@ -236,8 +285,7 @@ export class SlideshowAlertController {
     if (cam === activeEntity) {
       this._host._slideshowPendingAlertCam = "";
       this._host._slideshowPendingAlertType = "";
-      this._host._slideshowPausedUntil =
-        now + this._host._slideshowRotationMs();
+      this._host._slideshowPausedUntil = now + this.alertHoldMs();
       this._host._setSlideshowAlertState(severity);
       this._host._scheduleSlideshowRotation("active-alert");
       return;
@@ -245,7 +293,7 @@ export class SlideshowAlertController {
 
     const idx = this._host._cameraIndexByEntity(cam);
     if (idx < 0) return;
-    this._host._slideshowPausedUntil = now + this._host._slideshowRotationMs();
+    this._host._slideshowPausedUntil = now + this.alertHoldMs();
     this._host._slideshowPendingAlertCam = "";
     this._host._slideshowPendingAlertType = "";
     this._host._setSlideshowAlertState(severity);

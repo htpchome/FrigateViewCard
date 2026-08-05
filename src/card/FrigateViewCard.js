@@ -543,6 +543,7 @@ export class FrigateViewCard extends HTMLElement {
     this._deepLinkController = new DeepLinkController(this);
     this._slideshowAlertController = new SlideshowAlertController(this, {
       DAY,
+      SLIDESHOW_ALERT_HOLD_MS,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
       SLIDESHOW_REVIEW_WATCH_MIN_MS,
       SLIDESHOW_REVIEW_WATCH_MAX_MS,
@@ -2245,7 +2246,9 @@ export class FrigateViewCard extends HTMLElement {
     const activeEntity = String(this._activeCam?.entity || "").trim();
     let activeCameraAlerted = false;
     let gridChanged = false;
-    let firstGridAlertEntity = "";
+    let firstAlertEntity = "";
+    let firstAlertSeverity = "";
+    let activeAlertSeverity = "";
     for (const camera of this._config?.cameras || []) {
       const entity = String(camera?.entity || "").trim();
       if (!entity) continue;
@@ -2257,9 +2260,15 @@ export class FrigateViewCard extends HTMLElement {
       const severity = haReviewStatusSeverity(status);
       if (!severity) continue;
       if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
-      if (!firstGridAlertEntity) firstGridAlertEntity = entity;
+      if (!firstAlertEntity) {
+        firstAlertEntity = entity;
+        firstAlertSeverity = severity;
+      }
       hasActiveAlert = true;
-      if (entity === activeEntity) activeCameraAlerted = true;
+      if (entity === activeEntity) {
+        activeCameraAlerted = true;
+        activeAlertSeverity = severity;
+      }
       gridChanged =
         this._gridAlertController.markAlertCamera(entity, severity) ||
         gridChanged;
@@ -2269,9 +2278,24 @@ export class FrigateViewCard extends HTMLElement {
         PREVIEW_ALERT_HOLD_MS,
       );
     }
+
+    const slideshowAlertEntity = activeCameraAlerted
+      ? activeEntity
+      : firstAlertEntity;
+    const slideshowAlertSeverity = activeCameraAlerted
+      ? activeAlertSeverity
+      : firstAlertSeverity;
+    if (slideshowAlertEntity) {
+      this._slideshowAlertController.handleHaStatusCandidate(
+        slideshowAlertEntity,
+        slideshowAlertSeverity || "alert",
+      );
+    }
+
+    const gridAlertEntity = activeCameraAlerted ? activeEntity : firstAlertEntity;
     let gridFocused = false;
-    if (this._viewMode === "grid" && firstGridAlertEntity) {
-      gridFocused = this._focusGridPageForCamera(firstGridAlertEntity) === true;
+    if (this._viewMode === "grid" && gridAlertEntity) {
+      gridFocused = this._focusGridPageForCamera(gridAlertEntity) === true;
     }
     if ((gridChanged || gridFocused) && this._viewMode === "grid") {
       this._scheduleGridRefresh(90);

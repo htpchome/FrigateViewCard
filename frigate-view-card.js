@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1247";
+const VERSION = "1.0.1249";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -521,7 +521,7 @@ const STYLES = `
   }
   .preview-grid > div {min-width: 0;}
 
-  .preview-cell{display:flex;flex-direction:column;cursor:pointer;-webkit-backface-visibility: hidden;backface-visibility: hidden;}
+  .preview-cell{display:flex;flex-direction:column;cursor:pointer;-webkit-backface-visibility: hidden;backface-visibility: hidden;border-radius:var(--fvc-border-radius);}
   .preview-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:var(--fvc-border-radius);background:var(--c-bg-deep);-webkit-backface-visibility: hidden;backface-visibility: hidden;
     transform: translateZ(0);}
   .preview-media-host::after{content:"";position:absolute;inset:0;pointer-events:none;border:0 solid transparent;border-radius:inherit;box-sizing:border-box;z-index:3;}
@@ -530,7 +530,8 @@ const STYLES = `
   .preview-media-host.grid-detection{border-color:var(--warning-color, var(--c-accent));box-shadow:inset 0 0 0 2px var(--warning-color, var(--c-accent));}
   .preview-media-host.grid-detection::after{border-width:2px;border-color:var(--warning-color, var(--c-accent));}
   .preview-media-host video,.preview-media-host img,.preview-media-host ha-camera-stream{width:100%;height:100%;display:block;object-fit:contain;object-position:center center;background:var(--c-bg-deep);}
-  .preview-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;background:var(--c-bg-main);border-radius:var(--fvc-border-radius);}
+  .preview-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;background:var(--c-bg-main);
+    border-radius:var(--fvc-border-radius);}
   .preview-meta-name{font-size:.82rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-meta-source{font-size:.7rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-meta-events{font-size:.72rem;color:var(--c-text2);}
@@ -13397,6 +13398,9 @@ const SlideshowAlertController = class {
     this._host = host;
     this._constants = constants;
   }
+  alertHoldMs() {
+    return Math.max(1e3, Number(this._constants.SLIDESHOW_ALERT_HOLD_MS) || 0);
+  }
   isReviewFresh(review) {
     return isSlideshowReviewFresh({
       slideshowStartedAtSec: this._host._slideshowStartedAtSec,
@@ -13436,7 +13440,7 @@ const SlideshowAlertController = class {
     const activeEntity = this._host._activeCam?.entity || "";
     this._host._slideshowLastAlertAt = now;
     this._host._slideshowLastAlertCam = nextReview.entity;
-    this._host._slideshowPausedUntil = now + this._host._slideshowRotationMs();
+    this._host._slideshowPausedUntil = now + this.alertHoldMs();
     this._host._setSlideshowAlertState(nextReview.severity);
     if (nextReview.entity === activeEntity) {
       this._host._scheduleSlideshowRotation(`${source}-active`);
@@ -13495,7 +13499,7 @@ const SlideshowAlertController = class {
       const activeEntity = this._host._activeCam?.entity || "";
       this._host._slideshowLastAlertAt = Date.now();
       this._host._slideshowLastAlertCam = next.entity;
-      this._host._slideshowPausedUntil = Date.now() + this._host._slideshowRotationMs();
+      this._host._slideshowPausedUntil = Date.now() + this.alertHoldMs();
       this._host._setSlideshowAlertState(next.severity);
       if (next.entity === activeEntity) {
         this._host._scheduleSlideshowRotation("probe-active-review");
@@ -13533,6 +13537,42 @@ const SlideshowAlertController = class {
       maxMs: this._constants.SLIDESHOW_REVIEW_WATCH_MAX_MS
     });
   }
+  handleHaStatusCandidate(cam, severity = "alert") {
+    if (!this._host._slideshowActive || !this._host._isSlideshowRotationAvailable()) {
+      return;
+    }
+    if (!cam) return;
+    const normalizedSeverity = String(severity || "").trim().toLowerCase();
+    if (!this._host._shouldHandleSlideshowReview(cam, normalizedSeverity)) {
+      return;
+    }
+    if (this._host._slideshowPopupPaused) {
+      this._host._slideshowPendingAlertCam = cam;
+      this._host._slideshowPendingAlertType = normalizedSeverity || "alert";
+      this._host._setSlideshowAlertState(normalizedSeverity || "alert");
+      return;
+    }
+    const now = Date.now();
+    const activeEntity = this._host._activeCam?.entity || "";
+    this._host._slideshowLastAlertAt = now;
+    this._host._slideshowLastAlertCam = cam;
+    if (cam === activeEntity) {
+      this._host._slideshowPendingAlertCam = "";
+      this._host._slideshowPendingAlertType = "";
+      this._host._slideshowPausedUntil = now + this.alertHoldMs();
+      this._host._setSlideshowAlertState(normalizedSeverity || "alert");
+      this._host._scheduleSlideshowRotation("ha-active-alert");
+      return;
+    }
+    const idx = this._host._cameraIndexByEntity(cam);
+    if (idx < 0) return;
+    this._host._slideshowPausedUntil = now + this.alertHoldMs();
+    this._host._slideshowPendingAlertCam = "";
+    this._host._slideshowPendingAlertType = "";
+    this._host._setSlideshowAlertState(normalizedSeverity || "alert");
+    void this._host._switchCamera(idx, { source: "alert" });
+    this._host._scheduleSlideshowRotation("ha-alert-switch");
+  }
   scheduleReviewWatch(delayMs = null) {
     if (!this._host._slideshowActive || !this._host._isSlideshowRotationAvailable()) {
       return;
@@ -13569,14 +13609,14 @@ const SlideshowAlertController = class {
     if (cam === activeEntity) {
       this._host._slideshowPendingAlertCam = "";
       this._host._slideshowPendingAlertType = "";
-      this._host._slideshowPausedUntil = now + this._host._slideshowRotationMs();
+      this._host._slideshowPausedUntil = now + this.alertHoldMs();
       this._host._setSlideshowAlertState(severity);
       this._host._scheduleSlideshowRotation("active-alert");
       return;
     }
     const idx = this._host._cameraIndexByEntity(cam);
     if (idx < 0) return;
-    this._host._slideshowPausedUntil = now + this._host._slideshowRotationMs();
+    this._host._slideshowPausedUntil = now + this.alertHoldMs();
     this._host._slideshowPendingAlertCam = "";
     this._host._slideshowPendingAlertType = "";
     this._host._setSlideshowAlertState(severity);
@@ -14089,6 +14129,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._deepLinkController = new DeepLinkController(this);
     this._slideshowAlertController = new SlideshowAlertController(this, {
       DAY,
+      SLIDESHOW_ALERT_HOLD_MS,
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
       SLIDESHOW_REVIEW_WATCH_MIN_MS,
       SLIDESHOW_REVIEW_WATCH_MAX_MS
@@ -15510,7 +15551,9 @@ const FrigateViewCard = class extends HTMLElement {
     const activeEntity = String(this._activeCam?.entity || "").trim();
     let activeCameraAlerted = false;
     let gridChanged = false;
-    let firstGridAlertEntity = "";
+    let firstAlertEntity = "";
+    let firstAlertSeverity = "";
+    let activeAlertSeverity = "";
     for (const camera of this._config?.cameras || []) {
       const entity = String(camera?.entity || "").trim();
       if (!entity) continue;
@@ -15522,9 +15565,15 @@ const FrigateViewCard = class extends HTMLElement {
       const severity = haReviewStatusSeverity(status);
       if (!severity) continue;
       if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
-      if (!firstGridAlertEntity) firstGridAlertEntity = entity;
+      if (!firstAlertEntity) {
+        firstAlertEntity = entity;
+        firstAlertSeverity = severity;
+      }
       hasActiveAlert = true;
-      if (entity === activeEntity) activeCameraAlerted = true;
+      if (entity === activeEntity) {
+        activeCameraAlerted = true;
+        activeAlertSeverity = severity;
+      }
       gridChanged = this._gridAlertController.markAlertCamera(entity, severity) || gridChanged;
       this._previewAlertController.markAlertCamera(
         entity,
@@ -15532,9 +15581,18 @@ const FrigateViewCard = class extends HTMLElement {
         PREVIEW_ALERT_HOLD_MS
       );
     }
+    const slideshowAlertEntity = activeCameraAlerted ? activeEntity : firstAlertEntity;
+    const slideshowAlertSeverity = activeCameraAlerted ? activeAlertSeverity : firstAlertSeverity;
+    if (slideshowAlertEntity) {
+      this._slideshowAlertController.handleHaStatusCandidate(
+        slideshowAlertEntity,
+        slideshowAlertSeverity || "alert"
+      );
+    }
+    const gridAlertEntity = activeCameraAlerted ? activeEntity : firstAlertEntity;
     let gridFocused = false;
-    if (this._viewMode === "grid" && firstGridAlertEntity) {
-      gridFocused = this._focusGridPageForCamera(firstGridAlertEntity) === true;
+    if (this._viewMode === "grid" && gridAlertEntity) {
+      gridFocused = this._focusGridPageForCamera(gridAlertEntity) === true;
     }
     if ((gridChanged || gridFocused) && this._viewMode === "grid") {
       this._scheduleGridRefresh(90);
