@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1209";
+const VERSION = "1.0.1210";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -8520,6 +8520,40 @@ const BrowseWindowLoaderController = class {
     this._host._consumeDeepLinkEventOpen();
     if (this._host._eventsMode === "all") this._host._loadAllCamsBackground();
     this._host._renderAll();
+  }
+  async loadOlder() {
+    const before = this._host._events.length ? Math.floor(
+      Math.min(...this._host._events.map((event) => event.start_time))
+    ) : this._host._winStart;
+    this._host._loading = true;
+    const { clientId, cam } = this._host._cc();
+    try {
+      const older = await this._host._ws({
+        type: "frigate/events/get",
+        instance_id: clientId,
+        cameras: [cam],
+        before,
+        limit: 50
+      });
+      const nextEvents = Array.isArray(older) ? older.filter(
+        (olderEvent) => !this._host._events.some(
+          (currentEvent) => currentEvent.id === olderEvent.id
+        )
+      ) : [];
+      if (!nextEvents.length) {
+        this._host._exhausted = true;
+      } else {
+        this._host._events = this._host._events.concat(nextEvents);
+        this._host._winStart = Math.min(
+          this._host._winStart,
+          ...nextEvents.map((event) => event.start_time)
+        );
+      }
+    } catch (_) {
+    }
+    this._host._loading = false;
+    this._host._renderList();
+    this._host._renderSubtitle();
   }
   cacheActiveCamSlice(key, value) {
     const entity = this._host._activeCam?.entity;
@@ -17274,31 +17308,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._browseFilterController.renderFilter();
   }
   async _loadOlder() {
-    const before = this._events.length ? Math.floor(Math.min(...this._events.map((e) => e.start_time))) : this._winStart;
-    this._loading = true;
-    const { clientId, cam } = this._cc();
-    try {
-      const older = await this._ws({
-        type: "frigate/events/get",
-        instance_id: clientId,
-        cameras: [cam],
-        before,
-        limit: 50
-      });
-      const arr = Array.isArray(older) ? older.filter((o) => !this._events.some((e) => e.id === o.id)) : [];
-      if (!arr.length) this._exhausted = true;
-      else {
-        this._events = this._events.concat(arr);
-        this._winStart = Math.min(
-          this._winStart,
-          ...arr.map((e) => e.start_time)
-        );
-      }
-    } catch (_) {
-    }
-    this._loading = false;
-    this._renderList();
-    this._renderSubtitle();
+    await this._browseWindowLoaderController.loadOlder();
   }
   // ── render ────────────────────────────────────────────────
   _syncStatus() {

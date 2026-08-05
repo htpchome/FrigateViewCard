@@ -419,8 +419,16 @@ test("event list thumbnails use browser lazy loading", () => {
 });
 
 test("window loads use loading-state guard", () => {
-  assert.equal(/if \(this\._loading\) return;/.test(source), true);
-  assert.equal(/this\._loading = true;/.test(source), true);
+  assert.equal(
+    /if \(this\._host\._loading\) return;/.test(
+      browseWindowLoaderControllerSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._host\._loading = true;/.test(browseWindowLoaderControllerSource),
+    true,
+  );
 });
 
 test("startup resolves initial page through the navigation factory", () => {
@@ -1164,6 +1172,12 @@ test("browse window loading delegates through the browse window loader controlle
     true,
   );
   assert.equal(
+    /async _loadOlder\(\) \{\s*await this\._browseWindowLoaderController\.loadOlder\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
     browseWindowLoaderControllerSource.includes(
       "export class BrowseWindowLoaderController",
     ),
@@ -1171,6 +1185,10 @@ test("browse window loading delegates through the browse window loader controlle
   );
   assert.equal(
     browseWindowLoaderControllerSource.includes("async loadWindow(replace)"),
+    true,
+  );
+  assert.equal(
+    browseWindowLoaderControllerSource.includes("async loadOlder()"),
     true,
   );
 });

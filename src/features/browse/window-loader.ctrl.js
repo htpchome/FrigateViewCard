@@ -178,6 +178,45 @@ export class BrowseWindowLoaderController {
     this._host._renderAll();
   }
 
+  async loadOlder() {
+    const before = this._host._events.length
+      ? Math.floor(
+          Math.min(...this._host._events.map((event) => event.start_time)),
+        )
+      : this._host._winStart;
+    this._host._loading = true;
+    const { clientId, cam } = this._host._cc();
+    try {
+      const older = await this._host._ws({
+        type: "frigate/events/get",
+        instance_id: clientId,
+        cameras: [cam],
+        before,
+        limit: 50,
+      });
+      const nextEvents = Array.isArray(older)
+        ? older.filter(
+            (olderEvent) =>
+              !this._host._events.some(
+                (currentEvent) => currentEvent.id === olderEvent.id,
+              ),
+          )
+        : [];
+      if (!nextEvents.length) {
+        this._host._exhausted = true;
+      } else {
+        this._host._events = this._host._events.concat(nextEvents);
+        this._host._winStart = Math.min(
+          this._host._winStart,
+          ...nextEvents.map((event) => event.start_time),
+        );
+      }
+    } catch (_) {}
+    this._host._loading = false;
+    this._host._renderList();
+    this._host._renderSubtitle();
+  }
+
   cacheActiveCamSlice(key, value) {
     const entity = this._host._activeCam?.entity;
     if (entity && this._host._camCache[entity]) {

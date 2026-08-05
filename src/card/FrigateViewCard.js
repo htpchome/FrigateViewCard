@@ -5053,34 +5053,7 @@ export class FrigateViewCard extends HTMLElement {
     this._browseFilterController.renderFilter();
   }
   async _loadOlder() {
-    const before = this._events.length
-      ? Math.floor(Math.min(...this._events.map((e) => e.start_time)))
-      : this._winStart;
-    this._loading = true;
-    const { clientId, cam } = this._cc();
-    try {
-      const older = await this._ws({
-        type: "frigate/events/get",
-        instance_id: clientId,
-        cameras: [cam],
-        before,
-        limit: 50,
-      });
-      const arr = Array.isArray(older)
-        ? older.filter((o) => !this._events.some((e) => e.id === o.id))
-        : [];
-      if (!arr.length) this._exhausted = true;
-      else {
-        this._events = this._events.concat(arr);
-        this._winStart = Math.min(
-          this._winStart,
-          ...arr.map((e) => e.start_time),
-        );
-      }
-    } catch (_) {}
-    this._loading = false;
-    this._renderList();
-    this._renderSubtitle();
+    await this._browseWindowLoaderController.loadOlder();
   }
   // ── render ────────────────────────────────────────────────
   _syncStatus() {

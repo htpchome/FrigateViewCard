@@ -120,3 +120,47 @@ test("warmOtherCamerasEvents fills inactive camera cache through fetchWindowedEv
 
   assert.deepEqual(inactiveCache.events, [{ id: "event-2", start_time: 120 }]);
 });
+
+test("loadOlder appends unique events, updates the window start, and marks exhaustion", async () => {
+  const calls = [];
+  const host = {
+    _events: [
+      { id: "event-2", start_time: 180 },
+      { id: "event-1", start_time: 150 },
+    ],
+    _winStart: 140,
+    _loading: false,
+    _exhausted: false,
+    _cc: () => ({ clientId: "frigate", cam: "front" }),
+    _ws: async ({ before }) => {
+      if (before === 150) {
+        return [
+          { id: "event-1", start_time: 150 },
+          { id: "event-0", start_time: 120 },
+        ];
+      }
+      return [];
+    },
+    _renderList: () => calls.push("renderList"),
+    _renderSubtitle: () => calls.push("renderSubtitle"),
+  };
+  const controller = new BrowseWindowLoaderController(host);
+
+  await controller.loadOlder();
+
+  assert.equal(host._loading, false);
+  assert.equal(host._exhausted, false);
+  assert.deepEqual(host._events, [
+    { id: "event-2", start_time: 180 },
+    { id: "event-1", start_time: 150 },
+    { id: "event-0", start_time: 120 },
+  ]);
+  assert.equal(host._winStart, 120);
+  assert.deepEqual(calls, ["renderList", "renderSubtitle"]);
+
+  calls.length = 0;
+  await controller.loadOlder();
+
+  assert.equal(host._exhausted, true);
+  assert.deepEqual(calls, ["renderList", "renderSubtitle"]);
+});
