@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1201";
+const VERSION = "1.0.1202";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7599,7 +7599,7 @@ const resolvePopupCarouselActiveScrollLeft = ({
   padding = 8
 }) => Math.max(0, Number(activeOffsetLeft || 0) - Number(padding || 0));
 
-// src/shared/filter-state.js
+// src/features/browse/filter-state.js
 function buildReviewFilterLabels(review, sourceEvent = null) {
   const labels = new Set();
   if (sourceEvent?.label) labels.add(sourceEvent.label);
@@ -7774,6 +7774,104 @@ function selectReviewsForFilterTab({
   const safeReviews = [...reviewSource || []];
   return showAllReviews ? safeReviews : safeReviews.filter((review) => review?.severity === "alert");
 }
+const BrowseFilterController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  reviewsForTabBase() {
+    return selectReviewsForFilterTab({
+      reviews: this._host._reviews,
+      gridReviews: this._host._allGridReviews(),
+      isGridMixedListMode: this._host._isGridMixedListMode(),
+      showAllReviews: this._host._activeCam?.alerts_content === "all_reviews"
+    });
+  }
+  reviewSourceEvent(review) {
+    const firstDet = review?.data?.detections && review.data.detections[0] || "";
+    return firstDet ? this._host._findEventById(firstDet) : null;
+  }
+  filterOptionSourceEvents() {
+    return selectFilterOptionSourceEvents({
+      tab: this._host._tab,
+      reviews: this.reviewsForTabBase(),
+      keptEvents: this._host._isGridMixedListMode() ? this._host._allGridKeptEvents() : this._host._kept || [],
+      displayEvents: this._host._allDisplayEvents(),
+      getSourceEvent: (review) => this.reviewSourceEvent(review)
+    });
+  }
+  matchesEventFilters(event) {
+    return matchesEventFilters(event, {
+      filterLabel: this._host._filterLabel,
+      filterZone: this._host._filterZone,
+      favOnly: this._host._favOnly
+    });
+  }
+  filteredReviews() {
+    return this.reviewsForTabBase().filter((review) => {
+      const sourceEvent = this.reviewSourceEvent(review);
+      return matchesReviewFilters(review, sourceEvent, {
+        filterLabel: this._host._filterLabel,
+        filterZone: this._host._filterZone,
+        favOnly: this._host._favOnly,
+        getLabels: (candidateReview, candidateSourceEvent) => this.reviewFilterLabels(candidateReview, candidateSourceEvent),
+        getZones: (candidateReview, candidateSourceEvent) => this.reviewFilterZones(candidateReview, candidateSourceEvent)
+      });
+    });
+  }
+  filteredKept() {
+    return selectFilteredKeptEvents({
+      keptEvents: this._host._kept || [],
+      gridKeptEvents: this._host._allGridKeptEvents(),
+      isGridMixedListMode: this._host._isGridMixedListMode(),
+      matchesEvent: (event) => this.matchesEventFilters(event)
+    });
+  }
+  normalizeFilterSelections() {
+    const normalized = normalizeFilterSelections({
+      filterLabel: this._host._filterLabel,
+      filterZone: this._host._filterZone,
+      labels: this.labels(),
+      zones: this.zones()
+    });
+    this._host._filterLabel = normalized.filterLabel;
+    this._host._filterZone = normalized.filterZone;
+  }
+  zones() {
+    return selectFilterZones({
+      tab: this._host._tab,
+      reviews: this.reviewsForTabBase(),
+      events: this.filterOptionSourceEvents(),
+      getZones: (review) => {
+        const sourceEvent = this.reviewSourceEvent(review);
+        return this.reviewFilterZones(review, sourceEvent);
+      }
+    });
+  }
+  labels() {
+    return selectFilterLabels({
+      tab: this._host._tab,
+      reviews: this.reviewsForTabBase(),
+      events: this.filterOptionSourceEvents(),
+      getLabels: (review) => {
+        const sourceEvent = this.reviewSourceEvent(review);
+        return this.reviewFilterLabels(review, sourceEvent);
+      }
+    });
+  }
+  reviewFilterLabels(review, sourceEvent = null) {
+    return buildReviewFilterLabels(review, sourceEvent);
+  }
+  reviewFilterZones(review, sourceEvent = null) {
+    return buildReviewFilterZones(review, sourceEvent);
+  }
+  filtered() {
+    return selectFilteredEvents({
+      tab: this._host._tab,
+      events: this._host._allDisplayEvents(),
+      matchesEvent: (event) => this.matchesEventFilters(event)
+    });
+  }
+};
 
 // src/features/recordings/utils/availability.js
 function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
@@ -12512,6 +12610,7 @@ const FrigateViewCard = class extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
+    this._browseFilterController = new BrowseFilterController(this);
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
@@ -17177,98 +17276,26 @@ const FrigateViewCard = class extends HTMLElement {
       Math.round((ev.end_time || Date.now() / 1e3) - ev.start_time)
     );
   }
-  _reviewsForTabBase() {
-    return selectReviewsForFilterTab({
-      reviews: this._reviews,
-      gridReviews: this._allGridReviews(),
-      isGridMixedListMode: this._isGridMixedListMode(),
-      showAllReviews: this._activeCam?.alerts_content === "all_reviews"
-    });
-  }
   _reviewSourceEvent(review) {
-    const firstDet = review?.data?.detections && review.data.detections[0] || "";
-    return firstDet ? this._findEventById(firstDet) : null;
-  }
-  _filterOptionSourceEvents() {
-    return selectFilterOptionSourceEvents({
-      tab: this._tab,
-      reviews: this._reviewsForTabBase(),
-      keptEvents: this._isGridMixedListMode() ? this._allGridKeptEvents() : this._kept || [],
-      displayEvents: this._allDisplayEvents(),
-      getSourceEvent: (review) => this._reviewSourceEvent(review)
-    });
-  }
-  _matchesEventFilters(ev) {
-    return matchesEventFilters(ev, {
-      filterLabel: this._filterLabel,
-      filterZone: this._filterZone,
-      favOnly: this._favOnly
-    });
+    return this._browseFilterController.reviewSourceEvent(review);
   }
   _filteredReviews() {
-    return this._reviewsForTabBase().filter((review) => {
-      const sourceEvent = this._reviewSourceEvent(review);
-      return matchesReviewFilters(review, sourceEvent, {
-        filterLabel: this._filterLabel,
-        filterZone: this._filterZone,
-        favOnly: this._favOnly,
-        getLabels: (candidateReview, candidateSourceEvent) => this._reviewFilterLabels(candidateReview, candidateSourceEvent),
-        getZones: (candidateReview, candidateSourceEvent) => this._reviewFilterZones(candidateReview, candidateSourceEvent)
-      });
-    });
+    return this._browseFilterController.filteredReviews();
   }
   _filteredKept() {
-    return selectFilteredKeptEvents({
-      keptEvents: this._kept || [],
-      gridKeptEvents: this._allGridKeptEvents(),
-      isGridMixedListMode: this._isGridMixedListMode(),
-      matchesEvent: (event) => this._matchesEventFilters(event)
-    });
+    return this._browseFilterController.filteredKept();
   }
   _normalizeFilterSelections() {
-    const normalized = normalizeFilterSelections({
-      filterLabel: this._filterLabel,
-      filterZone: this._filterZone,
-      labels: this._labels(),
-      zones: this._zones()
-    });
-    this._filterLabel = normalized.filterLabel;
-    this._filterZone = normalized.filterZone;
+    this._browseFilterController.normalizeFilterSelections();
   }
   _zones() {
-    return selectFilterZones({
-      tab: this._tab,
-      reviews: this._reviewsForTabBase(),
-      events: this._filterOptionSourceEvents(),
-      getZones: (review) => {
-        const sourceEvent = this._reviewSourceEvent(review);
-        return this._reviewFilterZones(review, sourceEvent);
-      }
-    });
+    return this._browseFilterController.zones();
   }
   _labels() {
-    return selectFilterLabels({
-      tab: this._tab,
-      reviews: this._reviewsForTabBase(),
-      events: this._filterOptionSourceEvents(),
-      getLabels: (review) => {
-        const sourceEvent = this._reviewSourceEvent(review);
-        return this._reviewFilterLabels(review, sourceEvent);
-      }
-    });
-  }
-  _reviewFilterLabels(review, sourceEvent = null) {
-    return buildReviewFilterLabels(review, sourceEvent);
-  }
-  _reviewFilterZones(review, sourceEvent = null) {
-    return buildReviewFilterZones(review, sourceEvent);
+    return this._browseFilterController.labels();
   }
   _filtered() {
-    return selectFilteredEvents({
-      tab: this._tab,
-      events: this._allDisplayEvents(),
-      matchesEvent: (event) => this._matchesEventFilters(event)
-    });
+    return this._browseFilterController.filtered();
   }
   _eventCardHTML(ev, expanded, compact = false) {
     const model = buildEventListItemModel(ev, {

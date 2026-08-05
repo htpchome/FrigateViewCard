@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  BrowseFilterController,
   buildReviewFilterLabels,
   buildReviewFilterZones,
   collectFilterLabelsFromEvents,
@@ -18,7 +19,7 @@ import {
   selectFilterOptionSourceEvents,
   selectReviewsForFilterTab,
   selectFilterZones,
-} from "../src/shared/filter-state.js";
+} from "../src/features/browse/filter-state.js";
 
 test("buildReviewFilterLabels combines source event and review objects uniquely", () => {
   const labels = buildReviewFilterLabels(
@@ -473,4 +474,72 @@ test("matchesReviewFilters checks labels and zones through callbacks", () => {
     }),
     false,
   );
+});
+
+test("BrowseFilterController delegates filter state decisions from host state", () => {
+  const eventA = {
+    id: "event-a",
+    label: "person",
+    zones: ["front"],
+    has_clip: true,
+    has_snapshot: true,
+    retain_indefinitely: true,
+  };
+  const eventB = {
+    id: "event-b",
+    label: "car",
+    zones: ["driveway"],
+    has_clip: false,
+    has_snapshot: true,
+    retain_indefinitely: false,
+  };
+  const reviewAlert = {
+    id: "review-a",
+    severity: "alert",
+    data: {
+      detections: ["event-a"],
+      objects: ["person"],
+      zones: ["front"],
+    },
+  };
+  const reviewDetection = {
+    id: "review-b",
+    severity: "detection",
+    data: {
+      detections: ["event-b"],
+      objects: ["car"],
+      zones: ["driveway"],
+    },
+  };
+  const host = {
+    _tab: "alerts",
+    _reviews: [reviewAlert, reviewDetection],
+    _kept: [eventA, eventB],
+    _filterLabel: "person",
+    _filterZone: "front",
+    _favOnly: false,
+    _activeCam: { alerts_content: "all_reviews" },
+    _allGridReviews: () => [],
+    _allGridKeptEvents: () => [],
+    _allDisplayEvents: () => [eventA, eventB],
+    _isGridMixedListMode: () => false,
+    _findEventById: (id) =>
+      [eventA, eventB].find((event) => event.id === id) || null,
+  };
+
+  const controller = new BrowseFilterController(host);
+
+  assert.deepEqual(controller.labels(), ["person", "car"]);
+  assert.deepEqual(controller.zones(), ["front", "driveway"]);
+  assert.deepEqual(controller.filteredReviews(), [reviewAlert]);
+
+  host._tab = "clips";
+  assert.deepEqual(controller.filtered(), [eventA]);
+  assert.deepEqual(controller.filteredKept(), [eventA]);
+
+  host._filterLabel = "missing";
+  host._filterZone = "gone";
+  controller.normalizeFilterSelections();
+  assert.equal(host._filterLabel, "all");
+  assert.equal(host._filterZone, "all");
 });

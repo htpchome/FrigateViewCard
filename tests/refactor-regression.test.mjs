@@ -66,6 +66,10 @@ const viewportContextControllerSource = fs.readFileSync(
   new URL("../src/features/viewport/context.ctrl.js", import.meta.url),
   "utf8",
 );
+const browseFilterControllerSource = fs.readFileSync(
+  new URL("../src/features/browse/filter-state.js", import.meta.url),
+  "utf8",
+);
 const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
@@ -712,6 +716,76 @@ test("viewport helpers delegate through the viewport context controller", () => 
   );
 });
 
+test("browse filter helpers delegate through the browse filter controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { BrowseFilterController } from "../features/browse/filter-state.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._browseFilterController\s*=\s*new BrowseFilterController\(this\);/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("../shared/filter-state.js"), false);
+  assert.equal(
+    /_reviewSourceEvent\(review\) \{\s*return this\._browseFilterController\.reviewSourceEvent\(review\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_filteredReviews\(\) \{\s*return this\._browseFilterController\.filteredReviews\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_filteredKept\(\) \{\s*return this\._browseFilterController\.filteredKept\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_normalizeFilterSelections\(\) \{\s*this\._browseFilterController\.normalizeFilterSelections\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_zones\(\) \{\s*return this\._browseFilterController\.zones\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_labels\(\) \{\s*return this\._browseFilterController\.labels\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_filtered\(\) \{\s*return this\._browseFilterController\.filtered\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    browseFilterControllerSource.includes(
+      "export class BrowseFilterController",
+    ),
+    true,
+  );
+  assert.equal(
+    browseFilterControllerSource.includes(
+      "export function selectFilteredEvents",
+    ),
+    true,
+  );
+});
+
 test("popup media loading delegates through the popup media loader controller", () => {
   assert.equal(
     cardSource.includes(
@@ -766,7 +840,9 @@ test("popup media loading delegates through the popup media loader controller", 
     true,
   );
   assert.equal(
-    popupMediaLoaderControllerSource.includes("tryRecordingSource(video, src"),
+    /async tryRecordingSource\(\s*video,\s*src,/.test(
+      popupMediaLoaderControllerSource,
+    ),
     true,
   );
 });

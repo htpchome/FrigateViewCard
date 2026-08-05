@@ -188,24 +188,7 @@ import {
   resolvePopupCarouselRenderPlan,
   shouldShowPopupCarousel,
 } from "./popup/carousel.js";
-import {
-  collectFilterLabelsFromReviews,
-  buildReviewFilterLabels,
-  buildReviewFilterZones,
-  collectFilterLabelsFromEvents,
-  collectUniqueSourceEventsFromReviews,
-  collectFilterZonesFromReviews,
-  collectFilterZonesFromEvents,
-  matchesEventFilters,
-  matchesReviewFilters,
-  normalizeFilterSelections,
-  selectFilteredEvents,
-  selectFilteredKeptEvents,
-  selectFilterLabels,
-  selectFilterOptionSourceEvents,
-  selectReviewsForFilterTab,
-  selectFilterZones,
-} from "../shared/filter-state.js";
+import { BrowseFilterController } from "../features/browse/filter-state.js";
 import {
   buildRecordingPlaybackPlan,
   RecordingScrubController,
@@ -574,6 +557,7 @@ export class FrigateViewCard extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
+    this._browseFilterController = new BrowseFilterController(this);
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
@@ -5902,106 +5886,27 @@ export class FrigateViewCard extends HTMLElement {
       Math.round((ev.end_time || Date.now() / 1000) - ev.start_time),
     );
   }
-  _reviewsForTabBase() {
-    return selectReviewsForFilterTab({
-      reviews: this._reviews,
-      gridReviews: this._allGridReviews(),
-      isGridMixedListMode: this._isGridMixedListMode(),
-      showAllReviews: this._activeCam?.alerts_content === "all_reviews",
-    });
-  }
   _reviewSourceEvent(review) {
-    const firstDet =
-      (review?.data?.detections && review.data.detections[0]) || "";
-    return firstDet ? this._findEventById(firstDet) : null;
-  }
-  _filterOptionSourceEvents() {
-    return selectFilterOptionSourceEvents({
-      tab: this._tab,
-      reviews: this._reviewsForTabBase(),
-      keptEvents: this._isGridMixedListMode()
-        ? this._allGridKeptEvents()
-        : this._kept || [],
-      displayEvents: this._allDisplayEvents(),
-      getSourceEvent: (review) => this._reviewSourceEvent(review),
-    });
-  }
-  _matchesEventFilters(ev) {
-    return matchesEventFilters(ev, {
-      filterLabel: this._filterLabel,
-      filterZone: this._filterZone,
-      favOnly: this._favOnly,
-    });
+    return this._browseFilterController.reviewSourceEvent(review);
   }
   _filteredReviews() {
-    return this._reviewsForTabBase().filter((review) => {
-      const sourceEvent = this._reviewSourceEvent(review);
-      return matchesReviewFilters(review, sourceEvent, {
-        filterLabel: this._filterLabel,
-        filterZone: this._filterZone,
-        favOnly: this._favOnly,
-        getLabels: (candidateReview, candidateSourceEvent) =>
-          this._reviewFilterLabels(candidateReview, candidateSourceEvent),
-        getZones: (candidateReview, candidateSourceEvent) =>
-          this._reviewFilterZones(candidateReview, candidateSourceEvent),
-      });
-    });
+    return this._browseFilterController.filteredReviews();
   }
   _filteredKept() {
-    return selectFilteredKeptEvents({
-      keptEvents: this._kept || [],
-      gridKeptEvents: this._allGridKeptEvents(),
-      isGridMixedListMode: this._isGridMixedListMode(),
-      matchesEvent: (event) => this._matchesEventFilters(event),
-    });
+    return this._browseFilterController.filteredKept();
   }
   _normalizeFilterSelections() {
-    const normalized = normalizeFilterSelections({
-      filterLabel: this._filterLabel,
-      filterZone: this._filterZone,
-      labels: this._labels(),
-      zones: this._zones(),
-    });
-    this._filterLabel = normalized.filterLabel;
-    this._filterZone = normalized.filterZone;
+    this._browseFilterController.normalizeFilterSelections();
   }
   _zones() {
-    return selectFilterZones({
-      tab: this._tab,
-      reviews: this._reviewsForTabBase(),
-      events: this._filterOptionSourceEvents(),
-      getZones: (review) => {
-        const sourceEvent = this._reviewSourceEvent(review);
-        return this._reviewFilterZones(review, sourceEvent);
-      },
-    });
+    return this._browseFilterController.zones();
   }
 
   _labels() {
-    return selectFilterLabels({
-      tab: this._tab,
-      reviews: this._reviewsForTabBase(),
-      events: this._filterOptionSourceEvents(),
-      getLabels: (review) => {
-        const sourceEvent = this._reviewSourceEvent(review);
-        return this._reviewFilterLabels(review, sourceEvent);
-      },
-    });
-  }
-
-  _reviewFilterLabels(review, sourceEvent = null) {
-    return buildReviewFilterLabels(review, sourceEvent);
-  }
-
-  _reviewFilterZones(review, sourceEvent = null) {
-    return buildReviewFilterZones(review, sourceEvent);
+    return this._browseFilterController.labels();
   }
   _filtered() {
-    return selectFilteredEvents({
-      tab: this._tab,
-      events: this._allDisplayEvents(),
-      matchesEvent: (event) => this._matchesEventFilters(event),
-    });
+    return this._browseFilterController.filtered();
   }
   _eventCardHTML(ev, expanded, compact = false) {
     const model = buildEventListItemModel(ev, {
