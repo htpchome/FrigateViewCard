@@ -190,6 +190,7 @@ import {
 } from "./popup/carousel.js";
 import { BrowseCollectionController } from "../features/browse/collection.ctrl.js";
 import { BrowseFilterController } from "../features/browse/filter-state.js";
+import { BrowseTabDataController } from "../features/browse/tab-data.ctrl.js";
 import { BrowseWindowLoaderController } from "../features/browse/window-loader.ctrl.js";
 import {
   buildRecordingPlaybackPlan,
@@ -560,6 +561,7 @@ export class FrigateViewCard extends HTMLElement {
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._browseCollectionController = new BrowseCollectionController(this);
     this._browseFilterController = new BrowseFilterController(this);
+    this._browseTabDataController = new BrowseTabDataController(this);
     this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
@@ -2455,43 +2457,10 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _loadKept() {
-    const { clientId, cam } = this._cc();
-    try {
-      const k = await this._ws({
-        type: "frigate/events/get",
-        instance_id: clientId,
-        cameras: [cam],
-        favorites: true,
-        limit: 50,
-      });
-      this._kept = Array.isArray(k) ? k : [];
-      const ent = this._activeCam?.entity;
-      if (ent && this._camCache[ent]) this._camCache[ent].kept = this._kept;
-    } catch (_) {
-      this._kept = [];
-    }
+    await this._browseTabDataController.loadKept();
   }
   async _loadReviews() {
-    const { clientId, cam } = this._cc();
-    try {
-      const before = this._winEnd;
-      const after = Math.max(
-        0,
-        Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY),
-      );
-      const r = await this._fetchWindowedReviews(clientId, cam, after, before, {
-        debugLabel: "alerts-tab",
-      });
-      this._reviews = Array.isArray(r) ? r : [];
-      this._cacheActiveCamSlice("reviews", this._reviews);
-      this._slideshowAlertController.handleReviewsUpdated(
-        this._activeCam?.entity || "",
-        this._reviews,
-        "alerts-tab",
-      );
-    } catch (_) {
-      this._reviews = [];
-    }
+    await this._browseTabDataController.loadReviews();
   }
   async _loadCalendar() {
     await this._prefetchCalendarActivityForActiveCamera();
@@ -2751,30 +2720,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _loadTabData(tab) {
-    if (
-      tab !== "alerts" &&
-      tab !== "kept" &&
-      tab !== "recordings" &&
-      tab !== "controls"
-    )
-      return;
-    try {
-      if (tab === "alerts") await this._loadReviews();
-      if (tab === "kept") await this._loadKept();
-      if (this._isGridMixedListMode() && (tab === "alerts" || tab === "kept")) {
-        await this._loadGridMixedTabData(tab);
-      }
-      if (tab === "recordings") {
-        const { clientId, cam } = this._cc();
-        if (clientId && cam) {
-          await this._loadWindowRecordings(clientId, cam, this._winEnd);
-        }
-      }
-    } catch (error) {
-      console.error("[Frigate] tab data load failed", error);
-    } finally {
-      this._renderList();
-    }
+    await this._browseTabDataController.loadTabData(tab);
   }
 
   _isGridMixedListMode() {

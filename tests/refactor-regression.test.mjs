@@ -74,6 +74,10 @@ const browseFilterControllerSource = fs.readFileSync(
   new URL("../src/features/browse/filter-state.js", import.meta.url),
   "utf8",
 );
+const browseTabDataControllerSource = fs.readFileSync(
+  new URL("../src/features/browse/tab-data.ctrl.js", import.meta.url),
+  "utf8",
+);
 const browseWindowLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/browse/window-loader.ctrl.js", import.meta.url),
   "utf8",
@@ -857,6 +861,53 @@ test("browse filter helpers delegate through the browse filter controller", () =
     browseFilterControllerSource.includes(
       "export function selectFilteredEvents",
     ),
+    true,
+  );
+});
+
+test("browse tab data helpers delegate through the browse tab-data controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { BrowseTabDataController } from "../features/browse/tab-data.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._browseTabDataController\s*=\s*new BrowseTabDataController\(this\);/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _loadKept\(\) \{\s*await this\._browseTabDataController\.loadKept\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _loadReviews\(\) \{\s*await this\._browseTabDataController\.loadReviews\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _loadTabData\(tab\) \{\s*await this\._browseTabDataController\.loadTabData\(tab\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    browseTabDataControllerSource.includes(
+      "export class BrowseTabDataController",
+    ),
+    true,
+  );
+  assert.equal(
+    browseTabDataControllerSource.includes("async loadTabData(tab)"),
+    true,
+  );
+  assert.equal(
+    browseTabDataControllerSource.includes("async loadReviews()"),
     true,
   );
 });

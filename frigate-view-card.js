@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1204";
+const VERSION = "1.0.1205";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7997,6 +7997,88 @@ const BrowseFilterController = class {
   }
 };
 
+// src/features/browse/tab-data.ctrl.js
+const BrowseTabDataController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  async loadKept() {
+    const { clientId, cam } = this._host._cc();
+    try {
+      const kept = await this._host._ws({
+        type: "frigate/events/get",
+        instance_id: clientId,
+        cameras: [cam],
+        favorites: true,
+        limit: 50
+      });
+      this._host._kept = Array.isArray(kept) ? kept : [];
+      const entity = this._host._activeCam?.entity;
+      if (entity && this._host._camCache[entity]) {
+        this._host._camCache[entity].kept = this._host._kept;
+      }
+    } catch (_) {
+      this._host._kept = [];
+    }
+  }
+  async loadReviews() {
+    const { clientId, cam } = this._host._cc();
+    try {
+      const before = this._host._winEnd;
+      const after = Math.max(
+        0,
+        Math.floor(
+          before - (this._host._config?.alerts_reviews_days || 3) * DAY
+        )
+      );
+      const reviews = await this._host._fetchWindowedReviews(
+        clientId,
+        cam,
+        after,
+        before,
+        {
+          debugLabel: "alerts-tab"
+        }
+      );
+      this._host._reviews = Array.isArray(reviews) ? reviews : [];
+      this._host._cacheActiveCamSlice("reviews", this._host._reviews);
+      this._host._slideshowAlertController.handleReviewsUpdated(
+        this._host._activeCam?.entity || "",
+        this._host._reviews,
+        "alerts-tab"
+      );
+    } catch (_) {
+      this._host._reviews = [];
+    }
+  }
+  async loadTabData(tab) {
+    if (tab !== "alerts" && tab !== "kept" && tab !== "recordings" && tab !== "controls") {
+      return;
+    }
+    try {
+      if (tab === "alerts") await this.loadReviews();
+      if (tab === "kept") await this.loadKept();
+      if (this._host._isGridMixedListMode() && (tab === "alerts" || tab === "kept")) {
+        await this._host._loadGridMixedTabData(tab);
+      }
+      if (tab === "recordings") {
+        const { clientId, cam } = this._host._cc();
+        if (clientId && cam) {
+          await this._host._loadWindowRecordings(
+            clientId,
+            cam,
+            this._host._winEnd
+          );
+        }
+      }
+    } catch (error) {
+      console.error("[Frigate] tab data load failed", error);
+    } finally {
+      this._host._renderList();
+    }
+  }
+};
+
 // src/data/window-fetch.js
 async function fetchWindowedItems({
   after,
@@ -13064,6 +13146,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._browseCollectionController = new BrowseCollectionController(this);
     this._browseFilterController = new BrowseFilterController(this);
+    this._browseTabDataController = new BrowseTabDataController(this);
     this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
@@ -14650,43 +14733,10 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   async _loadKept() {
-    const { clientId, cam } = this._cc();
-    try {
-      const k = await this._ws({
-        type: "frigate/events/get",
-        instance_id: clientId,
-        cameras: [cam],
-        favorites: true,
-        limit: 50
-      });
-      this._kept = Array.isArray(k) ? k : [];
-      const ent = this._activeCam?.entity;
-      if (ent && this._camCache[ent]) this._camCache[ent].kept = this._kept;
-    } catch (_) {
-      this._kept = [];
-    }
+    await this._browseTabDataController.loadKept();
   }
   async _loadReviews() {
-    const { clientId, cam } = this._cc();
-    try {
-      const before = this._winEnd;
-      const after = Math.max(
-        0,
-        Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
-      );
-      const r = await this._fetchWindowedReviews(clientId, cam, after, before, {
-        debugLabel: "alerts-tab"
-      });
-      this._reviews = Array.isArray(r) ? r : [];
-      this._cacheActiveCamSlice("reviews", this._reviews);
-      this._slideshowAlertController.handleReviewsUpdated(
-        this._activeCam?.entity || "",
-        this._reviews,
-        "alerts-tab"
-      );
-    } catch (_) {
-      this._reviews = [];
-    }
+    await this._browseTabDataController.loadReviews();
   }
   async _loadCalendar() {
     await this._prefetchCalendarActivityForActiveCamera();
@@ -14921,25 +14971,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   async _loadTabData(tab) {
-    if (tab !== "alerts" && tab !== "kept" && tab !== "recordings" && tab !== "controls")
-      return;
-    try {
-      if (tab === "alerts") await this._loadReviews();
-      if (tab === "kept") await this._loadKept();
-      if (this._isGridMixedListMode() && (tab === "alerts" || tab === "kept")) {
-        await this._loadGridMixedTabData(tab);
-      }
-      if (tab === "recordings") {
-        const { clientId, cam } = this._cc();
-        if (clientId && cam) {
-          await this._loadWindowRecordings(clientId, cam, this._winEnd);
-        }
-      }
-    } catch (error) {
-      console.error("[Frigate] tab data load failed", error);
-    } finally {
-      this._renderList();
-    }
+    await this._browseTabDataController.loadTabData(tab);
   }
   _isGridMixedListMode() {
     return this._viewMode === "grid";
