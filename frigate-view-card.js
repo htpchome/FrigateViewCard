@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1236";
+const VERSION = "1.0.1238";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -524,10 +524,13 @@ const STYLES = `
   .preview-cell{display:flex;flex-direction:column;cursor:pointer;border-radius: 0 0 15px 15px;    -webkit-backface-visibility: hidden;backface-visibility: hidden;}
   .preview-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:15px;background:var(--c-bg-deep);-webkit-backface-visibility: hidden;backface-visibility: hidden;
     transform: translateZ(0);}
+  .preview-media-host::after{content:"";position:absolute;inset:0;pointer-events:none;border:0 solid transparent;border-radius:inherit;box-sizing:border-box;z-index:3;}
   .preview-media-host.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
+  .preview-media-host.grid-alert::after{border-width:2px;border-color:var(--error-color, var(--c-bg-alert));}
   .preview-media-host.grid-detection{border-color:var(--warning-color, var(--c-accent));box-shadow:inset 0 0 0 2px var(--warning-color, var(--c-accent));}
+  .preview-media-host.grid-detection::after{border-width:2px;border-color:var(--warning-color, var(--c-accent));}
   .preview-media-host video,.preview-media-host img,.preview-media-host ha-camera-stream{width:100%;height:100%;display:block;object-fit:contain;object-position:center center;background:var(--c-bg-deep);}
-  .preview-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;background:var(--c-bg-main);}
+  .preview-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;background:var(--c-bg-main);border-radius: var(--fvc-border-radius);}
   .preview-meta-name{font-size:.82rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-meta-source{font-size:.7rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-meta-events{font-size:.72rem;color:var(--c-text2);}
@@ -10724,6 +10727,11 @@ const PreviewAlertController = class {
     });
     if (!parsed) return;
     const { cam, severity, type } = parsed;
+    const normalizedSeverity = String(severity || "").trim().toLowerCase();
+    if (type !== "end" && !normalizedSeverity) {
+      this.scheduleAlertWatch(180);
+      return;
+    }
     if (type === "end") {
       if (this.isCameraAlertLive(cam)) {
         this.markAlertCamera(
@@ -10734,10 +10742,12 @@ const PreviewAlertController = class {
       }
       return;
     }
-    if (!this._host._shouldHandleSlideshowReview(cam, severity)) return;
+    if (!this._host._shouldHandleSlideshowReview(cam, normalizedSeverity)) {
+      return;
+    }
     this.markAlertCamera(
       cam,
-      severity || "alert",
+      normalizedSeverity,
       this._constants.PREVIEW_ALERT_HOLD_MS
     );
   }

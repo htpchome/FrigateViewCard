@@ -150,6 +150,17 @@ export class PreviewAlertController {
     });
     if (!parsed) return;
     const { cam, severity, type } = parsed;
+    const normalizedSeverity = String(severity || "")
+      .trim()
+      .toLowerCase();
+
+    // Some realtime payloads do not carry severity in-message. Schedule
+    // a near-term probe so preview alert/live promotion still occurs.
+    if (type !== "end" && !normalizedSeverity) {
+      this.scheduleAlertWatch(180);
+      return;
+    }
+
     if (type === "end") {
       if (this.isCameraAlertLive(cam)) {
         this.markAlertCamera(
@@ -160,10 +171,12 @@ export class PreviewAlertController {
       }
       return;
     }
-    if (!this._host._shouldHandleSlideshowReview(cam, severity)) return;
+    if (!this._host._shouldHandleSlideshowReview(cam, normalizedSeverity)) {
+      return;
+    }
     this.markAlertCamera(
       cam,
-      severity || "alert",
+      normalizedSeverity,
       this._constants.PREVIEW_ALERT_HOLD_MS,
     );
   }
