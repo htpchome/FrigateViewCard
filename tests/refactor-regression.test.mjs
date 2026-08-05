@@ -803,8 +803,8 @@ test("browse window loading delegates through the browse window loader controlle
     ),
     true,
   );
-  assert.equal(cardSource.includes('import { fetchWindowedItems }'), false);
-  assert.equal(cardSource.includes('return fetchWindowedItems({'), false);
+  assert.equal(cardSource.includes("import { fetchWindowedItems }"), false);
+  assert.equal(cardSource.includes("return fetchWindowedItems({"), false);
   assert.equal(
     /async _fetchWindowedEvents\(clientId, cam, after, before, opts = \{\}\) \{\s*return this\._browseWindowLoaderController\.fetchWindowedEvents\(/s.test(
       cardSource,

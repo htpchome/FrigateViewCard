@@ -42,20 +42,19 @@ test("loadWindow updates active slices and finishes the browse load cycle", asyn
     },
   };
   const controller = new BrowseWindowLoaderController(host, {
-    fetchWindowedItems: async ({ fetchBatch }) => fetchBatch({
-      after: 100,
-      before: 200,
-      limit: 25,
-      page: 0,
-    }),
+    fetchWindowedItems: async ({ fetchBatch }) =>
+      fetchBatch({
+        after: 100,
+        before: 200,
+        limit: 25,
+        page: 0,
+      }),
   });
 
   host._ws = async (payload) => {
     if (payload.type === "frigate/events/get") {
       eventFetchCount += 1;
-      return eventFetchCount === 1
-        ? [{ id: "event-1", start_time: 150 }]
-        : [];
+      return eventFetchCount === 1 ? [{ id: "event-1", start_time: 150 }] : [];
     }
     if (payload.type === "frigate/reviews/get") {
       reviewFetchCount += 1;
