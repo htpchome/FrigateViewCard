@@ -363,12 +363,9 @@ test("_commitRecordingsDayTransition updates caches and render state with camera
     recordings: [{ id: 1 }],
     swipeActive: true,
   });
+  const controller = new RecordingsBrowseNavController(ctx);
 
-  await FrigateViewCard.prototype._commitRecordingsDayTransition.call(
-    ctx,
-    bounds,
-    recordings,
-  );
+  await controller.commitDayTransition(bounds, recordings);
 
   assert.equal(ctx._followNowWindow, false);
   assert.equal(ctx._winStart, 100);
@@ -396,12 +393,9 @@ test("_commitRecordingsDayTransition skips cache writes without camera context",
       recordings: null,
       swipeActive: true,
     });
+  const controller = new RecordingsBrowseNavController(ctx);
 
-  await FrigateViewCard.prototype._commitRecordingsDayTransition.call(
-    ctx,
-    bounds,
-    null,
-  );
+  await controller.commitDayTransition(bounds, null);
 
   assert.equal(ctx._followNowWindow, false);
   assert.equal(ctx._winStart, 300);
@@ -428,17 +422,10 @@ test("_commitRecordingsDayTransition clears swipe-active state across repeated d
     recordings: [{ id: 1 }],
     swipeActive: true,
   });
+  const controller = new RecordingsBrowseNavController(ctx);
 
-  await FrigateViewCard.prototype._commitRecordingsDayTransition.call(
-    ctx,
-    firstBounds,
-    [{ id: 1 }],
-  );
-  await FrigateViewCard.prototype._commitRecordingsDayTransition.call(
-    ctx,
-    secondBounds,
-    [{ id: 2 }],
-  );
+  await controller.commitDayTransition(firstBounds, [{ id: 1 }]);
+  await controller.commitDayTransition(secondBounds, [{ id: 2 }]);
 
   assert.deepEqual(removedClasses, [
     "recordings-swipe-active",
@@ -462,8 +449,6 @@ test("mixed swipe and button recordings transitions both clear swipe-active stat
   ctx._animateRecordingsSwipeStageTo = async (...args) => {
     calls.push(["animate", ...args]);
   };
-  ctx._commitRecordingsDayTransition =
-    FrigateViewCard.prototype._commitRecordingsDayTransition;
   ctx._prepareRecordingsDayTransition = async (dir) => {
     calls.push(["prepare", dir]);
     return { hasData: true, bounds: secondBounds, recs: [{ id: 2 }] };
@@ -485,6 +470,8 @@ test("mixed swipe and button recordings transitions both clear swipe-active stat
   recordingsBrowseNavController.updateBrowseNav = async () => {
     calls.push(["updateBrowseNav"]);
   };
+  ctx._commitRecordingsDayTransition = async (bounds, recs) =>
+    recordingsBrowseNavController.commitDayTransition(bounds, recs);
   ctx._recordingsBrowseNavController = recordingsBrowseNavController;
 
   const gesture = {

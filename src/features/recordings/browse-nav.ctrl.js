@@ -1,6 +1,7 @@
 import {
   buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
+  resolveCommittedRecordingsDayState,
   resolvePreparedRecordingsDayTransition,
   resolveCachedRecordingsAvailability,
   resolveFailedRecordingsAvailabilityState,
@@ -167,6 +168,38 @@ export class RecordingsBrowseNavController {
       gesture.recs,
     );
     return true;
+  }
+
+  async commitDayTransition(bounds, recordings) {
+    if (!bounds) return;
+    const { clientId, cam } = this._host._cc();
+    const committed = resolveCommittedRecordingsDayState({
+      bounds,
+      recordings,
+      clientId,
+      camera: cam,
+    });
+    this._host._followNowWindow = false;
+    this._host._winStart = committed.bounds.start;
+    this._host._winEnd = committed.bounds.end;
+    this._host._exhausted = false;
+    this._host._pruneNonActiveCamWindowCaches();
+    this._host._recordings = committed.recordings;
+    if (committed.key) {
+      this._host._recordingsDayDataCache.set(
+        committed.key,
+        this._host._recordings,
+      );
+      this._host._recordingsDayAvailabilityCache.set(
+        committed.key,
+        committed.hasRecordings,
+      );
+    }
+    this._host._cacheActiveCamSlice("recordings", this._host._recordings);
+    this._host._renderListLabel(this._host._winEnd);
+    this._host._clearRecordingsSwipeListState();
+    this._host._lastRenderedListHtml = "";
+    this._host._renderList();
   }
 
   async stepDay(direction) {

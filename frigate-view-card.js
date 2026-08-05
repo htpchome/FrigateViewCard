@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1214";
+const VERSION = "1.0.1215";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9818,6 +9818,37 @@ const RecordingsBrowseNavController = class {
     );
     return true;
   }
+  async commitDayTransition(bounds, recordings) {
+    if (!bounds) return;
+    const { clientId, cam } = this._host._cc();
+    const committed = resolveCommittedRecordingsDayState({
+      bounds,
+      recordings,
+      clientId,
+      camera: cam
+    });
+    this._host._followNowWindow = false;
+    this._host._winStart = committed.bounds.start;
+    this._host._winEnd = committed.bounds.end;
+    this._host._exhausted = false;
+    this._host._pruneNonActiveCamWindowCaches();
+    this._host._recordings = committed.recordings;
+    if (committed.key) {
+      this._host._recordingsDayDataCache.set(
+        committed.key,
+        this._host._recordings
+      );
+      this._host._recordingsDayAvailabilityCache.set(
+        committed.key,
+        committed.hasRecordings
+      );
+    }
+    this._host._cacheActiveCamSlice("recordings", this._host._recordings);
+    this._host._renderListLabel(this._host._winEnd);
+    this._host._clearRecordingsSwipeListState();
+    this._host._lastRenderedListHtml = "";
+    this._host._renderList();
+  }
   async stepDay(direction) {
     return this.navigateDayAnimated(direction);
   }
@@ -15706,32 +15737,10 @@ const FrigateViewCard = class extends HTMLElement {
     return this._recordingsBrowseNavController.completeSwipeGesture(gesture);
   }
   async _commitRecordingsDayTransition(bounds, recs) {
-    if (!bounds) return;
-    const { clientId, cam } = this._cc();
-    const committed = resolveCommittedRecordingsDayState({
+    return this._recordingsBrowseNavController.commitDayTransition(
       bounds,
-      recordings: recs,
-      clientId,
-      camera: cam
-    });
-    this._followNowWindow = false;
-    this._winStart = committed.bounds.start;
-    this._winEnd = committed.bounds.end;
-    this._exhausted = false;
-    this._pruneNonActiveCamWindowCaches();
-    this._recordings = committed.recordings;
-    if (committed.key) {
-      this._recordingsDayDataCache.set(committed.key, this._recordings);
-      this._recordingsDayAvailabilityCache.set(
-        committed.key,
-        committed.hasRecordings
-      );
-    }
-    this._cacheActiveCamSlice("recordings", this._recordings);
-    this._renderListLabel(this._winEnd);
-    this._clearRecordingsSwipeListState();
-    this._lastRenderedListHtml = "";
-    this._renderList();
+      recs
+    );
   }
   _bounceRecordingsArea(direction) {
     const browse = this._$("#browse");

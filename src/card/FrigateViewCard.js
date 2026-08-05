@@ -208,7 +208,6 @@ import {
   normalizeFetchedRecordingsAvailability,
   RECORDINGS_SWIPE_EMPTY_HTML,
   RECORDINGS_SWIPE_LOADING_HTML,
-  resolveCommittedRecordingsDayState,
   resolveFailedRecordingsSwipeState,
   resolveClosestRecordingAlertStart,
   resolveRecordingSeekExecutionPlan,
@@ -3025,32 +3024,10 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _commitRecordingsDayTransition(bounds, recs) {
-    if (!bounds) return;
-    const { clientId, cam } = this._cc();
-    const committed = resolveCommittedRecordingsDayState({
+    return this._recordingsBrowseNavController.commitDayTransition(
       bounds,
-      recordings: recs,
-      clientId,
-      camera: cam,
-    });
-    this._followNowWindow = false;
-    this._winStart = committed.bounds.start;
-    this._winEnd = committed.bounds.end;
-    this._exhausted = false;
-    this._pruneNonActiveCamWindowCaches();
-    this._recordings = committed.recordings;
-    if (committed.key) {
-      this._recordingsDayDataCache.set(committed.key, this._recordings);
-      this._recordingsDayAvailabilityCache.set(
-        committed.key,
-        committed.hasRecordings,
-      );
-    }
-    this._cacheActiveCamSlice("recordings", this._recordings);
-    this._renderListLabel(this._winEnd);
-    this._clearRecordingsSwipeListState();
-    this._lastRenderedListHtml = "";
-    this._renderList();
+      recs,
+    );
   }
 
   _bounceRecordingsArea(direction) {

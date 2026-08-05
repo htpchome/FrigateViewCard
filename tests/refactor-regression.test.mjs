@@ -1224,6 +1224,12 @@ test("recordings browse nav delegates through the recordings browse nav controll
     true,
   );
   assert.equal(
+    /async _commitRecordingsDayTransition\(bounds, recs\) \{\s*return this\._recordingsBrowseNavController\.commitDayTransition\(bounds, recs\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
     /async _completeRecordingsSwipeGesture\(gesture\) \{\s*return this\._recordingsBrowseNavController\.completeSwipeGesture\(gesture\);\s*\}/s.test(
       cardSource,
     ),
@@ -1262,6 +1268,12 @@ test("recordings browse nav delegates through the recordings browse nav controll
   assert.equal(
     recordingsBrowseNavControllerSource.includes(
       "async navigateDayAnimated(direction)",
+    ),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes(
+      "async commitDayTransition(bounds, recordings)",
     ),
     true,
   );
