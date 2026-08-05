@@ -508,4 +508,16 @@ test("editor stylesheet keeps core config surface variables intact", () => {
     ),
     true,
   );
+  assert.equal(
+    editorSource.includes("background:var(--editor-card-bg);"),
+    true,
+  );
+  assert.equal(
+    editorSource.includes("background:var(--editor-secondary-bg);"),
+    true,
+  );
+  assert.equal(
+    editorSource.includes("background:var(--editor-primary);"),
+    true,
+  );
 });
