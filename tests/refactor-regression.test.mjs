@@ -62,6 +62,10 @@ const cardStyleContextControllerSource = fs.readFileSync(
   new URL("../src/features/card-style/context.ctrl.js", import.meta.url),
   "utf8",
 );
+const viewportContextControllerSource = fs.readFileSync(
+  new URL("../src/features/viewport/context.ctrl.js", import.meta.url),
+  "utf8",
+);
 const editorSource = fs.readFileSync(
   new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
   "utf8",
@@ -637,6 +641,69 @@ test("card style helpers delegate through the style context controller", () => {
   );
   assert.equal(
     cardStyleContextControllerSource.includes("isPanelView()"),
+    true,
+  );
+});
+
+test("viewport helpers delegate through the viewport context controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { ViewportContextController } from "../features/viewport/context.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._viewportContextController\s*=\s*new ViewportContextController\(this\);/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_isMobilePhoneViewport\(\) \{\s*const width = Number\(this\._cardWidth \|\| window\.innerWidth \|\| 0\);/.test(
+      cardSource,
+    ),
+    false,
+  );
+  assert.equal(
+    /_isMobileTabletViewport\(\) \{\s*const coarse =/.test(cardSource),
+    false,
+  );
+  assert.equal(
+    /_isCardVisible\(\) \{\s*return this\._viewportContextController\.isCardVisible\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_isMobilePhoneViewport\(\) \{\s*return this\._viewportContextController\.isMobilePhoneViewport\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_isMobileTabletViewport\(\) \{\s*return this\._viewportContextController\.isMobileTabletViewport\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_isLandscapeViewport\(\) \{\s*return this\._viewportContextController\.isLandscapeViewport\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    viewportContextControllerSource.includes(
+      "export class ViewportContextController",
+    ),
+    true,
+  );
+  assert.equal(
+    viewportContextControllerSource.includes("isCardVisible()"),
+    true,
+  );
+  assert.equal(
+    viewportContextControllerSource.includes("isMobileTabletViewport()"),
     true,
   );
 });

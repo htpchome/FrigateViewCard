@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1199";
+const VERSION = "1.0.1200";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10645,6 +10645,38 @@ const EditorPreviewContextController = class {
   }
 };
 
+// src/features/viewport/context.ctrl.js
+const ViewportContextController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  isCardVisible() {
+    if (!this._host.isConnected) return false;
+    if (document.visibilityState === "hidden") return false;
+    const style = getComputedStyle(this._host);
+    if (style.display === "none" || style.visibility === "hidden") {
+      return false;
+    }
+    const rect = this._host.getBoundingClientRect();
+    return rect.width > 2 && rect.height > 2;
+  }
+  isMobilePhoneViewport() {
+    const width = Number(this._host._cardWidth || window.innerWidth || 0);
+    return width > 0 && width < 420;
+  }
+  isMobileTabletViewport() {
+    const coarse = window.matchMedia?.("(pointer: coarse)")?.matches || window.matchMedia?.("(any-pointer: coarse)")?.matches || false;
+    const width = window.innerWidth || 0;
+    const height = window.innerHeight || 0;
+    const maxEdge = Math.max(width, height);
+    const minEdge = Math.min(width, height);
+    return coarse && maxEdge <= 1400 && minEdge <= 1100;
+  }
+  isLandscapeViewport() {
+    return window.matchMedia?.("(orientation: landscape)")?.matches || (window.innerWidth || 0) > (window.innerHeight || 0);
+  }
+};
+
 // src/navigation/route-lifecycle.js
 function isLeavingPreviewPage(context = {}, previewPageId) {
   return context.previousPageId === previewPageId;
@@ -12116,6 +12148,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
+    this._viewportContextController = new ViewportContextController(this);
     this._domCache = {};
     this._fallbackImgUrlCache = new Map();
     this._fallbackReqId = 0;
@@ -13346,8 +13379,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._config?.slideshow_rotation_enabled === true && !DEVICE_PROFILE.isPhone && !this._isMobilePhoneViewport() && Array.isArray(this._config?.cameras) && this._config.cameras.length > 1;
   }
   _isMobilePhoneViewport() {
-    const width = Number(this._cardWidth || window.innerWidth || 0);
-    return width > 0 && width < 420;
+    return this._viewportContextController.isMobilePhoneViewport();
   }
   _slideshowRotationMs() {
     const seconds = Number(this._config?.slideshow_rotation_seconds);
@@ -14741,12 +14773,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._cardStyleController.applyCardStyle();
   }
   _isCardVisible() {
-    if (!this.isConnected) return false;
-    if (document.visibilityState === "hidden") return false;
-    const style = getComputedStyle(this);
-    if (style.display === "none" || style.visibility === "hidden") return false;
-    const r = this.getBoundingClientRect();
-    return r.width > 2 && r.height > 2;
+    return this._viewportContextController.isCardVisible();
   }
   _scheduleResumeLive(reason = "") {
     if (this._isPreviewPageActive()) {
@@ -14767,15 +14794,10 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   _isMobileTabletViewport() {
-    const coarse = window.matchMedia?.("(pointer: coarse)")?.matches || window.matchMedia?.("(any-pointer: coarse)")?.matches || false;
-    const w = window.innerWidth || 0;
-    const h = window.innerHeight || 0;
-    const maxEdge = Math.max(w, h);
-    const minEdge = Math.min(w, h);
-    return coarse && maxEdge <= 1400 && minEdge <= 1100;
+    return this._viewportContextController.isMobileTabletViewport();
   }
   _isLandscapeViewport() {
-    return window.matchMedia?.("(orientation: landscape)")?.matches || (window.innerWidth || 0) > (window.innerHeight || 0);
+    return this._viewportContextController.isLandscapeViewport();
   }
   _clearRotateOverlayAudioSync() {
     if (this._rotateOverlaySyncVideo && this._onRotateOverlayVolumeChange) {

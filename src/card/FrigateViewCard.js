@@ -288,6 +288,7 @@ import { GridAlertController } from "../features/grid/alert.ctrl.js";
 import { GridPageController } from "../features/grid/page.ctrl.js";
 import { CardStyleContextController } from "../features/card-style/context.ctrl.js";
 import { EditorPreviewContextController } from "../features/editor-preview/context.ctrl.js";
+import { ViewportContextController } from "../features/viewport/context.ctrl.js";
 import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
 import { buildMobileViewInfoRowMarkup } from "../features/mobile-view/page.tmpl.js";
 import { SingleViewPageController } from "../features/single-view/page.ctrl.js";
@@ -574,6 +575,7 @@ export class FrigateViewCard extends HTMLElement {
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
+    this._viewportContextController = new ViewportContextController(this);
     this._domCache = {};
     this._fallbackImgUrlCache = new Map();
     this._fallbackReqId = 0;
@@ -2050,8 +2052,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isMobilePhoneViewport() {
-    const width = Number(this._cardWidth || window.innerWidth || 0);
-    return width > 0 && width < 420;
+    return this._viewportContextController.isMobilePhoneViewport();
   }
 
   _slideshowRotationMs() {
@@ -3628,12 +3629,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _isCardVisible() {
-    if (!this.isConnected) return false;
-    if (document.visibilityState === "hidden") return false;
-    const style = getComputedStyle(this);
-    if (style.display === "none" || style.visibility === "hidden") return false;
-    const r = this.getBoundingClientRect();
-    return r.width > 2 && r.height > 2;
+    return this._viewportContextController.isCardVisible();
   }
   _scheduleResumeLive(reason = "") {
     if (this._isPreviewPageActive()) {
@@ -3661,22 +3657,10 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
   _isMobileTabletViewport() {
-    const coarse =
-      window.matchMedia?.("(pointer: coarse)")?.matches ||
-      window.matchMedia?.("(any-pointer: coarse)")?.matches ||
-      false;
-    const w = window.innerWidth || 0;
-    const h = window.innerHeight || 0;
-    const maxEdge = Math.max(w, h);
-    const minEdge = Math.min(w, h);
-    // Coarse-pointer devices up to typical tablet sizes.
-    return coarse && maxEdge <= 1400 && minEdge <= 1100;
+    return this._viewportContextController.isMobileTabletViewport();
   }
   _isLandscapeViewport() {
-    return (
-      window.matchMedia?.("(orientation: landscape)")?.matches ||
-      (window.innerWidth || 0) > (window.innerHeight || 0)
-    );
+    return this._viewportContextController.isLandscapeViewport();
   }
   _clearRotateOverlayAudioSync() {
     if (this._rotateOverlaySyncVideo && this._onRotateOverlayVolumeChange) {
