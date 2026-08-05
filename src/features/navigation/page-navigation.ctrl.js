@@ -96,7 +96,7 @@ export class PageNavigationController {
           this._host._lastNonPreviewPageId = nextPageId;
         }
         this._host._syncMobileViewPageMarkup();
-        this._host._syncPageNavigationButtons();
+        this.syncPageNavigationButtons();
       },
     });
 

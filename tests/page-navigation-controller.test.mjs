@@ -126,7 +126,13 @@ test("factory callbacks update page state and sync nav buttons", () => {
 
   input.onAfterNavigate(PAGE_IDS.preview);
   assert.equal(h.host._lastNonPreviewPageId, PAGE_IDS.singleView);
-  assert.deepEqual(h.calls, [["syncMobileViewMarkup"], ["syncButtons"]]);
+  assert.deepEqual(h.calls, [
+    ["syncMobileViewMarkup"],
+    ["toggle", "active", false, PAGE_IDS.singleView],
+    ["setAttribute", "aria-pressed", "false", PAGE_IDS.singleView],
+    ["toggle", "active", false, PAGE_IDS.wideView],
+    ["setAttribute", "aria-pressed", "false", PAGE_IDS.wideView],
+  ]);
 
   input.onBeforeNavigate(PAGE_IDS.wideView, context);
   input.onAfterNavigate(PAGE_IDS.wideView);

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1227";
+const VERSION = "1.0.1228";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11193,7 +11193,7 @@ const PageNavigationController = class {
           this._host._lastNonPreviewPageId = nextPageId;
         }
         this._host._syncMobileViewPageMarkup();
-        this._host._syncPageNavigationButtons();
+        this.syncPageNavigationButtons();
       }
     });
     return this._host._navigationFactory;
