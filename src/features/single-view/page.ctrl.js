@@ -197,6 +197,11 @@ export class SingleViewPageController {
     if (cameraStateChanged) {
       this._host._syncStatus();
       this._host._kickLiveIfStale();
+      if (this._host._viewMode === "grid") {
+        this._host._scheduleGridRefresh?.(120);
+        this._host._gridAlertController?.scheduleAlertWatch?.(120);
+        void this._host._probeLatestGridAlert?.();
+      }
     }
     if (themeChanged) {
       this._host._applyCardStyle();
@@ -211,6 +216,8 @@ export class SingleViewPageController {
     if (previewPageActive) {
       if (cameraStateChanged) {
         this._host._renderPreviewPage();
+        this._host._previewAlertController?.scheduleAlertWatch?.(120);
+        void this._host._previewAlertController?.probeLatestAlert?.();
       }
       if (themeChanged) {
         this._host._applyCardStyle();

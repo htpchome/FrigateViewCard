@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import {
   cameraEntityForIncomingCamera,
   cameraIndexForIncomingCamera,
+  extractRealtimeMessageCamera,
+  extractRealtimeMessageSeverity,
 } from "../src/features/slideshow/routing.js";
 
 const config = {
@@ -40,5 +42,43 @@ test("cameraEntityForIncomingCamera resolves normalized camera ids", () => {
   assert.equal(
     cameraEntityForIncomingCamera(config, camCache, "camera.side_yard"),
     "camera.side_yard",
+  );
+});
+
+test("extractRealtimeMessageCamera supports nested payload shapes", () => {
+  assert.equal(
+    extractRealtimeMessageCamera({
+      payload: { after: { camera: "garage" } },
+    }),
+    "garage",
+  );
+  assert.equal(
+    extractRealtimeMessageCamera({
+      event: { after: { camera: "deck" } },
+    }),
+    "deck",
+  );
+  assert.equal(
+    extractRealtimeMessageCamera({
+      after: { data: { camera: "front_door" } },
+    }),
+    "front_door",
+  );
+});
+
+test("extractRealtimeMessageSeverity supports nested payload shapes", () => {
+  assert.equal(
+    extractRealtimeMessageSeverity({
+      payload: { after: { severity: "alert" } },
+      type: "update",
+    }),
+    "alert",
+  );
+  assert.equal(
+    extractRealtimeMessageSeverity({
+      review: { before: { severity: "detection" } },
+      type: "update",
+    }),
+    "detection",
   );
 });

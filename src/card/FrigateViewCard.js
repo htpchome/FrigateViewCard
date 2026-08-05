@@ -90,6 +90,11 @@ import {
   resolveGo2RtcEntity,
   shouldUseGo2RtcForEntity,
 } from "../integrations/frigate/camera-context.js";
+import {
+  haReviewStatusForCamera,
+  haReviewStatusSeverity,
+  haReviewStatusSignature,
+} from "../integrations/frigate/review-status.js";
 import { createGo2RtcResolver } from "../integrations/frigate/go2rtc-resolver.js";
 import { createGo2RtcMounter } from "../features/live/go2rtc-mounter.js";
 import {
@@ -348,6 +353,7 @@ export class FrigateViewCard extends HTMLElement {
     this._hass = null;
     this._lastHassCameraStateSignature = "";
     this._lastHassThemeSignature = "";
+    this._lastHassReviewStatusSignature = "";
     this._config = null;
     this._navigationFactory = null;
     this._pageId = PAGE_IDS.singleView;
@@ -1162,20 +1168,31 @@ export class FrigateViewCard extends HTMLElement {
       configuredCameraEntities(this._config),
     );
     const themeSignature = hassThemeSignature(hass);
+    const reviewStatusSignature = haReviewStatusSignature({
+      hass,
+      cameras: this._config?.cameras,
+      resolveDiscoveredCameraName: (entity) => this._camCache?.[entity]?.cam,
+    });
     const cameraStateChanged =
       cameraStateSignature !== this._lastHassCameraStateSignature;
     const themeChanged = themeSignature !== this._lastHassThemeSignature;
+    const reviewStatusChanged =
+      reviewStatusSignature !== this._lastHassReviewStatusSignature;
     this._lastHassCameraStateSignature = cameraStateSignature;
     this._lastHassThemeSignature = themeSignature;
+    this._lastHassReviewStatusSignature = reviewStatusSignature;
     if (!this._started) {
       this._started = true;
       this._start();
       return;
     }
     this._editorPreviewController.syncHassPreviewContext();
-    if (!cameraStateChanged && !themeChanged) return;
+    if (reviewStatusChanged) {
+      this._applyHaReviewStatusAlerts();
+    }
+    if (!cameraStateChanged && !themeChanged && !reviewStatusChanged) return;
     this._singleViewPageController.applyHassUpdateRouteFlow({
-      cameraStateChanged,
+      cameraStateChanged: cameraStateChanged || reviewStatusChanged,
       themeChanged,
       previewPageActive: this._isPreviewPageActive(),
     });
@@ -2199,6 +2216,33 @@ export class FrigateViewCard extends HTMLElement {
     return extractRealtimeMessageSeverity(msg);
   }
 
+  _applyHaReviewStatusAlerts() {
+    let gridChanged = false;
+    for (const camera of this._config?.cameras || []) {
+      const entity = String(camera?.entity || "").trim();
+      if (!entity) continue;
+      const status = haReviewStatusForCamera({
+        entity,
+        discoveredCameraName: this._camCache?.[entity]?.cam,
+        hass: this._hass,
+      });
+      const severity = haReviewStatusSeverity(status);
+      if (!severity) continue;
+      if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
+      gridChanged =
+        this._gridAlertController.markAlertCamera(entity, severity) ||
+        gridChanged;
+      this._previewAlertController.markAlertCamera(
+        entity,
+        severity,
+        PREVIEW_ALERT_HOLD_MS,
+      );
+    }
+    if (gridChanged && this._viewMode === "grid") {
+      this._scheduleGridRefresh(90);
+    }
+  }
+
   _handleSlideshowRealtimeMessage(msg) {
     this._slideshowAlertController.handleRealtimeMessage(msg);
   }
@@ -2382,20 +2426,49 @@ export class FrigateViewCard extends HTMLElement {
     };
   }
   async _subscribe() {
-    const { clientId } = this._cc();
-    if (!this._hass?.connection || !clientId) return;
+    if (!this._hass?.connection) return;
+    const clientIds = new Set();
+    for (const camera of this._config?.cameras || []) {
+      const entity = camera?.entity;
+      if (!entity) continue;
+      const discoveredId = String(
+        this._camCache[entity]?.clientId || "",
+      ).trim();
+      if (discoveredId) clientIds.add(discoveredId);
+    }
+    const activeClientId = String(this._cc()?.clientId || "").trim();
+    if (activeClientId) clientIds.add(activeClientId);
+    if (!clientIds.size) return;
+
+    const onRealtimeMessage = (msg) => {
+      this._handleGridRealtimeMessage(msg);
+      this._previewAlertController.handleRealtimeMessage(msg);
+      this._handleSlideshowRealtimeMessage(msg);
+      if (!this._isNowWindow()) return;
+      if (!this._isRealtimeEventMessage(msg)) return;
+      this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);
+    };
+
     try {
-      this._unsub = this._hass.connection.subscribeMessage(
-        (msg) => {
-          this._handleGridRealtimeMessage(msg);
-          this._previewAlertController.handleRealtimeMessage(msg);
-          this._handleSlideshowRealtimeMessage(msg);
-          if (!this._isNowWindow()) return;
-          if (!this._isRealtimeEventMessage(msg)) return;
-          this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);
-        },
-        { type: "frigate/events/subscribe", instance_id: clientId },
+      const subscriptions = [...clientIds].map((clientId) =>
+        this._hass.connection.subscribeMessage(onRealtimeMessage, {
+          type: "frigate/events/subscribe",
+          instance_id: clientId,
+        }),
       );
+      this._unsub = Promise.allSettled(subscriptions).then((results) => {
+        const unsubscribers = results
+          .filter((result) => result.status === "fulfilled")
+          .map((result) => result.value)
+          .filter((value) => typeof value === "function");
+        return () => {
+          for (const unsubscribe of unsubscribers) {
+            try {
+              unsubscribe();
+            } catch (_) {}
+          }
+        };
+      });
     } catch (_) {}
   }
 

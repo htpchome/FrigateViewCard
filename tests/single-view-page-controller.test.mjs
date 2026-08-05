@@ -93,6 +93,9 @@ const createHost = ({
     _syncColHeight: () => calls.push(["syncColHeight"]),
     _syncStatus: () => calls.push(["syncStatus"]),
     _kickLiveIfStale: () => calls.push(["kickLiveIfStale"]),
+    _scheduleGridRefresh: (delayMs) =>
+      calls.push(["scheduleGridRefresh", delayMs]),
+    _probeLatestGridAlert: () => calls.push(["probeLatestGridAlert"]),
     _renderPreviewPage: () => calls.push(["renderPreviewPage"]),
     _renderSubtitle: () => calls.push(["renderSubtitle"]),
     _renderStats: () => calls.push(["renderStats"]),
@@ -117,6 +120,11 @@ const createHost = ({
     _previewAlertController: {
       scheduleAlertWatch: (delayMs) =>
         calls.push(["schedulePreviewAlertWatch", delayMs]),
+      probeLatestAlert: () => calls.push(["probeLatestPreviewAlert"]),
+    },
+    _gridAlertController: {
+      scheduleAlertWatch: (delayMs) =>
+        calls.push(["scheduleGridAlertWatch", delayMs]),
     },
   };
   return { host, calls };
@@ -407,6 +415,25 @@ test("applyNonPreviewHassUpdate applies status, live kick, and style by flags", 
   ]);
 });
 
+test("applyNonPreviewHassUpdate triggers grid alert probing on camera changes", () => {
+  const { host, calls } = createHost();
+  host._viewMode = "grid";
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewHassUpdate({
+    cameraStateChanged: true,
+    themeChanged: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["syncStatus"],
+    ["kickLiveIfStale"],
+    ["scheduleGridRefresh", 120],
+    ["scheduleGridAlertWatch", 120],
+    ["probeLatestGridAlert"],
+  ]);
+});
+
 test("applyNonPreviewHassUpdate is a no-op when flags are false", () => {
   const { host, calls } = createHost();
   const controller = new SingleViewPageController(host, { PAGE_IDS });
@@ -430,7 +457,12 @@ test("applyHassUpdateRouteFlow handles preview-page branch", () => {
   });
 
   assert.equal(outcome, "preview");
-  assert.deepEqual(calls, [["renderPreviewPage"], ["applyCardStyle"]]);
+  assert.deepEqual(calls, [
+    ["renderPreviewPage"],
+    ["schedulePreviewAlertWatch", 120],
+    ["probeLatestPreviewAlert"],
+    ["applyCardStyle"],
+  ]);
 });
 
 test("applyHassUpdateRouteFlow handles non-preview branch", () => {

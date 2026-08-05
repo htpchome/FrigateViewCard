@@ -402,7 +402,7 @@ export const STYLES = `
   .preview-grid > div {min-width: 0;}
 
   .preview-cell{display:flex;flex-direction:column;cursor:pointer;-webkit-backface-visibility: hidden;backface-visibility: hidden;}
-  .preview-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;var(--fvc-border-radius);background:var(--c-bg-deep);-webkit-backface-visibility: hidden;backface-visibility: hidden;
+  .preview-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:var(--fvc-border-radius);background:var(--c-bg-deep);-webkit-backface-visibility: hidden;backface-visibility: hidden;
     transform: translateZ(0);}
   .preview-media-host::after{content:"";position:absolute;inset:0;pointer-events:none;border:0 solid transparent;border-radius:inherit;box-sizing:border-box;z-index:3;}
   .preview-media-host.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
@@ -410,7 +410,7 @@ export const STYLES = `
   .preview-media-host.grid-detection{border-color:var(--warning-color, var(--c-accent));box-shadow:inset 0 0 0 2px var(--warning-color, var(--c-accent));}
   .preview-media-host.grid-detection::after{border-width:2px;border-color:var(--warning-color, var(--c-accent));}
   .preview-media-host video,.preview-media-host img,.preview-media-host ha-camera-stream{width:100%;height:100%;display:block;object-fit:contain;object-position:center center;background:var(--c-bg-deep);}
-  .preview-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;background:var(--c-bg-main);border-radius: var(--fvc-border-radius);}
+  .preview-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;background:var(--c-bg-main);border-radius:var(--fvc-border-radius);}
   .preview-meta-name{font-size:.82rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-meta-source{font-size:.7rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-meta-events{font-size:.72rem;color:var(--c-text2);}

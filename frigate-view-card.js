@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1241";
+const VERSION = "1.0.1244";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -522,7 +522,7 @@ const STYLES = `
   .preview-grid > div {min-width: 0;}
 
   .preview-cell{display:flex;flex-direction:column;cursor:pointer;-webkit-backface-visibility: hidden;backface-visibility: hidden;}
-  .preview-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;var(--fvc-border-radius);background:var(--c-bg-deep);-webkit-backface-visibility: hidden;backface-visibility: hidden;
+  .preview-media-host{position:relative;aspect-ratio:16/9;overflow:hidden;border-radius:var(--fvc-border-radius);background:var(--c-bg-deep);-webkit-backface-visibility: hidden;backface-visibility: hidden;
     transform: translateZ(0);}
   .preview-media-host::after{content:"";position:absolute;inset:0;pointer-events:none;border:0 solid transparent;border-radius:inherit;box-sizing:border-box;z-index:3;}
   .preview-media-host.grid-alert{border-color:var(--error-color, var(--c-bg-alert));box-shadow:inset 0 0 0 2px var(--error-color, var(--c-bg-alert));}
@@ -530,7 +530,7 @@ const STYLES = `
   .preview-media-host.grid-detection{border-color:var(--warning-color, var(--c-accent));box-shadow:inset 0 0 0 2px var(--warning-color, var(--c-accent));}
   .preview-media-host.grid-detection::after{border-width:2px;border-color:var(--warning-color, var(--c-accent));}
   .preview-media-host video,.preview-media-host img,.preview-media-host ha-camera-stream{width:100%;height:100%;display:block;object-fit:contain;object-position:center center;background:var(--c-bg-deep);}
-  .preview-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;background:var(--c-bg-main);border-radius: var(--fvc-border-radius);}
+  .preview-meta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:6px 8px;background:var(--c-bg-main);border-radius:var(--fvc-border-radius);}
   .preview-meta-name{font-size:.82rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-meta-source{font-size:.7rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-meta-events{font-size:.72rem;color:var(--c-text2);}
@@ -2757,6 +2757,63 @@ function buildGo2RtcTransportState({
   });
   if (!ctx) return null;
   return { ...ctx, nowMs };
+}
+
+// src/integrations/frigate/review-status.js
+function normalizeCameraToken(value) {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+function reviewStatusEntityCandidates(entity, discoveredCameraName = "") {
+  const cameraEntity = String(entity || "").trim().toLowerCase();
+  const bareFromEntity = cameraEntity.replace(/^camera\./, "");
+  const cameraTokens = [bareFromEntity, discoveredCameraName].map((token) => normalizeCameraToken(token)).filter(Boolean);
+  const out = [];
+  for (const token of cameraTokens) {
+    out.push(`sensor.${token}_review_status`);
+  }
+  return [...new Set(out)];
+}
+function haReviewStatusForCamera({
+  entity,
+  discoveredCameraName = "",
+  hass
+}) {
+  const states = hass?.states || null;
+  if (!states) return "";
+  for (const candidate of reviewStatusEntityCandidates(
+    entity,
+    discoveredCameraName
+  )) {
+    const stateObj = states[candidate];
+    if (!stateObj) continue;
+    return String(stateObj.state || "").trim().toLowerCase();
+  }
+  return "";
+}
+function haReviewStatusSeverity(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "alert") return "alert";
+  if (normalized === "detection") return "detection";
+  return "";
+}
+function haReviewStatusSignature({
+  hass,
+  cameras,
+  resolveDiscoveredCameraName
+}) {
+  const parts = [];
+  for (const camera of cameras || []) {
+    const entity = String(camera?.entity || "").trim();
+    if (!entity) continue;
+    const discoveredCameraName = resolveDiscoveredCameraName ? resolveDiscoveredCameraName(entity) : "";
+    const state = haReviewStatusForCamera({
+      entity,
+      discoveredCameraName,
+      hass
+    });
+    parts.push(`${entity}:${state || "none"}`);
+  }
+  return parts.join("|");
 }
 
 // src/shared/media/url-utils.js
@@ -13046,6 +13103,11 @@ const SingleViewPageController = class {
     if (cameraStateChanged) {
       this._host._syncStatus();
       this._host._kickLiveIfStale();
+      if (this._host._viewMode === "grid") {
+        this._host._scheduleGridRefresh?.(120);
+        this._host._gridAlertController?.scheduleAlertWatch?.(120);
+        void this._host._probeLatestGridAlert?.();
+      }
     }
     if (themeChanged) {
       this._host._applyCardStyle();
@@ -13059,6 +13121,8 @@ const SingleViewPageController = class {
     if (previewPageActive) {
       if (cameraStateChanged) {
         this._host._renderPreviewPage();
+        this._host._previewAlertController?.scheduleAlertWatch?.(120);
+        void this._host._previewAlertController?.probeLatestAlert?.();
       }
       if (themeChanged) {
         this._host._applyCardStyle();
@@ -13647,8 +13711,23 @@ const SlideshowPageController = class {
 };
 
 // src/features/slideshow/routing.js
-function normalizeCameraToken(value) {
+function normalizeCameraToken2(value) {
   return String(value || "").trim().toLowerCase().replace(/^camera\./, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+function valueAtPath(obj, path) {
+  let current = obj;
+  for (const key of path) {
+    if (current == null) return "";
+    current = current[key];
+  }
+  return current;
+}
+function firstNonEmptyString(values) {
+  for (const value of values) {
+    const text = String(value || "").trim();
+    if (text) return text;
+  }
+  return "";
 }
 function slideshowReviewModeForCamera(config, entity) {
   const cam = config?.cameras?.find((camera) => camera.entity === entity);
@@ -13659,7 +13738,7 @@ function shouldHandleSlideshowReview(config, entity, severity) {
   return severity === "detection" && slideshowReviewModeForCamera(config, entity) === "all_reviews";
 }
 function cameraIndexForIncomingCamera(config, camCache, cameraId) {
-  const normalized = normalizeCameraToken(cameraId);
+  const normalized = normalizeCameraToken2(cameraId);
   if (!normalized) return -1;
   return config?.cameras?.findIndex((camera) => {
     const entity = String(camera?.entity || "").toLowerCase();
@@ -13669,7 +13748,7 @@ function cameraIndexForIncomingCamera(config, camCache, cameraId) {
       entity.replace(/^camera\./, ""),
       camera?.name || "",
       discovered
-    ].map((token) => normalizeCameraToken(token));
+    ].map((token) => normalizeCameraToken2(token));
     return tokens.includes(normalized);
   }) ?? -1;
 }
@@ -13689,15 +13768,48 @@ function cameraIndexByEntity(config, entity) {
   return config?.cameras?.findIndex((camera) => camera.entity === entity) ?? -1;
 }
 function extractRealtimeMessageCamera(msg) {
-  return String(
-    msg?.camera || msg?.event?.camera || msg?.review?.camera || msg?.after?.camera || msg?.before?.camera || ""
-  ).trim();
+  return firstNonEmptyString([
+    msg?.camera,
+    msg?.event?.camera,
+    msg?.review?.camera,
+    msg?.after?.camera,
+    msg?.before?.camera,
+    msg?.event?.after?.camera,
+    msg?.event?.before?.camera,
+    msg?.review?.after?.camera,
+    msg?.review?.before?.camera,
+    valueAtPath(msg, ["after", "data", "camera"]),
+    valueAtPath(msg, ["before", "data", "camera"]),
+    valueAtPath(msg, ["event", "data", "camera"]),
+    valueAtPath(msg, ["review", "data", "camera"]),
+    msg?.payload?.camera,
+    msg?.payload?.after?.camera,
+    msg?.payload?.before?.camera
+  ]);
 }
 function extractRealtimeMessageSeverity(msg) {
   const type = String(msg?.type || "").trim().toLowerCase();
-  return String(
-    msg?.severity || msg?.event?.severity || msg?.event?.data?.severity || msg?.review?.severity || msg?.review?.data?.severity || msg?.after?.severity || msg?.after?.data?.severity || msg?.before?.severity || msg?.before?.data?.severity || (type.includes("detection") ? "detection" : "")
-  ).trim().toLowerCase();
+  return firstNonEmptyString([
+    msg?.severity,
+    msg?.event?.severity,
+    msg?.event?.data?.severity,
+    msg?.review?.severity,
+    msg?.review?.data?.severity,
+    msg?.after?.severity,
+    msg?.after?.data?.severity,
+    msg?.before?.severity,
+    msg?.before?.data?.severity,
+    msg?.event?.after?.severity,
+    msg?.event?.before?.severity,
+    msg?.review?.after?.severity,
+    msg?.review?.before?.severity,
+    msg?.payload?.severity,
+    msg?.payload?.event?.severity,
+    msg?.payload?.review?.severity,
+    msg?.payload?.after?.severity,
+    msg?.payload?.before?.severity,
+    type.includes("detection") ? "detection" : ""
+  ]).trim().toLowerCase();
 }
 
 // src/card/FrigateViewCard.js
@@ -13762,6 +13874,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._hass = null;
     this._lastHassCameraStateSignature = "";
     this._lastHassThemeSignature = "";
+    this._lastHassReviewStatusSignature = "";
     this._config = null;
     this._navigationFactory = null;
     this._pageId = PAGE_IDS.singleView;
@@ -14463,19 +14576,29 @@ const FrigateViewCard = class extends HTMLElement {
       configuredCameraEntities(this._config)
     );
     const themeSignature = hassThemeSignature(hass);
+    const reviewStatusSignature = haReviewStatusSignature({
+      hass,
+      cameras: this._config?.cameras,
+      resolveDiscoveredCameraName: (entity) => this._camCache?.[entity]?.cam
+    });
     const cameraStateChanged = cameraStateSignature !== this._lastHassCameraStateSignature;
     const themeChanged = themeSignature !== this._lastHassThemeSignature;
+    const reviewStatusChanged = reviewStatusSignature !== this._lastHassReviewStatusSignature;
     this._lastHassCameraStateSignature = cameraStateSignature;
     this._lastHassThemeSignature = themeSignature;
+    this._lastHassReviewStatusSignature = reviewStatusSignature;
     if (!this._started) {
       this._started = true;
       this._start();
       return;
     }
     this._editorPreviewController.syncHassPreviewContext();
-    if (!cameraStateChanged && !themeChanged) return;
+    if (reviewStatusChanged) {
+      this._applyHaReviewStatusAlerts();
+    }
+    if (!cameraStateChanged && !themeChanged && !reviewStatusChanged) return;
     this._singleViewPageController.applyHassUpdateRouteFlow({
-      cameraStateChanged,
+      cameraStateChanged: cameraStateChanged || reviewStatusChanged,
       themeChanged,
       previewPageActive: this._isPreviewPageActive()
     });
@@ -15334,6 +15457,30 @@ const FrigateViewCard = class extends HTMLElement {
   _extractRealtimeMessageSeverity(msg) {
     return extractRealtimeMessageSeverity(msg);
   }
+  _applyHaReviewStatusAlerts() {
+    let gridChanged = false;
+    for (const camera of this._config?.cameras || []) {
+      const entity = String(camera?.entity || "").trim();
+      if (!entity) continue;
+      const status = haReviewStatusForCamera({
+        entity,
+        discoveredCameraName: this._camCache?.[entity]?.cam,
+        hass: this._hass
+      });
+      const severity = haReviewStatusSeverity(status);
+      if (!severity) continue;
+      if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
+      gridChanged = this._gridAlertController.markAlertCamera(entity, severity) || gridChanged;
+      this._previewAlertController.markAlertCamera(
+        entity,
+        severity,
+        PREVIEW_ALERT_HOLD_MS
+      );
+    }
+    if (gridChanged && this._viewMode === "grid") {
+      this._scheduleGridRefresh(90);
+    }
+  }
   _handleSlideshowRealtimeMessage(msg) {
     this._slideshowAlertController.handleRealtimeMessage(msg);
   }
@@ -15503,20 +15650,45 @@ const FrigateViewCard = class extends HTMLElement {
     };
   }
   async _subscribe() {
-    const { clientId } = this._cc();
-    if (!this._hass?.connection || !clientId) return;
+    if (!this._hass?.connection) return;
+    const clientIds = new Set();
+    for (const camera of this._config?.cameras || []) {
+      const entity = camera?.entity;
+      if (!entity) continue;
+      const discoveredId = String(
+        this._camCache[entity]?.clientId || ""
+      ).trim();
+      if (discoveredId) clientIds.add(discoveredId);
+    }
+    const activeClientId = String(this._cc()?.clientId || "").trim();
+    if (activeClientId) clientIds.add(activeClientId);
+    if (!clientIds.size) return;
+    const onRealtimeMessage = (msg) => {
+      this._handleGridRealtimeMessage(msg);
+      this._previewAlertController.handleRealtimeMessage(msg);
+      this._handleSlideshowRealtimeMessage(msg);
+      if (!this._isNowWindow()) return;
+      if (!this._isRealtimeEventMessage(msg)) return;
+      this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);
+    };
     try {
-      this._unsub = this._hass.connection.subscribeMessage(
-        (msg) => {
-          this._handleGridRealtimeMessage(msg);
-          this._previewAlertController.handleRealtimeMessage(msg);
-          this._handleSlideshowRealtimeMessage(msg);
-          if (!this._isNowWindow()) return;
-          if (!this._isRealtimeEventMessage(msg)) return;
-          this._scheduleReload(REALTIME_RELOAD_DEBOUNCE_MS);
-        },
-        { type: "frigate/events/subscribe", instance_id: clientId }
+      const subscriptions = [...clientIds].map(
+        (clientId) => this._hass.connection.subscribeMessage(onRealtimeMessage, {
+          type: "frigate/events/subscribe",
+          instance_id: clientId
+        })
       );
+      this._unsub = Promise.allSettled(subscriptions).then((results) => {
+        const unsubscribers = results.filter((result) => result.status === "fulfilled").map((result) => result.value).filter((value) => typeof value === "function");
+        return () => {
+          for (const unsubscribe of unsubscribers) {
+            try {
+              unsubscribe();
+            } catch (_) {
+            }
+          }
+        };
+      });
     } catch (_) {
     }
   }

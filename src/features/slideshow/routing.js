@@ -9,6 +9,23 @@ function normalizeCameraToken(value) {
     .replace(/^_+|_+$/g, "");
 }
 
+function valueAtPath(obj, path) {
+  let current = obj;
+  for (const key of path) {
+    if (current == null) return "";
+    current = current[key];
+  }
+  return current;
+}
+
+function firstNonEmptyString(values) {
+  for (const value of values) {
+    const text = String(value || "").trim();
+    if (text) return text;
+  }
+  return "";
+}
+
 export function slideshowReviewModeForCamera(config, entity) {
   const cam = config?.cameras?.find((camera) => camera.entity === entity);
   return normalizeAlertsAreaContent(cam?.alerts_content);
@@ -62,32 +79,51 @@ export function cameraIndexByEntity(config, entity) {
 }
 
 export function extractRealtimeMessageCamera(msg) {
-  return String(
-    msg?.camera ||
-      msg?.event?.camera ||
-      msg?.review?.camera ||
-      msg?.after?.camera ||
-      msg?.before?.camera ||
-      "",
-  ).trim();
+  return firstNonEmptyString([
+    msg?.camera,
+    msg?.event?.camera,
+    msg?.review?.camera,
+    msg?.after?.camera,
+    msg?.before?.camera,
+    msg?.event?.after?.camera,
+    msg?.event?.before?.camera,
+    msg?.review?.after?.camera,
+    msg?.review?.before?.camera,
+    valueAtPath(msg, ["after", "data", "camera"]),
+    valueAtPath(msg, ["before", "data", "camera"]),
+    valueAtPath(msg, ["event", "data", "camera"]),
+    valueAtPath(msg, ["review", "data", "camera"]),
+    msg?.payload?.camera,
+    msg?.payload?.after?.camera,
+    msg?.payload?.before?.camera,
+  ]);
 }
 
 export function extractRealtimeMessageSeverity(msg) {
   const type = String(msg?.type || "")
     .trim()
     .toLowerCase();
-  return String(
-    msg?.severity ||
-      msg?.event?.severity ||
-      msg?.event?.data?.severity ||
-      msg?.review?.severity ||
-      msg?.review?.data?.severity ||
-      msg?.after?.severity ||
-      msg?.after?.data?.severity ||
-      msg?.before?.severity ||
-      msg?.before?.data?.severity ||
-      (type.includes("detection") ? "detection" : ""),
-  )
+  return firstNonEmptyString([
+    msg?.severity,
+    msg?.event?.severity,
+    msg?.event?.data?.severity,
+    msg?.review?.severity,
+    msg?.review?.data?.severity,
+    msg?.after?.severity,
+    msg?.after?.data?.severity,
+    msg?.before?.severity,
+    msg?.before?.data?.severity,
+    msg?.event?.after?.severity,
+    msg?.event?.before?.severity,
+    msg?.review?.after?.severity,
+    msg?.review?.before?.severity,
+    msg?.payload?.severity,
+    msg?.payload?.event?.severity,
+    msg?.payload?.review?.severity,
+    msg?.payload?.after?.severity,
+    msg?.payload?.before?.severity,
+    type.includes("detection") ? "detection" : "",
+  ])
     .trim()
     .toLowerCase();
 }
