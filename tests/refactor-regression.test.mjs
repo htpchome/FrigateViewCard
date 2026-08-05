@@ -498,17 +498,16 @@ test("preview helpers delegate through the preview page controller", () => {
 });
 
 test("editor stylesheet keeps core config surface variables intact", () => {
+  assert.equal(editorSource.includes("_applyEditorThemeTokens()"), true);
   assert.equal(
-    editorSource.includes("--editor-card-bg: var(--card-background-color);"),
+    /"--editor-card-bg": this\._rootCssVar\("--card-background-color"\)/.test(
+      editorSource,
+    ),
     true,
   );
   assert.equal(
-    editorSource.includes("--editor-border: var(--divider-color);"),
-    true,
-  );
-  assert.equal(
-    editorSource.includes(
-      "--editor-icon: var(--icon-color, var(--secondary-text-color));",
+    /"--editor-primary": this\._rootCssVar\("--primary-color"\)/.test(
+      editorSource,
     ),
     true,
   );

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1191";
+const VERSION = "1.0.1192";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -17817,6 +17817,30 @@ const FrigateViewCardEditor = class extends HTMLElement {
     probe.remove();
     return this._rgbToHex(computed) || fallback;
   }
+  _rootCssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  _applyEditorThemeTokens() {
+    const secondaryText = this._rootCssVar("--secondary-text-color");
+    const tokens = {
+      "--editor-primary-bg": this._rootCssVar("--primary-background-color"),
+      "--editor-secondary-bg": this._rootCssVar("--secondary-background-color"),
+      "--editor-card-bg": this._rootCssVar("--card-background-color"),
+      "--editor-text": this._rootCssVar("--primary-text-color"),
+      "--editor-muted": secondaryText,
+      "--editor-primary": this._rootCssVar("--primary-color"),
+      "--editor-primary-d": this._rootCssVar("--dark-primary-color"),
+      "--editor-primary-l": this._rootCssVar("--light-primary-color"),
+      "--editor-border": this._rootCssVar("--divider-color"),
+      "--editor-border-width": this._rootCssVar("--ha-card-border-width"),
+      "--editor-shadow": this._rootCssVar("--ha-card-box-shadow"),
+      "--editor-icon": this._rootCssVar("--icon-color") || secondaryText
+    };
+    Object.entries(tokens).forEach(([name, value]) => {
+      if (value) this.style.setProperty(name, value);
+      else this.style.removeProperty(name);
+    });
+  }
   _themeDefaultHex(key) {
     return this._resolveColorToHex(THEME_DEFAULTS[key], "#000000");
   }
@@ -18206,6 +18230,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
         this._hiddenTabsDraft ?? this._config?.hidden_tabs
       )
     );
+    this._applyEditorThemeTokens();
     this._ensureThemeDraftCache();
     const activeTheme = this._config?.theme === "custom" ? "custom" : "default";
     const themeCustom = this._config?.theme_custom || {};
@@ -18506,18 +18531,6 @@ const FrigateViewCardEditor = class extends HTMLElement {
       </div>`;
     this.innerHTML = `<style>
             .ed-wrap{
-                --editor-primary-bg: var(--primary-background-color);
-                --editor-secondary-bg: var(--secondary-background-color);
-                --editor-card-bg: var(--card-background-color);
-                --editor-text: var(--primary-text-color);
-                --editor-muted: var(--secondary-text-color);
-                --editor-primary: var(--primary-color);
-                --editor-primary-d: var(--dark-primary-color);
-                --editor-primary-l: var(--light-primary-color);
-                --editor-border: var(--divider-color);
-                --editor-border-width: var(--ha-card-border-width);
-                --editor-shadow: var(--ha-card-box-shadow);
-                --editor-icon: var(--icon-color, var(--secondary-text-color));
               --c-bg-main: var(--editor-primary-bg);
               --c-bg-panel: var(--editor-card-bg);
               --c-text: var(--editor-text);
