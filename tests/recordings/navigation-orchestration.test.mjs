@@ -166,12 +166,29 @@ function createNavigateContext({
 } = {}) {
   const calls = [];
 
+  const swipeController = {
+    bounceArea(dir) {
+      calls.push(["bounce", dir]);
+    },
+    createStage(dir, incomingHtml) {
+      calls.push(["createStage", dir, incomingHtml]);
+      return stage;
+    },
+    async animateStageTo(...args) {
+      calls.push(["animate", ...args]);
+    },
+    clearListState() {
+      calls.push(["clearListState"]);
+    },
+  };
+
   return {
     calls,
     direction,
     ctx: {
       _tab: tab,
       _recordingsDayNavAnimating: false,
+      _recordingsSwipeController: swipeController,
       async _prepareRecordingsDayTransition(dir) {
         calls.push(["prepare", dir]);
         return prep;
@@ -184,21 +201,11 @@ function createNavigateContext({
         calls.push(["listMarkup", recordings]);
         return `rows:${recordings.length}`;
       },
-      _bounceRecordingsArea(dir) {
-        calls.push(["bounce", dir]);
-      },
       async _updateRecordingsBrowseNav() {
         calls.push(["updateBrowseNav"]);
       },
-      _createRecordingsSwipeStage(dir, incomingHtml) {
-        calls.push(["createStage", dir, incomingHtml]);
-        return stage;
-      },
       async _commitRecordingsDayTransition(bounds, recs) {
         calls.push(["commit", bounds, recs]);
-      },
-      async _animateRecordingsSwipeStageTo(...args) {
-        calls.push(["animate", ...args]);
       },
     },
   };
@@ -451,21 +458,26 @@ test("mixed swipe and button recordings transitions both clear swipe-active stat
 
   ctx._tab = "recordings";
   ctx._recordingsDayNavAnimating = false;
-  ctx._animateRecordingsSwipeStageTo = async (...args) => {
-    calls.push(["animate", ...args]);
-  };
   ctx._prepareRecordingsDayTransition = async (dir) => {
     calls.push(["prepare", dir]);
     return { hasData: true, bounds: secondBounds, recs: [{ id: 2 }] };
   };
   ctx._recordingsViewRows = (recordings) => recordings;
   ctx._recordingsListMarkup = (recordings) => `rows:${recordings.length}`;
-  ctx._bounceRecordingsArea = (dir) => {
-    calls.push(["bounce", dir]);
-  };
-  ctx._createRecordingsSwipeStage = (dir, incomingHtml) => {
-    calls.push(["createStage", dir, incomingHtml]);
-    return null;
+  ctx._recordingsSwipeController = {
+    bounceArea: (dir) => {
+      calls.push(["bounce", dir]);
+    },
+    createStage: (dir, incomingHtml) => {
+      calls.push(["createStage", dir, incomingHtml]);
+      return null;
+    },
+    animateStageTo: async (...args) => {
+      calls.push(["animate", ...args]);
+    },
+    clearListState: () => {
+      removedClasses.push("recordings-swipe-active");
+    },
   };
   const recordingsBrowseNavController = new RecordingsBrowseNavController(ctx);
   recordingsBrowseNavController.prepareDayTransition = async (dir) => {

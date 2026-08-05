@@ -1,6 +1,6 @@
 {
   "name": "frigate-view-card",
-  "version": "1.0.1218",
+  "version": "1.0.1219",
   "private": true,
   "scripts": {
     "build": "node scripts/build.mjs",

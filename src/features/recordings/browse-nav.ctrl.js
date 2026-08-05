@@ -18,6 +18,10 @@ export class RecordingsBrowseNavController {
     this._host = host;
   }
 
+  _swipeController() {
+    return this._host._recordingsSwipeController || null;
+  }
+
   async hasRecordingsInBounds(bounds, clientId, cam) {
     const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
     const cached = resolveCachedRecordingsAvailability({
@@ -112,15 +116,17 @@ export class RecordingsBrowseNavController {
           ),
       });
       if (navigation.shouldBounce) {
-        this._host._bounceRecordingsArea(dir);
+        const swipeController = this._swipeController();
+        if (swipeController) swipeController.bounceArea(dir);
+        else this._host._bounceRecordingsArea(dir);
         void this.updateBrowseNav();
         return false;
       }
 
-      const stage = this._host._createRecordingsSwipeStage(
-        dir,
-        navigation.incomingHtml,
-      );
+      const swipeController = this._swipeController();
+      const stage = swipeController
+        ? swipeController.createStage(dir, navigation.incomingHtml)
+        : this._host._createRecordingsSwipeStage(dir, navigation.incomingHtml);
       if (!stage) {
         await this._host._commitRecordingsDayTransition(
           navigation.bounds,
@@ -132,12 +138,21 @@ export class RecordingsBrowseNavController {
       await new Promise((resolve) => requestAnimationFrame(resolve));
       await new Promise((resolve) => requestAnimationFrame(resolve));
 
-      await this._host._animateRecordingsSwipeStageTo(
-        stage,
-        -dir * stage.width,
-        320,
-        "cubic-bezier(0.28, 0.02, 0.18, 1)",
-      );
+      if (swipeController) {
+        await swipeController.animateStageTo(
+          stage,
+          -dir * stage.width,
+          320,
+          "cubic-bezier(0.28, 0.02, 0.18, 1)",
+        );
+      } else {
+        await this._host._animateRecordingsSwipeStageTo(
+          stage,
+          -dir * stage.width,
+          320,
+          "cubic-bezier(0.28, 0.02, 0.18, 1)",
+        );
+      }
       await this._host._commitRecordingsDayTransition(
         navigation.bounds,
         navigation.recs,
@@ -157,12 +172,22 @@ export class RecordingsBrowseNavController {
     await new Promise((resolve) => requestAnimationFrame(resolve));
 
     const target = -gesture.direction * gesture.stage.width;
-    await this._host._animateRecordingsSwipeStageTo(
-      gesture.stage,
-      target,
-      300,
-      "cubic-bezier(0.28, 0.02, 0.18, 1)",
-    );
+    const swipeController = this._swipeController();
+    if (swipeController) {
+      await swipeController.animateStageTo(
+        gesture.stage,
+        target,
+        300,
+        "cubic-bezier(0.28, 0.02, 0.18, 1)",
+      );
+    } else {
+      await this._host._animateRecordingsSwipeStageTo(
+        gesture.stage,
+        target,
+        300,
+        "cubic-bezier(0.28, 0.02, 0.18, 1)",
+      );
+    }
     await this._host._commitRecordingsDayTransition(
       gesture.bounds,
       gesture.recs,
@@ -197,7 +222,9 @@ export class RecordingsBrowseNavController {
     }
     this._host._cacheActiveCamSlice("recordings", this._host._recordings);
     this._host._renderListLabel(this._host._winEnd);
-    this._host._clearRecordingsSwipeListState();
+    const swipeController = this._swipeController();
+    if (swipeController) swipeController.clearListState();
+    else this._host._clearRecordingsSwipeListState();
     this._host._lastRenderedListHtml = "";
     this._host._renderList();
   }

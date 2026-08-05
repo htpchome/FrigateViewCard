@@ -1276,6 +1276,26 @@ test("recordings browse nav delegates through the recordings browse nav controll
     true,
   );
   assert.equal(
+    recordingsBrowseNavControllerSource.includes("_swipeController()"),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes("swipeController.createStage"),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes("swipeController.animateStageTo"),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes("swipeController.clearListState"),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes("swipeController.bounceArea"),
+    true,
+  );
+  assert.equal(
     recordingsBrowseNavControllerSource.includes(
       "async commitDayTransition(bounds, recordings)",
     ),
