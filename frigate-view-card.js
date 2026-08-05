@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1234";
+const VERSION = "1.0.1235";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -127,7 +127,7 @@ const STYLES = `
     position: relative;
     box-sizing: border-box !important;
     display: block !important;
-    border:1px solid var(--secondary-background-color,#7a7a7a) !important;
+    border:4px solid var(--secondary-background-color) !important;
     border-radius: var(--fvc-border-radius) !important;
   }
   :host {
