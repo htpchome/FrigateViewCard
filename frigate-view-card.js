@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1195";
+const VERSION = "1.0.1196";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -25,7 +25,7 @@ const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
   30,
   60
 ]);
-const GRID_ROTATION_OPTIONS_SECONDS2 = Object.freeze([10, 20, 30, 60]);
+const GRID_ROTATION_OPTIONS_SECONDS = Object.freeze([10, 20, 30, 60]);
 const SLIDESHOW_ALERT_HOLD_MS = 1e4;
 const SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC = 10;
 const SLIDESHOW_REVIEW_WATCH_MIN_MS = 1500;
@@ -1550,7 +1550,7 @@ const applyEditorPreviewDraftToCardConfig = ({
     grid_mode_enabled: previewConfig.grid_mode_enabled === true,
     grid_start_in_grid_enabled: previewConfig.grid_start_in_grid_enabled === true,
     grid_live_view_enabled: previewConfig.grid_live_view_enabled !== false,
-    grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS2.includes(
+    grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
       Number(previewConfig.grid_rotation_seconds)
     ) ? Number(previewConfig.grid_rotation_seconds) : 30,
     mobile_view_page_enabled: previewConfig.mobile_view_page_enabled === true,
@@ -1916,7 +1916,7 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     normalizePageRoute(source.mobile_page),
     PAGE_IDS.singleView
   );
-  const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS2.includes(
+  const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(source.grid_rotation_seconds)
   ) ? Number(source.grid_rotation_seconds) : 30;
   addIfNotDefault(compact, "grid_rotation_seconds", gridRotationSeconds, 30);
@@ -2034,9 +2034,9 @@ function detectDeviceProfile() {
     os: isAndroid2 ? "Android" : isIOS2 ? "iOS" : "Desktop/Other"
   };
 }
-const DEVICE_PROFILE2 = detectDeviceProfile();
-const isIOS = DEVICE_PROFILE2.isIOS;
-const isAndroid = DEVICE_PROFILE2.isAndroid;
+const DEVICE_PROFILE = detectDeviceProfile();
+const isIOS = DEVICE_PROFILE.isIOS;
+const isAndroid = DEVICE_PROFILE.isAndroid;
 function cap(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
@@ -2455,7 +2455,7 @@ const buildEditorConfigFromDom = ({
   nextConfig.wide_view_page_enabled = resolveSwitchChecked(
     root.querySelector("#wide_view_page_enabled")
   );
-  nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS2.includes(
+  nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value || root.querySelector("#grid_rotation_seconds")?.value || "30"
     )
@@ -9522,7 +9522,7 @@ const PreviewPageController = class {
     return resolvePreviewLiveStreamHint({
       activeStreamType: this._host._activeStreamType,
       lastLiveStreamHint: this._host._lastLiveStreamHint,
-      isIOS: DEVICE_PROFILE2.isIOS
+      isIOS: DEVICE_PROFILE.isIOS
     });
   }
   previewStreamSourceLabel(entity, useLive) {
@@ -11643,7 +11643,7 @@ const FrigateViewCard = class extends HTMLElement {
     });
     this._go2rtcRaceMounter = createGo2RtcRaceMounter({
       mounter: this._go2rtcMounter,
-      isDesktop: DEVICE_PROFILE2.isDesktop,
+      isDesktop: DEVICE_PROFILE.isDesktop,
       resolveConnectionType: (entity) => this._cameraConnectionType(entity),
       disableHlsDesktopForEntity: (entity) => this._cameraDisableHlsDesktop(entity),
       getPendingMountDestroyers: () => this._pendingMountDestroyers || [],
@@ -12245,7 +12245,7 @@ const FrigateViewCard = class extends HTMLElement {
       landing_page: normalizePageRoute(config.landing_page),
       mobile_page: normalizePageRoute(config.mobile_page),
       deep_link_enabled: config.deep_link_enabled !== false,
-      grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS2.includes(
+      grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
         Number(config.grid_rotation_seconds)
       ) ? Number(config.grid_rotation_seconds) : 30,
       browse_expanded: config.browse_expanded === true,
@@ -12545,7 +12545,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._deepLinkController.consumeDeepLinkReviewOpen();
   }
   _isLikelyMobileClient() {
-    return DEVICE_PROFILE2.isMobile;
+    return DEVICE_PROFILE.isMobile;
   }
   _effectiveRealtimePollSeconds() {
     if (this._config?.mobile_poll_battery_saver === true && this._isLikelyMobileClient()) {
@@ -12752,7 +12752,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._isEditorPreviewContext() || this._isCardPickerPreviewContext();
   }
   _preferredStreamType() {
-    if (DEVICE_PROFILE2.isIOS) return "webrtc";
+    if (DEVICE_PROFILE.isIOS) return "webrtc";
     return "webrtc";
   }
   _currentLiveStreamHint() {
@@ -12968,7 +12968,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._previewPageController.isPreviewPageActive();
   }
   _deviceRouteBucket() {
-    return resolveDeviceRouteBucket(DEVICE_PROFILE2);
+    return resolveDeviceRouteBucket(DEVICE_PROFILE);
   }
   _ensureNavigationFactory() {
     return this._pageNavigationController.ensureNavigationFactory();
@@ -13187,7 +13187,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncToolbarButtons();
   }
   _isSlideshowRotationAvailable() {
-    return this._config?.slideshow_rotation_enabled === true && !DEVICE_PROFILE2.isPhone && !this._isMobilePhoneViewport() && Array.isArray(this._config?.cameras) && this._config.cameras.length > 1;
+    return this._config?.slideshow_rotation_enabled === true && !DEVICE_PROFILE.isPhone && !this._isMobilePhoneViewport() && Array.isArray(this._config?.cameras) && this._config.cameras.length > 1;
   }
   _isMobilePhoneViewport() {
     const width = Number(this._cardWidth || window.innerWidth || 0);
@@ -15865,10 +15865,10 @@ const FrigateViewCard = class extends HTMLElement {
     engWrap.classList.toggle("popup-covered", !!covered);
   }
   _isTouchPopupUi() {
-    return DEVICE_PROFILE2.hasTouch || this._isMobileTabletViewport();
+    return DEVICE_PROFILE.hasTouch || this._isMobileTabletViewport();
   }
   _isPhonePopupUi() {
-    if (DEVICE_PROFILE2.isPhone) return true;
+    if (DEVICE_PROFILE.isPhone) return true;
     const coarse = window.matchMedia?.("(pointer: coarse)")?.matches || window.matchMedia?.("(any-pointer: coarse)")?.matches || false;
     return coarse && Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 560;
   }
@@ -15951,7 +15951,7 @@ const FrigateViewCard = class extends HTMLElement {
     return await this._hlsJsCtorPromise;
   }
   _recordingPreferHls() {
-    return DEVICE_PROFILE2.isIOS || this._isFirefox() || this._isEdge();
+    return DEVICE_PROFILE.isIOS || this._isFirefox() || this._isEdge();
   }
   _popupMediaVideo() {
     const viewer = this._$("#viewer");
@@ -17565,7 +17565,7 @@ const normalizeCardConfig = (config) => {
   if (!mobilePageOptions.includes(src.mobile_page)) {
     src.mobile_page = PAGE_IDS.singleView;
   }
-  src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS2.includes(
+  src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(src.grid_rotation_seconds)
   ) ? Number(src.grid_rotation_seconds) : 30;
   src.alerts_reviews_days = normalizePositiveInteger3(
