@@ -27,6 +27,27 @@ export class BrowseCalendarPanelController {
     return false;
   }
 
+  toggleCalendar() {
+    const panel = this._host._$("#cal-panel");
+    if (!panel) return;
+    const open = panel.style.display === "none";
+    const filterPanel = this._host._$("#filter-panel");
+    if (filterPanel) filterPanel.style.display = "none";
+    panel.style.display = open ? "block" : "none";
+    this._host._syncToolbarButtons();
+    if (!open) return;
+    if (!this._host._calMonth) {
+      const parts = this._host._tzParts(this._host._winEnd);
+      this._host._calMonth = this.createCalendarMonthDate(
+        parts.year,
+        parts.month - 1,
+      );
+    }
+    this._host._applyCalendarActivityCacheForActiveCamera();
+    this.renderCal();
+    void this._host._prefetchCalendarActivityForActiveCamera();
+  }
+
   formatTzDateString(parts) {
     return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
   }

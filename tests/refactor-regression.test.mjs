@@ -807,6 +807,12 @@ test("browse calendar panel helpers delegate through the browse calendar panel c
     true,
   );
   assert.equal(
+    /_toggleCal\(\) \{\s*this\._browseCalendarPanelController\.toggleCalendar\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
     /_formatTzDateString\(parts\) \{\s*return this\._browseCalendarPanelController\.formatTzDateString\(parts\);\s*\}/s.test(
       cardSource,
     ),
@@ -864,6 +870,10 @@ test("browse calendar panel helpers delegate through the browse calendar panel c
     browseCalendarPanelControllerSource.includes(
       "export class BrowseCalendarPanelController",
     ),
+    true,
+  );
+  assert.equal(
+    browseCalendarPanelControllerSource.includes("toggleCalendar()"),
     true,
   );
   assert.equal(

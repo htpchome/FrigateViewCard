@@ -130,3 +130,40 @@ test("handleSidebarCalendarClick routes day, nav, and today interactions", () =>
     ["today"],
   ]);
 });
+
+test("toggleCalendar opens the panel, closes filters, initializes month, and starts calendar refresh flow", async () => {
+  const calendarPanel = { style: { display: "none" } };
+  const filterPanel = { style: { display: "block" } };
+  const calls = [];
+  const host = {
+    _calMonth: null,
+    _winEnd: 123,
+    _$: (selector) => {
+      if (selector === "#cal-panel") return calendarPanel;
+      if (selector === "#filter-panel") return filterPanel;
+      return null;
+    },
+    _syncToolbarButtons: () => calls.push("syncToolbar"),
+    _tzParts: () => ({ year: 2026, month: 8, day: 5 }),
+    _applyCalendarActivityCacheForActiveCamera: () => calls.push("applyCache"),
+    _prefetchCalendarActivityForActiveCamera: async () =>
+      calls.push("prefetch"),
+  };
+  const controller = new BrowseCalendarPanelController(host, {
+    buildCalendarPanelMarkup: () => "",
+  });
+  controller.renderCal = () => calls.push("renderCal");
+
+  controller.toggleCalendar();
+  await Promise.resolve();
+
+  assert.equal(calendarPanel.style.display, "block");
+  assert.equal(filterPanel.style.display, "none");
+  assert.equal(host._calMonth?.toISOString(), "2026-08-15T12:00:00.000Z");
+  assert.deepEqual(calls, [
+    "syncToolbar",
+    "applyCache",
+    "renderCal",
+    "prefetch",
+  ]);
+});

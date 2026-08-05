@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1208";
+const VERSION = "1.0.1209";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6752,6 +6752,26 @@ const BrowseCalendarPanelController = class {
       return true;
     }
     return false;
+  }
+  toggleCalendar() {
+    const panel = this._host._$("#cal-panel");
+    if (!panel) return;
+    const open = panel.style.display === "none";
+    const filterPanel = this._host._$("#filter-panel");
+    if (filterPanel) filterPanel.style.display = "none";
+    panel.style.display = open ? "block" : "none";
+    this._host._syncToolbarButtons();
+    if (!open) return;
+    if (!this._host._calMonth) {
+      const parts = this._host._tzParts(this._host._winEnd);
+      this._host._calMonth = this.createCalendarMonthDate(
+        parts.year,
+        parts.month - 1
+      );
+    }
+    this._host._applyCalendarActivityCacheForActiveCamera();
+    this.renderCal();
+    void this._host._prefetchCalendarActivityForActiveCamera();
   }
   formatTzDateString(parts) {
     return `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
@@ -17217,22 +17237,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._browseFilterController.toggleFilter();
   }
   _toggleCal() {
-    const p = this._$("#cal-panel");
-    if (!p) return;
-    const open = p.style.display === "none";
-    const filter = this._$("#filter-panel");
-    if (filter) filter.style.display = "none";
-    p.style.display = open ? "block" : "none";
-    this._syncToolbarButtons();
-    if (open) {
-      if (!this._calMonth) {
-        const z = this._tzParts(this._winEnd);
-        this._calMonth = this._createCalendarMonthDate(z.year, z.month - 1);
-      }
-      this._applyCalendarActivityCacheForActiveCamera();
-      this._renderCal();
-      void this._prefetchCalendarActivityForActiveCamera();
-    }
+    this._browseCalendarPanelController.toggleCalendar();
   }
   // ── calendar ──────────────────────────────────────────────
   _formatTzDateString(parts) {

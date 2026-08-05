@@ -5016,22 +5016,7 @@ export class FrigateViewCard extends HTMLElement {
     this._browseFilterController.toggleFilter();
   }
   _toggleCal() {
-    const p = this._$("#cal-panel");
-    if (!p) return;
-    const open = p.style.display === "none";
-    const filter = this._$("#filter-panel");
-    if (filter) filter.style.display = "none";
-    p.style.display = open ? "block" : "none";
-    this._syncToolbarButtons();
-    if (open) {
-      if (!this._calMonth) {
-        const z = this._tzParts(this._winEnd);
-        this._calMonth = this._createCalendarMonthDate(z.year, z.month - 1);
-      }
-      this._applyCalendarActivityCacheForActiveCamera();
-      this._renderCal();
-      void this._prefetchCalendarActivityForActiveCamera();
-    }
+    this._browseCalendarPanelController.toggleCalendar();
   }
   // ── calendar ──────────────────────────────────────────────
   _formatTzDateString(parts) {
