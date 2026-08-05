@@ -205,10 +205,11 @@ export class GridAlertController {
     ) {
       return;
     }
+    const pageFocused = this._host._focusGridPageForCamera?.(entity) === true;
     this._lastAlertAt = now;
     this._lastAlertCam = entity;
     const changed = this.markAlertCamera(entity, severity || "alert");
-    if (changed) this._host._scheduleGridRefresh();
+    if (changed || pageFocused) this._host._scheduleGridRefresh();
   }
 
   handleRealtimeMessage(msg) {

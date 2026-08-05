@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1246";
+const VERSION = "1.0.1247";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11681,10 +11681,11 @@ const GridAlertController = class {
     if (this._lastAlertCam === entity && now - Number(this._lastAlertAt || 0) < 1200) {
       return;
     }
+    const pageFocused = this._host._focusGridPageForCamera?.(entity) === true;
     this._lastAlertAt = now;
     this._lastAlertCam = entity;
     const changed = this.markAlertCamera(entity, severity || "alert");
-    if (changed) this._host._scheduleGridRefresh();
+    if (changed || pageFocused) this._host._scheduleGridRefresh();
   }
   handleRealtimeMessage(msg) {
     if (!this._host._isGridModeAvailable()) return;
@@ -11792,6 +11793,27 @@ const GridPageController = class {
     this._host._gridRotationStart = nextPage * 4;
     this._host._mountEngine(null, { quiet: true });
     this.scheduleGridRotation();
+  }
+  focusGridPageForCamera(entity) {
+    if (!this.isGridModeAvailable()) return false;
+    const idx = this._host._cameraIndexByEntity(entity);
+    if (idx < 0) return false;
+    const total = this._host._config?.cameras?.length || 0;
+    if (total <= 0) return false;
+    const maxStart = Math.max(0, (Math.ceil(total / 4) - 1) * 4);
+    const nextStart = Math.min(maxStart, Math.floor(idx / 4) * 4);
+    const currentStart = Math.min(
+      maxStart,
+      Math.max(
+        0,
+        Math.floor((Number(this._host._gridRotationStart) || 0) / 4) * 4
+      )
+    );
+    if (nextStart === currentStart) return false;
+    this._host._gridRotationStart = nextStart;
+    this._host._gridPinnedRotationStart = nextStart;
+    this.scheduleGridRotation();
+    return true;
   }
   stopGridModeState() {
     this.clearGridTimers();
@@ -15221,6 +15243,9 @@ const FrigateViewCard = class extends HTMLElement {
   _advanceGridRotation() {
     this._gridPageController.advanceGridRotation();
   }
+  _focusGridPageForCamera(entity) {
+    return this._gridPageController.focusGridPageForCamera(entity);
+  }
   _markGridAlertCamera(entity, severity = "alert") {
     return this._gridAlertController.markAlertCamera(entity, severity);
   }
@@ -15485,6 +15510,7 @@ const FrigateViewCard = class extends HTMLElement {
     const activeEntity = String(this._activeCam?.entity || "").trim();
     let activeCameraAlerted = false;
     let gridChanged = false;
+    let firstGridAlertEntity = "";
     for (const camera of this._config?.cameras || []) {
       const entity = String(camera?.entity || "").trim();
       if (!entity) continue;
@@ -15496,6 +15522,7 @@ const FrigateViewCard = class extends HTMLElement {
       const severity = haReviewStatusSeverity(status);
       if (!severity) continue;
       if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
+      if (!firstGridAlertEntity) firstGridAlertEntity = entity;
       hasActiveAlert = true;
       if (entity === activeEntity) activeCameraAlerted = true;
       gridChanged = this._gridAlertController.markAlertCamera(entity, severity) || gridChanged;
@@ -15505,7 +15532,11 @@ const FrigateViewCard = class extends HTMLElement {
         PREVIEW_ALERT_HOLD_MS
       );
     }
-    if (gridChanged && this._viewMode === "grid") {
+    let gridFocused = false;
+    if (this._viewMode === "grid" && firstGridAlertEntity) {
+      gridFocused = this._focusGridPageForCamera(firstGridAlertEntity) === true;
+    }
+    if ((gridChanged || gridFocused) && this._viewMode === "grid") {
       this._scheduleGridRefresh(90);
     }
     if (activeCameraAlerted && this._viewMode !== "grid" && !this._isPreviewPageActive()) {

@@ -79,3 +79,22 @@ test("handleRealtimeMessage schedules probe when camera parsing fails", () => {
 
   assert.deepEqual(calls, [["watch", 180]]);
 });
+
+test("handleAlertCandidate refreshes grid when alerted camera is on another page", () => {
+  const host = createHost({ severityByMessage: "alert", shouldHandle: true });
+  const controller = new GridAlertController(host, {
+    DAY: 86400,
+    SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC: 10,
+  });
+  const calls = [];
+
+  host._focusGridPageForCamera = () => true;
+  host._scheduleGridRefresh = () => {
+    calls.push(["refresh"]);
+  };
+  controller.markAlertCamera = () => false;
+
+  controller.handleAlertCandidate("camera.front_door", "alert");
+
+  assert.deepEqual(calls, [["refresh"]]);
+});

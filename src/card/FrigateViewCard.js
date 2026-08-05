@@ -1911,6 +1911,10 @@ export class FrigateViewCard extends HTMLElement {
     this._gridPageController.advanceGridRotation();
   }
 
+  _focusGridPageForCamera(entity) {
+    return this._gridPageController.focusGridPageForCamera(entity);
+  }
+
   _markGridAlertCamera(entity, severity = "alert") {
     return this._gridAlertController.markAlertCamera(entity, severity);
   }
@@ -2241,6 +2245,7 @@ export class FrigateViewCard extends HTMLElement {
     const activeEntity = String(this._activeCam?.entity || "").trim();
     let activeCameraAlerted = false;
     let gridChanged = false;
+    let firstGridAlertEntity = "";
     for (const camera of this._config?.cameras || []) {
       const entity = String(camera?.entity || "").trim();
       if (!entity) continue;
@@ -2252,6 +2257,7 @@ export class FrigateViewCard extends HTMLElement {
       const severity = haReviewStatusSeverity(status);
       if (!severity) continue;
       if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
+      if (!firstGridAlertEntity) firstGridAlertEntity = entity;
       hasActiveAlert = true;
       if (entity === activeEntity) activeCameraAlerted = true;
       gridChanged =
@@ -2263,7 +2269,11 @@ export class FrigateViewCard extends HTMLElement {
         PREVIEW_ALERT_HOLD_MS,
       );
     }
-    if (gridChanged && this._viewMode === "grid") {
+    let gridFocused = false;
+    if (this._viewMode === "grid" && firstGridAlertEntity) {
+      gridFocused = this._focusGridPageForCamera(firstGridAlertEntity) === true;
+    }
+    if ((gridChanged || gridFocused) && this._viewMode === "grid") {
       this._scheduleGridRefresh(90);
     }
     if (

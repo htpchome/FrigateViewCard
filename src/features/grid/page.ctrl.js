@@ -102,6 +102,28 @@ export class GridPageController {
     this.scheduleGridRotation();
   }
 
+  focusGridPageForCamera(entity) {
+    if (!this.isGridModeAvailable()) return false;
+    const idx = this._host._cameraIndexByEntity(entity);
+    if (idx < 0) return false;
+    const total = this._host._config?.cameras?.length || 0;
+    if (total <= 0) return false;
+    const maxStart = Math.max(0, (Math.ceil(total / 4) - 1) * 4);
+    const nextStart = Math.min(maxStart, Math.floor(idx / 4) * 4);
+    const currentStart = Math.min(
+      maxStart,
+      Math.max(
+        0,
+        Math.floor((Number(this._host._gridRotationStart) || 0) / 4) * 4,
+      ),
+    );
+    if (nextStart === currentStart) return false;
+    this._host._gridRotationStart = nextStart;
+    this._host._gridPinnedRotationStart = nextStart;
+    this.scheduleGridRotation();
+    return true;
+  }
+
   stopGridModeState() {
     this.clearGridTimers();
     this._host._gridResumePending = false;
