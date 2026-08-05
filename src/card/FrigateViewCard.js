@@ -2248,6 +2248,7 @@ export class FrigateViewCard extends HTMLElement {
     let gridChanged = false;
     let firstAlertEntity = "";
     let firstAlertSeverity = "";
+    let firstChangedAlertEntity = "";
     let activeAlertSeverity = "";
     for (const camera of this._config?.cameras || []) {
       const entity = String(camera?.entity || "").trim();
@@ -2269,9 +2270,14 @@ export class FrigateViewCard extends HTMLElement {
         activeCameraAlerted = true;
         activeAlertSeverity = severity;
       }
-      gridChanged =
-        this._gridAlertController.markAlertCamera(entity, severity) ||
-        gridChanged;
+      const changed = this._gridAlertController.markAlertCamera(
+        entity,
+        severity,
+      );
+      if (changed && !firstChangedAlertEntity) {
+        firstChangedAlertEntity = entity;
+      }
+      gridChanged = changed || gridChanged;
       this._previewAlertController.markAlertCamera(
         entity,
         severity,
@@ -2292,9 +2298,9 @@ export class FrigateViewCard extends HTMLElement {
       );
     }
 
-    const gridAlertEntity = activeCameraAlerted
-      ? activeEntity
-      : firstAlertEntity;
+    const gridAlertEntity =
+      firstChangedAlertEntity ||
+      (activeCameraAlerted ? activeEntity : firstAlertEntity);
     let gridFocused = false;
     if (this._viewMode === "grid" && gridAlertEntity) {
       gridFocused = this._focusGridPageForCamera(gridAlertEntity) === true;

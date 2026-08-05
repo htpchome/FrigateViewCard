@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1249";
+const VERSION = "1.0.1250";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15553,6 +15553,7 @@ const FrigateViewCard = class extends HTMLElement {
     let gridChanged = false;
     let firstAlertEntity = "";
     let firstAlertSeverity = "";
+    let firstChangedAlertEntity = "";
     let activeAlertSeverity = "";
     for (const camera of this._config?.cameras || []) {
       const entity = String(camera?.entity || "").trim();
@@ -15574,7 +15575,14 @@ const FrigateViewCard = class extends HTMLElement {
         activeCameraAlerted = true;
         activeAlertSeverity = severity;
       }
-      gridChanged = this._gridAlertController.markAlertCamera(entity, severity) || gridChanged;
+      const changed = this._gridAlertController.markAlertCamera(
+        entity,
+        severity
+      );
+      if (changed && !firstChangedAlertEntity) {
+        firstChangedAlertEntity = entity;
+      }
+      gridChanged = changed || gridChanged;
       this._previewAlertController.markAlertCamera(
         entity,
         severity,
@@ -15589,7 +15597,7 @@ const FrigateViewCard = class extends HTMLElement {
         slideshowAlertSeverity || "alert"
       );
     }
-    const gridAlertEntity = activeCameraAlerted ? activeEntity : firstAlertEntity;
+    const gridAlertEntity = firstChangedAlertEntity || (activeCameraAlerted ? activeEntity : firstAlertEntity);
     let gridFocused = false;
     if (this._viewMode === "grid" && gridAlertEntity) {
       gridFocused = this._focusGridPageForCamera(gridAlertEntity) === true;
