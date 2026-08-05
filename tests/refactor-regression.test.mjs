@@ -70,6 +70,10 @@ const browseFilterControllerSource = fs.readFileSync(
   new URL("../src/features/browse/filter-state.js", import.meta.url),
   "utf8",
 );
+const browseWindowLoaderControllerSource = fs.readFileSync(
+  new URL("../src/features/browse/window-loader.ctrl.js", import.meta.url),
+  "utf8",
+);
 const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
@@ -782,6 +786,87 @@ test("browse filter helpers delegate through the browse filter controller", () =
     browseFilterControllerSource.includes(
       "export function selectFilteredEvents",
     ),
+    true,
+  );
+});
+
+test("browse window loading delegates through the browse window loader controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { BrowseWindowLoaderController } from "../features/browse/window-loader.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._browseWindowLoaderController\s*=\s*new BrowseWindowLoaderController\(this\);/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes('import { fetchWindowedItems }'), false);
+  assert.equal(cardSource.includes('return fetchWindowedItems({'), false);
+  assert.equal(
+    /async _fetchWindowedEvents\(clientId, cam, after, before, opts = \{\}\) \{\s*return this\._browseWindowLoaderController\.fetchWindowedEvents\(/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _warmOtherCamerasEvents\(\) \{\s*return this\._browseWindowLoaderController\.warmOtherCamerasEvents\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_scheduleWarmOtherCamerasEvents\(delayMs = 1000\) \{\s*this\._browseWindowLoaderController\.scheduleWarmOtherCamerasEvents\(delayMs\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_pruneNonActiveCamWindowCaches\(\) \{\s*this\._browseWindowLoaderController\.pruneNonActiveCamWindowCaches\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _loadWindow\(replace\) \{\s*await this\._browseWindowLoaderController\.loadWindow\(replace\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_cacheActiveCamSlice\(key, value\) \{\s*this\._browseWindowLoaderController\.cacheActiveCamSlice\(key, value\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _loadWindowEvents\(clientId, cam, after, before\) \{\s*await this\._browseWindowLoaderController\.loadWindowEvents\(/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _loadWindowRecordings\(clientId, cam, before\) \{\s*await this\._browseWindowLoaderController\.loadWindowRecordings\(/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _loadWindowReviewsIfNeeded\(clientId, cam, after, before\) \{\s*await this\._browseWindowLoaderController\.loadWindowReviewsIfNeeded\(/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    browseWindowLoaderControllerSource.includes(
+      "export class BrowseWindowLoaderController",
+    ),
+    true,
+  );
+  assert.equal(
+    browseWindowLoaderControllerSource.includes("async loadWindow(replace)"),
     true,
   );
 });

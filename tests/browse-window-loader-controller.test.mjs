@@ -1,0 +1,123 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import { BrowseWindowLoaderController } from "../src/features/browse/window-loader.ctrl.js";
+
+test("loadWindow updates active slices and finishes the browse load cycle", async () => {
+  const calls = [];
+  let eventFetchCount = 0;
+  let reviewFetchCount = 0;
+  const activeCache = { clientId: "frigate", cam: "front", events: [] };
+  const host = {
+    _tab: "alerts",
+    _loading: false,
+    _reloadPending: true,
+    _reloadAfterLoad: false,
+    _exhausted: true,
+    _followNowWindow: false,
+    _config: { window_days: 1, alerts_reviews_days: 3 },
+    _activeCam: { entity: "camera.front" },
+    _camCache: { "camera.front": activeCache },
+    _events: [],
+    _reviews: [],
+    _recordings: [],
+    _eventsLoadToken: 0,
+    _reviewsLoadToken: 0,
+    _winStart: 100,
+    _winEnd: 200,
+    _eventsMode: "camera",
+    _cc: () => activeCache,
+    _ws: async () => [],
+    _renderList: () => calls.push("renderList"),
+    _renderStats: () => calls.push("renderStats"),
+    _renderAll: () => calls.push("renderAll"),
+    _scheduleReload: () => calls.push("scheduleReload"),
+    _consumeDeepLinkReviewOpen: () => calls.push("consumeReview"),
+    _consumeDeepLinkEventOpen: () => calls.push("consumeEvent"),
+    _loadAllCamsBackground: () => calls.push("loadAllCamsBackground"),
+    _isPreviewPageActive: () => false,
+    _slideshowAlertController: {
+      handleReviewsUpdated: (_entity, reviews, source) =>
+        calls.push(["reviewsUpdated", reviews.length, source]),
+    },
+  };
+  const controller = new BrowseWindowLoaderController(host, {
+    fetchWindowedItems: async ({ fetchBatch }) => fetchBatch({
+      after: 100,
+      before: 200,
+      limit: 25,
+      page: 0,
+    }),
+  });
+
+  host._ws = async (payload) => {
+    if (payload.type === "frigate/events/get") {
+      eventFetchCount += 1;
+      return eventFetchCount === 1
+        ? [{ id: "event-1", start_time: 150 }]
+        : [];
+    }
+    if (payload.type === "frigate/reviews/get") {
+      reviewFetchCount += 1;
+      return reviewFetchCount === 1
+        ? [{ id: "review-1", start_time: 170, severity: "alert" }]
+        : [];
+    }
+    return [];
+  };
+
+  await controller.loadWindow(true);
+
+  assert.equal(host._loading, false);
+  assert.equal(host._reloadPending, false);
+  assert.equal(host._reloadAfterLoad, false);
+  assert.equal(host._exhausted, false);
+  assert.deepEqual(host._events, [{ id: "event-1", start_time: 150 }]);
+  assert.deepEqual(host._reviews, [
+    { id: "review-1", start_time: 170, severity: "alert" },
+  ]);
+  assert.deepEqual(activeCache.events, host._events);
+  assert.deepEqual(activeCache.reviews, host._reviews);
+  assert.equal(calls.includes("renderAll"), true);
+  assert.equal(calls.includes("consumeReview"), true);
+  assert.equal(calls.includes("consumeEvent"), true);
+  assert.equal(
+    calls.some(
+      (entry) =>
+        Array.isArray(entry) &&
+        entry[0] === "reviewsUpdated" &&
+        entry[2] === "alerts-window-initial",
+    ),
+    true,
+  );
+});
+
+test("warmOtherCamerasEvents fills inactive camera cache through fetchWindowedEvents", async () => {
+  const inactiveCache = {
+    clientId: "frigate",
+    cam: "backyard",
+    events: [],
+  };
+  const host = {
+    _warmCamsToken: 0,
+    _activeCam: { entity: "camera.front" },
+    _winStart: 100,
+    _winEnd: 200,
+    _config: {
+      cameras: [{ entity: "camera.front" }, { entity: "camera.backyard" }],
+    },
+    _camCache: {
+      "camera.front": { clientId: "frigate", cam: "front", events: [] },
+      "camera.backyard": inactiveCache,
+    },
+    _ws: async () => [{ id: "event-2", start_time: 120 }],
+  };
+  const controller = new BrowseWindowLoaderController(host, {
+    fetchWindowedItems: async ({ fetchBatch }) =>
+      fetchBatch({ after: 100, before: 200, limit: 25, page: 0 }),
+  });
+
+  await controller.warmOtherCamerasEvents();
+
+  assert.deepEqual(inactiveCache.events, [{ id: "event-2", start_time: 120 }]);
+});
