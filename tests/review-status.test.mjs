@@ -35,6 +35,44 @@ test("haReviewStatusForCamera resolves first matching candidate", () => {
   );
 });
 
+test("haReviewStatusForCamera falls back to review_status attribute", () => {
+  const hass = {
+    states: {
+      "sensor.front_door_review_status": {
+        state: "on",
+        attributes: { review_status: "detection" },
+      },
+    },
+  };
+  assert.equal(
+    haReviewStatusForCamera({
+      entity: "camera.front_door",
+      discoveredCameraName: "front_door",
+      hass,
+    }),
+    "detection",
+  );
+});
+
+test("haReviewStatusForCamera falls back to severity attribute", () => {
+  const hass = {
+    states: {
+      "sensor.front_door_review_status": {
+        state: "unknown",
+        attributes: { severity: "alert" },
+      },
+    },
+  };
+  assert.equal(
+    haReviewStatusForCamera({
+      entity: "camera.front_door",
+      discoveredCameraName: "front_door",
+      hass,
+    }),
+    "alert",
+  );
+});
+
 test("haReviewStatusSeverity accepts only alert and detection", () => {
   assert.equal(haReviewStatusSeverity("alert"), "alert");
   assert.equal(haReviewStatusSeverity(" detection "), "detection");

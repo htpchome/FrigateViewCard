@@ -37,9 +37,25 @@ export function haReviewStatusForCamera({
   )) {
     const stateObj = states[candidate];
     if (!stateObj) continue;
-    return String(stateObj.state || "")
+    const rawState = String(stateObj.state || "")
       .trim()
       .toLowerCase();
+    if (rawState === "alert" || rawState === "detection") {
+      return rawState;
+    }
+    const attrReviewStatus = String(stateObj.attributes?.review_status || "")
+      .trim()
+      .toLowerCase();
+    if (attrReviewStatus === "alert" || attrReviewStatus === "detection") {
+      return attrReviewStatus;
+    }
+    const attrSeverity = String(stateObj.attributes?.severity || "")
+      .trim()
+      .toLowerCase();
+    if (attrSeverity === "alert" || attrSeverity === "detection") {
+      return attrSeverity;
+    }
+    return rawState;
   }
   return "";
 }

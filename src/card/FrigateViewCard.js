@@ -354,6 +354,7 @@ export class FrigateViewCard extends HTMLElement {
     this._lastHassCameraStateSignature = "";
     this._lastHassThemeSignature = "";
     this._lastHassReviewStatusSignature = "";
+    this._lastHaReviewStatusApplyAt = 0;
     this._config = null;
     this._navigationFactory = null;
     this._pageId = PAGE_IDS.singleView;
@@ -1163,6 +1164,7 @@ export class FrigateViewCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     if (!this._config) return;
+    const nowMs = Date.now();
     const cameraStateSignature = hassEntityStateSignature(
       hass,
       configuredCameraEntities(this._config),
@@ -1178,6 +1180,15 @@ export class FrigateViewCard extends HTMLElement {
     const themeChanged = themeSignature !== this._lastHassThemeSignature;
     const reviewStatusChanged =
       reviewStatusSignature !== this._lastHassReviewStatusSignature;
+    const reviewStatusPollIntervalMs = Math.max(
+      250,
+      Math.floor(this._effectiveRealtimePollSeconds() * 1000),
+    );
+    const reviewStatusPollDue =
+      nowMs - Number(this._lastHaReviewStatusApplyAt || 0) >=
+      reviewStatusPollIntervalMs;
+    const shouldApplyHaReviewStatus =
+      reviewStatusChanged || reviewStatusPollDue;
     this._lastHassCameraStateSignature = cameraStateSignature;
     this._lastHassThemeSignature = themeSignature;
     this._lastHassReviewStatusSignature = reviewStatusSignature;
@@ -1187,12 +1198,21 @@ export class FrigateViewCard extends HTMLElement {
       return;
     }
     this._editorPreviewController.syncHassPreviewContext();
-    if (reviewStatusChanged) {
-      this._applyHaReviewStatusAlerts();
+    let haReviewAlertActive = false;
+    if (shouldApplyHaReviewStatus) {
+      this._lastHaReviewStatusApplyAt = nowMs;
+      haReviewAlertActive = this._applyHaReviewStatusAlerts();
     }
-    if (!cameraStateChanged && !themeChanged && !reviewStatusChanged) return;
+    if (
+      !cameraStateChanged &&
+      !themeChanged &&
+      !reviewStatusChanged &&
+      !haReviewAlertActive
+    )
+      return;
     this._singleViewPageController.applyHassUpdateRouteFlow({
-      cameraStateChanged: cameraStateChanged || reviewStatusChanged,
+      cameraStateChanged:
+        cameraStateChanged || reviewStatusChanged || haReviewAlertActive,
       themeChanged,
       previewPageActive: this._isPreviewPageActive(),
     });
@@ -2217,6 +2237,9 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _applyHaReviewStatusAlerts() {
+    let hasActiveAlert = false;
+    const activeEntity = String(this._activeCam?.entity || "").trim();
+    let activeCameraAlerted = false;
     let gridChanged = false;
     for (const camera of this._config?.cameras || []) {
       const entity = String(camera?.entity || "").trim();
@@ -2229,6 +2252,8 @@ export class FrigateViewCard extends HTMLElement {
       const severity = haReviewStatusSeverity(status);
       if (!severity) continue;
       if (!this._shouldHandleSlideshowReview(entity, severity)) continue;
+      hasActiveAlert = true;
+      if (entity === activeEntity) activeCameraAlerted = true;
       gridChanged =
         this._gridAlertController.markAlertCamera(entity, severity) ||
         gridChanged;
@@ -2241,6 +2266,14 @@ export class FrigateViewCard extends HTMLElement {
     if (gridChanged && this._viewMode === "grid") {
       this._scheduleGridRefresh(90);
     }
+    if (
+      activeCameraAlerted &&
+      this._viewMode !== "grid" &&
+      !this._isPreviewPageActive()
+    ) {
+      this._scheduleResumeLive("ha-review-status-alert");
+    }
+    return hasActiveAlert;
   }
 
   _handleSlideshowRealtimeMessage(msg) {
