@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1197";
+const VERSION = "1.0.1198";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10306,6 +10306,114 @@ const GridPageController = class {
   }
 };
 
+// src/features/card-style/context.ctrl.js
+const CardStyleContextController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  visualStyleToggleRules() {
+    return [
+      { configKey: "shadows", className: "shadows-off" },
+      { configKey: "borders", className: "borders-off" },
+      { configKey: "rounded_corners", className: "corners-off" }
+    ];
+  }
+  cardStateClassNames() {
+    const classes = this.visualStyleToggleRules().filter(({ configKey }) => this._host._config?.[configKey] === false).map(({ className }) => className);
+    if (this._host._isPreviewPageActive()) classes.push("preview-active");
+    return classes.join(" ");
+  }
+  syncVisualStyleToggles() {
+    const card = this._host.shadowRoot?.querySelector("#card");
+    if (!card) return;
+    for (const { configKey, className } of this.visualStyleToggleRules()) {
+      const isEnabled = this._host._config?.[configKey] !== false;
+      card.classList.toggle(className, !isEnabled);
+    }
+    this.syncHostOuterStyles();
+  }
+  syncHostOuterStyles() {
+    const card = this._host.shadowRoot?.querySelector("#card");
+    if (!card) return;
+    const outerShadow = this.resolveCardTokenForHost(
+      card,
+      "box-shadow",
+      "var(--fvc-outer-shadow-m)"
+    );
+    const outerRadius = this.resolveCardTokenForHost(
+      card,
+      "border-radius",
+      "var(--fvc-outer-border-radius)"
+    );
+    this._host.style.boxShadow = this._host._config?.outer_shadows !== false && outerShadow ? outerShadow : "none";
+    this._host.style.borderRadius = outerRadius || "0px";
+  }
+  resolveCardTokenForHost(card, cssProperty, token) {
+    const value = String(token || "").trim();
+    if (!card || !value) return "";
+    const probe = document.createElement("div");
+    probe.style.cssText = "position:absolute;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;";
+    probe.style.setProperty(cssProperty, value);
+    card.appendChild(probe);
+    const resolved = getComputedStyle(probe).getPropertyValue(cssProperty).trim();
+    probe.remove();
+    return resolved || value;
+  }
+  applyTightMargins() {
+    const tightMarginsEnabled = this._host._config?.tight_margins === true;
+    const inPreviewContext = this._host._isPreviewContext();
+    if (this._host.parentElement) {
+      this._host.parentElement.style.height = inPreviewContext ? "auto" : "100%";
+      if (tightMarginsEnabled) {
+        this._host.parentElement.style.margin = "0";
+        this._host.parentElement.style.padding = "0";
+      } else if (this._host._parentOrigStyle) {
+        this._host.parentElement.style.margin = this._host._parentOrigStyle.margin;
+        this._host.parentElement.style.padding = this._host._parentOrigStyle.padding;
+      }
+    }
+    const card = this._host.shadowRoot?.querySelector("#card");
+    if (card) card.classList.toggle("tight-margins", tightMarginsEnabled);
+    this.setSectionsRowGap(tightMarginsEnabled);
+  }
+  setSectionsRowGap(tightMarginsEnabled) {
+    let element = this._host;
+    while (element) {
+      if (element.tagName === "HUI-SECTIONS-VIEW") {
+        if (tightMarginsEnabled && !this.isPanelView()) {
+          element.style.setProperty("--ha-view-sections-row-gap", "0px");
+        } else {
+          element.style.removeProperty("--ha-view-sections-row-gap");
+        }
+        break;
+      }
+      element = element.parentNode || element.host;
+    }
+  }
+  isPanelView() {
+    let element = this._host;
+    while (element) {
+      if (element.tagName === "HUI-SECTIONS-VIEW" && element.shadowRoot) {
+        return !this.hasAncestorInShadow(element.shadowRoot, this._host);
+      }
+      element = element.parentNode || element.host;
+    }
+    return false;
+  }
+  hasAncestorInShadow(root, target) {
+    const walk = (node, depth) => {
+      if (!node || depth > 15) return false;
+      for (const child of node.children || []) {
+        if (child === target) return depth > 0;
+        if (child.shadowRoot && walk(child.shadowRoot, depth + 1)) return true;
+        if (walk(child, depth)) return true;
+      }
+      return false;
+    };
+    return walk(root, 0);
+  }
+};
+
 // src/features/editor-preview/context.ctrl.js
 const EditorPreviewContextController = class {
   constructor(host) {
@@ -11927,6 +12035,7 @@ const FrigateViewCard = class extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
+    this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
     this._domCache = {};
     this._fallbackImgUrlCache = new Map();
@@ -12201,105 +12310,35 @@ const FrigateViewCard = class extends HTMLElement {
     this._startEditorDialogCloseObserver();
   }
   _visualStyleToggleRules() {
-    return [
-      { configKey: "shadows", className: "shadows-off" },
-      { configKey: "borders", className: "borders-off" },
-      { configKey: "rounded_corners", className: "corners-off" }
-    ];
+    return this._cardStyleController.visualStyleToggleRules();
   }
   _cardStateClassNames() {
-    const classes = this._visualStyleToggleRules().filter(({ configKey }) => this._config?.[configKey] === false).map(({ className }) => className);
-    if (this._isPreviewPageActive()) classes.push("preview-active");
-    return classes.join(" ");
+    return this._cardStyleController.cardStateClassNames();
   }
   _syncVisualStyleToggles() {
-    const card = this.shadowRoot?.querySelector("#card");
-    if (!card) return;
-    for (const { configKey, className } of this._visualStyleToggleRules()) {
-      const isEnabled = this._config?.[configKey] !== false;
-      card.classList.toggle(className, !isEnabled);
-    }
-    this._syncHostOuterStyles();
+    this._cardStyleController.syncVisualStyleToggles();
   }
   _syncHostOuterStyles() {
-    const card = this.shadowRoot?.querySelector("#card");
-    if (!card) return;
-    const outerShadow = this._resolveCardTokenForHost(
-      card,
-      "box-shadow",
-      "var(--fvc-outer-shadow-m)"
-    );
-    const outerRadius = this._resolveCardTokenForHost(
-      card,
-      "border-radius",
-      "var(--fvc-outer-border-radius)"
-    );
-    this.style.boxShadow = this._config?.outer_shadows !== false && outerShadow ? outerShadow : "none";
-    this.style.borderRadius = outerRadius || "0px";
+    this._cardStyleController.syncHostOuterStyles();
   }
   _resolveCardTokenForHost(card, cssProperty, token) {
-    const value = String(token || "").trim();
-    if (!card || !value) return "";
-    const probe = document.createElement("div");
-    probe.style.cssText = "position:absolute;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;";
-    probe.style.setProperty(cssProperty, value);
-    card.appendChild(probe);
-    const resolved = getComputedStyle(probe).getPropertyValue(cssProperty).trim();
-    probe.remove();
-    return resolved || value;
+    return this._cardStyleController.resolveCardTokenForHost(
+      card,
+      cssProperty,
+      token
+    );
   }
   _applyTightMargins() {
-    const tightMarginsEnabled = this._config?.tight_margins === true;
-    const inPreviewContext = this._isPreviewContext();
-    if (this.parentElement) {
-      this.parentElement.style.height = inPreviewContext ? "auto" : "100%";
-      if (tightMarginsEnabled) {
-        this.parentElement.style.margin = "0";
-        this.parentElement.style.padding = "0";
-      } else if (this._parentOrigStyle) {
-        this.parentElement.style.margin = this._parentOrigStyle.margin;
-        this.parentElement.style.padding = this._parentOrigStyle.padding;
-      }
-    }
-    const card = this.shadowRoot?.querySelector("#card");
-    if (card) card.classList.toggle("tight-margins", tightMarginsEnabled);
-    this._setSectionsRowGap(tightMarginsEnabled);
+    this._cardStyleController.applyTightMargins();
   }
   _setSectionsRowGap(tightMarginsEnabled) {
-    let element = this;
-    while (element) {
-      if (element.tagName === "HUI-SECTIONS-VIEW") {
-        if (tightMarginsEnabled && !this._isPanelView()) {
-          element.style.setProperty("--ha-view-sections-row-gap", "0px");
-        } else {
-          element.style.removeProperty("--ha-view-sections-row-gap");
-        }
-        break;
-      }
-      element = element.parentNode || element.host;
-    }
+    this._cardStyleController.setSectionsRowGap(tightMarginsEnabled);
   }
   _isPanelView() {
-    let el = this;
-    while (el) {
-      if (el.tagName === "HUI-SECTIONS-VIEW" && el.shadowRoot) {
-        return !this._hasAncestorInShadow(el.shadowRoot, this);
-      }
-      el = el.parentNode || el.host;
-    }
-    return false;
+    return this._cardStyleController.isPanelView();
   }
   _hasAncestorInShadow(root, target) {
-    const walk = (node, depth) => {
-      if (!node || depth > 15) return false;
-      for (const child of node.children || []) {
-        if (child === target) return depth > 0;
-        if (child.shadowRoot && walk(child.shadowRoot, depth + 1)) return true;
-        if (walk(child, depth)) return true;
-      }
-      return false;
-    };
-    return walk(root, 0);
+    return this._cardStyleController.hasAncestorInShadow(root, target);
   }
   static getConfigElement() {
     return document.createElement(CARD_TAG + "-editor");

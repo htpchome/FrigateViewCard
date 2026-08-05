@@ -58,6 +58,10 @@ const editorPreviewContextControllerSource = fs.readFileSync(
   new URL("../src/features/editor-preview/context.ctrl.js", import.meta.url),
   "utf8",
 );
+const cardStyleContextControllerSource = fs.readFileSync(
+  new URL("../src/features/card-style/context.ctrl.js", import.meta.url),
+  "utf8",
+);
 const editorSource = fs.readFileSync(
   new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
   "utf8",
@@ -561,6 +565,67 @@ test("editor preview helpers delegate through the context controller", () => {
   );
   assert.equal(
     editorPreviewContextControllerSource.includes("syncHassPreviewContext()"),
+    true,
+  );
+});
+
+test("card style helpers delegate through the style context controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { CardStyleContextController } from "../features/card-style/context.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._cardStyleController\s*=\s*new CardStyleContextController\(this\);/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("const outerShadow = this._resolveCardTokenForHost("),
+    false,
+  );
+  assert.equal(
+    cardSource.includes(
+      "const tightMarginsEnabled = this._config?.tight_margins === true;",
+    ),
+    false,
+  );
+  assert.equal(
+    /_cardStateClassNames\(\) \{\s*return this\._cardStyleController\.cardStateClassNames\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_syncVisualStyleToggles\(\) \{\s*this\._cardStyleController\.syncVisualStyleToggles\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_applyTightMargins\(\) \{\s*this\._cardStyleController\.applyTightMargins\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    cardStyleContextControllerSource.includes(
+      "export class CardStyleContextController",
+    ),
+    true,
+  );
+  assert.equal(
+    cardStyleContextControllerSource.includes("syncHostOuterStyles()"),
+    true,
+  );
+  assert.equal(
+    cardStyleContextControllerSource.includes("applyTightMargins()"),
+    true,
+  );
+  assert.equal(
+    cardStyleContextControllerSource.includes("isPanelView()"),
     true,
   );
 });

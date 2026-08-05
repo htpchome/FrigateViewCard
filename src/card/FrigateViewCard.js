@@ -286,6 +286,7 @@ import { PageNavigationController } from "../navigation/page-navigation.ctrl.js"
 import { DeepLinkController } from "../navigation/deep-link.ctrl.js";
 import { GridAlertController } from "../features/grid/alert.ctrl.js";
 import { GridPageController } from "../features/grid/page.ctrl.js";
+import { CardStyleContextController } from "../features/card-style/context.ctrl.js";
 import { EditorPreviewContextController } from "../features/editor-preview/context.ctrl.js";
 import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
 import { buildMobileViewInfoRowMarkup } from "../features/mobile-view/page.tmpl.js";
@@ -571,6 +572,7 @@ export class FrigateViewCard extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
+    this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
     this._domCache = {};
     this._fallbackImgUrlCache = new Map();
@@ -867,131 +869,43 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _visualStyleToggleRules() {
-    return [
-      { configKey: "shadows", className: "shadows-off" },
-      { configKey: "borders", className: "borders-off" },
-      { configKey: "rounded_corners", className: "corners-off" },
-    ];
+    return this._cardStyleController.visualStyleToggleRules();
   }
 
   _cardStateClassNames() {
-    const classes = this._visualStyleToggleRules()
-      .filter(({ configKey }) => this._config?.[configKey] === false)
-      .map(({ className }) => className);
-    if (this._isPreviewPageActive()) classes.push("preview-active");
-    return classes.join(" ");
+    return this._cardStyleController.cardStateClassNames();
   }
 
   _syncVisualStyleToggles() {
-    const card = this.shadowRoot?.querySelector("#card");
-    if (!card) return;
-    for (const { configKey, className } of this._visualStyleToggleRules()) {
-      const isEnabled = this._config?.[configKey] !== false;
-      card.classList.toggle(className, !isEnabled);
-    }
-    this._syncHostOuterStyles();
+    this._cardStyleController.syncVisualStyleToggles();
   }
 
   _syncHostOuterStyles() {
-    const card = this.shadowRoot?.querySelector("#card");
-    if (!card) return;
-    const outerShadow = this._resolveCardTokenForHost(
-      card,
-      "box-shadow",
-      "var(--fvc-outer-shadow-m)",
-    );
-    const outerRadius = this._resolveCardTokenForHost(
-      card,
-      "border-radius",
-      "var(--fvc-outer-border-radius)",
-    );
-
-    this.style.boxShadow =
-      this._config?.outer_shadows !== false && outerShadow
-        ? outerShadow
-        : "none";
-    this.style.borderRadius = outerRadius || "0px";
+    this._cardStyleController.syncHostOuterStyles();
   }
 
   _resolveCardTokenForHost(card, cssProperty, token) {
-    const value = String(token || "").trim();
-    if (!card || !value) return "";
-    const probe = document.createElement("div");
-    probe.style.cssText =
-      "position:absolute;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;";
-    probe.style.setProperty(cssProperty, value);
-    card.appendChild(probe);
-    const resolved = getComputedStyle(probe)
-      .getPropertyValue(cssProperty)
-      .trim();
-    probe.remove();
-    return resolved || value;
+    return this._cardStyleController.resolveCardTokenForHost(
+      card,
+      cssProperty,
+      token,
+    );
   }
 
   _applyTightMargins() {
-    const tightMarginsEnabled = this._config?.tight_margins === true;
-    const inPreviewContext = this._isPreviewContext();
-    if (this.parentElement) {
-      this.parentElement.style.height = inPreviewContext ? "auto" : "100%";
-      if (tightMarginsEnabled) {
-        this.parentElement.style.margin = "0";
-        this.parentElement.style.padding = "0";
-      } else if (this._parentOrigStyle) {
-        this.parentElement.style.margin = this._parentOrigStyle.margin;
-        this.parentElement.style.padding = this._parentOrigStyle.padding;
-      }
-    }
-    const card = this.shadowRoot?.querySelector("#card");
-    if (card) card.classList.toggle("tight-margins", tightMarginsEnabled);
-    this._setSectionsRowGap(tightMarginsEnabled);
+    this._cardStyleController.applyTightMargins();
   }
 
   _setSectionsRowGap(tightMarginsEnabled) {
-    let element = this;
-    while (element) {
-      if (element.tagName === "HUI-SECTIONS-VIEW") {
-        if (tightMarginsEnabled && !this._isPanelView()) {
-          element.style.setProperty("--ha-view-sections-row-gap", "0px");
-        } else {
-          element.style.removeProperty("--ha-view-sections-row-gap");
-        }
-        break;
-      }
-      element = element.parentNode || element.host;
-    }
+    this._cardStyleController.setSectionsRowGap(tightMarginsEnabled);
   }
 
   _isPanelView() {
-    // In panel view the card is the sole child of the sections-view,
-    // sitting directly inside the sections-view shadow root (no
-    // intermediate section-wrapper or column element).
-    // In sections / masonry / sidebar the card is nested deeper —
-    // inside a column element within the sections-view.
-    let el = this;
-    while (el) {
-      if (el.tagName === "HUI-SECTIONS-VIEW" && el.shadowRoot) {
-        // Walk the sections-view shadow root looking for a
-        // column / section wrapper between it and our card.
-        return !this._hasAncestorInShadow(el.shadowRoot, this);
-      }
-      el = el.parentNode || el.host;
-    }
-    return false;
+    return this._cardStyleController.isPanelView();
   }
 
   _hasAncestorInShadow(root, target) {
-    // Returns true if `target` is found nested inside `root` with at
-    // least one intermediate element (i.e. not a direct child).
-    const walk = (node, depth) => {
-      if (!node || depth > 15) return false;
-      for (const child of node.children || []) {
-        if (child === target) return depth > 0;
-        if (child.shadowRoot && walk(child.shadowRoot, depth + 1)) return true;
-        if (walk(child, depth)) return true;
-      }
-      return false;
-    };
-    return walk(root, 0);
+    return this._cardStyleController.hasAncestorInShadow(root, target);
   }
 
   static getConfigElement() {
