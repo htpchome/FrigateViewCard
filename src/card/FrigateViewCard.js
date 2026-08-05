@@ -288,6 +288,7 @@ import { GridAlertController } from "../features/grid/alert.ctrl.js";
 import { GridPageController } from "../features/grid/page.ctrl.js";
 import { CardStyleContextController } from "../features/card-style/context.ctrl.js";
 import { EditorPreviewContextController } from "../features/editor-preview/context.ctrl.js";
+import { PopupMediaLoaderController } from "../features/popup/media-loader.ctrl.js";
 import { ViewportContextController } from "../features/viewport/context.ctrl.js";
 import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
 import { buildMobileViewInfoRowMarkup } from "../features/mobile-view/page.tmpl.js";
@@ -575,6 +576,7 @@ export class FrigateViewCard extends HTMLElement {
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
+    this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._viewportContextController = new ViewportContextController(this);
     this._domCache = {};
     this._fallbackImgUrlCache = new Map();
@@ -5300,128 +5302,35 @@ export class FrigateViewCard extends HTMLElement {
     infoEvent,
     infoOpts,
   }) {
-    this._enter();
-    this._clearPopupMediaCleanup();
-    const renderPlan = resolvePopupMediaRenderPlan({
-      infoOpts,
-      fullscreenKind,
-      hasMediaElement: mediaElement instanceof Element,
+    this._popupMediaLoaderController.renderPopupMedia({
+      playingId,
       html,
-    });
-    this._playing = playingId ? { id: playingId } : null;
-    this._popupMediaType = renderPlan.popupMediaType;
-    const viewer = this._$("#viewer");
-    viewer.innerHTML = "";
-    if (renderPlan.shouldAppendMediaElement) {
-      viewer.appendChild(mediaElement);
-    } else {
-      viewer.innerHTML = renderPlan.viewerHtml;
-    }
-    const body = this._$("#myPopup")?.querySelector(".popup-body");
-    if (body) body.scrollTop = 0;
-    const video = viewer.querySelector("video");
-    const postRenderPlan = resolvePopupMediaPostRenderPlan({
-      popupMediaType: this._popupMediaType,
+      mediaElement,
       fullscreenKind,
-      activeId: this._popupMediaCurrentId(),
-      hasVideo: !!video,
+      infoEvent,
+      infoOpts,
     });
-    if (postRenderPlan.shouldEnsureFullscreenButton) {
-      this._ensurePopupFullscreenButton(postRenderPlan.fullscreenKind);
-    }
-    if (postRenderPlan.shouldRenderInfo) {
-      this._renderPopupInfo(infoEvent, infoOpts);
-    }
-    if (postRenderPlan.shouldInitPopupMediaControls) {
-      this._initPopupMediaControls(video, this._popupMediaType);
-    } else if (postRenderPlan.shouldResetControlsWithoutVideo) {
-      const controls = this._$("#popup-media-controls");
-      const controlsPlan = renderPlan.controlsPlan;
-      if (controls) {
-        controls.hidden = controlsPlan.controlsHidden;
-        if (controlsPlan.resetControlsHiddenClass) {
-          controls.classList.remove("is-hidden");
-        }
-      }
-    }
-    if (postRenderPlan.shouldRenderCarousel) {
-      this._renderPopupCarousel(
-        postRenderPlan.carouselMediaType,
-        postRenderPlan.carouselActiveId,
-      );
-    }
-    if (postRenderPlan.shouldScheduleRotateOverlay) {
-      this._scheduleRotateOverlayUpdate();
-    }
-    if (postRenderPlan.shouldShowPopupControls) {
-      this._showPopupControlsTemporarily();
-    }
   }
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
   }
   _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
-    return createVideoElement(
-      buildVideoOptionsForView(
-        "popup",
-        {
-          autoplay,
-          muted,
-          src,
-        },
-        { scopeKey: this },
-      ),
-    );
+    return this._popupMediaLoaderController.buildPopupVideo(src, {
+      autoplay,
+      muted,
+    });
   }
   _buildPopupClipSrc(id, file) {
-    return buildPopupMediaUrl({
-      baseUrl: this._media(id, file),
-      cacheKey: `${id}:${Date.now()}`,
-    });
+    return this._popupMediaLoaderController.buildPopupClipSrc(id, file);
   }
   _showClip(ev, opts = {}) {
-    const renderPlan = buildPopupClipRenderPlan({
-      id: ev.id,
-      opts,
-      infoEvent: ev,
-      isIos: isIOS,
-    });
-    const src = this._buildPopupClipSrc(ev.id, renderPlan.mediaFile);
-    this._renderPopupMedia({
-      playingId: renderPlan.playingId,
-      mediaElement: this._buildPopupVideo(src),
-      fullscreenKind: renderPlan.fullscreenKind,
-      infoEvent: renderPlan.infoEvent,
-      infoOpts: renderPlan.infoOpts,
-    });
+    this._popupMediaLoaderController.showClip(ev, opts);
   }
   _showClipById(id, opts = {}) {
-    if (!id) return;
-    const renderPlan = buildPopupClipRenderPlan({
-      id,
-      opts,
-      infoEvent: this._findEventById(id),
-      isIos: isIOS,
-      includeLookupInfo: true,
-    });
-    const src = this._buildPopupClipSrc(id, renderPlan.mediaFile);
-    this._renderPopupMedia({
-      playingId: renderPlan.playingId,
-      mediaElement: this._buildPopupVideo(src),
-      fullscreenKind: renderPlan.fullscreenKind,
-      infoEvent: renderPlan.infoEvent,
-      infoOpts: renderPlan.infoOpts,
-    });
+    this._popupMediaLoaderController.showClipById(id, opts);
   }
   _showSnapshot(ev, opts = {}) {
-    const renderPlan = buildPopupSnapshotRenderPlan({ event: ev, opts });
-    this._renderPopupMedia({
-      playingId: renderPlan.playingId,
-      html: `<img class="snap" src="${this._media(ev.id, "snapshot.jpg")}">`,
-      fullscreenKind: renderPlan.fullscreenKind,
-      infoEvent: renderPlan.infoEvent,
-      infoOpts: renderPlan.infoOpts,
-    });
+    this._popupMediaLoaderController.showSnapshot(ev, opts);
   }
 
   async _tryRecordingSource(
@@ -5429,235 +5338,16 @@ export class FrigateViewCard extends HTMLElement {
     src,
     { autoplay = true, timeoutMs = 9000 } = {},
   ) {
-    if (!video || !src) return false;
-    const isHlsSource = /\.m3u8(?:$|\?)/i.test(src);
-    this._destroyRecordingHls();
-
-    return await new Promise((resolve) => {
-      let done = false;
-      const finish = (ok) => {
-        if (done) return;
-        done = true;
-        cleanup();
-        resolve(ok);
-      };
-      const onReady = async () => {
-        if (!autoplay) {
-          finish(true);
-          return;
-        }
-        try {
-          await video.play?.();
-          finish(true);
-        } catch (_) {
-          // iOS may block autoplay despite the source being valid.
-          finish(true);
-        }
-      };
-      const onErr = () => finish(false);
-      const cleanup = () => {
-        clearTimeout(timer);
-        video.removeEventListener("loadedmetadata", onReady);
-        video.removeEventListener("canplay", onReady);
-        video.removeEventListener("error", onErr);
-      };
-      const timer = setTimeout(() => finish(false), timeoutMs);
-
-      video.addEventListener("loadedmetadata", onReady, { once: true });
-      video.addEventListener("canplay", onReady, { once: true });
-      video.addEventListener("error", onErr, { once: true });
-
-      const boot = async () => {
-        try {
-          if (!isHlsSource) {
-            video.src = src;
-            video.load();
-            return;
-          }
-
-          const canNativeHls = !!video.canPlayType(
-            "application/vnd.apple.mpegurl",
-          );
-          if (canNativeHls) {
-            video.src = src;
-            video.load();
-            return;
-          }
-
-          const HlsCtor = await this._getHlsJsCtor();
-          if (!HlsCtor || !HlsCtor.isSupported?.()) {
-            finish(false);
-            return;
-          }
-
-          const hls = new HlsCtor({
-            enableWorker: true,
-            maxBufferLength: 60,
-            backBufferLength: 90,
-          });
-          this._recordingHls = hls;
-          hls.on(HlsCtor.Events.ERROR, (_evt, data) => {
-            if (data?.fatal) finish(false);
-          });
-          hls.attachMedia(video);
-          hls.on(HlsCtor.Events.MEDIA_ATTACHED, () => {
-            hls.loadSource(src);
-          });
-        } catch (_) {
-          finish(false);
-        }
-      };
-      void boot();
-    });
+    return await this._popupMediaLoaderController.tryRecordingSource(
+      video,
+      src,
+      { autoplay, timeoutMs },
+    );
   }
 
   //Play Recordings
   async _showRecording(s, e) {
-    const start = s;
-    const token = ++this._playSeq; // cancel any in-flight load
-    this._enter();
-    this._clearPopupMediaCleanup();
-    const { clientId, cam } = this._cc();
-    const playbackPlan = buildRecordingPlaybackPlan({
-      clientId,
-      camera: cam,
-      start,
-      end: e,
-      preferHls: this._recordingPreferHls(),
-    });
-    const renderPlan = buildPopupRecordingRenderPlan({
-      start,
-      end: e,
-      playbackPlan,
-    });
-    const sourceAttemptPlan = buildPopupRecordingSourceAttemptPlan({
-      sourceCandidates: renderPlan.sourceCandidates,
-    });
-    const seekListenerPlan = resolvePopupRecordingSeekListenerPlan();
-    this._popupMediaType = renderPlan.popupMediaType;
-    this._playing = renderPlan.playing;
-    this._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
-    const viewer = this.shadowRoot.querySelector("#viewer");
-    viewer.innerHTML = '<div class="ld">Loading…</div>';
-    if (this._playSeq !== token) return;
-    const video = createVideoElement(
-      buildVideoOptionsForView(
-        "recording",
-        {
-          muted: true,
-        },
-        { scopeKey: this },
-      ),
-    );
-    mountNodeIntoSlot(viewer, video);
-    let playable = false;
-    let activeSource = "";
-    const mediaCleanup = [];
-    if (video) {
-      let resumeAfterNativeSeek = false;
-      const onSeeking = () => {
-        if (!video.seeking) return;
-        if (!video.paused) {
-          resumeAfterNativeSeek = true;
-          video.pause?.();
-        }
-      };
-      const onSeeked = () => {
-        if (!resumeAfterNativeSeek) return;
-        resumeAfterNativeSeek = false;
-        video.play?.().catch(() => {});
-      };
-      const seekHandlers = {
-        pauseForSeek: onSeeking,
-        resumeAfterSeek: onSeeked,
-      };
-      seekListenerPlan.listeners.forEach(({ type, action }) => {
-        video.addEventListener(type, seekHandlers[action]);
-        mediaCleanup.push(() =>
-          video.removeEventListener(type, seekHandlers[action]),
-        );
-      });
-
-      for (const attempt of sourceAttemptPlan.attempts) {
-        if (this._playSeq !== token) return;
-        const signed = await this._signed(attempt.path);
-        if (this._playSeq !== token) return;
-        playable = await this._tryRecordingSource(video, signed, {
-          autoplay: attempt.autoplay,
-        });
-        if (playable) {
-          activeSource = signed;
-          break;
-        }
-      }
-
-      if (!playable) {
-        const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
-          playable,
-          popupMediaType: renderPlan.popupMediaType,
-          fullscreenKind: renderPlan.fullscreenKind,
-        });
-        for (const fn of mediaCleanup) {
-          try {
-            fn();
-          } catch (_) {}
-        }
-        if (outcomePlan.shouldShowError) {
-          viewer.innerHTML = outcomePlan.errorHtml;
-        }
-        if (outcomePlan.shouldTeardownScrub) this._teardownRecordingScrub();
-        const scrub = this._$("#recording-scrub");
-        if (scrub && outcomePlan.shouldHideScrub) scrub.hidden = true;
-        return;
-      }
-    }
-    const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
-      playable,
-      popupMediaType: renderPlan.popupMediaType,
-      fullscreenKind: renderPlan.fullscreenKind,
-    });
-    if (outcomePlan.shouldEnsureFullscreenButton) {
-      this._ensurePopupFullscreenButton(outcomePlan.fullscreenKind);
-    }
-    if (outcomePlan.shouldScheduleRotateOverlay) {
-      this._scheduleRotateOverlayUpdate();
-    }
-    if (video && outcomePlan.shouldInitPopupMediaControls) {
-      const scrubInitPlan = buildPopupRecordingScrubInitPlan({
-        clientId,
-        cam,
-        start: s,
-        chunkEnd: renderPlan.chunkEnd,
-        token,
-        sourceUrl: activeSource || video.currentSrc || video.src,
-      });
-      this._initPopupMediaControls(video, renderPlan.popupMediaType);
-      this._initRecordingScrub({
-        clientId: scrubInitPlan.clientId,
-        cam: scrubInitPlan.cam,
-        start: scrubInitPlan.start,
-        end: scrubInitPlan.end,
-        video,
-        token: scrubInitPlan.token,
-        sourceUrl: scrubInitPlan.sourceUrl,
-      });
-    }
-    if (outcomePlan.shouldRenderCarousel) {
-      this._renderPopupCarousel(
-        outcomePlan.carouselMediaType,
-        outcomePlan.carouselActiveId,
-      );
-    }
-    if (outcomePlan.shouldShowPopupControls) {
-      this._showPopupControlsTemporarily();
-    }
-    this._popupMediaCleanup = () => {
-      for (const fn of mediaCleanup) {
-        try {
-          fn();
-        } catch (_) {}
-      }
-    };
+    await this._popupMediaLoaderController.showRecording(s, e);
   }
   async _signed(path) {
     try {

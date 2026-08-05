@@ -66,6 +66,10 @@ const viewportContextControllerSource = fs.readFileSync(
   new URL("../src/features/viewport/context.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupMediaLoaderControllerSource = fs.readFileSync(
+  new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
+  "utf8",
+);
 const editorSource = fs.readFileSync(
   new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
   "utf8",
@@ -704,6 +708,65 @@ test("viewport helpers delegate through the viewport context controller", () => 
   );
   assert.equal(
     viewportContextControllerSource.includes("isMobileTabletViewport()"),
+    true,
+  );
+});
+
+test("popup media loading delegates through the popup media loader controller", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { PopupMediaLoaderController } from "../features/popup/media-loader.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    /this\._popupMediaLoaderController\s*=\s*new PopupMediaLoaderController\(this\);/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_showClip\(ev, opts = \{\}\) \{\s*this\._popupMediaLoaderController\.showClip\(ev, opts\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_showClipById\(id, opts = \{\}\) \{\s*this\._popupMediaLoaderController\.showClipById\(id, opts\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_showSnapshot\(ev, opts = \{\}\) \{\s*this\._popupMediaLoaderController\.showSnapshot\(ev, opts\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _showRecording\(s, e\) \{\s*await this\._popupMediaLoaderController\.showRecording\(s, e\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "const sourceAttemptPlan = buildPopupRecordingSourceAttemptPlan",
+    ),
+    false,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes(
+      "export class PopupMediaLoaderController",
+    ),
+    true,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes("showRecording(start, end)"),
+    true,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes("tryRecordingSource(video, src"),
     true,
   );
 });

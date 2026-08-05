@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1200";
+const VERSION = "1.0.1201";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10645,6 +10645,372 @@ const EditorPreviewContextController = class {
   }
 };
 
+// src/features/popup/media-loader.ctrl.js
+const PopupMediaLoaderController = class {
+  constructor(host, deps = {}) {
+    this._host = host;
+    this._deps = {
+      buildVideoOptionsForView,
+      createVideoElement,
+      mountNodeIntoSlot,
+      isIOS,
+      ...deps
+    };
+  }
+  renderPopupMedia({
+    playingId,
+    html,
+    mediaElement,
+    fullscreenKind,
+    infoEvent,
+    infoOpts
+  }) {
+    this._host._enter();
+    this._host._clearPopupMediaCleanup();
+    const isElement = typeof Element !== "undefined" && mediaElement instanceof Element;
+    const renderPlan = resolvePopupMediaRenderPlan({
+      infoOpts,
+      fullscreenKind,
+      hasMediaElement: isElement,
+      html
+    });
+    this._host._playing = playingId ? { id: playingId } : null;
+    this._host._popupMediaType = renderPlan.popupMediaType;
+    const viewer = this._host._$("#viewer");
+    viewer.innerHTML = "";
+    if (renderPlan.shouldAppendMediaElement) {
+      viewer.appendChild(mediaElement);
+    } else {
+      viewer.innerHTML = renderPlan.viewerHtml;
+    }
+    const body = this._host._$("#myPopup")?.querySelector(".popup-body");
+    if (body) body.scrollTop = 0;
+    const video = viewer.querySelector("video");
+    const postRenderPlan = resolvePopupMediaPostRenderPlan({
+      popupMediaType: this._host._popupMediaType,
+      fullscreenKind,
+      activeId: this._host._popupMediaCurrentId(),
+      hasVideo: !!video
+    });
+    if (postRenderPlan.shouldEnsureFullscreenButton) {
+      this._host._ensurePopupFullscreenButton(postRenderPlan.fullscreenKind);
+    }
+    if (postRenderPlan.shouldRenderInfo) {
+      this._host._renderPopupInfo(infoEvent, infoOpts);
+    }
+    if (postRenderPlan.shouldInitPopupMediaControls) {
+      this._host._initPopupMediaControls(video, this._host._popupMediaType);
+    } else if (postRenderPlan.shouldResetControlsWithoutVideo) {
+      const controls = this._host._$("#popup-media-controls");
+      const controlsPlan = renderPlan.controlsPlan;
+      if (controls) {
+        controls.hidden = controlsPlan.controlsHidden;
+        if (controlsPlan.resetControlsHiddenClass) {
+          controls.classList.remove("is-hidden");
+        }
+      }
+    }
+    if (postRenderPlan.shouldRenderCarousel) {
+      this._host._renderPopupCarousel(
+        postRenderPlan.carouselMediaType,
+        postRenderPlan.carouselActiveId
+      );
+    }
+    if (postRenderPlan.shouldScheduleRotateOverlay) {
+      this._host._scheduleRotateOverlayUpdate();
+    }
+    if (postRenderPlan.shouldShowPopupControls) {
+      this._host._showPopupControlsTemporarily();
+    }
+  }
+  buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
+    return this._deps.createVideoElement(
+      this._deps.buildVideoOptionsForView(
+        "popup",
+        {
+          autoplay,
+          muted,
+          src
+        },
+        { scopeKey: this._host }
+      )
+    );
+  }
+  buildPopupClipSrc(id, file) {
+    return buildPopupMediaUrl({
+      baseUrl: this._host._media(id, file),
+      cacheKey: `${id}:${Date.now()}`
+    });
+  }
+  showClip(event, opts = {}) {
+    const renderPlan = buildPopupClipRenderPlan({
+      id: event.id,
+      opts,
+      infoEvent: event,
+      isIos: this._deps.isIOS
+    });
+    const src = this.buildPopupClipSrc(event.id, renderPlan.mediaFile);
+    this.renderPopupMedia({
+      playingId: renderPlan.playingId,
+      mediaElement: this.buildPopupVideo(src),
+      fullscreenKind: renderPlan.fullscreenKind,
+      infoEvent: renderPlan.infoEvent,
+      infoOpts: renderPlan.infoOpts
+    });
+  }
+  showClipById(id, opts = {}) {
+    if (!id) return;
+    const renderPlan = buildPopupClipRenderPlan({
+      id,
+      opts,
+      infoEvent: this._host._findEventById(id),
+      isIos: this._deps.isIOS,
+      includeLookupInfo: true
+    });
+    const src = this.buildPopupClipSrc(id, renderPlan.mediaFile);
+    this.renderPopupMedia({
+      playingId: renderPlan.playingId,
+      mediaElement: this.buildPopupVideo(src),
+      fullscreenKind: renderPlan.fullscreenKind,
+      infoEvent: renderPlan.infoEvent,
+      infoOpts: renderPlan.infoOpts
+    });
+  }
+  showSnapshot(event, opts = {}) {
+    const renderPlan = buildPopupSnapshotRenderPlan({ event, opts });
+    this.renderPopupMedia({
+      playingId: renderPlan.playingId,
+      html: `<img class="snap" src="${this._host._media(event.id, "snapshot.jpg")}">`,
+      fullscreenKind: renderPlan.fullscreenKind,
+      infoEvent: renderPlan.infoEvent,
+      infoOpts: renderPlan.infoOpts
+    });
+  }
+  async tryRecordingSource(video, src, { autoplay = true, timeoutMs = 9e3 } = {}) {
+    if (!video || !src) return false;
+    const isHlsSource = /\.m3u8(?:$|\?)/i.test(src);
+    this._host._destroyRecordingHls();
+    return await new Promise((resolve) => {
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve(ok);
+      };
+      const onReady = async () => {
+        if (!autoplay) {
+          finish(true);
+          return;
+        }
+        try {
+          await video.play?.();
+          finish(true);
+        } catch (_) {
+          finish(true);
+        }
+      };
+      const onErr = () => finish(false);
+      const cleanup = () => {
+        clearTimeout(timer);
+        video.removeEventListener("loadedmetadata", onReady);
+        video.removeEventListener("canplay", onReady);
+        video.removeEventListener("error", onErr);
+      };
+      const timer = setTimeout(() => finish(false), timeoutMs);
+      video.addEventListener("loadedmetadata", onReady, { once: true });
+      video.addEventListener("canplay", onReady, { once: true });
+      video.addEventListener("error", onErr, { once: true });
+      const boot = async () => {
+        try {
+          if (!isHlsSource) {
+            video.src = src;
+            video.load();
+            return;
+          }
+          const canNativeHls = !!video.canPlayType(
+            "application/vnd.apple.mpegurl"
+          );
+          if (canNativeHls) {
+            video.src = src;
+            video.load();
+            return;
+          }
+          const HlsCtor = await this._host._getHlsJsCtor();
+          if (!HlsCtor || !HlsCtor.isSupported?.()) {
+            finish(false);
+            return;
+          }
+          const hls = new HlsCtor({
+            enableWorker: true,
+            maxBufferLength: 60,
+            backBufferLength: 90
+          });
+          this._host._recordingHls = hls;
+          hls.on(HlsCtor.Events.ERROR, (_evt, data) => {
+            if (data?.fatal) finish(false);
+          });
+          hls.attachMedia(video);
+          hls.on(HlsCtor.Events.MEDIA_ATTACHED, () => {
+            hls.loadSource(src);
+          });
+        } catch (_) {
+          finish(false);
+        }
+      };
+      void boot();
+    });
+  }
+  async showRecording(start, end) {
+    const token = ++this._host._playSeq;
+    this._host._enter();
+    this._host._clearPopupMediaCleanup();
+    const { clientId, cam } = this._host._cc();
+    const playbackPlan = buildRecordingPlaybackPlan({
+      clientId,
+      camera: cam,
+      start,
+      end,
+      preferHls: this._host._recordingPreferHls()
+    });
+    const renderPlan = buildPopupRecordingRenderPlan({
+      start,
+      end,
+      playbackPlan
+    });
+    const sourceAttemptPlan = buildPopupRecordingSourceAttemptPlan({
+      sourceCandidates: renderPlan.sourceCandidates
+    });
+    const seekListenerPlan = resolvePopupRecordingSeekListenerPlan();
+    this._host._popupMediaType = renderPlan.popupMediaType;
+    this._host._playing = renderPlan.playing;
+    this._host._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
+    const viewer = this._host.shadowRoot.querySelector("#viewer");
+    viewer.innerHTML = '<div class="ld">Loading\u2026</div>';
+    if (this._host._playSeq !== token) return;
+    const video = this._deps.createVideoElement(
+      this._deps.buildVideoOptionsForView(
+        "recording",
+        {
+          muted: true
+        },
+        { scopeKey: this._host }
+      )
+    );
+    this._deps.mountNodeIntoSlot(viewer, video);
+    let playable = false;
+    let activeSource = "";
+    const mediaCleanup = [];
+    if (video) {
+      let resumeAfterNativeSeek = false;
+      const onSeeking = () => {
+        if (!video.seeking) return;
+        if (!video.paused) {
+          resumeAfterNativeSeek = true;
+          video.pause?.();
+        }
+      };
+      const onSeeked = () => {
+        if (!resumeAfterNativeSeek) return;
+        resumeAfterNativeSeek = false;
+        video.play?.().catch(() => {
+        });
+      };
+      const seekHandlers = {
+        pauseForSeek: onSeeking,
+        resumeAfterSeek: onSeeked
+      };
+      seekListenerPlan.listeners.forEach(({ type, action }) => {
+        video.addEventListener(type, seekHandlers[action]);
+        mediaCleanup.push(
+          () => video.removeEventListener(type, seekHandlers[action])
+        );
+      });
+      for (const attempt of sourceAttemptPlan.attempts) {
+        if (this._host._playSeq !== token) return;
+        const signed = await this._host._signed(attempt.path);
+        if (this._host._playSeq !== token) return;
+        playable = await this.tryRecordingSource(video, signed, {
+          autoplay: attempt.autoplay
+        });
+        if (playable) {
+          activeSource = signed;
+          break;
+        }
+      }
+      if (!playable) {
+        const outcomePlan2 = resolvePopupRecordingLoadOutcomePlan({
+          playable,
+          popupMediaType: renderPlan.popupMediaType,
+          fullscreenKind: renderPlan.fullscreenKind
+        });
+        for (const fn of mediaCleanup) {
+          try {
+            fn();
+          } catch (_) {
+          }
+        }
+        if (outcomePlan2.shouldShowError) {
+          viewer.innerHTML = outcomePlan2.errorHtml;
+        }
+        if (outcomePlan2.shouldTeardownScrub)
+          this._host._teardownRecordingScrub();
+        const scrub = this._host._$("#recording-scrub");
+        if (scrub && outcomePlan2.shouldHideScrub) scrub.hidden = true;
+        return;
+      }
+    }
+    const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
+      playable,
+      popupMediaType: renderPlan.popupMediaType,
+      fullscreenKind: renderPlan.fullscreenKind
+    });
+    if (outcomePlan.shouldEnsureFullscreenButton) {
+      this._host._ensurePopupFullscreenButton(outcomePlan.fullscreenKind);
+    }
+    if (outcomePlan.shouldScheduleRotateOverlay) {
+      this._host._scheduleRotateOverlayUpdate();
+    }
+    if (video && outcomePlan.shouldInitPopupMediaControls) {
+      const scrubInitPlan = buildPopupRecordingScrubInitPlan({
+        clientId,
+        cam,
+        start,
+        chunkEnd: renderPlan.chunkEnd,
+        token,
+        sourceUrl: activeSource || video.currentSrc || video.src
+      });
+      this._host._initPopupMediaControls(video, renderPlan.popupMediaType);
+      this._host._initRecordingScrub({
+        clientId: scrubInitPlan.clientId,
+        cam: scrubInitPlan.cam,
+        start: scrubInitPlan.start,
+        end: scrubInitPlan.end,
+        video,
+        token: scrubInitPlan.token,
+        sourceUrl: scrubInitPlan.sourceUrl
+      });
+    }
+    if (outcomePlan.shouldRenderCarousel) {
+      this._host._renderPopupCarousel(
+        outcomePlan.carouselMediaType,
+        outcomePlan.carouselActiveId
+      );
+    }
+    if (outcomePlan.shouldShowPopupControls) {
+      this._host._showPopupControlsTemporarily();
+    }
+    this._host._popupMediaCleanup = () => {
+      for (const fn of mediaCleanup) {
+        try {
+          fn();
+        } catch (_) {
+        }
+      }
+    };
+  }
+};
+
 // src/features/viewport/context.ctrl.js
 const ViewportContextController = class {
   constructor(host) {
@@ -12148,6 +12514,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
+    this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._viewportContextController = new ViewportContextController(this);
     this._domCache = {};
     this._fallbackImgUrlCache = new Map();
@@ -16261,352 +16628,46 @@ const FrigateViewCard = class extends HTMLElement {
     infoEvent,
     infoOpts
   }) {
-    this._enter();
-    this._clearPopupMediaCleanup();
-    const renderPlan = resolvePopupMediaRenderPlan({
-      infoOpts,
+    this._popupMediaLoaderController.renderPopupMedia({
+      playingId,
+      html,
+      mediaElement,
       fullscreenKind,
-      hasMediaElement: mediaElement instanceof Element,
-      html
+      infoEvent,
+      infoOpts
     });
-    this._playing = playingId ? { id: playingId } : null;
-    this._popupMediaType = renderPlan.popupMediaType;
-    const viewer = this._$("#viewer");
-    viewer.innerHTML = "";
-    if (renderPlan.shouldAppendMediaElement) {
-      viewer.appendChild(mediaElement);
-    } else {
-      viewer.innerHTML = renderPlan.viewerHtml;
-    }
-    const body = this._$("#myPopup")?.querySelector(".popup-body");
-    if (body) body.scrollTop = 0;
-    const video = viewer.querySelector("video");
-    const postRenderPlan = resolvePopupMediaPostRenderPlan({
-      popupMediaType: this._popupMediaType,
-      fullscreenKind,
-      activeId: this._popupMediaCurrentId(),
-      hasVideo: !!video
-    });
-    if (postRenderPlan.shouldEnsureFullscreenButton) {
-      this._ensurePopupFullscreenButton(postRenderPlan.fullscreenKind);
-    }
-    if (postRenderPlan.shouldRenderInfo) {
-      this._renderPopupInfo(infoEvent, infoOpts);
-    }
-    if (postRenderPlan.shouldInitPopupMediaControls) {
-      this._initPopupMediaControls(video, this._popupMediaType);
-    } else if (postRenderPlan.shouldResetControlsWithoutVideo) {
-      const controls = this._$("#popup-media-controls");
-      const controlsPlan = renderPlan.controlsPlan;
-      if (controls) {
-        controls.hidden = controlsPlan.controlsHidden;
-        if (controlsPlan.resetControlsHiddenClass) {
-          controls.classList.remove("is-hidden");
-        }
-      }
-    }
-    if (postRenderPlan.shouldRenderCarousel) {
-      this._renderPopupCarousel(
-        postRenderPlan.carouselMediaType,
-        postRenderPlan.carouselActiveId
-      );
-    }
-    if (postRenderPlan.shouldScheduleRotateOverlay) {
-      this._scheduleRotateOverlayUpdate();
-    }
-    if (postRenderPlan.shouldShowPopupControls) {
-      this._showPopupControlsTemporarily();
-    }
   }
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
   }
   _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
-    return createVideoElement(
-      buildVideoOptionsForView(
-        "popup",
-        {
-          autoplay,
-          muted,
-          src
-        },
-        { scopeKey: this }
-      )
-    );
+    return this._popupMediaLoaderController.buildPopupVideo(src, {
+      autoplay,
+      muted
+    });
   }
   _buildPopupClipSrc(id, file) {
-    return buildPopupMediaUrl({
-      baseUrl: this._media(id, file),
-      cacheKey: `${id}:${Date.now()}`
-    });
+    return this._popupMediaLoaderController.buildPopupClipSrc(id, file);
   }
   _showClip(ev, opts = {}) {
-    const renderPlan = buildPopupClipRenderPlan({
-      id: ev.id,
-      opts,
-      infoEvent: ev,
-      isIos: isIOS
-    });
-    const src = this._buildPopupClipSrc(ev.id, renderPlan.mediaFile);
-    this._renderPopupMedia({
-      playingId: renderPlan.playingId,
-      mediaElement: this._buildPopupVideo(src),
-      fullscreenKind: renderPlan.fullscreenKind,
-      infoEvent: renderPlan.infoEvent,
-      infoOpts: renderPlan.infoOpts
-    });
+    this._popupMediaLoaderController.showClip(ev, opts);
   }
   _showClipById(id, opts = {}) {
-    if (!id) return;
-    const renderPlan = buildPopupClipRenderPlan({
-      id,
-      opts,
-      infoEvent: this._findEventById(id),
-      isIos: isIOS,
-      includeLookupInfo: true
-    });
-    const src = this._buildPopupClipSrc(id, renderPlan.mediaFile);
-    this._renderPopupMedia({
-      playingId: renderPlan.playingId,
-      mediaElement: this._buildPopupVideo(src),
-      fullscreenKind: renderPlan.fullscreenKind,
-      infoEvent: renderPlan.infoEvent,
-      infoOpts: renderPlan.infoOpts
-    });
+    this._popupMediaLoaderController.showClipById(id, opts);
   }
   _showSnapshot(ev, opts = {}) {
-    const renderPlan = buildPopupSnapshotRenderPlan({ event: ev, opts });
-    this._renderPopupMedia({
-      playingId: renderPlan.playingId,
-      html: `<img class="snap" src="${this._media(ev.id, "snapshot.jpg")}">`,
-      fullscreenKind: renderPlan.fullscreenKind,
-      infoEvent: renderPlan.infoEvent,
-      infoOpts: renderPlan.infoOpts
-    });
+    this._popupMediaLoaderController.showSnapshot(ev, opts);
   }
   async _tryRecordingSource(video, src, { autoplay = true, timeoutMs = 9e3 } = {}) {
-    if (!video || !src) return false;
-    const isHlsSource = /\.m3u8(?:$|\?)/i.test(src);
-    this._destroyRecordingHls();
-    return await new Promise((resolve) => {
-      let done = false;
-      const finish = (ok) => {
-        if (done) return;
-        done = true;
-        cleanup();
-        resolve(ok);
-      };
-      const onReady = async () => {
-        if (!autoplay) {
-          finish(true);
-          return;
-        }
-        try {
-          await video.play?.();
-          finish(true);
-        } catch (_) {
-          finish(true);
-        }
-      };
-      const onErr = () => finish(false);
-      const cleanup = () => {
-        clearTimeout(timer);
-        video.removeEventListener("loadedmetadata", onReady);
-        video.removeEventListener("canplay", onReady);
-        video.removeEventListener("error", onErr);
-      };
-      const timer = setTimeout(() => finish(false), timeoutMs);
-      video.addEventListener("loadedmetadata", onReady, { once: true });
-      video.addEventListener("canplay", onReady, { once: true });
-      video.addEventListener("error", onErr, { once: true });
-      const boot = async () => {
-        try {
-          if (!isHlsSource) {
-            video.src = src;
-            video.load();
-            return;
-          }
-          const canNativeHls = !!video.canPlayType(
-            "application/vnd.apple.mpegurl"
-          );
-          if (canNativeHls) {
-            video.src = src;
-            video.load();
-            return;
-          }
-          const HlsCtor = await this._getHlsJsCtor();
-          if (!HlsCtor || !HlsCtor.isSupported?.()) {
-            finish(false);
-            return;
-          }
-          const hls = new HlsCtor({
-            enableWorker: true,
-            maxBufferLength: 60,
-            backBufferLength: 90
-          });
-          this._recordingHls = hls;
-          hls.on(HlsCtor.Events.ERROR, (_evt, data) => {
-            if (data?.fatal) finish(false);
-          });
-          hls.attachMedia(video);
-          hls.on(HlsCtor.Events.MEDIA_ATTACHED, () => {
-            hls.loadSource(src);
-          });
-        } catch (_) {
-          finish(false);
-        }
-      };
-      void boot();
-    });
+    return await this._popupMediaLoaderController.tryRecordingSource(
+      video,
+      src,
+      { autoplay, timeoutMs }
+    );
   }
   //Play Recordings
   async _showRecording(s, e) {
-    const start = s;
-    const token = ++this._playSeq;
-    this._enter();
-    this._clearPopupMediaCleanup();
-    const { clientId, cam } = this._cc();
-    const playbackPlan = buildRecordingPlaybackPlan({
-      clientId,
-      camera: cam,
-      start,
-      end: e,
-      preferHls: this._recordingPreferHls()
-    });
-    const renderPlan = buildPopupRecordingRenderPlan({
-      start,
-      end: e,
-      playbackPlan
-    });
-    const sourceAttemptPlan = buildPopupRecordingSourceAttemptPlan({
-      sourceCandidates: renderPlan.sourceCandidates
-    });
-    const seekListenerPlan = resolvePopupRecordingSeekListenerPlan();
-    this._popupMediaType = renderPlan.popupMediaType;
-    this._playing = renderPlan.playing;
-    this._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
-    const viewer = this.shadowRoot.querySelector("#viewer");
-    viewer.innerHTML = '<div class="ld">Loading\u2026</div>';
-    if (this._playSeq !== token) return;
-    const video = createVideoElement(
-      buildVideoOptionsForView(
-        "recording",
-        {
-          muted: true
-        },
-        { scopeKey: this }
-      )
-    );
-    mountNodeIntoSlot(viewer, video);
-    let playable = false;
-    let activeSource = "";
-    const mediaCleanup = [];
-    if (video) {
-      let resumeAfterNativeSeek = false;
-      const onSeeking = () => {
-        if (!video.seeking) return;
-        if (!video.paused) {
-          resumeAfterNativeSeek = true;
-          video.pause?.();
-        }
-      };
-      const onSeeked = () => {
-        if (!resumeAfterNativeSeek) return;
-        resumeAfterNativeSeek = false;
-        video.play?.().catch(() => {
-        });
-      };
-      const seekHandlers = {
-        pauseForSeek: onSeeking,
-        resumeAfterSeek: onSeeked
-      };
-      seekListenerPlan.listeners.forEach(({ type, action }) => {
-        video.addEventListener(type, seekHandlers[action]);
-        mediaCleanup.push(
-          () => video.removeEventListener(type, seekHandlers[action])
-        );
-      });
-      for (const attempt of sourceAttemptPlan.attempts) {
-        if (this._playSeq !== token) return;
-        const signed = await this._signed(attempt.path);
-        if (this._playSeq !== token) return;
-        playable = await this._tryRecordingSource(video, signed, {
-          autoplay: attempt.autoplay
-        });
-        if (playable) {
-          activeSource = signed;
-          break;
-        }
-      }
-      if (!playable) {
-        const outcomePlan2 = resolvePopupRecordingLoadOutcomePlan({
-          playable,
-          popupMediaType: renderPlan.popupMediaType,
-          fullscreenKind: renderPlan.fullscreenKind
-        });
-        for (const fn of mediaCleanup) {
-          try {
-            fn();
-          } catch (_) {
-          }
-        }
-        if (outcomePlan2.shouldShowError) {
-          viewer.innerHTML = outcomePlan2.errorHtml;
-        }
-        if (outcomePlan2.shouldTeardownScrub) this._teardownRecordingScrub();
-        const scrub = this._$("#recording-scrub");
-        if (scrub && outcomePlan2.shouldHideScrub) scrub.hidden = true;
-        return;
-      }
-    }
-    const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
-      playable,
-      popupMediaType: renderPlan.popupMediaType,
-      fullscreenKind: renderPlan.fullscreenKind
-    });
-    if (outcomePlan.shouldEnsureFullscreenButton) {
-      this._ensurePopupFullscreenButton(outcomePlan.fullscreenKind);
-    }
-    if (outcomePlan.shouldScheduleRotateOverlay) {
-      this._scheduleRotateOverlayUpdate();
-    }
-    if (video && outcomePlan.shouldInitPopupMediaControls) {
-      const scrubInitPlan = buildPopupRecordingScrubInitPlan({
-        clientId,
-        cam,
-        start: s,
-        chunkEnd: renderPlan.chunkEnd,
-        token,
-        sourceUrl: activeSource || video.currentSrc || video.src
-      });
-      this._initPopupMediaControls(video, renderPlan.popupMediaType);
-      this._initRecordingScrub({
-        clientId: scrubInitPlan.clientId,
-        cam: scrubInitPlan.cam,
-        start: scrubInitPlan.start,
-        end: scrubInitPlan.end,
-        video,
-        token: scrubInitPlan.token,
-        sourceUrl: scrubInitPlan.sourceUrl
-      });
-    }
-    if (outcomePlan.shouldRenderCarousel) {
-      this._renderPopupCarousel(
-        outcomePlan.carouselMediaType,
-        outcomePlan.carouselActiveId
-      );
-    }
-    if (outcomePlan.shouldShowPopupControls) {
-      this._showPopupControlsTemporarily();
-    }
-    this._popupMediaCleanup = () => {
-      for (const fn of mediaCleanup) {
-        try {
-          fn();
-        } catch (_) {
-        }
-      }
-    };
+    await this._popupMediaLoaderController.showRecording(s, e);
   }
   async _signed(path) {
     try {
