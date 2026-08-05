@@ -9,7 +9,7 @@ import {
   resolvePopupCarouselActiveScrollLeft,
   resolvePopupCarouselRenderPlan,
   shouldShowPopupCarousel,
-} from "../src/card/popup/carousel.js";
+} from "../src/features/popup/carousel.js";
 
 test("shouldShowPopupCarousel only enables supported popup media types", () => {
   assert.equal(shouldShowPopupCarousel("alert"), true);

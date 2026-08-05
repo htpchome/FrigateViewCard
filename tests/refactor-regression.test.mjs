@@ -1453,6 +1453,21 @@ test("popup media loading delegates through the popup media loader controller", 
     popupMediaLoaderControllerSource.includes("../../card/popup/media.js"),
     false,
   );
+  assert.equal(cardSource.includes('from "./popup/carousel.js"'), false);
+  assert.equal(cardSource.includes('from "./popup/drag.ctrl.js"'), false);
+  assert.equal(cardSource.includes('from "./popup/media.ctrl.js"'), false);
+  assert.equal(
+    cardSource.includes('from "../features/popup/carousel.js"'),
+    true,
+  );
+  assert.equal(
+    cardSource.includes('from "../features/popup/drag.ctrl.js"'),
+    true,
+  );
+  assert.equal(
+    cardSource.includes('from "../features/popup/media.ctrl.js"'),
+    true,
+  );
   assert.equal(
     popupMediaLoaderControllerSource.includes(
       'from "../../shared/media/url-utils.js"',

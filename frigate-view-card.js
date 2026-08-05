@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1233";
+const VERSION = "1.0.1234";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7107,7 +7107,7 @@ const LiveOverlayControlsController = class {
   }
 };
 
-// src/card/popup/drag.ctrl.js
+// src/features/popup/drag.ctrl.js
 const POPUP_DRAG_IGNORE_SELECTOR = "#popup-media-controls, #popup-carousel-wrap, #recording-scrub, .popup-info, .viewer, input, button, a, [data-ev]";
 const PopupDragController = class {
   constructor({
@@ -7327,7 +7327,7 @@ const resolvePopupMediaSeekTarget = ({
   return clamp(next, 0, safeDuration);
 };
 
-// src/card/popup/media.ctrl.js
+// src/features/popup/media.ctrl.js
 const PopupMediaControlsController = class {
   constructor({
     controls,
@@ -7593,7 +7593,7 @@ const resolvePopupRecordingLoadOutcomePlan = ({
   };
 };
 
-// src/card/popup/carousel.js
+// src/features/popup/carousel.js
 const sortByStartTimeDesc = (items = []) => [...items].sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0));
 const buildPopupCarouselItemMarkup = ({
   event = null,
@@ -14493,7 +14493,13 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._warmOtherCamsDelayT) clearTimeout(this._warmOtherCamsDelayT);
     this._warmOtherCamsDelayT = null;
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
-    this._editorPreviewController.dispose();
+    if (this._editorPreviewController) {
+      try {
+        this._editorPreviewController.dispose();
+      } catch (_) {
+      }
+      this._editorPreviewController = null;
+    }
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._liveOverlayControlsController) {
       try {

@@ -162,8 +162,8 @@ import {
 } from "../shared/favorite-mutation.js";
 import { ListScrollController } from "../features/list/scroll.ctrl.js";
 import { LiveOverlayControlsController } from "./controls/live-overlay.ctrl.js";
-import { PopupDragController } from "./popup/drag.ctrl.js";
-import { PopupMediaControlsController } from "./popup/media.ctrl.js";
+import { PopupDragController } from "../features/popup/drag.ctrl.js";
+import { PopupMediaControlsController } from "../features/popup/media.ctrl.js";
 import {
   buildPopupMediaControlState,
   resolvePopupMediaControlsInitPlan,
@@ -190,7 +190,7 @@ import {
   resolvePopupCarouselActiveScrollLeft,
   resolvePopupCarouselRenderPlan,
   shouldShowPopupCarousel,
-} from "./popup/carousel.js";
+} from "../features/popup/carousel.js";
 import { BrowseCollectionController } from "../features/browse/collection.ctrl.js";
 import { BrowseCalendarActivityController } from "../features/browse/calendar-activity.ctrl.js";
 import { BrowseFilterController } from "../features/browse/filter-state.js";
@@ -1234,7 +1234,12 @@ export class FrigateViewCard extends HTMLElement {
     if (this._warmOtherCamsDelayT) clearTimeout(this._warmOtherCamsDelayT);
     this._warmOtherCamsDelayT = null;
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
-    this._editorPreviewController.dispose();
+    if (this._editorPreviewController) {
+      try {
+        this._editorPreviewController.dispose();
+      } catch (_) {}
+      this._editorPreviewController = null;
+    }
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._liveOverlayControlsController) {
       try {

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { PopupMediaControlsController } from "../src/card/popup/media.ctrl.js";
+import { PopupMediaControlsController } from "../src/features/popup/media.ctrl.js";
 import { resolvePopupMediaControlsListenerPlan } from "../src/shared/media/controls.js";
 
 const signalCleanupMap = new WeakMap();
