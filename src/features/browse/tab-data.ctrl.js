@@ -35,17 +35,24 @@ export class BrowseTabDataController {
           before - (this._host._config?.alerts_reviews_days || 3) * DAY,
         ),
       );
-      const reviews = await this._host._fetchWindowedReviews(
-        clientId,
-        cam,
-        after,
-        before,
-        {
-          debugLabel: "alerts-tab",
-        },
-      );
+      const reviews =
+        await (this._host._browseWindowLoaderController?.fetchWindowedReviews?.(
+          clientId,
+          cam,
+          after,
+          before,
+          {
+            debugLabel: "alerts-tab",
+          },
+        ) ??
+          this._host._fetchWindowedReviews?.(clientId, cam, after, before, {
+            debugLabel: "alerts-tab",
+          }));
       this._host._reviews = Array.isArray(reviews) ? reviews : [];
-      this._host._cacheActiveCamSlice("reviews", this._host._reviews);
+      this._host._browseWindowLoaderController?.cacheActiveCamSlice?.(
+        "reviews",
+        this._host._reviews,
+      ) ?? this._host._cacheActiveCamSlice?.("reviews", this._host._reviews);
       this._host._slideshowAlertController.handleReviewsUpdated(
         this._host._activeCam?.entity || "",
         this._host._reviews,
@@ -77,11 +84,16 @@ export class BrowseTabDataController {
       if (tab === "recordings") {
         const { clientId, cam } = this._host._cc();
         if (clientId && cam) {
-          await this._host._loadWindowRecordings(
+          await (this._host._browseWindowLoaderController?.loadWindowRecordings?.(
             clientId,
             cam,
             this._host._winEnd,
-          );
+          ) ??
+            this._host._loadWindowRecordings?.(
+              clientId,
+              cam,
+              this._host._winEnd,
+            ));
         }
       }
     } catch (error) {

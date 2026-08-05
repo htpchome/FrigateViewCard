@@ -30,6 +30,10 @@ const sharedUrlSource = fs.readFileSync(
   new URL("../src/shared/media/url-utils.js", import.meta.url),
   "utf8",
 );
+const sharedMediaControlsSource = fs.readFileSync(
+  new URL("../src/shared/media/controls.js", import.meta.url),
+  "utf8",
+);
 const frigateBootstrapSource = fs.readFileSync(
   new URL("../src/integrations/frigate/bootstrap.js", import.meta.url),
   "utf8",
@@ -112,6 +116,10 @@ const recordingsSwipeControllerSource = fs.readFileSync(
 );
 const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
+  "utf8",
+);
+const popupMediaSource = fs.readFileSync(
+  new URL("../src/features/popup/media.js", import.meta.url),
   "utf8",
 );
 const navigationRouterSource = fs.readFileSync(
@@ -472,7 +480,7 @@ test("window loads use loading-state guard", () => {
 
 test("startup resolves initial page through the navigation factory", () => {
   const initialLoadIndex = cardSource.indexOf(
-    "const initialLoad = this._loadWindow(true);",
+    "const initialLoad = this._browseWindowLoaderController.loadWindow(true);",
   );
   const landingPageIndex = cardSource.search(
     /this\._pageNavigationController\.navigateToConfiguredLandingPage\([\s\S]*?source:\s*"startup"[\s\S]*?startup:\s*true[\s\S]*?startInGrid,[\s\S]*?hasPendingDeepLinkTarget:[\s\S]*?this\._deepLinkController\.hasPendingDeepLinkTarget\(\)/,
@@ -1051,48 +1059,13 @@ test("browse filter helpers delegate through the browse filter controller", () =
     ),
     true,
   );
-  assert.equal(
-    /_reviewSourceEvent\(review\) \{\s*return this\._browseFilterController\.reviewSourceEvent\(review\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /_filteredReviews\(\) \{\s*return this\._browseFilterController\.filteredReviews\(\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /_filteredKept\(\) \{\s*return this\._browseFilterController\.filteredKept\(\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /_normalizeFilterSelections\(\) \{\s*this\._browseFilterController\.normalizeFilterSelections\(\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /_zones\(\) \{\s*return this\._browseFilterController\.zones\(\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /_labels\(\) \{\s*return this\._browseFilterController\.labels\(\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /_filtered\(\) \{\s*return this\._browseFilterController\.filtered\(\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
+  assert.equal(cardSource.includes("_reviewSourceEvent(review) {"), false);
+  assert.equal(cardSource.includes("_filteredReviews() {"), false);
+  assert.equal(cardSource.includes("_filteredKept() {"), false);
+  assert.equal(cardSource.includes("_normalizeFilterSelections() {"), false);
+  assert.equal(cardSource.includes("_zones() {"), false);
+  assert.equal(cardSource.includes("_labels() {"), false);
+  assert.equal(cardSource.includes("_filtered() {"), false);
   assert.equal(
     browseFilterControllerSource.includes(
       "export class BrowseFilterController",
@@ -1175,66 +1148,38 @@ test("browse window loading delegates through the browse window loader controlle
   );
   assert.equal(cardSource.includes("import { fetchWindowedItems }"), false);
   assert.equal(cardSource.includes("return fetchWindowedItems({"), false);
+  assert.equal(cardSource.includes("async _fetchWindowedEvents("), false);
+  assert.equal(cardSource.includes("async _warmOtherCamerasEvents() {"), false);
   assert.equal(
-    /async _fetchWindowedEvents\(clientId, cam, after, before, opts = \{\}\) \{\s*return this\._browseWindowLoaderController\.fetchWindowedEvents\(/s.test(
-      cardSource,
-    ),
-    true,
+    cardSource.includes("_scheduleWarmOtherCamerasEvents(delayMs = 1000) {"),
+    false,
   );
   assert.equal(
-    /async _warmOtherCamerasEvents\(\) \{\s*return this\._browseWindowLoaderController\.warmOtherCamerasEvents\(\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
+    cardSource.includes("_pruneNonActiveCamWindowCaches() {"),
+    false,
+  );
+  assert.equal(cardSource.includes("async _loadWindow(replace) {"), false);
+  assert.equal(
+    cardSource.includes("_cacheActiveCamSlice(key, value) {"),
+    false,
   );
   assert.equal(
-    /_scheduleWarmOtherCamerasEvents\(delayMs = 1000\) \{\s*this\._browseWindowLoaderController\.scheduleWarmOtherCamerasEvents\(delayMs\);\s*\}/s.test(
-      cardSource,
+    cardSource.includes(
+      "async _loadWindowEvents(clientId, cam, after, before) {",
     ),
-    true,
+    false,
   );
   assert.equal(
-    /_pruneNonActiveCamWindowCaches\(\) \{\s*this\._browseWindowLoaderController\.pruneNonActiveCamWindowCaches\(\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
+    cardSource.includes("async _loadWindowRecordings(clientId, cam, before) {"),
+    false,
   );
   assert.equal(
-    /async _loadWindow\(replace\) \{\s*await this\._browseWindowLoaderController\.loadWindow\(replace\);\s*\}/s.test(
-      cardSource,
+    cardSource.includes(
+      "async _loadWindowReviewsIfNeeded(clientId, cam, after, before) {",
     ),
-    true,
+    false,
   );
-  assert.equal(
-    /_cacheActiveCamSlice\(key, value\) \{\s*this\._browseWindowLoaderController\.cacheActiveCamSlice\(key, value\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /async _loadWindowEvents\(clientId, cam, after, before\) \{\s*await this\._browseWindowLoaderController\.loadWindowEvents\(/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /async _loadWindowRecordings\(clientId, cam, before\) \{\s*await this\._browseWindowLoaderController\.loadWindowRecordings\(/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /async _loadWindowReviewsIfNeeded\(clientId, cam, after, before\) \{\s*await this\._browseWindowLoaderController\.loadWindowReviewsIfNeeded\(/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /async _loadOlder\(\) \{\s*await this\._browseWindowLoaderController\.loadOlder\(\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
+  assert.equal(cardSource.includes("async _loadOlder() {"), false);
   assert.equal(
     browseWindowLoaderControllerSource.includes(
       "export class BrowseWindowLoaderController",
@@ -1249,6 +1194,7 @@ test("browse window loading delegates through the browse window loader controlle
     browseWindowLoaderControllerSource.includes("async loadOlder()"),
     true,
   );
+  assert.equal(browseWindowLoaderControllerSource.includes("goNow()"), true);
   assert.equal(
     browseWindowLoaderControllerSource.includes("resolveRecordingsDayBounds"),
     true,
@@ -1298,48 +1244,28 @@ test("recordings browse nav delegates through the recordings browse nav controll
     ),
     true,
   );
+  assert.equal(cardSource.includes("async _hasRecordingsInBounds("), false);
   assert.equal(
-    /async _hasRecordingsInBounds\(bounds, clientId, cam\) \{\s*return this\._recordingsBrowseNavController\.hasRecordingsInBounds\(/s.test(
-      cardSource,
-    ),
-    true,
+    cardSource.includes("async _prepareRecordingsDayTransition(direction) {"),
+    false,
   );
   assert.equal(
-    /async _prepareRecordingsDayTransition\(direction\) \{\s*return this\._recordingsBrowseNavController\.prepareDayTransition\(direction\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
+    cardSource.includes("async _navigateRecordingsDayAnimated(direction) {"),
+    false,
   );
   assert.equal(
-    /async _navigateRecordingsDayAnimated\(direction\) \{\s*return this\._recordingsBrowseNavController\.navigateDayAnimated\(direction\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
+    cardSource.includes("async _commitRecordingsDayTransition(bounds, recs) {"),
+    false,
   );
   assert.equal(
-    /async _commitRecordingsDayTransition\(bounds, recs\) \{\s*return this\._recordingsBrowseNavController\.commitDayTransition\([\s\S]*?bounds,[\s\S]*?recs,[\s\S]*?\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
+    cardSource.includes("async _completeRecordingsSwipeGesture(gesture) {"),
+    false,
   );
   assert.equal(
-    /async _completeRecordingsSwipeGesture\(gesture\) \{\s*return this\._recordingsBrowseNavController\.completeSwipeGesture\(gesture\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
+    cardSource.includes("async _updateRecordingsBrowseNav() {"),
+    false,
   );
-  assert.equal(
-    /async _updateRecordingsBrowseNav\(\) \{\s*await this\._recordingsBrowseNavController\.updateBrowseNav\(\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /async _stepRecordingsDay\(dir\) \{\s*return this\._recordingsBrowseNavController\.stepDay\(dir\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
+  assert.equal(cardSource.includes("async _stepRecordingsDay(dir) {"), false);
   assert.equal(
     cardSource.includes("_recordingsDayBounds(tsSec = null)"),
     false,
@@ -1426,6 +1352,10 @@ test("recordings browse nav delegates through the recordings browse nav controll
   );
   assert.equal(
     recordingsBrowseNavControllerSource.includes("async updateBrowseNav()"),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes("this.commitDayTransition("),
     true,
   );
 });
@@ -1535,30 +1465,10 @@ test("popup media loading delegates through the popup media loader controller", 
     ),
     true,
   );
-  assert.equal(
-    /_showClip\(ev, opts = \{\}\) \{\s*this\._popupMediaLoaderController\.showClip\(ev, opts\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /_showClipById\(id, opts = \{\}\) \{\s*this\._popupMediaLoaderController\.showClipById\(id, opts\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /_showSnapshot\(ev, opts = \{\}\) \{\s*this\._popupMediaLoaderController\.showSnapshot\(ev, opts\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
-  assert.equal(
-    /async _showRecording\(s, e\) \{\s*await this\._popupMediaLoaderController\.showRecording\(s, e\);\s*\}/s.test(
-      cardSource,
-    ),
-    true,
-  );
+  assert.equal(cardSource.includes("_showClip(ev, opts = {}) {"), false);
+  assert.equal(cardSource.includes("_showClipById(id, opts = {}) {"), false);
+  assert.equal(cardSource.includes("_showSnapshot(ev, opts = {}) {"), false);
+  assert.equal(cardSource.includes("async _showRecording(s, e) {"), false);
   assert.equal(
     cardSource.includes(
       "const sourceAttemptPlan = buildPopupRecordingSourceAttemptPlan",
@@ -1576,7 +1486,33 @@ test("popup media loading delegates through the popup media loader controller", 
     false,
   );
   assert.equal(
-    popupMediaLoaderControllerSource.includes('from "./media.js"'),
+    popupMediaLoaderControllerSource.includes(
+      'from "../../shared/media/url-utils.js"',
+    ),
+    true,
+  );
+  assert.equal(
+    popupMediaSource.includes("export const resolvePopupMediaControlsInitPlan"),
+    false,
+  );
+  assert.equal(
+    popupMediaSource.includes("export const resolvePopupMediaSeekTarget"),
+    false,
+  );
+  assert.equal(
+    sharedMediaControlsSource.includes(
+      "export const resolvePopupMediaControlsInitPlan",
+    ),
+    true,
+  );
+  assert.equal(
+    sharedMediaControlsSource.includes(
+      "export const resolvePopupMediaSeekTarget",
+    ),
+    true,
+  );
+  assert.equal(
+    sharedUrlSource.includes("export const buildPopupMediaUrl"),
     true,
   );
   assert.equal(

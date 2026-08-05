@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1228";
+const VERSION = "1.0.1232";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2807,6 +2807,15 @@ const setCachedValue = ({ cacheMap, cacheKey, url, ttlMs, nowMs }) => {
 const isM3u8Response = ({ contentType, url }) => {
   const ct = String(contentType || "").toLowerCase();
   return ct.includes("application/vnd.apple.mpegurl") || ct.includes("application/x-mpegurl") || ct.includes("audio/mpegurl") || String(url || "").toLowerCase().includes(".m3u8");
+};
+const buildPopupMediaUrl = ({ baseUrl = "", cacheKey }) => {
+  const normalizedBaseUrl = String(baseUrl || "");
+  if (!normalizedBaseUrl) return "";
+  if (cacheKey === null || cacheKey === void 0 || cacheKey === "") {
+    return normalizedBaseUrl;
+  }
+  const separator = normalizedBaseUrl.includes("?") ? "&" : "?";
+  return `${normalizedBaseUrl}${separator}fvc=${encodeURIComponent(String(cacheKey))}`;
 };
 
 // src/integrations/frigate/bootstrap.js
@@ -6809,10 +6818,10 @@ const BrowseCalendarPanelController = class {
     );
     this._host.shadowRoot.querySelector("#cal-panel").style.display = "none";
     this._host._syncToolbarButtons();
-    this._host._pruneNonActiveCamWindowCaches();
+    this._host._browseWindowLoaderController?.pruneNonActiveCamWindowCaches?.() ?? this._host._pruneNonActiveCamWindowCaches?.();
     void (async () => {
-      await this._host._loadWindow(true);
-      this._host._scheduleWarmOtherCamerasEvents();
+      await (this._host._browseWindowLoaderController?.loadWindow?.(true) ?? this._host._loadWindow?.(true));
+      this._host._browseWindowLoaderController?.scheduleWarmOtherCamerasEvents?.() ?? this._host._scheduleWarmOtherCamerasEvents?.();
     })();
   }
   renderCal() {
@@ -7211,173 +7220,8 @@ const PopupDragController = class {
   }
 };
 
-// src/features/popup/media.js
+// src/shared/media/controls.js
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-const buildPopupMediaUrl = ({ baseUrl = "", cacheKey }) => {
-  const normalizedBaseUrl = String(baseUrl || "");
-  if (!normalizedBaseUrl) return "";
-  if (cacheKey === null || cacheKey === void 0 || cacheKey === "") {
-    return normalizedBaseUrl;
-  }
-  const separator = normalizedBaseUrl.includes("?") ? "&" : "?";
-  return `${normalizedBaseUrl}${separator}fvc=${encodeURIComponent(String(cacheKey))}`;
-};
-const resolvePopupMediaRenderPlan = ({
-  infoOpts = null,
-  fullscreenKind = "",
-  hasMediaElement = false,
-  html = "",
-  hasVideo = false
-}) => ({
-  popupMediaType: String(
-    infoOpts?.mediaType || fullscreenKind || ""
-  ).toLowerCase(),
-  shouldAppendMediaElement: Boolean(hasMediaElement),
-  viewerHtml: hasMediaElement ? "" : String(html || ""),
-  controlsPlan: hasVideo ? null : resolvePopupMediaControlsInitPlan({
-    hasVideo: false
-  })
-});
-const resolvePopupMediaPostRenderPlan = ({
-  popupMediaType = "",
-  fullscreenKind = "",
-  activeId = "",
-  hasVideo = false
-}) => ({
-  shouldEnsureFullscreenButton: true,
-  fullscreenKind,
-  shouldRenderInfo: true,
-  shouldInitPopupMediaControls: Boolean(hasVideo),
-  shouldResetControlsWithoutVideo: !hasVideo,
-  shouldRenderCarousel: true,
-  carouselMediaType: popupMediaType,
-  carouselActiveId: activeId,
-  shouldScheduleRotateOverlay: true,
-  shouldShowPopupControls: true
-});
-const buildPopupClipRenderPlan = ({
-  id = "",
-  opts = {},
-  infoEvent = null,
-  isIos = false,
-  includeLookupInfo = false
-}) => {
-  const mediaType = opts.mediaType || "clip";
-  return {
-    playingId: id,
-    mediaFile: isIos ? "master.m3u8" : "clip.mp4",
-    mediaType,
-    fullscreenKind: mediaType,
-    infoEvent,
-    infoOpts: includeLookupInfo ? {
-      id,
-      mediaType,
-      startTime: opts.startTime,
-      camera: opts.camera
-    } : { mediaType }
-  };
-};
-const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
-  const mediaType = opts.mediaType || "snapshot";
-  return {
-    playingId: event?.id || "",
-    mediaType,
-    fullscreenKind: mediaType,
-    infoEvent: event,
-    infoOpts: { mediaType }
-  };
-};
-const buildPopupRecordingRenderPlan = ({
-  start = 0,
-  end = 0,
-  playbackPlan = {}
-}) => ({
-  popupMediaType: "recording",
-  playing: { rec: start },
-  fullscreenKind: "recording",
-  infoEvent: null,
-  infoOpts: {
-    mediaType: "recording",
-    startTime: start,
-    durationSec: playbackPlan.clipDurationSec,
-    camera: playbackPlan.displayCamera,
-    objects: "-",
-    zone: "-",
-    score: "-",
-    recStart: start,
-    recEnd: end
-  },
-  chunkEnd: playbackPlan.chunkEnd,
-  sourceCandidates: playbackPlan.sourceCandidates || []
-});
-const buildPopupRecordingSourceAttemptPlan = ({
-  sourceCandidates = [],
-  autoplay = true
-}) => ({
-  attempts: sourceCandidates.map((path) => ({
-    path,
-    autoplay: Boolean(autoplay)
-  }))
-});
-const resolvePopupRecordingSeekListenerPlan = () => ({
-  listeners: [
-    { type: "seeking", action: "pauseForSeek" },
-    { type: "seeked", action: "resumeAfterSeek" }
-  ]
-});
-const buildPopupRecordingScrubInitPlan = ({
-  clientId = "",
-  cam = "",
-  start = 0,
-  chunkEnd = 0,
-  token = 0,
-  sourceUrl = ""
-}) => ({
-  clientId,
-  cam,
-  start,
-  end: chunkEnd,
-  token,
-  sourceUrl
-});
-const resolvePopupRecordingLoadOutcomePlan = ({
-  playable = false,
-  popupMediaType = "recording",
-  fullscreenKind = "recording"
-}) => {
-  if (!playable) {
-    return {
-      shouldShowError: true,
-      errorHtml: '<div class="ld">Unable to load recording</div>',
-      shouldTeardownScrub: true,
-      shouldHideScrub: true,
-      shouldEnsureFullscreenButton: false,
-      shouldScheduleRotateOverlay: false,
-      shouldInitPopupMediaControls: false,
-      shouldRenderCarousel: false,
-      shouldShowPopupControls: false,
-      popupMediaType,
-      fullscreenKind,
-      carouselMediaType: "recording",
-      carouselActiveId: ""
-    };
-  }
-  return {
-    shouldShowError: false,
-    errorHtml: "",
-    shouldTeardownScrub: false,
-    shouldHideScrub: false,
-    shouldEnsureFullscreenButton: true,
-    shouldScheduleRotateOverlay: true,
-    shouldInitPopupMediaControls: true,
-    shouldRenderCarousel: true,
-    shouldShowPopupControls: true,
-    popupMediaType,
-    fullscreenKind,
-    carouselMediaType: "recording",
-    carouselActiveId: ""
-  };
-};
 const resolvePopupMediaControlsInitPlan = ({
   shouldUseCustomControls = false,
   hasVideo = true
@@ -7591,6 +7435,164 @@ const PopupMediaControlsController = class {
   }
 };
 
+// src/features/popup/media.js
+const resolvePopupMediaRenderPlan = ({
+  infoOpts = null,
+  fullscreenKind = "",
+  hasMediaElement = false,
+  html = "",
+  hasVideo = false
+}) => ({
+  popupMediaType: String(
+    infoOpts?.mediaType || fullscreenKind || ""
+  ).toLowerCase(),
+  shouldAppendMediaElement: Boolean(hasMediaElement),
+  viewerHtml: hasMediaElement ? "" : String(html || ""),
+  controlsPlan: hasVideo ? null : resolvePopupMediaControlsInitPlan({
+    hasVideo: false
+  })
+});
+const resolvePopupMediaPostRenderPlan = ({
+  popupMediaType = "",
+  fullscreenKind = "",
+  activeId = "",
+  hasVideo = false
+}) => ({
+  shouldEnsureFullscreenButton: true,
+  fullscreenKind,
+  shouldRenderInfo: true,
+  shouldInitPopupMediaControls: Boolean(hasVideo),
+  shouldResetControlsWithoutVideo: !hasVideo,
+  shouldRenderCarousel: true,
+  carouselMediaType: popupMediaType,
+  carouselActiveId: activeId,
+  shouldScheduleRotateOverlay: true,
+  shouldShowPopupControls: true
+});
+const buildPopupClipRenderPlan = ({
+  id = "",
+  opts = {},
+  infoEvent = null,
+  isIos = false,
+  includeLookupInfo = false
+}) => {
+  const mediaType = opts.mediaType || "clip";
+  return {
+    playingId: id,
+    mediaFile: isIos ? "master.m3u8" : "clip.mp4",
+    mediaType,
+    fullscreenKind: mediaType,
+    infoEvent,
+    infoOpts: includeLookupInfo ? {
+      id,
+      mediaType,
+      startTime: opts.startTime,
+      camera: opts.camera
+    } : { mediaType }
+  };
+};
+const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
+  const mediaType = opts.mediaType || "snapshot";
+  return {
+    playingId: event?.id || "",
+    mediaType,
+    fullscreenKind: mediaType,
+    infoEvent: event,
+    infoOpts: { mediaType }
+  };
+};
+const buildPopupRecordingRenderPlan = ({
+  start = 0,
+  end = 0,
+  playbackPlan = {}
+}) => ({
+  popupMediaType: "recording",
+  playing: { rec: start },
+  fullscreenKind: "recording",
+  infoEvent: null,
+  infoOpts: {
+    mediaType: "recording",
+    startTime: start,
+    durationSec: playbackPlan.clipDurationSec,
+    camera: playbackPlan.displayCamera,
+    objects: "-",
+    zone: "-",
+    score: "-",
+    recStart: start,
+    recEnd: end
+  },
+  chunkEnd: playbackPlan.chunkEnd,
+  sourceCandidates: playbackPlan.sourceCandidates || []
+});
+const buildPopupRecordingSourceAttemptPlan = ({
+  sourceCandidates = [],
+  autoplay = true
+}) => ({
+  attempts: sourceCandidates.map((path) => ({
+    path,
+    autoplay: Boolean(autoplay)
+  }))
+});
+const resolvePopupRecordingSeekListenerPlan = () => ({
+  listeners: [
+    { type: "seeking", action: "pauseForSeek" },
+    { type: "seeked", action: "resumeAfterSeek" }
+  ]
+});
+const buildPopupRecordingScrubInitPlan = ({
+  clientId = "",
+  cam = "",
+  start = 0,
+  chunkEnd = 0,
+  token = 0,
+  sourceUrl = ""
+}) => ({
+  clientId,
+  cam,
+  start,
+  end: chunkEnd,
+  token,
+  sourceUrl
+});
+const resolvePopupRecordingLoadOutcomePlan = ({
+  playable = false,
+  popupMediaType = "recording",
+  fullscreenKind = "recording"
+}) => {
+  if (!playable) {
+    return {
+      shouldShowError: true,
+      errorHtml: '<div class="ld">Unable to load recording</div>',
+      shouldTeardownScrub: true,
+      shouldHideScrub: true,
+      shouldEnsureFullscreenButton: false,
+      shouldScheduleRotateOverlay: false,
+      shouldInitPopupMediaControls: false,
+      shouldRenderCarousel: false,
+      shouldShowPopupControls: false,
+      popupMediaType,
+      fullscreenKind,
+      carouselMediaType: "recording",
+      carouselActiveId: ""
+    };
+  }
+  return {
+    shouldShowError: false,
+    errorHtml: "",
+    shouldTeardownScrub: false,
+    shouldHideScrub: false,
+    shouldEnsureFullscreenButton: true,
+    shouldScheduleRotateOverlay: true,
+    shouldInitPopupMediaControls: true,
+    shouldRenderCarousel: true,
+    shouldShowPopupControls: true,
+    popupMediaType,
+    fullscreenKind,
+    carouselMediaType: "recording",
+    carouselActiveId: ""
+  };
+};
+
 // src/card/popup/carousel.js
 const sortByStartTimeDesc = (items = []) => [...items].sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0));
 const buildPopupCarouselItemMarkup = ({
@@ -7770,13 +7772,21 @@ const BrowseCollectionController = class {
       if (!clientId || !cam) continue;
       try {
         if (tab === "alerts") {
-          const reviews = await this._host._fetchWindowedReviews(
+          const reviews = await (this._host._browseWindowLoaderController?.fetchWindowedReviews?.(
             clientId,
             cam,
             reviewsAfter,
             before,
             { debugLabel: "grid-alerts-tab" }
-          );
+          ) ?? this._host._fetchWindowedReviews?.(
+            clientId,
+            cam,
+            reviewsAfter,
+            before,
+            {
+              debugLabel: "grid-alerts-tab"
+            }
+          ));
           cache.reviews = Array.isArray(reviews) ? reviews : [];
         }
         if (tab === "kept") {
@@ -8251,7 +8261,7 @@ const BrowseTabDataController = class {
           before - (this._host._config?.alerts_reviews_days || 3) * DAY
         )
       );
-      const reviews = await this._host._fetchWindowedReviews(
+      const reviews = await (this._host._browseWindowLoaderController?.fetchWindowedReviews?.(
         clientId,
         cam,
         after,
@@ -8259,9 +8269,14 @@ const BrowseTabDataController = class {
         {
           debugLabel: "alerts-tab"
         }
-      );
+      ) ?? this._host._fetchWindowedReviews?.(clientId, cam, after, before, {
+        debugLabel: "alerts-tab"
+      }));
       this._host._reviews = Array.isArray(reviews) ? reviews : [];
-      this._host._cacheActiveCamSlice("reviews", this._host._reviews);
+      this._host._browseWindowLoaderController?.cacheActiveCamSlice?.(
+        "reviews",
+        this._host._reviews
+      ) ?? this._host._cacheActiveCamSlice?.("reviews", this._host._reviews);
       this._host._slideshowAlertController.handleReviewsUpdated(
         this._host._activeCam?.entity || "",
         this._host._reviews,
@@ -8284,11 +8299,15 @@ const BrowseTabDataController = class {
       if (tab === "recordings") {
         const { clientId, cam } = this._host._cc();
         if (clientId && cam) {
-          await this._host._loadWindowRecordings(
+          await (this._host._browseWindowLoaderController?.loadWindowRecordings?.(
             clientId,
             cam,
             this._host._winEnd
-          );
+          ) ?? this._host._loadWindowRecordings?.(
+            clientId,
+            cam,
+            this._host._winEnd
+          ));
         }
       }
     } catch (error) {
@@ -8757,6 +8776,22 @@ const BrowseWindowLoaderController = class {
     } catch (_) {
       this._host._reviews = [];
     }
+  }
+  goNow() {
+    this._host._followNowWindow = true;
+    const now = Math.floor(Date.now() / 1e3);
+    this._host._winEnd = now;
+    this._host._winStart = now - this._host._config.window_days * DAY;
+    this._host._calSelectedDay = this._host._formatTzDateString(
+      this._host._tzParts(now)
+    );
+    this._host._exhausted = false;
+    this._host._calMonth = null;
+    this.pruneNonActiveCamWindowCaches();
+    void (async () => {
+      await this.loadWindow(true);
+      this.scheduleWarmOtherCamerasEvents();
+    })();
   }
 };
 
@@ -9915,10 +9950,10 @@ const RecordingsBrowseNavController = class {
       const swipeController = this._swipeController();
       const stage = swipeController ? swipeController.createStage(dir, navigation.incomingHtml) : this._host._createRecordingsSwipeStage(dir, navigation.incomingHtml);
       if (!stage) {
-        await this._host._commitRecordingsDayTransition(
+        await (this._host._commitRecordingsDayTransition?.(
           navigation.bounds,
           navigation.recs
-        );
+        ) ?? this.commitDayTransition(navigation.bounds, navigation.recs));
         return true;
       }
       await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -9938,10 +9973,10 @@ const RecordingsBrowseNavController = class {
           "cubic-bezier(0.28, 0.02, 0.18, 1)"
         );
       }
-      await this._host._commitRecordingsDayTransition(
+      await (this._host._commitRecordingsDayTransition?.(
         navigation.bounds,
         navigation.recs
-      );
+      ) ?? this.commitDayTransition(navigation.bounds, navigation.recs));
       return true;
     } finally {
       this._host._recordingsDayNavAnimating = false;
@@ -9970,10 +10005,10 @@ const RecordingsBrowseNavController = class {
         "cubic-bezier(0.28, 0.02, 0.18, 1)"
       );
     }
-    await this._host._commitRecordingsDayTransition(
+    await (this._host._commitRecordingsDayTransition?.(
       gesture.bounds,
       gesture.recs
-    );
+    ) ?? this.commitDayTransition(gesture.bounds, gesture.recs));
     return true;
   }
   async commitDayTransition(bounds, recordings) {
@@ -9989,7 +10024,7 @@ const RecordingsBrowseNavController = class {
     this._host._winStart = committed.bounds.start;
     this._host._winEnd = committed.bounds.end;
     this._host._exhausted = false;
-    this._host._pruneNonActiveCamWindowCaches();
+    this._host._browseWindowLoaderController?.pruneNonActiveCamWindowCaches?.() ?? this._host._pruneNonActiveCamWindowCaches?.();
     this._host._recordings = committed.recordings;
     if (committed.key) {
       this._host._recordingsDayDataCache.set(
@@ -10001,7 +10036,10 @@ const RecordingsBrowseNavController = class {
         committed.hasRecordings
       );
     }
-    this._host._cacheActiveCamSlice("recordings", this._host._recordings);
+    this._host._browseWindowLoaderController?.cacheActiveCamSlice?.(
+      "recordings",
+      this._host._recordings
+    ) ?? this._host._cacheActiveCamSlice?.("recordings", this._host._recordings);
     this._host._renderListLabel(this._host._winEnd);
     const swipeController = this._swipeController();
     if (swipeController) swipeController.clearListState();
@@ -11320,12 +11358,14 @@ const DeepLinkController = class {
     }
     this._host._deepLinkApplied = true;
     if (this._host._deepLinkMediaHint === "snapshot") {
-      this._host._showSnapshot(event);
+      this._host._popupMediaLoaderController?.showSnapshot?.(event) ?? this._host._showSnapshot?.(event);
       this.clearDeepLinkParamsFromUrl();
       return;
     }
     if (this._host._deepLinkMediaHint === "clip" && event.has_clip) {
-      this._host._showClip(event, { mediaType: "clip" });
+      this._host._popupMediaLoaderController?.showClip?.(event, {
+        mediaType: "clip"
+      }) ?? this._host._showClip?.(event, { mediaType: "clip" });
       this.clearDeepLinkParamsFromUrl();
       return;
     }
@@ -12686,7 +12726,7 @@ function renderStandardPageListLabel(host, ts = null) {
     const showButtons = !host._$("#card")?.classList.contains("mobile");
     if (prev) prev.style.display = showButtons ? "inline-flex" : "none";
     if (next) next.style.display = showButtons ? "inline-flex" : "none";
-    void host._updateRecordingsBrowseNav();
+    void (host._recordingsBrowseNavController?.updateBrowseNav?.() ?? host._updateRecordingsBrowseNav?.());
     return;
   }
   if (prev) prev.style.display = "none";
@@ -12736,7 +12776,7 @@ function syncStandardPageBrowseHeadFromScroll(host) {
 function renderStandardPageLegend(host) {
   const el = host._$("#legend");
   if (!el) return;
-  const labels = host._labels();
+  const labels = host._browseFilterController?.labels?.() ?? host._labels?.() ?? [];
   let html = labels.map(
     (label) => `<span class="lg"><i style="background:${labelColor(label)}"></i>${cap(label)}</span>`
   ).join("");
@@ -14538,8 +14578,8 @@ const FrigateViewCard = class extends HTMLElement {
     this._followNowWindow = true;
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
-    const initialLoad = this._loadWindow(true);
-    this._scheduleWarmOtherCamerasEvents();
+    const initialLoad = this._browseWindowLoaderController.loadWindow(true);
+    this._browseWindowLoaderController.scheduleWarmOtherCamerasEvents();
     const startInGrid = this._shouldStartInGridMode();
     this._pageNavigationController.navigateToConfiguredLandingPage({
       source: "startup",
@@ -14555,7 +14595,9 @@ const FrigateViewCard = class extends HTMLElement {
     this._deepLinkController.consumeDeepLinkReviewOpen();
     this._deepLinkController.consumeDeepLinkEventOpen();
     this._refresh = setInterval(() => {
-      if (this._isNowWindow()) this._loadWindow(true);
+      if (this._isNowWindow()) {
+        this._browseWindowLoaderController.loadWindow(true);
+      }
     }, this._config.refresh_seconds * 1e3);
     this._restartRealtimeHeadPollTimer();
     this._setupResizeObserver();
@@ -15334,7 +15376,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderCamSwitcher();
     this._syncStatus();
     this._renderStats();
-    this._normalizeFilterSelections();
+    this._browseFilterController.normalizeFilterSelections();
     if (this._$("#filter-panel")?.style.display !== "none") {
       this._renderFilter();
     }
@@ -15344,7 +15386,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._cancelPendingMount("switch-camera", { preserveMseEntity: prevEnt });
     this._mountEngine();
     clearTimeout(this._switchLoadT);
-    this._loadWindow(true);
+    this._browseWindowLoaderController.loadWindow(true);
     this._applyCalendarActivityCacheForActiveCamera();
     void this._prefetchCalendarActivityForActiveCamera();
     if (this._$("cal-panel")?.style.display !== "none") {
@@ -15361,62 +15403,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _isNowWindow() {
     return this._followNowWindow;
-  }
-  async _fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
-    return this._browseWindowLoaderController.fetchWindowedEvents(
-      clientId,
-      cam,
-      after,
-      before,
-      opts
-    );
-  }
-  async _warmOtherCamerasEvents() {
-    return this._browseWindowLoaderController.warmOtherCamerasEvents();
-  }
-  _scheduleWarmOtherCamerasEvents(delayMs = 1e3) {
-    this._browseWindowLoaderController.scheduleWarmOtherCamerasEvents(delayMs);
-  }
-  _pruneNonActiveCamWindowCaches() {
-    this._browseWindowLoaderController.pruneNonActiveCamWindowCaches();
-  }
-  async _fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
-    return this._browseWindowLoaderController.fetchWindowedReviews(
-      clientId,
-      cam,
-      after,
-      before,
-      opts
-    );
-  }
-  async _loadWindow(replace) {
-    await this._browseWindowLoaderController.loadWindow(replace);
-  }
-  _cacheActiveCamSlice(key, value) {
-    this._browseWindowLoaderController.cacheActiveCamSlice(key, value);
-  }
-  async _loadWindowEvents(clientId, cam, after, before) {
-    await this._browseWindowLoaderController.loadWindowEvents(
-      clientId,
-      cam,
-      after,
-      before
-    );
-  }
-  async _loadWindowRecordings(clientId, cam, before) {
-    await this._browseWindowLoaderController.loadWindowRecordings(
-      clientId,
-      cam,
-      before
-    );
-  }
-  async _loadWindowReviewsIfNeeded(clientId, cam, after, before) {
-    await this._browseWindowLoaderController.loadWindowReviewsIfNeeded(
-      clientId,
-      cam,
-      after,
-      before
-    );
   }
   async _loadKept() {
     await this._browseTabDataController.loadKept();
@@ -15565,7 +15551,7 @@ const FrigateViewCard = class extends HTMLElement {
           return;
         }
         this._reloadPending = false;
-        this._loadWindow(true);
+        this._browseWindowLoaderController.loadWindow(true);
       },
       Math.max(0, Number(delayMs) || 0)
     );
@@ -15750,7 +15736,7 @@ const FrigateViewCard = class extends HTMLElement {
       getTab: () => this._tab,
       isLoading: () => this._loading,
       isExhausted: () => this._exhausted,
-      loadOlder: () => this._loadOlder()
+      loadOlder: () => this._browseWindowLoaderController.loadOlder()
     });
     this._listScrollController.bind();
   }
@@ -15825,21 +15811,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _startRecordingsSwipeGesture(direction) {
     return this._recordingsSwipeController?.startGestureStage(direction) || null;
-  }
-  async _prepareRecordingsDayTransition(direction) {
-    return this._recordingsBrowseNavController.prepareDayTransition(direction);
-  }
-  async _navigateRecordingsDayAnimated(direction) {
-    return this._recordingsBrowseNavController.navigateDayAnimated(direction);
-  }
-  async _completeRecordingsSwipeGesture(gesture) {
-    return this._recordingsBrowseNavController.completeSwipeGesture(gesture);
-  }
-  async _commitRecordingsDayTransition(bounds, recs) {
-    return this._recordingsBrowseNavController.commitDayTransition(
-      bounds,
-      recs
-    );
   }
   _bounceRecordingsArea(direction) {
     this._recordingsSwipeController?.bounceArea(direction);
@@ -16291,7 +16262,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (recDayNav) {
       const dir = Number(recDayNav.dataset.recDayNav || 0);
       if (dir) {
-        void this._navigateRecordingsDayAnimated(dir);
+        void this._recordingsBrowseNavController.navigateDayAnimated(dir);
       }
       return true;
     }
@@ -16429,7 +16400,10 @@ const FrigateViewCard = class extends HTMLElement {
         e.preventDefault();
         return true;
       }
-      this._showRecording(+recRow.dataset.rs, +recRow.dataset.re);
+      this._popupMediaLoaderController.showRecording(
+        +recRow.dataset.rs,
+        +recRow.dataset.re
+      );
       return true;
     }
     return false;
@@ -16470,11 +16444,14 @@ const FrigateViewCard = class extends HTMLElement {
     if (revOpen) {
       const rid = revOpen.closest("[data-review-id]")?.dataset.reviewId;
       const review = rid ? this._findReviewById(rid) : null;
-      this._showClipById(revOpen.dataset.reviewOpen, {
-        mediaType: "alert",
-        startTime: review?.start_time,
-        camera: review?.camera
-      });
+      this._popupMediaLoaderController.showClipById(
+        revOpen.dataset.reviewOpen,
+        {
+          mediaType: "alert",
+          startTime: review?.start_time,
+          camera: review?.camera
+        }
+      );
       return true;
     }
     return false;
@@ -16505,7 +16482,7 @@ const FrigateViewCard = class extends HTMLElement {
       const filterPanel = this._$("#filter-panel");
       if (filterPanel) filterPanel.style.display = "none";
     } else {
-      this._normalizeFilterSelections();
+      this._browseFilterController.normalizeFilterSelections();
       if (this._$("#filter-panel")?.style.display !== "none") {
         this._renderFilter();
       }
@@ -16698,7 +16675,10 @@ const FrigateViewCard = class extends HTMLElement {
     if (outcome.shouldFallback) {
       state.isFallbackLoading = true;
       try {
-        await this._showRecording(outcome.fallbackStart, outcome.fallbackEnd);
+        await this._popupMediaLoaderController.showRecording(
+          outcome.fallbackStart,
+          outcome.fallbackEnd
+        );
       } finally {
         state.isFallbackLoading = false;
       }
@@ -16714,7 +16694,12 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._recordingAlertCache.has(cacheKey)) {
       return this._recordingAlertCache.get(cacheKey);
     }
-    const reviews = await this._fetchWindowedReviews(clientId, cam, start, end);
+    const reviews = await this._browseWindowLoaderController.fetchWindowedReviews(
+      clientId,
+      cam,
+      start,
+      end
+    );
     const alerts = (Array.isArray(reviews) ? reviews : []).map((r) => {
       const severity = String(
         r?.severity || r?.data?.severity || "detection"
@@ -16978,17 +16963,22 @@ const FrigateViewCard = class extends HTMLElement {
     const ev = this._allDisplayEvents().find((e) => e.id === id) || (this._tab === "kept" ? (this._kept || []).find((e) => e.id === id) : null);
     if (!ev) return;
     if (this._tab === "kept") {
-      if (ev.has_clip) this._showClip(ev, { mediaType: "kept" });
-      else this._showSnapshot(ev, { mediaType: "kept" });
+      if (ev.has_clip) {
+        this._popupMediaLoaderController.showClip(ev, { mediaType: "kept" });
+      } else {
+        this._popupMediaLoaderController.showSnapshot(ev, {
+          mediaType: "kept"
+        });
+      }
       return;
     }
     if (this._tab === "snapshot" || !ev.has_clip && ev.has_snapshot)
-      this._showSnapshot(ev);
+      this._popupMediaLoaderController.showSnapshot(ev);
     else if (ev.has_clip)
-      this._showClip(ev, {
+      this._popupMediaLoaderController.showClip(ev, {
         mediaType: this._tab === "kept" ? "kept" : "clip"
       });
-    else this._showSnapshot(ev);
+    else this._popupMediaLoaderController.showSnapshot(ev);
   }
   _enter() {
     const v = this._$("#viewer");
@@ -17283,54 +17273,8 @@ const FrigateViewCard = class extends HTMLElement {
       })
     );
   }
-  _renderPopupMedia({
-    playingId,
-    html,
-    mediaElement,
-    fullscreenKind,
-    infoEvent,
-    infoOpts
-  }) {
-    this._popupMediaLoaderController.renderPopupMedia({
-      playingId,
-      html,
-      mediaElement,
-      fullscreenKind,
-      infoEvent,
-      infoOpts
-    });
-  }
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
-  }
-  _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
-    return this._popupMediaLoaderController.buildPopupVideo(src, {
-      autoplay,
-      muted
-    });
-  }
-  _buildPopupClipSrc(id, file) {
-    return this._popupMediaLoaderController.buildPopupClipSrc(id, file);
-  }
-  _showClip(ev, opts = {}) {
-    this._popupMediaLoaderController.showClip(ev, opts);
-  }
-  _showClipById(id, opts = {}) {
-    this._popupMediaLoaderController.showClipById(id, opts);
-  }
-  _showSnapshot(ev, opts = {}) {
-    this._popupMediaLoaderController.showSnapshot(ev, opts);
-  }
-  async _tryRecordingSource(video, src, { autoplay = true, timeoutMs = 9e3 } = {}) {
-    return await this._popupMediaLoaderController.tryRecordingSource(
-      video,
-      src,
-      { autoplay, timeoutMs }
-    );
-  }
-  //Play Recordings
-  async _showRecording(s, e) {
-    await this._popupMediaLoaderController.showRecording(s, e);
   }
   async _signed(path) {
     try {
@@ -17406,20 +17350,6 @@ const FrigateViewCard = class extends HTMLElement {
       } catch (_) {
       }
     }
-  }
-  _goNow() {
-    this._followNowWindow = true;
-    const now = Math.floor(Date.now() / 1e3);
-    this._winEnd = now;
-    this._winStart = now - this._config.window_days * DAY;
-    this._calSelectedDay = this._formatTzDateString(this._tzParts(now));
-    this._exhausted = false;
-    this._calMonth = null;
-    this._pruneNonActiveCamWindowCaches();
-    void (async () => {
-      await this._loadWindow(true);
-      this._scheduleWarmOtherCamerasEvents();
-    })();
   }
   _download(id, file) {
     const a = document.createElement("a");
@@ -17528,9 +17458,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _renderFilter() {
     this._browseFilterController.renderFilter();
-  }
-  async _loadOlder() {
-    await this._browseWindowLoaderController.loadOlder();
   }
   // ── render ────────────────────────────────────────────────
   _syncStatus() {
@@ -17641,19 +17568,6 @@ const FrigateViewCard = class extends HTMLElement {
   _renderReviewsContent(items) {
     return this._activeStandardPageController().renderReviewsContent(items);
   }
-  async _hasRecordingsInBounds(bounds, clientId, cam) {
-    return this._recordingsBrowseNavController.hasRecordingsInBounds(
-      bounds,
-      clientId,
-      cam
-    );
-  }
-  async _updateRecordingsBrowseNav() {
-    await this._recordingsBrowseNavController.updateBrowseNav();
-  }
-  async _stepRecordingsDay(dir) {
-    return this._recordingsBrowseNavController.stepDay(dir);
-  }
   _syncBrowseHeadFromScroll() {
     this._activeStandardPageController().syncBrowseHeadFromScroll();
   }
@@ -17662,27 +17576,6 @@ const FrigateViewCard = class extends HTMLElement {
       1,
       Math.round((ev.end_time || Date.now() / 1e3) - ev.start_time)
     );
-  }
-  _reviewSourceEvent(review) {
-    return this._browseFilterController.reviewSourceEvent(review);
-  }
-  _filteredReviews() {
-    return this._browseFilterController.filteredReviews();
-  }
-  _filteredKept() {
-    return this._browseFilterController.filteredKept();
-  }
-  _normalizeFilterSelections() {
-    this._browseFilterController.normalizeFilterSelections();
-  }
-  _zones() {
-    return this._browseFilterController.zones();
-  }
-  _labels() {
-    return this._browseFilterController.labels();
-  }
-  _filtered() {
-    return this._browseFilterController.filtered();
   }
   _eventCardHTML(ev, expanded, compact = false) {
     const model = buildEventListItemModel(ev, {
@@ -17925,7 +17818,7 @@ const FrigateViewCard = class extends HTMLElement {
     el.scrollTop = el.scrollHeight;
   }
   _renderKeptList(list) {
-    const kept = this._filteredKept();
+    const kept = this._browseFilterController.filteredKept();
     this._renderListLabel();
     this._renderStandardListMarkup(list, {
       items: kept,
@@ -17938,7 +17831,7 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _renderEventsList(list) {
-    const events = this._filtered();
+    const events = this._browseFilterController.filtered();
     this._renderListLabel(resolveListLabelTimestamp(events));
     this._renderStandardListMarkup(list, {
       items: events,
@@ -18027,7 +17920,7 @@ const FrigateViewCard = class extends HTMLElement {
     const model = buildReviewListItemModel(review, {
       cap,
       icons: ICONS,
-      resolveSourceEvent: (value) => this._reviewSourceEvent(value),
+      resolveSourceEvent: (value) => this._browseFilterController.reviewSourceEvent(value),
       findEventById: (id) => this._findEventById(id),
       media: (id, file) => this._media(id, file),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts)
@@ -18036,7 +17929,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _renderReviews(list) {
     const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
-    const filteredReviews = this._filteredReviews();
+    const filteredReviews = this._browseFilterController.filteredReviews();
     const emptyText = showAllReviews ? "No reviews in this window" : "No alerts in this window";
     this._renderListLabel(resolveListLabelTimestamp(filteredReviews));
     const allRevs = [...filteredReviews].sort(

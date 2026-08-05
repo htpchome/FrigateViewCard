@@ -72,3 +72,13 @@ export const isM3u8Response = ({ contentType, url }) => {
       .includes(".m3u8")
   );
 };
+
+export const buildPopupMediaUrl = ({ baseUrl = "", cacheKey }) => {
+  const normalizedBaseUrl = String(baseUrl || "");
+  if (!normalizedBaseUrl) return "";
+  if (cacheKey === null || cacheKey === undefined || cacheKey === "") {
+    return normalizedBaseUrl;
+  }
+  const separator = normalizedBaseUrl.includes("?") ? "&" : "?";
+  return `${normalizedBaseUrl}${separator}fvc=${encodeURIComponent(String(cacheKey))}`;
+};

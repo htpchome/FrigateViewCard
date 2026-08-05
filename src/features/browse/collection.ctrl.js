@@ -75,13 +75,23 @@ export class BrowseCollectionController {
 
       try {
         if (tab === "alerts") {
-          const reviews = await this._host._fetchWindowedReviews(
-            clientId,
-            cam,
-            reviewsAfter,
-            before,
-            { debugLabel: "grid-alerts-tab" },
-          );
+          const reviews =
+            await (this._host._browseWindowLoaderController?.fetchWindowedReviews?.(
+              clientId,
+              cam,
+              reviewsAfter,
+              before,
+              { debugLabel: "grid-alerts-tab" },
+            ) ??
+              this._host._fetchWindowedReviews?.(
+                clientId,
+                cam,
+                reviewsAfter,
+                before,
+                {
+                  debugLabel: "grid-alerts-tab",
+                },
+              ));
           cache.reviews = Array.isArray(reviews) ? reviews : [];
         }
         if (tab === "kept") {

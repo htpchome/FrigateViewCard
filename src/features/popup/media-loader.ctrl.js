@@ -3,10 +3,10 @@ import {
   createVideoElement,
   mountNodeIntoSlot,
 } from "../../shared/media/video-factory.js";
+import { buildPopupMediaUrl } from "../../shared/media/url-utils.js";
 import { isIOS } from "../../helpers.js";
 import {
   buildPopupClipRenderPlan,
-  buildPopupMediaUrl,
   buildPopupRecordingRenderPlan,
   buildPopupRecordingScrubInitPlan,
   buildPopupRecordingSourceAttemptPlan,

@@ -2,9 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  buildPopupClipRenderPlan,
-  buildPopupMediaUrl,
   buildPopupMediaControlState,
+  resolvePopupMediaControlsInitPlan,
+  resolvePopupMediaControlsListenerPlan,
+  resolvePopupMediaSeekTarget,
+} from "../src/shared/media/controls.js";
+import { buildPopupMediaUrl } from "../src/shared/media/url-utils.js";
+import {
+  buildPopupClipRenderPlan,
   buildPopupRecordingRenderPlan,
   buildPopupRecordingScrubInitPlan,
   buildPopupRecordingSourceAttemptPlan,
@@ -13,9 +18,6 @@ import {
   resolvePopupMediaRenderPlan,
   resolvePopupRecordingSeekListenerPlan,
   resolvePopupRecordingLoadOutcomePlan,
-  resolvePopupMediaControlsInitPlan,
-  resolvePopupMediaControlsListenerPlan,
-  resolvePopupMediaSeekTarget,
 } from "../src/features/popup/media.js";
 
 test("buildPopupMediaUrl appends cache key without disturbing existing query strings", () => {

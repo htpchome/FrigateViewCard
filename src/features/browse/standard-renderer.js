@@ -180,7 +180,10 @@ export function renderStandardPageListLabel(host, ts = null) {
     const showButtons = !host._$("#card")?.classList.contains("mobile");
     if (prev) prev.style.display = showButtons ? "inline-flex" : "none";
     if (next) next.style.display = showButtons ? "inline-flex" : "none";
-    void host._updateRecordingsBrowseNav();
+    void (
+      host._recordingsBrowseNavController?.updateBrowseNav?.() ??
+      host._updateRecordingsBrowseNav?.()
+    );
     return;
   }
 
@@ -238,7 +241,8 @@ export function syncStandardPageBrowseHeadFromScroll(host) {
 export function renderStandardPageLegend(host) {
   const el = host._$("#legend");
   if (!el) return;
-  const labels = host._labels();
+  const labels =
+    host._browseFilterController?.labels?.() ?? host._labels?.() ?? [];
   let html = labels
     .map(
       (label) =>

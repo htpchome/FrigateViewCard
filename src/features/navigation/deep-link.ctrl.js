@@ -152,12 +152,15 @@ export class DeepLinkController {
 
     this._host._deepLinkApplied = true;
     if (this._host._deepLinkMediaHint === "snapshot") {
-      this._host._showSnapshot(event);
+      this._host._popupMediaLoaderController?.showSnapshot?.(event) ??
+        this._host._showSnapshot?.(event);
       this.clearDeepLinkParamsFromUrl();
       return;
     }
     if (this._host._deepLinkMediaHint === "clip" && event.has_clip) {
-      this._host._showClip(event, { mediaType: "clip" });
+      this._host._popupMediaLoaderController?.showClip?.(event, {
+        mediaType: "clip",
+      }) ?? this._host._showClip?.(event, { mediaType: "clip" });
       this.clearDeepLinkParamsFromUrl();
       return;
     }

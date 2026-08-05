@@ -434,4 +434,21 @@ export class BrowseWindowLoaderController {
       this._host._reviews = [];
     }
   }
+
+  goNow() {
+    this._host._followNowWindow = true;
+    const now = Math.floor(Date.now() / 1000);
+    this._host._winEnd = now;
+    this._host._winStart = now - this._host._config.window_days * DAY;
+    this._host._calSelectedDay = this._host._formatTzDateString(
+      this._host._tzParts(now),
+    );
+    this._host._exhausted = false;
+    this._host._calMonth = null;
+    this.pruneNonActiveCamWindowCaches();
+    void (async () => {
+      await this.loadWindow(true);
+      this.scheduleWarmOtherCamerasEvents();
+    })();
+  }
 }

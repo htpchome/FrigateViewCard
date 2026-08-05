@@ -170,10 +170,10 @@ export class RecordingsBrowseNavController {
         ? swipeController.createStage(dir, navigation.incomingHtml)
         : this._host._createRecordingsSwipeStage(dir, navigation.incomingHtml);
       if (!stage) {
-        await this._host._commitRecordingsDayTransition(
+        await (this._host._commitRecordingsDayTransition?.(
           navigation.bounds,
           navigation.recs,
-        );
+        ) ?? this.commitDayTransition(navigation.bounds, navigation.recs));
         return true;
       }
 
@@ -195,10 +195,10 @@ export class RecordingsBrowseNavController {
           "cubic-bezier(0.28, 0.02, 0.18, 1)",
         );
       }
-      await this._host._commitRecordingsDayTransition(
+      await (this._host._commitRecordingsDayTransition?.(
         navigation.bounds,
         navigation.recs,
-      );
+      ) ?? this.commitDayTransition(navigation.bounds, navigation.recs));
       return true;
     } finally {
       this._host._recordingsDayNavAnimating = false;
@@ -230,10 +230,10 @@ export class RecordingsBrowseNavController {
         "cubic-bezier(0.28, 0.02, 0.18, 1)",
       );
     }
-    await this._host._commitRecordingsDayTransition(
+    await (this._host._commitRecordingsDayTransition?.(
       gesture.bounds,
       gesture.recs,
-    );
+    ) ?? this.commitDayTransition(gesture.bounds, gesture.recs));
     return true;
   }
 
@@ -250,7 +250,8 @@ export class RecordingsBrowseNavController {
     this._host._winStart = committed.bounds.start;
     this._host._winEnd = committed.bounds.end;
     this._host._exhausted = false;
-    this._host._pruneNonActiveCamWindowCaches();
+    this._host._browseWindowLoaderController?.pruneNonActiveCamWindowCaches?.() ??
+      this._host._pruneNonActiveCamWindowCaches?.();
     this._host._recordings = committed.recordings;
     if (committed.key) {
       this._host._recordingsDayDataCache.set(
@@ -262,7 +263,11 @@ export class RecordingsBrowseNavController {
         committed.hasRecordings,
       );
     }
-    this._host._cacheActiveCamSlice("recordings", this._host._recordings);
+    this._host._browseWindowLoaderController?.cacheActiveCamSlice?.(
+      "recordings",
+      this._host._recordings,
+    ) ??
+      this._host._cacheActiveCamSlice?.("recordings", this._host._recordings);
     this._host._renderListLabel(this._host._winEnd);
     const swipeController = this._swipeController();
     if (swipeController) swipeController.clearListState();

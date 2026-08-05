@@ -165,9 +165,14 @@ import { LiveOverlayControlsController } from "./controls/live-overlay.ctrl.js";
 import { PopupDragController } from "./popup/drag.ctrl.js";
 import { PopupMediaControlsController } from "./popup/media.ctrl.js";
 import {
-  buildPopupClipRenderPlan,
-  buildPopupMediaUrl,
   buildPopupMediaControlState,
+  resolvePopupMediaControlsInitPlan,
+  resolvePopupMediaControlsListenerPlan,
+  resolvePopupMediaSeekTarget,
+} from "../shared/media/controls.js";
+import { buildPopupMediaUrl } from "../shared/media/url-utils.js";
+import {
+  buildPopupClipRenderPlan,
   buildPopupRecordingRenderPlan,
   buildPopupRecordingScrubInitPlan,
   buildPopupRecordingSourceAttemptPlan,
@@ -176,9 +181,6 @@ import {
   resolvePopupMediaRenderPlan,
   resolvePopupRecordingSeekListenerPlan,
   resolvePopupRecordingLoadOutcomePlan,
-  resolvePopupMediaControlsInitPlan,
-  resolvePopupMediaControlsListenerPlan,
-  resolvePopupMediaSeekTarget,
 } from "../features/popup/media.js";
 import {
   buildPopupCarouselItemMarkup,
@@ -1316,8 +1318,8 @@ export class FrigateViewCard extends HTMLElement {
     this._winEnd = now;
     this._winStart = now - this._config.window_days * DAY;
 
-    const initialLoad = this._loadWindow(true);
-    this._scheduleWarmOtherCamerasEvents();
+    const initialLoad = this._browseWindowLoaderController.loadWindow(true);
+    this._browseWindowLoaderController.scheduleWarmOtherCamerasEvents();
     const startInGrid = this._shouldStartInGridMode();
     this._pageNavigationController.navigateToConfiguredLandingPage({
       source: "startup",
@@ -1334,7 +1336,9 @@ export class FrigateViewCard extends HTMLElement {
     this._deepLinkController.consumeDeepLinkReviewOpen();
     this._deepLinkController.consumeDeepLinkEventOpen();
     this._refresh = setInterval(() => {
-      if (this._isNowWindow()) this._loadWindow(true);
+      if (this._isNowWindow()) {
+        this._browseWindowLoaderController.loadWindow(true);
+      }
     }, this._config.refresh_seconds * 1000);
     this._restartRealtimeHeadPollTimer();
     this._setupResizeObserver();
@@ -2290,7 +2294,7 @@ export class FrigateViewCard extends HTMLElement {
     this._renderCamSwitcher();
     this._syncStatus();
     this._renderStats();
-    this._normalizeFilterSelections();
+    this._browseFilterController.normalizeFilterSelections();
     if (this._$("#filter-panel")?.style.display !== "none") {
       this._renderFilter();
     }
@@ -2300,7 +2304,7 @@ export class FrigateViewCard extends HTMLElement {
     this._cancelPendingMount("switch-camera", { preserveMseEntity: prevEnt });
     this._mountEngine();
     clearTimeout(this._switchLoadT);
-    this._loadWindow(true);
+    this._browseWindowLoaderController.loadWindow(true);
     this._applyCalendarActivityCacheForActiveCamera();
     void this._prefetchCalendarActivityForActiveCamera();
     if (this._$("cal-panel")?.style.display !== "none") {
@@ -2317,70 +2321,6 @@ export class FrigateViewCard extends HTMLElement {
   }
   _isNowWindow() {
     return this._followNowWindow;
-  }
-  async _fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
-    return this._browseWindowLoaderController.fetchWindowedEvents(
-      clientId,
-      cam,
-      after,
-      before,
-      opts,
-    );
-  }
-
-  async _warmOtherCamerasEvents() {
-    return this._browseWindowLoaderController.warmOtherCamerasEvents();
-  }
-
-  _scheduleWarmOtherCamerasEvents(delayMs = 1000) {
-    this._browseWindowLoaderController.scheduleWarmOtherCamerasEvents(delayMs);
-  }
-
-  _pruneNonActiveCamWindowCaches() {
-    this._browseWindowLoaderController.pruneNonActiveCamWindowCaches();
-  }
-
-  async _fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
-    return this._browseWindowLoaderController.fetchWindowedReviews(
-      clientId,
-      cam,
-      after,
-      before,
-      opts,
-    );
-  }
-  async _loadWindow(replace) {
-    await this._browseWindowLoaderController.loadWindow(replace);
-  }
-
-  _cacheActiveCamSlice(key, value) {
-    this._browseWindowLoaderController.cacheActiveCamSlice(key, value);
-  }
-
-  async _loadWindowEvents(clientId, cam, after, before) {
-    await this._browseWindowLoaderController.loadWindowEvents(
-      clientId,
-      cam,
-      after,
-      before,
-    );
-  }
-
-  async _loadWindowRecordings(clientId, cam, before) {
-    await this._browseWindowLoaderController.loadWindowRecordings(
-      clientId,
-      cam,
-      before,
-    );
-  }
-
-  async _loadWindowReviewsIfNeeded(clientId, cam, after, before) {
-    await this._browseWindowLoaderController.loadWindowReviewsIfNeeded(
-      clientId,
-      cam,
-      after,
-      before,
-    );
   }
 
   async _loadKept() {
@@ -2549,7 +2489,7 @@ export class FrigateViewCard extends HTMLElement {
           return;
         }
         this._reloadPending = false;
-        this._loadWindow(true);
+        this._browseWindowLoaderController.loadWindow(true);
       },
       Math.max(0, Number(delayMs) || 0),
     );
@@ -2759,7 +2699,7 @@ export class FrigateViewCard extends HTMLElement {
       getTab: () => this._tab,
       isLoading: () => this._loading,
       isExhausted: () => this._exhausted,
-      loadOlder: () => this._loadOlder(),
+      loadOlder: () => this._browseWindowLoaderController.loadOlder(),
     });
     this._listScrollController.bind();
   }
@@ -2854,25 +2794,6 @@ export class FrigateViewCard extends HTMLElement {
   _startRecordingsSwipeGesture(direction) {
     return (
       this._recordingsSwipeController?.startGestureStage(direction) || null
-    );
-  }
-
-  async _prepareRecordingsDayTransition(direction) {
-    return this._recordingsBrowseNavController.prepareDayTransition(direction);
-  }
-
-  async _navigateRecordingsDayAnimated(direction) {
-    return this._recordingsBrowseNavController.navigateDayAnimated(direction);
-  }
-
-  async _completeRecordingsSwipeGesture(gesture) {
-    return this._recordingsBrowseNavController.completeSwipeGesture(gesture);
-  }
-
-  async _commitRecordingsDayTransition(bounds, recs) {
-    return this._recordingsBrowseNavController.commitDayTransition(
-      bounds,
-      recs,
     );
   }
 
@@ -3372,7 +3293,7 @@ export class FrigateViewCard extends HTMLElement {
     if (recDayNav) {
       const dir = Number(recDayNav.dataset.recDayNav || 0);
       if (dir) {
-        void this._navigateRecordingsDayAnimated(dir);
+        void this._recordingsBrowseNavController.navigateDayAnimated(dir);
       }
       return true;
     }
@@ -3510,7 +3431,10 @@ export class FrigateViewCard extends HTMLElement {
         e.preventDefault();
         return true;
       }
-      this._showRecording(+recRow.dataset.rs, +recRow.dataset.re);
+      this._popupMediaLoaderController.showRecording(
+        +recRow.dataset.rs,
+        +recRow.dataset.re,
+      );
       return true;
     }
     return false;
@@ -3551,11 +3475,14 @@ export class FrigateViewCard extends HTMLElement {
     if (revOpen) {
       const rid = revOpen.closest("[data-review-id]")?.dataset.reviewId;
       const review = rid ? this._findReviewById(rid) : null;
-      this._showClipById(revOpen.dataset.reviewOpen, {
-        mediaType: "alert",
-        startTime: review?.start_time,
-        camera: review?.camera,
-      });
+      this._popupMediaLoaderController.showClipById(
+        revOpen.dataset.reviewOpen,
+        {
+          mediaType: "alert",
+          startTime: review?.start_time,
+          camera: review?.camera,
+        },
+      );
       return true;
     }
     return false;
@@ -3588,7 +3515,7 @@ export class FrigateViewCard extends HTMLElement {
       const filterPanel = this._$("#filter-panel");
       if (filterPanel) filterPanel.style.display = "none";
     } else {
-      this._normalizeFilterSelections();
+      this._browseFilterController.normalizeFilterSelections();
       if (this._$("#filter-panel")?.style.display !== "none") {
         this._renderFilter();
       }
@@ -3814,7 +3741,10 @@ export class FrigateViewCard extends HTMLElement {
     if (outcome.shouldFallback) {
       state.isFallbackLoading = true;
       try {
-        await this._showRecording(outcome.fallbackStart, outcome.fallbackEnd);
+        await this._popupMediaLoaderController.showRecording(
+          outcome.fallbackStart,
+          outcome.fallbackEnd,
+        );
       } finally {
         state.isFallbackLoading = false;
       }
@@ -3831,7 +3761,13 @@ export class FrigateViewCard extends HTMLElement {
     if (this._recordingAlertCache.has(cacheKey)) {
       return this._recordingAlertCache.get(cacheKey);
     }
-    const reviews = await this._fetchWindowedReviews(clientId, cam, start, end);
+    const reviews =
+      await this._browseWindowLoaderController.fetchWindowedReviews(
+        clientId,
+        cam,
+        start,
+        end,
+      );
     const alerts = (Array.isArray(reviews) ? reviews : [])
       .map((r) => {
         const severity = String(
@@ -4183,17 +4119,22 @@ export class FrigateViewCard extends HTMLElement {
         : null);
     if (!ev) return;
     if (this._tab === "kept") {
-      if (ev.has_clip) this._showClip(ev, { mediaType: "kept" });
-      else this._showSnapshot(ev, { mediaType: "kept" });
+      if (ev.has_clip) {
+        this._popupMediaLoaderController.showClip(ev, { mediaType: "kept" });
+      } else {
+        this._popupMediaLoaderController.showSnapshot(ev, {
+          mediaType: "kept",
+        });
+      }
       return;
     }
     if (this._tab === "snapshot" || (!ev.has_clip && ev.has_snapshot))
-      this._showSnapshot(ev);
+      this._popupMediaLoaderController.showSnapshot(ev);
     else if (ev.has_clip)
-      this._showClip(ev, {
+      this._popupMediaLoaderController.showClip(ev, {
         mediaType: this._tab === "kept" ? "kept" : "clip",
       });
-    else this._showSnapshot(ev);
+    else this._popupMediaLoaderController.showSnapshot(ev);
   }
   _enter() {
     const v = this._$("#viewer");
@@ -4505,60 +4446,8 @@ export class FrigateViewCard extends HTMLElement {
       }),
     );
   }
-  _renderPopupMedia({
-    playingId,
-    html,
-    mediaElement,
-    fullscreenKind,
-    infoEvent,
-    infoOpts,
-  }) {
-    this._popupMediaLoaderController.renderPopupMedia({
-      playingId,
-      html,
-      mediaElement,
-      fullscreenKind,
-      infoEvent,
-      infoOpts,
-    });
-  }
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
-  }
-  _buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
-    return this._popupMediaLoaderController.buildPopupVideo(src, {
-      autoplay,
-      muted,
-    });
-  }
-  _buildPopupClipSrc(id, file) {
-    return this._popupMediaLoaderController.buildPopupClipSrc(id, file);
-  }
-  _showClip(ev, opts = {}) {
-    this._popupMediaLoaderController.showClip(ev, opts);
-  }
-  _showClipById(id, opts = {}) {
-    this._popupMediaLoaderController.showClipById(id, opts);
-  }
-  _showSnapshot(ev, opts = {}) {
-    this._popupMediaLoaderController.showSnapshot(ev, opts);
-  }
-
-  async _tryRecordingSource(
-    video,
-    src,
-    { autoplay = true, timeoutMs = 9000 } = {},
-  ) {
-    return await this._popupMediaLoaderController.tryRecordingSource(
-      video,
-      src,
-      { autoplay, timeoutMs },
-    );
-  }
-
-  //Play Recordings
-  async _showRecording(s, e) {
-    await this._popupMediaLoaderController.showRecording(s, e);
   }
   async _signed(path) {
     try {
@@ -4649,20 +4538,6 @@ export class FrigateViewCard extends HTMLElement {
         req.call(reqTarget);
       } catch (_) {}
     }
-  }
-  _goNow() {
-    this._followNowWindow = true;
-    const now = Math.floor(Date.now() / 1000);
-    this._winEnd = now;
-    this._winStart = now - this._config.window_days * DAY;
-    this._calSelectedDay = this._formatTzDateString(this._tzParts(now));
-    this._exhausted = false;
-    this._calMonth = null;
-    this._pruneNonActiveCamWindowCaches();
-    void (async () => {
-      await this._loadWindow(true);
-      this._scheduleWarmOtherCamerasEvents();
-    })();
   }
   _download(id, file) {
     const a = document.createElement("a");
@@ -4774,9 +4649,6 @@ export class FrigateViewCard extends HTMLElement {
   }
   _renderFilter() {
     this._browseFilterController.renderFilter();
-  }
-  async _loadOlder() {
-    await this._browseWindowLoaderController.loadOlder();
   }
   // ── render ────────────────────────────────────────────────
   _syncStatus() {
@@ -4898,22 +4770,6 @@ export class FrigateViewCard extends HTMLElement {
     return this._activeStandardPageController().renderReviewsContent(items);
   }
 
-  async _hasRecordingsInBounds(bounds, clientId, cam) {
-    return this._recordingsBrowseNavController.hasRecordingsInBounds(
-      bounds,
-      clientId,
-      cam,
-    );
-  }
-
-  async _updateRecordingsBrowseNav() {
-    await this._recordingsBrowseNavController.updateBrowseNav();
-  }
-
-  async _stepRecordingsDay(dir) {
-    return this._recordingsBrowseNavController.stepDay(dir);
-  }
-
   _syncBrowseHeadFromScroll() {
     this._activeStandardPageController().syncBrowseHeadFromScroll();
   }
@@ -4922,28 +4778,6 @@ export class FrigateViewCard extends HTMLElement {
       1,
       Math.round((ev.end_time || Date.now() / 1000) - ev.start_time),
     );
-  }
-  _reviewSourceEvent(review) {
-    return this._browseFilterController.reviewSourceEvent(review);
-  }
-  _filteredReviews() {
-    return this._browseFilterController.filteredReviews();
-  }
-  _filteredKept() {
-    return this._browseFilterController.filteredKept();
-  }
-  _normalizeFilterSelections() {
-    this._browseFilterController.normalizeFilterSelections();
-  }
-  _zones() {
-    return this._browseFilterController.zones();
-  }
-
-  _labels() {
-    return this._browseFilterController.labels();
-  }
-  _filtered() {
-    return this._browseFilterController.filtered();
   }
   _eventCardHTML(ev, expanded, compact = false) {
     const model = buildEventListItemModel(ev, {
@@ -5234,7 +5068,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _renderKeptList(list) {
-    const kept = this._filteredKept();
+    const kept = this._browseFilterController.filteredKept();
     this._renderListLabel();
     this._renderStandardListMarkup(list, {
       items: kept,
@@ -5248,7 +5082,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _renderEventsList(list) {
-    const events = this._filtered();
+    const events = this._browseFilterController.filtered();
     this._renderListLabel(resolveListLabelTimestamp(events));
     this._renderStandardListMarkup(list, {
       items: events,
@@ -5345,7 +5179,8 @@ export class FrigateViewCard extends HTMLElement {
     const model = buildReviewListItemModel(review, {
       cap,
       icons: ICONS,
-      resolveSourceEvent: (value) => this._reviewSourceEvent(value),
+      resolveSourceEvent: (value) =>
+        this._browseFilterController.reviewSourceEvent(value),
       findEventById: (id) => this._findEventById(id),
       media: (id, file) => this._media(id, file),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
@@ -5355,7 +5190,7 @@ export class FrigateViewCard extends HTMLElement {
 
   _renderReviews(list) {
     const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
-    const filteredReviews = this._filteredReviews();
+    const filteredReviews = this._browseFilterController.filteredReviews();
     const emptyText = showAllReviews
       ? "No reviews in this window"
       : "No alerts in this window";

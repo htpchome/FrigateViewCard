@@ -110,10 +110,13 @@ export class BrowseCalendarPanelController {
     );
     this._host.shadowRoot.querySelector("#cal-panel").style.display = "none";
     this._host._syncToolbarButtons();
-    this._host._pruneNonActiveCamWindowCaches();
+    this._host._browseWindowLoaderController?.pruneNonActiveCamWindowCaches?.() ??
+      this._host._pruneNonActiveCamWindowCaches?.();
     void (async () => {
-      await this._host._loadWindow(true);
-      this._host._scheduleWarmOtherCamerasEvents();
+      await (this._host._browseWindowLoaderController?.loadWindow?.(true) ??
+        this._host._loadWindow?.(true));
+      this._host._browseWindowLoaderController?.scheduleWarmOtherCamerasEvents?.() ??
+        this._host._scheduleWarmOtherCamerasEvents?.();
     })();
   }
 

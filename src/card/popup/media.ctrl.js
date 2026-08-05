@@ -1,4 +1,4 @@
-import { resolvePopupMediaSeekTarget } from "../../features/popup/media.js";
+import { resolvePopupMediaSeekTarget } from "../../shared/media/controls.js";
 import { CleanupController } from "../../shared/cleanup.js";
 
 export class PopupMediaControlsController {
