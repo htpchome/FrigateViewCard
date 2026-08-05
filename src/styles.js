@@ -7,7 +7,7 @@ export const STYLES = `
     position: relative;
     box-sizing: border-box !important;
     display: block !important;
-    border:4px solid var(--secondary-background-color) !important;
+    border:1px solid var(--secondary-background-color) !important;
     border-radius: var(--fvc-border-radius) !important;
   }
   :host {
