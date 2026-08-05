@@ -1,5 +1,14 @@
 import { normalizeAlertsAreaContent } from "../../helpers.js";
 
+function normalizeCameraToken(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^camera\./, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
 export function slideshowReviewModeForCamera(config, entity) {
   const cam = config?.cameras?.find((camera) => camera.entity === entity);
   return normalizeAlertsAreaContent(cam?.alerts_content);
@@ -14,22 +23,19 @@ export function shouldHandleSlideshowReview(config, entity, severity) {
 }
 
 export function cameraIndexForIncomingCamera(config, camCache, cameraId) {
-  const normalized = String(cameraId || "")
-    .trim()
-    .toLowerCase();
+  const normalized = normalizeCameraToken(cameraId);
   if (!normalized) return -1;
   return (
     config?.cameras?.findIndex((camera) => {
       const entity = String(camera?.entity || "").toLowerCase();
-      const name = String(camera?.name || "").toLowerCase();
-      const discovered = String(
-        camCache[camera?.entity]?.cam || "",
-      ).toLowerCase();
-      return (
-        entity === normalized ||
-        name === normalized ||
-        discovered === normalized
-      );
+      const discovered = String(camCache[camera?.entity]?.cam || "");
+      const tokens = [
+        entity,
+        entity.replace(/^camera\./, ""),
+        camera?.name || "",
+        discovered,
+      ].map((token) => normalizeCameraToken(token));
+      return tokens.includes(normalized);
     }) ?? -1
   );
 }

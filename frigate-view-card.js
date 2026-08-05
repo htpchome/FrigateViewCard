@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1239";
+const VERSION = "1.0.1240";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -13640,6 +13640,9 @@ const SlideshowPageController = class {
 };
 
 // src/features/slideshow/routing.js
+function normalizeCameraToken(value) {
+  return String(value || "").trim().toLowerCase().replace(/^camera\./, "").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
 function slideshowReviewModeForCamera(config, entity) {
   const cam = config?.cameras?.find((camera) => camera.entity === entity);
   return normalizeAlertsAreaContent2(cam?.alerts_content);
@@ -13649,15 +13652,18 @@ function shouldHandleSlideshowReview(config, entity, severity) {
   return severity === "detection" && slideshowReviewModeForCamera(config, entity) === "all_reviews";
 }
 function cameraIndexForIncomingCamera(config, camCache, cameraId) {
-  const normalized = String(cameraId || "").trim().toLowerCase();
+  const normalized = normalizeCameraToken(cameraId);
   if (!normalized) return -1;
   return config?.cameras?.findIndex((camera) => {
     const entity = String(camera?.entity || "").toLowerCase();
-    const name = String(camera?.name || "").toLowerCase();
-    const discovered = String(
-      camCache[camera?.entity]?.cam || ""
-    ).toLowerCase();
-    return entity === normalized || name === normalized || discovered === normalized;
+    const discovered = String(camCache[camera?.entity]?.cam || "");
+    const tokens = [
+      entity,
+      entity.replace(/^camera\./, ""),
+      camera?.name || "",
+      discovered
+    ].map((token) => normalizeCameraToken(token));
+    return tokens.includes(normalized);
   }) ?? -1;
 }
 function cameraEntityForIncomingCamera(config, camCache, cameraId) {
