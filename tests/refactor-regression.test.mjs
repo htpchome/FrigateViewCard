@@ -1218,7 +1218,7 @@ test("standard browse rendering support does not live in the card folder", () =>
   assert.equal(cardSource.includes("renderStandardPageEventsContent("), false);
   assert.equal(
     browseStandardRendererSource.includes(
-      '../../card/controls/shell-nav.tmpl.js',
+      "../../card/controls/shell-nav.tmpl.js",
     ),
     false,
   );
@@ -1242,7 +1242,7 @@ test("standard browse rendering support does not live in the card folder", () =>
   );
   assert.equal(
     mobileViewPageTemplateSource.includes(
-      '../../card/controls/shell-nav.tmpl.js',
+      "../../card/controls/shell-nav.tmpl.js",
     ),
     false,
   );
