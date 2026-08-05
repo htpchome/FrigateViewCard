@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1202";
+const VERSION = "1.0.1203";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7873,6 +7873,387 @@ const BrowseFilterController = class {
   }
 };
 
+// src/data/window-fetch.js
+async function fetchWindowedItems({
+  after,
+  before,
+  opts = {},
+  defaultPageLimit,
+  defaultBatchLimit,
+  useOptionLimit = true,
+  fetchBatch,
+  getItemStartTime
+}) {
+  const items = [];
+  const seen = new Set();
+  const afterTs = Math.floor(after);
+  let cursorBefore = Math.floor(
+    Number.isFinite(opts?.cursorBefore) ? opts.cursorBefore : before
+  );
+  const pageLimit = Math.max(
+    1,
+    Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : defaultPageLimit
+  );
+  const batchLimit = useOptionLimit ? Math.max(
+    1,
+    Number.isFinite(opts?.limit) ? Math.floor(opts.limit) : defaultBatchLimit
+  ) : defaultBatchLimit;
+  const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
+  for (let page = 0; page < pageLimit; page++) {
+    const batch = await fetchBatch({
+      after: afterTs,
+      before: cursorBefore,
+      limit: batchLimit,
+      page
+    });
+    if (!Array.isArray(batch) || !batch.length) break;
+    for (const item of batch) {
+      if (!item?.id || seen.has(item.id)) continue;
+      seen.add(item.id);
+      items.push(item);
+    }
+    onPage?.(items, {
+      page,
+      done: false
+    });
+    const oldest = Math.min(
+      ...batch.map((item) => Math.floor(getItemStartTime(item, before)))
+    );
+    if (batch.length < batchLimit || oldest <= afterTs) break;
+    cursorBefore = oldest - 1;
+  }
+  onPage?.(items, { page: -1, done: true });
+  return items;
+}
+
+// src/features/browse/window-loader.ctrl.js
+const BrowseWindowLoaderController = class {
+  constructor(host, deps = {}) {
+    this._host = host;
+    this._deps = {
+      fetchWindowedItems,
+      ...deps
+    };
+  }
+  async fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
+    return this._deps.fetchWindowedItems({
+      after,
+      before,
+      opts,
+      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
+      defaultBatchLimit: EVENT_FETCH_BATCH,
+      useOptionLimit: true,
+      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._host._ws({
+        type: "frigate/events/get",
+        instance_id: clientId,
+        cameras: [cam],
+        after: afterTs,
+        before: beforeTs,
+        limit
+      }),
+      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
+    });
+  }
+  async warmOtherCamerasEvents() {
+    const token = ++this._host._warmCamsToken;
+    const activeEntity = this._host._activeCam?.entity;
+    const after = this._host._winStart;
+    const before = this._host._winEnd;
+    for (const camera of this._host._config.cameras) {
+      if (camera.entity === activeEntity) continue;
+      const entity = camera.entity;
+      const cache = this._host._camCache[entity];
+      if (!cache?.clientId || !cache?.cam) continue;
+      if (Array.isArray(cache.events) && cache.events.length >= INACTIVE_WARM_EVENT_LIMIT) {
+        continue;
+      }
+      try {
+        const events = await this.fetchWindowedEvents(
+          cache.clientId,
+          cache.cam,
+          after,
+          before,
+          {
+            pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+            limit: INACTIVE_WARM_EVENT_LIMIT,
+            debugLabel: "warm-cache"
+          }
+        );
+        if (token !== this._host._warmCamsToken) return;
+        if (after !== this._host._winStart || before !== this._host._winEnd) {
+          return;
+        }
+        cache.events = Array.isArray(events) ? events.slice(0, INACTIVE_WARM_EVENT_LIMIT) : [];
+      } catch (_) {
+      }
+    }
+  }
+  scheduleWarmOtherCamerasEvents(delayMs = 1e3) {
+    if (this._host._warmOtherCamsDelayT) {
+      clearTimeout(this._host._warmOtherCamsDelayT);
+    }
+    this._host._warmOtherCamsDelayT = setTimeout(
+      () => {
+        this._host._warmOtherCamsDelayT = null;
+        if (!this._host.isConnected) return;
+        void this.warmOtherCamerasEvents();
+      },
+      Math.max(0, Number(delayMs) || 0)
+    );
+  }
+  pruneNonActiveCamWindowCaches() {
+    this._host._warmCamsToken++;
+    const activeEntity = this._host._activeCam?.entity;
+    for (const camera of this._host._config.cameras) {
+      const entity = camera.entity;
+      if (entity === activeEntity) continue;
+      const cache = this._host._camCache[entity];
+      if (!cache) continue;
+      cache.events = [];
+      cache.recordings = [];
+      cache.reviews = [];
+    }
+  }
+  async fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
+    return this._deps.fetchWindowedItems({
+      after,
+      before,
+      opts,
+      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
+      defaultBatchLimit: REVIEW_FETCH_BATCH,
+      useOptionLimit: false,
+      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._host._ws({
+        type: "frigate/reviews/get",
+        instance_id: clientId,
+        cameras: [cam],
+        after: afterTs,
+        before: beforeTs,
+        limit
+      }),
+      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
+    });
+  }
+  async loadWindow(replace) {
+    if (this._host._isPreviewPageActive()) return;
+    if (this._host._loading) return;
+    this._host._loading = true;
+    this._host._reloadPending = false;
+    this._host._reloadAfterLoad = false;
+    if (replace) this._host._exhausted = false;
+    if (this._host._followNowWindow) {
+      const now = Math.floor(Date.now() / 1e3);
+      this._host._winEnd = now;
+      this._host._winStart = now - this._host._config.window_days * DAY;
+    }
+    const { clientId, cam } = this._host._cc();
+    if (!clientId || !cam) {
+      this._host._loading = false;
+      return;
+    }
+    const after = this._host._winStart;
+    const before = this._host._winEnd;
+    const eventsTask = this.loadWindowEvents(clientId, cam, after, before);
+    await Promise.allSettled([
+      eventsTask,
+      this._host._tab === "recordings" ? this.loadWindowRecordings(clientId, cam, before) : Promise.resolve(),
+      (async () => {
+        await eventsTask;
+        await this.loadWindowReviewsIfNeeded(clientId, cam, after, before);
+      })()
+    ]);
+    const entity = this._host._activeCam?.entity;
+    if (entity && this._host._camCache[entity]) {
+      this._host._camCache[entity].events = this._host._events;
+      this._host._camCache[entity].recordings = this._host._recordings;
+    }
+    this._host._loading = false;
+    if (this._host._reloadAfterLoad) {
+      this._host._reloadAfterLoad = false;
+      this._host._scheduleReload();
+    }
+    this._host._consumeDeepLinkReviewOpen();
+    this._host._consumeDeepLinkEventOpen();
+    if (this._host._eventsMode === "all") this._host._loadAllCamsBackground();
+    this._host._renderAll();
+  }
+  cacheActiveCamSlice(key, value) {
+    const entity = this._host._activeCam?.entity;
+    if (entity && this._host._camCache[entity]) {
+      this._host._camCache[entity][key] = value;
+    }
+  }
+  async loadWindowEvents(clientId, cam, after, before) {
+    const loadToken = ++this._host._eventsLoadToken;
+    try {
+      const initialEvents = await this.fetchWindowedEvents(
+        clientId,
+        cam,
+        after,
+        before,
+        {
+          pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+          limit: INITIAL_EVENT_FETCH_LIMIT,
+          debugLabel: "initial"
+        }
+      );
+      this._host._events = Array.isArray(initialEvents) ? initialEvents : [];
+      this.cacheActiveCamSlice("events", this._host._events);
+      this._host._renderList();
+      this._host._renderStats();
+      if (!this._host._events.length || WINDOW_FETCH_PAGE_LIMIT <= INITIAL_EVENTS_PAGE_LIMIT) {
+        return;
+      }
+      const oldest = Math.min(
+        ...this._host._events.map(
+          (item) => Math.floor(item?.start_time || before)
+        )
+      );
+      const cursorBefore = oldest - 1;
+      const activeEntity = this._host._activeCam?.entity;
+      const winStart = this._host._winStart;
+      const winEnd = this._host._winEnd;
+      void (async () => {
+        try {
+          const remainingEvents = await this.fetchWindowedEvents(
+            clientId,
+            cam,
+            after,
+            before,
+            {
+              pageLimit: Math.min(
+                WINDOW_BACKGROUND_PAGE_LIMIT,
+                Math.max(
+                  1,
+                  WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT
+                )
+              ),
+              cursorBefore,
+              debugLabel: "background"
+            }
+          );
+          if (loadToken !== this._host._eventsLoadToken) return;
+          if (activeEntity !== this._host._activeCam?.entity) return;
+          if (winStart !== this._host._winStart || winEnd !== this._host._winEnd) {
+            return;
+          }
+          if (Array.isArray(remainingEvents) && remainingEvents.length) {
+            this._host._events = this._host._events.concat(remainingEvents);
+            this.cacheActiveCamSlice("events", this._host._events);
+            this._host._renderList();
+            this._host._renderStats();
+          }
+        } catch (_) {
+        }
+      })();
+    } catch (error) {
+      console.error("[Frigate] events", error);
+      this._host._events = [];
+    }
+  }
+  async loadWindowRecordings(clientId, cam, before) {
+    const bounds = this._host._recordingsDayBounds(before);
+    const cacheKey = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
+    try {
+      const recordings = await this._host._ws({
+        type: "frigate/recordings/get",
+        instance_id: clientId,
+        camera: cam,
+        after: Math.max(0, bounds.start),
+        before: bounds.end
+      });
+      this._host._recordings = Array.isArray(recordings) ? recordings : [];
+      this._host._recordingsDayDataCache.set(cacheKey, this._host._recordings);
+      this._host._recordingsDayAvailabilityCache.set(
+        cacheKey,
+        this._host._recordings.length > 0
+      );
+      this.cacheActiveCamSlice("recordings", this._host._recordings);
+      this._host._renderList();
+    } catch (_) {
+      this._host._recordings = [];
+    }
+  }
+  async loadWindowReviewsIfNeeded(clientId, cam, _after, before) {
+    if (this._host._tab !== "alerts") return;
+    const loadToken = ++this._host._reviewsLoadToken;
+    const reviewsAfter = Math.max(
+      0,
+      Math.floor(before - (this._host._config?.alerts_reviews_days || 3) * DAY)
+    );
+    try {
+      const initialReviews = await this.fetchWindowedReviews(
+        clientId,
+        cam,
+        reviewsAfter,
+        before,
+        {
+          pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+          debugLabel: "alerts-window-initial"
+        }
+      );
+      this._host._reviews = Array.isArray(initialReviews) ? initialReviews : [];
+      this.cacheActiveCamSlice("reviews", this._host._reviews);
+      this._host._renderList();
+      this._host._slideshowAlertController.handleReviewsUpdated(
+        this._host._activeCam?.entity || "",
+        this._host._reviews,
+        "alerts-window-initial"
+      );
+      if (!this._host._reviews.length || WINDOW_FETCH_PAGE_LIMIT <= INITIAL_EVENTS_PAGE_LIMIT) {
+        return;
+      }
+      const oldest = Math.min(
+        ...this._host._reviews.map(
+          (item) => Math.floor(item?.start_time || before)
+        )
+      );
+      const cursorBefore = oldest - 1;
+      const activeEntity = this._host._activeCam?.entity;
+      const winStart = this._host._winStart;
+      const winEnd = this._host._winEnd;
+      void (async () => {
+        try {
+          const remainingReviews = await this.fetchWindowedReviews(
+            clientId,
+            cam,
+            reviewsAfter,
+            before,
+            {
+              pageLimit: Math.min(
+                WINDOW_BACKGROUND_PAGE_LIMIT,
+                Math.max(
+                  1,
+                  WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT
+                )
+              ),
+              cursorBefore,
+              debugLabel: "alerts-window-background"
+            }
+          );
+          if (loadToken !== this._host._reviewsLoadToken) return;
+          if (activeEntity !== this._host._activeCam?.entity) return;
+          if (winStart !== this._host._winStart || winEnd !== this._host._winEnd) {
+            return;
+          }
+          if (Array.isArray(remainingReviews) && remainingReviews.length) {
+            this._host._reviews = this._host._reviews.concat(remainingReviews);
+            this.cacheActiveCamSlice("reviews", this._host._reviews);
+            this._host._renderList();
+            this._host._slideshowAlertController.handleReviewsUpdated(
+              this._host._activeCam?.entity || "",
+              this._host._reviews,
+              "alerts-window-background"
+            );
+          }
+        } catch (_) {
+        }
+      })();
+    } catch (_) {
+      this._host._reviews = [];
+    }
+  }
+};
+
 // src/features/recordings/utils/availability.js
 function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
   return `${clientId}|${camera}|${bounds.start}|${bounds.end}`;
@@ -12301,59 +12682,6 @@ function extractRealtimeMessageSeverity(msg) {
   ).trim().toLowerCase();
 }
 
-// src/data/window-fetch.js
-async function fetchWindowedItems({
-  after,
-  before,
-  opts = {},
-  defaultPageLimit,
-  defaultBatchLimit,
-  useOptionLimit = true,
-  fetchBatch,
-  getItemStartTime
-}) {
-  const items = [];
-  const seen = new Set();
-  const afterTs = Math.floor(after);
-  let cursorBefore = Math.floor(
-    Number.isFinite(opts?.cursorBefore) ? opts.cursorBefore : before
-  );
-  const pageLimit = Math.max(
-    1,
-    Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : defaultPageLimit
-  );
-  const batchLimit = useOptionLimit ? Math.max(
-    1,
-    Number.isFinite(opts?.limit) ? Math.floor(opts.limit) : defaultBatchLimit
-  ) : defaultBatchLimit;
-  const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
-  for (let page = 0; page < pageLimit; page++) {
-    const batch = await fetchBatch({
-      after: afterTs,
-      before: cursorBefore,
-      limit: batchLimit,
-      page
-    });
-    if (!Array.isArray(batch) || !batch.length) break;
-    for (const item of batch) {
-      if (!item?.id || seen.has(item.id)) continue;
-      seen.add(item.id);
-      items.push(item);
-    }
-    onPage?.(items, {
-      page,
-      done: false
-    });
-    const oldest = Math.min(
-      ...batch.map((item) => Math.floor(getItemStartTime(item, before)))
-    );
-    if (batch.length < batchLimit || oldest <= afterTs) break;
-    cursorBefore = oldest - 1;
-  }
-  onPage?.(items, { page: -1, done: true });
-  return items;
-}
-
 // src/card/FrigateViewCard.js
 const FrigateViewCard = class extends HTMLElement {
   constructor() {
@@ -12611,6 +12939,7 @@ const FrigateViewCard = class extends HTMLElement {
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
     this._browseFilterController = new BrowseFilterController(this);
+    this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
@@ -14140,308 +14469,60 @@ const FrigateViewCard = class extends HTMLElement {
     return this._followNowWindow;
   }
   async _fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
-    return fetchWindowedItems({
+    return this._browseWindowLoaderController.fetchWindowedEvents(
+      clientId,
+      cam,
       after,
       before,
-      opts,
-      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
-      defaultBatchLimit: EVENT_FETCH_BATCH,
-      useOptionLimit: true,
-      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._ws({
-        type: "frigate/events/get",
-        instance_id: clientId,
-        cameras: [cam],
-        after: afterTs,
-        before: beforeTs,
-        limit
-      }),
-      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
-    });
+      opts
+    );
   }
   async _warmOtherCamerasEvents() {
-    const token = ++this._warmCamsToken;
-    const activeEntity = this._activeCam?.entity;
-    const after = this._winStart;
-    const before = this._winEnd;
-    for (const camera of this._config.cameras) {
-      if (camera.entity === activeEntity) continue;
-      const entity = camera.entity;
-      const cache = this._camCache[entity];
-      if (!cache?.clientId || !cache?.cam) continue;
-      if (Array.isArray(cache.events) && cache.events.length >= INACTIVE_WARM_EVENT_LIMIT) {
-        continue;
-      }
-      try {
-        const events = await this._fetchWindowedEvents(
-          cache.clientId,
-          cache.cam,
-          after,
-          before,
-          {
-            pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
-            limit: INACTIVE_WARM_EVENT_LIMIT,
-            debugLabel: "warm-cache"
-          }
-        );
-        if (token !== this._warmCamsToken) return;
-        if (after !== this._winStart || before !== this._winEnd) return;
-        cache.events = Array.isArray(events) ? events.slice(0, INACTIVE_WARM_EVENT_LIMIT) : [];
-      } catch (_) {
-      }
-    }
+    return this._browseWindowLoaderController.warmOtherCamerasEvents();
   }
   _scheduleWarmOtherCamerasEvents(delayMs = 1e3) {
-    if (this._warmOtherCamsDelayT) clearTimeout(this._warmOtherCamsDelayT);
-    this._warmOtherCamsDelayT = setTimeout(
-      () => {
-        this._warmOtherCamsDelayT = null;
-        if (!this.isConnected) return;
-        void this._warmOtherCamerasEvents();
-      },
-      Math.max(0, Number(delayMs) || 0)
-    );
+    this._browseWindowLoaderController.scheduleWarmOtherCamerasEvents(delayMs);
   }
   _pruneNonActiveCamWindowCaches() {
-    this._warmCamsToken++;
-    const activeEntity = this._activeCam?.entity;
-    for (const camera of this._config.cameras) {
-      const entity = camera.entity;
-      if (entity === activeEntity) continue;
-      const cache = this._camCache[entity];
-      if (!cache) continue;
-      cache.events = [];
-      cache.recordings = [];
-      cache.reviews = [];
-    }
+    this._browseWindowLoaderController.pruneNonActiveCamWindowCaches();
   }
   async _fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
-    return fetchWindowedItems({
+    return this._browseWindowLoaderController.fetchWindowedReviews(
+      clientId,
+      cam,
       after,
       before,
-      opts,
-      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
-      defaultBatchLimit: REVIEW_FETCH_BATCH,
-      useOptionLimit: false,
-      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._ws({
-        type: "frigate/reviews/get",
-        instance_id: clientId,
-        cameras: [cam],
-        after: afterTs,
-        before: beforeTs,
-        limit
-      }),
-      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
-    });
+      opts
+    );
   }
   async _loadWindow(replace) {
-    if (this._isPreviewPageActive()) return;
-    if (this._loading) return;
-    this._loading = true;
-    this._reloadPending = false;
-    this._reloadAfterLoad = false;
-    if (replace) this._exhausted = false;
-    if (this._followNowWindow) {
-      const now = Math.floor(Date.now() / 1e3);
-      this._winEnd = now;
-      this._winStart = now - this._config.window_days * DAY;
-    }
-    const { clientId, cam } = this._cc();
-    if (!clientId || !cam) {
-      this._loading = false;
-      return;
-    }
-    const after = this._winStart, before = this._winEnd;
-    const eventsTask = this._loadWindowEvents(clientId, cam, after, before);
-    await Promise.allSettled([
-      eventsTask,
-      this._tab === "recordings" ? this._loadWindowRecordings(clientId, cam, before) : Promise.resolve(),
-      (async () => {
-        await eventsTask;
-        await this._loadWindowReviewsIfNeeded(clientId, cam, after, before);
-      })()
-    ]);
-    const ent = this._activeCam?.entity;
-    if (ent && this._camCache[ent]) {
-      this._camCache[ent].events = this._events;
-      this._camCache[ent].recordings = this._recordings;
-    }
-    this._loading = false;
-    if (this._reloadAfterLoad) {
-      this._reloadAfterLoad = false;
-      this._scheduleReload();
-    }
-    this._consumeDeepLinkReviewOpen();
-    this._consumeDeepLinkEventOpen();
-    if (this._eventsMode === "all") this._loadAllCamsBackground();
-    this._renderAll();
+    await this._browseWindowLoaderController.loadWindow(replace);
   }
   _cacheActiveCamSlice(key, value) {
-    const entity = this._activeCam?.entity;
-    if (entity && this._camCache[entity]) {
-      this._camCache[entity][key] = value;
-    }
+    this._browseWindowLoaderController.cacheActiveCamSlice(key, value);
   }
   async _loadWindowEvents(clientId, cam, after, before) {
-    const loadToken = ++this._eventsLoadToken;
-    try {
-      const initialEvents = await this._fetchWindowedEvents(
-        clientId,
-        cam,
-        after,
-        before,
-        {
-          pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
-          limit: INITIAL_EVENT_FETCH_LIMIT,
-          debugLabel: "initial"
-        }
-      );
-      this._events = Array.isArray(initialEvents) ? initialEvents : [];
-      this._cacheActiveCamSlice("events", this._events);
-      this._renderList();
-      this._renderStats();
-      if (!this._events.length || WINDOW_FETCH_PAGE_LIMIT <= INITIAL_EVENTS_PAGE_LIMIT) {
-        return;
-      }
-      const oldest = Math.min(
-        ...this._events.map((item) => Math.floor(item?.start_time || before))
-      );
-      const cursorBefore = oldest - 1;
-      const activeEntity = this._activeCam?.entity;
-      const winStart = this._winStart;
-      const winEnd = this._winEnd;
-      void (async () => {
-        try {
-          const remainingEvents = await this._fetchWindowedEvents(
-            clientId,
-            cam,
-            after,
-            before,
-            {
-              pageLimit: Math.min(
-                WINDOW_BACKGROUND_PAGE_LIMIT,
-                Math.max(
-                  1,
-                  WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT
-                )
-              ),
-              cursorBefore,
-              debugLabel: "background"
-            }
-          );
-          if (loadToken !== this._eventsLoadToken) return;
-          if (activeEntity !== this._activeCam?.entity) return;
-          if (winStart !== this._winStart || winEnd !== this._winEnd) return;
-          if (Array.isArray(remainingEvents) && remainingEvents.length) {
-            this._events = this._events.concat(remainingEvents);
-            this._cacheActiveCamSlice("events", this._events);
-            this._renderList();
-            this._renderStats();
-          }
-        } catch (_) {
-        }
-      })();
-    } catch (error) {
-      console.error("[Frigate] events", error);
-      this._events = [];
-    }
+    await this._browseWindowLoaderController.loadWindowEvents(
+      clientId,
+      cam,
+      after,
+      before
+    );
   }
   async _loadWindowRecordings(clientId, cam, before) {
-    const bounds = this._recordingsDayBounds(before);
-    const cacheKey = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
-    try {
-      const recordings = await this._ws({
-        type: "frigate/recordings/get",
-        instance_id: clientId,
-        camera: cam,
-        after: Math.max(0, bounds.start),
-        before: bounds.end
-      });
-      this._recordings = Array.isArray(recordings) ? recordings : [];
-      this._recordingsDayDataCache.set(cacheKey, this._recordings);
-      this._recordingsDayAvailabilityCache.set(
-        cacheKey,
-        this._recordings.length > 0
-      );
-      this._cacheActiveCamSlice("recordings", this._recordings);
-      this._renderList();
-    } catch (_) {
-      this._recordings = [];
-    }
+    await this._browseWindowLoaderController.loadWindowRecordings(
+      clientId,
+      cam,
+      before
+    );
   }
   async _loadWindowReviewsIfNeeded(clientId, cam, after, before) {
-    if (this._tab !== "alerts") return;
-    const loadToken = ++this._reviewsLoadToken;
-    const reviewsAfter = Math.max(
-      0,
-      Math.floor(before - (this._config?.alerts_reviews_days || 3) * DAY)
+    await this._browseWindowLoaderController.loadWindowReviewsIfNeeded(
+      clientId,
+      cam,
+      after,
+      before
     );
-    try {
-      const initialReviews = await this._fetchWindowedReviews(
-        clientId,
-        cam,
-        reviewsAfter,
-        before,
-        {
-          pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
-          debugLabel: "alerts-window-initial"
-        }
-      );
-      this._reviews = Array.isArray(initialReviews) ? initialReviews : [];
-      this._cacheActiveCamSlice("reviews", this._reviews);
-      this._renderList();
-      this._slideshowAlertController.handleReviewsUpdated(
-        this._activeCam?.entity || "",
-        this._reviews,
-        "alerts-window-initial"
-      );
-      if (!this._reviews.length || WINDOW_FETCH_PAGE_LIMIT <= INITIAL_EVENTS_PAGE_LIMIT) {
-        return;
-      }
-      const oldest = Math.min(
-        ...this._reviews.map((item) => Math.floor(item?.start_time || before))
-      );
-      const cursorBefore = oldest - 1;
-      const activeEntity = this._activeCam?.entity;
-      const winStart = this._winStart;
-      const winEnd = this._winEnd;
-      void (async () => {
-        try {
-          const remainingReviews = await this._fetchWindowedReviews(
-            clientId,
-            cam,
-            reviewsAfter,
-            before,
-            {
-              pageLimit: Math.min(
-                WINDOW_BACKGROUND_PAGE_LIMIT,
-                Math.max(
-                  1,
-                  WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT
-                )
-              ),
-              cursorBefore,
-              debugLabel: "alerts-window-background"
-            }
-          );
-          if (loadToken !== this._reviewsLoadToken) return;
-          if (activeEntity !== this._activeCam?.entity) return;
-          if (winStart !== this._winStart || winEnd !== this._winEnd) return;
-          if (Array.isArray(remainingReviews) && remainingReviews.length) {
-            this._reviews = this._reviews.concat(remainingReviews);
-            this._cacheActiveCamSlice("reviews", this._reviews);
-            this._renderList();
-            this._slideshowAlertController.handleReviewsUpdated(
-              this._activeCam?.entity || "",
-              this._reviews,
-              "alerts-window-background"
-            );
-          }
-        } catch (_) {
-        }
-      })();
-    } catch (_) {
-      this._reviews = [];
-    }
   }
   async _loadKept() {
     const { clientId, cam } = this._cc();
