@@ -19,14 +19,12 @@ export class RecordingsSwipeController {
     setGesture,
     setTapBlocked,
     getList,
-    clearListState,
     getLastRenderedListHtml,
     setLastRenderedListHtml,
     renderList,
     prepareDayTransition,
     renderRecordings,
     completeGesture,
-    bounceArea,
   }) {
     this._browse = browse;
     this._getTab = getTab;
@@ -36,14 +34,12 @@ export class RecordingsSwipeController {
     this._setGesture = setGesture;
     this._setTapBlocked = setTapBlocked;
     this._getList = getList;
-    this._clearListState = clearListState;
     this._getLastRenderedListHtml = getLastRenderedListHtml;
     this._setLastRenderedListHtml = setLastRenderedListHtml;
     this._renderList = renderList;
     this._prepareDayTransition = prepareDayTransition;
     this._renderRecordings = renderRecordings;
     this._completeGesture = completeGesture;
-    this._bounceArea = bounceArea;
     this._cleanup = new CleanupController();
     this._tracking = false;
     this._horizontal = false;
@@ -214,9 +210,25 @@ export class RecordingsSwipeController {
   destroyGestureStage() {
     const state = this._getGesture?.()?.stage;
     if (!state?.list) return;
-    this._clearListState?.(state.list);
+    this.clearListState(state.list);
     this._setLastRenderedListHtml?.("");
     this._renderList?.();
+  }
+
+  clearListState(list = null) {
+    const targetList = list || this._getList?.();
+    targetList?.classList?.remove("recordings-swipe-active");
+  }
+
+  bounceArea(direction) {
+    if (!this._browse) return;
+    const cls = direction > 0 ? "swipe-bounce-next" : "swipe-bounce-prev";
+    this._browse.classList.remove("swipe-bounce-prev", "swipe-bounce-next");
+    void this._browse.offsetWidth;
+    this._browse.classList.add(cls);
+    setTimeout(() => {
+      this._browse?.classList.remove(cls);
+    }, 280);
   }
 
   startGestureStage(direction) {
@@ -346,7 +358,7 @@ export class RecordingsSwipeController {
         "cubic-bezier(0.16, 0.64, 0.2, 1)",
       );
       if (this._disposed) return;
-      this._bounceArea?.(direction);
+      this.bounceArea(direction);
     }
     this._scheduleTapBlockClear();
     this._resetGesture({ clearTapBlock: false });

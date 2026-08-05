@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1216";
+const VERSION = "1.0.1217";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9459,14 +9459,12 @@ const RecordingsSwipeController = class {
     setGesture,
     setTapBlocked,
     getList,
-    clearListState,
     getLastRenderedListHtml,
     setLastRenderedListHtml,
     renderList,
     prepareDayTransition,
     renderRecordings,
-    completeGesture,
-    bounceArea
+    completeGesture
   }) {
     __publicField(this, "_canSwipe", () => this._getTab?.() === "recordings" && this._isMobileTabletViewport?.() && !this._isDayNavAnimating?.());
     __publicField(this, "_resetGesture", ({ clearTapBlock = true } = {}) => {
@@ -9529,7 +9527,7 @@ const RecordingsSwipeController = class {
           "cubic-bezier(0.16, 0.64, 0.2, 1)"
         );
         if (this._disposed) return;
-        this._bounceArea?.(direction);
+        this.bounceArea(direction);
       }
       this._scheduleTapBlockClear();
       this._resetGesture({ clearTapBlock: false });
@@ -9560,14 +9558,12 @@ const RecordingsSwipeController = class {
     this._setGesture = setGesture;
     this._setTapBlocked = setTapBlocked;
     this._getList = getList;
-    this._clearListState = clearListState;
     this._getLastRenderedListHtml = getLastRenderedListHtml;
     this._setLastRenderedListHtml = setLastRenderedListHtml;
     this._renderList = renderList;
     this._prepareDayTransition = prepareDayTransition;
     this._renderRecordings = renderRecordings;
     this._completeGesture = completeGesture;
-    this._bounceArea = bounceArea;
     this._cleanup = new CleanupController();
     this._tracking = false;
     this._horizontal = false;
@@ -9689,9 +9685,23 @@ const RecordingsSwipeController = class {
   destroyGestureStage() {
     const state = this._getGesture?.()?.stage;
     if (!state?.list) return;
-    this._clearListState?.(state.list);
+    this.clearListState(state.list);
     this._setLastRenderedListHtml?.("");
     this._renderList?.();
+  }
+  clearListState(list = null) {
+    const targetList = list || this._getList?.();
+    targetList?.classList?.remove("recordings-swipe-active");
+  }
+  bounceArea(direction) {
+    if (!this._browse) return;
+    const cls = direction > 0 ? "swipe-bounce-next" : "swipe-bounce-prev";
+    this._browse.classList.remove("swipe-bounce-prev", "swipe-bounce-next");
+    void this._browse.offsetWidth;
+    this._browse.classList.add(cls);
+    setTimeout(() => {
+      this._browse?.classList.remove(cls);
+    }, 280);
   }
   startGestureStage(direction) {
     const stage = this.createStage(direction, RECORDINGS_SWIPE_LOADING_HTML);
@@ -15703,7 +15713,6 @@ const FrigateViewCard = class extends HTMLElement {
         this._recordingsSwipeBlockTap = blocked;
       },
       getList: () => this._$("#list"),
-      clearListState: (list) => this._clearRecordingsSwipeListState(list),
       getLastRenderedListHtml: () => this._lastRenderedListHtml,
       setLastRenderedListHtml: (html) => {
         this._lastRenderedListHtml = html;
@@ -15711,8 +15720,7 @@ const FrigateViewCard = class extends HTMLElement {
       renderList: () => this._renderList(),
       prepareDayTransition: (direction) => this._prepareRecordingsDayTransition(direction),
       renderRecordings: (recordings) => this._recordingsListMarkup(this._recordingsViewRows(recordings)),
-      completeGesture: (gesture) => this._completeRecordingsSwipeGesture(gesture),
-      bounceArea: (direction) => this._bounceRecordingsArea(direction)
+      completeGesture: (gesture) => this._completeRecordingsSwipeGesture(gesture)
     });
     this._recordingsSwipeController.bind();
   }
@@ -15752,8 +15760,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._recordingsSwipeController?.destroyGestureStage();
   }
   _clearRecordingsSwipeListState(list = null) {
-    const targetList = list || this._$("#list");
-    targetList?.classList?.remove("recordings-swipe-active");
+    this._recordingsSwipeController?.clearListState(list);
   }
   _startRecordingsSwipeGesture(direction) {
     return this._recordingsSwipeController?.startGestureStage(direction) || null;
@@ -15774,15 +15781,7 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _bounceRecordingsArea(direction) {
-    const browse = this._$("#browse");
-    if (!browse) return;
-    const cls = direction > 0 ? "swipe-bounce-next" : "swipe-bounce-prev";
-    browse.classList.remove("swipe-bounce-prev", "swipe-bounce-next");
-    void browse.offsetWidth;
-    browse.classList.add(cls);
-    setTimeout(() => {
-      browse.classList.remove(cls);
-    }, 280);
+    this._recordingsSwipeController?.bounceArea(direction);
   }
   _scrollEventsToTop() {
     const list = this._$("#list");

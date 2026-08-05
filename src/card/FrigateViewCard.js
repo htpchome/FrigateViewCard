@@ -2862,7 +2862,6 @@ export class FrigateViewCard extends HTMLElement {
         this._recordingsSwipeBlockTap = blocked;
       },
       getList: () => this._$("#list"),
-      clearListState: (list) => this._clearRecordingsSwipeListState(list),
       getLastRenderedListHtml: () => this._lastRenderedListHtml,
       setLastRenderedListHtml: (html) => {
         this._lastRenderedListHtml = html;
@@ -2874,7 +2873,6 @@ export class FrigateViewCard extends HTMLElement {
         this._recordingsListMarkup(this._recordingsViewRows(recordings)),
       completeGesture: (gesture) =>
         this._completeRecordingsSwipeGesture(gesture),
-      bounceArea: (direction) => this._bounceRecordingsArea(direction),
     });
     this._recordingsSwipeController.bind();
   }
@@ -2928,8 +2926,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _clearRecordingsSwipeListState(list = null) {
-    const targetList = list || this._$("#list");
-    targetList?.classList?.remove("recordings-swipe-active");
+    this._recordingsSwipeController?.clearListState(list);
   }
 
   _startRecordingsSwipeGesture(direction) {
@@ -2958,15 +2955,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _bounceRecordingsArea(direction) {
-    const browse = this._$("#browse");
-    if (!browse) return;
-    const cls = direction > 0 ? "swipe-bounce-next" : "swipe-bounce-prev";
-    browse.classList.remove("swipe-bounce-prev", "swipe-bounce-next");
-    void browse.offsetWidth;
-    browse.classList.add(cls);
-    setTimeout(() => {
-      browse.classList.remove(cls);
-    }, 280);
+    this._recordingsSwipeController?.bounceArea(direction);
   }
 
   _scrollEventsToTop() {

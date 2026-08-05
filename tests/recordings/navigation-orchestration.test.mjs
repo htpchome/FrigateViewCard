@@ -128,6 +128,11 @@ function createCommitContext({
       _recordings: [],
       _recordingsDayDataCache: dataCache,
       _recordingsDayAvailabilityCache: availabilityCache,
+      _recordingsSwipeController: {
+        clearListState(targetList = null) {
+          (targetList || list)?.classList?.remove?.("recordings-swipe-active");
+        },
+      },
       _cc() {
         return { clientId, cam: camera };
       },

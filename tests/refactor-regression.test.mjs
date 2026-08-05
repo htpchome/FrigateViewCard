@@ -1306,13 +1306,19 @@ test("recordings swipe stage helpers delegate through the recordings swipe contr
     true,
   );
   assert.equal(
-    /_createRecordingsSwipeStage\(direction, incomingHtml\) \{\s*return this\._recordingsSwipeController\?\.createStage\(direction, incomingHtml\);\s*\}/s.test(
+    /_createRecordingsSwipeStage\(direction, incomingHtml\) \{\s*return this\._recordingsSwipeController\?\.createStage\([\s\S]*?direction,[\s\S]*?incomingHtml,[\s\S]*?\);\s*\}/s.test(
       cardSource,
     ),
     true,
   );
   assert.equal(
     /_setRecordingsSwipeStageOffset\(state, offset, transition = ""\) \{\s*this\._recordingsSwipeController\?\.setStageOffset\(state, offset, transition\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_clearRecordingsSwipeListState\(list = null\) \{\s*this\._recordingsSwipeController\?\.clearListState\(list\);\s*\}/s.test(
       cardSource,
     ),
     true,
@@ -1330,7 +1336,13 @@ test("recordings swipe stage helpers delegate through the recordings swipe contr
     true,
   );
   assert.equal(
-    /_startRecordingsSwipeGesture\(direction\) \{\s*return this\._recordingsSwipeController\?\.startGestureStage\(direction\) \|\| null;\s*\}/s.test(
+    /_bounceRecordingsArea\(direction\) \{\s*this\._recordingsSwipeController\?\.bounceArea\(direction\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_startRecordingsSwipeGesture\(direction\) \{\s*return \([\s\S]*?this\._recordingsSwipeController\?\.startGestureStage\(direction\) \|\| null[\s\S]*?\);\s*\}/s.test(
       cardSource,
     ),
     true,
@@ -1349,6 +1361,14 @@ test("recordings swipe stage helpers delegate through the recordings swipe contr
   );
   assert.equal(
     recordingsSwipeControllerSource.includes("animateStageTo("),
+    true,
+  );
+  assert.equal(
+    recordingsSwipeControllerSource.includes("clearListState(list = null)"),
+    true,
+  );
+  assert.equal(
+    recordingsSwipeControllerSource.includes("bounceArea(direction)"),
     true,
   );
   assert.equal(

@@ -99,14 +99,13 @@ test("RecordingsSwipeController disposes listeners and resets gesture state", as
       tapBlocked = next;
     },
     getList: () => list,
-    clearListState: () => {
-      destroyed += 1;
-    },
     getLastRenderedListHtml: () => lastRenderedListHtml,
     setLastRenderedListHtml: (value) => {
       lastRenderedListHtml = value;
     },
-    renderList: () => {},
+    renderList: () => {
+      destroyed += 1;
+    },
     prepareDayTransition: async () => ({
       hasData: false,
       bounds: null,
@@ -181,8 +180,6 @@ test("RecordingsSwipeController owns swipe-stage creation and prep loading state
     },
     setTapBlocked: () => {},
     getList: () => list,
-    clearListState: (target) =>
-      target?.classList?.remove?.("recordings-swipe-active"),
     getLastRenderedListHtml: () => lastRenderedListHtml,
     setLastRenderedListHtml: (value) => {
       lastRenderedListHtml = value;
@@ -209,4 +206,37 @@ test("RecordingsSwipeController owns swipe-stage creation and prep loading state
   assert.equal(nextGesture.stage.incoming.innerHTML, "rows:1");
   controller.destroyGestureStage();
   assert.equal(lastRenderedListHtml, "");
+});
+
+test("RecordingsSwipeController owns list-state cleanup and bounce classes", () => {
+  const browse = createFakeBrowse();
+  const listClasses = new Set(["recordings-swipe-active"]);
+  const list = {
+    classList: {
+      add: (token) => listClasses.add(token),
+      remove: (token) => listClasses.delete(token),
+    },
+  };
+  const controller = new RecordingsSwipeController({
+    browse,
+    getTab: () => "recordings",
+    isMobileTabletViewport: () => true,
+    isDayNavAnimating: () => false,
+    getGesture: () => null,
+    setGesture: () => {},
+    setTapBlocked: () => {},
+    getList: () => list,
+    getLastRenderedListHtml: () => "",
+    setLastRenderedListHtml: () => {},
+    renderList: () => {},
+    prepareDayTransition: async () => null,
+    renderRecordings: () => "",
+    completeGesture: async () => false,
+  });
+
+  controller.clearListState();
+  controller.bounceArea(1);
+
+  assert.equal(listClasses.has("recordings-swipe-active"), false);
+  assert.equal(browse.classList.contains("swipe-bounce-next"), true);
 });
