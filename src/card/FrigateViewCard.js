@@ -199,8 +199,8 @@ import {
   RecordingScrubController,
   buildRecordingScrubDecorations,
   buildPreparedRecordingsDayResult,
-  buildRecordingsDayCacheKey,
   buildRecordingsListMarkup,
+  RecordingsBrowseNavController,
   RecordingsSwipeController,
   createRecordingsSwipeGestureState,
   formatRecordingScrubTime,
@@ -209,10 +209,7 @@ import {
   normalizeFetchedRecordingsAvailability,
   RECORDINGS_SWIPE_EMPTY_HTML,
   RECORDINGS_SWIPE_LOADING_HTML,
-  resolveCachedRecordingsAvailability,
   resolveCommittedRecordingsDayState,
-  resolveFailedRecordingsAvailabilityState,
-  resolveFetchedRecordingsAvailabilityState,
   resolveFailedRecordingsSwipeState,
   resolveClosestRecordingAlertStart,
   resolveRecordingSeekExecutionPlan,
@@ -608,6 +605,9 @@ export class FrigateViewCard extends HTMLElement {
     this._recordingsDayNavAnimating = false;
     this._recordingsSwipeGesture = null;
     this._recordingsSwipeBlockTap = false;
+    this._recordingsBrowseNavController = new RecordingsBrowseNavController(
+      this,
+    );
     this._recordingsSwipeController = null;
     this._recordingHls = null;
     this._hlsJsCtorPromise = null;
@@ -5200,88 +5200,15 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _hasRecordingsInBounds(bounds, clientId, cam) {
-    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
-    const cached = resolveCachedRecordingsAvailability({
-      key,
-      dataCache: this._recordingsDayDataCache,
-      availabilityCache: this._recordingsDayAvailabilityCache,
-    });
-    if (cached.found) {
-      if (cached.shouldSyncAvailability) {
-        this._recordingsDayAvailabilityCache.set(key, cached.hasRecordings);
-      }
-      return cached.hasRecordings;
-    }
-    try {
-      const recs = await this._ws({
-        type: "frigate/recordings/get",
-        instance_id: clientId,
-        camera: cam,
-        after: Math.max(0, bounds.start),
-        before: bounds.end,
-      });
-      const fetched = resolveFetchedRecordingsAvailabilityState(recs);
-      this._recordingsDayDataCache.set(key, fetched.recordings);
-      this._recordingsDayAvailabilityCache.set(key, fetched.availabilityValue);
-      return fetched.hasRecordings;
-    } catch (_) {
-      const failed = resolveFailedRecordingsAvailabilityState();
-      this._recordingsDayAvailabilityCache.set(key, failed.availabilityValue);
-      return failed.hasRecordings;
-    }
-  }
-
-  async _updateRecordingsBrowseNav() {
-    if (this._tab !== "recordings") return;
-    const prev = this._$("#rec-day-prev");
-    const next = this._$("#rec-day-next");
-    if (!prev || !next) return;
-
-    const { clientId, cam } = this._cc();
-    const current = this._recordingsDayBounds();
-    const today = this._recordingsDayBounds(Math.floor(Date.now() / 1000));
-    const probePlan = resolveRecordingsBrowseNavProbePlan({
-      clientId,
-      camera: cam,
-      currentBounds: current,
-      todayBounds: today,
-      prevBounds: this._recordingsOffsetDayBounds(-1),
-      nextBounds: this._recordingsOffsetDayBounds(1),
-    });
-    if (!probePlan.hasContext) {
-      prev.disabled = probePlan.initialState.prevDisabled;
-      next.disabled = probePlan.initialState.nextDisabled;
-      return;
-    }
-
-    const token = ++this._recordingsNavUpdateToken;
-    prev.disabled = true;
-    next.disabled = true;
-    const hasPrev = await this._hasRecordingsInBounds(
-      probePlan.prevProbeBounds,
+    return this._recordingsBrowseNavController.hasRecordingsInBounds(
+      bounds,
       clientId,
       cam,
     );
-    if (token !== this._recordingsNavUpdateToken) return;
+  }
 
-    let hasNext = false;
-    if (probePlan.nextProbeBounds) {
-      hasNext = await this._hasRecordingsInBounds(
-        probePlan.nextProbeBounds,
-        clientId,
-        cam,
-      );
-      if (token !== this._recordingsNavUpdateToken) return;
-    }
-
-    const resolvedNavState = resolveRecordingsBrowseNavState({
-      currentBounds: current,
-      todayBounds: today,
-      hasPrev,
-      hasNext,
-    });
-    prev.disabled = resolvedNavState.prevDisabled;
-    next.disabled = resolvedNavState.nextDisabled;
+  async _updateRecordingsBrowseNav() {
+    await this._recordingsBrowseNavController.updateBrowseNav();
   }
 
   async _stepRecordingsDay(dir) {

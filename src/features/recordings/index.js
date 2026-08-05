@@ -41,6 +41,7 @@ export { buildRecordingsListMarkup } from "./recordings.tmpl.js";
 export { splitRecordingsHourly } from "./utils/segment.js";
 
 export { RecordingsSwipeController } from "./swipe.ctrl.js";
+export { RecordingsBrowseNavController } from "./browse-nav.ctrl.js";
 
 export {
   createRecordingsSwipeGestureState,

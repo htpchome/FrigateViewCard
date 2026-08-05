@@ -45,6 +45,8 @@ globalThis.HTMLElement =
 globalThis.HTMLImageElement = globalThis.HTMLImageElement || class {};
 
 const { FrigateViewCard } = await import("../../src/card/FrigateViewCard.js");
+const { RecordingsBrowseNavController } =
+  await import("../../src/features/recordings/index.js");
 
 function createBrowseNavContext({
   clientId = "client-a",
@@ -201,8 +203,13 @@ test("_updateRecordingsBrowseNav disables both buttons without camera context", 
   const { ctx, prev, next, probes } = createBrowseNavContext({
     clientId: "",
   });
+  const controller = new RecordingsBrowseNavController(ctx);
+  controller.hasRecordingsInBounds = async (bounds) => {
+    probes.push(bounds);
+    return false;
+  };
 
-  await FrigateViewCard.prototype._updateRecordingsBrowseNav.call(ctx);
+  await controller.updateBrowseNav();
 
   assert.equal(prev.disabled, true);
   assert.equal(next.disabled, true);
@@ -220,8 +227,15 @@ test("_updateRecordingsBrowseNav probes previous and next days before today", as
     hasPrev: true,
     hasNext: false,
   });
+  const controller = new RecordingsBrowseNavController(ctx);
+  controller.hasRecordingsInBounds = async (bounds) => {
+    probes.push(bounds);
+    if (bounds === prevBounds) return true;
+    if (bounds === nextBounds) return false;
+    return false;
+  };
 
-  await FrigateViewCard.prototype._updateRecordingsBrowseNav.call(ctx);
+  await controller.updateBrowseNav();
 
   assert.deepEqual(probes, [prevBounds, nextBounds]);
   assert.equal(prev.disabled, false);
@@ -239,12 +253,53 @@ test("_updateRecordingsBrowseNav skips next-day probing on today", async () => {
     hasPrev: false,
     hasNext: true,
   });
+  const controller = new RecordingsBrowseNavController(ctx);
+  controller.hasRecordingsInBounds = async (bounds) => {
+    probes.push(bounds);
+    if (bounds === prevBounds) return false;
+    if (bounds === nextBounds) return true;
+    return false;
+  };
 
-  await FrigateViewCard.prototype._updateRecordingsBrowseNav.call(ctx);
+  await controller.updateBrowseNav();
 
   assert.deepEqual(probes, [prevBounds]);
   assert.equal(prev.disabled, true);
   assert.equal(next.disabled, true);
+});
+
+test("hasRecordingsInBounds syncs cache hits and fetches uncached availability", async () => {
+  const dataCache = new Map([["client-a|front|0|99", [{ id: 1 }]]]);
+  const availabilityCache = new Map();
+  const host = {
+    _recordingsDayDataCache: dataCache,
+    _recordingsDayAvailabilityCache: availabilityCache,
+    _ws: async ({ before }) => {
+      if (before === 199) return [{ id: 2 }];
+      return [];
+    },
+  };
+  const controller = new RecordingsBrowseNavController(host);
+
+  assert.equal(
+    await controller.hasRecordingsInBounds(
+      { start: 0, end: 99 },
+      "client-a",
+      "front",
+    ),
+    true,
+  );
+  assert.equal(availabilityCache.get("client-a|front|0|99"), true);
+  assert.equal(
+    await controller.hasRecordingsInBounds(
+      { start: 100, end: 199 },
+      "client-a",
+      "front",
+    ),
+    true,
+  );
+  assert.deepEqual(dataCache.get("client-a|front|100|199"), [{ id: 2 }]);
+  assert.equal(availabilityCache.get("client-a|front|100|199"), true);
 });
 
 test("_commitRecordingsDayTransition updates caches and render state with camera context", async () => {

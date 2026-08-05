@@ -90,6 +90,10 @@ const browseWindowLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/browse/window-loader.ctrl.js", import.meta.url),
   "utf8",
 );
+const recordingsBrowseNavControllerSource = fs.readFileSync(
+  new URL("../src/features/recordings/browse-nav.ctrl.js", import.meta.url),
+  "utf8",
+);
 const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
@@ -1189,6 +1193,44 @@ test("browse window loading delegates through the browse window loader controlle
   );
   assert.equal(
     browseWindowLoaderControllerSource.includes("async loadOlder()"),
+    true,
+  );
+});
+
+test("recordings browse nav delegates through the recordings browse nav controller", () => {
+  assert.equal(cardSource.includes("RecordingsBrowseNavController,"), true);
+  assert.equal(
+    /this\._recordingsBrowseNavController\s*=\s*new RecordingsBrowseNavController\(\s*this,?\s*\)/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _hasRecordingsInBounds\(bounds, clientId, cam\) \{\s*return this\._recordingsBrowseNavController\.hasRecordingsInBounds\(/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /async _updateRecordingsBrowseNav\(\) \{\s*await this\._recordingsBrowseNavController\.updateBrowseNav\(\);\s*\}/s.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes(
+      "export class RecordingsBrowseNavController",
+    ),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes(
+      "async hasRecordingsInBounds(bounds, clientId, cam)",
+    ),
+    true,
+  );
+  assert.equal(
+    recordingsBrowseNavControllerSource.includes("async updateBrowseNav()"),
     true,
   );
 });

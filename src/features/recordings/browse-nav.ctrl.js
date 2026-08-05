@@ -1,0 +1,112 @@
+import {
+  buildRecordingsDayCacheKey,
+  resolveCachedRecordingsAvailability,
+  resolveFailedRecordingsAvailabilityState,
+  resolveFetchedRecordingsAvailabilityState,
+} from "./utils/availability.js";
+import {
+  resolveRecordingsBrowseNavProbePlan,
+  resolveRecordingsBrowseNavState,
+} from "./utils/browse-nav.js";
+
+export class RecordingsBrowseNavController {
+  constructor(host) {
+    this._host = host;
+  }
+
+  async hasRecordingsInBounds(bounds, clientId, cam) {
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    const cached = resolveCachedRecordingsAvailability({
+      key,
+      dataCache: this._host._recordingsDayDataCache,
+      availabilityCache: this._host._recordingsDayAvailabilityCache,
+    });
+    if (cached.found) {
+      if (cached.shouldSyncAvailability) {
+        this._host._recordingsDayAvailabilityCache.set(
+          key,
+          cached.hasRecordings,
+        );
+      }
+      return cached.hasRecordings;
+    }
+    try {
+      const recordings = await this._host._ws({
+        type: "frigate/recordings/get",
+        instance_id: clientId,
+        camera: cam,
+        after: Math.max(0, bounds.start),
+        before: bounds.end,
+      });
+      const fetched = resolveFetchedRecordingsAvailabilityState(recordings);
+      this._host._recordingsDayDataCache.set(key, fetched.recordings);
+      this._host._recordingsDayAvailabilityCache.set(
+        key,
+        fetched.availabilityValue,
+      );
+      return fetched.hasRecordings;
+    } catch (_) {
+      const failed = resolveFailedRecordingsAvailabilityState();
+      this._host._recordingsDayAvailabilityCache.set(
+        key,
+        failed.availabilityValue,
+      );
+      return failed.hasRecordings;
+    }
+  }
+
+  async updateBrowseNav() {
+    if (this._host._tab !== "recordings") return;
+    const prev = this._host._$("#rec-day-prev");
+    const next = this._host._$("#rec-day-next");
+    if (!prev || !next) return;
+
+    const { clientId, cam } = this._host._cc();
+    const current = this._host._recordingsDayBounds();
+    const today = this._host._recordingsDayBounds(
+      Math.floor(Date.now() / 1000),
+    );
+    const probePlan = resolveRecordingsBrowseNavProbePlan({
+      clientId,
+      camera: cam,
+      currentBounds: current,
+      todayBounds: today,
+      prevBounds: this._host._recordingsOffsetDayBounds(-1),
+      nextBounds: this._host._recordingsOffsetDayBounds(1),
+    });
+    if (!probePlan.hasContext) {
+      prev.disabled = probePlan.initialState.prevDisabled;
+      next.disabled = probePlan.initialState.nextDisabled;
+      return;
+    }
+
+    const token = ++this._host._recordingsNavUpdateToken;
+    prev.disabled = true;
+    next.disabled = true;
+    const hasPrev = await this.hasRecordingsInBounds(
+      probePlan.prevProbeBounds,
+      clientId,
+      cam,
+    );
+    if (token !== this._host._recordingsNavUpdateToken) return;
+
+    let hasNext = false;
+    if (probePlan.nextProbeBounds) {
+      hasNext = await this.hasRecordingsInBounds(
+        probePlan.nextProbeBounds,
+        clientId,
+        cam,
+      );
+      if (token !== this._host._recordingsNavUpdateToken) return;
+    }
+
+    const resolvedNavState = resolveRecordingsBrowseNavState({
+      currentBounds: current,
+      todayBounds: today,
+      hasPrev,
+      hasNext,
+    });
+    prev.disabled = resolvedNavState.prevDisabled;
+    next.disabled = resolvedNavState.nextDisabled;
+  }
+}
