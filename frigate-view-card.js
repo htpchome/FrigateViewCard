@@ -490,7 +490,7 @@ const STYLES = `
   .viewer video,.viewer img.snap{width:100%;height:100%;object-fit:contain;
     background:var(--c-bg-deep);}
   .viewer .ld{color:var(--c-text2);font-size:0.975rem;}
-  .ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--c-text2);background:linear-gradient(145deg,#1a2540,#0d1520);}
+  .ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--c-text2);background:linear-gradient(145deg,#1a2540,#0d1520);}
   .ph svg{width:40px;height:40px;opacity:.35;}
   .live-grid{width:100%;height:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:6px;padding:6px;box-sizing:border-box;}
   .live-grid-cell{position:relative;overflow:hidden;border-radius:calc(var(--fvc-border-radius) / 2);background:var(--c-bg-deep);border:1px solid var(--c-border2);}
