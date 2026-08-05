@@ -10,6 +10,10 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
+const browseStandardRendererSource = fs.readFileSync(
+  new URL("../src/features/browse/standard-renderer.js", import.meta.url),
+  "utf8",
+);
 const go2rtcResolverSource = fs.readFileSync(
   new URL("../src/integrations/frigate/go2rtc-resolver.js", import.meta.url),
   "utf8",
@@ -1201,6 +1205,29 @@ test("browse window loading delegates through the browse window loader controlle
   );
   assert.equal(
     browseWindowLoaderControllerSource.includes("resolveRecordingsDayBounds"),
+    true,
+  );
+});
+
+test("standard browse rendering support does not live in the card folder", () => {
+  assert.equal(cardSource.includes("standardPageListHeadingLabel("), false);
+  assert.equal(cardSource.includes("renderStandardPageEventsContent("), false);
+  assert.equal(
+    browseStandardRendererSource.includes(
+      "export function renderStandardPageEventsContent",
+    ),
+    true,
+  );
+  assert.equal(
+    browseStandardRendererSource.includes(
+      "export function renderStandardPageReviewsContent",
+    ),
+    true,
+  );
+  assert.equal(
+    browseStandardRendererSource.includes(
+      "export function renderStandardPageListLabel",
+    ),
     true,
   );
 });

@@ -16,7 +16,7 @@ import {
   standardPageShowStickyDayHeaders,
   standardPageSubtitleText,
   syncStandardPageStatus,
-} from "../../card/standard-renderer.js";
+} from "../browse/standard-renderer.js";
 import { applyMobileViewPageMarkup } from "./page.tmpl.js";
 
 export class MobileViewPageController {

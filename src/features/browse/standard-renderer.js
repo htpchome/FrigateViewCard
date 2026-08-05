@@ -1,13 +1,13 @@
-import { CAM_COLORS, cap, camDisplayName, labelColor } from "../helpers.js";
+import { CAM_COLORS, cap, camDisplayName, labelColor } from "../../helpers.js";
 import {
   buildCamSwitcherMarkup,
   resolveSubtitleText,
-} from "./controls/shell-nav.tmpl.js";
+} from "../../card/controls/shell-nav.tmpl.js";
 import {
   appendEndMarker,
   buildStickyDaySectionsHtml,
   resolveActiveDayLabelFromScroll,
-} from "../shared/list-render.js";
+} from "../../shared/list-render.js";
 import {
   buildMobileViewCamSwitcherMarkup,
   resolveMobileViewEventsCountText,
@@ -16,8 +16,8 @@ import {
   resolveMobileViewStreamTypeText,
   resolveMobileViewSubtitleText,
   resolveMobileViewTitleText,
-} from "../features/mobile-view/page.tmpl.js";
-import { ICONS } from "../icons.js";
+} from "../mobile-view/page.tmpl.js";
+import { ICONS } from "../../icons.js";
 
 function cameraName(camera) {
   return cap(camDisplayName(camera));
