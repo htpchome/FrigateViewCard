@@ -27,6 +27,12 @@ export function buildTabsMarkup({
   isGridModeAvailable,
   isSlideshowRotationAvailable,
   isSlideshowActive,
+  isControlsVisible,
+  controlsDisabled,
+  gridDisabled,
+  slideshowDisabled,
+  filterDisabled,
+  calendarDisabled,
   gridButtonIcon,
   slideshowButtonIcon,
 }) {
@@ -43,28 +49,29 @@ export function buildTabsMarkup({
       : id === activeTab
         ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>`
         : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
-  const filterDisabled = activeTab === "recordings";
+  const resolvedFilterDisabled = filterDisabled || activeTab === "recordings";
+  const controlsHidden = isControlsVisible === false;
   const gridHidden = !isGridModeAvailable;
   const gridActive = viewMode === "grid";
   const gridButton = gridHidden
     ? ""
-    : `<button class="tool${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}">${gridButtonIcon}</button>`;
+    : `<button class="tool${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}" ${gridDisabled ? "disabled" : ""}>${gridButtonIcon}</button>`;
   const slideshowHidden = !isSlideshowRotationAvailable;
   const slideshowActive = isSlideshowActive;
   const slideshowButton = slideshowHidden
     ? ""
-    : `<button class="tool slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}">${slideshowButtonIcon}</button>`;
+    : `<button class="tool slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button>`;
   const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
       ${tabMarkup("clips", icons.clips, "Clips")}
       ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
       ${tabMarkup("recordings", icons.recordings, "Recordings")}
       ${tabMarkup("kept", icons.star, "Kept events")}
       <div class="tl-tools" style=" margin-left: auto;">
-        <button class="tool${activeTab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${activeTab === "controls" ? "true" : "false"}">${icons.bullseye}</button>
+        ${controlsHidden ? "" : `<button class="tool${activeTab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${activeTab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
         ${gridButton}
         ${slideshowButton}
-        <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${filterDisabled ? "disabled" : ""}>${icons.filter}</button>
-        <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}">${icons.calendar}</button>
+        <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
+        <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}" ${calendarDisabled ? "disabled" : ""}>${icons.calendar}</button>
       </div>`;
   return { activeTab, markup };
 }

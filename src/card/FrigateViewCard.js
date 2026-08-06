@@ -2140,13 +2140,33 @@ export class FrigateViewCard extends HTMLElement {
     }, 250);
   }
 
+  _isControlsButtonVisible() {
+    return hasCameraPtz(this._activeCam);
+  }
+
+  _toolbarButtonStates() {
+    const inGrid = this._viewMode === "grid";
+    const inControls = this._tab === "controls";
+    const slideshowActive = this._slideshowActive === true;
+    return {
+      controlsVisible: this._isControlsButtonVisible(),
+      controlsDisabled: inGrid || slideshowActive,
+      gridDisabled: inControls || slideshowActive,
+      slideshowDisabled: inControls || inGrid,
+      filterDisabled: inControls,
+      calendarDisabled: inControls,
+    };
+  }
+
   _syncToolbarButtons() {
+    const buttonStates = this._toolbarButtonStates();
     const gridBtn = this._$("#grid-btn");
     if (gridBtn) {
       const gridAvailable = this._isGridModeAvailable();
       const gridActive = this._viewMode === "grid";
       gridBtn.hidden = !gridAvailable;
       gridBtn.style.display = gridAvailable ? "" : "none";
+      gridBtn.disabled = buttonStates.gridDisabled;
       gridBtn.classList.toggle("active", gridAvailable && gridActive);
       gridBtn.setAttribute(
         "aria-pressed",
@@ -2174,6 +2194,7 @@ export class FrigateViewCard extends HTMLElement {
       const available = this._isSlideshowRotationAvailable();
       slideshowBtn.hidden = !available;
       slideshowBtn.style.display = available ? "" : "none";
+      slideshowBtn.disabled = buttonStates.slideshowDisabled;
       slideshowBtn.classList.toggle(
         "active",
         this._slideshowActive && available,
@@ -2200,6 +2221,9 @@ export class FrigateViewCard extends HTMLElement {
 
     const controlsBtn = this._$("#controls-btn");
     if (controlsBtn) {
+      controlsBtn.hidden = !buttonStates.controlsVisible;
+      controlsBtn.style.display = buttonStates.controlsVisible ? "" : "none";
+      controlsBtn.disabled = buttonStates.controlsDisabled;
       const controlsActive = this._tab === "controls";
       controlsBtn.classList.toggle("active", controlsActive);
       controlsBtn.setAttribute(
@@ -2211,6 +2235,7 @@ export class FrigateViewCard extends HTMLElement {
     const filterBtn = this._$("#filter-btn");
     if (filterBtn) {
       const filterOpen = this._$("#filter-panel")?.style.display !== "none";
+      filterBtn.disabled = buttonStates.filterDisabled;
       filterBtn.classList.toggle("active", filterOpen);
       filterBtn.setAttribute("aria-pressed", filterOpen ? "true" : "false");
     }
@@ -2218,8 +2243,13 @@ export class FrigateViewCard extends HTMLElement {
     const calBtn = this._$("#cal-btn");
     if (calBtn) {
       const calOpen = this._$("#cal-panel")?.style.display !== "none";
+      calBtn.disabled = buttonStates.calendarDisabled;
       calBtn.classList.toggle("active", calOpen);
       calBtn.setAttribute("aria-pressed", calOpen ? "true" : "false");
+    }
+
+    if (!buttonStates.controlsVisible && this._tab === "controls") {
+      this._setTab(this._resolveControlsReturnTab());
     }
   }
 
@@ -2713,6 +2743,7 @@ export class FrigateViewCard extends HTMLElement {
       !!filterPanel && filterPanel.style.display !== "none";
     const calendarPanelOpen =
       !!calendarPanel && calendarPanel.style.display !== "none";
+    const buttonStates = this._toolbarButtonStates();
     const { activeTab, markup } = buildTabsMarkup({
       tab: this._tab,
       hiddenTabs: this._config.hidden_tabs,
@@ -2723,6 +2754,12 @@ export class FrigateViewCard extends HTMLElement {
       isGridModeAvailable: this._isGridModeAvailable(),
       isSlideshowRotationAvailable: this._isSlideshowRotationAvailable(),
       isSlideshowActive: this._slideshowActive,
+      isControlsVisible: buttonStates.controlsVisible,
+      controlsDisabled: buttonStates.controlsDisabled,
+      gridDisabled: buttonStates.gridDisabled,
+      slideshowDisabled: buttonStates.slideshowDisabled,
+      filterDisabled: buttonStates.filterDisabled,
+      calendarDisabled: buttonStates.calendarDisabled,
       gridButtonIcon: this._gridButtonIcon(),
       slideshowButtonIcon: this._slideshowButtonIcon(),
     });
@@ -3461,11 +3498,15 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handleTopToolbarClick(target) {
-    if (target.closest("#grid-btn")) {
+    const gridBtn = target.closest("#grid-btn");
+    if (gridBtn) {
+      if (gridBtn.disabled) return true;
       this._toggleGridMode();
       return true;
     }
-    if (target.closest("#slideshow-btn")) {
+    const slideshowBtn = target.closest("#slideshow-btn");
+    if (slideshowBtn) {
+      if (slideshowBtn.disabled) return true;
       this._toggleSlideshowRotation();
       return true;
     }
@@ -3481,15 +3522,21 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handleBrowsePanelToolbarClick(target) {
-    if (target.closest("#filter-btn")) {
+    const filterBtn = target.closest("#filter-btn");
+    if (filterBtn) {
+      if (filterBtn.disabled) return true;
       this._toggleFilter();
       return true;
     }
-    if (target.closest("#cal-btn")) {
+    const calBtn = target.closest("#cal-btn");
+    if (calBtn) {
+      if (calBtn.disabled) return true;
       this._toggleCal();
       return true;
     }
-    if (target.closest("#controls-btn")) {
+    const controlsBtn = target.closest("#controls-btn");
+    if (controlsBtn) {
+      if (controlsBtn.disabled || controlsBtn.hidden) return true;
       if (this._tab === "controls") {
         this._setTab(this._resolveControlsReturnTab());
       } else {
