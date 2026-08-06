@@ -1,3 +1,5 @@
+import { MOBILE_VIEW_PAGE_STYLES } from "./features/mobile-view/page.styles.js";
+
 export const STYLES = `
   :host {
     height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
@@ -644,6 +646,8 @@ export const STYLES = `
     .popup-info-grid{grid-template-columns:minmax(0,1fr);}
   }
 
+
+${MOBILE_VIEW_PAGE_STYLES}
 
 
 `;

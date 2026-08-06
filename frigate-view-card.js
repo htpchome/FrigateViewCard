@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1263";
+const VERSION = "1.0.1264";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -118,6 +118,67 @@ const ICONS = {
   person: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
   frigateview: '<svg viewBox="100 300 820 155" xmlns="http://www.w3.org/2000/svg"><desc>FrigateView</desc><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(-30.73 177.492)scale(1.93682)" d="M118.652 71.916v9.36H89.13v10.801h29.523v9.361H89.13v20.882h-10.8V71.916z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(41.364 177.49)scale(1.93682)" d="M83.872 82.716h10.081v6.841c2.953-4.896 7.921-6.84 14.834-6.84h4.464v8.64h-4.464c-9.29 0-14.834 5.905-14.834 12.097v18.866h-10.08z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(82.504 177.492)scale(1.93682)" d="M103.601 82.716v39.604h-10.08V82.716z"/><rect style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#71787e;fill-rule:nonzero;opacity:1" x="-5.04" y="-3.24" rx="0" ry="0" width="10.081" height="6.481" transform="translate(273.397 323.056)scale(1.93682)"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(142.187 177.49)scale(1.93682)" d="M78.185 125.776h10.873c2.304 4.32 5.76 5.833 9.576 5.833 8.21 0 12.025-4.177 12.025-10.01v-3.96c-2.376 3.529-6.48 5.4-13.537 5.4-14.4 0-20.737-7.704-20.737-20.52 0-13.394 6.84-20.523 20.737-20.523 7.129 0 11.233 1.873 13.537 5.329v-4.609h10.081v41.548c0 9.36-9.432 17.065-22.106 17.065-9.576 0-18.29-4.608-20.45-15.553m20.377-12.457c7.633 0 12.097-3.744 12.097-10.8 0-6.77-4.248-10.802-12.097-10.802-7.632 0-12.097 3.745-12.097 10.801 0 6.769 4.249 10.801 12.097 10.801"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(234.991 177.49)scale(1.93682)" d="M76.276 102.518c0-13.393 6.84-20.522 20.738-20.522 7.129 0 11.233 1.873 13.537 5.329v-4.609h10.081v39.604h-10.08v-4.68c-2.377 3.528-6.481 5.4-13.538 5.4-14.401 0-20.738-7.705-20.738-20.522m22.178 10.801c7.633 0 12.097-3.744 12.097-10.8 0-6.77-4.248-10.802-12.097-10.802-7.632 0-12.097 3.745-12.097 10.801 0 6.769 4.248 10.801 12.097 10.801"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(312.315 177.492)scale(1.93682)" d="M88.481 108.279V91.357h-5.184v-8.64h5.184V71.914h10.081v10.801h15.265v8.641H98.562v16.634c0 3.888 2.376 4.968 5.112 4.968h10.153v9.36h-12.385c-6.408 0-12.961-2.807-12.961-14.04"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(386.992 177.49)scale(1.93682)" d="M76.42 102.518c0-13.393 8.28-20.522 22.178-20.522 14.401 0 22.178 7.705 22.178 20.522v1.512H86.573c.576 5.833 4.753 9.29 12.025 9.29 5.257 0 9-1.73 10.8-5.185h10.874c-2.16 9.72-9.937 14.905-21.674 14.905-14.401 0-22.178-7.705-22.178-20.522m32.907-5.832c-1.872-3.169-5.472-4.969-10.729-4.969-5.112 0-8.857 1.728-10.729 4.969z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#71787e;fill-rule:nonzero;opacity:1" transform="translate(458.247 177.492)scale(1.93682)" d="m80.525 71.915 18.001 50.405h-3.815L76.709 71.915z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(670.207 365.593)scale(1.93682)" d="M7.093-25.202h3.816L-7.093 25.202h-3.816z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#71787e;fill-rule:nonzero;opacity:1" transform="translate(508.662 177.492)scale(1.93682)" d="M100.36 82.716v39.604h-3.6V82.716z"/><rect style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" x="-1.8" y="-1.62" rx="0" ry="0" width="3.6" height="3.24" transform="translate(699.555 319.918)scale(1.93682)"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#71787e;fill-rule:nonzero;opacity:1" transform="translate(557.54 177.49)scale(1.93682)" d="M78.292 102.518c0-13.393 7.56-20.522 20.306-20.522 12.745 0 20.306 7.129 20.306 20.522H81.893c0 11.305 5.184 16.922 16.705 16.922 9.793 0 15.265-3.96 16.49-12.674h3.6c-1.512 10.657-8.785 16.274-20.09 16.274-13.177 0-20.306-7.705-20.306-20.522m36.867-3.24c-1.008-9.433-6.408-13.681-16.561-13.681s-15.553 4.248-16.561 13.68z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#71787e;fill-rule:nonzero;opacity:1" transform="translate(649.512 177.49)scale(1.93682)" d="M103.6 82.716H100l12.025 39.604h3.6zm-34.49 0 11.664 39.604h3.6L72.71 82.716z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(888.24 376.05)scale(1.93682)" d="M7.633-19.802h-3.6L-7.634 19.802h3.6z"/><path style="stroke:none;stroke-width:1;stroke-dasharray:none;stroke-linecap:butt;stroke-dashoffset:0;stroke-linejoin:miter;stroke-miterlimit:4;fill:#161618;fill-rule:nonzero;opacity:1" transform="translate(828.061 376.05)scale(1.93682)" d="M4.212-19.802-7.813 19.802h3.6L7.814-19.802z"/></svg>'
 };
+
+// src/features/mobile-view/page.styles.js
+const MOBILE_VIEW_PAGE_STYLES = `
+  .card.mobile-view-active .mobile-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--c-bg-panel);
+  }
+
+  .card.mobile-view-active .mobile-top {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .card.mobile-view-active .mobile-bottom {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .card.mobile-view-active .mobile-bottom .col-right {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .card.mobile-view-active .mobile-bottom .col-right .frigate-view {
+    display: none;
+  }
+
+  .card.mobile-view-active .mobile-bottom .tabs-holder {
+    flex: 0 0 auto;
+  }
+
+  .card.mobile-view-active .mobile-bottom .browse-head {
+    flex: 0 0 auto;
+  }
+
+  .card.mobile-view-active .mobile-bottom .browse {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .card.mobile-view-active .mobile-top .page-nav,
+  .card.mobile-view-active .mobile-top .cam-switcher {
+    padding-inline: 8px;
+  }
+`;
 
 // src/styles.js
 const STYLES = `
@@ -766,6 +827,8 @@ const STYLES = `
     .popup-info-grid{grid-template-columns:minmax(0,1fr);}
   }
 
+
+${MOBILE_VIEW_PAGE_STYLES}
 
 
 `;
