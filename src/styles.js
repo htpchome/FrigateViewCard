@@ -9,8 +9,8 @@ export const STYLES = `
     position: relative;
     box-sizing: border-box !important;
     display: block !important;
-    border:1px solid var(--secondary-background-color) !important;
-    border-radius: 0;
+    border: 0 !important;
+    border-radius: var(--ha-card-border-radius, 14px);
   }
   :host {
     --popup-z-index: 1000;

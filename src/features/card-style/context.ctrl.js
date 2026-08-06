@@ -50,7 +50,11 @@ export class CardStyleContextController {
       this._host._config?.outer_shadows !== false && outerShadow
         ? outerShadow
         : "none";
-    this._host.style.borderRadius = outerRadius || "0px";
+    if (outerRadius) {
+      this._host.style.borderRadius = outerRadius;
+    } else {
+      this._host.style.removeProperty("border-radius");
+    }
   }
 
   resolveCardTokenForHost(card, cssProperty, token) {

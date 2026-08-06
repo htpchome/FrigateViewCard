@@ -65,6 +65,37 @@ test("syncVisualStyleToggles updates card classes and host outer styles", () => 
   assert.equal(host.style.borderRadius, "12px");
 });
 
+test("syncVisualStyleToggles avoids hardcoded host radius fallback", () => {
+  const card = {
+    classList: {
+      toggle: () => {},
+    },
+  };
+  const host = {
+    _config: {
+      shadows: true,
+      borders: true,
+      rounded_corners: true,
+      outer_shadows: true,
+    },
+    shadowRoot: {
+      querySelector: () => card,
+    },
+    style: {
+      removeProperty: (name) => {
+        host._removedProperty = name;
+      },
+    },
+  };
+  const controller = new CardStyleContextController(host);
+  controller.resolveCardTokenForHost = () => "";
+
+  controller.syncVisualStyleToggles();
+
+  assert.equal(host.style.borderRadius, undefined);
+  assert.equal(host._removedProperty, "border-radius");
+});
+
 test("applyTightMargins updates parent spacing and sections row gap", () => {
   const cardToggles = [];
   const sectionsStyle = {

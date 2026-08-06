@@ -1,6 +1,13 @@
 export const MOBILE_VIEW_PAGE_STYLES = `
+  .card.mobile-view-active {
+    border-top-left-radius: var(--fvc-border-radius);
+    border-top-right-radius: var(--fvc-border-radius);
+    overflow: hidden;
+  }
+
   .card.mobile-view-active .layout.mobile-layout {
-    border-radius: inherit;
+    border-top-left-radius: var(--fvc-border-radius);
+    border-top-right-radius: var(--fvc-border-radius);
     overflow: hidden;
   }
 
@@ -11,7 +18,8 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     height: 100%;
     min-height: 0;
     overflow: hidden;
-    border-radius: inherit;
+    border-top-left-radius: var(--fvc-border-radius);
+    border-top-right-radius: var(--fvc-border-radius);
     background: var(--c-bg-panel);
   }
 
@@ -21,8 +29,8 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     flex-direction: column;
     width: 100%;
     min-height: 0;
-    border-top-left-radius: inherit;
-    border-top-right-radius: inherit;
+    border-top-left-radius: var(--fvc-border-radius);
+    border-top-right-radius: var(--fvc-border-radius);
     overflow: hidden;
   }
 

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1266";
+const VERSION = "1.0.1270";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -121,8 +121,15 @@ const ICONS = {
 
 // src/features/mobile-view/page.styles.js
 const MOBILE_VIEW_PAGE_STYLES = `
+  .card.mobile-view-active {
+    border-top-left-radius: var(--fvc-border-radius);
+    border-top-right-radius: var(--fvc-border-radius);
+    overflow: hidden;
+  }
+
   .card.mobile-view-active .layout.mobile-layout {
-    border-radius: inherit;
+    border-top-left-radius: var(--fvc-border-radius);
+    border-top-right-radius: var(--fvc-border-radius);
     overflow: hidden;
   }
 
@@ -133,7 +140,8 @@ const MOBILE_VIEW_PAGE_STYLES = `
     height: 100%;
     min-height: 0;
     overflow: hidden;
-    border-radius: inherit;
+    border-top-left-radius: var(--fvc-border-radius);
+    border-top-right-radius: var(--fvc-border-radius);
     background: var(--c-bg-panel);
   }
 
@@ -143,8 +151,8 @@ const MOBILE_VIEW_PAGE_STYLES = `
     flex-direction: column;
     width: 100%;
     min-height: 0;
-    border-top-left-radius: inherit;
-    border-top-right-radius: inherit;
+    border-top-left-radius: var(--fvc-border-radius);
+    border-top-right-radius: var(--fvc-border-radius);
     overflow: hidden;
   }
 
@@ -199,8 +207,8 @@ const STYLES = `
     position: relative;
     box-sizing: border-box !important;
     display: block !important;
-    border:1px solid var(--secondary-background-color) !important;
-    border-radius: 0;
+    border: 0 !important;
+    border-radius: var(--ha-card-border-radius, 14px);
   }
   :host {
     --popup-z-index: 1000;
@@ -12516,7 +12524,11 @@ const CardStyleContextController = class {
       "var(--fvc-outer-border-radius)"
     );
     this._host.style.boxShadow = this._host._config?.outer_shadows !== false && outerShadow ? outerShadow : "none";
-    this._host.style.borderRadius = outerRadius || "0px";
+    if (outerRadius) {
+      this._host.style.borderRadius = outerRadius;
+    } else {
+      this._host.style.removeProperty("border-radius");
+    }
   }
   resolveCardTokenForHost(card, cssProperty, token) {
     const value = String(token || "").trim();
