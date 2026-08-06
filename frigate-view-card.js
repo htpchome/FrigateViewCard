@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1260";
+const VERSION = "1.0.1261";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2822,6 +2822,8 @@ function applyMobileViewPageMarkup({ host, pageIds }) {
 function normalizeProfile(profile = {}) {
   if (!profile || typeof profile !== "object") return {};
   const infoRowBuilder = typeof profile.buildInfoRowMarkup === "function" ? profile.buildInfoRowMarkup : null;
+  const rightColumnShellBuilder = typeof profile.buildRightColumnShellMarkup === "function" ? profile.buildRightColumnShellMarkup : null;
+  const mainLayoutShellBuilder = typeof profile.buildMainLayoutShellMarkup === "function" ? profile.buildMainLayoutShellMarkup : null;
   return {
     layoutClass: String(profile.layoutClass || "").trim(),
     leftColumnClass: String(profile.leftColumnClass || "").trim(),
@@ -2829,7 +2831,9 @@ function normalizeProfile(profile = {}) {
     tabsHolderClass: String(profile.tabsHolderClass || "").trim(),
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
-    buildInfoRowMarkup: infoRowBuilder
+    buildInfoRowMarkup: infoRowBuilder,
+    buildRightColumnShellMarkup: rightColumnShellBuilder,
+    buildMainLayoutShellMarkup: mainLayoutShellBuilder
   };
 }
 function resolvePageInfoRowMarkup(profile, { title, subtitle, version, host, buildDefaultInfoRowMarkup } = {}) {
@@ -2844,6 +2848,63 @@ function resolvePageInfoRowMarkup(profile, { title, subtitle, version, host, bui
     subtitle,
     version,
     host
+  }) || fallback();
+}
+function resolvePageRightColumnShellMarkup(profile, {
+  host,
+  icons,
+  tabsMarkup,
+  layoutProfile,
+  buildDefaultRightColumnShellMarkup
+} = {}) {
+  const fallback = () => {
+    if (typeof buildDefaultRightColumnShellMarkup !== "function") return "";
+    return buildDefaultRightColumnShellMarkup({
+      icons,
+      tabsMarkup,
+      layoutProfile
+    });
+  };
+  const builder = profile && typeof profile.buildRightColumnShellMarkup === "function" ? profile.buildRightColumnShellMarkup : null;
+  if (!builder) return fallback();
+  return builder({
+    host,
+    icons,
+    tabsMarkup,
+    layoutProfile
+  }) || fallback();
+}
+function resolvePageMainLayoutShellMarkup(profile, {
+  host,
+  liveEngineWrap,
+  infoRow,
+  pageNav,
+  camSwitcher,
+  rightColumnShell,
+  layoutProfile,
+  buildDefaultMainLayoutShellMarkup
+} = {}) {
+  const fallback = () => {
+    if (typeof buildDefaultMainLayoutShellMarkup !== "function") return "";
+    return buildDefaultMainLayoutShellMarkup({
+      liveEngineWrap,
+      infoRow,
+      pageNav,
+      camSwitcher,
+      rightColumnShell,
+      layoutProfile
+    });
+  };
+  const builder = profile && typeof profile.buildMainLayoutShellMarkup === "function" ? profile.buildMainLayoutShellMarkup : null;
+  if (!builder) return fallback();
+  return builder({
+    host,
+    liveEngineWrap,
+    infoRow,
+    pageNav,
+    camSwitcher,
+    rightColumnShell,
+    layoutProfile
   }) || fallback();
 }
 function createPageShellRegistry({ defaultPageId = "" } = {}) {
@@ -16399,18 +16460,44 @@ const FrigateViewCard = class extends HTMLElement {
       icons: ICONS,
       streamMuted: this._streamMuted
     });
-    const rightColumnShell = buildRightColumnShellMarkup({
+    const rightColumnShell = resolvePageRightColumnShellMarkup(shellProfile, {
+      host: this,
       icons: ICONS,
       tabsMarkup: this._buildTabsMarkup(),
-      layoutProfile
+      layoutProfile,
+      buildDefaultRightColumnShellMarkup: ({
+        icons,
+        tabsMarkup,
+        layoutProfile: layoutProfile2
+      }) => buildRightColumnShellMarkup({
+        icons,
+        tabsMarkup,
+        layoutProfile: layoutProfile2
+      })
     });
-    const mainLayoutShell = buildMainLayoutShellMarkup({
+    const mainLayoutShell = resolvePageMainLayoutShellMarkup(shellProfile, {
+      host: this,
       liveEngineWrap,
       infoRow,
       pageNav,
       camSwitcher,
       rightColumnShell,
-      layoutProfile
+      layoutProfile,
+      buildDefaultMainLayoutShellMarkup: ({
+        liveEngineWrap: liveEngineWrap2,
+        infoRow: infoRow2,
+        pageNav: pageNav2,
+        camSwitcher: camSwitcher2,
+        rightColumnShell: rightColumnShell2,
+        layoutProfile: layoutProfile2
+      }) => buildMainLayoutShellMarkup({
+        liveEngineWrap: liveEngineWrap2,
+        infoRow: infoRow2,
+        pageNav: pageNav2,
+        camSwitcher: camSwitcher2,
+        rightColumnShell: rightColumnShell2,
+        layoutProfile: layoutProfile2
+      })
     });
     const popupShell = buildPopupShellMarkup({
       icons: ICONS,

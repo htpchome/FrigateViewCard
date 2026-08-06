@@ -88,6 +88,8 @@ import {
   createPageShellRegistry,
   registerDefaultPageShellProfiles,
   resolvePageInfoRowMarkup,
+  resolvePageMainLayoutShellMarkup,
+  resolvePageRightColumnShellMarkup,
 } from "../features/navigation/page-shell-registry.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
 import {} from "../integrations/frigate/url.js";
@@ -2859,18 +2861,46 @@ export class FrigateViewCard extends HTMLElement {
       icons: ICONS,
       streamMuted: this._streamMuted,
     });
-    const rightColumnShell = buildRightColumnShellMarkup({
+    const rightColumnShell = resolvePageRightColumnShellMarkup(shellProfile, {
+      host: this,
       icons: ICONS,
       tabsMarkup: this._buildTabsMarkup(),
       layoutProfile,
+      buildDefaultRightColumnShellMarkup: ({
+        icons,
+        tabsMarkup,
+        layoutProfile,
+      }) =>
+        buildRightColumnShellMarkup({
+          icons,
+          tabsMarkup,
+          layoutProfile,
+        }),
     });
-    const mainLayoutShell = buildMainLayoutShellMarkup({
+    const mainLayoutShell = resolvePageMainLayoutShellMarkup(shellProfile, {
+      host: this,
       liveEngineWrap,
       infoRow,
       pageNav,
       camSwitcher,
       rightColumnShell,
       layoutProfile,
+      buildDefaultMainLayoutShellMarkup: ({
+        liveEngineWrap,
+        infoRow,
+        pageNav,
+        camSwitcher,
+        rightColumnShell,
+        layoutProfile,
+      }) =>
+        buildMainLayoutShellMarkup({
+          liveEngineWrap,
+          infoRow,
+          pageNav,
+          camSwitcher,
+          rightColumnShell,
+          layoutProfile,
+        }),
     });
     const popupShell = buildPopupShellMarkup({
       icons: ICONS,

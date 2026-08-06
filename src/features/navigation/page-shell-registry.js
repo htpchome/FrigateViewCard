@@ -6,6 +6,14 @@ function normalizeProfile(profile = {}) {
     typeof profile.buildInfoRowMarkup === "function"
       ? profile.buildInfoRowMarkup
       : null;
+  const rightColumnShellBuilder =
+    typeof profile.buildRightColumnShellMarkup === "function"
+      ? profile.buildRightColumnShellMarkup
+      : null;
+  const mainLayoutShellBuilder =
+    typeof profile.buildMainLayoutShellMarkup === "function"
+      ? profile.buildMainLayoutShellMarkup
+      : null;
   return {
     layoutClass: String(profile.layoutClass || "").trim(),
     leftColumnClass: String(profile.leftColumnClass || "").trim(),
@@ -14,6 +22,8 @@ function normalizeProfile(profile = {}) {
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
     buildInfoRowMarkup: infoRowBuilder,
+    buildRightColumnShellMarkup: rightColumnShellBuilder,
+    buildMainLayoutShellMarkup: mainLayoutShellBuilder,
   };
 }
 
@@ -38,6 +48,85 @@ export function resolvePageInfoRowMarkup(
       subtitle,
       version,
       host,
+    }) || fallback()
+  );
+}
+
+export function resolvePageRightColumnShellMarkup(
+  profile,
+  {
+    host,
+    icons,
+    tabsMarkup,
+    layoutProfile,
+    buildDefaultRightColumnShellMarkup,
+  } = {},
+) {
+  const fallback = () => {
+    if (typeof buildDefaultRightColumnShellMarkup !== "function") return "";
+    return buildDefaultRightColumnShellMarkup({
+      icons,
+      tabsMarkup,
+      layoutProfile,
+    });
+  };
+
+  const builder =
+    profile && typeof profile.buildRightColumnShellMarkup === "function"
+      ? profile.buildRightColumnShellMarkup
+      : null;
+  if (!builder) return fallback();
+
+  return (
+    builder({
+      host,
+      icons,
+      tabsMarkup,
+      layoutProfile,
+    }) || fallback()
+  );
+}
+
+export function resolvePageMainLayoutShellMarkup(
+  profile,
+  {
+    host,
+    liveEngineWrap,
+    infoRow,
+    pageNav,
+    camSwitcher,
+    rightColumnShell,
+    layoutProfile,
+    buildDefaultMainLayoutShellMarkup,
+  } = {},
+) {
+  const fallback = () => {
+    if (typeof buildDefaultMainLayoutShellMarkup !== "function") return "";
+    return buildDefaultMainLayoutShellMarkup({
+      liveEngineWrap,
+      infoRow,
+      pageNav,
+      camSwitcher,
+      rightColumnShell,
+      layoutProfile,
+    });
+  };
+
+  const builder =
+    profile && typeof profile.buildMainLayoutShellMarkup === "function"
+      ? profile.buildMainLayoutShellMarkup
+      : null;
+  if (!builder) return fallback();
+
+  return (
+    builder({
+      host,
+      liveEngineWrap,
+      infoRow,
+      pageNav,
+      camSwitcher,
+      rightColumnShell,
+      layoutProfile,
     }) || fallback()
   );
 }
