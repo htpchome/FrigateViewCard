@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1271";
+const VERSION = "1.0.1272";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11855,8 +11855,14 @@ const PreviewPageController = class {
       source: "preview-camera-select",
       deferCameraSwitch: true
     });
-    if (this._host._activeCamIdx === idx) this._host._activeCamIdx = -1;
-    void this._host._switchCamera(idx, { source: "manual" });
+    if (this._host._activeCamIdx === idx) {
+      this._host._viewMode = "single";
+      this._host._syncTabsShell?.();
+      this._host._renderAll?.();
+      this._host._scheduleResumeLive?.("preview-camera-select-same-camera");
+      return;
+    }
+    void this._host._switchCamera(idx, { source: "preview-camera-select" });
   }
   returnToPreviewPage() {
     const PAGE_IDS2 = this._constants.PAGE_IDS;

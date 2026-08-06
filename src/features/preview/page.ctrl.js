@@ -392,8 +392,16 @@ export class PreviewPageController {
         deferCameraSwitch: true,
       });
 
-    if (this._host._activeCamIdx === idx) this._host._activeCamIdx = -1;
-    void this._host._switchCamera(idx, { source: "manual" });
+    // Keep the existing live mount when selecting the already-active camera.
+    if (this._host._activeCamIdx === idx) {
+      this._host._viewMode = "single";
+      this._host._syncTabsShell?.();
+      this._host._renderAll?.();
+      this._host._scheduleResumeLive?.("preview-camera-select-same-camera");
+      return;
+    }
+
+    void this._host._switchCamera(idx, { source: "preview-camera-select" });
   }
 
   returnToPreviewPage() {

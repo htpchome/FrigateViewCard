@@ -193,3 +193,45 @@ test("mountPreviewMedia delegates preview cells through grid media ownership", (
   assert.equal(calls[0][1].stateObj?.attributes?.frontend_stream_type, "mse");
   assert.equal(host._previewMediaState?.destroyed, false);
 });
+
+test("exitPreviewPageToCamera avoids remount when selecting active camera", () => {
+  const { controller, calls, host } = createHost({
+    previewEnabled: true,
+    pageId: "preview",
+  });
+
+  controller.exitPreviewPageToCamera(0);
+
+  assert.equal(host._viewMode, "single");
+  assert.deepEqual(calls, [
+    [
+      "navigateToPageRoute",
+      "single-view",
+      {
+        source: "preview-camera-select",
+        deferCameraSwitch: true,
+      },
+    ],
+  ]);
+});
+
+test("exitPreviewPageToCamera switches camera for non-active selection", () => {
+  const { controller, calls } = createHost({
+    previewEnabled: true,
+    pageId: "preview",
+  });
+
+  controller.exitPreviewPageToCamera(1);
+
+  assert.deepEqual(calls, [
+    [
+      "navigateToPageRoute",
+      "single-view",
+      {
+        source: "preview-camera-select",
+        deferCameraSwitch: true,
+      },
+    ],
+    ["switchCamera", 1, { source: "preview-camera-select" }],
+  ]);
+});
