@@ -27,6 +27,7 @@ const createHost = ({
     _activeStreamType: activeStreamType,
     _lastLiveStreamHint: lastLiveStreamHint,
     _pageId: pageId,
+    _mountInProgress: false,
     _isPageRouteAvailable: () => true,
     _lastNonPreviewPageId: "single-view",
     _activeCamIdx: 0,
@@ -55,6 +56,8 @@ const createHost = ({
     _navigateToPageRoute: (pageId, context) =>
       calls.push(["navigateToPageRoute", pageId, context]),
     _switchCamera: (idx, context) => calls.push(["switchCamera", idx, context]),
+    _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
+    _scheduleResumeLive: (reason) => calls.push(["scheduleResumeLive", reason]),
     _previewAlertController: {
       start: () => calls.push(["previewAlertStart"]),
       previewCellSeverity: (entity) =>
@@ -122,6 +125,20 @@ test("preview stream source label derives from connection type and live hint", (
 
 test("activatePreviewPageRoute keeps preview path behavior intact", () => {
   const { host, calls, controller } = createHost();
+
+  controller.activatePreviewPageRoute({ previousPageId: "single-view" });
+
+  assert.deepEqual(calls, [
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["previewAlertStart"],
+  ]);
+});
+
+test("activatePreviewPageRoute cancels pending mount only when active", () => {
+  const { host, calls, controller } = createHost();
+  host._mountInProgress = true;
 
   controller.activatePreviewPageRoute({ previousPageId: "single-view" });
 
@@ -212,6 +229,7 @@ test("exitPreviewPageToCamera avoids remount when selecting active camera", () =
         deferCameraSwitch: true,
       },
     ],
+    ["mountEngine", null, { quiet: true }],
   ]);
 });
 

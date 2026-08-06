@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1272";
+const VERSION = "1.0.1273";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11824,7 +11824,9 @@ const PreviewPageController = class {
       if (this._host._$("#myPopup")?.classList.contains("is-open")) {
         this._host._closePopup();
       }
-      this._host._cancelPendingMount("page-route-preview");
+      if (this._host._mountInProgress === true) {
+        this._host._cancelPendingMount("page-route-preview");
+      }
     }
     this._host._applyPreviewShellVisibility();
     this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
@@ -11859,7 +11861,13 @@ const PreviewPageController = class {
       this._host._viewMode = "single";
       this._host._syncTabsShell?.();
       this._host._renderAll?.();
-      this._host._scheduleResumeLive?.("preview-camera-select-same-camera");
+      const engineHost = this._host._$("#engine");
+      const hasLiveVideo = !!(this._host._findVideoDeep?.(engineHost) || this._host._findVideoDeep?.(this._host._engine) || this._host._engine?.video);
+      if (hasLiveVideo) {
+        this._host._scheduleResumeLive?.("preview-camera-select-same-camera");
+      } else {
+        this._host._mountEngine?.(null, { quiet: true });
+      }
       return;
     }
     void this._host._switchCamera(idx, { source: "preview-camera-select" });
@@ -13241,7 +13249,9 @@ function handlePreviewExit(host, leavingPreview) {
   if (host._$("#myPopup")?.classList.contains("is-open")) {
     host._closePopup();
   }
-  host._cancelPendingMount(`page-route-${host._pageId}`);
+  if (host._mountInProgress === true) {
+    host._cancelPendingMount(`page-route-${host._pageId}`);
+  }
 }
 function activateStartupRoute(host, context = {}) {
   if (context.startInGrid === true) {

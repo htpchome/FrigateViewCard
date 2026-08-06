@@ -347,7 +347,9 @@ export class PreviewPageController {
       if (this._host._$("#myPopup")?.classList.contains("is-open")) {
         this._host._closePopup();
       }
-      this._host._cancelPendingMount("page-route-preview");
+      if (this._host._mountInProgress === true) {
+        this._host._cancelPendingMount("page-route-preview");
+      }
     }
     this._host._applyPreviewShellVisibility();
     this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
@@ -397,7 +399,17 @@ export class PreviewPageController {
       this._host._viewMode = "single";
       this._host._syncTabsShell?.();
       this._host._renderAll?.();
-      this._host._scheduleResumeLive?.("preview-camera-select-same-camera");
+      const engineHost = this._host._$("#engine");
+      const hasLiveVideo = !!(
+        this._host._findVideoDeep?.(engineHost) ||
+        this._host._findVideoDeep?.(this._host._engine) ||
+        this._host._engine?.video
+      );
+      if (hasLiveVideo) {
+        this._host._scheduleResumeLive?.("preview-camera-select-same-camera");
+      } else {
+        this._host._mountEngine?.(null, { quiet: true });
+      }
       return;
     }
 

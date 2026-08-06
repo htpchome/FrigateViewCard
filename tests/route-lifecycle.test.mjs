@@ -44,6 +44,63 @@ test("activateStandardPageRouteLifecycle avoids shell remount on non-startup rou
   ]);
 });
 
+test("activateStandardPageRouteLifecycle leaving preview does not cancel when mount idle", () => {
+  const calls = [];
+  const host = {
+    _pageId: "single-view",
+    _mountInProgress: false,
+    _syncTabsShell: () => calls.push(["syncTabsShell"]),
+    _renderAll: () => calls.push(["renderAll"]),
+    _stopPreviewMode: () => calls.push(["stopPreviewMode"]),
+    _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
+    _$: () => null,
+    _closePopup: () => calls.push(["closePopup"]),
+  };
+
+  activateStandardPageRouteLifecycle({
+    host,
+    context: { previousPageId: "preview", startup: false },
+    previewPageId: "preview",
+    applyRouteFrame: () => calls.push(["applyRouteFrame"]),
+  });
+
+  assert.deepEqual(calls, [
+    ["stopPreviewMode"],
+    ["applyRouteFrame"],
+    ["syncTabsShell"],
+    ["renderAll"],
+  ]);
+});
+
+test("activateStandardPageRouteLifecycle leaving preview cancels when mount active", () => {
+  const calls = [];
+  const host = {
+    _pageId: "single-view",
+    _mountInProgress: true,
+    _syncTabsShell: () => calls.push(["syncTabsShell"]),
+    _renderAll: () => calls.push(["renderAll"]),
+    _stopPreviewMode: () => calls.push(["stopPreviewMode"]),
+    _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
+    _$: () => null,
+    _closePopup: () => calls.push(["closePopup"]),
+  };
+
+  activateStandardPageRouteLifecycle({
+    host,
+    context: { previousPageId: "preview", startup: false },
+    previewPageId: "preview",
+    applyRouteFrame: () => calls.push(["applyRouteFrame"]),
+  });
+
+  assert.deepEqual(calls, [
+    ["stopPreviewMode"],
+    ["cancelPendingMount", "page-route-single-view"],
+    ["applyRouteFrame"],
+    ["syncTabsShell"],
+    ["renderAll"],
+  ]);
+});
+
 test("activateStandardPageRouteLifecycle keeps startup behavior unchanged", () => {
   const calls = [];
   const host = {

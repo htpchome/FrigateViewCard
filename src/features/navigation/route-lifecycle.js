@@ -9,7 +9,9 @@ export function handlePreviewExit(host, leavingPreview) {
   if (host._$("#myPopup")?.classList.contains("is-open")) {
     host._closePopup();
   }
-  host._cancelPendingMount(`page-route-${host._pageId}`);
+  if (host._mountInProgress === true) {
+    host._cancelPendingMount(`page-route-${host._pageId}`);
+  }
 }
 
 export function activateStartupRoute(host, context = {}) {
