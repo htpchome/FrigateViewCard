@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1273";
+const VERSION = "1.0.1274";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -13264,6 +13264,9 @@ function mountEngineQuietly(host) {
   host._mountEngine(null, { quiet: true });
 }
 function syncStandardRouteShell(host) {
+  if (typeof host?._renderShellPreserveLive === "function") {
+    host._renderShellPreserveLive();
+  }
   host._syncTabsShell();
   host._renderAll();
 }
@@ -13280,7 +13283,10 @@ function activateStandardPageRouteLifecycle({
     activateStartupRoute(host, context);
     return;
   }
-  if (context.deferCameraSwitch === true) return;
+  if (context.deferCameraSwitch === true) {
+    syncStandardRouteShell(host);
+    return;
+  }
   syncStandardRouteShell(host);
 }
 
@@ -16703,6 +16709,28 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderPreviewPage();
     this._applyPreviewShellVisibility();
     this._syncMobileViewPageMarkup();
+  }
+  _renderShellPreserveLive() {
+    const preservedEngWrap = this._$("#eng-wrap");
+    if (!preservedEngWrap) {
+      this._renderShell();
+      return;
+    }
+    const parent = preservedEngWrap.parentNode;
+    if (parent) {
+      parent.removeChild(preservedEngWrap);
+    }
+    this._renderShell();
+    const nextEngWrap = this._$("#eng-wrap");
+    if (!nextEngWrap) return;
+    nextEngWrap.replaceWith(preservedEngWrap);
+    this._domCache["#eng-wrap"] = preservedEngWrap;
+    const preservedEngine = preservedEngWrap.querySelector("#engine");
+    if (preservedEngine) {
+      this._domCache["#engine"] = preservedEngine;
+    }
+    this._initLiveOverlayControls();
+    this._syncFullscreenButtonsVisibility();
   }
   _initLiveOverlayControls() {
     const wrap = this._$("#eng-wrap");

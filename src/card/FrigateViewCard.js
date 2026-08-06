@@ -2941,6 +2941,35 @@ export class FrigateViewCard extends HTMLElement {
     this._syncMobileViewPageMarkup();
   }
 
+  _renderShellPreserveLive() {
+    const preservedEngWrap = this._$("#eng-wrap");
+    if (!preservedEngWrap) {
+      this._renderShell();
+      return;
+    }
+
+    const parent = preservedEngWrap.parentNode;
+    if (parent) {
+      parent.removeChild(preservedEngWrap);
+    }
+
+    this._renderShell();
+
+    const nextEngWrap = this._$("#eng-wrap");
+    if (!nextEngWrap) return;
+
+    nextEngWrap.replaceWith(preservedEngWrap);
+    this._domCache["#eng-wrap"] = preservedEngWrap;
+
+    const preservedEngine = preservedEngWrap.querySelector("#engine");
+    if (preservedEngine) {
+      this._domCache["#engine"] = preservedEngine;
+    }
+
+    this._initLiveOverlayControls();
+    this._syncFullscreenButtonsVisibility();
+  }
+
   _initLiveOverlayControls() {
     const wrap = this._$("#eng-wrap");
     if (!wrap) return;

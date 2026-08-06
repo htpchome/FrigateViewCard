@@ -28,6 +28,9 @@ export function mountEngineQuietly(host) {
 }
 
 export function syncStandardRouteShell(host) {
+  if (typeof host?._renderShellPreserveLive === "function") {
+    host._renderShellPreserveLive();
+  }
   host._syncTabsShell();
   host._renderAll();
 }
@@ -48,7 +51,10 @@ export function activateStandardPageRouteLifecycle({
     return;
   }
 
-  if (context.deferCameraSwitch === true) return;
+  if (context.deferCameraSwitch === true) {
+    syncStandardRouteShell(host);
+    return;
+  }
 
   syncStandardRouteShell(host);
 }
