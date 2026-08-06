@@ -6451,7 +6451,10 @@ const GridMediaController = class {
         const entity = host.dataset.previewMediaEntity || host.dataset.gridEntity || "";
         if (!entity) return;
         const stateObj = this._host._hass?.states?.[entity] || null;
-        const resolvedUrl = await this._resolveSnapshotImageUrl(entity, stateObj);
+        const resolvedUrl = await this._resolveSnapshotImageUrl(
+          entity,
+          stateObj
+        );
         if (!resolvedUrl || !img.isConnected) return;
         img.src = appendCacheBustParam(resolvedUrl, cacheBustValue);
       })
