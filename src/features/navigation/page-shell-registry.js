@@ -1,4 +1,7 @@
-import { buildMobileViewInfoRowMarkup } from "../mobile-view/page.tmpl.js";
+import {
+  buildMobileViewInfoRowMarkup,
+  buildMobileViewMainLayoutShellMarkup,
+} from "../mobile-view/page.tmpl.js";
 
 function normalizeProfile(profile = {}) {
   if (!profile || typeof profile !== "object") return {};
@@ -213,6 +216,22 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         online:
           host?._hass?.states?.[host?._activeCam?.entity]?.state !==
           "unavailable",
+      }),
+    buildMainLayoutShellMarkup: ({
+      liveEngineWrap,
+      infoRow,
+      pageNav,
+      camSwitcher,
+      rightColumnShell,
+      layoutProfile,
+    }) =>
+      buildMobileViewMainLayoutShellMarkup({
+        liveEngineWrap,
+        infoRow,
+        pageNav,
+        camSwitcher,
+        rightColumnShell,
+        layoutProfile,
       }),
     capabilities: {
       hasLive: true,

@@ -58,6 +58,33 @@ export function buildMobileViewInfoRowMarkup({
             </div>`;
 }
 
+export function buildMobileViewMainLayoutShellMarkup({
+  liveEngineWrap,
+  infoRow,
+  pageNav,
+  camSwitcher,
+  rightColumnShell,
+  layoutProfile = {},
+}) {
+  const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"]
+    .filter(Boolean)
+    .join(" ");
+
+  return `<div class="${layoutClassName}" id="layout">
+            <div class="mobile-container" id="mobile-container">
+              <div class="mobile-top" id="mobile-top">
+                ${pageNav}
+                ${camSwitcher}
+                ${liveEngineWrap}
+              </div>
+              <div class="mobile-bottom" id="mobile-bottom">
+                ${infoRow}
+                ${rightColumnShell}
+              </div>
+            </div>
+          </div>`;
+}
+
 export function buildMobileViewCamSwitcherMarkup(args) {
   return buildCamSwitcherMarkup(args);
 }

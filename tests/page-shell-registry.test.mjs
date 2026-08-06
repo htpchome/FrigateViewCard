@@ -90,3 +90,26 @@ test("page shell capabilities normalize unsupported values", () => {
     tabsVariant: "standard",
   });
 });
+
+test("mobile profile exposes custom main layout shell builder", () => {
+  const registry = createPageShellRegistry({
+    defaultPageId: PAGE_IDS.singleView,
+  });
+  registerDefaultPageShellProfiles(registry, PAGE_IDS);
+  const mobileProfile = registry.resolve(PAGE_IDS.mobileView);
+
+  assert.equal(typeof mobileProfile.buildMainLayoutShellMarkup, "function");
+
+  const markup = mobileProfile.buildMainLayoutShellMarkup({
+    liveEngineWrap: '<div id="eng-wrap"></div>',
+    infoRow: '<div class="info-row"></div>',
+    pageNav: '<div class="page-nav"></div>',
+    camSwitcher: '<div class="cam-switcher"></div>',
+    rightColumnShell: '<div id="col-right"></div>',
+    layoutProfile: { layoutClass: "layout--mobile-view" },
+  });
+
+  assert.equal(markup.includes('id="mobile-container"'), true);
+  assert.equal(markup.includes('id="mobile-top"'), true);
+  assert.equal(markup.includes('id="mobile-bottom"'), true);
+});

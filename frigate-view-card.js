@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1262";
+const VERSION = "1.0.1263";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2779,6 +2779,29 @@ function buildMobileViewInfoRowMarkup({
               </div>
             </div>`;
 }
+function buildMobileViewMainLayoutShellMarkup({
+  liveEngineWrap,
+  infoRow,
+  pageNav,
+  camSwitcher,
+  rightColumnShell,
+  layoutProfile = {}
+}) {
+  const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"].filter(Boolean).join(" ");
+  return `<div class="${layoutClassName}" id="layout">
+            <div class="mobile-container" id="mobile-container">
+              <div class="mobile-top" id="mobile-top">
+                ${pageNav}
+                ${camSwitcher}
+                ${liveEngineWrap}
+              </div>
+              <div class="mobile-bottom" id="mobile-bottom">
+                ${infoRow}
+                ${rightColumnShell}
+              </div>
+            </div>
+          </div>`;
+}
 function buildMobileViewCamSwitcherMarkup(args) {
   return buildCamSwitcherMarkup(args);
 }
@@ -2966,6 +2989,21 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       streamType: host?._activeStreamType,
       eventsCount: host?._allDisplayEvents?.().length || 0,
       online: host?._hass?.states?.[host?._activeCam?.entity]?.state !== "unavailable"
+    }),
+    buildMainLayoutShellMarkup: ({
+      liveEngineWrap,
+      infoRow,
+      pageNav,
+      camSwitcher,
+      rightColumnShell,
+      layoutProfile
+    }) => buildMobileViewMainLayoutShellMarkup({
+      liveEngineWrap,
+      infoRow,
+      pageNav,
+      camSwitcher,
+      rightColumnShell,
+      layoutProfile
     }),
     capabilities: {
       hasLive: true,
