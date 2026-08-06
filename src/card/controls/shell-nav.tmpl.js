@@ -147,10 +147,29 @@ export function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
               </div>`;
 }
 
-export function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
-  return `<div class="col-right" id="col-right">
+function mergeClassNames(...tokens) {
+  return [
+    ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean)),
+  ].join(" ");
+}
+
+export function buildRightColumnShellMarkup({
+  icons,
+  tabsMarkup,
+  layoutProfile = {},
+}) {
+  const rightColumnClassName = mergeClassNames(
+    "col-right",
+    layoutProfile.rightColumnClass,
+  );
+  const tabsHolderClassName = mergeClassNames(
+    "tabs-holder",
+    layoutProfile.tabsHolderClass,
+  );
+  const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
+  return `<div class="${rightColumnClassName}" id="col-right">
             <div class="frigate-view">${icons.frigateview}</div>
-            <div class="tabs-holder"> 
+            <div class="${tabsHolderClassName}"> 
               <div class="tabs shadow-small">            
                 ${tabsMarkup}              
               </div>
@@ -167,7 +186,7 @@ export function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
               </div>
             </div>
         
-            <div class="browse" id="browse" style="display:none">
+            <div class="${browseClassName}" id="browse" style="display:none">
               <div class="list-head">
                 <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
               </div>
@@ -281,16 +300,26 @@ export function buildMainLayoutShellMarkup({
   pageNav,
   camSwitcher,
   rightColumnShell,
+  layoutProfile = {},
 }) {
-  return `<div class="layout" id="layout">
-          <div class="col-left" id="col-left">
+  const layoutClassName = mergeClassNames("layout", layoutProfile.layoutClass);
+  const leftColumnClassName = mergeClassNames(
+    "col-left",
+    layoutProfile.leftColumnClass,
+  );
+  const resizeHandleClassName = mergeClassNames(
+    "resize-handle",
+    layoutProfile.resizeHandleClass,
+  );
+  return `<div class="${layoutClassName}" id="layout">
+          <div class="${leftColumnClassName}" id="col-left">
             ${liveEngineWrap}
 
             ${infoRow}
             ${pageNav}
             ${camSwitcher}
           </div>
-          <div class="resize-handle" id="resize-handle"></div>
+          <div class="${resizeHandleClassName}" id="resize-handle"></div>
           ${rightColumnShell}
 
         </div>`;

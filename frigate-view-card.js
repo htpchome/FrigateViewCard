@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1258";
+const VERSION = "1.0.1260";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2719,6 +2719,188 @@ const hassThemeSignature = (hass) => {
   return `${darkMode === true ? "dark" : "light"}:${theme || hass?.selectedTheme || ""}`;
 };
 const hassEntityStateSignature = (hass, entities) => entities.map((entity) => `${entity}:${hass?.states?.[entity]?.state ?? "missing"}`).join("|");
+
+// src/features/mobile-view/utils.js
+const MOBILE_VIEW_ACTIVE_CLASS = "mobile-view-active";
+function isMobileViewRoute(pageId, pageIds) {
+  return pageId === pageIds.mobileView;
+}
+
+// src/features/mobile-view/page.tmpl.js
+function buildCamSwitcherMarkup({
+  previewPageEnabled,
+  includeStatus,
+  cameras,
+  activeCamIdx,
+  isSingleView,
+  icons,
+  getCameraName,
+  isCameraAvailable
+}) {
+  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
+  const cameraButtons = (cameras || []).map((camera, index) => {
+    const name = getCameraName(camera);
+    const active = isSingleView && index === activeCamIdx;
+    const ok = !includeStatus || isCameraAvailable(camera);
+    return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
+  }).join("");
+  return `${backButton}${cameraButtons}`;
+}
+function buildMobileViewInfoRowMarkup({
+  title,
+  subtitle,
+  version,
+  streamType = "--",
+  eventsCount = "\u2014",
+  online = true
+}) {
+  return `<div class="info-row mobile-view-info-row">
+              <div>
+                <div class="info-title" id="info-title">${title}</div>
+                <span class="section-label" id="tl-range">${subtitle}</span>
+              </div>
+              <div class="stats">
+                <div class="stat">
+                  <div class="sv">v${version}</div>
+                  <div class="sl">Version</div>
+                </div>
+                <div class="stat">
+                  <div class="sv stream-type" id="stream-type">${resolveMobileViewStreamTypeText(streamType)}</div>
+                  <div class="sl">Stream</div>
+                </div>
+                <div class="stat">
+                  <div class="sv" id="ev-count">${resolveMobileViewEventsCountText(eventsCount)}</div>
+                  <div class="sl">Events</div>
+                </div>
+                <div class="stat">
+                  <div class="sv" id="on-dot" style="color:${resolveMobileViewStatusColor(online)}">\u25CF</div>
+                  <div class="sl" id="on-lbl">${resolveMobileViewOnlineLabel(online)}</div>
+                </div>
+              </div>
+            </div>`;
+}
+function buildMobileViewCamSwitcherMarkup(args) {
+  return buildCamSwitcherMarkup(args);
+}
+function resolveMobileViewTitleText({
+  title,
+  cameras = [],
+  activeCamera = null,
+  getCameraName
+}) {
+  if (title) return title;
+  if (Array.isArray(cameras) && cameras.length > 1 && activeCamera) {
+    return getCameraName(activeCamera);
+  }
+  return "Camera";
+}
+function resolveMobileViewSubtitleText(config) {
+  return config?.subtitle || "Frigate";
+}
+function resolveMobileViewStreamTypeText(streamType) {
+  return streamType || "--";
+}
+function resolveMobileViewEventsCountText(eventsCount) {
+  return String(eventsCount);
+}
+function resolveMobileViewStatusColor(online) {
+  return online ? "#4ade80" : "#ef4444";
+}
+function resolveMobileViewOnlineLabel(online) {
+  return online ? "Online" : "Offline";
+}
+function applyMobileViewPageMarkup({ host, pageIds }) {
+  const card = host?._$("#card");
+  if (!card) return;
+  card.classList.toggle(
+    MOBILE_VIEW_ACTIVE_CLASS,
+    isMobileViewRoute(host._pageId, pageIds)
+  );
+}
+
+// src/features/navigation/page-shell-registry.js
+function normalizeProfile(profile = {}) {
+  if (!profile || typeof profile !== "object") return {};
+  const infoRowBuilder = typeof profile.buildInfoRowMarkup === "function" ? profile.buildInfoRowMarkup : null;
+  return {
+    layoutClass: String(profile.layoutClass || "").trim(),
+    leftColumnClass: String(profile.leftColumnClass || "").trim(),
+    rightColumnClass: String(profile.rightColumnClass || "").trim(),
+    tabsHolderClass: String(profile.tabsHolderClass || "").trim(),
+    browseClass: String(profile.browseClass || "").trim(),
+    resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
+    buildInfoRowMarkup: infoRowBuilder
+  };
+}
+function resolvePageInfoRowMarkup(profile, { title, subtitle, version, host, buildDefaultInfoRowMarkup } = {}) {
+  const fallback = () => {
+    if (typeof buildDefaultInfoRowMarkup !== "function") return "";
+    return buildDefaultInfoRowMarkup({ title, subtitle, version });
+  };
+  const builder = profile && typeof profile.buildInfoRowMarkup === "function" ? profile.buildInfoRowMarkup : null;
+  if (!builder) return fallback();
+  return builder({
+    title,
+    subtitle,
+    version,
+    host
+  }) || fallback();
+}
+function createPageShellRegistry({ defaultPageId = "" } = {}) {
+  const profiles = new Map();
+  const register = (pageId, profile = {}) => {
+    const key = String(pageId || "").trim();
+    if (!key) return;
+    profiles.set(key, normalizeProfile(profile));
+  };
+  const resolve = (pageId) => {
+    const key = String(pageId || "").trim();
+    if (key && profiles.has(key)) return profiles.get(key);
+    if (defaultPageId && profiles.has(defaultPageId)) {
+      return profiles.get(defaultPageId);
+    }
+    return {};
+  };
+  return {
+    register,
+    resolve
+  };
+}
+function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
+  if (!registry || !PAGE_IDS2) return;
+  registry.register(PAGE_IDS2.singleView, {
+    layoutClass: "layout--single-view",
+    leftColumnClass: "col-left--single-view",
+    rightColumnClass: "col-right--single-view"
+  });
+  registry.register(PAGE_IDS2.mobileView, {
+    layoutClass: "layout--mobile-view",
+    leftColumnClass: "col-left--mobile-view",
+    rightColumnClass: "col-right--mobile-view",
+    tabsHolderClass: "tabs-holder--mobile-view",
+    browseClass: "browse--mobile-view",
+    buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildMobileViewInfoRowMarkup({
+      title,
+      subtitle,
+      version,
+      streamType: host?._activeStreamType,
+      eventsCount: host?._allDisplayEvents?.().length || 0,
+      online: host?._hass?.states?.[host?._activeCam?.entity]?.state !== "unavailable"
+    })
+  });
+  registry.register(PAGE_IDS2.wideView, {
+    layoutClass: "layout--wide-view",
+    leftColumnClass: "col-left--wide-view",
+    rightColumnClass: "col-right--wide-view",
+    tabsHolderClass: "tabs-holder--wide-view"
+  });
+  registry.register(PAGE_IDS2.preview, {
+    layoutClass: "layout--preview-view",
+    leftColumnClass: "col-left--preview-view",
+    rightColumnClass: "col-right--preview-view",
+    resizeHandleClass: "resize-handle--preview-view"
+  });
+}
 
 // src/integrations/frigate/url.js
 const makeGo2rtcCacheKey = ({ clientId, cam }) => `${clientId}:${cam}`;
@@ -6738,7 +6920,7 @@ function buildTabsMarkup({
       </div>`;
   return { activeTab, markup };
 }
-function buildCamSwitcherMarkup({
+function buildCamSwitcherMarkup2({
   previewPageEnabled,
   includeStatus,
   cameras,
@@ -6802,10 +6984,28 @@ function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
                   </div>
               </div>`;
 }
-function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
-  return `<div class="col-right" id="col-right">
+function mergeClassNames(...tokens) {
+  return [
+    ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean))
+  ].join(" ");
+}
+function buildRightColumnShellMarkup({
+  icons,
+  tabsMarkup,
+  layoutProfile = {}
+}) {
+  const rightColumnClassName = mergeClassNames(
+    "col-right",
+    layoutProfile.rightColumnClass
+  );
+  const tabsHolderClassName = mergeClassNames(
+    "tabs-holder",
+    layoutProfile.tabsHolderClass
+  );
+  const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
+  return `<div class="${rightColumnClassName}" id="col-right">
             <div class="frigate-view">${icons.frigateview}</div>
-            <div class="tabs-holder"> 
+            <div class="${tabsHolderClassName}"> 
               <div class="tabs shadow-small">            
                 ${tabsMarkup}              
               </div>
@@ -6822,7 +7022,7 @@ function buildRightColumnShellMarkup({ icons, tabsMarkup }) {
               </div>
             </div>
         
-            <div class="browse" id="browse" style="display:none">
+            <div class="${browseClassName}" id="browse" style="display:none">
               <div class="list-head">
                 <span class="newtoast" id="newtoast" style="display:none">new \u2726</span>
               </div>
@@ -6926,17 +7126,27 @@ function buildMainLayoutShellMarkup({
   infoRow,
   pageNav,
   camSwitcher,
-  rightColumnShell
+  rightColumnShell,
+  layoutProfile = {}
 }) {
-  return `<div class="layout" id="layout">
-          <div class="col-left" id="col-left">
+  const layoutClassName = mergeClassNames("layout", layoutProfile.layoutClass);
+  const leftColumnClassName = mergeClassNames(
+    "col-left",
+    layoutProfile.leftColumnClass
+  );
+  const resizeHandleClassName = mergeClassNames(
+    "resize-handle",
+    layoutProfile.resizeHandleClass
+  );
+  return `<div class="${layoutClassName}" id="layout">
+          <div class="${leftColumnClassName}" id="col-left">
             ${liveEngineWrap}
 
             ${infoRow}
             ${pageNav}
             ${camSwitcher}
           </div>
-          <div class="resize-handle" id="resize-handle"></div>
+          <div class="${resizeHandleClassName}" id="resize-handle"></div>
           ${rightColumnShell}
 
         </div>`;
@@ -12844,104 +13054,6 @@ function activateStandardPageRouteLifecycle({
   syncStandardRouteShell(host);
 }
 
-// src/features/mobile-view/utils.js
-const MOBILE_VIEW_ACTIVE_CLASS = "mobile-view-active";
-function isMobileViewRoute(pageId, pageIds) {
-  return pageId === pageIds.mobileView;
-}
-
-// src/features/mobile-view/page.tmpl.js
-function buildCamSwitcherMarkup2({
-  previewPageEnabled,
-  includeStatus,
-  cameras,
-  activeCamIdx,
-  isSingleView,
-  icons,
-  getCameraName,
-  isCameraAvailable
-}) {
-  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
-  const cameraButtons = (cameras || []).map((camera, index) => {
-    const name = getCameraName(camera);
-    const active = isSingleView && index === activeCamIdx;
-    const ok = !includeStatus || isCameraAvailable(camera);
-    return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
-  }).join("");
-  return `${backButton}${cameraButtons}`;
-}
-function buildMobileViewInfoRowMarkup({
-  title,
-  subtitle,
-  version,
-  streamType = "--",
-  eventsCount = "\u2014",
-  online = true
-}) {
-  return `<div class="info-row mobile-view-info-row">
-              <div>
-                <div class="info-title" id="info-title">${title}</div>
-                <span class="section-label" id="tl-range">${subtitle}</span>
-              </div>
-              <div class="stats">
-                <div class="stat">
-                  <div class="sv">v${version}</div>
-                  <div class="sl">Version</div>
-                </div>
-                <div class="stat">
-                  <div class="sv stream-type" id="stream-type">${resolveMobileViewStreamTypeText(streamType)}</div>
-                  <div class="sl">Stream</div>
-                </div>
-                <div class="stat">
-                  <div class="sv" id="ev-count">${resolveMobileViewEventsCountText(eventsCount)}</div>
-                  <div class="sl">Events</div>
-                </div>
-                <div class="stat">
-                  <div class="sv" id="on-dot" style="color:${resolveMobileViewStatusColor(online)}">\u25CF</div>
-                  <div class="sl" id="on-lbl">${resolveMobileViewOnlineLabel(online)}</div>
-                </div>
-              </div>
-            </div>`;
-}
-function buildMobileViewCamSwitcherMarkup(args) {
-  return buildCamSwitcherMarkup2(args);
-}
-function resolveMobileViewTitleText({
-  title,
-  cameras = [],
-  activeCamera = null,
-  getCameraName
-}) {
-  if (title) return title;
-  if (Array.isArray(cameras) && cameras.length > 1 && activeCamera) {
-    return getCameraName(activeCamera);
-  }
-  return "Camera";
-}
-function resolveMobileViewSubtitleText(config) {
-  return config?.subtitle || "Frigate";
-}
-function resolveMobileViewStreamTypeText(streamType) {
-  return streamType || "--";
-}
-function resolveMobileViewEventsCountText(eventsCount) {
-  return String(eventsCount);
-}
-function resolveMobileViewStatusColor(online) {
-  return online ? "#4ade80" : "#ef4444";
-}
-function resolveMobileViewOnlineLabel(online) {
-  return online ? "Online" : "Offline";
-}
-function applyMobileViewPageMarkup({ host, pageIds }) {
-  const card = host?._$("#card");
-  if (!card) return;
-  card.classList.toggle(
-    MOBILE_VIEW_ACTIVE_CLASS,
-    isMobileViewRoute(host._pageId, pageIds)
-  );
-}
-
 // src/features/browse/standard-renderer.js
 function cameraName(camera) {
   return cap(camDisplayName(camera));
@@ -14352,6 +14464,10 @@ const FrigateViewCard = class extends HTMLElement {
       normalizePageRoute,
       PAGE_IDS
     });
+    this._pageShellRegistry = createPageShellRegistry({
+      defaultPageId: PAGE_IDS.singleView
+    });
+    registerDefaultPageShellProfiles(this._pageShellRegistry, PAGE_IDS);
     this._deepLinkController = new DeepLinkController(this);
     this._slideshowAlertController = new SlideshowAlertController(this, {
       DAY,
@@ -15428,6 +15544,12 @@ const FrigateViewCard = class extends HTMLElement {
   _syncMobileViewPageMarkup() {
     this._mobileViewPageController.syncMobileViewPageMarkup();
   }
+  registerPageShellLayout(pageId, layoutProfile = {}) {
+    this._pageShellRegistry?.register(pageId, layoutProfile);
+  }
+  _activePageShellLayoutProfile() {
+    return this._pageShellRegistry?.resolve(this._pageId) || {};
+  }
   _activateWideViewPageRoute(context = {}) {
     this._wideViewPageController.activateWideViewPageRoute(context);
   }
@@ -16260,32 +16382,35 @@ const FrigateViewCard = class extends HTMLElement {
     const showCamSwitcher = this._config.cameras.length > 1 || this._isPreviewPageEnabled();
     const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
     const pageNav = this._pageNavigationController.pageNavMarkup();
-    const infoRow = this._isMobileViewPageActive() ? buildMobileViewInfoRowMarkup({
+    const shellProfile = this._activePageShellLayoutProfile();
+    const infoRow = resolvePageInfoRowMarkup(shellProfile, {
       title,
       subtitle,
       version: VERSION,
-      streamType: this._activeStreamType,
-      eventsCount: this._allDisplayEvents().length,
-      online: this._hass?.states?.[this._activeCam?.entity]?.state !== "unavailable"
-    }) : buildInfoRowMarkup({
-      title,
-      subtitle,
-      version: VERSION
+      host: this,
+      buildDefaultInfoRowMarkup: ({ title: title2, subtitle: subtitle2, version }) => buildInfoRowMarkup({
+        title: title2,
+        subtitle: subtitle2,
+        version
+      })
     });
+    const layoutProfile = shellProfile || {};
     const liveEngineWrap = buildLiveEngineWrapMarkup({
       icons: ICONS,
       streamMuted: this._streamMuted
     });
     const rightColumnShell = buildRightColumnShellMarkup({
       icons: ICONS,
-      tabsMarkup: this._buildTabsMarkup()
+      tabsMarkup: this._buildTabsMarkup(),
+      layoutProfile
     });
     const mainLayoutShell = buildMainLayoutShellMarkup({
       liveEngineWrap,
       infoRow,
       pageNav,
       camSwitcher,
-      rightColumnShell
+      rightColumnShell,
+      layoutProfile
     });
     const popupShell = buildPopupShellMarkup({
       icons: ICONS,

@@ -84,6 +84,11 @@ import {
   PAGE_IDS,
   resolveDeviceRouteBucket,
 } from "../features/navigation/router.js";
+import {
+  createPageShellRegistry,
+  registerDefaultPageShellProfiles,
+  resolvePageInfoRowMarkup,
+} from "../features/navigation/page-shell-registry.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
 import {} from "../integrations/frigate/url.js";
 import {
@@ -277,7 +282,6 @@ import { EditorPreviewContextController } from "../features/editor-preview/conte
 import { PopupMediaLoaderController } from "../features/popup/media-loader.ctrl.js";
 import { ViewportContextController } from "../features/viewport/context.ctrl.js";
 import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
-import { buildMobileViewInfoRowMarkup } from "../features/mobile-view/page.tmpl.js";
 import { SingleViewPageController } from "../features/single-view/page.ctrl.js";
 import { WideViewPageController } from "../features/wide-view/page.ctrl.js";
 import { SlideshowAlertController } from "../features/slideshow/alert.ctrl.js";
@@ -544,6 +548,10 @@ export class FrigateViewCard extends HTMLElement {
       normalizePageRoute,
       PAGE_IDS,
     });
+    this._pageShellRegistry = createPageShellRegistry({
+      defaultPageId: PAGE_IDS.singleView,
+    });
+    registerDefaultPageShellProfiles(this._pageShellRegistry, PAGE_IDS);
     this._deepLinkController = new DeepLinkController(this);
     this._slideshowAlertController = new SlideshowAlertController(this, {
       DAY,
@@ -1807,6 +1815,14 @@ export class FrigateViewCard extends HTMLElement {
     this._mobileViewPageController.syncMobileViewPageMarkup();
   }
 
+  registerPageShellLayout(pageId, layoutProfile = {}) {
+    this._pageShellRegistry?.register(pageId, layoutProfile);
+  }
+
+  _activePageShellLayoutProfile() {
+    return this._pageShellRegistry?.resolve(this._pageId) || {};
+  }
+
   _activateWideViewPageRoute(context = {}) {
     this._wideViewPageController.activateWideViewPageRoute(context);
   }
@@ -2825,22 +2841,20 @@ export class FrigateViewCard extends HTMLElement {
       ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     const pageNav = this._pageNavigationController.pageNavMarkup();
-    const infoRow = this._isMobileViewPageActive()
-      ? buildMobileViewInfoRowMarkup({
+    const shellProfile = this._activePageShellLayoutProfile();
+    const infoRow = resolvePageInfoRowMarkup(shellProfile, {
+      title,
+      subtitle,
+      version: VERSION,
+      host: this,
+      buildDefaultInfoRowMarkup: ({ title, subtitle, version }) =>
+        buildInfoRowMarkup({
           title,
           subtitle,
-          version: VERSION,
-          streamType: this._activeStreamType,
-          eventsCount: this._allDisplayEvents().length,
-          online:
-            this._hass?.states?.[this._activeCam?.entity]?.state !==
-            "unavailable",
-        })
-      : buildInfoRowMarkup({
-          title,
-          subtitle,
-          version: VERSION,
-        });
+          version,
+        }),
+    });
+    const layoutProfile = shellProfile || {};
     const liveEngineWrap = buildLiveEngineWrapMarkup({
       icons: ICONS,
       streamMuted: this._streamMuted,
@@ -2848,6 +2862,7 @@ export class FrigateViewCard extends HTMLElement {
     const rightColumnShell = buildRightColumnShellMarkup({
       icons: ICONS,
       tabsMarkup: this._buildTabsMarkup(),
+      layoutProfile,
     });
     const mainLayoutShell = buildMainLayoutShellMarkup({
       liveEngineWrap,
@@ -2855,6 +2870,7 @@ export class FrigateViewCard extends HTMLElement {
       pageNav,
       camSwitcher,
       rightColumnShell,
+      layoutProfile,
     });
     const popupShell = buildPopupShellMarkup({
       icons: ICONS,
