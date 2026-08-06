@@ -26,10 +26,7 @@ export function mountEngineQuietly(host) {
 }
 
 export function syncStandardRouteShell(host) {
-  // Route changes can swap page shell structure/class profiles.
-  host._cleanupEngine?.();
-  host._renderShell();
-  host._mountEngine?.(null, { quiet: true });
+  host._syncTabsShell();
   host._renderAll();
 }
 

@@ -6,32 +6,26 @@ import {
   syncStandardRouteShell,
 } from "../src/features/navigation/route-lifecycle.js";
 
-test("syncStandardRouteShell rebuilds shell and remounts engine quietly", () => {
+test("syncStandardRouteShell updates tabs and renders without remount", () => {
   const calls = [];
   const host = {
-    _cleanupEngine: () => calls.push(["cleanup"]),
-    _renderShell: () => calls.push(["renderShell"]),
-    _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
+    _syncTabsShell: () => calls.push(["syncTabsShell"]),
     _renderAll: () => calls.push(["renderAll"]),
   };
 
   syncStandardRouteShell(host);
 
   assert.deepEqual(calls, [
-    ["cleanup"],
-    ["renderShell"],
-    ["mountEngine", null, { quiet: true }],
+    ["syncTabsShell"],
     ["renderAll"],
   ]);
 });
 
-test("activateStandardPageRouteLifecycle rebuilds shell on non-startup route change", () => {
+test("activateStandardPageRouteLifecycle avoids shell remount on non-startup route change", () => {
   const calls = [];
   const host = {
     _pageId: "mobile-view",
-    _cleanupEngine: () => calls.push(["cleanup"]),
-    _renderShell: () => calls.push(["renderShell"]),
-    _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
+    _syncTabsShell: () => calls.push(["syncTabsShell"]),
     _renderAll: () => calls.push(["renderAll"]),
     _stopPreviewMode: () => calls.push(["stopPreview"]),
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
@@ -48,9 +42,7 @@ test("activateStandardPageRouteLifecycle rebuilds shell on non-startup route cha
 
   assert.deepEqual(calls, [
     ["applyRouteFrame"],
-    ["cleanup"],
-    ["renderShell"],
-    ["mountEngine", null, { quiet: true }],
+    ["syncTabsShell"],
     ["renderAll"],
   ]);
 });
