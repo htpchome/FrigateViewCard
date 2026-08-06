@@ -166,6 +166,13 @@ export class PreviewPageController {
           video.load();
         } catch (_) {}
       });
+      host.querySelectorAll("img[data-fvc-blob-url]").forEach((img) => {
+        const blobUrl = img.dataset.fvcBlobUrl || "";
+        if (!blobUrl) return;
+        try {
+          URL.revokeObjectURL(blobUrl);
+        } catch (_) {}
+      });
       host.innerHTML = "";
     });
   }

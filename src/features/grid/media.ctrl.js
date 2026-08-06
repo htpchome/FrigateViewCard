@@ -59,6 +59,41 @@ export class GridMediaController {
     return true;
   }
 
+  _isSignedCameraProxyUrl(url) {
+    const source = String(url || "");
+    return (
+      /\/api\/camera_proxy\//i.test(source) && /[?&]authSig=/i.test(source)
+    );
+  }
+
+  async _refreshSnapshotImageElement(img, resolvedUrl, cacheBustValue) {
+    if (!img || !img.isConnected || !resolvedUrl) return;
+
+    if (this._isSignedCameraProxyUrl(resolvedUrl)) {
+      try {
+        const response = await fetch(resolvedUrl, {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (!response.ok) return;
+        const blob = await response.blob();
+        if (!img.isConnected) return;
+        const nextBlobUrl = URL.createObjectURL(blob);
+        const previousBlobUrl = img.dataset.fvcBlobUrl || "";
+        img.src = nextBlobUrl;
+        img.dataset.fvcBlobUrl = nextBlobUrl;
+        if (previousBlobUrl && previousBlobUrl !== nextBlobUrl) {
+          try {
+            URL.revokeObjectURL(previousBlobUrl);
+          } catch (_) {}
+        }
+      } catch (_) {}
+      return;
+    }
+
+    img.src = appendCacheBustParam(resolvedUrl, cacheBustValue);
+  }
+
   async _resolveSnapshotImageUrl(entity, stateObj = null) {
     const primaryUrl = await this._host._streamFallbackUrl(entity);
     if (primaryUrl) return primaryUrl;
@@ -91,7 +126,11 @@ export class GridMediaController {
           stateObj,
         );
         if (!resolvedUrl || !img.isConnected) return;
-        img.src = appendCacheBustParam(resolvedUrl, cacheBustValue);
+        await this._refreshSnapshotImageElement(
+          img,
+          resolvedUrl,
+          cacheBustValue,
+        );
       }),
     );
   }
@@ -279,6 +318,13 @@ export class GridMediaController {
     this._host._engine = {
       destroy: () => {
         gridState.destroyed = true;
+        slot.querySelectorAll("img[data-fvc-blob-url]").forEach((img) => {
+          const blobUrl = img.dataset.fvcBlobUrl || "";
+          if (!blobUrl) return;
+          try {
+            URL.revokeObjectURL(blobUrl);
+          } catch (_) {}
+        });
         for (const cleanup of gridState.cleanup) {
           try {
             cleanup();
