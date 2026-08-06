@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1253";
+const VERSION = "1.0.1254";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -19,6 +19,7 @@ const REALTIME_HEAD_POLL_MS = 5e3;
 const REALTIME_RELOAD_DEBOUNCE_MS = 450;
 const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
 const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
+const SNAPSHOT_UPDATE_SECONDS = 60;
 const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
   10,
   20,
@@ -1497,6 +1498,7 @@ const createEditorPreviewDraft = (config) => ({
   alerts_reviews_days: config.alerts_reviews_days,
   window_hours: config.window_hours,
   realtime_poll_seconds: config.realtime_poll_seconds,
+  snapshot_update_seconds: config.snapshot_update_seconds,
   mobile_poll_battery_saver: config.mobile_poll_battery_saver,
   slideshow_rotation_enabled: config.slideshow_rotation_enabled,
   slideshow_rotation_seconds: config.slideshow_rotation_seconds,
@@ -1551,6 +1553,12 @@ const applyEditorPreviewDraftToCardConfig = ({
     realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
       Number(previewConfig.realtime_poll_seconds)
     ) ? Number(previewConfig.realtime_poll_seconds) : 5,
+    snapshot_update_seconds: normalizeBoundedPositiveInteger(
+      previewConfig.snapshot_update_seconds,
+      SNAPSHOT_UPDATE_SECONDS,
+      10,
+      240
+    ),
     mobile_poll_battery_saver: previewConfig.mobile_poll_battery_saver === true,
     slideshow_rotation_enabled: previewConfig.slideshow_rotation_enabled === true,
     slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
@@ -1862,6 +1870,18 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     Number(source.realtime_poll_seconds)
   ) ? Number(source.realtime_poll_seconds) : 5;
   addIfNotDefault(compact, "realtime_poll_seconds", realtimePollSeconds, 5);
+  const snapshotUpdateSeconds = normalizeBoundedPositiveInteger(
+    source.snapshot_update_seconds,
+    SNAPSHOT_UPDATE_SECONDS,
+    10,
+    240
+  );
+  addIfNotDefault(
+    compact,
+    "snapshot_update_seconds",
+    snapshotUpdateSeconds,
+    SNAPSHOT_UPDATE_SECONDS
+  );
   addIfNotDefault(
     compact,
     "mobile_poll_battery_saver",
@@ -2489,6 +2509,12 @@ const buildEditorConfigFromDom = ({
   nextConfig.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
     realtimePollSeconds
   ) ? realtimePollSeconds : 5;
+  nextConfig.snapshot_update_seconds = normalizeBoundedPositiveInteger(
+    root.querySelector("#snapshot_update_seconds")?.dataset.value || root.querySelector("#snapshot_update_seconds")?.value || String(SNAPSHOT_UPDATE_SECONDS),
+    SNAPSHOT_UPDATE_SECONDS,
+    10,
+    240
+  );
   nextConfig.mobile_poll_battery_saver = resolveSwitchChecked(
     root.querySelector("#mobile_poll_battery_saver")
   );
@@ -6508,6 +6534,7 @@ const GridMediaController = class {
       this._host._setActiveStreamType("grid");
       this._host._setStreamLoading(false);
       this._host._setStreamFallbackVisible(false);
+      this._host._syncSnapshotRefreshTimer?.();
       return;
     }
     this._host._gridLastRenderSignature = nextSignature;
@@ -6569,6 +6596,7 @@ const GridMediaController = class {
     this._host._setActiveStreamType("grid");
     this._host._setStreamLoading(false);
     this._host._setStreamFallbackVisible(false);
+    this._host._syncSnapshotRefreshTimer?.();
   }
 };
 
@@ -11137,11 +11165,13 @@ const PreviewPageController = class {
     if (!this.isPreviewPageEnabled()) {
       this.teardownPreviewMedia();
       this.applyPreviewShellVisibility();
+      this._host._syncSnapshotRefreshTimer?.();
       return;
     }
     if (!this.isPreviewPageActive()) {
       this.teardownPreviewMedia();
       this.applyPreviewShellVisibility();
+      this._host._syncSnapshotRefreshTimer?.();
       return;
     }
     const shell = this.ensurePreviewLayoutShell();
@@ -11166,6 +11196,7 @@ const PreviewPageController = class {
     if (shell.firstElementChild?.classList?.contains("preview-grid") && this._host._previewLastRenderSignature === nextSignature) {
       this.updatePreviewMeta();
       this.applyPreviewShellVisibility();
+      this._host._syncSnapshotRefreshTimer?.();
       return;
     }
     this.teardownPreviewMedia();
@@ -11205,6 +11236,7 @@ const PreviewPageController = class {
     });
     this.mountPreviewMedia();
     this.applyPreviewShellVisibility();
+    this._host._syncSnapshotRefreshTimer?.();
   }
   updatePreviewMeta() {
     if (!this.previewShowTitleBarsEnabled()) return;
@@ -11264,6 +11296,7 @@ const PreviewPageController = class {
         fallbackOnLiveError: true
       });
     });
+    this._host._syncSnapshotRefreshTimer?.();
   }
   activatePreviewPageRoute(context = {}) {
     const PAGE_IDS2 = this._constants.PAGE_IDS;
@@ -11276,6 +11309,7 @@ const PreviewPageController = class {
     this._host._applyPreviewShellVisibility();
     this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
     this.startPreviewMode();
+    this._host._syncSnapshotRefreshTimer?.();
   }
   startPreviewMode() {
     this._host._previewAlertController.start();
@@ -11818,6 +11852,7 @@ const GridPageController = class {
     this._host._gridAlertReturnT = null;
     this._host._gridRefreshT = null;
     this._host._gridAlertController.clearTimers();
+    this._host._clearSnapshotRefreshTimer?.();
   }
   clearGridAlertTracking() {
     this._host._gridAlertController.clearAlertTracking();
@@ -13204,11 +13239,15 @@ const SingleViewPageController = class {
   }
   applyNonPreviewConfigUpdateTail({
     needsEngineRemount = false,
+    snapshotUpdateChanged = false,
     realtimePollChanged = false
   } = {}) {
     this.applyNonPreviewSchemaSoftUpdate();
     if (needsEngineRemount) {
       this.mountEngineQuietly();
+    }
+    if (snapshotUpdateChanged) {
+      this._host._syncSnapshotRefreshTimer?.();
     }
     if (realtimePollChanged) {
       this._host._restartRealtimeHeadPollTimer();
@@ -13282,6 +13321,7 @@ const SingleViewPageController = class {
     needsShellRerender = false,
     activePageInvalid = false,
     previewPageActive = false,
+    snapshotUpdateChanged = false,
     realtimePollChanged = false
   } = {}) {
     this.applyCameraSetChange({
@@ -13300,6 +13340,7 @@ const SingleViewPageController = class {
     }
     this.applyNonPreviewConfigUpdateTail({
       needsEngineRemount,
+      snapshotUpdateChanged,
       realtimePollChanged
     });
     return "handled";
@@ -14185,6 +14226,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._gridRotationT = null;
     this._gridAlertReturnT = null;
     this._gridRefreshT = null;
+    this._snapshotRefreshT = null;
     this._gridResumePending = false;
     this._gridPinnedRotationStart = 0;
     this._gridLastRenderSignature = "";
@@ -14631,6 +14673,12 @@ const FrigateViewCard = class extends HTMLElement {
       realtime_poll_seconds: REALTIME_POLL_OPTIONS_SECONDS.includes(
         Number(config.realtime_poll_seconds)
       ) ? Number(config.realtime_poll_seconds) : 5,
+      snapshot_update_seconds: normalizeBoundedPositiveInteger(
+        config.snapshot_update_seconds,
+        SNAPSHOT_UPDATE_SECONDS,
+        10,
+        240
+      ),
       mobile_poll_battery_saver: config.mobile_poll_battery_saver === true,
       slideshow_rotation_enabled: config.slideshow_rotation_enabled === true,
       slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
@@ -14712,6 +14760,7 @@ const FrigateViewCard = class extends HTMLElement {
     const hiddenTabsChanged = JSON.stringify(prevConfig.hidden_tabs || []) !== JSON.stringify(nextConfig.hidden_tabs || []);
     const needsShellRerender = hiddenTabsChanged || previewEnabledChanged || mobileViewPageEnabledChanged || wideViewPageEnabledChanged;
     const needsEngineRemount = camerasChanged;
+    const snapshotUpdateChanged = prevConfig.snapshot_update_seconds !== nextConfig.snapshot_update_seconds;
     const realtimePollChanged = prevConfig.realtime_poll_seconds !== nextConfig.realtime_poll_seconds || prevConfig.mobile_poll_battery_saver !== nextConfig.mobile_poll_battery_saver;
     const activePageInvalid = !this._pageNavigationController.isPageRouteAvailable(this._pageId);
     const routeFlowOutcome = this._singleViewPageController.applyConfigUpdateRouteFlow({
@@ -14720,6 +14769,7 @@ const FrigateViewCard = class extends HTMLElement {
       needsShellRerender,
       activePageInvalid,
       previewPageActive: this._isPreviewPageActive(),
+      snapshotUpdateChanged,
       realtimePollChanged
     });
     if (routeFlowOutcome === "preview") {
@@ -15306,6 +15356,30 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _clearPreviewTimers() {
     this._previewAlertController.clearTimers();
+    this._clearSnapshotRefreshTimer();
+  }
+  _clearSnapshotRefreshTimer() {
+    if (this._snapshotRefreshT) clearTimeout(this._snapshotRefreshT);
+    this._snapshotRefreshT = null;
+  }
+  _snapshotUpdateMs() {
+    const seconds = Number(this._config?.snapshot_update_seconds);
+    const resolved = Number.isFinite(seconds) && seconds > 0 ? seconds : SNAPSHOT_UPDATE_SECONDS;
+    return Math.max(1e4, Math.min(24e4, Math.round(resolved * 1e3)));
+  }
+  _syncSnapshotRefreshTimer() {
+    this._clearSnapshotRefreshTimer();
+    const shouldRefreshPreview = this._isPreviewPageActive() && this._config?.preview_page_live_cameras !== true;
+    const shouldRefreshGrid = this._viewMode === "grid" && this._config?.grid_live_view_enabled !== false;
+    if (!shouldRefreshPreview && !shouldRefreshGrid) return;
+    this._snapshotRefreshT = setTimeout(() => {
+      this._snapshotRefreshT = null;
+      if (this._isPreviewPageActive() && this._config?.preview_page_live_cameras !== true) {
+        this._renderPreviewPage();
+      } else if (this._viewMode === "grid" && this._config?.grid_live_view_enabled !== false) {
+        this._scheduleGridRefresh(0);
+      }
+    }, this._snapshotUpdateMs());
   }
   _isPreviewCameraAlertLive(entity) {
     return this._previewAlertController.isCameraAlertLive(entity);
@@ -15315,6 +15389,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _renderPreviewPage() {
     this._previewPageController.renderPreviewPage();
+    this._syncSnapshotRefreshTimer();
   }
   _updatePreviewMeta() {
     this._previewPageController.updatePreviewMeta();
@@ -15343,6 +15418,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _clearGridTimers() {
     this._gridPageController.clearGridTimers();
+    this._clearSnapshotRefreshTimer();
   }
   _clearGridAlertTracking() {
     this._gridPageController.clearGridAlertTracking();
@@ -18433,6 +18509,12 @@ const normalizeCardConfig = (config) => {
   src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
     Number(src.realtime_poll_seconds)
   ) ? Number(src.realtime_poll_seconds) : 5;
+  src.snapshot_update_seconds = normalizeBoundedPositiveInteger(
+    src.snapshot_update_seconds,
+    SNAPSHOT_UPDATE_SECONDS,
+    10,
+    240
+  );
   src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
   src.slideshow_rotation_enabled = src.slideshow_rotation_enabled === true;
   src.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
@@ -19049,6 +19131,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       "#window_days",
       "#alerts_reviews_days",
       "#realtime_poll_seconds",
+      "#snapshot_update_seconds",
       "#slideshow_rotation_enabled",
       "#slideshow_rotation_seconds",
       "#slideshow_alert_hold_seconds",
@@ -19246,6 +19329,14 @@ const FrigateViewCardEditor = class extends HTMLElement {
               <ha-switch id="mobile_poll_battery_saver" ${this._config?.mobile_poll_battery_saver ? "checked" : ""}></ha-switch>
             </div>
             <div class="field-helper">On mobile-sized screens, use 10s polling to reduce battery use.</div>
+          </div>
+        </div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
+          <div id="snapshot_update_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <span class="field-label" style="margin:0">Snapshot Update Frequency</span>
+            <input id="snapshot_update_seconds" type="range" min="10" max="240" step="1" value="${this._config?.snapshot_update_seconds ?? SNAPSHOT_UPDATE_SECONDS}" style="width:100%">
+            <div class="field-helper">When Live View is disabled for a page, this determines how often a new snapshot is loaded.</div>
+            <div class="field-helper" id="snapshot_update_seconds-output">${this._config?.snapshot_update_seconds ?? SNAPSHOT_UPDATE_SECONDS} seconds</div>
           </div>
         </div>
       </div>
@@ -19911,6 +20002,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       }
     );
     [
+      "#snapshot_update_seconds",
       "#slideshow_alert_hold_seconds",
       "#grid_alert_hold_seconds",
       "#preview_page_alert_live_duration_seconds"
@@ -19944,6 +20036,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
         "rounded_corners",
         "outer_shadows",
         "mobile_poll_battery_saver",
+        "snapshot_update_seconds",
         "slideshow_rotation_enabled",
         "grid_mode_enabled",
         "grid_start_in_grid_enabled",

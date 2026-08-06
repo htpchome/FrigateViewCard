@@ -5,6 +5,7 @@ import {
   GRID_ROTATION_OPTIONS_SECONDS,
   MAX_CAMERAS,
   REALTIME_POLL_OPTIONS_SECONDS,
+  SNAPSHOT_UPDATE_SECONDS,
   SLIDESHOW_ALERT_HOLD_MS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   THEME_CUSTOM_KEYS,
@@ -90,6 +91,12 @@ export const normalizeCardConfig = (config) => {
   )
     ? Number(src.realtime_poll_seconds)
     : 5;
+  src.snapshot_update_seconds = normalizeBoundedPositiveInteger(
+    src.snapshot_update_seconds,
+    SNAPSHOT_UPDATE_SECONDS,
+    10,
+    240,
+  );
   src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
 
   src.slideshow_rotation_enabled = src.slideshow_rotation_enabled === true;

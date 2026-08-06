@@ -178,12 +178,16 @@ export class SingleViewPageController {
 
   applyNonPreviewConfigUpdateTail({
     needsEngineRemount = false,
+    snapshotUpdateChanged = false,
     realtimePollChanged = false,
   } = {}) {
     this.applyNonPreviewSchemaSoftUpdate();
 
     if (needsEngineRemount) {
       this.mountEngineQuietly();
+    }
+    if (snapshotUpdateChanged) {
+      this._host._syncSnapshotRefreshTimer?.();
     }
     if (realtimePollChanged) {
       this._host._restartRealtimeHeadPollTimer();
@@ -265,6 +269,7 @@ export class SingleViewPageController {
     needsShellRerender = false,
     activePageInvalid = false,
     previewPageActive = false,
+    snapshotUpdateChanged = false,
     realtimePollChanged = false,
   } = {}) {
     this.applyCameraSetChange({
@@ -286,6 +291,7 @@ export class SingleViewPageController {
 
     this.applyNonPreviewConfigUpdateTail({
       needsEngineRemount,
+      snapshotUpdateChanged,
       realtimePollChanged,
     });
     return "handled";

@@ -6,6 +6,7 @@ import {
   GRID_ROTATION_OPTIONS_SECONDS,
   REALTIME_POLL_OPTIONS_SECONDS,
   SLIDESHOW_ALERT_HOLD_MS,
+  SNAPSHOT_UPDATE_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   THEME_CUSTOM_KEYS,
 } from "../constants.js";
@@ -155,6 +156,18 @@ export const compactEditorConfigForYaml = (
     ? Number(source.realtime_poll_seconds)
     : 5;
   addIfNotDefault(compact, "realtime_poll_seconds", realtimePollSeconds, 5);
+  const snapshotUpdateSeconds = normalizeBoundedPositiveInteger(
+    source.snapshot_update_seconds,
+    SNAPSHOT_UPDATE_SECONDS,
+    10,
+    240,
+  );
+  addIfNotDefault(
+    compact,
+    "snapshot_update_seconds",
+    snapshotUpdateSeconds,
+    SNAPSHOT_UPDATE_SECONDS,
+  );
   addIfNotDefault(
     compact,
     "mobile_poll_battery_saver",

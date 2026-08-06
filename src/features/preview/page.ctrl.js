@@ -174,11 +174,13 @@ export class PreviewPageController {
     if (!this.isPreviewPageEnabled()) {
       this.teardownPreviewMedia();
       this.applyPreviewShellVisibility();
+      this._host._syncSnapshotRefreshTimer?.();
       return;
     }
     if (!this.isPreviewPageActive()) {
       this.teardownPreviewMedia();
       this.applyPreviewShellVisibility();
+      this._host._syncSnapshotRefreshTimer?.();
       return;
     }
 
@@ -213,6 +215,7 @@ export class PreviewPageController {
     ) {
       this.updatePreviewMeta();
       this.applyPreviewShellVisibility();
+      this._host._syncSnapshotRefreshTimer?.();
       return;
     }
     this.teardownPreviewMedia();
@@ -259,6 +262,7 @@ export class PreviewPageController {
     });
     this.mountPreviewMedia();
     this.applyPreviewShellVisibility();
+    this._host._syncSnapshotRefreshTimer?.();
   }
 
   updatePreviewMeta() {
@@ -327,6 +331,7 @@ export class PreviewPageController {
         fallbackOnLiveError: true,
       });
     });
+    this._host._syncSnapshotRefreshTimer?.();
   }
 
   activatePreviewPageRoute(context = {}) {
@@ -340,6 +345,7 @@ export class PreviewPageController {
     this._host._applyPreviewShellVisibility();
     this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();
     this.startPreviewMode();
+    this._host._syncSnapshotRefreshTimer?.();
   }
 
   startPreviewMode() {

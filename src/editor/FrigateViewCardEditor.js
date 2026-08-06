@@ -14,6 +14,7 @@ import {
   REALTIME_RELOAD_DEBOUNCE_MS,
   REALTIME_POLL_OPTIONS_SECONDS,
   MOBILE_BATTERY_SAVER_POLL_SECONDS,
+  SNAPSHOT_UPDATE_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   GRID_ROTATION_OPTIONS_SECONDS,
   SLIDESHOW_ALERT_HOLD_MS,
@@ -752,6 +753,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       "#window_days",
       "#alerts_reviews_days",
       "#realtime_poll_seconds",
+      "#snapshot_update_seconds",
       "#slideshow_rotation_enabled",
       "#slideshow_rotation_seconds",
       "#slideshow_alert_hold_seconds",
@@ -998,6 +1000,14 @@ export class FrigateViewCardEditor extends HTMLElement {
               <ha-switch id="mobile_poll_battery_saver" ${this._config?.mobile_poll_battery_saver ? "checked" : ""}></ha-switch>
             </div>
             <div class="field-helper">On mobile-sized screens, use 10s polling to reduce battery use.</div>
+          </div>
+        </div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
+          <div id="snapshot_update_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <span class="field-label" style="margin:0">Snapshot Update Frequency</span>
+            <input id="snapshot_update_seconds" type="range" min="10" max="240" step="1" value="${this._config?.snapshot_update_seconds ?? SNAPSHOT_UPDATE_SECONDS}" style="width:100%">
+            <div class="field-helper">When Live View is disabled for a page, this determines how often a new snapshot is loaded.</div>
+            <div class="field-helper" id="snapshot_update_seconds-output">${this._config?.snapshot_update_seconds ?? SNAPSHOT_UPDATE_SECONDS} seconds</div>
           </div>
         </div>
       </div>
@@ -1699,6 +1709,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       },
     );
     [
+      "#snapshot_update_seconds",
       "#slideshow_alert_hold_seconds",
       "#grid_alert_hold_seconds",
       "#preview_page_alert_live_duration_seconds",
@@ -1733,6 +1744,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         "rounded_corners",
         "outer_shadows",
         "mobile_poll_battery_saver",
+        "snapshot_update_seconds",
         "slideshow_rotation_enabled",
         "grid_mode_enabled",
         "grid_start_in_grid_enabled",

@@ -14,6 +14,7 @@ import {
   REALTIME_RELOAD_DEBOUNCE_MS,
   REALTIME_POLL_OPTIONS_SECONDS,
   MOBILE_BATTERY_SAVER_POLL_SECONDS,
+  SNAPSHOT_UPDATE_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   GRID_ROTATION_OPTIONS_SECONDS,
   GRID_ALERT_HOLD_MS,
@@ -543,6 +544,14 @@ export const buildEditorConfigFromDom = ({
   )
     ? realtimePollSeconds
     : 5;
+  nextConfig.snapshot_update_seconds = normalizeBoundedPositiveInteger(
+    root.querySelector("#snapshot_update_seconds")?.dataset.value ||
+      root.querySelector("#snapshot_update_seconds")?.value ||
+      String(SNAPSHOT_UPDATE_SECONDS),
+    SNAPSHOT_UPDATE_SECONDS,
+    10,
+    240,
+  );
   nextConfig.mobile_poll_battery_saver = resolveSwitchChecked(
     root.querySelector("#mobile_poll_battery_saver"),
   );

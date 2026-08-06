@@ -186,6 +186,7 @@ export class GridMediaController {
       this._host._setActiveStreamType("grid");
       this._host._setStreamLoading(false);
       this._host._setStreamFallbackVisible(false);
+      this._host._syncSnapshotRefreshTimer?.();
       return;
     }
 
@@ -252,5 +253,6 @@ export class GridMediaController {
     this._host._setActiveStreamType("grid");
     this._host._setStreamLoading(false);
     this._host._setStreamFallbackVisible(false);
+    this._host._syncSnapshotRefreshTimer?.();
   }
 }

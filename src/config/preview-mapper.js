@@ -3,6 +3,7 @@ import {
   REALTIME_POLL_OPTIONS_SECONDS,
   GRID_ALERT_HOLD_MS,
   SLIDESHOW_ALERT_HOLD_MS,
+  SNAPSHOT_UPDATE_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
 } from "../constants.js";
 import { normalizePageRoute } from "../features/navigation/router.js";
@@ -23,6 +24,7 @@ export const createEditorPreviewDraft = (config) => ({
   alerts_reviews_days: config.alerts_reviews_days,
   window_hours: config.window_hours,
   realtime_poll_seconds: config.realtime_poll_seconds,
+  snapshot_update_seconds: config.snapshot_update_seconds,
   mobile_poll_battery_saver: config.mobile_poll_battery_saver,
   slideshow_rotation_enabled: config.slideshow_rotation_enabled,
   slideshow_rotation_seconds: config.slideshow_rotation_seconds,
@@ -84,6 +86,12 @@ export const applyEditorPreviewDraftToCardConfig = ({
     )
       ? Number(previewConfig.realtime_poll_seconds)
       : 5,
+    snapshot_update_seconds: normalizeBoundedPositiveInteger(
+      previewConfig.snapshot_update_seconds,
+      SNAPSHOT_UPDATE_SECONDS,
+      10,
+      240,
+    ),
     mobile_poll_battery_saver: previewConfig.mobile_poll_battery_saver === true,
     slideshow_rotation_enabled:
       previewConfig.slideshow_rotation_enabled === true,

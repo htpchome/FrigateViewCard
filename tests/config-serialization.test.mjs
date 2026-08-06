@@ -29,6 +29,7 @@ test("editor YAML config omits normalized default values", () => {
     alerts_reviews_days: 3,
     realtime_poll_seconds: 5,
     mobile_poll_battery_saver: false,
+    snapshot_update_seconds: 60,
     slideshow_rotation_enabled: false,
     slideshow_rotation_seconds: 30,
     grid_mode_enabled: false,
@@ -251,6 +252,7 @@ test("preview draft carries hidden tabs and page routes", () => {
     hidden_tabs: ["clips", "snapshots"],
     landing_page: "preview",
     mobile_page: "single",
+    snapshot_update_seconds: 75,
     preview_page_alert_live_duration_seconds: 12,
     slideshow_alert_hold_seconds: 14,
     grid_alert_hold_seconds: 16,
@@ -260,6 +262,7 @@ test("preview draft carries hidden tabs and page routes", () => {
   assert.deepEqual(draft.hidden_tabs, ["clips", "snapshots"]);
   assert.equal(draft.landing_page, "preview");
   assert.equal(draft.mobile_page, "single");
+  assert.equal(draft.snapshot_update_seconds, 75);
   assert.equal(draft.preview_page_alert_live_duration_seconds, 12);
   assert.equal(draft.slideshow_alert_hold_seconds, 14);
   assert.equal(draft.grid_alert_hold_seconds, 16);
@@ -268,6 +271,7 @@ test("preview draft carries hidden tabs and page routes", () => {
 test("compact YAML preserves custom alert duration settings", () => {
   const config = compactEditorConfigForYaml({
     cameras: [{ entity: "camera.front_door" }],
+    snapshot_update_seconds: 90,
     preview_page_alert_live_duration_seconds: 18,
     slideshow_alert_hold_seconds: 22,
     grid_alert_hold_seconds: 26,
@@ -275,6 +279,7 @@ test("compact YAML preserves custom alert duration settings", () => {
 
   assert.deepEqual(config, {
     cameras: [{ entity: "camera.front_door" }],
+    snapshot_update_seconds: 90,
     preview_page_alert_live_duration_seconds: 18,
     slideshow_alert_hold_seconds: 22,
     grid_alert_hold_seconds: 26,

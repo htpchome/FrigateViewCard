@@ -14,6 +14,7 @@ import {
   REALTIME_RELOAD_DEBOUNCE_MS,
   REALTIME_POLL_OPTIONS_SECONDS,
   MOBILE_BATTERY_SAVER_POLL_SECONDS,
+  SNAPSHOT_UPDATE_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   GRID_ROTATION_OPTIONS_SECONDS,
   SLIDESHOW_ALERT_HOLD_MS,
@@ -43,6 +44,7 @@ import {
   cap,
   parseWs,
   normalizePositiveInteger,
+  normalizeBoundedPositiveInteger,
   normalizeCameraConnectionType,
   normalizeDisableHlsDesktop,
   normalizeHexColor,
@@ -513,6 +515,7 @@ export class FrigateViewCard extends HTMLElement {
     this._gridRotationT = null;
     this._gridAlertReturnT = null;
     this._gridRefreshT = null;
+    this._snapshotRefreshT = null;
     this._gridResumePending = false;
     this._gridPinnedRotationStart = 0;
     this._gridLastRenderSignature = "";
@@ -1008,6 +1011,12 @@ export class FrigateViewCard extends HTMLElement {
       )
         ? Number(config.realtime_poll_seconds)
         : 5,
+      snapshot_update_seconds: normalizeBoundedPositiveInteger(
+        config.snapshot_update_seconds,
+        SNAPSHOT_UPDATE_SECONDS,
+        10,
+        240,
+      ),
       mobile_poll_battery_saver: config.mobile_poll_battery_saver === true,
       slideshow_rotation_enabled: config.slideshow_rotation_enabled === true,
       slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
@@ -1136,6 +1145,8 @@ export class FrigateViewCard extends HTMLElement {
       mobileViewPageEnabledChanged ||
       wideViewPageEnabledChanged;
     const needsEngineRemount = camerasChanged;
+    const snapshotUpdateChanged =
+      prevConfig.snapshot_update_seconds !== nextConfig.snapshot_update_seconds;
     const realtimePollChanged =
       prevConfig.realtime_poll_seconds !== nextConfig.realtime_poll_seconds ||
       prevConfig.mobile_poll_battery_saver !==
@@ -1150,6 +1161,7 @@ export class FrigateViewCard extends HTMLElement {
         needsShellRerender,
         activePageInvalid,
         previewPageActive: this._isPreviewPageActive(),
+        snapshotUpdateChanged: snapshotUpdateChanged,
         realtimePollChanged,
       });
 
@@ -1826,6 +1838,46 @@ export class FrigateViewCard extends HTMLElement {
 
   _clearPreviewTimers() {
     this._previewAlertController.clearTimers();
+    this._clearSnapshotRefreshTimer();
+  }
+
+  _clearSnapshotRefreshTimer() {
+    if (this._snapshotRefreshT) clearTimeout(this._snapshotRefreshT);
+    this._snapshotRefreshT = null;
+  }
+
+  _snapshotUpdateMs() {
+    const seconds = Number(this._config?.snapshot_update_seconds);
+    const resolved =
+      Number.isFinite(seconds) && seconds > 0
+        ? seconds
+        : SNAPSHOT_UPDATE_SECONDS;
+    return Math.max(10000, Math.min(240000, Math.round(resolved * 1000)));
+  }
+
+  _syncSnapshotRefreshTimer() {
+    this._clearSnapshotRefreshTimer();
+    const shouldRefreshPreview =
+      this._isPreviewPageActive() &&
+      this._config?.preview_page_live_cameras !== true;
+    const shouldRefreshGrid =
+      this._viewMode === "grid" &&
+      this._config?.grid_live_view_enabled !== false;
+    if (!shouldRefreshPreview && !shouldRefreshGrid) return;
+    this._snapshotRefreshT = setTimeout(() => {
+      this._snapshotRefreshT = null;
+      if (
+        this._isPreviewPageActive() &&
+        this._config?.preview_page_live_cameras !== true
+      ) {
+        this._renderPreviewPage();
+      } else if (
+        this._viewMode === "grid" &&
+        this._config?.grid_live_view_enabled !== false
+      ) {
+        this._scheduleGridRefresh(0);
+      }
+    }, this._snapshotUpdateMs());
   }
 
   _isPreviewCameraAlertLive(entity) {
@@ -1838,6 +1890,7 @@ export class FrigateViewCard extends HTMLElement {
 
   _renderPreviewPage() {
     this._previewPageController.renderPreviewPage();
+    this._syncSnapshotRefreshTimer();
   }
 
   _updatePreviewMeta() {
@@ -1875,6 +1928,7 @@ export class FrigateViewCard extends HTMLElement {
 
   _clearGridTimers() {
     this._gridPageController.clearGridTimers();
+    this._clearSnapshotRefreshTimer();
   }
 
   _clearGridAlertTracking() {

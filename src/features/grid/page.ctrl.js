@@ -32,6 +32,7 @@ export class GridPageController {
     this._host._gridAlertReturnT = null;
     this._host._gridRefreshT = null;
     this._host._gridAlertController.clearTimers();
+    this._host._clearSnapshotRefreshTimer?.();
   }
 
   clearGridAlertTracking() {
