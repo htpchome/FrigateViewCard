@@ -1,4 +1,9 @@
 export const MOBILE_VIEW_PAGE_STYLES = `
+  .card.mobile-view-active .layout.mobile-layout {
+    border-radius: inherit;
+    overflow: hidden;
+  }
+
   .card.mobile-view-active .mobile-container {
     display: flex;
     flex-direction: column;
@@ -6,6 +11,7 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     height: 100%;
     min-height: 0;
     overflow: hidden;
+    border-radius: inherit;
     background: var(--c-bg-panel);
   }
 
@@ -15,6 +21,9 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     flex-direction: column;
     width: 100%;
     min-height: 0;
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+    overflow: hidden;
   }
 
   .card.mobile-view-active .mobile-bottom {

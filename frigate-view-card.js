@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1265";
+const VERSION = "1.0.1266";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -121,6 +121,11 @@ const ICONS = {
 
 // src/features/mobile-view/page.styles.js
 const MOBILE_VIEW_PAGE_STYLES = `
+  .card.mobile-view-active .layout.mobile-layout {
+    border-radius: inherit;
+    overflow: hidden;
+  }
+
   .card.mobile-view-active .mobile-container {
     display: flex;
     flex-direction: column;
@@ -128,6 +133,7 @@ const MOBILE_VIEW_PAGE_STYLES = `
     height: 100%;
     min-height: 0;
     overflow: hidden;
+    border-radius: inherit;
     background: var(--c-bg-panel);
   }
 
@@ -137,6 +143,9 @@ const MOBILE_VIEW_PAGE_STYLES = `
     flex-direction: column;
     width: 100%;
     min-height: 0;
+    border-top-left-radius: inherit;
+    border-top-right-radius: inherit;
+    overflow: hidden;
   }
 
   .card.mobile-view-active .mobile-bottom {
