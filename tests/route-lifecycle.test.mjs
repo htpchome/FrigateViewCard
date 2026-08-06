@@ -15,10 +15,7 @@ test("syncStandardRouteShell updates tabs and renders without remount", () => {
 
   syncStandardRouteShell(host);
 
-  assert.deepEqual(calls, [
-    ["syncTabsShell"],
-    ["renderAll"],
-  ]);
+  assert.deepEqual(calls, [["syncTabsShell"], ["renderAll"]]);
 });
 
 test("activateStandardPageRouteLifecycle avoids shell remount on non-startup route change", () => {
