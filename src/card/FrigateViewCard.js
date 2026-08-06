@@ -1870,14 +1870,18 @@ export class FrigateViewCard extends HTMLElement {
         this._isPreviewPageActive() &&
         this._config?.preview_page_live_cameras !== true
       ) {
-        this._previewLastRenderSignature = "";
-        this._renderPreviewPage();
-      } else if (
+        void this._refreshSnapshotMedia().finally(() => {
+          this._syncSnapshotRefreshTimer();
+        });
+        return;
+      }
+      if (
         this._viewMode === "grid" &&
         this._config?.grid_live_view_enabled === false
       ) {
-        this._gridLastRenderSignature = "";
-        this._scheduleGridRefresh(0);
+        void this._refreshSnapshotMedia().finally(() => {
+          this._syncSnapshotRefreshTimer();
+        });
       }
     }, this._snapshotUpdateMs());
   }
@@ -1893,6 +1897,10 @@ export class FrigateViewCard extends HTMLElement {
   _renderPreviewPage() {
     this._previewPageController.renderPreviewPage();
     this._syncSnapshotRefreshTimer();
+  }
+
+  _refreshSnapshotMedia() {
+    return this._gridMediaController.refreshSnapshotMedia();
   }
 
   _updatePreviewMeta() {
@@ -2056,6 +2064,7 @@ export class FrigateViewCard extends HTMLElement {
       this._scheduleGridRotation();
       this._gridAlertController.scheduleAlertWatch(300);
     }
+    this._syncSnapshotRefreshTimer();
     this._syncToolbarButtons();
   }
 

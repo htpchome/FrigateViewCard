@@ -8,6 +8,21 @@ export const toAbsoluteLocalUrl = ({ url, origin }) => {
   return isAbsoluteOrDataUrl(url) ? url : `${origin}${url}`;
 };
 
+export const appendCacheBustParam = (
+  url,
+  cacheBustValue,
+  key = "fvc_snapshot",
+) => {
+  const source = String(url || "");
+  if (!source) return "";
+  const token = String(cacheBustValue || Date.now());
+  const hashIndex = source.indexOf("#");
+  const base = hashIndex >= 0 ? source.slice(0, hashIndex) : source;
+  const hash = hashIndex >= 0 ? source.slice(hashIndex) : "";
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}${encodeURIComponent(key)}=${encodeURIComponent(token)}${hash}`;
+};
+
 export const getCachedEntityUrl = ({ cacheMap, entity, nowMs }) => {
   const cached = cacheMap?.get?.(entity);
   if (cached && cached.url && cached.exp > nowMs) return cached.url;

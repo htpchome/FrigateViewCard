@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1255";
+const VERSION = "1.0.1256";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4819,6 +4819,16 @@ const toAbsoluteLocalUrl = ({ url, origin }) => {
   if (!url) return "";
   return isAbsoluteOrDataUrl(url) ? url : `${origin}${url}`;
 };
+const appendCacheBustParam = (url, cacheBustValue, key = "fvc_snapshot") => {
+  const source = String(url || "");
+  if (!source) return "";
+  const token = String(cacheBustValue || Date.now());
+  const hashIndex = source.indexOf("#");
+  const base = hashIndex >= 0 ? source.slice(0, hashIndex) : source;
+  const hash = hashIndex >= 0 ? source.slice(hashIndex) : "";
+  const separator = base.includes("?") ? "&" : "?";
+  return `${base}${separator}${encodeURIComponent(key)}=${encodeURIComponent(token)}${hash}`;
+};
 const getCachedEntityUrl = ({ cacheMap, entity, nowMs }) => {
   const cached = cacheMap?.get?.(entity);
   if (cached && cached.url && cached.exp > nowMs) return cached.url;
@@ -6422,6 +6432,31 @@ const GridMediaController = class {
     cell.appendChild(img);
     return true;
   }
+  async _resolveSnapshotImageUrl(entity, stateObj = null) {
+    const primaryUrl = await this._host._streamFallbackUrl(entity);
+    if (primaryUrl) return primaryUrl;
+    const entityPicture = stateObj?.attributes?.entity_picture || this._host._hass?.states?.[entity]?.attributes?.entity_picture || "";
+    if (!entityPicture) return "";
+    return /^https?:\/\//i.test(entityPicture) ? entityPicture : `${window.location.origin}${entityPicture}`;
+  }
+  async refreshSnapshotMedia({ cacheBustValue = Date.now() } = {}) {
+    const hosts = this._host.shadowRoot?.querySelectorAll(
+      ".preview-media-host[data-preview-use-live='0'], .live-grid-cell[data-grid-use-live='0']"
+    );
+    if (!hosts?.length) return;
+    await Promise.all(
+      Array.from(hosts).map(async (host) => {
+        const img = host.querySelector?.("img");
+        if (!img || !img.isConnected) return;
+        const entity = host.dataset.previewMediaEntity || host.dataset.gridEntity || "";
+        if (!entity) return;
+        const stateObj = this._host._hass?.states?.[entity] || null;
+        const resolvedUrl = await this._resolveSnapshotImageUrl(entity, stateObj);
+        if (!resolvedUrl || !img.isConnected) return;
+        img.src = appendCacheBustParam(resolvedUrl, cacheBustValue);
+      })
+    );
+  }
   _mountGridDirectMseCell(cell, entity, gridState, options = {}) {
     const host = document.createElement("div");
     host.style.cssText = "width:100%;height:100%;display:block";
@@ -6554,6 +6589,7 @@ const GridMediaController = class {
         const severity = this._host._gridCellSeverity(entity);
         applyGridCellSeverityClass(cell, severity);
         const useLive = this._host._gridLiveViewEnabled() || this._host._isGridCameraAlertLive(entity);
+        cell.dataset.gridUseLive = useLive ? "1" : "0";
         if (entity) {
           this._mountGridCameraCellMedia(cell, {
             entity,
@@ -15375,11 +15411,15 @@ const FrigateViewCard = class extends HTMLElement {
     this._snapshotRefreshT = setTimeout(() => {
       this._snapshotRefreshT = null;
       if (this._isPreviewPageActive() && this._config?.preview_page_live_cameras !== true) {
-        this._previewLastRenderSignature = "";
-        this._renderPreviewPage();
-      } else if (this._viewMode === "grid" && this._config?.grid_live_view_enabled === false) {
-        this._gridLastRenderSignature = "";
-        this._scheduleGridRefresh(0);
+        void this._refreshSnapshotMedia().finally(() => {
+          this._syncSnapshotRefreshTimer();
+        });
+        return;
+      }
+      if (this._viewMode === "grid" && this._config?.grid_live_view_enabled === false) {
+        void this._refreshSnapshotMedia().finally(() => {
+          this._syncSnapshotRefreshTimer();
+        });
       }
     }, this._snapshotUpdateMs());
   }
@@ -15392,6 +15432,9 @@ const FrigateViewCard = class extends HTMLElement {
   _renderPreviewPage() {
     this._previewPageController.renderPreviewPage();
     this._syncSnapshotRefreshTimer();
+  }
+  _refreshSnapshotMedia() {
+    return this._gridMediaController.refreshSnapshotMedia();
   }
   _updatePreviewMeta() {
     this._previewPageController.updatePreviewMeta();
@@ -15516,6 +15559,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._scheduleGridRotation();
       this._gridAlertController.scheduleAlertWatch(300);
     }
+    this._syncSnapshotRefreshTimer();
     this._syncToolbarButtons();
   }
   _isSlideshowRotationAvailable() {

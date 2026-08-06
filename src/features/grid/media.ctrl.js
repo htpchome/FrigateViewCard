@@ -2,6 +2,7 @@ import {
   buildHaCameraStreamState,
   createHaCameraStreamElement,
 } from "../../integrations/home-assistant/playback.js";
+import { appendCacheBustParam } from "../live/fallbacks/fallback-url.js";
 import {
   applyGridCellSeverityClass,
   buildGridSignaturePart,
@@ -56,6 +57,40 @@ export class GridMediaController {
     })();
     cell.appendChild(img);
     return true;
+  }
+
+  async _resolveSnapshotImageUrl(entity, stateObj = null) {
+    const primaryUrl = await this._host._streamFallbackUrl(entity);
+    if (primaryUrl) return primaryUrl;
+    const entityPicture =
+      stateObj?.attributes?.entity_picture ||
+      this._host._hass?.states?.[entity]?.attributes?.entity_picture ||
+      "";
+    if (!entityPicture) return "";
+    return /^https?:\/\//i.test(entityPicture)
+      ? entityPicture
+      : `${window.location.origin}${entityPicture}`;
+  }
+
+  async refreshSnapshotMedia({ cacheBustValue = Date.now() } = {}) {
+    const hosts = this._host.shadowRoot?.querySelectorAll(
+      ".preview-media-host[data-preview-use-live='0'], .live-grid-cell[data-grid-use-live='0']",
+    );
+    if (!hosts?.length) return;
+
+    await Promise.all(
+      Array.from(hosts).map(async (host) => {
+        const img = host.querySelector?.("img");
+        if (!img || !img.isConnected) return;
+        const entity =
+          host.dataset.previewMediaEntity || host.dataset.gridEntity || "";
+        if (!entity) return;
+        const stateObj = this._host._hass?.states?.[entity] || null;
+        const resolvedUrl = await this._resolveSnapshotImageUrl(entity, stateObj);
+        if (!resolvedUrl || !img.isConnected) return;
+        img.src = appendCacheBustParam(resolvedUrl, cacheBustValue);
+      }),
+    );
   }
 
   _mountGridDirectMseCell(cell, entity, gridState, options = {}) {
@@ -213,6 +248,7 @@ export class GridMediaController {
         const useLive =
           this._host._gridLiveViewEnabled() ||
           this._host._isGridCameraAlertLive(entity);
+        cell.dataset.gridUseLive = useLive ? "1" : "0";
         if (entity) {
           this._mountGridCameraCellMedia(cell, {
             entity,
