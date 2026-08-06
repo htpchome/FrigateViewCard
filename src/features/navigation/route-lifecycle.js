@@ -26,7 +26,10 @@ export function mountEngineQuietly(host) {
 }
 
 export function syncStandardRouteShell(host) {
-  host._syncTabsShell();
+  // Route changes can swap page shell structure/class profiles.
+  host._cleanupEngine?.();
+  host._renderShell();
+  host._mountEngine?.(null, { quiet: true });
   host._renderAll();
 }
 
@@ -47,10 +50,6 @@ export function activateStandardPageRouteLifecycle({
   }
 
   if (context.deferCameraSwitch === true) return;
-
-  if (leavingPreview) {
-    mountEngineQuietly(host);
-  }
 
   syncStandardRouteShell(host);
 }

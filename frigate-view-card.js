@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1264";
+const VERSION = "1.0.1265";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -13227,7 +13227,9 @@ function mountEngineQuietly(host) {
   host._mountEngine(null, { quiet: true });
 }
 function syncStandardRouteShell(host) {
-  host._syncTabsShell();
+  host._cleanupEngine?.();
+  host._renderShell();
+  host._mountEngine?.(null, { quiet: true });
   host._renderAll();
 }
 function activateStandardPageRouteLifecycle({
@@ -13244,9 +13246,6 @@ function activateStandardPageRouteLifecycle({
     return;
   }
   if (context.deferCameraSwitch === true) return;
-  if (leavingPreview) {
-    mountEngineQuietly(host);
-  }
   syncStandardRouteShell(host);
 }
 
