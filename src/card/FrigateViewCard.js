@@ -1862,7 +1862,7 @@ export class FrigateViewCard extends HTMLElement {
       this._config?.preview_page_live_cameras !== true;
     const shouldRefreshGrid =
       this._viewMode === "grid" &&
-      this._config?.grid_live_view_enabled !== false;
+      this._config?.grid_live_view_enabled === false;
     if (!shouldRefreshPreview && !shouldRefreshGrid) return;
     this._snapshotRefreshT = setTimeout(() => {
       this._snapshotRefreshT = null;
@@ -1870,11 +1870,13 @@ export class FrigateViewCard extends HTMLElement {
         this._isPreviewPageActive() &&
         this._config?.preview_page_live_cameras !== true
       ) {
+        this._previewLastRenderSignature = "";
         this._renderPreviewPage();
       } else if (
         this._viewMode === "grid" &&
-        this._config?.grid_live_view_enabled !== false
+        this._config?.grid_live_view_enabled === false
       ) {
+        this._gridLastRenderSignature = "";
         this._scheduleGridRefresh(0);
       }
     }, this._snapshotUpdateMs());

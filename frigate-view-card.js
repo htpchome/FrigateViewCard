@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1254";
+const VERSION = "1.0.1255";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15370,13 +15370,15 @@ const FrigateViewCard = class extends HTMLElement {
   _syncSnapshotRefreshTimer() {
     this._clearSnapshotRefreshTimer();
     const shouldRefreshPreview = this._isPreviewPageActive() && this._config?.preview_page_live_cameras !== true;
-    const shouldRefreshGrid = this._viewMode === "grid" && this._config?.grid_live_view_enabled !== false;
+    const shouldRefreshGrid = this._viewMode === "grid" && this._config?.grid_live_view_enabled === false;
     if (!shouldRefreshPreview && !shouldRefreshGrid) return;
     this._snapshotRefreshT = setTimeout(() => {
       this._snapshotRefreshT = null;
       if (this._isPreviewPageActive() && this._config?.preview_page_live_cameras !== true) {
+        this._previewLastRenderSignature = "";
         this._renderPreviewPage();
-      } else if (this._viewMode === "grid" && this._config?.grid_live_view_enabled !== false) {
+      } else if (this._viewMode === "grid" && this._config?.grid_live_view_enabled === false) {
+        this._gridLastRenderSignature = "";
         this._scheduleGridRefresh(0);
       }
     }, this._snapshotUpdateMs());
