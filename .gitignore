@@ -160,3 +160,6 @@ wget-log
 # Local crash dumps
 core
 core.*
+
+# Misc
+docs/*
