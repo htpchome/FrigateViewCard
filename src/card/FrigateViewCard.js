@@ -87,6 +87,7 @@ import {
 import {
   createPageShellRegistry,
   registerDefaultPageShellProfiles,
+  resolvePageCapabilities,
   resolvePageInfoRowMarkup,
   resolvePageMainLayoutShellMarkup,
   resolvePageRightColumnShellMarkup,
@@ -1825,6 +1826,10 @@ export class FrigateViewCard extends HTMLElement {
     return this._pageShellRegistry?.resolve(this._pageId) || {};
   }
 
+  _activePageShellCapabilities() {
+    return resolvePageCapabilities(this._activePageShellLayoutProfile());
+  }
+
   _activateWideViewPageRoute(context = {}) {
     this._wideViewPageController.activateWideViewPageRoute(context);
   }
@@ -2788,6 +2793,10 @@ export class FrigateViewCard extends HTMLElement {
   _syncTabsShell() {
     const tabs = this._$(".tabs");
     if (!tabs) return;
+    if (this._activePageShellCapabilities().tabsVariant === "none") {
+      tabs.innerHTML = "";
+      return;
+    }
     const prevTab = this._tab;
     tabs.innerHTML = this._buildTabsMarkup();
     [

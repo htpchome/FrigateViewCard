@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1261";
+const VERSION = "1.0.1262";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2824,6 +2824,7 @@ function normalizeProfile(profile = {}) {
   const infoRowBuilder = typeof profile.buildInfoRowMarkup === "function" ? profile.buildInfoRowMarkup : null;
   const rightColumnShellBuilder = typeof profile.buildRightColumnShellMarkup === "function" ? profile.buildRightColumnShellMarkup : null;
   const mainLayoutShellBuilder = typeof profile.buildMainLayoutShellMarkup === "function" ? profile.buildMainLayoutShellMarkup : null;
+  const capabilities = profile.capabilities && typeof profile.capabilities === "object" ? profile.capabilities : {};
   return {
     layoutClass: String(profile.layoutClass || "").trim(),
     leftColumnClass: String(profile.leftColumnClass || "").trim(),
@@ -2831,9 +2832,22 @@ function normalizeProfile(profile = {}) {
     tabsHolderClass: String(profile.tabsHolderClass || "").trim(),
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
+    capabilities: {
+      hasLive: capabilities.hasLive !== false,
+      hasBrowse: capabilities.hasBrowse !== false,
+      tabsVariant: capabilities.tabsVariant === "none" || capabilities.tabsVariant === "new-tabs" ? capabilities.tabsVariant : "standard"
+    },
     buildInfoRowMarkup: infoRowBuilder,
     buildRightColumnShellMarkup: rightColumnShellBuilder,
     buildMainLayoutShellMarkup: mainLayoutShellBuilder
+  };
+}
+function resolvePageCapabilities(profile = {}) {
+  const caps = profile && profile.capabilities && typeof profile.capabilities === "object" ? profile.capabilities : {};
+  return {
+    hasLive: caps.hasLive !== false,
+    hasBrowse: caps.hasBrowse !== false,
+    tabsVariant: caps.tabsVariant === "none" || caps.tabsVariant === "new-tabs" ? caps.tabsVariant : "standard"
   };
 }
 function resolvePageInfoRowMarkup(profile, { title, subtitle, version, host, buildDefaultInfoRowMarkup } = {}) {
@@ -2932,7 +2946,12 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
   registry.register(PAGE_IDS2.singleView, {
     layoutClass: "layout--single-view",
     leftColumnClass: "col-left--single-view",
-    rightColumnClass: "col-right--single-view"
+    rightColumnClass: "col-right--single-view",
+    capabilities: {
+      hasLive: true,
+      hasBrowse: true,
+      tabsVariant: "standard"
+    }
   });
   registry.register(PAGE_IDS2.mobileView, {
     layoutClass: "layout--mobile-view",
@@ -2947,19 +2966,34 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       streamType: host?._activeStreamType,
       eventsCount: host?._allDisplayEvents?.().length || 0,
       online: host?._hass?.states?.[host?._activeCam?.entity]?.state !== "unavailable"
-    })
+    }),
+    capabilities: {
+      hasLive: true,
+      hasBrowse: true,
+      tabsVariant: "standard"
+    }
   });
   registry.register(PAGE_IDS2.wideView, {
     layoutClass: "layout--wide-view",
     leftColumnClass: "col-left--wide-view",
     rightColumnClass: "col-right--wide-view",
-    tabsHolderClass: "tabs-holder--wide-view"
+    tabsHolderClass: "tabs-holder--wide-view",
+    capabilities: {
+      hasLive: true,
+      hasBrowse: true,
+      tabsVariant: "standard"
+    }
   });
   registry.register(PAGE_IDS2.preview, {
     layoutClass: "layout--preview-view",
     leftColumnClass: "col-left--preview-view",
     rightColumnClass: "col-right--preview-view",
-    resizeHandleClass: "resize-handle--preview-view"
+    resizeHandleClass: "resize-handle--preview-view",
+    capabilities: {
+      hasLive: true,
+      hasBrowse: true,
+      tabsVariant: "standard"
+    }
   });
 }
 
@@ -15611,6 +15645,9 @@ const FrigateViewCard = class extends HTMLElement {
   _activePageShellLayoutProfile() {
     return this._pageShellRegistry?.resolve(this._pageId) || {};
   }
+  _activePageShellCapabilities() {
+    return resolvePageCapabilities(this._activePageShellLayoutProfile());
+  }
   _activateWideViewPageRoute(context = {}) {
     this._wideViewPageController.activateWideViewPageRoute(context);
   }
@@ -16403,6 +16440,10 @@ const FrigateViewCard = class extends HTMLElement {
   _syncTabsShell() {
     const tabs = this._$(".tabs");
     if (!tabs) return;
+    if (this._activePageShellCapabilities().tabsVariant === "none") {
+      tabs.innerHTML = "";
+      return;
+    }
     const prevTab = this._tab;
     tabs.innerHTML = this._buildTabsMarkup();
     [

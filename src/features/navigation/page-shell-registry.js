@@ -14,6 +14,10 @@ function normalizeProfile(profile = {}) {
     typeof profile.buildMainLayoutShellMarkup === "function"
       ? profile.buildMainLayoutShellMarkup
       : null;
+  const capabilities =
+    profile.capabilities && typeof profile.capabilities === "object"
+      ? profile.capabilities
+      : {};
   return {
     layoutClass: String(profile.layoutClass || "").trim(),
     leftColumnClass: String(profile.leftColumnClass || "").trim(),
@@ -21,9 +25,33 @@ function normalizeProfile(profile = {}) {
     tabsHolderClass: String(profile.tabsHolderClass || "").trim(),
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
+    capabilities: {
+      hasLive: capabilities.hasLive !== false,
+      hasBrowse: capabilities.hasBrowse !== false,
+      tabsVariant:
+        capabilities.tabsVariant === "none" ||
+        capabilities.tabsVariant === "new-tabs"
+          ? capabilities.tabsVariant
+          : "standard",
+    },
     buildInfoRowMarkup: infoRowBuilder,
     buildRightColumnShellMarkup: rightColumnShellBuilder,
     buildMainLayoutShellMarkup: mainLayoutShellBuilder,
+  };
+}
+
+export function resolvePageCapabilities(profile = {}) {
+  const caps =
+    profile && profile.capabilities && typeof profile.capabilities === "object"
+      ? profile.capabilities
+      : {};
+  return {
+    hasLive: caps.hasLive !== false,
+    hasBrowse: caps.hasBrowse !== false,
+    tabsVariant:
+      caps.tabsVariant === "none" || caps.tabsVariant === "new-tabs"
+        ? caps.tabsVariant
+        : "standard",
   };
 }
 
@@ -162,6 +190,11 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     layoutClass: "layout--single-view",
     leftColumnClass: "col-left--single-view",
     rightColumnClass: "col-right--single-view",
+    capabilities: {
+      hasLive: true,
+      hasBrowse: true,
+      tabsVariant: "standard",
+    },
   });
 
   registry.register(PAGE_IDS.mobileView, {
@@ -181,6 +214,11 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
           host?._hass?.states?.[host?._activeCam?.entity]?.state !==
           "unavailable",
       }),
+    capabilities: {
+      hasLive: true,
+      hasBrowse: true,
+      tabsVariant: "standard",
+    },
   });
 
   registry.register(PAGE_IDS.wideView, {
@@ -188,6 +226,11 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     leftColumnClass: "col-left--wide-view",
     rightColumnClass: "col-right--wide-view",
     tabsHolderClass: "tabs-holder--wide-view",
+    capabilities: {
+      hasLive: true,
+      hasBrowse: true,
+      tabsVariant: "standard",
+    },
   });
 
   registry.register(PAGE_IDS.preview, {
@@ -195,5 +238,10 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     leftColumnClass: "col-left--preview-view",
     rightColumnClass: "col-right--preview-view",
     resizeHandleClass: "resize-handle--preview-view",
+    capabilities: {
+      hasLive: true,
+      hasBrowse: true,
+      tabsVariant: "standard",
+    },
   });
 }
