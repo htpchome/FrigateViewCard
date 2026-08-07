@@ -1300,7 +1300,6 @@ export class FrigateViewCard extends HTMLElement {
       try {
         this._editorPreviewController.dispose();
       } catch (_) {}
-      this._editorPreviewController = null;
     }
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._liveOverlayControlsController) {
@@ -2087,11 +2086,12 @@ export class FrigateViewCard extends HTMLElement {
       this._scheduleGridRotation();
       this._gridAlertController.scheduleAlertWatch(300);
       if (this._tab === "alerts" || this._tab === "kept") {
-        void this._loadGridMixedTabData(this._tab).then(() => {
+        void (async () => {
+          await this._loadGridMixedTabData(this._tab);
           if (this._viewMode !== "grid") return;
           if (this._tab !== "alerts" && this._tab !== "kept") return;
           this._renderList();
-        });
+        })();
       }
     }
     this._syncSnapshotRefreshTimer();
