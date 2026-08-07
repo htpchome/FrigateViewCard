@@ -78,16 +78,52 @@ export const MOBILE_VIEW_PAGE_STYLES = `
 
   .card.mobile-view-active .mobile-top .cam-switcher {
     position: relative;
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 8px;
     overflow: visible;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__back {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__back svg {
+    width: 16px;
+    height: 16px;
   }
 
   .card.mobile-view-active .mobile-cam-picker {
     position: relative;
     flex: 1 1 auto;
     min-width: 0;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__status {
+    display: inline-flex;
+    align-items: center;
+    justify-self: end;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__stream {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.05;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__dot {
+    font-size: 1rem;
+    line-height: 1;
   }
 
   .card.mobile-view-active .mobile-cam-picker__trigger {

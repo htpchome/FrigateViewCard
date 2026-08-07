@@ -47,6 +47,8 @@ export function buildStandardPageCamSwitcherMarkup(
   host,
   { includeStatus = true, mobile = false } = {},
 ) {
+  const activeEntity = host._activeCam?.entity;
+  const activeState = activeEntity ? host._hass?.states?.[activeEntity] : null;
   const args = {
     previewPageEnabled: host._isPreviewPageEnabled?.() === true,
     includeStatus,
@@ -57,6 +59,8 @@ export function buildStandardPageCamSwitcherMarkup(
     getCameraName: cameraName,
     isCameraAvailable: (camera) =>
       host._hass?.states?.[camera.entity]?.state !== "unavailable",
+    streamType: host._activeStreamType || "--",
+    online: activeState ? activeState.state !== "unavailable" : true,
     pickerOpen: host._mobileCamSwitcherOpen === true,
   };
   return mobile
@@ -68,6 +72,7 @@ export function renderStandardPageCamSwitcher(host, { mobile = false } = {}) {
   const el = host._$("#cam-switcher");
   if (!el) return;
   if (
+    !mobile &&
     host._config.cameras.length < 2 &&
     host._isPreviewPageEnabled?.() !== true
   ) {

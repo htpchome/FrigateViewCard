@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1293";
+const VERSION = "1.0.1294";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -200,16 +200,52 @@ const MOBILE_VIEW_PAGE_STYLES = `
 
   .card.mobile-view-active .mobile-top .cam-switcher {
     position: relative;
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: 8px;
     overflow: visible;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__back {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__back svg {
+    width: 16px;
+    height: 16px;
   }
 
   .card.mobile-view-active .mobile-cam-picker {
     position: relative;
     flex: 1 1 auto;
     min-width: 0;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__status {
+    display: inline-flex;
+    align-items: center;
+    justify-self: end;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__stream {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.05;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__dot {
+    font-size: 1rem;
+    line-height: 1;
   }
 
   .card.mobile-view-active .mobile-cam-picker__trigger {
@@ -2938,13 +2974,15 @@ function buildMobileCamSwitcherMarkup({
   icons,
   getCameraName,
   isCameraAvailable,
+  streamType = "--",
+  online = true,
   pickerOpen = false
 }) {
   const cameraList = Array.isArray(cameras) ? cameras : [];
   const safeActiveIdx = Number.isInteger(activeCamIdx) && activeCamIdx >= 0 && activeCamIdx < cameraList.length ? activeCamIdx : 0;
   const activeCamera = cameraList[safeActiveIdx] || cameraList[0] || null;
   const activeCameraName = activeCamera ? getCameraName(activeCamera) : "Camera";
-  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
+  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn mobile-cam-picker__back" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left}</button>` : "";
   const cameraOptions = cameraList.map(
     (camera, index) => buildMobileCameraOptionMarkup({
       camera,
@@ -2970,15 +3008,20 @@ function buildMobileCamSwitcherMarkup({
       <div class="mobile-cam-picker__panel" role="listbox" ${pickerOpen ? "" : "hidden"} data-mobile-cam-panel>
         ${cameraOptions}
       </div>
+    </div>
+    <div class="mobile-cam-picker__status" aria-label="Live status">
+      <div class="mobile-cam-picker__stream">
+        <div class="sv stream-type" id="stream-type">${resolveMobileViewStreamTypeText(streamType)}</div>
+        <div class="sl">Stream</div>
+      </div>
+      <div class="sv mobile-cam-picker__dot" id="on-dot" style="color:${resolveMobileViewStatusColor(online)}">\u25CF</div>
     </div>`;
 }
 function buildMobileViewInfoRowMarkup({
   title,
   subtitle,
   version,
-  streamType = "--",
-  eventsCount = "\u2014",
-  online = true
+  eventsCount = "\u2014"
 }) {
   return `<div class="info-row mobile-view-info-row">
               <div>
@@ -2991,16 +3034,8 @@ function buildMobileViewInfoRowMarkup({
                   <div class="sl">Version</div>
                 </div>
                 <div class="stat">
-                  <div class="sv stream-type" id="stream-type">${resolveMobileViewStreamTypeText(streamType)}</div>
-                  <div class="sl">Stream</div>
-                </div>
-                <div class="stat">
                   <div class="sv" id="ev-count">${resolveMobileViewEventsCountText(eventsCount)}</div>
                   <div class="sl">Events</div>
-                </div>
-                <div class="stat">
-                  <div class="sv" id="on-dot" style="color:${resolveMobileViewStatusColor(online)}">\u25CF</div>
-                  <div class="sl" id="on-lbl">${resolveMobileViewOnlineLabel(online)}</div>
                 </div>
               </div>
             </div>`;
@@ -13697,6 +13732,8 @@ function buildStandardCamSwitcherButtons({
   return `${backButton}${cameraButtons}`;
 }
 function buildStandardPageCamSwitcherMarkup(host, { includeStatus = true, mobile = false } = {}) {
+  const activeEntity = host._activeCam?.entity;
+  const activeState = activeEntity ? host._hass?.states?.[activeEntity] : null;
   const args = {
     previewPageEnabled: host._isPreviewPageEnabled?.() === true,
     includeStatus,
@@ -13706,6 +13743,8 @@ function buildStandardPageCamSwitcherMarkup(host, { includeStatus = true, mobile
     icons: ICONS,
     getCameraName: cameraName,
     isCameraAvailable: (camera) => host._hass?.states?.[camera.entity]?.state !== "unavailable",
+    streamType: host._activeStreamType || "--",
+    online: activeState ? activeState.state !== "unavailable" : true,
     pickerOpen: host._mobileCamSwitcherOpen === true
   };
   return mobile ? buildMobileViewCamSwitcherMarkup(args) : buildStandardCamSwitcherButtons(args);
@@ -13713,7 +13752,7 @@ function buildStandardPageCamSwitcherMarkup(host, { includeStatus = true, mobile
 function renderStandardPageCamSwitcher(host, { mobile = false } = {}) {
   const el = host._$("#cam-switcher");
   if (!el) return;
-  if (host._config.cameras.length < 2 && host._isPreviewPageEnabled?.() !== true) {
+  if (!mobile && host._config.cameras.length < 2 && host._isPreviewPageEnabled?.() !== true) {
     el.style.display = "none";
     return;
   }

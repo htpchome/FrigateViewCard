@@ -31,6 +31,8 @@ export function buildMobileCamSwitcherMarkup({
   icons,
   getCameraName,
   isCameraAvailable,
+  streamType = "--",
+  online = true,
   pickerOpen = false,
 }) {
   const cameraList = Array.isArray(cameras) ? cameras : [];
@@ -45,7 +47,7 @@ export function buildMobileCamSwitcherMarkup({
     ? getCameraName(activeCamera)
     : "Camera";
   const backButton = previewPageEnabled
-    ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>`
+    ? `<button class="glass-btn cam-tab preview-back-btn mobile-cam-picker__back" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left}</button>`
     : "";
   const cameraOptions = cameraList
     .map((camera, index) =>
@@ -74,6 +76,13 @@ export function buildMobileCamSwitcherMarkup({
       <div class="mobile-cam-picker__panel" role="listbox" ${pickerOpen ? "" : "hidden"} data-mobile-cam-panel>
         ${cameraOptions}
       </div>
+    </div>
+    <div class="mobile-cam-picker__status" aria-label="Live status">
+      <div class="mobile-cam-picker__stream">
+        <div class="sv stream-type" id="stream-type">${resolveMobileViewStreamTypeText(streamType)}</div>
+        <div class="sl">Stream</div>
+      </div>
+      <div class="sv mobile-cam-picker__dot" id="on-dot" style="color:${resolveMobileViewStatusColor(online)}">●</div>
     </div>`;
 }
 
@@ -81,9 +90,7 @@ export function buildMobileViewInfoRowMarkup({
   title,
   subtitle,
   version,
-  streamType = "--",
   eventsCount = "—",
-  online = true,
 }) {
   return `<div class="info-row mobile-view-info-row">
               <div>
@@ -96,16 +103,8 @@ export function buildMobileViewInfoRowMarkup({
                   <div class="sl">Version</div>
                 </div>
                 <div class="stat">
-                  <div class="sv stream-type" id="stream-type">${resolveMobileViewStreamTypeText(streamType)}</div>
-                  <div class="sl">Stream</div>
-                </div>
-                <div class="stat">
                   <div class="sv" id="ev-count">${resolveMobileViewEventsCountText(eventsCount)}</div>
                   <div class="sl">Events</div>
-                </div>
-                <div class="stat">
-                  <div class="sv" id="on-dot" style="color:${resolveMobileViewStatusColor(online)}">●</div>
-                  <div class="sl" id="on-lbl">${resolveMobileViewOnlineLabel(online)}</div>
                 </div>
               </div>
             </div>`;

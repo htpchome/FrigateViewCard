@@ -149,7 +149,6 @@ test("mobile-view render helpers update subtitle and stats", () => {
 test("mobile-view render helpers update status and title", () => {
   const nodes = {
     "#on-dot": createNode(),
-    "#on-lbl": createNode(),
     "#info-title": createNode(),
   };
   const { host } = createHost({ domNodes: nodes });
@@ -158,11 +157,10 @@ test("mobile-view render helpers update status and title", () => {
   controller.syncStatus();
 
   assert.equal(nodes["#on-dot"].style.color, "#4ade80");
-  assert.equal(nodes["#on-lbl"].textContent, "Online");
   assert.equal(nodes["#info-title"].textContent, "Front Door");
 });
 
-test("mobile-view camera switcher render hides for a single camera when preview is disabled", () => {
+test("mobile-view camera switcher render remains visible for status when preview is disabled", () => {
   const nodes = {
     "#cam-switcher": createNode(),
   };
@@ -172,7 +170,7 @@ test("mobile-view camera switcher render hides for a single camera when preview 
 
   controller.renderCamSwitcher();
 
-  assert.equal(nodes["#cam-switcher"].style.display, "none");
+  assert.equal(nodes["#cam-switcher"].style.display, "");
 });
 
 test("mobile-view camera switcher markup includes picker trigger and options", () => {
@@ -183,6 +181,9 @@ test("mobile-view camera switcher markup includes picker trigger and options", (
 
   assert.equal(markup.includes("data-mobile-cam-trigger"), true);
   assert.equal(markup.includes('data-mobile-camidx="0"'), true);
+  assert.equal(markup.includes('id="stream-type"'), true);
+  assert.equal(markup.includes('id="on-dot"'), true);
+  assert.equal(markup.includes('id="on-lbl"'), false);
   assert.equal(markup.includes("Front Door"), true);
 });
 

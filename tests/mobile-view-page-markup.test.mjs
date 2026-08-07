@@ -64,17 +64,14 @@ test("mobile view info row markup uses expected ids", () => {
     title: "Driveway",
     subtitle: "Frigate",
     version: "1.0.1023",
-    streamType: "webrtc",
     eventsCount: 8,
-    online: false,
   });
 
   assert.equal(markup.includes('id="info-title"'), true);
   assert.equal(markup.includes('id="tl-range"'), true);
-  assert.equal(markup.includes('id="stream-type"'), true);
+  assert.equal(markup.includes('id="stream-type"'), false);
   assert.equal(markup.includes('id="ev-count"'), true);
-  assert.equal(markup.includes('id="on-lbl"'), true);
-  assert.equal(markup.includes("Offline"), true);
+  assert.equal(markup.includes('id="on-dot"'), false);
   assert.equal(markup.includes("8"), true);
 });
 
@@ -84,6 +81,8 @@ test("mobile view cam switcher markup renders trigger and picker options", () =>
     includeStatus: true,
     cameras: [{ entity: "camera.front_door" }, { entity: "camera.driveway" }],
     activeCamIdx: 1,
+    streamType: "webrtc",
+    online: false,
     isSingleView: true,
     icons: { left: "<", chevron: "v", volOn: "", volOff: "" },
     getCameraName: (camera) =>
@@ -95,5 +94,8 @@ test("mobile view cam switcher markup renders trigger and picker options", () =>
   assert.equal(markup.includes("data-mobile-cam-trigger"), true);
   assert.equal(markup.includes('data-mobile-camidx="1"'), true);
   assert.equal(markup.includes('aria-expanded="false"'), true);
+  assert.equal(markup.includes('id="stream-type"'), true);
+  assert.equal(markup.includes('id="on-dot"'), true);
+  assert.equal(markup.includes('id="on-lbl"'), false);
   assert.equal(markup.includes("Driveway"), true);
 });
