@@ -1686,9 +1686,8 @@ export class FrigateViewCard extends HTMLElement {
       const h = Number(videoEl.videoHeight) || 0;
       const ar = h > 0 ? w / h : 0;
       const host = videoEl.parentElement;
-      const panelHost = this._$("#eng-wrap") || host;
-      const cw = Number(panelHost?.clientWidth) || 0;
-      const ch = Number(panelHost?.clientHeight) || 0;
+      const cw = Number(host?.clientWidth) || 0;
+      const ch = Number(host?.clientHeight) || 0;
       const car = ch > 0 ? cw / ch : 0;
       const near169 = ar > 0 && Math.abs(ar - 16 / 9) < 0.08;
       const nearPanel = ar > 0 && car > 0 && Math.abs(ar - car) < 0.06;
