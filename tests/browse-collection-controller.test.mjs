@@ -164,3 +164,28 @@ test("loadGridMixedTabData alerts uses active-day reviews when available", async
     false,
   );
 });
+
+test("allGridReviews keeps same review id across different cameras", () => {
+  const host = {
+    _config: {
+      cameras: [{ entity: "camera.front" }, { entity: "camera.back" }],
+    },
+    _camCache: {
+      "camera.front": {
+        cam: "front",
+        reviews: [{ id: "same-id", camera: "front" }],
+      },
+      "camera.back": {
+        cam: "back",
+        reviews: [{ id: "same-id", camera: "back" }],
+      },
+    },
+  };
+
+  const controller = new BrowseCollectionController(host);
+
+  assert.deepEqual(controller.allGridReviews(), [
+    { id: "same-id", camera: "front" },
+    { id: "same-id", camera: "back" },
+  ]);
+});

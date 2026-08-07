@@ -330,7 +330,8 @@ test("selectReviewsForFilterTab uses grid reviews in mixed grid mode", () => {
     showAllReviews: false,
   });
 
-  assert.deepEqual(selected, [{ id: "grid-alert", severity: "alert" }]);
+  assert.deepEqual(selected, gridReviews);
+  assert.notEqual(selected, gridReviews);
 });
 
 test("normalizeFilterSelections resets missing label and zone to all", () => {

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1280";
+const VERSION = "1.0.1281";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -8593,6 +8593,9 @@ function selectReviewsForFilterTab({
 }) {
   const reviewSource = isGridMixedListMode ? gridReviews : reviews;
   const safeReviews = [...reviewSource || []];
+  if (isGridMixedListMode) {
+    return safeReviews;
+  }
   return showAllReviews ? safeReviews : safeReviews.filter((review) => reviewMatchesAlertsOnlyMode(review));
 }
 const BrowseFilterController = class {
@@ -8751,11 +8754,16 @@ const BrowseCollectionController = class {
     const reviews = [];
     const seen = new Set();
     for (const camera of this._host._config.cameras || []) {
+      const cameraKey = String(
+        this._host._camCache[camera.entity]?.cam || camera.entity || ""
+      );
       const cache = this._host._camCache[camera.entity];
       for (const review of cache?.reviews || []) {
         const id = String(review?.id || "");
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
+        if (!id) continue;
+        const dedupeKey = `${cameraKey}|${id}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
         reviews.push(review);
       }
     }
@@ -8791,8 +8799,8 @@ const BrowseCollectionController = class {
     const before = this._host._winEnd;
     const reviewDays = this._host._config?.alerts_reviews_days || 3;
     const reviewsAfter = Math.max(0, Math.floor(before - reviewDays * 86400));
-    const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
     for (const camera of this._host._config.cameras || []) {
+      const showAllReviews = camera?.alerts_content === "all_reviews";
       const entity = camera.entity;
       if (!entity) continue;
       try {

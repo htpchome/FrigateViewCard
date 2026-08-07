@@ -226,6 +226,9 @@ export function selectReviewsForFilterTab({
 }) {
   const reviewSource = isGridMixedListMode ? gridReviews : reviews;
   const safeReviews = [...(reviewSource || [])];
+  if (isGridMixedListMode) {
+    return safeReviews;
+  }
   return showAllReviews
     ? safeReviews
     : safeReviews.filter((review) => reviewMatchesAlertsOnlyMode(review));
