@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1324";
+const VERSION = "1.0.1325";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -569,7 +569,7 @@ const STYLES = `
     position:relative;
     top:0;
     left:0;
-    overflow:hidden !important;
+    overflow:visible !important;
     border:1px solid var(--secondary-background-color,#7a7a7a);
     border-radius: var(--fvc-border-radius);
     }
@@ -577,11 +577,10 @@ const STYLES = `
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;--fvc-outer-border-radius:0px;}
 
-  .card .layout{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;width:100%;
-    overflow:hidden !important;}
+  .card .layout{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;width:100%;overflow:visible !important;}
   .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
-  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;overflow:hidden;}
+  .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;overflow:visible;}
   .resize-handle{display:block;width:100%;height:6px;cursor:row-resize;background:var(--c-border2,#333);position:relative;flex-shrink:0;z-index:10;transition:background .15s;}
   .layout:not(.wide-view) .resize-handle{display:none;}
   .resize-handle:hover,.resize-handle.active{background:var(--c-accent,#3b82f6);}
@@ -714,8 +713,7 @@ const STYLES = `
   .more.to-top{position:relative;cursor:pointer;color:var(--c-text2);}
 
   /* \u2500\u2500 feed area \u2500\u2500 */
-    .feed-area{position:relative;width:100%;}
-    #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--view-height,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
+    #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;overflow:visible;max-height:var(--view-height,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
     #engine,#stream-fallback{transition:opacity .22s ease;}
     #eng-wrap::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:5;box-sizing:border-box;border:0 solid transparent;transition:border-color .2s ease,border-width .2s ease;}
     #eng-wrap.slideshow-switching #engine,
