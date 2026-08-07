@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1337";
+const VERSION = "1.0.1338";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15676,29 +15676,30 @@ const FrigateViewCard = class extends HTMLElement {
     this._startEditorDialogCloseObserver();
     const cardRoot = this.shadowRoot || this;
     cardRoot.addEventListener("touchstart", (e) => {
-      this._startY = e.touches[0].pageY;
+      this._startY = e.touches.pageY;
     }, { passive: true });
     cardRoot.addEventListener("touchmove", (e) => {
       let target = e.target;
+      let isInsideScrollable = false;
       while (target && target !== cardRoot) {
         const style = window.getComputedStyle(target);
-        if (style.overflowY === "auto" || style.overflowY === "scroll") {
+        const hasScrollOverflow = style.overflowY === "auto" || style.overflowY === "scroll";
+        const isScrollable = target.scrollHeight > target.clientHeight;
+        if (hasScrollOverflow && isScrollable) {
+          isInsideScrollable = true;
           break;
         }
         target = target.parentNode || target.host;
       }
-      const activeScrollEl = target && target !== cardRoot ? target : cardRoot.querySelector("#layout") || cardRoot;
-      const currentY = e.touches[0].pageY;
-      const deltaY = currentY - this._startY;
-      const scrollTop = activeScrollEl.scrollTop;
-      const scrollHeight = activeScrollEl.scrollHeight;
-      const clientHeight = activeScrollEl.clientHeight;
-      if (scrollTop <= 0 && deltaY > 0) {
+      if (isInsideScrollable) {
         return;
       }
-      if (scrollTop + clientHeight >= scrollHeight && deltaY < 0) {
-        e.preventDefault();
+      const currentY = e.touches.pageY;
+      const deltaY = currentY - this._startY;
+      if (deltaY > 0) {
+        return;
       }
+      e.preventDefault();
     }, { passive: false });
   }
   _visualStyleToggleRules() {

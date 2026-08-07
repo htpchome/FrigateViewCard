@@ -921,44 +921,47 @@ export class FrigateViewCard extends HTMLElement {
     this._startEditorDialogCloseObserver();
 
     /* ================================== */
-// Target the root of your card component to catch all inner touches
 const cardRoot = this.shadowRoot || this;
 
 cardRoot.addEventListener('touchstart', (e) => {
-  this._startY = e.touches[0].pageY;
+  this._startY = e.touches.pageY;
 }, { passive: true });
 
 cardRoot.addEventListener('touchmove', (e) => {
-  // Find the closest scrollable container that the user is actually touching
+  // 1. Walk up the DOM from the touch target to see if it's inside a scrollable element
   let target = e.target;
+  let isInsideScrollable = false;
+
   while (target && target !== cardRoot) {
     const style = window.getComputedStyle(target);
-    if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+    const hasScrollOverflow = style.overflowY === 'auto' || style.overflowY === 'scroll';
+    const isScrollable = target.scrollHeight > target.clientHeight;
+
+    if (hasScrollOverflow && isScrollable) {
+      isInsideScrollable = true;
       break;
     }
     target = target.parentNode || target.host;
   }
 
-  // If no internal scrollable container is found, default to #layout or the card itself
-  const activeScrollEl = (target && target !== cardRoot) ? target : (cardRoot.querySelector('#layout') || cardRoot);
+  // 2. If the user is touching a scrollable inner element, let iOS handle it (retains inner bounce!)
+  if (isInsideScrollable) {
+    return; 
+  }
 
-  const currentY = e.touches[0].pageY;
+  // 3. If they are touching the card background/header, kill the outer page bounce completely
+  const currentY = e.touches.pageY;
   const deltaY = currentY - this._startY;
 
-  const scrollTop = activeScrollEl.scrollTop;
-  const scrollHeight = activeScrollEl.scrollHeight;
-  const clientHeight = activeScrollEl.clientHeight;
-
-  // 1. Let the top pass completely so Home Assistant native pull-to-refresh works
-  if (scrollTop <= 0 && deltaY > 0) {
+  // Still allow downward swipe on static areas for Home Assistant pull-to-refresh
+  if (deltaY > 0) {
     return;
   }
 
-  // 2. Lock the bottom bounce ONLY if the active element has reached its true scrolling limit
-  if (scrollTop + clientHeight >= scrollHeight && deltaY < 0) {
-    e.preventDefault();
-  }
+  // Kill the outer card bounce for everything else
+  e.preventDefault();
 }, { passive: false });
+
 
     /* ================================== */
     
