@@ -921,32 +921,45 @@ export class FrigateViewCard extends HTMLElement {
     this._startEditorDialogCloseObserver();
 
     /* ================================== */
-const scrollTarget = this.shadowRoot.querySelector('#layout') || this; 
+// Target the root of your card component to catch all inner touches
+const cardRoot = this.shadowRoot || this;
 
-scrollTarget.addEventListener('touchstart', (e) => {
+cardRoot.addEventListener('touchstart', (e) => {
   this._startY = e.touches[0].pageY;
 }, { passive: true });
 
-scrollTarget.addEventListener('touchmove', (e) => {
+cardRoot.addEventListener('touchmove', (e) => {
+  // Find the closest scrollable container that the user is actually touching
+  let target = e.target;
+  while (target && target !== cardRoot) {
+    const style = window.getComputedStyle(target);
+    if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+      break;
+    }
+    target = target.parentNode || target.host;
+  }
+
+  // If no internal scrollable container is found, default to #layout or the card itself
+  const activeScrollEl = (target && target !== cardRoot) ? target : (cardRoot.querySelector('#layout') || cardRoot);
+
   const currentY = e.touches[0].pageY;
   const deltaY = currentY - this._startY;
-  
-  const scrollTop = scrollTarget.scrollTop;
-  const scrollHeight = scrollTarget.scrollHeight;
-  const clientHeight = scrollTarget.clientHeight;
 
-  // 1. User pulls down at the very top (iOS Safari / Companion App pull-to-refresh zone)
+  const scrollTop = activeScrollEl.scrollTop;
+  const scrollHeight = activeScrollEl.scrollHeight;
+  const clientHeight = activeScrollEl.clientHeight;
+
+  // 1. Let the top pass completely so Home Assistant native pull-to-refresh works
   if (scrollTop <= 0 && deltaY > 0) {
-    // DO NOT preventDefault here. 
-    // Letting this pass allows Home Assistant's native pull-to-refresh to catch the gesture.
-    return; 
+    return;
   }
 
-  // 2. User scrolls up at the very bottom (The ugly bottom rubber-band bounce)
+  // 2. Lock the bottom bounce ONLY if the active element has reached its true scrolling limit
   if (scrollTop + clientHeight >= scrollHeight && deltaY < 0) {
-    e.preventDefault(); // Kills ONLY the bottom overscroll bounce
+    e.preventDefault();
   }
 }, { passive: false });
+
     /* ================================== */
     
   }

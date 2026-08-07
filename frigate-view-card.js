@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1336";
+const VERSION = "1.0.1337";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15674,16 +15674,25 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-    const scrollTarget = this.shadowRoot.querySelector("#layout") || this;
-    scrollTarget.addEventListener("touchstart", (e) => {
+    const cardRoot = this.shadowRoot || this;
+    cardRoot.addEventListener("touchstart", (e) => {
       this._startY = e.touches[0].pageY;
     }, { passive: true });
-    scrollTarget.addEventListener("touchmove", (e) => {
+    cardRoot.addEventListener("touchmove", (e) => {
+      let target = e.target;
+      while (target && target !== cardRoot) {
+        const style = window.getComputedStyle(target);
+        if (style.overflowY === "auto" || style.overflowY === "scroll") {
+          break;
+        }
+        target = target.parentNode || target.host;
+      }
+      const activeScrollEl = target && target !== cardRoot ? target : cardRoot.querySelector("#layout") || cardRoot;
       const currentY = e.touches[0].pageY;
       const deltaY = currentY - this._startY;
-      const scrollTop = scrollTarget.scrollTop;
-      const scrollHeight = scrollTarget.scrollHeight;
-      const clientHeight = scrollTarget.clientHeight;
+      const scrollTop = activeScrollEl.scrollTop;
+      const scrollHeight = activeScrollEl.scrollHeight;
+      const clientHeight = activeScrollEl.clientHeight;
       if (scrollTop <= 0 && deltaY > 0) {
         return;
       }
