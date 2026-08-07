@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1304";
+const VERSION = "1.0.1305";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -14178,6 +14178,10 @@ const MobileCamSwitcherController = class {
     if (!this._isOpen()) return;
     const inPicker = target?.closest?.("[data-mobile-cam-picker]");
     if (inPicker) return;
+    this.close();
+  }
+  close() {
+    if (!this._isOpen()) return;
     this._setOpen(false);
     this._renderCamSwitcher();
   }
@@ -15541,6 +15545,15 @@ const FrigateViewCard = class extends HTMLElement {
       "frigate-view-card-preview-draft",
       this._onEditorPreviewDraft
     );
+    this._onDocumentPointerDown = (event) => {
+      if (!this._mobileCamSwitcherOpen) return;
+      const path = typeof event?.composedPath === "function" ? event.composedPath() : [];
+      if (Array.isArray(path) && path.includes(this)) return;
+      this._mobileCamSwitcherController?.close();
+    };
+    document.addEventListener("pointerdown", this._onDocumentPointerDown, {
+      passive: true
+    });
   }
   _cloneCardConfig(config) {
     try {
@@ -16033,6 +16046,9 @@ const FrigateViewCard = class extends HTMLElement {
         "frigate-view-card-preview-draft",
         this._onEditorPreviewDraft
       );
+    }
+    if (this._onDocumentPointerDown) {
+      document.removeEventListener("pointerdown", this._onDocumentPointerDown);
     }
     if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
     this._rotateOverlayRaf = 0;

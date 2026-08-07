@@ -46,6 +46,11 @@ export class MobileCamSwitcherController {
     if (!this._isOpen()) return;
     const inPicker = target?.closest?.("[data-mobile-cam-picker]");
     if (inPicker) return;
+    this.close();
+  }
+
+  close() {
+    if (!this._isOpen()) return;
     this._setOpen(false);
     this._renderCamSwitcher();
   }

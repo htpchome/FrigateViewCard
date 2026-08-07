@@ -775,6 +775,16 @@ export class FrigateViewCard extends HTMLElement {
       "frigate-view-card-preview-draft",
       this._onEditorPreviewDraft,
     );
+    this._onDocumentPointerDown = (event) => {
+      if (!this._mobileCamSwitcherOpen) return;
+      const path =
+        typeof event?.composedPath === "function" ? event.composedPath() : [];
+      if (Array.isArray(path) && path.includes(this)) return;
+      this._mobileCamSwitcherController?.close();
+    };
+    document.addEventListener("pointerdown", this._onDocumentPointerDown, {
+      passive: true,
+    });
   }
 
   _cloneCardConfig(config) {
@@ -1375,6 +1385,9 @@ export class FrigateViewCard extends HTMLElement {
         "frigate-view-card-preview-draft",
         this._onEditorPreviewDraft,
       );
+    }
+    if (this._onDocumentPointerDown) {
+      document.removeEventListener("pointerdown", this._onDocumentPointerDown);
     }
     if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
     this._rotateOverlayRaf = 0;

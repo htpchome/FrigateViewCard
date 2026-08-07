@@ -85,3 +85,23 @@ test("mobile cam switcher controller closes when clicking outside", () => {
   assert.equal(open, false);
   assert.equal(renderCalls, 1);
 });
+
+test("mobile cam switcher controller close collapses open picker once", () => {
+  let open = true;
+  let renderCalls = 0;
+  const controller = new MobileCamSwitcherController({
+    isOpen: () => open,
+    setOpen: (next) => {
+      open = next;
+    },
+    renderCamSwitcher: () => {
+      renderCalls += 1;
+    },
+  });
+
+  controller.close();
+  controller.close();
+
+  assert.equal(open, false);
+  assert.equal(renderCalls, 1);
+});
