@@ -243,6 +243,7 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     margin-bottom: var(--mv-list-item-margin-bottom);
     border-radius: var(--mv-list-item-radius);
     padding: var(--mv-list-item-padding);
+    background:var(--c-bg-primary);
   }
 
   .card.mobile-view-active .browse--mobile-view .list-item.compact {
