@@ -29,25 +29,27 @@ export class BrowseTabDataController {
     const { clientId, cam } = this._host._cc();
     try {
       const before = this._host._winEnd;
-      const after = Math.max(
-        0,
-        Math.floor(
-          before - (this._host._config?.alerts_reviews_days || 3) * DAY,
-        ),
-      );
-      const reviews =
-        await (this._host._browseWindowLoaderController?.fetchWindowedReviews?.(
+      const days = this._host._config?.alerts_reviews_days || 3;
+      const resolved =
+        await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
           clientId,
           cam,
-          after,
           before,
-          {
-            debugLabel: "alerts-tab",
-          },
+          days,
+          { debugLabel: "alerts-tab" },
         ) ??
-          this._host._fetchWindowedReviews?.(clientId, cam, after, before, {
-            debugLabel: "alerts-tab",
-          }));
+          this._host._fetchWindowedReviews?.(
+            clientId,
+            cam,
+            Math.max(0, Math.floor(before - days * DAY)),
+            before,
+            {
+              debugLabel: "alerts-tab",
+            },
+          ));
+      const reviews = Array.isArray(resolved?.items)
+        ? resolved.items
+        : resolved;
       this._host._reviews = Array.isArray(reviews) ? reviews : [];
       this._host._browseWindowLoaderController?.cacheActiveCamSlice?.(
         "reviews",

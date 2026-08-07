@@ -1,12 +1,10 @@
 import {
   DAY,
   EVENT_FETCH_BATCH,
-  INITIAL_EVENT_FETCH_LIMIT,
   INACTIVE_WARM_EVENT_LIMIT,
   REVIEW_FETCH_BATCH,
   WINDOW_FETCH_PAGE_LIMIT,
   INITIAL_EVENTS_PAGE_LIMIT,
-  WINDOW_BACKGROUND_PAGE_LIMIT,
 } from "../../constants.js";
 import { fetchWindowedItems } from "../../data/window-fetch.js";
 import { resolveRecordingsDayBounds } from "../recordings/utils/day.js";
@@ -132,6 +130,111 @@ export class BrowseWindowLoaderController {
     });
   }
 
+  _dayKeyForItem(item) {
+    const ts = Math.floor(Number(item?.start_time) || 0);
+    if (typeof this._host._dayKey === "function") {
+      return this._host._dayKey(ts);
+    }
+    const date = new Date(ts * 1000);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  _filterToRecentDaysWithData(items, dayCount) {
+    const targetDayCount = Math.max(1, Number(dayCount) || 1);
+    const sorted = Array.isArray(items)
+      ? items
+          .slice()
+          .sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0))
+      : [];
+    const selectedDays = new Set();
+    for (const item of sorted) {
+      const key = this._dayKeyForItem(item);
+      if (!key) continue;
+      selectedDays.add(key);
+      if (selectedDays.size >= targetDayCount) break;
+    }
+    if (!selectedDays.size) return [];
+    return sorted.filter((item) => selectedDays.has(this._dayKeyForItem(item)));
+  }
+
+  async _fetchRecentActiveDaysItems({
+    clientId,
+    cam,
+    before,
+    dayCount,
+    fetcher,
+    debugLabel,
+  }) {
+    const targetDayCount = Math.max(1, Number(dayCount) || 1);
+    let spanDays = targetDayCount;
+    const maxSpanDays = Math.max(targetDayCount * 16, targetDayCount + 30);
+    let bestItems = [];
+    let bestDayCount = 0;
+    let lastAfter = Math.max(0, Math.floor(before - spanDays * DAY));
+
+    while (true) {
+      const after = Math.max(0, Math.floor(before - spanDays * DAY));
+      lastAfter = after;
+      const items = await fetcher(after, before, {
+        debugLabel,
+      });
+      const latestItems = Array.isArray(items) ? items : [];
+      const filtered = this._filterToRecentDaysWithData(
+        latestItems,
+        targetDayCount,
+      );
+      const dayCountFound = new Set(
+        filtered.map((item) => this._dayKeyForItem(item)),
+      ).size;
+      if (dayCountFound > bestDayCount) {
+        bestDayCount = dayCountFound;
+        bestItems = filtered;
+      }
+      if (dayCountFound >= targetDayCount || spanDays >= maxSpanDays) {
+        return {
+          items: dayCountFound > 0 ? filtered : bestItems,
+          after,
+        };
+      }
+      spanDays = Math.min(maxSpanDays, spanDays * 2);
+    }
+  }
+
+  async fetchRecentActiveDayEvents(clientId, cam, before, dayCount, opts = {}) {
+    const result = await this._fetchRecentActiveDaysItems({
+      clientId,
+      cam,
+      before,
+      dayCount,
+      debugLabel: opts.debugLabel || "events-active-days",
+      fetcher: (after, beforeTs, fetchOpts) =>
+        this.fetchWindowedEvents(clientId, cam, after, beforeTs, fetchOpts),
+    });
+    return result;
+  }
+
+  async fetchRecentActiveDayReviews(
+    clientId,
+    cam,
+    before,
+    dayCount,
+    opts = {},
+  ) {
+    const result = await this._fetchRecentActiveDaysItems({
+      clientId,
+      cam,
+      before,
+      dayCount,
+      debugLabel: opts.debugLabel || "reviews-active-days",
+      fetcher: (after, beforeTs, fetchOpts) =>
+        this.fetchWindowedReviews(clientId, cam, after, beforeTs, fetchOpts),
+    });
+    return result;
+  }
+
   async loadWindow(replace) {
     if (this._host._isPreviewPageActive()) return;
     if (this._host._loading) return;
@@ -228,78 +331,29 @@ export class BrowseWindowLoaderController {
   }
 
   async loadWindowEvents(clientId, cam, after, before) {
-    const loadToken = ++this._host._eventsLoadToken;
     try {
-      const initialEvents = await this.fetchWindowedEvents(
+      const resolved = await this.fetchRecentActiveDayEvents(
         clientId,
         cam,
-        after,
         before,
-        {
-          pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
-          limit: INITIAL_EVENT_FETCH_LIMIT,
-          debugLabel: "initial",
-        },
+        this._host._config?.window_days || 1,
+        { debugLabel: "events-window" },
       );
-      this._host._events = Array.isArray(initialEvents) ? initialEvents : [];
+      this._host._events = Array.isArray(resolved?.items) ? resolved.items : [];
+      if (this._host._events.length) {
+        this._host._winStart = Math.min(
+          ...this._host._events.map((item) =>
+            Math.floor(item?.start_time || before),
+          ),
+        );
+      } else if (Number.isFinite(resolved?.after)) {
+        this._host._winStart = resolved.after;
+      } else {
+        this._host._winStart = after;
+      }
       this.cacheActiveCamSlice("events", this._host._events);
       this._host._renderList();
       this._host._renderStats();
-
-      if (
-        !this._host._events.length ||
-        WINDOW_FETCH_PAGE_LIMIT <= INITIAL_EVENTS_PAGE_LIMIT
-      ) {
-        return;
-      }
-
-      const oldest = Math.min(
-        ...this._host._events.map((item) =>
-          Math.floor(item?.start_time || before),
-        ),
-      );
-      const cursorBefore = oldest - 1;
-      const activeEntity = this._host._activeCam?.entity;
-      const winStart = this._host._winStart;
-      const winEnd = this._host._winEnd;
-
-      void (async () => {
-        try {
-          const remainingEvents = await this.fetchWindowedEvents(
-            clientId,
-            cam,
-            after,
-            before,
-            {
-              pageLimit: Math.min(
-                WINDOW_BACKGROUND_PAGE_LIMIT,
-                Math.max(
-                  1,
-                  WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT,
-                ),
-              ),
-              cursorBefore,
-              debugLabel: "background",
-            },
-          );
-
-          if (loadToken !== this._host._eventsLoadToken) return;
-          if (activeEntity !== this._host._activeCam?.entity) return;
-          if (
-            winStart !== this._host._winStart ||
-            winEnd !== this._host._winEnd
-          ) {
-            return;
-          }
-
-          if (Array.isArray(remainingEvents) && remainingEvents.length) {
-            this._host._events = this._host._events.concat(remainingEvents);
-            this.cacheActiveCamSlice("events", this._host._events);
-            this._host._renderList();
-            this._host._renderStats();
-          }
-        } catch (_) {}
-      })();
     } catch (error) {
       console.error("[Frigate] events", error);
       this._host._events = [];
@@ -347,89 +401,24 @@ export class BrowseWindowLoaderController {
 
   async loadWindowReviewsIfNeeded(clientId, cam, _after, before) {
     if (this._host._tab !== "alerts") return;
-    const loadToken = ++this._host._reviewsLoadToken;
-    const reviewsAfter = Math.max(
-      0,
-      Math.floor(before - (this._host._config?.alerts_reviews_days || 3) * DAY),
-    );
     try {
-      const initialReviews = await this.fetchWindowedReviews(
+      const resolved = await this.fetchRecentActiveDayReviews(
         clientId,
         cam,
-        reviewsAfter,
         before,
-        {
-          pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
-          debugLabel: "alerts-window-initial",
-        },
+        this._host._config?.alerts_reviews_days || 3,
+        { debugLabel: "alerts-window" },
       );
-      this._host._reviews = Array.isArray(initialReviews) ? initialReviews : [];
+      this._host._reviews = Array.isArray(resolved?.items)
+        ? resolved.items
+        : [];
       this.cacheActiveCamSlice("reviews", this._host._reviews);
       this._host._renderList();
       this._host._slideshowAlertController.handleReviewsUpdated(
         this._host._activeCam?.entity || "",
         this._host._reviews,
-        "alerts-window-initial",
+        "alerts-window",
       );
-
-      if (
-        !this._host._reviews.length ||
-        WINDOW_FETCH_PAGE_LIMIT <= INITIAL_EVENTS_PAGE_LIMIT
-      ) {
-        return;
-      }
-
-      const oldest = Math.min(
-        ...this._host._reviews.map((item) =>
-          Math.floor(item?.start_time || before),
-        ),
-      );
-      const cursorBefore = oldest - 1;
-      const activeEntity = this._host._activeCam?.entity;
-      const winStart = this._host._winStart;
-      const winEnd = this._host._winEnd;
-
-      void (async () => {
-        try {
-          const remainingReviews = await this.fetchWindowedReviews(
-            clientId,
-            cam,
-            reviewsAfter,
-            before,
-            {
-              pageLimit: Math.min(
-                WINDOW_BACKGROUND_PAGE_LIMIT,
-                Math.max(
-                  1,
-                  WINDOW_FETCH_PAGE_LIMIT - INITIAL_EVENTS_PAGE_LIMIT,
-                ),
-              ),
-              cursorBefore,
-              debugLabel: "alerts-window-background",
-            },
-          );
-
-          if (loadToken !== this._host._reviewsLoadToken) return;
-          if (activeEntity !== this._host._activeCam?.entity) return;
-          if (
-            winStart !== this._host._winStart ||
-            winEnd !== this._host._winEnd
-          ) {
-            return;
-          }
-
-          if (Array.isArray(remainingReviews) && remainingReviews.length) {
-            this._host._reviews = this._host._reviews.concat(remainingReviews);
-            this.cacheActiveCamSlice("reviews", this._host._reviews);
-            this._host._renderList();
-            this._host._slideshowAlertController.handleReviewsUpdated(
-              this._host._activeCam?.entity || "",
-              this._host._reviews,
-              "alerts-window-background",
-            );
-          }
-        } catch (_) {}
-      })();
     } catch (_) {
       this._host._reviews = [];
     }

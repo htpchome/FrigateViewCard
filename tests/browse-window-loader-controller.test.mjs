@@ -85,7 +85,7 @@ test("loadWindow updates active slices and finishes the browse load cycle", asyn
       (entry) =>
         Array.isArray(entry) &&
         entry[0] === "reviewsUpdated" &&
-        entry[2] === "alerts-window-initial",
+        entry[2] === "alerts-window",
     ),
     true,
   );
@@ -217,5 +217,39 @@ test("loadWindowRecordings resolves day bounds without card-owned recordings wra
   assert.equal(
     host._recordingsDayAvailabilityCache.get("frigate|front|100|199"),
     true,
+  );
+});
+
+test("fetchRecentActiveDayEvents returns last N days with events", async () => {
+  const host = {
+    _dayKey: (ts) => String(Math.floor(ts / 86400)),
+    _ws: async () => [],
+  };
+  const controller = new BrowseWindowLoaderController(host, {
+    fetchWindowedItems: async ({ fetchBatch }) =>
+      fetchBatch({ after: 0, before: 999999, limit: 250, page: 0 }),
+  });
+
+  const day = 86400;
+  const before = 6 * day;
+  controller.fetchWindowedEvents = async () => [
+    { id: "d5-a", start_time: 5 * day + 50 },
+    { id: "d5-b", start_time: 5 * day + 20 },
+    { id: "d4-a", start_time: 4 * day + 30 },
+    { id: "d1-a", start_time: 1 * day + 70 },
+    { id: "d1-b", start_time: 1 * day + 40 },
+    { id: "d1-c", start_time: 1 * day + 10 },
+  ];
+
+  const resolved = await controller.fetchRecentActiveDayEvents(
+    "frigate",
+    "front",
+    before,
+    3,
+  );
+
+  assert.deepEqual(
+    resolved.items.map((item) => item.id),
+    ["d5-a", "d5-b", "d4-a", "d1-a", "d1-b", "d1-c"],
   );
 });
