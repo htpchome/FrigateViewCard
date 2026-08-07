@@ -186,15 +186,20 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active .mobile-cam-picker__panel {
     position: absolute;
     top: calc(100% + 6px);
-    left: 0;
-    right: 0;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 8;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, max-content);
+    justify-content: center;
     gap: 4px;
-    max-height: 220px;
+    width: max-content;
+    min-width: 100%;
+    max-width: min(100vw - 24px, 420px);
+    max-height: min(60dvh, calc(100dvh - 160px));
     overflow-y: auto;
     padding: 6px;
+    box-sizing: border-box;
     border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.2);
@@ -214,7 +219,7 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.18);
@@ -249,12 +254,12 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   }
 
   .card.mobile-view-active .mobile-cam-picker__option-content {
-    display: inline-grid;
-    grid-template-columns: auto minmax(0, auto);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
-    justify-content: center;
     gap: 8px;
-    max-width: 100%;
+    width: 100%;
+    min-width: 0;
   }
 
   .card.mobile-view-active .mobile-cam-picker__option-label {
