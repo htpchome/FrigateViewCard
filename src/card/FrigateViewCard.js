@@ -757,6 +757,7 @@ export class FrigateViewCard extends HTMLElement {
     );
 
     this._onViewportRotate = () => {
+      this._syncBrowseHeadModeClass();
       this._applyCardStyle();
       this._scheduleRotateOverlayUpdate();
     };
@@ -3058,6 +3059,10 @@ export class FrigateViewCard extends HTMLElement {
       "recordings-browse-head-tall",
       this._tab === "recordings",
     );
+    card.classList.toggle(
+      "recordings-browse-head-compact",
+      this._isMobilePhoneViewport(),
+    );
   }
 
   _bindListScroll() {
@@ -3508,6 +3513,7 @@ export class FrigateViewCard extends HTMLElement {
       const card = this.shadowRoot.querySelector(".card");
       if (!card) return;
 
+      this._syncBrowseHeadModeClass();
       this._applyCardStyle();
       this._applyBrowse();
       this._scheduleRotateOverlayUpdate();

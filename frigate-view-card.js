@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1330";
+const VERSION = "1.0.1331";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -601,7 +601,7 @@ const STYLES = `
     position:relative}
 
   .card .browse-head{display:flex;align-items:center;justify-content:center;min-height:1.5rem;max-height:1.65em;flex-direction:row;width:auto;color:var(--c-text2);letter-spacing:.02em;line-height:1.40;padding:1px 8px;}
-  .card.recordings-browse-head-tall:not(.mobile) .browse-head{min-height:3.5rem;max-height:none;}
+  .card.recordings-browse-head-tall:not(.recordings-browse-head-compact) .browse-head{min-height:3.5rem;max-height:none;}
   .browse-head-left {display:flex;flex:1;justify-content:center;align-items:center;flex: 0 0 auto; }
   .browse-head-right {display:flex;justify-content center;align-items: center;flex: 0 0 auto;}
   .browse-head-middle {flex:1;text-align:center;font-weight:700;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
@@ -15527,6 +15527,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._onFullscreenChange
     );
     this._onViewportRotate = () => {
+      this._syncBrowseHeadModeClass();
       this._applyCardStyle();
       this._scheduleRotateOverlayUpdate();
     };
@@ -17446,6 +17447,10 @@ const FrigateViewCard = class extends HTMLElement {
       "recordings-browse-head-tall",
       this._tab === "recordings"
     );
+    card.classList.toggle(
+      "recordings-browse-head-compact",
+      this._isMobilePhoneViewport()
+    );
   }
   _bindListScroll() {
     const list = this._$("#list");
@@ -17824,6 +17829,7 @@ const FrigateViewCard = class extends HTMLElement {
       }
       const card = this.shadowRoot.querySelector(".card");
       if (!card) return;
+      this._syncBrowseHeadModeClass();
       this._applyCardStyle();
       this._applyBrowse();
       this._scheduleRotateOverlayUpdate();
