@@ -27,11 +27,13 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     display: flex;
     flex: 0 0 auto;
     flex-direction: column;
+    position: relative;
+    z-index: 2;
     width: 100%;
     min-height: 0;
     border-top-left-radius: var(--fvc-border-radius);
     border-top-right-radius: var(--fvc-border-radius);
-    overflow: hidden;
+    overflow: visible;
   }
 
   .card.mobile-view-active .mobile-bottom {
