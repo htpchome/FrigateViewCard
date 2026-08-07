@@ -996,7 +996,7 @@ export class FrigateViewCard extends HTMLElement {
   this._cardRoot.addEventListener('touchstart', this._onTouchStart, { passive: true });
   this._cardRoot.addEventListener('touchmove', this._onTouchMove, { passive: false });
   window.addEventListener('scroll', this._onScrollCheck, { passive: true });
-}
+
 
     /* ================================== */
     
