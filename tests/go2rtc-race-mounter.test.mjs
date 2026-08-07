@@ -126,3 +126,120 @@ test("go2rtc race mounter adopts the fallback winner and retains deferred webrtc
     globalThis.document = previousDocument;
   }
 });
+
+test("go2rtc race mounter reuses last known good strategy first", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    createElement: () => ({ style: {}, remove() {} }),
+  };
+  let webrtcCalls = 0;
+  let mseCalls = 0;
+  try {
+    const raceMounter = createGo2RtcRaceMounter({
+      mounter: {
+        tryMountWebRtc: async (slot) => {
+          webrtcCalls += 1;
+          await delay(10);
+          return { ok: false, type: "webrtc", slot, engine: { destroy() {} } };
+        },
+        tryMountMse: async (slot) => {
+          mseCalls += 1;
+          return { ok: true, type: "mse", slot, engine: { destroy() {} } };
+        },
+        tryMountHls: async () => false,
+      },
+      isDesktop: true,
+      resolveConnectionType: () => "frigate_go2rtc",
+      disableHlsDesktopForEntity: () => true,
+      getPendingMountDestroyers: () => [],
+      setPendingMountDestroyers: () => {},
+      isMountTokenCurrent: () => true,
+      adoptMountedAttempt: () => {},
+      waitForStreamStart: async () => true,
+      isCurrentWinnerEngine: () => true,
+      getPendingWebRtcTakeoverTimer: () => null,
+      setPendingWebRtcTakeoverTimer: () => {},
+    });
+
+    const slot = { appendChild() {} };
+
+    await raceMounter.mountWithRace({
+      slot,
+      entity: "camera.front",
+      forcedType: "mse",
+      mountToken: 1,
+    });
+    await raceMounter.mountWithRace({
+      slot,
+      entity: "camera.front",
+      mountToken: 2,
+    });
+
+    assert.equal(mseCalls, 2);
+    assert.equal(webrtcCalls, 0);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("go2rtc race mounter falls back when hinted strategy fails", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    createElement: () => ({ style: {}, remove() {} }),
+  };
+  let webrtcCalls = 0;
+  let mseCalls = 0;
+  let adoptedType = "";
+  try {
+    const raceMounter = createGo2RtcRaceMounter({
+      mounter: {
+        tryMountWebRtc: async (slot) => {
+          webrtcCalls += 1;
+          return { ok: true, type: "webrtc", slot, engine: { destroy() {} } };
+        },
+        tryMountMse: async (slot) => {
+          mseCalls += 1;
+          if (mseCalls <= 1) {
+            return { ok: true, type: "mse", slot, engine: { destroy() {} } };
+          }
+          return false;
+        },
+        tryMountHls: async () => false,
+      },
+      isDesktop: true,
+      resolveConnectionType: () => "frigate_go2rtc",
+      disableHlsDesktopForEntity: () => true,
+      getPendingMountDestroyers: () => [],
+      setPendingMountDestroyers: () => {},
+      isMountTokenCurrent: () => true,
+      adoptMountedAttempt: (_slot, winner) => {
+        adoptedType = winner?.type || "";
+      },
+      waitForStreamStart: async () => true,
+      isCurrentWinnerEngine: () => true,
+      getPendingWebRtcTakeoverTimer: () => null,
+      setPendingWebRtcTakeoverTimer: () => {},
+    });
+
+    const slot = { appendChild() {} };
+
+    await raceMounter.mountWithRace({
+      slot,
+      entity: "camera.back",
+      forcedType: "mse",
+      mountToken: 10,
+    });
+    const result = await raceMounter.mountWithRace({
+      slot,
+      entity: "camera.back",
+      mountToken: 11,
+    });
+
+    assert.equal(result, true);
+    assert.equal(adoptedType, "webrtc");
+    assert.equal(mseCalls, 2);
+    assert.equal(webrtcCalls, 1);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});

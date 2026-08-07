@@ -10,6 +10,8 @@ import {
   destroyLoserAttemptResults,
 } from "./mount-result.js";
 
+const STRATEGY_HINT_COOLDOWN_MS = 120000;
+
 export function createGo2RtcRaceMounter({
   mounter,
   isDesktop,
@@ -23,61 +25,68 @@ export function createGo2RtcRaceMounter({
   isCurrentWinnerEngine,
   getPendingWebRtcTakeoverTimer,
   setPendingWebRtcTakeoverTimer,
+  getNowMs = () => Date.now(),
 }) {
-  const buildAttempts = (entity = "", forcedType = null, hostSlot = null) => {
-    const targetEntity = String(entity || "").trim();
-    const connectionType = resolveConnectionType(targetEntity);
-    const disableHlsOnDesktop =
-      isDesktop && disableHlsDesktopForEntity(targetEntity);
-    const hiddenSlot = () => createAttemptSlot(hostSlot);
-    const builders = {
-      webrtc: (attemptOptions = {}) =>
-        mounter.tryMountWebRtc(
-          hiddenSlot(),
-          { waitMs: 7000 },
-          {
-            commit: false,
-            ...attemptOptions,
-          },
-        ),
-      mse: (attemptOptions = {}) =>
-        mounter.tryMountMse(
-          hiddenSlot(),
-          {
-            waitMs: 4000,
-            minCurrentTime: 0.05,
-            minDecodedFrames: 1,
-            requireReadyState: 2,
-            strict: true,
-          },
-          { commit: false, ...attemptOptions },
-        ),
-      hls: (attemptOptions = {}) =>
-        mounter.tryMountHls(
-          hiddenSlot(),
-          { waitMs: 5000 },
-          {
-            commit: false,
-            ...attemptOptions,
-          },
-        ),
-    };
+  const strategyHintsByEntity = new Map();
 
-    return buildLiveAttemptPlan({
-      connectionType,
-      forcedType,
-      disableHlsOnDesktop,
-      builders,
+  const normalizeEntityKey = (entity = "") => String(entity || "").trim();
+
+  const getHintState = (entity = "") => {
+    const key = normalizeEntityKey(entity);
+    if (!key) return null;
+    return strategyHintsByEntity.get(key) || null;
+  };
+
+  const markHintSuccess = (entity = "", type = "") => {
+    const key = normalizeEntityKey(entity);
+    const nextType = String(type || "")
+      .trim()
+      .toLowerCase();
+    if (!key || !nextType) return;
+    strategyHintsByEntity.set(key, {
+      type: nextType,
+      failureCount: 0,
+      cooldownUntilMs: 0,
+      updatedAtMs: getNowMs(),
     });
   };
 
-  const mountWithRace = async ({
+  const markHintFailure = (entity = "", type = "") => {
+    const key = normalizeEntityKey(entity);
+    const failedType = String(type || "")
+      .trim()
+      .toLowerCase();
+    if (!key || !failedType) return;
+    const current = getHintState(key);
+    if (!current || current.type !== failedType) return;
+    const failureCount = (Number(current.failureCount) || 0) + 1;
+    strategyHintsByEntity.set(key, {
+      type: current.type,
+      failureCount,
+      cooldownUntilMs:
+        failureCount >= 2 ? getNowMs() + STRATEGY_HINT_COOLDOWN_MS : 0,
+      updatedAtMs: getNowMs(),
+    });
+  };
+
+  const resolveHintedType = (entity = "", attempts = [], forcedType = null) => {
+    if (forcedType) return null;
+    const hint = getHintState(entity);
+    if (!hint?.type) return null;
+    const nowMs = getNowMs();
+    if (Number(hint.cooldownUntilMs) > nowMs) return null;
+    return attempts.some((attempt) => attempt.type === hint.type)
+      ? hint.type
+      : null;
+  };
+
+  const mountWithOrchestrator = async ({
     slot,
     entity,
-    forcedType = null,
     mountToken,
+    attempts,
+    preferredType = "webrtc",
   }) => {
-    const attempts = buildAttempts(entity, forcedType, slot);
     const strategies = attempts.map((attempt) =>
       createStrategyForType({
         type: attempt.type,
@@ -93,7 +102,7 @@ export function createGo2RtcRaceMounter({
 
     const orchestrator = new StreamOrchestrator({
       strategies,
-      preferredType: "webrtc",
+      preferredType,
       preferredWaitMs: 0,
       retainPreferredOnFallback: true,
     });
@@ -155,11 +164,115 @@ export function createGo2RtcRaceMounter({
         winnerEngine: winner.engine,
         winnerType: winner.type,
       });
+      markHintSuccess(entity, winner.type);
       return true;
     }
 
     await destroyLosers();
     return false;
+  };
+
+  const buildAttempts = (entity = "", forcedType = null, hostSlot = null) => {
+    const targetEntity = String(entity || "").trim();
+    const connectionType = resolveConnectionType(targetEntity);
+    const disableHlsOnDesktop =
+      isDesktop && disableHlsDesktopForEntity(targetEntity);
+    const hiddenSlot = () => createAttemptSlot(hostSlot);
+    const builders = {
+      webrtc: (attemptOptions = {}) =>
+        mounter.tryMountWebRtc(
+          hiddenSlot(),
+          { waitMs: 7000 },
+          {
+            commit: false,
+            ...attemptOptions,
+          },
+        ),
+      mse: (attemptOptions = {}) =>
+        mounter.tryMountMse(
+          hiddenSlot(),
+          {
+            waitMs: 4000,
+            minCurrentTime: 0.05,
+            minDecodedFrames: 1,
+            requireReadyState: 2,
+            strict: true,
+          },
+          { commit: false, ...attemptOptions },
+        ),
+      hls: (attemptOptions = {}) =>
+        mounter.tryMountHls(
+          hiddenSlot(),
+          { waitMs: 5000 },
+          {
+            commit: false,
+            ...attemptOptions,
+          },
+        ),
+    };
+
+    return buildLiveAttemptPlan({
+      connectionType,
+      forcedType,
+      disableHlsOnDesktop,
+      builders,
+    });
+  };
+
+  const mountWithRace = async ({
+    slot,
+    entity,
+    forcedType = null,
+    mountToken,
+  }) => {
+    const attempts = buildAttempts(entity, forcedType, slot);
+    const hintedType = resolveHintedType(entity, attempts, forcedType);
+    if (hintedType) {
+      const preferredAttempt = attempts.find(
+        (attempt) => attempt.type === hintedType,
+      );
+      if (preferredAttempt) {
+        let preferredResult = null;
+        try {
+          preferredResult = await preferredAttempt.start({ entity });
+        } catch (_) {
+          preferredResult = null;
+        }
+
+        if (!isMountTokenCurrent(mountToken)) {
+          cleanupStaleWinnerResult(preferredResult);
+          return false;
+        }
+
+        if (preferredResult?.ok) {
+          adoptMountedAttempt(slot, preferredResult);
+          markHintSuccess(entity, preferredResult.type || hintedType);
+          return true;
+        }
+
+        markHintFailure(entity, hintedType);
+
+        const fallbackAttempts = attempts.filter(
+          (attempt) => attempt.type !== hintedType,
+        );
+        if (!fallbackAttempts.length) return false;
+        return await mountWithOrchestrator({
+          slot,
+          entity,
+          mountToken,
+          attempts: fallbackAttempts,
+          preferredType: "webrtc",
+        });
+      }
+    }
+
+    return await mountWithOrchestrator({
+      slot,
+      entity,
+      mountToken,
+      attempts,
+      preferredType: "webrtc",
+    });
   };
 
   return {
