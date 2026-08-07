@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1283";
+const VERSION = "1.0.1285";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15022,7 +15022,12 @@ const FrigateViewCard = class extends HTMLElement {
     this._browseOpen = this._config.browse_expanded;
     this._singleViewPageController.applyEditorPreviewDraftRefresh();
   }
+  _ensureEditorPreviewController() {
+    if (this._editorPreviewController) return;
+    this._editorPreviewController = new EditorPreviewContextController(this);
+  }
   connectedCallback() {
+    this._ensureEditorPreviewController();
     if (this._disconnectTeardownT) {
       clearTimeout(this._disconnectTeardownT);
       this._disconnectTeardownT = null;
@@ -15266,6 +15271,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (routeFlowOutcome === "handled") return;
   }
   set hass(hass) {
+    this._ensureEditorPreviewController();
     this._hass = hass;
     if (!this._config) return;
     const nowMs = Date.now();
@@ -16940,10 +16946,15 @@ const FrigateViewCard = class extends HTMLElement {
       return;
     }
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
+    const isEditorExitReason = reason === "card-editor-close" || reason === "watchdog-dialog-close" || reason === "watchdog-edit-exit" || reason === "watchdog-dashboard-edit-on" || reason === "watchdog-dashboard-edit-off" || reason === "hass-edit-exit";
     const delay = reason === "card-editor-close" || reason === "watchdog-dialog-close" || reason === "watchdog-dashboard-edit-on" || reason === "watchdog-dashboard-edit-off" ? 40 : 140;
     this._resumeLiveT = setTimeout(() => {
+      this._resumeLiveT = null;
       this._resumeLiveIfNeeded(reason);
     }, delay);
+    if (isEditorExitReason && this._viewMode !== "grid") {
+      setTimeout(() => this._kickLiveIfStale(true), 900);
+    }
     if (this._isFirefox() && this._viewMode !== "grid") {
       setTimeout(() => this._kickLiveIfStale(true), 900);
     }

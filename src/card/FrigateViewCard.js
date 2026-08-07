@@ -858,7 +858,14 @@ export class FrigateViewCard extends HTMLElement {
     this._browseOpen = this._config.browse_expanded;
     this._singleViewPageController.applyEditorPreviewDraftRefresh();
   }
+
+  _ensureEditorPreviewController() {
+    if (this._editorPreviewController) return;
+    this._editorPreviewController = new EditorPreviewContextController(this);
+  }
+
   connectedCallback() {
+    this._ensureEditorPreviewController();
     if (this._disconnectTeardownT) {
       clearTimeout(this._disconnectTeardownT);
       this._disconnectTeardownT = null;
@@ -1187,6 +1194,7 @@ export class FrigateViewCard extends HTMLElement {
     if (routeFlowOutcome === "handled") return;
   }
   set hass(hass) {
+    this._ensureEditorPreviewController();
     this._hass = hass;
     if (!this._config) return;
     const nowMs = Date.now();
@@ -3169,6 +3177,13 @@ export class FrigateViewCard extends HTMLElement {
       return;
     }
     if (this._resumeLiveT) clearTimeout(this._resumeLiveT);
+    const isEditorExitReason =
+      reason === "card-editor-close" ||
+      reason === "watchdog-dialog-close" ||
+      reason === "watchdog-edit-exit" ||
+      reason === "watchdog-dashboard-edit-on" ||
+      reason === "watchdog-dashboard-edit-off" ||
+      reason === "hass-edit-exit";
     const delay =
       reason === "card-editor-close" ||
       reason === "watchdog-dialog-close" ||
@@ -3177,8 +3192,13 @@ export class FrigateViewCard extends HTMLElement {
         ? 40
         : 140;
     this._resumeLiveT = setTimeout(() => {
+      this._resumeLiveT = null;
       this._resumeLiveIfNeeded(reason);
     }, delay);
+    if (isEditorExitReason && this._viewMode !== "grid") {
+      // Editor exit can race layout/visibility; a late kick recovers missed first mounts.
+      setTimeout(() => this._kickLiveIfStale(true), 900);
+    }
     if (this._isFirefox() && this._viewMode !== "grid") {
       // Firefox may need a second kick after layout settles on tab return.
       setTimeout(() => this._kickLiveIfStale(true), 900);

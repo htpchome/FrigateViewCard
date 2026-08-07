@@ -109,9 +109,8 @@ test("grid mode toolbar and runtime hooks are present", () => {
     cardSource.includes(
       'if (this._tab === "alerts" || this._tab === "kept") {',
     ) &&
-      cardSource.includes(
-        "void this._loadGridMixedTabData(this._tab).then(() => {",
-      ) &&
+      cardSource.includes("void (async () => {") &&
+      cardSource.includes("await this._loadGridMixedTabData(this._tab);") &&
       cardSource.includes("this._renderList();"),
     true,
   );
