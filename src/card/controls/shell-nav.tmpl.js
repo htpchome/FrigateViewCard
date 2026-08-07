@@ -314,7 +314,9 @@ export function buildMainLayoutShellMarkup({
   );
   return `<div class="${layoutClassName}" id="layout">
           <div class="${leftColumnClassName}" id="col-left">
-            ${liveEngineWrap}
+            <div class="feed-area">
+              ${liveEngineWrap}
+            </div>
 
             ${infoRow}
             ${pageNav}
