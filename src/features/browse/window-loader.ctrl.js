@@ -173,11 +173,9 @@ export class BrowseWindowLoaderController {
     const maxSpanDays = Math.max(targetDayCount * 16, targetDayCount + 30);
     let bestItems = [];
     let bestDayCount = 0;
-    let lastAfter = Math.max(0, Math.floor(before - spanDays * DAY));
 
     while (true) {
       const after = Math.max(0, Math.floor(before - spanDays * DAY));
-      lastAfter = after;
       const items = await fetcher(after, before, {
         debugLabel,
       });
@@ -194,8 +192,9 @@ export class BrowseWindowLoaderController {
         bestItems = filtered;
       }
       if (dayCountFound >= targetDayCount || spanDays >= maxSpanDays) {
+        const bestResult = bestDayCount >= dayCountFound ? bestItems : filtered;
         return {
-          items: dayCountFound > 0 ? filtered : bestItems,
+          items: bestResult,
           after,
         };
       }

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1277";
+const VERSION = "1.0.1278";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -9245,10 +9245,8 @@ const BrowseWindowLoaderController = class {
     const maxSpanDays = Math.max(targetDayCount * 16, targetDayCount + 30);
     let bestItems = [];
     let bestDayCount = 0;
-    let lastAfter = Math.max(0, Math.floor(before - spanDays * DAY));
     while (true) {
       const after = Math.max(0, Math.floor(before - spanDays * DAY));
-      lastAfter = after;
       const items = await fetcher(after, before, {
         debugLabel
       });
@@ -9265,8 +9263,9 @@ const BrowseWindowLoaderController = class {
         bestItems = filtered;
       }
       if (dayCountFound >= targetDayCount || spanDays >= maxSpanDays) {
+        const bestResult = bestDayCount >= dayCountFound ? bestItems : filtered;
         return {
-          items: dayCountFound > 0 ? filtered : bestItems,
+          items: bestResult,
           after
         };
       }

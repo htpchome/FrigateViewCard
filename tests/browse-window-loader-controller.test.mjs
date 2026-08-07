@@ -253,3 +253,48 @@ test("fetchRecentActiveDayEvents returns last N days with events", async () => {
     ["d5-a", "d5-b", "d4-a", "d1-a", "d1-b", "d1-c"],
   );
 });
+
+test("fetchRecentActiveDayReviews keeps best active-day set across expanding probes", async () => {
+  const host = {
+    _dayKey: (ts) => String(Math.floor(ts / 86400)),
+    _ws: async () => [],
+  };
+  const controller = new BrowseWindowLoaderController(host, {
+    fetchWindowedItems: async ({ fetchBatch }) =>
+      fetchBatch({ after: 0, before: 999999, limit: 250, page: 0 }),
+  });
+
+  const day = 86400;
+  const before = 100 * day;
+  controller.fetchWindowedReviews = async (_clientId, _cam, after) => {
+    if (after >= 96 * day) {
+      return [
+        { id: "d99-a", start_time: 99 * day + 100 },
+        { id: "d97-a", start_time: 97 * day + 100 },
+      ];
+    }
+    if (after >= 92 * day) {
+      return [
+        { id: "d99-a", start_time: 99 * day + 100 },
+        { id: "d97-a", start_time: 97 * day + 100 },
+        { id: "d94-a", start_time: 94 * day + 100 },
+      ];
+    }
+    return [
+      { id: "d99-a", start_time: 99 * day + 100 },
+      { id: "d97-a", start_time: 97 * day + 100 },
+    ];
+  };
+
+  const resolved = await controller.fetchRecentActiveDayReviews(
+    "frigate",
+    "front",
+    before,
+    4,
+  );
+
+  assert.deepEqual(
+    resolved.items.map((item) => item.id),
+    ["d99-a", "d97-a", "d94-a"],
+  );
+});
