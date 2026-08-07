@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1290";
+const VERSION = "1.0.1291";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -194,6 +194,103 @@ const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active .mobile-top .page-nav,
   .card.mobile-view-active .mobile-top .cam-switcher {
     padding-inline: 8px;
+  }
+
+  .card.mobile-view-active .mobile-top .cam-switcher {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__trigger {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__chev {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__chev svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 8;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 6px;
+    border: 1px solid var(--c-border2);
+    border-radius: 10px;
+    background: var(--c-bg-panel);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__panel[hidden] {
+    display: none;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__option {
+    appearance: none;
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--c-border2);
+    border-radius: 8px;
+    background: var(--c-bg-main);
+    color: var(--c-text);
+    cursor: pointer;
+    padding: 8px 10px;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__option.is-active {
+    border-color: var(--c-primary-d);
+    background: var(--c-primary-l);
+    color: var(--c-primary-d);
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__option-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 `;
 
@@ -2809,24 +2906,69 @@ function isMobileViewRoute(pageId, pageIds) {
 }
 
 // src/features/mobile-view/page.tmpl.js
-function buildCamSwitcherMarkup({
+function buildMobileCameraOptionMarkup({
+  camera,
+  index,
+  activeCamIdx,
+  includeStatus,
+  getCameraName,
+  isCameraAvailable
+}) {
+  const name = getCameraName(camera);
+  const active = index === activeCamIdx;
+  const ok = !includeStatus || isCameraAvailable(camera);
+  return `<button
+            class="mobile-cam-picker__option${active ? " is-active" : ""}"
+            type="button"
+            role="option"
+            aria-selected="${active ? "true" : "false"}"
+            data-mobile-camidx="${index}"
+          >
+            <span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span>
+            <span class="mobile-cam-picker__option-label">${name}</span>
+          </button>`;
+}
+function buildMobileCamSwitcherMarkup({
   previewPageEnabled,
   includeStatus,
   cameras,
   activeCamIdx,
-  isSingleView,
   icons,
   getCameraName,
-  isCameraAvailable
+  isCameraAvailable,
+  pickerOpen = false
 }) {
+  const cameraList = Array.isArray(cameras) ? cameras : [];
+  const safeActiveIdx = Number.isInteger(activeCamIdx) && activeCamIdx >= 0 && activeCamIdx < cameraList.length ? activeCamIdx : 0;
+  const activeCamera = cameraList[safeActiveIdx] || cameraList[0] || null;
+  const activeCameraName = activeCamera ? getCameraName(activeCamera) : "Camera";
   const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
-  const cameraButtons = (cameras || []).map((camera, index) => {
-    const name = getCameraName(camera);
-    const active = isSingleView && index === activeCamIdx;
-    const ok = !includeStatus || isCameraAvailable(camera);
-    return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
-  }).join("");
-  return `${backButton}${cameraButtons}`;
+  const cameraOptions = cameraList.map(
+    (camera, index) => buildMobileCameraOptionMarkup({
+      camera,
+      index,
+      activeCamIdx: safeActiveIdx,
+      includeStatus,
+      getCameraName,
+      isCameraAvailable
+    })
+  ).join("");
+  return `${backButton}
+    <div class="mobile-cam-picker${pickerOpen ? " is-open" : ""}" data-mobile-cam-picker>
+      <button
+        class="glass-btn mobile-cam-picker__trigger"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded="${pickerOpen ? "true" : "false"}"
+        data-mobile-cam-trigger
+      >
+        <span class="mobile-cam-picker__label">${activeCameraName}</span>
+        <span class="mobile-cam-picker__chev" aria-hidden="true">${icons.chevron || "v"}</span>
+      </button>
+      <div class="mobile-cam-picker__panel" role="listbox" ${pickerOpen ? "" : "hidden"} data-mobile-cam-panel>
+        ${cameraOptions}
+      </div>
+    </div>`;
 }
 function buildMobileViewInfoRowMarkup({
   title,
@@ -2885,7 +3027,7 @@ function buildMobileViewMainLayoutShellMarkup({
           </div>`;
 }
 function buildMobileViewCamSwitcherMarkup(args) {
-  return buildCamSwitcherMarkup(args);
+  return buildMobileCamSwitcherMarkup(args);
 }
 function resolveMobileViewTitleText({
   title,
@@ -2979,7 +3121,7 @@ function buildTabsMarkup({
       </div>`;
   return { activeTab, markup };
 }
-function buildCamSwitcherMarkup2({
+function buildCamSwitcherMarkup({
   previewPageEnabled,
   includeStatus,
   cameras,
@@ -13561,7 +13703,8 @@ function buildStandardPageCamSwitcherMarkup(host, { includeStatus = true, mobile
     isSingleView: host._viewMode === "single",
     icons: ICONS,
     getCameraName: cameraName,
-    isCameraAvailable: (camera) => host._hass?.states?.[camera.entity]?.state !== "unavailable"
+    isCameraAvailable: (camera) => host._hass?.states?.[camera.entity]?.state !== "unavailable",
+    pickerOpen: host._mobileCamSwitcherOpen === true
   };
   return mobile ? buildMobileViewCamSwitcherMarkup(args) : buildStandardCamSwitcherButtons(args);
 }
@@ -14863,6 +15006,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._kept = [];
     this._tab = "alerts";
     this._lastNonControlsTab = "alerts";
+    this._mobileCamSwitcherOpen = false;
     this._playing = null;
     this._browseOpen = false;
     this._winEnd = 0;
@@ -16539,6 +16683,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
+    this._mobileCamSwitcherOpen = false;
     const source = String(opts?.source || "manual");
     if (source === "manual") {
       if (this._slideshowActive) {
@@ -17519,11 +17664,41 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _click(e) {
     const target = e.target;
+    if (this._handleMobileCamSwitcherClick(target)) return;
+    this._closeMobileCamSwitcherIfOutside(target);
     if (target.closest(".close-btn")) return this._closePopup();
     if (this._handleToolbarClick(target)) return;
     if (this._handleSidebarClick(target)) return;
     if (this._handleListClick(e, target)) return;
     if (this._handleEventClick(target)) return;
+  }
+  _handleMobileCamSwitcherClick(target) {
+    const trigger = target.closest("[data-mobile-cam-trigger]");
+    if (trigger) {
+      this._mobileCamSwitcherOpen = !this._mobileCamSwitcherOpen;
+      this._renderCamSwitcher();
+      return true;
+    }
+    const option = target.closest("[data-mobile-camidx]");
+    if (option) {
+      const idx = Number(option.dataset.mobileCamidx);
+      this._mobileCamSwitcherOpen = false;
+      if (Number.isInteger(idx) && idx >= 0) {
+        this._pauseSlideshowForInteraction();
+        void this._switchCamera(idx);
+      } else {
+        this._renderCamSwitcher();
+      }
+      return true;
+    }
+    return false;
+  }
+  _closeMobileCamSwitcherIfOutside(target) {
+    if (!this._mobileCamSwitcherOpen) return;
+    const inPicker = target.closest("[data-mobile-cam-picker]");
+    if (inPicker) return;
+    this._mobileCamSwitcherOpen = false;
+    this._renderCamSwitcher();
   }
   _handleToolbarClick(target) {
     if (this._handleTopToolbarClick(target)) return true;

@@ -175,13 +175,14 @@ test("mobile-view camera switcher render hides for a single camera when preview 
   assert.equal(nodes["#cam-switcher"].style.display, "none");
 });
 
-test("mobile-view camera switcher markup includes camera buttons", () => {
+test("mobile-view camera switcher markup includes picker trigger and options", () => {
   const { host } = createHost();
   const controller = new MobileViewPageController(host, { PAGE_IDS });
 
   const markup = controller.camSwitcherMarkup({ includeStatus: true });
 
-  assert.equal(markup.includes('data-camidx="0"'), true);
+  assert.equal(markup.includes("data-mobile-cam-trigger"), true);
+  assert.equal(markup.includes('data-mobile-camidx="0"'), true);
   assert.equal(markup.includes("Front Door"), true);
 });
 

@@ -78,20 +78,22 @@ test("mobile view info row markup uses expected ids", () => {
   assert.equal(markup.includes("8"), true);
 });
 
-test("mobile view cam switcher markup delegates to shared switcher builder", () => {
+test("mobile view cam switcher markup renders trigger and picker options", () => {
   const markup = buildMobileViewCamSwitcherMarkup({
     previewPageEnabled: true,
     includeStatus: true,
     cameras: [{ entity: "camera.front_door" }, { entity: "camera.driveway" }],
     activeCamIdx: 1,
     isSingleView: true,
-    icons: { left: "<", volOn: "", volOff: "" },
+    icons: { left: "<", chevron: "v", volOn: "", volOff: "" },
     getCameraName: (camera) =>
       camera.entity === "camera.driveway" ? "Driveway" : "Front Door",
     isCameraAvailable: (camera) => camera.entity !== "camera.front_door",
   });
 
   assert.equal(markup.includes("data-preview-back"), true);
-  assert.equal(markup.includes('data-camidx="1"'), true);
+  assert.equal(markup.includes("data-mobile-cam-trigger"), true);
+  assert.equal(markup.includes('data-mobile-camidx="1"'), true);
+  assert.equal(markup.includes('aria-expanded="false"'), true);
   assert.equal(markup.includes("Driveway"), true);
 });

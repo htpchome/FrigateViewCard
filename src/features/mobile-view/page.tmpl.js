@@ -1,27 +1,80 @@
 import { MOBILE_VIEW_ACTIVE_CLASS, isMobileViewRoute } from "./utils.js";
 
-function buildCamSwitcherMarkup({
+function buildMobileCameraOptionMarkup({
+  camera,
+  index,
+  activeCamIdx,
+  includeStatus,
+  getCameraName,
+  isCameraAvailable,
+}) {
+  const name = getCameraName(camera);
+  const active = index === activeCamIdx;
+  const ok = !includeStatus || isCameraAvailable(camera);
+  return `<button
+            class="mobile-cam-picker__option${active ? " is-active" : ""}"
+            type="button"
+            role="option"
+            aria-selected="${active ? "true" : "false"}"
+            data-mobile-camidx="${index}"
+          >
+            <span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span>
+            <span class="mobile-cam-picker__option-label">${name}</span>
+          </button>`;
+}
+
+export function buildMobileCamSwitcherMarkup({
   previewPageEnabled,
   includeStatus,
   cameras,
   activeCamIdx,
-  isSingleView,
   icons,
   getCameraName,
   isCameraAvailable,
+  pickerOpen = false,
 }) {
+  const cameraList = Array.isArray(cameras) ? cameras : [];
+  const safeActiveIdx =
+    Number.isInteger(activeCamIdx) &&
+    activeCamIdx >= 0 &&
+    activeCamIdx < cameraList.length
+      ? activeCamIdx
+      : 0;
+  const activeCamera = cameraList[safeActiveIdx] || cameraList[0] || null;
+  const activeCameraName = activeCamera
+    ? getCameraName(activeCamera)
+    : "Camera";
   const backButton = previewPageEnabled
     ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>`
     : "";
-  const cameraButtons = (cameras || [])
-    .map((camera, index) => {
-      const name = getCameraName(camera);
-      const active = isSingleView && index === activeCamIdx;
-      const ok = !includeStatus || isCameraAvailable(camera);
-      return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
-    })
+  const cameraOptions = cameraList
+    .map((camera, index) =>
+      buildMobileCameraOptionMarkup({
+        camera,
+        index,
+        activeCamIdx: safeActiveIdx,
+        includeStatus,
+        getCameraName,
+        isCameraAvailable,
+      }),
+    )
     .join("");
-  return `${backButton}${cameraButtons}`;
+  return `${backButton}
+    <div class="mobile-cam-picker${pickerOpen ? " is-open" : ""}" data-mobile-cam-picker>
+      <button
+        class="glass-btn mobile-cam-picker__trigger"
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded="${pickerOpen ? "true" : "false"}"
+        data-mobile-cam-trigger
+      >
+        <span class="mobile-cam-picker__label">${activeCameraName}</span>
+        <span class="mobile-cam-picker__chev" aria-hidden="true">${icons.chevron || "v"}</span>
+      </button>
+      <div class="mobile-cam-picker__panel" role="listbox" ${pickerOpen ? "" : "hidden"} data-mobile-cam-panel>
+        ${cameraOptions}
+      </div>
+    </div>`;
 }
 
 export function buildMobileViewInfoRowMarkup({
@@ -86,7 +139,7 @@ export function buildMobileViewMainLayoutShellMarkup({
 }
 
 export function buildMobileViewCamSwitcherMarkup(args) {
-  return buildCamSwitcherMarkup(args);
+  return buildMobileCamSwitcherMarkup(args);
 }
 
 export function resolveMobileViewTitleText({

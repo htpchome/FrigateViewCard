@@ -57,6 +57,7 @@ export function buildStandardPageCamSwitcherMarkup(
     getCameraName: cameraName,
     isCameraAvailable: (camera) =>
       host._hass?.states?.[camera.entity]?.state !== "unavailable",
+    pickerOpen: host._mobileCamSwitcherOpen === true,
   };
   return mobile
     ? buildMobileViewCamSwitcherMarkup(args)

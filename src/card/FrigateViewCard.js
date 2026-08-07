@@ -475,6 +475,7 @@ export class FrigateViewCard extends HTMLElement {
     this._kept = [];
     this._tab = "alerts";
     this._lastNonControlsTab = "alerts";
+    this._mobileCamSwitcherOpen = false;
     this._playing = null;
     this._browseOpen = false;
     this._winEnd = 0;
@@ -2481,6 +2482,7 @@ export class FrigateViewCard extends HTMLElement {
 
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
+    this._mobileCamSwitcherOpen = false;
     const source = String(opts?.source || "manual");
     if (source === "manual") {
       if (this._slideshowActive) {
@@ -3596,11 +3598,43 @@ export class FrigateViewCard extends HTMLElement {
   }
   _click(e) {
     const target = e.target;
+    if (this._handleMobileCamSwitcherClick(target)) return;
+    this._closeMobileCamSwitcherIfOutside(target);
     if (target.closest(".close-btn")) return this._closePopup();
     if (this._handleToolbarClick(target)) return;
     if (this._handleSidebarClick(target)) return;
     if (this._handleListClick(e, target)) return;
     if (this._handleEventClick(target)) return;
+  }
+  _handleMobileCamSwitcherClick(target) {
+    const trigger = target.closest("[data-mobile-cam-trigger]");
+    if (trigger) {
+      this._mobileCamSwitcherOpen = !this._mobileCamSwitcherOpen;
+      this._renderCamSwitcher();
+      return true;
+    }
+
+    const option = target.closest("[data-mobile-camidx]");
+    if (option) {
+      const idx = Number(option.dataset.mobileCamidx);
+      this._mobileCamSwitcherOpen = false;
+      if (Number.isInteger(idx) && idx >= 0) {
+        this._pauseSlideshowForInteraction();
+        void this._switchCamera(idx);
+      } else {
+        this._renderCamSwitcher();
+      }
+      return true;
+    }
+
+    return false;
+  }
+  _closeMobileCamSwitcherIfOutside(target) {
+    if (!this._mobileCamSwitcherOpen) return;
+    const inPicker = target.closest("[data-mobile-cam-picker]");
+    if (inPicker) return;
+    this._mobileCamSwitcherOpen = false;
+    this._renderCamSwitcher();
   }
   _handleToolbarClick(target) {
     if (this._handleTopToolbarClick(target)) return true;
