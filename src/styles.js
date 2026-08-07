@@ -11,6 +11,7 @@ export const STYLES = `
     display: block !important;
     border: 0 !important;
     border-radius: var(--ha-card-border-radius, 14px);
+    overscroll-behavior: none !important;
   }
   :host {
     --popup-z-index: 1000;

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1331";
+const VERSION = "1.0.1332";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -503,6 +503,7 @@ const STYLES = `
     display: block !important;
     border: 0 !important;
     border-radius: var(--ha-card-border-radius, 14px);
+    overscroll-behavior: none !important;
   }
   :host {
     --popup-z-index: 1000;
