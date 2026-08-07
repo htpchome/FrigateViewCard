@@ -203,3 +203,95 @@ test("go2rtc mounter HLS path commits the mounted engine on success", async () =
     assert.equal(assignedEngine.video, slot.lastChild);
   });
 });
+
+test("go2rtc mounter WebRTC closes signaling after startup", async () => {
+  await withFakeDocument(async () => {
+    const previousWebSocket = globalThis.WebSocket;
+    const previousRtcPeerConnection = globalThis.RTCPeerConnection;
+
+    let closeCalls = 0;
+    class FakeWebSocket {
+      constructor() {
+        this.readyState = 1;
+        this._listeners = new Map();
+      }
+
+      addEventListener(type, handler) {
+        this._listeners.set(type, handler);
+      }
+
+      send() {}
+
+      close() {
+        closeCalls += 1;
+        this.readyState = 3;
+      }
+    }
+
+    class FakePeerConnection {
+      constructor() {
+        this.connectionState = "new";
+        this.iceConnectionState = "new";
+        this._listeners = new Map();
+      }
+
+      addTransceiver() {}
+
+      addEventListener(type, handler) {
+        this._listeners.set(type, handler);
+      }
+
+      emit(type) {
+        const handler = this._listeners.get(type);
+        if (handler) handler({});
+      }
+
+      async createOffer() {
+        return { sdp: "sdp" };
+      }
+
+      async setLocalDescription() {}
+
+      async setRemoteDescription() {}
+
+      async addIceCandidate() {}
+
+      close() {}
+    }
+
+    globalThis.WebSocket = FakeWebSocket;
+    globalThis.RTCPeerConnection = FakePeerConnection;
+
+    let assignedEngine = null;
+    const mounter = createBaseMounter({
+      resolver: {
+        resolveMountRequest: () => ({ entity: "camera.front", commit: true }),
+      },
+      assignCommittedEngine: (engine) => {
+        assignedEngine = engine;
+      },
+      waitForStreamStart: async () => true,
+    });
+
+    try {
+      const slot = createSlot();
+      const result = await withFakeWindow(
+        {
+          WebSocket: FakeWebSocket,
+          RTCPeerConnection: FakePeerConnection,
+        },
+        () => mounter.tryMountWebRtc(slot),
+      );
+
+      assert.equal(result, true);
+      assert.ok(assignedEngine?.pc);
+      assignedEngine.pc.connectionState = "connected";
+      assignedEngine.pc.emit("connectionstatechange");
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.equal(closeCalls, 1);
+    } finally {
+      globalThis.WebSocket = previousWebSocket;
+      globalThis.RTCPeerConnection = previousRtcPeerConnection;
+    }
+  });
+});

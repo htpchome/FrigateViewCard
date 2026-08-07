@@ -12,6 +12,7 @@ import {
 
 const STRATEGY_HINT_COOLDOWN_MS = 120000;
 const STRATEGY_HINT_MAX_ENTRIES = 64;
+const DEFERRED_WEBRTC_MAX_HOLD_MS = 4000;
 
 export function createGo2RtcRaceMounter({
   mounter,
@@ -26,6 +27,7 @@ export function createGo2RtcRaceMounter({
   isCurrentWinnerEngine,
   getPendingWebRtcTakeoverTimer,
   setPendingWebRtcTakeoverTimer,
+  deferredWebRtcMaxHoldMs = DEFERRED_WEBRTC_MAX_HOLD_MS,
   getNowMs = () => Date.now(),
 }) {
   const strategyHintsByEntity = new Map();
@@ -313,49 +315,71 @@ export function createGo2RtcRaceMounter({
     winnerType,
   }) {
     if (!slot || !deferredAttempt || deferredAttempt.type !== "webrtc") return;
-    if (winnerType !== "mse") return;
+    if (winnerType !== "mse" && winnerType !== "hls") return;
     const pendingTimer = getPendingWebRtcTakeoverTimer?.();
     if (pendingTimer) {
       clearTimeout(pendingTimer);
       setPendingWebRtcTakeoverTimer(null);
     }
-    const timer = setTimeout(() => {
-      void (async () => {
-        try {
+    let settled = false;
+    let holdTimer = null;
+    const settleDeferredState = () => {
+      if (settled) return;
+      settled = true;
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+      setPendingMountDestroyers(
+        (getPendingMountDestroyers() || []).filter(
+          (attempt) => attempt?.type !== "webrtc",
+        ),
+      );
+      setPendingWebRtcTakeoverTimer(null);
+    };
+
+    holdTimer = setTimeout(
+      () => {
+        settleDeferredState();
+        void (async () => {
+          await deferredAttempt.strategy?.disconnect?.();
           const result = await deferredAttempt.promise.catch(() => null);
-          if (!result?.ok || result.type !== "webrtc") return;
-          const takeoverStable = await waitForStreamStart(result.slot, 1500, {
-            minCurrentTime: 0.1,
-            minDecodedFrames: 2,
-            requireReadyState: 2,
-            strict: true,
-          });
-          if (!takeoverStable) {
-            cleanupStaleWinnerResult(result);
-            return;
-          }
-          if (!isMountTokenCurrent(mountToken)) {
-            cleanupStaleWinnerResult(result);
-            return;
-          }
-          if (!isCurrentWinnerEngine(winnerEngine)) {
-            cleanupStaleWinnerResult(result);
-            return;
-          }
-          adoptMountedAttempt(slot, result);
-          try {
-            winnerEngine?.destroy?.();
-          } catch (_) {}
-        } finally {
-          setPendingMountDestroyers(
-            (getPendingMountDestroyers() || []).filter(
-              (attempt) => attempt?.type !== "webrtc",
-            ),
-          );
-          setPendingWebRtcTakeoverTimer(null);
+          cleanupStaleWinnerResult(result);
+        })();
+      },
+      Math.max(1, Number(deferredWebRtcMaxHoldMs) || 0),
+    );
+    setPendingWebRtcTakeoverTimer(holdTimer);
+
+    void (async () => {
+      try {
+        const result = await deferredAttempt.promise.catch(() => null);
+        if (!result?.ok || result.type !== "webrtc") return;
+        const takeoverStable = await waitForStreamStart(result.slot, 1500, {
+          minCurrentTime: 0.1,
+          minDecodedFrames: 2,
+          requireReadyState: 2,
+          strict: true,
+        });
+        if (!takeoverStable) {
+          cleanupStaleWinnerResult(result);
+          return;
         }
-      })();
-    }, 0);
-    setPendingWebRtcTakeoverTimer(timer);
+        if (!isMountTokenCurrent(mountToken)) {
+          cleanupStaleWinnerResult(result);
+          return;
+        }
+        if (!isCurrentWinnerEngine(winnerEngine)) {
+          cleanupStaleWinnerResult(result);
+          return;
+        }
+        adoptMountedAttempt(slot, result);
+        try {
+          winnerEngine?.destroy?.();
+        } catch (_) {}
+      } finally {
+        settleDeferredState();
+      }
+    })();
   }
 }

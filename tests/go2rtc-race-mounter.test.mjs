@@ -300,3 +300,70 @@ test("go2rtc race mounter evicts oldest strategy hints when cache is full", asyn
     globalThis.document = previousDocument;
   }
 });
+
+test("go2rtc race mounter clears deferred webrtc after max hold window", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    createElement: () => ({ style: {}, remove() {} }),
+  };
+  let pendingDestroyers = [];
+  let adoptedType = "";
+  try {
+    const raceMounter = createGo2RtcRaceMounter({
+      mounter: {
+        tryMountWebRtc: async (slot) => {
+          await delay(120);
+          return {
+            ok: false,
+            type: "webrtc",
+            slot,
+            engine: { destroy() {} },
+          };
+        },
+        tryMountMse: async (slot) => ({
+          ok: true,
+          type: "mse",
+          slot,
+          engine: { destroy() {} },
+        }),
+        tryMountHls: async () => false,
+      },
+      isDesktop: true,
+      resolveConnectionType: () => "frigate_go2rtc",
+      disableHlsDesktopForEntity: () => true,
+      getPendingMountDestroyers: () => pendingDestroyers,
+      setPendingMountDestroyers: (next) => {
+        pendingDestroyers = next;
+      },
+      isMountTokenCurrent: () => true,
+      adoptMountedAttempt: (_slot, winner) => {
+        adoptedType = winner?.type || "";
+      },
+      waitForStreamStart: async () => true,
+      isCurrentWinnerEngine: () => true,
+      getPendingWebRtcTakeoverTimer: () => null,
+      setPendingWebRtcTakeoverTimer: () => {},
+      deferredWebRtcMaxHoldMs: 40,
+    });
+
+    const slot = { appendChild() {} };
+    const result = await raceMounter.mountWithRace({
+      slot,
+      entity: "camera.front",
+      mountToken: 7,
+    });
+
+    assert.equal(result, true);
+    assert.equal(adoptedType, "mse");
+    assert.deepEqual(
+      pendingDestroyers.map((attempt) => attempt.type),
+      ["webrtc"],
+    );
+
+    await delay(90);
+    assert.deepEqual(pendingDestroyers, []);
+    assert.equal(adoptedType, "mse");
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});

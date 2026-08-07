@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1289";
+const VERSION = "1.0.1290";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4687,12 +4687,37 @@ function createGo2RtcMounter({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
     });
     const ws = new WebSocket(wsUrl);
+    let streamStarted = false;
+    let signalingClosed = false;
+    let closeSignalingTimer = null;
     let abortBound = false;
-    const destroy = () => {
+    const closeSignaling = () => {
+      if (signalingClosed) return;
+      signalingClosed = true;
+      if (closeSignalingTimer) {
+        clearTimeout(closeSignalingTimer);
+        closeSignalingTimer = null;
+      }
       try {
         ws.close();
       } catch (_) {
       }
+    };
+    const closeSignalingIfConnected = () => {
+      const state = String(pc.connectionState || "").trim().toLowerCase();
+      const iceState = String(pc.iceConnectionState || "").trim().toLowerCase();
+      const connected = state === "connected" || state === "completed" || iceState === "connected" || iceState === "completed";
+      if (connected) closeSignaling();
+    };
+    const scheduleSignalingClose = () => {
+      if (closeSignalingTimer) return;
+      closeSignalingTimer = setTimeout(() => {
+        closeSignalingTimer = null;
+        closeSignalingIfConnected();
+      }, 1500);
+    };
+    const destroy = () => {
+      closeSignaling();
       try {
         pc.close();
       } catch (_) {
@@ -4711,6 +4736,10 @@ function createGo2RtcMounter({
     }
     const engine = { video, pc, ws, destroy };
     if (commit) assignCommittedEngine(engine);
+    pc.addEventListener("connectionstatechange", () => {
+      if (!streamStarted) return;
+      closeSignalingIfConnected();
+    });
     pc.addTransceiver("video", { direction: "recvonly" });
     pc.addTransceiver("audio", { direction: "recvonly" });
     let resolveFirstRenderedFrame = null;
@@ -4783,6 +4812,8 @@ function createGo2RtcMounter({
       destroy();
       return false;
     }
+    streamStarted = true;
+    scheduleSignalingClose();
     return resolveCommittedResult({
       commit,
       type: "webrtc",
@@ -6635,6 +6666,7 @@ const StreamOrchestrator = class {
 // src/features/live/go2rtc-race-mounter.js
 const STRATEGY_HINT_COOLDOWN_MS = 12e4;
 const STRATEGY_HINT_MAX_ENTRIES = 64;
+const DEFERRED_WEBRTC_MAX_HOLD_MS = 4e3;
 function createGo2RtcRaceMounter({
   mounter,
   isDesktop,
@@ -6648,6 +6680,7 @@ function createGo2RtcRaceMounter({
   isCurrentWinnerEngine,
   getPendingWebRtcTakeoverTimer,
   setPendingWebRtcTakeoverTimer,
+  deferredWebRtcMaxHoldMs = DEFERRED_WEBRTC_MAX_HOLD_MS,
   getNowMs = () => Date.now()
 }) {
   const strategyHintsByEntity = new Map();
@@ -6896,51 +6929,71 @@ function createGo2RtcRaceMounter({
     winnerType
   }) {
     if (!slot || !deferredAttempt || deferredAttempt.type !== "webrtc") return;
-    if (winnerType !== "mse") return;
+    if (winnerType !== "mse" && winnerType !== "hls") return;
     const pendingTimer = getPendingWebRtcTakeoverTimer?.();
     if (pendingTimer) {
       clearTimeout(pendingTimer);
       setPendingWebRtcTakeoverTimer(null);
     }
-    const timer = setTimeout(() => {
-      void (async () => {
-        try {
+    let settled = false;
+    let holdTimer = null;
+    const settleDeferredState = () => {
+      if (settled) return;
+      settled = true;
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+        holdTimer = null;
+      }
+      setPendingMountDestroyers(
+        (getPendingMountDestroyers() || []).filter(
+          (attempt) => attempt?.type !== "webrtc"
+        )
+      );
+      setPendingWebRtcTakeoverTimer(null);
+    };
+    holdTimer = setTimeout(
+      () => {
+        settleDeferredState();
+        void (async () => {
+          await deferredAttempt.strategy?.disconnect?.();
           const result = await deferredAttempt.promise.catch(() => null);
-          if (!result?.ok || result.type !== "webrtc") return;
-          const takeoverStable = await waitForStreamStart(result.slot, 1500, {
-            minCurrentTime: 0.1,
-            minDecodedFrames: 2,
-            requireReadyState: 2,
-            strict: true
-          });
-          if (!takeoverStable) {
-            cleanupStaleWinnerResult(result);
-            return;
-          }
-          if (!isMountTokenCurrent2(mountToken)) {
-            cleanupStaleWinnerResult(result);
-            return;
-          }
-          if (!isCurrentWinnerEngine(winnerEngine)) {
-            cleanupStaleWinnerResult(result);
-            return;
-          }
-          adoptMountedAttempt(slot, result);
-          try {
-            winnerEngine?.destroy?.();
-          } catch (_) {
-          }
-        } finally {
-          setPendingMountDestroyers(
-            (getPendingMountDestroyers() || []).filter(
-              (attempt) => attempt?.type !== "webrtc"
-            )
-          );
-          setPendingWebRtcTakeoverTimer(null);
+          cleanupStaleWinnerResult(result);
+        })();
+      },
+      Math.max(1, Number(deferredWebRtcMaxHoldMs) || 0)
+    );
+    setPendingWebRtcTakeoverTimer(holdTimer);
+    void (async () => {
+      try {
+        const result = await deferredAttempt.promise.catch(() => null);
+        if (!result?.ok || result.type !== "webrtc") return;
+        const takeoverStable = await waitForStreamStart(result.slot, 1500, {
+          minCurrentTime: 0.1,
+          minDecodedFrames: 2,
+          requireReadyState: 2,
+          strict: true
+        });
+        if (!takeoverStable) {
+          cleanupStaleWinnerResult(result);
+          return;
         }
-      })();
-    }, 0);
-    setPendingWebRtcTakeoverTimer(timer);
+        if (!isMountTokenCurrent2(mountToken)) {
+          cleanupStaleWinnerResult(result);
+          return;
+        }
+        if (!isCurrentWinnerEngine(winnerEngine)) {
+          cleanupStaleWinnerResult(result);
+          return;
+        }
+        adoptMountedAttempt(slot, result);
+        try {
+          winnerEngine?.destroy?.();
+        } catch (_) {
+        }
+      } finally {
+        settleDeferredState();
+      }
+    })();
   }
 }
 
