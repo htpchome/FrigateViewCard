@@ -3508,6 +3508,7 @@ export class FrigateViewCard extends HTMLElement {
         mobile = w < 420;
       card.classList.toggle("wide", wide);
       card.classList.toggle("mobile", mobile);
+      this._applyCardStyle();
       this._applyBrowse();
       this._scheduleRotateOverlayUpdate();
     });
