@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1327";
+const VERSION = "1.0.1328";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -17808,13 +17808,17 @@ const FrigateViewCard = class extends HTMLElement {
       const w = entries[0].contentRect.width;
       const h = entries[0].contentRect.height;
       const prevW = this._cardWidth || 0;
+      const prevH = this._cardHeight || 0;
       this._cardWidth = w;
+      this._cardHeight = h;
       const visibleNow = w > 2 && h > 2;
       if (visibleNow && !this._wasVisible) {
         this._scheduleResumeLive("resize-visible");
       }
       this._wasVisible = visibleNow;
-      if (prevW > 0 && Math.round(w) === Math.round(prevW)) return;
+      if (prevW > 0 && prevH > 0 && Math.round(w) === Math.round(prevW) && Math.round(h) === Math.round(prevH)) {
+        return;
+      }
       const card = this.shadowRoot.querySelector(".card");
       if (!card) return;
       const wide = w >= 560, mobile = w < 420;
