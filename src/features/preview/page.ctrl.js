@@ -350,6 +350,11 @@ export class PreviewPageController {
       if (this._host._mountInProgress === true) {
         this._host._cancelPendingMount("page-route-preview");
       }
+      if (typeof this._host._renderShellPreserveLive === "function") {
+        this._host._renderShellPreserveLive();
+      } else if (typeof this._host._renderShell === "function") {
+        this._host._renderShell();
+      }
     }
     this._host._applyPreviewShellVisibility();
     this._host._wideViewPageController.applyStyleLayoutAndWideSyncForCard();

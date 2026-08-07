@@ -39,6 +39,7 @@ const createHost = ({
     _teardownPreviewMedia: () => calls.push(["teardownPreviewMedia"]),
     _applyPreviewShellVisibility: () =>
       calls.push(["applyPreviewShellVisibility"]),
+    _renderShellPreserveLive: () => calls.push(["renderShellPreserveLive"]),
     _applyCardStyle: () => calls.push(["applyCardStyle"]),
     _wideViewPageController: {
       applyStyleLayoutForCard: () => {
@@ -129,6 +130,7 @@ test("activatePreviewPageRoute keeps preview path behavior intact", () => {
   controller.activatePreviewPageRoute({ previousPageId: "single-view" });
 
   assert.deepEqual(calls, [
+    ["renderShellPreserveLive"],
     ["applyPreviewShellVisibility"],
     ["applyCardStyle"],
     ["applyLayoutMode"],
@@ -144,6 +146,7 @@ test("activatePreviewPageRoute cancels pending mount only when active", () => {
 
   assert.deepEqual(calls, [
     ["cancelPendingMount", "page-route-preview"],
+    ["renderShellPreserveLive"],
     ["applyPreviewShellVisibility"],
     ["applyCardStyle"],
     ["applyLayoutMode"],
