@@ -3486,22 +3486,13 @@ export class FrigateViewCard extends HTMLElement {
       const w = entries[0].contentRect.width;
       const h = entries[0].contentRect.height;
       const prevW = this._cardWidth || 0;
-      const prevH = this._cardHeight || 0;
       this._cardWidth = w;
-      this._cardHeight = h;
       const visibleNow = w > 2 && h > 2;
       if (visibleNow && !this._wasVisible) {
         this._scheduleResumeLive("resize-visible");
       }
       this._wasVisible = visibleNow;
-      if (
-        prevW > 0 &&
-        prevH > 0 &&
-        Math.round(w) === Math.round(prevW) &&
-        Math.round(h) === Math.round(prevH)
-      ) {
-        return;
-      }
+      if (prevW > 0 && Math.round(w) === Math.round(prevW)) return;
       const card = this.shadowRoot.querySelector(".card");
       if (!card) return;
       const wide = w >= 560,
@@ -3509,7 +3500,6 @@ export class FrigateViewCard extends HTMLElement {
       card.classList.toggle("wide", wide);
       card.classList.toggle("mobile", mobile);
       this._applyBrowse();
-      this._wideViewPageController?.syncColHeightIfWideView?.();
       this._scheduleRotateOverlayUpdate();
     });
     this._ro.observe(this);
