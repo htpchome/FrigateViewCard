@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1305";
+const VERSION = "1.0.1307";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -853,6 +853,30 @@ const STYLES = `
   @media (hover: hover) and (pointer: fine) {
     #eng-wrap:hover .live-fs-btn,
     #eng-wrap:hover .mute-btn{opacity:1;pointer-events:auto;}
+  }
+
+  /* Firefox: keep glass visuals but stabilize compositing to prevent hover-size jitter. */
+  @supports (-moz-appearance: none) {
+    #eng-wrap {
+      contain: layout paint;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+
+    #engine,
+    #engine video {
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+
+    #eng-wrap .live-fs-btn,
+    #eng-wrap .mute-btn,
+    #eng-wrap .live-fs-btn::after,
+    #eng-wrap .mute-btn::after {
+      will-change: opacity, transform;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
   }
 
   #eng-wrap:fullscreen .overlay-fs,
