@@ -756,7 +756,10 @@ export class FrigateViewCard extends HTMLElement {
       this._onFullscreenChange,
     );
 
-    this._onViewportRotate = () => this._scheduleRotateOverlayUpdate();
+    this._onViewportRotate = () => {
+      this._applyCardStyle();
+      this._scheduleRotateOverlayUpdate();
+    };
     window.addEventListener("resize", this._onViewportRotate, {
       passive: true,
     });
