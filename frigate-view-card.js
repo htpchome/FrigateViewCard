@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1294";
+const VERSION = "1.0.1295";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -329,6 +329,100 @@ const MOBILE_VIEW_PAGE_STYLES = `
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* Mobile list styling hooks (scoped to mobile view only). */
+  .card.mobile-view-active {
+    --mv-list-item-gap: 9px;
+    --mv-list-item-margin-bottom: 5px;
+    --mv-list-item-padding: 2px 10px 2px 2px;
+    --mv-list-item-radius: var(--fvc-border-radius);
+    --mv-list-thumb-width: 160px;
+    --mv-list-thumb-height: 90px;
+    --mv-list-thumb-radius: var(--fvc-border-radius);
+    --mv-list-dot-bottom: 2px;
+    --mv-list-dot-right: 3px;
+    --mv-list-desc-padding: 6px 8.4px;
+  }
+
+  .card.mobile-view-active .browse--mobile-view .list {
+    display: block;
+    min-height: 0;
+  }
+
+  .card.mobile-view-active .browse--mobile-view .list-head {
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .card.mobile-view-active .browse--mobile-view .list-item {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--mv-list-item-gap);
+    align-items: center;
+    margin-bottom: var(--mv-list-item-margin-bottom);
+    border-radius: var(--mv-list-item-radius);
+    padding: var(--mv-list-item-padding);
+  }
+
+  .card.mobile-view-active .browse--mobile-view .list-item.compact {
+    padding: var(--mv-list-item-padding);
+    flex-wrap: wrap;
+  }
+
+  .card.mobile-view-active .browse--mobile-view .list-item.compact .et {
+    width: 112px;
+    height: 63px;
+    border-radius: 5px;
+  }
+
+  .card.mobile-view-active .browse--mobile-view .et {
+    border-radius: var(--mv-list-thumb-radius);
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    object-fit: cover;
+  }
+
+  .card.mobile-view-active .browse--mobile-view .et img {
+    width: var(--mv-list-thumb-width);
+    height: var(--mv-list-thumb-height);
+    object-fit: cover;
+    display: block;
+  }
+
+  .card.mobile-view-active .browse--mobile-view .ed {
+    position: absolute;
+    bottom: var(--mv-list-dot-bottom);
+    right: var(--mv-list-dot-right);
+  }
+
+  .card.mobile-view-active .browse--mobile-view .ei {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .card.mobile-view-active .browse--mobile-view .etop {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 3px;
+    flex-wrap: wrap;
+  }
+
+  .card.mobile-view-active .browse--mobile-view .eact {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .card.mobile-view-active .browse--mobile-view .desc {
+    margin-top: 4px;
+    padding: var(--mv-list-desc-padding);
   }
 `;
 
