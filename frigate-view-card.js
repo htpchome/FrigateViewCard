@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1278";
+const VERSION = "1.0.1279";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -8446,12 +8446,8 @@ const BrowseCollectionController = class {
   }
   async loadGridMixedTabData(tab) {
     const before = this._host._winEnd;
-    const reviewsAfter = Math.max(
-      0,
-      Math.floor(
-        before - (this._host._config?.alerts_reviews_days || 3) * 86400
-      )
-    );
+    const reviewDays = this._host._config?.alerts_reviews_days || 3;
+    const reviewsAfter = Math.max(0, Math.floor(before - reviewDays * 86400));
     for (const camera of this._host._config.cameras || []) {
       const entity = camera.entity;
       if (!entity) continue;
@@ -8468,11 +8464,11 @@ const BrowseCollectionController = class {
       if (!clientId || !cam) continue;
       try {
         if (tab === "alerts") {
-          const reviews = await (this._host._browseWindowLoaderController?.fetchWindowedReviews?.(
+          const resolved = await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
             clientId,
             cam,
-            reviewsAfter,
             before,
+            reviewDays,
             { debugLabel: "grid-alerts-tab" }
           ) ?? this._host._fetchWindowedReviews?.(
             clientId,
@@ -8483,6 +8479,7 @@ const BrowseCollectionController = class {
               debugLabel: "grid-alerts-tab"
             }
           ));
+          const reviews = Array.isArray(resolved?.items) ? resolved.items : resolved;
           cache.reviews = Array.isArray(reviews) ? reviews : [];
         }
         if (tab === "kept") {

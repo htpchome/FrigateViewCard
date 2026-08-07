@@ -52,12 +52,8 @@ export class BrowseCollectionController {
 
   async loadGridMixedTabData(tab) {
     const before = this._host._winEnd;
-    const reviewsAfter = Math.max(
-      0,
-      Math.floor(
-        before - (this._host._config?.alerts_reviews_days || 3) * 86400,
-      ),
-    );
+    const reviewDays = this._host._config?.alerts_reviews_days || 3;
+    const reviewsAfter = Math.max(0, Math.floor(before - reviewDays * 86400));
     for (const camera of this._host._config.cameras || []) {
       const entity = camera.entity;
       if (!entity) continue;
@@ -75,12 +71,12 @@ export class BrowseCollectionController {
 
       try {
         if (tab === "alerts") {
-          const reviews =
-            await (this._host._browseWindowLoaderController?.fetchWindowedReviews?.(
+          const resolved =
+            await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
               clientId,
               cam,
-              reviewsAfter,
               before,
+              reviewDays,
               { debugLabel: "grid-alerts-tab" },
             ) ??
               this._host._fetchWindowedReviews?.(
@@ -92,6 +88,9 @@ export class BrowseCollectionController {
                   debugLabel: "grid-alerts-tab",
                 },
               ));
+          const reviews = Array.isArray(resolved?.items)
+            ? resolved.items
+            : resolved;
           cache.reviews = Array.isArray(reviews) ? reviews : [];
         }
         if (tab === "kept") {

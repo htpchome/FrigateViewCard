@@ -97,3 +97,70 @@ test("loadGridMixedTabData discovers cameras and fills cross-camera review and k
     true,
   );
 });
+
+test("loadGridMixedTabData alerts uses active-day reviews when available", async () => {
+  const calls = [];
+  const host = {
+    _winEnd: 500,
+    _config: {
+      alerts_reviews_days: 3,
+      cameras: [{ entity: "camera.front" }, { entity: "camera.back" }],
+    },
+    _camCache: {
+      "camera.front": {
+        discovered: true,
+        clientId: "frigate",
+        cam: "front",
+        reviews: [],
+      },
+      "camera.back": {
+        discovered: true,
+        clientId: "frigate",
+        cam: "back",
+        reviews: [],
+      },
+    },
+    _browseWindowLoaderController: {
+      fetchRecentActiveDayReviews: async (_clientId, cam, before, dayCount) => {
+        calls.push(["active-days", cam, before, dayCount]);
+        return {
+          items: [{ id: `${cam}-active`, start_time: 480, severity: "alert" }],
+        };
+      },
+    },
+    _fetchWindowedReviews: async () => {
+      calls.push(["legacy-fallback"]);
+      return [];
+    },
+    _discoverOne: async () => {},
+    _ws: async () => [],
+  };
+
+  const controller = new BrowseCollectionController(host);
+
+  await controller.loadGridMixedTabData("alerts");
+
+  assert.deepEqual(host._camCache["camera.front"].reviews, [
+    { id: "front-active", start_time: 480, severity: "alert" },
+  ]);
+  assert.deepEqual(host._camCache["camera.back"].reviews, [
+    { id: "back-active", start_time: 480, severity: "alert" },
+  ]);
+  assert.equal(
+    calls.some(
+      (entry) =>
+        Array.isArray(entry) &&
+        entry[0] === "active-days" &&
+        entry[1] === "front" &&
+        entry[2] === 500 &&
+        entry[3] === 3,
+    ),
+    true,
+  );
+  assert.equal(
+    calls.some(
+      (entry) => Array.isArray(entry) && entry[0] === "legacy-fallback",
+    ),
+    false,
+  );
+});
