@@ -1681,7 +1681,7 @@ export class FrigateViewCard extends HTMLElement {
 
   _applyVideoFit(videoEl) {
     if (!videoEl) return;
-    const fit = () => {
+    const fit = ({ lockDecision = false } = {}) => {
       const w = Number(videoEl.videoWidth) || 0;
       const h = Number(videoEl.videoHeight) || 0;
       const ar = h > 0 ? w / h : 0;
@@ -1692,17 +1692,34 @@ export class FrigateViewCard extends HTMLElement {
       const near169 = ar > 0 && Math.abs(ar - 16 / 9) < 0.08;
       const nearPanel = ar > 0 && car > 0 && Math.abs(ar - car) < 0.06;
       const hostSizeStable = cw > 8 && ch > 8;
+      const candidateFit =
+        hostSizeStable && near169 && nearPanel ? "cover" : "contain";
+      const metadataReady = w > 0 && h > 0;
+
+      if (
+        lockDecision &&
+        !videoEl._fvcLockedObjectFit &&
+        metadataReady &&
+        hostSizeStable
+      ) {
+        videoEl._fvcLockedObjectFit = candidateFit;
+      }
 
       videoEl.style.display = "block";
       videoEl.style.width = "100%";
       videoEl.style.height = "100%";
       videoEl.style.objectPosition = "center center";
-      videoEl.style.objectFit =
-        hostSizeStable && near169 && nearPanel ? "cover" : "contain";
+      videoEl.style.objectFit = videoEl._fvcLockedObjectFit || candidateFit;
     };
 
     fit();
-    videoEl.addEventListener("loadedmetadata", fit, { once: true });
+    videoEl.addEventListener(
+      "loadedmetadata",
+      () => fit({ lockDecision: true }),
+      {
+        once: true,
+      },
+    );
   }
 
   _attachVideoFit(streamEl, retries = 12) {
