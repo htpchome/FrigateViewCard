@@ -276,8 +276,8 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     --mv-list-item-margin-bottom: 5px;
     --mv-list-item-padding: 2px 10px 2px 2px;
     --mv-list-item-radius: var(--fvc-border-radius);
-    --mv-list-thumb-width: 208px;
-    --mv-list-thumb-height: 117px;
+    --mv-list-thumb-width: 192px;
+    --mv-list-thumb-height: 108px;
     --mv-list-thumb-radius: var(--fvc-border-radius);
     --mv-list-dot-bottom: 2px;
     --mv-list-dot-right: 3px;
