@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1303";
+const VERSION = "1.0.1304";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -308,15 +308,16 @@ const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active .mobile-cam-picker__panel {
     position: absolute;
     top: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
+    left: 0;
+    right: 0;
+    transform: none;
     z-index: 8;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     gap: 4px;
-    width: max(100%, max-content);
-    max-width: min(100vw - 24px, 420px);
+    width: 100%;
+    max-width: 100%;
     max-height: min(60dvh, calc(100dvh - 160px));
     overflow-y: auto;
     padding: 6px;
