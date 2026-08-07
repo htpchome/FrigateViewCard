@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1281";
+const VERSION = "1.0.1282";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -16015,6 +16015,13 @@ const FrigateViewCard = class extends HTMLElement {
     if (startGridTimers) {
       this._scheduleGridRotation();
       this._gridAlertController.scheduleAlertWatch(300);
+      if (this._tab === "alerts" || this._tab === "kept") {
+        void this._loadGridMixedTabData(this._tab).then(() => {
+          if (this._viewMode !== "grid") return;
+          if (this._tab !== "alerts" && this._tab !== "kept") return;
+          this._renderList();
+        });
+      }
     }
     this._syncSnapshotRefreshTimer();
     this._syncToolbarButtons();

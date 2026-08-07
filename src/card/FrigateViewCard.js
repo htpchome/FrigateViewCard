@@ -2086,6 +2086,13 @@ export class FrigateViewCard extends HTMLElement {
     if (startGridTimers) {
       this._scheduleGridRotation();
       this._gridAlertController.scheduleAlertWatch(300);
+      if (this._tab === "alerts" || this._tab === "kept") {
+        void this._loadGridMixedTabData(this._tab).then(() => {
+          if (this._viewMode !== "grid") return;
+          if (this._tab !== "alerts" && this._tab !== "kept") return;
+          this._renderList();
+        });
+      }
     }
     this._syncSnapshotRefreshTimer();
     this._syncToolbarButtons();

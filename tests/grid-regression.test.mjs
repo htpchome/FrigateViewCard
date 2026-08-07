@@ -54,7 +54,7 @@ test("grid mode toolbar and runtime hooks are present", () => {
     true,
   );
   assert.equal(
-    /_clearGridTimers\(\) \{\s*this\._gridPageController\.clearGridTimers\(\);\s*\}/.test(
+    /_clearGridTimers\(\) \{[\s\S]*?this\._gridPageController\.clearGridTimers\(\);[\s\S]*?\}/.test(
       cardSource,
     ),
     true,
@@ -103,6 +103,16 @@ test("grid mode toolbar and runtime hooks are present", () => {
   );
   assert.equal(
     gridMediaControllerSource.includes('liveStreamHint === "mse"'),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      'if (this._tab === "alerts" || this._tab === "kept") {',
+    ) &&
+      cardSource.includes(
+        "void this._loadGridMixedTabData(this._tab).then(() => {",
+      ) &&
+      cardSource.includes("this._renderList();"),
     true,
   );
 });
