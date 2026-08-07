@@ -170,10 +170,14 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     max-height: 220px;
     overflow-y: auto;
     padding: 6px;
-    border: 1px solid var(--c-border2);
+    border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 10px;
-    background: var(--c-bg-panel);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px) saturate(180%);
+    -webkit-backdrop-filter: blur(8px) saturate(180%);
+    box-shadow:
+      0 8px 32px rgba(31, 38, 135, 0.2),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.35);
   }
 
   .card.mobile-view-active .mobile-cam-picker__panel[hidden] {
@@ -186,19 +190,35 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    border: 1px solid var(--c-border2);
+    border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 8px;
-    background: var(--c-bg-main);
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(5px) saturate(170%);
+    -webkit-backdrop-filter: blur(5px) saturate(170%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
     color: var(--c-text);
     cursor: pointer;
     padding: 8px 10px;
     font-weight: 600;
     text-align: left;
+    transition:
+      background 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      color 0.18s ease;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__option:hover {
+    background: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.5);
   }
 
   .card.mobile-view-active .mobile-cam-picker__option.is-active {
-    border-color: var(--c-primary-d);
-    background: var(--c-primary-l);
+    border-color: rgba(255, 255, 255, 0.58);
+    background: rgba(255, 255, 255, 0.34);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+      0 0 0 1px color-mix(in srgb, var(--c-primary-d) 55%, transparent);
     color: var(--c-primary-d);
   }
 
