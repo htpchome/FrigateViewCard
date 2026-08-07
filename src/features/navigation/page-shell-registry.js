@@ -2,6 +2,10 @@ import {
   buildMobileViewInfoRowMarkup,
   buildMobileViewMainLayoutShellMarkup,
 } from "../mobile-view/page.tmpl.js";
+import {
+  buildInfoRowMarkup,
+  buildMainLayoutShellMarkup,
+} from "../../card/controls/shell-nav.tmpl.js";
 
 function normalizeProfile(profile = {}) {
   if (!profile || typeof profile !== "object") return {};
@@ -193,6 +197,31 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     layoutClass: "layout--single-view",
     leftColumnClass: "col-left--single-view",
     rightColumnClass: "col-right--single-view",
+    buildInfoRowMarkup: ({ title, subtitle, version, host }) =>
+      buildInfoRowMarkup({
+        title,
+        subtitle,
+        version,
+        pageNav:
+          host?._pageNavigationController?.pageNavMarkup?.() ||
+          host?._pageNavMarkup?.() ||
+          "",
+      }),
+    buildMainLayoutShellMarkup: ({
+      liveEngineWrap,
+      infoRow,
+      camSwitcher,
+      rightColumnShell,
+      layoutProfile,
+    }) =>
+      buildMainLayoutShellMarkup({
+        liveEngineWrap,
+        infoRow,
+        pageNav: "",
+        camSwitcher,
+        rightColumnShell,
+        layoutProfile,
+      }),
     capabilities: {
       hasLive: true,
       hasBrowse: true,
@@ -245,6 +274,31 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     leftColumnClass: "col-left--wide-view",
     rightColumnClass: "col-right--wide-view",
     tabsHolderClass: "tabs-holder--wide-view",
+    buildInfoRowMarkup: ({ title, subtitle, version, host }) =>
+      buildInfoRowMarkup({
+        title,
+        subtitle,
+        version,
+        pageNav:
+          host?._pageNavigationController?.pageNavMarkup?.() ||
+          host?._pageNavMarkup?.() ||
+          "",
+      }),
+    buildMainLayoutShellMarkup: ({
+      liveEngineWrap,
+      infoRow,
+      camSwitcher,
+      rightColumnShell,
+      layoutProfile,
+    }) =>
+      buildMainLayoutShellMarkup({
+        liveEngineWrap,
+        infoRow,
+        pageNav: "",
+        camSwitcher,
+        rightColumnShell,
+        layoutProfile,
+      }),
     capabilities: {
       hasLive: true,
       hasBrowse: true,
