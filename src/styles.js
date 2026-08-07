@@ -302,7 +302,6 @@ export const STYLES = `
   .glass-btn{  display: inline-flex; 
     align-items: center; 
     justify-content: center; 
-    position: relative;
     padding: 3px; 
     border-radius: 999rem; 
     color: black; 
@@ -325,7 +324,6 @@ export const STYLES = `
     left: 0; 
     width: 100%; 
     height: 100%;
-    pointer-events: none;
     opacity: 0.4; 
     z-index: -1;  
     border-radius: 999rem;
@@ -363,20 +361,6 @@ export const STYLES = `
   @media (hover: hover) and (pointer: fine) {
     #eng-wrap:hover .live-fs-btn,
     #eng-wrap:hover .mute-btn{opacity:1;pointer-events:auto;}
-  }
-
-  @supports (-moz-appearance:none) {
-    #eng-wrap .live-fs-btn,
-    #eng-wrap .mute-btn {
-      contain: paint;
-      isolation: isolate;
-    }
-
-    /* Firefox + 16:9 live view: drop-shadow filter on reveal can perturb video raster bounds. */
-    #eng-wrap .live-fs-btn::after,
-    #eng-wrap .mute-btn::after {
-      filter: blur(0.75px) brightness(112%);
-    }
   }
 
   #eng-wrap:fullscreen .overlay-fs,
