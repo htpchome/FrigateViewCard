@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1308";
+const VERSION = "1.0.1310";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -794,6 +794,7 @@ const STYLES = `
   .glass-btn{  display: inline-flex; 
     align-items: center; 
     justify-content: center; 
+    position: relative;
     padding: 3px; 
     border-radius: 999rem; 
     color: black; 
@@ -816,6 +817,7 @@ const STYLES = `
     left: 0; 
     width: 100%; 
     height: 100%;
+    pointer-events: none;
     opacity: 0.4; 
     z-index: -1;  
     border-radius: 999rem;
@@ -853,6 +855,20 @@ const STYLES = `
   @media (hover: hover) and (pointer: fine) {
     #eng-wrap:hover .live-fs-btn,
     #eng-wrap:hover .mute-btn{opacity:1;pointer-events:auto;}
+  }
+
+  @supports (-moz-appearance:none) {
+    #eng-wrap .live-fs-btn,
+    #eng-wrap .mute-btn {
+      contain: paint;
+      isolation: isolate;
+    }
+
+    /* Firefox + 16:9 live view: drop-shadow filter on reveal can perturb video raster bounds. */
+    #eng-wrap .live-fs-btn::after,
+    #eng-wrap .mute-btn::after {
+      filter: blur(0.75px) brightness(112%);
+    }
   }
 
   #eng-wrap:fullscreen .overlay-fs,
