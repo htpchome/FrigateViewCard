@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1338";
+const VERSION = "1.0.1339";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15691,9 +15691,7 @@ const FrigateViewCard = class extends HTMLElement {
         }
         target = target.parentNode || target.host;
       }
-      if (isInsideScrollable) {
-        return;
-      }
+      if (isInsideScrollable) return;
       const currentY = e.touches.pageY;
       const deltaY = currentY - this._startY;
       if (deltaY > 0) {
@@ -15701,6 +15699,19 @@ const FrigateViewCard = class extends HTMLElement {
       }
       e.preventDefault();
     }, { passive: false });
+    cardRoot.addEventListener("touchend", () => {
+      setTimeout(() => {
+        if (window.scrollY < 0 || document.documentElement.scrollTop < 0) {
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+            // Can use 'instant' if smooth still struggles against your header
+          });
+          document.body.style.transform = "translate3d(0,0,0)";
+          setTimeout(() => document.body.style.transform = "", 50);
+        }
+      }, 150);
+    });
   }
   _visualStyleToggleRules() {
     return this._cardStyleController.visualStyleToggleRules();

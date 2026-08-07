@@ -928,10 +928,10 @@ cardRoot.addEventListener('touchstart', (e) => {
 }, { passive: true });
 
 cardRoot.addEventListener('touchmove', (e) => {
-  // 1. Walk up the DOM from the touch target to see if it's inside a scrollable element
   let target = e.target;
   let isInsideScrollable = false;
 
+  // Walk up to find scrollable elements (your current layout logic)
   while (target && target !== cardRoot) {
     const style = window.getComputedStyle(target);
     const hasScrollOverflow = style.overflowY === 'auto' || style.overflowY === 'scroll';
@@ -944,23 +944,43 @@ cardRoot.addEventListener('touchmove', (e) => {
     target = target.parentNode || target.host;
   }
 
-  // 2. If the user is touching a scrollable inner element, let iOS handle it (retains inner bounce!)
-  if (isInsideScrollable) {
-    return; 
-  }
+  // Let inner scrollable elements retain native bounce mechanics
+  if (isInsideScrollable) return; 
 
-  // 3. If they are touching the card background/header, kill the outer page bounce completely
   const currentY = e.touches.pageY;
   const deltaY = currentY - this._startY;
 
-  // Still allow downward swipe on static areas for Home Assistant pull-to-refresh
+  // If pulling down on static cards, ALLOW it so native Home Assistant pull-to-refresh fires
   if (deltaY > 0) {
     return;
   }
 
-  // Kill the outer card bounce for everything else
+  // Firmly lock everything else down (stops bottom bounce completely)
   e.preventDefault();
 }, { passive: false });
+
+
+// --- THE FIX FOR STUCK WEBVIEWS ---
+// Fired when finger leaves the screen after a pull-down gesture
+cardRoot.addEventListener('touchend', () => {
+  // Use a slight timeout to wait for Home Assistant's header state changes to finish processing
+  setTimeout(() => {
+    // If the webview window offset got stuck in a negative vertical coordinate
+    if (window.scrollY < 0 || document.documentElement.scrollTop < 0) {
+      
+      // Method A: Instantly snap viewports back to true origin coordinate boundaries
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth' // Can use 'instant' if smooth still struggles against your header
+      });
+
+      // Method B: Deep-clean body boundaries to clear Apple WKWebView rendering offsets
+      document.body.style.transform = 'translate3d(0,0,0)';
+      setTimeout(() => document.body.style.transform = '', 50);
+    }
+  }, 150); // 150ms is the sweet spot for catching iOS render frames
+});
+
 
 
     /* ================================== */
