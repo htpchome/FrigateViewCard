@@ -234,6 +234,7 @@ const MOBILE_VIEW_PAGE_STYLES = `
     align-items: center;
     justify-self: end;
     gap: 6px;
+    font-size: 1rem;
     min-width: 0;
   }
 
@@ -241,11 +242,12 @@ const MOBILE_VIEW_PAGE_STYLES = `
     display: inline-flex;
     flex-direction: column;
     align-items: flex-end;
-    line-height: 1.05;
+    font-size: 0.85rem;
+    line-height: 1;
   }
 
   .card.mobile-view-active .mobile-cam-picker__dot {
-    font-size: 1rem;
+    font-size: 0.85rem;
     line-height: 1;
   }
 
