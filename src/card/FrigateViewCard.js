@@ -285,6 +285,7 @@ import { EditorPreviewContextController } from "../features/editor-preview/conte
 import { PopupMediaLoaderController } from "../features/popup/media-loader.ctrl.js";
 import { ViewportContextController } from "../features/viewport/context.ctrl.js";
 import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
+import { MobileCamSwitcherController } from "../features/mobile-view/cam-switcher.ctrl.js";
 import { SingleViewPageController } from "../features/single-view/page.ctrl.js";
 import { WideViewPageController } from "../features/wide-view/page.ctrl.js";
 import { SlideshowAlertController } from "../features/slideshow/alert.ctrl.js";
@@ -538,6 +539,15 @@ export class FrigateViewCard extends HTMLElement {
     });
     this._mobileViewPageController = new MobileViewPageController(this, {
       PAGE_IDS,
+    });
+    this._mobileCamSwitcherController = new MobileCamSwitcherController({
+      isOpen: () => this._mobileCamSwitcherOpen === true,
+      setOpen: (open) => {
+        this._mobileCamSwitcherOpen = open === true;
+      },
+      renderCamSwitcher: () => this._renderCamSwitcher(),
+      pauseSlideshowForInteraction: () => this._pauseSlideshowForInteraction(),
+      switchCamera: (idx) => this._switchCamera(idx),
     });
     this._singleViewPageController = new SingleViewPageController(this, {
       PAGE_IDS,
@@ -3598,43 +3608,13 @@ export class FrigateViewCard extends HTMLElement {
   }
   _click(e) {
     const target = e.target;
-    if (this._handleMobileCamSwitcherClick(target)) return;
-    this._closeMobileCamSwitcherIfOutside(target);
+    if (this._mobileCamSwitcherController.handleClickTarget(target)) return;
+    this._mobileCamSwitcherController.closeIfOutside(target);
     if (target.closest(".close-btn")) return this._closePopup();
     if (this._handleToolbarClick(target)) return;
     if (this._handleSidebarClick(target)) return;
     if (this._handleListClick(e, target)) return;
     if (this._handleEventClick(target)) return;
-  }
-  _handleMobileCamSwitcherClick(target) {
-    const trigger = target.closest("[data-mobile-cam-trigger]");
-    if (trigger) {
-      this._mobileCamSwitcherOpen = !this._mobileCamSwitcherOpen;
-      this._renderCamSwitcher();
-      return true;
-    }
-
-    const option = target.closest("[data-mobile-camidx]");
-    if (option) {
-      const idx = Number(option.dataset.mobileCamidx);
-      this._mobileCamSwitcherOpen = false;
-      if (Number.isInteger(idx) && idx >= 0) {
-        this._pauseSlideshowForInteraction();
-        void this._switchCamera(idx);
-      } else {
-        this._renderCamSwitcher();
-      }
-      return true;
-    }
-
-    return false;
-  }
-  _closeMobileCamSwitcherIfOutside(target) {
-    if (!this._mobileCamSwitcherOpen) return;
-    const inPicker = target.closest("[data-mobile-cam-picker]");
-    if (inPicker) return;
-    this._mobileCamSwitcherOpen = false;
-    this._renderCamSwitcher();
   }
   _handleToolbarClick(target) {
     if (this._handleTopToolbarClick(target)) return true;

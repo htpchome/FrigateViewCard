@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1291";
+const VERSION = "1.0.1292";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -13938,6 +13938,48 @@ const MobileViewPageController = class {
   }
 };
 
+// src/features/mobile-view/cam-switcher.ctrl.js
+const MobileCamSwitcherController = class {
+  constructor(options = {}) {
+    this._isOpen = typeof options.isOpen === "function" ? options.isOpen : () => false;
+    this._setOpen = typeof options.setOpen === "function" ? options.setOpen : () => {
+    };
+    this._renderCamSwitcher = typeof options.renderCamSwitcher === "function" ? options.renderCamSwitcher : () => {
+    };
+    this._pauseSlideshowForInteraction = typeof options.pauseSlideshowForInteraction === "function" ? options.pauseSlideshowForInteraction : () => {
+    };
+    this._switchCamera = typeof options.switchCamera === "function" ? options.switchCamera : () => Promise.resolve();
+  }
+  handleClickTarget(target) {
+    const trigger = target?.closest?.("[data-mobile-cam-trigger]");
+    if (trigger) {
+      this._setOpen(!this._isOpen());
+      this._renderCamSwitcher();
+      return true;
+    }
+    const option = target?.closest?.("[data-mobile-camidx]");
+    if (option) {
+      const idx = Number(option.dataset.mobileCamidx);
+      this._setOpen(false);
+      if (Number.isInteger(idx) && idx >= 0) {
+        this._pauseSlideshowForInteraction();
+        void this._switchCamera(idx);
+      } else {
+        this._renderCamSwitcher();
+      }
+      return true;
+    }
+    return false;
+  }
+  closeIfOutside(target) {
+    if (!this._isOpen()) return;
+    const inPicker = target?.closest?.("[data-mobile-cam-picker]");
+    if (inPicker) return;
+    this._setOpen(false);
+    this._renderCamSwitcher();
+  }
+};
+
 // src/features/single-view/page.ctrl.js
 const SingleViewPageController = class {
   constructor(host, constants) {
@@ -15069,6 +15111,15 @@ const FrigateViewCard = class extends HTMLElement {
     });
     this._mobileViewPageController = new MobileViewPageController(this, {
       PAGE_IDS
+    });
+    this._mobileCamSwitcherController = new MobileCamSwitcherController({
+      isOpen: () => this._mobileCamSwitcherOpen === true,
+      setOpen: (open) => {
+        this._mobileCamSwitcherOpen = open === true;
+      },
+      renderCamSwitcher: () => this._renderCamSwitcher(),
+      pauseSlideshowForInteraction: () => this._pauseSlideshowForInteraction(),
+      switchCamera: (idx) => this._switchCamera(idx)
     });
     this._singleViewPageController = new SingleViewPageController(this, {
       PAGE_IDS
@@ -17664,41 +17715,13 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _click(e) {
     const target = e.target;
-    if (this._handleMobileCamSwitcherClick(target)) return;
-    this._closeMobileCamSwitcherIfOutside(target);
+    if (this._mobileCamSwitcherController.handleClickTarget(target)) return;
+    this._mobileCamSwitcherController.closeIfOutside(target);
     if (target.closest(".close-btn")) return this._closePopup();
     if (this._handleToolbarClick(target)) return;
     if (this._handleSidebarClick(target)) return;
     if (this._handleListClick(e, target)) return;
     if (this._handleEventClick(target)) return;
-  }
-  _handleMobileCamSwitcherClick(target) {
-    const trigger = target.closest("[data-mobile-cam-trigger]");
-    if (trigger) {
-      this._mobileCamSwitcherOpen = !this._mobileCamSwitcherOpen;
-      this._renderCamSwitcher();
-      return true;
-    }
-    const option = target.closest("[data-mobile-camidx]");
-    if (option) {
-      const idx = Number(option.dataset.mobileCamidx);
-      this._mobileCamSwitcherOpen = false;
-      if (Number.isInteger(idx) && idx >= 0) {
-        this._pauseSlideshowForInteraction();
-        void this._switchCamera(idx);
-      } else {
-        this._renderCamSwitcher();
-      }
-      return true;
-    }
-    return false;
-  }
-  _closeMobileCamSwitcherIfOutside(target) {
-    if (!this._mobileCamSwitcherOpen) return;
-    const inPicker = target.closest("[data-mobile-cam-picker]");
-    if (inPicker) return;
-    this._mobileCamSwitcherOpen = false;
-    this._renderCamSwitcher();
   }
   _handleToolbarClick(target) {
     if (this._handleTopToolbarClick(target)) return true;
