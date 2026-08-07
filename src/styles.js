@@ -56,7 +56,6 @@ export const STYLES = `
     min-height: 0 !important;
     height: 100%;
     overflow:hidden !important;
-    overscroll-behavior: contain !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
@@ -82,7 +81,6 @@ export const STYLES = `
     overflow:hidden !important;
     border:1px solid var(--secondary-background-color,#7a7a7a);
     border-radius: var(--fvc-border-radius);
-    overscroll-behavior: contain !important;
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}

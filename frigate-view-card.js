@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1334";
+const VERSION = "1.0.1335";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -548,7 +548,6 @@ const STYLES = `
     min-height: 0 !important;
     height: 100%;
     overflow:hidden !important;
-    overscroll-behavior: contain !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
@@ -574,7 +573,6 @@ const STYLES = `
     overflow:hidden !important;
     border:1px solid var(--secondary-background-color,#7a7a7a);
     border-radius: var(--fvc-border-radius);
-    overscroll-behavior: contain !important;
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
