@@ -919,6 +919,18 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
+
+    // Target the document container or your card element
+document.addEventListener('touchmove', (e) => {
+  // Check if the page is trying to overscroll past the top or bottom
+  const isAtTop = window.scrollY <= 0 && e.touches[0].clientY > 0;
+  const isAtBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight && e.touches[0].clientY < 0;
+
+  if (isAtTop || isAtBottom) {
+    e.preventDefault(); // Kills the iOS native bounce
+  }
+}, { passive: false }); // 'passive: false' is mandatory for preventDefault to execute on iOS
+
   }
 
   _visualStyleToggleRules() {

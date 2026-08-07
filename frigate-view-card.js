@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1332";
+const VERSION = "1.0.1333";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -548,6 +548,7 @@ const STYLES = `
     min-height: 0 !important;
     height: 100%;
     overflow:hidden !important;
+    overscroll-behavior: none !important;
     }
   .card{
     --fvc-shadow-s: var(--ha-box-shadow-s);
@@ -573,6 +574,7 @@ const STYLES = `
     overflow:hidden !important;
     border:1px solid var(--secondary-background-color,#7a7a7a);
     border-radius: var(--fvc-border-radius);
+    overscroll-behavior: none !important;overscroll-behavior: none !important;
     }
   .card.shadows-off{--fvc-shadow-s:none;--fvc-shadow-m:none;}
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
@@ -15674,6 +15676,13 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
+    document.addEventListener("touchmove", (e) => {
+      const isAtTop = window.scrollY <= 0 && e.touches[0].clientY > 0;
+      const isAtBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight && e.touches[0].clientY < 0;
+      if (isAtTop || isAtBottom) {
+        e.preventDefault();
+      }
+    }, { passive: false });
   }
   _visualStyleToggleRules() {
     return this._cardStyleController.visualStyleToggleRules();
