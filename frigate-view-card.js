@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1339";
+const VERSION = "1.0.1340";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15674,14 +15674,14 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-    const cardRoot = this.shadowRoot || this;
-    cardRoot.addEventListener("touchstart", (e) => {
+    this._cardRoot = this.shadowRoot || this;
+    this._onTouchStart = (e) => {
       this._startY = e.touches.pageY;
-    }, { passive: true });
-    cardRoot.addEventListener("touchmove", (e) => {
+    };
+    this._onTouchMove = (e) => {
       let target = e.target;
       let isInsideScrollable = false;
-      while (target && target !== cardRoot) {
+      while (target && target !== this._cardRoot) {
         const style = window.getComputedStyle(target);
         const hasScrollOverflow = style.overflowY === "auto" || style.overflowY === "scroll";
         const isScrollable = target.scrollHeight > target.clientHeight;
@@ -15694,24 +15694,29 @@ const FrigateViewCard = class extends HTMLElement {
       if (isInsideScrollable) return;
       const currentY = e.touches.pageY;
       const deltaY = currentY - this._startY;
-      if (deltaY > 0) {
-        return;
-      }
+      if (deltaY > 0) return;
       e.preventDefault();
-    }, { passive: false });
-    cardRoot.addEventListener("touchend", () => {
-      setTimeout(() => {
-        if (window.scrollY < 0 || document.documentElement.scrollTop < 0) {
-          window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-            // Can use 'instant' if smooth still struggles against your header
-          });
-          document.body.style.transform = "translate3d(0,0,0)";
-          setTimeout(() => document.body.style.transform = "", 50);
+    };
+    this._onScrollCheck = () => {
+      if (this._snapTimer) clearTimeout(this._snapTimer);
+      this._snapTimer = setTimeout(() => {
+        const currentScroll = window.scrollY || document.documentElement.scrollTop;
+        if (currentScroll < 0) {
+          window.scrollTo(0, 0);
+          document.body.style.display = "none";
+          document.body.offsetHeight;
+          document.body.style.display = "";
+          const haHeader = document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")?.shadowRoot?.querySelector("ha-panel-lovelace")?.shadowRoot?.querySelector("hui-root")?.shadowRoot?.querySelector(".header");
+          if (haHeader) {
+            haHeader.style.transform = "translate3d(0,0,0)";
+            setTimeout(() => haHeader.style.transform = "", 10);
+          }
         }
-      }, 150);
-    });
+      }, 100);
+    };
+    this._cardRoot.addEventListener("touchstart", this._onTouchStart, { passive: true });
+    this._cardRoot.addEventListener("touchmove", this._onTouchMove, { passive: false });
+    window.addEventListener("scroll", this._onScrollCheck, { passive: true });
   }
   _visualStyleToggleRules() {
     return this._cardStyleController.visualStyleToggleRules();
@@ -15998,6 +16003,12 @@ const FrigateViewCard = class extends HTMLElement {
       if (this.isConnected) return;
       this._teardownDisconnected();
     }, 2500);
+    if (this._cardRoot) {
+      this._cardRoot.removeEventListener("touchstart", this._onTouchStart);
+      this._cardRoot.removeEventListener("touchmove", this._onTouchMove);
+    }
+    window.removeEventListener("scroll", this._onScrollCheck);
+    if (this._snapTimer) clearTimeout(this._snapTimer);
   }
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);

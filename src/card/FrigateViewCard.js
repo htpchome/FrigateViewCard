@@ -921,67 +921,82 @@ export class FrigateViewCard extends HTMLElement {
     this._startEditorDialogCloseObserver();
 
     /* ================================== */
-const cardRoot = this.shadowRoot || this;
 
-cardRoot.addEventListener('touchstart', (e) => {
-  this._startY = e.touches.pageY;
-}, { passive: true });
+ this._cardRoot = this.shadowRoot || this;
 
-cardRoot.addEventListener('touchmove', (e) => {
-  let target = e.target;
-  let isInsideScrollable = false;
+  // Track finger position at touch start
+  this._onTouchStart = (e) => {
+    this._startY = e.touches.pageY;
+  };
 
-  // Walk up to find scrollable elements (your current layout logic)
-  while (target && target !== cardRoot) {
-    const style = window.getComputedStyle(target);
-    const hasScrollOverflow = style.overflowY === 'auto' || style.overflowY === 'scroll';
-    const isScrollable = target.scrollHeight > target.clientHeight;
+  // Only intercept bottom overscroll; leave top overscroll alone so pull-to-refresh works
+  this._onTouchMove = (e) => {
+    let target = e.target;
+    let isInsideScrollable = false;
 
-    if (hasScrollOverflow && isScrollable) {
-      isInsideScrollable = true;
-      break;
+    while (target && target !== this._cardRoot) {
+      const style = window.getComputedStyle(target);
+      const hasScrollOverflow = style.overflowY === 'auto' || style.overflowY === 'scroll';
+      const isScrollable = target.scrollHeight > target.clientHeight;
+
+      if (hasScrollOverflow && isScrollable) {
+        isInsideScrollable = true;
+        break;
+      }
+      target = target.parentNode || target.host;
     }
-    target = target.parentNode || target.host;
-  }
 
-  // Let inner scrollable elements retain native bounce mechanics
-  if (isInsideScrollable) return; 
+    if (isInsideScrollable) return;
 
-  const currentY = e.touches.pageY;
-  const deltaY = currentY - this._startY;
+    const currentY = e.touches.pageY;
+    const deltaY = currentY - this._startY;
 
-  // If pulling down on static cards, ALLOW it so native Home Assistant pull-to-refresh fires
-  if (deltaY > 0) {
-    return;
-  }
+    // CRITICAL: If pulling down, do nothing. Let native iOS handle the pull-to-refresh.
+    if (deltaY > 0) return;
 
-  // Firmly lock everything else down (stops bottom bounce completely)
-  e.preventDefault();
-}, { passive: false });
+    // Block only the upward/bottom overscroll bounce
+    e.preventDefault();
+  };
 
+  // The realign fix: Monitor window positioning
+  this._onScrollCheck = () => {
+    // Clear any previous debounce timer
+    if (this._snapTimer) clearTimeout(this._snapTimer);
 
-// --- THE FIX FOR STUCK WEBVIEWS ---
-// Fired when finger leaves the screen after a pull-down gesture
-cardRoot.addEventListener('touchend', () => {
-  // Use a slight timeout to wait for Home Assistant's header state changes to finish processing
-  setTimeout(() => {
-    // If the webview window offset got stuck in a negative vertical coordinate
-    if (window.scrollY < 0 || document.documentElement.scrollTop < 0) {
-      
-      // Method A: Instantly snap viewports back to true origin coordinate boundaries
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth' // Can use 'instant' if smooth still struggles against your header
-      });
+    // Debounce checks for when scrolling stops
+    this._snapTimer = setTimeout(() => {
+      const currentScroll = window.scrollY || document.documentElement.scrollTop;
 
-      // Method B: Deep-clean body boundaries to clear Apple WKWebView rendering offsets
-      document.body.style.transform = 'translate3d(0,0,0)';
-      setTimeout(() => document.body.style.transform = '', 50);
-    }
-  }, 150); // 150ms is the sweet spot for catching iOS render frames
-});
+      // iOS shifts window.scrollY into negative integers during a pull down
+      if (currentScroll < 0) {
+        // Force-clear the negative view shift
+        window.scrollTo(0, 0);
 
+        // Reset webview viewport layout tracking
+        document.body.style.display = 'none';
+        // Force a layout redraw
+        document.body.offsetHeight; 
+        document.body.style.display = '';
+        
+        // Remove rendering artifacts from the sticky header context
+        const haHeader = document.querySelector('home-assistant')
+          ?.shadowRoot?.querySelector('home-assistant-main')
+          ?.shadowRoot?.querySelector('ha-panel-lovelace')
+          ?.shadowRoot?.querySelector('hui-root')
+          ?.shadowRoot?.querySelector('.header');
+          
+        if (haHeader) {
+          haHeader.style.transform = 'translate3d(0,0,0)';
+          setTimeout(() => haHeader.style.transform = '', 10);
+        }
+      }
+    }, 100); // 100ms catches the gesture end frame
+  };
 
+  this._cardRoot.addEventListener('touchstart', this._onTouchStart, { passive: true });
+  this._cardRoot.addEventListener('touchmove', this._onTouchMove, { passive: false });
+  window.addEventListener('scroll', this._onScrollCheck, { passive: true });
+}
 
     /* ================================== */
     
@@ -1367,6 +1382,15 @@ cardRoot.addEventListener('touchend', () => {
       if (this.isConnected) return;
       this._teardownDisconnected();
     }, 2500);
+/* ============================ */
+  if (this._cardRoot) {
+    this._cardRoot.removeEventListener('touchstart', this._onTouchStart);
+    this._cardRoot.removeEventListener('touchmove', this._onTouchMove);
+  }
+  window.removeEventListener('scroll', this._onScrollCheck);
+  if (this._snapTimer) clearTimeout(this._snapTimer);
+
+/* ============================ */
   }
 
   _teardownDisconnected() {
