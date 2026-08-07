@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1298";
+const VERSION = "1.0.1299";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -224,7 +224,8 @@ const MOBILE_VIEW_PAGE_STYLES = `
 
   .card.mobile-view-active .mobile-cam-picker {
     position: relative;
-    flex: 1 1 auto;
+    justify-self: center;
+    width: min(100%, clamp(190px, 60vw, 360px));
     min-width: 0;
   }
 
@@ -250,12 +251,31 @@ const MOBILE_VIEW_PAGE_STYLES = `
 
   .card.mobile-view-active .mobile-cam-picker__trigger {
     width: 100%;
-    display: inline-flex;
+    position: relative;
+    display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 10px;
-    padding: 8px 10px;
+    padding: 9px 36px 9px 12px;
     border-radius: 10px;
+    font-size: 1.15rem;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__trigger-content {
+    display: inline-grid;
+    grid-template-columns: auto minmax(0, auto);
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__trigger-dot {
+    visibility: hidden;
+    width: 0.95rem;
+    font-size: 1rem;
+    line-height: 1;
   }
 
   .card.mobile-view-active .mobile-cam-picker__label {
@@ -264,9 +284,14 @@ const MOBILE_VIEW_PAGE_STYLES = `
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: 700;
+    text-align: left;
   }
 
   .card.mobile-view-active .mobile-cam-picker__chev {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     width: 14px;
     height: 14px;
     display: inline-flex;
@@ -309,9 +334,9 @@ const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active .mobile-cam-picker__option {
     appearance: none;
     width: 100%;
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
     border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.18);
@@ -322,6 +347,7 @@ const MOBILE_VIEW_PAGE_STYLES = `
     cursor: pointer;
     padding: 8px 10px;
     font-weight: 600;
+    font-size: 1.15rem;
     text-align: left;
     transition:
       background 0.18s ease,
@@ -344,11 +370,21 @@ const MOBILE_VIEW_PAGE_STYLES = `
     color: var(--c-primary-d);
   }
 
+  .card.mobile-view-active .mobile-cam-picker__option-content {
+    display: inline-grid;
+    grid-template-columns: auto minmax(0, auto);
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    max-width: 100%;
+  }
+
   .card.mobile-view-active .mobile-cam-picker__option-label {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: left;
   }
 
   /* Mobile list styling hooks (scoped to mobile view only). */
@@ -3077,8 +3113,10 @@ function buildMobileCameraOptionMarkup({
             aria-selected="${active ? "true" : "false"}"
             data-mobile-camidx="${index}"
           >
-            <span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span>
-            <span class="mobile-cam-picker__option-label">${name}</span>
+            <span class="mobile-cam-picker__option-content">
+              <span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span>
+              <span class="mobile-cam-picker__option-label">${name}</span>
+            </span>
           </button>`;
 }
 function buildMobileCamSwitcherMarkup({
@@ -3117,7 +3155,10 @@ function buildMobileCamSwitcherMarkup({
         aria-expanded="${pickerOpen ? "true" : "false"}"
         data-mobile-cam-trigger
       >
-        <span class="mobile-cam-picker__label">${activeCameraName}</span>
+        <span class="mobile-cam-picker__trigger-content">
+          <span class="mobile-cam-picker__trigger-dot" aria-hidden="true">\u25CF</span>
+          <span class="mobile-cam-picker__label">${activeCameraName}</span>
+        </span>
         <span class="mobile-cam-picker__chev" aria-hidden="true">${icons.chevron || "v"}</span>
       </button>
       <div class="mobile-cam-picker__panel" role="listbox" ${pickerOpen ? "" : "hidden"} data-mobile-cam-panel>

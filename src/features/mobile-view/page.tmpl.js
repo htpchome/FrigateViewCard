@@ -18,8 +18,10 @@ function buildMobileCameraOptionMarkup({
             aria-selected="${active ? "true" : "false"}"
             data-mobile-camidx="${index}"
           >
-            <span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span>
-            <span class="mobile-cam-picker__option-label">${name}</span>
+            <span class="mobile-cam-picker__option-content">
+              <span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span>
+              <span class="mobile-cam-picker__option-label">${name}</span>
+            </span>
           </button>`;
 }
 
@@ -70,7 +72,10 @@ export function buildMobileCamSwitcherMarkup({
         aria-expanded="${pickerOpen ? "true" : "false"}"
         data-mobile-cam-trigger
       >
-        <span class="mobile-cam-picker__label">${activeCameraName}</span>
+        <span class="mobile-cam-picker__trigger-content">
+          <span class="mobile-cam-picker__trigger-dot" aria-hidden="true">●</span>
+          <span class="mobile-cam-picker__label">${activeCameraName}</span>
+        </span>
         <span class="mobile-cam-picker__chev" aria-hidden="true">${icons.chevron || "v"}</span>
       </button>
       <div class="mobile-cam-picker__panel" role="listbox" ${pickerOpen ? "" : "hidden"} data-mobile-cam-panel>

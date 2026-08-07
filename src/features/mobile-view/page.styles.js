@@ -102,7 +102,8 @@ export const MOBILE_VIEW_PAGE_STYLES = `
 
   .card.mobile-view-active .mobile-cam-picker {
     position: relative;
-    flex: 1 1 auto;
+    justify-self: center;
+    width: min(100%, clamp(190px, 60vw, 360px));
     min-width: 0;
   }
 
@@ -128,12 +129,31 @@ export const MOBILE_VIEW_PAGE_STYLES = `
 
   .card.mobile-view-active .mobile-cam-picker__trigger {
     width: 100%;
-    display: inline-flex;
+    position: relative;
+    display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 10px;
-    padding: 8px 10px;
+    padding: 9px 36px 9px 12px;
     border-radius: 10px;
+    font-size: 1.15rem;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__trigger-content {
+    display: inline-grid;
+    grid-template-columns: auto minmax(0, auto);
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .card.mobile-view-active .mobile-cam-picker__trigger-dot {
+    visibility: hidden;
+    width: 0.95rem;
+    font-size: 1rem;
+    line-height: 1;
   }
 
   .card.mobile-view-active .mobile-cam-picker__label {
@@ -142,9 +162,14 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: 700;
+    text-align: left;
   }
 
   .card.mobile-view-active .mobile-cam-picker__chev {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     width: 14px;
     height: 14px;
     display: inline-flex;
@@ -187,9 +212,9 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active .mobile-cam-picker__option {
     appearance: none;
     width: 100%;
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
     border: 1px solid rgba(255, 255, 255, 0.28);
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.18);
@@ -200,6 +225,7 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     cursor: pointer;
     padding: 8px 10px;
     font-weight: 600;
+    font-size: 1.15rem;
     text-align: left;
     transition:
       background 0.18s ease,
@@ -222,11 +248,21 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     color: var(--c-primary-d);
   }
 
+  .card.mobile-view-active .mobile-cam-picker__option-content {
+    display: inline-grid;
+    grid-template-columns: auto minmax(0, auto);
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    max-width: 100%;
+  }
+
   .card.mobile-view-active .mobile-cam-picker__option-label {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: left;
   }
 
   /* Mobile list styling hooks (scoped to mobile view only). */
