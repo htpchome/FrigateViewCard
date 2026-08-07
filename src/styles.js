@@ -363,30 +363,6 @@ export const STYLES = `
     #eng-wrap:hover .mute-btn{opacity:1;pointer-events:auto;}
   }
 
-  /* Firefox: keep glass visuals but stabilize compositing to prevent hover-size jitter. */
-  @supports (-moz-appearance: none) {
-    #eng-wrap {
-      contain: layout paint;
-      transform: translateZ(0);
-      backface-visibility: hidden;
-    }
-
-    #engine,
-    #engine video {
-      transform: translateZ(0);
-      backface-visibility: hidden;
-    }
-
-    #eng-wrap .live-fs-btn,
-    #eng-wrap .mute-btn,
-    #eng-wrap .live-fs-btn::after,
-    #eng-wrap .mute-btn::after {
-      will-change: opacity, transform;
-      transform: translateZ(0);
-      backface-visibility: hidden;
-    }
-  }
-
   #eng-wrap:fullscreen .overlay-fs,
   #eng-wrap:-webkit-full-screen .overlay-fs,
   #viewer:fullscreen .overlay-fs,
