@@ -17824,9 +17824,6 @@ const FrigateViewCard = class extends HTMLElement {
       }
       const card = this.shadowRoot.querySelector(".card");
       if (!card) return;
-      const wide = w >= 560, mobile = w < 420;
-      card.classList.toggle("wide", wide);
-      card.classList.toggle("mobile", mobile);
       this._applyCardStyle();
       this._applyBrowse();
       this._scheduleRotateOverlayUpdate();
