@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1335";
+const VERSION = "1.0.1336";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15674,10 +15674,20 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-    document.addEventListener("touchmove", (e) => {
-      const isAtTop = window.scrollY <= 0 && e.touches[0].clientY > 0;
-      const isAtBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight && e.touches[0].clientY < 0;
-      if (isAtTop || isAtBottom) {
+    const scrollTarget = this.shadowRoot.querySelector("#layout") || this;
+    scrollTarget.addEventListener("touchstart", (e) => {
+      this._startY = e.touches[0].pageY;
+    }, { passive: true });
+    scrollTarget.addEventListener("touchmove", (e) => {
+      const currentY = e.touches[0].pageY;
+      const deltaY = currentY - this._startY;
+      const scrollTop = scrollTarget.scrollTop;
+      const scrollHeight = scrollTarget.scrollHeight;
+      const clientHeight = scrollTarget.clientHeight;
+      if (scrollTop <= 0 && deltaY > 0) {
+        return;
+      }
+      if (scrollTop + clientHeight >= scrollHeight && deltaY < 0) {
         e.preventDefault();
       }
     }, { passive: false });

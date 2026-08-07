@@ -920,17 +920,35 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._startEditorDialogCloseObserver();
 
-    // Target the document container or your card element
-document.addEventListener('touchmove', (e) => {
-  // Check if the page is trying to overscroll past the top or bottom
-  const isAtTop = window.scrollY <= 0 && e.touches[0].clientY > 0;
-  const isAtBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight && e.touches[0].clientY < 0;
+    /* ================================== */
+const scrollTarget = this.shadowRoot.querySelector('#layout') || this; 
 
-  if (isAtTop || isAtBottom) {
-    e.preventDefault(); // Kills the iOS native bounce
+scrollTarget.addEventListener('touchstart', (e) => {
+  this._startY = e.touches[0].pageY;
+}, { passive: true });
+
+scrollTarget.addEventListener('touchmove', (e) => {
+  const currentY = e.touches[0].pageY;
+  const deltaY = currentY - this._startY;
+  
+  const scrollTop = scrollTarget.scrollTop;
+  const scrollHeight = scrollTarget.scrollHeight;
+  const clientHeight = scrollTarget.clientHeight;
+
+  // 1. User pulls down at the very top (iOS Safari / Companion App pull-to-refresh zone)
+  if (scrollTop <= 0 && deltaY > 0) {
+    // DO NOT preventDefault here. 
+    // Letting this pass allows Home Assistant's native pull-to-refresh to catch the gesture.
+    return; 
   }
-}, { passive: false }); // 'passive: false' is mandatory for preventDefault to execute on iOS
 
+  // 2. User scrolls up at the very bottom (The ugly bottom rubber-band bounce)
+  if (scrollTop + clientHeight >= scrollHeight && deltaY < 0) {
+    e.preventDefault(); // Kills ONLY the bottom overscroll bounce
+  }
+}, { passive: false });
+    /* ================================== */
+    
   }
 
   _visualStyleToggleRules() {
