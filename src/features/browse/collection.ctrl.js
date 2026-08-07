@@ -1,3 +1,5 @@
+import { reviewMatchesAlertsOnlyMode } from "./filter-state.js";
+
 export class BrowseCollectionController {
   constructor(host) {
     this._host = host;
@@ -54,6 +56,8 @@ export class BrowseCollectionController {
     const before = this._host._winEnd;
     const reviewDays = this._host._config?.alerts_reviews_days || 3;
     const reviewsAfter = Math.max(0, Math.floor(before - reviewDays * 86400));
+    const showAllReviews =
+      this._host._activeCam?.alerts_content === "all_reviews";
     for (const camera of this._host._config.cameras || []) {
       const entity = camera.entity;
       if (!entity) continue;
@@ -77,7 +81,10 @@ export class BrowseCollectionController {
               cam,
               before,
               reviewDays,
-              { debugLabel: "grid-alerts-tab" },
+              {
+                debugLabel: "grid-alerts-tab",
+                itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode,
+              },
             ) ??
               this._host._fetchWindowedReviews?.(
                 clientId,

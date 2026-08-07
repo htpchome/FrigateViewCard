@@ -298,3 +298,39 @@ test("fetchRecentActiveDayReviews keeps best active-day set across expanding pro
     ["d99-a", "d97-a", "d94-a"],
   );
 });
+
+test("fetchRecentActiveDayReviews supports alert-only active-day selection", async () => {
+  const host = {
+    _dayKey: (ts) => String(Math.floor(ts / 86400)),
+    _ws: async () => [],
+  };
+  const controller = new BrowseWindowLoaderController(host, {
+    fetchWindowedItems: async ({ fetchBatch }) =>
+      fetchBatch({ after: 0, before: 999999, limit: 250, page: 0 }),
+  });
+
+  const day = 86400;
+  const before = 10 * day;
+  controller.fetchWindowedReviews = async () => [
+    { id: "d9-detect", start_time: 9 * day + 100, severity: "detection" },
+    { id: "d8-detect", start_time: 8 * day + 100, severity: "detection" },
+    { id: "d7-alert", start_time: 7 * day + 100, severity: "alert" },
+    { id: "d6-alert", start_time: 6 * day + 100, severity: "alert" },
+  ];
+
+  const resolved = await controller.fetchRecentActiveDayReviews(
+    "frigate",
+    "front",
+    before,
+    2,
+    {
+      itemFilter: (review) =>
+        String(review?.severity || "").toLowerCase() === "alert",
+    },
+  );
+
+  assert.deepEqual(
+    resolved.items.map((item) => item.id),
+    ["d7-alert", "d6-alert"],
+  );
+});

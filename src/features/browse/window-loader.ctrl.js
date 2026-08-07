@@ -8,6 +8,7 @@ import {
 } from "../../constants.js";
 import { fetchWindowedItems } from "../../data/window-fetch.js";
 import { resolveRecordingsDayBounds } from "../recordings/utils/day.js";
+import { reviewMatchesAlertsOnlyMode } from "./filter-state.js";
 
 export class BrowseWindowLoaderController {
   constructor(host, deps = {}) {
@@ -167,6 +168,7 @@ export class BrowseWindowLoaderController {
     dayCount,
     fetcher,
     debugLabel,
+    itemFilter,
   }) {
     const targetDayCount = Math.max(1, Number(dayCount) || 1);
     let spanDays = targetDayCount;
@@ -179,7 +181,11 @@ export class BrowseWindowLoaderController {
       const items = await fetcher(after, before, {
         debugLabel,
       });
-      const latestItems = Array.isArray(items) ? items : [];
+      const latestItems = Array.isArray(items)
+        ? typeof itemFilter === "function"
+          ? items.filter((item) => itemFilter(item))
+          : items
+        : [];
       const filtered = this._filterToRecentDaysWithData(
         latestItems,
         targetDayCount,
@@ -228,6 +234,8 @@ export class BrowseWindowLoaderController {
       before,
       dayCount,
       debugLabel: opts.debugLabel || "reviews-active-days",
+      itemFilter:
+        typeof opts.itemFilter === "function" ? opts.itemFilter : null,
       fetcher: (after, beforeTs, fetchOpts) =>
         this.fetchWindowedReviews(clientId, cam, after, beforeTs, fetchOpts),
     });
@@ -401,12 +409,17 @@ export class BrowseWindowLoaderController {
   async loadWindowReviewsIfNeeded(clientId, cam, _after, before) {
     if (this._host._tab !== "alerts") return;
     try {
+      const showAllReviews =
+        this._host._activeCam?.alerts_content === "all_reviews";
       const resolved = await this.fetchRecentActiveDayReviews(
         clientId,
         cam,
         before,
         this._host._config?.alerts_reviews_days || 3,
-        { debugLabel: "alerts-window" },
+        {
+          debugLabel: "alerts-window",
+          itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode,
+        },
       );
       this._host._reviews = Array.isArray(resolved?.items)
         ? resolved.items

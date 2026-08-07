@@ -17,6 +17,7 @@ import {
   selectFilteredKeptEvents,
   selectFilterLabels,
   selectFilterOptionSourceEvents,
+  reviewMatchesAlertsOnlyMode,
   selectReviewsForFilterTab,
   selectFilterZones,
 } from "../src/features/browse/filter-state.js";
@@ -627,4 +628,18 @@ test("BrowseFilterController handles filter panel interactions and rendering", (
   assert.equal(host._favOnly, true);
   assert.deepEqual(calls, ["renderList"]);
   assert.equal(JSON.parse(filterPanel.innerHTML).favOnly, true);
+});
+
+test("reviewMatchesAlertsOnlyMode supports multi-severity review encodings", () => {
+  assert.equal(reviewMatchesAlertsOnlyMode({ severity: "alert" }), true);
+  assert.equal(
+    reviewMatchesAlertsOnlyMode({ severity: "alert,detection" }),
+    true,
+  );
+  assert.equal(
+    reviewMatchesAlertsOnlyMode({ data: { severity: ["detection", "alert"] } }),
+    true,
+  );
+  assert.equal(reviewMatchesAlertsOnlyMode({ severity: "detection" }), false);
+  assert.equal(reviewMatchesAlertsOnlyMode({}), false);
 });

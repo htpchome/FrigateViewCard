@@ -190,6 +190,34 @@ export function selectFilteredKeptEvents({
   return [...(source || [])].filter((event) => matchesEvent(event));
 }
 
+function reviewSeverityTokens(review) {
+  const values = [review?.severity, review?.data?.severity]
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .map((value) =>
+      String(value || "")
+        .trim()
+        .toLowerCase(),
+    )
+    .filter(Boolean);
+  const tokens = new Set();
+  for (const value of values) {
+    tokens.add(value);
+    for (const token of value.split(/[^a-z0-9]+/g)) {
+      if (token) tokens.add(token);
+    }
+  }
+  return tokens;
+}
+
+export function reviewMatchesAlertsOnlyMode(review) {
+  const tokens = reviewSeverityTokens(review);
+  if (!tokens.size) return false;
+  for (const token of tokens) {
+    if (token === "alert" || token.startsWith("alert")) return true;
+  }
+  return false;
+}
+
 export function selectReviewsForFilterTab({
   reviews = [],
   gridReviews = [],
@@ -200,7 +228,7 @@ export function selectReviewsForFilterTab({
   const safeReviews = [...(reviewSource || [])];
   return showAllReviews
     ? safeReviews
-    : safeReviews.filter((review) => review?.severity === "alert");
+    : safeReviews.filter((review) => reviewMatchesAlertsOnlyMode(review));
 }
 
 export class BrowseFilterController {

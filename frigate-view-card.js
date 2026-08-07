@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1279";
+const VERSION = "1.0.1280";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -8399,205 +8399,6 @@ const resolvePopupCarouselActiveScrollLeft = ({
   padding = 8
 }) => Math.max(0, Number(activeOffsetLeft || 0) - Number(padding || 0));
 
-// src/features/browse/collection.ctrl.js
-const BrowseCollectionController = class {
-  constructor(host) {
-    this._host = host;
-  }
-  allGridReviews() {
-    const reviews = [];
-    const seen = new Set();
-    for (const camera of this._host._config.cameras || []) {
-      const cache = this._host._camCache[camera.entity];
-      for (const review of cache?.reviews || []) {
-        const id = String(review?.id || "");
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-        reviews.push(review);
-      }
-    }
-    return reviews;
-  }
-  allGridKeptEvents() {
-    const events = [];
-    const seen = new Set();
-    for (const camera of this._host._config.cameras || []) {
-      const cache = this._host._camCache[camera.entity];
-      for (const event of cache?.kept || []) {
-        const id = String(event?.id || "");
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-        events.push(event);
-      }
-    }
-    return events;
-  }
-  findReviewById(id) {
-    if (!id) return null;
-    const target = String(id);
-    if (this._host._isGridMixedListMode()) {
-      return this.allGridReviews().find(
-        (review) => String(review?.id || "") === target
-      ) || null;
-    }
-    return (this._host._reviews || []).find(
-      (review) => String(review?.id || "") === target
-    ) || null;
-  }
-  async loadGridMixedTabData(tab) {
-    const before = this._host._winEnd;
-    const reviewDays = this._host._config?.alerts_reviews_days || 3;
-    const reviewsAfter = Math.max(0, Math.floor(before - reviewDays * 86400));
-    for (const camera of this._host._config.cameras || []) {
-      const entity = camera.entity;
-      if (!entity) continue;
-      try {
-        if (!this._host._camCache[entity]?.discovered) {
-          await this._host._discoverOne(entity);
-        }
-      } catch (_) {
-        continue;
-      }
-      const cache = this._host._camCache[entity];
-      const clientId = cache?.clientId;
-      const cam = cache?.cam;
-      if (!clientId || !cam) continue;
-      try {
-        if (tab === "alerts") {
-          const resolved = await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
-            clientId,
-            cam,
-            before,
-            reviewDays,
-            { debugLabel: "grid-alerts-tab" }
-          ) ?? this._host._fetchWindowedReviews?.(
-            clientId,
-            cam,
-            reviewsAfter,
-            before,
-            {
-              debugLabel: "grid-alerts-tab"
-            }
-          ));
-          const reviews = Array.isArray(resolved?.items) ? resolved.items : resolved;
-          cache.reviews = Array.isArray(reviews) ? reviews : [];
-        }
-        if (tab === "kept") {
-          const kept = await this._host._ws({
-            type: "frigate/events/get",
-            instance_id: clientId,
-            cameras: [cam],
-            favorites: true,
-            limit: 50
-          });
-          cache.kept = Array.isArray(kept) ? kept : [];
-        }
-      } catch (_) {
-      }
-    }
-  }
-  allDisplayEvents() {
-    if (this._host._eventsMode === "all") {
-      const seen = new Set();
-      const all = [];
-      for (const camera of this._host._config.cameras) {
-        const cache = this._host._camCache[camera.entity];
-        if (!cache) continue;
-        for (const event of cache.events || []) {
-          if (seen.has(event.id)) continue;
-          seen.add(event.id);
-          all.push(event);
-        }
-      }
-      return all.sort((a, b) => b.start_time - a.start_time);
-    }
-    return this._host._events;
-  }
-  findEventById(id) {
-    if (!id) return null;
-    const all = this.allDisplayEvents();
-    let event = all.find((candidate) => candidate.id === id);
-    if (event) return event;
-    for (const camera of this._host._config.cameras) {
-      const cache = this._host._camCache[camera.entity];
-      event = (cache?.events || []).find((candidate) => candidate.id === id);
-      if (event) return event;
-    }
-    event = (this._host._kept || []).find((candidate) => candidate.id === id);
-    return event || null;
-  }
-};
-
-// src/features/browse/calendar-activity.ctrl.js
-const BrowseCalendarActivityController = class {
-  constructor(host) {
-    this._host = host;
-  }
-  async loadCalendar() {
-    await this.prefetchCalendarActivityForActiveCamera();
-  }
-  calendarActivityCacheKey(clientId, cam, tz = this._host._tz()) {
-    return `${clientId || ""}|${cam || ""}|${tz || "UTC"}`;
-  }
-  applyCalendarActivityCacheForActiveCamera() {
-    const { clientId, cam } = this._host._cc();
-    const key = this.calendarActivityCacheKey(clientId, cam);
-    const cached = this._host._calendarActivityByCam.get(key);
-    this._host._daysWithActivity = cached ? new Set(cached) : new Set();
-  }
-  async prefetchCalendarActivityForActiveCamera() {
-    const { clientId, cam } = this._host._cc();
-    if (!clientId || !cam) {
-      this._host._daysWithActivity = new Set();
-      return;
-    }
-    const tz = this._host._tz();
-    const key = this.calendarActivityCacheKey(clientId, cam, tz);
-    const cached = this._host._calendarActivityByCam.get(key);
-    if (cached) {
-      this._host._daysWithActivity = new Set(cached);
-      return;
-    }
-    const existing = this._host._calendarActivityInFlight.get(key);
-    if (existing) {
-      await existing;
-      return;
-    }
-    const task = (async () => {
-      try {
-        const summary = await this._host._ws({
-          type: "frigate/events/summary",
-          instance_id: clientId,
-          timezone: tz
-        });
-        const days = Array.isArray(summary) ? new Set(
-          summary.filter((item) => item.camera === cam && item.day).map((item) => item.day)
-        ) : new Set();
-        this._host._calendarActivityByCam.set(key, days);
-        const active = this._host._cc();
-        const activeKey = this.calendarActivityCacheKey(
-          active.clientId,
-          active.cam,
-          tz
-        );
-        if (activeKey === key) {
-          this._host._daysWithActivity = new Set(days);
-          if (this._host._$("cal-panel")?.style.display !== "none") {
-            this._host._renderCal();
-          }
-        }
-      } catch (_) {
-      }
-    })();
-    this._host._calendarActivityInFlight.set(key, task);
-    try {
-      await task;
-    } finally {
-      this._host._calendarActivityInFlight.delete(key);
-    }
-  }
-};
-
 // src/features/browse/filter-state.js
 function buildReviewFilterLabels(review, sourceEvent = null) {
   const labels = new Set();
@@ -8763,6 +8564,27 @@ function selectFilteredKeptEvents({
   const source = isGridMixedListMode ? gridKeptEvents : keptEvents;
   return [...source || []].filter((event) => matchesEvent(event));
 }
+function reviewSeverityTokens(review) {
+  const values = [review?.severity, review?.data?.severity].flatMap((value) => Array.isArray(value) ? value : [value]).map(
+    (value) => String(value || "").trim().toLowerCase()
+  ).filter(Boolean);
+  const tokens = new Set();
+  for (const value of values) {
+    tokens.add(value);
+    for (const token of value.split(/[^a-z0-9]+/g)) {
+      if (token) tokens.add(token);
+    }
+  }
+  return tokens;
+}
+function reviewMatchesAlertsOnlyMode(review) {
+  const tokens = reviewSeverityTokens(review);
+  if (!tokens.size) return false;
+  for (const token of tokens) {
+    if (token === "alert" || token.startsWith("alert")) return true;
+  }
+  return false;
+}
 function selectReviewsForFilterTab({
   reviews = [],
   gridReviews = [],
@@ -8771,7 +8593,7 @@ function selectReviewsForFilterTab({
 }) {
   const reviewSource = isGridMixedListMode ? gridReviews : reviews;
   const safeReviews = [...reviewSource || []];
-  return showAllReviews ? safeReviews : safeReviews.filter((review) => review?.severity === "alert");
+  return showAllReviews ? safeReviews : safeReviews.filter((review) => reviewMatchesAlertsOnlyMode(review));
 }
 const BrowseFilterController = class {
   constructor(host, { buildFilterPanelMarkup: buildFilterPanelMarkup2 } = {}) {
@@ -8920,6 +8742,209 @@ const BrowseFilterController = class {
   }
 };
 
+// src/features/browse/collection.ctrl.js
+const BrowseCollectionController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  allGridReviews() {
+    const reviews = [];
+    const seen = new Set();
+    for (const camera of this._host._config.cameras || []) {
+      const cache = this._host._camCache[camera.entity];
+      for (const review of cache?.reviews || []) {
+        const id = String(review?.id || "");
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        reviews.push(review);
+      }
+    }
+    return reviews;
+  }
+  allGridKeptEvents() {
+    const events = [];
+    const seen = new Set();
+    for (const camera of this._host._config.cameras || []) {
+      const cache = this._host._camCache[camera.entity];
+      for (const event of cache?.kept || []) {
+        const id = String(event?.id || "");
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        events.push(event);
+      }
+    }
+    return events;
+  }
+  findReviewById(id) {
+    if (!id) return null;
+    const target = String(id);
+    if (this._host._isGridMixedListMode()) {
+      return this.allGridReviews().find(
+        (review) => String(review?.id || "") === target
+      ) || null;
+    }
+    return (this._host._reviews || []).find(
+      (review) => String(review?.id || "") === target
+    ) || null;
+  }
+  async loadGridMixedTabData(tab) {
+    const before = this._host._winEnd;
+    const reviewDays = this._host._config?.alerts_reviews_days || 3;
+    const reviewsAfter = Math.max(0, Math.floor(before - reviewDays * 86400));
+    const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
+    for (const camera of this._host._config.cameras || []) {
+      const entity = camera.entity;
+      if (!entity) continue;
+      try {
+        if (!this._host._camCache[entity]?.discovered) {
+          await this._host._discoverOne(entity);
+        }
+      } catch (_) {
+        continue;
+      }
+      const cache = this._host._camCache[entity];
+      const clientId = cache?.clientId;
+      const cam = cache?.cam;
+      if (!clientId || !cam) continue;
+      try {
+        if (tab === "alerts") {
+          const resolved = await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
+            clientId,
+            cam,
+            before,
+            reviewDays,
+            {
+              debugLabel: "grid-alerts-tab",
+              itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode
+            }
+          ) ?? this._host._fetchWindowedReviews?.(
+            clientId,
+            cam,
+            reviewsAfter,
+            before,
+            {
+              debugLabel: "grid-alerts-tab"
+            }
+          ));
+          const reviews = Array.isArray(resolved?.items) ? resolved.items : resolved;
+          cache.reviews = Array.isArray(reviews) ? reviews : [];
+        }
+        if (tab === "kept") {
+          const kept = await this._host._ws({
+            type: "frigate/events/get",
+            instance_id: clientId,
+            cameras: [cam],
+            favorites: true,
+            limit: 50
+          });
+          cache.kept = Array.isArray(kept) ? kept : [];
+        }
+      } catch (_) {
+      }
+    }
+  }
+  allDisplayEvents() {
+    if (this._host._eventsMode === "all") {
+      const seen = new Set();
+      const all = [];
+      for (const camera of this._host._config.cameras) {
+        const cache = this._host._camCache[camera.entity];
+        if (!cache) continue;
+        for (const event of cache.events || []) {
+          if (seen.has(event.id)) continue;
+          seen.add(event.id);
+          all.push(event);
+        }
+      }
+      return all.sort((a, b) => b.start_time - a.start_time);
+    }
+    return this._host._events;
+  }
+  findEventById(id) {
+    if (!id) return null;
+    const all = this.allDisplayEvents();
+    let event = all.find((candidate) => candidate.id === id);
+    if (event) return event;
+    for (const camera of this._host._config.cameras) {
+      const cache = this._host._camCache[camera.entity];
+      event = (cache?.events || []).find((candidate) => candidate.id === id);
+      if (event) return event;
+    }
+    event = (this._host._kept || []).find((candidate) => candidate.id === id);
+    return event || null;
+  }
+};
+
+// src/features/browse/calendar-activity.ctrl.js
+const BrowseCalendarActivityController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  async loadCalendar() {
+    await this.prefetchCalendarActivityForActiveCamera();
+  }
+  calendarActivityCacheKey(clientId, cam, tz = this._host._tz()) {
+    return `${clientId || ""}|${cam || ""}|${tz || "UTC"}`;
+  }
+  applyCalendarActivityCacheForActiveCamera() {
+    const { clientId, cam } = this._host._cc();
+    const key = this.calendarActivityCacheKey(clientId, cam);
+    const cached = this._host._calendarActivityByCam.get(key);
+    this._host._daysWithActivity = cached ? new Set(cached) : new Set();
+  }
+  async prefetchCalendarActivityForActiveCamera() {
+    const { clientId, cam } = this._host._cc();
+    if (!clientId || !cam) {
+      this._host._daysWithActivity = new Set();
+      return;
+    }
+    const tz = this._host._tz();
+    const key = this.calendarActivityCacheKey(clientId, cam, tz);
+    const cached = this._host._calendarActivityByCam.get(key);
+    if (cached) {
+      this._host._daysWithActivity = new Set(cached);
+      return;
+    }
+    const existing = this._host._calendarActivityInFlight.get(key);
+    if (existing) {
+      await existing;
+      return;
+    }
+    const task = (async () => {
+      try {
+        const summary = await this._host._ws({
+          type: "frigate/events/summary",
+          instance_id: clientId,
+          timezone: tz
+        });
+        const days = Array.isArray(summary) ? new Set(
+          summary.filter((item) => item.camera === cam && item.day).map((item) => item.day)
+        ) : new Set();
+        this._host._calendarActivityByCam.set(key, days);
+        const active = this._host._cc();
+        const activeKey = this.calendarActivityCacheKey(
+          active.clientId,
+          active.cam,
+          tz
+        );
+        if (activeKey === key) {
+          this._host._daysWithActivity = new Set(days);
+          if (this._host._$("cal-panel")?.style.display !== "none") {
+            this._host._renderCal();
+          }
+        }
+      } catch (_) {
+      }
+    })();
+    this._host._calendarActivityInFlight.set(key, task);
+    try {
+      await task;
+    } finally {
+      this._host._calendarActivityInFlight.delete(key);
+    }
+  }
+};
+
 // src/features/browse/tab-data.ctrl.js
 const BrowseTabDataController = class {
   constructor(host) {
@@ -8949,12 +8974,16 @@ const BrowseTabDataController = class {
     try {
       const before = this._host._winEnd;
       const days = this._host._config?.alerts_reviews_days || 3;
+      const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
       const resolved = await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
         clientId,
         cam,
         before,
         days,
-        { debugLabel: "alerts-tab" }
+        {
+          debugLabel: "alerts-tab",
+          itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode
+        }
       ) ?? this._host._fetchWindowedReviews?.(
         clientId,
         cam,
@@ -9235,7 +9264,8 @@ const BrowseWindowLoaderController = class {
     before,
     dayCount,
     fetcher,
-    debugLabel
+    debugLabel,
+    itemFilter
   }) {
     const targetDayCount = Math.max(1, Number(dayCount) || 1);
     let spanDays = targetDayCount;
@@ -9247,7 +9277,7 @@ const BrowseWindowLoaderController = class {
       const items = await fetcher(after, before, {
         debugLabel
       });
-      const latestItems = Array.isArray(items) ? items : [];
+      const latestItems = Array.isArray(items) ? typeof itemFilter === "function" ? items.filter((item) => itemFilter(item)) : items : [];
       const filtered = this._filterToRecentDaysWithData(
         latestItems,
         targetDayCount
@@ -9287,6 +9317,7 @@ const BrowseWindowLoaderController = class {
       before,
       dayCount,
       debugLabel: opts.debugLabel || "reviews-active-days",
+      itemFilter: typeof opts.itemFilter === "function" ? opts.itemFilter : null,
       fetcher: (after, beforeTs, fetchOpts) => this.fetchWindowedReviews(clientId, cam, after, beforeTs, fetchOpts)
     });
     return result;
@@ -9441,12 +9472,16 @@ const BrowseWindowLoaderController = class {
   async loadWindowReviewsIfNeeded(clientId, cam, _after, before) {
     if (this._host._tab !== "alerts") return;
     try {
+      const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
       const resolved = await this.fetchRecentActiveDayReviews(
         clientId,
         cam,
         before,
         this._host._config?.alerts_reviews_days || 3,
-        { debugLabel: "alerts-window" }
+        {
+          debugLabel: "alerts-window",
+          itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode
+        }
       );
       this._host._reviews = Array.isArray(resolved?.items) ? resolved.items : [];
       this.cacheActiveCamSlice("reviews", this._host._reviews);

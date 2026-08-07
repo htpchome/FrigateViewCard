@@ -1,4 +1,5 @@
 import { DAY } from "../../constants.js";
+import { reviewMatchesAlertsOnlyMode } from "./filter-state.js";
 
 export class BrowseTabDataController {
   constructor(host) {
@@ -30,13 +31,18 @@ export class BrowseTabDataController {
     try {
       const before = this._host._winEnd;
       const days = this._host._config?.alerts_reviews_days || 3;
+      const showAllReviews =
+        this._host._activeCam?.alerts_content === "all_reviews";
       const resolved =
         await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
           clientId,
           cam,
           before,
           days,
-          { debugLabel: "alerts-tab" },
+          {
+            debugLabel: "alerts-tab",
+            itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode,
+          },
         ) ??
           this._host._fetchWindowedReviews?.(
             clientId,
