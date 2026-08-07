@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1287";
+const VERSION = "1.0.1289";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6634,6 +6634,7 @@ const StreamOrchestrator = class {
 
 // src/features/live/go2rtc-race-mounter.js
 const STRATEGY_HINT_COOLDOWN_MS = 12e4;
+const STRATEGY_HINT_MAX_ENTRIES = 64;
 function createGo2RtcRaceMounter({
   mounter,
   isDesktop,
@@ -6651,6 +6652,19 @@ function createGo2RtcRaceMounter({
 }) {
   const strategyHintsByEntity = new Map();
   const normalizeEntityKey = (entity = "") => String(entity || "").trim();
+  const setHintState = (entity = "", nextState = null) => {
+    const key = normalizeEntityKey(entity);
+    if (!key || !nextState) return;
+    if (strategyHintsByEntity.has(key)) {
+      strategyHintsByEntity.delete(key);
+    }
+    strategyHintsByEntity.set(key, nextState);
+    while (strategyHintsByEntity.size > STRATEGY_HINT_MAX_ENTRIES) {
+      const oldestKey = strategyHintsByEntity.keys().next().value;
+      if (!oldestKey) break;
+      strategyHintsByEntity.delete(oldestKey);
+    }
+  };
   const getHintState = (entity = "") => {
     const key = normalizeEntityKey(entity);
     if (!key) return null;
@@ -6660,7 +6674,7 @@ function createGo2RtcRaceMounter({
     const key = normalizeEntityKey(entity);
     const nextType = String(type || "").trim().toLowerCase();
     if (!key || !nextType) return;
-    strategyHintsByEntity.set(key, {
+    setHintState(key, {
       type: nextType,
       failureCount: 0,
       cooldownUntilMs: 0,
@@ -6674,7 +6688,7 @@ function createGo2RtcRaceMounter({
     const current = getHintState(key);
     if (!current || current.type !== failedType) return;
     const failureCount = (Number(current.failureCount) || 0) + 1;
-    strategyHintsByEntity.set(key, {
+    setHintState(key, {
       type: current.type,
       failureCount,
       cooldownUntilMs: failureCount >= 2 ? getNowMs() + STRATEGY_HINT_COOLDOWN_MS : 0,
@@ -6687,6 +6701,7 @@ function createGo2RtcRaceMounter({
     if (!hint?.type) return null;
     const nowMs = getNowMs();
     if (Number(hint.cooldownUntilMs) > nowMs) return null;
+    setHintState(entity, hint);
     return attempts.some((attempt) => attempt.type === hint.type) ? hint.type : null;
   };
   const mountWithOrchestrator = async ({
@@ -6758,7 +6773,7 @@ function createGo2RtcRaceMounter({
         })
       );
       adoptMountedAttempt(slot, winner);
-      await destroyLosers();
+      void destroyLosers();
       scheduleDeferredWebRtcTakeover({
         slot,
         deferredAttempt: deferredPreferredAttempt,

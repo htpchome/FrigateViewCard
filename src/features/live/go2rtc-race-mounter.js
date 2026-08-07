@@ -11,6 +11,7 @@ import {
 } from "./mount-result.js";
 
 const STRATEGY_HINT_COOLDOWN_MS = 120000;
+const STRATEGY_HINT_MAX_ENTRIES = 64;
 
 export function createGo2RtcRaceMounter({
   mounter,
@@ -31,6 +32,21 @@ export function createGo2RtcRaceMounter({
 
   const normalizeEntityKey = (entity = "") => String(entity || "").trim();
 
+  const setHintState = (entity = "", nextState = null) => {
+    const key = normalizeEntityKey(entity);
+    if (!key || !nextState) return;
+    // Refresh insertion order so this map works as an LRU cache.
+    if (strategyHintsByEntity.has(key)) {
+      strategyHintsByEntity.delete(key);
+    }
+    strategyHintsByEntity.set(key, nextState);
+    while (strategyHintsByEntity.size > STRATEGY_HINT_MAX_ENTRIES) {
+      const oldestKey = strategyHintsByEntity.keys().next().value;
+      if (!oldestKey) break;
+      strategyHintsByEntity.delete(oldestKey);
+    }
+  };
+
   const getHintState = (entity = "") => {
     const key = normalizeEntityKey(entity);
     if (!key) return null;
@@ -43,7 +59,7 @@ export function createGo2RtcRaceMounter({
       .trim()
       .toLowerCase();
     if (!key || !nextType) return;
-    strategyHintsByEntity.set(key, {
+    setHintState(key, {
       type: nextType,
       failureCount: 0,
       cooldownUntilMs: 0,
@@ -60,7 +76,7 @@ export function createGo2RtcRaceMounter({
     const current = getHintState(key);
     if (!current || current.type !== failedType) return;
     const failureCount = (Number(current.failureCount) || 0) + 1;
-    strategyHintsByEntity.set(key, {
+    setHintState(key, {
       type: current.type,
       failureCount,
       cooldownUntilMs:
@@ -75,6 +91,7 @@ export function createGo2RtcRaceMounter({
     if (!hint?.type) return null;
     const nowMs = getNowMs();
     if (Number(hint.cooldownUntilMs) > nowMs) return null;
+    setHintState(entity, hint);
     return attempts.some((attempt) => attempt.type === hint.type)
       ? hint.type
       : null;
@@ -156,7 +173,7 @@ export function createGo2RtcRaceMounter({
         }),
       );
       adoptMountedAttempt(slot, winner);
-      await destroyLosers();
+      void destroyLosers();
       scheduleDeferredWebRtcTakeover({
         slot,
         deferredAttempt: deferredPreferredAttempt,

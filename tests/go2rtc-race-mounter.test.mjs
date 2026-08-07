@@ -114,9 +114,9 @@ test("go2rtc race mounter adopts the fallback winner and retains deferred webrtc
       ["webrtc"],
     );
     assert.ok(slot.attachedOrchestrator);
-    assert.equal(slot.clearedOrchestrator, slot.attachedOrchestrator);
-
     await delay(80);
+
+    assert.equal(slot.clearedOrchestrator, slot.attachedOrchestrator);
 
     assert.equal(adopted?.winner?.type, "webrtc");
     assert.equal(winnerDestroyed, true);
@@ -239,6 +239,63 @@ test("go2rtc race mounter falls back when hinted strategy fails", async () => {
     assert.equal(adoptedType, "webrtc");
     assert.equal(mseCalls, 2);
     assert.equal(webrtcCalls, 1);
+  } finally {
+    globalThis.document = previousDocument;
+  }
+});
+
+test("go2rtc race mounter evicts oldest strategy hints when cache is full", async () => {
+  const previousDocument = globalThis.document;
+  globalThis.document = {
+    createElement: () => ({ style: {}, remove() {} }),
+  };
+  let webrtcCalls = 0;
+  let mseCalls = 0;
+  try {
+    const raceMounter = createGo2RtcRaceMounter({
+      mounter: {
+        tryMountWebRtc: async (slot) => {
+          webrtcCalls += 1;
+          return { ok: true, type: "webrtc", slot, engine: { destroy() {} } };
+        },
+        tryMountMse: async (slot) => {
+          mseCalls += 1;
+          return { ok: true, type: "mse", slot, engine: { destroy() {} } };
+        },
+        tryMountHls: async () => false,
+      },
+      isDesktop: true,
+      resolveConnectionType: () => "frigate_go2rtc",
+      disableHlsDesktopForEntity: () => true,
+      getPendingMountDestroyers: () => [],
+      setPendingMountDestroyers: () => {},
+      isMountTokenCurrent: () => true,
+      adoptMountedAttempt: () => {},
+      waitForStreamStart: async () => true,
+      isCurrentWinnerEngine: () => true,
+      getPendingWebRtcTakeoverTimer: () => null,
+      setPendingWebRtcTakeoverTimer: () => {},
+    });
+
+    const slot = { appendChild() {} };
+
+    for (let index = 0; index < 70; index += 1) {
+      await raceMounter.mountWithRace({
+        slot,
+        entity: `camera.seed_${index}`,
+        forcedType: "mse",
+        mountToken: index + 1,
+      });
+    }
+
+    await raceMounter.mountWithRace({
+      slot,
+      entity: "camera.seed_0",
+      mountToken: 200,
+    });
+
+    assert.equal(webrtcCalls, 1);
+    assert.equal(mseCalls, 71);
   } finally {
     globalThis.document = previousDocument;
   }
