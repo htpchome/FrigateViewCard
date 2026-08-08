@@ -2,8 +2,8 @@ import { MOBILE_VIEW_PAGE_STYLES } from "./features/mobile-view/page.styles.js";
 
 export const STYLES = `
   :host {
-    height: 100% !important;
-    max-height: 100% !important;
+    height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
+    max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
     min-height: 0;
     overflow: hidden;
     position: relative;
@@ -11,7 +11,6 @@ export const STYLES = `
     display: block !important;
     border: 0 !important;
     border-radius: var(--ha-card-border-radius, 14px);
-    overscroll-behavior: none !important;
   }
   :host {
     --popup-z-index: 1000;
@@ -54,7 +53,6 @@ export const STYLES = `
     padding: 0 !important;
     margin: 0 !important;
     min-height: 0 !important;
-    height: 100%;
     overflow:hidden !important;
     }
   .card{
