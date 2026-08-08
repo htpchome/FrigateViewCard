@@ -43,6 +43,28 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     z-index: 2000;
   }
 
+  .card.mobile-view-active.mobile-rotate-live #eng-wrap,
+  .card.mobile-view-active.mobile-rotate-live-exit #eng-wrap {
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    z-index: 2147483000 !important;
+  }
+
+  .card.mobile-view-active.mobile-rotate-popup #myPopup,
+  .card.mobile-view-active.mobile-rotate-popup-exit #myPopup {
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 100dvh !important;
+    z-index: 2147483000 !important;
+  }
+
   .card.mobile-view-active .mobile-bottom {
     display: flex;
     flex: 1 1 auto;

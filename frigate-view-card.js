@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1357";
+const VERSION = "1.0.1358";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -163,6 +163,28 @@ const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active.mobile-rotate-popup .mobile-top,
   .card.mobile-view-active.mobile-rotate-popup-exit .mobile-top {
     z-index: 2000;
+  }
+
+  .card.mobile-view-active.mobile-rotate-live #eng-wrap,
+  .card.mobile-view-active.mobile-rotate-live-exit #eng-wrap {
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    z-index: 2147483000 !important;
+  }
+
+  .card.mobile-view-active.mobile-rotate-popup #myPopup,
+  .card.mobile-view-active.mobile-rotate-popup-exit #myPopup {
+    top: 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 100dvh !important;
+    z-index: 2147483000 !important;
   }
 
   .card.mobile-view-active .mobile-bottom {
