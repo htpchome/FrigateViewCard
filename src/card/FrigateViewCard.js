@@ -922,80 +922,34 @@ export class FrigateViewCard extends HTMLElement {
 
     /* ================================== */
 
- this._cardRoot = this.shadowRoot || this;
+  this._onTouchendSnap = () => {
+    // Check if the overall window or document wrapper is stuck in a negative offset
+    const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
+    
+    if (scrollY <= 0) {
+      // Force an immediate layout alignment jump to the top
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
 
-  // Track finger position at touch start
-  this._onTouchStart = (e) => {
-    this._startY = e.touches.pageY;
-  };
+      // Force-snap Home Assistant's primary scrolling view container
+      const haMainScroll = document.querySelector('home-assistant')
+        ?.shadowRoot?.querySelector('home-assistant-main')
+        ?.shadowRoot?.querySelector('ha-panel-lovelace')
+        ?.shadowRoot?.querySelector('hui-root')
+        ?.shadowRoot?.querySelector('#view');
 
-  // Only intercept bottom overscroll; leave top overscroll alone so pull-to-refresh works
-  this._onTouchMove = (e) => {
-    let target = e.target;
-    let isInsideScrollable = false;
-
-    while (target && target !== this._cardRoot) {
-      const style = window.getComputedStyle(target);
-      const hasScrollOverflow = style.overflowY === 'auto' || style.overflowY === 'scroll';
-      const isScrollable = target.scrollHeight > target.clientHeight;
-
-      if (hasScrollOverflow && isScrollable) {
-        isInsideScrollable = true;
-        break;
+      if (haMainScroll) {
+        haMainScroll.scrollTop = 0;
+        // Forces a clean visual update of the DOM container bounds
+        haMainScroll.style.transform = 'translate3d(0,0,0)';
+        setTimeout(() => { haMainScroll.style.transform = ''; }, 10);
       }
-      target = target.parentNode || target.host;
     }
-
-    if (isInsideScrollable) return;
-
-    const currentY = e.touches.pageY;
-    const deltaY = currentY - this._startY;
-
-    // CRITICAL: If pulling down, do nothing. Let native iOS handle the pull-to-refresh.
-    if (deltaY > 0) return;
-
-    // Block only the upward/bottom overscroll bounce
-    e.preventDefault();
   };
 
-  // The realign fix: Monitor window positioning
-  this._onScrollCheck = () => {
-    // Clear any previous debounce timer
-    if (this._snapTimer) clearTimeout(this._snapTimer);
-
-    // Debounce checks for when scrolling stops
-    this._snapTimer = setTimeout(() => {
-      const currentScroll = window.scrollY || document.documentElement.scrollTop;
-
-      // iOS shifts window.scrollY into negative integers during a pull down
-      if (currentScroll < 0) {
-        // Force-clear the negative view shift
-        window.scrollTo(0, 0);
-
-        // Reset webview viewport layout tracking
-        document.body.style.display = 'none';
-        // Force a layout redraw
-        document.body.offsetHeight; 
-        document.body.style.display = '';
-        
-        // Remove rendering artifacts from the sticky header context
-        const haHeader = document.querySelector('home-assistant')
-          ?.shadowRoot?.querySelector('home-assistant-main')
-          ?.shadowRoot?.querySelector('ha-panel-lovelace')
-          ?.shadowRoot?.querySelector('hui-root')
-          ?.shadowRoot?.querySelector('.header');
-          
-        if (haHeader) {
-          haHeader.style.transform = 'translate3d(0,0,0)';
-          setTimeout(() => haHeader.style.transform = '', 10);
-        }
-      }
-    }, 100); // 100ms catches the gesture end frame
-  };
-
-  this._cardRoot.addEventListener('touchstart', this._onTouchStart, { passive: true });
-  this._cardRoot.addEventListener('touchmove', this._onTouchMove, { passive: false });
-  window.addEventListener('scroll', this._onScrollCheck, { passive: true });
+  // Listen globally to the touch release event so it catches the end of the pull
+  window.addEventListener('touchend', this._onTouchendSnap, { passive: true });
 
 
     /* ================================== */
@@ -1383,13 +1337,7 @@ export class FrigateViewCard extends HTMLElement {
       this._teardownDisconnected();
     }, 2500);
 /* ============================ */
-  if (this._cardRoot) {
-    this._cardRoot.removeEventListener('touchstart', this._onTouchStart);
-    this._cardRoot.removeEventListener('touchmove', this._onTouchMove);
-  }
-  window.removeEventListener('scroll', this._onScrollCheck);
-  if (this._snapTimer) clearTimeout(this._snapTimer);
-
+ window.removeEventListener('touchend', this._onTouchendSnap);
 /* ============================ */
   }
 
