@@ -756,7 +756,7 @@ export class FrigateViewCard extends HTMLElement {
       this._onFullscreenChange,
     );
 
-    this._onViewportRotate = () => {
+    this._onViewportChange = () => {
       const vv = window.visualViewport;
       const viewportWidth = Math.round(vv?.width || window.innerWidth || 0);
       const viewportHeight = Math.round(vv?.height || window.innerHeight || 0);
@@ -773,14 +773,14 @@ export class FrigateViewCard extends HTMLElement {
 
       this._scheduleRotateOverlayUpdate();
     };
-    window.addEventListener("resize", this._onViewportRotate, {
+    window.addEventListener("resize", this._onViewportChange, {
       passive: true,
     });
-    window.addEventListener("orientationchange", this._onViewportRotate);
-    window.visualViewport?.addEventListener("resize", this._onViewportRotate, {
+    window.addEventListener("orientationchange", this._onViewportChange);
+    window.visualViewport?.addEventListener("resize", this._onViewportChange, {
       passive: true,
     });
-    window.visualViewport?.addEventListener("scroll", this._onViewportRotate, {
+    window.visualViewport?.addEventListener("scroll", this._onViewportChange, {
       passive: true,
     });
     this._onEditorPreviewDraft = (ev) => {
@@ -1384,16 +1384,16 @@ export class FrigateViewCard extends HTMLElement {
         this._onFullscreenChange,
       );
     }
-    if (this._onViewportRotate) {
-      window.removeEventListener("resize", this._onViewportRotate);
-      window.removeEventListener("orientationchange", this._onViewportRotate);
+    if (this._onViewportChange) {
+      window.removeEventListener("resize", this._onViewportChange);
+      window.removeEventListener("orientationchange", this._onViewportChange);
       window.visualViewport?.removeEventListener(
         "resize",
-        this._onViewportRotate,
+        this._onViewportChange,
       );
       window.visualViewport?.removeEventListener(
         "scroll",
-        this._onViewportRotate,
+        this._onViewportChange,
       );
     }
     if (this._onEditorPreviewDraft) {

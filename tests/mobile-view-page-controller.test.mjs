@@ -34,6 +34,7 @@ const createHost = ({ popupOpen = false, domNodes = {} } = {}) => {
     _eventsMode: "all",
     _tab: "alerts",
     _winEnd: 1722470400,
+    _isMobilePhoneViewport: () => true,
     _allDisplayEvents: () => [{ id: 1 }, { id: 2 }],
     _labels: () => ["person", "car"],
     _weekday: () => "Wed",

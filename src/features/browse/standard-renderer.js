@@ -183,7 +183,8 @@ export function renderStandardPageListLabel(host, ts = null) {
       host,
       ts || host._winEnd,
     );
-    const showButtons = !host._$("#card")?.classList.contains("mobile");
+    const mobilePhoneViewport = host._isMobilePhoneViewport?.() === true;
+    const showButtons = !mobilePhoneViewport;
     if (prev) prev.style.display = showButtons ? "inline-flex" : "none";
     if (next) next.style.display = showButtons ? "inline-flex" : "none";
     void (

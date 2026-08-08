@@ -36,6 +36,13 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     overflow: visible;
   }
 
+  .card.mobile-view-active.mobile-rotate-live .mobile-top,
+  .card.mobile-view-active.mobile-rotate-live-exit .mobile-top,
+  .card.mobile-view-active.mobile-rotate-popup .mobile-top,
+  .card.mobile-view-active.mobile-rotate-popup-exit .mobile-top {
+    z-index: 2000;
+  }
+
   .card.mobile-view-active .mobile-bottom {
     display: flex;
     flex: 1 1 auto;

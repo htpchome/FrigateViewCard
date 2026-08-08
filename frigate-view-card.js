@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1355";
+const VERSION = "1.0.1357";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -156,6 +156,13 @@ const MOBILE_VIEW_PAGE_STYLES = `
     border-top-left-radius: var(--fvc-border-radius);
     border-top-right-radius: var(--fvc-border-radius);
     overflow: visible;
+  }
+
+  .card.mobile-view-active.mobile-rotate-live .mobile-top,
+  .card.mobile-view-active.mobile-rotate-live-exit .mobile-top,
+  .card.mobile-view-active.mobile-rotate-popup .mobile-top,
+  .card.mobile-view-active.mobile-rotate-popup-exit .mobile-top {
+    z-index: 2000;
   }
 
   .card.mobile-view-active .mobile-bottom {
@@ -13995,7 +14002,8 @@ function renderStandardPageListLabel(host, ts = null) {
       host,
       ts || host._winEnd
     );
-    const showButtons = !host._$("#card")?.classList.contains("mobile");
+    const mobilePhoneViewport = host._isMobilePhoneViewport?.() === true;
+    const showButtons = !mobilePhoneViewport;
     if (prev) prev.style.display = showButtons ? "inline-flex" : "none";
     if (next) next.style.display = showButtons ? "inline-flex" : "none";
     void (host._recordingsBrowseNavController?.updateBrowseNav?.() ?? host._updateRecordingsBrowseNav?.());
@@ -15525,7 +15533,7 @@ const FrigateViewCard = class extends HTMLElement {
       "webkitfullscreenchange",
       this._onFullscreenChange
     );
-    this._onViewportRotate = () => {
+    this._onViewportChange = () => {
       const vv = window.visualViewport;
       const viewportWidth = Math.round(vv?.width || window.innerWidth || 0);
       const viewportHeight = Math.round(vv?.height || window.innerHeight || 0);
@@ -15538,14 +15546,14 @@ const FrigateViewCard = class extends HTMLElement {
       }
       this._scheduleRotateOverlayUpdate();
     };
-    window.addEventListener("resize", this._onViewportRotate, {
+    window.addEventListener("resize", this._onViewportChange, {
       passive: true
     });
-    window.addEventListener("orientationchange", this._onViewportRotate);
-    window.visualViewport?.addEventListener("resize", this._onViewportRotate, {
+    window.addEventListener("orientationchange", this._onViewportChange);
+    window.visualViewport?.addEventListener("resize", this._onViewportChange, {
       passive: true
     });
-    window.visualViewport?.addEventListener("scroll", this._onViewportRotate, {
+    window.visualViewport?.addEventListener("scroll", this._onViewportChange, {
       passive: true
     });
     this._onEditorPreviewDraft = (ev) => {
@@ -16040,16 +16048,16 @@ const FrigateViewCard = class extends HTMLElement {
         this._onFullscreenChange
       );
     }
-    if (this._onViewportRotate) {
-      window.removeEventListener("resize", this._onViewportRotate);
-      window.removeEventListener("orientationchange", this._onViewportRotate);
+    if (this._onViewportChange) {
+      window.removeEventListener("resize", this._onViewportChange);
+      window.removeEventListener("orientationchange", this._onViewportChange);
       window.visualViewport?.removeEventListener(
         "resize",
-        this._onViewportRotate
+        this._onViewportChange
       );
       window.visualViewport?.removeEventListener(
         "scroll",
-        this._onViewportRotate
+        this._onViewportChange
       );
     }
     if (this._onEditorPreviewDraft) {
