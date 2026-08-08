@@ -922,34 +922,44 @@ export class FrigateViewCard extends HTMLElement {
 
     /* ================================== */
 
-  this._onTouchendSnap = () => {
-    // Check if the overall window or document wrapper is stuck in a negative offset
-    const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
-    
-    if (scrollY <= 0) {
-      // Force an immediate layout alignment jump to the top
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-
-      // Force-snap Home Assistant's primary scrolling view container
-      const haMainScroll = document.querySelector('home-assistant')
-        ?.shadowRoot?.querySelector('home-assistant-main')
-        ?.shadowRoot?.querySelector('ha-panel-lovelace')
-        ?.shadowRoot?.querySelector('hui-root')
-        ?.shadowRoot?.querySelector('#view');
-
-      if (haMainScroll) {
-        haMainScroll.scrollTop = 0;
-        // Forces a clean visual update of the DOM container bounds
-        haMainScroll.style.transform = 'translate3d(0,0,0)';
-        setTimeout(() => { haMainScroll.style.transform = ''; }, 10);
+   // 1. Detect when a pull-to-refresh finishes by watching visibility states
+  this._refreshObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      // When the card becomes fully visible again after the refresh finishes
+      if (entry.isIntersecting) {
+        
+        // 2. Give the native iOS spinner 300ms to collapse and the header to realign
+        setTimeout(() => {
+          const cardElement = this.shadowRoot?.querySelector('.card') || this;
+          
+          // 3. Force-recalculate the layout bounds of the card
+          // This breaks the WKWebView rendering freeze and snaps the card to the header
+          cardElement.style.transform = 'translate3d(0, -0.5px, 0)';
+          
+          // Request an animation frame to force a layout paint pass
+          requestAnimationFrame(() => {
+            cardElement.style.transform = '';
+            
+            // 4. Force a secondary reflow on Home Assistant's view container if needed
+            const haMainView = document.querySelector('home-assistant')
+              ?.shadowRoot?.querySelector('home-assistant-main')
+              ?.shadowRoot?.querySelector('ha-panel-lovelace')
+              ?.shadowRoot?.querySelector('hui-root')
+              ?.shadowRoot?.querySelector('#view');
+              
+            if (haMainView) {
+              haMainView.style.display = 'none';
+              haMainView.offsetHeight; // Forces browser to recalculate element geometries
+              haMainView.style.display = '';
+            }
+          });
+        }, 300); // 300ms sweet spot to execute right after iOS spinner vanishes
       }
-    }
-  };
+    });
+  }, { threshold: 0.1 });
 
-  // Listen globally to the touch release event so it catches the end of the pull
-  window.addEventListener('touchend', this._onTouchendSnap, { passive: true });
+  // Attach the observer to the card itself
+  this._refreshObserver.observe(this);
 
 
     /* ================================== */
@@ -1337,7 +1347,8 @@ export class FrigateViewCard extends HTMLElement {
       this._teardownDisconnected();
     }, 2500);
 /* ============================ */
- window.removeEventListener('touchend', this._onTouchendSnap);
+   if (this._refreshObserver) {
+    this._refreshObserver.disconnect();
 /* ============================ */
   }
 
