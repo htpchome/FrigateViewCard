@@ -922,46 +922,45 @@ export class FrigateViewCard extends HTMLElement {
 
     /* ================================== */
 
-  // Create an observer that listens for ANY resize/layout shift on the main container
-  // This fires when the iOS spinner collapses and the Home Assistant container shifts back up
-  this._layoutShiftObserver = new ResizeObserver(() => {
-    // A 10ms micro-delay ensures we execute immediately after WebKit finishes moving the header navbar
-    setTimeout(() => {
-      const cardElement = this.shadowRoot?.querySelector('.card') || this;
-      
-      // Step 1: Force a layout-depth update on the card itself to recalculate its bounding rectangle
-      cardElement.style.marginTop = '-0.1px';
-      
-      requestAnimationFrame(() => {
-        // Step 2: Instantly trigger a hard layout-paint flow on Home Assistant's top viewport wrapper
-        // This forces WebKit to close the alignment gap between the header and your card
-        const haMainView = document.querySelector('home-assistant')
-          ?.shadowRoot?.querySelector('home-assistant-main')
-          ?.shadowRoot?.querySelector('ha-panel-lovelace')
-          ?.shadowRoot?.querySelector('hui-root')
-          ?.shadowRoot?.querySelector('#view');
+  // 1. Drill out of the card's shadow boundary to find Home Assistant's header container
+  const huiRoot = document.querySelector('home-assistant')
+    ?.shadowRoot?.querySelector('home-assistant-main')
+    ?.shadowRoot?.querySelector('ha-panel-lovelace')
+    ?.shadowRoot?.querySelector('hui-root');
 
-        if (haMainView) {
-          // Temporarily alter the structural positioning context to wake up the iOS rendering layers
-          const originalPosition = haMainView.style.position;
-          haMainView.style.position = 'relative';
-          
-          // Trigger a document reflow check
-          haMainView.offsetHeight; 
-          
-          // Revert back so normal dashboard rendering continues
-          haMainView.style.position = originalPosition;
-        }
+  if (huiRoot) {
+    const headerElement = huiRoot.shadowRoot?.querySelector('.header');
 
-        // Clean up the card element's dummy layout shift style modification
-        cardElement.style.marginTop = '';
+    if (headerElement) {
+      // 2. Set up a mutation observer to watch the header element for style/class changes
+      // This triggers when the iOS refresh spinner collapses and the navbar shifts up
+      this._headerPositionObserver = new MutationObserver(() => {
+        // Run a sequence of frame updates to force WebKit to snap the card up to the header
+        requestAnimationFrame(() => {
+          // Adjust scroll offsets stuck in the window frame
+          window.scrollTo(0, 0);
+          document.documentElement.scrollTop = 0;
+          document.body.scrollTop = 0;
+
+          const viewPane = huiRoot.shadowRoot?.querySelector('#view');
+          if (viewPane) {
+            viewPane.scrollTop = 0;
+            
+            // Toggle the visibility of the parent container to clear layout height glitches
+            const currentDisplay = viewPane.style.display;
+            viewPane.style.display = 'none';
+            viewPane.offsetHeight; // Forces a browser layout recalculation
+            viewPane.style.display = currentDisplay;
+          }
+        });
       });
-    }, 150); // Catches the frame right as the spinner completely vanishes
-  });
 
-  // Attach the observer to the main window layout context
-  if (document.body) {
-    this._layoutShiftObserver.observe(document.body);
+      // Begin monitoring the header element for any physical layout changes
+      this._headerPositionObserver.observe(headerElement, { 
+        attributes: true, 
+        attributeFilter: ['style', 'class'] 
+      });
+    }
   }
 
     /* ================================== */
@@ -1349,8 +1348,8 @@ export class FrigateViewCard extends HTMLElement {
       this._teardownDisconnected();
     }, 2500);
 /* ========================== */
-  if (this._layoutShiftObserver) {
-    this._layoutShiftObserver.disconnect();
+ if (this._headerPositionObserver) {
+    this._headerPositionObserver.disconnect();
   }
 /* ========================== */
   }
