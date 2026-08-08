@@ -73,6 +73,67 @@ export const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
   };
 };
 
+export const buildPopupInfoDownloadActions = ({
+  id = "",
+  mediaType = "",
+  hasClip = false,
+  hasSnapshot = false,
+  recStart = null,
+  recEnd = null,
+}) => {
+  const normalizedMediaType = String(mediaType || "").toLowerCase();
+  const actions = [];
+
+  if (
+    normalizedMediaType === "recording" &&
+    Number.isFinite(recStart) &&
+    Number.isFinite(recEnd)
+  ) {
+    actions.push({
+      kind: "recording",
+      label: "Download recording",
+      recStart: Math.floor(recStart),
+      recEnd: Math.floor(recEnd),
+      icon: "download",
+    });
+    return actions;
+  }
+
+  if (!id) return actions;
+
+  const currentFile =
+    normalizedMediaType === "snapshot"
+      ? "snapshot.jpg"
+      : hasClip
+        ? "clip.mp4"
+        : hasSnapshot
+          ? "snapshot.jpg"
+          : "";
+
+  if (currentFile) {
+    actions.push({
+      kind: "event",
+      id,
+      file: currentFile,
+      label:
+        currentFile === "snapshot.jpg" ? "Download snapshot" : "Download clip",
+      icon: currentFile === "snapshot.jpg" ? "snapshot" : "download",
+    });
+  }
+
+  if (hasSnapshot && currentFile !== "snapshot.jpg") {
+    actions.push({
+      kind: "event",
+      id,
+      file: "snapshot.jpg",
+      label: "Download snapshot",
+      icon: "snapshot",
+    });
+  }
+
+  return actions;
+};
+
 export const buildPopupRecordingRenderPlan = ({
   start = 0,
   end = 0,

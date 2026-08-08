@@ -188,6 +188,7 @@ import {
 } from "../shared/media/controls.js";
 import { buildPopupMediaUrl } from "../shared/media/url-utils.js";
 import {
+  buildPopupInfoDownloadActions,
   buildPopupClipRenderPlan,
   buildPopupRecordingRenderPlan,
   buildPopupRecordingScrubInitPlan,
@@ -4359,20 +4360,15 @@ export class FrigateViewCard extends HTMLElement {
       (opts.camera || ev?.camera || this._cc().cam || "").replace(/_/g, " ") ||
       "-";
     const hasClip = ev?.has_clip ?? mediaType === "clip";
-    const downloadFile =
-      mediaType === "recording"
-        ? ""
-        : mediaType === "snapshot"
-          ? "snapshot.jpg"
-          : hasClip
-            ? "clip.mp4"
-            : "snapshot.jpg";
-    const downloadLabel =
-      mediaType === "recording"
-        ? "Download recording"
-        : downloadFile === "snapshot.jpg"
-          ? "Download snapshot"
-          : "Download clip";
+    const hasSnapshot = ev?.has_snapshot ?? mediaType === "snapshot";
+    const downloadActions = buildPopupInfoDownloadActions({
+      id,
+      mediaType,
+      hasClip,
+      hasSnapshot,
+      recStart: opts.recStart,
+      recEnd: opts.recEnd,
+    });
 
     return {
       id,
@@ -4385,8 +4381,7 @@ export class FrigateViewCard extends HTMLElement {
       time,
       duration,
       camera,
-      downloadFile,
-      downloadLabel,
+      downloadActions,
       recStart: opts.recStart,
       recEnd: opts.recEnd,
     };
@@ -4412,15 +4407,14 @@ export class FrigateViewCard extends HTMLElement {
     head.textContent = `${cap(model.mediaType || "media")} - ${model.camera} - ${model.dayDate} - ${model.time}`;
     head.hidden = false;
 
-    const isRecordingDl =
-      model.mediaType === "recording" &&
-      Number.isFinite(model.recStart) &&
-      Number.isFinite(model.recEnd);
-    const downloadBtn = isRecordingDl
-      ? `<button class="popup-action" data-rec-dl-start="${Math.floor(model.recStart)}" data-rec-dl-end="${Math.floor(model.recEnd)}" title="${model.downloadLabel}" aria-label="${model.downloadLabel}">${ICONS.download}</button>`
-      : model.id
-        ? `<button class="popup-action" data-dl="${model.id}" data-dl-file="${model.downloadFile}" title="${model.downloadLabel}" aria-label="${model.downloadLabel}">${ICONS.download}</button>`
-        : "";
+    const downloadButtons = (model.downloadActions || [])
+      .map((action) => {
+        if (action.kind === "recording") {
+          return `<button class="popup-action" data-rec-dl-start="${action.recStart}" data-rec-dl-end="${action.recEnd}" title="${action.label}" aria-label="${action.label}">${ICONS[action.icon] || ICONS.download}</button>`;
+        }
+        return `<button class="popup-action" data-dl="${action.id}" data-dl-file="${action.file}" title="${action.label}" aria-label="${action.label}">${ICONS[action.icon] || ICONS.download}</button>`;
+      })
+      .join("");
 
     info.innerHTML = `
           <div class="popup-info-title">
@@ -4438,7 +4432,7 @@ export class FrigateViewCard extends HTMLElement {
               <div class="popup-info-row"><span class="popup-info-k">Zone</span><span class="popup-info-v">${model.zone}</span></div>
               <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${model.score}</span></div>
             </div>
-            <div class="popup-info-actions">${downloadBtn}</div>
+            <div class="popup-info-actions">${downloadButtons}</div>
           </div>
         `;
     info.hidden = false;
@@ -5235,6 +5229,10 @@ export class FrigateViewCard extends HTMLElement {
     );
   }
   _eventCardHTML(ev, expanded, compact = false) {
+    const showDownloadButtons = !(
+      this._isLikelyMobileClient() &&
+      ["alerts", "clips", "snapshot"].includes(this._tab)
+    );
     const model = buildEventListItemModel(ev, {
       cap,
       labelColor,
@@ -5243,6 +5241,7 @@ export class FrigateViewCard extends HTMLElement {
       durationLabel: (value) => this._dur(value),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
       isKeptTab: this._tab === "kept",
+      showDownloadButtons,
       showCameraLabel:
         (this._eventsMode === "all" || this._isGridMixedListMode()) &&
         this._config.cameras.length > 1,
@@ -5639,6 +5638,7 @@ export class FrigateViewCard extends HTMLElement {
       findEventById: (id) => this._findEventById(id),
       media: (id, file) => this._media(id, file),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
+      showDownloadButtons: !this._isLikelyMobileClient(),
     });
     return buildReviewListItemHtml(model, { cap, icons: ICONS });
   }

@@ -8,6 +8,7 @@ export function buildEventListItemModel(eventItem, deps) {
     dateTimeLabel,
     isKeptTab,
     showCameraLabel,
+    showDownloadButtons = true,
   } = deps || {};
 
   const score =
@@ -37,12 +38,14 @@ export function buildEventListItemModel(eventItem, deps) {
     : eventItem?.has_snapshot
       ? '<span class="bs">snap</span>'
       : "";
-  const dlClip = eventItem?.has_clip
-    ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
-    : "";
-  const dlSnap = eventItem?.has_snapshot
-    ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>`
-    : "";
+  const dlClip =
+    showDownloadButtons && eventItem?.has_clip
+      ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
+      : "";
+  const dlSnap =
+    showDownloadButtons && eventItem?.has_snapshot
+      ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>`
+      : "";
   const camLabel = showCameraLabel
     ? `<span class="cam-badge">${String(eventItem?.camera || "").replace(/_/g, " ")}</span>`
     : "";

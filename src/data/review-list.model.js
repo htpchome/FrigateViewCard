@@ -6,6 +6,7 @@ export function buildReviewListItemModel(review, deps) {
     findEventById,
     media,
     dateTimeLabel,
+    showDownloadButtons = true,
   } = deps || {};
 
   const sev = review?.severity === "alert" ? "alert" : "detection";
@@ -29,12 +30,14 @@ export function buildReviewListItemModel(review, deps) {
       ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>`
       : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>`
     : "";
-  const dlClip = mediaEvent?.has_clip
-    ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
-    : "";
-  const dlSnap = mediaEvent?.has_snapshot
-    ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>`
-    : "";
+  const dlClip =
+    showDownloadButtons && mediaEvent?.has_clip
+      ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
+      : "";
+  const dlSnap =
+    showDownloadButtons && mediaEvent?.has_snapshot
+      ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>`
+      : "";
 
   return {
     reviewId: review?.id || "",

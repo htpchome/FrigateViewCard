@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1361";
+const VERSION = "1.0.1362";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -8770,6 +8770,48 @@ const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
     infoOpts: { mediaType }
   };
 };
+const buildPopupInfoDownloadActions = ({
+  id = "",
+  mediaType = "",
+  hasClip = false,
+  hasSnapshot = false,
+  recStart = null,
+  recEnd = null
+}) => {
+  const normalizedMediaType = String(mediaType || "").toLowerCase();
+  const actions = [];
+  if (normalizedMediaType === "recording" && Number.isFinite(recStart) && Number.isFinite(recEnd)) {
+    actions.push({
+      kind: "recording",
+      label: "Download recording",
+      recStart: Math.floor(recStart),
+      recEnd: Math.floor(recEnd),
+      icon: "download"
+    });
+    return actions;
+  }
+  if (!id) return actions;
+  const currentFile = normalizedMediaType === "snapshot" ? "snapshot.jpg" : hasClip ? "clip.mp4" : hasSnapshot ? "snapshot.jpg" : "";
+  if (currentFile) {
+    actions.push({
+      kind: "event",
+      id,
+      file: currentFile,
+      label: currentFile === "snapshot.jpg" ? "Download snapshot" : "Download clip",
+      icon: currentFile === "snapshot.jpg" ? "snapshot" : "download"
+    });
+  }
+  if (hasSnapshot && currentFile !== "snapshot.jpg") {
+    actions.push({
+      kind: "event",
+      id,
+      file: "snapshot.jpg",
+      label: "Download snapshot",
+      icon: "snapshot"
+    });
+  }
+  return actions;
+};
 const buildPopupRecordingRenderPlan = ({
   start = 0,
   end = 0,
@@ -11453,7 +11495,8 @@ function buildReviewListItemModel(review, deps) {
     resolveSourceEvent,
     findEventById,
     media,
-    dateTimeLabel
+    dateTimeLabel,
+    showDownloadButtons = true
   } = deps || {};
   const sev = review?.severity === "alert" ? "alert" : "detection";
   const objs = (review?.data?.objects || []).map((label) => cap2(label)).join(", ");
@@ -11466,8 +11509,8 @@ function buildReviewListItemModel(review, deps) {
   const mediaEvent = sourceEvent || favEv;
   const mediaEventId = String(mediaEvent?.id || firstDet || "");
   const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>` : "";
-  const dlClip = mediaEvent?.has_clip ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
-  const dlSnap = mediaEvent?.has_snapshot ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>` : "";
+  const dlClip = showDownloadButtons && mediaEvent?.has_clip ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
+  const dlSnap = showDownloadButtons && mediaEvent?.has_snapshot ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>` : "";
   return {
     reviewId: review?.id || "",
     firstDet,
@@ -11516,7 +11559,8 @@ function buildEventListItemModel(eventItem, deps) {
     durationLabel,
     dateTimeLabel,
     isKeptTab,
-    showCameraLabel
+    showCameraLabel,
+    showDownloadButtons = true
   } = deps || {};
   const score = eventItem?.top_score != null ? `${Math.round(eventItem.top_score * 100)}%` : "";
   const reviewSev = eventItem?.severity === "alert" ? "alert" : eventItem?.severity === "detection" ? "detection" : "";
@@ -11526,8 +11570,8 @@ function buildEventListItemModel(eventItem, deps) {
   const thumbSrc = media(eventItem?.id, "thumbnail.jpg");
   const thumb = eventItem?.has_snapshot || eventItem?.has_clip ? `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${eventItem.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${icons.person}</div>` : `<div class="tph">${icons.person}</div>`;
   const badge = eventItem?.has_clip ? '<span class="bc">clip</span>' : eventItem?.has_snapshot ? '<span class="bs">snap</span>' : "";
-  const dlClip = eventItem?.has_clip ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
-  const dlSnap = eventItem?.has_snapshot ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>` : "";
+  const dlClip = showDownloadButtons && eventItem?.has_clip ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
+  const dlSnap = showDownloadButtons && eventItem?.has_snapshot ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>` : "";
   const camLabel = showCameraLabel ? `<span class="cam-badge">${String(eventItem?.camera || "").replace(/_/g, " ")}</span>` : "";
   const favBtn = eventItem?.retain_indefinitely ? `<button class="ico fav on" data-fav="${eventItem.id}">${icons.star}</button>` : `<button class="ico fav" data-fav="${eventItem.id}">${icons.starO}</button>`;
   return {
@@ -18624,8 +18668,15 @@ const FrigateViewCard = class extends HTMLElement {
     const duration = opts.durationSec != null ? `${Math.max(1, Math.round(opts.durationSec))}s` : ev ? `${this._dur(ev)}s` : "-";
     const camera = (opts.camera || ev?.camera || this._cc().cam || "").replace(/_/g, " ") || "-";
     const hasClip = ev?.has_clip ?? mediaType === "clip";
-    const downloadFile = mediaType === "recording" ? "" : mediaType === "snapshot" ? "snapshot.jpg" : hasClip ? "clip.mp4" : "snapshot.jpg";
-    const downloadLabel = mediaType === "recording" ? "Download recording" : downloadFile === "snapshot.jpg" ? "Download snapshot" : "Download clip";
+    const hasSnapshot = ev?.has_snapshot ?? mediaType === "snapshot";
+    const downloadActions = buildPopupInfoDownloadActions({
+      id,
+      mediaType,
+      hasClip,
+      hasSnapshot,
+      recStart: opts.recStart,
+      recEnd: opts.recEnd
+    });
     return {
       id,
       mediaType,
@@ -18637,8 +18688,7 @@ const FrigateViewCard = class extends HTMLElement {
       time,
       duration,
       camera,
-      downloadFile,
-      downloadLabel,
+      downloadActions,
       recStart: opts.recStart,
       recEnd: opts.recEnd
     };
@@ -18659,8 +18709,12 @@ const FrigateViewCard = class extends HTMLElement {
     }
     head.textContent = `${cap(model.mediaType || "media")} - ${model.camera} - ${model.dayDate} - ${model.time}`;
     head.hidden = false;
-    const isRecordingDl = model.mediaType === "recording" && Number.isFinite(model.recStart) && Number.isFinite(model.recEnd);
-    const downloadBtn = isRecordingDl ? `<button class="popup-action" data-rec-dl-start="${Math.floor(model.recStart)}" data-rec-dl-end="${Math.floor(model.recEnd)}" title="${model.downloadLabel}" aria-label="${model.downloadLabel}">${ICONS.download}</button>` : model.id ? `<button class="popup-action" data-dl="${model.id}" data-dl-file="${model.downloadFile}" title="${model.downloadLabel}" aria-label="${model.downloadLabel}">${ICONS.download}</button>` : "";
+    const downloadButtons = (model.downloadActions || []).map((action) => {
+      if (action.kind === "recording") {
+        return `<button class="popup-action" data-rec-dl-start="${action.recStart}" data-rec-dl-end="${action.recEnd}" title="${action.label}" aria-label="${action.label}">${ICONS[action.icon] || ICONS.download}</button>`;
+      }
+      return `<button class="popup-action" data-dl="${action.id}" data-dl-file="${action.file}" title="${action.label}" aria-label="${action.label}">${ICONS[action.icon] || ICONS.download}</button>`;
+    }).join("");
     info.innerHTML = `
           <div class="popup-info-title">
             <span class="tb" style="background:${labelColor(ev?.label || model.mediaType)}33;color:${labelColor(ev?.label || model.mediaType)}">${model.titleLabel}</span>
@@ -18677,7 +18731,7 @@ const FrigateViewCard = class extends HTMLElement {
               <div class="popup-info-row"><span class="popup-info-k">Zone</span><span class="popup-info-v">${model.zone}</span></div>
               <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${model.score}</span></div>
             </div>
-            <div class="popup-info-actions">${downloadBtn}</div>
+            <div class="popup-info-actions">${downloadButtons}</div>
           </div>
         `;
     info.hidden = false;
@@ -19399,6 +19453,7 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _eventCardHTML(ev, expanded, compact = false) {
+    const showDownloadButtons = !(this._isLikelyMobileClient() && ["alerts", "clips", "snapshot"].includes(this._tab));
     const model = buildEventListItemModel(ev, {
       cap,
       labelColor,
@@ -19407,6 +19462,7 @@ const FrigateViewCard = class extends HTMLElement {
       durationLabel: (value) => this._dur(value),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
       isKeptTab: this._tab === "kept",
+      showDownloadButtons,
       showCameraLabel: (this._eventsMode === "all" || this._isGridMixedListMode()) && this._config.cameras.length > 1
     });
     return buildEventListItemHtml(model, {
@@ -19744,7 +19800,8 @@ const FrigateViewCard = class extends HTMLElement {
       resolveSourceEvent: (value) => this._browseFilterController.reviewSourceEvent(value),
       findEventById: (id) => this._findEventById(id),
       media: (id, file) => this._media(id, file),
-      dateTimeLabel: (ts) => this._dateTimeLabel(ts)
+      dateTimeLabel: (ts) => this._dateTimeLabel(ts),
+      showDownloadButtons: !this._isLikelyMobileClient()
     });
     return buildReviewListItemHtml(model, { cap, icons: ICONS });
   }
