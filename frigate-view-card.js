@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1342";
+const VERSION = "1.0.1343";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15674,26 +15674,34 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-    this._refreshObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setTimeout(() => {
-            const cardElement = this.shadowRoot?.querySelector(".card") || this;
-            cardElement.style.transform = "translate3d(0, -0.5px, 0)";
-            requestAnimationFrame(() => {
-              cardElement.style.transform = "";
-              const haMainView = document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")?.shadowRoot?.querySelector("ha-panel-lovelace")?.shadowRoot?.querySelector("hui-root")?.shadowRoot?.querySelector("#view");
-              if (haMainView) {
-                haMainView.style.display = "none";
-                haMainView.offsetHeight;
-                haMainView.style.display = "";
-              }
-            });
-          }, 300);
-        }
-      });
-    }, { threshold: 0.1 });
-    this._refreshObserver.observe(this);
+    let checksCount = 0;
+    const maxChecks = 40;
+    const fixAlignmentLoop = () => {
+      const currentScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
+      const haMainView = document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")?.shadowRoot?.querySelector("ha-panel-lovelace")?.shadowRoot?.querySelector("hui-root")?.shadowRoot?.querySelector("#view");
+      if (currentScroll !== 0 || haMainView && haMainView.scrollTop !== 0) {
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        if (haMainView) haMainView.scrollTop = 0;
+        const cardElement = this.shadowRoot?.querySelector(".card") || this;
+        cardElement.style.transform = "translate3d(0, -0.5px, 0)";
+        requestAnimationFrame(() => {
+          cardElement.style.transform = "";
+          if (haMainView) {
+            const originalDisplay = haMainView.style.display;
+            haMainView.style.display = "none";
+            haMainView.offsetHeight;
+            haMainView.style.display = originalDisplay;
+          }
+        });
+      }
+      checksCount++;
+      if (checksCount < maxChecks) {
+        setTimeout(fixAlignmentLoop, 50);
+      }
+    };
+    setTimeout(fixAlignmentLoop, 100);
   }
   _visualStyleToggleRules() {
     return this._cardStyleController.visualStyleToggleRules();
@@ -15980,9 +15988,6 @@ const FrigateViewCard = class extends HTMLElement {
       if (this.isConnected) return;
       this._teardownDisconnected();
     }, 2500);
-    if (this._refreshObserver) {
-      this._refreshObserver.disconnect();
-    }
   }
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);

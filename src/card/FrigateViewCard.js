@@ -922,45 +922,55 @@ export class FrigateViewCard extends HTMLElement {
 
     /* ================================== */
 
-   // 1. Detect when a pull-to-refresh finishes by watching visibility states
-  this._refreshObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      // When the card becomes fully visible again after the refresh finishes
-      if (entry.isIntersecting) {
-        
-        // 2. Give the native iOS spinner 300ms to collapse and the header to realign
-        setTimeout(() => {
-          const cardElement = this.shadowRoot?.querySelector('.card') || this;
-          
-          // 3. Force-recalculate the layout bounds of the card
-          // This breaks the WKWebView rendering freeze and snaps the card to the header
-          cardElement.style.transform = 'translate3d(0, -0.5px, 0)';
-          
-          // Request an animation frame to force a layout paint pass
-          requestAnimationFrame(() => {
-            cardElement.style.transform = '';
-            
-            // 4. Force a secondary reflow on Home Assistant's view container if needed
-            const haMainView = document.querySelector('home-assistant')
-              ?.shadowRoot?.querySelector('home-assistant-main')
-              ?.shadowRoot?.querySelector('ha-panel-lovelace')
-              ?.shadowRoot?.querySelector('hui-root')
-              ?.shadowRoot?.querySelector('#view');
-              
-            if (haMainView) {
-              haMainView.style.display = 'none';
-              haMainView.offsetHeight; // Forces browser to recalculate element geometries
-              haMainView.style.display = '';
-            }
-          });
-        }, 300); // 300ms sweet spot to execute right after iOS spinner vanishes
-      }
-    });
-  }, { threshold: 0.1 });
+  // Run a continuous alignment loop to catch the exact moment the iOS spinner vanishes
+  let checksCount = 0;
+  const maxChecks = 40; // 40 checks at 50ms intervals = 2 seconds of monitoring post-load
+  
+  const fixAlignmentLoop = () => {
+    // Check if the global window coordinates are stuck in an offset position
+    const currentScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
+    
+    // Find Home Assistant's primary scrolling dashboard wrapper
+    const haMainView = document.querySelector('home-assistant')
+      ?.shadowRoot?.querySelector('home-assistant-main')
+      ?.shadowRoot?.querySelector('ha-panel-lovelace')
+      ?.shadowRoot?.querySelector('hui-root')
+      ?.shadowRoot?.querySelector('#view');
 
-  // Attach the observer to the card itself
-  this._refreshObserver.observe(this);
+    // IF stuck down (scroll position is altered or negative due to iOS webview shifts)
+    if (currentScroll !== 0 || (haMainView && haMainView.scrollTop !== 0)) {
+      // 1. Force the window variables back to zero
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      if (haMainView) haMainView.scrollTop = 0;
 
+      // 2. Clear cached WebKit geometries on the card element itself
+      const cardElement = this.shadowRoot?.querySelector('.card') || this;
+      cardElement.style.transform = 'translate3d(0, -0.5px, 0)';
+      
+      // 3. Force a layout paint-pass to snap the card up to the newly aligned header
+      requestAnimationFrame(() => {
+        cardElement.style.transform = '';
+        if (haMainView) {
+          // A micro-toggle breaks the rendering freeze caused by the native iOS spinner layout shift
+          const originalDisplay = haMainView.style.display;
+          haMainView.style.display = 'none';
+          haMainView.offsetHeight; // Forces browser to recalculate element geometries
+          haMainView.style.display = originalDisplay;
+        }
+      });
+    }
+
+    // Keep checking until the 2-second post-load window closes
+    checksCount++;
+    if (checksCount < maxChecks) {
+      setTimeout(fixAlignmentLoop, 50);
+    }
+  };
+
+  // Start checking immediately when the card mounts to the dashboard
+  setTimeout(fixAlignmentLoop, 100);
 
     /* ================================== */
     
@@ -1346,11 +1356,7 @@ export class FrigateViewCard extends HTMLElement {
       if (this.isConnected) return;
       this._teardownDisconnected();
     }, 2500);
-/* ============================ */
-   if (this._refreshObserver) {
-    this._refreshObserver.disconnect();
-   }
-/* ============================ */
+
   }
 
   _teardownDisconnected() {
