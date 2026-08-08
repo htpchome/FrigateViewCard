@@ -918,46 +918,7 @@ export class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("connected");
       }
     }
-    this._startEditorDialogCloseObserver();
-
-    /* ================================== */
-
-      // Wait exactly 2 seconds after the card mounts to the page
-  setTimeout(() => {
-    // 1. Force all core browser document scrolling offsets up
-    window.scrollTo(0, 0);
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-
-    // 2. Locate Home Assistant's primary structural panel wrappers
-    const lovelaceRoot = document.querySelector('home-assistant')
-      ?.shadowRoot?.querySelector('home-assistant-main')
-      ?.shadowRoot?.querySelector('ha-panel-lovelace')
-      ?.shadowRoot?.querySelector('hui-root');
-
-    if (lovelaceRoot) {
-      // Target the viewport container pane that holds your card
-      const viewPane = lovelaceRoot.shadowRoot?.querySelector('#view');
-      
-      if (viewPane) {
-        // Zero out the inner container scroll tracking variable
-        viewPane.scrollTop = 0;
-
-        // 3. PHYSICALLY translate the entire layout matrix up by 56px to snap the card home
-        viewPane.style.transform = 'translateY(-56px)';
-        
-        // Force the browser layout engine to paint and calculate the new position
-        viewPane.offsetHeight; 
-
-        // 4. Instantly snap it back to normal layout boundaries
-        // This micro-shove breaks the iOS WebKit render lock and leaves the card aligned
-        viewPane.style.transform = '';
-      }
-    }
-  }, 2000); // 2000ms delay window
-
-    /* ================================== */
-    
+    this._startEditorDialogCloseObserver();   
   }
 
   _visualStyleToggleRules() {
