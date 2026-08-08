@@ -22,10 +22,18 @@ export function buildReviewListItemModel(review, deps) {
     .trim();
   const reviewed = !!review?.has_been_reviewed;
   const favEv = firstDet ? findEventById(firstDet) : null;
+  const mediaEvent = sourceEvent || favEv;
+  const mediaEventId = String(mediaEvent?.id || firstDet || "");
   const favBtn = firstDet
     ? favEv?.retain_indefinitely
       ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>`
       : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>`
+    : "";
+  const dlClip = mediaEvent?.has_clip
+    ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
+    : "";
+  const dlSnap = mediaEvent?.has_snapshot
+    ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>`
     : "";
 
   return {
@@ -36,6 +44,8 @@ export function buildReviewListItemModel(review, deps) {
     cameraLabel,
     reviewed,
     favBtn,
+    dlClip,
+    dlSnap,
     thumbSrc: firstDet ? media(firstDet, "thumbnail.jpg") : "",
     timeLabel: dateTimeLabel(review?.start_time),
   };
@@ -63,6 +73,6 @@ export function buildReviewListItemHtml(model, deps) {
             </span>
           </div>
         </div>
-        ${model.favBtn}
+        <div class="eact">${model.favBtn}${model.dlClip}${model.dlSnap}</div>
       </div>`;
 }

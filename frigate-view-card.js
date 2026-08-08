@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1359";
+const VERSION = "1.0.1360";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -514,6 +514,13 @@ const MOBILE_VIEW_PAGE_STYLES = `
     flex-shrink: 0;
   }
 
+  @media (max-width: 720px) {
+    .card.mobile-view-active .browse--mobile-view .list-item .eact {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+
   .card.mobile-view-active .browse--mobile-view .desc {
     margin-top: 4px;
     padding: var(--mv-list-desc-padding);
@@ -942,6 +949,7 @@ const STYLES = `
   @media (max-width: 720px){
     .preview-meta{grid-template-columns:minmax(0,1fr);gap:2px;}
     .preview-meta-status{justify-self:start;}
+    .list-item .eact{flex-direction:column;align-items:stretch;}
   }
   @supports (-moz-appearance:none) {
     .live-grid{transform:translateZ(0);backface-visibility:hidden;}
@@ -11463,7 +11471,11 @@ function buildReviewListItemModel(review, deps) {
   const cameraLabel = String(review?.camera || sourceEvent?.camera || "").replace(/_/g, " ").trim();
   const reviewed = !!review?.has_been_reviewed;
   const favEv = firstDet ? findEventById(firstDet) : null;
+  const mediaEvent = sourceEvent || favEv;
+  const mediaEventId = String(mediaEvent?.id || firstDet || "");
   const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>` : "";
+  const dlClip = mediaEvent?.has_clip ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
+  const dlSnap = mediaEvent?.has_snapshot ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>` : "";
   return {
     reviewId: review?.id || "",
     firstDet,
@@ -11472,6 +11484,8 @@ function buildReviewListItemModel(review, deps) {
     cameraLabel,
     reviewed,
     favBtn,
+    dlClip,
+    dlSnap,
     thumbSrc: firstDet ? media(firstDet, "thumbnail.jpg") : "",
     timeLabel: dateTimeLabel(review?.start_time)
   };
@@ -11496,7 +11510,7 @@ function buildReviewListItemHtml(model, deps) {
             </span>
           </div>
         </div>
-        ${model.favBtn}
+        <div class="eact">${model.favBtn}${model.dlClip}${model.dlSnap}</div>
       </div>`;
 }
 
