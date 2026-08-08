@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1354";
+const VERSION = "1.0.1355";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15526,8 +15526,16 @@ const FrigateViewCard = class extends HTMLElement {
       this._onFullscreenChange
     );
     this._onViewportRotate = () => {
-      this._syncBrowseHeadModeClass();
-      this._applyCardStyle();
+      const vv = window.visualViewport;
+      const viewportWidth = Math.round(vv?.width || window.innerWidth || 0);
+      const viewportHeight = Math.round(vv?.height || window.innerHeight || 0);
+      const viewportSizeChanged = viewportWidth !== this._lastViewportWidth || viewportHeight !== this._lastViewportHeight;
+      if (viewportSizeChanged) {
+        this._lastViewportWidth = viewportWidth;
+        this._lastViewportHeight = viewportHeight;
+        this._syncBrowseHeadModeClass();
+        this._applyCardStyle();
+      }
       this._scheduleRotateOverlayUpdate();
     };
     window.addEventListener("resize", this._onViewportRotate, {

@@ -757,8 +757,20 @@ export class FrigateViewCard extends HTMLElement {
     );
 
     this._onViewportRotate = () => {
-      this._syncBrowseHeadModeClass();
-      this._applyCardStyle();
+      const vv = window.visualViewport;
+      const viewportWidth = Math.round(vv?.width || window.innerWidth || 0);
+      const viewportHeight = Math.round(vv?.height || window.innerHeight || 0);
+      const viewportSizeChanged =
+        viewportWidth !== this._lastViewportWidth ||
+        viewportHeight !== this._lastViewportHeight;
+
+      if (viewportSizeChanged) {
+        this._lastViewportWidth = viewportWidth;
+        this._lastViewportHeight = viewportHeight;
+        this._syncBrowseHeadModeClass();
+        this._applyCardStyle();
+      }
+
       this._scheduleRotateOverlayUpdate();
     };
     window.addEventListener("resize", this._onViewportRotate, {
@@ -918,7 +930,7 @@ export class FrigateViewCard extends HTMLElement {
         this._scheduleResumeLive("connected");
       }
     }
-    this._startEditorDialogCloseObserver();   
+    this._startEditorDialogCloseObserver();
   }
 
   _visualStyleToggleRules() {
