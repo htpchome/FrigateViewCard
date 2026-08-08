@@ -1349,6 +1349,7 @@ export class FrigateViewCard extends HTMLElement {
 /* ============================ */
    if (this._refreshObserver) {
     this._refreshObserver.disconnect();
+   }
 /* ============================ */
   }
 
