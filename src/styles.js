@@ -2,6 +2,8 @@ import { MOBILE_VIEW_PAGE_STYLES } from "./features/mobile-view/page.styles.js";
 
 export const STYLES = `
   :host {
+    height: 100% !important;
+    max-height: 100% !important;
     min-height: 0;
     overflow: hidden;
     position: relative;
