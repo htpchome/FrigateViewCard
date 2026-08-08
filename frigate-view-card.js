@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1346";
+const VERSION = "1.0.1348";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15674,31 +15674,21 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     this._startEditorDialogCloseObserver();
-    const huiRoot = document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")?.shadowRoot?.querySelector("ha-panel-lovelace")?.shadowRoot?.querySelector("hui-root");
-    if (huiRoot) {
-      const headerElement = huiRoot.shadowRoot?.querySelector(".header");
-      if (headerElement) {
-        this._headerPositionObserver = new MutationObserver(() => {
-          requestAnimationFrame(() => {
-            window.scrollTo(0, 0);
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-            const viewPane = huiRoot.shadowRoot?.querySelector("#view");
-            if (viewPane) {
-              viewPane.scrollTop = 0;
-              const currentDisplay = viewPane.style.display;
-              viewPane.style.display = "none";
-              viewPane.offsetHeight;
-              viewPane.style.display = currentDisplay;
-            }
-          });
-        });
-        this._headerPositionObserver.observe(headerElement, {
-          attributes: true,
-          attributeFilter: ["style", "class"]
-        });
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      const lovelaceRoot = document.querySelector("home-assistant")?.shadowRoot?.querySelector("home-assistant-main")?.shadowRoot?.querySelector("ha-panel-lovelace")?.shadowRoot?.querySelector("hui-root");
+      if (lovelaceRoot) {
+        const viewPane = lovelaceRoot.shadowRoot?.querySelector("#view");
+        if (viewPane) {
+          viewPane.scrollTop = 0;
+          viewPane.style.transform = "translateY(-56px)";
+          viewPane.offsetHeight;
+          viewPane.style.transform = "";
+        }
       }
-    }
+    }, 2e3);
   }
   _visualStyleToggleRules() {
     return this._cardStyleController.visualStyleToggleRules();
@@ -15985,9 +15975,6 @@ const FrigateViewCard = class extends HTMLElement {
       if (this.isConnected) return;
       this._teardownDisconnected();
     }, 2500);
-    if (this._headerPositionObserver) {
-      this._headerPositionObserver.disconnect();
-    }
   }
   _teardownDisconnected() {
     this._stopSlideshowRotation("disconnect", false);

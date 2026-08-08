@@ -922,46 +922,39 @@ export class FrigateViewCard extends HTMLElement {
 
     /* ================================== */
 
-  // 1. Drill out of the card's shadow boundary to find Home Assistant's header container
-  const huiRoot = document.querySelector('home-assistant')
-    ?.shadowRoot?.querySelector('home-assistant-main')
-    ?.shadowRoot?.querySelector('ha-panel-lovelace')
-    ?.shadowRoot?.querySelector('hui-root');
+      // Wait exactly 2 seconds after the card mounts to the page
+  setTimeout(() => {
+    // 1. Force all core browser document scrolling offsets up
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
 
-  if (huiRoot) {
-    const headerElement = huiRoot.shadowRoot?.querySelector('.header');
+    // 2. Locate Home Assistant's primary structural panel wrappers
+    const lovelaceRoot = document.querySelector('home-assistant')
+      ?.shadowRoot?.querySelector('home-assistant-main')
+      ?.shadowRoot?.querySelector('ha-panel-lovelace')
+      ?.shadowRoot?.querySelector('hui-root');
 
-    if (headerElement) {
-      // 2. Set up a mutation observer to watch the header element for style/class changes
-      // This triggers when the iOS refresh spinner collapses and the navbar shifts up
-      this._headerPositionObserver = new MutationObserver(() => {
-        // Run a sequence of frame updates to force WebKit to snap the card up to the header
-        requestAnimationFrame(() => {
-          // Adjust scroll offsets stuck in the window frame
-          window.scrollTo(0, 0);
-          document.documentElement.scrollTop = 0;
-          document.body.scrollTop = 0;
+    if (lovelaceRoot) {
+      // Target the viewport container pane that holds your card
+      const viewPane = lovelaceRoot.shadowRoot?.querySelector('#view');
+      
+      if (viewPane) {
+        // Zero out the inner container scroll tracking variable
+        viewPane.scrollTop = 0;
 
-          const viewPane = huiRoot.shadowRoot?.querySelector('#view');
-          if (viewPane) {
-            viewPane.scrollTop = 0;
-            
-            // Toggle the visibility of the parent container to clear layout height glitches
-            const currentDisplay = viewPane.style.display;
-            viewPane.style.display = 'none';
-            viewPane.offsetHeight; // Forces a browser layout recalculation
-            viewPane.style.display = currentDisplay;
-          }
-        });
-      });
+        // 3. PHYSICALLY translate the entire layout matrix up by 56px to snap the card home
+        viewPane.style.transform = 'translateY(-56px)';
+        
+        // Force the browser layout engine to paint and calculate the new position
+        viewPane.offsetHeight; 
 
-      // Begin monitoring the header element for any physical layout changes
-      this._headerPositionObserver.observe(headerElement, { 
-        attributes: true, 
-        attributeFilter: ['style', 'class'] 
-      });
+        // 4. Instantly snap it back to normal layout boundaries
+        // This micro-shove breaks the iOS WebKit render lock and leaves the card aligned
+        viewPane.style.transform = '';
+      }
     }
-  }
+  }, 2000); // 2000ms delay window
 
     /* ================================== */
     
@@ -1347,11 +1340,6 @@ export class FrigateViewCard extends HTMLElement {
       if (this.isConnected) return;
       this._teardownDisconnected();
     }, 2500);
-/* ========================== */
- if (this._headerPositionObserver) {
-    this._headerPositionObserver.disconnect();
-  }
-/* ========================== */
   }
 
   _teardownDisconnected() {
