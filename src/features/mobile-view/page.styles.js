@@ -392,13 +392,6 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     flex-shrink: 0;
   }
 
-  @media (max-width: 720px) {
-    .card.mobile-view-active .browse--mobile-view .list-item .eact {
-      flex-direction: column;
-      align-items: stretch;
-    }
-  }
-
   .card.mobile-view-active .browse--mobile-view .desc {
     margin-top: 4px;
     padding: var(--mv-list-desc-padding);

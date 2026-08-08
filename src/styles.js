@@ -421,7 +421,6 @@ export const STYLES = `
   @media (max-width: 720px){
     .preview-meta{grid-template-columns:minmax(0,1fr);gap:2px;}
     .preview-meta-status{justify-self:start;}
-    .list-item .eact{flex-direction:column;align-items:stretch;}
   }
   @supports (-moz-appearance:none) {
     .live-grid{transform:translateZ(0);backface-visibility:hidden;}

@@ -58,16 +58,17 @@ test("alert review rows render clip and snapshot download buttons from the sourc
   assert.equal(html.includes('class="eact"'), true);
 });
 
-test("narrow list styles stack action buttons vertically", () => {
+test("list action buttons remain horizontal in shared and mobile styles", () => {
   assert.equal(
     STYLES.includes(
       ".list-item .eact{flex-direction:column;align-items:stretch;}",
     ),
-    true,
+    false,
   );
   assert.equal(
     MOBILE_VIEW_PAGE_STYLES.includes(".list-item .eact {") &&
       MOBILE_VIEW_PAGE_STYLES.includes("flex-direction: column;"),
-    true,
+    false,
   );
+  assert.equal(MOBILE_VIEW_PAGE_STYLES.includes("flex-direction: row;"), true);
 });
