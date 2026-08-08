@@ -922,55 +922,47 @@ export class FrigateViewCard extends HTMLElement {
 
     /* ================================== */
 
-  // Run a continuous alignment loop to catch the exact moment the iOS spinner vanishes
-  let checksCount = 0;
-  const maxChecks = 40; // 40 checks at 50ms intervals = 2 seconds of monitoring post-load
-  
-  const fixAlignmentLoop = () => {
-    // Check if the global window coordinates are stuck in an offset position
-    const currentScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
-    
- const haMainView = document.querySelector('home-assistant')
-  ?.shadowRoot?.querySelector('home-assistant-main')
-  ?.shadowRoot?.querySelector('ha-panel-lovelace')
-  ?.shadowRoot?.querySelector('hui-root');
+  // Create an observer that listens for ANY resize/layout shift on the main container
+  // This fires when the iOS spinner collapses and the Home Assistant container shifts back up
+  this._layoutShiftObserver = new ResizeObserver(() => {
+    // A 10ms micro-delay ensures we execute immediately after WebKit finishes moving the header navbar
+    setTimeout(() => {
+      const cardElement = this.shadowRoot?.querySelector('.card') || this;
+      
+      // Step 1: Force a layout-depth update on the card itself to recalculate its bounding rectangle
+      cardElement.style.marginTop = '-0.1px';
+      
+      requestAnimationFrame(() => {
+        // Step 2: Instantly trigger a hard layout-paint flow on Home Assistant's top viewport wrapper
+        // This forces WebKit to close the alignment gap between the header and your card
+        const haMainView = document.querySelector('home-assistant')
+          ?.shadowRoot?.querySelector('home-assistant-main')
+          ?.shadowRoot?.querySelector('ha-panel-lovelace')
+          ?.shadowRoot?.querySelector('hui-root')
+          ?.shadowRoot?.querySelector('#view');
 
-if (haMainView) {
-  // 1. Force the scroll viewport straight back to zero
-  const viewContainer = haMainView.shadowRoot?.querySelector('#view');
-  if (viewContainer) viewContainer.scrollTop = 0;
+        if (haMainView) {
+          // Temporarily alter the structural positioning context to wake up the iOS rendering layers
+          const originalPosition = haMainView.style.position;
+          haMainView.style.position = 'relative';
+          
+          // Trigger a document reflow check
+          haMainView.offsetHeight; 
+          
+          // Revert back so normal dashboard rendering continues
+          haMainView.style.position = originalPosition;
+        }
 
-  // 2. Clear rendering bugs on both standard header layouts and tab group wrappers
-  const headerWrapper = haMainView.shadowRoot?.querySelector('.header');
-  const tabGroup = haMainView.shadowRoot?.querySelector('ha-tab-group') || haMainView.shadowRoot?.querySelector('ha-tabs');
-
-  // Trigger layer redraws across both potential targets
-  [headerWrapper, tabGroup].forEach(el => {
-    if (el) {
-      el.style.transform = 'translate3d(0, 0, 0)';
-      // A micro-timeout clears the sticky positions cached during the iOS refresh action
-      setTimeout(() => { el.style.transform = ''; }, 20);
-    }
+        // Clean up the card element's dummy layout shift style modification
+        cardElement.style.marginTop = '';
+      });
+    }, 150); // Catches the frame right as the spinner completely vanishes
   });
 
-  // 3. Force the parent view layout container to recalculate layout dimensions
-  if (viewContainer) {
-    const originalDisplay = viewContainer.style.display;
-    viewContainer.style.display = 'none';
-    viewContainer.offsetHeight; // Forces browser paint pass
-    viewContainer.style.display = originalDisplay;
+  // Attach the observer to the main window layout context
+  if (document.body) {
+    this._layoutShiftObserver.observe(document.body);
   }
-}
-
-    // Keep checking until the 2-second post-load window closes
-    checksCount++;
-    if (checksCount < maxChecks) {
-      setTimeout(fixAlignmentLoop, 50);
-    }
-  };
-
-  // Start checking immediately when the card mounts to the dashboard
-  setTimeout(fixAlignmentLoop, 100);
 
     /* ================================== */
     
@@ -1356,7 +1348,11 @@ if (haMainView) {
       if (this.isConnected) return;
       this._teardownDisconnected();
     }, 2500);
-
+/* ========================== */
+  if (this._layoutShiftObserver) {
+    this._layoutShiftObserver.disconnect();
+  }
+/* ========================== */
   }
 
   _teardownDisconnected() {
