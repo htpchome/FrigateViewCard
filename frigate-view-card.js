@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1351";
+const VERSION = "1.0.1352";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -494,8 +494,8 @@ const MOBILE_VIEW_PAGE_STYLES = `
 // src/styles.js
 const STYLES = `
   :host {
-    height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
-    max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
+    height: var(--card-host-height, 100%) !important;
+    max-height: var(--card-host-height, 100%) !important;
     min-height: 0;
     overflow: hidden;
     position: relative;

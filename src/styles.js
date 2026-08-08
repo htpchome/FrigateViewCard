@@ -2,8 +2,8 @@ import { MOBILE_VIEW_PAGE_STYLES } from "./features/mobile-view/page.styles.js";
 
 export const STYLES = `
   :host {
-    height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
-    max-height: var(--card-host-height, calc(100dvh - var(--header-height, 56px))) !important;
+    height: var(--card-host-height, 100%) !important;
+    max-height: var(--card-host-height, 100%) !important;
     min-height: 0;
     overflow: hidden;
     position: relative;
