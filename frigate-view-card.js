@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1358";
+const VERSION = "1.0.1359";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -17664,20 +17664,46 @@ const FrigateViewCard = class extends HTMLElement {
       this._rotateStyledVideo = video;
       this._rotateStyledVideoCssText = video.getAttribute("style") || "";
     }
+    const card = this._$("#card");
+    const forceMobileViewViewportCover = card?.classList?.contains("mobile-view-active") && (card.classList.contains("mobile-rotate-live") || card.classList.contains("mobile-rotate-live-exit"));
     const vv = window.visualViewport;
     const vw = Math.max(1, Math.round(vv?.width || window.innerWidth || 0));
     const vh = Math.max(1, Math.round(vv?.height || window.innerHeight || 0));
     const ox = Math.round(vv?.offsetLeft || 0);
     const oy = Math.round(vv?.offsetTop || 0);
     video.style.setProperty("position", "fixed", "important");
-    video.style.setProperty("top", `${oy}px`, "important");
-    video.style.setProperty("left", `${ox}px`, "important");
-    video.style.setProperty("width", `${vw}px`, "important");
-    video.style.setProperty("height", `${vh}px`, "important");
+    video.style.setProperty(
+      "top",
+      forceMobileViewViewportCover ? "0px" : `${oy}px`,
+      "important"
+    );
+    video.style.setProperty(
+      "left",
+      forceMobileViewViewportCover ? "0px" : `${ox}px`,
+      "important"
+    );
+    video.style.setProperty(
+      "width",
+      forceMobileViewViewportCover ? "100vw" : `${vw}px`,
+      "important"
+    );
+    video.style.setProperty(
+      "height",
+      forceMobileViewViewportCover ? "100dvh" : `${vh}px`,
+      "important"
+    );
     video.style.setProperty("max-width", "none", "important");
     video.style.setProperty("max-height", "none", "important");
-    video.style.setProperty("z-index", "1402", "important");
-    video.style.setProperty("object-fit", "contain", "important");
+    video.style.setProperty(
+      "z-index",
+      forceMobileViewViewportCover ? "2147483000" : "1402",
+      "important"
+    );
+    video.style.setProperty(
+      "object-fit",
+      forceMobileViewViewportCover ? "cover" : "contain",
+      "important"
+    );
     video.style.setProperty("background", "var(--c-bg-deep)", "important");
     video.style.setProperty("transform", "none", "important");
     video.style.setProperty("margin", "0", "important");
