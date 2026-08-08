@@ -930,37 +930,37 @@ export class FrigateViewCard extends HTMLElement {
     // Check if the global window coordinates are stuck in an offset position
     const currentScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
     
-    // Find Home Assistant's primary scrolling dashboard wrapper
-    const haMainView = document.querySelector('home-assistant')
-      ?.shadowRoot?.querySelector('home-assistant-main')
-      ?.shadowRoot?.querySelector('ha-panel-lovelace')
-      ?.shadowRoot?.querySelector('hui-root')
-      ?.shadowRoot?.querySelector('#view');
+ const haMainView = document.querySelector('home-assistant')
+  ?.shadowRoot?.querySelector('home-assistant-main')
+  ?.shadowRoot?.querySelector('ha-panel-lovelace')
+  ?.shadowRoot?.querySelector('hui-root');
 
-    // IF stuck down (scroll position is altered or negative due to iOS webview shifts)
-    if (currentScroll !== 0 || (haMainView && haMainView.scrollTop !== 0)) {
-      // 1. Force the window variables back to zero
-      window.scrollTo(0, 0);
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-      if (haMainView) haMainView.scrollTop = 0;
+if (haMainView) {
+  // 1. Force the scroll viewport straight back to zero
+  const viewContainer = haMainView.shadowRoot?.querySelector('#view');
+  if (viewContainer) viewContainer.scrollTop = 0;
 
-      // 2. Clear cached WebKit geometries on the card element itself
-      const cardElement = this.shadowRoot?.querySelector('.card') || this;
-      cardElement.style.transform = 'translate3d(0, -0.5px, 0)';
-      
-      // 3. Force a layout paint-pass to snap the card up to the newly aligned header
-      requestAnimationFrame(() => {
-        cardElement.style.transform = '';
-        if (haMainView) {
-          // A micro-toggle breaks the rendering freeze caused by the native iOS spinner layout shift
-          const originalDisplay = haMainView.style.display;
-          haMainView.style.display = 'none';
-          haMainView.offsetHeight; // Forces browser to recalculate element geometries
-          haMainView.style.display = originalDisplay;
-        }
-      });
+  // 2. Clear rendering bugs on both standard header layouts and tab group wrappers
+  const headerWrapper = haMainView.shadowRoot?.querySelector('.header');
+  const tabGroup = haMainView.shadowRoot?.querySelector('ha-tab-group') || haMainView.shadowRoot?.querySelector('ha-tabs');
+
+  // Trigger layer redraws across both potential targets
+  [headerWrapper, tabGroup].forEach(el => {
+    if (el) {
+      el.style.transform = 'translate3d(0, 0, 0)';
+      // A micro-timeout clears the sticky positions cached during the iOS refresh action
+      setTimeout(() => { el.style.transform = ''; }, 20);
     }
+  });
+
+  // 3. Force the parent view layout container to recalculate layout dimensions
+  if (viewContainer) {
+    const originalDisplay = viewContainer.style.display;
+    viewContainer.style.display = 'none';
+    viewContainer.offsetHeight; // Forces browser paint pass
+    viewContainer.style.display = originalDisplay;
+  }
+}
 
     // Keep checking until the 2-second post-load window closes
     checksCount++;
