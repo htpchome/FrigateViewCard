@@ -3467,9 +3467,10 @@ function buildRightColumnShellMarkup({
               </div>
             </div>
             <div class="footer">
-            <div></div>
-            <div class="more" id="older-hint" hidden>scroll for older\u2026</div>
-            <div></div>
+              <div></div>
+              <div class="more" id="older-hint" hidden>scroll for older\u2026</div>
+              <div></div>
+            </div>
           </div>`;
 }
 function buildControlsSectionMarkup({
