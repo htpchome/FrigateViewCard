@@ -218,6 +218,19 @@ export class GridMediaController {
         if (!stream) return false;
         cell.appendChild(stream);
         this._host._attachVideoFit(stream);
+        gridState.cleanup.push(() => {
+          try {
+            const video = this._host._findVideoDeep?.(stream);
+            if (video) {
+              video.pause?.();
+              video.removeAttribute?.("src");
+              video.load?.();
+            }
+          } catch (_) {}
+          try {
+            stream.remove();
+          } catch (_) {}
+        });
       }
       return true;
     }

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1369";
+const VERSION = "1.0.1370";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7838,6 +7838,21 @@ const GridMediaController = class {
         if (!stream) return false;
         cell.appendChild(stream);
         this._host._attachVideoFit(stream);
+        gridState.cleanup.push(() => {
+          try {
+            const video = this._host._findVideoDeep?.(stream);
+            if (video) {
+              video.pause?.();
+              video.removeAttribute?.("src");
+              video.load?.();
+            }
+          } catch (_) {
+          }
+          try {
+            stream.remove();
+          } catch (_) {
+          }
+        });
       }
       return true;
     }
@@ -12368,9 +12383,8 @@ const PreviewPageController = class {
     const hassReady = !!this._host._hass?.states;
     const nextSignature = cameras.map((camera, index) => {
       const entity = camera?.entity || "";
-      const severity = this.previewCellSeverity(entity);
       const useLive = this.previewShouldUseLive(entity);
-      return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
+      return `${index}:${entity}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
     }).concat([
       `titles:${showTitleBars ? "1" : "0"}`,
       `hass:${hassReady ? "1" : "0"}`
@@ -12421,12 +12435,22 @@ const PreviewPageController = class {
     this._host._syncSnapshotRefreshTimer?.();
   }
   updatePreviewMeta() {
-    if (!this.previewShowTitleBarsEnabled()) return;
+    const showTitleBars = this.previewShowTitleBarsEnabled();
     this._host.shadowRoot.querySelectorAll("[data-preview-camidx]").forEach((cell) => {
       const idx = Number(cell.dataset.previewCamidx);
       const camera = this._host._config?.cameras?.[idx];
       const entity = camera?.entity || "";
       if (!entity) return;
+      const severity = this.previewCellSeverity(entity);
+      const mediaHost = cell.querySelector(".preview-media-host");
+      if (mediaHost) {
+        mediaHost.classList.remove("grid-alert", "grid-detection");
+        if (severity === "alert") mediaHost.classList.add("grid-alert");
+        else if (severity === "detection") {
+          mediaHost.classList.add("grid-detection");
+        }
+      }
+      if (!showTitleBars) return;
       const online = this._host._hass?.states?.[entity]?.state !== "unavailable";
       const useLive = this.previewShouldUseLive(entity);
       const status = cell.querySelector(".preview-meta-status");

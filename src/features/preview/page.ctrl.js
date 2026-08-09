@@ -207,9 +207,8 @@ export class PreviewPageController {
     const nextSignature = cameras
       .map((camera, index) => {
         const entity = camera?.entity || "";
-        const severity = this.previewCellSeverity(entity);
         const useLive = this.previewShouldUseLive(entity);
-        return `${index}:${entity}:${severity || "none"}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
+        return `${index}:${entity}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
       })
       .concat([
         `titles:${showTitleBars ? "1" : "0"}`,
@@ -273,7 +272,7 @@ export class PreviewPageController {
   }
 
   updatePreviewMeta() {
-    if (!this.previewShowTitleBarsEnabled()) return;
+    const showTitleBars = this.previewShowTitleBarsEnabled();
     this._host.shadowRoot
       .querySelectorAll("[data-preview-camidx]")
       .forEach((cell) => {
@@ -281,6 +280,17 @@ export class PreviewPageController {
         const camera = this._host._config?.cameras?.[idx];
         const entity = camera?.entity || "";
         if (!entity) return;
+        const severity = this.previewCellSeverity(entity);
+        const mediaHost = cell.querySelector(".preview-media-host");
+        if (mediaHost) {
+          mediaHost.classList.remove("grid-alert", "grid-detection");
+          if (severity === "alert") mediaHost.classList.add("grid-alert");
+          else if (severity === "detection") {
+            mediaHost.classList.add("grid-detection");
+          }
+        }
+
+        if (!showTitleBars) return;
         const online =
           this._host._hass?.states?.[entity]?.state !== "unavailable";
         const useLive = this.previewShouldUseLive(entity);

@@ -256,3 +256,61 @@ test("exitPreviewPageToCamera switches camera for non-active selection", () => {
     ["switchCamera", 1, { source: "preview-camera-select" }],
   ]);
 });
+
+test("renderPreviewPage does not remount media on severity-only updates", () => {
+  const { controller, host } = createHost({
+    previewEnabled: true,
+    pageId: "preview",
+  });
+  host._hass = {
+    states: {
+      "camera.front_door": { state: "recording", attributes: {} },
+      "camera.driveway": { state: "recording", attributes: {} },
+    },
+  };
+
+  let severity = "alert";
+  host._previewAlertController.previewCellSeverity = () => severity;
+
+  const shell = {
+    firstElementChild: {
+      classList: {
+        contains: (value) => value === "preview-grid",
+      },
+    },
+    innerHTML: "",
+  };
+
+  host._$ = (selector) => {
+    if (selector === "#preview-shell-title") return { textContent: "" };
+    if (selector === "#preview-shell-subtitle") return { textContent: "" };
+    return null;
+  };
+  host._subtitleText = () => "Frigate";
+
+  controller.ensurePreviewLayoutShell = () => shell;
+  controller.applyPreviewShellVisibility = () => {};
+  host._syncSnapshotRefreshTimer = () => {};
+
+  let updateCalls = 0;
+  let mountCalls = 0;
+  controller.updatePreviewMeta = () => {
+    updateCalls += 1;
+  };
+  controller.mountPreviewMedia = () => {
+    mountCalls += 1;
+  };
+
+  host._previewLastRenderSignature =
+    "0:camera.front_door:snap|1:camera.driveway:snap|titles:1|hass:1";
+
+  severity = "detection";
+  controller.renderPreviewPage();
+
+  assert.equal(updateCalls, 1);
+  assert.equal(mountCalls, 0);
+  assert.equal(
+    host._previewLastRenderSignature,
+    "0:camera.front_door:snap|1:camera.driveway:snap|titles:1|hass:1",
+  );
+});
