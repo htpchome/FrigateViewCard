@@ -394,7 +394,8 @@ export const STYLES = `
   .card.preview-active .preview-shell-footer{display:flex;flex:0 0 auto;align-items:center;min-height:30px;padding:4px 8px;position:sticky;bottom:0;z-index:4;}
   .preview-shell-footer .frigate-view{position:static;max-height:24px;}
   .preview-shell-footer .frigate-view svg{height:24px;}
-
+  .frigateView-accent svg{color:#ffcc33;fill:#ffcc33;}
+  .frigateView-accent {color:#ffcc33;fill:#ffcc33;}
   .preview-grid {display: grid;gap: 10px;width: 100%;max-width: 100%;
     grid-template-columns: repeat(auto-fit,minmax(max(min(100%, 420px), calc(33.333% - 10px)),1fr));
   }
