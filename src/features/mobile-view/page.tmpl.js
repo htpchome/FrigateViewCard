@@ -135,7 +135,6 @@ export function buildMobileViewMainLayoutShellMarkup({
                 ${liveEngineWrap}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                ${infoRow}
                 ${rightColumnShell}
               </div>
             </div>
