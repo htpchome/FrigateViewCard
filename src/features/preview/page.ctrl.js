@@ -86,7 +86,7 @@ export class PreviewPageController {
 
     return buildPreviewLayoutShellMarkup({
       previewShellHeader,
-      previewFooterIcon: ICONS.frigateview,
+      previewFooterIcon: ICONS.frigateView,
     });
   }
 

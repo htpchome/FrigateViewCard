@@ -169,7 +169,6 @@ export function buildRightColumnShellMarkup({
   );
   const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
   return `<div class="${rightColumnClassName}" id="col-right">
-            <div class="frigate-view">${icons.frigateView}</div>
             <div class="${tabsHolderClassName}"> 
               <div class="tabs shadow-small">            
                 ${tabsMarkup}              
@@ -196,7 +195,7 @@ export function buildRightColumnShellMarkup({
               </div>
             </div>
             <div class="footer">
-              <div></div>
+              <div><div class="frigate-view">${icons.frigateView}</div></div>
               <div class="more" id="older-hint" hidden>scroll for older…</div>
               <div></div>
             </div>

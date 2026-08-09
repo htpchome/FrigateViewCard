@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1367";
+const VERSION = "1.0.1368";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -638,7 +638,7 @@ const STYLES = `
   .browse-head-right {display:flex;justify-content center;align-items: center;flex: 0 0 auto;}
   .browse-head-middle {flex:1;text-align:center;font-weight:700;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
 
-  .footer {display: grid;grid-template-columns: minmax(100px, 1fr) minmax(auto, 3fr) minmax(100px, 1fr);}
+  .footer {display: grid;grid-template-columns: minmax(100px, 1fr) minmax(auto, 3fr) minmax(100px, 1fr);line-height:2;min-height:1.5rem;font-size:1.2rem;padding;4px}
   
   .prev-next{display:inline-flex;align-items:center;gap:4px;font-size: 0.85rem;padding-inline: 0.3em;padding-block: 0.3em;line-height: 1;  border-radius: 999em;
     background:var(--c-bg-main);min-width:80px;
@@ -921,8 +921,6 @@ const STYLES = `
   .card.preview-active .preview-shell-footer{display:flex;flex:0 0 auto;align-items:center;min-height:30px;padding:4px 8px;position:sticky;bottom:0;z-index:4;}
   .preview-shell-footer .frigate-view{position:static;max-height:24px;}
   .preview-shell-footer .frigate-view svg{height:24px;}
-  .frigateView-accent svg{color:#ffcc33;fill:#ffcc33;}
-  .frigateView-accent {color:#ffcc33;fill:#ffcc33;}
   .preview-grid {display: grid;gap: 10px;width: 100%;max-width: 100%;
     grid-template-columns: repeat(auto-fit,minmax(max(min(100%, 420px), calc(33.333% - 10px)),1fr));
   }
@@ -1064,9 +1062,10 @@ const STYLES = `
   .controls-readout-line{padding:1px 0;}
   .controls-readout-empty{color:var(--c-text3);font-style:italic;font-family:var(--ha-font-family, Roboto, 'Helvetica Neue', sans-serif);}
 
-  .frigate-view{position:absolute;bottom:2px;left:6px;max-height:24px;pointer-events: none;
-      fill: #ff5733;stroke: #000000;stroke-width: 2px;}
+  .frigate-view{max-height:24px;pointer-events: none;}
   .frigate-view svg{height:24px;pointer-events: none;}
+  .frigateView-accent svg{color:#ff5733;fill:#ff5733;}
+  .frigateView-accent {color:#ff5733;fill:#ff5733;}
   
   .recording-scrub {display:flex;flex-direction:column;align-items:stretch;gap:6px;}
   .recording-scrub[hidden] {display:none;}
@@ -3440,7 +3439,6 @@ function buildRightColumnShellMarkup({
   );
   const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
   return `<div class="${rightColumnClassName}" id="col-right">
-            <div class="frigate-view">${icons.frigateView}</div>
             <div class="${tabsHolderClassName}"> 
               <div class="tabs shadow-small">            
                 ${tabsMarkup}              
@@ -3467,7 +3465,7 @@ function buildRightColumnShellMarkup({
               </div>
             </div>
             <div class="footer">
-              <div></div>
+              <div><div class="frigate-view">${icons.frigateView}</div></div>
               <div class="more" id="older-hint" hidden>scroll for older\u2026</div>
               <div></div>
             </div>
@@ -12263,7 +12261,7 @@ const PreviewPageController = class {
     });
     return buildPreviewLayoutShellMarkup({
       previewShellHeader,
-      previewFooterIcon: ICONS.frigateview
+      previewFooterIcon: ICONS.frigateView
     });
   }
   ensurePreviewLayoutShell() {
