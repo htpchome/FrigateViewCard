@@ -169,7 +169,7 @@ export function buildRightColumnShellMarkup({
   );
   const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
   return `<div class="${rightColumnClassName}" id="col-right">
-            <div class="frigate-view">${icons.frigateview}</div>
+            <div class="frigate-view">${icons.frigateView}</div>
             <div class="${tabsHolderClassName}"> 
               <div class="tabs shadow-small">            
                 ${tabsMarkup}              
