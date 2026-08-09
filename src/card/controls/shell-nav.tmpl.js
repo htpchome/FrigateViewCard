@@ -195,7 +195,10 @@ export function buildRightColumnShellMarkup({
                 <div class="empty">Loading…</div>
               </div>
             </div>
+            <div class="footer">
+            <div></div>
             <div class="more" id="older-hint" hidden>scroll for older…</div>
+            <div></div>
           </div>`;
 }
 
