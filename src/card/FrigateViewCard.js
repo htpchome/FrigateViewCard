@@ -90,7 +90,6 @@ import {
   resolvePageCapabilities,
   resolvePageInfoRowMarkup,
   resolvePageMainLayoutShellMarkup,
-  resolvePageRightColumnShellMarkup,
 } from "../features/navigation/page-shell-registry.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
 import {} from "../integrations/frigate/url.js";
@@ -164,7 +163,8 @@ import {
   buildMainLayoutShellMarkup,
   buildPageNavMarkup,
   buildPopupShellMarkup,
-  buildRightColumnShellMarkup,
+  buildBrowseMarkup,
+  buildFooterMarkup,
   buildTabsMarkup,
   buildToolsMarkup,
 } from "./controls/shell-nav.tmpl.js";
@@ -2946,24 +2946,14 @@ export class FrigateViewCard extends HTMLElement {
       icons: ICONS,
       streamMuted: this._streamMuted,
     });
-    const rightColumnShell = resolvePageRightColumnShellMarkup(shellProfile, {
-      host: this,
+    const tabsMarkup = this._buildTabsMarkup();
+    const toolsMarkup = this._getToolsMarkup();
+    const browseMarkup = buildBrowseMarkup({
       icons: ICONS,
-      tabsMarkup: this._buildTabsMarkup(),
-      toolsMarkup: this._getToolsMarkup(),
       layoutProfile,
-      buildDefaultRightColumnShellMarkup: ({
-        icons,
-        tabsMarkup,
-        toolsMarkup,
-        layoutProfile,
-      }) =>
-        buildRightColumnShellMarkup({
-          icons,
-          tabsMarkup,
-          toolsMarkup,
-          layoutProfile,
-        }),
+    });
+    const footerMarkup = buildFooterMarkup({
+      icons: ICONS,
     });
     const mainLayoutShell = resolvePageMainLayoutShellMarkup(shellProfile, {
       host: this,
@@ -2971,14 +2961,20 @@ export class FrigateViewCard extends HTMLElement {
       infoRow,
       pageNav,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile,
       buildDefaultMainLayoutShellMarkup: ({
         liveEngineWrap,
         infoRow,
         pageNav,
         camSwitcher,
-        rightColumnShell,
+        tabsMarkup,
+        toolsMarkup,
+        browseMarkup,
+        footerMarkup,
         layoutProfile,
       }) =>
         buildMainLayoutShellMarkup({
@@ -2986,7 +2982,10 @@ export class FrigateViewCard extends HTMLElement {
           infoRow,
           pageNav,
           camSwitcher,
-          rightColumnShell,
+          tabsMarkup,
+          toolsMarkup,
+          browseMarkup,
+          footerMarkup,
           layoutProfile,
         }),
     });

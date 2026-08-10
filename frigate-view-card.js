@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1378";
+const VERSION = "1.0.1379";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3243,7 +3243,10 @@ function buildMobileViewMainLayoutShellMarkup({
   infoRow,
   pageNav,
   camSwitcher,
-  rightColumnShell,
+  tabsMarkup,
+  toolsMarkup,
+  browseMarkup,
+  footerMarkup,
   layoutProfile = {}
 }) {
   const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"].filter(Boolean).join(" ");
@@ -3254,7 +3257,15 @@ function buildMobileViewMainLayoutShellMarkup({
                 ${liveEngineWrap}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                ${rightColumnShell}
+                <div class="col-right" id="col-right">
+                  <div class="tabs-holder"> 
+                    <div class="tabs shadow-small">            
+                      ${tabsMarkup}${toolsMarkup}
+                    </div>
+                  </div>
+                  ${browseMarkup}
+                  ${footerMarkup}
+                </div>
               </div>
             </div>
           </div>`;
@@ -3426,28 +3437,9 @@ function mergeClassNames(...tokens) {
     ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean))
   ].join(" ");
 }
-function buildRightColumnShellMarkup({
-  icons,
-  tabsMarkup,
-  toolsMarkup,
-  layoutProfile = {}
-}) {
-  const rightColumnClassName = mergeClassNames(
-    "col-right",
-    layoutProfile.rightColumnClass
-  );
-  const tabsHolderClassName = mergeClassNames(
-    "tabs-holder",
-    layoutProfile.tabsHolderClass
-  );
+function buildBrowseMarkup({ icons, layoutProfile = {} }) {
   const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
-  return `<div class="${rightColumnClassName}" id="col-right">
-            <div class="${tabsHolderClassName}"> 
-              <div class="tabs shadow-small">            
-                ${tabsMarkup}${toolsMarkup}
-              </div>
-            </div>
-            <div class="browse-head" id="browse-head" style="display:none">
+  return `<div class="browse-head" id="browse-head" style="display:none">
               <div class="browse-head-left">
                 <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${icons.left}Previous</button>
               </div>
@@ -3464,13 +3456,14 @@ function buildRightColumnShellMarkup({
               <div class="list" id="list">
                 <div class="empty">Loading\u2026</div>
               </div>
-            </div>
-            <div class="footer">
+            </div>`;
+}
+function buildFooterMarkup({ icons }) {
+  return `<div class="footer">
               <div><div class="frigate-view">${icons.frigateView}</div></div>
               <div class="more" id="older-hint" hidden>scroll for older\u2026</div>
               <div></div>
-            </div>
-          </div>`;
+            </div>`;
 }
 function buildControlsSectionMarkup({
   cameraName: cameraName2 = "Active Camera",
@@ -3565,13 +3558,24 @@ function buildMainLayoutShellMarkup({
   infoRow,
   pageNav,
   camSwitcher,
-  rightColumnShell,
+  tabsMarkup,
+  toolsMarkup,
+  browseMarkup,
+  footerMarkup,
   layoutProfile = {}
 }) {
   const layoutClassName = mergeClassNames("layout", layoutProfile.layoutClass);
   const leftColumnClassName = mergeClassNames(
     "col-left",
     layoutProfile.leftColumnClass
+  );
+  const rightColumnClassName = mergeClassNames(
+    "col-right",
+    layoutProfile.rightColumnClass
+  );
+  const tabsHolderClassName = mergeClassNames(
+    "tabs-holder",
+    layoutProfile.tabsHolderClass
   );
   const resizeHandleClassName = mergeClassNames(
     "resize-handle",
@@ -3586,8 +3590,15 @@ function buildMainLayoutShellMarkup({
             ${camSwitcher}
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
-          ${rightColumnShell}
-
+          <div class="${rightColumnClassName}" id="col-right">
+            <div class="${tabsHolderClassName}"> 
+              <div class="tabs shadow-small">            
+                ${tabsMarkup}${toolsMarkup}
+              </div>
+            </div>
+            ${browseMarkup}
+            ${footerMarkup}
+          </div>
         </div>`;
 }
 
@@ -3595,7 +3606,6 @@ function buildMainLayoutShellMarkup({
 function normalizeProfile(profile = {}) {
   if (!profile || typeof profile !== "object") return {};
   const infoRowBuilder = typeof profile.buildInfoRowMarkup === "function" ? profile.buildInfoRowMarkup : null;
-  const rightColumnShellBuilder = typeof profile.buildRightColumnShellMarkup === "function" ? profile.buildRightColumnShellMarkup : null;
   const mainLayoutShellBuilder = typeof profile.buildMainLayoutShellMarkup === "function" ? profile.buildMainLayoutShellMarkup : null;
   const capabilities = profile.capabilities && typeof profile.capabilities === "object" ? profile.capabilities : {};
   return {
@@ -3611,7 +3621,6 @@ function normalizeProfile(profile = {}) {
       tabsVariant: capabilities.tabsVariant === "none" || capabilities.tabsVariant === "new-tabs" ? capabilities.tabsVariant : "standard"
     },
     buildInfoRowMarkup: infoRowBuilder,
-    buildRightColumnShellMarkup: rightColumnShellBuilder,
     buildMainLayoutShellMarkup: mainLayoutShellBuilder
   };
 }
@@ -3637,37 +3646,16 @@ function resolvePageInfoRowMarkup(profile, { title, subtitle, version, host, bui
     host
   }) || fallback();
 }
-function resolvePageRightColumnShellMarkup(profile, {
-  host,
-  icons,
-  tabsMarkup,
-  layoutProfile,
-  buildDefaultRightColumnShellMarkup
-} = {}) {
-  const fallback = () => {
-    if (typeof buildDefaultRightColumnShellMarkup !== "function") return "";
-    return buildDefaultRightColumnShellMarkup({
-      icons,
-      tabsMarkup,
-      layoutProfile
-    });
-  };
-  const builder = profile && typeof profile.buildRightColumnShellMarkup === "function" ? profile.buildRightColumnShellMarkup : null;
-  if (!builder) return fallback();
-  return builder({
-    host,
-    icons,
-    tabsMarkup,
-    layoutProfile
-  }) || fallback();
-}
 function resolvePageMainLayoutShellMarkup(profile, {
   host,
   liveEngineWrap,
   infoRow,
   pageNav,
   camSwitcher,
-  rightColumnShell,
+  tabsMarkup,
+  toolsMarkup,
+  browseMarkup,
+  footerMarkup,
   layoutProfile,
   buildDefaultMainLayoutShellMarkup
 } = {}) {
@@ -3678,7 +3666,10 @@ function resolvePageMainLayoutShellMarkup(profile, {
       infoRow,
       pageNav,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile
     });
   };
@@ -3690,7 +3681,10 @@ function resolvePageMainLayoutShellMarkup(profile, {
     infoRow,
     pageNav,
     camSwitcher,
-    rightColumnShell,
+    tabsMarkup,
+    toolsMarkup,
+    browseMarkup,
+    footerMarkup,
     layoutProfile
   }) || fallback();
 }
@@ -3730,14 +3724,20 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       liveEngineWrap,
       infoRow,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile
     }) => buildMainLayoutShellMarkup({
       liveEngineWrap,
       infoRow,
       pageNav: "",
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile
     }),
     capabilities: {
@@ -3765,14 +3765,20 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       infoRow,
       pageNav,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile
     }) => buildMobileViewMainLayoutShellMarkup({
       liveEngineWrap,
       infoRow,
       pageNav,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile
     }),
     capabilities: {
@@ -3796,14 +3802,20 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       liveEngineWrap,
       infoRow,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile
     }) => buildMainLayoutShellMarkup({
       liveEngineWrap,
       infoRow,
       pageNav: "",
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile
     }),
     capabilities: {
@@ -17445,23 +17457,14 @@ const FrigateViewCard = class extends HTMLElement {
       icons: ICONS,
       streamMuted: this._streamMuted
     });
-    const rightColumnShell = resolvePageRightColumnShellMarkup(shellProfile, {
-      host: this,
+    const tabsMarkup = this._buildTabsMarkup();
+    const toolsMarkup = this._getToolsMarkup();
+    const browseMarkup = buildBrowseMarkup({
       icons: ICONS,
-      tabsMarkup: this._buildTabsMarkup(),
-      toolsMarkup: this._getToolsMarkup(),
-      layoutProfile,
-      buildDefaultRightColumnShellMarkup: ({
-        icons,
-        tabsMarkup,
-        toolsMarkup,
-        layoutProfile: layoutProfile2
-      }) => buildRightColumnShellMarkup({
-        icons,
-        tabsMarkup,
-        toolsMarkup,
-        layoutProfile: layoutProfile2
-      })
+      layoutProfile
+    });
+    const footerMarkup = buildFooterMarkup({
+      icons: ICONS
     });
     const mainLayoutShell = resolvePageMainLayoutShellMarkup(shellProfile, {
       host: this,
@@ -17469,21 +17472,30 @@ const FrigateViewCard = class extends HTMLElement {
       infoRow,
       pageNav,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile,
       buildDefaultMainLayoutShellMarkup: ({
         liveEngineWrap: liveEngineWrap2,
         infoRow: infoRow2,
         pageNav: pageNav2,
         camSwitcher: camSwitcher2,
-        rightColumnShell: rightColumnShell2,
+        tabsMarkup: tabsMarkup2,
+        toolsMarkup: toolsMarkup2,
+        browseMarkup: browseMarkup2,
+        footerMarkup: footerMarkup2,
         layoutProfile: layoutProfile2
       }) => buildMainLayoutShellMarkup({
         liveEngineWrap: liveEngineWrap2,
         infoRow: infoRow2,
         pageNav: pageNav2,
         camSwitcher: camSwitcher2,
-        rightColumnShell: rightColumnShell2,
+        tabsMarkup: tabsMarkup2,
+        toolsMarkup: toolsMarkup2,
+        browseMarkup: browseMarkup2,
+        footerMarkup: footerMarkup2,
         layoutProfile: layoutProfile2
       })
     });

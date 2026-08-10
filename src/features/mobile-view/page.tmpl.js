@@ -120,7 +120,10 @@ export function buildMobileViewMainLayoutShellMarkup({
   infoRow,
   pageNav,
   camSwitcher,
-  rightColumnShell,
+  tabsMarkup,
+  toolsMarkup,
+  browseMarkup,
+  footerMarkup,
   layoutProfile = {},
 }) {
   const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"]
@@ -134,7 +137,15 @@ export function buildMobileViewMainLayoutShellMarkup({
                 ${liveEngineWrap}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                ${rightColumnShell}
+                <div class="col-right" id="col-right">
+                  <div class="tabs-holder"> 
+                    <div class="tabs shadow-small">            
+                      ${tabsMarkup}${toolsMarkup}
+                    </div>
+                  </div>
+                  ${browseMarkup}
+                  ${footerMarkup}
+                </div>
               </div>
             </div>
           </div>`;

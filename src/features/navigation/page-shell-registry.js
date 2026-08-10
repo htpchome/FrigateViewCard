@@ -13,10 +13,6 @@ function normalizeProfile(profile = {}) {
     typeof profile.buildInfoRowMarkup === "function"
       ? profile.buildInfoRowMarkup
       : null;
-  const rightColumnShellBuilder =
-    typeof profile.buildRightColumnShellMarkup === "function"
-      ? profile.buildRightColumnShellMarkup
-      : null;
   const mainLayoutShellBuilder =
     typeof profile.buildMainLayoutShellMarkup === "function"
       ? profile.buildMainLayoutShellMarkup
@@ -42,7 +38,6 @@ function normalizeProfile(profile = {}) {
           : "standard",
     },
     buildInfoRowMarkup: infoRowBuilder,
-    buildRightColumnShellMarkup: rightColumnShellBuilder,
     buildMainLayoutShellMarkup: mainLayoutShellBuilder,
   };
 }
@@ -87,41 +82,6 @@ export function resolvePageInfoRowMarkup(
   );
 }
 
-export function resolvePageRightColumnShellMarkup(
-  profile,
-  {
-    host,
-    icons,
-    tabsMarkup,
-    layoutProfile,
-    buildDefaultRightColumnShellMarkup,
-  } = {},
-) {
-  const fallback = () => {
-    if (typeof buildDefaultRightColumnShellMarkup !== "function") return "";
-    return buildDefaultRightColumnShellMarkup({
-      icons,
-      tabsMarkup,
-      layoutProfile,
-    });
-  };
-
-  const builder =
-    profile && typeof profile.buildRightColumnShellMarkup === "function"
-      ? profile.buildRightColumnShellMarkup
-      : null;
-  if (!builder) return fallback();
-
-  return (
-    builder({
-      host,
-      icons,
-      tabsMarkup,
-      layoutProfile,
-    }) || fallback()
-  );
-}
-
 export function resolvePageMainLayoutShellMarkup(
   profile,
   {
@@ -130,7 +90,10 @@ export function resolvePageMainLayoutShellMarkup(
     infoRow,
     pageNav,
     camSwitcher,
-    rightColumnShell,
+    tabsMarkup,
+    toolsMarkup,
+    browseMarkup,
+    footerMarkup,
     layoutProfile,
     buildDefaultMainLayoutShellMarkup,
   } = {},
@@ -142,7 +105,10 @@ export function resolvePageMainLayoutShellMarkup(
       infoRow,
       pageNav,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile,
     });
   };
@@ -160,7 +126,10 @@ export function resolvePageMainLayoutShellMarkup(
       infoRow,
       pageNav,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile,
     }) || fallback()
   );
@@ -211,7 +180,10 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
       liveEngineWrap,
       infoRow,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile,
     }) =>
       buildMainLayoutShellMarkup({
@@ -219,7 +191,10 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         infoRow,
         pageNav: "",
         camSwitcher,
-        rightColumnShell,
+        tabsMarkup,
+        toolsMarkup,
+        browseMarkup,
+        footerMarkup,
         layoutProfile,
       }),
     capabilities: {
@@ -251,7 +226,10 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
       infoRow,
       pageNav,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile,
     }) =>
       buildMobileViewMainLayoutShellMarkup({
@@ -259,7 +237,10 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         infoRow,
         pageNav,
         camSwitcher,
-        rightColumnShell,
+        tabsMarkup,
+        toolsMarkup,
+        browseMarkup,
+        footerMarkup,
         layoutProfile,
       }),
     capabilities: {
@@ -288,7 +269,10 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
       liveEngineWrap,
       infoRow,
       camSwitcher,
-      rightColumnShell,
+      tabsMarkup,
+      toolsMarkup,
+      browseMarkup,
+      footerMarkup,
       layoutProfile,
     }) =>
       buildMainLayoutShellMarkup({
@@ -296,7 +280,10 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         infoRow,
         pageNav: "",
         camSwitcher,
-        rightColumnShell,
+        tabsMarkup,
+        toolsMarkup,
+        browseMarkup,
+        footerMarkup,
         layoutProfile,
       }),
     capabilities: {

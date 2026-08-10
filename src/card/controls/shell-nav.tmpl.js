@@ -157,28 +157,9 @@ function mergeClassNames(...tokens) {
   ].join(" ");
 }
 
-export function buildRightColumnShellMarkup({
-  icons,
-  tabsMarkup,
-  toolsMarkup,
-  layoutProfile = {},
-}) {
-  const rightColumnClassName = mergeClassNames(
-    "col-right",
-    layoutProfile.rightColumnClass,
-  );
-  const tabsHolderClassName = mergeClassNames(
-    "tabs-holder",
-    layoutProfile.tabsHolderClass,
-  );
+export function buildBrowseMarkup({ icons, layoutProfile = {} }) {
   const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
-  return `<div class="${rightColumnClassName}" id="col-right">
-            <div class="${tabsHolderClassName}"> 
-              <div class="tabs shadow-small">            
-                ${tabsMarkup}${toolsMarkup}
-              </div>
-            </div>
-            <div class="browse-head" id="browse-head" style="display:none">
+  return `<div class="browse-head" id="browse-head" style="display:none">
               <div class="browse-head-left">
                 <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${icons.left}Previous</button>
               </div>
@@ -195,13 +176,15 @@ export function buildRightColumnShellMarkup({
               <div class="list" id="list">
                 <div class="empty">Loading…</div>
               </div>
-            </div>
-            <div class="footer">
+            </div>`;
+}
+
+export function buildFooterMarkup({ icons }) {
+  return `<div class="footer">
               <div><div class="frigate-view">${icons.frigateView}</div></div>
               <div class="more" id="older-hint" hidden>scroll for older…</div>
               <div></div>
-            </div>
-          </div>`;
+            </div>`;
 }
 
 export function buildControlsSectionMarkup({
@@ -305,13 +288,24 @@ export function buildMainLayoutShellMarkup({
   infoRow,
   pageNav,
   camSwitcher,
-  rightColumnShell,
+  tabsMarkup,
+  toolsMarkup,
+  browseMarkup,
+  footerMarkup,
   layoutProfile = {},
 }) {
   const layoutClassName = mergeClassNames("layout", layoutProfile.layoutClass);
   const leftColumnClassName = mergeClassNames(
     "col-left",
     layoutProfile.leftColumnClass,
+  );
+  const rightColumnClassName = mergeClassNames(
+    "col-right",
+    layoutProfile.rightColumnClass,
+  );
+  const tabsHolderClassName = mergeClassNames(
+    "tabs-holder",
+    layoutProfile.tabsHolderClass,
   );
   const resizeHandleClassName = mergeClassNames(
     "resize-handle",
@@ -326,7 +320,14 @@ export function buildMainLayoutShellMarkup({
             ${camSwitcher}
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
-          ${rightColumnShell}
-
+          <div class="${rightColumnClassName}" id="col-right">
+            <div class="${tabsHolderClassName}"> 
+              <div class="tabs shadow-small">            
+                ${tabsMarkup}${toolsMarkup}
+              </div>
+            </div>
+            ${browseMarkup}
+            ${footerMarkup}
+          </div>
         </div>`;
 }
