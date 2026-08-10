@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1384";
+const VERSION = "1.0.1385";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3333,7 +3333,7 @@ function buildTabsMarkup({ tab, hiddenTabs, viewMode, icons }) {
   const gridModeListOnly = viewMode === "grid";
   const tabOrder = gridModeListOnly ? ["alerts", "kept", "controls"] : ["alerts", "clips", "snapshot", "recordings", "kept", "controls"];
   const activeTab = resolveActiveTab(tab, ht, tabOrder);
-  const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="circle-btn active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="cirlce-btn" data-tab="${id}" title="${label}">${icon}</div>`;
+  const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="circle-btn active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="circle-btn" data-tab="${id}" title="${label}">${icon}</div>`;
   const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
       ${tabMarkup("clips", icons.clips, "Clips")}
       ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
