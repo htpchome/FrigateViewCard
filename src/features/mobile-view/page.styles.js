@@ -73,17 +73,31 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     min-height: 0;
     overflow: hidden;
   }
-
-  .card.mobile-view-active .mobile-bottom .col-right {
-    display: flex;
-    flex: 1 1 auto;
-    flex-direction: column;
-    width: 100%;
-    min-height: 0;
-    overflow: hidden;
+  .card.mobile-view-active .mobile-bottom{
+    display:flex;
+    flex:1 1 auto; 
+    flex-direction:column;
+    width:100%;
+    min-height:0; 
+    overflow:hidden;
+    position:relative;
   }
+  .card.mobile-view-active .mobile-bottom .tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:5px;
+    padding:2px 8px;
+    overflow-x:auto;
+    scrollbar-width:none;
+    position:relative;
+    z-index:auto;
+    background-color:var(--c-bg-panel) !important;
+    border-radius: 8px;
+    transition: background-color 0.3s ease;
+    margin:3px 8px;}
+  .card.mobile-view-active .mobile-bottom .tabs::-webkit-scrollbar{display:none;}
 
-  .card.mobile-view-active .mobile-bottom .col-right .frigate-view {
+  .card.mobile-view-active .mobile-bottom .frigate-view {
     display: none;
   }
 
