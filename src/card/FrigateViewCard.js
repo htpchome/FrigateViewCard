@@ -3690,7 +3690,7 @@ export class FrigateViewCard extends HTMLElement {
     this._resumeSlideshowAfterPopup();
   }
   _createFilterPanel() {
-    const tabs = this._$(".tabs");
+    const tabs = this._$("#filter-btn");
     if (!tabs) return;
     this._$("#filter-panel")?.remove();
     const filterPanel = document.createElement("div");
@@ -3701,7 +3701,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _createCalendarPanel() {
-    const toolsEl = this._$(".tl-tools");
+    const toolsEl = this._$("#cal-btn");
     if (!toolsEl) return;
     this._$("#cal-panel")?.remove();
     const calPanel = document.createElement("div");

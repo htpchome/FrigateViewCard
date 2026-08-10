@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1387";
+const VERSION = "1.0.1388";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -18114,7 +18114,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._resumeSlideshowAfterPopup();
   }
   _createFilterPanel() {
-    const tabs = this._$(".tabs");
+    const tabs = this._$("#filter-btn");
     if (!tabs) return;
     this._$("#filter-panel")?.remove();
     const filterPanel = document.createElement("div");
@@ -18124,7 +18124,7 @@ const FrigateViewCard = class extends HTMLElement {
     tabs.after(filterPanel);
   }
   _createCalendarPanel() {
-    const toolsEl = this._$(".tl-tools");
+    const toolsEl = this._$("#cal-btn");
     if (!toolsEl) return;
     this._$("#cal-panel")?.remove();
     const calPanel = document.createElement("div");
