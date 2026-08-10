@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1379";
+const VERSION = "1.0.1380";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3257,15 +3257,11 @@ function buildMobileViewMainLayoutShellMarkup({
                 ${liveEngineWrap}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                <div class="col-right" id="col-right">
-                  <div class="tabs-holder"> 
-                    <div class="tabs shadow-small">            
-                      ${tabsMarkup}${toolsMarkup}
-                    </div>
-                  </div>
-                  ${browseMarkup}
-                  ${footerMarkup}
+                <div class="tabs shadow-small">            
+                  ${tabsMarkup}${toolsMarkup}
                 </div>
+                ${browseMarkup}
+                ${footerMarkup}
               </div>
             </div>
           </div>`;
@@ -3591,10 +3587,8 @@ function buildMainLayoutShellMarkup({
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
-            <div class="${tabsHolderClassName}"> 
-              <div class="tabs shadow-small">            
-                ${tabsMarkup}${toolsMarkup}
-              </div>
+            <div class="tabs shadow-small">            
+              ${tabsMarkup}${toolsMarkup}
             </div>
             ${browseMarkup}
             ${footerMarkup}

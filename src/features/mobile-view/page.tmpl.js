@@ -137,15 +137,11 @@ export function buildMobileViewMainLayoutShellMarkup({
                 ${liveEngineWrap}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                <div class="col-right" id="col-right">
-                  <div class="tabs-holder"> 
-                    <div class="tabs shadow-small">            
-                      ${tabsMarkup}${toolsMarkup}
-                    </div>
-                  </div>
-                  ${browseMarkup}
-                  ${footerMarkup}
+                <div class="tabs shadow-small">            
+                  ${tabsMarkup}${toolsMarkup}
                 </div>
+                ${browseMarkup}
+                ${footerMarkup}
               </div>
             </div>
           </div>`;

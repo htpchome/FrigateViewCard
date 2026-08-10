@@ -321,10 +321,8 @@ export function buildMainLayoutShellMarkup({
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
-            <div class="${tabsHolderClassName}"> 
-              <div class="tabs shadow-small">            
-                ${tabsMarkup}${toolsMarkup}
-              </div>
+            <div class="tabs shadow-small">            
+              ${tabsMarkup}${toolsMarkup}
             </div>
             ${browseMarkup}
             ${footerMarkup}
