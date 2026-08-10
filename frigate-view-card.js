@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1374";
+const VERSION = "1.0.1375";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3443,6 +3443,8 @@ function buildRightColumnShellMarkup({
               <div class="tabs shadow-small">            
                 ${tabsMarkup}              
               </div>
+              <div class="filter-panel" id="filter-panel" style="display:none"></div>
+              <div class="cal-panel" id="cal-panel" style="display:none"></div>
             </div>
             <div class="browse-head" id="browse-head" style="display:none">
               <div class="browse-head-left">

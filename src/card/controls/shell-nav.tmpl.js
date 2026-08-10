@@ -173,6 +173,8 @@ export function buildRightColumnShellMarkup({
               <div class="tabs shadow-small">            
                 ${tabsMarkup}              
               </div>
+              <div class="filter-panel" id="filter-panel" style="display:none"></div>
+              <div class="cal-panel" id="cal-panel" style="display:none"></div>
             </div>
             <div class="browse-head" id="browse-head" style="display:none">
               <div class="browse-head-left">
