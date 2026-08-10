@@ -208,14 +208,13 @@ export const STYLES = `
   .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:2px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;margin:3px 8px;}
   .tabs::-webkit-scrollbar{display:none;}
 
-  /* ── donut button ── */
-  .donut{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;min-height:36px;min-width:36px;background-color:var(--c-bg-main);padding:1px;transition: all 0.2s ease;cursor:pointer;}
-  .donut svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
-  .donut:hover {background-color:var(--c-bg-main);color:var(--c-primary-d);}
-  .donut:hover svg{color:var(--c-primary-d);}
-  .donut.active {background:var(--c-primary-d);} 
-  .donut.active svg{color:var(--c-text-rev);}
-
+  /* ── circle button ── */
+  .circle-btn{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;min-height:36px;min-width:36px;background-color:var(--c-bg-main);padding:1px;transition: all 0.2s ease;cursor:pointer;}
+  .circle-btn svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
+  .circle-btn:hover {background-color:var(--c-bg-main);color:var(--c-primary-d);}
+  .circle-btn:hover svg{color:var(--c-primary-d);}
+  .circle-btn.active {background:var(--c-primary-d);} 
+  .circle-btn.active svg{color:var(--c-text-rev);}
 
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}

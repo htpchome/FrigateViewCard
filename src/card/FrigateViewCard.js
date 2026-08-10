@@ -2874,7 +2874,10 @@ export class FrigateViewCard extends HTMLElement {
       return;
     }
     const prevTab = this._tab;
+    // Preserve the tools element — it renders independently from tab circle-btn(s).
+    const toolsEl = tabs.querySelector(".tl-tools");
     tabs.innerHTML = this._buildTabsMarkup();
+    if (toolsEl) tabs.appendChild(toolsEl);
     [
       "#grid-btn",
       "#slideshow-btn",
@@ -3951,9 +3954,9 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handleListNavigationClick(e, target) {
-    const donut = target.closest("[data-tab]");
-    if (donut) {
-      this._setTab(donut.dataset.tab);
+    const circleBtn = target.closest("[data-tab]");
+    if (cirlceBtn) {
+      this._setTab(circle - btn.dataset.tab);
       return true;
     }
     const olderHint = target.closest("#older-hint");

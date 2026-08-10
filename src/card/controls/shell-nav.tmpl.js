@@ -29,8 +29,8 @@ export function buildTabsMarkup({ tab, hiddenTabs, viewMode, icons }) {
     (gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id))
       ? ""
       : id === activeTab
-        ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>`
-        : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
+        ? `<div class="circle-btn active" data-tab="${id}" title="${label}">${icon}</div>`
+        : `<div class="cirlce-btn" data-tab="${id}" title="${label}">${icon}</div>`;
   const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
       ${tabMarkup("clips", icons.clips, "Clips")}
       ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}

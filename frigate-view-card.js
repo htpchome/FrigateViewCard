@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1381";
+const VERSION = "1.0.1383";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -749,14 +749,13 @@ const STYLES = `
   .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:2px 8px;overflow-x:auto;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;margin:3px 8px;}
   .tabs::-webkit-scrollbar{display:none;}
 
-  /* \u2500\u2500 donut button \u2500\u2500 */
-  .donut{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;min-height:36px;min-width:36px;background-color:var(--c-bg-main);padding:1px;transition: all 0.2s ease;cursor:pointer;}
-  .donut svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
-  .donut:hover {background-color:var(--c-bg-main);color:var(--c-primary-d);}
-  .donut:hover svg{color:var(--c-primary-d);}
-  .donut.active {background:var(--c-primary-d);} 
-  .donut.active svg{color:var(--c-text-rev);}
-
+  /* \u2500\u2500 circle button \u2500\u2500 */
+  .circle-btn{display:inline-flex;align-items:center;justify-content: center;gap:4px;font-size:1rem;font-weight:600;border-radius:50%;min-height:36px;min-width:36px;background-color:var(--c-bg-main);padding:1px;transition: all 0.2s ease;cursor:pointer;}
+  .circle-btn svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
+  .circle-btn:hover {background-color:var(--c-bg-main);color:var(--c-primary-d);}
+  .circle-btn:hover svg{color:var(--c-primary-d);}
+  .circle-btn.active {background:var(--c-primary-d);} 
+  .circle-btn.active svg{color:var(--c-text-rev);}
 
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
@@ -1646,11 +1645,11 @@ const CirclePadControl = class extends HTMLElement {
     if (!this._rootEl) return;
     this._rootEl.setAttribute("data-input-mode", mode);
   }
-  _trySetPointerCapture(btn, pointerId) {
-    if (!btn || typeof btn.setPointerCapture !== "function") return;
+  _trySetPointerCapture(btn2, pointerId) {
+    if (!btn2 || typeof btn2.setPointerCapture !== "function") return;
     if (!this._hasPointerId(pointerId)) return;
     try {
-      btn.setPointerCapture(pointerId);
+      btn2.setPointerCapture(pointerId);
     } catch (_e) {
     }
   }
@@ -1686,22 +1685,22 @@ const CirclePadControl = class extends HTMLElement {
     if (!(target instanceof Element)) return null;
     return target.closest(ACTION_SELECTOR);
   }
-  _getButtonAction(btn) {
-    return btn ? btn.getAttribute(CIRCLE_PAD_DATA_ACTION) : null;
+  _getButtonAction(btn2) {
+    return btn2 ? btn2.getAttribute(CIRCLE_PAD_DATA_ACTION) : null;
   }
   _isMicAction(action) {
     return action === CIRCLE_PAD_ACTIONS.MIC;
   }
-  _setMicPressed(btn, pressed) {
-    if (!btn) return;
-    btn.classList.toggle("is-pressed", Boolean(pressed));
+  _setMicPressed(btn2, pressed) {
+    if (!btn2) return;
+    btn2.classList.toggle("is-pressed", Boolean(pressed));
   }
-  _clearDirectionPressed(btn) {
-    if (!btn) return;
-    const action = this._getButtonAction(btn);
+  _clearDirectionPressed(btn2) {
+    if (!btn2) return;
+    const action = this._getButtonAction(btn2);
     if (!action || !this._pressed.has(action)) return;
     this._pressed.delete(action);
-    btn.classList.remove("is-pressed");
+    btn2.classList.remove("is-pressed");
   }
   _releaseDirectionByPointer(ev) {
     if (!ev || ev.pointerId === null || ev.pointerId === void 0) {
@@ -1719,21 +1718,21 @@ const CirclePadControl = class extends HTMLElement {
       ev.pointerType === INPUT_MODE_TOUCH ? INPUT_MODE_TOUCH : INPUT_MODE_MOUSE
     );
   }
-  _handleDirectionPointerDown(btn, action, pointerId) {
+  _handleDirectionPointerDown(btn2, action, pointerId) {
     if (!DIRECTION_ACTIONS.has(action)) return;
     if (this._pressed.has(action)) return;
     this._pressed.add(action);
     if (this._hasPointerId(pointerId)) {
-      this._pressedByPointer.set(pointerId, { action, btn });
+      this._pressedByPointer.set(pointerId, { action, btn: btn2 });
     }
-    btn.classList.add("is-pressed");
+    btn2.classList.add("is-pressed");
     this._dispatch(EVT_PRESS, { action });
-    this._trySetPointerCapture(btn, pointerId);
+    this._trySetPointerCapture(btn2, pointerId);
   }
-  _handleMicToggleClick(btn) {
+  _handleMicToggleClick(btn2) {
     this._activeMic = !this._activeMic;
     this._applyMicState();
-    this._setMicPressed(btn, false);
+    this._setMicPressed(btn2, false);
     this._dispatch(EVT_TOGGLE, {
       action: CIRCLE_PAD_ACTIONS.MIC,
       active: this._activeMic
@@ -1745,18 +1744,18 @@ const CirclePadControl = class extends HTMLElement {
   }
   _handlePointerEnd(ev, ignoreRelatedTarget = false) {
     if (this._releaseDirectionByPointer(ev)) return;
-    const btn = this._findActionButton(ev.target);
-    if (!btn) return;
-    if (ignoreRelatedTarget && ev.relatedTarget && btn.contains(ev.relatedTarget)) {
+    const btn2 = this._findActionButton(ev.target);
+    if (!btn2) return;
+    if (ignoreRelatedTarget && ev.relatedTarget && btn2.contains(ev.relatedTarget)) {
       return;
     }
-    const action = this._getButtonAction(btn);
+    const action = this._getButtonAction(btn2);
     if (this._isMicAction(action)) {
-      this._setMicPressed(btn, false);
+      this._setMicPressed(btn2, false);
       return;
     }
     if (!DIRECTION_ACTIONS.has(action) || !this._pressed.has(action)) return;
-    this._clearDirectionPressed(btn);
+    this._clearDirectionPressed(btn2);
     this._dispatch(EVT_RELEASE, { action });
   }
   _handlePointerRelease(ev) {
@@ -1769,25 +1768,25 @@ const CirclePadControl = class extends HTMLElement {
     if (this._wired || !this.shadowRoot) return;
     this._wired = true;
     this._onPointerDown = (ev) => {
-      const btn = this._findActionButton(ev.target);
-      if (!btn) return;
+      const btn2 = this._findActionButton(ev.target);
+      if (!btn2) return;
       this._setInputModeFromPointer(ev);
-      const action = this._getButtonAction(btn);
+      const action = this._getButtonAction(btn2);
       if (this._isMicAction(action)) {
-        this._setMicPressed(btn, true);
-        this._trySetPointerCapture(btn, ev.pointerId);
+        this._setMicPressed(btn2, true);
+        this._trySetPointerCapture(btn2, ev.pointerId);
         return;
       }
-      this._handleDirectionPointerDown(btn, action, ev.pointerId);
+      this._handleDirectionPointerDown(btn2, action, ev.pointerId);
     };
     this._onPointerUp = (ev) => this._handlePointerRelease(ev);
     this._onPointerCancel = (ev) => this._handlePointerRelease(ev);
     this._onPointerLeave = (ev) => this._handlePointerLeave(ev);
     this._onClick = (ev) => {
-      const btn = this._findActionButton(ev.target);
-      if (!btn) return;
-      if (!this._isMicAction(this._getButtonAction(btn))) return;
-      this._handleMicToggleClick(btn);
+      const btn2 = this._findActionButton(ev.target);
+      if (!btn2) return;
+      if (!this._isMicAction(this._getButtonAction(btn2))) return;
+      this._handleMicToggleClick(btn2);
     };
     this._bindRootEvents();
   }
@@ -3334,7 +3333,7 @@ function buildTabsMarkup({ tab, hiddenTabs, viewMode, icons }) {
   const gridModeListOnly = viewMode === "grid";
   const tabOrder = gridModeListOnly ? ["alerts", "kept", "controls"] : ["alerts", "clips", "snapshot", "recordings", "kept", "controls"];
   const activeTab = resolveActiveTab(tab, ht, tabOrder);
-  const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
+  const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="circle-btn active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="cirlce-btn" data-tab="${id}" title="${label}">${icon}</div>`;
   const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
       ${tabMarkup("clips", icons.clips, "Clips")}
       ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
@@ -17409,7 +17408,9 @@ const FrigateViewCard = class extends HTMLElement {
       return;
     }
     const prevTab = this._tab;
+    const toolsEl = tabs.querySelector(".tl-tools");
     tabs.innerHTML = this._buildTabsMarkup();
+    if (toolsEl) tabs.appendChild(toolsEl);
     [
       "#grid-btn",
       "#slideshow-btn",
@@ -18363,9 +18364,9 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handleListNavigationClick(e, target) {
-    const donut = target.closest("[data-tab]");
-    if (donut) {
-      this._setTab(donut.dataset.tab);
+    const circleBtn = target.closest("[data-tab]");
+    if (cirlceBtn) {
+      this._setTab(circle - btn.dataset.tab);
       return true;
     }
     const olderHint = target.closest("#older-hint");
@@ -18865,16 +18866,16 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _renderMuteButton() {
-    const btn = this._$("#mute-btn");
-    if (!btn) return;
+    const btn2 = this._$("#mute-btn");
+    if (!btn2) return;
     const hideMute = this._viewMode === "grid";
-    btn.hidden = hideMute;
-    btn.style.display = hideMute ? "none" : "";
+    btn2.hidden = hideMute;
+    btn2.style.display = hideMute ? "none" : "";
     if (hideMute) return;
     const label = this._streamMuted ? "Unmute live view" : "Mute live view";
-    btn.title = label;
-    btn.setAttribute("aria-label", label);
-    btn.innerHTML = this._streamMuted ? ICONS.volOff : ICONS.volOn;
+    btn2.title = label;
+    btn2.setAttribute("aria-label", label);
+    btn2.innerHTML = this._streamMuted ? ICONS.volOff : ICONS.volOn;
   }
   _timezoneDisplay() {
     const tz = this._hass?.config?.time_zone || "UTC";
@@ -18985,13 +18986,13 @@ const FrigateViewCard = class extends HTMLElement {
       existing.setAttribute("aria-label", label);
       return;
     }
-    const btn = document.createElement("button");
-    btn.className = "glass-btn overlay-fs popup-fs-btn";
-    btn.id = "popup-fs-btn";
-    btn.title = label;
-    btn.setAttribute("aria-label", label);
-    btn.innerHTML = ICONS.expand;
-    viewer.appendChild(btn);
+    const btn2 = document.createElement("button");
+    btn2.className = "glass-btn overlay-fs popup-fs-btn";
+    btn2.id = "popup-fs-btn";
+    btn2.title = label;
+    btn2.setAttribute("aria-label", label);
+    btn2.innerHTML = ICONS.expand;
+    viewer.appendChild(btn2);
   }
   _clearPopupMediaCleanup() {
     if (this._popupControlsHideTimer) {
