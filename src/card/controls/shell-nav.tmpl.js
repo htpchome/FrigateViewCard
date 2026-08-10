@@ -160,6 +160,7 @@ function mergeClassNames(...tokens) {
 export function buildRightColumnShellMarkup({
   icons,
   tabsMarkup,
+  toolsMarkup,
   layoutProfile = {},
 }) {
   const rightColumnClassName = mergeClassNames(
@@ -174,7 +175,7 @@ export function buildRightColumnShellMarkup({
   return `<div class="${rightColumnClassName}" id="col-right">
             <div class="${tabsHolderClassName}"> 
               <div class="tabs shadow-small">            
-                ${tabsMarkup}              
+                ${tabsMarkup}${toolsMarkup}
               </div>
             </div>
             <div class="browse-head" id="browse-head" style="display:none">

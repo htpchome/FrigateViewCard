@@ -3429,6 +3429,7 @@ function mergeClassNames(...tokens) {
 function buildRightColumnShellMarkup({
   icons,
   tabsMarkup,
+  toolsMarkup,
   layoutProfile = {}
 }) {
   const rightColumnClassName = mergeClassNames(
@@ -3443,7 +3444,7 @@ function buildRightColumnShellMarkup({
   return `<div class="${rightColumnClassName}" id="col-right">
             <div class="${tabsHolderClassName}"> 
               <div class="tabs shadow-small">            
-                ${tabsMarkup}              
+                ${tabsMarkup}${toolsMarkup}
               </div>
             </div>
             <div class="browse-head" id="browse-head" style="display:none">
@@ -17373,7 +17374,12 @@ const FrigateViewCard = class extends HTMLElement {
       slideshowButtonIcon: this._slideshowButtonIcon()
     });
     this._tab = activeTab;
-    return `${tabsMarkup}${toolsMarkup}`;
+    this._tabsMarkupCache = tabsMarkup;
+    this._toolsMarkupCache = toolsMarkup;
+    return tabsMarkup;
+  }
+  _getToolsMarkup() {
+    return this._toolsMarkupCache || "";
   }
   _syncTabsShell() {
     const tabs = this._$(".tabs");
@@ -17443,14 +17449,17 @@ const FrigateViewCard = class extends HTMLElement {
       host: this,
       icons: ICONS,
       tabsMarkup: this._buildTabsMarkup(),
+      toolsMarkup: this._getToolsMarkup(),
       layoutProfile,
       buildDefaultRightColumnShellMarkup: ({
         icons,
         tabsMarkup,
+        toolsMarkup,
         layoutProfile: layoutProfile2
       }) => buildRightColumnShellMarkup({
         icons,
         tabsMarkup,
+        toolsMarkup,
         layoutProfile: layoutProfile2
       })
     });
@@ -17493,7 +17502,8 @@ const FrigateViewCard = class extends HTMLElement {
       `;
     this._domCache = {};
     this._lastRenderedListHtml = "";
-    this._createFilterAndCalendarPanels();
+    this._createFilterPanel();
+    this._createCalendarPanel();
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
@@ -18080,20 +18090,24 @@ const FrigateViewCard = class extends HTMLElement {
     this._stopPopupMedia();
     this._resumeSlideshowAfterPopup();
   }
-  _createFilterAndCalendarPanels() {
+  _createFilterPanel() {
     const tabsHolder = this._$(".tabs-holder");
     if (!tabsHolder) return;
     this._$("#filter-panel")?.remove();
-    this._$("#cal-panel")?.remove();
     const filterPanel = document.createElement("div");
     filterPanel.id = "filter-panel";
     filterPanel.className = "filter-panel";
     filterPanel.style.display = "none";
+    tabsHolder.appendChild(filterPanel);
+  }
+  _createCalendarPanel() {
+    const tabsHolder = this._$(".tabs-holder");
+    if (!tabsHolder) return;
+    this._$("#cal-panel")?.remove();
     const calPanel = document.createElement("div");
     calPanel.id = "cal-panel";
     calPanel.className = "cal-panel";
     calPanel.style.display = "none";
-    tabsHolder.appendChild(filterPanel);
     tabsHolder.appendChild(calPanel);
   }
   _initPopupInteractions() {

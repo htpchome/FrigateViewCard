@@ -2827,12 +2827,16 @@ export class FrigateViewCard extends HTMLElement {
     const calendarPanelOpen =
       !!calendarPanel && calendarPanel.style.display !== "none";
     const buttonStates = this._toolbarButtonStates();
+
+    // Build tabs only
     const { activeTab, markup: tabsMarkup } = buildTabsMarkup({
       tab: this._tab,
       hiddenTabs: this._config.hidden_tabs,
       viewMode: this._viewMode,
       icons: ICONS,
     });
+
+    // Build tools only
     const toolsMarkup = buildToolsMarkup({
       tab: activeTab,
       viewMode: this._viewMode,
@@ -2851,8 +2855,15 @@ export class FrigateViewCard extends HTMLElement {
       gridButtonIcon: this._gridButtonIcon(),
       slideshowButtonIcon: this._slideshowButtonIcon(),
     });
+
     this._tab = activeTab;
-    return `${tabsMarkup}${toolsMarkup}`;
+    this._tabsMarkupCache = tabsMarkup;
+    this._toolsMarkupCache = toolsMarkup;
+    return tabsMarkup; // Return only tabs for backward compatibility
+  }
+
+  _getToolsMarkup() {
+    return this._toolsMarkupCache || "";
   }
 
   _syncTabsShell() {
@@ -2939,15 +2950,18 @@ export class FrigateViewCard extends HTMLElement {
       host: this,
       icons: ICONS,
       tabsMarkup: this._buildTabsMarkup(),
+      toolsMarkup: this._getToolsMarkup(),
       layoutProfile,
       buildDefaultRightColumnShellMarkup: ({
         icons,
         tabsMarkup,
+        toolsMarkup,
         layoutProfile,
       }) =>
         buildRightColumnShellMarkup({
           icons,
           tabsMarkup,
+          toolsMarkup,
           layoutProfile,
         }),
     });
@@ -2991,7 +3005,8 @@ export class FrigateViewCard extends HTMLElement {
       `;
     this._domCache = {}; // invalidate DOM element cache after full re-render
     this._lastRenderedListHtml = "";
-    this._createFilterAndCalendarPanels();
+    this._createFilterPanel();
+    this._createCalendarPanel();
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
@@ -3670,13 +3685,12 @@ export class FrigateViewCard extends HTMLElement {
     this._stopPopupMedia();
     this._resumeSlideshowAfterPopup();
   }
-  _createFilterAndCalendarPanels() {
+  _createFilterPanel() {
     const tabsHolder = this._$(".tabs-holder");
     if (!tabsHolder) return;
 
-    // Remove existing panels if they exist
+    // Remove existing panel if it exists
     this._$("#filter-panel")?.remove();
-    this._$("#cal-panel")?.remove();
 
     // Create filter panel
     const filterPanel = document.createElement("div");
@@ -3684,14 +3698,24 @@ export class FrigateViewCard extends HTMLElement {
     filterPanel.className = "filter-panel";
     filterPanel.style.display = "none";
 
+    // Append to tabs-holder
+    tabsHolder.appendChild(filterPanel);
+  }
+
+  _createCalendarPanel() {
+    const tabsHolder = this._$(".tabs-holder");
+    if (!tabsHolder) return;
+
+    // Remove existing panel if it exists
+    this._$("#cal-panel")?.remove();
+
     // Create calendar panel
     const calPanel = document.createElement("div");
     calPanel.id = "cal-panel";
     calPanel.className = "cal-panel";
     calPanel.style.display = "none";
 
-    // Append both panels to tabs-holder
-    tabsHolder.appendChild(filterPanel);
+    // Append to tabs-holder
     tabsHolder.appendChild(calPanel);
   }
 
