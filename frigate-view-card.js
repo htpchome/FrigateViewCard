@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1376";
+const VERSION = "1.0.1377";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3356,10 +3356,6 @@ function buildToolsMarkup({
       </div>`;
   return markup;
 }
-function buildToolsPanelsMarkup() {
-  return `<div class="filter-panel" id="filter-panel" style="display:none"></div>
-              <div class="cal-panel" id="cal-panel" style="display:none"></div>`;
-}
 function buildCamSwitcherMarkup({
   previewPageEnabled,
   includeStatus,
@@ -3449,7 +3445,6 @@ function buildRightColumnShellMarkup({
               <div class="tabs shadow-small">            
                 ${tabsMarkup}              
               </div>
-              ${buildToolsPanelsMarkup()}
             </div>
             <div class="browse-head" id="browse-head" style="display:none">
               <div class="browse-head-left">
@@ -17498,6 +17493,7 @@ const FrigateViewCard = class extends HTMLElement {
       `;
     this._domCache = {};
     this._lastRenderedListHtml = "";
+    this._createFilterAndCalendarPanels();
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
@@ -18083,6 +18079,22 @@ const FrigateViewCard = class extends HTMLElement {
     this._scheduleRotateOverlayUpdate();
     this._stopPopupMedia();
     this._resumeSlideshowAfterPopup();
+  }
+  _createFilterAndCalendarPanels() {
+    const tabsHolder = this._$(".tabs-holder");
+    if (!tabsHolder) return;
+    this._$("#filter-panel")?.remove();
+    this._$("#cal-panel")?.remove();
+    const filterPanel = document.createElement("div");
+    filterPanel.id = "filter-panel";
+    filterPanel.className = "filter-panel";
+    filterPanel.style.display = "none";
+    const calPanel = document.createElement("div");
+    calPanel.id = "cal-panel";
+    calPanel.className = "cal-panel";
+    calPanel.style.display = "none";
+    tabsHolder.appendChild(filterPanel);
+    tabsHolder.appendChild(calPanel);
   }
   _initPopupInteractions() {
     const popup = this._$("#myPopup");

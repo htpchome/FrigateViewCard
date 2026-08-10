@@ -167,7 +167,6 @@ import {
   buildRightColumnShellMarkup,
   buildTabsMarkup,
   buildToolsMarkup,
-  buildToolsPanelsMarkup,
 } from "./controls/shell-nav.tmpl.js";
 import {
   buildCalendarPanelMarkup,
@@ -2992,6 +2991,7 @@ export class FrigateViewCard extends HTMLElement {
       `;
     this._domCache = {}; // invalidate DOM element cache after full re-render
     this._lastRenderedListHtml = "";
+    this._createFilterAndCalendarPanels();
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
@@ -3670,6 +3670,31 @@ export class FrigateViewCard extends HTMLElement {
     this._stopPopupMedia();
     this._resumeSlideshowAfterPopup();
   }
+  _createFilterAndCalendarPanels() {
+    const tabsHolder = this._$(".tabs-holder");
+    if (!tabsHolder) return;
+
+    // Remove existing panels if they exist
+    this._$("#filter-panel")?.remove();
+    this._$("#cal-panel")?.remove();
+
+    // Create filter panel
+    const filterPanel = document.createElement("div");
+    filterPanel.id = "filter-panel";
+    filterPanel.className = "filter-panel";
+    filterPanel.style.display = "none";
+
+    // Create calendar panel
+    const calPanel = document.createElement("div");
+    calPanel.id = "cal-panel";
+    calPanel.className = "cal-panel";
+    calPanel.style.display = "none";
+
+    // Append both panels to tabs-holder
+    tabsHolder.appendChild(filterPanel);
+    tabsHolder.appendChild(calPanel);
+  }
+
   _initPopupInteractions() {
     const popup = this._$("#myPopup");
     if (!popup) return;
