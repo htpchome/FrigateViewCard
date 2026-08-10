@@ -3701,14 +3701,14 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _createCalendarPanel() {
-    const tabs = this._$(".tabs");
-    if (!tabs) return;
+    const toolsEl = this._$(".tl-tools");
+    if (!toolsEl) return;
     this._$("#cal-panel")?.remove();
     const calPanel = document.createElement("div");
     calPanel.id = "cal-panel";
     calPanel.className = "cal-panel";
     calPanel.style.display = "none";
-    tabs.after(calPanel);
+    toolsEl.appendChild(calPanel);
   }
 
   _initPopupInteractions() {
@@ -3945,8 +3945,8 @@ export class FrigateViewCard extends HTMLElement {
   }
   _handleListNavigationClick(e, target) {
     const circleBtn = target.closest("[data-tab]");
-    if (cirlceBtn) {
-      this._setTab(circle - btn.dataset.tab);
+    if (circleBtn) {
+      this._setTab(circleBtn.dataset.tab);
       return true;
     }
     const olderHint = target.closest("#older-hint");

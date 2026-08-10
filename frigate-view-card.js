@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1385";
+const VERSION = "1.0.1387";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1024,7 +1024,7 @@ const STYLES = `
   }
 
   /* \u2500\u2500 timeline \u2500\u2500 */
-  .tl-tools{display:flex;gap:4px;}
+  .tl-tools{position:relative;display:flex;gap:4px;}
   .tool{display:inline-flex;gap:4px;align-items:center;justify-content:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;cursor:pointer;padding:2px;transition: all 0.2s ease;min-height:36px;min-width:36px;}
   .tool svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .tool ha-icon{width:24px;height:24px;--mdc-icon-size:24px;color:var(--c-text2);opacity:0.85;}
@@ -1041,7 +1041,7 @@ const STYLES = `
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 
   /* \u2500\u2500 filter + cal \u2500\u2500 */
-  .filter-panel,.cal-panel{display: none;position: absolute;right:0;background-color: #f1f1f1;min-width: 300px;overflow: auto;border-top: 3px solid var(--c-primary);box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 3;padding:20px;}
+  .filter-panel,.cal-panel{display: none;position: absolute;top:100%;right:0;background-color: #f1f1f1;min-width: 300px;overflow: auto;border-top: 3px solid var(--c-primary);box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 3;padding:20px;}
   .frow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px;} .frow:last-child{margin-bottom:0;} .frow-l{font-size:0.75rem;color:var(--c-text3);width:38px;text-transform:uppercase;flex-shrink:0;}
   .chip{background:var(--c-bg-panel);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:10px;padding:3.6px 10.8px;font-size:0.825rem;cursor:pointer;}
   .chip.on{background:var(--c-primary-l);border-color:var(--c-primary-d);color:var(--c-primary-d);}
@@ -1645,11 +1645,11 @@ const CirclePadControl = class extends HTMLElement {
     if (!this._rootEl) return;
     this._rootEl.setAttribute("data-input-mode", mode);
   }
-  _trySetPointerCapture(btn2, pointerId) {
-    if (!btn2 || typeof btn2.setPointerCapture !== "function") return;
+  _trySetPointerCapture(btn, pointerId) {
+    if (!btn || typeof btn.setPointerCapture !== "function") return;
     if (!this._hasPointerId(pointerId)) return;
     try {
-      btn2.setPointerCapture(pointerId);
+      btn.setPointerCapture(pointerId);
     } catch (_e) {
     }
   }
@@ -1685,22 +1685,22 @@ const CirclePadControl = class extends HTMLElement {
     if (!(target instanceof Element)) return null;
     return target.closest(ACTION_SELECTOR);
   }
-  _getButtonAction(btn2) {
-    return btn2 ? btn2.getAttribute(CIRCLE_PAD_DATA_ACTION) : null;
+  _getButtonAction(btn) {
+    return btn ? btn.getAttribute(CIRCLE_PAD_DATA_ACTION) : null;
   }
   _isMicAction(action) {
     return action === CIRCLE_PAD_ACTIONS.MIC;
   }
-  _setMicPressed(btn2, pressed) {
-    if (!btn2) return;
-    btn2.classList.toggle("is-pressed", Boolean(pressed));
+  _setMicPressed(btn, pressed) {
+    if (!btn) return;
+    btn.classList.toggle("is-pressed", Boolean(pressed));
   }
-  _clearDirectionPressed(btn2) {
-    if (!btn2) return;
-    const action = this._getButtonAction(btn2);
+  _clearDirectionPressed(btn) {
+    if (!btn) return;
+    const action = this._getButtonAction(btn);
     if (!action || !this._pressed.has(action)) return;
     this._pressed.delete(action);
-    btn2.classList.remove("is-pressed");
+    btn.classList.remove("is-pressed");
   }
   _releaseDirectionByPointer(ev) {
     if (!ev || ev.pointerId === null || ev.pointerId === void 0) {
@@ -1718,21 +1718,21 @@ const CirclePadControl = class extends HTMLElement {
       ev.pointerType === INPUT_MODE_TOUCH ? INPUT_MODE_TOUCH : INPUT_MODE_MOUSE
     );
   }
-  _handleDirectionPointerDown(btn2, action, pointerId) {
+  _handleDirectionPointerDown(btn, action, pointerId) {
     if (!DIRECTION_ACTIONS.has(action)) return;
     if (this._pressed.has(action)) return;
     this._pressed.add(action);
     if (this._hasPointerId(pointerId)) {
-      this._pressedByPointer.set(pointerId, { action, btn: btn2 });
+      this._pressedByPointer.set(pointerId, { action, btn });
     }
-    btn2.classList.add("is-pressed");
+    btn.classList.add("is-pressed");
     this._dispatch(EVT_PRESS, { action });
-    this._trySetPointerCapture(btn2, pointerId);
+    this._trySetPointerCapture(btn, pointerId);
   }
-  _handleMicToggleClick(btn2) {
+  _handleMicToggleClick(btn) {
     this._activeMic = !this._activeMic;
     this._applyMicState();
-    this._setMicPressed(btn2, false);
+    this._setMicPressed(btn, false);
     this._dispatch(EVT_TOGGLE, {
       action: CIRCLE_PAD_ACTIONS.MIC,
       active: this._activeMic
@@ -1744,18 +1744,18 @@ const CirclePadControl = class extends HTMLElement {
   }
   _handlePointerEnd(ev, ignoreRelatedTarget = false) {
     if (this._releaseDirectionByPointer(ev)) return;
-    const btn2 = this._findActionButton(ev.target);
-    if (!btn2) return;
-    if (ignoreRelatedTarget && ev.relatedTarget && btn2.contains(ev.relatedTarget)) {
+    const btn = this._findActionButton(ev.target);
+    if (!btn) return;
+    if (ignoreRelatedTarget && ev.relatedTarget && btn.contains(ev.relatedTarget)) {
       return;
     }
-    const action = this._getButtonAction(btn2);
+    const action = this._getButtonAction(btn);
     if (this._isMicAction(action)) {
-      this._setMicPressed(btn2, false);
+      this._setMicPressed(btn, false);
       return;
     }
     if (!DIRECTION_ACTIONS.has(action) || !this._pressed.has(action)) return;
-    this._clearDirectionPressed(btn2);
+    this._clearDirectionPressed(btn);
     this._dispatch(EVT_RELEASE, { action });
   }
   _handlePointerRelease(ev) {
@@ -1768,25 +1768,25 @@ const CirclePadControl = class extends HTMLElement {
     if (this._wired || !this.shadowRoot) return;
     this._wired = true;
     this._onPointerDown = (ev) => {
-      const btn2 = this._findActionButton(ev.target);
-      if (!btn2) return;
+      const btn = this._findActionButton(ev.target);
+      if (!btn) return;
       this._setInputModeFromPointer(ev);
-      const action = this._getButtonAction(btn2);
+      const action = this._getButtonAction(btn);
       if (this._isMicAction(action)) {
-        this._setMicPressed(btn2, true);
-        this._trySetPointerCapture(btn2, ev.pointerId);
+        this._setMicPressed(btn, true);
+        this._trySetPointerCapture(btn, ev.pointerId);
         return;
       }
-      this._handleDirectionPointerDown(btn2, action, ev.pointerId);
+      this._handleDirectionPointerDown(btn, action, ev.pointerId);
     };
     this._onPointerUp = (ev) => this._handlePointerRelease(ev);
     this._onPointerCancel = (ev) => this._handlePointerRelease(ev);
     this._onPointerLeave = (ev) => this._handlePointerLeave(ev);
     this._onClick = (ev) => {
-      const btn2 = this._findActionButton(ev.target);
-      if (!btn2) return;
-      if (!this._isMicAction(this._getButtonAction(btn2))) return;
-      this._handleMicToggleClick(btn2);
+      const btn = this._findActionButton(ev.target);
+      if (!btn) return;
+      if (!this._isMicAction(this._getButtonAction(btn))) return;
+      this._handleMicToggleClick(btn);
     };
     this._bindRootEvents();
   }
@@ -18124,14 +18124,14 @@ const FrigateViewCard = class extends HTMLElement {
     tabs.after(filterPanel);
   }
   _createCalendarPanel() {
-    const tabs = this._$(".tabs");
-    if (!tabs) return;
+    const toolsEl = this._$(".tl-tools");
+    if (!toolsEl) return;
     this._$("#cal-panel")?.remove();
     const calPanel = document.createElement("div");
     calPanel.id = "cal-panel";
     calPanel.className = "cal-panel";
     calPanel.style.display = "none";
-    tabs.after(calPanel);
+    toolsEl.appendChild(calPanel);
   }
   _initPopupInteractions() {
     const popup = this._$("#myPopup");
@@ -18367,8 +18367,8 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _handleListNavigationClick(e, target) {
     const circleBtn = target.closest("[data-tab]");
-    if (cirlceBtn) {
-      this._setTab(circle - btn.dataset.tab);
+    if (circleBtn) {
+      this._setTab(circleBtn.dataset.tab);
       return true;
     }
     const olderHint = target.closest("#older-hint");
@@ -18868,16 +18868,16 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _renderMuteButton() {
-    const btn2 = this._$("#mute-btn");
-    if (!btn2) return;
+    const btn = this._$("#mute-btn");
+    if (!btn) return;
     const hideMute = this._viewMode === "grid";
-    btn2.hidden = hideMute;
-    btn2.style.display = hideMute ? "none" : "";
+    btn.hidden = hideMute;
+    btn.style.display = hideMute ? "none" : "";
     if (hideMute) return;
     const label = this._streamMuted ? "Unmute live view" : "Mute live view";
-    btn2.title = label;
-    btn2.setAttribute("aria-label", label);
-    btn2.innerHTML = this._streamMuted ? ICONS.volOff : ICONS.volOn;
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
+    btn.innerHTML = this._streamMuted ? ICONS.volOff : ICONS.volOn;
   }
   _timezoneDisplay() {
     const tz = this._hass?.config?.time_zone || "UTC";
@@ -18988,13 +18988,13 @@ const FrigateViewCard = class extends HTMLElement {
       existing.setAttribute("aria-label", label);
       return;
     }
-    const btn2 = document.createElement("button");
-    btn2.className = "glass-btn overlay-fs popup-fs-btn";
-    btn2.id = "popup-fs-btn";
-    btn2.title = label;
-    btn2.setAttribute("aria-label", label);
-    btn2.innerHTML = ICONS.expand;
-    viewer.appendChild(btn2);
+    const btn = document.createElement("button");
+    btn.className = "glass-btn overlay-fs popup-fs-btn";
+    btn.id = "popup-fs-btn";
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
+    btn.innerHTML = ICONS.expand;
+    viewer.appendChild(btn);
   }
   _clearPopupMediaCleanup() {
     if (this._popupControlsHideTimer) {
