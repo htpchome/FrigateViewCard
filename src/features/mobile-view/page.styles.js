@@ -327,6 +327,8 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     margin-bottom: 8px;
   }
 
+  .card.mobile-view-active .browse--mobile-view .list-day-label{position:relative;z-index:1;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-panel);border:none;text-align: center;}  
+
   .card.mobile-view-active .browse--mobile-view .list-item {
     position: relative;
     display: flex;

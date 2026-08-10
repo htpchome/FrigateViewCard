@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1371";
+const VERSION = "1.0.1372";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -452,6 +452,8 @@ const MOBILE_VIEW_PAGE_STYLES = `
     align-items: center;
     margin-bottom: 8px;
   }
+
+  .card.mobile-view-active .browse--mobile-view .list-day-label{position:relative;z-index:1;padding:2px 0 4px;font-size:1rem;font-weight:700;color:var(--c-text2);letter-spacing:.02em;line-height:1.30;pointer-events:none;background:var(--c-bg-panel);border:none;text-align: center;}  
 
   .card.mobile-view-active .browse--mobile-view .list-item {
     position: relative;
