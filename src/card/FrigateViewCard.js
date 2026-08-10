@@ -3708,7 +3708,7 @@ export class FrigateViewCard extends HTMLElement {
     calPanel.id = "cal-panel";
     calPanel.className = "cal-panel";
     calPanel.style.display = "none";
-    toolsEl.appendChild(calPanel);
+    toolsEl.after(calPanel);
   }
 
   _initPopupInteractions() {
