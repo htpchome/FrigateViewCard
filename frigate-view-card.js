@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1383";
+const VERSION = "1.0.1384";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -16929,14 +16929,16 @@ const FrigateViewCard = class extends HTMLElement {
     }
     const filterBtn = this._$("#filter-btn");
     if (filterBtn) {
-      const filterOpen = this._$("#filter-panel")?.style.display !== "none";
+      const filterPanel = this._$("#filter-panel");
+      const filterOpen = !!filterPanel && filterPanel.style.display !== "none";
       filterBtn.disabled = buttonStates.filterDisabled;
       filterBtn.classList.toggle("active", filterOpen);
       filterBtn.setAttribute("aria-pressed", filterOpen ? "true" : "false");
     }
     const calBtn = this._$("#cal-btn");
     if (calBtn) {
-      const calOpen = this._$("#cal-panel")?.style.display !== "none";
+      const calPanel = this._$("#cal-panel");
+      const calOpen = !!calPanel && calPanel.style.display !== "none";
       calBtn.disabled = buttonStates.calendarDisabled;
       calBtn.classList.toggle("active", calOpen);
       calBtn.setAttribute("aria-pressed", calOpen ? "true" : "false");
@@ -18112,24 +18114,24 @@ const FrigateViewCard = class extends HTMLElement {
     this._resumeSlideshowAfterPopup();
   }
   _createFilterPanel() {
-    const tabsHolder = this._$(".tabs-holder");
-    if (!tabsHolder) return;
+    const tabs = this._$(".tabs");
+    if (!tabs) return;
     this._$("#filter-panel")?.remove();
     const filterPanel = document.createElement("div");
     filterPanel.id = "filter-panel";
     filterPanel.className = "filter-panel";
     filterPanel.style.display = "none";
-    tabsHolder.appendChild(filterPanel);
+    tabs.after(filterPanel);
   }
   _createCalendarPanel() {
-    const tabsHolder = this._$(".tabs-holder");
-    if (!tabsHolder) return;
+    const tabs = this._$(".tabs");
+    if (!tabs) return;
     this._$("#cal-panel")?.remove();
     const calPanel = document.createElement("div");
     calPanel.id = "cal-panel";
     calPanel.className = "cal-panel";
     calPanel.style.display = "none";
-    tabsHolder.appendChild(calPanel);
+    tabs.after(calPanel);
   }
   _initPopupInteractions() {
     const popup = this._$("#myPopup");

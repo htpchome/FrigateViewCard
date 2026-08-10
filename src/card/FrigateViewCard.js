@@ -2316,7 +2316,8 @@ export class FrigateViewCard extends HTMLElement {
 
     const filterBtn = this._$("#filter-btn");
     if (filterBtn) {
-      const filterOpen = this._$("#filter-panel")?.style.display !== "none";
+      const filterPanel = this._$("#filter-panel");
+      const filterOpen = !!filterPanel && filterPanel.style.display !== "none";
       filterBtn.disabled = buttonStates.filterDisabled;
       filterBtn.classList.toggle("active", filterOpen);
       filterBtn.setAttribute("aria-pressed", filterOpen ? "true" : "false");
@@ -2324,7 +2325,8 @@ export class FrigateViewCard extends HTMLElement {
 
     const calBtn = this._$("#cal-btn");
     if (calBtn) {
-      const calOpen = this._$("#cal-panel")?.style.display !== "none";
+      const calPanel = this._$("#cal-panel");
+      const calOpen = !!calPanel && calPanel.style.display !== "none";
       calBtn.disabled = buttonStates.calendarDisabled;
       calBtn.classList.toggle("active", calOpen);
       calBtn.setAttribute("aria-pressed", calOpen ? "true" : "false");
@@ -3688,37 +3690,25 @@ export class FrigateViewCard extends HTMLElement {
     this._resumeSlideshowAfterPopup();
   }
   _createFilterPanel() {
-    const tabsHolder = this._$(".tabs-holder");
-    if (!tabsHolder) return;
-
-    // Remove existing panel if it exists
+    const tabs = this._$(".tabs");
+    if (!tabs) return;
     this._$("#filter-panel")?.remove();
-
-    // Create filter panel
     const filterPanel = document.createElement("div");
     filterPanel.id = "filter-panel";
     filterPanel.className = "filter-panel";
     filterPanel.style.display = "none";
-
-    // Append to tabs-holder
-    tabsHolder.appendChild(filterPanel);
+    tabs.after(filterPanel);
   }
 
   _createCalendarPanel() {
-    const tabsHolder = this._$(".tabs-holder");
-    if (!tabsHolder) return;
-
-    // Remove existing panel if it exists
+    const tabs = this._$(".tabs");
+    if (!tabs) return;
     this._$("#cal-panel")?.remove();
-
-    // Create calendar panel
     const calPanel = document.createElement("div");
     calPanel.id = "cal-panel";
     calPanel.className = "cal-panel";
     calPanel.style.display = "none";
-
-    // Append to tabs-holder
-    tabsHolder.appendChild(calPanel);
+    tabs.after(calPanel);
   }
 
   _initPopupInteractions() {
