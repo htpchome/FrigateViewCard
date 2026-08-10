@@ -176,7 +176,7 @@ import {
   buildFavoriteOptimisticMutation,
   buildFavoriteRollbackMutation,
 } from "../shared/favorite-mutation.js";
-import { ListScrollController } from "../features/list/scroll.ctrl.js";
+import { ListScrollController } from "../features/browse/scroll.ctrl.js";
 import { LiveOverlayControlsController } from "./controls/live-overlay.ctrl.js";
 import { PopupDragController } from "../features/popup/drag.ctrl.js";
 import { PopupMediaControlsController } from "../features/popup/media.ctrl.js";
