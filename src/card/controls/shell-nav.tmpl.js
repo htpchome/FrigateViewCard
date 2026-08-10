@@ -22,19 +22,6 @@ export function buildTabsMarkup({
   hiddenTabs,
   viewMode,
   icons,
-  isFilterPanelOpen,
-  isCalendarPanelOpen,
-  isGridModeAvailable,
-  isSlideshowRotationAvailable,
-  isSlideshowActive,
-  isControlsVisible,
-  controlsDisabled,
-  gridDisabled,
-  slideshowDisabled,
-  filterDisabled,
-  calendarDisabled,
-  gridButtonIcon,
-  slideshowButtonIcon,
 }) {
   const ht = new Set(hiddenTabs || []);
   const gridModeListOnly = viewMode === "grid";
@@ -49,7 +36,33 @@ export function buildTabsMarkup({
       : id === activeTab
         ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>`
         : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
-  const resolvedFilterDisabled = filterDisabled || activeTab === "recordings";
+  const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
+      ${tabMarkup("clips", icons.clips, "Clips")}
+      ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
+      ${tabMarkup("recordings", icons.recordings, "Recordings")}
+      ${tabMarkup("kept", icons.star, "Kept events")}`;
+  return { activeTab, markup };
+}
+
+export function buildToolsMarkup({
+  tab,
+  viewMode,
+  icons,
+  isFilterPanelOpen,
+  isCalendarPanelOpen,
+  isGridModeAvailable,
+  isSlideshowRotationAvailable,
+  isSlideshowActive,
+  isControlsVisible,
+  controlsDisabled,
+  gridDisabled,
+  slideshowDisabled,
+  filterDisabled,
+  calendarDisabled,
+  gridButtonIcon,
+  slideshowButtonIcon,
+}) {
+  const resolvedFilterDisabled = filterDisabled || tab === "recordings";
   const controlsHidden = isControlsVisible === false;
   const gridHidden = !isGridModeAvailable;
   const gridActive = viewMode === "grid";
@@ -61,19 +74,19 @@ export function buildTabsMarkup({
   const slideshowButton = slideshowHidden
     ? ""
     : `<button class="tool slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button>`;
-  const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
-      ${tabMarkup("clips", icons.clips, "Clips")}
-      ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
-      ${tabMarkup("recordings", icons.recordings, "Recordings")}
-      ${tabMarkup("kept", icons.star, "Kept events")}
-      <div class="tl-tools" style=" margin-left: auto;">
-        ${controlsHidden ? "" : `<button class="tool${activeTab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${activeTab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
+  const markup = `<div class="tl-tools" style=" margin-left: auto;">
+        ${controlsHidden ? "" : `<button class="tool${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
         ${gridButton}
         ${slideshowButton}
         <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
         <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}" ${calendarDisabled ? "disabled" : ""}>${icons.calendar}</button>
       </div>`;
-  return { activeTab, markup };
+  return markup;
+}
+
+export function buildToolsPanelsMarkup() {
+  return `<div class="filter-panel" id="filter-panel" style="display:none"></div>
+              <div class="cal-panel" id="cal-panel" style="display:none"></div>`;
 }
 
 export function buildCamSwitcherMarkup({
@@ -173,8 +186,7 @@ export function buildRightColumnShellMarkup({
               <div class="tabs shadow-small">            
                 ${tabsMarkup}              
               </div>
-              <div class="filter-panel" id="filter-panel" style="display:none"></div>
-              <div class="cal-panel" id="cal-panel" style="display:none"></div>
+              ${buildToolsPanelsMarkup()}
             </div>
             <div class="browse-head" id="browse-head" style="display:none">
               <div class="browse-head-left">

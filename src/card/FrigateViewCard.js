@@ -166,6 +166,8 @@ import {
   buildPopupShellMarkup,
   buildRightColumnShellMarkup,
   buildTabsMarkup,
+  buildToolsMarkup,
+  buildToolsPanelsMarkup,
 } from "./controls/shell-nav.tmpl.js";
 import {
   buildCalendarPanelMarkup,
@@ -2826,9 +2828,14 @@ export class FrigateViewCard extends HTMLElement {
     const calendarPanelOpen =
       !!calendarPanel && calendarPanel.style.display !== "none";
     const buttonStates = this._toolbarButtonStates();
-    const { activeTab, markup } = buildTabsMarkup({
+    const { activeTab, markup: tabsMarkup } = buildTabsMarkup({
       tab: this._tab,
       hiddenTabs: this._config.hidden_tabs,
+      viewMode: this._viewMode,
+      icons: ICONS,
+    });
+    const toolsMarkup = buildToolsMarkup({
+      tab: activeTab,
       viewMode: this._viewMode,
       icons: ICONS,
       isFilterPanelOpen: filterPanelOpen,
@@ -2846,7 +2853,7 @@ export class FrigateViewCard extends HTMLElement {
       slideshowButtonIcon: this._slideshowButtonIcon(),
     });
     this._tab = activeTab;
-    return markup;
+    return `${tabsMarkup}${toolsMarkup}`;
   }
 
   _syncTabsShell() {

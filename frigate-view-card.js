@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1375";
+const VERSION = "1.0.1376";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3312,6 +3312,23 @@ function buildTabsMarkup({
   tab,
   hiddenTabs,
   viewMode,
+  icons
+}) {
+  const ht = new Set(hiddenTabs || []);
+  const gridModeListOnly = viewMode === "grid";
+  const tabOrder = gridModeListOnly ? ["alerts", "kept", "controls"] : ["alerts", "clips", "snapshot", "recordings", "kept", "controls"];
+  const activeTab = resolveActiveTab(tab, ht, tabOrder);
+  const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
+  const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
+      ${tabMarkup("clips", icons.clips, "Clips")}
+      ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
+      ${tabMarkup("recordings", icons.recordings, "Recordings")}
+      ${tabMarkup("kept", icons.star, "Kept events")}`;
+  return { activeTab, markup };
+}
+function buildToolsMarkup({
+  tab,
+  viewMode,
   icons,
   isFilterPanelOpen,
   isCalendarPanelOpen,
@@ -3327,12 +3344,7 @@ function buildTabsMarkup({
   gridButtonIcon,
   slideshowButtonIcon
 }) {
-  const ht = new Set(hiddenTabs || []);
-  const gridModeListOnly = viewMode === "grid";
-  const tabOrder = gridModeListOnly ? ["alerts", "kept", "controls"] : ["alerts", "clips", "snapshot", "recordings", "kept", "controls"];
-  const activeTab = resolveActiveTab(tab, ht, tabOrder);
-  const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="donut active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="donut" data-tab="${id}" title="${label}">${icon}</div>`;
-  const resolvedFilterDisabled = filterDisabled || activeTab === "recordings";
+  const resolvedFilterDisabled = filterDisabled || tab === "recordings";
   const controlsHidden = isControlsVisible === false;
   const gridHidden = !isGridModeAvailable;
   const gridActive = viewMode === "grid";
@@ -3340,19 +3352,18 @@ function buildTabsMarkup({
   const slideshowHidden = !isSlideshowRotationAvailable;
   const slideshowActive = isSlideshowActive;
   const slideshowButton = slideshowHidden ? "" : `<button class="tool slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button>`;
-  const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
-      ${tabMarkup("clips", icons.clips, "Clips")}
-      ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
-      ${tabMarkup("recordings", icons.recordings, "Recordings")}
-      ${tabMarkup("kept", icons.star, "Kept events")}
-      <div class="tl-tools" style=" margin-left: auto;">
-        ${controlsHidden ? "" : `<button class="tool${activeTab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${activeTab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
+  const markup = `<div class="tl-tools" style=" margin-left: auto;">
+        ${controlsHidden ? "" : `<button class="tool${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
         ${gridButton}
         ${slideshowButton}
         <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
         <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}" ${calendarDisabled ? "disabled" : ""}>${icons.calendar}</button>
       </div>`;
-  return { activeTab, markup };
+  return markup;
+}
+function buildToolsPanelsMarkup() {
+  return `<div class="filter-panel" id="filter-panel" style="display:none"></div>
+              <div class="cal-panel" id="cal-panel" style="display:none"></div>`;
 }
 function buildCamSwitcherMarkup({
   previewPageEnabled,
@@ -3443,8 +3454,7 @@ function buildRightColumnShellMarkup({
               <div class="tabs shadow-small">            
                 ${tabsMarkup}              
               </div>
-              <div class="filter-panel" id="filter-panel" style="display:none"></div>
-              <div class="cal-panel" id="cal-panel" style="display:none"></div>
+              ${buildToolsPanelsMarkup()}
             </div>
             <div class="browse-head" id="browse-head" style="display:none">
               <div class="browse-head-left">
@@ -17348,9 +17358,14 @@ const FrigateViewCard = class extends HTMLElement {
     const filterPanelOpen = !!filterPanel && filterPanel.style.display !== "none";
     const calendarPanelOpen = !!calendarPanel && calendarPanel.style.display !== "none";
     const buttonStates = this._toolbarButtonStates();
-    const { activeTab, markup } = buildTabsMarkup({
+    const { activeTab, markup: tabsMarkup } = buildTabsMarkup({
       tab: this._tab,
       hiddenTabs: this._config.hidden_tabs,
+      viewMode: this._viewMode,
+      icons: ICONS
+    });
+    const toolsMarkup = buildToolsMarkup({
+      tab: activeTab,
       viewMode: this._viewMode,
       icons: ICONS,
       isFilterPanelOpen: filterPanelOpen,
@@ -17368,7 +17383,7 @@ const FrigateViewCard = class extends HTMLElement {
       slideshowButtonIcon: this._slideshowButtonIcon()
     });
     this._tab = activeTab;
-    return markup;
+    return `${tabsMarkup}${toolsMarkup}`;
   }
   _syncTabsShell() {
     const tabs = this._$(".tabs");

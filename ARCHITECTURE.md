@@ -187,39 +187,16 @@ Every change must satisfy all of these:
 - no workaround that hides an architectural contradiction
 - tests must assert which mode is active when the behavior depends on `frigate_go2rtc` versus `ha_direct`
 
-## 10. Build Order
+## 10. AI Working Rules
 
-Rebuild in this order:
-
-1. `src/integrations/frigate/`
-2. `src/integrations/home-assistant/`
-3. `src/shared/media/`
-4. `src/features/live/`
-5. `src/features/browse/`
-6. `src/features/popup/`
-7. `src/features/ptz/`
-8. `src/features/navigation/`
-9. `src/card/`
-
-Reason:
-
-- integration assumptions must be explicit before live code
-- Home Assistant-owned helpers must be explicit before the `ha_direct` path is rebuilt
-- shared media primitives must exist before live and popup code
-- the shell should be last, because it only composes already-correct owners
-
-## 11. AI Working Rules
-
-- First response is analysis only.
-- No edits until explicitly requested.
 - No web research unless explicitly requested.
 - If the requested behavior conflicts with this contract, say so immediately.
 - Do not describe `frigate_go2rtc` as truly browser-direct Frigate unless the runtime actually becomes that.
 - Do not blend `frigate_go2rtc` and `ha_direct` into one hidden control flow.
-- Do not add new modules unless their folder ownership is already defined here.
-- Do not widen scope from a local task into a refactor unless explicitly requested.
+- Do not add new modules unless their folder ownership is already defined here without asking first.
 
-## 12. Rejection Rule
+
+## 11. Rejection Rule
 
 A change must be rejected if it does any of the following:
 
