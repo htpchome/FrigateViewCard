@@ -3250,7 +3250,6 @@ function buildMobileViewMainLayoutShellMarkup({
   return `<div class="${layoutClassName}" id="layout">
             <div class="mobile-container" id="mobile-container">
               <div class="mobile-top" id="mobile-top">
-                ${pageNav}
                 ${camSwitcher}
                 ${liveEngineWrap}
               </div>
