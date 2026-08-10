@@ -3308,12 +3308,7 @@ function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
 function resolveSubtitleText(config) {
   return config?.subtitle || "Frigate";
 }
-function buildTabsMarkup({
-  tab,
-  hiddenTabs,
-  viewMode,
-  icons
-}) {
+function buildTabsMarkup({ tab, hiddenTabs, viewMode, icons }) {
   const ht = new Set(hiddenTabs || []);
   const gridModeListOnly = viewMode === "grid";
   const tabOrder = gridModeListOnly ? ["alerts", "kept", "controls"] : ["alerts", "clips", "snapshot", "recordings", "kept", "controls"];

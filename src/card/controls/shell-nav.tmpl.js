@@ -17,12 +17,7 @@ export function resolveSubtitleText(config) {
   return config?.subtitle || "Frigate";
 }
 
-export function buildTabsMarkup({
-  tab,
-  hiddenTabs,
-  viewMode,
-  icons,
-}) {
+export function buildTabsMarkup({ tab, hiddenTabs, viewMode, icons }) {
   const ht = new Set(hiddenTabs || []);
   const gridModeListOnly = viewMode === "grid";
   const tabOrder = gridModeListOnly
