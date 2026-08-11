@@ -111,8 +111,8 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   }
 
   .card.mobile-view-active .mobile-cam-picker__back svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
   }
 
   .card.mobile-view-active .mobile-cam-picker {
