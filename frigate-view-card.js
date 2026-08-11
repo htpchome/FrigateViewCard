@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1394";
+const VERSION = "1.0.1395";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -949,7 +949,8 @@ const STYLES = `
 
   /* \u2500\u2500 info row \u2500\u2500 */
   .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
-    border-bottom:1px solid var(--c-border);}
+    border-bottom:1px solid var(--c-border);justify-content: space-between;}
+  .info-left{flex: 1;}
   .info-row-page-nav{display:flex;justify-content:center;align-items:center;flex:1 1 240px;padding:0 12px;min-width:0;}
   .info-row-page-nav .page-nav{padding:0;justify-content:center;width:100%;}
   .page-nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0;}
@@ -3368,7 +3369,7 @@ function buildCamSwitcherMarkup({
 }
 function buildInfoRowMarkup({ title, subtitle, version, pageNav = "" }) {
   return `<div class="info-row">
-              <div>
+              <div class="info-left">
                 <div class="info-title" id="info-title">${title}</div>
                 <span class="section-label" id="tl-range">${subtitle}</span>
               </div>

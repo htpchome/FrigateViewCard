@@ -436,7 +436,8 @@ export const STYLES = `
 
   /* ── info row ── */
   .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
-    border-bottom:1px solid var(--c-border);}
+    border-bottom:1px solid var(--c-border);justify-content: space-between;}
+  .info-left{flex: 1;}
   .info-row-page-nav{display:flex;justify-content:center;align-items:center;flex:1 1 240px;padding:0 12px;min-width:0;}
   .info-row-page-nav .page-nav{padding:0;justify-content:center;width:100%;}
   .page-nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0;}

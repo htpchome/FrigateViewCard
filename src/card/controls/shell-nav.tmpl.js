@@ -105,7 +105,7 @@ export function buildCamSwitcherMarkup({
 
 export function buildInfoRowMarkup({ title, subtitle, version, pageNav = "" }) {
   return `<div class="info-row">
-              <div>
+              <div class="info-left">
                 <div class="info-title" id="info-title">${title}</div>
                 <span class="section-label" id="tl-range">${subtitle}</span>
               </div>
