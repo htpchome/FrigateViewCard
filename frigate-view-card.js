@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1392";
+const VERSION = "1.0.1393";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -16837,6 +16837,17 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _syncToolbarButtons() {
     const buttonStates = this._toolbarButtonStates();
+    if (this._activePageShellCapabilities().tabsVariant !== "none") {
+      const shouldShowGrid = this._isGridModeAvailable();
+      const shouldShowSlideshow = this._isSlideshowRotationAvailable();
+      const controlsBtnPresent = !!this._$("#controls-btn");
+      const gridBtnPresent = !!this._$("#grid-btn");
+      const slideshowBtnPresent = !!this._$("#slideshow-btn");
+      const needsToolsRerender = buttonStates.controlsVisible && !controlsBtnPresent || shouldShowGrid && !gridBtnPresent || shouldShowSlideshow && !slideshowBtnPresent;
+      if (needsToolsRerender) {
+        this._syncTabsShell();
+      }
+    }
     const gridBtn = this._$("#grid-btn");
     if (gridBtn) {
       const gridAvailable = this._isGridModeAvailable();

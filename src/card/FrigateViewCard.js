@@ -2246,6 +2246,20 @@ export class FrigateViewCard extends HTMLElement {
 
   _syncToolbarButtons() {
     const buttonStates = this._toolbarButtonStates();
+    if (this._activePageShellCapabilities().tabsVariant !== "none") {
+      const shouldShowGrid = this._isGridModeAvailable();
+      const shouldShowSlideshow = this._isSlideshowRotationAvailable();
+      const controlsBtnPresent = !!this._$("#controls-btn");
+      const gridBtnPresent = !!this._$("#grid-btn");
+      const slideshowBtnPresent = !!this._$("#slideshow-btn");
+      const needsToolsRerender =
+        (buttonStates.controlsVisible && !controlsBtnPresent) ||
+        (shouldShowGrid && !gridBtnPresent) ||
+        (shouldShowSlideshow && !slideshowBtnPresent);
+      if (needsToolsRerender) {
+        this._syncTabsShell();
+      }
+    }
     const gridBtn = this._$("#grid-btn");
     if (gridBtn) {
       const gridAvailable = this._isGridModeAvailable();
