@@ -1009,8 +1009,8 @@ const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
-  .divider {height:38px;width:8px;align-items:center;justify-content:center;}
-  .divider svg {height:24px;width:8px;}
+  .divider {min-height:36px;width:8px;align-items:center;justify-content:center;}
+  .divider svg {height:24px;width:8px;opacity:0.85;color:var(--c-text2);}
   .ico{width:30px;height:30px;display:flex;align-items:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
   .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
