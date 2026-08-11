@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1391";
+const VERSION = "1.0.1392";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15996,9 +15996,13 @@ const FrigateViewCard = class extends HTMLElement {
         previewModeConfigChanged,
         realtimePollChanged
       });
+      this._syncToolbarButtons();
       return;
     }
-    if (routeFlowOutcome === "handled") return;
+    if (routeFlowOutcome === "handled") {
+      this._syncToolbarButtons();
+      return;
+    }
   }
   set hass(hass) {
     this._ensureEditorPreviewController();

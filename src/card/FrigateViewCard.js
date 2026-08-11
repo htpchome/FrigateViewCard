@@ -1227,10 +1227,14 @@ export class FrigateViewCard extends HTMLElement {
         previewModeConfigChanged,
         realtimePollChanged,
       });
+      this._syncToolbarButtons();
       return;
     }
 
-    if (routeFlowOutcome === "handled") return;
+    if (routeFlowOutcome === "handled") {
+      this._syncToolbarButtons();
+      return;
+    }
   }
   set hass(hass) {
     this._ensureEditorPreviewController();
