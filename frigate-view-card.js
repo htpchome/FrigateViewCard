@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1397";
+const VERSION = "1.0.1398";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -116,6 +116,7 @@ const ICONS = {
   volOn: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>',
   grid: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 3v8h8V3H3zm6 6H5V5h4v4zm-6 4v8h8v-8H3zm6 6H5v-4h4v4zm4-16v8h8V3h-8zm6 6h-4V5h4v4zm-6 4v8h8v-8h-8zm6 6h-4v-4h4v4z"/></svg>',
   person: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
+  divider: '<svg fill="currentColor" version="1.1" viewBox="0 0 8 24"><path d="m3.7826 3h0.43584c0.411 0 0.74108 0.33008 0.74108 0.74208v16.516c0 0.412-0.33008 0.74208-0.74108 0.74208h-0.43584c-0.411 0-0.74208-0.33008-0.74208-0.74208v-16.516c0-0.412 0.33108-0.74208 0.74208-0.74208z"/></svg>',
   singleView: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1,1.5 A0.5,0.5 0 0 1 1.5,1 h21 A0.5,0.5 0 0 1 23,1.5 v10 A0.5,0.5 0 0 1 22.5,12 h-21 A0.5,0.5 0 0 1 1,11.5 Z M1,14.5 A0.5,0.5 0 0 1 1.5,14 h21 A0.5,0.5 0 0 1 23,14.5 v3 A0.5,0.5 0 0 1 22.5,18 h-21 A0.5,0.5 0 0 1 1,17.5 Z M1,19.5 A0.5,0.5 0 0 1 1.5,19 h21 A0.5,0.5 0 0 1 23,19.5 v3 A0.5,0.5 0 0 1 22.5,23 h-21 A0.5,0.5 0 0 1 1,22.5 Z" /></svg>',
   preView: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1,1.76 A0.76,0.76 0 0 1 1.76,1 h20.48 a0.76,0.76 0 0 1 0.76,0.76 v8.98 a0.76,0.76 0 0 1 -0.76,0.76 H1.76 A0.76,0.76 0 0 1 1,10.74 Z M1,13.26 A0.76,0.76 0 0 1 1.76,12.5 h20.48 a0.76,0.76 0 0 1 0.76,0.76 v8.98 a0.76,0.76 0 0 1 -0.76,0.76 H1.76 A0.76,0.76 0 0 1 1,22.24 Z" /></svg>',
   wideView: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M 1,5.52 A 0.52,0.52 0 0 1 1.52,5 h 13.83 a 0.52,0.52 0 0 1 0.52,0.52 v 9.81 a 0.52,0.52 0 0 1 -0.52,0.52 H 1.52 A 0.52,0.52 0 0 1 1,15.33 Z M 16.34,5.26 A 0.26,0.26 0 0 1 16.6,5 h 6.48 a 0.26,0.26 0 0 1 0.26,0.26 V 8.74 A 0.26,0.26 0 0 1 23.08,9 H 16.6 A 0.26,0.26 0 0 1 16.34,8.74 Z m 0,5 A 0.26,0.26 0 0 1 16.6,10 h 6.48 a 0.26,0.26 0 0 1 0.26,0.26 v 3.48 A 0.26,0.26 0 0 1 23.08,14 H 16.6 a 0.26,0.26 0 0 1 -0.26,-0.26 z m 0,5 A 0.26,0.26 0 0 1 16.6,15 h 6.48 a 0.26,0.26 0 0 1 0.26,0.26 v 3.48 A 0.26,0.26 0 0 1 23.08,19 H 16.6 a 0.26,0.26 0 0 1 -0.26,-0.26 z" /></svg>',
@@ -1008,7 +1009,8 @@ const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
-  .divider {height:1rem;width:1em}
+  .divider {height:24px;width:8px;align-items:center;}
+  .divider svg {height:24px;width:8px;}
   .ico{width:30px;height:30px;display:flex;align-items:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
   .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
@@ -3344,7 +3346,7 @@ function buildToolsMarkup({
         ${controlsHidden ? "" : `<button class="tool${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
         ${gridButton}
         ${slideshowButton}
-        <div class="divider">%7C</div>
+        <div class="divider">${icons.divider}</div>
         <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
         <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}" ${calendarDisabled ? "disabled" : ""}>${icons.calendar}</button>
       </div>`;
