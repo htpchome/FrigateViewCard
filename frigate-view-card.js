@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1399";
+const VERSION = "1.0.1400";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1009,7 +1009,7 @@ const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
-  .divider {min-height:36px;width:8px;align-items:center;justify-content:center;}
+  .divider {min-height:36px;width:8px;display:flex;align-items:center;justify-content:center;}
   .divider svg {height:24px;width:8px;opacity:0.85;color:var(--c-text2);}
   .ico{width:30px;height:30px;display:flex;align-items:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
   .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
