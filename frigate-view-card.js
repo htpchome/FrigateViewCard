@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1393";
+const VERSION = "1.0.1394";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -17396,9 +17396,7 @@ const FrigateViewCard = class extends HTMLElement {
       return;
     }
     const prevTab = this._tab;
-    const toolsEl = tabs.querySelector(".tl-tools");
-    tabs.innerHTML = this._buildTabsMarkup();
-    if (toolsEl) tabs.appendChild(toolsEl);
+    tabs.innerHTML = `${this._buildTabsMarkup()}${this._getToolsMarkup()}`;
     [
       "#grid-btn",
       "#slideshow-btn",

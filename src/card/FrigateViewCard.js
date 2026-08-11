@@ -2894,10 +2894,7 @@ export class FrigateViewCard extends HTMLElement {
       return;
     }
     const prevTab = this._tab;
-    // Preserve the tools element — it renders independently from tab circle-btn(s).
-    const toolsEl = tabs.querySelector(".tl-tools");
-    tabs.innerHTML = this._buildTabsMarkup();
-    if (toolsEl) tabs.appendChild(toolsEl);
+    tabs.innerHTML = `${this._buildTabsMarkup()}${this._getToolsMarkup()}`;
     [
       "#grid-btn",
       "#slideshow-btn",
