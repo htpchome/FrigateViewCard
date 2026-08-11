@@ -187,8 +187,8 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     right: 12px;
     top: 50%;
     transform: translateY(-50%);
-    width: 14px;
-    height: 14px;
+    width: 20px;
+    height: 30px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -196,8 +196,8 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   }
 
   .card.mobile-view-active .mobile-cam-picker__chev svg {
-    width: 14px;
-    height: 14px;
+    width: 20px;
+    height: 20px;
   }
 
   .card.mobile-view-active .mobile-cam-picker__panel {
