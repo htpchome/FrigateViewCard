@@ -222,9 +222,9 @@ export const STYLES = `
 
   /* ── feed area ── */
     .feed-area{position:relative;width:100%;}
-    #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--view-height,none);z-index:0;isolation:isolate;transition:opacity .22s ease,border-radius .25s ease,box-shadow .25s ease;}
+    #eng-wrap{background:var(--c-bg-deep);position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;max-height:var(--view-height,none);z-index:0;isolation:isolate;}
     #engine,#stream-fallback{transition:opacity .22s ease;}
-    #eng-wrap::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:5;box-sizing:border-box;border:0 solid transparent;transition:border-color .2s ease,border-width .2s ease;}
+    #eng-wrap::before{content:"";position:absolute;border-radius:inherit;pointer-events:none;z-index:5;}
     #eng-wrap.slideshow-switching #engine,
     #eng-wrap.slideshow-switching #stream-fallback{opacity:.12;}
     #eng-wrap.slideshow-alert::before{border-width:3px;border-color:var(--error-color, var(--c-bg-alert));}
