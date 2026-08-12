@@ -140,6 +140,8 @@ export function buildMobileViewMainLayoutShellMarkup({
                 <div class="tabs shadow-small">            
                   ${tabsMarkup}${toolsMarkup}
                 </div>
+                ${icons.frigateView}${icons.mobileView}${icons.preView}
+
                 ${browseMarkup}
                 ${footerMarkup}
               </div>

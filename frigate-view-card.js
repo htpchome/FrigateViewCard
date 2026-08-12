@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1400";
+const VERSION = "1.0.1401";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3154,7 +3154,7 @@ function buildMobileCamSwitcherMarkup({
   includeStatus,
   cameras,
   activeCamIdx,
-  icons,
+  icons: icons2,
   getCameraName,
   isCameraAvailable,
   streamType = "--",
@@ -3165,7 +3165,7 @@ function buildMobileCamSwitcherMarkup({
   const safeActiveIdx = Number.isInteger(activeCamIdx) && activeCamIdx >= 0 && activeCamIdx < cameraList.length ? activeCamIdx : 0;
   const activeCamera = cameraList[safeActiveIdx] || cameraList[0] || null;
   const activeCameraName = activeCamera ? getCameraName(activeCamera) : "Camera";
-  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn mobile-cam-picker__back" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left}</button>` : "";
+  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn mobile-cam-picker__back" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons2.left}</button>` : "";
   const cameraOptions = cameraList.map(
     (camera, index) => buildMobileCameraOptionMarkup({
       camera,
@@ -3189,7 +3189,7 @@ function buildMobileCamSwitcherMarkup({
           <span class="mobile-cam-picker__trigger-dot" aria-hidden="true">\u25CF</span>
           <span class="mobile-cam-picker__label">${activeCameraName}</span>
         </span>
-        <span class="mobile-cam-picker__chev" aria-hidden="true">${icons.chevron || "v"}</span>
+        <span class="mobile-cam-picker__chev" aria-hidden="true">${icons2.chevron || "v"}</span>
       </button>
       <div class="mobile-cam-picker__panel" role="listbox" ${pickerOpen ? "" : "hidden"} data-mobile-cam-panel>
         ${cameraOptions}
@@ -3248,6 +3248,8 @@ function buildMobileViewMainLayoutShellMarkup({
                 <div class="tabs shadow-small">            
                   ${tabsMarkup}${toolsMarkup}
                 </div>
+                ${icons.frigateView}${icons.mobileView}${icons.preView}
+
                 ${browseMarkup}
                 ${footerMarkup}
               </div>
@@ -3303,23 +3305,23 @@ function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
 function resolveSubtitleText(config) {
   return config?.subtitle || "Frigate";
 }
-function buildTabsMarkup({ tab, hiddenTabs, viewMode, icons }) {
+function buildTabsMarkup({ tab, hiddenTabs, viewMode, icons: icons2 }) {
   const ht = new Set(hiddenTabs || []);
   const gridModeListOnly = viewMode === "grid";
   const tabOrder = gridModeListOnly ? ["alerts", "kept", "controls"] : ["alerts", "clips", "snapshot", "recordings", "kept", "controls"];
   const activeTab = resolveActiveTab(tab, ht, tabOrder);
   const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="circle-btn active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="circle-btn" data-tab="${id}" title="${label}">${icon}</div>`;
-  const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
-      ${tabMarkup("clips", icons.clips, "Clips")}
-      ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
-      ${tabMarkup("recordings", icons.recordings, "Recordings")}
-      ${tabMarkup("kept", icons.star, "Kept events")}`;
+  const markup = `${tabMarkup("alerts", icons2.alerts, "Alerts")}
+      ${tabMarkup("clips", icons2.clips, "Clips")}
+      ${tabMarkup("snapshot", icons2.snapshot, "Snapshots")}
+      ${tabMarkup("recordings", icons2.recordings, "Recordings")}
+      ${tabMarkup("kept", icons2.star, "Kept events")}`;
   return { activeTab, markup };
 }
 function buildToolsMarkup({
   tab,
   viewMode,
-  icons,
+  icons: icons2,
   isFilterPanelOpen,
   isCalendarPanelOpen,
   isGridModeAvailable,
@@ -3343,12 +3345,12 @@ function buildToolsMarkup({
   const slideshowActive = isSlideshowActive;
   const slideshowButton = slideshowHidden ? "" : `<button class="tool slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button>`;
   const markup = `<div class="tl-tools" style=" margin-left: auto;">
-        ${controlsHidden ? "" : `<button class="tool${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
+        ${controlsHidden ? "" : `<button class="tool${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons2.bullseye}</button>`}
         ${gridButton}
         ${slideshowButton}
-        <div class="divider">${icons.divider}</div>
-        <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
-        <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}" ${calendarDisabled ? "disabled" : ""}>${icons.calendar}</button>
+        <div class="divider">${icons2.divider}</div>
+        <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons2.filter}</button>
+        <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}" ${calendarDisabled ? "disabled" : ""}>${icons2.calendar}</button>
       </div>`;
   return markup;
 }
@@ -3358,11 +3360,11 @@ function buildCamSwitcherMarkup({
   cameras,
   activeCamIdx,
   isSingleView,
-  icons,
+  icons: icons2,
   getCameraName,
   isCameraAvailable
 }) {
-  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
+  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons2.left} Back</button>` : "";
   const cameraButtons = (cameras || []).map((camera, index) => {
     const name = getCameraName(camera);
     const active = isSingleView && index === activeCamIdx;
@@ -3398,14 +3400,14 @@ function buildInfoRowMarkup({ title, subtitle, version, pageNav = "" }) {
               </div>
             </div>`;
 }
-function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
+function buildLiveEngineWrapMarkup({ icons: icons2, streamMuted }) {
   const muteLabel = streamMuted ? "Unmute live view" : "Mute live view";
-  const muteIcon = streamMuted ? icons.volOff : icons.volOn;
+  const muteIcon = streamMuted ? icons2.volOff : icons2.volOn;
   return `<div id="eng-wrap">
                 <frigate-live-stream id="engine">
-                  <div class="ph">${icons.live}<span>Connecting\u2026</span></div>
+                  <div class="ph">${icons2.live}<span>Connecting\u2026</span></div>
                 </frigate-live-stream>
-                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
+                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons2.expand}</button>
                   <button class="glass-btn mute-btn" id="mute-btn" title="${muteLabel}" aria-label="${muteLabel}">${muteIcon}</button>
                   <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
                   <div id="stream-fallback" hidden>
@@ -3422,15 +3424,15 @@ function mergeClassNames(...tokens) {
     ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean))
   ].join(" ");
 }
-function buildBrowseMarkup({ icons, layoutProfile = {} }) {
+function buildBrowseMarkup({ icons: icons2, layoutProfile = {} }) {
   const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
   return `<div class="browse-head" id="browse-head" style="display:none">
               <div class="browse-head-left">
-                <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${icons.left}Previous</button>
+                <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${icons2.left}Previous</button>
               </div>
               <div class="browse-head-middle" id="browse-head-label"></div>
               <div class="browse-head-right">
-                <button class="prev-next" id="rec-day-next" data-rec-day-nav="1" title="Next day" aria-label="Next day" style="display:none">Next${icons.right}</button>
+                <button class="prev-next" id="rec-day-next" data-rec-day-nav="1" title="Next day" aria-label="Next day" style="display:none">Next${icons2.right}</button>
               </div>
             </div>
         
@@ -3443,9 +3445,9 @@ function buildBrowseMarkup({ icons, layoutProfile = {} }) {
               </div>
             </div>`;
 }
-function buildFooterMarkup({ icons }) {
+function buildFooterMarkup({ icons: icons2 }) {
   return `<div class="footer">
-              <div><div class="frigate-view">${icons.frigateView}</div></div>
+              <div><div class="frigate-view">${icons2.frigateView}</div></div>
               <div class="more" id="older-hint" hidden>scroll for older\u2026</div>
               <div></div>
             </div>`;
@@ -3503,7 +3505,7 @@ function buildControlsReadoutEmptyMarkup(message = "Use the circle pad to move t
 function buildControlsReadoutLinesMarkup(lines) {
   return (lines || []).map((line) => `<div class="controls-readout-line">${line}</div>`).join("");
 }
-function buildPopupShellMarkup({ icons, version }) {
+function buildPopupShellMarkup({ icons: icons2, version }) {
   return `<div id="myPopup" class="popup-content">
             <div class="popup-close-row">
               <button class="close-btn" aria-label="Close">&times;</button> 
@@ -3511,7 +3513,7 @@ function buildPopupShellMarkup({ icons, version }) {
             <div class="popup-header"></div>          
             <div class="popup-body">
               <div class="viewer" id="viewer" style="display:none"></div>
-              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
+              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons2.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons2.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons2.expand}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
               </div>
               <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
                 <div class="recording-scrub" id="recording-scrub" hidden>
@@ -3528,10 +3530,10 @@ function buildPopupShellMarkup({ icons, version }) {
                 </div>
                 <div class="popup-info" id="popup-info" hidden></div>
                 <div class="popup-carousel-wrap" id="popup-carousel-wrap" hidden>
-                  <button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" aria-label="Previous items">${icons.left}
+                  <button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" aria-label="Previous items">${icons2.left}
                   </button>
                   <div class="popup-carousel" id="popup-carousel"></div>
-                  <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" aria-label="Next items">${icons.right}
+                  <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" aria-label="Next items">${icons2.right}
                   </button>
                 </div>
                 <h1 class="popup-shell-ver" id="popup-shell-ver">v${version}</h1>
@@ -11511,7 +11513,7 @@ function resolveControlsReadoutMarkup(lines, escapeText, emptyMessage) {
 function buildReviewListItemModel(review, deps) {
   const {
     cap: cap2,
-    icons,
+    icons: icons2,
     resolveSourceEvent,
     findEventById,
     media,
@@ -11528,9 +11530,9 @@ function buildReviewListItemModel(review, deps) {
   const favEv = firstDet ? findEventById(firstDet) : null;
   const mediaEvent = sourceEvent || favEv;
   const mediaEventId = String(mediaEvent?.id || firstDet || "");
-  const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>` : "";
-  const dlClip = showDownloadButtons && mediaEvent?.has_clip ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
-  const dlSnap = showDownloadButtons && mediaEvent?.has_snapshot ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>` : "";
+  const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons2.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${icons2.starO}</button>` : "";
+  const dlClip = showDownloadButtons && mediaEvent?.has_clip ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons2.download}</button>` : "";
+  const dlSnap = showDownloadButtons && mediaEvent?.has_snapshot ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons2.snapshot}</button>` : "";
   return {
     reviewId: review?.id || "",
     firstDet,
@@ -11546,10 +11548,10 @@ function buildReviewListItemModel(review, deps) {
   };
 }
 function buildReviewListItemHtml(model, deps) {
-  const { cap: cap2, icons } = deps || {};
+  const { cap: cap2, icons: icons2 } = deps || {};
   const thumb = model?.firstDet ? `<div class="et ${model.sev}">
                 <img src="${model.thumbSrc}" loading="lazy" data-thumb-id="${model.firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-                  <div class="tph" style="display:none">${icons.person}</div>
+                  <div class="tph" style="display:none">${icons2.person}</div>
                 </div>` : "";
   return `
       <div class="list-item shadow-small xform" data-review-id="${model.reviewId}" ${model.firstDet ? `data-review-open="${model.firstDet}"` : ""}>
@@ -11559,7 +11561,7 @@ function buildReviewListItemHtml(model, deps) {
         <div class="rev-inf">
           <div class="rev-t">${model.title}${model.cameraLabel ? ` <span class="cam-badge">${model.cameraLabel}</span>` : ""}</div>
           <div class="rev-m">
-            <span class="time-meta">${icons.clock}${model.timeLabel}</span>
+            <span class="time-meta">${icons2.clock}${model.timeLabel}</span>
             <span class="review-meta">
               ${cap2(model.sev)}${model.reviewed ? " \xB7 \u2713" : model.firstDet ? " \xB7 tap" : ""}
             </span>
@@ -11574,7 +11576,7 @@ function buildEventListItemModel(eventItem, deps) {
   const {
     cap: cap2,
     labelColor: labelColor2,
-    icons,
+    icons: icons2,
     media,
     durationLabel,
     dateTimeLabel,
@@ -11588,12 +11590,12 @@ function buildEventListItemModel(eventItem, deps) {
   const zone = eventItem?.zones && eventItem.zones.length ? eventItem.zones[0] : "";
   const subl = eventItem?.sub_label ? `<span class="subl">${eventItem.sub_label}</span>` : "";
   const thumbSrc = media(eventItem?.id, "thumbnail.jpg");
-  const thumb = eventItem?.has_snapshot || eventItem?.has_clip ? `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${eventItem.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${icons.person}</div>` : `<div class="tph">${icons.person}</div>`;
+  const thumb = eventItem?.has_snapshot || eventItem?.has_clip ? `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${eventItem.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${icons2.person}</div>` : `<div class="tph">${icons2.person}</div>`;
   const badge = eventItem?.has_clip ? '<span class="bc">clip</span>' : eventItem?.has_snapshot ? '<span class="bs">snap</span>' : "";
-  const dlClip = showDownloadButtons && eventItem?.has_clip ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
-  const dlSnap = showDownloadButtons && eventItem?.has_snapshot ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>` : "";
+  const dlClip = showDownloadButtons && eventItem?.has_clip ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons2.download}</button>` : "";
+  const dlSnap = showDownloadButtons && eventItem?.has_snapshot ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons2.snapshot}</button>` : "";
   const camLabel = showCameraLabel ? `<span class="cam-badge">${String(eventItem?.camera || "").replace(/_/g, " ")}</span>` : "";
-  const favBtn = eventItem?.retain_indefinitely ? `<button class="ico fav on" data-fav="${eventItem.id}">${icons.star}</button>` : `<button class="ico fav" data-fav="${eventItem.id}">${icons.starO}</button>`;
+  const favBtn = eventItem?.retain_indefinitely ? `<button class="ico fav on" data-fav="${eventItem.id}">${icons2.star}</button>` : `<button class="ico fav" data-fav="${eventItem.id}">${icons2.starO}</button>`;
   return {
     id: eventItem?.id,
     labelColorValue: labelColor2(eventItem?.label),
@@ -11613,7 +11615,7 @@ function buildEventListItemModel(eventItem, deps) {
     description: eventItem?.data?.description || ""
   };
 }
-function buildEventListItemHtml(model, { icons, expanded, compact }) {
+function buildEventListItemHtml(model, { icons: icons2, expanded, compact }) {
   const desc = expanded && model.description ? `<div class="desc">${model.description}</div>` : "";
   return `
     <div class="list-item${compact ? " compact" : ""} shadow-small xform" data-ev="${model.id}">
@@ -11621,7 +11623,7 @@ function buildEventListItemHtml(model, { icons, expanded, compact }) {
       <div class="et">${model.thumb}<div class="ed">${model.duration}s</div></div>
       <div class="ei">
         <div class="etop"><span class="tb" style="background:${model.labelColorValue}33;color:${model.labelColorValue}">${model.labelText}</span>${model.subl}${model.badge}${model.camLabel}${model.score ? `<span class="esc">${model.score}</span>` : ""}</div>
-        <div class="em"><span>${icons.clock}${model.timeLabel}</span>${model.zone ? `<span>${icons.pin}${model.zone}</span>` : ""}</div>
+        <div class="em"><span>${icons2.clock}${model.timeLabel}</span>${model.zone ? `<span>${icons2.pin}${model.zone}</span>` : ""}</div>
         ${desc}
       </div>
       <div class="eact${compact ? " h" : ""}">${model.favBtn}${model.dlClip}${model.dlSnap}</div>
@@ -13987,11 +13989,11 @@ function buildStandardCamSwitcherButtons({
   cameras,
   activeCamIdx,
   isSingleView,
-  icons,
+  icons: icons2,
   getCameraName,
   isCameraAvailable
 }) {
-  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
+  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons2.left} Back</button>` : "";
   const cameraButtons = (cameras || []).map((camera, index) => {
     const name = getCameraName(camera);
     const active = isSingleView && index === activeCamIdx;
