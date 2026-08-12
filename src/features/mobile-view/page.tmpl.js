@@ -119,7 +119,6 @@ export function buildMobileViewMainLayoutShellMarkup({
   liveEngineWrap,
   infoRow,
   pageNav,
-  icons,
   camSwitcher,
   tabsMarkup,
   toolsMarkup,
@@ -141,7 +140,6 @@ export function buildMobileViewMainLayoutShellMarkup({
                 <div class="tabs shadow-small">            
                   ${tabsMarkup}${toolsMarkup}
                 </div>
-                <div>${icons.frigateView}${icons.mobileView}${icons.preView}</div>
 
                 ${browseMarkup}
                 ${footerMarkup}
