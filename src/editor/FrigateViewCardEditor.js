@@ -384,14 +384,10 @@ export class FrigateViewCardEditor extends HTMLElement {
     });
     const token = (this._cameraModalPtzToken || 0) + 1;
     this._cameraModalPtzToken = token;
-    const [ptzInfo, attrs] = await Promise.all([
-      this._fetchPtzCapabilityForEntity(entity),
-      Promise.resolve(this._cameraStateAttributes(entity)),
-    ]);
+    const ptzInfo = await this._fetchPtzCapabilityForEntity(entity);
     if (this._cameraModalPtzToken !== token) return;
     const ptzSupported = hasPtzPanTiltCapability(ptzInfo);
-    const twoWayTalkSupported =
-      hasTwoWayTalkCapability(ptzInfo) || hasTwoWayTalkCapability(attrs);
+    const twoWayTalkSupported = hasTwoWayTalkCapability(ptzInfo);
     this._syncCameraModalPtzVisibility({
       supported: ptzSupported,
       loading: false,

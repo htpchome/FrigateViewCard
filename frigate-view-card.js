@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1414";
+const VERSION = "1.0.1415";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -20436,9 +20436,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
       return;
     }
     if (isHaDirect) {
-      const attrs2 = this._cameraStateAttributes(entity);
-      const ptzSupported2 = this._hasHaDirectPtzCapability(attrs2);
-      const twoWayTalkSupported2 = this._hasHaDirectTwoWayTalkCapability(attrs2);
+      const attrs = this._cameraStateAttributes(entity);
+      const ptzSupported2 = this._hasHaDirectPtzCapability(attrs);
+      const twoWayTalkSupported2 = this._hasHaDirectTwoWayTalkCapability(attrs);
       this._syncCameraModalPtzVisibility({
         supported: ptzSupported2,
         loading: false,
@@ -20457,13 +20457,10 @@ const FrigateViewCardEditor = class extends HTMLElement {
     });
     const token = (this._cameraModalPtzToken || 0) + 1;
     this._cameraModalPtzToken = token;
-    const [ptzInfo, attrs] = await Promise.all([
-      this._fetchPtzCapabilityForEntity(entity),
-      Promise.resolve(this._cameraStateAttributes(entity))
-    ]);
+    const ptzInfo = await this._fetchPtzCapabilityForEntity(entity);
     if (this._cameraModalPtzToken !== token) return;
     const ptzSupported = hasPtzPanTiltCapability(ptzInfo);
-    const twoWayTalkSupported = hasTwoWayTalkCapability(ptzInfo) || hasTwoWayTalkCapability(attrs);
+    const twoWayTalkSupported = hasTwoWayTalkCapability(ptzInfo);
     this._syncCameraModalPtzVisibility({
       supported: ptzSupported,
       loading: false,
