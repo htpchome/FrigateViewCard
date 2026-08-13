@@ -118,6 +118,22 @@ export const hasPtzFocusCapability = (ptzInfo) =>
 
 export const hasTwoWayTalkCapability = (ptzInfo) => {
   if (!ptzInfo || typeof ptzInfo !== "object") return false;
+
+  const producers = Array.isArray(ptzInfo.producers) ? ptzInfo.producers : [];
+  const hasGo2RtcBackchannel = producers.some((producer) => {
+    if (!Array.isArray(producer?.medias)) return false;
+    return producer.medias.some((media) => {
+      const token = String(media || "")
+        .trim()
+        .toLowerCase();
+      return (
+        token.includes("audio") &&
+        (token.includes("sendonly") || token.includes("sendrecv"))
+      );
+    });
+  });
+  if (hasGo2RtcBackchannel) return true;
+
   const truthyKeys = new Set([
     "two_way_talk",
     "twoWayTalk",

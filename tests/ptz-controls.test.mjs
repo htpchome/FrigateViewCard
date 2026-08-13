@@ -349,3 +349,27 @@ test("hasTwoWayTalkCapability detects talk support from PTZ info payload", () =>
   );
   assert.equal(hasTwoWayTalkCapability({ features: ["pt", "zoom"] }), false);
 });
+
+test("hasTwoWayTalkCapability detects go2rtc backchannel from producer medias", () => {
+  assert.equal(
+    hasTwoWayTalkCapability({
+      producers: [
+        {
+          medias: ["video, recvonly, H264", "audio, sendonly, PCMA/8000"],
+        },
+      ],
+    }),
+    true,
+  );
+
+  assert.equal(
+    hasTwoWayTalkCapability({
+      producers: [
+        {
+          medias: ["video, recvonly, H264", "audio, recvonly, AAC"],
+        },
+      ],
+    }),
+    false,
+  );
+});

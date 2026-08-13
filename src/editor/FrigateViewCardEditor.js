@@ -197,6 +197,12 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
   }
 
+  _ensureGo2RtcMetadataCache() {
+    if (!(this._go2rtcMetadataCache instanceof Map)) {
+      this._go2rtcMetadataCache = new Map();
+    }
+  }
+
   _cameraEntityPtzLookupContext(entity) {
     const state = this._hass?.states?.[entity];
     if (!state) return null;
@@ -244,6 +250,54 @@ export class FrigateViewCardEditor extends HTMLElement {
     })();
 
     this._ptzCapabilityCache.set(targetEntity, entry);
+    return entry.promise;
+  }
+
+  async _fetchGo2RtcStreamMetadataForEntity(entity) {
+    const targetEntity = String(entity || "").trim();
+    if (!targetEntity || !this._hass?.callWS) return null;
+    this._ensureGo2RtcMetadataCache();
+    const cached = this._go2rtcMetadataCache.get(targetEntity);
+    if (cached?.resolved) return cached.info;
+    if (cached?.promise) return cached.promise;
+
+    const context = this._cameraEntityPtzLookupContext(targetEntity);
+    if (!context) {
+      const empty = { resolved: true, info: null, promise: null };
+      this._go2rtcMetadataCache.set(targetEntity, empty);
+      return null;
+    }
+
+    const entry = { resolved: false, info: null, promise: null };
+    entry.promise = (async () => {
+      try {
+        const path = `/api/frigate/${encodeURIComponent(context.instanceId)}/go2rtc/api/streams?src=${encodeURIComponent(context.cameraName)}&video=all&audio=all&microphone`;
+        const signed = await this._hass.callWS({
+          type: "auth/sign_path",
+          path,
+          expires: 3600,
+        });
+        const signedPath = signed?.path || path;
+        const response = await fetch(`${window.location.origin}${signedPath}`, {
+          method: "GET",
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        entry.info = await response.json();
+      } catch (error) {
+        console.warn("[Frigate] Editor go2rtc metadata fetch failed", error);
+        entry.info = null;
+      } finally {
+        entry.resolved = true;
+        entry.promise = null;
+      }
+      return entry.info;
+    })();
+
+    this._go2rtcMetadataCache.set(targetEntity, entry);
     return entry.promise;
   }
 
@@ -384,10 +438,13 @@ export class FrigateViewCardEditor extends HTMLElement {
     });
     const token = (this._cameraModalPtzToken || 0) + 1;
     this._cameraModalPtzToken = token;
-    const ptzInfo = await this._fetchPtzCapabilityForEntity(entity);
+    const [ptzInfo, go2rtcStreamInfo] = await Promise.all([
+      this._fetchPtzCapabilityForEntity(entity),
+      this._fetchGo2RtcStreamMetadataForEntity(entity),
+    ]);
     if (this._cameraModalPtzToken !== token) return;
     const ptzSupported = hasPtzPanTiltCapability(ptzInfo);
-    const twoWayTalkSupported = hasTwoWayTalkCapability(ptzInfo);
+    const twoWayTalkSupported = hasTwoWayTalkCapability(go2rtcStreamInfo);
     this._syncCameraModalPtzVisibility({
       supported: ptzSupported,
       loading: false,
@@ -477,6 +534,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._hass = hass;
     if (this._ptzCapabilityCache instanceof Map) {
       this._ptzCapabilityCache.clear();
+    }
+    if (this._go2rtcMetadataCache instanceof Map) {
+      this._go2rtcMetadataCache.clear();
     }
     const modeKey = this._hass?.themes?.darkMode ? "dark" : "light";
     const key = `${this._frigateEntities().join(",")}|${modeKey}`;
