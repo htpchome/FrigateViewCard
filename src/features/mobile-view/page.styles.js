@@ -86,9 +86,12 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     min-height: 0;
   }
 
-  .card.mobile-view-active .mobile-top .page-nav,
   .card.mobile-view-active .mobile-top .cam-switcher {
     padding-inline: 8px;
+  }
+
+  .card.mobile-view-active .mobile-bottom .button-holder {
+    padding-inline: 6px;
   }
 
   .card.mobile-view-active .mobile-top .cam-switcher {

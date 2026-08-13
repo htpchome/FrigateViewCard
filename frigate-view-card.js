@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1418";
+const VERSION = "1.0.1419";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -213,9 +213,12 @@ const MOBILE_VIEW_PAGE_STYLES = `
     min-height: 0;
   }
 
-  .card.mobile-view-active .mobile-top .page-nav,
   .card.mobile-view-active .mobile-top .cam-switcher {
     padding-inline: 8px;
+  }
+
+  .card.mobile-view-active .mobile-bottom .button-holder {
+    padding-inline: 6px;
   }
 
   .card.mobile-view-active .mobile-top .cam-switcher {
@@ -718,7 +721,13 @@ const STYLES = `
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
-  .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:2px 8px;overflow:visible;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;margin:3px 8px;}
+  .tabs-holder{margin:3px 8px;border-radius:8px;background-color:var(--c-bg-panel);}
+  .button-holder{display:flex;align-items:center;gap:10px;padding:4px 8px;}
+  .button-holder-row{display:flex;align-items:center;min-width:0;}
+  .tabs-row{flex:1 1 auto;justify-content:flex-start;}
+  .page-nav-row{flex:0 1 auto;justify-content:center;}
+  .tools-row{flex:1 1 auto;justify-content:flex-end;}
+  .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:0;overflow:visible;scrollbar-width:none;position:relative;z-index:auto;background-color:transparent !important;border-radius:8px;transition:background-color 0.3s ease;margin:0;}
   .tabs::-webkit-scrollbar{display:none;}
 
   /* \u2500\u2500 circle button \u2500\u2500 */
@@ -957,10 +966,9 @@ const STYLES = `
   .info-left{flex: 1;}
   .info-row-page-nav{display:flex;justify-content:center;align-items:center;flex:1 1 240px;padding:0 12px;min-width:0;}
   .info-row-page-nav .page-nav{padding:0;justify-content:center;width:100%;}
-  .page-nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0;}
-  .page-nav-btn{border:1px solid var(--c-border2);background:var(--c-bg-panel);color:var(--c-text2);border-radius:999px;padding:6px 10px;font-size:.78rem;font-weight:700;line-height:1;cursor:pointer;transition:background .16s ease,border-color .16s ease,color .16s ease;}
-  .page-nav-btn:hover{border-color:var(--c-primary);color:var(--c-primary-d);}
-  .page-nav-btn.active{background:var(--c-primary-d);border-color:var(--c-primary-d);color:var(--c-text-rev);}
+  .page-nav{display:flex;align-items:center;justify-content:center;gap:4px;padding:0;}
+  .page-nav-btn{border-radius:6px;}
+  .page-nav-btn.active svg{color:var(--c-text-rev);opacity:1;}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
   .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
@@ -1001,6 +1009,7 @@ const STYLES = `
 
   /* \u2500\u2500 timeline \u2500\u2500 */
   .tl-tools{position:relative;display:flex;gap:4px;}
+  .tl-tools-slot{display:flex;align-items:center;justify-content:flex-end;min-width:0;}
   .tool{display:inline-flex;gap:4px;align-items:center;justify-content:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;cursor:pointer;padding:2px;transition: all 0.2s ease;min-height:36px;min-width:36px;}
   .tool svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .tool ha-icon{width:24px;height:24px;--mdc-icon-size:24px;color:var(--c-text2);opacity:0.85;}
@@ -1012,6 +1021,14 @@ const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
+  @media (max-width: 920px){
+    .button-holder{flex-direction:column;align-items:stretch;gap:6px;padding:6px 8px;}
+    .button-holder .tabs-row{order:3;justify-content:center;}
+    .button-holder .tools-row{order:2;justify-content:center;}
+    .button-holder .page-nav-row{order:1;justify-content:center;}
+    .button-holder .tabs{justify-content:center;}
+    .button-holder .tl-tools-slot{justify-content:center;}
+  }
   .divider {min-height:36px;width:8px;display:flex;align-items:center;justify-content:center;}
   .divider svg {height:24px;width:8px;opacity:0.85;color:var(--c-text2);}
   .ico{width:30px;height:30px;display:flex;align-items:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
@@ -3330,6 +3347,7 @@ function buildMobileViewMainLayoutShellMarkup({
   layoutProfile = {}
 }) {
   const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"].filter(Boolean).join(" ");
+  const tabsHolderClassName = ["tabs-holder", layoutProfile.tabsHolderClass].filter(Boolean).join(" ");
   return `<div class="${layoutClassName}" id="layout">
             <div class="mobile-container" id="mobile-container">
               <div class="mobile-top" id="mobile-top">
@@ -3337,8 +3355,20 @@ function buildMobileViewMainLayoutShellMarkup({
                 ${liveEngineWrap}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                <div class="tabs shadow-small">            
-                  ${tabsMarkup}${toolsMarkup}
+                <div class="${tabsHolderClassName} shadow-small">
+                  <div class="button-holder">
+                    <div class="button-holder-row tabs-row">
+                      <div class="tabs">
+                        ${tabsMarkup}
+                      </div>
+                    </div>
+                    <div class="button-holder-row page-nav-row">
+                      ${pageNav}
+                    </div>
+                    <div class="button-holder-row tools-row">
+                      <div class="tl-tools-slot">${toolsMarkup}</div>
+                    </div>
+                  </div>
                 </div>
 
                 ${browseMarkup}
@@ -3387,10 +3417,17 @@ function applyMobileViewPageMarkup({ host, pageIds }) {
 }
 
 // src/card/controls/shell-nav.tmpl.js
-function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
+function buildPageNavMarkup({
+  routes,
+  activePageId,
+  getRouteLabel,
+  getRouteIcon
+}) {
   return `<div class="page-nav" aria-label="Page navigation">${routes.map((pageId) => {
     const isActive = pageId === activePageId;
-    return `<button class="page-nav-btn${isActive ? " active" : ""}" type="button" data-page-route="${pageId}" aria-pressed="${isActive ? "true" : "false"}">${getRouteLabel(pageId)}</button>`;
+    const label = getRouteLabel(pageId);
+    const icon = typeof getRouteIcon === "function" ? getRouteIcon(pageId) : "";
+    return `<button class="page-nav-btn${isActive ? " active" : ""} tool icon-btn" type="button" data-page-route="${pageId}" aria-label="${label}" title="${label}" aria-pressed="${isActive ? "true" : "false"}">${icon || label}</button>`;
   }).join("")}</div>`;
 }
 function resolveSubtitleText(config) {
@@ -3442,7 +3479,7 @@ function buildToolsMarkup({
   const slideshowHidden = !isSlideshowRotationAvailable;
   const slideshowActive = isSlideshowActive;
   const slideshowButton = slideshowHidden ? "" : `<button class="tool slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button>`;
-  const markup = `<div class="tl-tools" style=" margin-left: auto;">
+  const markup = `<div class="tl-tools">
         ${controlsHidden ? "" : `<button class="tool${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
         ${gridButton}
         ${slideshowButton}
@@ -3671,13 +3708,24 @@ function buildMainLayoutShellMarkup({
             ${liveEngineWrap}
 
             ${infoRow}
-            ${pageNav}
             ${camSwitcher}
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
-            <div class="tabs shadow-small">            
-              ${tabsMarkup}${toolsMarkup}
+            <div class="${tabsHolderClassName} shadow-small">
+              <div class="button-holder">
+                <div class="button-holder-row tabs-row">
+                  <div class="tabs">            
+                    ${tabsMarkup}
+                  </div>
+                </div>
+                <div class="button-holder-row page-nav-row">
+                  ${pageNav}
+                </div>
+                <div class="button-holder-row tools-row">
+                  <div class="tl-tools-slot">${toolsMarkup}</div>
+                </div>
+              </div>
             </div>
             ${browseMarkup}
             ${footerMarkup}
@@ -3801,8 +3849,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildInfoRowMarkup({
       title,
       subtitle,
-      version,
-      pageNav: host?._pageNavigationController?.pageNavMarkup?.() || host?._pageNavMarkup?.() || ""
+      version
     }),
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,
@@ -3880,8 +3927,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildInfoRowMarkup({
       title,
       subtitle,
-      version,
-      pageNav: host?._pageNavigationController?.pageNavMarkup?.() || host?._pageNavMarkup?.() || ""
+      version
     }),
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,
@@ -12698,11 +12744,19 @@ const PageNavigationController = class {
     if (pageId === PAGE_IDS2.wideView) return "Wide View";
     return "Single View";
   }
+  pageRouteIcon(pageId) {
+    const { PAGE_IDS: PAGE_IDS2, ICONS: ICONS2 = {} } = this._constants;
+    if (pageId === PAGE_IDS2.mobileView) return ICONS2.mobileView || "";
+    if (pageId === PAGE_IDS2.preview) return ICONS2.preView || "";
+    if (pageId === PAGE_IDS2.wideView) return ICONS2.wideView || "";
+    return ICONS2.singleView || "";
+  }
   pageNavMarkup() {
     return this._constants.buildPageNavMarkup({
       routes: this.pageRouteOptions(),
       activePageId: this._constants.normalizePageRoute(this._host._pageId),
-      getRouteLabel: (pageId) => this.pageRouteLabel(pageId)
+      getRouteLabel: (pageId) => this.pageRouteLabel(pageId),
+      getRouteIcon: (pageId) => this.pageRouteIcon(pageId)
     });
   }
   syncPageNavShell() {
@@ -15549,7 +15603,8 @@ const FrigateViewCard = class extends HTMLElement {
       createNavigationFactory,
       getEnabledPageRoutes,
       normalizePageRoute,
-      PAGE_IDS
+      PAGE_IDS,
+      ICONS
     });
     this._pageShellRegistry = createPageShellRegistry({
       defaultPageId: PAGE_IDS.singleView
@@ -17500,13 +17555,18 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _syncTabsShell() {
     const tabs = this._$(".tabs");
+    const toolsSlot = this._$(".tl-tools-slot");
     if (!tabs) return;
     if (this._activePageShellCapabilities().tabsVariant === "none") {
       tabs.innerHTML = "";
+      if (toolsSlot) toolsSlot.innerHTML = "";
       return;
     }
     const prevTab = this._tab;
-    tabs.innerHTML = `${this._buildTabsMarkup()}${this._getToolsMarkup()}`;
+    tabs.innerHTML = this._buildTabsMarkup();
+    if (toolsSlot) {
+      toolsSlot.innerHTML = this._getToolsMarkup();
+    }
     [
       "#grid-btn",
       "#slideshow-btn",

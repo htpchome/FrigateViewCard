@@ -129,6 +129,9 @@ export function buildMobileViewMainLayoutShellMarkup({
   const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"]
     .filter(Boolean)
     .join(" ");
+  const tabsHolderClassName = ["tabs-holder", layoutProfile.tabsHolderClass]
+    .filter(Boolean)
+    .join(" ");
 
   return `<div class="${layoutClassName}" id="layout">
             <div class="mobile-container" id="mobile-container">
@@ -137,8 +140,20 @@ export function buildMobileViewMainLayoutShellMarkup({
                 ${liveEngineWrap}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                <div class="tabs shadow-small">            
-                  ${tabsMarkup}${toolsMarkup}
+                <div class="${tabsHolderClassName} shadow-small">
+                  <div class="button-holder">
+                    <div class="button-holder-row tabs-row">
+                      <div class="tabs">
+                        ${tabsMarkup}
+                      </div>
+                    </div>
+                    <div class="button-holder-row page-nav-row">
+                      ${pageNav}
+                    </div>
+                    <div class="button-holder-row tools-row">
+                      <div class="tl-tools-slot">${toolsMarkup}</div>
+                    </div>
+                  </div>
                 </div>
 
                 ${browseMarkup}

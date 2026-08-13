@@ -1,14 +1,22 @@
 import { resolveActiveTab } from "../../helpers.js";
 
-export function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
+export function buildPageNavMarkup({
+  routes,
+  activePageId,
+  getRouteLabel,
+  getRouteIcon,
+}) {
   return `<div class="page-nav" aria-label="Page navigation">${routes
     .map((pageId) => {
       const isActive = pageId === activePageId;
+      const label = getRouteLabel(pageId);
+      const icon =
+        typeof getRouteIcon === "function" ? getRouteIcon(pageId) : "";
       return `<button class="page-nav-btn${
         isActive ? " active" : ""
-      }" type="button" data-page-route="${pageId}" aria-pressed="${
+      } tool icon-btn" type="button" data-page-route="${pageId}" aria-label="${label}" title="${label}" aria-pressed="${
         isActive ? "true" : "false"
-      }">${getRouteLabel(pageId)}</button>`;
+      }">${icon || label}</button>`;
     })
     .join("")}</div>`;
 }
@@ -77,7 +85,7 @@ export function buildToolsMarkup({
   const slideshowButton = slideshowHidden
     ? ""
     : `<button class="tool slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button>`;
-  const markup = `<div class="tl-tools" style=" margin-left: auto;">
+  const markup = `<div class="tl-tools">
         ${controlsHidden ? "" : `<button class="tool${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
         ${gridButton}
         ${slideshowButton}
@@ -325,13 +333,24 @@ export function buildMainLayoutShellMarkup({
             ${liveEngineWrap}
 
             ${infoRow}
-            ${pageNav}
             ${camSwitcher}
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
-            <div class="tabs shadow-small">            
-              ${tabsMarkup}${toolsMarkup}
+            <div class="${tabsHolderClassName} shadow-small">
+              <div class="button-holder">
+                <div class="button-holder-row tabs-row">
+                  <div class="tabs">            
+                    ${tabsMarkup}
+                  </div>
+                </div>
+                <div class="button-holder-row page-nav-row">
+                  ${pageNav}
+                </div>
+                <div class="button-holder-row tools-row">
+                  <div class="tl-tools-slot">${toolsMarkup}</div>
+                </div>
+              </div>
             </div>
             ${browseMarkup}
             ${footerMarkup}

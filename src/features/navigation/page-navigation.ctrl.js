@@ -25,11 +25,20 @@ export class PageNavigationController {
     return "Single View";
   }
 
+  pageRouteIcon(pageId) {
+    const { PAGE_IDS, ICONS = {} } = this._constants;
+    if (pageId === PAGE_IDS.mobileView) return ICONS.mobileView || "";
+    if (pageId === PAGE_IDS.preview) return ICONS.preView || "";
+    if (pageId === PAGE_IDS.wideView) return ICONS.wideView || "";
+    return ICONS.singleView || "";
+  }
+
   pageNavMarkup() {
     return this._constants.buildPageNavMarkup({
       routes: this.pageRouteOptions(),
       activePageId: this._constants.normalizePageRoute(this._host._pageId),
       getRouteLabel: (pageId) => this.pageRouteLabel(pageId),
+      getRouteIcon: (pageId) => this.pageRouteIcon(pageId),
     });
   }
 

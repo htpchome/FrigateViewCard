@@ -563,6 +563,7 @@ export class FrigateViewCard extends HTMLElement {
       getEnabledPageRoutes,
       normalizePageRoute,
       PAGE_IDS,
+      ICONS,
     });
     this._pageShellRegistry = createPageShellRegistry({
       defaultPageId: PAGE_IDS.singleView,
@@ -2892,13 +2893,18 @@ export class FrigateViewCard extends HTMLElement {
 
   _syncTabsShell() {
     const tabs = this._$(".tabs");
+    const toolsSlot = this._$(".tl-tools-slot");
     if (!tabs) return;
     if (this._activePageShellCapabilities().tabsVariant === "none") {
       tabs.innerHTML = "";
+      if (toolsSlot) toolsSlot.innerHTML = "";
       return;
     }
     const prevTab = this._tab;
-    tabs.innerHTML = `${this._buildTabsMarkup()}${this._getToolsMarkup()}`;
+    tabs.innerHTML = this._buildTabsMarkup();
+    if (toolsSlot) {
+      toolsSlot.innerHTML = this._getToolsMarkup();
+    }
     [
       "#grid-btn",
       "#slideshow-btn",

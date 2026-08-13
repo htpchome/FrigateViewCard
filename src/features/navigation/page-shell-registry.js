@@ -172,10 +172,6 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         title,
         subtitle,
         version,
-        pageNav:
-          host?._pageNavigationController?.pageNavMarkup?.() ||
-          host?._pageNavMarkup?.() ||
-          "",
       }),
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,
@@ -262,10 +258,6 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         title,
         subtitle,
         version,
-        pageNav:
-          host?._pageNavigationController?.pageNavMarkup?.() ||
-          host?._pageNavMarkup?.() ||
-          "",
       }),
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,

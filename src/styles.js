@@ -204,7 +204,13 @@ export const STYLES = `
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
-  .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:2px 8px;overflow:visible;scrollbar-width:none;position:relative;z-index:auto;background-color:var(--c-bg-panel) !important;border-radius: 8px;transition: background-color 0.3s ease;margin:3px 8px;}
+  .tabs-holder{margin:3px 8px;border-radius:8px;background-color:var(--c-bg-panel);}
+  .button-holder{display:flex;align-items:center;gap:10px;padding:4px 8px;}
+  .button-holder-row{display:flex;align-items:center;min-width:0;}
+  .tabs-row{flex:1 1 auto;justify-content:flex-start;}
+  .page-nav-row{flex:0 1 auto;justify-content:center;}
+  .tools-row{flex:1 1 auto;justify-content:flex-end;}
+  .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:0;overflow:visible;scrollbar-width:none;position:relative;z-index:auto;background-color:transparent !important;border-radius:8px;transition:background-color 0.3s ease;margin:0;}
   .tabs::-webkit-scrollbar{display:none;}
 
   /* ── circle button ── */
@@ -443,10 +449,9 @@ export const STYLES = `
   .info-left{flex: 1;}
   .info-row-page-nav{display:flex;justify-content:center;align-items:center;flex:1 1 240px;padding:0 12px;min-width:0;}
   .info-row-page-nav .page-nav{padding:0;justify-content:center;width:100%;}
-  .page-nav{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 0;}
-  .page-nav-btn{border:1px solid var(--c-border2);background:var(--c-bg-panel);color:var(--c-text2);border-radius:999px;padding:6px 10px;font-size:.78rem;font-weight:700;line-height:1;cursor:pointer;transition:background .16s ease,border-color .16s ease,color .16s ease;}
-  .page-nav-btn:hover{border-color:var(--c-primary);color:var(--c-primary-d);}
-  .page-nav-btn.active{background:var(--c-primary-d);border-color:var(--c-primary-d);color:var(--c-text-rev);}
+  .page-nav{display:flex;align-items:center;justify-content:center;gap:4px;padding:0;}
+  .page-nav-btn{border-radius:6px;}
+  .page-nav-btn.active svg{color:var(--c-text-rev);opacity:1;}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
   .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
@@ -487,6 +492,7 @@ export const STYLES = `
 
   /* ── timeline ── */
   .tl-tools{position:relative;display:flex;gap:4px;}
+  .tl-tools-slot{display:flex;align-items:center;justify-content:flex-end;min-width:0;}
   .tool{display:inline-flex;gap:4px;align-items:center;justify-content:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;cursor:pointer;padding:2px;transition: all 0.2s ease;min-height:36px;min-width:36px;}
   .tool svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .tool ha-icon{width:24px;height:24px;--mdc-icon-size:24px;color:var(--c-text2);opacity:0.85;}
@@ -498,6 +504,14 @@ export const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
+  @media (max-width: 920px){
+    .button-holder{flex-direction:column;align-items:stretch;gap:6px;padding:6px 8px;}
+    .button-holder .tabs-row{order:3;justify-content:center;}
+    .button-holder .tools-row{order:2;justify-content:center;}
+    .button-holder .page-nav-row{order:1;justify-content:center;}
+    .button-holder .tabs{justify-content:center;}
+    .button-holder .tl-tools-slot{justify-content:center;}
+  }
   .divider {min-height:36px;width:8px;display:flex;align-items:center;justify-content:center;}
   .divider svg {height:24px;width:8px;opacity:0.85;color:var(--c-text2);}
   .ico{width:30px;height:30px;display:flex;align-items:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
