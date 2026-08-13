@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1410";
+const VERSION = "1.0.1411";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -20156,6 +20156,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const twoWayTalkEnabled = this.querySelector(
       "#camera-modal-two-way-talk-enabled"
     );
+    const twoWayTalkStateMessage = this.querySelector(
+      "#camera-modal-two-way-talk-state"
+    );
     if (toggleRow) {
       toggleRow.style.display = supported || loading ? "block" : "none";
     }
@@ -20182,6 +20185,18 @@ const FrigateViewCardEditor = class extends HTMLElement {
     if (speedRow) speedRow.style.display = showConfig ? "block" : "none";
     if (twoWayTalkToggleRow) {
       twoWayTalkToggleRow.style.display = twoWayTalkSupported ? "block" : "none";
+    }
+    if (twoWayTalkStateMessage) {
+      if (loading) {
+        twoWayTalkStateMessage.style.display = "block";
+        twoWayTalkStateMessage.textContent = "Checking Frigate two-way talk support for this camera.";
+      } else if (!twoWayTalkSupported) {
+        twoWayTalkStateMessage.style.display = "block";
+        twoWayTalkStateMessage.textContent = "Frigate did not report two-way talk support for this camera.";
+      } else {
+        twoWayTalkStateMessage.style.display = "none";
+        twoWayTalkStateMessage.textContent = "";
+      }
     }
     if (twoWayTalkEnabled) {
       twoWayTalkEnabled.dataset.supported = twoWayTalkSupported ? "true" : "false";
@@ -21312,6 +21327,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
             </div>
             <div class="field-helper">Only shown when Frigate reports talk support for this camera.</div>
           </div>
+          <div class="field-helper" id="camera-modal-two-way-talk-state" style="display:none"></div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
             <button type="button" id="camera-modal-cancel" class="cam-btn">Cancel</button>

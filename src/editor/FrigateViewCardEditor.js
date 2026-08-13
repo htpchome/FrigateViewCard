@@ -186,6 +186,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     const twoWayTalkEnabled = this.querySelector(
       "#camera-modal-two-way-talk-enabled",
     );
+    const twoWayTalkStateMessage = this.querySelector(
+      "#camera-modal-two-way-talk-state",
+    );
 
     if (toggleRow) {
       toggleRow.style.display = supported || loading ? "block" : "none";
@@ -219,6 +222,20 @@ export class FrigateViewCardEditor extends HTMLElement {
       twoWayTalkToggleRow.style.display = twoWayTalkSupported
         ? "block"
         : "none";
+    }
+    if (twoWayTalkStateMessage) {
+      if (loading) {
+        twoWayTalkStateMessage.style.display = "block";
+        twoWayTalkStateMessage.textContent =
+          "Checking Frigate two-way talk support for this camera.";
+      } else if (!twoWayTalkSupported) {
+        twoWayTalkStateMessage.style.display = "block";
+        twoWayTalkStateMessage.textContent =
+          "Frigate did not report two-way talk support for this camera.";
+      } else {
+        twoWayTalkStateMessage.style.display = "none";
+        twoWayTalkStateMessage.textContent = "";
+      }
     }
     if (twoWayTalkEnabled) {
       twoWayTalkEnabled.dataset.supported = twoWayTalkSupported
@@ -1503,6 +1520,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             </div>
             <div class="field-helper">Only shown when Frigate reports talk support for this camera.</div>
           </div>
+          <div class="field-helper" id="camera-modal-two-way-talk-state" style="display:none"></div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
             <button type="button" id="camera-modal-cancel" class="cam-btn">Cancel</button>
