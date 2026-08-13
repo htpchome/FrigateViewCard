@@ -390,7 +390,8 @@ export class FrigateViewCardEditor extends HTMLElement {
     ]);
     if (this._cameraModalPtzToken !== token) return;
     const ptzSupported = hasPtzPanTiltCapability(ptzInfo);
-    const twoWayTalkSupported = hasTwoWayTalkCapability(attrs);
+    const twoWayTalkSupported =
+      hasTwoWayTalkCapability(ptzInfo) || hasTwoWayTalkCapability(attrs);
     this._syncCameraModalPtzVisibility({
       supported: ptzSupported,
       loading: false,

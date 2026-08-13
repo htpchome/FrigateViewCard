@@ -339,5 +339,13 @@ test("hasTwoWayTalkCapability detects talk support from PTZ info payload", () =>
   assert.equal(hasTwoWayTalkCapability({ two_way_talk: true }), true);
   assert.equal(hasTwoWayTalkCapability({ features: ["pt", "talk"] }), true);
   assert.equal(hasTwoWayTalkCapability({ capabilities: ["microphone"] }), true);
+  assert.equal(
+    hasTwoWayTalkCapability({ profile: { supports_two_way_audio: true } }),
+    true,
+  );
+  assert.equal(
+    hasTwoWayTalkCapability({ features: [{ name: "backchannel" }] }),
+    true,
+  );
   assert.equal(hasTwoWayTalkCapability({ features: ["pt", "zoom"] }), false);
 });
