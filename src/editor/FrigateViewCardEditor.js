@@ -79,9 +79,9 @@ import {
 import {
   hasCameraPtz,
   hasPtzPanTiltCapability,
-  hasTwoWayTalkCapability,
   normalizeCameraPtzConfig,
 } from "../features/ptz/index.js";
+import { hasTwoWayTalkCapability } from "../features/two-way-talk/index.js";
 import {
   DEVICE_ROUTE_BUCKETS,
   getEnabledPageRoutes,
@@ -322,7 +322,6 @@ export class FrigateViewCardEditor extends HTMLElement {
   _syncCameraModalPtzVisibility({
     supported = false,
     loading = false,
-    twoWayTalkSupported = false,
     sourceType = DEFAULT_CAMERA_CONNECTION_TYPE,
     preserveSelection = false,
   } = {}) {
@@ -331,15 +330,6 @@ export class FrigateViewCardEditor extends HTMLElement {
     const stateMessage = this.querySelector("#camera-modal-ptz-state");
     const ptzEnabled = this.querySelector("#camera-modal-ptz-enabled");
     const speedRow = this.querySelector("#camera-modal-ptz-speed-row");
-    const twoWayTalkToggleRow = this.querySelector(
-      "#camera-modal-two-way-talk-toggle-row",
-    );
-    const twoWayTalkEnabled = this.querySelector(
-      "#camera-modal-two-way-talk-enabled",
-    );
-    const twoWayTalkStateMessage = this.querySelector(
-      "#camera-modal-two-way-talk-state",
-    );
 
     if (toggleRow) {
       toggleRow.style.display = supported || loading ? "block" : "none";
@@ -371,17 +361,36 @@ export class FrigateViewCardEditor extends HTMLElement {
     const showConfig = (supported || loading) && ptzEnabled?.checked === true;
     if (configRow) configRow.style.display = showConfig ? "block" : "none";
     if (speedRow) speedRow.style.display = showConfig ? "block" : "none";
+  }
+
+  _syncCameraModalTwoWayTalkVisibility({
+    supported = false,
+    loading = false,
+    sourceType = DEFAULT_CAMERA_CONNECTION_TYPE,
+    preserveSelection = false,
+  } = {}) {
+    const twoWayTalkToggleRow = this.querySelector(
+      "#camera-modal-two-way-talk-toggle-row",
+    );
+    const twoWayTalkEnabled = this.querySelector(
+      "#camera-modal-two-way-talk-enabled",
+    );
+    const twoWayTalkStateMessage = this.querySelector(
+      "#camera-modal-two-way-talk-state",
+    );
+    const sourceLabel =
+      normalizeCameraConnectionType(sourceType) === "ha_direct"
+        ? "Home Assistant"
+        : "Frigate";
 
     if (twoWayTalkToggleRow) {
-      twoWayTalkToggleRow.style.display = twoWayTalkSupported
-        ? "block"
-        : "none";
+      twoWayTalkToggleRow.style.display = supported ? "block" : "none";
     }
     if (twoWayTalkStateMessage) {
       if (loading) {
         twoWayTalkStateMessage.style.display = "block";
         twoWayTalkStateMessage.textContent = `Checking ${sourceLabel} two-way talk support for this camera.`;
-      } else if (!twoWayTalkSupported) {
+      } else if (!supported) {
         twoWayTalkStateMessage.style.display = "block";
         twoWayTalkStateMessage.textContent = `${sourceLabel} did not report two-way talk support for this camera.`;
       } else {
@@ -390,11 +399,9 @@ export class FrigateViewCardEditor extends HTMLElement {
       }
     }
     if (twoWayTalkEnabled) {
-      twoWayTalkEnabled.dataset.supported = twoWayTalkSupported
-        ? "true"
-        : "false";
-      twoWayTalkEnabled.disabled = !twoWayTalkSupported || loading;
-      if (!twoWayTalkSupported && !loading && !preserveSelection) {
+      twoWayTalkEnabled.dataset.supported = supported ? "true" : "false";
+      twoWayTalkEnabled.disabled = !supported || loading;
+      if (!supported && !loading && !preserveSelection) {
         twoWayTalkEnabled.checked = false;
       }
     }
@@ -409,7 +416,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       this._syncCameraModalPtzVisibility({
         supported: false,
         loading: false,
-        twoWayTalkSupported: false,
         sourceType: normalizedSourceType,
       });
       return;
@@ -418,11 +424,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (isHaDirect) {
       const attrs = this._cameraStateAttributes(entity);
       const ptzSupported = this._hasHaDirectPtzCapability(attrs);
-      const twoWayTalkSupported = this._hasHaDirectTwoWayTalkCapability(attrs);
       this._syncCameraModalPtzVisibility({
         supported: ptzSupported,
         loading: false,
-        twoWayTalkSupported,
         sourceType: normalizedSourceType,
         preserveSelection: ptzSupported,
       });
@@ -432,25 +436,65 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._syncCameraModalPtzVisibility({
       supported: false,
       loading: true,
-      twoWayTalkSupported: false,
       sourceType: normalizedSourceType,
       preserveSelection: true,
     });
     const token = (this._cameraModalPtzToken || 0) + 1;
     this._cameraModalPtzToken = token;
-    const [ptzInfo, go2rtcStreamInfo] = await Promise.all([
-      this._fetchPtzCapabilityForEntity(entity),
-      this._fetchGo2RtcStreamMetadataForEntity(entity),
-    ]);
+    const ptzInfo = await this._fetchPtzCapabilityForEntity(entity);
     if (this._cameraModalPtzToken !== token) return;
     const ptzSupported = hasPtzPanTiltCapability(ptzInfo);
-    const twoWayTalkSupported = hasTwoWayTalkCapability(go2rtcStreamInfo);
     this._syncCameraModalPtzVisibility({
       supported: ptzSupported,
       loading: false,
-      twoWayTalkSupported,
       sourceType: normalizedSourceType,
       preserveSelection: ptzSupported,
+    });
+  }
+
+  async _refreshCameraModalTwoWayTalkSupport() {
+    const entity = this._cameraModalEntityValue();
+    const sourceType = this._cameraModalConnectionTypeValue();
+    const normalizedSourceType = normalizeCameraConnectionType(sourceType);
+    const isHaDirect = normalizedSourceType === "ha_direct";
+    if (!entity) {
+      this._syncCameraModalTwoWayTalkVisibility({
+        supported: false,
+        loading: false,
+        sourceType: normalizedSourceType,
+      });
+      return;
+    }
+
+    if (isHaDirect) {
+      const attrs = this._cameraStateAttributes(entity);
+      const twoWayTalkSupported = this._hasHaDirectTwoWayTalkCapability(attrs);
+      this._syncCameraModalTwoWayTalkVisibility({
+        supported: twoWayTalkSupported,
+        loading: false,
+        sourceType: normalizedSourceType,
+        preserveSelection: twoWayTalkSupported,
+      });
+      return;
+    }
+
+    this._syncCameraModalTwoWayTalkVisibility({
+      supported: false,
+      loading: true,
+      sourceType: normalizedSourceType,
+      preserveSelection: true,
+    });
+    const token = (this._cameraModalTwoWayTalkToken || 0) + 1;
+    this._cameraModalTwoWayTalkToken = token;
+    const go2rtcStreamInfo =
+      await this._fetchGo2RtcStreamMetadataForEntity(entity);
+    if (this._cameraModalTwoWayTalkToken !== token) return;
+    const twoWayTalkSupported = hasTwoWayTalkCapability(go2rtcStreamInfo);
+    this._syncCameraModalTwoWayTalkVisibility({
+      supported: twoWayTalkSupported,
+      loading: false,
+      sourceType: normalizedSourceType,
+      preserveSelection: twoWayTalkSupported,
     });
   }
 
@@ -766,11 +810,17 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._syncCameraModalPtzVisibility({
       supported: hasCameraPtz(cam),
       loading: !!cam?.entity,
-      twoWayTalkSupported: false,
       sourceType: selectedConnectionType,
       preserveSelection: hasCameraPtz(cam),
     });
+    this._syncCameraModalTwoWayTalkVisibility({
+      supported: false,
+      loading: !!cam?.entity,
+      sourceType: selectedConnectionType,
+      preserveSelection: cam?.two_way_talk === true,
+    });
     void this._refreshCameraModalPtzSupport();
+    void this._refreshCameraModalTwoWayTalkSupport();
   }
 
   _closeCameraModal() {
@@ -1910,24 +1960,28 @@ export class FrigateViewCardEditor extends HTMLElement {
       "value-changed",
       () => {
         void this._refreshCameraModalPtzSupport();
+        void this._refreshCameraModalTwoWayTalkSupport();
       },
     );
     this.querySelector("#camera-modal-entity")?.addEventListener(
       "change",
       () => {
         void this._refreshCameraModalPtzSupport();
+        void this._refreshCameraModalTwoWayTalkSupport();
       },
     );
     this.querySelector("#camera-modal-connection-type")?.addEventListener(
       "value-changed",
       () => {
         void this._refreshCameraModalPtzSupport();
+        void this._refreshCameraModalTwoWayTalkSupport();
       },
     );
     this.querySelector("#camera-modal-connection-type")?.addEventListener(
       "change",
       () => {
         void this._refreshCameraModalPtzSupport();
+        void this._refreshCameraModalTwoWayTalkSupport();
       },
     );
     this.querySelector("#camera-modal-ptz-enabled")?.addEventListener(
@@ -1936,9 +1990,6 @@ export class FrigateViewCardEditor extends HTMLElement {
         this._syncCameraModalPtzVisibility({
           supported:
             this.querySelector("#camera-modal-ptz-enabled")?.dataset
-              ?.supported === "true",
-          twoWayTalkSupported:
-            this.querySelector("#camera-modal-two-way-talk-enabled")?.dataset
               ?.supported === "true",
           sourceType: this._cameraModalConnectionTypeValue(),
           loading: false,
@@ -1950,9 +2001,6 @@ export class FrigateViewCardEditor extends HTMLElement {
         this._syncCameraModalPtzVisibility({
           supported:
             this.querySelector("#camera-modal-ptz-enabled")?.dataset
-              ?.supported === "true",
-          twoWayTalkSupported:
-            this.querySelector("#camera-modal-two-way-talk-enabled")?.dataset
               ?.supported === "true",
           sourceType: this._cameraModalConnectionTypeValue(),
           loading: false,
