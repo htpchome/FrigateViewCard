@@ -203,7 +203,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
   }
 
-  _cameraEntityPtzLookupContext(entity) {
+  _cameraEntityCapabilityLookupContext(entity) {
     const state = this._hass?.states?.[entity];
     if (!state) return null;
     const attrs = state.attributes || {};
@@ -221,7 +221,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (cached?.resolved) return cached.info;
     if (cached?.promise) return cached.promise;
 
-    const context = this._cameraEntityPtzLookupContext(targetEntity);
+    const context = this._cameraEntityCapabilityLookupContext(targetEntity);
     if (!context) {
       const empty = { resolved: true, info: null, promise: null };
       this._ptzCapabilityCache.set(targetEntity, empty);
@@ -261,7 +261,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (cached?.resolved) return cached.info;
     if (cached?.promise) return cached.promise;
 
-    const context = this._cameraEntityPtzLookupContext(targetEntity);
+    const context = this._cameraEntityCapabilityLookupContext(targetEntity);
     if (!context) {
       const empty = { resolved: true, info: null, promise: null };
       this._go2rtcMetadataCache.set(targetEntity, empty);

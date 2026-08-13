@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1417";
+const VERSION = "1.0.1418";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -20311,7 +20311,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       this._go2rtcMetadataCache = new Map();
     }
   }
-  _cameraEntityPtzLookupContext(entity) {
+  _cameraEntityCapabilityLookupContext(entity) {
     const state = this._hass?.states?.[entity];
     if (!state) return null;
     const attrs = state.attributes || {};
@@ -20327,7 +20327,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const cached = this._ptzCapabilityCache.get(targetEntity);
     if (cached?.resolved) return cached.info;
     if (cached?.promise) return cached.promise;
-    const context = this._cameraEntityPtzLookupContext(targetEntity);
+    const context = this._cameraEntityCapabilityLookupContext(targetEntity);
     if (!context) {
       const empty = { resolved: true, info: null, promise: null };
       this._ptzCapabilityCache.set(targetEntity, empty);
@@ -20363,7 +20363,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const cached = this._go2rtcMetadataCache.get(targetEntity);
     if (cached?.resolved) return cached.info;
     if (cached?.promise) return cached.promise;
-    const context = this._cameraEntityPtzLookupContext(targetEntity);
+    const context = this._cameraEntityCapabilityLookupContext(targetEntity);
     if (!context) {
       const empty = { resolved: true, info: null, promise: null };
       this._go2rtcMetadataCache.set(targetEntity, empty);
