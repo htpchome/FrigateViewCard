@@ -75,7 +75,7 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     position:relative;
   }
   .card.mobile-view-active .mobile-bottom .frigate-view {
-    display: none;
+    
   }
   .card.mobile-view-active .mobile-bottom .browse-head {
     flex: 0 0 auto;
