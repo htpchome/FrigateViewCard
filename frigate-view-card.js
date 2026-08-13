@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1419";
+const VERSION = "1.0.1420";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3854,6 +3854,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,
       infoRow,
+      pageNav,
       camSwitcher,
       tabsMarkup,
       toolsMarkup,
@@ -3863,7 +3864,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     }) => buildMainLayoutShellMarkup({
       liveEngineWrap,
       infoRow,
-      pageNav: "",
+      pageNav,
       camSwitcher,
       tabsMarkup,
       toolsMarkup,
@@ -3932,6 +3933,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,
       infoRow,
+      pageNav,
       camSwitcher,
       tabsMarkup,
       toolsMarkup,
@@ -3941,7 +3943,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     }) => buildMainLayoutShellMarkup({
       liveEngineWrap,
       infoRow,
-      pageNav: "",
+      pageNav,
       camSwitcher,
       tabsMarkup,
       toolsMarkup,

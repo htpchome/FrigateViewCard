@@ -176,6 +176,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,
       infoRow,
+      pageNav,
       camSwitcher,
       tabsMarkup,
       toolsMarkup,
@@ -186,7 +187,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
       buildMainLayoutShellMarkup({
         liveEngineWrap,
         infoRow,
-        pageNav: "",
+        pageNav,
         camSwitcher,
         tabsMarkup,
         toolsMarkup,
@@ -262,6 +263,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,
       infoRow,
+      pageNav,
       camSwitcher,
       tabsMarkup,
       toolsMarkup,
@@ -272,7 +274,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
       buildMainLayoutShellMarkup({
         liveEngineWrap,
         infoRow,
-        pageNav: "",
+        pageNav,
         camSwitcher,
         tabsMarkup,
         toolsMarkup,
