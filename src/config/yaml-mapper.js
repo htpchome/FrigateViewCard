@@ -70,6 +70,7 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
         camera.disable_hls_desktop,
       ),
       ptz: normalizeCameraPtzConfig(camera.ptz),
+      ...(camera.two_way_talk === true ? { two_way_talk: true } : {}),
     };
   }
   return {
@@ -119,6 +120,9 @@ const compactCameraConfigForYaml = (camera) => {
   }
   if (normalized.ptz) {
     compact.ptz = { ...normalized.ptz };
+  }
+  if (normalized.two_way_talk === true) {
+    compact.two_way_talk = true;
   }
   return compact;
 };

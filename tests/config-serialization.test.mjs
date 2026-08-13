@@ -151,6 +151,26 @@ test("compact YAML preserves boolean PTZ enablement", () => {
   });
 });
 
+test("compact YAML preserves per-camera two-way talk when enabled", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [
+      {
+        entity: "camera.front_door",
+        two_way_talk: true,
+      },
+    ],
+  });
+
+  assert.deepEqual(config, {
+    cameras: [
+      {
+        entity: "camera.front_door",
+        two_way_talk: true,
+      },
+    ],
+  });
+});
+
 test("custom theme YAML config only keeps colors different from defaults", () => {
   const config = compactEditorConfigForYaml(
     {

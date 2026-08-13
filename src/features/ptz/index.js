@@ -80,6 +80,35 @@ export const hasPtzZoomCapability = (ptzInfo) =>
 export const hasPtzFocusCapability = (ptzInfo) =>
   Array.isArray(ptzInfo?.features) && ptzInfo.features.includes("focus");
 
+export const hasTwoWayTalkCapability = (ptzInfo) => {
+  if (!ptzInfo || typeof ptzInfo !== "object") return false;
+  if (
+    ptzInfo.two_way_talk === true ||
+    ptzInfo.twoWayTalk === true ||
+    ptzInfo.talk === true ||
+    ptzInfo.microphone === true
+  ) {
+    return true;
+  }
+
+  const source = [];
+  if (Array.isArray(ptzInfo.features)) source.push(...ptzInfo.features);
+  if (Array.isArray(ptzInfo.capabilities)) source.push(...ptzInfo.capabilities);
+  if (Array.isArray(ptzInfo.actions)) source.push(...ptzInfo.actions);
+
+  const normalized = source.map((item) =>
+    String(item || "")
+      .trim()
+      .toLowerCase(),
+  );
+
+  return normalized.some((value) =>
+    ["talk", "two_way_talk", "two-way-talk", "mic", "microphone"].includes(
+      value,
+    ),
+  );
+};
+
 export const canCameraUsePtz = (camera, ptzInfo) =>
   hasCameraPtz(camera) && hasPtzPanTiltCapability(ptzInfo);
 

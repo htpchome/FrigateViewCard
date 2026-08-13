@@ -79,6 +79,7 @@ import {
 import {
   hasCameraPtz,
   hasPtzPanTiltCapability,
+  hasTwoWayTalkCapability,
   normalizeCameraPtzConfig,
 } from "../features/ptz/index.js";
 import {
@@ -171,6 +172,7 @@ export class FrigateViewCardEditor extends HTMLElement {
   _syncCameraModalPtzVisibility({
     supported = false,
     loading = false,
+    twoWayTalkSupported = false,
     preserveSelection = false,
   } = {}) {
     const toggleRow = this.querySelector("#camera-modal-ptz-toggle-row");
@@ -178,6 +180,12 @@ export class FrigateViewCardEditor extends HTMLElement {
     const stateMessage = this.querySelector("#camera-modal-ptz-state");
     const ptzEnabled = this.querySelector("#camera-modal-ptz-enabled");
     const speedRow = this.querySelector("#camera-modal-ptz-speed-row");
+    const twoWayTalkToggleRow = this.querySelector(
+      "#camera-modal-two-way-talk-toggle-row",
+    );
+    const twoWayTalkEnabled = this.querySelector(
+      "#camera-modal-two-way-talk-enabled",
+    );
 
     if (toggleRow) {
       toggleRow.style.display = supported || loading ? "block" : "none";
@@ -206,18 +214,38 @@ export class FrigateViewCardEditor extends HTMLElement {
     const showConfig = (supported || loading) && ptzEnabled?.checked === true;
     if (configRow) configRow.style.display = showConfig ? "block" : "none";
     if (speedRow) speedRow.style.display = showConfig ? "block" : "none";
+
+    if (twoWayTalkToggleRow) {
+      twoWayTalkToggleRow.style.display = twoWayTalkSupported
+        ? "block"
+        : "none";
+    }
+    if (twoWayTalkEnabled) {
+      twoWayTalkEnabled.dataset.supported = twoWayTalkSupported
+        ? "true"
+        : "false";
+      twoWayTalkEnabled.disabled = !twoWayTalkSupported || loading;
+      if (!twoWayTalkSupported && !loading && !preserveSelection) {
+        twoWayTalkEnabled.checked = false;
+      }
+    }
   }
 
   async _refreshCameraModalPtzSupport() {
     const entity = this._cameraModalEntityValue();
     if (!entity) {
-      this._syncCameraModalPtzVisibility({ supported: false, loading: false });
+      this._syncCameraModalPtzVisibility({
+        supported: false,
+        loading: false,
+        twoWayTalkSupported: false,
+      });
       return;
     }
 
     this._syncCameraModalPtzVisibility({
       supported: false,
       loading: true,
+      twoWayTalkSupported: false,
       preserveSelection: true,
     });
     const token = (this._cameraModalPtzToken || 0) + 1;
@@ -227,6 +255,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._syncCameraModalPtzVisibility({
       supported: hasPtzPanTiltCapability(info),
       loading: false,
+      twoWayTalkSupported: hasTwoWayTalkCapability(info),
       preserveSelection: hasPtzPanTiltCapability(info),
     });
   }
@@ -454,6 +483,10 @@ export class FrigateViewCardEditor extends HTMLElement {
     return hasCameraPtz({ ptz: value }) ? "PTZ on" : "PTZ off";
   }
 
+  _cameraTwoWayTalkLabel(value) {
+    return value === true ? "Two-way talk on" : "Two-way talk off";
+  }
+
   _reorderCameras(from, to) {
     if (from === to || from < 0 || to < 0) return;
     const cur = [...this._getCams()];
@@ -493,6 +526,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     );
     const ptzEnabled = this.querySelector("#camera-modal-ptz-enabled");
     const ptzSpeed = this.querySelector("#camera-modal-ptz-speed");
+    const twoWayTalkEnabled = this.querySelector(
+      "#camera-modal-two-way-talk-enabled",
+    );
     const helper = this.querySelector("#camera-modal-helper");
     const normalizedPtz = normalizeCameraPtzConfig(cam?.ptz);
     if (title) title.textContent = index == null ? "Add" : "Edit";
@@ -522,11 +558,15 @@ export class FrigateViewCardEditor extends HTMLElement {
       ptzSpeed.value = String(normalizedPtz?.speed ?? 0.5);
       this._setCameraModalPtzSpeedOutput(ptzSpeed.value);
     }
+    if (twoWayTalkEnabled) {
+      twoWayTalkEnabled.checked = cam?.two_way_talk === true;
+    }
     if (helper) helper.textContent = "";
     if (modal) modal.classList.remove("hidden");
     this._syncCameraModalPtzVisibility({
       supported: hasCameraPtz(cam),
       loading: !!cam?.entity,
+      twoWayTalkSupported: false,
       preserveSelection: hasCameraPtz(cam),
     });
     void this._refreshCameraModalPtzSupport();
@@ -569,6 +609,13 @@ export class FrigateViewCardEditor extends HTMLElement {
       this.querySelector("#camera-modal-ptz-enabled")?.checked === true;
     const ptzSpeed =
       this.querySelector("#camera-modal-ptz-speed")?.value || "0.5";
+    const twoWayTalkSupported =
+      this.querySelector("#camera-modal-two-way-talk-enabled")?.dataset
+        ?.supported === "true";
+    const twoWayTalkEnabled =
+      twoWayTalkSupported &&
+      this.querySelector("#camera-modal-two-way-talk-enabled")?.checked ===
+        true;
     const ptz = ptzEnabled
       ? normalizeCameraPtzConfig({
           enabled: true,
@@ -593,6 +640,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         alerts_content: alertsContent,
         disable_hls_desktop: disableHlsDesktop,
         ptz,
+        ...(twoWayTalkEnabled ? { two_way_talk: true } : {}),
       });
     } else if (cur[this._editingCamIndex]) {
       cur[this._editingCamIndex] = {
@@ -602,6 +650,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         alerts_content: alertsContent,
         disable_hls_desktop: disableHlsDesktop,
         ptz,
+        ...(twoWayTalkEnabled ? { two_way_talk: true } : {}),
       };
     }
     this._config = { ...this._config, cameras: cur.slice(0, MAX_CAMERAS) };
@@ -943,7 +992,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         (cam, i) => `
       <div class="cam-row" draggable="true" data-row="${i}">
         <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
-        <div><div class="cam-name">${this._cameraLabel(cam)}</div><div class="cam-meta">${this._cameraConnectionLabel(cam.connection_type)} · ${this._cameraAlertsContentLabel(cam.alerts_content)} · ${this._cameraDesktopHlsLabel(cam.disable_hls_desktop)} · ${this._cameraPtzLabel(cam.ptz)}</div></div>
+        <div><div class="cam-name">${this._cameraLabel(cam)}</div><div class="cam-meta">${this._cameraConnectionLabel(cam.connection_type)} · ${this._cameraAlertsContentLabel(cam.alerts_content)} · ${this._cameraDesktopHlsLabel(cam.disable_hls_desktop)} · ${this._cameraPtzLabel(cam.ptz)} · ${this._cameraTwoWayTalkLabel(cam.two_way_talk)}</div></div>
                 <button class="cam-action" type="button" title="Edit" aria-label="Edit" data-edit-cam="${i}"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg></button>
                 <button class="cam-action" type="button" title="Delete" aria-label="Delete" data-remove-cam="${i}"><svg viewBox="0 0 24 24" style="width:24px; height:24px" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg></button>
       </div>`,
@@ -1447,6 +1496,13 @@ export class FrigateViewCardEditor extends HTMLElement {
               <div class="field-helper" id="camera-modal-ptz-speed-output">Current speed: 0.5</div>
             </div>
           </div>
+          <div class="cam-modal-field" id="camera-modal-two-way-talk-toggle-row" style="display:none">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="cam-modal-label" style="margin:0">Enable Two-way Talk</span>
+              <ha-switch id="camera-modal-two-way-talk-enabled"></ha-switch>
+            </div>
+            <div class="field-helper">Only shown when Frigate reports talk support for this camera.</div>
+          </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
             <button type="button" id="camera-modal-cancel" class="cam-btn">Cancel</button>
@@ -1658,6 +1714,9 @@ export class FrigateViewCardEditor extends HTMLElement {
           supported:
             this.querySelector("#camera-modal-ptz-enabled")?.dataset
               ?.supported === "true",
+          twoWayTalkSupported:
+            this.querySelector("#camera-modal-two-way-talk-enabled")?.dataset
+              ?.supported === "true",
           loading: false,
         }),
     );
@@ -1667,6 +1726,9 @@ export class FrigateViewCardEditor extends HTMLElement {
         this._syncCameraModalPtzVisibility({
           supported:
             this.querySelector("#camera-modal-ptz-enabled")?.dataset
+              ?.supported === "true",
+          twoWayTalkSupported:
+            this.querySelector("#camera-modal-two-way-talk-enabled")?.dataset
               ?.supported === "true",
           loading: false,
         }),

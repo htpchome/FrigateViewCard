@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   canCameraUsePtz,
   hasCameraPtz,
+  hasTwoWayTalkCapability,
   normalizeCameraPtzConfig,
   resolvePtzServicePlan,
 } from "../src/features/ptz/index.js";
@@ -300,4 +301,12 @@ test("hasCameraPtz requires an enabled PTZ camera config", () => {
 test("canCameraUsePtz requires Frigate pan tilt capability", () => {
   assert.equal(canCameraUsePtz({ ptz: true }, { features: ["pt"] }), true);
   assert.equal(canCameraUsePtz({ ptz: true }, { features: ["pt-r"] }), true);
+});
+
+test("hasTwoWayTalkCapability detects talk support from PTZ info payload", () => {
+  assert.equal(hasTwoWayTalkCapability(null), false);
+  assert.equal(hasTwoWayTalkCapability({ two_way_talk: true }), true);
+  assert.equal(hasTwoWayTalkCapability({ features: ["pt", "talk"] }), true);
+  assert.equal(hasTwoWayTalkCapability({ capabilities: ["microphone"] }), true);
+  assert.equal(hasTwoWayTalkCapability({ features: ["pt", "zoom"] }), false);
 });
