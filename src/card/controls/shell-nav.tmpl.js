@@ -17,20 +17,28 @@ export function resolveSubtitleText(config) {
   return config?.subtitle || "Frigate";
 }
 
-export function buildTabsMarkup({ tab, hiddenTabs, viewMode, icons }) {
+export function buildTabsMarkup({
+  tab,
+  hiddenTabs,
+  viewMode,
+  icons,
+  buttonClass = "circle-btn",
+}) {
   const ht = new Set(hiddenTabs || []);
   const gridModeListOnly = viewMode === "grid";
   const tabOrder = gridModeListOnly
     ? ["alerts", "kept", "controls"]
     : ["alerts", "clips", "snapshot", "recordings", "kept", "controls"];
   const activeTab = resolveActiveTab(tab, ht, tabOrder);
+  const tabButtonClass =
+    String(buttonClass || "circle-btn").trim() || "circle-btn";
   const tabMarkup = (id, icon, label) =>
     ht.has(id) ||
     (gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id))
       ? ""
       : id === activeTab
-        ? `<div class="circle-btn active" data-tab="${id}" title="${label}">${icon}</div>`
-        : `<div class="circle-btn" data-tab="${id}" title="${label}">${icon}</div>`;
+        ? `<div class="${tabButtonClass} active" data-tab="${id}" title="${label}">${icon}</div>`
+        : `<div class="${tabButtonClass}" data-tab="${id}" title="${label}">${icon}</div>`;
   const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
       ${tabMarkup("clips", icons.clips, "Clips")}
       ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}

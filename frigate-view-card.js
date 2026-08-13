@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1406";
+const VERSION = "1.0.1407";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -728,7 +728,10 @@ const STYLES = `
   .circle-btn:hover svg{color:var(--c-primary-d);}
   .circle-btn.active {background:var(--c-primary-d);} 
   .circle-btn.active svg{color:var(--c-text-rev);}
-
+  .icon-btn {display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:1rem;font-weight:600;min-height:36px;min-width:36px;cursor:pointer;}
+  .icon-btn svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
+  .icon-btn:hover svg{color:var(--c-text);}
+  .icon-btn.active svg{color:var(--c-text);}   
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
   .more,.end{position:relative;display:flex;min-height:0;align-items:center;justify-content:center;font-size:0.85rem;color:var(--c-text2);padding:6px;border-top: 1px solid var(--c-border);}
@@ -3304,12 +3307,19 @@ function buildPageNavMarkup({ routes, activePageId, getRouteLabel }) {
 function resolveSubtitleText(config) {
   return config?.subtitle || "Frigate";
 }
-function buildTabsMarkup({ tab, hiddenTabs, viewMode, icons }) {
+function buildTabsMarkup({
+  tab,
+  hiddenTabs,
+  viewMode,
+  icons,
+  buttonClass = "circle-btn"
+}) {
   const ht = new Set(hiddenTabs || []);
   const gridModeListOnly = viewMode === "grid";
   const tabOrder = gridModeListOnly ? ["alerts", "kept", "controls"] : ["alerts", "clips", "snapshot", "recordings", "kept", "controls"];
   const activeTab = resolveActiveTab(tab, ht, tabOrder);
-  const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="circle-btn active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="circle-btn" data-tab="${id}" title="${label}">${icon}</div>`;
+  const tabButtonClass = String(buttonClass || "circle-btn").trim() || "circle-btn";
+  const tabMarkup = (id, icon, label) => ht.has(id) || gridModeListOnly && ["clips", "snapshot", "recordings"].includes(id) ? "" : id === activeTab ? `<div class="${tabButtonClass} active" data-tab="${id}" title="${label}">${icon}</div>` : `<div class="${tabButtonClass}" data-tab="${id}" title="${label}">${icon}</div>`;
   const markup = `${tabMarkup("alerts", icons.alerts, "Alerts")}
       ${tabMarkup("clips", icons.clips, "Clips")}
       ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
@@ -3597,6 +3607,7 @@ function normalizeProfile(profile = {}) {
     leftColumnClass: String(profile.leftColumnClass || "").trim(),
     rightColumnClass: String(profile.rightColumnClass || "").trim(),
     tabsHolderClass: String(profile.tabsHolderClass || "").trim(),
+    tabsButtonClass: String(profile.tabsButtonClass || "").trim(),
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
     capabilities: {
@@ -3735,6 +3746,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     leftColumnClass: "col-left--mobile-view",
     rightColumnClass: "col-right--mobile-view",
     tabsHolderClass: "tabs-holder--mobile-view",
+    tabsButtonClass: "icon-btn",
     browseClass: "browse--mobile-view",
     buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildMobileViewInfoRowMarkup({
       title,
@@ -17362,11 +17374,14 @@ const FrigateViewCard = class extends HTMLElement {
     const filterPanelOpen = !!filterPanel && filterPanel.style.display !== "none";
     const calendarPanelOpen = !!calendarPanel && calendarPanel.style.display !== "none";
     const buttonStates = this._toolbarButtonStates();
+    const shellProfile = this._activePageShellLayoutProfile();
+    const tabsButtonClass = String(shellProfile?.tabsButtonClass || "").trim() || "circle-btn";
     const { activeTab, markup: tabsMarkup } = buildTabsMarkup({
       tab: this._tab,
       hiddenTabs: this._config.hidden_tabs,
       viewMode: this._viewMode,
-      icons: ICONS
+      icons: ICONS,
+      buttonClass: tabsButtonClass
     });
     const toolsMarkup = buildToolsMarkup({
       tab: activeTab,

@@ -72,6 +72,20 @@ test("buildTabsMarkup marks filter and calendar active only when open", () => {
   assert.match(toolsMarkup, /id="cal-btn"[^>]*aria-pressed="true"/);
 });
 
+test("buildTabsMarkup supports custom tab button class", () => {
+  const { markup } = buildTabsMarkup({
+    tab: "alerts",
+    hiddenTabs: [],
+    viewMode: "single",
+    icons,
+    buttonClass: "icon-btn",
+  });
+
+  assert.match(markup, /class="icon-btn active" data-tab="alerts"/);
+  assert.match(markup, /class="icon-btn" data-tab="clips"/);
+  assert.doesNotMatch(markup, /class="circle-btn/);
+});
+
 test("buildControlsSectionMarkup renders zoom and focus PTZ buttons", () => {
   const markup = buildControlsSectionMarkup({
     cameraName: "Driveway",

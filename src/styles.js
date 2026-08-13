@@ -214,7 +214,10 @@ export const STYLES = `
   .circle-btn:hover svg{color:var(--c-primary-d);}
   .circle-btn.active {background:var(--c-primary-d);} 
   .circle-btn.active svg{color:var(--c-text-rev);}
-
+  .icon-btn {display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:1rem;font-weight:600;min-height:36px;min-width:36px;cursor:pointer;}
+  .icon-btn svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
+  .icon-btn:hover svg{color:var(--c-text);}
+  .icon-btn.active svg{color:var(--c-text);}   
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
   .more,.end{position:relative;display:flex;min-height:0;align-items:center;justify-content:center;font-size:0.85rem;color:var(--c-text2);padding:6px;border-top: 1px solid var(--c-border);}

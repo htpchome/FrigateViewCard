@@ -2847,6 +2847,9 @@ export class FrigateViewCard extends HTMLElement {
     const calendarPanelOpen =
       !!calendarPanel && calendarPanel.style.display !== "none";
     const buttonStates = this._toolbarButtonStates();
+    const shellProfile = this._activePageShellLayoutProfile();
+    const tabsButtonClass =
+      String(shellProfile?.tabsButtonClass || "").trim() || "circle-btn";
 
     // Build tabs only
     const { activeTab, markup: tabsMarkup } = buildTabsMarkup({
@@ -2854,6 +2857,7 @@ export class FrigateViewCard extends HTMLElement {
       hiddenTabs: this._config.hidden_tabs,
       viewMode: this._viewMode,
       icons: ICONS,
+      buttonClass: tabsButtonClass,
     });
 
     // Build tools only

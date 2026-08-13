@@ -99,6 +99,7 @@ test("mobile profile exposes custom main layout shell builder", () => {
   const mobileProfile = registry.resolve(PAGE_IDS.mobileView);
 
   assert.equal(typeof mobileProfile.buildMainLayoutShellMarkup, "function");
+  assert.equal(mobileProfile.tabsButtonClass, "icon-btn");
 
   const markup = mobileProfile.buildMainLayoutShellMarkup({
     liveEngineWrap: '<div id="eng-wrap"></div>',
