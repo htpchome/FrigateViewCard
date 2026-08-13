@@ -115,7 +115,7 @@ test("compact YAML preserves per-camera PTZ config", () => {
         entity: "camera.driveway",
         ptz: {
           enabled: true,
-          move_mode: "RelativeMove",
+          move_mode: "ContinuousMove",
           speed: 0.4,
           distance: 0.2,
           continuous_duration: null,

@@ -28,6 +28,19 @@ test("normalizeCameraPtzConfig applies the default PTZ speed for enabled objects
   });
 });
 
+test("normalizeCameraPtzConfig coerces configured move mode to continuous", () => {
+  assert.deepEqual(
+    normalizeCameraPtzConfig({ enabled: true, move_mode: "RelativeMove" }),
+    {
+      enabled: true,
+      move_mode: "ContinuousMove",
+      speed: 0.5,
+      distance: null,
+      continuous_duration: null,
+    },
+  );
+});
+
 test("resolvePtzServicePlan maps press to the Frigate integration PTZ service", () => {
   const request = resolvePtzServicePlan({
     camera: {
@@ -249,7 +262,7 @@ test("resolvePtzServicePlan ignores PTZ when Frigate has no pan tilt capability"
   assert.equal(request, null);
 });
 
-test("resolvePtzServicePlan ignores release for relative moves", () => {
+test("resolvePtzServicePlan stops release even when relative move mode is configured", () => {
   const request = resolvePtzServicePlan({
     camera: {
       entity: "camera.driveway",
@@ -264,7 +277,19 @@ test("resolvePtzServicePlan ignores release for relative moves", () => {
     eventType: "release",
   });
 
-  assert.equal(request, null);
+  assert.deepEqual(request, {
+    executionMode: "sequential",
+    requests: [
+      {
+        type: "home_assistant_service",
+        domain: "frigate",
+        service: "ptz",
+        serviceData: { action: "stop" },
+        target: { entity_id: "camera.driveway" },
+      },
+    ],
+    readout: "[ptz:stop]",
+  });
 });
 
 test("hasCameraPtz requires an enabled PTZ camera config", () => {

@@ -59,7 +59,8 @@ export const normalizeCameraPtzConfig = (value) => {
 
   return {
     enabled: true,
-    move_mode: normalizePtzMoveMode(source.move_mode),
+    // Per-camera config currently supports continuous movement only.
+    move_mode: PTZ_MOVE_MODE_CONTINUOUS,
     speed,
     distance,
     continuous_duration: continuousDuration,

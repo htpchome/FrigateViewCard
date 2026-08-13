@@ -177,7 +177,6 @@ export class FrigateViewCardEditor extends HTMLElement {
     const configRow = this.querySelector("#camera-modal-ptz-config");
     const stateMessage = this.querySelector("#camera-modal-ptz-state");
     const ptzEnabled = this.querySelector("#camera-modal-ptz-enabled");
-    const moveModeRow = this.querySelector("#camera-modal-ptz-move-mode-row");
     const speedRow = this.querySelector("#camera-modal-ptz-speed-row");
 
     if (toggleRow) {
@@ -206,7 +205,6 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const showConfig = (supported || loading) && ptzEnabled?.checked === true;
     if (configRow) configRow.style.display = showConfig ? "block" : "none";
-    if (moveModeRow) moveModeRow.style.display = showConfig ? "block" : "none";
     if (speedRow) speedRow.style.display = showConfig ? "block" : "none";
   }
 
@@ -494,7 +492,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       "#camera-modal-disable-hls-desktop",
     );
     const ptzEnabled = this.querySelector("#camera-modal-ptz-enabled");
-    const ptzMoveMode = this.querySelector("#camera-modal-ptz-move-mode");
     const ptzSpeed = this.querySelector("#camera-modal-ptz-speed");
     const helper = this.querySelector("#camera-modal-helper");
     const normalizedPtz = normalizeCameraPtzConfig(cam?.ptz);
@@ -520,10 +517,6 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
     if (ptzEnabled) {
       ptzEnabled.checked = hasCameraPtz(cam);
-    }
-    if (ptzMoveMode) {
-      ptzMoveMode.value = normalizedPtz?.move_mode || "ContinuousMove";
-      ptzMoveMode.dataset.value = normalizedPtz?.move_mode || "ContinuousMove";
     }
     if (ptzSpeed) {
       ptzSpeed.value = String(normalizedPtz?.speed ?? 0.5);
@@ -574,16 +567,11 @@ export class FrigateViewCardEditor extends HTMLElement {
     const ptzEnabled =
       ptzSupported &&
       this.querySelector("#camera-modal-ptz-enabled")?.checked === true;
-    const ptzMoveMode =
-      this.querySelector("#camera-modal-ptz-move-mode")?.dataset?.value ||
-      this.querySelector("#camera-modal-ptz-move-mode")?.value ||
-      "ContinuousMove";
     const ptzSpeed =
       this.querySelector("#camera-modal-ptz-speed")?.value || "0.5";
     const ptz = ptzEnabled
       ? normalizeCameraPtzConfig({
           enabled: true,
-          move_mode: ptzMoveMode,
           speed: ptzSpeed,
         })
       : null;
@@ -1453,10 +1441,6 @@ export class FrigateViewCardEditor extends HTMLElement {
             <div class="field-helper" id="camera-modal-ptz-state" style="display:none"></div>
           </div>
           <div class="cam-modal-field" id="camera-modal-ptz-config" style="display:none">
-            <div class="cam-modal-field" id="camera-modal-ptz-move-mode-row" style="padding:0">
-              <span class="cam-modal-label">Move Mode</span>
-              <ha-selector id="camera-modal-ptz-move-mode"></ha-selector>
-            </div>
             <div class="cam-modal-field" id="camera-modal-ptz-speed-row" style="padding:0">
               <span class="cam-modal-label">Move Speed</span>
               <input id="camera-modal-ptz-speed" type="range" min="0.1" max="1" step="0.1" value="0.5" style="width:100%">
@@ -1609,21 +1593,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       initialValue: DEFAULT_CAMERA_CONNECTION_TYPE,
       fallbackValue: DEFAULT_CAMERA_CONNECTION_TYPE,
       normalize: (value) => normalizeCameraConnectionType(value),
-    });
-
-    setupSelectSelector({
-      element: this.querySelector("#camera-modal-ptz-move-mode"),
-      hass: this._hass,
-      options: [
-        { value: "ContinuousMove", label: "Continuous" },
-        { value: "RelativeMove", label: "Relative" },
-      ],
-      initialValue: "ContinuousMove",
-      fallbackValue: "ContinuousMove",
-      normalize: (value) =>
-        String(value || "ContinuousMove") === "RelativeMove"
-          ? "RelativeMove"
-          : "ContinuousMove",
     });
 
     bindClickHandlers(this, [
