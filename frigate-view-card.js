@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1420";
+const VERSION = "1.0.1421";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -721,12 +721,12 @@ const STYLES = `
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
-  .tabs-holder{margin:3px 8px;border-radius:8px;background-color:var(--c-bg-panel);}
-  .button-holder{display:flex;align-items:center;gap:10px;padding:4px 8px;}
+  .tabs-holder{margin:3px 8px;border-radius:8px;background-color:var(--c-bg-panel);container-type:inline-size;}
+  .button-holder{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"tabs nav tools";align-items:center;gap:10px;padding:4px 8px;}
   .button-holder-row{display:flex;align-items:center;min-width:0;}
-  .tabs-row{flex:1 1 auto;justify-content:flex-start;}
-  .page-nav-row{flex:0 1 auto;justify-content:center;}
-  .tools-row{flex:1 1 auto;justify-content:flex-end;}
+  .tabs-row{grid-area:tabs;justify-content:flex-start;}
+  .page-nav-row{grid-area:nav;justify-content:center;}
+  .tools-row{grid-area:tools;justify-content:flex-end;}
   .tabs{display:flex;flex-wrap:wrap;gap:5px;padding:0;overflow:visible;scrollbar-width:none;position:relative;z-index:auto;background-color:transparent !important;border-radius:8px;transition:background-color 0.3s ease;margin:0;}
   .tabs::-webkit-scrollbar{display:none;}
 
@@ -1021,13 +1021,20 @@ const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
-  @media (max-width: 920px){
-    .button-holder{flex-direction:column;align-items:stretch;gap:6px;padding:6px 8px;}
-    .button-holder .tabs-row{order:3;justify-content:center;}
-    .button-holder .tools-row{order:2;justify-content:center;}
-    .button-holder .page-nav-row{order:1;justify-content:center;}
+  @container (max-width: 640px){
+    .button-holder{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nav nav" "tabs tools";gap:8px;padding:6px 8px;}
+    .button-holder .page-nav-row{justify-content:center;}
+    .button-holder .tabs-row{justify-content:flex-start;}
+    .button-holder .tools-row{justify-content:flex-end;}
+  }
+  @container (max-width: 500px){
+    .button-holder{grid-template-columns:minmax(0,1fr);grid-template-areas:"nav" "tools" "tabs";gap:6px;padding:6px 8px;}
+    .button-holder .tabs-row,.button-holder .tools-row,.button-holder .page-nav-row{justify-content:center;}
     .button-holder .tabs{justify-content:center;}
     .button-holder .tl-tools-slot{justify-content:center;}
+  }
+  @media (max-width: 920px){
+    .tabs-holder{container-type:inline-size;}
   }
   .divider {min-height:36px;width:8px;display:flex;align-items:center;justify-content:center;}
   .divider svg {height:24px;width:8px;opacity:0.85;color:var(--c-text2);}
