@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1405";
+const VERSION = "1.0.1406";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -17164,7 +17164,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._browseWindowLoaderController.loadWindow(true);
     this._applyCalendarActivityCacheForActiveCamera();
     void this._prefetchCalendarActivityForActiveCamera();
-    if (this._$("cal-panel")?.style.display !== "none") {
+    if (this._$("#cal-panel")?.style.display !== "none") {
       this._renderCal();
     }
     this._syncToolbarButtons();
@@ -17412,6 +17412,8 @@ const FrigateViewCard = class extends HTMLElement {
     ].forEach((sel) => {
       delete this._domCache[sel];
     });
+    this._createFilterPanel();
+    this._createCalendarPanel();
     if (this._tab !== prevTab) {
       void this._loadTabData(this._tab);
     }

@@ -2622,7 +2622,7 @@ export class FrigateViewCard extends HTMLElement {
     this._browseWindowLoaderController.loadWindow(true);
     this._applyCalendarActivityCacheForActiveCamera();
     void this._prefetchCalendarActivityForActiveCamera();
-    if (this._$("cal-panel")?.style.display !== "none") {
+    if (this._$("#cal-panel")?.style.display !== "none") {
       this._renderCal();
     }
     this._syncToolbarButtons();
@@ -2904,6 +2904,8 @@ export class FrigateViewCard extends HTMLElement {
     ].forEach((sel) => {
       delete this._domCache[sel];
     });
+    this._createFilterPanel();
+    this._createCalendarPanel();
     if (this._tab !== prevTab) {
       void this._loadTabData(this._tab);
     }
