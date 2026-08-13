@@ -3245,7 +3245,9 @@ function buildMobileViewMainLayoutShellMarkup({
                 ${liveEngineWrap}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-
+                <div class="tabs shadow-small">            
+                  ${tabsMarkup}${toolsMarkup}
+                </div>
 
                 ${browseMarkup}
                 ${footerMarkup}
