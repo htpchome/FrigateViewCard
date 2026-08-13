@@ -2,6 +2,8 @@ const PTZ_MOVE_MODE_CONTINUOUS = "ContinuousMove";
 const PTZ_MOVE_MODE_RELATIVE = "RelativeMove";
 const PTZ_SERVICE_DOMAIN = "frigate";
 const PTZ_SERVICE_NAME = "ptz";
+const ONVIF_PTZ_SERVICE_DOMAIN = "onvif";
+const ONVIF_PTZ_SERVICE_NAME = "ptz";
 const PTZ_DEFAULT_SPEED = 0.5;
 const PTZ_DIRECTIONS = Object.freeze({
   up: Object.freeze(["up"]),
@@ -35,6 +37,40 @@ const buildHomeAssistantPtzRequest = ({ camera, action, argument = null }) => ({
   serviceData: argument ? { action, argument } : { action },
   target: { entity_id: camera.entity },
 });
+
+const buildOnvifPtzRequest = ({
+  camera,
+  moveMode,
+  pan,
+  tilt,
+  zoom,
+  speed,
+  distance,
+  continuousDuration,
+}) => {
+  const serviceData = { move_mode: moveMode };
+  if (pan) serviceData.pan = pan;
+  if (tilt) serviceData.tilt = tilt;
+  if (zoom) serviceData.zoom = zoom;
+  if (speed != null) serviceData.speed = speed;
+  if (distance != null) serviceData.distance = distance;
+  if (continuousDuration != null) {
+    serviceData.continuous_duration = continuousDuration;
+  }
+
+  return {
+    type: "home_assistant_service",
+    domain: ONVIF_PTZ_SERVICE_DOMAIN,
+    service: ONVIF_PTZ_SERVICE_NAME,
+    serviceData,
+    target: { entity_id: camera.entity },
+  };
+};
+
+const isHaDirectCamera = (camera) =>
+  String(camera?.connection_type || "")
+    .trim()
+    .toLowerCase() === "ha_direct";
 
 export const normalizePtzMoveMode = (value) => {
   const normalized = String(value || "")
@@ -110,7 +146,8 @@ export const hasTwoWayTalkCapability = (ptzInfo) => {
 };
 
 export const canCameraUsePtz = (camera, ptzInfo) =>
-  hasCameraPtz(camera) && hasPtzPanTiltCapability(ptzInfo);
+  hasCameraPtz(camera) &&
+  (isHaDirectCamera(camera) || hasPtzPanTiltCapability(ptzInfo));
 
 export const resolvePtzEmptyStateMessage = (
   camera,
@@ -138,7 +175,12 @@ export const resolvePtzEmptyStateMessage = (
   return "Use the circle pad to move the active camera.";
 };
 
-const canUsePtzAction = (action, ptzInfo) => {
+const canUsePtzAction = (action, ptzInfo, camera = null) => {
+  if (isHaDirectCamera(camera)) {
+    if (PTZ_DIRECTIONS[action]) return true;
+    if (action === "zoom-in" || action === "zoom-out") return true;
+    return false;
+  }
   if (PTZ_DIRECTIONS[action]) return hasPtzPanTiltCapability(ptzInfo);
   if (action === "zoom-in" || action === "zoom-out") {
     return hasPtzZoomCapability(ptzInfo);
@@ -156,12 +198,26 @@ export const resolvePtzServicePlan = ({
   eventType,
 }) => {
   const ptz = normalizeCameraPtzConfig(camera?.ptz);
-  if (!ptz || !camera?.entity || !canUsePtzAction(action, ptzInfo)) {
+  if (!ptz || !camera?.entity || !canUsePtzAction(action, ptzInfo, camera)) {
     return null;
   }
 
+  const haDirect = isHaDirectCamera(camera);
+
   if (eventType === "release") {
     if (ptz.move_mode !== PTZ_MOVE_MODE_CONTINUOUS) return null;
+    if (haDirect) {
+      return {
+        executionMode: "sequential",
+        requests: [
+          buildOnvifPtzRequest({
+            camera,
+            moveMode: "Stop",
+          }),
+        ],
+        readout: "[ptz:stop]",
+      };
+    }
     return {
       executionMode: "sequential",
       requests: [buildHomeAssistantPtzRequest({ camera, action: "stop" })],
@@ -171,6 +227,32 @@ export const resolvePtzServicePlan = ({
 
   const directions = PTZ_DIRECTIONS[action];
   if (directions?.length) {
+    if (haDirect) {
+      const pan = directions.includes("left")
+        ? "LEFT"
+        : directions.includes("right")
+          ? "RIGHT"
+          : null;
+      const tilt = directions.includes("up")
+        ? "UP"
+        : directions.includes("down")
+          ? "DOWN"
+          : null;
+      return {
+        executionMode: "sequential",
+        requests: [
+          buildOnvifPtzRequest({
+            camera,
+            moveMode: "ContinuousMove",
+            pan,
+            tilt,
+            speed: ptz.speed,
+            continuousDuration: ptz.continuous_duration,
+          }),
+        ],
+        readout: `[ptz:${action}]`,
+      };
+    }
     return {
       executionMode: directions.length > 1 ? "parallel" : "sequential",
       requests: directions.map((direction) =>
@@ -186,6 +268,29 @@ export const resolvePtzServicePlan = ({
 
   const singleAction = PTZ_SINGLE_ACTIONS[action];
   if (!singleAction) return null;
+
+  if (haDirect) {
+    const zoom =
+      action === "zoom-in"
+        ? "ZOOM_IN"
+        : action === "zoom-out"
+          ? "ZOOM_OUT"
+          : null;
+    if (!zoom) return null;
+    return {
+      executionMode: "sequential",
+      requests: [
+        buildOnvifPtzRequest({
+          camera,
+          moveMode: "ContinuousMove",
+          zoom,
+          speed: ptz.speed,
+          continuousDuration: ptz.continuous_duration,
+        }),
+      ],
+      readout: `[ptz:${action}]`,
+    };
+  }
 
   return {
     executionMode: "sequential",

@@ -95,6 +95,102 @@ import {
   withCardTypeForYaml,
 } from "../config/yaml-mapper.js";
 export class FrigateViewCardEditor extends HTMLElement {
+  _cameraStateAttributes(entity) {
+    const targetEntity = String(entity || "").trim();
+    if (!targetEntity) return {};
+    return this._hass?.states?.[targetEntity]?.attributes || {};
+  }
+
+  _cameraCapabilityTokens(attrs = {}) {
+    const tokens = [];
+    const pushTokens = (value) => {
+      if (Array.isArray(value)) {
+        value.forEach((entry) => pushTokens(entry));
+        return;
+      }
+      if (typeof value === "string") {
+        tokens.push(value);
+      }
+    };
+
+    pushTokens(attrs?.features);
+    pushTokens(attrs?.capabilities);
+    pushTokens(attrs?.actions);
+    pushTokens(attrs?.supported_features_list);
+
+    return tokens.map((value) =>
+      String(value || "")
+        .trim()
+        .toLowerCase(),
+    );
+  }
+
+  _hasBooleanCapability(attrs = {}, keys = []) {
+    return keys.some((key) => attrs?.[key] === true);
+  }
+
+  _hasTokenCapability(attrs = {}, allowedTokens = []) {
+    const allowed = new Set(allowedTokens);
+    return this._cameraCapabilityTokens(attrs).some((token) =>
+      allowed.has(token),
+    );
+  }
+
+  _hasHaDirectPtzCapability(attrs = {}) {
+    if (
+      this._hasBooleanCapability(attrs, [
+        "ptz",
+        "ptz_supported",
+        "supports_ptz",
+        "can_ptz",
+        "can_pan_tilt",
+      ])
+    ) {
+      return true;
+    }
+
+    return this._hasTokenCapability(attrs, [
+      "ptz",
+      "pt",
+      "pt-r",
+      "pan",
+      "tilt",
+      "zoom",
+    ]);
+  }
+
+  _hasHaDirectTwoWayTalkCapability(attrs = {}) {
+    if (
+      this._hasBooleanCapability(attrs, [
+        "two_way_talk",
+        "twoWayTalk",
+        "supports_two_way_talk",
+        "two_way_audio",
+        "supports_two_way_audio",
+        "audio_output",
+        "audio_out",
+        "talk",
+        "microphone",
+      ])
+    ) {
+      return true;
+    }
+
+    return this._hasTokenCapability(attrs, [
+      "talk",
+      "two_way_talk",
+      "two-way-talk",
+      "two_way_audio",
+      "audio_output",
+      "audio-out",
+      "audio_out",
+      "mic",
+      "microphone",
+      "speaker",
+      "backchannel",
+    ]);
+  }
+
   _ensurePtzCapabilityCache() {
     if (!(this._ptzCapabilityCache instanceof Map)) {
       this._ptzCapabilityCache = new Map();
@@ -173,6 +269,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     supported = false,
     loading = false,
     twoWayTalkSupported = false,
+    sourceType = DEFAULT_CAMERA_CONNECTION_TYPE,
     preserveSelection = false,
   } = {}) {
     const toggleRow = this.querySelector("#camera-modal-ptz-toggle-row");
@@ -199,15 +296,18 @@ export class FrigateViewCardEditor extends HTMLElement {
       if (!supported && !loading && !preserveSelection)
         ptzEnabled.checked = false;
     }
+    const sourceLabel =
+      normalizeCameraConnectionType(sourceType) === "ha_direct"
+        ? "Home Assistant"
+        : "Frigate";
+
     if (stateMessage) {
       if (loading) {
         stateMessage.style.display = "block";
-        stateMessage.textContent =
-          "Checking Frigate PTZ support for this camera.";
+        stateMessage.textContent = `Checking ${sourceLabel} PTZ support for this camera.`;
       } else if (!supported) {
         stateMessage.style.display = "block";
-        stateMessage.textContent =
-          "Frigate did not report PTZ pan/tilt support for this camera.";
+        stateMessage.textContent = `${sourceLabel} did not report PTZ pan/tilt support for this camera.`;
       } else {
         stateMessage.style.display = "none";
         stateMessage.textContent = "";
@@ -226,12 +326,10 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (twoWayTalkStateMessage) {
       if (loading) {
         twoWayTalkStateMessage.style.display = "block";
-        twoWayTalkStateMessage.textContent =
-          "Checking Frigate two-way talk support for this camera.";
+        twoWayTalkStateMessage.textContent = `Checking ${sourceLabel} two-way talk support for this camera.`;
       } else if (!twoWayTalkSupported) {
         twoWayTalkStateMessage.style.display = "block";
-        twoWayTalkStateMessage.textContent =
-          "Frigate did not report two-way talk support for this camera.";
+        twoWayTalkStateMessage.textContent = `${sourceLabel} did not report two-way talk support for this camera.`;
       } else {
         twoWayTalkStateMessage.style.display = "none";
         twoWayTalkStateMessage.textContent = "";
@@ -250,11 +348,29 @@ export class FrigateViewCardEditor extends HTMLElement {
 
   async _refreshCameraModalPtzSupport() {
     const entity = this._cameraModalEntityValue();
+    const sourceType = this._cameraModalConnectionTypeValue();
+    const normalizedSourceType = normalizeCameraConnectionType(sourceType);
+    const isHaDirect = normalizedSourceType === "ha_direct";
     if (!entity) {
       this._syncCameraModalPtzVisibility({
         supported: false,
         loading: false,
         twoWayTalkSupported: false,
+        sourceType: normalizedSourceType,
+      });
+      return;
+    }
+
+    if (isHaDirect) {
+      const attrs = this._cameraStateAttributes(entity);
+      const ptzSupported = this._hasHaDirectPtzCapability(attrs);
+      const twoWayTalkSupported = this._hasHaDirectTwoWayTalkCapability(attrs);
+      this._syncCameraModalPtzVisibility({
+        supported: ptzSupported,
+        loading: false,
+        twoWayTalkSupported,
+        sourceType: normalizedSourceType,
+        preserveSelection: ptzSupported,
       });
       return;
     }
@@ -263,17 +379,24 @@ export class FrigateViewCardEditor extends HTMLElement {
       supported: false,
       loading: true,
       twoWayTalkSupported: false,
+      sourceType: normalizedSourceType,
       preserveSelection: true,
     });
     const token = (this._cameraModalPtzToken || 0) + 1;
     this._cameraModalPtzToken = token;
-    const info = await this._fetchPtzCapabilityForEntity(entity);
+    const [ptzInfo, attrs] = await Promise.all([
+      this._fetchPtzCapabilityForEntity(entity),
+      Promise.resolve(this._cameraStateAttributes(entity)),
+    ]);
     if (this._cameraModalPtzToken !== token) return;
+    const ptzSupported = hasPtzPanTiltCapability(ptzInfo);
+    const twoWayTalkSupported = hasTwoWayTalkCapability(attrs);
     this._syncCameraModalPtzVisibility({
-      supported: hasPtzPanTiltCapability(info),
+      supported: ptzSupported,
       loading: false,
-      twoWayTalkSupported: hasTwoWayTalkCapability(info),
-      preserveSelection: hasPtzPanTiltCapability(info),
+      twoWayTalkSupported,
+      sourceType: normalizedSourceType,
+      preserveSelection: ptzSupported,
     });
   }
 
@@ -548,6 +671,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     );
     const helper = this.querySelector("#camera-modal-helper");
     const normalizedPtz = normalizeCameraPtzConfig(cam?.ptz);
+    const selectedConnectionType = normalizeCameraConnectionType(
+      cam?.connection_type,
+    );
     if (title) title.textContent = index == null ? "Add" : "Edit";
     if (save) save.textContent = index == null ? "Add" : "Save";
     if (name) name.value = cam?.name || "";
@@ -584,6 +710,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       supported: hasCameraPtz(cam),
       loading: !!cam?.entity,
       twoWayTalkSupported: false,
+      sourceType: selectedConnectionType,
       preserveSelection: hasCameraPtz(cam),
     });
     void this._refreshCameraModalPtzSupport();
@@ -600,6 +727,15 @@ export class FrigateViewCardEditor extends HTMLElement {
     return (entity?.dataset?.value || entity?.value || entity?.__value || "")
       .toString()
       .trim();
+  }
+
+  _cameraModalConnectionTypeValue() {
+    const connectionType = this.querySelector("#camera-modal-connection-type");
+    return normalizeCameraConnectionType(
+      connectionType?.dataset?.value ||
+        connectionType?.value ||
+        DEFAULT_CAMERA_CONNECTION_TYPE,
+    );
   }
 
   _saveCameraModal() {
@@ -1725,6 +1861,18 @@ export class FrigateViewCardEditor extends HTMLElement {
         void this._refreshCameraModalPtzSupport();
       },
     );
+    this.querySelector("#camera-modal-connection-type")?.addEventListener(
+      "value-changed",
+      () => {
+        void this._refreshCameraModalPtzSupport();
+      },
+    );
+    this.querySelector("#camera-modal-connection-type")?.addEventListener(
+      "change",
+      () => {
+        void this._refreshCameraModalPtzSupport();
+      },
+    );
     this.querySelector("#camera-modal-ptz-enabled")?.addEventListener(
       "value-changed",
       () =>
@@ -1735,6 +1883,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           twoWayTalkSupported:
             this.querySelector("#camera-modal-two-way-talk-enabled")?.dataset
               ?.supported === "true",
+          sourceType: this._cameraModalConnectionTypeValue(),
           loading: false,
         }),
     );
@@ -1748,6 +1897,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           twoWayTalkSupported:
             this.querySelector("#camera-modal-two-way-talk-enabled")?.dataset
               ?.supported === "true",
+          sourceType: this._cameraModalConnectionTypeValue(),
           loading: false,
         }),
     );

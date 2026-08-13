@@ -222,14 +222,14 @@ test("resolvePtzServicePlan stops zoom and focus actions on release", () => {
   assert.deepEqual(focusStop, zoomStop);
 });
 
-test("resolvePtzServicePlan uses Home Assistant PTZ service for ha_direct cameras", () => {
+test("resolvePtzServicePlan uses ONVIF PTZ service for ha_direct cameras", () => {
   const request = resolvePtzServicePlan({
     camera: {
       entity: "camera.driveway",
       connection_type: "ha_direct",
       ptz: true,
     },
-    ptzInfo: { features: ["pt"] },
+    ptzInfo: null,
     action: "left",
     eventType: "press",
   });
@@ -239,13 +239,44 @@ test("resolvePtzServicePlan uses Home Assistant PTZ service for ha_direct camera
     requests: [
       {
         type: "home_assistant_service",
-        domain: "frigate",
+        domain: "onvif",
         service: "ptz",
-        serviceData: { action: "move", argument: "left" },
+        serviceData: {
+          move_mode: "ContinuousMove",
+          pan: "LEFT",
+          speed: 0.5,
+        },
         target: { entity_id: "camera.driveway" },
       },
     ],
     readout: "[ptz:left]",
+  });
+});
+
+test("resolvePtzServicePlan uses ONVIF stop for ha_direct release", () => {
+  const request = resolvePtzServicePlan({
+    camera: {
+      entity: "camera.driveway",
+      connection_type: "ha_direct",
+      ptz: true,
+    },
+    ptzInfo: null,
+    action: "left",
+    eventType: "release",
+  });
+
+  assert.deepEqual(request, {
+    executionMode: "sequential",
+    requests: [
+      {
+        type: "home_assistant_service",
+        domain: "onvif",
+        service: "ptz",
+        serviceData: { move_mode: "Stop" },
+        target: { entity_id: "camera.driveway" },
+      },
+    ],
+    readout: "[ptz:stop]",
   });
 });
 
