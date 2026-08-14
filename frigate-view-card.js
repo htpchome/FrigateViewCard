@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1439";
+const VERSION = "1.0.1427";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -22495,8 +22495,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       disable_hls_desktop: normalizeDisableHlsDesktop2(
         c?.disable_hls_desktop
       ),
-      ptz: normalizeCameraPtzConfig(c?.ptz),
-      ...c?.two_way_talk === true ? { two_way_talk: true } : {}
+      ptz: normalizeCameraPtzConfig(c?.ptz)
     })).filter((c) => c.entity).slice(0, MAX_CAMERAS) : [];
   }
   _emitPreviewDraft(config) {

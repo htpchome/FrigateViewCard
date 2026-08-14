@@ -2146,7 +2146,6 @@ export class FrigateViewCardEditor extends HTMLElement {
               c?.disable_hls_desktop,
             ),
             ptz: normalizeCameraPtzConfig(c?.ptz),
-            ...(c?.two_way_talk === true ? { two_way_talk: true } : {}),
           }))
           .filter((c) => c.entity)
           .slice(0, MAX_CAMERAS)
