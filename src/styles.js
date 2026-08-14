@@ -452,7 +452,7 @@ export const STYLES = `
   .page-nav{display:flex;align-items:center;justify-content:center;gap:4px;padding:0;}
   .page-nav-btn{border-radius:6px;}
   .page-nav-btn.active svg{color:var(--c-text-rev);opacity:1;}
-  .info-row-mic-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--c-text2);cursor:pointer;transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease;}
+  .info-row-mic-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--c-text2);cursor:pointer;transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease;border:1px solid var(--c-text3);}
   .info-row-mic-btn svg{width:24px;height:24px;opacity:.92;color:currentColor;}
   .info-row-mic-btn:hover{border-color:var(--c-primary-d);color:var(--c-primary-d);}
   .info-row-mic-btn.active{background:rgba(74,222,128,.16);border-color:rgba(74,222,128,.45);color:#4ade80;box-shadow:0 0 0 1px rgba(74,222,128,.15) inset;}
