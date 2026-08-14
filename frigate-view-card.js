@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1430";
+const VERSION = "1.0.1431";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -963,10 +963,9 @@ const STYLES = `
 
 
   /* \u2500\u2500 info row \u2500\u2500 */
-  .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
-    border-bottom:1px solid var(--c-border);justify-content: space-between;align-items:center;width:100%}
-  .info-left{flex: 1;text-align:left}
-  .info-row-action-slot{display:flex;flex:1;padding:0 12px;text-align: center;}
+  .info-row{  display: grid;grid-template-columns: repeat(3, 1fr);align-items: center;width: 100%;}
+  .info-left{text-align:left}
+  .info-row-action-slot{text-align: center;}
   .info-row-page-nav{display:flex;justify-content:center;align-items:center;flex:1 1 240px;padding:0 12px;min-width:0;}
   .info-row-page-nav .page-nav{padding:0;justify-content:center;width:100%;}
   .page-nav{display:flex;align-items:center;justify-content:center;gap:4px;padding:0;}
@@ -978,7 +977,7 @@ const STYLES = `
   .info-row-mic-btn.active{background:rgba(74,222,128,.16);border-color:rgba(74,222,128,.45);color:#4ade80;box-shadow:0 0 0 1px rgba(74,222,128,.15) inset;}
   .info-row-mic-btn.active svg{opacity:1;}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
-  .stats{display:flex;flex:1;gap:10px;justify-self:end;text-align: right;} 
+  .stats{gap:10px;text-align:right;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
   .sv{font-size:1.05rem;font-weight:700;color:var(--c-primary-d);} .sl{font-size:0.75rem;color:var(--c-text2);text-transform:uppercase;letter-spacing:.06em;}
   
