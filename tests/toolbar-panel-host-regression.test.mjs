@@ -27,5 +27,6 @@ test("camera switch checks calendar panel with id selector", () => {
 test("two-way talk action slot is rebuilt from active camera availability", () => {
   assert.equal(cardSource.includes("_syncTwoWayTalkActionSlot()"), true);
   assert.equal(cardSource.includes("this._syncTwoWayTalkActionSlot();"), true);
-  assert.equal(cardSource.includes('if (!visible) return "";'), true);
+  assert.equal(cardSource.includes("button.hidden = !visible;"), true);
+  assert.equal(cardSource.includes('${visible ? "" : "hidden"}'), true);
 });

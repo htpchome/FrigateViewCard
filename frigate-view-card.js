@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1435";
+const VERSION = "1.0.1436";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -18095,8 +18095,7 @@ const FrigateViewCard = class extends HTMLElement {
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    if (!visible) return "";
-    return `<button class="info-row-mic-btn${active ? " active" : ""}" id="two-way-talk-btn" type="button" aria-pressed="${active ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
+    return `<button class="info-row-mic-btn${active ? " active" : ""}" id="two-way-talk-btn" type="button" ${visible ? "" : "hidden"} aria-pressed="${active ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
   }
   _activeCameraTwoWayTalkEnabled() {
     return this._activeCam?.two_way_talk === true;
@@ -18138,7 +18137,9 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncTwoWayTalkActionSlot();
     const button = this._$("#two-way-talk-btn");
     if (!button) return;
-    button.disabled = this._twoWayTalkStarting === true;
+    const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
+    button.hidden = !visible;
+    button.disabled = this._twoWayTalkStarting === true || !visible;
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
     button.classList.toggle("active", active);
