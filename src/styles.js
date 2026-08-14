@@ -445,7 +445,8 @@ export const STYLES = `
 
   /* ── info row ── */
   .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
-    border-bottom:1px solid var(--c-border);justify-content: space-between;}
+    border-bottom:1px solid var(--c-border);justify-content: space-between;align-items:center;}
+  .info-row > div { flex:1;width:0;}
   .info-left{flex: 1;}
   .info-row-action-slot{display:flex;align-items:center;justify-content:center;flex:0 0 auto;padding:0 12px;}
   .info-row-page-nav{display:flex;justify-content:center;align-items:center;flex:1 1 240px;padding:0 12px;min-width:0;}
