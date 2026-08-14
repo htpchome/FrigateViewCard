@@ -1761,19 +1761,10 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _setActiveStreamType(type) {
-    const wasTwoWayButtonVisible =
-      this._shouldRenderTwoWayTalkButtonForActiveCamera();
     applyActiveStreamTypeForCard({
       card: this,
       type,
     });
-    const isTwoWayButtonVisible =
-      this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    if (wasTwoWayButtonVisible !== isTwoWayButtonVisible) {
-      this._renderShellPreserveLive();
-    }
-    this._syncTwoWayTalkRuntimeState();
-    this._syncTwoWayTalkButton();
   }
 
   _setStreamFallbackVisible(visible, refreshImage = false) {
@@ -2649,6 +2640,7 @@ export class FrigateViewCard extends HTMLElement {
     if (this._$("#cal-panel")?.style.display !== "none") {
       this._renderCal();
     }
+    this._syncTwoWayTalkButton();
     this._syncToolbarButtons();
   }
   // ── data ─────────────────────────────────────────────────
@@ -3115,7 +3107,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _buildTwoWayTalkInfoButtonMarkup() {
-    if (!this._shouldRenderTwoWayTalkButtonForActiveCamera()) {
+    const pageId = normalizePageRoute(this._pageId);
+    if (pageId !== PAGE_IDS.singleView && pageId !== PAGE_IDS.wideView) {
       return "";
     }
     const active = this._twoWayTalkActiveForCurrentCamera();
@@ -3147,6 +3140,10 @@ export class FrigateViewCard extends HTMLElement {
   _syncTwoWayTalkButton() {
     const button = this._$("#two-way-talk-btn");
     if (!button) return;
+    const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
+    button.hidden = !visible;
+    button.disabled = this._twoWayTalkStarting === true || !visible;
+    if (!visible) return;
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
     button.classList.toggle("active", active);
@@ -3154,7 +3151,6 @@ export class FrigateViewCard extends HTMLElement {
     button.setAttribute("title", label);
     button.setAttribute("aria-label", label);
     button.innerHTML = active ? ICONS.micOn : ICONS.micOff;
-    button.disabled = this._twoWayTalkStarting === true;
   }
 
   async _toggleTwoWayTalkSession() {

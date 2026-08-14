@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1430";
+const VERSION = "1.0.1431";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -16979,17 +16979,10 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _setActiveStreamType(type) {
-    const wasTwoWayButtonVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
     applyActiveStreamTypeForCard({
       card: this,
       type
     });
-    const isTwoWayButtonVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    if (wasTwoWayButtonVisible !== isTwoWayButtonVisible) {
-      this._renderShellPreserveLive();
-    }
-    this._syncTwoWayTalkRuntimeState();
-    this._syncTwoWayTalkButton();
   }
   _setStreamFallbackVisible(visible, refreshImage = false) {
     applyStreamFallbackVisibilityForCard({
@@ -17696,6 +17689,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._$("#cal-panel")?.style.display !== "none") {
       this._renderCal();
     }
+    this._syncTwoWayTalkButton();
     this._syncToolbarButtons();
   }
   // ── data ─────────────────────────────────────────────────
@@ -18101,7 +18095,8 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _buildTwoWayTalkInfoButtonMarkup() {
-    if (!this._shouldRenderTwoWayTalkButtonForActiveCamera()) {
+    const pageId = normalizePageRoute(this._pageId);
+    if (pageId !== PAGE_IDS.singleView && pageId !== PAGE_IDS.wideView) {
       return "";
     }
     const active = this._twoWayTalkActiveForCurrentCamera();
@@ -18123,6 +18118,10 @@ const FrigateViewCard = class extends HTMLElement {
   _syncTwoWayTalkButton() {
     const button = this._$("#two-way-talk-btn");
     if (!button) return;
+    const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
+    button.hidden = !visible;
+    button.disabled = this._twoWayTalkStarting === true || !visible;
+    if (!visible) return;
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
     button.classList.toggle("active", active);
@@ -18130,7 +18129,6 @@ const FrigateViewCard = class extends HTMLElement {
     button.setAttribute("title", label);
     button.setAttribute("aria-label", label);
     button.innerHTML = active ? ICONS.micOn : ICONS.micOff;
-    button.disabled = this._twoWayTalkStarting === true;
   }
   async _toggleTwoWayTalkSession() {
     if (this._twoWayTalkStarting) return;
