@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1428";
+const VERSION = "1.0.1429";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11761,6 +11761,9 @@ const hasTwoWayTalkCapability = (capabilityInfo) => {
 };
 const shouldRenderTwoWayTalkButton = ({ camera, pageId, PAGE_IDS: PAGE_IDS2 }) => {
   if (camera?.two_way_talk !== true) return false;
+  const connectionType = String(camera?.connection_type || "").trim().toLowerCase();
+  const isWebRtcConnectionType = connectionType === "" || connectionType === "webrtc" || connectionType === "frigate_go2rtc";
+  if (!isWebRtcConnectionType) return false;
   return pageId === PAGE_IDS2.singleView || pageId === PAGE_IDS2.wideView;
 };
 

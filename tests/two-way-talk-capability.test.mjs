@@ -46,7 +46,7 @@ test("hasTwoWayTalkCapability detects go2rtc backchannel from producer medias", 
   );
 });
 
-test("shouldRenderTwoWayTalkButton only enables single and wide pages", () => {
+test("shouldRenderTwoWayTalkButton requires enabled talk and WebRTC connection type", () => {
   const PAGE_IDS = {
     singleView: "single-view",
     wideView: "wide-view",
@@ -56,7 +56,7 @@ test("shouldRenderTwoWayTalkButton only enables single and wide pages", () => {
 
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
+      camera: { two_way_talk: true, connection_type: "frigate_go2rtc" },
       pageId: PAGE_IDS.singleView,
       PAGE_IDS,
     }),
@@ -64,7 +64,7 @@ test("shouldRenderTwoWayTalkButton only enables single and wide pages", () => {
   );
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
+      camera: { two_way_talk: true, connection_type: "webrtc" },
       pageId: PAGE_IDS.wideView,
       PAGE_IDS,
     }),
@@ -72,7 +72,15 @@ test("shouldRenderTwoWayTalkButton only enables single and wide pages", () => {
   );
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
+      camera: { two_way_talk: true, connection_type: "ha_direct" },
+      pageId: PAGE_IDS.singleView,
+      PAGE_IDS,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldRenderTwoWayTalkButton({
+      camera: { two_way_talk: true, connection_type: "frigate_go2rtc" },
       pageId: PAGE_IDS.mobileView,
       PAGE_IDS,
     }),
@@ -80,7 +88,7 @@ test("shouldRenderTwoWayTalkButton only enables single and wide pages", () => {
   );
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: false },
+      camera: { two_way_talk: false, connection_type: "frigate_go2rtc" },
       pageId: PAGE_IDS.singleView,
       PAGE_IDS,
     }),

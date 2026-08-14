@@ -98,5 +98,13 @@ export const hasTwoWayTalkCapability = (capabilityInfo) => {
 
 export const shouldRenderTwoWayTalkButton = ({ camera, pageId, PAGE_IDS }) => {
   if (camera?.two_way_talk !== true) return false;
+  const connectionType = String(camera?.connection_type || "")
+    .trim()
+    .toLowerCase();
+  const isWebRtcConnectionType =
+    connectionType === "" ||
+    connectionType === "webrtc" ||
+    connectionType === "frigate_go2rtc";
+  if (!isWebRtcConnectionType) return false;
   return pageId === PAGE_IDS.singleView || pageId === PAGE_IDS.wideView;
 };
