@@ -3116,7 +3116,8 @@ export class FrigateViewCard extends HTMLElement {
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    return `<button class="info-row-mic-btn${active ? " active" : ""}" id="two-way-talk-btn" type="button" ${visible ? "" : "hidden"} aria-pressed="${active ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
+    if (!visible) return "";
+    return `<button class="info-row-mic-btn${active ? " active" : ""}" id="two-way-talk-btn" type="button" aria-pressed="${active ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
   }
 
   _activeCameraTwoWayTalkEnabled() {
@@ -3140,13 +3141,40 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
 
+  _syncTwoWayTalkActionSlot() {
+    const infoRow = this._$(".info-row");
+    if (!infoRow) return;
+
+    const actionMarkup = this._buildTwoWayTalkInfoButtonMarkup();
+    const existingSlot = infoRow.querySelector(".info-row-action-slot");
+
+    if (!actionMarkup) {
+      existingSlot?.remove();
+      delete this._domCache["#two-way-talk-btn"];
+      return;
+    }
+
+    if (!existingSlot) {
+      const actionSlot = document.createElement("div");
+      actionSlot.className = "info-row-action-slot";
+      actionSlot.innerHTML = actionMarkup;
+      const stats = infoRow.querySelector(".stats");
+      infoRow.insertBefore(actionSlot, stats || null);
+      delete this._domCache["#two-way-talk-btn"];
+      return;
+    }
+
+    if (!existingSlot.querySelector("#two-way-talk-btn")) {
+      existingSlot.innerHTML = actionMarkup;
+      delete this._domCache["#two-way-talk-btn"];
+    }
+  }
+
   _syncTwoWayTalkButton() {
+    this._syncTwoWayTalkActionSlot();
     const button = this._$("#two-way-talk-btn");
     if (!button) return;
-    const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    button.hidden = !visible;
-    button.disabled = this._twoWayTalkStarting === true || !visible;
-    if (!visible) return;
+    button.disabled = this._twoWayTalkStarting === true;
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
     button.classList.toggle("active", active);
