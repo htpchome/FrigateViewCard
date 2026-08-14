@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1438";
+const VERSION = "1.0.1439";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11759,16 +11759,8 @@ const hasTwoWayTalkCapability = (capabilityInfo) => {
     (item) => String(item || "").trim().toLowerCase()
   ).some((token) => tokenMatches.has(token));
 };
-const shouldRenderTwoWayTalkButton = ({
-  camera,
-  pageId,
-  PAGE_IDS: PAGE_IDS2,
-  activeStreamType
-}) => {
-  if (camera?.two_way_talk !== true) return false;
-  const streamType = String(activeStreamType || camera?.activeStreamType || "").trim().toLowerCase();
-  if (streamType !== "webrtc") return false;
-  return pageId === PAGE_IDS2.singleView || pageId === PAGE_IDS2.wideView;
+const shouldRenderTwoWayTalkButton = ({ camera }) => {
+  return camera?.two_way_talk === true;
 };
 
 // src/features/two-way-talk/session.js
@@ -16979,15 +16971,10 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _setActiveStreamType(type) {
-    const wasVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
     applyActiveStreamTypeForCard({
       card: this,
       type
     });
-    const isVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    if (wasVisible !== isVisible) {
-      this._renderShellPreserveLive();
-    }
     this._syncTwoWayTalkRuntimeState();
     this._syncTwoWayTalkButton();
   }
@@ -17618,7 +17605,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
-    const wasVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
     if (idx !== this._activeCamIdx) {
       void this._stopTwoWayTalkSession();
     }
@@ -17690,10 +17676,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderMuteButton();
     this._cancelPendingMount("switch-camera", { preserveMseEntity: prevEnt });
     this._mountEngine();
-    const isVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    if (wasVisible !== isVisible) {
-      this._renderShellPreserveLive();
-    }
     clearTimeout(this._switchLoadT);
     this._browseWindowLoaderController.loadWindow(true);
     this._applyCalendarActivityCacheForActiveCamera();
@@ -18107,12 +18089,14 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _buildTwoWayTalkInfoButtonMarkup() {
-    if (!this._shouldRenderTwoWayTalkButtonForActiveCamera()) {
+    const pageId = normalizePageRoute(this._pageId);
+    if (pageId !== PAGE_IDS.singleView && pageId !== PAGE_IDS.wideView) {
       return "";
     }
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
-    return `<button class="info-row-mic-btn${active ? " active" : ""}" id="two-way-talk-btn" type="button" aria-pressed="${active ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
+    const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
+    return `<button class="info-row-mic-btn${active ? " active" : ""}" id="two-way-talk-btn" type="button" ${visible ? "" : "hidden"} aria-pressed="${active ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
   }
   _activeCameraTwoWayTalkEnabled() {
     return this._activeCam?.two_way_talk === true;

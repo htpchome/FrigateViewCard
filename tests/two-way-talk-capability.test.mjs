@@ -46,66 +46,15 @@ test("hasTwoWayTalkCapability detects go2rtc backchannel from producer medias", 
   );
 });
 
-test("shouldRenderTwoWayTalkButton requires enabled talk and active WebRTC stream", () => {
-  const PAGE_IDS = {
-    singleView: "single-view",
-    wideView: "wide-view",
-    mobileView: "mobile-view",
-    preview: "preview",
-  };
-
+test("shouldRenderTwoWayTalkButton only depends on per-camera config", () => {
   assert.equal(
-    shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
-      pageId: PAGE_IDS.singleView,
-      PAGE_IDS,
-      activeStreamType: "webrtc",
-    }),
+    shouldRenderTwoWayTalkButton({ camera: { two_way_talk: true } }),
     true,
   );
   assert.equal(
-    shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
-      pageId: PAGE_IDS.wideView,
-      PAGE_IDS,
-      activeStreamType: "webrtc",
-    }),
-    true,
-  );
-  assert.equal(
-    shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
-      pageId: PAGE_IDS.singleView,
-      PAGE_IDS,
-      activeStreamType: "mse",
-    }),
+    shouldRenderTwoWayTalkButton({ camera: { two_way_talk: false } }),
     false,
   );
-  assert.equal(
-    shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
-      pageId: PAGE_IDS.singleView,
-      PAGE_IDS,
-      activeStreamType: "hls",
-    }),
-    false,
-  );
-  assert.equal(
-    shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
-      pageId: PAGE_IDS.mobileView,
-      PAGE_IDS,
-      activeStreamType: "webrtc",
-    }),
-    false,
-  );
-  assert.equal(
-    shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: false },
-      pageId: PAGE_IDS.singleView,
-      PAGE_IDS,
-      activeStreamType: "webrtc",
-    }),
-    false,
-  );
+  assert.equal(shouldRenderTwoWayTalkButton({ camera: {} }), false);
+  assert.equal(shouldRenderTwoWayTalkButton({ camera: null }), false);
 });

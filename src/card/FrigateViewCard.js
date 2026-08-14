@@ -1761,15 +1761,10 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _setActiveStreamType(type) {
-    const wasVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
     applyActiveStreamTypeForCard({
       card: this,
       type,
     });
-    const isVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    if (wasVisible !== isVisible) {
-      this._renderShellPreserveLive();
-    }
     this._syncTwoWayTalkRuntimeState();
     this._syncTwoWayTalkButton();
   }
@@ -2564,7 +2559,6 @@ export class FrigateViewCard extends HTMLElement {
 
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
-    const wasVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
     if (idx !== this._activeCamIdx) {
       void this._stopTwoWayTalkSession();
     }
@@ -2641,10 +2635,6 @@ export class FrigateViewCard extends HTMLElement {
     this._renderMuteButton();
     this._cancelPendingMount("switch-camera", { preserveMseEntity: prevEnt });
     this._mountEngine();
-    const isVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    if (wasVisible !== isVisible) {
-      this._renderShellPreserveLive();
-    }
     clearTimeout(this._switchLoadT);
     this._browseWindowLoaderController.loadWindow(true);
     this._applyCalendarActivityCacheForActiveCamera();
@@ -3119,12 +3109,14 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _buildTwoWayTalkInfoButtonMarkup() {
-    if (!this._shouldRenderTwoWayTalkButtonForActiveCamera()) {
+    const pageId = normalizePageRoute(this._pageId);
+    if (pageId !== PAGE_IDS.singleView && pageId !== PAGE_IDS.wideView) {
       return "";
     }
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
-    return `<button class="info-row-mic-btn${active ? " active" : ""}" id="two-way-talk-btn" type="button" aria-pressed="${active ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
+    const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
+    return `<button class="info-row-mic-btn${active ? " active" : ""}" id="two-way-talk-btn" type="button" ${visible ? "" : "hidden"} aria-pressed="${active ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
   }
 
   _activeCameraTwoWayTalkEnabled() {
