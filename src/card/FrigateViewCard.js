@@ -3098,11 +3098,23 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _shouldRenderTwoWayTalkButtonForActiveCamera() {
+    const streamTypeFromView = String(
+      this._$("#stream-type")?.textContent || "",
+    )
+      .trim()
+      .toLowerCase();
+    const activeStreamType = streamTypeFromView.includes("webrtc")
+      ? "webrtc"
+      : streamTypeFromView.includes("mse")
+        ? "mse"
+        : streamTypeFromView.includes("hls")
+          ? "hls"
+          : "";
     return shouldRenderTwoWayTalkButton({
       camera: this._activeCam,
       pageId: normalizePageRoute(this._pageId),
       PAGE_IDS,
-      activeStreamType: this._activeStreamType,
+      activeStreamType,
     });
   }
 

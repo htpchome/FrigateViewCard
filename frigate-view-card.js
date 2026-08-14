@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1431";
+const VERSION = "1.0.1432";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -18087,11 +18087,15 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncFullscreenButtonsVisibility();
   }
   _shouldRenderTwoWayTalkButtonForActiveCamera() {
+    const streamTypeFromView = String(
+      this._$("#stream-type")?.textContent || ""
+    ).trim().toLowerCase();
+    const activeStreamType = streamTypeFromView.includes("webrtc") ? "webrtc" : streamTypeFromView.includes("mse") ? "mse" : streamTypeFromView.includes("hls") ? "hls" : "";
     return shouldRenderTwoWayTalkButton({
       camera: this._activeCam,
       pageId: normalizePageRoute(this._pageId),
       PAGE_IDS,
-      activeStreamType: this._activeStreamType
+      activeStreamType
     });
   }
   _buildTwoWayTalkInfoButtonMarkup() {
