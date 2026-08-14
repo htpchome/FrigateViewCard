@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1425";
+const VERSION = "1.0.1426";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -21319,8 +21319,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const ptzSupported = this.querySelector("#camera-modal-ptz-enabled")?.dataset?.supported === "true";
     const ptzEnabled = ptzSupported && this.querySelector("#camera-modal-ptz-enabled")?.checked === true;
     const ptzSpeed = this.querySelector("#camera-modal-ptz-speed")?.value || "0.5";
-    const twoWayTalkSupported = this.querySelector("#camera-modal-two-way-talk-enabled")?.dataset?.supported === "true";
-    const twoWayTalkEnabled = twoWayTalkSupported && this.querySelector("#camera-modal-two-way-talk-enabled")?.checked === true;
+    const twoWayTalkEnabled = this.querySelector("#camera-modal-two-way-talk-enabled")?.checked === true;
     const ptz = ptzEnabled ? normalizeCameraPtzConfig({
       enabled: true,
       speed: ptzSpeed

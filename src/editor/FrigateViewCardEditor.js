@@ -869,13 +869,9 @@ export class FrigateViewCardEditor extends HTMLElement {
       this.querySelector("#camera-modal-ptz-enabled")?.checked === true;
     const ptzSpeed =
       this.querySelector("#camera-modal-ptz-speed")?.value || "0.5";
-    const twoWayTalkSupported =
-      this.querySelector("#camera-modal-two-way-talk-enabled")?.dataset
-        ?.supported === "true";
     const twoWayTalkEnabled =
-      twoWayTalkSupported &&
       this.querySelector("#camera-modal-two-way-talk-enabled")?.checked ===
-        true;
+      true;
     const ptz = ptzEnabled
       ? normalizeCameraPtzConfig({
           enabled: true,
