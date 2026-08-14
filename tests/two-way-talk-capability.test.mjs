@@ -56,7 +56,7 @@ test("shouldRenderTwoWayTalkButton requires enabled talk and active WebRTC strea
 
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
+      camera: { two_way_talk: true, connection_type: "ha_direct" },
       pageId: PAGE_IDS.singleView,
       PAGE_IDS,
       activeStreamType: "webrtc",
@@ -65,7 +65,7 @@ test("shouldRenderTwoWayTalkButton requires enabled talk and active WebRTC strea
   );
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
+      camera: { two_way_talk: true, connection_type: "frigate_go2rtc" },
       pageId: PAGE_IDS.wideView,
       PAGE_IDS,
       activeStreamType: "webrtc",
@@ -74,7 +74,7 @@ test("shouldRenderTwoWayTalkButton requires enabled talk and active WebRTC strea
   );
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
+      camera: { two_way_talk: true, connection_type: "frigate_go2rtc" },
       pageId: PAGE_IDS.singleView,
       PAGE_IDS,
       activeStreamType: "mse",
@@ -83,7 +83,7 @@ test("shouldRenderTwoWayTalkButton requires enabled talk and active WebRTC strea
   );
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true },
+      camera: { two_way_talk: true, connection_type: "frigate_go2rtc" },
       pageId: PAGE_IDS.singleView,
       PAGE_IDS,
       activeStreamType: "hls",

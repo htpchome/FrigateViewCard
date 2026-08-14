@@ -103,6 +103,10 @@ export const shouldRenderTwoWayTalkButton = ({
   activeStreamType,
 }) => {
   if (camera?.two_way_talk !== true) return false;
+  const connectionType = String(camera?.connection_type || "")
+    .trim()
+    .toLowerCase();
+  if (connectionType === "ha_direct") return false;
   const streamType = String(activeStreamType || camera?.activeStreamType || "")
     .trim()
     .toLowerCase();
