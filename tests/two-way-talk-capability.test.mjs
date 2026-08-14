@@ -46,7 +46,7 @@ test("hasTwoWayTalkCapability detects go2rtc backchannel from producer medias", 
   );
 });
 
-test("shouldRenderTwoWayTalkButton requires enabled talk and WebRTC connection type", () => {
+test("shouldRenderTwoWayTalkButton requires enabled talk and active WebRTC stream", () => {
   const PAGE_IDS = {
     singleView: "single-view",
     wideView: "wide-view",
@@ -56,41 +56,55 @@ test("shouldRenderTwoWayTalkButton requires enabled talk and WebRTC connection t
 
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true, connection_type: "frigate_go2rtc" },
+      camera: { two_way_talk: true },
       pageId: PAGE_IDS.singleView,
       PAGE_IDS,
+      activeStreamType: "webrtc",
     }),
     true,
   );
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true, connection_type: "webrtc" },
+      camera: { two_way_talk: true },
       pageId: PAGE_IDS.wideView,
       PAGE_IDS,
+      activeStreamType: "webrtc",
     }),
     true,
   );
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true, connection_type: "ha_direct" },
+      camera: { two_way_talk: true },
       pageId: PAGE_IDS.singleView,
       PAGE_IDS,
+      activeStreamType: "mse",
     }),
     false,
   );
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: true, connection_type: "frigate_go2rtc" },
+      camera: { two_way_talk: true },
+      pageId: PAGE_IDS.singleView,
+      PAGE_IDS,
+      activeStreamType: "hls",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldRenderTwoWayTalkButton({
+      camera: { two_way_talk: true },
       pageId: PAGE_IDS.mobileView,
       PAGE_IDS,
+      activeStreamType: "webrtc",
     }),
     false,
   );
   assert.equal(
     shouldRenderTwoWayTalkButton({
-      camera: { two_way_talk: false, connection_type: "frigate_go2rtc" },
+      camera: { two_way_talk: false },
       pageId: PAGE_IDS.singleView,
       PAGE_IDS,
+      activeStreamType: "webrtc",
     }),
     false,
   );

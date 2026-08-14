@@ -96,15 +96,16 @@ export const hasTwoWayTalkCapability = (capabilityInfo) => {
     .some((token) => tokenMatches.has(token));
 };
 
-export const shouldRenderTwoWayTalkButton = ({ camera, pageId, PAGE_IDS }) => {
+export const shouldRenderTwoWayTalkButton = ({
+  camera,
+  pageId,
+  PAGE_IDS,
+  activeStreamType,
+}) => {
   if (camera?.two_way_talk !== true) return false;
-  const connectionType = String(camera?.connection_type || "")
+  const streamType = String(activeStreamType || camera?.activeStreamType || "")
     .trim()
     .toLowerCase();
-  const isWebRtcConnectionType =
-    connectionType === "" ||
-    connectionType === "webrtc" ||
-    connectionType === "frigate_go2rtc";
-  if (!isWebRtcConnectionType) return false;
+  if (streamType !== "webrtc") return false;
   return pageId === PAGE_IDS.singleView || pageId === PAGE_IDS.wideView;
 };

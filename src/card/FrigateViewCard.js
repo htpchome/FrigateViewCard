@@ -1761,10 +1761,19 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _setActiveStreamType(type) {
+    const wasTwoWayButtonVisible =
+      this._shouldRenderTwoWayTalkButtonForActiveCamera();
     applyActiveStreamTypeForCard({
       card: this,
       type,
     });
+    const isTwoWayButtonVisible =
+      this._shouldRenderTwoWayTalkButtonForActiveCamera();
+    if (wasTwoWayButtonVisible !== isTwoWayButtonVisible) {
+      this._renderShellPreserveLive();
+    }
+    this._syncTwoWayTalkRuntimeState();
+    this._syncTwoWayTalkButton();
   }
 
   _setStreamFallbackVisible(visible, refreshImage = false) {
@@ -3096,14 +3105,17 @@ export class FrigateViewCard extends HTMLElement {
     this._syncFullscreenButtonsVisibility();
   }
 
+  _shouldRenderTwoWayTalkButtonForActiveCamera() {
+    return shouldRenderTwoWayTalkButton({
+      camera: this._activeCam,
+      pageId: normalizePageRoute(this._pageId),
+      PAGE_IDS,
+      activeStreamType: this._activeStreamType,
+    });
+  }
+
   _buildTwoWayTalkInfoButtonMarkup() {
-    if (
-      !shouldRenderTwoWayTalkButton({
-        camera: this._activeCam,
-        pageId: normalizePageRoute(this._pageId),
-        PAGE_IDS,
-      })
-    ) {
+    if (!this._shouldRenderTwoWayTalkButtonForActiveCamera()) {
       return "";
     }
     const active = this._twoWayTalkActiveForCurrentCamera();
@@ -3125,11 +3137,7 @@ export class FrigateViewCard extends HTMLElement {
   _syncTwoWayTalkRuntimeState() {
     if (!this._twoWayTalkSession) return;
     if (
-      !shouldRenderTwoWayTalkButton({
-        camera: this._activeCam,
-        pageId: normalizePageRoute(this._pageId),
-        PAGE_IDS,
-      }) ||
+      !this._shouldRenderTwoWayTalkButtonForActiveCamera() ||
       !this._activeCameraTwoWayTalkEnabled()
     ) {
       void this._stopTwoWayTalkSession();

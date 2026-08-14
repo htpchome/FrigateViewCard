@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1429";
+const VERSION = "1.0.1430";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11759,11 +11759,15 @@ const hasTwoWayTalkCapability = (capabilityInfo) => {
     (item) => String(item || "").trim().toLowerCase()
   ).some((token) => tokenMatches.has(token));
 };
-const shouldRenderTwoWayTalkButton = ({ camera, pageId, PAGE_IDS: PAGE_IDS2 }) => {
+const shouldRenderTwoWayTalkButton = ({
+  camera,
+  pageId,
+  PAGE_IDS: PAGE_IDS2,
+  activeStreamType
+}) => {
   if (camera?.two_way_talk !== true) return false;
-  const connectionType = String(camera?.connection_type || "").trim().toLowerCase();
-  const isWebRtcConnectionType = connectionType === "" || connectionType === "webrtc" || connectionType === "frigate_go2rtc";
-  if (!isWebRtcConnectionType) return false;
+  const streamType = String(activeStreamType || camera?.activeStreamType || "").trim().toLowerCase();
+  if (streamType !== "webrtc") return false;
   return pageId === PAGE_IDS2.singleView || pageId === PAGE_IDS2.wideView;
 };
 
@@ -16975,10 +16979,17 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _setActiveStreamType(type) {
+    const wasTwoWayButtonVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
     applyActiveStreamTypeForCard({
       card: this,
       type
     });
+    const isTwoWayButtonVisible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
+    if (wasTwoWayButtonVisible !== isTwoWayButtonVisible) {
+      this._renderShellPreserveLive();
+    }
+    this._syncTwoWayTalkRuntimeState();
+    this._syncTwoWayTalkButton();
   }
   _setStreamFallbackVisible(visible, refreshImage = false) {
     applyStreamFallbackVisibilityForCard({
@@ -18081,12 +18092,16 @@ const FrigateViewCard = class extends HTMLElement {
     this._initLiveOverlayControls();
     this._syncFullscreenButtonsVisibility();
   }
-  _buildTwoWayTalkInfoButtonMarkup() {
-    if (!shouldRenderTwoWayTalkButton({
+  _shouldRenderTwoWayTalkButtonForActiveCamera() {
+    return shouldRenderTwoWayTalkButton({
       camera: this._activeCam,
       pageId: normalizePageRoute(this._pageId),
-      PAGE_IDS
-    })) {
+      PAGE_IDS,
+      activeStreamType: this._activeStreamType
+    });
+  }
+  _buildTwoWayTalkInfoButtonMarkup() {
+    if (!this._shouldRenderTwoWayTalkButtonForActiveCamera()) {
       return "";
     }
     const active = this._twoWayTalkActiveForCurrentCamera();
@@ -18101,11 +18116,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _syncTwoWayTalkRuntimeState() {
     if (!this._twoWayTalkSession) return;
-    if (!shouldRenderTwoWayTalkButton({
-      camera: this._activeCam,
-      pageId: normalizePageRoute(this._pageId),
-      PAGE_IDS
-    }) || !this._activeCameraTwoWayTalkEnabled()) {
+    if (!this._shouldRenderTwoWayTalkButtonForActiveCamera() || !this._activeCameraTwoWayTalkEnabled()) {
       void this._stopTwoWayTalkSession();
     }
   }
