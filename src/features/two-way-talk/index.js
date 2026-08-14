@@ -95,3 +95,8 @@ export const hasTwoWayTalkCapability = (capabilityInfo) => {
     )
     .some((token) => tokenMatches.has(token));
 };
+
+export const shouldRenderTwoWayTalkButton = ({ camera, pageId, PAGE_IDS }) => {
+  if (camera?.two_way_talk !== true) return false;
+  return pageId === PAGE_IDS.singleView || pageId === PAGE_IDS.wideView;
+};

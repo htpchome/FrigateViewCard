@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1424";
+const VERSION = "1.0.1425";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -966,11 +966,17 @@ const STYLES = `
   .info-row{display:flex;flex-wrap: wrap;padding:10px 16px 8px;
     border-bottom:1px solid var(--c-border);justify-content: space-between;}
   .info-left{flex: 1;}
+  .info-row-action-slot{display:flex;align-items:center;justify-content:center;flex:0 0 auto;padding:0 12px;}
   .info-row-page-nav{display:flex;justify-content:center;align-items:center;flex:1 1 240px;padding:0 12px;min-width:0;}
   .info-row-page-nav .page-nav{padding:0;justify-content:center;width:100%;}
   .page-nav{display:flex;align-items:center;justify-content:center;gap:4px;padding:0;}
   .page-nav-btn{border-radius:6px;}
   .page-nav-btn.active svg{color:var(--c-text-rev);opacity:1;}
+  .info-row-mic-btn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--c-text2);cursor:pointer;transition:background .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease;}
+  .info-row-mic-btn svg{width:24px;height:24px;opacity:.92;color:currentColor;}
+  .info-row-mic-btn:hover{border-color:var(--c-primary-d);color:var(--c-primary-d);}
+  .info-row-mic-btn.active{background:rgba(74,222,128,.16);border-color:rgba(74,222,128,.45);color:#4ade80;box-shadow:0 0 0 1px rgba(74,222,128,.15) inset;}
+  .info-row-mic-btn.active svg{opacity:1;}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
   .stats{display:flex;flex-wrap: wrap;gap:10px;justify-self:end;margin-left:auto;justify-self:end;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
@@ -3517,13 +3523,20 @@ function buildCamSwitcherMarkup({
   }).join("");
   return `${backButton}${cameraButtons}`;
 }
-function buildInfoRowMarkup({ title, subtitle, version, pageNav = "" }) {
+function buildInfoRowMarkup({
+  title,
+  subtitle,
+  version,
+  pageNav = "",
+  centerActionMarkup = ""
+}) {
   return `<div class="info-row">
               <div class="info-left">
                 <div class="info-title" id="info-title">${title}</div>
                 <span class="section-label" id="tl-range">${subtitle}</span>
               </div>
               ${pageNav ? `<div class="info-row-page-nav">${pageNav}</div>` : ""}
+              ${centerActionMarkup ? `<div class="info-row-action-slot">${centerActionMarkup}</div>` : ""}
               <div class="stats">
                 <div class="stat">
                   <div class="sv">v${version}</div>
@@ -3858,7 +3871,8 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildInfoRowMarkup({
       title,
       subtitle,
-      version
+      version,
+      centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || ""
     }),
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,
@@ -3937,7 +3951,8 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildInfoRowMarkup({
       title,
       subtitle,
-      version
+      version,
+      centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || ""
     }),
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,
@@ -11666,6 +11681,330 @@ function resolveControlsReadoutMarkup(lines, escapeText, emptyMessage) {
   return buildControlsReadoutLinesMarkup(escapedLines);
 }
 
+// src/features/two-way-talk/index.js
+const hasTwoWayTalkCapability = (capabilityInfo) => {
+  if (!capabilityInfo || typeof capabilityInfo !== "object") return false;
+  const producers = Array.isArray(capabilityInfo.producers) ? capabilityInfo.producers : [];
+  const hasGo2RtcBackchannel = producers.some((producer) => {
+    if (!Array.isArray(producer?.medias)) return false;
+    return producer.medias.some((media) => {
+      const token = String(media || "").trim().toLowerCase();
+      return token.includes("audio") && (token.includes("sendonly") || token.includes("sendrecv"));
+    });
+  });
+  if (hasGo2RtcBackchannel) return true;
+  const truthyKeys = new Set([
+    "two_way_talk",
+    "twoWayTalk",
+    "two-way-talk",
+    "talk",
+    "talkback",
+    "microphone",
+    "mic",
+    "audio_output",
+    "audio_out",
+    "two_way_audio",
+    "supports_two_way_talk",
+    "supports_two_way_audio",
+    "backchannel"
+  ]);
+  const tokenMatches = new Set([
+    "talk",
+    "talkback",
+    "two_way_talk",
+    "two-way-talk",
+    "supports_two_way_talk",
+    "two_way_audio",
+    "two-way-audio",
+    "supports_two_way_audio",
+    "mic",
+    "microphone",
+    "audio_output",
+    "audio-out",
+    "audio_out",
+    "speaker",
+    "backchannel"
+  ]);
+  const stack = [capabilityInfo];
+  const seen = new Set();
+  const tokens = [];
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node || typeof node !== "object") continue;
+    if (seen.has(node)) continue;
+    seen.add(node);
+    if (Array.isArray(node)) {
+      node.forEach((item) => {
+        if (typeof item === "string") tokens.push(item);
+        else if (item && typeof item === "object") stack.push(item);
+      });
+      continue;
+    }
+    Object.entries(node).forEach(([key, value]) => {
+      const normalizedKey = String(key || "").trim().toLowerCase();
+      if (value === true && truthyKeys.has(key)) {
+        tokens.push(key);
+      }
+      if (value === true && truthyKeys.has(normalizedKey)) {
+        tokens.push(normalizedKey);
+      }
+      if (typeof value === "string") {
+        tokens.push(value);
+      } else if (Array.isArray(value) || value && typeof value === "object") {
+        stack.push(value);
+      }
+    });
+  }
+  return tokens.map(
+    (item) => String(item || "").trim().toLowerCase()
+  ).some((token) => tokenMatches.has(token));
+};
+const shouldRenderTwoWayTalkButton = ({ camera, pageId, PAGE_IDS: PAGE_IDS2 }) => {
+  if (camera?.two_way_talk !== true) return false;
+  return pageId === PAGE_IDS2.singleView || pageId === PAGE_IDS2.wideView;
+};
+
+// src/features/two-way-talk/session.js
+function resolveNavigatorMediaDevices() {
+  return typeof navigator !== "undefined" ? navigator.mediaDevices : null;
+}
+async function requestMicrophoneStream() {
+  const mediaDevices = resolveNavigatorMediaDevices();
+  if (!mediaDevices?.getUserMedia) {
+    throw new Error("Microphone capture is not supported in this browser");
+  }
+  return mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    },
+    video: false
+  });
+}
+function stopMediaStream(stream) {
+  stream?.getTracks?.().forEach((track) => {
+    try {
+      track.stop();
+    } catch (_) {
+    }
+  });
+}
+function createPeerConnection(configuration) {
+  return new RTCPeerConnection(
+    configuration || {
+      bundlePolicy: "max-bundle",
+      sdpSemantics: "unified-plan",
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    }
+  );
+}
+function bindLocalAudioTrack(pc, stream) {
+  const [audioTrack] = stream.getAudioTracks();
+  if (!audioTrack) {
+    throw new Error("No microphone audio track available");
+  }
+  pc.addTrack(audioTrack, stream);
+  pc.addTransceiver("video", { direction: "recvonly" });
+}
+async function startGo2RtcTwoWayTalkSession({ websocketUrl, onEnded }) {
+  if (!websocketUrl) {
+    throw new Error("Missing go2rtc WebSocket URL");
+  }
+  const localStream = await requestMicrophoneStream();
+  const pc = createPeerConnection();
+  const ws = new WebSocket(websocketUrl);
+  let ended = false;
+  const notifyEnded = () => {
+    if (ended) return;
+    ended = true;
+    onEnded?.();
+  };
+  bindLocalAudioTrack(pc, localStream);
+  const stop = () => {
+    try {
+      ws.close();
+    } catch (_) {
+    }
+    try {
+      pc.close();
+    } catch (_) {
+    }
+    stopMediaStream(localStream);
+    notifyEnded();
+  };
+  pc.addEventListener("icecandidate", (event) => {
+    if (ws.readyState !== WebSocket.OPEN || !event.candidate) return;
+    ws.send(
+      JSON.stringify({
+        type: "webrtc/candidate",
+        value: event.candidate.toJSON().candidate
+      })
+    );
+  });
+  ws.addEventListener("message", (event) => {
+    let msg;
+    try {
+      msg = JSON.parse(event.data);
+    } catch (_) {
+      return;
+    }
+    if (msg?.type === "webrtc/answer") {
+      pc.setRemoteDescription({
+        type: "answer",
+        sdp: msg.value
+      }).catch(() => {
+      });
+      return;
+    }
+    if (msg?.type === "webrtc/candidate") {
+      pc.addIceCandidate({ candidate: msg.value, sdpMid: "0" }).catch(() => {
+      });
+    }
+  });
+  ws.addEventListener("close", () => notifyEnded(), { once: true });
+  ws.addEventListener("error", () => notifyEnded(), { once: true });
+  await new Promise((resolve, reject) => {
+    const handleOpen = async () => {
+      try {
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: false,
+          offerToReceiveVideo: true
+        });
+        await pc.setLocalDescription(offer);
+        ws.send(JSON.stringify({ type: "webrtc/offer", value: offer.sdp }));
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    };
+    const handleError = () => {
+      reject(new Error("Unable to open go2rtc talkback socket"));
+    };
+    ws.addEventListener("open", handleOpen, { once: true });
+    ws.addEventListener("error", handleError, { once: true });
+  }).catch((error) => {
+    stop();
+    throw error;
+  });
+  return {
+    type: "frigate_go2rtc",
+    stop,
+    pc,
+    ws,
+    localStream
+  };
+}
+async function startHaDirectTwoWayTalkSession({
+  hass,
+  entityId,
+  onEnded
+}) {
+  if (!hass?.callWS || !hass?.connection || !entityId) {
+    throw new Error("Missing Home Assistant WebRTC session context");
+  }
+  const clientConfig = await hass.callWS({
+    type: "camera/webrtc/get_client_config",
+    entity_id: entityId
+  });
+  const localStream = await requestMicrophoneStream();
+  const pc = createPeerConnection(clientConfig?.configuration);
+  const pendingCandidates = [];
+  let sessionId = "";
+  let unsubscribe = null;
+  let ended = false;
+  const notifyEnded = () => {
+    if (ended) return;
+    ended = true;
+    onEnded?.();
+  };
+  bindLocalAudioTrack(pc, localStream);
+  if (clientConfig?.dataChannel) {
+    pc.createDataChannel(clientConfig.dataChannel);
+  }
+  const stop = async () => {
+    try {
+      pc.close();
+    } catch (_) {
+    }
+    stopMediaStream(localStream);
+    try {
+      const unsub = await unsubscribe;
+      if (typeof unsub === "function") unsub();
+    } catch (_) {
+    }
+    notifyEnded();
+  };
+  pc.addEventListener("icecandidate", (event) => {
+    if (!event.candidate) return;
+    if (!sessionId) {
+      pendingCandidates.push(event.candidate.toJSON());
+      return;
+    }
+    hass.callWS({
+      type: "camera/webrtc/candidate",
+      entity_id: entityId,
+      session_id: sessionId,
+      candidate: event.candidate.toJSON()
+    }).catch(() => {
+    });
+  });
+  const offer = await pc.createOffer({
+    offerToReceiveAudio: false,
+    offerToReceiveVideo: true
+  });
+  await pc.setLocalDescription(offer);
+  unsubscribe = hass.connection.subscribeMessage(
+    async (event) => {
+      if (event?.type === "session") {
+        sessionId = event.session_id || "";
+        while (pendingCandidates.length) {
+          const candidate = pendingCandidates.shift();
+          await hass.callWS({
+            type: "camera/webrtc/candidate",
+            entity_id: entityId,
+            session_id: sessionId,
+            candidate
+          }).catch(() => {
+          });
+        }
+        return;
+      }
+      if (event?.type === "answer") {
+        pc.setRemoteDescription({
+          type: "answer",
+          sdp: event.answer
+        }).catch(() => {
+        });
+        return;
+      }
+      if (event?.type === "candidate") {
+        const candidate = event.candidate?.sdpMid || event.candidate?.sdpMLineIndex != null ? new RTCIceCandidate(event.candidate) : new RTCIceCandidate({
+          candidate: event.candidate?.candidate,
+          sdpMid: "0"
+        });
+        pc.addIceCandidate(candidate).catch(() => {
+        });
+        return;
+      }
+      if (event?.type === "error") {
+        await stop();
+      }
+    },
+    {
+      type: "camera/webrtc/offer",
+      entity_id: entityId,
+      offer: offer.sdp
+    }
+  );
+  return {
+    type: "ha_direct",
+    stop,
+    pc,
+    localStream
+  };
+}
+
 // src/data/review-list.model.js
 function buildReviewListItemModel(review, deps) {
   const {
@@ -15640,6 +15979,9 @@ const FrigateViewCard = class extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
+    this._twoWayTalkSession = null;
+    this._twoWayTalkStarting = false;
+    this._twoWayTalkEntity = "";
     this._browseCalendarActivityController = new BrowseCalendarActivityController(this);
     this._browseCalendarPanelController = new BrowseCalendarPanelController(
       this,
@@ -16249,6 +16591,7 @@ const FrigateViewCard = class extends HTMLElement {
     }, 2500);
   }
   _teardownDisconnected() {
+    void this._stopTwoWayTalkSession();
     this._stopSlideshowRotation("disconnect", false);
     this._stopGridModeState();
     this._stopPreviewMode();
@@ -16720,6 +17063,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._singleViewPageController.activateSingleViewPageRoute(context);
   }
   _activateMobileViewPageRoute(context = {}) {
+    void this._stopTwoWayTalkSession();
     this._mobileViewPageController.activateMobileViewPageRoute(context);
   }
   _isMobileViewPageActive() {
@@ -16744,6 +17088,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._wideViewPageController.activateWideViewPageRoute(context);
   }
   _activatePreviewPageRoute(context = {}) {
+    void this._stopTwoWayTalkSession();
     this._previewPageController.activatePreviewPageRoute(context);
   }
   _applyPreviewShellVisibility() {
@@ -17259,6 +17604,9 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
+    if (idx !== this._activeCamIdx) {
+      void this._stopTwoWayTalkSession();
+    }
     this._mobileCamSwitcherOpen = false;
     const source = String(opts?.source || "manual");
     if (source === "manual") {
@@ -17729,6 +18077,102 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._initLiveOverlayControls();
     this._syncFullscreenButtonsVisibility();
+  }
+  _buildTwoWayTalkInfoButtonMarkup() {
+    if (!shouldRenderTwoWayTalkButton({
+      camera: this._activeCam,
+      pageId: normalizePageRoute(this._pageId),
+      PAGE_IDS
+    })) {
+      return "";
+    }
+    const active = this._twoWayTalkActiveForCurrentCamera();
+    const label = active ? "Disable two-way talk" : "Enable two-way talk";
+    return `<button class="info-row-mic-btn${active ? " active" : ""}" id="two-way-talk-btn" type="button" aria-pressed="${active ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
+  }
+  _activeCameraTwoWayTalkEnabled() {
+    return this._activeCam?.two_way_talk === true;
+  }
+  _twoWayTalkActiveForCurrentCamera() {
+    return !!this._twoWayTalkSession && this._twoWayTalkEntity === String(this._activeCam?.entity || "").trim();
+  }
+  _syncTwoWayTalkRuntimeState() {
+    if (!this._twoWayTalkSession) return;
+    if (!shouldRenderTwoWayTalkButton({
+      camera: this._activeCam,
+      pageId: normalizePageRoute(this._pageId),
+      PAGE_IDS
+    }) || !this._activeCameraTwoWayTalkEnabled()) {
+      void this._stopTwoWayTalkSession();
+    }
+  }
+  _syncTwoWayTalkButton() {
+    const button = this._$("#two-way-talk-btn");
+    if (!button) return;
+    const active = this._twoWayTalkActiveForCurrentCamera();
+    const label = active ? "Disable two-way talk" : "Enable two-way talk";
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    button.setAttribute("title", label);
+    button.setAttribute("aria-label", label);
+    button.innerHTML = active ? ICONS.micOn : ICONS.micOff;
+    button.disabled = this._twoWayTalkStarting === true;
+  }
+  async _toggleTwoWayTalkSession() {
+    if (this._twoWayTalkStarting) return;
+    if (this._twoWayTalkActiveForCurrentCamera()) {
+      await this._stopTwoWayTalkSession();
+      return;
+    }
+    await this._startTwoWayTalkSession();
+  }
+  async _startTwoWayTalkSession() {
+    if (!window.isSecureContext) return;
+    const entity = String(this._activeCam?.entity || "").trim();
+    if (!entity || !this._activeCameraTwoWayTalkEnabled()) return;
+    this._twoWayTalkStarting = true;
+    this._syncTwoWayTalkButton();
+    try {
+      await this._stopTwoWayTalkSession();
+      const handleEnded = () => {
+        if (this._twoWayTalkEntity !== entity) return;
+        this._twoWayTalkSession = null;
+        this._twoWayTalkEntity = "";
+        this._syncTwoWayTalkButton();
+      };
+      const session = this._shouldUseGo2RtcForEntity(entity) ? await startGo2RtcTwoWayTalkSession({
+        websocketUrl: await this._go2rtcResolver.websocketUrlForEntity(entity),
+        onEnded: handleEnded
+      }) : await startHaDirectTwoWayTalkSession({
+        hass: this._hass,
+        entityId: entity,
+        onEnded: handleEnded
+      });
+      this._twoWayTalkSession = session;
+      this._twoWayTalkEntity = entity;
+    } catch (error) {
+      console.warn("[Frigate] Two-way talk start failed", error);
+      this._twoWayTalkSession = null;
+      this._twoWayTalkEntity = "";
+    } finally {
+      this._twoWayTalkStarting = false;
+      this._syncTwoWayTalkButton();
+    }
+  }
+  async _stopTwoWayTalkSession() {
+    const session = this._twoWayTalkSession;
+    this._twoWayTalkSession = null;
+    this._twoWayTalkEntity = "";
+    if (!session) {
+      this._syncTwoWayTalkButton();
+      return;
+    }
+    try {
+      await session.stop?.();
+    } catch (error) {
+      console.warn("[Frigate] Two-way talk stop failed", error);
+    }
+    this._syncTwoWayTalkButton();
   }
   _initLiveOverlayControls() {
     const wrap = this._$("#eng-wrap");
@@ -18333,6 +18777,12 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handleTopToolbarClick(target) {
+    const twoWayTalkBtn = target.closest("#two-way-talk-btn");
+    if (twoWayTalkBtn) {
+      if (twoWayTalkBtn.disabled) return true;
+      void this._toggleTwoWayTalkSession();
+      return true;
+    }
     const gridBtn = target.closest("#grid-btn");
     if (gridBtn) {
       if (gridBtn.disabled) return true;
@@ -19610,8 +20060,10 @@ const FrigateViewCard = class extends HTMLElement {
       this._renderPreviewPage();
       return;
     }
+    this._syncTwoWayTalkRuntimeState();
     this._renderStats();
     this._renderMuteButton();
+    this._syncTwoWayTalkButton();
     this._syncFullscreenButtonsVisibility();
     this._syncToolbarButtons();
     this._renderLegend();
@@ -20100,85 +20552,6 @@ const FrigateViewCard = class extends HTMLElement {
     a.click();
     a.remove();
   }
-};
-
-// src/features/two-way-talk/index.js
-const hasTwoWayTalkCapability = (capabilityInfo) => {
-  if (!capabilityInfo || typeof capabilityInfo !== "object") return false;
-  const producers = Array.isArray(capabilityInfo.producers) ? capabilityInfo.producers : [];
-  const hasGo2RtcBackchannel = producers.some((producer) => {
-    if (!Array.isArray(producer?.medias)) return false;
-    return producer.medias.some((media) => {
-      const token = String(media || "").trim().toLowerCase();
-      return token.includes("audio") && (token.includes("sendonly") || token.includes("sendrecv"));
-    });
-  });
-  if (hasGo2RtcBackchannel) return true;
-  const truthyKeys = new Set([
-    "two_way_talk",
-    "twoWayTalk",
-    "two-way-talk",
-    "talk",
-    "talkback",
-    "microphone",
-    "mic",
-    "audio_output",
-    "audio_out",
-    "two_way_audio",
-    "supports_two_way_talk",
-    "supports_two_way_audio",
-    "backchannel"
-  ]);
-  const tokenMatches = new Set([
-    "talk",
-    "talkback",
-    "two_way_talk",
-    "two-way-talk",
-    "supports_two_way_talk",
-    "two_way_audio",
-    "two-way-audio",
-    "supports_two_way_audio",
-    "mic",
-    "microphone",
-    "audio_output",
-    "audio-out",
-    "audio_out",
-    "speaker",
-    "backchannel"
-  ]);
-  const stack = [capabilityInfo];
-  const seen = new Set();
-  const tokens = [];
-  while (stack.length) {
-    const node = stack.pop();
-    if (!node || typeof node !== "object") continue;
-    if (seen.has(node)) continue;
-    seen.add(node);
-    if (Array.isArray(node)) {
-      node.forEach((item) => {
-        if (typeof item === "string") tokens.push(item);
-        else if (item && typeof item === "object") stack.push(item);
-      });
-      continue;
-    }
-    Object.entries(node).forEach(([key, value]) => {
-      const normalizedKey = String(key || "").trim().toLowerCase();
-      if (value === true && truthyKeys.has(key)) {
-        tokens.push(key);
-      }
-      if (value === true && truthyKeys.has(normalizedKey)) {
-        tokens.push(normalizedKey);
-      }
-      if (typeof value === "string") {
-        tokens.push(value);
-      } else if (Array.isArray(value) || value && typeof value === "object") {
-        stack.push(value);
-      }
-    });
-  }
-  return tokens.map(
-    (item) => String(item || "").trim().toLowerCase()
-  ).some((token) => tokenMatches.has(token));
 };
 
 // src/config/card-config.js

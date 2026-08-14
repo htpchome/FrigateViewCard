@@ -120,13 +120,20 @@ export function buildCamSwitcherMarkup({
   return `${backButton}${cameraButtons}`;
 }
 
-export function buildInfoRowMarkup({ title, subtitle, version, pageNav = "" }) {
+export function buildInfoRowMarkup({
+  title,
+  subtitle,
+  version,
+  pageNav = "",
+  centerActionMarkup = "",
+}) {
   return `<div class="info-row">
               <div class="info-left">
                 <div class="info-title" id="info-title">${title}</div>
                 <span class="section-label" id="tl-range">${subtitle}</span>
               </div>
               ${pageNav ? `<div class="info-row-page-nav">${pageNav}</div>` : ""}
+              ${centerActionMarkup ? `<div class="info-row-action-slot">${centerActionMarkup}</div>` : ""}
               <div class="stats">
                 <div class="stat">
                   <div class="sv">v${version}</div>

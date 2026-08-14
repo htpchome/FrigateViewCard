@@ -257,6 +257,11 @@ import {
   resolvePtzServicePlan,
   resolvePtzEmptyStateMessage,
 } from "../features/ptz/index.js";
+import { shouldRenderTwoWayTalkButton } from "../features/two-way-talk/index.js";
+import {
+  startGo2RtcTwoWayTalkSession,
+  startHaDirectTwoWayTalkSession,
+} from "../features/two-way-talk/session.js";
 import {
   buildReviewListItemHtml,
   buildReviewListItemModel,
@@ -588,6 +593,9 @@ export class FrigateViewCard extends HTMLElement {
       SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
     });
     this._previewPageController = new PreviewPageController(this, { PAGE_IDS });
+    this._twoWayTalkSession = null;
+    this._twoWayTalkStarting = false;
+    this._twoWayTalkEntity = "";
     this._browseCalendarActivityController =
       new BrowseCalendarActivityController(this);
     this._browseCalendarPanelController = new BrowseCalendarPanelController(
@@ -1323,6 +1331,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _teardownDisconnected() {
+    void this._stopTwoWayTalkSession();
     this._stopSlideshowRotation("disconnect", false);
     this._stopGridModeState();
     this._stopPreviewMode();
@@ -1857,6 +1866,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _activateMobileViewPageRoute(context = {}) {
+    void this._stopTwoWayTalkSession();
     this._mobileViewPageController.activateMobileViewPageRoute(context);
   }
 
@@ -1891,6 +1901,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _activatePreviewPageRoute(context = {}) {
+    void this._stopTwoWayTalkSession();
     this._previewPageController.activatePreviewPageRoute(context);
   }
 
@@ -2546,6 +2557,9 @@ export class FrigateViewCard extends HTMLElement {
 
   // ── camera switching ──────────────────────────────────────
   async _switchCamera(idx, opts = {}) {
+    if (idx !== this._activeCamIdx) {
+      void this._stopTwoWayTalkSession();
+    }
     this._mobileCamSwitcherOpen = false;
     const source = String(opts?.source || "manual");
     if (source === "manual") {
@@ -3080,6 +3094,121 @@ export class FrigateViewCard extends HTMLElement {
 
     this._initLiveOverlayControls();
     this._syncFullscreenButtonsVisibility();
+  }
+
+  _buildTwoWayTalkInfoButtonMarkup() {
+    if (
+      !shouldRenderTwoWayTalkButton({
+        camera: this._activeCam,
+        pageId: normalizePageRoute(this._pageId),
+        PAGE_IDS,
+      })
+    ) {
+      return "";
+    }
+    const active = this._twoWayTalkActiveForCurrentCamera();
+    const label = active ? "Disable two-way talk" : "Enable two-way talk";
+    return `<button class="info-row-mic-btn${active ? " active" : ""}" id="two-way-talk-btn" type="button" aria-pressed="${active ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
+  }
+
+  _activeCameraTwoWayTalkEnabled() {
+    return this._activeCam?.two_way_talk === true;
+  }
+
+  _twoWayTalkActiveForCurrentCamera() {
+    return (
+      !!this._twoWayTalkSession &&
+      this._twoWayTalkEntity === String(this._activeCam?.entity || "").trim()
+    );
+  }
+
+  _syncTwoWayTalkRuntimeState() {
+    if (!this._twoWayTalkSession) return;
+    if (
+      !shouldRenderTwoWayTalkButton({
+        camera: this._activeCam,
+        pageId: normalizePageRoute(this._pageId),
+        PAGE_IDS,
+      }) ||
+      !this._activeCameraTwoWayTalkEnabled()
+    ) {
+      void this._stopTwoWayTalkSession();
+    }
+  }
+
+  _syncTwoWayTalkButton() {
+    const button = this._$("#two-way-talk-btn");
+    if (!button) return;
+    const active = this._twoWayTalkActiveForCurrentCamera();
+    const label = active ? "Disable two-way talk" : "Enable two-way talk";
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    button.setAttribute("title", label);
+    button.setAttribute("aria-label", label);
+    button.innerHTML = active ? ICONS.micOn : ICONS.micOff;
+    button.disabled = this._twoWayTalkStarting === true;
+  }
+
+  async _toggleTwoWayTalkSession() {
+    if (this._twoWayTalkStarting) return;
+    if (this._twoWayTalkActiveForCurrentCamera()) {
+      await this._stopTwoWayTalkSession();
+      return;
+    }
+    await this._startTwoWayTalkSession();
+  }
+
+  async _startTwoWayTalkSession() {
+    if (!window.isSecureContext) return;
+    const entity = String(this._activeCam?.entity || "").trim();
+    if (!entity || !this._activeCameraTwoWayTalkEnabled()) return;
+    this._twoWayTalkStarting = true;
+    this._syncTwoWayTalkButton();
+    try {
+      await this._stopTwoWayTalkSession();
+      const handleEnded = () => {
+        if (this._twoWayTalkEntity !== entity) return;
+        this._twoWayTalkSession = null;
+        this._twoWayTalkEntity = "";
+        this._syncTwoWayTalkButton();
+      };
+      const session = this._shouldUseGo2RtcForEntity(entity)
+        ? await startGo2RtcTwoWayTalkSession({
+            websocketUrl:
+              await this._go2rtcResolver.websocketUrlForEntity(entity),
+            onEnded: handleEnded,
+          })
+        : await startHaDirectTwoWayTalkSession({
+            hass: this._hass,
+            entityId: entity,
+            onEnded: handleEnded,
+          });
+      this._twoWayTalkSession = session;
+      this._twoWayTalkEntity = entity;
+    } catch (error) {
+      console.warn("[Frigate] Two-way talk start failed", error);
+      this._twoWayTalkSession = null;
+      this._twoWayTalkEntity = "";
+    } finally {
+      this._twoWayTalkStarting = false;
+      this._syncTwoWayTalkButton();
+    }
+  }
+
+  async _stopTwoWayTalkSession() {
+    const session = this._twoWayTalkSession;
+    this._twoWayTalkSession = null;
+    this._twoWayTalkEntity = "";
+    if (!session) {
+      this._syncTwoWayTalkButton();
+      return;
+    }
+    try {
+      await session.stop?.();
+    } catch (error) {
+      console.warn("[Frigate] Two-way talk stop failed", error);
+    }
+    this._syncTwoWayTalkButton();
   }
 
   _initLiveOverlayControls() {
@@ -3771,6 +3900,12 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handleTopToolbarClick(target) {
+    const twoWayTalkBtn = target.closest("#two-way-talk-btn");
+    if (twoWayTalkBtn) {
+      if (twoWayTalkBtn.disabled) return true;
+      void this._toggleTwoWayTalkSession();
+      return true;
+    }
     const gridBtn = target.closest("#grid-btn");
     if (gridBtn) {
       if (gridBtn.disabled) return true;
@@ -5191,8 +5326,10 @@ export class FrigateViewCard extends HTMLElement {
       this._renderPreviewPage();
       return;
     }
+    this._syncTwoWayTalkRuntimeState();
     this._renderStats();
     this._renderMuteButton();
+    this._syncTwoWayTalkButton();
     this._syncFullscreenButtonsVisibility();
     this._syncToolbarButtons();
     this._renderLegend();

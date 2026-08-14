@@ -172,6 +172,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         title,
         subtitle,
         version,
+        centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || "",
       }),
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,
@@ -259,6 +260,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         title,
         subtitle,
         version,
+        centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || "",
       }),
     buildMainLayoutShellMarkup: ({
       liveEngineWrap,

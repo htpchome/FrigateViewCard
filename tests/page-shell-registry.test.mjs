@@ -114,3 +114,33 @@ test("mobile profile exposes custom main layout shell builder", () => {
   assert.equal(markup.includes('id="mobile-top"'), true);
   assert.equal(markup.includes('id="mobile-bottom"'), true);
 });
+
+test("single and wide info rows render host action markup", () => {
+  const registry = createPageShellRegistry({
+    defaultPageId: PAGE_IDS.singleView,
+  });
+  registerDefaultPageShellProfiles(registry, PAGE_IDS);
+
+  const host = {
+    _buildTwoWayTalkInfoButtonMarkup: () =>
+      '<button id="two-way-talk-btn"></button>',
+  };
+
+  const singleInfoRow = registry
+    .resolve(PAGE_IDS.singleView)
+    .buildInfoRowMarkup({
+      title: "Camera",
+      subtitle: "Frigate",
+      version: "1.0.0",
+      host,
+    });
+  const wideInfoRow = registry.resolve(PAGE_IDS.wideView).buildInfoRowMarkup({
+    title: "Camera",
+    subtitle: "Frigate",
+    version: "1.0.0",
+    host,
+  });
+
+  assert.equal(singleInfoRow.includes("two-way-talk-btn"), true);
+  assert.equal(wideInfoRow.includes("two-way-talk-btn"), true);
+});
