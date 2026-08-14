@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1437";
+const VERSION = "1.0.1438";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -203,6 +203,18 @@ const MOBILE_VIEW_PAGE_STYLES = `
     overflow:hidden;
     position:relative;
   }
+  .card.mobile-view-active .mobile-view-two-way-talk-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 8px 12px 6px;
+  }
+
+  .card.mobile-view-active .mobile-view-two-way-talk-slot[hidden] {
+    display: none !important;
+  }
+
   .card.mobile-view-active .mobile-bottom .frigate-view {
     
   }
@@ -3351,6 +3363,7 @@ function buildMobileViewInfoRowMarkup({
             </div>`;
 }
 function buildMobileViewMainLayoutShellMarkup({
+  host,
   liveEngineWrap,
   infoRow,
   pageNav,
@@ -3363,6 +3376,7 @@ function buildMobileViewMainLayoutShellMarkup({
 }) {
   const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"].filter(Boolean).join(" ");
   const tabsHolderClassName = ["tabs-holder", layoutProfile.tabsHolderClass].filter(Boolean).join(" ");
+  const twoWayTalkMarkup = host?._buildTwoWayTalkMobileButtonMarkup?.() || "";
   return `<div class="${layoutClassName}" id="layout">
             <div class="mobile-container" id="mobile-container">
               <div class="mobile-top" id="mobile-top">
@@ -3370,6 +3384,7 @@ function buildMobileViewMainLayoutShellMarkup({
                 ${liveEngineWrap}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
+                ${twoWayTalkMarkup}
                 <div class="${tabsHolderClassName} shadow-small">
                   <div class="button-holder">
                     <div class="button-holder-row tabs-row">
@@ -3875,6 +3890,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || ""
     }),
     buildMainLayoutShellMarkup: ({
+      host,
       liveEngineWrap,
       infoRow,
       pageNav,
@@ -3917,6 +3933,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       online: host?._hass?.states?.[host?._activeCam?.entity]?.state !== "unavailable"
     }),
     buildMainLayoutShellMarkup: ({
+      host,
       liveEngineWrap,
       infoRow,
       pageNav,
@@ -3927,6 +3944,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       footerMarkup,
       layoutProfile
     }) => buildMobileViewMainLayoutShellMarkup({
+      host,
       liveEngineWrap,
       infoRow,
       pageNav,
@@ -18093,6 +18111,16 @@ const FrigateViewCard = class extends HTMLElement {
     if (pageId !== PAGE_IDS.singleView && pageId !== PAGE_IDS.wideView) {
       return "";
     }
+    return this._buildTwoWayTalkButtonMarkup();
+  }
+  _buildTwoWayTalkMobileButtonMarkup() {
+    if (normalizePageRoute(this._pageId) !== PAGE_IDS.mobileView) {
+      return "";
+    }
+    const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
+    return `<div class="mobile-view-two-way-talk-slot" id="mobile-view-two-way-talk-slot" ${visible ? "" : "hidden"}>${this._buildTwoWayTalkButtonMarkup()}</div>`;
+  }
+  _buildTwoWayTalkButtonMarkup() {
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
@@ -18134,8 +18162,14 @@ const FrigateViewCard = class extends HTMLElement {
       delete this._domCache["#two-way-talk-btn"];
     }
   }
+  _syncMobileViewTwoWayTalkSlot() {
+    const slot = this._$("#mobile-view-two-way-talk-slot");
+    if (!slot) return;
+    slot.hidden = !this._shouldRenderTwoWayTalkButtonForActiveCamera();
+  }
   _syncTwoWayTalkButton() {
     this._syncTwoWayTalkActionSlot();
+    this._syncMobileViewTwoWayTalkSlot();
     const button = this._$("#two-way-talk-btn");
     if (!button) return;
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();

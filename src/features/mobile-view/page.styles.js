@@ -74,6 +74,18 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     overflow:hidden;
     position:relative;
   }
+  .card.mobile-view-active .mobile-view-two-way-talk-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 8px 12px 6px;
+  }
+
+  .card.mobile-view-active .mobile-view-two-way-talk-slot[hidden] {
+    display: none !important;
+  }
+
   .card.mobile-view-active .mobile-bottom .frigate-view {
     
   }

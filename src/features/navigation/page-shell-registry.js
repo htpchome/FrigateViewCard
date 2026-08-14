@@ -175,6 +175,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || "",
       }),
     buildMainLayoutShellMarkup: ({
+      host,
       liveEngineWrap,
       infoRow,
       pageNav,
@@ -222,6 +223,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
           "unavailable",
       }),
     buildMainLayoutShellMarkup: ({
+      host,
       liveEngineWrap,
       infoRow,
       pageNav,
@@ -233,6 +235,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
       layoutProfile,
     }) =>
       buildMobileViewMainLayoutShellMarkup({
+        host,
         liveEngineWrap,
         infoRow,
         pageNav,

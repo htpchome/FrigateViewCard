@@ -116,6 +116,7 @@ export function buildMobileViewInfoRowMarkup({
 }
 
 export function buildMobileViewMainLayoutShellMarkup({
+  host,
   liveEngineWrap,
   infoRow,
   pageNav,
@@ -132,6 +133,7 @@ export function buildMobileViewMainLayoutShellMarkup({
   const tabsHolderClassName = ["tabs-holder", layoutProfile.tabsHolderClass]
     .filter(Boolean)
     .join(" ");
+  const twoWayTalkMarkup = host?._buildTwoWayTalkMobileButtonMarkup?.() || "";
 
   return `<div class="${layoutClassName}" id="layout">
             <div class="mobile-container" id="mobile-container">
@@ -140,6 +142,7 @@ export function buildMobileViewMainLayoutShellMarkup({
                 ${liveEngineWrap}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
+                ${twoWayTalkMarkup}
                 <div class="${tabsHolderClassName} shadow-small">
                   <div class="button-holder">
                     <div class="button-holder-row tabs-row">

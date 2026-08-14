@@ -3113,6 +3113,18 @@ export class FrigateViewCard extends HTMLElement {
     if (pageId !== PAGE_IDS.singleView && pageId !== PAGE_IDS.wideView) {
       return "";
     }
+    return this._buildTwoWayTalkButtonMarkup();
+  }
+
+  _buildTwoWayTalkMobileButtonMarkup() {
+    if (normalizePageRoute(this._pageId) !== PAGE_IDS.mobileView) {
+      return "";
+    }
+    const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
+    return `<div class="mobile-view-two-way-talk-slot" id="mobile-view-two-way-talk-slot" ${visible ? "" : "hidden"}>${this._buildTwoWayTalkButtonMarkup()}</div>`;
+  }
+
+  _buildTwoWayTalkButtonMarkup() {
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
@@ -3169,8 +3181,15 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
 
+  _syncMobileViewTwoWayTalkSlot() {
+    const slot = this._$("#mobile-view-two-way-talk-slot");
+    if (!slot) return;
+    slot.hidden = !this._shouldRenderTwoWayTalkButtonForActiveCamera();
+  }
+
   _syncTwoWayTalkButton() {
     this._syncTwoWayTalkActionSlot();
+    this._syncMobileViewTwoWayTalkSlot();
     const button = this._$("#two-way-talk-btn");
     if (!button) return;
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();

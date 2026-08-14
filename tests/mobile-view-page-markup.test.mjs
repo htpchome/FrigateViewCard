@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildMobileViewMainLayoutShellMarkup,
   buildMobileViewCamSwitcherMarkup,
   buildMobileViewInfoRowMarkup,
   resolveMobileViewEventsCountText,
@@ -98,4 +99,30 @@ test("mobile view cam switcher markup renders trigger and picker options", () =>
   assert.equal(markup.includes('id="on-dot"'), true);
   assert.equal(markup.includes('id="on-lbl"'), false);
   assert.equal(markup.includes("Driveway"), true);
+});
+
+test("mobile view main layout renders centered two-way-talk slot above tabs", () => {
+  const markup = buildMobileViewMainLayoutShellMarkup({
+    host: {
+      _buildTwoWayTalkMobileButtonMarkup: () =>
+        '<div id="mobile-view-two-way-talk-slot"><button id="two-way-talk-btn" hidden></button></div>',
+    },
+    liveEngineWrap: '<div id="eng-wrap"></div>',
+    infoRow: '<div class="info-row"></div>',
+    pageNav: '<div class="page-nav"></div>',
+    camSwitcher: '<div class="cam-switcher"></div>',
+    tabsMarkup: "<button>Alerts</button>",
+    toolsMarkup: "<button>Tools</button>",
+    browseMarkup: '<div class="browse"></div>',
+    footerMarkup: '<div class="footer"></div>',
+    layoutProfile: { layoutClass: "layout--mobile-view" },
+  });
+
+  assert.equal(markup.includes('id="mobile-view-two-way-talk-slot"'), true);
+  assert.equal(
+    markup.indexOf('id="mobile-view-two-way-talk-slot"') <
+      markup.indexOf('class="tabs-holder'),
+    true,
+  );
+  assert.equal(markup.includes('id="two-way-talk-btn"'), true);
 });
