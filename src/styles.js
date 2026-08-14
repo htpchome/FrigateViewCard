@@ -444,7 +444,7 @@ export const STYLES = `
 
 
   /* ── info row ── */
-  .info-row{  display: grid;grid-template-columns: repeat(3, 1fr);align-items: center;width: 100%;}
+  .info-row{display:grid;grid-template-columns: repeat(3, 1fr);padding:4px 10px;align-items: center;width: 100%;}
   .info-left{text-align:left}
   .info-row-action-slot{text-align: center;}
   .info-row-page-nav{display:flex;justify-content:center;align-items:center;flex:1 1 240px;padding:0 12px;min-width:0;}
