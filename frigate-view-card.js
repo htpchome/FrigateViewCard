@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1426";
+const VERSION = "1.0.1427";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -20909,8 +20909,10 @@ const FrigateViewCardEditor = class extends HTMLElement {
       "#camera-modal-two-way-talk-state"
     );
     const sourceLabel = normalizeCameraConnectionType2(sourceType) === "ha_direct" ? "Home Assistant" : "Frigate";
+    const showToggle = supported || loading || preserveSelection;
+    const allowSelection = supported || preserveSelection;
     if (twoWayTalkToggleRow) {
-      twoWayTalkToggleRow.style.display = supported ? "block" : "none";
+      twoWayTalkToggleRow.style.display = showToggle ? "block" : "none";
     }
     if (twoWayTalkStateMessage) {
       if (loading) {
@@ -20926,7 +20928,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     }
     if (twoWayTalkEnabled) {
       twoWayTalkEnabled.dataset.supported = supported ? "true" : "false";
-      twoWayTalkEnabled.disabled = !supported || loading;
+      twoWayTalkEnabled.disabled = !allowSelection || loading;
       if (!supported && !loading && !preserveSelection) {
         twoWayTalkEnabled.checked = false;
       }
@@ -21314,12 +21316,20 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const connectionType = normalizeCameraConnectionType2(
       this.querySelector("#camera-modal-connection-type")?.dataset?.value || this.querySelector("#camera-modal-connection-type")?.value || DEFAULT_CAMERA_CONNECTION_TYPE
     );
-    const alertsContent = this.querySelector("#camera-modal-all-reviews")?.checked === true ? "all_reviews" : "alerts_only";
-    const disableHlsDesktop = this.querySelector("#camera-modal-disable-hls-desktop")?.checked === true;
-    const ptzSupported = this.querySelector("#camera-modal-ptz-enabled")?.dataset?.supported === "true";
-    const ptzEnabled = ptzSupported && this.querySelector("#camera-modal-ptz-enabled")?.checked === true;
+    const alertsContentToggle = this.querySelector("#camera-modal-all-reviews");
+    const disableHlsDesktopToggle = this.querySelector(
+      "#camera-modal-disable-hls-desktop"
+    );
+    const ptzEnabledToggle = this.querySelector("#camera-modal-ptz-enabled");
+    const twoWayTalkToggle = this.querySelector(
+      "#camera-modal-two-way-talk-enabled"
+    );
+    const alertsContent = resolveSwitchChecked(alertsContentToggle) === true ? "all_reviews" : "alerts_only";
+    const disableHlsDesktop = resolveSwitchChecked(disableHlsDesktopToggle);
+    const ptzSupported = ptzEnabledToggle?.dataset?.supported === "true";
+    const ptzEnabled = ptzSupported && resolveSwitchChecked(ptzEnabledToggle);
     const ptzSpeed = this.querySelector("#camera-modal-ptz-speed")?.value || "0.5";
-    const twoWayTalkEnabled = this.querySelector("#camera-modal-two-way-talk-enabled")?.checked === true;
+    const twoWayTalkEnabled = resolveSwitchChecked(twoWayTalkToggle);
     const ptz = ptzEnabled ? normalizeCameraPtzConfig({
       enabled: true,
       speed: ptzSpeed
