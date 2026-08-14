@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1431";
+const VERSION = "1.0.1432";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -977,7 +977,7 @@ const STYLES = `
   .info-row-mic-btn.active{background:rgba(74,222,128,.16);border-color:rgba(74,222,128,.45);color:#4ade80;box-shadow:0 0 0 1px rgba(74,222,128,.15) inset;}
   .info-row-mic-btn.active svg{opacity:1;}
   .info-title{font-size:1.05rem;font-weight:700;color:var(--c-text);}
-  .stats{gap:10px;text-align:right;} 
+  .stats{display:flex;gap:10px;text-align:right;justify-content: end;align-items: center;} 
   .stat{display:flex;flex-direction:column;align-items:flex-end;}
   .sv{font-size:1.05rem;font-weight:700;color:var(--c-primary-d);} .sl{font-size:0.75rem;color:var(--c-text2);text-transform:uppercase;letter-spacing:.06em;}
   
