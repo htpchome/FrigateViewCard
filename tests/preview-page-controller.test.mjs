@@ -11,6 +11,7 @@ const createHost = ({
   alertLive = false,
   activeStreamType = "mse",
   lastLiveStreamHint = "",
+  mobileDevice = false,
 } = {}) => {
   const calls = [];
   const host = {
@@ -29,8 +30,10 @@ const createHost = ({
     _pageId: pageId,
     _mountInProgress: false,
     _isPageRouteAvailable: () => true,
+    _isMobileDevice: () => mobileDevice,
     _lastNonPreviewPageId: "single-view",
     _activeCamIdx: 0,
+    _activeCam: { entity: "camera.front_door" },
     _$: () => null,
     _isPreviewCameraAlertLive: () => alertLive,
     _cameraConnectionType: (entity) =>
@@ -212,6 +215,75 @@ test("mountPreviewMedia delegates preview cells through grid media ownership", (
   assert.equal(calls[0][1].fallbackOnLiveError, true);
   assert.equal(calls[0][1].stateObj?.attributes?.frontend_stream_type, "mse");
   assert.equal(host._previewMediaState?.destroyed, false);
+});
+
+test("mountPreviewMedia adopts and restores the active live host on mobile", () => {
+  const engineHost = { id: "engine" };
+  const originalParent = {
+    appendChild: (node) => {
+      node.parentNode = originalParent;
+    },
+    insertBefore: (node) => {
+      node.parentNode = originalParent;
+    },
+  };
+  const engWrap = {
+    parentNode: null,
+    nextSibling: null,
+  };
+  originalParent.appendChild(engWrap);
+
+  const previewHost = {
+    dataset: {
+      previewMediaEntity: "camera.front_door",
+      previewUseLive: "1",
+    },
+    innerHTML: "",
+    appendChild: (node) => {
+      node.parentNode = previewHost;
+    },
+    querySelectorAll: () => [],
+  };
+
+  const { controller, host } = createHost({
+    previewEnabled: true,
+    pageId: "preview",
+    mobileDevice: true,
+    liveCameras: true,
+  });
+  const calls = [];
+
+  host._hass = {
+    states: {
+      "camera.front_door": { state: "streaming", attributes: {} },
+    },
+  };
+  host._domCache = {};
+  host._findVideoDeep = (root) => (root === engineHost ? {} : null);
+  host._$ = (selector) => {
+    if (selector === "#eng-wrap") return engWrap;
+    if (selector === "#engine") return engineHost;
+    return null;
+  };
+  host._gridMediaController = {
+    mountCameraCellMedia: () => {
+      calls.push(["mountCameraCellMedia"]);
+      return true;
+    },
+  };
+  host.shadowRoot = {
+    querySelectorAll: (selector) =>
+      selector === ".preview-media-host" ? [previewHost] : [],
+  };
+
+  controller.mountPreviewMedia();
+
+  assert.equal(engWrap.parentNode, previewHost);
+  assert.deepEqual(calls, []);
+
+  controller.teardownPreviewMedia();
+
+  assert.equal(engWrap.parentNode, originalParent);
 });
 
 test("exitPreviewPageToCamera avoids remount when selecting active camera", () => {
