@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1440";
+const VERSION = "1.0.1441";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -923,6 +923,8 @@ const STYLES = `
   .card.preview-active{width:100%;max-width:none;margin:0;}
   .card.preview-active .layout{display:flex;flex-direction:column;width:100%;min-width:0;height:var(--view-height,100dvh);max-height:var(--view-height,100dvh);overflow:hidden !important;}
   .card.preview-active .col-left,.card.preview-active .resize-handle,.card.preview-active .col-right{display:none;}
+  .card.preview-active.mobile-client .col-left{display:block !important;position:absolute !important;left:-9999px !important;top:0 !important;width:1px !important;height:1px !important;min-width:1px !important;min-height:1px !important;overflow:hidden !important;opacity:0 !important;pointer-events:none !important;}
+  .card.preview-active.mobile-client .resize-handle,.card.preview-active.mobile-client .col-right{display:none !important;}
 
   .card.preview-active .preview-shell-header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;position:sticky;top:0;z-index:4;}
 
@@ -12749,40 +12751,6 @@ const PreviewPageController = class {
     this._host = host;
     this._constants = constants;
   }
-  _shouldAdoptActiveLiveIntoPreview(entity, useLive) {
-    const isMobileDevice = this._host._isMobileDevice?.() ?? DEVICE_PROFILE.isMobile;
-    if (!isMobileDevice) return false;
-    const activeEntity = String(this._host._activeCam?.entity || "").trim();
-    return !!activeEntity && !!useLive && entity === activeEntity;
-  }
-  _adoptActiveLiveIntoPreviewHost(host, previewState) {
-    var _a;
-    const engWrap = this._host._$("#eng-wrap");
-    const engineHost = this._host._$("#engine");
-    if (!engWrap || !engineHost || !host || !previewState) return false;
-    const hasEstablishedLiveOwner = isLiveTransportType(this._host._activeStreamType) && !!(this._host._engine || engineHost);
-    const hasLiveVideo = !!(this._host._findVideoDeep?.(engineHost) || this._host._findVideoDeep?.(this._host._engine) || this._host._engine?.video);
-    if (!hasEstablishedLiveOwner && !hasLiveVideo) return false;
-    const originalParent = engWrap.parentNode;
-    const originalNextSibling = engWrap.nextSibling;
-    if (!originalParent) return false;
-    host.appendChild(engWrap);
-    (_a = this._host)._domCache || (_a._domCache = {});
-    this._host._domCache["#eng-wrap"] = engWrap;
-    this._host._domCache["#engine"] = engineHost;
-    previewState.cleanup.push(() => {
-      var _a2;
-      if (originalNextSibling?.parentNode === originalParent) {
-        originalParent.insertBefore(engWrap, originalNextSibling);
-      } else {
-        originalParent.appendChild(engWrap);
-      }
-      (_a2 = this._host)._domCache || (_a2._domCache = {});
-      this._host._domCache["#eng-wrap"] = engWrap;
-      this._host._domCache["#engine"] = engineHost;
-    });
-    return true;
-  }
   _pageNavigation() {
     return this._host._pageNavigationController || null;
   }
@@ -13027,11 +12995,6 @@ const PreviewPageController = class {
     hosts.forEach((host) => {
       const entity = host.dataset.previewMediaEntity || "";
       const useLive = host.dataset.previewUseLive === "1";
-      if (this._shouldAdoptActiveLiveIntoPreview(entity, useLive)) {
-        if (this._adoptActiveLiveIntoPreviewHost(host, previewState)) {
-          return;
-        }
-      }
       const stateObj = entity ? buildHaCameraStreamState(
         this._host._hass,
         entity,
@@ -13762,6 +13725,7 @@ const CardStyleContextController = class {
   cardStateClassNames() {
     const classes = this.visualStyleToggleRules().filter(({ configKey }) => this._host._config?.[configKey] === false).map(({ className }) => className);
     if (this._host._isPreviewPageActive()) classes.push("preview-active");
+    if (this._host._isLikelyMobileClient?.()) classes.push("mobile-client");
     return classes.join(" ");
   }
   syncVisualStyleToggles() {

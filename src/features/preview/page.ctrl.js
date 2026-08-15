@@ -2,7 +2,6 @@ import {
   resolvePreviewLiveStreamHint,
   resolvePreviewStreamSourceLabel,
 } from "./utils.js";
-import { isLiveTransportType } from "../live/stream.state.js";
 import {
   buildPreviewCameraButtonMarkup,
   buildPreviewCellMarkup,
@@ -20,53 +19,6 @@ export class PreviewPageController {
   constructor(host, constants) {
     this._host = host;
     this._constants = constants;
-  }
-
-  _shouldAdoptActiveLiveIntoPreview(entity, useLive) {
-    const isMobileDevice =
-      this._host._isMobileDevice?.() ?? DEVICE_PROFILE.isMobile;
-    if (!isMobileDevice) return false;
-
-    const activeEntity = String(this._host._activeCam?.entity || "").trim();
-    return !!activeEntity && !!useLive && entity === activeEntity;
-  }
-
-  _adoptActiveLiveIntoPreviewHost(host, previewState) {
-    const engWrap = this._host._$("#eng-wrap");
-    const engineHost = this._host._$("#engine");
-    if (!engWrap || !engineHost || !host || !previewState) return false;
-
-    const hasEstablishedLiveOwner =
-      isLiveTransportType(this._host._activeStreamType) &&
-      !!(this._host._engine || engineHost);
-    const hasLiveVideo = !!(
-      this._host._findVideoDeep?.(engineHost) ||
-      this._host._findVideoDeep?.(this._host._engine) ||
-      this._host._engine?.video
-    );
-    if (!hasEstablishedLiveOwner && !hasLiveVideo) return false;
-
-    const originalParent = engWrap.parentNode;
-    const originalNextSibling = engWrap.nextSibling;
-    if (!originalParent) return false;
-
-    host.appendChild(engWrap);
-    this._host._domCache ||= {};
-    this._host._domCache["#eng-wrap"] = engWrap;
-    this._host._domCache["#engine"] = engineHost;
-
-    previewState.cleanup.push(() => {
-      if (originalNextSibling?.parentNode === originalParent) {
-        originalParent.insertBefore(engWrap, originalNextSibling);
-      } else {
-        originalParent.appendChild(engWrap);
-      }
-      this._host._domCache ||= {};
-      this._host._domCache["#eng-wrap"] = engWrap;
-      this._host._domCache["#engine"] = engineHost;
-    });
-
-    return true;
   }
 
   _pageNavigation() {
@@ -372,11 +324,6 @@ export class PreviewPageController {
     hosts.forEach((host) => {
       const entity = host.dataset.previewMediaEntity || "";
       const useLive = host.dataset.previewUseLive === "1";
-      if (this._shouldAdoptActiveLiveIntoPreview(entity, useLive)) {
-        if (this._adoptActiveLiveIntoPreviewHost(host, previewState)) {
-          return;
-        }
-      }
       const stateObj = entity
         ? buildHaCameraStreamState(
             this._host._hass,

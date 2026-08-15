@@ -23,11 +23,12 @@ test("cardStateClassNames reflects disabled toggles and preview state", () => {
   const controller = new CardStyleContextController({
     _config: { shadows: false, borders: true, rounded_corners: false },
     _isPreviewPageActive: () => true,
+    _isLikelyMobileClient: () => true,
   });
 
   assert.equal(
     controller.cardStateClassNames(),
-    "shadows-off corners-off preview-active",
+    "shadows-off corners-off preview-active mobile-client",
   );
 });
 

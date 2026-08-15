@@ -19,6 +19,7 @@ export class CardStyleContextController {
       .filter(({ configKey }) => this._host._config?.[configKey] === false)
       .map(({ className }) => className);
     if (this._host._isPreviewPageActive()) classes.push("preview-active");
+    if (this._host._isLikelyMobileClient?.()) classes.push("mobile-client");
     return classes.join(" ");
   }
 
