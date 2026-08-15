@@ -2,6 +2,7 @@ import {
   resolvePreviewLiveStreamHint,
   resolvePreviewStreamSourceLabel,
 } from "./utils.js";
+import { isLiveTransportType } from "../live/stream.state.js";
 import {
   buildPreviewCameraButtonMarkup,
   buildPreviewCellMarkup,
@@ -35,12 +36,15 @@ export class PreviewPageController {
     const engineHost = this._host._$("#engine");
     if (!engWrap || !engineHost || !host || !previewState) return false;
 
+    const hasEstablishedLiveOwner =
+      isLiveTransportType(this._host._activeStreamType) &&
+      !!(this._host._engine || engineHost);
     const hasLiveVideo = !!(
       this._host._findVideoDeep?.(engineHost) ||
       this._host._findVideoDeep?.(this._host._engine) ||
       this._host._engine?.video
     );
-    if (!hasLiveVideo) return false;
+    if (!hasEstablishedLiveOwner && !hasLiveVideo) return false;
 
     const originalParent = engWrap.parentNode;
     const originalNextSibling = engWrap.nextSibling;

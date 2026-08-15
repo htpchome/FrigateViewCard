@@ -259,7 +259,9 @@ test("mountPreviewMedia adopts and restores the active live host on mobile", () 
     },
   };
   host._domCache = {};
-  host._findVideoDeep = (root) => (root === engineHost ? {} : null);
+  host._findVideoDeep = () => null;
+  host._engine = engineHost;
+  host._activeStreamType = "webrtc";
   host._$ = (selector) => {
     if (selector === "#eng-wrap") return engWrap;
     if (selector === "#engine") return engineHost;

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1439";
+const VERSION = "1.0.1440";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -12760,8 +12760,9 @@ const PreviewPageController = class {
     const engWrap = this._host._$("#eng-wrap");
     const engineHost = this._host._$("#engine");
     if (!engWrap || !engineHost || !host || !previewState) return false;
+    const hasEstablishedLiveOwner = isLiveTransportType(this._host._activeStreamType) && !!(this._host._engine || engineHost);
     const hasLiveVideo = !!(this._host._findVideoDeep?.(engineHost) || this._host._findVideoDeep?.(this._host._engine) || this._host._engine?.video);
-    if (!hasLiveVideo) return false;
+    if (!hasEstablishedLiveOwner && !hasLiveVideo) return false;
     const originalParent = engWrap.parentNode;
     const originalNextSibling = engWrap.nextSibling;
     if (!originalParent) return false;
