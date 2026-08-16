@@ -249,6 +249,10 @@ svg path.slice-chevron{
   stroke: #059f14 !important;
   transition: stroke 0.15s ease;
 } 
+path.slice-chevron{
+  stroke: #059f14 !important;
+  transition: stroke 0.15s ease;
+}  
 
 /* Keep chevrons bright while a slice is actively pressed. */
 svg path.slice-button.is-pressed svg path.slice-chevron {
