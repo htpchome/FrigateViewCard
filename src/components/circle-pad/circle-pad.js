@@ -244,6 +244,12 @@ circle.circle-pad-middle-circle {
 }
 
 /*==================USED BELOW===================*/
+#circle-pad-chevron-right {
+  color: #059f14 !important;
+  stroke: #059f14 !important;
+  stroke-width:1 !important;
+  transition: stroke 0.15s ease;
+}
 /* --- Fixed Chevron State Handling --- */
 .${CIRCLE_PAD_CLASS} svg path.slice-chevron{
   stroke: #059f14 !important;
@@ -272,25 +278,25 @@ svg path.slice-button.is-pressed svg path.slice-chevron {
     stroke: var(--circle-pad-text-5) !important;
   }
 
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) svg path.slice-button:not(:hover):not(.is-pressed) svg path.slice-chevron {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) path.slice-button:not(:hover):not(.is-pressed) path.slice-chevron {
     stroke: var(--circle-pad-text-1) !important;
   }
 }
 
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] svg path.slice-button svg path.slice-chevron {
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] path.slice-button path.slice-chevron {
   stroke: var(--circle-pad-text-1) !important;
 }
 
 /* Touch-mode override: ignore sticky pseudo-classes and drive visual state via .is-pressed only. */
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] svg path.slice-button {
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] path.slice-button {
   fill: var(--primary-background-color) !important;
 }
 
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] svg path.slice-button.is-pressed {
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] path.slice-button.is-pressed {
   fill: var(--circle-pad-dark-primary) !important;
 }
 
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] svg path.slice-button.is-pressed svg path.slice-chevron {
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] path.slice-button.is-pressed path.slice-chevron {
   stroke: #ffffff !important;
 }
 /*==================USED ABOVE===================*/
@@ -326,7 +332,7 @@ const CIRCLE_PAD_SVG = `
  
  <g id="button-down" class="slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" aria-label="Down" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="down">
   <path id="circle-pad-button-down" class="circle-pad-key" d="m130.17 100.65a47 47 0 0 1-33.234 13.766 47 47 0 0 1-33.234-13.766l33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="filter:url(#circle-pad-clean-edges)" />
-  <path id="circle-pad-chevron-down" class="slice-chevron" d="m99.48 97.96-2.5402 2.0805-2.5402-2.0805" fill="none" stroke-linejoin="round" stroke-width="1" />
+  <path id="circle-pad-chevron-down" class="slice-chevron" d="m99.48 97.96-2.5402 2.0805-2.5402-2.0805" fill="none" stroke-linejoin="round" stroke-width="1" stroke="#000"/>
  </g>
  
  <g id="button-up" class="slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" aria-label="Up" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="up">
