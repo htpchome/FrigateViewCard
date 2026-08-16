@@ -231,7 +231,7 @@ export function buildControlsSectionMarkup({
               <div class="controls-section-subtitle">${cameraName} · ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
             </div>
             <div class="controls-pad-wrap${panTiltEnabled ? "" : " is-disabled"}">
-              <circle-pad-control id="controls-pad"></circle-pad-control>
+              <circle-pad-control-2 id="controls-pad"></circle-pad-control-2>
             </div>
             <div class="controls-actions" aria-label="PTZ auxiliary controls">
               <div class="controls-action-group${zoomEnabled ? "" : " is-disabled"}">

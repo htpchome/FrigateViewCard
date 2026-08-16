@@ -680,9 +680,9 @@ class CirclePadControl extends HTMLElement {
 
 if (
   typeof customElements !== "undefined" &&
-  !customElements.get("circle-pad-control")
+  !customElements.get("circle-pad-control-2")
 ) {
-  customElements.define("circle-pad-control", CirclePadControl);
+  customElements.define("circle-pad-control-2", CirclePadControl);
 }
 
 export {

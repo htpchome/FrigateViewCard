@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1444";
+const VERSION = "1.0.1445";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1721,8 +1721,8 @@ const CirclePadControl = class extends HTMLElement {
     );
   }
 };
-if (typeof customElements !== "undefined" && !customElements.get("circle-pad-control")) {
-  customElements.define("circle-pad-control", CirclePadControl);
+if (typeof customElements !== "undefined" && !customElements.get("circle-pad-control-2")) {
+  customElements.define("circle-pad-control-2", CirclePadControl);
 }
 
 // src/features/navigation/router.js
@@ -3543,7 +3543,7 @@ function buildControlsSectionMarkup({
               <div class="controls-section-subtitle">${cameraName2} \xB7 ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
             </div>
             <div class="controls-pad-wrap${panTiltEnabled ? "" : " is-disabled"}">
-              <circle-pad-control id="controls-pad"></circle-pad-control>
+              <circle-pad-control-2 id="controls-pad"></circle-pad-control-2>
             </div>
             <div class="controls-actions" aria-label="PTZ auxiliary controls">
               <div class="controls-action-group${zoomEnabled ? "" : " is-disabled"}">
