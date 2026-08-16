@@ -247,9 +247,13 @@ const CIRCLE_PAD_STYLES = `
 /*==================USED BELOW===================*/
 /* --- Fixed Chevron State Handling --- */
 .slice-chevron {
-  stroke: var(--circle-pad-text-1);
+  stroke: #ffcc33;
   transition: stroke 0.15s ease;
 }
+.slice-chevron path{
+  stroke: #059f14;
+  transition: stroke 0.15s ease;
+} 
 
 /* Keep chevrons bright while a slice is actively pressed. */
 .slice-button.is-pressed .slice-chevron {

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1450";
+const VERSION = "1.0.1451";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1344,9 +1344,13 @@ const CIRCLE_PAD_STYLES = `
 /*==================USED BELOW===================*/
 /* --- Fixed Chevron State Handling --- */
 .slice-chevron {
-  stroke: var(--circle-pad-text-1);
+  stroke: #ffcc33;
   transition: stroke 0.15s ease;
 }
+.slice-chevron path{
+  stroke: #059f14;
+  transition: stroke 0.15s ease;
+} 
 
 /* Keep chevrons bright while a slice is actively pressed. */
 .slice-button.is-pressed .slice-chevron {
