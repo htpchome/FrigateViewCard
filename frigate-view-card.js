@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1448";
+const VERSION = "1.0.1449";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1287,19 +1287,6 @@ const CIRCLE_PAD_STYLES = `
     min-height: 220px;
   }
 
-  .${CIRCLE_PAD_CLASS}__wrapper::before {
-    content: "";
-    position: absolute;
-    width: 99.6%;
-    height: 99.6%;
-    border-radius: 50%;
-    box-shadow:
-      0 14px 28px rgba(0, 0, 0, 0.06),
-      0 4px 10px rgba(0, 0, 0, 0.04);
-    z-index: 0;
-    pointer-events: none;
-  }
-
   .${CIRCLE_PAD_CLASS}__wrapper svg {
     width: 100%;
     height: 100%;
@@ -1310,8 +1297,8 @@ const CIRCLE_PAD_STYLES = `
     overflow: visible;
   }
 /*==================USED BELOW============================*/
-.circle-pad-outline {fill:var(--circle-pad-text-3);}
-.circle-pad-middle-circle {fill:var(--circle-pad-text-3);shape-rendering: geometricPrecision;}
+.circle-pad-outline {fill:var(--circle-pad-text-3);filter:url(#circle-pad-outside-shadow);}
+.circle-pad-middle-circle {fill:var(--circle-pad-text-3);shape-rendering: geometricPrecision;filter:url(#circle-pad-outside-shadow);}
 .circle-pad-middle-circle circle {
   shape-rendering: geometricPrecision;
 
@@ -1334,49 +1321,7 @@ const CIRCLE_PAD_STYLES = `
   }
 }
 
-/* Center Hub Base + Hover */
-.center-button #path9 { fill: #bababa; }
-.center-button #circle9 { fill: url(#dome-gradient);   }
-.center-button:hover #path9 { fill: var(--circle-pad-success); }
-.center-button:active #path9 { fill: var(--circle-pad-success); }
 
-@media (hover: hover) {
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .center-button:hover #circle9 {
-    filter: url(#button-shadow-hover);
-  }
-}
-
-/* Persistent mic-on visuals driven by component state */
-.center-button.is-active #circle9 {
-  fill: url(#dome-gradient-green);
-}
-
-.center-button.is-active #path9 {
-  fill: var(--circle-pad-success);
-}
-
-.center-button.is-active .mic-icon path {
-  fill: var(--circle-pad-text-1) !important;
-}
-
-.center-button.is-active {
-  filter: url(#green-glow-matrix);
-}
-
-.main-circle {filter: url(#outside-shadow);}
-.main-circle circle {
-  shape-rendering: geometricPrecision;
-}
-
-/* Green Dome Focus State (Keyboard Navigation) */
-.center-button:focus-visible #circle9 {
-  outline: none; /* Clears default browser ring if you are using your own filters */
-}
-
-/* Green Dome Active State (Pressed Click) */
-.center-button:active #circle9 { 
-  filter: brightness(0.92) url(#button-shadow-hover); /* Pressed visual without forcing active green state */
-}
 
 /* Standalone shadow layer applied exclusively over the center button structure in base state */
 .center-button {
@@ -1384,7 +1329,6 @@ const CIRCLE_PAD_STYLES = `
     0px 4px 8px rgba(0, 0, 0, 0.12),          /* Your original outer drop shadow */
     inset 0px 2px 4px rgba(0, 0, 0, 0.15);    /* New subtle inset shadow */
 }
-
 /* The inner shadow overlay styling */
 .inner-shadow-overlay {
   fill: none;
@@ -1393,7 +1337,6 @@ const CIRCLE_PAD_STYLES = `
   opacity: 0.15;            /* Softness/transparency of the shadow */
   filter: url(#simple-blur); /* Applies the blur effect */
 }
-
 /* Keyboard Accessibility Focus Rings - Set to none to prevent extra lines when active */
 .wheel-button:focus path,
 .wheel-button:focus circle {
@@ -1439,7 +1382,6 @@ const CIRCLE_PAD_STYLES = `
   stroke: #ffffff !important;
 }
 /*==================USED ABOVE===================*/
-/* Touch-mode override: prevent center hover/focus visuals from sticking between taps. */
 
 `;
 const CIRCLE_PAD_SVG = `
@@ -1454,26 +1396,32 @@ const CIRCLE_PAD_SVG = `
     <feDropShadow dx="0.2" dy="0.2" stdDeviation="2" flood-color="#333333" flood-opacity="0.25"></feDropShadow>
   </filter>
 
+  <filter id="circle-pad-clean-edges" x="-.013333" y="-.02717" width="1.0267" height="1.0543" style="color-interpolation-filters:sRGB">
+   <feGaussianBlur result="blur" stdDeviation="0.15"/>
+   <feComposite in="SourceGraphic" in2="blur" operator="in" result="composite1"/>
+   <feComposite in="composite1" in2="composite1" k2="1" operator="in" result="composite2"/>
+  </filter>
+
  </defs>
  
  <circle id="circle-pad-outline" class="circle-pad-outline" cx="50" cy="50" r="48" stroke-linecap="round" stroke-width=".12484"/>
  
- <g class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" aria-label="Right" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="right">
+ <g id="button-right" class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Right" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="right">
   <path id="circle-pad-button-right" class="circle-pad-key" d="m130.7 33.651a47 47 0 0 1 0 66.468l-33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
   <path id="circle-pad-chevron-right" class="slice-chevron" d="m127.96 64.64 2.0805 2.5402-2.0805 2.5402" fill="none" stroke-linejoin="round" stroke-width=".91954" style="fill:none;stroke-width:1;stroke:#000"/>
  </g>
  
- <g id="button-down" class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" aria-label="Down" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="down">
+ <g id="button-down" class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Down" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="down">
   <path id="circle-pad-button-down" class="circle-pad-key" d="m130.17 100.65a47 47 0 0 1-33.234 13.766 47 47 0 0 1-33.234-13.766l33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
   <path id="circle-pad-chevron-down" class="slice-chevron" d="m99.48 97.96-2.5402 2.0805-2.5402-2.0805" fill="none" stroke-linejoin="round" stroke-width=".91954" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
  </g>
  
- <g id="button-up" class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" aria-label="Up" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="up">
+ <g id="button-up" class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Up" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="up">
   <path id="circle-pad-button-up" class="circle-pad-key" d="m63.707 33.122a47 47 0 0 1 66.468-2e-6l-33.234 33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
   <path id="circle-pad-chevron-up" class="slice-chevron" d="m94.4 35.8 2.5402-2.0805 2.5402 2.0805" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
  </g>
  
- <g id="button-left" class="wheel-button slice-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" aria-label="Left" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="left">
+ <g id="button-left" class="wheel-button slice-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Left" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="left">
   <path id="circle-pad-button-left" class="circle-pad-key" d="m63.177 100.12a47 47 0 0 1-13.766-33.234 47 47 0 0 1 13.766-33.234l33.234 33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
   <path id="circle-pad-chevron-left" class="slice-chevron" d="m65.92 69.42-2.0805-2.5402 2.0805-2.5402" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
  </g>
