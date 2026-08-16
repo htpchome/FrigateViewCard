@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1455";
+const VERSION = "1.0.1456";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1344,7 +1344,6 @@ circle.circle-pad-middle-circle {
 /* --- Fixed Chevron State Handling --- */
 svg path.slice-chevron{
   stroke: #059f14 !important;
-  stroke-width: 1px !important;
   transition: stroke 0.15s ease;
 } 
 

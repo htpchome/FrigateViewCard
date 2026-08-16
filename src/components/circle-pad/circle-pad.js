@@ -247,7 +247,6 @@ circle.circle-pad-middle-circle {
 /* --- Fixed Chevron State Handling --- */
 svg path.slice-chevron{
   stroke: #059f14 !important;
-  stroke-width: 1px !important;
   transition: stroke 0.15s ease;
 } 
 
