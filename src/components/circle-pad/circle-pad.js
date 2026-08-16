@@ -204,7 +204,8 @@ const CIRCLE_PAD_STYLES = `
 .circle-pad-middle-circle {fill:var(--circle-pad-text-3);shape-rendering: geometricPrecision;filter:url(#circle-pad-outside-shadow);}
 circle.circle-pad-middle-circle {
   shape-rendering: geometricPrecision;
-
+}
+  
 /*==================USED ABOVE============================*/
 .slice-button .circle-pad-key,
 .slice-button path.circle-pad-key {
@@ -244,60 +245,41 @@ circle.circle-pad-middle-circle {
 }
 
 /*==================USED BELOW===================*/
-#circle-pad-chevron-right {
-  color: #059f14 !important;
+/* --- Chevron State Handling --- */
+.slice-chevron{
   stroke: #059f14 !important;
-  stroke-width:1 !important;
-  transition: stroke 0.15s ease;
-}
-/* --- Fixed Chevron State Handling --- */
-.${CIRCLE_PAD_CLASS} svg path.slice-chevron{
-  stroke: #059f14 !important;
-  stroke-width:1 !important;
-  transition: stroke 0.15s ease;
 } 
-.${CIRCLE_PAD_CLASS} path.slice-chevron{
-  stroke: #059f14 !important;
-  stroke-width:1 !important;
-  transition: stroke 0.15s ease;
-}
-.${CIRCLE_PAD_CLASS} .slice-chevron{
-  stroke: #059f14 !important;
-  stroke-width:1 !important;
-  transition: stroke 0.15s ease;
-}  
-#circle-pad-zoom-out-icon{stroke: #059f14 !important;stroke-width:1 !important;}
 
 /* Keep chevrons bright while a slice is actively pressed. */
-svg path.slice-button.is-pressed svg path.slice-chevron {
+.slice-button.is-pressed .slice-chevron {
   stroke: var(--circle-pad-text-5) !important;
 }
 
 @media (hover: hover) {
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) svg path.slice-button:hover svg path.slice-chevron {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
     stroke: var(--circle-pad-text-5) !important;
   }
 
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) path.slice-button:not(:hover):not(.is-pressed) path.slice-chevron {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(:hover):not(.is-pressed) .slice-chevron {
     stroke: var(--circle-pad-text-1) !important;
   }
 }
 
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] path.slice-button path.slice-chevron {
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button .slice-chevron {
   stroke: var(--circle-pad-text-1) !important;
 }
 
 /* Touch-mode override: ignore sticky pseudo-classes and drive visual state via .is-pressed only. */
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] path.slice-button {
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button {
   fill: var(--primary-background-color) !important;
 }
 
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] path.slice-button.is-pressed {
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed {
   fill: var(--circle-pad-dark-primary) !important;
 }
 
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] path.slice-button.is-pressed path.slice-chevron {
-  stroke: #ffffff !important;
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed .slice-chevron {
+  stroke: var(--circle-pad-text-4) !important;
 }
 /*==================USED ABOVE===================*/
 
