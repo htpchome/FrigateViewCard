@@ -245,17 +245,17 @@ circle.circle-pad-middle-circle {
 
 /*==================USED BELOW===================*/
 /* --- Fixed Chevron State Handling --- */
-svg path.slice-chevron{
+.${CIRCLE_PAD_CLASS} svg path.slice-chevron{
   stroke: #059f14 !important;
   stroke-width:1 !important;
   transition: stroke 0.15s ease;
 } 
-path.slice-chevron{
+.${CIRCLE_PAD_CLASS} path.slice-chevron{
   stroke: #059f14 !important;
   stroke-width:1 !important;
   transition: stroke 0.15s ease;
 }
-.slice-chevron{
+.${CIRCLE_PAD_CLASS} .slice-chevron{
   stroke: #059f14 !important;
   stroke-width:1 !important;
   transition: stroke 0.15s ease;
