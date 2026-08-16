@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1449";
+const VERSION = "1.0.1450";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1303,21 +1303,19 @@ const CIRCLE_PAD_STYLES = `
   shape-rendering: geometricPrecision;
 
 /*==================USED ABOVE============================*/
-.wheel-button {
+.slice-button,
+.slice-button path {
   cursor: pointer;
   outline: none;
-}
-.wheel-button path,
-.wheel-button circle {
   transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
+  fill: var(--primary-background-color)
 }
-.slice-button path { fill: var(--primary-background-color) }
 .slice-button.is-pressed path,
 .slice-button:active path { fill: var(--circle-pad-dark-primary) }
 
 @media (hover: hover) {
   .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover path {
-    fill: var(--primary-background-color);
+    fill: var(--circle-pad-light-primary);
   }
 }
 
@@ -1338,8 +1336,8 @@ const CIRCLE_PAD_STYLES = `
   filter: url(#simple-blur); /* Applies the blur effect */
 }
 /* Keyboard Accessibility Focus Rings - Set to none to prevent extra lines when active */
-.wheel-button:focus path,
-.wheel-button:focus circle {
+.slice-button:focus path,
+.slice-button:focus circle {
   stroke: none; 
 }
 
