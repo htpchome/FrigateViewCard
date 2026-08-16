@@ -213,28 +213,21 @@ const CIRCLE_PAD_STYLES = `
     overflow: visible;
   }
 /*==================USED BELOW============================*/
-.circle-pad-outline {fill:var(--circle-pad-text-2);filter:url(#circle-pad-outside-shadow);shape-rendering: geometricPrecision;}
-.circle-pad-middle-circle {fill:var(--circle-pad-text-2);filter:url(#circle-pad-outside-shadow);shape-rendering: geometricPrecision;}
+.circle-pad-outline {fill:var(--circle-pad-text-3);filter:url(#circle-pad-outside-shadow);shape-rendering: geometricPrecision;}
+.circle-pad-middle-circle {fill:var(--circle-pad-text-3);filter:url(#circle-pad-center-shadow);shape-rendering: geometricPrecision;}
 .circle-pad-middle-circle circle {
   shape-rendering: geometricPrecision;
-}
-
-
-
 
 /*==================USED ABOVE============================*/
-  .wheel-button {
-    cursor: pointer;
-    outline: none;
-  }
-
-  .wheel-button path,
-  .wheel-button circle {
-    transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
-  }
-
+.wheel-button {
+  cursor: pointer;
+  outline: none;
+}
+.wheel-button path,
+.wheel-button circle {
+  transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
+}
 .slice-button path { fill: var(--primary-background-color) }
-
 .slice-button.is-pressed path,
 .slice-button:active path { fill: var(--circle-pad-dark-primary) }
 
@@ -408,8 +401,6 @@ const CIRCLE_PAD_SVG = `
         <path id="circle-pad-chevron-left" class="slice-chevron" d="m65.92 69.42-2.0805-2.5402 2.0805-2.5402" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
       </g>
 
-      <circle id="circle-pad-middle-circle" class="circle-pad-middle-circle" cx="50" cy="50" r="14" paint-order:stroke fill markers;stroke-width:0"/>
-
       <g class="circle-pad-zoom-out-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Left" role="button" tabindex="0" >
         <path id="circle-pad-zoom-out-svg" d="m63.5 50.25a13.5 13.25 0 0 1-6.75 11.475 13.5 13.25 0 0 1-13.5-1e-6 13.5 13.25 0 0 1-6.75-11.475h13.5z" style="fill:#fff;filter:url(#circle-pad-clean-edges);paint-order:stroke fill markers;stroke-width:0"/>
         <path id="circle-pad-zoom-out" d="m53 57.304h-6v-0.85714h6z" style="stroke-width:.42857"/>
@@ -419,6 +410,8 @@ const CIRCLE_PAD_SVG = `
         <path id="circle-pad-zoom-in-svg" d="m36.5 49.75a13.5 13.25 0 0 1 13.5-13.25 13.5 13.25 0 0 1 13.5 13.25h-13.5z" style="fill:#fff;filter:url(#circle-pad-clean-edges);paint-order:stroke fill markers;stroke-width:0"/>
         <path id="circle-pad-zoom-in" d="m53 43.554h-2.5714v2.5714h-0.85714v-2.5714h-2.5714v-0.85714h2.5714v-2.5714h0.85714v2.5714h2.5714z" style="stroke-width:.42857"/>
       </g>
+      
+      <circle id="circle-pad-middle-circle" class="circle-pad-middle-circle" cx="50" cy="50" r="14" paint-order:stroke fill markers;stroke-width:0"/>
 
     </svg>
 
