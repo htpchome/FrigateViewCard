@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1451";
+const VERSION = "1.0.1452";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1299,24 +1299,23 @@ const CIRCLE_PAD_STYLES = `
 /*==================USED BELOW============================*/
 .circle-pad-outline {fill:var(--circle-pad-text-3);filter:url(#circle-pad-outside-shadow);}
 .circle-pad-middle-circle {fill:var(--circle-pad-text-3);shape-rendering: geometricPrecision;filter:url(#circle-pad-outside-shadow);}
-.circle-pad-middle-circle circle {
+circle.circle-pad-middle-circle {
   shape-rendering: geometricPrecision;
 
 /*==================USED ABOVE============================*/
-.slice-button,
-.slice-button path {
+.slice-button .circle-pad-key,
+.slice-button path.circle-pad-key {
   cursor: pointer;
   outline: none;
   transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
-  fill: var(--primary-background-color)
+  fill: var(--primary-background-color);
 }
-.slice-button.is-pressed path,
-.slice-button:active path { fill: var(--circle-pad-dark-primary) }
+.slice-button path.circle-pad-key.is-pressed,
+.slice-button path.circle-pad-key:active { fill: var(--circle-pad-dark-primary) }
 
 @media (hover: hover) {
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover path {
-    fill: var(--circle-pad-light-primary);
-  }
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button path.circle-pad-key:hover {
+    fill: var(--circle-pad-light-primary);  }
 }
 
 
@@ -1347,8 +1346,8 @@ const CIRCLE_PAD_STYLES = `
   stroke: #ffcc33;
   transition: stroke 0.15s ease;
 }
-.slice-chevron path{
-  stroke: #059f14;
+path.slice-chevron{
+  stroke: #059f14 !important;
   transition: stroke 0.15s ease;
 } 
 
@@ -1415,17 +1414,17 @@ const CIRCLE_PAD_SVG = `
  
  <g id="button-down" class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Down" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="down">
   <path id="circle-pad-button-down" class="circle-pad-key" d="m130.17 100.65a47 47 0 0 1-33.234 13.766 47 47 0 0 1-33.234-13.766l33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
-  <path id="circle-pad-chevron-down" class="slice-chevron" d="m99.48 97.96-2.5402 2.0805-2.5402-2.0805" fill="none" stroke-linejoin="round" stroke-width=".91954" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
+  <path id="circle-pad-chevron-down" class="slice-chevron" d="m99.48 97.96-2.5402 2.0805-2.5402-2.0805" fill="none" stroke-linejoin="round" stroke-width=".91954" style="fill:none;stroke-width:1;"/>
  </g>
  
  <g id="button-up" class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Up" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="up">
   <path id="circle-pad-button-up" class="circle-pad-key" d="m63.707 33.122a47 47 0 0 1 66.468-2e-6l-33.234 33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
-  <path id="circle-pad-chevron-up" class="slice-chevron" d="m94.4 35.8 2.5402-2.0805 2.5402 2.0805" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
+  <path id="circle-pad-chevron-up" class="slice-chevron" d="m94.4 35.8 2.5402-2.0805 2.5402 2.0805" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill:none;stroke-width:1;"/>
  </g>
  
  <g id="button-left" class="wheel-button slice-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Left" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="left">
   <path id="circle-pad-button-left" class="circle-pad-key" d="m63.177 100.12a47 47 0 0 1-13.766-33.234 47 47 0 0 1 13.766-33.234l33.234 33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
-  <path id="circle-pad-chevron-left" class="slice-chevron" d="m65.92 69.42-2.0805-2.5402 2.0805-2.5402" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
+  <path id="circle-pad-chevron-left" class="slice-chevron" d="m65.92 69.42-2.0805-2.5402 2.0805-2.5402" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill:none;stroke-width:1;"/>
  </g>
  
  <circle id="circle-pad-middle-circle" class="circle-pad-middle-circle" cx="50" cy="50" r="14"/>
