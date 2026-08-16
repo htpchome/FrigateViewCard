@@ -212,7 +212,17 @@ const CIRCLE_PAD_STYLES = `
     z-index: 1;
     overflow: visible;
   }
+/*==================USED BELOW============================*/
+.circle-pad-outline {fill:var(--circle-pad-text-2);filter:url(#circle-pad-outside-shadow);shape-rendering: geometricPrecision;}
+.circle-pad-middle-circle {fill:var(--circle-pad-text-2);filter:url(#circle-pad-outside-shadow);shape-rendering: geometricPrecision;}
+.circle-pad-middle-circle circle {
+  shape-rendering: geometricPrecision;
+}
 
+
+
+
+/*==================USED ABOVE============================*/
   .wheel-button {
     cursor: pointer;
     outline: none;
@@ -223,14 +233,14 @@ const CIRCLE_PAD_STYLES = `
     transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
   }
 
-.slice-button path { fill: var(--circle-pad-bg-1) }
+.slice-button path { fill: var(--primary-background-color) }
 
 .slice-button.is-pressed path,
 .slice-button:active path { fill: var(--circle-pad-dark-primary) }
 
 @media (hover: hover) {
   .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover path {
-    fill: var(--circle-pad-primary);
+    fill: var(--primary-background-color);
   }
 }
 
@@ -288,7 +298,7 @@ const CIRCLE_PAD_STYLES = `
 /* The inner shadow overlay styling */
 .inner-shadow-overlay {
   fill: none;
-  stroke: #000000;
+  stroke: var(--circle-pad-text-1);
   stroke-width: 2;          /* Thickness of the shadow */
   opacity: 0.15;            /* Softness/transparency of the shadow */
   filter: url(#simple-blur); /* Applies the blur effect */
@@ -300,72 +310,35 @@ const CIRCLE_PAD_STYLES = `
   stroke: none; 
 }
 
-/* --- Fixed Microphone State Handling --- */
-.mic-icon path,
-.mic-off-icon path {
-  fill: var(--circle-pad-text-2); /* Gray base state */
-  transition: fill 0.2s ease;
-}
-
-.mic-icon {
-  display: none;
-}
-
-.mic-off-icon {
-  display: inline;
-}
-
-.center-button.is-active .mic-icon {
-  display: inline;
-}
-
-.center-button.is-active .mic-off-icon {
-  display: none;
-}
-
-/* Forces the icon to turn pure black when hovered, focused, or active */
-.center-button:focus-visible .mic-icon path,
-.center-button:focus-visible .mic-off-icon path,
-.center-button:active .mic-icon path,
-.center-button:active .mic-off-icon path {
-  fill: var(--circle-pad-text-1) !important; 
-}
-
-@media (hover: hover) {
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .center-button:hover .mic-icon path,
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .center-button:hover .mic-off-icon path {
-    fill: var(--circle-pad-text-1) !important;
-  }
-}
-
+/*==================USED BELOW===================*/
 /* --- Fixed Chevron State Handling --- */
 .slice-chevron {
-  stroke: #555555;
+  stroke: var(--circle-pad-text-1);
   transition: stroke 0.15s ease;
 }
 
 /* Keep chevrons bright while a slice is actively pressed. */
 .slice-button.is-pressed .slice-chevron {
-  stroke: #ffffff !important;
+  stroke: var(--circle-pad-text-5) !important;
 }
 
 @media (hover: hover) {
   .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
-    stroke: #ffffff !important;
+    stroke: var(--circle-pad-text-5) !important;
   }
 
   .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(:hover):not(.is-pressed) .slice-chevron {
-    stroke: #555555 !important;
+    stroke: var(--circle-pad-text-1) !important;
   }
+}
+
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button .slice-chevron {
+  stroke: var(--circle-pad-text-1) !important;
 }
 
 /* Touch-mode override: ignore sticky pseudo-classes and drive visual state via .is-pressed only. */
 .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button path {
-  fill: var(--circle-pad-bg-1) !important;
-}
-
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button .slice-chevron {
-  stroke: #555555 !important;
+  fill: var(--primary-background-color) !important;
 }
 
 .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed path {
@@ -375,86 +348,78 @@ const CIRCLE_PAD_STYLES = `
 .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed .slice-chevron {
   stroke: #ffffff !important;
 }
-
+/*==================USED ABOVE===================*/
 /* Touch-mode override: prevent center hover/focus visuals from sticking between taps. */
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button:not(.is-active) #circle9 {
-  fill: url(#dome-gradient) !important;
-  filter: url(#button-shadow) !important;
-}
 
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button:not(.is-active):not(.is-pressed) #path9 {
-  fill: #bababa !important;
-}
-
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button.is-active #path9,
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button.is-pressed #path9 {
-  fill: var(--circle-pad-success) !important;
-}
-
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button.is-active #circle9 {
-  fill: url(#dome-gradient-green) !important;
-  filter: url(#button-shadow-hover) !important;
-}
-
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button:not(.is-active) .mic-icon path {
-  fill: var(--circle-pad-text-2) !important;
-}
-
-.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .center-button:not(.is-active) .mic-off-icon path {
-  fill: var(--circle-pad-text-2) !important;
-}
 `;
 
 const CIRCLE_PAD_SVG = `
   <div class="${CIRCLE_PAD_CLASS}__wrapper">
     <svg viewBox="0 0 100 100">
       <defs>
-        <filter id="circle-pad-outside-shadow" x="-.05" y="-.05" width="1.1021" height="1.1021" style="color-interpolation-filters:sRGB">
-        <feFlood flood-color="rgb(93,93,93)" flood-opacity=".49804" in="SourceGraphic" result="flood"/>
-        <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="2.000000"/>
-        <feOffset dx="0.200000" dy="0.200000" in="blur" result="offset"/>
-        <feComposite in="flood" in2="offset" operator="in" result="comp1"/>
-        <feComposite in="SourceGraphic" in2="comp1" result="comp2"/>
+
+        <filter id="simple-blur">
+          <feGaussianBlur stdDeviation="1.8"></feGaussianBlur>
         </filter>
+      
+        <filter id="circle-pad-outside-shadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0.2" dy="0.2" stdDeviation="2" flood-color="#333333" flood-opacity="0.25"></feDropShadow>
+        </filter>
+
         <filter id="circle-pad-clean-edges" x="-.013333" y="-.02717" width="1.0267" height="1.0543" style="color-interpolation-filters:sRGB">
-        <feGaussianBlur result="blur" stdDeviation="0.15"/>
-        <feComposite in="SourceGraphic" in2="blur" operator="in" result="composite1"/>
-        <feComposite in="composite1" in2="composite1" k2="1" operator="in" result="composite2"/>
+          <feGaussianBlur result="blur" stdDeviation="0.15"/>
+          <feComposite in="SourceGraphic" in2="blur" operator="in" result="composite1"/>
+          <feComposite in="composite1" in2="composite1" k2="1" operator="in" result="composite2"/>
         </filter>
+
         <filter id="circle-pad-center-shadow" x="-.18943" y="-.18943" width="1.386" height="1.386" style="color-interpolation-filters:sRGB">
-        <feFlood flood-color="rgb(93,93,93)" in="SourceGraphic" result="flood"/>
-        <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="2.000000"/>
-        <feOffset dx="0.200000" dy="0.200000" in="blur" result="offset"/>
-        <feComposite in="flood" in2="offset" operator="in" result="comp1"/>
-        <feComposite in="SourceGraphic" in2="comp1" result="fbSourceGraphic"/>
-        <feColorMatrix in="fbSourceGraphic" result="fbSourceGraphicAlpha" values="0 0 0 -1 0 0 0 0 -1 0 0 0 0 -1 0 0 0 0 1 0"/>
-        <feGaussianBlur in="fbSourceGraphic" result="blur" stdDeviation="0.21"/>
-        <feComposite in="fbSourceGraphic" in2="blur" operator="in" result="composite1"/>
-        <feComposite in="composite1" in2="composite1" k2="1" operator="in" result="composite2"/>
+          <feFlood flood-color="rgb(93,93,93)" in="SourceGraphic" result="flood"/>
+          <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="2.000000"/>
+          <feOffset dx="0.200000" dy="0.200000" in="blur" result="offset"/>
+          <feComposite in="flood" in2="offset" operator="in" result="comp1"/>
+          <feComposite in="SourceGraphic" in2="comp1" result="fbSourceGraphic"/>
+          <feColorMatrix in="fbSourceGraphic" result="fbSourceGraphicAlpha" values="0 0 0 -1 0 0 0 0 -1 0 0 0 0 -1 0 0 0 0 1 0"/>
+          <feGaussianBlur in="fbSourceGraphic" result="blur" stdDeviation="0.21"/>
+          <feComposite in="fbSourceGraphic" in2="blur" operator="in" result="composite1"/>
+          <feComposite in="composite1" in2="composite1" k2="1" operator="in" result="composite2"/>
         </filter>
+
       </defs>
-      <circle id="c-outline" class="circle-pad-outline" cx="50" cy="50" r="48" stroke-linecap="round" stroke-width=".12484" style="filter:url(#circle-pad-outside-shadow);font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
+
+      <circle id="circle-pad-outline" class="circle-pad-outline" cx="50" cy="50" r="48" stroke-linecap="round" stroke-width=".12484" font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
+
       <g class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Right" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="right">
         <path id="circle-pad-button-right" class="circle-pad-key" d="m130.7 33.651a47 47 0 0 1 0 66.468l-33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
         <path id="circle-pad-chevron-right" class="slice-chevron" d="m127.96 64.64 2.0805 2.5402-2.0805 2.5402" fill="none" stroke-linejoin="round" stroke-width=".91954" style="fill:none;stroke-width:1;stroke:#000"/>
       </g>
+
       <g class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Down" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="down">
         <path id="circle-pad-button-down" class="circle-pad-key" d="m130.17 100.65a47 47 0 0 1-33.234 13.766 47 47 0 0 1-33.234-13.766l33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
         <path id="circle-pad-chevron-down" class="slice-chevron" d="m99.48 97.96-2.5402 2.0805-2.5402-2.0805" fill="none" stroke-linejoin="round" stroke-width=".91954" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
       </g>
+
       <g class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Up" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="up">
         <path id="circle-pad-button-up" class="circle-pad-key" d="m63.707 33.122a47 47 0 0 1 66.468-2e-6l-33.234 33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
         <path id="circle-pad-chevron-up" class="slice-chevron" d="m94.4 35.8 2.5402-2.0805 2.5402 2.0805" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
       </g>
+
       <g class="wheel-button slice-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Left" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="left">
         <path id="circle-pad-button-left" class="circle-pad-key" d="m63.177 100.12a47 47 0 0 1-13.766-33.234 47 47 0 0 1 13.766-33.234l33.234 33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
         <path id="circle-pad-chevron-left" class="slice-chevron" d="m65.92 69.42-2.0805-2.5402 2.0805-2.5402" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
       </g>
-      <circle id="circle-pad-middle-circle" cx="50" cy="50" r="14" style="filter:url(#circle-pad-center-shadow);paint-order:stroke fill markers;stroke-width:0"/>
-      <path id="circle-pad-down-button" d="m63.5 50.25a13.5 13.25 0 0 1-6.75 11.475 13.5 13.25 0 0 1-13.5-1e-6 13.5 13.25 0 0 1-6.75-11.475h13.5z" style="fill:#fff;filter:url(#circle-pad-clean-edges);paint-order:stroke fill markers;stroke-width:0"/>
-      <path id="circle-pad-zoom-in-button" d="m36.5 49.75a13.5 13.25 0 0 1 13.5-13.25 13.5 13.25 0 0 1 13.5 13.25h-13.5z" style="fill:#fff;filter:url(#circle-pad-clean-edges);paint-order:stroke fill markers;stroke-width:0"/>
-      <path id="circle-pad-zoom-out" d="m53 57.304h-6v-0.85714h6z" style="stroke-width:.42857"/>
-      <path id="circle-pad-zoom-in" d="m53 43.554h-2.5714v2.5714h-0.85714v-2.5714h-2.5714v-0.85714h2.5714v-2.5714h0.85714v2.5714h2.5714z" style="stroke-width:.42857"/>
+
+      <circle id="circle-pad-middle-circle" class="circle-pad-middle-circle" cx="50" cy="50" r="14" paint-order:stroke fill markers;stroke-width:0"/>
+
+      <g class="circle-pad-zoom-out-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Left" role="button" tabindex="0" >
+        <path id="circle-pad-zoom-out-svg" d="m63.5 50.25a13.5 13.25 0 0 1-6.75 11.475 13.5 13.25 0 0 1-13.5-1e-6 13.5 13.25 0 0 1-6.75-11.475h13.5z" style="fill:#fff;filter:url(#circle-pad-clean-edges);paint-order:stroke fill markers;stroke-width:0"/>
+        <path id="circle-pad-zoom-out" d="m53 57.304h-6v-0.85714h6z" style="stroke-width:.42857"/>
+
+      </g>
+      <g class="circle-pad-zoom-in-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Left" role="button" tabindex="0" > 
+        <path id="circle-pad-zoom-in-svg" d="m36.5 49.75a13.5 13.25 0 0 1 13.5-13.25 13.5 13.25 0 0 1 13.5 13.25h-13.5z" style="fill:#fff;filter:url(#circle-pad-clean-edges);paint-order:stroke fill markers;stroke-width:0"/>
+        <path id="circle-pad-zoom-in" d="m53 43.554h-2.5714v2.5714h-0.85714v-2.5714h-2.5714v-0.85714h2.5714v-2.5714h0.85714v2.5714h2.5714z" style="stroke-width:.42857"/>
+      </g>
+
     </svg>
 
   </div>
