@@ -213,7 +213,7 @@ const CIRCLE_PAD_STYLES = `
     overflow: visible;
   }
 /*==================USED BELOW============================*/
-.circle-pad-outline {fill:var(--circle-pad-text-3);filter:url(#circle-pad-outside-shadow);shape-rendering: geometricPrecision;}
+.circle-pad-outline {fill:var(--circle-pad-text-3);}
 .circle-pad-middle-circle {fill:var(--circle-pad-text-3);filter:url(#circle-pad-center-shadow);shape-rendering: geometricPrecision;}
 .circle-pad-middle-circle circle {
   shape-rendering: geometricPrecision;

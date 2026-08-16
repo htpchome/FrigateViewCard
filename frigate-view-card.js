@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1446";
+const VERSION = "1.0.1447";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1310,7 +1310,7 @@ const CIRCLE_PAD_STYLES = `
     overflow: visible;
   }
 /*==================USED BELOW============================*/
-.circle-pad-outline {fill:var(--circle-pad-text-3);filter:url(#circle-pad-outside-shadow);shape-rendering: geometricPrecision;}
+.circle-pad-outline {fill:var(--circle-pad-text-3);}
 .circle-pad-middle-circle {fill:var(--circle-pad-text-3);filter:url(#circle-pad-center-shadow);shape-rendering: geometricPrecision;}
 .circle-pad-middle-circle circle {
   shape-rendering: geometricPrecision;
