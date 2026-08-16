@@ -1444,72 +1444,55 @@ const CIRCLE_PAD_STYLES = `
 `;
 const CIRCLE_PAD_SVG = `
   <div class="${CIRCLE_PAD_CLASS}__wrapper">
-    <svg viewBox="0 0 100 100">
-      <defs>
-
-        <filter id="simple-blur">
-          <feGaussianBlur stdDeviation="1.8"></feGaussianBlur>
-        </filter>
+<svg version="1.1" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <filter id="simple-blur">
+    <feGaussianBlur stdDeviation="1.8"></feGaussianBlur>
+  </filter>
       
-        <filter id="circle-pad-outside-shadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0.2" dy="0.2" stdDeviation="2" flood-color="#333333" flood-opacity="0.25"></feDropShadow>
-        </filter>
-
-        <filter id="circle-pad-clean-edges" x="-.013333" y="-.02717" width="1.0267" height="1.0543" style="color-interpolation-filters:sRGB">
-          <feGaussianBlur result="blur" stdDeviation="0.15"/>
-          <feComposite in="SourceGraphic" in2="blur" operator="in" result="composite1"/>
-          <feComposite in="composite1" in2="composite1" k2="1" operator="in" result="composite2"/>
-        </filter>
-
-        <filter id="circle-pad-center-shadow" x="-.18943" y="-.18943" width="1.386" height="1.386" style="color-interpolation-filters:sRGB">
-          <feFlood flood-color="rgb(93,93,93)" in="SourceGraphic" result="flood"/>
-          <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="2.000000"/>
-          <feOffset dx="0.200000" dy="0.200000" in="blur" result="offset"/>
-          <feComposite in="flood" in2="offset" operator="in" result="comp1"/>
-          <feComposite in="SourceGraphic" in2="comp1" result="fbSourceGraphic"/>
-          <feColorMatrix in="fbSourceGraphic" result="fbSourceGraphicAlpha" values="0 0 0 -1 0 0 0 0 -1 0 0 0 0 -1 0 0 0 0 1 0"/>
-          <feGaussianBlur in="fbSourceGraphic" result="blur" stdDeviation="0.21"/>
-          <feComposite in="fbSourceGraphic" in2="blur" operator="in" result="composite1"/>
-          <feComposite in="composite1" in2="composite1" k2="1" operator="in" result="composite2"/>
-        </filter>
-
-      </defs>
-
-      <circle id="circle-pad-outline" class="circle-pad-outline" cx="50" cy="50" r="48" stroke-linecap="round" stroke-width=".12484" font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
-
-      <g class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Right" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="right">
-        <path id="circle-pad-button-right" class="circle-pad-key" d="m130.7 33.651a47 47 0 0 1 0 66.468l-33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
-        <path id="circle-pad-chevron-right" class="slice-chevron" d="m127.96 64.64 2.0805 2.5402-2.0805 2.5402" fill="none" stroke-linejoin="round" stroke-width=".91954" style="fill:none;stroke-width:1;stroke:#000"/>
-      </g>
-
-      <g class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Down" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="down">
-        <path id="circle-pad-button-down" class="circle-pad-key" d="m130.17 100.65a47 47 0 0 1-33.234 13.766 47 47 0 0 1-33.234-13.766l33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
-        <path id="circle-pad-chevron-down" class="slice-chevron" d="m99.48 97.96-2.5402 2.0805-2.5402-2.0805" fill="none" stroke-linejoin="round" stroke-width=".91954" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
-      </g>
-
-      <g class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Up" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="up">
-        <path id="circle-pad-button-up" class="circle-pad-key" d="m63.707 33.122a47 47 0 0 1 66.468-2e-6l-33.234 33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
-        <path id="circle-pad-chevron-up" class="slice-chevron" d="m94.4 35.8 2.5402-2.0805 2.5402 2.0805" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
-      </g>
-
-      <g class="wheel-button slice-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Left" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="left">
-        <path id="circle-pad-button-left" class="circle-pad-key" d="m63.177 100.12a47 47 0 0 1-13.766-33.234 47 47 0 0 1 13.766-33.234l33.234 33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
-        <path id="circle-pad-chevron-left" class="slice-chevron" d="m65.92 69.42-2.0805-2.5402 2.0805-2.5402" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
-      </g>
-
-      <g class="circle-pad-zoom-out-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Left" role="button" tabindex="0" >
-        <path id="circle-pad-zoom-out-svg" d="m63.5 50.25a13.5 13.25 0 0 1-6.75 11.475 13.5 13.25 0 0 1-13.5-1e-6 13.5 13.25 0 0 1-6.75-11.475h13.5z" style="fill:#fff;filter:url(#circle-pad-clean-edges);paint-order:stroke fill markers;stroke-width:0"/>
-        <path id="circle-pad-zoom-out" d="m53 57.304h-6v-0.85714h6z" style="stroke-width:.42857"/>
-
-      </g>
-      <g class="circle-pad-zoom-in-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Left" role="button" tabindex="0" > 
-        <path id="circle-pad-zoom-in-svg" d="m36.5 49.75a13.5 13.25 0 0 1 13.5-13.25 13.5 13.25 0 0 1 13.5 13.25h-13.5z" style="fill:#fff;filter:url(#circle-pad-clean-edges);paint-order:stroke fill markers;stroke-width:0"/>
-        <path id="circle-pad-zoom-in" d="m53 43.554h-2.5714v2.5714h-0.85714v-2.5714h-2.5714v-0.85714h2.5714v-2.5714h0.85714v2.5714h2.5714z" style="stroke-width:.42857"/>
-      </g>
-      
-      <circle id="circle-pad-middle-circle" class="circle-pad-middle-circle" cx="50" cy="50" r="14" paint-order:stroke fill markers;stroke-width:0"/>
-
-    </svg>
+  <filter id="circle-pad-outside-shadow" x="-30%" y="-30%" width="160%" height="160%">
+    <feDropShadow dx="0.2" dy="0.2" stdDeviation="2" flood-color="#333333" flood-opacity="0.25"></feDropShadow>
+  </filter>
+  <filter id="circle-pad-clean-edges" x="-.013333" y="-.02717" width="1.0267" height="1.0543" style="color-interpolation-filters:sRGB">
+   <feGaussianBlur result="blur" stdDeviation="0.15"/>
+   <feComposite in="SourceGraphic" in2="blur" operator="in" result="composite1"/>
+   <feComposite in="composite1" in2="composite1" k2="1" operator="in" result="composite2"/>
+  </filter>
+ </defs>
+ 
+ <circle id="circle-pad-outline" class="circle-pad-outline" cx="50" cy="50" r="48" stroke-linecap="round" stroke-width=".12484"/>
+ 
+ <g class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Right" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="right">
+  <path id="circle-pad-button-right" class="circle-pad-key" d="m130.7 33.651a47 47 0 0 1 0 66.468l-33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
+  <path id="circle-pad-chevron-right" class="slice-chevron" d="m127.96 64.64 2.0805 2.5402-2.0805 2.5402" fill="none" stroke-linejoin="round" stroke-width=".91954" style="fill:none;stroke-width:1;stroke:#000"/>
+ </g>
+ 
+ <g id="button-down" class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Down" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="down">
+  <path id="circle-pad-button-down" class="circle-pad-key" d="m130.17 100.65a47 47 0 0 1-33.234 13.766 47 47 0 0 1-33.234-13.766l33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
+  <path id="circle-pad-chevron-down" class="slice-chevron" d="m99.48 97.96-2.5402 2.0805-2.5402-2.0805" fill="none" stroke-linejoin="round" stroke-width=".91954" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
+ </g>
+ 
+ <g id="button-up" class="wheel-button slice-button" transform="translate(-46.941,-16.885)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Up" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="up">
+  <path id="circle-pad-button-up" class="circle-pad-key" d="m63.707 33.122a47 47 0 0 1 66.468-2e-6l-33.234 33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
+  <path id="circle-pad-chevron-up" class="slice-chevron" d="m94.4 35.8 2.5402-2.0805 2.5402 2.0805" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
+ </g>
+ 
+ <g id="button-left" class="wheel-button slice-button" transform="translate(-46.941 -16.855)" stroke-linecap="round" style="filter:url(#circle-pad-clean-edges)" aria-label="Left" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="left">
+  <path id="circle-pad-button-left" class="circle-pad-key" d="m63.177 100.12a47 47 0 0 1-13.766-33.234 47 47 0 0 1 13.766-33.234l33.234 33.234z" fill="#fafafa" stroke-width=".12484" style="font-variation-settings:'opsz' 20, 'wght' 400;paint-order:stroke fill markers"/>
+  <path id="circle-pad-chevron-left" class="slice-chevron" d="m65.92 69.42-2.0805-2.5402 2.0805-2.5402" fill="none" stroke-linejoin="round" stroke-width=".91955" style="fill-opacity:0;stroke-width:1;stroke:#000"/>
+ </g>
+ 
+ <circle id="circle-pad-middle-circle" class="circle-pad-middle-circle" cx="50" cy="50" r="14"/>
+ 
+ <g id="button-zoom-out">
+  <path id="circle-pad-zoom-out-svg" d="m63.5 50.25a13.5 13.25 0 0 1-6.75 11.475 13.5 13.25 0 0 1-13.5-1e-6 13.5 13.25 0 0 1-6.75-11.475h13.5z" style="fill:#fff;filter:url(#circle-pad-clean-edges);paint-order:stroke fill markers;stroke-width:0"/>
+  <path id="circle-pad-zoom-out" d="m53 57.304h-6v-0.85714h6z" style="stroke-width:.42857"/>
+ </g>
+ <g id="button-zoom-in">
+  <path id="circle-pad-zoom-in-svg" d="m36.5 49.75a13.5 13.25 0 0 1 13.5-13.25 13.5 13.25 0 0 1 13.5 13.25h-13.5z" style="fill:#fff;filter:url(#circle-pad-clean-edges);paint-order:stroke fill markers;stroke-width:0"/>
+  <path id="circle-pad-zoom-in" d="m53 43.554h-2.5714v2.5714h-0.85714v-2.5714h-2.5714v-0.85714h2.5714v-2.5714h0.85714v2.5714h2.5714z" style="stroke-width:.42857"/>
+ </g>
+</svg>
 
   </div>
 `;
