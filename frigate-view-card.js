@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1480";
+const VERSION = "1.0.1481";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -14420,14 +14420,13 @@ function buildStandardCamSwitcherButtons({
   getCameraName,
   isCameraAvailable
 }) {
-  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
   const cameraButtons = (cameras || []).map((camera, index) => {
     const name = getCameraName(camera);
     const active = isSingleView && index === activeCamIdx;
     const ok = !includeStatus || isCameraAvailable(camera);
     return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
   }).join("");
-  return `${backButton}${cameraButtons}`;
+  return `${cameraButtons}`;
 }
 function buildStandardPageCamSwitcherMarkup(host, { includeStatus = true, mobile = false } = {}) {
   const activeEntity = host._activeCam?.entity;

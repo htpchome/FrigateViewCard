@@ -35,9 +35,6 @@ function buildStandardCamSwitcherButtons({
   getCameraName,
   isCameraAvailable,
 }) {
-  const backButton = previewPageEnabled
-    ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>`
-    : "";
   const cameraButtons = (cameras || [])
     .map((camera, index) => {
       const name = getCameraName(camera);
@@ -46,7 +43,7 @@ function buildStandardCamSwitcherButtons({
       return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
     })
     .join("");
-  return `${backButton}${cameraButtons}`;
+  return `${cameraButtons}`;
 }
 
 export function buildStandardPageCamSwitcherMarkup(
