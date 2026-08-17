@@ -5,6 +5,12 @@ import {
   resolveActiveDayLabelFromScroll,
 } from "../../shared/list-render.js";
 import {
+  hasCameraPtz,
+  hasPtzFocusCapability,
+  hasPtzPanTiltCapability,
+  hasPtzZoomCapability,
+} from "../ptz/index.js";
+import {
   buildMobileViewCamSwitcherMarkup,
   resolveMobileViewEventsCountText,
   resolveMobileViewOnlineLabel,
@@ -170,6 +176,18 @@ export function standardPageRecordingsHeadingLabel(host, ts = null) {
   return `${host._weekday(target)} - ${host._monthDay(target, { ordinal: true })} - Recordings`;
 }
 
+export function standardPageControlsHeadingLabel(host) {
+  const camera = host._activeCam || {};
+  const ptzInfo = host._activeCameraPtzInfo?.() || null;
+  const ptzConfigured = hasCameraPtz(camera);
+  const ptzReady =
+    ptzConfigured &&
+    (hasPtzPanTiltCapability(ptzInfo) ||
+      hasPtzZoomCapability(ptzInfo) ||
+      hasPtzFocusCapability(ptzInfo));
+  return `${cameraName(camera)} · ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}`;
+}
+
 export function renderStandardPageListLabel(host, ts = null) {
   const labelEl = host._$("#browse-head-label");
   const browseHead = host._$("#browse-head");
@@ -196,6 +214,10 @@ export function renderStandardPageListLabel(host, ts = null) {
 
   if (prev) prev.style.display = "none";
   if (next) next.style.display = "none";
+  if (host._tab === "controls") {
+    labelEl.textContent = standardPageControlsHeadingLabel(host);
+    return;
+  }
   labelEl.textContent = standardPageListHeadingLabel(host, ts);
 }
 

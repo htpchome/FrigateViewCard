@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1474";
+const VERSION = "1.0.1475";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1078,9 +1078,6 @@ const STYLES = `
   .cday{position:relative;background:none;border:none;color:var(--c-text);font-size:0.825rem;padding:6px 0;border-radius:4px;cursor:pointer;} .cday:hover,.cday.active{background:var(--c-primary-l);} .cdot{position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:#ef4444;}
 
   .controls-section{padding:6px 2px 0;}
-  .controls-section-head{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;}
-  .controls-section-title{margin:0;color:var(--c-text);font-size:0.95rem;font-weight:700;text-align:left;}
-  .controls-section-subtitle{color:var(--c-text2);font-size:0.8rem;line-height:1.35;}
   .controls-pad-wrap{max-width:280px;margin:10px auto 12px;}
   .controls-pad-wrap.is-disabled{opacity:.45;pointer-events:none;filter:saturate(.5);}
   .controls-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:0 0 12px;}
@@ -3538,20 +3535,8 @@ function buildControlsSectionMarkup({
                 ${enabled ? "" : "disabled"}
               >${label}</button>`;
   return `<div class="controls-section">
-            <div class="controls-section-head">
-              <div class="controls-section-subtitle">${cameraName2} \xB7 ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
-            </div>
             <div class="controls-pad-wrap${panTiltEnabled || zoomEnabled ? "" : " is-disabled"}">
               <circle-pad-control-2 id="controls-pad"${padDisabledActions ? ` disabled-actions="${padDisabledActions}"` : ""}></circle-pad-control-2>
-            </div>
-            <div class="controls-actions" aria-label="PTZ auxiliary controls">
-              <div class="controls-action-group${focusEnabled ? "" : " is-disabled"}">
-                <div class="controls-action-group-label">Focus</div>
-                <div class="controls-action-row">
-                  ${buildPtzButton("focus-in", "Focus In", focusEnabled)}
-                  ${buildPtzButton("focus-out", "Focus Out", focusEnabled)}
-                </div>
-              </div>
             </div>
             <div class="controls-readout">
               <div class="controls-readout-head">
@@ -14506,6 +14491,13 @@ function standardPageRecordingsHeadingLabel(host, ts = null) {
   const target = Math.floor(ts || host._winEnd || Date.now() / 1e3);
   return `${host._weekday(target)} - ${host._monthDay(target, { ordinal: true })} - Recordings`;
 }
+function standardPageControlsHeadingLabel(host) {
+  const camera = host._activeCam || {};
+  const ptzInfo = host._activeCameraPtzInfo?.() || null;
+  const ptzConfigured = hasCameraPtz(camera);
+  const ptzReady = ptzConfigured && (hasPtzPanTiltCapability(ptzInfo) || hasPtzZoomCapability(ptzInfo) || hasPtzFocusCapability(ptzInfo));
+  return `${cameraName(camera)} \xB7 ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}`;
+}
 function renderStandardPageListLabel(host, ts = null) {
   const labelEl = host._$("#browse-head-label");
   const browseHead = host._$("#browse-head");
@@ -14527,6 +14519,10 @@ function renderStandardPageListLabel(host, ts = null) {
   }
   if (prev) prev.style.display = "none";
   if (next) next.style.display = "none";
+  if (host._tab === "controls") {
+    labelEl.textContent = standardPageControlsHeadingLabel(host);
+    return;
+  }
   labelEl.textContent = standardPageListHeadingLabel(host, ts);
 }
 function standardPageShowStickyDayHeaders(host) {
