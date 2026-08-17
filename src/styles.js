@@ -84,8 +84,7 @@ export const STYLES = `
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;--fvc-outer-border-radius:0px;}
 
-  .card .layout{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;width:100%;
-    overflow:hidden !important;}
+  .card .layout{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;width:100%;overflow:hidden !important;}
   .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
   .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;overflow:hidden;}

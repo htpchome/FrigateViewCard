@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1482";
+const VERSION = "1.0.1483";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -615,8 +615,7 @@ const STYLES = `
   .card.borders-off{--fvc-border-s: none;--fvc-border-m:  none;--fvc-border-active: none}
   .card.corners-off{--fvc-border-radius:0px;--fvc-outer-border-radius:0px;}
 
-  .card .layout{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;width:100%;
-    overflow:hidden !important;}
+  .card .layout{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;width:100%;overflow:hidden !important;}
   .card .layout.wide-view{flex-direction:row;}
   .card .col-left{flex:0 1 auto; min-height:0; align-self: start;flex-direction:column;width:100%; display:flex;overflow:none;}
   .card .col-right{flex:1 1 auto; min-height:0; flex-direction:column;position:relative;width:100%; display:flex;overflow:hidden;}
@@ -6011,6 +6010,496 @@ const resolveRotateOverlayViewportVariables = ({
   };
 };
 
+// src/shared/cleanup.js
+const CleanupController = class {
+  constructor() {
+    this._abortController = new AbortController();
+    this._cleanups = [];
+    this._disposed = false;
+  }
+  get signal() {
+    return this._abortController.signal;
+  }
+  addEventListener(target, type, listener, options = {}) {
+    if (this._disposed || !target?.addEventListener || !listener) return;
+    const normalizedOptions = typeof options === "boolean" ? { capture: options } : { ...options };
+    target.addEventListener(type, listener, {
+      ...normalizedOptions,
+      signal: this.signal
+    });
+  }
+  addCleanup(cleanup) {
+    if (typeof cleanup !== "function") return;
+    if (this._disposed) {
+      try {
+        cleanup();
+      } catch (_) {
+      }
+      return;
+    }
+    this._cleanups.push(cleanup);
+  }
+  dispose() {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._abortController.abort();
+    for (const cleanup of this._cleanups.splice(0).reverse()) {
+      try {
+        cleanup();
+      } catch (_) {
+      }
+    }
+  }
+};
+
+// src/shared/media/video-zoom.ctrl.js
+const VIDEO_ZOOM_MIN = 1;
+const VIDEO_ZOOM_DOUBLE_TAP = 2;
+const VIDEO_ZOOM_MAX = 3;
+const VIDEO_ZOOM_WHEEL_STEP = 0.2;
+const DOUBLE_TAP_DELAY_MS = 320;
+const DOUBLE_TAP_DISTANCE_PX = 28;
+const MOVE_TOLERANCE_PX = 8;
+const EPSILON = 1e-3;
+function clampVideoZoom(value, min = VIDEO_ZOOM_MIN, max = VIDEO_ZOOM_MAX) {
+  return Math.min(max, Math.max(min, Number(value) || min));
+}
+function clampVideoPan({
+  x,
+  y,
+  scale,
+  width,
+  height
+}) {
+  const safeScale = clampVideoZoom(scale);
+  if (safeScale <= VIDEO_ZOOM_MIN + EPSILON) {
+    return { x: 0, y: 0 };
+  }
+  const safeWidth = Math.max(0, Number(width) || 0);
+  const safeHeight = Math.max(0, Number(height) || 0);
+  return {
+    x: Math.min(0, Math.max(safeWidth - safeWidth * safeScale, Number(x) || 0)),
+    y: Math.min(
+      0,
+      Math.max(safeHeight - safeHeight * safeScale, Number(y) || 0)
+    )
+  };
+}
+function zoomVideoAroundPoint({
+  currentScale,
+  nextScale,
+  x,
+  y,
+  focalX,
+  focalY,
+  width,
+  height
+}) {
+  const fromScale = clampVideoZoom(currentScale);
+  const toScale = clampVideoZoom(nextScale);
+  if (toScale <= VIDEO_ZOOM_MIN + EPSILON) {
+    return { scale: VIDEO_ZOOM_MIN, x: 0, y: 0 };
+  }
+  const ratio = toScale / fromScale;
+  const nextPan = clampVideoPan({
+    x: focalX - (focalX - x) * ratio,
+    y: focalY - (focalY - y) * ratio,
+    scale: toScale,
+    width,
+    height
+  });
+  return { scale: toScale, ...nextPan };
+}
+function distanceBetween(first, second) {
+  return Math.hypot(
+    Number(second?.clientX || 0) - Number(first?.clientX || 0),
+    Number(second?.clientY || 0) - Number(first?.clientY || 0)
+  );
+}
+function midpointBetween(first, second) {
+  return {
+    clientX: (Number(first?.clientX || 0) + Number(second?.clientX || 0)) / 2,
+    clientY: (Number(first?.clientY || 0) + Number(second?.clientY || 0)) / 2
+  };
+}
+function styleSnapshot(style, property) {
+  return {
+    value: style?.getPropertyValue?.(property) || "",
+    priority: style?.getPropertyPriority?.(property) || ""
+  };
+}
+function restoreStyle(style, property, snapshot) {
+  if (!style?.setProperty) return;
+  if (!snapshot?.value) {
+    style.removeProperty?.(property);
+    return;
+  }
+  style.setProperty(property, snapshot.value, snapshot.priority);
+}
+const VideoZoomController = class {
+  constructor(video, options = {}) {
+    __publicField(this, "_onWheel", (event) => {
+      const direction = Math.sign(Number(event.deltaY) || 0);
+      if (!direction) return;
+      const nextScale = clampVideoZoom(
+        this._scale - direction * VIDEO_ZOOM_WHEEL_STEP,
+        VIDEO_ZOOM_MIN,
+        this._maxScale
+      );
+      if (nextScale === this._scale && this._scale <= VIDEO_ZOOM_MIN + EPSILON && direction > 0) {
+        return;
+      }
+      event.preventDefault?.();
+      if (nextScale === this._scale) return;
+      this.zoomTo(nextScale, event.clientX, event.clientY);
+    });
+    __publicField(this, "_onDoubleClick", (event) => {
+      if (Date.now() - this._lastTouchZoomAt < 500) return;
+      event.preventDefault?.();
+      this.toggleDoubleZoom(event.clientX, event.clientY);
+    });
+    __publicField(this, "_onPointerDown", (event) => {
+      const point = this._pointForEvent(event);
+      if (point.pointerType === "mouse" && Number(event.button) !== 0) return;
+      this._pointers.set(point.pointerId, point);
+      const touchPoints = [...this._pointers.values()].filter(
+        (candidate) => candidate.pointerType === "touch"
+      );
+      if (touchPoints.length >= 2) {
+        event.preventDefault?.();
+        this._startPinch();
+        return;
+      }
+      if (this._scale > VIDEO_ZOOM_MIN + EPSILON) {
+        event.preventDefault?.();
+        this._startPan(point);
+      }
+    });
+    __publicField(this, "_onPointerMove", (event) => {
+      const point = this._pointers.get(event.pointerId);
+      if (!point) return;
+      point.clientX = Number(event.clientX) || 0;
+      point.clientY = Number(event.clientY) || 0;
+      if (Math.hypot(point.clientX - point.startX, point.clientY - point.startY) > MOVE_TOLERANCE_PX) {
+        point.moved = true;
+      }
+      if (this._pinch) {
+        const first = this._pointers.get(this._pinch.pointerIds[0]);
+        const second = this._pointers.get(this._pinch.pointerIds[1]);
+        if (!first || !second) return;
+        event.preventDefault?.();
+        const midpoint = midpointBetween(first, second);
+        const bounds2 = this._bounds();
+        const scale = clampVideoZoom(
+          this._pinch.scale * (distanceBetween(first, second) / this._pinch.distance),
+          VIDEO_ZOOM_MIN,
+          this._maxScale
+        );
+        const pan2 = clampVideoPan({
+          x: midpoint.clientX - bounds2.left - this._pinch.contentX * scale,
+          y: midpoint.clientY - bounds2.top - this._pinch.contentY * scale,
+          scale,
+          width: bounds2.width,
+          height: bounds2.height
+        });
+        this._scale = scale;
+        this._x = pan2.x;
+        this._y = pan2.y;
+        this._apply();
+        return;
+      }
+      if (!this._pan || this._pan.pointerId !== event.pointerId) return;
+      event.preventDefault?.();
+      const bounds = this._bounds();
+      const pan = clampVideoPan({
+        x: this._pan.startX + point.clientX - this._pan.startClientX,
+        y: this._pan.startY + point.clientY - this._pan.startClientY,
+        scale: this._scale,
+        width: bounds.width,
+        height: bounds.height
+      });
+      this._x = pan.x;
+      this._y = pan.y;
+      this._apply();
+    });
+    __publicField(this, "_onPointerUp", (event) => {
+      this._finishPointer(event, false);
+    });
+    __publicField(this, "_onPointerCancel", (event) => {
+      this._finishPointer(event, true);
+    });
+    __publicField(this, "_onLoadStart", () => {
+      this.reset();
+    });
+    this._video = video;
+    this._host = options.host || video?.parentElement || null;
+    this._maxScale = Math.max(
+      VIDEO_ZOOM_DOUBLE_TAP,
+      Number(options.maxScale) || VIDEO_ZOOM_MAX
+    );
+    this._cleanup = new CleanupController();
+    this._pointers = new Map();
+    this._scale = VIDEO_ZOOM_MIN;
+    this._x = 0;
+    this._y = 0;
+    this._pan = null;
+    this._pinch = null;
+    this._lastTap = null;
+    this._lastTouchZoomAt = 0;
+    this._bound = false;
+    this._styleSnapshots = null;
+    this._hostOverflowSnapshot = null;
+    this._resizeObserver = null;
+  }
+  get video() {
+    return this._video;
+  }
+  get state() {
+    return {
+      scale: this._scale,
+      x: this._x,
+      y: this._y
+    };
+  }
+  bind() {
+    if (this._bound || !this._video || !this._host) return this;
+    this._bound = true;
+    this._styleSnapshots = {
+      transform: styleSnapshot(this._video.style, "transform"),
+      transformOrigin: styleSnapshot(this._video.style, "transform-origin"),
+      cursor: styleSnapshot(this._video.style, "cursor"),
+      touchAction: styleSnapshot(this._video.style, "touch-action"),
+      willChange: styleSnapshot(this._video.style, "will-change"),
+      userSelect: styleSnapshot(this._video.style, "user-select")
+    };
+    this._hostOverflowSnapshot = styleSnapshot(this._host.style, "overflow");
+    this._video.style?.setProperty?.("transform-origin", "0 0", "important");
+    this._video.style?.setProperty?.("touch-action", "none");
+    this._video.style?.setProperty?.("will-change", "transform");
+    this._video.style?.setProperty?.("user-select", "none");
+    this._host.style?.setProperty?.("overflow", "hidden");
+    this._cleanup.addEventListener(this._video, "wheel", this._onWheel, {
+      passive: false
+    });
+    this._cleanup.addEventListener(this._video, "dblclick", this._onDoubleClick);
+    this._cleanup.addEventListener(
+      this._video,
+      "pointerdown",
+      this._onPointerDown,
+      { passive: false }
+    );
+    this._cleanup.addEventListener(
+      this._video,
+      "pointermove",
+      this._onPointerMove,
+      { passive: false }
+    );
+    this._cleanup.addEventListener(this._video, "pointerup", this._onPointerUp);
+    this._cleanup.addEventListener(
+      this._video,
+      "pointercancel",
+      this._onPointerCancel
+    );
+    this._cleanup.addEventListener(this._video, "loadstart", this._onLoadStart);
+    const ResizeObserverCtor = typeof ResizeObserver !== "undefined" ? ResizeObserver : null;
+    if (ResizeObserverCtor) {
+      this._resizeObserver = new ResizeObserverCtor(() => this.refresh());
+      this._resizeObserver.observe(this._host);
+      this._cleanup.addCleanup(() => this._resizeObserver?.disconnect?.());
+    }
+    this.refresh();
+    return this;
+  }
+  dispose() {
+    if (!this._bound) return;
+    this.reset();
+    this._cleanup.dispose();
+    this._bound = false;
+    restoreStyle(
+      this._video.style,
+      "transform",
+      this._styleSnapshots?.transform
+    );
+    restoreStyle(
+      this._video.style,
+      "transform-origin",
+      this._styleSnapshots?.transformOrigin
+    );
+    restoreStyle(this._video.style, "cursor", this._styleSnapshots?.cursor);
+    restoreStyle(
+      this._video.style,
+      "touch-action",
+      this._styleSnapshots?.touchAction
+    );
+    restoreStyle(
+      this._video.style,
+      "will-change",
+      this._styleSnapshots?.willChange
+    );
+    restoreStyle(
+      this._video.style,
+      "user-select",
+      this._styleSnapshots?.userSelect
+    );
+    restoreStyle(this._host.style, "overflow", this._hostOverflowSnapshot);
+    this._pointers.clear();
+  }
+  reset() {
+    this._scale = VIDEO_ZOOM_MIN;
+    this._x = 0;
+    this._y = 0;
+    this._pan = null;
+    this._pinch = null;
+    this._pointers.clear();
+    this._apply();
+  }
+  refresh() {
+    const bounds = this._bounds();
+    const pan = clampVideoPan({
+      x: this._x,
+      y: this._y,
+      scale: this._scale,
+      width: bounds.width,
+      height: bounds.height
+    });
+    this._x = pan.x;
+    this._y = pan.y;
+    this._apply();
+  }
+  zoomTo(nextScale, clientX, clientY) {
+    const bounds = this._bounds();
+    const focalX = Number(clientX) - bounds.left;
+    const focalY = Number(clientY) - bounds.top;
+    const next = zoomVideoAroundPoint({
+      currentScale: this._scale,
+      nextScale: clampVideoZoom(
+        nextScale,
+        VIDEO_ZOOM_MIN,
+        this._maxScale
+      ),
+      x: this._x,
+      y: this._y,
+      focalX,
+      focalY,
+      width: bounds.width,
+      height: bounds.height
+    });
+    this._scale = next.scale;
+    this._x = next.x;
+    this._y = next.y;
+    this._apply();
+  }
+  toggleDoubleZoom(clientX, clientY) {
+    if (this._scale > VIDEO_ZOOM_MIN + EPSILON) {
+      this.reset();
+      return;
+    }
+    this.zoomTo(VIDEO_ZOOM_DOUBLE_TAP, clientX, clientY);
+  }
+  _bounds() {
+    const rect = this._host?.getBoundingClientRect?.() || {};
+    return {
+      left: Number(rect.left) || 0,
+      top: Number(rect.top) || 0,
+      width: Number(this._host?.clientWidth) || Number(rect.width) || Number(this._video?.offsetWidth) || 0,
+      height: Number(this._host?.clientHeight) || Number(rect.height) || Number(this._video?.offsetHeight) || 0
+    };
+  }
+  _apply() {
+    const transform = this._scale <= VIDEO_ZOOM_MIN + EPSILON ? "translate3d(0px, 0px, 0) scale(1)" : `translate3d(${this._x}px, ${this._y}px, 0) scale(${this._scale})`;
+    this._video?.style?.setProperty?.("transform", transform, "important");
+    const cursor = this._pan ? "grabbing" : this._scale > VIDEO_ZOOM_MIN + EPSILON ? "grab" : "zoom-in";
+    this._video?.style?.setProperty?.("cursor", cursor);
+    this._video?.classList?.toggle?.(
+      "fvc-video-zoomed",
+      this._scale > VIDEO_ZOOM_MIN + EPSILON
+    );
+  }
+  _pointForEvent(event) {
+    return {
+      pointerId: event.pointerId,
+      pointerType: String(event.pointerType || "").toLowerCase(),
+      clientX: Number(event.clientX) || 0,
+      clientY: Number(event.clientY) || 0,
+      startX: Number(event.clientX) || 0,
+      startY: Number(event.clientY) || 0,
+      startedAt: Date.now(),
+      moved: false
+    };
+  }
+  _startPan(point) {
+    this._pan = {
+      pointerId: point.pointerId,
+      startClientX: point.clientX,
+      startClientY: point.clientY,
+      startX: this._x,
+      startY: this._y
+    };
+    this._video?.setPointerCapture?.(point.pointerId);
+    this._apply();
+  }
+  _startPinch() {
+    const points = [...this._pointers.values()].filter(
+      (point) => point.pointerType === "touch"
+    );
+    if (points.length < 2) return;
+    const first = points[0];
+    const second = points[1];
+    const midpoint = midpointBetween(first, second);
+    const bounds = this._bounds();
+    this._pinch = {
+      pointerIds: [first.pointerId, second.pointerId],
+      distance: Math.max(1, distanceBetween(first, second)),
+      scale: this._scale,
+      contentX: (midpoint.clientX - bounds.left - this._x) / this._scale,
+      contentY: (midpoint.clientY - bounds.top - this._y) / this._scale
+    };
+    this._pan = null;
+  }
+  _finishPointer(event, cancelled = false) {
+    const point = this._pointers.get(event.pointerId);
+    if (!point) return;
+    const wasPinching = !!this._pinch;
+    this._pointers.delete(event.pointerId);
+    this._video?.releasePointerCapture?.(event.pointerId);
+    if (this._pinch?.pointerIds.includes(event.pointerId)) {
+      this._pinch = null;
+      this._lastTouchZoomAt = Date.now();
+    }
+    if (this._pan?.pointerId === event.pointerId) {
+      this._pan = null;
+    }
+    const remainingTouches = [...this._pointers.values()].filter(
+      (candidate) => candidate.pointerType === "touch"
+    );
+    if (remainingTouches.length === 1 && this._scale > VIDEO_ZOOM_MIN + EPSILON) {
+      remainingTouches[0].moved = true;
+      this._startPan(remainingTouches[0]);
+    }
+    if (!cancelled && !wasPinching && point.pointerType === "touch" && !point.moved) {
+      const now = Date.now();
+      const currentTap = {
+        clientX: Number(event.clientX) || point.clientX,
+        clientY: Number(event.clientY) || point.clientY,
+        at: now
+      };
+      if (this._lastTap && now - this._lastTap.at <= DOUBLE_TAP_DELAY_MS && distanceBetween(this._lastTap, currentTap) <= DOUBLE_TAP_DISTANCE_PX) {
+        event.preventDefault?.();
+        this._lastTap = null;
+        this._lastTouchZoomAt = now;
+        this.toggleDoubleZoom(currentTap.clientX, currentTap.clientY);
+      } else {
+        this._lastTap = currentTap;
+      }
+    }
+    this._apply();
+  }
+};
+function attachVideoZoom(video, options = {}) {
+  if (!video) return null;
+  return new VideoZoomController(video, options).bind();
+}
+
 // src/features/live/fallbacks/fallback-url.js
 const isAbsoluteOrDataUrl = (url) => /^https?:\/\//i.test(url) || String(url || "").startsWith("data:");
 const FALLBACK_SIGNED_URL_TTL_MS = 55 * 60 * 1e3;
@@ -8307,48 +8796,6 @@ const buildFavoriteRollbackMutation = ({
   kept,
   activeEntity
 });
-
-// src/shared/cleanup.js
-const CleanupController = class {
-  constructor() {
-    this._abortController = new AbortController();
-    this._cleanups = [];
-    this._disposed = false;
-  }
-  get signal() {
-    return this._abortController.signal;
-  }
-  addEventListener(target, type, listener, options = {}) {
-    if (this._disposed || !target?.addEventListener || !listener) return;
-    const normalizedOptions = typeof options === "boolean" ? { capture: options } : { ...options };
-    target.addEventListener(type, listener, {
-      ...normalizedOptions,
-      signal: this.signal
-    });
-  }
-  addCleanup(cleanup) {
-    if (typeof cleanup !== "function") return;
-    if (this._disposed) {
-      try {
-        cleanup();
-      } catch (_) {
-      }
-      return;
-    }
-    this._cleanups.push(cleanup);
-  }
-  dispose() {
-    if (this._disposed) return;
-    this._disposed = true;
-    this._abortController.abort();
-    for (const cleanup of this._cleanups.splice(0).reverse()) {
-      try {
-        cleanup();
-      } catch (_) {
-      }
-    }
-  }
-};
 
 // src/features/browse/scroll.ctrl.js
 const ListScrollController = class {
@@ -13998,6 +14445,7 @@ const PopupMediaLoaderController = class {
     const body = this._host._$("#myPopup")?.querySelector(".popup-body");
     if (body) body.scrollTop = 0;
     const video = viewer.querySelector("video");
+    this._host._attachPopupVideoZoom?.(video);
     const postRenderPlan = resolvePopupMediaPostRenderPlan({
       popupMediaType: this._host._popupMediaType,
       fullscreenKind,
@@ -14210,6 +14658,7 @@ const PopupMediaLoaderController = class {
       )
     );
     this._deps.mountNodeIntoSlot(viewer, video);
+    this._host._attachPopupVideoZoom?.(video);
     let playable = false;
     let activeSource = "";
     const mediaCleanup = [];
@@ -14267,6 +14716,7 @@ const PopupMediaLoaderController = class {
         }
         if (outcomePlan2.shouldTeardownScrub)
           this._host._teardownRecordingScrub();
+        this._host._clearPopupVideoZoom?.();
         const scrub = this._host._$("#recording-scrub");
         if (scrub && outcomePlan2.shouldHideScrub) scrub.hidden = true;
         return;
@@ -15726,9 +16176,7 @@ const FrigateViewCard = class extends HTMLElement {
       getStreamMuted: () => this._streamMuted,
       waitForStreamStart: (streamEl, timeoutMs, opts) => this._waitForStreamStart(streamEl, timeoutMs, opts),
       attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
-      assignCommittedEngine: (engine) => {
-        this._engine = engine;
-      },
+      assignCommittedEngine: (engine) => this._assignLiveEngine(engine),
       onCommittedStream: (type) => {
         this._setActiveStreamType(type);
         this._setStreamLoading(false);
@@ -15755,9 +16203,7 @@ const FrigateViewCard = class extends HTMLElement {
       isCurrentEngine: (streamEl) => this._engine === streamEl,
       waitForStreamStart: (streamEl, timeoutMs, opts) => this._waitForStreamStart(streamEl, timeoutMs, opts),
       attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
-      assignCommittedEngine: (engine) => {
-        this._engine = engine;
-      },
+      assignCommittedEngine: (engine) => this._assignLiveEngine(engine),
       applyResolvedStreamUiState: (streamState) => this._applyResolvedStreamUiState(streamState),
       setLiveNativeControls: (enabled) => this._setLiveNativeControls(enabled)
     });
@@ -15776,9 +16222,7 @@ const FrigateViewCard = class extends HTMLElement {
         result: winner,
         streamMuted: this._streamMuted,
         rotateOverlayActive: this._rotateOverlayActive,
-        assignEngine: (engine) => {
-          this._engine = engine;
-        },
+        assignEngine: (engine) => this._assignLiveEngine(engine),
         setEngineMountedMuted: (muted) => {
           this._engineMountedMuted = muted;
         },
@@ -15987,9 +16431,7 @@ const FrigateViewCard = class extends HTMLElement {
       clearRotateOverlayAudioSync: () => this._clearRotateOverlayAudioSync(),
       clearRotateVideoFullscreenStyle: () => this._clearRotateVideoFullscreenStyle(),
       getEngine: () => this._engine,
-      setEngine: (engine) => {
-        this._engine = engine;
-      },
+      setEngine: (engine) => this._assignLiveEngine(engine),
       getActiveStreamType: () => this._activeStreamType,
       getStreamMuted: () => this._streamMuted,
       setEngineMountedMuted: (muted) => {
@@ -16786,6 +17228,49 @@ const FrigateViewCard = class extends HTMLElement {
       return lastHint;
     }
     return this._preferredStreamType();
+  }
+  _assignLiveEngine(engine) {
+    if (this._engine === engine) {
+      if (engine) this._attachMainLiveVideoZoom(engine);
+      return;
+    }
+    this._clearLiveVideoZoom();
+    this._engine = engine;
+    if (engine) this._attachMainLiveVideoZoom(engine);
+  }
+  _attachMainLiveVideoZoom(engine, retries = 12) {
+    if (!engine || this._engine !== engine) return;
+    const video = engine.video || this._findFullscreenVideo(engine) || this._findVideoDeep(engine);
+    if (video) {
+      if (this._liveVideoZoomController?.video === video) {
+        this._liveVideoZoomController.refresh();
+        return;
+      }
+      this._clearLiveVideoZoom();
+      this._liveVideoZoomController = attachVideoZoom(video);
+      return;
+    }
+    if (retries <= 0) return;
+    setTimeout(() => {
+      if (this._engine !== engine) return;
+      this._attachMainLiveVideoZoom(engine, retries - 1);
+    }, 160);
+  }
+  _clearLiveVideoZoom() {
+    this._liveVideoZoomController?.dispose?.();
+    this._liveVideoZoomController = null;
+  }
+  _attachPopupVideoZoom(video) {
+    if (this._popupVideoZoomController?.video === video) {
+      this._popupVideoZoomController.refresh();
+      return;
+    }
+    this._clearPopupVideoZoom?.();
+    this._popupVideoZoomController = attachVideoZoom(video);
+  }
+  _clearPopupVideoZoom() {
+    this._popupVideoZoomController?.dispose?.();
+    this._popupVideoZoomController = null;
   }
   _cleanupEngine() {
     return this._mseGraceController.cleanupEngine();
@@ -18420,6 +18905,12 @@ const FrigateViewCard = class extends HTMLElement {
     );
     video.style.setProperty("background", "var(--c-bg-deep)", "important");
     video.style.setProperty("transform", "none", "important");
+    if (this._liveVideoZoomController?.video === video) {
+      this._liveVideoZoomController.refresh();
+    }
+    if (this._popupVideoZoomController?.video === video) {
+      this._popupVideoZoomController.refresh();
+    }
     video.style.setProperty("margin", "0", "important");
     video.setAttribute("playsinline", "");
     video.setAttribute("webkit-playsinline", "true");
@@ -19595,6 +20086,7 @@ const FrigateViewCard = class extends HTMLElement {
     viewer.appendChild(btn);
   }
   _clearPopupMediaCleanup() {
+    this._clearPopupVideoZoom?.();
     if (this._popupControlsHideTimer) {
       clearTimeout(this._popupControlsHideTimer);
       this._popupControlsHideTimer = null;

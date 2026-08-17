@@ -140,6 +140,7 @@ import {
   setScopedVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
 } from "../shared/media/video-factory.js";
+import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
 import {
   loadFallbackAltForCard,
   loadFallbackPrimaryForCard,
@@ -399,9 +400,7 @@ export class FrigateViewCard extends HTMLElement {
       waitForStreamStart: (streamEl, timeoutMs, opts) =>
         this._waitForStreamStart(streamEl, timeoutMs, opts),
       attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
-      assignCommittedEngine: (engine) => {
-        this._engine = engine;
-      },
+      assignCommittedEngine: (engine) => this._assignLiveEngine(engine),
       onCommittedStream: (type) => {
         this._setActiveStreamType(type);
         this._setStreamLoading(false);
@@ -429,9 +428,7 @@ export class FrigateViewCard extends HTMLElement {
       waitForStreamStart: (streamEl, timeoutMs, opts) =>
         this._waitForStreamStart(streamEl, timeoutMs, opts),
       attachVideoFit: (streamEl) => this._attachVideoFit(streamEl),
-      assignCommittedEngine: (engine) => {
-        this._engine = engine;
-      },
+      assignCommittedEngine: (engine) => this._assignLiveEngine(engine),
       applyResolvedStreamUiState: (streamState) =>
         this._applyResolvedStreamUiState(streamState),
       setLiveNativeControls: (enabled) => this._setLiveNativeControls(enabled),
@@ -454,9 +451,7 @@ export class FrigateViewCard extends HTMLElement {
           result: winner,
           streamMuted: this._streamMuted,
           rotateOverlayActive: this._rotateOverlayActive,
-          assignEngine: (engine) => {
-            this._engine = engine;
-          },
+          assignEngine: (engine) => this._assignLiveEngine(engine),
           setEngineMountedMuted: (muted) => {
             this._engineMountedMuted = muted;
           },
@@ -670,9 +665,7 @@ export class FrigateViewCard extends HTMLElement {
       clearRotateVideoFullscreenStyle: () =>
         this._clearRotateVideoFullscreenStyle(),
       getEngine: () => this._engine,
-      setEngine: (engine) => {
-        this._engine = engine;
-      },
+      setEngine: (engine) => this._assignLiveEngine(engine),
       getActiveStreamType: () => this._activeStreamType,
       getStreamMuted: () => this._streamMuted,
       setEngineMountedMuted: (muted) => {
@@ -1623,6 +1616,57 @@ export class FrigateViewCard extends HTMLElement {
       return lastHint;
     }
     return this._preferredStreamType();
+  }
+
+  _assignLiveEngine(engine) {
+    if (this._engine === engine) {
+      if (engine) this._attachMainLiveVideoZoom(engine);
+      return;
+    }
+    this._clearLiveVideoZoom();
+    this._engine = engine;
+    if (engine) this._attachMainLiveVideoZoom(engine);
+  }
+
+  _attachMainLiveVideoZoom(engine, retries = 12) {
+    if (!engine || this._engine !== engine) return;
+    const video =
+      engine.video ||
+      this._findFullscreenVideo(engine) ||
+      this._findVideoDeep(engine);
+    if (video) {
+      if (this._liveVideoZoomController?.video === video) {
+        this._liveVideoZoomController.refresh();
+        return;
+      }
+      this._clearLiveVideoZoom();
+      this._liveVideoZoomController = attachVideoZoom(video);
+      return;
+    }
+    if (retries <= 0) return;
+    setTimeout(() => {
+      if (this._engine !== engine) return;
+      this._attachMainLiveVideoZoom(engine, retries - 1);
+    }, 160);
+  }
+
+  _clearLiveVideoZoom() {
+    this._liveVideoZoomController?.dispose?.();
+    this._liveVideoZoomController = null;
+  }
+
+  _attachPopupVideoZoom(video) {
+    if (this._popupVideoZoomController?.video === video) {
+      this._popupVideoZoomController.refresh();
+      return;
+    }
+    this._clearPopupVideoZoom?.();
+    this._popupVideoZoomController = attachVideoZoom(video);
+  }
+
+  _clearPopupVideoZoom() {
+    this._popupVideoZoomController?.dispose?.();
+    this._popupVideoZoomController = null;
   }
 
   _cleanupEngine() {
@@ -3572,6 +3616,12 @@ export class FrigateViewCard extends HTMLElement {
     );
     video.style.setProperty("background", "var(--c-bg-deep)", "important");
     video.style.setProperty("transform", "none", "important");
+    if (this._liveVideoZoomController?.video === video) {
+      this._liveVideoZoomController.refresh();
+    }
+    if (this._popupVideoZoomController?.video === video) {
+      this._popupVideoZoomController.refresh();
+    }
     video.style.setProperty("margin", "0", "important");
     video.setAttribute("playsinline", "");
     video.setAttribute("webkit-playsinline", "true");
@@ -4910,6 +4960,7 @@ export class FrigateViewCard extends HTMLElement {
     viewer.appendChild(btn);
   }
   _clearPopupMediaCleanup() {
+    this._clearPopupVideoZoom?.();
     if (this._popupControlsHideTimer) {
       clearTimeout(this._popupControlsHideTimer);
       this._popupControlsHideTimer = null;

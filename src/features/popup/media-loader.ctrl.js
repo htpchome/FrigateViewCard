@@ -60,6 +60,7 @@ export class PopupMediaLoaderController {
     const body = this._host._$("#myPopup")?.querySelector(".popup-body");
     if (body) body.scrollTop = 0;
     const video = viewer.querySelector("video");
+    this._host._attachPopupVideoZoom?.(video);
     const postRenderPlan = resolvePopupMediaPostRenderPlan({
       popupMediaType: this._host._popupMediaType,
       fullscreenKind,
@@ -289,6 +290,7 @@ export class PopupMediaLoaderController {
       ),
     );
     this._deps.mountNodeIntoSlot(viewer, video);
+    this._host._attachPopupVideoZoom?.(video);
     let playable = false;
     let activeSource = "";
     const mediaCleanup = [];
@@ -346,6 +348,7 @@ export class PopupMediaLoaderController {
         }
         if (outcomePlan.shouldTeardownScrub)
           this._host._teardownRecordingScrub();
+        this._host._clearPopupVideoZoom?.();
         const scrub = this._host._$("#recording-scrub");
         if (scrub && outcomePlan.shouldHideScrub) scrub.hidden = true;
         return;
