@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1465";
+const VERSION = "1.0.1466";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1336,10 +1336,11 @@ circle.circle-pad-middle-circle {
   filter: url(#simple-blur); /* Applies the blur effect */
 }
 /* Keyboard Accessibility Focus Rings - Set to none to prevent extra lines when active */
-.${CIRCLE_PAD_CLASS} .slice-button:focus,
-.${CIRCLE_PAD_CLASS} .slice-button:active,
-.${CIRCLE_PAD_CLASS} .slice-button .circle-pad-key:focus,
-.${CIRCLE_PAD_CLASS} .slice-button .circle-pad-key:active, {
+#button-down:focus, #button-down:active,
+.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:focus,
+.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:active,
+.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button .circle-pad-key:focus,
+.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button .circle-pad-key:active, {
   stroke:none;
   outline:none;
   fill:none;
