@@ -218,6 +218,10 @@ export function buildControlsSectionMarkup({
   zoomEnabled = false,
   focusEnabled = false,
 } = {}) {
+  const padDisabledActions = [
+    ...(panTiltEnabled ? [] : ["up", "right", "down", "left"]),
+    ...(zoomEnabled ? [] : ["zoom-in", "zoom-out"]),
+  ].join(" ");
   const buildPtzButton = (action, label, enabled) => `<button
                 class="controls-action-btn"
                 type="button"
@@ -227,20 +231,12 @@ export function buildControlsSectionMarkup({
               >${label}</button>`;
   return `<div class="controls-section">
             <div class="controls-section-head">
-              <h3 class="controls-section-title">PTZ Controls</h3>
               <div class="controls-section-subtitle">${cameraName} · ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
             </div>
-            <div class="controls-pad-wrap${panTiltEnabled ? "" : " is-disabled"}">
-              <circle-pad-control-2 id="controls-pad"></circle-pad-control-2>
+            <div class="controls-pad-wrap${panTiltEnabled || zoomEnabled ? "" : " is-disabled"}">
+              <circle-pad-control-2 id="controls-pad"${padDisabledActions ? ` disabled-actions="${padDisabledActions}"` : ""}></circle-pad-control-2>
             </div>
             <div class="controls-actions" aria-label="PTZ auxiliary controls">
-              <div class="controls-action-group${zoomEnabled ? "" : " is-disabled"}">
-                <div class="controls-action-group-label">Zoom</div>
-                <div class="controls-action-row">
-                  ${buildPtzButton("zoom-in", "Zoom In", zoomEnabled)}
-                  ${buildPtzButton("zoom-out", "Zoom Out", zoomEnabled)}
-                </div>
-              </div>
               <div class="controls-action-group${focusEnabled ? "" : " is-disabled"}">
                 <div class="controls-action-group-label">Focus</div>
                 <div class="controls-action-row">

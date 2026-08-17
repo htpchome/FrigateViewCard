@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1472";
+const VERSION = "1.0.1473";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1229,6 +1229,8 @@ const CIRCLE_PAD_ACTIONS = Object.freeze({
   DOWN_LEFT: "down-left",
   LEFT: "left",
   UP_LEFT: "up-left",
+  ZOOM_IN: "zoom-in",
+  ZOOM_OUT: "zoom-out",
   MIC: "mic"
 });
 const DIRECTION_ACTIONS = Object.freeze(
@@ -1240,7 +1242,9 @@ const DIRECTION_ACTIONS = Object.freeze(
     CIRCLE_PAD_ACTIONS.DOWN,
     CIRCLE_PAD_ACTIONS.DOWN_LEFT,
     CIRCLE_PAD_ACTIONS.LEFT,
-    CIRCLE_PAD_ACTIONS.UP_LEFT
+    CIRCLE_PAD_ACTIONS.UP_LEFT,
+    CIRCLE_PAD_ACTIONS.ZOOM_IN,
+    CIRCLE_PAD_ACTIONS.ZOOM_OUT
   ])
 );
 const EVT_PRESS = "circle-pad-press";
@@ -1250,6 +1254,7 @@ const INPUT_MODE_TOUCH = "touch";
 const INPUT_MODE_MOUSE = "mouse";
 const ACTION_SELECTOR = "[" + CIRCLE_PAD_DATA_ACTION + "]";
 const CENTER_BUTTON_SELECTOR = ".center-button";
+const DISABLED_ACTIONS_ATTR = "disabled-actions";
 const ROOT_EVENT_BINDINGS = Object.freeze([
   ["pointerdown", "_onPointerDown"],
   ["pointerup", "_onPointerUp"],
@@ -1311,6 +1316,11 @@ circle.circle-pad-middle-circle {
   transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
   fill: var(--primary-background-color);
 }
+.slice-button.is-disabled .circle-pad-key,
+.slice-button.is-disabled path.circle-pad-key {
+  cursor: default;
+  fill: var(--circle-pad-bg-3);
+}
 .slice-button .circle-pad-key.is-pressed,
 .slice-button .circle-pad-key:active { fill: var(--circle-pad-dark-primary) }
 
@@ -1346,6 +1356,12 @@ circle.circle-pad-middle-circle {
 .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button .slice-zoom{
   fill: var(--circle-pad-text-1) !important;
 }
+.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-disabled .slice-chevron {
+  stroke: var(--circle-pad-text-4) !important;
+}
+.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-disabled .slice-zoom {
+  fill: var(--circle-pad-text-4) !important;
+}
 
 /* Keep chevrons bright while a slice is actively pressed. */
 .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-pressed .slice-chevron {
@@ -1376,6 +1392,12 @@ circle.circle-pad-middle-circle {
 }
 .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button .slice-zoom {
   fill: var(--circle-pad-text-1) !important;
+}
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-disabled .slice-chevron {
+  stroke: var(--circle-pad-text-4) !important;
+}
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-disabled .slice-zoom {
+  fill: var(--circle-pad-text-4) !important;
 }
 
 /* Touch-mode override: ignore sticky pseudo-classes and drive visual state via .is-pressed only. */
@@ -1440,11 +1462,11 @@ const CIRCLE_PAD_SVG = `
  
  <circle id="circle-pad-middle-circle" class="circle-pad-middle-circle" cx="50" cy="50" r="14"/>
  
- <g id="button-zoom-out" class="slice-button" aria-label="Zoom Out">
+ <g id="button-zoom-out" class="slice-button" aria-label="Zoom Out" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="zoom-out">
   <path id="circle-pad-zoom-out" class="circle-pad-key" d="m63.5 50.25a13.5 13.25 0 0 1-6.75 11.475 13.5 13.25 0 0 1-13.5-1e-6 13.5 13.25 0 0 1-6.75-11.475h13.5z" style="filter:url(#circle-pad-clean-edges);"/>
   <path id="circle-pad-zoom-out-icon" class="slice-zoom" d="m53 57.304h-6v-0.85714h6z" style="pointer-events: none;" />
  </g>
- <g id="button-zoom-in" class="slice-button" aria-label="Zoom In">
+ <g id="button-zoom-in" class="slice-button" aria-label="Zoom In" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="zoom-in">
   <path id="circle-pad-zoom-in" class="circle-pad-key" d="m36.5 49.75a13.5 13.25 0 0 1 13.5-13.25 13.5 13.25 0 0 1 13.5 13.25h-13.5z" style="filter:url(#circle-pad-clean-edges);"/>
   <path id="circle-pad-zoom-in-icon" class="slice-zoom" d="m53 43.554h-2.5714v2.5714h-0.85714v-2.5714h-2.5714v-0.85714h2.5714v-2.5714h0.85714v2.5714h2.5714z" style="pointer-events: none;" />
  </g>
@@ -1453,6 +1475,9 @@ const CIRCLE_PAD_SVG = `
   </div>
 `;
 const CirclePadControl = class extends HTMLElement {
+  static get observedAttributes() {
+    return [DISABLED_ACTIONS_ATTR];
+  }
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -1473,6 +1498,10 @@ const CirclePadControl = class extends HTMLElement {
     this._wired = false;
     this._resetRootHandlers();
   }
+  attributeChangedCallback(name, _oldValue, _newValue) {
+    if (name !== DISABLED_ACTIONS_ATTR) return;
+    this._applyDisabledActions();
+  }
   setActive(action, active) {
     if (action !== CIRCLE_PAD_ACTIONS.MIC) return;
     this._activeMic = Boolean(active);
@@ -1492,7 +1521,29 @@ const CirclePadControl = class extends HTMLElement {
     this._rootEl = root;
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(root);
+    this._applyDisabledActions();
     this._applyMicState();
+  }
+  _getDisabledActions() {
+    return new Set(
+      String(this.getAttribute(DISABLED_ACTIONS_ATTR) || "").split(/[\s,]+/).map((action) => action.trim()).filter(Boolean)
+    );
+  }
+  _isActionDisabled(action) {
+    return this._getDisabledActions().has(action);
+  }
+  _applyDisabledActions() {
+    if (!this.shadowRoot) return;
+    const disabledActions = this._getDisabledActions();
+    for (const button of this.shadowRoot.querySelectorAll(ACTION_SELECTOR)) {
+      const action = this._getButtonAction(button);
+      const disabled = !!action && disabledActions.has(action);
+      button.classList.toggle("is-disabled", disabled);
+      button.setAttribute("aria-disabled", String(disabled));
+      if (disabled) {
+        button.classList.remove("is-pressed");
+      }
+    }
   }
   _applyMicState() {
     if (!this.shadowRoot) return;
@@ -1580,6 +1631,7 @@ const CirclePadControl = class extends HTMLElement {
   }
   _handleDirectionPointerDown(btn, action, pointerId) {
     if (!DIRECTION_ACTIONS.has(action)) return;
+    if (this._isActionDisabled(action)) return;
     if (this._pressed.has(action)) return;
     this._pressed.add(action);
     if (this._hasPointerId(pointerId)) {
@@ -1614,6 +1666,7 @@ const CirclePadControl = class extends HTMLElement {
       this._setMicPressed(btn, false);
       return;
     }
+    if (this._isActionDisabled(action)) return;
     if (!DIRECTION_ACTIONS.has(action) || !this._pressed.has(action)) return;
     this._clearDirectionPressed(btn);
     this._dispatch(EVT_RELEASE, { action });
@@ -1632,6 +1685,7 @@ const CirclePadControl = class extends HTMLElement {
       if (!btn) return;
       this._setInputModeFromPointer(ev);
       const action = this._getButtonAction(btn);
+      if (this._isActionDisabled(action)) return;
       if (this._isMicAction(action)) {
         this._setMicPressed(btn, true);
         this._trySetPointerCapture(btn, ev.pointerId);
@@ -3469,6 +3523,10 @@ function buildControlsSectionMarkup({
   zoomEnabled = false,
   focusEnabled = false
 } = {}) {
+  const padDisabledActions = [
+    ...panTiltEnabled ? [] : ["up", "right", "down", "left"],
+    ...zoomEnabled ? [] : ["zoom-in", "zoom-out"]
+  ].join(" ");
   const buildPtzButton = (action, label, enabled) => `<button
                 class="controls-action-btn"
                 type="button"
@@ -3478,20 +3536,12 @@ function buildControlsSectionMarkup({
               >${label}</button>`;
   return `<div class="controls-section">
             <div class="controls-section-head">
-              <h3 class="controls-section-title">PTZ Controls</h3>
               <div class="controls-section-subtitle">${cameraName2} \xB7 ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}</div>
             </div>
-            <div class="controls-pad-wrap${panTiltEnabled ? "" : " is-disabled"}">
-              <circle-pad-control-2 id="controls-pad"></circle-pad-control-2>
+            <div class="controls-pad-wrap${panTiltEnabled || zoomEnabled ? "" : " is-disabled"}">
+              <circle-pad-control-2 id="controls-pad"${padDisabledActions ? ` disabled-actions="${padDisabledActions}"` : ""}></circle-pad-control-2>
             </div>
             <div class="controls-actions" aria-label="PTZ auxiliary controls">
-              <div class="controls-action-group${zoomEnabled ? "" : " is-disabled"}">
-                <div class="controls-action-group-label">Zoom</div>
-                <div class="controls-action-row">
-                  ${buildPtzButton("zoom-in", "Zoom In", zoomEnabled)}
-                  ${buildPtzButton("zoom-out", "Zoom Out", zoomEnabled)}
-                </div>
-              </div>
               <div class="controls-action-group${focusEnabled ? "" : " is-disabled"}">
                 <div class="controls-action-group-label">Focus</div>
                 <div class="controls-action-row">

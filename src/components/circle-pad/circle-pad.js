@@ -128,6 +128,8 @@ const CIRCLE_PAD_ACTIONS = Object.freeze({
   DOWN_LEFT: "down-left",
   LEFT: "left",
   UP_LEFT: "up-left",
+  ZOOM_IN: "zoom-in",
+  ZOOM_OUT: "zoom-out",
   MIC: "mic",
 });
 
@@ -141,6 +143,8 @@ const DIRECTION_ACTIONS = Object.freeze(
     CIRCLE_PAD_ACTIONS.DOWN_LEFT,
     CIRCLE_PAD_ACTIONS.LEFT,
     CIRCLE_PAD_ACTIONS.UP_LEFT,
+    CIRCLE_PAD_ACTIONS.ZOOM_IN,
+    CIRCLE_PAD_ACTIONS.ZOOM_OUT,
   ]),
 );
 
@@ -151,6 +155,7 @@ const INPUT_MODE_TOUCH = "touch";
 const INPUT_MODE_MOUSE = "mouse";
 const ACTION_SELECTOR = "[" + CIRCLE_PAD_DATA_ACTION + "]";
 const CENTER_BUTTON_SELECTOR = ".center-button";
+const DISABLED_ACTIONS_ATTR = "disabled-actions";
 
 const ROOT_EVENT_BINDINGS = Object.freeze([
   ["pointerdown", "_onPointerDown"],
@@ -214,6 +219,11 @@ circle.circle-pad-middle-circle {
   transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
   fill: var(--primary-background-color);
 }
+.slice-button.is-disabled .circle-pad-key,
+.slice-button.is-disabled path.circle-pad-key {
+  cursor: default;
+  fill: var(--circle-pad-bg-3);
+}
 .slice-button .circle-pad-key.is-pressed,
 .slice-button .circle-pad-key:active { fill: var(--circle-pad-dark-primary) }
 
@@ -249,6 +259,12 @@ circle.circle-pad-middle-circle {
 .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button .slice-zoom{
   fill: var(--circle-pad-text-1) !important;
 }
+.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-disabled .slice-chevron {
+  stroke: var(--circle-pad-text-4) !important;
+}
+.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-disabled .slice-zoom {
+  fill: var(--circle-pad-text-4) !important;
+}
 
 /* Keep chevrons bright while a slice is actively pressed. */
 .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-pressed .slice-chevron {
@@ -279,6 +295,12 @@ circle.circle-pad-middle-circle {
 }
 .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button .slice-zoom {
   fill: var(--circle-pad-text-1) !important;
+}
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-disabled .slice-chevron {
+  stroke: var(--circle-pad-text-4) !important;
+}
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-disabled .slice-zoom {
+  fill: var(--circle-pad-text-4) !important;
 }
 
 /* Touch-mode override: ignore sticky pseudo-classes and drive visual state via .is-pressed only. */
@@ -344,11 +366,11 @@ const CIRCLE_PAD_SVG = `
  
  <circle id="circle-pad-middle-circle" class="circle-pad-middle-circle" cx="50" cy="50" r="14"/>
  
- <g id="button-zoom-out" class="slice-button" aria-label="Zoom Out">
+ <g id="button-zoom-out" class="slice-button" aria-label="Zoom Out" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="zoom-out">
   <path id="circle-pad-zoom-out" class="circle-pad-key" d="m63.5 50.25a13.5 13.25 0 0 1-6.75 11.475 13.5 13.25 0 0 1-13.5-1e-6 13.5 13.25 0 0 1-6.75-11.475h13.5z" style="filter:url(#circle-pad-clean-edges);"/>
   <path id="circle-pad-zoom-out-icon" class="slice-zoom" d="m53 57.304h-6v-0.85714h6z" style="pointer-events: none;" />
  </g>
- <g id="button-zoom-in" class="slice-button" aria-label="Zoom In">
+ <g id="button-zoom-in" class="slice-button" aria-label="Zoom In" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="zoom-in">
   <path id="circle-pad-zoom-in" class="circle-pad-key" d="m36.5 49.75a13.5 13.25 0 0 1 13.5-13.25 13.5 13.25 0 0 1 13.5 13.25h-13.5z" style="filter:url(#circle-pad-clean-edges);"/>
   <path id="circle-pad-zoom-in-icon" class="slice-zoom" d="m53 43.554h-2.5714v2.5714h-0.85714v-2.5714h-2.5714v-0.85714h2.5714v-2.5714h0.85714v2.5714h2.5714z" style="pointer-events: none;" />
  </g>
@@ -358,6 +380,10 @@ const CIRCLE_PAD_SVG = `
 `;
 
 class CirclePadControl extends HTMLElement {
+  static get observedAttributes() {
+    return [DISABLED_ACTIONS_ATTR];
+  }
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -379,6 +405,11 @@ class CirclePadControl extends HTMLElement {
     this._unbindRootEvents();
     this._wired = false;
     this._resetRootHandlers();
+  }
+
+  attributeChangedCallback(name, _oldValue, _newValue) {
+    if (name !== DISABLED_ACTIONS_ATTR) return;
+    this._applyDisabledActions();
   }
 
   setActive(action, active) {
@@ -405,7 +436,35 @@ class CirclePadControl extends HTMLElement {
 
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(root);
+    this._applyDisabledActions();
     this._applyMicState();
+  }
+
+  _getDisabledActions() {
+    return new Set(
+      String(this.getAttribute(DISABLED_ACTIONS_ATTR) || "")
+        .split(/[\s,]+/)
+        .map((action) => action.trim())
+        .filter(Boolean),
+    );
+  }
+
+  _isActionDisabled(action) {
+    return this._getDisabledActions().has(action);
+  }
+
+  _applyDisabledActions() {
+    if (!this.shadowRoot) return;
+    const disabledActions = this._getDisabledActions();
+    for (const button of this.shadowRoot.querySelectorAll(ACTION_SELECTOR)) {
+      const action = this._getButtonAction(button);
+      const disabled = !!action && disabledActions.has(action);
+      button.classList.toggle("is-disabled", disabled);
+      button.setAttribute("aria-disabled", String(disabled));
+      if (disabled) {
+        button.classList.remove("is-pressed");
+      }
+    }
   }
 
   _applyMicState() {
@@ -509,6 +568,7 @@ class CirclePadControl extends HTMLElement {
 
   _handleDirectionPointerDown(btn, action, pointerId) {
     if (!DIRECTION_ACTIONS.has(action)) return;
+    if (this._isActionDisabled(action)) return;
     if (this._pressed.has(action)) return;
 
     this._pressed.add(action);
@@ -559,6 +619,8 @@ class CirclePadControl extends HTMLElement {
       return;
     }
 
+    if (this._isActionDisabled(action)) return;
+
     if (!DIRECTION_ACTIONS.has(action) || !this._pressed.has(action)) return;
     this._clearDirectionPressed(btn);
     this._dispatch(EVT_RELEASE, { action });
@@ -583,6 +645,7 @@ class CirclePadControl extends HTMLElement {
       this._setInputModeFromPointer(ev);
 
       const action = this._getButtonAction(btn);
+      if (this._isActionDisabled(action)) return;
       if (this._isMicAction(action)) {
         this._setMicPressed(btn, true);
         this._trySetPointerCapture(btn, ev.pointerId);
