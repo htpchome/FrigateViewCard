@@ -239,6 +239,14 @@ circle.circle-pad-middle-circle {
   filter: url(#simple-blur); /* Applies the blur effect */
 }
 /* Keyboard Accessibility Focus Rings - Set to none to prevent extra lines when active */
+.${CIRCLE_PAD_CLASS} .slice-button:focus,
+.${CIRCLE_PAD_CLASS} .slice-button:active,
+.${CIRCLE_PAD_CLASS} .slice-button .circle-pad-key:focus,
+.${CIRCLE_PAD_CLASS} .slice-button .circle-pad-key:active, {
+  stroke:none;
+  outline:none;
+  fill:none;
+} 
 .slice-button:focus path,
 .slice-button:focus circle {
   stroke: none; 
@@ -307,8 +315,8 @@ const CIRCLE_PAD_SVG = `
  
  <circle id="circle-pad-outline" class="circle-pad-outline" cx="50" cy="50" r="48" stroke-linecap="round" stroke-width=".12484"/>
  
- <g id="button-right" class="slice-button" transform="translate(-46.941,-16.885)" aria-label="Right" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="right" stroke="none">
-  <path id="circle-pad-button-right" class="circle-pad-key" d="m130.7 33.651a47 47 0 0 1 0 66.468l-33.234-33.234z" fill="#fafafa" stroke-width=".12484" style="filter:url(#circle-pad-clean-edges)"/>
+ <g id="button-right" class="slice-button" transform="translate(-46.941,-16.885)" aria-label="Right" role="button" tabindex="0" ${CIRCLE_PAD_DATA_ACTION}="right">
+  <path id="circle-pad-button-right" class="circle-pad-key" d="m130.7 33.651a47 47 0 0 1 0 66.468l-33.234-33.234z" fill="#fafafa" stroke-width="0" style="filter:url(#circle-pad-clean-edges)"/>
   <path id="circle-pad-chevron-right" class="slice-chevron" d="m127.96 64.64 2.0805 2.5402-2.0805 2.5402" fill="none" stroke-linejoin="round" stroke-width="1"/>
  </g>
  
