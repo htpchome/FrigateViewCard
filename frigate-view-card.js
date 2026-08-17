@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1475";
+const VERSION = "1.0.1476";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3534,18 +3534,17 @@ function buildControlsSectionMarkup({
                 aria-label="${label}"
                 ${enabled ? "" : "disabled"}
               >${label}</button>`;
-  return `<div class="controls-section">
-            <div class="controls-pad-wrap${panTiltEnabled || zoomEnabled ? "" : " is-disabled"}">
-              <circle-pad-control-2 id="controls-pad"${padDisabledActions ? ` disabled-actions="${padDisabledActions}"` : ""}></circle-pad-control-2>
+  return `<div class="controls-pad-wrap${panTiltEnabled || zoomEnabled ? "" : " is-disabled"}">
+            <circle-pad-control-2 id="controls-pad"${padDisabledActions ? ` disabled-actions="${padDisabledActions}"` : ""}></circle-pad-control-2>
+          </div>
+          <div class="controls-readout">
+            <div class="controls-readout-head">
+              <span class="controls-readout-label">Readout</span>
+              <button class="controls-readout-clear" id="controls-readout-clear" type="button">Clear</button>
             </div>
-            <div class="controls-readout">
-              <div class="controls-readout-head">
-                <span class="controls-readout-label">Readout</span>
-                <button class="controls-readout-clear" id="controls-readout-clear" type="button">Clear</button>
-              </div>
-              <div class="controls-readout-lines" id="controls-readout-lines"></div>
-            </div>
-          </div>`;
+            <div class="controls-readout-lines" id="controls-readout-lines"></div>
+          </div>
+          `;
 }
 function buildControlsReadoutEmptyMarkup(message = "Use the circle pad to move the active camera.") {
   return `<div class="controls-readout-empty">${message}</div>`;
