@@ -221,14 +221,17 @@ circle.circle-pad-middle-circle {
 }
 .slice-button.is-disabled .circle-pad-key,
 .slice-button.is-disabled path.circle-pad-key {
-  cursor: default;
+  cursor: not-allowed;
   fill: var(--circle-pad-bg-3);
+}
+.slice-button.is-disabled {
+  cursor: not-allowed;
 }
 .slice-button .circle-pad-key.is-pressed,
 .slice-button .circle-pad-key:active { fill: var(--circle-pad-dark-primary) }
 
 @media (hover: hover) {
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button path.circle-pad-key:hover {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(.is-disabled) path.circle-pad-key:hover {
     fill: var(--circle-pad-primary);  }
 }
 
@@ -275,17 +278,17 @@ circle.circle-pad-middle-circle {
 }
 
 @media (hover: hover) {
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(.is-disabled):hover .slice-chevron {
     stroke: var(--circle-pad-text-5) !important;
   }
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-zoom {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(.is-disabled):hover .slice-zoom {
     fill: var(--circle-pad-text-5) !important;
   }
 
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(:hover):not(.is-pressed) .slice-chevron {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(.is-disabled):not(:hover):not(.is-pressed) .slice-chevron {
     stroke: var(--circle-pad-text-1) !important;
   }
-  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(:hover):not(.is-pressed) .slice-zoom {
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(.is-disabled):not(:hover):not(.is-pressed) .slice-zoom {
     fill: var(--circle-pad-text-1) !important;
   }
 }
