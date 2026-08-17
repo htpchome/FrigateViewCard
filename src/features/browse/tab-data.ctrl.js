@@ -31,10 +31,16 @@ export class BrowseTabDataController {
     try {
       const before = this._host._winEnd;
       const days = this._host._config?.alerts_reviews_days || 3;
+      const windowLoader = this._host._browseWindowLoaderController;
+      if (windowLoader?.hasCachedWindowReviews?.(clientId, cam, before)) {
+        const entity = this._host._activeCam?.entity;
+        this._host._reviews = this._host._camCache[entity]?.reviews || [];
+        return;
+      }
       const showAllReviews =
         this._host._activeCam?.alerts_content === "all_reviews";
       const resolved =
-        await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
+        await (windowLoader?.fetchRecentActiveDayReviews?.(
           clientId,
           cam,
           before,
@@ -57,8 +63,10 @@ export class BrowseTabDataController {
         ? resolved.items
         : resolved;
       this._host._reviews = Array.isArray(reviews) ? reviews : [];
-      this._host._browseWindowLoaderController?.cacheActiveCamSlice?.(
-        "reviews",
+      windowLoader?.cacheWindowReviews?.(
+        clientId,
+        cam,
+        before,
         this._host._reviews,
       ) ?? this._host._cacheActiveCamSlice?.("reviews", this._host._reviews);
       this._host._slideshowAlertController.handleReviewsUpdated(

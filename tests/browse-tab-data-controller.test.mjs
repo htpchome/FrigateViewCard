@@ -50,6 +50,36 @@ test("loadTabData loads alert data, grid-mixed data, and always renders list", a
   );
 });
 
+test("loadTabData reuses reviews cached for the current alert window", async () => {
+  const calls = [];
+  const cachedReviews = [{ id: "cached-review", start_time: 180 }];
+  const host = {
+    _winEnd: 200,
+    _config: { alerts_reviews_days: 3 },
+    _activeCam: { entity: "camera.front" },
+    _camCache: { "camera.front": { reviews: cachedReviews } },
+    _reviews: [],
+    _cc: () => ({ clientId: "frigate", cam: "front" }),
+    _browseWindowLoaderController: {
+      hasCachedWindowReviews: () => true,
+      fetchRecentActiveDayReviews: async () => {
+        calls.push("fetchReviews");
+        return { items: [] };
+      },
+    },
+    _slideshowAlertController: { handleReviewsUpdated: () => {} },
+    _isGridMixedListMode: () => false,
+    _loadGridMixedTabData: async () => {},
+    _renderList: () => calls.push("renderList"),
+  };
+  const controller = new BrowseTabDataController(host);
+
+  await controller.loadTabData("alerts");
+
+  assert.equal(host._reviews, cachedReviews);
+  assert.deepEqual(calls, ["renderList"]);
+});
+
 test("loadKept and recordings tab update kept cache and recording loader through host", async () => {
   const calls = [];
   const host = {

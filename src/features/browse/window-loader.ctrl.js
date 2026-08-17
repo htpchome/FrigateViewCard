@@ -106,6 +106,7 @@ export class BrowseWindowLoaderController {
       cache.events = [];
       cache.recordings = [];
       cache.reviews = [];
+      cache.reviewsWindowKey = "";
     }
   }
 
@@ -261,17 +262,22 @@ export class BrowseWindowLoaderController {
     }
     const after = this._host._winStart;
     const before = this._host._winEnd;
+    // Alerts is the default tab. Start its review request first so its first
+    // paint is not blocked behind the broader event collection used by Clips.
+    const reviewsTask = this.loadWindowReviewsIfNeeded(
+      clientId,
+      cam,
+      after,
+      before,
+    );
     const eventsTask = this.loadWindowEvents(clientId, cam, after, before);
 
     await Promise.allSettled([
+      reviewsTask,
       eventsTask,
       this._host._tab === "recordings"
         ? this.loadWindowRecordings(clientId, cam, before)
         : Promise.resolve(),
-      (async () => {
-        await eventsTask;
-        await this.loadWindowReviewsIfNeeded(clientId, cam, after, before);
-      })(),
     ]);
     const entity = this._host._activeCam?.entity;
     if (entity && this._host._camCache[entity]) {
@@ -335,6 +341,33 @@ export class BrowseWindowLoaderController {
     if (entity && this._host._camCache[entity]) {
       this._host._camCache[entity][key] = value;
     }
+  }
+
+  reviewWindowCacheKey(clientId, cam, before) {
+    const days = this._host._config?.alerts_reviews_days || 3;
+    const contentMode =
+      this._host._activeCam?.alerts_content === "all_reviews"
+        ? "all_reviews"
+        : "alerts_only";
+    return `${clientId}|${cam}|${Math.floor(before)}|${days}|${contentMode}`;
+  }
+
+  hasCachedWindowReviews(clientId, cam, before) {
+    const entity = this._host._activeCam?.entity;
+    const cache = entity ? this._host._camCache[entity] : null;
+    return (
+      !!cache &&
+      cache.reviewsWindowKey ===
+        this.reviewWindowCacheKey(clientId, cam, before)
+    );
+  }
+
+  cacheWindowReviews(clientId, cam, before, reviews) {
+    const entity = this._host._activeCam?.entity;
+    const cache = entity ? this._host._camCache[entity] : null;
+    if (!cache) return;
+    cache.reviews = reviews;
+    cache.reviewsWindowKey = this.reviewWindowCacheKey(clientId, cam, before);
   }
 
   async loadWindowEvents(clientId, cam, after, before) {
@@ -424,7 +457,7 @@ export class BrowseWindowLoaderController {
       this._host._reviews = Array.isArray(resolved?.items)
         ? resolved.items
         : [];
-      this.cacheActiveCamSlice("reviews", this._host._reviews);
+      this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
       this._host._renderList();
       this._host._slideshowAlertController.handleReviewsUpdated(
         this._host._activeCam?.entity || "",

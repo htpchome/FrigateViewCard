@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1477";
+const VERSION = "1.0.1478";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3096,6 +3096,7 @@ function mkCamState() {
     events: [],
     recordings: [],
     reviews: [],
+    reviewsWindowKey: "",
     kept: [],
     ptzInfo: null,
     ptzInfoFetched: false,
@@ -3471,9 +3472,6 @@ function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
                 <frigate-live-stream id="engine">
                   <div class="ph">${icons.live}<span>Connecting\u2026</span></div>
                 </frigate-live-stream>
-                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
-                  <button class="glass-btn mute-btn" id="mute-btn" title="${muteLabel}" aria-label="${muteLabel}">${muteIcon}</button>
-                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
                   <div id="stream-fallback" hidden>
                     <img id="stream-fallback-img" alt="Camera snapshot">
                   </div>
@@ -9684,8 +9682,14 @@ const BrowseTabDataController = class {
     try {
       const before = this._host._winEnd;
       const days = this._host._config?.alerts_reviews_days || 3;
+      const windowLoader = this._host._browseWindowLoaderController;
+      if (windowLoader?.hasCachedWindowReviews?.(clientId, cam, before)) {
+        const entity = this._host._activeCam?.entity;
+        this._host._reviews = this._host._camCache[entity]?.reviews || [];
+        return;
+      }
       const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
-      const resolved = await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
+      const resolved = await (windowLoader?.fetchRecentActiveDayReviews?.(
         clientId,
         cam,
         before,
@@ -9705,8 +9709,10 @@ const BrowseTabDataController = class {
       ));
       const reviews = Array.isArray(resolved?.items) ? resolved.items : resolved;
       this._host._reviews = Array.isArray(reviews) ? reviews : [];
-      this._host._browseWindowLoaderController?.cacheActiveCamSlice?.(
-        "reviews",
+      windowLoader?.cacheWindowReviews?.(
+        clientId,
+        cam,
+        before,
         this._host._reviews
       ) ?? this._host._cacheActiveCamSlice?.("reviews", this._host._reviews);
       this._host._slideshowAlertController.handleReviewsUpdated(
@@ -9923,6 +9929,7 @@ const BrowseWindowLoaderController = class {
       cache.events = [];
       cache.recordings = [];
       cache.reviews = [];
+      cache.reviewsWindowKey = "";
     }
   }
   async fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
@@ -10051,14 +10058,17 @@ const BrowseWindowLoaderController = class {
     }
     const after = this._host._winStart;
     const before = this._host._winEnd;
+    const reviewsTask = this.loadWindowReviewsIfNeeded(
+      clientId,
+      cam,
+      after,
+      before
+    );
     const eventsTask = this.loadWindowEvents(clientId, cam, after, before);
     await Promise.allSettled([
+      reviewsTask,
       eventsTask,
-      this._host._tab === "recordings" ? this.loadWindowRecordings(clientId, cam, before) : Promise.resolve(),
-      (async () => {
-        await eventsTask;
-        await this.loadWindowReviewsIfNeeded(clientId, cam, after, before);
-      })()
+      this._host._tab === "recordings" ? this.loadWindowRecordings(clientId, cam, before) : Promise.resolve()
     ]);
     const entity = this._host._activeCam?.entity;
     if (entity && this._host._camCache[entity]) {
@@ -10114,6 +10124,23 @@ const BrowseWindowLoaderController = class {
     if (entity && this._host._camCache[entity]) {
       this._host._camCache[entity][key] = value;
     }
+  }
+  reviewWindowCacheKey(clientId, cam, before) {
+    const days = this._host._config?.alerts_reviews_days || 3;
+    const contentMode = this._host._activeCam?.alerts_content === "all_reviews" ? "all_reviews" : "alerts_only";
+    return `${clientId}|${cam}|${Math.floor(before)}|${days}|${contentMode}`;
+  }
+  hasCachedWindowReviews(clientId, cam, before) {
+    const entity = this._host._activeCam?.entity;
+    const cache = entity ? this._host._camCache[entity] : null;
+    return !!cache && cache.reviewsWindowKey === this.reviewWindowCacheKey(clientId, cam, before);
+  }
+  cacheWindowReviews(clientId, cam, before, reviews) {
+    const entity = this._host._activeCam?.entity;
+    const cache = entity ? this._host._camCache[entity] : null;
+    if (!cache) return;
+    cache.reviews = reviews;
+    cache.reviewsWindowKey = this.reviewWindowCacheKey(clientId, cam, before);
   }
   async loadWindowEvents(clientId, cam, after, before) {
     try {
@@ -10194,7 +10221,7 @@ const BrowseWindowLoaderController = class {
         }
       );
       this._host._reviews = Array.isArray(resolved?.items) ? resolved.items : [];
-      this.cacheActiveCamSlice("reviews", this._host._reviews);
+      this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
       this._host._renderList();
       this._host._slideshowAlertController.handleReviewsUpdated(
         this._host._activeCam?.entity || "",

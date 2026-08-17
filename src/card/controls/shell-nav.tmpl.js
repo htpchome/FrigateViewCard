@@ -162,9 +162,6 @@ export function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
                 <frigate-live-stream id="engine">
                   <div class="ph">${icons.live}<span>Connecting…</span></div>
                 </frigate-live-stream>
-                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
-                  <button class="glass-btn mute-btn" id="mute-btn" title="${muteLabel}" aria-label="${muteLabel}">${muteIcon}</button>
-                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
                   <div id="stream-fallback" hidden>
                     <img id="stream-fallback-img" alt="Camera snapshot">
                   </div>

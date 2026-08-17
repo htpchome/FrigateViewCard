@@ -776,6 +776,7 @@ export function mkCamState() {
     events: [],
     recordings: [],
     reviews: [],
+    reviewsWindowKey: "",
     kept: [],
     ptzInfo: null,
     ptzInfoFetched: false,

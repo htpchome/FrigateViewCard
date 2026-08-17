@@ -91,6 +91,69 @@ test("loadWindow updates active slices and finishes the browse load cycle", asyn
   );
 });
 
+test("loadWindow renders alerts before the event request finishes", async () => {
+  const calls = [];
+  let releaseEvents;
+  const eventsPending = new Promise((resolve) => {
+    releaseEvents = resolve;
+  });
+  const activeCache = {
+    clientId: "frigate",
+    cam: "front",
+    events: [],
+    reviews: [],
+  };
+  const host = {
+    _tab: "alerts",
+    _loading: false,
+    _reloadPending: false,
+    _reloadAfterLoad: false,
+    _exhausted: false,
+    _followNowWindow: false,
+    _config: { window_days: 1, alerts_reviews_days: 1 },
+    _activeCam: { entity: "camera.front" },
+    _camCache: { "camera.front": activeCache },
+    _events: [],
+    _reviews: [],
+    _recordings: [],
+    _winStart: 100,
+    _winEnd: 200,
+    _eventsMode: "camera",
+    _cc: () => activeCache,
+    _ws: async (payload) => {
+      calls.push(payload.type);
+      if (payload.type === "frigate/events/get") return eventsPending;
+      return [{ id: "review-1", start_time: 180, severity: "alert" }];
+    },
+    _renderList: () => calls.push("renderList"),
+    _renderStats: () => {},
+    _renderAll: () => {},
+    _scheduleReload: () => {},
+    _consumeDeepLinkReviewOpen: () => {},
+    _consumeDeepLinkEventOpen: () => {},
+    _isPreviewPageActive: () => false,
+    _slideshowAlertController: { handleReviewsUpdated: () => {} },
+  };
+  const controller = new BrowseWindowLoaderController(host);
+
+  const load = controller.loadWindow(true);
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(calls.slice(0, 2), [
+    "frigate/reviews/get",
+    "frigate/events/get",
+  ]);
+  assert.deepEqual(host._reviews, [
+    { id: "review-1", start_time: 180, severity: "alert" },
+  ]);
+  assert.equal(calls.includes("renderList"), true);
+  assert.equal(host._loading, true);
+
+  releaseEvents([]);
+  await load;
+  assert.equal(host._loading, false);
+});
+
 test("warmOtherCamerasEvents fills inactive camera cache through fetchWindowedEvents", async () => {
   const inactiveCache = {
     clientId: "frigate",
