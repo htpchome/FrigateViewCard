@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1470";
+const VERSION = "1.0.1471";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1311,15 +1311,13 @@ circle.circle-pad-middle-circle {
   transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
   fill: var(--primary-background-color);
 }
-.slice-button path.circle-pad-key.is-pressed,
-.slice-button path.circle-pad-key:active { fill: var(--circle-pad-dark-primary) }
+.slice-button .circle-pad-key.is-pressed,
+.slice-button .circle-pad-key:active { fill: var(--circle-pad-dark-primary) }
 
 @media (hover: hover) {
   .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button path.circle-pad-key:hover {
     fill: var(--circle-pad-primary);  }
 }
-
-
 
 /* Standalone shadow layer applied exclusively over the center button structure in base state */
 .center-button {
@@ -1336,16 +1334,7 @@ circle.circle-pad-middle-circle {
   filter: url(#simple-blur); /* Applies the blur effect */
 }
 /* Keyboard Accessibility Focus Rings - Set to none to prevent extra lines when active */
-#button-down:focus, #button-down:active,
-.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:focus,
-.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:active,
-.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button .circle-pad-key:focus,
-.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button .circle-pad-key:active, {
-  stroke:none;
-  outline:none;
-  fill:none;
-}
-svg:focus {
+.${CIRCLE_PAD_CLASS} svg:focus, .${CIRCLE_PAD_CLASS} svg:active {
   outline: none;
 } 
 
@@ -1353,25 +1342,40 @@ svg:focus {
 /* --- Chevron State Handling --- */
 .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button .slice-chevron{
   stroke: var(--circle-pad-text-1) !important;
-} 
+}
+.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button .slice-zoom{
+  fill: var(--circle-pad-text-1) !important;
+}
 
 /* Keep chevrons bright while a slice is actively pressed. */
 .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-pressed .slice-chevron {
   stroke: var(--circle-pad-text-5) !important;
+}
+.${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button.is-pressed .slice-zoom {
+  fill: var(--circle-pad-text-5) !important;
 }
 
 @media (hover: hover) {
   .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-chevron {
     stroke: var(--circle-pad-text-5) !important;
   }
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:hover .slice-zoom {
+    fill: var(--circle-pad-text-5) !important;
+  }
 
   .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(:hover):not(.is-pressed) .slice-chevron {
     stroke: var(--circle-pad-text-1) !important;
+  }
+  .${CIRCLE_PAD_CLASS}:not([data-input-mode="touch"]) .slice-button:not(:hover):not(.is-pressed) .slice-zoom {
+    fill: var(--circle-pad-text-1) !important;
   }
 }
 
 .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button .slice-chevron {
   stroke: var(--circle-pad-text-1) !important;
+}
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button .slice-zoom {
+  fill: var(--circle-pad-text-1) !important;
 }
 
 /* Touch-mode override: ignore sticky pseudo-classes and drive visual state via .is-pressed only. */
@@ -1385,6 +1389,9 @@ svg:focus {
 
 .${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed .slice-chevron {
   stroke: var(--circle-pad-text-4) !important;
+}
+.${CIRCLE_PAD_CLASS}[data-input-mode="touch"] .slice-button.is-pressed .slice-zoom {
+  fill: var(--circle-pad-text-4) !important;
 }
 /*==================USED ABOVE===================*/
 
@@ -1413,33 +1420,33 @@ const CIRCLE_PAD_SVG = `
  
  <g id="button-right" class="slice-button" transform="translate(-46.941,-16.885)" aria-label="Right" role="button" ${CIRCLE_PAD_DATA_ACTION}="right">
   <path id="circle-pad-button-right" class="circle-pad-key" d="m130.7 33.651a47 47 0 0 1 0 66.468l-33.234-33.234z" fill="#fafafa" style="filter:url(#circle-pad-clean-edges)"/>
-  <path id="circle-pad-chevron-right" class="slice-chevron" d="m127.96 64.64 2.0805 2.5402-2.0805 2.5402" fill="none" stroke-linejoin="round" stroke-width="1"/>
+  <path id="circle-pad-chevron-right" class="slice-chevron" d="m127.96 64.64 2.0805 2.5402-2.0805 2.5402" fill="none" stroke-linejoin="round" stroke-width="1" style="pointer-events: none;" />
  </g>
  
  <g id="button-down" class="slice-button" transform="translate(-46.941,-16.885)" aria-label="Down"  role="button" ${CIRCLE_PAD_DATA_ACTION}="down">
   <path id="circle-pad-button-down" class="circle-pad-key" d="m130.17 100.65a47 47 0 0 1-33.234 13.766 47 47 0 0 1-33.234-13.766l33.234-33.234z" fill="#fafafa" style="filter:url(#circle-pad-clean-edges)" />
-  <path id="circle-pad-chevron-down" class="slice-chevron" d="m99.48 97.96-2.5402 2.0805-2.5402-2.0805" fill="none" stroke-linejoin="round" stroke-width="1" />
+  <path id="circle-pad-chevron-down" class="slice-chevron" d="m99.48 97.96-2.5402 2.0805-2.5402-2.0805" fill="none" stroke-linejoin="round" stroke-width="1" style="pointer-events: none;" />
  </g>
  
  <g id="button-up" class="slice-button" transform="translate(-46.941,-16.885)" aria-label="Up"  role="button" ${CIRCLE_PAD_DATA_ACTION}="up">
   <path id="circle-pad-button-up" class="circle-pad-key" d="m63.707 33.122a47 47 0 0 1 66.468-2e-6l-33.234 33.234z" fill="#fafafa" style="filter:url(#circle-pad-clean-edges)" />
-  <path id="circle-pad-chevron-up" class="slice-chevron" d="m94.4 35.8 2.5402-2.0805 2.5402 2.0805" fill="none" stroke-linejoin="round" stroke-width="1" />
+  <path id="circle-pad-chevron-up" class="slice-chevron" d="m94.4 35.8 2.5402-2.0805 2.5402 2.0805" fill="none" stroke-linejoin="round" stroke-width="1" style="pointer-events: none;" />
  </g>
  
  <g id="button-left" class="slice-button" transform="translate(-46.941 -16.855)" aria-label="Left"  role="button" ${CIRCLE_PAD_DATA_ACTION}="left">
   <path id="circle-pad-button-left" class="circle-pad-key" d="m63.177 100.12a47 47 0 0 1-13.766-33.234 47 47 0 0 1 13.766-33.234l33.234 33.234z" fill="#fafafa" style="filter:url(#circle-pad-clean-edges)" />
-  <path id="circle-pad-chevron-left" class="slice-chevron" d="m65.92 69.42-2.0805-2.5402 2.0805-2.5402" fill="none" stroke-linejoin="round" stroke-width="1" />
+  <path id="circle-pad-chevron-left" class="slice-chevron" d="m65.92 69.42-2.0805-2.5402 2.0805-2.5402" fill="none" stroke-linejoin="round" stroke-width="1" style="pointer-events: none;" />
  </g>
  
  <circle id="circle-pad-middle-circle" class="circle-pad-middle-circle" cx="50" cy="50" r="14"/>
  
  <g id="button-zoom-out" class="slice-button" aria-label="Zoom Out">
   <path id="circle-pad-zoom-out" class="circle-pad-key" d="m63.5 50.25a13.5 13.25 0 0 1-6.75 11.475 13.5 13.25 0 0 1-13.5-1e-6 13.5 13.25 0 0 1-6.75-11.475h13.5z" style="filter:url(#circle-pad-clean-edges);"/>
-  <path id="circle-pad-zoom-out-icon" class="slice-chevron" d="m53 57.304h-6v-0.85714h6z" />
+  <path id="circle-pad-zoom-out-icon" class="slice-zoom" d="m53 57.304h-6v-0.85714h6z" style="pointer-events: none;" />
  </g>
  <g id="button-zoom-in" class="slice-button" aria-label="Zoom In">
-  <path id="circle-pad-zoom-in" class="circle-pad-key"d="m36.5 49.75a13.5 13.25 0 0 1 13.5-13.25 13.5 13.25 0 0 1 13.5 13.25h-13.5z" style="filter:url(#circle-pad-clean-edges);"/>
-  <path id="circle-pad-zoom-in-icon" class="slice-chevron" d="m53 43.554h-2.5714v2.5714h-0.85714v-2.5714h-2.5714v-0.85714h2.5714v-2.5714h0.85714v2.5714h2.5714z" />
+  <path id="circle-pad-zoom-in" class="zoom-pad-key"d="m36.5 49.75a13.5 13.25 0 0 1 13.5-13.25 13.5 13.25 0 0 1 13.5 13.25h-13.5z" style="filter:url(#circle-pad-clean-edges);"/>
+  <path id="circle-pad-zoom-in-icon" class="slice-zoom" d="m53 43.554h-2.5714v2.5714h-0.85714v-2.5714h-2.5714v-0.85714h2.5714v-2.5714h0.85714v2.5714h2.5714z" style="pointer-events: none;" />
  </g>
 </svg>
 
