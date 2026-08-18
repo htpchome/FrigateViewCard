@@ -1431,9 +1431,18 @@ export class FrigateViewCard extends HTMLElement {
   }
   // ── init ─────────────────────────────────────────────────
   async _start() {
-    await this._discoverAll();
-    if (this._deepLinkController.isDeepLinkHandlingEnabled()) {
+    const deepLinkHandlingEnabled =
+      this._deepLinkController.isDeepLinkHandlingEnabled();
+    if (deepLinkHandlingEnabled) {
       this._deepLinkController.initDeepLinkFromUrl();
+    }
+    this._pageNavigationController.prepareConfiguredLandingPageShell({
+      hasPendingDeepLinkTarget:
+        this._deepLinkController.hasPendingDeepLinkTarget(),
+    });
+
+    await this._discoverAll();
+    if (deepLinkHandlingEnabled) {
       this._deepLinkController.applyDeepLinkCameraHint();
     }
     const now = Math.floor(Date.now() / 1000);

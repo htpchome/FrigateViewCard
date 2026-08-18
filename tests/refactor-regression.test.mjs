@@ -475,6 +475,10 @@ test("window loads use loading-state guard", () => {
 });
 
 test("startup resolves initial page through the navigation factory", () => {
+  const prepareShellIndex = cardSource.indexOf(
+    "this._pageNavigationController.prepareConfiguredLandingPageShell({",
+  );
+  const discoverIndex = cardSource.indexOf("await this._discoverAll();");
   const initialLoadIndex = cardSource.indexOf(
     "const initialLoad = this._browseWindowLoaderController.loadWindow(true);",
   );
@@ -482,6 +486,8 @@ test("startup resolves initial page through the navigation factory", () => {
     /this\._pageNavigationController\.navigateToConfiguredLandingPage\([\s\S]*?source:\s*"startup"[\s\S]*?startup:\s*true[\s\S]*?startInGrid,[\s\S]*?hasPendingDeepLinkTarget:[\s\S]*?this\._deepLinkController\.hasPendingDeepLinkTarget\(\)/,
   );
 
+  assert.ok(prepareShellIndex >= 0);
+  assert.ok(discoverIndex > prepareShellIndex);
   assert.ok(initialLoadIndex >= 0);
   assert.ok(landingPageIndex > initialLoadIndex);
   assert.equal(

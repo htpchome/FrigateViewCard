@@ -65,10 +65,29 @@ export class PageNavigationController {
     return this.ensureNavigationFactory().navigateTo(pageId, context);
   }
 
-  navigateToConfiguredLandingPage(context = {}) {
-    const nextPageId = this.ensureNavigationFactory().resolveStartupPage({
+  resolveConfiguredLandingPage(context = {}) {
+    return this.ensureNavigationFactory().resolveStartupPage({
       hasPendingDeepLinkTarget: context.hasPendingDeepLinkTarget === true,
     });
+  }
+
+  prepareConfiguredLandingPageShell(context = {}) {
+    const nextPageId = this.resolveConfiguredLandingPage(context);
+    const previousPageId = this._host._pageId;
+    this._host._pageId = nextPageId;
+    this._host._previewPageActive =
+      nextPageId === this._constants.PAGE_IDS.preview;
+    if (!this._host._previewPageActive) {
+      this._host._lastNonPreviewPageId = nextPageId;
+    }
+    if (nextPageId !== previousPageId) {
+      this._host._renderShell?.();
+    }
+    return nextPageId;
+  }
+
+  navigateToConfiguredLandingPage(context = {}) {
+    const nextPageId = this.resolveConfiguredLandingPage(context);
     return this.navigateToPageRoute(nextPageId, context);
   }
 

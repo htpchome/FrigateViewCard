@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1485";
+const VERSION = "1.0.1486";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -13585,10 +13585,26 @@ const PageNavigationController = class {
   navigateToPageRoute(pageId, context = {}) {
     return this.ensureNavigationFactory().navigateTo(pageId, context);
   }
-  navigateToConfiguredLandingPage(context = {}) {
-    const nextPageId = this.ensureNavigationFactory().resolveStartupPage({
+  resolveConfiguredLandingPage(context = {}) {
+    return this.ensureNavigationFactory().resolveStartupPage({
       hasPendingDeepLinkTarget: context.hasPendingDeepLinkTarget === true
     });
+  }
+  prepareConfiguredLandingPageShell(context = {}) {
+    const nextPageId = this.resolveConfiguredLandingPage(context);
+    const previousPageId = this._host._pageId;
+    this._host._pageId = nextPageId;
+    this._host._previewPageActive = nextPageId === this._constants.PAGE_IDS.preview;
+    if (!this._host._previewPageActive) {
+      this._host._lastNonPreviewPageId = nextPageId;
+    }
+    if (nextPageId !== previousPageId) {
+      this._host._renderShell?.();
+    }
+    return nextPageId;
+  }
+  navigateToConfiguredLandingPage(context = {}) {
+    const nextPageId = this.resolveConfiguredLandingPage(context);
     return this.navigateToPageRoute(nextPageId, context);
   }
   ensureNavigationFactory() {
@@ -17168,9 +17184,15 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── init ─────────────────────────────────────────────────
   async _start() {
-    await this._discoverAll();
-    if (this._deepLinkController.isDeepLinkHandlingEnabled()) {
+    const deepLinkHandlingEnabled = this._deepLinkController.isDeepLinkHandlingEnabled();
+    if (deepLinkHandlingEnabled) {
       this._deepLinkController.initDeepLinkFromUrl();
+    }
+    this._pageNavigationController.prepareConfiguredLandingPageShell({
+      hasPendingDeepLinkTarget: this._deepLinkController.hasPendingDeepLinkTarget()
+    });
+    await this._discoverAll();
+    if (deepLinkHandlingEnabled) {
       this._deepLinkController.applyDeepLinkCameraHint();
     }
     const now = Math.floor(Date.now() / 1e3);

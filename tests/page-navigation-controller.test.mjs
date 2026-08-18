@@ -58,6 +58,7 @@ const createHarness = () => {
     _activatePreviewPageRoute: (context) => calls.push(["preview", context]),
     _activateWideViewPageRoute: (context) => calls.push(["wide", context]),
     _syncMobileViewPageMarkup: () => calls.push(["syncMobileViewMarkup"]),
+    _renderShell: () => calls.push(["renderShell"]),
     _deviceRouteBucket: () => "desktop",
     _syncPageNavigationButtons: () => calls.push(["syncButtons"]),
     shadowRoot: {
@@ -246,4 +247,27 @@ test("navigateToConfiguredLandingPage resolves startup page and navigates", () =
     pageId: PAGE_IDS.wideView,
     context,
   });
+});
+
+test("prepareConfiguredLandingPageShell selects and renders the landing shell before activation", () => {
+  const h = createHarness();
+  const controller = new PageNavigationController(h.host, h.constants);
+
+  const result = controller.prepareConfiguredLandingPageShell({
+    hasPendingDeepLinkTarget: false,
+  });
+
+  assert.equal(result, PAGE_IDS.wideView);
+  assert.equal(h.host._pageId, PAGE_IDS.wideView);
+  assert.equal(h.host._previewPageActive, false);
+  assert.equal(h.host._lastNonPreviewPageId, PAGE_IDS.wideView);
+  assert.deepEqual(h.getLastStartupCall(), {
+    hasPendingDeepLinkTarget: false,
+  });
+  assert.deepEqual(h.calls, [["renderShell"]]);
+
+  controller.prepareConfiguredLandingPageShell({
+    hasPendingDeepLinkTarget: false,
+  });
+  assert.deepEqual(h.calls, [["renderShell"]]);
 });
