@@ -22,6 +22,14 @@ const singleViewPageTemplateSource = fs.readFileSync(
   new URL("../src/features/single-view/page.tmpl.js", import.meta.url),
   "utf8",
 );
+const singleViewPageControllerSource = fs.readFileSync(
+  new URL("../src/features/single-view/page.ctrl.js", import.meta.url),
+  "utf8",
+);
+const mobileViewPageControllerSource = fs.readFileSync(
+  new URL("../src/features/mobile-view/page.ctrl.js", import.meta.url),
+  "utf8",
+);
 const wideViewPageTemplateSource = fs.readFileSync(
   new URL("../src/features/wide-view/page.tmpl.js", import.meta.url),
   "utf8",
@@ -1219,6 +1227,40 @@ test("standard browse rendering support does not live in the card folder", () =>
       "../../card/controls/shell-nav.tmpl.js",
     ),
     false,
+  );
+});
+
+test("page chrome is owned by route templates and controllers", () => {
+  assert.equal(
+    browseStandardRendererSource.includes("../mobile-view/page.tmpl.js"),
+    false,
+  );
+  for (const exportName of [
+    "buildStandardPageCamSwitcherMarkup",
+    "renderStandardPageCamSwitcher",
+    "syncStandardPageStatus",
+    "renderStandardPageStats",
+    "renderStandardPageSubtitle",
+  ]) {
+    assert.equal(browseStandardRendererSource.includes(exportName), false);
+  }
+  assert.equal(
+    singleViewPageTemplateSource.includes(
+      "export function buildSingleViewCamSwitcherMarkup",
+    ),
+    true,
+  );
+  assert.equal(
+    singleViewPageControllerSource.includes(
+      "buildSingleViewCamSwitcherMarkup({",
+    ),
+    true,
+  );
+  assert.equal(
+    mobileViewPageControllerSource.includes(
+      "buildMobileViewCamSwitcherMarkup({",
+    ),
+    true,
   );
 });
 

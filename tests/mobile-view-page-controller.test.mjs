@@ -344,3 +344,43 @@ test("mobile-view browse-head sync follows active sticky day label", () => {
     "Wed - Jul 31st - Recent Alerts",
   );
 });
+
+test("mobile page chrome updates never access or replace the live region", () => {
+  const liveNode = {
+    innerHTML: "connected-live-camera",
+    connection: { id: "preserved" },
+  };
+  const cameraSwitcher = createNode();
+  const nodes = {
+    "#on-dot": createNode(),
+    "#info-title": createNode(),
+    "#ev-count": createNode(),
+    "#stream-type": createNode(),
+    "#tl-range": createNode(),
+  };
+  const { host, calls } = createHost({ domNodes: nodes });
+  let liveRegionAccesses = 0;
+  host._pageShellRegion = (regionKey) => {
+    if (regionKey === "live") {
+      liveRegionAccesses += 1;
+      return liveNode;
+    }
+    return regionKey === "cameraSwitcher" ? cameraSwitcher : null;
+  };
+  host._pageShellRegionElement = (_regionKey, selector) =>
+    nodes[selector] || null;
+  const controller = new MobileViewPageController(host, { PAGE_IDS });
+
+  controller.renderCamSwitcher();
+  controller.syncStatus();
+  controller.renderStats();
+  controller.renderSubtitle();
+
+  assert.equal(liveRegionAccesses, 0);
+  assert.equal(liveNode.innerHTML, "connected-live-camera");
+  assert.deepEqual(liveNode.connection, { id: "preserved" });
+  assert.equal(
+    calls.some(([name]) => name === "mountEngine" || name === "cleanupEngine"),
+    false,
+  );
+});

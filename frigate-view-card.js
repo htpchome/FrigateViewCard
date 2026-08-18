@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1493";
+const VERSION = "1.0.1494";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3363,6 +3363,48 @@ function normalizeRegions(regions) {
     ...suppliedRegions
   };
 }
+function buildSingleViewCamSwitcherMarkup({
+  includeStatus = true,
+  cameras = [],
+  activeCamIdx = 0,
+  isSingleView = false,
+  getCameraName,
+  isCameraAvailable
+} = {}) {
+  return (Array.isArray(cameras) ? cameras : []).map((camera, index) => {
+    const name = getCameraName(camera);
+    const active = isSingleView && index === activeCamIdx;
+    const available = !includeStatus || isCameraAvailable(camera);
+    return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${available ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
+  }).join("");
+}
+function resolveSingleViewTitleText({
+  title,
+  cameras = [],
+  activeCamera = null,
+  getCameraName
+} = {}) {
+  if (title) return title;
+  if (Array.isArray(cameras) && cameras.length > 1) {
+    return getCameraName(activeCamera);
+  }
+  return "Camera";
+}
+function resolveSingleViewSubtitleText(config) {
+  return config?.subtitle || "Frigate";
+}
+function resolveSingleViewStreamTypeText(streamType) {
+  return streamType || "--";
+}
+function resolveSingleViewEventsCountText(eventsCount) {
+  return String(eventsCount);
+}
+function resolveSingleViewStatusColor(online) {
+  return online ? "#4ade80" : "#ef4444";
+}
+function resolveSingleViewOnlineLabel(online) {
+  return online ? "Online" : "Offline";
+}
 function buildSingleViewMainLayoutShellMarkup({
   regions: suppliedRegions = null,
   layoutProfile = {}
@@ -3818,7 +3860,7 @@ function buildFooterMarkup({ icons }) {
             </div>`;
 }
 function buildControlsSectionMarkup({
-  cameraName: cameraName2 = "Active Camera",
+  cameraName: cameraName4 = "Active Camera",
   ptzReady = false,
   panTiltEnabled = false,
   zoomEnabled = false,
@@ -15147,105 +15189,6 @@ function activateStandardPageRouteLifecycle({
 function cameraName(camera) {
   return cap(camDisplayName(camera));
 }
-function buildStandardCamSwitcherButtons({
-  previewPageEnabled,
-  includeStatus,
-  cameras,
-  activeCamIdx,
-  isSingleView,
-  icons,
-  getCameraName,
-  isCameraAvailable
-}) {
-  const cameraButtons = (cameras || []).map((camera, index) => {
-    const name = getCameraName(camera);
-    const active = isSingleView && index === activeCamIdx;
-    const ok = !includeStatus || isCameraAvailable(camera);
-    return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
-  }).join("");
-  return `${cameraButtons}`;
-}
-function buildStandardPageCamSwitcherMarkup(host, { includeStatus = true, mobile = false } = {}) {
-  const activeEntity = host._activeCam?.entity;
-  const activeState = activeEntity ? host._hass?.states?.[activeEntity] : null;
-  const args = {
-    previewPageEnabled: host._isPreviewPageEnabled?.() === true,
-    includeStatus,
-    cameras: host._config.cameras,
-    activeCamIdx: host._activeCamIdx,
-    isSingleView: host._viewMode === "single",
-    icons: ICONS,
-    getCameraName: cameraName,
-    isCameraAvailable: (camera) => host._hass?.states?.[camera.entity]?.state !== "unavailable",
-    streamType: host._activeStreamType || "--",
-    online: activeState ? activeState.state !== "unavailable" : true,
-    pickerOpen: host._mobileCamSwitcherOpen === true
-  };
-  return mobile ? buildMobileViewCamSwitcherMarkup(args) : buildStandardCamSwitcherButtons(args);
-}
-function renderStandardPageCamSwitcher(host, { mobile = false } = {}) {
-  const el = host._pageShellRegion("cameraSwitcher");
-  if (!el) return;
-  if (!mobile && host._config.cameras.length < 2 && host._isPreviewPageEnabled?.() !== true) {
-    el.style.display = "none";
-    return;
-  }
-  el.style.display = "";
-  el.innerHTML = `${buildStandardPageCamSwitcherMarkup(host, {
-    includeStatus: true,
-    mobile
-  })}`;
-}
-function syncStandardPageStatus(host, { mobile = false } = {}) {
-  const ent = host._hass?.states?.[host._activeCam?.entity];
-  if (!ent) return;
-  const statusRegionKey = mobile ? "cameraSwitcher" : "information";
-  const dot = host._pageShellRegionElement(statusRegionKey, "#on-dot");
-  const lbl = host._pageShellRegionElement(statusRegionKey, "#on-lbl");
-  const title = host._pageShellRegionElement("information", "#info-title");
-  const ok = ent.state !== "unavailable";
-  if (dot) {
-    dot.style.color = mobile ? resolveMobileViewStatusColor(ok) : ok ? "#4ade80" : "#ef4444";
-  }
-  if (lbl) {
-    lbl.textContent = mobile ? resolveMobileViewOnlineLabel(ok) : ok ? "Online" : "Offline";
-  }
-  if (title) {
-    const activeCamera = host._activeCam;
-    const titleText = mobile ? resolveMobileViewTitleText({
-      title: host._config.title,
-      cameras: host._config.cameras,
-      activeCamera,
-      getCameraName: cameraName
-    }) : host._config.title || (host._config.cameras.length > 1 ? cameraName(activeCamera) : "Camera");
-    title.textContent = titleText;
-  }
-}
-function renderStandardPageStats(host, { mobile = false } = {}) {
-  const eventsCount = host._allDisplayEvents().length;
-  const eventCountEl = host._pageShellRegionElement(
-    "information",
-    "#ev-count"
-  );
-  if (eventCountEl) {
-    eventCountEl.textContent = mobile ? resolveMobileViewEventsCountText(eventsCount) : String(eventsCount);
-  }
-  const streamEl = host._pageShellRegionElement(
-    mobile ? "cameraSwitcher" : "information",
-    "#stream-type"
-  );
-  if (streamEl) {
-    streamEl.textContent = mobile ? resolveMobileViewStreamTypeText(host._activeStreamType) : host._activeStreamType || "--";
-  }
-}
-function standardPageSubtitleText(host, { mobile = false } = {}) {
-  return mobile ? resolveMobileViewSubtitleText(host._config) : host._config?.subtitle || "Frigate";
-}
-function renderStandardPageSubtitle(host, { mobile = false } = {}) {
-  const el = host._pageShellRegionElement("information", "#tl-range");
-  if (!el) return;
-  el.textContent = standardPageSubtitleText(host, { mobile });
-}
 function standardPageListHeadingLabel(host, ts = null) {
   const fallback = {
     recordings: "Recordings",
@@ -15361,6 +15304,7 @@ function renderStandardPageLegend(host) {
 }
 
 // src/features/mobile-view/page.ctrl.js
+const cameraName2 = (camera) => cap(camDisplayName(camera));
 const MobileViewPageController = class {
   constructor(host, constants) {
     this._host = host;
@@ -15380,25 +15324,88 @@ const MobileViewPageController = class {
     this.syncMobileViewPageMarkup();
   }
   camSwitcherMarkup({ includeStatus = true } = {}) {
-    return buildStandardPageCamSwitcherMarkup(this._host, {
+    const activeEntity = this._host._activeCam?.entity;
+    const activeState = activeEntity ? this._host._hass?.states?.[activeEntity] : null;
+    return buildMobileViewCamSwitcherMarkup({
+      previewPageEnabled: this._host._isPreviewPageEnabled?.() === true,
       includeStatus,
-      mobile: true
+      cameras: this._host._config.cameras,
+      activeCamIdx: this._host._activeCamIdx,
+      icons: ICONS,
+      getCameraName: cameraName2,
+      isCameraAvailable: (camera) => this._host._hass?.states?.[camera.entity]?.state !== "unavailable",
+      streamType: this._host._activeStreamType || "--",
+      online: activeState ? activeState.state !== "unavailable" : true,
+      pickerOpen: this._host._mobileCamSwitcherOpen === true
     });
   }
   renderCamSwitcher() {
-    renderStandardPageCamSwitcher(this._host, { mobile: true });
+    const element = this._host._pageShellRegion("cameraSwitcher");
+    if (!element) return;
+    element.style.display = "";
+    element.innerHTML = this.camSwitcherMarkup({ includeStatus: true });
   }
   syncStatus() {
-    syncStandardPageStatus(this._host, { mobile: true });
+    const state = this._host._hass?.states?.[this._host._activeCam?.entity] || null;
+    if (!state) return;
+    const statusDot = this._host._pageShellRegionElement(
+      "cameraSwitcher",
+      "#on-dot"
+    );
+    const statusLabel = this._host._pageShellRegionElement(
+      "cameraSwitcher",
+      "#on-lbl"
+    );
+    const title = this._host._pageShellRegionElement(
+      "information",
+      "#info-title"
+    );
+    const online = state.state !== "unavailable";
+    if (statusDot) {
+      statusDot.style.color = resolveMobileViewStatusColor(online);
+    }
+    if (statusLabel) {
+      statusLabel.textContent = resolveMobileViewOnlineLabel(online);
+    }
+    if (title) {
+      title.textContent = resolveMobileViewTitleText({
+        title: this._host._config.title,
+        cameras: this._host._config.cameras,
+        activeCamera: this._host._activeCam,
+        getCameraName: cameraName2
+      });
+    }
   }
   renderStats() {
-    renderStandardPageStats(this._host, { mobile: true });
+    const eventCount = this._host._pageShellRegionElement(
+      "information",
+      "#ev-count"
+    );
+    if (eventCount) {
+      eventCount.textContent = resolveMobileViewEventsCountText(
+        this._host._allDisplayEvents().length
+      );
+    }
+    const streamType = this._host._pageShellRegionElement(
+      "cameraSwitcher",
+      "#stream-type"
+    );
+    if (streamType) {
+      streamType.textContent = resolveMobileViewStreamTypeText(
+        this._host._activeStreamType
+      );
+    }
   }
   subtitleText() {
-    return standardPageSubtitleText(this._host, { mobile: true });
+    return resolveMobileViewSubtitleText(this._host._config);
   }
   renderSubtitle() {
-    renderStandardPageSubtitle(this._host, { mobile: true });
+    const subtitle = this._host._pageShellRegionElement(
+      "information",
+      "#tl-range"
+    );
+    if (!subtitle) return;
+    subtitle.textContent = this.subtitleText();
   }
   renderLegend() {
     renderStandardPageLegend(this._host);
@@ -15485,6 +15492,7 @@ const MobileCamSwitcherController = class {
 };
 
 // src/features/single-view/page.ctrl.js
+const cameraName3 = (camera) => cap(camDisplayName(camera));
 const SingleViewPageController = class {
   constructor(host, constants) {
     this._host = host;
@@ -15494,25 +15502,86 @@ const SingleViewPageController = class {
     return this._host._pageNavigationController || null;
   }
   camSwitcherMarkup({ includeStatus = true } = {}) {
-    return buildStandardPageCamSwitcherMarkup(this._host, {
+    return buildSingleViewCamSwitcherMarkup({
       includeStatus,
-      mobile: false
+      cameras: this._host._config.cameras,
+      activeCamIdx: this._host._activeCamIdx,
+      isSingleView: this._host._viewMode === "single",
+      getCameraName: cameraName3,
+      isCameraAvailable: (camera) => this._host._hass?.states?.[camera.entity]?.state !== "unavailable"
     });
   }
   renderCamSwitcher() {
-    renderStandardPageCamSwitcher(this._host, { mobile: false });
+    const element = this._host._pageShellRegion("cameraSwitcher");
+    if (!element) return;
+    if (this._host._config.cameras.length < 2 && this._host._isPreviewPageEnabled?.() !== true) {
+      element.style.display = "none";
+      return;
+    }
+    element.style.display = "";
+    element.innerHTML = this.camSwitcherMarkup({ includeStatus: true });
   }
   syncStatus() {
-    syncStandardPageStatus(this._host, { mobile: false });
+    const state = this._host._hass?.states?.[this._host._activeCam?.entity] || null;
+    if (!state) return;
+    const statusDot = this._host._pageShellRegionElement(
+      "information",
+      "#on-dot"
+    );
+    const statusLabel = this._host._pageShellRegionElement(
+      "information",
+      "#on-lbl"
+    );
+    const title = this._host._pageShellRegionElement(
+      "information",
+      "#info-title"
+    );
+    const online = state.state !== "unavailable";
+    if (statusDot) {
+      statusDot.style.color = resolveSingleViewStatusColor(online);
+    }
+    if (statusLabel) {
+      statusLabel.textContent = resolveSingleViewOnlineLabel(online);
+    }
+    if (title) {
+      title.textContent = resolveSingleViewTitleText({
+        title: this._host._config.title,
+        cameras: this._host._config.cameras,
+        activeCamera: this._host._activeCam,
+        getCameraName: cameraName3
+      });
+    }
   }
   renderStats() {
-    renderStandardPageStats(this._host, { mobile: false });
+    const eventCount = this._host._pageShellRegionElement(
+      "information",
+      "#ev-count"
+    );
+    if (eventCount) {
+      eventCount.textContent = resolveSingleViewEventsCountText(
+        this._host._allDisplayEvents().length
+      );
+    }
+    const streamType = this._host._pageShellRegionElement(
+      "information",
+      "#stream-type"
+    );
+    if (streamType) {
+      streamType.textContent = resolveSingleViewStreamTypeText(
+        this._host._activeStreamType
+      );
+    }
   }
   subtitleText() {
-    return standardPageSubtitleText(this._host, { mobile: false });
+    return resolveSingleViewSubtitleText(this._host._config);
   }
   renderSubtitle() {
-    renderStandardPageSubtitle(this._host, { mobile: false });
+    const subtitle = this._host._pageShellRegionElement(
+      "information",
+      "#tl-range"
+    );
+    if (!subtitle) return;
+    subtitle.textContent = this.subtitleText();
   }
   renderLegend() {
     renderStandardPageLegend(this._host);
@@ -21518,9 +21587,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
     if (!state) return null;
     const attrs = state.attributes || {};
     const instanceId = attrs.client_id || attrs.mqtt_client_id || "";
-    const cameraName2 = attrs.camera_name || entity.replace(/^camera\./, "");
-    if (!instanceId || !cameraName2) return null;
-    return { instanceId, cameraName: cameraName2 };
+    const cameraName4 = attrs.camera_name || entity.replace(/^camera\./, "");
+    if (!instanceId || !cameraName4) return null;
+    return { instanceId, cameraName: cameraName4 };
   }
   async _fetchPtzCapabilityForEntity(entity) {
     const targetEntity = String(entity || "").trim();

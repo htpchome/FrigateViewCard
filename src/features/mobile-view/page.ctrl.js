@@ -1,23 +1,30 @@
 import { activateStandardPageRouteLifecycle } from "../navigation/route-lifecycle.js";
 import {
-  buildStandardPageCamSwitcherMarkup,
-  renderStandardPageCamSwitcher,
   renderStandardPageEventsContent,
   renderStandardPageKeptContent,
   renderStandardPageLegend,
   renderStandardPageListLabel,
   renderStandardPageReviewsContent,
   renderStandardPageStickyDaySections,
-  renderStandardPageStats,
-  renderStandardPageSubtitle,
   syncStandardPageBrowseHeadFromScroll,
   standardPageListHeadingLabel,
   standardPageRecordingsHeadingLabel,
   standardPageShowStickyDayHeaders,
-  standardPageSubtitleText,
-  syncStandardPageStatus,
 } from "../browse/standard-renderer.js";
-import { applyMobileViewPageMarkup } from "./page.tmpl.js";
+import { cap, camDisplayName } from "../../helpers.js";
+import { ICONS } from "../../icons.js";
+import {
+  applyMobileViewPageMarkup,
+  buildMobileViewCamSwitcherMarkup,
+  resolveMobileViewEventsCountText,
+  resolveMobileViewOnlineLabel,
+  resolveMobileViewStatusColor,
+  resolveMobileViewStreamTypeText,
+  resolveMobileViewSubtitleText,
+  resolveMobileViewTitleText,
+} from "./page.tmpl.js";
+
+const cameraName = (camera) => cap(camDisplayName(camera));
 
 export class MobileViewPageController {
   constructor(host, constants) {
@@ -41,30 +48,98 @@ export class MobileViewPageController {
   }
 
   camSwitcherMarkup({ includeStatus = true } = {}) {
-    return buildStandardPageCamSwitcherMarkup(this._host, {
+    const activeEntity = this._host._activeCam?.entity;
+    const activeState = activeEntity
+      ? this._host._hass?.states?.[activeEntity]
+      : null;
+    return buildMobileViewCamSwitcherMarkup({
+      previewPageEnabled: this._host._isPreviewPageEnabled?.() === true,
       includeStatus,
-      mobile: true,
+      cameras: this._host._config.cameras,
+      activeCamIdx: this._host._activeCamIdx,
+      icons: ICONS,
+      getCameraName: cameraName,
+      isCameraAvailable: (camera) =>
+        this._host._hass?.states?.[camera.entity]?.state !== "unavailable",
+      streamType: this._host._activeStreamType || "--",
+      online: activeState ? activeState.state !== "unavailable" : true,
+      pickerOpen: this._host._mobileCamSwitcherOpen === true,
     });
   }
 
   renderCamSwitcher() {
-    renderStandardPageCamSwitcher(this._host, { mobile: true });
+    const element = this._host._pageShellRegion("cameraSwitcher");
+    if (!element) return;
+    element.style.display = "";
+    element.innerHTML = this.camSwitcherMarkup({ includeStatus: true });
   }
 
   syncStatus() {
-    syncStandardPageStatus(this._host, { mobile: true });
+    const state =
+      this._host._hass?.states?.[this._host._activeCam?.entity] || null;
+    if (!state) return;
+
+    const statusDot = this._host._pageShellRegionElement(
+      "cameraSwitcher",
+      "#on-dot",
+    );
+    const statusLabel = this._host._pageShellRegionElement(
+      "cameraSwitcher",
+      "#on-lbl",
+    );
+    const title = this._host._pageShellRegionElement(
+      "information",
+      "#info-title",
+    );
+    const online = state.state !== "unavailable";
+    if (statusDot) {
+      statusDot.style.color = resolveMobileViewStatusColor(online);
+    }
+    if (statusLabel) {
+      statusLabel.textContent = resolveMobileViewOnlineLabel(online);
+    }
+    if (title) {
+      title.textContent = resolveMobileViewTitleText({
+        title: this._host._config.title,
+        cameras: this._host._config.cameras,
+        activeCamera: this._host._activeCam,
+        getCameraName: cameraName,
+      });
+    }
   }
 
   renderStats() {
-    renderStandardPageStats(this._host, { mobile: true });
+    const eventCount = this._host._pageShellRegionElement(
+      "information",
+      "#ev-count",
+    );
+    if (eventCount) {
+      eventCount.textContent = resolveMobileViewEventsCountText(
+        this._host._allDisplayEvents().length,
+      );
+    }
+    const streamType = this._host._pageShellRegionElement(
+      "cameraSwitcher",
+      "#stream-type",
+    );
+    if (streamType) {
+      streamType.textContent = resolveMobileViewStreamTypeText(
+        this._host._activeStreamType,
+      );
+    }
   }
 
   subtitleText() {
-    return standardPageSubtitleText(this._host, { mobile: true });
+    return resolveMobileViewSubtitleText(this._host._config);
   }
 
   renderSubtitle() {
-    renderStandardPageSubtitle(this._host, { mobile: true });
+    const subtitle = this._host._pageShellRegionElement(
+      "information",
+      "#tl-range",
+    );
+    if (!subtitle) return;
+    subtitle.textContent = this.subtitleText();
   }
 
   renderLegend() {

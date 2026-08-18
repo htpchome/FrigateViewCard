@@ -23,6 +23,57 @@ function normalizeRegions(regions) {
   };
 }
 
+export function buildSingleViewCamSwitcherMarkup({
+  includeStatus = true,
+  cameras = [],
+  activeCamIdx = 0,
+  isSingleView = false,
+  getCameraName,
+  isCameraAvailable,
+} = {}) {
+  return (Array.isArray(cameras) ? cameras : [])
+    .map((camera, index) => {
+      const name = getCameraName(camera);
+      const active = isSingleView && index === activeCamIdx;
+      const available = !includeStatus || isCameraAvailable(camera);
+      return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${available ? "#4ade80" : "#ef4444"}">●</span> ${name}</button>`;
+    })
+    .join("");
+}
+
+export function resolveSingleViewTitleText({
+  title,
+  cameras = [],
+  activeCamera = null,
+  getCameraName,
+} = {}) {
+  if (title) return title;
+  if (Array.isArray(cameras) && cameras.length > 1) {
+    return getCameraName(activeCamera);
+  }
+  return "Camera";
+}
+
+export function resolveSingleViewSubtitleText(config) {
+  return config?.subtitle || "Frigate";
+}
+
+export function resolveSingleViewStreamTypeText(streamType) {
+  return streamType || "--";
+}
+
+export function resolveSingleViewEventsCountText(eventsCount) {
+  return String(eventsCount);
+}
+
+export function resolveSingleViewStatusColor(online) {
+  return online ? "#4ade80" : "#ef4444";
+}
+
+export function resolveSingleViewOnlineLabel(online) {
+  return online ? "Online" : "Offline";
+}
+
 export function buildSingleViewMainLayoutShellMarkup({
   regions: suppliedRegions = null,
   layoutProfile = {},

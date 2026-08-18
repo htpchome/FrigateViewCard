@@ -1,22 +1,28 @@
 import {
-  buildStandardPageCamSwitcherMarkup,
-  renderStandardPageCamSwitcher,
   renderStandardPageEventsContent,
   renderStandardPageKeptContent,
   renderStandardPageLegend,
   renderStandardPageListLabel,
   renderStandardPageReviewsContent,
   renderStandardPageStickyDaySections,
-  renderStandardPageStats,
-  renderStandardPageSubtitle,
   syncStandardPageBrowseHeadFromScroll,
   standardPageListHeadingLabel,
   standardPageRecordingsHeadingLabel,
   standardPageShowStickyDayHeaders,
-  standardPageSubtitleText,
-  syncStandardPageStatus,
 } from "../browse/standard-renderer.js";
 import { activateStandardPageRouteLifecycle } from "../navigation/route-lifecycle.js";
+import { cap, camDisplayName } from "../../helpers.js";
+import {
+  buildSingleViewCamSwitcherMarkup,
+  resolveSingleViewEventsCountText,
+  resolveSingleViewOnlineLabel,
+  resolveSingleViewStatusColor,
+  resolveSingleViewStreamTypeText,
+  resolveSingleViewSubtitleText,
+  resolveSingleViewTitleText,
+} from "./page.tmpl.js";
+
+const cameraName = (camera) => cap(camDisplayName(camera));
 
 export class SingleViewPageController {
   constructor(host, constants) {
@@ -29,30 +35,97 @@ export class SingleViewPageController {
   }
 
   camSwitcherMarkup({ includeStatus = true } = {}) {
-    return buildStandardPageCamSwitcherMarkup(this._host, {
+    return buildSingleViewCamSwitcherMarkup({
       includeStatus,
-      mobile: false,
+      cameras: this._host._config.cameras,
+      activeCamIdx: this._host._activeCamIdx,
+      isSingleView: this._host._viewMode === "single",
+      getCameraName: cameraName,
+      isCameraAvailable: (camera) =>
+        this._host._hass?.states?.[camera.entity]?.state !== "unavailable",
     });
   }
 
   renderCamSwitcher() {
-    renderStandardPageCamSwitcher(this._host, { mobile: false });
+    const element = this._host._pageShellRegion("cameraSwitcher");
+    if (!element) return;
+    if (
+      this._host._config.cameras.length < 2 &&
+      this._host._isPreviewPageEnabled?.() !== true
+    ) {
+      element.style.display = "none";
+      return;
+    }
+    element.style.display = "";
+    element.innerHTML = this.camSwitcherMarkup({ includeStatus: true });
   }
 
   syncStatus() {
-    syncStandardPageStatus(this._host, { mobile: false });
+    const state =
+      this._host._hass?.states?.[this._host._activeCam?.entity] || null;
+    if (!state) return;
+
+    const statusDot = this._host._pageShellRegionElement(
+      "information",
+      "#on-dot",
+    );
+    const statusLabel = this._host._pageShellRegionElement(
+      "information",
+      "#on-lbl",
+    );
+    const title = this._host._pageShellRegionElement(
+      "information",
+      "#info-title",
+    );
+    const online = state.state !== "unavailable";
+    if (statusDot) {
+      statusDot.style.color = resolveSingleViewStatusColor(online);
+    }
+    if (statusLabel) {
+      statusLabel.textContent = resolveSingleViewOnlineLabel(online);
+    }
+    if (title) {
+      title.textContent = resolveSingleViewTitleText({
+        title: this._host._config.title,
+        cameras: this._host._config.cameras,
+        activeCamera: this._host._activeCam,
+        getCameraName: cameraName,
+      });
+    }
   }
 
   renderStats() {
-    renderStandardPageStats(this._host, { mobile: false });
+    const eventCount = this._host._pageShellRegionElement(
+      "information",
+      "#ev-count",
+    );
+    if (eventCount) {
+      eventCount.textContent = resolveSingleViewEventsCountText(
+        this._host._allDisplayEvents().length,
+      );
+    }
+    const streamType = this._host._pageShellRegionElement(
+      "information",
+      "#stream-type",
+    );
+    if (streamType) {
+      streamType.textContent = resolveSingleViewStreamTypeText(
+        this._host._activeStreamType,
+      );
+    }
   }
 
   subtitleText() {
-    return standardPageSubtitleText(this._host, { mobile: false });
+    return resolveSingleViewSubtitleText(this._host._config);
   }
 
   renderSubtitle() {
-    renderStandardPageSubtitle(this._host, { mobile: false });
+    const subtitle = this._host._pageShellRegionElement(
+      "information",
+      "#tl-range",
+    );
+    if (!subtitle) return;
+    subtitle.textContent = this.subtitleText();
   }
 
   renderLegend() {
