@@ -147,11 +147,11 @@ export function buildMobileViewMainLayoutShellMarkup({
                   <div class="button-holder">
                     <div class="button-holder-row tabs-row">
                       <div class="tabs">
-                        ${tabsMarkup}
+                        
                       </div>
                     </div>
                     <div class="button-holder-row page-nav-row">
-                      ${pageNav}
+                      ${tabsMarkup}
                     </div>
                     <div class="button-holder-row tools-row">
                       <div class="tl-tools-slot">${toolsMarkup}</div>
