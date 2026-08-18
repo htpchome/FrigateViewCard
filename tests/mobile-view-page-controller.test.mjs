@@ -77,6 +77,7 @@ const createHost = ({ popupOpen = false, domNodes = {} } = {}) => {
     _applyPreviewShellVisibility: () =>
       calls.push(["applyPreviewShellVisibility"]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
+    _renderShellPreserveLive: () => calls.push(["renderShellPreserveLive"]),
     _syncTabsShell: () => calls.push(["syncTabsShell"]),
     _renderAll: () => calls.push(["renderAll"]),
     _wideViewPageController: {
@@ -101,7 +102,7 @@ test("activateMobileViewPageRoute handles startup like single-view", () => {
   ]);
 });
 
-test("activateMobileViewPageRoute leaves preview and remounts quietly", () => {
+test("activateMobileViewPageRoute leaves preview and preserves live media", () => {
   const { host, calls } = createHost({ popupOpen: true });
   const controller = new MobileViewPageController(host, { PAGE_IDS });
 
@@ -110,11 +111,10 @@ test("activateMobileViewPageRoute leaves preview and remounts quietly", () => {
   assert.deepEqual(calls, [
     ["stopPreview"],
     ["closePopup"],
-    ["cancelPendingMount", "page-route-mobile-view"],
     ["applyPreviewShellVisibility"],
     ["applyStyleLayoutAndWideSyncForCard"],
     ["toggleClass", "mobile-view-active", true],
-    ["mountEngine", null, { quiet: true }],
+    ["renderShellPreserveLive"],
     ["syncTabsShell"],
     ["renderAll"],
   ]);

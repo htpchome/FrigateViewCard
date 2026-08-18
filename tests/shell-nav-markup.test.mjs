@@ -86,7 +86,7 @@ test("buildTabsMarkup supports custom tab button class", () => {
   assert.doesNotMatch(markup, /class="circle-btn/);
 });
 
-test("buildControlsSectionMarkup renders zoom and focus PTZ buttons", () => {
+test("buildControlsSectionMarkup enables pan, tilt, and zoom on the circle pad", () => {
   const markup = buildControlsSectionMarkup({
     cameraName: "Driveway",
     ptzReady: true,
@@ -95,14 +95,11 @@ test("buildControlsSectionMarkup renders zoom and focus PTZ buttons", () => {
     focusEnabled: true,
   });
 
-  assert.match(markup, /data-ptz-control="zoom-in"/);
-  assert.match(markup, /data-ptz-control="zoom-out"/);
-  assert.match(markup, /data-ptz-control="focus-in"/);
-  assert.match(markup, /data-ptz-control="focus-out"/);
-  assert.match(markup, /Driveway · Frigate PTZ ready/);
+  assert.match(markup, /<circle-pad-control-2 id="controls-pad"><\/circle-pad-control-2>/);
+  assert.doesNotMatch(markup, /disabled-actions=/);
 });
 
-test("buildControlsSectionMarkup disables unavailable auxiliary PTZ buttons", () => {
+test("buildControlsSectionMarkup disables unavailable zoom actions on the circle pad", () => {
   const markup = buildControlsSectionMarkup({
     cameraName: "Driveway",
     ptzReady: true,
@@ -111,7 +108,5 @@ test("buildControlsSectionMarkup disables unavailable auxiliary PTZ buttons", ()
     focusEnabled: false,
   });
 
-  assert.match(markup, /data-ptz-control="zoom-in"[^>]*disabled/);
-  assert.match(markup, /data-ptz-control="focus-in"[^>]*disabled/);
-  assert.match(markup, /controls-action-group is-disabled/);
+  assert.match(markup, /disabled-actions="zoom-in zoom-out"/);
 });

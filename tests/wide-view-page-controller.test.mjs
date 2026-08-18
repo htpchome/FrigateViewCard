@@ -27,6 +27,7 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
     _applyCardStyle: () => calls.push(["applyCardStyle"]),
     _setViewMode: (mode) => calls.push(["setViewMode", mode]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
+    _renderShellPreserveLive: () => calls.push(["renderShellPreserveLive"]),
     _syncTabsShell: () => calls.push(["syncTabsShell"]),
     _renderAll: () => calls.push(["renderAll"]),
   };
@@ -67,7 +68,7 @@ test("activateWideViewPageRoute startup grid chooses grid mode", () => {
   ]);
 });
 
-test("activateWideViewPageRoute leaves preview and remounts quietly", () => {
+test("activateWideViewPageRoute leaves preview and preserves live media", () => {
   const { host, calls } = createHost({ isWide: true, popupOpen: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
   controller.applyLayoutModeForCard = () => calls.push(["applyLayoutMode"]);
@@ -78,12 +79,11 @@ test("activateWideViewPageRoute leaves preview and remounts quietly", () => {
   assert.deepEqual(calls, [
     ["stopPreview"],
     ["closePopup"],
-    ["cancelPendingMount", "page-route-wide-view"],
     ["applyPreviewShellVisibility"],
     ["applyCardStyle"],
     ["applyLayoutMode"],
     ["syncColHeight"],
-    ["mountEngine", null, { quiet: true }],
+    ["renderShellPreserveLive"],
     ["syncTabsShell"],
     ["renderAll"],
   ]);
@@ -102,6 +102,9 @@ test("activateWideViewPageRoute honors deferCameraSwitch", () => {
     ["applyCardStyle"],
     ["applyLayoutMode"],
     ["syncColHeight"],
+    ["renderShellPreserveLive"],
+    ["syncTabsShell"],
+    ["renderAll"],
   ]);
 });
 

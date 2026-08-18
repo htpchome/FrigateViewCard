@@ -110,6 +110,9 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
       },
       _parentOrigStyle: null,
       parentElement: null,
+      _stopTwoWayTalkSession() {
+        calls.push(["stopTwoWayTalkSession"]);
+      },
       _stopSlideshowRotation() {
         calls.push(["stopSlideshowRotation"]);
       },
@@ -144,6 +147,7 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
 
     assert.deepEqual(clearTimeoutCalls, [33]);
     assert.deepEqual(calls, [
+      ["stopTwoWayTalkSession"],
       ["stopSlideshowRotation"],
       ["stopGridModeState"],
       ["stopPreviewMode"],

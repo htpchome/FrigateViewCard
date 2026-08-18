@@ -113,6 +113,7 @@ const createHost = ({
     _renderShell: () => calls.push(["renderShell"]),
     _setViewMode: (mode) => calls.push(["setViewMode", mode]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
+    _renderShellPreserveLive: () => calls.push(["renderShellPreserveLive"]),
     _syncTabsShell: () => calls.push(["syncTabsShell"]),
     _renderListLabel: () => calls.push(["renderListLabel"]),
     _renderList: () => calls.push(["renderList"]),
@@ -158,7 +159,7 @@ test("activateStandardPageRoute startup grid chooses grid mode", () => {
   ]);
 });
 
-test("activateStandardPageRoute leaves preview and remounts quietly", () => {
+test("activateStandardPageRoute leaves preview and preserves live media", () => {
   const { host, calls } = createHost({ popupOpen: true });
   host._pageId = "wide-view";
   const controller = new SingleViewPageController(host, { PAGE_IDS });
@@ -168,12 +169,11 @@ test("activateStandardPageRoute leaves preview and remounts quietly", () => {
   assert.deepEqual(calls, [
     ["stopPreview"],
     ["closePopup"],
-    ["cancelPendingMount", "page-route-wide-view"],
     ["applyPreviewShellVisibility"],
     ["applyCardStyle"],
     ["applyLayoutMode"],
     ["syncColHeightIfWideView"],
-    ["mountEngine", null, { quiet: true }],
+    ["renderShellPreserveLive"],
     ["syncTabsShell"],
     ["renderAll"],
   ]);
@@ -189,6 +189,9 @@ test("activateStandardPageRoute honors deferCameraSwitch", () => {
     ["applyPreviewShellVisibility"],
     ["applyCardStyle"],
     ["applyLayoutMode"],
+    ["renderShellPreserveLive"],
+    ["syncTabsShell"],
+    ["renderAll"],
   ]);
 });
 
@@ -685,13 +688,13 @@ test("single-view camera switcher render hides for a single camera when preview 
   assert.equal(nodes["#cam-switcher"].style.display, "none");
 });
 
-test("single-view camera switcher markup includes preview back button when enabled", () => {
+test("single-view camera switcher uses page navigation instead of a preview back button", () => {
   const { host } = createHost({ previewPageEnabled: true });
   const controller = new SingleViewPageController(host, { PAGE_IDS });
 
   const markup = controller.camSwitcherMarkup({ includeStatus: true });
 
-  assert.equal(markup.includes("data-preview-back"), true);
+  assert.equal(markup.includes("data-preview-back"), false);
   assert.equal(markup.includes('data-camidx="0"'), true);
   assert.equal(markup.includes("Front Door"), true);
 });

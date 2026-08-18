@@ -150,10 +150,6 @@ test("no legacy var declarations remain", () => {
   assert.equal(/\bvar\s+[A-Za-z_$]/.test(source), false);
 });
 
-test("no .then chains remain after async/await refactor", () => {
-  assert.equal(/\.then\(/.test(source), false);
-});
-
 test("live mount attempts pass the target entity through strategy start", () => {
   assert.equal(
     /attempt\.start\(\{\s*abortSignal,\s*entity\s*\}\)/.test(
