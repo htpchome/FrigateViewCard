@@ -204,7 +204,7 @@ test("go2rtc mounter HLS path commits the mounted engine on success", async () =
   });
 });
 
-test("go2rtc mounter WebRTC closes signaling after startup", async () => {
+test("go2rtc mounter WebRTC keeps signaling open until engine teardown", async () => {
   await withFakeDocument(async () => {
     const previousWebSocket = globalThis.WebSocket;
     const previousRtcPeerConnection = globalThis.RTCPeerConnection;
@@ -288,6 +288,8 @@ test("go2rtc mounter WebRTC closes signaling after startup", async () => {
       assignedEngine.pc.connectionState = "connected";
       assignedEngine.pc.emit("connectionstatechange");
       await new Promise((resolve) => setTimeout(resolve, 0));
+      assert.equal(closeCalls, 0);
+      assignedEngine.destroy();
       assert.equal(closeCalls, 1);
     } finally {
       globalThis.WebSocket = previousWebSocket;

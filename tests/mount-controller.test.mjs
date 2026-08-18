@@ -187,3 +187,68 @@ test("live mount controller delegates go2rtc race mounts outside the card shell"
   assert.equal(calls[7][1].mountStartedAt, 0);
   assert.equal(calls[7][1].mountTargetEntity, "");
 });
+
+test("live mount controller reuses a cached WebRTC engine before starting a race", async () => {
+  const calls = [];
+  const slot = { innerHTML: "occupied" };
+  const cachedEngine = { video: {} };
+  const controller = createLiveMountController({
+    getSlot: () => slot,
+    isPreviewPageActive: () => false,
+    getViewMode: () => "single",
+    isGridModeAvailable: () => true,
+    getMountInProgress: () => false,
+    getMountTargetEntity: () => "",
+    getMountState: () => ({
+      mountSeq: 1,
+      mountInProgress: false,
+      mountStartedAt: 0,
+      mountTargetEntity: "",
+    }),
+    applyMountTrackingState: () => {},
+    cancelPendingMount: () => {},
+    mountGridEngine: () => {},
+    cleanupEngine: () => calls.push("cleanup"),
+    getStreamMuted: () => true,
+    setEngineMountedMuted: () => {},
+    mseGraceController: {
+      takeGraceWebRtcEntry: (entity) => {
+        calls.push(["take-webrtc", entity]);
+        return { engine: cachedEngine };
+      },
+      adoptGraceWebRtcEngine: (targetSlot, engine) => {
+        calls.push(["adopt-webrtc", targetSlot, engine]);
+        return true;
+      },
+      takeGraceMseEntry: () => {
+        throw new Error("MSE cache should not be checked after WebRTC reuse");
+      },
+      adoptGraceMseEngine: () => false,
+    },
+    getPendingMountDestroyers: () => [],
+    setPendingMountDestroyers: () => {},
+    haDirectMounter: {
+      tryMount: async () => {
+        throw new Error("HA mount should not run after WebRTC reuse");
+      },
+    },
+    go2rtcRaceMounter: {
+      mountWithRace: async () => {
+        throw new Error("Transport race should not run after WebRTC reuse");
+      },
+    },
+    preferredStreamType: () => "webrtc",
+    setActiveStreamType: () => {},
+    setStreamLoading: () => {},
+    setStreamFallbackVisible: () => {},
+    scheduleResumeLive: () => {},
+    resolveUseGo2Rtc: () => true,
+  });
+
+  await controller.mount({ entity: "camera.front" });
+
+  assert.deepEqual(calls, [
+    ["take-webrtc", "camera.front"],
+    ["adopt-webrtc", slot, cachedEngine],
+  ]);
+});

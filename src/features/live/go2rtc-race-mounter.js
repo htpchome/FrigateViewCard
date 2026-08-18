@@ -13,6 +13,7 @@ import {
 const STRATEGY_HINT_COOLDOWN_MS = 120000;
 const STRATEGY_HINT_MAX_ENTRIES = 64;
 const DEFERRED_WEBRTC_MAX_HOLD_MS = 4000;
+const PREFERRED_WEBRTC_WAIT_MS = 500;
 
 export function createGo2RtcRaceMounter({
   mounter,
@@ -28,6 +29,7 @@ export function createGo2RtcRaceMounter({
   getPendingWebRtcTakeoverTimer,
   setPendingWebRtcTakeoverTimer,
   deferredWebRtcMaxHoldMs = DEFERRED_WEBRTC_MAX_HOLD_MS,
+  preferredWebRtcWaitMs = PREFERRED_WEBRTC_WAIT_MS,
   getNowMs = () => Date.now(),
 }) {
   const strategyHintsByEntity = new Map();
@@ -122,7 +124,7 @@ export function createGo2RtcRaceMounter({
     const orchestrator = new StreamOrchestrator({
       strategies,
       preferredType,
-      preferredWaitMs: 0,
+      preferredWaitMs: Math.max(0, Number(preferredWebRtcWaitMs) || 0),
       retainPreferredOnFallback: true,
     });
     slot?.attachOrchestrator?.(orchestrator);
@@ -177,13 +179,16 @@ export function createGo2RtcRaceMounter({
       adoptMountedAttempt(slot, winner);
       void destroyLosers();
       scheduleDeferredWebRtcTakeover({
+        entity,
         slot,
         deferredAttempt: deferredPreferredAttempt,
         mountToken,
         winnerEngine: winner.engine,
         winnerType: winner.type,
       });
-      markHintSuccess(entity, winner.type);
+      if (deferredPreferredType !== "webrtc") {
+        markHintSuccess(entity, winner.type);
+      }
       return true;
     }
 
@@ -308,6 +313,7 @@ export function createGo2RtcRaceMounter({
   }
 
   function scheduleDeferredWebRtcTakeover({
+    entity,
     slot,
     deferredAttempt,
     mountToken,
@@ -377,6 +383,7 @@ export function createGo2RtcRaceMounter({
         try {
           winnerEngine?.destroy?.();
         } catch (_) {}
+        markHintSuccess(entity, "webrtc");
       } finally {
         settleDeferredState();
       }

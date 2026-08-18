@@ -2677,7 +2677,7 @@ export class FrigateViewCard extends HTMLElement {
     this._renderList();
     this._streamMuted = true;
     this._renderMuteButton();
-    this._cancelPendingMount("switch-camera", { preserveMseEntity: prevEnt });
+    this._cancelPendingMount("switch-camera", { preserveLiveEntity: prevEnt });
     this._mountEngine();
     clearTimeout(this._switchLoadT);
     this._browseWindowLoaderController.loadWindow(true);

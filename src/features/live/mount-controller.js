@@ -150,6 +150,20 @@ export function createLiveMountController({
     const targetEntity = mountEntry.entity;
     const useGo2Rtc = resolveUseGo2Rtc?.(targetEntity) === true;
 
+    if (useGo2Rtc && (!forcedType || forcedType === "webrtc")) {
+      const graceWebRtcEntry =
+        mseGraceController.takeGraceWebRtcEntry?.(targetEntity) || null;
+      if (
+        graceWebRtcEntry?.engine &&
+        mseGraceController.adoptGraceWebRtcEngine?.(
+          slot,
+          graceWebRtcEntry.engine,
+        )
+      ) {
+        return;
+      }
+    }
+
     if (useGo2Rtc && (!forcedType || forcedType === "mse")) {
       const graceMseAction = resolveGraceMseReuseAction({
         useGo2Rtc,

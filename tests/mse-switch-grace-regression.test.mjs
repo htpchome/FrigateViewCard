@@ -27,7 +27,7 @@ const attemptPlannerSource = fs.readFileSync(
   "utf8",
 );
 
-test("camera switching preserves recent MSE engines for short switch-back reuse", () => {
+test("camera switching preserves recent live engines for short switch-back reuse", () => {
   assert.equal(
     cardSource.includes(
       'import { createMseGraceController } from "../features/live/mse-grace-controller.js";',
@@ -52,6 +52,18 @@ test("camera switching preserves recent MSE engines for short switch-back reuse"
   );
   assert.equal(mseGraceControllerSource.includes("takeGraceMseEntry"), true);
   assert.equal(mseGraceControllerSource.includes("adoptGraceMseEngine"), true);
+  assert.equal(
+    mseGraceControllerSource.includes("const webRtcGracePool = new Map()"),
+    true,
+  );
+  assert.equal(
+    mseGraceControllerSource.includes("takeGraceWebRtcEntry"),
+    true,
+  );
+  assert.equal(
+    mseGraceControllerSource.includes("adoptGraceWebRtcEngine"),
+    true,
+  );
   assert.equal(mseGraceControllerSource.includes("clearGracePool"), true);
   assert.equal(
     pendingDestroyersSource.includes("splitPendingDestroyersByGraceMse"),
@@ -60,11 +72,11 @@ test("camera switching preserves recent MSE engines for short switch-back reuse"
 });
 
 test("switch-camera cleanup keeps shell grace coordination and live race takeover separated", () => {
-  assert.equal(cardSource.includes("preserveMseEntity"), true);
+  assert.equal(cardSource.includes("preserveLiveEntity"), true);
   assert.equal(cardSource.includes("cleanupEngine(options)"), true);
   assert.match(
     mseGraceControllerSource,
-    /String\(getActiveStreamType\?\.\(\)\s*\|\|\s*""\)[\s\S]*?toLowerCase\(\)[\s\S]*?===\s*"mse"/,
+    /const activeStreamType[\s\S]*?activeStreamType === "webrtc"[\s\S]*?activeStreamType === "mse"/,
   );
   assert.equal(
     mseGraceControllerSource.includes('pendingAttempt?.type === "mse"'),
@@ -82,7 +94,7 @@ test("switch-camera cleanup keeps shell grace coordination and live race takeove
     mseGraceControllerSource.includes("appendChild(result.engine.video)"),
     true,
   );
-  assert.equal(mseGraceControllerSource.includes("preserveMseEntity"), true);
+  assert.equal(mseGraceControllerSource.includes("preserveLiveEntity"), true);
   assert.equal(cardSource.includes("_scheduleDeferredWebRtcTakeover"), false);
   assert.equal(
     go2rtcRaceMounterSource.includes("function scheduleDeferredWebRtcTakeover"),

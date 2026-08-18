@@ -35,6 +35,25 @@ export function createMseGraceController({
   setLiveNativeControls,
 }) {
   const mseGracePool = new Map();
+  const webRtcGracePool = new Map();
+  const terminalWebRtcStates = new Set(["closed", "failed", "disconnected"]);
+  let graceEntrySequence = 0;
+
+  const isWebRtcEngineReusable = (engine) => {
+    if (!engine?.video || !engine?.pc || !engine?.ws) return false;
+    const connectionState = String(engine.pc.connectionState || "")
+      .trim()
+      .toLowerCase();
+    const iceState = String(engine.pc.iceConnectionState || "")
+      .trim()
+      .toLowerCase();
+    const wsState = Number(engine.ws.readyState);
+    return (
+      !terminalWebRtcStates.has(connectionState) &&
+      !terminalWebRtcStates.has(iceState) &&
+      (!Number.isFinite(wsState) || wsState <= 1)
+    );
+  };
   let mseGraceHost = null;
 
   const evictGraceMseEntry = (entity) => {
@@ -50,11 +69,34 @@ export function createMseGraceController({
     } catch (_) {}
   };
 
-  const trimGraceMsePool = () => {
-    while (mseGracePool.size > graceMax) {
-      const oldestKey = mseGracePool.keys().next().value;
-      if (!oldestKey) break;
-      evictGraceMseEntry(oldestKey);
+  const evictGraceWebRtcEntry = (entity) => {
+    const key = normalizeGraceEntityKey(entity);
+    if (!key) return;
+    const entry = webRtcGracePool.get(key);
+    if (!entry) return;
+    entry.cancelled = true;
+    if (entry.timer) clearTimeout(entry.timer);
+    webRtcGracePool.delete(key);
+    try {
+      entry.engine?.destroy?.();
+    } catch (_) {}
+  };
+
+  const trimGracePool = () => {
+    const maxEntries = Math.max(0, Number(graceMax) || 0);
+    while (mseGracePool.size + webRtcGracePool.size > maxEntries) {
+      const mseKey = mseGracePool.keys().next().value || "";
+      const webRtcKey = webRtcGracePool.keys().next().value || "";
+      const mseOrder = Number(mseGracePool.get(mseKey)?.graceOrder) || Infinity;
+      const webRtcOrder =
+        Number(webRtcGracePool.get(webRtcKey)?.graceOrder) || Infinity;
+      if (mseOrder <= webRtcOrder) {
+        if (!mseKey) break;
+        evictGraceMseEntry(mseKey);
+      } else {
+        if (!webRtcKey) break;
+        evictGraceWebRtcEntry(webRtcKey);
+      }
     }
   };
 
@@ -83,8 +125,28 @@ export function createMseGraceController({
         evictGraceMseEntry(key);
       },
     });
+    entry.graceOrder = ++graceEntrySequence;
     mseGracePool.set(key, entry);
-    trimGraceMsePool();
+    trimGracePool();
+    return true;
+  };
+  const stashWebRtcEngineForGrace = (entity, engine) => {
+    const key = normalizeGraceEntityKey(entity);
+    if (!key || !isWebRtcEngineReusable(engine)) return false;
+    evictGraceWebRtcEntry(key);
+    ensureMseGraceHost().appendChild(engine.video);
+    prepareEngineVideoForGraceHost(engine.video);
+    const entry = createGraceEngineEntry({
+      engine,
+      graceMs,
+      onExpire: () => {
+        if (webRtcGracePool.get(key) !== entry) return;
+        evictGraceWebRtcEntry(key);
+      },
+    });
+    entry.graceOrder = ++graceEntrySequence;
+    webRtcGracePool.set(key, entry);
+    trimGracePool();
     return true;
   };
 
@@ -99,6 +161,7 @@ export function createMseGraceController({
         evictGraceMseEntry(key);
       },
     });
+    entry.graceOrder = ++graceEntrySequence;
     entry.promise = (async () => {
       try {
         const result = await promise;
@@ -124,8 +187,9 @@ export function createMseGraceController({
         return null;
       }
     })();
+    entry.graceOrder = ++graceEntrySequence;
     mseGracePool.set(key, entry);
-    trimGraceMsePool();
+    trimGracePool();
     return true;
   };
 
@@ -136,6 +200,15 @@ export function createMseGraceController({
     if (!entry) return null;
     if (entry.timer) clearTimeout(entry.timer);
     mseGracePool.delete(key);
+    return entry;
+  };
+  const takeGraceWebRtcEntry = (entity) => {
+    const key = normalizeGraceEntityKey(entity);
+    if (!key) return null;
+    const entry = webRtcGracePool.get(key);
+    if (!entry) return null;
+    if (entry.timer) clearTimeout(entry.timer);
+    webRtcGracePool.delete(key);
     return entry;
   };
 
@@ -169,6 +242,35 @@ export function createMseGraceController({
     void engine.video.play?.().catch?.(() => {});
     return true;
   };
+  const adoptGraceWebRtcEngine = (slot, engine) => {
+    if (!slot || !isWebRtcEngineReusable(engine)) {
+      try {
+        engine?.destroy?.();
+      } catch (_) {}
+      return false;
+    }
+    configureVideoElement(
+      engine.video,
+      buildVideoOptionsForView(
+        "live",
+        {
+          muted: getStreamMuted?.(),
+          controls: false,
+        },
+        { scopeKey: getScopeKey?.() },
+      ),
+    );
+    mountNodeIntoSlot(slot, engine.video);
+    attachVideoFit?.(engine.video);
+    setEngine?.(engine);
+    setEngineMountedMuted?.(getStreamMuted?.());
+    setActiveStreamType?.("webrtc");
+    setStreamLoading?.(false);
+    setStreamFallbackVisible?.(false);
+    if (getRotateOverlayActive?.()) setLiveNativeControls?.(true);
+    void engine.video.play?.().catch?.(() => {});
+    return true;
+  };
 
   const cleanupEngine = (options = {}) => {
     const pendingTakeoverTimer = getPendingWebRtcTakeoverTimer?.();
@@ -179,17 +281,19 @@ export function createMseGraceController({
     clearRotateOverlayAudioSync?.();
     clearRotateVideoFullscreenStyle?.();
 
-    const preserveMseEntity = String(options?.preserveMseEntity || "").trim();
+    const preserveLiveEntity = String(
+      options?.preserveLiveEntity || options?.preserveMseEntity || "",
+    ).trim();
     const pending = getPendingMountDestroyers?.() || [];
     setPendingMountDestroyers?.([]);
 
     const { toPreserve, toDestroy } = splitPendingDestroyersByGraceMse({
       pendingDestroyers: pending,
-      preserveMseEntity,
+      preserveMseEntity: preserveLiveEntity,
     });
 
     for (const pendingAttempt of toPreserve) {
-      stashPendingMsePromiseForGrace(preserveMseEntity, pendingAttempt.promise);
+      stashPendingMsePromiseForGrace(preserveLiveEntity, pendingAttempt.promise);
     }
     for (const pendingAttempt of toDestroy) {
       try {
@@ -199,12 +303,21 @@ export function createMseGraceController({
 
     const engine = getEngine?.();
     if (!engine) return;
+    const activeStreamType = String(getActiveStreamType?.() || "")
+      .trim()
+      .toLowerCase();
     if (
-      preserveMseEntity &&
-      String(getActiveStreamType?.() || "")
-        .trim()
-        .toLowerCase() === "mse" &&
-      stashMseEngineForGrace(preserveMseEntity, engine)
+      preserveLiveEntity &&
+      activeStreamType === "webrtc" &&
+      stashWebRtcEngineForGrace(preserveLiveEntity, engine)
+    ) {
+      setEngine?.(null);
+      return;
+    }
+    if (
+      preserveLiveEntity &&
+      activeStreamType === "mse" &&
+      stashMseEngineForGrace(preserveLiveEntity, engine)
     ) {
       setEngine?.(null);
       return;
@@ -221,6 +334,9 @@ export function createMseGraceController({
     for (const entity of [...mseGracePool.keys()]) {
       evictGraceMseEntry(entity);
     }
+    for (const entity of [...webRtcGracePool.keys()]) {
+      evictGraceWebRtcEntry(entity);
+    }
     try {
       mseGraceHost?.remove?.();
     } catch (_) {}
@@ -232,5 +348,7 @@ export function createMseGraceController({
     clearGracePool,
     takeGraceMseEntry,
     adoptGraceMseEngine,
+    takeGraceWebRtcEntry,
+    adoptGraceWebRtcEngine,
   };
 }

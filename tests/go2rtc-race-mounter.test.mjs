@@ -40,12 +40,15 @@ test("go2rtc race mounter adopts the fallback winner and retains deferred webrtc
   let pendingDestroyers = [];
   let adopted = null;
   let pendingTimer = null;
+  let webrtcCalls = 0;
+  let mseCalls = 0;
   let winnerDestroyed = false;
   let currentWinnerEngine = null;
   try {
     const raceMounter = createGo2RtcRaceMounter({
       mounter: {
         tryMountWebRtc: async (slot) => {
+          webrtcCalls += 1;
           await delay(20);
           return {
             ok: true,
@@ -54,16 +57,19 @@ test("go2rtc race mounter adopts the fallback winner and retains deferred webrtc
             engine: { destroy() {} },
           };
         },
-        tryMountMse: async (slot) => ({
-          ok: true,
-          type: "mse",
-          slot,
-          engine: {
-            destroy() {
-              winnerDestroyed = true;
+        tryMountMse: async (slot) => {
+          mseCalls += 1;
+          return {
+            ok: true,
+            type: "mse",
+            slot,
+            engine: {
+              destroy() {
+                winnerDestroyed = true;
+              },
             },
-          },
-        }),
+          };
+        },
         tryMountHls: async () => false,
       },
       isDesktop: true,
@@ -84,6 +90,7 @@ test("go2rtc race mounter adopts the fallback winner and retains deferred webrtc
       setPendingWebRtcTakeoverTimer: (timer) => {
         pendingTimer = timer;
       },
+      preferredWebRtcWaitMs: 5,
     });
 
     const slot = {
@@ -122,6 +129,16 @@ test("go2rtc race mounter adopts the fallback winner and retains deferred webrtc
     assert.equal(winnerDestroyed, true);
     assert.equal(pendingTimer, null);
     assert.deepEqual(pendingDestroyers, []);
+    const reusedHintResult = await raceMounter.mountWithRace({
+      slot,
+      entity: "camera.front",
+      mountToken: 8,
+    });
+
+    assert.equal(reusedHintResult, true);
+    assert.equal(adopted?.winner?.type, "webrtc");
+    assert.equal(webrtcCalls, 2);
+    assert.equal(mseCalls, 1);
   } finally {
     globalThis.document = previousDocument;
   }
@@ -344,6 +361,7 @@ test("go2rtc race mounter clears deferred webrtc after max hold window", async (
       getPendingWebRtcTakeoverTimer: () => null,
       setPendingWebRtcTakeoverTimer: () => {},
       deferredWebRtcMaxHoldMs: 40,
+      preferredWebRtcWaitMs: 5,
     });
 
     const slot = { appendChild() {} };

@@ -324,48 +324,12 @@ export function createGo2RtcMounter({
       iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
     });
     const ws = new WebSocket(wsUrl);
-    let streamStarted = false;
-    let signalingClosed = false;
-    let closeSignalingTimer = null;
     let abortBound = false;
 
-    const closeSignaling = () => {
-      if (signalingClosed) return;
-      signalingClosed = true;
-      if (closeSignalingTimer) {
-        clearTimeout(closeSignalingTimer);
-        closeSignalingTimer = null;
-      }
+    const destroy = () => {
       try {
         ws.close();
       } catch (_) {}
-    };
-
-    const closeSignalingIfConnected = () => {
-      const state = String(pc.connectionState || "")
-        .trim()
-        .toLowerCase();
-      const iceState = String(pc.iceConnectionState || "")
-        .trim()
-        .toLowerCase();
-      const connected =
-        state === "connected" ||
-        state === "completed" ||
-        iceState === "connected" ||
-        iceState === "completed";
-      if (connected) closeSignaling();
-    };
-
-    const scheduleSignalingClose = () => {
-      if (closeSignalingTimer) return;
-      closeSignalingTimer = setTimeout(() => {
-        closeSignalingTimer = null;
-        closeSignalingIfConnected();
-      }, 1500);
-    };
-
-    const destroy = () => {
-      closeSignaling();
       try {
         pc.close();
       } catch (_) {}
@@ -385,11 +349,6 @@ export function createGo2RtcMounter({
 
     const engine = { video, pc, ws, destroy };
     if (commit) assignCommittedEngine(engine);
-
-    pc.addEventListener("connectionstatechange", () => {
-      if (!streamStarted) return;
-      closeSignalingIfConnected();
-    });
 
     pc.addTransceiver("video", { direction: "recvonly" });
     pc.addTransceiver("audio", { direction: "recvonly" });
@@ -467,9 +426,6 @@ export function createGo2RtcMounter({
       destroy();
       return false;
     }
-
-    streamStarted = true;
-    scheduleSignalingClose();
 
     return resolveCommittedResult({
       commit,
