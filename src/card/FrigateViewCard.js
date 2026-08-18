@@ -90,6 +90,8 @@ import {
   resolvePageCapabilities,
   resolvePageInfoRowMarkup,
   resolvePageMainLayoutShellMarkup,
+  resolveRequiredPageShellRegions,
+  validatePageShellRegionMarkup,
 } from "../features/navigation/page-shell-registry.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
 import {} from "../integrations/frigate/url.js";
@@ -3027,7 +3029,7 @@ export class FrigateViewCard extends HTMLElement {
     const showCamSwitcher =
       this._config.cameras.length > 1 || this._isPreviewPageEnabled();
     const camSwitcher = showCamSwitcher
-      ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
+      ? `<div class="cam-switcher" id="cam-switcher" data-fvc-region="camera-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
       : "";
     const pageNav = this._pageNavigationController.pageNavMarkup();
     const shellProfile = this._activePageShellLayoutProfile();
@@ -3091,6 +3093,16 @@ export class FrigateViewCard extends HTMLElement {
           layoutProfile,
         }),
     });
+    const regionValidation = validatePageShellRegionMarkup(mainLayoutShell, {
+      requiredRegions: resolveRequiredPageShellRegions(shellProfile),
+    });
+    if (!regionValidation.valid) {
+      console.warn("[Frigate] Page shell region contract violation", {
+        pageId: this._pageId,
+        missing: regionValidation.missing,
+        duplicates: regionValidation.duplicates,
+      });
+    }
     const popupShell = buildPopupShellMarkup({
       icons: ICONS,
       version: VERSION,
@@ -3174,7 +3186,7 @@ export class FrigateViewCard extends HTMLElement {
       return "";
     }
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    return `<div class="mobile-view-two-way-talk-slot" id="mobile-view-two-way-talk-slot" ${visible ? "" : "hidden"}>${this._buildTwoWayTalkButtonMarkup()}</div>`;
+    return `<div class="mobile-view-two-way-talk-slot" id="mobile-view-two-way-talk-slot" data-fvc-region="two-way-talk" ${visible ? "" : "hidden"}>${this._buildTwoWayTalkButtonMarkup()}</div>`;
   }
 
   _buildTwoWayTalkButtonMarkup() {
@@ -3221,6 +3233,7 @@ export class FrigateViewCard extends HTMLElement {
     if (!existingSlot) {
       const actionSlot = document.createElement("div");
       actionSlot.className = "info-row-action-slot";
+      actionSlot.dataset.fvcRegion = "two-way-talk";
       actionSlot.innerHTML = actionMarkup;
       const stats = infoRow.querySelector(".stats");
       infoRow.insertBefore(actionSlot, stats || null);
@@ -3974,6 +3987,7 @@ export class FrigateViewCard extends HTMLElement {
     const filterPanel = document.createElement("div");
     filterPanel.id = "filter-panel";
     filterPanel.className = "filter-panel";
+    filterPanel.dataset.fvcRegion = "filter-panel";
     filterPanel.style.display = "none";
     tabs.after(filterPanel);
   }
@@ -3985,6 +3999,7 @@ export class FrigateViewCard extends HTMLElement {
     const calPanel = document.createElement("div");
     calPanel.id = "cal-panel";
     calPanel.className = "cal-panel";
+    calPanel.dataset.fvcRegion = "calendar-panel";
     calPanel.style.display = "none";
     toolsEl.after(calPanel);
   }

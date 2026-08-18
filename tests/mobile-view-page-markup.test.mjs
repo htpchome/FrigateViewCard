@@ -125,4 +125,12 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
     true,
   );
   assert.equal(markup.includes('id="two-way-talk-btn"'), true);
+  assert.equal(
+    markup.match(/data-fvc-region="tabs"/g)?.length,
+    1,
+  );
+  assert.equal(
+    markup.match(/data-fvc-region="tools"/g)?.length,
+    1,
+  );
 });

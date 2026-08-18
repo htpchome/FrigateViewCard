@@ -2,7 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildBrowseMarkup,
   buildControlsSectionMarkup,
+  buildFooterMarkup,
+  buildInfoRowMarkup,
+  buildLiveEngineWrapMarkup,
+  buildMainLayoutShellMarkup,
+  buildPageNavMarkup,
   buildTabsMarkup,
   buildToolsMarkup,
 } from "../src/card/controls/shell-nav.tmpl.js";
@@ -109,4 +115,56 @@ test("buildControlsSectionMarkup disables unavailable zoom actions on the circle
   });
 
   assert.match(markup, /disabled-actions="zoom-in zoom-out"/);
+});
+
+test("shared shell builders expose stable page region anchors", () => {
+  const pageNav = buildPageNavMarkup({
+    routes: ["single-view"],
+    activePageId: "single-view",
+    getRouteLabel: () => "Single View",
+    getRouteIcon: () => "S",
+  });
+  const infoRow = buildInfoRowMarkup({
+    title: "Camera",
+    subtitle: "Frigate",
+    version: "1.0.0",
+  });
+  const liveEngineWrap = buildLiveEngineWrapMarkup({
+    icons: { live: "L", volOff: "M", volOn: "V", expand: "E" },
+    streamMuted: true,
+  });
+  const browseMarkup = buildBrowseMarkup({
+    icons: { left: "<", right: ">" },
+  });
+  const footerMarkup = buildFooterMarkup({
+    icons: { frigateView: "F" },
+  });
+  const shellMarkup = buildMainLayoutShellMarkup({
+    liveEngineWrap,
+    infoRow,
+    pageNav,
+    camSwitcher: "",
+    tabsMarkup: "Tabs",
+    toolsMarkup: "Tools",
+    browseMarkup,
+    footerMarkup,
+  });
+
+  for (const regionName of [
+    "live",
+    "information",
+    "page-navigation",
+    "tabs",
+    "tools",
+    "browse-header",
+    "browse",
+    "footer",
+  ]) {
+    assert.equal(
+      shellMarkup.match(
+        new RegExp(`data-fvc-region="${regionName}"`, "g"),
+      )?.length,
+      1,
+    );
+  }
 });

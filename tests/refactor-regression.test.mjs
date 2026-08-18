@@ -1585,3 +1585,38 @@ test("editor stylesheet keeps core config surface variables intact", () => {
     true,
   );
 });
+
+test("page shell regions are validated before the shell is committed", () => {
+  const validationIndex = cardSource.indexOf(
+    "validatePageShellRegionMarkup(mainLayoutShell, {",
+  );
+  const shellCommitIndex = cardSource.indexOf(
+    "this.shadowRoot.innerHTML = `<style>${STYLES}</style>",
+  );
+
+  assert.ok(validationIndex >= 0);
+  assert.ok(shellCommitIndex > validationIndex);
+});
+
+test("page shell replacement preserves the existing live wrapper", () => {
+  const preserveStart = cardSource.indexOf("_renderShellPreserveLive() {");
+  const preserveEnd = cardSource.indexOf(
+    "_shouldRenderTwoWayTalkButtonForActiveCamera()",
+    preserveStart,
+  );
+  const preserveSource = cardSource.slice(preserveStart, preserveEnd);
+  const detachIndex = preserveSource.indexOf(
+    "parent.removeChild(preservedEngWrap);",
+  );
+  const renderIndex = preserveSource.indexOf(
+    "this._renderShell();",
+    detachIndex,
+  );
+  const restoreIndex = preserveSource.indexOf(
+    "nextEngWrap.replaceWith(preservedEngWrap);",
+  );
+
+  assert.ok(detachIndex >= 0);
+  assert.ok(renderIndex > detachIndex);
+  assert.ok(restoreIndex > renderIndex);
+});

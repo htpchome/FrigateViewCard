@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1488";
+const VERSION = "1.0.1489";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3237,7 +3237,7 @@ function buildMobileViewInfoRowMarkup({
   version,
   eventsCount = "\u2014"
 }) {
-  return `<div class="info-row mobile-view-info-row">
+  return `<div class="info-row mobile-view-info-row" data-fvc-region="information">
               <div>
                 <div class="info-title" id="info-title">${title}</div>
                 <span class="section-label" id="tl-range">${subtitle}</span>
@@ -3280,7 +3280,7 @@ function buildMobileViewMainLayoutShellMarkup({
                 <div class="${tabsHolderClassName} shadow-small">
                   <div class="button-holder">
                     <div class="button-holder-row tabs-row">
-                      <div class="tabs">
+                      <div class="tabs" data-fvc-region="tabs">
                         ${tabsMarkup}
                       </div>
                     </div>
@@ -3288,7 +3288,7 @@ function buildMobileViewMainLayoutShellMarkup({
                       ${pageNav}
                     </div>
                     <div class="button-holder-row tools-row">
-                      <div class="tl-tools-slot">${toolsMarkup}</div>
+                      <div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>
                     </div>
                   </div>
                 </div>
@@ -3345,7 +3345,7 @@ function buildPageNavMarkup({
   getRouteLabel,
   getRouteIcon
 }) {
-  return `<div class="page-nav" aria-label="Page navigation">${routes.map((pageId) => {
+  return `<div class="page-nav" data-fvc-region="page-navigation" aria-label="Page navigation">${routes.map((pageId) => {
     const isActive = pageId === activePageId;
     const label = getRouteLabel(pageId);
     const icon = typeof getRouteIcon === "function" ? getRouteIcon(pageId) : "";
@@ -3437,13 +3437,13 @@ function buildInfoRowMarkup({
   pageNav = "",
   centerActionMarkup = ""
 }) {
-  return `<div class="info-row">
+  return `<div class="info-row" data-fvc-region="information">
               <div class="info-left">
                 <div class="info-title" id="info-title">${title}</div>
                 <span class="section-label" id="tl-range">${subtitle}</span>
               </div>
               ${pageNav ? `<div class="info-row-page-nav">${pageNav}</div>` : ""}
-              ${centerActionMarkup ? `<div class="info-row-action-slot">${centerActionMarkup}</div>` : ""}
+              ${centerActionMarkup ? `<div class="info-row-action-slot" data-fvc-region="two-way-talk">${centerActionMarkup}</div>` : ""}
               <div class="stats">
                 <div class="stat">
                   <div class="sv">v${version}</div>
@@ -3467,7 +3467,7 @@ function buildInfoRowMarkup({
 function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
   const muteLabel = streamMuted ? "Unmute live view" : "Mute live view";
   const muteIcon = streamMuted ? icons.volOff : icons.volOn;
-  return `<div id="eng-wrap">
+  return `<div id="eng-wrap" data-fvc-region="live">
                 <frigate-live-stream id="engine">
                   <div class="ph">${icons.live}<span>Connecting\u2026</span></div>
                 </frigate-live-stream>
@@ -3490,7 +3490,7 @@ function mergeClassNames(...tokens) {
 }
 function buildBrowseMarkup({ icons, layoutProfile = {} }) {
   const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
-  return `<div class="browse-head" id="browse-head" style="display:none">
+  return `<div class="browse-head" id="browse-head" data-fvc-region="browse-header" style="display:none">
               <div class="browse-head-left">
                 <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${icons.left}Previous</button>
               </div>
@@ -3500,7 +3500,7 @@ function buildBrowseMarkup({ icons, layoutProfile = {} }) {
               </div>
             </div>
         
-            <div class="${browseClassName}" id="browse" style="display:none">
+            <div class="${browseClassName}" id="browse" data-fvc-region="browse" style="display:none">
               <div class="list-head">
                 <span class="newtoast" id="newtoast" style="display:none">new \u2726</span>
               </div>
@@ -3510,7 +3510,7 @@ function buildBrowseMarkup({ icons, layoutProfile = {} }) {
             </div>`;
 }
 function buildFooterMarkup({ icons }) {
-  return `<div class="footer">
+  return `<div class="footer" data-fvc-region="footer">
               <div><div class="frigate-view">${icons.frigateView}</div></div>
               <div class="more" id="older-hint" hidden>scroll for older\u2026</div>
               <div></div>
@@ -3627,7 +3627,7 @@ function buildMainLayoutShellMarkup({
             <div class="${tabsHolderClassName} shadow-small">
               <div class="button-holder">
                 <div class="button-holder-row tabs-row">
-                  <div class="tabs">            
+                  <div class="tabs" data-fvc-region="tabs">
                     ${tabsMarkup}
                   </div>
                 </div>
@@ -3635,7 +3635,7 @@ function buildMainLayoutShellMarkup({
                   ${pageNav}
                 </div>
                 <div class="button-holder-row tools-row">
-                  <div class="tl-tools-slot">${toolsMarkup}</div>
+                  <div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>
                 </div>
               </div>
             </div>
@@ -3646,6 +3646,20 @@ function buildMainLayoutShellMarkup({
 }
 
 // src/features/navigation/page-shell-registry.js
+const PAGE_SHELL_REGIONS = Object.freeze({
+  live: "live",
+  information: "information",
+  cameraSwitcher: "camera-switcher",
+  tabs: "tabs",
+  tools: "tools",
+  pageNavigation: "page-navigation",
+  browseHeader: "browse-header",
+  browse: "browse",
+  footer: "footer",
+  twoWayTalk: "two-way-talk",
+  filterPanel: "filter-panel",
+  calendarPanel: "calendar-panel"
+});
 function normalizeProfile(profile = {}) {
   if (!profile || typeof profile !== "object") return {};
   const infoRowBuilder = typeof profile.buildInfoRowMarkup === "function" ? profile.buildInfoRowMarkup : null;
@@ -3674,6 +3688,45 @@ function resolvePageCapabilities(profile = {}) {
     hasLive: caps.hasLive !== false,
     hasBrowse: caps.hasBrowse !== false,
     tabsVariant: caps.tabsVariant === "none" || caps.tabsVariant === "new-tabs" ? caps.tabsVariant : "standard"
+  };
+}
+function resolveRequiredPageShellRegions(profile = {}) {
+  const capabilities = resolvePageCapabilities(profile);
+  const requiredRegions = [];
+  if (capabilities.hasLive) {
+    requiredRegions.push(PAGE_SHELL_REGIONS.live);
+  }
+  if (capabilities.hasBrowse) {
+    requiredRegions.push(
+      PAGE_SHELL_REGIONS.browseHeader,
+      PAGE_SHELL_REGIONS.browse
+    );
+  }
+  if (capabilities.tabsVariant !== "none") {
+    requiredRegions.push(PAGE_SHELL_REGIONS.tabs, PAGE_SHELL_REGIONS.tools);
+  }
+  return requiredRegions;
+}
+function validatePageShellRegionMarkup(markup, { requiredRegions = [] } = {}) {
+  const counts = {};
+  const regionPattern = /\bdata-fvc-region\s*=\s*(?:"([^"]+)"|'([^']+)')/g;
+  for (const match of String(markup || "").matchAll(regionPattern)) {
+    const regionName = String(match[1] || match[2] || "").trim();
+    if (!regionName) continue;
+    counts[regionName] = (counts[regionName] || 0) + 1;
+  }
+  const required = [
+    ...new Set(
+      (Array.isArray(requiredRegions) ? requiredRegions : []).map((regionName) => String(regionName || "").trim()).filter(Boolean)
+    )
+  ];
+  const missing = required.filter((regionName) => !counts[regionName]);
+  const duplicates = Object.entries(counts).filter(([, count]) => count > 1).map(([regionName]) => regionName);
+  return {
+    valid: missing.length === 0 && duplicates.length === 0,
+    counts,
+    missing,
+    duplicates
   };
 }
 function resolvePageInfoRowMarkup(profile, { title, subtitle, version, host, buildDefaultInfoRowMarkup } = {}) {
@@ -18498,7 +18551,7 @@ const FrigateViewCard = class extends HTMLElement {
     const title = this._config.title || (this._config.cameras.length === 1 ? cap(camDisplayName(this._config.cameras[0])) : "Cameras") || "Camera";
     const subtitle = this._subtitleText();
     const showCamSwitcher = this._config.cameras.length > 1 || this._isPreviewPageEnabled();
-    const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
+    const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher" data-fvc-region="camera-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
     const pageNav = this._pageNavigationController.pageNavMarkup();
     const shellProfile = this._activePageShellLayoutProfile();
     const infoRow = resolvePageInfoRowMarkup(shellProfile, {
@@ -18559,6 +18612,16 @@ const FrigateViewCard = class extends HTMLElement {
         layoutProfile: layoutProfile2
       })
     });
+    const regionValidation = validatePageShellRegionMarkup(mainLayoutShell, {
+      requiredRegions: resolveRequiredPageShellRegions(shellProfile)
+    });
+    if (!regionValidation.valid) {
+      console.warn("[Frigate] Page shell region contract violation", {
+        pageId: this._pageId,
+        missing: regionValidation.missing,
+        duplicates: regionValidation.duplicates
+      });
+    }
     const popupShell = buildPopupShellMarkup({
       icons: ICONS,
       version: VERSION
@@ -18632,7 +18695,7 @@ const FrigateViewCard = class extends HTMLElement {
       return "";
     }
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    return `<div class="mobile-view-two-way-talk-slot" id="mobile-view-two-way-talk-slot" ${visible ? "" : "hidden"}>${this._buildTwoWayTalkButtonMarkup()}</div>`;
+    return `<div class="mobile-view-two-way-talk-slot" id="mobile-view-two-way-talk-slot" data-fvc-region="two-way-talk" ${visible ? "" : "hidden"}>${this._buildTwoWayTalkButtonMarkup()}</div>`;
   }
   _buildTwoWayTalkButtonMarkup() {
     const active = this._twoWayTalkActiveForCurrentCamera();
@@ -18665,6 +18728,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (!existingSlot) {
       const actionSlot = document.createElement("div");
       actionSlot.className = "info-row-action-slot";
+      actionSlot.dataset.fvcRegion = "two-way-talk";
       actionSlot.innerHTML = actionMarkup;
       const stats = infoRow.querySelector(".stats");
       infoRow.insertBefore(actionSlot, stats || null);
@@ -19323,6 +19387,7 @@ const FrigateViewCard = class extends HTMLElement {
     const filterPanel = document.createElement("div");
     filterPanel.id = "filter-panel";
     filterPanel.className = "filter-panel";
+    filterPanel.dataset.fvcRegion = "filter-panel";
     filterPanel.style.display = "none";
     tabs.after(filterPanel);
   }
@@ -19333,6 +19398,7 @@ const FrigateViewCard = class extends HTMLElement {
     const calPanel = document.createElement("div");
     calPanel.id = "cal-panel";
     calPanel.className = "cal-panel";
+    calPanel.dataset.fvcRegion = "calendar-panel";
     calPanel.style.display = "none";
     toolsEl.after(calPanel);
   }

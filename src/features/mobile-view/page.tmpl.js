@@ -97,7 +97,7 @@ export function buildMobileViewInfoRowMarkup({
   version,
   eventsCount = "—",
 }) {
-  return `<div class="info-row mobile-view-info-row">
+  return `<div class="info-row mobile-view-info-row" data-fvc-region="information">
               <div>
                 <div class="info-title" id="info-title">${title}</div>
                 <span class="section-label" id="tl-range">${subtitle}</span>
@@ -146,7 +146,7 @@ export function buildMobileViewMainLayoutShellMarkup({
                 <div class="${tabsHolderClassName} shadow-small">
                   <div class="button-holder">
                     <div class="button-holder-row tabs-row">
-                      <div class="tabs">
+                      <div class="tabs" data-fvc-region="tabs">
                         ${tabsMarkup}
                       </div>
                     </div>
@@ -154,7 +154,7 @@ export function buildMobileViewMainLayoutShellMarkup({
                       ${pageNav}
                     </div>
                     <div class="button-holder-row tools-row">
-                      <div class="tl-tools-slot">${toolsMarkup}</div>
+                      <div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>
                     </div>
                   </div>
                 </div>

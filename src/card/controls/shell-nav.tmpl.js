@@ -6,7 +6,7 @@ export function buildPageNavMarkup({
   getRouteLabel,
   getRouteIcon,
 }) {
-  return `<div class="page-nav" aria-label="Page navigation">${routes
+  return `<div class="page-nav" data-fvc-region="page-navigation" aria-label="Page navigation">${routes
     .map((pageId) => {
       const isActive = pageId === activePageId;
       const label = getRouteLabel(pageId);
@@ -127,13 +127,13 @@ export function buildInfoRowMarkup({
   pageNav = "",
   centerActionMarkup = "",
 }) {
-  return `<div class="info-row">
+  return `<div class="info-row" data-fvc-region="information">
               <div class="info-left">
                 <div class="info-title" id="info-title">${title}</div>
                 <span class="section-label" id="tl-range">${subtitle}</span>
               </div>
               ${pageNav ? `<div class="info-row-page-nav">${pageNav}</div>` : ""}
-              ${centerActionMarkup ? `<div class="info-row-action-slot">${centerActionMarkup}</div>` : ""}
+              ${centerActionMarkup ? `<div class="info-row-action-slot" data-fvc-region="two-way-talk">${centerActionMarkup}</div>` : ""}
               <div class="stats">
                 <div class="stat">
                   <div class="sv">v${version}</div>
@@ -158,7 +158,7 @@ export function buildInfoRowMarkup({
 export function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
   const muteLabel = streamMuted ? "Unmute live view" : "Mute live view";
   const muteIcon = streamMuted ? icons.volOff : icons.volOn;
-  return `<div id="eng-wrap">
+  return `<div id="eng-wrap" data-fvc-region="live">
                 <frigate-live-stream id="engine">
                   <div class="ph">${icons.live}<span>Connecting…</span></div>
                 </frigate-live-stream>
@@ -183,7 +183,7 @@ function mergeClassNames(...tokens) {
 
 export function buildBrowseMarkup({ icons, layoutProfile = {} }) {
   const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
-  return `<div class="browse-head" id="browse-head" style="display:none">
+  return `<div class="browse-head" id="browse-head" data-fvc-region="browse-header" style="display:none">
               <div class="browse-head-left">
                 <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${icons.left}Previous</button>
               </div>
@@ -193,7 +193,7 @@ export function buildBrowseMarkup({ icons, layoutProfile = {} }) {
               </div>
             </div>
         
-            <div class="${browseClassName}" id="browse" style="display:none">
+            <div class="${browseClassName}" id="browse" data-fvc-region="browse" style="display:none">
               <div class="list-head">
                 <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
               </div>
@@ -204,7 +204,7 @@ export function buildBrowseMarkup({ icons, layoutProfile = {} }) {
 }
 
 export function buildFooterMarkup({ icons }) {
-  return `<div class="footer">
+  return `<div class="footer" data-fvc-region="footer">
               <div><div class="frigate-view">${icons.frigateView}</div></div>
               <div class="more" id="older-hint" hidden>scroll for older…</div>
               <div></div>
@@ -330,7 +330,7 @@ export function buildMainLayoutShellMarkup({
             <div class="${tabsHolderClassName} shadow-small">
               <div class="button-holder">
                 <div class="button-holder-row tabs-row">
-                  <div class="tabs">            
+                  <div class="tabs" data-fvc-region="tabs">
                     ${tabsMarkup}
                   </div>
                 </div>
@@ -338,7 +338,7 @@ export function buildMainLayoutShellMarkup({
                   ${pageNav}
                 </div>
                 <div class="button-holder-row tools-row">
-                  <div class="tl-tools-slot">${toolsMarkup}</div>
+                  <div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>
                 </div>
               </div>
             </div>

@@ -7,6 +7,21 @@ import {
   buildMainLayoutShellMarkup,
 } from "../../card/controls/shell-nav.tmpl.js";
 
+export const PAGE_SHELL_REGIONS = Object.freeze({
+  live: "live",
+  information: "information",
+  cameraSwitcher: "camera-switcher",
+  tabs: "tabs",
+  tools: "tools",
+  pageNavigation: "page-navigation",
+  browseHeader: "browse-header",
+  browse: "browse",
+  footer: "footer",
+  twoWayTalk: "two-way-talk",
+  filterPanel: "filter-panel",
+  calendarPanel: "calendar-panel",
+});
+
 function normalizeProfile(profile = {}) {
   if (!profile || typeof profile !== "object") return {};
   const infoRowBuilder =
@@ -55,6 +70,56 @@ export function resolvePageCapabilities(profile = {}) {
       caps.tabsVariant === "none" || caps.tabsVariant === "new-tabs"
         ? caps.tabsVariant
         : "standard",
+  };
+}
+
+export function resolveRequiredPageShellRegions(profile = {}) {
+  const capabilities = resolvePageCapabilities(profile);
+  const requiredRegions = [];
+  if (capabilities.hasLive) {
+    requiredRegions.push(PAGE_SHELL_REGIONS.live);
+  }
+  if (capabilities.hasBrowse) {
+    requiredRegions.push(
+      PAGE_SHELL_REGIONS.browseHeader,
+      PAGE_SHELL_REGIONS.browse,
+    );
+  }
+  if (capabilities.tabsVariant !== "none") {
+    requiredRegions.push(PAGE_SHELL_REGIONS.tabs, PAGE_SHELL_REGIONS.tools);
+  }
+  return requiredRegions;
+}
+
+export function validatePageShellRegionMarkup(
+  markup,
+  { requiredRegions = [] } = {},
+) {
+  const counts = {};
+  const regionPattern = /\bdata-fvc-region\s*=\s*(?:"([^"]+)"|'([^']+)')/g;
+  for (const match of String(markup || "").matchAll(regionPattern)) {
+    const regionName = String(match[1] || match[2] || "").trim();
+    if (!regionName) continue;
+    counts[regionName] = (counts[regionName] || 0) + 1;
+  }
+
+  const required = [
+    ...new Set(
+      (Array.isArray(requiredRegions) ? requiredRegions : [])
+        .map((regionName) => String(regionName || "").trim())
+        .filter(Boolean),
+    ),
+  ];
+  const missing = required.filter((regionName) => !counts[regionName]);
+  const duplicates = Object.entries(counts)
+    .filter(([, count]) => count > 1)
+    .map(([regionName]) => regionName);
+
+  return {
+    valid: missing.length === 0 && duplicates.length === 0,
+    counts,
+    missing,
+    duplicates,
   };
 }
 

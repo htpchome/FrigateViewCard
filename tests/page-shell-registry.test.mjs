@@ -2,9 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  PAGE_SHELL_REGIONS,
   createPageShellRegistry,
   registerDefaultPageShellProfiles,
   resolvePageCapabilities,
+  resolveRequiredPageShellRegions,
+  validatePageShellRegionMarkup,
 } from "../src/features/navigation/page-shell-registry.js";
 
 const PAGE_IDS = Object.freeze({
@@ -102,17 +105,28 @@ test("mobile profile exposes custom main layout shell builder", () => {
   assert.equal(mobileProfile.tabsButtonClass, "icon-btn");
 
   const markup = mobileProfile.buildMainLayoutShellMarkup({
-    liveEngineWrap: '<div id="eng-wrap"></div>',
+    liveEngineWrap:
+      '<div id="eng-wrap" data-fvc-region="live"></div>',
     infoRow: '<div class="info-row"></div>',
-    pageNav: '<div class="page-nav"></div>',
-    camSwitcher: '<div class="cam-switcher"></div>',
-    rightColumnShell: '<div id="col-right"></div>',
+    pageNav:
+      '<div class="page-nav" data-fvc-region="page-navigation"></div>',
+    camSwitcher:
+      '<div class="cam-switcher" data-fvc-region="camera-switcher"></div>',
+    browseMarkup:
+      '<div data-fvc-region="browse-header"></div><div data-fvc-region="browse"></div>',
+    footerMarkup: '<div data-fvc-region="footer"></div>',
     layoutProfile: { layoutClass: "layout--mobile-view" },
   });
 
   assert.equal(markup.includes('id="mobile-container"'), true);
   assert.equal(markup.includes('id="mobile-top"'), true);
   assert.equal(markup.includes('id="mobile-bottom"'), true);
+  const validation = validatePageShellRegionMarkup(markup, {
+    requiredRegions: resolveRequiredPageShellRegions(mobileProfile),
+  });
+  assert.equal(validation.valid, true);
+  assert.deepEqual(validation.missing, []);
+  assert.deepEqual(validation.duplicates, []);
 });
 
 test("single and wide info rows render host action markup", () => {
@@ -143,4 +157,50 @@ test("single and wide info rows render host action markup", () => {
 
   assert.equal(singleInfoRow.includes("two-way-talk-btn"), true);
   assert.equal(wideInfoRow.includes("two-way-talk-btn"), true);
+});
+
+test("required page shell regions follow declared capabilities", () => {
+  assert.deepEqual(
+    resolveRequiredPageShellRegions({
+      capabilities: {
+        hasLive: true,
+        hasBrowse: true,
+        tabsVariant: "standard",
+      },
+    }),
+    [
+      PAGE_SHELL_REGIONS.live,
+      PAGE_SHELL_REGIONS.browseHeader,
+      PAGE_SHELL_REGIONS.browse,
+      PAGE_SHELL_REGIONS.tabs,
+      PAGE_SHELL_REGIONS.tools,
+    ],
+  );
+
+  assert.deepEqual(
+    resolveRequiredPageShellRegions({
+      capabilities: {
+        hasLive: false,
+        hasBrowse: false,
+        tabsVariant: "none",
+      },
+    }),
+    [],
+  );
+});
+
+test("page shell region validation reports missing and duplicate anchors", () => {
+  const result = validatePageShellRegionMarkup(
+    `<div data-fvc-region="live"></div>
+     <div data-fvc-region="tabs"></div>
+     <div data-fvc-region="tabs"></div>`,
+    {
+      requiredRegions: [PAGE_SHELL_REGIONS.live, PAGE_SHELL_REGIONS.browse],
+    },
+  );
+
+  assert.equal(result.valid, false);
+  assert.deepEqual(result.counts, { live: 1, tabs: 2 });
+  assert.deepEqual(result.missing, [PAGE_SHELL_REGIONS.browse]);
+  assert.deepEqual(result.duplicates, [PAGE_SHELL_REGIONS.tabs]);
 });
