@@ -267,10 +267,10 @@ export class BrowseFilterController {
 
   toggleFilter() {
     if (this._host._tab === "recordings") return;
-    const filterPanel = this._host._$("#filter-panel");
+    const filterPanel = this._host._pageShellRegion("filterPanel");
     if (!filterPanel) return;
     const open = filterPanel.style.display === "none";
-    const calendarPanel = this._host._$("#cal-panel");
+    const calendarPanel = this._host._pageShellRegion("calendarPanel");
     if (calendarPanel) calendarPanel.style.display = "none";
     filterPanel.style.display = open ? "block" : "none";
     this._host._syncToolbarButtons();
@@ -278,7 +278,7 @@ export class BrowseFilterController {
   }
 
   renderFilter() {
-    const filterPanel = this._host.shadowRoot.querySelector("#filter-panel");
+    const filterPanel = this._host._pageShellRegion("filterPanel");
     if (!filterPanel || !this._buildFilterPanelMarkup) return;
     this.normalizeFilterSelections();
     filterPanel.innerHTML = this._buildFilterPanelMarkup({

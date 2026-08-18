@@ -1,12 +1,12 @@
 import { resolveActiveTab } from "../../helpers.js";
 
-export function buildPageNavMarkup({
+export function buildPageNavButtonsMarkup({
   routes,
   activePageId,
   getRouteLabel,
   getRouteIcon,
 }) {
-  return `<div class="page-nav" data-fvc-region="page-navigation" aria-label="Page navigation">${routes
+  return routes
     .map((pageId) => {
       const isActive = pageId === activePageId;
       const label = getRouteLabel(pageId);
@@ -18,7 +18,11 @@ export function buildPageNavMarkup({
         isActive ? "true" : "false"
       }">${icon || label}</button>`;
     })
-    .join("")}</div>`;
+    .join("");
+}
+
+export function buildPageNavMarkup(options) {
+  return `<div class="page-nav" data-fvc-region="page-navigation" aria-label="Page navigation">${buildPageNavButtonsMarkup(options)}</div>`;
 }
 
 export function resolveSubtitleText(config) {
@@ -91,7 +95,9 @@ export function buildToolsMarkup({
         ${slideshowButton}
         <div class="divider">${icons.divider}</div>
         <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
+        <div class="filter-panel" id="filter-panel" data-fvc-region="filter-panel" style="display:none"></div>
         <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}" ${calendarDisabled ? "disabled" : ""}>${icons.calendar}</button>
+        <div class="cal-panel" id="cal-panel" data-fvc-region="calendar-panel" style="display:none"></div>
       </div>`;
   return markup;
 }

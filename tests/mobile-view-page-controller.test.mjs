@@ -14,6 +14,14 @@ const createNode = () => ({
   innerHTML: "",
 });
 
+const REGION_ROOT_SELECTORS = {
+  cameraSwitcher: "#cam-switcher",
+  browseHeader: "#browse-head",
+  browse: "#browse",
+  filterPanel: "#filter-panel",
+  calendarPanel: "#cal-panel",
+};
+
 const createHost = ({ popupOpen = false, domNodes = {} } = {}) => {
   const calls = [];
   const nodeMap = domNodes;
@@ -72,6 +80,9 @@ const createHost = ({ popupOpen = false, domNodes = {} } = {}) => {
       }
       return null;
     },
+    _pageShellRegion: (regionKey) =>
+      host._$(REGION_ROOT_SELECTORS[regionKey] || ""),
+    _pageShellRegionElement: (_regionKey, selector) => host._$(selector),
     _closePopup: () => calls.push(["closePopup"]),
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
     _applyPreviewShellVisibility: () =>

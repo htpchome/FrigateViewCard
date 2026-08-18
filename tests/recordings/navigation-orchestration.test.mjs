@@ -74,6 +74,11 @@ function createBrowseNavContext({
         if (selector === "#rec-day-next") return next;
         return null;
       },
+      _pageShellRegionElement(_regionKey, selector) {
+        if (selector === "#rec-day-prev") return prev;
+        if (selector === "#rec-day-next") return next;
+        return null;
+      },
       _cc() {
         return { clientId, cam: camera };
       },

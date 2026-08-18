@@ -6,33 +6,50 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
+const shellNavSource = fs.readFileSync(
+  new URL("../src/card/controls/shell-nav.tmpl.js", import.meta.url),
+  "utf8",
+);
 const stylesSource = fs.readFileSync(
   new URL("../src/styles.js", import.meta.url),
   "utf8",
 );
 
-test("tabs shell rebuild recreates filter and calendar panel hosts", () => {
-  assert.equal(cardSource.includes("_syncTabsShell()"), true);
-  assert.equal(cardSource.includes("this._createFilterPanel();"), true);
-  assert.equal(cardSource.includes("this._createCalendarPanel();"), true);
-});
-
-test("camera switch checks calendar panel with id selector", () => {
+test("tools markup owns filter and calendar panel hosts", () => {
   assert.equal(
-    cardSource.includes('this._$("#cal-panel")?.style.display'),
+    shellNavSource.includes('data-fvc-region="filter-panel"'),
     true,
   );
   assert.equal(
-    cardSource.includes('this._$("cal-panel")?.style.display'),
-    false,
+    shellNavSource.includes('data-fvc-region="calendar-panel"'),
+    true,
   );
+  assert.equal(cardSource.includes("this._createFilterPanel();"), false);
+  assert.equal(cardSource.includes("this._createCalendarPanel();"), false);
 });
 
-test("two-way talk action slot is rebuilt from active camera availability", () => {
-  assert.equal(cardSource.includes("_syncTwoWayTalkActionSlot()"), true);
-  assert.equal(cardSource.includes("this._syncTwoWayTalkActionSlot();"), true);
+test("camera switch checks the named calendar panel region", () => {
+  assert.equal(
+    cardSource.includes(
+      'this._pageShellRegion("calendarPanel")?.style.display',
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes('querySelector("#cal-panel")'), false);
+});
+
+test("two-way talk updates its existing region without repairing layout", () => {
+  const start = cardSource.indexOf("_syncTwoWayTalkActionSlot() {");
+  const end = cardSource.indexOf(
+    "_syncMobileViewTwoWayTalkSlot()",
+    start,
+  );
+  const methodSource = cardSource.slice(start, end);
+
+  assert.equal(methodSource.includes("if (!existingSlot) return;"), true);
+  assert.equal(methodSource.includes("document.createElement"), false);
+  assert.equal(methodSource.includes("existingSlot?.remove()"), false);
   assert.equal(cardSource.includes("button.hidden = !visible;"), true);
-  assert.equal(cardSource.includes('${visible ? "" : "hidden"}'), true);
 });
 
 test("two-way talk hidden button keeps the info row layout stable", () => {
@@ -57,4 +74,16 @@ test("two-way talk start and end paths synchronize the live audio state", () => 
     cardSource,
     /async _stopTwoWayTalkSession\(\) \{[\s\S]*?this\._setTwoWayTalkLiveAudioActive\(false\);/,
   );
+});
+
+test("tabs and tools synchronize independently without layout repair", () => {
+  const start = cardSource.indexOf("_syncTabsShell() {");
+  const end = cardSource.indexOf("async _loadTabData", start);
+  const methodSource = cardSource.slice(start, end);
+
+  assert.equal(methodSource.includes("if (!tabs && !toolsSlot) return;"), true);
+  assert.equal(methodSource.includes("if (tabs) tabs.innerHTML"), true);
+  assert.equal(methodSource.includes("if (toolsSlot) toolsSlot.innerHTML"), true);
+  assert.equal(methodSource.includes("_createFilterPanel"), false);
+  assert.equal(methodSource.includes("_createCalendarPanel"), false);
 });

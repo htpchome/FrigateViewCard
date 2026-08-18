@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1489";
+const VERSION = "1.0.1490";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3339,18 +3339,21 @@ function applyMobileViewPageMarkup({ host, pageIds }) {
 }
 
 // src/card/controls/shell-nav.tmpl.js
-function buildPageNavMarkup({
+function buildPageNavButtonsMarkup({
   routes,
   activePageId,
   getRouteLabel,
   getRouteIcon
 }) {
-  return `<div class="page-nav" data-fvc-region="page-navigation" aria-label="Page navigation">${routes.map((pageId) => {
+  return routes.map((pageId) => {
     const isActive = pageId === activePageId;
     const label = getRouteLabel(pageId);
     const icon = typeof getRouteIcon === "function" ? getRouteIcon(pageId) : "";
     return `<button class="page-nav-btn${isActive ? " active" : ""} tool icon-btn" type="button" data-page-route="${pageId}" aria-label="${label}" title="${label}" aria-pressed="${isActive ? "true" : "false"}">${icon || label}</button>`;
-  }).join("")}</div>`;
+  }).join("");
+}
+function buildPageNavMarkup(options) {
+  return `<div class="page-nav" data-fvc-region="page-navigation" aria-label="Page navigation">${buildPageNavButtonsMarkup(options)}</div>`;
 }
 function resolveSubtitleText(config) {
   return config?.subtitle || "Frigate";
@@ -3407,7 +3410,9 @@ function buildToolsMarkup({
         ${slideshowButton}
         <div class="divider">${icons.divider}</div>
         <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
+        <div class="filter-panel" id="filter-panel" data-fvc-region="filter-panel" style="display:none"></div>
         <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}" ${calendarDisabled ? "disabled" : ""}>${icons.calendar}</button>
+        <div class="cal-panel" id="cal-panel" data-fvc-region="calendar-panel" style="display:none"></div>
       </div>`;
   return markup;
 }
@@ -8734,10 +8739,10 @@ const BrowseCalendarPanelController = class {
     return false;
   }
   toggleCalendar() {
-    const panel = this._host._$("#cal-panel");
+    const panel = this._host._pageShellRegion("calendarPanel");
     if (!panel) return;
     const open = panel.style.display === "none";
-    const filterPanel = this._host._$("#filter-panel");
+    const filterPanel = this._host._pageShellRegion("filterPanel");
     if (filterPanel) filterPanel.style.display = "none";
     panel.style.display = open ? "block" : "none";
     this._host._syncToolbarButtons();
@@ -8806,7 +8811,8 @@ const BrowseCalendarPanelController = class {
       this._host._tzDateTimeToEpochSeconds(year, month, day, 23, 59, 59),
       this._deps.nowEpochSeconds()
     );
-    this._host.shadowRoot.querySelector("#cal-panel").style.display = "none";
+    const panel = this._host._pageShellRegion("calendarPanel");
+    if (panel) panel.style.display = "none";
     this._host._syncToolbarButtons();
     this._host._browseWindowLoaderController?.pruneNonActiveCamWindowCaches?.() ?? this._host._pruneNonActiveCamWindowCaches?.();
     void (async () => {
@@ -8815,7 +8821,7 @@ const BrowseCalendarPanelController = class {
     })();
   }
   renderCal() {
-    const panel = this._host.shadowRoot.querySelector("#cal-panel");
+    const panel = this._host._pageShellRegion("calendarPanel");
     if (!panel) return;
     panel.innerHTML = this._deps.buildCalendarPanelMarkup({
       monthDate: this.resolveCalendarMonthDate(),
@@ -9923,17 +9929,17 @@ const BrowseFilterController = class {
   }
   toggleFilter() {
     if (this._host._tab === "recordings") return;
-    const filterPanel = this._host._$("#filter-panel");
+    const filterPanel = this._host._pageShellRegion("filterPanel");
     if (!filterPanel) return;
     const open = filterPanel.style.display === "none";
-    const calendarPanel = this._host._$("#cal-panel");
+    const calendarPanel = this._host._pageShellRegion("calendarPanel");
     if (calendarPanel) calendarPanel.style.display = "none";
     filterPanel.style.display = open ? "block" : "none";
     this._host._syncToolbarButtons();
     if (open) this.renderFilter();
   }
   renderFilter() {
-    const filterPanel = this._host.shadowRoot.querySelector("#filter-panel");
+    const filterPanel = this._host._pageShellRegion("filterPanel");
     if (!filterPanel || !this._buildFilterPanelMarkup) return;
     this.normalizeFilterSelections();
     filterPanel.innerHTML = this._buildFilterPanelMarkup({
@@ -12101,8 +12107,14 @@ const RecordingsBrowseNavController = class {
   }
   async updateBrowseNav() {
     if (this._host._tab !== "recordings") return;
-    const prev = this._host._$("#rec-day-prev");
-    const next = this._host._$("#rec-day-next");
+    const prev = this._host._pageShellRegionElement(
+      "browseHeader",
+      "#rec-day-prev"
+    );
+    const next = this._host._pageShellRegionElement(
+      "browseHeader",
+      "#rec-day-next"
+    );
     if (!prev || !next) return;
     const { clientId, cam } = this._host._cc();
     const current = this._recordingsDayBounds();
@@ -13622,14 +13634,21 @@ const PageNavigationController = class {
       getRouteIcon: (pageId) => this.pageRouteIcon(pageId)
     });
   }
-  syncPageNavShell() {
-    this._host.shadowRoot.querySelectorAll(".page-nav").forEach((nav) => {
-      nav.innerHTML = this.pageNavMarkup();
+  pageNavButtonsMarkup() {
+    return this._constants.buildPageNavButtonsMarkup({
+      routes: this.pageRouteOptions(),
+      activePageId: this._constants.normalizePageRoute(this._host._pageId),
+      getRouteLabel: (pageId) => this.pageRouteLabel(pageId),
+      getRouteIcon: (pageId) => this.pageRouteIcon(pageId)
     });
+  }
+  syncPageNavShell() {
+    const nav = this._host._pageShellRegion("pageNavigation");
+    if (nav) nav.innerHTML = this.pageNavButtonsMarkup();
     this.syncPageNavigationButtons();
   }
   syncPageNavigationButtons() {
-    this._host.shadowRoot.querySelectorAll("[data-page-route]").forEach((button) => {
+    this._host._pageShellRegionElements("pageNavigation", "[data-page-route]").forEach((button) => {
       const isActive = button.dataset.pageRoute === this._constants.normalizePageRoute(this._host._pageId);
       button.classList.toggle("active", isActive);
       button.setAttribute("aria-pressed", isActive ? "true" : "false");
@@ -15057,7 +15076,7 @@ function buildStandardPageCamSwitcherMarkup(host, { includeStatus = true, mobile
   return mobile ? buildMobileViewCamSwitcherMarkup(args) : buildStandardCamSwitcherButtons(args);
 }
 function renderStandardPageCamSwitcher(host, { mobile = false } = {}) {
-  const el = host._$("#cam-switcher");
+  const el = host._pageShellRegion("cameraSwitcher");
   if (!el) return;
   if (!mobile && host._config.cameras.length < 2 && host._isPreviewPageEnabled?.() !== true) {
     el.style.display = "none";
@@ -15072,9 +15091,10 @@ function renderStandardPageCamSwitcher(host, { mobile = false } = {}) {
 function syncStandardPageStatus(host, { mobile = false } = {}) {
   const ent = host._hass?.states?.[host._activeCam?.entity];
   if (!ent) return;
-  const dot = host._$("#on-dot");
-  const lbl = host._$("#on-lbl");
-  const title = host._$("#info-title");
+  const statusRegionKey = mobile ? "cameraSwitcher" : "information";
+  const dot = host._pageShellRegionElement(statusRegionKey, "#on-dot");
+  const lbl = host._pageShellRegionElement(statusRegionKey, "#on-lbl");
+  const title = host._pageShellRegionElement("information", "#info-title");
   const ok = ent.state !== "unavailable";
   if (dot) {
     dot.style.color = mobile ? resolveMobileViewStatusColor(ok) : ok ? "#4ade80" : "#ef4444";
@@ -15095,11 +15115,17 @@ function syncStandardPageStatus(host, { mobile = false } = {}) {
 }
 function renderStandardPageStats(host, { mobile = false } = {}) {
   const eventsCount = host._allDisplayEvents().length;
-  const eventCountEl = host._$("#ev-count");
+  const eventCountEl = host._pageShellRegionElement(
+    "information",
+    "#ev-count"
+  );
   if (eventCountEl) {
     eventCountEl.textContent = mobile ? resolveMobileViewEventsCountText(eventsCount) : String(eventsCount);
   }
-  const streamEl = host._$("#stream-type");
+  const streamEl = host._pageShellRegionElement(
+    mobile ? "cameraSwitcher" : "information",
+    "#stream-type"
+  );
   if (streamEl) {
     streamEl.textContent = mobile ? resolveMobileViewStreamTypeText(host._activeStreamType) : host._activeStreamType || "--";
   }
@@ -15108,7 +15134,7 @@ function standardPageSubtitleText(host, { mobile = false } = {}) {
   return mobile ? resolveMobileViewSubtitleText(host._config) : host._config?.subtitle || "Frigate";
 }
 function renderStandardPageSubtitle(host, { mobile = false } = {}) {
-  const el = host._$("#tl-range");
+  const el = host._pageShellRegionElement("information", "#tl-range");
   if (!el) return;
   el.textContent = standardPageSubtitleText(host, { mobile });
 }
@@ -15137,10 +15163,13 @@ function standardPageControlsHeadingLabel(host) {
   return `${cameraName(camera)} \xB7 ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}`;
 }
 function renderStandardPageListLabel(host, ts = null) {
-  const labelEl = host._$("#browse-head-label");
-  const browseHead = host._$("#browse-head");
-  const prev = host._$("#rec-day-prev");
-  const next = host._$("#rec-day-next");
+  const browseHead = host._pageShellRegion("browseHeader");
+  const labelEl = host._pageShellRegionElement(
+    "browseHeader",
+    "#browse-head-label"
+  );
+  const prev = host._pageShellRegionElement("browseHeader", "#rec-day-prev");
+  const next = host._pageShellRegionElement("browseHeader", "#rec-day-next");
   if (!labelEl || !browseHead) return;
   browseHead.style.display = "flex";
   if (host._tab === "recordings") {
@@ -15194,9 +15223,12 @@ function renderStandardPageReviewsContent(host, items) {
 }
 function syncStandardPageBrowseHeadFromScroll(host) {
   if (!standardPageShowStickyDayHeaders(host)) return;
-  const list = host._$("#list");
-  const browse = host._$("#browse");
-  const label = host._$("#browse-head-label");
+  const browse = host._pageShellRegion("browse");
+  const list = host._pageShellRegionElement("browse", "#list");
+  const label = host._pageShellRegionElement(
+    "browseHeader",
+    "#browse-head-label"
+  );
   if (!list || !browse || !label) return;
   const nextLabel = resolveActiveDayLabelFromScroll({ list, browse });
   if (nextLabel) {
@@ -15204,7 +15236,7 @@ function syncStandardPageBrowseHeadFromScroll(host) {
   }
 }
 function renderStandardPageLegend(host) {
-  const el = host._$("#legend");
+  const el = host._pageShellRegionElement("filterPanel", "#legend");
   if (!el) return;
   const labels = host._browseFilterController?.labels?.() ?? host._labels?.() ?? [];
   let html = labels.map(
@@ -16486,6 +16518,7 @@ const FrigateViewCard = class extends HTMLElement {
       PAGE_IDS
     });
     this._pageNavigationController = new PageNavigationController(this, {
+      buildPageNavButtonsMarkup,
       buildPageNavMarkup,
       createNavigationFactory,
       getEnabledPageRoutes,
@@ -17941,18 +17974,19 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _syncToolbarButtons() {
     const buttonStates = this._toolbarButtonStates();
-    if (this._activePageShellCapabilities().tabsVariant !== "none") {
+    const toolsRegion = this._pageShellRegion("tools");
+    if (toolsRegion && this._activePageShellCapabilities().tabsVariant !== "none") {
       const shouldShowGrid = this._isGridModeAvailable();
       const shouldShowSlideshow = this._isSlideshowRotationAvailable();
-      const controlsBtnPresent = !!this._$("#controls-btn");
-      const gridBtnPresent = !!this._$("#grid-btn");
-      const slideshowBtnPresent = !!this._$("#slideshow-btn");
+      const controlsBtnPresent = !!this._pageShellRegionElement("tools", "#controls-btn");
+      const gridBtnPresent = !!this._pageShellRegionElement("tools", "#grid-btn");
+      const slideshowBtnPresent = !!this._pageShellRegionElement("tools", "#slideshow-btn");
       const needsToolsRerender = buttonStates.controlsVisible && !controlsBtnPresent || shouldShowGrid && !gridBtnPresent || shouldShowSlideshow && !slideshowBtnPresent;
       if (needsToolsRerender) {
         this._syncTabsShell();
       }
     }
-    const gridBtn = this._$("#grid-btn");
+    const gridBtn = this._pageShellRegionElement("tools", "#grid-btn");
     if (gridBtn) {
       const gridAvailable = this._isGridModeAvailable();
       const gridActive = this._viewMode === "grid";
@@ -17980,7 +18014,7 @@ const FrigateViewCard = class extends HTMLElement {
         }
       }
     }
-    const slideshowBtn = this._$("#slideshow-btn");
+    const slideshowBtn = this._pageShellRegionElement("tools", "#slideshow-btn");
     if (slideshowBtn) {
       const available = this._isSlideshowRotationAvailable();
       slideshowBtn.hidden = !available;
@@ -18005,7 +18039,7 @@ const FrigateViewCard = class extends HTMLElement {
       slideshowBtn.innerHTML = this._slideshowButtonIcon();
       if (!available) this._stopSlideshowRotation("unavailable", false);
     }
-    const controlsBtn = this._$("#controls-btn");
+    const controlsBtn = this._pageShellRegionElement("tools", "#controls-btn");
     if (controlsBtn) {
       controlsBtn.hidden = !buttonStates.controlsVisible;
       controlsBtn.style.display = buttonStates.controlsVisible ? "" : "none";
@@ -18017,17 +18051,17 @@ const FrigateViewCard = class extends HTMLElement {
         controlsActive ? "true" : "false"
       );
     }
-    const filterBtn = this._$("#filter-btn");
+    const filterBtn = this._pageShellRegionElement("tools", "#filter-btn");
     if (filterBtn) {
-      const filterPanel = this._$("#filter-panel");
+      const filterPanel = this._pageShellRegion("filterPanel");
       const filterOpen = !!filterPanel && filterPanel.style.display !== "none";
       filterBtn.disabled = buttonStates.filterDisabled;
       filterBtn.classList.toggle("active", filterOpen);
       filterBtn.setAttribute("aria-pressed", filterOpen ? "true" : "false");
     }
-    const calBtn = this._$("#cal-btn");
+    const calBtn = this._pageShellRegionElement("tools", "#cal-btn");
     if (calBtn) {
-      const calPanel = this._$("#cal-panel");
+      const calPanel = this._pageShellRegion("calendarPanel");
       const calOpen = !!calPanel && calPanel.style.display !== "none";
       calBtn.disabled = buttonStates.calendarDisabled;
       calBtn.classList.toggle("active", calOpen);
@@ -18253,7 +18287,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncStatus();
     this._renderStats();
     this._browseFilterController.normalizeFilterSelections();
-    if (this._$("#filter-panel")?.style.display !== "none") {
+    if (this._pageShellRegion("filterPanel")?.style.display !== "none") {
       this._renderFilter();
     }
     this._renderList();
@@ -18265,7 +18299,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._browseWindowLoaderController.loadWindow(true);
     this._applyCalendarActivityCacheForActiveCamera();
     void this._prefetchCalendarActivityForActiveCamera();
-    if (this._$("#cal-panel")?.style.display !== "none") {
+    if (this._pageShellRegion("calendarPanel")?.style.display !== "none") {
       this._renderCal();
     }
     this._syncTwoWayTalkButton();
@@ -18459,8 +18493,8 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _buildTabsMarkup() {
-    const filterPanel = this._$("#filter-panel");
-    const calendarPanel = this._$("#cal-panel");
+    const filterPanel = this._pageShellRegion("filterPanel");
+    const calendarPanel = this._pageShellRegion("calendarPanel");
     const filterPanelOpen = !!filterPanel && filterPanel.style.display !== "none";
     const calendarPanelOpen = !!calendarPanel && calendarPanel.style.display !== "none";
     const buttonStates = this._toolbarButtonStates();
@@ -18500,30 +18534,18 @@ const FrigateViewCard = class extends HTMLElement {
     return this._toolsMarkupCache || "";
   }
   _syncTabsShell() {
-    const tabs = this._$(".tabs");
-    const toolsSlot = this._$(".tl-tools-slot");
-    if (!tabs) return;
+    const tabs = this._pageShellRegion("tabs");
+    const toolsSlot = this._pageShellRegion("tools");
+    if (!tabs && !toolsSlot) return;
     if (this._activePageShellCapabilities().tabsVariant === "none") {
-      tabs.innerHTML = "";
+      if (tabs) tabs.innerHTML = "";
       if (toolsSlot) toolsSlot.innerHTML = "";
       return;
     }
     const prevTab = this._tab;
-    tabs.innerHTML = this._buildTabsMarkup();
-    if (toolsSlot) {
-      toolsSlot.innerHTML = this._getToolsMarkup();
-    }
-    [
-      "#grid-btn",
-      "#slideshow-btn",
-      "#filter-btn",
-      "#cal-btn",
-      "#controls-btn"
-    ].forEach((sel) => {
-      delete this._domCache[sel];
-    });
-    this._createFilterPanel();
-    this._createCalendarPanel();
+    const tabsMarkup = this._buildTabsMarkup();
+    if (tabs) tabs.innerHTML = tabsMarkup;
+    if (toolsSlot) toolsSlot.innerHTML = this._getToolsMarkup();
     if (this._tab !== prevTab) {
       void this._loadTabData(this._tab);
     }
@@ -18637,8 +18659,6 @@ const FrigateViewCard = class extends HTMLElement {
       `;
     this._domCache = {};
     this._lastRenderedListHtml = "";
-    this._createFilterPanel();
-    this._createCalendarPanel();
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
@@ -18716,39 +18736,34 @@ const FrigateViewCard = class extends HTMLElement {
     }
   }
   _syncTwoWayTalkActionSlot() {
-    const infoRow = this._$(".info-row");
+    const infoRow = this._pageShellRegion("information");
     if (!infoRow) return;
+    const existingSlot = this._pageShellRegionElement(
+      "information",
+      `[data-fvc-region="two-way-talk"]`
+    );
+    if (!existingSlot) return;
     const actionMarkup = this._buildTwoWayTalkInfoButtonMarkup();
-    const existingSlot = infoRow.querySelector(".info-row-action-slot");
     if (!actionMarkup) {
-      existingSlot?.remove();
-      delete this._domCache["#two-way-talk-btn"];
+      existingSlot.innerHTML = "";
+      existingSlot.hidden = true;
       return;
     }
-    if (!existingSlot) {
-      const actionSlot = document.createElement("div");
-      actionSlot.className = "info-row-action-slot";
-      actionSlot.dataset.fvcRegion = "two-way-talk";
-      actionSlot.innerHTML = actionMarkup;
-      const stats = infoRow.querySelector(".stats");
-      infoRow.insertBefore(actionSlot, stats || null);
-      delete this._domCache["#two-way-talk-btn"];
-      return;
-    }
+    existingSlot.hidden = false;
     if (!existingSlot.querySelector("#two-way-talk-btn")) {
       existingSlot.innerHTML = actionMarkup;
-      delete this._domCache["#two-way-talk-btn"];
     }
   }
   _syncMobileViewTwoWayTalkSlot() {
-    const slot = this._$("#mobile-view-two-way-talk-slot");
+    if (!this._isMobileViewPageActive()) return;
+    const slot = this._pageShellRegion("twoWayTalk");
     if (!slot) return;
     slot.hidden = !this._shouldRenderTwoWayTalkButtonForActiveCamera();
   }
   _syncTwoWayTalkButton() {
     this._syncTwoWayTalkActionSlot();
     this._syncMobileViewTwoWayTalkSlot();
-    const button = this._$("#two-way-talk-btn");
+    const button = this._pageShellRegionElement("twoWayTalk", "#two-way-talk-btn");
     if (!button) return;
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
     button.hidden = !visible;
@@ -18873,8 +18888,8 @@ const FrigateViewCard = class extends HTMLElement {
     );
   }
   _bindListScroll() {
-    const list = this._$("#list");
-    const browse = this._$("#browse");
+    const list = this._pageShellRegionElement("browse", "#list");
+    const browse = this._pageShellRegion("browse");
     if (!list && !browse) return;
     if (this._listScrollController) {
       this._listScrollController.dispose();
@@ -18897,7 +18912,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._recordingsSwipeController.dispose();
       this._recordingsSwipeController = null;
     }
-    const browse = this._$("#browse");
+    const browse = this._pageShellRegion("browse");
     if (!browse) return;
     this._recordingsSwipeController = new RecordingsSwipeController({
       browse,
@@ -18911,7 +18926,7 @@ const FrigateViewCard = class extends HTMLElement {
       setTapBlocked: (blocked) => {
         this._recordingsSwipeBlockTap = blocked;
       },
-      getList: () => this._$("#list"),
+      getList: () => this._pageShellRegionElement("browse", "#list"),
       getLastRenderedListHtml: () => this._lastRenderedListHtml,
       setLastRenderedListHtml: (html) => {
         this._lastRenderedListHtml = html;
@@ -18968,8 +18983,8 @@ const FrigateViewCard = class extends HTMLElement {
     this._recordingsSwipeController?.bounceArea(direction);
   }
   _scrollEventsToTop() {
-    const list = this._$("#list");
-    const browse = this._$("#browse");
+    const list = this._pageShellRegionElement("browse", "#list");
+    const browse = this._pageShellRegion("browse");
     const scroller = resolveActiveListScroller({ list, browse });
     if (!scroller) return;
     if (typeof scroller.scrollTo === "function") {
@@ -19381,26 +19396,10 @@ const FrigateViewCard = class extends HTMLElement {
     this._resumeSlideshowAfterPopup();
   }
   _createFilterPanel() {
-    const tabs = this._$("#filter-btn");
-    if (!tabs) return;
-    this._$("#filter-panel")?.remove();
-    const filterPanel = document.createElement("div");
-    filterPanel.id = "filter-panel";
-    filterPanel.className = "filter-panel";
-    filterPanel.dataset.fvcRegion = "filter-panel";
-    filterPanel.style.display = "none";
-    tabs.after(filterPanel);
+    return this._pageShellRegion("filterPanel");
   }
   _createCalendarPanel() {
-    const toolsEl = this._$("#cal-btn");
-    if (!toolsEl) return;
-    this._$("#cal-panel")?.remove();
-    const calPanel = document.createElement("div");
-    calPanel.id = "cal-panel";
-    calPanel.className = "cal-panel";
-    calPanel.dataset.fvcRegion = "calendar-panel";
-    calPanel.style.display = "none";
-    toolsEl.after(calPanel);
+    return this._pageShellRegion("calendarPanel");
   }
   _initPopupInteractions() {
     const popup = this._$("#myPopup");
@@ -19706,16 +19705,16 @@ const FrigateViewCard = class extends HTMLElement {
     if (tab !== "controls") {
       this._lastNonControlsTab = tab;
     }
-    this.shadowRoot.querySelectorAll("[data-tab]").forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
-    const filterBtn = this._$("#filter-btn");
+    this._pageShellRegionElements("tabs", "[data-tab]").forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
+    const filterBtn = this._pageShellRegionElement("tools", "#filter-btn");
     if (filterBtn)
       filterBtn.disabled = tab === "recordings" || tab === "controls";
     if (tab === "recordings" || tab === "controls") {
-      const filterPanel = this._$("#filter-panel");
+      const filterPanel = this._pageShellRegion("filterPanel");
       if (filterPanel) filterPanel.style.display = "none";
     } else {
       this._browseFilterController.normalizeFilterSelections();
-      if (this._$("#filter-panel")?.style.display !== "none") {
+      if (this._pageShellRegion("filterPanel")?.style.display !== "none") {
         this._renderFilter();
       }
     }
@@ -19746,8 +19745,8 @@ const FrigateViewCard = class extends HTMLElement {
     return available[0];
   }
   _resetBrowseScrollTop() {
-    const list = this._$("#list");
-    const browse = this._$("#browse");
+    const list = this._pageShellRegionElement("browse", "#list");
+    const browse = this._pageShellRegion("browse");
     if (list) list.scrollTop = 0;
     if (browse) browse.scrollTop = 0;
   }
@@ -20645,7 +20644,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // ── browse / filter ───────────────────────────────────────
   _applyBrowse() {
-    const b = this._$("#browse");
+    const b = this._pageShellRegion("browse");
     if (b) b.style.display = "flex";
   }
   _toggleBrowse() {
@@ -20713,6 +20712,17 @@ const FrigateViewCard = class extends HTMLElement {
     const next = this.shadowRoot.querySelector(sel);
     this._domCache[sel] = next;
     return next;
+  }
+  _pageShellRegion(regionKey) {
+    const regionName = PAGE_SHELL_REGIONS[regionKey];
+    if (!regionName) return null;
+    return this._$(`[data-fvc-region="${regionName}"]`);
+  }
+  _pageShellRegionElement(regionKey, selector) {
+    return this._pageShellRegion(regionKey)?.querySelector?.(selector) || null;
+  }
+  _pageShellRegionElements(regionKey, selector) {
+    return this._pageShellRegion(regionKey)?.querySelectorAll?.(selector) || [];
   }
   _renderAll() {
     if (this._isPreviewPageActive()) {
@@ -20850,7 +20860,7 @@ const FrigateViewCard = class extends HTMLElement {
     return true;
   }
   _renderList() {
-    const list = this._$("#list");
+    const list = this._pageShellRegionElement("browse", "#list");
     if (!list) return;
     if (this._tab === "controls") {
       return this._renderControlsTabList(list);
@@ -21135,9 +21145,9 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _syncOlderHint(forceHide = null) {
     syncOlderHintFromScroll({
-      hintEl: this._$("#older-hint"),
-      list: this._$("#list"),
-      browse: this._$("#browse"),
+      hintEl: this._pageShellRegionElement("footer", "#older-hint"),
+      list: this._pageShellRegionElement("browse", "#list"),
+      browse: this._pageShellRegion("browse"),
       tab: this._tab,
       forceHide
     });

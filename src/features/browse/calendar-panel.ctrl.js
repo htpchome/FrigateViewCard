@@ -28,10 +28,10 @@ export class BrowseCalendarPanelController {
   }
 
   toggleCalendar() {
-    const panel = this._host._$("#cal-panel");
+    const panel = this._host._pageShellRegion("calendarPanel");
     if (!panel) return;
     const open = panel.style.display === "none";
-    const filterPanel = this._host._$("#filter-panel");
+    const filterPanel = this._host._pageShellRegion("filterPanel");
     if (filterPanel) filterPanel.style.display = "none";
     panel.style.display = open ? "block" : "none";
     this._host._syncToolbarButtons();
@@ -108,7 +108,8 @@ export class BrowseCalendarPanelController {
       this._host._tzDateTimeToEpochSeconds(year, month, day, 23, 59, 59),
       this._deps.nowEpochSeconds(),
     );
-    this._host.shadowRoot.querySelector("#cal-panel").style.display = "none";
+    const panel = this._host._pageShellRegion("calendarPanel");
+    if (panel) panel.style.display = "none";
     this._host._syncToolbarButtons();
     this._host._browseWindowLoaderController?.pruneNonActiveCamWindowCaches?.() ??
       this._host._pruneNonActiveCamWindowCaches?.();
@@ -121,7 +122,7 @@ export class BrowseCalendarPanelController {
   }
 
   renderCal() {
-    const panel = this._host.shadowRoot.querySelector("#cal-panel");
+    const panel = this._host._pageShellRegion("calendarPanel");
     if (!panel) return;
     panel.innerHTML = this._deps.buildCalendarPanelMarkup({
       monthDate: this.resolveCalendarMonthDate(),

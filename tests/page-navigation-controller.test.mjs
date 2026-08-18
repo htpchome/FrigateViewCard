@@ -61,6 +61,12 @@ const createHarness = () => {
     _renderShell: () => calls.push(["renderShell"]),
     _deviceRouteBucket: () => "desktop",
     _syncPageNavigationButtons: () => calls.push(["syncButtons"]),
+    _pageShellRegion: (regionKey) =>
+      regionKey === "pageNavigation" ? navContainer : null,
+    _pageShellRegionElements: (regionKey, selector) =>
+      regionKey === "pageNavigation" && selector === "[data-page-route]"
+        ? [activeButton, inactiveButton]
+        : [],
     shadowRoot: {
       querySelectorAll: (selector) => {
         if (selector === ".page-nav") return [navContainer];
@@ -72,6 +78,7 @@ const createHarness = () => {
   };
 
   const constants = {
+    buildPageNavButtonsMarkup: () => "buttons-only",
     buildPageNavMarkup: ({ routes, activePageId, getRouteLabel }) =>
       `${routes.join("|")}:${activePageId}:${getRouteLabel(PAGE_IDS.preview)}`,
     getEnabledPageRoutes: () => [PAGE_IDS.singleView, PAGE_IDS.preview],
@@ -200,6 +207,13 @@ test("pageNavMarkup builds markup from route helpers", () => {
   assert.equal(markup, "single-view|preview:single-view:Preview");
 });
 
+test("pageNavButtonsMarkup builds region contents without a wrapper", () => {
+  const h = createHarness();
+  const controller = new PageNavigationController(h.host, h.constants);
+
+  assert.equal(controller.pageNavButtonsMarkup(), "buttons-only");
+});
+
 test("syncPageNavShell writes markup and updates nav buttons", () => {
   const h = createHarness();
   const controller = new PageNavigationController(h.host, h.constants);
@@ -208,7 +222,7 @@ test("syncPageNavShell writes markup and updates nav buttons", () => {
 
   assert.equal(
     h.navContainer.innerHTML,
-    "single-view|preview:single-view:Preview",
+    "buttons-only",
   );
   assert.deepEqual(h.calls, [
     ["toggle", "active", true, PAGE_IDS.singleView],
@@ -270,4 +284,14 @@ test("prepareConfiguredLandingPageShell selects and renders the landing shell be
     hasPendingDeepLinkTarget: false,
   });
   assert.deepEqual(h.calls, [["renderShell"]]);
+});
+
+test("navigation synchronization does not recreate an omitted region", () => {
+  const h = createHarness();
+  h.host._pageShellRegion = () => null;
+  h.host._pageShellRegionElements = () => [];
+  const controller = new PageNavigationController(h.host, h.constants);
+
+  assert.doesNotThrow(() => controller.syncPageNavShell());
+  assert.equal(h.navContainer.innerHTML, "");
 });

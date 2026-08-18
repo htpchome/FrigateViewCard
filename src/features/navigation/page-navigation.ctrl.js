@@ -42,16 +42,24 @@ export class PageNavigationController {
     });
   }
 
-  syncPageNavShell() {
-    this._host.shadowRoot.querySelectorAll(".page-nav").forEach((nav) => {
-      nav.innerHTML = this.pageNavMarkup();
+  pageNavButtonsMarkup() {
+    return this._constants.buildPageNavButtonsMarkup({
+      routes: this.pageRouteOptions(),
+      activePageId: this._constants.normalizePageRoute(this._host._pageId),
+      getRouteLabel: (pageId) => this.pageRouteLabel(pageId),
+      getRouteIcon: (pageId) => this.pageRouteIcon(pageId),
     });
+  }
+
+  syncPageNavShell() {
+    const nav = this._host._pageShellRegion("pageNavigation");
+    if (nav) nav.innerHTML = this.pageNavButtonsMarkup();
     this.syncPageNavigationButtons();
   }
 
   syncPageNavigationButtons() {
-    this._host.shadowRoot
-      .querySelectorAll("[data-page-route]")
+    this._host
+      ._pageShellRegionElements("pageNavigation", "[data-page-route]")
       .forEach((button) => {
         const isActive =
           button.dataset.pageRoute ===

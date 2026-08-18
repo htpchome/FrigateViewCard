@@ -9,9 +9,8 @@ test("renderCal builds panel markup from active month, day, and activity state",
     _calSelectedDay: "2026-08-05",
     _calMonth: new Date(Date.UTC(2026, 7, 15, 12, 0, 0)),
     _daysWithActivity: new Set(["2026-08-01"]),
-    shadowRoot: {
-      querySelector: (selector) => (selector === "#cal-panel" ? panel : null),
-    },
+    _pageShellRegion: (regionKey) =>
+      regionKey === "calendarPanel" ? panel : null,
     _tz: () => "UTC",
     _tzParts: () => ({ year: 2026, month: 8, day: 5 }),
     _winEnd: 0,
@@ -42,9 +41,8 @@ test("pickDay updates browse window, closes panel, and schedules window reload f
     _calSelectedDay: null,
     _winStart: 0,
     _winEnd: 0,
-    shadowRoot: {
-      querySelector: (selector) => (selector === "#cal-panel" ? panel : null),
-    },
+    _pageShellRegion: (regionKey) =>
+      regionKey === "calendarPanel" ? panel : null,
     _syncToolbarButtons: () => calls.push("syncToolbar"),
     _pruneNonActiveCamWindowCaches: () => calls.push("pruneCaches"),
     _loadWindow: async (replace) => calls.push(["loadWindow", replace]),
@@ -86,7 +84,7 @@ test("handleSidebarCalendarClick routes day, nav, and today interactions", () =>
   const host = {
     _tzParts: () => ({ year: 2026, month: 8, day: 5 }),
     _winEnd: 0,
-    shadowRoot: { querySelector: () => ({ style: { display: "block" } }) },
+    _pageShellRegion: () => ({ style: { display: "block" } }),
     _tzDateTimeToEpochSeconds: () => 0,
     _syncToolbarButtons: () => {},
     _pruneNonActiveCamWindowCaches: () => {},
@@ -138,9 +136,9 @@ test("toggleCalendar opens the panel, closes filters, initializes month, and sta
   const host = {
     _calMonth: null,
     _winEnd: 123,
-    _$: (selector) => {
-      if (selector === "#cal-panel") return calendarPanel;
-      if (selector === "#filter-panel") return filterPanel;
+    _pageShellRegion: (regionKey) => {
+      if (regionKey === "calendarPanel") return calendarPanel;
+      if (regionKey === "filterPanel") return filterPanel;
       return null;
     },
     _syncToolbarButtons: () => calls.push("syncToolbar"),
@@ -166,4 +164,13 @@ test("toggleCalendar opens the panel, closes filters, initializes month, and sta
     "renderCal",
     "prefetch",
   ]);
+});
+
+test("calendar controller does not create an omitted panel region", () => {
+  const controller = new BrowseCalendarPanelController({
+    _pageShellRegion: () => null,
+  });
+
+  assert.doesNotThrow(() => controller.toggleCalendar());
+  assert.doesNotThrow(() => controller.renderCal());
 });

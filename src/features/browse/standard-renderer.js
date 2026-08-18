@@ -72,7 +72,7 @@ export function buildStandardPageCamSwitcherMarkup(
 }
 
 export function renderStandardPageCamSwitcher(host, { mobile = false } = {}) {
-  const el = host._$("#cam-switcher");
+  const el = host._pageShellRegion("cameraSwitcher");
   if (!el) return;
   if (
     !mobile &&
@@ -92,9 +92,10 @@ export function renderStandardPageCamSwitcher(host, { mobile = false } = {}) {
 export function syncStandardPageStatus(host, { mobile = false } = {}) {
   const ent = host._hass?.states?.[host._activeCam?.entity];
   if (!ent) return;
-  const dot = host._$("#on-dot");
-  const lbl = host._$("#on-lbl");
-  const title = host._$("#info-title");
+  const statusRegionKey = mobile ? "cameraSwitcher" : "information";
+  const dot = host._pageShellRegionElement(statusRegionKey, "#on-dot");
+  const lbl = host._pageShellRegionElement(statusRegionKey, "#on-lbl");
+  const title = host._pageShellRegionElement("information", "#info-title");
   const ok = ent.state !== "unavailable";
   if (dot) {
     dot.style.color = mobile
@@ -127,13 +128,19 @@ export function syncStandardPageStatus(host, { mobile = false } = {}) {
 
 export function renderStandardPageStats(host, { mobile = false } = {}) {
   const eventsCount = host._allDisplayEvents().length;
-  const eventCountEl = host._$("#ev-count");
+  const eventCountEl = host._pageShellRegionElement(
+    "information",
+    "#ev-count",
+  );
   if (eventCountEl) {
     eventCountEl.textContent = mobile
       ? resolveMobileViewEventsCountText(eventsCount)
       : String(eventsCount);
   }
-  const streamEl = host._$("#stream-type");
+  const streamEl = host._pageShellRegionElement(
+    mobile ? "cameraSwitcher" : "information",
+    "#stream-type",
+  );
   if (streamEl) {
     streamEl.textContent = mobile
       ? resolveMobileViewStreamTypeText(host._activeStreamType)
@@ -148,7 +155,7 @@ export function standardPageSubtitleText(host, { mobile = false } = {}) {
 }
 
 export function renderStandardPageSubtitle(host, { mobile = false } = {}) {
-  const el = host._$("#tl-range");
+  const el = host._pageShellRegionElement("information", "#tl-range");
   if (!el) return;
   el.textContent = standardPageSubtitleText(host, { mobile });
 }
@@ -186,10 +193,13 @@ export function standardPageControlsHeadingLabel(host) {
 }
 
 export function renderStandardPageListLabel(host, ts = null) {
-  const labelEl = host._$("#browse-head-label");
-  const browseHead = host._$("#browse-head");
-  const prev = host._$("#rec-day-prev");
-  const next = host._$("#rec-day-next");
+  const browseHead = host._pageShellRegion("browseHeader");
+  const labelEl = host._pageShellRegionElement(
+    "browseHeader",
+    "#browse-head-label",
+  );
+  const prev = host._pageShellRegionElement("browseHeader", "#rec-day-prev");
+  const next = host._pageShellRegionElement("browseHeader", "#rec-day-next");
   if (!labelEl || !browseHead) return;
 
   browseHead.style.display = "flex";
@@ -253,9 +263,12 @@ export function renderStandardPageReviewsContent(host, items) {
 export function syncStandardPageBrowseHeadFromScroll(host) {
   if (!standardPageShowStickyDayHeaders(host)) return;
 
-  const list = host._$("#list");
-  const browse = host._$("#browse");
-  const label = host._$("#browse-head-label");
+  const browse = host._pageShellRegion("browse");
+  const list = host._pageShellRegionElement("browse", "#list");
+  const label = host._pageShellRegionElement(
+    "browseHeader",
+    "#browse-head-label",
+  );
   if (!list || !browse || !label) return;
 
   const nextLabel = resolveActiveDayLabelFromScroll({ list, browse });
@@ -265,7 +278,7 @@ export function syncStandardPageBrowseHeadFromScroll(host) {
 }
 
 export function renderStandardPageLegend(host) {
-  const el = host._$("#legend");
+  const el = host._pageShellRegionElement("filterPanel", "#legend");
   if (!el) return;
   const labels =
     host._browseFilterController?.labels?.() ?? host._labels?.() ?? [];

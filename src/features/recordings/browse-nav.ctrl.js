@@ -282,8 +282,14 @@ export class RecordingsBrowseNavController {
 
   async updateBrowseNav() {
     if (this._host._tab !== "recordings") return;
-    const prev = this._host._$("#rec-day-prev");
-    const next = this._host._$("#rec-day-next");
+    const prev = this._host._pageShellRegionElement(
+      "browseHeader",
+      "#rec-day-prev",
+    );
+    const next = this._host._pageShellRegionElement(
+      "browseHeader",
+      "#rec-day-next",
+    );
     if (!prev || !next) return;
 
     const { clientId, cam } = this._host._cc();

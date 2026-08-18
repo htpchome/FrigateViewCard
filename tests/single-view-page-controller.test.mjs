@@ -11,6 +11,14 @@ const createNode = () => ({
   innerHTML: "",
 });
 
+const REGION_ROOT_SELECTORS = {
+  cameraSwitcher: "#cam-switcher",
+  browseHeader: "#browse-head",
+  browse: "#browse",
+  filterPanel: "#filter-panel",
+  calendarPanel: "#cal-panel",
+};
+
 const createHost = ({
   isWide = false,
   popupOpen = false,
@@ -66,6 +74,9 @@ const createHost = ({
       }
       return nodeMap[selector] || null;
     },
+    _pageShellRegion: (regionKey) =>
+      host._$(REGION_ROOT_SELECTORS[regionKey] || ""),
+    _pageShellRegionElement: (_regionKey, selector) => host._$(selector),
     _closePopup: () => calls.push(["closePopup"]),
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
     _applyPreviewShellVisibility: () =>
@@ -842,4 +853,22 @@ test("single-view browse-head sync follows active sticky day label", () => {
     nodes["#browse-head-label"].textContent,
     "Wed - Jul 31st - Recent Alerts",
   );
+});
+
+test("standard render helpers leave omitted regions untouched", () => {
+  const { host } = createHost();
+  host._pageShellRegion = () => null;
+  host._pageShellRegionElement = () => null;
+  host._$ = () => {
+    throw new Error("global selector fallback used");
+  };
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  assert.doesNotThrow(() => controller.renderCamSwitcher());
+  assert.doesNotThrow(() => controller.syncStatus());
+  assert.doesNotThrow(() => controller.renderStats());
+  assert.doesNotThrow(() => controller.renderSubtitle());
+  assert.doesNotThrow(() => controller.renderLegend());
+  assert.doesNotThrow(() => controller.renderListLabel());
+  assert.doesNotThrow(() => controller.syncBrowseHeadFromScroll());
 });

@@ -574,6 +574,11 @@ test("BrowseFilterController handles filter panel interactions and rendering", (
       if (selector === "#cal-panel") return calendarPanel;
       return null;
     },
+    _pageShellRegion: (regionKey) => {
+      if (regionKey === "filterPanel") return filterPanel;
+      if (regionKey === "calendarPanel") return calendarPanel;
+      return null;
+    },
     _syncToolbarButtons: () => calls.push("syncToolbar"),
     _renderList: () => calls.push("renderList"),
   };
@@ -643,4 +648,14 @@ test("reviewMatchesAlertsOnlyMode supports multi-severity review encodings", () 
   );
   assert.equal(reviewMatchesAlertsOnlyMode({ severity: "detection" }), false);
   assert.equal(reviewMatchesAlertsOnlyMode({}), false);
+});
+
+test("filter controller does not create an omitted panel region", () => {
+  const controller = new BrowseFilterController({
+    _tab: "alerts",
+    _pageShellRegion: () => null,
+  });
+
+  assert.doesNotThrow(() => controller.toggleFilter());
+  assert.doesNotThrow(() => controller.renderFilter());
 });

@@ -8,6 +8,7 @@ import {
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
   buildMainLayoutShellMarkup,
+  buildPageNavButtonsMarkup,
   buildPageNavMarkup,
   buildTabsMarkup,
   buildToolsMarkup,
@@ -23,6 +24,25 @@ const icons = {
   filter: "F",
   calendar: "D",
 };
+
+test("page navigation updates provide buttons without nesting the region", () => {
+  const options = {
+    routes: ["single-view"],
+    activePageId: "single-view",
+    getRouteLabel: () => "Single View",
+    getRouteIcon: () => "S",
+  };
+
+  const pageNav = buildPageNavMarkup(options);
+  const buttons = buildPageNavButtonsMarkup(options);
+
+  assert.equal(
+    pageNav.match(/data-fvc-region="page-navigation"/g)?.length,
+    1,
+  );
+  assert.doesNotMatch(buttons, /data-fvc-region="page-navigation"/);
+  assert.match(buttons, /data-page-route="single-view"/);
+});
 
 test("buildTabsMarkup keeps filter and calendar inactive when panels are absent", () => {
   const { markup: tabsMarkup } = buildTabsMarkup({
@@ -47,6 +67,8 @@ test("buildTabsMarkup keeps filter and calendar inactive when panels are absent"
 
   assert.match(toolsMarkup, /id="filter-btn"[^>]*aria-pressed="false"/);
   assert.match(toolsMarkup, /id="cal-btn"[^>]*aria-pressed="false"/);
+  assert.match(toolsMarkup, /data-fvc-region="filter-panel"/);
+  assert.match(toolsMarkup, /data-fvc-region="calendar-panel"/);
   assert.doesNotMatch(toolsMarkup, /id="filter-btn"[^>]*class="tool active"/);
   assert.doesNotMatch(toolsMarkup, /id="cal-btn"[^>]*class="tool active"/);
 });

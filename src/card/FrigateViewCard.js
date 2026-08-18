@@ -85,6 +85,7 @@ import {
   resolveDeviceRouteBucket,
 } from "../features/navigation/router.js";
 import {
+  PAGE_SHELL_REGIONS,
   createPageShellRegistry,
   registerDefaultPageShellProfiles,
   resolvePageCapabilities,
@@ -164,6 +165,7 @@ import {
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
   buildMainLayoutShellMarkup,
+  buildPageNavButtonsMarkup,
   buildPageNavMarkup,
   buildPopupShellMarkup,
   buildBrowseMarkup,
@@ -560,6 +562,7 @@ export class FrigateViewCard extends HTMLElement {
       PAGE_IDS,
     });
     this._pageNavigationController = new PageNavigationController(this, {
+      buildPageNavButtonsMarkup,
       buildPageNavMarkup,
       createNavigationFactory,
       getEnabledPageRoutes,
@@ -2315,12 +2318,16 @@ export class FrigateViewCard extends HTMLElement {
 
   _syncToolbarButtons() {
     const buttonStates = this._toolbarButtonStates();
-    if (this._activePageShellCapabilities().tabsVariant !== "none") {
+    const toolsRegion = this._pageShellRegion("tools");
+    if (
+      toolsRegion &&
+      this._activePageShellCapabilities().tabsVariant !== "none"
+    ) {
       const shouldShowGrid = this._isGridModeAvailable();
       const shouldShowSlideshow = this._isSlideshowRotationAvailable();
-      const controlsBtnPresent = !!this._$("#controls-btn");
-      const gridBtnPresent = !!this._$("#grid-btn");
-      const slideshowBtnPresent = !!this._$("#slideshow-btn");
+      const controlsBtnPresent = !!this._pageShellRegionElement("tools", "#controls-btn");
+      const gridBtnPresent = !!this._pageShellRegionElement("tools", "#grid-btn");
+      const slideshowBtnPresent = !!this._pageShellRegionElement("tools", "#slideshow-btn");
       const needsToolsRerender =
         (buttonStates.controlsVisible && !controlsBtnPresent) ||
         (shouldShowGrid && !gridBtnPresent) ||
@@ -2329,7 +2336,7 @@ export class FrigateViewCard extends HTMLElement {
         this._syncTabsShell();
       }
     }
-    const gridBtn = this._$("#grid-btn");
+    const gridBtn = this._pageShellRegionElement("tools", "#grid-btn");
     if (gridBtn) {
       const gridAvailable = this._isGridModeAvailable();
       const gridActive = this._viewMode === "grid";
@@ -2358,7 +2365,7 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
 
-    const slideshowBtn = this._$("#slideshow-btn");
+    const slideshowBtn = this._pageShellRegionElement("tools", "#slideshow-btn");
     if (slideshowBtn) {
       const available = this._isSlideshowRotationAvailable();
       slideshowBtn.hidden = !available;
@@ -2388,7 +2395,7 @@ export class FrigateViewCard extends HTMLElement {
       if (!available) this._stopSlideshowRotation("unavailable", false);
     }
 
-    const controlsBtn = this._$("#controls-btn");
+    const controlsBtn = this._pageShellRegionElement("tools", "#controls-btn");
     if (controlsBtn) {
       controlsBtn.hidden = !buttonStates.controlsVisible;
       controlsBtn.style.display = buttonStates.controlsVisible ? "" : "none";
@@ -2401,18 +2408,18 @@ export class FrigateViewCard extends HTMLElement {
       );
     }
 
-    const filterBtn = this._$("#filter-btn");
+    const filterBtn = this._pageShellRegionElement("tools", "#filter-btn");
     if (filterBtn) {
-      const filterPanel = this._$("#filter-panel");
+      const filterPanel = this._pageShellRegion("filterPanel");
       const filterOpen = !!filterPanel && filterPanel.style.display !== "none";
       filterBtn.disabled = buttonStates.filterDisabled;
       filterBtn.classList.toggle("active", filterOpen);
       filterBtn.setAttribute("aria-pressed", filterOpen ? "true" : "false");
     }
 
-    const calBtn = this._$("#cal-btn");
+    const calBtn = this._pageShellRegionElement("tools", "#cal-btn");
     if (calBtn) {
-      const calPanel = this._$("#cal-panel");
+      const calPanel = this._pageShellRegion("calendarPanel");
       const calOpen = !!calPanel && calPanel.style.display !== "none";
       calBtn.disabled = buttonStates.calendarDisabled;
       calBtn.classList.toggle("active", calOpen);
@@ -2682,7 +2689,7 @@ export class FrigateViewCard extends HTMLElement {
     this._syncStatus();
     this._renderStats();
     this._browseFilterController.normalizeFilterSelections();
-    if (this._$("#filter-panel")?.style.display !== "none") {
+    if (this._pageShellRegion("filterPanel")?.style.display !== "none") {
       this._renderFilter();
     }
     this._renderList();
@@ -2694,7 +2701,7 @@ export class FrigateViewCard extends HTMLElement {
     this._browseWindowLoaderController.loadWindow(true);
     this._applyCalendarActivityCacheForActiveCamera();
     void this._prefetchCalendarActivityForActiveCamera();
-    if (this._$("#cal-panel")?.style.display !== "none") {
+    if (this._pageShellRegion("calendarPanel")?.style.display !== "none") {
       this._renderCal();
     }
     this._syncTwoWayTalkButton();
@@ -2913,8 +2920,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _buildTabsMarkup() {
-    const filterPanel = this._$("#filter-panel");
-    const calendarPanel = this._$("#cal-panel");
+    const filterPanel = this._pageShellRegion("filterPanel");
+    const calendarPanel = this._pageShellRegion("calendarPanel");
     const filterPanelOpen =
       !!filterPanel && filterPanel.style.display !== "none";
     const calendarPanelOpen =
@@ -2964,30 +2971,20 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _syncTabsShell() {
-    const tabs = this._$(".tabs");
-    const toolsSlot = this._$(".tl-tools-slot");
-    if (!tabs) return;
+    const tabs = this._pageShellRegion("tabs");
+    const toolsSlot = this._pageShellRegion("tools");
+    if (!tabs && !toolsSlot) return;
+
     if (this._activePageShellCapabilities().tabsVariant === "none") {
-      tabs.innerHTML = "";
+      if (tabs) tabs.innerHTML = "";
       if (toolsSlot) toolsSlot.innerHTML = "";
       return;
     }
+
     const prevTab = this._tab;
-    tabs.innerHTML = this._buildTabsMarkup();
-    if (toolsSlot) {
-      toolsSlot.innerHTML = this._getToolsMarkup();
-    }
-    [
-      "#grid-btn",
-      "#slideshow-btn",
-      "#filter-btn",
-      "#cal-btn",
-      "#controls-btn",
-    ].forEach((sel) => {
-      delete this._domCache[sel];
-    });
-    this._createFilterPanel();
-    this._createCalendarPanel();
+    const tabsMarkup = this._buildTabsMarkup();
+    if (tabs) tabs.innerHTML = tabsMarkup;
+    if (toolsSlot) toolsSlot.innerHTML = this._getToolsMarkup();
     if (this._tab !== prevTab) {
       void this._loadTabData(this._tab);
     }
@@ -3118,8 +3115,6 @@ export class FrigateViewCard extends HTMLElement {
       `;
     this._domCache = {}; // invalidate DOM element cache after full re-render
     this._lastRenderedListHtml = "";
-    this._createFilterPanel();
-    this._createCalendarPanel();
     this._initPopupInteractions();
     this._applyBrowse();
     this._applyCardStyle();
@@ -3218,37 +3213,31 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _syncTwoWayTalkActionSlot() {
-    const infoRow = this._$(".info-row");
+    const infoRow = this._pageShellRegion("information");
     if (!infoRow) return;
 
+    const existingSlot = this._pageShellRegionElement(
+      "information",
+      `[data-fvc-region="two-way-talk"]`,
+    );
+    if (!existingSlot) return;
+
     const actionMarkup = this._buildTwoWayTalkInfoButtonMarkup();
-    const existingSlot = infoRow.querySelector(".info-row-action-slot");
-
     if (!actionMarkup) {
-      existingSlot?.remove();
-      delete this._domCache["#two-way-talk-btn"];
+      existingSlot.innerHTML = "";
+      existingSlot.hidden = true;
       return;
     }
 
-    if (!existingSlot) {
-      const actionSlot = document.createElement("div");
-      actionSlot.className = "info-row-action-slot";
-      actionSlot.dataset.fvcRegion = "two-way-talk";
-      actionSlot.innerHTML = actionMarkup;
-      const stats = infoRow.querySelector(".stats");
-      infoRow.insertBefore(actionSlot, stats || null);
-      delete this._domCache["#two-way-talk-btn"];
-      return;
-    }
-
+    existingSlot.hidden = false;
     if (!existingSlot.querySelector("#two-way-talk-btn")) {
       existingSlot.innerHTML = actionMarkup;
-      delete this._domCache["#two-way-talk-btn"];
     }
   }
 
   _syncMobileViewTwoWayTalkSlot() {
-    const slot = this._$("#mobile-view-two-way-talk-slot");
+    if (!this._isMobileViewPageActive()) return;
+    const slot = this._pageShellRegion("twoWayTalk");
     if (!slot) return;
     slot.hidden = !this._shouldRenderTwoWayTalkButtonForActiveCamera();
   }
@@ -3256,7 +3245,7 @@ export class FrigateViewCard extends HTMLElement {
   _syncTwoWayTalkButton() {
     this._syncTwoWayTalkActionSlot();
     this._syncMobileViewTwoWayTalkSlot();
-    const button = this._$("#two-way-talk-btn");
+    const button = this._pageShellRegionElement("twoWayTalk", "#two-way-talk-btn");
     if (!button) return;
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
     button.hidden = !visible;
@@ -3390,8 +3379,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _bindListScroll() {
-    const list = this._$("#list");
-    const browse = this._$("#browse");
+    const list = this._pageShellRegionElement("browse", "#list");
+    const browse = this._pageShellRegion("browse");
     if (!list && !browse) return;
     if (this._listScrollController) {
       this._listScrollController.dispose();
@@ -3415,7 +3404,7 @@ export class FrigateViewCard extends HTMLElement {
       this._recordingsSwipeController.dispose();
       this._recordingsSwipeController = null;
     }
-    const browse = this._$("#browse");
+    const browse = this._pageShellRegion("browse");
     if (!browse) return;
     this._recordingsSwipeController = new RecordingsSwipeController({
       browse,
@@ -3429,7 +3418,7 @@ export class FrigateViewCard extends HTMLElement {
       setTapBlocked: (blocked) => {
         this._recordingsSwipeBlockTap = blocked;
       },
-      getList: () => this._$("#list"),
+      getList: () => this._pageShellRegionElement("browse", "#list"),
       getLastRenderedListHtml: () => this._lastRenderedListHtml,
       setLastRenderedListHtml: (html) => {
         this._lastRenderedListHtml = html;
@@ -3508,8 +3497,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _scrollEventsToTop() {
-    const list = this._$("#list");
-    const browse = this._$("#browse");
+    const list = this._pageShellRegionElement("browse", "#list");
+    const browse = this._pageShellRegion("browse");
     const scroller = resolveActiveListScroller({ list, browse });
     if (!scroller) return;
     if (typeof scroller.scrollTo === "function") {
@@ -3981,27 +3970,11 @@ export class FrigateViewCard extends HTMLElement {
     this._resumeSlideshowAfterPopup();
   }
   _createFilterPanel() {
-    const tabs = this._$("#filter-btn");
-    if (!tabs) return;
-    this._$("#filter-panel")?.remove();
-    const filterPanel = document.createElement("div");
-    filterPanel.id = "filter-panel";
-    filterPanel.className = "filter-panel";
-    filterPanel.dataset.fvcRegion = "filter-panel";
-    filterPanel.style.display = "none";
-    tabs.after(filterPanel);
+    return this._pageShellRegion("filterPanel");
   }
 
   _createCalendarPanel() {
-    const toolsEl = this._$("#cal-btn");
-    if (!toolsEl) return;
-    this._$("#cal-panel")?.remove();
-    const calPanel = document.createElement("div");
-    calPanel.id = "cal-panel";
-    calPanel.className = "cal-panel";
-    calPanel.dataset.fvcRegion = "calendar-panel";
-    calPanel.style.display = "none";
-    toolsEl.after(calPanel);
+    return this._pageShellRegion("calendarPanel");
   }
 
   _initPopupInteractions() {
@@ -4308,18 +4281,17 @@ export class FrigateViewCard extends HTMLElement {
     if (tab !== "controls") {
       this._lastNonControlsTab = tab;
     }
-    this.shadowRoot
-      .querySelectorAll("[data-tab]")
+    this._pageShellRegionElements("tabs", "[data-tab]")
       .forEach((p) => p.classList.toggle("active", p.dataset.tab === tab));
-    const filterBtn = this._$("#filter-btn");
+    const filterBtn = this._pageShellRegionElement("tools", "#filter-btn");
     if (filterBtn)
       filterBtn.disabled = tab === "recordings" || tab === "controls";
     if (tab === "recordings" || tab === "controls") {
-      const filterPanel = this._$("#filter-panel");
+      const filterPanel = this._pageShellRegion("filterPanel");
       if (filterPanel) filterPanel.style.display = "none";
     } else {
       this._browseFilterController.normalizeFilterSelections();
-      if (this._$("#filter-panel")?.style.display !== "none") {
+      if (this._pageShellRegion("filterPanel")?.style.display !== "none") {
         this._renderFilter();
       }
     }
@@ -4360,8 +4332,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _resetBrowseScrollTop() {
-    const list = this._$("#list");
-    const browse = this._$("#browse");
+    const list = this._pageShellRegionElement("browse", "#list");
+    const browse = this._pageShellRegion("browse");
     if (list) list.scrollTop = 0;
     if (browse) browse.scrollTop = 0;
   }
@@ -5390,7 +5362,7 @@ export class FrigateViewCard extends HTMLElement {
   }
   // ── browse / filter ───────────────────────────────────────
   _applyBrowse() {
-    const b = this._$("#browse");
+    const b = this._pageShellRegion("browse");
     if (b) b.style.display = "flex";
   }
   _toggleBrowse() {
@@ -5458,6 +5430,19 @@ export class FrigateViewCard extends HTMLElement {
     const next = this.shadowRoot.querySelector(sel);
     this._domCache[sel] = next;
     return next;
+  }
+  _pageShellRegion(regionKey) {
+    const regionName = PAGE_SHELL_REGIONS[regionKey];
+    if (!regionName) return null;
+    return this._$(`[data-fvc-region="${regionName}"]`);
+  }
+  _pageShellRegionElement(regionKey, selector) {
+    return this._pageShellRegion(regionKey)?.querySelector?.(selector) || null;
+  }
+  _pageShellRegionElements(regionKey, selector) {
+    return (
+      this._pageShellRegion(regionKey)?.querySelectorAll?.(selector) || []
+    );
   }
   _renderAll() {
     if (this._isPreviewPageActive()) {
@@ -5613,7 +5598,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _renderList() {
-    const list = this._$("#list");
+    const list = this._pageShellRegionElement("browse", "#list");
     if (!list) return;
     if (this._tab === "controls") {
       return this._renderControlsTabList(list);
@@ -5950,9 +5935,9 @@ export class FrigateViewCard extends HTMLElement {
 
   _syncOlderHint(forceHide = null) {
     syncOlderHintFromScroll({
-      hintEl: this._$("#older-hint"),
-      list: this._$("#list"),
-      browse: this._$("#browse"),
+      hintEl: this._pageShellRegionElement("footer", "#older-hint"),
+      list: this._pageShellRegionElement("browse", "#list"),
+      browse: this._pageShellRegion("browse"),
       tab: this._tab,
       forceHide,
     });
