@@ -105,22 +105,28 @@ test("mobile profile exposes custom main layout shell builder", () => {
   assert.equal(mobileProfile.tabsButtonClass, "icon-btn");
 
   const markup = mobileProfile.buildMainLayoutShellMarkup({
-    liveEngineWrap:
-      '<div id="eng-wrap" data-fvc-region="live"></div>',
-    infoRow: '<div class="info-row"></div>',
-    pageNav:
-      '<div class="page-nav" data-fvc-region="page-navigation"></div>',
-    camSwitcher:
-      '<div class="cam-switcher" data-fvc-region="camera-switcher"></div>',
-    browseMarkup:
-      '<div data-fvc-region="browse-header"></div><div data-fvc-region="browse"></div>',
-    footerMarkup: '<div data-fvc-region="footer"></div>',
+    host: {
+      _buildTwoWayTalkMobileButtonMarkup: () =>
+        `<div data-fvc-region="two-way-talk">Talk</div>`,
+    },
+    regions: {
+      live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
+      information: `<div data-fvc-region="information"></div>`,
+      pageNavigation: `<div data-fvc-region="page-navigation"></div>`,
+      cameraSwitcher: `<div data-fvc-region="camera-switcher"></div>`,
+      tabs: `<div data-fvc-region="tabs"></div>`,
+      tools: `<div data-fvc-region="tools"></div>`,
+      browseHeader: `<div data-fvc-region="browse-header"></div>`,
+      browse: `<div data-fvc-region="browse"></div>`,
+      footer: `<div data-fvc-region="footer"></div>`,
+    },
     layoutProfile: { layoutClass: "layout--mobile-view" },
   });
 
   assert.equal(markup.includes('id="mobile-container"'), true);
   assert.equal(markup.includes('id="mobile-top"'), true);
   assert.equal(markup.includes('id="mobile-bottom"'), true);
+  assert.equal(markup.includes('data-fvc-region="two-way-talk"'), true);
   const validation = validatePageShellRegionMarkup(markup, {
     requiredRegions: resolveRequiredPageShellRegions(mobileProfile),
   });

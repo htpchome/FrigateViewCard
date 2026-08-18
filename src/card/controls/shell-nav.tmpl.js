@@ -25,6 +25,20 @@ export function buildPageNavMarkup(options) {
   return `<div class="page-nav" data-fvc-region="page-navigation" aria-label="Page navigation">${buildPageNavButtonsMarkup(options)}</div>`;
 }
 
+export function buildCamSwitcherRegionMarkup({ markup = "" } = {}) {
+  const content = String(markup || "");
+  if (!content) return "";
+  return `<div class="cam-switcher" id="cam-switcher" data-fvc-region="camera-switcher">${content}</div>`;
+}
+
+export function buildTabsRegionMarkup({ markup = "" } = {}) {
+  return `<div class="tabs" data-fvc-region="tabs">${String(markup || "")}</div>`;
+}
+
+export function buildToolsRegionMarkup({ markup = "" } = {}) {
+  return `<div class="tl-tools-slot" data-fvc-region="tools">${String(markup || "")}</div>`;
+}
+
 export function resolveSubtitleText(config) {
   return config?.subtitle || "Frigate";
 }
@@ -187,8 +201,7 @@ function mergeClassNames(...tokens) {
   ].join(" ");
 }
 
-export function buildBrowseMarkup({ icons, layoutProfile = {} }) {
-  const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
+export function buildBrowseHeaderRegionMarkup({ icons }) {
   return `<div class="browse-head" id="browse-head" data-fvc-region="browse-header" style="display:none">
               <div class="browse-head-left">
                 <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${icons.left}Previous</button>
@@ -197,9 +210,12 @@ export function buildBrowseMarkup({ icons, layoutProfile = {} }) {
               <div class="browse-head-right">
                 <button class="prev-next" id="rec-day-next" data-rec-day-nav="1" title="Next day" aria-label="Next day" style="display:none">Next${icons.right}</button>
               </div>
-            </div>
-        
-            <div class="${browseClassName}" id="browse" data-fvc-region="browse" style="display:none">
+            </div>`;
+}
+
+export function buildBrowseRegionMarkup({ layoutProfile = {} } = {}) {
+  const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
+  return `<div class="${browseClassName}" id="browse" data-fvc-region="browse" style="display:none">
               <div class="list-head">
                 <span class="newtoast" id="newtoast" style="display:none">new ✦</span>
               </div>
@@ -207,6 +223,11 @@ export function buildBrowseMarkup({ icons, layoutProfile = {} }) {
                 <div class="empty">Loading…</div>
               </div>
             </div>`;
+}
+
+export function buildBrowseMarkup(args = {}) {
+  return `${buildBrowseHeaderRegionMarkup(args)}
+        ${buildBrowseRegionMarkup(args)}`;
 }
 
 export function buildFooterMarkup({ icons }) {
@@ -297,16 +318,44 @@ export function buildPopupShellMarkup({ icons, version }) {
 }
 
 export function buildMainLayoutShellMarkup({
-  liveEngineWrap,
-  infoRow,
-  pageNav,
-  camSwitcher,
-  tabsMarkup,
-  toolsMarkup,
-  browseMarkup,
-  footerMarkup,
+  regions: suppliedRegions = null,
+  liveEngineWrap = "",
+  infoRow = "",
+  pageNav = "",
+  camSwitcher = "",
+  tabsMarkup = "",
+  toolsMarkup = "",
+  browseMarkup = "",
+  footerMarkup = "",
   layoutProfile = {},
-}) {
+} = {}) {
+  const usesRegionComposition =
+    suppliedRegions &&
+    typeof suppliedRegions === "object" &&
+    !Array.isArray(suppliedRegions);
+  const regions = {
+    live: "",
+    information: "",
+    cameraSwitcher: "",
+    pageNavigation: "",
+    tabs: "",
+    tools: "",
+    browseHeader: "",
+    browse: "",
+    footer: "",
+    ...(usesRegionComposition
+      ? suppliedRegions
+      : {
+          live: liveEngineWrap,
+          information: infoRow,
+          cameraSwitcher: camSwitcher,
+          pageNavigation: pageNav,
+          tabs: buildTabsRegionMarkup({ markup: tabsMarkup }),
+          tools: buildToolsRegionMarkup({ markup: toolsMarkup }),
+          browseHeader: browseMarkup,
+          footer: footerMarkup,
+        }),
+  };
   const layoutClassName = mergeClassNames("layout", layoutProfile.layoutClass);
   const leftColumnClassName = mergeClassNames(
     "col-left",
@@ -326,30 +375,29 @@ export function buildMainLayoutShellMarkup({
   );
   return `<div class="${layoutClassName}" id="layout">
           <div class="${leftColumnClassName}" id="col-left">
-            ${liveEngineWrap}
+            ${regions.live}
 
-            ${infoRow}
-            ${camSwitcher}
+            ${regions.information}
+            ${regions.cameraSwitcher}
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
             <div class="${tabsHolderClassName} shadow-small">
               <div class="button-holder">
                 <div class="button-holder-row tabs-row">
-                  <div class="tabs" data-fvc-region="tabs">
-                    ${tabsMarkup}
-                  </div>
+                  ${regions.tabs}
                 </div>
                 <div class="button-holder-row page-nav-row">
-                  ${pageNav}
+                  ${regions.pageNavigation}
                 </div>
                 <div class="button-holder-row tools-row">
-                  <div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>
+                  ${regions.tools}
                 </div>
               </div>
             </div>
-            ${browseMarkup}
-            ${footerMarkup}
+            ${regions.browseHeader}
+            ${regions.browse}
+            ${regions.footer}
           </div>
         </div>`;
 }

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1490";
+const VERSION = "1.0.1491";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3255,46 +3255,69 @@ function buildMobileViewInfoRowMarkup({
             </div>`;
 }
 function buildMobileViewMainLayoutShellMarkup({
+  regions: suppliedRegions = null,
   host,
-  liveEngineWrap,
-  infoRow,
-  pageNav,
-  camSwitcher,
-  tabsMarkup,
-  toolsMarkup,
-  browseMarkup,
-  footerMarkup,
+  liveEngineWrap = "",
+  infoRow = "",
+  pageNav = "",
+  camSwitcher = "",
+  tabsMarkup = "",
+  toolsMarkup = "",
+  browseMarkup = "",
+  footerMarkup = "",
   layoutProfile = {}
-}) {
+} = {}) {
+  const usesRegionComposition = suppliedRegions && typeof suppliedRegions === "object" && !Array.isArray(suppliedRegions);
+  const regions = {
+    live: "",
+    information: "",
+    cameraSwitcher: "",
+    pageNavigation: "",
+    tabs: "",
+    tools: "",
+    twoWayTalk: "",
+    browseHeader: "",
+    browse: "",
+    footer: "",
+    ...usesRegionComposition ? suppliedRegions : {
+      live: liveEngineWrap,
+      information: infoRow,
+      cameraSwitcher: camSwitcher,
+      pageNavigation: pageNav,
+      tabs: `<div class="tabs" data-fvc-region="tabs">${tabsMarkup}</div>`,
+      tools: `<div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>`,
+      twoWayTalk: host?._buildTwoWayTalkMobileButtonMarkup?.() || "",
+      browseHeader: browseMarkup,
+      footer: footerMarkup
+    }
+  };
   const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"].filter(Boolean).join(" ");
   const tabsHolderClassName = ["tabs-holder", layoutProfile.tabsHolderClass].filter(Boolean).join(" ");
-  const twoWayTalkMarkup = host?._buildTwoWayTalkMobileButtonMarkup?.() || "";
   return `<div class="${layoutClassName}" id="layout">
             <div class="mobile-container" id="mobile-container">
               <div class="mobile-top" id="mobile-top">
-                ${camSwitcher}
-                ${liveEngineWrap}
+                ${regions.cameraSwitcher}
+                ${regions.live}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                ${twoWayTalkMarkup}
+                ${regions.twoWayTalk}
                 <div class="${tabsHolderClassName} shadow-small">
                   <div class="button-holder">
                     <div class="button-holder-row tabs-row">
-                      <div class="tabs" data-fvc-region="tabs">
-                        ${tabsMarkup}
-                      </div>
+                      ${regions.tabs}
                     </div>
                     <div class="button-holder-row page-nav-row">
-                      ${pageNav}
+                      ${regions.pageNavigation}
                     </div>
                     <div class="button-holder-row tools-row">
-                      <div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>
+                      ${regions.tools}
                     </div>
                   </div>
                 </div>
 
-                ${browseMarkup}
-                ${footerMarkup}
+                ${regions.browseHeader}
+                ${regions.browse}
+                ${regions.footer}
               </div>
             </div>
           </div>`;
@@ -3354,6 +3377,17 @@ function buildPageNavButtonsMarkup({
 }
 function buildPageNavMarkup(options) {
   return `<div class="page-nav" data-fvc-region="page-navigation" aria-label="Page navigation">${buildPageNavButtonsMarkup(options)}</div>`;
+}
+function buildCamSwitcherRegionMarkup({ markup = "" } = {}) {
+  const content = String(markup || "");
+  if (!content) return "";
+  return `<div class="cam-switcher" id="cam-switcher" data-fvc-region="camera-switcher">${content}</div>`;
+}
+function buildTabsRegionMarkup({ markup = "" } = {}) {
+  return `<div class="tabs" data-fvc-region="tabs">${String(markup || "")}</div>`;
+}
+function buildToolsRegionMarkup({ markup = "" } = {}) {
+  return `<div class="tl-tools-slot" data-fvc-region="tools">${String(markup || "")}</div>`;
 }
 function resolveSubtitleText(config) {
   return config?.subtitle || "Frigate";
@@ -3493,8 +3527,7 @@ function mergeClassNames(...tokens) {
     ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean))
   ].join(" ");
 }
-function buildBrowseMarkup({ icons, layoutProfile = {} }) {
-  const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
+function buildBrowseHeaderRegionMarkup({ icons }) {
   return `<div class="browse-head" id="browse-head" data-fvc-region="browse-header" style="display:none">
               <div class="browse-head-left">
                 <button class="prev-next" id="rec-day-prev" data-rec-day-nav="-1" title="Previous day" aria-label="Previous day" style="display:none">${icons.left}Previous</button>
@@ -3503,9 +3536,11 @@ function buildBrowseMarkup({ icons, layoutProfile = {} }) {
               <div class="browse-head-right">
                 <button class="prev-next" id="rec-day-next" data-rec-day-nav="1" title="Next day" aria-label="Next day" style="display:none">Next${icons.right}</button>
               </div>
-            </div>
-        
-            <div class="${browseClassName}" id="browse" data-fvc-region="browse" style="display:none">
+            </div>`;
+}
+function buildBrowseRegionMarkup({ layoutProfile = {} } = {}) {
+  const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
+  return `<div class="${browseClassName}" id="browse" data-fvc-region="browse" style="display:none">
               <div class="list-head">
                 <span class="newtoast" id="newtoast" style="display:none">new \u2726</span>
               </div>
@@ -3513,6 +3548,10 @@ function buildBrowseMarkup({ icons, layoutProfile = {} }) {
                 <div class="empty">Loading\u2026</div>
               </div>
             </div>`;
+}
+function buildBrowseMarkup(args = {}) {
+  return `${buildBrowseHeaderRegionMarkup(args)}
+        ${buildBrowseRegionMarkup(args)}`;
 }
 function buildFooterMarkup({ icons }) {
   return `<div class="footer" data-fvc-region="footer">
@@ -3593,16 +3632,39 @@ function buildPopupShellMarkup({ icons, version }) {
           </div>`;
 }
 function buildMainLayoutShellMarkup({
-  liveEngineWrap,
-  infoRow,
-  pageNav,
-  camSwitcher,
-  tabsMarkup,
-  toolsMarkup,
-  browseMarkup,
-  footerMarkup,
+  regions: suppliedRegions = null,
+  liveEngineWrap = "",
+  infoRow = "",
+  pageNav = "",
+  camSwitcher = "",
+  tabsMarkup = "",
+  toolsMarkup = "",
+  browseMarkup = "",
+  footerMarkup = "",
   layoutProfile = {}
-}) {
+} = {}) {
+  const usesRegionComposition = suppliedRegions && typeof suppliedRegions === "object" && !Array.isArray(suppliedRegions);
+  const regions = {
+    live: "",
+    information: "",
+    cameraSwitcher: "",
+    pageNavigation: "",
+    tabs: "",
+    tools: "",
+    browseHeader: "",
+    browse: "",
+    footer: "",
+    ...usesRegionComposition ? suppliedRegions : {
+      live: liveEngineWrap,
+      information: infoRow,
+      cameraSwitcher: camSwitcher,
+      pageNavigation: pageNav,
+      tabs: buildTabsRegionMarkup({ markup: tabsMarkup }),
+      tools: buildToolsRegionMarkup({ markup: toolsMarkup }),
+      browseHeader: browseMarkup,
+      footer: footerMarkup
+    }
+  };
   const layoutClassName = mergeClassNames("layout", layoutProfile.layoutClass);
   const leftColumnClassName = mergeClassNames(
     "col-left",
@@ -3622,30 +3684,29 @@ function buildMainLayoutShellMarkup({
   );
   return `<div class="${layoutClassName}" id="layout">
           <div class="${leftColumnClassName}" id="col-left">
-            ${liveEngineWrap}
+            ${regions.live}
 
-            ${infoRow}
-            ${camSwitcher}
+            ${regions.information}
+            ${regions.cameraSwitcher}
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
             <div class="${tabsHolderClassName} shadow-small">
               <div class="button-holder">
                 <div class="button-holder-row tabs-row">
-                  <div class="tabs" data-fvc-region="tabs">
-                    ${tabsMarkup}
-                  </div>
+                  ${regions.tabs}
                 </div>
                 <div class="button-holder-row page-nav-row">
-                  ${pageNav}
+                  ${regions.pageNavigation}
                 </div>
                 <div class="button-holder-row tools-row">
-                  <div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>
+                  ${regions.tools}
                 </div>
               </div>
             </div>
-            ${browseMarkup}
-            ${footerMarkup}
+            ${regions.browseHeader}
+            ${regions.browse}
+            ${regions.footer}
           </div>
         </div>`;
 }
@@ -3750,6 +3811,7 @@ function resolvePageInfoRowMarkup(profile, { title, subtitle, version, host, bui
 }
 function resolvePageMainLayoutShellMarkup(profile, {
   host,
+  regions,
   liveEngineWrap,
   infoRow,
   pageNav,
@@ -3764,6 +3826,7 @@ function resolvePageMainLayoutShellMarkup(profile, {
   const fallback = () => {
     if (typeof buildDefaultMainLayoutShellMarkup !== "function") return "";
     return buildDefaultMainLayoutShellMarkup({
+      regions,
       liveEngineWrap,
       infoRow,
       pageNav,
@@ -3779,6 +3842,7 @@ function resolvePageMainLayoutShellMarkup(profile, {
   if (!builder) return fallback();
   return builder({
     host,
+    regions,
     liveEngineWrap,
     infoRow,
     pageNav,
@@ -3822,26 +3886,8 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       version,
       centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || ""
     }),
-    buildMainLayoutShellMarkup: ({
-      host,
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
-      layoutProfile
-    }) => buildMainLayoutShellMarkup({
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
+    buildMainLayoutShellMarkup: ({ regions, layoutProfile }) => buildMainLayoutShellMarkup({
+      regions,
       layoutProfile
     }),
     capabilities: {
@@ -3865,27 +3911,11 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       eventsCount: host?._allDisplayEvents?.().length || 0,
       online: host?._hass?.states?.[host?._activeCam?.entity]?.state !== "unavailable"
     }),
-    buildMainLayoutShellMarkup: ({
-      host,
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
-      layoutProfile
-    }) => buildMobileViewMainLayoutShellMarkup({
-      host,
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
+    buildMainLayoutShellMarkup: ({ host, regions, layoutProfile }) => buildMobileViewMainLayoutShellMarkup({
+      regions: {
+        ...regions || {},
+        twoWayTalk: host?._buildTwoWayTalkMobileButtonMarkup?.() || ""
+      },
       layoutProfile
     }),
     capabilities: {
@@ -3905,25 +3935,8 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       version,
       centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || ""
     }),
-    buildMainLayoutShellMarkup: ({
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
-      layoutProfile
-    }) => buildMainLayoutShellMarkup({
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
+    buildMainLayoutShellMarkup: ({ regions, layoutProfile }) => buildMainLayoutShellMarkup({
+      regions,
       layoutProfile
     }),
     capabilities: {
@@ -18573,7 +18586,7 @@ const FrigateViewCard = class extends HTMLElement {
     const title = this._config.title || (this._config.cameras.length === 1 ? cap(camDisplayName(this._config.cameras[0])) : "Cameras") || "Camera";
     const subtitle = this._subtitleText();
     const showCamSwitcher = this._config.cameras.length > 1 || this._isPreviewPageEnabled();
-    const camSwitcher = showCamSwitcher ? `<div class="cam-switcher" id="cam-switcher" data-fvc-region="camera-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>` : "";
+    const camSwitcherMarkup = showCamSwitcher ? this._camSwitcherMarkup({ includeStatus: false }) : "";
     const pageNav = this._pageNavigationController.pageNavMarkup();
     const shellProfile = this._activePageShellLayoutProfile();
     const infoRow = resolvePageInfoRowMarkup(shellProfile, {
@@ -18588,49 +18601,30 @@ const FrigateViewCard = class extends HTMLElement {
       })
     });
     const layoutProfile = shellProfile || {};
-    const liveEngineWrap = buildLiveEngineWrapMarkup({
-      icons: ICONS,
-      streamMuted: this._streamMuted
-    });
     const tabsMarkup = this._buildTabsMarkup();
     const toolsMarkup = this._getToolsMarkup();
-    const browseMarkup = buildBrowseMarkup({
-      icons: ICONS,
-      layoutProfile
-    });
-    const footerMarkup = buildFooterMarkup({
-      icons: ICONS
-    });
+    const regions = {
+      live: buildLiveEngineWrapMarkup({
+        icons: ICONS,
+        streamMuted: this._streamMuted
+      }),
+      information: infoRow,
+      cameraSwitcher: buildCamSwitcherRegionMarkup({
+        markup: camSwitcherMarkup
+      }),
+      pageNavigation: pageNav,
+      tabs: buildTabsRegionMarkup({ markup: tabsMarkup }),
+      tools: buildToolsRegionMarkup({ markup: toolsMarkup }),
+      browseHeader: buildBrowseHeaderRegionMarkup({ icons: ICONS }),
+      browse: buildBrowseRegionMarkup({ layoutProfile }),
+      footer: buildFooterMarkup({ icons: ICONS })
+    };
     const mainLayoutShell = resolvePageMainLayoutShellMarkup(shellProfile, {
       host: this,
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
+      regions,
       layoutProfile,
-      buildDefaultMainLayoutShellMarkup: ({
-        liveEngineWrap: liveEngineWrap2,
-        infoRow: infoRow2,
-        pageNav: pageNav2,
-        camSwitcher: camSwitcher2,
-        tabsMarkup: tabsMarkup2,
-        toolsMarkup: toolsMarkup2,
-        browseMarkup: browseMarkup2,
-        footerMarkup: footerMarkup2,
-        layoutProfile: layoutProfile2
-      }) => buildMainLayoutShellMarkup({
-        liveEngineWrap: liveEngineWrap2,
-        infoRow: infoRow2,
-        pageNav: pageNav2,
-        camSwitcher: camSwitcher2,
-        tabsMarkup: tabsMarkup2,
-        toolsMarkup: toolsMarkup2,
-        browseMarkup: browseMarkup2,
-        footerMarkup: footerMarkup2,
+      buildDefaultMainLayoutShellMarkup: ({ regions: regions2, layoutProfile: layoutProfile2 }) => buildMainLayoutShellMarkup({
+        regions: regions2,
         layoutProfile: layoutProfile2
       })
     });

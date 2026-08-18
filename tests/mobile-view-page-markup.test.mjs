@@ -134,3 +134,19 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
     1,
   );
 });
+
+
+test("mobile region composition leaves omitted tabs absent", () => {
+  const markup = buildMobileViewMainLayoutShellMarkup({
+    regions: {
+      live: `<div data-fvc-region="live">Live</div>`,
+      tools: `<div data-fvc-region="tools">Atomic Tools</div>`,
+    },
+    tabsMarkup: "Legacy Tabs",
+    toolsMarkup: "Legacy Tools",
+  });
+
+  assert.match(markup, /Atomic Tools/);
+  assert.doesNotMatch(markup, /Legacy Tabs|Legacy Tools/);
+  assert.doesNotMatch(markup, /data-fvc-region="tabs"/);
+});

@@ -160,6 +160,7 @@ import { createMseGraceController } from "../features/live/mse-grace-controller.
 import { GridMediaController } from "../features/grid/media.ctrl.js";
 import {
   buildControlsSectionMarkup,
+  buildCamSwitcherRegionMarkup,
   buildControlsReadoutEmptyMarkup,
   buildControlsReadoutLinesMarkup,
   buildInfoRowMarkup,
@@ -168,10 +169,13 @@ import {
   buildPageNavButtonsMarkup,
   buildPageNavMarkup,
   buildPopupShellMarkup,
-  buildBrowseMarkup,
+  buildBrowseHeaderRegionMarkup,
+  buildBrowseRegionMarkup,
   buildFooterMarkup,
   buildTabsMarkup,
+  buildTabsRegionMarkup,
   buildToolsMarkup,
+  buildToolsRegionMarkup,
 } from "./controls/shell-nav.tmpl.js";
 import {
   buildCalendarPanelMarkup,
@@ -3025,8 +3029,8 @@ export class FrigateViewCard extends HTMLElement {
     const subtitle = this._subtitleText();
     const showCamSwitcher =
       this._config.cameras.length > 1 || this._isPreviewPageEnabled();
-    const camSwitcher = showCamSwitcher
-      ? `<div class="cam-switcher" id="cam-switcher" data-fvc-region="camera-switcher">${this._camSwitcherMarkup({ includeStatus: false })}</div>`
+    const camSwitcherMarkup = showCamSwitcher
+      ? this._camSwitcherMarkup({ includeStatus: false })
       : "";
     const pageNav = this._pageNavigationController.pageNavMarkup();
     const shellProfile = this._activePageShellLayoutProfile();
@@ -3043,50 +3047,31 @@ export class FrigateViewCard extends HTMLElement {
         }),
     });
     const layoutProfile = shellProfile || {};
-    const liveEngineWrap = buildLiveEngineWrapMarkup({
-      icons: ICONS,
-      streamMuted: this._streamMuted,
-    });
     const tabsMarkup = this._buildTabsMarkup();
     const toolsMarkup = this._getToolsMarkup();
-    const browseMarkup = buildBrowseMarkup({
-      icons: ICONS,
-      layoutProfile,
-    });
-    const footerMarkup = buildFooterMarkup({
-      icons: ICONS,
-    });
+    const regions = {
+      live: buildLiveEngineWrapMarkup({
+        icons: ICONS,
+        streamMuted: this._streamMuted,
+      }),
+      information: infoRow,
+      cameraSwitcher: buildCamSwitcherRegionMarkup({
+        markup: camSwitcherMarkup,
+      }),
+      pageNavigation: pageNav,
+      tabs: buildTabsRegionMarkup({ markup: tabsMarkup }),
+      tools: buildToolsRegionMarkup({ markup: toolsMarkup }),
+      browseHeader: buildBrowseHeaderRegionMarkup({ icons: ICONS }),
+      browse: buildBrowseRegionMarkup({ layoutProfile }),
+      footer: buildFooterMarkup({ icons: ICONS }),
+    };
     const mainLayoutShell = resolvePageMainLayoutShellMarkup(shellProfile, {
       host: this,
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
+      regions,
       layoutProfile,
-      buildDefaultMainLayoutShellMarkup: ({
-        liveEngineWrap,
-        infoRow,
-        pageNav,
-        camSwitcher,
-        tabsMarkup,
-        toolsMarkup,
-        browseMarkup,
-        footerMarkup,
-        layoutProfile,
-      }) =>
+      buildDefaultMainLayoutShellMarkup: ({ regions, layoutProfile }) =>
         buildMainLayoutShellMarkup({
-          liveEngineWrap,
-          infoRow,
-          pageNav,
-          camSwitcher,
-          tabsMarkup,
-          toolsMarkup,
-          browseMarkup,
-          footerMarkup,
+          regions,
           layoutProfile,
         }),
     });

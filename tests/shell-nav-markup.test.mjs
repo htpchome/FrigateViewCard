@@ -2,7 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildBrowseHeaderRegionMarkup,
   buildBrowseMarkup,
+  buildBrowseRegionMarkup,
+  buildCamSwitcherRegionMarkup,
   buildControlsSectionMarkup,
   buildFooterMarkup,
   buildInfoRowMarkup,
@@ -11,7 +14,9 @@ import {
   buildPageNavButtonsMarkup,
   buildPageNavMarkup,
   buildTabsMarkup,
+  buildTabsRegionMarkup,
   buildToolsMarkup,
+  buildToolsRegionMarkup,
 } from "../src/card/controls/shell-nav.tmpl.js";
 
 const icons = {
@@ -24,6 +29,49 @@ const icons = {
   filter: "F",
   calendar: "D",
 };
+
+test("atomic shell fragments own their controller region anchors", () => {
+  const fragments = {
+    cameraSwitcher: buildCamSwitcherRegionMarkup({ markup: "Cameras" }),
+    tabs: buildTabsRegionMarkup({ markup: "Tabs" }),
+    tools: buildToolsRegionMarkup({ markup: "Tools" }),
+    browseHeader: buildBrowseHeaderRegionMarkup({
+      icons: { left: "<", right: ">" },
+    }),
+    browse: buildBrowseRegionMarkup(),
+  };
+
+  for (const [regionName, markup] of Object.entries({
+    "camera-switcher": fragments.cameraSwitcher,
+    tabs: fragments.tabs,
+    tools: fragments.tools,
+    "browse-header": fragments.browseHeader,
+    browse: fragments.browse,
+  })) {
+    assert.equal(
+      markup.match(new RegExp(`data-fvc-region="${regionName}"`, "g"))
+        ?.length,
+      1,
+    );
+  }
+  assert.match(fragments.tabs, />Tabs<\/div>/);
+  assert.match(fragments.tools, />Tools<\/div>/);
+});
+
+test("region composition does not synthesize omitted page regions", () => {
+  const shellMarkup = buildMainLayoutShellMarkup({
+    regions: {
+      live: `<div data-fvc-region="live">Live</div>`,
+      tabs: buildTabsRegionMarkup({ markup: "Atomic Tabs" }),
+    },
+    tabsMarkup: "Legacy Tabs",
+    toolsMarkup: "Legacy Tools",
+  });
+
+  assert.match(shellMarkup, /Atomic Tabs/);
+  assert.doesNotMatch(shellMarkup, /Legacy Tabs|Legacy Tools/);
+  assert.doesNotMatch(shellMarkup, /data-fvc-region="tools"/);
+});
 
 test("page navigation updates provide buttons without nesting the region", () => {
   const options = {

@@ -152,6 +152,7 @@ export function resolvePageMainLayoutShellMarkup(
   profile,
   {
     host,
+    regions,
     liveEngineWrap,
     infoRow,
     pageNav,
@@ -167,6 +168,7 @@ export function resolvePageMainLayoutShellMarkup(
   const fallback = () => {
     if (typeof buildDefaultMainLayoutShellMarkup !== "function") return "";
     return buildDefaultMainLayoutShellMarkup({
+      regions,
       liveEngineWrap,
       infoRow,
       pageNav,
@@ -188,6 +190,7 @@ export function resolvePageMainLayoutShellMarkup(
   return (
     builder({
       host,
+      regions,
       liveEngineWrap,
       infoRow,
       pageNav,
@@ -239,27 +242,9 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         version,
         centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || "",
       }),
-    buildMainLayoutShellMarkup: ({
-      host,
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
-      layoutProfile,
-    }) =>
+    buildMainLayoutShellMarkup: ({ regions, layoutProfile }) =>
       buildMainLayoutShellMarkup({
-        liveEngineWrap,
-        infoRow,
-        pageNav,
-        camSwitcher,
-        tabsMarkup,
-        toolsMarkup,
-        browseMarkup,
-        footerMarkup,
+        regions,
         layoutProfile,
       }),
     capabilities: {
@@ -287,28 +272,12 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
           host?._hass?.states?.[host?._activeCam?.entity]?.state !==
           "unavailable",
       }),
-    buildMainLayoutShellMarkup: ({
-      host,
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
-      layoutProfile,
-    }) =>
+    buildMainLayoutShellMarkup: ({ host, regions, layoutProfile }) =>
       buildMobileViewMainLayoutShellMarkup({
-        host,
-        liveEngineWrap,
-        infoRow,
-        pageNav,
-        camSwitcher,
-        tabsMarkup,
-        toolsMarkup,
-        browseMarkup,
-        footerMarkup,
+        regions: {
+          ...(regions || {}),
+          twoWayTalk: host?._buildTwoWayTalkMobileButtonMarkup?.() || "",
+        },
         layoutProfile,
       }),
     capabilities: {
@@ -330,26 +299,9 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         version,
         centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || "",
       }),
-    buildMainLayoutShellMarkup: ({
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
-      layoutProfile,
-    }) =>
+    buildMainLayoutShellMarkup: ({ regions, layoutProfile }) =>
       buildMainLayoutShellMarkup({
-        liveEngineWrap,
-        infoRow,
-        pageNav,
-        camSwitcher,
-        tabsMarkup,
-        toolsMarkup,
-        browseMarkup,
-        footerMarkup,
+        regions,
         layoutProfile,
       }),
     capabilities: {

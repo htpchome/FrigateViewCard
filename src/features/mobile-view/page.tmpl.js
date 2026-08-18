@@ -116,51 +116,79 @@ export function buildMobileViewInfoRowMarkup({
 }
 
 export function buildMobileViewMainLayoutShellMarkup({
+  regions: suppliedRegions = null,
   host,
-  liveEngineWrap,
-  infoRow,
-  pageNav,
-  camSwitcher,
-  tabsMarkup,
-  toolsMarkup,
-  browseMarkup,
-  footerMarkup,
+  liveEngineWrap = "",
+  infoRow = "",
+  pageNav = "",
+  camSwitcher = "",
+  tabsMarkup = "",
+  toolsMarkup = "",
+  browseMarkup = "",
+  footerMarkup = "",
   layoutProfile = {},
-}) {
+} = {}) {
+  const usesRegionComposition =
+    suppliedRegions &&
+    typeof suppliedRegions === "object" &&
+    !Array.isArray(suppliedRegions);
+  const regions = {
+    live: "",
+    information: "",
+    cameraSwitcher: "",
+    pageNavigation: "",
+    tabs: "",
+    tools: "",
+    twoWayTalk: "",
+    browseHeader: "",
+    browse: "",
+    footer: "",
+    ...(usesRegionComposition
+      ? suppliedRegions
+      : {
+          live: liveEngineWrap,
+          information: infoRow,
+          cameraSwitcher: camSwitcher,
+          pageNavigation: pageNav,
+          tabs: `<div class="tabs" data-fvc-region="tabs">${tabsMarkup}</div>`,
+          tools: `<div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>`,
+          twoWayTalk: host?._buildTwoWayTalkMobileButtonMarkup?.() || "",
+          browseHeader: browseMarkup,
+          footer: footerMarkup,
+        }),
+  };
   const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"]
     .filter(Boolean)
     .join(" ");
   const tabsHolderClassName = ["tabs-holder", layoutProfile.tabsHolderClass]
     .filter(Boolean)
     .join(" ");
-  const twoWayTalkMarkup = host?._buildTwoWayTalkMobileButtonMarkup?.() || "";
 
   return `<div class="${layoutClassName}" id="layout">
             <div class="mobile-container" id="mobile-container">
               <div class="mobile-top" id="mobile-top">
-                ${camSwitcher}
-                ${liveEngineWrap}
+                ${regions.cameraSwitcher}
+                ${regions.live}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                ${twoWayTalkMarkup}
+                ${regions.twoWayTalk}
                 <div class="${tabsHolderClassName} shadow-small">
                   <div class="button-holder">
                     <div class="button-holder-row tabs-row">
-                      <div class="tabs" data-fvc-region="tabs">
-                        ${tabsMarkup}
-                      </div>
+                      ${regions.tabs}
                     </div>
                     <div class="button-holder-row page-nav-row">
-                      ${pageNav}
+                      ${regions.pageNavigation}
                     </div>
                     <div class="button-holder-row tools-row">
-                      <div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>
+                      ${regions.tools}
                     </div>
                   </div>
                 </div>
 
-                ${browseMarkup}
-                ${footerMarkup}
+                ${regions.browseHeader}
+                ${regions.browse}
+                ${regions.footer}
               </div>
             </div>
           </div>`;
