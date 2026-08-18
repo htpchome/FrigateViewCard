@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1484";
+const VERSION = "1.0.1485";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -18683,6 +18683,9 @@ const FrigateViewCard = class extends HTMLElement {
     }
     await this._startTwoWayTalkSession();
   }
+  _setTwoWayTalkLiveAudioActive(active) {
+    this._applyLiveMuteChange(!active, { source: "two-way-talk" });
+  }
   async _startTwoWayTalkSession() {
     if (!window.isSecureContext) return;
     const entity = String(this._activeCam?.entity || "").trim();
@@ -18695,6 +18698,7 @@ const FrigateViewCard = class extends HTMLElement {
         if (this._twoWayTalkEntity !== entity) return;
         this._twoWayTalkSession = null;
         this._twoWayTalkEntity = "";
+        this._setTwoWayTalkLiveAudioActive(false);
         this._syncTwoWayTalkButton();
       };
       const session = this._shouldUseGo2RtcForEntity(entity) ? await startGo2RtcTwoWayTalkSession({
@@ -18707,10 +18711,12 @@ const FrigateViewCard = class extends HTMLElement {
       });
       this._twoWayTalkSession = session;
       this._twoWayTalkEntity = entity;
+      this._setTwoWayTalkLiveAudioActive(true);
     } catch (error) {
       console.warn("[Frigate] Two-way talk start failed", error);
       this._twoWayTalkSession = null;
       this._twoWayTalkEntity = "";
+      this._setTwoWayTalkLiveAudioActive(false);
     } finally {
       this._twoWayTalkStarting = false;
       this._syncTwoWayTalkButton();
@@ -18720,6 +18726,7 @@ const FrigateViewCard = class extends HTMLElement {
     const session = this._twoWayTalkSession;
     this._twoWayTalkSession = null;
     this._twoWayTalkEntity = "";
+    this._setTwoWayTalkLiveAudioActive(false);
     if (!session) {
       this._syncTwoWayTalkButton();
       return;

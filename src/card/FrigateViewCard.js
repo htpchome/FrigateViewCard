@@ -3257,6 +3257,10 @@ export class FrigateViewCard extends HTMLElement {
     await this._startTwoWayTalkSession();
   }
 
+  _setTwoWayTalkLiveAudioActive(active) {
+    this._applyLiveMuteChange(!active, { source: "two-way-talk" });
+  }
+
   async _startTwoWayTalkSession() {
     if (!window.isSecureContext) return;
     const entity = String(this._activeCam?.entity || "").trim();
@@ -3269,6 +3273,7 @@ export class FrigateViewCard extends HTMLElement {
         if (this._twoWayTalkEntity !== entity) return;
         this._twoWayTalkSession = null;
         this._twoWayTalkEntity = "";
+        this._setTwoWayTalkLiveAudioActive(false);
         this._syncTwoWayTalkButton();
       };
       const session = this._shouldUseGo2RtcForEntity(entity)
@@ -3284,10 +3289,12 @@ export class FrigateViewCard extends HTMLElement {
           });
       this._twoWayTalkSession = session;
       this._twoWayTalkEntity = entity;
+      this._setTwoWayTalkLiveAudioActive(true);
     } catch (error) {
       console.warn("[Frigate] Two-way talk start failed", error);
       this._twoWayTalkSession = null;
       this._twoWayTalkEntity = "";
+      this._setTwoWayTalkLiveAudioActive(false);
     } finally {
       this._twoWayTalkStarting = false;
       this._syncTwoWayTalkButton();
@@ -3298,6 +3305,7 @@ export class FrigateViewCard extends HTMLElement {
     const session = this._twoWayTalkSession;
     this._twoWayTalkSession = null;
     this._twoWayTalkEntity = "";
+    this._setTwoWayTalkLiveAudioActive(false);
     if (!session) {
       this._syncTwoWayTalkButton();
       return;

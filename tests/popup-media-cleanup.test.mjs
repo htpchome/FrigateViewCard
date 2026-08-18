@@ -242,3 +242,48 @@ test("_stopPopupMedia resets popup media surfaces after shared cleanup", () => {
   assert.equal(ctx._popupMediaType, "");
   assert.equal(ctx._playing, null);
 });
+
+test("two-way talk active state unmutes live audio and inactive state remutes it", () => {
+  const calls = [];
+  const ctx = {
+    _applyLiveMuteChange(muted, options) {
+      calls.push([muted, options]);
+    },
+  };
+
+  FrigateViewCard.prototype._setTwoWayTalkLiveAudioActive.call(ctx, true);
+  FrigateViewCard.prototype._setTwoWayTalkLiveAudioActive.call(ctx, false);
+
+  assert.deepEqual(calls, [
+    [false, { source: "two-way-talk" }],
+    [true, { source: "two-way-talk" }],
+  ]);
+});
+
+test("stopping two-way talk remutes live audio before closing the session", async () => {
+  const calls = [];
+  const ctx = {
+    _twoWayTalkSession: {
+      async stop() {
+        calls.push(["stop"]);
+      },
+    },
+    _twoWayTalkEntity: "camera.front",
+    _setTwoWayTalkLiveAudioActive(active) {
+      calls.push(["audio-active", active]);
+    },
+    _syncTwoWayTalkButton() {
+      calls.push(["sync-button"]);
+    },
+  };
+
+  await FrigateViewCard.prototype._stopTwoWayTalkSession.call(ctx);
+
+  assert.equal(ctx._twoWayTalkSession, null);
+  assert.equal(ctx._twoWayTalkEntity, "");
+  assert.deepEqual(calls, [
+    ["audio-active", false],
+    ["stop"],
+    ["sync-button"],
+  ]);
+});

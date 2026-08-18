@@ -43,3 +43,18 @@ test("two-way talk hidden button keeps the info row layout stable", () => {
     true,
   );
 });
+
+test("two-way talk start and end paths synchronize the live audio state", () => {
+  assert.match(
+    cardSource,
+    /this\._twoWayTalkSession = session;[\s\S]*?this\._setTwoWayTalkLiveAudioActive\(true\);/,
+  );
+  assert.match(
+    cardSource,
+    /const handleEnded = \(\) => \{[\s\S]*?this\._setTwoWayTalkLiveAudioActive\(false\);/,
+  );
+  assert.match(
+    cardSource,
+    /async _stopTwoWayTalkSession\(\) \{[\s\S]*?this\._setTwoWayTalkLiveAudioActive\(false\);/,
+  );
+});
