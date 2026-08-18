@@ -1,15 +1,4 @@
-import {
-  renderStandardPageEventsContent,
-  renderStandardPageKeptContent,
-  renderStandardPageLegend,
-  renderStandardPageListLabel,
-  renderStandardPageReviewsContent,
-  renderStandardPageStickyDaySections,
-  syncStandardPageBrowseHeadFromScroll,
-  standardPageListHeadingLabel,
-  standardPageRecordingsHeadingLabel,
-  standardPageShowStickyDayHeaders,
-} from "../browse/standard-renderer.js";
+import { BrowseRenderController } from "../browse/render.ctrl.js";
 import { activateStandardPageRouteLifecycle } from "../navigation/route-lifecycle.js";
 import { cap, camDisplayName } from "../../helpers.js";
 import {
@@ -28,6 +17,7 @@ export class SingleViewPageController {
   constructor(host, constants) {
     this._host = host;
     this._constants = constants;
+    this._browseRenderController = new BrowseRenderController(host);
   }
 
   _pageNavigation() {
@@ -129,43 +119,46 @@ export class SingleViewPageController {
   }
 
   renderLegend() {
-    renderStandardPageLegend(this._host);
+    this._browseRenderController.renderLegend();
   }
 
   listHeadingLabel(ts = null) {
-    return standardPageListHeadingLabel(this._host, ts);
+    return this._browseRenderController.listHeadingLabel(ts);
   }
 
   recordingsHeadingLabel(ts = null) {
-    return standardPageRecordingsHeadingLabel(this._host, ts);
+    return this._browseRenderController.recordingsHeadingLabel(ts);
   }
 
   renderListLabel(ts = null) {
-    renderStandardPageListLabel(this._host, ts);
+    this._browseRenderController.renderListLabel(ts);
   }
 
   showStickyDayHeaders() {
-    return standardPageShowStickyDayHeaders(this._host);
+    return this._browseRenderController.showStickyDayHeaders();
   }
 
   renderStickyDaySections(items, renderItem) {
-    return renderStandardPageStickyDaySections(this._host, items, renderItem);
+    return this._browseRenderController.renderStickyDaySections(
+      items,
+      renderItem,
+    );
   }
 
   renderEventsContent(items) {
-    return renderStandardPageEventsContent(this._host, items);
+    return this._browseRenderController.renderEventsContent(items);
   }
 
   renderKeptContent(items) {
-    return renderStandardPageKeptContent(this._host, items);
+    return this._browseRenderController.renderKeptContent(items);
   }
 
   renderReviewsContent(items) {
-    return renderStandardPageReviewsContent(this._host, items);
+    return this._browseRenderController.renderReviewsContent(items);
   }
 
   syncBrowseHeadFromScroll() {
-    syncStandardPageBrowseHeadFromScroll(this._host);
+    this._browseRenderController.syncBrowseHeadFromScroll();
   }
 
   activateSingleViewPageRoute(context = {}) {

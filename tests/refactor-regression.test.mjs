@@ -10,8 +10,12 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
-const browseStandardRendererSource = fs.readFileSync(
-  new URL("../src/features/browse/standard-renderer.js", import.meta.url),
+const browseListTemplateSource = fs.readFileSync(
+  new URL("../src/features/browse/list.tmpl.js", import.meta.url),
+  "utf8",
+);
+const browseRenderControllerSource = fs.readFileSync(
+  new URL("../src/features/browse/render.ctrl.js", import.meta.url),
   "utf8",
 );
 const mobileViewPageTemplateSource = fs.readFileSync(
@@ -1195,31 +1199,48 @@ test("browse window loading delegates through the browse window loader controlle
   );
 });
 
-test("standard browse rendering support does not live in the card folder", () => {
+test("browse markup and DOM synchronization have separate owners", () => {
   assert.equal(cardSource.includes("standardPageListHeadingLabel("), false);
   assert.equal(cardSource.includes("renderStandardPageEventsContent("), false);
+  for (const forbiddenMarkupDependency of [
+    "_host",
+    "_pageShellRegion",
+    ".innerHTML =",
+    ".style.",
+    "../../card/controls/shell-nav.tmpl.js",
+  ]) {
+    assert.equal(
+      browseListTemplateSource.includes(forbiddenMarkupDependency),
+      false,
+    );
+  }
+  for (const markupExport of [
+    "export function buildBrowseEventsContentMarkup",
+    "export function buildBrowseReviewsContentMarkup",
+    "export function buildBrowseLegendMarkup",
+  ]) {
+    assert.equal(browseListTemplateSource.includes(markupExport), true);
+  }
   assert.equal(
-    browseStandardRendererSource.includes(
-      "../../card/controls/shell-nav.tmpl.js",
-    ),
-    false,
-  );
-  assert.equal(
-    browseStandardRendererSource.includes(
-      "export function renderStandardPageEventsContent",
+    browseRenderControllerSource.includes(
+      "export class BrowseRenderController",
     ),
     true,
   );
   assert.equal(
-    browseStandardRendererSource.includes(
-      "export function renderStandardPageReviewsContent",
-    ),
+    browseRenderControllerSource.includes("renderListLabel(timestamp = null)"),
     true,
   );
   assert.equal(
-    browseStandardRendererSource.includes(
-      "export function renderStandardPageListLabel",
-    ),
+    browseRenderControllerSource.includes("syncBrowseHeadFromScroll()"),
+    true,
+  );
+  assert.equal(
+    browseRenderControllerSource.includes("renderLegend()"),
+    true,
+  );
+  assert.equal(
+    browseRenderControllerSource.includes("./list.tmpl.js"),
     true,
   );
   assert.equal(
@@ -1231,19 +1252,25 @@ test("standard browse rendering support does not live in the card folder", () =>
 });
 
 test("page chrome is owned by route templates and controllers", () => {
+  for (const browseSource of [
+    browseListTemplateSource,
+    browseRenderControllerSource,
+  ]) {
+    assert.equal(browseSource.includes("../mobile-view/page.tmpl.js"), false);
+    for (const pageChromeName of [
+      "buildStandardPageCamSwitcherMarkup",
+      "renderStandardPageCamSwitcher",
+      "syncStandardPageStatus",
+      "renderStandardPageStats",
+      "renderStandardPageSubtitle",
+    ]) {
+      assert.equal(browseSource.includes(pageChromeName), false);
+    }
+  }
   assert.equal(
-    browseStandardRendererSource.includes("../mobile-view/page.tmpl.js"),
+    browseRenderControllerSource.includes("_pageShellRegion(\"live\")"),
     false,
   );
-  for (const exportName of [
-    "buildStandardPageCamSwitcherMarkup",
-    "renderStandardPageCamSwitcher",
-    "syncStandardPageStatus",
-    "renderStandardPageStats",
-    "renderStandardPageSubtitle",
-  ]) {
-    assert.equal(browseStandardRendererSource.includes(exportName), false);
-  }
   assert.equal(
     singleViewPageTemplateSource.includes(
       "export function buildSingleViewCamSwitcherMarkup",
@@ -1259,6 +1286,18 @@ test("page chrome is owned by route templates and controllers", () => {
   assert.equal(
     mobileViewPageControllerSource.includes(
       "buildMobileViewCamSwitcherMarkup({",
+    ),
+    true,
+  );
+  assert.equal(
+    singleViewPageControllerSource.includes(
+      "new BrowseRenderController(host)",
+    ),
+    true,
+  );
+  assert.equal(
+    mobileViewPageControllerSource.includes(
+      "new BrowseRenderController(host)",
     ),
     true,
   );

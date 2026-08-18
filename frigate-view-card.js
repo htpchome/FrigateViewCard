@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1494";
+const VERSION = "1.0.1495";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15185,123 +15185,249 @@ function activateStandardPageRouteLifecycle({
   syncStandardRouteShell(host);
 }
 
-// src/features/browse/standard-renderer.js
-function cameraName(camera) {
-  return cap(camDisplayName(camera));
-}
-function standardPageListHeadingLabel(host, ts = null) {
+// src/features/browse/list.tmpl.js
+const STICKY_DAY_TABS = Object.freeze(["alerts", "clips", "snapshot"]);
+function resolveBrowseListHeadingLabel({
+  tab = "",
+  timestamp = null,
+  getWeekday,
+  getMonthDay,
+  capitalize
+} = {}) {
   const fallback = {
     recordings: "Recordings",
     clips: "Recent Clips",
     snapshot: "Recent Snaps",
     alerts: "Recent Alerts",
     kept: "Kept"
-  }[host._tab] || cap(host._tab || "");
-  if (!ts || !["alerts", "clips", "snapshot"].includes(host._tab)) {
-    return fallback;
-  }
-  return `${host._weekday(ts)} - ${host._monthDay(ts, { ordinal: true })} - ${fallback}`;
+  }[tab] || capitalize(tab || "");
+  if (!timestamp || !STICKY_DAY_TABS.includes(tab)) return fallback;
+  return `${getWeekday(timestamp)} - ${getMonthDay(timestamp, {
+    ordinal: true
+  })} - ${fallback}`;
 }
-function standardPageRecordingsHeadingLabel(host, ts = null) {
-  const target = Math.floor(ts || host._winEnd || Date.now() / 1e3);
-  return `${host._weekday(target)} - ${host._monthDay(target, { ordinal: true })} - Recordings`;
+function resolveBrowseRecordingsHeadingLabel({
+  timestamp = null,
+  windowEnd = null,
+  nowSec,
+  getWeekday,
+  getMonthDay
+} = {}) {
+  const target = Math.floor(timestamp || windowEnd || nowSec);
+  return `${getWeekday(target)} - ${getMonthDay(target, {
+    ordinal: true
+  })} - Recordings`;
 }
-function standardPageControlsHeadingLabel(host) {
-  const camera = host._activeCam || {};
-  const ptzInfo = host._activeCameraPtzInfo?.() || null;
-  const ptzConfigured = hasCameraPtz(camera);
-  const ptzReady = ptzConfigured && (hasPtzPanTiltCapability(ptzInfo) || hasPtzZoomCapability(ptzInfo) || hasPtzFocusCapability(ptzInfo));
-  return `${cameraName(camera)} \xB7 ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}`;
+function resolveBrowseControlsHeadingLabel({
+  cameraName: cameraName4,
+  ptzReady = false
+} = {}) {
+  return `${cameraName4} \xB7 ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}`;
 }
-function renderStandardPageListLabel(host, ts = null) {
-  const browseHead = host._pageShellRegion("browseHeader");
-  const labelEl = host._pageShellRegionElement(
-    "browseHeader",
-    "#browse-head-label"
-  );
-  const prev = host._pageShellRegionElement("browseHeader", "#rec-day-prev");
-  const next = host._pageShellRegionElement("browseHeader", "#rec-day-next");
-  if (!labelEl || !browseHead) return;
-  browseHead.style.display = "flex";
-  if (host._tab === "recordings") {
-    labelEl.textContent = standardPageRecordingsHeadingLabel(
-      host,
-      ts || host._winEnd
-    );
-    const mobilePhoneViewport = host._isMobilePhoneViewport?.() === true;
-    const showButtons = !mobilePhoneViewport;
-    if (prev) prev.style.display = showButtons ? "inline-flex" : "none";
-    if (next) next.style.display = showButtons ? "inline-flex" : "none";
-    void (host._recordingsBrowseNavController?.updateBrowseNav?.() ?? host._updateRecordingsBrowseNav?.());
-    return;
-  }
-  if (prev) prev.style.display = "none";
-  if (next) next.style.display = "none";
-  if (host._tab === "controls") {
-    labelEl.textContent = standardPageControlsHeadingLabel(host);
-    return;
-  }
-  labelEl.textContent = standardPageListHeadingLabel(host, ts);
+function shouldShowBrowseStickyDayHeaders(tab) {
+  return STICKY_DAY_TABS.includes(tab);
 }
-function standardPageShowStickyDayHeaders(host) {
-  return ["alerts", "clips", "snapshot"].includes(host._tab);
-}
-function renderStandardPageStickyDaySections(host, items, renderItem) {
+function buildBrowseStickyDaySectionsMarkup({
+  items = [],
+  getDayKey,
+  getLabel,
+  renderItem
+} = {}) {
   return buildStickyDaySectionsHtml(items, {
     getStartTime: (item) => item?.start_time,
-    getDayKey: (ts) => host._dayKey(ts),
-    getLabel: (ts) => standardPageListHeadingLabel(host, ts),
+    getDayKey,
+    getLabel,
     renderItem
   });
 }
-function renderStandardPageEventsContent(host, items) {
-  const content = standardPageShowStickyDayHeaders(host) ? renderStandardPageStickyDaySections(
-    host,
+function buildBrowseEventsContentMarkup({
+  items = [],
+  showStickyDayHeaders = false,
+  getDayKey,
+  getLabel,
+  renderItem,
+  exhausted = false
+} = {}) {
+  const content = showStickyDayHeaders ? buildBrowseStickyDaySectionsMarkup({
     items,
-    (item) => host._eventCardHTML(item, false)
-  ) : items.map((item) => host._eventCardHTML(item, false)).join("");
-  return appendEndMarker(content, host._exhausted);
+    getDayKey,
+    getLabel,
+    renderItem
+  }) : items.map((item) => renderItem(item)).join("");
+  return appendEndMarker(content, exhausted);
 }
-function renderStandardPageKeptContent(host, items) {
-  return items.map((item) => host._eventCardHTML(item, false)).join("");
+function buildBrowseKeptContentMarkup({
+  items = [],
+  renderItem
+} = {}) {
+  return items.map((item) => renderItem(item)).join("");
 }
-function renderStandardPageReviewsContent(host, items) {
-  return renderStandardPageStickyDaySections(
-    host,
+function buildBrowseReviewsContentMarkup({
+  items = [],
+  getDayKey,
+  getLabel,
+  renderItem
+} = {}) {
+  return buildBrowseStickyDaySectionsMarkup({
     items,
-    (item) => host._reviewListItemHTML(item)
-  );
+    getDayKey,
+    getLabel,
+    renderItem
+  });
 }
-function syncStandardPageBrowseHeadFromScroll(host) {
-  if (!standardPageShowStickyDayHeaders(host)) return;
-  const browse = host._pageShellRegion("browse");
-  const list = host._pageShellRegionElement("browse", "#list");
-  const label = host._pageShellRegionElement(
-    "browseHeader",
-    "#browse-head-label"
-  );
-  if (!list || !browse || !label) return;
-  const nextLabel = resolveActiveDayLabelFromScroll({ list, browse });
-  if (nextLabel) {
-    label.textContent = nextLabel;
-  }
-}
-function renderStandardPageLegend(host) {
-  const el = host._pageShellRegionElement("filterPanel", "#legend");
-  if (!el) return;
-  const labels = host._browseFilterController?.labels?.() ?? host._labels?.() ?? [];
+const opaqueCameraColor = (color) => String(color || "").replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")");
+function buildBrowseLegendMarkup({
+  labels = [],
+  cameras = [],
+  eventsMode = "",
+  cameraColors = [],
+  getLabelColor,
+  capitalize,
+  getCameraName
+} = {}) {
   let html = labels.map(
-    (label) => `<span class="lg"><i style="background:${labelColor(label)}"></i>${cap(label)}</span>`
+    (label) => `<span class="lg"><i style="background:${getLabelColor(label)}"></i>${capitalize(label)}</span>`
   ).join("");
-  if (host._eventsMode === "all") {
-    host._config.cameras.forEach((camera, index) => {
-      html += `<span class="lg"><i style="background:${CAM_COLORS[index % CAM_COLORS.length].replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")")}"></i>${cameraName(camera)} rec</span>`;
+  if (eventsMode === "all") {
+    cameras.forEach((camera, index) => {
+      const color = cameraColors[index % cameraColors.length];
+      html += `<span class="lg"><i style="background:${opaqueCameraColor(color)}"></i>${getCameraName(camera)} rec</span>`;
     });
   } else {
-    html += `<span class="lg"><i style="background:${CAM_COLORS[0].replace(".5", "1").replace("rgba", "rgb").replace(",1)", ")")}"></i>Rec</span>`;
+    html += `<span class="lg"><i style="background:${opaqueCameraColor(cameraColors[0])}"></i>Rec</span>`;
   }
-  el.innerHTML = html;
+  return html;
 }
+
+// src/features/browse/render.ctrl.js
+const cameraName = (camera) => cap(camDisplayName(camera));
+const BrowseRenderController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  listHeadingLabel(timestamp = null) {
+    return resolveBrowseListHeadingLabel({
+      tab: this._host._tab,
+      timestamp,
+      getWeekday: (value) => this._host._weekday(value),
+      getMonthDay: (value, options) => this._host._monthDay(value, options),
+      capitalize: cap
+    });
+  }
+  recordingsHeadingLabel(timestamp = null) {
+    return resolveBrowseRecordingsHeadingLabel({
+      timestamp,
+      windowEnd: this._host._winEnd,
+      nowSec: Date.now() / 1e3,
+      getWeekday: (value) => this._host._weekday(value),
+      getMonthDay: (value, options) => this._host._monthDay(value, options)
+    });
+  }
+  controlsHeadingLabel() {
+    const camera = this._host._activeCam || {};
+    const ptzInfo = this._host._activeCameraPtzInfo?.() || null;
+    const ptzConfigured = hasCameraPtz(camera);
+    const ptzReady = ptzConfigured && (hasPtzPanTiltCapability(ptzInfo) || hasPtzZoomCapability(ptzInfo) || hasPtzFocusCapability(ptzInfo));
+    return resolveBrowseControlsHeadingLabel({
+      cameraName: cameraName(camera),
+      ptzReady
+    });
+  }
+  renderListLabel(timestamp = null) {
+    const browseHeader = this._host._pageShellRegion("browseHeader");
+    const label = this._host._pageShellRegionElement(
+      "browseHeader",
+      "#browse-head-label"
+    );
+    const previous = this._host._pageShellRegionElement(
+      "browseHeader",
+      "#rec-day-prev"
+    );
+    const next = this._host._pageShellRegionElement(
+      "browseHeader",
+      "#rec-day-next"
+    );
+    if (!label || !browseHeader) return;
+    browseHeader.style.display = "flex";
+    if (this._host._tab === "recordings") {
+      label.textContent = this.recordingsHeadingLabel(
+        timestamp || this._host._winEnd
+      );
+      const showButtons = this._host._isMobilePhoneViewport?.() !== true;
+      if (previous) previous.style.display = showButtons ? "inline-flex" : "none";
+      if (next) next.style.display = showButtons ? "inline-flex" : "none";
+      void (this._host._recordingsBrowseNavController?.updateBrowseNav?.() ?? this._host._updateRecordingsBrowseNav?.());
+      return;
+    }
+    if (previous) previous.style.display = "none";
+    if (next) next.style.display = "none";
+    label.textContent = this._host._tab === "controls" ? this.controlsHeadingLabel() : this.listHeadingLabel(timestamp);
+  }
+  showStickyDayHeaders() {
+    return shouldShowBrowseStickyDayHeaders(this._host._tab);
+  }
+  renderStickyDaySections(items, renderItem) {
+    return buildBrowseStickyDaySectionsMarkup({
+      items,
+      getDayKey: (timestamp) => this._host._dayKey(timestamp),
+      getLabel: (timestamp) => this.listHeadingLabel(timestamp),
+      renderItem
+    });
+  }
+  renderEventsContent(items) {
+    return buildBrowseEventsContentMarkup({
+      items,
+      showStickyDayHeaders: this.showStickyDayHeaders(),
+      getDayKey: (timestamp) => this._host._dayKey(timestamp),
+      getLabel: (timestamp) => this.listHeadingLabel(timestamp),
+      renderItem: (item) => this._host._eventCardHTML(item, false),
+      exhausted: this._host._exhausted
+    });
+  }
+  renderKeptContent(items) {
+    return buildBrowseKeptContentMarkup({
+      items,
+      renderItem: (item) => this._host._eventCardHTML(item, false)
+    });
+  }
+  renderReviewsContent(items) {
+    return buildBrowseReviewsContentMarkup({
+      items,
+      getDayKey: (timestamp) => this._host._dayKey(timestamp),
+      getLabel: (timestamp) => this.listHeadingLabel(timestamp),
+      renderItem: (item) => this._host._reviewListItemHTML(item)
+    });
+  }
+  syncBrowseHeadFromScroll() {
+    if (!this.showStickyDayHeaders()) return;
+    const browse = this._host._pageShellRegion("browse");
+    const list = this._host._pageShellRegionElement("browse", "#list");
+    const label = this._host._pageShellRegionElement(
+      "browseHeader",
+      "#browse-head-label"
+    );
+    if (!list || !browse || !label) return;
+    const nextLabel = resolveActiveDayLabelFromScroll({ list, browse });
+    if (nextLabel) label.textContent = nextLabel;
+  }
+  renderLegend() {
+    const legend = this._host._pageShellRegionElement(
+      "filterPanel",
+      "#legend"
+    );
+    if (!legend) return;
+    const labels = this._host._browseFilterController?.labels?.() ?? this._host._labels?.() ?? [];
+    legend.innerHTML = buildBrowseLegendMarkup({
+      labels,
+      cameras: this._host._config.cameras,
+      eventsMode: this._host._eventsMode,
+      cameraColors: CAM_COLORS,
+      getLabelColor: labelColor,
+      capitalize: cap,
+      getCameraName: cameraName
+    });
+  }
+};
 
 // src/features/mobile-view/page.ctrl.js
 const cameraName2 = (camera) => cap(camDisplayName(camera));
@@ -15309,6 +15435,7 @@ const MobileViewPageController = class {
   constructor(host, constants) {
     this._host = host;
     this._constants = constants;
+    this._browseRenderController = new BrowseRenderController(host);
   }
   activateMobileViewPageRoute(context = {}) {
     activateStandardPageRouteLifecycle({
@@ -15408,34 +15535,37 @@ const MobileViewPageController = class {
     subtitle.textContent = this.subtitleText();
   }
   renderLegend() {
-    renderStandardPageLegend(this._host);
+    this._browseRenderController.renderLegend();
   }
   listHeadingLabel(ts = null) {
-    return standardPageListHeadingLabel(this._host, ts);
+    return this._browseRenderController.listHeadingLabel(ts);
   }
   recordingsHeadingLabel(ts = null) {
-    return standardPageRecordingsHeadingLabel(this._host, ts);
+    return this._browseRenderController.recordingsHeadingLabel(ts);
   }
   renderListLabel(ts = null) {
-    renderStandardPageListLabel(this._host, ts);
+    this._browseRenderController.renderListLabel(ts);
   }
   showStickyDayHeaders() {
-    return standardPageShowStickyDayHeaders(this._host);
+    return this._browseRenderController.showStickyDayHeaders();
   }
   renderStickyDaySections(items, renderItem) {
-    return renderStandardPageStickyDaySections(this._host, items, renderItem);
+    return this._browseRenderController.renderStickyDaySections(
+      items,
+      renderItem
+    );
   }
   renderEventsContent(items) {
-    return renderStandardPageEventsContent(this._host, items);
+    return this._browseRenderController.renderEventsContent(items);
   }
   renderKeptContent(items) {
-    return renderStandardPageKeptContent(this._host, items);
+    return this._browseRenderController.renderKeptContent(items);
   }
   renderReviewsContent(items) {
-    return renderStandardPageReviewsContent(this._host, items);
+    return this._browseRenderController.renderReviewsContent(items);
   }
   syncBrowseHeadFromScroll() {
-    syncStandardPageBrowseHeadFromScroll(this._host);
+    this._browseRenderController.syncBrowseHeadFromScroll();
   }
   syncMobileViewPageMarkup() {
     applyMobileViewPageMarkup({
@@ -15497,6 +15627,7 @@ const SingleViewPageController = class {
   constructor(host, constants) {
     this._host = host;
     this._constants = constants;
+    this._browseRenderController = new BrowseRenderController(host);
   }
   _pageNavigation() {
     return this._host._pageNavigationController || null;
@@ -15584,34 +15715,37 @@ const SingleViewPageController = class {
     subtitle.textContent = this.subtitleText();
   }
   renderLegend() {
-    renderStandardPageLegend(this._host);
+    this._browseRenderController.renderLegend();
   }
   listHeadingLabel(ts = null) {
-    return standardPageListHeadingLabel(this._host, ts);
+    return this._browseRenderController.listHeadingLabel(ts);
   }
   recordingsHeadingLabel(ts = null) {
-    return standardPageRecordingsHeadingLabel(this._host, ts);
+    return this._browseRenderController.recordingsHeadingLabel(ts);
   }
   renderListLabel(ts = null) {
-    renderStandardPageListLabel(this._host, ts);
+    this._browseRenderController.renderListLabel(ts);
   }
   showStickyDayHeaders() {
-    return standardPageShowStickyDayHeaders(this._host);
+    return this._browseRenderController.showStickyDayHeaders();
   }
   renderStickyDaySections(items, renderItem) {
-    return renderStandardPageStickyDaySections(this._host, items, renderItem);
+    return this._browseRenderController.renderStickyDaySections(
+      items,
+      renderItem
+    );
   }
   renderEventsContent(items) {
-    return renderStandardPageEventsContent(this._host, items);
+    return this._browseRenderController.renderEventsContent(items);
   }
   renderKeptContent(items) {
-    return renderStandardPageKeptContent(this._host, items);
+    return this._browseRenderController.renderKeptContent(items);
   }
   renderReviewsContent(items) {
-    return renderStandardPageReviewsContent(this._host, items);
+    return this._browseRenderController.renderReviewsContent(items);
   }
   syncBrowseHeadFromScroll() {
-    syncStandardPageBrowseHeadFromScroll(this._host);
+    this._browseRenderController.syncBrowseHeadFromScroll();
   }
   activateSingleViewPageRoute(context = {}) {
     this.activateStandardPageRoute(context);

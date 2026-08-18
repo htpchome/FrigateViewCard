@@ -345,7 +345,7 @@ test("mobile-view browse-head sync follows active sticky day label", () => {
   );
 });
 
-test("mobile page chrome updates never access or replace the live region", () => {
+test("mobile page and browse updates never access or replace the live region", () => {
   const liveNode = {
     innerHTML: "connected-live-camera",
     connection: { id: "preserved" },
@@ -375,6 +375,10 @@ test("mobile page chrome updates never access or replace the live region", () =>
   controller.syncStatus();
   controller.renderStats();
   controller.renderSubtitle();
+  controller.renderLegend();
+  controller.renderListLabel();
+  controller.renderEventsContent([{ id: 1, start_time: 1722470400 }]);
+  controller.syncBrowseHeadFromScroll();
 
   assert.equal(liveRegionAccesses, 0);
   assert.equal(liveNode.innerHTML, "connected-live-camera");
