@@ -161,6 +161,18 @@ export class SingleViewPageController {
     this._browseRenderController.syncBrowseHeadFromScroll();
   }
 
+  renderList() {
+    this._browseRenderController.renderList();
+  }
+
+  setListHtmlIfChanged(list, html) {
+    return this._browseRenderController.setListHtmlIfChanged(list, html);
+  }
+
+  syncOlderHint(forceHide = null) {
+    this._browseRenderController.syncOlderHint(forceHide);
+  }
+
   activateSingleViewPageRoute(context = {}) {
     this.activateStandardPageRoute(context);
   }

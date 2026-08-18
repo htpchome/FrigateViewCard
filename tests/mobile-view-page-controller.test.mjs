@@ -45,6 +45,11 @@ const createHost = ({ popupOpen = false, domNodes = {} } = {}) => {
     _isMobilePhoneViewport: () => true,
     _allDisplayEvents: () => [{ id: 1 }, { id: 2 }],
     _labels: () => ["person", "car"],
+    _browseFilterController: {
+      filtered: () => [],
+      filteredKept: () => [],
+      filteredReviews: () => [{ id: 1, start_time: 1722470400 }],
+    },
     _weekday: () => "Wed",
     _monthDay: () => "Jul 31st",
     _dayKey: () => "2026-07-31",
@@ -357,6 +362,7 @@ test("mobile page and browse updates never access or replace the live region", (
     "#ev-count": createNode(),
     "#stream-type": createNode(),
     "#tl-range": createNode(),
+    "#list": createNode(),
   };
   const { host, calls } = createHost({ domNodes: nodes });
   let liveRegionAccesses = 0;
@@ -378,6 +384,7 @@ test("mobile page and browse updates never access or replace the live region", (
   controller.renderLegend();
   controller.renderListLabel();
   controller.renderEventsContent([{ id: 1, start_time: 1722470400 }]);
+  controller.renderList();
   controller.syncBrowseHeadFromScroll();
 
   assert.equal(liveRegionAccesses, 0);

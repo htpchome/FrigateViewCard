@@ -1,5 +1,13 @@
 import { CAM_COLORS, cap, camDisplayName, labelColor } from "../../helpers.js";
-import { resolveActiveDayLabelFromScroll } from "../../shared/list-render.js";
+import {
+  applyListMarkupWithOlderHint,
+  createOlderHintSyncer,
+  resolveActiveDayLabelFromScroll,
+  resolveListLabelTimestamp,
+  resolveListMarkup,
+  runListPostRenderSync,
+  syncOlderHintFromScroll,
+} from "../../shared/list-render.js";
 import {
   hasCameraPtz,
   hasPtzFocusCapability,
@@ -174,6 +182,179 @@ export class BrowseRenderController {
       getLabelColor: labelColor,
       capitalize: cap,
       getCameraName: cameraName,
+    });
+  }
+
+  renderList() {
+    const list = this._host._pageShellRegionElement("browse", "#list");
+    if (!list) return;
+
+    if (this._host._tab === "controls") {
+      this.syncOlderHint(true);
+      return this._host._renderControlsSection(list);
+    }
+
+    if (this._host._tab === "recordings") {
+      return this._renderRecordingsTabList(list);
+    }
+
+    if (this._host._tab === "alerts") {
+      this.syncOlderHint(false);
+      return this._renderReviews(list);
+    }
+
+    if (this._host._tab === "kept") {
+      return this._renderKeptList(list);
+    }
+
+    return this._renderEventsList(list);
+  }
+
+  syncOlderHint(forceHide = null) {
+    syncOlderHintFromScroll({
+      hintEl: this._host._pageShellRegionElement("footer", "#older-hint"),
+      list: this._host._pageShellRegionElement("browse", "#list"),
+      browse: this._host._pageShellRegion("browse"),
+      tab: this._host._tab,
+      forceHide,
+    });
+  }
+
+  setListHtmlIfChanged(list, html) {
+    if (!list) return false;
+    const nextHtml = String(html || "");
+    if (this._host._lastRenderedListHtml === nextHtml) return false;
+    list.innerHTML = nextHtml;
+    this._host._lastRenderedListHtml = nextHtml;
+    return true;
+  }
+
+  _renderRecordingsTabList(list) {
+    // Preserve the list DOM while its recording is open in the viewer.
+    if (
+      this._host._$("#viewer")?.style.display !== "none" &&
+      this._host._playing?.rec != null
+    ) {
+      return;
+    }
+    this.syncOlderHint(false);
+    this._renderRecordings(list);
+  }
+
+  _renderKeptList(list) {
+    const kept = this._host._browseFilterController.filteredKept();
+    this.renderListLabel();
+    this._renderStandardListMarkup(list, {
+      items: kept,
+      emptyMessage: "No kept events",
+      emptyHint: "star an event to keep it",
+      buildContentHtml: (items) => this.renderKeptContent(items),
+      emptyForceHide: false,
+      contentForceHide: false,
+      syncOnContent: true,
+    });
+  }
+
+  _renderEventsList(list) {
+    const events = this._host._browseFilterController.filtered();
+    this.renderListLabel(resolveListLabelTimestamp(events));
+    this._renderStandardListMarkup(list, {
+      items: events,
+      emptyMessage: "No events in this window",
+      buildContentHtml: (items) => this.renderEventsContent(items),
+      emptyForceHide: false,
+      contentForceHide: null,
+      syncOnContent: false,
+      syncBrowseHead: true,
+      scheduleDeferredOlderHint: true,
+    });
+  }
+
+  _renderStandardListMarkup(
+    list,
+    {
+      items,
+      emptyMessage,
+      emptyHint = "",
+      buildContentHtml,
+      emptyForceHide = null,
+      contentForceHide = null,
+      syncOnContent = true,
+      syncBrowseHead = false,
+      scheduleDeferredOlderHint = false,
+    } = {},
+  ) {
+    const syncOlderHint = createOlderHintSyncer((forceHide) =>
+      this.syncOlderHint(forceHide),
+    );
+    const renderState = resolveListMarkup({
+      items,
+      emptyMessage,
+      emptyHint,
+      buildContentHtml,
+    });
+    const hasContent = applyListMarkupWithOlderHint({
+      setHtml: (html) => this.setListHtmlIfChanged(list, html),
+      html: renderState.html,
+      isEmpty: renderState.isEmpty,
+      syncOlderHint,
+      emptyForceHide,
+      contentForceHide,
+      syncOnContent,
+    });
+    if (!hasContent || !syncBrowseHead) return;
+
+    runListPostRenderSync({
+      syncBrowseHead: () => this.syncBrowseHeadFromScroll(),
+      syncOlderHint,
+      forceHide: contentForceHide,
+      scheduleDeferredOlderHint,
+    });
+  }
+
+  _renderRecordings(list) {
+    this.renderListLabel(this._host._winEnd);
+    const recordings = this._host._recordingsViewRows(this._host._recordings);
+    const syncOlderHint = createOlderHintSyncer((forceHide) =>
+      this.syncOlderHint(forceHide),
+    );
+    const html = this._host._recordingsListMarkup(
+      recordings,
+      "No recordings in the last 24 hours",
+    );
+    applyListMarkupWithOlderHint({
+      setHtml: (nextHtml) => this.setListHtmlIfChanged(list, nextHtml),
+      html,
+      isEmpty: !recordings.length,
+      syncOlderHint,
+      emptyForceHide: true,
+      contentForceHide: false,
+      syncOnContent: true,
+    });
+  }
+
+  _renderReviews(list) {
+    const showAllReviews =
+      this._host._activeCam?.alerts_content === "all_reviews";
+    const filteredReviews =
+      this._host._browseFilterController.filteredReviews();
+    const emptyText = showAllReviews
+      ? "No reviews in this window"
+      : "No alerts in this window";
+    const allReviews = [...filteredReviews].sort(
+      (a, b) => b.start_time - a.start_time,
+    );
+
+    this.renderListLabel(resolveListLabelTimestamp(allReviews));
+    this._renderStandardListMarkup(list, {
+      items: allReviews,
+      emptyMessage: emptyText,
+      buildContentHtml: (items) => this.renderReviewsContent(items),
+      emptyForceHide: true,
+      contentForceHide: false,
+      syncOnContent: false,
+      scheduleDeferredOlderHint: false,
+      syncBrowseHead: true,
     });
   }
 }

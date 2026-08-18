@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1495";
+const VERSION = "1.0.1496";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -15427,6 +15427,152 @@ const BrowseRenderController = class {
       getCameraName: cameraName
     });
   }
+  renderList() {
+    const list = this._host._pageShellRegionElement("browse", "#list");
+    if (!list) return;
+    if (this._host._tab === "controls") {
+      this.syncOlderHint(true);
+      return this._host._renderControlsSection(list);
+    }
+    if (this._host._tab === "recordings") {
+      return this._renderRecordingsTabList(list);
+    }
+    if (this._host._tab === "alerts") {
+      this.syncOlderHint(false);
+      return this._renderReviews(list);
+    }
+    if (this._host._tab === "kept") {
+      return this._renderKeptList(list);
+    }
+    return this._renderEventsList(list);
+  }
+  syncOlderHint(forceHide = null) {
+    syncOlderHintFromScroll({
+      hintEl: this._host._pageShellRegionElement("footer", "#older-hint"),
+      list: this._host._pageShellRegionElement("browse", "#list"),
+      browse: this._host._pageShellRegion("browse"),
+      tab: this._host._tab,
+      forceHide
+    });
+  }
+  setListHtmlIfChanged(list, html) {
+    if (!list) return false;
+    const nextHtml = String(html || "");
+    if (this._host._lastRenderedListHtml === nextHtml) return false;
+    list.innerHTML = nextHtml;
+    this._host._lastRenderedListHtml = nextHtml;
+    return true;
+  }
+  _renderRecordingsTabList(list) {
+    if (this._host._$("#viewer")?.style.display !== "none" && this._host._playing?.rec != null) {
+      return;
+    }
+    this.syncOlderHint(false);
+    this._renderRecordings(list);
+  }
+  _renderKeptList(list) {
+    const kept = this._host._browseFilterController.filteredKept();
+    this.renderListLabel();
+    this._renderStandardListMarkup(list, {
+      items: kept,
+      emptyMessage: "No kept events",
+      emptyHint: "star an event to keep it",
+      buildContentHtml: (items) => this.renderKeptContent(items),
+      emptyForceHide: false,
+      contentForceHide: false,
+      syncOnContent: true
+    });
+  }
+  _renderEventsList(list) {
+    const events = this._host._browseFilterController.filtered();
+    this.renderListLabel(resolveListLabelTimestamp(events));
+    this._renderStandardListMarkup(list, {
+      items: events,
+      emptyMessage: "No events in this window",
+      buildContentHtml: (items) => this.renderEventsContent(items),
+      emptyForceHide: false,
+      contentForceHide: null,
+      syncOnContent: false,
+      syncBrowseHead: true,
+      scheduleDeferredOlderHint: true
+    });
+  }
+  _renderStandardListMarkup(list, {
+    items,
+    emptyMessage,
+    emptyHint = "",
+    buildContentHtml,
+    emptyForceHide = null,
+    contentForceHide = null,
+    syncOnContent = true,
+    syncBrowseHead = false,
+    scheduleDeferredOlderHint = false
+  } = {}) {
+    const syncOlderHint = createOlderHintSyncer(
+      (forceHide) => this.syncOlderHint(forceHide)
+    );
+    const renderState = resolveListMarkup({
+      items,
+      emptyMessage,
+      emptyHint,
+      buildContentHtml
+    });
+    const hasContent = applyListMarkupWithOlderHint({
+      setHtml: (html) => this.setListHtmlIfChanged(list, html),
+      html: renderState.html,
+      isEmpty: renderState.isEmpty,
+      syncOlderHint,
+      emptyForceHide,
+      contentForceHide,
+      syncOnContent
+    });
+    if (!hasContent || !syncBrowseHead) return;
+    runListPostRenderSync({
+      syncBrowseHead: () => this.syncBrowseHeadFromScroll(),
+      syncOlderHint,
+      forceHide: contentForceHide,
+      scheduleDeferredOlderHint
+    });
+  }
+  _renderRecordings(list) {
+    this.renderListLabel(this._host._winEnd);
+    const recordings = this._host._recordingsViewRows(this._host._recordings);
+    const syncOlderHint = createOlderHintSyncer(
+      (forceHide) => this.syncOlderHint(forceHide)
+    );
+    const html = this._host._recordingsListMarkup(
+      recordings,
+      "No recordings in the last 24 hours"
+    );
+    applyListMarkupWithOlderHint({
+      setHtml: (nextHtml) => this.setListHtmlIfChanged(list, nextHtml),
+      html,
+      isEmpty: !recordings.length,
+      syncOlderHint,
+      emptyForceHide: true,
+      contentForceHide: false,
+      syncOnContent: true
+    });
+  }
+  _renderReviews(list) {
+    const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
+    const filteredReviews = this._host._browseFilterController.filteredReviews();
+    const emptyText = showAllReviews ? "No reviews in this window" : "No alerts in this window";
+    const allReviews = [...filteredReviews].sort(
+      (a, b) => b.start_time - a.start_time
+    );
+    this.renderListLabel(resolveListLabelTimestamp(allReviews));
+    this._renderStandardListMarkup(list, {
+      items: allReviews,
+      emptyMessage: emptyText,
+      buildContentHtml: (items) => this.renderReviewsContent(items),
+      emptyForceHide: true,
+      contentForceHide: false,
+      syncOnContent: false,
+      scheduleDeferredOlderHint: false,
+      syncBrowseHead: true
+    });
+  }
 };
 
 // src/features/mobile-view/page.ctrl.js
@@ -15566,6 +15712,15 @@ const MobileViewPageController = class {
   }
   syncBrowseHeadFromScroll() {
     this._browseRenderController.syncBrowseHeadFromScroll();
+  }
+  renderList() {
+    this._browseRenderController.renderList();
+  }
+  setListHtmlIfChanged(list, html) {
+    return this._browseRenderController.setListHtmlIfChanged(list, html);
+  }
+  syncOlderHint(forceHide = null) {
+    this._browseRenderController.syncOlderHint(forceHide);
   }
   syncMobileViewPageMarkup() {
     applyMobileViewPageMarkup({
@@ -15746,6 +15901,15 @@ const SingleViewPageController = class {
   }
   syncBrowseHeadFromScroll() {
     this._browseRenderController.syncBrowseHeadFromScroll();
+  }
+  renderList() {
+    this._browseRenderController.renderList();
+  }
+  setListHtmlIfChanged(list, html) {
+    return this._browseRenderController.setListHtmlIfChanged(list, html);
+  }
+  syncOlderHint(forceHide = null) {
+    this._browseRenderController.syncOlderHint(forceHide);
   }
   activateSingleViewPageRoute(context = {}) {
     this.activateStandardPageRoute(context);
@@ -21118,6 +21282,9 @@ const FrigateViewCard = class extends HTMLElement {
   _syncBrowseHeadFromScroll() {
     this._activeStandardPageController().syncBrowseHeadFromScroll();
   }
+  _syncOlderHint(forceHide = null) {
+    this._activeStandardPageController().syncOlderHint(forceHide);
+  }
   _dur(ev) {
     return Math.max(
       1,
@@ -21144,45 +21311,13 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _setListHtmlIfChanged(list, html) {
-    if (!list) return false;
-    const nextHtml = String(html || "");
-    if (this._lastRenderedListHtml === nextHtml) return false;
-    list.innerHTML = nextHtml;
-    this._lastRenderedListHtml = nextHtml;
-    return true;
+    return this._activeStandardPageController().setListHtmlIfChanged(
+      list,
+      html
+    );
   }
   _renderList() {
-    const list = this._pageShellRegionElement("browse", "#list");
-    if (!list) return;
-    if (this._tab === "controls") {
-      return this._renderControlsTabList(list);
-    }
-    if (this._tab === "recordings") {
-      return this._renderRecordingsTabList(list);
-    }
-    return this._renderStandardTabList(list);
-  }
-  _renderControlsTabList(list) {
-    this._syncOlderHint(true);
-    return this._renderControlsSection(list);
-  }
-  _renderRecordingsTabList(list) {
-    if (this._isRecordingViewerActive() && this._playing?.rec != null) return;
-    this._syncOlderHint(false);
-    return this._renderRecordings(list);
-  }
-  _isRecordingViewerActive() {
-    return this._$("#viewer")?.style.display !== "none";
-  }
-  _renderStandardTabList(list) {
-    if (this._tab === "alerts") {
-      this._syncOlderHint(false);
-      return this._renderReviews(list);
-    }
-    if (this._tab === "kept") {
-      return this._renderKeptList(list);
-    }
-    return this._renderEventsList(list);
+    this._activeStandardPageController().renderList();
   }
   _renderControlsSection(list) {
     void this._ensureActiveCameraPtzInfo();
@@ -21366,105 +21501,6 @@ const FrigateViewCard = class extends HTMLElement {
     if (!this._controlsReadoutLines.length) return;
     el.scrollTop = el.scrollHeight;
   }
-  _renderKeptList(list) {
-    const kept = this._browseFilterController.filteredKept();
-    this._renderListLabel();
-    this._renderStandardListMarkup(list, {
-      items: kept,
-      emptyMessage: "No kept events",
-      emptyHint: "star an event to keep it",
-      buildContentHtml: (items) => this._renderKeptContent(items),
-      emptyForceHide: false,
-      contentForceHide: false,
-      syncOnContent: true
-    });
-  }
-  _renderEventsList(list) {
-    const events = this._browseFilterController.filtered();
-    this._renderListLabel(resolveListLabelTimestamp(events));
-    this._renderStandardListMarkup(list, {
-      items: events,
-      emptyMessage: "No events in this window",
-      buildContentHtml: (items) => this._renderEventsContent(items),
-      emptyForceHide: false,
-      contentForceHide: null,
-      syncOnContent: false,
-      syncBrowseHead: true,
-      scheduleDeferredOlderHint: true
-    });
-  }
-  _renderStandardListMarkup(list, {
-    items,
-    emptyMessage,
-    emptyHint = "",
-    buildContentHtml,
-    emptyForceHide = null,
-    contentForceHide = null,
-    syncOnContent = true,
-    syncBrowseHead = false,
-    scheduleDeferredOlderHint = false
-  } = {}) {
-    const syncOlderHint = createOlderHintSyncer(
-      (forceHide) => this._syncOlderHint(forceHide)
-    );
-    const renderState = resolveListMarkup({
-      items,
-      emptyMessage,
-      emptyHint,
-      buildContentHtml
-    });
-    const hasContent = applyListMarkupWithOlderHint({
-      setHtml: (html) => this._setListHtmlIfChanged(list, html),
-      html: renderState.html,
-      isEmpty: renderState.isEmpty,
-      syncOlderHint,
-      emptyForceHide,
-      contentForceHide,
-      syncOnContent
-    });
-    if (!hasContent) {
-      return;
-    }
-    if (!syncBrowseHead) {
-      return;
-    }
-    runListPostRenderSync({
-      syncBrowseHead: () => this._syncBrowseHeadFromScroll(),
-      syncOlderHint,
-      forceHide: contentForceHide,
-      scheduleDeferredOlderHint
-    });
-  }
-  _syncOlderHint(forceHide = null) {
-    syncOlderHintFromScroll({
-      hintEl: this._pageShellRegionElement("footer", "#older-hint"),
-      list: this._pageShellRegionElement("browse", "#list"),
-      browse: this._pageShellRegion("browse"),
-      tab: this._tab,
-      forceHide
-    });
-  }
-  _renderRecordings(list) {
-    this._renderListLabel(this._winEnd);
-    const recs = this._recordingsViewRows(this._recordings);
-    const isEmpty = !recs.length;
-    const syncOlderHint = createOlderHintSyncer(
-      (forceHide) => this._syncOlderHint(forceHide)
-    );
-    const html = this._recordingsListMarkup(
-      recs,
-      "No recordings in the last 24 hours"
-    );
-    applyListMarkupWithOlderHint({
-      setHtml: (nextHtml) => this._setListHtmlIfChanged(list, nextHtml),
-      html,
-      isEmpty,
-      syncOlderHint,
-      emptyForceHide: true,
-      contentForceHide: false,
-      syncOnContent: true
-    });
-  }
   _reviewListItemHTML(review) {
     const model = buildReviewListItemModel(review, {
       cap,
@@ -21476,26 +21512,6 @@ const FrigateViewCard = class extends HTMLElement {
       showDownloadButtons: !this._isLikelyMobileClient()
     });
     return buildReviewListItemHtml(model, { cap, icons: ICONS });
-  }
-  _renderReviews(list) {
-    const showAllReviews = this._activeCam?.alerts_content === "all_reviews";
-    const filteredReviews = this._browseFilterController.filteredReviews();
-    const emptyText = showAllReviews ? "No reviews in this window" : "No alerts in this window";
-    this._renderListLabel(resolveListLabelTimestamp(filteredReviews));
-    const allRevs = [...filteredReviews].sort(
-      (a, b) => b.start_time - a.start_time
-    );
-    this._renderListLabel(resolveListLabelTimestamp(allRevs));
-    this._renderStandardListMarkup(list, {
-      items: allRevs,
-      emptyMessage: emptyText,
-      buildContentHtml: (items) => this._renderReviewsContent(items),
-      emptyForceHide: true,
-      contentForceHide: false,
-      syncOnContent: false,
-      scheduleDeferredOlderHint: false,
-      syncBrowseHead: true
-    });
   }
   // ── clip download range ───────────────────────────────────
   async _downloadRecRange(dlStart, dlEnd) {

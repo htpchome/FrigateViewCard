@@ -175,6 +175,18 @@ export class MobileViewPageController {
     this._browseRenderController.syncBrowseHeadFromScroll();
   }
 
+  renderList() {
+    this._browseRenderController.renderList();
+  }
+
+  setListHtmlIfChanged(list, html) {
+    return this._browseRenderController.setListHtmlIfChanged(list, html);
+  }
+
+  syncOlderHint(forceHide = null) {
+    this._browseRenderController.syncOlderHint(forceHide);
+  }
+
   syncMobileViewPageMarkup() {
     applyMobileViewPageMarkup({
       host: this._host,

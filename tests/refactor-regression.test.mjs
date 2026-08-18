@@ -1758,3 +1758,57 @@ test("page shell replacement preserves the existing live wrapper", () => {
   assert.ok(renderIndex > detachIndex);
   assert.ok(restoreIndex > renderIndex);
 });
+
+test("browse list orchestration is owned by the browse render controller", () => {
+  for (const controllerMethod of [
+    "renderList() {",
+    "setListHtmlIfChanged(list, html)",
+    "syncOlderHint(forceHide = null)",
+    "_renderStandardListMarkup(",
+    "_renderRecordings(list)",
+    "_renderReviews(list)",
+  ]) {
+    assert.equal(
+      browseRenderControllerSource.includes(controllerMethod),
+      true,
+    );
+  }
+  for (const removedCardMethod of [
+    "_renderEventsList(list) {",
+    "_renderKeptList(list) {",
+    "_renderStandardListMarkup(",
+    "_renderRecordings(list) {",
+    "_renderReviews(list) {",
+  ]) {
+    assert.equal(cardSource.includes(removedCardMethod), false);
+  }
+  assert.equal(
+    /_renderList\(\) \{\s*this\._activeStandardPageController\(\)\.renderList\(\);\s*\}/.test(
+      cardSource,
+    ),
+    true,
+  );
+  assert.equal(
+    /_syncOlderHint\(forceHide = null\) \{\s*this\._activeStandardPageController\(\)\.syncOlderHint\(forceHide\);\s*\}/.test(
+      cardSource,
+    ),
+    true,
+  );
+  for (const pageControllerSource of [
+    singleViewPageControllerSource,
+    mobileViewPageControllerSource,
+  ]) {
+    assert.equal(
+      pageControllerSource.includes(
+        "this._browseRenderController.renderList();",
+      ),
+      true,
+    );
+    assert.equal(
+      pageControllerSource.includes(
+        "this._browseRenderController.syncOlderHint(forceHide);",
+      ),
+      true,
+    );
+  }
+});
