@@ -156,10 +156,10 @@ export function buildMobileViewMainLayoutShellMarkup({
                 <div class="${tabsHolderClassName} shadow-small">
                   <div class="button-holder">
                     <div class="button-holder-row tabs-row">
-                      ${regions.tabs}
+                      
                     </div>
                     <div class="button-holder-row page-nav-row">
-                      ${regions.pageNavigation}
+                      ${regions.tabs}
                     </div>
                     <div class="button-holder-row tools-row">
                       ${regions.tools}
