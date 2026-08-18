@@ -1,0 +1,66 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import { buildPreviewPageMainLayoutShellMarkup } from "../src/features/preview/page.tmpl.js";
+import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
+import { buildWideViewMainLayoutShellMarkup } from "../src/features/wide-view/page.tmpl.js";
+
+const regions = {
+  live: `<div data-fvc-region="live">Live</div>`,
+  information: `<div data-fvc-region="information">Information</div>`,
+  cameraSwitcher: `<div data-fvc-region="camera-switcher">Cameras</div>`,
+  pageNavigation: `<div data-fvc-region="page-navigation">Navigation</div>`,
+  tabs: `<div data-fvc-region="tabs">Tabs</div>`,
+  tools: `<div data-fvc-region="tools">Tools</div>`,
+  browseHeader: `<div data-fvc-region="browse-header">Browse Header</div>`,
+  browse: `<div data-fvc-region="browse">Browse</div>`,
+  footer: `<div data-fvc-region="footer">Footer</div>`,
+};
+
+const routeBuilders = [
+  ["single-view", buildSingleViewMainLayoutShellMarkup],
+  ["wide-view", buildWideViewMainLayoutShellMarkup],
+  ["preview-view", buildPreviewPageMainLayoutShellMarkup],
+];
+
+test("route-owned outer templates compose every atomic region once", () => {
+  for (const [layoutSuffix, builder] of routeBuilders) {
+    const markup = builder({
+      regions,
+      layoutProfile: {
+        layoutClass: `layout--${layoutSuffix}`,
+        leftColumnClass: `col-left--${layoutSuffix}`,
+        rightColumnClass: `col-right--${layoutSuffix}`,
+      },
+    });
+
+    assert.match(markup, new RegExp(`class="layout layout--${layoutSuffix}"`));
+    for (const regionName of [
+      "live",
+      "information",
+      "camera-switcher",
+      "page-navigation",
+      "tabs",
+      "tools",
+      "browse-header",
+      "browse",
+      "footer",
+    ]) {
+      assert.equal(
+        markup.match(new RegExp(`data-fvc-region="${regionName}"`, "g"))
+          ?.length,
+        1,
+      );
+    }
+  }
+});
+
+test("route-owned outer templates do not synthesize omitted regions", () => {
+  for (const [, builder] of routeBuilders) {
+    const markup = builder({ regions: { live: regions.live } });
+
+    assert.match(markup, /data-fvc-region="live"/);
+    assert.doesNotMatch(markup, /data-fvc-region="tabs"/);
+    assert.doesNotMatch(markup, /data-fvc-region="tools"/);
+  }
+});

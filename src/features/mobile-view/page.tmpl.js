@@ -117,21 +117,14 @@ export function buildMobileViewInfoRowMarkup({
 
 export function buildMobileViewMainLayoutShellMarkup({
   regions: suppliedRegions = null,
-  host,
-  liveEngineWrap = "",
-  infoRow = "",
-  pageNav = "",
-  camSwitcher = "",
-  tabsMarkup = "",
-  toolsMarkup = "",
-  browseMarkup = "",
-  footerMarkup = "",
   layoutProfile = {},
 } = {}) {
-  const usesRegionComposition =
+  const normalizedRegions =
     suppliedRegions &&
     typeof suppliedRegions === "object" &&
-    !Array.isArray(suppliedRegions);
+    !Array.isArray(suppliedRegions)
+      ? suppliedRegions
+      : {};
   const regions = {
     live: "",
     information: "",
@@ -143,19 +136,7 @@ export function buildMobileViewMainLayoutShellMarkup({
     browseHeader: "",
     browse: "",
     footer: "",
-    ...(usesRegionComposition
-      ? suppliedRegions
-      : {
-          live: liveEngineWrap,
-          information: infoRow,
-          cameraSwitcher: camSwitcher,
-          pageNavigation: pageNav,
-          tabs: `<div class="tabs" data-fvc-region="tabs">${tabsMarkup}</div>`,
-          tools: `<div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>`,
-          twoWayTalk: host?._buildTwoWayTalkMobileButtonMarkup?.() || "",
-          browseHeader: browseMarkup,
-          footer: footerMarkup,
-        }),
+    ...normalizedRegions,
   };
   const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"]
     .filter(Boolean)

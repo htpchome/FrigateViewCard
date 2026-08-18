@@ -18,6 +18,22 @@ const mobileViewPageTemplateSource = fs.readFileSync(
   new URL("../src/features/mobile-view/page.tmpl.js", import.meta.url),
   "utf8",
 );
+const singleViewPageTemplateSource = fs.readFileSync(
+  new URL("../src/features/single-view/page.tmpl.js", import.meta.url),
+  "utf8",
+);
+const wideViewPageTemplateSource = fs.readFileSync(
+  new URL("../src/features/wide-view/page.tmpl.js", import.meta.url),
+  "utf8",
+);
+const pageShellRegistrySource = fs.readFileSync(
+  new URL("../src/features/navigation/page-shell-registry.js", import.meta.url),
+  "utf8",
+);
+const shellNavTemplateSource = fs.readFileSync(
+  new URL("../src/card/controls/shell-nav.tmpl.js", import.meta.url),
+  "utf8",
+);
 const go2rtcResolverSource = fs.readFileSync(
   new URL("../src/integrations/frigate/go2rtc-resolver.js", import.meta.url),
   "utf8",
@@ -1544,6 +1560,47 @@ test("navigation helpers live under the navigation feature owner", () => {
   assert.equal(
     deepLinkControllerSource.includes("export class DeepLinkController"),
     true,
+  );
+});
+
+test("outer page layouts live with their route owners", () => {
+  assert.equal(
+    singleViewPageTemplateSource.includes(
+      "export function buildSingleViewMainLayoutShellMarkup",
+    ),
+    true,
+  );
+  assert.equal(
+    mobileViewPageTemplateSource.includes(
+      "export function buildMobileViewMainLayoutShellMarkup",
+    ),
+    true,
+  );
+  assert.equal(
+    wideViewPageTemplateSource.includes(
+      "export function buildWideViewMainLayoutShellMarkup",
+    ),
+    true,
+  );
+  assert.equal(
+    previewPageTemplateSource.includes(
+      "export function buildPreviewPageMainLayoutShellMarkup",
+    ),
+    true,
+  );
+  for (const templatePath of [
+    "../single-view/page.tmpl.js",
+    "../mobile-view/page.tmpl.js",
+    "../wide-view/page.tmpl.js",
+    "../preview/page.tmpl.js",
+  ]) {
+    assert.equal(pageShellRegistrySource.includes(templatePath), true);
+  }
+  assert.equal(
+    shellNavTemplateSource.includes(
+      "export function buildMainLayoutShellMarkup",
+    ),
+    false,
   );
 });
 

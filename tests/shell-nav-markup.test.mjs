@@ -3,14 +3,12 @@ import assert from "node:assert/strict";
 
 import {
   buildBrowseHeaderRegionMarkup,
-  buildBrowseMarkup,
   buildBrowseRegionMarkup,
   buildCamSwitcherRegionMarkup,
   buildControlsSectionMarkup,
   buildFooterMarkup,
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
-  buildMainLayoutShellMarkup,
   buildPageNavButtonsMarkup,
   buildPageNavMarkup,
   buildTabsMarkup,
@@ -18,6 +16,7 @@ import {
   buildToolsMarkup,
   buildToolsRegionMarkup,
 } from "../src/card/controls/shell-nav.tmpl.js";
+import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
 
 const icons = {
   alerts: "A",
@@ -59,17 +58,14 @@ test("atomic shell fragments own their controller region anchors", () => {
 });
 
 test("region composition does not synthesize omitted page regions", () => {
-  const shellMarkup = buildMainLayoutShellMarkup({
+  const shellMarkup = buildSingleViewMainLayoutShellMarkup({
     regions: {
       live: `<div data-fvc-region="live">Live</div>`,
       tabs: buildTabsRegionMarkup({ markup: "Atomic Tabs" }),
     },
-    tabsMarkup: "Legacy Tabs",
-    toolsMarkup: "Legacy Tools",
   });
 
   assert.match(shellMarkup, /Atomic Tabs/);
-  assert.doesNotMatch(shellMarkup, /Legacy Tabs|Legacy Tools/);
   assert.doesNotMatch(shellMarkup, /data-fvc-region="tools"/);
 });
 
@@ -203,21 +199,26 @@ test("shared shell builders expose stable page region anchors", () => {
     icons: { live: "L", volOff: "M", volOn: "V", expand: "E" },
     streamMuted: true,
   });
-  const browseMarkup = buildBrowseMarkup({
+  const browseHeader = buildBrowseHeaderRegionMarkup({
     icons: { left: "<", right: ">" },
   });
+  const browse = buildBrowseRegionMarkup();
+  const tabs = buildTabsRegionMarkup({ markup: "Tabs" });
+  const tools = buildToolsRegionMarkup({ markup: "Tools" });
   const footerMarkup = buildFooterMarkup({
     icons: { frigateView: "F" },
   });
-  const shellMarkup = buildMainLayoutShellMarkup({
-    liveEngineWrap,
-    infoRow,
-    pageNav,
-    camSwitcher: "",
-    tabsMarkup: "Tabs",
-    toolsMarkup: "Tools",
-    browseMarkup,
-    footerMarkup,
+  const shellMarkup = buildSingleViewMainLayoutShellMarkup({
+    regions: {
+      live: liveEngineWrap,
+      information: infoRow,
+      pageNavigation: pageNav,
+      tabs,
+      tools,
+      browseHeader,
+      browse,
+      footer: footerMarkup,
+    },
   });
 
   for (const regionName of [

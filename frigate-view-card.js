@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1491";
+const VERSION = "1.0.1492";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3256,18 +3256,9 @@ function buildMobileViewInfoRowMarkup({
 }
 function buildMobileViewMainLayoutShellMarkup({
   regions: suppliedRegions = null,
-  host,
-  liveEngineWrap = "",
-  infoRow = "",
-  pageNav = "",
-  camSwitcher = "",
-  tabsMarkup = "",
-  toolsMarkup = "",
-  browseMarkup = "",
-  footerMarkup = "",
   layoutProfile = {}
 } = {}) {
-  const usesRegionComposition = suppliedRegions && typeof suppliedRegions === "object" && !Array.isArray(suppliedRegions);
+  const normalizedRegions = suppliedRegions && typeof suppliedRegions === "object" && !Array.isArray(suppliedRegions) ? suppliedRegions : {};
   const regions = {
     live: "",
     information: "",
@@ -3279,17 +3270,7 @@ function buildMobileViewMainLayoutShellMarkup({
     browseHeader: "",
     browse: "",
     footer: "",
-    ...usesRegionComposition ? suppliedRegions : {
-      live: liveEngineWrap,
-      information: infoRow,
-      cameraSwitcher: camSwitcher,
-      pageNavigation: pageNav,
-      tabs: `<div class="tabs" data-fvc-region="tabs">${tabsMarkup}</div>`,
-      tools: `<div class="tl-tools-slot" data-fvc-region="tools">${toolsMarkup}</div>`,
-      twoWayTalk: host?._buildTwoWayTalkMobileButtonMarkup?.() || "",
-      browseHeader: browseMarkup,
-      footer: footerMarkup
-    }
+    ...normalizedRegions
   };
   const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"].filter(Boolean).join(" ");
   const tabsHolderClassName = ["tabs-holder", layoutProfile.tabsHolderClass].filter(Boolean).join(" ");
@@ -3359,6 +3340,286 @@ function applyMobileViewPageMarkup({ host, pageIds }) {
     MOBILE_VIEW_ACTIVE_CLASS,
     isMobileViewRoute(host._pageId, pageIds)
   );
+}
+
+// src/features/single-view/page.tmpl.js
+function mergeClassNames(...tokens) {
+  return [
+    ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean))
+  ].join(" ");
+}
+function normalizeRegions(regions) {
+  const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
+  return {
+    live: "",
+    information: "",
+    cameraSwitcher: "",
+    pageNavigation: "",
+    tabs: "",
+    tools: "",
+    browseHeader: "",
+    browse: "",
+    footer: "",
+    ...suppliedRegions
+  };
+}
+function buildSingleViewMainLayoutShellMarkup({
+  regions: suppliedRegions = null,
+  layoutProfile = {}
+} = {}) {
+  const regions = normalizeRegions(suppliedRegions);
+  const layoutClassName = mergeClassNames("layout", layoutProfile.layoutClass);
+  const leftColumnClassName = mergeClassNames(
+    "col-left",
+    layoutProfile.leftColumnClass
+  );
+  const rightColumnClassName = mergeClassNames(
+    "col-right",
+    layoutProfile.rightColumnClass
+  );
+  const tabsHolderClassName = mergeClassNames(
+    "tabs-holder",
+    layoutProfile.tabsHolderClass
+  );
+  const resizeHandleClassName = mergeClassNames(
+    "resize-handle",
+    layoutProfile.resizeHandleClass
+  );
+  return `<div class="${layoutClassName}" id="layout">
+          <div class="${leftColumnClassName}" id="col-left">
+            ${regions.live}
+
+            ${regions.information}
+            ${regions.cameraSwitcher}
+          </div>
+          <div class="${resizeHandleClassName}" id="resize-handle"></div>
+          <div class="${rightColumnClassName}" id="col-right">
+            <div class="${tabsHolderClassName} shadow-small">
+              <div class="button-holder">
+                <div class="button-holder-row tabs-row">
+                  ${regions.tabs}
+                </div>
+                <div class="button-holder-row page-nav-row">
+                  ${regions.pageNavigation}
+                </div>
+                <div class="button-holder-row tools-row">
+                  ${regions.tools}
+                </div>
+              </div>
+            </div>
+            ${regions.browseHeader}
+            ${regions.browse}
+            ${regions.footer}
+          </div>
+        </div>`;
+}
+
+// src/features/wide-view/page.tmpl.js
+function mergeClassNames2(...tokens) {
+  return [
+    ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean))
+  ].join(" ");
+}
+function normalizeRegions2(regions) {
+  const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
+  return {
+    live: "",
+    information: "",
+    cameraSwitcher: "",
+    pageNavigation: "",
+    tabs: "",
+    tools: "",
+    browseHeader: "",
+    browse: "",
+    footer: "",
+    ...suppliedRegions
+  };
+}
+function buildWideViewMainLayoutShellMarkup({
+  regions: suppliedRegions = null,
+  layoutProfile = {}
+} = {}) {
+  const regions = normalizeRegions2(suppliedRegions);
+  const layoutClassName = mergeClassNames2("layout", layoutProfile.layoutClass);
+  const leftColumnClassName = mergeClassNames2(
+    "col-left",
+    layoutProfile.leftColumnClass
+  );
+  const rightColumnClassName = mergeClassNames2(
+    "col-right",
+    layoutProfile.rightColumnClass
+  );
+  const tabsHolderClassName = mergeClassNames2(
+    "tabs-holder",
+    layoutProfile.tabsHolderClass
+  );
+  const resizeHandleClassName = mergeClassNames2(
+    "resize-handle",
+    layoutProfile.resizeHandleClass
+  );
+  return `<div class="${layoutClassName}" id="layout">
+          <div class="${leftColumnClassName}" id="col-left">
+            ${regions.live}
+
+            ${regions.information}
+            ${regions.cameraSwitcher}
+          </div>
+          <div class="${resizeHandleClassName}" id="resize-handle"></div>
+          <div class="${rightColumnClassName}" id="col-right">
+            <div class="${tabsHolderClassName} shadow-small">
+              <div class="button-holder">
+                <div class="button-holder-row tabs-row">
+                  ${regions.tabs}
+                </div>
+                <div class="button-holder-row page-nav-row">
+                  ${regions.pageNavigation}
+                </div>
+                <div class="button-holder-row tools-row">
+                  ${regions.tools}
+                </div>
+              </div>
+            </div>
+            ${regions.browseHeader}
+            ${regions.browse}
+            ${regions.footer}
+          </div>
+        </div>`;
+}
+
+// src/features/preview/page.tmpl.js
+function previewMediaSeverityClass(severity) {
+  if (severity === "alert") return "grid-alert";
+  if (severity === "detection") return "grid-detection";
+  return "";
+}
+function buildPreviewStatusMarkup(online) {
+  return `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">\u25CF</span>${online ? "Online" : "Offline"}`;
+}
+function buildPreviewMetaMarkup({
+  showTitleBars,
+  name,
+  online,
+  sourceLabel,
+  eventsCount
+}) {
+  if (!showTitleBars) return "";
+  return `<div class="preview-meta">
+              <div class="preview-meta-name">${name}</div>
+              <div class="preview-meta-status">${buildPreviewStatusMarkup(online)}</div>
+              <div class="preview-meta-source">Stream Source: ${sourceLabel}</div>
+              <div class="preview-meta-events">Events: ${eventsCount}</div>
+            </div>`;
+}
+function buildPreviewCellMarkup({
+  index,
+  entity,
+  severity,
+  useLive,
+  metaMarkup
+}) {
+  return `<div class="preview-cell shadow-medium" data-preview-camidx="${index}">
+          <div class="preview-media-host ${previewMediaSeverityClass(severity)}" data-preview-media-entity="${entity}" data-preview-use-live="${useLive ? "1" : "0"}"></div>
+          ${metaMarkup}
+        </div>`;
+}
+function buildPreviewCameraButtonMarkup({ index, name }) {
+  return `<button class="glass-btn preview-cam-btn" type="button" data-preview-select-camidx="${index}">${name}</button>`;
+}
+function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
+  return `<div class="preview-grid" id="preview-grid">${cellsMarkup}</div>
+      <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
+}
+function buildPreviewShellHeaderMarkup({ title, subtitle, pageNav }) {
+  return `<div class="preview-shell-header" id="preview-shell-header">
+            <div class="preview-shell-title">
+              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
+              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
+            </div>
+            ${pageNav}
+          </div>`;
+}
+function buildPreviewLayoutShellMarkup({
+  previewShellHeader,
+  previewFooterIcon
+}) {
+  return `${previewShellHeader}
+          <div class="preview-shell" id="preview-shell"></div>
+          <div class="preview-shell-footer" id="preview-shell-footer">
+            <div class="frigate-view">${previewFooterIcon}</div>
+          </div>`;
+}
+function mergePreviewLayoutClassNames(...tokens) {
+  return [
+    ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean))
+  ].join(" ");
+}
+function normalizePreviewPageRegions(regions) {
+  const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
+  return {
+    live: "",
+    information: "",
+    cameraSwitcher: "",
+    pageNavigation: "",
+    tabs: "",
+    tools: "",
+    browseHeader: "",
+    browse: "",
+    footer: "",
+    ...suppliedRegions
+  };
+}
+function buildPreviewPageMainLayoutShellMarkup({
+  regions: suppliedRegions = null,
+  layoutProfile = {}
+} = {}) {
+  const regions = normalizePreviewPageRegions(suppliedRegions);
+  const layoutClassName = mergePreviewLayoutClassNames(
+    "layout",
+    layoutProfile.layoutClass
+  );
+  const leftColumnClassName = mergePreviewLayoutClassNames(
+    "col-left",
+    layoutProfile.leftColumnClass
+  );
+  const rightColumnClassName = mergePreviewLayoutClassNames(
+    "col-right",
+    layoutProfile.rightColumnClass
+  );
+  const tabsHolderClassName = mergePreviewLayoutClassNames(
+    "tabs-holder",
+    layoutProfile.tabsHolderClass
+  );
+  const resizeHandleClassName = mergePreviewLayoutClassNames(
+    "resize-handle",
+    layoutProfile.resizeHandleClass
+  );
+  return `<div class="${layoutClassName}" id="layout">
+          <div class="${leftColumnClassName}" id="col-left">
+            ${regions.live}
+
+            ${regions.information}
+            ${regions.cameraSwitcher}
+          </div>
+          <div class="${resizeHandleClassName}" id="resize-handle"></div>
+          <div class="${rightColumnClassName}" id="col-right">
+            <div class="${tabsHolderClassName} shadow-small">
+              <div class="button-holder">
+                <div class="button-holder-row tabs-row">
+                  ${regions.tabs}
+                </div>
+                <div class="button-holder-row page-nav-row">
+                  ${regions.pageNavigation}
+                </div>
+                <div class="button-holder-row tools-row">
+                  ${regions.tools}
+                </div>
+              </div>
+            </div>
+            ${regions.browseHeader}
+            ${regions.browse}
+            ${regions.footer}
+          </div>
+        </div>`;
 }
 
 // src/card/controls/shell-nav.tmpl.js
@@ -3522,7 +3783,7 @@ function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
                   </div>
               </div>`;
 }
-function mergeClassNames(...tokens) {
+function mergeClassNames3(...tokens) {
   return [
     ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean))
   ].join(" ");
@@ -3539,7 +3800,7 @@ function buildBrowseHeaderRegionMarkup({ icons }) {
             </div>`;
 }
 function buildBrowseRegionMarkup({ layoutProfile = {} } = {}) {
-  const browseClassName = mergeClassNames("browse", layoutProfile.browseClass);
+  const browseClassName = mergeClassNames3("browse", layoutProfile.browseClass);
   return `<div class="${browseClassName}" id="browse" data-fvc-region="browse" style="display:none">
               <div class="list-head">
                 <span class="newtoast" id="newtoast" style="display:none">new \u2726</span>
@@ -3548,10 +3809,6 @@ function buildBrowseRegionMarkup({ layoutProfile = {} } = {}) {
                 <div class="empty">Loading\u2026</div>
               </div>
             </div>`;
-}
-function buildBrowseMarkup(args = {}) {
-  return `${buildBrowseHeaderRegionMarkup(args)}
-        ${buildBrowseRegionMarkup(args)}`;
 }
 function buildFooterMarkup({ icons }) {
   return `<div class="footer" data-fvc-region="footer">
@@ -3630,85 +3887,6 @@ function buildPopupShellMarkup({ icons, version }) {
                 <h1 class="popup-shell-ver" id="popup-shell-ver">v${version}</h1>
             </div>
           </div>`;
-}
-function buildMainLayoutShellMarkup({
-  regions: suppliedRegions = null,
-  liveEngineWrap = "",
-  infoRow = "",
-  pageNav = "",
-  camSwitcher = "",
-  tabsMarkup = "",
-  toolsMarkup = "",
-  browseMarkup = "",
-  footerMarkup = "",
-  layoutProfile = {}
-} = {}) {
-  const usesRegionComposition = suppliedRegions && typeof suppliedRegions === "object" && !Array.isArray(suppliedRegions);
-  const regions = {
-    live: "",
-    information: "",
-    cameraSwitcher: "",
-    pageNavigation: "",
-    tabs: "",
-    tools: "",
-    browseHeader: "",
-    browse: "",
-    footer: "",
-    ...usesRegionComposition ? suppliedRegions : {
-      live: liveEngineWrap,
-      information: infoRow,
-      cameraSwitcher: camSwitcher,
-      pageNavigation: pageNav,
-      tabs: buildTabsRegionMarkup({ markup: tabsMarkup }),
-      tools: buildToolsRegionMarkup({ markup: toolsMarkup }),
-      browseHeader: browseMarkup,
-      footer: footerMarkup
-    }
-  };
-  const layoutClassName = mergeClassNames("layout", layoutProfile.layoutClass);
-  const leftColumnClassName = mergeClassNames(
-    "col-left",
-    layoutProfile.leftColumnClass
-  );
-  const rightColumnClassName = mergeClassNames(
-    "col-right",
-    layoutProfile.rightColumnClass
-  );
-  const tabsHolderClassName = mergeClassNames(
-    "tabs-holder",
-    layoutProfile.tabsHolderClass
-  );
-  const resizeHandleClassName = mergeClassNames(
-    "resize-handle",
-    layoutProfile.resizeHandleClass
-  );
-  return `<div class="${layoutClassName}" id="layout">
-          <div class="${leftColumnClassName}" id="col-left">
-            ${regions.live}
-
-            ${regions.information}
-            ${regions.cameraSwitcher}
-          </div>
-          <div class="${resizeHandleClassName}" id="resize-handle"></div>
-          <div class="${rightColumnClassName}" id="col-right">
-            <div class="${tabsHolderClassName} shadow-small">
-              <div class="button-holder">
-                <div class="button-holder-row tabs-row">
-                  ${regions.tabs}
-                </div>
-                <div class="button-holder-row page-nav-row">
-                  ${regions.pageNavigation}
-                </div>
-                <div class="button-holder-row tools-row">
-                  ${regions.tools}
-                </div>
-              </div>
-            </div>
-            ${regions.browseHeader}
-            ${regions.browse}
-            ${regions.footer}
-          </div>
-        </div>`;
 }
 
 // src/features/navigation/page-shell-registry.js
@@ -3812,14 +3990,6 @@ function resolvePageInfoRowMarkup(profile, { title, subtitle, version, host, bui
 function resolvePageMainLayoutShellMarkup(profile, {
   host,
   regions,
-  liveEngineWrap,
-  infoRow,
-  pageNav,
-  camSwitcher,
-  tabsMarkup,
-  toolsMarkup,
-  browseMarkup,
-  footerMarkup,
   layoutProfile,
   buildDefaultMainLayoutShellMarkup
 } = {}) {
@@ -3827,14 +3997,6 @@ function resolvePageMainLayoutShellMarkup(profile, {
     if (typeof buildDefaultMainLayoutShellMarkup !== "function") return "";
     return buildDefaultMainLayoutShellMarkup({
       regions,
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
       layoutProfile
     });
   };
@@ -3843,14 +4005,6 @@ function resolvePageMainLayoutShellMarkup(profile, {
   return builder({
     host,
     regions,
-    liveEngineWrap,
-    infoRow,
-    pageNav,
-    camSwitcher,
-    tabsMarkup,
-    toolsMarkup,
-    browseMarkup,
-    footerMarkup,
     layoutProfile
   }) || fallback();
 }
@@ -3886,7 +4040,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       version,
       centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || ""
     }),
-    buildMainLayoutShellMarkup: ({ regions, layoutProfile }) => buildMainLayoutShellMarkup({
+    buildMainLayoutShellMarkup: ({ regions, layoutProfile }) => buildSingleViewMainLayoutShellMarkup({
       regions,
       layoutProfile
     }),
@@ -3935,7 +4089,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       version,
       centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || ""
     }),
-    buildMainLayoutShellMarkup: ({ regions, layoutProfile }) => buildMainLayoutShellMarkup({
+    buildMainLayoutShellMarkup: ({ regions, layoutProfile }) => buildWideViewMainLayoutShellMarkup({
       regions,
       layoutProfile
     }),
@@ -3950,6 +4104,10 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     leftColumnClass: "col-left--preview-view",
     rightColumnClass: "col-right--preview-view",
     resizeHandleClass: "resize-handle--preview-view",
+    buildMainLayoutShellMarkup: ({ regions, layoutProfile }) => buildPreviewPageMainLayoutShellMarkup({
+      regions,
+      layoutProfile
+    }),
     capabilities: {
       hasLive: true,
       hasBrowse: true,
@@ -13201,69 +13359,6 @@ const PreviewAlertController = class {
   }
 };
 
-// src/features/preview/page.tmpl.js
-function previewMediaSeverityClass(severity) {
-  if (severity === "alert") return "grid-alert";
-  if (severity === "detection") return "grid-detection";
-  return "";
-}
-function buildPreviewStatusMarkup(online) {
-  return `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">\u25CF</span>${online ? "Online" : "Offline"}`;
-}
-function buildPreviewMetaMarkup({
-  showTitleBars,
-  name,
-  online,
-  sourceLabel,
-  eventsCount
-}) {
-  if (!showTitleBars) return "";
-  return `<div class="preview-meta">
-              <div class="preview-meta-name">${name}</div>
-              <div class="preview-meta-status">${buildPreviewStatusMarkup(online)}</div>
-              <div class="preview-meta-source">Stream Source: ${sourceLabel}</div>
-              <div class="preview-meta-events">Events: ${eventsCount}</div>
-            </div>`;
-}
-function buildPreviewCellMarkup({
-  index,
-  entity,
-  severity,
-  useLive,
-  metaMarkup
-}) {
-  return `<div class="preview-cell shadow-medium" data-preview-camidx="${index}">
-          <div class="preview-media-host ${previewMediaSeverityClass(severity)}" data-preview-media-entity="${entity}" data-preview-use-live="${useLive ? "1" : "0"}"></div>
-          ${metaMarkup}
-        </div>`;
-}
-function buildPreviewCameraButtonMarkup({ index, name }) {
-  return `<button class="glass-btn preview-cam-btn" type="button" data-preview-select-camidx="${index}">${name}</button>`;
-}
-function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
-  return `<div class="preview-grid" id="preview-grid">${cellsMarkup}</div>
-      <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
-}
-function buildPreviewShellHeaderMarkup({ title, subtitle, pageNav }) {
-  return `<div class="preview-shell-header" id="preview-shell-header">
-            <div class="preview-shell-title">
-              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
-              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
-            </div>
-            ${pageNav}
-          </div>`;
-}
-function buildPreviewLayoutShellMarkup({
-  previewShellHeader,
-  previewFooterIcon
-}) {
-  return `${previewShellHeader}
-          <div class="preview-shell" id="preview-shell"></div>
-          <div class="preview-shell-footer" id="preview-shell-footer">
-            <div class="frigate-view">${previewFooterIcon}</div>
-          </div>`;
-}
-
 // src/features/preview/page.ctrl.js
 const PreviewPageController = class {
   constructor(host, constants) {
@@ -18623,7 +18718,7 @@ const FrigateViewCard = class extends HTMLElement {
       host: this,
       regions,
       layoutProfile,
-      buildDefaultMainLayoutShellMarkup: ({ regions: regions2, layoutProfile: layoutProfile2 }) => buildMainLayoutShellMarkup({
+      buildDefaultMainLayoutShellMarkup: ({ regions: regions2, layoutProfile: layoutProfile2 }) => buildSingleViewMainLayoutShellMarkup({
         regions: regions2,
         layoutProfile: layoutProfile2
       })

@@ -56,6 +56,23 @@ test("page shell registry default page capabilities resolve stable defaults", ()
   });
 });
 
+test("every registered page profile owns an outer layout builder", () => {
+  const registry = createPageShellRegistry({
+    defaultPageId: PAGE_IDS.singleView,
+  });
+  registerDefaultPageShellProfiles(registry, PAGE_IDS);
+
+  const builders = [
+    PAGE_IDS.singleView,
+    PAGE_IDS.mobileView,
+    PAGE_IDS.wideView,
+    PAGE_IDS.preview,
+  ].map((pageId) => registry.resolve(pageId).buildMainLayoutShellMarkup);
+
+  builders.forEach((builder) => assert.equal(typeof builder, "function"));
+  assert.equal(new Set(builders).size, builders.length);
+});
+
 test("page shell capabilities honor explicit overrides", () => {
   const profile = {
     capabilities: {

@@ -165,7 +165,6 @@ import {
   buildControlsReadoutLinesMarkup,
   buildInfoRowMarkup,
   buildLiveEngineWrapMarkup,
-  buildMainLayoutShellMarkup,
   buildPageNavButtonsMarkup,
   buildPageNavMarkup,
   buildPopupShellMarkup,
@@ -303,6 +302,7 @@ import { ViewportContextController } from "../features/viewport/context.ctrl.js"
 import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
 import { MobileCamSwitcherController } from "../features/mobile-view/cam-switcher.ctrl.js";
 import { SingleViewPageController } from "../features/single-view/page.ctrl.js";
+import { buildSingleViewMainLayoutShellMarkup } from "../features/single-view/page.tmpl.js";
 import { WideViewPageController } from "../features/wide-view/page.ctrl.js";
 import { SlideshowAlertController } from "../features/slideshow/alert.ctrl.js";
 import { SlideshowPageController } from "../features/slideshow/page.ctrl.js";
@@ -3070,7 +3070,7 @@ export class FrigateViewCard extends HTMLElement {
       regions,
       layoutProfile,
       buildDefaultMainLayoutShellMarkup: ({ regions, layoutProfile }) =>
-        buildMainLayoutShellMarkup({
+        buildSingleViewMainLayoutShellMarkup({
           regions,
           layoutProfile,
         }),

@@ -103,18 +103,19 @@ test("mobile view cam switcher markup renders trigger and picker options", () =>
 
 test("mobile view main layout renders centered two-way-talk slot above tabs", () => {
   const markup = buildMobileViewMainLayoutShellMarkup({
-    host: {
-      _buildTwoWayTalkMobileButtonMarkup: () =>
-        '<div id="mobile-view-two-way-talk-slot"><button id="two-way-talk-btn" hidden></button></div>',
+    regions: {
+      live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
+      information: `<div data-fvc-region="information"></div>`,
+      pageNavigation: `<div class="page-nav" data-fvc-region="page-navigation"></div>`,
+      cameraSwitcher: `<div class="cam-switcher" data-fvc-region="camera-switcher"></div>`,
+      tabs: `<div class="tabs" data-fvc-region="tabs"><button>Alerts</button></div>`,
+      tools: `<div class="tl-tools-slot" data-fvc-region="tools"><button>Tools</button></div>`,
+      twoWayTalk:
+        `<div id="mobile-view-two-way-talk-slot" data-fvc-region="two-way-talk"><button id="two-way-talk-btn" hidden></button></div>`,
+      browseHeader: `<div data-fvc-region="browse-header"></div>`,
+      browse: `<div class="browse" data-fvc-region="browse"></div>`,
+      footer: `<div class="footer" data-fvc-region="footer"></div>`,
     },
-    liveEngineWrap: '<div id="eng-wrap"></div>',
-    infoRow: '<div class="info-row"></div>',
-    pageNav: '<div class="page-nav"></div>',
-    camSwitcher: '<div class="cam-switcher"></div>',
-    tabsMarkup: "<button>Alerts</button>",
-    toolsMarkup: "<button>Tools</button>",
-    browseMarkup: '<div class="browse"></div>',
-    footerMarkup: '<div class="footer"></div>',
     layoutProfile: { layoutClass: "layout--mobile-view" },
   });
 
@@ -142,11 +143,8 @@ test("mobile region composition leaves omitted tabs absent", () => {
       live: `<div data-fvc-region="live">Live</div>`,
       tools: `<div data-fvc-region="tools">Atomic Tools</div>`,
     },
-    tabsMarkup: "Legacy Tabs",
-    toolsMarkup: "Legacy Tools",
   });
 
   assert.match(markup, /Atomic Tools/);
-  assert.doesNotMatch(markup, /Legacy Tabs|Legacy Tools/);
   assert.doesNotMatch(markup, /data-fvc-region="tabs"/);
 });

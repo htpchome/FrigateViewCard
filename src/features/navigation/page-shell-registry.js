@@ -2,10 +2,10 @@ import {
   buildMobileViewInfoRowMarkup,
   buildMobileViewMainLayoutShellMarkup,
 } from "../mobile-view/page.tmpl.js";
-import {
-  buildInfoRowMarkup,
-  buildMainLayoutShellMarkup,
-} from "../../card/controls/shell-nav.tmpl.js";
+import { buildSingleViewMainLayoutShellMarkup } from "../single-view/page.tmpl.js";
+import { buildWideViewMainLayoutShellMarkup } from "../wide-view/page.tmpl.js";
+import { buildPreviewPageMainLayoutShellMarkup } from "../preview/page.tmpl.js";
+import { buildInfoRowMarkup } from "../../card/controls/shell-nav.tmpl.js";
 
 export const PAGE_SHELL_REGIONS = Object.freeze({
   live: "live",
@@ -153,14 +153,6 @@ export function resolvePageMainLayoutShellMarkup(
   {
     host,
     regions,
-    liveEngineWrap,
-    infoRow,
-    pageNav,
-    camSwitcher,
-    tabsMarkup,
-    toolsMarkup,
-    browseMarkup,
-    footerMarkup,
     layoutProfile,
     buildDefaultMainLayoutShellMarkup,
   } = {},
@@ -169,14 +161,6 @@ export function resolvePageMainLayoutShellMarkup(
     if (typeof buildDefaultMainLayoutShellMarkup !== "function") return "";
     return buildDefaultMainLayoutShellMarkup({
       regions,
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
       layoutProfile,
     });
   };
@@ -191,14 +175,6 @@ export function resolvePageMainLayoutShellMarkup(
     builder({
       host,
       regions,
-      liveEngineWrap,
-      infoRow,
-      pageNav,
-      camSwitcher,
-      tabsMarkup,
-      toolsMarkup,
-      browseMarkup,
-      footerMarkup,
       layoutProfile,
     }) || fallback()
   );
@@ -243,7 +219,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || "",
       }),
     buildMainLayoutShellMarkup: ({ regions, layoutProfile }) =>
-      buildMainLayoutShellMarkup({
+      buildSingleViewMainLayoutShellMarkup({
         regions,
         layoutProfile,
       }),
@@ -300,7 +276,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || "",
       }),
     buildMainLayoutShellMarkup: ({ regions, layoutProfile }) =>
-      buildMainLayoutShellMarkup({
+      buildWideViewMainLayoutShellMarkup({
         regions,
         layoutProfile,
       }),
@@ -316,6 +292,11 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     leftColumnClass: "col-left--preview-view",
     rightColumnClass: "col-right--preview-view",
     resizeHandleClass: "resize-handle--preview-view",
+    buildMainLayoutShellMarkup: ({ regions, layoutProfile }) =>
+      buildPreviewPageMainLayoutShellMarkup({
+        regions,
+        layoutProfile,
+      }),
     capabilities: {
       hasLive: true,
       hasBrowse: true,

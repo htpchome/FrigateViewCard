@@ -225,11 +225,6 @@ export function buildBrowseRegionMarkup({ layoutProfile = {} } = {}) {
             </div>`;
 }
 
-export function buildBrowseMarkup(args = {}) {
-  return `${buildBrowseHeaderRegionMarkup(args)}
-        ${buildBrowseRegionMarkup(args)}`;
-}
-
 export function buildFooterMarkup({ icons }) {
   return `<div class="footer" data-fvc-region="footer">
               <div><div class="frigate-view">${icons.frigateView}</div></div>
@@ -315,89 +310,4 @@ export function buildPopupShellMarkup({ icons, version }) {
                 <h1 class="popup-shell-ver" id="popup-shell-ver">v${version}</h1>
             </div>
           </div>`;
-}
-
-export function buildMainLayoutShellMarkup({
-  regions: suppliedRegions = null,
-  liveEngineWrap = "",
-  infoRow = "",
-  pageNav = "",
-  camSwitcher = "",
-  tabsMarkup = "",
-  toolsMarkup = "",
-  browseMarkup = "",
-  footerMarkup = "",
-  layoutProfile = {},
-} = {}) {
-  const usesRegionComposition =
-    suppliedRegions &&
-    typeof suppliedRegions === "object" &&
-    !Array.isArray(suppliedRegions);
-  const regions = {
-    live: "",
-    information: "",
-    cameraSwitcher: "",
-    pageNavigation: "",
-    tabs: "",
-    tools: "",
-    browseHeader: "",
-    browse: "",
-    footer: "",
-    ...(usesRegionComposition
-      ? suppliedRegions
-      : {
-          live: liveEngineWrap,
-          information: infoRow,
-          cameraSwitcher: camSwitcher,
-          pageNavigation: pageNav,
-          tabs: buildTabsRegionMarkup({ markup: tabsMarkup }),
-          tools: buildToolsRegionMarkup({ markup: toolsMarkup }),
-          browseHeader: browseMarkup,
-          footer: footerMarkup,
-        }),
-  };
-  const layoutClassName = mergeClassNames("layout", layoutProfile.layoutClass);
-  const leftColumnClassName = mergeClassNames(
-    "col-left",
-    layoutProfile.leftColumnClass,
-  );
-  const rightColumnClassName = mergeClassNames(
-    "col-right",
-    layoutProfile.rightColumnClass,
-  );
-  const tabsHolderClassName = mergeClassNames(
-    "tabs-holder",
-    layoutProfile.tabsHolderClass,
-  );
-  const resizeHandleClassName = mergeClassNames(
-    "resize-handle",
-    layoutProfile.resizeHandleClass,
-  );
-  return `<div class="${layoutClassName}" id="layout">
-          <div class="${leftColumnClassName}" id="col-left">
-            ${regions.live}
-
-            ${regions.information}
-            ${regions.cameraSwitcher}
-          </div>
-          <div class="${resizeHandleClassName}" id="resize-handle"></div>
-          <div class="${rightColumnClassName}" id="col-right">
-            <div class="${tabsHolderClassName} shadow-small">
-              <div class="button-holder">
-                <div class="button-holder-row tabs-row">
-                  ${regions.tabs}
-                </div>
-                <div class="button-holder-row page-nav-row">
-                  ${regions.pageNavigation}
-                </div>
-                <div class="button-holder-row tools-row">
-                  ${regions.tools}
-                </div>
-              </div>
-            </div>
-            ${regions.browseHeader}
-            ${regions.browse}
-            ${regions.footer}
-          </div>
-        </div>`;
 }
