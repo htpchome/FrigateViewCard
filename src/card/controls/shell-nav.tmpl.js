@@ -260,6 +260,21 @@ export function buildControlsReadoutLinesMarkup(lines) {
     .join("");
 }
 
+export function buildPlaybackTargetDialogMarkup() {
+  return `<div class="playback-target-dialog" id="playback-target-dialog" hidden>
+            <button class="playback-target-backdrop" type="button" data-playback-target-close aria-label="Close playback destinations"></button>
+            <section class="playback-target-card" role="dialog" aria-modal="true" aria-labelledby="playback-target-title">
+              <div class="playback-target-head">
+                <h2 id="playback-target-title" data-playback-target-title>Send video</h2>
+                <button class="playback-target-close" type="button" data-playback-target-close aria-label="Close">&times;</button>
+              </div>
+              <p class="playback-target-description" data-playback-target-description></p>
+              <div class="playback-target-list" data-playback-target-list></div>
+              <p class="playback-target-status" data-playback-target-status role="status" hidden></p>
+            </section>
+          </div>`;
+}
+
 export function buildPopupShellMarkup({ icons, version }) {
   return `<div id="myPopup" class="popup-content">
             <div class="popup-close-row">

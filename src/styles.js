@@ -614,7 +614,24 @@ export const STYLES = `
   .desc{margin-top:4px;font-size:0.825rem;color:var(--c-text2);line-height:1.45;background:var(--c-bg-panel);border-radius:5px;padding:6px 8.4px;}
 
 
-   /* ── toast ── */
+   /* ── Home Assistant playback destinations ── */
+  .playback-target-dialog[hidden]{display:none !important;}
+  .playback-target-dialog{position:absolute;inset:0;z-index:1500;display:grid;place-items:center;padding:16px;box-sizing:border-box;}
+  .playback-target-backdrop{position:absolute;inset:0;width:100%;height:100%;border:0;background:rgba(0,0,0,.58);cursor:default;}
+  .playback-target-card{position:relative;z-index:1;width:min(420px,100%);max-height:min(520px,calc(100% - 24px));display:flex;flex-direction:column;gap:10px;box-sizing:border-box;overflow:hidden;padding:16px;background:var(--c-bg-main);color:var(--c-text);border:1px solid var(--c-border2);border-radius:var(--fvc-border-radius);box-shadow:0 16px 48px rgba(0,0,0,.42);}
+  .playback-target-head{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  .playback-target-head h2{margin:0;font-size:1.05rem;line-height:1.3;}
+  .playback-target-close{appearance:none;-webkit-appearance:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;padding:0;border:1px solid var(--c-border2);border-radius:8px;background:var(--c-bg-panel);color:var(--c-text2);font-size:1.55rem;line-height:1;cursor:pointer;}
+  .playback-target-description,.playback-target-status,.playback-target-empty{margin:0;color:var(--c-text2);font-size:.86rem;line-height:1.4;}
+  .playback-target-list{display:flex;flex-direction:column;gap:6px;min-height:0;overflow-y:auto;}
+  .playback-target-option{appearance:none;-webkit-appearance:none;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:10px 12px;border:1px solid var(--c-border2);border-radius:8px;background:var(--c-bg-panel);color:var(--c-text);text-align:left;cursor:pointer;}
+  .playback-target-option:hover,.playback-target-option:focus-visible{border-color:var(--c-primary-d);outline:none;}
+  .playback-target-option:disabled{opacity:.55;cursor:wait;}
+  .playback-target-option-name{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .playback-target-option-state{color:var(--c-text3);font-size:.75rem;text-transform:capitalize;flex:0 0 auto;}
+  .playback-target-status{padding-top:2px;color:var(--c-primary-d);}
+
+  /* ── toast ── */
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99;background:rgba(15,21,40,.96);border:1px solid rgba(239,68,68,.4);color:var(--c-off);padding:8px 14px;border-radius:6px;font-size:0.9rem;box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:90%;}
 
 /* ========================================================= */
