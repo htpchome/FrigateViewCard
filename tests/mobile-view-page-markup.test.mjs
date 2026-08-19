@@ -135,11 +135,11 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
   );
   assert.match(
     markup,
-    /mobile-video-controls-left-row">[\s\S]*?data-fvc-region="live-mute"/,
+    /mobile-video-controls-left-row">[\s\S]*?data-fvc-region="live-fullscreen"/,
   );
   assert.match(
     markup,
-    /mobile-video-controls-right-row">[\s\S]*?data-fvc-region="live-fullscreen"/,
+    /mobile-video-controls-right-row">[\s\S]*?data-fvc-region="live-mute"/,
   );
   assert.equal(markup.includes('id="mobile-view-two-way-talk-slot"'), true);
   assert.equal(

@@ -121,6 +121,25 @@ test("mobile inline live controls stay visible without overlay reveal binding", 
   );
   assert.match(
     mobileViewStylesSource,
-    /mobile-video-controls-container \.live-fs-btn\{[\s\S]*?position:relative;[\s\S]*?opacity:1;[\s\S]*?pointer-events:auto;/,
+    /mobile-video-controls-container \.live-playback-controls,[\s\S]*?position:relative;[\s\S]*?opacity:1;[\s\S]*?pointer-events:auto;/,
   );
+});
+
+test("live and popup playback controls delegate to the shared target prompt", () => {
+  for (const controlId of [
+    "#live-cast-btn",
+    "#live-airplay-btn",
+    "#popup-cast-btn, #popup-media-cast",
+    "#popup-airplay-btn, #popup-media-airplay",
+  ]) {
+    assert.equal(cardSource.includes(controlId), true);
+  }
+  assert.equal(cardSource.includes("promptVideoPlaybackTarget(video, target)"), true);
+  assert.equal(
+    stylesSource.includes(
+      "grid-template-areas:\"sp1 play progress mute fs cast airplay sp2\"",
+    ),
+    true,
+  );
+  assert.equal(stylesSource.includes(".popup-playback-controls{"), true);
 });

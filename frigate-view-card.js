@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1507";
+const VERSION = "1.0.1508";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -182,8 +182,9 @@ const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active .mobile-video-controls-left-row{grid-area:video-controls-left;justify-content:flex-start;}
   .card.mobile-view-active .mobile-microphone-row{grid-area:microphone;justify-content:center;}
   .card.mobile-view-active .mobile-video-controls-right-row{grid-area:video-controls-right;justify-content:flex-end;}
+  .card.mobile-view-active .mobile-video-controls-container .live-playback-controls,
   .card.mobile-view-active .mobile-video-controls-container .mute-btn,
-  .card.mobile-view-active .mobile-video-controls-container .live-fs-btn{
+  .card.mobile-view-active .mobile-video-controls-container .live-playback-btn{
     position:relative;
     inset:auto;
     z-index:1;
@@ -914,22 +915,31 @@ const STYLES = `
   .cam-tab:hover svg{width:14.4px;height:14.4px;flex-shrink:0;} 
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
 
+  .live-playback-controls{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .live-playback-controls .live-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
+  .live-playback-controls .live-playback-btn svg{width:30px;height:30px;opacity:.8;}
+  .live-playback-controls .live-playback-btn:hover svg{width:30px;height:30px;opacity:.95;}
+
   .overlay-fs{position:absolute;top:8px;left:8px;z-index:3;padding: 3px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .overlay-fs::after {content: "";position: absolute;top: 0;left: 0;}         
   .overlay-fs[hidden]{display:none !important;}
   .overlay-fs svg {width:30px;height:30px;opacity: 0.8; }
   .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
+  .popup-playback-controls{display:flex;gap:4px;}
+  .popup-playback-controls .popup-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
+  #viewer:hover .popup-playback-controls{opacity:1;pointer-events:auto;}
+  @media (hover:none), (pointer:coarse){#viewer .popup-playback-controls{opacity:1;pointer-events:auto;}}
   .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;padding:4px 10px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
   .slideshow-next-chip[hidden]{display:none !important;}
-  #live-stage.live-controls-visible .live-fs-btn,
+  #live-stage.live-controls-visible .live-playback-controls,
   #live-stage.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {
-    #live-stage:hover .live-fs-btn,
+    #live-stage:hover .live-playback-controls,
     #live-stage:hover .mute-btn{opacity:1;pointer-events:auto;}
   }
 
-  #live-stage:fullscreen .overlay-fs,
-  #live-stage:-webkit-full-screen .overlay-fs,
+  #live-stage:fullscreen .live-playback-controls,
+  #live-stage:-webkit-full-screen .live-playback-controls,
   #viewer:fullscreen .overlay-fs,
   #viewer:-webkit-full-screen .overlay-fs{display:none !important;}
   #live-stage:fullscreen,
@@ -1177,7 +1187,7 @@ const STYLES = `
   .popup-info-head {margin: 0;font-size: 18px;font-weight: 800;color: var(--c-text2);
     line-height: 1.35;text-transform: uppercase;letter-spacing: .03em;}
   .popup-info-head[hidden] {display: none;}
-  .popup-media-controls {display:grid;grid-template-columns:2px 36px minmax(0,1fr) 36px 36px 2px;grid-template-areas:"sp1 play progress mute fs sp2" ". . time . . .";align-items:center;column-gap:5px;row-gap:0;padding:1px 4px 2px;border-radius:8px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
+  .popup-media-controls {display:grid;grid-template-columns:2px 36px minmax(0,1fr) 36px 36px 36px 36px 2px;grid-template-areas:"sp1 play progress mute fs cast airplay sp2" ". . time . . . . .";align-items:center;column-gap:5px;row-gap:0;padding:1px 4px 2px;border-radius:8px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
   .popup-media-controls[hidden] {display:none !important;}
   .popup-media-controls-spacer {width:2px;}
   .popup-media-controls-spacer:first-child {grid-area:sp1;}
@@ -1194,6 +1204,8 @@ const STYLES = `
   .popup-media-btn#popup-media-play {grid-area:play;}
   .popup-media-btn#popup-media-mute {grid-area:mute;}
   .popup-media-btn#popup-media-fs {grid-area:fs;}
+  .popup-media-btn#popup-media-cast {grid-area:cast;}
+  .popup-media-btn#popup-media-airplay {grid-area:airplay;}
   .card.mobile-rotate-popup .popup-media-controls,
   .card.mobile-rotate-popup-exit .popup-media-controls {position:fixed;left:10px;right:10px;bottom:1px;width:auto;z-index:1406;background:var(--c-bg-panel);opacity:.62;backdrop-filter:blur(3px);transition:opacity .22s ease;}
   .card.mobile-rotate-popup .popup-media-btn#popup-media-fs,
@@ -3755,7 +3767,11 @@ function buildLiveEngineWrapMarkup({ icons }) {
               </div>`;
 }
 function buildLiveFullscreenControlMarkup({ icons }) {
-  return `<button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
+  return `<div class="live-playback-controls" data-fvc-region="live-fullscreen">
+    <button class="glass-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
+    <button class="glass-btn live-playback-btn live-cast-btn" id="live-cast-btn" title="Cast live video" aria-label="Cast live video">${icons.cast}</button>
+    <button class="glass-btn live-playback-btn live-airplay-btn" id="live-airplay-btn" title="AirPlay live video" aria-label="AirPlay live video">${icons.airplayVideo}</button>
+  </div>`;
 }
 function buildLiveMuteControlMarkup({ icons, streamMuted }) {
   const label = streamMuted ? "Unmute live view" : "Mute live view";
@@ -3984,7 +4000,7 @@ function buildPopupShellMarkup({ icons, version }) {
             <div class="popup-header"></div>          
             <div class="popup-body">
               <div class="viewer" id="viewer" style="display:none"></div>
-              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
+              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button><button class="popup-media-btn" id="popup-media-cast" type="button" title="Cast video" aria-label="Cast video">${icons.cast}</button><button class="popup-media-btn" id="popup-media-airplay" type="button" title="AirPlay video" aria-label="AirPlay video">${icons.airplayVideo}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
               </div>
               <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
                 <div class="recording-scrub" id="recording-scrub" hidden>
@@ -5176,6 +5192,7 @@ function configureVideoElement(video, options = {}) {
   applyVideoDatasetOptions(video, options);
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
+  video.setAttribute("x-webkit-airplay", "allow");
   if (options.attributes && typeof options.attributes === "object") {
     for (const [name, value] of Object.entries(options.attributes)) {
       if (value === null || value === void 0 || value === false) {
@@ -6829,6 +6846,33 @@ const VideoZoomController = class {
 function attachVideoZoom(video, options = {}) {
   if (!video) return null;
   return new VideoZoomController(video, options).bind();
+}
+
+// src/shared/media/playback-target.js
+const PLAYBACK_TARGET_CAST = "cast";
+const PLAYBACK_TARGET_AIRPLAY = "airplay";
+function resolveVideoPlaybackTargetSupport(video) {
+  return {
+    cast: typeof video?.remote?.prompt === "function",
+    airplay: typeof video?.webkitShowPlaybackTargetPicker === "function"
+  };
+}
+async function promptVideoPlaybackTarget(video, target) {
+  if (!video) return false;
+  if (target === PLAYBACK_TARGET_AIRPLAY) {
+    const prompt = video.webkitShowPlaybackTargetPicker;
+    if (typeof prompt !== "function") return false;
+    video.setAttribute?.("x-webkit-airplay", "allow");
+    prompt.call(video);
+    return true;
+  }
+  if (target === PLAYBACK_TARGET_CAST) {
+    const prompt = video.remote?.prompt;
+    if (typeof prompt !== "function") return false;
+    await prompt.call(video.remote);
+    return true;
+  }
+  return false;
 }
 
 // src/features/live/fallbacks/fallback-url.js
@@ -20008,6 +20052,14 @@ const FrigateViewCard = class extends HTMLElement {
       this._fullscreen(this._$("#live-stage"), { preferLive: true });
       return true;
     }
+    if (target.closest("#live-cast-btn")) {
+      void this._promptPlaybackTarget(PLAYBACK_TARGET_CAST, { preferLive: true });
+      return true;
+    }
+    if (target.closest("#live-airplay-btn")) {
+      void this._promptPlaybackTarget(PLAYBACK_TARGET_AIRPLAY, { preferLive: true });
+      return true;
+    }
     return false;
   }
   _handleBrowseToolbarClick(target) {
@@ -20054,6 +20106,16 @@ const FrigateViewCard = class extends HTMLElement {
   _handlePopupMediaToolbarClick(target) {
     if (target.closest("#popup-fs-btn")) {
       this._fullscreen(this._$("#viewer"));
+      return true;
+    }
+    if (target.closest("#popup-cast-btn, #popup-media-cast")) {
+      void this._promptPlaybackTarget(PLAYBACK_TARGET_CAST, { popup: true });
+      this._showPopupControlsTemporarily();
+      return true;
+    }
+    if (target.closest("#popup-airplay-btn, #popup-media-airplay")) {
+      void this._promptPlaybackTarget(PLAYBACK_TARGET_AIRPLAY, { popup: true });
+      this._showPopupControlsTemporarily();
       return true;
     }
     if (target.closest("#mute-btn")) {
@@ -20802,25 +20864,38 @@ const FrigateViewCard = class extends HTMLElement {
   _ensurePopupFullscreenButton(kind = "media") {
     const viewer = this._$("#viewer");
     if (!viewer) return;
+    const existingControls = viewer.querySelector("#popup-playback-controls");
     if (this._usePopupCustomControls(kind)) {
-      const existingBtn = viewer.querySelector("#popup-fs-btn");
-      if (existingBtn) existingBtn.remove();
+      existingControls?.remove();
+      const legacyButton = viewer.querySelector("#popup-fs-btn");
+      legacyButton?.remove();
       return;
     }
     const label = kind === "alert" ? "Fullscreen alert" : kind === "recording" ? "Fullscreen recording" : "Fullscreen media";
-    const existing = viewer.querySelector("#popup-fs-btn");
-    if (existing) {
-      existing.title = label;
-      existing.setAttribute("aria-label", label);
-      return;
+    let controls = existingControls;
+    if (!controls) {
+      viewer.querySelector("#popup-fs-btn")?.remove();
+      controls = document.createElement("div");
+      controls.className = "popup-playback-controls overlay-fs";
+      controls.id = "popup-playback-controls";
+      viewer.appendChild(controls);
     }
-    const btn = document.createElement("button");
-    btn.className = "glass-btn overlay-fs popup-fs-btn";
-    btn.id = "popup-fs-btn";
-    btn.title = label;
-    btn.setAttribute("aria-label", label);
-    btn.innerHTML = ICONS.expand;
-    viewer.appendChild(btn);
+    controls.innerHTML = "";
+    const addButton = (id, title, icon) => {
+      const button = document.createElement("button");
+      button.className = "glass-btn popup-playback-btn";
+      button.id = id;
+      button.type = "button";
+      button.title = title;
+      button.setAttribute("aria-label", title);
+      button.innerHTML = icon;
+      controls.appendChild(button);
+    };
+    addButton("popup-fs-btn", label, ICONS.expand);
+    if (this._isPopupVideoMediaType(kind)) {
+      addButton("popup-cast-btn", "Cast video", ICONS.cast);
+      addButton("popup-airplay-btn", "AirPlay video", ICONS.airplayVideo);
+    }
   }
   _clearPopupMediaCleanup() {
     this._clearPopupVideoZoom?.();
@@ -21080,6 +21155,29 @@ const FrigateViewCard = class extends HTMLElement {
       return r?.path || path;
     } catch (_) {
       return path;
+    }
+  }
+  async _promptPlaybackTarget(target, { popup = false, preferLive = false } = {}) {
+    const root = this.shadowRoot?.querySelector(
+      popup ? "#viewer" : "#live-stage"
+    );
+    let video = this._findVideoDeep(root);
+    if (!video && preferLive) {
+      video = this._findVideoDeep(this.shadowRoot?.querySelector("#engine")) || this._findVideoDeep(this._engine);
+    }
+    if (!video) {
+      console.warn("[Frigate] No video is available for remote playback");
+      return false;
+    }
+    try {
+      const prompted = await promptVideoPlaybackTarget(video, target);
+      if (!prompted) {
+        console.warn("[Frigate] " + target + " playback is not supported");
+      }
+      return prompted;
+    } catch (error) {
+      console.warn("[Frigate] " + target + " playback prompt failed", error);
+      return false;
     }
   }
   _findFullscreenVideo(el) {

@@ -359,22 +359,31 @@ export const STYLES = `
   .cam-tab:hover svg{width:14.4px;height:14.4px;flex-shrink:0;} 
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
 
+  .live-playback-controls{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .live-playback-controls .live-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
+  .live-playback-controls .live-playback-btn svg{width:30px;height:30px;opacity:.8;}
+  .live-playback-controls .live-playback-btn:hover svg{width:30px;height:30px;opacity:.95;}
+
   .overlay-fs{position:absolute;top:8px;left:8px;z-index:3;padding: 3px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .overlay-fs::after {content: "";position: absolute;top: 0;left: 0;}         
   .overlay-fs[hidden]{display:none !important;}
   .overlay-fs svg {width:30px;height:30px;opacity: 0.8; }
   .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
+  .popup-playback-controls{display:flex;gap:4px;}
+  .popup-playback-controls .popup-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
+  #viewer:hover .popup-playback-controls{opacity:1;pointer-events:auto;}
+  @media (hover:none), (pointer:coarse){#viewer .popup-playback-controls{opacity:1;pointer-events:auto;}}
   .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;padding:4px 10px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
   .slideshow-next-chip[hidden]{display:none !important;}
-  #live-stage.live-controls-visible .live-fs-btn,
+  #live-stage.live-controls-visible .live-playback-controls,
   #live-stage.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {
-    #live-stage:hover .live-fs-btn,
+    #live-stage:hover .live-playback-controls,
     #live-stage:hover .mute-btn{opacity:1;pointer-events:auto;}
   }
 
-  #live-stage:fullscreen .overlay-fs,
-  #live-stage:-webkit-full-screen .overlay-fs,
+  #live-stage:fullscreen .live-playback-controls,
+  #live-stage:-webkit-full-screen .live-playback-controls,
   #viewer:fullscreen .overlay-fs,
   #viewer:-webkit-full-screen .overlay-fs{display:none !important;}
   #live-stage:fullscreen,
@@ -622,7 +631,7 @@ export const STYLES = `
   .popup-info-head {margin: 0;font-size: 18px;font-weight: 800;color: var(--c-text2);
     line-height: 1.35;text-transform: uppercase;letter-spacing: .03em;}
   .popup-info-head[hidden] {display: none;}
-  .popup-media-controls {display:grid;grid-template-columns:2px 36px minmax(0,1fr) 36px 36px 2px;grid-template-areas:"sp1 play progress mute fs sp2" ". . time . . .";align-items:center;column-gap:5px;row-gap:0;padding:1px 4px 2px;border-radius:8px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
+  .popup-media-controls {display:grid;grid-template-columns:2px 36px minmax(0,1fr) 36px 36px 36px 36px 2px;grid-template-areas:"sp1 play progress mute fs cast airplay sp2" ". . time . . . . .";align-items:center;column-gap:5px;row-gap:0;padding:1px 4px 2px;border-radius:8px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
   .popup-media-controls[hidden] {display:none !important;}
   .popup-media-controls-spacer {width:2px;}
   .popup-media-controls-spacer:first-child {grid-area:sp1;}
@@ -639,6 +648,8 @@ export const STYLES = `
   .popup-media-btn#popup-media-play {grid-area:play;}
   .popup-media-btn#popup-media-mute {grid-area:mute;}
   .popup-media-btn#popup-media-fs {grid-area:fs;}
+  .popup-media-btn#popup-media-cast {grid-area:cast;}
+  .popup-media-btn#popup-media-airplay {grid-area:airplay;}
   .card.mobile-rotate-popup .popup-media-controls,
   .card.mobile-rotate-popup-exit .popup-media-controls {position:fixed;left:10px;right:10px;bottom:1px;width:auto;z-index:1406;background:var(--c-bg-panel);opacity:.62;backdrop-filter:blur(3px);transition:opacity .22s ease;}
   .card.mobile-rotate-popup .popup-media-btn#popup-media-fs,

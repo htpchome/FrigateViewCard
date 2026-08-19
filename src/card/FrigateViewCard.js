@@ -145,6 +145,11 @@ import {
 } from "../shared/media/video-factory.js";
 import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
 import {
+  PLAYBACK_TARGET_AIRPLAY,
+  PLAYBACK_TARGET_CAST,
+  promptVideoPlaybackTarget,
+} from "../shared/media/playback-target.js";
+import {
   loadFallbackAltForCard,
   loadFallbackPrimaryForCard,
 } from "../features/live/fallbacks/fallback-url.js";
@@ -4017,6 +4022,14 @@ export class FrigateViewCard extends HTMLElement {
       this._fullscreen(this._$("#live-stage"), { preferLive: true });
       return true;
     }
+    if (target.closest("#live-cast-btn")) {
+      void this._promptPlaybackTarget(PLAYBACK_TARGET_CAST, { preferLive: true });
+      return true;
+    }
+    if (target.closest("#live-airplay-btn")) {
+      void this._promptPlaybackTarget(PLAYBACK_TARGET_AIRPLAY, { preferLive: true });
+      return true;
+    }
     return false;
   }
   _handleBrowseToolbarClick(target) {
@@ -4063,6 +4076,16 @@ export class FrigateViewCard extends HTMLElement {
   _handlePopupMediaToolbarClick(target) {
     if (target.closest("#popup-fs-btn")) {
       this._fullscreen(this._$("#viewer"));
+      return true;
+    }
+    if (target.closest("#popup-cast-btn, #popup-media-cast")) {
+      void this._promptPlaybackTarget(PLAYBACK_TARGET_CAST, { popup: true });
+      this._showPopupControlsTemporarily();
+      return true;
+    }
+    if (target.closest("#popup-airplay-btn, #popup-media-airplay")) {
+      void this._promptPlaybackTarget(PLAYBACK_TARGET_AIRPLAY, { popup: true });
+      this._showPopupControlsTemporarily();
       return true;
     }
     if (target.closest("#mute-btn")) {
@@ -4923,9 +4946,11 @@ export class FrigateViewCard extends HTMLElement {
   _ensurePopupFullscreenButton(kind = "media") {
     const viewer = this._$("#viewer");
     if (!viewer) return;
+    const existingControls = viewer.querySelector("#popup-playback-controls");
     if (this._usePopupCustomControls(kind)) {
-      const existingBtn = viewer.querySelector("#popup-fs-btn");
-      if (existingBtn) existingBtn.remove();
+      existingControls?.remove();
+      const legacyButton = viewer.querySelector("#popup-fs-btn");
+      legacyButton?.remove();
       return;
     }
     const label =
@@ -4934,19 +4959,30 @@ export class FrigateViewCard extends HTMLElement {
         : kind === "recording"
           ? "Fullscreen recording"
           : "Fullscreen media";
-    const existing = viewer.querySelector("#popup-fs-btn");
-    if (existing) {
-      existing.title = label;
-      existing.setAttribute("aria-label", label);
-      return;
+    let controls = existingControls;
+    if (!controls) {
+      viewer.querySelector("#popup-fs-btn")?.remove();
+      controls = document.createElement("div");
+      controls.className = "popup-playback-controls overlay-fs";
+      controls.id = "popup-playback-controls";
+      viewer.appendChild(controls);
     }
-    const btn = document.createElement("button");
-    btn.className = "glass-btn overlay-fs popup-fs-btn";
-    btn.id = "popup-fs-btn";
-    btn.title = label;
-    btn.setAttribute("aria-label", label);
-    btn.innerHTML = ICONS.expand;
-    viewer.appendChild(btn);
+    controls.innerHTML = "";
+    const addButton = (id, title, icon) => {
+      const button = document.createElement("button");
+      button.className = "glass-btn popup-playback-btn";
+      button.id = id;
+      button.type = "button";
+      button.title = title;
+      button.setAttribute("aria-label", title);
+      button.innerHTML = icon;
+      controls.appendChild(button);
+    };
+    addButton("popup-fs-btn", label, ICONS.expand);
+    if (this._isPopupVideoMediaType(kind)) {
+      addButton("popup-cast-btn", "Cast video", ICONS.cast);
+      addButton("popup-airplay-btn", "AirPlay video", ICONS.airplayVideo);
+    }
   }
   _clearPopupMediaCleanup() {
     this._clearPopupVideoZoom?.();
@@ -5215,6 +5251,35 @@ export class FrigateViewCard extends HTMLElement {
       return path;
     }
   }
+  async _promptPlaybackTarget(
+    target,
+    { popup = false, preferLive = false } = {},
+  ) {
+    const root = this.shadowRoot?.querySelector(
+      popup ? "#viewer" : "#live-stage",
+    );
+    let video = this._findVideoDeep(root);
+    if (!video && preferLive) {
+      video =
+        this._findVideoDeep(this.shadowRoot?.querySelector("#engine")) ||
+        this._findVideoDeep(this._engine);
+    }
+    if (!video) {
+      console.warn("[Frigate] No video is available for remote playback");
+      return false;
+    }
+    try {
+      const prompted = await promptVideoPlaybackTarget(video, target);
+      if (!prompted) {
+        console.warn("[Frigate] " + target + " playback is not supported");
+      }
+      return prompted;
+    } catch (error) {
+      console.warn("[Frigate] " + target + " playback prompt failed", error);
+      return false;
+    }
+  }
+
   _findFullscreenVideo(el) {
     if (!el) return null;
     if (el.tagName?.toLowerCase() === "video") return el;

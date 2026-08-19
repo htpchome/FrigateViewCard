@@ -11,6 +11,7 @@ import {
   buildLiveEngineWrapMarkup,
   buildPageNavButtonsMarkup,
   buildPageNavMarkup,
+  buildPopupShellMarkup,
   buildTabsMarkup,
   buildTabsRegionMarkup,
   buildToolsMarkup,
@@ -228,13 +229,16 @@ test("shared shell builders expose stable page region anchors", () => {
     streamMuted: true,
   });
   const liveFullscreen = buildLiveFullscreenControlMarkup({
-    icons: { expand: "E" },
+    icons: { expand: "E", cast: "C", airplayVideo: "A" },
   });
   const liveMute = buildLiveMuteControlMarkup({
     icons: { volOff: "M", volOn: "V" },
     streamMuted: true,
   });
   assert.doesNotMatch(liveEngineWrap, /id="(?:live-fs-btn|mute-btn)"/);
+  assert.match(liveFullscreen, /id="live-fs-btn"/);
+  assert.match(liveFullscreen, /id="live-cast-btn"/);
+  assert.match(liveFullscreen, /id="live-airplay-btn"/);
   const browseHeader = buildBrowseHeaderRegionMarkup({
     icons: { left: "<", right: ">" },
   });
@@ -278,4 +282,21 @@ test("shared shell builders expose stable page region anchors", () => {
       1,
     );
   }
+});
+
+test("popup custom media controls place Cast and AirPlay beside fullscreen", () => {
+  const markup = buildPopupShellMarkup({
+    version: "1.0.0",
+    icons: {
+      play: "P",
+      volOn: "M",
+      expand: "F",
+      cast: "C",
+      airplayVideo: "A",
+    },
+  });
+
+  assert.match(markup, /id="popup-media-fs"/);
+  assert.match(markup, /id="popup-media-cast"/);
+  assert.match(markup, /id="popup-media-airplay"/);
 });

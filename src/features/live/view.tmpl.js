@@ -15,7 +15,11 @@ export function buildLiveEngineWrapMarkup({ icons }) {
 }
 
 export function buildLiveFullscreenControlMarkup({ icons }) {
-  return `<button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
+  return `<div class="live-playback-controls" data-fvc-region="live-fullscreen">
+    <button class="glass-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
+    <button class="glass-btn live-playback-btn live-cast-btn" id="live-cast-btn" title="Cast live video" aria-label="Cast live video">${icons.cast}</button>
+    <button class="glass-btn live-playback-btn live-airplay-btn" id="live-airplay-btn" title="AirPlay live video" aria-label="AirPlay live video">${icons.airplayVideo}</button>
+  </div>`;
 }
 
 export function buildLiveMuteControlMarkup({ icons, streamMuted }) {

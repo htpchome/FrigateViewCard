@@ -112,6 +112,7 @@ test("createVideoElement applies liveEngine defaults", () => {
     );
     assert.equal(video.hasAttribute("playsinline"), true);
     assert.equal(video.hasAttribute("webkit-playsinline"), true);
+    assert.equal(video.getAttribute("x-webkit-airplay"), "allow");
   });
 });
 
