@@ -169,13 +169,13 @@ export function buildMobileViewMainLayoutShellMarkup({
               <div class="mobile-bottom" id="mobile-bottom">
                 <div class="mobile-video-controls-container">
                     <div class="button-holder-row mobile-video-controls-left-row">
-                      ${inlineMute}
+                      ${inlineFullscreen}
                     </div>
                     <div class="button-holder-row mobile-microphone-row">
                       ${regions.twoWayTalk}
                     </div>
                     <div class="button-holder-row mobile-video-controls-right-row">
-                      ${inlineFullscreen}
+                      ${inlineMute}
                     </div>
                 </div>              
                 <div class="mobile-tab-container">
