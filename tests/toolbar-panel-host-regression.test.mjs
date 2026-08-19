@@ -61,6 +61,22 @@ test("two-way talk hidden button keeps the info row layout stable", () => {
   );
 });
 
+test("icon buttons reset native button chrome", () => {
+  const start = stylesSource.indexOf(".icon-btn{");
+  const end = stylesSource.indexOf(".icon-btn svg", start);
+  const rule = stylesSource.slice(start, end);
+
+  for (const declaration of [
+    "appearance:none",
+    "-webkit-appearance:none",
+    "border:0",
+    "background:transparent",
+    "box-shadow:none",
+  ]) {
+    assert.equal(rule.includes(declaration), true);
+  }
+});
+
 test("two-way talk start and end paths synchronize the live audio state", () => {
   assert.match(
     cardSource,
