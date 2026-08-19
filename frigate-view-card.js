@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1497";
+const VERSION = "1.0.1498";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -165,6 +165,23 @@ const MOBILE_VIEW_PAGE_STYLES = `
     overflow: visible;
   }
 
+  .card.mobile-view-active .mobile-bottom{
+    display:flex;
+    flex:1 1 auto; 
+    flex-direction:column;
+    width:100%;
+    min-height:0; 
+    overflow:hidden;
+    position:relative;
+  }
+  .card.mobile-view-active .mobile-tab-container{
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"left tabs tools";align-items:center;gap:10px;padding:4px 8px;
+  }
+  
+  .card.mobile-view-active .mobile-left-row{grid-area:left;justify-content:flex-start;}
+  .card.mobile-view-active .mobile-tabs-row{grid-area:tabs;justify-content:center;}
+  .card.mobile-view-active .mobile-tools-row{grid-area:tools;justify-content:flex-end;}
+
   .card.mobile-view-active.mobile-rotate-live .mobile-top,
   .card.mobile-view-active.mobile-rotate-live-exit .mobile-top,
   .card.mobile-view-active.mobile-rotate-popup .mobile-top,
@@ -194,15 +211,6 @@ const MOBILE_VIEW_PAGE_STYLES = `
     z-index: 2147483000 !important;
   }
 
-  .card.mobile-view-active .mobile-bottom{
-    display:flex;
-    flex:1 1 auto; 
-    flex-direction:column;
-    width:100%;
-    min-height:0; 
-    overflow:hidden;
-    position:relative;
-  }
   .card.mobile-view-active .mobile-view-two-way-talk-slot {
     display: flex;
     align-items: center;
@@ -3282,18 +3290,17 @@ function buildMobileViewMainLayoutShellMarkup({
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
                 ${regions.twoWayTalk}
-                <div class="${tabsHolderClassName} shadow-small">
-                  <div class="button-holder">
-                    <div class="button-holder-row">
+                <div class="mobile-tab-container">
+                    <div class="mobile-button-holder-row mobile-left-row">
                       
                     </div>
-                    <div class="button-holder-row tabs-row">
+                    <div class="button-holder-row mobile-tabs-row">
                       ${regions.tabs}
                     </div>
-                    <div class="button-holder-row tools-row">
+                    <div class="button-holder-row mobile-tools-row">
                       ${regions.tools}
                     </div>
-                  </div>
+
                 </div>
 
                 ${regions.browseHeader}

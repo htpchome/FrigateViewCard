@@ -36,6 +36,23 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     overflow: visible;
   }
 
+  .card.mobile-view-active .mobile-bottom{
+    display:flex;
+    flex:1 1 auto; 
+    flex-direction:column;
+    width:100%;
+    min-height:0; 
+    overflow:hidden;
+    position:relative;
+  }
+  .card.mobile-view-active .mobile-tab-container{
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"left tabs tools";align-items:center;gap:10px;padding:4px 8px;
+  }
+  
+  .card.mobile-view-active .mobile-left-row{grid-area:left;justify-content:flex-start;}
+  .card.mobile-view-active .mobile-tabs-row{grid-area:tabs;justify-content:center;}
+  .card.mobile-view-active .mobile-tools-row{grid-area:tools;justify-content:flex-end;}
+
   .card.mobile-view-active.mobile-rotate-live .mobile-top,
   .card.mobile-view-active.mobile-rotate-live-exit .mobile-top,
   .card.mobile-view-active.mobile-rotate-popup .mobile-top,
@@ -65,15 +82,6 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     z-index: 2147483000 !important;
   }
 
-  .card.mobile-view-active .mobile-bottom{
-    display:flex;
-    flex:1 1 auto; 
-    flex-direction:column;
-    width:100%;
-    min-height:0; 
-    overflow:hidden;
-    position:relative;
-  }
   .card.mobile-view-active .mobile-view-two-way-talk-slot {
     display: flex;
     align-items: center;

@@ -153,18 +153,17 @@ export function buildMobileViewMainLayoutShellMarkup({
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
                 ${regions.twoWayTalk}
-                <div class="${tabsHolderClassName} shadow-small">
-                  <div class="button-holder">
-                    <div class="button-holder-row">
+                <div class="mobile-tab-container">
+                    <div class="mobile-button-holder-row mobile-left-row">
                       
                     </div>
-                    <div class="button-holder-row tabs-row">
+                    <div class="button-holder-row mobile-tabs-row">
                       ${regions.tabs}
                     </div>
-                    <div class="button-holder-row tools-row">
+                    <div class="button-holder-row mobile-tools-row">
                       ${regions.tools}
                     </div>
-                  </div>
+
                 </div>
 
                 ${regions.browseHeader}
