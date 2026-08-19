@@ -120,6 +120,7 @@ test("mobile profile exposes custom main layout shell builder", () => {
 
   assert.equal(typeof mobileProfile.buildMainLayoutShellMarkup, "function");
   assert.equal(mobileProfile.tabsButtonClass, "icon-btn");
+  assert.equal(mobileProfile.toolsButtonClass, "icon-btn");
 
   const markup = mobileProfile.buildMainLayoutShellMarkup({
     host: {

@@ -158,6 +158,30 @@ test("buildTabsMarkup supports custom tab button class", () => {
   assert.doesNotMatch(markup, /class="circle-btn/);
 });
 
+test("buildToolsMarkup supports custom tool button class", () => {
+  const markup = buildToolsMarkup({
+    tab: "alerts",
+    viewMode: "single",
+    icons,
+    buttonClass: "icon-btn",
+    isFilterPanelOpen: true,
+    isCalendarPanelOpen: false,
+    isGridModeAvailable: true,
+    isSlideshowRotationAvailable: true,
+    isSlideshowActive: false,
+    isControlsVisible: true,
+    gridButtonIcon: "G",
+    slideshowButtonIcon: "L",
+  });
+
+  assert.match(markup, /class="icon-btn" id="controls-btn"/);
+  assert.match(markup, /class="icon-btn" id="grid-btn"/);
+  assert.match(markup, /class="icon-btn slideshow-btn" id="slideshow-btn"/);
+  assert.match(markup, /class="icon-btn active" id="filter-btn"/);
+  assert.match(markup, /class="icon-btn" id="cal-btn"/);
+  assert.doesNotMatch(markup, /class="tool/);
+});
+
 test("buildControlsSectionMarkup enables pan, tilt, and zoom on the circle pad", () => {
   const markup = buildControlsSectionMarkup({
     cameraName: "Driveway",

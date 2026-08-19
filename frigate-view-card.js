@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1498";
+const VERSION = "1.0.1499";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3726,6 +3726,7 @@ function buildToolsMarkup({
   tab,
   viewMode,
   icons,
+  buttonClass = "tool",
   isFilterPanelOpen,
   isCalendarPanelOpen,
   isGridModeAvailable,
@@ -3740,22 +3741,23 @@ function buildToolsMarkup({
   gridButtonIcon,
   slideshowButtonIcon
 }) {
+  const toolButtonClass = String(buttonClass || "tool").trim() || "tool";
   const resolvedFilterDisabled = filterDisabled || tab === "recordings";
   const controlsHidden = isControlsVisible === false;
   const gridHidden = !isGridModeAvailable;
   const gridActive = viewMode === "grid";
-  const gridButton = gridHidden ? "" : `<button class="tool${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}" ${gridDisabled ? "disabled" : ""}>${gridButtonIcon}</button>`;
+  const gridButton = gridHidden ? "" : `<button class="${toolButtonClass}${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}" ${gridDisabled ? "disabled" : ""}>${gridButtonIcon}</button>`;
   const slideshowHidden = !isSlideshowRotationAvailable;
   const slideshowActive = isSlideshowActive;
-  const slideshowButton = slideshowHidden ? "" : `<button class="tool slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button>`;
+  const slideshowButton = slideshowHidden ? "" : `<button class="${toolButtonClass} slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button>`;
   const markup = `<div class="tl-tools">
-        ${controlsHidden ? "" : `<button class="tool${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
+        ${controlsHidden ? "" : `<button class="${toolButtonClass}${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button>`}
         ${gridButton}
         ${slideshowButton}
         <div class="divider">${icons.divider}</div>
-        <button class="tool${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
+        <button class="${toolButtonClass}${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
         <div class="filter-panel" id="filter-panel" data-fvc-region="filter-panel" style="display:none"></div>
-        <button class="tool${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}" ${calendarDisabled ? "disabled" : ""}>${icons.calendar}</button>
+        <button class="${toolButtonClass}${isCalendarPanelOpen ? " active" : ""}" id="cal-btn" title="Calendar" aria-pressed="${isCalendarPanelOpen ? "true" : "false"}" ${calendarDisabled ? "disabled" : ""}>${icons.calendar}</button>
         <div class="cal-panel" id="cal-panel" data-fvc-region="calendar-panel" style="display:none"></div>
       </div>`;
   return markup;
@@ -3964,6 +3966,7 @@ function normalizeProfile(profile = {}) {
     rightColumnClass: String(profile.rightColumnClass || "").trim(),
     tabsHolderClass: String(profile.tabsHolderClass || "").trim(),
     tabsButtonClass: String(profile.tabsButtonClass || "").trim(),
+    toolsButtonClass: String(profile.toolsButtonClass || "").trim(),
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
     capabilities: {
@@ -4105,6 +4108,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     rightColumnClass: "col-right--mobile-view",
     tabsHolderClass: "tabs-holder--mobile-view",
     tabsButtonClass: "icon-btn",
+    toolsButtonClass: "icon-btn",
     browseClass: "browse--mobile-view",
     buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildMobileViewInfoRowMarkup({
       title,
@@ -18982,6 +18986,7 @@ const FrigateViewCard = class extends HTMLElement {
     const buttonStates = this._toolbarButtonStates();
     const shellProfile = this._activePageShellLayoutProfile();
     const tabsButtonClass = String(shellProfile?.tabsButtonClass || "").trim() || "circle-btn";
+    const toolsButtonClass = String(shellProfile?.toolsButtonClass || "").trim() || "tool";
     const { activeTab, markup: tabsMarkup } = buildTabsMarkup({
       tab: this._tab,
       hiddenTabs: this._config.hidden_tabs,
@@ -18993,6 +18998,7 @@ const FrigateViewCard = class extends HTMLElement {
       tab: activeTab,
       viewMode: this._viewMode,
       icons: ICONS,
+      buttonClass: toolsButtonClass,
       isFilterPanelOpen: filterPanelOpen,
       isCalendarPanelOpen: calendarPanelOpen,
       isGridModeAvailable: this._isGridModeAvailable(),

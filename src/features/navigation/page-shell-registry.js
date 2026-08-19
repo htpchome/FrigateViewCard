@@ -42,6 +42,7 @@ function normalizeProfile(profile = {}) {
     rightColumnClass: String(profile.rightColumnClass || "").trim(),
     tabsHolderClass: String(profile.tabsHolderClass || "").trim(),
     tabsButtonClass: String(profile.tabsButtonClass || "").trim(),
+    toolsButtonClass: String(profile.toolsButtonClass || "").trim(),
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
     capabilities: {
@@ -236,6 +237,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     rightColumnClass: "col-right--mobile-view",
     tabsHolderClass: "tabs-holder--mobile-view",
     tabsButtonClass: "icon-btn",
+    toolsButtonClass: "icon-btn",
     browseClass: "browse--mobile-view",
     buildInfoRowMarkup: ({ title, subtitle, version, host }) =>
       buildMobileViewInfoRowMarkup({

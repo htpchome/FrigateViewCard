@@ -122,7 +122,7 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
   assert.equal(markup.includes('id="mobile-view-two-way-talk-slot"'), true);
   assert.equal(
     markup.indexOf('id="mobile-view-two-way-talk-slot"') <
-      markup.indexOf('class="tabs-holder'),
+      markup.indexOf('class="mobile-tab-container'),
     true,
   );
   assert.equal(markup.includes('id="two-way-talk-btn"'), true);

@@ -2924,6 +2924,8 @@ export class FrigateViewCard extends HTMLElement {
     const shellProfile = this._activePageShellLayoutProfile();
     const tabsButtonClass =
       String(shellProfile?.tabsButtonClass || "").trim() || "circle-btn";
+    const toolsButtonClass =
+      String(shellProfile?.toolsButtonClass || "").trim() || "tool";
 
     // Build tabs only
     const { activeTab, markup: tabsMarkup } = buildTabsMarkup({
@@ -2939,6 +2941,7 @@ export class FrigateViewCard extends HTMLElement {
       tab: activeTab,
       viewMode: this._viewMode,
       icons: ICONS,
+      buttonClass: toolsButtonClass,
       isFilterPanelOpen: filterPanelOpen,
       isCalendarPanelOpen: calendarPanelOpen,
       isGridModeAvailable: this._isGridModeAvailable(),

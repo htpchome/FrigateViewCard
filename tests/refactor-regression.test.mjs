@@ -1685,6 +1685,33 @@ test("outer page layouts live with their route owners", () => {
   );
 });
 
+test("page profiles own tab and tool visual button classes", () => {
+  assert.equal(
+    pageShellRegistrySource.includes(
+      'tabsButtonClass: "icon-btn"',
+    ),
+    true,
+  );
+  assert.equal(
+    pageShellRegistrySource.includes(
+      'toolsButtonClass: "icon-btn"',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("buttonClass: tabsButtonClass"),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("buttonClass: toolsButtonClass"),
+    true,
+  );
+  assert.equal(
+    shellNavTemplateSource.includes('buttonClass = "tool"'),
+    true,
+  );
+});
+
 test("editor stylesheet keeps core config surface variables intact", () => {
   assert.equal(
     /:host\s*\{[\s\S]*?--editor-card-bg: var\(--card-background-color\);/.test(
