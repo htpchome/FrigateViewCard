@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1496";
+const VERSION = "1.0.1497";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3284,10 +3284,10 @@ function buildMobileViewMainLayoutShellMarkup({
                 ${regions.twoWayTalk}
                 <div class="${tabsHolderClassName} shadow-small">
                   <div class="button-holder">
-                    <div class="button-holder-row tabs-row">
+                    <div class="button-holder-row">
                       
                     </div>
-                    <div class="button-holder-row page-nav-row">
+                    <div class="button-holder-row tabs-row">
                       ${regions.tabs}
                     </div>
                     <div class="button-holder-row tools-row">
