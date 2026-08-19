@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1521";
+const VERSION = "1.0.1522";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -905,18 +905,24 @@ const STYLES = `
   .glass-btn:hover svg{width:30px;height:30px;opacity: 0.95; }
 
   .square-btn{
-    cursor:pointer;
-    inline-flex; 
-    align-items: center; 
-    justify-content: center; 
-    padding: 3px;
-    color:rgba(255, 255, 255, 0.9);
-    background:rgba(0, 0, 0, 0.5);
-    border-radius:8px;
-    border:1px solid rgb(33, 33, 33);
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    color: #fff;
+    background: rgb(20 20 20 / 80%);
+    border: 1px solid rgb(255 255 255 / 25%);
+    border-radius: 4px;
+    cursor: pointer;
+    appearance: none;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      transform 80ms ease;
     }
-  .square-btn:hover{background:rgba(0, 0, 0, 0.6);}
-  .square-btn svg{color:rgba(255, 255, 255, 0.9);width:30px;height:30px;opacity: 0.8;}
+  .square-btn:hover{background: rgb(45 45 45 / 95%);border-color: rgb(255 255 255 / 45%);}
+  .square-btn svg{width: 24px;height: 24px;fill: currentColor;pointer-events: none;}
   .mute-btn {position:absolute;right:8px;bottom:8px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
   .btn-secondary{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
