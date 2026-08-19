@@ -151,6 +151,33 @@ test("browser target support separates Cast and AirPlay capabilities", () => {
     }).cast,
     false,
   );
+  assert.equal(
+    resolveBrowserPlaybackTargetSupport({
+      windowObj: { chrome: {} },
+      navigatorObj: { userAgent: "Mozilla/5.0 Edg/140.0" },
+    }).cast,
+    false,
+  );
+  const { windowObj: edgeCastWindow } = createCastWindow();
+  assert.equal(
+    resolveBrowserPlaybackTargetSupport({
+      windowObj: edgeCastWindow,
+      navigatorObj: { userAgent: "Mozilla/5.0 Edg/140.0" },
+    }).cast,
+    false,
+  );
+  assert.equal(
+    resolveBrowserPlaybackTargetSupport({
+      windowObj: {
+        HTMLVideoElement: {
+          prototype: { webkitShowPlaybackTargetPicker() {} },
+        },
+      },
+      navigatorObj: { userAgent: "iPhone" },
+      castFrameworkReady: false,
+    }).airplay,
+    true,
+  );
 });
 
 test("Google Cast request uses the default receiver and receiver media URL", async () => {
@@ -333,7 +360,7 @@ test("controller prewarms sources and prompts without HA media-player services",
   await controller.prepare("live");
   assert.deepEqual(sourceCalls, ["live:camera.front"]);
   assert.equal(mounted.length, 0);
-  assert.equal(videos.every((video) => video.src === ""), true);
+  assert.equal(videos.length, 0);
   assert.equal(await controller.prompt(PLAYBACK_TARGET_CAST), true);
   assert.equal(castCalls[0].source.url, "https://ha.local/live:camera.front.mp4");
   assert.equal(mounted.length, 0);

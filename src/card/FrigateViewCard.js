@@ -2675,6 +2675,7 @@ export class FrigateViewCard extends HTMLElement {
   async _switchCamera(idx, opts = {}) {
     if (idx !== this._activeCamIdx) {
       void this._stopTwoWayTalkSession();
+      this._playbackTargetController.release("live");
     }
     this._mobileCamSwitcherOpen = false;
     const source = String(opts?.source || "manual");
@@ -3996,6 +3997,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _closePopup() {
+    this._playbackTargetController.release("popup");
     const popup = this._$("#myPopup");
     if (!popup) return;
     popup.classList.remove("is-open");

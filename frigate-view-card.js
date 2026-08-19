@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1512";
+const VERSION = "1.0.1514";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6856,6 +6856,7 @@ const DEFAULT_SOURCE_TTL_MS = 5 * 60 * 1e3;
 const MAX_CACHED_SOURCES = 12;
 const googleCastFrameworkState = { promise: null };
 const isAppleMobileBrowser = (navigatorObj) => /iPad|iPhone|iPod/i.test(String(navigatorObj?.userAgent || ""));
+const isMicrosoftEdgeBrowser = (navigatorObj) => /Edg(?:A|iOS)?\//i.test(String(navigatorObj?.userAgent || ""));
 const googleCastEnvironment = (windowObj) => {
   const framework = windowObj?.cast?.framework;
   const media = windowObj?.chrome?.cast?.media;
@@ -6874,12 +6875,13 @@ function resolveBrowserPlaybackTargetSupport({
   navigatorObj = globalThis.navigator,
   castFrameworkReady = null
 } = {}) {
-  const airplay = typeof video?.webkitShowPlaybackTargetPicker === "function";
+  const airplay = typeof video?.webkitShowPlaybackTargetPicker === "function" || typeof windowObj?.HTMLVideoElement?.prototype?.webkitShowPlaybackTargetPicker === "function";
+  const castBrowserSupported = !isAppleMobileBrowser(navigatorObj) && !isMicrosoftEdgeBrowser(navigatorObj);
   const frameworkAvailable = !!googleCastEnvironment(windowObj);
-  const likelyCastBrowser = !isAppleMobileBrowser(navigatorObj) && !!windowObj?.chrome;
+  const likelyCastBrowser = castBrowserSupported && !!windowObj?.chrome;
   return {
     airplay,
-    cast: frameworkAvailable || castFrameworkReady !== false && likelyCastBrowser,
+    cast: castBrowserSupported && (frameworkAvailable || castFrameworkReady !== false && likelyCastBrowser),
     frameworkAvailable,
     likelyCastBrowser
   };
@@ -6902,6 +6904,10 @@ function ensureGoogleCastFramework({
   documentObj = globalThis.document,
   timeoutMs = 8e3
 } = {}) {
+  const navigatorObj = windowObj?.navigator;
+  if (isAppleMobileBrowser(navigatorObj) || isMicrosoftEdgeBrowser(navigatorObj)) {
+    return Promise.resolve(false);
+  }
   if (configureGoogleCastFramework(windowObj)) {
     return Promise.resolve(true);
   }
@@ -7065,7 +7071,6 @@ const BrowserPlaybackTargetController = class {
     this._sources = new Map();
     this._sourceInFlight = new Map();
     this._videos = new Map();
-    this._supportProbeVideo = null;
     this._castReady = null;
     this._castWarmPromise = null;
   }
@@ -7093,6 +7098,7 @@ const BrowserPlaybackTargetController = class {
       video.play?.().catch?.(() => {
       });
     };
+    const releaseOnTerminal = () => this._releaseVideo(scope);
     const onWirelessTargetChanged = () => {
       if (video.webkitCurrentPlaybackTargetIsWireless === true) {
         playOnWirelessTarget();
@@ -7106,24 +7112,34 @@ const BrowserPlaybackTargetController = class {
     );
     video.addEventListener?.("loadedmetadata", playOnWirelessTarget);
     video.addEventListener?.("canplay", playOnWirelessTarget);
+    video.addEventListener?.("ended", releaseOnTerminal);
+    video.addEventListener?.("error", releaseOnTerminal);
     this._getMount?.()?.appendChild?.(video);
     this._videos.set(scope, {
       video,
       onWirelessTargetChanged,
-      playOnWirelessTarget
+      playOnWirelessTarget,
+      releaseOnTerminal
     });
     return video;
   }
   _releaseVideo(scope) {
     const entry = this._videos.get(scope);
     if (!entry) return;
-    const { video, onWirelessTargetChanged, playOnWirelessTarget } = entry;
+    const {
+      video,
+      onWirelessTargetChanged,
+      playOnWirelessTarget,
+      releaseOnTerminal
+    } = entry;
     video.removeEventListener?.(
       "webkitcurrentplaybacktargetiswirelesschanged",
       onWirelessTargetChanged
     );
     video.removeEventListener?.("loadedmetadata", playOnWirelessTarget);
     video.removeEventListener?.("canplay", playOnWirelessTarget);
+    video.removeEventListener?.("ended", releaseOnTerminal);
+    video.removeEventListener?.("error", releaseOnTerminal);
     try {
       video.pause?.();
       video.removeAttribute?.("src");
@@ -7133,16 +7149,8 @@ const BrowserPlaybackTargetController = class {
     video.remove?.();
     this._videos.delete(scope);
   }
-  _videoForSupportProbe() {
-    if (!this._supportProbeVideo) {
-      this._supportProbeVideo = this._createVideo?.() || null;
-    }
-    return this._supportProbeVideo;
-  }
   getSupport() {
-    const video = this._videoForSupportProbe();
     const support = resolveBrowserPlaybackTargetSupport({
-      video,
       windowObj: this._getWindow?.(),
       navigatorObj: this._getNavigator?.(),
       castFrameworkReady: this._castReady
@@ -7250,10 +7258,17 @@ const BrowserPlaybackTargetController = class {
       return false;
     });
   }
+  release(scope = "") {
+    if (scope) {
+      this._releaseVideo(scope);
+      return;
+    }
+    for (const activeScope of [...this._videos.keys()]) {
+      this._releaseVideo(activeScope);
+    }
+  }
   dispose() {
-    for (const scope of [...this._videos.keys()]) this._releaseVideo(scope);
-    this._supportProbeVideo?.remove?.();
-    this._supportProbeVideo = null;
+    this.release();
     this._sources.clear();
     this._sourceInFlight.clear();
   }
@@ -19369,6 +19384,7 @@ const FrigateViewCard = class extends HTMLElement {
   async _switchCamera(idx, opts = {}) {
     if (idx !== this._activeCamIdx) {
       void this._stopTwoWayTalkSession();
+      this._playbackTargetController.release("live");
     }
     this._mobileCamSwitcherOpen = false;
     const source = String(opts?.source || "manual");
@@ -20513,6 +20529,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._playing = null;
   }
   _closePopup() {
+    this._playbackTargetController.release("popup");
     const popup = this._$("#myPopup");
     if (!popup) return;
     popup.classList.remove("is-open");

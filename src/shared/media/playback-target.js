@@ -12,6 +12,9 @@ const googleCastFrameworkState = { promise: null };
 const isAppleMobileBrowser = (navigatorObj) =>
   /iPad|iPhone|iPod/i.test(String(navigatorObj?.userAgent || ""));
 
+const isMicrosoftEdgeBrowser = (navigatorObj) =>
+  /Edg(?:A|iOS)?\//i.test(String(navigatorObj?.userAgent || ""));
+
 const googleCastEnvironment = (windowObj) => {
   const framework = windowObj?.cast?.framework;
   const media = windowObj?.chrome?.cast?.media;
@@ -32,15 +35,20 @@ export function resolveBrowserPlaybackTargetSupport({
   castFrameworkReady = null,
 } = {}) {
   const airplay =
-    typeof video?.webkitShowPlaybackTargetPicker === "function";
+    typeof video?.webkitShowPlaybackTargetPicker === "function" ||
+    typeof windowObj?.HTMLVideoElement?.prototype
+      ?.webkitShowPlaybackTargetPicker === "function";
+  const castBrowserSupported =
+    !isAppleMobileBrowser(navigatorObj) &&
+    !isMicrosoftEdgeBrowser(navigatorObj);
   const frameworkAvailable = !!googleCastEnvironment(windowObj);
-  const likelyCastBrowser =
-    !isAppleMobileBrowser(navigatorObj) && !!windowObj?.chrome;
+  const likelyCastBrowser = castBrowserSupported && !!windowObj?.chrome;
   return {
     airplay,
     cast:
-      frameworkAvailable ||
-      (castFrameworkReady !== false && likelyCastBrowser),
+      castBrowserSupported &&
+      (frameworkAvailable ||
+        (castFrameworkReady !== false && likelyCastBrowser)),
     frameworkAvailable,
     likelyCastBrowser,
   };
@@ -66,6 +74,13 @@ export function ensureGoogleCastFramework({
   documentObj = globalThis.document,
   timeoutMs = 8000,
 } = {}) {
+  const navigatorObj = windowObj?.navigator;
+  if (
+    isAppleMobileBrowser(navigatorObj) ||
+    isMicrosoftEdgeBrowser(navigatorObj)
+  ) {
+    return Promise.resolve(false);
+  }
   if (configureGoogleCastFramework(windowObj)) {
     return Promise.resolve(true);
   }
@@ -235,7 +250,6 @@ export class BrowserPlaybackTargetController {
     this._sources = new Map();
     this._sourceInFlight = new Map();
     this._videos = new Map();
-    this._supportProbeVideo = null;
     this._castReady = null;
     this._castWarmPromise = null;
   }
@@ -265,6 +279,7 @@ export class BrowserPlaybackTargetController {
       if (video.webkitCurrentPlaybackTargetIsWireless !== true) return;
       video.play?.().catch?.(() => {});
     };
+    const releaseOnTerminal = () => this._releaseVideo(scope);
     const onWirelessTargetChanged = () => {
       if (video.webkitCurrentPlaybackTargetIsWireless === true) {
         playOnWirelessTarget();
@@ -278,11 +293,14 @@ export class BrowserPlaybackTargetController {
     );
     video.addEventListener?.("loadedmetadata", playOnWirelessTarget);
     video.addEventListener?.("canplay", playOnWirelessTarget);
+    video.addEventListener?.("ended", releaseOnTerminal);
+    video.addEventListener?.("error", releaseOnTerminal);
     this._getMount?.()?.appendChild?.(video);
     this._videos.set(scope, {
       video,
       onWirelessTargetChanged,
       playOnWirelessTarget,
+      releaseOnTerminal,
     });
     return video;
   }
@@ -290,13 +308,20 @@ export class BrowserPlaybackTargetController {
   _releaseVideo(scope) {
     const entry = this._videos.get(scope);
     if (!entry) return;
-    const { video, onWirelessTargetChanged, playOnWirelessTarget } = entry;
+    const {
+      video,
+      onWirelessTargetChanged,
+      playOnWirelessTarget,
+      releaseOnTerminal,
+    } = entry;
     video.removeEventListener?.(
       "webkitcurrentplaybacktargetiswirelesschanged",
       onWirelessTargetChanged,
     );
     video.removeEventListener?.("loadedmetadata", playOnWirelessTarget);
     video.removeEventListener?.("canplay", playOnWirelessTarget);
+    video.removeEventListener?.("ended", releaseOnTerminal);
+    video.removeEventListener?.("error", releaseOnTerminal);
     try {
       video.pause?.();
       video.removeAttribute?.("src");
@@ -306,17 +331,8 @@ export class BrowserPlaybackTargetController {
     this._videos.delete(scope);
   }
 
-  _videoForSupportProbe() {
-    if (!this._supportProbeVideo) {
-      this._supportProbeVideo = this._createVideo?.() || null;
-    }
-    return this._supportProbeVideo;
-  }
-
   getSupport() {
-    const video = this._videoForSupportProbe();
     const support = resolveBrowserPlaybackTargetSupport({
-      video,
       windowObj: this._getWindow?.(),
       navigatorObj: this._getNavigator?.(),
       castFrameworkReady: this._castReady,
@@ -445,10 +461,18 @@ export class BrowserPlaybackTargetController {
       });
   }
 
+  release(scope = "") {
+    if (scope) {
+      this._releaseVideo(scope);
+      return;
+    }
+    for (const activeScope of [...this._videos.keys()]) {
+      this._releaseVideo(activeScope);
+    }
+  }
+
   dispose() {
-    for (const scope of [...this._videos.keys()]) this._releaseVideo(scope);
-    this._supportProbeVideo?.remove?.();
-    this._supportProbeVideo = null;
+    this.release();
     this._sources.clear();
     this._sourceInFlight.clear();
   }

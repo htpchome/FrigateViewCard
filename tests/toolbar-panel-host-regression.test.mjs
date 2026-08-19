@@ -138,6 +138,14 @@ test("live and popup playback controls delegate to browser target playback", () 
     cardSource.includes("this._playbackTargetController.prompt("),
     true,
   );
+  assert.equal(
+    cardSource.includes('this._playbackTargetController.release("popup")'),
+    true,
+  );
+  assert.equal(
+    cardSource.includes('this._playbackTargetController.release("live")'),
+    true,
+  );
   assert.equal(cardSource.includes("_playbackTargetContext(scope"), true);
   assert.equal(cardSource.includes("camera/stream"), false);
   assert.equal(
