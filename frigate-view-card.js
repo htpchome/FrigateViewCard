@@ -903,7 +903,17 @@ const STYLES = `
   .glass-btn:hover{background:rgba(255, 255, 255, 0.3);} 
   .glass-btn svg{width:30px;height:30px;opacity: 0.8; }
   .glass-btn:hover svg{width:30px;height:30px;opacity: 0.95; }
-  .square-btn{color:rgba(255, 255, 255, 0.9);background:rgba(0, 0, 0, 0.5);border-radius:8px;border:1px solid rgba(255, 255, 255, 0.6);}
+
+  .square-btn{
+    inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 3px;
+    color:rgba(255, 255, 255, 0.9);
+    background:rgba(0, 0, 0, 0.5);
+    border-radius:8px;
+    border:1px solid rgba(255, 255, 255, 0.6);
+    }
   .square-btn:hover{background:rgba(0, 0, 0, 0.6);}
   .square-btn svg{color:rgba(255, 255, 255, 0.9);width:30px;height:30px;opacity: 0.8;}
   .mute-btn {position:absolute;right:8px;bottom:8px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
