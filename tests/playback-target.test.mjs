@@ -18,7 +18,7 @@ import {
   resolveHomeAssistantCameraHlsSource,
 } from "../src/integrations/home-assistant/receiver-source.js";
 
-function createFakeVideo({ airplay = false, remotePrompt = null } = {}) {
+function createFakeVideo({ airplay = false } = {}) {
   const attributes = new Map();
   const listeners = new Map();
   const video = {
@@ -66,9 +66,6 @@ function createFakeVideo({ airplay = false, remotePrompt = null } = {}) {
     video.webkitShowPlaybackTargetPicker = () => {
       video.airplayPrompted = true;
     };
-  }
-  if (remotePrompt) {
-    video.remote = { prompt: remotePrompt };
   }
   return video;
 }
@@ -140,20 +137,19 @@ test("browser target support separates Cast and AirPlay capabilities", () => {
     {
       airplay: true,
       cast: false,
-      remotePlayback: false,
       frameworkAvailable: false,
       likelyCastBrowser: false,
     },
   );
 
-  const remoteVideo = createFakeVideo({ remotePrompt: async () => {} });
   assert.equal(
     resolveBrowserPlaybackTargetSupport({
-      video: remoteVideo,
+      video: createFakeVideo(),
       windowObj: { chrome: {} },
       navigatorObj: { userAgent: "Chrome" },
+      castFrameworkReady: false,
     }).cast,
-    true,
+    false,
   );
 });
 
@@ -188,25 +184,6 @@ test("Google Cast request uses the default receiver and receiver media URL", asy
   assert.equal(calls.loads[0].mediaInfo.contentId, source.url);
 });
 
-test("Cast falls back to Remote Playback with the prepared video", async () => {
-  let promptCalls = 0;
-  const video = createFakeVideo({
-    remotePrompt: async () => {
-      promptCalls += 1;
-    },
-  });
-  assert.equal(
-    await promptGoogleCastSource({
-      source: { url: "https://ha.local/clip.mp4" },
-      fallbackVideo: video,
-      windowObj: {},
-    }),
-    true,
-  );
-  assert.equal(promptCalls, 1);
-  assert.equal(video.loadCalls, 1);
-});
-
 test("AirPlay uses a dedicated prepared video instead of the displayed stream", () => {
   const video = createFakeVideo({ airplay: true });
   const source = {
@@ -222,8 +199,7 @@ test("AirPlay uses a dedicated prepared video instead of the displayed stream", 
   assert.equal(video.loadCalls, 0);
   assert.equal(promptAirPlayVideo(video), true);
   assert.equal(video.loadCalls, 1);
-  assert.equal(video.playCalls, 1);
-  assert.equal(video.muted, true);
+  assert.equal(video.playCalls, 0);
   assert.equal(video.airplayPrompted, true);
 });
 
@@ -341,8 +317,8 @@ test("controller prewarms sources and prompts without HA media-player services",
       return video;
     },
     prepareCast: async () => true,
-    promptCast: async (source, video) => {
-      castCalls.push({ source, video });
+    promptCast: async (source) => {
+      castCalls.push({ source });
       return true;
     },
     promptAirPlay: (video) => {
@@ -360,7 +336,7 @@ test("controller prewarms sources and prompts without HA media-player services",
   assert.equal(videos.every((video) => video.src === ""), true);
   assert.equal(await controller.prompt(PLAYBACK_TARGET_CAST), true);
   assert.equal(castCalls[0].source.url, "https://ha.local/live:camera.front.mp4");
-  assert.equal(castCalls[0].video.src, castCalls[0].source.url);
+  assert.equal(mounted.length, 0);
 
   await controller.prepare("popup");
   assert.equal(
@@ -368,14 +344,15 @@ test("controller prewarms sources and prompts without HA media-player services",
     true,
   );
   assert.equal(airplayCalls[0].src, "https://ha.local/clip:frigate:event-1.mp4");
-  assert.equal(mounted.length, 2);
+  assert.equal(mounted.length, 1);
 
   airplayCalls[0].webkitCurrentPlaybackTargetIsWireless = true;
   airplayCalls[0].dispatch(
     "webkitcurrentplaybacktargetiswirelesschanged",
   );
   assert.equal(airplayCalls[0].playCalls, 1);
-  assert.equal(airplayCalls[0].muted, false);
+  airplayCalls[0].dispatch("canplay");
+  assert.equal(airplayCalls[0].playCalls, 2);
 
   airplayCalls[0].webkitCurrentPlaybackTargetIsWireless = false;
   airplayCalls[0].dispatch(

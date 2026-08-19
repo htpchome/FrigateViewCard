@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1511";
+const VERSION = "1.0.1512";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6854,7 +6854,7 @@ const GOOGLE_CAST_SCRIPT_ID = "fvc-google-cast-sender";
 const GOOGLE_CAST_SCRIPT_URL = "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
 const DEFAULT_SOURCE_TTL_MS = 5 * 60 * 1e3;
 const MAX_CACHED_SOURCES = 12;
-const googleCastFrameworkPromise = null;
+const googleCastFrameworkState = { promise: null };
 const isAppleMobileBrowser = (navigatorObj) => /iPad|iPhone|iPod/i.test(String(navigatorObj?.userAgent || ""));
 const googleCastEnvironment = (windowObj) => {
   const framework = windowObj?.cast?.framework;
@@ -6874,14 +6874,12 @@ function resolveBrowserPlaybackTargetSupport({
   navigatorObj = globalThis.navigator,
   castFrameworkReady = null
 } = {}) {
-  const remotePlayback = typeof video?.remote?.prompt === "function";
   const airplay = typeof video?.webkitShowPlaybackTargetPicker === "function";
   const frameworkAvailable = !!googleCastEnvironment(windowObj);
   const likelyCastBrowser = !isAppleMobileBrowser(navigatorObj) && !!windowObj?.chrome;
   return {
     airplay,
-    cast: frameworkAvailable || remotePlayback || castFrameworkReady !== false && likelyCastBrowser,
-    remotePlayback,
+    cast: frameworkAvailable || castFrameworkReady !== false && likelyCastBrowser,
     frameworkAvailable,
     likelyCastBrowser
   };
@@ -6915,8 +6913,10 @@ function ensureGoogleCastFramework({
   if (!support.likelyCastBrowser || !documentObj?.head) {
     return Promise.resolve(false);
   }
-  if (googleCastFrameworkPromise) return googleCastFrameworkPromise;
-  googleCastFrameworkPromise = new Promise((resolve) => {
+  if (googleCastFrameworkState.promise) {
+    return googleCastFrameworkState.promise;
+  }
+  googleCastFrameworkState.promise = new Promise((resolve) => {
     let settled = false;
     let timeout = null;
     let readinessPoll = null;
@@ -6961,7 +6961,7 @@ function ensureGoogleCastFramework({
       finish(configureGoogleCastFramework(windowObj));
     }, timeoutMs);
   });
-  return googleCastFrameworkPromise;
+  return googleCastFrameworkState.promise;
 }
 function buildGoogleCastLoadRequest({
   source,
@@ -6987,22 +6987,10 @@ function buildGoogleCastLoadRequest({
 }
 function promptGoogleCastSource({
   source,
-  fallbackVideo = null,
   windowObj = globalThis.window
 } = {}) {
   const env = googleCastEnvironment(windowObj);
-  if (!env) {
-    const prompt = fallbackVideo?.remote?.prompt;
-    if (typeof prompt !== "function") return Promise.resolve(false);
-    try {
-      fallbackVideo.load?.();
-      return Promise.resolve(prompt.call(fallbackVideo.remote)).then(
-        () => true
-      );
-    } catch (error) {
-      return Promise.reject(error);
-    }
-  }
+  if (!env) return Promise.resolve(false);
   const castContext = env.framework.CastContext.getInstance();
   const loadIntoSession = (session) => {
     const request = buildGoogleCastLoadRequest({ source, windowObj });
@@ -7038,13 +7026,7 @@ function promptAirPlayVideo(video) {
   const prompt = video?.webkitShowPlaybackTargetPicker;
   if (typeof prompt !== "function") return false;
   try {
-    video.muted = true;
     video.load?.();
-    try {
-      video.play?.().catch?.(() => {
-      });
-    } catch (_) {
-    }
     prompt.call(video);
     return true;
   } catch (_) {
@@ -7058,7 +7040,7 @@ const BrowserPlaybackTargetController = class {
     getMount,
     createVideo = () => globalThis.document?.createElement?.("video"),
     prepareCast = () => ensureGoogleCastFramework(),
-    promptCast = (source, video) => promptGoogleCastSource({ source, fallbackVideo: video }),
+    promptCast = (source) => promptGoogleCastSource({ source }),
     promptAirPlay = (video) => promptAirPlayVideo(video),
     getWindow = () => globalThis.window,
     getNavigator = () => globalThis.navigator,
@@ -7106,11 +7088,14 @@ const BrowserPlaybackTargetController = class {
     if (video.style) {
       video.style.cssText = "position:fixed;left:-10000px;top:-10000px;width:1px;height:1px;opacity:0;pointer-events:none";
     }
+    const playOnWirelessTarget = () => {
+      if (video.webkitCurrentPlaybackTargetIsWireless !== true) return;
+      video.play?.().catch?.(() => {
+      });
+    };
     const onWirelessTargetChanged = () => {
       if (video.webkitCurrentPlaybackTargetIsWireless === true) {
-        video.muted = false;
-        video.play?.().catch?.(() => {
-        });
+        playOnWirelessTarget();
         return;
       }
       this._releaseVideo(scope);
@@ -7119,18 +7104,26 @@ const BrowserPlaybackTargetController = class {
       "webkitcurrentplaybacktargetiswirelesschanged",
       onWirelessTargetChanged
     );
+    video.addEventListener?.("loadedmetadata", playOnWirelessTarget);
+    video.addEventListener?.("canplay", playOnWirelessTarget);
     this._getMount?.()?.appendChild?.(video);
-    this._videos.set(scope, { video, onWirelessTargetChanged });
+    this._videos.set(scope, {
+      video,
+      onWirelessTargetChanged,
+      playOnWirelessTarget
+    });
     return video;
   }
   _releaseVideo(scope) {
     const entry = this._videos.get(scope);
     if (!entry) return;
-    const { video, onWirelessTargetChanged } = entry;
+    const { video, onWirelessTargetChanged, playOnWirelessTarget } = entry;
     video.removeEventListener?.(
       "webkitcurrentplaybacktargetiswirelesschanged",
       onWirelessTargetChanged
     );
+    video.removeEventListener?.("loadedmetadata", playOnWirelessTarget);
+    video.removeEventListener?.("canplay", playOnWirelessTarget);
     try {
       video.pause?.();
       video.removeAttribute?.("src");
@@ -7228,9 +7221,9 @@ const BrowserPlaybackTargetController = class {
       );
       return Promise.resolve(false);
     }
-    const video = this._videoForScope(scope);
-    configureReceiverVideo(video, source);
     if (target === PLAYBACK_TARGET_AIRPLAY) {
+      const video = this._videoForScope(scope);
+      configureReceiverVideo(video, source);
       const prompted = this._promptAirPlay?.(video) === true;
       if (!prompted) {
         this._onStatus?.("AirPlay is not supported in this browser.");
@@ -7240,7 +7233,7 @@ const BrowserPlaybackTargetController = class {
     if (target !== PLAYBACK_TARGET_CAST) return Promise.resolve(false);
     let result;
     try {
-      result = this._promptCast?.(source, video);
+      result = this._promptCast?.(source);
     } catch (error) {
       result = Promise.reject(error);
     }

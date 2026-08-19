@@ -178,6 +178,14 @@ test("no legacy var declarations remain", () => {
   assert.equal(/\bvar\s+[A-Za-z_$]/.test(source), false);
 });
 
+test("generated bundle preserves mutable Cast loader state", () => {
+  assert.match(
+    source,
+    /^const googleCastFrameworkState = \{ promise: null \};$/m,
+  );
+  assert.doesNotMatch(source, /googleCastFrameworkPromise/);
+});
+
 test("live mount attempts pass the target entity through strategy start", () => {
   assert.equal(
     /attempt\.start\(\{\s*abortSignal,\s*entity\s*\}\)/.test(
