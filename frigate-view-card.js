@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1525";
+const VERSION = "1.0.1526";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -923,16 +923,8 @@ const STYLES = `
     }
   .square-btn:hover{background: rgb(45 45 45 / 95%);border-color: rgb(255 255 255 / 45%);}
   .square-btn svg{width: 24px;height: 24px;fill: currentColor;pointer-events: none;}
-  .mute-btn {position:absolute;right:16px;bottom:36px;z-index:3;pointer-events:none;}
-  .live-fs-btn {position:absolute;right:16px;bottom:72px;z-index:3;pointer-events:none;}
-
-  .live-playback-controls{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
-  .live-playback-controls .live-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
-  .live-playback-controls .live-playback-btn svg{width:30px;height:30px;opacity:.8;}
-  .live-playback-controls .live-playback-btn:hover svg{width:30px;height:30px;opacity:.95;}
-  .live-playback-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
-
-
+  .mute-btn {position:absolute;right:8px;bottom:8px;z-index:3;pointer-events:none;}
+  
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
   .btn-secondary{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
   .btn-primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
@@ -943,6 +935,13 @@ const STYLES = `
   .cam-tab svg{width:14.4px;height:14.4px;flex-shrink:0;}
   .cam-tab:hover svg{width:14.4px;height:14.4px;flex-shrink:0;} 
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
+
+  .live-playback-controls{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .live-playback-controls .live-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
+  .live-playback-controls .live-playback-btn svg{width:30px;height:30px;opacity:.8;}
+  .live-playback-controls .live-playback-btn:hover svg{width:30px;height:30px;opacity:.95;}
+  .live-playback-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
+
 
   .overlay-fs::after {content: "";position: absolute;top: 0;left: 0;}         
   .overlay-fs[hidden]{display:none !important;}
