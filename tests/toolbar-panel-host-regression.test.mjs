@@ -125,7 +125,7 @@ test("mobile inline live controls stay visible without overlay reveal binding", 
   );
 });
 
-test("live and popup playback controls delegate to the HA target controller", () => {
+test("live and popup playback controls delegate to browser target playback", () => {
   for (const controlId of [
     "#live-cast-btn",
     "#live-airplay-btn",
@@ -135,10 +135,11 @@ test("live and popup playback controls delegate to the HA target controller", ()
     assert.equal(cardSource.includes(controlId), true);
   }
   assert.equal(
-    cardSource.includes("this._playbackTargetController.open({"),
+    cardSource.includes("this._playbackTargetController.prompt("),
     true,
   );
   assert.equal(cardSource.includes("_playbackTargetContext(scope"), true);
+  assert.equal(cardSource.includes("camera/stream"), false);
   assert.equal(
     stylesSource.includes(
       "grid-template-areas:\"sp1 play progress mute fs cast airplay sp2\"",
@@ -146,5 +147,5 @@ test("live and popup playback controls delegate to the HA target controller", ()
     true,
   );
   assert.equal(stylesSource.includes(".popup-playback-controls{"), true);
-  assert.equal(stylesSource.includes(".playback-target-dialog{"), true);
+  assert.equal(stylesSource.includes(".playback-target-dialog{"), false);
 });

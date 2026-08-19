@@ -97,6 +97,7 @@ export class PopupMediaLoaderController {
     if (postRenderPlan.shouldShowPopupControls) {
       this._host._showPopupControlsTemporarily();
     }
+    this._host._preparePopupPlaybackTarget?.();
   }
 
   buildPopupVideo(src, { autoplay = true, muted = true } = {}) {
@@ -394,6 +395,7 @@ export class PopupMediaLoaderController {
     if (outcomePlan.shouldShowPopupControls) {
       this._host._showPopupControlsTemporarily();
     }
+    this._host._preparePopupPlaybackTarget?.();
     this._host._popupMediaCleanup = () => {
       for (const fn of mediaCleanup) {
         try {

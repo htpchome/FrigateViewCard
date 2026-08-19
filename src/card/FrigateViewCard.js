@@ -145,11 +145,15 @@ import {
 } from "../shared/media/video-factory.js";
 import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
 import {
+  BrowserPlaybackTargetController,
   PLAYBACK_TARGET_AIRPLAY,
   PLAYBACK_TARGET_CAST,
-  PlaybackTargetController,
-} from "./controls/playback-target.ctrl.js";
+} from "../shared/media/playback-target.js";
 import { buildFrigateReceiverMediaPath } from "../integrations/frigate/receiver-media.js";
+import {
+  resolveAbsoluteReceiverSourceUrl,
+  resolveHomeAssistantCameraHlsSource,
+} from "../integrations/home-assistant/receiver-source.js";
 import {
   loadFallbackAltForCard,
   loadFallbackPrimaryForCard,
@@ -183,7 +187,6 @@ import {
   buildFooterMarkup,
   buildTabsMarkup,
   buildTabsRegionMarkup,
-  buildPlaybackTargetDialogMarkup,
   buildToolsMarkup,
   buildToolsRegionMarkup,
 } from "./controls/shell-nav.tmpl.js";
@@ -618,19 +621,13 @@ export class FrigateViewCard extends HTMLElement {
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
-    this._playbackTargetController = new PlaybackTargetController({
-      getDialog: () => this._$("#playback-target-dialog"),
-      getStates: () => this._hass?.states || {},
-      getPlaybackContext: (scope) => this._playbackTargetContext(scope),
-      resolveMediaPath: (context) => buildFrigateReceiverMediaPath(context),
-      signPath: (path) => this._signed(path),
-      getBaseUrl: () =>
-        this._hass?.config?.internal_url ||
-        this._hass?.config?.external_url ||
-        this._hass?.hassUrl?.("/") ||
-        (typeof window !== "undefined" ? window.location.href : ""),
-      callService: (domain, service, serviceData, target) =>
-        this._hass?.callService(domain, service, serviceData, target),
+    this._playbackTargetController = new BrowserPlaybackTargetController({
+      getContext: (scope) => this._playbackTargetContext(scope),
+      resolveSource: (context) =>
+        this._resolvePlaybackTargetSource(context),
+      getMount: () => this.shadowRoot,
+      onSupportChange: () => this._syncPlaybackTargetButtons(),
+      onStatus: (message) => this._toast(message),
     });
     this._viewportContextController = new ViewportContextController(this);
     this._domCache = {};
@@ -1926,6 +1923,8 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _mountEngine(forcedType = null, options = {}) {
+    void this._playbackTargetController.prepare("live");
+    this._syncPlaybackTargetButtons();
     return this._liveMountController.mount({
       forcedType,
       quiet: options?.quiet === true,
@@ -2453,6 +2452,35 @@ export class FrigateViewCard extends HTMLElement {
     if (!buttonStates.controlsVisible && this._tab === "controls") {
       this._setTab(this._resolveControlsReturnTab());
     }
+  }
+
+  _syncPlaybackTargetButtons() {
+    const support = this._playbackTargetController?.getSupport?.() || {
+      cast: false,
+      airplay: false,
+    };
+    const sync = (selector, supported, fallbackTitle) => {
+      this.shadowRoot.querySelectorAll(selector).forEach((button) => {
+        const baseTitle =
+          button.dataset.playbackBaseTitle || button.title || fallbackTitle;
+        button.dataset.playbackBaseTitle = baseTitle;
+        button.disabled = !supported;
+        button.setAttribute("aria-disabled", supported ? "false" : "true");
+        button.title = supported
+          ? baseTitle
+          : `${fallbackTitle} is not supported in this browser`;
+      });
+    };
+    sync(
+      "#live-cast-btn, #popup-cast-btn, #popup-media-cast",
+      support.cast,
+      "Cast video",
+    );
+    sync(
+      "#live-airplay-btn, #popup-airplay-btn, #popup-media-airplay",
+      support.airplay,
+      "AirPlay video",
+    );
   }
 
   _stopSlideshowRotation(reason = "manual-stop", sync = true) {
@@ -3110,7 +3138,6 @@ export class FrigateViewCard extends HTMLElement {
         duplicates: regionValidation.duplicates,
       });
     }
-    const playbackTargetDialog = buildPlaybackTargetDialogMarkup();
     const popupShell = buildPopupShellMarkup({
       icons: ICONS,
       version: VERSION,
@@ -3119,10 +3146,9 @@ export class FrigateViewCard extends HTMLElement {
     <ha-card class="card ${this._cardStateClassNames()}" id="card" style="border-radius: var(--fvc-border-radius);">
 
         ${mainLayoutShell}
-        <!--<div class="toast" id="toast" style="display:none"></div>-->
+        <div class="toast" id="toast" style="display:none"></div>
 
           ${popupShell}
-          ${playbackTargetDialog}
       </ha-card>
       `;
     this._domCache = {}; // invalidate DOM element cache after full re-render
@@ -4008,7 +4034,6 @@ export class FrigateViewCard extends HTMLElement {
   }
   _click(e) {
     const target = e.target;
-    if (this._playbackTargetController.handleClickTarget(target)) return;
     if (this._mobileCamSwitcherController.handleClickTarget(target)) return;
     this._mobileCamSwitcherController.closeIfOutside(target);
     if (target.closest(".close-btn")) return this._closePopup();
@@ -4047,15 +4072,13 @@ export class FrigateViewCard extends HTMLElement {
       return true;
     }
     if (target.closest("#live-cast-btn")) {
-      this._playbackTargetController.open({
-        target: PLAYBACK_TARGET_CAST,
+      void this._playbackTargetController.prompt(PLAYBACK_TARGET_CAST, {
         scope: "live",
       });
       return true;
     }
     if (target.closest("#live-airplay-btn")) {
-      this._playbackTargetController.open({
-        target: PLAYBACK_TARGET_AIRPLAY,
+      void this._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
         scope: "live",
       });
       return true;
@@ -4109,16 +4132,14 @@ export class FrigateViewCard extends HTMLElement {
       return true;
     }
     if (target.closest("#popup-cast-btn, #popup-media-cast")) {
-      this._playbackTargetController.open({
-        target: PLAYBACK_TARGET_CAST,
+      void this._playbackTargetController.prompt(PLAYBACK_TARGET_CAST, {
         scope: "popup",
       });
       this._showPopupControlsTemporarily();
       return true;
     }
     if (target.closest("#popup-airplay-btn, #popup-media-airplay")) {
-      this._playbackTargetController.open({
-        target: PLAYBACK_TARGET_AIRPLAY,
+      void this._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
         scope: "popup",
       });
       this._showPopupControlsTemporarily();
@@ -5019,6 +5040,7 @@ export class FrigateViewCard extends HTMLElement {
       addButton("popup-cast-btn", "Cast video", ICONS.cast);
       addButton("popup-airplay-btn", "AirPlay video", ICONS.airplayVideo);
     }
+    this._syncPlaybackTargetButtons();
   }
   _clearPopupMediaCleanup() {
     this._clearPopupVideoZoom?.();
@@ -5287,23 +5309,84 @@ export class FrigateViewCard extends HTMLElement {
       return path;
     }
   }
+  _receiverPlaybackBaseUrl() {
+    return (
+      this._hass?.config?.internal_url ||
+      this._hass?.config?.external_url ||
+      this._hass?.hassUrl?.("/") ||
+      (typeof window !== "undefined" ? window.location.href : "")
+    );
+  }
+
   _playbackTargetContext(scope = "live") {
     if (scope === "live") {
+      const cameraEntity = this._activeCam?.entity || "";
       return {
-        cameraEntity: this._activeCam?.entity || "",
+        scope,
+        sourceKey: `live:${cameraEntity}`,
+        cameraEntity,
+        title: camDisplayName(this._activeCam || {}),
       };
     }
 
     const { clientId, cam } = this._cc();
+    const mediaType = this._popupMediaType;
+    const eventId = this._playing?.id || "";
+    const recordingStart =
+      this._recordingScrubState?.start ?? this._playing?.rec ?? null;
+    const recordingEnd = this._recordingScrubState?.end ?? null;
     return {
-      mediaType: this._popupMediaType,
+      scope,
+      sourceKey:
+        mediaType === "recording"
+          ? `recording:${clientId}:${cam}:${recordingStart}:${recordingEnd}`
+          : `${mediaType}:${clientId}:${eventId}`,
+      mediaType,
       clientId,
       camera: cam,
-      eventId: this._playing?.id || "",
-      recordingStart:
-        this._recordingScrubState?.start ?? this._playing?.rec ?? null,
-      recordingEnd: this._recordingScrubState?.end ?? null,
+      eventId,
+      recordingStart,
+      recordingEnd,
+      title: `${cap(mediaType || "video")} video`,
     };
+  }
+
+  async _resolvePlaybackTargetSource(context = {}) {
+    if (context.scope === "live") {
+      const source = await resolveHomeAssistantCameraHlsSource({
+        hass: this._hass,
+        cameraEntity: context.cameraEntity,
+        baseUrl: this._receiverPlaybackBaseUrl(),
+      });
+      return source.ok ? { ...source, title: context.title } : source;
+    }
+
+    const media = buildFrigateReceiverMediaPath(context);
+    if (!media.ok) return media;
+    const signedPath = await this._signed(media.path);
+    const url = resolveAbsoluteReceiverSourceUrl(
+      signedPath || media.path,
+      this._receiverPlaybackBaseUrl(),
+    );
+    if (!url) {
+      return {
+        ok: false,
+        message: "The receiver video URL could not be prepared.",
+      };
+    }
+    return {
+      ok: true,
+      url,
+      contentType: media.contentType,
+      title: context.title,
+      ttlMs: 30 * 60 * 1000,
+    };
+  }
+
+  _preparePopupPlaybackTarget() {
+    if (!this._isPopupVideoMediaType(this._popupMediaType)) return;
+    void this._playbackTargetController.prepare("popup");
+    this._syncPlaybackTargetButtons();
   }
 
   _findFullscreenVideo(el) {
@@ -5531,6 +5614,7 @@ export class FrigateViewCard extends HTMLElement {
     this._syncTwoWayTalkButton();
     this._syncFullscreenButtonsVisibility();
     this._syncToolbarButtons();
+    this._syncPlaybackTargetButtons();
     this._renderLegend();
     this._renderSubtitle();
     this._renderCamSwitcher();

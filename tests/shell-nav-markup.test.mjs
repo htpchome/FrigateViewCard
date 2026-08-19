@@ -11,7 +11,6 @@ import {
   buildLiveEngineWrapMarkup,
   buildPageNavButtonsMarkup,
   buildPageNavMarkup,
-  buildPlaybackTargetDialogMarkup,
   buildPopupShellMarkup,
   buildTabsMarkup,
   buildTabsRegionMarkup,
@@ -300,14 +299,4 @@ test("popup custom media controls place Cast and AirPlay beside fullscreen", () 
   assert.match(markup, /id="popup-media-fs"/);
   assert.match(markup, /id="popup-media-cast"/);
   assert.match(markup, /id="popup-media-airplay"/);
-});
-
-test("playback target dialog exposes an accessible media-player picker", () => {
-  const markup = buildPlaybackTargetDialogMarkup();
-
-  assert.match(markup, /id="playback-target-dialog"/);
-  assert.match(markup, /role="dialog"/);
-  assert.match(markup, /aria-modal="true"/);
-  assert.match(markup, /data-playback-target-list/);
-  assert.match(markup, /data-playback-target-close/);
 });
