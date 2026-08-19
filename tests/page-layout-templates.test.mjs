@@ -7,6 +7,8 @@ import { buildWideViewMainLayoutShellMarkup } from "../src/features/wide-view/pa
 
 const regions = {
   live: `<div data-fvc-region="live">Live</div>`,
+  liveFullscreen: `<button data-fvc-region="live-fullscreen">Fullscreen</button>`,
+  liveMute: `<button data-fvc-region="live-mute">Mute</button>`,
   information: `<div data-fvc-region="information">Information</div>`,
   cameraSwitcher: `<div data-fvc-region="camera-switcher">Cameras</div>`,
   pageNavigation: `<div data-fvc-region="page-navigation">Navigation</div>`,
@@ -37,6 +39,8 @@ test("route-owned outer templates compose every atomic region once", () => {
     assert.match(markup, new RegExp(`class="layout layout--${layoutSuffix}"`));
     for (const regionName of [
       "live",
+      "live-fullscreen",
+      "live-mute",
       "information",
       "camera-switcher",
       "page-navigation",

@@ -157,6 +157,11 @@ import { createHaDirectMounter } from "../features/live/ha-direct-mounter.js";
 import { createLiveMountController } from "../features/live/mount-controller.js";
 import { createGo2RtcRaceMounter } from "../features/live/go2rtc-race-mounter.js";
 import { createMseGraceController } from "../features/live/mse-grace-controller.js";
+import {
+  buildLiveEngineWrapMarkup,
+  buildLiveFullscreenControlMarkup,
+  buildLiveMuteControlMarkup,
+} from "../features/live/view.tmpl.js";
 import { GridMediaController } from "../features/grid/media.ctrl.js";
 import {
   buildControlsSectionMarkup,
@@ -164,7 +169,6 @@ import {
   buildControlsReadoutEmptyMarkup,
   buildControlsReadoutLinesMarkup,
   buildInfoRowMarkup,
-  buildLiveEngineWrapMarkup,
   buildPageNavButtonsMarkup,
   buildPageNavMarkup,
   buildPopupShellMarkup,
@@ -1886,7 +1890,7 @@ export class FrigateViewCard extends HTMLElement {
     this._rotateOverlayMode = uiPlan.mode;
     if (uiPlan.disableNativeControls) this._setLiveNativeControls(false);
     if (uiPlan.clearLiveControlsVisible) {
-      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
+      this._$("#live-stage")?.classList.remove("live-controls-visible");
     }
     if (uiPlan.clearLoading) this._setStreamLoading(false);
     if (uiPlan.enableNativeControls) this._setLiveNativeControls(true);
@@ -3043,7 +3047,9 @@ export class FrigateViewCard extends HTMLElement {
     const tabsMarkup = this._buildTabsMarkup();
     const toolsMarkup = this._getToolsMarkup();
     const regions = {
-      live: buildLiveEngineWrapMarkup({
+      live: buildLiveEngineWrapMarkup({ icons: ICONS }),
+      liveFullscreen: buildLiveFullscreenControlMarkup({ icons: ICONS }),
+      liveMute: buildLiveMuteControlMarkup({
         icons: ICONS,
         streamMuted: this._streamMuted,
       }),
@@ -3308,7 +3314,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _initLiveOverlayControls() {
-    const wrap = this._$("#eng-wrap");
+    const wrap = this._$("#live-stage");
     if (!wrap) return;
     if (this._liveOverlayControlsController) {
       try {
@@ -4007,7 +4013,7 @@ export class FrigateViewCard extends HTMLElement {
       return true;
     }
     if (target.closest("#live-fs-btn")) {
-      this._fullscreen(this._$("#eng-wrap"), { preferLive: true });
+      this._fullscreen(this._$("#live-stage"), { preferLive: true });
       return true;
     }
     return false;
@@ -5016,14 +5022,14 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _showLiveControlsTemporarily(ms = 2200) {
-    const wrap = this._$("#eng-wrap");
+    const wrap = this._$("#live-stage");
     if (!wrap) return;
     wrap.classList.add("live-controls-visible");
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._rotateOverlayMode !== "live") return;
     this._liveControlsHideTimer = setTimeout(
       () => {
-        const nextWrap = this._$("#eng-wrap");
+        const nextWrap = this._$("#live-stage");
         if (nextWrap && this._rotateOverlayMode === "live") {
           nextWrap.classList.remove("live-controls-visible");
         }

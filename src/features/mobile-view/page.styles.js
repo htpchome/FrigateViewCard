@@ -66,8 +66,8 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     z-index: 2000;
   }
 
-  .card.mobile-view-active.mobile-rotate-live #eng-wrap,
-  .card.mobile-view-active.mobile-rotate-live-exit #eng-wrap {
+  .card.mobile-view-active.mobile-rotate-live #live-stage,
+  .card.mobile-view-active.mobile-rotate-live-exit #live-stage {
     top: 0 !important;
     left: 0 !important;
     width: 100vw !important;

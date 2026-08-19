@@ -124,6 +124,8 @@ function normalizePreviewPageRegions(regions) {
       : {};
   return {
     live: "",
+    liveFullscreen: "",
+    liveMute: "",
     information: "",
     cameraSwitcher: "",
     pageNavigation: "",
@@ -164,7 +166,11 @@ export function buildPreviewPageMainLayoutShellMarkup({
 
   return `<div class="${layoutClassName}" id="layout">
           <div class="${leftColumnClassName}" id="col-left">
-            ${regions.live}
+            <div class="live-stage live-stage--overlay" id="live-stage">
+              ${regions.live}
+              ${regions.liveFullscreen}
+              ${regions.liveMute}
+            </div>
 
             ${regions.information}
             ${regions.cameraSwitcher}

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1504";
+const VERSION = "1.0.1505";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -195,8 +195,8 @@ const MOBILE_VIEW_PAGE_STYLES = `
     z-index: 2000;
   }
 
-  .card.mobile-view-active.mobile-rotate-live #eng-wrap,
-  .card.mobile-view-active.mobile-rotate-live-exit #eng-wrap {
+  .card.mobile-view-active.mobile-rotate-live #live-stage,
+  .card.mobile-view-active.mobile-rotate-live-exit #live-stage {
     top: 0 !important;
     left: 0 !important;
     width: 100vw !important;
@@ -639,7 +639,8 @@ const STYLES = `
   .resize-handle::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:2px;background:rgba(255,255,255,.4);border-radius:1px;}
   .layout.wide-view .resize-handle{width:6px;height:auto;cursor:col-resize;}
   .layout.wide-view .resize-handle::after{width:2px;height:32px;}
-  .card #eng-wrap{min-height:0;flex-shrink: 0;}
+  .card .live-stage{position:relative;width:100%;min-height:0;flex-shrink:0;}
+  .card #eng-wrap{min-height:0;}
   .card .browse{
     display:flex;
     flex:1 1 0;
@@ -787,8 +788,10 @@ const STYLES = `
     #eng-wrap.popup-covered::after{content:"";position:absolute;inset:0;background:var(--c-bg-deep);z-index:4;pointer-events:none;}
     .card.mobile-rotate-live,
     .card.mobile-rotate-live-exit{overflow:hidden;height:var(--rotate-vh);max-height:var(--rotate-vh);}
+    .card.mobile-rotate-live #live-stage,
+    .card.mobile-rotate-live-exit #live-stage{position:fixed;top:var(--rotate-oy);left:var(--rotate-ox);z-index:1400;width:var(--rotate-vw);height:var(--rotate-vh);max-width:none;max-height:none;border-radius:0;background:#000;box-shadow:none;transform:none;}
     .card.mobile-rotate-live #eng-wrap,
-    .card.mobile-rotate-live-exit #eng-wrap{position:fixed;top:var(--rotate-oy);left:var(--rotate-ox);z-index:1400;width:var(--rotate-vw);height:var(--rotate-vh);max-width:none;max-height:none;aspect-ratio:auto;border-radius:0;background:#000;box-shadow:none;transform:none;}
+    .card.mobile-rotate-live-exit #eng-wrap{width:100%;height:100%;max-height:none;aspect-ratio:auto;border-radius:0;}
     .card.mobile-rotate-live #engine,
     .card.mobile-rotate-live-exit #engine{position:absolute;inset:0;}
     .card.mobile-rotate-live #engine > *,
@@ -797,8 +800,8 @@ const STYLES = `
     .card.mobile-rotate-live-exit #engine video,
     .card.mobile-rotate-live #stream-fallback img,
     .card.mobile-rotate-live-exit #stream-fallback img{object-fit:cover;object-position:center center;}
-    .card.mobile-rotate-live #eng-wrap{animation:liveOverlayIn .28s ease both;}
-    .card.mobile-rotate-live-exit #eng-wrap{animation:liveOverlayOut .24s ease both;}
+    .card.mobile-rotate-live #live-stage{animation:liveOverlayIn .28s ease both;}
+    .card.mobile-rotate-live-exit #live-stage{animation:liveOverlayOut .24s ease both;}
     .card.mobile-rotate-live .stream-loading,
     .card.mobile-rotate-live-exit .stream-loading{display:none !important;}
     .card.mobile-rotate-popup,
@@ -908,17 +911,21 @@ const STYLES = `
   .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
   .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;padding:4px 10px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
   .slideshow-next-chip[hidden]{display:none !important;}
-  #eng-wrap.live-controls-visible .live-fs-btn,
-  #eng-wrap.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
+  #live-stage.live-controls-visible .live-fs-btn,
+  #live-stage.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {
-    #eng-wrap:hover .live-fs-btn,
-    #eng-wrap:hover .mute-btn{opacity:1;pointer-events:auto;}
+    #live-stage:hover .live-fs-btn,
+    #live-stage:hover .mute-btn{opacity:1;pointer-events:auto;}
   }
 
-  #eng-wrap:fullscreen .overlay-fs,
-  #eng-wrap:-webkit-full-screen .overlay-fs,
+  #live-stage:fullscreen .overlay-fs,
+  #live-stage:-webkit-full-screen .overlay-fs,
   #viewer:fullscreen .overlay-fs,
   #viewer:-webkit-full-screen .overlay-fs{display:none !important;}
+  #live-stage:fullscreen,
+  #live-stage:-webkit-full-screen{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#000;}
+  #live-stage:fullscreen #eng-wrap,
+  #live-stage:-webkit-full-screen #eng-wrap{width:100%;height:100%;max-height:none;aspect-ratio:auto;}
   .viewer{width:100%;aspect-ratio:16/9;min-height:240px;max-height:70dvh;
     background:var(--c-bg-deep);display:flex;align-items:center;justify-content:center;z-index:2;position:relative;overflow:hidden;border-radius:7px;}
   .viewer video,.viewer img.snap{width:100%;height:100%;object-fit:contain;
@@ -3277,6 +3284,8 @@ function buildMobileViewMainLayoutShellMarkup({
   const normalizedRegions = suppliedRegions && typeof suppliedRegions === "object" && !Array.isArray(suppliedRegions) ? suppliedRegions : {};
   const regions = {
     live: "",
+    liveFullscreen: "",
+    liveMute: "",
     information: "",
     cameraSwitcher: "",
     pageNavigation: "",
@@ -3294,7 +3303,11 @@ function buildMobileViewMainLayoutShellMarkup({
             <div class="mobile-container" id="mobile-container">
               <div class="mobile-top" id="mobile-top">
                 ${regions.cameraSwitcher}
-                ${regions.live}
+                <div class="live-stage live-stage--overlay" id="live-stage">
+                  ${regions.live}
+                  ${regions.liveFullscreen}
+                  ${regions.liveMute}
+                </div>
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
                 <div class="mobile-video-controls-container">
@@ -3374,6 +3387,8 @@ function normalizeRegions(regions) {
   const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
   return {
     live: "",
+    liveFullscreen: "",
+    liveMute: "",
     information: "",
     cameraSwitcher: "",
     pageNavigation: "",
@@ -3451,7 +3466,11 @@ function buildSingleViewMainLayoutShellMarkup({
   );
   return `<div class="${layoutClassName}" id="layout">
           <div class="${leftColumnClassName}" id="col-left">
-            ${regions.live}
+            <div class="live-stage live-stage--overlay" id="live-stage">
+              ${regions.live}
+              ${regions.liveFullscreen}
+              ${regions.liveMute}
+            </div>
 
             ${regions.information}
             ${regions.cameraSwitcher}
@@ -3488,6 +3507,8 @@ function normalizeRegions2(regions) {
   const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
   return {
     live: "",
+    liveFullscreen: "",
+    liveMute: "",
     information: "",
     cameraSwitcher: "",
     pageNavigation: "",
@@ -3523,7 +3544,11 @@ function buildWideViewMainLayoutShellMarkup({
   );
   return `<div class="${layoutClassName}" id="layout">
           <div class="${leftColumnClassName}" id="col-left">
-            ${regions.live}
+            <div class="live-stage live-stage--overlay" id="live-stage">
+              ${regions.live}
+              ${regions.liveFullscreen}
+              ${regions.liveMute}
+            </div>
 
             ${regions.information}
             ${regions.cameraSwitcher}
@@ -3621,6 +3646,8 @@ function normalizePreviewPageRegions(regions) {
   const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
   return {
     live: "",
+    liveFullscreen: "",
+    liveMute: "",
     information: "",
     cameraSwitcher: "",
     pageNavigation: "",
@@ -3659,7 +3686,11 @@ function buildPreviewPageMainLayoutShellMarkup({
   );
   return `<div class="${layoutClassName}" id="layout">
           <div class="${leftColumnClassName}" id="col-left">
-            ${regions.live}
+            <div class="live-stage live-stage--overlay" id="live-stage">
+              ${regions.live}
+              ${regions.liveFullscreen}
+              ${regions.liveMute}
+            </div>
 
             ${regions.information}
             ${regions.cameraSwitcher}
@@ -3684,6 +3715,31 @@ function buildPreviewPageMainLayoutShellMarkup({
             ${regions.footer}
           </div>
         </div>`;
+}
+
+// src/features/live/view.tmpl.js
+function buildLiveEngineWrapMarkup({ icons }) {
+  return `<div id="eng-wrap" data-fvc-region="live">
+                <frigate-live-stream id="engine">
+                  <div class="ph">${icons.live}<span>Connecting\u2026</span></div>
+                </frigate-live-stream>
+                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
+                  <div id="stream-fallback" hidden>
+                    <img id="stream-fallback-img" alt="Camera snapshot">
+                  </div>
+                  <div class="stream-fallback-status" id="stream-fallback-status" hidden>Snapshot unavailable</div>
+                  <div class="stream-loading" id="stream-loading" hidden>
+                    <span class="dot"></span><span class="label">Loading\u2026</span>
+                  </div>
+              </div>`;
+}
+function buildLiveFullscreenControlMarkup({ icons }) {
+  return `<button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
+}
+function buildLiveMuteControlMarkup({ icons, streamMuted }) {
+  const label = streamMuted ? "Unmute live view" : "Mute live view";
+  const icon = streamMuted ? icons.volOff : icons.volOn;
+  return `<button class="glass-btn mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
 }
 
 // src/card/controls/shell-nav.tmpl.js
@@ -3829,25 +3885,6 @@ function buildInfoRowMarkup({
               </div>
             </div>`;
 }
-function buildLiveEngineWrapMarkup({ icons, streamMuted }) {
-  const muteLabel = streamMuted ? "Unmute live view" : "Mute live view";
-  const muteIcon = streamMuted ? icons.volOff : icons.volOn;
-  return `<div id="eng-wrap" data-fvc-region="live">
-                <frigate-live-stream id="engine">
-                  <div class="ph">${icons.live}<span>Connecting\u2026</span></div>
-                </frigate-live-stream>
-                  <button class="glass-btn overlay-fs live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
-                  <button class="glass-btn mute-btn" id="mute-btn" title="${muteLabel}" aria-label="${muteLabel}">${muteIcon}</button>
-                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
-                  <div id="stream-fallback" hidden>
-                    <img id="stream-fallback-img" alt="Camera snapshot">
-                  </div>
-                  <div class="stream-fallback-status" id="stream-fallback-status" hidden>Snapshot unavailable</div>
-                  <div class="stream-loading" id="stream-loading" hidden>
-                    <span class="dot"></span><span class="label">Loading\u2026</span>
-                  </div>
-              </div>`;
-}
 function mergeClassNames3(...tokens) {
   return [
     ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean))
@@ -3957,6 +3994,8 @@ function buildPopupShellMarkup({ icons, version }) {
 // src/features/navigation/page-shell-registry.js
 const PAGE_SHELL_REGIONS = Object.freeze({
   live: "live",
+  liveFullscreen: "live-fullscreen",
+  liveMute: "live-mute",
   information: "information",
   cameraSwitcher: "camera-switcher",
   tabs: "tabs",
@@ -4004,7 +4043,11 @@ function resolveRequiredPageShellRegions(profile = {}) {
   const capabilities = resolvePageCapabilities(profile);
   const requiredRegions = [];
   if (capabilities.hasLive) {
-    requiredRegions.push(PAGE_SHELL_REGIONS.live);
+    requiredRegions.push(
+      PAGE_SHELL_REGIONS.live,
+      PAGE_SHELL_REGIONS.liveFullscreen,
+      PAGE_SHELL_REGIONS.liveMute
+    );
   }
   if (capabilities.hasBrowse) {
     requiredRegions.push(
@@ -18154,7 +18197,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._rotateOverlayMode = uiPlan.mode;
     if (uiPlan.disableNativeControls) this._setLiveNativeControls(false);
     if (uiPlan.clearLiveControlsVisible) {
-      this._$("#eng-wrap")?.classList.remove("live-controls-visible");
+      this._$("#live-stage")?.classList.remove("live-controls-visible");
     }
     if (uiPlan.clearLoading) this._setStreamLoading(false);
     if (uiPlan.enableNativeControls) this._setLiveNativeControls(true);
@@ -19093,7 +19136,9 @@ const FrigateViewCard = class extends HTMLElement {
     const tabsMarkup = this._buildTabsMarkup();
     const toolsMarkup = this._getToolsMarkup();
     const regions = {
-      live: buildLiveEngineWrapMarkup({
+      live: buildLiveEngineWrapMarkup({ icons: ICONS }),
+      liveFullscreen: buildLiveFullscreenControlMarkup({ icons: ICONS }),
+      liveMute: buildLiveMuteControlMarkup({
         icons: ICONS,
         streamMuted: this._streamMuted
       }),
@@ -19323,7 +19368,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncTwoWayTalkButton();
   }
   _initLiveOverlayControls() {
-    const wrap = this._$("#eng-wrap");
+    const wrap = this._$("#live-stage");
     if (!wrap) return;
     if (this._liveOverlayControlsController) {
       try {
@@ -19936,7 +19981,7 @@ const FrigateViewCard = class extends HTMLElement {
       return true;
     }
     if (target.closest("#live-fs-btn")) {
-      this._fullscreen(this._$("#eng-wrap"), { preferLive: true });
+      this._fullscreen(this._$("#live-stage"), { preferLive: true });
       return true;
     }
     return false;
@@ -20826,14 +20871,14 @@ const FrigateViewCard = class extends HTMLElement {
     }, 2200);
   }
   _showLiveControlsTemporarily(ms = 2200) {
-    const wrap = this._$("#eng-wrap");
+    const wrap = this._$("#live-stage");
     if (!wrap) return;
     wrap.classList.add("live-controls-visible");
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._rotateOverlayMode !== "live") return;
     this._liveControlsHideTimer = setTimeout(
       () => {
-        const nextWrap = this._$("#eng-wrap");
+        const nextWrap = this._$("#live-stage");
         if (nextWrap && this._rotateOverlayMode === "live") {
           nextWrap.classList.remove("live-controls-visible");
         }

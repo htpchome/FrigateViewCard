@@ -94,7 +94,8 @@ export const STYLES = `
   .resize-handle::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:2px;background:rgba(255,255,255,.4);border-radius:1px;}
   .layout.wide-view .resize-handle{width:6px;height:auto;cursor:col-resize;}
   .layout.wide-view .resize-handle::after{width:2px;height:32px;}
-  .card #eng-wrap{min-height:0;flex-shrink: 0;}
+  .card .live-stage{position:relative;width:100%;min-height:0;flex-shrink:0;}
+  .card #eng-wrap{min-height:0;}
   .card .browse{
     display:flex;
     flex:1 1 0;
@@ -242,8 +243,10 @@ export const STYLES = `
     #eng-wrap.popup-covered::after{content:"";position:absolute;inset:0;background:var(--c-bg-deep);z-index:4;pointer-events:none;}
     .card.mobile-rotate-live,
     .card.mobile-rotate-live-exit{overflow:hidden;height:var(--rotate-vh);max-height:var(--rotate-vh);}
+    .card.mobile-rotate-live #live-stage,
+    .card.mobile-rotate-live-exit #live-stage{position:fixed;top:var(--rotate-oy);left:var(--rotate-ox);z-index:1400;width:var(--rotate-vw);height:var(--rotate-vh);max-width:none;max-height:none;border-radius:0;background:#000;box-shadow:none;transform:none;}
     .card.mobile-rotate-live #eng-wrap,
-    .card.mobile-rotate-live-exit #eng-wrap{position:fixed;top:var(--rotate-oy);left:var(--rotate-ox);z-index:1400;width:var(--rotate-vw);height:var(--rotate-vh);max-width:none;max-height:none;aspect-ratio:auto;border-radius:0;background:#000;box-shadow:none;transform:none;}
+    .card.mobile-rotate-live-exit #eng-wrap{width:100%;height:100%;max-height:none;aspect-ratio:auto;border-radius:0;}
     .card.mobile-rotate-live #engine,
     .card.mobile-rotate-live-exit #engine{position:absolute;inset:0;}
     .card.mobile-rotate-live #engine > *,
@@ -252,8 +255,8 @@ export const STYLES = `
     .card.mobile-rotate-live-exit #engine video,
     .card.mobile-rotate-live #stream-fallback img,
     .card.mobile-rotate-live-exit #stream-fallback img{object-fit:cover;object-position:center center;}
-    .card.mobile-rotate-live #eng-wrap{animation:liveOverlayIn .28s ease both;}
-    .card.mobile-rotate-live-exit #eng-wrap{animation:liveOverlayOut .24s ease both;}
+    .card.mobile-rotate-live #live-stage{animation:liveOverlayIn .28s ease both;}
+    .card.mobile-rotate-live-exit #live-stage{animation:liveOverlayOut .24s ease both;}
     .card.mobile-rotate-live .stream-loading,
     .card.mobile-rotate-live-exit .stream-loading{display:none !important;}
     .card.mobile-rotate-popup,
@@ -363,17 +366,21 @@ export const STYLES = `
   .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
   .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;padding:4px 10px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
   .slideshow-next-chip[hidden]{display:none !important;}
-  #eng-wrap.live-controls-visible .live-fs-btn,
-  #eng-wrap.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
+  #live-stage.live-controls-visible .live-fs-btn,
+  #live-stage.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {
-    #eng-wrap:hover .live-fs-btn,
-    #eng-wrap:hover .mute-btn{opacity:1;pointer-events:auto;}
+    #live-stage:hover .live-fs-btn,
+    #live-stage:hover .mute-btn{opacity:1;pointer-events:auto;}
   }
 
-  #eng-wrap:fullscreen .overlay-fs,
-  #eng-wrap:-webkit-full-screen .overlay-fs,
+  #live-stage:fullscreen .overlay-fs,
+  #live-stage:-webkit-full-screen .overlay-fs,
   #viewer:fullscreen .overlay-fs,
   #viewer:-webkit-full-screen .overlay-fs{display:none !important;}
+  #live-stage:fullscreen,
+  #live-stage:-webkit-full-screen{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#000;}
+  #live-stage:fullscreen #eng-wrap,
+  #live-stage:-webkit-full-screen #eng-wrap{width:100%;height:100%;max-height:none;aspect-ratio:auto;}
   .viewer{width:100%;aspect-ratio:16/9;min-height:240px;max-height:70dvh;
     background:var(--c-bg-deep);display:flex;align-items:center;justify-content:center;z-index:2;position:relative;overflow:hidden;border-radius:7px;}
   .viewer video,.viewer img.snap{width:100%;height:100%;object-fit:contain;

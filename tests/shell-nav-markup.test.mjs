@@ -17,6 +17,10 @@ import {
   buildToolsRegionMarkup,
 } from "../src/card/controls/shell-nav.tmpl.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
+import {
+  buildLiveFullscreenControlMarkup,
+  buildLiveMuteControlMarkup,
+} from "../src/features/live/view.tmpl.js";
 
 const icons = {
   alerts: "A",
@@ -223,6 +227,14 @@ test("shared shell builders expose stable page region anchors", () => {
     icons: { live: "L", volOff: "M", volOn: "V", expand: "E" },
     streamMuted: true,
   });
+  const liveFullscreen = buildLiveFullscreenControlMarkup({
+    icons: { expand: "E" },
+  });
+  const liveMute = buildLiveMuteControlMarkup({
+    icons: { volOff: "M", volOn: "V" },
+    streamMuted: true,
+  });
+  assert.doesNotMatch(liveEngineWrap, /id="(?:live-fs-btn|mute-btn)"/);
   const browseHeader = buildBrowseHeaderRegionMarkup({
     icons: { left: "<", right: ">" },
   });
@@ -236,6 +248,8 @@ test("shared shell builders expose stable page region anchors", () => {
     regions: {
       live: liveEngineWrap,
       information: infoRow,
+      liveFullscreen,
+      liveMute,
       pageNavigation: pageNav,
       tabs,
       tools,
@@ -249,6 +263,8 @@ test("shared shell builders expose stable page region anchors", () => {
     "live",
     "information",
     "page-navigation",
+    "live-fullscreen",
+    "live-mute",
     "tabs",
     "tools",
     "browse-header",

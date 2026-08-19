@@ -9,6 +9,8 @@ import { buildInfoRowMarkup } from "../../card/controls/shell-nav.tmpl.js";
 
 export const PAGE_SHELL_REGIONS = Object.freeze({
   live: "live",
+  liveFullscreen: "live-fullscreen",
+  liveMute: "live-mute",
   information: "information",
   cameraSwitcher: "camera-switcher",
   tabs: "tabs",
@@ -78,7 +80,11 @@ export function resolveRequiredPageShellRegions(profile = {}) {
   const capabilities = resolvePageCapabilities(profile);
   const requiredRegions = [];
   if (capabilities.hasLive) {
-    requiredRegions.push(PAGE_SHELL_REGIONS.live);
+    requiredRegions.push(
+      PAGE_SHELL_REGIONS.live,
+      PAGE_SHELL_REGIONS.liveFullscreen,
+      PAGE_SHELL_REGIONS.liveMute,
+    );
   }
   if (capabilities.hasBrowse) {
     requiredRegions.push(

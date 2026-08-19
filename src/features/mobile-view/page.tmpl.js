@@ -127,6 +127,8 @@ export function buildMobileViewMainLayoutShellMarkup({
       : {};
   const regions = {
     live: "",
+    liveFullscreen: "",
+    liveMute: "",
     information: "",
     cameraSwitcher: "",
     pageNavigation: "",
@@ -149,7 +151,11 @@ export function buildMobileViewMainLayoutShellMarkup({
             <div class="mobile-container" id="mobile-container">
               <div class="mobile-top" id="mobile-top">
                 ${regions.cameraSwitcher}
-                ${regions.live}
+                <div class="live-stage live-stage--overlay" id="live-stage">
+                  ${regions.live}
+                  ${regions.liveFullscreen}
+                  ${regions.liveMute}
+                </div>
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
                 <div class="mobile-video-controls-container">

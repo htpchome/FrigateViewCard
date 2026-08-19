@@ -129,6 +129,8 @@ test("mobile profile exposes custom main layout shell builder", () => {
     },
     regions: {
       live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
+      liveFullscreen: `<button data-fvc-region="live-fullscreen"></button>`,
+      liveMute: `<button data-fvc-region="live-mute"></button>`,
       information: `<div data-fvc-region="information"></div>`,
       pageNavigation: `<div data-fvc-region="page-navigation"></div>`,
       cameraSwitcher: `<div data-fvc-region="camera-switcher"></div>`,
@@ -194,6 +196,8 @@ test("required page shell regions follow declared capabilities", () => {
     }),
     [
       PAGE_SHELL_REGIONS.live,
+      PAGE_SHELL_REGIONS.liveFullscreen,
+      PAGE_SHELL_REGIONS.liveMute,
       PAGE_SHELL_REGIONS.browseHeader,
       PAGE_SHELL_REGIONS.browse,
       PAGE_SHELL_REGIONS.tabs,
