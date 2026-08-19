@@ -121,6 +121,11 @@ test("mobile profile exposes custom main layout shell builder", () => {
   assert.equal(typeof mobileProfile.buildMainLayoutShellMarkup, "function");
   assert.equal(mobileProfile.tabsButtonClass, "icon-btn");
   assert.equal(mobileProfile.toolsButtonClass, "icon-btn");
+  assert.equal(mobileProfile.liveControlsPlacement, "inline");
+  assert.equal(
+    registry.resolve(PAGE_IDS.singleView).liveControlsPlacement,
+    "overlay",
+  );
 
   const markup = mobileProfile.buildMainLayoutShellMarkup({
     host: {
@@ -140,13 +145,14 @@ test("mobile profile exposes custom main layout shell builder", () => {
       browse: `<div data-fvc-region="browse"></div>`,
       footer: `<div data-fvc-region="footer"></div>`,
     },
-    layoutProfile: { layoutClass: "layout--mobile-view" },
+    layoutProfile: mobileProfile,
   });
 
   assert.equal(markup.includes('id="mobile-container"'), true);
   assert.equal(markup.includes('id="mobile-top"'), true);
   assert.equal(markup.includes('id="mobile-bottom"'), true);
   assert.equal(markup.includes('data-fvc-region="two-way-talk"'), true);
+  assert.equal(markup.includes("live-stage--inline"), true);
   const validation = validatePageShellRegionMarkup(markup, {
     requiredRegions: resolveRequiredPageShellRegions(mobileProfile),
   });

@@ -105,6 +105,8 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
   const markup = buildMobileViewMainLayoutShellMarkup({
     regions: {
       live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
+      liveFullscreen: `<button data-fvc-region="live-fullscreen"></button>`,
+      liveMute: `<button data-fvc-region="live-mute"></button>`,
       information: `<div data-fvc-region="information"></div>`,
       pageNavigation: `<div class="page-nav" data-fvc-region="page-navigation"></div>`,
       cameraSwitcher: `<div class="cam-switcher" data-fvc-region="camera-switcher"></div>`,
@@ -116,9 +118,29 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
       browse: `<div class="browse" data-fvc-region="browse"></div>`,
       footer: `<div class="footer" data-fvc-region="footer"></div>`,
     },
-    layoutProfile: { layoutClass: "layout--mobile-view" },
+    layoutProfile: {
+      layoutClass: "layout--mobile-view",
+      liveControlsPlacement: "inline",
+    },
   });
 
+  const liveStageMarkup = markup.slice(
+    0,
+    markup.indexOf('id="mobile-bottom"'),
+  );
+  assert.match(markup, /class="live-stage live-stage--inline"/);
+  assert.doesNotMatch(
+    liveStageMarkup,
+    /data-fvc-region="live-(?:mute|fullscreen)"/,
+  );
+  assert.match(
+    markup,
+    /mobile-video-controls-left-row">[\s\S]*?data-fvc-region="live-mute"/,
+  );
+  assert.match(
+    markup,
+    /mobile-video-controls-right-row">[\s\S]*?data-fvc-region="live-fullscreen"/,
+  );
   assert.equal(markup.includes('id="mobile-view-two-way-talk-slot"'), true);
   assert.equal(
     markup.indexOf('id="mobile-view-two-way-talk-slot"') <
@@ -134,6 +156,24 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
     markup.match(/data-fvc-region="tools"/g)?.length,
     1,
   );
+});
+
+test("mobile view retains overlay controls unless inline placement is selected", () => {
+  const markup = buildMobileViewMainLayoutShellMarkup({
+    regions: {
+      live: `<div data-fvc-region="live"></div>`,
+      liveFullscreen: `<button data-fvc-region="live-fullscreen"></button>`,
+      liveMute: `<button data-fvc-region="live-mute"></button>`,
+    },
+  });
+  const liveStageMarkup = markup.slice(
+    0,
+    markup.indexOf('id="mobile-bottom"'),
+  );
+
+  assert.match(markup, /class="live-stage live-stage--overlay"/);
+  assert.match(liveStageMarkup, /data-fvc-region="live-fullscreen"/);
+  assert.match(liveStageMarkup, /data-fvc-region="live-mute"/);
 });
 
 

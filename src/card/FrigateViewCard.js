@@ -3322,6 +3322,7 @@ export class FrigateViewCard extends HTMLElement {
       } catch (_) {}
       this._liveOverlayControlsController = null;
     }
+    if (!wrap.classList.contains("live-stage--overlay")) return;
     const show = () => {
       wrap.classList.add("live-controls-visible");
     };
@@ -5022,14 +5023,14 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _showLiveControlsTemporarily(ms = 2200) {
-    const wrap = this._$("#live-stage");
+    const wrap = this._$("#live-stage.live-stage--overlay");
     if (!wrap) return;
     wrap.classList.add("live-controls-visible");
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._rotateOverlayMode !== "live") return;
     this._liveControlsHideTimer = setTimeout(
       () => {
-        const nextWrap = this._$("#live-stage");
+        const nextWrap = this._$("#live-stage.live-stage--overlay");
         if (nextWrap && this._rotateOverlayMode === "live") {
           nextWrap.classList.remove("live-controls-visible");
         }

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1505";
+const VERSION = "1.0.1506";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -180,6 +180,14 @@ const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active .mobile-video-controls-left-row{grid-area:video-controls-left;justify-content:flex-start;}
   .card.mobile-view-active .mobile-microphone-row{grid-area:microphone;justify-content:center;}
   .card.mobile-view-active .mobile-video-controls-right-row{grid-area:video-controls-right;justify-content:flex-end;}
+  .card.mobile-view-active .mobile-video-controls-container .mute-btn,
+  .card.mobile-view-active .mobile-video-controls-container .live-fs-btn{
+    position:relative;
+    inset:auto;
+    z-index:1;
+    opacity:1;
+    pointer-events:auto;
+  }
 
   .card.mobile-view-active .mobile-tab-container{
   display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"left tabs tools";align-items:center;gap:10px;padding:0px 8px;
@@ -3299,24 +3307,35 @@ function buildMobileViewMainLayoutShellMarkup({
   };
   const layoutClassName = ["layout", layoutProfile.layoutClass, "mobile-layout"].filter(Boolean).join(" ");
   const tabsHolderClassName = ["tabs-holder", layoutProfile.tabsHolderClass].filter(Boolean).join(" ");
+  const liveControlsInline = layoutProfile.liveControlsPlacement === "inline";
+  const liveStageClassName = [
+    "live-stage",
+    liveControlsInline ? "live-stage--inline" : "live-stage--overlay"
+  ].join(" ");
+  const overlayFullscreen = liveControlsInline ? "" : regions.liveFullscreen;
+  const overlayMute = liveControlsInline ? "" : regions.liveMute;
+  const inlineMute = liveControlsInline ? regions.liveMute : "";
+  const inlineFullscreen = liveControlsInline ? regions.liveFullscreen : "";
   return `<div class="${layoutClassName}" id="layout">
             <div class="mobile-container" id="mobile-container">
               <div class="mobile-top" id="mobile-top">
                 ${regions.cameraSwitcher}
-                <div class="live-stage live-stage--overlay" id="live-stage">
+                <div class="${liveStageClassName}" id="live-stage">
                   ${regions.live}
-                  ${regions.liveFullscreen}
-                  ${regions.liveMute}
+                  ${overlayFullscreen}
+                  ${overlayMute}
                 </div>
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
                 <div class="mobile-video-controls-container">
                     <div class="button-holder-row mobile-video-controls-left-row">
+                      ${inlineMute}
                     </div>
                     <div class="button-holder-row mobile-microphone-row">
                       ${regions.twoWayTalk}
                     </div>
                     <div class="button-holder-row mobile-video-controls-right-row">
+                      ${inlineFullscreen}
                     </div>
                 </div>              
                 <div class="mobile-tab-container">
@@ -4020,6 +4039,7 @@ function normalizeProfile(profile = {}) {
     tabsHolderClass: String(profile.tabsHolderClass || "").trim(),
     tabsButtonClass: String(profile.tabsButtonClass || "").trim(),
     toolsButtonClass: String(profile.toolsButtonClass || "").trim(),
+    liveControlsPlacement: profile.liveControlsPlacement === "inline" ? "inline" : "overlay",
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
     capabilities: {
@@ -4166,6 +4186,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     tabsHolderClass: "tabs-holder--mobile-view",
     tabsButtonClass: "icon-btn",
     toolsButtonClass: "icon-btn",
+    liveControlsPlacement: "inline",
     browseClass: "browse--mobile-view",
     buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildMobileViewInfoRowMarkup({
       title,
@@ -19377,6 +19398,7 @@ const FrigateViewCard = class extends HTMLElement {
       }
       this._liveOverlayControlsController = null;
     }
+    if (!wrap.classList.contains("live-stage--overlay")) return;
     const show = () => {
       wrap.classList.add("live-controls-visible");
     };
@@ -20871,14 +20893,14 @@ const FrigateViewCard = class extends HTMLElement {
     }, 2200);
   }
   _showLiveControlsTemporarily(ms = 2200) {
-    const wrap = this._$("#live-stage");
+    const wrap = this._$("#live-stage.live-stage--overlay");
     if (!wrap) return;
     wrap.classList.add("live-controls-visible");
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
     if (this._rotateOverlayMode !== "live") return;
     this._liveControlsHideTimer = setTimeout(
       () => {
-        const nextWrap = this._$("#live-stage");
+        const nextWrap = this._$("#live-stage.live-stage--overlay");
         if (nextWrap && this._rotateOverlayMode === "live") {
           nextWrap.classList.remove("live-controls-visible");
         }

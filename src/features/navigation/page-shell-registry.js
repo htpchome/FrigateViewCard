@@ -45,6 +45,8 @@ function normalizeProfile(profile = {}) {
     tabsHolderClass: String(profile.tabsHolderClass || "").trim(),
     tabsButtonClass: String(profile.tabsButtonClass || "").trim(),
     toolsButtonClass: String(profile.toolsButtonClass || "").trim(),
+    liveControlsPlacement:
+      profile.liveControlsPlacement === "inline" ? "inline" : "overlay",
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
     capabilities: {
@@ -244,6 +246,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     tabsHolderClass: "tabs-holder--mobile-view",
     tabsButtonClass: "icon-btn",
     toolsButtonClass: "icon-btn",
+    liveControlsPlacement: "inline",
     browseClass: "browse--mobile-view",
     buildInfoRowMarkup: ({ title, subtitle, version, host }) =>
       buildMobileViewInfoRowMarkup({

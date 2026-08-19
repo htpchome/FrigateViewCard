@@ -14,6 +14,10 @@ const stylesSource = fs.readFileSync(
   new URL("../src/styles.js", import.meta.url),
   "utf8",
 );
+const mobileViewStylesSource = fs.readFileSync(
+  new URL("../src/features/mobile-view/page.styles.js", import.meta.url),
+  "utf8",
+);
 
 test("tools markup owns filter and calendar panel hosts", () => {
   assert.equal(
@@ -102,4 +106,21 @@ test("tabs and tools synchronize independently without layout repair", () => {
   assert.equal(methodSource.includes("if (toolsSlot) toolsSlot.innerHTML"), true);
   assert.equal(methodSource.includes("_createFilterPanel"), false);
   assert.equal(methodSource.includes("_createCalendarPanel"), false);
+});
+
+test("mobile inline live controls stay visible without overlay reveal binding", () => {
+  assert.equal(
+    cardSource.includes(
+      'if (!wrap.classList.contains("live-stage--overlay")) return;',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes('#live-stage.live-stage--overlay'),
+    true,
+  );
+  assert.match(
+    mobileViewStylesSource,
+    /mobile-video-controls-container \.live-fs-btn\{[\s\S]*?position:relative;[\s\S]*?opacity:1;[\s\S]*?pointer-events:auto;/,
+  );
 });

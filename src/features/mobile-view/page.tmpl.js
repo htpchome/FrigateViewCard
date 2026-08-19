@@ -146,25 +146,36 @@ export function buildMobileViewMainLayoutShellMarkup({
   const tabsHolderClassName = ["tabs-holder", layoutProfile.tabsHolderClass]
     .filter(Boolean)
     .join(" ");
+  const liveControlsInline = layoutProfile.liveControlsPlacement === "inline";
+  const liveStageClassName = [
+    "live-stage",
+    liveControlsInline ? "live-stage--inline" : "live-stage--overlay",
+  ].join(" ");
+  const overlayFullscreen = liveControlsInline ? "" : regions.liveFullscreen;
+  const overlayMute = liveControlsInline ? "" : regions.liveMute;
+  const inlineMute = liveControlsInline ? regions.liveMute : "";
+  const inlineFullscreen = liveControlsInline ? regions.liveFullscreen : "";
 
   return `<div class="${layoutClassName}" id="layout">
             <div class="mobile-container" id="mobile-container">
               <div class="mobile-top" id="mobile-top">
                 ${regions.cameraSwitcher}
-                <div class="live-stage live-stage--overlay" id="live-stage">
+                <div class="${liveStageClassName}" id="live-stage">
                   ${regions.live}
-                  ${regions.liveFullscreen}
-                  ${regions.liveMute}
+                  ${overlayFullscreen}
+                  ${overlayMute}
                 </div>
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
                 <div class="mobile-video-controls-container">
                     <div class="button-holder-row mobile-video-controls-left-row">
+                      ${inlineMute}
                     </div>
                     <div class="button-holder-row mobile-microphone-row">
                       ${regions.twoWayTalk}
                     </div>
                     <div class="button-holder-row mobile-video-controls-right-row">
+                      ${inlineFullscreen}
                     </div>
                 </div>              
                 <div class="mobile-tab-container">
