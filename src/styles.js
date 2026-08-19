@@ -366,8 +366,7 @@ export const STYLES = `
     }
   .square-btn:hover{background: rgb(45 45 45 / 95%);border-color: rgb(255 255 255 / 45%);}
   .square-btn svg{width: 24px;height: 24px;fill: currentColor;pointer-events: none;}
-  .mute-btn {position:absolute;right:8px;bottom:8px;z-index:3;pointer-events:none;}
-  
+  .mute-btn {position:absolute;right:8px;bottom:8px;z-index:3;pointer-events:none;transition:opacity .16s ease;}
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
   .btn-secondary{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
   .btn-primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
