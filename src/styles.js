@@ -368,10 +368,9 @@ export const STYLES = `
   .square-btn svg{width: 24px;height: 24px;fill: currentColor;pointer-events: none;}
   .mute-btn {position:absolute;right:20px;bottom:48px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
 
-  .live-playback-controls{position:absolute;right:20px;bottom:92px;z-index:3;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
-  .live-playback-controls .live-playback-btn{position:relative;width:36px;height:36px;}
-  .live-playback-controls .live-playback-btn svg{width:24px;height:24px;}
-  .live-playback-controls .live-playback-btn:hover svg{width:24px;height:24px;}
+  .live-fs-btn{position:absolute;right:20px;bottom:92px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .live-playback-btn svg{width:24px;height:24px;}
+  .live-playback-btn:hover svg{width:24px;height:24px;}
   .live-playback-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
 
 
@@ -396,15 +395,15 @@ export const STYLES = `
   @media (hover:none), (pointer:coarse){#viewer .popup-playback-controls{opacity:1;pointer-events:auto;}}
   .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;padding:4px 10px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
   .slideshow-next-chip[hidden]{display:none !important;}
-  #live-stage.live-controls-visible .live-playback-controls,
+  #live-stage.live-controls-visible .live-fs-btn,
   #live-stage.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {
-    #live-stage:hover .live-playback-controls,
+    #live-stage:hover .live-fs-btn,
     #live-stage:hover .mute-btn{opacity:1;pointer-events:auto;}
   }
 
-  #live-stage:fullscreen .live-playback-controls,
-  #live-stage:-webkit-full-screen .live-playback-controls,
+  #live-stage:fullscreen .live-fs-btn,
+  #live-stage:-webkit-full-screen .live-fs-btn,
   #viewer:fullscreen .overlay-fs,
   #viewer:-webkit-full-screen .overlay-fs{display:none !important;}
   #live-stage:fullscreen,

@@ -121,7 +121,7 @@ test("mobile inline live controls stay visible without overlay reveal binding", 
   );
   assert.match(
     mobileViewStylesSource,
-    /mobile-video-controls-container \.live-playback-controls,[\s\S]*?position:relative;[\s\S]*?opacity:1;[\s\S]*?pointer-events:auto;/,
+    /mobile-video-controls-container \.live-playback-btn\{[\s\S]*?position:relative;[\s\S]*?opacity:1;[\s\S]*?pointer-events:auto;/,
   );
 });
 
