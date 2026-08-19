@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1514";
+const VERSION = "1.0.1515";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3769,8 +3769,8 @@ function buildLiveEngineWrapMarkup({ icons }) {
 function buildLiveFullscreenControlMarkup({ icons }) {
   return `<div class="live-playback-controls" data-fvc-region="live-fullscreen">
     <button class="glass-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
-    <button class="glass-btn live-playback-btn live-cast-btn" id="live-cast-btn" title="Cast live video" aria-label="Cast live video">${icons.cast}</button>
-    <button class="glass-btn live-playback-btn live-airplay-btn" id="live-airplay-btn" title="AirPlay live video" aria-label="AirPlay live video">${icons.airplayVideo}</button>
+    <button class="glass-btn live-playback-btn live-cast-btn" id="live-cast-btn" title="Cast live video" aria-label="Cast live video" hidden>${icons.cast}</button>
+    <button class="glass-btn live-playback-btn live-airplay-btn" id="live-airplay-btn" title="AirPlay live video" aria-label="AirPlay live video" hidden>${icons.airplayVideo}</button>
   </div>`;
 }
 function buildLiveMuteControlMarkup({ icons, streamMuted }) {
@@ -4000,7 +4000,7 @@ function buildPopupShellMarkup({ icons, version }) {
             <div class="popup-header"></div>          
             <div class="popup-body">
               <div class="viewer" id="viewer" style="display:none"></div>
-              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button><button class="popup-media-btn" id="popup-media-cast" type="button" title="Cast video" aria-label="Cast video">${icons.cast}</button><button class="popup-media-btn" id="popup-media-airplay" type="button" title="AirPlay video" aria-label="AirPlay video">${icons.airplayVideo}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
+              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button><button class="popup-media-btn" id="popup-media-cast" type="button" title="Cast video" aria-label="Cast video" hidden>${icons.cast}</button><button class="popup-media-btn" id="popup-media-airplay" type="button" title="AirPlay video" aria-label="AirPlay video" hidden>${icons.airplayVideo}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
               </div>
               <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
                 <div class="recording-scrub" id="recording-scrub" hidden>
@@ -4272,6 +4272,11 @@ const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
   const encClient = encodeURIComponent(clientId);
   const encCam = encodeURIComponent(cam);
   return [`/api/frigate/${encClient}/go2rtc/api/stream.m3u8?src=${encCam}&mp4`];
+};
+const buildGo2rtcReceiverMp4Path = ({ clientId, cam }) => {
+  const encClient = encodeURIComponent(clientId);
+  const encCam = encodeURIComponent(cam);
+  return `/api/frigate/${encClient}/go2rtc/api/stream.mp4?src=${encCam}&video=h264&audio=aac`;
 };
 
 // src/integrations/frigate/camera-context.js
@@ -4841,10 +4846,37 @@ function createGo2RtcResolver({
     hlsProbeInFlight.set(cacheKey, probePromise);
     return probePromise;
   };
+  const receiverSourceForEntity = async (entity = "") => {
+    const state = await resolveTransportStateForEntity(entity);
+    if (!state) return null;
+    const path = buildGo2rtcReceiverMp4Path(state);
+    let signedPath = "";
+    try {
+      const result = await getHass()?.callWS?.({
+        type: "auth/sign_path",
+        path,
+        expires: 3600
+      });
+      signedPath = String(result?.path || "").trim();
+    } catch (_) {
+      return null;
+    }
+    if (!signedPath) return null;
+    return {
+      url: resolveAbsoluteSignedPath({
+        signedPath,
+        origin: getOrigin()
+      }),
+      contentType: "video/mp4",
+      streamType: "LIVE",
+      ttlMs: 55 * 60 * 1e3
+    };
+  };
   return {
     resolveMountRequest,
     websocketUrlForEntity,
-    hlsUrlForEntity
+    hlsUrlForEntity,
+    receiverSourceForEntity
   };
 }
 
@@ -19213,9 +19245,10 @@ const FrigateViewCard = class extends HTMLElement {
       this.shadowRoot.querySelectorAll(selector).forEach((button) => {
         const baseTitle = button.dataset.playbackBaseTitle || button.title || fallbackTitle;
         button.dataset.playbackBaseTitle = baseTitle;
+        button.hidden = !supported;
         button.disabled = !supported;
-        button.setAttribute("aria-disabled", supported ? "false" : "true");
-        button.title = supported ? baseTitle : `${fallbackTitle} is not supported in this browser`;
+        button.setAttribute("aria-hidden", supported ? "false" : "true");
+        button.title = baseTitle;
       });
     };
     sync(
@@ -21439,20 +21472,21 @@ const FrigateViewCard = class extends HTMLElement {
       viewer.appendChild(controls);
     }
     controls.innerHTML = "";
-    const addButton = (id, title, icon) => {
+    const addButton = (id, title, icon, initiallyHidden = false) => {
       const button = document.createElement("button");
       button.className = "glass-btn popup-playback-btn";
       button.id = id;
       button.type = "button";
       button.title = title;
       button.setAttribute("aria-label", title);
+      button.hidden = initiallyHidden;
       button.innerHTML = icon;
       controls.appendChild(button);
     };
     addButton("popup-fs-btn", label, ICONS.expand);
     if (this._isPopupVideoMediaType(kind)) {
-      addButton("popup-cast-btn", "Cast video", ICONS.cast);
-      addButton("popup-airplay-btn", "AirPlay video", ICONS.airplayVideo);
+      addButton("popup-cast-btn", "Cast video", ICONS.cast, true);
+      addButton("popup-airplay-btn", "AirPlay video", ICONS.airplayVideo, true);
     }
     this._syncPlaybackTargetButtons();
   }
@@ -21722,10 +21756,12 @@ const FrigateViewCard = class extends HTMLElement {
   _playbackTargetContext(scope = "live") {
     if (scope === "live") {
       const cameraEntity = this._activeCam?.entity || "";
+      const connectionType = this._cameraConnectionType(cameraEntity);
       return {
         scope,
-        sourceKey: `live:${cameraEntity}`,
+        sourceKey: `live:${connectionType}:${cameraEntity}`,
         cameraEntity,
+        connectionType,
         title: camDisplayName(this._activeCam || {})
       };
     }
@@ -21751,6 +21787,21 @@ const FrigateViewCard = class extends HTMLElement {
   }
   async _resolvePlaybackTargetSource(context = {}) {
     if (context.scope === "live") {
+      if (context.connectionType === "frigate_go2rtc") {
+        const source2 = await this._go2rtcResolver.receiverSourceForEntity(
+          context.cameraEntity
+        );
+        return source2?.url ? { ok: true, ...source2, title: context.title } : {
+          ok: false,
+          message: "Frigate go2rtc could not prepare receiver-compatible live video."
+        };
+      }
+      if (context.connectionType !== "ha_direct") {
+        return {
+          ok: false,
+          message: "The configured live transport is not supported."
+        };
+      }
       const source = await resolveHomeAssistantCameraHlsSource({
         hass: this._hass,
         cameraEntity: context.cameraEntity,

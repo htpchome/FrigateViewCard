@@ -104,3 +104,32 @@ test("go2rtc resolver caches HLS playlist URLs", async () => {
   });
   assert.equal(calls.fetch, 1);
 });
+
+test("go2rtc resolver builds a signed receiver source with explicit H264 and AAC", async () => {
+  const { resolver } = createResolverHarness({
+    callWSResult: (msg) => ({ path: `${msg.path}&authSig=receiver` }),
+  });
+
+  const source = await resolver.receiverSourceForEntity("camera.front");
+
+  assert.deepEqual(source, {
+    url:
+      "https://ha.local/api/frigate/frigate/go2rtc/api/stream.mp4?src=front&video=h264&audio=aac&authSig=receiver",
+    contentType: "video/mp4",
+    streamType: "LIVE",
+    ttlMs: 3300000,
+  });
+});
+
+test("go2rtc receiver source does not fall back when URL signing fails", async () => {
+  const { resolver } = createResolverHarness({
+    callWSResult: () => {
+      throw new Error("signing unavailable");
+    },
+  });
+
+  assert.equal(
+    await resolver.receiverSourceForEntity("camera.front"),
+    null,
+  );
+});

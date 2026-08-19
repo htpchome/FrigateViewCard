@@ -2464,11 +2464,10 @@ export class FrigateViewCard extends HTMLElement {
         const baseTitle =
           button.dataset.playbackBaseTitle || button.title || fallbackTitle;
         button.dataset.playbackBaseTitle = baseTitle;
+        button.hidden = !supported;
         button.disabled = !supported;
-        button.setAttribute("aria-disabled", supported ? "false" : "true");
-        button.title = supported
-          ? baseTitle
-          : `${fallbackTitle} is not supported in this browser`;
+        button.setAttribute("aria-hidden", supported ? "false" : "true");
+        button.title = baseTitle;
       });
     };
     sync(
@@ -5027,20 +5026,21 @@ export class FrigateViewCard extends HTMLElement {
       viewer.appendChild(controls);
     }
     controls.innerHTML = "";
-    const addButton = (id, title, icon) => {
+    const addButton = (id, title, icon, initiallyHidden = false) => {
       const button = document.createElement("button");
       button.className = "glass-btn popup-playback-btn";
       button.id = id;
       button.type = "button";
       button.title = title;
       button.setAttribute("aria-label", title);
+      button.hidden = initiallyHidden;
       button.innerHTML = icon;
       controls.appendChild(button);
     };
     addButton("popup-fs-btn", label, ICONS.expand);
     if (this._isPopupVideoMediaType(kind)) {
-      addButton("popup-cast-btn", "Cast video", ICONS.cast);
-      addButton("popup-airplay-btn", "AirPlay video", ICONS.airplayVideo);
+      addButton("popup-cast-btn", "Cast video", ICONS.cast, true);
+      addButton("popup-airplay-btn", "AirPlay video", ICONS.airplayVideo, true);
     }
     this._syncPlaybackTargetButtons();
   }
@@ -5323,10 +5323,12 @@ export class FrigateViewCard extends HTMLElement {
   _playbackTargetContext(scope = "live") {
     if (scope === "live") {
       const cameraEntity = this._activeCam?.entity || "";
+      const connectionType = this._cameraConnectionType(cameraEntity);
       return {
         scope,
-        sourceKey: `live:${cameraEntity}`,
+        sourceKey: `live:${connectionType}:${cameraEntity}`,
         cameraEntity,
+        connectionType,
         title: camDisplayName(this._activeCam || {}),
       };
     }
@@ -5362,6 +5364,25 @@ export class FrigateViewCard extends HTMLElement {
 
   async _resolvePlaybackTargetSource(context = {}) {
     if (context.scope === "live") {
+      if (context.connectionType === "frigate_go2rtc") {
+        const source =
+          await this._go2rtcResolver.receiverSourceForEntity(
+            context.cameraEntity,
+          );
+        return source?.url
+          ? { ok: true, ...source, title: context.title }
+          : {
+              ok: false,
+              message:
+                "Frigate go2rtc could not prepare receiver-compatible live video.",
+            };
+      }
+      if (context.connectionType !== "ha_direct") {
+        return {
+          ok: false,
+          message: "The configured live transport is not supported.",
+        };
+      }
       const source = await resolveHomeAssistantCameraHlsSource({
         hass: this._hass,
         cameraEntity: context.cameraEntity,

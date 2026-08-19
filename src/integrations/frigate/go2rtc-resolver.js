@@ -4,12 +4,14 @@ import {
 } from "./camera-context.js";
 import {
   buildGo2rtcHlsCandidates,
+  buildGo2rtcReceiverMp4Path,
   buildGo2rtcWsPath,
   makeGo2rtcCacheKey,
 } from "./url.js";
 import {
   buildGo2RtcHlsProbeResult,
   buildSignedGo2RtcWebSocketUrl,
+  resolveAbsoluteSignedPath,
   rewriteSignedHlsManifestSource,
   signHomeAssistantPath,
   signSameOriginAbsoluteUrl,
@@ -217,9 +219,39 @@ export function createGo2RtcResolver({
     return probePromise;
   };
 
+  const receiverSourceForEntity = async (entity = "") => {
+    const state = await resolveTransportStateForEntity(entity);
+    if (!state) return null;
+
+    const path = buildGo2rtcReceiverMp4Path(state);
+    let signedPath = "";
+    try {
+      const result = await getHass()?.callWS?.({
+        type: "auth/sign_path",
+        path,
+        expires: 3600,
+      });
+      signedPath = String(result?.path || "").trim();
+    } catch (_) {
+      return null;
+    }
+    if (!signedPath) return null;
+
+    return {
+      url: resolveAbsoluteSignedPath({
+        signedPath,
+        origin: getOrigin(),
+      }),
+      contentType: "video/mp4",
+      streamType: "LIVE",
+      ttlMs: 55 * 60 * 1000,
+    };
+  };
+
   return {
     resolveMountRequest,
     websocketUrlForEntity,
     hlsUrlForEntity,
+    receiverSourceForEntity,
   };
 }

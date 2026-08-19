@@ -237,8 +237,8 @@ test("shared shell builders expose stable page region anchors", () => {
   });
   assert.doesNotMatch(liveEngineWrap, /id="(?:live-fs-btn|mute-btn)"/);
   assert.match(liveFullscreen, /id="live-fs-btn"/);
-  assert.match(liveFullscreen, /id="live-cast-btn"/);
-  assert.match(liveFullscreen, /id="live-airplay-btn"/);
+  assert.match(liveFullscreen, /id="live-cast-btn"[^>]* hidden/);
+  assert.match(liveFullscreen, /id="live-airplay-btn"[^>]* hidden/);
   const browseHeader = buildBrowseHeaderRegionMarkup({
     icons: { left: "<", right: ">" },
   });
@@ -297,6 +297,6 @@ test("popup custom media controls place Cast and AirPlay beside fullscreen", () 
   });
 
   assert.match(markup, /id="popup-media-fs"/);
-  assert.match(markup, /id="popup-media-cast"/);
-  assert.match(markup, /id="popup-media-airplay"/);
+  assert.match(markup, /id="popup-media-cast"[^>]* hidden/);
+  assert.match(markup, /id="popup-media-airplay"[^>]* hidden/);
 });

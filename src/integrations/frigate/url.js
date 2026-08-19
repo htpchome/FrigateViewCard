@@ -8,3 +8,9 @@ export const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
   const encCam = encodeURIComponent(cam);
   return [`/api/frigate/${encClient}/go2rtc/api/stream.m3u8?src=${encCam}&mp4`];
 };
+
+export const buildGo2rtcReceiverMp4Path = ({ clientId, cam }) => {
+  const encClient = encodeURIComponent(clientId);
+  const encCam = encodeURIComponent(cam);
+  return `/api/frigate/${encClient}/go2rtc/api/stream.mp4?src=${encCam}&video=h264&audio=aac`;
+};

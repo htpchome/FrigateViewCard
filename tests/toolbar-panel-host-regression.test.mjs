@@ -138,6 +138,7 @@ test("live and popup playback controls delegate to browser target playback", () 
     cardSource.includes("this._playbackTargetController.prompt("),
     true,
   );
+  assert.equal(cardSource.includes("button.hidden = !supported"), true);
   assert.equal(
     cardSource.includes('this._playbackTargetController.release("popup")'),
     true,
@@ -148,6 +149,14 @@ test("live and popup playback controls delegate to browser target playback", () 
   );
   assert.equal(cardSource.includes("_playbackTargetContext(scope"), true);
   assert.equal(cardSource.includes("camera/stream"), false);
+  assert.equal(
+    cardSource.includes("context.connectionType === \"frigate_go2rtc\""),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("context.connectionType !== \"ha_direct\""),
+    true,
+  );
   assert.equal(
     stylesSource.includes(
       "grid-template-areas:\"sp1 play progress mute fs cast airplay sp2\"",

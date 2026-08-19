@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildGo2rtcHlsCandidates,
+  buildGo2rtcReceiverMp4Path,
   buildGo2rtcWsPath,
   makeGo2rtcCacheKey,
 } from "../src/integrations/frigate/url.js";
@@ -34,6 +35,16 @@ test("buildGo2rtcHlsCandidates returns the supported HA go2rtc HLS candidate", (
   assert.deepEqual(candidates, [
     "/api/frigate/c/go2rtc/api/stream.m3u8?src=x&mp4",
   ]);
+});
+
+test("buildGo2rtcReceiverMp4Path selects receiver-safe H264 and AAC", () => {
+  assert.equal(
+    buildGo2rtcReceiverMp4Path({
+      clientId: "frig ate",
+      cam: "front/door",
+    }),
+    "/api/frigate/frig%20ate/go2rtc/api/stream.mp4?src=front%2Fdoor&video=h264&audio=aac",
+  );
 });
 
 test("URL helpers convert signed and websocket URLs", () => {
