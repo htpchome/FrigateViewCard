@@ -356,7 +356,7 @@ export const STYLES = `
     color:rgba(255, 255, 255, 0.9);
     background:rgba(0, 0, 0, 0.5);
     border-radius:8px;
-    border:1px solid rgba(255, 255, 255, 0.6);
+    border:1px solid rgb(33, 33, 33);
     }
   .square-btn:hover{background:rgba(0, 0, 0, 0.6);}
   .square-btn svg{color:rgba(255, 255, 255, 0.9);width:30px;height:30px;opacity: 0.8;}
