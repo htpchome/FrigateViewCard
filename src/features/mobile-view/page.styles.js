@@ -93,7 +93,7 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    padding: 8px 12px 6px;
+    padding: 2px 12px;
   }
 
   .card.mobile-view-active .mobile-view-two-way-talk-slot[hidden] {
