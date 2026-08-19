@@ -3789,7 +3789,8 @@ function buildLiveEngineWrapMarkup({ icons }) {
               </div>`;
 }
 function buildLiveFullscreenControlMarkup({ icons }) {
-  return `<button class="square-btn live-playback-btn live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
+  return `<div class="live-playback-controls" data-fvc-region="live-fullscreen">
+    <button class="square-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
   </div>`;
 }
 function buildLiveMuteControlMarkup({ icons, streamMuted }) {
