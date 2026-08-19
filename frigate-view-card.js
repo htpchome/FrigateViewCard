@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1515";
+const VERSION = "1.0.1516";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -919,6 +919,7 @@ const STYLES = `
   .live-playback-controls .live-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
   .live-playback-controls .live-playback-btn svg{width:30px;height:30px;opacity:.8;}
   .live-playback-controls .live-playback-btn:hover svg{width:30px;height:30px;opacity:.95;}
+  .live-playback-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
 
   .overlay-fs{position:absolute;top:8px;left:8px;z-index:3;padding: 3px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .overlay-fs::after {content: "";position: absolute;top: 0;left: 0;}         
@@ -3770,7 +3771,6 @@ function buildLiveFullscreenControlMarkup({ icons }) {
   return `<div class="live-playback-controls" data-fvc-region="live-fullscreen">
     <button class="glass-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
     <button class="glass-btn live-playback-btn live-cast-btn" id="live-cast-btn" title="Cast live video" aria-label="Cast live video" hidden>${icons.cast}</button>
-    <button class="glass-btn live-playback-btn live-airplay-btn" id="live-airplay-btn" title="AirPlay live video" aria-label="AirPlay live video" hidden>${icons.airplayVideo}</button>
   </div>`;
 }
 function buildLiveMuteControlMarkup({ icons, streamMuted }) {
@@ -5224,6 +5224,8 @@ function configureVideoElement(video, options = {}) {
   applyVideoDatasetOptions(video, options);
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
+  video.disableRemotePlayback = true;
+  video.setAttribute("x-webkit-airplay", "deny");
   if (options.attributes && typeof options.attributes === "object") {
     for (const [name, value] of Object.entries(options.attributes)) {
       if (value === null || value === void 0 || value === false) {
@@ -6887,7 +6889,14 @@ const GOOGLE_CAST_SCRIPT_URL = "https://www.gstatic.com/cv/js/sender/v1/cast_sen
 const DEFAULT_SOURCE_TTL_MS = 5 * 60 * 1e3;
 const MAX_CACHED_SOURCES = 12;
 const googleCastFrameworkState = { promise: null };
-const isAppleMobileBrowser = (navigatorObj) => /iPad|iPhone|iPod/i.test(String(navigatorObj?.userAgent || ""));
+const isAppleMobileBrowser = (navigatorObj) => {
+  const userAgent = String(navigatorObj?.userAgent || "");
+  const platform = String(
+    navigatorObj?.userAgentData?.platform || navigatorObj?.platform || ""
+  );
+  const maxTouchPoints = Number(navigatorObj?.maxTouchPoints || 0);
+  return /iPad|iPhone|iPod|iOS/i.test(userAgent) || /iPad|iPhone|iPod|iOS/i.test(platform) || /Mac/i.test(platform) && maxTouchPoints > 1;
+};
 const isMicrosoftEdgeBrowser = (navigatorObj) => /Edg(?:A|iOS)?\//i.test(String(navigatorObj?.userAgent || ""));
 const googleCastEnvironment = (windowObj) => {
   const framework = windowObj?.cast?.framework;
@@ -7174,6 +7183,8 @@ const BrowserPlaybackTargetController = class {
     video.removeEventListener?.("error", releaseOnTerminal);
     try {
       video.pause?.();
+      video.disableRemotePlayback = true;
+      video.setAttribute?.("x-webkit-airplay", "deny");
       video.removeAttribute?.("src");
       video.load?.();
     } catch (_) {
@@ -19257,7 +19268,7 @@ const FrigateViewCard = class extends HTMLElement {
       "Cast video"
     );
     sync(
-      "#live-airplay-btn, #popup-airplay-btn, #popup-media-airplay",
+      "#popup-airplay-btn, #popup-media-airplay",
       support.airplay,
       "AirPlay video"
     );
@@ -20637,12 +20648,6 @@ const FrigateViewCard = class extends HTMLElement {
     }
     if (target.closest("#live-cast-btn")) {
       void this._playbackTargetController.prompt(PLAYBACK_TARGET_CAST, {
-        scope: "live"
-      });
-      return true;
-    }
-    if (target.closest("#live-airplay-btn")) {
-      void this._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
         scope: "live"
       });
       return true;

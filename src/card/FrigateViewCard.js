@@ -2476,7 +2476,7 @@ export class FrigateViewCard extends HTMLElement {
       "Cast video",
     );
     sync(
-      "#live-airplay-btn, #popup-airplay-btn, #popup-media-airplay",
+      "#popup-airplay-btn, #popup-media-airplay",
       support.airplay,
       "AirPlay video",
     );
@@ -4074,12 +4074,6 @@ export class FrigateViewCard extends HTMLElement {
     }
     if (target.closest("#live-cast-btn")) {
       void this._playbackTargetController.prompt(PLAYBACK_TARGET_CAST, {
-        scope: "live",
-      });
-      return true;
-    }
-    if (target.closest("#live-airplay-btn")) {
-      void this._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
         scope: "live",
       });
       return true;

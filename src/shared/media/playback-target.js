@@ -9,8 +9,18 @@ const MAX_CACHED_SOURCES = 12;
 
 const googleCastFrameworkState = { promise: null };
 
-const isAppleMobileBrowser = (navigatorObj) =>
-  /iPad|iPhone|iPod/i.test(String(navigatorObj?.userAgent || ""));
+const isAppleMobileBrowser = (navigatorObj) => {
+  const userAgent = String(navigatorObj?.userAgent || "");
+  const platform = String(
+    navigatorObj?.userAgentData?.platform || navigatorObj?.platform || "",
+  );
+  const maxTouchPoints = Number(navigatorObj?.maxTouchPoints || 0);
+  return (
+    /iPad|iPhone|iPod|iOS/i.test(userAgent) ||
+    /iPad|iPhone|iPod|iOS/i.test(platform) ||
+    (/Mac/i.test(platform) && maxTouchPoints > 1)
+  );
+};
 
 const isMicrosoftEdgeBrowser = (navigatorObj) =>
   /Edg(?:A|iOS)?\//i.test(String(navigatorObj?.userAgent || ""));
@@ -324,6 +334,8 @@ export class BrowserPlaybackTargetController {
     video.removeEventListener?.("error", releaseOnTerminal);
     try {
       video.pause?.();
+      video.disableRemotePlayback = true;
+      video.setAttribute?.("x-webkit-airplay", "deny");
       video.removeAttribute?.("src");
       video.load?.();
     } catch (_) {}

@@ -38,6 +38,9 @@ function createFakeVideo({ airplay = false } = {}) {
       attributes.delete(name);
       if (name === "src") this.src = "";
     },
+    getAttribute(name) {
+      return attributes.get(name);
+    },
     hasAttribute(name) {
       return attributes.has(name);
     },
@@ -148,6 +151,28 @@ test("browser target support separates Cast and AirPlay capabilities", () => {
       windowObj: { chrome: {} },
       navigatorObj: { userAgent: "Chrome" },
       castFrameworkReady: false,
+    }).cast,
+    false,
+  );
+  assert.equal(
+    resolveBrowserPlaybackTargetSupport({
+      windowObj: createCastWindow().windowObj,
+      navigatorObj: {
+        userAgent: "Home Assistant/2026.8 (iOS 18.6)",
+        platform: "iPhone",
+        maxTouchPoints: 5,
+      },
+    }).cast,
+    false,
+  );
+  assert.equal(
+    resolveBrowserPlaybackTargetSupport({
+      windowObj: createCastWindow().windowObj,
+      navigatorObj: {
+        userAgent: "Mozilla/5.0 (Macintosh) Version/18.0 Mobile/15E148",
+        platform: "MacIntel",
+        maxTouchPoints: 5,
+      },
     }).cast,
     false,
   );
@@ -386,6 +411,11 @@ test("controller prewarms sources and prompts without HA media-player services",
     "webkitcurrentplaybacktargetiswirelesschanged",
   );
   assert.equal(airplayCalls[0].removed, true);
+  assert.equal(airplayCalls[0].disableRemotePlayback, true);
+  assert.equal(
+    airplayCalls[0].getAttribute("x-webkit-airplay"),
+    "deny",
+  );
 
   controller.dispose();
   assert.equal(videos.every((video) => video.removed), true);

@@ -363,6 +363,7 @@ export const STYLES = `
   .live-playback-controls .live-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
   .live-playback-controls .live-playback-btn svg{width:30px;height:30px;opacity:.8;}
   .live-playback-controls .live-playback-btn:hover svg{width:30px;height:30px;opacity:.95;}
+  .live-playback-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
 
   .overlay-fs{position:absolute;top:8px;left:8px;z-index:3;padding: 3px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .overlay-fs::after {content: "";position: absolute;top: 0;left: 0;}         

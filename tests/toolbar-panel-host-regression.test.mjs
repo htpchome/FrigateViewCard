@@ -128,7 +128,6 @@ test("mobile inline live controls stay visible without overlay reveal binding", 
 test("live and popup playback controls delegate to browser target playback", () => {
   for (const controlId of [
     "#live-cast-btn",
-    "#live-airplay-btn",
     "#popup-cast-btn, #popup-media-cast",
     "#popup-airplay-btn, #popup-media-airplay",
   ]) {
@@ -139,6 +138,13 @@ test("live and popup playback controls delegate to browser target playback", () 
     true,
   );
   assert.equal(cardSource.includes("button.hidden = !supported"), true);
+  assert.equal(cardSource.includes("#live-airplay-btn"), false);
+  assert.equal(
+    stylesSource.includes(
+      ".live-playback-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}",
+    ),
+    true,
+  );
   assert.equal(
     cardSource.includes('this._playbackTargetController.release("popup")'),
     true,

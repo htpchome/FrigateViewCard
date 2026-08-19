@@ -112,7 +112,8 @@ test("createVideoElement applies liveEngine defaults", () => {
     );
     assert.equal(video.hasAttribute("playsinline"), true);
     assert.equal(video.hasAttribute("webkit-playsinline"), true);
-    assert.equal(video.hasAttribute("x-webkit-airplay"), false);
+    assert.equal(video.disableRemotePlayback, true);
+    assert.equal(video.getAttribute("x-webkit-airplay"), "deny");
   });
 });
 

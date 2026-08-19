@@ -18,7 +18,6 @@ export function buildLiveFullscreenControlMarkup({ icons }) {
   return `<div class="live-playback-controls" data-fvc-region="live-fullscreen">
     <button class="glass-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
     <button class="glass-btn live-playback-btn live-cast-btn" id="live-cast-btn" title="Cast live video" aria-label="Cast live video" hidden>${icons.cast}</button>
-    <button class="glass-btn live-playback-btn live-airplay-btn" id="live-airplay-btn" title="AirPlay live video" aria-label="AirPlay live video" hidden>${icons.airplayVideo}</button>
   </div>`;
 }
 
