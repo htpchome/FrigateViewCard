@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1522";
+const VERSION = "1.0.1523";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -912,7 +912,7 @@ const STYLES = `
     padding: 0;
     color: #fff;
     background: rgb(20 20 20 / 80%);
-    border: 1px solid rgb(255 255 255 / 25%);
+    border: 1px solid rgb(255 255 255 / 15%);
     border-radius: 4px;
     cursor: pointer;
     appearance: none;

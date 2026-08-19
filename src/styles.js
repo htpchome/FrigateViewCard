@@ -355,7 +355,7 @@ export const STYLES = `
     padding: 0;
     color: #fff;
     background: rgb(20 20 20 / 80%);
-    border: 1px solid rgb(255 255 255 / 25%);
+    border: 1px solid rgb(255 255 255 / 15%);
     border-radius: 4px;
     cursor: pointer;
     appearance: none;
