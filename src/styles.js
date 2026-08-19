@@ -348,6 +348,7 @@ export const STYLES = `
   .glass-btn:hover svg{width:30px;height:30px;opacity: 0.95; }
 
   .square-btn{
+    cursor:pointer;
     inline-flex; 
     align-items: center; 
     justify-content: center; 
