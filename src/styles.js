@@ -368,7 +368,8 @@ export const STYLES = `
   .square-btn svg{width: 24px;height: 24px;fill: currentColor;pointer-events: none;}
   .mute-btn {position:absolute;right:20px;bottom:32px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .live-fs-btn{position:absolute;right:20px;bottom:84px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
-  
+  .pip-btn{}
+
   .live-playback-controls{position:absolute;right:20px;bottom:84px;z-index:3;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .live-playback-controls .live-playback-btn{position:relative;width:36px;height:36px;}
   .live-playback-controls .live-playback-btn svg{width:24px;height:24px;}
