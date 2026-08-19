@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1517";
+const VERSION = "1.0.1518";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -903,7 +903,9 @@ const STYLES = `
   .glass-btn:hover{background:rgba(255, 255, 255, 0.3);} 
   .glass-btn svg{width:30px;height:30px;opacity: 0.8; }
   .glass-btn:hover svg{width:30px;height:30px;opacity: 0.95; }
-
+  .square-btn{background:rgba(0, 0, 0, 0.5);border-radius:8px;border:1px solid rgba(0, 0, 0, 0.3);}
+  .square-btn:hover{background:rgba(0, 0, 0, 0.7);}
+  .square-btn svg{width:30px;height:30px;opacity: 0.8;}
   .mute-btn {position:absolute;right:8px;bottom:8px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
   .btn-secondary{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
@@ -3769,13 +3771,13 @@ function buildLiveEngineWrapMarkup({ icons }) {
 }
 function buildLiveFullscreenControlMarkup({ icons }) {
   return `<div class="live-playback-controls" data-fvc-region="live-fullscreen">
-    <button class="glass-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
+    <button class="square-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
   </div>`;
 }
 function buildLiveMuteControlMarkup({ icons, streamMuted }) {
   const label = streamMuted ? "Unmute live view" : "Mute live view";
   const icon = streamMuted ? icons.volOff : icons.volOn;
-  return `<button class="glass-btn mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
+  return `<button class="square-btn mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
 }
 
 // src/card/controls/shell-nav.tmpl.js

@@ -16,12 +16,12 @@ export function buildLiveEngineWrapMarkup({ icons }) {
 
 export function buildLiveFullscreenControlMarkup({ icons }) {
   return `<div class="live-playback-controls" data-fvc-region="live-fullscreen">
-    <button class="glass-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
+    <button class="square-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
   </div>`;
 }
 
 export function buildLiveMuteControlMarkup({ icons, streamMuted }) {
   const label = streamMuted ? "Unmute live view" : "Mute live view";
   const icon = streamMuted ? icons.volOff : icons.volOn;
-  return `<button class="glass-btn mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
+  return `<button class="square-btn mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
 }
