@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1510";
+const VERSION = "1.0.1511";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -6919,22 +6919,31 @@ function ensureGoogleCastFramework({
   googleCastFrameworkPromise = new Promise((resolve) => {
     let settled = false;
     let timeout = null;
+    let readinessPoll = null;
     const previousCallback = windowObj.__onGCastApiAvailable;
     const finish = (available) => {
       if (settled) return;
       settled = true;
       if (timeout) clearTimeout(timeout);
+      if (readinessPoll) clearInterval(readinessPoll);
       if (windowObj.__onGCastApiAvailable === onAvailable) {
         windowObj.__onGCastApiAvailable = previousCallback;
       }
       resolve(Boolean(available));
+    };
+    const finishWhenReady = () => {
+      if (configureGoogleCastFramework(windowObj)) finish(true);
     };
     const onAvailable = (available, errorInfo) => {
       try {
         previousCallback?.(available, errorInfo);
       } catch (_) {
       }
-      finish(available && configureGoogleCastFramework(windowObj));
+      if (!available) {
+        finish(false);
+        return;
+      }
+      finishWhenReady();
     };
     windowObj.__onGCastApiAvailable = onAvailable;
     let script = documentObj.getElementById?.(GOOGLE_CAST_SCRIPT_ID);
@@ -6946,6 +6955,8 @@ function ensureGoogleCastFramework({
       script.addEventListener?.("error", () => finish(false), { once: true });
       documentObj.head.appendChild(script);
     }
+    script.addEventListener?.("load", finishWhenReady, { once: true });
+    readinessPoll = setInterval(finishWhenReady, 100);
     timeout = setTimeout(() => {
       finish(configureGoogleCastFramework(windowObj));
     }, timeoutMs);
@@ -6988,8 +6999,8 @@ function promptGoogleCastSource({
       return Promise.resolve(prompt.call(fallbackVideo.remote)).then(
         () => true
       );
-    } catch (_) {
-      return Promise.resolve(false);
+    } catch (error) {
+      return Promise.reject(error);
     }
   }
   const castContext = env.framework.CastContext.getInstance();
@@ -7005,8 +7016,8 @@ function promptGoogleCastSource({
     return Promise.resolve(sessionRequest).then(
       () => loadIntoSession(castContext.getCurrentSession())
     );
-  } catch (_) {
-    return Promise.resolve(false);
+  } catch (error) {
+    return Promise.reject(error);
   }
 }
 function configureReceiverVideo(video, source) {
@@ -7027,7 +7038,13 @@ function promptAirPlayVideo(video) {
   const prompt = video?.webkitShowPlaybackTargetPicker;
   if (typeof prompt !== "function") return false;
   try {
+    video.muted = true;
     video.load?.();
+    try {
+      video.play?.().catch?.(() => {
+      });
+    } catch (_) {
+    }
     prompt.call(video);
     return true;
   } catch (_) {
@@ -7066,6 +7083,7 @@ const BrowserPlaybackTargetController = class {
     this._sources = new Map();
     this._sourceInFlight = new Map();
     this._videos = new Map();
+    this._supportProbeVideo = null;
     this._castReady = null;
     this._castWarmPromise = null;
   }
@@ -7089,9 +7107,13 @@ const BrowserPlaybackTargetController = class {
       video.style.cssText = "position:fixed;left:-10000px;top:-10000px;width:1px;height:1px;opacity:0;pointer-events:none";
     }
     const onWirelessTargetChanged = () => {
-      if (video.webkitCurrentPlaybackTargetIsWireless !== true) return;
-      video.play?.().catch?.(() => {
-      });
+      if (video.webkitCurrentPlaybackTargetIsWireless === true) {
+        video.muted = false;
+        video.play?.().catch?.(() => {
+        });
+        return;
+      }
+      this._releaseVideo(scope);
     };
     video.addEventListener?.(
       "webkitcurrentplaybacktargetiswirelesschanged",
@@ -7101,8 +7123,31 @@ const BrowserPlaybackTargetController = class {
     this._videos.set(scope, { video, onWirelessTargetChanged });
     return video;
   }
+  _releaseVideo(scope) {
+    const entry = this._videos.get(scope);
+    if (!entry) return;
+    const { video, onWirelessTargetChanged } = entry;
+    video.removeEventListener?.(
+      "webkitcurrentplaybacktargetiswirelesschanged",
+      onWirelessTargetChanged
+    );
+    try {
+      video.pause?.();
+      video.removeAttribute?.("src");
+      video.load?.();
+    } catch (_) {
+    }
+    video.remove?.();
+    this._videos.delete(scope);
+  }
+  _videoForSupportProbe() {
+    if (!this._supportProbeVideo) {
+      this._supportProbeVideo = this._createVideo?.() || null;
+    }
+    return this._supportProbeVideo;
+  }
   getSupport() {
-    const video = this._videoForScope("live");
+    const video = this._videoForSupportProbe();
     const support = resolveBrowserPlaybackTargetSupport({
       video,
       windowObj: this._getWindow?.(),
@@ -7143,10 +7188,7 @@ const BrowserPlaybackTargetController = class {
     if (!context) return Promise.resolve(null);
     void this._warmCast();
     const cached = this._freshSource(context.sourceKey);
-    if (cached) {
-      configureReceiverVideo(this._videoForScope(scope), cached);
-      return Promise.resolve(cached);
-    }
+    if (cached) return Promise.resolve(cached);
     const current = this._sourceInFlight.get(context.sourceKey);
     if (current) return current;
     const pending = Promise.resolve(this._resolveSource?.(context)).then((source) => {
@@ -7162,7 +7204,6 @@ const BrowserPlaybackTargetController = class {
       while (this._sources.size > MAX_CACHED_SOURCES) {
         this._sources.delete(this._sources.keys().next().value);
       }
-      configureReceiverVideo(this._videoForScope(scope), source);
       return source;
     }).catch((error) => {
       if (notifyErrors) {
@@ -7200,31 +7241,26 @@ const BrowserPlaybackTargetController = class {
     let result;
     try {
       result = this._promptCast?.(source, video);
-    } catch (_) {
-      result = false;
+    } catch (error) {
+      result = Promise.reject(error);
     }
     return Promise.resolve(result).then((prompted) => {
-      if (!prompted) {
-        this._onStatus?.("Cast playback is not supported in this browser.");
-      }
+      if (!prompted) this._onStatus?.("Cast playback could not be started.");
       return Boolean(prompted);
+    }).catch((error) => {
+      const detail = String(
+        error?.description || error?.code || error?.name || error?.message || ""
+      ).trim();
+      this._onStatus?.(
+        detail ? `Cast playback failed: ${detail}` : "Cast playback failed before the receiver could load the video."
+      );
+      return false;
     });
   }
   dispose() {
-    for (const { video, onWirelessTargetChanged } of this._videos.values()) {
-      video.removeEventListener?.(
-        "webkitcurrentplaybacktargetiswirelesschanged",
-        onWirelessTargetChanged
-      );
-      try {
-        video.pause?.();
-        video.removeAttribute?.("src");
-        video.load?.();
-      } catch (_) {
-      }
-      video.remove?.();
-    }
-    this._videos.clear();
+    for (const scope of [...this._videos.keys()]) this._releaseVideo(scope);
+    this._supportProbeVideo?.remove?.();
+    this._supportProbeVideo = null;
     this._sources.clear();
     this._sourceInFlight.clear();
   }
@@ -7238,7 +7274,9 @@ function buildFrigateReceiverMediaPath({
   camera = "",
   eventId = "",
   recordingStart = null,
-  recordingEnd = null
+  recordingEnd = null,
+  eventRecordingStart = null,
+  eventRecordingEnd = null
 } = {}) {
   const normalizedType = String(mediaType || "").toLowerCase();
   const encodedClientId = encodePathPart(clientId);
@@ -7267,6 +7305,15 @@ function buildFrigateReceiverMediaPath({
     return {
       ok: false,
       message: "Only clips, alerts, kept clips, and recordings can be sent."
+    };
+  }
+  const eventStart = Number(eventRecordingStart);
+  const eventEnd = Number(eventRecordingEnd);
+  if (camera && Number.isFinite(eventStart) && Number.isFinite(eventEnd) && eventEnd > eventStart) {
+    return {
+      ok: true,
+      path: `/api/frigate/${encodedClientId}/recording/${encodePathPart(camera)}/start/${eventStart}/end/${eventEnd}`,
+      contentType: "video/mp4"
     };
   }
   return {
@@ -21675,6 +21722,7 @@ const FrigateViewCard = class extends HTMLElement {
     const { clientId, cam } = this._cc();
     const mediaType = this._popupMediaType;
     const eventId = this._playing?.id || "";
+    const event = eventId ? this._findEventById(eventId) : null;
     const recordingStart = this._recordingScrubState?.start ?? this._playing?.rec ?? null;
     const recordingEnd = this._recordingScrubState?.end ?? null;
     return {
@@ -21682,10 +21730,12 @@ const FrigateViewCard = class extends HTMLElement {
       sourceKey: mediaType === "recording" ? `recording:${clientId}:${cam}:${recordingStart}:${recordingEnd}` : `${mediaType}:${clientId}:${eventId}`,
       mediaType,
       clientId,
-      camera: cam,
+      camera: event?.camera || cam,
       eventId,
       recordingStart,
       recordingEnd,
+      eventRecordingStart: Number.isFinite(Number(event?.start_time)) ? Math.floor(Number(event.start_time)) : null,
+      eventRecordingEnd: Number.isFinite(Number(event?.end_time)) ? Math.ceil(Number(event.end_time)) : null,
       title: `${cap(mediaType || "video")} video`
     };
   }

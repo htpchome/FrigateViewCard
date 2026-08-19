@@ -7,6 +7,8 @@ export function buildFrigateReceiverMediaPath({
   eventId = "",
   recordingStart = null,
   recordingEnd = null,
+  eventRecordingStart = null,
+  eventRecordingEnd = null,
 } = {}) {
   const normalizedType = String(mediaType || "").toLowerCase();
   const encodedClientId = encodePathPart(clientId);
@@ -37,6 +39,21 @@ export function buildFrigateReceiverMediaPath({
     return {
       ok: false,
       message: "Only clips, alerts, kept clips, and recordings can be sent.",
+    };
+  }
+
+  const eventStart = Number(eventRecordingStart);
+  const eventEnd = Number(eventRecordingEnd);
+  if (
+    camera &&
+    Number.isFinite(eventStart) &&
+    Number.isFinite(eventEnd) &&
+    eventEnd > eventStart
+  ) {
+    return {
+      ok: true,
+      path: `/api/frigate/${encodedClientId}/recording/${encodePathPart(camera)}/start/${eventStart}/end/${eventEnd}`,
+      contentType: "video/mp4",
     };
   }
 

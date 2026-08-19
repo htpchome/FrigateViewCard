@@ -5332,6 +5332,7 @@ export class FrigateViewCard extends HTMLElement {
     const { clientId, cam } = this._cc();
     const mediaType = this._popupMediaType;
     const eventId = this._playing?.id || "";
+    const event = eventId ? this._findEventById(eventId) : null;
     const recordingStart =
       this._recordingScrubState?.start ?? this._playing?.rec ?? null;
     const recordingEnd = this._recordingScrubState?.end ?? null;
@@ -5343,10 +5344,16 @@ export class FrigateViewCard extends HTMLElement {
           : `${mediaType}:${clientId}:${eventId}`,
       mediaType,
       clientId,
-      camera: cam,
+      camera: event?.camera || cam,
       eventId,
       recordingStart,
       recordingEnd,
+      eventRecordingStart: Number.isFinite(Number(event?.start_time))
+        ? Math.floor(Number(event.start_time))
+        : null,
+      eventRecordingEnd: Number.isFinite(Number(event?.end_time))
+        ? Math.ceil(Number(event.end_time))
+        : null,
       title: `${cap(mediaType || "video")} video`,
     };
   }

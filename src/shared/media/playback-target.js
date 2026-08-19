@@ -86,21 +86,30 @@ export function ensureGoogleCastFramework({
   googleCastFrameworkPromise = new Promise((resolve) => {
     let settled = false;
     let timeout = null;
+    let readinessPoll = null;
     const previousCallback = windowObj.__onGCastApiAvailable;
     const finish = (available) => {
       if (settled) return;
       settled = true;
       if (timeout) clearTimeout(timeout);
+      if (readinessPoll) clearInterval(readinessPoll);
       if (windowObj.__onGCastApiAvailable === onAvailable) {
         windowObj.__onGCastApiAvailable = previousCallback;
       }
       resolve(Boolean(available));
     };
+    const finishWhenReady = () => {
+      if (configureGoogleCastFramework(windowObj)) finish(true);
+    };
     const onAvailable = (available, errorInfo) => {
       try {
         previousCallback?.(available, errorInfo);
       } catch (_) {}
-      finish(available && configureGoogleCastFramework(windowObj));
+      if (!available) {
+        finish(false);
+        return;
+      }
+      finishWhenReady();
     };
     windowObj.__onGCastApiAvailable = onAvailable;
 
@@ -113,6 +122,8 @@ export function ensureGoogleCastFramework({
       script.addEventListener?.("error", () => finish(false), { once: true });
       documentObj.head.appendChild(script);
     }
+    script.addEventListener?.("load", finishWhenReady, { once: true });
+    readinessPoll = setInterval(finishWhenReady, 100);
     timeout = setTimeout(() => {
       finish(configureGoogleCastFramework(windowObj));
     }, timeoutMs);
@@ -157,8 +168,8 @@ export function promptGoogleCastSource({
       return Promise.resolve(prompt.call(fallbackVideo.remote)).then(
         () => true,
       );
-    } catch (_) {
-      return Promise.resolve(false);
+    } catch (error) {
+      return Promise.reject(error);
     }
   }
 
@@ -176,8 +187,8 @@ export function promptGoogleCastSource({
     return Promise.resolve(sessionRequest).then(() =>
       loadIntoSession(castContext.getCurrentSession()),
     );
-  } catch (_) {
-    return Promise.resolve(false);
+  } catch (error) {
+    return Promise.reject(error);
   }
 }
 
@@ -200,7 +211,11 @@ export function promptAirPlayVideo(video) {
   const prompt = video?.webkitShowPlaybackTargetPicker;
   if (typeof prompt !== "function") return false;
   try {
+    video.muted = true;
     video.load?.();
+    try {
+      video.play?.().catch?.(() => {});
+    } catch (_) {}
     prompt.call(video);
     return true;
   } catch (_) {
@@ -239,6 +254,7 @@ export class BrowserPlaybackTargetController {
     this._sources = new Map();
     this._sourceInFlight = new Map();
     this._videos = new Map();
+    this._supportProbeVideo = null;
     this._castReady = null;
     this._castWarmPromise = null;
   }
@@ -265,8 +281,12 @@ export class BrowserPlaybackTargetController {
         "position:fixed;left:-10000px;top:-10000px;width:1px;height:1px;opacity:0;pointer-events:none";
     }
     const onWirelessTargetChanged = () => {
-      if (video.webkitCurrentPlaybackTargetIsWireless !== true) return;
-      video.play?.().catch?.(() => {});
+      if (video.webkitCurrentPlaybackTargetIsWireless === true) {
+        video.muted = false;
+        video.play?.().catch?.(() => {});
+        return;
+      }
+      this._releaseVideo(scope);
     };
     video.addEventListener?.(
       "webkitcurrentplaybacktargetiswirelesschanged",
@@ -277,8 +297,32 @@ export class BrowserPlaybackTargetController {
     return video;
   }
 
+  _releaseVideo(scope) {
+    const entry = this._videos.get(scope);
+    if (!entry) return;
+    const { video, onWirelessTargetChanged } = entry;
+    video.removeEventListener?.(
+      "webkitcurrentplaybacktargetiswirelesschanged",
+      onWirelessTargetChanged,
+    );
+    try {
+      video.pause?.();
+      video.removeAttribute?.("src");
+      video.load?.();
+    } catch (_) {}
+    video.remove?.();
+    this._videos.delete(scope);
+  }
+
+  _videoForSupportProbe() {
+    if (!this._supportProbeVideo) {
+      this._supportProbeVideo = this._createVideo?.() || null;
+    }
+    return this._supportProbeVideo;
+  }
+
   getSupport() {
-    const video = this._videoForScope("live");
+    const video = this._videoForSupportProbe();
     const support = resolveBrowserPlaybackTargetSupport({
       video,
       windowObj: this._getWindow?.(),
@@ -326,10 +370,7 @@ export class BrowserPlaybackTargetController {
     void this._warmCast();
 
     const cached = this._freshSource(context.sourceKey);
-    if (cached) {
-      configureReceiverVideo(this._videoForScope(scope), cached);
-      return Promise.resolve(cached);
-    }
+    if (cached) return Promise.resolve(cached);
     const current = this._sourceInFlight.get(context.sourceKey);
     if (current) return current;
 
@@ -349,7 +390,6 @@ export class BrowserPlaybackTargetController {
         while (this._sources.size > MAX_CACHED_SOURCES) {
           this._sources.delete(this._sources.keys().next().value);
         }
-        configureReceiverVideo(this._videoForScope(scope), source);
         return source;
       })
       .catch((error) => {
@@ -392,31 +432,31 @@ export class BrowserPlaybackTargetController {
     let result;
     try {
       result = this._promptCast?.(source, video);
-    } catch (_) {
-      result = false;
+    } catch (error) {
+      result = Promise.reject(error);
     }
-    return Promise.resolve(result).then((prompted) => {
-      if (!prompted) {
-        this._onStatus?.("Cast playback is not supported in this browser.");
-      }
-      return Boolean(prompted);
-    });
+    return Promise.resolve(result)
+      .then((prompted) => {
+        if (!prompted) this._onStatus?.("Cast playback could not be started.");
+        return Boolean(prompted);
+      })
+      .catch((error) => {
+        const detail = String(
+          error?.description || error?.code || error?.name || error?.message || "",
+        ).trim();
+        this._onStatus?.(
+          detail
+            ? `Cast playback failed: ${detail}`
+            : "Cast playback failed before the receiver could load the video.",
+        );
+        return false;
+      });
   }
 
   dispose() {
-    for (const { video, onWirelessTargetChanged } of this._videos.values()) {
-      video.removeEventListener?.(
-        "webkitcurrentplaybacktargetiswirelesschanged",
-        onWirelessTargetChanged,
-      );
-      try {
-        video.pause?.();
-        video.removeAttribute?.("src");
-        video.load?.();
-      } catch (_) {}
-      video.remove?.();
-    }
-    this._videos.clear();
+    for (const scope of [...this._videos.keys()]) this._releaseVideo(scope);
+    this._supportProbeVideo?.remove?.();
+    this._supportProbeVideo = null;
     this._sources.clear();
     this._sourceInFlight.clear();
   }

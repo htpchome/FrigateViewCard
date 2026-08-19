@@ -222,6 +222,8 @@ test("AirPlay uses a dedicated prepared video instead of the displayed stream", 
   assert.equal(video.loadCalls, 0);
   assert.equal(promptAirPlayVideo(video), true);
   assert.equal(video.loadCalls, 1);
+  assert.equal(video.playCalls, 1);
+  assert.equal(video.muted, true);
   assert.equal(video.airplayPrompted, true);
 });
 
@@ -269,6 +271,22 @@ test("Frigate stored receiver paths always use MP4", () => {
       ok: true,
       path:
         "/api/frigate/frigate%20main/notifications/event%2F1/clip.mp4",
+      contentType: "video/mp4",
+    },
+  );
+  assert.deepEqual(
+    buildFrigateReceiverMediaPath({
+      mediaType: "clip",
+      clientId: "frigate",
+      camera: "front door",
+      eventId: "event-1",
+      eventRecordingStart: 100,
+      eventRecordingEnd: 200,
+    }),
+    {
+      ok: true,
+      path:
+        "/api/frigate/frigate/recording/front%20door/start/100/end/200",
       contentType: "video/mp4",
     },
   );
@@ -338,6 +356,8 @@ test("controller prewarms sources and prompts without HA media-player services",
   await controller.prepare("live");
   await controller.prepare("live");
   assert.deepEqual(sourceCalls, ["live:camera.front"]);
+  assert.equal(mounted.length, 0);
+  assert.equal(videos.every((video) => video.src === ""), true);
   assert.equal(await controller.prompt(PLAYBACK_TARGET_CAST), true);
   assert.equal(castCalls[0].source.url, "https://ha.local/live:camera.front.mp4");
   assert.equal(castCalls[0].video.src, castCalls[0].source.url);
@@ -355,6 +375,13 @@ test("controller prewarms sources and prompts without HA media-player services",
     "webkitcurrentplaybacktargetiswirelesschanged",
   );
   assert.equal(airplayCalls[0].playCalls, 1);
+  assert.equal(airplayCalls[0].muted, false);
+
+  airplayCalls[0].webkitCurrentPlaybackTargetIsWireless = false;
+  airplayCalls[0].dispatch(
+    "webkitcurrentplaybacktargetiswirelesschanged",
+  );
+  assert.equal(airplayCalls[0].removed, true);
 
   controller.dispose();
   assert.equal(videos.every((video) => video.removed), true);
