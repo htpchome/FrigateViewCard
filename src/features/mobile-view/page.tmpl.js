@@ -152,7 +152,7 @@ export function buildMobileViewMainLayoutShellMarkup({
                 ${regions.live}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                <div class=".mobile-video-controls-container">
+                <div class="mobile-video-controls-container">
                     <div class="button-holder-row mobile-video-controls-left-row">
                     </div>
                     <div class="button-holder-row mobile-microphone-row">
