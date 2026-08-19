@@ -61,10 +61,10 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   }
 
   .card.mobile-view-active .mobile-tab-container{
-  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"left tabs tools";align-items:center;gap:10px;padding:0px 8px;
+  display:grid;grid-template-columns:max-content auto minmax(0, 1fr);grid-template-areas:"tabs middle tools";align-items:center;gap:10px;padding:0px 8px;
   }  
-  .card.mobile-view-active .mobile-left-row{grid-area:left;justify-content:flex-start;}
-  .card.mobile-view-active .mobile-tabs-row{grid-area:tabs;justify-content:center;}
+  .card.mobile-view-active .mobile-left-row{grid-area:tabs;justify-content:flex-start;}
+  .card.mobile-view-active .mobile-tabs-row{grid-area:middle;justify-content:flex-start;}
   .card.mobile-view-active .mobile-tools-row{grid-area:tools;justify-content:flex-end;}
 
   .card.mobile-view-active.mobile-rotate-live .mobile-top,
