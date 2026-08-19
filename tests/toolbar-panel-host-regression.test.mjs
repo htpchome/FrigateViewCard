@@ -125,14 +125,11 @@ test("mobile inline live controls stay visible without overlay reveal binding", 
   );
 });
 
-test("live and popup playback controls delegate to browser target playback", () => {
-  for (const controlId of [
-    "#live-cast-btn",
-    "#popup-cast-btn, #popup-media-cast",
-    "#popup-airplay-btn, #popup-media-airplay",
-  ]) {
-    assert.equal(cardSource.includes(controlId), true);
-  }
+test("popup AirPlay controls delegate to browser target playback", () => {
+  assert.equal(
+    cardSource.includes("#popup-airplay-btn, #popup-media-airplay"),
+    true,
+  );
   assert.equal(
     cardSource.includes("this._playbackTargetController.prompt("),
     true,
@@ -149,23 +146,12 @@ test("live and popup playback controls delegate to browser target playback", () 
     cardSource.includes('this._playbackTargetController.release("popup")'),
     true,
   );
-  assert.equal(
-    cardSource.includes('this._playbackTargetController.release("live")'),
-    true,
-  );
   assert.equal(cardSource.includes("_playbackTargetContext(scope"), true);
   assert.equal(cardSource.includes("camera/stream"), false);
-  assert.equal(
-    cardSource.includes("context.connectionType === \"frigate_go2rtc\""),
-    true,
-  );
-  assert.equal(
-    cardSource.includes("context.connectionType !== \"ha_direct\""),
-    true,
-  );
+  assert.equal(cardSource.includes("context.connectionType"), false);
   assert.equal(
     stylesSource.includes(
-      "grid-template-areas:\"sp1 play progress mute fs cast airplay sp2\"",
+      "grid-template-areas:\"sp1 play progress mute fs airplay sp2\"",
     ),
     true,
   );

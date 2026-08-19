@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1516";
+const VERSION = "1.0.1517";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -92,7 +92,6 @@ const ICONS = {
   airplayVideo: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 22h12l-6-6-6 6M21 3H3c-1.11 0-2 .89-2 2v12c0 1.1.9 2 2 2h4v-2H3V5h18v12h-4v2h4c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2Z"/></svg>',
   live: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>',
   recordings: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>',
-  cast: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 18v3h3c0-1.66-1.34-3-3-3m0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7m2-11C1.89 3 1 3.89 1 5v7h2V5h18v14H10v2h11c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2H3m-2 7v2c4.97 0 9 4.03 9 9h2c0-6.08-4.92-11-11-11Z"/></svg>',
   clips: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8 12.5v-9l6 4.5-6 4.5z"/></svg>',
   snapshot: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.2A3.2 3.2 0 0 1 8.8 12 3.2 3.2 0 0 1 12 8.8 3.2 3.2 0 0 1 15.2 12 3.2 3.2 0 0 1 12 15.2M20 4h-3.17L15 2H9L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/></svg>',
   alerts: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm-1 14l-4-4 1.4-1.4L11 13.2l5.6-5.6L18 9l-7 7z"/></svg>',
@@ -101,6 +100,7 @@ const ICONS = {
   back: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>',
   left: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>',
   right: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m8.59 16.59 1.41 1.41L16 12 10 6 8.59 7.41 13.17 12z"/></svg>',
+  popOut: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m4.264 5.633-.594.804 8.555 6.321.594-.803z"/><path fill-rule="evenodd" d="m14.145 13.557-3.921.211 2.972-4.021z"/><path d="M3.68 2.867A3.185 3.185 0 0 0 .5 6.047v10.641a3.185 3.185 0 0 0 3.18 3.18h11.332A1.5 1.5 0 0 1 15 19.674v-.855H3.68a2.126 2.126 0 0 1-2.133-2.131V6.047A2.127 2.127 0 0 1 3.68 3.914h14.141a2.127 2.127 0 0 1 2.131 2.133V14H21V6.047a3.185 3.185 0 0 0-3.18-3.18z"/><path d="M16.75 14.75h5.325a1 1 0 0 1 1 1v4.174a1 1 0 0 1-1 1H16.75a1 1 0 0 1-1-1V15.75a1 1 0 0 1 1-1z"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>',
   download: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>',
@@ -1188,7 +1188,7 @@ const STYLES = `
   .popup-info-head {margin: 0;font-size: 18px;font-weight: 800;color: var(--c-text2);
     line-height: 1.35;text-transform: uppercase;letter-spacing: .03em;}
   .popup-info-head[hidden] {display: none;}
-  .popup-media-controls {display:grid;grid-template-columns:2px 36px minmax(0,1fr) 36px 36px 36px 36px 2px;grid-template-areas:"sp1 play progress mute fs cast airplay sp2" ". . time . . . . .";align-items:center;column-gap:5px;row-gap:0;padding:1px 4px 2px;border-radius:8px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
+  .popup-media-controls {display:grid;grid-template-columns:2px 36px minmax(0,1fr) 36px 36px 36px 2px;grid-template-areas:"sp1 play progress mute fs airplay sp2" ". . time . . . .";align-items:center;column-gap:5px;row-gap:0;padding:1px 4px 2px;border-radius:8px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}
   .popup-media-controls[hidden] {display:none !important;}
   .popup-media-controls-spacer {width:2px;}
   .popup-media-controls-spacer:first-child {grid-area:sp1;}
@@ -1205,7 +1205,6 @@ const STYLES = `
   .popup-media-btn#popup-media-play {grid-area:play;}
   .popup-media-btn#popup-media-mute {grid-area:mute;}
   .popup-media-btn#popup-media-fs {grid-area:fs;}
-  .popup-media-btn#popup-media-cast {grid-area:cast;}
   .popup-media-btn#popup-media-airplay {grid-area:airplay;}
   .card.mobile-rotate-popup .popup-media-controls,
   .card.mobile-rotate-popup-exit .popup-media-controls {position:fixed;left:10px;right:10px;bottom:1px;width:auto;z-index:1406;background:var(--c-bg-panel);opacity:.62;backdrop-filter:blur(3px);transition:opacity .22s ease;}
@@ -3770,7 +3769,6 @@ function buildLiveEngineWrapMarkup({ icons }) {
 function buildLiveFullscreenControlMarkup({ icons }) {
   return `<div class="live-playback-controls" data-fvc-region="live-fullscreen">
     <button class="glass-btn live-playback-btn live-fs-btn" id="live-fs-btn" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
-    <button class="glass-btn live-playback-btn live-cast-btn" id="live-cast-btn" title="Cast live video" aria-label="Cast live video" hidden>${icons.cast}</button>
   </div>`;
 }
 function buildLiveMuteControlMarkup({ icons, streamMuted }) {
@@ -4000,7 +3998,7 @@ function buildPopupShellMarkup({ icons, version }) {
             <div class="popup-header"></div>          
             <div class="popup-body">
               <div class="viewer" id="viewer" style="display:none"></div>
-              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button><button class="popup-media-btn" id="popup-media-cast" type="button" title="Cast video" aria-label="Cast video" hidden>${icons.cast}</button><button class="popup-media-btn" id="popup-media-airplay" type="button" title="AirPlay video" aria-label="AirPlay video" hidden>${icons.airplayVideo}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
+              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button><button class="popup-media-btn" id="popup-media-airplay" type="button" title="AirPlay video" aria-label="AirPlay video" hidden>${icons.airplayVideo}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
               </div>
               <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
                 <div class="recording-scrub" id="recording-scrub" hidden>
@@ -4272,11 +4270,6 @@ const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
   const encClient = encodeURIComponent(clientId);
   const encCam = encodeURIComponent(cam);
   return [`/api/frigate/${encClient}/go2rtc/api/stream.m3u8?src=${encCam}&mp4`];
-};
-const buildGo2rtcReceiverMp4Path = ({ clientId, cam }) => {
-  const encClient = encodeURIComponent(clientId);
-  const encCam = encodeURIComponent(cam);
-  return `/api/frigate/${encClient}/go2rtc/api/stream.mp4?src=${encCam}&video=h264&audio=aac`;
 };
 
 // src/integrations/frigate/camera-context.js
@@ -4846,37 +4839,10 @@ function createGo2RtcResolver({
     hlsProbeInFlight.set(cacheKey, probePromise);
     return probePromise;
   };
-  const receiverSourceForEntity = async (entity = "") => {
-    const state = await resolveTransportStateForEntity(entity);
-    if (!state) return null;
-    const path = buildGo2rtcReceiverMp4Path(state);
-    let signedPath = "";
-    try {
-      const result = await getHass()?.callWS?.({
-        type: "auth/sign_path",
-        path,
-        expires: 3600
-      });
-      signedPath = String(result?.path || "").trim();
-    } catch (_) {
-      return null;
-    }
-    if (!signedPath) return null;
-    return {
-      url: resolveAbsoluteSignedPath({
-        signedPath,
-        origin: getOrigin()
-      }),
-      contentType: "video/mp4",
-      streamType: "LIVE",
-      ttlMs: 55 * 60 * 1e3
-    };
-  };
   return {
     resolveMountRequest,
     websocketUrlForEntity,
-    hlsUrlForEntity,
-    receiverSourceForEntity
+    hlsUrlForEntity
   };
 }
 
@@ -6882,178 +6848,16 @@ function attachVideoZoom(video, options = {}) {
 }
 
 // src/shared/media/playback-target.js
-const PLAYBACK_TARGET_CAST = "cast";
 const PLAYBACK_TARGET_AIRPLAY = "airplay";
-const GOOGLE_CAST_SCRIPT_ID = "fvc-google-cast-sender";
-const GOOGLE_CAST_SCRIPT_URL = "https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1";
 const DEFAULT_SOURCE_TTL_MS = 5 * 60 * 1e3;
 const MAX_CACHED_SOURCES = 12;
-const googleCastFrameworkState = { promise: null };
-const isAppleMobileBrowser = (navigatorObj) => {
-  const userAgent = String(navigatorObj?.userAgent || "");
-  const platform = String(
-    navigatorObj?.userAgentData?.platform || navigatorObj?.platform || ""
-  );
-  const maxTouchPoints = Number(navigatorObj?.maxTouchPoints || 0);
-  return /iPad|iPhone|iPod|iOS/i.test(userAgent) || /iPad|iPhone|iPod|iOS/i.test(platform) || /Mac/i.test(platform) && maxTouchPoints > 1;
-};
-const isMicrosoftEdgeBrowser = (navigatorObj) => /Edg(?:A|iOS)?\//i.test(String(navigatorObj?.userAgent || ""));
-const googleCastEnvironment = (windowObj) => {
-  const framework = windowObj?.cast?.framework;
-  const media = windowObj?.chrome?.cast?.media;
-  if (!framework?.CastContext || !media?.MediaInfo || !media?.LoadRequest) {
-    return null;
-  }
-  return {
-    framework,
-    media,
-    chromeCast: windowObj.chrome.cast
-  };
-};
 function resolveBrowserPlaybackTargetSupport({
   video = null,
-  windowObj = globalThis.window,
-  navigatorObj = globalThis.navigator,
-  castFrameworkReady = null
+  windowObj = globalThis.window
 } = {}) {
-  const airplay = typeof video?.webkitShowPlaybackTargetPicker === "function" || typeof windowObj?.HTMLVideoElement?.prototype?.webkitShowPlaybackTargetPicker === "function";
-  const castBrowserSupported = !isAppleMobileBrowser(navigatorObj) && !isMicrosoftEdgeBrowser(navigatorObj);
-  const frameworkAvailable = !!googleCastEnvironment(windowObj);
-  const likelyCastBrowser = castBrowserSupported && !!windowObj?.chrome;
   return {
-    airplay,
-    cast: castBrowserSupported && (frameworkAvailable || castFrameworkReady !== false && likelyCastBrowser),
-    frameworkAvailable,
-    likelyCastBrowser
+    airplay: typeof video?.webkitShowPlaybackTargetPicker === "function" || typeof windowObj?.HTMLVideoElement?.prototype?.webkitShowPlaybackTargetPicker === "function"
   };
-}
-function configureGoogleCastFramework(windowObj = globalThis.window) {
-  const env = googleCastEnvironment(windowObj);
-  if (!env) return false;
-  try {
-    env.framework.CastContext.getInstance().setOptions({
-      receiverApplicationId: env.chromeCast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
-      autoJoinPolicy: env.chromeCast.AutoJoinPolicy.ORIGIN_SCOPED
-    });
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-function ensureGoogleCastFramework({
-  windowObj = globalThis.window,
-  documentObj = globalThis.document,
-  timeoutMs = 8e3
-} = {}) {
-  const navigatorObj = windowObj?.navigator;
-  if (isAppleMobileBrowser(navigatorObj) || isMicrosoftEdgeBrowser(navigatorObj)) {
-    return Promise.resolve(false);
-  }
-  if (configureGoogleCastFramework(windowObj)) {
-    return Promise.resolve(true);
-  }
-  const support = resolveBrowserPlaybackTargetSupport({
-    windowObj,
-    navigatorObj: windowObj?.navigator,
-    castFrameworkReady: null
-  });
-  if (!support.likelyCastBrowser || !documentObj?.head) {
-    return Promise.resolve(false);
-  }
-  if (googleCastFrameworkState.promise) {
-    return googleCastFrameworkState.promise;
-  }
-  googleCastFrameworkState.promise = new Promise((resolve) => {
-    let settled = false;
-    let timeout = null;
-    let readinessPoll = null;
-    const previousCallback = windowObj.__onGCastApiAvailable;
-    const finish = (available) => {
-      if (settled) return;
-      settled = true;
-      if (timeout) clearTimeout(timeout);
-      if (readinessPoll) clearInterval(readinessPoll);
-      if (windowObj.__onGCastApiAvailable === onAvailable) {
-        windowObj.__onGCastApiAvailable = previousCallback;
-      }
-      resolve(Boolean(available));
-    };
-    const finishWhenReady = () => {
-      if (configureGoogleCastFramework(windowObj)) finish(true);
-    };
-    const onAvailable = (available, errorInfo) => {
-      try {
-        previousCallback?.(available, errorInfo);
-      } catch (_) {
-      }
-      if (!available) {
-        finish(false);
-        return;
-      }
-      finishWhenReady();
-    };
-    windowObj.__onGCastApiAvailable = onAvailable;
-    let script = documentObj.getElementById?.(GOOGLE_CAST_SCRIPT_ID);
-    if (!script) {
-      script = documentObj.createElement("script");
-      script.id = GOOGLE_CAST_SCRIPT_ID;
-      script.async = true;
-      script.src = GOOGLE_CAST_SCRIPT_URL;
-      script.addEventListener?.("error", () => finish(false), { once: true });
-      documentObj.head.appendChild(script);
-    }
-    script.addEventListener?.("load", finishWhenReady, { once: true });
-    readinessPoll = setInterval(finishWhenReady, 100);
-    timeout = setTimeout(() => {
-      finish(configureGoogleCastFramework(windowObj));
-    }, timeoutMs);
-  });
-  return googleCastFrameworkState.promise;
-}
-function buildGoogleCastLoadRequest({
-  source,
-  windowObj = globalThis.window
-} = {}) {
-  const env = googleCastEnvironment(windowObj);
-  if (!env || !source?.url) return null;
-  const mediaInfo = new env.media.MediaInfo(
-    source.url,
-    source.contentType || "video/mp4"
-  );
-  if (source.streamType && env.media.StreamType?.[source.streamType]) {
-    mediaInfo.streamType = env.media.StreamType[source.streamType];
-  }
-  if (source.title && env.media.GenericMediaMetadata) {
-    const metadata = new env.media.GenericMediaMetadata();
-    metadata.title = source.title;
-    mediaInfo.metadata = metadata;
-  }
-  const request = new env.media.LoadRequest(mediaInfo);
-  request.autoplay = true;
-  return request;
-}
-function promptGoogleCastSource({
-  source,
-  windowObj = globalThis.window
-} = {}) {
-  const env = googleCastEnvironment(windowObj);
-  if (!env) return Promise.resolve(false);
-  const castContext = env.framework.CastContext.getInstance();
-  const loadIntoSession = (session) => {
-    const request = buildGoogleCastLoadRequest({ source, windowObj });
-    if (!session || !request) return false;
-    return Promise.resolve(session.loadMedia(request)).then(() => true);
-  };
-  const currentSession = castContext.getCurrentSession();
-  if (currentSession) return loadIntoSession(currentSession);
-  try {
-    const sessionRequest = castContext.requestSession();
-    return Promise.resolve(sessionRequest).then(
-      () => loadIntoSession(castContext.getCurrentSession())
-    );
-  } catch (error) {
-    return Promise.reject(error);
-  }
 }
 function configureReceiverVideo(video, source) {
   if (!video || !source?.url) return false;
@@ -7080,20 +6884,27 @@ function promptAirPlayVideo(video) {
     return false;
   }
 }
+function clearBrowserMediaSession(navigatorObj = globalThis.navigator) {
+  const mediaSession = navigatorObj?.mediaSession;
+  if (!mediaSession) return false;
+  try {
+    mediaSession.playbackState = "none";
+    mediaSession.metadata = null;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 const BrowserPlaybackTargetController = class {
   constructor({
     getContext,
     resolveSource,
     getMount,
     createVideo = () => globalThis.document?.createElement?.("video"),
-    prepareCast = () => ensureGoogleCastFramework(),
-    promptCast = (source) => promptGoogleCastSource({ source }),
     promptAirPlay = (video) => promptAirPlayVideo(video),
     getWindow = () => globalThis.window,
     getNavigator = () => globalThis.navigator,
     getNowMs = () => Date.now(),
-    onSupportChange = () => {
-    },
     onStatus = () => {
     }
   } = {}) {
@@ -7101,19 +6912,14 @@ const BrowserPlaybackTargetController = class {
     this._resolveSource = resolveSource;
     this._getMount = getMount;
     this._createVideo = createVideo;
-    this._prepareCast = prepareCast;
-    this._promptCast = promptCast;
     this._promptAirPlay = promptAirPlay;
     this._getWindow = getWindow;
     this._getNavigator = getNavigator;
     this._getNowMs = getNowMs;
-    this._onSupportChange = onSupportChange;
     this._onStatus = onStatus;
     this._sources = new Map();
     this._sourceInFlight = new Map();
     this._videos = new Map();
-    this._castReady = null;
-    this._castWarmPromise = null;
   }
   _contextForScope(scope) {
     const context = this._getContext?.(scope) || {};
@@ -7167,6 +6973,7 @@ const BrowserPlaybackTargetController = class {
   _releaseVideo(scope) {
     const entry = this._videos.get(scope);
     if (!entry) return;
+    const wasWireless = entry.video.webkitCurrentPlaybackTargetIsWireless === true;
     const {
       video,
       onWirelessTargetChanged,
@@ -7185,39 +6992,21 @@ const BrowserPlaybackTargetController = class {
       video.pause?.();
       video.disableRemotePlayback = true;
       video.setAttribute?.("x-webkit-airplay", "deny");
+      if ("srcObject" in video) video.srcObject = null;
       video.removeAttribute?.("src");
       video.load?.();
     } catch (_) {
     }
     video.remove?.();
     this._videos.delete(scope);
+    if (wasWireless) {
+      clearBrowserMediaSession(this._getNavigator?.());
+    }
   }
   getSupport() {
-    const support = resolveBrowserPlaybackTargetSupport({
-      windowObj: this._getWindow?.(),
-      navigatorObj: this._getNavigator?.(),
-      castFrameworkReady: this._castReady
+    return resolveBrowserPlaybackTargetSupport({
+      windowObj: this._getWindow?.()
     });
-    return {
-      airplay: support.airplay,
-      cast: support.cast
-    };
-  }
-  _emitSupport() {
-    this._onSupportChange?.(this.getSupport());
-  }
-  _warmCast() {
-    if (this._castWarmPromise) return this._castWarmPromise;
-    this._castWarmPromise = Promise.resolve(this._prepareCast?.()).then((ready) => {
-      this._castReady = Boolean(ready);
-      this._emitSupport();
-      return this._castReady;
-    }).catch(() => {
-      this._castReady = false;
-      this._emitSupport();
-      return false;
-    });
-    return this._castWarmPromise;
   }
   _freshSource(sourceKey) {
     const entry = this._sources.get(sourceKey);
@@ -7227,10 +7016,9 @@ const BrowserPlaybackTargetController = class {
     }
     return entry.source;
   }
-  prepare(scope = "live", { notifyErrors = false } = {}) {
+  prepare(scope = "popup", { notifyErrors = false } = {}) {
     const context = this._contextForScope(scope);
     if (!context) return Promise.resolve(null);
-    void this._warmCast();
     const cached = this._freshSource(context.sourceKey);
     if (cached) return Promise.resolve(cached);
     const current = this._sourceInFlight.get(context.sourceKey);
@@ -7262,44 +7050,24 @@ const BrowserPlaybackTargetController = class {
     this._sourceInFlight.set(context.sourceKey, pending);
     return pending;
   }
-  prompt(target, { scope = "live" } = {}) {
+  prompt(target, { scope = "popup" } = {}) {
+    if (target !== PLAYBACK_TARGET_AIRPLAY) return Promise.resolve(false);
     const context = this._contextForScope(scope);
     const source = context ? this._freshSource(context.sourceKey) : null;
     if (!source) {
       void this.prepare(scope, { notifyErrors: true });
       this._onStatus?.(
-        `Preparing video for ${target === PLAYBACK_TARGET_AIRPLAY ? "AirPlay" : "Cast"}. Tap again in a moment.`
+        "Preparing video for AirPlay. Tap again in a moment."
       );
       return Promise.resolve(false);
     }
-    if (target === PLAYBACK_TARGET_AIRPLAY) {
-      const video = this._videoForScope(scope);
-      configureReceiverVideo(video, source);
-      const prompted = this._promptAirPlay?.(video) === true;
-      if (!prompted) {
-        this._onStatus?.("AirPlay is not supported in this browser.");
-      }
-      return Promise.resolve(prompted);
+    const video = this._videoForScope(scope);
+    configureReceiverVideo(video, source);
+    const prompted = this._promptAirPlay?.(video) === true;
+    if (!prompted) {
+      this._onStatus?.("AirPlay is not supported in this browser.");
     }
-    if (target !== PLAYBACK_TARGET_CAST) return Promise.resolve(false);
-    let result;
-    try {
-      result = this._promptCast?.(source);
-    } catch (error) {
-      result = Promise.reject(error);
-    }
-    return Promise.resolve(result).then((prompted) => {
-      if (!prompted) this._onStatus?.("Cast playback could not be started.");
-      return Boolean(prompted);
-    }).catch((error) => {
-      const detail = String(
-        error?.description || error?.code || error?.name || error?.message || ""
-      ).trim();
-      this._onStatus?.(
-        detail ? `Cast playback failed: ${detail}` : "Cast playback failed before the receiver could load the video."
-      );
-      return false;
-    });
+    return Promise.resolve(prompted);
   }
   release(scope = "") {
     if (scope) {
@@ -7382,45 +7150,6 @@ function resolveAbsoluteReceiverSourceUrl(sourceUrl = "", baseUrl = "") {
     return new URL(normalized, baseUrl).href;
   } catch (_) {
     return "";
-  }
-}
-async function resolveHomeAssistantCameraHlsSource({
-  hass,
-  cameraEntity = "",
-  baseUrl = ""
-} = {}) {
-  if (!cameraEntity || typeof hass?.callWS !== "function") {
-    return {
-      ok: false,
-      message: "The active Home Assistant camera is not available."
-    };
-  }
-  try {
-    const result = await hass.callWS({
-      type: "camera/stream",
-      entity_id: cameraEntity,
-      format: "hls"
-    });
-    const streamUrl = typeof result === "string" ? result : result?.url || result?.path || "";
-    const url = resolveAbsoluteReceiverSourceUrl(streamUrl, baseUrl);
-    if (!url) {
-      return {
-        ok: false,
-        message: "Home Assistant did not return a receiver-safe HLS URL."
-      };
-    }
-    return {
-      ok: true,
-      url,
-      contentType: "application/vnd.apple.mpegurl",
-      streamType: "LIVE",
-      ttlMs: 4 * 60 * 1e3
-    };
-  } catch (_) {
-    return {
-      ok: false,
-      message: "Home Assistant could not prepare the live HLS stream."
-    };
   }
 }
 
@@ -17733,7 +17462,6 @@ const FrigateViewCard = class extends HTMLElement {
       getContext: (scope) => this._playbackTargetContext(scope),
       resolveSource: (context) => this._resolvePlaybackTargetSource(context),
       getMount: () => this.shadowRoot,
-      onSupportChange: () => this._syncPlaybackTargetButtons(),
       onStatus: (message) => this._toast(message)
     });
     this._viewportContextController = new ViewportContextController(this);
@@ -18837,8 +18565,6 @@ const FrigateViewCard = class extends HTMLElement {
     if (uiPlan.showPopupControls) this._showPopupControlsTemporarily();
   }
   async _mountEngine(forcedType = null, options = {}) {
-    void this._playbackTargetController.prepare("live");
-    this._syncPlaybackTargetButtons();
     return this._liveMountController.mount({
       forcedType,
       quiet: options?.quiet === true,
@@ -19249,7 +18975,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _syncPlaybackTargetButtons() {
     const support = this._playbackTargetController?.getSupport?.() || {
-      cast: false,
       airplay: false
     };
     const sync = (selector, supported, fallbackTitle) => {
@@ -19262,11 +18987,6 @@ const FrigateViewCard = class extends HTMLElement {
         button.title = baseTitle;
       });
     };
-    sync(
-      "#live-cast-btn, #popup-cast-btn, #popup-media-cast",
-      support.cast,
-      "Cast video"
-    );
     sync(
       "#popup-airplay-btn, #popup-media-airplay",
       support.airplay,
@@ -19428,7 +19148,6 @@ const FrigateViewCard = class extends HTMLElement {
   async _switchCamera(idx, opts = {}) {
     if (idx !== this._activeCamIdx) {
       void this._stopTwoWayTalkSession();
-      this._playbackTargetController.release("live");
     }
     this._mobileCamSwitcherOpen = false;
     const source = String(opts?.source || "manual");
@@ -20646,12 +20365,6 @@ const FrigateViewCard = class extends HTMLElement {
       this._fullscreen(this._$("#live-stage"), { preferLive: true });
       return true;
     }
-    if (target.closest("#live-cast-btn")) {
-      void this._playbackTargetController.prompt(PLAYBACK_TARGET_CAST, {
-        scope: "live"
-      });
-      return true;
-    }
     return false;
   }
   _handleBrowseToolbarClick(target) {
@@ -20698,13 +20411,6 @@ const FrigateViewCard = class extends HTMLElement {
   _handlePopupMediaToolbarClick(target) {
     if (target.closest("#popup-fs-btn")) {
       this._fullscreen(this._$("#viewer"));
-      return true;
-    }
-    if (target.closest("#popup-cast-btn, #popup-media-cast")) {
-      void this._playbackTargetController.prompt(PLAYBACK_TARGET_CAST, {
-        scope: "popup"
-      });
-      this._showPopupControlsTemporarily();
       return true;
     }
     if (target.closest("#popup-airplay-btn, #popup-media-airplay")) {
@@ -21490,7 +21196,6 @@ const FrigateViewCard = class extends HTMLElement {
     };
     addButton("popup-fs-btn", label, ICONS.expand);
     if (this._isPopupVideoMediaType(kind)) {
-      addButton("popup-cast-btn", "Cast video", ICONS.cast, true);
       addButton("popup-airplay-btn", "AirPlay video", ICONS.airplayVideo, true);
     }
     this._syncPlaybackTargetButtons();
@@ -21758,18 +21463,8 @@ const FrigateViewCard = class extends HTMLElement {
   _receiverPlaybackBaseUrl() {
     return this._hass?.config?.internal_url || this._hass?.config?.external_url || this._hass?.hassUrl?.("/") || (typeof window !== "undefined" ? window.location.href : "");
   }
-  _playbackTargetContext(scope = "live") {
-    if (scope === "live") {
-      const cameraEntity = this._activeCam?.entity || "";
-      const connectionType = this._cameraConnectionType(cameraEntity);
-      return {
-        scope,
-        sourceKey: `live:${connectionType}:${cameraEntity}`,
-        cameraEntity,
-        connectionType,
-        title: camDisplayName(this._activeCam || {})
-      };
-    }
+  _playbackTargetContext(scope = "popup") {
+    if (scope !== "popup") return null;
     const { clientId, cam } = this._cc();
     const mediaType = this._popupMediaType;
     const eventId = this._playing?.id || "";
@@ -21791,29 +21486,6 @@ const FrigateViewCard = class extends HTMLElement {
     };
   }
   async _resolvePlaybackTargetSource(context = {}) {
-    if (context.scope === "live") {
-      if (context.connectionType === "frigate_go2rtc") {
-        const source2 = await this._go2rtcResolver.receiverSourceForEntity(
-          context.cameraEntity
-        );
-        return source2?.url ? { ok: true, ...source2, title: context.title } : {
-          ok: false,
-          message: "Frigate go2rtc could not prepare receiver-compatible live video."
-        };
-      }
-      if (context.connectionType !== "ha_direct") {
-        return {
-          ok: false,
-          message: "The configured live transport is not supported."
-        };
-      }
-      const source = await resolveHomeAssistantCameraHlsSource({
-        hass: this._hass,
-        cameraEntity: context.cameraEntity,
-        baseUrl: this._receiverPlaybackBaseUrl()
-      });
-      return source.ok ? { ...source, title: context.title } : source;
-    }
     const media = buildFrigateReceiverMediaPath(context);
     if (!media.ok) return media;
     const signedPath = await this._signed(media.path);

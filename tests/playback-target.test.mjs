@@ -4,25 +4,19 @@ import assert from "node:assert/strict";
 import {
   BrowserPlaybackTargetController,
   PLAYBACK_TARGET_AIRPLAY,
-  PLAYBACK_TARGET_CAST,
-  buildGoogleCastLoadRequest,
-  configureGoogleCastFramework,
   configureReceiverVideo,
   promptAirPlayVideo,
-  promptGoogleCastSource,
   resolveBrowserPlaybackTargetSupport,
 } from "../src/shared/media/playback-target.js";
 import { buildFrigateReceiverMediaPath } from "../src/integrations/frigate/receiver-media.js";
-import {
-  resolveAbsoluteReceiverSourceUrl,
-  resolveHomeAssistantCameraHlsSource,
-} from "../src/integrations/home-assistant/receiver-source.js";
+import { resolveAbsoluteReceiverSourceUrl } from "../src/integrations/home-assistant/receiver-source.js";
 
 function createFakeVideo({ airplay = false } = {}) {
   const attributes = new Map();
   const listeners = new Map();
   const video = {
     src: "",
+    srcObject: { active: true },
     preload: "",
     controls: true,
     playsInline: false,
@@ -73,123 +67,14 @@ function createFakeVideo({ airplay = false } = {}) {
   return video;
 }
 
-function createCastWindow() {
-  const calls = {
-    options: [],
-    loads: [],
-    sessions: 0,
-  };
-  class MediaInfo {
-    constructor(contentId, contentType) {
-      this.contentId = contentId;
-      this.contentType = contentType;
-    }
-  }
-  class LoadRequest {
-    constructor(mediaInfo) {
-      this.mediaInfo = mediaInfo;
-      this.autoplay = false;
-    }
-  }
-  class GenericMediaMetadata {}
-  const session = {
-    loadMedia: async (request) => {
-      calls.loads.push(request);
-    },
-  };
-  const castContext = {
-    setOptions: (options) => calls.options.push(options),
-    getCurrentSession: () => session,
-    requestSession: async () => {
-      calls.sessions += 1;
-    },
-  };
-  const windowObj = {
-    cast: {
-      framework: {
-        CastContext: {
-          getInstance: () => castContext,
-        },
-      },
-    },
-    chrome: {
-      cast: {
-        AutoJoinPolicy: { ORIGIN_SCOPED: "origin" },
-        media: {
-          DEFAULT_MEDIA_RECEIVER_APP_ID: "default-app",
-          GenericMediaMetadata,
-          LoadRequest,
-          MediaInfo,
-          StreamType: { LIVE: "LIVE" },
-        },
-      },
-    },
-  };
-  return { windowObj, calls, session };
-}
-
-test("browser target support separates Cast and AirPlay capabilities", () => {
+test("browser target support detects AirPlay capability", () => {
   const airplayVideo = createFakeVideo({ airplay: true });
   assert.deepEqual(
     resolveBrowserPlaybackTargetSupport({
       video: airplayVideo,
       windowObj: {},
-      navigatorObj: { userAgent: "iPhone" },
-      castFrameworkReady: false,
     }),
-    {
-      airplay: true,
-      cast: false,
-      frameworkAvailable: false,
-      likelyCastBrowser: false,
-    },
-  );
-
-  assert.equal(
-    resolveBrowserPlaybackTargetSupport({
-      video: createFakeVideo(),
-      windowObj: { chrome: {} },
-      navigatorObj: { userAgent: "Chrome" },
-      castFrameworkReady: false,
-    }).cast,
-    false,
-  );
-  assert.equal(
-    resolveBrowserPlaybackTargetSupport({
-      windowObj: createCastWindow().windowObj,
-      navigatorObj: {
-        userAgent: "Home Assistant/2026.8 (iOS 18.6)",
-        platform: "iPhone",
-        maxTouchPoints: 5,
-      },
-    }).cast,
-    false,
-  );
-  assert.equal(
-    resolveBrowserPlaybackTargetSupport({
-      windowObj: createCastWindow().windowObj,
-      navigatorObj: {
-        userAgent: "Mozilla/5.0 (Macintosh) Version/18.0 Mobile/15E148",
-        platform: "MacIntel",
-        maxTouchPoints: 5,
-      },
-    }).cast,
-    false,
-  );
-  assert.equal(
-    resolveBrowserPlaybackTargetSupport({
-      windowObj: { chrome: {} },
-      navigatorObj: { userAgent: "Mozilla/5.0 Edg/140.0" },
-    }).cast,
-    false,
-  );
-  const { windowObj: edgeCastWindow } = createCastWindow();
-  assert.equal(
-    resolveBrowserPlaybackTargetSupport({
-      windowObj: edgeCastWindow,
-      navigatorObj: { userAgent: "Mozilla/5.0 Edg/140.0" },
-    }).cast,
-    false,
+    { airplay: true },
   );
   assert.equal(
     resolveBrowserPlaybackTargetSupport({
@@ -198,42 +83,13 @@ test("browser target support separates Cast and AirPlay capabilities", () => {
           prototype: { webkitShowPlaybackTargetPicker() {} },
         },
       },
-      navigatorObj: { userAgent: "iPhone" },
-      castFrameworkReady: false,
     }).airplay,
     true,
   );
-});
-
-test("Google Cast request uses the default receiver and receiver media URL", async () => {
-  const { windowObj, calls } = createCastWindow();
-  assert.equal(configureGoogleCastFramework(windowObj), true);
-  assert.deepEqual(calls.options, [
-    {
-      receiverApplicationId: "default-app",
-      autoJoinPolicy: "origin",
-    },
-  ]);
-
-  const source = {
-    url: "https://ha.local/api/hls/token/playlist.m3u8",
-    contentType: "application/vnd.apple.mpegurl",
-    streamType: "LIVE",
-    title: "Front Door",
-  };
-  const request = buildGoogleCastLoadRequest({ source, windowObj });
-  assert.equal(request.mediaInfo.contentId, source.url);
-  assert.equal(request.mediaInfo.contentType, source.contentType);
-  assert.equal(request.mediaInfo.streamType, "LIVE");
-  assert.equal(request.mediaInfo.metadata.title, "Front Door");
-  assert.equal(request.autoplay, true);
-
   assert.equal(
-    await promptGoogleCastSource({ source, windowObj }),
-    true,
+    resolveBrowserPlaybackTargetSupport({ windowObj: {} }).airplay,
+    false,
   );
-  assert.equal(calls.loads.length, 1);
-  assert.equal(calls.loads[0].mediaInfo.contentId, source.url);
 });
 
 test("AirPlay uses a dedicated prepared video instead of the displayed stream", () => {
@@ -255,35 +111,12 @@ test("AirPlay uses a dedicated prepared video instead of the displayed stream", 
   assert.equal(video.airplayPrompted, true);
 });
 
-test("Home Assistant camera stream returns receiver-addressable HLS", async () => {
-  const calls = [];
-  const source = await resolveHomeAssistantCameraHlsSource({
-    hass: {
-      callWS: async (message) => {
-        calls.push(message);
-        return { url: "/api/hls/token/playlist.m3u8" };
-      },
-    },
-    cameraEntity: "camera.front",
-    baseUrl: "https://ha.local/lovelace/cameras",
-  });
-
-  assert.deepEqual(calls, [
-    {
-      type: "camera/stream",
-      entity_id: "camera.front",
-      format: "hls",
-    },
-  ]);
-  assert.deepEqual(source, {
-    ok: true,
-    url: "https://ha.local/api/hls/token/playlist.m3u8",
-    contentType: "application/vnd.apple.mpegurl",
-    streamType: "LIVE",
-    ttlMs: 240000,
-  });
+test("receiver URL resolution rejects browser-local blobs", () => {
   assert.equal(
-    resolveAbsoluteReceiverSourceUrl("blob:browser-only", "https://ha.local"),
+    resolveAbsoluteReceiverSourceUrl(
+      "blob:browser-only",
+      "https://ha.local",
+    ),
     "",
   );
 });
@@ -335,24 +168,20 @@ test("Frigate stored receiver paths always use MP4", () => {
   );
 });
 
-test("controller prewarms sources and prompts without HA media-player services", async () => {
+test("controller prewarms popup AirPlay and tears down its wireless media session", async () => {
   const videos = [];
   const mounted = [];
-  const castCalls = [];
   const airplayCalls = [];
   const sourceCalls = [];
-  const contexts = {
-    live: {
-      sourceKey: "live:camera.front",
-      cameraEntity: "camera.front",
-    },
-    popup: {
-      sourceKey: "clip:frigate:event-1",
-      eventId: "event-1",
-    },
+  const mediaSession = {
+    playbackState: "playing",
+    metadata: { title: "Clip" },
   };
   const controller = new BrowserPlaybackTargetController({
-    getContext: (scope) => contexts[scope],
+    getContext: () => ({
+      sourceKey: "clip:frigate:event-1",
+      eventId: "event-1",
+    }),
     resolveSource: async (context) => {
       sourceCalls.push(context.sourceKey);
       return {
@@ -368,34 +197,27 @@ test("controller prewarms sources and prompts without HA media-player services",
       videos.push(video);
       return video;
     },
-    prepareCast: async () => true,
-    promptCast: async (source) => {
-      castCalls.push({ source });
-      return true;
-    },
     promptAirPlay: (video) => {
       airplayCalls.push(video);
       return true;
     },
-    getWindow: () => ({ chrome: {} }),
-    getNavigator: () => ({ userAgent: "Chrome" }),
+    getWindow: () => ({}),
+    getNavigator: () => ({ mediaSession }),
   });
 
-  await controller.prepare("live");
-  await controller.prepare("live");
-  assert.deepEqual(sourceCalls, ["live:camera.front"]);
+  await controller.prepare("popup");
+  await controller.prepare("popup");
+  assert.deepEqual(sourceCalls, ["clip:frigate:event-1"]);
   assert.equal(mounted.length, 0);
   assert.equal(videos.length, 0);
-  assert.equal(await controller.prompt(PLAYBACK_TARGET_CAST), true);
-  assert.equal(castCalls[0].source.url, "https://ha.local/live:camera.front.mp4");
-  assert.equal(mounted.length, 0);
-
-  await controller.prepare("popup");
   assert.equal(
     await controller.prompt(PLAYBACK_TARGET_AIRPLAY, { scope: "popup" }),
     true,
   );
-  assert.equal(airplayCalls[0].src, "https://ha.local/clip:frigate:event-1.mp4");
+  assert.equal(
+    airplayCalls[0].src,
+    "https://ha.local/clip:frigate:event-1.mp4",
+  );
   assert.equal(mounted.length, 1);
 
   airplayCalls[0].webkitCurrentPlaybackTargetIsWireless = true;
@@ -406,40 +228,38 @@ test("controller prewarms sources and prompts without HA media-player services",
   airplayCalls[0].dispatch("canplay");
   assert.equal(airplayCalls[0].playCalls, 2);
 
-  airplayCalls[0].webkitCurrentPlaybackTargetIsWireless = false;
-  airplayCalls[0].dispatch(
-    "webkitcurrentplaybacktargetiswirelesschanged",
-  );
+  controller.release("popup");
   assert.equal(airplayCalls[0].removed, true);
   assert.equal(airplayCalls[0].disableRemotePlayback, true);
+  assert.equal(airplayCalls[0].srcObject, null);
   assert.equal(
     airplayCalls[0].getAttribute("x-webkit-airplay"),
     "deny",
   );
+  assert.equal(mediaSession.playbackState, "none");
+  assert.equal(mediaSession.metadata, null);
 
   controller.dispose();
   assert.equal(videos.every((video) => video.removed), true);
 });
 
-test("controller reports preparation and unsupported playback states", async () => {
+test("controller reports AirPlay source preparation failures", async () => {
   const statuses = [];
   const controller = new BrowserPlaybackTargetController({
-    getContext: () => ({ sourceKey: "live:camera.front" }),
+    getContext: () => ({ sourceKey: "clip:frigate:event-1" }),
     resolveSource: async () => ({
-      message: "Live HLS is unavailable.",
+      message: "AirPlay video is unavailable.",
     }),
     createVideo: () => createFakeVideo(),
-    prepareCast: async () => false,
-    promptCast: async () => false,
     onStatus: (message) => statuses.push(message),
   });
 
   assert.equal(
-    await controller.prompt(PLAYBACK_TARGET_CAST),
+    await controller.prompt(PLAYBACK_TARGET_AIRPLAY, { scope: "popup" }),
     false,
   );
-  assert.match(statuses[0], /Preparing video for Cast/);
-  await controller.prepare("live", { notifyErrors: true });
-  assert.match(statuses.at(-1), /Live HLS is unavailable/);
+  assert.match(statuses[0], /Preparing video for AirPlay/);
+  await controller.prepare("popup", { notifyErrors: true });
+  assert.match(statuses.at(-1), /AirPlay video is unavailable/);
   controller.dispose();
 });
