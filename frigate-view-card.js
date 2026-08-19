@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1524";
+const VERSION = "1.0.1525";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -860,10 +860,12 @@ const STYLES = `
   .stream-loading[hidden]{display:none;}
   .stream-loading .dot{width:10px;height:10px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--c-text-rev);border-radius:50%;animation:spin .9s linear infinite;}
 
-  /*===================Buttons======================*/
   .close-btn {width: 40px;height: 40px;border-radius: 50%;display: flex;align-items: center;  justify-content: center;font-size: 24px;line-height: 1;cursor: pointer;border: 1px solid #ccc;
     background-color: #f5f5f5;color: #333;transition: all 0.2s ease;}
   .close-btn:hover {background-color: #e0e0e0;color: #000;}
+
+
+
   .glass-btn{  display: inline-flex; 
     align-items: center; 
     justify-content: center; 
@@ -923,6 +925,12 @@ const STYLES = `
   .square-btn svg{width: 24px;height: 24px;fill: currentColor;pointer-events: none;}
   .mute-btn {position:absolute;right:16px;bottom:36px;z-index:3;pointer-events:none;}
   .live-fs-btn {position:absolute;right:16px;bottom:72px;z-index:3;pointer-events:none;}
+
+  .live-playback-controls{position:absolute;top:8px;left:8px;z-index:3;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .live-playback-controls .live-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
+  .live-playback-controls .live-playback-btn svg{width:30px;height:30px;opacity:.8;}
+  .live-playback-controls .live-playback-btn:hover svg{width:30px;height:30px;opacity:.95;}
+  .live-playback-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
 
 
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
@@ -3781,7 +3789,8 @@ function buildLiveEngineWrapMarkup({ icons }) {
               </div>`;
 }
 function buildLiveFullscreenControlMarkup({ icons }) {
-  return `<button class="square-btn live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
+  return `<button class="square-btn live-playback-btn live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>
+  </div>`;
 }
 function buildLiveMuteControlMarkup({ icons, streamMuted }) {
   const label = streamMuted ? "Unmute live view" : "Mute live view";
