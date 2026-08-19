@@ -241,6 +241,7 @@ test("shared shell builders expose stable page region anchors", () => {
     /^<button[^>]*id="live-fs-btn"[^>]*data-fvc-region="live-fullscreen"/,
   );
   assert.doesNotMatch(liveFullscreen, /<div/);
+  assert.doesNotMatch(liveFullscreen, /live-playback-btn/);
   assert.doesNotMatch(liveFullscreen, /id="live-airplay-btn"/);
   const browseHeader = buildBrowseHeaderRegionMarkup({
     icons: { left: "<", right: ">" },

@@ -121,7 +121,7 @@ test("mobile inline live controls stay visible without overlay reveal binding", 
   );
   assert.match(
     mobileViewStylesSource,
-    /mobile-video-controls-container \.live-playback-btn\{[\s\S]*?position:relative;[\s\S]*?opacity:1;[\s\S]*?pointer-events:auto;/,
+    /mobile-video-controls-container \.live-fs-btn\{[\s\S]*?position:relative;[\s\S]*?opacity:1;[\s\S]*?pointer-events:auto;/,
   );
 });
 
@@ -138,7 +138,7 @@ test("popup AirPlay controls delegate to browser target playback", () => {
   assert.equal(cardSource.includes("#live-airplay-btn"), false);
   assert.equal(
     stylesSource.includes(
-      ".live-playback-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}",
+      ".live-fs-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}",
     ),
     true,
   );
