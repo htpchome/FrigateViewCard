@@ -14,12 +14,24 @@ export function buildLiveEngineWrapMarkup({ icons }) {
               </div>`;
 }
 
-export function buildLiveFullscreenControlMarkup({ icons }) {
-  return `<button class="square-btn live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
+const resolveLiveControlButtonClass = (buttonClass) =>
+  String(buttonClass || "square-btn").trim() || "square-btn";
+
+export function buildLiveFullscreenControlMarkup({
+  icons,
+  buttonClass = "square-btn",
+}) {
+  const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
+  return `<button class="${visualButtonClass} live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
 }
 
-export function buildLiveMuteControlMarkup({ icons, streamMuted }) {
+export function buildLiveMuteControlMarkup({
+  icons,
+  streamMuted,
+  buttonClass = "square-btn",
+}) {
   const label = streamMuted ? "Unmute live view" : "Mute live view";
   const icon = streamMuted ? icons.volOff : icons.volOn;
-  return `<button class="square-btn mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
+  const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
+  return `<button class="${visualButtonClass} mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
 }

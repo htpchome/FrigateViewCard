@@ -121,6 +121,8 @@ test("mobile profile exposes custom main layout shell builder", () => {
   assert.equal(typeof mobileProfile.buildMainLayoutShellMarkup, "function");
   assert.equal(mobileProfile.tabsButtonClass, "icon-btn");
   assert.equal(mobileProfile.toolsButtonClass, "icon-btn");
+  assert.equal(mobileProfile.liveFullscreenButtonClass, "icon-btn");
+  assert.equal(mobileProfile.liveMuteButtonClass, "icon-btn");
   assert.equal(mobileProfile.liveControlsPlacement, "inline");
   assert.equal(
     registry.resolve(PAGE_IDS.singleView).liveControlsPlacement,

@@ -3088,10 +3088,14 @@ export class FrigateViewCard extends HTMLElement {
     const toolsMarkup = this._getToolsMarkup();
     const regions = {
       live: buildLiveEngineWrapMarkup({ icons: ICONS }),
-      liveFullscreen: buildLiveFullscreenControlMarkup({ icons: ICONS }),
+      liveFullscreen: buildLiveFullscreenControlMarkup({
+        icons: ICONS,
+        buttonClass: shellProfile?.liveFullscreenButtonClass,
+      }),
       liveMute: buildLiveMuteControlMarkup({
         icons: ICONS,
         streamMuted: this._streamMuted,
+        buttonClass: shellProfile?.liveMuteButtonClass,
       }),
       information: infoRow,
       cameraSwitcher: buildCamSwitcherRegionMarkup({

@@ -1686,25 +1686,31 @@ test("outer page layouts live with their route owners", () => {
   );
 });
 
-test("page profiles own tab and tool visual button classes", () => {
-  assert.equal(
-    pageShellRegistrySource.includes(
-      'tabsButtonClass: "icon-btn"',
-    ),
-    true,
-  );
-  assert.equal(
-    pageShellRegistrySource.includes(
-      'toolsButtonClass: "icon-btn"',
-    ),
-    true,
-  );
+test("page profiles own toolbar and live-control visual button classes", () => {
+  for (const profileEntry of [
+    'tabsButtonClass: "icon-btn"',
+    'toolsButtonClass: "icon-btn"',
+    'liveFullscreenButtonClass: "icon-btn"',
+    'liveMuteButtonClass: "icon-btn"',
+  ]) {
+    assert.equal(pageShellRegistrySource.includes(profileEntry), true);
+  }
   assert.equal(
     cardSource.includes("buttonClass: tabsButtonClass"),
     true,
   );
   assert.equal(
     cardSource.includes("buttonClass: toolsButtonClass"),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "buttonClass: shellProfile?.liveFullscreenButtonClass",
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("buttonClass: shellProfile?.liveMuteButtonClass"),
     true,
   );
   assert.equal(

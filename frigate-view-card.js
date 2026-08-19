@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1537";
+const VERSION = "1.0.1538";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3783,13 +3783,23 @@ function buildLiveEngineWrapMarkup({ icons }) {
                   </div>
               </div>`;
 }
-function buildLiveFullscreenControlMarkup({ icons }) {
-  return `<button class="square-btn live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
+const resolveLiveControlButtonClass = (buttonClass) => String(buttonClass || "square-btn").trim() || "square-btn";
+function buildLiveFullscreenControlMarkup({
+  icons,
+  buttonClass = "square-btn"
+}) {
+  const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
+  return `<button class="${visualButtonClass} live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
 }
-function buildLiveMuteControlMarkup({ icons, streamMuted }) {
+function buildLiveMuteControlMarkup({
+  icons,
+  streamMuted,
+  buttonClass = "square-btn"
+}) {
   const label = streamMuted ? "Unmute live view" : "Mute live view";
   const icon = streamMuted ? icons.volOff : icons.volOn;
-  return `<button class="square-btn mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
+  const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
+  return `<button class="${visualButtonClass} mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
 }
 
 // src/card/controls/shell-nav.tmpl.js
@@ -4070,6 +4080,10 @@ function normalizeProfile(profile = {}) {
     tabsHolderClass: String(profile.tabsHolderClass || "").trim(),
     tabsButtonClass: String(profile.tabsButtonClass || "").trim(),
     toolsButtonClass: String(profile.toolsButtonClass || "").trim(),
+    liveFullscreenButtonClass: String(
+      profile.liveFullscreenButtonClass || ""
+    ).trim(),
+    liveMuteButtonClass: String(profile.liveMuteButtonClass || "").trim(),
     liveControlsPlacement: profile.liveControlsPlacement === "inline" ? "inline" : "overlay",
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
@@ -4217,6 +4231,8 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     tabsHolderClass: "tabs-holder--mobile-view",
     tabsButtonClass: "icon-btn",
     toolsButtonClass: "icon-btn",
+    liveFullscreenButtonClass: "icon-btn",
+    liveMuteButtonClass: "icon-btn",
     liveControlsPlacement: "inline",
     browseClass: "browse--mobile-view",
     buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildMobileViewInfoRowMarkup({
@@ -19531,10 +19547,14 @@ const FrigateViewCard = class extends HTMLElement {
     const toolsMarkup = this._getToolsMarkup();
     const regions = {
       live: buildLiveEngineWrapMarkup({ icons: ICONS }),
-      liveFullscreen: buildLiveFullscreenControlMarkup({ icons: ICONS }),
+      liveFullscreen: buildLiveFullscreenControlMarkup({
+        icons: ICONS,
+        buttonClass: shellProfile?.liveFullscreenButtonClass
+      }),
       liveMute: buildLiveMuteControlMarkup({
         icons: ICONS,
-        streamMuted: this._streamMuted
+        streamMuted: this._streamMuted,
+        buttonClass: shellProfile?.liveMuteButtonClass
       }),
       information: infoRow,
       cameraSwitcher: buildCamSwitcherRegionMarkup({
