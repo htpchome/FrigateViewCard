@@ -152,9 +152,17 @@ export function buildMobileViewMainLayoutShellMarkup({
                 ${regions.live}
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
-                ${regions.twoWayTalk}
+                <div class=".mobile-video-controls-container">
+                    <div class="button-holder-row mobile-video-controls-left-row">
+                    </div>
+                    <div class="button-holder-row mobile-microphone-row">
+                      ${regions.twoWayTalk}
+                    </div>
+                    <div class="button-holder-row mobile-video-controls-right-row">
+                    </div>
+                </div>              
                 <div class="mobile-tab-container">
-                    <div class="mobile-button-holder-row mobile-left-row">
+                    <div class="button-holder-row mobile-left-row">
                       
                     </div>
                     <div class="button-holder-row mobile-tabs-row">
@@ -163,7 +171,6 @@ export function buildMobileViewMainLayoutShellMarkup({
                     <div class="button-holder-row mobile-tools-row">
                       ${regions.tools}
                     </div>
-
                 </div>
 
                 ${regions.browseHeader}
