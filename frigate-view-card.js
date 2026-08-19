@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1541";
+const VERSION = "1.0.1542";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -133,6 +133,21 @@ const ICONS = {
 
 // src/features/mobile-view/page.styles.js
 const MOBILE_VIEW_PAGE_STYLES = `
+  :host(.mobile-view-rotate-cover) {
+    position: fixed !important;
+    top: var(--rotate-oy, 0px) !important;
+    left: var(--rotate-ox, 0px) !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: var(--rotate-vw, 100vw) !important;
+    height: var(--rotate-vh, 100dvh) !important;
+    min-height: var(--rotate-vh, 100dvh) !important;
+    max-height: var(--rotate-vh, 100dvh) !important;
+    z-index: 2147483647 !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+  }
+
   .card.mobile-view-active {
     border-top-left-radius: var(--fvc-border-radius);
     border-top-right-radius: var(--fvc-border-radius);
@@ -3212,6 +3227,7 @@ const hassEntityStateSignature = (hass, entities) => entities.map((entity) => `$
 
 // src/features/mobile-view/utils.js
 const MOBILE_VIEW_ACTIVE_CLASS = "mobile-view-active";
+const MOBILE_VIEW_ROTATE_COVER_CLASS = "mobile-view-rotate-cover";
 function isMobileViewRoute(pageId, pageIds) {
   return pageId === pageIds.mobileView;
 }
@@ -6284,7 +6300,8 @@ const resolveRotateOverlayUiPlan = ({
       clearLoading: true,
       syncFullscreenButtons: true,
       showLiveControls: true,
-      showPopupControls: true
+      showPopupControls: true,
+      retainViewportCover: true
     };
   }
   if (action === "activate-popup") {
@@ -6303,7 +6320,8 @@ const resolveRotateOverlayUiPlan = ({
       clearLoading: false,
       syncFullscreenButtons: true,
       showLiveControls: false,
-      showPopupControls: true
+      showPopupControls: true,
+      retainViewportCover: true
     };
   }
   if (action === "idle") {
@@ -6323,7 +6341,8 @@ const resolveRotateOverlayUiPlan = ({
       clearLoading: false,
       syncFullscreenButtons: false,
       showLiveControls: false,
-      showPopupControls: false
+      showPopupControls: false,
+      retainViewportCover: false
     };
   }
   return {
@@ -6339,7 +6358,8 @@ const resolveRotateOverlayUiPlan = ({
     clearLoading: false,
     syncFullscreenButtons: true,
     showLiveControls: false,
-    showPopupControls: true
+    showPopupControls: true,
+    retainViewportCover: true
   };
 };
 const resolveRotateOverlayExitPlan = ({ action = "idle" } = {}) => {
@@ -6348,14 +6368,16 @@ const resolveRotateOverlayExitPlan = ({ action = "idle" } = {}) => {
       shouldSchedule: false,
       delayMs: 0,
       removeClasses: [],
-      syncFullscreenButtons: false
+      syncFullscreenButtons: false,
+      releaseViewportCover: false
     };
   }
   return {
     shouldSchedule: true,
     delayMs: 260,
     removeClasses: ["mobile-rotate-live-exit", "mobile-rotate-popup-exit"],
-    syncFullscreenButtons: true
+    syncFullscreenButtons: true,
+    releaseViewportCover: true
   };
 };
 const resolveRotateOverlayNativeControlsPlan = ({
@@ -18193,6 +18215,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._rotateOverlayRaf = 0;
     if (this._rotateOverlayExitT) clearTimeout(this._rotateOverlayExitT);
     this._rotateOverlayExitT = null;
+    this.classList?.remove?.(MOBILE_VIEW_ROTATE_COVER_CLASS);
     this._clearRotateOverlayAudioSync();
     this._clearRotateVideoFullscreenStyle();
     this._mseGraceController.clearGracePool();
@@ -18586,6 +18609,10 @@ const FrigateViewCard = class extends HTMLElement {
     if (uiPlan.addClasses.length) {
       card.classList.add(...uiPlan.addClasses);
     }
+    this.classList.toggle(
+      MOBILE_VIEW_ROTATE_COVER_CLASS,
+      card.classList.contains(MOBILE_VIEW_ACTIVE_CLASS) && uiPlan.retainViewportCover
+    );
     this._rotateOverlayActive = uiPlan.active;
     this._rotateOverlayMode = uiPlan.mode;
     if (uiPlan.disableNativeControls) this._setLiveNativeControls(false);
@@ -20150,6 +20177,9 @@ const FrigateViewCard = class extends HTMLElement {
       const c = this._$("#card");
       if (c && exitPlan.removeClasses.length) {
         c.classList.remove(...exitPlan.removeClasses);
+      }
+      if (exitPlan.releaseViewportCover) {
+        this.classList.remove(MOBILE_VIEW_ROTATE_COVER_CLASS);
       }
       this._rotateOverlayExitT = null;
       if (this._resumeLiveT) return;

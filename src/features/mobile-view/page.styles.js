@@ -1,4 +1,19 @@
 export const MOBILE_VIEW_PAGE_STYLES = `
+  :host(.mobile-view-rotate-cover) {
+    position: fixed !important;
+    top: var(--rotate-oy, 0px) !important;
+    left: var(--rotate-ox, 0px) !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: var(--rotate-vw, 100vw) !important;
+    height: var(--rotate-vh, 100dvh) !important;
+    min-height: var(--rotate-vh, 100dvh) !important;
+    max-height: var(--rotate-vh, 100dvh) !important;
+    z-index: 2147483647 !important;
+    overflow: visible !important;
+    border-radius: 0 !important;
+  }
+
   .card.mobile-view-active {
     border-top-left-radius: var(--fvc-border-radius);
     border-top-right-radius: var(--fvc-border-radius);

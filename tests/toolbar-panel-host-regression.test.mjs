@@ -125,6 +125,25 @@ test("mobile inline live controls stay visible without overlay reveal binding", 
   );
 });
 
+test("mobile rotate overlay promotes the card host above Home Assistant chrome", () => {
+  assert.match(
+    mobileViewStylesSource,
+    /:host\(\.mobile-view-rotate-cover\)[\s\S]*?position: fixed !important;[\s\S]*?width: var\(--rotate-vw, 100vw\) !important;[\s\S]*?height: var\(--rotate-vh, 100dvh\) !important;[\s\S]*?z-index: 2147483647 !important;/,
+  );
+  assert.equal(
+    cardSource.includes("MOBILE_VIEW_ROTATE_COVER_CLASS"),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("uiPlan.retainViewportCover"),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("exitPlan.releaseViewportCover"),
+    true,
+  );
+});
+
 test("popup AirPlay controls delegate to browser target playback", () => {
   assert.equal(
     cardSource.includes("#popup-airplay-btn, #popup-media-airplay"),

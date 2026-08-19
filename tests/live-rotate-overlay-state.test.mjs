@@ -199,6 +199,7 @@ test("resolveRotateOverlayUiPlan shapes class mutations and side effects per act
       syncFullscreenButtons: true,
       showLiveControls: true,
       showPopupControls: true,
+      retainViewportCover: true,
     },
   );
 
@@ -225,6 +226,7 @@ test("resolveRotateOverlayUiPlan shapes class mutations and side effects per act
       syncFullscreenButtons: true,
       showLiveControls: false,
       showPopupControls: true,
+      retainViewportCover: true,
     },
   );
 
@@ -247,7 +249,19 @@ test("resolveRotateOverlayUiPlan shapes class mutations and side effects per act
       syncFullscreenButtons: true,
       showLiveControls: false,
       showPopupControls: true,
+      retainViewportCover: true,
     },
+  );
+});
+
+test("resolveRotateOverlayUiPlan releases viewport cover when idle", () => {
+  assert.equal(
+    resolveRotateOverlayUiPlan({
+      action: "idle",
+      active: false,
+      mode: "none",
+    }).retainViewportCover,
+    false,
   );
 });
 
@@ -257,6 +271,7 @@ test("resolveRotateOverlayExitPlan only schedules cleanup for deactivate", () =>
     delayMs: 0,
     removeClasses: [],
     syncFullscreenButtons: false,
+    releaseViewportCover: false,
   });
 
   assert.deepEqual(resolveRotateOverlayExitPlan({ action: "deactivate" }), {
@@ -264,6 +279,7 @@ test("resolveRotateOverlayExitPlan only schedules cleanup for deactivate", () =>
     delayMs: 260,
     removeClasses: ["mobile-rotate-live-exit", "mobile-rotate-popup-exit"],
     syncFullscreenButtons: true,
+    releaseViewportCover: true,
   });
 });
 

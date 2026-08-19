@@ -108,6 +108,7 @@ export const resolveRotateOverlayUiPlan = ({
       syncFullscreenButtons: true,
       showLiveControls: true,
       showPopupControls: true,
+      retainViewportCover: true,
     };
   }
 
@@ -128,6 +129,7 @@ export const resolveRotateOverlayUiPlan = ({
       syncFullscreenButtons: true,
       showLiveControls: false,
       showPopupControls: true,
+      retainViewportCover: true,
     };
   }
 
@@ -149,6 +151,7 @@ export const resolveRotateOverlayUiPlan = ({
       syncFullscreenButtons: false,
       showLiveControls: false,
       showPopupControls: false,
+      retainViewportCover: false,
     };
   }
 
@@ -168,6 +171,7 @@ export const resolveRotateOverlayUiPlan = ({
     syncFullscreenButtons: true,
     showLiveControls: false,
     showPopupControls: true,
+    retainViewportCover: true,
   };
 };
 
@@ -178,6 +182,7 @@ export const resolveRotateOverlayExitPlan = ({ action = "idle" } = {}) => {
       delayMs: 0,
       removeClasses: [],
       syncFullscreenButtons: false,
+      releaseViewportCover: false,
     };
   }
 
@@ -186,6 +191,7 @@ export const resolveRotateOverlayExitPlan = ({ action = "idle" } = {}) => {
     delayMs: 260,
     removeClasses: ["mobile-rotate-live-exit", "mobile-rotate-popup-exit"],
     syncFullscreenButtons: true,
+    releaseViewportCover: true,
   };
 };
 

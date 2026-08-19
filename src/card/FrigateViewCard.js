@@ -301,6 +301,10 @@ import { PopupMediaLoaderController } from "../features/popup/media-loader.ctrl.
 import { ViewportContextController } from "../features/viewport/context.ctrl.js";
 import { MobileViewPageController } from "../features/mobile-view/page.ctrl.js";
 import { MobileCamSwitcherController } from "../features/mobile-view/cam-switcher.ctrl.js";
+import {
+  MOBILE_VIEW_ACTIVE_CLASS,
+  MOBILE_VIEW_ROTATE_COVER_CLASS,
+} from "../features/mobile-view/utils.js";
 import { SingleViewPageController } from "../features/single-view/page.ctrl.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../features/single-view/page.tmpl.js";
 import { WideViewPageController } from "../features/wide-view/page.ctrl.js";
@@ -1439,6 +1443,7 @@ export class FrigateViewCard extends HTMLElement {
     this._rotateOverlayRaf = 0;
     if (this._rotateOverlayExitT) clearTimeout(this._rotateOverlayExitT);
     this._rotateOverlayExitT = null;
+    this.classList?.remove?.(MOBILE_VIEW_ROTATE_COVER_CLASS);
     this._clearRotateOverlayAudioSync();
     this._clearRotateVideoFullscreenStyle();
     this._mseGraceController.clearGracePool();
@@ -1904,6 +1909,11 @@ export class FrigateViewCard extends HTMLElement {
     if (uiPlan.addClasses.length) {
       card.classList.add(...uiPlan.addClasses);
     }
+    this.classList.toggle(
+      MOBILE_VIEW_ROTATE_COVER_CLASS,
+      card.classList.contains(MOBILE_VIEW_ACTIVE_CLASS) &&
+        uiPlan.retainViewportCover,
+    );
     this._rotateOverlayActive = uiPlan.active;
     this._rotateOverlayMode = uiPlan.mode;
     if (uiPlan.disableNativeControls) this._setLiveNativeControls(false);
@@ -3778,6 +3788,9 @@ export class FrigateViewCard extends HTMLElement {
       const c = this._$("#card");
       if (c && exitPlan.removeClasses.length) {
         c.classList.remove(...exitPlan.removeClasses);
+      }
+      if (exitPlan.releaseViewportCover) {
+        this.classList.remove(MOBILE_VIEW_ROTATE_COVER_CLASS);
       }
       this._rotateOverlayExitT = null;
       if (this._resumeLiveT) return;
