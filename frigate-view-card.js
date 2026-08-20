@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1554";
+const VERSION = "1.0.1555";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3659,17 +3659,8 @@ function buildWideViewMainLayoutShellMarkup({
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
             <div class="${tabsHolderClassName} shadow-small">
-              <div class="button-holder">
-                <div class="button-holder-row tabs-row">
-                  ${regions.tabs}
-                </div>
-                <div class="button-holder-row page-nav-row">
-                  
-                </div>
-                <div class="button-holder-row tools-row">
-                  
-                </div>
-              </div>
+                  ${regions.tabs} 
+              
             </div>
             ${regions.browseHeader}
             ${regions.browse}
