@@ -3101,6 +3101,7 @@ export class FrigateViewCard extends HTMLElement {
     const pageNav = this._pageNavigationController.pageNavMarkup();
     const shellProfile = this._activePageShellLayoutProfile();
     const shellCapabilities = resolvePageCapabilities(shellProfile);
+    const isWideViewPage = this._pageId === PAGE_IDS.wideView;
     const infoRow = resolvePageInfoRowMarkup(shellProfile, {
       title,
       subtitle,
@@ -3142,7 +3143,11 @@ export class FrigateViewCard extends HTMLElement {
       tools: buildToolsRegionMarkup({ markup: toolsMarkup }),
       browseHeader: buildBrowseHeaderRegionMarkup({ icons: ICONS }),
       browse: buildBrowseRegionMarkup({ layoutProfile }),
-      footer: buildFooterMarkup({ icons: ICONS }),
+      footer: buildFooterMarkup({
+        icons: ICONS,
+        includeFrigateView: !isWideViewPage,
+      }),
+      wideFooterIcon: isWideViewPage ? ICONS.frigateView : "",
     };
     const mainLayoutShell = resolvePageMainLayoutShellMarkup(shellProfile, {
       host: this,

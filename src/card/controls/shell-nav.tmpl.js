@@ -209,11 +209,21 @@ export function buildBrowseRegionMarkup({ layoutProfile = {} } = {}) {
             </div>`;
 }
 
-export function buildFooterMarkup({ icons }) {
-  return `<div class="footer" data-fvc-region="footer">
-              <div><div class="frigate-view">${icons.frigateView}</div></div>
+export function buildFooterMarkup({
+  icons = {},
+  includeFrigateView = true,
+} = {}) {
+  const footerClass = includeFrigateView
+    ? "footer"
+    : "footer footer--older-hint-only";
+  const frigateView = includeFrigateView
+    ? `<div><div class="frigate-view">${icons.frigateView || ""}</div></div>`
+    : "";
+  const trailingSpacer = includeFrigateView ? "<div></div>" : "";
+  return `<div class="${footerClass}" data-fvc-region="footer">
+              ${frigateView}
               <div class="more" id="older-hint" hidden>scroll for older…</div>
-              <div></div>
+              ${trailingSpacer}
             </div>`;
 }
 

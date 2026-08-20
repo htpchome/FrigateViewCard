@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1550";
+const VERSION = "1.0.1551";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -687,7 +687,8 @@ const STYLES = `
   .browse-head-middle {flex:1;text-align:center;font-weight:700;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
 
   .footer {display: grid;grid-template-columns: minmax(100px, 1fr) minmax(auto, 3fr) minmax(100px, 1fr);line-height:2;min-height:1.5rem;font-size:1.2rem;padding:4px;align-items: center;}
-  .wide-footer {display: block;line-height:2;min-height:2.5rem;font-size:2rem;padding:4px;align-items: center;}
+  .footer.footer--older-hint-only{display:flex;justify-content:center;}
+  .wide-footer{display:flex;justify-content:flex-start;align-items:center;line-height:2;min-height:2.5rem;font-size:2rem;padding:4px;text-align:left;}
   
   .prev-next{display:inline-flex;align-items:center;gap:4px;font-size: 0.85rem;padding-inline: 0.3em;padding-block: 0.3em;line-height: 1;  border-radius: 999em;
     background:var(--c-bg-main);min-width:80px;
@@ -3601,6 +3602,7 @@ function normalizeRegions2(regions) {
     browseHeader: "",
     browse: "",
     footer: "",
+    wideFooterIcon: "",
     ...suppliedRegions
   };
 }
@@ -3657,7 +3659,9 @@ function buildWideViewMainLayoutShellMarkup({
             ${regions.browse}
             ${regions.footer}
           </div>
-          <div class="wide-footer"></div>
+          <div class="wide-footer">
+            <div class="frigate-view">${regions.wideFooterIcon}</div>
+          </div>
         </div>`;
 }
 
@@ -4015,11 +4019,17 @@ function buildBrowseRegionMarkup({ layoutProfile = {} } = {}) {
               </div>
             </div>`;
 }
-function buildFooterMarkup({ icons }) {
-  return `<div class="footer" data-fvc-region="footer">
-              <div><div class="frigate-view">${icons.frigateView}</div></div>
+function buildFooterMarkup({
+  icons = {},
+  includeFrigateView = true
+} = {}) {
+  const footerClass = includeFrigateView ? "footer" : "footer footer--older-hint-only";
+  const frigateView = includeFrigateView ? `<div><div class="frigate-view">${icons.frigateView || ""}</div></div>` : "";
+  const trailingSpacer = includeFrigateView ? "<div></div>" : "";
+  return `<div class="${footerClass}" data-fvc-region="footer">
+              ${frigateView}
               <div class="more" id="older-hint" hidden>scroll for older\u2026</div>
-              <div></div>
+              ${trailingSpacer}
             </div>`;
 }
 function buildControlsSectionMarkup({
@@ -19858,6 +19868,7 @@ const FrigateViewCard = class extends HTMLElement {
     const pageNav = this._pageNavigationController.pageNavMarkup();
     const shellProfile = this._activePageShellLayoutProfile();
     const shellCapabilities = resolvePageCapabilities(shellProfile);
+    const isWideViewPage = this._pageId === PAGE_IDS.wideView;
     const infoRow = resolvePageInfoRowMarkup(shellProfile, {
       title,
       subtitle,
@@ -19896,7 +19907,11 @@ const FrigateViewCard = class extends HTMLElement {
       tools: buildToolsRegionMarkup({ markup: toolsMarkup }),
       browseHeader: buildBrowseHeaderRegionMarkup({ icons: ICONS }),
       browse: buildBrowseRegionMarkup({ layoutProfile }),
-      footer: buildFooterMarkup({ icons: ICONS })
+      footer: buildFooterMarkup({
+        icons: ICONS,
+        includeFrigateView: !isWideViewPage
+      }),
+      wideFooterIcon: isWideViewPage ? ICONS.frigateView : ""
     };
     const mainLayoutShell = resolvePageMainLayoutShellMarkup(shellProfile, {
       host: this,

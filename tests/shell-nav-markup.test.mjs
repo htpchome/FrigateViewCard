@@ -277,6 +277,17 @@ test("shared shell builders expose stable page region anchors", () => {
   const footerMarkup = buildFooterMarkup({
     icons: { frigateView: "F" },
   });
+  const hintOnlyFooterMarkup = buildFooterMarkup({
+    icons: { frigateView: "F" },
+    includeFrigateView: false,
+  });
+  assert.match(
+    hintOnlyFooterMarkup,
+    /class="footer footer--older-hint-only"[^>]*data-fvc-region="footer"/,
+  );
+  assert.match(hintOnlyFooterMarkup, /id="older-hint"/);
+  assert.doesNotMatch(hintOnlyFooterMarkup, /class="frigate-view"/);
+  assert.doesNotMatch(hintOnlyFooterMarkup, />F</);
   const shellMarkup = buildSingleViewMainLayoutShellMarkup({
     regions: {
       live: liveEngineWrap,

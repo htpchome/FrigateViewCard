@@ -18,6 +18,7 @@ const regions = {
   browseHeader: `<div data-fvc-region="browse-header">Browse Header</div>`,
   browse: `<div data-fvc-region="browse">Browse</div>`,
   footer: `<div data-fvc-region="footer">Footer</div>`,
+  wideFooterIcon: `<svg data-wide-footer-icon></svg>`,
 };
 
 const routeBuilders = [
@@ -65,6 +66,19 @@ test("route-owned outer templates compose every atomic region once", () => {
       layoutSuffix === "preview-view" ? 0 : 1,
     );
   }
+});
+
+test("wide view renders its branded footer separately from the browse footer", () => {
+  const markup = buildWideViewMainLayoutShellMarkup({ regions });
+
+  assert.match(
+    markup,
+    /<div class="col-right"[^>]*>[\s\S]*?data-fvc-region="footer"[\s\S]*?<\/div>\s*<div class="wide-footer">/,
+  );
+  assert.match(
+    markup,
+    /<div class="wide-footer">\s*<div class="frigate-view"><svg data-wide-footer-icon><\/svg><\/div>/,
+  );
 });
 
 test("route-owned outer templates do not synthesize omitted regions", () => {
