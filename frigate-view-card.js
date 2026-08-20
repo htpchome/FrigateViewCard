@@ -779,6 +779,7 @@ const STYLES = `
   .xform:hover{transform: scale(1.004);box-shadow: var(--fvc-shadow-s);}
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
+  .small-padding {padding:5px;}
   .tabs-holder{margin:3px 8px;border-radius:8px;background-color:var(--c-bg-panel);container-type:inline-size;}
   .button-holder{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"tabs nav tools";align-items:center;gap:10px;padding:4px 8px;}
   .button-holder-row{display:flex;align-items:center;min-width:0;}
@@ -3659,7 +3660,7 @@ function buildWideViewMainLayoutShellMarkup({
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
             <div class="${tabsHolderClassName} shadow-small">
-              <div class="button-holder">
+              <div class="small-padding">
                 ${regions.tabs} 
               </div>              
             </div>

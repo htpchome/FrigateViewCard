@@ -81,7 +81,7 @@ export function buildWideViewMainLayoutShellMarkup({
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
             <div class="${tabsHolderClassName} shadow-small">
-              <div class="button-holder">
+              <div class="small-padding">
                 ${regions.tabs} 
               </div>              
             </div>
