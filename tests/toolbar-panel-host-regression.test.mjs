@@ -119,10 +119,22 @@ test("mobile inline live controls stay visible without overlay reveal binding", 
     cardSource.includes('#live-stage.live-stage--overlay'),
     true,
   );
-  assert.match(
-    mobileViewStylesSource,
-    /mobile-video-controls-container \.live-fs-btn\{[\s\S]*?position:relative;[\s\S]*?opacity:1;[\s\S]*?pointer-events:auto;/,
+  const controlsRuleStart = mobileViewStylesSource.indexOf(
+    ".mobile-video-controls-container .mute-btn,",
   );
+  const controlsRuleEnd = mobileViewStylesSource.indexOf(
+    "}",
+    controlsRuleStart,
+  );
+  const controlsRule = mobileViewStylesSource.slice(
+    controlsRuleStart,
+    controlsRuleEnd,
+  );
+  assert.equal(controlsRule.includes(".live-fs-btn"), true);
+  assert.equal(controlsRule.includes(".live-take-snapshot-btn"), true);
+  assert.equal(controlsRule.includes("position:relative;"), true);
+  assert.equal(controlsRule.includes("opacity:1;"), true);
+  assert.equal(controlsRule.includes("pointer-events:auto;"), true);
 });
 
 test("mobile rotate overlay promotes the card host above Home Assistant chrome", () => {
@@ -164,7 +176,7 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
   assert.equal(cardSource.includes("#live-airplay-btn"), false);
   assert.equal(
     stylesSource.includes(
-      ".live-pip-btn[hidden],.live-fs-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}",
+      ".live-pip-btn[hidden],.live-fs-btn[hidden],.live-take-snapshot-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}",
     ),
     true,
   );

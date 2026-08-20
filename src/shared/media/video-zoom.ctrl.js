@@ -129,6 +129,10 @@ export class VideoZoomController {
     };
   }
 
+  get viewport() {
+    return this._bounds();
+  }
+
   bind() {
     if (this._bound || !this._video || !this._host) return this;
     this._bound = true;

@@ -9,6 +9,7 @@ const regions = {
   live: `<div data-fvc-region="live">Live</div>`,
   livePictureInPicture: `<button data-fvc-region="live-picture-in-picture">PiP</button>`,
   liveFullscreen: `<button data-fvc-region="live-fullscreen">Fullscreen</button>`,
+  liveTakeSnapshot: `<button data-fvc-region="live-take-snapshot">Snapshot</button>`,
   liveMute: `<button data-fvc-region="live-mute">Mute</button>`,
   information: `<div data-fvc-region="information">Information</div>`,
   cameraSwitcher: `<div data-fvc-region="camera-switcher">Cameras</div>`,
@@ -43,6 +44,7 @@ test("route-owned outer templates compose every atomic region once", () => {
     for (const regionName of [
       "live",
       "live-fullscreen",
+      "live-take-snapshot",
       "live-mute",
       "information",
       "camera-switcher",

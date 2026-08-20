@@ -13,6 +13,7 @@ function normalizeRegions(regions) {
     live: "",
     livePictureInPicture: "",
     liveFullscreen: "",
+    liveTakeSnapshot: "",
     liveMute: "",
     information: "",
     cameraSwitcher: "",
@@ -106,6 +107,7 @@ export function buildSingleViewMainLayoutShellMarkup({
               ${regions.live}
               ${regions.livePictureInPicture}
               ${regions.liveFullscreen}
+              ${regions.liveTakeSnapshot}
               ${regions.liveMute}
             </div>
 

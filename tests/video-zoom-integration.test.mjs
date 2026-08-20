@@ -38,6 +38,25 @@ test("video zoom is attached through committed main-live and popup lifecycles", 
   );
 });
 
+test("displayed-frame snapshots consume the matching live and popup zoom state", () => {
+  assert.equal(
+    cardSource.includes(
+      'from "../shared/media/frame-capture.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("activeZoomController?.viewport || null"),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("activeZoomController?.state || null"),
+    true,
+  );
+  assert.equal(cardSource.includes('this._takeDisplayedSnapshot("live")'), true);
+  assert.equal(cardSource.includes('this._takeDisplayedSnapshot("popup")'), true);
+});
+
 test("grid and preview media do not attach video zoom", () => {
   assert.equal(gridMediaSource.includes("attachVideoZoom"), false);
   assert.equal(gridMediaSource.includes("_attachPopupVideoZoom"), false);

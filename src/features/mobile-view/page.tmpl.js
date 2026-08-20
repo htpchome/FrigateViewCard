@@ -128,6 +128,7 @@ export function buildMobileViewMainLayoutShellMarkup({
   const regions = {
     live: "",
     liveFullscreen: "",
+    liveTakeSnapshot: "",
     liveMute: "",
     information: "",
     cameraSwitcher: "",
@@ -152,7 +153,13 @@ export function buildMobileViewMainLayoutShellMarkup({
     liveControlsInline ? "live-stage--inline" : "live-stage--overlay",
   ].join(" ");
   const overlayFullscreen = liveControlsInline ? "" : regions.liveFullscreen;
+  const overlayTakeSnapshot = liveControlsInline
+    ? ""
+    : regions.liveTakeSnapshot;
   const overlayMute = liveControlsInline ? "" : regions.liveMute;
+  const inlineTakeSnapshot = liveControlsInline
+    ? regions.liveTakeSnapshot
+    : "";
   const inlineMute = liveControlsInline ? regions.liveMute : "";
   const inlineFullscreen = liveControlsInline ? regions.liveFullscreen : "";
 
@@ -163,13 +170,14 @@ export function buildMobileViewMainLayoutShellMarkup({
                 <div class="${liveStageClassName}" id="live-stage">
                   ${regions.live}
                   ${overlayFullscreen}
+                  ${overlayTakeSnapshot}
                   ${overlayMute}
                 </div>
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
                 <div class="mobile-video-controls-container">
                     <div class="button-holder-row mobile-video-controls-left-row">
-                      
+                      ${inlineTakeSnapshot}
                     </div>
                     <div class="button-holder-row mobile-microphone-row">
                       ${regions.twoWayTalk}

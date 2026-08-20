@@ -140,6 +140,17 @@ test("video zoom math clamps scale and pan to the default viewport", () => {
   );
 });
 
+test("video zoom exposes the current capture viewport", () => {
+  const { controller } = createZoomFixture();
+
+  assert.deepEqual(controller.viewport, {
+    left: 0,
+    top: 0,
+    width: 300,
+    height: 200,
+  });
+});
+
 test("wheel zoom is pointer-focused, capped at 3x, and releases outward page scroll at 1x", () => {
   const { controller, video } = createZoomFixture();
 

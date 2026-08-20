@@ -11,6 +11,7 @@ export const PAGE_SHELL_REGIONS = Object.freeze({
   live: "live",
   livePictureInPicture: "live-picture-in-picture",
   liveFullscreen: "live-fullscreen",
+  liveTakeSnapshot: "live-take-snapshot",
   liveMute: "live-mute",
   information: "information",
   cameraSwitcher: "camera-switcher",
@@ -51,6 +52,9 @@ function normalizeProfile(profile = {}) {
     ).trim(),
     livePictureInPictureButtonClass: String(
       profile.livePictureInPictureButtonClass || "",
+    ).trim(),
+    liveTakeSnapshotButtonClass: String(
+      profile.liveTakeSnapshotButtonClass || "",
     ).trim(),
     liveMuteButtonClass: String(profile.liveMuteButtonClass || "").trim(),
     liveControlsPlacement:
@@ -97,6 +101,7 @@ export function resolveRequiredPageShellRegions(profile = {}) {
     requiredRegions.push(
       PAGE_SHELL_REGIONS.live,
       PAGE_SHELL_REGIONS.liveFullscreen,
+      PAGE_SHELL_REGIONS.liveTakeSnapshot,
       PAGE_SHELL_REGIONS.liveMute,
     );
     if (capabilities.hasLivePictureInPicture) {
@@ -263,6 +268,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     tabsButtonClass: "icon-btn",
     toolsButtonClass: "icon-btn",
     liveFullscreenButtonClass: "icon-btn",
+    liveTakeSnapshotButtonClass: "icon-btn",
     liveMuteButtonClass: "icon-btn",
     liveControlsPlacement: "inline",
     browseClass: "browse--mobile-view",

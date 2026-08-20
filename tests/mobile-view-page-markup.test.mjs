@@ -106,6 +106,7 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
     regions: {
       live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
       liveFullscreen: `<button data-fvc-region="live-fullscreen"></button>`,
+      liveTakeSnapshot: `<button data-fvc-region="live-take-snapshot"></button>`,
       liveMute: `<button data-fvc-region="live-mute"></button>`,
       information: `<div data-fvc-region="information"></div>`,
       pageNavigation: `<div class="page-nav" data-fvc-region="page-navigation"></div>`,
@@ -131,15 +132,15 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
   assert.match(markup, /class="live-stage live-stage--inline"/);
   assert.doesNotMatch(
     liveStageMarkup,
-    /data-fvc-region="live-(?:mute|fullscreen)"/,
+    /data-fvc-region="live-(?:mute|fullscreen|take-snapshot)"/,
   );
   assert.match(
     markup,
-    /mobile-video-controls-left-row">[\s\S]*?data-fvc-region="live-fullscreen"/,
+    /mobile-video-controls-left-row">\s*<button data-fvc-region="live-take-snapshot"/,
   );
   assert.match(
     markup,
-    /mobile-video-controls-right-row">[\s\S]*?data-fvc-region="live-mute"/,
+    /mobile-video-controls-right-row">\s*<button data-fvc-region="live-mute"[\s\S]*?data-fvc-region="live-fullscreen"/,
   );
   assert.equal(markup.includes('id="mobile-view-two-way-talk-slot"'), true);
   assert.equal(
@@ -163,6 +164,7 @@ test("mobile view retains overlay controls unless inline placement is selected",
     regions: {
       live: `<div data-fvc-region="live"></div>`,
       liveFullscreen: `<button data-fvc-region="live-fullscreen"></button>`,
+      liveTakeSnapshot: `<button data-fvc-region="live-take-snapshot"></button>`,
       liveMute: `<button data-fvc-region="live-mute"></button>`,
     },
   });
@@ -173,6 +175,7 @@ test("mobile view retains overlay controls unless inline placement is selected",
 
   assert.match(markup, /class="live-stage live-stage--overlay"/);
   assert.match(liveStageMarkup, /data-fvc-region="live-fullscreen"/);
+  assert.match(liveStageMarkup, /data-fvc-region="live-take-snapshot"/);
   assert.match(liveStageMarkup, /data-fvc-region="live-mute"/);
 });
 

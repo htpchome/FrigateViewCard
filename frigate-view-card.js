@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1590";
+const VERSION = "1.0.1591";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -203,7 +203,8 @@ const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active .mobile-microphone-row{grid-area:microphone;justify-content:center;}
   .card.mobile-view-active .mobile-video-controls-right-row{grid-area:video-controls-right;justify-content:flex-end;}
   .card.mobile-view-active .mobile-video-controls-container .mute-btn,
-  .card.mobile-view-active .mobile-video-controls-container .live-fs-btn{
+  .card.mobile-view-active .mobile-video-controls-container .live-fs-btn,
+  .card.mobile-view-active .mobile-video-controls-container .live-take-snapshot-btn{
     position:relative;
     inset:auto;
     z-index:1;
@@ -946,9 +947,10 @@ const STYLES = `
   .square-btn svg{width: 24px;height: 24px;fill: currentColor;pointer-events: none;}
   .mute-btn {position:absolute;right:20px;bottom:48px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .live-fs-btn{position:absolute;right:20px;bottom:92px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
-  .live-pip-btn{position:absolute;right:20px;bottom:136px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .live-take-snapshot-btn{position:absolute;right:20px;bottom:136px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .live-pip-btn{position:absolute;right:20px;bottom:180px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
 
-  .live-pip-btn[hidden],.live-fs-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
+  .live-pip-btn[hidden],.live-fs-btn[hidden],.live-take-snapshot-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
 
 
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
@@ -975,12 +977,18 @@ const STYLES = `
   .slideshow-next-chip[hidden]{display:none !important;}
   #live-stage.live-controls-visible .live-pip-btn,
   #live-stage.live-controls-visible .live-fs-btn,
+  #live-stage.live-controls-visible .live-take-snapshot-btn,
   #live-stage.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {
     #live-stage:hover .live-pip-btn,
     #live-stage:hover .live-fs-btn,
+    #live-stage:hover .live-take-snapshot-btn,
     #live-stage:hover .mute-btn{opacity:1;pointer-events:auto;}
   }
+
+  .snapshot-result-bubble{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:12;min-height:30px;display:flex;align-items:center;justify-content:center;padding:6px 12px;border:1px solid currentColor;border-radius:999px;font-size:.82rem;font-weight:700;line-height:1;white-space:nowrap;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.3);backdrop-filter:blur(3px);}
+  .snapshot-result-bubble.success{color:var(--c-on);background:rgba(74,222,128,.18);background:color-mix(in srgb,var(--c-on) 18%,rgba(15,21,40,.88));}
+  .snapshot-result-bubble.failure{color:var(--c-off);background:rgba(220,49,70,.2);background:color-mix(in srgb,var(--error-color,var(--c-bg-alert)) 20%,rgba(15,21,40,.88));}
 
   #live-stage:fullscreen .live-pip-btn,
   #live-stage:-webkit-full-screen .live-pip-btn,
@@ -3392,6 +3400,7 @@ function buildMobileViewMainLayoutShellMarkup({
   const regions = {
     live: "",
     liveFullscreen: "",
+    liveTakeSnapshot: "",
     liveMute: "",
     information: "",
     cameraSwitcher: "",
@@ -3412,7 +3421,9 @@ function buildMobileViewMainLayoutShellMarkup({
     liveControlsInline ? "live-stage--inline" : "live-stage--overlay"
   ].join(" ");
   const overlayFullscreen = liveControlsInline ? "" : regions.liveFullscreen;
+  const overlayTakeSnapshot = liveControlsInline ? "" : regions.liveTakeSnapshot;
   const overlayMute = liveControlsInline ? "" : regions.liveMute;
+  const inlineTakeSnapshot = liveControlsInline ? regions.liveTakeSnapshot : "";
   const inlineMute = liveControlsInline ? regions.liveMute : "";
   const inlineFullscreen = liveControlsInline ? regions.liveFullscreen : "";
   return `<div class="${layoutClassName}" id="layout">
@@ -3422,13 +3433,14 @@ function buildMobileViewMainLayoutShellMarkup({
                 <div class="${liveStageClassName}" id="live-stage">
                   ${regions.live}
                   ${overlayFullscreen}
+                  ${overlayTakeSnapshot}
                   ${overlayMute}
                 </div>
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
                 <div class="mobile-video-controls-container">
                     <div class="button-holder-row mobile-video-controls-left-row">
-                      
+                      ${inlineTakeSnapshot}
                     </div>
                     <div class="button-holder-row mobile-microphone-row">
                       ${regions.twoWayTalk}
@@ -3508,6 +3520,7 @@ function normalizeRegions(regions) {
     live: "",
     livePictureInPicture: "",
     liveFullscreen: "",
+    liveTakeSnapshot: "",
     liveMute: "",
     information: "",
     cameraSwitcher: "",
@@ -3590,6 +3603,7 @@ function buildSingleViewMainLayoutShellMarkup({
               ${regions.live}
               ${regions.livePictureInPicture}
               ${regions.liveFullscreen}
+              ${regions.liveTakeSnapshot}
               ${regions.liveMute}
             </div>
 
@@ -3630,6 +3644,7 @@ function normalizeRegions2(regions) {
     live: "",
     livePictureInPicture: "",
     liveFullscreen: "",
+    liveTakeSnapshot: "",
     liveMute: "",
     information: "",
     cameraSwitcher: "",
@@ -3672,6 +3687,7 @@ function buildWideViewMainLayoutShellMarkup({
               ${regions.live}
               ${regions.livePictureInPicture}
               ${regions.liveFullscreen}
+              ${regions.liveTakeSnapshot}
               ${regions.liveMute}
             </div>
 
@@ -3783,6 +3799,7 @@ function normalizePreviewPageRegions(regions) {
   return {
     live: "",
     liveFullscreen: "",
+    liveTakeSnapshot: "",
     liveMute: "",
     information: "",
     cameraSwitcher: "",
@@ -3825,6 +3842,7 @@ function buildPreviewPageMainLayoutShellMarkup({
             <div class="live-stage live-stage--overlay" id="live-stage">
               ${regions.live}
               ${regions.liveFullscreen}
+              ${regions.liveTakeSnapshot}
               ${regions.liveMute}
             </div>
 
@@ -3883,6 +3901,13 @@ function buildLivePictureInPictureControlMarkup({
 }) {
   const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
   return `<button class="${visualButtonClass} live-pip-btn" id="live-pip-btn" data-fvc-region="live-picture-in-picture" type="button" title="Picture-in-Picture live" aria-label="Picture-in-Picture live" aria-pressed="false" hidden>${icons.pipPopOut}</button>`;
+}
+function buildLiveTakeSnapshotControlMarkup({
+  icons,
+  buttonClass = "square-btn"
+}) {
+  const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
+  return `<button class="${visualButtonClass} live-take-snapshot-btn" id="live-take-snapshot-btn" data-fvc-region="live-take-snapshot" type="button" title="Take Snapshot" aria-label="Take Snapshot">${icons.takeSnapshot}</button>`;
 }
 function buildLiveMuteControlMarkup({
   icons,
@@ -4183,6 +4208,7 @@ const PAGE_SHELL_REGIONS = Object.freeze({
   live: "live",
   livePictureInPicture: "live-picture-in-picture",
   liveFullscreen: "live-fullscreen",
+  liveTakeSnapshot: "live-take-snapshot",
   liveMute: "live-mute",
   information: "information",
   cameraSwitcher: "camera-switcher",
@@ -4214,6 +4240,9 @@ function normalizeProfile(profile = {}) {
     livePictureInPictureButtonClass: String(
       profile.livePictureInPictureButtonClass || ""
     ).trim(),
+    liveTakeSnapshotButtonClass: String(
+      profile.liveTakeSnapshotButtonClass || ""
+    ).trim(),
     liveMuteButtonClass: String(profile.liveMuteButtonClass || "").trim(),
     liveControlsPlacement: profile.liveControlsPlacement === "inline" ? "inline" : "overlay",
     browseClass: String(profile.browseClass || "").trim(),
@@ -4244,6 +4273,7 @@ function resolveRequiredPageShellRegions(profile = {}) {
     requiredRegions.push(
       PAGE_SHELL_REGIONS.live,
       PAGE_SHELL_REGIONS.liveFullscreen,
+      PAGE_SHELL_REGIONS.liveTakeSnapshot,
       PAGE_SHELL_REGIONS.liveMute
     );
     if (capabilities.hasLivePictureInPicture) {
@@ -4369,6 +4399,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     tabsButtonClass: "icon-btn",
     toolsButtonClass: "icon-btn",
     liveFullscreenButtonClass: "icon-btn",
+    liveTakeSnapshotButtonClass: "icon-btn",
     liveMuteButtonClass: "icon-btn",
     liveControlsPlacement: "inline",
     browseClass: "browse--mobile-view",
@@ -6785,6 +6816,9 @@ const VideoZoomController = class {
       x: this._x,
       y: this._y
     };
+  }
+  get viewport() {
+    return this._bounds();
   }
   bind() {
     if (this._bound || !this._video || !this._host) return this;
@@ -14235,6 +14269,146 @@ function createOlderHintSyncer(syncOlderHint) {
   };
 }
 
+// src/shared/media/frame-capture.js
+const positiveNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : 0;
+};
+function resolveDisplayedFrameDimensions(media) {
+  return {
+    width: positiveNumber(media?.videoWidth || media?.naturalWidth),
+    height: positiveNumber(media?.videoHeight || media?.naturalHeight)
+  };
+}
+function resolveDisplayedFrameSourceRect({
+  sourceWidth,
+  sourceHeight,
+  viewportWidth,
+  viewportHeight,
+  objectFit = "contain",
+  zoomState = null
+} = {}) {
+  const width = positiveNumber(sourceWidth);
+  const height = positiveNumber(sourceHeight);
+  if (!width || !height) return null;
+  const viewportW = positiveNumber(viewportWidth);
+  const viewportH = positiveNumber(viewportHeight);
+  if (!viewportW || !viewportH) {
+    return { x: 0, y: 0, width, height };
+  }
+  const fit = String(objectFit || "contain").toLowerCase();
+  const fitScale = fit === "cover" ? Math.max(viewportW / width, viewportH / height) : Math.min(viewportW / width, viewportH / height);
+  const fittedWidth = width * fitScale;
+  const fittedHeight = height * fitScale;
+  const scale = Math.max(1, Number(zoomState?.scale) || 1);
+  const panX = Number(zoomState?.x) || 0;
+  const panY = Number(zoomState?.y) || 0;
+  const renderedLeft = panX + (viewportW - fittedWidth) / 2 * scale;
+  const renderedTop = panY + (viewportH - fittedHeight) / 2 * scale;
+  const renderedWidth = fittedWidth * scale;
+  const renderedHeight = fittedHeight * scale;
+  const visibleLeft = Math.max(0, renderedLeft);
+  const visibleTop = Math.max(0, renderedTop);
+  const visibleRight = Math.min(viewportW, renderedLeft + renderedWidth);
+  const visibleBottom = Math.min(viewportH, renderedTop + renderedHeight);
+  if (visibleRight <= visibleLeft || visibleBottom <= visibleTop) return null;
+  return {
+    x: (visibleLeft - renderedLeft) / renderedWidth * width,
+    y: (visibleTop - renderedTop) / renderedHeight * height,
+    width: (visibleRight - visibleLeft) / renderedWidth * width,
+    height: (visibleBottom - visibleTop) / renderedHeight * height
+  };
+}
+async function captureDisplayedFrame(media, {
+  documentObj = globalThis.document,
+  viewport = null,
+  objectFit = "contain",
+  zoomState = null,
+  mimeType = "image/jpeg",
+  quality = 0.92
+} = {}) {
+  const source = resolveDisplayedFrameDimensions(media);
+  if (!source.width || !source.height) {
+    throw new Error("Displayed media frame is not ready.");
+  }
+  const parent = media?.parentElement || null;
+  const sourceRect = resolveDisplayedFrameSourceRect({
+    sourceWidth: source.width,
+    sourceHeight: source.height,
+    viewportWidth: positiveNumber(viewport?.width) || positiveNumber(parent?.clientWidth) || positiveNumber(media?.clientWidth),
+    viewportHeight: positiveNumber(viewport?.height) || positiveNumber(parent?.clientHeight) || positiveNumber(media?.clientHeight),
+    objectFit,
+    zoomState
+  });
+  if (!sourceRect) throw new Error("Displayed media frame is not visible.");
+  const canvas = documentObj?.createElement?.("canvas");
+  const context = canvas?.getContext?.("2d");
+  if (!canvas || !context) {
+    throw new Error("Snapshot capture is not supported in this browser.");
+  }
+  canvas.width = Math.max(1, Math.round(sourceRect.width));
+  canvas.height = Math.max(1, Math.round(sourceRect.height));
+  context.drawImage(
+    media,
+    sourceRect.x,
+    sourceRect.y,
+    sourceRect.width,
+    sourceRect.height,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+  return await new Promise((resolve, reject) => {
+    if (typeof canvas.toBlob !== "function") {
+      reject(new Error("Snapshot encoding is not supported in this browser."));
+      return;
+    }
+    canvas.toBlob(
+      (blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("The displayed frame could not be encoded."));
+      },
+      mimeType,
+      quality
+    );
+  });
+}
+function buildDisplayedFrameFilename({
+  camera = "camera",
+  capturedAt = new Date()
+} = {}) {
+  const safeCamera = String(camera || "camera").trim().replace(/[^a-z0-9._-]+/gi, "-").replace(/^-+|-+$/g, "") || "camera";
+  const date = capturedAt instanceof Date ? capturedAt : new Date(capturedAt);
+  const safeDate = Number.isFinite(date.getTime()) ? date : new Date();
+  const timestamp = safeDate.toISOString().replace(/\.\d{3}Z$/, "Z").replace(/:/g, "-");
+  return `${safeCamera}_${timestamp}.jpg`;
+}
+function downloadDisplayedFrame(blob, filename, {
+  documentObj = globalThis.document,
+  urlApi = globalThis.URL,
+  schedule = globalThis.setTimeout
+} = {}) {
+  if (!blob || typeof urlApi?.createObjectURL !== "function") {
+    throw new Error("Snapshot download is not supported in this browser.");
+  }
+  const objectUrl = urlApi.createObjectURL(blob);
+  const anchor = documentObj?.createElement?.("a");
+  if (!anchor) {
+    urlApi.revokeObjectURL?.(objectUrl);
+    throw new Error("Snapshot download is not supported in this browser.");
+  }
+  anchor.href = objectUrl;
+  anchor.download = String(filename || "snapshot.jpg");
+  documentObj.body?.appendChild?.(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove?.();
+    schedule?.(() => urlApi.revokeObjectURL?.(objectUrl), 0);
+  }
+}
+
 // src/features/preview/utils.js
 const LIVE_STREAM_HINTS = new Set(["webrtc", "mse", "hls"]);
 function normalizePreviewAlertSeverity(value) {
@@ -18886,6 +19060,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._lastNonControlsTab = "alerts";
     this._mobileCamSwitcherOpen = false;
     this._playing = null;
+    this._popupMediaCamera = "";
     this._browseOpen = false;
     this._winEnd = 0;
     this._winStart = 0;
@@ -19053,6 +19228,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._popupControlsHideTimer = null;
     this._liveControlsHideTimer = null;
     this._liveOverlayControlsController = null;
+    this._snapshotResultTimers = { live: null, popup: null };
     this._recordingScrubController = null;
     this._recordingScrubState = null;
     this._recordingAlertCache = new Map();
@@ -19679,6 +19855,10 @@ const FrigateViewCard = class extends HTMLElement {
       }
     }
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
+    Object.values(this._snapshotResultTimers || {}).forEach((timer) => {
+      if (timer) clearTimeout(timer);
+    });
+    this._snapshotResultTimers = { live: null, popup: null };
     if (this._liveOverlayControlsController) {
       try {
         this._liveOverlayControlsController.dispose();
@@ -21172,6 +21352,10 @@ const FrigateViewCard = class extends HTMLElement {
         icons: ICONS,
         buttonClass: shellProfile?.liveFullscreenButtonClass
       }),
+      liveTakeSnapshot: buildLiveTakeSnapshotControlMarkup({
+        icons: ICONS,
+        buttonClass: shellProfile?.liveTakeSnapshotButtonClass
+      }),
       liveMute: buildLiveMuteControlMarkup({
         icons: ICONS,
         streamMuted: this._streamMuted,
@@ -21961,6 +22145,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (carousel) carousel.innerHTML = "";
     this._hidePopupInfo();
     this._popupMediaType = "";
+    this._popupMediaCamera = "";
     this._playing = null;
   }
   _closePopup() {
@@ -22044,6 +22229,10 @@ const FrigateViewCard = class extends HTMLElement {
       void this._togglePictureInPicture(this._livePictureInPictureVideo());
       return true;
     }
+    if (target.closest("#live-take-snapshot-btn")) {
+      void this._takeDisplayedSnapshot("live");
+      return true;
+    }
     if (target.closest("#live-fs-btn")) {
       this._fullscreen(this._$("#live-stage"), { preferLive: true });
       return true;
@@ -22092,6 +22281,10 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handlePopupMediaToolbarClick(target) {
+    if (target.closest("#popup-take-snapshot-btn")) {
+      void this._takeDisplayedSnapshot("popup");
+      return true;
+    }
     if (target.closest("#popup-pip-btn")) {
       void this._togglePictureInPicture(this._popupMediaVideo(), { popup: true });
       this._showPopupControlsTemporarily();
@@ -22692,9 +22885,11 @@ const FrigateViewCard = class extends HTMLElement {
     if (!info || !head) return;
     const model = this._popupInfoModel(ev, opts);
     if (!model) {
+      this._popupMediaCamera = "";
       this._hidePopupInfo();
       return;
     }
+    this._popupMediaCamera = model.camera;
     if (model.mediaType !== "recording") {
       this._teardownRecordingScrub();
       if (scrub) scrub.hidden = true;
@@ -22822,6 +23017,11 @@ const FrigateViewCard = class extends HTMLElement {
     if (liveBtn) liveBtn.hidden = visibility.liveButtonHidden;
     if (popupControlsFsBtn)
       popupControlsFsBtn.hidden = visibility.popupControlsFullscreenHidden;
+    this._syncTakeSnapshotButtonVisibility();
+  }
+  _syncTakeSnapshotButtonVisibility() {
+    const liveButton = this._$("#live-take-snapshot-btn");
+    if (liveButton) liveButton.hidden = this._viewMode === "grid";
   }
   _open(id) {
     const ev = this._allDisplayEvents().find((e) => e.id === id) || (this._tab === "kept" ? (this._kept || []).find((e) => e.id === id) : null);
@@ -22872,6 +23072,76 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _livePictureInPictureVideo() {
     return this._findVideoDeep(this._$("#engine")) || this._findVideoDeep(this._engine) || this._engine?.video || null;
+  }
+  _displayedSnapshotMedia(scope = "live") {
+    if (scope === "popup") {
+      const viewer = this._$("#viewer");
+      return viewer?.querySelector?.("video") || viewer?.querySelector?.("img.snap") || null;
+    }
+    const fallback = this._$("#stream-fallback");
+    if (fallback && !fallback.hidden) {
+      const fallbackImage = fallback.querySelector?.(
+        "#stream-fallback-img, img"
+      );
+      if (fallbackImage) return fallbackImage;
+    }
+    return this._livePictureInPictureVideo();
+  }
+  _displayedSnapshotCaptureOptions(scope, media) {
+    const zoomController = scope === "popup" ? this._popupVideoZoomController : this._liveVideoZoomController;
+    const activeZoomController = zoomController?.video === media ? zoomController : null;
+    const computedStyle = globalThis.getComputedStyle?.(media) || null;
+    return {
+      viewport: activeZoomController?.viewport || null,
+      zoomState: activeZoomController?.state || null,
+      objectFit: computedStyle?.objectFit || media?.style?.objectFit || "contain"
+    };
+  }
+  _showSnapshotResultBubble(scope, success) {
+    const surface = scope === "popup" ? this._$("#viewer") : this._$("#live-stage");
+    if (!surface) return;
+    const existing = surface.querySelector?.(".snapshot-result-bubble");
+    existing?.remove?.();
+    const bubble = document.createElement("div");
+    bubble.className = `snapshot-result-bubble ${success ? "success" : "failure"}`;
+    bubble.textContent = success ? "Snapshot taken" : "Unable to take snapshot";
+    surface.appendChild(bubble);
+    const previousTimer = this._snapshotResultTimers?.[scope];
+    if (previousTimer) clearTimeout(previousTimer);
+    this._snapshotResultTimers[scope] = setTimeout(() => {
+      bubble.remove?.();
+      this._snapshotResultTimers[scope] = null;
+    }, 1800);
+  }
+  async _takeDisplayedSnapshot(scope = "live") {
+    const button = this._$(
+      scope === "popup" ? "#popup-take-snapshot-btn" : "#live-take-snapshot-btn"
+    );
+    if (button?.disabled) return false;
+    if (button) button.disabled = true;
+    try {
+      const media = this._displayedSnapshotMedia(scope);
+      if (!media) throw new Error("Displayed media frame is not ready.");
+      const blob = await captureDisplayedFrame(
+        media,
+        this._displayedSnapshotCaptureOptions(scope, media)
+      );
+      const camera = scope === "popup" ? this._popupMediaCamera || this._cc().cam : this._cc().cam;
+      downloadDisplayedFrame(
+        blob,
+        buildDisplayedFrameFilename({ camera })
+      );
+      this._showSnapshotResultBubble(scope, true);
+      return true;
+    } catch (error) {
+      console.warn("[Frigate] Displayed frame snapshot failed", error);
+      this._showSnapshotResultBubble(scope, false);
+      return false;
+    } finally {
+      if (button) button.disabled = false;
+      if (scope === "popup") this._showPopupControlsTemporarily();
+      else this._showLiveControlsTemporarily();
+    }
   }
   _clearPictureInPictureButtonController(scope) {
     const property = scope === "popup" ? "_popupPictureInPictureButtonController" : "_livePictureInPictureButtonController";
@@ -22954,7 +23224,9 @@ const FrigateViewCard = class extends HTMLElement {
     const viewer = this._$("#viewer");
     if (!viewer) return;
     const existingControls = viewer.querySelector("#popup-playback-controls");
-    if (this._usePopupCustomControls(mediaType) || !viewer.querySelector("video")) {
+    const video = viewer.querySelector("video");
+    const snapshot = viewer.querySelector("img.snap");
+    if (!video && !snapshot) {
       this._clearPictureInPictureButtonController("popup");
       existingControls?.remove();
       return;
@@ -22967,6 +23239,18 @@ const FrigateViewCard = class extends HTMLElement {
       viewer.appendChild(controls);
     }
     controls.innerHTML = "";
+    const takeSnapshotButton = document.createElement("button");
+    takeSnapshotButton.className = "square-btn popup-playback-btn popup-take-snapshot-btn";
+    takeSnapshotButton.id = "popup-take-snapshot-btn";
+    takeSnapshotButton.type = "button";
+    takeSnapshotButton.title = "Take Snapshot";
+    takeSnapshotButton.setAttribute("aria-label", "Take Snapshot");
+    takeSnapshotButton.innerHTML = ICONS.takeSnapshot;
+    controls.appendChild(takeSnapshotButton);
+    if (this._usePopupCustomControls(mediaType) || !video) {
+      this._clearPictureInPictureButtonController("popup");
+      return;
+    }
     if (!DEVICE_PROFILE.isMobile && !this._isFirefox() && this._isPopupVideoMediaType(mediaType)) {
       const pictureInPictureButton = document.createElement("button");
       pictureInPictureButton.className = "square-btn popup-playback-btn popup-pip-btn";

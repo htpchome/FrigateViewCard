@@ -130,6 +130,7 @@ test("mobile profile exposes custom main layout shell builder", () => {
   assert.equal(mobileProfile.tabsButtonClass, "icon-btn");
   assert.equal(mobileProfile.toolsButtonClass, "icon-btn");
   assert.equal(mobileProfile.liveFullscreenButtonClass, "icon-btn");
+  assert.equal(mobileProfile.liveTakeSnapshotButtonClass, "icon-btn");
   assert.equal(mobileProfile.liveMuteButtonClass, "icon-btn");
   assert.equal(mobileProfile.liveControlsPlacement, "inline");
   assert.equal(
@@ -145,6 +146,7 @@ test("mobile profile exposes custom main layout shell builder", () => {
     regions: {
       live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
       liveFullscreen: `<button data-fvc-region="live-fullscreen"></button>`,
+      liveTakeSnapshot: `<button data-fvc-region="live-take-snapshot"></button>`,
       liveMute: `<button data-fvc-region="live-mute"></button>`,
       information: `<div data-fvc-region="information"></div>`,
       pageNavigation: `<div data-fvc-region="page-navigation"></div>`,
@@ -214,6 +216,7 @@ test("required page shell regions follow declared capabilities", () => {
     [
       PAGE_SHELL_REGIONS.live,
       PAGE_SHELL_REGIONS.liveFullscreen,
+      PAGE_SHELL_REGIONS.liveTakeSnapshot,
       PAGE_SHELL_REGIONS.liveMute,
       PAGE_SHELL_REGIONS.livePictureInPicture,
       PAGE_SHELL_REGIONS.browseHeader,

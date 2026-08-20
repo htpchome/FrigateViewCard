@@ -33,6 +33,14 @@ export function buildLivePictureInPictureControlMarkup({
   return `<button class="${visualButtonClass} live-pip-btn" id="live-pip-btn" data-fvc-region="live-picture-in-picture" type="button" title="Picture-in-Picture live" aria-label="Picture-in-Picture live" aria-pressed="false" hidden>${icons.pipPopOut}</button>`;
 }
 
+export function buildLiveTakeSnapshotControlMarkup({
+  icons,
+  buttonClass = "square-btn",
+}) {
+  const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
+  return `<button class="${visualButtonClass} live-take-snapshot-btn" id="live-take-snapshot-btn" data-fvc-region="live-take-snapshot" type="button" title="Take Snapshot" aria-label="Take Snapshot">${icons.takeSnapshot}</button>`;
+}
+
 export function buildLiveMuteControlMarkup({
   icons,
   streamMuted,

@@ -22,6 +22,7 @@ import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-vie
 import {
   buildLiveFullscreenControlMarkup,
   buildLivePictureInPictureControlMarkup,
+  buildLiveTakeSnapshotControlMarkup,
   buildLiveMuteControlMarkup,
 } from "../src/features/live/view.tmpl.js";
 
@@ -353,6 +354,9 @@ test("shared shell builders expose stable page region anchors", () => {
   const livePictureInPicture = buildLivePictureInPictureControlMarkup({
     icons: { pipPopOut: "P" },
   });
+  const liveTakeSnapshot = buildLiveTakeSnapshotControlMarkup({
+    icons: { takeSnapshot: "S" },
+  });
   const liveMute = buildLiveMuteControlMarkup({
     icons: { volOff: "M", volOn: "V" },
     streamMuted: true,
@@ -371,6 +375,11 @@ test("shared shell builders expose stable page region anchors", () => {
     /^<button[^>]*class="square-btn live-pip-btn"[^>]*id="live-pip-btn"[^>]*data-fvc-region="live-picture-in-picture"/,
   );
   assert.match(livePictureInPicture, /aria-pressed="false"[^>]* hidden>P/);
+  assert.match(
+    liveTakeSnapshot,
+    /^<button[^>]*class="square-btn live-take-snapshot-btn"[^>]*id="live-take-snapshot-btn"[^>]*data-fvc-region="live-take-snapshot"/,
+  );
+  assert.match(liveTakeSnapshot, /title="Take Snapshot"[^>]*>S<\/button>$/);
   assert.match(liveMute, /class="square-btn mute-btn"/);
 
   const mobileLiveFullscreen = buildLiveFullscreenControlMarkup({
@@ -382,10 +391,19 @@ test("shared shell builders expose stable page region anchors", () => {
     streamMuted: true,
     buttonClass: "icon-btn",
   });
+  const mobileLiveTakeSnapshot = buildLiveTakeSnapshotControlMarkup({
+    icons: { takeSnapshot: "S" },
+    buttonClass: "icon-btn",
+  });
   assert.match(mobileLiveFullscreen, /class="icon-btn live-fs-btn"/);
   assert.doesNotMatch(mobileLiveFullscreen, /square-btn/);
   assert.match(mobileLiveMute, /class="icon-btn mute-btn"/);
   assert.doesNotMatch(mobileLiveMute, /square-btn/);
+  assert.match(
+    mobileLiveTakeSnapshot,
+    /class="icon-btn live-take-snapshot-btn"/,
+  );
+  assert.doesNotMatch(mobileLiveTakeSnapshot, /square-btn/);
   const browseHeader = buildBrowseHeaderRegionMarkup({
     icons: { left: "<", right: ">" },
   });
@@ -412,6 +430,7 @@ test("shared shell builders expose stable page region anchors", () => {
       livePictureInPicture,
       information: infoRow,
       liveFullscreen,
+      liveTakeSnapshot,
       liveMute,
       pageNavigation: pageNav,
       tabs,
@@ -428,6 +447,7 @@ test("shared shell builders expose stable page region anchors", () => {
     "information",
     "page-navigation",
     "live-fullscreen",
+    "live-take-snapshot",
     "live-mute",
     "tabs",
     "tools",
