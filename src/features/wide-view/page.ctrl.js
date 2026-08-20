@@ -105,6 +105,7 @@ export class WideViewPageController {
 
   syncColHeight() {
     requestAnimationFrame(() => {
+      this._companionController?.updateLayout?.();
       const l = this._host.shadowRoot?.querySelector(".col-left");
       const r = this._host.shadowRoot?.querySelector(".col-right");
       if (!l || !r) return;

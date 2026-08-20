@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1561";
+const VERSION = "1.0.1562";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1054,7 +1054,7 @@ const STYLES = `
   .card .col-left--wide-view{height:100%;max-height:100%;overflow:hidden;}
   .wide-companion-panel{display:flex;flex:1 1 0;flex-direction:column;gap:8px;min-width:0;min-height:0;padding:10px;box-sizing:border-box;overflow:hidden;}
   .wide-companion-title{font-size:.9rem;font-weight:700;color:var(--c-text);letter-spacing:.02em;}
-  .wide-companion-grid{flex:0 0 auto;min-height:0;overflow:hidden;align-content:start;justify-content:start;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),260px));grid-auto-rows:auto;}
+  .wide-companion-grid{flex:1 1 0;min-height:0;height:100%;overflow:hidden;align-content:start;justify-content:start;grid-template-columns:repeat(var(--wide-companion-columns,1),minmax(0,260px));grid-auto-rows:auto;}
   .wide-companion-cell{height:auto;min-height:0;overflow:hidden;}
   .wide-companion-media-host{flex:0 0 auto;min-height:0;aspect-ratio:16/9;}
   .wide-companion-meta{flex:0 0 auto;}
@@ -17000,6 +17000,7 @@ const WideViewPageController = class {
   }
   syncColHeight() {
     requestAnimationFrame(() => {
+      this._companionController?.updateLayout?.();
       const l = this._host.shadowRoot?.querySelector(".col-left");
       const r = this._host.shadowRoot?.querySelector(".col-right");
       if (!l || !r) return;
@@ -17342,6 +17343,47 @@ function buildWideCompanionRegionMarkup() {
 
 // src/features/wide-view/companion.ctrl.js
 const LIVE_STREAM_HINTS2 = new Set(["webrtc", "mse", "hls"]);
+const COMPANION_GRID_GAP_PX = 10;
+const COMPANION_META_HEIGHT_PX = 48;
+const COMPANION_PREFERRED_WIDTH_PX = 160;
+const COMPANION_MAX_WIDTH_PX = 260;
+function resolveWideCompanionColumnCount({
+  cameraCount,
+  width,
+  height,
+  metadataHeight = COMPANION_META_HEIGHT_PX
+} = {}) {
+  const count = Math.max(1, Math.floor(Number(cameraCount) || 0));
+  const availableWidth = Math.max(0, Number(width) || 0);
+  const availableHeight = Math.max(0, Number(height) || 0);
+  const resolvedMetaHeight = Math.max(
+    0,
+    Number(metadataHeight) || COMPANION_META_HEIGHT_PX
+  );
+  if (availableWidth <= 0) return 1;
+  const widthBasedColumns = Math.min(
+    count,
+    Math.max(
+      1,
+      Math.floor(
+        (availableWidth + COMPANION_GRID_GAP_PX) / (COMPANION_PREFERRED_WIDTH_PX + COMPANION_GRID_GAP_PX)
+      )
+    )
+  );
+  if (availableHeight <= 0) return widthBasedColumns;
+  for (let columns = widthBasedColumns; columns <= count; columns += 1) {
+    const totalGapWidth = COMPANION_GRID_GAP_PX * (columns - 1);
+    const cellWidth = Math.min(
+      COMPANION_MAX_WIDTH_PX,
+      Math.max(0, (availableWidth - totalGapWidth) / columns)
+    );
+    const rows = Math.ceil(count / columns);
+    const rowHeight = cellWidth * (9 / 16) + resolvedMetaHeight;
+    const requiredHeight = rows * rowHeight + COMPANION_GRID_GAP_PX * (rows - 1);
+    if (requiredHeight <= availableHeight) return columns;
+  }
+  return count;
+}
 const WideViewCompanionController = class {
   constructor(host, constants) {
     this._host = host;
@@ -17407,6 +17449,23 @@ const WideViewCompanionController = class {
       return "HA Live";
     }
     return `${this.liveStreamHint().toUpperCase()} Live`;
+  }
+  updateLayout() {
+    if (!this.isActive()) return;
+    const grid = this._host._$("#wide-companion-grid");
+    if (!grid) return;
+    const cameraCount = this._host._config?.cameras?.length || 0;
+    const metadataHeight = grid.querySelector?.(".wide-companion-meta")?.offsetHeight || COMPANION_META_HEIGHT_PX;
+    const columns = resolveWideCompanionColumnCount({
+      cameraCount,
+      width: grid.clientWidth,
+      height: grid.clientHeight,
+      metadataHeight
+    });
+    grid.style?.setProperty?.(
+      "--wide-companion-columns",
+      String(columns)
+    );
   }
   teardownMedia() {
     if (this._mediaState) {

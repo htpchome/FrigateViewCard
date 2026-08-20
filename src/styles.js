@@ -481,7 +481,7 @@ export const STYLES = `
   .card .col-left--wide-view{height:100%;max-height:100%;overflow:hidden;}
   .wide-companion-panel{display:flex;flex:1 1 0;flex-direction:column;gap:8px;min-width:0;min-height:0;padding:10px;box-sizing:border-box;overflow:hidden;}
   .wide-companion-title{font-size:.9rem;font-weight:700;color:var(--c-text);letter-spacing:.02em;}
-  .wide-companion-grid{flex:0 0 auto;min-height:0;overflow:hidden;align-content:start;justify-content:start;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),260px));grid-auto-rows:auto;}
+  .wide-companion-grid{flex:1 1 0;min-height:0;height:100%;overflow:hidden;align-content:start;justify-content:start;grid-template-columns:repeat(var(--wide-companion-columns,1),minmax(0,260px));grid-auto-rows:auto;}
   .wide-companion-cell{height:auto;min-height:0;overflow:hidden;}
   .wide-companion-media-host{flex:0 0 auto;min-height:0;aspect-ratio:16/9;}
   .wide-companion-meta{flex:0 0 auto;}

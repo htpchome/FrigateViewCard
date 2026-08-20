@@ -2,7 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { GridMediaController } from "../src/features/grid/media.ctrl.js";
-import { WideViewCompanionController } from "../src/features/wide-view/companion.ctrl.js";
+import {
+  resolveWideCompanionColumnCount,
+  WideViewCompanionController,
+} from "../src/features/wide-view/companion.ctrl.js";
 import { STYLES } from "../src/styles.js";
 
 const constants = {
@@ -16,7 +19,19 @@ const constants = {
 
 const createHost = ({ live = false, takeover = false } = {}) => {
   const calls = [];
-  const grid = { firstElementChild: null, innerHTML: "" };
+  const grid = {
+    firstElementChild: null,
+    innerHTML: "",
+    clientWidth: 745,
+    clientHeight: 550,
+    querySelector: () => ({ offsetHeight: 48 }),
+    style: {
+      values: {},
+      setProperty(name, value) {
+        this.values[name] = value;
+      },
+    },
+  };
   const host = {
     _pageId: "wide-view",
     _viewMode: "single",
@@ -80,14 +95,59 @@ test("Companion Cameras render every configured camera in user order", () => {
 });
 
 test("Companion Camera columns resize responsively within useful bounds", () => {
+  assert.equal(
+    resolveWideCompanionColumnCount({
+      cameraCount: 7,
+      width: 745,
+      height: 550,
+    }),
+    4,
+  );
+  assert.equal(
+    resolveWideCompanionColumnCount({
+      cameraCount: 7,
+      width: 510,
+      height: 750,
+    }),
+    3,
+  );
+  assert.equal(
+    resolveWideCompanionColumnCount({
+      cameraCount: 7,
+      width: 1260,
+      height: 300,
+    }),
+    7,
+  );
+  assert.equal(
+    resolveWideCompanionColumnCount({
+      cameraCount: 7,
+      width: 300,
+      height: 740,
+    }),
+    2,
+  );
   assert.match(
     STYLES,
-    /\.wide-companion-grid\{[^}]*grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,160px\),260px\)\)/,
+    /\.wide-companion-grid\{[^}]*grid-template-columns:repeat\(var\(--wide-companion-columns,1\),minmax\(0,260px\)\)/,
   );
   assert.match(
     STYLES,
     /\.wide-companion-media-host\{[^}]*aspect-ratio:16\/9/,
   );
+});
+
+test("Companion Camera controller applies the resolved column count", () => {
+  const { host, grid } = createHost();
+  host._config.cameras = Array.from({ length: 7 }, (_, index) => ({
+    entity: `camera.camera_${index + 1}`,
+    name: `Camera ${index + 1}`,
+  }));
+  const controller = new WideViewCompanionController(host, constants);
+
+  controller.updateLayout();
+
+  assert.equal(grid.style.values["--wide-companion-columns"], "4");
 });
 
 test("Companion Camera live state is config live or active alert", () => {
