@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1551";
+const VERSION = "1.0.1552";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3659,9 +3659,9 @@ function buildWideViewMainLayoutShellMarkup({
             ${regions.browse}
             ${regions.footer}
           </div>
-          <div class="wide-footer">
-            <div class="frigate-view">${regions.wideFooterIcon}</div>
-          </div>
+        </div>
+        <div class="wide-footer">
+          <div class="frigate-view">${regions.wideFooterIcon}</div>
         </div>`;
 }
 
