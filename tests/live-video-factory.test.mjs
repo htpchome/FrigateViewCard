@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  applyNativePictureInPicturePolicy,
   buildVideoOptionsForView,
   configureVideoElement,
   createVideoElement,
@@ -11,6 +12,7 @@ import {
   resetVideoViewDefaultOptions,
   resetScopedVideoViewDefaultOptions,
   resolveVideoProfileNameForView,
+  shouldSuppressNativePictureInPicture,
   setScopedVideoViewDefaultOptions,
   setVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
@@ -112,11 +114,72 @@ test("createVideoElement applies liveEngine defaults", () => {
     );
     assert.equal(video.hasAttribute("playsinline"), true);
     assert.equal(video.hasAttribute("webkit-playsinline"), true);
-    assert.equal(video.disablePictureInPicture, true);
-    assert.equal(video.getAttribute("disablepictureinpicture"), "");
+    assert.equal(video.disablePictureInPicture, false);
+    assert.equal(video.hasAttribute("disablepictureinpicture"), false);
     assert.equal(video.disableRemotePlayback, true);
     assert.equal(video.getAttribute("x-webkit-airplay"), "deny");
   });
+});
+
+test("native PiP overlay suppression is limited to desktop Firefox", () => {
+  assert.equal(
+    shouldSuppressNativePictureInPicture({
+      userAgent: "Mozilla/5.0 Firefox/153.0",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldSuppressNativePictureInPicture({
+      userAgent: "Mozilla/5.0 Edg/142.0",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldSuppressNativePictureInPicture({
+      userAgent: "Mozilla/5.0 Android Mobile Firefox/153.0",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldSuppressNativePictureInPicture({
+      userAgent: "Mozilla/5.0 SeaMonkey/2.53 Firefox/128.0",
+    }),
+    false,
+  );
+});
+
+test("Firefox video creation suppresses only the browser overlay button", () => {
+  withFakeDocument(() => {
+    const video = createVideoElement({
+      profile: "liveEngine",
+      navigatorObj: { userAgent: "Mozilla/5.0 Firefox/153.0" },
+    });
+
+    assert.equal(video.disablePictureInPicture, true);
+    assert.equal(video.getAttribute("disablepictureinpicture"), "");
+  });
+});
+
+test("nested player videos receive the same stable browser PiP policy", () => {
+  const video = createFakeVideoElement();
+
+  assert.equal(
+    applyNativePictureInPicturePolicy(video, {
+      navigatorObj: { userAgent: "Mozilla/5.0 Firefox/153.0" },
+    }),
+    true,
+  );
+  assert.equal(video.disablePictureInPicture, true);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), true);
+
+  assert.equal(
+    applyNativePictureInPicturePolicy(video, {
+      navigatorObj: { userAgent: "Mozilla/5.0 Edg/142.0" },
+    }),
+    false,
+  );
+  assert.equal(video.disablePictureInPicture, false);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), false);
 });
 
 test("popup profile enables controls and preload metadata", () => {

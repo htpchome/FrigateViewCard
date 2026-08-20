@@ -137,6 +137,7 @@ import {
 } from "../features/live/rotate-overlay-state.js";
 import {
   buildVideoOptionsForView,
+  applyNativePictureInPicturePolicy,
   configureVideoElement,
   createVideoElement,
   mountNodeIntoSlot,
@@ -144,6 +145,11 @@ import {
   supportsNativeHlsPlayback,
 } from "../shared/media/video-factory.js";
 import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
+import {
+  PictureInPictureButtonController,
+  resolveVideoPictureInPictureSupport,
+  toggleVideoPictureInPicture,
+} from "../shared/media/picture-in-picture.js";
 import {
   BrowserPlaybackTargetController,
   PLAYBACK_TARGET_AIRPLAY,
@@ -166,6 +172,7 @@ import { createMseGraceController } from "../features/live/mse-grace-controller.
 import {
   buildLiveEngineWrapMarkup,
   buildLiveFullscreenControlMarkup,
+  buildLivePictureInPictureControlMarkup,
   buildLiveMuteControlMarkup,
 } from "../features/live/view.tmpl.js";
 import { GridMediaController } from "../features/grid/media.ctrl.js";
@@ -646,6 +653,8 @@ export class FrigateViewCard extends HTMLElement {
     this._popupMediaType = "";
     this._popupMediaStopTimer = null;
     this._popupMediaControlsController = null;
+    this._livePictureInPictureButtonController = null;
+    this._popupPictureInPictureButtonController = null;
     this._popupControlsHideTimer = null;
     this._liveControlsHideTimer = null;
     this._liveOverlayControlsController = null;
@@ -1382,6 +1391,8 @@ export class FrigateViewCard extends HTMLElement {
       } catch (_) {}
       this._liveOverlayControlsController = null;
     }
+    this._clearPictureInPictureButtonController("live");
+    this._clearPictureInPictureButtonController("popup");
     if (this._playbackTargetController) {
       try {
         this._playbackTargetController.dispose();
@@ -1656,11 +1667,17 @@ export class FrigateViewCard extends HTMLElement {
   _assignLiveEngine(engine) {
     if (this._engine === engine) {
       if (engine) this._attachMainLiveVideoZoom(engine);
+      this._syncPictureInPictureButtons();
       return;
     }
     this._clearLiveVideoZoom();
+    this._clearPictureInPictureButtonController("live");
     this._engine = engine;
-    if (engine) this._attachMainLiveVideoZoom(engine);
+    if (engine) {
+      this._attachMainLiveVideoZoom(engine);
+    } else {
+      this._syncPictureInPictureButtons();
+    }
   }
 
   _attachMainLiveVideoZoom(engine, retries = 12) {
@@ -1672,10 +1689,12 @@ export class FrigateViewCard extends HTMLElement {
     if (video) {
       if (this._liveVideoZoomController?.video === video) {
         this._liveVideoZoomController.refresh();
+        this._syncPictureInPictureButtons();
         return;
       }
       this._clearLiveVideoZoom();
       this._liveVideoZoomController = attachVideoZoom(video);
+      this._syncPictureInPictureButtons();
       return;
     }
     if (retries <= 0) return;
@@ -3081,6 +3100,7 @@ export class FrigateViewCard extends HTMLElement {
       : "";
     const pageNav = this._pageNavigationController.pageNavMarkup();
     const shellProfile = this._activePageShellLayoutProfile();
+    const shellCapabilities = resolvePageCapabilities(shellProfile);
     const infoRow = resolvePageInfoRowMarkup(shellProfile, {
       title,
       subtitle,
@@ -3098,6 +3118,12 @@ export class FrigateViewCard extends HTMLElement {
     const toolsMarkup = this._getToolsMarkup();
     const regions = {
       live: buildLiveEngineWrapMarkup({ icons: ICONS }),
+      livePictureInPicture: shellCapabilities.hasLivePictureInPicture
+        ? buildLivePictureInPictureControlMarkup({
+            icons: ICONS,
+            buttonClass: shellProfile?.livePictureInPictureButtonClass,
+          })
+        : "",
       liveFullscreen: buildLiveFullscreenControlMarkup({
         icons: ICONS,
         buttonClass: shellProfile?.liveFullscreenButtonClass,
@@ -3166,6 +3192,7 @@ export class FrigateViewCard extends HTMLElement {
     this._renderPreviewPage();
     this._applyPreviewShellVisibility();
     this._syncMobileViewPageMarkup();
+    this._syncPictureInPictureButtons();
   }
 
   _renderShellPreserveLive() {
@@ -3195,6 +3222,7 @@ export class FrigateViewCard extends HTMLElement {
 
     this._initLiveOverlayControls();
     this._syncFullscreenButtonsVisibility();
+    this._syncPictureInPictureButtons();
   }
 
   _shouldRenderTwoWayTalkButtonForActiveCamera() {
@@ -3944,6 +3972,7 @@ export class FrigateViewCard extends HTMLElement {
     this._setLivePopupCover(true);
     this._applyLiveMuteChange(true, { source: "popup-open" });
     this._syncFullscreenButtonsVisibility();
+    this._syncPictureInPictureButtons();
     this._scheduleRotateOverlayUpdate();
   }
   _stopPopupMedia() {
@@ -4007,6 +4036,7 @@ export class FrigateViewCard extends HTMLElement {
     this._setLivePopupCover(false);
     this._applyLiveMuteChange(true, { source: "popup-close" });
     this._syncFullscreenButtonsVisibility();
+    this._syncPictureInPictureButtons();
     this._scheduleRotateOverlayUpdate();
 
     this._stopPopupMedia();
@@ -4071,6 +4101,10 @@ export class FrigateViewCard extends HTMLElement {
       this._toggleSlideshowRotation();
       return true;
     }
+    if (target.closest("#live-pip-btn")) {
+      void this._togglePictureInPicture(this._livePictureInPictureVideo());
+      return true;
+    }
     if (target.closest("#live-fs-btn")) {
       this._fullscreen(this._$("#live-stage"), { preferLive: true });
       return true;
@@ -4119,6 +4153,11 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handlePopupMediaToolbarClick(target) {
+    if (target.closest("#popup-pip-btn")) {
+      void this._togglePictureInPicture(this._popupMediaVideo(), { popup: true });
+      this._showPopupControlsTemporarily();
+      return true;
+    }
     if (target.closest("#popup-airplay-btn, #popup-media-airplay")) {
       void this._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
         scope: "popup",
@@ -4978,7 +5017,111 @@ export class FrigateViewCard extends HTMLElement {
   _usePopupCustomControls(mediaType) {
     return this._isPhonePopupUi() && this._isPopupVideoMediaType(mediaType);
   }
-  _ensurePopupAirPlayButton(mediaType = "") {
+  _livePictureInPictureVideo() {
+    return (
+      this._findVideoDeep(this._$("#engine")) ||
+      this._findVideoDeep(this._engine) ||
+      this._engine?.video ||
+      null
+    );
+  }
+
+  _clearPictureInPictureButtonController(scope) {
+    const property =
+      scope === "popup"
+        ? "_popupPictureInPictureButtonController"
+        : "_livePictureInPictureButtonController";
+    const controller = this[property];
+    if (controller) {
+      try {
+        controller.dispose();
+      } catch (_) {}
+    }
+    this[property] = null;
+  }
+
+  _bindPictureInPictureButton(scope, button, video) {
+    const property =
+      scope === "popup"
+        ? "_popupPictureInPictureButtonController"
+        : "_livePictureInPictureButtonController";
+    applyNativePictureInPicturePolicy(video);
+    const current = this[property];
+    if (current?.button === button && current?.video === video) {
+      current.refresh();
+      return;
+    }
+
+    this._clearPictureInPictureButtonController(scope);
+    if (!button || !video) {
+      if (button) {
+        button.hidden = true;
+        button.disabled = true;
+      }
+      return;
+    }
+
+    const controller = new PictureInPictureButtonController({
+      button,
+      video,
+      documentObj: video.ownerDocument || globalThis.document || null,
+    });
+    this[property] = controller;
+    controller.bind();
+  }
+
+  _syncPictureInPictureButtons() {
+    const popupOpen =
+      this._$("#myPopup")?.classList.contains("is-open") === true;
+    const liveAllowed =
+      this._activePageShellCapabilities().hasLivePictureInPicture &&
+      !DEVICE_PROFILE.isMobile &&
+      this._viewMode !== "grid" &&
+      !popupOpen;
+    this._bindPictureInPictureButton(
+      "live",
+      this._$("#live-pip-btn"),
+      liveAllowed ? this._livePictureInPictureVideo() : null,
+    );
+
+    const popupMediaType = this._popupMediaType;
+    const popupAllowed =
+      popupOpen &&
+      !DEVICE_PROFILE.isMobile &&
+      this._isPopupVideoMediaType(popupMediaType);
+    this._bindPictureInPictureButton(
+      "popup",
+      this._$("#popup-pip-btn"),
+      popupAllowed ? this._popupMediaVideo() : null,
+    );
+  }
+
+  async _togglePictureInPicture(video, { popup = false } = {}) {
+    const documentObj = video?.ownerDocument || globalThis.document || null;
+    const support = resolveVideoPictureInPictureSupport({ video, documentObj });
+    if (!support.supported) {
+      this._toast("Picture-in-Picture is not supported for this video.");
+      this._syncPictureInPictureButtons();
+      return;
+    }
+
+    try {
+      await toggleVideoPictureInPicture({ video, documentObj });
+    } catch (error) {
+      console.warn("[Frigate] Picture-in-Picture request failed", error);
+      const reason = String(error?.message || "").trim();
+      this._toast(
+        reason
+          ? `Picture-in-Picture could not start: ${reason}`
+          : "Picture-in-Picture could not start in this browser.",
+      );
+    } finally {
+      this._syncPictureInPictureButtons();
+      if (popup) this._showPopupControlsTemporarily();
+    }
+  }
+
+  _ensurePopupPlaybackButtons(mediaType = "") {
     const viewer = this._$("#viewer");
     if (!viewer) return;
     const existingControls = viewer.querySelector("#popup-playback-controls");
@@ -4986,9 +5129,11 @@ export class FrigateViewCard extends HTMLElement {
       this._usePopupCustomControls(mediaType) ||
       !viewer.querySelector("video")
     ) {
+      this._clearPictureInPictureButtonController("popup");
       existingControls?.remove();
       return;
     }
+
     let controls = existingControls;
     if (!controls) {
       controls = document.createElement("div");
@@ -4997,18 +5142,35 @@ export class FrigateViewCard extends HTMLElement {
       viewer.appendChild(controls);
     }
     controls.innerHTML = "";
-    const button = document.createElement("button");
-    button.className = "glass-btn popup-playback-btn";
-    button.id = "popup-airplay-btn";
-    button.type = "button";
-    button.title = "AirPlay video";
-    button.setAttribute("aria-label", "AirPlay video");
-    button.hidden = true;
-    button.innerHTML = ICONS.airplayVideo;
-    controls.appendChild(button);
+
+    if (!DEVICE_PROFILE.isMobile && this._isPopupVideoMediaType(mediaType)) {
+      const pictureInPictureButton = document.createElement("button");
+      pictureInPictureButton.className =
+        "square-btn popup-playback-btn popup-pip-btn";
+      pictureInPictureButton.id = "popup-pip-btn";
+      pictureInPictureButton.type = "button";
+      pictureInPictureButton.title = "Picture-in-Picture";
+      pictureInPictureButton.setAttribute("aria-label", "Picture-in-Picture");
+      pictureInPictureButton.setAttribute("aria-pressed", "false");
+      pictureInPictureButton.hidden = true;
+      pictureInPictureButton.innerHTML = ICONS.pipPopOut;
+      controls.appendChild(pictureInPictureButton);
+    }
+
+    const airPlayButton = document.createElement("button");
+    airPlayButton.className = "glass-btn popup-playback-btn";
+    airPlayButton.id = "popup-airplay-btn";
+    airPlayButton.type = "button";
+    airPlayButton.title = "AirPlay video";
+    airPlayButton.setAttribute("aria-label", "AirPlay video");
+    airPlayButton.hidden = true;
+    airPlayButton.innerHTML = ICONS.airplayVideo;
+    controls.appendChild(airPlayButton);
     this._syncPlaybackTargetButtons();
+    this._syncPictureInPictureButtons();
   }
   _clearPopupMediaCleanup() {
+    this._clearPictureInPictureButtonController("popup");
     this._clearPopupVideoZoom?.();
     if (this._popupControlsHideTimer) {
       clearTimeout(this._popupControlsHideTimer);
@@ -5569,6 +5731,7 @@ export class FrigateViewCard extends HTMLElement {
     this._renderMuteButton();
     this._syncTwoWayTalkButton();
     this._syncFullscreenButtonsVisibility();
+    this._syncPictureInPictureButtons();
     this._syncToolbarButtons();
     this._syncPlaybackTargetButtons();
     this._renderLegend();

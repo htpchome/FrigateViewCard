@@ -223,7 +223,7 @@ export class PopupMediaLoaderController {
       hasVideo: !!video,
     });
     if (postRenderPlan.shouldEnsureAirPlayButton) {
-      this._host._ensurePopupAirPlayButton(postRenderPlan.airPlayMediaType);
+      this._host._ensurePopupPlaybackButtons(postRenderPlan.airPlayMediaType);
     }
     if (postRenderPlan.shouldRenderInfo) {
       this._host._renderPopupInfo(infoEvent, infoOpts);
@@ -514,7 +514,7 @@ export class PopupMediaLoaderController {
       popupMediaType: renderPlan.popupMediaType,
     });
     if (outcomePlan.shouldEnsureAirPlayButton) {
-      this._host._ensurePopupAirPlayButton(outcomePlan.airPlayMediaType);
+      this._host._ensurePopupPlaybackButtons(outcomePlan.airPlayMediaType);
     }
     if (outcomePlan.shouldScheduleRotateOverlay) {
       this._host._scheduleRotateOverlayUpdate();

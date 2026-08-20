@@ -368,8 +368,9 @@ export const STYLES = `
   .square-btn svg{width: 24px;height: 24px;fill: currentColor;pointer-events: none;}
   .mute-btn {position:absolute;right:20px;bottom:48px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .live-fs-btn{position:absolute;right:20px;bottom:92px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .live-pip-btn{position:absolute;right:20px;bottom:136px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
 
-  .live-fs-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
+  .live-pip-btn[hidden],.live-fs-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
 
 
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
@@ -387,19 +388,24 @@ export const STYLES = `
   .overlay-controls[hidden]{display:none !important;}
   .overlay-controls svg {width:30px;height:30px;opacity: 0.8; }
   .overlay-controls:hover svg {width:30px;height:30px;opacity: 0.95; }
-  .popup-playback-controls{display:flex;gap:4px;}
+  .popup-playback-controls{position:absolute;right:20px;bottom:48px;z-index:3;display:flex;flex-direction:column;gap:8px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .popup-playback-controls .popup-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
+  .popup-playback-controls .square-btn svg{width:24px;height:24px;opacity:1;}
   #viewer:hover .popup-playback-controls{opacity:1;pointer-events:auto;}
   @media (hover:none), (pointer:coarse){#viewer .popup-playback-controls{opacity:1;pointer-events:auto;}}
   .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;padding:4px 10px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
   .slideshow-next-chip[hidden]{display:none !important;}
+  #live-stage.live-controls-visible .live-pip-btn,
   #live-stage.live-controls-visible .live-fs-btn,
   #live-stage.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {
+    #live-stage:hover .live-pip-btn,
     #live-stage:hover .live-fs-btn,
     #live-stage:hover .mute-btn{opacity:1;pointer-events:auto;}
   }
 
+  #live-stage:fullscreen .live-pip-btn,
+  #live-stage:-webkit-full-screen .live-pip-btn,
   #live-stage:fullscreen .live-fs-btn,
   #live-stage:-webkit-full-screen .live-fs-btn,
   #viewer:fullscreen .overlay-controls,

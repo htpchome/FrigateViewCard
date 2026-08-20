@@ -9,6 +9,7 @@ import { buildInfoRowMarkup } from "../../card/controls/shell-nav.tmpl.js";
 
 export const PAGE_SHELL_REGIONS = Object.freeze({
   live: "live",
+  livePictureInPicture: "live-picture-in-picture",
   liveFullscreen: "live-fullscreen",
   liveMute: "live-mute",
   information: "information",
@@ -48,6 +49,9 @@ function normalizeProfile(profile = {}) {
     liveFullscreenButtonClass: String(
       profile.liveFullscreenButtonClass || "",
     ).trim(),
+    livePictureInPictureButtonClass: String(
+      profile.livePictureInPictureButtonClass || "",
+    ).trim(),
     liveMuteButtonClass: String(profile.liveMuteButtonClass || "").trim(),
     liveControlsPlacement:
       profile.liveControlsPlacement === "inline" ? "inline" : "overlay",
@@ -55,6 +59,8 @@ function normalizeProfile(profile = {}) {
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
     capabilities: {
       hasLive: capabilities.hasLive !== false,
+      hasLivePictureInPicture:
+        capabilities.hasLivePictureInPicture === true,
       hasBrowse: capabilities.hasBrowse !== false,
       tabsVariant:
         capabilities.tabsVariant === "none" ||
@@ -74,6 +80,8 @@ export function resolvePageCapabilities(profile = {}) {
       : {};
   return {
     hasLive: caps.hasLive !== false,
+    hasLivePictureInPicture:
+      caps.hasLivePictureInPicture === true,
     hasBrowse: caps.hasBrowse !== false,
     tabsVariant:
       caps.tabsVariant === "none" || caps.tabsVariant === "new-tabs"
@@ -91,6 +99,9 @@ export function resolveRequiredPageShellRegions(profile = {}) {
       PAGE_SHELL_REGIONS.liveFullscreen,
       PAGE_SHELL_REGIONS.liveMute,
     );
+    if (capabilities.hasLivePictureInPicture) {
+      requiredRegions.push(PAGE_SHELL_REGIONS.livePictureInPicture);
+    }
   }
   if (capabilities.hasBrowse) {
     requiredRegions.push(
@@ -238,6 +249,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
       }),
     capabilities: {
       hasLive: true,
+      hasLivePictureInPicture: true,
       hasBrowse: true,
       tabsVariant: "standard",
     },
@@ -299,6 +311,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
       }),
     capabilities: {
       hasLive: true,
+      hasLivePictureInPicture: true,
       hasBrowse: true,
       tabsVariant: "standard",
     },

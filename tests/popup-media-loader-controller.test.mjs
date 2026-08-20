@@ -108,7 +108,7 @@ test("showRecording signs candidates and initializes popup recording playback on
       if (selector === "#recording-scrub") return { hidden: false };
       return null;
     },
-    _ensurePopupAirPlayButton: (kind) => calls.push(["ensureAirPlay", kind]),
+    _ensurePopupPlaybackButtons: (kind) => calls.push(["ensurePlayback", kind]),
     _scheduleRotateOverlayUpdate: () => calls.push(["scheduleRotate"]),
     _initPopupMediaControls: (_video, type) =>
       calls.push(["initControls", type]),

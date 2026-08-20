@@ -20,6 +20,7 @@ import {
 import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
 import {
   buildLiveFullscreenControlMarkup,
+  buildLivePictureInPictureControlMarkup,
   buildLiveMuteControlMarkup,
 } from "../src/features/live/view.tmpl.js";
 
@@ -231,6 +232,9 @@ test("shared shell builders expose stable page region anchors", () => {
   const liveFullscreen = buildLiveFullscreenControlMarkup({
     icons: { expand: "E" },
   });
+  const livePictureInPicture = buildLivePictureInPictureControlMarkup({
+    icons: { pipPopOut: "P" },
+  });
   const liveMute = buildLiveMuteControlMarkup({
     icons: { volOff: "M", volOn: "V" },
     streamMuted: true,
@@ -244,6 +248,11 @@ test("shared shell builders expose stable page region anchors", () => {
   assert.doesNotMatch(liveFullscreen, /live-playback-btn/);
   assert.doesNotMatch(liveFullscreen, /id="live-airplay-btn"/);
   assert.match(liveFullscreen, /class="square-btn live-fs-btn"/);
+  assert.match(
+    livePictureInPicture,
+    /^<button[^>]*class="square-btn live-pip-btn"[^>]*id="live-pip-btn"[^>]*data-fvc-region="live-picture-in-picture"/,
+  );
+  assert.match(livePictureInPicture, /aria-pressed="false"[^>]* hidden>P/);
   assert.match(liveMute, /class="square-btn mute-btn"/);
 
   const mobileLiveFullscreen = buildLiveFullscreenControlMarkup({
@@ -271,6 +280,7 @@ test("shared shell builders expose stable page region anchors", () => {
   const shellMarkup = buildSingleViewMainLayoutShellMarkup({
     regions: {
       live: liveEngineWrap,
+      livePictureInPicture,
       information: infoRow,
       liveFullscreen,
       liveMute,
@@ -285,6 +295,7 @@ test("shared shell builders expose stable page region anchors", () => {
 
   for (const regionName of [
     "live",
+    "live-picture-in-picture",
     "information",
     "page-navigation",
     "live-fullscreen",

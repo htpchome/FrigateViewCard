@@ -144,10 +144,13 @@ test("mobile rotate overlay promotes the card host above Home Assistant chrome",
   );
 });
 
-test("popup AirPlay controls delegate to browser target playback", () => {
+test("popup playback controls delegate to native PiP and AirPlay", () => {
   assert.equal(cardSource.includes("#popup-fs-btn"), false);
   assert.equal(cardSource.includes("_ensurePopupFullscreenButton"), false);
-  assert.equal(cardSource.includes("_ensurePopupAirPlayButton"), true);
+  assert.equal(cardSource.includes("_ensurePopupAirPlayButton"), false);
+  assert.equal(cardSource.includes("_ensurePopupPlaybackButtons"), true);
+  assert.equal(cardSource.includes('pictureInPictureButton.id = "popup-pip-btn"'), true);
+  assert.equal(cardSource.includes("toggleVideoPictureInPicture"), true);
   assert.equal(stylesSource.includes(".overlay-fs"), false);
   assert.equal(
     cardSource.includes("#popup-airplay-btn, #popup-media-airplay"),
@@ -161,7 +164,7 @@ test("popup AirPlay controls delegate to browser target playback", () => {
   assert.equal(cardSource.includes("#live-airplay-btn"), false);
   assert.equal(
     stylesSource.includes(
-      ".live-fs-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}",
+      ".live-pip-btn[hidden],.live-fs-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}",
     ),
     true,
   );

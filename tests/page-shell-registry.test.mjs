@@ -36,21 +36,25 @@ test("page shell registry default page capabilities resolve stable defaults", ()
 
   assert.deepEqual(singleCaps, {
     hasLive: true,
+    hasLivePictureInPicture: true,
     hasBrowse: true,
     tabsVariant: "standard",
   });
   assert.deepEqual(mobileCaps, {
     hasLive: true,
+    hasLivePictureInPicture: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
   assert.deepEqual(wideCaps, {
     hasLive: true,
+    hasLivePictureInPicture: true,
     hasBrowse: true,
     tabsVariant: "standard",
   });
   assert.deepEqual(previewCaps, {
     hasLive: true,
+    hasLivePictureInPicture: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
@@ -77,6 +81,7 @@ test("page shell capabilities honor explicit overrides", () => {
   const profile = {
     capabilities: {
       hasLive: false,
+      hasLivePictureInPicture: true,
       hasBrowse: false,
       tabsVariant: "new-tabs",
     },
@@ -84,6 +89,7 @@ test("page shell capabilities honor explicit overrides", () => {
 
   assert.deepEqual(resolvePageCapabilities(profile), {
     hasLive: false,
+    hasLivePictureInPicture: true,
     hasBrowse: false,
     tabsVariant: "new-tabs",
   });
@@ -100,12 +106,14 @@ test("page shell capabilities normalize unsupported values", () => {
 
   assert.deepEqual(resolvePageCapabilities(profile), {
     hasLive: true,
+    hasLivePictureInPicture: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
 
   assert.deepEqual(resolvePageCapabilities({}), {
     hasLive: true,
+    hasLivePictureInPicture: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
@@ -198,6 +206,7 @@ test("required page shell regions follow declared capabilities", () => {
     resolveRequiredPageShellRegions({
       capabilities: {
         hasLive: true,
+        hasLivePictureInPicture: true,
         hasBrowse: true,
         tabsVariant: "standard",
       },
@@ -206,6 +215,7 @@ test("required page shell regions follow declared capabilities", () => {
       PAGE_SHELL_REGIONS.live,
       PAGE_SHELL_REGIONS.liveFullscreen,
       PAGE_SHELL_REGIONS.liveMute,
+      PAGE_SHELL_REGIONS.livePictureInPicture,
       PAGE_SHELL_REGIONS.browseHeader,
       PAGE_SHELL_REGIONS.browse,
       PAGE_SHELL_REGIONS.tabs,

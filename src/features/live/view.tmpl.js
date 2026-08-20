@@ -25,6 +25,14 @@ export function buildLiveFullscreenControlMarkup({
   return `<button class="${visualButtonClass} live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
 }
 
+export function buildLivePictureInPictureControlMarkup({
+  icons,
+  buttonClass = "square-btn",
+}) {
+  const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
+  return `<button class="${visualButtonClass} live-pip-btn" id="live-pip-btn" data-fvc-region="live-picture-in-picture" type="button" title="Picture-in-Picture live" aria-label="Picture-in-Picture live" aria-pressed="false" hidden>${icons.pipPopOut}</button>`;
+}
+
 export function buildLiveMuteControlMarkup({
   icons,
   streamMuted,

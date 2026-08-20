@@ -62,6 +62,9 @@ test("_clearPopupMediaCleanup clears timers, disposes controllers, and destroys 
           calls.push(["disposeControls"]);
         },
       },
+      _clearPictureInPictureButtonController(scope) {
+        calls.push(["clearPictureInPicture", scope]);
+      },
       _popupMediaCleanup: () => {
         calls.push(["popupMediaCleanup"]);
       },
@@ -73,6 +76,7 @@ test("_clearPopupMediaCleanup clears timers, disposes controllers, and destroys 
     FrigateViewCard.prototype._clearPopupMediaCleanup.call(ctx);
 
     assert.deepEqual(calls, [
+      ["clearPictureInPicture", "popup"],
       ["clearTimeout", 11],
       ["clearTimeout", 22],
       ["disposeControls"],
@@ -122,6 +126,9 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
       _stopPreviewMode() {
         calls.push(["stopPreviewMode"]);
       },
+      _clearPictureInPictureButtonController(scope) {
+        calls.push(["clearPictureInPicture", scope]);
+      },
       _clearPopupMediaCleanup() {
         calls.push([
           "clearPopupMediaCleanup",
@@ -151,6 +158,8 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
       ["stopSlideshowRotation"],
       ["stopGridModeState"],
       ["stopPreviewMode"],
+      ["clearPictureInPicture", "live"],
+      ["clearPictureInPicture", "popup"],
       ["clearPopupMediaCleanup", 11, 22],
       ["clearRotateOverlayAudioSync"],
       ["clearRotateVideoFullscreenStyle"],

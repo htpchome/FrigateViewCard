@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1544";
+const VERSION = "1.0.1545";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -941,8 +941,9 @@ const STYLES = `
   .square-btn svg{width: 24px;height: 24px;fill: currentColor;pointer-events: none;}
   .mute-btn {position:absolute;right:20px;bottom:48px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .live-fs-btn{position:absolute;right:20px;bottom:92px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .live-pip-btn{position:absolute;right:20px;bottom:136px;z-index:3;width:36px;height:36px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
 
-  .live-fs-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
+  .live-pip-btn[hidden],.live-fs-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
 
 
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
@@ -960,19 +961,24 @@ const STYLES = `
   .overlay-controls[hidden]{display:none !important;}
   .overlay-controls svg {width:30px;height:30px;opacity: 0.8; }
   .overlay-controls:hover svg {width:30px;height:30px;opacity: 0.95; }
-  .popup-playback-controls{display:flex;gap:4px;}
+  .popup-playback-controls{position:absolute;right:20px;bottom:48px;z-index:3;display:flex;flex-direction:column;gap:8px;opacity:0;pointer-events:none;transition:opacity .16s ease;}
   .popup-playback-controls .popup-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
+  .popup-playback-controls .square-btn svg{width:24px;height:24px;opacity:1;}
   #viewer:hover .popup-playback-controls{opacity:1;pointer-events:auto;}
   @media (hover:none), (pointer:coarse){#viewer .popup-playback-controls{opacity:1;pointer-events:auto;}}
   .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;padding:4px 10px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
   .slideshow-next-chip[hidden]{display:none !important;}
+  #live-stage.live-controls-visible .live-pip-btn,
   #live-stage.live-controls-visible .live-fs-btn,
   #live-stage.live-controls-visible .mute-btn{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {
+    #live-stage:hover .live-pip-btn,
     #live-stage:hover .live-fs-btn,
     #live-stage:hover .mute-btn{opacity:1;pointer-events:auto;}
   }
 
+  #live-stage:fullscreen .live-pip-btn,
+  #live-stage:-webkit-full-screen .live-pip-btn,
   #live-stage:fullscreen .live-fs-btn,
   #live-stage:-webkit-full-screen .live-fs-btn,
   #viewer:fullscreen .overlay-controls,
@@ -3461,6 +3467,7 @@ function normalizeRegions(regions) {
   const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
   return {
     live: "",
+    livePictureInPicture: "",
     liveFullscreen: "",
     liveMute: "",
     information: "",
@@ -3542,6 +3549,7 @@ function buildSingleViewMainLayoutShellMarkup({
           <div class="${leftColumnClassName}" id="col-left">
             <div class="live-stage live-stage--overlay" id="live-stage">
               ${regions.live}
+              ${regions.livePictureInPicture}
               ${regions.liveFullscreen}
               ${regions.liveMute}
             </div>
@@ -3581,6 +3589,7 @@ function normalizeRegions2(regions) {
   const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
   return {
     live: "",
+    livePictureInPicture: "",
     liveFullscreen: "",
     liveMute: "",
     information: "",
@@ -3620,6 +3629,7 @@ function buildWideViewMainLayoutShellMarkup({
           <div class="${leftColumnClassName}" id="col-left">
             <div class="live-stage live-stage--overlay" id="live-stage">
               ${regions.live}
+              ${regions.livePictureInPicture}
               ${regions.liveFullscreen}
               ${regions.liveMute}
             </div>
@@ -3814,6 +3824,13 @@ function buildLiveFullscreenControlMarkup({
 }) {
   const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
   return `<button class="${visualButtonClass} live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
+}
+function buildLivePictureInPictureControlMarkup({
+  icons,
+  buttonClass = "square-btn"
+}) {
+  const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
+  return `<button class="${visualButtonClass} live-pip-btn" id="live-pip-btn" data-fvc-region="live-picture-in-picture" type="button" title="Picture-in-Picture live" aria-label="Picture-in-Picture live" aria-pressed="false" hidden>${icons.pipPopOut}</button>`;
 }
 function buildLiveMuteControlMarkup({
   icons,
@@ -4078,6 +4095,7 @@ function buildPopupShellMarkup({ icons, version }) {
 // src/features/navigation/page-shell-registry.js
 const PAGE_SHELL_REGIONS = Object.freeze({
   live: "live",
+  livePictureInPicture: "live-picture-in-picture",
   liveFullscreen: "live-fullscreen",
   liveMute: "live-mute",
   information: "information",
@@ -4107,12 +4125,16 @@ function normalizeProfile(profile = {}) {
     liveFullscreenButtonClass: String(
       profile.liveFullscreenButtonClass || ""
     ).trim(),
+    livePictureInPictureButtonClass: String(
+      profile.livePictureInPictureButtonClass || ""
+    ).trim(),
     liveMuteButtonClass: String(profile.liveMuteButtonClass || "").trim(),
     liveControlsPlacement: profile.liveControlsPlacement === "inline" ? "inline" : "overlay",
     browseClass: String(profile.browseClass || "").trim(),
     resizeHandleClass: String(profile.resizeHandleClass || "").trim(),
     capabilities: {
       hasLive: capabilities.hasLive !== false,
+      hasLivePictureInPicture: capabilities.hasLivePictureInPicture === true,
       hasBrowse: capabilities.hasBrowse !== false,
       tabsVariant: capabilities.tabsVariant === "none" || capabilities.tabsVariant === "new-tabs" ? capabilities.tabsVariant : "standard"
     },
@@ -4124,6 +4146,7 @@ function resolvePageCapabilities(profile = {}) {
   const caps = profile && profile.capabilities && typeof profile.capabilities === "object" ? profile.capabilities : {};
   return {
     hasLive: caps.hasLive !== false,
+    hasLivePictureInPicture: caps.hasLivePictureInPicture === true,
     hasBrowse: caps.hasBrowse !== false,
     tabsVariant: caps.tabsVariant === "none" || caps.tabsVariant === "new-tabs" ? caps.tabsVariant : "standard"
   };
@@ -4137,6 +4160,9 @@ function resolveRequiredPageShellRegions(profile = {}) {
       PAGE_SHELL_REGIONS.liveFullscreen,
       PAGE_SHELL_REGIONS.liveMute
     );
+    if (capabilities.hasLivePictureInPicture) {
+      requiredRegions.push(PAGE_SHELL_REGIONS.livePictureInPicture);
+    }
   }
   if (capabilities.hasBrowse) {
     requiredRegions.push(
@@ -4244,6 +4270,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     }),
     capabilities: {
       hasLive: true,
+      hasLivePictureInPicture: true,
       hasBrowse: true,
       tabsVariant: "standard"
     }
@@ -4297,6 +4324,7 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     }),
     capabilities: {
       hasLive: true,
+      hasLivePictureInPicture: true,
       hasBrowse: true,
       tabsVariant: "standard"
     }
@@ -5208,6 +5236,24 @@ function applyVideoDatasetOptions(video, options = {}) {
     video.dataset[key] = value === true ? "1" : String(value);
   }
 }
+function shouldSuppressNativePictureInPicture(navigatorObj = globalThis.navigator) {
+  const userAgent = String(navigatorObj?.userAgent || "");
+  const isMobile = navigatorObj?.userAgentData?.mobile === true || /android|mobile/i.test(userAgent);
+  return !isMobile && /firefox/i.test(userAgent) && !/seamonkey/i.test(userAgent);
+}
+function applyNativePictureInPicturePolicy(video, { navigatorObj = globalThis.navigator, suppress = void 0 } = {}) {
+  if (!video) return false;
+  const shouldSuppress = Boolean(
+    suppress ?? shouldSuppressNativePictureInPicture(navigatorObj)
+  );
+  video.disablePictureInPicture = shouldSuppress;
+  if (shouldSuppress) {
+    video.setAttribute?.("disablepictureinpicture", "");
+  } else {
+    video.removeAttribute?.("disablepictureinpicture");
+  }
+  return shouldSuppress;
+}
 function configureVideoElement(video, options = {}) {
   if (!video) return video;
   const profile = resolveVideoProfile({
@@ -5245,8 +5291,10 @@ function configureVideoElement(video, options = {}) {
   applyVideoDatasetOptions(video, options);
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
-  video.disablePictureInPicture = true;
-  video.setAttribute("disablepictureinpicture", "");
+  applyNativePictureInPicturePolicy(video, {
+    navigatorObj: options.navigatorObj,
+    suppress: options.disablePictureInPicture
+  });
   video.disableRemotePlayback = true;
   video.setAttribute("x-webkit-airplay", "deny");
   if (options.attributes && typeof options.attributes === "object") {
@@ -6905,6 +6953,132 @@ function attachVideoZoom(video, options = {}) {
   if (!video) return null;
   return new VideoZoomController(video, options).bind();
 }
+
+// src/shared/media/picture-in-picture.js
+const PICTURE_IN_PICTURE_METHOD_STANDARD = "standard";
+const PICTURE_IN_PICTURE_METHOD_WEBKIT = "webkit";
+function resolveOwnerDocument(video, documentObj) {
+  return documentObj || video?.ownerDocument || globalThis.document || null;
+}
+function pictureInPictureElementForVideo(video, documentObj = null) {
+  if (!video) return null;
+  const root = video.getRootNode?.();
+  return root?.pictureInPictureElement || resolveOwnerDocument(video, documentObj)?.pictureInPictureElement || null;
+}
+function isVideoPictureInPictureActive(video, documentObj = null) {
+  if (!video) return false;
+  if (video.webkitPresentationMode === "picture-in-picture") return true;
+  return pictureInPictureElementForVideo(video, documentObj) === video;
+}
+function resolveVideoPictureInPictureSupport({
+  video = null,
+  documentObj = null
+} = {}) {
+  if (!video) return { supported: false, method: "" };
+  const doc = resolveOwnerDocument(video, documentObj);
+  if (typeof video.requestPictureInPicture === "function" && doc?.pictureInPictureEnabled !== false) {
+    return {
+      supported: true,
+      method: PICTURE_IN_PICTURE_METHOD_STANDARD
+    };
+  }
+  if (typeof video.webkitSetPresentationMode === "function") {
+    try {
+      if (typeof video.webkitSupportsPresentationMode !== "function" || video.webkitSupportsPresentationMode("picture-in-picture")) {
+        return {
+          supported: true,
+          method: PICTURE_IN_PICTURE_METHOD_WEBKIT
+        };
+      }
+    } catch (_) {
+    }
+  }
+  return { supported: false, method: "" };
+}
+async function toggleVideoPictureInPicture({
+  video = null,
+  documentObj = null
+} = {}) {
+  const support = resolveVideoPictureInPictureSupport({ video, documentObj });
+  if (!support.supported) {
+    throw new Error("Picture-in-Picture is not supported for this video.");
+  }
+  if (support.method === PICTURE_IN_PICTURE_METHOD_STANDARD) {
+    const doc = resolveOwnerDocument(video, documentObj);
+    if (isVideoPictureInPictureActive(video, doc)) {
+      await doc.exitPictureInPicture();
+      return { active: false, method: support.method };
+    }
+    await video.requestPictureInPicture();
+    return { active: true, method: support.method };
+  }
+  const active = isVideoPictureInPictureActive(video, documentObj);
+  video.webkitSetPresentationMode(active ? "inline" : "picture-in-picture");
+  return { active: !active, method: support.method };
+}
+const PictureInPictureButtonController = class {
+  constructor({ button = null, video = null, documentObj = null } = {}) {
+    __publicField(this, "_sync", () => this.refresh());
+    this.button = button;
+    this.video = video;
+    this._documentObj = documentObj;
+    this._bound = false;
+  }
+  bind() {
+    if (this._bound || !this.button || !this.video) return this;
+    this._bound = true;
+    for (const eventName of [
+      "enterpictureinpicture",
+      "leavepictureinpicture",
+      "webkitpresentationmodechanged",
+      "loadedmetadata",
+      "emptied"
+    ]) {
+      this.video.addEventListener?.(eventName, this._sync);
+    }
+    this.refresh();
+    return this;
+  }
+  refresh() {
+    if (!this.button || !this.video) return false;
+    const support = resolveVideoPictureInPictureSupport({
+      video: this.video,
+      documentObj: this._documentObj
+    });
+    const mediaReady = this.video.readyState === void 0 || Number(this.video.readyState) > 0;
+    const available = support.supported && mediaReady;
+    const active = available && isVideoPictureInPictureActive(this.video, this._documentObj);
+    this.button.hidden = !available;
+    this.button.disabled = !available;
+    this.button.classList?.toggle?.("active", active);
+    this.button.setAttribute?.(
+      "aria-hidden",
+      available ? "false" : "true"
+    );
+    this.button.setAttribute?.("aria-pressed", active ? "true" : "false");
+    this.button.title = active ? "Exit Picture-in-Picture" : "Picture-in-Picture";
+    this.button.setAttribute?.("aria-label", this.button.title);
+    return available;
+  }
+  dispose() {
+    if (this._bound && this.video) {
+      for (const eventName of [
+        "enterpictureinpicture",
+        "leavepictureinpicture",
+        "webkitpresentationmodechanged",
+        "loadedmetadata",
+        "emptied"
+      ]) {
+        this.video.removeEventListener?.(eventName, this._sync);
+      }
+    }
+    if (this.button) {
+      this.button.hidden = true;
+      this.button.disabled = true;
+    }
+    this._bound = false;
+  }
+};
 
 // src/shared/media/playback-target.js
 const PLAYBACK_TARGET_AIRPLAY = "airplay";
@@ -15376,7 +15550,7 @@ const PopupMediaLoaderController = class {
       hasVideo: !!video
     });
     if (postRenderPlan.shouldEnsureAirPlayButton) {
-      this._host._ensurePopupAirPlayButton(postRenderPlan.airPlayMediaType);
+      this._host._ensurePopupPlaybackButtons(postRenderPlan.airPlayMediaType);
     }
     if (postRenderPlan.shouldRenderInfo) {
       this._host._renderPopupInfo(infoEvent, infoOpts);
@@ -15650,7 +15824,7 @@ const PopupMediaLoaderController = class {
       popupMediaType: renderPlan.popupMediaType
     });
     if (outcomePlan.shouldEnsureAirPlayButton) {
-      this._host._ensurePopupAirPlayButton(outcomePlan.airPlayMediaType);
+      this._host._ensurePopupPlaybackButtons(outcomePlan.airPlayMediaType);
     }
     if (outcomePlan.shouldScheduleRotateOverlay) {
       this._host._scheduleRotateOverlayUpdate();
@@ -17661,6 +17835,8 @@ const FrigateViewCard = class extends HTMLElement {
     this._popupMediaType = "";
     this._popupMediaStopTimer = null;
     this._popupMediaControlsController = null;
+    this._livePictureInPictureButtonController = null;
+    this._popupPictureInPictureButtonController = null;
     this._popupControlsHideTimer = null;
     this._liveControlsHideTimer = null;
     this._liveOverlayControlsController = null;
@@ -18275,6 +18451,8 @@ const FrigateViewCard = class extends HTMLElement {
       }
       this._liveOverlayControlsController = null;
     }
+    this._clearPictureInPictureButtonController("live");
+    this._clearPictureInPictureButtonController("popup");
     if (this._playbackTargetController) {
       try {
         this._playbackTargetController.dispose();
@@ -18513,11 +18691,17 @@ const FrigateViewCard = class extends HTMLElement {
   _assignLiveEngine(engine) {
     if (this._engine === engine) {
       if (engine) this._attachMainLiveVideoZoom(engine);
+      this._syncPictureInPictureButtons();
       return;
     }
     this._clearLiveVideoZoom();
+    this._clearPictureInPictureButtonController("live");
     this._engine = engine;
-    if (engine) this._attachMainLiveVideoZoom(engine);
+    if (engine) {
+      this._attachMainLiveVideoZoom(engine);
+    } else {
+      this._syncPictureInPictureButtons();
+    }
   }
   _attachMainLiveVideoZoom(engine, retries = 12) {
     if (!engine || this._engine !== engine) return;
@@ -18525,10 +18709,12 @@ const FrigateViewCard = class extends HTMLElement {
     if (video) {
       if (this._liveVideoZoomController?.video === video) {
         this._liveVideoZoomController.refresh();
+        this._syncPictureInPictureButtons();
         return;
       }
       this._clearLiveVideoZoom();
       this._liveVideoZoomController = attachVideoZoom(video);
+      this._syncPictureInPictureButtons();
       return;
     }
     if (retries <= 0) return;
@@ -19684,6 +19870,7 @@ const FrigateViewCard = class extends HTMLElement {
     const camSwitcherMarkup = showCamSwitcher ? this._camSwitcherMarkup({ includeStatus: false }) : "";
     const pageNav = this._pageNavigationController.pageNavMarkup();
     const shellProfile = this._activePageShellLayoutProfile();
+    const shellCapabilities = resolvePageCapabilities(shellProfile);
     const infoRow = resolvePageInfoRowMarkup(shellProfile, {
       title,
       subtitle,
@@ -19700,6 +19887,10 @@ const FrigateViewCard = class extends HTMLElement {
     const toolsMarkup = this._getToolsMarkup();
     const regions = {
       live: buildLiveEngineWrapMarkup({ icons: ICONS }),
+      livePictureInPicture: shellCapabilities.hasLivePictureInPicture ? buildLivePictureInPictureControlMarkup({
+        icons: ICONS,
+        buttonClass: shellProfile?.livePictureInPictureButtonClass
+      }) : "",
       liveFullscreen: buildLiveFullscreenControlMarkup({
         icons: ICONS,
         buttonClass: shellProfile?.liveFullscreenButtonClass
@@ -19767,6 +19958,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderPreviewPage();
     this._applyPreviewShellVisibility();
     this._syncMobileViewPageMarkup();
+    this._syncPictureInPictureButtons();
   }
   _renderShellPreserveLive() {
     const preservedEngWrap = this._$("#eng-wrap");
@@ -19789,6 +19981,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     this._initLiveOverlayControls();
     this._syncFullscreenButtonsVisibility();
+    this._syncPictureInPictureButtons();
   }
   _shouldRenderTwoWayTalkButtonForActiveCamera() {
     return shouldRenderTwoWayTalkButton({
@@ -20435,6 +20628,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._setLivePopupCover(true);
     this._applyLiveMuteChange(true, { source: "popup-open" });
     this._syncFullscreenButtonsVisibility();
+    this._syncPictureInPictureButtons();
     this._scheduleRotateOverlayUpdate();
   }
   _stopPopupMedia() {
@@ -20491,6 +20685,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._setLivePopupCover(false);
     this._applyLiveMuteChange(true, { source: "popup-close" });
     this._syncFullscreenButtonsVisibility();
+    this._syncPictureInPictureButtons();
     this._scheduleRotateOverlayUpdate();
     this._stopPopupMedia();
     this._resumeSlideshowAfterPopup();
@@ -20552,6 +20747,10 @@ const FrigateViewCard = class extends HTMLElement {
       this._toggleSlideshowRotation();
       return true;
     }
+    if (target.closest("#live-pip-btn")) {
+      void this._togglePictureInPicture(this._livePictureInPictureVideo());
+      return true;
+    }
     if (target.closest("#live-fs-btn")) {
       this._fullscreen(this._$("#live-stage"), { preferLive: true });
       return true;
@@ -20600,6 +20799,11 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handlePopupMediaToolbarClick(target) {
+    if (target.closest("#popup-pip-btn")) {
+      void this._togglePictureInPicture(this._popupMediaVideo(), { popup: true });
+      this._showPopupControlsTemporarily();
+      return true;
+    }
     if (target.closest("#popup-airplay-btn, #popup-media-airplay")) {
       void this._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
         scope: "popup"
@@ -21347,11 +21551,87 @@ const FrigateViewCard = class extends HTMLElement {
   _usePopupCustomControls(mediaType) {
     return this._isPhonePopupUi() && this._isPopupVideoMediaType(mediaType);
   }
-  _ensurePopupAirPlayButton(mediaType = "") {
+  _livePictureInPictureVideo() {
+    return this._findVideoDeep(this._$("#engine")) || this._findVideoDeep(this._engine) || this._engine?.video || null;
+  }
+  _clearPictureInPictureButtonController(scope) {
+    const property = scope === "popup" ? "_popupPictureInPictureButtonController" : "_livePictureInPictureButtonController";
+    const controller = this[property];
+    if (controller) {
+      try {
+        controller.dispose();
+      } catch (_) {
+      }
+    }
+    this[property] = null;
+  }
+  _bindPictureInPictureButton(scope, button, video) {
+    const property = scope === "popup" ? "_popupPictureInPictureButtonController" : "_livePictureInPictureButtonController";
+    applyNativePictureInPicturePolicy(video);
+    const current = this[property];
+    if (current?.button === button && current?.video === video) {
+      current.refresh();
+      return;
+    }
+    this._clearPictureInPictureButtonController(scope);
+    if (!button || !video) {
+      if (button) {
+        button.hidden = true;
+        button.disabled = true;
+      }
+      return;
+    }
+    const controller = new PictureInPictureButtonController({
+      button,
+      video,
+      documentObj: video.ownerDocument || globalThis.document || null
+    });
+    this[property] = controller;
+    controller.bind();
+  }
+  _syncPictureInPictureButtons() {
+    const popupOpen = this._$("#myPopup")?.classList.contains("is-open") === true;
+    const liveAllowed = this._activePageShellCapabilities().hasLivePictureInPicture && !DEVICE_PROFILE.isMobile && this._viewMode !== "grid" && !popupOpen;
+    this._bindPictureInPictureButton(
+      "live",
+      this._$("#live-pip-btn"),
+      liveAllowed ? this._livePictureInPictureVideo() : null
+    );
+    const popupMediaType = this._popupMediaType;
+    const popupAllowed = popupOpen && !DEVICE_PROFILE.isMobile && this._isPopupVideoMediaType(popupMediaType);
+    this._bindPictureInPictureButton(
+      "popup",
+      this._$("#popup-pip-btn"),
+      popupAllowed ? this._popupMediaVideo() : null
+    );
+  }
+  async _togglePictureInPicture(video, { popup = false } = {}) {
+    const documentObj = video?.ownerDocument || globalThis.document || null;
+    const support = resolveVideoPictureInPictureSupport({ video, documentObj });
+    if (!support.supported) {
+      this._toast("Picture-in-Picture is not supported for this video.");
+      this._syncPictureInPictureButtons();
+      return;
+    }
+    try {
+      await toggleVideoPictureInPicture({ video, documentObj });
+    } catch (error) {
+      console.warn("[Frigate] Picture-in-Picture request failed", error);
+      const reason = String(error?.message || "").trim();
+      this._toast(
+        reason ? `Picture-in-Picture could not start: ${reason}` : "Picture-in-Picture could not start in this browser."
+      );
+    } finally {
+      this._syncPictureInPictureButtons();
+      if (popup) this._showPopupControlsTemporarily();
+    }
+  }
+  _ensurePopupPlaybackButtons(mediaType = "") {
     const viewer = this._$("#viewer");
     if (!viewer) return;
     const existingControls = viewer.querySelector("#popup-playback-controls");
     if (this._usePopupCustomControls(mediaType) || !viewer.querySelector("video")) {
+      this._clearPictureInPictureButtonController("popup");
       existingControls?.remove();
       return;
     }
@@ -21363,18 +21643,32 @@ const FrigateViewCard = class extends HTMLElement {
       viewer.appendChild(controls);
     }
     controls.innerHTML = "";
-    const button = document.createElement("button");
-    button.className = "glass-btn popup-playback-btn";
-    button.id = "popup-airplay-btn";
-    button.type = "button";
-    button.title = "AirPlay video";
-    button.setAttribute("aria-label", "AirPlay video");
-    button.hidden = true;
-    button.innerHTML = ICONS.airplayVideo;
-    controls.appendChild(button);
+    if (!DEVICE_PROFILE.isMobile && this._isPopupVideoMediaType(mediaType)) {
+      const pictureInPictureButton = document.createElement("button");
+      pictureInPictureButton.className = "square-btn popup-playback-btn popup-pip-btn";
+      pictureInPictureButton.id = "popup-pip-btn";
+      pictureInPictureButton.type = "button";
+      pictureInPictureButton.title = "Picture-in-Picture";
+      pictureInPictureButton.setAttribute("aria-label", "Picture-in-Picture");
+      pictureInPictureButton.setAttribute("aria-pressed", "false");
+      pictureInPictureButton.hidden = true;
+      pictureInPictureButton.innerHTML = ICONS.pipPopOut;
+      controls.appendChild(pictureInPictureButton);
+    }
+    const airPlayButton = document.createElement("button");
+    airPlayButton.className = "glass-btn popup-playback-btn";
+    airPlayButton.id = "popup-airplay-btn";
+    airPlayButton.type = "button";
+    airPlayButton.title = "AirPlay video";
+    airPlayButton.setAttribute("aria-label", "AirPlay video");
+    airPlayButton.hidden = true;
+    airPlayButton.innerHTML = ICONS.airplayVideo;
+    controls.appendChild(airPlayButton);
     this._syncPlaybackTargetButtons();
+    this._syncPictureInPictureButtons();
   }
   _clearPopupMediaCleanup() {
+    this._clearPictureInPictureButtonController("popup");
     this._clearPopupVideoZoom?.();
     if (this._popupControlsHideTimer) {
       clearTimeout(this._popupControlsHideTimer);
@@ -21890,6 +22184,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderMuteButton();
     this._syncTwoWayTalkButton();
     this._syncFullscreenButtonsVisibility();
+    this._syncPictureInPictureButtons();
     this._syncToolbarButtons();
     this._syncPlaybackTargetButtons();
     this._renderLegend();

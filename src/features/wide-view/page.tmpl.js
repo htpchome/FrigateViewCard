@@ -11,6 +11,7 @@ function normalizeRegions(regions) {
       : {};
   return {
     live: "",
+    livePictureInPicture: "",
     liveFullscreen: "",
     liveMute: "",
     information: "",
@@ -52,6 +53,7 @@ export function buildWideViewMainLayoutShellMarkup({
           <div class="${leftColumnClassName}" id="col-left">
             <div class="live-stage live-stage--overlay" id="live-stage">
               ${regions.live}
+              ${regions.livePictureInPicture}
               ${regions.liveFullscreen}
               ${regions.liveMute}
             </div>

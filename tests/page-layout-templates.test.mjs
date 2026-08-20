@@ -7,6 +7,7 @@ import { buildWideViewMainLayoutShellMarkup } from "../src/features/wide-view/pa
 
 const regions = {
   live: `<div data-fvc-region="live">Live</div>`,
+  livePictureInPicture: `<button data-fvc-region="live-picture-in-picture">PiP</button>`,
   liveFullscreen: `<button data-fvc-region="live-fullscreen">Fullscreen</button>`,
   liveMute: `<button data-fvc-region="live-mute">Mute</button>`,
   information: `<div data-fvc-region="information">Information</div>`,
@@ -56,6 +57,13 @@ test("route-owned outer templates compose every atomic region once", () => {
         1,
       );
     }
+
+    const pictureInPictureCount =
+      markup.match(/data-fvc-region="live-picture-in-picture"/g)?.length || 0;
+    assert.equal(
+      pictureInPictureCount,
+      layoutSuffix === "preview-view" ? 0 : 1,
+    );
   }
 });
 
