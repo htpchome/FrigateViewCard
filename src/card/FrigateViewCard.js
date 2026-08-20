@@ -3940,6 +3940,7 @@ export class FrigateViewCard extends HTMLElement {
       this._applyCardStyle();
       this._applyBrowse();
       this._scheduleRotateOverlayUpdate();
+      this._wideViewPageController.syncColHeightIfWideView();
     });
     this._ro.observe(this);
     if (!this._io && "IntersectionObserver" in window) {

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1553";
+const VERSION = "1.0.1554";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -20610,6 +20610,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._applyCardStyle();
       this._applyBrowse();
       this._scheduleRotateOverlayUpdate();
+      this._wideViewPageController.syncColHeightIfWideView();
     });
     this._ro.observe(this);
     if (!this._io && "IntersectionObserver" in window) {

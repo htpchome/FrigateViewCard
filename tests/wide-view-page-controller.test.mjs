@@ -1,9 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import { WideViewPageController } from "../src/features/wide-view/page.ctrl.js";
 
 const PAGE_IDS = { preview: "preview", wideView: "wide-view" };
+const cardSource = fs.readFileSync(
+  new URL("../src/card/FrigateViewCard.js", import.meta.url),
+  "utf8",
+);
 
 const createHost = ({ isWide = false, popupOpen = false } = {}) => {
   const calls = [];
@@ -132,6 +137,13 @@ test("syncColHeightIfWideView syncs only for wide route", () => {
   singleController.syncColHeight = () => single.calls.push(["syncColHeight"]);
   singleController.syncColHeightIfWideView();
   assert.deepEqual(single.calls, []);
+});
+
+test("card resize observation resyncs wide-view column height", () => {
+  assert.match(
+    cardSource,
+    /_setupResizeObserver\(\)[\s\S]*?this\._wideViewPageController\.syncColHeightIfWideView\(\);[\s\S]*?this\._ro\.observe\(this\);/,
+  );
 });
 
 test("wideViewLayoutState resolves wide layout widths with clamping", () => {
