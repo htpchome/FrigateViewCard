@@ -7,6 +7,7 @@ import {
   buildPopupCarouselEvents,
   buildPopupCarouselContentPlan,
   buildPopupCarouselScrollPlan,
+  PopupCarouselSwipeController,
   resolvePopupCarouselActiveScrollLeft,
   resolvePopupCarouselNavigationState,
   resolvePopupCarouselRenderPlan,
@@ -96,6 +97,7 @@ test("resolvePopupCarouselRenderPlan hides unsupported and empty carousel states
       shouldClear: true,
       hidden: true,
       touch: false,
+      mobile: false,
     },
   );
 
@@ -110,6 +112,7 @@ test("resolvePopupCarouselRenderPlan hides unsupported and empty carousel states
       shouldClear: true,
       hidden: true,
       touch: false,
+      mobile: false,
     },
   );
 
@@ -118,12 +121,14 @@ test("resolvePopupCarouselRenderPlan hides unsupported and empty carousel states
       mediaType: "clip",
       eventCount: 2,
       isTouchUi: true,
+      isMobileDevice: true,
     }),
     {
       shouldRender: true,
       shouldClear: false,
       hidden: false,
       touch: true,
+      mobile: true,
     },
   );
 });
@@ -135,6 +140,7 @@ test("buildPopupCarouselContentPlan limits rendering and reuses render plan sema
     events: [{ id: "one" }, { id: "two" }, { id: "three" }],
     activeId: "two",
     isTouchUi: true,
+    isMobileDevice: true,
     limit: 2,
     renderEvent: (event, activeId) => {
       rendered.push([event.id, activeId]);
@@ -151,6 +157,7 @@ test("buildPopupCarouselContentPlan limits rendering and reuses render plan sema
     shouldClear: false,
     hidden: false,
     touch: true,
+    mobile: true,
     html: "<one:two><two:two>",
   });
 });
@@ -176,6 +183,76 @@ test("buildPopupCarouselScrollPlan advances by one visible carousel page", () =>
     left: 148,
     behavior: "smooth",
   });
+});
+
+test("mobile carousel swipe advances by the same visible page as buttons", () => {
+  const listeners = new Map();
+  const classes = new Set();
+  const scrollCalls = [];
+  const row = {
+    scrollLeft: 0,
+    clientWidth: 442,
+    addEventListener(type, listener, options = {}) {
+      if (!listeners.has(type)) listeners.set(type, new Set());
+      listeners.get(type).add(listener);
+      options.signal?.addEventListener?.(
+        "abort",
+        () => listeners.get(type)?.delete(listener),
+        { once: true },
+      );
+    },
+    removeEventListener(type, listener) {
+      listeners.get(type)?.delete(listener);
+    },
+    dispatch(type, event) {
+      for (const listener of listeners.get(type) || []) listener(event);
+    },
+    classList: {
+      add: (token) => classes.add(token),
+      remove: (token) => classes.delete(token),
+    },
+    setPointerCapture() {},
+    releasePointerCapture() {},
+    scrollTo(options) {
+      scrollCalls.push(options);
+      this.scrollLeft = options.left;
+    },
+  };
+  const controller = new PopupCarouselSwipeController({
+    row,
+    getScrollPlan: (dir) =>
+      buildPopupCarouselScrollPlan({
+        itemWidth: 142,
+        viewportWidth: row.clientWidth,
+        dir,
+      }),
+  }).bind();
+
+  row.dispatch("pointerdown", {
+    pointerType: "touch",
+    pointerId: 1,
+    clientX: 300,
+    clientY: 40,
+  });
+  row.dispatch("pointermove", {
+    pointerType: "touch",
+    pointerId: 1,
+    clientX: 250,
+    clientY: 42,
+    cancelable: true,
+    preventDefault() {},
+  });
+  assert.equal(classes.has("is-swiping"), true);
+  row.dispatch("pointerup", {
+    pointerType: "touch",
+    pointerId: 1,
+    clientX: 240,
+    clientY: 42,
+  });
+
+  assert.deepEqual(scrollCalls, [{ left: 450, behavior: "smooth" }]);
+  assert.equal(classes.has("is-swiping"), false);
+  controller.dispose();
 });
 
 test("buildPopupCarouselItemMarkup builds active carousel button markup", () => {
@@ -240,7 +317,7 @@ test("popup carousel navigation only exposes scrollable directions", () => {
   );
 });
 
-test("popup carousel navigation remains visible and uses fixed glass geometry", () => {
+test("popup carousel navigation uses fixed glass geometry and hides on mobile devices", () => {
   assert.doesNotMatch(
     STYLES,
     /\.popup-carousel-wrap\.touch \.popup-carousel-nav\s*\{[^}]*display:none/,
@@ -255,4 +332,12 @@ test("popup carousel navigation remains visible and uses fixed glass geometry", 
   );
   assert.match(STYLES, /\.popup-carousel-nav\.left \{[^}]*border-radius:7px/);
   assert.match(STYLES, /\.popup-carousel-nav\.right \{[^}]*border-radius:7px/);
+  assert.match(
+    STYLES,
+    /\.popup-carousel-wrap\.mobile-device \.popup-carousel-nav \{display:none !important;\}/,
+  );
+  assert.match(
+    STYLES,
+    /\.popup-carousel-wrap\.mobile-device \.popup-carousel \{touch-action:pan-y;\}/,
+  );
 });

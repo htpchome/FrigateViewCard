@@ -725,6 +725,9 @@ export const STYLES = `
   .popup-carousel-nav:focus-visible {outline:2px solid var(--c-primary-d);outline-offset:2px;}
   .popup-carousel-nav.left {left:4px;border-radius:7px;}
   .popup-carousel-nav.right {right:4px;border-radius:7px;}
+  .popup-carousel-wrap.mobile-device .popup-carousel-nav {display:none !important;}
+  .popup-carousel-wrap.mobile-device .popup-carousel {touch-action:pan-y;}
+  .popup-carousel.is-swiping {scroll-snap-type:none;scroll-behavior:auto;}
   .popup-info {background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 9px;
     padding: 10px 12px;display: flex;flex-direction: column;gap: 8px;}
   .popup-info[hidden] {display: none;}

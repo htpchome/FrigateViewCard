@@ -232,6 +232,7 @@ import {
   buildPopupCarouselContentPlan,
   buildPopupCarouselEvents,
   buildPopupCarouselScrollPlan,
+  PopupCarouselSwipeController,
   resolvePopupCarouselActiveScrollLeft,
   resolvePopupCarouselNavigationState,
   resolvePopupCarouselRenderPlan,
@@ -674,6 +675,7 @@ export class FrigateViewCard extends HTMLElement {
     this._popupMediaStopTimer = null;
     this._popupMediaControlsController = null;
     this._popupCarouselResizeObserver = null;
+    this._popupCarouselSwipeController = null;
     this._livePictureInPictureButtonController = null;
     this._popupPictureInPictureButtonController = null;
     this._popupControlsHideTimer = null;
@@ -5494,6 +5496,8 @@ export class FrigateViewCard extends HTMLElement {
     this._clearPopupVideoZoom?.();
     this._popupCarouselResizeObserver?.disconnect?.();
     this._popupCarouselResizeObserver = null;
+    this._popupCarouselSwipeController?.dispose?.();
+    this._popupCarouselSwipeController = null;
     const popupCarousel = this._$?.("#popup-carousel");
     if (popupCarousel) popupCarousel.onscroll = null;
     if (this._popupControlsHideTimer) {
@@ -5709,12 +5713,15 @@ export class FrigateViewCard extends HTMLElement {
     if (!wrap || !row) return;
     this._popupCarouselResizeObserver?.disconnect?.();
     this._popupCarouselResizeObserver = null;
+    this._popupCarouselSwipeController?.dispose?.();
+    this._popupCarouselSwipeController = null;
     row.onscroll = null;
     const contentPlan = buildPopupCarouselContentPlan({
       mediaType,
       events: this._popupCarouselEvents(mediaType),
       activeId,
       isTouchUi: this._isTouchPopupUi(),
+      isMobileDevice: this._isLikelyMobileClient(),
       renderEvent: (ev, currentActiveId) =>
         this._carouselEventItem(ev, currentActiveId),
     });
@@ -5728,11 +5735,18 @@ export class FrigateViewCard extends HTMLElement {
     row.innerHTML = contentPlan.html;
     row.scrollLeft = 0;
     wrap.classList.toggle("touch", contentPlan.touch);
+    wrap.classList.toggle("mobile-device", contentPlan.mobile);
     const syncNavigation = () => this._syncPopupCarouselNavigation(row);
     row.onscroll = syncNavigation;
     if (typeof ResizeObserver !== "undefined") {
       this._popupCarouselResizeObserver = new ResizeObserver(syncNavigation);
       this._popupCarouselResizeObserver.observe(row);
+    }
+    if (contentPlan.mobile) {
+      this._popupCarouselSwipeController = new PopupCarouselSwipeController({
+        row,
+        getScrollPlan: (dir) => this._popupCarouselScrollPlan(row, dir),
+      }).bind();
     }
     syncNavigation();
     requestAnimationFrame(() => {
@@ -5770,14 +5784,15 @@ export class FrigateViewCard extends HTMLElement {
   _scrollPopupCarousel(dir = 1) {
     const row = this._$("#popup-carousel");
     if (!row) return;
+    row.scrollBy(this._popupCarouselScrollPlan(row, dir));
+  }
+  _popupCarouselScrollPlan(row, dir = 1) {
     const item = row.querySelector(".popup-carousel-item");
-    row.scrollBy(
-      buildPopupCarouselScrollPlan({
-        itemWidth: item?.getBoundingClientRect?.().width,
-        viewportWidth: row.clientWidth,
-        dir,
-      }),
-    );
+    return buildPopupCarouselScrollPlan({
+      itemWidth: item?.getBoundingClientRect?.().width,
+      viewportWidth: row.clientWidth,
+      dir,
+    });
   }
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;

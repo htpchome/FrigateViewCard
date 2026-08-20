@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1593";
+const VERSION = "1.0.1594";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1301,6 +1301,9 @@ const STYLES = `
   .popup-carousel-nav:focus-visible {outline:2px solid var(--c-primary-d);outline-offset:2px;}
   .popup-carousel-nav.left {left:4px;border-radius:7px;}
   .popup-carousel-nav.right {right:4px;border-radius:7px;}
+  .popup-carousel-wrap.mobile-device .popup-carousel-nav {display:none !important;}
+  .popup-carousel-wrap.mobile-device .popup-carousel {touch-action:pan-y;}
+  .popup-carousel.is-swiping {scroll-snap-type:none;scroll-behavior:auto;}
   .popup-info {background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 9px;
     padding: 10px 12px;display: flex;flex-direction: column;gap: 8px;}
   .popup-info[hidden] {display: none;}
@@ -10611,14 +10614,16 @@ const buildPopupCarouselEvents = ({
 const resolvePopupCarouselRenderPlan = ({
   mediaType = "",
   eventCount = 0,
-  isTouchUi = false
+  isTouchUi = false,
+  isMobileDevice = false
 }) => {
   if (!shouldShowPopupCarousel(mediaType)) {
     return {
       shouldRender: false,
       shouldClear: true,
       hidden: true,
-      touch: false
+      touch: false,
+      mobile: false
     };
   }
   if (!(Number(eventCount || 0) > 0)) {
@@ -10626,14 +10631,16 @@ const resolvePopupCarouselRenderPlan = ({
       shouldRender: false,
       shouldClear: true,
       hidden: true,
-      touch: false
+      touch: false,
+      mobile: false
     };
   }
   return {
     shouldRender: true,
     shouldClear: false,
     hidden: false,
-    touch: Boolean(isTouchUi)
+    touch: Boolean(isTouchUi),
+    mobile: Boolean(isMobileDevice)
   };
 };
 const buildPopupCarouselContentPlan = ({
@@ -10641,6 +10648,7 @@ const buildPopupCarouselContentPlan = ({
   events = [],
   activeId = "",
   isTouchUi = false,
+  isMobileDevice = false,
   limit = 200,
   renderEvent = () => ""
 }) => {
@@ -10648,7 +10656,8 @@ const buildPopupCarouselContentPlan = ({
   const renderPlan = resolvePopupCarouselRenderPlan({
     mediaType,
     eventCount: limitedEvents.length,
-    isTouchUi
+    isTouchUi,
+    isMobileDevice
   });
   return {
     ...renderPlan,
@@ -10696,6 +10705,112 @@ const resolvePopupCarouselNavigationState = ({
     canScrollLeft: hasOverflow && currentScrollLeft > edgeTolerance,
     canScrollRight: hasOverflow && currentScrollLeft < maxScrollLeft - edgeTolerance
   };
+};
+const PopupCarouselSwipeController = class {
+  constructor({
+    row,
+    getScrollPlan = () => ({ left: 0, behavior: "smooth" }),
+    axisThreshold = 8,
+    commitThreshold = 32
+  } = {}) {
+    __publicField(this, "_onPointerDown", (event) => {
+      if (String(event?.pointerType || "").toLowerCase() !== "touch") return;
+      this._gesture = {
+        pointerId: event.pointerId,
+        startX: Number(event.clientX) || 0,
+        startY: Number(event.clientY) || 0,
+        startScrollLeft: Number(this._row?.scrollLeft) || 0,
+        axis: ""
+      };
+      this._row?.setPointerCapture?.(event.pointerId);
+    });
+    __publicField(this, "_onPointerMove", (event) => {
+      if (!this._gesture || event.pointerId !== this._gesture.pointerId) return;
+      const delta = this._gestureDelta(event);
+      const axis = this._resolveAxis(delta);
+      if (!axis) return;
+      if (axis === "vertical") {
+        this._gesture = null;
+        return;
+      }
+      if (event.cancelable) event.preventDefault?.();
+      this._row?.classList?.add?.("is-swiping");
+      this._row.scrollLeft = this._gesture.startScrollLeft - delta.x;
+    });
+    __publicField(this, "_onPointerUp", (event) => this._finish(event, false));
+    __publicField(this, "_onPointerCancel", (event) => this._finish(event, true));
+    this._row = row;
+    this._getScrollPlan = getScrollPlan;
+    this._axisThreshold = Math.max(0, Number(axisThreshold || 0));
+    this._commitThreshold = Math.max(0, Number(commitThreshold || 0));
+    this._cleanup = new CleanupController();
+    this._gesture = null;
+  }
+  bind() {
+    if (!this._row) return this;
+    this._cleanup.addEventListener(this._row, "pointerdown", this._onPointerDown);
+    this._cleanup.addEventListener(this._row, "pointermove", this._onPointerMove);
+    this._cleanup.addEventListener(this._row, "pointerup", this._onPointerUp);
+    this._cleanup.addEventListener(
+      this._row,
+      "pointercancel",
+      this._onPointerCancel
+    );
+    return this;
+  }
+  dispose() {
+    this._restoreStart();
+    this._cleanup.dispose();
+  }
+  _scrollTo(left, behavior = "smooth") {
+    if (typeof this._row?.scrollTo === "function") {
+      this._row.scrollTo({ left, behavior });
+      return;
+    }
+    if (this._row) this._row.scrollLeft = left;
+  }
+  _restoreStart() {
+    const startScrollLeft = this._gesture?.startScrollLeft;
+    this._gesture = null;
+    this._row?.classList?.remove?.("is-swiping");
+    if (Number.isFinite(startScrollLeft)) {
+      this._scrollTo(startScrollLeft, "smooth");
+    }
+  }
+  _gestureDelta(event) {
+    return {
+      x: (Number(event?.clientX) || 0) - this._gesture.startX,
+      y: (Number(event?.clientY) || 0) - this._gesture.startY
+    };
+  }
+  _resolveAxis(delta) {
+    if (this._gesture.axis) return this._gesture.axis;
+    if (Math.max(Math.abs(delta.x), Math.abs(delta.y)) < this._axisThreshold) {
+      return "";
+    }
+    this._gesture.axis = Math.abs(delta.x) > Math.abs(delta.y) ? "horizontal" : "vertical";
+    return this._gesture.axis;
+  }
+  _finish(event, cancelled = false) {
+    if (!this._gesture || event.pointerId !== this._gesture.pointerId) return;
+    const gesture = this._gesture;
+    const delta = this._gestureDelta(event);
+    const axis = this._resolveAxis(delta);
+    this._gesture = null;
+    this._row?.releasePointerCapture?.(event.pointerId);
+    this._row?.classList?.remove?.("is-swiping");
+    if (axis !== "horizontal" || cancelled) {
+      this._scrollTo(gesture.startScrollLeft, "smooth");
+      return;
+    }
+    const direction = delta.x < 0 ? 1 : -1;
+    const shouldAdvance = Math.abs(delta.x) >= this._commitThreshold;
+    const scrollPlan = shouldAdvance ? this._getScrollPlan(direction) : { left: 0, behavior: "smooth" };
+    this._scrollTo(
+      gesture.startScrollLeft + Number(scrollPlan?.left || 0),
+      scrollPlan?.behavior || "smooth"
+    );
+  }
 };
 
 // src/features/browse/filter-state.js
@@ -19261,6 +19376,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._popupMediaStopTimer = null;
     this._popupMediaControlsController = null;
     this._popupCarouselResizeObserver = null;
+    this._popupCarouselSwipeController = null;
     this._livePictureInPictureButtonController = null;
     this._popupPictureInPictureButtonController = null;
     this._popupControlsHideTimer = null;
@@ -23321,6 +23437,8 @@ const FrigateViewCard = class extends HTMLElement {
     this._clearPopupVideoZoom?.();
     this._popupCarouselResizeObserver?.disconnect?.();
     this._popupCarouselResizeObserver = null;
+    this._popupCarouselSwipeController?.dispose?.();
+    this._popupCarouselSwipeController = null;
     const popupCarousel = this._$?.("#popup-carousel");
     if (popupCarousel) popupCarousel.onscroll = null;
     if (this._popupControlsHideTimer) {
@@ -23530,12 +23648,15 @@ const FrigateViewCard = class extends HTMLElement {
     if (!wrap || !row) return;
     this._popupCarouselResizeObserver?.disconnect?.();
     this._popupCarouselResizeObserver = null;
+    this._popupCarouselSwipeController?.dispose?.();
+    this._popupCarouselSwipeController = null;
     row.onscroll = null;
     const contentPlan = buildPopupCarouselContentPlan({
       mediaType,
       events: this._popupCarouselEvents(mediaType),
       activeId,
       isTouchUi: this._isTouchPopupUi(),
+      isMobileDevice: this._isLikelyMobileClient(),
       renderEvent: (ev, currentActiveId) => this._carouselEventItem(ev, currentActiveId)
     });
     if (contentPlan.shouldClear) {
@@ -23548,11 +23669,18 @@ const FrigateViewCard = class extends HTMLElement {
     row.innerHTML = contentPlan.html;
     row.scrollLeft = 0;
     wrap.classList.toggle("touch", contentPlan.touch);
+    wrap.classList.toggle("mobile-device", contentPlan.mobile);
     const syncNavigation = () => this._syncPopupCarouselNavigation(row);
     row.onscroll = syncNavigation;
     if (typeof ResizeObserver !== "undefined") {
       this._popupCarouselResizeObserver = new ResizeObserver(syncNavigation);
       this._popupCarouselResizeObserver.observe(row);
+    }
+    if (contentPlan.mobile) {
+      this._popupCarouselSwipeController = new PopupCarouselSwipeController({
+        row,
+        getScrollPlan: (dir) => this._popupCarouselScrollPlan(row, dir)
+      }).bind();
     }
     syncNavigation();
     requestAnimationFrame(() => {
@@ -23590,14 +23718,15 @@ const FrigateViewCard = class extends HTMLElement {
   _scrollPopupCarousel(dir = 1) {
     const row = this._$("#popup-carousel");
     if (!row) return;
+    row.scrollBy(this._popupCarouselScrollPlan(row, dir));
+  }
+  _popupCarouselScrollPlan(row, dir = 1) {
     const item = row.querySelector(".popup-carousel-item");
-    row.scrollBy(
-      buildPopupCarouselScrollPlan({
-        itemWidth: item?.getBoundingClientRect?.().width,
-        viewportWidth: row.clientWidth,
-        dir
-      })
-    );
+    return buildPopupCarouselScrollPlan({
+      itemWidth: item?.getBoundingClientRect?.().width,
+      viewportWidth: row.clientWidth,
+      dir
+    });
   }
   _media(id, file, dl) {
     return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
