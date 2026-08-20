@@ -129,3 +129,25 @@ export const resolvePopupCarouselActiveScrollLeft = ({
   activeOffsetLeft = 0,
   padding = 8,
 }) => Math.max(0, Number(activeOffsetLeft || 0) - Number(padding || 0));
+
+export const resolvePopupCarouselNavigationState = ({
+  scrollLeft = 0,
+  scrollWidth = 0,
+  viewportWidth = 0,
+  tolerance = 1,
+} = {}) => {
+  const viewport = Math.max(0, Number(viewportWidth || 0));
+  const maxScrollLeft = Math.max(0, Number(scrollWidth || 0) - viewport);
+  const currentScrollLeft = Math.min(
+    maxScrollLeft,
+    Math.max(0, Number(scrollLeft || 0)),
+  );
+  const edgeTolerance = Math.max(0, Number(tolerance || 0));
+  const hasOverflow = maxScrollLeft > edgeTolerance;
+
+  return {
+    canScrollLeft: hasOverflow && currentScrollLeft > edgeTolerance,
+    canScrollRight:
+      hasOverflow && currentScrollLeft < maxScrollLeft - edgeTolerance,
+  };
+};

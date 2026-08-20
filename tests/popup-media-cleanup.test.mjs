@@ -252,6 +252,47 @@ test("_stopPopupMedia resets popup media surfaces after shared cleanup", () => {
   assert.equal(ctx._playing, null);
 });
 
+test("popup carousel controls reflect scroll edges and measured item height", () => {
+  const cssValues = new Map();
+  const wrap = {
+    style: {
+      setProperty(name, value) {
+        cssValues.set(name, value);
+      },
+    },
+  };
+  const leftButton = { hidden: false };
+  const rightButton = { hidden: true };
+  const row = {
+    scrollLeft: 0,
+    scrollWidth: 1800,
+    clientWidth: 900,
+    querySelector(selector) {
+      assert.equal(selector, ".popup-carousel-item");
+      return { getBoundingClientRect: () => ({ height: 98 }) };
+    },
+  };
+  const ctx = {
+    _$(selector) {
+      if (selector === "#popup-carousel-wrap") return wrap;
+      if (selector === "#popup-carousel-left") return leftButton;
+      if (selector === "#popup-carousel-right") return rightButton;
+      return null;
+    },
+  };
+
+  FrigateViewCard.prototype._syncPopupCarouselNavigation.call(ctx, row);
+
+  assert.equal(leftButton.hidden, true);
+  assert.equal(rightButton.hidden, false);
+  assert.equal(cssValues.get("--popup-carousel-item-height"), "98px");
+
+  row.scrollLeft = 900;
+  FrigateViewCard.prototype._syncPopupCarouselNavigation.call(ctx, row);
+  assert.equal(leftButton.hidden, false);
+  assert.equal(rightButton.hidden, true);
+});
+
 test("two-way talk active state unmutes live audio and inactive state remutes it", () => {
   const calls = [];
   const ctx = {

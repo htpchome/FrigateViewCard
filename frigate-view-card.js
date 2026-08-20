@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1592";
+const VERSION = "1.0.1593";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1283,7 +1283,7 @@ const STYLES = `
   .card.mobile-rotate-popup .popup-media-controls.is-hidden,
   .card.mobile-rotate-popup-exit .popup-media-controls.is-hidden {opacity:0;pointer-events:none;}
 
-  .popup-carousel-wrap {position:relative;min-width:0;isolation:isolate;}
+  .popup-carousel-wrap {--popup-carousel-item-height:100px;position:relative;min-width:0;isolation:isolate;}
   .popup-carousel-wrap[hidden] {display:none !important;}
   .popup-carousel {display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:2px 0 4px;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--c-text4) transparent;}
   .popup-carousel::-webkit-scrollbar {height:8px;}
@@ -1293,13 +1293,14 @@ const STYLES = `
   .popup-carousel-item.active {border-color:var(--c-primary-d);box-shadow:0 0 0 1px var(--c-primary-d) inset;}
   .popup-carousel-item .et {width:124px;height:70px;border-radius:5px;}
   .popup-carousel-meta {display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:.72rem;color:var(--c-text2);}
-  .popup-carousel-nav {appearance:none;-webkit-appearance:none;position:absolute;top:2px;bottom:12px;width:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;margin:0;padding:0;overflow:hidden;background:rgba(15,21,40,.58);background:color-mix(in srgb,var(--c-bg-panel) 64%,transparent);border:1px solid rgba(255,255,255,.3);border-color:color-mix(in srgb,var(--c-text-rev) 30%,transparent);box-shadow:0 7px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.34),inset 0 -1px 0 rgba(255,255,255,.08);backdrop-filter:blur(9px) saturate(165%);-webkit-backdrop-filter:blur(9px) saturate(165%);color:var(--c-text-rev);opacity:1;z-index:3;cursor:pointer;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease;}
+  .popup-carousel-nav {appearance:none;-webkit-appearance:none;position:absolute;top:calc(2px + 7px);bottom:auto;width:26px;height:calc(var(--popup-carousel-item-height) - 14px);box-sizing:border-box;display:flex;align-items:center;justify-content:center;margin:0;padding:0;overflow:visible;background:rgba(255,255,255,.18);background:color-mix(in srgb,var(--c-bg-panel) 34%,transparent);border:1px solid rgba(255,255,255,.38);border-color:color-mix(in srgb,var(--c-text-rev) 38%,transparent);box-shadow:0 7px 18px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.42),inset 0 -1px 0 rgba(255,255,255,.08);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);color:#111;opacity:1;z-index:3;cursor:pointer;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease;}
   .popup-carousel-nav svg {display:block;flex:0 0 auto;width:22px;height:32px;transform:scale(1.15,1.25);filter:drop-shadow(0 1px 2px rgba(0,0,0,.38));pointer-events:none;}
-  .popup-carousel-nav:hover {background:rgba(25,35,53,.72);background:color-mix(in srgb,var(--c-bg-panel) 78%,transparent);color:var(--c-primary-d);border-color:var(--c-primary-d);box-shadow:0 9px 22px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.46);}
-  .popup-carousel-nav:active {background:rgba(15,21,40,.78);box-shadow:0 3px 10px rgba(0,0,0,.26),inset 0 1px 4px rgba(0,0,0,.22);}
+  .popup-carousel-nav[hidden] {display:none !important;}
+  .popup-carousel-nav:hover {background:rgba(255,255,255,.3);background:color-mix(in srgb,var(--c-bg-panel) 48%,transparent);color:var(--c-primary-d);border-color:var(--c-primary-d);box-shadow:0 9px 22px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.5);}
+  .popup-carousel-nav:active {background:rgba(255,255,255,.38);box-shadow:0 3px 10px rgba(0,0,0,.22),inset 0 1px 4px rgba(0,0,0,.18);}
   .popup-carousel-nav:focus-visible {outline:2px solid var(--c-primary-d);outline-offset:2px;}
-  .popup-carousel-nav.left {left:4px;border-radius:999px;}
-  .popup-carousel-nav.right {right:4px;border-radius:999px;}
+  .popup-carousel-nav.left {left:4px;border-radius:7px;}
+  .popup-carousel-nav.right {right:4px;border-radius:7px;}
   .popup-info {background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 9px;
     padding: 10px 12px;display: flex;flex-direction: column;gap: 8px;}
   .popup-info[hidden] {display: none;}
@@ -4174,7 +4175,15 @@ function buildPopupShellMarkup({ icons, version }) {
             <div class="popup-header"></div>          
             <div class="popup-body">
               <div class="viewer" id="viewer" style="display:none"></div>
-              <div class="popup-media-controls" id="popup-media-controls" hidden><span class="popup-media-controls-spacer" aria-hidden="true"></span><button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button><input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress"><span class="popup-media-time" id="popup-media-time">0:00/0:00</span><button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button><button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button><button class="popup-media-btn" id="popup-media-airplay" type="button" title="AirPlay video" aria-label="AirPlay video" hidden>${icons.airplayVideo}</button><span class="popup-media-controls-spacer" aria-hidden="true"></span>
+              <div class="popup-media-controls" id="popup-media-controls" hidden>
+                <span class="popup-media-controls-spacer" aria-hidden="true"></span>
+                <button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button>
+                <input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress">
+                <span class="popup-media-time" id="popup-media-time">0:00/0:00</span>
+                <button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button>
+                <button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button>
+                <button class="popup-media-btn" id="popup-media-airplay" type="button" title="AirPlay video" aria-label="AirPlay video" hidden>${icons.airplayVideo}</button>
+                <span class="popup-media-controls-spacer" aria-hidden="true"></span>
               </div>
               <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
                 <div class="recording-scrub" id="recording-scrub" hidden>
@@ -4195,10 +4204,10 @@ function buildPopupShellMarkup({ icons, version }) {
                 </div>
                 <div class="popup-info" id="popup-info" hidden></div>
                 <div class="popup-carousel-wrap" id="popup-carousel-wrap" hidden>
-                  <button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" type="button" title="Previous carousel page" aria-label="Previous carousel page" aria-controls="popup-carousel">${icons.left}
+                  <button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" type="button" title="Previous carousel page" aria-label="Previous carousel page" aria-controls="popup-carousel" hidden>${icons.left}
                   </button>
                   <div class="popup-carousel" id="popup-carousel"></div>
-                  <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" type="button" title="Next carousel page" aria-label="Next carousel page" aria-controls="popup-carousel">${icons.right}
+                  <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" type="button" title="Next carousel page" aria-label="Next carousel page" aria-controls="popup-carousel" hidden>${icons.right}
                   </button>
                 </div>
                 <h1 class="popup-shell-ver" id="popup-shell-ver">v${version}</h1>
@@ -10669,6 +10678,25 @@ const resolvePopupCarouselActiveScrollLeft = ({
   activeOffsetLeft = 0,
   padding = 8
 }) => Math.max(0, Number(activeOffsetLeft || 0) - Number(padding || 0));
+const resolvePopupCarouselNavigationState = ({
+  scrollLeft = 0,
+  scrollWidth = 0,
+  viewportWidth = 0,
+  tolerance = 1
+} = {}) => {
+  const viewport = Math.max(0, Number(viewportWidth || 0));
+  const maxScrollLeft = Math.max(0, Number(scrollWidth || 0) - viewport);
+  const currentScrollLeft = Math.min(
+    maxScrollLeft,
+    Math.max(0, Number(scrollLeft || 0))
+  );
+  const edgeTolerance = Math.max(0, Number(tolerance || 0));
+  const hasOverflow = maxScrollLeft > edgeTolerance;
+  return {
+    canScrollLeft: hasOverflow && currentScrollLeft > edgeTolerance,
+    canScrollRight: hasOverflow && currentScrollLeft < maxScrollLeft - edgeTolerance
+  };
+};
 
 // src/features/browse/filter-state.js
 function buildReviewFilterLabels(review, sourceEvent = null) {
@@ -19232,6 +19260,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._popupMediaType = "";
     this._popupMediaStopTimer = null;
     this._popupMediaControlsController = null;
+    this._popupCarouselResizeObserver = null;
     this._livePictureInPictureButtonController = null;
     this._popupPictureInPictureButtonController = null;
     this._popupControlsHideTimer = null;
@@ -22151,7 +22180,10 @@ const FrigateViewCard = class extends HTMLElement {
     const carouselWrap = this._$("#popup-carousel-wrap");
     const carousel = this._$("#popup-carousel");
     if (carouselWrap) carouselWrap.hidden = true;
-    if (carousel) carousel.innerHTML = "";
+    if (carousel) {
+      carousel.onscroll = null;
+      carousel.innerHTML = "";
+    }
     this._hidePopupInfo();
     this._popupMediaType = "";
     this._popupMediaCamera = "";
@@ -23287,6 +23319,10 @@ const FrigateViewCard = class extends HTMLElement {
   _clearPopupMediaCleanup() {
     this._clearPictureInPictureButtonController("popup");
     this._clearPopupVideoZoom?.();
+    this._popupCarouselResizeObserver?.disconnect?.();
+    this._popupCarouselResizeObserver = null;
+    const popupCarousel = this._$?.("#popup-carousel");
+    if (popupCarousel) popupCarousel.onscroll = null;
     if (this._popupControlsHideTimer) {
       clearTimeout(this._popupControlsHideTimer);
       this._popupControlsHideTimer = null;
@@ -23492,6 +23528,9 @@ const FrigateViewCard = class extends HTMLElement {
     const wrap = this._$("#popup-carousel-wrap");
     const row = this._$("#popup-carousel");
     if (!wrap || !row) return;
+    this._popupCarouselResizeObserver?.disconnect?.();
+    this._popupCarouselResizeObserver = null;
+    row.onscroll = null;
     const contentPlan = buildPopupCarouselContentPlan({
       mediaType,
       events: this._popupCarouselEvents(mediaType),
@@ -23509,6 +23548,13 @@ const FrigateViewCard = class extends HTMLElement {
     row.innerHTML = contentPlan.html;
     row.scrollLeft = 0;
     wrap.classList.toggle("touch", contentPlan.touch);
+    const syncNavigation = () => this._syncPopupCarouselNavigation(row);
+    row.onscroll = syncNavigation;
+    if (typeof ResizeObserver !== "undefined") {
+      this._popupCarouselResizeObserver = new ResizeObserver(syncNavigation);
+      this._popupCarouselResizeObserver.observe(row);
+    }
+    syncNavigation();
     requestAnimationFrame(() => {
       const active = row.querySelector(".popup-carousel-item.active");
       if (active) {
@@ -23517,7 +23563,29 @@ const FrigateViewCard = class extends HTMLElement {
         });
         row.scrollLeft = left;
       }
+      syncNavigation();
     });
+  }
+  _syncPopupCarouselNavigation(row = this._$("#popup-carousel")) {
+    if (!row) return;
+    const wrap = this._$("#popup-carousel-wrap");
+    const leftButton = this._$("#popup-carousel-left");
+    const rightButton = this._$("#popup-carousel-right");
+    const item = row.querySelector(".popup-carousel-item");
+    const itemHeight = Number(item?.getBoundingClientRect?.().height || 0);
+    if (wrap && itemHeight > 0) {
+      wrap.style.setProperty(
+        "--popup-carousel-item-height",
+        `${itemHeight}px`
+      );
+    }
+    const navigationState = resolvePopupCarouselNavigationState({
+      scrollLeft: row.scrollLeft,
+      scrollWidth: row.scrollWidth,
+      viewportWidth: row.clientWidth
+    });
+    if (leftButton) leftButton.hidden = !navigationState.canScrollLeft;
+    if (rightButton) rightButton.hidden = !navigationState.canScrollRight;
   }
   _scrollPopupCarousel(dir = 1) {
     const row = this._$("#popup-carousel");

@@ -8,6 +8,7 @@ import {
   buildPopupCarouselContentPlan,
   buildPopupCarouselScrollPlan,
   resolvePopupCarouselActiveScrollLeft,
+  resolvePopupCarouselNavigationState,
   resolvePopupCarouselRenderPlan,
   shouldShowPopupCarousel,
 } from "../src/features/popup/carousel.js";
@@ -204,6 +205,41 @@ test("resolvePopupCarouselActiveScrollLeft clamps the active item target", () =>
   );
 });
 
+test("popup carousel navigation only exposes scrollable directions", () => {
+  assert.deepEqual(
+    resolvePopupCarouselNavigationState({
+      scrollLeft: 0,
+      scrollWidth: 1800,
+      viewportWidth: 900,
+    }),
+    { canScrollLeft: false, canScrollRight: true },
+  );
+  assert.deepEqual(
+    resolvePopupCarouselNavigationState({
+      scrollLeft: 450,
+      scrollWidth: 1800,
+      viewportWidth: 900,
+    }),
+    { canScrollLeft: true, canScrollRight: true },
+  );
+  assert.deepEqual(
+    resolvePopupCarouselNavigationState({
+      scrollLeft: 900,
+      scrollWidth: 1800,
+      viewportWidth: 900,
+    }),
+    { canScrollLeft: true, canScrollRight: false },
+  );
+  assert.deepEqual(
+    resolvePopupCarouselNavigationState({
+      scrollLeft: 0,
+      scrollWidth: 800,
+      viewportWidth: 900,
+    }),
+    { canScrollLeft: false, canScrollRight: false },
+  );
+});
+
 test("popup carousel navigation remains visible and uses fixed glass geometry", () => {
   assert.doesNotMatch(
     STYLES,
@@ -211,10 +247,12 @@ test("popup carousel navigation remains visible and uses fixed glass geometry", 
   );
   assert.match(
     STYLES,
-    /\.popup-carousel-nav \{[^}]*appearance:none;[^}]*top:2px;bottom:12px;width:30px;[^}]*box-sizing:border-box;[^}]*backdrop-filter:blur\(9px\) saturate\(165%\)/,
+    /\.popup-carousel-nav \{[^}]*appearance:none;[^}]*top:calc\(2px \+ 7px\);bottom:auto;width:26px;height:calc\(var\(--popup-carousel-item-height\) - 14px\);[^}]*background:rgba\(255,255,255,\.18\);[^}]*backdrop-filter:blur\(10px\) saturate\(170%\);[^}]*color:#111/,
   );
   assert.match(
     STYLES,
     /\.popup-carousel-nav svg \{[^}]*width:22px;height:32px;[^}]*scale\(1\.15,1\.25\)/,
   );
+  assert.match(STYLES, /\.popup-carousel-nav\.left \{[^}]*border-radius:7px/);
+  assert.match(STYLES, /\.popup-carousel-nav\.right \{[^}]*border-radius:7px/);
 });

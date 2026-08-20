@@ -707,7 +707,7 @@ export const STYLES = `
   .card.mobile-rotate-popup .popup-media-controls.is-hidden,
   .card.mobile-rotate-popup-exit .popup-media-controls.is-hidden {opacity:0;pointer-events:none;}
 
-  .popup-carousel-wrap {position:relative;min-width:0;isolation:isolate;}
+  .popup-carousel-wrap {--popup-carousel-item-height:100px;position:relative;min-width:0;isolation:isolate;}
   .popup-carousel-wrap[hidden] {display:none !important;}
   .popup-carousel {display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:2px 0 4px;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--c-text4) transparent;}
   .popup-carousel::-webkit-scrollbar {height:8px;}
@@ -717,13 +717,14 @@ export const STYLES = `
   .popup-carousel-item.active {border-color:var(--c-primary-d);box-shadow:0 0 0 1px var(--c-primary-d) inset;}
   .popup-carousel-item .et {width:124px;height:70px;border-radius:5px;}
   .popup-carousel-meta {display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:.72rem;color:var(--c-text2);}
-  .popup-carousel-nav {appearance:none;-webkit-appearance:none;position:absolute;top:2px;bottom:12px;width:30px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;margin:0;padding:0;overflow:hidden;background:rgba(15,21,40,.58);background:color-mix(in srgb,var(--c-bg-panel) 64%,transparent);border:1px solid rgba(255,255,255,.3);border-color:color-mix(in srgb,var(--c-text-rev) 30%,transparent);box-shadow:0 7px 18px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.34),inset 0 -1px 0 rgba(255,255,255,.08);backdrop-filter:blur(9px) saturate(165%);-webkit-backdrop-filter:blur(9px) saturate(165%);color:var(--c-text-rev);opacity:1;z-index:3;cursor:pointer;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease;}
+  .popup-carousel-nav {appearance:none;-webkit-appearance:none;position:absolute;top:calc(2px + 7px);bottom:auto;width:26px;height:calc(var(--popup-carousel-item-height) - 14px);box-sizing:border-box;display:flex;align-items:center;justify-content:center;margin:0;padding:0;overflow:visible;background:rgba(255,255,255,.18);background:color-mix(in srgb,var(--c-bg-panel) 34%,transparent);border:1px solid rgba(255,255,255,.38);border-color:color-mix(in srgb,var(--c-text-rev) 38%,transparent);box-shadow:0 7px 18px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.42),inset 0 -1px 0 rgba(255,255,255,.08);backdrop-filter:blur(10px) saturate(170%);-webkit-backdrop-filter:blur(10px) saturate(170%);color:#111;opacity:1;z-index:3;cursor:pointer;transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,color .18s ease;}
   .popup-carousel-nav svg {display:block;flex:0 0 auto;width:22px;height:32px;transform:scale(1.15,1.25);filter:drop-shadow(0 1px 2px rgba(0,0,0,.38));pointer-events:none;}
-  .popup-carousel-nav:hover {background:rgba(25,35,53,.72);background:color-mix(in srgb,var(--c-bg-panel) 78%,transparent);color:var(--c-primary-d);border-color:var(--c-primary-d);box-shadow:0 9px 22px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.46);}
-  .popup-carousel-nav:active {background:rgba(15,21,40,.78);box-shadow:0 3px 10px rgba(0,0,0,.26),inset 0 1px 4px rgba(0,0,0,.22);}
+  .popup-carousel-nav[hidden] {display:none !important;}
+  .popup-carousel-nav:hover {background:rgba(255,255,255,.3);background:color-mix(in srgb,var(--c-bg-panel) 48%,transparent);color:var(--c-primary-d);border-color:var(--c-primary-d);box-shadow:0 9px 22px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.5);}
+  .popup-carousel-nav:active {background:rgba(255,255,255,.38);box-shadow:0 3px 10px rgba(0,0,0,.22),inset 0 1px 4px rgba(0,0,0,.18);}
   .popup-carousel-nav:focus-visible {outline:2px solid var(--c-primary-d);outline-offset:2px;}
-  .popup-carousel-nav.left {left:4px;border-radius:999px;}
-  .popup-carousel-nav.right {right:4px;border-radius:999px;}
+  .popup-carousel-nav.left {left:4px;border-radius:7px;}
+  .popup-carousel-nav.right {right:4px;border-radius:7px;}
   .popup-info {background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 9px;
     padding: 10px 12px;display: flex;flex-direction: column;gap: 8px;}
   .popup-info[hidden] {display: none;}

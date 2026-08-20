@@ -233,6 +233,7 @@ import {
   buildPopupCarouselEvents,
   buildPopupCarouselScrollPlan,
   resolvePopupCarouselActiveScrollLeft,
+  resolvePopupCarouselNavigationState,
   resolvePopupCarouselRenderPlan,
   shouldShowPopupCarousel,
 } from "../features/popup/carousel.js";
@@ -672,6 +673,7 @@ export class FrigateViewCard extends HTMLElement {
     this._popupMediaType = "";
     this._popupMediaStopTimer = null;
     this._popupMediaControlsController = null;
+    this._popupCarouselResizeObserver = null;
     this._livePictureInPictureButtonController = null;
     this._popupPictureInPictureButtonController = null;
     this._popupControlsHideTimer = null;
@@ -4156,7 +4158,10 @@ export class FrigateViewCard extends HTMLElement {
     const carouselWrap = this._$("#popup-carousel-wrap");
     const carousel = this._$("#popup-carousel");
     if (carouselWrap) carouselWrap.hidden = true;
-    if (carousel) carousel.innerHTML = "";
+    if (carousel) {
+      carousel.onscroll = null;
+      carousel.innerHTML = "";
+    }
     this._hidePopupInfo();
     this._popupMediaType = "";
     this._popupMediaCamera = "";
@@ -5487,6 +5492,10 @@ export class FrigateViewCard extends HTMLElement {
   _clearPopupMediaCleanup() {
     this._clearPictureInPictureButtonController("popup");
     this._clearPopupVideoZoom?.();
+    this._popupCarouselResizeObserver?.disconnect?.();
+    this._popupCarouselResizeObserver = null;
+    const popupCarousel = this._$?.("#popup-carousel");
+    if (popupCarousel) popupCarousel.onscroll = null;
     if (this._popupControlsHideTimer) {
       clearTimeout(this._popupControlsHideTimer);
       this._popupControlsHideTimer = null;
@@ -5698,6 +5707,9 @@ export class FrigateViewCard extends HTMLElement {
     const wrap = this._$("#popup-carousel-wrap");
     const row = this._$("#popup-carousel");
     if (!wrap || !row) return;
+    this._popupCarouselResizeObserver?.disconnect?.();
+    this._popupCarouselResizeObserver = null;
+    row.onscroll = null;
     const contentPlan = buildPopupCarouselContentPlan({
       mediaType,
       events: this._popupCarouselEvents(mediaType),
@@ -5716,6 +5728,13 @@ export class FrigateViewCard extends HTMLElement {
     row.innerHTML = contentPlan.html;
     row.scrollLeft = 0;
     wrap.classList.toggle("touch", contentPlan.touch);
+    const syncNavigation = () => this._syncPopupCarouselNavigation(row);
+    row.onscroll = syncNavigation;
+    if (typeof ResizeObserver !== "undefined") {
+      this._popupCarouselResizeObserver = new ResizeObserver(syncNavigation);
+      this._popupCarouselResizeObserver.observe(row);
+    }
+    syncNavigation();
     requestAnimationFrame(() => {
       const active = row.querySelector(".popup-carousel-item.active");
       if (active) {
@@ -5724,7 +5743,29 @@ export class FrigateViewCard extends HTMLElement {
         });
         row.scrollLeft = left;
       }
+      syncNavigation();
     });
+  }
+  _syncPopupCarouselNavigation(row = this._$("#popup-carousel")) {
+    if (!row) return;
+    const wrap = this._$("#popup-carousel-wrap");
+    const leftButton = this._$("#popup-carousel-left");
+    const rightButton = this._$("#popup-carousel-right");
+    const item = row.querySelector(".popup-carousel-item");
+    const itemHeight = Number(item?.getBoundingClientRect?.().height || 0);
+    if (wrap && itemHeight > 0) {
+      wrap.style.setProperty(
+        "--popup-carousel-item-height",
+        `${itemHeight}px`,
+      );
+    }
+    const navigationState = resolvePopupCarouselNavigationState({
+      scrollLeft: row.scrollLeft,
+      scrollWidth: row.scrollWidth,
+      viewportWidth: row.clientWidth,
+    });
+    if (leftButton) leftButton.hidden = !navigationState.canScrollLeft;
+    if (rightButton) rightButton.hidden = !navigationState.canScrollRight;
   }
   _scrollPopupCarousel(dir = 1) {
     const row = this._$("#popup-carousel");
