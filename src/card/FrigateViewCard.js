@@ -5733,6 +5733,7 @@ export class FrigateViewCard extends HTMLElement {
     row.scrollBy(
       buildPopupCarouselScrollPlan({
         itemWidth: item?.getBoundingClientRect?.().width,
+        viewportWidth: row.clientWidth,
         dir,
       }),
     );

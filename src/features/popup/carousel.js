@@ -107,14 +107,20 @@ export const buildPopupCarouselContentPlan = ({
 
 export const buildPopupCarouselScrollPlan = ({
   itemWidth = 0,
+  viewportWidth = 0,
   dir = 1,
   gap = 8,
   fallbackWidth = 132,
 }) => {
   const width = Number(itemWidth || 0) || Number(fallbackWidth || 0);
   const step = width + Number(gap || 0);
+  const availableWidth = Math.max(0, Number(viewportWidth || 0));
+  const visibleItems = Math.max(
+    1,
+    Math.floor((availableWidth + Number(gap || 0)) / step),
+  );
   return {
-    left: step * (Number(dir || 0) < 0 ? -1 : 1),
+    left: step * visibleItems * (Number(dir || 0) < 0 ? -1 : 1),
     behavior: "smooth",
   };
 };

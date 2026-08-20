@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { STYLES } from "../src/styles.js";
 
 import {
   buildPopupCarouselItemMarkup,
@@ -153,13 +154,25 @@ test("buildPopupCarouselContentPlan limits rendering and reuses render plan sema
   });
 });
 
-test("buildPopupCarouselScrollPlan uses measured width or fallback", () => {
-  assert.deepEqual(buildPopupCarouselScrollPlan({ itemWidth: 140, dir: -1 }), {
-    left: -148,
+test("buildPopupCarouselScrollPlan advances by one visible carousel page", () => {
+  assert.deepEqual(buildPopupCarouselScrollPlan({
+    itemWidth: 140,
+    viewportWidth: 900,
+    dir: -1,
+  }), {
+    left: -888,
     behavior: "smooth",
   });
-  assert.deepEqual(buildPopupCarouselScrollPlan({ itemWidth: 0, dir: 1 }), {
-    left: 140,
+  assert.deepEqual(buildPopupCarouselScrollPlan({
+    itemWidth: 0,
+    viewportWidth: 700,
+    dir: 1,
+  }), {
+    left: 700,
+    behavior: "smooth",
+  });
+  assert.deepEqual(buildPopupCarouselScrollPlan({ itemWidth: 140, dir: 1 }), {
+    left: 148,
     behavior: "smooth",
   });
 });
@@ -188,5 +201,20 @@ test("resolvePopupCarouselActiveScrollLeft clamps the active item target", () =>
   assert.equal(
     resolvePopupCarouselActiveScrollLeft({ activeOffsetLeft: 4 }),
     0,
+  );
+});
+
+test("popup carousel navigation remains visible and uses fixed glass geometry", () => {
+  assert.doesNotMatch(
+    STYLES,
+    /\.popup-carousel-wrap\.touch \.popup-carousel-nav\s*\{[^}]*display:none/,
+  );
+  assert.match(
+    STYLES,
+    /\.popup-carousel-nav \{[^}]*appearance:none;[^}]*top:2px;bottom:12px;width:30px;[^}]*box-sizing:border-box;[^}]*backdrop-filter:blur\(9px\) saturate\(165%\)/,
+  );
+  assert.match(
+    STYLES,
+    /\.popup-carousel-nav svg \{[^}]*width:22px;height:32px;[^}]*scale\(1\.15,1\.25\)/,
   );
 });

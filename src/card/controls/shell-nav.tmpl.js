@@ -332,10 +332,10 @@ export function buildPopupShellMarkup({ icons, version }) {
                 </div>
                 <div class="popup-info" id="popup-info" hidden></div>
                 <div class="popup-carousel-wrap" id="popup-carousel-wrap" hidden>
-                  <button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" aria-label="Previous items">${icons.left}
+                  <button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" type="button" title="Previous carousel page" aria-label="Previous carousel page" aria-controls="popup-carousel">${icons.left}
                   </button>
                   <div class="popup-carousel" id="popup-carousel"></div>
-                  <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" aria-label="Next items">${icons.right}
+                  <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" type="button" title="Next carousel page" aria-label="Next carousel page" aria-controls="popup-carousel">${icons.right}
                   </button>
                 </div>
                 <h1 class="popup-shell-ver" id="popup-shell-ver">v${version}</h1>

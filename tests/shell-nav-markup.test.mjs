@@ -480,4 +480,12 @@ test("popup custom media controls place AirPlay beside fullscreen", () => {
   assert.match(markup, /id="recording-scrub-preview"[^>]* hidden/);
   assert.match(markup, /id="recording-scrub-preview-image"/);
   assert.match(markup, /id="recording-scrub-preview-label"/);
+  assert.match(
+    markup,
+    /id="popup-carousel-left"[^>]*type="button"[^>]*aria-label="Previous carousel page"[^>]*aria-controls="popup-carousel"/,
+  );
+  assert.match(
+    markup,
+    /id="popup-carousel-right"[^>]*type="button"[^>]*aria-label="Next carousel page"[^>]*aria-controls="popup-carousel"/,
+  );
 });
