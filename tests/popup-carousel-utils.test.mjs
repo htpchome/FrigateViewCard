@@ -188,9 +188,12 @@ test("buildPopupCarouselScrollPlan advances by one visible carousel page", () =>
 test("mobile carousel swipe advances by the same visible page as buttons", () => {
   const listeners = new Map();
   const classes = new Set();
-  const scrollCalls = [];
+  const animationFrames = [];
+  let frameId = 0;
+  let prevented = false;
   const row = {
     scrollLeft: 0,
+    scrollWidth: 1200,
     clientWidth: 442,
     addEventListener(type, listener, options = {}) {
       if (!listeners.has(type)) listeners.set(type, new Set());
@@ -208,14 +211,8 @@ test("mobile carousel swipe advances by the same visible page as buttons", () =>
       for (const listener of listeners.get(type) || []) listener(event);
     },
     classList: {
-      add: (token) => classes.add(token),
-      remove: (token) => classes.delete(token),
-    },
-    setPointerCapture() {},
-    releasePointerCapture() {},
-    scrollTo(options) {
-      scrollCalls.push(options);
-      this.scrollLeft = options.left;
+      add: (...tokens) => tokens.forEach((token) => classes.add(token)),
+      remove: (...tokens) => tokens.forEach((token) => classes.delete(token)),
     },
   };
   const controller = new PopupCarouselSwipeController({
@@ -226,32 +223,42 @@ test("mobile carousel swipe advances by the same visible page as buttons", () =>
         viewportWidth: row.clientWidth,
         dir,
       }),
+    now: () => 0,
+    requestFrame: (callback) => {
+      animationFrames.push(callback);
+      frameId += 1;
+      return frameId;
+    },
+    cancelFrame: () => {},
   }).bind();
 
-  row.dispatch("pointerdown", {
-    pointerType: "touch",
-    pointerId: 1,
-    clientX: 300,
-    clientY: 40,
+  row.dispatch("touchstart", {
+    touches: [{ identifier: 1, clientX: 300, clientY: 40 }],
   });
-  row.dispatch("pointermove", {
-    pointerType: "touch",
-    pointerId: 1,
-    clientX: 250,
-    clientY: 42,
+  row.dispatch("touchmove", {
+    touches: [{ identifier: 1, clientX: 250, clientY: 42 }],
     cancelable: true,
-    preventDefault() {},
+    preventDefault() {
+      prevented = true;
+    },
   });
+  assert.equal(prevented, true);
   assert.equal(classes.has("is-swiping"), true);
-  row.dispatch("pointerup", {
-    pointerType: "touch",
-    pointerId: 1,
-    clientX: 240,
-    clientY: 42,
+  assert.equal(row.scrollLeft, 50);
+  row.dispatch("touchend", {
+    changedTouches: [{ identifier: 1, clientX: 240, clientY: 42 }],
   });
+  assert.equal(classes.has("is-settling"), true);
 
-  assert.deepEqual(scrollCalls, [{ left: 450, behavior: "smooth" }]);
+  let frameNow = 0;
+  while (animationFrames.length) {
+    frameNow += 55;
+    animationFrames.shift()(frameNow);
+  }
+
+  assert.equal(row.scrollLeft, 450);
   assert.equal(classes.has("is-swiping"), false);
+  assert.equal(classes.has("is-settling"), false);
   controller.dispose();
 });
 

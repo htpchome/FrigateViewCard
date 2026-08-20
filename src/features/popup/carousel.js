@@ -164,84 +164,116 @@ export class PopupCarouselSwipeController {
   constructor({
     row,
     getScrollPlan = () => ({ left: 0, behavior: "smooth" }),
-    axisThreshold = 8,
+    axisThreshold = 10,
     commitThreshold = 32,
+    settleDurationMs = 220,
+    requestFrame = globalThis.requestAnimationFrame?.bind(globalThis) ||
+      ((callback) => globalThis.setTimeout(() => callback(Date.now()), 16)),
+    cancelFrame = globalThis.cancelAnimationFrame?.bind(globalThis) ||
+      globalThis.clearTimeout?.bind(globalThis),
+    now = globalThis.performance?.now?.bind(globalThis.performance) || Date.now,
   } = {}) {
     this._row = row;
     this._getScrollPlan = getScrollPlan;
     this._axisThreshold = Math.max(0, Number(axisThreshold || 0));
     this._commitThreshold = Math.max(0, Number(commitThreshold || 0));
+    this._settleDurationMs = Math.max(0, Number(settleDurationMs || 0));
+    this._requestFrame = requestFrame;
+    this._cancelFrame = cancelFrame;
+    this._now = now;
     this._cleanup = new CleanupController();
     this._gesture = null;
+    this._animationFrame = 0;
   }
 
   bind() {
     if (!this._row) return this;
-    this._cleanup.addEventListener(this._row, "pointerdown", this._onPointerDown);
-    this._cleanup.addEventListener(this._row, "pointermove", this._onPointerMove);
-    this._cleanup.addEventListener(this._row, "pointerup", this._onPointerUp);
+    this._cleanup.addEventListener(this._row, "touchstart", this._onTouchStart, {
+      passive: true,
+    });
+    this._cleanup.addEventListener(this._row, "touchmove", this._onTouchMove, {
+      passive: false,
+    });
+    this._cleanup.addEventListener(this._row, "touchend", this._onTouchEnd);
     this._cleanup.addEventListener(
       this._row,
-      "pointercancel",
-      this._onPointerCancel,
+      "touchcancel",
+      this._onTouchCancel,
     );
     return this;
   }
 
   dispose() {
-    this._restoreStart();
+    this._cancelSettle();
+    this._gesture = null;
+    this._row?.classList?.remove?.("is-swiping", "is-settling");
     this._cleanup.dispose();
   }
 
-  _scrollTo(left, behavior = "smooth") {
-    if (typeof this._row?.scrollTo === "function") {
-      this._row.scrollTo({ left, behavior });
-      return;
-    }
-    if (this._row) this._row.scrollLeft = left;
+  _cancelSettle() {
+    if (this._animationFrame) this._cancelFrame?.(this._animationFrame);
+    this._animationFrame = 0;
+    this._row?.classList?.remove?.("is-settling");
   }
 
-  _restoreStart() {
-    const startScrollLeft = this._gesture?.startScrollLeft;
-    this._gesture = null;
-    this._row?.classList?.remove?.("is-swiping");
-    if (Number.isFinite(startScrollLeft)) {
-      this._scrollTo(startScrollLeft, "smooth");
-    }
+  _touchFromList(touchList, identifier) {
+    return [...(touchList || [])].find(
+      (touch) => touch.identifier === identifier,
+    );
   }
 
-  _onPointerDown = (event) => {
-    if (String(event?.pointerType || "").toLowerCase() !== "touch") return;
+  _onTouchStart = (event) => {
+    if (this._gesture || event.touches?.length !== 1) return;
+    const touch = event.touches[0];
+    this._cancelSettle();
     this._gesture = {
-      pointerId: event.pointerId,
-      startX: Number(event.clientX) || 0,
-      startY: Number(event.clientY) || 0,
+      identifier: touch.identifier,
+      startX: Number(touch.clientX) || 0,
+      startY: Number(touch.clientY) || 0,
+      currentX: Number(touch.clientX) || 0,
+      currentY: Number(touch.clientY) || 0,
       startScrollLeft: Number(this._row?.scrollLeft) || 0,
       axis: "",
     };
-    this._row?.setPointerCapture?.(event.pointerId);
   };
 
-  _gestureDelta(event) {
+  _gestureDelta() {
     return {
-      x: (Number(event?.clientX) || 0) - this._gesture.startX,
-      y: (Number(event?.clientY) || 0) - this._gesture.startY,
+      x: this._gesture.currentX - this._gesture.startX,
+      y: this._gesture.currentY - this._gesture.startY,
     };
   }
 
-  _resolveAxis(delta) {
+  _resolveAxis(delta, final = false) {
     if (this._gesture.axis) return this._gesture.axis;
-    if (Math.max(Math.abs(delta.x), Math.abs(delta.y)) < this._axisThreshold) {
+    const absX = Math.abs(delta.x);
+    const absY = Math.abs(delta.y);
+    if (Math.max(absX, absY) < this._axisThreshold) {
       return "";
     }
-    this._gesture.axis =
-      Math.abs(delta.x) > Math.abs(delta.y) ? "horizontal" : "vertical";
+    if (absX > absY * 1.1) this._gesture.axis = "horizontal";
+    else if (absY > absX * 1.1) this._gesture.axis = "vertical";
+    else if (final || Math.max(absX, absY) >= this._axisThreshold * 2) {
+      this._gesture.axis = absX > absY ? "horizontal" : "vertical";
+    }
     return this._gesture.axis;
   }
 
-  _onPointerMove = (event) => {
-    if (!this._gesture || event.pointerId !== this._gesture.pointerId) return;
-    const delta = this._gestureDelta(event);
+  _updateGestureTouch(touch) {
+    if (!touch || !this._gesture) return false;
+    this._gesture.currentX = Number(touch.clientX) || 0;
+    this._gesture.currentY = Number(touch.clientY) || 0;
+    return true;
+  }
+
+  _onTouchMove = (event) => {
+    if (!this._gesture) return;
+    const touch = this._touchFromList(
+      event.touches,
+      this._gesture.identifier,
+    );
+    if (!this._updateGestureTouch(touch)) return;
+    const delta = this._gestureDelta();
     const axis = this._resolveAxis(delta);
     if (!axis) return;
     if (axis === "vertical") {
@@ -253,16 +285,54 @@ export class PopupCarouselSwipeController {
     this._row.scrollLeft = this._gesture.startScrollLeft - delta.x;
   };
 
+  _animateTo(targetScrollLeft) {
+    this._cancelSettle();
+    const maxScrollLeft = Math.max(
+      0,
+      Number(this._row?.scrollWidth || 0) - Number(this._row?.clientWidth || 0),
+    );
+    const target = Math.min(
+      maxScrollLeft,
+      Math.max(0, Number(targetScrollLeft || 0)),
+    );
+    const start = Number(this._row?.scrollLeft) || 0;
+    const distance = target - start;
+    if (!distance || !this._settleDurationMs || !this._requestFrame) {
+      if (this._row) this._row.scrollLeft = target;
+      return;
+    }
+    const startedAt = this._now();
+    this._row?.classList?.add?.("is-settling");
+    const step = (frameNow) => {
+      const elapsed = Math.max(0, Number(frameNow) - startedAt);
+      const progress = Math.min(1, elapsed / this._settleDurationMs);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      this._row.scrollLeft = start + distance * eased;
+      if (progress < 1) {
+        this._animationFrame = this._requestFrame(step);
+        return;
+      }
+      this._row.scrollLeft = target;
+      this._animationFrame = 0;
+      this._row?.classList?.remove?.("is-settling");
+    };
+    this._animationFrame = this._requestFrame(step);
+  }
+
   _finish(event, cancelled = false) {
-    if (!this._gesture || event.pointerId !== this._gesture.pointerId) return;
+    if (!this._gesture) return;
+    const touch = this._touchFromList(
+      event.changedTouches,
+      this._gesture.identifier,
+    );
+    this._updateGestureTouch(touch);
     const gesture = this._gesture;
-    const delta = this._gestureDelta(event);
-    const axis = this._resolveAxis(delta);
+    const delta = this._gestureDelta();
+    const axis = this._resolveAxis(delta, true);
     this._gesture = null;
-    this._row?.releasePointerCapture?.(event.pointerId);
     this._row?.classList?.remove?.("is-swiping");
     if (axis !== "horizontal" || cancelled) {
-      this._scrollTo(gesture.startScrollLeft, "smooth");
+      if (axis === "horizontal") this._animateTo(gesture.startScrollLeft);
       return;
     }
     const direction = delta.x < 0 ? 1 : -1;
@@ -270,13 +340,12 @@ export class PopupCarouselSwipeController {
     const scrollPlan = shouldAdvance
       ? this._getScrollPlan(direction)
       : { left: 0, behavior: "smooth" };
-    this._scrollTo(
+    this._animateTo(
       gesture.startScrollLeft + Number(scrollPlan?.left || 0),
-      scrollPlan?.behavior || "smooth",
     );
   }
 
-  _onPointerUp = (event) => this._finish(event, false);
+  _onTouchEnd = (event) => this._finish(event, false);
 
-  _onPointerCancel = (event) => this._finish(event, true);
+  _onTouchCancel = (event) => this._finish(event, true);
 }
