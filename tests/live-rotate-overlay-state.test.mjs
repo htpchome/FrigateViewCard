@@ -135,11 +135,9 @@ test("resolveFullscreenButtonVisibility hides controls for popup rotation and fu
       isFullscreen: false,
       inGridMode: false,
       rotateOverlayMode: "none",
-      suppressPopupButton: false,
     }),
     {
       liveButtonHidden: false,
-      popupButtonHidden: false,
       popupControlsFullscreenHidden: false,
     },
   );
@@ -150,11 +148,9 @@ test("resolveFullscreenButtonVisibility hides controls for popup rotation and fu
       isFullscreen: false,
       inGridMode: false,
       rotateOverlayMode: "popup",
-      suppressPopupButton: true,
     }),
     {
       liveButtonHidden: true,
-      popupButtonHidden: true,
       popupControlsFullscreenHidden: true,
     },
   );
@@ -165,11 +161,9 @@ test("resolveFullscreenButtonVisibility hides controls for popup rotation and fu
       isFullscreen: true,
       inGridMode: true,
       rotateOverlayMode: "live",
-      suppressPopupButton: false,
     }),
     {
       liveButtonHidden: true,
-      popupButtonHidden: true,
       popupControlsFullscreenHidden: false,
     },
   );

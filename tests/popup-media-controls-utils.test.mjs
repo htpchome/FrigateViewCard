@@ -93,7 +93,7 @@ test("resolvePopupMediaRenderPlan normalizes popup media rendering state", () =>
   assert.deepEqual(
     resolvePopupMediaRenderPlan({
       infoOpts: { mediaType: "Alert" },
-      fullscreenKind: "clip",
+      mediaType: "clip",
       hasMediaElement: true,
       html: "<img>",
       hasVideo: true,
@@ -109,7 +109,7 @@ test("resolvePopupMediaRenderPlan normalizes popup media rendering state", () =>
   assert.deepEqual(
     resolvePopupMediaRenderPlan({
       infoOpts: null,
-      fullscreenKind: "Snapshot",
+      mediaType: "Snapshot",
       hasMediaElement: false,
       html: '<img class="snap">',
       hasVideo: false,
@@ -134,13 +134,12 @@ test("resolvePopupMediaPostRenderPlan shapes popup follow-up work after viewer m
   assert.deepEqual(
     resolvePopupMediaPostRenderPlan({
       popupMediaType: "clip",
-      fullscreenKind: "clip",
       activeId: "ev-1",
       hasVideo: true,
     }),
     {
-      shouldEnsureFullscreenButton: true,
-      fullscreenKind: "clip",
+      shouldEnsureAirPlayButton: true,
+      airPlayMediaType: "clip",
       shouldRenderInfo: true,
       shouldInitPopupMediaControls: true,
       shouldResetControlsWithoutVideo: false,
@@ -155,13 +154,12 @@ test("resolvePopupMediaPostRenderPlan shapes popup follow-up work after viewer m
   assert.deepEqual(
     resolvePopupMediaPostRenderPlan({
       popupMediaType: "snapshot",
-      fullscreenKind: "snapshot",
       activeId: "",
       hasVideo: false,
     }),
     {
-      shouldEnsureFullscreenButton: true,
-      fullscreenKind: "snapshot",
+      shouldEnsureAirPlayButton: true,
+      airPlayMediaType: "snapshot",
       shouldRenderInfo: true,
       shouldInitPopupMediaControls: false,
       shouldResetControlsWithoutVideo: true,
@@ -185,7 +183,6 @@ test("buildPopupClipRenderPlan resolves clip defaults and iOS media file selecti
       playingId: "abc",
       mediaFile: "master.m3u8",
       mediaType: "clip",
-      fullscreenKind: "clip",
       infoEvent: { id: "abc" },
       infoOpts: { mediaType: "clip" },
     },
@@ -207,7 +204,6 @@ test("buildPopupClipRenderPlan resolves clip defaults and iOS media file selecti
       playingId: "xyz",
       mediaFile: "clip.mp4",
       mediaType: "alert",
-      fullscreenKind: "alert",
       infoEvent: null,
       infoOpts: {
         id: "xyz",
@@ -228,7 +224,6 @@ test("buildPopupSnapshotRenderPlan resolves snapshot defaults", () => {
     {
       playingId: "snap-1",
       mediaType: "snapshot",
-      fullscreenKind: "snapshot",
       infoEvent: { id: "snap-1" },
       infoOpts: { mediaType: "snapshot" },
     },
@@ -250,7 +245,6 @@ test("buildPopupRecordingRenderPlan resolves popup recording state and info opti
     {
       popupMediaType: "recording",
       playing: { rec: 100 },
-      fullscreenKind: "recording",
       infoEvent: null,
       infoOpts: {
         mediaType: "recording",
@@ -329,13 +323,13 @@ test("resolvePopupRecordingLoadOutcomePlan separates failure and success UI foll
     errorHtml: '<div class="ld">Unable to load recording</div>',
     shouldTeardownScrub: true,
     shouldHideScrub: true,
-    shouldEnsureFullscreenButton: false,
+    shouldEnsureAirPlayButton: false,
     shouldScheduleRotateOverlay: false,
     shouldInitPopupMediaControls: false,
     shouldRenderCarousel: false,
     shouldShowPopupControls: false,
     popupMediaType: "recording",
-    fullscreenKind: "recording",
+    airPlayMediaType: "recording",
     carouselMediaType: "recording",
     carouselActiveId: "",
   });
@@ -344,20 +338,19 @@ test("resolvePopupRecordingLoadOutcomePlan separates failure and success UI foll
     resolvePopupRecordingLoadOutcomePlan({
       playable: true,
       popupMediaType: "recording",
-      fullscreenKind: "recording",
     }),
     {
       shouldShowError: false,
       errorHtml: "",
       shouldTeardownScrub: false,
       shouldHideScrub: false,
-      shouldEnsureFullscreenButton: true,
+      shouldEnsureAirPlayButton: true,
       shouldScheduleRotateOverlay: true,
       shouldInitPopupMediaControls: true,
       shouldRenderCarousel: true,
       shouldShowPopupControls: true,
       popupMediaType: "recording",
-      fullscreenKind: "recording",
+      airPlayMediaType: "recording",
       carouselMediaType: "recording",
       carouselActiveId: "",
     },

@@ -1,7 +1,56 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { PopupMediaLoaderController } from "../src/features/popup/media-loader.ctrl.js";
+import {
+  PopupMediaLoaderController,
+  PopupSnapshotFullscreenController,
+} from "../src/features/popup/media-loader.ctrl.js";
+
+class FakeSnapshotTarget {
+  constructor() {
+    this._listeners = new Map();
+  }
+
+  addEventListener(type, listener, options = {}) {
+    if (!this._listeners.has(type)) this._listeners.set(type, new Set());
+    this._listeners.get(type).add(listener);
+    options?.signal?.addEventListener?.(
+      "abort",
+      () => this._listeners.get(type)?.delete(listener),
+      { once: true },
+    );
+  }
+
+  dispatch(type, init = {}) {
+    const event = {
+      type,
+      pointerId: 0,
+      pointerType: "mouse",
+      clientX: 100,
+      clientY: 80,
+      defaultPrevented: false,
+      preventDefault() {
+        this.defaultPrevented = true;
+      },
+      ...init,
+    };
+    for (const listener of this._listeners.get(type) || []) listener(event);
+    return event;
+  }
+}
+
+const touchPoint = (pointerId, clientX = 100, clientY = 80) => ({
+  pointerId,
+  pointerType: "touch",
+  clientX,
+  clientY,
+});
+
+const dispatchTouchTap = (target, pointerId, clientX = 100, clientY = 80) => {
+  const point = touchPoint(pointerId, clientX, clientY);
+  target.dispatch("pointerdown", point);
+  return target.dispatch("pointerup", point);
+};
 
 test("showClipById routes clip loading through popup media rendering", () => {
   const host = {
@@ -21,7 +70,7 @@ test("showClipById routes clip loading through popup media rendering", () => {
   controller.showClipById("event-1", { mediaType: "alert" });
 
   assert.equal(rendered.playingId, "event-1");
-  assert.equal(rendered.fullscreenKind, "alert");
+  assert.equal(rendered.mediaType, "alert");
   assert.equal(rendered.infoEvent.id, "event-1");
   assert.equal(
     rendered.mediaElement.options.src.includes("/media/event-1/master.m3u8"),
@@ -59,7 +108,7 @@ test("showRecording signs candidates and initializes popup recording playback on
       if (selector === "#recording-scrub") return { hidden: false };
       return null;
     },
-    _ensurePopupFullscreenButton: (kind) => calls.push(["ensureFs", kind]),
+    _ensurePopupAirPlayButton: (kind) => calls.push(["ensureAirPlay", kind]),
     _scheduleRotateOverlayUpdate: () => calls.push(["scheduleRotate"]),
     _initPopupMediaControls: (_video, type) =>
       calls.push(["initControls", type]),
@@ -107,4 +156,62 @@ test("showRecording signs candidates and initializes popup recording playback on
     ),
     true,
   );
+});
+
+test("snapshot fullscreen supports double click and touch double tap", () => {
+  const target = new FakeSnapshotTarget();
+  let nowMs = 1000;
+  let fullscreenRequests = 0;
+  const controller = new PopupSnapshotFullscreenController({
+    target,
+    now: () => nowMs,
+    onFullscreen: () => {
+      fullscreenRequests += 1;
+    },
+  }).bind();
+
+  const doubleClick = target.dispatch("dblclick");
+  assert.equal(doubleClick.defaultPrevented, true);
+  assert.equal(fullscreenRequests, 1);
+
+  nowMs = 2000;
+  dispatchTouchTap(target, 1);
+  nowMs = 2200;
+  const secondTap = dispatchTouchTap(target, 1);
+  assert.equal(secondTap.defaultPrevented, true);
+  assert.equal(fullscreenRequests, 2);
+
+  target.dispatch("dblclick");
+  assert.equal(fullscreenRequests, 2);
+
+  controller.dispose();
+  nowMs = 3000;
+  target.dispatch("dblclick");
+  assert.equal(fullscreenRequests, 2);
+});
+
+test("snapshot fullscreen ignores moved and distant touch pairs", () => {
+  const target = new FakeSnapshotTarget();
+  let nowMs = 1000;
+  let fullscreenRequests = 0;
+  new PopupSnapshotFullscreenController({
+    target,
+    now: () => nowMs,
+    onFullscreen: () => {
+      fullscreenRequests += 1;
+    },
+  }).bind();
+
+  dispatchTouchTap(target, 1, 20, 20);
+  nowMs = 1100;
+  dispatchTouchTap(target, 1, 100, 100);
+  assert.equal(fullscreenRequests, 0);
+
+  nowMs = 2000;
+  target.dispatch("pointerdown", touchPoint(2, 40, 40));
+  target.dispatch("pointermove", touchPoint(2, 60, 40));
+  target.dispatch("pointerup", touchPoint(2, 60, 40));
+  nowMs = 2100;
+  dispatchTouchTap(target, 2, 60, 40);
+  assert.equal(fullscreenRequests, 0);
 });

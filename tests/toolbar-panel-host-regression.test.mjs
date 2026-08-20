@@ -145,6 +145,10 @@ test("mobile rotate overlay promotes the card host above Home Assistant chrome",
 });
 
 test("popup AirPlay controls delegate to browser target playback", () => {
+  assert.equal(cardSource.includes("#popup-fs-btn"), false);
+  assert.equal(cardSource.includes("_ensurePopupFullscreenButton"), false);
+  assert.equal(cardSource.includes("_ensurePopupAirPlayButton"), true);
+  assert.equal(stylesSource.includes(".overlay-fs"), false);
   assert.equal(
     cardSource.includes("#popup-airplay-btn, #popup-media-airplay"),
     true,

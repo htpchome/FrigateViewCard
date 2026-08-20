@@ -2,13 +2,13 @@ import { resolvePopupMediaControlsInitPlan } from "../../shared/media/controls.j
 
 export const resolvePopupMediaRenderPlan = ({
   infoOpts = null,
-  fullscreenKind = "",
+  mediaType = "",
   hasMediaElement = false,
   html = "",
   hasVideo = false,
 }) => ({
   popupMediaType: String(
-    infoOpts?.mediaType || fullscreenKind || "",
+    infoOpts?.mediaType || mediaType || "",
   ).toLowerCase(),
   shouldAppendMediaElement: Boolean(hasMediaElement),
   viewerHtml: hasMediaElement ? "" : String(html || ""),
@@ -21,12 +21,11 @@ export const resolvePopupMediaRenderPlan = ({
 
 export const resolvePopupMediaPostRenderPlan = ({
   popupMediaType = "",
-  fullscreenKind = "",
   activeId = "",
   hasVideo = false,
 }) => ({
-  shouldEnsureFullscreenButton: true,
-  fullscreenKind,
+  shouldEnsureAirPlayButton: true,
+  airPlayMediaType: popupMediaType,
   shouldRenderInfo: true,
   shouldInitPopupMediaControls: Boolean(hasVideo),
   shouldResetControlsWithoutVideo: !hasVideo,
@@ -49,7 +48,6 @@ export const buildPopupClipRenderPlan = ({
     playingId: id,
     mediaFile: isIos ? "master.m3u8" : "clip.mp4",
     mediaType,
-    fullscreenKind: mediaType,
     infoEvent,
     infoOpts: includeLookupInfo
       ? {
@@ -67,7 +65,6 @@ export const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
   return {
     playingId: event?.id || "",
     mediaType,
-    fullscreenKind: mediaType,
     infoEvent: event,
     infoOpts: { mediaType },
   };
@@ -141,7 +138,6 @@ export const buildPopupRecordingRenderPlan = ({
 }) => ({
   popupMediaType: "recording",
   playing: { rec: start },
-  fullscreenKind: "recording",
   infoEvent: null,
   infoOpts: {
     mediaType: "recording",
@@ -194,7 +190,6 @@ export const buildPopupRecordingScrubInitPlan = ({
 export const resolvePopupRecordingLoadOutcomePlan = ({
   playable = false,
   popupMediaType = "recording",
-  fullscreenKind = "recording",
 }) => {
   if (!playable) {
     return {
@@ -202,13 +197,13 @@ export const resolvePopupRecordingLoadOutcomePlan = ({
       errorHtml: '<div class="ld">Unable to load recording</div>',
       shouldTeardownScrub: true,
       shouldHideScrub: true,
-      shouldEnsureFullscreenButton: false,
+      shouldEnsureAirPlayButton: false,
       shouldScheduleRotateOverlay: false,
       shouldInitPopupMediaControls: false,
       shouldRenderCarousel: false,
       shouldShowPopupControls: false,
       popupMediaType,
-      fullscreenKind,
+      airPlayMediaType: popupMediaType,
       carouselMediaType: "recording",
       carouselActiveId: "",
     };
@@ -219,13 +214,13 @@ export const resolvePopupRecordingLoadOutcomePlan = ({
     errorHtml: "",
     shouldTeardownScrub: false,
     shouldHideScrub: false,
-    shouldEnsureFullscreenButton: true,
+    shouldEnsureAirPlayButton: true,
     shouldScheduleRotateOverlay: true,
     shouldInitPopupMediaControls: true,
     shouldRenderCarousel: true,
     shouldShowPopupControls: true,
     popupMediaType,
-    fullscreenKind,
+    airPlayMediaType: popupMediaType,
     carouselMediaType: "recording",
     carouselActiveId: "",
   };

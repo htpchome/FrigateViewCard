@@ -4119,10 +4119,6 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handlePopupMediaToolbarClick(target) {
-    if (target.closest("#popup-fs-btn")) {
-      this._fullscreen(this._$("#viewer"));
-      return true;
-    }
     if (target.closest("#popup-airplay-btn, #popup-media-airplay")) {
       void this._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
         scope: "popup",
@@ -4909,7 +4905,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _syncFullscreenButtonsVisibility() {
     const liveBtn = this._$("#live-fs-btn");
-    const popupBtn = this._$("#popup-fs-btn");
     const popupControlsFsBtn = this._$("#popup-media-fs");
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     const isFullscreen = !!(
@@ -4921,10 +4916,8 @@ export class FrigateViewCard extends HTMLElement {
       isFullscreen,
       inGridMode,
       rotateOverlayMode: this._rotateOverlayMode,
-      suppressPopupButton: this._usePopupCustomControls(this._popupMediaType),
     });
     if (liveBtn) liveBtn.hidden = visibility.liveButtonHidden;
-    if (popupBtn) popupBtn.hidden = visibility.popupButtonHidden;
     if (popupControlsFsBtn)
       popupControlsFsBtn.hidden = visibility.popupControlsFullscreenHidden;
   }
@@ -4985,46 +4978,34 @@ export class FrigateViewCard extends HTMLElement {
   _usePopupCustomControls(mediaType) {
     return this._isPhonePopupUi() && this._isPopupVideoMediaType(mediaType);
   }
-  _ensurePopupFullscreenButton(kind = "media") {
+  _ensurePopupAirPlayButton(mediaType = "") {
     const viewer = this._$("#viewer");
     if (!viewer) return;
     const existingControls = viewer.querySelector("#popup-playback-controls");
-    if (this._usePopupCustomControls(kind)) {
+    if (
+      this._usePopupCustomControls(mediaType) ||
+      !viewer.querySelector("video")
+    ) {
       existingControls?.remove();
-      const legacyButton = viewer.querySelector("#popup-fs-btn");
-      legacyButton?.remove();
       return;
     }
-    const label =
-      kind === "alert"
-        ? "Fullscreen alert"
-        : kind === "recording"
-          ? "Fullscreen recording"
-          : "Fullscreen media";
     let controls = existingControls;
     if (!controls) {
-      viewer.querySelector("#popup-fs-btn")?.remove();
       controls = document.createElement("div");
-      controls.className = "popup-playback-controls overlay-fs";
+      controls.className = "popup-playback-controls overlay-controls";
       controls.id = "popup-playback-controls";
       viewer.appendChild(controls);
     }
     controls.innerHTML = "";
-    const addButton = (id, title, icon, initiallyHidden = false) => {
-      const button = document.createElement("button");
-      button.className = "glass-btn popup-playback-btn";
-      button.id = id;
-      button.type = "button";
-      button.title = title;
-      button.setAttribute("aria-label", title);
-      button.hidden = initiallyHidden;
-      button.innerHTML = icon;
-      controls.appendChild(button);
-    };
-    addButton("popup-fs-btn", label, ICONS.expand);
-    if (this._isPopupVideoMediaType(kind)) {
-      addButton("popup-airplay-btn", "AirPlay video", ICONS.airplayVideo, true);
-    }
+    const button = document.createElement("button");
+    button.className = "glass-btn popup-playback-btn";
+    button.id = "popup-airplay-btn";
+    button.type = "button";
+    button.title = "AirPlay video";
+    button.setAttribute("aria-label", "AirPlay video");
+    button.hidden = true;
+    button.innerHTML = ICONS.airplayVideo;
+    controls.appendChild(button);
     this._syncPlaybackTargetButtons();
   }
   _clearPopupMediaCleanup() {

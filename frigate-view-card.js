@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1542";
+const VERSION = "1.0.1543";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -848,8 +848,8 @@ const STYLES = `
     .card.mobile-rotate-popup-exit #viewer video,
     .card.mobile-rotate-popup #viewer img.snap,
     .card.mobile-rotate-popup-exit #viewer img.snap{object-fit:contain;object-position:center center;background:#000;}
-    .card.mobile-rotate-popup .overlay-fs,
-    .card.mobile-rotate-popup-exit .overlay-fs,
+    .card.mobile-rotate-popup .overlay-controls,
+    .card.mobile-rotate-popup-exit .overlay-controls,
     .card.mobile-rotate-popup .popup-close-row,
     .card.mobile-rotate-popup-exit .popup-close-row{display:none !important;}
     .card.mobile-rotate-popup #popup-info-head,
@@ -956,10 +956,10 @@ const STYLES = `
   .cam-tab:hover svg{width:14.4px;height:14.4px;flex-shrink:0;} 
   .cam-dot{font-size:0.7rem;vertical-align:middle;}
 
-  .overlay-fs::after {content: "";position: absolute;top: 0;left: 0;}         
-  .overlay-fs[hidden]{display:none !important;}
-  .overlay-fs svg {width:30px;height:30px;opacity: 0.8; }
-  .overlay-fs:hover svg {width:30px;height:30px;opacity: 0.95; }
+  .overlay-controls::after {content: "";position: absolute;top: 0;left: 0;}
+  .overlay-controls[hidden]{display:none !important;}
+  .overlay-controls svg {width:30px;height:30px;opacity: 0.8; }
+  .overlay-controls:hover svg {width:30px;height:30px;opacity: 0.95; }
   .popup-playback-controls{display:flex;gap:4px;}
   .popup-playback-controls .popup-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
   #viewer:hover .popup-playback-controls{opacity:1;pointer-events:auto;}
@@ -975,16 +975,21 @@ const STYLES = `
 
   #live-stage:fullscreen .live-fs-btn,
   #live-stage:-webkit-full-screen .live-fs-btn,
-  #viewer:fullscreen .overlay-fs,
-  #viewer:-webkit-full-screen .overlay-fs{display:none !important;}
+  #viewer:fullscreen .overlay-controls,
+  #viewer:-webkit-full-screen .overlay-controls{display:none !important;}
   #live-stage:fullscreen,
   #live-stage:-webkit-full-screen{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#000;}
   #live-stage:fullscreen #eng-wrap,
   #live-stage:-webkit-full-screen #eng-wrap{width:100%;height:100%;max-height:none;aspect-ratio:auto;}
+  #viewer:fullscreen,
+  #viewer:-webkit-full-screen{width:100%;height:100%;max-height:none;min-height:0;aspect-ratio:auto;border-radius:0;background:#000;}
+  #viewer:fullscreen img.snap,
+  #viewer:-webkit-full-screen img.snap{cursor:default;}
   .viewer{width:100%;aspect-ratio:16/9;min-height:240px;max-height:70dvh;
     background:var(--c-bg-deep);display:flex;align-items:center;justify-content:center;z-index:2;position:relative;overflow:hidden;border-radius:7px;}
   .viewer video,.viewer img.snap{width:100%;height:100%;object-fit:contain;
     background:var(--c-bg-deep);}
+  .viewer img.snap{cursor:zoom-in;touch-action:manipulation;user-select:none;-webkit-user-drag:none;}
   .viewer .ld{color:var(--c-text2);font-size:0.975rem;}
   .ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;color:var(--c-text2);background:linear-gradient(145deg,#1a2540,#0d1520);}
   .ph svg{width:40px;height:40px;opacity:.35;}
@@ -6262,16 +6267,12 @@ const resolveFullscreenButtonVisibility = ({
   popupOpen = false,
   isFullscreen = false,
   inGridMode = false,
-  rotateOverlayMode = "none",
-  suppressPopupButton = false
+  rotateOverlayMode = "none"
 }) => {
   const popupRotateActive = rotateOverlayMode === "popup";
   return {
     liveButtonHidden: Boolean(
       popupOpen || isFullscreen || inGridMode || popupRotateActive
-    ),
-    popupButtonHidden: Boolean(
-      isFullscreen || popupRotateActive || suppressPopupButton
     ),
     popupControlsFullscreenHidden: Boolean(popupRotateActive)
   };
@@ -10074,13 +10075,13 @@ const PopupMediaControlsController = class {
 // src/features/popup/media.js
 const resolvePopupMediaRenderPlan = ({
   infoOpts = null,
-  fullscreenKind = "",
+  mediaType = "",
   hasMediaElement = false,
   html = "",
   hasVideo = false
 }) => ({
   popupMediaType: String(
-    infoOpts?.mediaType || fullscreenKind || ""
+    infoOpts?.mediaType || mediaType || ""
   ).toLowerCase(),
   shouldAppendMediaElement: Boolean(hasMediaElement),
   viewerHtml: hasMediaElement ? "" : String(html || ""),
@@ -10090,12 +10091,11 @@ const resolvePopupMediaRenderPlan = ({
 });
 const resolvePopupMediaPostRenderPlan = ({
   popupMediaType = "",
-  fullscreenKind = "",
   activeId = "",
   hasVideo = false
 }) => ({
-  shouldEnsureFullscreenButton: true,
-  fullscreenKind,
+  shouldEnsureAirPlayButton: true,
+  airPlayMediaType: popupMediaType,
   shouldRenderInfo: true,
   shouldInitPopupMediaControls: Boolean(hasVideo),
   shouldResetControlsWithoutVideo: !hasVideo,
@@ -10117,7 +10117,6 @@ const buildPopupClipRenderPlan = ({
     playingId: id,
     mediaFile: isIos ? "master.m3u8" : "clip.mp4",
     mediaType,
-    fullscreenKind: mediaType,
     infoEvent,
     infoOpts: includeLookupInfo ? {
       id,
@@ -10132,7 +10131,6 @@ const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
   return {
     playingId: event?.id || "",
     mediaType,
-    fullscreenKind: mediaType,
     infoEvent: event,
     infoOpts: { mediaType }
   };
@@ -10186,7 +10184,6 @@ const buildPopupRecordingRenderPlan = ({
 }) => ({
   popupMediaType: "recording",
   playing: { rec: start },
-  fullscreenKind: "recording",
   infoEvent: null,
   infoOpts: {
     mediaType: "recording",
@@ -10234,8 +10231,7 @@ const buildPopupRecordingScrubInitPlan = ({
 });
 const resolvePopupRecordingLoadOutcomePlan = ({
   playable = false,
-  popupMediaType = "recording",
-  fullscreenKind = "recording"
+  popupMediaType = "recording"
 }) => {
   if (!playable) {
     return {
@@ -10243,13 +10239,13 @@ const resolvePopupRecordingLoadOutcomePlan = ({
       errorHtml: '<div class="ld">Unable to load recording</div>',
       shouldTeardownScrub: true,
       shouldHideScrub: true,
-      shouldEnsureFullscreenButton: false,
+      shouldEnsureAirPlayButton: false,
       shouldScheduleRotateOverlay: false,
       shouldInitPopupMediaControls: false,
       shouldRenderCarousel: false,
       shouldShowPopupControls: false,
       popupMediaType,
-      fullscreenKind,
+      airPlayMediaType: popupMediaType,
       carouselMediaType: "recording",
       carouselActiveId: ""
     };
@@ -10259,13 +10255,13 @@ const resolvePopupRecordingLoadOutcomePlan = ({
     errorHtml: "",
     shouldTeardownScrub: false,
     shouldHideScrub: false,
-    shouldEnsureFullscreenButton: true,
+    shouldEnsureAirPlayButton: true,
     shouldScheduleRotateOverlay: true,
     shouldInitPopupMediaControls: true,
     shouldRenderCarousel: true,
     shouldShowPopupControls: true,
     popupMediaType,
-    fullscreenKind,
+    airPlayMediaType: popupMediaType,
     carouselMediaType: "recording",
     carouselActiveId: ""
   };
@@ -15203,6 +15199,124 @@ const EditorPreviewContextController = class {
 };
 
 // src/features/popup/media-loader.ctrl.js
+const SNAPSHOT_DOUBLE_TAP_DELAY_MS = 320;
+const SNAPSHOT_DOUBLE_TAP_DISTANCE_PX = 28;
+const SNAPSHOT_MOVE_TOLERANCE_PX = 8;
+const TOUCH_DOUBLE_CLICK_SUPPRESSION_MS = 500;
+const snapshotPointerPoint = (event) => ({
+  pointerId: event.pointerId,
+  clientX: Number(event.clientX) || 0,
+  clientY: Number(event.clientY) || 0,
+  startX: Number(event.clientX) || 0,
+  startY: Number(event.clientY) || 0,
+  moved: false
+});
+const snapshotTapDistance = (first, second) => Math.hypot(
+  Number(second?.clientX || 0) - Number(first?.clientX || 0),
+  Number(second?.clientY || 0) - Number(first?.clientY || 0)
+);
+const PopupSnapshotFullscreenController = class {
+  constructor({ target, onFullscreen, now = () => Date.now() } = {}) {
+    __publicField(this, "_onDoubleClick", (event) => {
+      if (this._now() - this._lastTouchFullscreenAt < TOUCH_DOUBLE_CLICK_SUPPRESSION_MS) {
+        return;
+      }
+      this._requestFullscreen(event);
+    });
+    __publicField(this, "_onPointerDown", (event) => {
+      if (String(event.pointerType || "").toLowerCase() !== "touch") return;
+      this._pointers.set(event.pointerId, snapshotPointerPoint(event));
+      if (this._pointers.size <= 1) return;
+      this._lastTap = null;
+      this._pointers.forEach((point) => {
+        point.moved = true;
+      });
+    });
+    __publicField(this, "_onPointerMove", (event) => {
+      const point = this._pointers.get(event.pointerId);
+      if (!point) return;
+      point.clientX = Number(event.clientX) || 0;
+      point.clientY = Number(event.clientY) || 0;
+      if (Math.hypot(point.clientX - point.startX, point.clientY - point.startY) > SNAPSHOT_MOVE_TOLERANCE_PX) {
+        point.moved = true;
+      }
+    });
+    __publicField(this, "_onPointerUp", (event) => this._finishPointer(event));
+    __publicField(this, "_onPointerCancel", (event) => this._finishPointer(event, true));
+    this._target = target;
+    this._onFullscreen = onFullscreen;
+    this._now = now;
+    this._cleanup = new CleanupController();
+    this._pointers = new Map();
+    this._lastTap = null;
+    this._lastTouchFullscreenAt = 0;
+    this._bound = false;
+  }
+  bind() {
+    if (this._bound || !this._target) return this;
+    this._bound = true;
+    this._cleanup.addEventListener(
+      this._target,
+      "dblclick",
+      this._onDoubleClick
+    );
+    this._cleanup.addEventListener(
+      this._target,
+      "pointerdown",
+      this._onPointerDown
+    );
+    this._cleanup.addEventListener(
+      this._target,
+      "pointermove",
+      this._onPointerMove
+    );
+    this._cleanup.addEventListener(
+      this._target,
+      "pointerup",
+      this._onPointerUp,
+      { passive: false }
+    );
+    this._cleanup.addEventListener(
+      this._target,
+      "pointercancel",
+      this._onPointerCancel
+    );
+    return this;
+  }
+  dispose() {
+    if (!this._bound) return;
+    this._cleanup.dispose();
+    this._pointers.clear();
+    this._lastTap = null;
+    this._bound = false;
+  }
+  _requestFullscreen(event) {
+    event?.preventDefault?.();
+    this._onFullscreen?.();
+  }
+  _finishPointer(event, cancelled = false) {
+    const point = this._pointers.get(event.pointerId);
+    if (!point) return;
+    this._pointers.delete(event.pointerId);
+    if (cancelled || point.moved) {
+      this._lastTap = null;
+      return;
+    }
+    const now = this._now();
+    const currentTap = {
+      clientX: Number(event.clientX) || point.clientX,
+      clientY: Number(event.clientY) || point.clientY,
+      at: now
+    };
+    if (this._lastTap && now - this._lastTap.at <= SNAPSHOT_DOUBLE_TAP_DELAY_MS && snapshotTapDistance(this._lastTap, currentTap) <= SNAPSHOT_DOUBLE_TAP_DISTANCE_PX) {
+      this._lastTap = null;
+      this._lastTouchFullscreenAt = now;
+      this._requestFullscreen(event);
+      return;
+    }
+    this._lastTap = currentTap;
+  }
+};
 const PopupMediaLoaderController = class {
   constructor(host, deps = {}) {
     this._host = host;
@@ -15218,7 +15332,7 @@ const PopupMediaLoaderController = class {
     playingId,
     html,
     mediaElement,
-    fullscreenKind,
+    mediaType,
     infoEvent,
     infoOpts
   }) {
@@ -15227,7 +15341,7 @@ const PopupMediaLoaderController = class {
     const isElement = typeof Element !== "undefined" && mediaElement instanceof Element;
     const renderPlan = resolvePopupMediaRenderPlan({
       infoOpts,
-      fullscreenKind,
+      mediaType,
       hasMediaElement: isElement,
       html
     });
@@ -15244,14 +15358,23 @@ const PopupMediaLoaderController = class {
     if (body) body.scrollTop = 0;
     const video = viewer.querySelector("video");
     this._host._attachPopupVideoZoom?.(video);
+    const snapshot = viewer.querySelector("img.snap");
+    if (snapshot) {
+      const snapshotFullscreenController = new PopupSnapshotFullscreenController({
+        target: snapshot,
+        onFullscreen: () => this._host._fullscreen(viewer)
+      }).bind();
+      this._host._popupMediaCleanup = () => {
+        snapshotFullscreenController.dispose();
+      };
+    }
     const postRenderPlan = resolvePopupMediaPostRenderPlan({
       popupMediaType: this._host._popupMediaType,
-      fullscreenKind,
       activeId: this._host._popupMediaCurrentId(),
       hasVideo: !!video
     });
-    if (postRenderPlan.shouldEnsureFullscreenButton) {
-      this._host._ensurePopupFullscreenButton(postRenderPlan.fullscreenKind);
+    if (postRenderPlan.shouldEnsureAirPlayButton) {
+      this._host._ensurePopupAirPlayButton(postRenderPlan.airPlayMediaType);
     }
     if (postRenderPlan.shouldRenderInfo) {
       this._host._renderPopupInfo(infoEvent, infoOpts);
@@ -15312,7 +15435,7 @@ const PopupMediaLoaderController = class {
     this.renderPopupMedia({
       playingId: renderPlan.playingId,
       mediaElement: this.buildPopupVideo(src),
-      fullscreenKind: renderPlan.fullscreenKind,
+      mediaType: renderPlan.mediaType,
       infoEvent: renderPlan.infoEvent,
       infoOpts: renderPlan.infoOpts
     });
@@ -15330,7 +15453,7 @@ const PopupMediaLoaderController = class {
     this.renderPopupMedia({
       playingId: renderPlan.playingId,
       mediaElement: this.buildPopupVideo(src),
-      fullscreenKind: renderPlan.fullscreenKind,
+      mediaType: renderPlan.mediaType,
       infoEvent: renderPlan.infoEvent,
       infoOpts: renderPlan.infoOpts
     });
@@ -15340,7 +15463,7 @@ const PopupMediaLoaderController = class {
     this.renderPopupMedia({
       playingId: renderPlan.playingId,
       html: `<img class="snap" src="${this._host._media(event.id, "snapshot.jpg")}">`,
-      fullscreenKind: renderPlan.fullscreenKind,
+      mediaType: renderPlan.mediaType,
       infoEvent: renderPlan.infoEvent,
       infoOpts: renderPlan.infoOpts
     });
@@ -15501,8 +15624,7 @@ const PopupMediaLoaderController = class {
       if (!playable) {
         const outcomePlan2 = resolvePopupRecordingLoadOutcomePlan({
           playable,
-          popupMediaType: renderPlan.popupMediaType,
-          fullscreenKind: renderPlan.fullscreenKind
+          popupMediaType: renderPlan.popupMediaType
         });
         for (const fn of mediaCleanup) {
           try {
@@ -15523,11 +15645,10 @@ const PopupMediaLoaderController = class {
     }
     const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
       playable,
-      popupMediaType: renderPlan.popupMediaType,
-      fullscreenKind: renderPlan.fullscreenKind
+      popupMediaType: renderPlan.popupMediaType
     });
-    if (outcomePlan.shouldEnsureFullscreenButton) {
-      this._host._ensurePopupFullscreenButton(outcomePlan.fullscreenKind);
+    if (outcomePlan.shouldEnsureAirPlayButton) {
+      this._host._ensurePopupAirPlayButton(outcomePlan.airPlayMediaType);
     }
     if (outcomePlan.shouldScheduleRotateOverlay) {
       this._host._scheduleRotateOverlayUpdate();
@@ -20477,10 +20598,6 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handlePopupMediaToolbarClick(target) {
-    if (target.closest("#popup-fs-btn")) {
-      this._fullscreen(this._$("#viewer"));
-      return true;
-    }
     if (target.closest("#popup-airplay-btn, #popup-media-airplay")) {
       void this._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
         scope: "popup"
@@ -21167,7 +21284,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _syncFullscreenButtonsVisibility() {
     const liveBtn = this._$("#live-fs-btn");
-    const popupBtn = this._$("#popup-fs-btn");
     const popupControlsFsBtn = this._$("#popup-media-fs");
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
@@ -21176,11 +21292,9 @@ const FrigateViewCard = class extends HTMLElement {
       popupOpen: !!popupOpen,
       isFullscreen,
       inGridMode,
-      rotateOverlayMode: this._rotateOverlayMode,
-      suppressPopupButton: this._usePopupCustomControls(this._popupMediaType)
+      rotateOverlayMode: this._rotateOverlayMode
     });
     if (liveBtn) liveBtn.hidden = visibility.liveButtonHidden;
-    if (popupBtn) popupBtn.hidden = visibility.popupButtonHidden;
     if (popupControlsFsBtn)
       popupControlsFsBtn.hidden = visibility.popupControlsFullscreenHidden;
   }
@@ -21231,41 +21345,31 @@ const FrigateViewCard = class extends HTMLElement {
   _usePopupCustomControls(mediaType) {
     return this._isPhonePopupUi() && this._isPopupVideoMediaType(mediaType);
   }
-  _ensurePopupFullscreenButton(kind = "media") {
+  _ensurePopupAirPlayButton(mediaType = "") {
     const viewer = this._$("#viewer");
     if (!viewer) return;
     const existingControls = viewer.querySelector("#popup-playback-controls");
-    if (this._usePopupCustomControls(kind)) {
+    if (this._usePopupCustomControls(mediaType) || !viewer.querySelector("video")) {
       existingControls?.remove();
-      const legacyButton = viewer.querySelector("#popup-fs-btn");
-      legacyButton?.remove();
       return;
     }
-    const label = kind === "alert" ? "Fullscreen alert" : kind === "recording" ? "Fullscreen recording" : "Fullscreen media";
     let controls = existingControls;
     if (!controls) {
-      viewer.querySelector("#popup-fs-btn")?.remove();
       controls = document.createElement("div");
-      controls.className = "popup-playback-controls overlay-fs";
+      controls.className = "popup-playback-controls overlay-controls";
       controls.id = "popup-playback-controls";
       viewer.appendChild(controls);
     }
     controls.innerHTML = "";
-    const addButton = (id, title, icon, initiallyHidden = false) => {
-      const button = document.createElement("button");
-      button.className = "glass-btn popup-playback-btn";
-      button.id = id;
-      button.type = "button";
-      button.title = title;
-      button.setAttribute("aria-label", title);
-      button.hidden = initiallyHidden;
-      button.innerHTML = icon;
-      controls.appendChild(button);
-    };
-    addButton("popup-fs-btn", label, ICONS.expand);
-    if (this._isPopupVideoMediaType(kind)) {
-      addButton("popup-airplay-btn", "AirPlay video", ICONS.airplayVideo, true);
-    }
+    const button = document.createElement("button");
+    button.className = "glass-btn popup-playback-btn";
+    button.id = "popup-airplay-btn";
+    button.type = "button";
+    button.title = "AirPlay video";
+    button.setAttribute("aria-label", "AirPlay video");
+    button.hidden = true;
+    button.innerHTML = ICONS.airplayVideo;
+    controls.appendChild(button);
     this._syncPlaybackTargetButtons();
   }
   _clearPopupMediaCleanup() {

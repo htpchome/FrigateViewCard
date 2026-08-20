@@ -69,15 +69,11 @@ export const resolveFullscreenButtonVisibility = ({
   isFullscreen = false,
   inGridMode = false,
   rotateOverlayMode = "none",
-  suppressPopupButton = false,
 }) => {
   const popupRotateActive = rotateOverlayMode === "popup";
   return {
     liveButtonHidden: Boolean(
       popupOpen || isFullscreen || inGridMode || popupRotateActive,
-    ),
-    popupButtonHidden: Boolean(
-      isFullscreen || popupRotateActive || suppressPopupButton,
     ),
     popupControlsFullscreenHidden: Boolean(popupRotateActive),
   };
