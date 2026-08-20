@@ -677,7 +677,7 @@ export const STYLES = `
   .popup-close-row {position: absolute;top: 3px;right: 10px;z-index: 5;pointer-events: none;}
   .popup-close-row .close-btn {pointer-events: auto;}
   .popup-header::before {content: '';width: 40px;height: 4px;background-color: var(--handle-color);  border-radius: 3px;}
-  .popup-body {padding: 0 24px 24px 24px;overflow-y: auto;overflow-x:hidden;flex-grow: 1;display: flex;  flex-direction: column;gap: 8px;-webkit-overflow-scrolling: touch;overscroll-behavior-y: contain;}
+  .popup-body {padding: 0 10px 10px 10px;overflow-y: auto;overflow-x:hidden;flex-grow: 1;display: flex;  flex-direction: column;gap: 8px;-webkit-overflow-scrolling: touch;overscroll-behavior-y: contain;}
   .popup-shell-ver {margin: 0;font-size: 18px;font-weight: 800;line-height: 1.2;color: var(--c-text2);}
   .popup-info-head {margin: 0;font-size: 18px;font-weight: 800;color: var(--c-text2);
     line-height: 1.35;text-transform: uppercase;letter-spacing: .03em;}
