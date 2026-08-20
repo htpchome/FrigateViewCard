@@ -10,13 +10,7 @@
     "windsurf": true
   },
   "yaml.disableSchemaDetection": [
-    "file:///workspaces/FrigateViewCard/.devcontainer/homeassistant/configuration.yaml",
-    "**/.github/workflows/*.yml",
-    "**/.github/workflows/*.yaml",
-    "**/.gitea/workflows/*.yml",
-    "**/.gitea/workflows/*.yaml",
-    "**/.forgejo/workflows/*.yml",
-    "**/.forgejo/workflows/*.yaml"
+    "file:///workspaces/FrigateViewCard/.devcontainer/homeassistant/configuration.yaml"
   ],
   "yaml.schemas": {
     "https://www.schemastore.org/eslintrc.json": "file:///workspaces/FrigateViewCard/.devcontainer/homeassistant/configuration.yaml"

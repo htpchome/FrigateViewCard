@@ -146,6 +146,7 @@ import {
 } from "../shared/media/video-factory.js";
 import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
 import {
+  isVideoPictureInPictureActive,
   PictureInPictureButtonController,
   resolveVideoPictureInPictureSupport,
   toggleVideoPictureInPicture,
@@ -5045,7 +5046,10 @@ export class FrigateViewCard extends HTMLElement {
       scope === "popup"
         ? "_popupPictureInPictureButtonController"
         : "_livePictureInPictureButtonController";
-    applyNativePictureInPicturePolicy(video);
+    const documentObj = video?.ownerDocument || globalThis.document || null;
+    if (!isVideoPictureInPictureActive(video, documentObj)) {
+      applyNativePictureInPicturePolicy(video);
+    }
     const current = this[property];
     if (current?.button === button && current?.video === video) {
       current.refresh();
@@ -5064,7 +5068,7 @@ export class FrigateViewCard extends HTMLElement {
     const controller = new PictureInPictureButtonController({
       button,
       video,
-      documentObj: video.ownerDocument || globalThis.document || null,
+      documentObj,
     });
     this[property] = controller;
     controller.bind();
@@ -5106,7 +5110,11 @@ export class FrigateViewCard extends HTMLElement {
     }
 
     try {
-      await toggleVideoPictureInPicture({ video, documentObj });
+      await toggleVideoPictureInPicture({
+        video,
+        documentObj,
+        temporarilyAllowDisabled: true,
+      });
     } catch (error) {
       console.warn("[Frigate] Picture-in-Picture request failed", error);
       const reason = String(error?.message || "").trim();

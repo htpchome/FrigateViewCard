@@ -96,6 +96,92 @@ test("standard PiP enters without mutating disablePictureInPicture", async () =>
   assert.equal(video.disablePictureInPicture, true);
 });
 
+test("custom PiP requests temporarily allow a suppressed video", async () => {
+  const attributes = new Map([["disablepictureinpicture", ""]]);
+  const requestState = [];
+  const documentObj = {
+    pictureInPictureEnabled: true,
+    pictureInPictureElement: null,
+  };
+  const video = createEventTarget({
+    ownerDocument: documentObj,
+    disablePictureInPicture: true,
+    hasAttribute(name) {
+      return attributes.has(name);
+    },
+    setAttribute(name, value) {
+      attributes.set(name, String(value));
+    },
+    removeAttribute(name) {
+      attributes.delete(name);
+    },
+    async requestPictureInPicture() {
+      requestState.push({
+        disabled: video.disablePictureInPicture,
+        hasAttribute: video.hasAttribute("disablepictureinpicture"),
+      });
+      documentObj.pictureInPictureElement = video;
+    },
+  });
+
+  const result = await toggleVideoPictureInPicture({
+    video,
+    documentObj,
+    temporarilyAllowDisabled: true,
+  });
+
+  assert.deepEqual(result, {
+    active: true,
+    method: PICTURE_IN_PICTURE_METHOD_STANDARD,
+  });
+  assert.deepEqual(requestState, [{ disabled: false, hasAttribute: false }]);
+  assert.equal(video.disablePictureInPicture, false);
+  assert.equal(video.listenerCount("leavepictureinpicture"), 1);
+
+  documentObj.pictureInPictureElement = null;
+  video.dispatch("leavepictureinpicture");
+  assert.equal(video.disablePictureInPicture, true);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), true);
+  assert.equal(video.listenerCount("leavepictureinpicture"), 0);
+});
+
+test("failed custom PiP requests restore video suppression immediately", async () => {
+  const attributes = new Map([["disablepictureinpicture", ""]]);
+  const documentObj = {
+    pictureInPictureEnabled: true,
+    pictureInPictureElement: null,
+  };
+  const video = createEventTarget({
+    ownerDocument: documentObj,
+    disablePictureInPicture: true,
+    hasAttribute(name) {
+      return attributes.has(name);
+    },
+    setAttribute(name, value) {
+      attributes.set(name, String(value));
+    },
+    removeAttribute(name) {
+      attributes.delete(name);
+    },
+    async requestPictureInPicture() {
+      throw new Error("request rejected");
+    },
+  });
+
+  await assert.rejects(
+    toggleVideoPictureInPicture({
+      video,
+      documentObj,
+      temporarilyAllowDisabled: true,
+    }),
+    /request rejected/,
+  );
+
+  assert.equal(video.disablePictureInPicture, true);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), true);
+  assert.equal(video.listenerCount("leavepictureinpicture"), 0);
+});
+
 test("standard PiP exits when the same video is active", async () => {
   const calls = [];
   const video = { requestPictureInPicture() {} };

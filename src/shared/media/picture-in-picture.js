@@ -54,9 +54,34 @@ export function resolveVideoPictureInPictureSupport({
   return { supported: false, method: "" };
 }
 
+function temporarilyAllowDisabledPictureInPicture(video) {
+  const wasDisabled =
+    video?.disablePictureInPicture === true ||
+    video?.hasAttribute?.("disablepictureinpicture") === true;
+  if (!wasDisabled) return null;
+
+  let restored = false;
+  const restoresOnExit = typeof video.addEventListener === "function";
+  const restore = () => {
+    if (restored) return;
+    restored = true;
+    video.removeEventListener?.("leavepictureinpicture", restore);
+    video.disablePictureInPicture = true;
+    video.setAttribute?.("disablepictureinpicture", "");
+  };
+
+  if (restoresOnExit) {
+    video.addEventListener("leavepictureinpicture", restore);
+  }
+  video.disablePictureInPicture = false;
+  video.removeAttribute?.("disablepictureinpicture");
+  return { restore, restoresOnExit };
+}
+
 export async function toggleVideoPictureInPicture({
   video = null,
   documentObj = null,
+  temporarilyAllowDisabled = false,
 } = {}) {
   const support = resolveVideoPictureInPictureSupport({ video, documentObj });
   if (!support.supported) {
@@ -69,7 +94,18 @@ export async function toggleVideoPictureInPicture({
       await doc.exitPictureInPicture();
       return { active: false, method: support.method };
     }
-    await video.requestPictureInPicture();
+    const suppressionRestore = temporarilyAllowDisabled
+      ? temporarilyAllowDisabledPictureInPicture(video)
+      : null;
+    try {
+      await video.requestPictureInPicture();
+    } catch (error) {
+      suppressionRestore?.restore();
+      throw error;
+    }
+    if (suppressionRestore && !suppressionRestore.restoresOnExit) {
+      suppressionRestore.restore();
+    }
     return { active: true, method: support.method };
   }
 

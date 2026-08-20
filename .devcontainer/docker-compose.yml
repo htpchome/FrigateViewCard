@@ -4,6 +4,8 @@ services:
   # ── Development Container ──────────────────────────────────
   devcontainer:
     image: mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm
+    security_opt:
+      - seccomp=unconfined
     volumes:
       - ../..:/workspaces:cached
       - ha-config:/config
