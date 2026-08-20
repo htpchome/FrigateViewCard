@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1566";
+const VERSION = "1.0.1567";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -210,7 +210,7 @@ const MOBILE_VIEW_PAGE_STYLES = `
   }
 
   .card.mobile-view-active .mobile-tab-container{
-  display:grid;grid-template-columns:max-content auto minmax(0, 1fr);grid-template-areas:"tabs middle tools";align-items:center;gap:10px;padding:0px 8px;
+  display:grid;grid-template-columns:max-content auto minmax(0, 1fr);grid-template-areas:"tabs middle tools";align-items:center;gap:10px;padding:0px 8px;margin:3px 8px;border-radius:8px;background-color:var(--c-bg-panel);container-type:inline-size;
   }  
   .card.mobile-view-active .mobile-left-row{grid-area:tabs;justify-content:flex-start;}
   .card.mobile-view-active .mobile-tabs-row{grid-area:middle;justify-content:flex-start;}
@@ -3436,7 +3436,7 @@ function buildMobileViewMainLayoutShellMarkup({
                       ${inlineFullscreen}                      
                     </div>
                 </div>              
-                <div class="mobile-tab-container">
+                <div class="mobile-tab-container shadow-small">
                     <div class="button-holder-row mobile-left-row">
                       ${regions.tabs}
                     </div>

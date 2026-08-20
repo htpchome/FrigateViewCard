@@ -179,7 +179,7 @@ export function buildMobileViewMainLayoutShellMarkup({
                       ${inlineFullscreen}                      
                     </div>
                 </div>              
-                <div class="mobile-tab-container">
+                <div class="mobile-tab-container shadow-small">
                     <div class="button-holder-row mobile-left-row">
                       ${regions.tabs}
                     </div>
