@@ -12,9 +12,9 @@ const LIVE_STREAM_HINTS = new Set(["webrtc", "mse", "hls"]);
 const COMPANION_GRID_GAP_PX = 10;
 const COMPANION_META_HEIGHT_PX = 48;
 const COMPANION_PREFERRED_WIDTH_PX = 160;
-const COMPANION_MAX_WIDTH_PX = 260;
+const COMPANION_MAX_WIDTH_PX = 320;
 
-export function resolveWideCompanionColumnCount({
+export function resolveWideCompanionGridLayout({
   cameraCount,
   width,
   height,
@@ -27,34 +27,39 @@ export function resolveWideCompanionColumnCount({
     0,
     Number(metadataHeight) || COMPANION_META_HEIGHT_PX,
   );
-  if (availableWidth <= 0) return 1;
+  if (availableWidth <= 0) return { columns: 1, cellWidth: 0 };
 
-  const widthBasedColumns = Math.min(
-    count,
-    Math.max(
-      1,
-      Math.floor(
-        (availableWidth + COMPANION_GRID_GAP_PX) /
-          (COMPANION_PREFERRED_WIDTH_PX + COMPANION_GRID_GAP_PX),
-      ),
-    ),
-  );
-  if (availableHeight <= 0) return widthBasedColumns;
-
-  for (let columns = widthBasedColumns; columns <= count; columns += 1) {
+  let bestLayout = { columns: 1, cellWidth: 0 };
+  for (let columns = 1; columns <= count; columns += 1) {
     const totalGapWidth = COMPANION_GRID_GAP_PX * (columns - 1);
-    const cellWidth = Math.min(
+    const widthLimitedCellWidth = Math.min(
       COMPANION_MAX_WIDTH_PX,
       Math.max(0, (availableWidth - totalGapWidth) / columns),
     );
     const rows = Math.ceil(count / columns);
-    const rowHeight = cellWidth * (9 / 16) + resolvedMetaHeight;
-    const requiredHeight =
-      rows * rowHeight + COMPANION_GRID_GAP_PX * (rows - 1);
-    if (requiredHeight <= availableHeight) return columns;
+    const totalGapHeight = COMPANION_GRID_GAP_PX * (rows - 1);
+    const heightLimitedCellWidth =
+      availableHeight > 0
+        ? Math.max(
+            0,
+            ((availableHeight - totalGapHeight) / rows -
+              resolvedMetaHeight) *
+              (16 / 9),
+          )
+        : COMPANION_PREFERRED_WIDTH_PX;
+    const cellWidth = Math.min(
+      widthLimitedCellWidth,
+      heightLimitedCellWidth,
+    );
+    if (cellWidth > bestLayout.cellWidth + 0.5) {
+      bestLayout = { columns, cellWidth };
+    }
   }
 
-  return count;
+  return {
+    columns: bestLayout.columns,
+    cellWidth: Math.floor(Math.max(1, bestLayout.cellWidth) * 10) / 10,
+  };
 }
 
 export class WideViewCompanionController {
@@ -152,7 +157,7 @@ export class WideViewCompanionController {
     const metadataHeight =
       grid.querySelector?.(".wide-companion-meta")?.offsetHeight ||
       COMPANION_META_HEIGHT_PX;
-    const columns = resolveWideCompanionColumnCount({
+    const layout = resolveWideCompanionGridLayout({
       cameraCount,
       width: grid.clientWidth,
       height: grid.clientHeight,
@@ -160,7 +165,11 @@ export class WideViewCompanionController {
     });
     grid.style?.setProperty?.(
       "--wide-companion-columns",
-      String(columns),
+      String(layout.columns),
+    );
+    grid.style?.setProperty?.(
+      "--wide-companion-cell-width",
+      `${layout.cellWidth}px`,
     );
   }
 

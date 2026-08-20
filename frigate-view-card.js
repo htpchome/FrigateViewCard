@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1562";
+const VERSION = "1.0.1563";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1054,7 +1054,7 @@ const STYLES = `
   .card .col-left--wide-view{height:100%;max-height:100%;overflow:hidden;}
   .wide-companion-panel{display:flex;flex:1 1 0;flex-direction:column;gap:8px;min-width:0;min-height:0;padding:10px;box-sizing:border-box;overflow:hidden;}
   .wide-companion-title{font-size:.9rem;font-weight:700;color:var(--c-text);letter-spacing:.02em;}
-  .wide-companion-grid{flex:1 1 0;min-height:0;height:100%;overflow:hidden;align-content:start;justify-content:start;grid-template-columns:repeat(var(--wide-companion-columns,1),minmax(0,260px));grid-auto-rows:auto;}
+  .wide-companion-grid{flex:1 1 0;min-height:0;height:100%;overflow:hidden;align-content:start;justify-content:start;grid-template-columns:repeat(var(--wide-companion-columns,1),minmax(0,var(--wide-companion-cell-width,320px)));grid-auto-rows:auto;}
   .wide-companion-cell{height:auto;min-height:0;overflow:hidden;}
   .wide-companion-media-host{flex:0 0 auto;min-height:0;aspect-ratio:16/9;}
   .wide-companion-meta{flex:0 0 auto;}
@@ -17346,8 +17346,8 @@ const LIVE_STREAM_HINTS2 = new Set(["webrtc", "mse", "hls"]);
 const COMPANION_GRID_GAP_PX = 10;
 const COMPANION_META_HEIGHT_PX = 48;
 const COMPANION_PREFERRED_WIDTH_PX = 160;
-const COMPANION_MAX_WIDTH_PX = 260;
-function resolveWideCompanionColumnCount({
+const COMPANION_MAX_WIDTH_PX = 320;
+function resolveWideCompanionGridLayout({
   cameraCount,
   width,
   height,
@@ -17360,29 +17360,32 @@ function resolveWideCompanionColumnCount({
     0,
     Number(metadataHeight) || COMPANION_META_HEIGHT_PX
   );
-  if (availableWidth <= 0) return 1;
-  const widthBasedColumns = Math.min(
-    count,
-    Math.max(
-      1,
-      Math.floor(
-        (availableWidth + COMPANION_GRID_GAP_PX) / (COMPANION_PREFERRED_WIDTH_PX + COMPANION_GRID_GAP_PX)
-      )
-    )
-  );
-  if (availableHeight <= 0) return widthBasedColumns;
-  for (let columns = widthBasedColumns; columns <= count; columns += 1) {
+  if (availableWidth <= 0) return { columns: 1, cellWidth: 0 };
+  let bestLayout = { columns: 1, cellWidth: 0 };
+  for (let columns = 1; columns <= count; columns += 1) {
     const totalGapWidth = COMPANION_GRID_GAP_PX * (columns - 1);
-    const cellWidth = Math.min(
+    const widthLimitedCellWidth = Math.min(
       COMPANION_MAX_WIDTH_PX,
       Math.max(0, (availableWidth - totalGapWidth) / columns)
     );
     const rows = Math.ceil(count / columns);
-    const rowHeight = cellWidth * (9 / 16) + resolvedMetaHeight;
-    const requiredHeight = rows * rowHeight + COMPANION_GRID_GAP_PX * (rows - 1);
-    if (requiredHeight <= availableHeight) return columns;
+    const totalGapHeight = COMPANION_GRID_GAP_PX * (rows - 1);
+    const heightLimitedCellWidth = availableHeight > 0 ? Math.max(
+      0,
+      ((availableHeight - totalGapHeight) / rows - resolvedMetaHeight) * (16 / 9)
+    ) : COMPANION_PREFERRED_WIDTH_PX;
+    const cellWidth = Math.min(
+      widthLimitedCellWidth,
+      heightLimitedCellWidth
+    );
+    if (cellWidth > bestLayout.cellWidth + 0.5) {
+      bestLayout = { columns, cellWidth };
+    }
   }
-  return count;
+  return {
+    columns: bestLayout.columns,
+    cellWidth: Math.floor(Math.max(1, bestLayout.cellWidth) * 10) / 10
+  };
 }
 const WideViewCompanionController = class {
   constructor(host, constants) {
@@ -17456,7 +17459,7 @@ const WideViewCompanionController = class {
     if (!grid) return;
     const cameraCount = this._host._config?.cameras?.length || 0;
     const metadataHeight = grid.querySelector?.(".wide-companion-meta")?.offsetHeight || COMPANION_META_HEIGHT_PX;
-    const columns = resolveWideCompanionColumnCount({
+    const layout = resolveWideCompanionGridLayout({
       cameraCount,
       width: grid.clientWidth,
       height: grid.clientHeight,
@@ -17464,7 +17467,11 @@ const WideViewCompanionController = class {
     });
     grid.style?.setProperty?.(
       "--wide-companion-columns",
-      String(columns)
+      String(layout.columns)
+    );
+    grid.style?.setProperty?.(
+      "--wide-companion-cell-width",
+      `${layout.cellWidth}px`
     );
   }
   teardownMedia() {

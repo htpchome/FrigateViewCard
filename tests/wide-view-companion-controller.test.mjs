@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { GridMediaController } from "../src/features/grid/media.ctrl.js";
 import {
-  resolveWideCompanionColumnCount,
+  resolveWideCompanionGridLayout,
   WideViewCompanionController,
 } from "../src/features/wide-view/companion.ctrl.js";
 import { STYLES } from "../src/styles.js";
@@ -95,41 +95,57 @@ test("Companion Cameras render every configured camera in user order", () => {
 });
 
 test("Companion Camera columns resize responsively within useful bounds", () => {
-  assert.equal(
-    resolveWideCompanionColumnCount({
+  assert.deepEqual(
+    resolveWideCompanionGridLayout({
       cameraCount: 7,
       width: 745,
       height: 550,
     }),
-    4,
+    { columns: 3, cellWidth: 228.7 },
   );
-  assert.equal(
-    resolveWideCompanionColumnCount({
+  assert.deepEqual(
+    resolveWideCompanionGridLayout({
       cameraCount: 7,
       width: 510,
       height: 750,
     }),
-    3,
+    { columns: 2, cellWidth: 234.6 },
   );
-  assert.equal(
-    resolveWideCompanionColumnCount({
+  assert.deepEqual(
+    resolveWideCompanionGridLayout({
       cameraCount: 7,
       width: 1260,
       height: 300,
     }),
-    7,
+    { columns: 4, cellWidth: 172.4 },
   );
-  assert.equal(
-    resolveWideCompanionColumnCount({
+  assert.deepEqual(
+    resolveWideCompanionGridLayout({
       cameraCount: 7,
       width: 300,
       height: 740,
     }),
-    2,
+    { columns: 2, cellWidth: 145 },
+  );
+  assert.deepEqual(
+    resolveWideCompanionGridLayout({
+      cameraCount: 5,
+      width: 960,
+      height: 500,
+    }),
+    { columns: 3, cellWidth: 313.3 },
+  );
+  assert.deepEqual(
+    resolveWideCompanionGridLayout({
+      cameraCount: 5,
+      width: 490,
+      height: 700,
+    }),
+    { columns: 2, cellWidth: 240 },
   );
   assert.match(
     STYLES,
-    /\.wide-companion-grid\{[^}]*grid-template-columns:repeat\(var\(--wide-companion-columns,1\),minmax\(0,260px\)\)/,
+    /\.wide-companion-grid\{[^}]*grid-template-columns:repeat\(var\(--wide-companion-columns,1\),minmax\(0,var\(--wide-companion-cell-width,320px\)\)\)/,
   );
   assert.match(
     STYLES,
@@ -147,7 +163,8 @@ test("Companion Camera controller applies the resolved column count", () => {
 
   controller.updateLayout();
 
-  assert.equal(grid.style.values["--wide-companion-columns"], "4");
+  assert.equal(grid.style.values["--wide-companion-columns"], "3");
+  assert.equal(grid.style.values["--wide-companion-cell-width"], "228.7px");
 });
 
 test("Companion Camera live state is config live or active alert", () => {
