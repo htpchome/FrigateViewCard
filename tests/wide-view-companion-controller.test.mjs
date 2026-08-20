@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { GridMediaController } from "../src/features/grid/media.ctrl.js";
 import { WideViewCompanionController } from "../src/features/wide-view/companion.ctrl.js";
+import { STYLES } from "../src/styles.js";
 
 const constants = {
   DAY: 86400,
@@ -15,16 +16,7 @@ const constants = {
 
 const createHost = ({ live = false, takeover = false } = {}) => {
   const calls = [];
-  const grid = {
-    firstElementChild: null,
-    innerHTML: "",
-    style: {
-      values: {},
-      setProperty(name, value) {
-        this.values[name] = value;
-      },
-    },
-  };
+  const grid = { firstElementChild: null, innerHTML: "" };
   const host = {
     _pageId: "wide-view",
     _viewMode: "single",
@@ -85,22 +77,17 @@ test("Companion Cameras render every configured camera in user order", () => {
   assert.match(grid.innerHTML, /data-wide-companion-camidx="1"/);
   assert.match(grid.innerHTML, /Stream Source: Snapshot/);
   assert.match(grid.innerHTML, /Events: 2/);
-  assert.equal(grid.style.values["--wide-companion-columns"], "2");
-  assert.equal(grid.style.values["--wide-companion-rows"], "1");
 });
 
-test("Companion Cameras use a compact two-row layout at the camera limit", () => {
-  const { host, grid } = createHost();
-  host._config.cameras = Array.from({ length: 8 }, (_, index) => ({
-    entity: `camera.camera_${index + 1}`,
-    name: `Camera ${index + 1}`,
-  }));
-  const controller = new WideViewCompanionController(host, constants);
-
-  controller.render();
-
-  assert.equal(grid.style.values["--wide-companion-columns"], "4");
-  assert.equal(grid.style.values["--wide-companion-rows"], "2");
+test("Companion Camera columns resize responsively within useful bounds", () => {
+  assert.match(
+    STYLES,
+    /\.wide-companion-grid\{[^}]*grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,160px\),260px\)\)/,
+  );
+  assert.match(
+    STYLES,
+    /\.wide-companion-media-host\{[^}]*aspect-ratio:16\/9/,
+  );
 });
 
 test("Companion Camera live state is config live or active alert", () => {

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1558";
+const VERSION = "1.0.1560";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1054,9 +1054,9 @@ const STYLES = `
   .card .col-left--wide-view{height:100%;max-height:100%;overflow:hidden;}
   .wide-companion-panel{display:flex;flex:1 1 0;flex-direction:column;gap:8px;min-width:0;min-height:0;padding:10px;box-sizing:border-box;overflow:hidden;}
   .wide-companion-title{font-size:.9rem;font-weight:700;color:var(--c-text);letter-spacing:.02em;}
-  .wide-companion-grid{flex:1 1 0;min-height:0;height:100%;overflow:hidden;grid-template-columns:repeat(var(--wide-companion-columns,1),minmax(0,1fr));grid-template-rows:repeat(var(--wide-companion-rows,1),minmax(0,1fr));}
-  .wide-companion-cell{height:100%;min-height:0;overflow:hidden;}
-  .wide-companion-media-host{flex:1 1 0;min-height:0;aspect-ratio:auto;}
+  .wide-companion-grid{flex:0 0 auto;min-height:0;overflow:hidden;align-content:start;justify-content:start;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),260px));grid-auto-rows:auto;}
+  .wide-companion-cell{height:auto;min-height:0;overflow:hidden;}
+  .wide-companion-media-host{flex:0 0 auto;min-height:0;aspect-ratio:16/9;}
   .wide-companion-meta{flex:0 0 auto;}
   @media (max-width: 720px){
     .preview-meta{grid-template-columns:minmax(0,1fr);gap:2px;}
@@ -17453,14 +17453,6 @@ const WideViewCompanionController = class {
     const grid = this._host._$("#wide-companion-grid");
     if (!grid) return;
     const cameras = Array.isArray(this._host._config?.cameras) ? this._host._config.cameras : [];
-    const cameraCount = Math.max(1, cameras.length);
-    const columns = cameraCount <= 3 ? cameraCount : Math.ceil(cameraCount / 2);
-    const rows = Math.ceil(cameraCount / columns);
-    grid.style?.setProperty?.(
-      "--wide-companion-columns",
-      String(columns)
-    );
-    grid.style?.setProperty?.("--wide-companion-rows", String(rows));
     const liveStreamHint = this.liveStreamHint();
     const hassReady = !!this._host._hass?.states;
     const nextSignature = cameras.map((camera, index) => {
