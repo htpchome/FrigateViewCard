@@ -338,6 +338,8 @@ export function configureVideoElement(video, options = {}) {
 
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
+  video.disablePictureInPicture = true;
+  video.setAttribute("disablepictureinpicture", "");
   video.disableRemotePlayback = true;
   video.setAttribute("x-webkit-airplay", "deny");
 
