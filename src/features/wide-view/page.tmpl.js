@@ -75,14 +75,15 @@ export function buildWideViewMainLayoutShellMarkup({
               </div>
             </div>
 
-
+          <!-- NEW CAMERA INSERTION LOCATION -->
 
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
             <div class="${tabsHolderClassName} shadow-small">
-                  ${regions.tabs} 
-              
+              <div class="button-holder">
+                ${regions.tabs} 
+              </div>              
             </div>
             ${regions.browseHeader}
             ${regions.browse}
