@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1588";
+const VERSION = "1.0.1589";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -123,7 +123,8 @@ const ICONS = {
   person: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
   divider: '<svg fill="currentColor" version="1.1" viewBox="0 0 8 24"><path d="m3.7826 3h0.43584c0.411 0 0.74108 0.33008 0.74108 0.74208v16.516c0 0.412-0.33008 0.74208-0.74108 0.74208h-0.43584c-0.411 0-0.74208-0.33008-0.74208-0.74208v-16.516c0-0.412 0.33108-0.74208 0.74208-0.74208z"/></svg>',
   singleView: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M6,2H18A2,2 0 0,1 20,4V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V4A2,2 0 0,1 6,2M6,4V8H18V4H6Z" /></svg>',
-  preView: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M9,5V9H21V5M9,19H21V15H9M9,14H21V10H9M4,9H8V5H4M4,19H8V15H4M4,14H8V10H4V14Z" /></svg>',
+  list: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M9,5V9H21V5M9,19H21V15H9M9,14H21V10H9M4,9H8V5H4M4,19H8V15H4M4,14H8V10H4V14Z" /></svg>',
+  preView: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="m4 18c-0.554 0-1 0.446-1 1v1c0 0.554 0.446 1 1 1h16c0.554 0 1-0.446 1-1v-1c0-0.554-0.446-1-1-1zm0-5c-0.554 0-1 0.446-1 1v1c0 0.554 0.446 1 1 1h16c0.554 0 1-0.446 1-1v-1c0-0.554-0.446-1-1-1zm0-5c-0.554 0-1 0.446-1 1v1c0 0.554 0.446 1 1 1h16c0.554 0 1-0.446 1-1v-1c0-0.554-0.446-1-1-1zm0-5c-0.554 0-1 0.446-1 1v1c0 0.554 0.446 1 1 1h16c0.554 0 1-0.446 1-1v-1c0-0.554-0.446-1-1-1z" stroke-width:0"/></svg>',
   wideView: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M3,3H11V5H3V3M13,3H21V5H13V3M3,7H11V9H3V7M13,7H21V9H13V7M3,11H11V13H3V11M13,11H21V13H13V11M3,15H11V17H3V15M13,15H21V17H13V15M3,19H11V21H3V19M13,19H21V21H13V19Z" /></svg>',
   mobileView: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M17,19V5H7V19H17M17,1A2,2 0 0,1 19,3V21A2,2 0 0,1 17,23H7C5.89,23 5,22.1 5,21V3C5,1.89 5.89,1 7,1H17M9,7H15V9H9V7M9,11H13V13H9V11Z" /></svg>',
   micOn: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" /></svg>',
@@ -11321,6 +11322,29 @@ async function fetchWindowedItems({
 function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
   return `${clientId}|${camera}|${bounds.start}|${bounds.end}`;
 }
+function recordingDayItemKey(recording = {}) {
+  const id = String(recording?.id || "").trim();
+  if (id) return `id:${id}`;
+  const start = Number(recording?.start_time) || 0;
+  const end = Number(recording?.end_time) || 0;
+  const path = String(
+    recording?.path || recording?.segment_path || recording?.file || ""
+  );
+  return `range:${start}:${end}:${path}`;
+}
+function mergeRecordingDayChunks(current = [], incoming = []) {
+  const recordings = new Map();
+  for (const recording of [
+    ...Array.isArray(current) ? current : [],
+    ...Array.isArray(incoming) ? incoming : []
+  ]) {
+    if (!recording || typeof recording !== "object") continue;
+    recordings.set(recordingDayItemKey(recording), recording);
+  }
+  return [...recordings.values()].sort(
+    (a, b) => Number(a?.start_time || 0) - Number(b?.start_time || 0)
+  );
+}
 function resolvePreparedRecordingsDayTransition({
   direction = 0,
   bounds = null,
@@ -11470,6 +11494,31 @@ function resolveOffsetRecordingsDayBounds({
     start: toEpochSeconds(year, month, day, 0, 0, 0),
     end: toEpochSeconds(year, month, day, 23, 59, 59)
   };
+}
+function buildRecordingsDayFetchChunks({
+  bounds = null,
+  before = null,
+  chunkSeconds = 6 * 60 * 60
+} = {}) {
+  const dayStart = Math.floor(Number(bounds?.start));
+  const dayEnd = Math.floor(Number(bounds?.end));
+  if (!Number.isFinite(dayStart) || !Number.isFinite(dayEnd)) return [];
+  if (dayEnd <= dayStart) return [];
+  const requestedBefore = Number(before);
+  const effectiveEnd = Math.min(
+    dayEnd,
+    Number.isFinite(requestedBefore) && requestedBefore > dayStart ? Math.floor(requestedBefore) : dayEnd
+  );
+  if (effectiveEnd <= dayStart) return [];
+  const sliceSeconds = Math.max(60, Math.floor(Number(chunkSeconds) || 0));
+  const chunks = [];
+  for (let start = dayStart; start < effectiveEnd; start += sliceSeconds) {
+    chunks.push({
+      start,
+      end: Math.min(effectiveEnd, start + sliceSeconds)
+    });
+  }
+  return chunks.reverse();
 }
 
 // src/features/browse/window-loader.ctrl.js
@@ -11832,14 +11881,30 @@ const BrowseWindowLoaderController = class {
     );
     const cacheIsFresh = fetchedAt > 0 && Date.now() - fetchedAt < this._recordingsFreshnessMs();
     if (hasCached && (!isToday || cacheIsFresh)) return cachedRecordings;
+    let lastProgressRecordings = null;
     try {
       const recordings = await this._fetchRecordingsDay(
         clientId,
         cam,
         bounds,
-        { forceRefresh: hasCached }
+        {
+          forceRefresh: hasCached,
+          progressive: !hasCached,
+          before,
+          onProgress: (partialRecordings) => {
+            lastProgressRecordings = partialRecordings;
+            this._publishRecordingsDay(
+              clientId,
+              cam,
+              bounds,
+              partialRecordings
+            );
+          }
+        }
       );
-      this._publishRecordingsDay(clientId, cam, bounds, recordings);
+      if (recordings !== lastProgressRecordings) {
+        this._publishRecordingsDay(clientId, cam, bounds, recordings);
+      }
       return recordings;
     } catch (_) {
       if (!hasCached && this._recordingsContextMatches(clientId, cam, bounds)) {
@@ -11888,11 +11953,27 @@ const BrowseWindowLoaderController = class {
     this._host._renderList();
     return true;
   }
-  async _fetchRecordingsDay(clientId, cam, bounds, { forceRefresh = false } = {}) {
-    const sharedLoader = this._host._recordingsBrowseNavController?.fetchRecordingsInBounds;
+  async _fetchRecordingsDay(clientId, cam, bounds, {
+    forceRefresh = false,
+    progressive = false,
+    before = null,
+    onProgress = null
+  } = {}) {
+    const recordingsController = this._host._recordingsBrowseNavController;
+    const progressiveLoader = recordingsController?.fetchRecordingsInBoundsProgressively;
+    if (progressive && typeof progressiveLoader === "function") {
+      return await progressiveLoader.call(
+        recordingsController,
+        bounds,
+        clientId,
+        cam,
+        { before, onProgress }
+      );
+    }
+    const sharedLoader = recordingsController?.fetchRecordingsInBounds;
     if (typeof sharedLoader === "function") {
       return await sharedLoader.call(
-        this._host._recordingsBrowseNavController,
+        recordingsController,
         bounds,
         clientId,
         cam,
@@ -13059,6 +13140,81 @@ const RecordingsBrowseNavController = class {
       );
       this._recordingsFetchedAtCache().set(key, Date.now());
       return fetched.recordings;
+    })();
+    requestCache.set(key, request);
+    try {
+      return await request;
+    } finally {
+      if (requestCache.get(key) === request) requestCache.delete(key);
+    }
+  }
+  async fetchRecordingsInBoundsProgressively(bounds, clientId, cam, { before = null, chunkSeconds = 6 * 60 * 60, onProgress = null } = {}) {
+    if (!bounds || !clientId || !cam) return [];
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    const dataCache = this._recordingsDataCache();
+    if (dataCache.has(key)) return dataCache.get(key) || [];
+    const requestCache = this._recordingsRequestCache();
+    if (requestCache.has(key)) return await requestCache.get(key);
+    const chunks = buildRecordingsDayFetchChunks({
+      bounds,
+      before,
+      chunkSeconds
+    });
+    const request = (async () => {
+      let accumulated = [];
+      let completedChunks = 0;
+      try {
+        for (const [index, chunk] of chunks.entries()) {
+          const response = await this._host._ws({
+            type: "frigate/recordings/get",
+            instance_id: clientId,
+            camera: cam,
+            after: Math.max(0, chunk.start),
+            before: chunk.end
+          });
+          accumulated = mergeRecordingDayChunks(accumulated, response);
+          completedChunks += 1;
+          const complete = index === chunks.length - 1;
+          if (complete) {
+            dataCache.set(key, accumulated);
+            this._recordingsAvailabilityCache().set(
+              key,
+              accumulated.length > 0
+            );
+            this._recordingsFetchedAtCache().set(key, Date.now());
+          }
+          if ((accumulated.length || complete) && onProgress) {
+            try {
+              onProgress(accumulated, {
+                chunk,
+                completedChunks,
+                totalChunks: chunks.length,
+                complete
+              });
+            } catch (_) {
+            }
+          }
+        }
+      } catch (error) {
+        if (!completedChunks) throw error;
+      }
+      if (!chunks.length) {
+        dataCache.set(key, []);
+        this._recordingsAvailabilityCache().set(key, false);
+        this._recordingsFetchedAtCache().set(key, Date.now());
+        if (onProgress) {
+          try {
+            onProgress([], {
+              chunk: null,
+              completedChunks: 0,
+              totalChunks: 0,
+              complete: true
+            });
+          } catch (_) {
+          }
+        }
+      }
+      return accumulated;
     })();
     requestCache.set(key, request);
     try {

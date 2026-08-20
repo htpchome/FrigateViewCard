@@ -1,6 +1,7 @@
 export {
   buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
+  mergeRecordingDayChunks,
   normalizeFetchedRecordingsAvailability,
   resolveCommittedRecordingsDayState,
   resolveFailedRecordingsAvailabilityState,
@@ -16,6 +17,7 @@ export {
 } from "./utils/browse-nav.js";
 
 export {
+  buildRecordingsDayFetchChunks,
   resolveOffsetRecordingsDayBounds,
   resolveRecordingsDayBounds,
 } from "./utils/day.js";

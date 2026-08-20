@@ -2,6 +2,31 @@ export function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
   return `${clientId}|${camera}|${bounds.start}|${bounds.end}`;
 }
 
+function recordingDayItemKey(recording = {}) {
+  const id = String(recording?.id || "").trim();
+  if (id) return `id:${id}`;
+  const start = Number(recording?.start_time) || 0;
+  const end = Number(recording?.end_time) || 0;
+  const path = String(
+    recording?.path || recording?.segment_path || recording?.file || "",
+  );
+  return `range:${start}:${end}:${path}`;
+}
+
+export function mergeRecordingDayChunks(current = [], incoming = []) {
+  const recordings = new Map();
+  for (const recording of [
+    ...(Array.isArray(current) ? current : []),
+    ...(Array.isArray(incoming) ? incoming : []),
+  ]) {
+    if (!recording || typeof recording !== "object") continue;
+    recordings.set(recordingDayItemKey(recording), recording);
+  }
+  return [...recordings.values()].sort(
+    (a, b) => Number(a?.start_time || 0) - Number(b?.start_time || 0),
+  );
+}
+
 export function resolvePreparedRecordingsDayTransition({
   direction = 0,
   bounds = null,

@@ -55,8 +55,9 @@ export const ICONS = {
     '<svg fill="currentColor" version="1.1" viewBox="0 0 8 24"><path d="m3.7826 3h0.43584c0.411 0 0.74108 0.33008 0.74108 0.74208v16.516c0 0.412-0.33008 0.74208-0.74108 0.74208h-0.43584c-0.411 0-0.74208-0.33008-0.74208-0.74208v-16.516c0-0.412 0.33108-0.74208 0.74208-0.74208z"/></svg>',
   singleView:
     '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M6,2H18A2,2 0 0,1 20,4V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V4A2,2 0 0,1 6,2M6,4V8H18V4H6Z" /></svg>',
-  preView:
+  list:
     '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M9,5V9H21V5M9,19H21V15H9M9,14H21V10H9M4,9H8V5H4M4,19H8V15H4M4,14H8V10H4V14Z" /></svg>',
+  preView: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="m4 18c-0.554 0-1 0.446-1 1v1c0 0.554 0.446 1 1 1h16c0.554 0 1-0.446 1-1v-1c0-0.554-0.446-1-1-1zm0-5c-0.554 0-1 0.446-1 1v1c0 0.554 0.446 1 1 1h16c0.554 0 1-0.446 1-1v-1c0-0.554-0.446-1-1-1zm0-5c-0.554 0-1 0.446-1 1v1c0 0.554 0.446 1 1 1h16c0.554 0 1-0.446 1-1v-1c0-0.554-0.446-1-1-1zm0-5c-0.554 0-1 0.446-1 1v1c0 0.554 0.446 1 1 1h16c0.554 0 1-0.446 1-1v-1c0-0.554-0.446-1-1-1z" stroke-width:0"/></svg>',
   wideView:
     '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M3,3H11V5H3V3M13,3H21V5H13V3M3,7H11V9H3V7M13,7H21V9H13V7M3,11H11V13H3V11M13,11H21V13H13V11M3,15H11V17H3V15M13,15H21V17H13V15M3,19H11V21H3V19M13,19H21V21H13V19Z" /></svg>',
   mobileView:

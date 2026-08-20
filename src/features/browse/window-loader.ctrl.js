@@ -438,14 +438,30 @@ export class BrowseWindowLoaderController {
       fetchedAt > 0 && Date.now() - fetchedAt < this._recordingsFreshnessMs();
     if (hasCached && (!isToday || cacheIsFresh)) return cachedRecordings;
 
+    let lastProgressRecordings = null;
     try {
       const recordings = await this._fetchRecordingsDay(
         clientId,
         cam,
         bounds,
-        { forceRefresh: hasCached },
+        {
+          forceRefresh: hasCached,
+          progressive: !hasCached,
+          before,
+          onProgress: (partialRecordings) => {
+            lastProgressRecordings = partialRecordings;
+            this._publishRecordingsDay(
+              clientId,
+              cam,
+              bounds,
+              partialRecordings,
+            );
+          },
+        },
       );
-      this._publishRecordingsDay(clientId, cam, bounds, recordings);
+      if (recordings !== lastProgressRecordings) {
+        this._publishRecordingsDay(clientId, cam, bounds, recordings);
+      }
       return recordings;
     } catch (_) {
       if (!hasCached && this._recordingsContextMatches(clientId, cam, bounds)) {
@@ -506,13 +522,30 @@ export class BrowseWindowLoaderController {
     clientId,
     cam,
     bounds,
-    { forceRefresh = false } = {},
+    {
+      forceRefresh = false,
+      progressive = false,
+      before = null,
+      onProgress = null,
+    } = {},
   ) {
-    const sharedLoader =
-      this._host._recordingsBrowseNavController?.fetchRecordingsInBounds;
+    const recordingsController = this._host._recordingsBrowseNavController;
+    const progressiveLoader =
+      recordingsController?.fetchRecordingsInBoundsProgressively;
+    if (progressive && typeof progressiveLoader === "function") {
+      return await progressiveLoader.call(
+        recordingsController,
+        bounds,
+        clientId,
+        cam,
+        { before, onProgress },
+      );
+    }
+
+    const sharedLoader = recordingsController?.fetchRecordingsInBounds;
     if (typeof sharedLoader === "function") {
       return await sharedLoader.call(
-        this._host._recordingsBrowseNavController,
+        recordingsController,
         bounds,
         clientId,
         cam,

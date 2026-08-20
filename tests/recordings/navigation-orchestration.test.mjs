@@ -400,6 +400,138 @@ test("fetchRecordingsInBounds deduplicates concurrent day requests", async () =>
   );
 });
 
+test("fetchRecordingsInBoundsProgressively paints newest slices before completing the day", async () => {
+  const bounds = { start: 100, end: 400 };
+  const requests = [];
+  const paints = [];
+  const host = {
+    _recordingsDayDataCache: new Map(),
+    _recordingsDayAvailabilityCache: new Map(),
+    _recordingsDayFetchedAtCache: new Map(),
+    _recordingsDayRequestCache: new Map(),
+    _ws: async ({ after, before }) => {
+      requests.push([after, before]);
+      if (after === 300) {
+        return [{ id: "newest", start_time: 350, end_time: 390 }];
+      }
+      if (after === 200) {
+        return [{ id: "middle", start_time: 250, end_time: 290 }];
+      }
+      return [{ id: "oldest", start_time: 150, end_time: 190 }];
+    },
+  };
+  const controller = new RecordingsBrowseNavController(host);
+
+  const recordings = await controller.fetchRecordingsInBoundsProgressively(
+    bounds,
+    "client-a",
+    "front",
+    {
+      before: 400,
+      chunkSeconds: 100,
+      onProgress: (partial, state) => {
+        paints.push({
+          ids: partial.map((recording) => recording.id),
+          complete: state.complete,
+        });
+      },
+    },
+  );
+
+  assert.deepEqual(requests, [
+    [300, 400],
+    [200, 300],
+    [100, 200],
+  ]);
+  assert.deepEqual(paints, [
+    { ids: ["newest"], complete: false },
+    { ids: ["middle", "newest"], complete: false },
+    { ids: ["oldest", "middle", "newest"], complete: true },
+  ]);
+  assert.deepEqual(
+    recordings.map((recording) => recording.id),
+    ["oldest", "middle", "newest"],
+  );
+  assert.deepEqual(
+    host._recordingsDayDataCache.get("client-a|front|100|400"),
+    recordings,
+  );
+  assert.equal(
+    host._recordingsDayAvailabilityCache.get("client-a|front|100|400"),
+    true,
+  );
+  assert.equal(
+    host._recordingsDayFetchedAtCache.has("client-a|front|100|400"),
+    true,
+  );
+  assert.equal(host._recordingsDayRequestCache.size, 0);
+});
+
+test("fetchRecordingsInBoundsProgressively keeps painted data when an older slice fails", async () => {
+  const bounds = { start: 100, end: 300 };
+  const paints = [];
+  let requestCount = 0;
+  const host = {
+    _recordingsDayDataCache: new Map(),
+    _recordingsDayAvailabilityCache: new Map(),
+    _recordingsDayFetchedAtCache: new Map(),
+    _recordingsDayRequestCache: new Map(),
+    _ws: async () => {
+      requestCount += 1;
+      if (requestCount > 1) throw new Error("offline");
+      return [{ id: "newest", start_time: 250, end_time: 290 }];
+    },
+  };
+  const controller = new RecordingsBrowseNavController(host);
+
+  const recordings = await controller.fetchRecordingsInBoundsProgressively(
+    bounds,
+    "client-a",
+    "front",
+    {
+      before: 300,
+      chunkSeconds: 100,
+      onProgress: (partial) => paints.push(partial),
+    },
+  );
+
+  assert.deepEqual(recordings, [
+    { id: "newest", start_time: 250, end_time: 290 },
+  ]);
+  assert.equal(paints.length, 1);
+  assert.equal(
+    host._recordingsDayDataCache.has("client-a|front|100|300"),
+    false,
+  );
+  assert.equal(host._recordingsDayRequestCache.size, 0);
+});
+
+test("fetchRecordingsInBoundsProgressively rejects when the newest slice fails", async () => {
+  const bounds = { start: 100, end: 300 };
+  const host = {
+    _recordingsDayDataCache: new Map(),
+    _recordingsDayAvailabilityCache: new Map(),
+    _recordingsDayFetchedAtCache: new Map(),
+    _recordingsDayRequestCache: new Map(),
+    _ws: async () => {
+      throw new Error("offline");
+    },
+  };
+  const controller = new RecordingsBrowseNavController(host);
+
+  await assert.rejects(
+    controller.fetchRecordingsInBoundsProgressively(
+      bounds,
+      "client-a",
+      "front",
+      { before: 300, chunkSeconds: 100 },
+    ),
+    /offline/,
+  );
+  assert.equal(host._recordingsDayDataCache.size, 0);
+  assert.equal(host._recordingsDayRequestCache.size, 0);
+});
+
 test("prepareDayTransition preserves the empty bounce state when loading fails", async () => {
   const bounds = { start: 100, end: 199 };
   const host = {

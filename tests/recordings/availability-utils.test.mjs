@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
+  mergeRecordingDayChunks,
   normalizeFetchedRecordingsAvailability,
   resolveCommittedRecordingsDayState,
   resolvePreparedRecordingsDayTransition,
@@ -11,6 +12,26 @@ import {
   resolveFailedRecordingsAvailabilityState,
   resolveFetchedRecordingsAvailabilityState,
 } from "../../src/features/recordings/utils/availability.js";
+
+test("mergeRecordingDayChunks deduplicates boundary items and sorts by start", () => {
+  assert.deepEqual(
+    mergeRecordingDayChunks(
+      [
+        { id: "newer", start_time: 300, end_time: 400 },
+        { id: "boundary", start_time: 200, end_time: 300 },
+      ],
+      [
+        { id: "older", start_time: 100, end_time: 200 },
+        { id: "boundary", start_time: 200, end_time: 300 },
+      ],
+    ),
+    [
+      { id: "older", start_time: 100, end_time: 200 },
+      { id: "boundary", start_time: 200, end_time: 300 },
+      { id: "newer", start_time: 300, end_time: 400 },
+    ],
+  );
+});
 
 test("buildRecordingsDayCacheKey combines client, camera, and bounds", () => {
   assert.equal(

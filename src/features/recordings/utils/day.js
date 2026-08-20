@@ -32,3 +32,33 @@ export function resolveOffsetRecordingsDayBounds({
     end: toEpochSeconds(year, month, day, 23, 59, 59),
   };
 }
+
+export function buildRecordingsDayFetchChunks({
+  bounds = null,
+  before = null,
+  chunkSeconds = 6 * 60 * 60,
+} = {}) {
+  const dayStart = Math.floor(Number(bounds?.start));
+  const dayEnd = Math.floor(Number(bounds?.end));
+  if (!Number.isFinite(dayStart) || !Number.isFinite(dayEnd)) return [];
+  if (dayEnd <= dayStart) return [];
+
+  const requestedBefore = Number(before);
+  const effectiveEnd = Math.min(
+    dayEnd,
+    Number.isFinite(requestedBefore) && requestedBefore > dayStart
+      ? Math.floor(requestedBefore)
+      : dayEnd,
+  );
+  if (effectiveEnd <= dayStart) return [];
+
+  const sliceSeconds = Math.max(60, Math.floor(Number(chunkSeconds) || 0));
+  const chunks = [];
+  for (let start = dayStart; start < effectiveEnd; start += sliceSeconds) {
+    chunks.push({
+      start,
+      end: Math.min(effectiveEnd, start + sliceSeconds),
+    });
+  }
+  return chunks.reverse();
+}

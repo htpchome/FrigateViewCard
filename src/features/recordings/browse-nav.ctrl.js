@@ -1,6 +1,7 @@
 import {
   buildPreparedRecordingsDayResult,
   buildRecordingsDayCacheKey,
+  mergeRecordingDayChunks,
   resolveCommittedRecordingsDayState,
   resolvePreparedRecordingsDayTransition,
   resolveCachedRecordingsAvailability,
@@ -12,6 +13,7 @@ import {
   resolveRecordingsBrowseNavState,
 } from "./utils/browse-nav.js";
 import {
+  buildRecordingsDayFetchChunks,
   resolveOffsetRecordingsDayBounds,
   resolveRecordingsDayBounds,
 } from "./utils/day.js";
@@ -131,6 +133,88 @@ export class RecordingsBrowseNavController {
       );
       this._recordingsFetchedAtCache().set(key, Date.now());
       return fetched.recordings;
+    })();
+    requestCache.set(key, request);
+    try {
+      return await request;
+    } finally {
+      if (requestCache.get(key) === request) requestCache.delete(key);
+    }
+  }
+
+  async fetchRecordingsInBoundsProgressively(
+    bounds,
+    clientId,
+    cam,
+    { before = null, chunkSeconds = 6 * 60 * 60, onProgress = null } = {},
+  ) {
+    if (!bounds || !clientId || !cam) return [];
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    const dataCache = this._recordingsDataCache();
+    if (dataCache.has(key)) return dataCache.get(key) || [];
+
+    const requestCache = this._recordingsRequestCache();
+    if (requestCache.has(key)) return await requestCache.get(key);
+
+    const chunks = buildRecordingsDayFetchChunks({
+      bounds,
+      before,
+      chunkSeconds,
+    });
+    const request = (async () => {
+      let accumulated = [];
+      let completedChunks = 0;
+      try {
+        for (const [index, chunk] of chunks.entries()) {
+          const response = await this._host._ws({
+            type: "frigate/recordings/get",
+            instance_id: clientId,
+            camera: cam,
+            after: Math.max(0, chunk.start),
+            before: chunk.end,
+          });
+          accumulated = mergeRecordingDayChunks(accumulated, response);
+          completedChunks += 1;
+          const complete = index === chunks.length - 1;
+          if (complete) {
+            dataCache.set(key, accumulated);
+            this._recordingsAvailabilityCache().set(
+              key,
+              accumulated.length > 0,
+            );
+            this._recordingsFetchedAtCache().set(key, Date.now());
+          }
+          if ((accumulated.length || complete) && onProgress) {
+            try {
+              onProgress(accumulated, {
+                chunk,
+                completedChunks,
+                totalChunks: chunks.length,
+                complete,
+              });
+            } catch (_) {}
+          }
+        }
+      } catch (error) {
+        if (!completedChunks) throw error;
+      }
+
+      if (!chunks.length) {
+        dataCache.set(key, []);
+        this._recordingsAvailabilityCache().set(key, false);
+        this._recordingsFetchedAtCache().set(key, Date.now());
+        if (onProgress) {
+          try {
+            onProgress([], {
+              chunk: null,
+              completedChunks: 0,
+              totalChunks: 0,
+              complete: true,
+            });
+          } catch (_) {}
+        }
+      }
+      return accumulated;
     })();
     requestCache.set(key, request);
     try {

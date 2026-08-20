@@ -285,6 +285,57 @@ test("loadWindowRecordings resolves day bounds without card-owned recordings wra
   );
 });
 
+test("loadWindowRecordings paints progressive cold-load results as they arrive", async () => {
+  const bounds = { start: 100, end: 400 };
+  const newest = [{ id: "newest", start_time: 350, end_time: 390 }];
+  const complete = [
+    { id: "oldest", start_time: 150, end_time: 190 },
+    ...newest,
+  ];
+  const renders = [];
+  const host = {
+    _winEnd: 400,
+    _config: { refresh_seconds: 45 },
+    _activeCam: { entity: "camera.front" },
+    _camCache: { "camera.front": {} },
+    _recordings: [],
+    _recordingsDayDataCache: new Map(),
+    _recordingsDayAvailabilityCache: new Map(),
+    _recordingsDayFetchedAtCache: new Map(),
+    _recordingsDayBounds: () => bounds,
+    _cc: () => ({ clientId: "frigate", cam: "front" }),
+    _recordingsBrowseNavController: {
+      async fetchRecordingsInBoundsProgressively(
+        receivedBounds,
+        clientId,
+        camera,
+        { before, onProgress },
+      ) {
+        assert.deepEqual(receivedBounds, bounds);
+        assert.equal(clientId, "frigate");
+        assert.equal(camera, "front");
+        assert.equal(before, 400);
+        onProgress(newest, { complete: false });
+        await new Promise((resolve) => setImmediate(resolve));
+        onProgress(complete, { complete: true });
+        return complete;
+      },
+    },
+    _renderList: () => renders.push(host._recordings),
+  };
+  const controller = new BrowseWindowLoaderController(host);
+
+  const load = controller.loadWindowRecordings("frigate", "front", 400);
+
+  assert.deepEqual(host._recordings, newest);
+  assert.deepEqual(renders, [newest]);
+
+  assert.deepEqual(await load, complete);
+  assert.deepEqual(host._recordings, complete);
+  assert.deepEqual(renders, [newest, complete]);
+  assert.deepEqual(host._camCache["camera.front"].recordings, complete);
+});
+
 test("loadWindowRecordings paints stale current-day cache before refreshing it", async () => {
   const bounds = { start: 100, end: 199 };
   const key = "frigate|front|100|199";

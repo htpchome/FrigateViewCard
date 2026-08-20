@@ -2,9 +2,40 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildRecordingsDayFetchChunks,
   resolveOffsetRecordingsDayBounds,
   resolveRecordingsDayBounds,
 } from "../../src/features/recordings/utils/day.js";
+
+test("buildRecordingsDayFetchChunks returns newest six-hour slices first", () => {
+  assert.deepEqual(
+    buildRecordingsDayFetchChunks({
+      bounds: { start: 0, end: 86_400 },
+      before: 73_800,
+    }),
+    [
+      { start: 64_800, end: 73_800 },
+      { start: 43_200, end: 64_800 },
+      { start: 21_600, end: 43_200 },
+      { start: 0, end: 21_600 },
+    ],
+  );
+});
+
+test("buildRecordingsDayFetchChunks clamps requests to the selected day", () => {
+  assert.deepEqual(
+    buildRecordingsDayFetchChunks({
+      bounds: { start: 100, end: 500 },
+      before: 900,
+      chunkSeconds: 180,
+    }),
+    [
+      { start: 460, end: 500 },
+      { start: 280, end: 460 },
+      { start: 100, end: 280 },
+    ],
+  );
+});
 
 function makeEpochStub() {
   return (year, month, day, hour, minute, second) =>
