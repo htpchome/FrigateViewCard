@@ -15,7 +15,16 @@ const constants = {
 
 const createHost = ({ live = false, takeover = false } = {}) => {
   const calls = [];
-  const grid = { firstElementChild: null, innerHTML: "" };
+  const grid = {
+    firstElementChild: null,
+    innerHTML: "",
+    style: {
+      values: {},
+      setProperty(name, value) {
+        this.values[name] = value;
+      },
+    },
+  };
   const host = {
     _pageId: "wide-view",
     _viewMode: "single",
@@ -76,6 +85,22 @@ test("Companion Cameras render every configured camera in user order", () => {
   assert.match(grid.innerHTML, /data-wide-companion-camidx="1"/);
   assert.match(grid.innerHTML, /Stream Source: Snapshot/);
   assert.match(grid.innerHTML, /Events: 2/);
+  assert.equal(grid.style.values["--wide-companion-columns"], "2");
+  assert.equal(grid.style.values["--wide-companion-rows"], "1");
+});
+
+test("Companion Cameras use a compact two-row layout at the camera limit", () => {
+  const { host, grid } = createHost();
+  host._config.cameras = Array.from({ length: 8 }, (_, index) => ({
+    entity: `camera.camera_${index + 1}`,
+    name: `Camera ${index + 1}`,
+  }));
+  const controller = new WideViewCompanionController(host, constants);
+
+  controller.render();
+
+  assert.equal(grid.style.values["--wide-companion-columns"], "4");
+  assert.equal(grid.style.values["--wide-companion-rows"], "2");
 });
 
 test("Companion Camera live state is config live or active alert", () => {

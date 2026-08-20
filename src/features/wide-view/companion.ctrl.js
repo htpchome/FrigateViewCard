@@ -142,6 +142,14 @@ export class WideViewCompanionController {
     const cameras = Array.isArray(this._host._config?.cameras)
       ? this._host._config.cameras
       : [];
+    const cameraCount = Math.max(1, cameras.length);
+    const columns = cameraCount <= 3 ? cameraCount : Math.ceil(cameraCount / 2);
+    const rows = Math.ceil(cameraCount / columns);
+    grid.style?.setProperty?.(
+      "--wide-companion-columns",
+      String(columns),
+    );
+    grid.style?.setProperty?.("--wide-companion-rows", String(rows));
     const liveStreamHint = this.liveStreamHint();
     const hassReady = !!this._host._hass?.states;
     const nextSignature = cameras

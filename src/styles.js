@@ -477,9 +477,14 @@ export const STYLES = `
   .preview-meta-status .dot{font-size:.82rem;line-height:1;}
   .preview-cam-buttons{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
   .preview-cam-btn{font-size:.9rem;line-height:1;padding:6px 9px;}
-  .wide-companion-panel{display:flex;flex-direction:column;gap:8px;min-width:0;padding:10px;box-sizing:border-box;}
+  .card .layout--wide-view{flex:1 1 0;height:auto;min-height:0;}
+  .card .col-left--wide-view{height:100%;max-height:100%;overflow:hidden;}
+  .wide-companion-panel{display:flex;flex:1 1 0;flex-direction:column;gap:8px;min-width:0;min-height:0;padding:10px;box-sizing:border-box;overflow:hidden;}
   .wide-companion-title{font-size:.9rem;font-weight:700;color:var(--c-text);letter-spacing:.02em;}
-  .wide-companion-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));}
+  .wide-companion-grid{flex:1 1 0;min-height:0;height:100%;overflow:hidden;grid-template-columns:repeat(var(--wide-companion-columns,1),minmax(0,1fr));grid-template-rows:repeat(var(--wide-companion-rows,1),minmax(0,1fr));}
+  .wide-companion-cell{height:100%;min-height:0;overflow:hidden;}
+  .wide-companion-media-host{flex:1 1 0;min-height:0;aspect-ratio:auto;}
+  .wide-companion-meta{flex:0 0 auto;}
   @media (max-width: 720px){
     .preview-meta{grid-template-columns:minmax(0,1fr);gap:2px;}
     .preview-meta-status{justify-self:start;}
