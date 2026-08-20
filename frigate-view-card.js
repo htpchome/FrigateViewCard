@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1552";
+const VERSION = "1.0.1553";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3639,6 +3639,22 @@ function buildWideViewMainLayoutShellMarkup({
 
             ${regions.information}
             ${regions.cameraSwitcher}
+            <div class="${tabsHolderClassName} shadow-small">
+              <div class="button-holder">
+                <div class="button-holder-row tabs-row">
+                  
+                </div>
+                <div class="button-holder-row page-nav-row">
+                  ${regions.pageNavigation}
+                </div>
+                <div class="button-holder-row tools-row">
+                  ${regions.tools}
+                </div>
+              </div>
+            </div>
+
+
+
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
@@ -3648,10 +3664,10 @@ function buildWideViewMainLayoutShellMarkup({
                   ${regions.tabs}
                 </div>
                 <div class="button-holder-row page-nav-row">
-                  ${regions.pageNavigation}
+                  
                 </div>
                 <div class="button-holder-row tools-row">
-                  ${regions.tools}
+                  
                 </div>
               </div>
             </div>

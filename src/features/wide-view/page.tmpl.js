@@ -61,6 +61,22 @@ export function buildWideViewMainLayoutShellMarkup({
 
             ${regions.information}
             ${regions.cameraSwitcher}
+            <div class="${tabsHolderClassName} shadow-small">
+              <div class="button-holder">
+                <div class="button-holder-row tabs-row">
+                  
+                </div>
+                <div class="button-holder-row page-nav-row">
+                  ${regions.pageNavigation}
+                </div>
+                <div class="button-holder-row tools-row">
+                  ${regions.tools}
+                </div>
+              </div>
+            </div>
+
+
+
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
@@ -70,10 +86,10 @@ export function buildWideViewMainLayoutShellMarkup({
                   ${regions.tabs}
                 </div>
                 <div class="button-holder-row page-nav-row">
-                  ${regions.pageNavigation}
+                  
                 </div>
                 <div class="button-holder-row tools-row">
-                  ${regions.tools}
+                  
                 </div>
               </div>
             </div>
