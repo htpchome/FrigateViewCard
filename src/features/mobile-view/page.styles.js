@@ -61,7 +61,7 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     position:relative;
   }
   .card.mobile-view-active .mobile-video-controls-container{
-  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"video-controls-left microphone video-controls-right";align-items:center;gap:10px;padding:0px 8px;background: linear-gradient(to bottom, var(--c-bg-main) 50%, transparent 50%);
+  display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"video-controls-left microphone video-controls-right";align-items:center;gap:10px;padding:0px 8px;
   }
   .card.mobile-view-active .mobile-video-controls-left-row{grid-area:video-controls-left;justify-content:flex-start;}
   .card.mobile-view-active .mobile-microphone-row{grid-area:microphone;justify-content:center;}
