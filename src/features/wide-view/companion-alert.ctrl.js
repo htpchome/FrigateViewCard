@@ -200,11 +200,6 @@ export class WideViewCompanionAlertController {
       .toLowerCase();
 
     if (type !== "end" && !normalizedSeverity) {
-      this.markAlertCamera(
-        cam,
-        "alert",
-        this._host._previewAlertHoldMs?.(),
-      );
       this.scheduleAlertWatch(180);
       return;
     }

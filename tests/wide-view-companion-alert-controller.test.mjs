@@ -57,6 +57,34 @@ test("companion realtime alerts preserve detection severity", () => {
   assert.deepEqual(calls, [["camera.front_door", "detection", 6000]]);
 });
 
+test("companion realtime ignores detections excluded by camera config", () => {
+  const host = createHost({ severity: "detection", shouldHandle: false });
+  const controller = new WideViewCompanionAlertController(host, constants, {
+    isActive: () => true,
+  });
+  const calls = [];
+  controller.markAlertCamera = (...args) => calls.push(args);
+
+  controller.handleRealtimeMessage({ type: "new" });
+
+  assert.deepEqual(calls, []);
+});
+
+test("companion realtime only probes Reviews when severity is missing", () => {
+  const host = createHost({ severity: "" });
+  const controller = new WideViewCompanionAlertController(host, constants, {
+    isActive: () => true,
+  });
+  const calls = [];
+  controller.markAlertCamera = (...args) => calls.push(["mark", ...args]);
+  controller.scheduleAlertWatch = (delayMs) =>
+    calls.push(["watch", delayMs]);
+
+  controller.handleRealtimeMessage({ type: "update" });
+
+  assert.deepEqual(calls, [["watch", 180]]);
+});
+
 test("companion alerts do not track state while Wide View is inactive", () => {
   const controller = new WideViewCompanionAlertController(
     createHost(),

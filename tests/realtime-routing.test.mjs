@@ -6,6 +6,7 @@ import {
   cameraIndexForIncomingCamera,
   extractRealtimeMessageCamera,
   extractRealtimeMessageSeverity,
+  shouldHandleSlideshowReview,
 } from "../src/features/slideshow/routing.js";
 
 const config = {
@@ -80,5 +81,39 @@ test("extractRealtimeMessageSeverity supports nested payload shapes", () => {
       type: "update",
     }),
     "detection",
+  );
+});
+
+test("review severity respects each camera's Alerts Area Content setting", () => {
+  const reviewConfig = {
+    cameras: [
+      { entity: "camera.front_door", alerts_content: "alerts_only" },
+      { entity: "camera.side_yard", alerts_content: "all_reviews" },
+    ],
+  };
+
+  assert.equal(
+    shouldHandleSlideshowReview(
+      reviewConfig,
+      "camera.front_door",
+      "alert",
+    ),
+    true,
+  );
+  assert.equal(
+    shouldHandleSlideshowReview(
+      reviewConfig,
+      "camera.front_door",
+      "detection",
+    ),
+    false,
+  );
+  assert.equal(
+    shouldHandleSlideshowReview(
+      reviewConfig,
+      "camera.side_yard",
+      "detection",
+    ),
+    true,
   );
 });

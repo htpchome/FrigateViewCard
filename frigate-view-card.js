@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1560";
+const VERSION = "1.0.1561";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -14022,7 +14022,6 @@ const PreviewAlertController = class {
     const { cam, severity, type } = parsed;
     const normalizedSeverity = String(severity || "").trim().toLowerCase();
     if (type !== "end" && !normalizedSeverity) {
-      this.markAlertCamera(cam, "alert", this._host._previewAlertHoldMs?.());
       this.scheduleAlertWatch(180);
       return;
     }
@@ -14939,8 +14938,10 @@ const GridAlertController = class {
     const normalizedSeverity = String(severity || "").trim().toLowerCase();
     if (type === "end") return;
     if (!normalizedSeverity) {
-      this.handleAlertCandidate(cam, "alert");
       this.scheduleAlertWatch(180);
+      return;
+    }
+    if (!this._host._shouldHandleSlideshowReview(cam, normalizedSeverity)) {
       return;
     }
     this.handleAlertCandidate(cam, normalizedSeverity);
@@ -17232,11 +17233,6 @@ const WideViewCompanionAlertController = class {
     const { cam, severity, type } = parsed;
     const normalizedSeverity = String(severity || "").trim().toLowerCase();
     if (type !== "end" && !normalizedSeverity) {
-      this.markAlertCamera(
-        cam,
-        "alert",
-        this._host._previewAlertHoldMs?.()
-      );
       this.scheduleAlertWatch(180);
       return;
     }

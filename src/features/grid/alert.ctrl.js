@@ -234,8 +234,10 @@ export class GridAlertController {
       .toLowerCase();
     if (type === "end") return;
     if (!normalizedSeverity) {
-      this.handleAlertCandidate(cam, "alert");
       this.scheduleAlertWatch(180);
+      return;
+    }
+    if (!this._host._shouldHandleSlideshowReview(cam, normalizedSeverity)) {
       return;
     }
     this.handleAlertCandidate(cam, normalizedSeverity);

@@ -161,10 +161,9 @@ export class PreviewAlertController {
       .trim()
       .toLowerCase();
 
-    // Some realtime payloads do not carry severity in-message. Treat those
-    // mapped realtime updates as alert immediately, then schedule a probe.
+    // Severity-less object events must be resolved through Reviews before
+    // applying the camera's Alerts Area Content policy.
     if (type !== "end" && !normalizedSeverity) {
-      this.markAlertCamera(cam, "alert", this._host._previewAlertHoldMs?.());
       this.scheduleAlertWatch(180);
       return;
     }

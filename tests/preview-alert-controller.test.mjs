@@ -35,7 +35,7 @@ test("handleRealtimeMessage marks camera live when alert severity is present", (
   assert.deepEqual(calls, [["camera.front_door", "alert", 6000]]);
 });
 
-test("handleRealtimeMessage marks alert and schedules probe when realtime severity is missing", () => {
+test("handleRealtimeMessage only probes Reviews when realtime severity is missing", () => {
   const host = createHost({ severityByMessage: "", shouldHandle: true });
   const controller = new PreviewAlertController(host, {
     PREVIEW_ALERT_HOLD_MS: 6000,
@@ -52,10 +52,24 @@ test("handleRealtimeMessage marks alert and schedules probe when realtime severi
 
   controller.handleRealtimeMessage({ type: "update", camera: "front_door" });
 
-  assert.deepEqual(calls, [
-    ["mark", "camera.front_door", "alert", 6000],
-    ["watch", 180],
-  ]);
+  assert.deepEqual(calls, [["watch", 180]]);
+});
+
+test("handleRealtimeMessage ignores detections excluded by camera config", () => {
+  const host = createHost({
+    severityByMessage: "detection",
+    shouldHandle: false,
+  });
+  const controller = new PreviewAlertController(host, {
+    PREVIEW_ALERT_HOLD_MS: 6000,
+    PREVIEW_ALERT_END_GRACE_MS: 3500,
+  });
+  const calls = [];
+  controller.markAlertCamera = (...args) => calls.push(args);
+
+  controller.handleRealtimeMessage({ type: "new", camera: "front_door" });
+
+  assert.deepEqual(calls, []);
 });
 
 test("handleRealtimeMessage schedules probe when realtime camera cannot be resolved", () => {
