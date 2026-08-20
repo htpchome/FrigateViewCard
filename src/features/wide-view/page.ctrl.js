@@ -33,6 +33,10 @@ export class WideViewPageController {
     this._companionController?.start?.();
   }
 
+  resumeCompanionMedia() {
+    this._companionController?.resumeVisible?.();
+  }
+
   stopCompanionMode() {
     this._companionController?.stop?.();
   }

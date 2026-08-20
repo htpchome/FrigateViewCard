@@ -351,6 +351,14 @@ export class WideViewCompanionController {
     this.render();
   }
 
+  resumeVisible() {
+    if (!this.isActive()) return;
+    this.render();
+    if (!this.liveCamerasEnabled()) {
+      void this._host._refreshSnapshotMedia?.();
+    }
+  }
+
   stop() {
     this._alertController.stop();
     this.teardownMedia();

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1563";
+const VERSION = "1.0.1564";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -16946,6 +16946,9 @@ const WideViewPageController = class {
   startCompanionMode() {
     this._companionController?.start?.();
   }
+  resumeCompanionMedia() {
+    this._companionController?.resumeVisible?.();
+  }
   stopCompanionMode() {
     this._companionController?.stop?.();
   }
@@ -17624,6 +17627,13 @@ const WideViewCompanionController = class {
     if (!this.isActive()) return;
     this._alertController.start();
     this.render();
+  }
+  resumeVisible() {
+    if (!this.isActive()) return;
+    this.render();
+    if (!this.liveCamerasEnabled()) {
+      void this._host._refreshSnapshotMedia?.();
+    }
   }
   stop() {
     this._alertController.stop();
@@ -18653,6 +18663,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
         this._scheduleResumeLive("doc-visible");
+        this._wideViewPageController?.resumeCompanionMedia?.();
       }
     };
     document.addEventListener("visibilitychange", this._onDocVisibility);
@@ -18808,6 +18819,10 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
     if (this._started) {
+      this._wideViewPageController?.startCompanionMode?.();
+      if (!this._ro && typeof ResizeObserver !== "undefined") {
+        this._setupResizeObserver();
+      }
       this._startEditModeWatchdog();
       if (this._shouldStartInGridMode()) {
         this._applyStartInGridMode("connected");
@@ -21341,6 +21356,7 @@ const FrigateViewCard = class extends HTMLElement {
       const visibleNow = w > 2 && h > 2;
       if (visibleNow && !this._wasVisible) {
         this._scheduleResumeLive("resize-visible");
+        this._wideViewPageController?.resumeCompanionMedia?.();
       }
       this._wasVisible = visibleNow;
       if (prevW > 0 && prevH > 0 && Math.round(w) === Math.round(prevW) && Math.round(h) === Math.round(prevH)) {
@@ -21361,6 +21377,7 @@ const FrigateViewCard = class extends HTMLElement {
           const e = entries[0];
           if (e?.isIntersecting) {
             this._scheduleResumeLive("intersection");
+            this._wideViewPageController?.resumeCompanionMedia?.();
           }
         },
         { threshold: 0.15 }

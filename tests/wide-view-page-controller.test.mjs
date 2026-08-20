@@ -164,6 +164,21 @@ test("card resize observation resyncs wide-view column height", () => {
   );
 });
 
+test("card visibility and reconnect hooks resume Companion Camera media", () => {
+  assert.match(
+    cardSource,
+    /connectedCallback\(\)[\s\S]*?_wideViewPageController\?\.startCompanionMode\?\.\(\)/,
+  );
+  assert.match(
+    cardSource,
+    /visibilityState === "visible"[\s\S]*?_wideViewPageController\?\.resumeCompanionMedia\?\.\(\)/,
+  );
+  assert.match(
+    cardSource,
+    /e\?\.isIntersecting[\s\S]*?_wideViewPageController\?\.resumeCompanionMedia\?\.\(\)/,
+  );
+});
+
 test("wideViewLayoutState resolves wide layout widths with clamping", () => {
   const wide = createHost({ isWide: true });
   const wideController = new WideViewPageController(wide.host, { PAGE_IDS });

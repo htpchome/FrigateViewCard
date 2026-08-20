@@ -789,6 +789,7 @@ export class FrigateViewCard extends HTMLElement {
     this._onDocVisibility = () => {
       if (document.visibilityState === "visible") {
         this._scheduleResumeLive("doc-visible");
+        this._wideViewPageController?.resumeCompanionMedia?.();
       }
     };
 
@@ -966,6 +967,10 @@ export class FrigateViewCard extends HTMLElement {
     this._syncVisualStyleToggles();
     this._scheduleRotateOverlayUpdate();
     if (this._started) {
+      this._wideViewPageController?.startCompanionMode?.();
+      if (!this._ro && typeof ResizeObserver !== "undefined") {
+        this._setupResizeObserver();
+      }
       this._startEditModeWatchdog();
       if (this._shouldStartInGridMode()) {
         this._applyStartInGridMode("connected");
@@ -4015,6 +4020,7 @@ export class FrigateViewCard extends HTMLElement {
       const visibleNow = w > 2 && h > 2;
       if (visibleNow && !this._wasVisible) {
         this._scheduleResumeLive("resize-visible");
+        this._wideViewPageController?.resumeCompanionMedia?.();
       }
       this._wasVisible = visibleNow;
       if (
@@ -4041,6 +4047,7 @@ export class FrigateViewCard extends HTMLElement {
           const e = entries[0];
           if (e?.isIntersecting) {
             this._scheduleResumeLive("intersection");
+            this._wideViewPageController?.resumeCompanionMedia?.();
           }
         },
         { threshold: 0.15 },

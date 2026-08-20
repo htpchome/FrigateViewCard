@@ -167,6 +167,28 @@ test("Companion Camera controller applies the resolved column count", () => {
   assert.equal(grid.style.values["--wide-companion-cell-width"], "228.7px");
 });
 
+test("visible snapshot companions rerender and retry snapshot loading", () => {
+  const { host, calls } = createHost({ live: false });
+  host._refreshSnapshotMedia = () => calls.push(["refreshSnapshots"]);
+  const controller = new WideViewCompanionController(host, constants);
+  controller.render = () => calls.push(["render"]);
+
+  controller.resumeVisible();
+
+  assert.deepEqual(calls, [["render"], ["refreshSnapshots"]]);
+});
+
+test("visible always-live companions do not request snapshot refresh", () => {
+  const { host, calls } = createHost({ live: true });
+  host._refreshSnapshotMedia = () => calls.push(["refreshSnapshots"]);
+  const controller = new WideViewCompanionController(host, constants);
+  controller.render = () => calls.push(["render"]);
+
+  controller.resumeVisible();
+
+  assert.deepEqual(calls, [["render"]]);
+});
+
 test("Companion Camera live state is config live or active alert", () => {
   const snapshotHarness = createHost({ live: false });
   const snapshotController = new WideViewCompanionController(
