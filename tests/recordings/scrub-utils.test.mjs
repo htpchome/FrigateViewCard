@@ -53,11 +53,11 @@ test("buildRecordingScrubDecorations creates alert and detection marker markup",
 
   assert.match(
     decorations.markerMarkup,
-    /recording-scrub-alert" style="left:10%;width:5%"/,
+    /recording-scrub-alert" data-recording-alert-index="0" style="left:10%;width:5%"/,
   );
   assert.match(
     decorations.markerMarkup,
-    /recording-scrub-detection" style="left:30%;width:0\.75%"/,
+    /recording-scrub-detection" data-recording-alert-index="1" style="left:30%;width:0\.75%"/,
   );
 });
 

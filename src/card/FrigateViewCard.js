@@ -4760,11 +4760,21 @@ export class FrigateViewCard extends HTMLElement {
         if (!["alert", "detection"].includes(severity)) return null;
         const rs = Math.max(start, Number(r?.start_time || start));
         const re = Math.min(end, Number(r?.end_time || rs + 1));
+        const detections = Array.isArray(r?.data?.detections)
+          ? r.data.detections
+          : Array.isArray(r?.detections)
+            ? r.detections
+            : [];
+        const eventId = String(detections[0] || "").trim();
         return {
           id: r?.id || `${rs}-${re}`,
           start: rs,
           end: re > rs ? re : rs + 1,
           severity,
+          eventId,
+          snapshotUrl: eventId
+            ? `/api/frigate/${encodeURIComponent(clientId)}/notifications/${encodeURIComponent(eventId)}/snapshot.jpg`
+            : "",
         };
       })
       .filter(Boolean)
@@ -4787,6 +4797,9 @@ export class FrigateViewCard extends HTMLElement {
     const ticks = this._$("#recording-scrub-ticks");
     const markers = this._$("#recording-scrub-markers");
     const cursor = this._$("#recording-scrub-cursor");
+    const preview = this._$("#recording-scrub-preview");
+    const previewImage = this._$("#recording-scrub-preview-image");
+    const previewLabel = this._$("#recording-scrub-preview-label");
     const labelStart = this._$("#recording-scrub-start");
     const labelNow = this._$("#recording-scrub-now");
     const labelEnd = this._$("#recording-scrub-end");
@@ -4843,10 +4856,14 @@ export class FrigateViewCard extends HTMLElement {
       video,
       ticks,
       markers,
+      preview,
+      previewImage,
+      previewLabel,
       state,
       setCursor: (timeSec) => this._setRecordingScrubCursor(timeSec),
       seekToRatio: (ratio, options) =>
         this._seekRecordingScrubToRatio(ratio, options),
+      formatTime: (seconds) => this._fmtScrubTime(seconds),
     });
     this._recordingScrubController.bind();
   }

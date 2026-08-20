@@ -139,3 +139,63 @@ test("RecordingScrubController clears marker layers and listeners on dispose", (
   assert.equal(markers.innerHTML, "");
   assert.equal(state.isScrubbing, false);
 });
+
+test("RecordingScrubController shows a clamped snapshot preview for a marker", () => {
+  const track = createTarget();
+  const video = createTarget();
+  const preview = {
+    hidden: true,
+    style: {},
+    getBoundingClientRect: () => ({ width: 100 }),
+  };
+  const previewImage = {
+    alt: "",
+    src: "",
+    removeAttribute(name) {
+      if (name === "src") this.src = "";
+    },
+  };
+  const previewLabel = { textContent: "" };
+  const marker = {
+    getBoundingClientRect: () => ({ left: 180, width: 10 }),
+  };
+  const state = {
+    start: 100,
+    alerts: [
+      {
+        start: 125,
+        severity: "alert",
+        snapshotUrl: "/snapshot.jpg",
+      },
+    ],
+    isScrubbing: false,
+    resumeAfterScrub: false,
+  };
+
+  const controller = new RecordingScrubController({
+    track,
+    video,
+    ticks: { innerHTML: "" },
+    markers: { innerHTML: "" },
+    preview,
+    previewImage,
+    previewLabel,
+    state,
+    setCursor: () => {},
+    seekToRatio: () => {},
+    formatTime: (seconds) => `0:${String(seconds).padStart(2, "0")}`,
+  });
+
+  controller._showMarkerPreview(0, marker);
+
+  assert.equal(preview.hidden, false);
+  assert.equal(preview.style.left, "144px");
+  assert.equal(previewImage.src, "/snapshot.jpg");
+  assert.equal(previewImage.alt, "Alert snapshot");
+  assert.equal(previewLabel.textContent, "Alert · 0:25");
+
+  controller._hideMarkerPreview({ clearImage: true });
+
+  assert.equal(preview.hidden, true);
+  assert.equal(previewImage.src, "");
+});

@@ -296,6 +296,10 @@ export function buildPopupShellMarkup({ icons, version }) {
                     <div class="recording-scrub-ticks" id="recording-scrub-ticks"></div>
                     <div class="recording-scrub-markers" id="recording-scrub-markers"></div>
                     <div class="recording-scrub-cursor" id="recording-scrub-cursor"></div>
+                    <div class="recording-scrub-preview" id="recording-scrub-preview" hidden>
+                      <img id="recording-scrub-preview-image" alt="">
+                      <span id="recording-scrub-preview-label"></span>
+                    </div>
                   </div>
                   <div class="recording-scrub-labels">
                     <span id="recording-scrub-start">0:00</span>

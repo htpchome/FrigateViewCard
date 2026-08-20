@@ -78,15 +78,15 @@ export function buildRecordingScrubDecorations({
   }
 
   let markerMarkup = "";
-  for (const alert of alerts) {
+  alerts.forEach((alert, index) => {
     const left = ((alert.start - safeStart) / span) * 100;
     const width = Math.max(0.75, ((alert.end - alert.start) / span) * 100);
     const markerClass =
       String(alert.severity || "").toLowerCase() === "alert"
         ? "recording-scrub-alert"
         : "recording-scrub-detection";
-    markerMarkup += `<span class="${markerClass}" style="left:${Math.max(0, left)}%;width:${Math.min(100, width)}%"></span>`;
-  }
+    markerMarkup += `<span class="${markerClass}" data-recording-alert-index="${index}" style="left:${Math.max(0, left)}%;width:${Math.min(100, width)}%"></span>`;
+  });
 
   return {
     span,

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1565";
+const VERSION = "1.0.1566";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1207,10 +1207,14 @@ const STYLES = `
   .recording-scrub-track {position:relative;width:100%;height:28px;border-radius:999px;background:var(--c-bg-scrub);cursor:pointer;touch-action:none;overflow:visible;}
   .recording-scrub-ticks {position:absolute;inset:0;pointer-events:none;z-index:3;}
   .recording-scrub-markers {position:absolute;inset:0;pointer-events:none;z-index:2;}
-  .recording-scrub-alert {position:absolute;top:2px;bottom:2px;background:var(--c-bg-alert);border-radius:999px;min-width:8px;opacity:.95;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset;}
-  .recording-scrub-detection {position:absolute;top:4px;bottom:4px;background:#f59e0b;border-radius:999px;min-width:4px;opacity:.95;}
+  .recording-scrub-alert {position:absolute;top:2px;bottom:2px;background:var(--c-bg-alert);border-radius:999px;min-width:8px;opacity:.95;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset;pointer-events:auto;}
+  .recording-scrub-detection {position:absolute;top:4px;bottom:4px;background:#f59e0b;border-radius:999px;min-width:4px;opacity:.95;pointer-events:auto;}
   .recording-scrub-tick {position:absolute;top:3px;bottom:3px;width:3px;background:rgba(15,21,40,.55);border-radius:999px;transform:translateX(-1px);box-shadow:0 0 0 1px rgba(255,255,255,.28);}
   .recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);z-index:4;}
+  .recording-scrub-preview {position:absolute;bottom:calc(100% + 8px);left:50%;width:min(200px,calc(100% - 12px));padding:4px;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.42);transform:translateX(-50%);pointer-events:none;z-index:8;box-sizing:border-box;}
+  .recording-scrub-preview[hidden] {display:none;}
+  .recording-scrub-preview img {display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:5px;background:var(--c-bg-deep);}
+  .recording-scrub-preview span {display:block;padding:4px 2px 1px;font-size:.7rem;font-weight:700;color:var(--c-text2);text-transform:none;line-height:1.2;}
   .recording-scrub-labels {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--c-text2);font-weight:600;line-height:1;}
   .recording-scrub-now {font-variant-numeric:tabular-nums;}
 
@@ -4130,6 +4134,10 @@ function buildPopupShellMarkup({ icons, version }) {
                     <div class="recording-scrub-ticks" id="recording-scrub-ticks"></div>
                     <div class="recording-scrub-markers" id="recording-scrub-markers"></div>
                     <div class="recording-scrub-cursor" id="recording-scrub-cursor"></div>
+                    <div class="recording-scrub-preview" id="recording-scrub-preview" hidden>
+                      <img id="recording-scrub-preview-image" alt="">
+                      <span id="recording-scrub-preview-label"></span>
+                    </div>
                   </div>
                   <div class="recording-scrub-labels">
                     <span id="recording-scrub-start">0:00</span>
@@ -12032,12 +12040,12 @@ function buildRecordingScrubDecorations({
     tickMarkup += `<span class="recording-scrub-tick" style="left:${left}%"></span>`;
   }
   let markerMarkup = "";
-  for (const alert of alerts) {
+  alerts.forEach((alert, index) => {
     const left = (alert.start - safeStart) / span * 100;
     const width = Math.max(0.75, (alert.end - alert.start) / span * 100);
     const markerClass = String(alert.severity || "").toLowerCase() === "alert" ? "recording-scrub-alert" : "recording-scrub-detection";
-    markerMarkup += `<span class="${markerClass}" style="left:${Math.max(0, left)}%;width:${Math.min(100, width)}%"></span>`;
-  }
+    markerMarkup += `<span class="${markerClass}" data-recording-alert-index="${index}" style="left:${Math.max(0, left)}%;width:${Math.min(100, width)}%"></span>`;
+  });
   return {
     span,
     labelStart: "0:00",
@@ -12143,9 +12151,37 @@ function resolveRecordingSeekOutcome({
 
 // src/features/recordings/scrub.ctrl.js
 const RecordingScrubController = class {
-  constructor({ track, video, ticks, markers, state, setCursor, seekToRatio }) {
+  constructor({
+    track,
+    video,
+    ticks,
+    markers,
+    preview = null,
+    previewImage = null,
+    previewLabel = null,
+    state,
+    setCursor,
+    seekToRatio,
+    formatTime = null
+  }) {
+    __publicField(this, "_onMarkerPointerOver", (event) => {
+      const marker = this._markerFromEvent(event);
+      if (!marker) return;
+      const index = Number(marker.dataset?.recordingAlertIndex);
+      if (!Number.isInteger(index) || index < 0) return;
+      this._showMarkerPreview(index, marker);
+    });
+    __publicField(this, "_onMarkerPointerOut", (event) => {
+      const marker = this._markerFromEvent(event);
+      if (!marker || marker.contains?.(event.relatedTarget)) return;
+      this._hideMarkerPreview();
+    });
+    __publicField(this, "_onPreviewImageError", () => {
+      this._hideMarkerPreview({ clearImage: true });
+    });
     __publicField(this, "_onPointerDown", (event) => {
       this._consumeGesture(event);
+      this._hideMarkerPreview();
       this._dragging = true;
       this._state.isScrubbing = true;
       this._state.resumeAfterScrub = !this._video.paused;
@@ -12181,9 +12217,13 @@ const RecordingScrubController = class {
     this._video = video;
     this._ticks = ticks;
     this._markers = markers;
+    this._preview = preview;
+    this._previewImage = previewImage;
+    this._previewLabel = previewLabel;
     this._state = state;
     this._setCursor = setCursor;
     this._seekToRatio = seekToRatio;
+    this._formatTime = typeof formatTime === "function" ? formatTime : (value) => String(value);
     this._cleanup = new CleanupController();
     this._dragging = false;
     this._lastRatio = 0;
@@ -12235,10 +12275,26 @@ const RecordingScrubController = class {
       "timeupdate",
       this._onTimeUpdate
     );
+    this._cleanup.addEventListener(
+      this._markers,
+      "pointerover",
+      this._onMarkerPointerOver
+    );
+    this._cleanup.addEventListener(
+      this._markers,
+      "pointerout",
+      this._onMarkerPointerOut
+    );
+    this._cleanup.addEventListener(
+      this._previewImage,
+      "error",
+      this._onPreviewImageError
+    );
   }
   dispose() {
     this._dragging = false;
     this._state.isScrubbing = false;
+    this._hideMarkerPreview({ clearImage: true });
     this._cleanup.dispose();
     if (this._ticks) this._ticks.innerHTML = "";
     if (this._markers) this._markers.innerHTML = "";
@@ -12251,6 +12307,50 @@ const RecordingScrubController = class {
   _consumeGesture(event) {
     event.preventDefault?.();
     event.stopPropagation?.();
+  }
+  _markerFromEvent(event) {
+    const marker = event?.target?.closest?.("[data-recording-alert-index]");
+    if (!marker) return null;
+    if (this._markers?.contains && !this._markers.contains(marker)) return null;
+    return marker;
+  }
+  _showMarkerPreview(index, marker) {
+    const alert = this._state?.alerts?.[index];
+    const snapshotUrl = String(alert?.snapshotUrl || "").trim();
+    if (!snapshotUrl || !this._preview || !this._previewImage || !marker) {
+      this._hideMarkerPreview();
+      return;
+    }
+    const severity = String(alert?.severity || "detection").toLowerCase() === "alert" ? "Alert" : "Detection";
+    const relativeStart = Math.max(
+      0,
+      Number(alert?.start || 0) - Number(this._state?.start || 0)
+    );
+    this._previewImage.alt = `${severity} snapshot`;
+    this._previewImage.src = snapshotUrl;
+    if (this._previewLabel) {
+      this._previewLabel.textContent = `${severity} \xB7 ${this._formatTime(relativeStart)}`;
+    }
+    this._preview.hidden = false;
+    const trackRect = this._track.getBoundingClientRect();
+    const markerRect = marker.getBoundingClientRect();
+    const previewWidth = Number(this._preview.getBoundingClientRect?.().width) || 180;
+    const halfWidth = previewWidth / 2;
+    const markerCenter = markerRect.left - trackRect.left + markerRect.width / 2;
+    const margin = 6;
+    const minLeft = Math.min(halfWidth + margin, trackRect.width / 2);
+    const maxLeft = Math.max(
+      trackRect.width / 2,
+      trackRect.width - halfWidth - margin
+    );
+    const left = Math.max(minLeft, Math.min(markerCenter, maxLeft));
+    this._preview.style.left = `${left}px`;
+  }
+  _hideMarkerPreview({ clearImage = false } = {}) {
+    if (this._preview) this._preview.hidden = true;
+    if (clearImage && this._previewImage) {
+      this._previewImage.removeAttribute?.("src");
+    }
   }
 };
 
@@ -22039,11 +22139,15 @@ const FrigateViewCard = class extends HTMLElement {
       if (!["alert", "detection"].includes(severity)) return null;
       const rs = Math.max(start, Number(r?.start_time || start));
       const re = Math.min(end, Number(r?.end_time || rs + 1));
+      const detections = Array.isArray(r?.data?.detections) ? r.data.detections : Array.isArray(r?.detections) ? r.detections : [];
+      const eventId = String(detections[0] || "").trim();
       return {
         id: r?.id || `${rs}-${re}`,
         start: rs,
         end: re > rs ? re : rs + 1,
-        severity
+        severity,
+        eventId,
+        snapshotUrl: eventId ? `/api/frigate/${encodeURIComponent(clientId)}/notifications/${encodeURIComponent(eventId)}/snapshot.jpg` : ""
       };
     }).filter(Boolean).sort((a, b) => a.start - b.start);
     this._recordingAlertCache.set(cacheKey, alerts);
@@ -22063,6 +22167,9 @@ const FrigateViewCard = class extends HTMLElement {
     const ticks = this._$("#recording-scrub-ticks");
     const markers = this._$("#recording-scrub-markers");
     const cursor = this._$("#recording-scrub-cursor");
+    const preview = this._$("#recording-scrub-preview");
+    const previewImage = this._$("#recording-scrub-preview-image");
+    const previewLabel = this._$("#recording-scrub-preview-label");
     const labelStart = this._$("#recording-scrub-start");
     const labelNow = this._$("#recording-scrub-now");
     const labelEnd = this._$("#recording-scrub-end");
@@ -22113,9 +22220,13 @@ const FrigateViewCard = class extends HTMLElement {
       video,
       ticks,
       markers,
+      preview,
+      previewImage,
+      previewLabel,
       state,
       setCursor: (timeSec) => this._setRecordingScrubCursor(timeSec),
-      seekToRatio: (ratio, options) => this._seekRecordingScrubToRatio(ratio, options)
+      seekToRatio: (ratio, options) => this._seekRecordingScrubToRatio(ratio, options),
+      formatTime: (seconds) => this._fmtScrubTime(seconds)
     });
     this._recordingScrubController.bind();
   }

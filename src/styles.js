@@ -634,10 +634,14 @@ export const STYLES = `
   .recording-scrub-track {position:relative;width:100%;height:28px;border-radius:999px;background:var(--c-bg-scrub);cursor:pointer;touch-action:none;overflow:visible;}
   .recording-scrub-ticks {position:absolute;inset:0;pointer-events:none;z-index:3;}
   .recording-scrub-markers {position:absolute;inset:0;pointer-events:none;z-index:2;}
-  .recording-scrub-alert {position:absolute;top:2px;bottom:2px;background:var(--c-bg-alert);border-radius:999px;min-width:8px;opacity:.95;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset;}
-  .recording-scrub-detection {position:absolute;top:4px;bottom:4px;background:#f59e0b;border-radius:999px;min-width:4px;opacity:.95;}
+  .recording-scrub-alert {position:absolute;top:2px;bottom:2px;background:var(--c-bg-alert);border-radius:999px;min-width:8px;opacity:.95;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset;pointer-events:auto;}
+  .recording-scrub-detection {position:absolute;top:4px;bottom:4px;background:#f59e0b;border-radius:999px;min-width:4px;opacity:.95;pointer-events:auto;}
   .recording-scrub-tick {position:absolute;top:3px;bottom:3px;width:3px;background:rgba(15,21,40,.55);border-radius:999px;transform:translateX(-1px);box-shadow:0 0 0 1px rgba(255,255,255,.28);}
   .recording-scrub-cursor {position:absolute;top:-6px;bottom:-6px;width:3px;background:rgba(255,255,255,.97);border-radius:999px;left:0;transform:translateX(-1px);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25);z-index:4;}
+  .recording-scrub-preview {position:absolute;bottom:calc(100% + 8px);left:50%;width:min(200px,calc(100% - 12px));padding:4px;background:var(--c-bg-main);border:1px solid var(--c-border2);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.42);transform:translateX(-50%);pointer-events:none;z-index:8;box-sizing:border-box;}
+  .recording-scrub-preview[hidden] {display:none;}
+  .recording-scrub-preview img {display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:5px;background:var(--c-bg-deep);}
+  .recording-scrub-preview span {display:block;padding:4px 2px 1px;font-size:.7rem;font-weight:700;color:var(--c-text2);text-transform:none;line-height:1.2;}
   .recording-scrub-labels {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.78rem;color:var(--c-text2);font-weight:600;line-height:1;}
   .recording-scrub-now {font-variant-numeric:tabular-nums;}
 
