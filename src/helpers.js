@@ -624,6 +624,12 @@ export const buildEditorConfigFromDom = ({
   nextConfig.wide_view_page_enabled = resolveSwitchChecked(
     root.querySelector("#wide_view_page_enabled"),
   );
+  nextConfig.wide_view_live_cameras = resolveSwitchChecked(
+    root.querySelector("#wide_view_live_cameras"),
+  );
+  nextConfig.wide_view_alert_takeover = resolveSwitchChecked(
+    root.querySelector("#wide_view_alert_takeover"),
+  );
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value ||

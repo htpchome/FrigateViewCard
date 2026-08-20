@@ -188,6 +188,35 @@ test("buildToolsMarkup supports custom tool button class", () => {
   assert.doesNotMatch(markup, /class="tool/);
 });
 
+test("buildToolsMarkup places Wide View alert takeover beside grid", () => {
+  const markup = buildToolsMarkup({
+    tab: "alerts",
+    viewMode: "single",
+    icons,
+    isFilterPanelOpen: false,
+    isCalendarPanelOpen: false,
+    isGridModeAvailable: true,
+    isSlideshowRotationAvailable: false,
+    isSlideshowActive: false,
+    isControlsVisible: true,
+    gridButtonIcon: "G",
+    slideshowButtonIcon: "L",
+    showWideAlertTakeover: true,
+    wideAlertTakeoverEnabled: true,
+    wideAlertTakeoverButtonIcon: "T",
+  });
+
+  assert.match(
+    markup,
+    /id="grid-btn"[\s\S]*?id="wide-alert-takeover-btn"/,
+  );
+  assert.match(
+    markup,
+    /class="tool active" id="wide-alert-takeover-btn"[^>]*aria-pressed="true"/,
+  );
+  assert.match(markup, /title="Disable Alert Camera Takeover"/);
+});
+
 test("buildControlsSectionMarkup enables pan, tilt, and zoom on the circle pad", () => {
   const markup = buildControlsSectionMarkup({
     cameraName: "Driveway",

@@ -102,7 +102,19 @@ test("grid mode toolbar and runtime hooks are present", () => {
     true,
   );
   assert.equal(
-    gridMediaControllerSource.includes('liveStreamHint === "mse"'),
+    gridMediaControllerSource.includes("_mountGridGo2RtcCell"),
+    true,
+  );
+  assert.equal(
+    gridMediaControllerSource.includes(
+      "this._host._shouldUseGo2RtcForEntity(entity)",
+    ),
+    true,
+  );
+  assert.equal(
+    ["tryMountWebRtc", "tryMountMse", "tryMountHls"].every((method) =>
+      gridMediaControllerSource.includes(method),
+    ),
     true,
   );
   assert.equal(

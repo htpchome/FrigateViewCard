@@ -56,6 +56,24 @@ test("activateWideViewPageRoute handles startup and mounts engine", () => {
   ]);
 });
 
+test("activateWideViewPageRoute starts the Companion Camera session", () => {
+  const { host, calls } = createHost({ isWide: true });
+  const companionController = {
+    start: () => calls.push(["startCompanions"]),
+  };
+  const controller = new WideViewPageController(
+    host,
+    { PAGE_IDS },
+    { companionController },
+  );
+  controller.applyLayoutModeForCard = () => calls.push(["applyLayoutMode"]);
+  controller.syncColHeight = () => calls.push(["syncColHeight"]);
+
+  controller.activateWideViewPageRoute({ startup: true });
+
+  assert.deepEqual(calls.slice(-2), [["mountEngine"], ["startCompanions"]]);
+});
+
 test("activateWideViewPageRoute startup grid chooses grid mode", () => {
   const { host, calls } = createHost({ isWide: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });

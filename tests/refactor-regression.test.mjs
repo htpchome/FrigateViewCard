@@ -439,7 +439,7 @@ test("go2rtc ownership is pulled out of the card shell", () => {
   assert.equal(cardSource.includes("_gridPageCameraIndices("), false);
   assert.equal(cardSource.includes("_scheduleDeferredWebRtcTakeover("), false);
   assert.equal(
-    /_mountGridCameraCellMedia\([\s\S]*?liveStreamHint === "mse" &&[\s\S]*?_host\._shouldUseGo2RtcForEntity\(entity\)/.test(
+    /_mountGridCameraCellMedia\([\s\S]*?_host\._shouldUseGo2RtcForEntity\(entity\)[\s\S]*?_mountGridGo2RtcCell/.test(
       gridMediaControllerSource,
     ),
     true,

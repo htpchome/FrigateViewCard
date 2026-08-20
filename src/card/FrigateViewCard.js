@@ -315,6 +315,7 @@ import {
 import { SingleViewPageController } from "../features/single-view/page.ctrl.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../features/single-view/page.tmpl.js";
 import { WideViewPageController } from "../features/wide-view/page.ctrl.js";
+import { WideViewCompanionController } from "../features/wide-view/companion.ctrl.js";
 import { SlideshowAlertController } from "../features/slideshow/alert.ctrl.js";
 import { SlideshowPageController } from "../features/slideshow/page.ctrl.js";
 import {
@@ -573,8 +574,18 @@ export class FrigateViewCard extends HTMLElement {
     this._singleViewPageController = new SingleViewPageController(this, {
       PAGE_IDS,
     });
+    this._wideViewCompanionController = new WideViewCompanionController(this, {
+      DAY,
+      ICONS,
+      PAGE_IDS,
+      PREVIEW_ALERT_HOLD_MS,
+      PREVIEW_ALERT_END_GRACE_MS,
+      SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC,
+    });
     this._wideViewPageController = new WideViewPageController(this, {
       PAGE_IDS,
+    }, {
+      companionController: this._wideViewCompanionController,
     });
     this._pageNavigationController = new PageNavigationController(this, {
       buildPageNavButtonsMarkup,
@@ -1120,8 +1131,17 @@ export class FrigateViewCard extends HTMLElement {
       preview_page_live_cameras: config.preview_page_live_cameras === true,
       preview_page_show_title_bars:
         config.preview_page_show_title_bars !== false,
+      preview_page_alert_live_duration_seconds:
+        normalizeBoundedPositiveInteger(
+          config.preview_page_alert_live_duration_seconds,
+          Math.round(PREVIEW_ALERT_HOLD_MS / 1000),
+          5,
+          60,
+        ),
       wide_view_page_enabled:
         config.wide_view_page_enabled === true || config.wide_view === true,
+      wide_view_live_cameras: config.wide_view_live_cameras === true,
+      wide_view_alert_takeover: config.wide_view_alert_takeover === true,
       landing_page: normalizePageRoute(config.landing_page),
       mobile_page: normalizePageRoute(config.mobile_page),
       deep_link_enabled: config.deep_link_enabled !== false,
@@ -1188,12 +1208,18 @@ export class FrigateViewCard extends HTMLElement {
     const wideViewPageEnabledChanged =
       !!prevConfig &&
       prevConfig.wide_view_page_enabled !== nextConfig.wide_view_page_enabled;
+    const wideViewTakeoverDefaultChanged =
+      !!prevConfig &&
+      prevConfig.wide_view_alert_takeover !==
+        nextConfig.wide_view_alert_takeover;
     const previewVisualChanged =
       !!prevConfig &&
       (prevConfig.preview_page_live_cameras !==
         nextConfig.preview_page_live_cameras ||
         prevConfig.preview_page_show_title_bars !==
-          nextConfig.preview_page_show_title_bars);
+          nextConfig.preview_page_show_title_bars ||
+        prevConfig.preview_page_alert_live_duration_seconds !==
+          nextConfig.preview_page_alert_live_duration_seconds);
     const previewModeConfigChanged =
       previewEnabledChanged || previewVisualChanged;
 
@@ -1212,6 +1238,11 @@ export class FrigateViewCard extends HTMLElement {
     this._browseOpen = this._config.browse_expanded;
     for (const c of cameras) {
       if (!this._camCache[c.entity]) this._camCache[c.entity] = mkCamState();
+    }
+    if (prevConfig) {
+      this._wideViewPageController.applyCompanionConfigUpdate({
+        takeoverDefaultChanged: wideViewTakeoverDefaultChanged,
+      });
     }
 
     if (!wasStarted || !prevConfig) {
@@ -1357,6 +1388,7 @@ export class FrigateViewCard extends HTMLElement {
     this._stopSlideshowRotation("disconnect", false);
     this._stopGridModeState();
     this._stopPreviewMode();
+    this._wideViewPageController?.stopCompanionMode?.();
     if (this._rt) clearTimeout(this._rt);
     this._rt = null;
     if (this._refresh) clearInterval(this._refresh);
@@ -2058,7 +2090,16 @@ export class FrigateViewCard extends HTMLElement {
     const shouldRefreshGrid =
       this._viewMode === "grid" &&
       this._config?.grid_live_view_enabled === false;
-    if (!shouldRefreshPreview && !shouldRefreshGrid) return;
+    const shouldRefreshWideCompanions =
+      this._wideViewPageController.isWideViewPageActive() &&
+      !this._wideViewPageController.companionLiveCamerasEnabled();
+    if (
+      !shouldRefreshPreview &&
+      !shouldRefreshGrid &&
+      !shouldRefreshWideCompanions
+    ) {
+      return;
+    }
     this._snapshotRefreshT = setTimeout(() => {
       this._snapshotRefreshT = null;
       if (
@@ -2073,6 +2114,15 @@ export class FrigateViewCard extends HTMLElement {
       if (
         this._viewMode === "grid" &&
         this._config?.grid_live_view_enabled === false
+      ) {
+        void this._refreshSnapshotMedia().finally(() => {
+          this._syncSnapshotRefreshTimer();
+        });
+        return;
+      }
+      if (
+        this._wideViewPageController.isWideViewPageActive() &&
+        !this._wideViewPageController.companionLiveCamerasEnabled()
       ) {
         void this._refreshSnapshotMedia().finally(() => {
           this._syncSnapshotRefreshTimer();
@@ -2370,13 +2420,20 @@ export class FrigateViewCard extends HTMLElement {
     ) {
       const shouldShowGrid = this._isGridModeAvailable();
       const shouldShowSlideshow = this._isSlideshowRotationAvailable();
+      const shouldShowWideAlertTakeover =
+        this._wideViewPageController.isWideViewPageActive();
       const controlsBtnPresent = !!this._pageShellRegionElement("tools", "#controls-btn");
       const gridBtnPresent = !!this._pageShellRegionElement("tools", "#grid-btn");
       const slideshowBtnPresent = !!this._pageShellRegionElement("tools", "#slideshow-btn");
+      const wideAlertTakeoverBtnPresent = !!this._pageShellRegionElement(
+        "tools",
+        "#wide-alert-takeover-btn",
+      );
       const needsToolsRerender =
         (buttonStates.controlsVisible && !controlsBtnPresent) ||
         (shouldShowGrid && !gridBtnPresent) ||
-        (shouldShowSlideshow && !slideshowBtnPresent);
+        (shouldShowSlideshow && !slideshowBtnPresent) ||
+        (shouldShowWideAlertTakeover && !wideAlertTakeoverBtnPresent);
       if (needsToolsRerender) {
         this._syncTabsShell();
       }
@@ -2408,6 +2465,26 @@ export class FrigateViewCard extends HTMLElement {
           this._setViewMode("single");
         }
       }
+    }
+
+    const wideAlertTakeoverBtn = this._pageShellRegionElement(
+      "tools",
+      "#wide-alert-takeover-btn",
+    );
+    if (wideAlertTakeoverBtn) {
+      const active =
+        this._wideViewPageController.companionAlertTakeoverEnabled();
+      const label = active
+        ? "Disable Alert Camera Takeover"
+        : "Enable Alert Camera Takeover";
+      wideAlertTakeoverBtn.classList.toggle("active", active);
+      wideAlertTakeoverBtn.setAttribute(
+        "aria-pressed",
+        active ? "true" : "false",
+      );
+      wideAlertTakeoverBtn.setAttribute("title", label);
+      wideAlertTakeoverBtn.setAttribute("aria-label", label);
+      wideAlertTakeoverBtn.innerHTML = ICONS.alerts;
     }
 
     const slideshowBtn = this._pageShellRegionElement("tools", "#slideshow-btn");
@@ -2646,6 +2723,10 @@ export class FrigateViewCard extends HTMLElement {
         entity,
         severity,
         this._previewAlertHoldMs(),
+      );
+      this._wideViewPageController?.handleCompanionHaReviewStatus?.(
+        entity,
+        severity,
       );
     }
 
@@ -2887,6 +2968,7 @@ export class FrigateViewCard extends HTMLElement {
     const onRealtimeMessage = (msg) => {
       this._handleGridRealtimeMessage(msg);
       this._previewAlertController.handleRealtimeMessage(msg);
+      this._wideViewPageController?.handleCompanionRealtimeMessage?.(msg);
       this._handleSlideshowRealtimeMessage(msg);
       if (!this._isNowWindow()) return;
       if (!this._isRealtimeEventMessage(msg)) return;
@@ -3028,6 +3110,11 @@ export class FrigateViewCard extends HTMLElement {
       calendarDisabled: buttonStates.calendarDisabled,
       gridButtonIcon: this._gridButtonIcon(),
       slideshowButtonIcon: this._slideshowButtonIcon(),
+      showWideAlertTakeover:
+        this._wideViewPageController.isWideViewPageActive(),
+      wideAlertTakeoverEnabled:
+        this._wideViewPageController.companionAlertTakeoverEnabled(),
+      wideAlertTakeoverButtonIcon: ICONS.alerts,
     });
 
     this._tab = activeTab;
@@ -3148,6 +3235,9 @@ export class FrigateViewCard extends HTMLElement {
         includeFrigateView: !isWideViewPage,
       }),
       wideFooterIcon: isWideViewPage ? ICONS.frigateView : "",
+      companionCameras: isWideViewPage
+        ? this._wideViewPageController.buildCompanionRegionMarkup()
+        : "",
     };
     const mainLayoutShell = resolvePageMainLayoutShellMarkup(shellProfile, {
       host: this,
@@ -3173,6 +3263,7 @@ export class FrigateViewCard extends HTMLElement {
       icons: ICONS,
       version: VERSION,
     });
+    this._wideViewPageController.teardownCompanionMedia();
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._cardStateClassNames()}" id="card" style="border-radius: var(--fvc-border-radius);">
 
@@ -3195,6 +3286,7 @@ export class FrigateViewCard extends HTMLElement {
     this._initLiveOverlayControls();
     this._syncSlideshowCountdownOverlay();
     this._renderPreviewPage();
+    this._wideViewPageController.renderCompanionCameras();
     this._applyPreviewShellVisibility();
     this._syncMobileViewPageMarkup();
     this._syncPictureInPictureButtons();
@@ -4095,6 +4187,11 @@ export class FrigateViewCard extends HTMLElement {
       void this._toggleTwoWayTalkSession();
       return true;
     }
+    const wideAlertTakeoverBtn = target.closest("#wide-alert-takeover-btn");
+    if (wideAlertTakeoverBtn) {
+      this._wideViewPageController.toggleCompanionAlertTakeover();
+      return true;
+    }
     const gridBtn = target.closest("#grid-btn");
     if (gridBtn) {
       if (gridBtn.disabled) return true;
@@ -4197,12 +4294,26 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handleSidebarClick(target) {
+    if (this._handleWideViewSidebarClick(target)) return true;
     if (this._handlePreviewSidebarClick(target)) return true;
     if (this._handleSidebarNavigationClick(target)) return true;
     if (this._handleSidebarCameraClick(target)) return true;
     if (this._handleSidebarCalendarClick(target)) return true;
     if (this._handleSidebarFilterClick(target)) return true;
     return false;
+  }
+  _handleWideViewSidebarClick(target) {
+    const companionCell = target.closest("[data-wide-companion-camidx]");
+    if (
+      !companionCell ||
+      !this._wideViewPageController.isWideViewPageActive()
+    ) {
+      return false;
+    }
+    this._wideViewPageController.selectCompanionCamera(
+      Number(companionCell.dataset.wideCompanionCamidx),
+    );
+    return true;
   }
   _handleSidebarFilterClick(target) {
     return this._browseFilterController.handleSidebarFilterClick(target);
@@ -5756,6 +5867,7 @@ export class FrigateViewCard extends HTMLElement {
     this._renderCamSwitcher();
     this._renderList();
     this._syncStatus();
+    this._wideViewPageController.renderCompanionCameras();
   }
   _renderStats() {
     this._activeStandardPageController().renderStats();

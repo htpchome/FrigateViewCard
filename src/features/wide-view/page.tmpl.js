@@ -23,6 +23,7 @@ function normalizeRegions(regions) {
     browse: "",
     footer: "",
     wideFooterIcon: "",
+    companionCameras: "",
     ...suppliedRegions,
   };
 }
@@ -75,7 +76,7 @@ export function buildWideViewMainLayoutShellMarkup({
               </div>
             </div>
 
-          <!-- NEW CAMERA INSERTION LOCATION -->
+            ${regions.companionCameras}
 
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>

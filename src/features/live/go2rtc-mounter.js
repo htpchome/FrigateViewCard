@@ -308,7 +308,7 @@ export function createGo2RtcMounter({
       buildVideoOptionsForView(
         "live",
         {
-          muted: getStreamMuted(),
+          muted: options?.muted ?? getStreamMuted(),
           controls: false,
         },
         { scopeKey },
@@ -450,7 +450,7 @@ export function createGo2RtcMounter({
       buildVideoOptionsForView(
         "live",
         {
-          muted: getStreamMuted(),
+          muted: options?.muted ?? getStreamMuted(),
           controls: false,
           src: hlsSource.url,
         },

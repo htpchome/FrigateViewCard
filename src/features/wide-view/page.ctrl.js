@@ -1,9 +1,10 @@
 import { activateStandardPageRouteLifecycle } from "../navigation/route-lifecycle.js";
 
 export class WideViewPageController {
-  constructor(host, constants) {
+  constructor(host, constants, options = {}) {
     this._host = host;
     this._constants = constants;
+    this._companionController = options.companionController || null;
   }
 
   activateWideViewPageRoute(context = {}) {
@@ -13,6 +14,62 @@ export class WideViewPageController {
       previewPageId: this._constants.PAGE_IDS.preview,
       applyRouteFrame: () => this._applyWideViewRouteFrame(),
     });
+    this.startCompanionMode();
+  }
+
+  buildCompanionRegionMarkup() {
+    return this._companionController?.buildRegionMarkup?.() || "";
+  }
+
+  renderCompanionCameras() {
+    this._companionController?.render?.();
+  }
+
+  teardownCompanionMedia() {
+    this._companionController?.teardownMedia?.();
+  }
+
+  startCompanionMode() {
+    this._companionController?.start?.();
+  }
+
+  stopCompanionMode() {
+    this._companionController?.stop?.();
+  }
+
+  handleCompanionRealtimeMessage(msg) {
+    this._companionController?.handleRealtimeMessage?.(msg);
+  }
+
+  handleCompanionHaReviewStatus(entity, severity) {
+    return (
+      this._companionController?.handleHaReviewStatus?.(entity, severity) ===
+      true
+    );
+  }
+
+  handleCompanionHassUpdate() {
+    this._companionController?.handleHassUpdate?.();
+  }
+
+  applyCompanionConfigUpdate(options = {}) {
+    this._companionController?.applyConfigUpdate?.(options);
+  }
+
+  companionLiveCamerasEnabled() {
+    return this._companionController?.liveCamerasEnabled?.() === true;
+  }
+
+  companionAlertTakeoverEnabled() {
+    return this._companionController?.alertTakeoverEnabled?.() === true;
+  }
+
+  toggleCompanionAlertTakeover() {
+    return this._companionController?.toggleAlertTakeover?.() === true;
+  }
+
+  selectCompanionCamera(index) {
+    this._companionController?.selectCamera?.(index);
   }
 
   _applyWideViewRouteFrame() {

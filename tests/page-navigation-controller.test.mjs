@@ -57,6 +57,9 @@ const createHarness = () => {
     _activateMobileViewPageRoute: (context) => calls.push(["mobile", context]),
     _activatePreviewPageRoute: (context) => calls.push(["preview", context]),
     _activateWideViewPageRoute: (context) => calls.push(["wide", context]),
+    _wideViewPageController: {
+      stopCompanionMode: () => calls.push(["stopCompanions"]),
+    },
     _syncMobileViewPageMarkup: () => calls.push(["syncMobileViewMarkup"]),
     _renderShell: () => calls.push(["renderShell"]),
     _deviceRouteBucket: () => "desktop",
@@ -145,6 +148,18 @@ test("factory callbacks update page state and sync nav buttons", () => {
   input.onBeforeNavigate(PAGE_IDS.wideView, context);
   input.onAfterNavigate(PAGE_IDS.wideView);
   assert.equal(h.host._lastNonPreviewPageId, PAGE_IDS.wideView);
+});
+
+test("factory stops Companion Cameras when navigation leaves Wide View", () => {
+  const h = createHarness();
+  const controller = new PageNavigationController(h.host, h.constants);
+  controller.ensureNavigationFactory();
+  const input = h.getInput();
+  h.host._pageId = PAGE_IDS.wideView;
+
+  input.onBeforeNavigate(PAGE_IDS.singleView, {});
+
+  assert.deepEqual(h.calls, [["stopCompanions"]]);
 });
 
 test("factory page activators route to host handlers", () => {

@@ -123,7 +123,14 @@ export class PageNavigationController {
       getDeviceBucket: () => this._host._deviceRouteBucket(),
       getConfig: () => this._host._config || {},
       onBeforeNavigate: (nextPageId, context) => {
-        context.previousPageId = this._host._pageId || PAGE_IDS.singleView;
+        const previousPageId = this._host._pageId || PAGE_IDS.singleView;
+        context.previousPageId = previousPageId;
+        if (
+          previousPageId === PAGE_IDS.wideView &&
+          nextPageId !== PAGE_IDS.wideView
+        ) {
+          this._host._wideViewPageController?.stopCompanionMode?.();
+        }
         this._host._pageId = nextPageId;
         this._host._previewPageActive = nextPageId === PAGE_IDS.preview;
       },

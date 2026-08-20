@@ -1064,6 +1064,8 @@ export class FrigateViewCardEditor extends HTMLElement {
       "#preview_page_alert_live_duration_seconds",
       "#preview_page_show_title_bars",
       "#wide_view_page_enabled",
+      "#wide_view_live_cameras",
+      "#wide_view_alert_takeover",
       "#landing_page",
       "#mobile_page",
       "#stream_height",
@@ -1306,6 +1308,14 @@ export class FrigateViewCardEditor extends HTMLElement {
             <div class="field-helper" id="snapshot_update_seconds-output">${this._config?.snapshot_update_seconds ?? SNAPSHOT_UPDATE_SECONDS} seconds</div>
           </div>
         </div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
+          <div id="preview_alert_live_duration_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <span class="field-label" style="margin:0">Alert Camera Live Duration</span>
+            <input id="preview_page_alert_live_duration_seconds" type="range" min="5" max="60" step="1" value="${this._config?.preview_page_alert_live_duration_seconds ?? 10}" style="width:100%">
+            <div class="field-helper">How long an alerted snapshot camera remains live on Preview and in Wide View Companion Cameras.</div>
+            <div class="field-helper" id="preview_page_alert_live_duration_seconds-output">${this._config?.preview_page_alert_live_duration_seconds ?? 10} seconds</div>
+          </div>
+        </div>
       </div>
       <div class="section">
         <div class="layout-row">
@@ -1428,15 +1438,6 @@ export class FrigateViewCardEditor extends HTMLElement {
         </div>
         <div class="field-helper">On = all preview cameras load live. Off = snapshots, with alert/review cameras promoted to temporary live view.</div>
       </div>
-      <div id="preview_alert_live_duration_row" class="section" style="display:${this._config?.preview_page_live_cameras ? "none" : "block"}">
-        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
-          <div style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
-            <span class="field-label" style="margin:0">Preview Alert Live Duration</span>
-            <input id="preview_page_alert_live_duration_seconds" type="range" min="5" max="60" step="1" value="${this._config?.preview_page_alert_live_duration_seconds ?? 10}" style="width:100%">
-            <div class="field-helper" id="preview_page_alert_live_duration_seconds-output">${this._config?.preview_page_alert_live_duration_seconds ?? 10} seconds</div>
-          </div>
-        </div>
-      </div>
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Show Title Bars</span>
@@ -1457,6 +1458,20 @@ export class FrigateViewCardEditor extends HTMLElement {
           <ha-switch id="wide_view_page_enabled" ${this._config?.wide_view_page_enabled ? "checked" : ""}></ha-switch>
         </div>
         <div class="field-helper">When enabled, Wide View becomes available in navigation and as a desktop/tablet landing page option.</div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Live Companion Cameras</span>
+          <ha-switch id="wide_view_live_cameras" ${this._config?.wide_view_live_cameras ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">On = all Companion Cameras remain live. Off = refreshed snapshots, with alerted cameras temporarily promoted to live.</div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Alert Camera Takeover Default</span>
+          <ha-switch id="wide_view_alert_takeover" ${this._config?.wide_view_alert_takeover ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">Sets the initial state of the Wide View toolbar button that allows alerted cameras to take over the main live view.</div>
       </div>
       <div id="col-width-row" style="display:flex;align-items:center;gap:6px;margin-top:6px;${this._config?.wide_view_page_enabled ? "" : "display:none"}">
         <label style="font-size:11px;color:var(--c-text);white-space:nowrap">Left Width %</label>
@@ -2041,6 +2056,8 @@ export class FrigateViewCardEditor extends HTMLElement {
       ids: [
         "tight_margins",
         "wide_view_page_enabled",
+        "wide_view_live_cameras",
+        "wide_view_alert_takeover",
         "mobile_view_page_enabled",
         "shadows",
         "borders",
@@ -2062,9 +2079,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       events: ["input", "change", "value-changed"],
       handler: () => {
         const slideshowRow = this.querySelector("#slideshow_rotation_row");
-        const previewDurationRow = this.querySelector(
-          "#preview_alert_live_duration_row",
-        );
         const enabled =
           this.querySelector("#slideshow_rotation_enabled")?.checked === true;
         const gridRow = this.querySelector("#grid_rotation_row");
@@ -2072,14 +2086,8 @@ export class FrigateViewCardEditor extends HTMLElement {
         const gridLiveRow = this.querySelector("#grid_live_row");
         const gridEnabled =
           this.querySelector("#grid_mode_enabled")?.checked === true;
-        const liveCamerasEnabled =
-          this.querySelector("#preview_page_live_cameras")?.checked === true;
         if (slideshowRow)
           slideshowRow.style.display = enabled ? "flex" : "none";
-        if (previewDurationRow)
-          previewDurationRow.style.display = liveCamerasEnabled
-            ? "none"
-            : "block";
         if (gridStartRow)
           gridStartRow.style.display = gridEnabled ? "flex" : "none";
         if (gridLiveRow)

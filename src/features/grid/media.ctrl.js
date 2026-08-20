@@ -109,7 +109,7 @@ export class GridMediaController {
 
   async refreshSnapshotMedia({ cacheBustValue = Date.now() } = {}) {
     const hosts = this._host.shadowRoot?.querySelectorAll(
-      ".preview-media-host[data-preview-use-live='0'], .live-grid-cell[data-grid-use-live='0']",
+      ".preview-media-host[data-preview-use-live='0'], .live-grid-cell[data-grid-use-live='0'], .wide-companion-media-host[data-wide-companion-use-live='0']",
     );
     if (!hosts?.length) return;
 
@@ -118,7 +118,10 @@ export class GridMediaController {
         const img = host.querySelector?.("img");
         if (!img || !img.isConnected) return;
         const entity =
-          host.dataset.previewMediaEntity || host.dataset.gridEntity || "";
+          host.dataset.previewMediaEntity ||
+          host.dataset.gridEntity ||
+          host.dataset.wideCompanionMediaEntity ||
+          "";
         if (!entity) return;
         const stateObj = this._host._hass?.states?.[entity] || null;
         const resolvedUrl = await this._resolveSnapshotImageUrl(
@@ -135,26 +138,41 @@ export class GridMediaController {
     );
   }
 
-  _mountGridDirectMseCell(cell, entity, gridState, options = {}) {
+  _mountGridGo2RtcCell(cell, entity, gridState, options = {}) {
     const host = document.createElement("div");
     host.style.cssText = "width:100%;height:100%;display:block";
     cell.appendChild(host);
     void (async () => {
-      const result = await this._host._go2rtcMounter.tryMountMse(
-        host,
-        {
-          waitMs: 4000,
-          minCurrentTime: 0.05,
-          minDecodedFrames: 1,
-          requireReadyState: 2,
-          strict: true,
-        },
-        {
-          commit: false,
-          entity,
-          muted: true,
-        },
-      );
+      const liveStreamHint = String(options.liveStreamHint || "mse")
+        .trim()
+        .toLowerCase();
+      const mountMethod =
+        liveStreamHint === "webrtc"
+          ? "tryMountWebRtc"
+          : liveStreamHint === "hls"
+            ? "tryMountHls"
+            : "tryMountMse";
+      const startup =
+        liveStreamHint === "webrtc"
+          ? { waitMs: 7000 }
+          : liveStreamHint === "hls"
+            ? { waitMs: 5000 }
+            : {
+                waitMs: 4000,
+                minCurrentTime: 0.05,
+                minDecodedFrames: 1,
+                requireReadyState: 2,
+                strict: true,
+              };
+      const mount = this._host._go2rtcMounter?.[mountMethod];
+      const result =
+        typeof mount === "function"
+          ? await mount.call(this._host._go2rtcMounter, host, startup, {
+              commit: false,
+              entity,
+              muted: true,
+            })
+          : false;
       if (!result?.ok) {
         if (host.isConnected) {
           host.remove();
@@ -196,16 +214,14 @@ export class GridMediaController {
     },
   ) {
     if (!cell || !entity) return false;
-    if (stateObj && useLive) {
-      if (
-        liveStreamHint === "mse" &&
-        this._host._shouldUseGo2RtcForEntity(entity)
-      ) {
-        this._mountGridDirectMseCell(cell, entity, gridState, {
+    if (useLive) {
+      if (this._host._shouldUseGo2RtcForEntity(entity)) {
+        this._mountGridGo2RtcCell(cell, entity, gridState, {
           fallbackOnFailure: fallbackOnLiveError,
           stateObj,
+          liveStreamHint,
         });
-      } else {
+      } else if (stateObj) {
         const stream = createHaCameraStreamElement({
           hass: this._host._hass,
           stateObj,
@@ -231,6 +247,8 @@ export class GridMediaController {
             stream.remove();
           } catch (_) {}
         });
+      } else {
+        return this._mountGridSnapshotCell(cell, { entity, stateObj });
       }
       return true;
     }

@@ -258,6 +258,18 @@ export const compactEditorConfigForYaml = (
   );
   addIfNotDefault(
     compact,
+    "wide_view_live_cameras",
+    source.wide_view_live_cameras === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
+    "wide_view_alert_takeover",
+    source.wide_view_alert_takeover === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
     "landing_page",
     normalizePageRoute(source.landing_page),
     PAGE_IDS.singleView,

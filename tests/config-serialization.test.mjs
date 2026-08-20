@@ -50,6 +50,8 @@ test("editor YAML config omits normalized default values", () => {
     wide_view: false,
     col_left_width_pct: 50,
     preview_page_alert_live_duration_seconds: 10,
+    wide_view_live_cameras: false,
+    wide_view_alert_takeover: false,
     hidden_tabs: [],
   });
 
@@ -276,6 +278,8 @@ test("preview draft carries hidden tabs and page routes", () => {
     preview_page_alert_live_duration_seconds: 12,
     slideshow_alert_hold_seconds: 14,
     grid_alert_hold_seconds: 16,
+    wide_view_live_cameras: true,
+    wide_view_alert_takeover: true,
   });
 
   assert.equal(draft.mobile_view_page_enabled, true);
@@ -286,6 +290,8 @@ test("preview draft carries hidden tabs and page routes", () => {
   assert.equal(draft.preview_page_alert_live_duration_seconds, 12);
   assert.equal(draft.slideshow_alert_hold_seconds, 14);
   assert.equal(draft.grid_alert_hold_seconds, 16);
+  assert.equal(draft.wide_view_live_cameras, true);
+  assert.equal(draft.wide_view_alert_takeover, true);
 });
 
 test("compact YAML preserves custom alert duration settings", () => {
@@ -303,6 +309,22 @@ test("compact YAML preserves custom alert duration settings", () => {
     preview_page_alert_live_duration_seconds: 18,
     slideshow_alert_hold_seconds: 22,
     grid_alert_hold_seconds: 26,
+  });
+});
+
+test("compact YAML preserves Wide View Companion Camera settings", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    wide_view_page_enabled: true,
+    wide_view_live_cameras: true,
+    wide_view_alert_takeover: true,
+  });
+
+  assert.deepEqual(config, {
+    cameras: [{ entity: "camera.front_door" }],
+    wide_view_page_enabled: true,
+    wide_view_live_cameras: true,
+    wide_view_alert_takeover: true,
   });
 });
 

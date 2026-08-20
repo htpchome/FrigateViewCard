@@ -81,6 +81,9 @@ test("_subscribe aggregates successful realtime subscriptions into one cleanup",
     _previewAlertController: {
       handleRealtimeMessage: () => calls.push(["previewMessage"]),
     },
+    _wideViewPageController: {
+      handleCompanionRealtimeMessage: () => calls.push(["companionMessage"]),
+    },
     _handleSlideshowRealtimeMessage: () => calls.push(["slideshowMessage"]),
     _isNowWindow: () => false,
   };
@@ -94,9 +97,10 @@ test("_subscribe aggregates successful realtime subscriptions into one cleanup",
   assert.equal(callbacks.length, 2);
 
   callbacks[0]({ type: "new" });
-  assert.deepEqual(calls.slice(-3), [
+  assert.deepEqual(calls.slice(-4), [
     ["gridMessage"],
     ["previewMessage"],
+    ["companionMessage"],
     ["slideshowMessage"],
   ]);
 

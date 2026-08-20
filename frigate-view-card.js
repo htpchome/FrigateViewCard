@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1556";
+const VERSION = "1.0.1557";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1050,6 +1050,9 @@ const STYLES = `
   .preview-meta-status .dot{font-size:.82rem;line-height:1;}
   .preview-cam-buttons{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
   .preview-cam-btn{font-size:.9rem;line-height:1;padding:6px 9px;}
+  .wide-companion-panel{display:flex;flex-direction:column;gap:8px;min-width:0;padding:10px;box-sizing:border-box;}
+  .wide-companion-title{font-size:.9rem;font-weight:700;color:var(--c-text);letter-spacing:.02em;}
+  .wide-companion-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));}
   @media (max-width: 720px){
     .preview-meta{grid-template-columns:minmax(0,1fr);gap:2px;}
     .preview-meta-status{justify-self:start;}
@@ -1942,6 +1945,8 @@ const createEditorPreviewDraft = (config) => ({
   preview_page_alert_live_duration_seconds: config.preview_page_alert_live_duration_seconds,
   preview_page_show_title_bars: config.preview_page_show_title_bars,
   wide_view_page_enabled: config.wide_view_page_enabled,
+  wide_view_live_cameras: config.wide_view_live_cameras,
+  wide_view_alert_takeover: config.wide_view_alert_takeover,
   landing_page: config.landing_page,
   mobile_page: config.mobile_page,
   grid_rotation_seconds: config.grid_rotation_seconds,
@@ -2033,6 +2038,8 @@ const applyEditorPreviewDraftToCardConfig = ({
     rounded_corners: previewConfig.rounded_corners !== false,
     outer_shadows: previewConfig.outer_shadows !== false,
     wide_view_page_enabled: previewConfig.wide_view_page_enabled === true,
+    wide_view_live_cameras: previewConfig.wide_view_live_cameras === true,
+    wide_view_alert_takeover: previewConfig.wide_view_alert_takeover === true,
     landing_page: normalizePageRoute(previewConfig.landing_page),
     mobile_page: normalizePageRoute(previewConfig.mobile_page),
     col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
@@ -2478,6 +2485,18 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     compact,
     "wide_view_page_enabled",
     source.wide_view_page_enabled === true,
+    false
+  );
+  addIfNotDefault(
+    compact,
+    "wide_view_live_cameras",
+    source.wide_view_live_cameras === true,
+    false
+  );
+  addIfNotDefault(
+    compact,
+    "wide_view_alert_takeover",
+    source.wide_view_alert_takeover === true,
     false
   );
   addIfNotDefault(
@@ -3085,6 +3104,12 @@ const buildEditorConfigFromDom = ({
   nextConfig.wide_view_page_enabled = resolveSwitchChecked(
     root.querySelector("#wide_view_page_enabled")
   );
+  nextConfig.wide_view_live_cameras = resolveSwitchChecked(
+    root.querySelector("#wide_view_live_cameras")
+  );
+  nextConfig.wide_view_alert_takeover = resolveSwitchChecked(
+    root.querySelector("#wide_view_alert_takeover")
+  );
   nextConfig.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(
       root.querySelector("#grid_rotation_seconds")?.dataset.value || root.querySelector("#grid_rotation_seconds")?.value || "30"
@@ -3604,6 +3629,7 @@ function normalizeRegions2(regions) {
     browse: "",
     footer: "",
     wideFooterIcon: "",
+    companionCameras: "",
     ...suppliedRegions
   };
 }
@@ -3654,7 +3680,7 @@ function buildWideViewMainLayoutShellMarkup({
               </div>
             </div>
 
-          <!-- NEW CAMERA INSERTION LOCATION -->
+            ${regions.companionCameras}
 
           </div>
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
@@ -3926,7 +3952,10 @@ function buildToolsMarkup({
   filterDisabled,
   calendarDisabled,
   gridButtonIcon,
-  slideshowButtonIcon
+  slideshowButtonIcon,
+  showWideAlertTakeover = false,
+  wideAlertTakeoverEnabled = false,
+  wideAlertTakeoverButtonIcon = ""
 }) {
   const toolButtonClass = String(buttonClass || "tool").trim() || "tool";
   const resolvedFilterDisabled = filterDisabled || tab === "recordings";
@@ -3934,12 +3963,15 @@ function buildToolsMarkup({
   const gridHidden = !isGridModeAvailable;
   const gridActive = viewMode === "grid";
   const gridButton = gridHidden ? "" : `<button class="${toolButtonClass}${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}" ${gridDisabled ? "disabled" : ""}>${gridButtonIcon}</button>`;
+  const wideAlertTakeoverLabel = wideAlertTakeoverEnabled ? "Disable Alert Camera Takeover" : "Enable Alert Camera Takeover";
+  const wideAlertTakeoverButton = showWideAlertTakeover ? `<button class="${toolButtonClass}${wideAlertTakeoverEnabled ? " active" : ""}" id="wide-alert-takeover-btn" type="button" aria-pressed="${wideAlertTakeoverEnabled ? "true" : "false"}" title="${wideAlertTakeoverLabel}" aria-label="${wideAlertTakeoverLabel}">${wideAlertTakeoverButtonIcon}</button>` : "";
   const slideshowHidden = !isSlideshowRotationAvailable;
   const slideshowActive = isSlideshowActive;
   const slideshowButton = slideshowHidden ? "" : `<button class="${toolButtonClass} slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button><div class="divider">${icons.divider}</div>`;
   const markup = `<div class="tl-tools">
         ${controlsHidden ? "" : `<button class="${toolButtonClass}${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button><div class="divider">${icons.divider}</div>`}
         ${gridButton}
+        ${wideAlertTakeoverButton}
         ${slideshowButton}
         <button class="${toolButtonClass}${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
         <div class="filter-panel" id="filter-panel" data-fvc-region="filter-panel" style="display:none"></div>
@@ -5603,7 +5635,7 @@ function createGo2RtcMounter({
       buildVideoOptionsForView(
         "live",
         {
-          muted: getStreamMuted(),
+          muted: options?.muted ?? getStreamMuted(),
           controls: false
         },
         { scopeKey }
@@ -5732,7 +5764,7 @@ function createGo2RtcMounter({
       buildVideoOptionsForView(
         "live",
         {
-          muted: getStreamMuted(),
+          muted: options?.muted ?? getStreamMuted(),
           controls: false,
           src: hlsSource.url
         },
@@ -9304,14 +9336,14 @@ const GridMediaController = class {
   }
   async refreshSnapshotMedia({ cacheBustValue = Date.now() } = {}) {
     const hosts = this._host.shadowRoot?.querySelectorAll(
-      ".preview-media-host[data-preview-use-live='0'], .live-grid-cell[data-grid-use-live='0']"
+      ".preview-media-host[data-preview-use-live='0'], .live-grid-cell[data-grid-use-live='0'], .wide-companion-media-host[data-wide-companion-use-live='0']"
     );
     if (!hosts?.length) return;
     await Promise.all(
       Array.from(hosts).map(async (host) => {
         const img = host.querySelector?.("img");
         if (!img || !img.isConnected) return;
-        const entity = host.dataset.previewMediaEntity || host.dataset.gridEntity || "";
+        const entity = host.dataset.previewMediaEntity || host.dataset.gridEntity || host.dataset.wideCompanionMediaEntity || "";
         if (!entity) return;
         const stateObj = this._host._hass?.states?.[entity] || null;
         const resolvedUrl = await this._resolveSnapshotImageUrl(
@@ -9327,26 +9359,26 @@ const GridMediaController = class {
       })
     );
   }
-  _mountGridDirectMseCell(cell, entity, gridState, options = {}) {
+  _mountGridGo2RtcCell(cell, entity, gridState, options = {}) {
     const host = document.createElement("div");
     host.style.cssText = "width:100%;height:100%;display:block";
     cell.appendChild(host);
     void (async () => {
-      const result = await this._host._go2rtcMounter.tryMountMse(
-        host,
-        {
-          waitMs: 4e3,
-          minCurrentTime: 0.05,
-          minDecodedFrames: 1,
-          requireReadyState: 2,
-          strict: true
-        },
-        {
-          commit: false,
-          entity,
-          muted: true
-        }
-      );
+      const liveStreamHint = String(options.liveStreamHint || "mse").trim().toLowerCase();
+      const mountMethod = liveStreamHint === "webrtc" ? "tryMountWebRtc" : liveStreamHint === "hls" ? "tryMountHls" : "tryMountMse";
+      const startup = liveStreamHint === "webrtc" ? { waitMs: 7e3 } : liveStreamHint === "hls" ? { waitMs: 5e3 } : {
+        waitMs: 4e3,
+        minCurrentTime: 0.05,
+        minDecodedFrames: 1,
+        requireReadyState: 2,
+        strict: true
+      };
+      const mount = this._host._go2rtcMounter?.[mountMethod];
+      const result = typeof mount === "function" ? await mount.call(this._host._go2rtcMounter, host, startup, {
+        commit: false,
+        entity,
+        muted: true
+      }) : false;
       if (!result?.ok) {
         if (host.isConnected) {
           host.remove();
@@ -9387,13 +9419,14 @@ const GridMediaController = class {
     fallbackOnLiveError = false
   }) {
     if (!cell || !entity) return false;
-    if (stateObj && useLive) {
-      if (liveStreamHint === "mse" && this._host._shouldUseGo2RtcForEntity(entity)) {
-        this._mountGridDirectMseCell(cell, entity, gridState, {
+    if (useLive) {
+      if (this._host._shouldUseGo2RtcForEntity(entity)) {
+        this._mountGridGo2RtcCell(cell, entity, gridState, {
           fallbackOnFailure: fallbackOnLiveError,
-          stateObj
+          stateObj,
+          liveStreamHint
         });
-      } else {
+      } else if (stateObj) {
         const stream = createHaCameraStreamElement({
           hass: this._host._hass,
           stateObj,
@@ -9420,6 +9453,8 @@ const GridMediaController = class {
           } catch (_) {
           }
         });
+      } else {
+        return this._mountGridSnapshotCell(cell, { entity, stateObj });
       }
       return true;
     }
@@ -14497,7 +14532,11 @@ const PageNavigationController = class {
       getDeviceBucket: () => this._host._deviceRouteBucket(),
       getConfig: () => this._host._config || {},
       onBeforeNavigate: (nextPageId, context) => {
-        context.previousPageId = this._host._pageId || PAGE_IDS2.singleView;
+        const previousPageId = this._host._pageId || PAGE_IDS2.singleView;
+        context.previousPageId = previousPageId;
+        if (previousPageId === PAGE_IDS2.wideView && nextPageId !== PAGE_IDS2.wideView) {
+          this._host._wideViewPageController?.stopCompanionMode?.();
+        }
         this._host._pageId = nextPageId;
         this._host._previewPageActive = nextPageId === PAGE_IDS2.preview;
       },
@@ -16774,6 +16813,7 @@ const SingleViewPageController = class {
     if (cameraStateChanged) {
       this._host._syncStatus();
       this._host._kickLiveIfStale();
+      this._host._wideViewPageController?.handleCompanionHassUpdate?.();
       if (this._host._viewMode === "grid") {
         this._host._scheduleGridRefresh?.(120);
         this._host._gridAlertController?.scheduleAlertWatch?.(120);
@@ -16874,9 +16914,10 @@ const SingleViewPageController = class {
 
 // src/features/wide-view/page.ctrl.js
 const WideViewPageController = class {
-  constructor(host, constants) {
+  constructor(host, constants, options = {}) {
     this._host = host;
     this._constants = constants;
+    this._companionController = options.companionController || null;
   }
   activateWideViewPageRoute(context = {}) {
     activateStandardPageRouteLifecycle({
@@ -16885,6 +16926,46 @@ const WideViewPageController = class {
       previewPageId: this._constants.PAGE_IDS.preview,
       applyRouteFrame: () => this._applyWideViewRouteFrame()
     });
+    this.startCompanionMode();
+  }
+  buildCompanionRegionMarkup() {
+    return this._companionController?.buildRegionMarkup?.() || "";
+  }
+  renderCompanionCameras() {
+    this._companionController?.render?.();
+  }
+  teardownCompanionMedia() {
+    this._companionController?.teardownMedia?.();
+  }
+  startCompanionMode() {
+    this._companionController?.start?.();
+  }
+  stopCompanionMode() {
+    this._companionController?.stop?.();
+  }
+  handleCompanionRealtimeMessage(msg) {
+    this._companionController?.handleRealtimeMessage?.(msg);
+  }
+  handleCompanionHaReviewStatus(entity, severity) {
+    return this._companionController?.handleHaReviewStatus?.(entity, severity) === true;
+  }
+  handleCompanionHassUpdate() {
+    this._companionController?.handleHassUpdate?.();
+  }
+  applyCompanionConfigUpdate(options = {}) {
+    this._companionController?.applyConfigUpdate?.(options);
+  }
+  companionLiveCamerasEnabled() {
+    return this._companionController?.liveCamerasEnabled?.() === true;
+  }
+  companionAlertTakeoverEnabled() {
+    return this._companionController?.alertTakeoverEnabled?.() === true;
+  }
+  toggleCompanionAlertTakeover() {
+    return this._companionController?.toggleAlertTakeover?.() === true;
+  }
+  selectCompanionCamera(index) {
+    this._companionController?.selectCamera?.(index);
   }
   _applyWideViewRouteFrame() {
     this._host._applyPreviewShellVisibility();
@@ -16996,6 +17077,541 @@ const WideViewPageController = class {
       document.removeEventListener("mouseup", onMouseUp);
     };
     handle.addEventListener("mousedown", onMouseDown);
+  }
+};
+
+// src/features/wide-view/companion-alert.ctrl.js
+const normalizeAlertSeverity = (value) => String(value || "").trim().toLowerCase() === "detection" ? "detection" : "alert";
+const normalizeCellSeverity = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized === "alert" || normalized === "detection" ? normalized : "";
+};
+const WideViewCompanionAlertController = class {
+  constructor(host, constants, options = {}) {
+    this._host = host;
+    this._constants = constants;
+    this._isActive = typeof options.isActive === "function" ? options.isActive : () => false;
+    this._onStateChange = typeof options.onStateChange === "function" ? options.onStateChange : () => {
+    };
+    this._alertWatchT = null;
+    this._alertCleanupT = null;
+    this._alertExpiresByEntity = new Map();
+    this._alertSeverityByEntity = new Map();
+    this._handledReviewIds = new Set();
+    this._startedAtSec = 0;
+  }
+  clearTimers() {
+    if (this._alertWatchT) clearTimeout(this._alertWatchT);
+    if (this._alertCleanupT) clearTimeout(this._alertCleanupT);
+    this._alertWatchT = null;
+    this._alertCleanupT = null;
+  }
+  clearAlertTracking() {
+    this._alertExpiresByEntity.clear();
+    this._alertSeverityByEntity.clear();
+    this._handledReviewIds.clear();
+  }
+  isCameraAlertLive(entity) {
+    return Number(this._alertExpiresByEntity.get(entity) || 0) > Date.now();
+  }
+  cellSeverity(entity) {
+    if (!this.isCameraAlertLive(entity)) {
+      this._alertSeverityByEntity.delete(entity);
+      return "";
+    }
+    return normalizeCellSeverity(this._alertSeverityByEntity.get(entity));
+  }
+  markAlertCamera(entity, severity = "alert", holdMs = null, { allowTakeover = true } = {}) {
+    if (!entity || !this._isActive()) return false;
+    const wasLive = this.isCameraAlertLive(entity);
+    const previousSeverity = this.cellSeverity(entity);
+    const normalizedSeverity = normalizeAlertSeverity(severity);
+    const defaultHoldMs = this._host._previewAlertHoldMs?.() || this._constants.PREVIEW_ALERT_HOLD_MS;
+    this._alertSeverityByEntity.set(entity, normalizedSeverity);
+    this._alertExpiresByEntity.set(
+      entity,
+      Date.now() + Math.max(1e3, Number(holdMs) || defaultHoldMs)
+    );
+    this._scheduleAlertCleanup();
+    const changed = !wasLive || previousSeverity !== normalizedSeverity;
+    this._onStateChange({
+      entity,
+      severity: normalizedSeverity,
+      changed,
+      allowTakeover
+    });
+    return changed;
+  }
+  rememberHandledReview(reviewId) {
+    rememberHandledReviewId(this._handledReviewIds, reviewId);
+  }
+  isReviewFresh(review) {
+    const startedAt = Number(this._startedAtSec || 0);
+    if (startedAt <= 0) return true;
+    const reviewStart = Number(this._host._reviewStartTimeSec(review) || 0);
+    if (reviewStart <= 0) return false;
+    return reviewStart >= startedAt - Number(this._constants.SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC || 0);
+  }
+  async probeLatestAlert() {
+    if (!this._isActive()) return;
+    const before = Math.floor(Date.now() / 1e3);
+    const after = Math.max(
+      0,
+      Math.floor(
+        before - (this._host._config?.alerts_reviews_days || 3) * this._constants.DAY
+      )
+    );
+    const next = await findNewestReviewCandidateAcrossCameras({
+      cameras: this._host._config?.cameras,
+      getEntity: (camera) => camera?.entity,
+      getCache: (entity) => this._host._camCache[entity],
+      fetchReviews: async ({ cache }) => this._host._ws({
+        type: "frigate/reviews/get",
+        instance_id: cache.clientId,
+        cameras: [cache.cam],
+        after,
+        before,
+        limit: 5
+      }),
+      onReviewsFetched: ({ cache, reviews }) => {
+        cache.reviews = reviews;
+      },
+      buildCandidate: ({ entity, reviews }) => findFirstReviewCandidateForEntity({
+        reviews,
+        entity,
+        isReviewFresh: (review) => this.isReviewFresh(review),
+        normalizeSeverity: (review) => this._host._normalizeReviewSeverity(review),
+        shouldHandleSeverity: (targetEntity, targetSeverity) => this._host._shouldHandleSlideshowReview(
+          targetEntity,
+          targetSeverity
+        ),
+        isHandledReviewId: (reviewId) => this._handledReviewIds.has(reviewId),
+        reviewStartTime: (review) => this._host._reviewStartTimeSec(review)
+      })
+    });
+    if (!next?.entity) return;
+    if (next.reviewId) this.rememberHandledReview(next.reviewId);
+    this.markAlertCamera(
+      next.entity,
+      next.severity,
+      this._host._previewAlertHoldMs?.()
+    );
+  }
+  scheduleAlertWatch(delayMs = null) {
+    if (this._alertWatchT) clearTimeout(this._alertWatchT);
+    if (!this._isActive()) return;
+    const wait = delayMs == null ? Math.max(
+      1200,
+      Math.floor(this._host._effectiveRealtimePollSeconds() * 1e3)
+    ) : Math.max(0, Number(delayMs) || 0);
+    this._alertWatchT = setTimeout(() => {
+      this._alertWatchT = null;
+      void this.probeLatestAlert().finally(() => {
+        this.scheduleAlertWatch();
+      });
+    }, wait);
+  }
+  handleRealtimeMessage(msg) {
+    if (!this._isActive()) return;
+    const parsed = parseRealtimeAlertMessage({
+      host: this._host,
+      msg,
+      checkSeverity: false
+    });
+    if (!parsed) {
+      if (this._host._isRealtimeEventMessage?.(msg)) {
+        this.scheduleAlertWatch(180);
+      }
+      return;
+    }
+    const { cam, severity, type } = parsed;
+    const normalizedSeverity = String(severity || "").trim().toLowerCase();
+    if (type !== "end" && !normalizedSeverity) {
+      this.markAlertCamera(
+        cam,
+        "alert",
+        this._host._previewAlertHoldMs?.()
+      );
+      this.scheduleAlertWatch(180);
+      return;
+    }
+    if (type === "end") {
+      if (this.isCameraAlertLive(cam)) {
+        this.markAlertCamera(
+          cam,
+          this.cellSeverity(cam),
+          this._constants.PREVIEW_ALERT_END_GRACE_MS,
+          { allowTakeover: false }
+        );
+      }
+      return;
+    }
+    if (!this._host._shouldHandleSlideshowReview(cam, normalizedSeverity)) {
+      return;
+    }
+    this.markAlertCamera(
+      cam,
+      normalizedSeverity,
+      this._host._previewAlertHoldMs?.()
+    );
+  }
+  start() {
+    if (!this._isActive()) return;
+    this._startedAtSec = Math.floor(Date.now() / 1e3);
+    this.clearTimers();
+    this.clearAlertTracking();
+    this.scheduleAlertWatch(350);
+  }
+  stop() {
+    this.clearTimers();
+    this.clearAlertTracking();
+    this._startedAtSec = 0;
+  }
+  _scheduleAlertCleanup() {
+    if (this._alertCleanupT) clearTimeout(this._alertCleanupT);
+    let nextExpiry = 0;
+    for (const until of this._alertExpiresByEntity.values()) {
+      const timestamp = Number(until || 0);
+      if (timestamp <= Date.now()) continue;
+      if (!nextExpiry || timestamp < nextExpiry) nextExpiry = timestamp;
+    }
+    if (!nextExpiry) {
+      this._alertCleanupT = null;
+      return;
+    }
+    const wait = Math.max(100, nextExpiry - Date.now() + 25);
+    this._alertCleanupT = setTimeout(() => {
+      this._alertCleanupT = null;
+      let changed = false;
+      const now = Date.now();
+      for (const [entity, until] of this._alertExpiresByEntity.entries()) {
+        if (Number(until || 0) > now) continue;
+        this._alertExpiresByEntity.delete(entity);
+        this._alertSeverityByEntity.delete(entity);
+        changed = true;
+      }
+      if (changed && this._isActive()) {
+        this._onStateChange({ expired: true, changed: false });
+      }
+      this._scheduleAlertCleanup();
+    }, wait);
+  }
+};
+
+// src/features/wide-view/companion.tmpl.js
+const companionSeverityClass = (severity) => {
+  if (severity === "alert") return "grid-alert";
+  if (severity === "detection") return "grid-detection";
+  return "";
+};
+function buildWideCompanionStatusMarkup(online) {
+  return `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">\u25CF</span>${online ? "Online" : "Offline"}`;
+}
+function buildWideCompanionMetaMarkup({
+  name,
+  online,
+  sourceLabel,
+  eventsCount
+}) {
+  return `<div class="preview-meta wide-companion-meta">
+            <div class="preview-meta-name wide-companion-meta-name">${name}</div>
+            <div class="preview-meta-status wide-companion-meta-status">${buildWideCompanionStatusMarkup(online)}</div>
+            <div class="preview-meta-source wide-companion-meta-source">Stream Source: ${sourceLabel}</div>
+            <div class="preview-meta-events wide-companion-meta-events">Events: ${eventsCount}</div>
+          </div>`;
+}
+function buildWideCompanionCellMarkup({
+  index,
+  entity,
+  severity,
+  useLive,
+  metaMarkup
+}) {
+  return `<div class="preview-cell wide-companion-cell shadow-medium" data-wide-companion-camidx="${index}">
+            <div class="preview-media-host wide-companion-media-host ${companionSeverityClass(severity)}" data-wide-companion-media-entity="${entity}" data-wide-companion-use-live="${useLive ? "1" : "0"}"></div>
+            ${metaMarkup}
+          </div>`;
+}
+function buildWideCompanionRegionMarkup() {
+  return `<section class="wide-companion-panel" id="wide-companion-panel" aria-label="Companion Cameras">
+            <div class="wide-companion-title">Companion Cameras</div>
+            <div class="preview-grid wide-companion-grid" id="wide-companion-grid"></div>
+          </section>`;
+}
+
+// src/features/wide-view/companion.ctrl.js
+const LIVE_STREAM_HINTS2 = new Set(["webrtc", "mse", "hls"]);
+const WideViewCompanionController = class {
+  constructor(host, constants) {
+    this._host = host;
+    this._constants = constants;
+    this._mediaState = null;
+    this._lastRenderSignature = "";
+    this._alertTakeoverEnabled = null;
+    this._alertController = new WideViewCompanionAlertController(
+      host,
+      constants,
+      {
+        isActive: () => this.isActive(),
+        onStateChange: (detail) => this._handleAlertStateChange(detail)
+      }
+    );
+  }
+  isActive() {
+    return this._host._pageId === this._constants.PAGE_IDS.wideView;
+  }
+  buildRegionMarkup() {
+    return buildWideCompanionRegionMarkup();
+  }
+  liveCamerasEnabled() {
+    return this._host._config?.wide_view_live_cameras === true;
+  }
+  alertTakeoverEnabled() {
+    if (typeof this._alertTakeoverEnabled === "boolean") {
+      return this._alertTakeoverEnabled;
+    }
+    return this._host._config?.wide_view_alert_takeover === true;
+  }
+  resetAlertTakeoverDefault() {
+    this._alertTakeoverEnabled = null;
+    this._host._syncToolbarButtons?.();
+  }
+  toggleAlertTakeover() {
+    this._alertTakeoverEnabled = !this.alertTakeoverEnabled();
+    this._host._syncToolbarButtons?.();
+    return this._alertTakeoverEnabled;
+  }
+  shouldUseLive(entity) {
+    return this.liveCamerasEnabled() || this._alertController.isCameraAlertLive(entity);
+  }
+  cellSeverity(entity) {
+    return this._alertController.cellSeverity(entity);
+  }
+  eventsCount(entity) {
+    const cache = this._host._camCache[entity];
+    const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
+    const reviewsCount = Array.isArray(cache?.reviews) ? cache.reviews.length : 0;
+    return eventsCount + reviewsCount;
+  }
+  liveStreamHint() {
+    const active = String(this._host._activeStreamType || "").trim().toLowerCase();
+    if (LIVE_STREAM_HINTS2.has(active)) return active;
+    const previous = String(this._host._lastLiveStreamHint || "").trim().toLowerCase();
+    if (LIVE_STREAM_HINTS2.has(previous)) return previous;
+    return DEVICE_PROFILE.isIOS ? "webrtc" : "mse";
+  }
+  streamSourceLabel(entity, useLive) {
+    if (!useLive) return "Snapshot";
+    if (this._host._cameraConnectionType(entity) === "ha_direct") {
+      return "HA Live";
+    }
+    return `${this.liveStreamHint().toUpperCase()} Live`;
+  }
+  teardownMedia() {
+    if (this._mediaState) {
+      this._mediaState.destroyed = true;
+      for (const cleanup of this._mediaState.cleanup || []) {
+        try {
+          cleanup();
+        } catch (_) {
+        }
+      }
+    }
+    this._mediaState = null;
+    this._lastRenderSignature = "";
+    this._host.shadowRoot?.querySelectorAll?.(".wide-companion-media-host")?.forEach((mediaHost) => {
+      mediaHost.querySelectorAll?.("video")?.forEach((video) => {
+        try {
+          video.pause();
+          video.removeAttribute("src");
+          video.load();
+        } catch (_) {
+        }
+      });
+      mediaHost.querySelectorAll?.("img[data-fvc-blob-url]")?.forEach((img) => {
+        const blobUrl = img.dataset.fvcBlobUrl || "";
+        if (!blobUrl) return;
+        try {
+          URL.revokeObjectURL(blobUrl);
+        } catch (_) {
+        }
+      });
+      mediaHost.innerHTML = "";
+    });
+  }
+  render() {
+    if (!this.isActive()) {
+      this.teardownMedia();
+      this._host._syncSnapshotRefreshTimer?.();
+      return;
+    }
+    const grid = this._host._$("#wide-companion-grid");
+    if (!grid) return;
+    const cameras = Array.isArray(this._host._config?.cameras) ? this._host._config.cameras : [];
+    const liveStreamHint = this.liveStreamHint();
+    const hassReady = !!this._host._hass?.states;
+    const nextSignature = cameras.map((camera, index) => {
+      const entity = camera?.entity || "";
+      const useLive = this.shouldUseLive(entity);
+      return `${index}:${entity}:${useLive ? `live:${liveStreamHint}` : "snap"}`;
+    }).concat(`hass:${hassReady ? "1" : "0"}`).join("|");
+    if (grid.firstElementChild && this._lastRenderSignature === nextSignature) {
+      this.updateMeta();
+      this._host._syncSnapshotRefreshTimer?.();
+      this._host._wideViewPageController?.syncColHeightIfWideView?.();
+      return;
+    }
+    this.teardownMedia();
+    this._lastRenderSignature = nextSignature;
+    grid.innerHTML = cameras.map((camera, index) => {
+      const entity = camera?.entity || "";
+      const online = this._host._hass?.states?.[entity]?.state !== "unavailable";
+      const useLive = this.shouldUseLive(entity);
+      return buildWideCompanionCellMarkup({
+        index,
+        entity,
+        severity: this.cellSeverity(entity),
+        useLive,
+        metaMarkup: buildWideCompanionMetaMarkup({
+          name: cap(camDisplayName(camera)),
+          online,
+          sourceLabel: this.streamSourceLabel(entity, useLive),
+          eventsCount: this.eventsCount(entity)
+        })
+      });
+    }).join("");
+    this.mountMedia();
+    this._host._syncSnapshotRefreshTimer?.();
+    this._host._wideViewPageController?.syncColHeightIfWideView?.();
+  }
+  updateMeta() {
+    this._host.shadowRoot?.querySelectorAll?.("[data-wide-companion-camidx]")?.forEach((cell) => {
+      const index = Number(cell.dataset.wideCompanionCamidx);
+      const camera = this._host._config?.cameras?.[index];
+      const entity = camera?.entity || "";
+      if (!entity) return;
+      const severity = this.cellSeverity(entity);
+      const mediaHost = cell.querySelector?.(
+        ".wide-companion-media-host"
+      );
+      if (mediaHost) {
+        mediaHost.classList.remove("grid-alert", "grid-detection");
+        if (severity === "alert") mediaHost.classList.add("grid-alert");
+        if (severity === "detection") {
+          mediaHost.classList.add("grid-detection");
+        }
+      }
+      const online = this._host._hass?.states?.[entity]?.state !== "unavailable";
+      const useLive = this.shouldUseLive(entity);
+      const status = cell.querySelector?.(".wide-companion-meta-status");
+      if (status) status.innerHTML = buildWideCompanionStatusMarkup(online);
+      const source = cell.querySelector?.(".wide-companion-meta-source");
+      if (source) {
+        source.textContent = `Stream Source: ${this.streamSourceLabel(entity, useLive)}`;
+      }
+      const events = cell.querySelector?.(".wide-companion-meta-events");
+      if (events) {
+        events.textContent = `Events: ${this.eventsCount(entity)}`;
+      }
+    });
+  }
+  mountMedia() {
+    if (!this.isActive()) return;
+    const mediaHosts = this._host.shadowRoot?.querySelectorAll?.(
+      ".wide-companion-media-host"
+    ) || [];
+    if (!this._host._hass?.states) {
+      mediaHosts.forEach((mediaHost) => {
+        mediaHost.innerHTML = `<div class="ph">${this._constants.ICONS.live}<span>Loading\u2026</span></div>`;
+      });
+      return;
+    }
+    const liveStreamHint = this.liveStreamHint();
+    const mediaState = { destroyed: false, cleanup: [] };
+    this._mediaState = mediaState;
+    mediaHosts.forEach((mediaHost) => {
+      const entity = mediaHost.dataset.wideCompanionMediaEntity || "";
+      const useLive = mediaHost.dataset.wideCompanionUseLive === "1";
+      const stateObj = entity ? buildHaCameraStreamState(
+        this._host._hass,
+        entity,
+        liveStreamHint,
+        this._host._preferredStreamType()
+      ) || this._host._hass?.states?.[entity] || null : null;
+      mediaHost.innerHTML = "";
+      if (!entity) {
+        mediaHost.innerHTML = `<div class="ph">${this._constants.ICONS.live}<span>Unavailable</span></div>`;
+        return;
+      }
+      this._host._gridMediaController.mountCameraCellMedia(mediaHost, {
+        entity,
+        stateObj,
+        useLive,
+        liveStreamHint,
+        gridState: mediaState,
+        fallbackOnLiveError: true
+      });
+    });
+  }
+  start() {
+    if (!this.isActive()) return;
+    this._alertController.start();
+    this.render();
+  }
+  stop() {
+    this._alertController.stop();
+    this.teardownMedia();
+    this._host._clearSnapshotRefreshTimer?.();
+  }
+  handleRealtimeMessage(msg) {
+    this._alertController.handleRealtimeMessage(msg);
+  }
+  handleHaReviewStatus(entity, severity) {
+    return this._alertController.markAlertCamera(
+      entity,
+      severity,
+      this._host._previewAlertHoldMs?.()
+    );
+  }
+  handleHassUpdate() {
+    if (!this.isActive()) return;
+    this.render();
+    this._alertController.scheduleAlertWatch(120);
+    void this._alertController.probeLatestAlert();
+  }
+  applyConfigUpdate({ takeoverDefaultChanged = false } = {}) {
+    if (takeoverDefaultChanged) this.resetAlertTakeoverDefault();
+    if (this.isActive()) this.render();
+  }
+  selectCamera(index) {
+    if (!this.isActive()) return;
+    if (!Number.isInteger(index) || index < 0 || index >= (this._host._config?.cameras?.length || 0)) {
+      return;
+    }
+    this._host._pauseSlideshowForInteraction?.();
+    void this._host._switchCamera(index, {
+      source: "manual",
+      origin: "wide-companion-camera-select"
+    });
+  }
+  _handleAlertStateChange(detail = {}) {
+    if (!this.isActive()) return;
+    this.render();
+    if (detail.changed !== true || detail.allowTakeover === false) return;
+    if (!this.alertTakeoverEnabled()) return;
+    this._takeOverMainCamera(detail.entity);
+  }
+  _takeOverMainCamera(entity) {
+    const index = this._host._cameraIndexByEntity(entity);
+    if (index < 0) return;
+    if (index === this._host._activeCamIdx && this._host._viewMode === "single") {
+      return;
+    }
+    this._host._stopSlideshowRotation?.("wide-companion-alert", false);
+    void this._host._switchCamera(index, {
+      source: "alert",
+      origin: "wide-companion-alert"
+    });
   }
 };
 
@@ -17763,8 +18379,18 @@ const FrigateViewCard = class extends HTMLElement {
     this._singleViewPageController = new SingleViewPageController(this, {
       PAGE_IDS
     });
+    this._wideViewCompanionController = new WideViewCompanionController(this, {
+      DAY,
+      ICONS,
+      PAGE_IDS,
+      PREVIEW_ALERT_HOLD_MS,
+      PREVIEW_ALERT_END_GRACE_MS,
+      SLIDESHOW_REVIEW_FRESHNESS_GRACE_SEC
+    });
     this._wideViewPageController = new WideViewPageController(this, {
       PAGE_IDS
+    }, {
+      companionController: this._wideViewCompanionController
     });
     this._pageNavigationController = new PageNavigationController(this, {
       buildPageNavButtonsMarkup,
@@ -18250,7 +18876,15 @@ const FrigateViewCard = class extends HTMLElement {
       preview_page_enabled: config.preview_page_enabled === true,
       preview_page_live_cameras: config.preview_page_live_cameras === true,
       preview_page_show_title_bars: config.preview_page_show_title_bars !== false,
+      preview_page_alert_live_duration_seconds: normalizeBoundedPositiveInteger(
+        config.preview_page_alert_live_duration_seconds,
+        Math.round(PREVIEW_ALERT_HOLD_MS / 1e3),
+        5,
+        60
+      ),
       wide_view_page_enabled: config.wide_view_page_enabled === true || config.wide_view === true,
+      wide_view_live_cameras: config.wide_view_live_cameras === true,
+      wide_view_alert_takeover: config.wide_view_alert_takeover === true,
       landing_page: normalizePageRoute(config.landing_page),
       mobile_page: normalizePageRoute(config.mobile_page),
       deep_link_enabled: config.deep_link_enabled !== false,
@@ -18291,7 +18925,8 @@ const FrigateViewCard = class extends HTMLElement {
     const previewEnabledChanged = !!prevConfig && prevConfig.preview_page_enabled !== nextConfig.preview_page_enabled;
     const mobileViewPageEnabledChanged = !!prevConfig && prevConfig.mobile_view_page_enabled !== nextConfig.mobile_view_page_enabled;
     const wideViewPageEnabledChanged = !!prevConfig && prevConfig.wide_view_page_enabled !== nextConfig.wide_view_page_enabled;
-    const previewVisualChanged = !!prevConfig && (prevConfig.preview_page_live_cameras !== nextConfig.preview_page_live_cameras || prevConfig.preview_page_show_title_bars !== nextConfig.preview_page_show_title_bars);
+    const wideViewTakeoverDefaultChanged = !!prevConfig && prevConfig.wide_view_alert_takeover !== nextConfig.wide_view_alert_takeover;
+    const previewVisualChanged = !!prevConfig && (prevConfig.preview_page_live_cameras !== nextConfig.preview_page_live_cameras || prevConfig.preview_page_show_title_bars !== nextConfig.preview_page_show_title_bars || prevConfig.preview_page_alert_live_duration_seconds !== nextConfig.preview_page_alert_live_duration_seconds);
     const previewModeConfigChanged = previewEnabledChanged || previewVisualChanged;
     this._committedConfig = this._cloneCardConfig(nextConfig);
     this._config = nextConfig;
@@ -18308,6 +18943,11 @@ const FrigateViewCard = class extends HTMLElement {
     this._browseOpen = this._config.browse_expanded;
     for (const c of cameras) {
       if (!this._camCache[c.entity]) this._camCache[c.entity] = mkCamState();
+    }
+    if (prevConfig) {
+      this._wideViewPageController.applyCompanionConfigUpdate({
+        takeoverDefaultChanged: wideViewTakeoverDefaultChanged
+      });
     }
     if (!wasStarted || !prevConfig) {
       this._renderShell();
@@ -18420,6 +19060,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._stopSlideshowRotation("disconnect", false);
     this._stopGridModeState();
     this._stopPreviewMode();
+    this._wideViewPageController?.stopCompanionMode?.();
     if (this._rt) clearTimeout(this._rt);
     this._rt = null;
     if (this._refresh) clearInterval(this._refresh);
@@ -19022,7 +19663,10 @@ const FrigateViewCard = class extends HTMLElement {
     this._clearSnapshotRefreshTimer();
     const shouldRefreshPreview = this._isPreviewPageActive() && this._config?.preview_page_live_cameras !== true;
     const shouldRefreshGrid = this._viewMode === "grid" && this._config?.grid_live_view_enabled === false;
-    if (!shouldRefreshPreview && !shouldRefreshGrid) return;
+    const shouldRefreshWideCompanions = this._wideViewPageController.isWideViewPageActive() && !this._wideViewPageController.companionLiveCamerasEnabled();
+    if (!shouldRefreshPreview && !shouldRefreshGrid && !shouldRefreshWideCompanions) {
+      return;
+    }
     this._snapshotRefreshT = setTimeout(() => {
       this._snapshotRefreshT = null;
       if (this._isPreviewPageActive() && this._config?.preview_page_live_cameras !== true) {
@@ -19032,6 +19676,12 @@ const FrigateViewCard = class extends HTMLElement {
         return;
       }
       if (this._viewMode === "grid" && this._config?.grid_live_view_enabled === false) {
+        void this._refreshSnapshotMedia().finally(() => {
+          this._syncSnapshotRefreshTimer();
+        });
+        return;
+      }
+      if (this._wideViewPageController.isWideViewPageActive() && !this._wideViewPageController.companionLiveCamerasEnabled()) {
         void this._refreshSnapshotMedia().finally(() => {
           this._syncSnapshotRefreshTimer();
         });
@@ -19256,10 +19906,15 @@ const FrigateViewCard = class extends HTMLElement {
     if (toolsRegion && this._activePageShellCapabilities().tabsVariant !== "none") {
       const shouldShowGrid = this._isGridModeAvailable();
       const shouldShowSlideshow = this._isSlideshowRotationAvailable();
+      const shouldShowWideAlertTakeover = this._wideViewPageController.isWideViewPageActive();
       const controlsBtnPresent = !!this._pageShellRegionElement("tools", "#controls-btn");
       const gridBtnPresent = !!this._pageShellRegionElement("tools", "#grid-btn");
       const slideshowBtnPresent = !!this._pageShellRegionElement("tools", "#slideshow-btn");
-      const needsToolsRerender = buttonStates.controlsVisible && !controlsBtnPresent || shouldShowGrid && !gridBtnPresent || shouldShowSlideshow && !slideshowBtnPresent;
+      const wideAlertTakeoverBtnPresent = !!this._pageShellRegionElement(
+        "tools",
+        "#wide-alert-takeover-btn"
+      );
+      const needsToolsRerender = buttonStates.controlsVisible && !controlsBtnPresent || shouldShowGrid && !gridBtnPresent || shouldShowSlideshow && !slideshowBtnPresent || shouldShowWideAlertTakeover && !wideAlertTakeoverBtnPresent;
       if (needsToolsRerender) {
         this._syncTabsShell();
       }
@@ -19291,6 +19946,22 @@ const FrigateViewCard = class extends HTMLElement {
           this._setViewMode("single");
         }
       }
+    }
+    const wideAlertTakeoverBtn = this._pageShellRegionElement(
+      "tools",
+      "#wide-alert-takeover-btn"
+    );
+    if (wideAlertTakeoverBtn) {
+      const active = this._wideViewPageController.companionAlertTakeoverEnabled();
+      const label = active ? "Disable Alert Camera Takeover" : "Enable Alert Camera Takeover";
+      wideAlertTakeoverBtn.classList.toggle("active", active);
+      wideAlertTakeoverBtn.setAttribute(
+        "aria-pressed",
+        active ? "true" : "false"
+      );
+      wideAlertTakeoverBtn.setAttribute("title", label);
+      wideAlertTakeoverBtn.setAttribute("aria-label", label);
+      wideAlertTakeoverBtn.innerHTML = ICONS.alerts;
     }
     const slideshowBtn = this._pageShellRegionElement("tools", "#slideshow-btn");
     if (slideshowBtn) {
@@ -19494,6 +20165,10 @@ const FrigateViewCard = class extends HTMLElement {
         entity,
         severity,
         this._previewAlertHoldMs()
+      );
+      this._wideViewPageController?.handleCompanionHaReviewStatus?.(
+        entity,
+        severity
       );
     }
     const slideshowAlertEntity = activeCameraAlerted ? activeEntity : firstAlertEntity;
@@ -19707,6 +20382,7 @@ const FrigateViewCard = class extends HTMLElement {
     const onRealtimeMessage = (msg) => {
       this._handleGridRealtimeMessage(msg);
       this._previewAlertController.handleRealtimeMessage(msg);
+      this._wideViewPageController?.handleCompanionRealtimeMessage?.(msg);
       this._handleSlideshowRealtimeMessage(msg);
       if (!this._isNowWindow()) return;
       if (!this._isRealtimeEventMessage(msg)) return;
@@ -19823,7 +20499,10 @@ const FrigateViewCard = class extends HTMLElement {
       filterDisabled: buttonStates.filterDisabled,
       calendarDisabled: buttonStates.calendarDisabled,
       gridButtonIcon: this._gridButtonIcon(),
-      slideshowButtonIcon: this._slideshowButtonIcon()
+      slideshowButtonIcon: this._slideshowButtonIcon(),
+      showWideAlertTakeover: this._wideViewPageController.isWideViewPageActive(),
+      wideAlertTakeoverEnabled: this._wideViewPageController.companionAlertTakeoverEnabled(),
+      wideAlertTakeoverButtonIcon: ICONS.alerts
     });
     this._tab = activeTab;
     this._tabsMarkupCache = tabsMarkup;
@@ -19920,7 +20599,8 @@ const FrigateViewCard = class extends HTMLElement {
         icons: ICONS,
         includeFrigateView: !isWideViewPage
       }),
-      wideFooterIcon: isWideViewPage ? ICONS.frigateView : ""
+      wideFooterIcon: isWideViewPage ? ICONS.frigateView : "",
+      companionCameras: isWideViewPage ? this._wideViewPageController.buildCompanionRegionMarkup() : ""
     };
     const mainLayoutShell = resolvePageMainLayoutShellMarkup(shellProfile, {
       host: this,
@@ -19945,6 +20625,7 @@ const FrigateViewCard = class extends HTMLElement {
       icons: ICONS,
       version: VERSION
     });
+    this._wideViewPageController.teardownCompanionMedia();
     this.shadowRoot.innerHTML = `<style>${STYLES}</style>
     <ha-card class="card ${this._cardStateClassNames()}" id="card" style="border-radius: var(--fvc-border-radius);">
 
@@ -19967,6 +20648,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._initLiveOverlayControls();
     this._syncSlideshowCountdownOverlay();
     this._renderPreviewPage();
+    this._wideViewPageController.renderCompanionCameras();
     this._applyPreviewShellVisibility();
     this._syncMobileViewPageMarkup();
     this._syncPictureInPictureButtons();
@@ -20747,6 +21429,11 @@ const FrigateViewCard = class extends HTMLElement {
       void this._toggleTwoWayTalkSession();
       return true;
     }
+    const wideAlertTakeoverBtn = target.closest("#wide-alert-takeover-btn");
+    if (wideAlertTakeoverBtn) {
+      this._wideViewPageController.toggleCompanionAlertTakeover();
+      return true;
+    }
     const gridBtn = target.closest("#grid-btn");
     if (gridBtn) {
       if (gridBtn.disabled) return true;
@@ -20849,12 +21536,23 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handleSidebarClick(target) {
+    if (this._handleWideViewSidebarClick(target)) return true;
     if (this._handlePreviewSidebarClick(target)) return true;
     if (this._handleSidebarNavigationClick(target)) return true;
     if (this._handleSidebarCameraClick(target)) return true;
     if (this._handleSidebarCalendarClick(target)) return true;
     if (this._handleSidebarFilterClick(target)) return true;
     return false;
+  }
+  _handleWideViewSidebarClick(target) {
+    const companionCell = target.closest("[data-wide-companion-camidx]");
+    if (!companionCell || !this._wideViewPageController.isWideViewPageActive()) {
+      return false;
+    }
+    this._wideViewPageController.selectCompanionCamera(
+      Number(companionCell.dataset.wideCompanionCamidx)
+    );
+    return true;
   }
   _handleSidebarFilterClick(target) {
     return this._browseFilterController.handleSidebarFilterClick(target);
@@ -22209,6 +22907,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._renderCamSwitcher();
     this._renderList();
     this._syncStatus();
+    this._wideViewPageController.renderCompanionCameras();
   }
   _renderStats() {
     this._activeStandardPageController().renderStats();
@@ -22626,6 +23325,8 @@ const normalizeCardConfig = (config) => {
     60
   );
   src.wide_view_page_enabled = src.wide_view_page_enabled === true || src.wide_view === true;
+  src.wide_view_live_cameras = src.wide_view_live_cameras === true;
+  src.wide_view_alert_takeover = src.wide_view_alert_takeover === true;
   src.landing_page = normalizePageRoute(src.landing_page);
   src.mobile_page = normalizePageRoute(src.mobile_page);
   const landingPageOptions = getEnabledPageRoutes(
@@ -23492,6 +24193,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
       "#preview_page_alert_live_duration_seconds",
       "#preview_page_show_title_bars",
       "#wide_view_page_enabled",
+      "#wide_view_live_cameras",
+      "#wide_view_alert_takeover",
       "#landing_page",
       "#mobile_page",
       "#stream_height",
@@ -23685,6 +24388,14 @@ const FrigateViewCardEditor = class extends HTMLElement {
             <div class="field-helper" id="snapshot_update_seconds-output">${this._config?.snapshot_update_seconds ?? SNAPSHOT_UPDATE_SECONDS} seconds</div>
           </div>
         </div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
+          <div id="preview_alert_live_duration_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <span class="field-label" style="margin:0">Alert Camera Live Duration</span>
+            <input id="preview_page_alert_live_duration_seconds" type="range" min="5" max="60" step="1" value="${this._config?.preview_page_alert_live_duration_seconds ?? 10}" style="width:100%">
+            <div class="field-helper">How long an alerted snapshot camera remains live on Preview and in Wide View Companion Cameras.</div>
+            <div class="field-helper" id="preview_page_alert_live_duration_seconds-output">${this._config?.preview_page_alert_live_duration_seconds ?? 10} seconds</div>
+          </div>
+        </div>
       </div>
       <div class="section">
         <div class="layout-row">
@@ -23804,15 +24515,6 @@ const FrigateViewCardEditor = class extends HTMLElement {
         </div>
         <div class="field-helper">On = all preview cameras load live. Off = snapshots, with alert/review cameras promoted to temporary live view.</div>
       </div>
-      <div id="preview_alert_live_duration_row" class="section" style="display:${this._config?.preview_page_live_cameras ? "none" : "block"}">
-        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
-          <div style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
-            <span class="field-label" style="margin:0">Preview Alert Live Duration</span>
-            <input id="preview_page_alert_live_duration_seconds" type="range" min="5" max="60" step="1" value="${this._config?.preview_page_alert_live_duration_seconds ?? 10}" style="width:100%">
-            <div class="field-helper" id="preview_page_alert_live_duration_seconds-output">${this._config?.preview_page_alert_live_duration_seconds ?? 10} seconds</div>
-          </div>
-        </div>
-      </div>
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Show Title Bars</span>
@@ -23829,6 +24531,20 @@ const FrigateViewCardEditor = class extends HTMLElement {
           <ha-switch id="wide_view_page_enabled" ${this._config?.wide_view_page_enabled ? "checked" : ""}></ha-switch>
         </div>
         <div class="field-helper">When enabled, Wide View becomes available in navigation and as a desktop/tablet landing page option.</div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Live Companion Cameras</span>
+          <ha-switch id="wide_view_live_cameras" ${this._config?.wide_view_live_cameras ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">On = all Companion Cameras remain live. Off = refreshed snapshots, with alerted cameras temporarily promoted to live.</div>
+      </div>
+      <div class="section">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Alert Camera Takeover Default</span>
+          <ha-switch id="wide_view_alert_takeover" ${this._config?.wide_view_alert_takeover ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">Sets the initial state of the Wide View toolbar button that allows alerted cameras to take over the main live view.</div>
       </div>
       <div id="col-width-row" style="display:flex;align-items:center;gap:6px;margin-top:6px;${this._config?.wide_view_page_enabled ? "" : "display:none"}">
         <label style="font-size:11px;color:var(--c-text);white-space:nowrap">Left Width %</label>
@@ -24387,6 +25103,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
       ids: [
         "tight_margins",
         "wide_view_page_enabled",
+        "wide_view_live_cameras",
+        "wide_view_alert_takeover",
         "mobile_view_page_enabled",
         "shadows",
         "borders",
@@ -24408,19 +25126,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
       events: ["input", "change", "value-changed"],
       handler: () => {
         const slideshowRow = this.querySelector("#slideshow_rotation_row");
-        const previewDurationRow = this.querySelector(
-          "#preview_alert_live_duration_row"
-        );
         const enabled = this.querySelector("#slideshow_rotation_enabled")?.checked === true;
         const gridRow = this.querySelector("#grid_rotation_row");
         const gridStartRow = this.querySelector("#grid_start_row");
         const gridLiveRow = this.querySelector("#grid_live_row");
         const gridEnabled = this.querySelector("#grid_mode_enabled")?.checked === true;
-        const liveCamerasEnabled = this.querySelector("#preview_page_live_cameras")?.checked === true;
         if (slideshowRow)
           slideshowRow.style.display = enabled ? "flex" : "none";
-        if (previewDurationRow)
-          previewDurationRow.style.display = liveCamerasEnabled ? "none" : "block";
         if (gridStartRow)
           gridStartRow.style.display = gridEnabled ? "flex" : "none";
         if (gridLiveRow)

@@ -279,6 +279,7 @@ export class SingleViewPageController {
     if (cameraStateChanged) {
       this._host._syncStatus();
       this._host._kickLiveIfStale();
+      this._host._wideViewPageController?.handleCompanionHassUpdate?.();
       if (this._host._viewMode === "grid") {
         this._host._scheduleGridRefresh?.(120);
         this._host._gridAlertController?.scheduleAlertWatch?.(120);

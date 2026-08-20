@@ -92,6 +92,9 @@ export function buildToolsMarkup({
   calendarDisabled,
   gridButtonIcon,
   slideshowButtonIcon,
+  showWideAlertTakeover = false,
+  wideAlertTakeoverEnabled = false,
+  wideAlertTakeoverButtonIcon = "",
 }) {
   const toolButtonClass =
     String(buttonClass || "tool").trim() || "tool";
@@ -102,6 +105,12 @@ export function buildToolsMarkup({
   const gridButton = gridHidden
     ? ""
     : `<button class="${toolButtonClass}${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}" ${gridDisabled ? "disabled" : ""}>${gridButtonIcon}</button>`;
+  const wideAlertTakeoverLabel = wideAlertTakeoverEnabled
+    ? "Disable Alert Camera Takeover"
+    : "Enable Alert Camera Takeover";
+  const wideAlertTakeoverButton = showWideAlertTakeover
+    ? `<button class="${toolButtonClass}${wideAlertTakeoverEnabled ? " active" : ""}" id="wide-alert-takeover-btn" type="button" aria-pressed="${wideAlertTakeoverEnabled ? "true" : "false"}" title="${wideAlertTakeoverLabel}" aria-label="${wideAlertTakeoverLabel}">${wideAlertTakeoverButtonIcon}</button>`
+    : "";
   const slideshowHidden = !isSlideshowRotationAvailable;
   const slideshowActive = isSlideshowActive;
   const slideshowButton = slideshowHidden
@@ -110,6 +119,7 @@ export function buildToolsMarkup({
   const markup = `<div class="tl-tools">
         ${controlsHidden ? "" : `<button class="${toolButtonClass}${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button><div class="divider">${icons.divider}</div>`}
         ${gridButton}
+        ${wideAlertTakeoverButton}
         ${slideshowButton}
         <button class="${toolButtonClass}${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
         <div class="filter-panel" id="filter-panel" data-fvc-region="filter-panel" style="display:none"></div>

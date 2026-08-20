@@ -477,6 +477,9 @@ export const STYLES = `
   .preview-meta-status .dot{font-size:.82rem;line-height:1;}
   .preview-cam-buttons{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
   .preview-cam-btn{font-size:.9rem;line-height:1;padding:6px 9px;}
+  .wide-companion-panel{display:flex;flex-direction:column;gap:8px;min-width:0;padding:10px;box-sizing:border-box;}
+  .wide-companion-title{font-size:.9rem;font-weight:700;color:var(--c-text);letter-spacing:.02em;}
+  .wide-companion-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));}
   @media (max-width: 720px){
     .preview-meta{grid-template-columns:minmax(0,1fr);gap:2px;}
     .preview-meta-status{justify-self:start;}

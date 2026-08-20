@@ -19,6 +19,7 @@ const regions = {
   browse: `<div data-fvc-region="browse">Browse</div>`,
   footer: `<div data-fvc-region="footer">Footer</div>`,
   wideFooterIcon: `<svg data-wide-footer-icon></svg>`,
+  companionCameras: `<section id="wide-companion-panel">Companions</section>`,
 };
 
 const routeBuilders = [
@@ -78,6 +79,15 @@ test("wide view renders its branded footer separately from the browse footer", (
   assert.match(
     markup,
     /<div class="wide-footer">\s*<div class="frigate-view"><svg data-wide-footer-icon><\/svg><\/div>/,
+  );
+});
+
+test("wide view inserts Companion Cameras below its tool controls", () => {
+  const markup = buildWideViewMainLayoutShellMarkup({ regions });
+
+  assert.match(
+    markup,
+    /data-fvc-region="tools"[\s\S]*?id="wide-companion-panel"[\s\S]*?id="resize-handle"/,
   );
 });
 

@@ -40,6 +40,8 @@ export const createEditorPreviewDraft = (config) => ({
     config.preview_page_alert_live_duration_seconds,
   preview_page_show_title_bars: config.preview_page_show_title_bars,
   wide_view_page_enabled: config.wide_view_page_enabled,
+  wide_view_live_cameras: config.wide_view_live_cameras,
+  wide_view_alert_takeover: config.wide_view_alert_takeover,
   landing_page: config.landing_page,
   mobile_page: config.mobile_page,
   grid_rotation_seconds: config.grid_rotation_seconds,
@@ -156,6 +158,9 @@ export const applyEditorPreviewDraftToCardConfig = ({
     rounded_corners: previewConfig.rounded_corners !== false,
     outer_shadows: previewConfig.outer_shadows !== false,
     wide_view_page_enabled: previewConfig.wide_view_page_enabled === true,
+    wide_view_live_cameras: previewConfig.wide_view_live_cameras === true,
+    wide_view_alert_takeover:
+      previewConfig.wide_view_alert_takeover === true,
     landing_page: normalizePageRoute(previewConfig.landing_page),
     mobile_page: normalizePageRoute(previewConfig.mobile_page),
     col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,

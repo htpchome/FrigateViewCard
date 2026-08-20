@@ -135,6 +135,8 @@ export const normalizeCardConfig = (config) => {
 
   src.wide_view_page_enabled =
     src.wide_view_page_enabled === true || src.wide_view === true;
+  src.wide_view_live_cameras = src.wide_view_live_cameras === true;
+  src.wide_view_alert_takeover = src.wide_view_alert_takeover === true;
 
   src.landing_page = normalizePageRoute(src.landing_page);
   src.mobile_page = normalizePageRoute(src.mobile_page);
