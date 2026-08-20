@@ -78,7 +78,8 @@ export function buildWideViewMainLayoutShellMarkup({
             </div>
             ${regions.browseHeader}
             ${regions.browse}
+            ${regions.footer}
           </div>
-          ${regions.footer}
+          <div class="footer"><div class="frigate-view">${icons.frigateView}</div></div>
         </div>`;
 }
