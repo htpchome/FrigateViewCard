@@ -184,3 +184,17 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
   assert.equal(stylesSource.includes(".popup-playback-controls{"), true);
   assert.equal(stylesSource.includes(".playback-target-dialog{"), false);
 });
+
+test("Firefox relies on native PiP controls instead of visible custom buttons", () => {
+  assert.match(
+    cardSource,
+    /!DEVICE_PROFILE\.isMobile\s*&&\s*!this\._isFirefox\(\)\s*&&\s*this\._isPopupVideoMediaType\(mediaType\)/,
+  );
+  assert.match(
+    cardSource,
+    /const liveAllowed =[\s\S]*?!isFirefox &&[\s\S]*?liveAllowed \? liveVideo : null/,
+  );
+  assert.equal(cardSource.includes("enableNativePictureInPicture(liveVideo)"), true);
+  assert.equal(cardSource.includes("enableNativePictureInPicture(popupVideo)"), true);
+  assert.equal(cardSource.includes("temporarilyAllowDisabled"), false);
+});

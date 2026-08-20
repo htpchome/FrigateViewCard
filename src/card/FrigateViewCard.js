@@ -137,16 +137,15 @@ import {
 } from "../features/live/rotate-overlay-state.js";
 import {
   buildVideoOptionsForView,
-  applyNativePictureInPicturePolicy,
   configureVideoElement,
   createVideoElement,
+  enableNativePictureInPicture,
   mountNodeIntoSlot,
   setScopedVideoViewDefaultOptions,
   supportsNativeHlsPlayback,
 } from "../shared/media/video-factory.js";
 import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
 import {
-  isVideoPictureInPictureActive,
   PictureInPictureButtonController,
   resolveVideoPictureInPictureSupport,
   toggleVideoPictureInPicture,
@@ -5047,9 +5046,6 @@ export class FrigateViewCard extends HTMLElement {
         ? "_popupPictureInPictureButtonController"
         : "_livePictureInPictureButtonController";
     const documentObj = video?.ownerDocument || globalThis.document || null;
-    if (!isVideoPictureInPictureActive(video, documentObj)) {
-      applyNativePictureInPicturePolicy(video);
-    }
     const current = this[property];
     if (current?.button === button && current?.video === video) {
       current.refresh();
@@ -5077,26 +5073,33 @@ export class FrigateViewCard extends HTMLElement {
   _syncPictureInPictureButtons() {
     const popupOpen =
       this._$("#myPopup")?.classList.contains("is-open") === true;
+    const isFirefox = this._isFirefox();
+    const liveVideo = this._livePictureInPictureVideo();
+    enableNativePictureInPicture(liveVideo);
     const liveAllowed =
       this._activePageShellCapabilities().hasLivePictureInPicture &&
       !DEVICE_PROFILE.isMobile &&
+      !isFirefox &&
       this._viewMode !== "grid" &&
       !popupOpen;
     this._bindPictureInPictureButton(
       "live",
       this._$("#live-pip-btn"),
-      liveAllowed ? this._livePictureInPictureVideo() : null,
+      liveAllowed ? liveVideo : null,
     );
 
     const popupMediaType = this._popupMediaType;
+    const popupVideo = popupOpen ? this._popupMediaVideo() : null;
+    enableNativePictureInPicture(popupVideo);
     const popupAllowed =
       popupOpen &&
       !DEVICE_PROFILE.isMobile &&
+      !isFirefox &&
       this._isPopupVideoMediaType(popupMediaType);
     this._bindPictureInPictureButton(
       "popup",
       this._$("#popup-pip-btn"),
-      popupAllowed ? this._popupMediaVideo() : null,
+      popupAllowed ? popupVideo : null,
     );
   }
 
@@ -5110,11 +5113,7 @@ export class FrigateViewCard extends HTMLElement {
     }
 
     try {
-      await toggleVideoPictureInPicture({
-        video,
-        documentObj,
-        temporarilyAllowDisabled: true,
-      });
+      await toggleVideoPictureInPicture({ video, documentObj });
     } catch (error) {
       console.warn("[Frigate] Picture-in-Picture request failed", error);
       const reason = String(error?.message || "").trim();
@@ -5151,7 +5150,11 @@ export class FrigateViewCard extends HTMLElement {
     }
     controls.innerHTML = "";
 
-    if (!DEVICE_PROFILE.isMobile && this._isPopupVideoMediaType(mediaType)) {
+    if (
+      !DEVICE_PROFILE.isMobile &&
+      !this._isFirefox() &&
+      this._isPopupVideoMediaType(mediaType)
+    ) {
       const pictureInPictureButton = document.createElement("button");
       pictureInPictureButton.className =
         "square-btn popup-playback-btn popup-pip-btn";

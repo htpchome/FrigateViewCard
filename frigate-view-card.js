@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1546";
+const VERSION = "1.0.1547";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5236,23 +5236,11 @@ function applyVideoDatasetOptions(video, options = {}) {
     video.dataset[key] = value === true ? "1" : String(value);
   }
 }
-function shouldSuppressNativePictureInPicture(navigatorObj = globalThis.navigator) {
-  const userAgent = String(navigatorObj?.userAgent || "");
-  const isMobile = navigatorObj?.userAgentData?.mobile === true || /android|mobile/i.test(userAgent);
-  return !isMobile && /firefox/i.test(userAgent) && !/seamonkey/i.test(userAgent);
-}
-function applyNativePictureInPicturePolicy(video, { navigatorObj = globalThis.navigator, suppress = void 0 } = {}) {
+function enableNativePictureInPicture(video) {
   if (!video) return false;
-  const shouldSuppress = Boolean(
-    suppress ?? shouldSuppressNativePictureInPicture(navigatorObj)
-  );
-  video.disablePictureInPicture = shouldSuppress;
-  if (shouldSuppress) {
-    video.setAttribute?.("disablepictureinpicture", "");
-  } else {
-    video.removeAttribute?.("disablepictureinpicture");
-  }
-  return shouldSuppress;
+  video.disablePictureInPicture = false;
+  video.removeAttribute?.("disablepictureinpicture");
+  return true;
 }
 function configureVideoElement(video, options = {}) {
   if (!video) return video;
@@ -5291,10 +5279,7 @@ function configureVideoElement(video, options = {}) {
   applyVideoDatasetOptions(video, options);
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
-  applyNativePictureInPicturePolicy(video, {
-    navigatorObj: options.navigatorObj,
-    suppress: options.disablePictureInPicture
-  });
+  enableNativePictureInPicture(video);
   video.disableRemotePlayback = true;
   video.setAttribute("x-webkit-airplay", "deny");
   if (options.attributes && typeof options.attributes === "object") {
@@ -6995,29 +6980,9 @@ function resolveVideoPictureInPictureSupport({
   }
   return { supported: false, method: "" };
 }
-function temporarilyAllowDisabledPictureInPicture(video) {
-  const wasDisabled = video?.disablePictureInPicture === true || video?.hasAttribute?.("disablepictureinpicture") === true;
-  if (!wasDisabled) return null;
-  let restored = false;
-  const restoresOnExit = typeof video.addEventListener === "function";
-  const restore = () => {
-    if (restored) return;
-    restored = true;
-    video.removeEventListener?.("leavepictureinpicture", restore);
-    video.disablePictureInPicture = true;
-    video.setAttribute?.("disablepictureinpicture", "");
-  };
-  if (restoresOnExit) {
-    video.addEventListener("leavepictureinpicture", restore);
-  }
-  video.disablePictureInPicture = false;
-  video.removeAttribute?.("disablepictureinpicture");
-  return { restore, restoresOnExit };
-}
 async function toggleVideoPictureInPicture({
   video = null,
-  documentObj = null,
-  temporarilyAllowDisabled = false
+  documentObj = null
 } = {}) {
   const support = resolveVideoPictureInPictureSupport({ video, documentObj });
   if (!support.supported) {
@@ -7029,16 +6994,7 @@ async function toggleVideoPictureInPicture({
       await doc.exitPictureInPicture();
       return { active: false, method: support.method };
     }
-    const suppressionRestore = temporarilyAllowDisabled ? temporarilyAllowDisabledPictureInPicture(video) : null;
-    try {
-      await video.requestPictureInPicture();
-    } catch (error) {
-      suppressionRestore?.restore();
-      throw error;
-    }
-    if (suppressionRestore && !suppressionRestore.restoresOnExit) {
-      suppressionRestore.restore();
-    }
+    await video.requestPictureInPicture();
     return { active: true, method: support.method };
   }
   const active = isVideoPictureInPictureActive(video, documentObj);
@@ -21597,9 +21553,6 @@ const FrigateViewCard = class extends HTMLElement {
   _bindPictureInPictureButton(scope, button, video) {
     const property = scope === "popup" ? "_popupPictureInPictureButtonController" : "_livePictureInPictureButtonController";
     const documentObj = video?.ownerDocument || globalThis.document || null;
-    if (!isVideoPictureInPictureActive(video, documentObj)) {
-      applyNativePictureInPicturePolicy(video);
-    }
     const current = this[property];
     if (current?.button === button && current?.video === video) {
       current.refresh();
@@ -21623,18 +21576,23 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _syncPictureInPictureButtons() {
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open") === true;
-    const liveAllowed = this._activePageShellCapabilities().hasLivePictureInPicture && !DEVICE_PROFILE.isMobile && this._viewMode !== "grid" && !popupOpen;
+    const isFirefox = this._isFirefox();
+    const liveVideo = this._livePictureInPictureVideo();
+    enableNativePictureInPicture(liveVideo);
+    const liveAllowed = this._activePageShellCapabilities().hasLivePictureInPicture && !DEVICE_PROFILE.isMobile && !isFirefox && this._viewMode !== "grid" && !popupOpen;
     this._bindPictureInPictureButton(
       "live",
       this._$("#live-pip-btn"),
-      liveAllowed ? this._livePictureInPictureVideo() : null
+      liveAllowed ? liveVideo : null
     );
     const popupMediaType = this._popupMediaType;
-    const popupAllowed = popupOpen && !DEVICE_PROFILE.isMobile && this._isPopupVideoMediaType(popupMediaType);
+    const popupVideo = popupOpen ? this._popupMediaVideo() : null;
+    enableNativePictureInPicture(popupVideo);
+    const popupAllowed = popupOpen && !DEVICE_PROFILE.isMobile && !isFirefox && this._isPopupVideoMediaType(popupMediaType);
     this._bindPictureInPictureButton(
       "popup",
       this._$("#popup-pip-btn"),
-      popupAllowed ? this._popupMediaVideo() : null
+      popupAllowed ? popupVideo : null
     );
   }
   async _togglePictureInPicture(video, { popup = false } = {}) {
@@ -21646,11 +21604,7 @@ const FrigateViewCard = class extends HTMLElement {
       return;
     }
     try {
-      await toggleVideoPictureInPicture({
-        video,
-        documentObj,
-        temporarilyAllowDisabled: true
-      });
+      await toggleVideoPictureInPicture({ video, documentObj });
     } catch (error) {
       console.warn("[Frigate] Picture-in-Picture request failed", error);
       const reason = String(error?.message || "").trim();
@@ -21679,7 +21633,7 @@ const FrigateViewCard = class extends HTMLElement {
       viewer.appendChild(controls);
     }
     controls.innerHTML = "";
-    if (!DEVICE_PROFILE.isMobile && this._isPopupVideoMediaType(mediaType)) {
+    if (!DEVICE_PROFILE.isMobile && !this._isFirefox() && this._isPopupVideoMediaType(mediaType)) {
       const pictureInPictureButton = document.createElement("button");
       pictureInPictureButton.className = "square-btn popup-playback-btn popup-pip-btn";
       pictureInPictureButton.id = "popup-pip-btn";

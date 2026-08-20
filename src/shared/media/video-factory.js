@@ -298,33 +298,11 @@ function applyVideoDatasetOptions(video, options = {}) {
   }
 }
 
-export function shouldSuppressNativePictureInPicture(
-  navigatorObj = globalThis.navigator,
-) {
-  const userAgent = String(navigatorObj?.userAgent || "");
-  const isMobile =
-    navigatorObj?.userAgentData?.mobile === true ||
-    /android|mobile/i.test(userAgent);
-  return (
-    !isMobile && /firefox/i.test(userAgent) && !/seamonkey/i.test(userAgent)
-  );
-}
-
-export function applyNativePictureInPicturePolicy(
-  video,
-  { navigatorObj = globalThis.navigator, suppress = undefined } = {},
-) {
+export function enableNativePictureInPicture(video) {
   if (!video) return false;
-  const shouldSuppress = Boolean(
-    suppress ?? shouldSuppressNativePictureInPicture(navigatorObj),
-  );
-  video.disablePictureInPicture = shouldSuppress;
-  if (shouldSuppress) {
-    video.setAttribute?.("disablepictureinpicture", "");
-  } else {
-    video.removeAttribute?.("disablepictureinpicture");
-  }
-  return shouldSuppress;
+  video.disablePictureInPicture = false;
+  video.removeAttribute?.("disablepictureinpicture");
+  return true;
 }
 
 export function configureVideoElement(video, options = {}) {
@@ -367,10 +345,7 @@ export function configureVideoElement(video, options = {}) {
 
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
-  applyNativePictureInPicturePolicy(video, {
-    navigatorObj: options.navigatorObj,
-    suppress: options.disablePictureInPicture,
-  });
+  enableNativePictureInPicture(video);
   video.disableRemotePlayback = true;
   video.setAttribute("x-webkit-airplay", "deny");
 
