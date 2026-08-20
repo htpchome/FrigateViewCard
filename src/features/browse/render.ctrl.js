@@ -94,10 +94,12 @@ export class BrowseRenderController {
       const showButtons = this._host._isMobilePhoneViewport?.() !== true;
       if (previous) previous.style.display = showButtons ? "inline-flex" : "none";
       if (next) next.style.display = showButtons ? "inline-flex" : "none";
-      void (
-        this._host._recordingsBrowseNavController?.updateBrowseNav?.() ??
-        this._host._updateRecordingsBrowseNav?.()
-      );
+      if (this._host._recordingsBrowseNavController?.prepareBrowseNav) {
+        this._host._recordingsBrowseNavController.prepareBrowseNav();
+      } else {
+        if (previous) previous.disabled = true;
+        if (next) next.disabled = true;
+      }
       return;
     }
 
@@ -331,6 +333,7 @@ export class BrowseRenderController {
       contentForceHide: false,
       syncOnContent: true,
     });
+    this._host._recordingsBrowseNavController?.scheduleBrowseNavUpdate?.();
   }
 
   _renderReviews(list) {

@@ -338,10 +338,6 @@ test("prepareDayTransition reuses cached transitions and fetches uncached day da
     },
   };
   const controller = new RecordingsBrowseNavController(host);
-  controller.hasRecordingsInBounds = async (bounds) => {
-    calls.push(["hasRecordingsInBounds", bounds]);
-    return bounds === fetchedBounds;
-  };
 
   assert.deepEqual(await controller.prepareDayTransition(-1), {
     hasData: true,
@@ -355,14 +351,108 @@ test("prepareDayTransition reuses cached transitions and fetches uncached day da
     bounds: fetchedBounds,
     recs: [{ id: "fetched" }],
   });
-  assert.deepEqual(calls, [
-    ["hasRecordingsInBounds", fetchedBounds],
-    ["ws", 199],
-  ]);
+  assert.deepEqual(calls, [["ws", 199]]);
   assert.deepEqual(dataCache.get("client-a|front|100|199"), [
     { id: "fetched" },
   ]);
   assert.equal(availabilityCache.get("client-a|front|100|199"), true);
+});
+
+test("fetchRecordingsInBounds deduplicates concurrent day requests", async () => {
+  const bounds = { start: 100, end: 199 };
+  let releaseRequest;
+  let requestCount = 0;
+  const pendingRequest = new Promise((resolve) => {
+    releaseRequest = resolve;
+  });
+  const host = {
+    _recordingsDayDataCache: new Map(),
+    _recordingsDayAvailabilityCache: new Map(),
+    _recordingsDayFetchedAtCache: new Map(),
+    _recordingsDayRequestCache: new Map(),
+    _ws: async () => {
+      requestCount += 1;
+      return await pendingRequest;
+    },
+  };
+  const controller = new RecordingsBrowseNavController(host);
+
+  const first = controller.fetchRecordingsInBounds(
+    bounds,
+    "client-a",
+    "front",
+  );
+  const second = controller.fetchRecordingsInBounds(
+    bounds,
+    "client-a",
+    "front",
+  );
+
+  assert.equal(requestCount, 1);
+  releaseRequest([{ id: "recording-1" }]);
+
+  assert.deepEqual(await first, [{ id: "recording-1" }]);
+  assert.deepEqual(await second, [{ id: "recording-1" }]);
+  assert.equal(host._recordingsDayRequestCache.size, 0);
+  assert.deepEqual(
+    host._recordingsDayDataCache.get("client-a|front|100|199"),
+    [{ id: "recording-1" }],
+  );
+});
+
+test("prepareDayTransition preserves the empty bounce state when loading fails", async () => {
+  const bounds = { start: 100, end: 199 };
+  const host = {
+    _recordingsDayDataCache: new Map(),
+    _recordingsDayAvailabilityCache: new Map(),
+    _recordingsOffsetDayBounds: () => bounds,
+    _recordingsDayBounds: () => ({ start: 200, end: 299 }),
+    _cc: () => ({ clientId: "client-a", cam: "front" }),
+    _ws: async () => {
+      throw new Error("offline");
+    },
+  };
+  const controller = new RecordingsBrowseNavController(host);
+
+  assert.deepEqual(await controller.prepareDayTransition(-1), {
+    hasData: false,
+    bounds,
+    recs: [],
+  });
+});
+
+test("scheduleBrowseNavUpdate waits for current rows and coalesces repeated renders", async () => {
+  const bounds = { start: 100, end: 199 };
+  const previous = { disabled: false };
+  const next = { disabled: false };
+  let updateCount = 0;
+  const host = {
+    _tab: "recordings",
+    _winEnd: 150,
+    _recordingsDayDataCache: new Map(),
+    _recordingsDayAvailabilityCache: new Map(),
+    _cc: () => ({ clientId: "client-a", cam: "front" }),
+    _recordingsDayBounds: () => bounds,
+    _pageShellRegionElement: (_region, selector) =>
+      selector === "#rec-day-prev" ? previous : next,
+  };
+  const controller = new RecordingsBrowseNavController(host);
+  controller.updateBrowseNav = async () => {
+    updateCount += 1;
+  };
+
+  controller.prepareBrowseNav();
+  assert.equal(previous.disabled, true);
+  assert.equal(next.disabled, true);
+  assert.equal(controller.scheduleBrowseNavUpdate(), false);
+
+  host._recordingsDayDataCache.set("client-a|front|100|199", []);
+  assert.equal(controller.scheduleBrowseNavUpdate(), true);
+  assert.equal(controller.scheduleBrowseNavUpdate(), false);
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(updateCount, 1);
+  assert.equal(controller.scheduleBrowseNavUpdate(), false);
 });
 
 test("_commitRecordingsDayTransition updates caches and render state with camera context", async () => {

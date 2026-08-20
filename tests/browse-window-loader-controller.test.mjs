@@ -258,6 +258,7 @@ test("loadWindowRecordings resolves day bounds without card-owned recordings wra
   const controller = new BrowseWindowLoaderController(host);
 
   await controller.loadWindowRecordings("frigate", "front", 150);
+  await controller.loadWindowRecordings("frigate", "front", 150);
 
   assert.deepEqual(calls, [
     {
@@ -267,6 +268,7 @@ test("loadWindowRecordings resolves day bounds without card-owned recordings wra
       after: 100,
       before: 199,
     },
+    "renderList",
     "renderList",
   ]);
   assert.deepEqual(host._recordings, [
@@ -281,6 +283,86 @@ test("loadWindowRecordings resolves day bounds without card-owned recordings wra
     host._recordingsDayAvailabilityCache.get("frigate|front|100|199"),
     true,
   );
+});
+
+test("loadWindowRecordings paints stale current-day cache before refreshing it", async () => {
+  const bounds = { start: 100, end: 199 };
+  const key = "frigate|front|100|199";
+  const cached = [{ id: "cached", start_time: 110, end_time: 120 }];
+  const refreshed = [{ id: "fresh", start_time: 130, end_time: 140 }];
+  let releaseRequest;
+  let requestCount = 0;
+  const pendingRequest = new Promise((resolve) => {
+    releaseRequest = resolve;
+  });
+  const renders = [];
+  const host = {
+    _winEnd: 150,
+    _config: { refresh_seconds: 15 },
+    _activeCam: { entity: "camera.front" },
+    _camCache: { "camera.front": {} },
+    _recordings: [],
+    _recordingsDayDataCache: new Map([[key, cached]]),
+    _recordingsDayAvailabilityCache: new Map([[key, true]]),
+    _recordingsDayFetchedAtCache: new Map([[key, Date.now() - 60_000]]),
+    _recordingsDayRequestCache: new Map(),
+    _recordingsDayBounds: () => bounds,
+    _cc: () => ({ clientId: "frigate", cam: "front" }),
+    _ws: async () => {
+      requestCount += 1;
+      return await pendingRequest;
+    },
+    _renderList: () => renders.push(host._recordings),
+  };
+  const controller = new BrowseWindowLoaderController(host);
+
+  const load = controller.loadWindowRecordings("frigate", "front", 150);
+
+  assert.deepEqual(host._recordings, cached);
+  assert.equal(requestCount, 1);
+  assert.deepEqual(renders, [cached]);
+
+  releaseRequest(refreshed);
+  await load;
+
+  assert.deepEqual(host._recordings, refreshed);
+  assert.deepEqual(host._recordingsDayDataCache.get(key), refreshed);
+  assert.deepEqual(renders, [cached, refreshed]);
+});
+
+test("loadWindowRecordings reuses a fresh current-day cache without fetching", async () => {
+  const bounds = { start: 100, end: 199 };
+  const key = "frigate|front|100|199";
+  const cached = [{ id: "cached", start_time: 110, end_time: 120 }];
+  let requestCount = 0;
+  const host = {
+    _winEnd: 150,
+    _config: { refresh_seconds: 45 },
+    _activeCam: { entity: "camera.front" },
+    _camCache: { "camera.front": {} },
+    _recordings: [],
+    _recordingsDayDataCache: new Map([[key, cached]]),
+    _recordingsDayAvailabilityCache: new Map([[key, true]]),
+    _recordingsDayFetchedAtCache: new Map([[key, Date.now()]]),
+    _recordingsDayBounds: () => bounds,
+    _cc: () => ({ clientId: "frigate", cam: "front" }),
+    _ws: async () => {
+      requestCount += 1;
+      return [];
+    },
+    _renderList: () => {},
+  };
+  const controller = new BrowseWindowLoaderController(host);
+
+  const recordings = await controller.loadWindowRecordings(
+    "frigate",
+    "front",
+    150,
+  );
+
+  assert.deepEqual(recordings, cached);
+  assert.deepEqual(host._recordings, cached);
+  assert.equal(requestCount, 0);
 });
 
 test("fetchRecentActiveDayEvents returns last N days with events", async () => {

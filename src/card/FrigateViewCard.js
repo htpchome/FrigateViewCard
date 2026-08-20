@@ -674,6 +674,8 @@ export class FrigateViewCard extends HTMLElement {
     this._recordingAlertCache = new Map();
     this._recordingsDayAvailabilityCache = new Map();
     this._recordingsDayDataCache = new Map();
+    this._recordingsDayFetchedAtCache = new Map();
+    this._recordingsDayRequestCache = new Map();
     this._recordingsNavUpdateToken = 0;
     this._recordingsDayNavAnimating = false;
     this._recordingsSwipeGesture = null;

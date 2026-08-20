@@ -760,7 +760,12 @@ test("single-view list label helpers format alerts and recordings headings", () 
   );
   assert.equal(nodes["#rec-day-prev"].style.display, "inline-flex");
   assert.equal(nodes["#rec-day-next"].style.display, "inline-flex");
-  assert.deepEqual(calls.slice(-1), [["updateRecordingsBrowseNav"]]);
+  assert.equal(nodes["#rec-day-prev"].disabled, true);
+  assert.equal(nodes["#rec-day-next"].disabled, true);
+  assert.equal(
+    calls.some(([action]) => action === "updateRecordingsBrowseNav"),
+    false,
+  );
 });
 
 test("single-view sticky-day helpers expose grouped section rendering", () => {

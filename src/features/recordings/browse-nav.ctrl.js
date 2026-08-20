@@ -20,6 +20,11 @@ import { resolvePreparedRecordingsDayNavigationState } from "./utils/swipe.js";
 export class RecordingsBrowseNavController {
   constructor(host) {
     this._host = host;
+    this._scheduledBrowseNavKey = "";
+    this._activeBrowseNavKey = "";
+    this._lastBrowseNavKey = "";
+    this._lastBrowseNavPrevious = null;
+    this._lastBrowseNavNext = null;
   }
 
   _swipeController() {
@@ -66,23 +71,51 @@ export class RecordingsBrowseNavController {
     });
   }
 
-  async hasRecordingsInBounds(bounds, clientId, cam) {
-    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
-    const cached = resolveCachedRecordingsAvailability({
-      key,
-      dataCache: this._host._recordingsDayDataCache,
-      availabilityCache: this._host._recordingsDayAvailabilityCache,
-    });
-    if (cached.found) {
-      if (cached.shouldSyncAvailability) {
-        this._host._recordingsDayAvailabilityCache.set(
-          key,
-          cached.hasRecordings,
-        );
-      }
-      return cached.hasRecordings;
+  _recordingsDataCache() {
+    if (!this._host._recordingsDayDataCache) {
+      this._host._recordingsDayDataCache = new Map();
     }
-    try {
+    return this._host._recordingsDayDataCache;
+  }
+
+  _recordingsAvailabilityCache() {
+    if (!this._host._recordingsDayAvailabilityCache) {
+      this._host._recordingsDayAvailabilityCache = new Map();
+    }
+    return this._host._recordingsDayAvailabilityCache;
+  }
+
+  _recordingsFetchedAtCache() {
+    if (!this._host._recordingsDayFetchedAtCache) {
+      this._host._recordingsDayFetchedAtCache = new Map();
+    }
+    return this._host._recordingsDayFetchedAtCache;
+  }
+
+  _recordingsRequestCache() {
+    if (!this._host._recordingsDayRequestCache) {
+      this._host._recordingsDayRequestCache = new Map();
+    }
+    return this._host._recordingsDayRequestCache;
+  }
+
+  async fetchRecordingsInBounds(
+    bounds,
+    clientId,
+    cam,
+    { forceRefresh = false } = {},
+  ) {
+    if (!bounds || !clientId || !cam) return [];
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    const dataCache = this._recordingsDataCache();
+    if (!forceRefresh && dataCache.has(key)) {
+      return dataCache.get(key) || [];
+    }
+
+    const requestCache = this._recordingsRequestCache();
+    if (requestCache.has(key)) return await requestCache.get(key);
+
+    const request = (async () => {
       const recordings = await this._host._ws({
         type: "frigate/recordings/get",
         instance_id: clientId,
@@ -91,15 +124,45 @@ export class RecordingsBrowseNavController {
         before: bounds.end,
       });
       const fetched = resolveFetchedRecordingsAvailabilityState(recordings);
-      this._host._recordingsDayDataCache.set(key, fetched.recordings);
-      this._host._recordingsDayAvailabilityCache.set(
+      dataCache.set(key, fetched.recordings);
+      this._recordingsAvailabilityCache().set(
         key,
         fetched.availabilityValue,
       );
-      return fetched.hasRecordings;
+      this._recordingsFetchedAtCache().set(key, Date.now());
+      return fetched.recordings;
+    })();
+    requestCache.set(key, request);
+    try {
+      return await request;
+    } finally {
+      if (requestCache.get(key) === request) requestCache.delete(key);
+    }
+  }
+
+  async hasRecordingsInBounds(bounds, clientId, cam) {
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    const cached = resolveCachedRecordingsAvailability({
+      key,
+      dataCache: this._recordingsDataCache(),
+      availabilityCache: this._recordingsAvailabilityCache(),
+    });
+    if (cached.found) {
+      if (cached.shouldSyncAvailability) {
+        this._recordingsAvailabilityCache().set(key, cached.hasRecordings);
+      }
+      return cached.hasRecordings;
+    }
+    try {
+      const recordings = await this.fetchRecordingsInBounds(
+        bounds,
+        clientId,
+        cam,
+      );
+      return recordings.length > 0;
     } catch (_) {
       const failed = resolveFailedRecordingsAvailabilityState();
-      this._host._recordingsDayAvailabilityCache.set(
+      this._recordingsAvailabilityCache().set(
         key,
         failed.availabilityValue,
       );
@@ -124,21 +187,92 @@ export class RecordingsBrowseNavController {
     }
 
     const key = prepared.key;
-    const hasData = await this.hasRecordingsInBounds(bounds, clientId, cam);
-    if (!hasData) {
+    let recordings = [];
+    try {
+      recordings = await this.fetchRecordingsInBounds(
+        bounds,
+        clientId,
+        cam,
+      );
+    } catch (_) {
       return { hasData: false, bounds, recs: [] };
     }
-    const recordings = await this._host._ws({
-      type: "frigate/recordings/get",
-      instance_id: clientId,
-      camera: cam,
-      after: Math.max(0, bounds.start),
-      before: bounds.end,
-    });
     const result = buildPreparedRecordingsDayResult(bounds, recordings);
-    this._host._recordingsDayDataCache.set(key, result.recs);
-    this._host._recordingsDayAvailabilityCache.set(key, result.hasData);
+    this._recordingsDataCache().set(key, result.recs);
+    this._recordingsAvailabilityCache().set(key, result.hasData);
     return result;
+  }
+
+  _browseNavContextKey({ requireData = true } = {}) {
+    if (this._host._tab !== "recordings") return "";
+    const { clientId, cam } = this._host._cc();
+    if (!clientId || !cam) return "";
+    const bounds = this._recordingsDayBounds();
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    return !requireData || this._recordingsDataCache().has(key) ? key : "";
+  }
+
+  _browseNavNodes() {
+    return {
+      previous: this._host._pageShellRegionElement(
+        "browseHeader",
+        "#rec-day-prev",
+      ),
+      next: this._host._pageShellRegionElement(
+        "browseHeader",
+        "#rec-day-next",
+      ),
+    };
+  }
+
+  prepareBrowseNav() {
+    const key = this._browseNavContextKey({ requireData: false });
+    const { previous, next } = this._browseNavNodes();
+    const alreadyResolved =
+      !!key &&
+      key === this._lastBrowseNavKey &&
+      previous === this._lastBrowseNavPrevious &&
+      next === this._lastBrowseNavNext;
+    if (alreadyResolved) return;
+    if (previous) previous.disabled = true;
+    if (next) next.disabled = true;
+  }
+
+  scheduleBrowseNavUpdate() {
+    const key = this._browseNavContextKey();
+    const { previous, next } = this._browseNavNodes();
+    const alreadyResolved =
+      key === this._lastBrowseNavKey &&
+      previous === this._lastBrowseNavPrevious &&
+      next === this._lastBrowseNavNext;
+    if (
+      !key ||
+      key === this._scheduledBrowseNavKey ||
+      key === this._activeBrowseNavKey ||
+      alreadyResolved
+    ) {
+      return false;
+    }
+
+    this._scheduledBrowseNavKey = key;
+    void Promise.resolve().then(async () => {
+      if (this._scheduledBrowseNavKey !== key) return;
+      this._scheduledBrowseNavKey = "";
+      if (this._browseNavContextKey() !== key) return;
+      this._activeBrowseNavKey = key;
+      try {
+        await this.updateBrowseNav();
+        if (this._browseNavContextKey() === key) {
+          this._lastBrowseNavKey = key;
+          const resolvedNodes = this._browseNavNodes();
+          this._lastBrowseNavPrevious = resolvedNodes.previous;
+          this._lastBrowseNavNext = resolvedNodes.next;
+        }
+      } finally {
+        if (this._activeBrowseNavKey === key) this._activeBrowseNavKey = "";
+      }
+    }).catch(() => {});
+    return true;
   }
 
   async navigateDayAnimated(direction) {

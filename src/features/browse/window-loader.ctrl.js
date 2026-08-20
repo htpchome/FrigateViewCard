@@ -7,6 +7,7 @@ import {
   INITIAL_EVENTS_PAGE_LIMIT,
 } from "../../constants.js";
 import { fetchWindowedItems } from "../../data/window-fetch.js";
+import { buildRecordingsDayCacheKey } from "../recordings/utils/availability.js";
 import { resolveRecordingsDayBounds } from "../recordings/utils/day.js";
 import { reviewMatchesAlertsOnlyMode } from "./filter-state.js";
 
@@ -401,41 +402,155 @@ export class BrowseWindowLoaderController {
   }
 
   async loadWindowRecordings(clientId, cam, before) {
-    const bounds = this._host._recordingsDayBounds
-      ? this._host._recordingsDayBounds(before)
-      : resolveRecordingsDayBounds({
-          tsSec: before,
-          fallbackSec: this._host._winEnd,
-          getTzParts: (target) => this._host._tzParts(target),
-          toEpochSeconds: (year, month, day, hour, minute, second) =>
-            this._host._tzDateTimeToEpochSeconds(
-              year,
-              month,
-              day,
-              hour,
-              minute,
-              second,
-            ),
-        });
-    const cacheKey = `${clientId}|${cam}|${bounds.start}|${bounds.end}`;
+    const bounds = this._resolveRecordingsDayBounds(before);
+    const cacheKey = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    if (!this._host._recordingsDayDataCache) {
+      this._host._recordingsDayDataCache = new Map();
+    }
+    if (!this._host._recordingsDayAvailabilityCache) {
+      this._host._recordingsDayAvailabilityCache = new Map();
+    }
+    if (!this._host._recordingsDayFetchedAtCache) {
+      this._host._recordingsDayFetchedAtCache = new Map();
+    }
+
+    const dataCache = this._host._recordingsDayDataCache;
+    const hasCached = dataCache.has(cacheKey);
+    const cachedRecordings = hasCached ? dataCache.get(cacheKey) || [] : [];
+    if (hasCached) {
+      this._publishRecordingsDay(
+        clientId,
+        cam,
+        bounds,
+        cachedRecordings,
+      );
+    }
+
+    const todayBounds = this._resolveRecordingsDayBounds(
+      Math.floor(Date.now() / 1000),
+    );
+    const isToday =
+      bounds.start === todayBounds.start && bounds.end === todayBounds.end;
+    const fetchedAt = Number(
+      this._host._recordingsDayFetchedAtCache.get(cacheKey) || 0,
+    );
+    const cacheIsFresh =
+      fetchedAt > 0 && Date.now() - fetchedAt < this._recordingsFreshnessMs();
+    if (hasCached && (!isToday || cacheIsFresh)) return cachedRecordings;
+
     try {
-      const recordings = await this._host._ws({
+      const recordings = await this._fetchRecordingsDay(
+        clientId,
+        cam,
+        bounds,
+        { forceRefresh: hasCached },
+      );
+      this._publishRecordingsDay(clientId, cam, bounds, recordings);
+      return recordings;
+    } catch (_) {
+      if (!hasCached && this._recordingsContextMatches(clientId, cam, bounds)) {
+        this._host._recordings = [];
+        this.cacheActiveCamSlice("recordings", this._host._recordings);
+      }
+      return cachedRecordings;
+    }
+  }
+
+  _resolveRecordingsDayBounds(timestamp) {
+    if (this._host._recordingsDayBounds) {
+      return this._host._recordingsDayBounds(timestamp);
+    }
+    return resolveRecordingsDayBounds({
+      tsSec: timestamp,
+      fallbackSec: this._host._winEnd,
+      getTzParts: (target) => this._host._tzParts(target),
+      toEpochSeconds: (year, month, day, hour, minute, second) =>
+        this._host._tzDateTimeToEpochSeconds(
+          year,
+          month,
+          day,
+          hour,
+          minute,
+          second,
+        ),
+    });
+  }
+
+  _recordingsFreshnessMs() {
+    const refreshSeconds = Math.max(
+      15,
+      Number(this._host._config?.refresh_seconds) || 45,
+    );
+    return refreshSeconds * 1000;
+  }
+
+  _recordingsContextMatches(clientId, cam, bounds) {
+    if (typeof this._host._cc !== "function") return true;
+    const active = this._host._cc();
+    if (active?.clientId !== clientId || active?.cam !== cam) return false;
+    const activeBounds = this._resolveRecordingsDayBounds(this._host._winEnd);
+    return (
+      activeBounds.start === bounds.start && activeBounds.end === bounds.end
+    );
+  }
+
+  _publishRecordingsDay(clientId, cam, bounds, recordings) {
+    if (!this._recordingsContextMatches(clientId, cam, bounds)) return false;
+    this._host._recordings = Array.isArray(recordings) ? recordings : [];
+    this.cacheActiveCamSlice("recordings", this._host._recordings);
+    this._host._renderList();
+    return true;
+  }
+
+  async _fetchRecordingsDay(
+    clientId,
+    cam,
+    bounds,
+    { forceRefresh = false } = {},
+  ) {
+    const sharedLoader =
+      this._host._recordingsBrowseNavController?.fetchRecordingsInBounds;
+    if (typeof sharedLoader === "function") {
+      return await sharedLoader.call(
+        this._host._recordingsBrowseNavController,
+        bounds,
+        clientId,
+        cam,
+        { forceRefresh },
+      );
+    }
+
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    const dataCache = this._host._recordingsDayDataCache;
+    if (!forceRefresh && dataCache.has(key)) return dataCache.get(key) || [];
+    if (!this._host._recordingsDayRequestCache) {
+      this._host._recordingsDayRequestCache = new Map();
+    }
+    const requestCache = this._host._recordingsDayRequestCache;
+    if (requestCache.has(key)) return await requestCache.get(key);
+
+    const request = (async () => {
+      const response = await this._host._ws({
         type: "frigate/recordings/get",
         instance_id: clientId,
         camera: cam,
         after: Math.max(0, bounds.start),
         before: bounds.end,
       });
-      this._host._recordings = Array.isArray(recordings) ? recordings : [];
-      this._host._recordingsDayDataCache.set(cacheKey, this._host._recordings);
+      const recordings = Array.isArray(response) ? response : [];
+      dataCache.set(key, recordings);
       this._host._recordingsDayAvailabilityCache.set(
-        cacheKey,
-        this._host._recordings.length > 0,
+        key,
+        recordings.length > 0,
       );
-      this.cacheActiveCamSlice("recordings", this._host._recordings);
-      this._host._renderList();
-    } catch (_) {
-      this._host._recordings = [];
+      this._host._recordingsDayFetchedAtCache.set(key, Date.now());
+      return recordings;
+    })();
+    requestCache.set(key, request);
+    try {
+      return await request;
+    } finally {
+      if (requestCache.get(key) === request) requestCache.delete(key);
     }
   }
 

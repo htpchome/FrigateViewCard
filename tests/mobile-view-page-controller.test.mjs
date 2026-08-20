@@ -255,7 +255,12 @@ test("mobile-view list label helpers format alerts and recordings headings", () 
   );
   assert.equal(nodes["#rec-day-prev"].style.display, "none");
   assert.equal(nodes["#rec-day-next"].style.display, "none");
-  assert.deepEqual(calls.slice(-1), [["updateRecordingsBrowseNav"]]);
+  assert.equal(nodes["#rec-day-prev"].disabled, true);
+  assert.equal(nodes["#rec-day-next"].disabled, true);
+  assert.equal(
+    calls.some(([action]) => action === "updateRecordingsBrowseNav"),
+    false,
+  );
 });
 
 test("mobile-view sticky-day helpers expose grouped section rendering", () => {
