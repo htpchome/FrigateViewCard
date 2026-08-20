@@ -246,6 +246,31 @@ test("runtime takeover defaults from config and does not revert main camera", ()
   );
 });
 
+test("Alert Camera Takeover cannot start while another toolbar mode is active", () => {
+  const { host, calls } = createHost({ takeover: false });
+  host._toolbarButtonStates = () => ({
+    wideAlertTakeoverDisabled: true,
+  });
+  const controller = new WideViewCompanionController(host, constants);
+
+  assert.equal(controller.toggleAlertTakeover(), false);
+  assert.equal(controller.alertTakeoverEnabled(), false);
+  assert.deepEqual(calls, [["syncToolbar"]]);
+});
+
+test("configured Alert Camera Takeover yields to an already active mode", () => {
+  const { host, calls } = createHost({ takeover: true });
+  host._toolbarButtonStates = () => ({
+    wideAlertTakeoverDisabled: true,
+  });
+  const controller = new WideViewCompanionController(host, constants);
+
+  controller.resetAlertTakeoverDefault();
+
+  assert.equal(controller.alertTakeoverEnabled(), false);
+  assert.deepEqual(calls, [["syncToolbar"]]);
+});
+
 test("clicking a Companion Camera uses the normal manual camera switch", () => {
   const { host, calls } = createHost();
   const controller = new WideViewCompanionController(host, constants);

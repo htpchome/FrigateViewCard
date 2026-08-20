@@ -16,6 +16,7 @@ import {
   buildTabsRegionMarkup,
   buildToolsMarkup,
   buildToolsRegionMarkup,
+  resolveToolbarModeButtonStates,
 } from "../src/card/controls/shell-nav.tmpl.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
 import {
@@ -215,6 +216,94 @@ test("buildToolsMarkup places Wide View alert takeover beside grid", () => {
     /class="tool active" id="wide-alert-takeover-btn"[^>]*aria-pressed="true"/,
   );
   assert.match(markup, /title="Disable Alert Camera Takeover"/);
+  assert.doesNotMatch(markup, /<\/button><\/button>/);
+});
+
+test("Wide View toolbar modes disable every other mode", () => {
+  const cases = [
+    {
+      active: { controlsActive: true },
+      expected: {
+        controlsDisabled: false,
+        gridDisabled: true,
+        slideshowDisabled: true,
+        wideAlertTakeoverDisabled: true,
+        filterDisabled: true,
+        calendarDisabled: true,
+      },
+    },
+    {
+      active: { gridActive: true },
+      expected: {
+        controlsDisabled: true,
+        gridDisabled: false,
+        slideshowDisabled: true,
+        wideAlertTakeoverDisabled: true,
+        filterDisabled: false,
+        calendarDisabled: false,
+      },
+    },
+    {
+      active: { slideshowActive: true },
+      expected: {
+        controlsDisabled: true,
+        gridDisabled: true,
+        slideshowDisabled: false,
+        wideAlertTakeoverDisabled: true,
+        filterDisabled: false,
+        calendarDisabled: false,
+      },
+    },
+    {
+      active: { wideAlertTakeoverActive: true },
+      expected: {
+        controlsDisabled: true,
+        gridDisabled: true,
+        slideshowDisabled: true,
+        wideAlertTakeoverDisabled: false,
+        filterDisabled: false,
+        calendarDisabled: false,
+      },
+    },
+  ];
+
+  for (const { active, expected } of cases) {
+    assert.deepEqual(
+      resolveToolbarModeButtonStates({
+        controlsVisible: true,
+        ...active,
+      }),
+      { controlsVisible: true, ...expected },
+    );
+  }
+});
+
+test("buildToolsMarkup renders Alert Camera Takeover as disabled", () => {
+  const markup = buildToolsMarkup({
+    tab: "alerts",
+    viewMode: "single",
+    icons,
+    isFilterPanelOpen: false,
+    isCalendarPanelOpen: false,
+    isGridModeAvailable: true,
+    isSlideshowRotationAvailable: true,
+    isSlideshowActive: true,
+    isControlsVisible: true,
+    controlsDisabled: true,
+    gridDisabled: true,
+    slideshowDisabled: false,
+    wideAlertTakeoverDisabled: true,
+    gridButtonIcon: "G",
+    slideshowButtonIcon: "L",
+    showWideAlertTakeover: true,
+    wideAlertTakeoverEnabled: false,
+    wideAlertTakeoverButtonIcon: "T",
+  });
+
+  assert.match(markup, /id="wide-alert-takeover-btn"[^>]* disabled/);
+  assert.doesNotMatch(markup, /id="slideshow-btn"[^>]* disabled/);
+  assert.doesNotMatch(markup, /id="filter-btn"[^>]* disabled/);
+  assert.doesNotMatch(markup, /id="cal-btn"[^>]* disabled/);
 });
 
 test("buildControlsSectionMarkup enables pan, tilt, and zoom on the circle pad", () => {

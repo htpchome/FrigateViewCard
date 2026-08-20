@@ -100,10 +100,23 @@ export class WideViewCompanionController {
 
   resetAlertTakeoverDefault() {
     this._alertTakeoverEnabled = null;
+    if (
+      this.alertTakeoverEnabled() &&
+      this._host._toolbarButtonStates?.().wideAlertTakeoverDisabled
+    ) {
+      this._alertTakeoverEnabled = false;
+    }
     this._host._syncToolbarButtons?.();
   }
 
   toggleAlertTakeover() {
+    if (
+      !this.alertTakeoverEnabled() &&
+      this._host._toolbarButtonStates?.().wideAlertTakeoverDisabled
+    ) {
+      this._host._syncToolbarButtons?.();
+      return false;
+    }
     this._alertTakeoverEnabled = !this.alertTakeoverEnabled();
     this._host._syncToolbarButtons?.();
     return this._alertTakeoverEnabled;
@@ -347,6 +360,13 @@ export class WideViewCompanionController {
 
   start() {
     if (!this.isActive()) return;
+    if (
+      this.alertTakeoverEnabled() &&
+      this._host._toolbarButtonStates?.().wideAlertTakeoverDisabled
+    ) {
+      this._alertTakeoverEnabled = false;
+      this._host._syncToolbarButtons?.();
+    }
     this._alertController.start();
     this.render();
   }

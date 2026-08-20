@@ -49,6 +49,7 @@ export class SlideshowPageController {
 
   startRotation(source = "manual") {
     if (!this._host._isSlideshowRotationAvailable()) return false;
+    if (this._host._toolbarButtonStates?.().slideshowDisabled) return false;
     this._host._slideshowActive = true;
     this._host._slideshowPopupPaused =
       this._host._$("#myPopup")?.classList.contains("is-open") === true;
@@ -86,6 +87,10 @@ export class SlideshowPageController {
   toggleRotation() {
     if (this._host._slideshowActive) {
       this.stopRotation("manual-stop");
+      return;
+    }
+    if (this._host._toolbarButtonStates?.().slideshowDisabled) {
+      this._host._syncToolbarButtons?.();
       return;
     }
     let startedFromGrid = false;

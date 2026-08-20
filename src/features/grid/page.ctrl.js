@@ -64,6 +64,7 @@ export class GridPageController {
     if (this._host._isPreviewPageActive()) return;
     if (!this.shouldStartInGridMode()) return;
     if (this._host._viewMode === "grid") return;
+    if (this._host._toolbarButtonStates?.().gridDisabled) return;
     this._host._gridRotationStart = 0;
     this._host._setViewMode("grid");
   }
@@ -147,6 +148,10 @@ export class GridPageController {
       } else {
         this._host._syncToolbarButtons();
       }
+      return;
+    }
+    if (this._host._toolbarButtonStates?.().gridDisabled) {
+      this._host._syncToolbarButtons?.();
       return;
     }
     this._host._gridRotationStart = 0;

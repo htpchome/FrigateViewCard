@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1589";
+const VERSION = "1.0.1590";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -3945,6 +3945,23 @@ function buildTabsMarkup({
       ${tabMarkup("kept", icons.star, "Kept events")}`;
   return { activeTab, markup };
 }
+function resolveToolbarModeButtonStates({
+  controlsVisible = false,
+  controlsActive = false,
+  gridActive = false,
+  slideshowActive = false,
+  wideAlertTakeoverActive = false
+} = {}) {
+  return {
+    controlsVisible: controlsVisible === true,
+    controlsDisabled: gridActive || slideshowActive || wideAlertTakeoverActive,
+    gridDisabled: controlsActive || slideshowActive || wideAlertTakeoverActive,
+    slideshowDisabled: controlsActive || gridActive || wideAlertTakeoverActive,
+    wideAlertTakeoverDisabled: controlsActive || gridActive || slideshowActive,
+    filterDisabled: controlsActive,
+    calendarDisabled: controlsActive
+  };
+}
 function buildToolsMarkup({
   tab,
   viewMode,
@@ -3959,6 +3976,7 @@ function buildToolsMarkup({
   controlsDisabled,
   gridDisabled,
   slideshowDisabled,
+  wideAlertTakeoverDisabled,
   filterDisabled,
   calendarDisabled,
   gridButtonIcon,
@@ -3974,14 +3992,14 @@ function buildToolsMarkup({
   const gridActive = viewMode === "grid";
   const gridButton = gridHidden ? "" : `<button class="${toolButtonClass}${gridActive ? " active" : ""}" id="grid-btn" aria-pressed="${gridActive ? "true" : "false"}" title="${gridActive ? "Stop grid mode" : "Start grid mode"}" aria-label="${gridActive ? "Stop grid mode" : "Start grid mode"}" ${gridDisabled ? "disabled" : ""}>${gridButtonIcon}</button>`;
   const wideAlertTakeoverLabel = wideAlertTakeoverEnabled ? "Disable Alert Camera Takeover" : "Enable Alert Camera Takeover";
-  const wideAlertTakeoverButton = showWideAlertTakeover ? `<button class="${toolButtonClass}${wideAlertTakeoverEnabled ? " active" : ""}" id="wide-alert-takeover-btn" type="button" aria-pressed="${wideAlertTakeoverEnabled ? "true" : "false"}" title="${wideAlertTakeoverLabel}" aria-label="${wideAlertTakeoverLabel}">${wideAlertTakeoverButtonIcon}</button></button><div class="divider">${icons.divider}</div>` : "";
+  const wideAlertTakeoverButton = showWideAlertTakeover ? `<button class="${toolButtonClass}${wideAlertTakeoverEnabled ? " active" : ""}" id="wide-alert-takeover-btn" type="button" aria-pressed="${wideAlertTakeoverEnabled ? "true" : "false"}" title="${wideAlertTakeoverLabel}" aria-label="${wideAlertTakeoverLabel}" ${wideAlertTakeoverDisabled ? "disabled" : ""}>${wideAlertTakeoverButtonIcon}</button><div class="divider">${icons.divider}</div>` : "";
   const slideshowHidden = !isSlideshowRotationAvailable;
   const slideshowActive = isSlideshowActive;
   const slideshowButton = slideshowHidden ? "" : `<button class="${toolButtonClass} slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button><div class="divider">${icons.divider}</div>`;
   const markup = `<div class="tl-tools">
         ${controlsHidden ? "" : `<button class="${toolButtonClass}${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button><div class="divider">${icons.divider}</div>`}
-        ${wideAlertTakeoverButton}
         ${gridButton}
+        ${wideAlertTakeoverButton}
         ${slideshowButton}
         <button class="${toolButtonClass}${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
         <div class="filter-panel" id="filter-panel" data-fvc-region="filter-panel" style="display:none"></div>
@@ -15452,6 +15470,7 @@ const GridPageController = class {
     if (this._host._isPreviewPageActive()) return;
     if (!this.shouldStartInGridMode()) return;
     if (this._host._viewMode === "grid") return;
+    if (this._host._toolbarButtonStates?.().gridDisabled) return;
     this._host._gridRotationStart = 0;
     this._host._setViewMode("grid");
   }
@@ -15530,6 +15549,10 @@ const GridPageController = class {
       } else {
         this._host._syncToolbarButtons();
       }
+      return;
+    }
+    if (this._host._toolbarButtonStates?.().gridDisabled) {
+      this._host._syncToolbarButtons?.();
       return;
     }
     this._host._gridRotationStart = 0;
@@ -17887,9 +17910,16 @@ const WideViewCompanionController = class {
   }
   resetAlertTakeoverDefault() {
     this._alertTakeoverEnabled = null;
+    if (this.alertTakeoverEnabled() && this._host._toolbarButtonStates?.().wideAlertTakeoverDisabled) {
+      this._alertTakeoverEnabled = false;
+    }
     this._host._syncToolbarButtons?.();
   }
   toggleAlertTakeover() {
+    if (!this.alertTakeoverEnabled() && this._host._toolbarButtonStates?.().wideAlertTakeoverDisabled) {
+      this._host._syncToolbarButtons?.();
+      return false;
+    }
     this._alertTakeoverEnabled = !this.alertTakeoverEnabled();
     this._host._syncToolbarButtons?.();
     return this._alertTakeoverEnabled;
@@ -18089,6 +18119,10 @@ const WideViewCompanionController = class {
   }
   start() {
     if (!this.isActive()) return;
+    if (this.alertTakeoverEnabled() && this._host._toolbarButtonStates?.().wideAlertTakeoverDisabled) {
+      this._alertTakeoverEnabled = false;
+      this._host._syncToolbarButtons?.();
+    }
     this._alertController.start();
     this.render();
   }
@@ -18473,6 +18507,7 @@ const SlideshowPageController = class {
   }
   startRotation(source = "manual") {
     if (!this._host._isSlideshowRotationAvailable()) return false;
+    if (this._host._toolbarButtonStates?.().slideshowDisabled) return false;
     this._host._slideshowActive = true;
     this._host._slideshowPopupPaused = this._host._$("#myPopup")?.classList.contains("is-open") === true;
     this._host._slideshowPausedUntil = 0;
@@ -18505,6 +18540,10 @@ const SlideshowPageController = class {
   toggleRotation() {
     if (this._host._slideshowActive) {
       this.stopRotation("manual-stop");
+      return;
+    }
+    if (this._host._toolbarButtonStates?.().slideshowDisabled) {
+      this._host._syncToolbarButtons?.();
       return;
     }
     let startedFromGrid = false;
@@ -20339,6 +20378,10 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _setViewMode(mode) {
     if (this._isPreviewPageActive()) return;
+    if (mode === "grid" && this._viewMode !== "grid" && this._toolbarButtonStates().gridDisabled) {
+      this._syncToolbarButtons();
+      return;
+    }
     const nextMode = mode === "grid" && this._isGridModeAvailable() ? "grid" : "single";
     if (this._viewMode === "grid" && nextMode !== "grid") {
       this._stopGridModeState();
@@ -20436,17 +20479,14 @@ const FrigateViewCard = class extends HTMLElement {
     return hasCameraPtz(this._activeCam);
   }
   _toolbarButtonStates() {
-    const inGrid = this._viewMode === "grid";
-    const inControls = this._tab === "controls";
-    const slideshowActive = this._slideshowActive === true;
-    return {
+    const wideAlertTakeoverActive = this._wideViewPageController.isWideViewPageActive() && this._wideViewPageController.companionAlertTakeoverEnabled();
+    return resolveToolbarModeButtonStates({
       controlsVisible: this._isControlsButtonVisible(),
-      controlsDisabled: inGrid || slideshowActive,
-      gridDisabled: inControls || slideshowActive,
-      slideshowDisabled: inControls || inGrid,
-      filterDisabled: inControls,
-      calendarDisabled: inControls
-    };
+      controlsActive: this._tab === "controls",
+      gridActive: this._viewMode === "grid",
+      slideshowActive: this._slideshowActive === true,
+      wideAlertTakeoverActive
+    });
   }
   _syncToolbarButtons() {
     const buttonStates = this._toolbarButtonStates();
@@ -20503,6 +20543,7 @@ const FrigateViewCard = class extends HTMLElement {
       const active = this._wideViewPageController.companionAlertTakeoverEnabled();
       const label = active ? "Disable Alert Camera Takeover" : "Enable Alert Camera Takeover";
       wideAlertTakeoverBtn.classList.toggle("active", active);
+      wideAlertTakeoverBtn.disabled = buttonStates.wideAlertTakeoverDisabled;
       wideAlertTakeoverBtn.setAttribute(
         "aria-pressed",
         active ? "true" : "false"
@@ -21044,6 +21085,7 @@ const FrigateViewCard = class extends HTMLElement {
       controlsDisabled: buttonStates.controlsDisabled,
       gridDisabled: buttonStates.gridDisabled,
       slideshowDisabled: buttonStates.slideshowDisabled,
+      wideAlertTakeoverDisabled: buttonStates.wideAlertTakeoverDisabled,
       filterDisabled: buttonStates.filterDisabled,
       calendarDisabled: buttonStates.calendarDisabled,
       gridButtonIcon: this._gridButtonIcon(),
@@ -21981,6 +22023,7 @@ const FrigateViewCard = class extends HTMLElement {
     }
     const wideAlertTakeoverBtn = target.closest("#wide-alert-takeover-btn");
     if (wideAlertTakeoverBtn) {
+      if (wideAlertTakeoverBtn.disabled) return true;
       this._wideViewPageController.toggleCompanionAlertTakeover();
       return true;
     }
@@ -22268,6 +22311,10 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _setTab(tab) {
     const prevTab = this._tab;
+    if (tab === "controls" && prevTab !== "controls" && this._toolbarButtonStates().controlsDisabled) {
+      this._syncToolbarButtons();
+      return;
+    }
     this._tab = tab;
     if (tab !== "controls") {
       this._lastNonControlsTab = tab;

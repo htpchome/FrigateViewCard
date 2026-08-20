@@ -192,6 +192,7 @@ import {
   buildTabsRegionMarkup,
   buildToolsMarkup,
   buildToolsRegionMarkup,
+  resolveToolbarModeButtonStates,
 } from "./controls/shell-nav.tmpl.js";
 import {
   buildCalendarPanelMarkup,
@@ -2278,6 +2279,14 @@ export class FrigateViewCard extends HTMLElement {
 
   _setViewMode(mode) {
     if (this._isPreviewPageActive()) return;
+    if (
+      mode === "grid" &&
+      this._viewMode !== "grid" &&
+      this._toolbarButtonStates().gridDisabled
+    ) {
+      this._syncToolbarButtons();
+      return;
+    }
     const nextMode =
       mode === "grid" && this._isGridModeAvailable() ? "grid" : "single";
     if (this._viewMode === "grid" && nextMode !== "grid") {
@@ -2405,17 +2414,16 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _toolbarButtonStates() {
-    const inGrid = this._viewMode === "grid";
-    const inControls = this._tab === "controls";
-    const slideshowActive = this._slideshowActive === true;
-    return {
+    const wideAlertTakeoverActive =
+      this._wideViewPageController.isWideViewPageActive() &&
+      this._wideViewPageController.companionAlertTakeoverEnabled();
+    return resolveToolbarModeButtonStates({
       controlsVisible: this._isControlsButtonVisible(),
-      controlsDisabled: inGrid || slideshowActive,
-      gridDisabled: inControls || slideshowActive,
-      slideshowDisabled: inControls || inGrid,
-      filterDisabled: inControls,
-      calendarDisabled: inControls,
-    };
+      controlsActive: this._tab === "controls",
+      gridActive: this._viewMode === "grid",
+      slideshowActive: this._slideshowActive === true,
+      wideAlertTakeoverActive,
+    });
   }
 
   _syncToolbarButtons() {
@@ -2485,6 +2493,8 @@ export class FrigateViewCard extends HTMLElement {
         ? "Disable Alert Camera Takeover"
         : "Enable Alert Camera Takeover";
       wideAlertTakeoverBtn.classList.toggle("active", active);
+      wideAlertTakeoverBtn.disabled =
+        buttonStates.wideAlertTakeoverDisabled;
       wideAlertTakeoverBtn.setAttribute(
         "aria-pressed",
         active ? "true" : "false",
@@ -3113,6 +3123,8 @@ export class FrigateViewCard extends HTMLElement {
       controlsDisabled: buttonStates.controlsDisabled,
       gridDisabled: buttonStates.gridDisabled,
       slideshowDisabled: buttonStates.slideshowDisabled,
+      wideAlertTakeoverDisabled:
+        buttonStates.wideAlertTakeoverDisabled,
       filterDisabled: buttonStates.filterDisabled,
       calendarDisabled: buttonStates.calendarDisabled,
       gridButtonIcon: this._gridButtonIcon(),
@@ -4198,6 +4210,7 @@ export class FrigateViewCard extends HTMLElement {
     }
     const wideAlertTakeoverBtn = target.closest("#wide-alert-takeover-btn");
     if (wideAlertTakeoverBtn) {
+      if (wideAlertTakeoverBtn.disabled) return true;
       this._wideViewPageController.toggleCompanionAlertTakeover();
       return true;
     }
@@ -4488,6 +4501,14 @@ export class FrigateViewCard extends HTMLElement {
   }
   _setTab(tab) {
     const prevTab = this._tab;
+    if (
+      tab === "controls" &&
+      prevTab !== "controls" &&
+      this._toolbarButtonStates().controlsDisabled
+    ) {
+      this._syncToolbarButtons();
+      return;
+    }
     this._tab = tab;
     if (tab !== "controls") {
       this._lastNonControlsTab = tab;

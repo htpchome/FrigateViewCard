@@ -74,6 +74,28 @@ export function buildTabsMarkup({
   return { activeTab, markup };
 }
 
+export function resolveToolbarModeButtonStates({
+  controlsVisible = false,
+  controlsActive = false,
+  gridActive = false,
+  slideshowActive = false,
+  wideAlertTakeoverActive = false,
+} = {}) {
+  return {
+    controlsVisible: controlsVisible === true,
+    controlsDisabled:
+      gridActive || slideshowActive || wideAlertTakeoverActive,
+    gridDisabled:
+      controlsActive || slideshowActive || wideAlertTakeoverActive,
+    slideshowDisabled:
+      controlsActive || gridActive || wideAlertTakeoverActive,
+    wideAlertTakeoverDisabled:
+      controlsActive || gridActive || slideshowActive,
+    filterDisabled: controlsActive,
+    calendarDisabled: controlsActive,
+  };
+}
+
 export function buildToolsMarkup({
   tab,
   viewMode,
@@ -88,6 +110,7 @@ export function buildToolsMarkup({
   controlsDisabled,
   gridDisabled,
   slideshowDisabled,
+  wideAlertTakeoverDisabled,
   filterDisabled,
   calendarDisabled,
   gridButtonIcon,
@@ -109,7 +132,7 @@ export function buildToolsMarkup({
     ? "Disable Alert Camera Takeover"
     : "Enable Alert Camera Takeover";
   const wideAlertTakeoverButton = showWideAlertTakeover
-    ? `<button class="${toolButtonClass}${wideAlertTakeoverEnabled ? " active" : ""}" id="wide-alert-takeover-btn" type="button" aria-pressed="${wideAlertTakeoverEnabled ? "true" : "false"}" title="${wideAlertTakeoverLabel}" aria-label="${wideAlertTakeoverLabel}">${wideAlertTakeoverButtonIcon}</button></button><div class="divider">${icons.divider}</div>`
+    ? `<button class="${toolButtonClass}${wideAlertTakeoverEnabled ? " active" : ""}" id="wide-alert-takeover-btn" type="button" aria-pressed="${wideAlertTakeoverEnabled ? "true" : "false"}" title="${wideAlertTakeoverLabel}" aria-label="${wideAlertTakeoverLabel}" ${wideAlertTakeoverDisabled ? "disabled" : ""}>${wideAlertTakeoverButtonIcon}</button><div class="divider">${icons.divider}</div>`
     : "";
   const slideshowHidden = !isSlideshowRotationAvailable;
   const slideshowActive = isSlideshowActive;
@@ -118,8 +141,8 @@ export function buildToolsMarkup({
     : `<button class="${toolButtonClass} slideshow-btn${slideshowActive ? " active" : ""}" id="slideshow-btn" aria-pressed="${slideshowActive ? "true" : "false"}" title="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" aria-label="${slideshowActive ? "Stop slideshow rotation" : "Start slideshow rotation"}" ${slideshowDisabled ? "disabled" : ""}>${slideshowButtonIcon}</button><div class="divider">${icons.divider}</div>`;
   const markup = `<div class="tl-tools">
         ${controlsHidden ? "" : `<button class="${toolButtonClass}${tab === "controls" ? " active" : ""}" id="controls-btn" title="Controls" aria-label="Controls" aria-pressed="${tab === "controls" ? "true" : "false"}" ${controlsDisabled ? "disabled" : ""}>${icons.bullseye}</button><div class="divider">${icons.divider}</div>`}
-        ${wideAlertTakeoverButton}
         ${gridButton}
+        ${wideAlertTakeoverButton}
         ${slideshowButton}
         <button class="${toolButtonClass}${isFilterPanelOpen ? " active" : ""}" id="filter-btn" title="Filter" aria-pressed="${isFilterPanelOpen ? "true" : "false"}" ${resolvedFilterDisabled ? "disabled" : ""}>${icons.filter}</button>
         <div class="filter-panel" id="filter-panel" data-fvc-region="filter-panel" style="display:none"></div>
