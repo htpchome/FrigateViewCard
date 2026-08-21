@@ -157,6 +157,10 @@ const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupCarouselControllerSource = fs.readFileSync(
+  new URL("../src/features/popup/carousel.ctrl.js", import.meta.url),
+  "utf8",
+);
 const popupInfoControllerSource = fs.readFileSync(
   new URL("../src/features/popup/info.ctrl.js", import.meta.url),
   "utf8",
@@ -1576,7 +1580,7 @@ test("popup media loading delegates through the popup media loader controller", 
   assert.equal(cardSource.includes('from "./popup/drag.ctrl.js"'), false);
   assert.equal(cardSource.includes('from "./popup/media.ctrl.js"'), false);
   assert.equal(
-    cardSource.includes('from "../features/popup/carousel.js"'),
+    cardSource.includes('from "../features/popup/carousel.ctrl.js"'),
     true,
   );
   assert.equal(
@@ -1662,6 +1666,38 @@ test("popup info rendering and actions are owned by the popup feature", () => {
   assert.equal(
     popupMediaLoaderControllerSource.includes(
       "this._infoController?.render(infoEvent, infoOpts)",
+    ),
+    true,
+  );
+});
+
+test("popup carousel rendering and lifecycle are owned by the popup feature", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { PopupCarouselController } from "../features/popup/carousel.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "this._popupCarouselController = new PopupCarouselController",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("_renderPopupCarousel("), false);
+  assert.equal(cardSource.includes("_syncPopupCarouselNavigation("), false);
+  assert.equal(cardSource.includes("_scrollPopupCarousel("), false);
+  assert.equal(cardSource.includes("_popupCarouselScrollPlan("), false);
+  assert.equal(cardSource.includes("PopupCarouselSwipeController"), false);
+  assert.equal(
+    popupCarouselControllerSource.includes(
+      "export class PopupCarouselController",
+    ),
+    true,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes(
+      "this._carouselController?.render(",
     ),
     true,
   );

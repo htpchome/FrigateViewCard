@@ -165,9 +165,14 @@ export class PopupSnapshotFullscreenController {
 
 export class PopupMediaLoaderController {
   constructor(host, deps = {}) {
-    const { infoController = host._popupInfoController, ...loaderDeps } = deps;
+    const {
+      infoController = host._popupInfoController,
+      carouselController = host._popupCarouselController,
+      ...loaderDeps
+    } = deps;
     this._host = host;
     this._infoController = infoController;
+    this._carouselController = carouselController;
     this._deps = {
       buildVideoOptionsForView,
       createVideoElement,
@@ -243,7 +248,7 @@ export class PopupMediaLoaderController {
       }
     }
     if (postRenderPlan.shouldRenderCarousel) {
-      this._host._renderPopupCarousel(
+      this._carouselController?.render(
         postRenderPlan.carouselMediaType,
         postRenderPlan.carouselActiveId,
       );
@@ -542,7 +547,7 @@ export class PopupMediaLoaderController {
       });
     }
     if (outcomePlan.shouldRenderCarousel) {
-      this._host._renderPopupCarousel(
+      this._carouselController?.render(
         outcomePlan.carouselMediaType,
         outcomePlan.carouselActiveId,
       );

@@ -216,17 +216,7 @@ import {
   resolvePopupMediaControlsListenerPlan,
   resolvePopupMediaSeekTarget,
 } from "../shared/media/controls.js";
-import {
-  buildPopupCarouselItemMarkup,
-  buildPopupCarouselContentPlan,
-  buildPopupCarouselEvents,
-  buildPopupCarouselScrollPlan,
-  PopupCarouselSwipeController,
-  resolvePopupCarouselActiveScrollLeft,
-  resolvePopupCarouselNavigationState,
-  resolvePopupCarouselRenderPlan,
-  shouldShowPopupCarousel,
-} from "../features/popup/carousel.js";
+import { PopupCarouselController } from "../features/popup/carousel.ctrl.js";
 import { BrowseCollectionController } from "../features/browse/collection.ctrl.js";
 import { BrowseCalendarActivityController } from "../features/browse/calendar-activity.ctrl.js";
 import { BrowseFilterController } from "../features/browse/filter-state.js";
@@ -663,6 +653,18 @@ export class FrigateViewCard extends HTMLElement {
       onDownloadRecording: (start, end) =>
         void this._frigateMediaDownloadController.downloadRecording(start, end),
     });
+    this._popupCarouselController = new PopupCarouselController({
+      query: (selector) => this._$(selector),
+      getKept: () => this._kept,
+      getReviews: () => this._reviews,
+      getDisplayEvents: () => this._allDisplayEvents(),
+      findEventById: (id) => this._findEventById(id),
+      mediaUrl: (id, file) => this._media(id, file),
+      formatDateTime: (timestamp) => this._dateTimeLabel(timestamp),
+      formatTime: (timestamp) => this._time(timestamp),
+      isTouchUi: () => this._isTouchPopupUi(),
+      isMobileDevice: () => this._isLikelyMobileClient(),
+    });
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._playbackTargetController = new BrowserPlaybackTargetController({
       getContext: (scope) => this._playbackTargetContext(scope),
@@ -689,8 +691,6 @@ export class FrigateViewCard extends HTMLElement {
     this._popupMediaType = "";
     this._popupMediaStopTimer = null;
     this._popupMediaControlsController = null;
-    this._popupCarouselResizeObserver = null;
-    this._popupCarouselSwipeController = null;
     this._livePictureInPictureButtonController = null;
     this._popupPictureInPictureButtonController = null;
     this._popupControlsHideTimer = null;
@@ -4172,13 +4172,7 @@ export class FrigateViewCard extends HTMLElement {
       controls.hidden = true;
       controls.classList.remove("is-hidden");
     }
-    const carouselWrap = this._$("#popup-carousel-wrap");
-    const carousel = this._$("#popup-carousel");
-    if (carouselWrap) carouselWrap.hidden = true;
-    if (carousel) {
-      carousel.onscroll = null;
-      carousel.innerHTML = "";
-    }
+    this._popupCarouselController.clear();
     this._popupInfoController.hide();
     this._popupMediaType = "";
     this._playing = null;
@@ -4357,7 +4351,7 @@ export class FrigateViewCard extends HTMLElement {
     const carouselNav = target.closest("[data-carousel-dir]");
     if (carouselNav) {
       const dir = Number(carouselNav.dataset.carouselDir || 0);
-      if (dir) this._scrollPopupCarousel(dir);
+      if (dir) this._popupCarouselController.scroll(dir);
       return true;
     }
     return false;
@@ -5379,12 +5373,7 @@ export class FrigateViewCard extends HTMLElement {
   _clearPopupMediaCleanup() {
     this._clearPictureInPictureButtonController("popup");
     this._clearPopupVideoZoom?.();
-    this._popupCarouselResizeObserver?.disconnect?.();
-    this._popupCarouselResizeObserver = null;
-    this._popupCarouselSwipeController?.dispose?.();
-    this._popupCarouselSwipeController = null;
-    const popupCarousel = this._$?.("#popup-carousel");
-    if (popupCarousel) popupCarousel.onscroll = null;
+    this._popupCarouselController?.dispose?.();
     if (this._popupControlsHideTimer) {
       clearTimeout(this._popupControlsHideTimer);
       this._popupControlsHideTimer = null;
@@ -5569,115 +5558,6 @@ export class FrigateViewCard extends HTMLElement {
       onSync: syncButtons,
     });
     this._popupMediaControlsController.bind();
-  }
-  _carouselEventItem(ev, activeId = "") {
-    if (!ev?.id) return "";
-    const thumbFile = "thumbnail.jpg";
-    const thumb = `<img src="${this._media(ev.id, thumbFile)}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
-    return buildPopupCarouselItemMarkup({
-      event: ev,
-      activeId,
-      thumbnailHtml: thumb,
-      title: this._dateTimeLabel(ev.start_time || 0),
-      label: cap(ev.label || "event"),
-      time: this._time(ev.start_time || 0),
-    });
-  }
-  _popupCarouselEvents(mediaType) {
-    return buildPopupCarouselEvents({
-      mediaType,
-      kept: this._kept || [],
-      reviews: this._reviews || [],
-      displayEvents: this._allDisplayEvents(),
-      findEventById: (id) => this._findEventById(id),
-    });
-  }
-  _renderPopupCarousel(mediaType, activeId = "") {
-    const wrap = this._$("#popup-carousel-wrap");
-    const row = this._$("#popup-carousel");
-    if (!wrap || !row) return;
-    this._popupCarouselResizeObserver?.disconnect?.();
-    this._popupCarouselResizeObserver = null;
-    this._popupCarouselSwipeController?.dispose?.();
-    this._popupCarouselSwipeController = null;
-    row.onscroll = null;
-    const contentPlan = buildPopupCarouselContentPlan({
-      mediaType,
-      events: this._popupCarouselEvents(mediaType),
-      activeId,
-      isTouchUi: this._isTouchPopupUi(),
-      isMobileDevice: this._isLikelyMobileClient(),
-      renderEvent: (ev, currentActiveId) =>
-        this._carouselEventItem(ev, currentActiveId),
-    });
-    if (contentPlan.shouldClear) {
-      row.innerHTML = "";
-    }
-    wrap.hidden = contentPlan.hidden;
-    if (!contentPlan.shouldRender) {
-      return;
-    }
-    row.innerHTML = contentPlan.html;
-    row.scrollLeft = 0;
-    wrap.classList.toggle("touch", contentPlan.touch);
-    wrap.classList.toggle("mobile-device", contentPlan.mobile);
-    const syncNavigation = () => this._syncPopupCarouselNavigation(row);
-    row.onscroll = syncNavigation;
-    if (typeof ResizeObserver !== "undefined") {
-      this._popupCarouselResizeObserver = new ResizeObserver(syncNavigation);
-      this._popupCarouselResizeObserver.observe(row);
-    }
-    if (contentPlan.mobile) {
-      this._popupCarouselSwipeController = new PopupCarouselSwipeController({
-        row,
-        getScrollPlan: (dir) => this._popupCarouselScrollPlan(row, dir),
-      }).bind();
-    }
-    syncNavigation();
-    requestAnimationFrame(() => {
-      const active = row.querySelector(".popup-carousel-item.active");
-      if (active) {
-        const left = resolvePopupCarouselActiveScrollLeft({
-          activeOffsetLeft: active.offsetLeft,
-        });
-        row.scrollLeft = left;
-      }
-      syncNavigation();
-    });
-  }
-  _syncPopupCarouselNavigation(row = this._$("#popup-carousel")) {
-    if (!row) return;
-    const wrap = this._$("#popup-carousel-wrap");
-    const leftButton = this._$("#popup-carousel-left");
-    const rightButton = this._$("#popup-carousel-right");
-    const item = row.querySelector(".popup-carousel-item");
-    const itemHeight = Number(item?.getBoundingClientRect?.().height || 0);
-    if (wrap && itemHeight > 0) {
-      wrap.style.setProperty(
-        "--popup-carousel-item-height",
-        `${itemHeight}px`,
-      );
-    }
-    const navigationState = resolvePopupCarouselNavigationState({
-      scrollLeft: row.scrollLeft,
-      scrollWidth: row.scrollWidth,
-      viewportWidth: row.clientWidth,
-    });
-    if (leftButton) leftButton.hidden = !navigationState.canScrollLeft;
-    if (rightButton) rightButton.hidden = !navigationState.canScrollRight;
-  }
-  _scrollPopupCarousel(dir = 1) {
-    const row = this._$("#popup-carousel");
-    if (!row) return;
-    row.scrollBy(this._popupCarouselScrollPlan(row, dir));
-  }
-  _popupCarouselScrollPlan(row, dir = 1) {
-    const item = row.querySelector(".popup-carousel-item");
-    return buildPopupCarouselScrollPlan({
-      itemWidth: item?.getBoundingClientRect?.().width,
-      viewportWidth: row.clientWidth,
-      dir,
-    });
   }
   _media(id, file, dl) {
     return buildFrigateNotificationMediaPath({

@@ -100,6 +100,9 @@ test("showRecording signs candidates and initializes popup recording playback on
     _popupInfoController: {
       render: (_event, opts) => calls.push(["renderInfo", opts.mediaType]),
     },
+    _popupCarouselController: {
+      render: (type, id) => calls.push(["renderCarousel", type, id]),
+    },
     shadowRoot: {
       querySelector: () => viewer,
     },
@@ -115,8 +118,6 @@ test("showRecording signs candidates and initializes popup recording playback on
       calls.push(["initControls", type]),
     _initRecordingScrub: (payload) =>
       calls.push(["initScrub", payload.sourceUrl]),
-    _renderPopupCarousel: (type, id) =>
-      calls.push(["renderCarousel", type, id]),
     _showPopupControlsTemporarily: () => calls.push(["showControls"]),
   };
   const controller = new PopupMediaLoaderController(host, {

@@ -45,6 +45,9 @@ globalThis.HTMLElement =
 globalThis.HTMLImageElement = globalThis.HTMLImageElement || class {};
 
 const { FrigateViewCard } = await import("../src/card/FrigateViewCard.js");
+const { PopupCarouselController } = await import(
+  "../src/features/popup/carousel.ctrl.js"
+);
 
 test("_clearPopupMediaCleanup clears timers, disposes controllers, and destroys recording HLS", () => {
   const calls = [];
@@ -65,6 +68,11 @@ test("_clearPopupMediaCleanup clears timers, disposes controllers, and destroys 
       _clearPictureInPictureButtonController(scope) {
         calls.push(["clearPictureInPicture", scope]);
       },
+      _popupCarouselController: {
+        dispose() {
+          calls.push(["disposeCarousel"]);
+        },
+      },
       _popupMediaCleanup: () => {
         calls.push(["popupMediaCleanup"]);
       },
@@ -77,6 +85,7 @@ test("_clearPopupMediaCleanup clears timers, disposes controllers, and destroys 
 
     assert.deepEqual(calls, [
       ["clearPictureInPicture", "popup"],
+      ["disposeCarousel"],
       ["clearTimeout", 11],
       ["clearTimeout", 22],
       ["disposeControls"],
@@ -224,11 +233,16 @@ test("_stopPopupMedia resets popup media surfaces after shared cleanup", () => {
         calls.push(["hidePopupInfo"]);
       },
     },
+    _popupCarouselController: {
+      clear() {
+        calls.push(["clearCarousel"]);
+        carouselWrap.hidden = true;
+        carousel.innerHTML = "";
+      },
+    },
     _$(selector) {
       if (selector === "#viewer") return viewer;
       if (selector === "#popup-media-controls") return controls;
-      if (selector === "#popup-carousel-wrap") return carouselWrap;
-      if (selector === "#popup-carousel") return carousel;
       return null;
     },
     _resetPopupMediaSurfaceState:
@@ -243,6 +257,7 @@ test("_stopPopupMedia resets popup media surfaces after shared cleanup", () => {
     ["removeAttribute", "src"],
     ["removeSource"],
     ["removeClass", "is-hidden"],
+    ["clearCarousel"],
     ["hidePopupInfo"],
   ]);
   assert.equal(viewer.innerHTML, "");
@@ -274,23 +289,23 @@ test("popup carousel controls reflect scroll edges and measured item height", ()
       return { getBoundingClientRect: () => ({ height: 98 }) };
     },
   };
-  const ctx = {
-    _$(selector) {
+  const controller = new PopupCarouselController({
+    query(selector) {
       if (selector === "#popup-carousel-wrap") return wrap;
       if (selector === "#popup-carousel-left") return leftButton;
       if (selector === "#popup-carousel-right") return rightButton;
       return null;
     },
-  };
+  });
 
-  FrigateViewCard.prototype._syncPopupCarouselNavigation.call(ctx, row);
+  controller.syncNavigation(row);
 
   assert.equal(leftButton.hidden, true);
   assert.equal(rightButton.hidden, false);
   assert.equal(cssValues.get("--popup-carousel-item-height"), "98px");
 
   row.scrollLeft = 900;
-  FrigateViewCard.prototype._syncPopupCarouselNavigation.call(ctx, row);
+  controller.syncNavigation(row);
   assert.equal(leftButton.hidden, false);
   assert.equal(rightButton.hidden, true);
 });

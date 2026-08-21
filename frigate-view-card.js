@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1597";
+const VERSION = "1.0.1598";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11007,6 +11007,162 @@ const PopupCarouselSwipeController = class {
   }
 };
 
+// src/features/popup/carousel.ctrl.js
+const PopupCarouselController = class {
+  constructor({
+    query,
+    getKept = () => [],
+    getReviews = () => [],
+    getDisplayEvents = () => [],
+    findEventById = () => null,
+    mediaUrl = () => "",
+    formatDateTime = () => "",
+    formatTime = () => "",
+    isTouchUi = () => false,
+    isMobileDevice = () => false,
+    resizeObserverCtor = globalThis.ResizeObserver,
+    requestFrame = globalThis.requestAnimationFrame?.bind(globalThis) || ((callback) => globalThis.setTimeout(callback, 0)),
+    createSwipeController = (options) => new PopupCarouselSwipeController(options)
+  } = {}) {
+    this._query = query;
+    this._getKept = getKept;
+    this._getReviews = getReviews;
+    this._getDisplayEvents = getDisplayEvents;
+    this._findEventById = findEventById;
+    this._mediaUrl = mediaUrl;
+    this._formatDateTime = formatDateTime;
+    this._formatTime = formatTime;
+    this._isTouchUi = isTouchUi;
+    this._isMobileDevice = isMobileDevice;
+    this._ResizeObserver = resizeObserverCtor;
+    this._requestFrame = requestFrame;
+    this._createSwipeController = createSwipeController;
+    this._resizeObserver = null;
+    this._swipeController = null;
+    this._row = null;
+    this._renderToken = 0;
+  }
+  render(mediaType, activeId = "") {
+    const wrap = this._query?.("#popup-carousel-wrap");
+    const row = this._query?.("#popup-carousel");
+    if (!wrap || !row) return null;
+    this.dispose();
+    this._row = row;
+    row.onscroll = null;
+    const contentPlan = buildPopupCarouselContentPlan({
+      mediaType,
+      events: this._events(mediaType),
+      activeId,
+      isTouchUi: this._isTouchUi(),
+      isMobileDevice: this._isMobileDevice(),
+      renderEvent: (event, currentActiveId) => this._eventMarkup(event, currentActiveId)
+    });
+    if (contentPlan.shouldClear) row.innerHTML = "";
+    wrap.hidden = contentPlan.hidden;
+    if (!contentPlan.shouldRender) return contentPlan;
+    row.innerHTML = contentPlan.html;
+    row.scrollLeft = 0;
+    wrap.classList.toggle("touch", contentPlan.touch);
+    wrap.classList.toggle("mobile-device", contentPlan.mobile);
+    const syncNavigation = () => this.syncNavigation(row);
+    row.onscroll = syncNavigation;
+    if (typeof this._ResizeObserver === "function") {
+      this._resizeObserver = new this._ResizeObserver(syncNavigation);
+      this._resizeObserver.observe(row);
+    }
+    if (contentPlan.mobile) {
+      this._swipeController = this._createSwipeController({
+        row,
+        getScrollPlan: (dir) => this._scrollPlan(row, dir)
+      }).bind();
+    }
+    syncNavigation();
+    const renderToken = this._renderToken;
+    this._requestFrame(() => {
+      if (renderToken !== this._renderToken || this._row !== row) return;
+      const active = row.querySelector(".popup-carousel-item.active");
+      if (active) {
+        row.scrollLeft = resolvePopupCarouselActiveScrollLeft({
+          activeOffsetLeft: active.offsetLeft
+        });
+      }
+      syncNavigation();
+    });
+    return contentPlan;
+  }
+  clear() {
+    this.dispose();
+    const wrap = this._query?.("#popup-carousel-wrap");
+    const row = this._query?.("#popup-carousel");
+    if (wrap) wrap.hidden = true;
+    if (row) row.innerHTML = "";
+  }
+  dispose() {
+    this._renderToken += 1;
+    this._resizeObserver?.disconnect?.();
+    this._resizeObserver = null;
+    this._swipeController?.dispose?.();
+    this._swipeController = null;
+    if (this._row) this._row.onscroll = null;
+    this._row = null;
+  }
+  syncNavigation(row = this._query?.("#popup-carousel")) {
+    if (!row) return;
+    const wrap = this._query?.("#popup-carousel-wrap");
+    const leftButton = this._query?.("#popup-carousel-left");
+    const rightButton = this._query?.("#popup-carousel-right");
+    const item = row.querySelector(".popup-carousel-item");
+    const itemHeight = Number(item?.getBoundingClientRect?.().height || 0);
+    if (wrap && itemHeight > 0) {
+      wrap.style.setProperty(
+        "--popup-carousel-item-height",
+        `${itemHeight}px`
+      );
+    }
+    const navigationState = resolvePopupCarouselNavigationState({
+      scrollLeft: row.scrollLeft,
+      scrollWidth: row.scrollWidth,
+      viewportWidth: row.clientWidth
+    });
+    if (leftButton) leftButton.hidden = !navigationState.canScrollLeft;
+    if (rightButton) rightButton.hidden = !navigationState.canScrollRight;
+  }
+  scroll(dir = 1) {
+    const row = this._query?.("#popup-carousel");
+    if (!row) return;
+    row.scrollBy(this._scrollPlan(row, dir));
+  }
+  _events(mediaType) {
+    return buildPopupCarouselEvents({
+      mediaType,
+      kept: this._getKept() || [],
+      reviews: this._getReviews() || [],
+      displayEvents: this._getDisplayEvents() || [],
+      findEventById: this._findEventById
+    });
+  }
+  _eventMarkup(event, activeId = "") {
+    if (!event?.id) return "";
+    const thumbnail = `<img src="${this._mediaUrl(event.id, "thumbnail.jpg")}" loading="lazy" data-thumb-id="${event.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
+    return buildPopupCarouselItemMarkup({
+      event,
+      activeId,
+      thumbnailHtml: thumbnail,
+      title: this._formatDateTime(event.start_time || 0),
+      label: cap(event.label || "event"),
+      time: this._formatTime(event.start_time || 0)
+    });
+  }
+  _scrollPlan(row, dir = 1) {
+    const item = row.querySelector(".popup-carousel-item");
+    return buildPopupCarouselScrollPlan({
+      itemWidth: item?.getBoundingClientRect?.().width,
+      viewportWidth: row.clientWidth,
+      dir
+    });
+  }
+};
+
 // src/features/browse/filter-state.js
 function buildReviewFilterLabels(review, sourceEvent = null) {
   const labels = new Set();
@@ -16701,9 +16857,14 @@ const PopupSnapshotFullscreenController = class {
 };
 const PopupMediaLoaderController = class {
   constructor(host, deps = {}) {
-    const { infoController = host._popupInfoController, ...loaderDeps } = deps;
+    const {
+      infoController = host._popupInfoController,
+      carouselController = host._popupCarouselController,
+      ...loaderDeps
+    } = deps;
     this._host = host;
     this._infoController = infoController;
+    this._carouselController = carouselController;
     this._deps = {
       buildVideoOptionsForView,
       createVideoElement,
@@ -16776,7 +16937,7 @@ const PopupMediaLoaderController = class {
       }
     }
     if (postRenderPlan.shouldRenderCarousel) {
-      this._host._renderPopupCarousel(
+      this._carouselController?.render(
         postRenderPlan.carouselMediaType,
         postRenderPlan.carouselActiveId
       );
@@ -17058,7 +17219,7 @@ const PopupMediaLoaderController = class {
       });
     }
     if (outcomePlan.shouldRenderCarousel) {
-      this._host._renderPopupCarousel(
+      this._carouselController?.render(
         outcomePlan.carouselMediaType,
         outcomePlan.carouselActiveId
       );
@@ -19722,6 +19883,18 @@ const FrigateViewCard = class extends HTMLElement {
       onDownloadEvent: (id, file) => this._frigateMediaDownloadController.downloadEvent(id, file),
       onDownloadRecording: (start, end) => void this._frigateMediaDownloadController.downloadRecording(start, end)
     });
+    this._popupCarouselController = new PopupCarouselController({
+      query: (selector) => this._$(selector),
+      getKept: () => this._kept,
+      getReviews: () => this._reviews,
+      getDisplayEvents: () => this._allDisplayEvents(),
+      findEventById: (id) => this._findEventById(id),
+      mediaUrl: (id, file) => this._media(id, file),
+      formatDateTime: (timestamp) => this._dateTimeLabel(timestamp),
+      formatTime: (timestamp) => this._time(timestamp),
+      isTouchUi: () => this._isTouchPopupUi(),
+      isMobileDevice: () => this._isLikelyMobileClient()
+    });
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._playbackTargetController = new BrowserPlaybackTargetController({
       getContext: (scope) => this._playbackTargetContext(scope),
@@ -19747,8 +19920,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._popupMediaType = "";
     this._popupMediaStopTimer = null;
     this._popupMediaControlsController = null;
-    this._popupCarouselResizeObserver = null;
-    this._popupCarouselSwipeController = null;
     this._livePictureInPictureButtonController = null;
     this._popupPictureInPictureButtonController = null;
     this._popupControlsHideTimer = null;
@@ -22665,13 +22836,7 @@ const FrigateViewCard = class extends HTMLElement {
       controls.hidden = true;
       controls.classList.remove("is-hidden");
     }
-    const carouselWrap = this._$("#popup-carousel-wrap");
-    const carousel = this._$("#popup-carousel");
-    if (carouselWrap) carouselWrap.hidden = true;
-    if (carousel) {
-      carousel.onscroll = null;
-      carousel.innerHTML = "";
-    }
+    this._popupCarouselController.clear();
     this._popupInfoController.hide();
     this._popupMediaType = "";
     this._playing = null;
@@ -22846,7 +23011,7 @@ const FrigateViewCard = class extends HTMLElement {
     const carouselNav = target.closest("[data-carousel-dir]");
     if (carouselNav) {
       const dir = Number(carouselNav.dataset.carouselDir || 0);
-      if (dir) this._scrollPopupCarousel(dir);
+      if (dir) this._popupCarouselController.scroll(dir);
       return true;
     }
     return false;
@@ -23709,12 +23874,7 @@ const FrigateViewCard = class extends HTMLElement {
   _clearPopupMediaCleanup() {
     this._clearPictureInPictureButtonController("popup");
     this._clearPopupVideoZoom?.();
-    this._popupCarouselResizeObserver?.disconnect?.();
-    this._popupCarouselResizeObserver = null;
-    this._popupCarouselSwipeController?.dispose?.();
-    this._popupCarouselSwipeController = null;
-    const popupCarousel = this._$?.("#popup-carousel");
-    if (popupCarousel) popupCarousel.onscroll = null;
+    this._popupCarouselController?.dispose?.();
     if (this._popupControlsHideTimer) {
       clearTimeout(this._popupControlsHideTimer);
       this._popupControlsHideTimer = null;
@@ -23893,114 +24053,6 @@ const FrigateViewCard = class extends HTMLElement {
       onSync: syncButtons
     });
     this._popupMediaControlsController.bind();
-  }
-  _carouselEventItem(ev, activeId = "") {
-    if (!ev?.id) return "";
-    const thumbFile = "thumbnail.jpg";
-    const thumb = `<img src="${this._media(ev.id, thumbFile)}" loading="lazy" data-thumb-id="${ev.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${ICONS.person}</div>`;
-    return buildPopupCarouselItemMarkup({
-      event: ev,
-      activeId,
-      thumbnailHtml: thumb,
-      title: this._dateTimeLabel(ev.start_time || 0),
-      label: cap(ev.label || "event"),
-      time: this._time(ev.start_time || 0)
-    });
-  }
-  _popupCarouselEvents(mediaType) {
-    return buildPopupCarouselEvents({
-      mediaType,
-      kept: this._kept || [],
-      reviews: this._reviews || [],
-      displayEvents: this._allDisplayEvents(),
-      findEventById: (id) => this._findEventById(id)
-    });
-  }
-  _renderPopupCarousel(mediaType, activeId = "") {
-    const wrap = this._$("#popup-carousel-wrap");
-    const row = this._$("#popup-carousel");
-    if (!wrap || !row) return;
-    this._popupCarouselResizeObserver?.disconnect?.();
-    this._popupCarouselResizeObserver = null;
-    this._popupCarouselSwipeController?.dispose?.();
-    this._popupCarouselSwipeController = null;
-    row.onscroll = null;
-    const contentPlan = buildPopupCarouselContentPlan({
-      mediaType,
-      events: this._popupCarouselEvents(mediaType),
-      activeId,
-      isTouchUi: this._isTouchPopupUi(),
-      isMobileDevice: this._isLikelyMobileClient(),
-      renderEvent: (ev, currentActiveId) => this._carouselEventItem(ev, currentActiveId)
-    });
-    if (contentPlan.shouldClear) {
-      row.innerHTML = "";
-    }
-    wrap.hidden = contentPlan.hidden;
-    if (!contentPlan.shouldRender) {
-      return;
-    }
-    row.innerHTML = contentPlan.html;
-    row.scrollLeft = 0;
-    wrap.classList.toggle("touch", contentPlan.touch);
-    wrap.classList.toggle("mobile-device", contentPlan.mobile);
-    const syncNavigation = () => this._syncPopupCarouselNavigation(row);
-    row.onscroll = syncNavigation;
-    if (typeof ResizeObserver !== "undefined") {
-      this._popupCarouselResizeObserver = new ResizeObserver(syncNavigation);
-      this._popupCarouselResizeObserver.observe(row);
-    }
-    if (contentPlan.mobile) {
-      this._popupCarouselSwipeController = new PopupCarouselSwipeController({
-        row,
-        getScrollPlan: (dir) => this._popupCarouselScrollPlan(row, dir)
-      }).bind();
-    }
-    syncNavigation();
-    requestAnimationFrame(() => {
-      const active = row.querySelector(".popup-carousel-item.active");
-      if (active) {
-        const left = resolvePopupCarouselActiveScrollLeft({
-          activeOffsetLeft: active.offsetLeft
-        });
-        row.scrollLeft = left;
-      }
-      syncNavigation();
-    });
-  }
-  _syncPopupCarouselNavigation(row = this._$("#popup-carousel")) {
-    if (!row) return;
-    const wrap = this._$("#popup-carousel-wrap");
-    const leftButton = this._$("#popup-carousel-left");
-    const rightButton = this._$("#popup-carousel-right");
-    const item = row.querySelector(".popup-carousel-item");
-    const itemHeight = Number(item?.getBoundingClientRect?.().height || 0);
-    if (wrap && itemHeight > 0) {
-      wrap.style.setProperty(
-        "--popup-carousel-item-height",
-        `${itemHeight}px`
-      );
-    }
-    const navigationState = resolvePopupCarouselNavigationState({
-      scrollLeft: row.scrollLeft,
-      scrollWidth: row.scrollWidth,
-      viewportWidth: row.clientWidth
-    });
-    if (leftButton) leftButton.hidden = !navigationState.canScrollLeft;
-    if (rightButton) rightButton.hidden = !navigationState.canScrollRight;
-  }
-  _scrollPopupCarousel(dir = 1) {
-    const row = this._$("#popup-carousel");
-    if (!row) return;
-    row.scrollBy(this._popupCarouselScrollPlan(row, dir));
-  }
-  _popupCarouselScrollPlan(row, dir = 1) {
-    const item = row.querySelector(".popup-carousel-item");
-    return buildPopupCarouselScrollPlan({
-      itemWidth: item?.getBoundingClientRect?.().width,
-      viewportWidth: row.clientWidth,
-      dir
-    });
   }
   _media(id, file, dl) {
     return buildFrigateNotificationMediaPath({
