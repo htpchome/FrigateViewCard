@@ -321,7 +321,6 @@ export function buildPopupShellMarkup({ icons, version }) {
                 <button class="popup-media-btn" id="popup-media-airplay" type="button" title="AirPlay video" aria-label="AirPlay video" hidden>${icons.airplayVideo}</button>
                 <span class="popup-media-controls-spacer" aria-hidden="true"></span>
               </div>
-              <h2 class="popup-info-head" id="popup-info-head" hidden></h2>
                 <div class="recording-scrub" id="recording-scrub" hidden>
                   <div class="recording-scrub-track" id="recording-scrub-track">
                     <div class="recording-scrub-ticks" id="recording-scrub-ticks"></div>

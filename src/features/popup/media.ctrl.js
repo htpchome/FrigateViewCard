@@ -178,6 +178,9 @@ export class PopupMediaControlsSurfaceController {
     this._disposeMediaBinding();
     const controls = this._query?.("#popup-media-controls");
     if (!controls || !video) return null;
+    const mobileTablet = this._isMobileTabletViewport();
+    if (mobileTablet) controls.classList?.add?.("mobile-tablet-layout");
+    else controls.classList?.remove?.("mobile-tablet-layout");
 
     this._video = video;
     const controlsPlan = resolvePopupMediaControlsInitPlan({
@@ -279,7 +282,7 @@ export class PopupMediaControlsSurfaceController {
       if (airPlayButton) airPlayButton.hidden = true;
     }
 
-    if (isVideo) {
+    if (isVideo && !mobileTablet) {
       const pictureInPictureButton = appendButton({
         id: "popup-pip-btn",
         className: "popup-pip-btn",

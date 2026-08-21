@@ -26,9 +26,8 @@ export class PopupInfoController {
   }
 
   render(event = null, options = {}) {
-    const head = this._query?.("#popup-info-head");
     const info = this._query?.("#popup-info");
-    if (!head || !info) return null;
+    if (!info) return null;
 
     const model = buildPopupInfoModel({
       event,
@@ -50,22 +49,15 @@ export class PopupInfoController {
     }
 
     const markup = buildPopupInfoMarkup({ event, model });
-    head.textContent = markup.headText;
-    head.hidden = false;
     info.innerHTML = markup.infoHtml;
     info.hidden = false;
     return model;
   }
 
   hide() {
-    const head = this._query?.("#popup-info-head");
     const info = this._query?.("#popup-info");
     this._onResetRecordingScrub?.();
     this._onMediaCameraChange?.("");
-    if (head) {
-      head.textContent = "";
-      head.hidden = true;
-    }
     if (info) {
       info.innerHTML = "";
       info.hidden = true;

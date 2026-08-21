@@ -164,6 +164,7 @@ test("popup media controls surface owns custom controls, actions, and auto-hide"
     query: (selector) => elements.get(selector) || null,
     formatTime: (value) => `${value}s`,
     shouldUseCustomControls: () => true,
+    isMobileTabletViewport: () => true,
     isAutoHideActive: () => true,
     icons: {
       pause: "pause-icon",
@@ -184,6 +185,7 @@ test("popup media controls surface owns custom controls, actions, and auto-hide"
   assert.equal(video.controls, false);
   assert.deepEqual(attributeCalls, [["remove", "controls"]]);
   assert.equal(controls.hidden, false);
+  assert.equal(controls.classList.contains("mobile-tablet-layout"), true);
   assert.equal(progress.value, "250");
   assert.equal(playButton.innerHTML, "play-icon");
   assert.equal(muteButton.innerHTML, "volume-icon");
@@ -349,7 +351,7 @@ test("popup media controls surface renders tablet video actions in shared order"
 
   assert.deepEqual(
     playbackControls.children.map((button) => button.id),
-    ["popup-pip-btn", "popup-take-snapshot-btn"],
+    ["popup-take-snapshot-btn"],
   );
   assert.equal(overlayOptions.surface, viewer);
   assert.equal(overlayOptions.revealDurationMs, 1800);

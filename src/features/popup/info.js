@@ -100,6 +100,9 @@ export const buildPopupInfoModel = ({
   const dayDate = startTs
     ? `${formatWeekday(startTs)} - ${formatMonthDay(startTs, { ordinal: true })}`
     : "-";
+  const shortDate = startTs
+    ? formatMonthDay(startTs, { numeric: true })
+    : "-";
   const duration =
     options.durationSec != null
       ? `${Math.max(1, Math.round(options.durationSec))}s`
@@ -120,6 +123,7 @@ export const buildPopupInfoModel = ({
     zone,
     objects,
     dayDate,
+    shortDate,
     time,
     duration,
     camera,
@@ -156,16 +160,22 @@ export const buildPopupInfoMarkup = ({
   const downloadButtons = (model.downloadActions || [])
     .map((action) => buildPopupInfoDownloadButtonMarkup(action, icons))
     .join("");
+  const compactTime = String(model.time || "-")
+    .toLowerCase()
+    .replace(/\s+(am|pm)$/i, "$1");
+  const mediaHeading = cap(String(model.mediaType || "media").toLowerCase());
+  const cameraHeading = cap(String(model.camera || "-").toLowerCase());
+  const headText = `${mediaHeading} - ${cameraHeading} - ${compactTime} - ${model.shortDate}`;
 
   return {
-    headText: `${cap(model.mediaType || "media")} - ${model.camera} - ${model.dayDate} - ${model.time}`,
+    headText,
     infoHtml: `
-          <div class="popup-info-title">
-            <span class="tb" style="background:${color}33;color:${color}">${model.titleLabel}</span>
-            ${event?.sub_label ? `<span class="subl">${event.sub_label}</span>` : ""}
-          </div>
-
-          <div class="popup-info-body">
+          <h2 class="popup-info-head" id="popup-info-head">${headText}</h2>
+          <div class="popup-info-content">
+            <div class="popup-info-title">
+              <span class="tb" style="background:${color}33;color:${color}">${model.titleLabel}</span>
+              ${event?.sub_label ? `<span class="subl">${event.sub_label}</span>` : ""}
+            </div>
             <div class="popup-info-grid">
               <div class="popup-info-row"><span class="popup-info-k">Camera</span><span class="popup-info-v">${model.camera}</span></div>
               <div class="popup-info-row"><span class="popup-info-k">Day/Date</span><span class="popup-info-v">${model.dayDate}</span></div>
@@ -174,8 +184,8 @@ export const buildPopupInfoMarkup = ({
               <div class="popup-info-row"><span class="popup-info-k">Objects</span><span class="popup-info-v">${model.objects}</span></div>
               <div class="popup-info-row"><span class="popup-info-k">Zone</span><span class="popup-info-v">${model.zone}</span></div>
               <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${model.score}</span></div>
+              <div class="popup-info-actions">${downloadButtons}</div>
             </div>
-            <div class="popup-info-actions">${downloadButtons}</div>
           </div>
         `,
   };

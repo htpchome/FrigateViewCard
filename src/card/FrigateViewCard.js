@@ -4895,6 +4895,7 @@ export class FrigateViewCard extends HTMLElement {
   _syncPictureInPictureButtons() {
     const popupOpen =
       this._$("#myPopup")?.classList.contains("is-open") === true;
+    const mobileTablet = this._isMobileTabletViewport();
     const isFirefox = this._isFirefox();
     const liveVideo = this._livePictureInPictureVideo();
     if (isFirefox) {
@@ -4903,6 +4904,7 @@ export class FrigateViewCard extends HTMLElement {
       enableNativePictureInPicture(liveVideo);
     }
     const liveAllowed =
+      !mobileTablet &&
       this._activePageShellCapabilities().hasLivePictureInPicture &&
       this._viewMode !== "grid" &&
       !popupOpen;
@@ -4922,6 +4924,7 @@ export class FrigateViewCard extends HTMLElement {
       enableNativePictureInPicture(popupVideo);
     }
     const popupAllowed =
+      !mobileTablet &&
       popupOpen &&
       this._isPopupVideoMediaType(popupMediaType);
     this._bindPictureInPictureButton(
@@ -5331,14 +5334,15 @@ export class FrigateViewCard extends HTMLElement {
       timeZone: this._tz(),
     });
   }
-  _monthDay(ts, { ordinal = false } = {}) {
+  _monthDay(ts, { ordinal = false, numeric = false } = {}) {
     const parts = new Intl.DateTimeFormat("en-US", {
-      month: "short",
+      month: numeric ? "numeric" : "short",
       day: "numeric",
       timeZone: this._tz(),
     }).formatToParts(new Date(ts * 1000));
     const month = parts.find((p) => p.type === "month")?.value || "";
     const day = Number(parts.find((p) => p.type === "day")?.value || 0);
+    if (numeric) return `${month}/${day}`;
     return `${month} ${ordinal ? this._ordinal(day) : day}`.trim();
   }
   _ordinal(n) {

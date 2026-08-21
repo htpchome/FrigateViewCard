@@ -4,6 +4,7 @@ import {
   mountNodeIntoSlot,
 } from "../../shared/media/video-factory.js";
 import { buildPopupMediaUrl } from "../../shared/media/url-utils.js";
+import { resolveDisplayedFrameDimensions } from "../../shared/media/frame-capture.js";
 import { isIOS } from "../../helpers.js";
 import {
   buildPopupClipRenderPlan,
@@ -18,6 +19,44 @@ import {
   resolvePopupRecordingSeekListenerPlan,
 } from "./media.js";
 import { buildRecordingPlaybackPlan } from "../recordings/index.js";
+
+const POPUP_MEDIA_MAX_HEIGHT_DVH = 70;
+
+export const resolvePopupMediaSizing = (media = null) => {
+  const { width, height } = resolveDisplayedFrameDimensions(media);
+  if (width <= 0 || height <= 0) return null;
+  const ratio = width / height;
+  return {
+    aspectRatio: `${width} / ${height}`,
+    maxWidth: `${Math.round(ratio * POPUP_MEDIA_MAX_HEIGHT_DVH * 1000) / 1000}dvh`,
+  };
+};
+
+export const bindPopupMediaSizing = ({ viewer = null, media = null } = {}) => {
+  const style = viewer?.style;
+  if (!style || !media) return () => {};
+
+  style.removeProperty?.("--popup-media-aspect-ratio");
+  style.removeProperty?.("--popup-media-max-width");
+  const sync = () => {
+    const sizing = resolvePopupMediaSizing(media);
+    if (!sizing) return false;
+    style.setProperty?.("--popup-media-aspect-ratio", sizing.aspectRatio);
+    style.setProperty?.("--popup-media-max-width", sizing.maxWidth);
+    return true;
+  };
+  const events = ["loadedmetadata", "resize", "load"];
+  events.forEach((eventName) => media.addEventListener?.(eventName, sync));
+  sync();
+
+  return () => {
+    events.forEach((eventName) =>
+      media.removeEventListener?.(eventName, sync),
+    );
+    style.removeProperty?.("--popup-media-aspect-ratio");
+    style.removeProperty?.("--popup-media-max-width");
+  };
+};
 
 export class PopupMediaLoaderController {
   constructor(host, deps = {}) {
@@ -81,6 +120,11 @@ export class PopupMediaLoaderController {
     if (body) body.scrollTop = 0;
     const video = viewer.querySelector("video");
     const snapshot = viewer.querySelector("img.snap");
+    const clearMediaSizing = bindPopupMediaSizing({
+      viewer,
+      media: video || snapshot,
+    });
+    this._lifecycleController?.setMediaCleanup?.(clearMediaSizing);
     this._host._attachPopupVideoZoom?.(video || snapshot);
     const postRenderPlan = resolvePopupMediaPostRenderPlan({
       popupMediaType: renderPlan.popupMediaType,
@@ -327,10 +371,11 @@ export class PopupMediaLoaderController {
       ),
     );
     this._deps.mountNodeIntoSlot(viewer, video);
+    const clearMediaSizing = bindPopupMediaSizing({ viewer, media: video });
     this._host._attachPopupVideoZoom?.(video);
     let playable = false;
     let activeSource = "";
-    const mediaCleanup = [];
+    const mediaCleanup = [clearMediaSizing];
     if (video) {
       let resumeAfterNativeSeek = false;
       const onSeeking = () => {

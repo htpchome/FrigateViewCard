@@ -1,7 +1,61 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { PopupMediaLoaderController } from "../src/features/popup/media-loader.ctrl.js";
+import {
+  PopupMediaLoaderController,
+  bindPopupMediaSizing,
+  resolvePopupMediaSizing,
+} from "../src/features/popup/media-loader.ctrl.js";
+
+test("popup media sizing follows arbitrary intrinsic aspect ratios", () => {
+  assert.deepEqual(
+    resolvePopupMediaSizing({ videoWidth: 1920, videoHeight: 1080 }),
+    {
+      aspectRatio: "1920 / 1080",
+      maxWidth: "124.444dvh",
+    },
+  );
+  assert.deepEqual(
+    resolvePopupMediaSizing({ naturalWidth: 1080, naturalHeight: 1920 }),
+    {
+      aspectRatio: "1080 / 1920",
+      maxWidth: "39.375dvh",
+    },
+  );
+  assert.equal(resolvePopupMediaSizing({ videoWidth: 0, videoHeight: 0 }), null);
+});
+
+test("popup media sizing updates from metadata and cleans up viewer variables", () => {
+  const values = new Map();
+  const listeners = new Map();
+  const viewer = {
+    style: {
+      setProperty: (name, value) => values.set(name, value),
+      removeProperty: (name) => values.delete(name),
+    },
+  };
+  const media = {
+    videoWidth: 0,
+    videoHeight: 0,
+    addEventListener: (name, listener) => listeners.set(name, listener),
+    removeEventListener: (name, listener) => {
+      if (listeners.get(name) === listener) listeners.delete(name);
+    },
+  };
+
+  const cleanup = bindPopupMediaSizing({ viewer, media });
+  assert.equal(values.has("--popup-media-aspect-ratio"), false);
+
+  media.videoWidth = 4;
+  media.videoHeight = 3;
+  listeners.get("loadedmetadata")();
+  assert.equal(values.get("--popup-media-aspect-ratio"), "4 / 3");
+  assert.equal(values.get("--popup-media-max-width"), "93.333dvh");
+
+  cleanup();
+  assert.equal(values.size, 0);
+  assert.equal(listeners.size, 0);
+});
 
 test("showClipById routes clip loading through popup media rendering", () => {
   const host = {

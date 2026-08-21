@@ -26,7 +26,11 @@ test("popup info model derives event details and download actions", () => {
     formatTime: () => "8:44 pm",
     formatWeekday: () => "Fri",
     formatMonthDay: (_timestamp, options) =>
-      options.ordinal ? "Aug 21st" : "Aug 21",
+      options.numeric
+        ? "8/21"
+        : options.ordinal
+          ? "Aug 21st"
+          : "Aug 21",
     formatEventDuration: () => 12,
   });
 
@@ -38,6 +42,7 @@ test("popup info model derives event details and download actions", () => {
     zone: "porch",
     objects: "Person, Car",
     dayDate: "Fri - Aug 21st",
+    shortDate: "8/21",
     time: "8:44 pm",
     duration: "12s",
     camera: "front door",
@@ -78,7 +83,8 @@ test("popup recording model and markup include the range download action", () =>
     options,
     formatTime: () => "9:00 pm",
     formatWeekday: () => "Fri",
-    formatMonthDay: () => "Aug 21st",
+    formatMonthDay: (_timestamp, options) =>
+      options.numeric ? "8/21" : "Aug 21st",
   });
   const markup = buildPopupInfoMarkup({
     model,
@@ -104,7 +110,11 @@ test("popup recording model and markup include the range download action", () =>
   );
   assert.equal(
     markup.headText,
-    "Recording - back yard - Fri - Aug 21st - 9:00 pm",
+    "Recording - Back yard - 9:00pm - 8/21",
+  );
+  assert.match(
+    markup.infoHtml,
+    /<h2 class="popup-info-head" id="popup-info-head">Recording - Back yard - 9:00pm - 8\/21<\/h2>/,
   );
   assert.match(markup.infoHtml, /data-rec-dl-start="200"/);
   assert.match(markup.infoHtml, /data-rec-dl-end="260"/);
@@ -112,19 +122,16 @@ test("popup recording model and markup include the range download action", () =>
 });
 
 test("popup info controller owns rendering, hiding, and popup actions", () => {
-  const head = { textContent: "", hidden: true };
   const info = { innerHTML: "", hidden: true };
-  const elements = new Map([
-    ["#popup-info-head", head],
-    ["#popup-info", info],
-  ]);
+  const elements = new Map([["#popup-info", info]]);
   const calls = [];
   const controller = new PopupInfoController({
     query: (selector) => elements.get(selector) || null,
     getActiveCamera: () => "front_door",
     formatTime: () => "8:44 pm",
     formatWeekday: () => "Fri",
-    formatMonthDay: () => "Aug 21st",
+    formatMonthDay: (_timestamp, options) =>
+      options.numeric ? "8/21" : "Aug 21st",
     formatEventDuration: () => 10,
     onResetRecordingScrub: () => calls.push(["resetScrub"]),
     onMediaCameraChange: (camera) => calls.push(["camera", camera]),
@@ -144,8 +151,8 @@ test("popup info controller owns rendering, hiding, and popup actions", () => {
     { mediaType: "clip" },
   );
 
-  assert.equal(head.hidden, false);
   assert.equal(info.hidden, false);
+  assert.match(info.innerHTML, /Clip - Front door - 8:44pm - 8\/21/);
   assert.match(info.innerHTML, /data-dl="event-1"/);
   assert.deepEqual(calls.slice(0, 2), [
     ["camera", "front door"],
@@ -184,8 +191,6 @@ test("popup info controller owns rendering, hiding, and popup actions", () => {
   assert.equal(stopped, 2);
 
   controller.hide();
-  assert.equal(head.hidden, true);
-  assert.equal(head.textContent, "");
   assert.equal(info.hidden, true);
   assert.equal(info.innerHTML, "");
   assert.deepEqual(calls.slice(-2), [["resetScrub"], ["camera", ""]]);

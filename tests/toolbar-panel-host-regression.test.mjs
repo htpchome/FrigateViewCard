@@ -203,12 +203,23 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
     ),
     true,
   );
+  assert.equal(
+    stylesSource.includes(
+      "grid-template-areas:\"sp1 play progress mute airplay sp2\"",
+    ),
+    true,
+  );
   assert.equal(stylesSource.includes(".popup-playback-controls{"), true);
   assert.equal(stylesSource.includes(".playback-target-dialog{"), false);
 });
 
-test("Firefox uses custom PiP buttons with temporary native suppression relief", () => {
-  assert.match(popupMediaControlsSource, /if \(isVideo\) \{/);
+test("Firefox uses desktop custom PiP buttons with temporary native suppression relief", () => {
+  assert.match(
+    popupMediaControlsSource,
+    /if \(isVideo && !mobileTablet\) \{/,
+  );
+  assert.match(cardSource, /const liveAllowed =\s*!mobileTablet &&/);
+  assert.match(cardSource, /const popupAllowed =\s*!mobileTablet &&/);
   assert.equal(popupMediaControlsSource.includes("_isMobileDevice"), false);
   assert.equal(
     popupMediaControlsSource.includes("!this._isFirefox()"),
