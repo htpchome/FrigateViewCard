@@ -5,6 +5,7 @@ import {
   PICTURE_IN_PICTURE_METHOD_STANDARD,
   PICTURE_IN_PICTURE_METHOD_WEBKIT,
   PictureInPictureButtonController,
+  isVideoPictureInPictureTemporarilyAllowed,
   resolveVideoPictureInPictureSupport,
   toggleVideoPictureInPicture,
 } from "../src/shared/media/picture-in-picture.js";
@@ -141,12 +142,17 @@ test("Firefox PiP exit reasserts suppression and resumes live playback after tea
   });
   assert.equal(video.disablePictureInPicture, false);
   assert.equal(video.hasAttribute("disablepictureinpicture"), false);
+  assert.equal(isVideoPictureInPictureTemporarilyAllowed(video), true);
 
+  // Firefox can transiently omit the active PiP element while the session is
+  // still open. The explicit session remains authoritative until leave.
   documentObj.pictureInPictureElement = null;
+  assert.equal(isVideoPictureInPictureTemporarilyAllowed(video), true);
   video.dispatch("leavepictureinpicture");
 
   assert.equal(video.disablePictureInPicture, true);
   assert.equal(video.hasAttribute("disablepictureinpicture"), true);
+  assert.equal(isVideoPictureInPictureTemporarilyAllowed(video), false);
   assert.equal(video.listenerCount("leavepictureinpicture"), 0);
   assert.deepEqual(
     scheduled.map(({ delayMs }) => delayMs),
@@ -194,6 +200,7 @@ test("Firefox PiP entry restores suppression after a failed request", async () =
   );
   assert.equal(video.disablePictureInPicture, true);
   assert.equal(video.hasAttribute("disablepictureinpicture"), true);
+  assert.equal(isVideoPictureInPictureTemporarilyAllowed(video), false);
 });
 
 test("standard PiP exits when the same video is active", async () => {

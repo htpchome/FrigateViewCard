@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1616";
+const VERSION = "1.0.1617";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7249,6 +7249,7 @@ function attachVideoZoom(video, options = {}) {
 const PICTURE_IN_PICTURE_METHOD_STANDARD = "standard";
 const PICTURE_IN_PICTURE_METHOD_WEBKIT = "webkit";
 const PICTURE_IN_PICTURE_EXIT_RECHECK_DELAYS_MS = Object.freeze([0, 120]);
+const temporarilyAllowedPictureInPictureVideos = new WeakSet();
 function resolveOwnerDocument(video, documentObj) {
   return documentObj || video?.ownerDocument || globalThis.document || null;
 }
@@ -7261,6 +7262,9 @@ function isVideoPictureInPictureActive(video, documentObj = null) {
   if (!video) return false;
   if (video.webkitPresentationMode === "picture-in-picture") return true;
   return pictureInPictureElementForVideo(video, documentObj) === video;
+}
+function isVideoPictureInPictureTemporarilyAllowed(video) {
+  return !!video && temporarilyAllowedPictureInPictureVideos.has(video);
 }
 function resolveVideoPictureInPictureSupport({
   video = null,
@@ -7338,6 +7342,7 @@ async function toggleVideoPictureInPicture({
     if (isVideoPictureInPictureActive(video, doc)) {
       await doc.exitPictureInPicture();
       if (temporarilyAllowDisabled) {
+        temporarilyAllowedPictureInPictureVideos.delete(video);
         applyDisabledPictureInPictureExitState({
           video,
           documentObj: doc,
@@ -7356,11 +7361,13 @@ async function toggleVideoPictureInPicture({
       await video.requestPictureInPicture();
       return { active: true, method: support.method };
     }
+    temporarilyAllowedPictureInPictureVideos.add(video);
     enableNativePictureInPicture(video);
     let restorePending = true;
     const restoreSuppression = () => {
       if (!restorePending) return;
       restorePending = false;
+      temporarilyAllowedPictureInPictureVideos.delete(video);
       video.removeEventListener?.(
         "leavepictureinpicture",
         restoreSuppression
@@ -7386,6 +7393,7 @@ async function toggleVideoPictureInPicture({
       await video.requestPictureInPicture();
     } catch (error) {
       restorePending = false;
+      temporarilyAllowedPictureInPictureVideos.delete(video);
       video.removeEventListener?.(
         "leavepictureinpicture",
         restoreSuppression
@@ -24631,11 +24639,8 @@ const FrigateViewCard = class extends HTMLElement {
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open") === true;
     const isFirefox = this._isFirefox();
     const liveVideo = this._livePictureInPictureVideo();
-    const livePictureInPictureActive = isVideoPictureInPictureActive(
-      liveVideo,
-      liveVideo?.ownerDocument || globalThis.document || null
-    );
-    if (isFirefox && !livePictureInPictureActive) {
+    const livePictureInPictureTemporarilyAllowed = isVideoPictureInPictureTemporarilyAllowed(liveVideo);
+    if (isFirefox && !livePictureInPictureTemporarilyAllowed) {
       disableNativePictureInPicture(liveVideo);
     } else {
       enableNativePictureInPicture(liveVideo);
@@ -24648,11 +24653,8 @@ const FrigateViewCard = class extends HTMLElement {
     );
     const popupMediaType = this._popupLifecycleController.mediaType();
     const popupVideo = popupOpen ? this._popupMediaControlsController.video() : null;
-    const popupPictureInPictureActive = isVideoPictureInPictureActive(
-      popupVideo,
-      popupVideo?.ownerDocument || globalThis.document || null
-    );
-    if (isFirefox && !popupPictureInPictureActive) {
+    const popupPictureInPictureTemporarilyAllowed = isVideoPictureInPictureTemporarilyAllowed(popupVideo);
+    if (isFirefox && !popupPictureInPictureTemporarilyAllowed) {
       disableNativePictureInPicture(popupVideo);
     } else {
       enableNativePictureInPicture(popupVideo);

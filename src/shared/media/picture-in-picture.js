@@ -6,6 +6,7 @@ import {
 export const PICTURE_IN_PICTURE_METHOD_STANDARD = "standard";
 export const PICTURE_IN_PICTURE_METHOD_WEBKIT = "webkit";
 const PICTURE_IN_PICTURE_EXIT_RECHECK_DELAYS_MS = Object.freeze([0, 120]);
+const temporarilyAllowedPictureInPictureVideos = new WeakSet();
 
 function resolveOwnerDocument(video, documentObj) {
   return documentObj || video?.ownerDocument || globalThis.document || null;
@@ -25,6 +26,10 @@ export function isVideoPictureInPictureActive(video, documentObj = null) {
   if (!video) return false;
   if (video.webkitPresentationMode === "picture-in-picture") return true;
   return pictureInPictureElementForVideo(video, documentObj) === video;
+}
+
+export function isVideoPictureInPictureTemporarilyAllowed(video) {
+  return !!video && temporarilyAllowedPictureInPictureVideos.has(video);
 }
 
 export function resolveVideoPictureInPictureSupport({
@@ -112,6 +117,7 @@ export async function toggleVideoPictureInPicture({
     if (isVideoPictureInPictureActive(video, doc)) {
       await doc.exitPictureInPicture();
       if (temporarilyAllowDisabled) {
+        temporarilyAllowedPictureInPictureVideos.delete(video);
         applyDisabledPictureInPictureExitState({
           video,
           documentObj: doc,
@@ -131,11 +137,13 @@ export async function toggleVideoPictureInPicture({
       return { active: true, method: support.method };
     }
 
+    temporarilyAllowedPictureInPictureVideos.add(video);
     enableNativePictureInPicture(video);
     let restorePending = true;
     const restoreSuppression = () => {
       if (!restorePending) return;
       restorePending = false;
+      temporarilyAllowedPictureInPictureVideos.delete(video);
       video.removeEventListener?.(
         "leavepictureinpicture",
         restoreSuppression,
@@ -161,6 +169,7 @@ export async function toggleVideoPictureInPicture({
       await video.requestPictureInPicture();
     } catch (error) {
       restorePending = false;
+      temporarilyAllowedPictureInPictureVideos.delete(video);
       video.removeEventListener?.(
         "leavepictureinpicture",
         restoreSuppression,
