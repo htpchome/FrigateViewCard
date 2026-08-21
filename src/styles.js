@@ -740,7 +740,7 @@ export const STYLES = `
     letter-spacing: .05em;flex-shrink: 0;}
   .popup-info-v {font-size: 0.9rem;color: var(--c-text);white-space: nowrap;overflow: hidden;
     text-overflow: ellipsis;}
-  .popup-info-actions {display:flex;align-items:flex-end;justify-content:flex-end;flex:0 0 auto;min-width:52px;}
+  .popup-info-actions {display:flex;gap:4px;}
   .popup-action {display:inline-flex;gap:4px;align-items:center;justify-content:center;
     background: var(--c-bg-panel);border: 1px solid var(--c-border2);border-radius: 6px;
     color: var(--c-text2);cursor:pointer;padding:2px;transition: all 0.2s ease;min-height:36px;min-width:36px;}
