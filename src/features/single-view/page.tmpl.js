@@ -1,3 +1,5 @@
+import { buildLivePlaybackControlsMarkup } from "../live/view.tmpl.js";
+
 function mergeClassNames(...tokens) {
   return [
     ...new Set(tokens.filter(Boolean).join(" ").split(/\s+/).filter(Boolean)),
@@ -11,6 +13,7 @@ function normalizeRegions(regions) {
       : {};
   return {
     live: "",
+    liveRotate: "",
     livePictureInPicture: "",
     liveFullscreen: "",
     liveTakeSnapshot: "",
@@ -105,10 +108,7 @@ export function buildSingleViewMainLayoutShellMarkup({
           <div class="${leftColumnClassName}" id="col-left">
             <div class="live-stage live-stage--overlay" id="live-stage">
               ${regions.live}
-              ${regions.livePictureInPicture}
-              ${regions.liveFullscreen}
-              ${regions.liveTakeSnapshot}
-              ${regions.liveMute}
+              ${buildLivePlaybackControlsMarkup(regions)}
             </div>
 
             ${regions.information}

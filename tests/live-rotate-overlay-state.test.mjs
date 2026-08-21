@@ -53,6 +53,41 @@ test("resolveRotateOverlayTargetMode prioritizes popup media, otherwise live whe
   );
 });
 
+test("resolveRotateOverlayTargetMode lets a surface-scoped manual choice override physical orientation", () => {
+  assert.equal(
+    resolveRotateOverlayTargetMode({
+      isMobileTabletViewport: true,
+      isLandscapeViewport: false,
+      popupOpen: false,
+      manualOverride: "force-on",
+      manualOverrideTarget: "live",
+    }),
+    "live",
+  );
+  assert.equal(
+    resolveRotateOverlayTargetMode({
+      isMobileTabletViewport: true,
+      isLandscapeViewport: true,
+      popupOpen: true,
+      popupMediaVisible: true,
+      manualOverride: "force-off",
+      manualOverrideTarget: "popup",
+    }),
+    "none",
+  );
+  assert.equal(
+    resolveRotateOverlayTargetMode({
+      isMobileTabletViewport: true,
+      isLandscapeViewport: true,
+      popupOpen: true,
+      popupMediaVisible: true,
+      manualOverride: "force-off",
+      manualOverrideTarget: "live",
+    }),
+    "popup",
+  );
+});
+
 test("resolveRotateOverlayState activates live and popup with prior-mode hints", () => {
   assert.deepEqual(
     resolveRotateOverlayState({
@@ -164,7 +199,7 @@ test("resolveFullscreenButtonVisibility hides controls for popup rotation and fu
     }),
     {
       liveButtonHidden: true,
-      popupControlsFullscreenHidden: false,
+      popupControlsFullscreenHidden: true,
     },
   );
 });
@@ -187,7 +222,7 @@ test("resolveRotateOverlayUiPlan shapes class mutations and side effects per act
       ],
       addClasses: ["mobile-rotate-live"],
       disableNativeControls: true,
-      enableNativeControls: true,
+      enableNativeControls: false,
       clearLiveControlsVisible: false,
       clearLoading: true,
       syncFullscreenButtons: true,
@@ -295,6 +330,21 @@ test("resolveRotateOverlayNativeControlsPlan keeps retry timing and cleanup beha
     bindAudioSync: false,
     retryDelaysMs: [120, 420, 900],
   });
+
+  assert.deepEqual(
+    resolveRotateOverlayNativeControlsPlan({
+      enabled: false,
+      applyFullscreenStyle: true,
+    }),
+    {
+      expectedActive: false,
+      clearAudioSyncFirst: true,
+      clearFullscreenStyleFirst: false,
+      applyFullscreenStyle: true,
+      bindAudioSync: false,
+      retryDelaysMs: [120, 420, 900],
+    },
+  );
 });
 
 test("resolveRotateOverlayViewportVariables prefers visual viewport and clamps minimum size", () => {

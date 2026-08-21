@@ -106,6 +106,8 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
   const markup = buildMobileViewMainLayoutShellMarkup({
     regions: {
       live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
+      liveRotate: `<button data-fvc-region="live-rotate"></button>`,
+      livePictureInPicture: `<button data-fvc-region="live-picture-in-picture"></button>`,
       liveFullscreen: `<button data-fvc-region="live-fullscreen"></button>`,
       liveTakeSnapshot: `<button data-fvc-region="live-take-snapshot"></button>`,
       liveMute: `<button data-fvc-region="live-mute"></button>`,
@@ -122,7 +124,7 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
     },
     layoutProfile: {
       layoutClass: "layout--mobile-view",
-      liveControlsPlacement: "inline",
+      liveControlsPlacement: "overlay",
     },
   });
 
@@ -130,18 +132,11 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
     0,
     markup.indexOf('id="mobile-bottom"'),
   );
-  assert.match(markup, /class="live-stage live-stage--inline"/);
-  assert.doesNotMatch(
+  assert.match(markup, /class="live-stage live-stage--overlay"/);
+  assert.match(liveStageMarkup, /id="live-playback-controls"/);
+  assert.match(
     liveStageMarkup,
-    /data-fvc-region="live-(?:mute|fullscreen|take-snapshot)"/,
-  );
-  assert.match(
-    markup,
-    /mobile-video-controls-left-row">\s*<button data-fvc-region="live-take-snapshot"/,
-  );
-  assert.match(
-    markup,
-    /mobile-video-controls-right-row">\s*<button data-fvc-region="live-mute"[\s\S]*?data-fvc-region="live-fullscreen"/,
+    /live-rotate[\s\S]*?live-picture-in-picture[\s\S]*?live-take-snapshot[\s\S]*?live-fullscreen[\s\S]*?live-mute/,
   );
   assert.equal(markup.includes('id="mobile-view-two-way-talk-slot"'), true);
   assert.equal(
@@ -160,7 +155,7 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
   );
 });
 
-test("mobile view retains overlay controls unless inline placement is selected", () => {
+test("mobile view always keeps playback controls grouped over the media", () => {
   const markup = buildMobileViewMainLayoutShellMarkup({
     regions: {
       live: `<div data-fvc-region="live"></div>`,

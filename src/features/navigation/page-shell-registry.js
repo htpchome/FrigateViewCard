@@ -9,6 +9,7 @@ import { buildInfoRowMarkup } from "../../card/controls/shell-nav.tmpl.js";
 
 export const PAGE_SHELL_REGIONS = Object.freeze({
   live: "live",
+  liveRotate: "live-rotate",
   livePictureInPicture: "live-picture-in-picture",
   liveFullscreen: "live-fullscreen",
   liveTakeSnapshot: "live-take-snapshot",
@@ -53,6 +54,9 @@ function normalizeProfile(profile = {}) {
     livePictureInPictureButtonClass: String(
       profile.livePictureInPictureButtonClass || "",
     ).trim(),
+    liveRotateButtonClass: String(
+      profile.liveRotateButtonClass || "",
+    ).trim(),
     liveTakeSnapshotButtonClass: String(
       profile.liveTakeSnapshotButtonClass || "",
     ).trim(),
@@ -65,6 +69,7 @@ function normalizeProfile(profile = {}) {
       hasLive: capabilities.hasLive !== false,
       hasLivePictureInPicture:
         capabilities.hasLivePictureInPicture === true,
+      hasLiveRotate: capabilities.hasLiveRotate === true,
       hasBrowse: capabilities.hasBrowse !== false,
       tabsVariant:
         capabilities.tabsVariant === "none" ||
@@ -86,6 +91,7 @@ export function resolvePageCapabilities(profile = {}) {
     hasLive: caps.hasLive !== false,
     hasLivePictureInPicture:
       caps.hasLivePictureInPicture === true,
+    hasLiveRotate: caps.hasLiveRotate === true,
     hasBrowse: caps.hasBrowse !== false,
     tabsVariant:
       caps.tabsVariant === "none" || caps.tabsVariant === "new-tabs"
@@ -106,6 +112,9 @@ export function resolveRequiredPageShellRegions(profile = {}) {
     );
     if (capabilities.hasLivePictureInPicture) {
       requiredRegions.push(PAGE_SHELL_REGIONS.livePictureInPicture);
+    }
+    if (capabilities.hasLiveRotate) {
+      requiredRegions.push(PAGE_SHELL_REGIONS.liveRotate);
     }
   }
   if (capabilities.hasBrowse) {
@@ -255,6 +264,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     capabilities: {
       hasLive: true,
       hasLivePictureInPicture: true,
+      hasLiveRotate: true,
       hasBrowse: true,
       tabsVariant: "standard",
     },
@@ -267,10 +277,7 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     tabsHolderClass: "tabs-holder--mobile-view",
     tabsButtonClass: "icon-btn",
     toolsButtonClass: "icon-btn",
-    liveFullscreenButtonClass: "icon-btn",
-    liveTakeSnapshotButtonClass: "icon-btn",
-    liveMuteButtonClass: "icon-btn",
-    liveControlsPlacement: "inline",
+    liveControlsPlacement: "overlay",
     browseClass: "browse--mobile-view",
     buildInfoRowMarkup: ({ title, subtitle, version, host }) =>
       buildMobileViewInfoRowMarkup({
@@ -296,6 +303,8 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
       }),
     capabilities: {
       hasLive: true,
+      hasLivePictureInPicture: true,
+      hasLiveRotate: true,
       hasBrowse: true,
       tabsVariant: "standard",
     },

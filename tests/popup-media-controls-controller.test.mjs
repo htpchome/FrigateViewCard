@@ -274,7 +274,7 @@ test("popup media controls surface renders snapshot, PiP, and AirPlay buttons", 
   const controller = new PopupMediaControlsSurfaceController({
     query: (selector) => (selector === "#viewer" ? viewer : null),
     shouldUseCustomControls: () => false,
-    isMobileDevice: () => false,
+    isMobileTabletViewport: () => false,
     isFirefox: () => false,
     isVideoMediaType: () => true,
     onSyncPlaybackTargetButtons: () => calls.push(["syncPlayback"]),
@@ -283,6 +283,8 @@ test("popup media controls surface renders snapshot, PiP, and AirPlay buttons", 
       takeSnapshot: "snapshot-icon",
       pipPopOut: "pip-icon",
       airplayVideo: "airplay-icon",
+      phoneRotateLandscape: "rotate-icon",
+      expand: "fullscreen-icon",
     },
     documentObj: { createElement },
   });
@@ -291,10 +293,60 @@ test("popup media controls surface renders snapshot, PiP, and AirPlay buttons", 
 
   assert.deepEqual(
     playbackControls.children.map((button) => button.id),
-    ["popup-take-snapshot-btn", "popup-pip-btn", "popup-airplay-btn"],
+    ["popup-airplay-btn", "popup-pip-btn", "popup-take-snapshot-btn"],
   );
-  assert.equal(playbackControls.children[0].innerHTML, "snapshot-icon");
+  assert.equal(playbackControls.children[0].innerHTML, "airplay-icon");
   assert.equal(playbackControls.children[1].innerHTML, "pip-icon");
-  assert.equal(playbackControls.children[2].innerHTML, "airplay-icon");
+  assert.equal(playbackControls.children[2].innerHTML, "snapshot-icon");
   assert.deepEqual(calls, [["syncPlayback"], ["syncPictureInPicture"]]);
+});
+
+test("popup media controls surface renders tablet video actions in shared order", () => {
+  const createElement = (tagName) => ({
+    tagName,
+    children: [],
+    innerHTML: "",
+    setAttribute(name, value) {
+      this[name] = value;
+    },
+    appendChild(child) {
+      this.children.push(child);
+    },
+  });
+  const video = {};
+  const viewer = createElement("div");
+  let playbackControls = null;
+  viewer.querySelector = (selector) => {
+    if (selector === "#popup-playback-controls") return playbackControls;
+    if (selector === "video") return video;
+    return null;
+  };
+  viewer.appendChild = (child) => {
+    viewer.children.push(child);
+    if (child.id === "popup-playback-controls") playbackControls = child;
+  };
+  const controller = new PopupMediaControlsSurfaceController({
+    query: (selector) => (selector === "#viewer" ? viewer : null),
+    isMobileTabletViewport: () => true,
+    isVideoMediaType: () => true,
+    icons: {
+      takeSnapshot: "snapshot-icon",
+      pipPopOut: "pip-icon",
+      phoneRotateLandscape: "rotate-icon",
+      expand: "fullscreen-icon",
+    },
+    documentObj: { createElement },
+  });
+
+  controller.ensurePlaybackButtons("clip");
+
+  assert.deepEqual(
+    playbackControls.children.map((button) => button.id),
+    [
+      "popup-rotate-btn",
+      "popup-pip-btn",
+      "popup-take-snapshot-btn",
+      "popup-fs-btn",
+    ],
+  );
 });

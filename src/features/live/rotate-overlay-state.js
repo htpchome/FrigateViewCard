@@ -3,12 +3,20 @@ export const resolveRotateOverlayTargetMode = ({
   isLandscapeViewport = false,
   popupOpen = false,
   popupMediaVisible = false,
+  manualOverride = "auto",
+  manualOverrideTarget = "none",
 }) => {
-  const rotateEligible = Boolean(isMobileTabletViewport && isLandscapeViewport);
-  if (!rotateEligible) return "none";
-  if (popupMediaVisible) return "popup";
-  if (!popupOpen) return "live";
-  return "none";
+  if (!isMobileTabletViewport) return "none";
+  const surfaceMode = popupMediaVisible
+    ? "popup"
+    : popupOpen
+      ? "none"
+      : "live";
+  if (surfaceMode === "none") return "none";
+  const overrideApplies = manualOverrideTarget === surfaceMode;
+  if (overrideApplies && manualOverride === "force-off") return "none";
+  if (overrideApplies && manualOverride === "force-on") return surfaceMode;
+  return isLandscapeViewport ? surfaceMode : "none";
 };
 
 export const resolveRotateOverlayState = ({
@@ -16,6 +24,8 @@ export const resolveRotateOverlayState = ({
   isLandscapeViewport = false,
   popupOpen = false,
   popupMediaVisible = false,
+  manualOverride = "auto",
+  manualOverrideTarget = "none",
   currentMode = "none",
   isActive = false,
 }) => {
@@ -24,6 +34,8 @@ export const resolveRotateOverlayState = ({
     isLandscapeViewport,
     popupOpen,
     popupMediaVisible,
+    manualOverride,
+    manualOverrideTarget,
   });
 
   if (nextMode === "live") {
@@ -75,7 +87,9 @@ export const resolveFullscreenButtonVisibility = ({
     liveButtonHidden: Boolean(
       popupOpen || isFullscreen || inGridMode || popupRotateActive,
     ),
-    popupControlsFullscreenHidden: Boolean(popupRotateActive),
+    popupControlsFullscreenHidden: Boolean(
+      isFullscreen || popupRotateActive,
+    ),
   };
 };
 
@@ -97,8 +111,8 @@ export const resolveRotateOverlayUiPlan = ({
         "mobile-rotate-popup-exit",
       ],
       addClasses: ["mobile-rotate-live"],
-      disableNativeControls: Boolean(fromPopup),
-      enableNativeControls: true,
+      disableNativeControls: true,
+      enableNativeControls: false,
       clearLiveControlsVisible: false,
       clearLoading: true,
       syncFullscreenButtons: true,
@@ -193,11 +207,12 @@ export const resolveRotateOverlayExitPlan = ({ action = "idle" } = {}) => {
 
 export const resolveRotateOverlayNativeControlsPlan = ({
   enabled = false,
+  applyFullscreenStyle = enabled,
 }) => ({
   expectedActive: Boolean(enabled),
   clearAudioSyncFirst: !enabled,
-  clearFullscreenStyleFirst: !enabled,
-  applyFullscreenStyle: Boolean(enabled),
+  clearFullscreenStyleFirst: !applyFullscreenStyle,
+  applyFullscreenStyle: Boolean(applyFullscreenStyle),
   bindAudioSync: Boolean(enabled),
   retryDelaysMs: [120, 420, 900],
 });

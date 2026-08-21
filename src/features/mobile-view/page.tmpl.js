@@ -1,4 +1,5 @@
 import { MOBILE_VIEW_ACTIVE_CLASS, isMobileViewRoute } from "./utils.js";
+import { buildLivePlaybackControlsMarkup } from "../live/view.tmpl.js";
 
 function buildMobileCameraOptionMarkup({
   camera,
@@ -127,6 +128,8 @@ export function buildMobileViewMainLayoutShellMarkup({
       : {};
   const regions = {
     live: "",
+    liveRotate: "",
+    livePictureInPicture: "",
     liveFullscreen: "",
     liveTakeSnapshot: "",
     liveMute: "",
@@ -147,44 +150,23 @@ export function buildMobileViewMainLayoutShellMarkup({
   const tabsHolderClassName = ["tabs-holder", layoutProfile.tabsHolderClass]
     .filter(Boolean)
     .join(" ");
-  const liveControlsInline = layoutProfile.liveControlsPlacement === "inline";
-  const liveStageClassName = [
-    "live-stage",
-    liveControlsInline ? "live-stage--inline" : "live-stage--overlay",
-  ].join(" ");
-  const overlayFullscreen = liveControlsInline ? "" : regions.liveFullscreen;
-  const overlayTakeSnapshot = liveControlsInline
-    ? ""
-    : regions.liveTakeSnapshot;
-  const overlayMute = liveControlsInline ? "" : regions.liveMute;
-  const inlineTakeSnapshot = liveControlsInline
-    ? regions.liveTakeSnapshot
-    : "";
-  const inlineMute = liveControlsInline ? regions.liveMute : "";
-  const inlineFullscreen = liveControlsInline ? regions.liveFullscreen : "";
-
   return `<div class="${layoutClassName}" id="layout">
             <div class="mobile-container" id="mobile-container">
               <div class="mobile-top" id="mobile-top">
                 ${regions.cameraSwitcher}
-                <div class="${liveStageClassName}" id="live-stage">
+                <div class="live-stage live-stage--overlay" id="live-stage">
                   ${regions.live}
-                  ${overlayFullscreen}
-                  ${overlayTakeSnapshot}
-                  ${overlayMute}
+                  ${buildLivePlaybackControlsMarkup(regions)}
                 </div>
               </div>
               <div class="mobile-bottom" id="mobile-bottom">
                 <div class="mobile-video-controls-container">
                     <div class="button-holder-row mobile-video-controls-left-row">
-                      ${inlineTakeSnapshot}
                     </div>
                     <div class="button-holder-row mobile-microphone-row">
                       ${regions.twoWayTalk}
                     </div>
                     <div class="button-holder-row mobile-video-controls-right-row">
-                      ${inlineMute}
-                      ${inlineFullscreen}                      
                     </div>
                 </div>              
                 <div class="mobile-tab-container shadow-small">

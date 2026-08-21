@@ -37,24 +37,28 @@ test("page shell registry default page capabilities resolve stable defaults", ()
   assert.deepEqual(singleCaps, {
     hasLive: true,
     hasLivePictureInPicture: true,
+    hasLiveRotate: true,
     hasBrowse: true,
     tabsVariant: "standard",
   });
   assert.deepEqual(mobileCaps, {
     hasLive: true,
-    hasLivePictureInPicture: false,
+    hasLivePictureInPicture: true,
+    hasLiveRotate: true,
     hasBrowse: true,
     tabsVariant: "standard",
   });
   assert.deepEqual(wideCaps, {
     hasLive: true,
     hasLivePictureInPicture: true,
+    hasLiveRotate: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
   assert.deepEqual(previewCaps, {
     hasLive: true,
     hasLivePictureInPicture: false,
+    hasLiveRotate: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
@@ -90,6 +94,7 @@ test("page shell capabilities honor explicit overrides", () => {
   assert.deepEqual(resolvePageCapabilities(profile), {
     hasLive: false,
     hasLivePictureInPicture: true,
+    hasLiveRotate: false,
     hasBrowse: false,
     tabsVariant: "new-tabs",
   });
@@ -107,6 +112,7 @@ test("page shell capabilities normalize unsupported values", () => {
   assert.deepEqual(resolvePageCapabilities(profile), {
     hasLive: true,
     hasLivePictureInPicture: false,
+    hasLiveRotate: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
@@ -114,6 +120,7 @@ test("page shell capabilities normalize unsupported values", () => {
   assert.deepEqual(resolvePageCapabilities({}), {
     hasLive: true,
     hasLivePictureInPicture: false,
+    hasLiveRotate: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
@@ -129,10 +136,10 @@ test("mobile profile exposes custom main layout shell builder", () => {
   assert.equal(typeof mobileProfile.buildMainLayoutShellMarkup, "function");
   assert.equal(mobileProfile.tabsButtonClass, "icon-btn");
   assert.equal(mobileProfile.toolsButtonClass, "icon-btn");
-  assert.equal(mobileProfile.liveFullscreenButtonClass, "icon-btn");
-  assert.equal(mobileProfile.liveTakeSnapshotButtonClass, "icon-btn");
-  assert.equal(mobileProfile.liveMuteButtonClass, "icon-btn");
-  assert.equal(mobileProfile.liveControlsPlacement, "inline");
+  assert.equal(mobileProfile.liveFullscreenButtonClass, "");
+  assert.equal(mobileProfile.liveTakeSnapshotButtonClass, "");
+  assert.equal(mobileProfile.liveMuteButtonClass, "");
+  assert.equal(mobileProfile.liveControlsPlacement, "overlay");
   assert.equal(
     registry.resolve(PAGE_IDS.singleView).liveControlsPlacement,
     "overlay",
@@ -145,6 +152,8 @@ test("mobile profile exposes custom main layout shell builder", () => {
     },
     regions: {
       live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
+      liveRotate: `<button data-fvc-region="live-rotate"></button>`,
+      livePictureInPicture: `<button data-fvc-region="live-picture-in-picture"></button>`,
       liveFullscreen: `<button data-fvc-region="live-fullscreen"></button>`,
       liveTakeSnapshot: `<button data-fvc-region="live-take-snapshot"></button>`,
       liveMute: `<button data-fvc-region="live-mute"></button>`,
@@ -164,7 +173,7 @@ test("mobile profile exposes custom main layout shell builder", () => {
   assert.equal(markup.includes('id="mobile-top"'), true);
   assert.equal(markup.includes('id="mobile-bottom"'), true);
   assert.equal(markup.includes('data-fvc-region="two-way-talk"'), true);
-  assert.equal(markup.includes("live-stage--inline"), true);
+  assert.equal(markup.includes("live-stage--overlay"), true);
   const validation = validatePageShellRegionMarkup(markup, {
     requiredRegions: resolveRequiredPageShellRegions(mobileProfile),
   });
@@ -209,6 +218,7 @@ test("required page shell regions follow declared capabilities", () => {
       capabilities: {
         hasLive: true,
         hasLivePictureInPicture: true,
+        hasLiveRotate: true,
         hasBrowse: true,
         tabsVariant: "standard",
       },
@@ -219,6 +229,7 @@ test("required page shell regions follow declared capabilities", () => {
       PAGE_SHELL_REGIONS.liveTakeSnapshot,
       PAGE_SHELL_REGIONS.liveMute,
       PAGE_SHELL_REGIONS.livePictureInPicture,
+      PAGE_SHELL_REGIONS.liveRotate,
       PAGE_SHELL_REGIONS.browseHeader,
       PAGE_SHELL_REGIONS.browse,
       PAGE_SHELL_REGIONS.tabs,

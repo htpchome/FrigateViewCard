@@ -1,3 +1,5 @@
+import { buildLivePlaybackControlsMarkup } from "../live/view.tmpl.js";
+
 /**
  * Returns the class suffix used for preview alert/detection highlighting.
  * @param {string} severity Preview severity value.
@@ -124,6 +126,8 @@ function normalizePreviewPageRegions(regions) {
       : {};
   return {
     live: "",
+    liveRotate: "",
+    livePictureInPicture: "",
     liveFullscreen: "",
     liveTakeSnapshot: "",
     liveMute: "",
@@ -169,9 +173,11 @@ export function buildPreviewPageMainLayoutShellMarkup({
           <div class="${leftColumnClassName}" id="col-left">
             <div class="live-stage live-stage--overlay" id="live-stage">
               ${regions.live}
-              ${regions.liveFullscreen}
-              ${regions.liveTakeSnapshot}
-              ${regions.liveMute}
+              ${buildLivePlaybackControlsMarkup({
+                ...regions,
+                liveRotate: "",
+                livePictureInPicture: "",
+              })}
             </div>
 
             ${regions.information}

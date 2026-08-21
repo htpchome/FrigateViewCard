@@ -170,6 +170,7 @@ import {
   buildLiveEngineWrapMarkup,
   buildLiveFullscreenControlMarkup,
   buildLivePictureInPictureControlMarkup,
+  buildLiveRotateControlMarkup,
   buildLiveTakeSnapshotControlMarkup,
   buildLiveMuteControlMarkup,
 } from "../features/live/view.tmpl.js";
@@ -672,7 +673,7 @@ export class FrigateViewCard extends HTMLElement {
         shouldUseCustomControls: (mediaType) =>
           this._usePopupCustomControls(mediaType),
         isAutoHideActive: () => this._rotateOverlayMode === "popup",
-        isMobileDevice: () => DEVICE_PROFILE.isMobile,
+        isMobileTabletViewport: () => this._isMobileTabletViewport(),
         isVideoMediaType: (mediaType) =>
           this._isPopupVideoMediaType(mediaType),
         onClearPictureInPicture: (scope) =>
@@ -681,6 +682,9 @@ export class FrigateViewCard extends HTMLElement {
           this._syncPlaybackTargetButtons(),
         onSyncPictureInPictureButtons: () =>
           this._syncPictureInPictureButtons(),
+        onSyncRotateButtons: () => this._syncRotateOverlayButtons(),
+        onSyncFullscreenButtons: () =>
+          this._syncFullscreenButtonsVisibility(),
       });
     this._popupLifecycleController = new PopupLifecycleController({
       query: (selector) => this._$(selector),
@@ -826,6 +830,9 @@ export class FrigateViewCard extends HTMLElement {
     this._lastLiveKick = 0;
     this._rotateOverlayActive = false;
     this._rotateOverlayMode = "none";
+    this._rotateOverlayManualOverride = "auto";
+    this._rotateOverlayManualTarget = "none";
+    this._lastPhysicalLandscape = this._isLandscapeViewport();
     this._rotateOverlayRaf = 0;
     this._rotateOverlayExitT = null;
     this._rotateOverlaySyncVideo = null;
@@ -875,6 +882,13 @@ export class FrigateViewCard extends HTMLElement {
         this._lastViewportHeight = viewportHeight;
         this._syncBrowseHeadModeClass();
         this._applyCardStyle();
+      }
+
+      const physicalLandscape = this._isLandscapeViewport();
+      if (physicalLandscape !== this._lastPhysicalLandscape) {
+        this._lastPhysicalLandscape = physicalLandscape;
+        this._rotateOverlayManualOverride = "auto";
+        this._rotateOverlayManualTarget = "none";
       }
 
       this._scheduleRotateOverlayUpdate();
@@ -1551,6 +1565,8 @@ export class FrigateViewCard extends HTMLElement {
     this._rotateOverlayRaf = 0;
     if (this._rotateOverlayExitT) clearTimeout(this._rotateOverlayExitT);
     this._rotateOverlayExitT = null;
+    this._rotateOverlayManualOverride = "auto";
+    this._rotateOverlayManualTarget = "none";
     this.classList?.remove?.(MOBILE_VIEW_ROTATE_COVER_CLASS);
     this._clearRotateOverlayAudioSync();
     this._clearRotateVideoFullscreenStyle();
@@ -2038,7 +2054,11 @@ export class FrigateViewCard extends HTMLElement {
     );
     this._rotateOverlayActive = uiPlan.active;
     this._rotateOverlayMode = uiPlan.mode;
-    if (uiPlan.disableNativeControls) this._setLiveNativeControls(false);
+    if (uiPlan.disableNativeControls) {
+      this._setLiveNativeControls(false, {
+        applyFullscreenStyle: uiPlan.active && uiPlan.mode === "live",
+      });
+    }
     if (uiPlan.clearLiveControlsVisible) {
       this._$("#live-stage")?.classList.remove("live-controls-visible");
     }
@@ -2049,6 +2069,7 @@ export class FrigateViewCard extends HTMLElement {
     if (uiPlan.showPopupControls) {
       this._popupMediaControlsController.showTemporarily();
     }
+    this._syncRotateOverlayButtons();
   }
 
   async _mountEngine(forcedType = null, options = {}) {
@@ -3290,6 +3311,12 @@ export class FrigateViewCard extends HTMLElement {
     const toolsMarkup = this._getToolsMarkup();
     const regions = {
       live: buildLiveEngineWrapMarkup({ icons: ICONS }),
+      liveRotate: shellCapabilities.hasLiveRotate
+        ? buildLiveRotateControlMarkup({
+            icons: ICONS,
+            buttonClass: shellProfile?.liveRotateButtonClass,
+          })
+        : "",
       livePictureInPicture: shellCapabilities.hasLivePictureInPicture
         ? buildLivePictureInPictureControlMarkup({
             icons: ICONS,
@@ -3372,6 +3399,9 @@ export class FrigateViewCard extends HTMLElement {
     this._bindRecordingsSwipe();
     this._wideViewPageController.initResizeHandle();
     this._initLiveOverlayControls();
+    this._renderMuteButton();
+    this._syncFullscreenButtonsVisibility();
+    this._syncRotateOverlayButtons();
     this._syncSlideshowCountdownOverlay();
     this._renderPreviewPage();
     this._wideViewPageController.renderCompanionCameras();
@@ -3406,7 +3436,9 @@ export class FrigateViewCard extends HTMLElement {
     }
 
     this._initLiveOverlayControls();
+    this._renderMuteButton();
     this._syncFullscreenButtonsVisibility();
+    this._syncRotateOverlayButtons();
     this._syncPictureInPictureButtons();
   }
 
@@ -3909,11 +3941,14 @@ export class FrigateViewCard extends HTMLElement {
     };
     video.addEventListener("volumechange", this._onRotateOverlayVolumeChange);
   }
-  _setLiveNativeControls(enabled) {
-    const controlsPlan = resolveRotateOverlayNativeControlsPlan({ enabled });
+  _setLiveNativeControls(enabled, { applyFullscreenStyle = enabled } = {}) {
+    const controlsPlan = resolveRotateOverlayNativeControlsPlan({
+      enabled,
+      applyFullscreenStyle,
+    });
     const expected = controlsPlan.expectedActive;
     const apply = () => {
-      if (!!this._rotateOverlayActive !== expected) return;
+      if (expected && !this._rotateOverlayActive) return;
       const host = this._$("#engine");
       const v =
         this._findVideoDeep(host) ||
@@ -3938,6 +3973,47 @@ export class FrigateViewCard extends HTMLElement {
     }
     apply();
     controlsPlan.retryDelaysMs.forEach((delay) => setTimeout(apply, delay));
+  }
+  _toggleRotateOverlay(targetMode) {
+    if (!this._isMobileTabletViewport()) return;
+    const normalizedTarget = targetMode === "popup" ? "popup" : "live";
+    const targetActive =
+      this._rotateOverlayActive && this._rotateOverlayMode === normalizedTarget;
+    this._rotateOverlayManualOverride = targetActive
+      ? "force-off"
+      : "force-on";
+    this._rotateOverlayManualTarget = normalizedTarget;
+    this._scheduleRotateOverlayUpdate();
+  }
+  _syncRotateOverlayButtons() {
+    const mobileTablet = this._isMobileTabletViewport();
+    const liveButton = this._$("#live-rotate-btn");
+    const liveAvailable =
+      mobileTablet && this._activePageShellCapabilities().hasLiveRotate;
+    const popupButton = this._$("#popup-rotate-btn");
+
+    const syncButton = (button, mode, available) => {
+      if (!button) return;
+      const active =
+        available &&
+        this._rotateOverlayActive &&
+        this._rotateOverlayMode === mode;
+      const label = active ? "Rotate to portrait" : "Rotate to landscape";
+      button.hidden = !available;
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      button.setAttribute("aria-pressed", String(active));
+      button.innerHTML = active
+        ? ICONS.phoneRotatePortrait
+        : ICONS.phoneRotateLandscape;
+    };
+
+    syncButton(liveButton, "live", liveAvailable);
+    syncButton(
+      popupButton,
+      "popup",
+      mobileTablet && Boolean(this._popupMediaControlsController.video()),
+    );
   }
   _scheduleRotateOverlayUpdate() {
     if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
@@ -3965,11 +4041,20 @@ export class FrigateViewCard extends HTMLElement {
       !!viewer &&
       viewer.style.display !== "none" &&
       viewer.childElementCount > 0;
+    if (
+      this._rotateOverlayManualTarget === "popup" &&
+      !popupMediaVisible
+    ) {
+      this._rotateOverlayManualOverride = "auto";
+      this._rotateOverlayManualTarget = "none";
+    }
     const rotateState = resolveRotateOverlayState({
       isMobileTabletViewport: this._isMobileTabletViewport(),
       isLandscapeViewport: this._isLandscapeViewport(),
       popupOpen,
       popupMediaVisible,
+      manualOverride: this._rotateOverlayManualOverride,
+      manualOverrideTarget: this._rotateOverlayManualTarget,
       currentMode: this._rotateOverlayMode,
       isActive: this._rotateOverlayActive,
     });
@@ -4205,6 +4290,10 @@ export class FrigateViewCard extends HTMLElement {
       void this._togglePictureInPicture(this._livePictureInPictureVideo());
       return true;
     }
+    if (target.closest("#live-rotate-btn")) {
+      this._toggleRotateOverlay("live");
+      return true;
+    }
     if (target.closest("#live-take-snapshot-btn")) {
       void this._takeDisplayedSnapshot("live");
       return true;
@@ -4266,6 +4355,15 @@ export class FrigateViewCard extends HTMLElement {
         this._popupMediaControlsController.video(),
         { popup: true },
       );
+      this._popupMediaControlsController.showTemporarily();
+      return true;
+    }
+    if (target.closest("#popup-rotate-btn")) {
+      this._toggleRotateOverlay("popup");
+      return true;
+    }
+    if (target.closest("#popup-fs-btn")) {
+      this._fullscreen(this._$("#viewer"));
       this._popupMediaControlsController.showTemporarily();
       return true;
     }
@@ -4611,7 +4709,8 @@ export class FrigateViewCard extends HTMLElement {
   _renderMuteButton() {
     const btn = this._$("#mute-btn");
     if (!btn) return;
-    const hideMute = this._viewMode === "grid";
+    const hideMute =
+      this._viewMode === "grid" || this._pageId === PAGE_IDS.mobileView;
     btn.hidden = hideMute;
     btn.style.display = hideMute ? "none" : "";
     if (hideMute) return;
@@ -4663,6 +4762,7 @@ export class FrigateViewCard extends HTMLElement {
   _syncFullscreenButtonsVisibility() {
     const liveBtn = this._$("#live-fs-btn");
     const popupControlsFsBtn = this._$("#popup-media-fs");
+    const popupOverlayFsBtn = this._$("#popup-fs-btn");
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     const isFullscreen = !!(
       document.fullscreenElement || document.webkitFullscreenElement
@@ -4674,9 +4774,17 @@ export class FrigateViewCard extends HTMLElement {
       inGridMode,
       rotateOverlayMode: this._rotateOverlayMode,
     });
-    if (liveBtn) liveBtn.hidden = visibility.liveButtonHidden;
+    if (liveBtn) {
+      liveBtn.hidden =
+        this._pageId === PAGE_IDS.mobileView || visibility.liveButtonHidden;
+    }
     if (popupControlsFsBtn)
-      popupControlsFsBtn.hidden = visibility.popupControlsFullscreenHidden;
+      popupControlsFsBtn.hidden =
+        Boolean(popupOverlayFsBtn) ||
+        visibility.popupControlsFullscreenHidden;
+    if (popupOverlayFsBtn) {
+      popupOverlayFsBtn.hidden = visibility.popupControlsFullscreenHidden;
+    }
     this._syncTakeSnapshotButtonVisibility();
   }
 
@@ -4718,23 +4826,16 @@ export class FrigateViewCard extends HTMLElement {
   _isTouchPopupUi() {
     return DEVICE_PROFILE.hasTouch || this._isMobileTabletViewport();
   }
-  _isPhonePopupUi() {
-    if (DEVICE_PROFILE.isPhone) return true;
-    const coarse =
-      window.matchMedia?.("(pointer: coarse)")?.matches ||
-      window.matchMedia?.("(any-pointer: coarse)")?.matches ||
-      false;
-    return (
-      coarse && Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 560
-    );
-  }
   _isPopupVideoMediaType(mediaType) {
     return ["alert", "clip", "recording", "kept"].includes(
       String(mediaType || "").toLowerCase(),
     );
   }
   _usePopupCustomControls(mediaType) {
-    return this._isPhonePopupUi() && this._isPopupVideoMediaType(mediaType);
+    return (
+      this._isMobileTabletViewport() &&
+      this._isPopupVideoMediaType(mediaType)
+    );
   }
   _livePictureInPictureVideo() {
     return (
@@ -4896,7 +4997,6 @@ export class FrigateViewCard extends HTMLElement {
     }
     const liveAllowed =
       this._activePageShellCapabilities().hasLivePictureInPicture &&
-      !DEVICE_PROFILE.isMobile &&
       this._viewMode !== "grid" &&
       !popupOpen;
     this._bindPictureInPictureButton(
@@ -4916,7 +5016,6 @@ export class FrigateViewCard extends HTMLElement {
     }
     const popupAllowed =
       popupOpen &&
-      !DEVICE_PROFILE.isMobile &&
       this._isPopupVideoMediaType(popupMediaType);
     this._bindPictureInPictureButton(
       "popup",

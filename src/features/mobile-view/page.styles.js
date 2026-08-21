@@ -66,16 +66,6 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   .card.mobile-view-active .mobile-video-controls-left-row{grid-area:video-controls-left;justify-content:flex-start;}
   .card.mobile-view-active .mobile-microphone-row{grid-area:microphone;justify-content:center;}
   .card.mobile-view-active .mobile-video-controls-right-row{grid-area:video-controls-right;justify-content:flex-end;}
-  .card.mobile-view-active .mobile-video-controls-container .mute-btn,
-  .card.mobile-view-active .mobile-video-controls-container .live-fs-btn,
-  .card.mobile-view-active .mobile-video-controls-container .live-take-snapshot-btn{
-    position:relative;
-    inset:auto;
-    z-index:1;
-    opacity:1;
-    pointer-events:auto;
-  }
-
   .card.mobile-view-active .mobile-tab-container{
   display:grid;grid-template-columns:max-content auto minmax(0, 1fr);grid-template-areas:"tabs middle tools";align-items:center;gap:10px;padding:0px 8px;margin:3px 8px;border-radius:8px;background-color:var(--c-bg-panel);container-type:inline-size;
   }  

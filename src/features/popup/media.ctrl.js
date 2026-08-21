@@ -130,11 +130,13 @@ export class PopupMediaControlsSurfaceController {
     formatTime = () => "0:00",
     shouldUseCustomControls = () => false,
     isAutoHideActive = () => false,
-    isMobileDevice = () => false,
+    isMobileTabletViewport = () => false,
     isVideoMediaType = () => false,
     onClearPictureInPicture = () => {},
     onSyncPlaybackTargetButtons = () => {},
     onSyncPictureInPictureButtons = () => {},
+    onSyncRotateButtons = () => {},
+    onSyncFullscreenButtons = () => {},
     icons = ICONS,
     documentObj = globalThis.document,
     hideDelayMs = 2200,
@@ -146,11 +148,13 @@ export class PopupMediaControlsSurfaceController {
     this._formatTime = formatTime;
     this._shouldUseCustomControls = shouldUseCustomControls;
     this._isAutoHideActive = isAutoHideActive;
-    this._isMobileDevice = isMobileDevice;
+    this._isMobileTabletViewport = isMobileTabletViewport;
     this._isVideoMediaType = isVideoMediaType;
     this._onClearPictureInPicture = onClearPictureInPicture;
     this._onSyncPlaybackTargetButtons = onSyncPlaybackTargetButtons;
     this._onSyncPictureInPictureButtons = onSyncPictureInPictureButtons;
+    this._onSyncRotateButtons = onSyncRotateButtons;
+    this._onSyncFullscreenButtons = onSyncFullscreenButtons;
     this._icons = icons;
     this._document = documentObj;
     this._hideDelayMs = Math.max(0, Number(hideDelayMs) || 0);
@@ -241,50 +245,82 @@ export class PopupMediaControlsSurfaceController {
     }
     controls.innerHTML = "";
 
-    const takeSnapshotButton = this._document?.createElement?.("button");
-    if (!takeSnapshotButton) return;
-    takeSnapshotButton.className =
-      "square-btn popup-playback-btn popup-take-snapshot-btn";
-    takeSnapshotButton.id = "popup-take-snapshot-btn";
-    takeSnapshotButton.type = "button";
-    takeSnapshotButton.title = "Take Snapshot";
-    takeSnapshotButton.setAttribute("aria-label", "Take Snapshot");
-    takeSnapshotButton.innerHTML = this._icons.takeSnapshot;
-    controls.appendChild(takeSnapshotButton);
+    const appendButton = ({ id, className, title, icon, pressed = null }) => {
+      const button = this._document?.createElement?.("button");
+      if (!button) return null;
+      button.className = `square-btn popup-playback-btn ${className}`;
+      button.id = id;
+      button.type = "button";
+      button.title = title;
+      button.setAttribute("aria-label", title);
+      if (pressed !== null) {
+        button.setAttribute("aria-pressed", String(pressed));
+      }
+      button.innerHTML = icon;
+      controls.appendChild(button);
+      return button;
+    };
+    const isVideo = Boolean(video && this._isVideoMediaType(mediaType));
+    const mobileTablet = this._isMobileTabletViewport();
 
-    if (this._shouldUseCustomControls(mediaType) || !video) {
+    if (isVideo && !mobileTablet) {
+      const airPlayButton = appendButton({
+        id: "popup-airplay-btn",
+        className: "popup-airplay-btn",
+        title: "AirPlay video",
+        icon: this._icons.airplayVideo,
+      });
+      if (airPlayButton) airPlayButton.hidden = true;
+    }
+
+    if (isVideo && mobileTablet) {
+      appendButton({
+        id: "popup-rotate-btn",
+        className: "popup-rotate-btn",
+        title: "Rotate to landscape",
+        icon: this._icons.phoneRotateLandscape,
+        pressed: false,
+      });
+    }
+
+    if (isVideo) {
+      const pictureInPictureButton = appendButton({
+        id: "popup-pip-btn",
+        className: "popup-pip-btn",
+        title: "Picture-in-Picture",
+        icon: this._icons.pipPopOut,
+        pressed: false,
+      });
+      if (pictureInPictureButton) pictureInPictureButton.hidden = true;
+    }
+
+    appendButton({
+      id: "popup-take-snapshot-btn",
+      className: "popup-take-snapshot-btn",
+      title: "Take Snapshot",
+      icon: this._icons.takeSnapshot,
+    });
+
+    if (!isVideo) {
       this._onClearPictureInPicture("popup");
+      this._onSyncRotateButtons();
+      this._onSyncFullscreenButtons();
       return;
     }
 
-    if (
-      !this._isMobileDevice() &&
-      this._isVideoMediaType(mediaType)
-    ) {
-      const pictureInPictureButton = this._document.createElement("button");
-      pictureInPictureButton.className =
-        "square-btn popup-playback-btn popup-pip-btn";
-      pictureInPictureButton.id = "popup-pip-btn";
-      pictureInPictureButton.type = "button";
-      pictureInPictureButton.title = "Picture-in-Picture";
-      pictureInPictureButton.setAttribute("aria-label", "Picture-in-Picture");
-      pictureInPictureButton.setAttribute("aria-pressed", "false");
-      pictureInPictureButton.hidden = true;
-      pictureInPictureButton.innerHTML = this._icons.pipPopOut;
-      controls.appendChild(pictureInPictureButton);
+    if (mobileTablet) {
+      appendButton({
+        id: "popup-fs-btn",
+        className: "popup-fs-btn",
+        title: "Fullscreen",
+        icon: this._icons.expand,
+      });
     }
 
-    const airPlayButton = this._document.createElement("button");
-    airPlayButton.className = "glass-btn popup-playback-btn";
-    airPlayButton.id = "popup-airplay-btn";
-    airPlayButton.type = "button";
-    airPlayButton.title = "AirPlay video";
-    airPlayButton.setAttribute("aria-label", "AirPlay video");
-    airPlayButton.hidden = true;
-    airPlayButton.innerHTML = this._icons.airplayVideo;
-    controls.appendChild(airPlayButton);
     this._onSyncPlaybackTargetButtons();
     this._onSyncPictureInPictureButtons();
+    this._onSyncRotateButtons();
+    this._onSyncFullscreenButtons();
   }
 
   update(video = this.video(), { updateProgress = true } = {}) {

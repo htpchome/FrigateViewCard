@@ -112,7 +112,7 @@ test("tabs and tools synchronize independently without layout repair", () => {
   assert.equal(methodSource.includes("_createCalendarPanel"), false);
 });
 
-test("mobile inline live controls stay visible without overlay reveal binding", () => {
+test("live controls share one vertically centered overlay visibility owner", () => {
   assert.equal(
     cardSource.includes(
       'if (!wrap.classList.contains("live-stage--overlay")) return;',
@@ -123,22 +123,19 @@ test("mobile inline live controls stay visible without overlay reveal binding", 
     cardSource.includes('#live-stage.live-stage--overlay'),
     true,
   );
-  const controlsRuleStart = mobileViewStylesSource.indexOf(
-    ".mobile-video-controls-container .mute-btn,",
+  assert.equal(stylesSource.includes(".live-playback-controls,.popup-playback-controls{"), true);
+  assert.equal(stylesSource.includes("top:50%;right:clamp(.75rem,2vw,1.125rem)"), true);
+  assert.equal(stylesSource.includes("flex-direction:column"), true);
+  assert.equal(
+    stylesSource.includes(
+      "#live-stage.live-controls-visible .live-playback-controls{opacity:1;pointer-events:auto;}",
+    ),
+    true,
   );
-  const controlsRuleEnd = mobileViewStylesSource.indexOf(
-    "}",
-    controlsRuleStart,
+  assert.equal(
+    mobileViewStylesSource.includes(".mobile-video-controls-container .mute-btn"),
+    false,
   );
-  const controlsRule = mobileViewStylesSource.slice(
-    controlsRuleStart,
-    controlsRuleEnd,
-  );
-  assert.equal(controlsRule.includes(".live-fs-btn"), true);
-  assert.equal(controlsRule.includes(".live-take-snapshot-btn"), true);
-  assert.equal(controlsRule.includes("position:relative;"), true);
-  assert.equal(controlsRule.includes("opacity:1;"), true);
-  assert.equal(controlsRule.includes("pointer-events:auto;"), true);
 });
 
 test("mobile rotate overlay promotes the card host above Home Assistant chrome", () => {
@@ -161,7 +158,7 @@ test("mobile rotate overlay promotes the card host above Home Assistant chrome",
 });
 
 test("popup playback controls delegate to native PiP and AirPlay", () => {
-  assert.equal(cardSource.includes("#popup-fs-btn"), false);
+  assert.equal(cardSource.includes("#popup-fs-btn"), true);
   assert.equal(cardSource.includes("_ensurePopupFullscreenButton"), false);
   assert.equal(cardSource.includes("_ensurePopupAirPlayButton"), false);
   assert.equal(cardSource.includes("_ensurePopupPlaybackButtons"), false);
@@ -171,7 +168,7 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
   );
   assert.equal(
     popupMediaControlsSource.includes(
-      'pictureInPictureButton.id = "popup-pip-btn"',
+      'id: "popup-pip-btn"',
     ),
     true,
   );
@@ -189,7 +186,7 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
   assert.equal(cardSource.includes("#live-airplay-btn"), false);
   assert.equal(
     stylesSource.includes(
-      ".live-pip-btn[hidden],.live-fs-btn[hidden],.live-take-snapshot-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}",
+      ".live-pip-btn[hidden],.live-fs-btn[hidden],.live-take-snapshot-btn[hidden],.live-rotate-btn[hidden],.mute-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}",
     ),
     true,
   );
@@ -211,10 +208,8 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
 });
 
 test("Firefox uses custom PiP buttons with temporary native suppression relief", () => {
-  assert.match(
-    popupMediaControlsSource,
-    /!this\._isMobileDevice\(\)\s*&&\s*this\._isVideoMediaType\(mediaType\)/,
-  );
+  assert.match(popupMediaControlsSource, /if \(isVideo\) \{/);
+  assert.equal(popupMediaControlsSource.includes("_isMobileDevice"), false);
   assert.equal(
     popupMediaControlsSource.includes("!this._isFirefox()"),
     false,
