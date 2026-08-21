@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1609";
+const VERSION = "1.0.1610";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -16379,7 +16379,7 @@ const PreviewPageController = class {
     this._host._clearPreviewTimers();
     this.teardownPreviewMedia();
   }
-  _restoreCameraBrowseCache(idx) {
+  restoreCameraBrowseCache(idx) {
     const entity = this._host._config?.cameras?.[idx]?.entity;
     const cache = entity ? this._host._camCache?.[entity] : null;
     if (!cache) return;
@@ -16387,6 +16387,22 @@ const PreviewPageController = class {
     this._host._recordings = cache.recordings || [];
     this._host._reviews = cache.reviews || [];
     this._host._kept = cache.kept || [];
+  }
+  prepareRetainedCameraExit() {
+    this._host._viewMode = "single";
+    this.restoreCameraBrowseCache(this._host._activeCamIdx);
+  }
+  resumeRetainedCameraAfterExit() {
+    const engineHost = this._host._$("#engine");
+    const hasLiveVideo = !!(this._host._findVideoDeep?.(engineHost) || this._host._findVideoDeep?.(this._host._engine) || this._host._engine?.video);
+    if (hasLiveVideo) {
+      this._host._scheduleResumeLive?.("preview-retained-camera-exit");
+    } else {
+      this._host._mountEngine?.();
+    }
+    void this._host._browseWindowLoaderController?.loadWindow?.(true);
+    this._host._applyCalendarActivityCacheForActiveCamera?.();
+    void this._host._prefetchCalendarActivityForActiveCamera?.();
   }
   exitPreviewPageToCamera(idx) {
     if (!this.isPreviewPageActive()) return;
@@ -16402,8 +16418,7 @@ const PreviewPageController = class {
     ) ?? this._host._isPageRouteAvailable?.(this._host._lastNonPreviewPageId) ? this._host._lastNonPreviewPageId : PAGE_IDS2.singleView);
     const selectingActiveCamera = this._host._activeCamIdx === idx;
     if (selectingActiveCamera) {
-      this._host._viewMode = "single";
-      this._restoreCameraBrowseCache(idx);
+      this.prepareRetainedCameraExit();
     }
     pageNavigation?.navigateToPageRoute?.(targetPageId, {
       source: "preview-camera-select",
@@ -16413,16 +16428,7 @@ const PreviewPageController = class {
       deferCameraSwitch: true
     });
     if (selectingActiveCamera) {
-      const engineHost = this._host._$("#engine");
-      const hasLiveVideo = !!(this._host._findVideoDeep?.(engineHost) || this._host._findVideoDeep?.(this._host._engine) || this._host._engine?.video);
-      if (hasLiveVideo) {
-        this._host._scheduleResumeLive?.("preview-camera-select-same-camera");
-      } else {
-        this._host._mountEngine?.();
-      }
-      void this._host._browseWindowLoaderController?.loadWindow?.(true);
-      this._host._applyCalendarActivityCacheForActiveCamera?.();
-      void this._host._prefetchCalendarActivityForActiveCamera?.();
+      this.resumeRetainedCameraAfterExit();
       return;
     }
     void this._host._switchCamera(idx, { source: "preview-camera-select" });
@@ -18123,7 +18129,11 @@ function activateStandardPageRouteLifecycle({
   applyRouteFrame
 } = {}) {
   const leavingPreview = isLeavingPreviewPage(context, previewPageId);
+  const useRetainedPreviewCamera = leavingPreview && context.startup !== true && context.deferCameraSwitch !== true;
   handlePreviewExit(host, leavingPreview);
+  if (useRetainedPreviewCamera) {
+    host._previewPageController?.prepareRetainedCameraExit?.();
+  }
   applyRouteFrame?.();
   if (context.startup === true) {
     activateStartupRoute(host, context);
@@ -18134,6 +18144,9 @@ function activateStandardPageRouteLifecycle({
     return;
   }
   syncStandardRouteShell(host);
+  if (useRetainedPreviewCamera) {
+    host._previewPageController?.resumeRetainedCameraAfterExit?.();
+  }
 }
 
 // src/features/browse/list.tmpl.js

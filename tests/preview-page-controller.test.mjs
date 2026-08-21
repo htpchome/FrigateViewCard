@@ -270,7 +270,7 @@ test("exitPreviewPageToCamera preserves an existing active-camera live mount", (
         deferCameraSwitch: true,
       },
     ],
-    ["scheduleResumeLive", "preview-camera-select-same-camera"],
+    ["scheduleResumeLive", "preview-retained-camera-exit"],
     ["loadWindow", true],
   ]);
 });

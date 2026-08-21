@@ -118,6 +118,41 @@ test("activateStandardPageRouteLifecycle leaving preview cancels when mount acti
   ]);
 });
 
+test("page navigation leaving Preview immediately resumes the retained camera", () => {
+  const calls = [];
+  const host = {
+    _pageId: "mobile-view",
+    _mountInProgress: false,
+    _renderShellPreserveLive: () => calls.push(["renderShellPreserveLive"]),
+    _syncTabsShell: () => calls.push(["syncTabsShell"]),
+    _renderAll: () => calls.push(["renderAll"]),
+    _stopPreviewMode: () => calls.push(["stopPreviewMode"]),
+    _$: () => null,
+    _previewPageController: {
+      prepareRetainedCameraExit: () => calls.push(["prepareRetainedCamera"]),
+      resumeRetainedCameraAfterExit: () =>
+        calls.push(["resumeRetainedCamera"]),
+    },
+  };
+
+  activateStandardPageRouteLifecycle({
+    host,
+    context: { previousPageId: "preview", source: "page-nav" },
+    previewPageId: "preview",
+    applyRouteFrame: () => calls.push(["applyRouteFrame"]),
+  });
+
+  assert.deepEqual(calls, [
+    ["stopPreviewMode"],
+    ["prepareRetainedCamera"],
+    ["applyRouteFrame"],
+    ["renderShellPreserveLive"],
+    ["syncTabsShell"],
+    ["renderAll"],
+    ["resumeRetainedCamera"],
+  ]);
+});
+
 test("activateStandardPageRouteLifecycle applies shell swap during deferred camera switch", () => {
   const calls = [];
   const host = {

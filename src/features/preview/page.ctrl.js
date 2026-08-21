@@ -381,7 +381,7 @@ export class PreviewPageController {
     this.teardownPreviewMedia();
   }
 
-  _restoreCameraBrowseCache(idx) {
+  restoreCameraBrowseCache(idx) {
     const entity = this._host._config?.cameras?.[idx]?.entity;
     const cache = entity ? this._host._camCache?.[entity] : null;
     if (!cache) return;
@@ -389,6 +389,28 @@ export class PreviewPageController {
     this._host._recordings = cache.recordings || [];
     this._host._reviews = cache.reviews || [];
     this._host._kept = cache.kept || [];
+  }
+
+  prepareRetainedCameraExit() {
+    this._host._viewMode = "single";
+    this.restoreCameraBrowseCache(this._host._activeCamIdx);
+  }
+
+  resumeRetainedCameraAfterExit() {
+    const engineHost = this._host._$("#engine");
+    const hasLiveVideo = !!(
+      this._host._findVideoDeep?.(engineHost) ||
+      this._host._findVideoDeep?.(this._host._engine) ||
+      this._host._engine?.video
+    );
+    if (hasLiveVideo) {
+      this._host._scheduleResumeLive?.("preview-retained-camera-exit");
+    } else {
+      this._host._mountEngine?.();
+    }
+    void this._host._browseWindowLoaderController?.loadWindow?.(true);
+    this._host._applyCalendarActivityCacheForActiveCamera?.();
+    void this._host._prefetchCalendarActivityForActiveCamera?.();
   }
 
   exitPreviewPageToCamera(idx) {
@@ -416,8 +438,7 @@ export class PreviewPageController {
 
     const selectingActiveCamera = this._host._activeCamIdx === idx;
     if (selectingActiveCamera) {
-      this._host._viewMode = "single";
-      this._restoreCameraBrowseCache(idx);
+      this.prepareRetainedCameraExit();
     }
 
     pageNavigation?.navigateToPageRoute?.(targetPageId, {
@@ -431,22 +452,7 @@ export class PreviewPageController {
 
     // Keep the existing live mount when selecting the already-active camera.
     if (selectingActiveCamera) {
-      const engineHost = this._host._$("#engine");
-      const hasLiveVideo = !!(
-        this._host._findVideoDeep?.(engineHost) ||
-        this._host._findVideoDeep?.(this._host._engine) ||
-        this._host._engine?.video
-      );
-      if (hasLiveVideo) {
-        this._host._scheduleResumeLive?.("preview-camera-select-same-camera");
-      } else {
-        this._host._mountEngine?.();
-      }
-      // Preview startup skips browse loading, while other tiles load through
-      // the normal camera-switch path.
-      void this._host._browseWindowLoaderController?.loadWindow?.(true);
-      this._host._applyCalendarActivityCacheForActiveCamera?.();
-      void this._host._prefetchCalendarActivityForActiveCamera?.();
+      this.resumeRetainedCameraAfterExit();
       return;
     }
 

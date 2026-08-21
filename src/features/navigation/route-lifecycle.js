@@ -42,8 +42,15 @@ export function activateStandardPageRouteLifecycle({
   applyRouteFrame,
 } = {}) {
   const leavingPreview = isLeavingPreviewPage(context, previewPageId);
+  const useRetainedPreviewCamera =
+    leavingPreview &&
+    context.startup !== true &&
+    context.deferCameraSwitch !== true;
 
   handlePreviewExit(host, leavingPreview);
+  if (useRetainedPreviewCamera) {
+    host._previewPageController?.prepareRetainedCameraExit?.();
+  }
   applyRouteFrame?.();
 
   if (context.startup === true) {
@@ -57,4 +64,7 @@ export function activateStandardPageRouteLifecycle({
   }
 
   syncStandardRouteShell(host);
+  if (useRetainedPreviewCamera) {
+    host._previewPageController?.resumeRetainedCameraAfterExit?.();
+  }
 }
