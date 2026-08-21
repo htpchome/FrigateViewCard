@@ -8,6 +8,7 @@ import {
   MOBILE_PAGE_MODES,
   normalizeMobilePageMode,
   PAGE_IDS,
+  resolveDeepLinkPageRoute,
   resolveMobilePreviewDestination,
   resolveStartupPageRoute,
 } from "../src/features/navigation/router.js";
@@ -69,7 +70,7 @@ test("mobile landing page excludes wide-view even when enabled", () => {
   );
 });
 
-test("deep links force single-view startup", () => {
+test("desktop deep links continue to use single-view startup", () => {
   const config = {
     mobile_view_page_enabled: true,
     preview_page_enabled: true,
@@ -82,6 +83,52 @@ test("deep links force single-view startup", () => {
     resolveStartupPageRoute({
       config,
       deviceBucket: DEVICE_ROUTE_BUCKETS.desktop,
+      hasPendingDeepLinkTarget: true,
+    }),
+    PAGE_IDS.singleView,
+  );
+});
+
+test("phone deep links use the final page from the configured mobile flow", () => {
+  const baseConfig = {
+    mobile_view_page_enabled: true,
+    preview_page_enabled: true,
+  };
+  const expectations = [
+    [MOBILE_PAGE_MODES.mobile, PAGE_IDS.mobileView],
+    [MOBILE_PAGE_MODES.previewMobile, PAGE_IDS.mobileView],
+    [MOBILE_PAGE_MODES.previewSingle, PAGE_IDS.singleView],
+    [MOBILE_PAGE_MODES.single, PAGE_IDS.singleView],
+  ];
+
+  for (const [mobilePage, expectedPage] of expectations) {
+    const config = { ...baseConfig, mobile_page: mobilePage };
+    assert.equal(
+      resolveDeepLinkPageRoute(config, DEVICE_ROUTE_BUCKETS.mobile),
+      expectedPage,
+    );
+    assert.equal(
+      resolveStartupPageRoute({
+        config,
+        deviceBucket: DEVICE_ROUTE_BUCKETS.mobile,
+        hasPendingDeepLinkTarget: true,
+      }),
+      expectedPage,
+    );
+  }
+});
+
+test("phone deep links fall back to single-view when mobile-view is disabled", () => {
+  const config = {
+    mobile_view_page_enabled: false,
+    preview_page_enabled: true,
+    mobile_page: MOBILE_PAGE_MODES.previewMobile,
+  };
+
+  assert.equal(
+    resolveStartupPageRoute({
+      config,
+      deviceBucket: DEVICE_ROUTE_BUCKETS.mobile,
       hasPendingDeepLinkTarget: true,
     }),
     PAGE_IDS.singleView,

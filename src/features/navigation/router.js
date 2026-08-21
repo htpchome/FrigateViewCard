@@ -115,6 +115,18 @@ export const resolveMobilePreviewDestination = (value) => {
   return "";
 };
 
+export const resolveDeepLinkPageRoute = (config, deviceBucket) => {
+  if (deviceBucket !== DEVICE_ROUTE_BUCKETS.mobile) return PAGE_IDS.singleView;
+  const mode = normalizeMobilePageMode(config?.mobile_page);
+  if (
+    mode === MOBILE_PAGE_MODES.mobile ||
+    mode === MOBILE_PAGE_MODES.previewMobile
+  ) {
+    return PAGE_IDS.mobileView;
+  }
+  return PAGE_IDS.singleView;
+};
+
 export const resolveConfiguredLandingPage = (config, deviceBucket) => {
   if (deviceBucket === DEVICE_ROUTE_BUCKETS.mobile) {
     return resolveMobilePageEntryRoute(config?.mobile_page);
@@ -127,8 +139,13 @@ export const resolveStartupPageRoute = ({
   deviceBucket,
   hasPendingDeepLinkTarget = false,
 }) => {
-  if (hasPendingDeepLinkTarget) return PAGE_IDS.singleView;
   const available = getEnabledPageRoutes(config, deviceBucket);
+  if (hasPendingDeepLinkTarget) {
+    const deepLinkPage = resolveDeepLinkPageRoute(config, deviceBucket);
+    return available.includes(deepLinkPage)
+      ? deepLinkPage
+      : PAGE_IDS.singleView;
+  }
   const preferred = resolveConfiguredLandingPage(config, deviceBucket);
   if (available.includes(preferred)) return preferred;
   return available[0] || PAGE_IDS.singleView;

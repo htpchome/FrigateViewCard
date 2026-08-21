@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1606";
+const VERSION = "1.0.1607";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1932,6 +1932,14 @@ const resolveMobilePreviewDestination = (value) => {
   if (mode === MOBILE_PAGE_MODES.previewSingle) return PAGE_IDS.singleView;
   return "";
 };
+const resolveDeepLinkPageRoute = (config, deviceBucket) => {
+  if (deviceBucket !== DEVICE_ROUTE_BUCKETS.mobile) return PAGE_IDS.singleView;
+  const mode = normalizeMobilePageMode(config?.mobile_page);
+  if (mode === MOBILE_PAGE_MODES.mobile || mode === MOBILE_PAGE_MODES.previewMobile) {
+    return PAGE_IDS.mobileView;
+  }
+  return PAGE_IDS.singleView;
+};
 const resolveConfiguredLandingPage = (config, deviceBucket) => {
   if (deviceBucket === DEVICE_ROUTE_BUCKETS.mobile) {
     return resolveMobilePageEntryRoute(config?.mobile_page);
@@ -1943,8 +1951,11 @@ const resolveStartupPageRoute = ({
   deviceBucket,
   hasPendingDeepLinkTarget = false
 }) => {
-  if (hasPendingDeepLinkTarget) return PAGE_IDS.singleView;
   const available = getEnabledPageRoutes(config, deviceBucket);
+  if (hasPendingDeepLinkTarget) {
+    const deepLinkPage = resolveDeepLinkPageRoute(config, deviceBucket);
+    return available.includes(deepLinkPage) ? deepLinkPage : PAGE_IDS.singleView;
+  }
   const preferred = resolveConfiguredLandingPage(config, deviceBucket);
   if (available.includes(preferred)) return preferred;
   return available[0] || PAGE_IDS.singleView;

@@ -210,6 +210,7 @@ Behavior:
 - `media=snapshot` forces snapshot popup when an event/review resolves.
 - `media=clip` prefers clip popup when a clip exists.
 - If a camera hint is provided, the card switches to that camera first.
+- On phones, deep links open Mobile View for the `Mobile` and `Preview + Mobile` landing modes, or Single View for the `Single View` and `Preview + Single View` modes.
 - On dashboards with multiple FrigateView cards, links with a camera hint are consumed by the card that has that camera configured.
 
 Tap Action URL examples (Frigate Notifications blueprint variables):
