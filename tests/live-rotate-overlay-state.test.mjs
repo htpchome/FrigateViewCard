@@ -5,6 +5,7 @@ import {
   resolveRotateOverlayExitPlan,
   resolveFullscreenButtonVisibility,
   resolveRotateOverlayNativeControlsPlan,
+  resolveRotateOverlayPresentation,
   resolveRotateOverlayState,
   resolveRotateOverlayTargetMode,
   resolveRotateOverlayUiPlan,
@@ -53,14 +54,14 @@ test("resolveRotateOverlayTargetMode prioritizes popup media, otherwise live whe
   );
 });
 
-test("resolveRotateOverlayTargetMode lets a surface-scoped manual choice override physical orientation", () => {
+test("resolveRotateOverlayTargetMode forces the opposite presentation orientation", () => {
   assert.equal(
     resolveRotateOverlayTargetMode({
       isMobileTabletViewport: true,
       isLandscapeViewport: false,
       popupOpen: false,
-      manualOverride: "force-on",
-      manualOverrideTarget: "live",
+      manualOrientation: "landscape",
+      manualOrientationTarget: "live",
     }),
     "live",
   );
@@ -70,21 +71,38 @@ test("resolveRotateOverlayTargetMode lets a surface-scoped manual choice overrid
       isLandscapeViewport: true,
       popupOpen: true,
       popupMediaVisible: true,
-      manualOverride: "force-off",
-      manualOverrideTarget: "popup",
+      manualOrientation: "portrait",
+      manualOrientationTarget: "popup",
     }),
-    "none",
+    "popup",
   );
   assert.equal(
     resolveRotateOverlayTargetMode({
       isMobileTabletViewport: true,
-      isLandscapeViewport: true,
-      popupOpen: true,
-      popupMediaVisible: true,
-      manualOverride: "force-off",
-      manualOverrideTarget: "live",
+      isLandscapeViewport: false,
+      popupOpen: false,
+      manualOrientation: "portrait",
+      manualOrientationTarget: "live",
     }),
-    "popup",
+    "none",
+  );
+
+  assert.deepEqual(
+    resolveRotateOverlayPresentation({
+      isMobileTabletViewport: true,
+      isLandscapeViewport: false,
+      popupOpen: false,
+      manualOrientation: "landscape",
+      manualOrientationTarget: "live",
+    }),
+    {
+      active: true,
+      mode: "live",
+      orientation: "landscape",
+      physicalOrientation: "portrait",
+      surfaceMode: "live",
+      swapped: true,
+    },
   );
 });
 
@@ -104,6 +122,8 @@ test("resolveRotateOverlayState activates live and popup with prior-mode hints",
       fromPopup: true,
       mode: "live",
       nextMode: "live",
+      orientation: "landscape",
+      swapped: false,
     },
   );
 
@@ -122,6 +142,8 @@ test("resolveRotateOverlayState activates live and popup with prior-mode hints",
       fromLive: true,
       mode: "popup",
       nextMode: "popup",
+      orientation: "landscape",
+      swapped: false,
     },
   );
 });
@@ -141,6 +163,8 @@ test("resolveRotateOverlayState distinguishes idle and deactivate outcomes", () 
       active: false,
       mode: "none",
       nextMode: "none",
+      orientation: "landscape",
+      swapped: false,
     },
   );
 
@@ -159,6 +183,8 @@ test("resolveRotateOverlayState distinguishes idle and deactivate outcomes", () 
       exitMode: "popup",
       mode: "none",
       nextMode: "none",
+      orientation: "landscape",
+      swapped: false,
     },
   );
 });
@@ -226,7 +252,7 @@ test("resolveRotateOverlayUiPlan shapes class mutations and side effects per act
       clearLiveControlsVisible: false,
       clearLoading: true,
       syncFullscreenButtons: true,
-      showLiveControls: true,
+      showLiveControls: false,
       showPopupControls: true,
       retainViewportCover: true,
     },
@@ -364,6 +390,8 @@ test("resolveRotateOverlayViewportVariables prefers visual viewport and clamps m
       heightPx: "845px",
       offsetLeftPx: "12px",
       offsetTopPx: "9px",
+      centerLeftPx: "207px",
+      centerTopPx: "431.5px",
     },
   );
 
@@ -378,6 +406,8 @@ test("resolveRotateOverlayViewportVariables prefers visual viewport and clamps m
       heightPx: "1px",
       offsetLeftPx: "0px",
       offsetTopPx: "0px",
+      centerLeftPx: "0.5px",
+      centerTopPx: "0.5px",
     },
   );
 });

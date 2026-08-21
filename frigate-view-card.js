@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1619";
+const VERSION = "1.0.1620";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -235,6 +235,20 @@ const MOBILE_VIEW_PAGE_STYLES = `
     max-height: 100dvh !important;
     min-height: 100dvh !important;
     z-index: 2147483000 !important;
+  }
+
+  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-live #live-stage,
+  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-live-exit #live-stage,
+  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-popup #myPopup,
+  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-popup-exit #myPopup {
+    top: var(--rotate-cy) !important;
+    left: var(--rotate-cx) !important;
+    width: var(--rotate-vh) !important;
+    height: var(--rotate-vw) !important;
+    min-height: var(--rotate-vw) !important;
+    max-height: var(--rotate-vw) !important;
+    transform: translate(-50%, -50%) rotate(90deg) !important;
+    transform-origin: center center !important;
   }
 
   .card.mobile-view-active .mobile-view-two-way-talk-slot {
@@ -585,6 +599,8 @@ const STYLES = `
     --rotate-vh: 100dvh;
     --rotate-ox: 0px;
     --rotate-oy: 0px;
+    --rotate-cx: 50vw;
+    --rotate-cy: 50dvh;
   }
 
   /* \u2500\u2500 theme variables (dark = default) \u2500\u2500 */
@@ -833,6 +849,10 @@ const STYLES = `
     .card.mobile-rotate-popup-exit{overflow:hidden;height:var(--rotate-vh);max-height:var(--rotate-vh);}
     .card.mobile-rotate-popup #myPopup,
     .card.mobile-rotate-popup-exit #myPopup{position:fixed;top:var(--rotate-oy);left:var(--rotate-ox);right:auto;bottom:auto;width:var(--rotate-vw);height:var(--rotate-vh);max-height:var(--rotate-vh);min-height:var(--rotate-vh);z-index:1400;transform:translateY(0) !important;border-radius:0;background:var(--c-bg-deep);}
+    .card.mobile-rotate-orientation-swapped.mobile-rotate-live #live-stage,
+    .card.mobile-rotate-orientation-swapped.mobile-rotate-live-exit #live-stage,
+    .card.mobile-rotate-orientation-swapped.mobile-rotate-popup #myPopup,
+    .card.mobile-rotate-orientation-swapped.mobile-rotate-popup-exit #myPopup{top:var(--rotate-cy);left:var(--rotate-cx);width:var(--rotate-vh);height:var(--rotate-vw);min-height:var(--rotate-vw);max-height:var(--rotate-vw);transform:translate(-50%,-50%) rotate(90deg) !important;transform-origin:center center;}
     .card.mobile-rotate-popup #myPopup{animation:popupOverlayIn .28s ease both;}
     .card.mobile-rotate-popup-exit #myPopup{animation:popupOverlayOut .24s ease both;}
     .card.mobile-rotate-popup .popup-header,
@@ -935,7 +955,7 @@ const STYLES = `
   .square-btn:hover{background: rgb(45 45 45 / 95%);border-color: rgb(255 255 255 / 45%);}
   .square-btn svg{width: 24px;height: 24px;fill: currentColor;pointer-events: none;}
   .live-playback-controls,.popup-playback-controls{position:absolute;top:50%;right:clamp(.75rem,2vw,1.125rem);bottom:auto;z-index:7;display:flex;flex-direction:column;gap:.5rem;opacity:0;pointer-events:none;transform:translateY(-50%);transition:opacity .16s ease;}
-  .live-playback-controls > button,.popup-playback-controls > button{position:relative;inset:auto;width:36px;height:36px;flex:0 0 36px;opacity:1;pointer-events:auto;}
+  .live-playback-controls > button,.popup-playback-controls > button{position:relative;inset:auto;width:36px;height:36px;flex:0 0 36px;opacity:1;}
 
   .live-pip-btn[hidden],.live-fs-btn[hidden],.live-take-snapshot-btn[hidden],.live-rotate-btn[hidden],.mute-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
 
@@ -957,15 +977,14 @@ const STYLES = `
   .overlay-controls:hover svg {width:30px;height:30px;opacity: 0.95; }
   .popup-playback-controls .popup-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
   .popup-playback-controls .square-btn svg{width:24px;height:24px;opacity:1;}
-  #viewer:hover .popup-playback-controls{opacity:1;pointer-events:auto;}
-  @media (hover:none), (pointer:coarse){#viewer .popup-playback-controls{opacity:1;pointer-events:auto;}}
+  #viewer.popup-controls-visible .popup-playback-controls{opacity:1;pointer-events:auto;}
   .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;padding:4px 10px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
   .slideshow-next-chip[hidden]{display:none !important;}
   #live-stage.live-controls-visible .live-playback-controls{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {
+    #viewer:hover .popup-playback-controls{opacity:1;pointer-events:auto;}
     #live-stage:hover .live-playback-controls{opacity:1;pointer-events:auto;}
   }
-  @media (hover:none), (pointer:coarse){#live-stage .live-playback-controls{opacity:1;pointer-events:auto;}}
 
   .snapshot-result-bubble{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:12;min-height:30px;display:flex;align-items:center;justify-content:center;padding:6px 12px;border:1px solid currentColor;border-radius:999px;font-size:.82rem;font-weight:700;line-height:1;white-space:nowrap;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.3);backdrop-filter:blur(3px);}
   .snapshot-result-bubble.success{color:var(--c-on);background:rgba(74,222,128,.18);background:color-mix(in srgb,var(--c-on) 18%,rgba(15,21,40,.88));}
@@ -6551,47 +6570,62 @@ const resolveSnapshotFallbackState = ({
 });
 
 // src/features/live/rotate-overlay-state.js
-const resolveRotateOverlayTargetMode = ({
+const resolveRotateOverlayPresentation = ({
   isMobileTabletViewport = false,
   isLandscapeViewport = false,
   popupOpen = false,
   popupMediaVisible = false,
-  manualOverride = "auto",
-  manualOverrideTarget = "none"
+  manualOrientation = "auto",
+  manualOrientationTarget = "none"
 }) => {
-  if (!isMobileTabletViewport) return "none";
   const surfaceMode = popupMediaVisible ? "popup" : popupOpen ? "none" : "live";
-  if (surfaceMode === "none") return "none";
-  const overrideApplies = manualOverrideTarget === surfaceMode;
-  if (overrideApplies && manualOverride === "force-off") return "none";
-  if (overrideApplies && manualOverride === "force-on") return surfaceMode;
-  return isLandscapeViewport ? surfaceMode : "none";
+  const physicalOrientation = isLandscapeViewport ? "landscape" : "portrait";
+  const manualApplies = manualOrientationTarget === surfaceMode && ["landscape", "portrait"].includes(manualOrientation);
+  const orientation = manualApplies ? manualOrientation : physicalOrientation;
+  const swapped = orientation !== physicalOrientation;
+  const active = Boolean(
+    isMobileTabletViewport && surfaceMode !== "none" && (isLandscapeViewport || swapped)
+  );
+  return {
+    active,
+    mode: active ? surfaceMode : "none",
+    orientation,
+    physicalOrientation,
+    surfaceMode,
+    swapped
+  };
+};
+const resolveRotateOverlayTargetMode = (options = {}) => {
+  return resolveRotateOverlayPresentation(options).mode;
 };
 const resolveRotateOverlayState = ({
   isMobileTabletViewport = false,
   isLandscapeViewport = false,
   popupOpen = false,
   popupMediaVisible = false,
-  manualOverride = "auto",
-  manualOverrideTarget = "none",
+  manualOrientation = "auto",
+  manualOrientationTarget = "none",
   currentMode = "none",
   isActive = false
 }) => {
-  const nextMode = resolveRotateOverlayTargetMode({
+  const presentation = resolveRotateOverlayPresentation({
     isMobileTabletViewport,
     isLandscapeViewport,
     popupOpen,
     popupMediaVisible,
-    manualOverride,
-    manualOverrideTarget
+    manualOrientation,
+    manualOrientationTarget
   });
+  const nextMode = presentation.mode;
   if (nextMode === "live") {
     return {
       action: "activate-live",
       active: true,
       fromPopup: currentMode === "popup",
       mode: "live",
-      nextMode
+      nextMode,
+      orientation: presentation.orientation,
+      swapped: presentation.swapped
     };
   }
   if (nextMode === "popup") {
@@ -6600,7 +6634,9 @@ const resolveRotateOverlayState = ({
       active: true,
       fromLive: currentMode === "live",
       mode: "popup",
-      nextMode
+      nextMode,
+      orientation: presentation.orientation,
+      swapped: presentation.swapped
     };
   }
   if (!isActive) {
@@ -6608,7 +6644,9 @@ const resolveRotateOverlayState = ({
       action: "idle",
       active: false,
       mode: "none",
-      nextMode
+      nextMode,
+      orientation: presentation.orientation,
+      swapped: presentation.swapped
     };
   }
   return {
@@ -6616,7 +6654,9 @@ const resolveRotateOverlayState = ({
     active: false,
     exitMode: currentMode,
     mode: "none",
-    nextMode
+    nextMode,
+    orientation: presentation.orientation,
+    swapped: presentation.swapped
   };
 };
 const resolveFullscreenButtonVisibility = ({
@@ -6658,7 +6698,7 @@ const resolveRotateOverlayUiPlan = ({
       clearLiveControlsVisible: false,
       clearLoading: true,
       syncFullscreenButtons: true,
-      showLiveControls: true,
+      showLiveControls: false,
       showPopupControls: true,
       retainViewportCover: true
     };
@@ -6769,7 +6809,9 @@ const resolveRotateOverlayViewportVariables = ({
     widthPx: `${width}px`,
     heightPx: `${height}px`,
     offsetLeftPx: `${offsetLeft}px`,
-    offsetTopPx: `${offsetTop}px`
+    offsetTopPx: `${offsetTop}px`,
+    centerLeftPx: `${offsetLeft + width / 2}px`,
+    centerTopPx: `${offsetTop + height / 2}px`
   };
 };
 
@@ -10270,9 +10312,17 @@ const ListScrollController = class {
   }
 };
 
-// src/card/controls/live-overlay.ctrl.js
-const LiveOverlayControlsController = class {
-  constructor({ wrap, show, hideNow, hideSoon }) {
+// src/shared/media/overlay-controls.ctrl.js
+const TAP_MOVE_TOLERANCE_PX = 8;
+const MediaOverlayControlsController = class {
+  constructor({
+    surface,
+    wrap,
+    show,
+    hideNow,
+    hideSoon,
+    revealDurationMs = 1300
+  }) {
     __publicField(this, "_onPointerEnter", (event) => {
       if (event?.pointerType === "mouse") this._show?.();
     });
@@ -10282,50 +10332,86 @@ const LiveOverlayControlsController = class {
     __publicField(this, "_onPointerDown", (event) => {
       const pointerType = String(event?.pointerType || "").toLowerCase();
       if (pointerType === "mouse") return;
-      this._show?.();
-      this._hideSoon?.(1300);
+      this._pointers.set(event.pointerId, {
+        startX: Number(event.clientX) || 0,
+        startY: Number(event.clientY) || 0,
+        moved: false
+      });
+      if (this._pointers.size > 1) {
+        this._pointers.forEach((pointer) => {
+          pointer.moved = true;
+        });
+      }
     });
-    __publicField(this, "_onTouchStart", () => {
-      this._show?.();
-      this._hideSoon?.(1300);
+    __publicField(this, "_onPointerMove", (event) => {
+      const pointer = this._pointers.get(event.pointerId);
+      if (!pointer || pointer.moved) return;
+      const distance = Math.hypot(
+        (Number(event.clientX) || 0) - pointer.startX,
+        (Number(event.clientY) || 0) - pointer.startY
+      );
+      if (distance > TAP_MOVE_TOLERANCE_PX) pointer.moved = true;
     });
-    this._wrap = wrap;
+    __publicField(this, "_onPointerUp", (event) => {
+      const pointer = this._pointers.get(event.pointerId);
+      this._pointers.delete(event.pointerId);
+      if (!pointer || pointer.moved) return;
+      this._show?.();
+      this._hideSoon?.(this._revealDurationMs);
+    });
+    __publicField(this, "_onPointerCancel", (event) => {
+      this._pointers.delete(event.pointerId);
+    });
+    this._surface = surface || wrap;
     this._show = show;
     this._hideNow = hideNow;
     this._hideSoon = hideSoon;
+    this._revealDurationMs = Math.max(0, Number(revealDurationMs) || 0);
     this._cleanup = new CleanupController();
+    this._pointers = new Map();
   }
   bind() {
-    if (!this._wrap) return;
+    if (!this._surface) return;
     this._cleanup.addEventListener(
-      this._wrap,
+      this._surface,
       "pointerenter",
       this._onPointerEnter,
       { passive: true }
     );
     this._cleanup.addEventListener(
-      this._wrap,
+      this._surface,
       "pointerleave",
       this._onPointerLeave,
       { passive: true }
     );
     this._cleanup.addEventListener(
-      this._wrap,
+      this._surface,
       "pointerdown",
       this._onPointerDown,
-      { passive: true }
+      { passive: true, capture: true }
     );
     this._cleanup.addEventListener(
-      this._wrap,
-      "touchstart",
-      this._onTouchStart,
-      {
-        passive: true
-      }
+      this._surface,
+      "pointermove",
+      this._onPointerMove,
+      { passive: true, capture: true }
+    );
+    this._cleanup.addEventListener(
+      this._surface,
+      "pointerup",
+      this._onPointerUp,
+      { passive: true, capture: true }
+    );
+    this._cleanup.addEventListener(
+      this._surface,
+      "pointercancel",
+      this._onPointerCancel,
+      { passive: true, capture: true }
     );
   }
   dispose() {
     this._cleanup.dispose();
+    this._pointers.clear();
     this._hideNow?.();
   }
 };
@@ -10790,7 +10876,8 @@ const PopupMediaControlsSurfaceController = class {
     hideDelayMs = 2200,
     setTimer = globalThis.setTimeout?.bind(globalThis),
     clearTimer = globalThis.clearTimeout?.bind(globalThis),
-    createBinding = (options) => new PopupMediaControlsController(options)
+    createBinding = (options) => new PopupMediaControlsController(options),
+    createOverlayControls = (options) => new MediaOverlayControlsController(options)
   } = {}) {
     this._query = query;
     this._formatTime = formatTime;
@@ -10809,15 +10896,18 @@ const PopupMediaControlsSurfaceController = class {
     this._setTimer = setTimer;
     this._clearTimer = clearTimer;
     this._createBinding = createBinding;
+    this._createOverlayControls = createOverlayControls;
     this._binding = null;
     this._video = null;
     this._hideTimer = null;
+    this._playbackOverlayController = null;
+    this._playbackOverlayHideTimer = null;
   }
   video() {
     return this._query?.("#viewer")?.querySelector?.("video") || null;
   }
   initialize(video, mediaType = "") {
-    this.dispose();
+    this._disposeMediaBinding();
     const controls = this._query?.("#popup-media-controls");
     if (!controls || !video) return null;
     this._video = video;
@@ -10852,7 +10942,7 @@ const PopupMediaControlsSurfaceController = class {
     return controlsPlan;
   }
   resetWithoutVideo(controlsPlan = null) {
-    this.dispose();
+    this._disposeMediaBinding();
     const controls = this._query?.("#popup-media-controls");
     if (!controls) return;
     const plan = controlsPlan || resolvePopupMediaControlsInitPlan({ hasVideo: false });
@@ -10870,6 +10960,7 @@ const PopupMediaControlsSurfaceController = class {
     const video = viewer.querySelector?.("video");
     const snapshot = viewer.querySelector?.("img.snap");
     if (!video && !snapshot) {
+      this._disposePlaybackOverlayVisibility();
       this._onClearPictureInPicture("popup");
       existingControls?.remove?.();
       return;
@@ -10900,6 +10991,7 @@ const PopupMediaControlsSurfaceController = class {
     };
     const isVideo = Boolean(video && this._isVideoMediaType(mediaType));
     const mobileTablet = this._isMobileTabletViewport();
+    this._bindPlaybackOverlayVisibility(viewer, mobileTablet);
     if (isVideo && !mobileTablet) {
       const airPlayButton = appendButton({
         id: "popup-airplay-btn",
@@ -11029,11 +11121,48 @@ const PopupMediaControlsSurfaceController = class {
     }, this._hideDelayMs);
   }
   dispose() {
+    this._disposeMediaBinding();
+    this._disposePlaybackOverlayVisibility();
+  }
+  _disposeMediaBinding() {
     this._clearHideTimer();
     this._binding?.dispose?.();
     this._binding = null;
     this._video = null;
     this._query?.("#popup-media-controls")?.classList?.remove?.("is-hidden");
+  }
+  _bindPlaybackOverlayVisibility(viewer, mobileTablet) {
+    this._disposePlaybackOverlayVisibility();
+    if (!viewer || !mobileTablet) return;
+    this._playbackOverlayController = this._createOverlayControls({
+      surface: viewer,
+      show: () => viewer.classList?.add?.("popup-controls-visible"),
+      hideNow: () => {
+        viewer.classList?.remove?.("popup-controls-visible");
+        this._clearPlaybackOverlayHideTimer();
+      },
+      hideSoon: (delayMs) => {
+        this._clearPlaybackOverlayHideTimer();
+        if (!this._setTimer) return;
+        this._playbackOverlayHideTimer = this._setTimer(() => {
+          this._playbackOverlayHideTimer = null;
+          viewer.classList?.remove?.("popup-controls-visible");
+        }, delayMs);
+      },
+      revealDurationMs: 1800
+    });
+    this._playbackOverlayController.bind();
+  }
+  _disposePlaybackOverlayVisibility() {
+    this._playbackOverlayController?.dispose?.();
+    this._playbackOverlayController = null;
+    this._clearPlaybackOverlayHideTimer();
+  }
+  _clearPlaybackOverlayHideTimer() {
+    if (this._playbackOverlayHideTimer !== null && this._clearTimer) {
+      this._clearTimer(this._playbackOverlayHideTimer);
+    }
+    this._playbackOverlayHideTimer = null;
   }
   _clearHideTimer() {
     if (this._hideTimer !== null && this._clearTimer) {
@@ -21284,8 +21413,9 @@ const FrigateViewCard = class extends HTMLElement {
     this._lastLiveKick = 0;
     this._rotateOverlayActive = false;
     this._rotateOverlayMode = "none";
-    this._rotateOverlayManualOverride = "auto";
+    this._rotateOverlayManualOrientation = "auto";
     this._rotateOverlayManualTarget = "none";
+    this._rotateOverlayOrientation = this._isLandscapeViewport() ? "landscape" : "portrait";
     this._lastPhysicalLandscape = this._isLandscapeViewport();
     this._rotateOverlayRaf = 0;
     this._rotateOverlayExitT = null;
@@ -21335,7 +21465,7 @@ const FrigateViewCard = class extends HTMLElement {
       const physicalLandscape = this._isLandscapeViewport();
       if (physicalLandscape !== this._lastPhysicalLandscape) {
         this._lastPhysicalLandscape = physicalLandscape;
-        this._rotateOverlayManualOverride = "auto";
+        this._rotateOverlayManualOrientation = "auto";
         this._rotateOverlayManualTarget = "none";
       }
       this._scheduleRotateOverlayUpdate();
@@ -21898,8 +22028,12 @@ const FrigateViewCard = class extends HTMLElement {
     this._rotateOverlayRaf = 0;
     if (this._rotateOverlayExitT) clearTimeout(this._rotateOverlayExitT);
     this._rotateOverlayExitT = null;
-    this._rotateOverlayManualOverride = "auto";
+    this._rotateOverlayManualOrientation = "auto";
     this._rotateOverlayManualTarget = "none";
+    this._rotateOverlayOrientation = this._lastPhysicalLandscape ? "landscape" : "portrait";
+    this._$?.("#card")?.classList?.remove?.(
+      "mobile-rotate-orientation-swapped"
+    );
     this.classList?.remove?.(MOBILE_VIEW_ROTATE_COVER_CLASS);
     this._clearRotateOverlayAudioSync();
     this._clearRotateVideoFullscreenStyle();
@@ -22298,7 +22432,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._setLiveNativeControls(true);
     }
   }
-  _applyRotateOverlayUiPlan(card, uiPlan) {
+  _applyRotateOverlayUiPlan(card, uiPlan, rotateState = {}) {
     if (!card || !uiPlan) return;
     if (uiPlan.removeClasses.length) {
       card.classList.remove(...uiPlan.removeClasses);
@@ -22310,11 +22444,19 @@ const FrigateViewCard = class extends HTMLElement {
       MOBILE_VIEW_ROTATE_COVER_CLASS,
       card.classList.contains(MOBILE_VIEW_ACTIVE_CLASS) && uiPlan.retainViewportCover
     );
+    const nextSwapped = Boolean(uiPlan.active && rotateState.swapped);
+    if (rotateState.action !== "deactivate") {
+      card.classList.toggle(
+        "mobile-rotate-orientation-swapped",
+        nextSwapped
+      );
+    }
+    this._rotateOverlayOrientation = rotateState.orientation || (this._isLandscapeViewport() ? "landscape" : "portrait");
     this._rotateOverlayActive = uiPlan.active;
     this._rotateOverlayMode = uiPlan.mode;
     if (uiPlan.disableNativeControls) {
       this._setLiveNativeControls(false, {
-        applyFullscreenStyle: uiPlan.active && uiPlan.mode === "live"
+        applyFullscreenStyle: uiPlan.active && uiPlan.mode === "live" && !nextSwapped
       });
     }
     if (uiPlan.clearLiveControlsVisible) {
@@ -23613,7 +23755,7 @@ const FrigateViewCard = class extends HTMLElement {
         this._liveControlsHideTimer = null;
       }, ms);
     };
-    this._liveOverlayControlsController = new LiveOverlayControlsController({
+    this._liveOverlayControlsController = new MediaOverlayControlsController({
       wrap,
       show,
       hideNow,
@@ -23904,9 +24046,12 @@ const FrigateViewCard = class extends HTMLElement {
   _toggleRotateOverlay(targetMode) {
     if (!this._isMobileTabletViewport()) return;
     const normalizedTarget = targetMode === "popup" ? "popup" : "live";
-    const targetActive = this._rotateOverlayActive && this._rotateOverlayMode === normalizedTarget;
-    this._rotateOverlayManualOverride = targetActive ? "force-off" : "force-on";
-    this._rotateOverlayManualTarget = normalizedTarget;
+    const physicalOrientation = this._isLandscapeViewport() ? "landscape" : "portrait";
+    const currentOrientation = this._rotateOverlayActive && this._rotateOverlayMode === normalizedTarget ? this._rotateOverlayOrientation : physicalOrientation;
+    const nextOrientation = currentOrientation === "landscape" ? "portrait" : "landscape";
+    const returnsToAuto = nextOrientation === physicalOrientation;
+    this._rotateOverlayManualOrientation = returnsToAuto ? "auto" : nextOrientation;
+    this._rotateOverlayManualTarget = returnsToAuto ? "none" : normalizedTarget;
     this._scheduleRotateOverlayUpdate();
   }
   _syncRotateOverlayButtons() {
@@ -23916,13 +24061,16 @@ const FrigateViewCard = class extends HTMLElement {
     const popupButton = this._$("#popup-rotate-btn");
     const syncButton = (button, mode, available) => {
       if (!button) return;
-      const active = available && this._rotateOverlayActive && this._rotateOverlayMode === mode;
-      const label = active ? "Rotate to portrait" : "Rotate to landscape";
+      const physicalOrientation = this._isLandscapeViewport() ? "landscape" : "portrait";
+      const orientation = available && this._rotateOverlayActive && this._rotateOverlayMode === mode ? this._rotateOverlayOrientation : physicalOrientation;
+      const manual = available && this._rotateOverlayManualOrientation !== "auto" && this._rotateOverlayManualTarget === mode;
+      const landscape = orientation === "landscape";
+      const label = landscape ? "Rotate to portrait" : "Rotate to landscape";
       button.hidden = !available;
       button.title = label;
       button.setAttribute("aria-label", label);
-      button.setAttribute("aria-pressed", String(active));
-      button.innerHTML = active ? ICONS.phoneRotatePortrait : ICONS.phoneRotateLandscape;
+      button.setAttribute("aria-pressed", String(manual));
+      button.innerHTML = landscape ? ICONS.phoneRotatePortrait : ICONS.phoneRotateLandscape;
     };
     syncButton(liveButton, "live", liveAvailable);
     syncButton(
@@ -23944,6 +24092,8 @@ const FrigateViewCard = class extends HTMLElement {
       this.style.setProperty("--rotate-vh", viewportVars.heightPx);
       this.style.setProperty("--rotate-ox", viewportVars.offsetLeftPx);
       this.style.setProperty("--rotate-oy", viewportVars.offsetTopPx);
+      this.style.setProperty("--rotate-cx", viewportVars.centerLeftPx);
+      this.style.setProperty("--rotate-cy", viewportVars.centerTopPx);
       this._updateRotateOverlayState();
     });
   }
@@ -23954,7 +24104,7 @@ const FrigateViewCard = class extends HTMLElement {
     const viewer = this._$("#viewer");
     const popupMediaVisible = !!popupOpen && !!viewer && viewer.style.display !== "none" && viewer.childElementCount > 0;
     if (this._rotateOverlayManualTarget === "popup" && !popupMediaVisible) {
-      this._rotateOverlayManualOverride = "auto";
+      this._rotateOverlayManualOrientation = "auto";
       this._rotateOverlayManualTarget = "none";
     }
     const rotateState = resolveRotateOverlayState({
@@ -23962,8 +24112,8 @@ const FrigateViewCard = class extends HTMLElement {
       isLandscapeViewport: this._isLandscapeViewport(),
       popupOpen,
       popupMediaVisible,
-      manualOverride: this._rotateOverlayManualOverride,
-      manualOverrideTarget: this._rotateOverlayManualTarget,
+      manualOrientation: this._rotateOverlayManualOrientation,
+      manualOrientationTarget: this._rotateOverlayManualTarget,
       currentMode: this._rotateOverlayMode,
       isActive: this._rotateOverlayActive
     });
@@ -23972,7 +24122,7 @@ const FrigateViewCard = class extends HTMLElement {
       clearTimeout(this._rotateOverlayExitT);
       this._rotateOverlayExitT = null;
     }
-    this._applyRotateOverlayUiPlan(card, uiPlan);
+    this._applyRotateOverlayUiPlan(card, uiPlan, rotateState);
     const exitPlan = resolveRotateOverlayExitPlan({
       action: rotateState.action
     });
@@ -23990,6 +24140,7 @@ const FrigateViewCard = class extends HTMLElement {
       if (c && exitPlan.removeClasses.length) {
         c.classList.remove(...exitPlan.removeClasses);
       }
+      c?.classList?.remove?.("mobile-rotate-orientation-swapped");
       if (exitPlan.releaseViewportCover) {
         this.classList.remove(MOBILE_VIEW_ROTATE_COVER_CLASS);
       }
@@ -24831,13 +24982,10 @@ const FrigateViewCard = class extends HTMLElement {
     if (!wrap) return;
     wrap.classList.add("live-controls-visible");
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
-    if (this._rotateOverlayMode !== "live") return;
     this._liveControlsHideTimer = setTimeout(
       () => {
         const nextWrap = this._$("#live-stage.live-stage--overlay");
-        if (nextWrap && this._rotateOverlayMode === "live") {
-          nextWrap.classList.remove("live-controls-visible");
-        }
+        nextWrap?.classList.remove("live-controls-visible");
         this._liveControlsHideTimer = null;
       },
       Math.max(500, Number(ms) || 2200)

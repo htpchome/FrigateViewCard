@@ -46,7 +46,7 @@ test("LiveOverlayControlsController shows on mouse hover and hides on leave", ()
   assert.deepEqual(calls, ["show", "hideNow"]);
 });
 
-test("LiveOverlayControlsController schedules hide for non-mouse interaction", () => {
+test("LiveOverlayControlsController reveals controls after a stationary touch tap", () => {
   const wrap = createTarget();
   const calls = [];
   const controller = new LiveOverlayControlsController({
@@ -57,15 +57,78 @@ test("LiveOverlayControlsController schedules hide for non-mouse interaction", (
   });
 
   controller.bind();
-  wrap.dispatch("pointerdown", { pointerType: "touch" });
-  wrap.dispatch("touchstart");
+  wrap.dispatch("pointerdown", {
+    pointerId: 1,
+    pointerType: "touch",
+    clientX: 100,
+    clientY: 80,
+  });
+  wrap.dispatch("pointerup", {
+    pointerId: 1,
+    pointerType: "touch",
+    clientX: 100,
+    clientY: 80,
+  });
 
-  assert.deepEqual(calls, [
-    "show",
-    ["hideSoon", 1300],
-    "show",
-    ["hideSoon", 1300],
-  ]);
+  assert.deepEqual(calls, ["show", ["hideSoon", 1300]]);
+});
+
+test("LiveOverlayControlsController leaves zoom pans and pinches alone", () => {
+  const wrap = createTarget();
+  const calls = [];
+  const controller = new LiveOverlayControlsController({
+    wrap,
+    show: () => calls.push("show"),
+    hideNow: () => calls.push("hideNow"),
+    hideSoon: (ms) => calls.push(["hideSoon", ms]),
+  });
+
+  controller.bind();
+  wrap.dispatch("pointerdown", {
+    pointerId: 1,
+    pointerType: "touch",
+    clientX: 100,
+    clientY: 80,
+  });
+  wrap.dispatch("pointermove", {
+    pointerId: 1,
+    pointerType: "touch",
+    clientX: 120,
+    clientY: 80,
+  });
+  wrap.dispatch("pointerup", {
+    pointerId: 1,
+    pointerType: "touch",
+    clientX: 120,
+    clientY: 80,
+  });
+
+  wrap.dispatch("pointerdown", {
+    pointerId: 2,
+    pointerType: "touch",
+    clientX: 80,
+    clientY: 80,
+  });
+  wrap.dispatch("pointerdown", {
+    pointerId: 3,
+    pointerType: "touch",
+    clientX: 140,
+    clientY: 80,
+  });
+  wrap.dispatch("pointerup", {
+    pointerId: 2,
+    pointerType: "touch",
+    clientX: 80,
+    clientY: 80,
+  });
+  wrap.dispatch("pointerup", {
+    pointerId: 3,
+    pointerType: "touch",
+    clientX: 140,
+    clientY: 80,
+  });
+
+  assert.deepEqual(calls, []);
 });
 
 test("LiveOverlayControlsController removes listeners and hides on dispose", () => {

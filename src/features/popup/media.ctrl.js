@@ -6,6 +6,7 @@ import {
   resolvePopupMediaSeekTarget,
 } from "../../shared/media/controls.js";
 import { CleanupController } from "../../shared/cleanup.js";
+import { MediaOverlayControlsController } from "../../shared/media/overlay-controls.ctrl.js";
 
 export class PopupMediaControlsController {
   constructor({
@@ -143,6 +144,8 @@ export class PopupMediaControlsSurfaceController {
     setTimer = globalThis.setTimeout?.bind(globalThis),
     clearTimer = globalThis.clearTimeout?.bind(globalThis),
     createBinding = (options) => new PopupMediaControlsController(options),
+    createOverlayControls = (options) =>
+      new MediaOverlayControlsController(options),
   } = {}) {
     this._query = query;
     this._formatTime = formatTime;
@@ -161,9 +164,12 @@ export class PopupMediaControlsSurfaceController {
     this._setTimer = setTimer;
     this._clearTimer = clearTimer;
     this._createBinding = createBinding;
+    this._createOverlayControls = createOverlayControls;
     this._binding = null;
     this._video = null;
     this._hideTimer = null;
+    this._playbackOverlayController = null;
+    this._playbackOverlayHideTimer = null;
   }
 
   video() {
@@ -171,7 +177,7 @@ export class PopupMediaControlsSurfaceController {
   }
 
   initialize(video, mediaType = "") {
-    this.dispose();
+    this._disposeMediaBinding();
     const controls = this._query?.("#popup-media-controls");
     if (!controls || !video) return null;
 
@@ -210,7 +216,7 @@ export class PopupMediaControlsSurfaceController {
   }
 
   resetWithoutVideo(controlsPlan = null) {
-    this.dispose();
+    this._disposeMediaBinding();
     const controls = this._query?.("#popup-media-controls");
     if (!controls) return;
     const plan =
@@ -230,6 +236,7 @@ export class PopupMediaControlsSurfaceController {
     const video = viewer.querySelector?.("video");
     const snapshot = viewer.querySelector?.("img.snap");
     if (!video && !snapshot) {
+      this._disposePlaybackOverlayVisibility();
       this._onClearPictureInPicture("popup");
       existingControls?.remove?.();
       return;
@@ -262,6 +269,7 @@ export class PopupMediaControlsSurfaceController {
     };
     const isVideo = Boolean(video && this._isVideoMediaType(mediaType));
     const mobileTablet = this._isMobileTabletViewport();
+    this._bindPlaybackOverlayVisibility(viewer, mobileTablet);
 
     if (isVideo && !mobileTablet) {
       const airPlayButton = appendButton({
@@ -408,11 +416,52 @@ export class PopupMediaControlsSurfaceController {
   }
 
   dispose() {
+    this._disposeMediaBinding();
+    this._disposePlaybackOverlayVisibility();
+  }
+
+  _disposeMediaBinding() {
     this._clearHideTimer();
     this._binding?.dispose?.();
     this._binding = null;
     this._video = null;
     this._query?.("#popup-media-controls")?.classList?.remove?.("is-hidden");
+  }
+
+  _bindPlaybackOverlayVisibility(viewer, mobileTablet) {
+    this._disposePlaybackOverlayVisibility();
+    if (!viewer || !mobileTablet) return;
+    this._playbackOverlayController = this._createOverlayControls({
+      surface: viewer,
+      show: () => viewer.classList?.add?.("popup-controls-visible"),
+      hideNow: () => {
+        viewer.classList?.remove?.("popup-controls-visible");
+        this._clearPlaybackOverlayHideTimer();
+      },
+      hideSoon: (delayMs) => {
+        this._clearPlaybackOverlayHideTimer();
+        if (!this._setTimer) return;
+        this._playbackOverlayHideTimer = this._setTimer(() => {
+          this._playbackOverlayHideTimer = null;
+          viewer.classList?.remove?.("popup-controls-visible");
+        }, delayMs);
+      },
+      revealDurationMs: 1800,
+    });
+    this._playbackOverlayController.bind();
+  }
+
+  _disposePlaybackOverlayVisibility() {
+    this._playbackOverlayController?.dispose?.();
+    this._playbackOverlayController = null;
+    this._clearPlaybackOverlayHideTimer();
+  }
+
+  _clearPlaybackOverlayHideTimer() {
+    if (this._playbackOverlayHideTimer !== null && this._clearTimer) {
+      this._clearTimer(this._playbackOverlayHideTimer);
+    }
+    this._playbackOverlayHideTimer = null;
   }
 
   _clearHideTimer() {

@@ -325,10 +325,21 @@ test("popup media controls surface renders tablet video actions in shared order"
     viewer.children.push(child);
     if (child.id === "popup-playback-controls") playbackControls = child;
   };
+  let overlayOptions = null;
+  let overlayBound = false;
   const controller = new PopupMediaControlsSurfaceController({
     query: (selector) => (selector === "#viewer" ? viewer : null),
     isMobileTabletViewport: () => true,
     isVideoMediaType: () => true,
+    createOverlayControls: (options) => {
+      overlayOptions = options;
+      return {
+        bind: () => {
+          overlayBound = true;
+        },
+        dispose: () => {},
+      };
+    },
     icons: {
       takeSnapshot: "snapshot-icon",
       pipPopOut: "pip-icon",
@@ -349,4 +360,7 @@ test("popup media controls surface renders tablet video actions in shared order"
       "popup-fs-btn",
     ],
   );
+  assert.equal(overlayOptions.surface, viewer);
+  assert.equal(overlayOptions.revealDurationMs, 1800);
+  assert.equal(overlayBound, true);
 });

@@ -830,8 +830,11 @@ export class FrigateViewCard extends HTMLElement {
     this._lastLiveKick = 0;
     this._rotateOverlayActive = false;
     this._rotateOverlayMode = "none";
-    this._rotateOverlayManualOverride = "auto";
+    this._rotateOverlayManualOrientation = "auto";
     this._rotateOverlayManualTarget = "none";
+    this._rotateOverlayOrientation = this._isLandscapeViewport()
+      ? "landscape"
+      : "portrait";
     this._lastPhysicalLandscape = this._isLandscapeViewport();
     this._rotateOverlayRaf = 0;
     this._rotateOverlayExitT = null;
@@ -887,7 +890,7 @@ export class FrigateViewCard extends HTMLElement {
       const physicalLandscape = this._isLandscapeViewport();
       if (physicalLandscape !== this._lastPhysicalLandscape) {
         this._lastPhysicalLandscape = physicalLandscape;
-        this._rotateOverlayManualOverride = "auto";
+        this._rotateOverlayManualOrientation = "auto";
         this._rotateOverlayManualTarget = "none";
       }
 
@@ -1565,8 +1568,14 @@ export class FrigateViewCard extends HTMLElement {
     this._rotateOverlayRaf = 0;
     if (this._rotateOverlayExitT) clearTimeout(this._rotateOverlayExitT);
     this._rotateOverlayExitT = null;
-    this._rotateOverlayManualOverride = "auto";
+    this._rotateOverlayManualOrientation = "auto";
     this._rotateOverlayManualTarget = "none";
+    this._rotateOverlayOrientation = this._lastPhysicalLandscape
+      ? "landscape"
+      : "portrait";
+    this._$?.("#card")?.classList?.remove?.(
+      "mobile-rotate-orientation-swapped",
+    );
     this.classList?.remove?.(MOBILE_VIEW_ROTATE_COVER_CLASS);
     this._clearRotateOverlayAudioSync();
     this._clearRotateVideoFullscreenStyle();
@@ -2039,7 +2048,7 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
 
-  _applyRotateOverlayUiPlan(card, uiPlan) {
+  _applyRotateOverlayUiPlan(card, uiPlan, rotateState = {}) {
     if (!card || !uiPlan) return;
     if (uiPlan.removeClasses.length) {
       card.classList.remove(...uiPlan.removeClasses);
@@ -2052,11 +2061,22 @@ export class FrigateViewCard extends HTMLElement {
       card.classList.contains(MOBILE_VIEW_ACTIVE_CLASS) &&
         uiPlan.retainViewportCover,
     );
+    const nextSwapped = Boolean(uiPlan.active && rotateState.swapped);
+    if (rotateState.action !== "deactivate") {
+      card.classList.toggle(
+        "mobile-rotate-orientation-swapped",
+        nextSwapped,
+      );
+    }
+    this._rotateOverlayOrientation =
+      rotateState.orientation ||
+      (this._isLandscapeViewport() ? "landscape" : "portrait");
     this._rotateOverlayActive = uiPlan.active;
     this._rotateOverlayMode = uiPlan.mode;
     if (uiPlan.disableNativeControls) {
       this._setLiveNativeControls(false, {
-        applyFullscreenStyle: uiPlan.active && uiPlan.mode === "live",
+        applyFullscreenStyle:
+          uiPlan.active && uiPlan.mode === "live" && !nextSwapped,
       });
     }
     if (uiPlan.clearLiveControlsVisible) {
@@ -3977,12 +3997,22 @@ export class FrigateViewCard extends HTMLElement {
   _toggleRotateOverlay(targetMode) {
     if (!this._isMobileTabletViewport()) return;
     const normalizedTarget = targetMode === "popup" ? "popup" : "live";
-    const targetActive =
-      this._rotateOverlayActive && this._rotateOverlayMode === normalizedTarget;
-    this._rotateOverlayManualOverride = targetActive
-      ? "force-off"
-      : "force-on";
-    this._rotateOverlayManualTarget = normalizedTarget;
+    const physicalOrientation = this._isLandscapeViewport()
+      ? "landscape"
+      : "portrait";
+    const currentOrientation =
+      this._rotateOverlayActive && this._rotateOverlayMode === normalizedTarget
+        ? this._rotateOverlayOrientation
+        : physicalOrientation;
+    const nextOrientation =
+      currentOrientation === "landscape" ? "portrait" : "landscape";
+    const returnsToAuto = nextOrientation === physicalOrientation;
+    this._rotateOverlayManualOrientation = returnsToAuto
+      ? "auto"
+      : nextOrientation;
+    this._rotateOverlayManualTarget = returnsToAuto
+      ? "none"
+      : normalizedTarget;
     this._scheduleRotateOverlayUpdate();
   }
   _syncRotateOverlayButtons() {
@@ -3994,16 +4024,28 @@ export class FrigateViewCard extends HTMLElement {
 
     const syncButton = (button, mode, available) => {
       if (!button) return;
-      const active =
+      const physicalOrientation = this._isLandscapeViewport()
+        ? "landscape"
+        : "portrait";
+      const orientation =
         available &&
         this._rotateOverlayActive &&
-        this._rotateOverlayMode === mode;
-      const label = active ? "Rotate to portrait" : "Rotate to landscape";
+        this._rotateOverlayMode === mode
+          ? this._rotateOverlayOrientation
+          : physicalOrientation;
+      const manual =
+        available &&
+        this._rotateOverlayManualOrientation !== "auto" &&
+        this._rotateOverlayManualTarget === mode;
+      const landscape = orientation === "landscape";
+      const label = landscape
+        ? "Rotate to portrait"
+        : "Rotate to landscape";
       button.hidden = !available;
       button.title = label;
       button.setAttribute("aria-label", label);
-      button.setAttribute("aria-pressed", String(active));
-      button.innerHTML = active
+      button.setAttribute("aria-pressed", String(manual));
+      button.innerHTML = landscape
         ? ICONS.phoneRotatePortrait
         : ICONS.phoneRotateLandscape;
     };
@@ -4028,6 +4070,8 @@ export class FrigateViewCard extends HTMLElement {
       this.style.setProperty("--rotate-vh", viewportVars.heightPx);
       this.style.setProperty("--rotate-ox", viewportVars.offsetLeftPx);
       this.style.setProperty("--rotate-oy", viewportVars.offsetTopPx);
+      this.style.setProperty("--rotate-cx", viewportVars.centerLeftPx);
+      this.style.setProperty("--rotate-cy", viewportVars.centerTopPx);
       this._updateRotateOverlayState();
     });
   }
@@ -4045,7 +4089,7 @@ export class FrigateViewCard extends HTMLElement {
       this._rotateOverlayManualTarget === "popup" &&
       !popupMediaVisible
     ) {
-      this._rotateOverlayManualOverride = "auto";
+      this._rotateOverlayManualOrientation = "auto";
       this._rotateOverlayManualTarget = "none";
     }
     const rotateState = resolveRotateOverlayState({
@@ -4053,8 +4097,8 @@ export class FrigateViewCard extends HTMLElement {
       isLandscapeViewport: this._isLandscapeViewport(),
       popupOpen,
       popupMediaVisible,
-      manualOverride: this._rotateOverlayManualOverride,
-      manualOverrideTarget: this._rotateOverlayManualTarget,
+      manualOrientation: this._rotateOverlayManualOrientation,
+      manualOrientationTarget: this._rotateOverlayManualTarget,
       currentMode: this._rotateOverlayMode,
       isActive: this._rotateOverlayActive,
     });
@@ -4065,7 +4109,7 @@ export class FrigateViewCard extends HTMLElement {
       this._rotateOverlayExitT = null;
     }
 
-    this._applyRotateOverlayUiPlan(card, uiPlan);
+    this._applyRotateOverlayUiPlan(card, uiPlan, rotateState);
     const exitPlan = resolveRotateOverlayExitPlan({
       action: rotateState.action,
     });
@@ -4087,6 +4131,7 @@ export class FrigateViewCard extends HTMLElement {
       if (c && exitPlan.removeClasses.length) {
         c.classList.remove(...exitPlan.removeClasses);
       }
+      c?.classList?.remove?.("mobile-rotate-orientation-swapped");
       if (exitPlan.releaseViewportCover) {
         this.classList.remove(MOBILE_VIEW_ROTATE_COVER_CLASS);
       }
@@ -5060,13 +5105,10 @@ export class FrigateViewCard extends HTMLElement {
     if (!wrap) return;
     wrap.classList.add("live-controls-visible");
     if (this._liveControlsHideTimer) clearTimeout(this._liveControlsHideTimer);
-    if (this._rotateOverlayMode !== "live") return;
     this._liveControlsHideTimer = setTimeout(
       () => {
         const nextWrap = this._$("#live-stage.live-stage--overlay");
-        if (nextWrap && this._rotateOverlayMode === "live") {
-          nextWrap.classList.remove("live-controls-visible");
-        }
+        nextWrap?.classList.remove("live-controls-visible");
         this._liveControlsHideTimer = null;
       },
       Math.max(500, Number(ms) || 2200),
