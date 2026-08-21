@@ -34,6 +34,10 @@ const createHost = ({
     _lastNonPreviewPageId: "single-view",
     _activeCamIdx: 0,
     _activeCam: { entity: "camera.front_door" },
+    _events: [],
+    _recordings: [],
+    _reviews: [],
+    _kept: [],
     _$: () => null,
     _isPreviewCameraAlertLive: () => alertLive,
     _cameraConnectionType: (entity) =>
@@ -231,6 +235,8 @@ test("exitPreviewPageToCamera avoids remount when selecting active camera", () =
   controller.exitPreviewPageToCamera(0);
 
   assert.equal(host._viewMode, "single");
+  assert.deepEqual(host._events, [1, 2]);
+  assert.deepEqual(host._reviews, [3]);
   assert.deepEqual(calls, [
     [
       "navigateToPageRoute",

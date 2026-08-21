@@ -184,6 +184,36 @@ test("warmOtherCamerasEvents fills inactive camera cache through fetchWindowedEv
   assert.deepEqual(inactiveCache.events, [{ id: "event-2", start_time: 120 }]);
 });
 
+test("warmOtherCamerasEvents also fills the active camera cache on Preview", async () => {
+  const activeCache = {
+    clientId: "frigate",
+    cam: "front",
+    events: [],
+  };
+  const host = {
+    _warmCamsToken: 0,
+    _activeCam: { entity: "camera.front" },
+    _winStart: 100,
+    _winEnd: 200,
+    _config: {
+      cameras: [{ entity: "camera.front" }],
+    },
+    _camCache: {
+      "camera.front": activeCache,
+    },
+    _isPreviewPageActive: () => true,
+    _ws: async () => [{ id: "event-1", start_time: 150 }],
+  };
+  const controller = new BrowseWindowLoaderController(host, {
+    fetchWindowedItems: async ({ fetchBatch }) =>
+      fetchBatch({ after: 100, before: 200, limit: 25, page: 0 }),
+  });
+
+  await controller.warmOtherCamerasEvents();
+
+  assert.deepEqual(activeCache.events, [{ id: "event-1", start_time: 150 }]);
+});
+
 test("loadOlder appends unique events, updates the window start, and marks exhaustion", async () => {
   const calls = [];
   const host = {
