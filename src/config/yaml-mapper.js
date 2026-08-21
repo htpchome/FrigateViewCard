@@ -10,7 +10,12 @@ import {
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   THEME_CUSTOM_KEYS,
 } from "../constants.js";
-import { normalizePageRoute, PAGE_IDS } from "../features/navigation/router.js";
+import {
+  MOBILE_PAGE_MODES,
+  normalizeMobilePageMode,
+  normalizePageRoute,
+  PAGE_IDS,
+} from "../features/navigation/router.js";
 import { normalizeBoundedPositiveInteger } from "../helpers.js";
 import { normalizeCameraPtzConfig } from "../features/ptz/index.js";
 
@@ -277,8 +282,8 @@ export const compactEditorConfigForYaml = (
   addIfNotDefault(
     compact,
     "mobile_page",
-    normalizePageRoute(source.mobile_page),
-    PAGE_IDS.singleView,
+    normalizeMobilePageMode(source.mobile_page),
+    MOBILE_PAGE_MODES.mobile,
   );
 
   const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS.includes(

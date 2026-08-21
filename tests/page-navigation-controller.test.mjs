@@ -52,7 +52,8 @@ const createHarness = () => {
     _pageId: PAGE_IDS.singleView,
     _previewPageActive: false,
     _lastNonPreviewPageId: PAGE_IDS.singleView,
-    _config: { a: 1 },
+    _config: { a: 1, mobile_page: "mobile-view" },
+    _deviceBucket: "desktop",
     _activateSingleViewPageRoute: (context) => calls.push(["single", context]),
     _activateMobileViewPageRoute: (context) => calls.push(["mobile", context]),
     _activatePreviewPageRoute: (context) => calls.push(["preview", context]),
@@ -62,7 +63,7 @@ const createHarness = () => {
     },
     _syncMobileViewPageMarkup: () => calls.push(["syncMobileViewMarkup"]),
     _renderShell: () => calls.push(["renderShell"]),
-    _deviceRouteBucket: () => "desktop",
+    _deviceRouteBucket: () => host._deviceBucket,
     _syncPageNavigationButtons: () => calls.push(["syncButtons"]),
     _pageShellRegion: (regionKey) =>
       regionKey === "pageNavigation" ? navContainer : null,
@@ -85,11 +86,18 @@ const createHarness = () => {
     buildPageNavMarkup: ({ routes, activePageId, getRouteLabel }) =>
       `${routes.join("|")}:${activePageId}:${getRouteLabel(PAGE_IDS.preview)}`,
     getEnabledPageRoutes: () => [PAGE_IDS.singleView, PAGE_IDS.preview],
+    DEVICE_ROUTE_BUCKETS: { mobile: "mobile" },
     normalizePageRoute: (value) =>
       String(value || "")
         .trim()
         .toLowerCase(),
     PAGE_IDS,
+    resolveMobilePreviewDestination: (mode) =>
+      mode === "preview-mobile-view"
+        ? PAGE_IDS.mobileView
+        : mode === "preview-single-view"
+          ? PAGE_IDS.singleView
+          : "",
     createNavigationFactory: (input) => {
       createCount += 1;
       capturedFactoryInput = input;
@@ -276,6 +284,29 @@ test("navigateToConfiguredLandingPage resolves startup page and navigates", () =
     pageId: PAGE_IDS.wideView,
     context,
   });
+});
+
+test("phone preview camera targets follow the configured landing flow", () => {
+  const h = createHarness();
+  h.host._deviceBucket = "mobile";
+  h.host._config.mobile_page = "preview-mobile-view";
+  h.constants.getEnabledPageRoutes = () => [
+    PAGE_IDS.singleView,
+    PAGE_IDS.mobileView,
+    PAGE_IDS.preview,
+  ];
+  const controller = new PageNavigationController(h.host, h.constants);
+
+  assert.equal(
+    controller.resolvePreviewCameraTargetPage(PAGE_IDS.singleView),
+    PAGE_IDS.mobileView,
+  );
+
+  h.host._config.mobile_page = "preview-single-view";
+  assert.equal(
+    controller.resolvePreviewCameraTargetPage(PAGE_IDS.mobileView),
+    PAGE_IDS.singleView,
+  );
 });
 
 test("prepareConfiguredLandingPageShell selects and renders the landing shell before activation", () => {

@@ -85,6 +85,9 @@ import { hasTwoWayTalkCapability } from "../features/two-way-talk/index.js";
 import {
   DEVICE_ROUTE_BUCKETS,
   getEnabledPageRoutes,
+  getMobilePageModes,
+  MOBILE_PAGE_MODES,
+  normalizeMobilePageMode,
   normalizePageRoute,
   PAGE_IDS,
 } from "../features/navigation/router.js";
@@ -602,10 +605,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       normalized,
       DEVICE_ROUTE_BUCKETS.desktop,
     ).join("|");
-    const mobile = getEnabledPageRoutes(
-      normalized,
-      DEVICE_ROUTE_BUCKETS.mobile,
-    ).join("|");
+    const mobile = getMobilePageModes().join("|");
     return `${desktop}::${mobile}`;
   }
 
@@ -1207,10 +1207,15 @@ export class FrigateViewCardEditor extends HTMLElement {
       this._config,
       DEVICE_ROUTE_BUCKETS.desktop,
     ).map((pageId) => ({ value: pageId, label: pageRouteLabel(pageId) }));
-    const mobilePageOptions = getEnabledPageRoutes(
-      this._config,
-      DEVICE_ROUTE_BUCKETS.mobile,
-    ).map((pageId) => ({ value: pageId, label: pageRouteLabel(pageId) }));
+    const mobilePageLabels = {
+      [MOBILE_PAGE_MODES.mobile]: "Mobile",
+      [MOBILE_PAGE_MODES.previewMobile]: "Preview + Mobile",
+      [MOBILE_PAGE_MODES.previewSingle]: "Preview + Single View",
+      [MOBILE_PAGE_MODES.single]: "Single View",
+    };
+    const mobilePageOptions = getMobilePageModes().map(
+      (mode) => ({ value: mode, label: mobilePageLabels[mode] }),
+    );
     const tabToggle = (id, label) => `<ha-formfield label="${label}">
           <ha-switch data-active-tab="${id}" ${hiddenTabs.has(id) ? "" : "checked"}></ha-switch>
         </ha-formfield>`;
@@ -1496,7 +1501,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       <div class="section">
         <span class="field-label">Mobile Page</span>
         <ha-selector id="mobile_page" style="width:220px"></ha-selector>
-        <div class="field-helper">Choose the default starting page for phones. Wide View is intentionally excluded here.</div>
+        <div class="field-helper">Choose the phone starting flow. Preview combinations open Preview first, then send a selected camera to Mobile or Single View. Options involving Mobile or Preview require those pages to be enabled.</div>
       </div>`;
     const gridviewPanelContent = `
       <div class="section">
@@ -1901,9 +1906,10 @@ export class FrigateViewCardEditor extends HTMLElement {
       element: this.querySelector("#mobile_page"),
       hass: this._hass,
       options: mobilePageOptions,
-      initialValue: this._config?.mobile_page || PAGE_IDS.singleView,
-      fallbackValue: PAGE_IDS.singleView,
-      normalize: (value) => normalizePageRoute(value),
+      initialValue:
+        this._config?.mobile_page || MOBILE_PAGE_MODES.mobile,
+      fallbackValue: MOBILE_PAGE_MODES.mobile,
+      normalize: (value) => normalizeMobilePageMode(value),
       onChange: () => update(),
     });
 

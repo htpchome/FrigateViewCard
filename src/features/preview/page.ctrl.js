@@ -394,11 +394,15 @@ export class PreviewPageController {
     const PAGE_IDS = this._constants.PAGE_IDS;
     const pageNavigation = this._pageNavigation();
     const targetPageId =
-      (pageNavigation?.isPageRouteAvailable?.(
+      pageNavigation?.resolvePreviewCameraTargetPage?.(
         this._host._lastNonPreviewPageId,
-      ) ?? this._host._isPageRouteAvailable?.(this._host._lastNonPreviewPageId))
+      ) ||
+      ((pageNavigation?.isPageRouteAvailable?.(
+        this._host._lastNonPreviewPageId,
+      ) ??
+      this._host._isPageRouteAvailable?.(this._host._lastNonPreviewPageId))
         ? this._host._lastNonPreviewPageId
-        : PAGE_IDS.singleView;
+        : PAGE_IDS.singleView);
 
     pageNavigation?.navigateToPageRoute?.(targetPageId, {
       source: "preview-camera-select",

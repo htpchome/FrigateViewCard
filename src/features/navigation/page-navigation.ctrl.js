@@ -79,6 +79,23 @@ export class PageNavigationController {
     });
   }
 
+  resolvePreviewCameraTargetPage(fallbackPageId) {
+    const { DEVICE_ROUTE_BUCKETS, PAGE_IDS } = this._constants;
+    const isPhone =
+      this._host._deviceRouteBucket() === DEVICE_ROUTE_BUCKETS.mobile;
+    const configuredTarget = isPhone
+      ? this._constants.resolveMobilePreviewDestination(
+          this._host._config?.mobile_page,
+        )
+      : "";
+    const targetPageId = this._constants.normalizePageRoute(
+      configuredTarget || fallbackPageId,
+    );
+    return this.isPageRouteAvailable(targetPageId)
+      ? targetPageId
+      : PAGE_IDS.singleView;
+  }
+
   prepareConfiguredLandingPageShell(context = {}) {
     const nextPageId = this.resolveConfiguredLandingPage(context);
     const previousPageId = this._host._pageId;

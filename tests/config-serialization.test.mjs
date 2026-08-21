@@ -10,6 +10,7 @@ import {
   compactEditorConfigForYaml,
   withCardTypeForYaml,
 } from "../src/config/yaml-mapper.js";
+import { normalizeCardConfig } from "../src/config/card-config.js";
 
 test("editor YAML config omits normalized default values", () => {
   const config = compactEditorConfigForYaml({
@@ -338,6 +339,25 @@ test("compact YAML includes mobile view page toggle when enabled", () => {
     cameras: [{ entity: "camera.front_door" }],
     mobile_view_page_enabled: true,
   });
+});
+
+test("phone landing flow defaults to Mobile and preserves preview combinations", () => {
+  const defaults = normalizeCardConfig({
+    cameras: [{ entity: "camera.front_door" }],
+  });
+  const legacyPreview = normalizeCardConfig({
+    cameras: [{ entity: "camera.front_door" }],
+    preview_page_enabled: true,
+    mobile_page: "preview",
+  });
+  const compact = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    mobile_page: "preview-mobile-view",
+  });
+
+  assert.equal(defaults.mobile_page, "mobile-view");
+  assert.equal(legacyPreview.mobile_page, "preview-single-view");
+  assert.equal(compact.mobile_page, "preview-mobile-view");
 });
 
 test("compact YAML preserves video default config objects", () => {

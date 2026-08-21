@@ -6,7 +6,10 @@ import {
   SNAPSHOT_UPDATE_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
 } from "../constants.js";
-import { normalizePageRoute } from "../features/navigation/router.js";
+import {
+  normalizeMobilePageMode,
+  normalizePageRoute,
+} from "../features/navigation/router.js";
 import { normalizeBoundedPositiveInteger } from "../helpers.js";
 
 const normalizePositiveInteger = (value, fallback) => {
@@ -162,7 +165,7 @@ export const applyEditorPreviewDraftToCardConfig = ({
     wide_view_alert_takeover:
       previewConfig.wide_view_alert_takeover === true,
     landing_page: normalizePageRoute(previewConfig.landing_page),
-    mobile_page: normalizePageRoute(previewConfig.mobile_page),
+    mobile_page: normalizeMobilePageMode(previewConfig.mobile_page),
     col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
     video_defaults:
       previewConfig.video_defaults &&

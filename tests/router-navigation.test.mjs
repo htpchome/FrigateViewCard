@@ -4,9 +4,27 @@ import assert from "node:assert/strict";
 import {
   DEVICE_ROUTE_BUCKETS,
   getEnabledPageRoutes,
+  getMobilePageModes,
+  MOBILE_PAGE_MODES,
+  normalizeMobilePageMode,
   PAGE_IDS,
+  resolveMobilePreviewDestination,
   resolveStartupPageRoute,
 } from "../src/features/navigation/router.js";
+
+test("phone landing modes use the configured editor order", () => {
+  assert.deepEqual(getMobilePageModes(), [
+    MOBILE_PAGE_MODES.mobile,
+    MOBILE_PAGE_MODES.previewMobile,
+    MOBILE_PAGE_MODES.previewSingle,
+    MOBILE_PAGE_MODES.single,
+  ]);
+  assert.equal(normalizeMobilePageMode(), MOBILE_PAGE_MODES.mobile);
+  assert.equal(
+    normalizeMobilePageMode("preview"),
+    MOBILE_PAGE_MODES.previewSingle,
+  );
+});
 
 test("desktop landing page honors enabled wide-view route", () => {
   const config = {
@@ -100,5 +118,33 @@ test("mobile view route is available on desktop and mobile when enabled", () => 
       deviceBucket: DEVICE_ROUTE_BUCKETS.mobile,
     }),
     PAGE_IDS.mobileView,
+  );
+});
+
+test("phone preview combinations start on Preview and resolve their camera destination", () => {
+  const config = {
+    mobile_view_page_enabled: true,
+    preview_page_enabled: true,
+    mobile_page: MOBILE_PAGE_MODES.previewMobile,
+  };
+
+  assert.equal(
+    resolveStartupPageRoute({
+      config,
+      deviceBucket: DEVICE_ROUTE_BUCKETS.mobile,
+    }),
+    PAGE_IDS.preview,
+  );
+  assert.equal(
+    resolveMobilePreviewDestination(MOBILE_PAGE_MODES.previewMobile),
+    PAGE_IDS.mobileView,
+  );
+  assert.equal(
+    resolveMobilePreviewDestination(MOBILE_PAGE_MODES.previewSingle),
+    PAGE_IDS.singleView,
+  );
+  assert.equal(
+    resolveMobilePreviewDestination(MOBILE_PAGE_MODES.mobile),
+    "",
   );
 });

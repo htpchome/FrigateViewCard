@@ -262,6 +262,32 @@ test("exitPreviewPageToCamera switches camera for non-active selection", () => {
   ]);
 });
 
+test("exitPreviewPageToCamera uses the configured phone flow destination", () => {
+  const { controller, calls, host } = createHost({
+    previewEnabled: true,
+    pageId: "preview",
+  });
+  host._pageNavigationController = {
+    resolvePreviewCameraTargetPage: () => "mobile-view",
+    navigateToPageRoute: (pageId, context) =>
+      calls.push(["navigateToPageRoute", pageId, context]),
+  };
+
+  controller.exitPreviewPageToCamera(1);
+
+  assert.deepEqual(calls, [
+    [
+      "navigateToPageRoute",
+      "mobile-view",
+      {
+        source: "preview-camera-select",
+        deferCameraSwitch: true,
+      },
+    ],
+    ["switchCamera", 1, { source: "preview-camera-select" }],
+  ]);
+});
+
 test("renderPreviewPage does not remount media on severity-only updates", () => {
   const { controller, host } = createHost({
     previewEnabled: true,

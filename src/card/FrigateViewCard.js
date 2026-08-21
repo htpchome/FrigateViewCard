@@ -78,10 +78,13 @@ import {
 } from "../helpers.js";
 import {
   createNavigationFactory,
+  DEVICE_ROUTE_BUCKETS,
   getEnabledPageRoutes,
+  normalizeMobilePageMode,
   normalizePageRoute,
   PAGE_IDS,
   resolveDeviceRouteBucket,
+  resolveMobilePreviewDestination,
 } from "../features/navigation/router.js";
 import {
   PAGE_SHELL_REGIONS,
@@ -562,10 +565,12 @@ export class FrigateViewCard extends HTMLElement {
       buildPageNavButtonsMarkup,
       buildPageNavMarkup,
       createNavigationFactory,
+      DEVICE_ROUTE_BUCKETS,
       getEnabledPageRoutes,
       normalizePageRoute,
       PAGE_IDS,
       ICONS,
+      resolveMobilePreviewDestination,
     });
     this._pageShellRegistry = createPageShellRegistry({
       defaultPageId: PAGE_IDS.singleView,
@@ -1210,7 +1215,7 @@ export class FrigateViewCard extends HTMLElement {
       wide_view_live_cameras: config.wide_view_live_cameras === true,
       wide_view_alert_takeover: config.wide_view_alert_takeover === true,
       landing_page: normalizePageRoute(config.landing_page),
-      mobile_page: normalizePageRoute(config.mobile_page),
+      mobile_page: normalizeMobilePageMode(config.mobile_page),
       deep_link_enabled: config.deep_link_enabled !== false,
       grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
         Number(config.grid_rotation_seconds),

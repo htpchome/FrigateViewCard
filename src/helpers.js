@@ -33,7 +33,12 @@ import {
   THEME_CUSTOM_ROWS,
   THEME_CUSTOM_KEYS,
 } from "./constants.js";
-import { normalizePageRoute, PAGE_IDS } from "./features/navigation/router.js";
+import {
+  MOBILE_PAGE_MODES,
+  normalizeMobilePageMode,
+  normalizePageRoute,
+  PAGE_IDS,
+} from "./features/navigation/router.js";
 import { createEditorPreviewDraft as mapEditorPreviewDraft } from "./config/preview-mapper.js";
 import {
   compactEditorConfigForYaml as mapCompactEditorConfigForYaml,
@@ -708,10 +713,11 @@ export const buildEditorConfigFromDom = ({
       root.querySelector("#landing_page")?.value ||
       PAGE_IDS.singleView,
   );
-  nextConfig.mobile_page = normalizePageRoute(
+  nextConfig.mobile_page = normalizeMobilePageMode(
     root.querySelector("#mobile_page")?.dataset.value ||
       root.querySelector("#mobile_page")?.value ||
-      PAGE_IDS.singleView,
+      nextConfig.mobile_page ||
+      MOBILE_PAGE_MODES.mobile,
   );
 
   const leftWidthRaw = root

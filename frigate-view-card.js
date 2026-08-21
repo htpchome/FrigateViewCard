@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1604";
+const VERSION = "1.0.1605";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1846,6 +1846,12 @@ const PAGE_IDS = Object.freeze({
   preview: "preview",
   wideView: "wide-view"
 });
+const MOBILE_PAGE_MODES = Object.freeze({
+  mobile: PAGE_IDS.mobileView,
+  previewMobile: "preview-mobile-view",
+  previewSingle: "preview-single-view",
+  single: PAGE_IDS.singleView
+});
 const DEVICE_ROUTE_BUCKETS = Object.freeze({
   mobile: "mobile",
   tablet: "tablet",
@@ -1858,6 +1864,7 @@ const PAGE_ROUTE_ORDER = Object.freeze([
   PAGE_IDS.wideView
 ]);
 const PAGE_ROUTE_SET = new Set(PAGE_ROUTE_ORDER);
+const MOBILE_PAGE_MODE_SET = new Set(Object.values(MOBILE_PAGE_MODES));
 const normalizePageRoute = (value) => {
   const route = String(value || "").trim().toLowerCase();
   if (route === "normal" || route === "single") return PAGE_IDS.singleView;
@@ -1867,6 +1874,19 @@ const normalizePageRoute = (value) => {
   if (route === "wide" || route === "wide_view") return PAGE_IDS.wideView;
   if (route === "preview") return PAGE_IDS.preview;
   return PAGE_ROUTE_SET.has(route) ? route : PAGE_IDS.singleView;
+};
+const normalizeMobilePageMode = (value) => {
+  const mode = String(value || "").trim().toLowerCase().replace(/[_+\s]+/g, "-");
+  if (mode === "preview") return MOBILE_PAGE_MODES.previewSingle;
+  if (mode === "preview-mobile") return MOBILE_PAGE_MODES.previewMobile;
+  if (mode === "preview-single") return MOBILE_PAGE_MODES.previewSingle;
+  if (mode === "mobile" || mode === "mobile-view") {
+    return MOBILE_PAGE_MODES.mobile;
+  }
+  if (mode === "single" || mode === "single-view") {
+    return MOBILE_PAGE_MODES.single;
+  }
+  return MOBILE_PAGE_MODE_SET.has(mode) ? mode : MOBILE_PAGE_MODES.mobile;
 };
 const resolveDeviceRouteBucket = (deviceProfile = {}) => {
   if (deviceProfile?.isPhone) return DEVICE_ROUTE_BUCKETS.mobile;
@@ -1893,9 +1913,30 @@ const isPageSupportedOnDevice = (pageId, deviceBucket) => {
 const getEnabledPageRoutes = (config, deviceBucket) => PAGE_ROUTE_ORDER.filter(
   (pageId) => isPageEnabled(config, pageId) && isPageSupportedOnDevice(pageId, deviceBucket)
 );
+const getMobilePageModes = () => [
+  MOBILE_PAGE_MODES.mobile,
+  MOBILE_PAGE_MODES.previewMobile,
+  MOBILE_PAGE_MODES.previewSingle,
+  MOBILE_PAGE_MODES.single
+];
+const resolveMobilePageEntryRoute = (value) => {
+  const mode = normalizeMobilePageMode(value);
+  if (mode === MOBILE_PAGE_MODES.previewMobile || mode === MOBILE_PAGE_MODES.previewSingle) {
+    return PAGE_IDS.preview;
+  }
+  return mode;
+};
+const resolveMobilePreviewDestination = (value) => {
+  const mode = normalizeMobilePageMode(value);
+  if (mode === MOBILE_PAGE_MODES.previewMobile) return PAGE_IDS.mobileView;
+  if (mode === MOBILE_PAGE_MODES.previewSingle) return PAGE_IDS.singleView;
+  return "";
+};
 const resolveConfiguredLandingPage = (config, deviceBucket) => {
-  const key = deviceBucket === DEVICE_ROUTE_BUCKETS.mobile ? "mobile_page" : "landing_page";
-  return normalizePageRoute(config?.[key]);
+  if (deviceBucket === DEVICE_ROUTE_BUCKETS.mobile) {
+    return resolveMobilePageEntryRoute(config?.mobile_page);
+  }
+  return normalizePageRoute(config?.landing_page);
 };
 const resolveStartupPageRoute = ({
   config,
@@ -2067,7 +2108,7 @@ const applyEditorPreviewDraftToCardConfig = ({
     wide_view_live_cameras: previewConfig.wide_view_live_cameras === true,
     wide_view_alert_takeover: previewConfig.wide_view_alert_takeover === true,
     landing_page: normalizePageRoute(previewConfig.landing_page),
-    mobile_page: normalizePageRoute(previewConfig.mobile_page),
+    mobile_page: normalizeMobilePageMode(previewConfig.mobile_page),
     col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
     video_defaults: previewConfig.video_defaults && typeof previewConfig.video_defaults === "object" && !Array.isArray(previewConfig.video_defaults) ? previewConfig.video_defaults : base.video_defaults,
     video_live_defaults: previewConfig.video_live_defaults && typeof previewConfig.video_live_defaults === "object" && !Array.isArray(previewConfig.video_live_defaults) ? previewConfig.video_live_defaults : base.video_live_defaults,
@@ -2534,8 +2575,8 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
   addIfNotDefault(
     compact,
     "mobile_page",
-    normalizePageRoute(source.mobile_page),
-    PAGE_IDS.singleView
+    normalizeMobilePageMode(source.mobile_page),
+    MOBILE_PAGE_MODES.mobile
   );
   const gridRotationSeconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(source.grid_rotation_seconds)
@@ -3182,8 +3223,8 @@ const buildEditorConfigFromDom = ({
   nextConfig.landing_page = normalizePageRoute(
     root.querySelector("#landing_page")?.dataset.value || root.querySelector("#landing_page")?.value || PAGE_IDS.singleView
   );
-  nextConfig.mobile_page = normalizePageRoute(
-    root.querySelector("#mobile_page")?.dataset.value || root.querySelector("#mobile_page")?.value || PAGE_IDS.singleView
+  nextConfig.mobile_page = normalizeMobilePageMode(
+    root.querySelector("#mobile_page")?.dataset.value || root.querySelector("#mobile_page")?.value || nextConfig.mobile_page || MOBILE_PAGE_MODES.mobile
   );
   const leftWidthRaw = root.querySelector("#col_left_width_pct")?.value?.replace(/%/g, "").trim();
   nextConfig.col_left_width_pct = leftWidthRaw ? Math.min(Math.max(parseInt(leftWidthRaw, 10) || 50, 10), 90) : 50;
@@ -16333,9 +16374,11 @@ const PreviewPageController = class {
     }
     const PAGE_IDS2 = this._constants.PAGE_IDS;
     const pageNavigation = this._pageNavigation();
-    const targetPageId = pageNavigation?.isPageRouteAvailable?.(
+    const targetPageId = pageNavigation?.resolvePreviewCameraTargetPage?.(
       this._host._lastNonPreviewPageId
-    ) ?? this._host._isPageRouteAvailable?.(this._host._lastNonPreviewPageId) ? this._host._lastNonPreviewPageId : PAGE_IDS2.singleView;
+    ) || (pageNavigation?.isPageRouteAvailable?.(
+      this._host._lastNonPreviewPageId
+    ) ?? this._host._isPageRouteAvailable?.(this._host._lastNonPreviewPageId) ? this._host._lastNonPreviewPageId : PAGE_IDS2.singleView);
     pageNavigation?.navigateToPageRoute?.(targetPageId, {
       source: "preview-camera-select",
       deferCameraSwitch: true
@@ -16437,6 +16480,17 @@ const PageNavigationController = class {
     return this.ensureNavigationFactory().resolveStartupPage({
       hasPendingDeepLinkTarget: context.hasPendingDeepLinkTarget === true
     });
+  }
+  resolvePreviewCameraTargetPage(fallbackPageId) {
+    const { DEVICE_ROUTE_BUCKETS: DEVICE_ROUTE_BUCKETS2, PAGE_IDS: PAGE_IDS2 } = this._constants;
+    const isPhone = this._host._deviceRouteBucket() === DEVICE_ROUTE_BUCKETS2.mobile;
+    const configuredTarget = isPhone ? this._constants.resolveMobilePreviewDestination(
+      this._host._config?.mobile_page
+    ) : "";
+    const targetPageId = this._constants.normalizePageRoute(
+      configuredTarget || fallbackPageId
+    );
+    return this.isPageRouteAvailable(targetPageId) ? targetPageId : PAGE_IDS2.singleView;
   }
   prepareConfiguredLandingPageShell(context = {}) {
     const nextPageId = this.resolveConfiguredLandingPage(context);
@@ -20543,10 +20597,12 @@ const FrigateViewCard = class extends HTMLElement {
       buildPageNavButtonsMarkup,
       buildPageNavMarkup,
       createNavigationFactory,
+      DEVICE_ROUTE_BUCKETS,
       getEnabledPageRoutes,
       normalizePageRoute,
       PAGE_IDS,
-      ICONS
+      ICONS,
+      resolveMobilePreviewDestination
     });
     this._pageShellRegistry = createPageShellRegistry({
       defaultPageId: PAGE_IDS.singleView
@@ -21110,7 +21166,7 @@ const FrigateViewCard = class extends HTMLElement {
       wide_view_live_cameras: config.wide_view_live_cameras === true,
       wide_view_alert_takeover: config.wide_view_alert_takeover === true,
       landing_page: normalizePageRoute(config.landing_page),
-      mobile_page: normalizePageRoute(config.mobile_page),
+      mobile_page: normalizeMobilePageMode(config.mobile_page),
       deep_link_enabled: config.deep_link_enabled !== false,
       grid_rotation_seconds: GRID_ROTATION_OPTIONS_SECONDS.includes(
         Number(config.grid_rotation_seconds)
@@ -24931,20 +24987,13 @@ const normalizeCardConfig = (config) => {
   src.wide_view_live_cameras = src.wide_view_live_cameras === true;
   src.wide_view_alert_takeover = src.wide_view_alert_takeover === true;
   src.landing_page = normalizePageRoute(src.landing_page);
-  src.mobile_page = normalizePageRoute(src.mobile_page);
+  src.mobile_page = normalizeMobilePageMode(src.mobile_page);
   const landingPageOptions = getEnabledPageRoutes(
     src,
     DEVICE_ROUTE_BUCKETS.desktop
   );
-  const mobilePageOptions = getEnabledPageRoutes(
-    src,
-    DEVICE_ROUTE_BUCKETS.mobile
-  );
   if (!landingPageOptions.includes(src.landing_page)) {
     src.landing_page = PAGE_IDS.singleView;
-  }
-  if (!mobilePageOptions.includes(src.mobile_page)) {
-    src.mobile_page = PAGE_IDS.singleView;
   }
   src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
     Number(src.grid_rotation_seconds)
@@ -25403,10 +25452,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       normalized,
       DEVICE_ROUTE_BUCKETS.desktop
     ).join("|");
-    const mobile = getEnabledPageRoutes(
-      normalized,
-      DEVICE_ROUTE_BUCKETS.mobile
-    ).join("|");
+    const mobile = getMobilePageModes().join("|");
     return `${desktop}::${mobile}`;
   }
   _frigateEntities() {
@@ -25895,10 +25941,15 @@ const FrigateViewCardEditor = class extends HTMLElement {
       this._config,
       DEVICE_ROUTE_BUCKETS.desktop
     ).map((pageId) => ({ value: pageId, label: pageRouteLabel(pageId) }));
-    const mobilePageOptions = getEnabledPageRoutes(
-      this._config,
-      DEVICE_ROUTE_BUCKETS.mobile
-    ).map((pageId) => ({ value: pageId, label: pageRouteLabel(pageId) }));
+    const mobilePageLabels = {
+      [MOBILE_PAGE_MODES.mobile]: "Mobile",
+      [MOBILE_PAGE_MODES.previewMobile]: "Preview + Mobile",
+      [MOBILE_PAGE_MODES.previewSingle]: "Preview + Single View",
+      [MOBILE_PAGE_MODES.single]: "Single View"
+    };
+    const mobilePageOptions = getMobilePageModes().map(
+      (mode) => ({ value: mode, label: mobilePageLabels[mode] })
+    );
     const tabToggle = (id, label) => `<ha-formfield label="${label}">
           <ha-switch data-active-tab="${id}" ${hiddenTabs.has(id) ? "" : "checked"}></ha-switch>
         </ha-formfield>`;
@@ -26172,7 +26223,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       <div class="section">
         <span class="field-label">Mobile Page</span>
         <ha-selector id="mobile_page" style="width:220px"></ha-selector>
-        <div class="field-helper">Choose the default starting page for phones. Wide View is intentionally excluded here.</div>
+        <div class="field-helper">Choose the phone starting flow. Preview combinations open Preview first, then send a selected camera to Mobile or Single View. Options involving Mobile or Preview require those pages to be enabled.</div>
       </div>`;
     const gridviewPanelContent = `
       <div class="section">
@@ -26561,9 +26612,9 @@ const FrigateViewCardEditor = class extends HTMLElement {
       element: this.querySelector("#mobile_page"),
       hass: this._hass,
       options: mobilePageOptions,
-      initialValue: this._config?.mobile_page || PAGE_IDS.singleView,
-      fallbackValue: PAGE_IDS.singleView,
-      normalize: (value) => normalizePageRoute(value),
+      initialValue: this._config?.mobile_page || MOBILE_PAGE_MODES.mobile,
+      fallbackValue: MOBILE_PAGE_MODES.mobile,
+      normalize: (value) => normalizeMobilePageMode(value),
       onChange: () => update()
     });
     setupEntitySelector({

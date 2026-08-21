@@ -5,6 +5,13 @@ export const PAGE_IDS = Object.freeze({
   wideView: "wide-view",
 });
 
+export const MOBILE_PAGE_MODES = Object.freeze({
+  mobile: PAGE_IDS.mobileView,
+  previewMobile: "preview-mobile-view",
+  previewSingle: "preview-single-view",
+  single: PAGE_IDS.singleView,
+});
+
 export const DEVICE_ROUTE_BUCKETS = Object.freeze({
   mobile: "mobile",
   tablet: "tablet",
@@ -19,6 +26,7 @@ const PAGE_ROUTE_ORDER = Object.freeze([
 ]);
 
 const PAGE_ROUTE_SET = new Set(PAGE_ROUTE_ORDER);
+const MOBILE_PAGE_MODE_SET = new Set(Object.values(MOBILE_PAGE_MODES));
 
 export const normalizePageRoute = (value) => {
   const route = String(value || "")
@@ -31,6 +39,23 @@ export const normalizePageRoute = (value) => {
   if (route === "wide" || route === "wide_view") return PAGE_IDS.wideView;
   if (route === "preview") return PAGE_IDS.preview;
   return PAGE_ROUTE_SET.has(route) ? route : PAGE_IDS.singleView;
+};
+
+export const normalizeMobilePageMode = (value) => {
+  const mode = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_+\s]+/g, "-");
+  if (mode === "preview") return MOBILE_PAGE_MODES.previewSingle;
+  if (mode === "preview-mobile") return MOBILE_PAGE_MODES.previewMobile;
+  if (mode === "preview-single") return MOBILE_PAGE_MODES.previewSingle;
+  if (mode === "mobile" || mode === "mobile-view") {
+    return MOBILE_PAGE_MODES.mobile;
+  }
+  if (mode === "single" || mode === "single-view") {
+    return MOBILE_PAGE_MODES.single;
+  }
+  return MOBILE_PAGE_MODE_SET.has(mode) ? mode : MOBILE_PAGE_MODES.mobile;
 };
 
 export const resolveDeviceRouteBucket = (deviceProfile = {}) => {
@@ -65,12 +90,36 @@ export const getEnabledPageRoutes = (config, deviceBucket) =>
       isPageSupportedOnDevice(pageId, deviceBucket),
   );
 
+export const getMobilePageModes = () => [
+  MOBILE_PAGE_MODES.mobile,
+  MOBILE_PAGE_MODES.previewMobile,
+  MOBILE_PAGE_MODES.previewSingle,
+  MOBILE_PAGE_MODES.single,
+];
+
+export const resolveMobilePageEntryRoute = (value) => {
+  const mode = normalizeMobilePageMode(value);
+  if (
+    mode === MOBILE_PAGE_MODES.previewMobile ||
+    mode === MOBILE_PAGE_MODES.previewSingle
+  ) {
+    return PAGE_IDS.preview;
+  }
+  return mode;
+};
+
+export const resolveMobilePreviewDestination = (value) => {
+  const mode = normalizeMobilePageMode(value);
+  if (mode === MOBILE_PAGE_MODES.previewMobile) return PAGE_IDS.mobileView;
+  if (mode === MOBILE_PAGE_MODES.previewSingle) return PAGE_IDS.singleView;
+  return "";
+};
+
 export const resolveConfiguredLandingPage = (config, deviceBucket) => {
-  const key =
-    deviceBucket === DEVICE_ROUTE_BUCKETS.mobile
-      ? "mobile_page"
-      : "landing_page";
-  return normalizePageRoute(config?.[key]);
+  if (deviceBucket === DEVICE_ROUTE_BUCKETS.mobile) {
+    return resolveMobilePageEntryRoute(config?.mobile_page);
+  }
+  return normalizePageRoute(config?.landing_page);
 };
 
 export const resolveStartupPageRoute = ({

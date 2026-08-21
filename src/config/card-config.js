@@ -19,6 +19,7 @@ import {
 import {
   DEVICE_ROUTE_BUCKETS,
   getEnabledPageRoutes,
+  normalizeMobilePageMode,
   normalizePageRoute,
   PAGE_IDS,
 } from "../features/navigation/router.js";
@@ -139,20 +140,13 @@ export const normalizeCardConfig = (config) => {
   src.wide_view_alert_takeover = src.wide_view_alert_takeover === true;
 
   src.landing_page = normalizePageRoute(src.landing_page);
-  src.mobile_page = normalizePageRoute(src.mobile_page);
+  src.mobile_page = normalizeMobilePageMode(src.mobile_page);
   const landingPageOptions = getEnabledPageRoutes(
     src,
     DEVICE_ROUTE_BUCKETS.desktop,
   );
-  const mobilePageOptions = getEnabledPageRoutes(
-    src,
-    DEVICE_ROUTE_BUCKETS.mobile,
-  );
   if (!landingPageOptions.includes(src.landing_page)) {
     src.landing_page = PAGE_IDS.singleView;
-  }
-  if (!mobilePageOptions.includes(src.mobile_page)) {
-    src.mobile_page = PAGE_IDS.singleView;
   }
 
   src.grid_rotation_seconds = GRID_ROTATION_OPTIONS_SECONDS.includes(
