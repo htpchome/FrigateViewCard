@@ -391,7 +391,7 @@ export const STYLES = `
   .popup-playback-controls .popup-playback-btn{position:relative;width:36px;height:36px;padding:3px;}
   .popup-playback-controls .square-btn svg{width:24px;height:24px;opacity:1;}
   #viewer.popup-controls-visible .popup-playback-controls{opacity:1;pointer-events:auto;}
-  .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;padding:4px 10px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
+  .slideshow-next-chip{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:6;min-height:30px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border:1px solid var(--c-border2);border-radius:999px;background:color-mix(in srgb,var(--c-bg-panel) 88%,transparent);box-shadow:0 3px 10px rgba(0,0,0,.22);color:var(--c-text);font-size:.78rem;font-weight:700;line-height:1;cursor:default;pointer-events:none;white-space:nowrap;opacity:.95;}
   .slideshow-next-chip[hidden]{display:none !important;}
   #live-stage.live-controls-visible .live-playback-controls{opacity:1;pointer-events:auto;}
   @media (hover: hover) and (pointer: fine) {

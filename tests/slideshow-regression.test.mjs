@@ -2,6 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
+import { buildLiveEngineWrapMarkup } from "../src/features/live/view.tmpl.js";
+import { STYLES } from "../src/styles.js";
+
 const source = fs.readFileSync(
   new URL("../frigate-view-card.js", import.meta.url),
   "utf8",
@@ -37,4 +40,34 @@ test("slideshow runtime hooks are present", () => {
   assert.equal(source.includes("error-color"), true);
   assert.equal(source.includes("warning-color"), true);
   assert.equal(source.includes("data?.severity"), true);
+});
+
+test("slideshow countdown does not change live video compositing", () => {
+  const markup = buildLiveEngineWrapMarkup({ icons: { live: "live" } });
+  assert.equal(
+    markup.includes('class="slideshow-next-chip"'),
+    true,
+  );
+  assert.equal(markup.includes('class="glass-btn slideshow-next-chip"'), false);
+
+  const ruleStart = STYLES.indexOf(".slideshow-next-chip{");
+  const ruleEnd = STYLES.indexOf("}", ruleStart);
+  const rule = STYLES.slice(ruleStart, ruleEnd);
+  assert.notEqual(ruleStart, -1);
+  assert.equal(rule.includes("backdrop-filter"), false);
+});
+
+test("main live video fit remains stable after metadata loads", () => {
+  const cardSource = fs.readFileSync(
+    new URL("../src/card/FrigateViewCard.js", import.meta.url),
+    "utf8",
+  );
+  const fitStart = cardSource.indexOf("  _applyVideoFit(videoEl) {");
+  const fitEnd = cardSource.indexOf("  _attachVideoFit(", fitStart);
+  const fitMethod = cardSource.slice(fitStart, fitEnd);
+
+  assert.notEqual(fitStart, -1);
+  assert.equal(fitMethod.includes('videoEl.style.objectFit = "contain";'), true);
+  assert.equal(fitMethod.includes("loadedmetadata"), false);
+  assert.equal(fitMethod.includes('"cover"'), false);
 });

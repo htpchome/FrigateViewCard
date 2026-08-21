@@ -3,7 +3,7 @@ export function buildLiveEngineWrapMarkup({ icons }) {
                 <frigate-live-stream id="engine">
                   <div class="ph">${icons.live}<span>Connecting…</span></div>
                 </frigate-live-stream>
-                  <div class="glass-btn slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
+                  <div class="slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
                   <div id="stream-fallback" hidden>
                     <img id="stream-fallback-img" alt="Camera snapshot">
                   </div>
