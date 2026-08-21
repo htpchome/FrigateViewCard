@@ -49,7 +49,7 @@ const { PopupCarouselController } = await import(
   "../src/features/popup/carousel.ctrl.js"
 );
 
-test("_clearPopupMediaCleanup clears timers, disposes controllers, and destroys recording HLS", () => {
+test("_clearPopupMediaCleanup delegates controls disposal and clears media state", () => {
   const calls = [];
   const originalClearTimeout = globalThis.clearTimeout;
   globalThis.clearTimeout = (value) => {
@@ -58,7 +58,6 @@ test("_clearPopupMediaCleanup clears timers, disposes controllers, and destroys 
 
   try {
     const ctx = {
-      _popupControlsHideTimer: 11,
       _popupMediaStopTimer: 22,
       _popupMediaControlsController: {
         dispose() {
@@ -86,15 +85,13 @@ test("_clearPopupMediaCleanup clears timers, disposes controllers, and destroys 
     assert.deepEqual(calls, [
       ["clearPictureInPicture", "popup"],
       ["disposeCarousel"],
-      ["clearTimeout", 11],
-      ["clearTimeout", 22],
       ["disposeControls"],
+      ["clearTimeout", 22],
       ["popupMediaCleanup"],
       ["destroyRecordingHls"],
     ]);
-    assert.equal(ctx._popupControlsHideTimer, null);
     assert.equal(ctx._popupMediaStopTimer, null);
-    assert.equal(ctx._popupMediaControlsController, null);
+    assert.notEqual(ctx._popupMediaControlsController, null);
     assert.equal(ctx._popupMediaCleanup, null);
   } finally {
     globalThis.clearTimeout = originalClearTimeout;
@@ -111,7 +108,6 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
 
   try {
     const ctx = {
-      _popupControlsHideTimer: 11,
       _popupMediaStopTimer: 22,
       _liveControlsHideTimer: 33,
       _rotateOverlayRaf: 0,
@@ -139,11 +135,7 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
         calls.push(["clearPictureInPicture", scope]);
       },
       _clearPopupMediaCleanup() {
-        calls.push([
-          "clearPopupMediaCleanup",
-          this._popupControlsHideTimer,
-          this._popupMediaStopTimer,
-        ]);
+        calls.push(["clearPopupMediaCleanup", this._popupMediaStopTimer]);
       },
       _clearRotateOverlayAudioSync() {
         calls.push(["clearRotateOverlayAudioSync"]);
@@ -169,7 +161,7 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
       ["stopPreviewMode"],
       ["clearPictureInPicture", "live"],
       ["clearPictureInPicture", "popup"],
-      ["clearPopupMediaCleanup", 11, 22],
+      ["clearPopupMediaCleanup", 22],
       ["clearRotateOverlayAudioSync"],
       ["clearRotateVideoFullscreenStyle"],
       ["clearGracePool"],

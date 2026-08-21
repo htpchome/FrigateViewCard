@@ -103,6 +103,11 @@ test("showRecording signs candidates and initializes popup recording playback on
     _popupCarouselController: {
       render: (type, id) => calls.push(["renderCarousel", type, id]),
     },
+    _popupMediaControlsController: {
+      initialize: (_video, type) => calls.push(["initControls", type]),
+      resetWithoutVideo: () => calls.push(["resetControls"]),
+      showTemporarily: () => calls.push(["showControls"]),
+    },
     shadowRoot: {
       querySelector: () => viewer,
     },
@@ -114,11 +119,8 @@ test("showRecording signs candidates and initializes popup recording playback on
     },
     _ensurePopupPlaybackButtons: (kind) => calls.push(["ensurePlayback", kind]),
     _scheduleRotateOverlayUpdate: () => calls.push(["scheduleRotate"]),
-    _initPopupMediaControls: (_video, type) =>
-      calls.push(["initControls", type]),
     _initRecordingScrub: (payload) =>
       calls.push(["initScrub", payload.sourceUrl]),
-    _showPopupControlsTemporarily: () => calls.push(["showControls"]),
   };
   const controller = new PopupMediaLoaderController(host, {
     buildVideoOptionsForView: (_view, options) => options,

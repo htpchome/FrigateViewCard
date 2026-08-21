@@ -157,6 +157,10 @@ const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupMediaControlsControllerSource = fs.readFileSync(
+  new URL("../src/features/popup/media.ctrl.js", import.meta.url),
+  "utf8",
+);
 const popupCarouselControllerSource = fs.readFileSync(
   new URL("../src/features/popup/carousel.ctrl.js", import.meta.url),
   "utf8",
@@ -1698,6 +1702,47 @@ test("popup carousel rendering and lifecycle are owned by the popup feature", ()
   assert.equal(
     popupMediaLoaderControllerSource.includes(
       "this._carouselController?.render(",
+    ),
+    true,
+  );
+});
+
+test("popup media controls and visibility are owned by the popup feature", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { PopupMediaControlsSurfaceController } from "../features/popup/media.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("new PopupMediaControlsSurfaceController"),
+    true,
+  );
+  assert.equal(cardSource.includes("_showPopupControlsTemporarily("), false);
+  assert.equal(cardSource.includes("_updatePopupMediaButtons("), false);
+  assert.equal(cardSource.includes("_togglePopupMediaPlay("), false);
+  assert.equal(cardSource.includes("_togglePopupMediaMute("), false);
+  assert.equal(cardSource.includes("_initPopupMediaControls("), false);
+  assert.equal(cardSource.includes("_popupControlsHideTimer"), false);
+  assert.equal(
+    popupMediaControlsControllerSource.includes(
+      "export class PopupMediaControlsSurfaceController",
+    ),
+    true,
+  );
+  assert.equal(
+    popupMediaControlsControllerSource.includes("handleClick(target)"),
+    true,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes(
+      "this._mediaControlsController?.initialize(",
+    ),
+    true,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes(
+      "this._mediaControlsController?.resetWithoutVideo(",
     ),
     true,
   );

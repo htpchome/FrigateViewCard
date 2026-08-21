@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1600";
+const VERSION = "1.0.1601";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10693,6 +10693,168 @@ const PopupMediaControlsController = class {
     this._controls?.classList?.remove("is-hidden");
   }
 };
+const PopupMediaControlsSurfaceController = class {
+  constructor({
+    query,
+    formatTime = () => "0:00",
+    shouldUseCustomControls = () => false,
+    isAutoHideActive = () => false,
+    icons = ICONS,
+    hideDelayMs = 2200,
+    setTimer = globalThis.setTimeout?.bind(globalThis),
+    clearTimer = globalThis.clearTimeout?.bind(globalThis),
+    createBinding = (options) => new PopupMediaControlsController(options)
+  } = {}) {
+    this._query = query;
+    this._formatTime = formatTime;
+    this._shouldUseCustomControls = shouldUseCustomControls;
+    this._isAutoHideActive = isAutoHideActive;
+    this._icons = icons;
+    this._hideDelayMs = Math.max(0, Number(hideDelayMs) || 0);
+    this._setTimer = setTimer;
+    this._clearTimer = clearTimer;
+    this._createBinding = createBinding;
+    this._binding = null;
+    this._video = null;
+    this._hideTimer = null;
+  }
+  video() {
+    return this._query?.("#viewer")?.querySelector?.("video") || null;
+  }
+  initialize(video, mediaType = "") {
+    this.dispose();
+    const controls = this._query?.("#popup-media-controls");
+    if (!controls || !video) return null;
+    this._video = video;
+    const controlsPlan = resolvePopupMediaControlsInitPlan({
+      shouldUseCustomControls: this._shouldUseCustomControls(mediaType)
+    });
+    video.controls = controlsPlan.videoControlsEnabled;
+    if (controlsPlan.removeVideoControlsAttribute) {
+      video.removeAttribute("controls");
+    }
+    if (controlsPlan.setVideoControlsAttribute) {
+      video.setAttribute("controls", "");
+    }
+    controls.hidden = controlsPlan.controlsHidden;
+    if (controlsPlan.resetControlsHiddenClass) {
+      controls.classList.remove("is-hidden");
+    }
+    if (!controlsPlan.shouldBindCustomControls) return controlsPlan;
+    const progress = this._query?.("#popup-media-progress");
+    this._binding = this._createBinding({
+      controls,
+      progress,
+      video,
+      listenerPlan: resolvePopupMediaControlsListenerPlan({
+        hasProgressControl: Boolean(progress)
+      }),
+      onShowNow: () => this.showNow(),
+      onShowTemporarily: () => this.showTemporarily(),
+      onSync: ({ progressDragging = false } = {}) => this.update(video, { updateProgress: !progressDragging })
+    });
+    this._binding.bind();
+    return controlsPlan;
+  }
+  resetWithoutVideo(controlsPlan = null) {
+    this.dispose();
+    const controls = this._query?.("#popup-media-controls");
+    if (!controls) return;
+    const plan = controlsPlan || resolvePopupMediaControlsInitPlan({ hasVideo: false });
+    controls.hidden = plan.controlsHidden;
+    if (plan.resetControlsHiddenClass) {
+      controls.classList.remove("is-hidden");
+    }
+  }
+  update(video = this.video(), { updateProgress = true } = {}) {
+    if (!video) return null;
+    const controlState = buildPopupMediaControlState({
+      duration: video.duration,
+      currentTime: video.currentTime,
+      paused: video.paused,
+      muted: video.muted,
+      formatTime: this._formatTime
+    });
+    const playButton = this._query?.("#popup-media-play");
+    const muteButton = this._query?.("#popup-media-mute");
+    const progress = this._query?.("#popup-media-progress");
+    const time = this._query?.("#popup-media-time");
+    if (updateProgress && progress) progress.value = controlState.progressValue;
+    if (playButton) {
+      playButton.innerHTML = controlState.showPauseIcon ? this._icons.pause : this._icons.play;
+    }
+    if (muteButton) {
+      muteButton.innerHTML = controlState.showMutedIcon ? this._icons.volOff : this._icons.volOn;
+    }
+    if (time) time.textContent = controlState.timeText;
+    return controlState;
+  }
+  togglePlay() {
+    const video = this.video();
+    if (!video) return false;
+    if (video.paused) {
+      const playResult = video.play?.();
+      playResult?.catch?.(() => {
+      });
+    } else {
+      video.pause?.();
+    }
+    this.showTemporarily();
+    this.update(video);
+    return true;
+  }
+  toggleMute() {
+    const video = this.video();
+    if (!video) return false;
+    video.muted = !video.muted;
+    this.showTemporarily();
+    this.update(video);
+    return true;
+  }
+  handleClick(target) {
+    if (target?.closest?.("#popup-media-play")) {
+      this.togglePlay();
+      return true;
+    }
+    if (target?.closest?.("#popup-media-mute")) {
+      this.toggleMute();
+      return true;
+    }
+    return false;
+  }
+  showNow() {
+    const controls = this._query?.("#popup-media-controls");
+    if (!controls || controls.hidden) return;
+    this._clearHideTimer();
+    controls.classList.remove("is-hidden");
+  }
+  showTemporarily() {
+    const controls = this._query?.("#popup-media-controls");
+    if (!controls || controls.hidden) return;
+    this.showNow();
+    if (!this._isAutoHideActive() || !this._setTimer) return;
+    this._hideTimer = this._setTimer(() => {
+      this._hideTimer = null;
+      const nextControls = this._query?.("#popup-media-controls");
+      if (nextControls && !nextControls.hidden) {
+        nextControls.classList.add("is-hidden");
+      }
+    }, this._hideDelayMs);
+  }
+  dispose() {
+    this._clearHideTimer();
+    this._binding?.dispose?.();
+    this._binding = null;
+    this._video = null;
+    this._query?.("#popup-media-controls")?.classList?.remove?.("is-hidden");
+  }
+  _clearHideTimer() {
+    if (this._hideTimer !== null && this._clearTimer) {
+      this._clearTimer(this._hideTimer);
+    }
+    this._hideTimer = null;
+  }
+};
 
 // src/features/popup/carousel.js
 const sortByStartTimeDesc = (items = []) => [...items].sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0));
@@ -16860,11 +17022,13 @@ const PopupMediaLoaderController = class {
     const {
       infoController = host._popupInfoController,
       carouselController = host._popupCarouselController,
+      mediaControlsController = host._popupMediaControlsController,
       ...loaderDeps
     } = deps;
     this._host = host;
     this._infoController = infoController;
     this._carouselController = carouselController;
+    this._mediaControlsController = mediaControlsController;
     this._deps = {
       buildVideoOptionsForView,
       createVideoElement,
@@ -16925,16 +17089,12 @@ const PopupMediaLoaderController = class {
       this._infoController?.render(infoEvent, infoOpts);
     }
     if (postRenderPlan.shouldInitPopupMediaControls) {
-      this._host._initPopupMediaControls(video, this._host._popupMediaType);
+      this._mediaControlsController?.initialize(
+        video,
+        this._host._popupMediaType
+      );
     } else if (postRenderPlan.shouldResetControlsWithoutVideo) {
-      const controls = this._host._$("#popup-media-controls");
-      const controlsPlan = renderPlan.controlsPlan;
-      if (controls) {
-        controls.hidden = controlsPlan.controlsHidden;
-        if (controlsPlan.resetControlsHiddenClass) {
-          controls.classList.remove("is-hidden");
-        }
-      }
+      this._mediaControlsController?.resetWithoutVideo(renderPlan.controlsPlan);
     }
     if (postRenderPlan.shouldRenderCarousel) {
       this._carouselController?.render(
@@ -16946,7 +17106,7 @@ const PopupMediaLoaderController = class {
       this._host._scheduleRotateOverlayUpdate();
     }
     if (postRenderPlan.shouldShowPopupControls) {
-      this._host._showPopupControlsTemporarily();
+      this._mediaControlsController?.showTemporarily();
     }
     this._host._preparePopupPlaybackTarget?.();
   }
@@ -17207,7 +17367,10 @@ const PopupMediaLoaderController = class {
         token,
         sourceUrl: activeSource || video.currentSrc || video.src
       });
-      this._host._initPopupMediaControls(video, renderPlan.popupMediaType);
+      this._mediaControlsController?.initialize(
+        video,
+        renderPlan.popupMediaType
+      );
       this._host._initRecordingScrub({
         clientId: scrubInitPlan.clientId,
         cam: scrubInitPlan.cam,
@@ -17225,7 +17388,7 @@ const PopupMediaLoaderController = class {
       );
     }
     if (outcomePlan.shouldShowPopupControls) {
-      this._host._showPopupControlsTemporarily();
+      this._mediaControlsController?.showTemporarily();
     }
     this._host._preparePopupPlaybackTarget?.();
     this._host._popupMediaCleanup = () => {
@@ -19895,6 +20058,12 @@ const FrigateViewCard = class extends HTMLElement {
       isTouchUi: () => this._isTouchPopupUi(),
       isMobileDevice: () => this._isLikelyMobileClient()
     });
+    this._popupMediaControlsController = new PopupMediaControlsSurfaceController({
+      query: (selector) => this._$(selector),
+      formatTime: (value) => this._fmtScrubTime(value),
+      shouldUseCustomControls: (mediaType) => this._usePopupCustomControls(mediaType),
+      isAutoHideActive: () => this._rotateOverlayMode === "popup"
+    });
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._playbackTargetController = new BrowserPlaybackTargetController({
       getContext: (scope) => this._playbackTargetContext(scope),
@@ -19919,10 +20088,8 @@ const FrigateViewCard = class extends HTMLElement {
     this._popupMediaCleanup = null;
     this._popupMediaType = "";
     this._popupMediaStopTimer = null;
-    this._popupMediaControlsController = null;
     this._livePictureInPictureButtonController = null;
     this._popupPictureInPictureButtonController = null;
-    this._popupControlsHideTimer = null;
     this._liveControlsHideTimer = null;
     this._liveOverlayControlsController = null;
     this._snapshotResultTimers = { live: null, popup: null };
@@ -21044,7 +21211,9 @@ const FrigateViewCard = class extends HTMLElement {
     if (uiPlan.enableNativeControls) this._setLiveNativeControls(true);
     if (uiPlan.syncFullscreenButtons) this._syncFullscreenButtonsVisibility();
     if (uiPlan.showLiveControls) this._showLiveControlsTemporarily();
-    if (uiPlan.showPopupControls) this._showPopupControlsTemporarily();
+    if (uiPlan.showPopupControls) {
+      this._popupMediaControlsController.showTemporarily();
+    }
   }
   async _mountEngine(forcedType = null, options = {}) {
     return this._liveMountController.mount({
@@ -22980,32 +23149,28 @@ const FrigateViewCard = class extends HTMLElement {
       return true;
     }
     if (target.closest("#popup-pip-btn")) {
-      void this._togglePictureInPicture(this._popupMediaVideo(), { popup: true });
-      this._showPopupControlsTemporarily();
+      void this._togglePictureInPicture(
+        this._popupMediaControlsController.video(),
+        { popup: true }
+      );
+      this._popupMediaControlsController.showTemporarily();
       return true;
     }
     if (target.closest("#popup-airplay-btn, #popup-media-airplay")) {
       void this._playbackTargetController.prompt(PLAYBACK_TARGET_AIRPLAY, {
         scope: "popup"
       });
-      this._showPopupControlsTemporarily();
+      this._popupMediaControlsController.showTemporarily();
       return true;
     }
     if (target.closest("#mute-btn")) {
       this._toggleMute();
       return true;
     }
-    if (target.closest("#popup-media-play")) {
-      this._togglePopupMediaPlay();
-      return true;
-    }
-    if (target.closest("#popup-media-mute")) {
-      this._togglePopupMediaMute();
-      return true;
-    }
+    if (this._popupMediaControlsController.handleClick(target)) return true;
     if (target.closest("#popup-media-fs")) {
       this._fullscreen(this._$("#viewer"));
-      this._showPopupControlsTemporarily();
+      this._popupMediaControlsController.showTemporarily();
       return true;
     }
     const carouselNav = target.closest("[data-carousel-dir]");
@@ -23735,8 +23900,9 @@ const FrigateViewCard = class extends HTMLElement {
       return false;
     } finally {
       if (button) button.disabled = false;
-      if (scope === "popup") this._showPopupControlsTemporarily();
-      else this._showLiveControlsTemporarily();
+      if (scope === "popup") {
+        this._popupMediaControlsController.showTemporarily();
+      } else this._showLiveControlsTemporarily();
     }
   }
   _clearPictureInPictureButtonController(scope) {
@@ -23786,7 +23952,7 @@ const FrigateViewCard = class extends HTMLElement {
       liveAllowed ? liveVideo : null
     );
     const popupMediaType = this._popupMediaType;
-    const popupVideo = popupOpen ? this._popupMediaVideo() : null;
+    const popupVideo = popupOpen ? this._popupMediaControlsController.video() : null;
     enableNativePictureInPicture(popupVideo);
     const popupAllowed = popupOpen && !DEVICE_PROFILE.isMobile && !isFirefox && this._isPopupVideoMediaType(popupMediaType);
     this._bindPictureInPictureButton(
@@ -23813,7 +23979,7 @@ const FrigateViewCard = class extends HTMLElement {
       );
     } finally {
       this._syncPictureInPictureButtons();
-      if (popup) this._showPopupControlsTemporarily();
+      if (popup) this._popupMediaControlsController.showTemporarily();
     }
   }
   _ensurePopupPlaybackButtons(mediaType = "") {
@@ -23875,21 +24041,11 @@ const FrigateViewCard = class extends HTMLElement {
     this._clearPictureInPictureButtonController("popup");
     this._clearPopupVideoZoom?.();
     this._popupCarouselController?.dispose?.();
-    if (this._popupControlsHideTimer) {
-      clearTimeout(this._popupControlsHideTimer);
-      this._popupControlsHideTimer = null;
-    }
+    this._popupMediaControlsController?.dispose?.();
     if (this._popupMediaStopTimer) {
       clearTimeout(this._popupMediaStopTimer);
       this._popupMediaStopTimer = null;
     }
-    if (this._popupMediaControlsController) {
-      try {
-        this._popupMediaControlsController.dispose();
-      } catch (_) {
-      }
-    }
-    this._popupMediaControlsController = null;
     if (!this._popupMediaCleanup) return;
     try {
       this._popupMediaCleanup();
@@ -23924,26 +24080,9 @@ const FrigateViewCard = class extends HTMLElement {
   _recordingPreferHls() {
     return DEVICE_PROFILE.isIOS || this._isFirefox() || this._isEdge();
   }
-  _popupMediaVideo() {
-    const viewer = this._$("#viewer");
-    if (!viewer) return null;
-    return viewer.querySelector("video");
-  }
   _popupMediaCurrentId() {
     if (this._playing?.id) return this._playing.id;
     return "";
-  }
-  _showPopupControlsTemporarily() {
-    const controls = this._$("#popup-media-controls");
-    if (!controls || controls.hidden) return;
-    controls.classList.remove("is-hidden");
-    if (this._popupControlsHideTimer)
-      clearTimeout(this._popupControlsHideTimer);
-    if (this._rotateOverlayMode !== "popup") return;
-    this._popupControlsHideTimer = setTimeout(() => {
-      const el = this._$("#popup-media-controls");
-      if (el && !el.hidden) el.classList.add("is-hidden");
-    }, 2200);
   }
   _showLiveControlsTemporarily(ms = 2200) {
     const wrap = this._$("#live-stage.live-stage--overlay");
@@ -23961,98 +24100,6 @@ const FrigateViewCard = class extends HTMLElement {
       },
       Math.max(500, Number(ms) || 2200)
     );
-  }
-  _updatePopupMediaButtons(video) {
-    const playBtn = this._$("#popup-media-play");
-    const muteBtn = this._$("#popup-media-mute");
-    const progress = this._$("#popup-media-progress");
-    const time = this._$("#popup-media-time");
-    if (!playBtn || !muteBtn || !progress || !time) return;
-    const controlState = buildPopupMediaControlState({
-      duration: video?.duration,
-      currentTime: video?.currentTime,
-      paused: video?.paused,
-      muted: video?.muted,
-      formatTime: (value) => this._fmtScrubTime(value)
-    });
-    progress.value = controlState.progressValue;
-    playBtn.innerHTML = controlState.showPauseIcon ? ICONS.pause : ICONS.play;
-    muteBtn.innerHTML = controlState.showMutedIcon ? ICONS.volOff : ICONS.volOn;
-    time.textContent = controlState.timeText;
-  }
-  _togglePopupMediaPlay() {
-    const v = this._popupMediaVideo();
-    if (!v) return;
-    if (v.paused) v.play?.().catch(() => {
-    });
-    else v.pause?.();
-    this._showPopupControlsTemporarily();
-    this._updatePopupMediaButtons(v);
-  }
-  _togglePopupMediaMute() {
-    const v = this._popupMediaVideo();
-    if (!v) return;
-    v.muted = !v.muted;
-    this._showPopupControlsTemporarily();
-    this._updatePopupMediaButtons(v);
-  }
-  _initPopupMediaControls(video, mediaType) {
-    const controls = this._$("#popup-media-controls");
-    if (!controls || !video) return;
-    const controlsPlan = resolvePopupMediaControlsInitPlan({
-      shouldUseCustomControls: this._usePopupCustomControls(mediaType)
-    });
-    video.controls = controlsPlan.videoControlsEnabled;
-    if (controlsPlan.removeVideoControlsAttribute) {
-      video.removeAttribute("controls");
-    }
-    if (controlsPlan.setVideoControlsAttribute) {
-      video.setAttribute("controls", "");
-    }
-    controls.hidden = controlsPlan.controlsHidden;
-    if (controlsPlan.resetControlsHiddenClass) {
-      controls.classList.remove("is-hidden");
-    }
-    if (!controlsPlan.shouldBindCustomControls) return;
-    const progress = this._$("#popup-media-progress");
-    const listenerPlan = resolvePopupMediaControlsListenerPlan({
-      hasProgressControl: !!progress
-    });
-    const sync = () => {
-      const playBtn = this._$("#popup-media-play");
-      const muteBtn = this._$("#popup-media-mute");
-      const time = this._$("#popup-media-time");
-      const controlState = buildPopupMediaControlState({
-        duration: video.duration,
-        currentTime: video.currentTime,
-        paused: video.paused,
-        muted: video.muted,
-        formatTime: (value) => this._fmtScrubTime(value)
-      });
-      if (playBtn)
-        playBtn.innerHTML = controlState.showPauseIcon ? ICONS.pause : ICONS.play;
-      if (muteBtn)
-        muteBtn.innerHTML = controlState.showMutedIcon ? ICONS.volOff : ICONS.volOn;
-      if (time) time.textContent = controlState.timeText;
-    };
-    const syncButtons = ({ progressDragging = false } = {}) => {
-      sync();
-      if (!progressDragging) this._updatePopupMediaButtons(video);
-    };
-    this._popupMediaControlsController = new PopupMediaControlsController({
-      controls,
-      progress,
-      video,
-      listenerPlan,
-      onShowNow: () => {
-        if (this._popupControlsHideTimer)
-          clearTimeout(this._popupControlsHideTimer);
-        controls.classList.remove("is-hidden");
-      },
-      onShowTemporarily: () => this._showPopupControlsTemporarily(),
-      onSync: syncButtons
-    });
-    this._popupMediaControlsController.bind();
   }
   _media(id, file, dl) {
     return buildFrigateNotificationMediaPath({

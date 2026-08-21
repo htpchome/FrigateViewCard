@@ -168,11 +168,13 @@ export class PopupMediaLoaderController {
     const {
       infoController = host._popupInfoController,
       carouselController = host._popupCarouselController,
+      mediaControlsController = host._popupMediaControlsController,
       ...loaderDeps
     } = deps;
     this._host = host;
     this._infoController = infoController;
     this._carouselController = carouselController;
+    this._mediaControlsController = mediaControlsController;
     this._deps = {
       buildVideoOptionsForView,
       createVideoElement,
@@ -236,16 +238,12 @@ export class PopupMediaLoaderController {
       this._infoController?.render(infoEvent, infoOpts);
     }
     if (postRenderPlan.shouldInitPopupMediaControls) {
-      this._host._initPopupMediaControls(video, this._host._popupMediaType);
+      this._mediaControlsController?.initialize(
+        video,
+        this._host._popupMediaType,
+      );
     } else if (postRenderPlan.shouldResetControlsWithoutVideo) {
-      const controls = this._host._$("#popup-media-controls");
-      const controlsPlan = renderPlan.controlsPlan;
-      if (controls) {
-        controls.hidden = controlsPlan.controlsHidden;
-        if (controlsPlan.resetControlsHiddenClass) {
-          controls.classList.remove("is-hidden");
-        }
-      }
+      this._mediaControlsController?.resetWithoutVideo(renderPlan.controlsPlan);
     }
     if (postRenderPlan.shouldRenderCarousel) {
       this._carouselController?.render(
@@ -257,7 +255,7 @@ export class PopupMediaLoaderController {
       this._host._scheduleRotateOverlayUpdate();
     }
     if (postRenderPlan.shouldShowPopupControls) {
-      this._host._showPopupControlsTemporarily();
+      this._mediaControlsController?.showTemporarily();
     }
     this._host._preparePopupPlaybackTarget?.();
   }
@@ -535,7 +533,10 @@ export class PopupMediaLoaderController {
         token,
         sourceUrl: activeSource || video.currentSrc || video.src,
       });
-      this._host._initPopupMediaControls(video, renderPlan.popupMediaType);
+      this._mediaControlsController?.initialize(
+        video,
+        renderPlan.popupMediaType,
+      );
       this._host._initRecordingScrub({
         clientId: scrubInitPlan.clientId,
         cam: scrubInitPlan.cam,
@@ -553,7 +554,7 @@ export class PopupMediaLoaderController {
       );
     }
     if (outcomePlan.shouldShowPopupControls) {
-      this._host._showPopupControlsTemporarily();
+      this._mediaControlsController?.showTemporarily();
     }
     this._host._preparePopupPlaybackTarget?.();
     this._host._popupMediaCleanup = () => {

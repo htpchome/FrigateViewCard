@@ -1,4 +1,10 @@
-import { resolvePopupMediaSeekTarget } from "../../shared/media/controls.js";
+import { ICONS } from "../../icons.js";
+import {
+  buildPopupMediaControlState,
+  resolvePopupMediaControlsInitPlan,
+  resolvePopupMediaControlsListenerPlan,
+  resolvePopupMediaSeekTarget,
+} from "../../shared/media/controls.js";
 import { CleanupController } from "../../shared/cleanup.js";
 
 export class PopupMediaControlsController {
@@ -116,4 +122,185 @@ export class PopupMediaControlsController {
       this._onShowTemporarily?.();
     },
   };
+}
+
+export class PopupMediaControlsSurfaceController {
+  constructor({
+    query,
+    formatTime = () => "0:00",
+    shouldUseCustomControls = () => false,
+    isAutoHideActive = () => false,
+    icons = ICONS,
+    hideDelayMs = 2200,
+    setTimer = globalThis.setTimeout?.bind(globalThis),
+    clearTimer = globalThis.clearTimeout?.bind(globalThis),
+    createBinding = (options) => new PopupMediaControlsController(options),
+  } = {}) {
+    this._query = query;
+    this._formatTime = formatTime;
+    this._shouldUseCustomControls = shouldUseCustomControls;
+    this._isAutoHideActive = isAutoHideActive;
+    this._icons = icons;
+    this._hideDelayMs = Math.max(0, Number(hideDelayMs) || 0);
+    this._setTimer = setTimer;
+    this._clearTimer = clearTimer;
+    this._createBinding = createBinding;
+    this._binding = null;
+    this._video = null;
+    this._hideTimer = null;
+  }
+
+  video() {
+    return this._query?.("#viewer")?.querySelector?.("video") || null;
+  }
+
+  initialize(video, mediaType = "") {
+    this.dispose();
+    const controls = this._query?.("#popup-media-controls");
+    if (!controls || !video) return null;
+
+    this._video = video;
+    const controlsPlan = resolvePopupMediaControlsInitPlan({
+      shouldUseCustomControls: this._shouldUseCustomControls(mediaType),
+    });
+    video.controls = controlsPlan.videoControlsEnabled;
+    if (controlsPlan.removeVideoControlsAttribute) {
+      video.removeAttribute("controls");
+    }
+    if (controlsPlan.setVideoControlsAttribute) {
+      video.setAttribute("controls", "");
+    }
+    controls.hidden = controlsPlan.controlsHidden;
+    if (controlsPlan.resetControlsHiddenClass) {
+      controls.classList.remove("is-hidden");
+    }
+    if (!controlsPlan.shouldBindCustomControls) return controlsPlan;
+
+    const progress = this._query?.("#popup-media-progress");
+    this._binding = this._createBinding({
+      controls,
+      progress,
+      video,
+      listenerPlan: resolvePopupMediaControlsListenerPlan({
+        hasProgressControl: Boolean(progress),
+      }),
+      onShowNow: () => this.showNow(),
+      onShowTemporarily: () => this.showTemporarily(),
+      onSync: ({ progressDragging = false } = {}) =>
+        this.update(video, { updateProgress: !progressDragging }),
+    });
+    this._binding.bind();
+    return controlsPlan;
+  }
+
+  resetWithoutVideo(controlsPlan = null) {
+    this.dispose();
+    const controls = this._query?.("#popup-media-controls");
+    if (!controls) return;
+    const plan =
+      controlsPlan || resolvePopupMediaControlsInitPlan({ hasVideo: false });
+    controls.hidden = plan.controlsHidden;
+    if (plan.resetControlsHiddenClass) {
+      controls.classList.remove("is-hidden");
+    }
+  }
+
+  update(video = this.video(), { updateProgress = true } = {}) {
+    if (!video) return null;
+    const controlState = buildPopupMediaControlState({
+      duration: video.duration,
+      currentTime: video.currentTime,
+      paused: video.paused,
+      muted: video.muted,
+      formatTime: this._formatTime,
+    });
+    const playButton = this._query?.("#popup-media-play");
+    const muteButton = this._query?.("#popup-media-mute");
+    const progress = this._query?.("#popup-media-progress");
+    const time = this._query?.("#popup-media-time");
+    if (updateProgress && progress) progress.value = controlState.progressValue;
+    if (playButton) {
+      playButton.innerHTML = controlState.showPauseIcon
+        ? this._icons.pause
+        : this._icons.play;
+    }
+    if (muteButton) {
+      muteButton.innerHTML = controlState.showMutedIcon
+        ? this._icons.volOff
+        : this._icons.volOn;
+    }
+    if (time) time.textContent = controlState.timeText;
+    return controlState;
+  }
+
+  togglePlay() {
+    const video = this.video();
+    if (!video) return false;
+    if (video.paused) {
+      const playResult = video.play?.();
+      playResult?.catch?.(() => {});
+    } else {
+      video.pause?.();
+    }
+    this.showTemporarily();
+    this.update(video);
+    return true;
+  }
+
+  toggleMute() {
+    const video = this.video();
+    if (!video) return false;
+    video.muted = !video.muted;
+    this.showTemporarily();
+    this.update(video);
+    return true;
+  }
+
+  handleClick(target) {
+    if (target?.closest?.("#popup-media-play")) {
+      this.togglePlay();
+      return true;
+    }
+    if (target?.closest?.("#popup-media-mute")) {
+      this.toggleMute();
+      return true;
+    }
+    return false;
+  }
+
+  showNow() {
+    const controls = this._query?.("#popup-media-controls");
+    if (!controls || controls.hidden) return;
+    this._clearHideTimer();
+    controls.classList.remove("is-hidden");
+  }
+
+  showTemporarily() {
+    const controls = this._query?.("#popup-media-controls");
+    if (!controls || controls.hidden) return;
+    this.showNow();
+    if (!this._isAutoHideActive() || !this._setTimer) return;
+    this._hideTimer = this._setTimer(() => {
+      this._hideTimer = null;
+      const nextControls = this._query?.("#popup-media-controls");
+      if (nextControls && !nextControls.hidden) {
+        nextControls.classList.add("is-hidden");
+      }
+    }, this._hideDelayMs);
+  }
+
+  dispose() {
+    this._clearHideTimer();
+    this._binding?.dispose?.();
+    this._binding = null;
+    this._video = null;
+    this._query?.("#popup-media-controls")?.classList?.remove?.("is-hidden");
+  }
+
+  _clearHideTimer() {
+    if (this._hideTimer !== null && this._clearTimer) {
+      this._clearTimer(this._hideTimer);
+    }
+    this._hideTimer = null;
+  }
 }
