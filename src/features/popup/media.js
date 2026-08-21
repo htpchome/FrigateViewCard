@@ -70,6 +70,20 @@ export const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
   };
 };
 
+export const buildPopupCarouselSelectionPlan = ({
+  event = null,
+  mediaType = "",
+} = {}) => {
+  if (!event?.id) return null;
+  const type = String(mediaType || "").toLowerCase();
+  const useSnapshot =
+    type === "snapshot" || (!event.has_clip && event.has_snapshot);
+  return {
+    kind: useSnapshot ? "snapshot" : "clip",
+    mediaType: type || (useSnapshot ? "snapshot" : "clip"),
+  };
+};
+
 export const buildPopupRecordingRenderPlan = ({
   start = 0,
   end = 0,

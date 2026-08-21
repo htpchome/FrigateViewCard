@@ -7,6 +7,7 @@ test("popup carousel controller owns rendering, navigation, swipe, and cleanup",
   const classes = new Map();
   const cssValues = new Map();
   const calls = [];
+  const selections = [];
   const frames = [];
   const item = {
     getBoundingClientRect: () => ({ width: 140, height: 96 }),
@@ -18,6 +19,7 @@ test("popup carousel controller owns rendering, navigation, swipe, and cleanup",
     scrollWidth: 600,
     clientWidth: 300,
     onscroll: null,
+    onclick: null,
     querySelector: (selector) =>
       selector === ".popup-carousel-item.active" ? activeItem : item,
     scrollBy: (plan) => calls.push(["scrollBy", plan]),
@@ -78,6 +80,25 @@ test("popup carousel controller owns rendering, navigation, swipe, and cleanup",
         has_clip: true,
       },
     ],
+    getReviews: () => [
+      { start_time: 10, data: { detections: ["older"] } },
+      { start_time: 20, data: { detections: ["active"] } },
+    ],
+    findEventById: (id) =>
+      ({
+        older: {
+          id: "older",
+          label: "person",
+          start_time: 10,
+          has_clip: true,
+        },
+        active: {
+          id: "active",
+          label: "car",
+          start_time: 20,
+          has_clip: true,
+        },
+      })[id] || null,
     mediaUrl: (id, file) => `/media/${id}/${file}`,
     formatDateTime: (timestamp) => `date:${timestamp}`,
     formatTime: (timestamp) => `time:${timestamp}`,
@@ -86,9 +107,10 @@ test("popup carousel controller owns rendering, navigation, swipe, and cleanup",
     resizeObserverCtor: FakeResizeObserver,
     requestFrame: (callback) => frames.push(callback),
     createSwipeController: () => swipe,
+    onSelectEvent: (id, mediaType) => selections.push([id, mediaType]),
   });
 
-  const plan = controller.render("clip", "active");
+  const plan = controller.render("alert", "active");
 
   assert.equal(plan.shouldRender, true);
   assert.equal(wrap.hidden, false);
@@ -98,6 +120,7 @@ test("popup carousel controller owns rendering, navigation, swipe, and cleanup",
   assert.match(row.innerHTML, /class="popup-carousel-item active"/);
   assert.match(row.innerHTML, /\/media\/active\/thumbnail.jpg/);
   assert.equal(typeof row.onscroll, "function");
+  assert.equal(typeof row.onclick, "function");
   assert.equal(leftButton.hidden, true);
   assert.equal(rightButton.hidden, false);
   assert.equal(cssValues.get("--popup-carousel-item-height"), "96px");
@@ -114,10 +137,28 @@ test("popup carousel controller owns rendering, navigation, swipe, and cleanup",
     { left: 296, behavior: "smooth" },
   ]);
 
+  let stopped = false;
+  let prevented = false;
+  row.onclick({
+    target: {
+      closest: () => ({ dataset: { ev: "older" } }),
+    },
+    stopPropagation: () => {
+      stopped = true;
+    },
+    preventDefault: () => {
+      prevented = true;
+    },
+  });
+  assert.deepEqual(selections, [["older", "alert"]]);
+  assert.equal(stopped, true);
+  assert.equal(prevented, true);
+
   controller.clear();
   assert.equal(wrap.hidden, true);
   assert.equal(row.innerHTML, "");
   assert.equal(row.onscroll, null);
+  assert.equal(row.onclick, null);
   assert.equal(
     calls.some(([type]) => type === "resizeDisconnect"),
     true,

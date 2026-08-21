@@ -1,56 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  PopupMediaLoaderController,
-  PopupSnapshotFullscreenController,
-} from "../src/features/popup/media-loader.ctrl.js";
-
-class FakeSnapshotTarget {
-  constructor() {
-    this._listeners = new Map();
-  }
-
-  addEventListener(type, listener, options = {}) {
-    if (!this._listeners.has(type)) this._listeners.set(type, new Set());
-    this._listeners.get(type).add(listener);
-    options?.signal?.addEventListener?.(
-      "abort",
-      () => this._listeners.get(type)?.delete(listener),
-      { once: true },
-    );
-  }
-
-  dispatch(type, init = {}) {
-    const event = {
-      type,
-      pointerId: 0,
-      pointerType: "mouse",
-      clientX: 100,
-      clientY: 80,
-      defaultPrevented: false,
-      preventDefault() {
-        this.defaultPrevented = true;
-      },
-      ...init,
-    };
-    for (const listener of this._listeners.get(type) || []) listener(event);
-    return event;
-  }
-}
-
-const touchPoint = (pointerId, clientX = 100, clientY = 80) => ({
-  pointerId,
-  pointerType: "touch",
-  clientX,
-  clientY,
-});
-
-const dispatchTouchTap = (target, pointerId, clientX = 100, clientY = 80) => {
-  const point = touchPoint(pointerId, clientX, clientY);
-  target.dispatch("pointerdown", point);
-  return target.dispatch("pointerup", point);
-};
+import { PopupMediaLoaderController } from "../src/features/popup/media-loader.ctrl.js";
 
 test("showClipById routes clip loading through popup media rendering", () => {
   const host = {
@@ -184,60 +135,66 @@ test("popup media loader owns recording HLS cleanup", () => {
   assert.equal(controller._recordingHls, null);
 });
 
-test("snapshot fullscreen supports double click and touch double tap", () => {
-  const target = new FakeSnapshotTarget();
-  let nowMs = 1000;
-  let fullscreenRequests = 0;
-  const controller = new PopupSnapshotFullscreenController({
-    target,
-    now: () => nowMs,
-    onFullscreen: () => {
-      fullscreenRequests += 1;
-    },
-  }).bind();
+test("carousel selections preserve alert and snapshot popup media types", () => {
+  const event = {
+    id: "event-1",
+    has_clip: true,
+    has_snapshot: true,
+  };
+  const host = {
+    _findEventById: () => event,
+  };
+  const controller = new PopupMediaLoaderController(host);
+  const calls = [];
+  controller.showClip = (selectedEvent, opts) => {
+    calls.push(["clip", selectedEvent.id, opts.mediaType]);
+  };
+  controller.showSnapshot = (selectedEvent, opts) => {
+    calls.push(["snapshot", selectedEvent.id, opts.mediaType]);
+  };
 
-  const doubleClick = target.dispatch("dblclick");
-  assert.equal(doubleClick.defaultPrevented, true);
-  assert.equal(fullscreenRequests, 1);
-
-  nowMs = 2000;
-  dispatchTouchTap(target, 1);
-  nowMs = 2200;
-  const secondTap = dispatchTouchTap(target, 1);
-  assert.equal(secondTap.defaultPrevented, true);
-  assert.equal(fullscreenRequests, 2);
-
-  target.dispatch("dblclick");
-  assert.equal(fullscreenRequests, 2);
-
-  controller.dispose();
-  nowMs = 3000;
-  target.dispatch("dblclick");
-  assert.equal(fullscreenRequests, 2);
+  assert.equal(controller.showCarouselEventById("event-1", "alert"), true);
+  assert.equal(
+    controller.showCarouselEventById("event-1", "snapshot"),
+    true,
+  );
+  assert.deepEqual(calls, [
+    ["clip", "event-1", "alert"],
+    ["snapshot", "event-1", "snapshot"],
+  ]);
 });
 
-test("snapshot fullscreen ignores moved and distant touch pairs", () => {
-  const target = new FakeSnapshotTarget();
-  let nowMs = 1000;
-  let fullscreenRequests = 0;
-  new PopupSnapshotFullscreenController({
-    target,
-    now: () => nowMs,
-    onFullscreen: () => {
-      fullscreenRequests += 1;
+test("snapshot popup media attaches the shared zoom controller", () => {
+  const snapshot = { id: "snapshot-image" };
+  const body = { scrollTop: 12 };
+  const viewer = {
+    innerHTML: "",
+    querySelector: (selector) => {
+      if (selector === "video") return null;
+      if (selector === "img.snap") return snapshot;
+      return null;
     },
-  }).bind();
+  };
+  let zoomTarget = null;
+  const host = {
+    _$: (selector) => {
+      if (selector === "#viewer") return viewer;
+      if (selector === "#myPopup") {
+        return { querySelector: () => body };
+      }
+      return null;
+    },
+    _media: (id, file) => `/media/${id}/${file}`,
+    _attachPopupVideoZoom: (media) => {
+      zoomTarget = media;
+    },
+    _scheduleRotateOverlayUpdate: () => {},
+    _preparePopupPlaybackTarget: () => {},
+  };
+  const controller = new PopupMediaLoaderController(host);
 
-  dispatchTouchTap(target, 1, 20, 20);
-  nowMs = 1100;
-  dispatchTouchTap(target, 1, 100, 100);
-  assert.equal(fullscreenRequests, 0);
+  controller.showSnapshot({ id: "event-1" });
 
-  nowMs = 2000;
-  target.dispatch("pointerdown", touchPoint(2, 40, 40));
-  target.dispatch("pointermove", touchPoint(2, 60, 40));
-  target.dispatch("pointerup", touchPoint(2, 60, 40));
-  nowMs = 2100;
-  dispatchTouchTap(target, 2, 60, 40);
-  assert.equal(fullscreenRequests, 0);
+  assert.equal(zoomTarget, snapshot);
+  assert.equal(body.scrollTop, 0);
 });

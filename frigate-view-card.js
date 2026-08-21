@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1603";
+const VERSION = "1.0.1604";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11145,10 +11145,20 @@ const PopupCarouselController = class {
     formatTime = () => "",
     isTouchUi = () => false,
     isMobileDevice = () => false,
+    onSelectEvent = () => {
+    },
     resizeObserverCtor = globalThis.ResizeObserver,
     requestFrame = globalThis.requestAnimationFrame?.bind(globalThis) || ((callback) => globalThis.setTimeout(callback, 0)),
     createSwipeController = (options) => new PopupCarouselSwipeController(options)
   } = {}) {
+    __publicField(this, "_onItemClick", (event) => {
+      const item = event?.target?.closest?.(".popup-carousel-item[data-ev]");
+      const eventId = String(item?.dataset?.ev || "");
+      if (!eventId) return;
+      event.stopPropagation?.();
+      event.preventDefault?.();
+      this._onSelectEvent(eventId, this._mediaType);
+    });
     this._query = query;
     this._getKept = getKept;
     this._getReviews = getReviews;
@@ -11159,12 +11169,14 @@ const PopupCarouselController = class {
     this._formatTime = formatTime;
     this._isTouchUi = isTouchUi;
     this._isMobileDevice = isMobileDevice;
+    this._onSelectEvent = onSelectEvent;
     this._ResizeObserver = resizeObserverCtor;
     this._requestFrame = requestFrame;
     this._createSwipeController = createSwipeController;
     this._resizeObserver = null;
     this._swipeController = null;
     this._row = null;
+    this._mediaType = "";
     this._renderToken = 0;
   }
   render(mediaType, activeId = "") {
@@ -11174,6 +11186,7 @@ const PopupCarouselController = class {
     this.dispose();
     this._row = row;
     row.onscroll = null;
+    row.onclick = null;
     const contentPlan = buildPopupCarouselContentPlan({
       mediaType,
       events: this._events(mediaType),
@@ -11185,8 +11198,10 @@ const PopupCarouselController = class {
     if (contentPlan.shouldClear) row.innerHTML = "";
     wrap.hidden = contentPlan.hidden;
     if (!contentPlan.shouldRender) return contentPlan;
+    this._mediaType = String(mediaType || "").toLowerCase();
     row.innerHTML = contentPlan.html;
     row.scrollLeft = 0;
+    row.onclick = this._onItemClick;
     wrap.classList.toggle("touch", contentPlan.touch);
     wrap.classList.toggle("mobile-device", contentPlan.mobile);
     const syncNavigation = () => this.syncNavigation(row);
@@ -11228,8 +11243,12 @@ const PopupCarouselController = class {
     this._resizeObserver = null;
     this._swipeController?.dispose?.();
     this._swipeController = null;
-    if (this._row) this._row.onscroll = null;
+    if (this._row) {
+      this._row.onscroll = null;
+      this._row.onclick = null;
+    }
     this._row = null;
+    this._mediaType = "";
   }
   syncNavigation(row = this._query?.("#popup-carousel")) {
     if (!row) return;
@@ -17414,6 +17433,18 @@ const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
     infoOpts: { mediaType }
   };
 };
+const buildPopupCarouselSelectionPlan = ({
+  event = null,
+  mediaType = ""
+} = {}) => {
+  if (!event?.id) return null;
+  const type = String(mediaType || "").toLowerCase();
+  const useSnapshot = type === "snapshot" || !event.has_clip && event.has_snapshot;
+  return {
+    kind: useSnapshot ? "snapshot" : "clip",
+    mediaType: type || (useSnapshot ? "snapshot" : "clip")
+  };
+};
 const buildPopupRecordingRenderPlan = ({
   start = 0,
   end = 0,
@@ -17505,124 +17536,6 @@ const resolvePopupRecordingLoadOutcomePlan = ({
 };
 
 // src/features/popup/media-loader.ctrl.js
-const SNAPSHOT_DOUBLE_TAP_DELAY_MS = 320;
-const SNAPSHOT_DOUBLE_TAP_DISTANCE_PX = 28;
-const SNAPSHOT_MOVE_TOLERANCE_PX = 8;
-const TOUCH_DOUBLE_CLICK_SUPPRESSION_MS = 500;
-const snapshotPointerPoint = (event) => ({
-  pointerId: event.pointerId,
-  clientX: Number(event.clientX) || 0,
-  clientY: Number(event.clientY) || 0,
-  startX: Number(event.clientX) || 0,
-  startY: Number(event.clientY) || 0,
-  moved: false
-});
-const snapshotTapDistance = (first, second) => Math.hypot(
-  Number(second?.clientX || 0) - Number(first?.clientX || 0),
-  Number(second?.clientY || 0) - Number(first?.clientY || 0)
-);
-const PopupSnapshotFullscreenController = class {
-  constructor({ target, onFullscreen, now = () => Date.now() } = {}) {
-    __publicField(this, "_onDoubleClick", (event) => {
-      if (this._now() - this._lastTouchFullscreenAt < TOUCH_DOUBLE_CLICK_SUPPRESSION_MS) {
-        return;
-      }
-      this._requestFullscreen(event);
-    });
-    __publicField(this, "_onPointerDown", (event) => {
-      if (String(event.pointerType || "").toLowerCase() !== "touch") return;
-      this._pointers.set(event.pointerId, snapshotPointerPoint(event));
-      if (this._pointers.size <= 1) return;
-      this._lastTap = null;
-      this._pointers.forEach((point) => {
-        point.moved = true;
-      });
-    });
-    __publicField(this, "_onPointerMove", (event) => {
-      const point = this._pointers.get(event.pointerId);
-      if (!point) return;
-      point.clientX = Number(event.clientX) || 0;
-      point.clientY = Number(event.clientY) || 0;
-      if (Math.hypot(point.clientX - point.startX, point.clientY - point.startY) > SNAPSHOT_MOVE_TOLERANCE_PX) {
-        point.moved = true;
-      }
-    });
-    __publicField(this, "_onPointerUp", (event) => this._finishPointer(event));
-    __publicField(this, "_onPointerCancel", (event) => this._finishPointer(event, true));
-    this._target = target;
-    this._onFullscreen = onFullscreen;
-    this._now = now;
-    this._cleanup = new CleanupController();
-    this._pointers = new Map();
-    this._lastTap = null;
-    this._lastTouchFullscreenAt = 0;
-    this._bound = false;
-  }
-  bind() {
-    if (this._bound || !this._target) return this;
-    this._bound = true;
-    this._cleanup.addEventListener(
-      this._target,
-      "dblclick",
-      this._onDoubleClick
-    );
-    this._cleanup.addEventListener(
-      this._target,
-      "pointerdown",
-      this._onPointerDown
-    );
-    this._cleanup.addEventListener(
-      this._target,
-      "pointermove",
-      this._onPointerMove
-    );
-    this._cleanup.addEventListener(
-      this._target,
-      "pointerup",
-      this._onPointerUp,
-      { passive: false }
-    );
-    this._cleanup.addEventListener(
-      this._target,
-      "pointercancel",
-      this._onPointerCancel
-    );
-    return this;
-  }
-  dispose() {
-    if (!this._bound) return;
-    this._cleanup.dispose();
-    this._pointers.clear();
-    this._lastTap = null;
-    this._bound = false;
-  }
-  _requestFullscreen(event) {
-    event?.preventDefault?.();
-    this._onFullscreen?.();
-  }
-  _finishPointer(event, cancelled = false) {
-    const point = this._pointers.get(event.pointerId);
-    if (!point) return;
-    this._pointers.delete(event.pointerId);
-    if (cancelled || point.moved) {
-      this._lastTap = null;
-      return;
-    }
-    const now = this._now();
-    const currentTap = {
-      clientX: Number(event.clientX) || point.clientX,
-      clientY: Number(event.clientY) || point.clientY,
-      at: now
-    };
-    if (this._lastTap && now - this._lastTap.at <= SNAPSHOT_DOUBLE_TAP_DELAY_MS && snapshotTapDistance(this._lastTap, currentTap) <= SNAPSHOT_DOUBLE_TAP_DISTANCE_PX) {
-      this._lastTap = null;
-      this._lastTouchFullscreenAt = now;
-      this._requestFullscreen(event);
-      return;
-    }
-    this._lastTap = currentTap;
-  }
-};
 const PopupMediaLoaderController = class {
   constructor(host, deps = {}) {
     const {
@@ -17681,17 +17594,8 @@ const PopupMediaLoaderController = class {
     const body = this._host._$("#myPopup")?.querySelector(".popup-body");
     if (body) body.scrollTop = 0;
     const video = viewer.querySelector("video");
-    this._host._attachPopupVideoZoom?.(video);
     const snapshot = viewer.querySelector("img.snap");
-    if (snapshot) {
-      const snapshotFullscreenController = new PopupSnapshotFullscreenController({
-        target: snapshot,
-        onFullscreen: () => this._host._fullscreen(viewer)
-      }).bind();
-      this._lifecycleController?.setMediaCleanup(() => {
-        snapshotFullscreenController.dispose();
-      });
-    }
+    this._host._attachPopupVideoZoom?.(video || snapshot);
     const postRenderPlan = resolvePopupMediaPostRenderPlan({
       popupMediaType: renderPlan.popupMediaType,
       activeId: playingId || "",
@@ -17789,6 +17693,21 @@ const PopupMediaLoaderController = class {
       infoEvent: renderPlan.infoEvent,
       infoOpts: renderPlan.infoOpts
     });
+  }
+  showCarouselEventById(id, mediaType = "") {
+    if (!id) return false;
+    const event = this._host._findEventById(id);
+    const selectionPlan = buildPopupCarouselSelectionPlan({
+      event,
+      mediaType
+    });
+    if (!selectionPlan) return false;
+    if (selectionPlan.kind === "snapshot") {
+      this.showSnapshot(event, { mediaType: selectionPlan.mediaType });
+    } else {
+      this.showClip(event, { mediaType: selectionPlan.mediaType });
+    }
+    return true;
   }
   async tryRecordingSource(video, src, { autoplay = true, timeoutMs = 9e3 } = {}) {
     if (!video || !src) return false;
@@ -20713,7 +20632,11 @@ const FrigateViewCard = class extends HTMLElement {
       formatDateTime: (timestamp) => this._dateTimeLabel(timestamp),
       formatTime: (timestamp) => this._time(timestamp),
       isTouchUi: () => this._isTouchPopupUi(),
-      isMobileDevice: () => this._isLikelyMobileClient()
+      isMobileDevice: () => this._isLikelyMobileClient(),
+      onSelectEvent: (id, mediaType) => this._popupMediaLoaderController?.showCarouselEventById(
+        id,
+        mediaType
+      )
     });
     this._popupMediaControlsController = new PopupMediaControlsSurfaceController({
       query: (selector) => this._$(selector),

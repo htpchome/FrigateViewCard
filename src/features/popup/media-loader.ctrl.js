@@ -1,4 +1,3 @@
-import { CleanupController } from "../../shared/cleanup.js";
 import {
   buildVideoOptionsForView,
   createVideoElement,
@@ -8,6 +7,7 @@ import { buildPopupMediaUrl } from "../../shared/media/url-utils.js";
 import { isIOS } from "../../helpers.js";
 import {
   buildPopupClipRenderPlan,
+  buildPopupCarouselSelectionPlan,
   buildPopupRecordingRenderPlan,
   buildPopupRecordingScrubInitPlan,
   buildPopupRecordingSourceAttemptPlan,
@@ -18,150 +18,6 @@ import {
   resolvePopupRecordingSeekListenerPlan,
 } from "./media.js";
 import { buildRecordingPlaybackPlan } from "../recordings/index.js";
-
-const SNAPSHOT_DOUBLE_TAP_DELAY_MS = 320;
-const SNAPSHOT_DOUBLE_TAP_DISTANCE_PX = 28;
-const SNAPSHOT_MOVE_TOLERANCE_PX = 8;
-const TOUCH_DOUBLE_CLICK_SUPPRESSION_MS = 500;
-
-const snapshotPointerPoint = (event) => ({
-  pointerId: event.pointerId,
-  clientX: Number(event.clientX) || 0,
-  clientY: Number(event.clientY) || 0,
-  startX: Number(event.clientX) || 0,
-  startY: Number(event.clientY) || 0,
-  moved: false,
-});
-
-const snapshotTapDistance = (first, second) =>
-  Math.hypot(
-    Number(second?.clientX || 0) - Number(first?.clientX || 0),
-    Number(second?.clientY || 0) - Number(first?.clientY || 0),
-  );
-
-export class PopupSnapshotFullscreenController {
-  constructor({ target, onFullscreen, now = () => Date.now() } = {}) {
-    this._target = target;
-    this._onFullscreen = onFullscreen;
-    this._now = now;
-    this._cleanup = new CleanupController();
-    this._pointers = new Map();
-    this._lastTap = null;
-    this._lastTouchFullscreenAt = 0;
-    this._bound = false;
-  }
-
-  bind() {
-    if (this._bound || !this._target) return this;
-    this._bound = true;
-    this._cleanup.addEventListener(
-      this._target,
-      "dblclick",
-      this._onDoubleClick,
-    );
-    this._cleanup.addEventListener(
-      this._target,
-      "pointerdown",
-      this._onPointerDown,
-    );
-    this._cleanup.addEventListener(
-      this._target,
-      "pointermove",
-      this._onPointerMove,
-    );
-    this._cleanup.addEventListener(
-      this._target,
-      "pointerup",
-      this._onPointerUp,
-      { passive: false },
-    );
-    this._cleanup.addEventListener(
-      this._target,
-      "pointercancel",
-      this._onPointerCancel,
-    );
-    return this;
-  }
-
-  dispose() {
-    if (!this._bound) return;
-    this._cleanup.dispose();
-    this._pointers.clear();
-    this._lastTap = null;
-    this._bound = false;
-  }
-
-  _requestFullscreen(event) {
-    event?.preventDefault?.();
-    this._onFullscreen?.();
-  }
-
-  _onDoubleClick = (event) => {
-    if (
-      this._now() - this._lastTouchFullscreenAt <
-      TOUCH_DOUBLE_CLICK_SUPPRESSION_MS
-    ) {
-      return;
-    }
-    this._requestFullscreen(event);
-  };
-
-  _onPointerDown = (event) => {
-    if (String(event.pointerType || "").toLowerCase() !== "touch") return;
-    this._pointers.set(event.pointerId, snapshotPointerPoint(event));
-    if (this._pointers.size <= 1) return;
-    this._lastTap = null;
-    this._pointers.forEach((point) => {
-      point.moved = true;
-    });
-  };
-
-  _onPointerMove = (event) => {
-    const point = this._pointers.get(event.pointerId);
-    if (!point) return;
-    point.clientX = Number(event.clientX) || 0;
-    point.clientY = Number(event.clientY) || 0;
-    if (
-      Math.hypot(point.clientX - point.startX, point.clientY - point.startY) >
-      SNAPSHOT_MOVE_TOLERANCE_PX
-    ) {
-      point.moved = true;
-    }
-  };
-
-  _finishPointer(event, cancelled = false) {
-    const point = this._pointers.get(event.pointerId);
-    if (!point) return;
-    this._pointers.delete(event.pointerId);
-    if (cancelled || point.moved) {
-      this._lastTap = null;
-      return;
-    }
-
-    const now = this._now();
-    const currentTap = {
-      clientX: Number(event.clientX) || point.clientX,
-      clientY: Number(event.clientY) || point.clientY,
-      at: now,
-    };
-    if (
-      this._lastTap &&
-      now - this._lastTap.at <= SNAPSHOT_DOUBLE_TAP_DELAY_MS &&
-      snapshotTapDistance(this._lastTap, currentTap) <=
-        SNAPSHOT_DOUBLE_TAP_DISTANCE_PX
-    ) {
-      this._lastTap = null;
-      this._lastTouchFullscreenAt = now;
-      this._requestFullscreen(event);
-      return;
-    }
-    this._lastTap = currentTap;
-  }
-
-  _onPointerUp = (event) => this._finishPointer(event);
-
-  _onPointerCancel = (event) => this._finishPointer(event, true);
-}
 
 export class PopupMediaLoaderController {
   constructor(host, deps = {}) {
@@ -224,18 +80,8 @@ export class PopupMediaLoaderController {
     const body = this._host._$("#myPopup")?.querySelector(".popup-body");
     if (body) body.scrollTop = 0;
     const video = viewer.querySelector("video");
-    this._host._attachPopupVideoZoom?.(video);
     const snapshot = viewer.querySelector("img.snap");
-    if (snapshot) {
-      const snapshotFullscreenController =
-        new PopupSnapshotFullscreenController({
-          target: snapshot,
-          onFullscreen: () => this._host._fullscreen(viewer),
-        }).bind();
-      this._lifecycleController?.setMediaCleanup(() => {
-        snapshotFullscreenController.dispose();
-      });
-    }
+    this._host._attachPopupVideoZoom?.(video || snapshot);
     const postRenderPlan = resolvePopupMediaPostRenderPlan({
       popupMediaType: renderPlan.popupMediaType,
       activeId: playingId || "",
@@ -338,6 +184,22 @@ export class PopupMediaLoaderController {
       infoEvent: renderPlan.infoEvent,
       infoOpts: renderPlan.infoOpts,
     });
+  }
+
+  showCarouselEventById(id, mediaType = "") {
+    if (!id) return false;
+    const event = this._host._findEventById(id);
+    const selectionPlan = buildPopupCarouselSelectionPlan({
+      event,
+      mediaType,
+    });
+    if (!selectionPlan) return false;
+    if (selectionPlan.kind === "snapshot") {
+      this.showSnapshot(event, { mediaType: selectionPlan.mediaType });
+    } else {
+      this.showClip(event, { mediaType: selectionPlan.mediaType });
+    }
+    return true;
   }
 
   async tryRecordingSource(

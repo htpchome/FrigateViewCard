@@ -19,7 +19,7 @@ const previewPageSource = fs.readFileSync(
   "utf8",
 );
 
-test("video zoom is attached through committed main-live and popup lifecycles", () => {
+test("media zoom is attached through committed main-live and popup lifecycles", () => {
   assert.equal(
     cardSource.includes(
       'import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";',
@@ -33,7 +33,9 @@ test("video zoom is attached through committed main-live and popup lifecycles", 
     true,
   );
   assert.equal(
-    popupLoaderSource.includes("this._host._attachPopupVideoZoom?.(video);"),
+    popupLoaderSource.includes(
+      "this._host._attachPopupVideoZoom?.(video || snapshot);",
+    ),
     true,
   );
 });

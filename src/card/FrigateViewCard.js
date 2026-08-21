@@ -660,6 +660,11 @@ export class FrigateViewCard extends HTMLElement {
       formatTime: (timestamp) => this._time(timestamp),
       isTouchUi: () => this._isTouchPopupUi(),
       isMobileDevice: () => this._isLikelyMobileClient(),
+      onSelectEvent: (id, mediaType) =>
+        this._popupMediaLoaderController?.showCarouselEventById(
+          id,
+          mediaType,
+        ),
     });
     this._popupMediaControlsController =
       new PopupMediaControlsSurfaceController({

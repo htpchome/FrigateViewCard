@@ -22,6 +22,7 @@ export class PopupCarouselController {
     formatTime = () => "",
     isTouchUi = () => false,
     isMobileDevice = () => false,
+    onSelectEvent = () => {},
     resizeObserverCtor = globalThis.ResizeObserver,
     requestFrame = globalThis.requestAnimationFrame?.bind(globalThis) ||
       ((callback) => globalThis.setTimeout(callback, 0)),
@@ -38,12 +39,14 @@ export class PopupCarouselController {
     this._formatTime = formatTime;
     this._isTouchUi = isTouchUi;
     this._isMobileDevice = isMobileDevice;
+    this._onSelectEvent = onSelectEvent;
     this._ResizeObserver = resizeObserverCtor;
     this._requestFrame = requestFrame;
     this._createSwipeController = createSwipeController;
     this._resizeObserver = null;
     this._swipeController = null;
     this._row = null;
+    this._mediaType = "";
     this._renderToken = 0;
   }
 
@@ -55,6 +58,7 @@ export class PopupCarouselController {
     this.dispose();
     this._row = row;
     row.onscroll = null;
+    row.onclick = null;
     const contentPlan = buildPopupCarouselContentPlan({
       mediaType,
       events: this._events(mediaType),
@@ -68,8 +72,10 @@ export class PopupCarouselController {
     wrap.hidden = contentPlan.hidden;
     if (!contentPlan.shouldRender) return contentPlan;
 
+    this._mediaType = String(mediaType || "").toLowerCase();
     row.innerHTML = contentPlan.html;
     row.scrollLeft = 0;
+    row.onclick = this._onItemClick;
     wrap.classList.toggle("touch", contentPlan.touch);
     wrap.classList.toggle("mobile-device", contentPlan.mobile);
     const syncNavigation = () => this.syncNavigation(row);
@@ -113,8 +119,12 @@ export class PopupCarouselController {
     this._resizeObserver = null;
     this._swipeController?.dispose?.();
     this._swipeController = null;
-    if (this._row) this._row.onscroll = null;
+    if (this._row) {
+      this._row.onscroll = null;
+      this._row.onclick = null;
+    }
     this._row = null;
+    this._mediaType = "";
   }
 
   syncNavigation(row = this._query?.("#popup-carousel")) {
@@ -176,4 +186,13 @@ export class PopupCarouselController {
       dir,
     });
   }
+
+  _onItemClick = (event) => {
+    const item = event?.target?.closest?.(".popup-carousel-item[data-ev]");
+    const eventId = String(item?.dataset?.ev || "");
+    if (!eventId) return;
+    event.stopPropagation?.();
+    event.preventDefault?.();
+    this._onSelectEvent(eventId, this._mediaType);
+  };
 }
