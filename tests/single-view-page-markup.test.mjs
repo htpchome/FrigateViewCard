@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildSingleViewCamSwitcherMarkup,
-  resolveSingleViewEventsCountText,
+  resolveSingleViewAlertsCountText,
   resolveSingleViewOnlineLabel,
   resolveSingleViewStatusColor,
   resolveSingleViewStreamTypeText,
@@ -48,7 +48,7 @@ test("single view text resolvers preserve standard display values", () => {
   assert.equal(resolveSingleViewSubtitleText({}), "Frigate");
   assert.equal(resolveSingleViewStreamTypeText("webrtc"), "webrtc");
   assert.equal(resolveSingleViewStreamTypeText(""), "--");
-  assert.equal(resolveSingleViewEventsCountText(12), "12");
+  assert.equal(resolveSingleViewAlertsCountText(12), "12");
   assert.equal(resolveSingleViewOnlineLabel(true), "Online");
   assert.equal(resolveSingleViewOnlineLabel(false), "Offline");
   assert.equal(resolveSingleViewStatusColor(true), "#4ade80");

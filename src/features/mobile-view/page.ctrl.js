@@ -5,7 +5,7 @@ import { ICONS } from "../../icons.js";
 import {
   applyMobileViewPageMarkup,
   buildMobileViewCamSwitcherMarkup,
-  resolveMobileViewEventsCountText,
+  resolveMobileViewAlertsCountText,
   resolveMobileViewOnlineLabel,
   resolveMobileViewStatusColor,
   resolveMobileViewStreamTypeText,
@@ -99,13 +99,15 @@ export class MobileViewPageController {
   }
 
   renderStats() {
-    const eventCount = this._host._pageShellRegionElement(
+    const alertCount = this._host._pageShellRegionElement(
       "information",
-      "#ev-count",
+      "#alert-count",
     );
-    if (eventCount) {
-      eventCount.textContent = resolveMobileViewEventsCountText(
-        this._host._allDisplayEvents().length,
+    if (alertCount) {
+      alertCount.textContent = resolveMobileViewAlertsCountText(
+        this._host._browseWindowLoaderController?.cameraAlertsCount?.(
+          this._host._activeCam?.entity || "",
+        ) ?? 0,
       );
     }
     const streamType = this._host._pageShellRegionElement(

@@ -12,13 +12,13 @@ export function buildWideCompanionMetaMarkup({
   name,
   online,
   sourceLabel,
-  eventsCount,
+  alertsCount,
 }) {
   return `<div class="preview-meta wide-companion-meta">
             <div class="preview-meta-name wide-companion-meta-name">${name}</div>
             <div class="preview-meta-status wide-companion-meta-status">${buildWideCompanionStatusMarkup(online)}</div>
             <div class="preview-meta-source wide-companion-meta-source">Stream Source: ${sourceLabel}</div>
-            <div class="preview-meta-events wide-companion-meta-events">Events: ${eventsCount}</div>
+            <div class="preview-meta-alerts wide-companion-meta-alerts">Alerts: ${alertsCount}</div>
           </div>`;
 }
 

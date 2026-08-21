@@ -66,8 +66,8 @@ export function resolveSingleViewStreamTypeText(streamType) {
   return streamType || "--";
 }
 
-export function resolveSingleViewEventsCountText(eventsCount) {
-  return String(eventsCount);
+export function resolveSingleViewAlertsCountText(alertsCount) {
+  return String(alertsCount);
 }
 
 export function resolveSingleViewStatusColor(online) {

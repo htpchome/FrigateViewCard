@@ -95,7 +95,7 @@ export function buildMobileViewInfoRowMarkup({
   title,
   subtitle,
   version,
-  eventsCount = "—",
+  alertsCount = "—",
 }) {
   return `<div class="info-row mobile-view-info-row" data-fvc-region="information">
               <div>
@@ -108,8 +108,8 @@ export function buildMobileViewInfoRowMarkup({
                   <div class="sl">Version</div>
                 </div>
                 <div class="stat">
-                  <div class="sv" id="ev-count">${resolveMobileViewEventsCountText(eventsCount)}</div>
-                  <div class="sl">Events</div>
+                  <div class="sv" id="alert-count">${resolveMobileViewAlertsCountText(alertsCount)}</div>
+                  <div class="sl">Alerts</div>
                 </div>
               </div>
             </div>`;
@@ -232,8 +232,8 @@ export function resolveMobileViewStreamTypeText(streamType) {
   return streamType || "--";
 }
 
-export function resolveMobileViewEventsCountText(eventsCount) {
-  return String(eventsCount);
+export function resolveMobileViewAlertsCountText(alertsCount) {
+  return String(alertsCount);
 }
 
 export function resolveMobileViewStatusColor(online) {

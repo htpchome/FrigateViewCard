@@ -133,9 +133,11 @@ export class WideViewCompanionAlertController {
           before,
           limit: 5,
         }),
-      onReviewsFetched: ({ cache, reviews }) => {
-        cache.reviews = reviews;
-      },
+      onReviewsFetched: ({ entity, reviews }) =>
+        this._host._browseWindowLoaderController?.mergeLatestCameraReviews?.(
+          entity,
+          reviews,
+        ),
       buildCandidate: ({ entity, reviews }) =>
         findFirstReviewCandidateForEntity({
           reviews,

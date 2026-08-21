@@ -85,6 +85,61 @@ export class BrowseWindowLoaderController {
     }
   }
 
+  async warmVisibleCameraReviews() {
+    const previewActive = this._host._isPreviewPageActive?.() === true;
+    const allCameraCountsVisible =
+      previewActive ||
+      this._host._wideViewCompanionController?.isActive?.() === true;
+    if (!allCameraCountsVisible) return;
+
+    const token = (Number(this._host._warmReviewsToken) || 0) + 1;
+    this._host._warmReviewsToken = token;
+    const before = this._host._winEnd;
+    const dayCount = this._host._config?.alerts_reviews_days || 3;
+
+    for (const camera of this._host._config?.cameras || []) {
+      const entity = camera?.entity || "";
+      if (entity === this._host._activeCam?.entity && !previewActive) continue;
+      const cache = entity ? this._host._camCache[entity] : null;
+      if (!cache?.clientId || !cache?.cam) continue;
+      const contentMode = this._reviewContentMode(camera?.alerts_content);
+      const cacheKey = this.reviewWindowCacheKeyForContent(
+        cache.clientId,
+        cache.cam,
+        before,
+        contentMode,
+      );
+      if (cache.reviewsWindowKey === cacheKey) continue;
+
+      try {
+        const resolved = await this.fetchRecentActiveDayReviews(
+          cache.clientId,
+          cache.cam,
+          before,
+          dayCount,
+          {
+            debugLabel: "camera-alert-count",
+            itemFilter:
+              contentMode === "all_reviews"
+                ? null
+                : reviewMatchesAlertsOnlyMode,
+          },
+        );
+        if (token !== this._host._warmReviewsToken) return;
+        const reviews = Array.isArray(resolved?.items) ? resolved.items : [];
+        this.cacheCameraWindowReviews(
+          entity,
+          cache.clientId,
+          cache.cam,
+          before,
+          reviews,
+          contentMode,
+        );
+        this._notifyCameraAlertsChanged(entity);
+      } catch (_) {}
+    }
+  }
+
   scheduleWarmOtherCamerasEvents(delayMs = 1000) {
     if (this._host._warmOtherCamsDelayT) {
       clearTimeout(this._host._warmOtherCamsDelayT);
@@ -94,6 +149,7 @@ export class BrowseWindowLoaderController {
         this._host._warmOtherCamsDelayT = null;
         if (!this._host.isConnected) return;
         void this.warmOtherCamerasEvents();
+        void this.warmVisibleCameraReviews();
       },
       Math.max(0, Number(delayMs) || 0),
     );
@@ -101,6 +157,8 @@ export class BrowseWindowLoaderController {
 
   pruneNonActiveCamWindowCaches() {
     this._host._warmCamsToken++;
+    this._host._warmReviewsToken =
+      (Number(this._host._warmReviewsToken) || 0) + 1;
     const activeEntity = this._host._activeCam?.entity;
     for (const camera of this._host._config.cameras) {
       const entity = camera.entity;
@@ -303,8 +361,8 @@ export class BrowseWindowLoaderController {
     }
     const after = this._host._winStart;
     const before = this._host._winEnd;
-    // Alerts is the default tab. Start its review request first so its first
-    // paint is not blocked behind the broader event collection used by Clips.
+    // Reviews feed both the Alerts list and camera count. Start them before the
+    // broader event collection used by Clips.
     const reviewsTask = this.loadWindowReviewsIfNeeded(
       clientId,
       cam,
@@ -385,11 +443,21 @@ export class BrowseWindowLoaderController {
   }
 
   reviewWindowCacheKey(clientId, cam, before) {
+    return this.reviewWindowCacheKeyForContent(
+      clientId,
+      cam,
+      before,
+      this._host._activeCam?.alerts_content,
+    );
+  }
+
+  _reviewContentMode(value) {
+    return value === "all_reviews" ? "all_reviews" : "alerts_only";
+  }
+
+  reviewWindowCacheKeyForContent(clientId, cam, before, alertsContent) {
     const days = this._host._config?.alerts_reviews_days || 3;
-    const contentMode =
-      this._host._activeCam?.alerts_content === "all_reviews"
-        ? "all_reviews"
-        : "alerts_only";
+    const contentMode = this._reviewContentMode(alertsContent);
     return `${clientId}|${cam}|${Math.floor(before)}|${days}|${contentMode}`;
   }
 
@@ -405,10 +473,73 @@ export class BrowseWindowLoaderController {
 
   cacheWindowReviews(clientId, cam, before, reviews) {
     const entity = this._host._activeCam?.entity;
+    this.cacheCameraWindowReviews(
+      entity,
+      clientId,
+      cam,
+      before,
+      reviews,
+      this._host._activeCam?.alerts_content,
+    );
+  }
+
+  cacheCameraWindowReviews(
+    entity,
+    clientId,
+    cam,
+    before,
+    reviews,
+    alertsContent,
+  ) {
     const cache = entity ? this._host._camCache[entity] : null;
     if (!cache) return;
-    cache.reviews = reviews;
-    cache.reviewsWindowKey = this.reviewWindowCacheKey(clientId, cam, before);
+    cache.reviews = Array.isArray(reviews) ? reviews : [];
+    cache.reviewsWindowKey = this.reviewWindowCacheKeyForContent(
+      clientId,
+      cam,
+      before,
+      alertsContent,
+    );
+  }
+
+  cameraAlertsCount(entity) {
+    const reviews = this._host._camCache?.[entity]?.reviews;
+    return Array.isArray(reviews) ? reviews.length : 0;
+  }
+
+  mergeLatestCameraReviews(entity, reviews) {
+    const cache = entity ? this._host._camCache?.[entity] : null;
+    if (!cache?.reviewsWindowKey || !Array.isArray(reviews)) return false;
+    if (this._host._followNowWindow === false) return false;
+    const camera = (this._host._config?.cameras || []).find(
+      (candidate) => candidate?.entity === entity,
+    );
+    const contentMode = this._reviewContentMode(camera?.alerts_content);
+    const eligible =
+      contentMode === "all_reviews"
+        ? reviews
+        : reviews.filter((review) => reviewMatchesAlertsOnlyMode(review));
+    const byId = new Map();
+    for (const review of [...(cache.reviews || []), ...eligible]) {
+      const id = String(review?.id || "").trim();
+      if (id) byId.set(id, review);
+    }
+    const merged = this._filterToRecentDaysWithData(
+      [...byId.values()],
+      this._host._config?.alerts_reviews_days || 3,
+    );
+    if (this._sameWindowItems(cache.reviews, merged)) return false;
+    cache.reviews = merged;
+    this._notifyCameraAlertsChanged(entity);
+    return true;
+  }
+
+  _notifyCameraAlertsChanged(entity) {
+    this._host._previewPageController?.updatePreviewMeta?.();
+    this._host._wideViewCompanionController?.updateMeta?.();
+    if (entity === this._host._activeCam?.entity) {
+      this._host._renderStats?.();
+    }
   }
 
   _windowContextMatches(clientId, cam, before) {
@@ -451,12 +582,15 @@ export class BrowseWindowLoaderController {
     const changed = !this._sameWindowItems(this._host._reviews, nextReviews);
     this._host._reviews = nextReviews;
     this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
+    this._notifyCameraAlertsChanged(this._host._activeCam?.entity || "");
     if (changed) this._host._renderList();
-    this._host._slideshowAlertController.handleReviewsUpdated(
-      this._host._activeCam?.entity || "",
-      this._host._reviews,
-      "alerts-window",
-    );
+    if (this._host._tab === "alerts") {
+      this._host._slideshowAlertController.handleReviewsUpdated(
+        this._host._activeCam?.entity || "",
+        this._host._reviews,
+        "alerts-window",
+      );
+    }
     return true;
   }
 
@@ -702,7 +836,6 @@ export class BrowseWindowLoaderController {
   }
 
   async loadWindowReviewsIfNeeded(clientId, cam, _after, before) {
-    if (this._host._tab !== "alerts") return;
     const loadToken = (Number(this._host._reviewsLoadToken) || 0) + 1;
     this._host._reviewsLoadToken = loadToken;
     try {

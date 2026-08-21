@@ -3,7 +3,7 @@ import { activateStandardPageRouteLifecycle } from "../navigation/route-lifecycl
 import { cap, camDisplayName } from "../../helpers.js";
 import {
   buildSingleViewCamSwitcherMarkup,
-  resolveSingleViewEventsCountText,
+  resolveSingleViewAlertsCountText,
   resolveSingleViewOnlineLabel,
   resolveSingleViewStatusColor,
   resolveSingleViewStreamTypeText,
@@ -85,13 +85,15 @@ export class SingleViewPageController {
   }
 
   renderStats() {
-    const eventCount = this._host._pageShellRegionElement(
+    const alertCount = this._host._pageShellRegionElement(
       "information",
-      "#ev-count",
+      "#alert-count",
     );
-    if (eventCount) {
-      eventCount.textContent = resolveSingleViewEventsCountText(
-        this._host._allDisplayEvents().length,
+    if (alertCount) {
+      alertCount.textContent = resolveSingleViewAlertsCountText(
+        this._host._browseWindowLoaderController?.cameraAlertsCount?.(
+          this._host._activeCam?.entity || "",
+        ) ?? 0,
       );
     }
     const streamType = this._host._pageShellRegionElement(

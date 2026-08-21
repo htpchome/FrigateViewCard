@@ -69,6 +69,8 @@ const createHost = ({
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
     _browseWindowLoaderController: {
       loadWindow: (replace) => calls.push(["loadWindow", replace]),
+      cameraAlertsCount: (entity) =>
+        host._camCache[entity]?.reviews?.length || 0,
     },
     _scheduleResumeLive: (reason) => calls.push(["scheduleResumeLive", reason]),
     _previewAlertController: {
@@ -93,8 +95,8 @@ test("preview helpers derive values from host state", () => {
   assert.equal(controller.previewShowTitleBarsEnabled(), false);
   assert.equal(controller.previewCellSeverity("camera.front_door"), "alert");
   assert.equal(controller.previewShouldUseLive("camera.front_door"), true);
-  assert.equal(controller.previewEventsCount("camera.front_door"), 3);
-  assert.equal(controller.previewEventsCount("camera.driveway"), 2);
+  assert.equal(controller.previewAlertsCount("camera.front_door"), 1);
+  assert.equal(controller.previewAlertsCount("camera.driveway"), 2);
 });
 
 test("preview page active state derives from config and current page id", () => {

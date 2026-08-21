@@ -44,6 +44,9 @@ const createHost = ({ popupOpen = false, domNodes = {} } = {}) => {
     _winEnd: 1722470400,
     _isMobilePhoneViewport: () => true,
     _allDisplayEvents: () => [{ id: 1 }, { id: 2 }],
+    _browseWindowLoaderController: {
+      cameraAlertsCount: () => 2,
+    },
     _labels: () => ["person", "car"],
     _browseFilterController: {
       filtered: () => [],
@@ -151,7 +154,7 @@ test("syncMobileViewPageMarkup toggles class off when route is not mobile", () =
 test("mobile-view render helpers update subtitle and stats", () => {
   const nodes = {
     "#tl-range": createNode(),
-    "#ev-count": createNode(),
+    "#alert-count": createNode(),
     "#stream-type": createNode(),
   };
   const { host } = createHost({ domNodes: nodes });
@@ -161,7 +164,7 @@ test("mobile-view render helpers update subtitle and stats", () => {
   controller.renderStats();
 
   assert.equal(nodes["#tl-range"].textContent, "Mobile Feed");
-  assert.equal(nodes["#ev-count"].textContent, "2");
+  assert.equal(nodes["#alert-count"].textContent, "2");
   assert.equal(nodes["#stream-type"].textContent, "webrtc");
 });
 
@@ -366,7 +369,7 @@ test("mobile page and browse updates never access or replace the live region", (
   const nodes = {
     "#on-dot": createNode(),
     "#info-title": createNode(),
-    "#ev-count": createNode(),
+    "#alert-count": createNode(),
     "#stream-type": createNode(),
     "#tl-range": createNode(),
     "#list": createNode(),

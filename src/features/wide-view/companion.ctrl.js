@@ -133,13 +133,13 @@ export class WideViewCompanionController {
     return this._alertController.cellSeverity(entity);
   }
 
-  eventsCount(entity) {
-    const cache = this._host._camCache[entity];
-    const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
-    const reviewsCount = Array.isArray(cache?.reviews)
-      ? cache.reviews.length
-      : 0;
-    return eventsCount + reviewsCount;
+  alertsCount(entity) {
+    return (
+      this._host._browseWindowLoaderController?.cameraAlertsCount?.(entity) ??
+      (Array.isArray(this._host._camCache?.[entity]?.reviews)
+        ? this._host._camCache[entity].reviews.length
+        : 0)
+    );
   }
 
   liveStreamHint() {
@@ -269,7 +269,7 @@ export class WideViewCompanionController {
             name: cap(camDisplayName(camera)),
             online,
             sourceLabel: this.streamSourceLabel(entity, useLive),
-            eventsCount: this.eventsCount(entity),
+            alertsCount: this.alertsCount(entity),
           }),
         });
       })
@@ -307,9 +307,9 @@ export class WideViewCompanionController {
         if (source) {
           source.textContent = `Stream Source: ${this.streamSourceLabel(entity, useLive)}`;
         }
-        const events = cell.querySelector?.(".wide-companion-meta-events");
-        if (events) {
-          events.textContent = `Events: ${this.eventsCount(entity)}`;
+        const alerts = cell.querySelector?.(".wide-companion-meta-alerts");
+        if (alerts) {
+          alerts.textContent = `Alerts: ${this.alertsCount(entity)}`;
         }
       });
   }

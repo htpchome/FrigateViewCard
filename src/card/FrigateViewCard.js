@@ -721,6 +721,7 @@ export class FrigateViewCard extends HTMLElement {
     this._eventsLoadToken = 0;
     this._reviewsLoadToken = 0;
     this._warmCamsToken = 0;
+    this._warmReviewsToken = 0;
     this._warmOtherCamsDelayT = null;
     this._reloadPending = false;
     this._reloadAfterLoad = false;

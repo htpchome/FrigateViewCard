@@ -52,6 +52,9 @@ const createHost = ({
       },
     },
     _allDisplayEvents: () => [{ id: 1 }, { id: 2 }],
+    _browseWindowLoaderController: {
+      cameraAlertsCount: () => 2,
+    },
     _labels: () => ["person", "car"],
     _weekday: () => "Wed",
     _monthDay: () => "Jul 31st",
@@ -658,7 +661,7 @@ test("applyConfigUpdateRouteFlow handles non-preview tail branch", () => {
 test("single-view render helpers update subtitle and stats through the controller", () => {
   const nodes = {
     "#tl-range": createNode(),
-    "#ev-count": createNode(),
+    "#alert-count": createNode(),
     "#stream-type": createNode(),
   };
   const { host } = createHost({ domNodes: nodes });
@@ -668,7 +671,7 @@ test("single-view render helpers update subtitle and stats through the controlle
   controller.renderStats();
 
   assert.equal(nodes["#tl-range"].textContent, "Front Patio");
-  assert.equal(nodes["#ev-count"].textContent, "2");
+  assert.equal(nodes["#alert-count"].textContent, "2");
   assert.equal(nodes["#stream-type"].textContent, "webrtc");
 });
 

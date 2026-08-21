@@ -31,6 +31,7 @@ export class WideViewPageController {
 
   startCompanionMode() {
     this._companionController?.start?.();
+    void this._host._browseWindowLoaderController?.warmVisibleCameraReviews?.();
   }
 
   resumeCompanionMedia() {

@@ -349,6 +349,151 @@ test("warmOtherCamerasEvents also fills the active camera cache on Preview", asy
   assert.deepEqual(activeCache.events, [{ id: "event-1", start_time: 150 }]);
 });
 
+test("warmVisibleCameraReviews counts configured active review days per camera policy", async () => {
+  const day = 86400;
+  const before = 10 * day;
+  const sourceReviews = {
+    front: [
+      {
+        id: "front-d9-detection",
+        start_time: 9 * day + 200,
+        severity: "detection",
+      },
+      {
+        id: "front-d8-alert",
+        start_time: 8 * day + 200,
+        severity: "alert",
+      },
+      {
+        id: "front-d6-alert",
+        start_time: 6 * day + 200,
+        severity: "alert",
+      },
+    ],
+    driveway: [
+      {
+        id: "driveway-d9-detection-a",
+        start_time: 9 * day + 300,
+        severity: "detection",
+      },
+      {
+        id: "driveway-d9-detection-b",
+        start_time: 9 * day + 200,
+        severity: "detection",
+      },
+      {
+        id: "driveway-d8-alert",
+        start_time: 8 * day + 100,
+        severity: "alert",
+      },
+      {
+        id: "driveway-d6-alert",
+        start_time: 6 * day + 100,
+        severity: "alert",
+      },
+    ],
+  };
+  const host = {
+    _warmReviewsToken: 0,
+    _followNowWindow: true,
+    _winEnd: before,
+    _config: {
+      alerts_reviews_days: 2,
+      cameras: [
+        { entity: "camera.front", alerts_content: "alerts_only" },
+        { entity: "camera.driveway", alerts_content: "all_reviews" },
+      ],
+    },
+    _camCache: {
+      "camera.front": { clientId: "frigate", cam: "front", reviews: [] },
+      "camera.driveway": {
+        clientId: "frigate",
+        cam: "driveway",
+        reviews: [],
+      },
+    },
+    _activeCam: { entity: "camera.front" },
+    _isPreviewPageActive: () => true,
+    _dayKey: (ts) => String(Math.floor(ts / day)),
+    _renderStats: () => {},
+  };
+  const controller = new BrowseWindowLoaderController(host);
+  controller.fetchWindowedReviews = async (_clientId, cam, after) =>
+    sourceReviews[cam].filter((review) => review.start_time >= after);
+
+  await controller.warmVisibleCameraReviews();
+
+  assert.deepEqual(
+    host._camCache["camera.front"].reviews.map((review) => review.id),
+    ["front-d8-alert", "front-d6-alert"],
+  );
+  assert.deepEqual(
+    host._camCache["camera.driveway"].reviews.map((review) => review.id),
+    [
+      "driveway-d9-detection-a",
+      "driveway-d9-detection-b",
+      "driveway-d8-alert",
+    ],
+  );
+  assert.equal(controller.cameraAlertsCount("camera.front"), 2);
+  assert.equal(controller.cameraAlertsCount("camera.driveway"), 3);
+  assert.match(
+    host._camCache["camera.front"].reviewsWindowKey,
+    /\|2\|alerts_only$/,
+  );
+  assert.match(
+    host._camCache["camera.driveway"].reviewsWindowKey,
+    /\|2\|all_reviews$/,
+  );
+});
+
+test("review probes merge eligible current reviews without replacing the full count window", () => {
+  const day = 86400;
+  const host = {
+    _followNowWindow: true,
+    _config: {
+      alerts_reviews_days: 2,
+      cameras: [
+        { entity: "camera.front", alerts_content: "alerts_only" },
+      ],
+    },
+    _camCache: {
+      "camera.front": {
+        reviewsWindowKey: "frigate|front|864000|2|alerts_only",
+        reviews: [
+          { id: "d8-alert", start_time: 8 * day, severity: "alert" },
+          { id: "d6-alert", start_time: 6 * day, severity: "alert" },
+        ],
+      },
+    },
+    _activeCam: { entity: "camera.front" },
+    _dayKey: (ts) => String(Math.floor(ts / day)),
+    _renderStats: () => {},
+  };
+  const controller = new BrowseWindowLoaderController(host);
+
+  assert.equal(
+    controller.mergeLatestCameraReviews("camera.front", [
+      { id: "d9-detection", start_time: 9 * day, severity: "detection" },
+      { id: "d9-alert", start_time: 9 * day, severity: "alert" },
+    ]),
+    true,
+  );
+  assert.deepEqual(
+    host._camCache["camera.front"].reviews.map((review) => review.id),
+    ["d9-alert", "d8-alert"],
+  );
+
+  host._followNowWindow = false;
+  assert.equal(
+    controller.mergeLatestCameraReviews("camera.front", [
+      { id: "d10-alert", start_time: 10 * day, severity: "alert" },
+    ]),
+    false,
+  );
+  assert.equal(controller.cameraAlertsCount("camera.front"), 2);
+});
+
 test("loadOlder appends unique events, updates the window start, and marks exhaustion", async () => {
   const calls = [];
   const host = {

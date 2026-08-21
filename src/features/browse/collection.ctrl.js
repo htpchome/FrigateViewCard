@@ -102,7 +102,21 @@ export class BrowseCollectionController {
           const reviews = Array.isArray(resolved?.items)
             ? resolved.items
             : resolved;
-          cache.reviews = Array.isArray(reviews) ? reviews : [];
+          const nextReviews = Array.isArray(reviews) ? reviews : [];
+          const windowLoader = this._host._browseWindowLoaderController;
+          if (typeof windowLoader?.cacheCameraWindowReviews === "function") {
+            windowLoader.cacheCameraWindowReviews(
+              entity,
+              clientId,
+              cam,
+              before,
+              nextReviews,
+              camera?.alerts_content,
+            );
+          } else {
+            cache.reviews = nextReviews;
+            cache.reviewsWindowKey = "";
+          }
         }
         if (tab === "kept") {
           const kept = await this._host._ws({

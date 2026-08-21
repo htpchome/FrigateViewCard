@@ -200,8 +200,8 @@ export function buildInfoRowMarkup({
                   <div class="sl">Stream</div>
                 </div>
                 <div class="stat">
-                  <div class="sv" id="ev-count">—</div>
-                  <div class="sl">Events</div>
+                  <div class="sv" id="alert-count">—</div>
+                  <div class="sl">Alerts</div>
                 </div>
                 <div class="stat">
                   <div class="sv" id="on-dot" style="color:var(--c-on)">●</div>

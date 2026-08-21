@@ -5,7 +5,7 @@ import {
   buildMobileViewMainLayoutShellMarkup,
   buildMobileViewCamSwitcherMarkup,
   buildMobileViewInfoRowMarkup,
-  resolveMobileViewEventsCountText,
+  resolveMobileViewAlertsCountText,
   resolveMobileViewOnlineLabel,
   resolveMobileViewStatusColor,
   resolveMobileViewStreamTypeText,
@@ -53,7 +53,7 @@ test("mobile view text resolvers return stable display values", () => {
   assert.equal(resolveMobileViewSubtitleText({}), "Frigate");
   assert.equal(resolveMobileViewStreamTypeText("webrtc"), "webrtc");
   assert.equal(resolveMobileViewStreamTypeText(""), "--");
-  assert.equal(resolveMobileViewEventsCountText(12), "12");
+  assert.equal(resolveMobileViewAlertsCountText(12), "12");
   assert.equal(resolveMobileViewOnlineLabel(true), "Online");
   assert.equal(resolveMobileViewOnlineLabel(false), "Offline");
   assert.equal(resolveMobileViewStatusColor(true), "#4ade80");
@@ -65,13 +65,14 @@ test("mobile view info row markup uses expected ids", () => {
     title: "Driveway",
     subtitle: "Frigate",
     version: "1.0.1023",
-    eventsCount: 8,
+    alertsCount: 8,
   });
 
   assert.equal(markup.includes('id="info-title"'), true);
   assert.equal(markup.includes('id="tl-range"'), true);
   assert.equal(markup.includes('id="stream-type"'), false);
-  assert.equal(markup.includes('id="ev-count"'), true);
+  assert.equal(markup.includes('id="alert-count"'), true);
+  assert.equal(markup.includes("Alerts"), true);
   assert.equal(markup.includes('id="on-dot"'), false);
   assert.equal(markup.includes("8"), true);
 });

@@ -479,7 +479,7 @@ export const STYLES = `
     border-radius:var(--fvc-border-radius);}
   .preview-meta-name{font-size:.82rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-meta-source{font-size:.7rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .preview-meta-events{font-size:.72rem;color:var(--c-text2);}
+  .preview-meta-alerts{font-size:.72rem;color:var(--c-text2);}
   .preview-meta-status{font-size:.72rem;color:var(--c-text2);display:inline-flex;align-items:center;gap:5px;justify-self:end;}
   .preview-meta-status .dot{font-size:.82rem;line-height:1;}
   .preview-cam-buttons{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}

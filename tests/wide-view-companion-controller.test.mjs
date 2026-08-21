@@ -62,6 +62,10 @@ const createHost = ({ live = false, takeover = false } = {}) => {
       entity === "camera.front_door" ? "ha_direct" : "frigate_go2rtc",
     _preferredStreamType: () => "webrtc",
     _gridMediaController: { mountCameraCellMedia: () => true },
+    _browseWindowLoaderController: {
+      cameraAlertsCount: (entity) =>
+        host._camCache[entity]?.reviews?.length || 0,
+    },
     _syncSnapshotRefreshTimer: () => calls.push(["syncSnapshots"]),
     _syncToolbarButtons: () => calls.push(["syncToolbar"]),
     _pauseSlideshowForInteraction: () => calls.push(["pauseSlideshow"]),
@@ -91,7 +95,7 @@ test("Companion Cameras render every configured camera in user order", () => {
   assert.match(grid.innerHTML, /data-wide-companion-camidx="0"/);
   assert.match(grid.innerHTML, /data-wide-companion-camidx="1"/);
   assert.match(grid.innerHTML, /Stream Source: Snapshot/);
-  assert.match(grid.innerHTML, /Events: 2/);
+  assert.match(grid.innerHTML, /Alerts: 2/);
 });
 
 test("Companion Camera columns resize responsively within useful bounds", () => {

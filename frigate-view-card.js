@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1612";
+const VERSION = "1.0.1613";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1054,7 +1054,7 @@ const STYLES = `
     border-radius:var(--fvc-border-radius);}
   .preview-meta-name{font-size:.82rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-meta-source{font-size:.7rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .preview-meta-events{font-size:.72rem;color:var(--c-text2);}
+  .preview-meta-alerts{font-size:.72rem;color:var(--c-text2);}
   .preview-meta-status{font-size:.72rem;color:var(--c-text2);display:inline-flex;align-items:center;gap:5px;justify-self:end;}
   .preview-meta-status .dot{font-size:.82rem;line-height:1;}
   .preview-cam-buttons{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
@@ -3431,7 +3431,7 @@ function buildMobileViewInfoRowMarkup({
   title,
   subtitle,
   version,
-  eventsCount = "\u2014"
+  alertsCount = "\u2014"
 }) {
   return `<div class="info-row mobile-view-info-row" data-fvc-region="information">
               <div>
@@ -3444,8 +3444,8 @@ function buildMobileViewInfoRowMarkup({
                   <div class="sl">Version</div>
                 </div>
                 <div class="stat">
-                  <div class="sv" id="ev-count">${resolveMobileViewEventsCountText(eventsCount)}</div>
-                  <div class="sl">Events</div>
+                  <div class="sv" id="alert-count">${resolveMobileViewAlertsCountText(alertsCount)}</div>
+                  <div class="sl">Alerts</div>
                 </div>
               </div>
             </div>`;
@@ -3548,8 +3548,8 @@ function resolveMobileViewSubtitleText(config) {
 function resolveMobileViewStreamTypeText(streamType) {
   return streamType || "--";
 }
-function resolveMobileViewEventsCountText(eventsCount) {
-  return String(eventsCount);
+function resolveMobileViewAlertsCountText(alertsCount) {
+  return String(alertsCount);
 }
 function resolveMobileViewStatusColor(online) {
   return online ? "#4ade80" : "#ef4444";
@@ -3624,8 +3624,8 @@ function resolveSingleViewSubtitleText(config) {
 function resolveSingleViewStreamTypeText(streamType) {
   return streamType || "--";
 }
-function resolveSingleViewEventsCountText(eventsCount) {
-  return String(eventsCount);
+function resolveSingleViewAlertsCountText(alertsCount) {
+  return String(alertsCount);
 }
 function resolveSingleViewStatusColor(online) {
   return online ? "#4ade80" : "#ef4444";
@@ -3799,14 +3799,14 @@ function buildPreviewMetaMarkup({
   name,
   online,
   sourceLabel,
-  eventsCount
+  alertsCount
 }) {
   if (!showTitleBars) return "";
   return `<div class="preview-meta">
               <div class="preview-meta-name">${name}</div>
               <div class="preview-meta-status">${buildPreviewStatusMarkup(online)}</div>
               <div class="preview-meta-source">Stream Source: ${sourceLabel}</div>
-              <div class="preview-meta-events">Events: ${eventsCount}</div>
+              <div class="preview-meta-alerts">Alerts: ${alertsCount}</div>
             </div>`;
 }
 function buildPreviewCellMarkup({
@@ -4135,8 +4135,8 @@ function buildInfoRowMarkup({
                   <div class="sl">Stream</div>
                 </div>
                 <div class="stat">
-                  <div class="sv" id="ev-count">\u2014</div>
-                  <div class="sl">Events</div>
+                  <div class="sv" id="alert-count">\u2014</div>
+                  <div class="sl">Alerts</div>
                 </div>
                 <div class="stat">
                   <div class="sv" id="on-dot" style="color:var(--c-on)">\u25CF</div>
@@ -4474,7 +4474,9 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
       subtitle,
       version,
       streamType: host?._activeStreamType,
-      eventsCount: host?._allDisplayEvents?.().length || 0,
+      alertsCount: host?._browseWindowLoaderController?.cameraAlertsCount?.(
+        host?._activeCam?.entity || ""
+      ) || 0,
       online: host?._hass?.states?.[host?._activeCam?.entity]?.state !== "unavailable"
     }),
     buildMainLayoutShellMarkup: ({ host, regions, layoutProfile }) => buildMobileViewMainLayoutShellMarkup({
@@ -14103,7 +14105,21 @@ const BrowseCollectionController = class {
             }
           ));
           const reviews = Array.isArray(resolved?.items) ? resolved.items : resolved;
-          cache.reviews = Array.isArray(reviews) ? reviews : [];
+          const nextReviews = Array.isArray(reviews) ? reviews : [];
+          const windowLoader = this._host._browseWindowLoaderController;
+          if (typeof windowLoader?.cacheCameraWindowReviews === "function") {
+            windowLoader.cacheCameraWindowReviews(
+              entity,
+              clientId,
+              cam,
+              before,
+              nextReviews,
+              camera?.alerts_content
+            );
+          } else {
+            cache.reviews = nextReviews;
+            cache.reviewsWindowKey = "";
+          }
         }
         if (tab === "kept") {
           const kept = await this._host._ws({
@@ -14456,6 +14472,53 @@ const BrowseWindowLoaderController = class {
       }
     }
   }
+  async warmVisibleCameraReviews() {
+    const previewActive = this._host._isPreviewPageActive?.() === true;
+    const allCameraCountsVisible = previewActive || this._host._wideViewCompanionController?.isActive?.() === true;
+    if (!allCameraCountsVisible) return;
+    const token = (Number(this._host._warmReviewsToken) || 0) + 1;
+    this._host._warmReviewsToken = token;
+    const before = this._host._winEnd;
+    const dayCount = this._host._config?.alerts_reviews_days || 3;
+    for (const camera of this._host._config?.cameras || []) {
+      const entity = camera?.entity || "";
+      if (entity === this._host._activeCam?.entity && !previewActive) continue;
+      const cache = entity ? this._host._camCache[entity] : null;
+      if (!cache?.clientId || !cache?.cam) continue;
+      const contentMode = this._reviewContentMode(camera?.alerts_content);
+      const cacheKey = this.reviewWindowCacheKeyForContent(
+        cache.clientId,
+        cache.cam,
+        before,
+        contentMode
+      );
+      if (cache.reviewsWindowKey === cacheKey) continue;
+      try {
+        const resolved = await this.fetchRecentActiveDayReviews(
+          cache.clientId,
+          cache.cam,
+          before,
+          dayCount,
+          {
+            debugLabel: "camera-alert-count",
+            itemFilter: contentMode === "all_reviews" ? null : reviewMatchesAlertsOnlyMode
+          }
+        );
+        if (token !== this._host._warmReviewsToken) return;
+        const reviews = Array.isArray(resolved?.items) ? resolved.items : [];
+        this.cacheCameraWindowReviews(
+          entity,
+          cache.clientId,
+          cache.cam,
+          before,
+          reviews,
+          contentMode
+        );
+        this._notifyCameraAlertsChanged(entity);
+      } catch (_) {
+      }
+    }
+  }
   scheduleWarmOtherCamerasEvents(delayMs = 1e3) {
     if (this._host._warmOtherCamsDelayT) {
       clearTimeout(this._host._warmOtherCamsDelayT);
@@ -14465,12 +14528,14 @@ const BrowseWindowLoaderController = class {
         this._host._warmOtherCamsDelayT = null;
         if (!this._host.isConnected) return;
         void this.warmOtherCamerasEvents();
+        void this.warmVisibleCameraReviews();
       },
       Math.max(0, Number(delayMs) || 0)
     );
   }
   pruneNonActiveCamWindowCaches() {
     this._host._warmCamsToken++;
+    this._host._warmReviewsToken = (Number(this._host._warmReviewsToken) || 0) + 1;
     const activeEntity = this._host._activeCam?.entity;
     for (const camera of this._host._config.cameras) {
       const entity = camera.entity;
@@ -14704,8 +14769,19 @@ const BrowseWindowLoaderController = class {
     }
   }
   reviewWindowCacheKey(clientId, cam, before) {
+    return this.reviewWindowCacheKeyForContent(
+      clientId,
+      cam,
+      before,
+      this._host._activeCam?.alerts_content
+    );
+  }
+  _reviewContentMode(value) {
+    return value === "all_reviews" ? "all_reviews" : "alerts_only";
+  }
+  reviewWindowCacheKeyForContent(clientId, cam, before, alertsContent) {
     const days = this._host._config?.alerts_reviews_days || 3;
-    const contentMode = this._host._activeCam?.alerts_content === "all_reviews" ? "all_reviews" : "alerts_only";
+    const contentMode = this._reviewContentMode(alertsContent);
     return `${clientId}|${cam}|${Math.floor(before)}|${days}|${contentMode}`;
   }
   hasCachedWindowReviews(clientId, cam, before) {
@@ -14715,10 +14791,59 @@ const BrowseWindowLoaderController = class {
   }
   cacheWindowReviews(clientId, cam, before, reviews) {
     const entity = this._host._activeCam?.entity;
+    this.cacheCameraWindowReviews(
+      entity,
+      clientId,
+      cam,
+      before,
+      reviews,
+      this._host._activeCam?.alerts_content
+    );
+  }
+  cacheCameraWindowReviews(entity, clientId, cam, before, reviews, alertsContent) {
     const cache = entity ? this._host._camCache[entity] : null;
     if (!cache) return;
-    cache.reviews = reviews;
-    cache.reviewsWindowKey = this.reviewWindowCacheKey(clientId, cam, before);
+    cache.reviews = Array.isArray(reviews) ? reviews : [];
+    cache.reviewsWindowKey = this.reviewWindowCacheKeyForContent(
+      clientId,
+      cam,
+      before,
+      alertsContent
+    );
+  }
+  cameraAlertsCount(entity) {
+    const reviews = this._host._camCache?.[entity]?.reviews;
+    return Array.isArray(reviews) ? reviews.length : 0;
+  }
+  mergeLatestCameraReviews(entity, reviews) {
+    const cache = entity ? this._host._camCache?.[entity] : null;
+    if (!cache?.reviewsWindowKey || !Array.isArray(reviews)) return false;
+    if (this._host._followNowWindow === false) return false;
+    const camera = (this._host._config?.cameras || []).find(
+      (candidate) => candidate?.entity === entity
+    );
+    const contentMode = this._reviewContentMode(camera?.alerts_content);
+    const eligible = contentMode === "all_reviews" ? reviews : reviews.filter((review) => reviewMatchesAlertsOnlyMode(review));
+    const byId = new Map();
+    for (const review of [...cache.reviews || [], ...eligible]) {
+      const id = String(review?.id || "").trim();
+      if (id) byId.set(id, review);
+    }
+    const merged = this._filterToRecentDaysWithData(
+      [...byId.values()],
+      this._host._config?.alerts_reviews_days || 3
+    );
+    if (this._sameWindowItems(cache.reviews, merged)) return false;
+    cache.reviews = merged;
+    this._notifyCameraAlertsChanged(entity);
+    return true;
+  }
+  _notifyCameraAlertsChanged(entity) {
+    this._host._previewPageController?.updatePreviewMeta?.();
+    this._host._wideViewCompanionController?.updateMeta?.();
+    if (entity === this._host._activeCam?.entity) {
+      this._host._renderStats?.();
+    }
   }
   _windowContextMatches(clientId, cam, before) {
     if (typeof this._host._cc === "function") {
@@ -14757,12 +14882,15 @@ const BrowseWindowLoaderController = class {
     const changed = !this._sameWindowItems(this._host._reviews, nextReviews);
     this._host._reviews = nextReviews;
     this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
+    this._notifyCameraAlertsChanged(this._host._activeCam?.entity || "");
     if (changed) this._host._renderList();
-    this._host._slideshowAlertController.handleReviewsUpdated(
-      this._host._activeCam?.entity || "",
-      this._host._reviews,
-      "alerts-window"
-    );
+    if (this._host._tab === "alerts") {
+      this._host._slideshowAlertController.handleReviewsUpdated(
+        this._host._activeCam?.entity || "",
+        this._host._reviews,
+        "alerts-window"
+      );
+    }
     return true;
   }
   async loadWindowEvents(clientId, cam, after, before) {
@@ -14975,7 +15103,6 @@ const BrowseWindowLoaderController = class {
     }
   }
   async loadWindowReviewsIfNeeded(clientId, cam, _after, before) {
-    if (this._host._tab !== "alerts") return;
     const loadToken = (Number(this._host._reviewsLoadToken) || 0) + 1;
     this._host._reviewsLoadToken = loadToken;
     try {
@@ -16066,9 +16193,10 @@ const PreviewAlertController = class {
         before,
         limit: 5
       }),
-      onReviewsFetched: ({ cache, reviews }) => {
-        cache.reviews = reviews;
-      },
+      onReviewsFetched: ({ entity, reviews }) => this._host._browseWindowLoaderController?.mergeLatestCameraReviews?.(
+        entity,
+        reviews
+      ),
       buildCandidate: ({ entity, reviews }) => findFirstReviewCandidateForEntity({
         reviews,
         entity,
@@ -16206,11 +16334,8 @@ const PreviewPageController = class {
   previewShouldUseLive(entity) {
     return this.previewLiveCamerasEnabled() || this._host._isPreviewCameraAlertLive(entity);
   }
-  previewEventsCount(entity) {
-    const cache = this._host._camCache[entity];
-    const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
-    const reviewsCount = Array.isArray(cache?.reviews) ? cache.reviews.length : 0;
-    return eventsCount + reviewsCount;
+  previewAlertsCount(entity) {
+    return this._host._browseWindowLoaderController?.cameraAlertsCount?.(entity) ?? (Array.isArray(this._host._camCache?.[entity]?.reviews) ? this._host._camCache[entity].reviews.length : 0);
   }
   previewCellSeverity(entity) {
     return this._host._previewAlertController.previewCellSeverity(entity);
@@ -16354,7 +16479,7 @@ const PreviewPageController = class {
       const severity = this.previewCellSeverity(entity);
       const useLive = this.previewShouldUseLive(entity);
       const sourceLabel = this.previewStreamSourceLabel(entity, useLive);
-      const eventsCount = this.previewEventsCount(entity);
+      const alertsCount = this.previewAlertsCount(entity);
       const name = cap(camDisplayName(camera));
       return buildPreviewCellMarkup({
         index,
@@ -16366,7 +16491,7 @@ const PreviewPageController = class {
           name,
           online,
           sourceLabel,
-          eventsCount
+          alertsCount
         })
       });
     }).join("");
@@ -16411,9 +16536,9 @@ const PreviewPageController = class {
       if (source) {
         source.textContent = `Stream Source: ${this.previewStreamSourceLabel(entity, useLive)}`;
       }
-      const events = cell.querySelector(".preview-meta-events");
-      if (events) {
-        events.textContent = `Events: ${this.previewEventsCount(entity)}`;
+      const alerts = cell.querySelector(".preview-meta-alerts");
+      if (alerts) {
+        alerts.textContent = `Alerts: ${this.previewAlertsCount(entity)}`;
       }
     });
   }
@@ -16476,6 +16601,7 @@ const PreviewPageController = class {
   }
   startPreviewMode() {
     this._host._previewAlertController.start();
+    void this._host._browseWindowLoaderController?.warmVisibleCameraReviews?.();
   }
   stopPreviewMode() {
     this._host._clearPreviewTimers();
@@ -18723,13 +18849,15 @@ const MobileViewPageController = class {
     }
   }
   renderStats() {
-    const eventCount = this._host._pageShellRegionElement(
+    const alertCount = this._host._pageShellRegionElement(
       "information",
-      "#ev-count"
+      "#alert-count"
     );
-    if (eventCount) {
-      eventCount.textContent = resolveMobileViewEventsCountText(
-        this._host._allDisplayEvents().length
+    if (alertCount) {
+      alertCount.textContent = resolveMobileViewAlertsCountText(
+        this._host._browseWindowLoaderController?.cameraAlertsCount?.(
+          this._host._activeCam?.entity || ""
+        ) ?? 0
       );
     }
     const streamType = this._host._pageShellRegionElement(
@@ -18912,13 +19040,15 @@ const SingleViewPageController = class {
     }
   }
   renderStats() {
-    const eventCount = this._host._pageShellRegionElement(
+    const alertCount = this._host._pageShellRegionElement(
       "information",
-      "#ev-count"
+      "#alert-count"
     );
-    if (eventCount) {
-      eventCount.textContent = resolveSingleViewEventsCountText(
-        this._host._allDisplayEvents().length
+    if (alertCount) {
+      alertCount.textContent = resolveSingleViewAlertsCountText(
+        this._host._browseWindowLoaderController?.cameraAlertsCount?.(
+          this._host._activeCam?.entity || ""
+        ) ?? 0
       );
     }
     const streamType = this._host._pageShellRegionElement(
@@ -19199,6 +19329,7 @@ const WideViewPageController = class {
   }
   startCompanionMode() {
     this._companionController?.start?.();
+    void this._host._browseWindowLoaderController?.warmVisibleCameraReviews?.();
   }
   resumeCompanionMedia() {
     this._companionController?.resumeVisible?.();
@@ -19437,9 +19568,10 @@ const WideViewCompanionAlertController = class {
         before,
         limit: 5
       }),
-      onReviewsFetched: ({ cache, reviews }) => {
-        cache.reviews = reviews;
-      },
+      onReviewsFetched: ({ entity, reviews }) => this._host._browseWindowLoaderController?.mergeLatestCameraReviews?.(
+        entity,
+        reviews
+      ),
       buildCandidate: ({ entity, reviews }) => findFirstReviewCandidateForEntity({
         reviews,
         entity,
@@ -19570,13 +19702,13 @@ function buildWideCompanionMetaMarkup({
   name,
   online,
   sourceLabel,
-  eventsCount
+  alertsCount
 }) {
   return `<div class="preview-meta wide-companion-meta">
             <div class="preview-meta-name wide-companion-meta-name">${name}</div>
             <div class="preview-meta-status wide-companion-meta-status">${buildWideCompanionStatusMarkup(online)}</div>
             <div class="preview-meta-source wide-companion-meta-source">Stream Source: ${sourceLabel}</div>
-            <div class="preview-meta-events wide-companion-meta-events">Events: ${eventsCount}</div>
+            <div class="preview-meta-alerts wide-companion-meta-alerts">Alerts: ${alertsCount}</div>
           </div>`;
 }
 function buildWideCompanionCellMarkup({
@@ -19697,11 +19829,8 @@ const WideViewCompanionController = class {
   cellSeverity(entity) {
     return this._alertController.cellSeverity(entity);
   }
-  eventsCount(entity) {
-    const cache = this._host._camCache[entity];
-    const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
-    const reviewsCount = Array.isArray(cache?.reviews) ? cache.reviews.length : 0;
-    return eventsCount + reviewsCount;
+  alertsCount(entity) {
+    return this._host._browseWindowLoaderController?.cameraAlertsCount?.(entity) ?? (Array.isArray(this._host._camCache?.[entity]?.reviews) ? this._host._camCache[entity].reviews.length : 0);
   }
   liveStreamHint() {
     const active = String(this._host._activeStreamType || "").trim().toLowerCase();
@@ -19807,7 +19936,7 @@ const WideViewCompanionController = class {
           name: cap(camDisplayName(camera)),
           online,
           sourceLabel: this.streamSourceLabel(entity, useLive),
-          eventsCount: this.eventsCount(entity)
+          alertsCount: this.alertsCount(entity)
         })
       });
     }).join("");
@@ -19840,9 +19969,9 @@ const WideViewCompanionController = class {
       if (source) {
         source.textContent = `Stream Source: ${this.streamSourceLabel(entity, useLive)}`;
       }
-      const events = cell.querySelector?.(".wide-companion-meta-events");
-      if (events) {
-        events.textContent = `Events: ${this.eventsCount(entity)}`;
+      const alerts = cell.querySelector?.(".wide-companion-meta-alerts");
+      if (alerts) {
+        alerts.textContent = `Alerts: ${this.alertsCount(entity)}`;
       }
     });
   }
@@ -20884,6 +21013,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._eventsLoadToken = 0;
     this._reviewsLoadToken = 0;
     this._warmCamsToken = 0;
+    this._warmReviewsToken = 0;
     this._warmOtherCamsDelayT = null;
     this._reloadPending = false;
     this._reloadAfterLoad = false;

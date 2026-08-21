@@ -278,7 +278,10 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         subtitle,
         version,
         streamType: host?._activeStreamType,
-        eventsCount: host?._allDisplayEvents?.().length || 0,
+        alertsCount:
+          host?._browseWindowLoaderController?.cameraAlertsCount?.(
+            host?._activeCam?.entity || "",
+          ) || 0,
         online:
           host?._hass?.states?.[host?._activeCam?.entity]?.state !==
           "unavailable",

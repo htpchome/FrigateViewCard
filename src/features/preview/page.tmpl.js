@@ -25,7 +25,7 @@ export function buildPreviewStatusMarkup(online) {
  * @param {string} args.name Camera display name.
  * @param {boolean} args.online Camera online state.
  * @param {string} args.sourceLabel Rendered stream source label.
- * @param {number} args.eventsCount Combined event count.
+ * @param {number} args.alertsCount Filtered review count.
  * @returns {string}
  */
 export function buildPreviewMetaMarkup({
@@ -33,14 +33,14 @@ export function buildPreviewMetaMarkup({
   name,
   online,
   sourceLabel,
-  eventsCount,
+  alertsCount,
 }) {
   if (!showTitleBars) return "";
   return `<div class="preview-meta">
               <div class="preview-meta-name">${name}</div>
               <div class="preview-meta-status">${buildPreviewStatusMarkup(online)}</div>
               <div class="preview-meta-source">Stream Source: ${sourceLabel}</div>
-              <div class="preview-meta-events">Events: ${eventsCount}</div>
+              <div class="preview-meta-alerts">Alerts: ${alertsCount}</div>
             </div>`;
 }
 

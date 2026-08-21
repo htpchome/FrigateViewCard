@@ -51,13 +51,13 @@ export class PreviewPageController {
     );
   }
 
-  previewEventsCount(entity) {
-    const cache = this._host._camCache[entity];
-    const eventsCount = Array.isArray(cache?.events) ? cache.events.length : 0;
-    const reviewsCount = Array.isArray(cache?.reviews)
-      ? cache.reviews.length
-      : 0;
-    return eventsCount + reviewsCount;
+  previewAlertsCount(entity) {
+    return (
+      this._host._browseWindowLoaderController?.cameraAlertsCount?.(entity) ??
+      (Array.isArray(this._host._camCache?.[entity]?.reviews)
+        ? this._host._camCache[entity].reviews.length
+        : 0)
+    );
   }
 
   previewCellSeverity(entity) {
@@ -235,7 +235,7 @@ export class PreviewPageController {
         const severity = this.previewCellSeverity(entity);
         const useLive = this.previewShouldUseLive(entity);
         const sourceLabel = this.previewStreamSourceLabel(entity, useLive);
-        const eventsCount = this.previewEventsCount(entity);
+        const alertsCount = this.previewAlertsCount(entity);
         const name = cap(camDisplayName(camera));
         return buildPreviewCellMarkup({
           index,
@@ -247,7 +247,7 @@ export class PreviewPageController {
             name,
             online,
             sourceLabel,
-            eventsCount,
+            alertsCount,
           }),
         });
       })
@@ -302,9 +302,9 @@ export class PreviewPageController {
         if (source) {
           source.textContent = `Stream Source: ${this.previewStreamSourceLabel(entity, useLive)}`;
         }
-        const events = cell.querySelector(".preview-meta-events");
-        if (events) {
-          events.textContent = `Events: ${this.previewEventsCount(entity)}`;
+        const alerts = cell.querySelector(".preview-meta-alerts");
+        if (alerts) {
+          alerts.textContent = `Alerts: ${this.previewAlertsCount(entity)}`;
         }
       });
   }
@@ -374,6 +374,7 @@ export class PreviewPageController {
 
   startPreviewMode() {
     this._host._previewAlertController.start();
+    void this._host._browseWindowLoaderController?.warmVisibleCameraReviews?.();
   }
 
   stopPreviewMode() {
