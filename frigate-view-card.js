@@ -4,18 +4,16 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1611";
+const VERSION = "1.0.1612";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
 const EVENT_FETCH_BATCH = 100;
-const INITIAL_EVENT_FETCH_LIMIT = 20;
 const INITIAL_BROWSE_PAINT_LIMIT = 6;
 const INACTIVE_WARM_EVENT_LIMIT = 5;
 const REVIEW_FETCH_BATCH = 100;
 const WINDOW_FETCH_PAGE_LIMIT = 10;
-const INITIAL_EVENTS_PAGE_LIMIT = 1;
-const WINDOW_BACKGROUND_PAGE_LIMIT = 4;
+const WARM_EVENT_PAGE_LIMIT = 1;
 const REALTIME_HEAD_POLL_MS = 5e3;
 const REALTIME_RELOAD_DEBOUNCE_MS = 450;
 const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
@@ -14444,7 +14442,7 @@ const BrowseWindowLoaderController = class {
           after,
           before,
           {
-            pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+            pageLimit: WARM_EVENT_PAGE_LIMIT,
             limit: INACTIVE_WARM_EVENT_LIMIT,
             debugLabel: "warm-cache"
           }
@@ -14753,24 +14751,18 @@ const BrowseWindowLoaderController = class {
     }
     return true;
   }
-  _publishWindowReviews(clientId, cam, before, reviews, { complete = false } = {}) {
+  _publishWindowReviews(clientId, cam, before, reviews) {
     if (!this._windowContextMatches(clientId, cam, before)) return false;
     const nextReviews = Array.isArray(reviews) ? reviews : [];
     const changed = !this._sameWindowItems(this._host._reviews, nextReviews);
     this._host._reviews = nextReviews;
-    if (complete) {
-      this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
-    } else {
-      this.cacheActiveCamSlice("reviews", this._host._reviews);
-    }
+    this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
     if (changed) this._host._renderList();
-    if (complete) {
-      this._host._slideshowAlertController.handleReviewsUpdated(
-        this._host._activeCam?.entity || "",
-        this._host._reviews,
-        "alerts-window"
-      );
-    }
+    this._host._slideshowAlertController.handleReviewsUpdated(
+      this._host._activeCam?.entity || "",
+      this._host._reviews,
+      "alerts-window"
+    );
     return true;
   }
   async loadWindowEvents(clientId, cam, after, before) {
@@ -14986,7 +14978,6 @@ const BrowseWindowLoaderController = class {
     if (this._host._tab !== "alerts") return;
     const loadToken = (Number(this._host._reviewsLoadToken) || 0) + 1;
     this._host._reviewsLoadToken = loadToken;
-    let publishedProgress = false;
     try {
       const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
       const resolved = await this.fetchRecentActiveDayReviews(
@@ -14996,29 +14987,15 @@ const BrowseWindowLoaderController = class {
         this._host._config?.alerts_reviews_days || 3,
         {
           debugLabel: "alerts-window",
-          itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode,
-          onProgress: (partialReviews) => {
-            if (this._host._reviewsLoadToken !== loadToken) return;
-            publishedProgress = this._publishWindowReviews(
-              clientId,
-              cam,
-              before,
-              partialReviews
-            ) || publishedProgress;
-          }
+          itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode
         }
       );
       if (this._host._reviewsLoadToken !== loadToken || !this._windowContextMatches(clientId, cam, before)) {
         return;
       }
       const reviews = Array.isArray(resolved?.items) ? resolved.items : [];
-      this._publishWindowReviews(clientId, cam, before, reviews, {
-        complete: true
-      });
+      this._publishWindowReviews(clientId, cam, before, reviews);
     } catch (_) {
-      if (!publishedProgress && this._host._reviewsLoadToken === loadToken && this._windowContextMatches(clientId, cam, before)) {
-        this._host._reviews = [];
-      }
     }
   }
   goNow() {

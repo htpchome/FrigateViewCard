@@ -213,7 +213,7 @@ test("loadWindowEvents paints six newest clips before loading the full window", 
   assert.equal(activeCache.events.length, 12);
 });
 
-test("loadWindowReviews paints only eligible alerts before completing its cache", async () => {
+test("loadWindowReviews retains cached alerts until the filtered window completes", async () => {
   const firstReviews = Array.from({ length: 6 }, (_, index) => ({
     id: `review-${index}`,
     start_time: 195 - index,
@@ -228,14 +228,17 @@ test("loadWindowReviews paints only eligible alerts before completing its cache"
   const requestBeforeValues = [];
   const renderedLengths = [];
   const reviewUpdates = [];
-  let releaseRemaining;
-  const remainingPending = new Promise((resolve) => {
-    releaseRemaining = resolve;
+  let releaseReviews;
+  const reviewsPending = new Promise((resolve) => {
+    releaseReviews = resolve;
   });
+  const cachedReviews = [
+    { id: "cached-review", start_time: 150, severity: "alert" },
+  ];
   const activeCache = {
     clientId: "frigate",
     cam: "front",
-    reviews: [],
+    reviews: cachedReviews,
     reviewsWindowKey: "",
   };
   const host = {
@@ -243,15 +246,14 @@ test("loadWindowReviews paints only eligible alerts before completing its cache"
     _config: { alerts_reviews_days: 1 },
     _activeCam: { entity: "camera.front", alerts_content: "alerts_only" },
     _camCache: { "camera.front": activeCache },
-    _reviews: [],
+    _reviews: cachedReviews,
     _reviewsLoadToken: 0,
     _winEnd: 200,
     _cc: () => activeCache,
     _ws: async ({ before, limit }) => {
       requestLimits.push(limit);
       requestBeforeValues.push(before);
-      if (requestLimits.length === 1) return firstReviews;
-      return await remainingPending;
+      return await reviewsPending;
     },
     _renderList: () => renderedLengths.push(host._reviews.length),
     _slideshowAlertController: {
@@ -269,21 +271,21 @@ test("loadWindowReviews paints only eligible alerts before completing its cache"
   );
   await new Promise((resolve) => setImmediate(resolve));
 
-  assert.deepEqual(requestLimits, [6, 100]);
-  assert.deepEqual(requestBeforeValues, [200, 200]);
-  assert.equal(host._reviews.length, 5);
-  assert.equal(activeCache.reviews.length, 5);
+  assert.deepEqual(requestLimits, [100]);
+  assert.deepEqual(requestBeforeValues, [200]);
+  assert.equal(host._reviews, cachedReviews);
+  assert.equal(activeCache.reviews, cachedReviews);
   assert.equal(activeCache.reviewsWindowKey, "");
-  assert.deepEqual(renderedLengths, [5]);
+  assert.deepEqual(renderedLengths, []);
   assert.deepEqual(reviewUpdates, []);
 
-  releaseRemaining([...firstReviews, ...remainingReviews]);
+  releaseReviews([...firstReviews, ...remainingReviews]);
   await load;
 
   assert.equal(host._reviews.length, 11);
   assert.equal(activeCache.reviews.length, 11);
   assert.equal(activeCache.reviewsWindowKey.includes("frigate|front|200"), true);
-  assert.deepEqual(renderedLengths, [5, 11]);
+  assert.deepEqual(renderedLengths, [11]);
   assert.deepEqual(reviewUpdates, [11]);
 });
 

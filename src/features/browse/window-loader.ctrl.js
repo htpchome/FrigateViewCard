@@ -4,8 +4,8 @@ import {
   INITIAL_BROWSE_PAINT_LIMIT,
   INACTIVE_WARM_EVENT_LIMIT,
   REVIEW_FETCH_BATCH,
+  WARM_EVENT_PAGE_LIMIT,
   WINDOW_FETCH_PAGE_LIMIT,
-  INITIAL_EVENTS_PAGE_LIMIT,
 } from "../../constants.js";
 import { fetchWindowedItems } from "../../data/window-fetch.js";
 import { buildRecordingsDayCacheKey } from "../recordings/utils/availability.js";
@@ -69,7 +69,7 @@ export class BrowseWindowLoaderController {
           after,
           before,
           {
-            pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+            pageLimit: WARM_EVENT_PAGE_LIMIT,
             limit: INACTIVE_WARM_EVENT_LIMIT,
             debugLabel: "warm-cache",
           },
@@ -445,30 +445,18 @@ export class BrowseWindowLoaderController {
     return true;
   }
 
-  _publishWindowReviews(
-    clientId,
-    cam,
-    before,
-    reviews,
-    { complete = false } = {},
-  ) {
+  _publishWindowReviews(clientId, cam, before, reviews) {
     if (!this._windowContextMatches(clientId, cam, before)) return false;
     const nextReviews = Array.isArray(reviews) ? reviews : [];
     const changed = !this._sameWindowItems(this._host._reviews, nextReviews);
     this._host._reviews = nextReviews;
-    if (complete) {
-      this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
-    } else {
-      this.cacheActiveCamSlice("reviews", this._host._reviews);
-    }
+    this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
     if (changed) this._host._renderList();
-    if (complete) {
-      this._host._slideshowAlertController.handleReviewsUpdated(
-        this._host._activeCam?.entity || "",
-        this._host._reviews,
-        "alerts-window",
-      );
-    }
+    this._host._slideshowAlertController.handleReviewsUpdated(
+      this._host._activeCam?.entity || "",
+      this._host._reviews,
+      "alerts-window",
+    );
     return true;
   }
 
@@ -717,7 +705,6 @@ export class BrowseWindowLoaderController {
     if (this._host._tab !== "alerts") return;
     const loadToken = (Number(this._host._reviewsLoadToken) || 0) + 1;
     this._host._reviewsLoadToken = loadToken;
-    let publishedProgress = false;
     try {
       const showAllReviews =
         this._host._activeCam?.alerts_content === "all_reviews";
@@ -729,16 +716,6 @@ export class BrowseWindowLoaderController {
         {
           debugLabel: "alerts-window",
           itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode,
-          onProgress: (partialReviews) => {
-            if (this._host._reviewsLoadToken !== loadToken) return;
-            publishedProgress =
-              this._publishWindowReviews(
-                clientId,
-                cam,
-                before,
-                partialReviews,
-              ) || publishedProgress;
-          },
         },
       );
       if (
@@ -748,18 +725,8 @@ export class BrowseWindowLoaderController {
         return;
       }
       const reviews = Array.isArray(resolved?.items) ? resolved.items : [];
-      this._publishWindowReviews(clientId, cam, before, reviews, {
-        complete: true,
-      });
-    } catch (_) {
-      if (
-        !publishedProgress &&
-        this._host._reviewsLoadToken === loadToken &&
-        this._windowContextMatches(clientId, cam, before)
-      ) {
-        this._host._reviews = [];
-      }
-    }
+      this._publishWindowReviews(clientId, cam, before, reviews);
+    } catch (_) {}
   }
 
   goNow() {
