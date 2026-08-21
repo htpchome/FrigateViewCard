@@ -95,7 +95,8 @@ import {
   validatePageShellRegionMarkup,
 } from "../features/navigation/page-shell-registry.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
-import {} from "../integrations/frigate/url.js";
+import { buildFrigateNotificationMediaPath } from "../integrations/frigate/url.js";
+import { FrigateMediaDownloadController } from "../integrations/frigate/media-download.ctrl.js";
 import {
   discoverFrigateCameraState,
   resolveCameraConnectionType,
@@ -636,6 +637,11 @@ export class FrigateViewCard extends HTMLElement {
     this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
+    this._frigateMediaDownloadController = new FrigateMediaDownloadController({
+      getContext: () => this._cc(),
+      signPath: (path) => this._signed(path),
+      formatTime: (timestamp) => this._time(timestamp),
+    });
     this._popupInfoController = new PopupInfoController({
       query: (selector) => this._$(selector),
       getActiveCamera: () => this._cc().cam,
@@ -652,9 +658,10 @@ export class FrigateViewCard extends HTMLElement {
       onMediaCameraChange: (camera) => {
         this._popupMediaCamera = camera;
       },
-      onDownloadEvent: (id, file) => this._download(id, file),
+      onDownloadEvent: (id, file) =>
+        this._frigateMediaDownloadController.downloadEvent(id, file),
       onDownloadRecording: (start, end) =>
-        this._downloadRecRange(start, end),
+        void this._frigateMediaDownloadController.downloadRecording(start, end),
     });
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._playbackTargetController = new BrowserPlaybackTargetController({
@@ -4460,7 +4467,7 @@ export class FrigateViewCard extends HTMLElement {
       const rs = Number(recDl.dataset.recDlStart);
       const re = Number(recDl.dataset.recDlEnd);
       if (Number.isFinite(rs) && Number.isFinite(re) && re > rs) {
-        this._downloadRecRange(rs, re);
+        void this._frigateMediaDownloadController.downloadRecording(rs, re);
       }
       return true;
     }
@@ -4502,7 +4509,10 @@ export class FrigateViewCard extends HTMLElement {
     const dl = target.closest(".ico[data-dl]");
     if (dl) {
       e.stopPropagation();
-      this._download(dl.dataset.dl, dl.dataset.dlFile);
+      this._frigateMediaDownloadController.downloadEvent(
+        dl.dataset.dl,
+        dl.dataset.dlFile,
+      );
       return true;
     }
     const fav = target.closest("[data-fav]");
@@ -5670,7 +5680,12 @@ export class FrigateViewCard extends HTMLElement {
     });
   }
   _media(id, file, dl) {
-    return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
+    return buildFrigateNotificationMediaPath({
+      clientId: this._cc().clientId,
+      eventId: id,
+      file,
+      download: dl,
+    });
   }
   async _signed(path) {
     try {
@@ -5831,14 +5846,6 @@ export class FrigateViewCard extends HTMLElement {
         req.call(reqTarget);
       } catch (_) {}
     }
-  }
-  _download(id, file) {
-    const a = document.createElement("a");
-    a.href = this._media(id, file, true);
-    a.download = `${this._cc().cam}_${id}_${file}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
   }
   // ── favorites (realtime) ──────────────────────────────────
   _toggleFav(id) {
@@ -6362,22 +6369,5 @@ export class FrigateViewCard extends HTMLElement {
       showDownloadButtons: !this._isLikelyMobileClient(),
     });
     return buildReviewListItemHtml(model, { cap, icons: ICONS });
-  }
-
-  // ── clip download range ───────────────────────────────────
-  async _downloadRecRange(dlStart, dlEnd) {
-    const { clientId, cam } = this._cc();
-    const start = Math.floor(Number(dlStart) || 0);
-    const endRaw = Math.floor(Number(dlEnd) || 0);
-    const end = Math.max(start + 1, Math.min(endRaw, start + 7200));
-    const base = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${end}`;
-    const signed = await this._signed(`${base}?download=true`);
-    const url = signed;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${cam}_${this._time(dlStart).replace(/:/g, "-")}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
   }
 }

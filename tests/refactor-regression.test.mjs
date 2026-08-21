@@ -54,8 +54,19 @@ const frigateUrlSource = fs.readFileSync(
   new URL("../src/integrations/frigate/url.js", import.meta.url),
   "utf8",
 );
+const frigateMediaDownloadControllerSource = fs.readFileSync(
+  new URL(
+    "../src/integrations/frigate/media-download.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const sharedUrlSource = fs.readFileSync(
   new URL("../src/shared/media/url-utils.js", import.meta.url),
+  "utf8",
+);
+const sharedMediaDownloadSource = fs.readFileSync(
+  new URL("../src/shared/media/download.js", import.meta.url),
   "utf8",
 );
 const sharedMediaControlsSource = fs.readFileSync(
@@ -1652,6 +1663,49 @@ test("popup info rendering and actions are owned by the popup feature", () => {
     popupMediaLoaderControllerSource.includes(
       "this._infoController?.render(infoEvent, infoOpts)",
     ),
+    true,
+  );
+});
+
+test("Frigate download routing is owned by the Frigate integration", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { FrigateMediaDownloadController } from "../integrations/frigate/media-download.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes(
+      "this._frigateMediaDownloadController = new FrigateMediaDownloadController",
+    ),
+    true,
+  );
+  assert.equal(cardSource.includes("_download(id, file)"), false);
+  assert.equal(cardSource.includes("_downloadRecRange("), false);
+  assert.equal(
+    frigateUrlSource.includes(
+      "export const buildFrigateNotificationMediaPath",
+    ),
+    true,
+  );
+  assert.equal(
+    frigateUrlSource.includes("export const buildFrigateEventDownloadPlan"),
+    true,
+  );
+  assert.equal(
+    frigateUrlSource.includes(
+      "export const buildFrigateRecordingDownloadPlan",
+    ),
+    true,
+  );
+  assert.equal(
+    frigateMediaDownloadControllerSource.includes(
+      "export class FrigateMediaDownloadController",
+    ),
+    true,
+  );
+  assert.equal(
+    sharedMediaDownloadSource.includes("export const triggerBrowserDownload"),
     true,
   );
 });

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1596";
+const VERSION = "1.0.1597";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -4479,12 +4479,112 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
 }
 
 // src/integrations/frigate/url.js
+const encodePathPart = (value) => encodeURIComponent(String(value || ""));
 const makeGo2rtcCacheKey = ({ clientId, cam }) => `${clientId}:${cam}`;
 const buildGo2rtcWsPath = ({ clientId, cam }) => `/api/frigate/${encodeURIComponent(clientId)}/mse/api/ws?src=${encodeURIComponent(cam)}`;
 const buildGo2rtcHlsCandidates = ({ clientId, cam }) => {
   const encClient = encodeURIComponent(clientId);
   const encCam = encodeURIComponent(cam);
   return [`/api/frigate/${encClient}/go2rtc/api/stream.m3u8?src=${encCam}&mp4`];
+};
+const buildFrigateNotificationMediaPath = ({
+  clientId = "",
+  eventId = "",
+  file = "",
+  download = false
+} = {}) => `/api/frigate/${encodePathPart(clientId)}/notifications/${encodePathPart(eventId)}/${encodePathPart(file)}${download ? "?download=true" : ""}`;
+const buildFrigateEventDownloadPlan = ({
+  clientId = "",
+  camera = "",
+  eventId = "",
+  file = ""
+} = {}) => ({
+  url: buildFrigateNotificationMediaPath({
+    clientId,
+    eventId,
+    file,
+    download: true
+  }),
+  filename: `${camera}_${eventId}_${file}`
+});
+const buildFrigateRecordingDownloadPlan = ({
+  clientId = "",
+  camera = "",
+  start: startValue = 0,
+  end: endValue = 0,
+  timeLabel = "",
+  maxDurationSec = 7200
+} = {}) => {
+  const start = Math.floor(Number(startValue) || 0);
+  const endRaw = Math.floor(Number(endValue) || 0);
+  const maxEnd = start + Math.max(1, Number(maxDurationSec) || 7200);
+  const end = Math.max(start + 1, Math.min(endRaw, maxEnd));
+  return {
+    path: `/api/frigate/${encodePathPart(clientId)}/recording/${encodePathPart(camera)}/start/${start}/end/${end}?download=true`,
+    filename: `${camera}_${String(timeLabel || "").replace(/:/g, "-")}.mp4`,
+    start,
+    end
+  };
+};
+
+// src/shared/media/download.js
+const triggerBrowserDownload = ({
+  url = "",
+  filename = "",
+  documentObj = globalThis.document
+} = {}) => {
+  const anchor = documentObj?.createElement?.("a");
+  if (!anchor) {
+    throw new Error("File downloads are not supported in this browser.");
+  }
+  anchor.href = url;
+  anchor.download = filename;
+  documentObj.body?.appendChild?.(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove?.();
+  }
+};
+
+// src/integrations/frigate/media-download.ctrl.js
+const FrigateMediaDownloadController = class {
+  constructor({
+    getContext,
+    signPath = async (path) => path,
+    formatTime = () => "",
+    download = triggerBrowserDownload
+  } = {}) {
+    this._getContext = getContext;
+    this._signPath = signPath;
+    this._formatTime = formatTime;
+    this._download = download;
+  }
+  downloadEvent(eventId, file) {
+    const { clientId = "", cam = "" } = this._getContext?.() || {};
+    const plan = buildFrigateEventDownloadPlan({
+      clientId,
+      camera: cam,
+      eventId,
+      file
+    });
+    this._download(plan);
+    return plan;
+  }
+  async downloadRecording(start, end) {
+    const { clientId = "", cam = "" } = this._getContext?.() || {};
+    const plan = buildFrigateRecordingDownloadPlan({
+      clientId,
+      camera: cam,
+      start,
+      end,
+      timeLabel: this._formatTime(start)
+    });
+    const url = await this._signPath(plan.path);
+    const signedPlan = { url, filename: plan.filename };
+    this._download(signedPlan);
+    return { ...plan, url };
+  }
 };
 
 // src/integrations/frigate/camera-context.js
@@ -7439,7 +7539,7 @@ const BrowserPlaybackTargetController = class {
 };
 
 // src/integrations/frigate/receiver-media.js
-const encodePathPart = (value) => encodeURIComponent(String(value || ""));
+const encodePathPart2 = (value) => encodeURIComponent(String(value || ""));
 function buildFrigateReceiverMediaPath({
   mediaType = "",
   clientId = "",
@@ -7451,7 +7551,7 @@ function buildFrigateReceiverMediaPath({
   eventRecordingEnd = null
 } = {}) {
   const normalizedType = String(mediaType || "").toLowerCase();
-  const encodedClientId = encodePathPart(clientId);
+  const encodedClientId = encodePathPart2(clientId);
   if (!encodedClientId) {
     return {
       ok: false,
@@ -7469,7 +7569,7 @@ function buildFrigateReceiverMediaPath({
     }
     return {
       ok: true,
-      path: `/api/frigate/${encodedClientId}/recording/${encodePathPart(camera)}/start/${start}/end/${end}`,
+      path: `/api/frigate/${encodedClientId}/recording/${encodePathPart2(camera)}/start/${start}/end/${end}`,
       contentType: "video/mp4"
     };
   }
@@ -7484,13 +7584,13 @@ function buildFrigateReceiverMediaPath({
   if (camera && Number.isFinite(eventStart) && Number.isFinite(eventEnd) && eventEnd > eventStart) {
     return {
       ok: true,
-      path: `/api/frigate/${encodedClientId}/recording/${encodePathPart(camera)}/start/${eventStart}/end/${eventEnd}`,
+      path: `/api/frigate/${encodedClientId}/recording/${encodePathPart2(camera)}/start/${eventStart}/end/${eventEnd}`,
       contentType: "video/mp4"
     };
   }
   return {
     ok: true,
-    path: `/api/frigate/${encodedClientId}/notifications/${encodePathPart(eventId)}/clip.mp4`,
+    path: `/api/frigate/${encodedClientId}/notifications/${encodePathPart2(eventId)}/clip.mp4`,
     contentType: "video/mp4"
   };
 }
@@ -19599,6 +19699,11 @@ const FrigateViewCard = class extends HTMLElement {
     this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
+    this._frigateMediaDownloadController = new FrigateMediaDownloadController({
+      getContext: () => this._cc(),
+      signPath: (path) => this._signed(path),
+      formatTime: (timestamp) => this._time(timestamp)
+    });
     this._popupInfoController = new PopupInfoController({
       query: (selector) => this._$(selector),
       getActiveCamera: () => this._cc().cam,
@@ -19614,8 +19719,8 @@ const FrigateViewCard = class extends HTMLElement {
       onMediaCameraChange: (camera) => {
         this._popupMediaCamera = camera;
       },
-      onDownloadEvent: (id, file) => this._download(id, file),
-      onDownloadRecording: (start, end) => this._downloadRecRange(start, end)
+      onDownloadEvent: (id, file) => this._frigateMediaDownloadController.downloadEvent(id, file),
+      onDownloadRecording: (start, end) => void this._frigateMediaDownloadController.downloadRecording(start, end)
     });
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._playbackTargetController = new BrowserPlaybackTargetController({
@@ -22848,7 +22953,7 @@ const FrigateViewCard = class extends HTMLElement {
       const rs = Number(recDl.dataset.recDlStart);
       const re = Number(recDl.dataset.recDlEnd);
       if (Number.isFinite(rs) && Number.isFinite(re) && re > rs) {
-        this._downloadRecRange(rs, re);
+        void this._frigateMediaDownloadController.downloadRecording(rs, re);
       }
       return true;
     }
@@ -22890,7 +22995,10 @@ const FrigateViewCard = class extends HTMLElement {
     const dl = target.closest(".ico[data-dl]");
     if (dl) {
       e.stopPropagation();
-      this._download(dl.dataset.dl, dl.dataset.dlFile);
+      this._frigateMediaDownloadController.downloadEvent(
+        dl.dataset.dl,
+        dl.dataset.dlFile
+      );
       return true;
     }
     const fav = target.closest("[data-fav]");
@@ -23895,7 +24003,12 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _media(id, file, dl) {
-    return `/api/frigate/${this._cc().clientId}/notifications/${id}/${file}${dl ? "?download=true" : ""}`;
+    return buildFrigateNotificationMediaPath({
+      clientId: this._cc().clientId,
+      eventId: id,
+      file,
+      download: dl
+    });
   }
   async _signed(path) {
     try {
@@ -24023,14 +24136,6 @@ const FrigateViewCard = class extends HTMLElement {
       } catch (_) {
       }
     }
-  }
-  _download(id, file) {
-    const a = document.createElement("a");
-    a.href = this._media(id, file, true);
-    a.download = `${this._cc().cam}_${id}_${file}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
   }
   // ── favorites (realtime) ──────────────────────────────────
   _toggleFav(id) {
@@ -24490,22 +24595,6 @@ const FrigateViewCard = class extends HTMLElement {
       showDownloadButtons: !this._isLikelyMobileClient()
     });
     return buildReviewListItemHtml(model, { cap, icons: ICONS });
-  }
-  // ── clip download range ───────────────────────────────────
-  async _downloadRecRange(dlStart, dlEnd) {
-    const { clientId, cam } = this._cc();
-    const start = Math.floor(Number(dlStart) || 0);
-    const endRaw = Math.floor(Number(dlEnd) || 0);
-    const end = Math.max(start + 1, Math.min(endRaw, start + 7200));
-    const base = `/api/frigate/${encodeURIComponent(clientId)}/recording/${encodeURIComponent(cam)}/start/${start}/end/${end}`;
-    const signed = await this._signed(`${base}?download=true`);
-    const url = signed;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${cam}_${this._time(dlStart).replace(/:/g, "-")}.mp4`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
   }
 };
 
