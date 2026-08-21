@@ -106,7 +106,6 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
   const markup = buildMobileViewMainLayoutShellMarkup({
     regions: {
       live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
-      liveRotate: `<button data-fvc-region="live-rotate"></button>`,
       livePictureInPicture: `<button data-fvc-region="live-picture-in-picture"></button>`,
       liveFullscreen: `<button data-fvc-region="live-fullscreen"></button>`,
       liveTakeSnapshot: `<button data-fvc-region="live-take-snapshot"></button>`,
@@ -136,7 +135,7 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
   assert.match(liveStageMarkup, /id="live-playback-controls"/);
   assert.match(
     liveStageMarkup,
-    /live-rotate[\s\S]*?live-picture-in-picture[\s\S]*?live-take-snapshot[\s\S]*?live-fullscreen[\s\S]*?live-mute/,
+    /live-picture-in-picture[\s\S]*?live-take-snapshot[\s\S]*?live-fullscreen[\s\S]*?live-mute/,
   );
   assert.equal(markup.includes('id="mobile-view-two-way-talk-slot"'), true);
   assert.equal(

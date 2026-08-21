@@ -128,7 +128,6 @@ export function buildMobileViewMainLayoutShellMarkup({
       : {};
   const regions = {
     live: "",
-    liveRotate: "",
     livePictureInPicture: "",
     liveFullscreen: "",
     liveTakeSnapshot: "",

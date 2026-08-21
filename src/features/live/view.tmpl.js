@@ -52,17 +52,8 @@ export function buildLiveMuteControlMarkup({
   return `<button class="${visualButtonClass} mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
 }
 
-export function buildLiveRotateControlMarkup({
-  icons,
-  buttonClass = "square-btn",
-}) {
-  const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
-  return `<button class="${visualButtonClass} live-rotate-btn" id="live-rotate-btn" data-fvc-region="live-rotate" type="button" title="Rotate to landscape" aria-label="Rotate to landscape" aria-pressed="false" hidden>${icons.phoneRotateLandscape}</button>`;
-}
-
 export function buildLivePlaybackControlsMarkup(regions = {}) {
   return `<div class="live-playback-controls overlay-controls" id="live-playback-controls">
-              ${regions.liveRotate || ""}
               ${regions.livePictureInPicture || ""}
               ${regions.liveTakeSnapshot || ""}
               ${regions.liveFullscreen || ""}

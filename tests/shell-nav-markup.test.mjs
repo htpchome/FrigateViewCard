@@ -23,7 +23,6 @@ import {
   buildLiveFullscreenControlMarkup,
   buildLivePictureInPictureControlMarkup,
   buildLivePlaybackControlsMarkup,
-  buildLiveRotateControlMarkup,
   buildLiveTakeSnapshotControlMarkup,
   buildLiveMuteControlMarkup,
 } from "../src/features/live/view.tmpl.js";
@@ -383,12 +382,7 @@ test("shared shell builders expose stable page region anchors", () => {
   );
   assert.match(liveTakeSnapshot, /title="Take Snapshot"[^>]*>S<\/button>$/);
   assert.match(liveMute, /class="square-btn mute-btn"/);
-  const liveRotate = buildLiveRotateControlMarkup({
-    icons: { phoneRotateLandscape: "R" },
-  });
-  assert.match(liveRotate, /id="live-rotate-btn"/);
   const livePlaybackControls = buildLivePlaybackControlsMarkup({
-    liveRotate,
     livePictureInPicture,
     liveTakeSnapshot,
     liveFullscreen,
@@ -396,7 +390,7 @@ test("shared shell builders expose stable page region anchors", () => {
   });
   assert.match(
     livePlaybackControls,
-    /live-rotate-btn[\s\S]*?live-pip-btn[\s\S]*?live-take-snapshot-btn[\s\S]*?live-fs-btn[\s\S]*?mute-btn/,
+    /live-pip-btn[\s\S]*?live-take-snapshot-btn[\s\S]*?live-fs-btn[\s\S]*?mute-btn/,
   );
 
   const mobileLiveFullscreen = buildLiveFullscreenControlMarkup({
@@ -444,7 +438,6 @@ test("shared shell builders expose stable page region anchors", () => {
   const shellMarkup = buildSingleViewMainLayoutShellMarkup({
     regions: {
       live: liveEngineWrap,
-      liveRotate,
       livePictureInPicture,
       information: infoRow,
       liveFullscreen,
@@ -461,7 +454,6 @@ test("shared shell builders expose stable page region anchors", () => {
 
   for (const regionName of [
     "live",
-    "live-rotate",
     "live-picture-in-picture",
     "information",
     "page-navigation",

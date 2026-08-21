@@ -136,7 +136,6 @@ export class PopupMediaControlsSurfaceController {
     onClearPictureInPicture = () => {},
     onSyncPlaybackTargetButtons = () => {},
     onSyncPictureInPictureButtons = () => {},
-    onSyncRotateButtons = () => {},
     onSyncFullscreenButtons = () => {},
     icons = ICONS,
     documentObj = globalThis.document,
@@ -156,7 +155,6 @@ export class PopupMediaControlsSurfaceController {
     this._onClearPictureInPicture = onClearPictureInPicture;
     this._onSyncPlaybackTargetButtons = onSyncPlaybackTargetButtons;
     this._onSyncPictureInPictureButtons = onSyncPictureInPictureButtons;
-    this._onSyncRotateButtons = onSyncRotateButtons;
     this._onSyncFullscreenButtons = onSyncFullscreenButtons;
     this._icons = icons;
     this._document = documentObj;
@@ -281,16 +279,6 @@ export class PopupMediaControlsSurfaceController {
       if (airPlayButton) airPlayButton.hidden = true;
     }
 
-    if (isVideo && mobileTablet) {
-      appendButton({
-        id: "popup-rotate-btn",
-        className: "popup-rotate-btn",
-        title: "Rotate to landscape",
-        icon: this._icons.phoneRotateLandscape,
-        pressed: false,
-      });
-    }
-
     if (isVideo) {
       const pictureInPictureButton = appendButton({
         id: "popup-pip-btn",
@@ -311,23 +299,12 @@ export class PopupMediaControlsSurfaceController {
 
     if (!isVideo) {
       this._onClearPictureInPicture("popup");
-      this._onSyncRotateButtons();
       this._onSyncFullscreenButtons();
       return;
     }
 
-    if (mobileTablet) {
-      appendButton({
-        id: "popup-fs-btn",
-        className: "popup-fs-btn",
-        title: "Fullscreen",
-        icon: this._icons.expand,
-      });
-    }
-
     this._onSyncPlaybackTargetButtons();
     this._onSyncPictureInPictureButtons();
-    this._onSyncRotateButtons();
     this._onSyncFullscreenButtons();
   }
 

@@ -283,8 +283,6 @@ test("popup media controls surface renders snapshot, PiP, and AirPlay buttons", 
       takeSnapshot: "snapshot-icon",
       pipPopOut: "pip-icon",
       airplayVideo: "airplay-icon",
-      phoneRotateLandscape: "rotate-icon",
-      expand: "fullscreen-icon",
     },
     documentObj: { createElement },
   });
@@ -343,8 +341,6 @@ test("popup media controls surface renders tablet video actions in shared order"
     icons: {
       takeSnapshot: "snapshot-icon",
       pipPopOut: "pip-icon",
-      phoneRotateLandscape: "rotate-icon",
-      expand: "fullscreen-icon",
     },
     documentObj: { createElement },
   });
@@ -353,12 +349,7 @@ test("popup media controls surface renders tablet video actions in shared order"
 
   assert.deepEqual(
     playbackControls.children.map((button) => button.id),
-    [
-      "popup-rotate-btn",
-      "popup-pip-btn",
-      "popup-take-snapshot-btn",
-      "popup-fs-btn",
-    ],
+    ["popup-pip-btn", "popup-take-snapshot-btn"],
   );
   assert.equal(overlayOptions.surface, viewer);
   assert.equal(overlayOptions.revealDurationMs, 1800);

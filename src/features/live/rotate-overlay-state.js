@@ -1,77 +1,16 @@
-export const resolveRotateOverlayPresentation = ({
+export const resolveRotateOverlayTargetMode = ({
   isMobileTabletViewport = false,
   isLandscapeViewport = false,
   popupOpen = false,
   popupMediaVisible = false,
-  manualOrientation = "auto",
-  manualOrientationTarget = "none",
 }) => {
-  const surfaceMode = popupMediaVisible
-    ? "popup"
-    : popupOpen
-      ? "none"
-      : "live";
-  const physicalOrientation = isLandscapeViewport
-    ? "landscape"
-    : "portrait";
-  const manualApplies =
-    manualOrientationTarget === surfaceMode &&
-    ["landscape", "portrait"].includes(manualOrientation);
-  const orientation = manualApplies
-    ? manualOrientation
-    : physicalOrientation;
-  const active = Boolean(
-    isMobileTabletViewport &&
-      surfaceMode !== "none" &&
-      (manualApplies
-        ? orientation === "landscape"
-        : isLandscapeViewport),
+  const rotateEligible = Boolean(
+    isMobileTabletViewport && isLandscapeViewport,
   );
-  const swapped = active && orientation !== physicalOrientation;
-  return {
-    active,
-    mode: active ? surfaceMode : "none",
-    orientation,
-    physicalOrientation,
-    surfaceMode,
-    swapped,
-  };
-};
-
-export const resolveRotateOverlayTargetMode = (options = {}) => {
-  return resolveRotateOverlayPresentation(options).mode;
-};
-
-export const resolveRotateOverlayTogglePlan = ({
-  targetMode = "live",
-  isLandscapeViewport = false,
-  manualOrientation = "auto",
-  manualOrientationTarget = "none",
-} = {}) => {
-  const normalizedTarget = targetMode === "popup" ? "popup" : "live";
-  const physicalOrientation = isLandscapeViewport
-    ? "landscape"
-    : "portrait";
-  const manualApplies =
-    manualOrientationTarget === normalizedTarget &&
-    ["landscape", "portrait"].includes(manualOrientation);
-  const currentOrientation = manualApplies
-    ? manualOrientation
-    : physicalOrientation;
-  const nextOrientation =
-    currentOrientation === "landscape" ? "portrait" : "landscape";
-  const returnsToAuto = nextOrientation === physicalOrientation;
-
-  return {
-    targetMode: normalizedTarget,
-    nextOrientation,
-    manualOrientation: returnsToAuto ? "auto" : nextOrientation,
-    manualOrientationTarget: returnsToAuto ? "none" : normalizedTarget,
-    enterFullscreen:
-      physicalOrientation === "portrait" &&
-      nextOrientation === "landscape",
-    exitFullscreen: nextOrientation === "portrait",
-  };
+  if (!rotateEligible) return "none";
+  if (popupMediaVisible) return "popup";
+  if (!popupOpen) return "live";
+  return "none";
 };
 
 export const resolveRotateOverlayState = ({
@@ -79,20 +18,15 @@ export const resolveRotateOverlayState = ({
   isLandscapeViewport = false,
   popupOpen = false,
   popupMediaVisible = false,
-  manualOrientation = "auto",
-  manualOrientationTarget = "none",
   currentMode = "none",
   isActive = false,
 }) => {
-  const presentation = resolveRotateOverlayPresentation({
+  const nextMode = resolveRotateOverlayTargetMode({
     isMobileTabletViewport,
     isLandscapeViewport,
     popupOpen,
     popupMediaVisible,
-    manualOrientation,
-    manualOrientationTarget,
   });
-  const nextMode = presentation.mode;
 
   if (nextMode === "live") {
     return {
@@ -101,8 +35,6 @@ export const resolveRotateOverlayState = ({
       fromPopup: currentMode === "popup",
       mode: "live",
       nextMode,
-      orientation: presentation.orientation,
-      swapped: presentation.swapped,
     };
   }
 
@@ -113,8 +45,6 @@ export const resolveRotateOverlayState = ({
       fromLive: currentMode === "live",
       mode: "popup",
       nextMode,
-      orientation: presentation.orientation,
-      swapped: presentation.swapped,
     };
   }
 
@@ -124,8 +54,6 @@ export const resolveRotateOverlayState = ({
       active: false,
       mode: "none",
       nextMode,
-      orientation: presentation.orientation,
-      swapped: presentation.swapped,
     };
   }
 
@@ -135,8 +63,6 @@ export const resolveRotateOverlayState = ({
     exitMode: currentMode,
     mode: "none",
     nextMode,
-    orientation: presentation.orientation,
-    swapped: presentation.swapped,
   };
 };
 
@@ -144,15 +70,17 @@ export const resolveFullscreenButtonVisibility = ({
   popupOpen = false,
   isFullscreen = false,
   inGridMode = false,
-  rotateOverlayMode = "none",
+  isMobileTabletViewport = false,
 }) => {
-  const popupRotateActive = rotateOverlayMode === "popup";
   return {
     liveButtonHidden: Boolean(
-      popupOpen || isFullscreen || inGridMode || popupRotateActive,
+      isMobileTabletViewport ||
+        popupOpen ||
+        isFullscreen ||
+        inGridMode,
     ),
     popupControlsFullscreenHidden: Boolean(
-      isFullscreen || popupRotateActive,
+      isMobileTabletViewport || isFullscreen,
     ),
   };
 };
@@ -301,7 +229,5 @@ export const resolveRotateOverlayViewportVariables = ({
     heightPx: `${height}px`,
     offsetLeftPx: `${offsetLeft}px`,
     offsetTopPx: `${offsetTop}px`,
-    centerLeftPx: `${offsetLeft + width / 2}px`,
-    centerTopPx: `${offsetTop + height / 2}px`,
   };
 };

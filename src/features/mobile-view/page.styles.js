@@ -102,20 +102,6 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     z-index: 2147483000 !important;
   }
 
-  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-live #live-stage,
-  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-live-exit #live-stage,
-  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-popup #myPopup,
-  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-popup-exit #myPopup {
-    top: var(--rotate-cy) !important;
-    left: var(--rotate-cx) !important;
-    width: var(--rotate-vh) !important;
-    height: var(--rotate-vw) !important;
-    min-height: var(--rotate-vw) !important;
-    max-height: var(--rotate-vw) !important;
-    transform: translate(-50%, -50%) rotate(90deg) !important;
-    transform-origin: center center !important;
-  }
-
   .card.mobile-view-active .mobile-view-two-way-talk-slot {
     display: flex;
     align-items: center;

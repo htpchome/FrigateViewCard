@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1622";
+const VERSION = "1.0.1623";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -100,8 +100,6 @@ const ICONS = {
   back: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>',
   left: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>',
   right: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m8.59 16.59 1.41 1.41L16 12 10 6 8.59 7.41 13.17 12z"/></svg>',
-  phoneRotateLandscape: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9,1H3A2,2 0 0,0 1,3V16A2,2 0 0,0 3,18H9A2,2 0 0,0 11,16V3A2,2 0 0,0 9,1M9,15H3V3H9V15M21,13H13V15H21V21H9V20H6V21A2,2 0 0,0 8,23H21A2,2 0 0,0 23,21V15A2,2 0 0,0 21,13M23,10L19,8L20.91,7.09C19.74,4.31 17,2.5 14,2.5V1A9,9 0 0,1 23,10Z" /></svg>',
-  phoneRotatePortrait: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9,1H3A2,2 0 0,0 1,3V16A2,2 0 0,0 3,18H4V15H3V3H9V11H11V3A2,2 0 0,0 9,1M23,21V15A2,2 0 0,0 21,13H8A2,2 0 0,0 6,15V21A2,2 0 0,0 8,23H21A2,2 0 0,0 23,21M9,21V15H21V21H9M23,10H21.5C21.5,7 19.69,4.27 16.92,3.09L16,5L14,1A9,9 0 0,1 23,10Z" /></svg>',
   pipPopOut: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m4.264 5.633-.594.804 8.555 6.321.594-.803z"/><path fill-rule="evenodd" d="m14.145 13.557-3.921.211 2.972-4.021z"/><path d="M3.68 2.867A3.185 3.185 0 0 0 .5 6.047v10.641a3.185 3.185 0 0 0 3.18 3.18h11.332A1.5 1.5 0 0 1 15 19.674v-.855H3.68a2.126 2.126 0 0 1-2.133-2.131V6.047A2.127 2.127 0 0 1 3.68 3.914h14.141a2.127 2.127 0 0 1 2.131 2.133V14H21V6.047a3.185 3.185 0 0 0-3.18-3.18z"/><path d="M16.75 14.75h5.325a1 1 0 0 1 1 1v4.174a1 1 0 0 1-1 1H16.75a1 1 0 0 1-1-1V15.75a1 1 0 0 1 1-1z"/></svg>',
   pipPopIn: '<svg fill="currentColor" viewBox="0 0 24 24" ><path d="m22.066 20.929 0.60193-0.79808-8.492-6.4054-0.60192 0.79708z"/><path d="m12.264 12.908 3.9229-0.17217-3.0117 3.9914z" fill-rule="evenodd"/><path d="M3.68 2.867A3.185 3.185 0 0 0 .5 6.047v10.641a3.185 3.185 0 0 0 3.18 3.18h11.332A1.5 1.5 0 0 1 15 19.674v-.855H3.68a2.126 2.126 0 0 1-2.133-2.131V6.047A2.127 2.127 0 0 1 3.68 3.914h14.141a2.127 2.127 0 0 1 2.131 2.133V14H21V6.047a3.185 3.185 0 0 0-3.18-3.18z"/><path d="m4.6157 6.3473h5.325a1 1 0 0 1 1 1v4.174a1 1 0 0 1-1 1h-5.325a1 1 0 0 1-1-1v-4.174a1 1 0 0 1 1-1z"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
@@ -235,20 +233,6 @@ const MOBILE_VIEW_PAGE_STYLES = `
     max-height: 100dvh !important;
     min-height: 100dvh !important;
     z-index: 2147483000 !important;
-  }
-
-  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-live #live-stage,
-  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-live-exit #live-stage,
-  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-popup #myPopup,
-  .card.mobile-view-active.mobile-rotate-orientation-swapped.mobile-rotate-popup-exit #myPopup {
-    top: var(--rotate-cy) !important;
-    left: var(--rotate-cx) !important;
-    width: var(--rotate-vh) !important;
-    height: var(--rotate-vw) !important;
-    min-height: var(--rotate-vw) !important;
-    max-height: var(--rotate-vw) !important;
-    transform: translate(-50%, -50%) rotate(90deg) !important;
-    transform-origin: center center !important;
   }
 
   .card.mobile-view-active .mobile-view-two-way-talk-slot {
@@ -599,8 +583,6 @@ const STYLES = `
     --rotate-vh: 100dvh;
     --rotate-ox: 0px;
     --rotate-oy: 0px;
-    --rotate-cx: 50vw;
-    --rotate-cy: 50dvh;
   }
 
   /* \u2500\u2500 theme variables (dark = default) \u2500\u2500 */
@@ -849,10 +831,6 @@ const STYLES = `
     .card.mobile-rotate-popup-exit{overflow:hidden;height:var(--rotate-vh);max-height:var(--rotate-vh);}
     .card.mobile-rotate-popup #myPopup,
     .card.mobile-rotate-popup-exit #myPopup{position:fixed;top:var(--rotate-oy);left:var(--rotate-ox);right:auto;bottom:auto;width:var(--rotate-vw);height:var(--rotate-vh);max-height:var(--rotate-vh);min-height:var(--rotate-vh);z-index:1400;transform:translateY(0) !important;border-radius:0;background:var(--c-bg-deep);}
-    .card.mobile-rotate-orientation-swapped.mobile-rotate-live #live-stage,
-    .card.mobile-rotate-orientation-swapped.mobile-rotate-live-exit #live-stage,
-    .card.mobile-rotate-orientation-swapped.mobile-rotate-popup #myPopup,
-    .card.mobile-rotate-orientation-swapped.mobile-rotate-popup-exit #myPopup{top:var(--rotate-cy);left:var(--rotate-cx);width:var(--rotate-vh);height:var(--rotate-vw);min-height:var(--rotate-vw);max-height:var(--rotate-vw);transform:translate(-50%,-50%) rotate(90deg) !important;transform-origin:center center;}
     .card.mobile-rotate-popup #myPopup{animation:popupOverlayIn .28s ease both;}
     .card.mobile-rotate-popup-exit #myPopup{animation:popupOverlayOut .24s ease both;}
     .card.mobile-rotate-popup .popup-header,
@@ -957,7 +935,7 @@ const STYLES = `
   .live-playback-controls,.popup-playback-controls{position:absolute;top:50%;right:clamp(.75rem,2vw,1.125rem);bottom:auto;z-index:7;display:flex;flex-direction:column;gap:.5rem;opacity:0;pointer-events:none;transform:translateY(-50%);transition:opacity .16s ease;}
   .live-playback-controls > button,.popup-playback-controls > button{position:relative;inset:auto;width:36px;height:36px;flex:0 0 36px;opacity:1;}
 
-  .live-pip-btn[hidden],.live-fs-btn[hidden],.live-take-snapshot-btn[hidden],.live-rotate-btn[hidden],.mute-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
+  .live-pip-btn[hidden],.live-fs-btn[hidden],.live-take-snapshot-btn[hidden],.mute-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
 
 
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
@@ -3397,16 +3375,8 @@ function buildLiveMuteControlMarkup({
   const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
   return `<button class="${visualButtonClass} mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
 }
-function buildLiveRotateControlMarkup({
-  icons,
-  buttonClass = "square-btn"
-}) {
-  const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
-  return `<button class="${visualButtonClass} live-rotate-btn" id="live-rotate-btn" data-fvc-region="live-rotate" type="button" title="Rotate to landscape" aria-label="Rotate to landscape" aria-pressed="false" hidden>${icons.phoneRotateLandscape}</button>`;
-}
 function buildLivePlaybackControlsMarkup(regions = {}) {
   return `<div class="live-playback-controls overlay-controls" id="live-playback-controls">
-              ${regions.liveRotate || ""}
               ${regions.livePictureInPicture || ""}
               ${regions.liveTakeSnapshot || ""}
               ${regions.liveFullscreen || ""}
@@ -3523,7 +3493,6 @@ function buildMobileViewMainLayoutShellMarkup({
   const normalizedRegions = suppliedRegions && typeof suppliedRegions === "object" && !Array.isArray(suppliedRegions) ? suppliedRegions : {};
   const regions = {
     live: "",
-    liveRotate: "",
     livePictureInPicture: "",
     liveFullscreen: "",
     liveTakeSnapshot: "",
@@ -3628,7 +3597,6 @@ function normalizeRegions(regions) {
   const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
   return {
     live: "",
-    liveRotate: "",
     livePictureInPicture: "",
     liveFullscreen: "",
     liveTakeSnapshot: "",
@@ -3750,7 +3718,6 @@ function normalizeRegions2(regions) {
   const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
   return {
     live: "",
-    liveRotate: "",
     livePictureInPicture: "",
     liveFullscreen: "",
     liveTakeSnapshot: "",
@@ -3904,7 +3871,6 @@ function normalizePreviewPageRegions(regions) {
   const suppliedRegions = regions && typeof regions === "object" && !Array.isArray(regions) ? regions : {};
   return {
     live: "",
-    liveRotate: "",
     livePictureInPicture: "",
     liveFullscreen: "",
     liveTakeSnapshot: "",
@@ -3951,7 +3917,6 @@ function buildPreviewPageMainLayoutShellMarkup({
               ${regions.live}
               ${buildLivePlaybackControlsMarkup({
     ...regions,
-    liveRotate: "",
     livePictureInPicture: ""
   })}
             </div>
@@ -4275,7 +4240,6 @@ function buildPopupShellMarkup({ icons, version }) {
 // src/features/navigation/page-shell-registry.js
 const PAGE_SHELL_REGIONS = Object.freeze({
   live: "live",
-  liveRotate: "live-rotate",
   livePictureInPicture: "live-picture-in-picture",
   liveFullscreen: "live-fullscreen",
   liveTakeSnapshot: "live-take-snapshot",
@@ -4310,9 +4274,6 @@ function normalizeProfile(profile = {}) {
     livePictureInPictureButtonClass: String(
       profile.livePictureInPictureButtonClass || ""
     ).trim(),
-    liveRotateButtonClass: String(
-      profile.liveRotateButtonClass || ""
-    ).trim(),
     liveTakeSnapshotButtonClass: String(
       profile.liveTakeSnapshotButtonClass || ""
     ).trim(),
@@ -4323,7 +4284,6 @@ function normalizeProfile(profile = {}) {
     capabilities: {
       hasLive: capabilities.hasLive !== false,
       hasLivePictureInPicture: capabilities.hasLivePictureInPicture === true,
-      hasLiveRotate: capabilities.hasLiveRotate === true,
       hasBrowse: capabilities.hasBrowse !== false,
       tabsVariant: capabilities.tabsVariant === "none" || capabilities.tabsVariant === "new-tabs" ? capabilities.tabsVariant : "standard"
     },
@@ -4336,7 +4296,6 @@ function resolvePageCapabilities(profile = {}) {
   return {
     hasLive: caps.hasLive !== false,
     hasLivePictureInPicture: caps.hasLivePictureInPicture === true,
-    hasLiveRotate: caps.hasLiveRotate === true,
     hasBrowse: caps.hasBrowse !== false,
     tabsVariant: caps.tabsVariant === "none" || caps.tabsVariant === "new-tabs" ? caps.tabsVariant : "standard"
   };
@@ -4353,9 +4312,6 @@ function resolveRequiredPageShellRegions(profile = {}) {
     );
     if (capabilities.hasLivePictureInPicture) {
       requiredRegions.push(PAGE_SHELL_REGIONS.livePictureInPicture);
-    }
-    if (capabilities.hasLiveRotate) {
-      requiredRegions.push(PAGE_SHELL_REGIONS.liveRotate);
     }
   }
   if (capabilities.hasBrowse) {
@@ -4465,7 +4421,6 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     capabilities: {
       hasLive: true,
       hasLivePictureInPicture: true,
-      hasLiveRotate: true,
       hasBrowse: true,
       tabsVariant: "standard"
     }
@@ -4499,7 +4454,6 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     capabilities: {
       hasLive: true,
       hasLivePictureInPicture: true,
-      hasLiveRotate: true,
       hasBrowse: true,
       tabsVariant: "standard"
     }
@@ -6570,83 +6524,41 @@ const resolveSnapshotFallbackState = ({
 });
 
 // src/features/live/rotate-overlay-state.js
-const resolveRotateOverlayPresentation = ({
+const resolveRotateOverlayTargetMode = ({
   isMobileTabletViewport = false,
   isLandscapeViewport = false,
   popupOpen = false,
-  popupMediaVisible = false,
-  manualOrientation = "auto",
-  manualOrientationTarget = "none"
+  popupMediaVisible = false
 }) => {
-  const surfaceMode = popupMediaVisible ? "popup" : popupOpen ? "none" : "live";
-  const physicalOrientation = isLandscapeViewport ? "landscape" : "portrait";
-  const manualApplies = manualOrientationTarget === surfaceMode && ["landscape", "portrait"].includes(manualOrientation);
-  const orientation = manualApplies ? manualOrientation : physicalOrientation;
-  const active = Boolean(
-    isMobileTabletViewport && surfaceMode !== "none" && (manualApplies ? orientation === "landscape" : isLandscapeViewport)
+  const rotateEligible = Boolean(
+    isMobileTabletViewport && isLandscapeViewport
   );
-  const swapped = active && orientation !== physicalOrientation;
-  return {
-    active,
-    mode: active ? surfaceMode : "none",
-    orientation,
-    physicalOrientation,
-    surfaceMode,
-    swapped
-  };
-};
-const resolveRotateOverlayTargetMode = (options = {}) => {
-  return resolveRotateOverlayPresentation(options).mode;
-};
-const resolveRotateOverlayTogglePlan = ({
-  targetMode = "live",
-  isLandscapeViewport = false,
-  manualOrientation = "auto",
-  manualOrientationTarget = "none"
-} = {}) => {
-  const normalizedTarget = targetMode === "popup" ? "popup" : "live";
-  const physicalOrientation = isLandscapeViewport ? "landscape" : "portrait";
-  const manualApplies = manualOrientationTarget === normalizedTarget && ["landscape", "portrait"].includes(manualOrientation);
-  const currentOrientation = manualApplies ? manualOrientation : physicalOrientation;
-  const nextOrientation = currentOrientation === "landscape" ? "portrait" : "landscape";
-  const returnsToAuto = nextOrientation === physicalOrientation;
-  return {
-    targetMode: normalizedTarget,
-    nextOrientation,
-    manualOrientation: returnsToAuto ? "auto" : nextOrientation,
-    manualOrientationTarget: returnsToAuto ? "none" : normalizedTarget,
-    enterFullscreen: physicalOrientation === "portrait" && nextOrientation === "landscape",
-    exitFullscreen: nextOrientation === "portrait"
-  };
+  if (!rotateEligible) return "none";
+  if (popupMediaVisible) return "popup";
+  if (!popupOpen) return "live";
+  return "none";
 };
 const resolveRotateOverlayState = ({
   isMobileTabletViewport = false,
   isLandscapeViewport = false,
   popupOpen = false,
   popupMediaVisible = false,
-  manualOrientation = "auto",
-  manualOrientationTarget = "none",
   currentMode = "none",
   isActive = false
 }) => {
-  const presentation = resolveRotateOverlayPresentation({
+  const nextMode = resolveRotateOverlayTargetMode({
     isMobileTabletViewport,
     isLandscapeViewport,
     popupOpen,
-    popupMediaVisible,
-    manualOrientation,
-    manualOrientationTarget
+    popupMediaVisible
   });
-  const nextMode = presentation.mode;
   if (nextMode === "live") {
     return {
       action: "activate-live",
       active: true,
       fromPopup: currentMode === "popup",
       mode: "live",
-      nextMode,
-      orientation: presentation.orientation,
-      swapped: presentation.swapped
+      nextMode
     };
   }
   if (nextMode === "popup") {
@@ -6655,9 +6567,7 @@ const resolveRotateOverlayState = ({
       active: true,
       fromLive: currentMode === "live",
       mode: "popup",
-      nextMode,
-      orientation: presentation.orientation,
-      swapped: presentation.swapped
+      nextMode
     };
   }
   if (!isActive) {
@@ -6665,9 +6575,7 @@ const resolveRotateOverlayState = ({
       action: "idle",
       active: false,
       mode: "none",
-      nextMode,
-      orientation: presentation.orientation,
-      swapped: presentation.swapped
+      nextMode
     };
   }
   return {
@@ -6675,24 +6583,21 @@ const resolveRotateOverlayState = ({
     active: false,
     exitMode: currentMode,
     mode: "none",
-    nextMode,
-    orientation: presentation.orientation,
-    swapped: presentation.swapped
+    nextMode
   };
 };
 const resolveFullscreenButtonVisibility = ({
   popupOpen = false,
   isFullscreen = false,
   inGridMode = false,
-  rotateOverlayMode = "none"
+  isMobileTabletViewport = false
 }) => {
-  const popupRotateActive = rotateOverlayMode === "popup";
   return {
     liveButtonHidden: Boolean(
-      popupOpen || isFullscreen || inGridMode || popupRotateActive
+      isMobileTabletViewport || popupOpen || isFullscreen || inGridMode
     ),
     popupControlsFullscreenHidden: Boolean(
-      isFullscreen || popupRotateActive
+      isMobileTabletViewport || isFullscreen
     )
   };
 };
@@ -6830,9 +6735,7 @@ const resolveRotateOverlayViewportVariables = ({
     widthPx: `${width}px`,
     heightPx: `${height}px`,
     offsetLeftPx: `${offsetLeft}px`,
-    offsetTopPx: `${offsetTop}px`,
-    centerLeftPx: `${offsetLeft + width / 2}px`,
-    centerTopPx: `${offsetTop + height / 2}px`
+    offsetTopPx: `${offsetTop}px`
   };
 };
 
@@ -10947,8 +10850,6 @@ const PopupMediaControlsSurfaceController = class {
     },
     onSyncPictureInPictureButtons = () => {
     },
-    onSyncRotateButtons = () => {
-    },
     onSyncFullscreenButtons = () => {
     },
     icons = ICONS,
@@ -10968,7 +10869,6 @@ const PopupMediaControlsSurfaceController = class {
     this._onClearPictureInPicture = onClearPictureInPicture;
     this._onSyncPlaybackTargetButtons = onSyncPlaybackTargetButtons;
     this._onSyncPictureInPictureButtons = onSyncPictureInPictureButtons;
-    this._onSyncRotateButtons = onSyncRotateButtons;
     this._onSyncFullscreenButtons = onSyncFullscreenButtons;
     this._icons = icons;
     this._document = documentObj;
@@ -11081,15 +10981,6 @@ const PopupMediaControlsSurfaceController = class {
       });
       if (airPlayButton) airPlayButton.hidden = true;
     }
-    if (isVideo && mobileTablet) {
-      appendButton({
-        id: "popup-rotate-btn",
-        className: "popup-rotate-btn",
-        title: "Rotate to landscape",
-        icon: this._icons.phoneRotateLandscape,
-        pressed: false
-      });
-    }
     if (isVideo) {
       const pictureInPictureButton = appendButton({
         id: "popup-pip-btn",
@@ -11108,21 +10999,11 @@ const PopupMediaControlsSurfaceController = class {
     });
     if (!isVideo) {
       this._onClearPictureInPicture("popup");
-      this._onSyncRotateButtons();
       this._onSyncFullscreenButtons();
       return;
     }
-    if (mobileTablet) {
-      appendButton({
-        id: "popup-fs-btn",
-        className: "popup-fs-btn",
-        title: "Fullscreen",
-        icon: this._icons.expand
-      });
-    }
     this._onSyncPlaybackTargetButtons();
     this._onSyncPictureInPictureButtons();
-    this._onSyncRotateButtons();
     this._onSyncFullscreenButtons();
   }
   update(video = this.video(), { updateProgress = true } = {}) {
@@ -21358,7 +21239,6 @@ const FrigateViewCard = class extends HTMLElement {
       onClearPictureInPicture: (scope) => this._clearPictureInPictureButtonController(scope),
       onSyncPlaybackTargetButtons: () => this._syncPlaybackTargetButtons(),
       onSyncPictureInPictureButtons: () => this._syncPictureInPictureButtons(),
-      onSyncRotateButtons: () => this._syncRotateOverlayButtons(),
       onSyncFullscreenButtons: () => this._syncFullscreenButtonsVisibility()
     });
     this._popupLifecycleController = new PopupLifecycleController({
@@ -21493,13 +21373,8 @@ const FrigateViewCard = class extends HTMLElement {
     this._lastLiveKick = 0;
     this._rotateOverlayActive = false;
     this._rotateOverlayMode = "none";
-    this._rotateOverlayManualOrientation = "auto";
-    this._rotateOverlayManualTarget = "none";
-    this._rotateOverlayOrientation = this._isLandscapeViewport() ? "landscape" : "portrait";
-    this._lastPhysicalLandscape = this._isLandscapeViewport();
     this._rotateOverlayRaf = 0;
     this._rotateOverlayExitT = null;
-    this._rotateOverlayFullscreenElement = null;
     this._rotateOverlaySyncVideo = null;
     this._onRotateOverlayVolumeChange = null;
     this._rotateStyledVideo = null;
@@ -21526,13 +21401,7 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
     document.addEventListener("visibilitychange", this._onDocVisibility);
-    this._onFullscreenChange = () => {
-      const fullscreenElement = this._rotateFullscreenElement();
-      if (this._rotateOverlayFullscreenElement && fullscreenElement !== this._rotateOverlayFullscreenElement) {
-        this._rotateOverlayFullscreenElement = null;
-      }
-      this._syncFullscreenButtonsVisibility();
-    };
+    this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
     document.addEventListener(
       "webkitfullscreenchange",
@@ -21548,13 +21417,6 @@ const FrigateViewCard = class extends HTMLElement {
         this._lastViewportHeight = viewportHeight;
         this._syncBrowseHeadModeClass();
         this._applyCardStyle();
-      }
-      const physicalLandscape = this._isLandscapeViewport();
-      if (physicalLandscape !== this._lastPhysicalLandscape) {
-        this._lastPhysicalLandscape = physicalLandscape;
-        this._rotateOverlayManualOrientation = "auto";
-        this._rotateOverlayManualTarget = "none";
-        if (!physicalLandscape) void this._exitRotateOverlayFullscreen();
       }
       this._scheduleRotateOverlayUpdate();
     };
@@ -22116,13 +21978,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._rotateOverlayRaf = 0;
     if (this._rotateOverlayExitT) clearTimeout(this._rotateOverlayExitT);
     this._rotateOverlayExitT = null;
-    this._rotateOverlayManualOrientation = "auto";
-    this._rotateOverlayManualTarget = "none";
-    this._rotateOverlayOrientation = this._lastPhysicalLandscape ? "landscape" : "portrait";
-    this._rotateOverlayFullscreenElement = null;
-    this._$?.("#card")?.classList?.remove?.(
-      "mobile-rotate-orientation-swapped"
-    );
     this.classList?.remove?.(MOBILE_VIEW_ROTATE_COVER_CLASS);
     this._clearRotateOverlayAudioSync();
     this._clearRotateVideoFullscreenStyle();
@@ -22521,7 +22376,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._setLiveNativeControls(true);
     }
   }
-  _applyRotateOverlayUiPlan(card, uiPlan, rotateState = {}) {
+  _applyRotateOverlayUiPlan(card, uiPlan) {
     if (!card || !uiPlan) return;
     if (uiPlan.removeClasses.length) {
       card.classList.remove(...uiPlan.removeClasses);
@@ -22533,19 +22388,11 @@ const FrigateViewCard = class extends HTMLElement {
       MOBILE_VIEW_ROTATE_COVER_CLASS,
       card.classList.contains(MOBILE_VIEW_ACTIVE_CLASS) && uiPlan.retainViewportCover
     );
-    const nextSwapped = Boolean(uiPlan.active && rotateState.swapped);
-    if (rotateState.action !== "deactivate") {
-      card.classList.toggle(
-        "mobile-rotate-orientation-swapped",
-        nextSwapped
-      );
-    }
-    this._rotateOverlayOrientation = rotateState.orientation || (this._isLandscapeViewport() ? "landscape" : "portrait");
     this._rotateOverlayActive = uiPlan.active;
     this._rotateOverlayMode = uiPlan.mode;
     if (uiPlan.disableNativeControls) {
       this._setLiveNativeControls(false, {
-        applyFullscreenStyle: uiPlan.active && uiPlan.mode === "live" && !nextSwapped
+        applyFullscreenStyle: uiPlan.active && uiPlan.mode === "live"
       });
     }
     if (uiPlan.clearLiveControlsVisible) {
@@ -22558,7 +22405,6 @@ const FrigateViewCard = class extends HTMLElement {
     if (uiPlan.showPopupControls) {
       this._popupMediaControlsController.showTemporarily();
     }
-    this._syncRotateOverlayButtons();
   }
   async _mountEngine(forcedType = null, options = {}) {
     return this._liveMountController.mount({
@@ -23555,10 +23401,6 @@ const FrigateViewCard = class extends HTMLElement {
     const toolsMarkup = this._getToolsMarkup();
     const regions = {
       live: buildLiveEngineWrapMarkup({ icons: ICONS }),
-      liveRotate: shellCapabilities.hasLiveRotate ? buildLiveRotateControlMarkup({
-        icons: ICONS,
-        buttonClass: shellProfile?.liveRotateButtonClass
-      }) : "",
       livePictureInPicture: shellCapabilities.hasLivePictureInPicture ? buildLivePictureInPictureControlMarkup({
         icons: ICONS,
         buttonClass: shellProfile?.livePictureInPictureButtonClass
@@ -24132,91 +23974,6 @@ const FrigateViewCard = class extends HTMLElement {
     apply();
     controlsPlan.retryDelaysMs.forEach((delay) => setTimeout(apply, delay));
   }
-  _rotateFullscreenElement() {
-    return this.shadowRoot?.fullscreenElement || this.shadowRoot?.webkitFullscreenElement || document.fullscreenElement || document.webkitFullscreenElement || null;
-  }
-  async _enterRotateOverlayFullscreen(targetMode) {
-    const target = targetMode === "popup" ? this._$("#viewer") : this._$("#live-stage");
-    if (!target) return false;
-    const current = this._rotateFullscreenElement();
-    if (current) return current === target;
-    const request = target.requestFullscreen || target.webkitRequestFullscreen;
-    if (typeof request !== "function") return false;
-    this._rotateOverlayFullscreenElement = target;
-    try {
-      const result = request === target.requestFullscreen ? request.call(target, { navigationUI: "hide" }) : request.call(target);
-      await result;
-      if (this._rotateOverlayFullscreenElement !== target) {
-        const entered = this._rotateFullscreenElement();
-        if (entered === target) {
-          const exit = document.exitFullscreen || document.webkitExitFullscreen;
-          await exit?.call?.(document);
-        }
-        return false;
-      }
-      return true;
-    } catch (_) {
-      if (this._rotateOverlayFullscreenElement === target) {
-        this._rotateOverlayFullscreenElement = null;
-      }
-      return false;
-    }
-  }
-  async _exitRotateOverlayFullscreen() {
-    const owned = this._rotateOverlayFullscreenElement;
-    this._rotateOverlayFullscreenElement = null;
-    if (!owned || this._rotateFullscreenElement() !== owned) return false;
-    const exit = document.exitFullscreen || document.webkitExitFullscreen;
-    if (typeof exit !== "function") return false;
-    try {
-      await exit.call(document);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-  _toggleRotateOverlay(targetMode) {
-    if (!this._isMobileTabletViewport()) return;
-    const togglePlan = resolveRotateOverlayTogglePlan({
-      targetMode,
-      isLandscapeViewport: this._isLandscapeViewport(),
-      manualOrientation: this._rotateOverlayManualOrientation,
-      manualOrientationTarget: this._rotateOverlayManualTarget
-    });
-    this._rotateOverlayManualOrientation = togglePlan.manualOrientation;
-    this._rotateOverlayManualTarget = togglePlan.manualOrientationTarget;
-    if (togglePlan.enterFullscreen) {
-      void this._enterRotateOverlayFullscreen(togglePlan.targetMode);
-    } else if (togglePlan.exitFullscreen) {
-      void this._exitRotateOverlayFullscreen();
-    }
-    this._scheduleRotateOverlayUpdate();
-  }
-  _syncRotateOverlayButtons() {
-    const mobileTablet = this._isMobileTabletViewport();
-    const liveButton = this._$("#live-rotate-btn");
-    const liveAvailable = mobileTablet && this._activePageShellCapabilities().hasLiveRotate;
-    const popupButton = this._$("#popup-rotate-btn");
-    const syncButton = (button, mode, available) => {
-      if (!button) return;
-      const physicalOrientation = this._isLandscapeViewport() ? "landscape" : "portrait";
-      const manual = available && this._rotateOverlayManualOrientation !== "auto" && this._rotateOverlayManualTarget === mode;
-      const orientation = manual ? this._rotateOverlayManualOrientation : available && this._rotateOverlayActive && this._rotateOverlayMode === mode ? this._rotateOverlayOrientation : physicalOrientation;
-      const landscape = orientation === "landscape";
-      const label = landscape ? "Rotate to portrait" : "Rotate to landscape";
-      button.hidden = !available;
-      button.title = label;
-      button.setAttribute("aria-label", label);
-      button.setAttribute("aria-pressed", String(manual));
-      button.innerHTML = landscape ? ICONS.phoneRotatePortrait : ICONS.phoneRotateLandscape;
-    };
-    syncButton(liveButton, "live", liveAvailable);
-    syncButton(
-      popupButton,
-      "popup",
-      mobileTablet && Boolean(this._popupMediaControlsController.video())
-    );
-  }
   _scheduleRotateOverlayUpdate() {
     if (this._rotateOverlayRaf) cancelAnimationFrame(this._rotateOverlayRaf);
     this._rotateOverlayRaf = requestAnimationFrame(() => {
@@ -24230,8 +23987,6 @@ const FrigateViewCard = class extends HTMLElement {
       this.style.setProperty("--rotate-vh", viewportVars.heightPx);
       this.style.setProperty("--rotate-ox", viewportVars.offsetLeftPx);
       this.style.setProperty("--rotate-oy", viewportVars.offsetTopPx);
-      this.style.setProperty("--rotate-cx", viewportVars.centerLeftPx);
-      this.style.setProperty("--rotate-cy", viewportVars.centerTopPx);
       this._updateRotateOverlayState();
     });
   }
@@ -24241,18 +23996,11 @@ const FrigateViewCard = class extends HTMLElement {
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     const viewer = this._$("#viewer");
     const popupMediaVisible = !!popupOpen && !!viewer && viewer.style.display !== "none" && viewer.childElementCount > 0;
-    if (this._rotateOverlayManualTarget === "popup" && !popupMediaVisible) {
-      this._rotateOverlayManualOrientation = "auto";
-      this._rotateOverlayManualTarget = "none";
-      void this._exitRotateOverlayFullscreen();
-    }
     const rotateState = resolveRotateOverlayState({
       isMobileTabletViewport: this._isMobileTabletViewport(),
       isLandscapeViewport: this._isLandscapeViewport(),
       popupOpen,
       popupMediaVisible,
-      manualOrientation: this._rotateOverlayManualOrientation,
-      manualOrientationTarget: this._rotateOverlayManualTarget,
       currentMode: this._rotateOverlayMode,
       isActive: this._rotateOverlayActive
     });
@@ -24261,7 +24009,7 @@ const FrigateViewCard = class extends HTMLElement {
       clearTimeout(this._rotateOverlayExitT);
       this._rotateOverlayExitT = null;
     }
-    this._applyRotateOverlayUiPlan(card, uiPlan, rotateState);
+    this._applyRotateOverlayUiPlan(card, uiPlan);
     const exitPlan = resolveRotateOverlayExitPlan({
       action: rotateState.action
     });
@@ -24279,7 +24027,6 @@ const FrigateViewCard = class extends HTMLElement {
       if (c && exitPlan.removeClasses.length) {
         c.classList.remove(...exitPlan.removeClasses);
       }
-      c?.classList?.remove?.("mobile-rotate-orientation-swapped");
       if (exitPlan.releaseViewportCover) {
         this.classList.remove(MOBILE_VIEW_ROTATE_COVER_CLASS);
       }
@@ -24460,10 +24207,6 @@ const FrigateViewCard = class extends HTMLElement {
       void this._togglePictureInPicture(this._livePictureInPictureVideo());
       return true;
     }
-    if (target.closest("#live-rotate-btn")) {
-      this._toggleRotateOverlay("live");
-      return true;
-    }
     if (target.closest("#live-take-snapshot-btn")) {
       void this._takeDisplayedSnapshot("live");
       return true;
@@ -24525,15 +24268,6 @@ const FrigateViewCard = class extends HTMLElement {
         this._popupMediaControlsController.video(),
         { popup: true }
       );
-      this._popupMediaControlsController.showTemporarily();
-      return true;
-    }
-    if (target.closest("#popup-rotate-btn")) {
-      this._toggleRotateOverlay("popup");
-      return true;
-    }
-    if (target.closest("#popup-fs-btn")) {
-      this._fullscreen(this._$("#viewer"));
       this._popupMediaControlsController.showTemporarily();
       return true;
     }
@@ -24850,7 +24584,7 @@ const FrigateViewCard = class extends HTMLElement {
   _renderMuteButton() {
     const btn = this._$("#mute-btn");
     if (!btn) return;
-    const hideMute = this._viewMode === "grid" || this._pageId === PAGE_IDS.mobileView;
+    const hideMute = this._viewMode === "grid";
     btn.hidden = hideMute;
     btn.style.display = hideMute ? "none" : "";
     if (hideMute) return;
@@ -24890,7 +24624,6 @@ const FrigateViewCard = class extends HTMLElement {
   _syncFullscreenButtonsVisibility() {
     const liveBtn = this._$("#live-fs-btn");
     const popupControlsFsBtn = this._$("#popup-media-fs");
-    const popupOverlayFsBtn = this._$("#popup-fs-btn");
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open");
     const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
     const inGridMode = this._viewMode === "grid";
@@ -24898,15 +24631,13 @@ const FrigateViewCard = class extends HTMLElement {
       popupOpen: !!popupOpen,
       isFullscreen,
       inGridMode,
-      rotateOverlayMode: this._rotateOverlayMode
+      isMobileTabletViewport: this._isMobileTabletViewport()
     });
     if (liveBtn) {
-      liveBtn.hidden = this._pageId === PAGE_IDS.mobileView || visibility.liveButtonHidden;
+      liveBtn.hidden = visibility.liveButtonHidden;
     }
-    if (popupControlsFsBtn)
-      popupControlsFsBtn.hidden = Boolean(popupOverlayFsBtn) || visibility.popupControlsFullscreenHidden;
-    if (popupOverlayFsBtn) {
-      popupOverlayFsBtn.hidden = visibility.popupControlsFullscreenHidden;
+    if (popupControlsFsBtn) {
+      popupControlsFsBtn.hidden = visibility.popupControlsFullscreenHidden;
     }
     this._syncTakeSnapshotButtonVisibility();
   }

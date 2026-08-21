@@ -1996,10 +1996,7 @@ test("page profiles own toolbar classes and normalize live-control classes", () 
     cardSource.includes("buttonClass: shellProfile?.liveMuteButtonClass"),
     true,
   );
-  assert.equal(
-    pageShellRegistrySource.includes("liveRotateButtonClass: String("),
-    true,
-  );
+  assert.equal(pageShellRegistrySource.includes("liveRotateButtonClass"), false);
   assert.equal(
     shellNavTemplateSource.includes('buttonClass = "tool"'),
     true,

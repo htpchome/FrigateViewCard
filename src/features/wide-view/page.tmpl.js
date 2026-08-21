@@ -13,7 +13,6 @@ function normalizeRegions(regions) {
       : {};
   return {
     live: "",
-    liveRotate: "",
     livePictureInPicture: "",
     liveFullscreen: "",
     liveTakeSnapshot: "",

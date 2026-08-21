@@ -37,28 +37,24 @@ test("page shell registry default page capabilities resolve stable defaults", ()
   assert.deepEqual(singleCaps, {
     hasLive: true,
     hasLivePictureInPicture: true,
-    hasLiveRotate: true,
     hasBrowse: true,
     tabsVariant: "standard",
   });
   assert.deepEqual(mobileCaps, {
     hasLive: true,
     hasLivePictureInPicture: true,
-    hasLiveRotate: true,
     hasBrowse: true,
     tabsVariant: "standard",
   });
   assert.deepEqual(wideCaps, {
     hasLive: true,
     hasLivePictureInPicture: true,
-    hasLiveRotate: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
   assert.deepEqual(previewCaps, {
     hasLive: true,
     hasLivePictureInPicture: false,
-    hasLiveRotate: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
@@ -94,7 +90,6 @@ test("page shell capabilities honor explicit overrides", () => {
   assert.deepEqual(resolvePageCapabilities(profile), {
     hasLive: false,
     hasLivePictureInPicture: true,
-    hasLiveRotate: false,
     hasBrowse: false,
     tabsVariant: "new-tabs",
   });
@@ -112,7 +107,6 @@ test("page shell capabilities normalize unsupported values", () => {
   assert.deepEqual(resolvePageCapabilities(profile), {
     hasLive: true,
     hasLivePictureInPicture: false,
-    hasLiveRotate: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
@@ -120,7 +114,6 @@ test("page shell capabilities normalize unsupported values", () => {
   assert.deepEqual(resolvePageCapabilities({}), {
     hasLive: true,
     hasLivePictureInPicture: false,
-    hasLiveRotate: false,
     hasBrowse: true,
     tabsVariant: "standard",
   });
@@ -152,7 +145,6 @@ test("mobile profile exposes custom main layout shell builder", () => {
     },
     regions: {
       live: `<div id="eng-wrap" data-fvc-region="live"></div>`,
-      liveRotate: `<button data-fvc-region="live-rotate"></button>`,
       livePictureInPicture: `<button data-fvc-region="live-picture-in-picture"></button>`,
       liveFullscreen: `<button data-fvc-region="live-fullscreen"></button>`,
       liveTakeSnapshot: `<button data-fvc-region="live-take-snapshot"></button>`,
@@ -218,7 +210,6 @@ test("required page shell regions follow declared capabilities", () => {
       capabilities: {
         hasLive: true,
         hasLivePictureInPicture: true,
-        hasLiveRotate: true,
         hasBrowse: true,
         tabsVariant: "standard",
       },
@@ -229,7 +220,6 @@ test("required page shell regions follow declared capabilities", () => {
       PAGE_SHELL_REGIONS.liveTakeSnapshot,
       PAGE_SHELL_REGIONS.liveMute,
       PAGE_SHELL_REGIONS.livePictureInPicture,
-      PAGE_SHELL_REGIONS.liveRotate,
       PAGE_SHELL_REGIONS.browseHeader,
       PAGE_SHELL_REGIONS.browse,
       PAGE_SHELL_REGIONS.tabs,

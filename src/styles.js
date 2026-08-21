@@ -20,8 +20,6 @@ export const STYLES = `
     --rotate-vh: 100dvh;
     --rotate-ox: 0px;
     --rotate-oy: 0px;
-    --rotate-cx: 50vw;
-    --rotate-cy: 50dvh;
   }
 
   /* ── theme variables (dark = default) ── */
@@ -270,10 +268,6 @@ export const STYLES = `
     .card.mobile-rotate-popup-exit{overflow:hidden;height:var(--rotate-vh);max-height:var(--rotate-vh);}
     .card.mobile-rotate-popup #myPopup,
     .card.mobile-rotate-popup-exit #myPopup{position:fixed;top:var(--rotate-oy);left:var(--rotate-ox);right:auto;bottom:auto;width:var(--rotate-vw);height:var(--rotate-vh);max-height:var(--rotate-vh);min-height:var(--rotate-vh);z-index:1400;transform:translateY(0) !important;border-radius:0;background:var(--c-bg-deep);}
-    .card.mobile-rotate-orientation-swapped.mobile-rotate-live #live-stage,
-    .card.mobile-rotate-orientation-swapped.mobile-rotate-live-exit #live-stage,
-    .card.mobile-rotate-orientation-swapped.mobile-rotate-popup #myPopup,
-    .card.mobile-rotate-orientation-swapped.mobile-rotate-popup-exit #myPopup{top:var(--rotate-cy);left:var(--rotate-cx);width:var(--rotate-vh);height:var(--rotate-vw);min-height:var(--rotate-vw);max-height:var(--rotate-vw);transform:translate(-50%,-50%) rotate(90deg) !important;transform-origin:center center;}
     .card.mobile-rotate-popup #myPopup{animation:popupOverlayIn .28s ease both;}
     .card.mobile-rotate-popup-exit #myPopup{animation:popupOverlayOut .24s ease both;}
     .card.mobile-rotate-popup .popup-header,
@@ -378,7 +372,7 @@ export const STYLES = `
   .live-playback-controls,.popup-playback-controls{position:absolute;top:50%;right:clamp(.75rem,2vw,1.125rem);bottom:auto;z-index:7;display:flex;flex-direction:column;gap:.5rem;opacity:0;pointer-events:none;transform:translateY(-50%);transition:opacity .16s ease;}
   .live-playback-controls > button,.popup-playback-controls > button{position:relative;inset:auto;width:36px;height:36px;flex:0 0 36px;opacity:1;}
 
-  .live-pip-btn[hidden],.live-fs-btn[hidden],.live-take-snapshot-btn[hidden],.live-rotate-btn[hidden],.mute-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
+  .live-pip-btn[hidden],.live-fs-btn[hidden],.live-take-snapshot-btn[hidden],.mute-btn[hidden],.popup-playback-btn[hidden],.popup-media-btn[hidden]{display:none !important;}
 
 
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}

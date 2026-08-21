@@ -126,7 +126,6 @@ function normalizePreviewPageRegions(regions) {
       : {};
   return {
     live: "",
-    liveRotate: "",
     livePictureInPicture: "",
     liveFullscreen: "",
     liveTakeSnapshot: "",
@@ -175,7 +174,6 @@ export function buildPreviewPageMainLayoutShellMarkup({
               ${regions.live}
               ${buildLivePlaybackControlsMarkup({
                 ...regions,
-                liveRotate: "",
                 livePictureInPicture: "",
               })}
             </div>
