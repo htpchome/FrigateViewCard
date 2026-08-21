@@ -1,10 +1,11 @@
-export const VERSION = "1.0.1610";
+export const VERSION = "1.0.1611";
 
 export const CARD_TAG = "frigate-view-card";
 export const DAY = 86400;
 export const RECORDINGS_WINDOW = 24 * 3600;
 export const EVENT_FETCH_BATCH = 100;
 export const INITIAL_EVENT_FETCH_LIMIT = 20;
+export const INITIAL_BROWSE_PAINT_LIMIT = 6;
 export const INACTIVE_WARM_EVENT_LIMIT = 5;
 export const REVIEW_FETCH_BATCH = 100;
 export const WINDOW_FETCH_PAGE_LIMIT = 10;

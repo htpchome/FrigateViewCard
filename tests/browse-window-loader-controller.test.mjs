@@ -154,6 +154,139 @@ test("loadWindow renders alerts before the event request finishes", async () => 
   assert.equal(host._loading, false);
 });
 
+test("loadWindowEvents paints six newest clips before loading the full window", async () => {
+  const firstEvents = Array.from({ length: 6 }, (_, index) => ({
+    id: `event-${index}`,
+    start_time: 195 - index,
+  }));
+  const remainingEvents = Array.from({ length: 6 }, (_, index) => ({
+    id: `event-${index + 6}`,
+    start_time: 189 - index,
+  }));
+  const requestLimits = [];
+  const requestBeforeValues = [];
+  const renderedLengths = [];
+  const statsLengths = [];
+  let releaseRemaining;
+  const remainingPending = new Promise((resolve) => {
+    releaseRemaining = resolve;
+  });
+  const activeCache = {
+    clientId: "frigate",
+    cam: "front",
+    events: [],
+  };
+  const host = {
+    _config: { window_days: 1 },
+    _activeCam: { entity: "camera.front" },
+    _camCache: { "camera.front": activeCache },
+    _events: [],
+    _eventsLoadToken: 0,
+    _winEnd: 200,
+    _cc: () => activeCache,
+    _ws: async ({ before, limit }) => {
+      requestLimits.push(limit);
+      requestBeforeValues.push(before);
+      if (requestLimits.length === 1) return firstEvents;
+      return await remainingPending;
+    },
+    _renderList: () => renderedLengths.push(host._events.length),
+    _renderStats: () => statsLengths.push(host._events.length),
+  };
+  const controller = new BrowseWindowLoaderController(host);
+
+  const load = controller.loadWindowEvents("frigate", "front", 100, 200);
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(requestLimits, [6, 100]);
+  assert.deepEqual(requestBeforeValues, [200, 200]);
+  assert.equal(host._events.length, 6);
+  assert.deepEqual(renderedLengths, [6]);
+  assert.deepEqual(statsLengths, [6]);
+
+  releaseRemaining([...firstEvents, ...remainingEvents]);
+  await load;
+
+  assert.equal(host._events.length, 12);
+  assert.deepEqual(renderedLengths, [6, 12]);
+  assert.deepEqual(statsLengths, [6, 12]);
+  assert.equal(activeCache.events.length, 12);
+});
+
+test("loadWindowReviews paints only eligible alerts before completing its cache", async () => {
+  const firstReviews = Array.from({ length: 6 }, (_, index) => ({
+    id: `review-${index}`,
+    start_time: 195 - index,
+    severity: index === 5 ? "detection" : "alert",
+  }));
+  const remainingReviews = Array.from({ length: 6 }, (_, index) => ({
+    id: `review-${index + 6}`,
+    start_time: 189 - index,
+    severity: "alert",
+  }));
+  const requestLimits = [];
+  const requestBeforeValues = [];
+  const renderedLengths = [];
+  const reviewUpdates = [];
+  let releaseRemaining;
+  const remainingPending = new Promise((resolve) => {
+    releaseRemaining = resolve;
+  });
+  const activeCache = {
+    clientId: "frigate",
+    cam: "front",
+    reviews: [],
+    reviewsWindowKey: "",
+  };
+  const host = {
+    _tab: "alerts",
+    _config: { alerts_reviews_days: 1 },
+    _activeCam: { entity: "camera.front", alerts_content: "alerts_only" },
+    _camCache: { "camera.front": activeCache },
+    _reviews: [],
+    _reviewsLoadToken: 0,
+    _winEnd: 200,
+    _cc: () => activeCache,
+    _ws: async ({ before, limit }) => {
+      requestLimits.push(limit);
+      requestBeforeValues.push(before);
+      if (requestLimits.length === 1) return firstReviews;
+      return await remainingPending;
+    },
+    _renderList: () => renderedLengths.push(host._reviews.length),
+    _slideshowAlertController: {
+      handleReviewsUpdated: (_entity, reviews) =>
+        reviewUpdates.push(reviews.length),
+    },
+  };
+  const controller = new BrowseWindowLoaderController(host);
+
+  const load = controller.loadWindowReviewsIfNeeded(
+    "frigate",
+    "front",
+    100,
+    200,
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(requestLimits, [6, 100]);
+  assert.deepEqual(requestBeforeValues, [200, 200]);
+  assert.equal(host._reviews.length, 5);
+  assert.equal(activeCache.reviews.length, 5);
+  assert.equal(activeCache.reviewsWindowKey, "");
+  assert.deepEqual(renderedLengths, [5]);
+  assert.deepEqual(reviewUpdates, []);
+
+  releaseRemaining([...firstReviews, ...remainingReviews]);
+  await load;
+
+  assert.equal(host._reviews.length, 11);
+  assert.equal(activeCache.reviews.length, 11);
+  assert.equal(activeCache.reviewsWindowKey.includes("frigate|front|200"), true);
+  assert.deepEqual(renderedLengths, [5, 11]);
+  assert.deepEqual(reviewUpdates, [11]);
+});
+
 test("warmOtherCamerasEvents fills inactive camera cache through fetchWindowedEvents", async () => {
   const inactiveCache = {
     clientId: "frigate",

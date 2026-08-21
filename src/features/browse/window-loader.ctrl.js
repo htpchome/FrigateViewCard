@@ -1,6 +1,7 @@
 import {
   DAY,
   EVENT_FETCH_BATCH,
+  INITIAL_BROWSE_PAINT_LIMIT,
   INACTIVE_WARM_EVENT_LIMIT,
   REVIEW_FETCH_BATCH,
   WINDOW_FETCH_PAGE_LIMIT,
@@ -173,18 +174,51 @@ export class BrowseWindowLoaderController {
     fetcher,
     debugLabel,
     itemFilter,
+    onProgress,
   }) {
     const targetDayCount = Math.max(1, Number(dayCount) || 1);
     let spanDays = targetDayCount;
     const maxSpanDays = Math.max(targetDayCount * 16, targetDayCount + 30);
     let bestItems = [];
     let bestDayCount = 0;
+    let progressStarted = false;
+    let lastProgressKey = "";
 
     while (true) {
       const after = Math.max(0, Math.floor(before - spanDays * DAY));
-      const items = await fetcher(after, before, {
-        debugLabel,
-      });
+      const fetchOpts = { debugLabel };
+      if (typeof onProgress === "function") {
+        fetchOpts.initialBatchLimit = INITIAL_BROWSE_PAINT_LIMIT;
+        fetchOpts.onPage = (pageItems, pageState = {}) => {
+          if (pageState.done) return;
+          const eligibleItems = Array.isArray(pageItems)
+            ? typeof itemFilter === "function"
+              ? pageItems.filter((item) => itemFilter(item))
+              : pageItems
+            : [];
+          const recentItems = this._filterToRecentDaysWithData(
+            eligibleItems,
+            targetDayCount,
+          );
+          if (!recentItems.length) return;
+          const progressiveItems = progressStarted
+            ? recentItems
+            : recentItems.slice(0, INITIAL_BROWSE_PAINT_LIMIT);
+          const progressKey = progressiveItems
+            .map((item) => item?.id || item?.start_time || "")
+            .join("|");
+          if (progressKey === lastProgressKey) return;
+          progressStarted = true;
+          lastProgressKey = progressKey;
+          onProgress(progressiveItems.slice(), {
+            after,
+            spanDays,
+            page: pageState.page,
+            complete: false,
+          });
+        };
+      }
+      const items = await fetcher(after, before, fetchOpts);
       const latestItems = Array.isArray(items)
         ? typeof itemFilter === "function"
           ? items.filter((item) => itemFilter(item))
@@ -219,6 +253,8 @@ export class BrowseWindowLoaderController {
       before,
       dayCount,
       debugLabel: opts.debugLabel || "events-active-days",
+      onProgress:
+        typeof opts.onProgress === "function" ? opts.onProgress : null,
       fetcher: (after, beforeTs, fetchOpts) =>
         this.fetchWindowedEvents(clientId, cam, after, beforeTs, fetchOpts),
     });
@@ -240,6 +276,8 @@ export class BrowseWindowLoaderController {
       debugLabel: opts.debugLabel || "reviews-active-days",
       itemFilter:
         typeof opts.itemFilter === "function" ? opts.itemFilter : null,
+      onProgress:
+        typeof opts.onProgress === "function" ? opts.onProgress : null,
       fetcher: (after, beforeTs, fetchOpts) =>
         this.fetchWindowedReviews(clientId, cam, after, beforeTs, fetchOpts),
     });
@@ -373,19 +411,101 @@ export class BrowseWindowLoaderController {
     cache.reviewsWindowKey = this.reviewWindowCacheKey(clientId, cam, before);
   }
 
+  _windowContextMatches(clientId, cam, before) {
+    if (typeof this._host._cc === "function") {
+      const active = this._host._cc();
+      if (active?.clientId !== clientId || active?.cam !== cam) return false;
+    }
+    if (Number.isFinite(this._host._winEnd) && Number.isFinite(before)) {
+      return Math.floor(this._host._winEnd) === Math.floor(before);
+    }
+    return true;
+  }
+
+  _sameWindowItems(currentItems, nextItems) {
+    if (!Array.isArray(currentItems) || !Array.isArray(nextItems)) return false;
+    if (currentItems.length !== nextItems.length) return false;
+    return currentItems.every((item, index) => {
+      const nextItem = nextItems[index];
+      if (item === nextItem) return true;
+      return !!item?.id && item.id === nextItem?.id;
+    });
+  }
+
+  _publishWindowEvents(clientId, cam, before, events) {
+    if (!this._windowContextMatches(clientId, cam, before)) return false;
+    const nextEvents = Array.isArray(events) ? events : [];
+    const changed = !this._sameWindowItems(this._host._events, nextEvents);
+    this._host._events = nextEvents;
+    this.cacheActiveCamSlice("events", this._host._events);
+    if (changed) {
+      this._host._renderList();
+      this._host._renderStats();
+    }
+    return true;
+  }
+
+  _publishWindowReviews(
+    clientId,
+    cam,
+    before,
+    reviews,
+    { complete = false } = {},
+  ) {
+    if (!this._windowContextMatches(clientId, cam, before)) return false;
+    const nextReviews = Array.isArray(reviews) ? reviews : [];
+    const changed = !this._sameWindowItems(this._host._reviews, nextReviews);
+    this._host._reviews = nextReviews;
+    if (complete) {
+      this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
+    } else {
+      this.cacheActiveCamSlice("reviews", this._host._reviews);
+    }
+    if (changed) this._host._renderList();
+    if (complete) {
+      this._host._slideshowAlertController.handleReviewsUpdated(
+        this._host._activeCam?.entity || "",
+        this._host._reviews,
+        "alerts-window",
+      );
+    }
+    return true;
+  }
+
   async loadWindowEvents(clientId, cam, after, before) {
+    const loadToken = (Number(this._host._eventsLoadToken) || 0) + 1;
+    this._host._eventsLoadToken = loadToken;
+    let publishedProgress = false;
     try {
       const resolved = await this.fetchRecentActiveDayEvents(
         clientId,
         cam,
         before,
         this._host._config?.window_days || 1,
-        { debugLabel: "events-window" },
+        {
+          debugLabel: "events-window",
+          onProgress: (partialEvents) => {
+            if (this._host._eventsLoadToken !== loadToken) return;
+            publishedProgress =
+              this._publishWindowEvents(
+                clientId,
+                cam,
+                before,
+                partialEvents,
+              ) || publishedProgress;
+          },
+        },
       );
-      this._host._events = Array.isArray(resolved?.items) ? resolved.items : [];
-      if (this._host._events.length) {
+      if (
+        this._host._eventsLoadToken !== loadToken ||
+        !this._windowContextMatches(clientId, cam, before)
+      ) {
+        return;
+      }
+      const events = Array.isArray(resolved?.items) ? resolved.items : [];
+      if (events.length) {
         this._host._winStart = Math.min(
-          ...this._host._events.map((item) =>
+          ...events.map((item) =>
             Math.floor(item?.start_time || before),
           ),
         );
@@ -394,12 +514,16 @@ export class BrowseWindowLoaderController {
       } else {
         this._host._winStart = after;
       }
-      this.cacheActiveCamSlice("events", this._host._events);
-      this._host._renderList();
-      this._host._renderStats();
+      this._publishWindowEvents(clientId, cam, before, events);
     } catch (error) {
       console.error("[Frigate] events", error);
-      this._host._events = [];
+      if (
+        !publishedProgress &&
+        this._host._eventsLoadToken === loadToken &&
+        this._windowContextMatches(clientId, cam, before)
+      ) {
+        this._host._events = [];
+      }
     }
   }
 
@@ -591,6 +715,9 @@ export class BrowseWindowLoaderController {
 
   async loadWindowReviewsIfNeeded(clientId, cam, _after, before) {
     if (this._host._tab !== "alerts") return;
+    const loadToken = (Number(this._host._reviewsLoadToken) || 0) + 1;
+    this._host._reviewsLoadToken = loadToken;
+    let publishedProgress = false;
     try {
       const showAllReviews =
         this._host._activeCam?.alerts_content === "all_reviews";
@@ -602,20 +729,36 @@ export class BrowseWindowLoaderController {
         {
           debugLabel: "alerts-window",
           itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode,
+          onProgress: (partialReviews) => {
+            if (this._host._reviewsLoadToken !== loadToken) return;
+            publishedProgress =
+              this._publishWindowReviews(
+                clientId,
+                cam,
+                before,
+                partialReviews,
+              ) || publishedProgress;
+          },
         },
       );
-      this._host._reviews = Array.isArray(resolved?.items)
-        ? resolved.items
-        : [];
-      this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
-      this._host._renderList();
-      this._host._slideshowAlertController.handleReviewsUpdated(
-        this._host._activeCam?.entity || "",
-        this._host._reviews,
-        "alerts-window",
-      );
+      if (
+        this._host._reviewsLoadToken !== loadToken ||
+        !this._windowContextMatches(clientId, cam, before)
+      ) {
+        return;
+      }
+      const reviews = Array.isArray(resolved?.items) ? resolved.items : [];
+      this._publishWindowReviews(clientId, cam, before, reviews, {
+        complete: true,
+      });
     } catch (_) {
-      this._host._reviews = [];
+      if (
+        !publishedProgress &&
+        this._host._reviewsLoadToken === loadToken &&
+        this._windowContextMatches(clientId, cam, before)
+      ) {
+        this._host._reviews = [];
+      }
     }
   }
 

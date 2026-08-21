@@ -28,13 +28,27 @@ export async function fetchWindowedItems({
           : defaultBatchLimit,
       )
     : defaultBatchLimit;
+  const initialBatchLimit = Math.min(
+    batchLimit,
+    Math.max(
+      1,
+      Number.isFinite(opts?.initialBatchLimit)
+        ? Math.floor(opts.initialBatchLimit)
+        : batchLimit,
+    ),
+  );
   const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
+  const hasInitialProbe = initialBatchLimit < batchLimit;
+  const requestCount = pageLimit + (hasInitialProbe ? 1 : 0);
 
-  for (let page = 0; page < pageLimit; page++) {
+  for (let requestPage = 0; requestPage < requestCount; requestPage++) {
+    const isInitialProbe = hasInitialProbe && requestPage === 0;
+    const page = hasInitialProbe ? Math.max(0, requestPage - 1) : requestPage;
+    const requestLimit = isInitialProbe ? initialBatchLimit : batchLimit;
     const batch = await fetchBatch({
       after: afterTs,
       before: cursorBefore,
-      limit: batchLimit,
+      limit: requestLimit,
       page,
     });
     if (!Array.isArray(batch) || !batch.length) break;
@@ -50,10 +64,15 @@ export async function fetchWindowedItems({
       done: false,
     });
 
+    if (isInitialProbe) {
+      if (batch.length < requestLimit) break;
+      continue;
+    }
+
     const oldest = Math.min(
       ...batch.map((item) => Math.floor(getItemStartTime(item, before))),
     );
-    if (batch.length < batchLimit || oldest <= afterTs) break;
+    if (batch.length < requestLimit || oldest <= afterTs) break;
     cursorBefore = oldest - 1;
   }
 
