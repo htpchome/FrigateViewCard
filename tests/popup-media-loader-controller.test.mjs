@@ -28,7 +28,12 @@ test("popup media sizing follows arbitrary intrinsic aspect ratios", () => {
 test("popup media sizing updates from metadata and cleans up viewer variables", () => {
   const values = new Map();
   const listeners = new Map();
+  const classes = new Set();
   const viewer = {
+    classList: {
+      add: (name) => classes.add(name),
+      remove: (name) => classes.delete(name),
+    },
     style: {
       setProperty: (name, value) => values.set(name, value),
       removeProperty: (name) => values.delete(name),
@@ -45,16 +50,19 @@ test("popup media sizing updates from metadata and cleans up viewer variables", 
 
   const cleanup = bindPopupMediaSizing({ viewer, media });
   assert.equal(values.has("--popup-media-aspect-ratio"), false);
+  assert.equal(classes.has("popup-media-ratio-ready"), false);
 
   media.videoWidth = 4;
   media.videoHeight = 3;
   listeners.get("loadedmetadata")();
   assert.equal(values.get("--popup-media-aspect-ratio"), "4 / 3");
   assert.equal(values.get("--popup-media-max-width"), "93.333dvh");
+  assert.equal(classes.has("popup-media-ratio-ready"), true);
 
   cleanup();
   assert.equal(values.size, 0);
   assert.equal(listeners.size, 0);
+  assert.equal(classes.size, 0);
 });
 
 test("showClipById routes clip loading through popup media rendering", () => {

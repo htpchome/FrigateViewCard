@@ -36,6 +36,7 @@ export const bindPopupMediaSizing = ({ viewer = null, media = null } = {}) => {
   const style = viewer?.style;
   if (!style || !media) return () => {};
 
+  viewer.classList?.remove?.("popup-media-ratio-ready");
   style.removeProperty?.("--popup-media-aspect-ratio");
   style.removeProperty?.("--popup-media-max-width");
   const sync = () => {
@@ -43,6 +44,7 @@ export const bindPopupMediaSizing = ({ viewer = null, media = null } = {}) => {
     if (!sizing) return false;
     style.setProperty?.("--popup-media-aspect-ratio", sizing.aspectRatio);
     style.setProperty?.("--popup-media-max-width", sizing.maxWidth);
+    viewer.classList?.add?.("popup-media-ratio-ready");
     return true;
   };
   const events = ["loadedmetadata", "resize", "load"];
@@ -53,6 +55,7 @@ export const bindPopupMediaSizing = ({ viewer = null, media = null } = {}) => {
     events.forEach((eventName) =>
       media.removeEventListener?.(eventName, sync),
     );
+    viewer.classList?.remove?.("popup-media-ratio-ready");
     style.removeProperty?.("--popup-media-aspect-ratio");
     style.removeProperty?.("--popup-media-max-width");
   };
