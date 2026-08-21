@@ -233,9 +233,10 @@ export class BrowseRenderController {
 
   _renderRecordingsTabList(list) {
     // Preserve the list DOM while its recording is open in the viewer.
+    const popupPlaying = this._host._popupLifecycleController?.playing?.();
     if (
       this._host._$("#viewer")?.style.display !== "none" &&
-      this._host._playing?.rec != null
+      popupPlaying?.rec != null
     ) {
       return;
     }

@@ -18,6 +18,10 @@ const mobileViewStylesSource = fs.readFileSync(
   new URL("../src/features/mobile-view/page.styles.js", import.meta.url),
   "utf8",
 );
+const popupMediaControlsSource = fs.readFileSync(
+  new URL("../src/features/popup/media.ctrl.js", import.meta.url),
+  "utf8",
+);
 
 test("tools markup owns filter and calendar panel hosts", () => {
   assert.equal(
@@ -160,8 +164,17 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
   assert.equal(cardSource.includes("#popup-fs-btn"), false);
   assert.equal(cardSource.includes("_ensurePopupFullscreenButton"), false);
   assert.equal(cardSource.includes("_ensurePopupAirPlayButton"), false);
-  assert.equal(cardSource.includes("_ensurePopupPlaybackButtons"), true);
-  assert.equal(cardSource.includes('pictureInPictureButton.id = "popup-pip-btn"'), true);
+  assert.equal(cardSource.includes("_ensurePopupPlaybackButtons"), false);
+  assert.equal(
+    popupMediaControlsSource.includes("ensurePlaybackButtons(mediaType"),
+    true,
+  );
+  assert.equal(
+    popupMediaControlsSource.includes(
+      'pictureInPictureButton.id = "popup-pip-btn"',
+    ),
+    true,
+  );
   assert.equal(cardSource.includes("toggleVideoPictureInPicture"), true);
   assert.equal(stylesSource.includes(".overlay-fs"), false);
   assert.equal(
@@ -181,7 +194,7 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
     true,
   );
   assert.equal(
-    cardSource.includes('this._playbackTargetController.release("popup")'),
+    cardSource.includes("this._playbackTargetController?.release(scope)"),
     true,
   );
   assert.equal(cardSource.includes("_playbackTargetContext(scope"), true);
@@ -199,8 +212,8 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
 
 test("Firefox relies on native PiP controls instead of visible custom buttons", () => {
   assert.match(
-    cardSource,
-    /!DEVICE_PROFILE\.isMobile\s*&&\s*!this\._isFirefox\(\)\s*&&\s*this\._isPopupVideoMediaType\(mediaType\)/,
+    popupMediaControlsSource,
+    /!this\._isMobileDevice\(\)\s*&&\s*!this\._isFirefox\(\)\s*&&\s*this\._isVideoMediaType\(mediaType\)/,
   );
   assert.match(
     cardSource,

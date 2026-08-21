@@ -33,7 +33,9 @@ test("activateStandardPageRouteLifecycle avoids shell remount on non-startup rou
     _stopPreviewMode: () => calls.push(["stopPreview"]),
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
     _$: () => null,
-    _closePopup: () => calls.push(["closePopup"]),
+    _popupLifecycleController: {
+      close: () => calls.push(["closePopup"]),
+    },
   };
 
   activateStandardPageRouteLifecycle({
@@ -62,7 +64,9 @@ test("activateStandardPageRouteLifecycle leaving preview does not cancel when mo
     _stopPreviewMode: () => calls.push(["stopPreviewMode"]),
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
     _$: () => null,
-    _closePopup: () => calls.push(["closePopup"]),
+    _popupLifecycleController: {
+      close: () => calls.push(["closePopup"]),
+    },
   };
 
   activateStandardPageRouteLifecycle({
@@ -92,7 +96,9 @@ test("activateStandardPageRouteLifecycle leaving preview cancels when mount acti
     _stopPreviewMode: () => calls.push(["stopPreviewMode"]),
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
     _$: () => null,
-    _closePopup: () => calls.push(["closePopup"]),
+    _popupLifecycleController: {
+      close: () => calls.push(["closePopup"]),
+    },
   };
 
   activateStandardPageRouteLifecycle({
@@ -123,7 +129,9 @@ test("activateStandardPageRouteLifecycle applies shell swap during deferred came
     _stopPreviewMode: () => calls.push(["stopPreviewMode"]),
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
     _$: () => null,
-    _closePopup: () => calls.push(["closePopup"]),
+    _popupLifecycleController: {
+      close: () => calls.push(["closePopup"]),
+    },
   };
 
   activateStandardPageRouteLifecycle({

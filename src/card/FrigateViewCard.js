@@ -206,11 +206,11 @@ import {
 } from "../shared/favorite-mutation.js";
 import { ListScrollController } from "../features/browse/scroll.ctrl.js";
 import { LiveOverlayControlsController } from "./controls/live-overlay.ctrl.js";
-import { PopupDragController } from "../features/popup/drag.ctrl.js";
 import { PopupInfoController } from "../features/popup/info.ctrl.js";
 import { PopupMediaControlsSurfaceController } from "../features/popup/media.ctrl.js";
 import { PopupCarouselController } from "../features/popup/carousel.ctrl.js";
 import { PopupRecordingScrubController } from "../features/popup/recording-scrub.ctrl.js";
+import { PopupLifecycleController } from "../features/popup/lifecycle.ctrl.js";
 import { BrowseCollectionController } from "../features/browse/collection.ctrl.js";
 import { BrowseCalendarActivityController } from "../features/browse/calendar-activity.ctrl.js";
 import { BrowseFilterController } from "../features/browse/filter-state.js";
@@ -471,8 +471,6 @@ export class FrigateViewCard extends HTMLElement {
     this._tab = "alerts";
     this._lastNonControlsTab = "alerts";
     this._mobileCamSwitcherOpen = false;
-    this._playing = null;
-    this._popupMediaCamera = "";
     this._browseOpen = false;
     this._winEnd = 0;
     this._winStart = 0;
@@ -644,7 +642,7 @@ export class FrigateViewCard extends HTMLElement {
       onResetRecordingScrub: () =>
         this._popupRecordingScrubController.teardown(),
       onMediaCameraChange: (camera) => {
-        this._popupMediaCamera = camera;
+        this._popupLifecycleController.setMediaCamera(camera);
       },
       onDownloadEvent: (id, file) =>
         this._frigateMediaDownloadController.downloadEvent(id, file),
@@ -670,7 +668,41 @@ export class FrigateViewCard extends HTMLElement {
         shouldUseCustomControls: (mediaType) =>
           this._usePopupCustomControls(mediaType),
         isAutoHideActive: () => this._rotateOverlayMode === "popup",
+        isMobileDevice: () => DEVICE_PROFILE.isMobile,
+        isFirefox: () => this._isFirefox(),
+        isVideoMediaType: (mediaType) =>
+          this._isPopupVideoMediaType(mediaType),
+        onClearPictureInPicture: (scope) =>
+          this._clearPictureInPictureButtonController(scope),
+        onSyncPlaybackTargetButtons: () =>
+          this._syncPlaybackTargetButtons(),
+        onSyncPictureInPictureButtons: () =>
+          this._syncPictureInPictureButtons(),
       });
+    this._popupLifecycleController = new PopupLifecycleController({
+      query: (selector) => this._$(selector),
+      isFirefox: () => this._isFirefox(),
+      onPauseSlideshow: () => this._pauseSlideshowForPopup(),
+      onResumeSlideshow: () => this._resumeSlideshowAfterPopup(),
+      onSetLiveCovered: (covered) => this._setLivePopupCover(covered),
+      onMuteLive: (muted, options) =>
+        this._applyLiveMuteChange(muted, options),
+      onSyncFullscreen: () => this._syncFullscreenButtonsVisibility(),
+      onSyncPictureInPicture: () => this._syncPictureInPictureButtons(),
+      onScheduleOverlay: () => this._scheduleRotateOverlayUpdate(),
+      onReleasePlaybackTarget: (scope) =>
+        this._playbackTargetController?.release(scope),
+      onClearPictureInPicture: (scope) =>
+        this._clearPictureInPictureButtonController(scope),
+      onClearVideoZoom: () => this._clearPopupVideoZoom?.(),
+      onDisposeCarousel: () => this._popupCarouselController.dispose(),
+      onClearCarousel: () => this._popupCarouselController.clear(),
+      onDisposeMediaControls: () =>
+        this._popupMediaControlsController.dispose(),
+      onHideInfo: () => this._popupInfoController.hide(),
+      onClearMediaTransport: () =>
+        this._popupMediaLoaderController?.clearRecordingTransport(),
+    });
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._playbackTargetController = new BrowserPlaybackTargetController({
       getContext: (scope) => this._playbackTargetContext(scope),
@@ -692,10 +724,6 @@ export class FrigateViewCard extends HTMLElement {
     this._realtimeHeadPollT = null;
     this._switchLoadT = null;
     this._listScrollController = null;
-    this._popupDragController = null;
-    this._popupMediaCleanup = null;
-    this._popupMediaType = "";
-    this._popupMediaStopTimer = null;
     this._livePictureInPictureButtonController = null;
     this._popupPictureInPictureButtonController = null;
     this._liveControlsHideTimer = null;
@@ -713,8 +741,6 @@ export class FrigateViewCard extends HTMLElement {
       this,
     );
     this._recordingsSwipeController = null;
-    this._recordingHls = null;
-    this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
     this._lastRenderedListHtml = "";
     this._pendingMountDestroyers = [];
@@ -1464,7 +1490,6 @@ export class FrigateViewCard extends HTMLElement {
       this._liveOverlayControlsController = null;
     }
     this._clearPictureInPictureButtonController("live");
-    this._clearPictureInPictureButtonController("popup");
     if (this._playbackTargetController) {
       try {
         this._playbackTargetController.dispose();
@@ -1480,16 +1505,12 @@ export class FrigateViewCard extends HTMLElement {
       this._recordingsSwipeController.dispose();
       this._recordingsSwipeController = null;
     }
-    this._clearPopupMediaCleanup();
+    this._popupLifecycleController.dispose();
     if (this._onDocVisibility) {
       document.removeEventListener("visibilitychange", this._onDocVisibility);
     }
     if (this._onShadowError) {
       this.shadowRoot.removeEventListener("error", this._onShadowError, true);
-    }
-    if (this._popupDragController) {
-      this._popupDragController.dispose();
-      this._popupDragController = null;
     }
     if (this._onFullscreenChange) {
       document.removeEventListener(
@@ -2876,7 +2897,7 @@ export class FrigateViewCard extends HTMLElement {
     this._kept = cached.kept || [];
     // Camera button should always return to single live view.
     this._viewMode = "single";
-    if (popupOpen) this._closePopup();
+    if (popupOpen) this._popupLifecycleController.close();
     if (engWrap) engWrap.style.display = "";
     this.shadowRoot
       .querySelectorAll("[data-viewmode]")
@@ -3332,7 +3353,7 @@ export class FrigateViewCard extends HTMLElement {
       `;
     this._domCache = {}; // invalidate DOM element cache after full re-render
     this._lastRenderedListHtml = "";
-    this._initPopupInteractions();
+    this._popupLifecycleController.bindInteractions();
     this._applyBrowse();
     this._applyCardStyle();
     this._wideViewPageController.applyLayoutAndWideSyncForCard();
@@ -4118,84 +4139,6 @@ export class FrigateViewCard extends HTMLElement {
     this._activeStandardPageController().renderCamSwitcher();
   }
   // ── interactions ──────────────────────────────────────────
-  _openPopup() {
-    const popup = this._$("#myPopup");
-    if (!popup) return;
-    this._pauseSlideshowForPopup();
-    popup.classList.add("is-open");
-    popup.style.transform = "translateY(0)";
-    const body = popup.querySelector(".popup-body");
-    if (body) body.scrollTop = 0;
-    this._setLivePopupCover(true);
-    this._applyLiveMuteChange(true, { source: "popup-open" });
-    this._syncFullscreenButtonsVisibility();
-    this._syncPictureInPictureButtons();
-    this._scheduleRotateOverlayUpdate();
-  }
-  _stopPopupMedia() {
-    this._clearPopupMediaCleanup();
-    const viewer = this._$("#viewer");
-    if (!viewer) return;
-
-    const cleanupVideos = (dropSources) => {
-      viewer.querySelectorAll("video").forEach((v) => {
-        try {
-          v.pause();
-          if (dropSources) {
-            if ("srcObject" in v) v.srcObject = null;
-            v.removeAttribute("src");
-            v.querySelectorAll("source").forEach((s) => s.remove());
-          }
-        } catch (_) {}
-      });
-      if (dropSources) viewer.innerHTML = "";
-    };
-
-    const deferSourceDrop =
-      this._isFirefox() &&
-      this._popupMediaType &&
-      this._popupMediaType !== "recording";
-    if (deferSourceDrop) {
-      cleanupVideos(false);
-      this._popupMediaStopTimer = setTimeout(() => {
-        this._popupMediaStopTimer = null;
-        cleanupVideos(true);
-      }, 1200);
-    } else {
-      cleanupVideos(true);
-    }
-
-    this._resetPopupMediaSurfaceState(viewer);
-  }
-
-  _resetPopupMediaSurfaceState(viewer) {
-    viewer.style.display = "none";
-    const controls = this._$("#popup-media-controls");
-    if (controls) {
-      controls.hidden = true;
-      controls.classList.remove("is-hidden");
-    }
-    this._popupCarouselController.clear();
-    this._popupInfoController.hide();
-    this._popupMediaType = "";
-    this._playing = null;
-  }
-
-  _closePopup() {
-    this._playbackTargetController.release("popup");
-    const popup = this._$("#myPopup");
-    if (!popup) return;
-    popup.classList.remove("is-open");
-    popup.style.transform = "translateY(100%)";
-    this._setLivePopupCover(false);
-    this._applyLiveMuteChange(true, { source: "popup-close" });
-    this._syncFullscreenButtonsVisibility();
-    this._syncPictureInPictureButtons();
-    this._scheduleRotateOverlayUpdate();
-
-    this._stopPopupMedia();
-    this._resumeSlideshowAfterPopup();
-  }
   _createFilterPanel() {
     return this._pageShellRegion("filterPanel");
   }
@@ -4204,27 +4147,13 @@ export class FrigateViewCard extends HTMLElement {
     return this._pageShellRegion("calendarPanel");
   }
 
-  _initPopupInteractions() {
-    const popup = this._$("#myPopup");
-    if (!popup) return;
-    if (this._popupDragController) {
-      this._popupDragController.dispose();
-      this._popupDragController = null;
-    }
-    this._popupDragController = new PopupDragController({
-      popup,
-      eventTarget: document,
-      closeThreshold: 100,
-      closePopup: () => this._closePopup(),
-      isPopupOpen: () => popup.classList.contains("is-open"),
-    });
-    this._popupDragController.bind();
-  }
   _click(e) {
     const target = e.target;
     if (this._mobileCamSwitcherController.handleClickTarget(target)) return;
     this._mobileCamSwitcherController.closeIfOutside(target);
-    if (target.closest(".close-btn")) return this._closePopup();
+    if (target.closest(".close-btn")) {
+      return this._popupLifecycleController.close();
+    }
     if (this._handleToolbarClick(target)) return;
     if (this._popupInfoController.handleClick(e, target)) return;
     if (this._handleSidebarClick(target)) return;
@@ -4771,11 +4700,6 @@ export class FrigateViewCard extends HTMLElement {
       });
     else this._popupMediaLoaderController.showSnapshot(ev);
   }
-  _enter() {
-    const v = this._$("#viewer");
-    v.style.display = "flex";
-    this._openPopup();
-  }
   _setLivePopupCover(covered) {
     const engWrap = this._$("#eng-wrap");
     if (!engWrap) return;
@@ -4885,7 +4809,7 @@ export class FrigateViewCard extends HTMLElement {
       );
       const camera =
         scope === "popup"
-          ? this._popupMediaCamera || this._cc().cam
+          ? this._popupLifecycleController.mediaCamera() || this._cc().cam
           : this._cc().cam;
       downloadDisplayedFrame(
         blob,
@@ -4968,7 +4892,7 @@ export class FrigateViewCard extends HTMLElement {
       liveAllowed ? liveVideo : null,
     );
 
-    const popupMediaType = this._popupMediaType;
+    const popupMediaType = this._popupLifecycleController.mediaType();
     const popupVideo = popupOpen
       ? this._popupMediaControlsController.video()
       : null;
@@ -5010,121 +4934,6 @@ export class FrigateViewCard extends HTMLElement {
     }
   }
 
-  _ensurePopupPlaybackButtons(mediaType = "") {
-    const viewer = this._$("#viewer");
-    if (!viewer) return;
-    const existingControls = viewer.querySelector("#popup-playback-controls");
-    const video = viewer.querySelector("video");
-    const snapshot = viewer.querySelector("img.snap");
-    if (!video && !snapshot) {
-      this._clearPictureInPictureButtonController("popup");
-      existingControls?.remove();
-      return;
-    }
-
-    let controls = existingControls;
-    if (!controls) {
-      controls = document.createElement("div");
-      controls.className = "popup-playback-controls overlay-controls";
-      controls.id = "popup-playback-controls";
-      viewer.appendChild(controls);
-    }
-    controls.innerHTML = "";
-
-    const takeSnapshotButton = document.createElement("button");
-    takeSnapshotButton.className =
-      "square-btn popup-playback-btn popup-take-snapshot-btn";
-    takeSnapshotButton.id = "popup-take-snapshot-btn";
-    takeSnapshotButton.type = "button";
-    takeSnapshotButton.title = "Take Snapshot";
-    takeSnapshotButton.setAttribute("aria-label", "Take Snapshot");
-    takeSnapshotButton.innerHTML = ICONS.takeSnapshot;
-    controls.appendChild(takeSnapshotButton);
-
-    if (this._usePopupCustomControls(mediaType) || !video) {
-      this._clearPictureInPictureButtonController("popup");
-      return;
-    }
-
-    if (
-      !DEVICE_PROFILE.isMobile &&
-      !this._isFirefox() &&
-      this._isPopupVideoMediaType(mediaType)
-    ) {
-      const pictureInPictureButton = document.createElement("button");
-      pictureInPictureButton.className =
-        "square-btn popup-playback-btn popup-pip-btn";
-      pictureInPictureButton.id = "popup-pip-btn";
-      pictureInPictureButton.type = "button";
-      pictureInPictureButton.title = "Picture-in-Picture";
-      pictureInPictureButton.setAttribute("aria-label", "Picture-in-Picture");
-      pictureInPictureButton.setAttribute("aria-pressed", "false");
-      pictureInPictureButton.hidden = true;
-      pictureInPictureButton.innerHTML = ICONS.pipPopOut;
-      controls.appendChild(pictureInPictureButton);
-    }
-
-    const airPlayButton = document.createElement("button");
-    airPlayButton.className = "glass-btn popup-playback-btn";
-    airPlayButton.id = "popup-airplay-btn";
-    airPlayButton.type = "button";
-    airPlayButton.title = "AirPlay video";
-    airPlayButton.setAttribute("aria-label", "AirPlay video");
-    airPlayButton.hidden = true;
-    airPlayButton.innerHTML = ICONS.airplayVideo;
-    controls.appendChild(airPlayButton);
-    this._syncPlaybackTargetButtons();
-    this._syncPictureInPictureButtons();
-  }
-  _clearPopupMediaCleanup() {
-    this._clearPictureInPictureButtonController("popup");
-    this._clearPopupVideoZoom?.();
-    this._popupCarouselController?.dispose?.();
-    this._popupMediaControlsController?.dispose?.();
-    if (this._popupMediaStopTimer) {
-      clearTimeout(this._popupMediaStopTimer);
-      this._popupMediaStopTimer = null;
-    }
-    if (!this._popupMediaCleanup) return;
-    try {
-      this._popupMediaCleanup();
-    } catch (_) {}
-    this._popupMediaCleanup = null;
-    this._destroyRecordingHls();
-  }
-
-  _destroyRecordingHls() {
-    if (!this._recordingHls) return;
-    try {
-      this._recordingHls.destroy();
-    } catch (_) {}
-    this._recordingHls = null;
-  }
-
-  async _getHlsJsCtor() {
-    const existing = window.Hls;
-    if (existing) return existing;
-    if (!this._hlsJsCtorPromise) {
-      this._hlsJsCtorPromise = new Promise((resolve) => {
-        const script = document.createElement("script");
-        script.src =
-          "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
-        script.async = true;
-        script.onload = () => resolve(window.Hls || null);
-        script.onerror = () => resolve(null);
-        document.head.appendChild(script);
-      });
-    }
-    return await this._hlsJsCtorPromise;
-  }
-
-  _recordingPreferHls() {
-    return DEVICE_PROFILE.isIOS || this._isFirefox() || this._isEdge();
-  }
-  _popupMediaCurrentId() {
-    if (this._playing?.id) return this._playing.id;
-    return "";
-  }
   _showLiveControlsTemporarily(ms = 2200) {
     const wrap = this._$("#live-stage.live-stage--overlay");
     if (!wrap) return;
@@ -5175,12 +4984,13 @@ export class FrigateViewCard extends HTMLElement {
     if (scope !== "popup") return null;
 
     const { clientId, cam } = this._cc();
-    const mediaType = this._popupMediaType;
-    const eventId = this._playing?.id || "";
+    const mediaType = this._popupLifecycleController.mediaType();
+    const playing = this._popupLifecycleController.playing();
+    const eventId = playing?.id || "";
     const event = eventId ? this._findEventById(eventId) : null;
     const recordingRange = this._popupRecordingScrubController.range();
     const recordingStart =
-      recordingRange?.start ?? this._playing?.rec ?? null;
+      recordingRange?.start ?? playing?.rec ?? null;
     const recordingEnd = recordingRange?.end ?? null;
     return {
       scope,
@@ -5228,7 +5038,13 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _preparePopupPlaybackTarget() {
-    if (!this._isPopupVideoMediaType(this._popupMediaType)) return;
+    if (
+      !this._isPopupVideoMediaType(
+        this._popupLifecycleController.mediaType(),
+      )
+    ) {
+      return;
+    }
     void this._playbackTargetController.prepare("popup");
     this._syncPlaybackTargetButtons();
   }

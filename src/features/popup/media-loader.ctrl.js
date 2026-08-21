@@ -170,6 +170,7 @@ export class PopupMediaLoaderController {
       carouselController = host._popupCarouselController,
       mediaControlsController = host._popupMediaControlsController,
       recordingScrubController = host._popupRecordingScrubController,
+      lifecycleController = host._popupLifecycleController,
       ...loaderDeps
     } = deps;
     this._host = host;
@@ -177,11 +178,16 @@ export class PopupMediaLoaderController {
     this._carouselController = carouselController;
     this._mediaControlsController = mediaControlsController;
     this._recordingScrubController = recordingScrubController;
+    this._lifecycleController = lifecycleController;
+    this._recordingHls = null;
+    this._hlsJsCtorPromise = null;
     this._deps = {
       buildVideoOptionsForView,
       createVideoElement,
       mountNodeIntoSlot,
       isIOS,
+      preferRecordingHls: () =>
+        isIOS || host._isFirefox?.() || host._isEdge?.(),
       ...loaderDeps,
     };
   }
@@ -194,8 +200,8 @@ export class PopupMediaLoaderController {
     infoEvent,
     infoOpts,
   }) {
-    this._host._enter();
-    this._host._clearPopupMediaCleanup();
+    this._lifecycleController?.enter();
+    this._lifecycleController?.clearMediaCleanup();
     const isElement =
       typeof Element !== "undefined" && mediaElement instanceof Element;
     const renderPlan = resolvePopupMediaRenderPlan({
@@ -204,8 +210,10 @@ export class PopupMediaLoaderController {
       hasMediaElement: isElement,
       html,
     });
-    this._host._playing = playingId ? { id: playingId } : null;
-    this._host._popupMediaType = renderPlan.popupMediaType;
+    this._lifecycleController?.setMediaState({
+      mediaType: renderPlan.popupMediaType,
+      playing: playingId ? { id: playingId } : null,
+    });
     const viewer = this._host._$("#viewer");
     viewer.innerHTML = "";
     if (renderPlan.shouldAppendMediaElement) {
@@ -224,17 +232,19 @@ export class PopupMediaLoaderController {
           target: snapshot,
           onFullscreen: () => this._host._fullscreen(viewer),
         }).bind();
-      this._host._popupMediaCleanup = () => {
+      this._lifecycleController?.setMediaCleanup(() => {
         snapshotFullscreenController.dispose();
-      };
+      });
     }
     const postRenderPlan = resolvePopupMediaPostRenderPlan({
-      popupMediaType: this._host._popupMediaType,
-      activeId: this._host._popupMediaCurrentId(),
+      popupMediaType: renderPlan.popupMediaType,
+      activeId: playingId || "",
       hasVideo: !!video,
     });
     if (postRenderPlan.shouldEnsureAirPlayButton) {
-      this._host._ensurePopupPlaybackButtons(postRenderPlan.airPlayMediaType);
+      this._mediaControlsController?.ensurePlaybackButtons(
+        postRenderPlan.airPlayMediaType,
+      );
     }
     if (postRenderPlan.shouldRenderInfo) {
       this._infoController?.render(infoEvent, infoOpts);
@@ -242,7 +252,7 @@ export class PopupMediaLoaderController {
     if (postRenderPlan.shouldInitPopupMediaControls) {
       this._mediaControlsController?.initialize(
         video,
-        this._host._popupMediaType,
+        renderPlan.popupMediaType,
       );
     } else if (postRenderPlan.shouldResetControlsWithoutVideo) {
       this._mediaControlsController?.resetWithoutVideo(renderPlan.controlsPlan);
@@ -337,7 +347,7 @@ export class PopupMediaLoaderController {
   ) {
     if (!video || !src) return false;
     const isHlsSource = /\.m3u8(?:$|\?)/i.test(src);
-    this._host._destroyRecordingHls();
+    this.clearRecordingTransport();
 
     return await new Promise((resolve) => {
       let done = false;
@@ -389,7 +399,7 @@ export class PopupMediaLoaderController {
             return;
           }
 
-          const HlsCtor = await this._host._getHlsJsCtor();
+          const HlsCtor = await this._getHlsJsCtor();
           if (!HlsCtor || !HlsCtor.isSupported?.()) {
             finish(false);
             return;
@@ -400,7 +410,7 @@ export class PopupMediaLoaderController {
             maxBufferLength: 60,
             backBufferLength: 90,
           });
-          this._host._recordingHls = hls;
+          this._recordingHls = hls;
           hls.on(HlsCtor.Events.ERROR, (_evt, data) => {
             if (data?.fatal) finish(false);
           });
@@ -418,15 +428,15 @@ export class PopupMediaLoaderController {
 
   async showRecording(start, end) {
     const token = ++this._host._playSeq;
-    this._host._enter();
-    this._host._clearPopupMediaCleanup();
+    this._lifecycleController?.enter();
+    this._lifecycleController?.clearMediaCleanup();
     const { clientId, cam } = this._host._cc();
     const playbackPlan = buildRecordingPlaybackPlan({
       clientId,
       camera: cam,
       start,
       end,
-      preferHls: this._host._recordingPreferHls(),
+      preferHls: this._deps.preferRecordingHls(),
     });
     const renderPlan = buildPopupRecordingRenderPlan({
       start,
@@ -437,8 +447,10 @@ export class PopupMediaLoaderController {
       sourceCandidates: renderPlan.sourceCandidates,
     });
     const seekListenerPlan = resolvePopupRecordingSeekListenerPlan();
-    this._host._popupMediaType = renderPlan.popupMediaType;
-    this._host._playing = renderPlan.playing;
+    this._lifecycleController?.setMediaState({
+      mediaType: renderPlan.popupMediaType,
+      playing: renderPlan.playing,
+    });
     this._infoController?.render(renderPlan.infoEvent, renderPlan.infoOpts);
     const viewer = this._host.shadowRoot.querySelector("#viewer");
     viewer.innerHTML = '<div class="ld">Loading…</div>';
@@ -511,6 +523,7 @@ export class PopupMediaLoaderController {
         if (outcomePlan.shouldTeardownScrub) {
           this._recordingScrubController?.teardown();
         }
+        this.clearRecordingTransport();
         this._host._clearPopupVideoZoom?.();
         return;
       }
@@ -520,7 +533,9 @@ export class PopupMediaLoaderController {
       popupMediaType: renderPlan.popupMediaType,
     });
     if (outcomePlan.shouldEnsureAirPlayButton) {
-      this._host._ensurePopupPlaybackButtons(outcomePlan.airPlayMediaType);
+      this._mediaControlsController?.ensurePlaybackButtons(
+        outcomePlan.airPlayMediaType,
+      );
     }
     if (outcomePlan.shouldScheduleRotateOverlay) {
       this._host._scheduleRotateOverlayUpdate();
@@ -558,12 +573,41 @@ export class PopupMediaLoaderController {
       this._mediaControlsController?.showTemporarily();
     }
     this._host._preparePopupPlaybackTarget?.();
-    this._host._popupMediaCleanup = () => {
+    this._lifecycleController?.setMediaCleanup(() => {
       for (const fn of mediaCleanup) {
         try {
           fn();
         } catch (_) {}
       }
-    };
+    });
+  }
+
+  clearRecordingTransport() {
+    if (!this._recordingHls) return;
+    try {
+      this._recordingHls.destroy();
+    } catch (_) {}
+    this._recordingHls = null;
+  }
+
+  async _getHlsJsCtor() {
+    const existing = globalThis.window?.Hls;
+    if (existing) return existing;
+    if (!this._hlsJsCtorPromise) {
+      this._hlsJsCtorPromise = new Promise((resolve) => {
+        const script = globalThis.document?.createElement?.("script");
+        if (!script) {
+          resolve(null);
+          return;
+        }
+        script.src =
+          "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
+        script.async = true;
+        script.onload = () => resolve(globalThis.window?.Hls || null);
+        script.onerror = () => resolve(null);
+        globalThis.document?.head?.appendChild?.(script);
+      });
+    }
+    return await this._hlsJsCtorPromise;
   }
 }

@@ -55,7 +55,9 @@ const createHost = ({
       },
       applyLayoutModeForCard: () => calls.push(["applyLayoutMode"]),
     },
-    _closePopup: () => calls.push(["closePopup"]),
+    _popupLifecycleController: {
+      close: () => calls.push(["closePopup"]),
+    },
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
     _navigateToPageRoute: (pageId, context) =>
       calls.push(["navigateToPageRoute", pageId, context]),

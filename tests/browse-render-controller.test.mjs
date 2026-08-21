@@ -58,7 +58,9 @@ const createHost = () => {
     _kept: [],
     _reviews: [],
     _recordings: [],
-    _playing: null,
+    _popupLifecycleController: {
+      playing: () => null,
+    },
     _activeCam: {
       entity: "camera.front",
       name: "Front",
@@ -155,7 +157,7 @@ test("browse render controller preserves an active recording viewer", () => {
   const controller = new BrowseRenderController(host);
   host._tab = "recordings";
   host._recordings = [{ id: 4 }];
-  host._playing = { rec: { id: 4 } };
+  host._popupLifecycleController.playing = () => ({ rec: { id: 4 } });
   nodes.viewer.style.display = "";
   nodes.list.innerHTML = "preserved recording list";
   const writesBeforeRender = listWrites();

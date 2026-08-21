@@ -355,7 +355,7 @@ export class PreviewPageController {
     const PAGE_IDS = this._constants.PAGE_IDS;
     if (context.previousPageId !== PAGE_IDS.preview) {
       if (this._host._$("#myPopup")?.classList.contains("is-open")) {
-        this._host._closePopup();
+        this._host._popupLifecycleController?.close();
       }
       if (this._host._mountInProgress === true) {
         this._host._cancelPendingMount("page-route-preview");

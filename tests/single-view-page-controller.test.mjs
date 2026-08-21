@@ -77,7 +77,9 @@ const createHost = ({
     _pageShellRegion: (regionKey) =>
       host._$(REGION_ROOT_SELECTORS[regionKey] || ""),
     _pageShellRegionElement: (_regionKey, selector) => host._$(selector),
-    _closePopup: () => calls.push(["closePopup"]),
+    _popupLifecycleController: {
+      close: () => calls.push(["closePopup"]),
+    },
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
     _applyPreviewShellVisibility: () =>
       calls.push(["applyPreviewShellVisibility"]),

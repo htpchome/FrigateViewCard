@@ -93,10 +93,7 @@ test("showRecording signs candidates and initializes popup recording playback on
   };
   const host = {
     _playSeq: 0,
-    _enter: () => calls.push(["enter"]),
-    _clearPopupMediaCleanup: () => calls.push(["clearCleanup"]),
     _cc: () => ({ clientId: "frigate", cam: "front_door" }),
-    _recordingPreferHls: () => false,
     _popupInfoController: {
       render: (_event, opts) => calls.push(["renderInfo", opts.mediaType]),
     },
@@ -107,17 +104,27 @@ test("showRecording signs candidates and initializes popup recording playback on
       initialize: (_video, type) => calls.push(["initControls", type]),
       resetWithoutVideo: () => calls.push(["resetControls"]),
       showTemporarily: () => calls.push(["showControls"]),
+      ensurePlaybackButtons: (kind) =>
+        calls.push(["ensurePlayback", kind]),
     },
     _popupRecordingScrubController: {
       teardown: () => calls.push(["teardownScrub"]),
       initialize: (payload) =>
         calls.push(["initScrub", payload.sourceUrl]),
     },
+    _popupLifecycleController: {
+      enter: () => calls.push(["enter"]),
+      clearMediaCleanup: () => calls.push(["clearCleanup"]),
+      setMediaState: (state) => calls.push(["setMediaState", state.mediaType]),
+      setMediaCleanup: (cleanup) => {
+        calls.push(["setMediaCleanup"]);
+        host.registeredMediaCleanup = cleanup;
+      },
+    },
     shadowRoot: {
       querySelector: () => viewer,
     },
     _signed: async (path) => `signed:${path}`,
-    _ensurePopupPlaybackButtons: (kind) => calls.push(["ensurePlayback", kind]),
     _scheduleRotateOverlayUpdate: () => calls.push(["scheduleRotate"]),
   };
   const controller = new PopupMediaLoaderController(host, {
@@ -158,6 +165,23 @@ test("showRecording signs candidates and initializes popup recording playback on
     ),
     true,
   );
+});
+
+test("popup media loader owns recording HLS cleanup", () => {
+  const host = {};
+  const controller = new PopupMediaLoaderController(host);
+  let destroyCount = 0;
+  controller._recordingHls = {
+    destroy() {
+      destroyCount += 1;
+    },
+  };
+
+  controller.clearRecordingTransport();
+  controller.clearRecordingTransport();
+
+  assert.equal(destroyCount, 1);
+  assert.equal(controller._recordingHls, null);
 });
 
 test("snapshot fullscreen supports double click and touch double tap", () => {

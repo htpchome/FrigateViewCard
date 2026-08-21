@@ -168,6 +168,10 @@ const popupRecordingScrubControllerSource = fs.readFileSync(
   ),
   "utf8",
 );
+const popupLifecycleControllerSource = fs.readFileSync(
+  new URL("../src/features/popup/lifecycle.ctrl.js", import.meta.url),
+  "utf8",
+);
 const popupCarouselControllerSource = fs.readFileSync(
   new URL("../src/features/popup/carousel.ctrl.js", import.meta.url),
   "utf8",
@@ -1596,6 +1600,10 @@ test("popup media loading delegates through the popup media loader controller", 
   );
   assert.equal(
     cardSource.includes('from "../features/popup/drag.ctrl.js"'),
+    false,
+  );
+  assert.equal(
+    popupLifecycleControllerSource.includes('from "./drag.ctrl.js"'),
     true,
   );
   assert.equal(
@@ -1779,6 +1787,54 @@ test("popup recording scrub coordination is owned by the popup feature", () => {
   assert.equal(
     popupMediaLoaderControllerSource.includes(
       "this._recordingScrubController?.initialize(",
+    ),
+    true,
+  );
+});
+
+test("popup lifecycle and recording transport cleanup are feature-owned", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { PopupLifecycleController } from "../features/popup/lifecycle.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("new PopupLifecycleController"),
+    true,
+  );
+  assert.equal(cardSource.includes("_openPopup()"), false);
+  assert.equal(cardSource.includes("_closePopup()"), false);
+  assert.equal(cardSource.includes("_stopPopupMedia()"), false);
+  assert.equal(cardSource.includes("_clearPopupMediaCleanup()"), false);
+  assert.equal(cardSource.includes("_popupDragController"), false);
+  assert.equal(cardSource.includes("_popupMediaStopTimer"), false);
+  assert.equal(cardSource.includes("_recordingHls"), false);
+  assert.equal(cardSource.includes("_hlsJsCtorPromise"), false);
+  assert.equal(cardSource.includes("_recordingPreferHls()"), false);
+  assert.equal(cardSource.includes("_ensurePopupPlaybackButtons"), false);
+  assert.equal(cardSource.includes("this._playing"), false);
+  assert.equal(
+    popupLifecycleControllerSource.includes(
+      "export class PopupLifecycleController",
+    ),
+    true,
+  );
+  assert.equal(
+    popupLifecycleControllerSource.includes("clearMediaCleanup()"),
+    true,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes("clearRecordingTransport()"),
+    true,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes("this._host._recordingHls"),
+    false,
+  );
+  assert.equal(
+    popupMediaControlsControllerSource.includes(
+      "ensurePlaybackButtons(mediaType",
     ),
     true,
   );

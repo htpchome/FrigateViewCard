@@ -25,7 +25,9 @@ const createHost = ({ isWide = false, popupOpen = false } = {}) => {
       }
       return null;
     },
-    _closePopup: () => calls.push(["closePopup"]),
+    _popupLifecycleController: {
+      close: () => calls.push(["closePopup"]),
+    },
     _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
     _applyPreviewShellVisibility: () =>
       calls.push(["applyPreviewShellVisibility"]),

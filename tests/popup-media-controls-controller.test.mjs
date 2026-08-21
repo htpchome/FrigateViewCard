@@ -245,3 +245,56 @@ test("popup media controls surface enables native controls and resets snapshots"
   assert.equal(controls.hidden, true);
   assert.equal(controls.classList.contains("is-hidden"), false);
 });
+
+test("popup media controls surface renders snapshot, PiP, and AirPlay buttons", () => {
+  const calls = [];
+  const createElement = (tagName) => ({
+    tagName,
+    children: [],
+    innerHTML: "",
+    setAttribute(name, value) {
+      this[name] = value;
+    },
+    appendChild(child) {
+      this.children.push(child);
+    },
+  });
+  const video = {};
+  const viewer = createElement("div");
+  let playbackControls = null;
+  viewer.querySelector = (selector) => {
+    if (selector === "#popup-playback-controls") return playbackControls;
+    if (selector === "video") return video;
+    return null;
+  };
+  viewer.appendChild = (child) => {
+    viewer.children.push(child);
+    if (child.id === "popup-playback-controls") playbackControls = child;
+  };
+  const controller = new PopupMediaControlsSurfaceController({
+    query: (selector) => (selector === "#viewer" ? viewer : null),
+    shouldUseCustomControls: () => false,
+    isMobileDevice: () => false,
+    isFirefox: () => false,
+    isVideoMediaType: () => true,
+    onSyncPlaybackTargetButtons: () => calls.push(["syncPlayback"]),
+    onSyncPictureInPictureButtons: () => calls.push(["syncPictureInPicture"]),
+    icons: {
+      takeSnapshot: "snapshot-icon",
+      pipPopOut: "pip-icon",
+      airplayVideo: "airplay-icon",
+    },
+    documentObj: { createElement },
+  });
+
+  controller.ensurePlaybackButtons("clip");
+
+  assert.deepEqual(
+    playbackControls.children.map((button) => button.id),
+    ["popup-take-snapshot-btn", "popup-pip-btn", "popup-airplay-btn"],
+  );
+  assert.equal(playbackControls.children[0].innerHTML, "snapshot-icon");
+  assert.equal(playbackControls.children[1].innerHTML, "pip-icon");
+  assert.equal(playbackControls.children[2].innerHTML, "airplay-icon");
+  assert.deepEqual(calls, [["syncPlayback"], ["syncPictureInPicture"]]);
+});

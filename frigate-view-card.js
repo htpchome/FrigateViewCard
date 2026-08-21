@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1602";
+const VERSION = "1.0.1603";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10143,119 +10143,6 @@ const LiveOverlayControlsController = class {
   }
 };
 
-// src/features/popup/drag.ctrl.js
-const POPUP_DRAG_IGNORE_SELECTOR = "#popup-media-controls, #popup-carousel-wrap, #recording-scrub, .popup-info, .viewer, input, button, a, [data-ev]";
-const PopupDragController = class {
-  constructor({
-    popup,
-    eventTarget,
-    closeThreshold = 100,
-    closePopup,
-    isPopupOpen
-  }) {
-    __publicField(this, "_onMouseDown", (event) => {
-      if (this._shouldIgnoreDragStart(event.target)) return;
-      this._start(event.clientY);
-    });
-    __publicField(this, "_onTouchStart", (event) => {
-      if (this._shouldIgnoreDragStart(event.target)) return;
-      this._start(event.touches[0].clientY);
-    });
-    __publicField(this, "_onMouseMove", (event) => {
-      this._move(event.clientY);
-    });
-    __publicField(this, "_onTouchMove", (event) => {
-      this._move(event.touches[0].clientY, event);
-    });
-    __publicField(this, "_onPointerEnd", () => {
-      this._end();
-    });
-    this._popup = popup;
-    this._eventTarget = eventTarget;
-    this._closeThreshold = closeThreshold;
-    this._closePopup = closePopup;
-    this._isPopupOpen = isPopupOpen;
-    this._cleanup = new CleanupController();
-    this._drag = {
-      isDragging: false,
-      startY: 0,
-      currentY: 0
-    };
-  }
-  bind() {
-    if (!this._popup || !this._eventTarget) return;
-    this._cleanup.addEventListener(this._popup, "mousedown", this._onMouseDown);
-    this._cleanup.addEventListener(
-      this._popup,
-      "touchstart",
-      this._onTouchStart
-    );
-    this._cleanup.addEventListener(
-      this._eventTarget,
-      "mousemove",
-      this._onMouseMove
-    );
-    this._cleanup.addEventListener(
-      this._eventTarget,
-      "touchmove",
-      this._onTouchMove,
-      { passive: false }
-    );
-    this._cleanup.addEventListener(
-      this._eventTarget,
-      "mouseup",
-      this._onPointerEnd
-    );
-    this._cleanup.addEventListener(
-      this._eventTarget,
-      "touchend",
-      this._onPointerEnd
-    );
-  }
-  dispose() {
-    this._resetDrag();
-    this._cleanup.dispose();
-  }
-  _start(clientY) {
-    this._drag.isDragging = true;
-    this._drag.startY = clientY;
-    this._drag.currentY = 0;
-    this._popup.style.transition = "none";
-  }
-  _resetDrag() {
-    this._drag.isDragging = false;
-    this._drag.startY = 0;
-    this._drag.currentY = 0;
-    if (!this._popup) return;
-    this._popup.style.transition = "";
-    this._popup.style.transform = "";
-  }
-  _shouldIgnoreDragStart(target) {
-    return !!target?.closest?.(POPUP_DRAG_IGNORE_SELECTOR);
-  }
-  _move(clientY, event = null) {
-    if (!this._popup) return;
-    if (!this._drag.isDragging || !this._isPopupOpen?.()) return;
-    if (event?.cancelable) event.preventDefault();
-    this._drag.currentY = clientY - this._drag.startY;
-    if (this._drag.currentY > 0) {
-      this._popup.style.transform = `translateY(${this._drag.currentY}px)`;
-    }
-  }
-  _end() {
-    if (!this._popup || !this._drag.isDragging) return;
-    const currentY = this._drag.currentY;
-    this._drag.isDragging = false;
-    this._popup.style.transition = "";
-    if (currentY > this._closeThreshold) {
-      this._closePopup?.();
-    } else {
-      this._popup.style.transform = "translateY(0)";
-    }
-    this._drag.currentY = 0;
-  }
-};
-
 // src/features/popup/info.js
 const buildPopupInfoDownloadActions = ({
   id = "",
@@ -10699,7 +10586,17 @@ const PopupMediaControlsSurfaceController = class {
     formatTime = () => "0:00",
     shouldUseCustomControls = () => false,
     isAutoHideActive = () => false,
+    isMobileDevice = () => false,
+    isFirefox = () => false,
+    isVideoMediaType = () => false,
+    onClearPictureInPicture = () => {
+    },
+    onSyncPlaybackTargetButtons = () => {
+    },
+    onSyncPictureInPictureButtons = () => {
+    },
     icons = ICONS,
+    documentObj = globalThis.document,
     hideDelayMs = 2200,
     setTimer = globalThis.setTimeout?.bind(globalThis),
     clearTimer = globalThis.clearTimeout?.bind(globalThis),
@@ -10709,7 +10606,14 @@ const PopupMediaControlsSurfaceController = class {
     this._formatTime = formatTime;
     this._shouldUseCustomControls = shouldUseCustomControls;
     this._isAutoHideActive = isAutoHideActive;
+    this._isMobileDevice = isMobileDevice;
+    this._isFirefox = isFirefox;
+    this._isVideoMediaType = isVideoMediaType;
+    this._onClearPictureInPicture = onClearPictureInPicture;
+    this._onSyncPlaybackTargetButtons = onSyncPlaybackTargetButtons;
+    this._onSyncPictureInPictureButtons = onSyncPictureInPictureButtons;
     this._icons = icons;
+    this._document = documentObj;
     this._hideDelayMs = Math.max(0, Number(hideDelayMs) || 0);
     this._setTimer = setTimer;
     this._clearTimer = clearTimer;
@@ -10765,6 +10669,65 @@ const PopupMediaControlsSurfaceController = class {
     if (plan.resetControlsHiddenClass) {
       controls.classList.remove("is-hidden");
     }
+  }
+  ensurePlaybackButtons(mediaType = "") {
+    const viewer = this._query?.("#viewer");
+    if (!viewer) return;
+    const existingControls = viewer.querySelector?.(
+      "#popup-playback-controls"
+    );
+    const video = viewer.querySelector?.("video");
+    const snapshot = viewer.querySelector?.("img.snap");
+    if (!video && !snapshot) {
+      this._onClearPictureInPicture("popup");
+      existingControls?.remove?.();
+      return;
+    }
+    let controls = existingControls;
+    if (!controls) {
+      controls = this._document?.createElement?.("div");
+      if (!controls) return;
+      controls.className = "popup-playback-controls overlay-controls";
+      controls.id = "popup-playback-controls";
+      viewer.appendChild(controls);
+    }
+    controls.innerHTML = "";
+    const takeSnapshotButton = this._document?.createElement?.("button");
+    if (!takeSnapshotButton) return;
+    takeSnapshotButton.className = "square-btn popup-playback-btn popup-take-snapshot-btn";
+    takeSnapshotButton.id = "popup-take-snapshot-btn";
+    takeSnapshotButton.type = "button";
+    takeSnapshotButton.title = "Take Snapshot";
+    takeSnapshotButton.setAttribute("aria-label", "Take Snapshot");
+    takeSnapshotButton.innerHTML = this._icons.takeSnapshot;
+    controls.appendChild(takeSnapshotButton);
+    if (this._shouldUseCustomControls(mediaType) || !video) {
+      this._onClearPictureInPicture("popup");
+      return;
+    }
+    if (!this._isMobileDevice() && !this._isFirefox() && this._isVideoMediaType(mediaType)) {
+      const pictureInPictureButton = this._document.createElement("button");
+      pictureInPictureButton.className = "square-btn popup-playback-btn popup-pip-btn";
+      pictureInPictureButton.id = "popup-pip-btn";
+      pictureInPictureButton.type = "button";
+      pictureInPictureButton.title = "Picture-in-Picture";
+      pictureInPictureButton.setAttribute("aria-label", "Picture-in-Picture");
+      pictureInPictureButton.setAttribute("aria-pressed", "false");
+      pictureInPictureButton.hidden = true;
+      pictureInPictureButton.innerHTML = this._icons.pipPopOut;
+      controls.appendChild(pictureInPictureButton);
+    }
+    const airPlayButton = this._document.createElement("button");
+    airPlayButton.className = "glass-btn popup-playback-btn";
+    airPlayButton.id = "popup-airplay-btn";
+    airPlayButton.type = "button";
+    airPlayButton.title = "AirPlay video";
+    airPlayButton.setAttribute("aria-label", "AirPlay video");
+    airPlayButton.hidden = true;
+    airPlayButton.innerHTML = this._icons.airplayVideo;
+    controls.appendChild(airPlayButton);
+    this._onSyncPlaybackTargetButtons();
+    this._onSyncPictureInPictureButtons();
   }
   update(video = this.video(), { updateProgress = true } = {}) {
     if (!video) return null;
@@ -13304,6 +13267,333 @@ const PopupRecordingScrubController = class {
       video.play?.().catch(() => {
       });
     }
+  }
+};
+
+// src/features/popup/drag.ctrl.js
+const POPUP_DRAG_IGNORE_SELECTOR = "#popup-media-controls, #popup-carousel-wrap, #recording-scrub, .popup-info, .viewer, input, button, a, [data-ev]";
+const PopupDragController = class {
+  constructor({
+    popup,
+    eventTarget,
+    closeThreshold = 100,
+    closePopup,
+    isPopupOpen
+  }) {
+    __publicField(this, "_onMouseDown", (event) => {
+      if (this._shouldIgnoreDragStart(event.target)) return;
+      this._start(event.clientY);
+    });
+    __publicField(this, "_onTouchStart", (event) => {
+      if (this._shouldIgnoreDragStart(event.target)) return;
+      this._start(event.touches[0].clientY);
+    });
+    __publicField(this, "_onMouseMove", (event) => {
+      this._move(event.clientY);
+    });
+    __publicField(this, "_onTouchMove", (event) => {
+      this._move(event.touches[0].clientY, event);
+    });
+    __publicField(this, "_onPointerEnd", () => {
+      this._end();
+    });
+    this._popup = popup;
+    this._eventTarget = eventTarget;
+    this._closeThreshold = closeThreshold;
+    this._closePopup = closePopup;
+    this._isPopupOpen = isPopupOpen;
+    this._cleanup = new CleanupController();
+    this._drag = {
+      isDragging: false,
+      startY: 0,
+      currentY: 0
+    };
+  }
+  bind() {
+    if (!this._popup || !this._eventTarget) return;
+    this._cleanup.addEventListener(this._popup, "mousedown", this._onMouseDown);
+    this._cleanup.addEventListener(
+      this._popup,
+      "touchstart",
+      this._onTouchStart
+    );
+    this._cleanup.addEventListener(
+      this._eventTarget,
+      "mousemove",
+      this._onMouseMove
+    );
+    this._cleanup.addEventListener(
+      this._eventTarget,
+      "touchmove",
+      this._onTouchMove,
+      { passive: false }
+    );
+    this._cleanup.addEventListener(
+      this._eventTarget,
+      "mouseup",
+      this._onPointerEnd
+    );
+    this._cleanup.addEventListener(
+      this._eventTarget,
+      "touchend",
+      this._onPointerEnd
+    );
+  }
+  dispose() {
+    this._resetDrag();
+    this._cleanup.dispose();
+  }
+  _start(clientY) {
+    this._drag.isDragging = true;
+    this._drag.startY = clientY;
+    this._drag.currentY = 0;
+    this._popup.style.transition = "none";
+  }
+  _resetDrag() {
+    this._drag.isDragging = false;
+    this._drag.startY = 0;
+    this._drag.currentY = 0;
+    if (!this._popup) return;
+    this._popup.style.transition = "";
+    this._popup.style.transform = "";
+  }
+  _shouldIgnoreDragStart(target) {
+    return !!target?.closest?.(POPUP_DRAG_IGNORE_SELECTOR);
+  }
+  _move(clientY, event = null) {
+    if (!this._popup) return;
+    if (!this._drag.isDragging || !this._isPopupOpen?.()) return;
+    if (event?.cancelable) event.preventDefault();
+    this._drag.currentY = clientY - this._drag.startY;
+    if (this._drag.currentY > 0) {
+      this._popup.style.transform = `translateY(${this._drag.currentY}px)`;
+    }
+  }
+  _end() {
+    if (!this._popup || !this._drag.isDragging) return;
+    const currentY = this._drag.currentY;
+    this._drag.isDragging = false;
+    this._popup.style.transition = "";
+    if (currentY > this._closeThreshold) {
+      this._closePopup?.();
+    } else {
+      this._popup.style.transform = "translateY(0)";
+    }
+    this._drag.currentY = 0;
+  }
+};
+
+// src/features/popup/lifecycle.ctrl.js
+const PopupLifecycleController = class {
+  constructor({
+    query,
+    isFirefox = () => false,
+    onPauseSlideshow = () => {
+    },
+    onResumeSlideshow = () => {
+    },
+    onSetLiveCovered = () => {
+    },
+    onMuteLive = () => {
+    },
+    onSyncFullscreen = () => {
+    },
+    onSyncPictureInPicture = () => {
+    },
+    onScheduleOverlay = () => {
+    },
+    onReleasePlaybackTarget = () => {
+    },
+    onClearPictureInPicture = () => {
+    },
+    onClearVideoZoom = () => {
+    },
+    onDisposeCarousel = () => {
+    },
+    onClearCarousel = () => {
+    },
+    onDisposeMediaControls = () => {
+    },
+    onHideInfo = () => {
+    },
+    onClearMediaTransport = () => {
+    },
+    eventTarget = globalThis.document,
+    createDragController = (options) => new PopupDragController(options),
+    setTimer = globalThis.setTimeout?.bind(globalThis),
+    clearTimer = globalThis.clearTimeout?.bind(globalThis),
+    sourceDropDelayMs = 1200
+  } = {}) {
+    this._query = query;
+    this._isFirefox = isFirefox;
+    this._onPauseSlideshow = onPauseSlideshow;
+    this._onResumeSlideshow = onResumeSlideshow;
+    this._onSetLiveCovered = onSetLiveCovered;
+    this._onMuteLive = onMuteLive;
+    this._onSyncFullscreen = onSyncFullscreen;
+    this._onSyncPictureInPicture = onSyncPictureInPicture;
+    this._onScheduleOverlay = onScheduleOverlay;
+    this._onReleasePlaybackTarget = onReleasePlaybackTarget;
+    this._onClearPictureInPicture = onClearPictureInPicture;
+    this._onClearVideoZoom = onClearVideoZoom;
+    this._onDisposeCarousel = onDisposeCarousel;
+    this._onClearCarousel = onClearCarousel;
+    this._onDisposeMediaControls = onDisposeMediaControls;
+    this._onHideInfo = onHideInfo;
+    this._onClearMediaTransport = onClearMediaTransport;
+    this._eventTarget = eventTarget;
+    this._createDragController = createDragController;
+    this._setTimer = setTimer;
+    this._clearTimer = clearTimer;
+    this._sourceDropDelayMs = Math.max(0, Number(sourceDropDelayMs) || 0);
+    this._dragController = null;
+    this._mediaCleanup = null;
+    this._mediaStopTimer = null;
+    this._mediaType = "";
+    this._playing = null;
+    this._mediaCamera = "";
+  }
+  setMediaState({ mediaType = "", playing = null } = {}) {
+    this._mediaType = String(mediaType || "");
+    this._playing = playing;
+  }
+  mediaType() {
+    return this._mediaType;
+  }
+  playing() {
+    return this._playing;
+  }
+  setMediaCamera(camera = "") {
+    this._mediaCamera = String(camera || "");
+  }
+  mediaCamera() {
+    return this._mediaCamera;
+  }
+  enter() {
+    const viewer = this._query?.("#viewer");
+    if (viewer) viewer.style.display = "flex";
+    return this.open();
+  }
+  open() {
+    const popup = this._query?.("#myPopup");
+    if (!popup) return false;
+    this._onPauseSlideshow();
+    popup.classList.add("is-open");
+    popup.style.transform = "translateY(0)";
+    const body = popup.querySelector?.(".popup-body");
+    if (body) body.scrollTop = 0;
+    this._onSetLiveCovered(true);
+    this._onMuteLive(true, { source: "popup-open" });
+    this._syncGlobalUi();
+    return true;
+  }
+  close() {
+    this._onReleasePlaybackTarget("popup");
+    const popup = this._query?.("#myPopup");
+    if (!popup) return false;
+    popup.classList.remove("is-open");
+    popup.style.transform = "translateY(100%)";
+    this._onSetLiveCovered(false);
+    this._onMuteLive(true, { source: "popup-close" });
+    this._syncGlobalUi();
+    this.stopMedia();
+    this._onResumeSlideshow();
+    return true;
+  }
+  bindInteractions() {
+    const popup = this._query?.("#myPopup");
+    if (!popup) return null;
+    this._disposeDrag();
+    this._dragController = this._createDragController({
+      popup,
+      eventTarget: this._eventTarget,
+      closeThreshold: 100,
+      closePopup: () => this.close(),
+      isPopupOpen: () => popup.classList.contains("is-open")
+    });
+    this._dragController.bind();
+    return this._dragController;
+  }
+  setMediaCleanup(cleanup) {
+    this._mediaCleanup = typeof cleanup === "function" ? cleanup : null;
+  }
+  clearMediaCleanup() {
+    this._onClearPictureInPicture("popup");
+    this._onClearVideoZoom();
+    this._onDisposeCarousel();
+    this._onDisposeMediaControls();
+    this._clearStopTimer();
+    const cleanup = this._mediaCleanup;
+    this._mediaCleanup = null;
+    if (cleanup) {
+      try {
+        cleanup();
+      } catch (_) {
+      }
+    }
+    this._onClearMediaTransport();
+  }
+  stopMedia({ forceSourceDrop = false } = {}) {
+    this.clearMediaCleanup();
+    const viewer = this._query?.("#viewer");
+    if (!viewer) return;
+    const mediaType = this._mediaType;
+    const deferSourceDrop = !forceSourceDrop && this._isFirefox?.() && mediaType && mediaType !== "recording";
+    if (deferSourceDrop) {
+      this._cleanupVideos(viewer, false);
+      this._mediaStopTimer = this._setTimer?.(() => {
+        this._mediaStopTimer = null;
+        this._cleanupVideos(viewer, true);
+      }, this._sourceDropDelayMs);
+    } else {
+      this._cleanupVideos(viewer, true);
+    }
+    this._resetSurface(viewer);
+  }
+  dispose() {
+    this.stopMedia({ forceSourceDrop: true });
+    this._disposeDrag();
+  }
+  _syncGlobalUi() {
+    this._onSyncFullscreen();
+    this._onSyncPictureInPicture();
+    this._onScheduleOverlay();
+  }
+  _cleanupVideos(viewer, dropSources) {
+    viewer.querySelectorAll?.("video").forEach((video) => {
+      try {
+        video.pause();
+        if (dropSources) {
+          if ("srcObject" in video) video.srcObject = null;
+          video.removeAttribute("src");
+          video.querySelectorAll?.("source").forEach((source) => source.remove());
+        }
+      } catch (_) {
+      }
+    });
+    if (dropSources) viewer.innerHTML = "";
+  }
+  _resetSurface(viewer) {
+    viewer.style.display = "none";
+    const controls = this._query?.("#popup-media-controls");
+    if (controls) {
+      controls.hidden = true;
+      controls.classList.remove("is-hidden");
+    }
+    this._onClearCarousel();
+    this._onHideInfo();
+    this._mediaType = "";
+    this._playing = null;
+    this._mediaCamera = "";
+  }
+  _clearStopTimer() {
+    if (!this._mediaStopTimer) return;
+    this._clearTimer?.(this._mediaStopTimer);
+    this._mediaStopTimer = null;
+  }
+  _disposeDrag() {
+    this._dragController?.dispose?.();
+    this._dragController = null;
   }
 };
 
@@ -15994,7 +16284,7 @@ const PreviewPageController = class {
     const PAGE_IDS2 = this._constants.PAGE_IDS;
     if (context.previousPageId !== PAGE_IDS2.preview) {
       if (this._host._$("#myPopup")?.classList.contains("is-open")) {
-        this._host._closePopup();
+        this._host._popupLifecycleController?.close();
       }
       if (this._host._mountInProgress === true) {
         this._host._cancelPendingMount("page-route-preview");
@@ -17340,6 +17630,7 @@ const PopupMediaLoaderController = class {
       carouselController = host._popupCarouselController,
       mediaControlsController = host._popupMediaControlsController,
       recordingScrubController = host._popupRecordingScrubController,
+      lifecycleController = host._popupLifecycleController,
       ...loaderDeps
     } = deps;
     this._host = host;
@@ -17347,11 +17638,15 @@ const PopupMediaLoaderController = class {
     this._carouselController = carouselController;
     this._mediaControlsController = mediaControlsController;
     this._recordingScrubController = recordingScrubController;
+    this._lifecycleController = lifecycleController;
+    this._recordingHls = null;
+    this._hlsJsCtorPromise = null;
     this._deps = {
       buildVideoOptionsForView,
       createVideoElement,
       mountNodeIntoSlot,
       isIOS,
+      preferRecordingHls: () => isIOS || host._isFirefox?.() || host._isEdge?.(),
       ...loaderDeps
     };
   }
@@ -17363,8 +17658,8 @@ const PopupMediaLoaderController = class {
     infoEvent,
     infoOpts
   }) {
-    this._host._enter();
-    this._host._clearPopupMediaCleanup();
+    this._lifecycleController?.enter();
+    this._lifecycleController?.clearMediaCleanup();
     const isElement = typeof Element !== "undefined" && mediaElement instanceof Element;
     const renderPlan = resolvePopupMediaRenderPlan({
       infoOpts,
@@ -17372,8 +17667,10 @@ const PopupMediaLoaderController = class {
       hasMediaElement: isElement,
       html
     });
-    this._host._playing = playingId ? { id: playingId } : null;
-    this._host._popupMediaType = renderPlan.popupMediaType;
+    this._lifecycleController?.setMediaState({
+      mediaType: renderPlan.popupMediaType,
+      playing: playingId ? { id: playingId } : null
+    });
     const viewer = this._host._$("#viewer");
     viewer.innerHTML = "";
     if (renderPlan.shouldAppendMediaElement) {
@@ -17391,17 +17688,19 @@ const PopupMediaLoaderController = class {
         target: snapshot,
         onFullscreen: () => this._host._fullscreen(viewer)
       }).bind();
-      this._host._popupMediaCleanup = () => {
+      this._lifecycleController?.setMediaCleanup(() => {
         snapshotFullscreenController.dispose();
-      };
+      });
     }
     const postRenderPlan = resolvePopupMediaPostRenderPlan({
-      popupMediaType: this._host._popupMediaType,
-      activeId: this._host._popupMediaCurrentId(),
+      popupMediaType: renderPlan.popupMediaType,
+      activeId: playingId || "",
       hasVideo: !!video
     });
     if (postRenderPlan.shouldEnsureAirPlayButton) {
-      this._host._ensurePopupPlaybackButtons(postRenderPlan.airPlayMediaType);
+      this._mediaControlsController?.ensurePlaybackButtons(
+        postRenderPlan.airPlayMediaType
+      );
     }
     if (postRenderPlan.shouldRenderInfo) {
       this._infoController?.render(infoEvent, infoOpts);
@@ -17409,7 +17708,7 @@ const PopupMediaLoaderController = class {
     if (postRenderPlan.shouldInitPopupMediaControls) {
       this._mediaControlsController?.initialize(
         video,
-        this._host._popupMediaType
+        renderPlan.popupMediaType
       );
     } else if (postRenderPlan.shouldResetControlsWithoutVideo) {
       this._mediaControlsController?.resetWithoutVideo(renderPlan.controlsPlan);
@@ -17494,7 +17793,7 @@ const PopupMediaLoaderController = class {
   async tryRecordingSource(video, src, { autoplay = true, timeoutMs = 9e3 } = {}) {
     if (!video || !src) return false;
     const isHlsSource = /\.m3u8(?:$|\?)/i.test(src);
-    this._host._destroyRecordingHls();
+    this.clearRecordingTransport();
     return await new Promise((resolve) => {
       let done = false;
       const finish = (ok) => {
@@ -17541,7 +17840,7 @@ const PopupMediaLoaderController = class {
             video.load();
             return;
           }
-          const HlsCtor = await this._host._getHlsJsCtor();
+          const HlsCtor = await this._getHlsJsCtor();
           if (!HlsCtor || !HlsCtor.isSupported?.()) {
             finish(false);
             return;
@@ -17551,7 +17850,7 @@ const PopupMediaLoaderController = class {
             maxBufferLength: 60,
             backBufferLength: 90
           });
-          this._host._recordingHls = hls;
+          this._recordingHls = hls;
           hls.on(HlsCtor.Events.ERROR, (_evt, data) => {
             if (data?.fatal) finish(false);
           });
@@ -17568,15 +17867,15 @@ const PopupMediaLoaderController = class {
   }
   async showRecording(start, end) {
     const token = ++this._host._playSeq;
-    this._host._enter();
-    this._host._clearPopupMediaCleanup();
+    this._lifecycleController?.enter();
+    this._lifecycleController?.clearMediaCleanup();
     const { clientId, cam } = this._host._cc();
     const playbackPlan = buildRecordingPlaybackPlan({
       clientId,
       camera: cam,
       start,
       end,
-      preferHls: this._host._recordingPreferHls()
+      preferHls: this._deps.preferRecordingHls()
     });
     const renderPlan = buildPopupRecordingRenderPlan({
       start,
@@ -17587,8 +17886,10 @@ const PopupMediaLoaderController = class {
       sourceCandidates: renderPlan.sourceCandidates
     });
     const seekListenerPlan = resolvePopupRecordingSeekListenerPlan();
-    this._host._popupMediaType = renderPlan.popupMediaType;
-    this._host._playing = renderPlan.playing;
+    this._lifecycleController?.setMediaState({
+      mediaType: renderPlan.popupMediaType,
+      playing: renderPlan.playing
+    });
     this._infoController?.render(renderPlan.infoEvent, renderPlan.infoOpts);
     const viewer = this._host.shadowRoot.querySelector("#viewer");
     viewer.innerHTML = '<div class="ld">Loading\u2026</div>';
@@ -17661,6 +17962,7 @@ const PopupMediaLoaderController = class {
         if (outcomePlan2.shouldTeardownScrub) {
           this._recordingScrubController?.teardown();
         }
+        this.clearRecordingTransport();
         this._host._clearPopupVideoZoom?.();
         return;
       }
@@ -17670,7 +17972,9 @@ const PopupMediaLoaderController = class {
       popupMediaType: renderPlan.popupMediaType
     });
     if (outcomePlan.shouldEnsureAirPlayButton) {
-      this._host._ensurePopupPlaybackButtons(outcomePlan.airPlayMediaType);
+      this._mediaControlsController?.ensurePlaybackButtons(
+        outcomePlan.airPlayMediaType
+      );
     }
     if (outcomePlan.shouldScheduleRotateOverlay) {
       this._host._scheduleRotateOverlayUpdate();
@@ -17708,14 +18012,41 @@ const PopupMediaLoaderController = class {
       this._mediaControlsController?.showTemporarily();
     }
     this._host._preparePopupPlaybackTarget?.();
-    this._host._popupMediaCleanup = () => {
+    this._lifecycleController?.setMediaCleanup(() => {
       for (const fn of mediaCleanup) {
         try {
           fn();
         } catch (_) {
         }
       }
-    };
+    });
+  }
+  clearRecordingTransport() {
+    if (!this._recordingHls) return;
+    try {
+      this._recordingHls.destroy();
+    } catch (_) {
+    }
+    this._recordingHls = null;
+  }
+  async _getHlsJsCtor() {
+    const existing = globalThis.window?.Hls;
+    if (existing) return existing;
+    if (!this._hlsJsCtorPromise) {
+      this._hlsJsCtorPromise = new Promise((resolve) => {
+        const script = globalThis.document?.createElement?.("script");
+        if (!script) {
+          resolve(null);
+          return;
+        }
+        script.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
+        script.async = true;
+        script.onload = () => resolve(globalThis.window?.Hls || null);
+        script.onerror = () => resolve(null);
+        globalThis.document?.head?.appendChild?.(script);
+      });
+    }
+    return await this._hlsJsCtorPromise;
   }
 };
 
@@ -17759,7 +18090,7 @@ function handlePreviewExit(host, leavingPreview) {
   if (!leavingPreview) return;
   host._stopPreviewMode();
   if (host._$("#myPopup")?.classList.contains("is-open")) {
-    host._closePopup();
+    host._popupLifecycleController?.close();
   }
   if (host._mountInProgress === true) {
     host._cancelPendingMount(`page-route-${host._pageId}`);
@@ -18086,7 +18417,8 @@ const BrowseRenderController = class {
     return true;
   }
   _renderRecordingsTabList(list) {
-    if (this._host._$("#viewer")?.style.display !== "none" && this._host._playing?.rec != null) {
+    const popupPlaying = this._host._popupLifecycleController?.playing?.();
+    if (this._host._$("#viewer")?.style.display !== "none" && popupPlaying?.rec != null) {
       return;
     }
     this.syncOlderHint(false);
@@ -20201,8 +20533,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._tab = "alerts";
     this._lastNonControlsTab = "alerts";
     this._mobileCamSwitcherOpen = false;
-    this._playing = null;
-    this._popupMediaCamera = "";
     this._browseOpen = false;
     this._winEnd = 0;
     this._winStart = 0;
@@ -20368,7 +20698,7 @@ const FrigateViewCard = class extends HTMLElement {
       formatEventDuration: (event) => this._dur(event),
       onResetRecordingScrub: () => this._popupRecordingScrubController.teardown(),
       onMediaCameraChange: (camera) => {
-        this._popupMediaCamera = camera;
+        this._popupLifecycleController.setMediaCamera(camera);
       },
       onDownloadEvent: (id, file) => this._frigateMediaDownloadController.downloadEvent(id, file),
       onDownloadRecording: (start, end) => void this._frigateMediaDownloadController.downloadRecording(start, end)
@@ -20389,7 +20719,32 @@ const FrigateViewCard = class extends HTMLElement {
       query: (selector) => this._$(selector),
       formatTime: formatRecordingScrubTime,
       shouldUseCustomControls: (mediaType) => this._usePopupCustomControls(mediaType),
-      isAutoHideActive: () => this._rotateOverlayMode === "popup"
+      isAutoHideActive: () => this._rotateOverlayMode === "popup",
+      isMobileDevice: () => DEVICE_PROFILE.isMobile,
+      isFirefox: () => this._isFirefox(),
+      isVideoMediaType: (mediaType) => this._isPopupVideoMediaType(mediaType),
+      onClearPictureInPicture: (scope) => this._clearPictureInPictureButtonController(scope),
+      onSyncPlaybackTargetButtons: () => this._syncPlaybackTargetButtons(),
+      onSyncPictureInPictureButtons: () => this._syncPictureInPictureButtons()
+    });
+    this._popupLifecycleController = new PopupLifecycleController({
+      query: (selector) => this._$(selector),
+      isFirefox: () => this._isFirefox(),
+      onPauseSlideshow: () => this._pauseSlideshowForPopup(),
+      onResumeSlideshow: () => this._resumeSlideshowAfterPopup(),
+      onSetLiveCovered: (covered) => this._setLivePopupCover(covered),
+      onMuteLive: (muted, options) => this._applyLiveMuteChange(muted, options),
+      onSyncFullscreen: () => this._syncFullscreenButtonsVisibility(),
+      onSyncPictureInPicture: () => this._syncPictureInPictureButtons(),
+      onScheduleOverlay: () => this._scheduleRotateOverlayUpdate(),
+      onReleasePlaybackTarget: (scope) => this._playbackTargetController?.release(scope),
+      onClearPictureInPicture: (scope) => this._clearPictureInPictureButtonController(scope),
+      onClearVideoZoom: () => this._clearPopupVideoZoom?.(),
+      onDisposeCarousel: () => this._popupCarouselController.dispose(),
+      onClearCarousel: () => this._popupCarouselController.clear(),
+      onDisposeMediaControls: () => this._popupMediaControlsController.dispose(),
+      onHideInfo: () => this._popupInfoController.hide(),
+      onClearMediaTransport: () => this._popupMediaLoaderController?.clearRecordingTransport()
     });
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._playbackTargetController = new BrowserPlaybackTargetController({
@@ -20411,10 +20766,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._realtimeHeadPollT = null;
     this._switchLoadT = null;
     this._listScrollController = null;
-    this._popupDragController = null;
-    this._popupMediaCleanup = null;
-    this._popupMediaType = "";
-    this._popupMediaStopTimer = null;
     this._livePictureInPictureButtonController = null;
     this._popupPictureInPictureButtonController = null;
     this._liveControlsHideTimer = null;
@@ -20432,8 +20783,6 @@ const FrigateViewCard = class extends HTMLElement {
       this
     );
     this._recordingsSwipeController = null;
-    this._recordingHls = null;
-    this._hlsJsCtorPromise = null;
     this._mountSeq = 0;
     this._lastRenderedListHtml = "";
     this._pendingMountDestroyers = [];
@@ -21055,7 +21404,6 @@ const FrigateViewCard = class extends HTMLElement {
       this._liveOverlayControlsController = null;
     }
     this._clearPictureInPictureButtonController("live");
-    this._clearPictureInPictureButtonController("popup");
     if (this._playbackTargetController) {
       try {
         this._playbackTargetController.dispose();
@@ -21073,16 +21421,12 @@ const FrigateViewCard = class extends HTMLElement {
       this._recordingsSwipeController.dispose();
       this._recordingsSwipeController = null;
     }
-    this._clearPopupMediaCleanup();
+    this._popupLifecycleController.dispose();
     if (this._onDocVisibility) {
       document.removeEventListener("visibilitychange", this._onDocVisibility);
     }
     if (this._onShadowError) {
       this.shadowRoot.removeEventListener("error", this._onShadowError, true);
-    }
-    if (this._popupDragController) {
-      this._popupDragController.dispose();
-      this._popupDragController = null;
     }
     if (this._onFullscreenChange) {
       document.removeEventListener(
@@ -22210,7 +22554,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._reviews = cached.reviews || [];
     this._kept = cached.kept || [];
     this._viewMode = "single";
-    if (popupOpen) this._closePopup();
+    if (popupOpen) this._popupLifecycleController.close();
     if (engWrap) engWrap.style.display = "";
     this.shadowRoot.querySelectorAll("[data-viewmode]").forEach(
       (p) => p.classList.toggle("active", p.dataset.viewmode === "single")
@@ -22602,7 +22946,7 @@ const FrigateViewCard = class extends HTMLElement {
       `;
     this._domCache = {};
     this._lastRenderedListHtml = "";
-    this._initPopupInteractions();
+    this._popupLifecycleController.bindInteractions();
     this._applyBrowse();
     this._applyCardStyle();
     this._wideViewPageController.applyLayoutAndWideSyncForCard();
@@ -23278,103 +23622,19 @@ const FrigateViewCard = class extends HTMLElement {
     this._activeStandardPageController().renderCamSwitcher();
   }
   // ── interactions ──────────────────────────────────────────
-  _openPopup() {
-    const popup = this._$("#myPopup");
-    if (!popup) return;
-    this._pauseSlideshowForPopup();
-    popup.classList.add("is-open");
-    popup.style.transform = "translateY(0)";
-    const body = popup.querySelector(".popup-body");
-    if (body) body.scrollTop = 0;
-    this._setLivePopupCover(true);
-    this._applyLiveMuteChange(true, { source: "popup-open" });
-    this._syncFullscreenButtonsVisibility();
-    this._syncPictureInPictureButtons();
-    this._scheduleRotateOverlayUpdate();
-  }
-  _stopPopupMedia() {
-    this._clearPopupMediaCleanup();
-    const viewer = this._$("#viewer");
-    if (!viewer) return;
-    const cleanupVideos = (dropSources) => {
-      viewer.querySelectorAll("video").forEach((v) => {
-        try {
-          v.pause();
-          if (dropSources) {
-            if ("srcObject" in v) v.srcObject = null;
-            v.removeAttribute("src");
-            v.querySelectorAll("source").forEach((s) => s.remove());
-          }
-        } catch (_) {
-        }
-      });
-      if (dropSources) viewer.innerHTML = "";
-    };
-    const deferSourceDrop = this._isFirefox() && this._popupMediaType && this._popupMediaType !== "recording";
-    if (deferSourceDrop) {
-      cleanupVideos(false);
-      this._popupMediaStopTimer = setTimeout(() => {
-        this._popupMediaStopTimer = null;
-        cleanupVideos(true);
-      }, 1200);
-    } else {
-      cleanupVideos(true);
-    }
-    this._resetPopupMediaSurfaceState(viewer);
-  }
-  _resetPopupMediaSurfaceState(viewer) {
-    viewer.style.display = "none";
-    const controls = this._$("#popup-media-controls");
-    if (controls) {
-      controls.hidden = true;
-      controls.classList.remove("is-hidden");
-    }
-    this._popupCarouselController.clear();
-    this._popupInfoController.hide();
-    this._popupMediaType = "";
-    this._playing = null;
-  }
-  _closePopup() {
-    this._playbackTargetController.release("popup");
-    const popup = this._$("#myPopup");
-    if (!popup) return;
-    popup.classList.remove("is-open");
-    popup.style.transform = "translateY(100%)";
-    this._setLivePopupCover(false);
-    this._applyLiveMuteChange(true, { source: "popup-close" });
-    this._syncFullscreenButtonsVisibility();
-    this._syncPictureInPictureButtons();
-    this._scheduleRotateOverlayUpdate();
-    this._stopPopupMedia();
-    this._resumeSlideshowAfterPopup();
-  }
   _createFilterPanel() {
     return this._pageShellRegion("filterPanel");
   }
   _createCalendarPanel() {
     return this._pageShellRegion("calendarPanel");
   }
-  _initPopupInteractions() {
-    const popup = this._$("#myPopup");
-    if (!popup) return;
-    if (this._popupDragController) {
-      this._popupDragController.dispose();
-      this._popupDragController = null;
-    }
-    this._popupDragController = new PopupDragController({
-      popup,
-      eventTarget: document,
-      closeThreshold: 100,
-      closePopup: () => this._closePopup(),
-      isPopupOpen: () => popup.classList.contains("is-open")
-    });
-    this._popupDragController.bind();
-  }
   _click(e) {
     const target = e.target;
     if (this._mobileCamSwitcherController.handleClickTarget(target)) return;
     this._mobileCamSwitcherController.closeIfOutside(target);
-    if (target.closest(".close-btn")) return this._closePopup();
+    if (target.closest(".close-btn")) {
+      return this._popupLifecycleController.close();
+    }
     if (this._handleToolbarClick(target)) return;
     if (this._popupInfoController.handleClick(e, target)) return;
     if (this._handleSidebarClick(target)) return;
@@ -23872,11 +24132,6 @@ const FrigateViewCard = class extends HTMLElement {
       });
     else this._popupMediaLoaderController.showSnapshot(ev);
   }
-  _enter() {
-    const v = this._$("#viewer");
-    v.style.display = "flex";
-    this._openPopup();
-  }
   _setLivePopupCover(covered) {
     const engWrap = this._$("#eng-wrap");
     if (!engWrap) return;
@@ -23954,7 +24209,7 @@ const FrigateViewCard = class extends HTMLElement {
         media,
         this._displayedSnapshotCaptureOptions(scope, media)
       );
-      const camera = scope === "popup" ? this._popupMediaCamera || this._cc().cam : this._cc().cam;
+      const camera = scope === "popup" ? this._popupLifecycleController.mediaCamera() || this._cc().cam : this._cc().cam;
       downloadDisplayedFrame(
         blob,
         buildDisplayedFrameFilename({ camera })
@@ -24018,7 +24273,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._$("#live-pip-btn"),
       liveAllowed ? liveVideo : null
     );
-    const popupMediaType = this._popupMediaType;
+    const popupMediaType = this._popupLifecycleController.mediaType();
     const popupVideo = popupOpen ? this._popupMediaControlsController.video() : null;
     enableNativePictureInPicture(popupVideo);
     const popupAllowed = popupOpen && !DEVICE_PROFILE.isMobile && !isFirefox && this._isPopupVideoMediaType(popupMediaType);
@@ -24048,108 +24303,6 @@ const FrigateViewCard = class extends HTMLElement {
       this._syncPictureInPictureButtons();
       if (popup) this._popupMediaControlsController.showTemporarily();
     }
-  }
-  _ensurePopupPlaybackButtons(mediaType = "") {
-    const viewer = this._$("#viewer");
-    if (!viewer) return;
-    const existingControls = viewer.querySelector("#popup-playback-controls");
-    const video = viewer.querySelector("video");
-    const snapshot = viewer.querySelector("img.snap");
-    if (!video && !snapshot) {
-      this._clearPictureInPictureButtonController("popup");
-      existingControls?.remove();
-      return;
-    }
-    let controls = existingControls;
-    if (!controls) {
-      controls = document.createElement("div");
-      controls.className = "popup-playback-controls overlay-controls";
-      controls.id = "popup-playback-controls";
-      viewer.appendChild(controls);
-    }
-    controls.innerHTML = "";
-    const takeSnapshotButton = document.createElement("button");
-    takeSnapshotButton.className = "square-btn popup-playback-btn popup-take-snapshot-btn";
-    takeSnapshotButton.id = "popup-take-snapshot-btn";
-    takeSnapshotButton.type = "button";
-    takeSnapshotButton.title = "Take Snapshot";
-    takeSnapshotButton.setAttribute("aria-label", "Take Snapshot");
-    takeSnapshotButton.innerHTML = ICONS.takeSnapshot;
-    controls.appendChild(takeSnapshotButton);
-    if (this._usePopupCustomControls(mediaType) || !video) {
-      this._clearPictureInPictureButtonController("popup");
-      return;
-    }
-    if (!DEVICE_PROFILE.isMobile && !this._isFirefox() && this._isPopupVideoMediaType(mediaType)) {
-      const pictureInPictureButton = document.createElement("button");
-      pictureInPictureButton.className = "square-btn popup-playback-btn popup-pip-btn";
-      pictureInPictureButton.id = "popup-pip-btn";
-      pictureInPictureButton.type = "button";
-      pictureInPictureButton.title = "Picture-in-Picture";
-      pictureInPictureButton.setAttribute("aria-label", "Picture-in-Picture");
-      pictureInPictureButton.setAttribute("aria-pressed", "false");
-      pictureInPictureButton.hidden = true;
-      pictureInPictureButton.innerHTML = ICONS.pipPopOut;
-      controls.appendChild(pictureInPictureButton);
-    }
-    const airPlayButton = document.createElement("button");
-    airPlayButton.className = "glass-btn popup-playback-btn";
-    airPlayButton.id = "popup-airplay-btn";
-    airPlayButton.type = "button";
-    airPlayButton.title = "AirPlay video";
-    airPlayButton.setAttribute("aria-label", "AirPlay video");
-    airPlayButton.hidden = true;
-    airPlayButton.innerHTML = ICONS.airplayVideo;
-    controls.appendChild(airPlayButton);
-    this._syncPlaybackTargetButtons();
-    this._syncPictureInPictureButtons();
-  }
-  _clearPopupMediaCleanup() {
-    this._clearPictureInPictureButtonController("popup");
-    this._clearPopupVideoZoom?.();
-    this._popupCarouselController?.dispose?.();
-    this._popupMediaControlsController?.dispose?.();
-    if (this._popupMediaStopTimer) {
-      clearTimeout(this._popupMediaStopTimer);
-      this._popupMediaStopTimer = null;
-    }
-    if (!this._popupMediaCleanup) return;
-    try {
-      this._popupMediaCleanup();
-    } catch (_) {
-    }
-    this._popupMediaCleanup = null;
-    this._destroyRecordingHls();
-  }
-  _destroyRecordingHls() {
-    if (!this._recordingHls) return;
-    try {
-      this._recordingHls.destroy();
-    } catch (_) {
-    }
-    this._recordingHls = null;
-  }
-  async _getHlsJsCtor() {
-    const existing = window.Hls;
-    if (existing) return existing;
-    if (!this._hlsJsCtorPromise) {
-      this._hlsJsCtorPromise = new Promise((resolve) => {
-        const script = document.createElement("script");
-        script.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js";
-        script.async = true;
-        script.onload = () => resolve(window.Hls || null);
-        script.onerror = () => resolve(null);
-        document.head.appendChild(script);
-      });
-    }
-    return await this._hlsJsCtorPromise;
-  }
-  _recordingPreferHls() {
-    return DEVICE_PROFILE.isIOS || this._isFirefox() || this._isEdge();
-  }
-  _popupMediaCurrentId() {
-    if (this._playing?.id) return this._playing.id;
-    return "";
   }
   _showLiveControlsTemporarily(ms = 2200) {
     const wrap = this._$("#live-stage.live-stage--overlay");
@@ -24194,11 +24347,12 @@ const FrigateViewCard = class extends HTMLElement {
   _playbackTargetContext(scope = "popup") {
     if (scope !== "popup") return null;
     const { clientId, cam } = this._cc();
-    const mediaType = this._popupMediaType;
-    const eventId = this._playing?.id || "";
+    const mediaType = this._popupLifecycleController.mediaType();
+    const playing = this._popupLifecycleController.playing();
+    const eventId = playing?.id || "";
     const event = eventId ? this._findEventById(eventId) : null;
     const recordingRange = this._popupRecordingScrubController.range();
-    const recordingStart = recordingRange?.start ?? this._playing?.rec ?? null;
+    const recordingStart = recordingRange?.start ?? playing?.rec ?? null;
     const recordingEnd = recordingRange?.end ?? null;
     return {
       scope,
@@ -24237,7 +24391,11 @@ const FrigateViewCard = class extends HTMLElement {
     };
   }
   _preparePopupPlaybackTarget() {
-    if (!this._isPopupVideoMediaType(this._popupMediaType)) return;
+    if (!this._isPopupVideoMediaType(
+      this._popupLifecycleController.mediaType()
+    )) {
+      return;
+    }
     void this._playbackTargetController.prepare("popup");
     this._syncPlaybackTargetButtons();
   }

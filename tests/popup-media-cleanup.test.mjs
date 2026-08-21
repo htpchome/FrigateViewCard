@@ -49,56 +49,7 @@ const { PopupCarouselController } = await import(
   "../src/features/popup/carousel.ctrl.js"
 );
 
-test("_clearPopupMediaCleanup delegates controls disposal and clears media state", () => {
-  const calls = [];
-  const originalClearTimeout = globalThis.clearTimeout;
-  globalThis.clearTimeout = (value) => {
-    calls.push(["clearTimeout", value]);
-  };
-
-  try {
-    const ctx = {
-      _popupMediaStopTimer: 22,
-      _popupMediaControlsController: {
-        dispose() {
-          calls.push(["disposeControls"]);
-        },
-      },
-      _clearPictureInPictureButtonController(scope) {
-        calls.push(["clearPictureInPicture", scope]);
-      },
-      _popupCarouselController: {
-        dispose() {
-          calls.push(["disposeCarousel"]);
-        },
-      },
-      _popupMediaCleanup: () => {
-        calls.push(["popupMediaCleanup"]);
-      },
-      _destroyRecordingHls() {
-        calls.push(["destroyRecordingHls"]);
-      },
-    };
-
-    FrigateViewCard.prototype._clearPopupMediaCleanup.call(ctx);
-
-    assert.deepEqual(calls, [
-      ["clearPictureInPicture", "popup"],
-      ["disposeCarousel"],
-      ["disposeControls"],
-      ["clearTimeout", 22],
-      ["popupMediaCleanup"],
-      ["destroyRecordingHls"],
-    ]);
-    assert.equal(ctx._popupMediaStopTimer, null);
-    assert.notEqual(ctx._popupMediaControlsController, null);
-    assert.equal(ctx._popupMediaCleanup, null);
-  } finally {
-    globalThis.clearTimeout = originalClearTimeout;
-  }
-});
-
-test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCleanup", () => {
+test("_teardownDisconnected delegates popup cleanup to its lifecycle owner", () => {
   const clearTimeoutCalls = [];
   const calls = [];
   const originalClearTimeout = globalThis.clearTimeout;
@@ -108,7 +59,6 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
 
   try {
     const ctx = {
-      _popupMediaStopTimer: 22,
       _liveControlsHideTimer: 33,
       _rotateOverlayRaf: 0,
       _rotateOverlayExitT: null,
@@ -134,8 +84,10 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
       _clearPictureInPictureButtonController(scope) {
         calls.push(["clearPictureInPicture", scope]);
       },
-      _clearPopupMediaCleanup() {
-        calls.push(["clearPopupMediaCleanup", this._popupMediaStopTimer]);
+      _popupLifecycleController: {
+        dispose() {
+          calls.push(["disposePopupLifecycle"]);
+        },
       },
       _clearRotateOverlayAudioSync() {
         calls.push(["clearRotateOverlayAudioSync"]);
@@ -160,8 +112,7 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
       ["stopGridModeState"],
       ["stopPreviewMode"],
       ["clearPictureInPicture", "live"],
-      ["clearPictureInPicture", "popup"],
-      ["clearPopupMediaCleanup", 22],
+      ["disposePopupLifecycle"],
       ["clearRotateOverlayAudioSync"],
       ["clearRotateVideoFullscreenStyle"],
       ["clearGracePool"],
@@ -171,94 +122,6 @@ test("_teardownDisconnected delegates popup timer cleanup to _clearPopupMediaCle
   } finally {
     globalThis.clearTimeout = originalClearTimeout;
   }
-});
-
-test("_stopPopupMedia resets popup media surfaces after shared cleanup", () => {
-  const calls = [];
-  const video = {
-    pause() {
-      calls.push(["pauseVideo"]);
-    },
-    removeAttribute(name) {
-      calls.push(["removeAttribute", name]);
-    },
-    querySelectorAll(selector) {
-      assert.equal(selector, "source");
-      return [
-        {
-          remove() {
-            calls.push(["removeSource"]);
-          },
-        },
-      ];
-    },
-  };
-  const viewer = {
-    style: { display: "block" },
-    innerHTML: "video markup",
-    querySelectorAll(selector) {
-      assert.equal(selector, "video");
-      return [video];
-    },
-  };
-  const controls = {
-    hidden: false,
-    classList: {
-      remove(token) {
-        calls.push(["removeClass", token]);
-      },
-    },
-  };
-  const carouselWrap = { hidden: false };
-  const carousel = { innerHTML: "items" };
-  const ctx = {
-    _popupMediaType: "clip",
-    _playing: { id: "abc" },
-    _clearPopupMediaCleanup() {
-      calls.push(["clearPopupMediaCleanup"]);
-    },
-    _isFirefox() {
-      return false;
-    },
-    _popupInfoController: {
-      hide() {
-        calls.push(["hidePopupInfo"]);
-      },
-    },
-    _popupCarouselController: {
-      clear() {
-        calls.push(["clearCarousel"]);
-        carouselWrap.hidden = true;
-        carousel.innerHTML = "";
-      },
-    },
-    _$(selector) {
-      if (selector === "#viewer") return viewer;
-      if (selector === "#popup-media-controls") return controls;
-      return null;
-    },
-    _resetPopupMediaSurfaceState:
-      FrigateViewCard.prototype._resetPopupMediaSurfaceState,
-  };
-
-  FrigateViewCard.prototype._stopPopupMedia.call(ctx);
-
-  assert.deepEqual(calls, [
-    ["clearPopupMediaCleanup"],
-    ["pauseVideo"],
-    ["removeAttribute", "src"],
-    ["removeSource"],
-    ["removeClass", "is-hidden"],
-    ["clearCarousel"],
-    ["hidePopupInfo"],
-  ]);
-  assert.equal(viewer.innerHTML, "");
-  assert.equal(viewer.style.display, "none");
-  assert.equal(controls.hidden, true);
-  assert.equal(carouselWrap.hidden, true);
-  assert.equal(carousel.innerHTML, "");
-  assert.equal(ctx._popupMediaType, "");
-  assert.equal(ctx._playing, null);
 });
 
 test("popup carousel controls reflect scroll edges and measured item height", () => {

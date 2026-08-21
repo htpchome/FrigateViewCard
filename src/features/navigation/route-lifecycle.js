@@ -7,7 +7,7 @@ export function handlePreviewExit(host, leavingPreview) {
 
   host._stopPreviewMode();
   if (host._$("#myPopup")?.classList.contains("is-open")) {
-    host._closePopup();
+    host._popupLifecycleController?.close();
   }
   if (host._mountInProgress === true) {
     host._cancelPendingMount(`page-route-${host._pageId}`);
