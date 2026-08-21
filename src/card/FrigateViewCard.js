@@ -39,7 +39,6 @@ import "../components/circle-pad/circle-pad.js";
 import {
   detectDeviceProfile,
   DEVICE_PROFILE,
-  isIOS,
   isAndroid,
   cap,
   parseWs,
@@ -211,32 +210,23 @@ import { PopupDragController } from "../features/popup/drag.ctrl.js";
 import { PopupInfoController } from "../features/popup/info.ctrl.js";
 import { PopupMediaControlsSurfaceController } from "../features/popup/media.ctrl.js";
 import { PopupCarouselController } from "../features/popup/carousel.ctrl.js";
+import { PopupRecordingScrubController } from "../features/popup/recording-scrub.ctrl.js";
 import { BrowseCollectionController } from "../features/browse/collection.ctrl.js";
 import { BrowseCalendarActivityController } from "../features/browse/calendar-activity.ctrl.js";
 import { BrowseFilterController } from "../features/browse/filter-state.js";
 import { BrowseTabDataController } from "../features/browse/tab-data.ctrl.js";
 import { BrowseWindowLoaderController } from "../features/browse/window-loader.ctrl.js";
 import {
-  buildRecordingPlaybackPlan,
-  RecordingScrubController,
-  buildRecordingScrubDecorations,
   buildRecordingsListMarkup,
   RecordingsBrowseNavController,
   RecordingsSwipeController,
   createRecordingsSwipeGestureState,
   formatRecordingScrubTime,
-  isRecordingSeekTargetInRange,
-  isRecordingSeekVerified,
   normalizeFetchedRecordingsAvailability,
   RECORDINGS_SWIPE_EMPTY_HTML,
   resolveFailedRecordingsSwipeState,
-  resolveClosestRecordingAlertStart,
-  resolveRecordingSeekExecutionPlan,
   resolvePreparedRecordingsIncomingState,
   resolvePreparedRecordingsSwipeState,
-  resolveRecordingScrubTarget,
-  resolveRecordingSeekOutcome,
-  resolveRecordingSeekTimeout,
   resolveRecordingsBrowseNavContextState,
   resolveRecordingsBrowseNavProbePlan,
   resolveRecordingsBrowseNavState,
@@ -626,6 +616,23 @@ export class FrigateViewCard extends HTMLElement {
       signPath: (path) => this._signed(path),
       formatTime: (timestamp) => this._time(timestamp),
     });
+    this._popupRecordingScrubController =
+      new PopupRecordingScrubController({
+        query: (selector) => this._$(selector),
+        fetchReviews: (clientId, cam, start, end) =>
+          this._browseWindowLoaderController.fetchWindowedReviews(
+            clientId,
+            cam,
+            start,
+            end,
+          ),
+        isPlaybackTokenCurrent: (token) => token === this._playSeq,
+        isFirefox: () => this._isFirefox(),
+        isEdge: () => this._isEdge(),
+        isIOS: () => DEVICE_PROFILE.isIOS,
+        onFallbackRecording: (start, end) =>
+          this._popupMediaLoaderController?.showRecording(start, end),
+      });
     this._popupInfoController = new PopupInfoController({
       query: (selector) => this._$(selector),
       getActiveCamera: () => this._cc().cam,
@@ -634,11 +641,8 @@ export class FrigateViewCard extends HTMLElement {
       formatMonthDay: (timestamp, options) =>
         this._monthDay(timestamp, options),
       formatEventDuration: (event) => this._dur(event),
-      onResetRecordingScrub: () => {
-        this._teardownRecordingScrub();
-        const scrub = this._$("#recording-scrub");
-        if (scrub) scrub.hidden = true;
-      },
+      onResetRecordingScrub: () =>
+        this._popupRecordingScrubController.teardown(),
       onMediaCameraChange: (camera) => {
         this._popupMediaCamera = camera;
       },
@@ -662,7 +666,7 @@ export class FrigateViewCard extends HTMLElement {
     this._popupMediaControlsController =
       new PopupMediaControlsSurfaceController({
         query: (selector) => this._$(selector),
-        formatTime: (value) => this._fmtScrubTime(value),
+        formatTime: formatRecordingScrubTime,
         shouldUseCustomControls: (mediaType) =>
           this._usePopupCustomControls(mediaType),
         isAutoHideActive: () => this._rotateOverlayMode === "popup",
@@ -697,9 +701,6 @@ export class FrigateViewCard extends HTMLElement {
     this._liveControlsHideTimer = null;
     this._liveOverlayControlsController = null;
     this._snapshotResultTimers = { live: null, popup: null };
-    this._recordingScrubController = null;
-    this._recordingScrubState = null;
-    this._recordingAlertCache = new Map();
     this._recordingsDayAvailabilityCache = new Map();
     this._recordingsDayDataCache = new Map();
     this._recordingsDayFetchedAtCache = new Map();
@@ -4620,303 +4621,6 @@ export class FrigateViewCard extends HTMLElement {
     return this._browseCollectionController.findEventById(id);
   }
 
-  _teardownRecordingScrub() {
-    if (this._recordingScrubController) {
-      try {
-        this._recordingScrubController.dispose();
-      } catch (_) {}
-    }
-    this._recordingScrubController = null;
-    this._recordingScrubState = null;
-  }
-
-  _setRecordingScrubCursor(timeSec) {
-    const state = this._recordingScrubState;
-    if (!state?.cursor || !Number.isFinite(timeSec)) return;
-    const span = Math.max(1, state.end - state.start);
-    const pct = ((timeSec - state.start) / span) * 100;
-    state.cursor.style.left = `${Math.max(0, Math.min(100, pct))}%`;
-    if (state.labelNow) {
-      const rel = Math.max(0, Math.min(span, timeSec - state.start));
-      state.labelNow.textContent = `${this._fmtScrubTime(rel)} / ${this._fmtScrubTime(span)}`;
-    }
-  }
-
-  _fmtScrubTime(sec) {
-    return formatRecordingScrubTime(sec);
-  }
-
-  _closestRecordingAlertStart(targetSec, alerts, thresholdSec) {
-    return resolveClosestRecordingAlertStart(targetSec, alerts, thresholdSec);
-  }
-
-  _resolveRecordingScrubTarget(ratio) {
-    const state = this._recordingScrubState;
-    if (!state?.video) return null;
-    return resolveRecordingScrubTarget({
-      ratio,
-      start: state.start,
-      end: state.end,
-      alerts: state.alerts,
-    });
-  }
-
-  _seekRecordingScrubToRatio(ratio, { commit = false } = {}) {
-    const state = this._recordingScrubState;
-    if (!state?.video) return;
-    const target = this._resolveRecordingScrubTarget(ratio);
-    if (!target) return;
-
-    state.pendingAbsTarget = target.absTarget;
-    state.pendingRelTarget = target.relTarget;
-    this._setRecordingScrubCursor(target.absTarget);
-
-    if (!commit) return;
-
-    const rel = Number(state.pendingRelTarget);
-    if (!Number.isFinite(rel)) return;
-    void this._commitRecordingSeek(state, rel, target.absTarget);
-  }
-
-  _isRecordingTimeSeekable(video, targetSec, toleranceSec = 0.35) {
-    if (!video) return false;
-    return isRecordingSeekTargetInRange({
-      targetSec,
-      seekable: video.seekable,
-      toleranceSec,
-    });
-  }
-
-  async _attemptRecordingSeek(video, targetSec, timeoutMs = 2500) {
-    if (!video || !Number.isFinite(targetSec)) return false;
-    return await new Promise((resolve) => {
-      let done = false;
-      const finish = (ok) => {
-        if (done) return;
-        done = true;
-        cleanup();
-        resolve(ok);
-      };
-      const verify = () => {
-        finish(
-          isRecordingSeekVerified({
-            currentTime: video.currentTime,
-            targetSec,
-          }),
-        );
-      };
-      const onDone = () => verify();
-      const onError = () => finish(false);
-      const cleanup = () => {
-        clearTimeout(timer);
-        video.removeEventListener("seeked", onDone);
-        video.removeEventListener("timeupdate", onDone);
-        video.removeEventListener("error", onError);
-      };
-      const timer = setTimeout(() => verify(), timeoutMs);
-
-      video.addEventListener("seeked", onDone, { once: true });
-      video.addEventListener("timeupdate", onDone, { once: true });
-      video.addEventListener("error", onError, { once: true });
-
-      try {
-        const plan = resolveRecordingSeekExecutionPlan({
-          hasFastSeek: typeof video.fastSeek === "function",
-          isEdge: this._isEdge(),
-          isIOS,
-        });
-        if (plan.shouldUseFastSeek) {
-          video.fastSeek(targetSec);
-        } else {
-          video.currentTime = targetSec;
-        }
-      } catch (_) {
-        finish(false);
-      }
-    });
-  }
-
-  async _commitRecordingSeek(state, relTarget, absTarget) {
-    if (
-      !state?.video ||
-      !Number.isFinite(relTarget) ||
-      !Number.isFinite(absTarget)
-    )
-      return;
-
-    state.seekNonce = Number(state.seekNonce || 0) + 1;
-    const nonce = state.seekNonce;
-    const video = state.video;
-
-    const isFirefox = this._isFirefox();
-    const isEdge = this._isEdge();
-    const seekTimeout = resolveRecordingSeekTimeout({ isFirefox, isEdge });
-    const seekOk = await this._attemptRecordingSeek(
-      video,
-      relTarget,
-      seekTimeout,
-    );
-    if (nonce !== state.seekNonce) return;
-
-    const outcome = resolveRecordingSeekOutcome({
-      isFirefox,
-      isEdge,
-      seekOk,
-      currentTime: video.currentTime,
-      relTarget,
-      absTarget,
-      start: state.start,
-      end: state.end,
-      resumeAfterScrub: state.resumeAfterScrub,
-      isFallbackLoading: state.isFallbackLoading,
-    });
-
-    if (outcome.shouldFallback) {
-      state.isFallbackLoading = true;
-      try {
-        await this._popupMediaLoaderController.showRecording(
-          outcome.fallbackStart,
-          outcome.fallbackEnd,
-        );
-      } finally {
-        state.isFallbackLoading = false;
-      }
-      return;
-    }
-
-    if (outcome.shouldResumePlayback) {
-      video.play?.().catch(() => {});
-    }
-  }
-
-  async _fetchRecordingAlerts(clientId, cam, start, end) {
-    const cacheKey = `${clientId}|${cam}|${Math.floor(start)}|${Math.floor(end)}`;
-    if (this._recordingAlertCache.has(cacheKey)) {
-      return this._recordingAlertCache.get(cacheKey);
-    }
-    const reviews =
-      await this._browseWindowLoaderController.fetchWindowedReviews(
-        clientId,
-        cam,
-        start,
-        end,
-      );
-    const alerts = (Array.isArray(reviews) ? reviews : [])
-      .map((r) => {
-        const severity = String(
-          r?.severity || r?.data?.severity || "detection",
-        ).toLowerCase();
-        if (!["alert", "detection"].includes(severity)) return null;
-        const rs = Math.max(start, Number(r?.start_time || start));
-        const re = Math.min(end, Number(r?.end_time || rs + 1));
-        const detections = Array.isArray(r?.data?.detections)
-          ? r.data.detections
-          : Array.isArray(r?.detections)
-            ? r.detections
-            : [];
-        const eventId = String(detections[0] || "").trim();
-        return {
-          id: r?.id || `${rs}-${re}`,
-          start: rs,
-          end: re > rs ? re : rs + 1,
-          severity,
-          eventId,
-          snapshotUrl: eventId
-            ? `/api/frigate/${encodeURIComponent(clientId)}/notifications/${encodeURIComponent(eventId)}/snapshot.jpg`
-            : "",
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.start - b.start);
-    this._recordingAlertCache.set(cacheKey, alerts);
-    return alerts;
-  }
-
-  async _initRecordingScrub({
-    clientId,
-    cam,
-    start,
-    end,
-    video,
-    token,
-    sourceUrl,
-  }) {
-    const scrub = this._$("#recording-scrub");
-    const track = this._$("#recording-scrub-track");
-    const ticks = this._$("#recording-scrub-ticks");
-    const markers = this._$("#recording-scrub-markers");
-    const cursor = this._$("#recording-scrub-cursor");
-    const preview = this._$("#recording-scrub-preview");
-    const previewImage = this._$("#recording-scrub-preview-image");
-    const previewLabel = this._$("#recording-scrub-preview-label");
-    const labelStart = this._$("#recording-scrub-start");
-    const labelNow = this._$("#recording-scrub-now");
-    const labelEnd = this._$("#recording-scrub-end");
-    if (!scrub || !track || !markers || !cursor || !video) return;
-
-    this._teardownRecordingScrub();
-    scrub.hidden = false;
-    if (ticks) ticks.innerHTML = "";
-    markers.innerHTML = "";
-
-    const alerts = await this._fetchRecordingAlerts(
-      clientId,
-      cam,
-      start,
-      end,
-    ).catch(() => []);
-    if (token !== this._playSeq) return;
-
-    const decorations = buildRecordingScrubDecorations({
-      start,
-      end,
-      alerts,
-    });
-    const span = decorations.span;
-    if (labelStart) labelStart.textContent = decorations.labelStart;
-    if (labelEnd) labelEnd.textContent = decorations.labelEnd;
-    if (labelNow) labelNow.textContent = decorations.labelNow;
-
-    const tickLayer = ticks || markers;
-    tickLayer.innerHTML = decorations.tickMarkup;
-    markers.innerHTML = decorations.markerMarkup;
-
-    const state = {
-      start,
-      end,
-      alerts,
-      video,
-      cursor,
-      labelNow,
-      isScrubbing: false,
-      resumeAfterScrub: false,
-      pendingAbsTarget: null,
-      pendingRelTarget: null,
-      seekNonce: 0,
-      isFallbackLoading: false,
-      sourceUrl: sourceUrl || "",
-      sourceUrlNoHash: String(sourceUrl || "").split("#")[0],
-    };
-
-    this._recordingScrubState = state;
-    this._setRecordingScrubCursor(start);
-    this._recordingScrubController = new RecordingScrubController({
-      track,
-      video,
-      ticks,
-      markers,
-      preview,
-      previewImage,
-      previewLabel,
-      state,
-      setCursor: (timeSec) => this._setRecordingScrubCursor(timeSec),
-      seekToRatio: (ratio, options) =>
-        this._seekRecordingScrubToRatio(ratio, options),
-      formatTime: (seconds) => this._fmtScrubTime(seconds),
-    });
-    this._recordingScrubController.bind();
-  }
-
   _setLiveMuted(muted) {
     this._streamMuted = !!muted;
     const eng = this._engine;
@@ -5474,9 +5178,10 @@ export class FrigateViewCard extends HTMLElement {
     const mediaType = this._popupMediaType;
     const eventId = this._playing?.id || "";
     const event = eventId ? this._findEventById(eventId) : null;
+    const recordingRange = this._popupRecordingScrubController.range();
     const recordingStart =
-      this._recordingScrubState?.start ?? this._playing?.rec ?? null;
-    const recordingEnd = this._recordingScrubState?.end ?? null;
+      recordingRange?.start ?? this._playing?.rec ?? null;
+    const recordingEnd = recordingRange?.end ?? null;
     return {
       scope,
       sourceKey:

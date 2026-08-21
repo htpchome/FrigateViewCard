@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1601";
+const VERSION = "1.0.1602";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -11325,715 +11325,37 @@ const PopupCarouselController = class {
   }
 };
 
-// src/features/browse/filter-state.js
-function buildReviewFilterLabels(review, sourceEvent = null) {
-  const labels = new Set();
-  if (sourceEvent?.label) labels.add(sourceEvent.label);
-  (review?.data?.objects || []).forEach((label) => {
-    if (label) labels.add(label);
-  });
-  return [...labels];
-}
-function buildReviewFilterZones(review, sourceEvent = null) {
-  const zones = new Set();
-  (sourceEvent?.zones || []).forEach((zone) => {
-    if (zone) zones.add(zone);
-  });
-  (review?.data?.zones || []).forEach((zone) => {
-    if (zone) zones.add(zone);
-  });
-  return [...zones];
-}
-function collectFilterLabelsFromEvents(events) {
-  const labels = new Set();
-  (events || []).forEach((event) => {
-    if (event?.label) labels.add(event.label);
-  });
-  return [...labels];
-}
-function collectFilterZonesFromEvents(events) {
-  const zones = new Set();
-  (events || []).forEach((event) => {
-    (event?.zones || []).forEach((zone) => {
-      if (zone) zones.add(zone);
-    });
-  });
-  return [...zones];
-}
-function collectFilterLabelsFromReviews(reviews, getLabels) {
-  const labels = new Set();
-  (reviews || []).forEach((review) => {
-    (getLabels(review) || []).forEach((label) => {
-      if (label) labels.add(label);
-    });
-  });
-  return [...labels];
-}
-function collectFilterZonesFromReviews(reviews, getZones) {
-  const zones = new Set();
-  (reviews || []).forEach((review) => {
-    (getZones(review) || []).forEach((zone) => {
-      if (zone) zones.add(zone);
-    });
-  });
-  return [...zones];
-}
-function collectUniqueSourceEventsFromReviews(reviews, getSourceEvent) {
-  const seen = new Set();
-  const out = [];
-  (reviews || []).forEach((review) => {
-    const sourceEvent = getSourceEvent(review);
-    if (!sourceEvent?.id || seen.has(sourceEvent.id)) return;
-    seen.add(sourceEvent.id);
-    out.push(sourceEvent);
-  });
-  return out;
-}
-function selectFilterLabels({
-  tab,
-  reviews = [],
-  events = [],
-  getLabels = () => []
-}) {
-  if (tab === "alerts") {
-    return collectFilterLabelsFromReviews(reviews, getLabels);
-  }
-  return collectFilterLabelsFromEvents(events);
-}
-function selectFilterZones({
-  tab,
-  reviews = [],
-  events = [],
-  getZones = () => []
-}) {
-  if (tab === "alerts") {
-    return collectFilterZonesFromReviews(reviews, getZones);
-  }
-  return collectFilterZonesFromEvents(events);
-}
-function selectFilterOptionSourceEvents({
-  tab,
-  reviews = [],
-  keptEvents = [],
-  displayEvents = [],
-  getSourceEvent = () => null
-}) {
-  if (tab === "alerts") {
-    return collectUniqueSourceEventsFromReviews(reviews, getSourceEvent);
-  }
-  if (tab === "kept") {
-    return [...keptEvents];
-  }
-  return [...displayEvents];
-}
-function normalizeFilterSelections({
-  filterLabel,
-  filterZone,
-  labels,
-  zones
-}) {
+// src/integrations/frigate/recording-review-markers.js
+const buildFrigateRecordingReviewMarkers = ({
+  clientId = "",
+  start = 0,
+  end = 0,
+  reviews = []
+} = {}) => (Array.isArray(reviews) ? reviews : []).map((review) => {
+  const severity = String(
+    review?.severity || review?.data?.severity || "detection"
+  ).toLowerCase();
+  if (!["alert", "detection"].includes(severity)) return null;
+  const markerStart = Math.max(start, Number(review?.start_time || start));
+  const markerEnd = Math.min(
+    end,
+    Number(review?.end_time || markerStart + 1)
+  );
+  const detections = Array.isArray(review?.data?.detections) ? review.data.detections : Array.isArray(review?.detections) ? review.detections : [];
+  const eventId = String(detections[0] || "").trim();
   return {
-    filterLabel: filterLabel !== "all" && !(labels || []).includes(filterLabel) ? "all" : filterLabel,
-    filterZone: filterZone !== "all" && !(zones || []).includes(filterZone) ? "all" : filterZone
+    id: review?.id || `${markerStart}-${markerEnd}`,
+    start: markerStart,
+    end: markerEnd > markerStart ? markerEnd : markerStart + 1,
+    severity,
+    eventId,
+    snapshotUrl: eventId ? buildFrigateNotificationMediaPath({
+      clientId,
+      eventId,
+      file: "snapshot.jpg"
+    }) : ""
   };
-}
-function matchesEventFilters(event, { filterLabel = "all", filterZone = "all", favOnly = false } = {}) {
-  if (!event) return false;
-  if (filterLabel !== "all" && event.label !== filterLabel) {
-    return false;
-  }
-  if (filterZone !== "all" && !(event.zones || []).includes(filterZone)) {
-    return false;
-  }
-  if (favOnly && !event.retain_indefinitely) {
-    return false;
-  }
-  return true;
-}
-function matchesReviewFilters(review, sourceEvent, {
-  filterLabel = "all",
-  filterZone = "all",
-  favOnly = false,
-  getLabels = () => [],
-  getZones = () => []
-} = {}) {
-  if (favOnly) return !!sourceEvent?.retain_indefinitely;
-  if (filterLabel !== "all") {
-    const labels = getLabels(review, sourceEvent);
-    if (!labels.includes(filterLabel)) return false;
-  }
-  if (filterZone !== "all") {
-    const zones = getZones(review, sourceEvent);
-    if (!zones.includes(filterZone)) return false;
-  }
-  return true;
-}
-function selectFilteredEvents({
-  tab,
-  events = [],
-  matchesEvent = () => true
-}) {
-  let filteredEvents = [...events || []];
-  if (tab === "clips") {
-    filteredEvents = filteredEvents.filter((event) => event?.has_clip);
-  } else if (tab === "snapshot") {
-    filteredEvents = filteredEvents.filter((event) => event?.has_snapshot);
-  }
-  return filteredEvents.filter((event) => matchesEvent(event));
-}
-function selectFilteredKeptEvents({
-  keptEvents = [],
-  gridKeptEvents = [],
-  isGridMixedListMode = false,
-  matchesEvent = () => true
-}) {
-  const source = isGridMixedListMode ? gridKeptEvents : keptEvents;
-  return [...source || []].filter((event) => matchesEvent(event));
-}
-function reviewSeverityTokens(review) {
-  const values = [review?.severity, review?.data?.severity].flatMap((value) => Array.isArray(value) ? value : [value]).map(
-    (value) => String(value || "").trim().toLowerCase()
-  ).filter(Boolean);
-  const tokens = new Set();
-  for (const value of values) {
-    tokens.add(value);
-    for (const token of value.split(/[^a-z0-9]+/g)) {
-      if (token) tokens.add(token);
-    }
-  }
-  return tokens;
-}
-function reviewMatchesAlertsOnlyMode(review) {
-  const tokens = reviewSeverityTokens(review);
-  if (!tokens.size) return false;
-  for (const token of tokens) {
-    if (token === "alert" || token.startsWith("alert")) return true;
-  }
-  return false;
-}
-function selectReviewsForFilterTab({
-  reviews = [],
-  gridReviews = [],
-  isGridMixedListMode = false,
-  showAllReviews = false
-}) {
-  const reviewSource = isGridMixedListMode ? gridReviews : reviews;
-  const safeReviews = [...reviewSource || []];
-  if (isGridMixedListMode) {
-    return safeReviews;
-  }
-  return showAllReviews ? safeReviews : safeReviews.filter((review) => reviewMatchesAlertsOnlyMode(review));
-}
-const BrowseFilterController = class {
-  constructor(host, { buildFilterPanelMarkup: buildFilterPanelMarkup2 } = {}) {
-    this._host = host;
-    this._buildFilterPanelMarkup = buildFilterPanelMarkup2;
-  }
-  handleSidebarFilterClick(target) {
-    const filterLabelOption = target.closest("[data-flabel]");
-    if (filterLabelOption) {
-      this._host._filterLabel = filterLabelOption.dataset.flabel;
-      this.renderFilter();
-      this._host._renderList();
-      return true;
-    }
-    const filterZoneOption = target.closest("[data-fzone]");
-    if (filterZoneOption) {
-      this._host._filterZone = filterZoneOption.dataset.fzone;
-      this.renderFilter();
-      this._host._renderList();
-      return true;
-    }
-    const favoriteOnlyOption = target.closest("[data-favonly]");
-    if (favoriteOnlyOption) {
-      this._host._favOnly = favoriteOnlyOption.dataset.favonly === "1";
-      this.renderFilter();
-      this._host._renderList();
-      return true;
-    }
-    return false;
-  }
-  toggleFilter() {
-    if (this._host._tab === "recordings") return;
-    const filterPanel = this._host._pageShellRegion("filterPanel");
-    if (!filterPanel) return;
-    const open = filterPanel.style.display === "none";
-    const calendarPanel = this._host._pageShellRegion("calendarPanel");
-    if (calendarPanel) calendarPanel.style.display = "none";
-    filterPanel.style.display = open ? "block" : "none";
-    this._host._syncToolbarButtons();
-    if (open) this.renderFilter();
-  }
-  renderFilter() {
-    const filterPanel = this._host._pageShellRegion("filterPanel");
-    if (!filterPanel || !this._buildFilterPanelMarkup) return;
-    this.normalizeFilterSelections();
-    filterPanel.innerHTML = this._buildFilterPanelMarkup({
-      labels: ["all", ...this.labels()],
-      zones: ["all", ...this.zones()],
-      filterLabel: this._host._filterLabel,
-      filterZone: this._host._filterZone,
-      favOnly: this._host._favOnly
-    });
-  }
-  reviewsForTabBase() {
-    return selectReviewsForFilterTab({
-      reviews: this._host._reviews,
-      gridReviews: this._host._allGridReviews(),
-      isGridMixedListMode: this._host._isGridMixedListMode(),
-      showAllReviews: this._host._activeCam?.alerts_content === "all_reviews"
-    });
-  }
-  reviewSourceEvent(review) {
-    const firstDet = review?.data?.detections && review.data.detections[0] || "";
-    return firstDet ? this._host._findEventById(firstDet) : null;
-  }
-  filterOptionSourceEvents() {
-    return selectFilterOptionSourceEvents({
-      tab: this._host._tab,
-      reviews: this.reviewsForTabBase(),
-      keptEvents: this._host._isGridMixedListMode() ? this._host._allGridKeptEvents() : this._host._kept || [],
-      displayEvents: this._host._allDisplayEvents(),
-      getSourceEvent: (review) => this.reviewSourceEvent(review)
-    });
-  }
-  matchesEventFilters(event) {
-    return matchesEventFilters(event, {
-      filterLabel: this._host._filterLabel,
-      filterZone: this._host._filterZone,
-      favOnly: this._host._favOnly
-    });
-  }
-  filteredReviews() {
-    return this.reviewsForTabBase().filter((review) => {
-      const sourceEvent = this.reviewSourceEvent(review);
-      return matchesReviewFilters(review, sourceEvent, {
-        filterLabel: this._host._filterLabel,
-        filterZone: this._host._filterZone,
-        favOnly: this._host._favOnly,
-        getLabels: (candidateReview, candidateSourceEvent) => this.reviewFilterLabels(candidateReview, candidateSourceEvent),
-        getZones: (candidateReview, candidateSourceEvent) => this.reviewFilterZones(candidateReview, candidateSourceEvent)
-      });
-    });
-  }
-  filteredKept() {
-    return selectFilteredKeptEvents({
-      keptEvents: this._host._kept || [],
-      gridKeptEvents: this._host._allGridKeptEvents(),
-      isGridMixedListMode: this._host._isGridMixedListMode(),
-      matchesEvent: (event) => this.matchesEventFilters(event)
-    });
-  }
-  normalizeFilterSelections() {
-    const normalized = normalizeFilterSelections({
-      filterLabel: this._host._filterLabel,
-      filterZone: this._host._filterZone,
-      labels: this.labels(),
-      zones: this.zones()
-    });
-    this._host._filterLabel = normalized.filterLabel;
-    this._host._filterZone = normalized.filterZone;
-  }
-  zones() {
-    return selectFilterZones({
-      tab: this._host._tab,
-      reviews: this.reviewsForTabBase(),
-      events: this.filterOptionSourceEvents(),
-      getZones: (review) => {
-        const sourceEvent = this.reviewSourceEvent(review);
-        return this.reviewFilterZones(review, sourceEvent);
-      }
-    });
-  }
-  labels() {
-    return selectFilterLabels({
-      tab: this._host._tab,
-      reviews: this.reviewsForTabBase(),
-      events: this.filterOptionSourceEvents(),
-      getLabels: (review) => {
-        const sourceEvent = this.reviewSourceEvent(review);
-        return this.reviewFilterLabels(review, sourceEvent);
-      }
-    });
-  }
-  reviewFilterLabels(review, sourceEvent = null) {
-    return buildReviewFilterLabels(review, sourceEvent);
-  }
-  reviewFilterZones(review, sourceEvent = null) {
-    return buildReviewFilterZones(review, sourceEvent);
-  }
-  filtered() {
-    return selectFilteredEvents({
-      tab: this._host._tab,
-      events: this._host._allDisplayEvents(),
-      matchesEvent: (event) => this.matchesEventFilters(event)
-    });
-  }
-};
-
-// src/features/browse/collection.ctrl.js
-const BrowseCollectionController = class {
-  constructor(host) {
-    this._host = host;
-  }
-  allGridReviews() {
-    const reviews = [];
-    const seen = new Set();
-    for (const camera of this._host._config.cameras || []) {
-      const cameraKey = String(
-        this._host._camCache[camera.entity]?.cam || camera.entity || ""
-      );
-      const cache = this._host._camCache[camera.entity];
-      for (const review of cache?.reviews || []) {
-        const id = String(review?.id || "");
-        if (!id) continue;
-        const dedupeKey = `${cameraKey}|${id}`;
-        if (seen.has(dedupeKey)) continue;
-        seen.add(dedupeKey);
-        reviews.push(review);
-      }
-    }
-    return reviews;
-  }
-  allGridKeptEvents() {
-    const events = [];
-    const seen = new Set();
-    for (const camera of this._host._config.cameras || []) {
-      const cache = this._host._camCache[camera.entity];
-      for (const event of cache?.kept || []) {
-        const id = String(event?.id || "");
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-        events.push(event);
-      }
-    }
-    return events;
-  }
-  findReviewById(id) {
-    if (!id) return null;
-    const target = String(id);
-    if (this._host._isGridMixedListMode()) {
-      return this.allGridReviews().find(
-        (review) => String(review?.id || "") === target
-      ) || null;
-    }
-    return (this._host._reviews || []).find(
-      (review) => String(review?.id || "") === target
-    ) || null;
-  }
-  async loadGridMixedTabData(tab) {
-    const before = this._host._winEnd;
-    const reviewDays = this._host._config?.alerts_reviews_days || 3;
-    const reviewsAfter = Math.max(0, Math.floor(before - reviewDays * 86400));
-    for (const camera of this._host._config.cameras || []) {
-      const showAllReviews = camera?.alerts_content === "all_reviews";
-      const entity = camera.entity;
-      if (!entity) continue;
-      try {
-        if (!this._host._camCache[entity]?.discovered) {
-          await this._host._discoverOne(entity);
-        }
-      } catch (_) {
-        continue;
-      }
-      const cache = this._host._camCache[entity];
-      const clientId = cache?.clientId;
-      const cam = cache?.cam;
-      if (!clientId || !cam) continue;
-      try {
-        if (tab === "alerts") {
-          const resolved = await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
-            clientId,
-            cam,
-            before,
-            reviewDays,
-            {
-              debugLabel: "grid-alerts-tab",
-              itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode
-            }
-          ) ?? this._host._fetchWindowedReviews?.(
-            clientId,
-            cam,
-            reviewsAfter,
-            before,
-            {
-              debugLabel: "grid-alerts-tab"
-            }
-          ));
-          const reviews = Array.isArray(resolved?.items) ? resolved.items : resolved;
-          cache.reviews = Array.isArray(reviews) ? reviews : [];
-        }
-        if (tab === "kept") {
-          const kept = await this._host._ws({
-            type: "frigate/events/get",
-            instance_id: clientId,
-            cameras: [cam],
-            favorites: true,
-            limit: 50
-          });
-          cache.kept = Array.isArray(kept) ? kept : [];
-        }
-      } catch (_) {
-      }
-    }
-  }
-  allDisplayEvents() {
-    if (this._host._eventsMode === "all") {
-      const seen = new Set();
-      const all = [];
-      for (const camera of this._host._config.cameras) {
-        const cache = this._host._camCache[camera.entity];
-        if (!cache) continue;
-        for (const event of cache.events || []) {
-          if (seen.has(event.id)) continue;
-          seen.add(event.id);
-          all.push(event);
-        }
-      }
-      return all.sort((a, b) => b.start_time - a.start_time);
-    }
-    return this._host._events;
-  }
-  findEventById(id) {
-    if (!id) return null;
-    const all = this.allDisplayEvents();
-    let event = all.find((candidate) => candidate.id === id);
-    if (event) return event;
-    for (const camera of this._host._config.cameras) {
-      const cache = this._host._camCache[camera.entity];
-      event = (cache?.events || []).find((candidate) => candidate.id === id);
-      if (event) return event;
-    }
-    event = (this._host._kept || []).find((candidate) => candidate.id === id);
-    return event || null;
-  }
-};
-
-// src/features/browse/calendar-activity.ctrl.js
-const BrowseCalendarActivityController = class {
-  constructor(host) {
-    this._host = host;
-  }
-  async loadCalendar() {
-    await this.prefetchCalendarActivityForActiveCamera();
-  }
-  calendarActivityCacheKey(clientId, cam, tz = this._host._tz()) {
-    return `${clientId || ""}|${cam || ""}|${tz || "UTC"}`;
-  }
-  applyCalendarActivityCacheForActiveCamera() {
-    const { clientId, cam } = this._host._cc();
-    const key = this.calendarActivityCacheKey(clientId, cam);
-    const cached = this._host._calendarActivityByCam.get(key);
-    this._host._daysWithActivity = cached ? new Set(cached) : new Set();
-  }
-  async prefetchCalendarActivityForActiveCamera() {
-    const { clientId, cam } = this._host._cc();
-    if (!clientId || !cam) {
-      this._host._daysWithActivity = new Set();
-      return;
-    }
-    const tz = this._host._tz();
-    const key = this.calendarActivityCacheKey(clientId, cam, tz);
-    const cached = this._host._calendarActivityByCam.get(key);
-    if (cached) {
-      this._host._daysWithActivity = new Set(cached);
-      return;
-    }
-    const existing = this._host._calendarActivityInFlight.get(key);
-    if (existing) {
-      await existing;
-      return;
-    }
-    const task = (async () => {
-      try {
-        const summary = await this._host._ws({
-          type: "frigate/events/summary",
-          instance_id: clientId,
-          timezone: tz
-        });
-        const days = Array.isArray(summary) ? new Set(
-          summary.filter((item) => item.camera === cam && item.day).map((item) => item.day)
-        ) : new Set();
-        this._host._calendarActivityByCam.set(key, days);
-        const active = this._host._cc();
-        const activeKey = this.calendarActivityCacheKey(
-          active.clientId,
-          active.cam,
-          tz
-        );
-        if (activeKey === key) {
-          this._host._daysWithActivity = new Set(days);
-          if (this._host._$("cal-panel")?.style.display !== "none") {
-            this._host._renderCal();
-          }
-        }
-      } catch (_) {
-      }
-    })();
-    this._host._calendarActivityInFlight.set(key, task);
-    try {
-      await task;
-    } finally {
-      this._host._calendarActivityInFlight.delete(key);
-    }
-  }
-};
-
-// src/features/browse/tab-data.ctrl.js
-const BrowseTabDataController = class {
-  constructor(host) {
-    this._host = host;
-  }
-  async loadKept() {
-    const { clientId, cam } = this._host._cc();
-    try {
-      const kept = await this._host._ws({
-        type: "frigate/events/get",
-        instance_id: clientId,
-        cameras: [cam],
-        favorites: true,
-        limit: 50
-      });
-      this._host._kept = Array.isArray(kept) ? kept : [];
-      const entity = this._host._activeCam?.entity;
-      if (entity && this._host._camCache[entity]) {
-        this._host._camCache[entity].kept = this._host._kept;
-      }
-    } catch (_) {
-      this._host._kept = [];
-    }
-  }
-  async loadReviews() {
-    const { clientId, cam } = this._host._cc();
-    try {
-      const before = this._host._winEnd;
-      const days = this._host._config?.alerts_reviews_days || 3;
-      const windowLoader = this._host._browseWindowLoaderController;
-      if (windowLoader?.hasCachedWindowReviews?.(clientId, cam, before)) {
-        const entity = this._host._activeCam?.entity;
-        this._host._reviews = this._host._camCache[entity]?.reviews || [];
-        return;
-      }
-      const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
-      const resolved = await (windowLoader?.fetchRecentActiveDayReviews?.(
-        clientId,
-        cam,
-        before,
-        days,
-        {
-          debugLabel: "alerts-tab",
-          itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode
-        }
-      ) ?? this._host._fetchWindowedReviews?.(
-        clientId,
-        cam,
-        Math.max(0, Math.floor(before - days * DAY)),
-        before,
-        {
-          debugLabel: "alerts-tab"
-        }
-      ));
-      const reviews = Array.isArray(resolved?.items) ? resolved.items : resolved;
-      this._host._reviews = Array.isArray(reviews) ? reviews : [];
-      windowLoader?.cacheWindowReviews?.(
-        clientId,
-        cam,
-        before,
-        this._host._reviews
-      ) ?? this._host._cacheActiveCamSlice?.("reviews", this._host._reviews);
-      this._host._slideshowAlertController.handleReviewsUpdated(
-        this._host._activeCam?.entity || "",
-        this._host._reviews,
-        "alerts-tab"
-      );
-    } catch (_) {
-      this._host._reviews = [];
-    }
-  }
-  async loadTabData(tab) {
-    if (tab !== "alerts" && tab !== "kept" && tab !== "recordings" && tab !== "controls") {
-      return;
-    }
-    try {
-      if (tab === "alerts") await this.loadReviews();
-      if (tab === "kept") await this.loadKept();
-      if (this._host._isGridMixedListMode() && (tab === "alerts" || tab === "kept")) {
-        await this._host._loadGridMixedTabData(tab);
-      }
-      if (tab === "recordings") {
-        const { clientId, cam } = this._host._cc();
-        if (clientId && cam) {
-          await (this._host._browseWindowLoaderController?.loadWindowRecordings?.(
-            clientId,
-            cam,
-            this._host._winEnd
-          ) ?? this._host._loadWindowRecordings?.(
-            clientId,
-            cam,
-            this._host._winEnd
-          ));
-        }
-      }
-    } catch (error) {
-      console.error("[Frigate] tab data load failed", error);
-    } finally {
-      this._host._renderList();
-    }
-  }
-};
-
-// src/data/window-fetch.js
-async function fetchWindowedItems({
-  after,
-  before,
-  opts = {},
-  defaultPageLimit,
-  defaultBatchLimit,
-  useOptionLimit = true,
-  fetchBatch,
-  getItemStartTime
-}) {
-  const items = [];
-  const seen = new Set();
-  const afterTs = Math.floor(after);
-  let cursorBefore = Math.floor(
-    Number.isFinite(opts?.cursorBefore) ? opts.cursorBefore : before
-  );
-  const pageLimit = Math.max(
-    1,
-    Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : defaultPageLimit
-  );
-  const batchLimit = useOptionLimit ? Math.max(
-    1,
-    Number.isFinite(opts?.limit) ? Math.floor(opts.limit) : defaultBatchLimit
-  ) : defaultBatchLimit;
-  const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
-  for (let page = 0; page < pageLimit; page++) {
-    const batch = await fetchBatch({
-      after: afterTs,
-      before: cursorBefore,
-      limit: batchLimit,
-      page
-    });
-    if (!Array.isArray(batch) || !batch.length) break;
-    for (const item of batch) {
-      if (!item?.id || seen.has(item.id)) continue;
-      seen.add(item.id);
-      items.push(item);
-    }
-    onPage?.(items, {
-      page,
-      done: false
-    });
-    const oldest = Math.min(
-      ...batch.map((item) => Math.floor(getItemStartTime(item, before)))
-    );
-    if (batch.length < batchLimit || oldest <= afterTs) break;
-    cursorBefore = oldest - 1;
-  }
-  onPage?.(items, { page: -1, done: true });
-  return items;
-}
+}).filter(Boolean).sort((left, right) => left.start - right.start);
 
 // src/features/recordings/utils/availability.js
 function buildRecordingsDayCacheKey(clientId, camera, bounds = {}) {
@@ -12179,600 +11501,6 @@ function buildPreparedRecordingsDayResult(bounds, recordings) {
   };
 }
 
-// src/features/recordings/utils/day.js
-function resolveRecordingsDayBounds({
-  tsSec = null,
-  fallbackSec = null,
-  getTzParts = () => ({}),
-  toEpochSeconds = () => 0,
-  nowSec = Date.now() / 1e3
-}) {
-  const target = Math.floor(tsSec || fallbackSec || nowSec);
-  const parts = getTzParts(target);
-  const start = toEpochSeconds(parts.year, parts.month, parts.day, 0, 0, 0);
-  const end = toEpochSeconds(parts.year, parts.month, parts.day, 23, 59, 59);
-  return { start, end };
-}
-function resolveOffsetRecordingsDayBounds({
-  offsetDays = 0,
-  fallbackSec = null,
-  getTzParts = () => ({}),
-  toEpochSeconds = () => 0,
-  nowSec = Date.now() / 1e3
-}) {
-  const base = getTzParts(fallbackSec || nowSec);
-  const shifted = new Date(
-    Date.UTC(base.year, base.month - 1, base.day + offsetDays, 12, 0, 0)
-  );
-  const year = shifted.getUTCFullYear();
-  const month = shifted.getUTCMonth() + 1;
-  const day = shifted.getUTCDate();
-  return {
-    start: toEpochSeconds(year, month, day, 0, 0, 0),
-    end: toEpochSeconds(year, month, day, 23, 59, 59)
-  };
-}
-function buildRecordingsDayFetchChunks({
-  bounds = null,
-  before = null,
-  chunkSeconds = 6 * 60 * 60
-} = {}) {
-  const dayStart = Math.floor(Number(bounds?.start));
-  const dayEnd = Math.floor(Number(bounds?.end));
-  if (!Number.isFinite(dayStart) || !Number.isFinite(dayEnd)) return [];
-  if (dayEnd <= dayStart) return [];
-  const requestedBefore = Number(before);
-  const effectiveEnd = Math.min(
-    dayEnd,
-    Number.isFinite(requestedBefore) && requestedBefore > dayStart ? Math.floor(requestedBefore) : dayEnd
-  );
-  if (effectiveEnd <= dayStart) return [];
-  const sliceSeconds = Math.max(60, Math.floor(Number(chunkSeconds) || 0));
-  const chunks = [];
-  for (let start = dayStart; start < effectiveEnd; start += sliceSeconds) {
-    chunks.push({
-      start,
-      end: Math.min(effectiveEnd, start + sliceSeconds)
-    });
-  }
-  return chunks.reverse();
-}
-
-// src/features/browse/window-loader.ctrl.js
-const BrowseWindowLoaderController = class {
-  constructor(host, deps = {}) {
-    this._host = host;
-    this._deps = {
-      fetchWindowedItems,
-      ...deps
-    };
-  }
-  async fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
-    return this._deps.fetchWindowedItems({
-      after,
-      before,
-      opts,
-      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
-      defaultBatchLimit: EVENT_FETCH_BATCH,
-      useOptionLimit: true,
-      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._host._ws({
-        type: "frigate/events/get",
-        instance_id: clientId,
-        cameras: [cam],
-        after: afterTs,
-        before: beforeTs,
-        limit
-      }),
-      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
-    });
-  }
-  async warmOtherCamerasEvents() {
-    const token = ++this._host._warmCamsToken;
-    const activeEntity = this._host._activeCam?.entity;
-    const after = this._host._winStart;
-    const before = this._host._winEnd;
-    for (const camera of this._host._config.cameras) {
-      if (camera.entity === activeEntity) continue;
-      const entity = camera.entity;
-      const cache = this._host._camCache[entity];
-      if (!cache?.clientId || !cache?.cam) continue;
-      if (Array.isArray(cache.events) && cache.events.length >= INACTIVE_WARM_EVENT_LIMIT) {
-        continue;
-      }
-      try {
-        const events = await this.fetchWindowedEvents(
-          cache.clientId,
-          cache.cam,
-          after,
-          before,
-          {
-            pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
-            limit: INACTIVE_WARM_EVENT_LIMIT,
-            debugLabel: "warm-cache"
-          }
-        );
-        if (token !== this._host._warmCamsToken) return;
-        if (after !== this._host._winStart || before !== this._host._winEnd) {
-          return;
-        }
-        cache.events = Array.isArray(events) ? events.slice(0, INACTIVE_WARM_EVENT_LIMIT) : [];
-      } catch (_) {
-      }
-    }
-  }
-  scheduleWarmOtherCamerasEvents(delayMs = 1e3) {
-    if (this._host._warmOtherCamsDelayT) {
-      clearTimeout(this._host._warmOtherCamsDelayT);
-    }
-    this._host._warmOtherCamsDelayT = setTimeout(
-      () => {
-        this._host._warmOtherCamsDelayT = null;
-        if (!this._host.isConnected) return;
-        void this.warmOtherCamerasEvents();
-      },
-      Math.max(0, Number(delayMs) || 0)
-    );
-  }
-  pruneNonActiveCamWindowCaches() {
-    this._host._warmCamsToken++;
-    const activeEntity = this._host._activeCam?.entity;
-    for (const camera of this._host._config.cameras) {
-      const entity = camera.entity;
-      if (entity === activeEntity) continue;
-      const cache = this._host._camCache[entity];
-      if (!cache) continue;
-      cache.events = [];
-      cache.recordings = [];
-      cache.reviews = [];
-      cache.reviewsWindowKey = "";
-    }
-  }
-  async fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
-    return this._deps.fetchWindowedItems({
-      after,
-      before,
-      opts,
-      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
-      defaultBatchLimit: REVIEW_FETCH_BATCH,
-      useOptionLimit: false,
-      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._host._ws({
-        type: "frigate/reviews/get",
-        instance_id: clientId,
-        cameras: [cam],
-        after: afterTs,
-        before: beforeTs,
-        limit
-      }),
-      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
-    });
-  }
-  _dayKeyForItem(item) {
-    const ts = Math.floor(Number(item?.start_time) || 0);
-    if (typeof this._host._dayKey === "function") {
-      return this._host._dayKey(ts);
-    }
-    const date = new Date(ts * 1e3);
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-  _filterToRecentDaysWithData(items, dayCount) {
-    const targetDayCount = Math.max(1, Number(dayCount) || 1);
-    const sorted = Array.isArray(items) ? items.slice().sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0)) : [];
-    const selectedDays = new Set();
-    for (const item of sorted) {
-      const key = this._dayKeyForItem(item);
-      if (!key) continue;
-      selectedDays.add(key);
-      if (selectedDays.size >= targetDayCount) break;
-    }
-    if (!selectedDays.size) return [];
-    return sorted.filter((item) => selectedDays.has(this._dayKeyForItem(item)));
-  }
-  async _fetchRecentActiveDaysItems({
-    clientId,
-    cam,
-    before,
-    dayCount,
-    fetcher,
-    debugLabel,
-    itemFilter
-  }) {
-    const targetDayCount = Math.max(1, Number(dayCount) || 1);
-    let spanDays = targetDayCount;
-    const maxSpanDays = Math.max(targetDayCount * 16, targetDayCount + 30);
-    let bestItems = [];
-    let bestDayCount = 0;
-    while (true) {
-      const after = Math.max(0, Math.floor(before - spanDays * DAY));
-      const items = await fetcher(after, before, {
-        debugLabel
-      });
-      const latestItems = Array.isArray(items) ? typeof itemFilter === "function" ? items.filter((item) => itemFilter(item)) : items : [];
-      const filtered = this._filterToRecentDaysWithData(
-        latestItems,
-        targetDayCount
-      );
-      const dayCountFound = new Set(
-        filtered.map((item) => this._dayKeyForItem(item))
-      ).size;
-      if (dayCountFound > bestDayCount) {
-        bestDayCount = dayCountFound;
-        bestItems = filtered;
-      }
-      if (dayCountFound >= targetDayCount || spanDays >= maxSpanDays) {
-        const bestResult = bestDayCount >= dayCountFound ? bestItems : filtered;
-        return {
-          items: bestResult,
-          after
-        };
-      }
-      spanDays = Math.min(maxSpanDays, spanDays * 2);
-    }
-  }
-  async fetchRecentActiveDayEvents(clientId, cam, before, dayCount, opts = {}) {
-    const result = await this._fetchRecentActiveDaysItems({
-      clientId,
-      cam,
-      before,
-      dayCount,
-      debugLabel: opts.debugLabel || "events-active-days",
-      fetcher: (after, beforeTs, fetchOpts) => this.fetchWindowedEvents(clientId, cam, after, beforeTs, fetchOpts)
-    });
-    return result;
-  }
-  async fetchRecentActiveDayReviews(clientId, cam, before, dayCount, opts = {}) {
-    const result = await this._fetchRecentActiveDaysItems({
-      clientId,
-      cam,
-      before,
-      dayCount,
-      debugLabel: opts.debugLabel || "reviews-active-days",
-      itemFilter: typeof opts.itemFilter === "function" ? opts.itemFilter : null,
-      fetcher: (after, beforeTs, fetchOpts) => this.fetchWindowedReviews(clientId, cam, after, beforeTs, fetchOpts)
-    });
-    return result;
-  }
-  async loadWindow(replace) {
-    if (this._host._isPreviewPageActive()) return;
-    if (this._host._loading) return;
-    this._host._loading = true;
-    this._host._reloadPending = false;
-    this._host._reloadAfterLoad = false;
-    if (replace) this._host._exhausted = false;
-    if (this._host._followNowWindow) {
-      const now = Math.floor(Date.now() / 1e3);
-      this._host._winEnd = now;
-      this._host._winStart = now - this._host._config.window_days * DAY;
-    }
-    const { clientId, cam } = this._host._cc();
-    if (!clientId || !cam) {
-      this._host._loading = false;
-      return;
-    }
-    const after = this._host._winStart;
-    const before = this._host._winEnd;
-    const reviewsTask = this.loadWindowReviewsIfNeeded(
-      clientId,
-      cam,
-      after,
-      before
-    );
-    const eventsTask = this.loadWindowEvents(clientId, cam, after, before);
-    await Promise.allSettled([
-      reviewsTask,
-      eventsTask,
-      this._host._tab === "recordings" ? this.loadWindowRecordings(clientId, cam, before) : Promise.resolve()
-    ]);
-    const entity = this._host._activeCam?.entity;
-    if (entity && this._host._camCache[entity]) {
-      this._host._camCache[entity].events = this._host._events;
-      this._host._camCache[entity].recordings = this._host._recordings;
-    }
-    this._host._loading = false;
-    if (this._host._reloadAfterLoad) {
-      this._host._reloadAfterLoad = false;
-      this._host._scheduleReload();
-    }
-    this._host._deepLinkController?.consumeDeepLinkReviewOpen?.() ?? this._host._consumeDeepLinkReviewOpen?.();
-    this._host._deepLinkController?.consumeDeepLinkEventOpen?.() ?? this._host._consumeDeepLinkEventOpen?.();
-    if (this._host._eventsMode === "all") this._host._loadAllCamsBackground();
-    this._host._renderAll();
-  }
-  async loadOlder() {
-    const before = this._host._events.length ? Math.floor(
-      Math.min(...this._host._events.map((event) => event.start_time))
-    ) : this._host._winStart;
-    this._host._loading = true;
-    const { clientId, cam } = this._host._cc();
-    try {
-      const older = await this._host._ws({
-        type: "frigate/events/get",
-        instance_id: clientId,
-        cameras: [cam],
-        before,
-        limit: 50
-      });
-      const nextEvents = Array.isArray(older) ? older.filter(
-        (olderEvent) => !this._host._events.some(
-          (currentEvent) => currentEvent.id === olderEvent.id
-        )
-      ) : [];
-      if (!nextEvents.length) {
-        this._host._exhausted = true;
-      } else {
-        this._host._events = this._host._events.concat(nextEvents);
-        this._host._winStart = Math.min(
-          this._host._winStart,
-          ...nextEvents.map((event) => event.start_time)
-        );
-      }
-    } catch (_) {
-    }
-    this._host._loading = false;
-    this._host._renderList();
-    this._host._renderSubtitle();
-  }
-  cacheActiveCamSlice(key, value) {
-    const entity = this._host._activeCam?.entity;
-    if (entity && this._host._camCache[entity]) {
-      this._host._camCache[entity][key] = value;
-    }
-  }
-  reviewWindowCacheKey(clientId, cam, before) {
-    const days = this._host._config?.alerts_reviews_days || 3;
-    const contentMode = this._host._activeCam?.alerts_content === "all_reviews" ? "all_reviews" : "alerts_only";
-    return `${clientId}|${cam}|${Math.floor(before)}|${days}|${contentMode}`;
-  }
-  hasCachedWindowReviews(clientId, cam, before) {
-    const entity = this._host._activeCam?.entity;
-    const cache = entity ? this._host._camCache[entity] : null;
-    return !!cache && cache.reviewsWindowKey === this.reviewWindowCacheKey(clientId, cam, before);
-  }
-  cacheWindowReviews(clientId, cam, before, reviews) {
-    const entity = this._host._activeCam?.entity;
-    const cache = entity ? this._host._camCache[entity] : null;
-    if (!cache) return;
-    cache.reviews = reviews;
-    cache.reviewsWindowKey = this.reviewWindowCacheKey(clientId, cam, before);
-  }
-  async loadWindowEvents(clientId, cam, after, before) {
-    try {
-      const resolved = await this.fetchRecentActiveDayEvents(
-        clientId,
-        cam,
-        before,
-        this._host._config?.window_days || 1,
-        { debugLabel: "events-window" }
-      );
-      this._host._events = Array.isArray(resolved?.items) ? resolved.items : [];
-      if (this._host._events.length) {
-        this._host._winStart = Math.min(
-          ...this._host._events.map(
-            (item) => Math.floor(item?.start_time || before)
-          )
-        );
-      } else if (Number.isFinite(resolved?.after)) {
-        this._host._winStart = resolved.after;
-      } else {
-        this._host._winStart = after;
-      }
-      this.cacheActiveCamSlice("events", this._host._events);
-      this._host._renderList();
-      this._host._renderStats();
-    } catch (error) {
-      console.error("[Frigate] events", error);
-      this._host._events = [];
-    }
-  }
-  async loadWindowRecordings(clientId, cam, before) {
-    const bounds = this._resolveRecordingsDayBounds(before);
-    const cacheKey = buildRecordingsDayCacheKey(clientId, cam, bounds);
-    if (!this._host._recordingsDayDataCache) {
-      this._host._recordingsDayDataCache = new Map();
-    }
-    if (!this._host._recordingsDayAvailabilityCache) {
-      this._host._recordingsDayAvailabilityCache = new Map();
-    }
-    if (!this._host._recordingsDayFetchedAtCache) {
-      this._host._recordingsDayFetchedAtCache = new Map();
-    }
-    const dataCache = this._host._recordingsDayDataCache;
-    const hasCached = dataCache.has(cacheKey);
-    const cachedRecordings = hasCached ? dataCache.get(cacheKey) || [] : [];
-    if (hasCached) {
-      this._publishRecordingsDay(
-        clientId,
-        cam,
-        bounds,
-        cachedRecordings
-      );
-    }
-    const todayBounds = this._resolveRecordingsDayBounds(
-      Math.floor(Date.now() / 1e3)
-    );
-    const isToday = bounds.start === todayBounds.start && bounds.end === todayBounds.end;
-    const fetchedAt = Number(
-      this._host._recordingsDayFetchedAtCache.get(cacheKey) || 0
-    );
-    const cacheIsFresh = fetchedAt > 0 && Date.now() - fetchedAt < this._recordingsFreshnessMs();
-    if (hasCached && (!isToday || cacheIsFresh)) return cachedRecordings;
-    let lastProgressRecordings = null;
-    try {
-      const recordings = await this._fetchRecordingsDay(
-        clientId,
-        cam,
-        bounds,
-        {
-          forceRefresh: hasCached,
-          progressive: !hasCached,
-          before,
-          onProgress: (partialRecordings) => {
-            lastProgressRecordings = partialRecordings;
-            this._publishRecordingsDay(
-              clientId,
-              cam,
-              bounds,
-              partialRecordings
-            );
-          }
-        }
-      );
-      if (recordings !== lastProgressRecordings) {
-        this._publishRecordingsDay(clientId, cam, bounds, recordings);
-      }
-      return recordings;
-    } catch (_) {
-      if (!hasCached && this._recordingsContextMatches(clientId, cam, bounds)) {
-        this._host._recordings = [];
-        this.cacheActiveCamSlice("recordings", this._host._recordings);
-      }
-      return cachedRecordings;
-    }
-  }
-  _resolveRecordingsDayBounds(timestamp) {
-    if (this._host._recordingsDayBounds) {
-      return this._host._recordingsDayBounds(timestamp);
-    }
-    return resolveRecordingsDayBounds({
-      tsSec: timestamp,
-      fallbackSec: this._host._winEnd,
-      getTzParts: (target) => this._host._tzParts(target),
-      toEpochSeconds: (year, month, day, hour, minute, second) => this._host._tzDateTimeToEpochSeconds(
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        second
-      )
-    });
-  }
-  _recordingsFreshnessMs() {
-    const refreshSeconds = Math.max(
-      15,
-      Number(this._host._config?.refresh_seconds) || 45
-    );
-    return refreshSeconds * 1e3;
-  }
-  _recordingsContextMatches(clientId, cam, bounds) {
-    if (typeof this._host._cc !== "function") return true;
-    const active = this._host._cc();
-    if (active?.clientId !== clientId || active?.cam !== cam) return false;
-    const activeBounds = this._resolveRecordingsDayBounds(this._host._winEnd);
-    return activeBounds.start === bounds.start && activeBounds.end === bounds.end;
-  }
-  _publishRecordingsDay(clientId, cam, bounds, recordings) {
-    if (!this._recordingsContextMatches(clientId, cam, bounds)) return false;
-    this._host._recordings = Array.isArray(recordings) ? recordings : [];
-    this.cacheActiveCamSlice("recordings", this._host._recordings);
-    this._host._renderList();
-    return true;
-  }
-  async _fetchRecordingsDay(clientId, cam, bounds, {
-    forceRefresh = false,
-    progressive = false,
-    before = null,
-    onProgress = null
-  } = {}) {
-    const recordingsController = this._host._recordingsBrowseNavController;
-    const progressiveLoader = recordingsController?.fetchRecordingsInBoundsProgressively;
-    if (progressive && typeof progressiveLoader === "function") {
-      return await progressiveLoader.call(
-        recordingsController,
-        bounds,
-        clientId,
-        cam,
-        { before, onProgress }
-      );
-    }
-    const sharedLoader = recordingsController?.fetchRecordingsInBounds;
-    if (typeof sharedLoader === "function") {
-      return await sharedLoader.call(
-        recordingsController,
-        bounds,
-        clientId,
-        cam,
-        { forceRefresh }
-      );
-    }
-    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
-    const dataCache = this._host._recordingsDayDataCache;
-    if (!forceRefresh && dataCache.has(key)) return dataCache.get(key) || [];
-    if (!this._host._recordingsDayRequestCache) {
-      this._host._recordingsDayRequestCache = new Map();
-    }
-    const requestCache = this._host._recordingsDayRequestCache;
-    if (requestCache.has(key)) return await requestCache.get(key);
-    const request = (async () => {
-      const response = await this._host._ws({
-        type: "frigate/recordings/get",
-        instance_id: clientId,
-        camera: cam,
-        after: Math.max(0, bounds.start),
-        before: bounds.end
-      });
-      const recordings = Array.isArray(response) ? response : [];
-      dataCache.set(key, recordings);
-      this._host._recordingsDayAvailabilityCache.set(
-        key,
-        recordings.length > 0
-      );
-      this._host._recordingsDayFetchedAtCache.set(key, Date.now());
-      return recordings;
-    })();
-    requestCache.set(key, request);
-    try {
-      return await request;
-    } finally {
-      if (requestCache.get(key) === request) requestCache.delete(key);
-    }
-  }
-  async loadWindowReviewsIfNeeded(clientId, cam, _after, before) {
-    if (this._host._tab !== "alerts") return;
-    try {
-      const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
-      const resolved = await this.fetchRecentActiveDayReviews(
-        clientId,
-        cam,
-        before,
-        this._host._config?.alerts_reviews_days || 3,
-        {
-          debugLabel: "alerts-window",
-          itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode
-        }
-      );
-      this._host._reviews = Array.isArray(resolved?.items) ? resolved.items : [];
-      this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
-      this._host._renderList();
-      this._host._slideshowAlertController.handleReviewsUpdated(
-        this._host._activeCam?.entity || "",
-        this._host._reviews,
-        "alerts-window"
-      );
-    } catch (_) {
-      this._host._reviews = [];
-    }
-  }
-  goNow() {
-    this._host._followNowWindow = true;
-    const now = Math.floor(Date.now() / 1e3);
-    this._host._winEnd = now;
-    this._host._winStart = now - this._host._config.window_days * DAY;
-    this._host._calSelectedDay = this._host._formatTzDateString(
-      this._host._tzParts(now)
-    );
-    this._host._exhausted = false;
-    this._host._calMonth = null;
-    this.pruneNonActiveCamWindowCaches();
-    void (async () => {
-      await this.loadWindow(true);
-      this.scheduleWarmOtherCamerasEvents();
-    })();
-  }
-};
-
 // src/features/recordings/utils/browse-nav.js
 function resolveRecordingsBrowseNavContextState({
   clientId = "",
@@ -12838,6 +11566,65 @@ function resolveRecordingsBrowseNavState({
     prevDisabled: !hasPrev,
     nextDisabled: isTodayOrFuture || !hasNext
   };
+}
+
+// src/features/recordings/utils/day.js
+function resolveRecordingsDayBounds({
+  tsSec = null,
+  fallbackSec = null,
+  getTzParts = () => ({}),
+  toEpochSeconds = () => 0,
+  nowSec = Date.now() / 1e3
+}) {
+  const target = Math.floor(tsSec || fallbackSec || nowSec);
+  const parts = getTzParts(target);
+  const start = toEpochSeconds(parts.year, parts.month, parts.day, 0, 0, 0);
+  const end = toEpochSeconds(parts.year, parts.month, parts.day, 23, 59, 59);
+  return { start, end };
+}
+function resolveOffsetRecordingsDayBounds({
+  offsetDays = 0,
+  fallbackSec = null,
+  getTzParts = () => ({}),
+  toEpochSeconds = () => 0,
+  nowSec = Date.now() / 1e3
+}) {
+  const base = getTzParts(fallbackSec || nowSec);
+  const shifted = new Date(
+    Date.UTC(base.year, base.month - 1, base.day + offsetDays, 12, 0, 0)
+  );
+  const year = shifted.getUTCFullYear();
+  const month = shifted.getUTCMonth() + 1;
+  const day = shifted.getUTCDate();
+  return {
+    start: toEpochSeconds(year, month, day, 0, 0, 0),
+    end: toEpochSeconds(year, month, day, 23, 59, 59)
+  };
+}
+function buildRecordingsDayFetchChunks({
+  bounds = null,
+  before = null,
+  chunkSeconds = 6 * 60 * 60
+} = {}) {
+  const dayStart = Math.floor(Number(bounds?.start));
+  const dayEnd = Math.floor(Number(bounds?.end));
+  if (!Number.isFinite(dayStart) || !Number.isFinite(dayEnd)) return [];
+  if (dayEnd <= dayStart) return [];
+  const requestedBefore = Number(before);
+  const effectiveEnd = Math.min(
+    dayEnd,
+    Number.isFinite(requestedBefore) && requestedBefore > dayStart ? Math.floor(requestedBefore) : dayEnd
+  );
+  if (effectiveEnd <= dayStart) return [];
+  const sliceSeconds = Math.max(60, Math.floor(Number(chunkSeconds) || 0));
+  const chunks = [];
+  for (let start = dayStart; start < effectiveEnd; start += sliceSeconds) {
+    chunks.push({
+      start,
+      end: Math.min(effectiveEnd, start + sliceSeconds)
+    });
+  }
+  return chunks.reverse();
 }
 
 // src/features/recordings/utils/playback.js
@@ -14233,6 +13020,1535 @@ const RecordingsBrowseNavController = class {
     });
     prev.disabled = resolvedNavState.prevDisabled;
     next.disabled = resolvedNavState.nextDisabled;
+  }
+};
+
+// src/features/popup/recording-scrub.ctrl.js
+const PopupRecordingScrubController = class {
+  constructor({
+    query,
+    fetchReviews = async () => [],
+    isPlaybackTokenCurrent = () => true,
+    isFirefox = () => false,
+    isEdge = () => false,
+    isIOS: isIOS2 = () => false,
+    onFallbackRecording = async () => {
+    },
+    buildMarkers = buildFrigateRecordingReviewMarkers,
+    createScrubBinding = (options) => new RecordingScrubController(options),
+    setTimer = globalThis.setTimeout?.bind(globalThis),
+    clearTimer = globalThis.clearTimeout?.bind(globalThis)
+  } = {}) {
+    this._query = query;
+    this._fetchReviews = fetchReviews;
+    this._isPlaybackTokenCurrent = isPlaybackTokenCurrent;
+    this._isFirefox = isFirefox;
+    this._isEdge = isEdge;
+    this._isIOS = isIOS2;
+    this._onFallbackRecording = onFallbackRecording;
+    this._buildMarkers = buildMarkers;
+    this._createScrubBinding = createScrubBinding;
+    this._setTimer = setTimer;
+    this._clearTimer = clearTimer;
+    this._binding = null;
+    this._state = null;
+    this._markerCache = new Map();
+    this._initGeneration = 0;
+  }
+  range() {
+    if (!this._state) return null;
+    return {
+      start: this._state.start,
+      end: this._state.end
+    };
+  }
+  async initialize({
+    clientId,
+    cam,
+    start,
+    end,
+    video,
+    token,
+    sourceUrl
+  } = {}) {
+    const elements = this._elements();
+    if (!elements.scrub || !elements.track || !elements.markers || !elements.cursor || !video) {
+      return null;
+    }
+    this.teardown();
+    const generation = this._initGeneration;
+    elements.scrub.hidden = false;
+    if (elements.ticks) elements.ticks.innerHTML = "";
+    elements.markers.innerHTML = "";
+    const alerts = await this._loadMarkers({
+      clientId,
+      cam,
+      start,
+      end
+    }).catch(() => []);
+    if (generation !== this._initGeneration || !this._isPlaybackTokenCurrent?.(token)) {
+      return null;
+    }
+    const decorations = buildRecordingScrubDecorations({
+      start,
+      end,
+      alerts
+    });
+    if (elements.labelStart) {
+      elements.labelStart.textContent = decorations.labelStart;
+    }
+    if (elements.labelEnd) {
+      elements.labelEnd.textContent = decorations.labelEnd;
+    }
+    if (elements.labelNow) {
+      elements.labelNow.textContent = decorations.labelNow;
+    }
+    const tickLayer = elements.ticks || elements.markers;
+    tickLayer.innerHTML = decorations.tickMarkup;
+    elements.markers.innerHTML = decorations.markerMarkup;
+    const state = {
+      start,
+      end,
+      alerts,
+      video,
+      cursor: elements.cursor,
+      labelNow: elements.labelNow,
+      isScrubbing: false,
+      resumeAfterScrub: false,
+      pendingAbsTarget: null,
+      pendingRelTarget: null,
+      seekNonce: 0,
+      isFallbackLoading: false,
+      sourceUrl: sourceUrl || "",
+      sourceUrlNoHash: String(sourceUrl || "").split("#")[0]
+    };
+    this._state = state;
+    this._setCursor(start);
+    this._binding = this._createScrubBinding({
+      track: elements.track,
+      video,
+      ticks: elements.ticks,
+      markers: elements.markers,
+      preview: elements.preview,
+      previewImage: elements.previewImage,
+      previewLabel: elements.previewLabel,
+      state,
+      setCursor: (timeSec) => this._setCursor(timeSec),
+      seekToRatio: (ratio, options) => this._seekToRatio(ratio, options),
+      formatTime: formatRecordingScrubTime
+    });
+    this._binding.bind();
+    return this.range();
+  }
+  teardown() {
+    this._initGeneration += 1;
+    if (this._state) {
+      this._state.seekNonce = Number(this._state.seekNonce || 0) + 1;
+    }
+    if (this._binding) {
+      try {
+        this._binding.dispose();
+      } catch (_) {
+      }
+    }
+    this._binding = null;
+    this._state = null;
+    const { scrub, ticks, markers, preview, previewImage } = this._elements();
+    if (scrub) scrub.hidden = true;
+    if (ticks) ticks.innerHTML = "";
+    if (markers) markers.innerHTML = "";
+    if (preview) preview.hidden = true;
+    previewImage?.removeAttribute?.("src");
+  }
+  async _loadMarkers({ clientId, cam, start, end }) {
+    const cacheKey = `${clientId}|${cam}|${Math.floor(start)}|${Math.floor(end)}`;
+    if (this._markerCache.has(cacheKey)) {
+      return this._markerCache.get(cacheKey);
+    }
+    const reviews = await this._fetchReviews(clientId, cam, start, end);
+    const markers = this._buildMarkers({
+      clientId,
+      start,
+      end,
+      reviews
+    });
+    this._markerCache.set(cacheKey, markers);
+    return markers;
+  }
+  _elements() {
+    return {
+      scrub: this._query?.("#recording-scrub"),
+      track: this._query?.("#recording-scrub-track"),
+      ticks: this._query?.("#recording-scrub-ticks"),
+      markers: this._query?.("#recording-scrub-markers"),
+      cursor: this._query?.("#recording-scrub-cursor"),
+      preview: this._query?.("#recording-scrub-preview"),
+      previewImage: this._query?.("#recording-scrub-preview-image"),
+      previewLabel: this._query?.("#recording-scrub-preview-label"),
+      labelStart: this._query?.("#recording-scrub-start"),
+      labelNow: this._query?.("#recording-scrub-now"),
+      labelEnd: this._query?.("#recording-scrub-end")
+    };
+  }
+  _setCursor(timeSec) {
+    const state = this._state;
+    if (!state?.cursor || !Number.isFinite(timeSec)) return;
+    const span = Math.max(1, state.end - state.start);
+    const pct = (timeSec - state.start) / span * 100;
+    state.cursor.style.left = `${Math.max(0, Math.min(100, pct))}%`;
+    if (state.labelNow) {
+      const rel = Math.max(0, Math.min(span, timeSec - state.start));
+      state.labelNow.textContent = `${formatRecordingScrubTime(rel)} / ${formatRecordingScrubTime(span)}`;
+    }
+  }
+  _seekToRatio(ratio, { commit = false } = {}) {
+    const state = this._state;
+    if (!state?.video) return;
+    const target = resolveRecordingScrubTarget({
+      ratio,
+      start: state.start,
+      end: state.end,
+      alerts: state.alerts
+    });
+    state.pendingAbsTarget = target.absTarget;
+    state.pendingRelTarget = target.relTarget;
+    this._setCursor(target.absTarget);
+    if (!commit) return;
+    const relTarget = Number(state.pendingRelTarget);
+    if (!Number.isFinite(relTarget)) return;
+    void this._commitSeek(state, relTarget, target.absTarget);
+  }
+  async _attemptSeek(video, targetSec, timeoutMs = 2500) {
+    if (!video || !Number.isFinite(targetSec)) return false;
+    return await new Promise((resolve) => {
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve(ok);
+      };
+      const verify = () => {
+        finish(
+          isRecordingSeekVerified({
+            currentTime: video.currentTime,
+            targetSec
+          })
+        );
+      };
+      const onDone = () => verify();
+      const onError = () => finish(false);
+      const cleanup = () => {
+        this._clearTimer?.(timer);
+        video.removeEventListener("seeked", onDone);
+        video.removeEventListener("timeupdate", onDone);
+        video.removeEventListener("error", onError);
+      };
+      const timer = this._setTimer?.(() => verify(), timeoutMs);
+      video.addEventListener("seeked", onDone, { once: true });
+      video.addEventListener("timeupdate", onDone, { once: true });
+      video.addEventListener("error", onError, { once: true });
+      try {
+        const plan = resolveRecordingSeekExecutionPlan({
+          hasFastSeek: typeof video.fastSeek === "function",
+          isEdge: this._isEdge?.(),
+          isIOS: this._isIOS?.()
+        });
+        if (plan.shouldUseFastSeek) {
+          video.fastSeek(targetSec);
+        } else {
+          video.currentTime = targetSec;
+        }
+      } catch (_) {
+        finish(false);
+      }
+    });
+  }
+  async _commitSeek(state, relTarget, absTarget) {
+    if (!state?.video || !Number.isFinite(relTarget) || !Number.isFinite(absTarget)) {
+      return;
+    }
+    state.seekNonce = Number(state.seekNonce || 0) + 1;
+    const nonce = state.seekNonce;
+    const video = state.video;
+    const isFirefox = this._isFirefox?.();
+    const isEdge = this._isEdge?.();
+    const seekTimeout = resolveRecordingSeekTimeout({ isFirefox, isEdge });
+    const seekOk = await this._attemptSeek(video, relTarget, seekTimeout);
+    if (nonce !== state.seekNonce || state !== this._state) return;
+    const outcome = resolveRecordingSeekOutcome({
+      isFirefox,
+      isEdge,
+      seekOk,
+      currentTime: video.currentTime,
+      relTarget,
+      absTarget,
+      start: state.start,
+      end: state.end,
+      resumeAfterScrub: state.resumeAfterScrub,
+      isFallbackLoading: state.isFallbackLoading
+    });
+    if (outcome.shouldFallback) {
+      state.isFallbackLoading = true;
+      try {
+        await this._onFallbackRecording?.(
+          outcome.fallbackStart,
+          outcome.fallbackEnd
+        );
+      } finally {
+        state.isFallbackLoading = false;
+      }
+      return;
+    }
+    if (outcome.shouldResumePlayback) {
+      video.play?.().catch(() => {
+      });
+    }
+  }
+};
+
+// src/features/browse/filter-state.js
+function buildReviewFilterLabels(review, sourceEvent = null) {
+  const labels = new Set();
+  if (sourceEvent?.label) labels.add(sourceEvent.label);
+  (review?.data?.objects || []).forEach((label) => {
+    if (label) labels.add(label);
+  });
+  return [...labels];
+}
+function buildReviewFilterZones(review, sourceEvent = null) {
+  const zones = new Set();
+  (sourceEvent?.zones || []).forEach((zone) => {
+    if (zone) zones.add(zone);
+  });
+  (review?.data?.zones || []).forEach((zone) => {
+    if (zone) zones.add(zone);
+  });
+  return [...zones];
+}
+function collectFilterLabelsFromEvents(events) {
+  const labels = new Set();
+  (events || []).forEach((event) => {
+    if (event?.label) labels.add(event.label);
+  });
+  return [...labels];
+}
+function collectFilterZonesFromEvents(events) {
+  const zones = new Set();
+  (events || []).forEach((event) => {
+    (event?.zones || []).forEach((zone) => {
+      if (zone) zones.add(zone);
+    });
+  });
+  return [...zones];
+}
+function collectFilterLabelsFromReviews(reviews, getLabels) {
+  const labels = new Set();
+  (reviews || []).forEach((review) => {
+    (getLabels(review) || []).forEach((label) => {
+      if (label) labels.add(label);
+    });
+  });
+  return [...labels];
+}
+function collectFilterZonesFromReviews(reviews, getZones) {
+  const zones = new Set();
+  (reviews || []).forEach((review) => {
+    (getZones(review) || []).forEach((zone) => {
+      if (zone) zones.add(zone);
+    });
+  });
+  return [...zones];
+}
+function collectUniqueSourceEventsFromReviews(reviews, getSourceEvent) {
+  const seen = new Set();
+  const out = [];
+  (reviews || []).forEach((review) => {
+    const sourceEvent = getSourceEvent(review);
+    if (!sourceEvent?.id || seen.has(sourceEvent.id)) return;
+    seen.add(sourceEvent.id);
+    out.push(sourceEvent);
+  });
+  return out;
+}
+function selectFilterLabels({
+  tab,
+  reviews = [],
+  events = [],
+  getLabels = () => []
+}) {
+  if (tab === "alerts") {
+    return collectFilterLabelsFromReviews(reviews, getLabels);
+  }
+  return collectFilterLabelsFromEvents(events);
+}
+function selectFilterZones({
+  tab,
+  reviews = [],
+  events = [],
+  getZones = () => []
+}) {
+  if (tab === "alerts") {
+    return collectFilterZonesFromReviews(reviews, getZones);
+  }
+  return collectFilterZonesFromEvents(events);
+}
+function selectFilterOptionSourceEvents({
+  tab,
+  reviews = [],
+  keptEvents = [],
+  displayEvents = [],
+  getSourceEvent = () => null
+}) {
+  if (tab === "alerts") {
+    return collectUniqueSourceEventsFromReviews(reviews, getSourceEvent);
+  }
+  if (tab === "kept") {
+    return [...keptEvents];
+  }
+  return [...displayEvents];
+}
+function normalizeFilterSelections({
+  filterLabel,
+  filterZone,
+  labels,
+  zones
+}) {
+  return {
+    filterLabel: filterLabel !== "all" && !(labels || []).includes(filterLabel) ? "all" : filterLabel,
+    filterZone: filterZone !== "all" && !(zones || []).includes(filterZone) ? "all" : filterZone
+  };
+}
+function matchesEventFilters(event, { filterLabel = "all", filterZone = "all", favOnly = false } = {}) {
+  if (!event) return false;
+  if (filterLabel !== "all" && event.label !== filterLabel) {
+    return false;
+  }
+  if (filterZone !== "all" && !(event.zones || []).includes(filterZone)) {
+    return false;
+  }
+  if (favOnly && !event.retain_indefinitely) {
+    return false;
+  }
+  return true;
+}
+function matchesReviewFilters(review, sourceEvent, {
+  filterLabel = "all",
+  filterZone = "all",
+  favOnly = false,
+  getLabels = () => [],
+  getZones = () => []
+} = {}) {
+  if (favOnly) return !!sourceEvent?.retain_indefinitely;
+  if (filterLabel !== "all") {
+    const labels = getLabels(review, sourceEvent);
+    if (!labels.includes(filterLabel)) return false;
+  }
+  if (filterZone !== "all") {
+    const zones = getZones(review, sourceEvent);
+    if (!zones.includes(filterZone)) return false;
+  }
+  return true;
+}
+function selectFilteredEvents({
+  tab,
+  events = [],
+  matchesEvent = () => true
+}) {
+  let filteredEvents = [...events || []];
+  if (tab === "clips") {
+    filteredEvents = filteredEvents.filter((event) => event?.has_clip);
+  } else if (tab === "snapshot") {
+    filteredEvents = filteredEvents.filter((event) => event?.has_snapshot);
+  }
+  return filteredEvents.filter((event) => matchesEvent(event));
+}
+function selectFilteredKeptEvents({
+  keptEvents = [],
+  gridKeptEvents = [],
+  isGridMixedListMode = false,
+  matchesEvent = () => true
+}) {
+  const source = isGridMixedListMode ? gridKeptEvents : keptEvents;
+  return [...source || []].filter((event) => matchesEvent(event));
+}
+function reviewSeverityTokens(review) {
+  const values = [review?.severity, review?.data?.severity].flatMap((value) => Array.isArray(value) ? value : [value]).map(
+    (value) => String(value || "").trim().toLowerCase()
+  ).filter(Boolean);
+  const tokens = new Set();
+  for (const value of values) {
+    tokens.add(value);
+    for (const token of value.split(/[^a-z0-9]+/g)) {
+      if (token) tokens.add(token);
+    }
+  }
+  return tokens;
+}
+function reviewMatchesAlertsOnlyMode(review) {
+  const tokens = reviewSeverityTokens(review);
+  if (!tokens.size) return false;
+  for (const token of tokens) {
+    if (token === "alert" || token.startsWith("alert")) return true;
+  }
+  return false;
+}
+function selectReviewsForFilterTab({
+  reviews = [],
+  gridReviews = [],
+  isGridMixedListMode = false,
+  showAllReviews = false
+}) {
+  const reviewSource = isGridMixedListMode ? gridReviews : reviews;
+  const safeReviews = [...reviewSource || []];
+  if (isGridMixedListMode) {
+    return safeReviews;
+  }
+  return showAllReviews ? safeReviews : safeReviews.filter((review) => reviewMatchesAlertsOnlyMode(review));
+}
+const BrowseFilterController = class {
+  constructor(host, { buildFilterPanelMarkup: buildFilterPanelMarkup2 } = {}) {
+    this._host = host;
+    this._buildFilterPanelMarkup = buildFilterPanelMarkup2;
+  }
+  handleSidebarFilterClick(target) {
+    const filterLabelOption = target.closest("[data-flabel]");
+    if (filterLabelOption) {
+      this._host._filterLabel = filterLabelOption.dataset.flabel;
+      this.renderFilter();
+      this._host._renderList();
+      return true;
+    }
+    const filterZoneOption = target.closest("[data-fzone]");
+    if (filterZoneOption) {
+      this._host._filterZone = filterZoneOption.dataset.fzone;
+      this.renderFilter();
+      this._host._renderList();
+      return true;
+    }
+    const favoriteOnlyOption = target.closest("[data-favonly]");
+    if (favoriteOnlyOption) {
+      this._host._favOnly = favoriteOnlyOption.dataset.favonly === "1";
+      this.renderFilter();
+      this._host._renderList();
+      return true;
+    }
+    return false;
+  }
+  toggleFilter() {
+    if (this._host._tab === "recordings") return;
+    const filterPanel = this._host._pageShellRegion("filterPanel");
+    if (!filterPanel) return;
+    const open = filterPanel.style.display === "none";
+    const calendarPanel = this._host._pageShellRegion("calendarPanel");
+    if (calendarPanel) calendarPanel.style.display = "none";
+    filterPanel.style.display = open ? "block" : "none";
+    this._host._syncToolbarButtons();
+    if (open) this.renderFilter();
+  }
+  renderFilter() {
+    const filterPanel = this._host._pageShellRegion("filterPanel");
+    if (!filterPanel || !this._buildFilterPanelMarkup) return;
+    this.normalizeFilterSelections();
+    filterPanel.innerHTML = this._buildFilterPanelMarkup({
+      labels: ["all", ...this.labels()],
+      zones: ["all", ...this.zones()],
+      filterLabel: this._host._filterLabel,
+      filterZone: this._host._filterZone,
+      favOnly: this._host._favOnly
+    });
+  }
+  reviewsForTabBase() {
+    return selectReviewsForFilterTab({
+      reviews: this._host._reviews,
+      gridReviews: this._host._allGridReviews(),
+      isGridMixedListMode: this._host._isGridMixedListMode(),
+      showAllReviews: this._host._activeCam?.alerts_content === "all_reviews"
+    });
+  }
+  reviewSourceEvent(review) {
+    const firstDet = review?.data?.detections && review.data.detections[0] || "";
+    return firstDet ? this._host._findEventById(firstDet) : null;
+  }
+  filterOptionSourceEvents() {
+    return selectFilterOptionSourceEvents({
+      tab: this._host._tab,
+      reviews: this.reviewsForTabBase(),
+      keptEvents: this._host._isGridMixedListMode() ? this._host._allGridKeptEvents() : this._host._kept || [],
+      displayEvents: this._host._allDisplayEvents(),
+      getSourceEvent: (review) => this.reviewSourceEvent(review)
+    });
+  }
+  matchesEventFilters(event) {
+    return matchesEventFilters(event, {
+      filterLabel: this._host._filterLabel,
+      filterZone: this._host._filterZone,
+      favOnly: this._host._favOnly
+    });
+  }
+  filteredReviews() {
+    return this.reviewsForTabBase().filter((review) => {
+      const sourceEvent = this.reviewSourceEvent(review);
+      return matchesReviewFilters(review, sourceEvent, {
+        filterLabel: this._host._filterLabel,
+        filterZone: this._host._filterZone,
+        favOnly: this._host._favOnly,
+        getLabels: (candidateReview, candidateSourceEvent) => this.reviewFilterLabels(candidateReview, candidateSourceEvent),
+        getZones: (candidateReview, candidateSourceEvent) => this.reviewFilterZones(candidateReview, candidateSourceEvent)
+      });
+    });
+  }
+  filteredKept() {
+    return selectFilteredKeptEvents({
+      keptEvents: this._host._kept || [],
+      gridKeptEvents: this._host._allGridKeptEvents(),
+      isGridMixedListMode: this._host._isGridMixedListMode(),
+      matchesEvent: (event) => this.matchesEventFilters(event)
+    });
+  }
+  normalizeFilterSelections() {
+    const normalized = normalizeFilterSelections({
+      filterLabel: this._host._filterLabel,
+      filterZone: this._host._filterZone,
+      labels: this.labels(),
+      zones: this.zones()
+    });
+    this._host._filterLabel = normalized.filterLabel;
+    this._host._filterZone = normalized.filterZone;
+  }
+  zones() {
+    return selectFilterZones({
+      tab: this._host._tab,
+      reviews: this.reviewsForTabBase(),
+      events: this.filterOptionSourceEvents(),
+      getZones: (review) => {
+        const sourceEvent = this.reviewSourceEvent(review);
+        return this.reviewFilterZones(review, sourceEvent);
+      }
+    });
+  }
+  labels() {
+    return selectFilterLabels({
+      tab: this._host._tab,
+      reviews: this.reviewsForTabBase(),
+      events: this.filterOptionSourceEvents(),
+      getLabels: (review) => {
+        const sourceEvent = this.reviewSourceEvent(review);
+        return this.reviewFilterLabels(review, sourceEvent);
+      }
+    });
+  }
+  reviewFilterLabels(review, sourceEvent = null) {
+    return buildReviewFilterLabels(review, sourceEvent);
+  }
+  reviewFilterZones(review, sourceEvent = null) {
+    return buildReviewFilterZones(review, sourceEvent);
+  }
+  filtered() {
+    return selectFilteredEvents({
+      tab: this._host._tab,
+      events: this._host._allDisplayEvents(),
+      matchesEvent: (event) => this.matchesEventFilters(event)
+    });
+  }
+};
+
+// src/features/browse/collection.ctrl.js
+const BrowseCollectionController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  allGridReviews() {
+    const reviews = [];
+    const seen = new Set();
+    for (const camera of this._host._config.cameras || []) {
+      const cameraKey = String(
+        this._host._camCache[camera.entity]?.cam || camera.entity || ""
+      );
+      const cache = this._host._camCache[camera.entity];
+      for (const review of cache?.reviews || []) {
+        const id = String(review?.id || "");
+        if (!id) continue;
+        const dedupeKey = `${cameraKey}|${id}`;
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+        reviews.push(review);
+      }
+    }
+    return reviews;
+  }
+  allGridKeptEvents() {
+    const events = [];
+    const seen = new Set();
+    for (const camera of this._host._config.cameras || []) {
+      const cache = this._host._camCache[camera.entity];
+      for (const event of cache?.kept || []) {
+        const id = String(event?.id || "");
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        events.push(event);
+      }
+    }
+    return events;
+  }
+  findReviewById(id) {
+    if (!id) return null;
+    const target = String(id);
+    if (this._host._isGridMixedListMode()) {
+      return this.allGridReviews().find(
+        (review) => String(review?.id || "") === target
+      ) || null;
+    }
+    return (this._host._reviews || []).find(
+      (review) => String(review?.id || "") === target
+    ) || null;
+  }
+  async loadGridMixedTabData(tab) {
+    const before = this._host._winEnd;
+    const reviewDays = this._host._config?.alerts_reviews_days || 3;
+    const reviewsAfter = Math.max(0, Math.floor(before - reviewDays * 86400));
+    for (const camera of this._host._config.cameras || []) {
+      const showAllReviews = camera?.alerts_content === "all_reviews";
+      const entity = camera.entity;
+      if (!entity) continue;
+      try {
+        if (!this._host._camCache[entity]?.discovered) {
+          await this._host._discoverOne(entity);
+        }
+      } catch (_) {
+        continue;
+      }
+      const cache = this._host._camCache[entity];
+      const clientId = cache?.clientId;
+      const cam = cache?.cam;
+      if (!clientId || !cam) continue;
+      try {
+        if (tab === "alerts") {
+          const resolved = await (this._host._browseWindowLoaderController?.fetchRecentActiveDayReviews?.(
+            clientId,
+            cam,
+            before,
+            reviewDays,
+            {
+              debugLabel: "grid-alerts-tab",
+              itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode
+            }
+          ) ?? this._host._fetchWindowedReviews?.(
+            clientId,
+            cam,
+            reviewsAfter,
+            before,
+            {
+              debugLabel: "grid-alerts-tab"
+            }
+          ));
+          const reviews = Array.isArray(resolved?.items) ? resolved.items : resolved;
+          cache.reviews = Array.isArray(reviews) ? reviews : [];
+        }
+        if (tab === "kept") {
+          const kept = await this._host._ws({
+            type: "frigate/events/get",
+            instance_id: clientId,
+            cameras: [cam],
+            favorites: true,
+            limit: 50
+          });
+          cache.kept = Array.isArray(kept) ? kept : [];
+        }
+      } catch (_) {
+      }
+    }
+  }
+  allDisplayEvents() {
+    if (this._host._eventsMode === "all") {
+      const seen = new Set();
+      const all = [];
+      for (const camera of this._host._config.cameras) {
+        const cache = this._host._camCache[camera.entity];
+        if (!cache) continue;
+        for (const event of cache.events || []) {
+          if (seen.has(event.id)) continue;
+          seen.add(event.id);
+          all.push(event);
+        }
+      }
+      return all.sort((a, b) => b.start_time - a.start_time);
+    }
+    return this._host._events;
+  }
+  findEventById(id) {
+    if (!id) return null;
+    const all = this.allDisplayEvents();
+    let event = all.find((candidate) => candidate.id === id);
+    if (event) return event;
+    for (const camera of this._host._config.cameras) {
+      const cache = this._host._camCache[camera.entity];
+      event = (cache?.events || []).find((candidate) => candidate.id === id);
+      if (event) return event;
+    }
+    event = (this._host._kept || []).find((candidate) => candidate.id === id);
+    return event || null;
+  }
+};
+
+// src/features/browse/calendar-activity.ctrl.js
+const BrowseCalendarActivityController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  async loadCalendar() {
+    await this.prefetchCalendarActivityForActiveCamera();
+  }
+  calendarActivityCacheKey(clientId, cam, tz = this._host._tz()) {
+    return `${clientId || ""}|${cam || ""}|${tz || "UTC"}`;
+  }
+  applyCalendarActivityCacheForActiveCamera() {
+    const { clientId, cam } = this._host._cc();
+    const key = this.calendarActivityCacheKey(clientId, cam);
+    const cached = this._host._calendarActivityByCam.get(key);
+    this._host._daysWithActivity = cached ? new Set(cached) : new Set();
+  }
+  async prefetchCalendarActivityForActiveCamera() {
+    const { clientId, cam } = this._host._cc();
+    if (!clientId || !cam) {
+      this._host._daysWithActivity = new Set();
+      return;
+    }
+    const tz = this._host._tz();
+    const key = this.calendarActivityCacheKey(clientId, cam, tz);
+    const cached = this._host._calendarActivityByCam.get(key);
+    if (cached) {
+      this._host._daysWithActivity = new Set(cached);
+      return;
+    }
+    const existing = this._host._calendarActivityInFlight.get(key);
+    if (existing) {
+      await existing;
+      return;
+    }
+    const task = (async () => {
+      try {
+        const summary = await this._host._ws({
+          type: "frigate/events/summary",
+          instance_id: clientId,
+          timezone: tz
+        });
+        const days = Array.isArray(summary) ? new Set(
+          summary.filter((item) => item.camera === cam && item.day).map((item) => item.day)
+        ) : new Set();
+        this._host._calendarActivityByCam.set(key, days);
+        const active = this._host._cc();
+        const activeKey = this.calendarActivityCacheKey(
+          active.clientId,
+          active.cam,
+          tz
+        );
+        if (activeKey === key) {
+          this._host._daysWithActivity = new Set(days);
+          if (this._host._$("cal-panel")?.style.display !== "none") {
+            this._host._renderCal();
+          }
+        }
+      } catch (_) {
+      }
+    })();
+    this._host._calendarActivityInFlight.set(key, task);
+    try {
+      await task;
+    } finally {
+      this._host._calendarActivityInFlight.delete(key);
+    }
+  }
+};
+
+// src/features/browse/tab-data.ctrl.js
+const BrowseTabDataController = class {
+  constructor(host) {
+    this._host = host;
+  }
+  async loadKept() {
+    const { clientId, cam } = this._host._cc();
+    try {
+      const kept = await this._host._ws({
+        type: "frigate/events/get",
+        instance_id: clientId,
+        cameras: [cam],
+        favorites: true,
+        limit: 50
+      });
+      this._host._kept = Array.isArray(kept) ? kept : [];
+      const entity = this._host._activeCam?.entity;
+      if (entity && this._host._camCache[entity]) {
+        this._host._camCache[entity].kept = this._host._kept;
+      }
+    } catch (_) {
+      this._host._kept = [];
+    }
+  }
+  async loadReviews() {
+    const { clientId, cam } = this._host._cc();
+    try {
+      const before = this._host._winEnd;
+      const days = this._host._config?.alerts_reviews_days || 3;
+      const windowLoader = this._host._browseWindowLoaderController;
+      if (windowLoader?.hasCachedWindowReviews?.(clientId, cam, before)) {
+        const entity = this._host._activeCam?.entity;
+        this._host._reviews = this._host._camCache[entity]?.reviews || [];
+        return;
+      }
+      const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
+      const resolved = await (windowLoader?.fetchRecentActiveDayReviews?.(
+        clientId,
+        cam,
+        before,
+        days,
+        {
+          debugLabel: "alerts-tab",
+          itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode
+        }
+      ) ?? this._host._fetchWindowedReviews?.(
+        clientId,
+        cam,
+        Math.max(0, Math.floor(before - days * DAY)),
+        before,
+        {
+          debugLabel: "alerts-tab"
+        }
+      ));
+      const reviews = Array.isArray(resolved?.items) ? resolved.items : resolved;
+      this._host._reviews = Array.isArray(reviews) ? reviews : [];
+      windowLoader?.cacheWindowReviews?.(
+        clientId,
+        cam,
+        before,
+        this._host._reviews
+      ) ?? this._host._cacheActiveCamSlice?.("reviews", this._host._reviews);
+      this._host._slideshowAlertController.handleReviewsUpdated(
+        this._host._activeCam?.entity || "",
+        this._host._reviews,
+        "alerts-tab"
+      );
+    } catch (_) {
+      this._host._reviews = [];
+    }
+  }
+  async loadTabData(tab) {
+    if (tab !== "alerts" && tab !== "kept" && tab !== "recordings" && tab !== "controls") {
+      return;
+    }
+    try {
+      if (tab === "alerts") await this.loadReviews();
+      if (tab === "kept") await this.loadKept();
+      if (this._host._isGridMixedListMode() && (tab === "alerts" || tab === "kept")) {
+        await this._host._loadGridMixedTabData(tab);
+      }
+      if (tab === "recordings") {
+        const { clientId, cam } = this._host._cc();
+        if (clientId && cam) {
+          await (this._host._browseWindowLoaderController?.loadWindowRecordings?.(
+            clientId,
+            cam,
+            this._host._winEnd
+          ) ?? this._host._loadWindowRecordings?.(
+            clientId,
+            cam,
+            this._host._winEnd
+          ));
+        }
+      }
+    } catch (error) {
+      console.error("[Frigate] tab data load failed", error);
+    } finally {
+      this._host._renderList();
+    }
+  }
+};
+
+// src/data/window-fetch.js
+async function fetchWindowedItems({
+  after,
+  before,
+  opts = {},
+  defaultPageLimit,
+  defaultBatchLimit,
+  useOptionLimit = true,
+  fetchBatch,
+  getItemStartTime
+}) {
+  const items = [];
+  const seen = new Set();
+  const afterTs = Math.floor(after);
+  let cursorBefore = Math.floor(
+    Number.isFinite(opts?.cursorBefore) ? opts.cursorBefore : before
+  );
+  const pageLimit = Math.max(
+    1,
+    Number.isFinite(opts?.pageLimit) ? Math.floor(opts.pageLimit) : defaultPageLimit
+  );
+  const batchLimit = useOptionLimit ? Math.max(
+    1,
+    Number.isFinite(opts?.limit) ? Math.floor(opts.limit) : defaultBatchLimit
+  ) : defaultBatchLimit;
+  const onPage = typeof opts?.onPage === "function" ? opts.onPage : null;
+  for (let page = 0; page < pageLimit; page++) {
+    const batch = await fetchBatch({
+      after: afterTs,
+      before: cursorBefore,
+      limit: batchLimit,
+      page
+    });
+    if (!Array.isArray(batch) || !batch.length) break;
+    for (const item of batch) {
+      if (!item?.id || seen.has(item.id)) continue;
+      seen.add(item.id);
+      items.push(item);
+    }
+    onPage?.(items, {
+      page,
+      done: false
+    });
+    const oldest = Math.min(
+      ...batch.map((item) => Math.floor(getItemStartTime(item, before)))
+    );
+    if (batch.length < batchLimit || oldest <= afterTs) break;
+    cursorBefore = oldest - 1;
+  }
+  onPage?.(items, { page: -1, done: true });
+  return items;
+}
+
+// src/features/browse/window-loader.ctrl.js
+const BrowseWindowLoaderController = class {
+  constructor(host, deps = {}) {
+    this._host = host;
+    this._deps = {
+      fetchWindowedItems,
+      ...deps
+    };
+  }
+  async fetchWindowedEvents(clientId, cam, after, before, opts = {}) {
+    return this._deps.fetchWindowedItems({
+      after,
+      before,
+      opts,
+      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
+      defaultBatchLimit: EVENT_FETCH_BATCH,
+      useOptionLimit: true,
+      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._host._ws({
+        type: "frigate/events/get",
+        instance_id: clientId,
+        cameras: [cam],
+        after: afterTs,
+        before: beforeTs,
+        limit
+      }),
+      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
+    });
+  }
+  async warmOtherCamerasEvents() {
+    const token = ++this._host._warmCamsToken;
+    const activeEntity = this._host._activeCam?.entity;
+    const after = this._host._winStart;
+    const before = this._host._winEnd;
+    for (const camera of this._host._config.cameras) {
+      if (camera.entity === activeEntity) continue;
+      const entity = camera.entity;
+      const cache = this._host._camCache[entity];
+      if (!cache?.clientId || !cache?.cam) continue;
+      if (Array.isArray(cache.events) && cache.events.length >= INACTIVE_WARM_EVENT_LIMIT) {
+        continue;
+      }
+      try {
+        const events = await this.fetchWindowedEvents(
+          cache.clientId,
+          cache.cam,
+          after,
+          before,
+          {
+            pageLimit: INITIAL_EVENTS_PAGE_LIMIT,
+            limit: INACTIVE_WARM_EVENT_LIMIT,
+            debugLabel: "warm-cache"
+          }
+        );
+        if (token !== this._host._warmCamsToken) return;
+        if (after !== this._host._winStart || before !== this._host._winEnd) {
+          return;
+        }
+        cache.events = Array.isArray(events) ? events.slice(0, INACTIVE_WARM_EVENT_LIMIT) : [];
+      } catch (_) {
+      }
+    }
+  }
+  scheduleWarmOtherCamerasEvents(delayMs = 1e3) {
+    if (this._host._warmOtherCamsDelayT) {
+      clearTimeout(this._host._warmOtherCamsDelayT);
+    }
+    this._host._warmOtherCamsDelayT = setTimeout(
+      () => {
+        this._host._warmOtherCamsDelayT = null;
+        if (!this._host.isConnected) return;
+        void this.warmOtherCamerasEvents();
+      },
+      Math.max(0, Number(delayMs) || 0)
+    );
+  }
+  pruneNonActiveCamWindowCaches() {
+    this._host._warmCamsToken++;
+    const activeEntity = this._host._activeCam?.entity;
+    for (const camera of this._host._config.cameras) {
+      const entity = camera.entity;
+      if (entity === activeEntity) continue;
+      const cache = this._host._camCache[entity];
+      if (!cache) continue;
+      cache.events = [];
+      cache.recordings = [];
+      cache.reviews = [];
+      cache.reviewsWindowKey = "";
+    }
+  }
+  async fetchWindowedReviews(clientId, cam, after, before, opts = {}) {
+    return this._deps.fetchWindowedItems({
+      after,
+      before,
+      opts,
+      defaultPageLimit: WINDOW_FETCH_PAGE_LIMIT,
+      defaultBatchLimit: REVIEW_FETCH_BATCH,
+      useOptionLimit: false,
+      fetchBatch: ({ after: afterTs, before: beforeTs, limit }) => this._host._ws({
+        type: "frigate/reviews/get",
+        instance_id: clientId,
+        cameras: [cam],
+        after: afterTs,
+        before: beforeTs,
+        limit
+      }),
+      getItemStartTime: (item, fallbackBefore) => item?.start_time || fallbackBefore
+    });
+  }
+  _dayKeyForItem(item) {
+    const ts = Math.floor(Number(item?.start_time) || 0);
+    if (typeof this._host._dayKey === "function") {
+      return this._host._dayKey(ts);
+    }
+    const date = new Date(ts * 1e3);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+  _filterToRecentDaysWithData(items, dayCount) {
+    const targetDayCount = Math.max(1, Number(dayCount) || 1);
+    const sorted = Array.isArray(items) ? items.slice().sort((a, b) => (b?.start_time || 0) - (a?.start_time || 0)) : [];
+    const selectedDays = new Set();
+    for (const item of sorted) {
+      const key = this._dayKeyForItem(item);
+      if (!key) continue;
+      selectedDays.add(key);
+      if (selectedDays.size >= targetDayCount) break;
+    }
+    if (!selectedDays.size) return [];
+    return sorted.filter((item) => selectedDays.has(this._dayKeyForItem(item)));
+  }
+  async _fetchRecentActiveDaysItems({
+    clientId,
+    cam,
+    before,
+    dayCount,
+    fetcher,
+    debugLabel,
+    itemFilter
+  }) {
+    const targetDayCount = Math.max(1, Number(dayCount) || 1);
+    let spanDays = targetDayCount;
+    const maxSpanDays = Math.max(targetDayCount * 16, targetDayCount + 30);
+    let bestItems = [];
+    let bestDayCount = 0;
+    while (true) {
+      const after = Math.max(0, Math.floor(before - spanDays * DAY));
+      const items = await fetcher(after, before, {
+        debugLabel
+      });
+      const latestItems = Array.isArray(items) ? typeof itemFilter === "function" ? items.filter((item) => itemFilter(item)) : items : [];
+      const filtered = this._filterToRecentDaysWithData(
+        latestItems,
+        targetDayCount
+      );
+      const dayCountFound = new Set(
+        filtered.map((item) => this._dayKeyForItem(item))
+      ).size;
+      if (dayCountFound > bestDayCount) {
+        bestDayCount = dayCountFound;
+        bestItems = filtered;
+      }
+      if (dayCountFound >= targetDayCount || spanDays >= maxSpanDays) {
+        const bestResult = bestDayCount >= dayCountFound ? bestItems : filtered;
+        return {
+          items: bestResult,
+          after
+        };
+      }
+      spanDays = Math.min(maxSpanDays, spanDays * 2);
+    }
+  }
+  async fetchRecentActiveDayEvents(clientId, cam, before, dayCount, opts = {}) {
+    const result = await this._fetchRecentActiveDaysItems({
+      clientId,
+      cam,
+      before,
+      dayCount,
+      debugLabel: opts.debugLabel || "events-active-days",
+      fetcher: (after, beforeTs, fetchOpts) => this.fetchWindowedEvents(clientId, cam, after, beforeTs, fetchOpts)
+    });
+    return result;
+  }
+  async fetchRecentActiveDayReviews(clientId, cam, before, dayCount, opts = {}) {
+    const result = await this._fetchRecentActiveDaysItems({
+      clientId,
+      cam,
+      before,
+      dayCount,
+      debugLabel: opts.debugLabel || "reviews-active-days",
+      itemFilter: typeof opts.itemFilter === "function" ? opts.itemFilter : null,
+      fetcher: (after, beforeTs, fetchOpts) => this.fetchWindowedReviews(clientId, cam, after, beforeTs, fetchOpts)
+    });
+    return result;
+  }
+  async loadWindow(replace) {
+    if (this._host._isPreviewPageActive()) return;
+    if (this._host._loading) return;
+    this._host._loading = true;
+    this._host._reloadPending = false;
+    this._host._reloadAfterLoad = false;
+    if (replace) this._host._exhausted = false;
+    if (this._host._followNowWindow) {
+      const now = Math.floor(Date.now() / 1e3);
+      this._host._winEnd = now;
+      this._host._winStart = now - this._host._config.window_days * DAY;
+    }
+    const { clientId, cam } = this._host._cc();
+    if (!clientId || !cam) {
+      this._host._loading = false;
+      return;
+    }
+    const after = this._host._winStart;
+    const before = this._host._winEnd;
+    const reviewsTask = this.loadWindowReviewsIfNeeded(
+      clientId,
+      cam,
+      after,
+      before
+    );
+    const eventsTask = this.loadWindowEvents(clientId, cam, after, before);
+    await Promise.allSettled([
+      reviewsTask,
+      eventsTask,
+      this._host._tab === "recordings" ? this.loadWindowRecordings(clientId, cam, before) : Promise.resolve()
+    ]);
+    const entity = this._host._activeCam?.entity;
+    if (entity && this._host._camCache[entity]) {
+      this._host._camCache[entity].events = this._host._events;
+      this._host._camCache[entity].recordings = this._host._recordings;
+    }
+    this._host._loading = false;
+    if (this._host._reloadAfterLoad) {
+      this._host._reloadAfterLoad = false;
+      this._host._scheduleReload();
+    }
+    this._host._deepLinkController?.consumeDeepLinkReviewOpen?.() ?? this._host._consumeDeepLinkReviewOpen?.();
+    this._host._deepLinkController?.consumeDeepLinkEventOpen?.() ?? this._host._consumeDeepLinkEventOpen?.();
+    if (this._host._eventsMode === "all") this._host._loadAllCamsBackground();
+    this._host._renderAll();
+  }
+  async loadOlder() {
+    const before = this._host._events.length ? Math.floor(
+      Math.min(...this._host._events.map((event) => event.start_time))
+    ) : this._host._winStart;
+    this._host._loading = true;
+    const { clientId, cam } = this._host._cc();
+    try {
+      const older = await this._host._ws({
+        type: "frigate/events/get",
+        instance_id: clientId,
+        cameras: [cam],
+        before,
+        limit: 50
+      });
+      const nextEvents = Array.isArray(older) ? older.filter(
+        (olderEvent) => !this._host._events.some(
+          (currentEvent) => currentEvent.id === olderEvent.id
+        )
+      ) : [];
+      if (!nextEvents.length) {
+        this._host._exhausted = true;
+      } else {
+        this._host._events = this._host._events.concat(nextEvents);
+        this._host._winStart = Math.min(
+          this._host._winStart,
+          ...nextEvents.map((event) => event.start_time)
+        );
+      }
+    } catch (_) {
+    }
+    this._host._loading = false;
+    this._host._renderList();
+    this._host._renderSubtitle();
+  }
+  cacheActiveCamSlice(key, value) {
+    const entity = this._host._activeCam?.entity;
+    if (entity && this._host._camCache[entity]) {
+      this._host._camCache[entity][key] = value;
+    }
+  }
+  reviewWindowCacheKey(clientId, cam, before) {
+    const days = this._host._config?.alerts_reviews_days || 3;
+    const contentMode = this._host._activeCam?.alerts_content === "all_reviews" ? "all_reviews" : "alerts_only";
+    return `${clientId}|${cam}|${Math.floor(before)}|${days}|${contentMode}`;
+  }
+  hasCachedWindowReviews(clientId, cam, before) {
+    const entity = this._host._activeCam?.entity;
+    const cache = entity ? this._host._camCache[entity] : null;
+    return !!cache && cache.reviewsWindowKey === this.reviewWindowCacheKey(clientId, cam, before);
+  }
+  cacheWindowReviews(clientId, cam, before, reviews) {
+    const entity = this._host._activeCam?.entity;
+    const cache = entity ? this._host._camCache[entity] : null;
+    if (!cache) return;
+    cache.reviews = reviews;
+    cache.reviewsWindowKey = this.reviewWindowCacheKey(clientId, cam, before);
+  }
+  async loadWindowEvents(clientId, cam, after, before) {
+    try {
+      const resolved = await this.fetchRecentActiveDayEvents(
+        clientId,
+        cam,
+        before,
+        this._host._config?.window_days || 1,
+        { debugLabel: "events-window" }
+      );
+      this._host._events = Array.isArray(resolved?.items) ? resolved.items : [];
+      if (this._host._events.length) {
+        this._host._winStart = Math.min(
+          ...this._host._events.map(
+            (item) => Math.floor(item?.start_time || before)
+          )
+        );
+      } else if (Number.isFinite(resolved?.after)) {
+        this._host._winStart = resolved.after;
+      } else {
+        this._host._winStart = after;
+      }
+      this.cacheActiveCamSlice("events", this._host._events);
+      this._host._renderList();
+      this._host._renderStats();
+    } catch (error) {
+      console.error("[Frigate] events", error);
+      this._host._events = [];
+    }
+  }
+  async loadWindowRecordings(clientId, cam, before) {
+    const bounds = this._resolveRecordingsDayBounds(before);
+    const cacheKey = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    if (!this._host._recordingsDayDataCache) {
+      this._host._recordingsDayDataCache = new Map();
+    }
+    if (!this._host._recordingsDayAvailabilityCache) {
+      this._host._recordingsDayAvailabilityCache = new Map();
+    }
+    if (!this._host._recordingsDayFetchedAtCache) {
+      this._host._recordingsDayFetchedAtCache = new Map();
+    }
+    const dataCache = this._host._recordingsDayDataCache;
+    const hasCached = dataCache.has(cacheKey);
+    const cachedRecordings = hasCached ? dataCache.get(cacheKey) || [] : [];
+    if (hasCached) {
+      this._publishRecordingsDay(
+        clientId,
+        cam,
+        bounds,
+        cachedRecordings
+      );
+    }
+    const todayBounds = this._resolveRecordingsDayBounds(
+      Math.floor(Date.now() / 1e3)
+    );
+    const isToday = bounds.start === todayBounds.start && bounds.end === todayBounds.end;
+    const fetchedAt = Number(
+      this._host._recordingsDayFetchedAtCache.get(cacheKey) || 0
+    );
+    const cacheIsFresh = fetchedAt > 0 && Date.now() - fetchedAt < this._recordingsFreshnessMs();
+    if (hasCached && (!isToday || cacheIsFresh)) return cachedRecordings;
+    let lastProgressRecordings = null;
+    try {
+      const recordings = await this._fetchRecordingsDay(
+        clientId,
+        cam,
+        bounds,
+        {
+          forceRefresh: hasCached,
+          progressive: !hasCached,
+          before,
+          onProgress: (partialRecordings) => {
+            lastProgressRecordings = partialRecordings;
+            this._publishRecordingsDay(
+              clientId,
+              cam,
+              bounds,
+              partialRecordings
+            );
+          }
+        }
+      );
+      if (recordings !== lastProgressRecordings) {
+        this._publishRecordingsDay(clientId, cam, bounds, recordings);
+      }
+      return recordings;
+    } catch (_) {
+      if (!hasCached && this._recordingsContextMatches(clientId, cam, bounds)) {
+        this._host._recordings = [];
+        this.cacheActiveCamSlice("recordings", this._host._recordings);
+      }
+      return cachedRecordings;
+    }
+  }
+  _resolveRecordingsDayBounds(timestamp) {
+    if (this._host._recordingsDayBounds) {
+      return this._host._recordingsDayBounds(timestamp);
+    }
+    return resolveRecordingsDayBounds({
+      tsSec: timestamp,
+      fallbackSec: this._host._winEnd,
+      getTzParts: (target) => this._host._tzParts(target),
+      toEpochSeconds: (year, month, day, hour, minute, second) => this._host._tzDateTimeToEpochSeconds(
+        year,
+        month,
+        day,
+        hour,
+        minute,
+        second
+      )
+    });
+  }
+  _recordingsFreshnessMs() {
+    const refreshSeconds = Math.max(
+      15,
+      Number(this._host._config?.refresh_seconds) || 45
+    );
+    return refreshSeconds * 1e3;
+  }
+  _recordingsContextMatches(clientId, cam, bounds) {
+    if (typeof this._host._cc !== "function") return true;
+    const active = this._host._cc();
+    if (active?.clientId !== clientId || active?.cam !== cam) return false;
+    const activeBounds = this._resolveRecordingsDayBounds(this._host._winEnd);
+    return activeBounds.start === bounds.start && activeBounds.end === bounds.end;
+  }
+  _publishRecordingsDay(clientId, cam, bounds, recordings) {
+    if (!this._recordingsContextMatches(clientId, cam, bounds)) return false;
+    this._host._recordings = Array.isArray(recordings) ? recordings : [];
+    this.cacheActiveCamSlice("recordings", this._host._recordings);
+    this._host._renderList();
+    return true;
+  }
+  async _fetchRecordingsDay(clientId, cam, bounds, {
+    forceRefresh = false,
+    progressive = false,
+    before = null,
+    onProgress = null
+  } = {}) {
+    const recordingsController = this._host._recordingsBrowseNavController;
+    const progressiveLoader = recordingsController?.fetchRecordingsInBoundsProgressively;
+    if (progressive && typeof progressiveLoader === "function") {
+      return await progressiveLoader.call(
+        recordingsController,
+        bounds,
+        clientId,
+        cam,
+        { before, onProgress }
+      );
+    }
+    const sharedLoader = recordingsController?.fetchRecordingsInBounds;
+    if (typeof sharedLoader === "function") {
+      return await sharedLoader.call(
+        recordingsController,
+        bounds,
+        clientId,
+        cam,
+        { forceRefresh }
+      );
+    }
+    const key = buildRecordingsDayCacheKey(clientId, cam, bounds);
+    const dataCache = this._host._recordingsDayDataCache;
+    if (!forceRefresh && dataCache.has(key)) return dataCache.get(key) || [];
+    if (!this._host._recordingsDayRequestCache) {
+      this._host._recordingsDayRequestCache = new Map();
+    }
+    const requestCache = this._host._recordingsDayRequestCache;
+    if (requestCache.has(key)) return await requestCache.get(key);
+    const request = (async () => {
+      const response = await this._host._ws({
+        type: "frigate/recordings/get",
+        instance_id: clientId,
+        camera: cam,
+        after: Math.max(0, bounds.start),
+        before: bounds.end
+      });
+      const recordings = Array.isArray(response) ? response : [];
+      dataCache.set(key, recordings);
+      this._host._recordingsDayAvailabilityCache.set(
+        key,
+        recordings.length > 0
+      );
+      this._host._recordingsDayFetchedAtCache.set(key, Date.now());
+      return recordings;
+    })();
+    requestCache.set(key, request);
+    try {
+      return await request;
+    } finally {
+      if (requestCache.get(key) === request) requestCache.delete(key);
+    }
+  }
+  async loadWindowReviewsIfNeeded(clientId, cam, _after, before) {
+    if (this._host._tab !== "alerts") return;
+    try {
+      const showAllReviews = this._host._activeCam?.alerts_content === "all_reviews";
+      const resolved = await this.fetchRecentActiveDayReviews(
+        clientId,
+        cam,
+        before,
+        this._host._config?.alerts_reviews_days || 3,
+        {
+          debugLabel: "alerts-window",
+          itemFilter: showAllReviews ? null : reviewMatchesAlertsOnlyMode
+        }
+      );
+      this._host._reviews = Array.isArray(resolved?.items) ? resolved.items : [];
+      this.cacheWindowReviews(clientId, cam, before, this._host._reviews);
+      this._host._renderList();
+      this._host._slideshowAlertController.handleReviewsUpdated(
+        this._host._activeCam?.entity || "",
+        this._host._reviews,
+        "alerts-window"
+      );
+    } catch (_) {
+      this._host._reviews = [];
+    }
+  }
+  goNow() {
+    this._host._followNowWindow = true;
+    const now = Math.floor(Date.now() / 1e3);
+    this._host._winEnd = now;
+    this._host._winStart = now - this._host._config.window_days * DAY;
+    this._host._calSelectedDay = this._host._formatTzDateString(
+      this._host._tzParts(now)
+    );
+    this._host._exhausted = false;
+    this._host._calMonth = null;
+    this.pruneNonActiveCamWindowCaches();
+    void (async () => {
+      await this.loadWindow(true);
+      this.scheduleWarmOtherCamerasEvents();
+    })();
   }
 };
 
@@ -17023,12 +17339,14 @@ const PopupMediaLoaderController = class {
       infoController = host._popupInfoController,
       carouselController = host._popupCarouselController,
       mediaControlsController = host._popupMediaControlsController,
+      recordingScrubController = host._popupRecordingScrubController,
       ...loaderDeps
     } = deps;
     this._host = host;
     this._infoController = infoController;
     this._carouselController = carouselController;
     this._mediaControlsController = mediaControlsController;
+    this._recordingScrubController = recordingScrubController;
     this._deps = {
       buildVideoOptionsForView,
       createVideoElement,
@@ -17340,11 +17658,10 @@ const PopupMediaLoaderController = class {
         if (outcomePlan2.shouldShowError) {
           viewer.innerHTML = outcomePlan2.errorHtml;
         }
-        if (outcomePlan2.shouldTeardownScrub)
-          this._host._teardownRecordingScrub();
+        if (outcomePlan2.shouldTeardownScrub) {
+          this._recordingScrubController?.teardown();
+        }
         this._host._clearPopupVideoZoom?.();
-        const scrub = this._host._$("#recording-scrub");
-        if (scrub && outcomePlan2.shouldHideScrub) scrub.hidden = true;
         return;
       }
     }
@@ -17371,7 +17688,7 @@ const PopupMediaLoaderController = class {
         video,
         renderPlan.popupMediaType
       );
-      this._host._initRecordingScrub({
+      void this._recordingScrubController?.initialize({
         clientId: scrubInitPlan.clientId,
         cam: scrubInitPlan.cam,
         start: scrubInitPlan.start,
@@ -20028,6 +20345,20 @@ const FrigateViewCard = class extends HTMLElement {
       signPath: (path) => this._signed(path),
       formatTime: (timestamp) => this._time(timestamp)
     });
+    this._popupRecordingScrubController = new PopupRecordingScrubController({
+      query: (selector) => this._$(selector),
+      fetchReviews: (clientId, cam, start, end) => this._browseWindowLoaderController.fetchWindowedReviews(
+        clientId,
+        cam,
+        start,
+        end
+      ),
+      isPlaybackTokenCurrent: (token) => token === this._playSeq,
+      isFirefox: () => this._isFirefox(),
+      isEdge: () => this._isEdge(),
+      isIOS: () => DEVICE_PROFILE.isIOS,
+      onFallbackRecording: (start, end) => this._popupMediaLoaderController?.showRecording(start, end)
+    });
     this._popupInfoController = new PopupInfoController({
       query: (selector) => this._$(selector),
       getActiveCamera: () => this._cc().cam,
@@ -20035,11 +20366,7 @@ const FrigateViewCard = class extends HTMLElement {
       formatWeekday: (timestamp) => this._weekday(timestamp),
       formatMonthDay: (timestamp, options) => this._monthDay(timestamp, options),
       formatEventDuration: (event) => this._dur(event),
-      onResetRecordingScrub: () => {
-        this._teardownRecordingScrub();
-        const scrub = this._$("#recording-scrub");
-        if (scrub) scrub.hidden = true;
-      },
+      onResetRecordingScrub: () => this._popupRecordingScrubController.teardown(),
       onMediaCameraChange: (camera) => {
         this._popupMediaCamera = camera;
       },
@@ -20060,7 +20387,7 @@ const FrigateViewCard = class extends HTMLElement {
     });
     this._popupMediaControlsController = new PopupMediaControlsSurfaceController({
       query: (selector) => this._$(selector),
-      formatTime: (value) => this._fmtScrubTime(value),
+      formatTime: formatRecordingScrubTime,
       shouldUseCustomControls: (mediaType) => this._usePopupCustomControls(mediaType),
       isAutoHideActive: () => this._rotateOverlayMode === "popup"
     });
@@ -20093,9 +20420,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._liveControlsHideTimer = null;
     this._liveOverlayControlsController = null;
     this._snapshotResultTimers = { live: null, popup: null };
-    this._recordingScrubController = null;
-    this._recordingScrubState = null;
-    this._recordingAlertCache = new Map();
     this._recordingsDayAvailabilityCache = new Map();
     this._recordingsDayDataCache = new Map();
     this._recordingsDayFetchedAtCache = new Map();
@@ -23427,263 +23751,6 @@ const FrigateViewCard = class extends HTMLElement {
   _findEventById(id) {
     return this._browseCollectionController.findEventById(id);
   }
-  _teardownRecordingScrub() {
-    if (this._recordingScrubController) {
-      try {
-        this._recordingScrubController.dispose();
-      } catch (_) {
-      }
-    }
-    this._recordingScrubController = null;
-    this._recordingScrubState = null;
-  }
-  _setRecordingScrubCursor(timeSec) {
-    const state = this._recordingScrubState;
-    if (!state?.cursor || !Number.isFinite(timeSec)) return;
-    const span = Math.max(1, state.end - state.start);
-    const pct = (timeSec - state.start) / span * 100;
-    state.cursor.style.left = `${Math.max(0, Math.min(100, pct))}%`;
-    if (state.labelNow) {
-      const rel = Math.max(0, Math.min(span, timeSec - state.start));
-      state.labelNow.textContent = `${this._fmtScrubTime(rel)} / ${this._fmtScrubTime(span)}`;
-    }
-  }
-  _fmtScrubTime(sec) {
-    return formatRecordingScrubTime(sec);
-  }
-  _closestRecordingAlertStart(targetSec, alerts, thresholdSec) {
-    return resolveClosestRecordingAlertStart(targetSec, alerts, thresholdSec);
-  }
-  _resolveRecordingScrubTarget(ratio) {
-    const state = this._recordingScrubState;
-    if (!state?.video) return null;
-    return resolveRecordingScrubTarget({
-      ratio,
-      start: state.start,
-      end: state.end,
-      alerts: state.alerts
-    });
-  }
-  _seekRecordingScrubToRatio(ratio, { commit = false } = {}) {
-    const state = this._recordingScrubState;
-    if (!state?.video) return;
-    const target = this._resolveRecordingScrubTarget(ratio);
-    if (!target) return;
-    state.pendingAbsTarget = target.absTarget;
-    state.pendingRelTarget = target.relTarget;
-    this._setRecordingScrubCursor(target.absTarget);
-    if (!commit) return;
-    const rel = Number(state.pendingRelTarget);
-    if (!Number.isFinite(rel)) return;
-    void this._commitRecordingSeek(state, rel, target.absTarget);
-  }
-  _isRecordingTimeSeekable(video, targetSec, toleranceSec = 0.35) {
-    if (!video) return false;
-    return isRecordingSeekTargetInRange({
-      targetSec,
-      seekable: video.seekable,
-      toleranceSec
-    });
-  }
-  async _attemptRecordingSeek(video, targetSec, timeoutMs = 2500) {
-    if (!video || !Number.isFinite(targetSec)) return false;
-    return await new Promise((resolve) => {
-      let done = false;
-      const finish = (ok) => {
-        if (done) return;
-        done = true;
-        cleanup();
-        resolve(ok);
-      };
-      const verify = () => {
-        finish(
-          isRecordingSeekVerified({
-            currentTime: video.currentTime,
-            targetSec
-          })
-        );
-      };
-      const onDone = () => verify();
-      const onError = () => finish(false);
-      const cleanup = () => {
-        clearTimeout(timer);
-        video.removeEventListener("seeked", onDone);
-        video.removeEventListener("timeupdate", onDone);
-        video.removeEventListener("error", onError);
-      };
-      const timer = setTimeout(() => verify(), timeoutMs);
-      video.addEventListener("seeked", onDone, { once: true });
-      video.addEventListener("timeupdate", onDone, { once: true });
-      video.addEventListener("error", onError, { once: true });
-      try {
-        const plan = resolveRecordingSeekExecutionPlan({
-          hasFastSeek: typeof video.fastSeek === "function",
-          isEdge: this._isEdge(),
-          isIOS
-        });
-        if (plan.shouldUseFastSeek) {
-          video.fastSeek(targetSec);
-        } else {
-          video.currentTime = targetSec;
-        }
-      } catch (_) {
-        finish(false);
-      }
-    });
-  }
-  async _commitRecordingSeek(state, relTarget, absTarget) {
-    if (!state?.video || !Number.isFinite(relTarget) || !Number.isFinite(absTarget))
-      return;
-    state.seekNonce = Number(state.seekNonce || 0) + 1;
-    const nonce = state.seekNonce;
-    const video = state.video;
-    const isFirefox = this._isFirefox();
-    const isEdge = this._isEdge();
-    const seekTimeout = resolveRecordingSeekTimeout({ isFirefox, isEdge });
-    const seekOk = await this._attemptRecordingSeek(
-      video,
-      relTarget,
-      seekTimeout
-    );
-    if (nonce !== state.seekNonce) return;
-    const outcome = resolveRecordingSeekOutcome({
-      isFirefox,
-      isEdge,
-      seekOk,
-      currentTime: video.currentTime,
-      relTarget,
-      absTarget,
-      start: state.start,
-      end: state.end,
-      resumeAfterScrub: state.resumeAfterScrub,
-      isFallbackLoading: state.isFallbackLoading
-    });
-    if (outcome.shouldFallback) {
-      state.isFallbackLoading = true;
-      try {
-        await this._popupMediaLoaderController.showRecording(
-          outcome.fallbackStart,
-          outcome.fallbackEnd
-        );
-      } finally {
-        state.isFallbackLoading = false;
-      }
-      return;
-    }
-    if (outcome.shouldResumePlayback) {
-      video.play?.().catch(() => {
-      });
-    }
-  }
-  async _fetchRecordingAlerts(clientId, cam, start, end) {
-    const cacheKey = `${clientId}|${cam}|${Math.floor(start)}|${Math.floor(end)}`;
-    if (this._recordingAlertCache.has(cacheKey)) {
-      return this._recordingAlertCache.get(cacheKey);
-    }
-    const reviews = await this._browseWindowLoaderController.fetchWindowedReviews(
-      clientId,
-      cam,
-      start,
-      end
-    );
-    const alerts = (Array.isArray(reviews) ? reviews : []).map((r) => {
-      const severity = String(
-        r?.severity || r?.data?.severity || "detection"
-      ).toLowerCase();
-      if (!["alert", "detection"].includes(severity)) return null;
-      const rs = Math.max(start, Number(r?.start_time || start));
-      const re = Math.min(end, Number(r?.end_time || rs + 1));
-      const detections = Array.isArray(r?.data?.detections) ? r.data.detections : Array.isArray(r?.detections) ? r.detections : [];
-      const eventId = String(detections[0] || "").trim();
-      return {
-        id: r?.id || `${rs}-${re}`,
-        start: rs,
-        end: re > rs ? re : rs + 1,
-        severity,
-        eventId,
-        snapshotUrl: eventId ? `/api/frigate/${encodeURIComponent(clientId)}/notifications/${encodeURIComponent(eventId)}/snapshot.jpg` : ""
-      };
-    }).filter(Boolean).sort((a, b) => a.start - b.start);
-    this._recordingAlertCache.set(cacheKey, alerts);
-    return alerts;
-  }
-  async _initRecordingScrub({
-    clientId,
-    cam,
-    start,
-    end,
-    video,
-    token,
-    sourceUrl
-  }) {
-    const scrub = this._$("#recording-scrub");
-    const track = this._$("#recording-scrub-track");
-    const ticks = this._$("#recording-scrub-ticks");
-    const markers = this._$("#recording-scrub-markers");
-    const cursor = this._$("#recording-scrub-cursor");
-    const preview = this._$("#recording-scrub-preview");
-    const previewImage = this._$("#recording-scrub-preview-image");
-    const previewLabel = this._$("#recording-scrub-preview-label");
-    const labelStart = this._$("#recording-scrub-start");
-    const labelNow = this._$("#recording-scrub-now");
-    const labelEnd = this._$("#recording-scrub-end");
-    if (!scrub || !track || !markers || !cursor || !video) return;
-    this._teardownRecordingScrub();
-    scrub.hidden = false;
-    if (ticks) ticks.innerHTML = "";
-    markers.innerHTML = "";
-    const alerts = await this._fetchRecordingAlerts(
-      clientId,
-      cam,
-      start,
-      end
-    ).catch(() => []);
-    if (token !== this._playSeq) return;
-    const decorations = buildRecordingScrubDecorations({
-      start,
-      end,
-      alerts
-    });
-    const span = decorations.span;
-    if (labelStart) labelStart.textContent = decorations.labelStart;
-    if (labelEnd) labelEnd.textContent = decorations.labelEnd;
-    if (labelNow) labelNow.textContent = decorations.labelNow;
-    const tickLayer = ticks || markers;
-    tickLayer.innerHTML = decorations.tickMarkup;
-    markers.innerHTML = decorations.markerMarkup;
-    const state = {
-      start,
-      end,
-      alerts,
-      video,
-      cursor,
-      labelNow,
-      isScrubbing: false,
-      resumeAfterScrub: false,
-      pendingAbsTarget: null,
-      pendingRelTarget: null,
-      seekNonce: 0,
-      isFallbackLoading: false,
-      sourceUrl: sourceUrl || "",
-      sourceUrlNoHash: String(sourceUrl || "").split("#")[0]
-    };
-    this._recordingScrubState = state;
-    this._setRecordingScrubCursor(start);
-    this._recordingScrubController = new RecordingScrubController({
-      track,
-      video,
-      ticks,
-      markers,
-      preview,
-      previewImage,
-      previewLabel,
-      state,
-      setCursor: (timeSec) => this._setRecordingScrubCursor(timeSec),
-      seekToRatio: (ratio, options) => this._seekRecordingScrubToRatio(ratio, options),
-      formatTime: (seconds) => this._fmtScrubTime(seconds)
-    });
-    this._recordingScrubController.bind();
-  }
   _setLiveMuted(muted) {
     this._streamMuted = !!muted;
     const eng = this._engine;
@@ -24130,8 +24197,9 @@ const FrigateViewCard = class extends HTMLElement {
     const mediaType = this._popupMediaType;
     const eventId = this._playing?.id || "";
     const event = eventId ? this._findEventById(eventId) : null;
-    const recordingStart = this._recordingScrubState?.start ?? this._playing?.rec ?? null;
-    const recordingEnd = this._recordingScrubState?.end ?? null;
+    const recordingRange = this._popupRecordingScrubController.range();
+    const recordingStart = recordingRange?.start ?? this._playing?.rec ?? null;
+    const recordingEnd = recordingRange?.end ?? null;
     return {
       scope,
       sourceKey: mediaType === "recording" ? `recording:${clientId}:${cam}:${recordingStart}:${recordingEnd}` : `${mediaType}:${clientId}:${eventId}`,

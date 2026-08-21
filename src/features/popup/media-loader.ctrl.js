@@ -169,12 +169,14 @@ export class PopupMediaLoaderController {
       infoController = host._popupInfoController,
       carouselController = host._popupCarouselController,
       mediaControlsController = host._popupMediaControlsController,
+      recordingScrubController = host._popupRecordingScrubController,
       ...loaderDeps
     } = deps;
     this._host = host;
     this._infoController = infoController;
     this._carouselController = carouselController;
     this._mediaControlsController = mediaControlsController;
+    this._recordingScrubController = recordingScrubController;
     this._deps = {
       buildVideoOptionsForView,
       createVideoElement,
@@ -506,11 +508,10 @@ export class PopupMediaLoaderController {
         if (outcomePlan.shouldShowError) {
           viewer.innerHTML = outcomePlan.errorHtml;
         }
-        if (outcomePlan.shouldTeardownScrub)
-          this._host._teardownRecordingScrub();
+        if (outcomePlan.shouldTeardownScrub) {
+          this._recordingScrubController?.teardown();
+        }
         this._host._clearPopupVideoZoom?.();
-        const scrub = this._host._$("#recording-scrub");
-        if (scrub && outcomePlan.shouldHideScrub) scrub.hidden = true;
         return;
       }
     }
@@ -537,7 +538,7 @@ export class PopupMediaLoaderController {
         video,
         renderPlan.popupMediaType,
       );
-      this._host._initRecordingScrub({
+      void this._recordingScrubController?.initialize({
         clientId: scrubInitPlan.clientId,
         cam: scrubInitPlan.cam,
         start: scrubInitPlan.start,

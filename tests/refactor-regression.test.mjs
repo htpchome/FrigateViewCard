@@ -161,6 +161,13 @@ const popupMediaControlsControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupRecordingScrubControllerSource = fs.readFileSync(
+  new URL(
+    "../src/features/popup/recording-scrub.ctrl.js",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const popupCarouselControllerSource = fs.readFileSync(
   new URL("../src/features/popup/carousel.ctrl.js", import.meta.url),
   "utf8",
@@ -1743,6 +1750,35 @@ test("popup media controls and visibility are owned by the popup feature", () =>
   assert.equal(
     popupMediaLoaderControllerSource.includes(
       "this._mediaControlsController?.resetWithoutVideo(",
+    ),
+    true,
+  );
+});
+
+test("popup recording scrub coordination is owned by the popup feature", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { PopupRecordingScrubController } from "../features/popup/recording-scrub.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("new PopupRecordingScrubController"),
+    true,
+  );
+  assert.equal(cardSource.includes("_initRecordingScrub("), false);
+  assert.equal(cardSource.includes("_teardownRecordingScrub("), false);
+  assert.equal(cardSource.includes("_fetchRecordingAlerts("), false);
+  assert.equal(cardSource.includes("_recordingScrubState"), false);
+  assert.equal(
+    popupRecordingScrubControllerSource.includes(
+      "export class PopupRecordingScrubController",
+    ),
+    true,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes(
+      "this._recordingScrubController?.initialize(",
     ),
     true,
   );

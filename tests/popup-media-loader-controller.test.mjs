@@ -108,19 +108,17 @@ test("showRecording signs candidates and initializes popup recording playback on
       resetWithoutVideo: () => calls.push(["resetControls"]),
       showTemporarily: () => calls.push(["showControls"]),
     },
+    _popupRecordingScrubController: {
+      teardown: () => calls.push(["teardownScrub"]),
+      initialize: (payload) =>
+        calls.push(["initScrub", payload.sourceUrl]),
+    },
     shadowRoot: {
       querySelector: () => viewer,
     },
     _signed: async (path) => `signed:${path}`,
-    _teardownRecordingScrub: () => calls.push(["teardownScrub"]),
-    _$: (selector) => {
-      if (selector === "#recording-scrub") return { hidden: false };
-      return null;
-    },
     _ensurePopupPlaybackButtons: (kind) => calls.push(["ensurePlayback", kind]),
     _scheduleRotateOverlayUpdate: () => calls.push(["scheduleRotate"]),
-    _initRecordingScrub: (payload) =>
-      calls.push(["initScrub", payload.sourceUrl]),
   };
   const controller = new PopupMediaLoaderController(host, {
     buildVideoOptionsForView: (_view, options) => options,
