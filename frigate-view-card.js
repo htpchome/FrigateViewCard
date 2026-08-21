@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1621";
+const VERSION = "1.0.1622";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7333,6 +7333,7 @@ function attachVideoZoom(video, options = {}) {
 const PICTURE_IN_PICTURE_METHOD_STANDARD = "standard";
 const PICTURE_IN_PICTURE_METHOD_WEBKIT = "webkit";
 const PICTURE_IN_PICTURE_EXIT_RECHECK_DELAYS_MS = Object.freeze([0, 120]);
+const PICTURE_IN_PICTURE_LAYOUT_REFRESH_DELAY_MS = 180;
 function resolveOwnerDocument(video, documentObj) {
   return documentObj || video?.ownerDocument || globalThis.document || null;
 }
@@ -7406,12 +7407,58 @@ function scheduleDisabledPictureInPictureExitRecheck({
     }, delayMs);
   }
 }
+function refreshVideoPictureInPictureSuppressionLayout({
+  video = null,
+  requestFrame = globalThis.requestAnimationFrame?.bind(globalThis)
+} = {}) {
+  const style = video?.style;
+  if (!style?.setProperty || !style?.getPropertyValue || !style?.removeProperty || typeof video?.getBoundingClientRect !== "function") {
+    return false;
+  }
+  const bounds = video.getBoundingClientRect();
+  const width = Number(bounds?.width) || 0;
+  if (width <= 0) return false;
+  const previousWidth = style.getPropertyValue("width");
+  const previousPriority = style.getPropertyPriority?.("width") || "";
+  const nudgedWidth = `${Math.max(1, Math.round(width) - 1)}px`;
+  style.setProperty("width", nudgedWidth, "important");
+  video.getBoundingClientRect();
+  const restore = () => {
+    if (style.getPropertyValue("width") !== nudgedWidth) return;
+    if (previousWidth) {
+      style.setProperty("width", previousWidth, previousPriority);
+    } else {
+      style.removeProperty("width");
+    }
+    video.getBoundingClientRect();
+  };
+  if (typeof requestFrame === "function") requestFrame(restore);
+  else restore();
+  return true;
+}
+function schedulePictureInPictureSuppressionLayoutRefresh({
+  video,
+  documentObj,
+  setTimer,
+  requestFrame
+}) {
+  if (typeof setTimer !== "function" || !video?.style?.setProperty || typeof video?.getBoundingClientRect !== "function") {
+    return;
+  }
+  setTimer(() => {
+    if (video.isConnected === false || isVideoPictureInPictureActive(video, documentObj)) {
+      return;
+    }
+    refreshVideoPictureInPictureSuppressionLayout({ video, requestFrame });
+  }, PICTURE_IN_PICTURE_LAYOUT_REFRESH_DELAY_MS);
+}
 async function toggleVideoPictureInPicture({
   video = null,
   documentObj = null,
   temporarilyAllowDisabled = false,
   resumePlaybackOnExit = false,
-  setTimer = globalThis.setTimeout?.bind(globalThis)
+  setTimer = globalThis.setTimeout?.bind(globalThis),
+  requestFrame = globalThis.requestAnimationFrame?.bind(globalThis)
 } = {}) {
   const support = resolveVideoPictureInPictureSupport({ video, documentObj });
   if (!support.supported) {
@@ -7433,6 +7480,12 @@ async function toggleVideoPictureInPicture({
           documentObj: doc,
           resumePlayback: resumePlaybackOnExit,
           setTimer
+        });
+        schedulePictureInPictureSuppressionLayoutRefresh({
+          video,
+          documentObj: doc,
+          setTimer,
+          requestFrame
         });
       }
       return { active: false, method: support.method };
@@ -7461,6 +7514,12 @@ async function toggleVideoPictureInPicture({
         documentObj: doc,
         resumePlayback: resumePlaybackOnExit,
         setTimer
+      });
+      schedulePictureInPictureSuppressionLayoutRefresh({
+        video,
+        documentObj: doc,
+        setTimer,
+        requestFrame
       });
     };
     video.addEventListener?.(

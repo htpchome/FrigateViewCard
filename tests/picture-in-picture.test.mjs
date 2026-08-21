@@ -5,6 +5,7 @@ import {
   PICTURE_IN_PICTURE_METHOD_STANDARD,
   PICTURE_IN_PICTURE_METHOD_WEBKIT,
   PictureInPictureButtonController,
+  refreshVideoPictureInPictureSuppressionLayout,
   resolveVideoPictureInPictureSupport,
   toggleVideoPictureInPicture,
 } from "../src/shared/media/picture-in-picture.js";
@@ -56,6 +57,64 @@ function createButton() {
   };
 }
 
+function createStyleDeclaration(initial = {}) {
+  const values = new Map(
+    Object.entries(initial).map(([name, value]) => [
+      name,
+      { value: String(value), priority: "" },
+    ]),
+  );
+  return {
+    getPropertyValue(name) {
+      return values.get(name)?.value || "";
+    },
+    getPropertyPriority(name) {
+      return values.get(name)?.priority || "";
+    },
+    setProperty(name, value, priority = "") {
+      values.set(name, {
+        value: String(value),
+        priority: String(priority),
+      });
+    },
+    removeProperty(name) {
+      const previous = values.get(name)?.value || "";
+      values.delete(name);
+      return previous;
+    },
+  };
+}
+
+test("Firefox suppression layout refresh nudges and restores video width", () => {
+  const style = createStyleDeclaration({ width: "100%" });
+  const frames = [];
+  let layoutReads = 0;
+  const video = {
+    style,
+    getBoundingClientRect() {
+      layoutReads += 1;
+      return { width: 640 };
+    },
+  };
+
+  assert.equal(
+    refreshVideoPictureInPictureSuppressionLayout({
+      video,
+      requestFrame: (callback) => frames.push(callback),
+    }),
+    true,
+  );
+  assert.equal(style.getPropertyValue("width"), "639px");
+  assert.equal(style.getPropertyPriority("width"), "important");
+  assert.equal(frames.length, 1);
+
+  frames[0]();
+
+  assert.equal(style.getPropertyValue("width"), "100%");
+  assert.equal(style.getPropertyPriority("width"), "");
+  assert.equal(layoutReads, 3);
+});
+
 test("standard PiP support is detected from the browser API", () => {
   const video = {
     requestPictureInPicture() {},
@@ -97,6 +156,8 @@ test("standard PiP enters through the browser API", async () => {
 test("Firefox PiP exit reasserts suppression and resumes live playback after teardown", async () => {
   const attributes = new Map([["disablepictureinpicture", ""]]);
   const scheduled = [];
+  const frames = [];
+  const style = createStyleDeclaration({ width: "100%" });
   let playCalls = 0;
   const documentObj = {
     pictureInPictureEnabled: true,
@@ -106,6 +167,10 @@ test("Firefox PiP exit reasserts suppression and resumes live playback after tea
     ownerDocument: documentObj,
     disablePictureInPicture: true,
     paused: false,
+    style,
+    getBoundingClientRect() {
+      return { width: 640 };
+    },
     setAttribute(name, value) {
       attributes.set(name, String(value));
     },
@@ -134,6 +199,7 @@ test("Firefox PiP exit reasserts suppression and resumes live playback after tea
     setTimer: (callback, delayMs) => {
       scheduled.push({ callback, delayMs });
     },
+    requestFrame: (callback) => frames.push(callback),
   });
 
   assert.deepEqual(result, {
@@ -156,7 +222,7 @@ test("Firefox PiP exit reasserts suppression and resumes live playback after tea
   assert.equal(video.listenerCount("leavepictureinpicture"), 0);
   assert.deepEqual(
     scheduled.map(({ delayMs }) => delayMs),
-    [0, 120],
+    [0, 120, 180],
   );
 
   // Firefox may finish teardown after the leave event and expose the native
@@ -170,6 +236,10 @@ test("Firefox PiP exit reasserts suppression and resumes live playback after tea
   assert.equal(video.hasAttribute("disablepictureinpicture"), true);
   assert.equal(video.paused, false);
   assert.equal(playCalls, 1);
+  assert.equal(style.getPropertyValue("width"), "639px");
+  assert.equal(frames.length, 1);
+  frames[0]();
+  assert.equal(style.getPropertyValue("width"), "100%");
 });
 
 test("Firefox PiP entry restores suppression after a failed request", async () => {
