@@ -135,6 +135,7 @@ import {
   buildVideoOptionsForView,
   configureVideoElement,
   createVideoElement,
+  disableNativePictureInPicture,
   enableNativePictureInPicture,
   mountNodeIntoSlot,
   setScopedVideoViewDefaultOptions,
@@ -672,7 +673,6 @@ export class FrigateViewCard extends HTMLElement {
           this._usePopupCustomControls(mediaType),
         isAutoHideActive: () => this._rotateOverlayMode === "popup",
         isMobileDevice: () => DEVICE_PROFILE.isMobile,
-        isFirefox: () => this._isFirefox(),
         isVideoMediaType: (mediaType) =>
           this._isPopupVideoMediaType(mediaType),
         onClearPictureInPicture: (scope) =>
@@ -4889,11 +4889,11 @@ export class FrigateViewCard extends HTMLElement {
       this._$("#myPopup")?.classList.contains("is-open") === true;
     const isFirefox = this._isFirefox();
     const liveVideo = this._livePictureInPictureVideo();
-    enableNativePictureInPicture(liveVideo);
+    if (isFirefox) disableNativePictureInPicture(liveVideo);
+    else enableNativePictureInPicture(liveVideo);
     const liveAllowed =
       this._activePageShellCapabilities().hasLivePictureInPicture &&
       !DEVICE_PROFILE.isMobile &&
-      !isFirefox &&
       this._viewMode !== "grid" &&
       !popupOpen;
     this._bindPictureInPictureButton(
@@ -4906,11 +4906,11 @@ export class FrigateViewCard extends HTMLElement {
     const popupVideo = popupOpen
       ? this._popupMediaControlsController.video()
       : null;
-    enableNativePictureInPicture(popupVideo);
+    if (isFirefox) disableNativePictureInPicture(popupVideo);
+    else enableNativePictureInPicture(popupVideo);
     const popupAllowed =
       popupOpen &&
       !DEVICE_PROFILE.isMobile &&
-      !isFirefox &&
       this._isPopupVideoMediaType(popupMediaType);
     this._bindPictureInPictureButton(
       "popup",
@@ -4929,7 +4929,11 @@ export class FrigateViewCard extends HTMLElement {
     }
 
     try {
-      await toggleVideoPictureInPicture({ video, documentObj });
+      await toggleVideoPictureInPicture({
+        video,
+        documentObj,
+        temporarilyAllowDisabled: this._isFirefox(),
+      });
     } catch (error) {
       console.warn("[Frigate] Picture-in-Picture request failed", error);
       const reason = String(error?.message || "").trim();

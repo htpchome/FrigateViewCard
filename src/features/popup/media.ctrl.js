@@ -131,7 +131,6 @@ export class PopupMediaControlsSurfaceController {
     shouldUseCustomControls = () => false,
     isAutoHideActive = () => false,
     isMobileDevice = () => false,
-    isFirefox = () => false,
     isVideoMediaType = () => false,
     onClearPictureInPicture = () => {},
     onSyncPlaybackTargetButtons = () => {},
@@ -148,7 +147,6 @@ export class PopupMediaControlsSurfaceController {
     this._shouldUseCustomControls = shouldUseCustomControls;
     this._isAutoHideActive = isAutoHideActive;
     this._isMobileDevice = isMobileDevice;
-    this._isFirefox = isFirefox;
     this._isVideoMediaType = isVideoMediaType;
     this._onClearPictureInPicture = onClearPictureInPicture;
     this._onSyncPlaybackTargetButtons = onSyncPlaybackTargetButtons;
@@ -261,7 +259,6 @@ export class PopupMediaControlsSurfaceController {
 
     if (
       !this._isMobileDevice() &&
-      !this._isFirefox() &&
       this._isVideoMediaType(mediaType)
     ) {
       const pictureInPictureButton = this._document.createElement("button");

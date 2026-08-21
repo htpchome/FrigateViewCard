@@ -210,16 +210,25 @@ test("popup playback controls delegate to native PiP and AirPlay", () => {
   assert.equal(stylesSource.includes(".playback-target-dialog{"), false);
 });
 
-test("Firefox relies on native PiP controls instead of visible custom buttons", () => {
+test("Firefox uses custom PiP buttons with temporary native suppression relief", () => {
   assert.match(
     popupMediaControlsSource,
-    /!this\._isMobileDevice\(\)\s*&&\s*!this\._isFirefox\(\)\s*&&\s*this\._isVideoMediaType\(mediaType\)/,
+    /!this\._isMobileDevice\(\)\s*&&\s*this\._isVideoMediaType\(mediaType\)/,
+  );
+  assert.equal(
+    popupMediaControlsSource.includes("!this._isFirefox()"),
+    false,
   );
   assert.match(
     cardSource,
-    /const liveAllowed =[\s\S]*?!isFirefox &&[\s\S]*?liveAllowed \? liveVideo : null/,
+    /if \(isFirefox\) disableNativePictureInPicture\(liveVideo\)/,
   );
-  assert.equal(cardSource.includes("enableNativePictureInPicture(liveVideo)"), true);
-  assert.equal(cardSource.includes("enableNativePictureInPicture(popupVideo)"), true);
-  assert.equal(cardSource.includes("temporarilyAllowDisabled"), false);
+  assert.match(
+    cardSource,
+    /if \(isFirefox\) disableNativePictureInPicture\(popupVideo\)/,
+  );
+  assert.equal(
+    cardSource.includes("temporarilyAllowDisabled: this._isFirefox()"),
+    true,
+  );
 });

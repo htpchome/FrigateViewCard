@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1613";
+const VERSION = "1.0.1614";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -5527,6 +5527,16 @@ function enableNativePictureInPicture(video) {
   video.removeAttribute?.("disablepictureinpicture");
   return true;
 }
+function disableNativePictureInPicture(video) {
+  if (!video) return false;
+  video.disablePictureInPicture = true;
+  video.setAttribute?.("disablepictureinpicture", "");
+  return true;
+}
+function isFirefoxNavigator(navigatorObj = globalThis.navigator) {
+  const userAgent = String(navigatorObj?.userAgent || "");
+  return /firefox|fxios/i.test(userAgent) && !/seamonkey/i.test(userAgent);
+}
 function configureVideoElement(video, options = {}) {
   if (!video) return video;
   const profile = resolveVideoProfile({
@@ -5564,7 +5574,12 @@ function configureVideoElement(video, options = {}) {
   applyVideoDatasetOptions(video, options);
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
-  enableNativePictureInPicture(video);
+  const disableFirefoxNativePictureInPicture = isFirefoxNavigator(
+    options.navigatorObj
+  );
+  if (!disableFirefoxNativePictureInPicture) {
+    enableNativePictureInPicture(video);
+  }
   video.disableRemotePlayback = true;
   video.setAttribute("x-webkit-airplay", "deny");
   if (options.attributes && typeof options.attributes === "object") {
@@ -5577,6 +5592,9 @@ function configureVideoElement(video, options = {}) {
         video.setAttribute(name, String(value));
       }
     }
+  }
+  if (disableFirefoxNativePictureInPicture) {
+    disableNativePictureInPicture(video);
   }
   return video;
 }
@@ -7270,7 +7288,8 @@ function resolveVideoPictureInPictureSupport({
 }
 async function toggleVideoPictureInPicture({
   video = null,
-  documentObj = null
+  documentObj = null,
+  temporarilyAllowDisabled = false
 } = {}) {
   const support = resolveVideoPictureInPictureSupport({ video, documentObj });
   if (!support.supported) {
@@ -7282,7 +7301,16 @@ async function toggleVideoPictureInPicture({
       await doc.exitPictureInPicture();
       return { active: false, method: support.method };
     }
-    await video.requestPictureInPicture();
+    if (!temporarilyAllowDisabled) {
+      await video.requestPictureInPicture();
+      return { active: true, method: support.method };
+    }
+    enableNativePictureInPicture(video);
+    try {
+      await video.requestPictureInPicture();
+    } finally {
+      disableNativePictureInPicture(video);
+    }
     return { active: true, method: support.method };
   }
   const active = isVideoPictureInPictureActive(video, documentObj);
@@ -10640,7 +10668,6 @@ const PopupMediaControlsSurfaceController = class {
     shouldUseCustomControls = () => false,
     isAutoHideActive = () => false,
     isMobileDevice = () => false,
-    isFirefox = () => false,
     isVideoMediaType = () => false,
     onClearPictureInPicture = () => {
     },
@@ -10660,7 +10687,6 @@ const PopupMediaControlsSurfaceController = class {
     this._shouldUseCustomControls = shouldUseCustomControls;
     this._isAutoHideActive = isAutoHideActive;
     this._isMobileDevice = isMobileDevice;
-    this._isFirefox = isFirefox;
     this._isVideoMediaType = isVideoMediaType;
     this._onClearPictureInPicture = onClearPictureInPicture;
     this._onSyncPlaybackTargetButtons = onSyncPlaybackTargetButtons;
@@ -10758,7 +10784,7 @@ const PopupMediaControlsSurfaceController = class {
       this._onClearPictureInPicture("popup");
       return;
     }
-    if (!this._isMobileDevice() && !this._isFirefox() && this._isVideoMediaType(mediaType)) {
+    if (!this._isMobileDevice() && this._isVideoMediaType(mediaType)) {
       const pictureInPictureButton = this._document.createElement("button");
       pictureInPictureButton.className = "square-btn popup-playback-btn popup-pip-btn";
       pictureInPictureButton.id = "popup-pip-btn";
@@ -20974,7 +21000,6 @@ const FrigateViewCard = class extends HTMLElement {
       shouldUseCustomControls: (mediaType) => this._usePopupCustomControls(mediaType),
       isAutoHideActive: () => this._rotateOverlayMode === "popup",
       isMobileDevice: () => DEVICE_PROFILE.isMobile,
-      isFirefox: () => this._isFirefox(),
       isVideoMediaType: (mediaType) => this._isPopupVideoMediaType(mediaType),
       onClearPictureInPicture: (scope) => this._clearPictureInPictureButtonController(scope),
       onSyncPlaybackTargetButtons: () => this._syncPlaybackTargetButtons(),
@@ -24524,8 +24549,9 @@ const FrigateViewCard = class extends HTMLElement {
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open") === true;
     const isFirefox = this._isFirefox();
     const liveVideo = this._livePictureInPictureVideo();
-    enableNativePictureInPicture(liveVideo);
-    const liveAllowed = this._activePageShellCapabilities().hasLivePictureInPicture && !DEVICE_PROFILE.isMobile && !isFirefox && this._viewMode !== "grid" && !popupOpen;
+    if (isFirefox) disableNativePictureInPicture(liveVideo);
+    else enableNativePictureInPicture(liveVideo);
+    const liveAllowed = this._activePageShellCapabilities().hasLivePictureInPicture && !DEVICE_PROFILE.isMobile && this._viewMode !== "grid" && !popupOpen;
     this._bindPictureInPictureButton(
       "live",
       this._$("#live-pip-btn"),
@@ -24533,8 +24559,9 @@ const FrigateViewCard = class extends HTMLElement {
     );
     const popupMediaType = this._popupLifecycleController.mediaType();
     const popupVideo = popupOpen ? this._popupMediaControlsController.video() : null;
-    enableNativePictureInPicture(popupVideo);
-    const popupAllowed = popupOpen && !DEVICE_PROFILE.isMobile && !isFirefox && this._isPopupVideoMediaType(popupMediaType);
+    if (isFirefox) disableNativePictureInPicture(popupVideo);
+    else enableNativePictureInPicture(popupVideo);
+    const popupAllowed = popupOpen && !DEVICE_PROFILE.isMobile && this._isPopupVideoMediaType(popupMediaType);
     this._bindPictureInPictureButton(
       "popup",
       this._$("#popup-pip-btn"),
@@ -24550,7 +24577,11 @@ const FrigateViewCard = class extends HTMLElement {
       return;
     }
     try {
-      await toggleVideoPictureInPicture({ video, documentObj });
+      await toggleVideoPictureInPicture({
+        video,
+        documentObj,
+        temporarilyAllowDisabled: this._isFirefox()
+      });
     } catch (error) {
       console.warn("[Frigate] Picture-in-Picture request failed", error);
       const reason = String(error?.message || "").trim();

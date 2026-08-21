@@ -1,3 +1,8 @@
+import {
+  disableNativePictureInPicture,
+  enableNativePictureInPicture,
+} from "./video-factory.js";
+
 export const PICTURE_IN_PICTURE_METHOD_STANDARD = "standard";
 export const PICTURE_IN_PICTURE_METHOD_WEBKIT = "webkit";
 
@@ -57,6 +62,7 @@ export function resolveVideoPictureInPictureSupport({
 export async function toggleVideoPictureInPicture({
   video = null,
   documentObj = null,
+  temporarilyAllowDisabled = false,
 } = {}) {
   const support = resolveVideoPictureInPictureSupport({ video, documentObj });
   if (!support.supported) {
@@ -69,7 +75,17 @@ export async function toggleVideoPictureInPicture({
       await doc.exitPictureInPicture();
       return { active: false, method: support.method };
     }
-    await video.requestPictureInPicture();
+    if (!temporarilyAllowDisabled) {
+      await video.requestPictureInPicture();
+      return { active: true, method: support.method };
+    }
+
+    enableNativePictureInPicture(video);
+    try {
+      await video.requestPictureInPicture();
+    } finally {
+      disableNativePictureInPicture(video);
+    }
     return { active: true, method: support.method };
   }
 

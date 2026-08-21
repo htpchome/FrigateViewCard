@@ -5,6 +5,7 @@ import {
   buildVideoOptionsForView,
   configureVideoElement,
   createVideoElement,
+  disableNativePictureInPicture,
   enableNativePictureInPicture,
   getVideoViewDefaultOptions,
   getScopedVideoViewDefaultOptions,
@@ -120,16 +121,24 @@ test("createVideoElement applies liveEngine defaults", () => {
   });
 });
 
-test("Firefox video creation leaves native PiP enabled", () => {
+test("Firefox video creation suppresses native PiP controls", () => {
   withFakeDocument(() => {
     const video = createVideoElement({
       profile: "liveEngine",
       navigatorObj: { userAgent: "Mozilla/5.0 Firefox/153.0" },
     });
 
-    assert.equal(video.disablePictureInPicture, false);
-    assert.equal(video.hasAttribute("disablepictureinpicture"), false);
+    assert.equal(video.disablePictureInPicture, true);
+    assert.equal(video.hasAttribute("disablepictureinpicture"), true);
   });
+});
+
+test("native PiP suppression sets both the video property and attribute", () => {
+  const video = createFakeVideoElement();
+
+  assert.equal(disableNativePictureInPicture(video), true);
+  assert.equal(video.disablePictureInPicture, true);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), true);
 });
 
 test("nested player videos have stale PiP suppression cleared", () => {

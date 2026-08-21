@@ -93,6 +93,75 @@ test("standard PiP enters through the browser API", async () => {
   assert.deepEqual(calls, ["request"]);
 });
 
+test("Firefox PiP entry temporarily clears and then restores suppression", async () => {
+  const attributes = new Map([["disablepictureinpicture", ""]]);
+  const documentObj = {
+    pictureInPictureEnabled: true,
+    pictureInPictureElement: null,
+  };
+  const video = {
+    ownerDocument: documentObj,
+    disablePictureInPicture: true,
+    setAttribute(name, value) {
+      attributes.set(name, String(value));
+    },
+    removeAttribute(name) {
+      attributes.delete(name);
+    },
+    hasAttribute(name) {
+      return attributes.has(name);
+    },
+    async requestPictureInPicture() {
+      assert.equal(this.disablePictureInPicture, false);
+      assert.equal(this.hasAttribute("disablepictureinpicture"), false);
+      documentObj.pictureInPictureElement = video;
+    },
+  };
+
+  const result = await toggleVideoPictureInPicture({
+    video,
+    documentObj,
+    temporarilyAllowDisabled: true,
+  });
+
+  assert.deepEqual(result, {
+    active: true,
+    method: PICTURE_IN_PICTURE_METHOD_STANDARD,
+  });
+  assert.equal(video.disablePictureInPicture, true);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), true);
+});
+
+test("Firefox PiP entry restores suppression after a failed request", async () => {
+  const attributes = new Map([["disablepictureinpicture", ""]]);
+  const video = {
+    disablePictureInPicture: true,
+    setAttribute(name, value) {
+      attributes.set(name, String(value));
+    },
+    removeAttribute(name) {
+      attributes.delete(name);
+    },
+    hasAttribute(name) {
+      return attributes.has(name);
+    },
+    async requestPictureInPicture() {
+      throw new Error("request rejected");
+    },
+  };
+
+  await assert.rejects(
+    toggleVideoPictureInPicture({
+      video,
+      documentObj: { pictureInPictureEnabled: true },
+      temporarilyAllowDisabled: true,
+    }),
+    /request rejected/,
+  );
+  assert.equal(video.disablePictureInPicture, true);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), true);
+});
+
 test("standard PiP exits when the same video is active", async () => {
   const calls = [];
   const video = { requestPictureInPicture() {} };

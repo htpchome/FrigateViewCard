@@ -305,6 +305,18 @@ export function enableNativePictureInPicture(video) {
   return true;
 }
 
+export function disableNativePictureInPicture(video) {
+  if (!video) return false;
+  video.disablePictureInPicture = true;
+  video.setAttribute?.("disablepictureinpicture", "");
+  return true;
+}
+
+function isFirefoxNavigator(navigatorObj = globalThis.navigator) {
+  const userAgent = String(navigatorObj?.userAgent || "");
+  return /firefox|fxios/i.test(userAgent) && !/seamonkey/i.test(userAgent);
+}
+
 export function configureVideoElement(video, options = {}) {
   if (!video) return video;
   const profile = resolveVideoProfile({
@@ -345,7 +357,12 @@ export function configureVideoElement(video, options = {}) {
 
   video.setAttribute("playsinline", "");
   video.setAttribute("webkit-playsinline", "");
-  enableNativePictureInPicture(video);
+  const disableFirefoxNativePictureInPicture = isFirefoxNavigator(
+    options.navigatorObj,
+  );
+  if (!disableFirefoxNativePictureInPicture) {
+    enableNativePictureInPicture(video);
+  }
   video.disableRemotePlayback = true;
   video.setAttribute("x-webkit-airplay", "deny");
 
@@ -359,6 +376,10 @@ export function configureVideoElement(video, options = {}) {
         video.setAttribute(name, String(value));
       }
     }
+  }
+
+  if (disableFirefoxNativePictureInPicture) {
+    disableNativePictureInPicture(video);
   }
 
   return video;
