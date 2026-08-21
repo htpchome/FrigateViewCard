@@ -230,6 +230,14 @@ test("Firefox uses custom PiP buttons with temporary native suppression relief",
   assert.equal(cardSource.includes("isVideoPictureInPictureActive"), true);
   assert.equal(
     cardSource.includes("temporarilyAllowDisabled: this._isFirefox()"),
+    false,
+  );
+  assert.equal(
+    cardSource.includes("temporarilyAllowDisabled: isFirefox"),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("resumePlaybackOnExit: isFirefox && !popup"),
     true,
   );
 });

@@ -4936,6 +4936,7 @@ export class FrigateViewCard extends HTMLElement {
 
   async _togglePictureInPicture(video, { popup = false } = {}) {
     const documentObj = video?.ownerDocument || globalThis.document || null;
+    const isFirefox = this._isFirefox();
     const support = resolveVideoPictureInPictureSupport({ video, documentObj });
     if (!support.supported) {
       this._toast("Picture-in-Picture is not supported for this video.");
@@ -4947,7 +4948,8 @@ export class FrigateViewCard extends HTMLElement {
       await toggleVideoPictureInPicture({
         video,
         documentObj,
-        temporarilyAllowDisabled: this._isFirefox(),
+        temporarilyAllowDisabled: isFirefox,
+        resumePlaybackOnExit: isFirefox && !popup,
       });
     } catch (error) {
       console.warn("[Frigate] Picture-in-Picture request failed", error);

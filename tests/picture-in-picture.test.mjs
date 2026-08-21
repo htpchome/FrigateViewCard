@@ -93,8 +93,10 @@ test("standard PiP enters through the browser API", async () => {
   assert.deepEqual(calls, ["request"]);
 });
 
-test("Firefox PiP entry restores suppression only after the session leaves", async () => {
+test("Firefox PiP exit reasserts suppression and resumes live playback after teardown", async () => {
   const attributes = new Map([["disablepictureinpicture", ""]]);
+  const scheduled = [];
+  let playCalls = 0;
   const documentObj = {
     pictureInPictureEnabled: true,
     pictureInPictureElement: null,
@@ -102,6 +104,7 @@ test("Firefox PiP entry restores suppression only after the session leaves", asy
   const video = createEventTarget({
     ownerDocument: documentObj,
     disablePictureInPicture: true,
+    paused: false,
     setAttribute(name, value) {
       attributes.set(name, String(value));
     },
@@ -110,6 +113,10 @@ test("Firefox PiP entry restores suppression only after the session leaves", asy
     },
     hasAttribute(name) {
       return attributes.has(name);
+    },
+    async play() {
+      playCalls += 1;
+      this.paused = false;
     },
     async requestPictureInPicture() {
       assert.equal(this.disablePictureInPicture, false);
@@ -122,6 +129,10 @@ test("Firefox PiP entry restores suppression only after the session leaves", asy
     video,
     documentObj,
     temporarilyAllowDisabled: true,
+    resumePlaybackOnExit: true,
+    setTimer: (callback, delayMs) => {
+      scheduled.push({ callback, delayMs });
+    },
   });
 
   assert.deepEqual(result, {
@@ -137,6 +148,22 @@ test("Firefox PiP entry restores suppression only after the session leaves", asy
   assert.equal(video.disablePictureInPicture, true);
   assert.equal(video.hasAttribute("disablepictureinpicture"), true);
   assert.equal(video.listenerCount("leavepictureinpicture"), 0);
+  assert.deepEqual(
+    scheduled.map(({ delayMs }) => delayMs),
+    [0, 120],
+  );
+
+  // Firefox may finish teardown after the leave event and expose the native
+  // control again while also pausing the source video.
+  video.disablePictureInPicture = false;
+  video.removeAttribute("disablepictureinpicture");
+  video.paused = true;
+  for (const { callback } of scheduled) callback();
+
+  assert.equal(video.disablePictureInPicture, true);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), true);
+  assert.equal(video.paused, false);
+  assert.equal(playCalls, 1);
 });
 
 test("Firefox PiP entry restores suppression after a failed request", async () => {

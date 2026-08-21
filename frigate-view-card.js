@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1615";
+const VERSION = "1.0.1616";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7248,6 +7248,7 @@ function attachVideoZoom(video, options = {}) {
 // src/shared/media/picture-in-picture.js
 const PICTURE_IN_PICTURE_METHOD_STANDARD = "standard";
 const PICTURE_IN_PICTURE_METHOD_WEBKIT = "webkit";
+const PICTURE_IN_PICTURE_EXIT_RECHECK_DELAYS_MS = Object.freeze([0, 120]);
 function resolveOwnerDocument(video, documentObj) {
   return documentObj || video?.ownerDocument || globalThis.document || null;
 }
@@ -7286,10 +7287,47 @@ function resolveVideoPictureInPictureSupport({
   }
   return { supported: false, method: "" };
 }
+function applyDisabledPictureInPictureExitState({
+  video,
+  documentObj,
+  resumePlayback,
+  refreshSuppression = false
+}) {
+  if (isVideoPictureInPictureActive(video, documentObj)) return;
+  if (refreshSuppression) enableNativePictureInPicture(video);
+  disableNativePictureInPicture(video);
+  if (!resumePlayback || !video?.paused) return;
+  try {
+    const playRequest = video.play?.();
+    playRequest?.catch?.(() => {
+    });
+  } catch (_) {
+  }
+}
+function scheduleDisabledPictureInPictureExitRecheck({
+  video,
+  documentObj,
+  resumePlayback,
+  setTimer
+}) {
+  if (typeof setTimer !== "function") return;
+  for (const delayMs of PICTURE_IN_PICTURE_EXIT_RECHECK_DELAYS_MS) {
+    setTimer(() => {
+      applyDisabledPictureInPictureExitState({
+        video,
+        documentObj,
+        resumePlayback,
+        refreshSuppression: true
+      });
+    }, delayMs);
+  }
+}
 async function toggleVideoPictureInPicture({
   video = null,
   documentObj = null,
-  temporarilyAllowDisabled = false
+  temporarilyAllowDisabled = false,
+  resumePlaybackOnExit = false,
+  setTimer = globalThis.setTimeout?.bind(globalThis)
 } = {}) {
   const support = resolveVideoPictureInPictureSupport({ video, documentObj });
   if (!support.supported) {
@@ -7300,7 +7338,17 @@ async function toggleVideoPictureInPicture({
     if (isVideoPictureInPictureActive(video, doc)) {
       await doc.exitPictureInPicture();
       if (temporarilyAllowDisabled) {
-        disableNativePictureInPicture(video);
+        applyDisabledPictureInPictureExitState({
+          video,
+          documentObj: doc,
+          resumePlayback: resumePlaybackOnExit
+        });
+        scheduleDisabledPictureInPictureExitRecheck({
+          video,
+          documentObj: doc,
+          resumePlayback: resumePlaybackOnExit,
+          setTimer
+        });
       }
       return { active: false, method: support.method };
     }
@@ -7317,7 +7365,17 @@ async function toggleVideoPictureInPicture({
         "leavepictureinpicture",
         restoreSuppression
       );
-      disableNativePictureInPicture(video);
+      applyDisabledPictureInPictureExitState({
+        video,
+        documentObj: doc,
+        resumePlayback: resumePlaybackOnExit
+      });
+      scheduleDisabledPictureInPictureExitRecheck({
+        video,
+        documentObj: doc,
+        resumePlayback: resumePlaybackOnExit,
+        setTimer
+      });
     };
     video.addEventListener?.(
       "leavepictureinpicture",
@@ -7327,7 +7385,12 @@ async function toggleVideoPictureInPicture({
     try {
       await video.requestPictureInPicture();
     } catch (error) {
-      restoreSuppression();
+      restorePending = false;
+      video.removeEventListener?.(
+        "leavepictureinpicture",
+        restoreSuppression
+      );
+      disableNativePictureInPicture(video);
       throw error;
     }
     return { active: true, method: support.method };
@@ -24603,6 +24666,7 @@ const FrigateViewCard = class extends HTMLElement {
   }
   async _togglePictureInPicture(video, { popup = false } = {}) {
     const documentObj = video?.ownerDocument || globalThis.document || null;
+    const isFirefox = this._isFirefox();
     const support = resolveVideoPictureInPictureSupport({ video, documentObj });
     if (!support.supported) {
       this._toast("Picture-in-Picture is not supported for this video.");
@@ -24613,7 +24677,8 @@ const FrigateViewCard = class extends HTMLElement {
       await toggleVideoPictureInPicture({
         video,
         documentObj,
-        temporarilyAllowDisabled: this._isFirefox()
+        temporarilyAllowDisabled: isFirefox,
+        resumePlaybackOnExit: isFirefox && !popup
       });
     } catch (error) {
       console.warn("[Frigate] Picture-in-Picture request failed", error);

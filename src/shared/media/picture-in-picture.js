@@ -5,6 +5,7 @@ import {
 
 export const PICTURE_IN_PICTURE_METHOD_STANDARD = "standard";
 export const PICTURE_IN_PICTURE_METHOD_WEBKIT = "webkit";
+const PICTURE_IN_PICTURE_EXIT_RECHECK_DELAYS_MS = Object.freeze([0, 120]);
 
 function resolveOwnerDocument(video, documentObj) {
   return documentObj || video?.ownerDocument || globalThis.document || null;
@@ -59,10 +60,47 @@ export function resolveVideoPictureInPictureSupport({
   return { supported: false, method: "" };
 }
 
+function applyDisabledPictureInPictureExitState({
+  video,
+  documentObj,
+  resumePlayback,
+  refreshSuppression = false,
+}) {
+  if (isVideoPictureInPictureActive(video, documentObj)) return;
+  if (refreshSuppression) enableNativePictureInPicture(video);
+  disableNativePictureInPicture(video);
+  if (!resumePlayback || !video?.paused) return;
+  try {
+    const playRequest = video.play?.();
+    playRequest?.catch?.(() => {});
+  } catch (_) {}
+}
+
+function scheduleDisabledPictureInPictureExitRecheck({
+  video,
+  documentObj,
+  resumePlayback,
+  setTimer,
+}) {
+  if (typeof setTimer !== "function") return;
+  for (const delayMs of PICTURE_IN_PICTURE_EXIT_RECHECK_DELAYS_MS) {
+    setTimer(() => {
+      applyDisabledPictureInPictureExitState({
+        video,
+        documentObj,
+        resumePlayback,
+        refreshSuppression: true,
+      });
+    }, delayMs);
+  }
+}
+
 export async function toggleVideoPictureInPicture({
   video = null,
   documentObj = null,
   temporarilyAllowDisabled = false,
+  resumePlaybackOnExit = false,
+  setTimer = globalThis.setTimeout?.bind(globalThis),
 } = {}) {
   const support = resolveVideoPictureInPictureSupport({ video, documentObj });
   if (!support.supported) {
@@ -74,7 +112,17 @@ export async function toggleVideoPictureInPicture({
     if (isVideoPictureInPictureActive(video, doc)) {
       await doc.exitPictureInPicture();
       if (temporarilyAllowDisabled) {
-        disableNativePictureInPicture(video);
+        applyDisabledPictureInPictureExitState({
+          video,
+          documentObj: doc,
+          resumePlayback: resumePlaybackOnExit,
+        });
+        scheduleDisabledPictureInPictureExitRecheck({
+          video,
+          documentObj: doc,
+          resumePlayback: resumePlaybackOnExit,
+          setTimer,
+        });
       }
       return { active: false, method: support.method };
     }
@@ -92,7 +140,17 @@ export async function toggleVideoPictureInPicture({
         "leavepictureinpicture",
         restoreSuppression,
       );
-      disableNativePictureInPicture(video);
+      applyDisabledPictureInPictureExitState({
+        video,
+        documentObj: doc,
+        resumePlayback: resumePlaybackOnExit,
+      });
+      scheduleDisabledPictureInPictureExitRecheck({
+        video,
+        documentObj: doc,
+        resumePlayback: resumePlaybackOnExit,
+        setTimer,
+      });
     };
     video.addEventListener?.(
       "leavepictureinpicture",
@@ -102,7 +160,12 @@ export async function toggleVideoPictureInPicture({
     try {
       await video.requestPictureInPicture();
     } catch (error) {
-      restoreSuppression();
+      restorePending = false;
+      video.removeEventListener?.(
+        "leavepictureinpicture",
+        restoreSuppression,
+      );
+      disableNativePictureInPicture(video);
       throw error;
     }
     return { active: true, method: support.method };
