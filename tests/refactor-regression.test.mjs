@@ -1997,6 +1997,7 @@ test("page profiles own toolbar classes and normalize live-control classes", () 
     true,
   );
   assert.equal(pageShellRegistrySource.includes("liveRotateButtonClass"), false);
+  assert.equal(cardSource.includes("_syncRotateOverlayButtons"), false);
   assert.equal(
     shellNavTemplateSource.includes('buttonClass = "tool"'),
     true,

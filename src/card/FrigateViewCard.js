@@ -3380,7 +3380,6 @@ export class FrigateViewCard extends HTMLElement {
     this._initLiveOverlayControls();
     this._renderMuteButton();
     this._syncFullscreenButtonsVisibility();
-    this._syncRotateOverlayButtons();
     this._syncSlideshowCountdownOverlay();
     this._renderPreviewPage();
     this._wideViewPageController.renderCompanionCameras();
@@ -3417,7 +3416,6 @@ export class FrigateViewCard extends HTMLElement {
     this._initLiveOverlayControls();
     this._renderMuteButton();
     this._syncFullscreenButtonsVisibility();
-    this._syncRotateOverlayButtons();
     this._syncPictureInPictureButtons();
   }
 
