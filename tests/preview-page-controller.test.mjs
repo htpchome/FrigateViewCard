@@ -63,6 +63,9 @@ const createHost = ({
       calls.push(["navigateToPageRoute", pageId, context]),
     _switchCamera: (idx, context) => calls.push(["switchCamera", idx, context]),
     _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
+    _browseWindowLoaderController: {
+      loadWindow: (replace) => calls.push(["loadWindow", replace]),
+    },
     _scheduleResumeLive: (reason) => calls.push(["scheduleResumeLive", reason]),
     _previewAlertController: {
       start: () => calls.push(["previewAlertStart"]),
@@ -237,7 +240,32 @@ test("exitPreviewPageToCamera avoids remount when selecting active camera", () =
         deferCameraSwitch: true,
       },
     ],
-    ["mountEngine", null, { quiet: true }],
+    ["mountEngine"],
+    ["loadWindow", true],
+  ]);
+});
+
+test("exitPreviewPageToCamera preserves an existing active-camera live mount", () => {
+  const { controller, calls, host } = createHost({
+    previewEnabled: true,
+    pageId: "preview",
+  });
+  host._$ = (selector) => (selector === "#engine" ? {} : null);
+  host._findVideoDeep = () => ({ tagName: "VIDEO" });
+
+  controller.exitPreviewPageToCamera(0);
+
+  assert.deepEqual(calls, [
+    [
+      "navigateToPageRoute",
+      "single-view",
+      {
+        source: "preview-camera-select",
+        deferCameraSwitch: true,
+      },
+    ],
+    ["scheduleResumeLive", "preview-camera-select-same-camera"],
+    ["loadWindow", true],
   ]);
 });
 

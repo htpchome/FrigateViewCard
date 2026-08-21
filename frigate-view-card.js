@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1605";
+const VERSION = "1.0.1606";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -16395,8 +16395,9 @@ const PreviewPageController = class {
       if (hasLiveVideo) {
         this._host._scheduleResumeLive?.("preview-camera-select-same-camera");
       } else {
-        this._host._mountEngine?.(null, { quiet: true });
+        this._host._mountEngine?.();
       }
+      void this._host._browseWindowLoaderController?.loadWindow?.(true);
       return;
     }
     void this._host._switchCamera(idx, { source: "preview-camera-select" });

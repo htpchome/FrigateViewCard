@@ -427,8 +427,11 @@ export class PreviewPageController {
       if (hasLiveVideo) {
         this._host._scheduleResumeLive?.("preview-camera-select-same-camera");
       } else {
-        this._host._mountEngine?.(null, { quiet: true });
+        this._host._mountEngine?.();
       }
+      // Preview startup skips browse loading, while other tiles load through
+      // the normal camera-switch path.
+      void this._host._browseWindowLoaderController?.loadWindow?.(true);
       return;
     }
 
