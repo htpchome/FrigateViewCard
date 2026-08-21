@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1607";
+const VERSION = "1.0.1608";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -16723,6 +16723,10 @@ const DeepLinkController = class {
   }
   hasPendingDeepLinkTarget() {
     if (!this.isDeepLinkCandidateForCard()) return false;
+    return this.hasParsedDeepLinkTarget();
+  }
+  hasParsedDeepLinkTarget() {
+    if (!this.isDeepLinkHandlingEnabled()) return false;
     return !!(this._host._deepLinkEventId || this._host._deepLinkReviewId || this._host._deepLinkCameraHint);
   }
 };
@@ -21473,12 +21477,16 @@ const FrigateViewCard = class extends HTMLElement {
       this._deepLinkController.initDeepLinkFromUrl();
     }
     this._pageNavigationController.prepareConfiguredLandingPageShell({
-      hasPendingDeepLinkTarget: this._deepLinkController.hasPendingDeepLinkTarget()
+      hasPendingDeepLinkTarget: this._deepLinkController.hasParsedDeepLinkTarget()
     });
     await this._discoverAll();
     if (deepLinkHandlingEnabled) {
       this._deepLinkController.applyDeepLinkCameraHint();
     }
+    const hasPendingDeepLinkTarget = this._deepLinkController.hasPendingDeepLinkTarget();
+    this._pageNavigationController.prepareConfiguredLandingPageShell({
+      hasPendingDeepLinkTarget
+    });
     const now = Math.floor(Date.now() / 1e3);
     this._followNowWindow = true;
     this._winEnd = now;
@@ -21490,7 +21498,7 @@ const FrigateViewCard = class extends HTMLElement {
       source: "startup",
       startup: true,
       startInGrid,
-      hasPendingDeepLinkTarget: this._deepLinkController.hasPendingDeepLinkTarget()
+      hasPendingDeepLinkTarget
     });
     await initialLoad;
     void this._prefetchCalendarActivityForActiveCamera();

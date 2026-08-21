@@ -200,6 +200,11 @@ export class DeepLinkController {
 
   hasPendingDeepLinkTarget() {
     if (!this.isDeepLinkCandidateForCard()) return false;
+    return this.hasParsedDeepLinkTarget();
+  }
+
+  hasParsedDeepLinkTarget() {
+    if (!this.isDeepLinkHandlingEnabled()) return false;
     return !!(
       this._host._deepLinkEventId ||
       this._host._deepLinkReviewId ||

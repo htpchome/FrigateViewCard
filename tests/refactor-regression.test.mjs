@@ -542,20 +542,32 @@ test("window loads use loading-state guard", () => {
 });
 
 test("startup resolves initial page through the navigation factory", () => {
-  const prepareShellIndex = cardSource.indexOf(
+  const provisionalShellIndex = cardSource.indexOf(
     "this._pageNavigationController.prepareConfiguredLandingPageShell({",
   );
   const discoverIndex = cardSource.indexOf("await this._discoverAll();");
+  const finalShellIndex = cardSource.indexOf(
+    "this._pageNavigationController.prepareConfiguredLandingPageShell({",
+    provisionalShellIndex + 1,
+  );
   const initialLoadIndex = cardSource.indexOf(
     "const initialLoad = this._browseWindowLoaderController.loadWindow(true);",
   );
   const landingPageIndex = cardSource.search(
-    /this\._pageNavigationController\.navigateToConfiguredLandingPage\([\s\S]*?source:\s*"startup"[\s\S]*?startup:\s*true[\s\S]*?startInGrid,[\s\S]*?hasPendingDeepLinkTarget:[\s\S]*?this\._deepLinkController\.hasPendingDeepLinkTarget\(\)/,
+    /this\._pageNavigationController\.navigateToConfiguredLandingPage\([\s\S]*?source:\s*"startup"[\s\S]*?startup:\s*true[\s\S]*?startInGrid,[\s\S]*?hasPendingDeepLinkTarget,/,
   );
 
-  assert.ok(prepareShellIndex >= 0);
-  assert.ok(discoverIndex > prepareShellIndex);
+  assert.ok(provisionalShellIndex >= 0);
+  assert.ok(discoverIndex > provisionalShellIndex);
+  assert.ok(finalShellIndex > discoverIndex);
+  assert.equal(
+    cardSource.includes(
+      "this._deepLinkController.hasParsedDeepLinkTarget()",
+    ),
+    true,
+  );
   assert.ok(initialLoadIndex >= 0);
+  assert.ok(initialLoadIndex > finalShellIndex);
   assert.ok(landingPageIndex > initialLoadIndex);
   assert.equal(
     cardSource.includes(

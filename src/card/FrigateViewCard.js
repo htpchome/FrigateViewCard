@@ -1578,13 +1578,20 @@ export class FrigateViewCard extends HTMLElement {
     }
     this._pageNavigationController.prepareConfiguredLandingPageShell({
       hasPendingDeepLinkTarget:
-        this._deepLinkController.hasPendingDeepLinkTarget(),
+        this._deepLinkController.hasParsedDeepLinkTarget(),
     });
 
     await this._discoverAll();
     if (deepLinkHandlingEnabled) {
       this._deepLinkController.applyDeepLinkCameraHint();
     }
+    const hasPendingDeepLinkTarget =
+      this._deepLinkController.hasPendingDeepLinkTarget();
+    // Discovery resolves Frigate camera-name hints. Reconfirm the shell so a
+    // non-matching card cannot activate a final route on the provisional one.
+    this._pageNavigationController.prepareConfiguredLandingPageShell({
+      hasPendingDeepLinkTarget,
+    });
     const now = Math.floor(Date.now() / 1000);
     this._followNowWindow = true;
     this._winEnd = now;
@@ -1597,8 +1604,7 @@ export class FrigateViewCard extends HTMLElement {
       source: "startup",
       startup: true,
       startInGrid,
-      hasPendingDeepLinkTarget:
-        this._deepLinkController.hasPendingDeepLinkTarget(),
+      hasPendingDeepLinkTarget,
     });
     await initialLoad;
     void this._prefetchCalendarActivityForActiveCamera();

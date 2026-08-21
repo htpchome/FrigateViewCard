@@ -122,6 +122,15 @@ test("initDeepLinkFromUrl and camera hint helpers populate host state", async ()
   );
 });
 
+test("parsed deep-link targets are available before camera discovery", () => {
+  const { host, controller } = createHarness();
+  host._deepLinkEventId = "event-1";
+  host._deepLinkCameraHint = "frigate-camera-not-discovered-yet";
+
+  assert.equal(controller.hasParsedDeepLinkTarget(), true);
+  assert.equal(controller.hasPendingDeepLinkTarget(), false);
+});
+
 test("consumeDeepLinkEventOpen opens event popup and clears params", async () => {
   const { host, calls, controller } = createHarness();
   let cleared = 0;
