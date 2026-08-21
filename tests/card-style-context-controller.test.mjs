@@ -235,41 +235,7 @@ test("applyCardStyle resolves percent host height and clears view-height", () =>
   );
 });
 
-test("percent height can be capped below the Home Assistant header", () => {
-  const controller = new CardStyleContextController({});
-
-  withGlobals(
-    {
-      document: global.document,
-      window: {
-        innerHeight: 900,
-        visualViewport: null,
-      },
-      getComputedStyle: global.getComputedStyle,
-    },
-    () => {
-      assert.equal(
-        controller.resolvePercentHostHeightPx({
-          ratio: 1,
-          haCardHeight: "900px",
-          headerHeight: "56px",
-          constrainToViewport: true,
-        }),
-        844,
-      );
-      assert.equal(
-        controller.resolvePercentHostHeightPx({
-          ratio: 1,
-          haCardHeight: "900px",
-          headerHeight: "56px",
-        }),
-        900,
-      );
-    },
-  );
-});
-
-test("applyCardStyle subtracts measured wrapper padding from percent height", () => {
+test("applyCardStyle fits non-tight percent height within wrapper viewport", () => {
   const hostStyleCalls = [];
   const card = {
     style: {
@@ -277,7 +243,10 @@ test("applyCardStyle subtracts measured wrapper padding from percent height", ()
       removeProperty: () => {},
     },
   };
-  const parentElement = { style: {} };
+  const parentElement = {
+    style: {},
+    getBoundingClientRect: () => ({ top: 56 }),
+  };
   const host = {
     _config: {
       stream_height: 100,
@@ -318,8 +287,8 @@ test("applyCardStyle subtracts measured wrapper padding from percent height", ()
         }
         return {
           getPropertyValue: (name) => {
-            if (name === "--ha-card-height") return "400px";
-            if (name === "--header-height") return "56px";
+            if (name === "--ha-card-height") return "";
+            if (name === "--header-height") return "0px";
             return "";
           },
         };
@@ -330,7 +299,7 @@ test("applyCardStyle subtracts measured wrapper padding from percent height", ()
     },
   );
 
-  assert.deepEqual(hostStyleCalls, [["set", "--card-host-height", "368px"]]);
+  assert.deepEqual(hostStyleCalls, [["set", "--card-host-height", "812px"]]);
 });
 
 test("percent height padding compensation preserves tight margins sizing", () => {

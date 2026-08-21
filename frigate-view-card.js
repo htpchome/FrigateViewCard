@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1631";
+const VERSION = "1.0.1632";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -17742,14 +17742,17 @@ const CardStyleContextController = class {
         const resolvedPercentHeightPx = this.resolvePercentHostHeightPx({
           ratio: Math.max(0.01, numericHeight / 100),
           haCardHeight,
-          headerHeight: hostComputedStyle.getPropertyValue("--header-height"),
-          constrainToViewport: this._host._config?.tight_margins !== true && !this._host._isPreviewContext()
+          headerHeight: hostComputedStyle.getPropertyValue("--header-height")
         });
         if (resolvedPercentHeightPx != null) {
+          const wrapperViewportHeightPx = this.resolvePercentHeightWrapperViewportPx(
+            Math.max(0.01, numericHeight / 100)
+          );
+          const constrainedHeightPx = wrapperViewportHeightPx != null ? Math.min(resolvedPercentHeightPx, wrapperViewportHeightPx) : resolvedPercentHeightPx;
           const wrapperPaddingPx = this.resolvePercentHeightWrapperPaddingPx();
           this._host.style.setProperty(
             "--card-host-height",
-            `${Math.max(1, resolvedPercentHeightPx - wrapperPaddingPx)}px`
+            `${Math.max(1, constrainedHeightPx - wrapperPaddingPx)}px`
           );
         } else {
           this._host.style.removeProperty("--card-host-height");
@@ -17787,21 +17790,30 @@ const CardStyleContextController = class {
     }
     this.syncHostOuterStyles();
   }
-  resolvePercentHostHeightPx({
-    ratio,
-    haCardHeight,
-    headerHeight,
-    constrainToViewport = false
-  }) {
+  resolvePercentHostHeightPx({ ratio, haCardHeight, headerHeight }) {
     const headerHeightPx = this.parsePxLength(headerHeight) ?? 56;
     const viewportHeightPx = Math.max(
       0,
       (window.visualViewport?.height || window.innerHeight || 0) - headerHeightPx
     );
-    const configuredReferenceHeightPx = this.parsePxLength(haCardHeight) ?? (viewportHeightPx > 0 ? viewportHeightPx : null);
-    const referenceHeightPx = constrainToViewport && viewportHeightPx > 0 ? Math.min(configuredReferenceHeightPx ?? viewportHeightPx, viewportHeightPx) : configuredReferenceHeightPx;
+    const referenceHeightPx = this.parsePxLength(haCardHeight) ?? (viewportHeightPx > 0 ? viewportHeightPx : null);
     if (referenceHeightPx == null) return null;
     return Math.max(1, referenceHeightPx * ratio);
+  }
+  resolvePercentHeightWrapperViewportPx(ratio) {
+    if (this._host._config?.tight_margins === true || this._host._isPreviewContext() || !this._host.parentElement?.getBoundingClientRect) {
+      return null;
+    }
+    const visualViewport = window.visualViewport;
+    const viewportTop = Number(visualViewport?.offsetTop) || 0;
+    const viewportHeight = Number(visualViewport?.height) || Number(window.innerHeight) || 0;
+    const wrapperTop = Number(
+      this._host.parentElement.getBoundingClientRect().top
+    );
+    if (!Number.isFinite(wrapperTop) || viewportHeight <= 0) return null;
+    const availableHeight = viewportTop + viewportHeight - Math.max(viewportTop, wrapperTop);
+    if (availableHeight <= 0) return null;
+    return Math.max(1, availableHeight * ratio);
   }
   resolvePercentHeightWrapperPaddingPx() {
     if (this._host._config?.tight_margins === true || this._host._isPreviewContext() || !this._host.parentElement) {
