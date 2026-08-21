@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1595";
+const VERSION = "1.0.1596";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -10156,6 +10156,229 @@ const PopupDragController = class {
   }
 };
 
+// src/features/popup/info.js
+const buildPopupInfoDownloadActions = ({
+  id = "",
+  mediaType = "",
+  hasClip = false,
+  hasSnapshot = false,
+  recStart = null,
+  recEnd = null
+}) => {
+  const normalizedMediaType = String(mediaType || "").toLowerCase();
+  const actions = [];
+  if (normalizedMediaType === "recording" && Number.isFinite(recStart) && Number.isFinite(recEnd)) {
+    actions.push({
+      kind: "recording",
+      label: "Download recording",
+      recStart: Math.floor(recStart),
+      recEnd: Math.floor(recEnd),
+      icon: "download"
+    });
+    return actions;
+  }
+  if (!id) return actions;
+  const currentFile = normalizedMediaType === "snapshot" ? "snapshot.jpg" : hasClip ? "clip.mp4" : hasSnapshot ? "snapshot.jpg" : "";
+  if (currentFile) {
+    actions.push({
+      kind: "event",
+      id,
+      file: currentFile,
+      label: currentFile === "snapshot.jpg" ? "Download snapshot" : "Download clip",
+      icon: currentFile === "snapshot.jpg" ? "snapshot" : "download"
+    });
+  }
+  if (hasSnapshot && currentFile !== "snapshot.jpg") {
+    actions.push({
+      kind: "event",
+      id,
+      file: "snapshot.jpg",
+      label: "Download snapshot",
+      icon: "snapshot"
+    });
+  }
+  return actions;
+};
+const buildPopupInfoModel = ({
+  event = null,
+  options = {},
+  activeCamera = "",
+  formatTime = () => "-",
+  formatWeekday = () => "-",
+  formatMonthDay = () => "-",
+  formatEventDuration = () => 1
+} = {}) => {
+  const id = event?.id || options.id || "";
+  const mediaType = options.mediaType || (event?.has_clip ? "clip" : "snapshot");
+  const hasContent = Boolean(event || id || mediaType === "recording");
+  if (!hasContent) return null;
+  const titleLabel = event?.label ? cap(event.label) : cap(mediaType || "event");
+  const score = options.score != null ? options.score : event?.top_score != null ? `${Math.round(event.top_score * 100)}%` : "-";
+  const zone = options.zone || (event?.zones?.length ? event.zones[0] : "-");
+  const objects = options.objects || (event?.data?.objects?.length ? event.data.objects.map(cap).join(", ") : event?.label ? cap(event.label) : "-");
+  const startTs = options.startTime ?? event?.start_time;
+  const time = startTs ? formatTime(startTs) : "-";
+  const dayDate = startTs ? `${formatWeekday(startTs)} - ${formatMonthDay(startTs, { ordinal: true })}` : "-";
+  const duration = options.durationSec != null ? `${Math.max(1, Math.round(options.durationSec))}s` : event ? `${formatEventDuration(event)}s` : "-";
+  const camera = String(
+    options.camera || event?.camera || activeCamera || ""
+  ).replace(/_/g, " ") || "-";
+  const hasClip = event?.has_clip ?? mediaType === "clip";
+  const hasSnapshot = event?.has_snapshot ?? mediaType === "snapshot";
+  return {
+    id,
+    mediaType,
+    titleLabel,
+    score,
+    zone,
+    objects,
+    dayDate,
+    time,
+    duration,
+    camera,
+    recStart: options.recStart,
+    recEnd: options.recEnd,
+    downloadActions: buildPopupInfoDownloadActions({
+      id,
+      mediaType,
+      hasClip,
+      hasSnapshot,
+      recStart: options.recStart,
+      recEnd: options.recEnd
+    })
+  };
+};
+const buildPopupInfoDownloadButtonMarkup = (action, icons) => {
+  const icon = icons[action.icon] || icons.download;
+  if (action.kind === "recording") {
+    return `<button class="popup-action" data-rec-dl-start="${action.recStart}" data-rec-dl-end="${action.recEnd}" title="${action.label}" aria-label="${action.label}">${icon}</button>`;
+  }
+  return `<button class="popup-action" data-dl="${action.id}" data-dl-file="${action.file}" title="${action.label}" aria-label="${action.label}">${icon}</button>`;
+};
+const buildPopupInfoMarkup = ({
+  event = null,
+  model,
+  icons = ICONS,
+  resolveLabelColor = labelColor
+} = {}) => {
+  if (!model) return { headText: "", infoHtml: "" };
+  const color = resolveLabelColor(event?.label || model.mediaType);
+  const downloadButtons = (model.downloadActions || []).map((action) => buildPopupInfoDownloadButtonMarkup(action, icons)).join("");
+  return {
+    headText: `${cap(model.mediaType || "media")} - ${model.camera} - ${model.dayDate} - ${model.time}`,
+    infoHtml: `
+          <div class="popup-info-title">
+            <span class="tb" style="background:${color}33;color:${color}">${model.titleLabel}</span>
+            ${event?.sub_label ? `<span class="subl">${event.sub_label}</span>` : ""}
+          </div>
+
+          <div class="popup-info-body">
+            <div class="popup-info-grid">
+              <div class="popup-info-row"><span class="popup-info-k">Camera</span><span class="popup-info-v">${model.camera}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Day/Date</span><span class="popup-info-v">${model.dayDate}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Time</span><span class="popup-info-v">${model.time}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Duration</span><span class="popup-info-v">${model.duration}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Objects</span><span class="popup-info-v">${model.objects}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Zone</span><span class="popup-info-v">${model.zone}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${model.score}</span></div>
+            </div>
+            <div class="popup-info-actions">${downloadButtons}</div>
+          </div>
+        `
+  };
+};
+
+// src/features/popup/info.ctrl.js
+const PopupInfoController = class {
+  constructor({
+    query,
+    getActiveCamera,
+    formatTime,
+    formatWeekday,
+    formatMonthDay,
+    formatEventDuration,
+    onResetRecordingScrub,
+    onMediaCameraChange,
+    onDownloadEvent,
+    onDownloadRecording
+  } = {}) {
+    this._query = query;
+    this._getActiveCamera = getActiveCamera;
+    this._formatTime = formatTime;
+    this._formatWeekday = formatWeekday;
+    this._formatMonthDay = formatMonthDay;
+    this._formatEventDuration = formatEventDuration;
+    this._onResetRecordingScrub = onResetRecordingScrub;
+    this._onMediaCameraChange = onMediaCameraChange;
+    this._onDownloadEvent = onDownloadEvent;
+    this._onDownloadRecording = onDownloadRecording;
+  }
+  render(event = null, options = {}) {
+    const head = this._query?.("#popup-info-head");
+    const info = this._query?.("#popup-info");
+    if (!head || !info) return null;
+    const model = buildPopupInfoModel({
+      event,
+      options,
+      activeCamera: this._getActiveCamera?.() || "",
+      formatTime: this._formatTime,
+      formatWeekday: this._formatWeekday,
+      formatMonthDay: this._formatMonthDay,
+      formatEventDuration: this._formatEventDuration
+    });
+    if (!model) {
+      this.hide();
+      return null;
+    }
+    this._onMediaCameraChange?.(model.camera);
+    if (model.mediaType !== "recording") {
+      this._onResetRecordingScrub?.();
+    }
+    const markup = buildPopupInfoMarkup({ event, model });
+    head.textContent = markup.headText;
+    head.hidden = false;
+    info.innerHTML = markup.infoHtml;
+    info.hidden = false;
+    return model;
+  }
+  hide() {
+    const head = this._query?.("#popup-info-head");
+    const info = this._query?.("#popup-info");
+    this._onResetRecordingScrub?.();
+    this._onMediaCameraChange?.("");
+    if (head) {
+      head.textContent = "";
+      head.hidden = true;
+    }
+    if (info) {
+      info.innerHTML = "";
+      info.hidden = true;
+    }
+  }
+  handleClick(event, target = event?.target) {
+    const recordingAction = target?.closest?.(
+      ".popup-action[data-rec-dl-start]"
+    );
+    if (recordingAction) {
+      event?.stopPropagation?.();
+      const start = Number(recordingAction.dataset.recDlStart);
+      const end = Number(recordingAction.dataset.recDlEnd);
+      if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
+        this._onDownloadRecording?.(start, end);
+      }
+      return true;
+    }
+    const eventAction = target?.closest?.(".popup-action[data-dl]");
+    if (!eventAction) return false;
+    event?.stopPropagation?.();
+    this._onDownloadEvent?.(
+      eventAction.dataset.dl,
+      eventAction.dataset.dlFile
+    );
+    return true;
+  }
+};
+
 // src/shared/media/controls.js
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const resolvePopupMediaControlsInitPlan = ({
@@ -10369,201 +10592,6 @@ const PopupMediaControlsController = class {
     this._progressDragging = false;
     this._controls?.classList?.remove("is-hidden");
   }
-};
-
-// src/features/popup/media.js
-const resolvePopupMediaRenderPlan = ({
-  infoOpts = null,
-  mediaType = "",
-  hasMediaElement = false,
-  html = "",
-  hasVideo = false
-}) => ({
-  popupMediaType: String(
-    infoOpts?.mediaType || mediaType || ""
-  ).toLowerCase(),
-  shouldAppendMediaElement: Boolean(hasMediaElement),
-  viewerHtml: hasMediaElement ? "" : String(html || ""),
-  controlsPlan: hasVideo ? null : resolvePopupMediaControlsInitPlan({
-    hasVideo: false
-  })
-});
-const resolvePopupMediaPostRenderPlan = ({
-  popupMediaType = "",
-  activeId = "",
-  hasVideo = false
-}) => ({
-  shouldEnsureAirPlayButton: true,
-  airPlayMediaType: popupMediaType,
-  shouldRenderInfo: true,
-  shouldInitPopupMediaControls: Boolean(hasVideo),
-  shouldResetControlsWithoutVideo: !hasVideo,
-  shouldRenderCarousel: true,
-  carouselMediaType: popupMediaType,
-  carouselActiveId: activeId,
-  shouldScheduleRotateOverlay: true,
-  shouldShowPopupControls: true
-});
-const buildPopupClipRenderPlan = ({
-  id = "",
-  opts = {},
-  infoEvent = null,
-  isIos = false,
-  includeLookupInfo = false
-}) => {
-  const mediaType = opts.mediaType || "clip";
-  return {
-    playingId: id,
-    mediaFile: isIos ? "master.m3u8" : "clip.mp4",
-    mediaType,
-    infoEvent,
-    infoOpts: includeLookupInfo ? {
-      id,
-      mediaType,
-      startTime: opts.startTime,
-      camera: opts.camera
-    } : { mediaType }
-  };
-};
-const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
-  const mediaType = opts.mediaType || "snapshot";
-  return {
-    playingId: event?.id || "",
-    mediaType,
-    infoEvent: event,
-    infoOpts: { mediaType }
-  };
-};
-const buildPopupInfoDownloadActions = ({
-  id = "",
-  mediaType = "",
-  hasClip = false,
-  hasSnapshot = false,
-  recStart = null,
-  recEnd = null
-}) => {
-  const normalizedMediaType = String(mediaType || "").toLowerCase();
-  const actions = [];
-  if (normalizedMediaType === "recording" && Number.isFinite(recStart) && Number.isFinite(recEnd)) {
-    actions.push({
-      kind: "recording",
-      label: "Download recording",
-      recStart: Math.floor(recStart),
-      recEnd: Math.floor(recEnd),
-      icon: "download"
-    });
-    return actions;
-  }
-  if (!id) return actions;
-  const currentFile = normalizedMediaType === "snapshot" ? "snapshot.jpg" : hasClip ? "clip.mp4" : hasSnapshot ? "snapshot.jpg" : "";
-  if (currentFile) {
-    actions.push({
-      kind: "event",
-      id,
-      file: currentFile,
-      label: currentFile === "snapshot.jpg" ? "Download snapshot" : "Download clip",
-      icon: currentFile === "snapshot.jpg" ? "snapshot" : "download"
-    });
-  }
-  if (hasSnapshot && currentFile !== "snapshot.jpg") {
-    actions.push({
-      kind: "event",
-      id,
-      file: "snapshot.jpg",
-      label: "Download snapshot",
-      icon: "snapshot"
-    });
-  }
-  return actions;
-};
-const buildPopupRecordingRenderPlan = ({
-  start = 0,
-  end = 0,
-  playbackPlan = {}
-}) => ({
-  popupMediaType: "recording",
-  playing: { rec: start },
-  infoEvent: null,
-  infoOpts: {
-    mediaType: "recording",
-    startTime: start,
-    durationSec: playbackPlan.clipDurationSec,
-    camera: playbackPlan.displayCamera,
-    objects: "-",
-    zone: "-",
-    score: "-",
-    recStart: start,
-    recEnd: end
-  },
-  chunkEnd: playbackPlan.chunkEnd,
-  sourceCandidates: playbackPlan.sourceCandidates || []
-});
-const buildPopupRecordingSourceAttemptPlan = ({
-  sourceCandidates = [],
-  autoplay = true
-}) => ({
-  attempts: sourceCandidates.map((path) => ({
-    path,
-    autoplay: Boolean(autoplay)
-  }))
-});
-const resolvePopupRecordingSeekListenerPlan = () => ({
-  listeners: [
-    { type: "seeking", action: "pauseForSeek" },
-    { type: "seeked", action: "resumeAfterSeek" }
-  ]
-});
-const buildPopupRecordingScrubInitPlan = ({
-  clientId = "",
-  cam = "",
-  start = 0,
-  chunkEnd = 0,
-  token = 0,
-  sourceUrl = ""
-}) => ({
-  clientId,
-  cam,
-  start,
-  end: chunkEnd,
-  token,
-  sourceUrl
-});
-const resolvePopupRecordingLoadOutcomePlan = ({
-  playable = false,
-  popupMediaType = "recording"
-}) => {
-  if (!playable) {
-    return {
-      shouldShowError: true,
-      errorHtml: '<div class="ld">Unable to load recording</div>',
-      shouldTeardownScrub: true,
-      shouldHideScrub: true,
-      shouldEnsureAirPlayButton: false,
-      shouldScheduleRotateOverlay: false,
-      shouldInitPopupMediaControls: false,
-      shouldRenderCarousel: false,
-      shouldShowPopupControls: false,
-      popupMediaType,
-      airPlayMediaType: popupMediaType,
-      carouselMediaType: "recording",
-      carouselActiveId: ""
-    };
-  }
-  return {
-    shouldShowError: false,
-    errorHtml: "",
-    shouldTeardownScrub: false,
-    shouldHideScrub: false,
-    shouldEnsureAirPlayButton: true,
-    shouldScheduleRotateOverlay: true,
-    shouldInitPopupMediaControls: true,
-    shouldRenderCarousel: true,
-    shouldShowPopupControls: true,
-    popupMediaType,
-    airPlayMediaType: popupMediaType,
-    carouselMediaType: "recording",
-    carouselActiveId: ""
-  };
 };
 
 // src/features/popup/carousel.js
@@ -16299,6 +16327,159 @@ const EditorPreviewContextController = class {
   }
 };
 
+// src/features/popup/media.js
+const resolvePopupMediaRenderPlan = ({
+  infoOpts = null,
+  mediaType = "",
+  hasMediaElement = false,
+  html = "",
+  hasVideo = false
+}) => ({
+  popupMediaType: String(
+    infoOpts?.mediaType || mediaType || ""
+  ).toLowerCase(),
+  shouldAppendMediaElement: Boolean(hasMediaElement),
+  viewerHtml: hasMediaElement ? "" : String(html || ""),
+  controlsPlan: hasVideo ? null : resolvePopupMediaControlsInitPlan({
+    hasVideo: false
+  })
+});
+const resolvePopupMediaPostRenderPlan = ({
+  popupMediaType = "",
+  activeId = "",
+  hasVideo = false
+}) => ({
+  shouldEnsureAirPlayButton: true,
+  airPlayMediaType: popupMediaType,
+  shouldRenderInfo: true,
+  shouldInitPopupMediaControls: Boolean(hasVideo),
+  shouldResetControlsWithoutVideo: !hasVideo,
+  shouldRenderCarousel: true,
+  carouselMediaType: popupMediaType,
+  carouselActiveId: activeId,
+  shouldScheduleRotateOverlay: true,
+  shouldShowPopupControls: true
+});
+const buildPopupClipRenderPlan = ({
+  id = "",
+  opts = {},
+  infoEvent = null,
+  isIos = false,
+  includeLookupInfo = false
+}) => {
+  const mediaType = opts.mediaType || "clip";
+  return {
+    playingId: id,
+    mediaFile: isIos ? "master.m3u8" : "clip.mp4",
+    mediaType,
+    infoEvent,
+    infoOpts: includeLookupInfo ? {
+      id,
+      mediaType,
+      startTime: opts.startTime,
+      camera: opts.camera
+    } : { mediaType }
+  };
+};
+const buildPopupSnapshotRenderPlan = ({ event = null, opts = {} }) => {
+  const mediaType = opts.mediaType || "snapshot";
+  return {
+    playingId: event?.id || "",
+    mediaType,
+    infoEvent: event,
+    infoOpts: { mediaType }
+  };
+};
+const buildPopupRecordingRenderPlan = ({
+  start = 0,
+  end = 0,
+  playbackPlan = {}
+}) => ({
+  popupMediaType: "recording",
+  playing: { rec: start },
+  infoEvent: null,
+  infoOpts: {
+    mediaType: "recording",
+    startTime: start,
+    durationSec: playbackPlan.clipDurationSec,
+    camera: playbackPlan.displayCamera,
+    objects: "-",
+    zone: "-",
+    score: "-",
+    recStart: start,
+    recEnd: end
+  },
+  chunkEnd: playbackPlan.chunkEnd,
+  sourceCandidates: playbackPlan.sourceCandidates || []
+});
+const buildPopupRecordingSourceAttemptPlan = ({
+  sourceCandidates = [],
+  autoplay = true
+}) => ({
+  attempts: sourceCandidates.map((path) => ({
+    path,
+    autoplay: Boolean(autoplay)
+  }))
+});
+const resolvePopupRecordingSeekListenerPlan = () => ({
+  listeners: [
+    { type: "seeking", action: "pauseForSeek" },
+    { type: "seeked", action: "resumeAfterSeek" }
+  ]
+});
+const buildPopupRecordingScrubInitPlan = ({
+  clientId = "",
+  cam = "",
+  start = 0,
+  chunkEnd = 0,
+  token = 0,
+  sourceUrl = ""
+}) => ({
+  clientId,
+  cam,
+  start,
+  end: chunkEnd,
+  token,
+  sourceUrl
+});
+const resolvePopupRecordingLoadOutcomePlan = ({
+  playable = false,
+  popupMediaType = "recording"
+}) => {
+  if (!playable) {
+    return {
+      shouldShowError: true,
+      errorHtml: '<div class="ld">Unable to load recording</div>',
+      shouldTeardownScrub: true,
+      shouldHideScrub: true,
+      shouldEnsureAirPlayButton: false,
+      shouldScheduleRotateOverlay: false,
+      shouldInitPopupMediaControls: false,
+      shouldRenderCarousel: false,
+      shouldShowPopupControls: false,
+      popupMediaType,
+      airPlayMediaType: popupMediaType,
+      carouselMediaType: "recording",
+      carouselActiveId: ""
+    };
+  }
+  return {
+    shouldShowError: false,
+    errorHtml: "",
+    shouldTeardownScrub: false,
+    shouldHideScrub: false,
+    shouldEnsureAirPlayButton: true,
+    shouldScheduleRotateOverlay: true,
+    shouldInitPopupMediaControls: true,
+    shouldRenderCarousel: true,
+    shouldShowPopupControls: true,
+    popupMediaType,
+    airPlayMediaType: popupMediaType,
+    carouselMediaType: "recording",
+    carouselActiveId: ""
+  };
+};
+
 // src/features/popup/media-loader.ctrl.js
 const SNAPSHOT_DOUBLE_TAP_DELAY_MS = 320;
 const SNAPSHOT_DOUBLE_TAP_DISTANCE_PX = 28;
@@ -16420,13 +16601,15 @@ const PopupSnapshotFullscreenController = class {
 };
 const PopupMediaLoaderController = class {
   constructor(host, deps = {}) {
+    const { infoController = host._popupInfoController, ...loaderDeps } = deps;
     this._host = host;
+    this._infoController = infoController;
     this._deps = {
       buildVideoOptionsForView,
       createVideoElement,
       mountNodeIntoSlot,
       isIOS,
-      ...deps
+      ...loaderDeps
     };
   }
   renderPopupMedia({
@@ -16478,7 +16661,7 @@ const PopupMediaLoaderController = class {
       this._host._ensurePopupPlaybackButtons(postRenderPlan.airPlayMediaType);
     }
     if (postRenderPlan.shouldRenderInfo) {
-      this._host._renderPopupInfo(infoEvent, infoOpts);
+      this._infoController?.render(infoEvent, infoOpts);
     }
     if (postRenderPlan.shouldInitPopupMediaControls) {
       this._host._initPopupMediaControls(video, this._host._popupMediaType);
@@ -16667,7 +16850,7 @@ const PopupMediaLoaderController = class {
     const seekListenerPlan = resolvePopupRecordingSeekListenerPlan();
     this._host._popupMediaType = renderPlan.popupMediaType;
     this._host._playing = renderPlan.playing;
-    this._host._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
+    this._infoController?.render(renderPlan.infoEvent, renderPlan.infoOpts);
     const viewer = this._host.shadowRoot.querySelector("#viewer");
     viewer.innerHTML = '<div class="ld">Loading\u2026</div>';
     if (this._host._playSeq !== token) return;
@@ -19416,6 +19599,24 @@ const FrigateViewCard = class extends HTMLElement {
     this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
+    this._popupInfoController = new PopupInfoController({
+      query: (selector) => this._$(selector),
+      getActiveCamera: () => this._cc().cam,
+      formatTime: (timestamp) => this._time(timestamp),
+      formatWeekday: (timestamp) => this._weekday(timestamp),
+      formatMonthDay: (timestamp, options) => this._monthDay(timestamp, options),
+      formatEventDuration: (event) => this._dur(event),
+      onResetRecordingScrub: () => {
+        this._teardownRecordingScrub();
+        const scrub = this._$("#recording-scrub");
+        if (scrub) scrub.hidden = true;
+      },
+      onMediaCameraChange: (camera) => {
+        this._popupMediaCamera = camera;
+      },
+      onDownloadEvent: (id, file) => this._download(id, file),
+      onDownloadRecording: (start, end) => this._downloadRecRange(start, end)
+    });
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._playbackTargetController = new BrowserPlaybackTargetController({
       getContext: (scope) => this._playbackTargetContext(scope),
@@ -22366,9 +22567,8 @@ const FrigateViewCard = class extends HTMLElement {
       carousel.onscroll = null;
       carousel.innerHTML = "";
     }
-    this._hidePopupInfo();
+    this._popupInfoController.hide();
     this._popupMediaType = "";
-    this._popupMediaCamera = "";
     this._playing = null;
   }
   _closePopup() {
@@ -22413,6 +22613,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._mobileCamSwitcherController.closeIfOutside(target);
     if (target.closest(".close-btn")) return this._closePopup();
     if (this._handleToolbarClick(target)) return;
+    if (this._popupInfoController.handleClick(e, target)) return;
     if (this._handleSidebarClick(target)) return;
     if (this._handleListClick(e, target)) return;
     if (this._handleEventClick(target)) return;
@@ -22641,7 +22842,7 @@ const FrigateViewCard = class extends HTMLElement {
     return this._handleRecordingsListClick(e, target);
   }
   _handleRecordingsListClick(e, target) {
-    const recDl = target.closest("[data-rec-dl-start]");
+    const recDl = target.closest(".rp[data-rec-dl-start]");
     if (recDl) {
       e.stopPropagation();
       const rs = Number(recDl.dataset.recDlStart);
@@ -22686,7 +22887,7 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handlePrimaryListItemClick(e, target) {
-    const dl = target.closest("[data-dl]");
+    const dl = target.closest(".ico[data-dl]");
     if (dl) {
       e.stopPropagation();
       this._download(dl.dataset.dl, dl.dataset.dlFile);
@@ -22787,21 +22988,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _findEventById(id) {
     return this._browseCollectionController.findEventById(id);
-  }
-  _hidePopupInfo() {
-    const head = this._$("#popup-info-head");
-    const info = this._$("#popup-info");
-    this._teardownRecordingScrub();
-    const scrub = this._$("#recording-scrub");
-    if (scrub) scrub.hidden = true;
-    if (head) {
-      head.textContent = "";
-      head.hidden = true;
-    }
-    if (info) {
-      info.innerHTML = "";
-      info.hidden = true;
-    }
   }
   _teardownRecordingScrub() {
     if (this._recordingScrubController) {
@@ -23059,92 +23245,6 @@ const FrigateViewCard = class extends HTMLElement {
       formatTime: (seconds) => this._fmtScrubTime(seconds)
     });
     this._recordingScrubController.bind();
-  }
-  _popupInfoModel(ev = null, opts = {}) {
-    const id = ev?.id || opts.id || "";
-    const mediaType = opts.mediaType || (ev?.has_clip ? "clip" : "snapshot");
-    const showWithoutEvent = mediaType === "recording";
-    const hasContent = !!ev || !!id || showWithoutEvent;
-    if (!hasContent) return null;
-    const titleLabel = ev?.label ? cap(ev.label) : cap(mediaType || "event");
-    const score = opts.score != null ? opts.score : ev?.top_score != null ? `${Math.round(ev.top_score * 100)}%` : "-";
-    const zone = opts.zone || (ev?.zones?.length ? ev.zones[0] : "-");
-    const objects = opts.objects || (ev?.data?.objects?.length ? ev.data.objects.map(cap).join(", ") : ev?.label ? cap(ev.label) : "-");
-    const startTs = opts.startTime ?? ev?.start_time;
-    const time = startTs ? this._time(startTs) : "-";
-    const dayDate = startTs ? `${this._weekday(startTs)} - ${this._monthDay(startTs, { ordinal: true })}` : "-";
-    const duration = opts.durationSec != null ? `${Math.max(1, Math.round(opts.durationSec))}s` : ev ? `${this._dur(ev)}s` : "-";
-    const camera = (opts.camera || ev?.camera || this._cc().cam || "").replace(/_/g, " ") || "-";
-    const hasClip = ev?.has_clip ?? mediaType === "clip";
-    const hasSnapshot = ev?.has_snapshot ?? mediaType === "snapshot";
-    const downloadActions = buildPopupInfoDownloadActions({
-      id,
-      mediaType,
-      hasClip,
-      hasSnapshot,
-      recStart: opts.recStart,
-      recEnd: opts.recEnd
-    });
-    return {
-      id,
-      mediaType,
-      titleLabel,
-      score,
-      zone,
-      objects,
-      dayDate,
-      time,
-      duration,
-      camera,
-      downloadActions,
-      recStart: opts.recStart,
-      recEnd: opts.recEnd
-    };
-  }
-  _renderPopupInfo(ev = null, opts = {}) {
-    const head = this._$("#popup-info-head");
-    const info = this._$("#popup-info");
-    const scrub = this._$("#recording-scrub");
-    if (!info || !head) return;
-    const model = this._popupInfoModel(ev, opts);
-    if (!model) {
-      this._popupMediaCamera = "";
-      this._hidePopupInfo();
-      return;
-    }
-    this._popupMediaCamera = model.camera;
-    if (model.mediaType !== "recording") {
-      this._teardownRecordingScrub();
-      if (scrub) scrub.hidden = true;
-    }
-    head.textContent = `${cap(model.mediaType || "media")} - ${model.camera} - ${model.dayDate} - ${model.time}`;
-    head.hidden = false;
-    const downloadButtons = (model.downloadActions || []).map((action) => {
-      if (action.kind === "recording") {
-        return `<button class="popup-action" data-rec-dl-start="${action.recStart}" data-rec-dl-end="${action.recEnd}" title="${action.label}" aria-label="${action.label}">${ICONS[action.icon] || ICONS.download}</button>`;
-      }
-      return `<button class="popup-action" data-dl="${action.id}" data-dl-file="${action.file}" title="${action.label}" aria-label="${action.label}">${ICONS[action.icon] || ICONS.download}</button>`;
-    }).join("");
-    info.innerHTML = `
-          <div class="popup-info-title">
-            <span class="tb" style="background:${labelColor(ev?.label || model.mediaType)}33;color:${labelColor(ev?.label || model.mediaType)}">${model.titleLabel}</span>
-            ${ev?.sub_label ? `<span class="subl">${ev.sub_label}</span>` : ""}
-          </div>
-
-          <div class="popup-info-body">
-            <div class="popup-info-grid">
-              <div class="popup-info-row"><span class="popup-info-k">Camera</span><span class="popup-info-v">${model.camera}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Day/Date</span><span class="popup-info-v">${model.dayDate}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Time</span><span class="popup-info-v">${model.time}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Duration</span><span class="popup-info-v">${model.duration}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Objects</span><span class="popup-info-v">${model.objects}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Zone</span><span class="popup-info-v">${model.zone}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${model.score}</span></div>
-            </div>
-            <div class="popup-info-actions">${downloadButtons}</div>
-          </div>
-        `;
-    info.hidden = false;
   }
   _setLiveMuted(muted) {
     this._streamMuted = !!muted;

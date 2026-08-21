@@ -219,8 +219,10 @@ test("_stopPopupMedia resets popup media surfaces after shared cleanup", () => {
     _isFirefox() {
       return false;
     },
-    _hidePopupInfo() {
-      calls.push(["hidePopupInfo"]);
+    _popupInfoController: {
+      hide() {
+        calls.push(["hidePopupInfo"]);
+      },
     },
     _$(selector) {
       if (selector === "#viewer") return viewer;

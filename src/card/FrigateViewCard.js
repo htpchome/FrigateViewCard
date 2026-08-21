@@ -207,6 +207,7 @@ import {
 import { ListScrollController } from "../features/browse/scroll.ctrl.js";
 import { LiveOverlayControlsController } from "./controls/live-overlay.ctrl.js";
 import { PopupDragController } from "../features/popup/drag.ctrl.js";
+import { PopupInfoController } from "../features/popup/info.ctrl.js";
 import { PopupMediaControlsController } from "../features/popup/media.ctrl.js";
 import {
   buildPopupMediaControlState,
@@ -214,19 +215,6 @@ import {
   resolvePopupMediaControlsListenerPlan,
   resolvePopupMediaSeekTarget,
 } from "../shared/media/controls.js";
-import { buildPopupMediaUrl } from "../shared/media/url-utils.js";
-import {
-  buildPopupInfoDownloadActions,
-  buildPopupClipRenderPlan,
-  buildPopupRecordingRenderPlan,
-  buildPopupRecordingScrubInitPlan,
-  buildPopupRecordingSourceAttemptPlan,
-  buildPopupSnapshotRenderPlan,
-  resolvePopupMediaPostRenderPlan,
-  resolvePopupMediaRenderPlan,
-  resolvePopupRecordingSeekListenerPlan,
-  resolvePopupRecordingLoadOutcomePlan,
-} from "../features/popup/media.js";
 import {
   buildPopupCarouselItemMarkup,
   buildPopupCarouselContentPlan,
@@ -648,6 +636,26 @@ export class FrigateViewCard extends HTMLElement {
     this._browseWindowLoaderController = new BrowseWindowLoaderController(this);
     this._cardStyleController = new CardStyleContextController(this);
     this._editorPreviewController = new EditorPreviewContextController(this);
+    this._popupInfoController = new PopupInfoController({
+      query: (selector) => this._$(selector),
+      getActiveCamera: () => this._cc().cam,
+      formatTime: (timestamp) => this._time(timestamp),
+      formatWeekday: (timestamp) => this._weekday(timestamp),
+      formatMonthDay: (timestamp, options) =>
+        this._monthDay(timestamp, options),
+      formatEventDuration: (event) => this._dur(event),
+      onResetRecordingScrub: () => {
+        this._teardownRecordingScrub();
+        const scrub = this._$("#recording-scrub");
+        if (scrub) scrub.hidden = true;
+      },
+      onMediaCameraChange: (camera) => {
+        this._popupMediaCamera = camera;
+      },
+      onDownloadEvent: (id, file) => this._download(id, file),
+      onDownloadRecording: (start, end) =>
+        this._downloadRecRange(start, end),
+    });
     this._popupMediaLoaderController = new PopupMediaLoaderController(this);
     this._playbackTargetController = new BrowserPlaybackTargetController({
       getContext: (scope) => this._playbackTargetContext(scope),
@@ -4164,9 +4172,8 @@ export class FrigateViewCard extends HTMLElement {
       carousel.onscroll = null;
       carousel.innerHTML = "";
     }
-    this._hidePopupInfo();
+    this._popupInfoController.hide();
     this._popupMediaType = "";
-    this._popupMediaCamera = "";
     this._playing = null;
   }
 
@@ -4215,6 +4222,7 @@ export class FrigateViewCard extends HTMLElement {
     this._mobileCamSwitcherController.closeIfOutside(target);
     if (target.closest(".close-btn")) return this._closePopup();
     if (this._handleToolbarClick(target)) return;
+    if (this._popupInfoController.handleClick(e, target)) return;
     if (this._handleSidebarClick(target)) return;
     if (this._handleListClick(e, target)) return;
     if (this._handleEventClick(target)) return;
@@ -4446,7 +4454,7 @@ export class FrigateViewCard extends HTMLElement {
     return this._handleRecordingsListClick(e, target);
   }
   _handleRecordingsListClick(e, target) {
-    const recDl = target.closest("[data-rec-dl-start]");
+    const recDl = target.closest(".rp[data-rec-dl-start]");
     if (recDl) {
       e.stopPropagation();
       const rs = Number(recDl.dataset.recDlStart);
@@ -4491,7 +4499,7 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handlePrimaryListItemClick(e, target) {
-    const dl = target.closest("[data-dl]");
+    const dl = target.closest(".ico[data-dl]");
     if (dl) {
       e.stopPropagation();
       this._download(dl.dataset.dl, dl.dataset.dlFile);
@@ -4608,22 +4616,6 @@ export class FrigateViewCard extends HTMLElement {
 
   _findEventById(id) {
     return this._browseCollectionController.findEventById(id);
-  }
-
-  _hidePopupInfo() {
-    const head = this._$("#popup-info-head");
-    const info = this._$("#popup-info");
-    this._teardownRecordingScrub();
-    const scrub = this._$("#recording-scrub");
-    if (scrub) scrub.hidden = true;
-    if (head) {
-      head.textContent = "";
-      head.hidden = true;
-    }
-    if (info) {
-      info.innerHTML = "";
-      info.hidden = true;
-    }
   }
 
   _teardownRecordingScrub() {
@@ -4921,123 +4913,6 @@ export class FrigateViewCard extends HTMLElement {
       formatTime: (seconds) => this._fmtScrubTime(seconds),
     });
     this._recordingScrubController.bind();
-  }
-
-  _popupInfoModel(ev = null, opts = {}) {
-    const id = ev?.id || opts.id || "";
-    const mediaType = opts.mediaType || (ev?.has_clip ? "clip" : "snapshot");
-    const showWithoutEvent = mediaType === "recording";
-    const hasContent = !!ev || !!id || showWithoutEvent;
-    if (!hasContent) return null;
-
-    const titleLabel = ev?.label ? cap(ev.label) : cap(mediaType || "event");
-    const score =
-      opts.score != null
-        ? opts.score
-        : ev?.top_score != null
-          ? `${Math.round(ev.top_score * 100)}%`
-          : "-";
-    const zone = opts.zone || (ev?.zones?.length ? ev.zones[0] : "-");
-    const objects =
-      opts.objects ||
-      (ev?.data?.objects?.length
-        ? ev.data.objects.map(cap).join(", ")
-        : ev?.label
-          ? cap(ev.label)
-          : "-");
-    const startTs = opts.startTime ?? ev?.start_time;
-    const time = startTs ? this._time(startTs) : "-";
-    const dayDate = startTs
-      ? `${this._weekday(startTs)} - ${this._monthDay(startTs, { ordinal: true })}`
-      : "-";
-    const duration =
-      opts.durationSec != null
-        ? `${Math.max(1, Math.round(opts.durationSec))}s`
-        : ev
-          ? `${this._dur(ev)}s`
-          : "-";
-    const camera =
-      (opts.camera || ev?.camera || this._cc().cam || "").replace(/_/g, " ") ||
-      "-";
-    const hasClip = ev?.has_clip ?? mediaType === "clip";
-    const hasSnapshot = ev?.has_snapshot ?? mediaType === "snapshot";
-    const downloadActions = buildPopupInfoDownloadActions({
-      id,
-      mediaType,
-      hasClip,
-      hasSnapshot,
-      recStart: opts.recStart,
-      recEnd: opts.recEnd,
-    });
-
-    return {
-      id,
-      mediaType,
-      titleLabel,
-      score,
-      zone,
-      objects,
-      dayDate,
-      time,
-      duration,
-      camera,
-      downloadActions,
-      recStart: opts.recStart,
-      recEnd: opts.recEnd,
-    };
-  }
-
-  _renderPopupInfo(ev = null, opts = {}) {
-    const head = this._$("#popup-info-head");
-    const info = this._$("#popup-info");
-    const scrub = this._$("#recording-scrub");
-    if (!info || !head) return;
-
-    const model = this._popupInfoModel(ev, opts);
-    if (!model) {
-      this._popupMediaCamera = "";
-      this._hidePopupInfo();
-      return;
-    }
-    this._popupMediaCamera = model.camera;
-
-    if (model.mediaType !== "recording") {
-      this._teardownRecordingScrub();
-      if (scrub) scrub.hidden = true;
-    }
-
-    head.textContent = `${cap(model.mediaType || "media")} - ${model.camera} - ${model.dayDate} - ${model.time}`;
-    head.hidden = false;
-
-    const downloadButtons = (model.downloadActions || [])
-      .map((action) => {
-        if (action.kind === "recording") {
-          return `<button class="popup-action" data-rec-dl-start="${action.recStart}" data-rec-dl-end="${action.recEnd}" title="${action.label}" aria-label="${action.label}">${ICONS[action.icon] || ICONS.download}</button>`;
-        }
-        return `<button class="popup-action" data-dl="${action.id}" data-dl-file="${action.file}" title="${action.label}" aria-label="${action.label}">${ICONS[action.icon] || ICONS.download}</button>`;
-      })
-      .join("");
-
-    info.innerHTML = `
-          <div class="popup-info-title">
-            <span class="tb" style="background:${labelColor(ev?.label || model.mediaType)}33;color:${labelColor(ev?.label || model.mediaType)}">${model.titleLabel}</span>
-            ${ev?.sub_label ? `<span class="subl">${ev.sub_label}</span>` : ""}
-          </div>
-
-          <div class="popup-info-body">
-            <div class="popup-info-grid">
-              <div class="popup-info-row"><span class="popup-info-k">Camera</span><span class="popup-info-v">${model.camera}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Day/Date</span><span class="popup-info-v">${model.dayDate}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Time</span><span class="popup-info-v">${model.time}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Duration</span><span class="popup-info-v">${model.duration}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Objects</span><span class="popup-info-v">${model.objects}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Zone</span><span class="popup-info-v">${model.zone}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${model.score}</span></div>
-            </div>
-            <div class="popup-info-actions">${downloadButtons}</div>
-          </div>
-        `;
-    info.hidden = false;
   }
 
   _setLiveMuted(muted) {

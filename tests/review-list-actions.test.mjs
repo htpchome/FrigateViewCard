@@ -6,7 +6,7 @@ import {
   buildReviewListItemHtml,
   buildReviewListItemModel,
 } from "../src/data/review-list.model.js";
-import { buildPopupInfoDownloadActions } from "../src/features/popup/media.js";
+import { buildPopupInfoDownloadActions } from "../src/features/popup/info.js";
 import { MOBILE_VIEW_PAGE_STYLES } from "../src/features/mobile-view/page.styles.js";
 import { STYLES } from "../src/styles.js";
 

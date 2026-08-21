@@ -146,6 +146,14 @@ const popupMediaLoaderControllerSource = fs.readFileSync(
   new URL("../src/features/popup/media-loader.ctrl.js", import.meta.url),
   "utf8",
 );
+const popupInfoControllerSource = fs.readFileSync(
+  new URL("../src/features/popup/info.ctrl.js", import.meta.url),
+  "utf8",
+);
+const popupInfoSource = fs.readFileSync(
+  new URL("../src/features/popup/info.js", import.meta.url),
+  "utf8",
+);
 const popupMediaSource = fs.readFileSync(
   new URL("../src/features/popup/media.js", import.meta.url),
   "utf8",
@@ -1605,6 +1613,44 @@ test("popup media loading delegates through the popup media loader controller", 
   assert.equal(
     /async tryRecordingSource\(\s*video,\s*src,/.test(
       popupMediaLoaderControllerSource,
+    ),
+    true,
+  );
+});
+
+test("popup info rendering and actions are owned by the popup feature", () => {
+  assert.equal(
+    cardSource.includes(
+      'import { PopupInfoController } from "../features/popup/info.ctrl.js";',
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes("this._popupInfoController = new PopupInfoController"),
+    true,
+  );
+  assert.equal(cardSource.includes("_popupInfoModel("), false);
+  assert.equal(cardSource.includes("_renderPopupInfo("), false);
+  assert.equal(cardSource.includes('class="popup-info-actions"'), false);
+  assert.equal(
+    popupInfoControllerSource.includes("export class PopupInfoController"),
+    true,
+  );
+  assert.equal(
+    popupInfoControllerSource.includes("handleClick(event, target"),
+    true,
+  );
+  assert.equal(
+    popupInfoSource.includes("export const buildPopupInfoModel"),
+    true,
+  );
+  assert.equal(
+    popupInfoSource.includes("export const buildPopupInfoMarkup"),
+    true,
+  );
+  assert.equal(
+    popupMediaLoaderControllerSource.includes(
+      "this._infoController?.render(infoEvent, infoOpts)",
     ),
     true,
   );

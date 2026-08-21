@@ -165,13 +165,15 @@ export class PopupSnapshotFullscreenController {
 
 export class PopupMediaLoaderController {
   constructor(host, deps = {}) {
+    const { infoController = host._popupInfoController, ...loaderDeps } = deps;
     this._host = host;
+    this._infoController = infoController;
     this._deps = {
       buildVideoOptionsForView,
       createVideoElement,
       mountNodeIntoSlot,
       isIOS,
-      ...deps,
+      ...loaderDeps,
     };
   }
 
@@ -226,7 +228,7 @@ export class PopupMediaLoaderController {
       this._host._ensurePopupPlaybackButtons(postRenderPlan.airPlayMediaType);
     }
     if (postRenderPlan.shouldRenderInfo) {
-      this._host._renderPopupInfo(infoEvent, infoOpts);
+      this._infoController?.render(infoEvent, infoOpts);
     }
     if (postRenderPlan.shouldInitPopupMediaControls) {
       this._host._initPopupMediaControls(video, this._host._popupMediaType);
@@ -432,7 +434,7 @@ export class PopupMediaLoaderController {
     const seekListenerPlan = resolvePopupRecordingSeekListenerPlan();
     this._host._popupMediaType = renderPlan.popupMediaType;
     this._host._playing = renderPlan.playing;
-    this._host._renderPopupInfo(renderPlan.infoEvent, renderPlan.infoOpts);
+    this._infoController?.render(renderPlan.infoEvent, renderPlan.infoOpts);
     const viewer = this._host.shadowRoot.querySelector("#viewer");
     viewer.innerHTML = '<div class="ld">Loading…</div>';
     if (this._host._playSeq !== token) return;

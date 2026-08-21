@@ -97,8 +97,9 @@ test("showRecording signs candidates and initializes popup recording playback on
     _clearPopupMediaCleanup: () => calls.push(["clearCleanup"]),
     _cc: () => ({ clientId: "frigate", cam: "front_door" }),
     _recordingPreferHls: () => false,
-    _renderPopupInfo: (_event, opts) =>
-      calls.push(["renderInfo", opts.mediaType]),
+    _popupInfoController: {
+      render: (_event, opts) => calls.push(["renderInfo", opts.mediaType]),
+    },
     shadowRoot: {
       querySelector: () => viewer,
     },
