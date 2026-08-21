@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1614";
+const VERSION = "1.0.1615";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -7299,6 +7299,9 @@ async function toggleVideoPictureInPicture({
     const doc = resolveOwnerDocument(video, documentObj);
     if (isVideoPictureInPictureActive(video, doc)) {
       await doc.exitPictureInPicture();
+      if (temporarilyAllowDisabled) {
+        disableNativePictureInPicture(video);
+      }
       return { active: false, method: support.method };
     }
     if (!temporarilyAllowDisabled) {
@@ -7306,10 +7309,26 @@ async function toggleVideoPictureInPicture({
       return { active: true, method: support.method };
     }
     enableNativePictureInPicture(video);
+    let restorePending = true;
+    const restoreSuppression = () => {
+      if (!restorePending) return;
+      restorePending = false;
+      video.removeEventListener?.(
+        "leavepictureinpicture",
+        restoreSuppression
+      );
+      disableNativePictureInPicture(video);
+    };
+    video.addEventListener?.(
+      "leavepictureinpicture",
+      restoreSuppression,
+      { once: true }
+    );
     try {
       await video.requestPictureInPicture();
-    } finally {
-      disableNativePictureInPicture(video);
+    } catch (error) {
+      restoreSuppression();
+      throw error;
     }
     return { active: true, method: support.method };
   }
@@ -24549,8 +24568,15 @@ const FrigateViewCard = class extends HTMLElement {
     const popupOpen = this._$("#myPopup")?.classList.contains("is-open") === true;
     const isFirefox = this._isFirefox();
     const liveVideo = this._livePictureInPictureVideo();
-    if (isFirefox) disableNativePictureInPicture(liveVideo);
-    else enableNativePictureInPicture(liveVideo);
+    const livePictureInPictureActive = isVideoPictureInPictureActive(
+      liveVideo,
+      liveVideo?.ownerDocument || globalThis.document || null
+    );
+    if (isFirefox && !livePictureInPictureActive) {
+      disableNativePictureInPicture(liveVideo);
+    } else {
+      enableNativePictureInPicture(liveVideo);
+    }
     const liveAllowed = this._activePageShellCapabilities().hasLivePictureInPicture && !DEVICE_PROFILE.isMobile && this._viewMode !== "grid" && !popupOpen;
     this._bindPictureInPictureButton(
       "live",
@@ -24559,8 +24585,15 @@ const FrigateViewCard = class extends HTMLElement {
     );
     const popupMediaType = this._popupLifecycleController.mediaType();
     const popupVideo = popupOpen ? this._popupMediaControlsController.video() : null;
-    if (isFirefox) disableNativePictureInPicture(popupVideo);
-    else enableNativePictureInPicture(popupVideo);
+    const popupPictureInPictureActive = isVideoPictureInPictureActive(
+      popupVideo,
+      popupVideo?.ownerDocument || globalThis.document || null
+    );
+    if (isFirefox && !popupPictureInPictureActive) {
+      disableNativePictureInPicture(popupVideo);
+    } else {
+      enableNativePictureInPicture(popupVideo);
+    }
     const popupAllowed = popupOpen && !DEVICE_PROFILE.isMobile && this._isPopupVideoMediaType(popupMediaType);
     this._bindPictureInPictureButton(
       "popup",

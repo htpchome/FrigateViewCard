@@ -143,6 +143,7 @@ import {
 } from "../shared/media/video-factory.js";
 import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
 import {
+  isVideoPictureInPictureActive,
   PictureInPictureButtonController,
   resolveVideoPictureInPictureSupport,
   toggleVideoPictureInPicture,
@@ -4889,8 +4890,15 @@ export class FrigateViewCard extends HTMLElement {
       this._$("#myPopup")?.classList.contains("is-open") === true;
     const isFirefox = this._isFirefox();
     const liveVideo = this._livePictureInPictureVideo();
-    if (isFirefox) disableNativePictureInPicture(liveVideo);
-    else enableNativePictureInPicture(liveVideo);
+    const livePictureInPictureActive = isVideoPictureInPictureActive(
+      liveVideo,
+      liveVideo?.ownerDocument || globalThis.document || null,
+    );
+    if (isFirefox && !livePictureInPictureActive) {
+      disableNativePictureInPicture(liveVideo);
+    } else {
+      enableNativePictureInPicture(liveVideo);
+    }
     const liveAllowed =
       this._activePageShellCapabilities().hasLivePictureInPicture &&
       !DEVICE_PROFILE.isMobile &&
@@ -4906,8 +4914,15 @@ export class FrigateViewCard extends HTMLElement {
     const popupVideo = popupOpen
       ? this._popupMediaControlsController.video()
       : null;
-    if (isFirefox) disableNativePictureInPicture(popupVideo);
-    else enableNativePictureInPicture(popupVideo);
+    const popupPictureInPictureActive = isVideoPictureInPictureActive(
+      popupVideo,
+      popupVideo?.ownerDocument || globalThis.document || null,
+    );
+    if (isFirefox && !popupPictureInPictureActive) {
+      disableNativePictureInPicture(popupVideo);
+    } else {
+      enableNativePictureInPicture(popupVideo);
+    }
     const popupAllowed =
       popupOpen &&
       !DEVICE_PROFILE.isMobile &&

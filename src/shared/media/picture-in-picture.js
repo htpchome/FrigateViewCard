@@ -73,6 +73,9 @@ export async function toggleVideoPictureInPicture({
     const doc = resolveOwnerDocument(video, documentObj);
     if (isVideoPictureInPictureActive(video, doc)) {
       await doc.exitPictureInPicture();
+      if (temporarilyAllowDisabled) {
+        disableNativePictureInPicture(video);
+      }
       return { active: false, method: support.method };
     }
     if (!temporarilyAllowDisabled) {
@@ -81,10 +84,26 @@ export async function toggleVideoPictureInPicture({
     }
 
     enableNativePictureInPicture(video);
+    let restorePending = true;
+    const restoreSuppression = () => {
+      if (!restorePending) return;
+      restorePending = false;
+      video.removeEventListener?.(
+        "leavepictureinpicture",
+        restoreSuppression,
+      );
+      disableNativePictureInPicture(video);
+    };
+    video.addEventListener?.(
+      "leavepictureinpicture",
+      restoreSuppression,
+      { once: true },
+    );
     try {
       await video.requestPictureInPicture();
-    } finally {
-      disableNativePictureInPicture(video);
+    } catch (error) {
+      restoreSuppression();
+      throw error;
     }
     return { active: true, method: support.method };
   }

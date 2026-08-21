@@ -93,13 +93,13 @@ test("standard PiP enters through the browser API", async () => {
   assert.deepEqual(calls, ["request"]);
 });
 
-test("Firefox PiP entry temporarily clears and then restores suppression", async () => {
+test("Firefox PiP entry restores suppression only after the session leaves", async () => {
   const attributes = new Map([["disablepictureinpicture", ""]]);
   const documentObj = {
     pictureInPictureEnabled: true,
     pictureInPictureElement: null,
   };
-  const video = {
+  const video = createEventTarget({
     ownerDocument: documentObj,
     disablePictureInPicture: true,
     setAttribute(name, value) {
@@ -116,7 +116,7 @@ test("Firefox PiP entry temporarily clears and then restores suppression", async
       assert.equal(this.hasAttribute("disablepictureinpicture"), false);
       documentObj.pictureInPictureElement = video;
     },
-  };
+  });
 
   const result = await toggleVideoPictureInPicture({
     video,
@@ -128,8 +128,15 @@ test("Firefox PiP entry temporarily clears and then restores suppression", async
     active: true,
     method: PICTURE_IN_PICTURE_METHOD_STANDARD,
   });
+  assert.equal(video.disablePictureInPicture, false);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), false);
+
+  documentObj.pictureInPictureElement = null;
+  video.dispatch("leavepictureinpicture");
+
   assert.equal(video.disablePictureInPicture, true);
   assert.equal(video.hasAttribute("disablepictureinpicture"), true);
+  assert.equal(video.listenerCount("leavepictureinpicture"), 0);
 });
 
 test("Firefox PiP entry restores suppression after a failed request", async () => {
