@@ -2,10 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  beginNativePictureInPictureAllowance,
   buildVideoOptionsForView,
   configureVideoElement,
   createVideoElement,
   disableNativePictureInPicture,
+  endNativePictureInPictureAllowance,
   enableNativePictureInPicture,
   getVideoViewDefaultOptions,
   getScopedVideoViewDefaultOptions,
@@ -136,6 +138,28 @@ test("Firefox video creation suppresses native PiP controls", () => {
 test("native PiP suppression sets both the video property and attribute", () => {
   const video = createFakeVideoElement();
 
+  assert.equal(disableNativePictureInPicture(video), true);
+  assert.equal(video.disablePictureInPicture, true);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), true);
+});
+
+test("active native PiP allowance blocks competing suppression writes", () => {
+  const video = createFakeVideoElement();
+  disableNativePictureInPicture(video);
+
+  assert.equal(beginNativePictureInPictureAllowance(video), true);
+  assert.equal(video.disablePictureInPicture, false);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), false);
+
+  assert.equal(disableNativePictureInPicture(video), false);
+  configureVideoElement(video, {
+    profile: "liveEngine",
+    navigatorObj: { userAgent: "Mozilla/5.0 Firefox/153.0" },
+  });
+  assert.equal(video.disablePictureInPicture, false);
+  assert.equal(video.hasAttribute("disablepictureinpicture"), false);
+
+  assert.equal(endNativePictureInPictureAllowance(video), true);
   assert.equal(disableNativePictureInPicture(video), true);
   assert.equal(video.disablePictureInPicture, true);
   assert.equal(video.hasAttribute("disablepictureinpicture"), true);

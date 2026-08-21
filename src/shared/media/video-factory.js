@@ -298,6 +298,12 @@ function applyVideoDatasetOptions(video, options = {}) {
   }
 }
 
+const nativePictureInPictureAllowanceVideos = new WeakSet();
+
+export function hasNativePictureInPictureAllowance(video) {
+  return !!video && nativePictureInPictureAllowanceVideos.has(video);
+}
+
 export function enableNativePictureInPicture(video) {
   if (!video) return false;
   video.disablePictureInPicture = false;
@@ -305,8 +311,23 @@ export function enableNativePictureInPicture(video) {
   return true;
 }
 
+export function beginNativePictureInPictureAllowance(video) {
+  if (!video) return false;
+  nativePictureInPictureAllowanceVideos.add(video);
+  return enableNativePictureInPicture(video);
+}
+
+export function endNativePictureInPictureAllowance(video) {
+  if (!video) return false;
+  return nativePictureInPictureAllowanceVideos.delete(video);
+}
+
 export function disableNativePictureInPicture(video) {
   if (!video) return false;
+  if (hasNativePictureInPictureAllowance(video)) {
+    enableNativePictureInPicture(video);
+    return false;
+  }
   video.disablePictureInPicture = true;
   video.setAttribute?.("disablepictureinpicture", "");
   return true;

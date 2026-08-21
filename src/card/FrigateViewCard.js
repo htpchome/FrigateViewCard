@@ -143,7 +143,6 @@ import {
 } from "../shared/media/video-factory.js";
 import { attachVideoZoom } from "../shared/media/video-zoom.ctrl.js";
 import {
-  isVideoPictureInPictureTemporarilyAllowed,
   PictureInPictureButtonController,
   resolveVideoPictureInPictureSupport,
   toggleVideoPictureInPicture,
@@ -4890,9 +4889,7 @@ export class FrigateViewCard extends HTMLElement {
       this._$("#myPopup")?.classList.contains("is-open") === true;
     const isFirefox = this._isFirefox();
     const liveVideo = this._livePictureInPictureVideo();
-    const livePictureInPictureTemporarilyAllowed =
-      isVideoPictureInPictureTemporarilyAllowed(liveVideo);
-    if (isFirefox && !livePictureInPictureTemporarilyAllowed) {
+    if (isFirefox) {
       disableNativePictureInPicture(liveVideo);
     } else {
       enableNativePictureInPicture(liveVideo);
@@ -4912,9 +4909,7 @@ export class FrigateViewCard extends HTMLElement {
     const popupVideo = popupOpen
       ? this._popupMediaControlsController.video()
       : null;
-    const popupPictureInPictureTemporarilyAllowed =
-      isVideoPictureInPictureTemporarilyAllowed(popupVideo);
-    if (isFirefox && !popupPictureInPictureTemporarilyAllowed) {
+    if (isFirefox) {
       disableNativePictureInPicture(popupVideo);
     } else {
       enableNativePictureInPicture(popupVideo);
