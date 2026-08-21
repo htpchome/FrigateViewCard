@@ -235,6 +235,123 @@ test("applyCardStyle resolves percent host height and clears view-height", () =>
   );
 });
 
+test("applyCardStyle subtracts measured wrapper padding from percent height", () => {
+  const hostStyleCalls = [];
+  const card = {
+    style: {
+      setProperty: () => {},
+      removeProperty: () => {},
+    },
+  };
+  const parentElement = { style: {} };
+  const host = {
+    _config: {
+      stream_height: 100,
+      stream_height_unit: "%",
+      compact_preview: false,
+      tight_margins: false,
+      theme: "default",
+    },
+    _isPreviewContext: () => false,
+    parentElement,
+    shadowRoot: {
+      querySelector: () => card,
+    },
+    style: {
+      setProperty: (name, value) => hostStyleCalls.push(["set", name, value]),
+      removeProperty: (name) => hostStyleCalls.push(["remove", name]),
+    },
+  };
+  const controller = new CardStyleContextController(host);
+  controller.applyTightMargins = () => {};
+  controller.syncHostOuterStyles = () => {};
+
+  withGlobals(
+    {
+      document: global.document,
+      window: {
+        innerHeight: 900,
+        visualViewport: null,
+      },
+      getComputedStyle: (element) => {
+        if (element === parentElement) {
+          return {
+            boxSizing: "border-box",
+            paddingTop: "12px",
+            paddingBottom: "20px",
+            getPropertyValue: () => "",
+          };
+        }
+        return {
+          getPropertyValue: (name) => {
+            if (name === "--ha-card-height") return "400px";
+            if (name === "--header-height") return "56px";
+            return "";
+          },
+        };
+      },
+    },
+    () => {
+      controller.applyCardStyle();
+    },
+  );
+
+  assert.deepEqual(hostStyleCalls, [["set", "--card-host-height", "368px"]]);
+});
+
+test("percent height padding compensation preserves tight margins sizing", () => {
+  const parentElement = {};
+  const host = {
+    _config: { tight_margins: true },
+    _isPreviewContext: () => false,
+    parentElement,
+  };
+  const controller = new CardStyleContextController(host);
+  let measured = false;
+
+  withGlobals(
+    {
+      document: global.document,
+      window: global.window,
+      getComputedStyle: () => {
+        measured = true;
+        return {};
+      },
+    },
+    () => {
+      assert.equal(controller.resolvePercentHeightWrapperPaddingPx(), 0);
+    },
+  );
+
+  assert.equal(measured, false);
+});
+
+test("percent height padding compensation skips content-box wrappers", () => {
+  const parentElement = {};
+  const host = {
+    _config: { tight_margins: false },
+    _isPreviewContext: () => false,
+    parentElement,
+  };
+  const controller = new CardStyleContextController(host);
+
+  withGlobals(
+    {
+      document: global.document,
+      window: global.window,
+      getComputedStyle: () => ({
+        boxSizing: "content-box",
+        paddingTop: "12px",
+        paddingBottom: "20px",
+        getPropertyValue: () => "content-box",
+      }),
+    },
+    () => {
+      assert.equal(controller.resolvePercentHeightWrapperPaddingPx(), 0);
+    },
+  );
+});
+
 test("applyCardStyle applies custom theme overrides and default removals", () => {
   const cardCalls = [];
   const card = {

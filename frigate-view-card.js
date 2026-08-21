@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1629";
+const VERSION = "1.0.1630";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -17745,9 +17745,10 @@ const CardStyleContextController = class {
           headerHeight: hostComputedStyle.getPropertyValue("--header-height")
         });
         if (resolvedPercentHeightPx != null) {
+          const wrapperPaddingPx = this.resolvePercentHeightWrapperPaddingPx();
           this._host.style.setProperty(
             "--card-host-height",
-            `${resolvedPercentHeightPx}px`
+            `${Math.max(1, resolvedPercentHeightPx - wrapperPaddingPx)}px`
           );
         } else {
           this._host.style.removeProperty("--card-host-height");
@@ -17794,6 +17795,17 @@ const CardStyleContextController = class {
     const referenceHeightPx = this.parsePxLength(haCardHeight) ?? (viewportHeightPx > 0 ? viewportHeightPx : null);
     if (referenceHeightPx == null) return null;
     return Math.max(1, referenceHeightPx * ratio);
+  }
+  resolvePercentHeightWrapperPaddingPx() {
+    if (this._host._config?.tight_margins === true || this._host._isPreviewContext() || !this._host.parentElement) {
+      return 0;
+    }
+    const wrapperStyle = getComputedStyle(this._host.parentElement);
+    const boxSizing = wrapperStyle.boxSizing || wrapperStyle.getPropertyValue("box-sizing").trim();
+    if (boxSizing !== "border-box") return 0;
+    const paddingTop = this.parsePxLength(wrapperStyle.paddingTop) ?? 0;
+    const paddingBottom = this.parsePxLength(wrapperStyle.paddingBottom) ?? 0;
+    return Math.max(0, paddingTop + paddingBottom);
   }
   parsePxLength(value) {
     const match = /^(-?\d+(?:\.\d+)?)px$/i.exec(String(value || "").trim());
