@@ -20,12 +20,14 @@ export const resolveRotateOverlayPresentation = ({
   const orientation = manualApplies
     ? manualOrientation
     : physicalOrientation;
-  const swapped = orientation !== physicalOrientation;
   const active = Boolean(
     isMobileTabletViewport &&
       surfaceMode !== "none" &&
-      (isLandscapeViewport || swapped),
+      (manualApplies
+        ? orientation === "landscape"
+        : isLandscapeViewport),
   );
+  const swapped = active && orientation !== physicalOrientation;
   return {
     active,
     mode: active ? surfaceMode : "none",
@@ -38,6 +40,38 @@ export const resolveRotateOverlayPresentation = ({
 
 export const resolveRotateOverlayTargetMode = (options = {}) => {
   return resolveRotateOverlayPresentation(options).mode;
+};
+
+export const resolveRotateOverlayTogglePlan = ({
+  targetMode = "live",
+  isLandscapeViewport = false,
+  manualOrientation = "auto",
+  manualOrientationTarget = "none",
+} = {}) => {
+  const normalizedTarget = targetMode === "popup" ? "popup" : "live";
+  const physicalOrientation = isLandscapeViewport
+    ? "landscape"
+    : "portrait";
+  const manualApplies =
+    manualOrientationTarget === normalizedTarget &&
+    ["landscape", "portrait"].includes(manualOrientation);
+  const currentOrientation = manualApplies
+    ? manualOrientation
+    : physicalOrientation;
+  const nextOrientation =
+    currentOrientation === "landscape" ? "portrait" : "landscape";
+  const returnsToAuto = nextOrientation === physicalOrientation;
+
+  return {
+    targetMode: normalizedTarget,
+    nextOrientation,
+    manualOrientation: returnsToAuto ? "auto" : nextOrientation,
+    manualOrientationTarget: returnsToAuto ? "none" : normalizedTarget,
+    enterFullscreen:
+      physicalOrientation === "portrait" &&
+      nextOrientation === "landscape",
+    exitFullscreen: nextOrientation === "portrait",
+  };
 };
 
 export const resolveRotateOverlayState = ({

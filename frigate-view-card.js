@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1620";
+const VERSION = "1.0.1621";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -994,8 +994,8 @@ const STYLES = `
   #live-stage:-webkit-full-screen .live-pip-btn,
   #live-stage:fullscreen .live-fs-btn,
   #live-stage:-webkit-full-screen .live-fs-btn,
-  #viewer:fullscreen .overlay-controls,
-  #viewer:-webkit-full-screen .overlay-controls{display:none !important;}
+  #viewer:fullscreen .popup-fs-btn,
+  #viewer:-webkit-full-screen .popup-fs-btn{display:none !important;}
   #live-stage:fullscreen,
   #live-stage:-webkit-full-screen{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#000;}
   #live-stage:fullscreen #eng-wrap,
@@ -6582,10 +6582,10 @@ const resolveRotateOverlayPresentation = ({
   const physicalOrientation = isLandscapeViewport ? "landscape" : "portrait";
   const manualApplies = manualOrientationTarget === surfaceMode && ["landscape", "portrait"].includes(manualOrientation);
   const orientation = manualApplies ? manualOrientation : physicalOrientation;
-  const swapped = orientation !== physicalOrientation;
   const active = Boolean(
-    isMobileTabletViewport && surfaceMode !== "none" && (isLandscapeViewport || swapped)
+    isMobileTabletViewport && surfaceMode !== "none" && (manualApplies ? orientation === "landscape" : isLandscapeViewport)
   );
+  const swapped = active && orientation !== physicalOrientation;
   return {
     active,
     mode: active ? surfaceMode : "none",
@@ -6597,6 +6597,27 @@ const resolveRotateOverlayPresentation = ({
 };
 const resolveRotateOverlayTargetMode = (options = {}) => {
   return resolveRotateOverlayPresentation(options).mode;
+};
+const resolveRotateOverlayTogglePlan = ({
+  targetMode = "live",
+  isLandscapeViewport = false,
+  manualOrientation = "auto",
+  manualOrientationTarget = "none"
+} = {}) => {
+  const normalizedTarget = targetMode === "popup" ? "popup" : "live";
+  const physicalOrientation = isLandscapeViewport ? "landscape" : "portrait";
+  const manualApplies = manualOrientationTarget === normalizedTarget && ["landscape", "portrait"].includes(manualOrientation);
+  const currentOrientation = manualApplies ? manualOrientation : physicalOrientation;
+  const nextOrientation = currentOrientation === "landscape" ? "portrait" : "landscape";
+  const returnsToAuto = nextOrientation === physicalOrientation;
+  return {
+    targetMode: normalizedTarget,
+    nextOrientation,
+    manualOrientation: returnsToAuto ? "auto" : nextOrientation,
+    manualOrientationTarget: returnsToAuto ? "none" : normalizedTarget,
+    enterFullscreen: physicalOrientation === "portrait" && nextOrientation === "landscape",
+    exitFullscreen: nextOrientation === "portrait"
+  };
 };
 const resolveRotateOverlayState = ({
   isMobileTabletViewport = false,
@@ -21419,6 +21440,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._lastPhysicalLandscape = this._isLandscapeViewport();
     this._rotateOverlayRaf = 0;
     this._rotateOverlayExitT = null;
+    this._rotateOverlayFullscreenElement = null;
     this._rotateOverlaySyncVideo = null;
     this._onRotateOverlayVolumeChange = null;
     this._rotateStyledVideo = null;
@@ -21445,7 +21467,13 @@ const FrigateViewCard = class extends HTMLElement {
       }
     };
     document.addEventListener("visibilitychange", this._onDocVisibility);
-    this._onFullscreenChange = () => this._syncFullscreenButtonsVisibility();
+    this._onFullscreenChange = () => {
+      const fullscreenElement = this._rotateFullscreenElement();
+      if (this._rotateOverlayFullscreenElement && fullscreenElement !== this._rotateOverlayFullscreenElement) {
+        this._rotateOverlayFullscreenElement = null;
+      }
+      this._syncFullscreenButtonsVisibility();
+    };
     document.addEventListener("fullscreenchange", this._onFullscreenChange);
     document.addEventListener(
       "webkitfullscreenchange",
@@ -21467,6 +21495,7 @@ const FrigateViewCard = class extends HTMLElement {
         this._lastPhysicalLandscape = physicalLandscape;
         this._rotateOverlayManualOrientation = "auto";
         this._rotateOverlayManualTarget = "none";
+        if (!physicalLandscape) void this._exitRotateOverlayFullscreen();
       }
       this._scheduleRotateOverlayUpdate();
     };
@@ -22031,6 +22060,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._rotateOverlayManualOrientation = "auto";
     this._rotateOverlayManualTarget = "none";
     this._rotateOverlayOrientation = this._lastPhysicalLandscape ? "landscape" : "portrait";
+    this._rotateOverlayFullscreenElement = null;
     this._$?.("#card")?.classList?.remove?.(
       "mobile-rotate-orientation-swapped"
     );
@@ -24043,15 +24073,64 @@ const FrigateViewCard = class extends HTMLElement {
     apply();
     controlsPlan.retryDelaysMs.forEach((delay) => setTimeout(apply, delay));
   }
+  _rotateFullscreenElement() {
+    return this.shadowRoot?.fullscreenElement || this.shadowRoot?.webkitFullscreenElement || document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+  async _enterRotateOverlayFullscreen(targetMode) {
+    const target = targetMode === "popup" ? this._$("#viewer") : this._$("#live-stage");
+    if (!target) return false;
+    const current = this._rotateFullscreenElement();
+    if (current) return current === target;
+    const request = target.requestFullscreen || target.webkitRequestFullscreen;
+    if (typeof request !== "function") return false;
+    this._rotateOverlayFullscreenElement = target;
+    try {
+      const result = request === target.requestFullscreen ? request.call(target, { navigationUI: "hide" }) : request.call(target);
+      await result;
+      if (this._rotateOverlayFullscreenElement !== target) {
+        const entered = this._rotateFullscreenElement();
+        if (entered === target) {
+          const exit = document.exitFullscreen || document.webkitExitFullscreen;
+          await exit?.call?.(document);
+        }
+        return false;
+      }
+      return true;
+    } catch (_) {
+      if (this._rotateOverlayFullscreenElement === target) {
+        this._rotateOverlayFullscreenElement = null;
+      }
+      return false;
+    }
+  }
+  async _exitRotateOverlayFullscreen() {
+    const owned = this._rotateOverlayFullscreenElement;
+    this._rotateOverlayFullscreenElement = null;
+    if (!owned || this._rotateFullscreenElement() !== owned) return false;
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (typeof exit !== "function") return false;
+    try {
+      await exit.call(document);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
   _toggleRotateOverlay(targetMode) {
     if (!this._isMobileTabletViewport()) return;
-    const normalizedTarget = targetMode === "popup" ? "popup" : "live";
-    const physicalOrientation = this._isLandscapeViewport() ? "landscape" : "portrait";
-    const currentOrientation = this._rotateOverlayActive && this._rotateOverlayMode === normalizedTarget ? this._rotateOverlayOrientation : physicalOrientation;
-    const nextOrientation = currentOrientation === "landscape" ? "portrait" : "landscape";
-    const returnsToAuto = nextOrientation === physicalOrientation;
-    this._rotateOverlayManualOrientation = returnsToAuto ? "auto" : nextOrientation;
-    this._rotateOverlayManualTarget = returnsToAuto ? "none" : normalizedTarget;
+    const togglePlan = resolveRotateOverlayTogglePlan({
+      targetMode,
+      isLandscapeViewport: this._isLandscapeViewport(),
+      manualOrientation: this._rotateOverlayManualOrientation,
+      manualOrientationTarget: this._rotateOverlayManualTarget
+    });
+    this._rotateOverlayManualOrientation = togglePlan.manualOrientation;
+    this._rotateOverlayManualTarget = togglePlan.manualOrientationTarget;
+    if (togglePlan.enterFullscreen) {
+      void this._enterRotateOverlayFullscreen(togglePlan.targetMode);
+    } else if (togglePlan.exitFullscreen) {
+      void this._exitRotateOverlayFullscreen();
+    }
     this._scheduleRotateOverlayUpdate();
   }
   _syncRotateOverlayButtons() {
@@ -24062,8 +24141,8 @@ const FrigateViewCard = class extends HTMLElement {
     const syncButton = (button, mode, available) => {
       if (!button) return;
       const physicalOrientation = this._isLandscapeViewport() ? "landscape" : "portrait";
-      const orientation = available && this._rotateOverlayActive && this._rotateOverlayMode === mode ? this._rotateOverlayOrientation : physicalOrientation;
       const manual = available && this._rotateOverlayManualOrientation !== "auto" && this._rotateOverlayManualTarget === mode;
+      const orientation = manual ? this._rotateOverlayManualOrientation : available && this._rotateOverlayActive && this._rotateOverlayMode === mode ? this._rotateOverlayOrientation : physicalOrientation;
       const landscape = orientation === "landscape";
       const label = landscape ? "Rotate to portrait" : "Rotate to landscape";
       button.hidden = !available;
@@ -24106,6 +24185,7 @@ const FrigateViewCard = class extends HTMLElement {
     if (this._rotateOverlayManualTarget === "popup" && !popupMediaVisible) {
       this._rotateOverlayManualOrientation = "auto";
       this._rotateOverlayManualTarget = "none";
+      void this._exitRotateOverlayFullscreen();
     }
     const rotateState = resolveRotateOverlayState({
       isMobileTabletViewport: this._isMobileTabletViewport(),

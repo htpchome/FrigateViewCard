@@ -8,9 +8,59 @@ import {
   resolveRotateOverlayPresentation,
   resolveRotateOverlayState,
   resolveRotateOverlayTargetMode,
+  resolveRotateOverlayTogglePlan,
   resolveRotateOverlayUiPlan,
   resolveRotateOverlayViewportVariables,
 } from "../src/features/live/rotate-overlay-state.js";
+
+test("resolveRotateOverlayTogglePlan separates forced landscape from normal app layout", () => {
+  assert.deepEqual(
+    resolveRotateOverlayTogglePlan({
+      targetMode: "live",
+      isLandscapeViewport: false,
+    }),
+    {
+      targetMode: "live",
+      nextOrientation: "landscape",
+      manualOrientation: "landscape",
+      manualOrientationTarget: "live",
+      enterFullscreen: true,
+      exitFullscreen: false,
+    },
+  );
+
+  assert.deepEqual(
+    resolveRotateOverlayTogglePlan({
+      targetMode: "popup",
+      isLandscapeViewport: true,
+    }),
+    {
+      targetMode: "popup",
+      nextOrientation: "portrait",
+      manualOrientation: "portrait",
+      manualOrientationTarget: "popup",
+      enterFullscreen: false,
+      exitFullscreen: true,
+    },
+  );
+
+  assert.deepEqual(
+    resolveRotateOverlayTogglePlan({
+      targetMode: "popup",
+      isLandscapeViewport: true,
+      manualOrientation: "portrait",
+      manualOrientationTarget: "popup",
+    }),
+    {
+      targetMode: "popup",
+      nextOrientation: "landscape",
+      manualOrientation: "auto",
+      manualOrientationTarget: "none",
+      enterFullscreen: false,
+      exitFullscreen: false,
+    },
+  );
+});
 
 test("resolveRotateOverlayTargetMode keeps overlay off outside eligible viewport", () => {
   assert.equal(
@@ -54,7 +104,7 @@ test("resolveRotateOverlayTargetMode prioritizes popup media, otherwise live whe
   );
 });
 
-test("resolveRotateOverlayTargetMode forces the opposite presentation orientation", () => {
+test("resolveRotateOverlayTargetMode forces landscape or restores the normal app layout", () => {
   assert.equal(
     resolveRotateOverlayTargetMode({
       isMobileTabletViewport: true,
@@ -74,7 +124,7 @@ test("resolveRotateOverlayTargetMode forces the opposite presentation orientatio
       manualOrientation: "portrait",
       manualOrientationTarget: "popup",
     }),
-    "popup",
+    "none",
   );
   assert.equal(
     resolveRotateOverlayTargetMode({
@@ -102,6 +152,25 @@ test("resolveRotateOverlayTargetMode forces the opposite presentation orientatio
       physicalOrientation: "portrait",
       surfaceMode: "live",
       swapped: true,
+    },
+  );
+
+  assert.deepEqual(
+    resolveRotateOverlayPresentation({
+      isMobileTabletViewport: true,
+      isLandscapeViewport: true,
+      popupOpen: true,
+      popupMediaVisible: true,
+      manualOrientation: "portrait",
+      manualOrientationTarget: "popup",
+    }),
+    {
+      active: false,
+      mode: "none",
+      orientation: "portrait",
+      physicalOrientation: "landscape",
+      surfaceMode: "popup",
+      swapped: false,
     },
   );
 });

@@ -415,8 +415,8 @@ export const STYLES = `
   #live-stage:-webkit-full-screen .live-pip-btn,
   #live-stage:fullscreen .live-fs-btn,
   #live-stage:-webkit-full-screen .live-fs-btn,
-  #viewer:fullscreen .overlay-controls,
-  #viewer:-webkit-full-screen .overlay-controls{display:none !important;}
+  #viewer:fullscreen .popup-fs-btn,
+  #viewer:-webkit-full-screen .popup-fs-btn{display:none !important;}
   #live-stage:fullscreen,
   #live-stage:-webkit-full-screen{display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#000;}
   #live-stage:fullscreen #eng-wrap,
