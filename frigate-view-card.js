@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1630";
+const VERSION = "1.0.1631";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -17742,7 +17742,8 @@ const CardStyleContextController = class {
         const resolvedPercentHeightPx = this.resolvePercentHostHeightPx({
           ratio: Math.max(0.01, numericHeight / 100),
           haCardHeight,
-          headerHeight: hostComputedStyle.getPropertyValue("--header-height")
+          headerHeight: hostComputedStyle.getPropertyValue("--header-height"),
+          constrainToViewport: this._host._config?.tight_margins !== true && !this._host._isPreviewContext()
         });
         if (resolvedPercentHeightPx != null) {
           const wrapperPaddingPx = this.resolvePercentHeightWrapperPaddingPx();
@@ -17786,13 +17787,19 @@ const CardStyleContextController = class {
     }
     this.syncHostOuterStyles();
   }
-  resolvePercentHostHeightPx({ ratio, haCardHeight, headerHeight }) {
+  resolvePercentHostHeightPx({
+    ratio,
+    haCardHeight,
+    headerHeight,
+    constrainToViewport = false
+  }) {
     const headerHeightPx = this.parsePxLength(headerHeight) ?? 56;
     const viewportHeightPx = Math.max(
       0,
       (window.visualViewport?.height || window.innerHeight || 0) - headerHeightPx
     );
-    const referenceHeightPx = this.parsePxLength(haCardHeight) ?? (viewportHeightPx > 0 ? viewportHeightPx : null);
+    const configuredReferenceHeightPx = this.parsePxLength(haCardHeight) ?? (viewportHeightPx > 0 ? viewportHeightPx : null);
+    const referenceHeightPx = constrainToViewport && viewportHeightPx > 0 ? Math.min(configuredReferenceHeightPx ?? viewportHeightPx, viewportHeightPx) : configuredReferenceHeightPx;
     if (referenceHeightPx == null) return null;
     return Math.max(1, referenceHeightPx * ratio);
   }

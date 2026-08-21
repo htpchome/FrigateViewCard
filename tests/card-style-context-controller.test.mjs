@@ -235,6 +235,40 @@ test("applyCardStyle resolves percent host height and clears view-height", () =>
   );
 });
 
+test("percent height can be capped below the Home Assistant header", () => {
+  const controller = new CardStyleContextController({});
+
+  withGlobals(
+    {
+      document: global.document,
+      window: {
+        innerHeight: 900,
+        visualViewport: null,
+      },
+      getComputedStyle: global.getComputedStyle,
+    },
+    () => {
+      assert.equal(
+        controller.resolvePercentHostHeightPx({
+          ratio: 1,
+          haCardHeight: "900px",
+          headerHeight: "56px",
+          constrainToViewport: true,
+        }),
+        844,
+      );
+      assert.equal(
+        controller.resolvePercentHostHeightPx({
+          ratio: 1,
+          haCardHeight: "900px",
+          headerHeight: "56px",
+        }),
+        900,
+      );
+    },
+  );
+});
+
 test("applyCardStyle subtracts measured wrapper padding from percent height", () => {
   const hostStyleCalls = [];
   const card = {

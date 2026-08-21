@@ -175,6 +175,9 @@ export class CardStyleContextController {
           ratio: Math.max(0.01, numericHeight / 100),
           haCardHeight,
           headerHeight: hostComputedStyle.getPropertyValue("--header-height"),
+          constrainToViewport:
+            this._host._config?.tight_margins !== true &&
+            !this._host._isPreviewContext(),
         });
         if (resolvedPercentHeightPx != null) {
           const wrapperPaddingPx = this.resolvePercentHeightWrapperPaddingPx();
@@ -231,16 +234,25 @@ export class CardStyleContextController {
     this.syncHostOuterStyles();
   }
 
-  resolvePercentHostHeightPx({ ratio, haCardHeight, headerHeight }) {
+  resolvePercentHostHeightPx({
+    ratio,
+    haCardHeight,
+    headerHeight,
+    constrainToViewport = false,
+  }) {
     const headerHeightPx = this.parsePxLength(headerHeight) ?? 56;
     const viewportHeightPx = Math.max(
       0,
       (window.visualViewport?.height || window.innerHeight || 0) -
         headerHeightPx,
     );
-    const referenceHeightPx =
+    const configuredReferenceHeightPx =
       this.parsePxLength(haCardHeight) ??
       (viewportHeightPx > 0 ? viewportHeightPx : null);
+    const referenceHeightPx =
+      constrainToViewport && viewportHeightPx > 0
+        ? Math.min(configuredReferenceHeightPx ?? viewportHeightPx, viewportHeightPx)
+        : configuredReferenceHeightPx;
     if (referenceHeightPx == null) return null;
     return Math.max(1, referenceHeightPx * ratio);
   }
