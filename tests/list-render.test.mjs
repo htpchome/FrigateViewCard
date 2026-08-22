@@ -83,7 +83,7 @@ test("resolveOlderHintMetrics tracks browse scroll when browse is active scrolle
     clientHeight: 400,
     querySelector: () => ({ getBoundingClientRect: () => ({ height: 80 }) }),
   };
-  const browse = { scrollTop: 320 };
+  const browse = { scrollTop: 320, scrollHeight: 1200, clientHeight: 500 };
 
   const originalGetComputedStyle = globalThis.getComputedStyle;
   globalThis.getComputedStyle = () => ({ overflowY: "visible" });
@@ -91,16 +91,35 @@ test("resolveOlderHintMetrics tracks browse scroll when browse is active scrolle
     const metrics = resolveOlderHintMetrics({ list, browse });
     assert.equal(metrics.scrollTop, 320);
     assert.equal(metrics.itemHeight, 80);
+    assert.equal(metrics.hasScrollableContent, true);
     const state = resolveOlderHintState({
       tab: "clips",
       scrollTop: metrics.scrollTop,
       itemHeight: metrics.itemHeight,
+      hasScrollableContent: metrics.hasScrollableContent,
     });
     assert.equal(state.isToTop, true);
     assert.equal(state.text, "Click to return to top");
   } finally {
     globalThis.getComputedStyle = originalGetComputedStyle;
   }
+});
+
+test("older hint stays hidden until the active browse area can scroll", () => {
+  const fixedState = resolveOlderHintState({
+    tab: "clips",
+    scrollTop: 0,
+    hasScrollableContent: false,
+  });
+  const scrollableState = resolveOlderHintState({
+    tab: "clips",
+    scrollTop: 0,
+    hasScrollableContent: true,
+  });
+
+  assert.equal(fixedState.hidden, true);
+  assert.equal(scrollableState.hidden, false);
+  assert.equal(scrollableState.text, "scroll for older…");
 });
 
 test("resolveActiveDayLabelFromScroll follows labels against browse anchor", () => {

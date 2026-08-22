@@ -10,6 +10,7 @@ export class ListScrollController {
     isLoading,
     isExhausted,
     loadOlder,
+    resizeObserverCtor = globalThis.ResizeObserver,
   }) {
     this._list = list;
     this._browse = browse;
@@ -19,6 +20,8 @@ export class ListScrollController {
     this._isLoading = isLoading;
     this._isExhausted = isExhausted;
     this._loadOlder = loadOlder;
+    this._resizeObserverCtor = resizeObserverCtor;
+    this._resizeObserver = null;
     this._cleanup = new CleanupController();
   }
 
@@ -32,6 +35,19 @@ export class ListScrollController {
     if (this._browse && this._browse !== this._list) {
       this._cleanup.addEventListener(this._browse, "scroll", this._onScroll, {
         passive: true,
+      });
+    }
+    if (typeof this._resizeObserverCtor === "function") {
+      this._resizeObserver = new this._resizeObserverCtor(() => {
+        this._syncOlderHint?.();
+      });
+      if (this._list) this._resizeObserver.observe(this._list);
+      if (this._browse && this._browse !== this._list) {
+        this._resizeObserver.observe(this._browse);
+      }
+      this._cleanup.addCleanup(() => {
+        this._resizeObserver?.disconnect();
+        this._resizeObserver = null;
       });
     }
   }

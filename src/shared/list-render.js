@@ -42,6 +42,7 @@ export function resolveOlderHintState({
   tab = "",
   scrollTop = 0,
   itemHeight = 60,
+  hasScrollableContent = false,
 }) {
   if (forceHide === true) {
     return {
@@ -55,7 +56,7 @@ export function resolveOlderHintState({
   const supportsHint = ["clips", "snapshot", "alerts", "recordings"].includes(
     String(tab || ""),
   );
-  const canShowHint = forceHide !== false && supportsHint;
+  const canShowHint = supportsHint && hasScrollableContent;
   if (!canShowHint) {
     return {
       hidden: true,
@@ -78,11 +79,15 @@ export function resolveOlderHintState({
 export function resolveOlderHintMetrics({ list, browse }) {
   const scroller = resolveActiveListScroller({ list, browse });
   const scrollTop = Number(scroller?.scrollTop || 0);
+  const scrollHeight = Number(scroller?.scrollHeight || 0);
+  const clientHeight = Number(scroller?.clientHeight || 0);
   const sample = list?.querySelector(".list-item, .rev, .rec");
   const itemHeight = Number(sample?.getBoundingClientRect?.().height || 60);
   return {
     scrollTop,
     itemHeight,
+    hasScrollableContent:
+      clientHeight > 0 && scrollHeight > clientHeight + 2,
   };
 }
 
@@ -118,6 +123,7 @@ export function syncOlderHintFromScroll({
     tab,
     scrollTop: metrics.scrollTop,
     itemHeight: metrics.itemHeight,
+    hasScrollableContent: metrics.hasScrollableContent,
   });
 
   applyOlderHintDomState(hintEl, nextState);

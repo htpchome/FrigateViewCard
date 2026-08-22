@@ -125,3 +125,43 @@ test("ListScrollController disposes scroll listeners", () => {
 
   assert.equal(loadOlderCalls, 0);
 });
+
+test("ListScrollController resyncs the older hint when browse dimensions change", () => {
+  const list = createTarget();
+  const browse = createTarget();
+  const observed = [];
+  let resizeCallback = null;
+  let disconnected = false;
+  let hintSyncs = 0;
+  class FakeResizeObserver {
+    constructor(callback) {
+      resizeCallback = callback;
+    }
+
+    observe(target) {
+      observed.push(target);
+    }
+
+    disconnect() {
+      disconnected = true;
+    }
+  }
+
+  const controller = new ListScrollController({
+    list,
+    browse,
+    syncOlderHint: () => {
+      hintSyncs += 1;
+    },
+    resizeObserverCtor: FakeResizeObserver,
+  });
+
+  controller.bind();
+  resizeCallback();
+
+  assert.deepEqual(observed, [list, browse]);
+  assert.equal(hintSyncs, 1);
+
+  controller.dispose();
+  assert.equal(disconnected, true);
+});
