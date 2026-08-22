@@ -171,7 +171,7 @@ export const STYLES = `
   .list-item:hover{background: var(--c-bg-panel);}
   .list-item.compact{padding:2px 10px 2px 2px;flex-wrap:wrap;}
   .list-item.compact .et{width:112px;height:63px;border-radius:5px;}
-  .list-item.compact .eact .ico{width:30px;height:30px;}
+  .list-item.compact .eact .ico{width:30px !important;height:30px !important;}
   .list-item.compact .eact .ico svg{width:24px;height:24px;}
   .et{border-radius:var(--fvc-border-radius);overflow:hidden;flex-shrink:0;
     background:var(--c-bg-deep);position:relative;object-fit:cover;}
@@ -603,7 +603,7 @@ export const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
-  .ico{width:30px !important;height:30px !important;background:var(--c-bg-panel);padding:0px !important;}
+  .ico{min-width:30px !important;min-height:30px !important;width:30px !important;height:30px !important;background:var(--c-bg-panel);padding:0px !important;}
   .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
   @media (hover:none), (pointer:coarse) {
