@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1664";
+const VERSION = "1.0.1665";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -825,7 +825,7 @@ const STYLES = `
   border: none;
   box-shadow: 0 2px 4px var(--c-border2);
   border-radius: 50%;
-  font: 600 1.35rem/1 Arial;
+  font: 600 1.35rem/1 'Roboto', sans-serif;
   cursor: pointer;
   appearance: none;
   transition:
@@ -833,7 +833,7 @@ const STYLES = `
     box-shadow 0.2s ease,
     transform 0.12s ease;
   }
-  .round-btn svg{width:36px;height:36px;opacity:0.85;color:var(--c-text2)}
+  .round-btn svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .round-btn:hover{background-size: 210% 210%;}
   .round-btn:hover svg{color:var(--c-text);}
   .round-btn.active {transform: scale(0.95);box-shadow: 0 2px 4px var(--c-border2);background:var(--c-bg-panel);}
