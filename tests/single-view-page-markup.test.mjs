@@ -45,7 +45,7 @@ test("single view title resolver preserves the standard title fallback", () => {
 
 test("single view text resolvers preserve standard display values", () => {
   assert.equal(resolveSingleViewSubtitleText({ subtitle: "Patio" }), "Patio");
-  assert.equal(resolveSingleViewSubtitleText({}), "Frigate");
+  assert.equal(resolveSingleViewSubtitleText({}), "FrigateView");
   assert.equal(resolveSingleViewStreamTypeText("webrtc"), "webrtc");
   assert.equal(resolveSingleViewStreamTypeText(""), "--");
   assert.equal(resolveSingleViewAlertsCountText(12), "12");

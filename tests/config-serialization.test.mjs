@@ -29,6 +29,7 @@ test("editor YAML config omits normalized default values", () => {
       },
     ],
     title: "Frigate",
+    subtitle: "FrigateView",
     theme: "default",
     shadows: true,
     window_days: 3,
@@ -66,6 +67,15 @@ test("editor YAML config omits normalized default values", () => {
     cameras: [{ entity: "camera.front_door", name: "Front Door" }],
     title: "Frigate",
   });
+});
+
+test("compact YAML preserves a non-default subtitle", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    subtitle: "Frigate",
+  });
+
+  assert.equal(config.subtitle, "Frigate");
 });
 
 test("card layout controls normalize to hardened ranges and defaults", () => {

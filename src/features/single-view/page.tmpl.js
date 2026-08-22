@@ -1,4 +1,5 @@
 import { buildLivePlaybackControlsMarkup } from "../live/view.tmpl.js";
+import { DEFAULT_SUBTITLE } from "../../constants.js";
 
 function mergeClassNames(...tokens) {
   return [
@@ -61,7 +62,7 @@ export function resolveSingleViewTitleText({
 }
 
 export function resolveSingleViewSubtitleText(config) {
-  return config?.subtitle || "Frigate";
+  return config?.subtitle || DEFAULT_SUBTITLE;
 }
 
 export function resolveSingleViewStreamTypeText(streamType) {

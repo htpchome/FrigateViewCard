@@ -1,6 +1,7 @@
 import {
   VERSION,
   CARD_TAG,
+  DEFAULT_SUBTITLE,
   DAY,
   RECORDINGS_WINDOW,
   REALTIME_HEAD_POLL_MS,
@@ -1281,7 +1282,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const generalPanelContent = `
       <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
-      <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="Frigate"></ha-input>
+      <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="${DEFAULT_SUBTITLE}"></ha-input>
       <div class="section">
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
           <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">

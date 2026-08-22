@@ -1,4 +1,5 @@
 import { resolveActiveTab } from "../../helpers.js";
+import { DEFAULT_SUBTITLE } from "../../constants.js";
 export { buildLiveEngineWrapMarkup } from "../../features/live/view.tmpl.js";
 
 export function buildPageNavButtonsMarkup({
@@ -41,7 +42,7 @@ export function buildToolsRegionMarkup({ markup = "" } = {}) {
 }
 
 export function resolveSubtitleText(config) {
-  return config?.subtitle || "Frigate";
+  return config?.subtitle || DEFAULT_SUBTITLE;
 }
 
 export function buildTabsMarkup({

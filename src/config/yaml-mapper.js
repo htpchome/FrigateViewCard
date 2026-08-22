@@ -2,6 +2,7 @@ import {
   ALLOWED_HIDDEN_TABS,
   CARD_TAG,
   DEFAULT_CAMERA_CONNECTION_TYPE,
+  DEFAULT_SUBTITLE,
   GRID_ALERT_HOLD_MS,
   GRID_ROTATION_OPTIONS_SECONDS,
   REALTIME_POLL_OPTIONS_SECONDS,
@@ -169,7 +170,10 @@ export const compactEditorConfigForYaml = (
   if (cameras.length) compact.cameras = cameras;
 
   addStringIfPresent(compact, "title", source.title);
-  addStringIfPresent(compact, "subtitle", source.subtitle);
+  const subtitle = String(source.subtitle || "").trim();
+  if (subtitle && subtitle !== DEFAULT_SUBTITLE) {
+    compact.subtitle = subtitle;
+  }
 
   const windowDays = normalizePositiveInteger(source.window_days, 3);
   addIfNotDefault(compact, "window_days", windowDays, 3);

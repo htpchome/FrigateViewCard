@@ -4,8 +4,9 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1639";
+const VERSION = "1.0.1640";
 const CARD_TAG = "frigate-view-card";
+const DEFAULT_SUBTITLE = "FrigateView";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
 const EVENT_FETCH_BATCH = 100;
@@ -2498,7 +2499,10 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
   const cameras = Array.isArray(source.cameras) ? source.cameras.map(compactCameraConfigForYaml).filter(Boolean) : [];
   if (cameras.length) compact.cameras = cameras;
   addStringIfPresent(compact, "title", source.title);
-  addStringIfPresent(compact, "subtitle", source.subtitle);
+  const subtitle = String(source.subtitle || "").trim();
+  if (subtitle && subtitle !== DEFAULT_SUBTITLE) {
+    compact.subtitle = subtitle;
+  }
   const windowDays = normalizePositiveInteger2(source.window_days, 3);
   addIfNotDefault(compact, "window_days", windowDays, 3);
   const alertsReviewsDays = normalizePositiveInteger2(
@@ -3638,7 +3642,7 @@ function resolveMobileViewTitleText({
   return "Camera";
 }
 function resolveMobileViewSubtitleText(config) {
-  return config?.subtitle || "Frigate";
+  return config?.subtitle || DEFAULT_SUBTITLE;
 }
 function resolveMobileViewStreamTypeText(streamType) {
   return streamType || "--";
@@ -3714,7 +3718,7 @@ function resolveSingleViewTitleText({
   return "Camera";
 }
 function resolveSingleViewSubtitleText(config) {
-  return config?.subtitle || "Frigate";
+  return config?.subtitle || DEFAULT_SUBTITLE;
 }
 function resolveSingleViewStreamTypeText(streamType) {
   return streamType || "--";
@@ -4046,7 +4050,7 @@ function buildToolsRegionMarkup({ markup = "" } = {}) {
   return `<div class="tl-tools-slot" data-fvc-region="tools">${String(markup || "")}</div>`;
 }
 function resolveSubtitleText(config) {
-  return config?.subtitle || "Frigate";
+  return config?.subtitle || DEFAULT_SUBTITLE;
 }
 function buildTabsMarkup({
   tab,
@@ -26763,7 +26767,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       </div>`;
     const generalPanelContent = `
       <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
-      <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="Frigate"></ha-input>
+      <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="${DEFAULT_SUBTITLE}"></ha-input>
       <div class="section">
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
           <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">

@@ -1,5 +1,6 @@
 import { MOBILE_VIEW_ACTIVE_CLASS, isMobileViewRoute } from "./utils.js";
 import { buildLivePlaybackControlsMarkup } from "../live/view.tmpl.js";
+import { DEFAULT_SUBTITLE } from "../../constants.js";
 
 function buildMobileCameraOptionMarkup({
   camera,
@@ -206,7 +207,7 @@ export function resolveMobileViewTitleText({
 }
 
 export function resolveMobileViewSubtitleText(config) {
-  return config?.subtitle || "Frigate";
+  return config?.subtitle || DEFAULT_SUBTITLE;
 }
 
 export function resolveMobileViewStreamTypeText(streamType) {

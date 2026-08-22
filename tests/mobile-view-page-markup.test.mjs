@@ -50,7 +50,7 @@ test("mobile view text resolvers return stable display values", () => {
     resolveMobileViewSubtitleText({ subtitle: "Frigate" }),
     "Frigate",
   );
-  assert.equal(resolveMobileViewSubtitleText({}), "Frigate");
+  assert.equal(resolveMobileViewSubtitleText({}), "FrigateView");
   assert.equal(resolveMobileViewStreamTypeText("webrtc"), "webrtc");
   assert.equal(resolveMobileViewStreamTypeText(""), "--");
   assert.equal(resolveMobileViewAlertsCountText(12), "12");
