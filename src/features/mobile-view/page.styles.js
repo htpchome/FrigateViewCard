@@ -197,6 +197,9 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     padding: 9px 36px 9px 12px;
     border-radius: 10px;
     font-size: 1.15rem;
+    border:none;
+    box-shadow: rgba(0, 0, 0, 0.25) 0px 0.0625em 0.0625em, rgba(0, 0, 0, 0.25) 0px 0.125em 0.5em, rgba(255, 255, 255, 0.1) 0px 0px 0px 1px inset;
+    background:var(--c-bg-primary);
   }
 
   .card.mobile-view-active .mobile-cam-picker__trigger-content {

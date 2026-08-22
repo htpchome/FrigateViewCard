@@ -68,7 +68,7 @@ export function buildMobileCamSwitcherMarkup({
   return `${backButton}
     <div class="mobile-cam-picker${pickerOpen ? " is-open" : ""}" data-mobile-cam-picker>
       <button
-        class="glass-btn mobile-cam-picker__trigger"
+        class="mobile-cam-picker__trigger"
         type="button"
         aria-haspopup="listbox"
         aria-expanded="${pickerOpen ? "true" : "false"}"
