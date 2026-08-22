@@ -603,7 +603,7 @@ export const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
-  .ico{width:30px !important;height:30px !important;background:var(--c-bg-panel);}
+  .ico{width:30px !important;height:30px !important;background:var(--c-bg-panel);padding:0px !important;}
   .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
   @media (hover:none), (pointer:coarse) {
