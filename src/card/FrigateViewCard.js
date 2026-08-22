@@ -1020,6 +1020,7 @@ export class FrigateViewCard extends HTMLElement {
         height: this.parentElement.style.height,
         margin: this.parentElement.style.margin,
         padding: this.parentElement.style.padding,
+        boxSizing: this.parentElement.style.boxSizing,
       };
       this.parentElement.style.height = this._isPreviewContext()
         ? "auto"
@@ -1561,6 +1562,7 @@ export class FrigateViewCard extends HTMLElement {
       this.parentElement.style.height = this._parentOrigStyle.height;
       this.parentElement.style.margin = this._parentOrigStyle.margin;
       this.parentElement.style.padding = this._parentOrigStyle.padding;
+      this.parentElement.style.boxSizing = this._parentOrigStyle.boxSizing;
     }
     this._setSectionsRowGap(false);
     this._cleanupEngine();

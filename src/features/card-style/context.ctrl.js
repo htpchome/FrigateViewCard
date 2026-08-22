@@ -77,9 +77,17 @@ export class CardStyleContextController {
     const tightMarginsEnabled = this._host._config?.tight_margins === true;
     const inPreviewContext = this._host._isPreviewContext();
     if (this._host.parentElement) {
+      const containsPercentHeight =
+        !tightMarginsEnabled &&
+        !inPreviewContext &&
+        this._host._config?.stream_height_unit === "%" &&
+        Number(this._host._config?.stream_height) > 0;
       this._host.parentElement.style.height = inPreviewContext
         ? "auto"
         : "100%";
+      this._host.parentElement.style.boxSizing = containsPercentHeight
+        ? "border-box"
+        : this._host._parentOrigStyle?.boxSizing || "";
       if (tightMarginsEnabled) {
         this._host.parentElement.style.margin = "0";
         this._host.parentElement.style.padding = "0";

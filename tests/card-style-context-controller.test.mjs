@@ -111,11 +111,20 @@ test("applyTightMargins updates parent spacing and sections row gap", () => {
     host: null,
   };
   const parentElement = {
-    style: { height: "", margin: "8px", padding: "6px" },
+    style: {
+      height: "",
+      margin: "8px",
+      padding: "6px",
+      boxSizing: "content-box",
+    },
   };
   const host = {
     _config: { tight_margins: true },
-    _parentOrigStyle: { margin: "10px", padding: "12px" },
+    _parentOrigStyle: {
+      margin: "10px",
+      padding: "12px",
+      boxSizing: "content-box",
+    },
     _isPreviewContext: () => false,
     shadowRoot: {
       querySelector: () => ({
@@ -138,10 +147,52 @@ test("applyTightMargins updates parent spacing and sections row gap", () => {
   assert.equal(parentElement.style.height, "100%");
   assert.equal(parentElement.style.margin, "0");
   assert.equal(parentElement.style.padding, "0");
+  assert.equal(parentElement.style.boxSizing, "content-box");
   assert.deepEqual(cardToggles, [
     ["toggle", "tight-margins", true],
     ["set", "--ha-view-sections-row-gap", "0px"],
   ]);
+});
+
+test("applyTightMargins contains non-tight percent height wrapper padding", () => {
+  const parentElement = {
+    style: {
+      height: "",
+      margin: "",
+      padding: "",
+      boxSizing: "content-box",
+    },
+  };
+  const host = {
+    _config: {
+      tight_margins: false,
+      stream_height: 100,
+      stream_height_unit: "%",
+    },
+    _parentOrigStyle: {
+      margin: "8px",
+      padding: "11px",
+      boxSizing: "content-box",
+    },
+    _isPreviewContext: () => false,
+    shadowRoot: {
+      querySelector: () => ({
+        classList: { toggle: () => {} },
+      }),
+    },
+    parentElement,
+    tagName: "FRIGATE-VIEW-CARD",
+    parentNode: null,
+    host: null,
+  };
+  const controller = new CardStyleContextController(host);
+
+  controller.applyTightMargins();
+
+  assert.equal(parentElement.style.height, "100%");
+  assert.equal(parentElement.style.margin, "8px");
+  assert.equal(parentElement.style.padding, "11px");
+  assert.equal(parentElement.style.boxSizing, "border-box");
 });
 
 test("resolveCardTokenForHost measures resolved token values", () => {

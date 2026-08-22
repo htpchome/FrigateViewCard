@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1632";
+const VERSION = "1.0.1633";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -17673,7 +17673,9 @@ const CardStyleContextController = class {
     const tightMarginsEnabled = this._host._config?.tight_margins === true;
     const inPreviewContext = this._host._isPreviewContext();
     if (this._host.parentElement) {
+      const containsPercentHeight = !tightMarginsEnabled && !inPreviewContext && this._host._config?.stream_height_unit === "%" && Number(this._host._config?.stream_height) > 0;
       this._host.parentElement.style.height = inPreviewContext ? "auto" : "100%";
+      this._host.parentElement.style.boxSizing = containsPercentHeight ? "border-box" : this._host._parentOrigStyle?.boxSizing || "";
       if (tightMarginsEnabled) {
         this._host.parentElement.style.margin = "0";
         this._host.parentElement.style.padding = "0";
@@ -21624,7 +21626,8 @@ const FrigateViewCard = class extends HTMLElement {
       this._parentOrigStyle = {
         height: this.parentElement.style.height,
         margin: this.parentElement.style.margin,
-        padding: this.parentElement.style.padding
+        padding: this.parentElement.style.padding,
+        boxSizing: this.parentElement.style.boxSizing
       };
       this.parentElement.style.height = this._isPreviewContext() ? "auto" : "100%";
       this._applyTightMargins();
@@ -22066,6 +22069,7 @@ const FrigateViewCard = class extends HTMLElement {
       this.parentElement.style.height = this._parentOrigStyle.height;
       this.parentElement.style.margin = this._parentOrigStyle.margin;
       this.parentElement.style.padding = this._parentOrigStyle.padding;
+      this.parentElement.style.boxSizing = this._parentOrigStyle.boxSizing;
     }
     this._setSectionsRowGap(false);
     this._cleanupEngine();
