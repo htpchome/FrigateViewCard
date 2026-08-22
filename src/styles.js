@@ -248,7 +248,7 @@ export const STYLES = `
   border: none;
   box-shadow: 0 2px 4px var(--c-border2);
   border-radius: 50%;
-  font: 600 1.35rem/1 'Roboto', sans-serif;
+  font: 600 1.35rem/1 Arial;
   cursor: pointer;
   appearance: none;
   transition:
