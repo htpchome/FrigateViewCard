@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1641";
+const VERSION = "1.0.1642";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_SUBTITLE = "FrigateView";
 const DAY = 86400;
@@ -677,7 +677,7 @@ const STYLES = `
   .browse-head-right {display:flex;justify-content center;align-items: center;flex: 0 0 auto;}
   .browse-head-middle {flex:1;text-align:center;font-weight:700;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
 
-  .footer {display: grid;grid-template-columns: minmax(100px, 1fr) minmax(auto, 3fr) minmax(100px, 1fr);line-height:2;min-height:1.5rem;font-size:1.2rem;padding:4px;align-items: center;border-top: 1px solid var(--c-border);}
+  .footer {display: grid;grid-template-columns: minmax(100px, 1fr) minmax(auto, 3fr) minmax(100px, 1fr);line-height:2;min-height:1.5rem;font-size:1.2rem;padding:4px;align-items: center;border: 5px solid var(--c-border);}
   .footer.footer--older-hint-only{display:flex;justify-content:center;}
   .wide-footer{display:flex;justify-content:flex-start;align-items:center;line-height:2;min-height:2.5rem;font-size:2rem;padding:4px;text-align:left;}
   
@@ -796,6 +796,7 @@ const STYLES = `
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
   .more,.end{position:relative;display:flex;min-height:0;align-items:center;justify-content:center;font-size:0.85rem;color:var(--c-text2);padding:6px;}
+  .more[hidden]{display:none !important;}
   .more.to-top{position:relative;cursor:pointer;color:var(--c-text2);}
 
   /* \u2500\u2500 feed area \u2500\u2500 */
@@ -16060,10 +16061,20 @@ function resolveOlderHintMetrics({ list, browse }) {
   const clientHeight = Number(scroller?.clientHeight || 0);
   const sample = list?.querySelector(".list-item, .rev, .rec");
   const itemHeight = Number(sample?.getBoundingClientRect?.().height || 60);
+  let hasScrollableContent = clientHeight > 0 && scrollHeight > clientHeight + 2;
+  if (scroller === browse && typeof list?.getBoundingClientRect === "function" && typeof browse?.getBoundingClientRect === "function") {
+    const listRect = list.getBoundingClientRect();
+    const browseRect = browse.getBoundingClientRect();
+    const listBottom = Number(listRect?.bottom);
+    const browseBottom = Number(browseRect?.bottom);
+    if (Number.isFinite(listBottom) && Number.isFinite(browseBottom)) {
+      hasScrollableContent = scrollTop > 2 || listBottom > browseBottom + 2;
+    }
+  }
   return {
     scrollTop,
     itemHeight,
-    hasScrollableContent: clientHeight > 0 && scrollHeight > clientHeight + 2
+    hasScrollableContent
   };
 }
 function applyOlderHintDomState(hintEl, state) {

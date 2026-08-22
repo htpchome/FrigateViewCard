@@ -7,6 +7,7 @@ import {
   resolveOlderHintMetrics,
   resolveOlderHintState,
 } from "../src/shared/list-render.js";
+import { STYLES } from "../src/styles.js";
 
 test("resolveActiveListScroller prefers browse when list is not a scroll container", () => {
   const list = {
@@ -120,6 +121,35 @@ test("older hint stays hidden until the active browse area can scroll", () => {
   assert.equal(fixedState.hidden, true);
   assert.equal(scrollableState.hidden, false);
   assert.equal(scrollableState.text, "scroll for older…");
+});
+
+test("older hint ignores outer overflow when the current tab list fits", () => {
+  const list = {
+    scrollTop: 0,
+    scrollHeight: 240,
+    clientHeight: 240,
+    querySelector: () => null,
+    getBoundingClientRect: () => ({ bottom: 340 }),
+  };
+  const browse = {
+    scrollTop: 0,
+    scrollHeight: 900,
+    clientHeight: 500,
+    getBoundingClientRect: () => ({ bottom: 600 }),
+  };
+  const originalGetComputedStyle = globalThis.getComputedStyle;
+  globalThis.getComputedStyle = () => ({ overflowY: "visible" });
+
+  try {
+    const metrics = resolveOlderHintMetrics({ list, browse });
+    assert.equal(metrics.hasScrollableContent, false);
+  } finally {
+    globalThis.getComputedStyle = originalGetComputedStyle;
+  }
+});
+
+test("older hint hidden state overrides its flex presentation", () => {
+  assert.match(STYLES, /\.more\[hidden\]\{display:none !important;\}/);
 });
 
 test("resolveActiveDayLabelFromScroll follows labels against browse anchor", () => {

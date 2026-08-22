@@ -83,11 +83,27 @@ export function resolveOlderHintMetrics({ list, browse }) {
   const clientHeight = Number(scroller?.clientHeight || 0);
   const sample = list?.querySelector(".list-item, .rev, .rec");
   const itemHeight = Number(sample?.getBoundingClientRect?.().height || 60);
+  let hasScrollableContent =
+    clientHeight > 0 && scrollHeight > clientHeight + 2;
+
+  if (
+    scroller === browse &&
+    typeof list?.getBoundingClientRect === "function" &&
+    typeof browse?.getBoundingClientRect === "function"
+  ) {
+    const listRect = list.getBoundingClientRect();
+    const browseRect = browse.getBoundingClientRect();
+    const listBottom = Number(listRect?.bottom);
+    const browseBottom = Number(browseRect?.bottom);
+    if (Number.isFinite(listBottom) && Number.isFinite(browseBottom)) {
+      hasScrollableContent = scrollTop > 2 || listBottom > browseBottom + 2;
+    }
+  }
+
   return {
     scrollTop,
     itemHeight,
-    hasScrollableContent:
-      clientHeight > 0 && scrollHeight > clientHeight + 2,
+    hasScrollableContent,
   };
 }
 
