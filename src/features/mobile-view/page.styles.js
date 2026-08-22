@@ -153,18 +153,9 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   }
 
   .card.mobile-view-active .mobile-cam-picker__back {
-    width: 34px;
-    height: 34px;
-    border-radius: 999px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
   }
 
   .card.mobile-view-active .mobile-cam-picker__back svg {
-    width: 20px;
-    height: 20px;
   }
 
   .card.mobile-view-active .mobile-cam-picker {
