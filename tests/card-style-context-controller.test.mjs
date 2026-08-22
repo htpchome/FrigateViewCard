@@ -322,7 +322,7 @@ test("percent height padding compensation preserves tight margins sizing", () =>
       },
     },
     () => {
-      assert.equal(controller.resolvePercentHeightWrapperPaddingPx(), 0);
+      assert.equal(controller.resolveHeightWrapperPaddingPx(), 0);
     },
   );
 
@@ -350,7 +350,7 @@ test("percent height padding compensation skips content-box wrappers", () => {
       }),
     },
     () => {
-      assert.equal(controller.resolvePercentHeightWrapperPaddingPx(), 0);
+      assert.equal(controller.resolveHeightWrapperPaddingPx(), 0);
     },
   );
 });
@@ -390,11 +390,157 @@ test("percent height reserves measured sections view bottom padding", () => {
     },
     () => {
       assert.equal(
-        controller.resolvePercentHeightSectionsBottomPaddingPx(),
+        controller.resolveHeightSectionsBottomPaddingPx(),
         24,
       );
     },
   );
+});
+
+test("viewport height fits below the card top with tight margins", () => {
+  const parentElement = {
+    getBoundingClientRect: () => ({ top: 56 }),
+  };
+  const host = {
+    _config: { tight_margins: true },
+    _isPreviewContext: () => false,
+    parentElement,
+  };
+  const controller = new CardStyleContextController(host);
+
+  withGlobals(
+    {
+      document: global.document,
+      window: {
+        innerHeight: 1308,
+        visualViewport: {
+          height: 1308,
+          offsetTop: 0,
+        },
+      },
+      getComputedStyle: global.getComputedStyle,
+    },
+    () => {
+      assert.equal(controller.resolveViewportUnitHostHeightPx(1), 1252);
+    },
+  );
+});
+
+test("viewport height reserves non-tight sections bottom padding", () => {
+  const sectionsView = {
+    tagName: "HUI-SECTIONS-VIEW",
+    parentElement: null,
+  };
+  const sectionsContainer = {
+    tagName: "DIV",
+    parentElement: null,
+    getRootNode: () => ({ host: sectionsView }),
+  };
+  const innerContainer = {
+    tagName: "DIV",
+    parentElement: sectionsContainer,
+  };
+  const parentElement = {
+    tagName: "HUI-CARD",
+    parentElement: innerContainer,
+    getBoundingClientRect: () => ({ top: 80 }),
+  };
+  const host = {
+    _config: { tight_margins: false },
+    _isPreviewContext: () => false,
+    parentElement,
+  };
+  const controller = new CardStyleContextController(host);
+
+  withGlobals(
+    {
+      document: global.document,
+      window: {
+        innerHeight: 1308,
+        visualViewport: {
+          height: 1308,
+          offsetTop: 0,
+        },
+      },
+      getComputedStyle: (element) => ({
+        boxSizing: element === parentElement ? "content-box" : "",
+        paddingTop: "0px",
+        paddingBottom: element === sectionsContainer ? "24px" : "0px",
+        getPropertyValue: () => "",
+      }),
+    },
+    () => {
+      assert.equal(controller.resolveViewportUnitHostHeightPx(1), 1204);
+      assert.equal(controller.resolveViewportUnitHostHeightPx(0.5), 654);
+    },
+  );
+});
+
+test("applyCardStyle resolves vh and dvh units to the available viewport", () => {
+  for (const streamHeightUnit of ["vh", "dvh"]) {
+    const hostStyleCalls = [];
+    const cardStyleCalls = [];
+    const card = {
+      style: {
+        setProperty: (name, value) => cardStyleCalls.push(["set", name, value]),
+        removeProperty: (name) => cardStyleCalls.push(["remove", name]),
+      },
+    };
+    const host = {
+      _config: {
+        stream_height: 100,
+        stream_height_unit: streamHeightUnit,
+        tight_margins: true,
+        theme: "default",
+      },
+      _isPreviewContext: () => false,
+      parentElement: {
+        getBoundingClientRect: () => ({ top: 56 }),
+      },
+      shadowRoot: {
+        querySelector: () => card,
+      },
+      style: {
+        setProperty: (name, value) => hostStyleCalls.push(["set", name, value]),
+        removeProperty: (name) => hostStyleCalls.push(["remove", name]),
+      },
+    };
+    const controller = new CardStyleContextController(host);
+    controller.applyTightMargins = () => {};
+    controller.syncHostOuterStyles = () => {};
+
+    withGlobals(
+      {
+        document: global.document,
+        window: {
+          innerHeight: 1308,
+          visualViewport: {
+            height: 1308,
+            offsetTop: 0,
+          },
+        },
+        getComputedStyle: () => ({
+          getPropertyValue: () => "",
+        }),
+      },
+      () => {
+        controller.applyCardStyle();
+      },
+    );
+
+    assert.deepEqual(hostStyleCalls, [
+      ["set", "--card-host-height", "1252px"],
+    ]);
+    assert.equal(
+      cardStyleCalls.some(
+        ([action, name, value]) =>
+          action === "set" &&
+          name === "--view-height" &&
+          value === "1252px",
+      ),
+      true,
+    );
+  }
 });
 
 test("applyCardStyle applies custom theme overrides and default removals", () => {

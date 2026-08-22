@@ -164,6 +164,11 @@ export class CardStyleContextController {
       configuredHeightUnit === "%" &&
       Number.isFinite(numericHeight) &&
       numericHeight > 0;
+    const isViewportHeight =
+      (configuredHeightUnit === "vh" || configuredHeightUnit === "dvh") &&
+      Number.isFinite(numericHeight) &&
+      numericHeight > 0 &&
+      !this._host._isPreviewContext();
     const hostComputedStyle = getComputedStyle(this._host);
     const haCardHeight = hostComputedStyle
       .getPropertyValue("--ha-card-height")
@@ -185,9 +190,9 @@ export class CardStyleContextController {
             wrapperViewportHeightPx != null
               ? Math.min(resolvedPercentHeightPx, wrapperViewportHeightPx)
               : resolvedPercentHeightPx;
-          const wrapperPaddingPx = this.resolvePercentHeightWrapperPaddingPx();
+          const wrapperPaddingPx = this.resolveHeightWrapperPaddingPx();
           const sectionsBottomPaddingPx =
-            this.resolvePercentHeightSectionsBottomPaddingPx();
+            this.resolveHeightSectionsBottomPaddingPx();
           this._host.style.setProperty(
             "--card-host-height",
             `${Math.max(
@@ -201,6 +206,24 @@ export class CardStyleContextController {
           this._host.style.removeProperty("--card-host-height");
         }
         card.style.removeProperty("--view-height");
+      } else if (isViewportHeight) {
+        const resolvedViewportHeightPx = this.resolveViewportUnitHostHeightPx(
+          Math.max(0.01, numericHeight / 100),
+        );
+        if (resolvedViewportHeightPx != null) {
+          const resolvedHeightValue = `${resolvedViewportHeightPx}px`;
+          this._host.style.setProperty(
+            "--card-host-height",
+            resolvedHeightValue,
+          );
+          card.style.setProperty("--view-height", resolvedHeightValue);
+        } else {
+          this._host.style.setProperty(
+            "--card-host-height",
+            configuredHeightValue,
+          );
+          card.style.setProperty("--view-height", configuredHeightValue);
+        }
       } else {
         this._host.style.setProperty(
           "--card-host-height",
@@ -261,8 +284,33 @@ export class CardStyleContextController {
   }
 
   resolvePercentHeightWrapperViewportPx(ratio) {
+    if (this._host._config?.tight_margins === true) return null;
+    const availableHeight = this.resolveHeightWrapperViewportPx();
+    return availableHeight != null
+      ? Math.max(1, availableHeight * ratio)
+      : null;
+  }
+
+  resolveViewportUnitHostHeightPx(ratio) {
+    const viewportHeight =
+      Number(window.visualViewport?.height) || Number(window.innerHeight) || 0;
+    if (viewportHeight <= 0) return null;
+
+    const configuredHeight = viewportHeight * ratio;
+    const availableHeight = this.resolveHeightWrapperViewportPx();
+    if (availableHeight == null) return Math.max(1, configuredHeight);
+
+    const availableCardHeight = Math.max(
+      1,
+      availableHeight -
+        this.resolveHeightWrapperPaddingPx() -
+        this.resolveHeightSectionsBottomPaddingPx(),
+    );
+    return Math.max(1, Math.min(configuredHeight, availableCardHeight));
+  }
+
+  resolveHeightWrapperViewportPx() {
     if (
-      this._host._config?.tight_margins === true ||
       this._host._isPreviewContext() ||
       !this._host.parentElement?.getBoundingClientRect
     ) {
@@ -281,10 +329,10 @@ export class CardStyleContextController {
     const availableHeight =
       viewportTop + viewportHeight - Math.max(viewportTop, wrapperTop);
     if (availableHeight <= 0) return null;
-    return Math.max(1, availableHeight * ratio);
+    return Math.max(1, availableHeight);
   }
 
-  resolvePercentHeightWrapperPaddingPx() {
+  resolveHeightWrapperPaddingPx() {
     if (
       this._host._config?.tight_margins === true ||
       this._host._isPreviewContext() ||
@@ -304,7 +352,7 @@ export class CardStyleContextController {
     return Math.max(0, paddingTop + paddingBottom);
   }
 
-  resolvePercentHeightSectionsBottomPaddingPx() {
+  resolveHeightSectionsBottomPaddingPx() {
     if (
       this._host._config?.tight_margins === true ||
       this._host._isPreviewContext() ||
