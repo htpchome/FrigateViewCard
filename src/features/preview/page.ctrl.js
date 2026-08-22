@@ -12,6 +12,7 @@ import {
   buildPreviewStatusMarkup,
 } from "./page.tmpl.js";
 import { ICONS } from "../../icons.js";
+import { DEFAULT_TITLE } from "../../constants.js";
 import { cap, camDisplayName, DEVICE_PROFILE } from "../../helpers.js";
 import { buildHaCameraStreamState } from "../../integrations/home-assistant/playback.js";
 
@@ -65,19 +66,15 @@ export class PreviewPageController {
   }
 
   _previewPageTitle() {
-    return (
-      this._host._config.title ||
-      (this._host._config.cameras.length === 1
-        ? cap(camDisplayName(this._host._config.cameras[0]))
-        : "Cameras") ||
-      "Camera"
-    );
+    return String(this._host._config.title || "").trim() || DEFAULT_TITLE;
   }
 
   buildPreviewLayoutShellMarkup() {
     const previewShellHeader = buildPreviewShellHeaderMarkup({
       title: this._previewPageTitle(),
       subtitle: this._host._subtitleText(),
+      displayTitle: this._host._config.display_title !== false,
+      displaySubtitle: this._host._config.display_subtitle !== false,
       pageNav:
         this._pageNavigation()?.pageNavMarkup?.() ||
         this._host._pageNavMarkup?.() ||
@@ -195,8 +192,14 @@ export class PreviewPageController {
     if (!shell) return;
     const titleEl = this._host._$("#preview-shell-title");
     const subtitleEl = this._host._$("#preview-shell-subtitle");
-    if (titleEl) titleEl.textContent = this._previewPageTitle();
-    if (subtitleEl) subtitleEl.textContent = this._host._subtitleText();
+    if (titleEl) {
+      titleEl.hidden = this._host._config.display_title === false;
+      titleEl.textContent = this._previewPageTitle();
+    }
+    if (subtitleEl) {
+      subtitleEl.hidden = this._host._config.display_subtitle === false;
+      subtitleEl.textContent = this._host._subtitleText();
+    }
 
     const cameras = Array.isArray(this._host._config?.cameras)
       ? this._host._config.cameras.slice(0, 9)

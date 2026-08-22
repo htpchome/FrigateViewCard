@@ -156,14 +156,16 @@ export function buildToolsMarkup({
 export function buildInfoRowMarkup({
   title,
   subtitle,
+  displayTitle = true,
+  displaySubtitle = true,
   version,
   pageNav = "",
   centerActionMarkup = "",
 }) {
   return `<div class="info-row" data-fvc-region="information">
               <div class="info-left">
-                <div class="info-title" id="info-title">${title}</div>
-                <span class="section-label" id="tl-range">${subtitle}</span>
+                <div class="info-title" id="info-title" ${displayTitle ? "" : "hidden"}>${title}</div>
+                <span class="section-label" id="tl-range" ${displaySubtitle ? "" : "hidden"}>${subtitle}</span>
               </div>
               ${pageNav ? `<div class="info-row-page-nav">${pageNav}</div>` : ""}
               ${centerActionMarkup ? `<div class="info-row-action-slot" data-fvc-region="two-way-talk">${centerActionMarkup}</div>` : ""}

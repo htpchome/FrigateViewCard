@@ -1,6 +1,8 @@
 import {
   VERSION,
   CARD_TAG,
+  DEFAULT_TITLE,
+  DEFAULT_SUBTITLE,
   DAY,
   RECORDINGS_WINDOW,
   REALTIME_HEAD_POLL_MS,
@@ -1170,8 +1172,10 @@ export class FrigateViewCard extends HTMLElement {
     const legacyWindowHours = parseInt(config.window_hours, 10);
     const nextConfig = {
       cameras,
-      title: config.title || null,
-      subtitle: config.subtitle || null,
+      title: String(config.title || "").trim() || DEFAULT_TITLE,
+      subtitle: String(config.subtitle || "").trim() || DEFAULT_SUBTITLE,
+      display_title: config.display_title !== false,
+      display_subtitle: config.display_subtitle !== false,
       window_days:
         normalizePositiveInteger(config.window_days, null) ||
         (Number.isFinite(legacyWindowHours) && legacyWindowHours > 0
@@ -2917,6 +2921,7 @@ export class FrigateViewCard extends HTMLElement {
     this._syncTabsShell();
     this._renderCamSwitcher();
     this._syncStatus();
+    this._renderSubtitle();
     this._renderStats();
     this._browseFilterController.normalizeFilterSelections();
     if (this._pageShellRegion("filterPanel")?.style.display !== "none") {
@@ -3257,13 +3262,10 @@ export class FrigateViewCard extends HTMLElement {
 
   // =======================Render Shell===================================
   _renderShell() {
-    const title =
-      this._config.title ||
-      (this._config.cameras.length === 1
-        ? cap(camDisplayName(this._config.cameras[0]))
-        : "Cameras") ||
-      "Camera";
+    const title = this._config.title || DEFAULT_TITLE;
     const subtitle = this._subtitleText();
+    const displayTitle = this._config.display_title !== false;
+    const displaySubtitle = this._config.display_subtitle !== false;
     const showCamSwitcher =
       this._config.cameras.length > 1 || this._isPreviewPageEnabled();
     const camSwitcherMarkup = showCamSwitcher
@@ -3276,12 +3278,22 @@ export class FrigateViewCard extends HTMLElement {
     const infoRow = resolvePageInfoRowMarkup(shellProfile, {
       title,
       subtitle,
+      displayTitle,
+      displaySubtitle,
       version: VERSION,
       host: this,
-      buildDefaultInfoRowMarkup: ({ title, subtitle, version }) =>
+      buildDefaultInfoRowMarkup: ({
+        title,
+        subtitle,
+        displayTitle,
+        displaySubtitle,
+        version,
+      }) =>
         buildInfoRowMarkup({
           title,
           subtitle,
+          displayTitle,
+          displaySubtitle,
           version,
         }),
     });

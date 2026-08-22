@@ -1,6 +1,7 @@
 import {
   VERSION,
   CARD_TAG,
+  DEFAULT_TITLE,
   DEFAULT_SUBTITLE,
   DAY,
   RECORDINGS_WINDOW,
@@ -1052,6 +1053,8 @@ export class FrigateViewCardEditor extends HTMLElement {
     const previewUpdateSelectors = [
       "#title",
       "#subtitle",
+      "#display_title",
+      "#display_subtitle",
       "#window_days",
       "#alerts_reviews_days",
       "#realtime_poll_seconds",
@@ -1283,8 +1286,14 @@ export class FrigateViewCardEditor extends HTMLElement {
       </div>`;
 
     const generalPanelContent = `
-      <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
-      <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="${DEFAULT_SUBTITLE}"></ha-input>
+      <div class="text-display-row">
+        <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || DEFAULT_TITLE}" placeholder="${DEFAULT_TITLE}"></ha-input>
+        <label class="text-display-checkbox"><input id="display_title" type="checkbox" ${this._config?.display_title !== false ? "checked" : ""}> <span>Display</span></label>
+      </div>
+      <div class="text-display-row">
+        <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || DEFAULT_SUBTITLE}" placeholder="${DEFAULT_SUBTITLE}"></ha-input>
+        <label class="text-display-checkbox"><input id="display_subtitle" type="checkbox" ${this._config?.display_subtitle !== false ? "checked" : ""}> <span>Display</span></label>
+      </div>
       <div class="section">
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
           <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
@@ -1658,6 +1667,12 @@ export class FrigateViewCardEditor extends HTMLElement {
             .field-helper.error{color:var(--c-alert);}
             .section{border-top:1px solid var(--divider-color, #d1d5db);padding-top:16px;}
             .chk-row{display:flex;flex-wrap:wrap;gap:8px 16px;}
+            .text-display-row{display:flex;align-items:center;gap:12px;min-width:0;}
+            .text-display-row + .text-display-row{margin-top:8px;}
+            .text-display-row + .section{margin-top:12px;}
+            .text-display-row ha-input{flex:1 1 auto;min-width:0;}
+            .text-display-checkbox{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;cursor:pointer;color:var(--c-text, var(--editor-text));font-size:12px;font-weight:600;}
+            .text-display-checkbox input{margin:0;}
 
             .cam-wrap{display:flex;flex-direction:column;gap:8px;}
             .cam-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;border:var(--editor-border-width) solid var(--editor-border);border-radius:12px;padding:8px 12px;background:var(--editor-card-bg);box-shadow:var(--editor-shadow);}
@@ -2097,6 +2112,8 @@ export class FrigateViewCardEditor extends HTMLElement {
       root: this,
       ids: [
         "tight_margins",
+        "display_title",
+        "display_subtitle",
         "wide_view_page_enabled",
         "wide_view_live_cameras",
         "wide_view_alert_takeover",

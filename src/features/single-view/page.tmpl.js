@@ -1,5 +1,5 @@
 import { buildLivePlaybackControlsMarkup } from "../live/view.tmpl.js";
-import { DEFAULT_SUBTITLE } from "../../constants.js";
+import { DEFAULT_TITLE, DEFAULT_SUBTITLE } from "../../constants.js";
 
 function mergeClassNames(...tokens) {
   return [
@@ -50,19 +50,20 @@ export function buildSingleViewCamSwitcherMarkup({
 
 export function resolveSingleViewTitleText({
   title,
-  cameras = [],
+} = {}) {
+  return String(title || "").trim() || DEFAULT_TITLE;
+}
+
+export function resolveSingleViewSubtitleText({
+  subtitle,
   activeCamera = null,
   getCameraName,
 } = {}) {
-  if (title) return title;
-  if (Array.isArray(cameras) && cameras.length > 1) {
-    return getCameraName(activeCamera);
-  }
-  return "Camera";
-}
-
-export function resolveSingleViewSubtitleText(config) {
-  return config?.subtitle || DEFAULT_SUBTITLE;
+  const value = String(subtitle || "").trim();
+  if (value && value !== DEFAULT_SUBTITLE) return value;
+  return activeCamera && typeof getCameraName === "function"
+    ? getCameraName(activeCamera)
+    : "Camera";
 }
 
 export function resolveSingleViewStreamTypeText(streamType) {

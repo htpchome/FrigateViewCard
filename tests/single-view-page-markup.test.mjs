@@ -11,41 +11,49 @@ import {
   resolveSingleViewTitleText,
 } from "../src/features/single-view/page.tmpl.js";
 
-test("single view title resolver preserves the standard title fallback", () => {
-  const getCameraName = (camera) => camera?.name || "Camera";
-
+test("single view title resolver defaults to FrigateView", () => {
   assert.equal(
     resolveSingleViewTitleText({
       title: "Front Door",
-      cameras: [{ name: "Ignored" }],
-      activeCamera: { name: "Ignored" },
-      getCameraName,
     }),
     "Front Door",
   );
   assert.equal(
     resolveSingleViewTitleText({
       title: "",
-      cameras: [{ name: "Front Door" }, { name: "Driveway" }],
-      activeCamera: { name: "Driveway" },
+    }),
+    "FrigateView",
+  );
+});
+
+test("single view subtitle resolves the active camera token", () => {
+  const activeCamera = { name: "Driveway" };
+  const getCameraName = (camera) => camera.name;
+
+  assert.equal(resolveSingleViewSubtitleText({ subtitle: "Patio" }), "Patio");
+  assert.equal(
+    resolveSingleViewSubtitleText({
+      subtitle: "{Camera}",
+      activeCamera,
       getCameraName,
     }),
     "Driveway",
   );
   assert.equal(
-    resolveSingleViewTitleText({
-      title: "",
-      cameras: [{ name: "Front Door" }],
-      activeCamera: { name: "Front Door" },
+    resolveSingleViewSubtitleText({
+      subtitle: "",
+      activeCamera,
       getCameraName,
     }),
+    "Driveway",
+  );
+  assert.equal(
+    resolveSingleViewSubtitleText({ subtitle: "{Camera}" }),
     "Camera",
   );
 });
 
-test("single view text resolvers preserve standard display values", () => {
-  assert.equal(resolveSingleViewSubtitleText({ subtitle: "Patio" }), "Patio");
-  assert.equal(resolveSingleViewSubtitleText({}), "FrigateView");
+test("single view text resolvers preserve standard status values", () => {
   assert.equal(resolveSingleViewStreamTypeText("webrtc"), "webrtc");
   assert.equal(resolveSingleViewStreamTypeText(""), "--");
   assert.equal(resolveSingleViewAlertsCountText(12), "12");
@@ -71,7 +79,7 @@ test("single view camera switcher markup preserves active and availability state
   assert.equal(markup.includes("Front Door"), true);
   assert.equal(markup.includes("Driveway"), true);
   assert.equal(
-    markup.includes("class=\"glass-btn cam-tab shadow-small active\" data-camidx=\"1\""),
+    markup.includes("class=\"cam-tab shadow-small active\" data-camidx=\"1\""),
     true,
   );
   assert.equal(markup.includes("style=\"color:#ef4444\""), true);

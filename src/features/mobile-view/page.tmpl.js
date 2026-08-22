@@ -1,6 +1,6 @@
 import { MOBILE_VIEW_ACTIVE_CLASS, isMobileViewRoute } from "./utils.js";
 import { buildLivePlaybackControlsMarkup } from "../live/view.tmpl.js";
-import { DEFAULT_SUBTITLE } from "../../constants.js";
+import { DEFAULT_TITLE, DEFAULT_SUBTITLE } from "../../constants.js";
 
 function buildMobileCameraOptionMarkup({
   camera,
@@ -96,13 +96,15 @@ export function buildMobileCamSwitcherMarkup({
 export function buildMobileViewInfoRowMarkup({
   title,
   subtitle,
+  displayTitle = true,
+  displaySubtitle = true,
   version,
   alertsCount = "—",
 }) {
   return `<div class="info-row mobile-view-info-row" data-fvc-region="information">
               <div>
-                <div class="info-title" id="info-title">${title}</div>
-                <span class="section-label" id="tl-range">${subtitle}</span>
+                <div class="info-title" id="info-title" ${displayTitle ? "" : "hidden"}>${title}</div>
+                <span class="section-label" id="tl-range" ${displaySubtitle ? "" : "hidden"}>${subtitle}</span>
               </div>
               <div class="stats">
                 <div class="stat">
@@ -195,19 +197,20 @@ export function buildMobileViewCamSwitcherMarkup(args) {
 
 export function resolveMobileViewTitleText({
   title,
-  cameras = [],
-  activeCamera = null,
-  getCameraName,
-}) {
-  if (title) return title;
-  if (Array.isArray(cameras) && cameras.length > 1 && activeCamera) {
-    return getCameraName(activeCamera);
-  }
-  return "Camera";
+} = {}) {
+  return String(title || "").trim() || DEFAULT_TITLE;
 }
 
-export function resolveMobileViewSubtitleText(config) {
-  return config?.subtitle || DEFAULT_SUBTITLE;
+export function resolveMobileViewSubtitleText({
+  subtitle,
+  activeCamera = null,
+  getCameraName,
+} = {}) {
+  const value = String(subtitle || "").trim();
+  if (value && value !== DEFAULT_SUBTITLE) return value;
+  return activeCamera && typeof getCameraName === "function"
+    ? getCameraName(activeCamera)
+    : "Camera";
 }
 
 export function resolveMobileViewStreamTypeText(streamType) {

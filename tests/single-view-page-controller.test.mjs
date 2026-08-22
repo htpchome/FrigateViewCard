@@ -675,6 +675,26 @@ test("single-view render helpers update subtitle and stats through the controlle
   assert.equal(nodes["#stream-type"].textContent, "webrtc");
 });
 
+test("single-view dynamic subtitle follows the active camera and display setting", () => {
+  const nodes = { "#tl-range": createNode() };
+  const { host } = createHost({ domNodes: nodes });
+  host._config.subtitle = "{Camera}";
+  host._config.display_subtitle = false;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderSubtitle();
+
+  assert.equal(nodes["#tl-range"].textContent, "Front Door");
+  assert.equal(nodes["#tl-range"].hidden, true);
+
+  host._activeCam = { entity: "camera.driveway", name: "Driveway" };
+  host._config.display_subtitle = true;
+  controller.renderSubtitle();
+
+  assert.equal(nodes["#tl-range"].textContent, "Driveway");
+  assert.equal(nodes["#tl-range"].hidden, false);
+});
+
 test("single-view render helpers update status and title through the controller", () => {
   const nodes = {
     "#on-dot": createNode(),
@@ -688,7 +708,12 @@ test("single-view render helpers update status and title through the controller"
 
   assert.equal(nodes["#on-dot"].style.color, "#4ade80");
   assert.equal(nodes["#on-lbl"].textContent, "Online");
-  assert.equal(nodes["#info-title"].textContent, "Front Door");
+  assert.equal(nodes["#info-title"].textContent, "FrigateView");
+  assert.equal(nodes["#info-title"].hidden, false);
+
+  host._config.display_title = false;
+  controller.syncStatus();
+  assert.equal(nodes["#info-title"].hidden, true);
 });
 
 test("single-view camera switcher render hides for a single camera when preview is disabled", () => {

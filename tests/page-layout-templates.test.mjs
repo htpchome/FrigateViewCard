@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { buildPreviewPageMainLayoutShellMarkup } from "../src/features/preview/page.tmpl.js";
+import {
+  buildPreviewPageMainLayoutShellMarkup,
+  buildPreviewShellHeaderMarkup,
+} from "../src/features/preview/page.tmpl.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
 import { buildWideViewMainLayoutShellMarkup } from "../src/features/wide-view/page.tmpl.js";
 import { STYLES } from "../src/styles.js";
@@ -29,6 +32,19 @@ const routeBuilders = [
   ["wide-view", buildWideViewMainLayoutShellMarkup],
   ["preview-view", buildPreviewPageMainLayoutShellMarkup],
 ];
+
+test("preview header can hide title and subtitle independently", () => {
+  const markup = buildPreviewShellHeaderMarkup({
+    title: "FrigateView",
+    subtitle: "Driveway",
+    displayTitle: false,
+    displaySubtitle: false,
+    pageNav: "Navigation",
+  });
+
+  assert.match(markup, /id="preview-shell-title" hidden/);
+  assert.match(markup, /id="preview-shell-subtitle" hidden/);
+});
 
 test("route-owned outer templates compose every atomic region once", () => {
   for (const [layoutSuffix, builder] of routeBuilders) {

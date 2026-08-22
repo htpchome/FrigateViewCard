@@ -28,8 +28,10 @@ test("editor YAML config omits normalized default values", () => {
         disable_hls_desktop: false,
       },
     ],
-    title: "Frigate",
-    subtitle: "FrigateView",
+    title: "FrigateView",
+    subtitle: "{Camera}",
+    display_title: true,
+    display_subtitle: true,
     theme: "default",
     shadows: true,
     window_days: 3,
@@ -66,7 +68,6 @@ test("editor YAML config omits normalized default values", () => {
 
   assert.deepEqual(config, {
     cameras: [{ entity: "camera.front_door", name: "Front Door" }],
-    title: "Frigate",
   });
 });
 
@@ -77,6 +78,29 @@ test("compact YAML preserves a non-default subtitle", () => {
   });
 
   assert.equal(config.subtitle, "Frigate");
+});
+
+test("title and subtitle defaults normalize and hidden states serialize", () => {
+  const defaults = normalizeCardConfig({
+    cameras: [{ entity: "camera.front_door" }],
+  });
+  const compact = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    title: "FrigateView",
+    subtitle: "{Camera}",
+    display_title: false,
+    display_subtitle: false,
+  });
+
+  assert.equal(defaults.title, "FrigateView");
+  assert.equal(defaults.subtitle, "{Camera}");
+  assert.equal(defaults.display_title, true);
+  assert.equal(defaults.display_subtitle, true);
+  assert.deepEqual(compact, {
+    cameras: [{ entity: "camera.front_door" }],
+    display_title: false,
+    display_subtitle: false,
+  });
 });
 
 test("pre-roll and post-roll config defaults off and serializes when enabled", () => {
@@ -361,6 +385,27 @@ test("buildEditorConfigFromDom reads the pre-roll and post-roll switch", () => {
   assert.equal(result.event_pre_post_roll_enabled, true);
 });
 
+test("buildEditorConfigFromDom reads title and subtitle display checkboxes", () => {
+  const root = {
+    querySelector: (selector) => {
+      if (selector === "#display_title") return { checked: false };
+      if (selector === "#display_subtitle") return { checked: true };
+      return null;
+    },
+    querySelectorAll: () => [],
+  };
+
+  const result = buildEditorConfigFromDom({
+    root,
+    baseConfig: {},
+    cameras: [{ entity: "camera.front_door" }],
+    themeDraftCache: {},
+  });
+
+  assert.equal(result.display_title, false);
+  assert.equal(result.display_subtitle, true);
+});
+
 test("compact YAML keeps normalized hidden tabs when non-default", () => {
   const config = compactEditorConfigForYaml({
     cameras: [{ entity: "camera.front_door" }],
@@ -387,6 +432,8 @@ test("preview draft carries hidden tabs and page routes", () => {
     grid_alert_hold_seconds: 16,
     wide_view_live_cameras: true,
     wide_view_alert_takeover: true,
+    display_title: false,
+    display_subtitle: true,
   });
 
   assert.equal(draft.mobile_view_page_enabled, true);
@@ -400,6 +447,8 @@ test("preview draft carries hidden tabs and page routes", () => {
   assert.equal(draft.grid_alert_hold_seconds, 16);
   assert.equal(draft.wide_view_live_cameras, true);
   assert.equal(draft.wide_view_alert_takeover, true);
+  assert.equal(draft.display_title, false);
+  assert.equal(draft.display_subtitle, true);
 });
 
 test("compact YAML preserves custom alert duration settings", () => {

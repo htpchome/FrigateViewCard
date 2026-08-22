@@ -65,6 +65,17 @@ export class MobileViewPageController {
   }
 
   syncStatus() {
+    const title = this._host._pageShellRegionElement(
+      "information",
+      "#info-title",
+    );
+    if (title) {
+      title.hidden = this._host._config.display_title === false;
+      title.textContent = resolveMobileViewTitleText({
+        title: this._host._config.title,
+      });
+    }
+
     const state =
       this._host._hass?.states?.[this._host._activeCam?.entity] || null;
     if (!state) return;
@@ -77,24 +88,12 @@ export class MobileViewPageController {
       "cameraSwitcher",
       "#on-lbl",
     );
-    const title = this._host._pageShellRegionElement(
-      "information",
-      "#info-title",
-    );
     const online = state.state !== "unavailable";
     if (statusDot) {
       statusDot.style.color = resolveMobileViewStatusColor(online);
     }
     if (statusLabel) {
       statusLabel.textContent = resolveMobileViewOnlineLabel(online);
-    }
-    if (title) {
-      title.textContent = resolveMobileViewTitleText({
-        title: this._host._config.title,
-        cameras: this._host._config.cameras,
-        activeCamera: this._host._activeCam,
-        getCameraName: cameraName,
-      });
     }
   }
 
@@ -122,7 +121,11 @@ export class MobileViewPageController {
   }
 
   subtitleText() {
-    return resolveMobileViewSubtitleText(this._host._config);
+    return resolveMobileViewSubtitleText({
+      subtitle: this._host._config.subtitle,
+      activeCamera: this._host._activeCam,
+      getCameraName: cameraName,
+    });
   }
 
   renderSubtitle() {
@@ -131,6 +134,7 @@ export class MobileViewPageController {
       "#tl-range",
     );
     if (!subtitle) return;
+    subtitle.hidden = this._host._config.display_subtitle === false;
     subtitle.textContent = this.subtitleText();
   }
 

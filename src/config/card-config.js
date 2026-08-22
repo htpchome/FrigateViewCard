@@ -1,5 +1,7 @@
 import {
   ALLOWED_HIDDEN_TABS,
+  DEFAULT_TITLE,
+  DEFAULT_SUBTITLE,
   DEFAULT_CAMERA_CONNECTION_TYPE,
   GRID_ALERT_HOLD_MS,
   GRID_ROTATION_OPTIONS_SECONDS,
@@ -60,6 +62,11 @@ export const normalizeCardConfig = (config) => {
   }
 
   delete src.camera_entity;
+
+  src.title = String(src.title || "").trim() || DEFAULT_TITLE;
+  src.subtitle = String(src.subtitle || "").trim() || DEFAULT_SUBTITLE;
+  src.display_title = src.display_title !== false;
+  src.display_subtitle = src.display_subtitle !== false;
 
   src.theme = src.theme === "custom" ? "custom" : "default";
   if (src.theme_custom && typeof src.theme_custom === "object") {

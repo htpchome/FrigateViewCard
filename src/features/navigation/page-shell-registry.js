@@ -154,11 +154,25 @@ export function validatePageShellRegionMarkup(
 
 export function resolvePageInfoRowMarkup(
   profile,
-  { title, subtitle, version, host, buildDefaultInfoRowMarkup } = {},
+  {
+    title,
+    subtitle,
+    displayTitle = true,
+    displaySubtitle = true,
+    version,
+    host,
+    buildDefaultInfoRowMarkup,
+  } = {},
 ) {
   const fallback = () => {
     if (typeof buildDefaultInfoRowMarkup !== "function") return "";
-    return buildDefaultInfoRowMarkup({ title, subtitle, version });
+    return buildDefaultInfoRowMarkup({
+      title,
+      subtitle,
+      displayTitle,
+      displaySubtitle,
+      version,
+    });
   };
 
   const builder =
@@ -171,6 +185,8 @@ export function resolvePageInfoRowMarkup(
     builder({
       title,
       subtitle,
+      displayTitle,
+      displaySubtitle,
       version,
       host,
     }) || fallback()
@@ -240,10 +256,19 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     layoutClass: "layout--single-view",
     leftColumnClass: "col-left--single-view",
     rightColumnClass: "col-right--single-view",
-    buildInfoRowMarkup: ({ title, subtitle, version, host }) =>
+    buildInfoRowMarkup: ({
+      title,
+      subtitle,
+      displayTitle,
+      displaySubtitle,
+      version,
+      host,
+    }) =>
       buildInfoRowMarkup({
         title,
         subtitle,
+        displayTitle,
+        displaySubtitle,
         version,
         centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || "",
       }),
@@ -269,10 +294,19 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     toolsButtonClass: "icon-btn",
     liveControlsPlacement: "overlay",
     browseClass: "browse--mobile-view",
-    buildInfoRowMarkup: ({ title, subtitle, version, host }) =>
+    buildInfoRowMarkup: ({
+      title,
+      subtitle,
+      displayTitle,
+      displaySubtitle,
+      version,
+      host,
+    }) =>
       buildMobileViewInfoRowMarkup({
         title,
         subtitle,
+        displayTitle,
+        displaySubtitle,
         version,
         streamType: host?._activeStreamType,
         alertsCount:
@@ -304,10 +338,19 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
     leftColumnClass: "col-left--wide-view",
     rightColumnClass: "col-right--wide-view",
     tabsHolderClass: "tabs-holder--wide-view",
-    buildInfoRowMarkup: ({ title, subtitle, version, host }) =>
+    buildInfoRowMarkup: ({
+      title,
+      subtitle,
+      displayTitle,
+      displaySubtitle,
+      version,
+      host,
+    }) =>
       buildInfoRowMarkup({
         title,
         subtitle,
+        displayTitle,
+        displaySubtitle,
         version,
         centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || "",
       }),

@@ -13,13 +13,10 @@ import {
   resolveMobileViewTitleText,
 } from "../src/features/mobile-view/page.tmpl.js";
 
-test("mobile view title resolver falls back like single-view", () => {
+test("mobile view title resolver defaults to FrigateView", () => {
   assert.equal(
     resolveMobileViewTitleText({
       title: "Front Door",
-      cameras: [{ entity: "camera.front_door" }],
-      activeCamera: { entity: "camera.front_door" },
-      getCameraName: () => "Ignored",
     }),
     "Front Door",
   );
@@ -27,30 +24,38 @@ test("mobile view title resolver falls back like single-view", () => {
   assert.equal(
     resolveMobileViewTitleText({
       title: "",
-      cameras: [{ entity: "camera.front_door" }, { entity: "camera.driveway" }],
-      activeCamera: { entity: "camera.driveway" },
-      getCameraName: () => "Driveway",
     }),
-    "Driveway",
-  );
-
-  assert.equal(
-    resolveMobileViewTitleText({
-      title: "",
-      cameras: [{ entity: "camera.front_door" }],
-      activeCamera: { entity: "camera.front_door" },
-      getCameraName: () => "Front Door",
-    }),
-    "Camera",
+    "FrigateView",
   );
 });
 
-test("mobile view text resolvers return stable display values", () => {
+test("mobile view subtitle resolves the active camera token", () => {
+  const activeCamera = { name: "Driveway" };
+  const getCameraName = (camera) => camera.name;
+
   assert.equal(
     resolveMobileViewSubtitleText({ subtitle: "Frigate" }),
     "Frigate",
   );
-  assert.equal(resolveMobileViewSubtitleText({}), "FrigateView");
+  assert.equal(
+    resolveMobileViewSubtitleText({
+      subtitle: "{Camera}",
+      activeCamera,
+      getCameraName,
+    }),
+    "Driveway",
+  );
+  assert.equal(
+    resolveMobileViewSubtitleText({
+      subtitle: "",
+      activeCamera,
+      getCameraName,
+    }),
+    "Driveway",
+  );
+});
+
+test("mobile view text resolvers return stable status values", () => {
   assert.equal(resolveMobileViewStreamTypeText("webrtc"), "webrtc");
   assert.equal(resolveMobileViewStreamTypeText(""), "--");
   assert.equal(resolveMobileViewAlertsCountText(12), "12");
@@ -75,6 +80,19 @@ test("mobile view info row markup uses expected ids", () => {
   assert.equal(markup.includes("Alerts"), true);
   assert.equal(markup.includes('id="on-dot"'), false);
   assert.equal(markup.includes("8"), true);
+});
+
+test("mobile view info row can hide title and subtitle independently", () => {
+  const markup = buildMobileViewInfoRowMarkup({
+    title: "FrigateView",
+    subtitle: "Driveway",
+    displayTitle: false,
+    displaySubtitle: false,
+    version: "1.0.1023",
+  });
+
+  assert.match(markup, /id="info-title" hidden/);
+  assert.match(markup, /id="tl-range" hidden/);
 });
 
 test("mobile view cam switcher markup renders trigger and picker options", () => {

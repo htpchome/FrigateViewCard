@@ -92,11 +92,17 @@ export function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
       <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
 }
 
-export function buildPreviewShellHeaderMarkup({ title, subtitle, pageNav }) {
+export function buildPreviewShellHeaderMarkup({
+  title,
+  subtitle,
+  displayTitle = true,
+  displaySubtitle = true,
+  pageNav,
+}) {
   return `<div class="preview-shell-header" id="preview-shell-header">
             <div class="preview-shell-title">
-              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
-              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
+              <div class="preview-shell-title-main" id="preview-shell-title" ${displayTitle ? "" : "hidden"}>${title}</div>
+              <div class="preview-shell-title-sub" id="preview-shell-subtitle" ${displaySubtitle ? "" : "hidden"}>${subtitle}</div>
             </div>
             ${pageNav}
           </div>`;

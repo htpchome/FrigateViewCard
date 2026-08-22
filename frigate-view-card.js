@@ -4,9 +4,10 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1649";
+const VERSION = "1.0.1650";
 const CARD_TAG = "frigate-view-card";
-const DEFAULT_SUBTITLE = "FrigateView";
+const DEFAULT_TITLE = "FrigateView";
+const DEFAULT_SUBTITLE = "{Camera}";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
 const EVENT_FETCH_BATCH = 100;
@@ -2034,6 +2035,8 @@ const normalizePositiveInteger = (value, fallback) => {
 const createEditorPreviewDraft = (config) => ({
   title: config.title,
   subtitle: config.subtitle,
+  display_title: config.display_title,
+  display_subtitle: config.display_subtitle,
   cameras: Array.isArray(config.cameras) ? config.cameras.map((camera) => ({ ...camera })) : [],
   window_days: config.window_days,
   alerts_reviews_days: config.alerts_reviews_days,
@@ -2085,8 +2088,10 @@ const applyEditorPreviewDraftToCardConfig = ({
   const base = baseConfig && typeof baseConfig === "object" ? baseConfig : {};
   return {
     ...base,
-    title: previewConfig.title || null,
-    subtitle: previewConfig.subtitle || null,
+    title: String(previewConfig.title || "").trim() || DEFAULT_TITLE,
+    subtitle: String(previewConfig.subtitle || "").trim() || DEFAULT_SUBTITLE,
+    display_title: previewConfig.display_title !== false,
+    display_subtitle: previewConfig.display_subtitle !== false,
     cameras: Array.isArray(previewConfig.cameras) ? previewConfig.cameras : base.cameras,
     window_days: normalizePositiveInteger(previewConfig.window_days, 3),
     alerts_reviews_days: normalizePositiveInteger(
@@ -2501,11 +2506,26 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
   const compact = {};
   const cameras = Array.isArray(source.cameras) ? source.cameras.map(compactCameraConfigForYaml).filter(Boolean) : [];
   if (cameras.length) compact.cameras = cameras;
-  addStringIfPresent(compact, "title", source.title);
+  const title = String(source.title || "").trim();
+  if (title && title !== DEFAULT_TITLE) {
+    compact.title = title;
+  }
   const subtitle = String(source.subtitle || "").trim();
   if (subtitle && subtitle !== DEFAULT_SUBTITLE) {
     compact.subtitle = subtitle;
   }
+  addIfNotDefault(
+    compact,
+    "display_title",
+    source.display_title !== false,
+    true
+  );
+  addIfNotDefault(
+    compact,
+    "display_subtitle",
+    source.display_subtitle !== false,
+    true
+  );
   const windowDays = normalizePositiveInteger2(source.window_days, 3);
   addIfNotDefault(compact, "window_days", windowDays, 3);
   const alertsReviewsDays = normalizePositiveInteger2(
@@ -3172,6 +3192,10 @@ const buildEditorConfigFromDom = ({
   else delete nextConfig.title;
   if (subtitle) nextConfig.subtitle = subtitle;
   else delete nextConfig.subtitle;
+  const displayTitle = root.querySelector("#display_title");
+  const displaySubtitle = root.querySelector("#display_subtitle");
+  nextConfig.display_title = displayTitle ? resolveSwitchChecked(displayTitle) : baseConfig?.display_title !== false;
+  nextConfig.display_subtitle = displaySubtitle ? resolveSwitchChecked(displaySubtitle) : baseConfig?.display_subtitle !== false;
   nextConfig.window_days = normalizePositiveInteger3(
     root.querySelector("#window_days")?.dataset.value || root.querySelector("#window_days")?.value || "3",
     3
@@ -3556,13 +3580,15 @@ function buildMobileCamSwitcherMarkup({
 function buildMobileViewInfoRowMarkup({
   title,
   subtitle,
+  displayTitle = true,
+  displaySubtitle = true,
   version,
   alertsCount = "\u2014"
 }) {
   return `<div class="info-row mobile-view-info-row" data-fvc-region="information">
               <div>
-                <div class="info-title" id="info-title">${title}</div>
-                <span class="section-label" id="tl-range">${subtitle}</span>
+                <div class="info-title" id="info-title" ${displayTitle ? "" : "hidden"}>${title}</div>
+                <span class="section-label" id="tl-range" ${displaySubtitle ? "" : "hidden"}>${subtitle}</span>
               </div>
               <div class="stats">
                 <div class="stat">
@@ -3642,19 +3668,18 @@ function buildMobileViewCamSwitcherMarkup(args) {
   return buildMobileCamSwitcherMarkup(args);
 }
 function resolveMobileViewTitleText({
-  title,
-  cameras = [],
+  title
+} = {}) {
+  return String(title || "").trim() || DEFAULT_TITLE;
+}
+function resolveMobileViewSubtitleText({
+  subtitle,
   activeCamera = null,
   getCameraName
-}) {
-  if (title) return title;
-  if (Array.isArray(cameras) && cameras.length > 1 && activeCamera) {
-    return getCameraName(activeCamera);
-  }
-  return "Camera";
-}
-function resolveMobileViewSubtitleText(config) {
-  return config?.subtitle || DEFAULT_SUBTITLE;
+} = {}) {
+  const value = String(subtitle || "").trim();
+  if (value && value !== DEFAULT_SUBTITLE) return value;
+  return activeCamera && typeof getCameraName === "function" ? getCameraName(activeCamera) : "Camera";
 }
 function resolveMobileViewStreamTypeText(streamType) {
   return streamType || "--";
@@ -3718,19 +3743,18 @@ function buildSingleViewCamSwitcherMarkup({
   }).join("");
 }
 function resolveSingleViewTitleText({
-  title,
-  cameras = [],
+  title
+} = {}) {
+  return String(title || "").trim() || DEFAULT_TITLE;
+}
+function resolveSingleViewSubtitleText({
+  subtitle,
   activeCamera = null,
   getCameraName
 } = {}) {
-  if (title) return title;
-  if (Array.isArray(cameras) && cameras.length > 1) {
-    return getCameraName(activeCamera);
-  }
-  return "Camera";
-}
-function resolveSingleViewSubtitleText(config) {
-  return config?.subtitle || DEFAULT_SUBTITLE;
+  const value = String(subtitle || "").trim();
+  if (value && value !== DEFAULT_SUBTITLE) return value;
+  return activeCamera && typeof getCameraName === "function" ? getCameraName(activeCamera) : "Camera";
 }
 function resolveSingleViewStreamTypeText(streamType) {
   return streamType || "--";
@@ -3930,11 +3954,17 @@ function buildPreviewShellMarkup({ cellsMarkup, buttonsMarkup }) {
   return `<div class="preview-grid" id="preview-grid">${cellsMarkup}</div>
       <div class="preview-cam-buttons">${buttonsMarkup}</div>`;
 }
-function buildPreviewShellHeaderMarkup({ title, subtitle, pageNav }) {
+function buildPreviewShellHeaderMarkup({
+  title,
+  subtitle,
+  displayTitle = true,
+  displaySubtitle = true,
+  pageNav
+}) {
   return `<div class="preview-shell-header" id="preview-shell-header">
             <div class="preview-shell-title">
-              <div class="preview-shell-title-main" id="preview-shell-title">${title}</div>
-              <div class="preview-shell-title-sub" id="preview-shell-subtitle">${subtitle}</div>
+              <div class="preview-shell-title-main" id="preview-shell-title" ${displayTitle ? "" : "hidden"}>${title}</div>
+              <div class="preview-shell-title-sub" id="preview-shell-subtitle" ${displaySubtitle ? "" : "hidden"}>${subtitle}</div>
             </div>
             ${pageNav}
           </div>`;
@@ -4150,14 +4180,16 @@ function buildToolsMarkup({
 function buildInfoRowMarkup({
   title,
   subtitle,
+  displayTitle = true,
+  displaySubtitle = true,
   version,
   pageNav = "",
   centerActionMarkup = ""
 }) {
   return `<div class="info-row" data-fvc-region="information">
               <div class="info-left">
-                <div class="info-title" id="info-title">${title}</div>
-                <span class="section-label" id="tl-range">${subtitle}</span>
+                <div class="info-title" id="info-title" ${displayTitle ? "" : "hidden"}>${title}</div>
+                <span class="section-label" id="tl-range" ${displaySubtitle ? "" : "hidden"}>${subtitle}</span>
               </div>
               ${pageNav ? `<div class="info-row-page-nav">${pageNav}</div>` : ""}
               ${centerActionMarkup ? `<div class="info-row-action-slot" data-fvc-region="two-way-talk">${centerActionMarkup}</div>` : ""}
@@ -4414,16 +4446,32 @@ function validatePageShellRegionMarkup(markup, { requiredRegions = [] } = {}) {
     duplicates
   };
 }
-function resolvePageInfoRowMarkup(profile, { title, subtitle, version, host, buildDefaultInfoRowMarkup } = {}) {
+function resolvePageInfoRowMarkup(profile, {
+  title,
+  subtitle,
+  displayTitle = true,
+  displaySubtitle = true,
+  version,
+  host,
+  buildDefaultInfoRowMarkup
+} = {}) {
   const fallback = () => {
     if (typeof buildDefaultInfoRowMarkup !== "function") return "";
-    return buildDefaultInfoRowMarkup({ title, subtitle, version });
+    return buildDefaultInfoRowMarkup({
+      title,
+      subtitle,
+      displayTitle,
+      displaySubtitle,
+      version
+    });
   };
   const builder = profile && typeof profile.buildInfoRowMarkup === "function" ? profile.buildInfoRowMarkup : null;
   if (!builder) return fallback();
   return builder({
     title,
     subtitle,
+    displayTitle,
+    displaySubtitle,
     version,
     host
   }) || fallback();
@@ -4475,9 +4523,18 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     layoutClass: "layout--single-view",
     leftColumnClass: "col-left--single-view",
     rightColumnClass: "col-right--single-view",
-    buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildInfoRowMarkup({
+    buildInfoRowMarkup: ({
       title,
       subtitle,
+      displayTitle,
+      displaySubtitle,
+      version,
+      host
+    }) => buildInfoRowMarkup({
+      title,
+      subtitle,
+      displayTitle,
+      displaySubtitle,
       version,
       centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || ""
     }),
@@ -4501,9 +4558,18 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     toolsButtonClass: "icon-btn",
     liveControlsPlacement: "overlay",
     browseClass: "browse--mobile-view",
-    buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildMobileViewInfoRowMarkup({
+    buildInfoRowMarkup: ({
       title,
       subtitle,
+      displayTitle,
+      displaySubtitle,
+      version,
+      host
+    }) => buildMobileViewInfoRowMarkup({
+      title,
+      subtitle,
+      displayTitle,
+      displaySubtitle,
       version,
       streamType: host?._activeStreamType,
       alertsCount: host?._browseWindowLoaderController?.cameraAlertsCount?.(
@@ -4530,9 +4596,18 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     leftColumnClass: "col-left--wide-view",
     rightColumnClass: "col-right--wide-view",
     tabsHolderClass: "tabs-holder--wide-view",
-    buildInfoRowMarkup: ({ title, subtitle, version, host }) => buildInfoRowMarkup({
+    buildInfoRowMarkup: ({
       title,
       subtitle,
+      displayTitle,
+      displaySubtitle,
+      version,
+      host
+    }) => buildInfoRowMarkup({
+      title,
+      subtitle,
+      displayTitle,
+      displaySubtitle,
       version,
       centerActionMarkup: host?._buildTwoWayTalkInfoButtonMarkup?.() || ""
     }),
@@ -16761,12 +16836,14 @@ const PreviewPageController = class {
     return this._host._previewAlertController.previewCellSeverity(entity);
   }
   _previewPageTitle() {
-    return this._host._config.title || (this._host._config.cameras.length === 1 ? cap(camDisplayName(this._host._config.cameras[0])) : "Cameras") || "Camera";
+    return String(this._host._config.title || "").trim() || DEFAULT_TITLE;
   }
   buildPreviewLayoutShellMarkup() {
     const previewShellHeader = buildPreviewShellHeaderMarkup({
       title: this._previewPageTitle(),
       subtitle: this._host._subtitleText(),
+      displayTitle: this._host._config.display_title !== false,
+      displaySubtitle: this._host._config.display_subtitle !== false,
       pageNav: this._pageNavigation()?.pageNavMarkup?.() || this._host._pageNavMarkup?.() || ""
     });
     return buildPreviewLayoutShellMarkup({
@@ -16870,8 +16947,14 @@ const PreviewPageController = class {
     if (!shell) return;
     const titleEl = this._host._$("#preview-shell-title");
     const subtitleEl = this._host._$("#preview-shell-subtitle");
-    if (titleEl) titleEl.textContent = this._previewPageTitle();
-    if (subtitleEl) subtitleEl.textContent = this._host._subtitleText();
+    if (titleEl) {
+      titleEl.hidden = this._host._config.display_title === false;
+      titleEl.textContent = this._previewPageTitle();
+    }
+    if (subtitleEl) {
+      subtitleEl.hidden = this._host._config.display_subtitle === false;
+      subtitleEl.textContent = this._host._subtitleText();
+    }
     const cameras = Array.isArray(this._host._config?.cameras) ? this._host._config.cameras.slice(0, 9) : [];
     const showTitleBars = this.previewShowTitleBarsEnabled();
     const liveStreamHint = this.previewLiveStreamHint();
@@ -19458,6 +19541,16 @@ const MobileViewPageController = class {
     element.innerHTML = this.camSwitcherMarkup({ includeStatus: true });
   }
   syncStatus() {
+    const title = this._host._pageShellRegionElement(
+      "information",
+      "#info-title"
+    );
+    if (title) {
+      title.hidden = this._host._config.display_title === false;
+      title.textContent = resolveMobileViewTitleText({
+        title: this._host._config.title
+      });
+    }
     const state = this._host._hass?.states?.[this._host._activeCam?.entity] || null;
     if (!state) return;
     const statusDot = this._host._pageShellRegionElement(
@@ -19468,24 +19561,12 @@ const MobileViewPageController = class {
       "cameraSwitcher",
       "#on-lbl"
     );
-    const title = this._host._pageShellRegionElement(
-      "information",
-      "#info-title"
-    );
     const online = state.state !== "unavailable";
     if (statusDot) {
       statusDot.style.color = resolveMobileViewStatusColor(online);
     }
     if (statusLabel) {
       statusLabel.textContent = resolveMobileViewOnlineLabel(online);
-    }
-    if (title) {
-      title.textContent = resolveMobileViewTitleText({
-        title: this._host._config.title,
-        cameras: this._host._config.cameras,
-        activeCamera: this._host._activeCam,
-        getCameraName: cameraName2
-      });
     }
   }
   renderStats() {
@@ -19511,7 +19592,11 @@ const MobileViewPageController = class {
     }
   }
   subtitleText() {
-    return resolveMobileViewSubtitleText(this._host._config);
+    return resolveMobileViewSubtitleText({
+      subtitle: this._host._config.subtitle,
+      activeCamera: this._host._activeCam,
+      getCameraName: cameraName2
+    });
   }
   renderSubtitle() {
     const subtitle = this._host._pageShellRegionElement(
@@ -19519,6 +19604,7 @@ const MobileViewPageController = class {
       "#tl-range"
     );
     if (!subtitle) return;
+    subtitle.hidden = this._host._config.display_subtitle === false;
     subtitle.textContent = this.subtitleText();
   }
   renderLegend() {
@@ -19649,6 +19735,16 @@ const SingleViewPageController = class {
     element.innerHTML = this.camSwitcherMarkup({ includeStatus: true });
   }
   syncStatus() {
+    const title = this._host._pageShellRegionElement(
+      "information",
+      "#info-title"
+    );
+    if (title) {
+      title.hidden = this._host._config.display_title === false;
+      title.textContent = resolveSingleViewTitleText({
+        title: this._host._config.title
+      });
+    }
     const state = this._host._hass?.states?.[this._host._activeCam?.entity] || null;
     if (!state) return;
     const statusDot = this._host._pageShellRegionElement(
@@ -19659,24 +19755,12 @@ const SingleViewPageController = class {
       "information",
       "#on-lbl"
     );
-    const title = this._host._pageShellRegionElement(
-      "information",
-      "#info-title"
-    );
     const online = state.state !== "unavailable";
     if (statusDot) {
       statusDot.style.color = resolveSingleViewStatusColor(online);
     }
     if (statusLabel) {
       statusLabel.textContent = resolveSingleViewOnlineLabel(online);
-    }
-    if (title) {
-      title.textContent = resolveSingleViewTitleText({
-        title: this._host._config.title,
-        cameras: this._host._config.cameras,
-        activeCamera: this._host._activeCam,
-        getCameraName: cameraName3
-      });
     }
   }
   renderStats() {
@@ -19702,7 +19786,11 @@ const SingleViewPageController = class {
     }
   }
   subtitleText() {
-    return resolveSingleViewSubtitleText(this._host._config);
+    return resolveSingleViewSubtitleText({
+      subtitle: this._host._config.subtitle,
+      activeCamera: this._host._activeCam,
+      getCameraName: cameraName3
+    });
   }
   renderSubtitle() {
     const subtitle = this._host._pageShellRegionElement(
@@ -19710,6 +19798,7 @@ const SingleViewPageController = class {
       "#tl-range"
     );
     if (!subtitle) return;
+    subtitle.hidden = this._host._config.display_subtitle === false;
     subtitle.textContent = this.subtitleText();
   }
   renderLegend() {
@@ -22044,8 +22133,10 @@ const FrigateViewCard = class extends HTMLElement {
     const legacyWindowHours = parseInt(config.window_hours, 10);
     const nextConfig = {
       cameras,
-      title: config.title || null,
-      subtitle: config.subtitle || null,
+      title: String(config.title || "").trim() || DEFAULT_TITLE,
+      subtitle: String(config.subtitle || "").trim() || DEFAULT_SUBTITLE,
+      display_title: config.display_title !== false,
+      display_subtitle: config.display_subtitle !== false,
       window_days: normalizePositiveInteger3(config.window_days, null) || (Number.isFinite(legacyWindowHours) && legacyWindowHours > 0 ? Math.max(1, Math.ceil(legacyWindowHours / 24)) : 3),
       alerts_reviews_days: normalizePositiveInteger3(
         config.alerts_reviews_days,
@@ -23453,6 +23544,7 @@ const FrigateViewCard = class extends HTMLElement {
     this._syncTabsShell();
     this._renderCamSwitcher();
     this._syncStatus();
+    this._renderSubtitle();
     this._renderStats();
     this._browseFilterController.normalizeFilterSelections();
     if (this._pageShellRegion("filterPanel")?.style.display !== "none") {
@@ -23745,8 +23837,10 @@ const FrigateViewCard = class extends HTMLElement {
   }
   // =======================Render Shell===================================
   _renderShell() {
-    const title = this._config.title || (this._config.cameras.length === 1 ? cap(camDisplayName(this._config.cameras[0])) : "Cameras") || "Camera";
+    const title = this._config.title || DEFAULT_TITLE;
     const subtitle = this._subtitleText();
+    const displayTitle = this._config.display_title !== false;
+    const displaySubtitle = this._config.display_subtitle !== false;
     const showCamSwitcher = this._config.cameras.length > 1 || this._isPreviewPageEnabled();
     const camSwitcherMarkup = showCamSwitcher ? this._camSwitcherMarkup({ includeStatus: false }) : "";
     const pageNav = this._pageNavigationController.pageNavMarkup();
@@ -23756,11 +23850,21 @@ const FrigateViewCard = class extends HTMLElement {
     const infoRow = resolvePageInfoRowMarkup(shellProfile, {
       title,
       subtitle,
+      displayTitle,
+      displaySubtitle,
       version: VERSION,
       host: this,
-      buildDefaultInfoRowMarkup: ({ title: title2, subtitle: subtitle2, version }) => buildInfoRowMarkup({
+      buildDefaultInfoRowMarkup: ({
         title: title2,
         subtitle: subtitle2,
+        displayTitle: displayTitle2,
+        displaySubtitle: displaySubtitle2,
+        version
+      }) => buildInfoRowMarkup({
+        title: title2,
+        subtitle: subtitle2,
+        displayTitle: displayTitle2,
+        displaySubtitle: displaySubtitle2,
         version
       })
     });
@@ -25863,6 +25967,10 @@ const normalizeCardConfig = (config) => {
     src.hidden_tabs = src.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
   }
   delete src.camera_entity;
+  src.title = String(src.title || "").trim() || DEFAULT_TITLE;
+  src.subtitle = String(src.subtitle || "").trim() || DEFAULT_SUBTITLE;
+  src.display_title = src.display_title !== false;
+  src.display_subtitle = src.display_subtitle !== false;
   src.theme = src.theme === "custom" ? "custom" : "default";
   if (src.theme_custom && typeof src.theme_custom === "object") {
     src.theme_custom = Object.fromEntries(
@@ -26767,6 +26875,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const previewUpdateSelectors = [
       "#title",
       "#subtitle",
+      "#display_title",
+      "#display_subtitle",
       "#window_days",
       "#alerts_reviews_days",
       "#realtime_poll_seconds",
@@ -26951,8 +27061,14 @@ const FrigateViewCardEditor = class extends HTMLElement {
         <span class="cam-helper">Maximum ${MAX_CAMERAS} cameras.</span>
       </div>`;
     const generalPanelContent = `
-      <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || ""}" placeholder="My Camera"></ha-input>
-      <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || ""}" placeholder="${DEFAULT_SUBTITLE}"></ha-input>
+      <div class="text-display-row">
+        <ha-input label="Title" name="title" id="title" type="text" value="${this._config?.title || DEFAULT_TITLE}" placeholder="${DEFAULT_TITLE}"></ha-input>
+        <label class="text-display-checkbox"><input id="display_title" type="checkbox" ${this._config?.display_title !== false ? "checked" : ""}> <span>Display</span></label>
+      </div>
+      <div class="text-display-row">
+        <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${this._config?.subtitle || DEFAULT_SUBTITLE}" placeholder="${DEFAULT_SUBTITLE}"></ha-input>
+        <label class="text-display-checkbox"><input id="display_subtitle" type="checkbox" ${this._config?.display_subtitle !== false ? "checked" : ""}> <span>Display</span></label>
+      </div>
       <div class="section">
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
           <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
@@ -27313,6 +27429,12 @@ const FrigateViewCardEditor = class extends HTMLElement {
             .field-helper.error{color:var(--c-alert);}
             .section{border-top:1px solid var(--divider-color, #d1d5db);padding-top:16px;}
             .chk-row{display:flex;flex-wrap:wrap;gap:8px 16px;}
+            .text-display-row{display:flex;align-items:center;gap:12px;min-width:0;}
+            .text-display-row + .text-display-row{margin-top:8px;}
+            .text-display-row + .section{margin-top:12px;}
+            .text-display-row ha-input{flex:1 1 auto;min-width:0;}
+            .text-display-checkbox{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;cursor:pointer;color:var(--c-text, var(--editor-text));font-size:12px;font-weight:600;}
+            .text-display-checkbox input{margin:0;}
 
             .cam-wrap{display:flex;flex-direction:column;gap:8px;}
             .cam-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;border:var(--editor-border-width) solid var(--editor-border);border-radius:12px;padding:8px 12px;background:var(--editor-card-bg);box-shadow:var(--editor-shadow);}
@@ -27731,6 +27853,8 @@ const FrigateViewCardEditor = class extends HTMLElement {
       root: this,
       ids: [
         "tight_margins",
+        "display_title",
+        "display_subtitle",
         "wide_view_page_enabled",
         "wide_view_live_cameras",
         "wide_view_alert_takeover",

@@ -1,7 +1,8 @@
-export const VERSION = "1.0.1649";
+export const VERSION = "1.0.1650";
 
 export const CARD_TAG = "frigate-view-card";
-export const DEFAULT_SUBTITLE = "FrigateView";
+export const DEFAULT_TITLE = "FrigateView";
+export const DEFAULT_SUBTITLE = "{Camera}";
 export const DAY = 86400;
 export const RECORDINGS_WINDOW = 24 * 3600;
 export const EVENT_FETCH_BATCH = 100;

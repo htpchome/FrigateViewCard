@@ -475,6 +475,19 @@ test("shared shell builders expose stable page region anchors", () => {
   }
 });
 
+test("shared info row can hide title and subtitle independently", () => {
+  const markup = buildInfoRowMarkup({
+    title: "FrigateView",
+    subtitle: "Driveway",
+    displayTitle: false,
+    displaySubtitle: false,
+    version: "1.0.0",
+  });
+
+  assert.match(markup, /id="info-title" hidden/);
+  assert.match(markup, /id="tl-range" hidden/);
+});
+
 test("popup custom media controls place AirPlay beside fullscreen", () => {
   const markup = buildPopupShellMarkup({
     version: "1.0.0",

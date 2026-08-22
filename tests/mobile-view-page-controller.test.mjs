@@ -168,6 +168,26 @@ test("mobile-view render helpers update subtitle and stats", () => {
   assert.equal(nodes["#stream-type"].textContent, "webrtc");
 });
 
+test("mobile-view dynamic subtitle follows the active camera and display setting", () => {
+  const nodes = { "#tl-range": createNode() };
+  const { host } = createHost({ domNodes: nodes });
+  host._config.subtitle = "{Camera}";
+  host._config.display_subtitle = false;
+  const controller = new MobileViewPageController(host, { PAGE_IDS });
+
+  controller.renderSubtitle();
+
+  assert.equal(nodes["#tl-range"].textContent, "Front Door");
+  assert.equal(nodes["#tl-range"].hidden, true);
+
+  host._activeCam = { entity: "camera.driveway", name: "Driveway" };
+  host._config.display_subtitle = true;
+  controller.renderSubtitle();
+
+  assert.equal(nodes["#tl-range"].textContent, "Driveway");
+  assert.equal(nodes["#tl-range"].hidden, false);
+});
+
 test("mobile-view render helpers update status and title", () => {
   const nodes = {
     "#on-dot": createNode(),
@@ -179,7 +199,12 @@ test("mobile-view render helpers update status and title", () => {
   controller.syncStatus();
 
   assert.equal(nodes["#on-dot"].style.color, "#4ade80");
-  assert.equal(nodes["#info-title"].textContent, "Front Door");
+  assert.equal(nodes["#info-title"].textContent, "FrigateView");
+  assert.equal(nodes["#info-title"].hidden, false);
+
+  host._config.display_title = false;
+  controller.syncStatus();
+  assert.equal(nodes["#info-title"].hidden, true);
 });
 
 test("mobile-view camera switcher render remains visible for status when preview is disabled", () => {

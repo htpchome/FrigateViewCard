@@ -51,6 +51,17 @@ export class SingleViewPageController {
   }
 
   syncStatus() {
+    const title = this._host._pageShellRegionElement(
+      "information",
+      "#info-title",
+    );
+    if (title) {
+      title.hidden = this._host._config.display_title === false;
+      title.textContent = resolveSingleViewTitleText({
+        title: this._host._config.title,
+      });
+    }
+
     const state =
       this._host._hass?.states?.[this._host._activeCam?.entity] || null;
     if (!state) return;
@@ -63,24 +74,12 @@ export class SingleViewPageController {
       "information",
       "#on-lbl",
     );
-    const title = this._host._pageShellRegionElement(
-      "information",
-      "#info-title",
-    );
     const online = state.state !== "unavailable";
     if (statusDot) {
       statusDot.style.color = resolveSingleViewStatusColor(online);
     }
     if (statusLabel) {
       statusLabel.textContent = resolveSingleViewOnlineLabel(online);
-    }
-    if (title) {
-      title.textContent = resolveSingleViewTitleText({
-        title: this._host._config.title,
-        cameras: this._host._config.cameras,
-        activeCamera: this._host._activeCam,
-        getCameraName: cameraName,
-      });
     }
   }
 
@@ -108,7 +107,11 @@ export class SingleViewPageController {
   }
 
   subtitleText() {
-    return resolveSingleViewSubtitleText(this._host._config);
+    return resolveSingleViewSubtitleText({
+      subtitle: this._host._config.subtitle,
+      activeCamera: this._host._activeCam,
+      getCameraName: cameraName,
+    });
   }
 
   renderSubtitle() {
@@ -117,6 +120,7 @@ export class SingleViewPageController {
       "#tl-range",
     );
     if (!subtitle) return;
+    subtitle.hidden = this._host._config.display_subtitle === false;
     subtitle.textContent = this.subtitleText();
   }
 

@@ -1,4 +1,6 @@
 import {
+  DEFAULT_TITLE,
+  DEFAULT_SUBTITLE,
   GRID_ROTATION_OPTIONS_SECONDS,
   REALTIME_POLL_OPTIONS_SECONDS,
   GRID_ALERT_HOLD_MS,
@@ -25,6 +27,8 @@ const normalizePositiveInteger = (value, fallback) => {
 export const createEditorPreviewDraft = (config) => ({
   title: config.title,
   subtitle: config.subtitle,
+  display_title: config.display_title,
+  display_subtitle: config.display_subtitle,
   cameras: Array.isArray(config.cameras)
     ? config.cameras.map((camera) => ({ ...camera }))
     : [],
@@ -81,8 +85,10 @@ export const applyEditorPreviewDraftToCardConfig = ({
 
   return {
     ...base,
-    title: previewConfig.title || null,
-    subtitle: previewConfig.subtitle || null,
+    title: String(previewConfig.title || "").trim() || DEFAULT_TITLE,
+    subtitle: String(previewConfig.subtitle || "").trim() || DEFAULT_SUBTITLE,
+    display_title: previewConfig.display_title !== false,
+    display_subtitle: previewConfig.display_subtitle !== false,
     cameras: Array.isArray(previewConfig.cameras)
       ? previewConfig.cameras
       : base.cameras,

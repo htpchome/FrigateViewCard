@@ -523,6 +523,14 @@ export const buildEditorConfigFromDom = ({
   else delete nextConfig.title;
   if (subtitle) nextConfig.subtitle = subtitle;
   else delete nextConfig.subtitle;
+  const displayTitle = root.querySelector("#display_title");
+  const displaySubtitle = root.querySelector("#display_subtitle");
+  nextConfig.display_title = displayTitle
+    ? resolveSwitchChecked(displayTitle)
+    : baseConfig?.display_title !== false;
+  nextConfig.display_subtitle = displaySubtitle
+    ? resolveSwitchChecked(displaySubtitle)
+    : baseConfig?.display_subtitle !== false;
 
   nextConfig.window_days = normalizePositiveInteger(
     root.querySelector("#window_days")?.dataset.value ||

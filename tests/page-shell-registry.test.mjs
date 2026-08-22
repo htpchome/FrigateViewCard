@@ -190,6 +190,8 @@ test("single and wide info rows render host action markup", () => {
     .buildInfoRowMarkup({
       title: "Camera",
       subtitle: "Frigate",
+      displayTitle: false,
+      displaySubtitle: false,
       version: "1.0.0",
       host,
     });
@@ -202,6 +204,8 @@ test("single and wide info rows render host action markup", () => {
 
   assert.equal(singleInfoRow.includes("two-way-talk-btn"), true);
   assert.equal(wideInfoRow.includes("two-way-talk-btn"), true);
+  assert.match(singleInfoRow, /id="info-title" hidden/);
+  assert.match(singleInfoRow, /id="tl-range" hidden/);
 });
 
 test("required page shell regions follow declared capabilities", () => {
