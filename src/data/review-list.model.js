@@ -5,6 +5,7 @@ export function buildReviewListItemModel(review, deps) {
     resolveSourceEvent,
     findEventById,
     media,
+    durationLabel,
     dateTimeLabel,
     showDownloadButtons = true,
   } = deps || {};
@@ -50,6 +51,10 @@ export function buildReviewListItemModel(review, deps) {
     dlClip,
     dlSnap,
     thumbSrc: firstDet ? media(firstDet, "thumbnail.jpg") : "",
+    duration:
+      typeof durationLabel === "function"
+        ? durationLabel(mediaEvent || review)
+        : null,
     timeLabel: dateTimeLabel(review?.start_time),
   };
 }
@@ -60,6 +65,7 @@ export function buildReviewListItemHtml(model, deps) {
     ? `<div class="et ${model.sev}">
                 <img src="${model.thumbSrc}" loading="lazy" data-thumb-id="${model.firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="tph" style="display:none">${icons.person}</div>
+                  ${model.duration != null ? `<div class="ed">${model.duration}s</div>` : ""}
                 </div>`
     : "";
   return `

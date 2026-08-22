@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildEventListItemModel } from "../src/data/event-list.model.js";
+import {
+  buildEventListItemHtml,
+  buildEventListItemModel,
+} from "../src/data/event-list.model.js";
 import {
   buildReviewListItemHtml,
   buildReviewListItemModel,
@@ -24,6 +27,7 @@ test("alert review rows render clip and snapshot download buttons from the sourc
     id: "review-1",
     camera: "front_door",
     start_time: 1723000000,
+    end_time: 1723000012,
     severity: "alert",
     data: {
       detections: ["event-1"],
@@ -33,6 +37,8 @@ test("alert review rows render clip and snapshot download buttons from the sourc
   const sourceEvent = {
     id: "event-1",
     camera: "front_door",
+    start_time: 1723000000,
+    end_time: 1723000012,
     has_clip: true,
     has_snapshot: true,
     retain_indefinitely: false,
@@ -45,6 +51,7 @@ test("alert review rows render clip and snapshot download buttons from the sourc
     resolveSourceEvent: () => sourceEvent,
     findEventById: () => sourceEvent,
     media: (id, file) => `/media/${id}/${file}`,
+    durationLabel: (value) => (value === sourceEvent ? 22 : 12),
     dateTimeLabel: () => "Fri · 8:44 pm",
   });
 
@@ -58,6 +65,43 @@ test("alert review rows render clip and snapshot download buttons from the sourc
   assert.equal(html.includes('data-dl-file="clip.mp4"'), true);
   assert.equal(html.includes('data-dl-file="snapshot.jpg"'), true);
   assert.equal(html.includes('class="eact"'), true);
+  assert.equal(html.includes('<div class="ed">22s</div>'), true);
+});
+
+test("event duration badges render for clips and stay hidden for snapshots", () => {
+  const buildModel = (showDurationBadge) =>
+    buildEventListItemModel(
+      {
+        id: "event-1",
+        label: "person",
+        start_time: 1723000000,
+        end_time: 1723000010,
+        has_clip: true,
+        has_snapshot: true,
+        retain_indefinitely: false,
+      },
+      {
+        cap: (value) =>
+          String(value || "").replace(/^./, (char) => char.toUpperCase()),
+        labelColor: () => "#fff",
+        icons: ICONS,
+        media: (id, file) => `/media/${id}/${file}`,
+        durationLabel: () => 10,
+        dateTimeLabel: () => "Fri · 8:44 pm",
+        isKeptTab: false,
+        showCameraLabel: false,
+        showDurationBadge,
+      },
+    );
+  const render = (model) =>
+    buildEventListItemHtml(model, {
+      icons: ICONS,
+      expanded: false,
+      compact: false,
+    });
+
+  assert.equal(render(buildModel(true)).includes('<div class="ed">10s</div>'), true);
+  assert.equal(render(buildModel(false)).includes('class="ed"'), false);
 });
 
 test("event and alert list rows can hide download buttons for mobile clients", () => {

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1646";
+const VERSION = "1.0.1647";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_SUBTITLE = "FrigateView";
 const DAY = 86400;
@@ -4634,26 +4634,6 @@ const buildFrigateRecordingDownloadPlan = ({
   };
 };
 
-// src/shared/media/download.js
-const triggerBrowserDownload = ({
-  url = "",
-  filename = "",
-  documentObj = globalThis.document
-} = {}) => {
-  const anchor = documentObj?.createElement?.("a");
-  if (!anchor) {
-    throw new Error("File downloads are not supported in this browser.");
-  }
-  anchor.href = url;
-  anchor.download = filename;
-  documentObj.body?.appendChild?.(anchor);
-  try {
-    anchor.click();
-  } finally {
-    anchor.remove?.();
-  }
-};
-
 // src/integrations/frigate/event-media.js
 const resolveFrigateEventPrePostRollRange = ({
   event = null,
@@ -4675,6 +4655,26 @@ const resolveFrigateEventPrePostRollRange = ({
     end,
     durationSec: end - start
   };
+};
+
+// src/shared/media/download.js
+const triggerBrowserDownload = ({
+  url = "",
+  filename = "",
+  documentObj = globalThis.document
+} = {}) => {
+  const anchor = documentObj?.createElement?.("a");
+  if (!anchor) {
+    throw new Error("File downloads are not supported in this browser.");
+  }
+  anchor.href = url;
+  anchor.download = filename;
+  documentObj.body?.appendChild?.(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove?.();
+  }
 };
 
 // src/integrations/frigate/media-download.ctrl.js
@@ -15938,6 +15938,7 @@ function buildReviewListItemModel(review, deps) {
     resolveSourceEvent,
     findEventById,
     media,
+    durationLabel,
     dateTimeLabel,
     showDownloadButtons = true
   } = deps || {};
@@ -15965,6 +15966,7 @@ function buildReviewListItemModel(review, deps) {
     dlClip,
     dlSnap,
     thumbSrc: firstDet ? media(firstDet, "thumbnail.jpg") : "",
+    duration: typeof durationLabel === "function" ? durationLabel(mediaEvent || review) : null,
     timeLabel: dateTimeLabel(review?.start_time)
   };
 }
@@ -15973,6 +15975,7 @@ function buildReviewListItemHtml(model, deps) {
   const thumb = model?.firstDet ? `<div class="et ${model.sev}">
                 <img src="${model.thumbSrc}" loading="lazy" data-thumb-id="${model.firstDet}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
                   <div class="tph" style="display:none">${icons.person}</div>
+                  ${model.duration != null ? `<div class="ed">${model.duration}s</div>` : ""}
                 </div>` : "";
   return `
       <div class="list-item shadow-small xform" data-review-id="${model.reviewId}" ${model.firstDet ? `data-review-open="${model.firstDet}"` : ""}>
@@ -16003,7 +16006,8 @@ function buildEventListItemModel(eventItem, deps) {
     dateTimeLabel,
     isKeptTab,
     showCameraLabel,
-    showDownloadButtons = true
+    showDownloadButtons = true,
+    showDurationBadge = true
   } = deps || {};
   const score = eventItem?.top_score != null ? `${Math.round(eventItem.top_score * 100)}%` : "";
   const reviewSev = eventItem?.severity === "alert" ? "alert" : eventItem?.severity === "detection" ? "detection" : "";
@@ -16031,7 +16035,8 @@ function buildEventListItemModel(eventItem, deps) {
     dlSnap,
     camLabel,
     favBtn,
-    duration: durationLabel(eventItem),
+    duration: showDurationBadge ? durationLabel(eventItem) : null,
+    showDurationBadge,
     timeLabel: dateTimeLabel(eventItem?.start_time),
     description: eventItem?.data?.description || ""
   };
@@ -16041,7 +16046,7 @@ function buildEventListItemHtml(model, { icons, expanded, compact }) {
   return `
     <div class="list-item${compact ? " compact" : ""} shadow-small xform" data-ev="${model.id}">
       ${model.reviewBar}
-      <div class="et">${model.thumb}<div class="ed">${model.duration}s</div></div>
+      <div class="et">${model.thumb}${model.showDurationBadge ? `<div class="ed">${model.duration}s</div>` : ""}</div>
       <div class="ei">
         <div class="etop"><span class="tb" style="background:${model.labelColorValue}33;color:${model.labelColorValue}">${model.labelText}</span>${model.subl}${model.badge}${model.camLabel}${model.score ? `<span class="esc">${model.score}</span>` : ""}</div>
         <div class="em"><span>${icons.clock}${model.timeLabel}</span>${model.zone ? `<span>${icons.pin}${model.zone}</span>` : ""}</div>
@@ -25623,6 +25628,13 @@ const FrigateViewCard = class extends HTMLElement {
       Math.round((ev.end_time || Date.now() / 1e3) - ev.start_time)
     );
   }
+  _eventMediaDuration(ev) {
+    const range = resolveFrigateEventPrePostRollRange({
+      event: ev,
+      enabled: this._config?.event_pre_post_roll_enabled === true
+    });
+    return range?.durationSec ?? this._dur(ev);
+  }
   _eventCardHTML(ev, expanded, compact = false) {
     const showDownloadButtons = !(this._isLikelyMobileClient() && ["alerts", "clips", "snapshot"].includes(this._tab));
     const model = buildEventListItemModel(ev, {
@@ -25630,10 +25642,11 @@ const FrigateViewCard = class extends HTMLElement {
       labelColor,
       icons: ICONS,
       media: (id, file) => this._media(id, file),
-      durationLabel: (value) => this._dur(value),
+      durationLabel: (value) => this._eventMediaDuration(value),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
       isKeptTab: this._tab === "kept",
       showDownloadButtons,
+      showDurationBadge: this._tab !== "snapshot",
       showCameraLabel: (this._eventsMode === "all" || this._isGridMixedListMode()) && this._config.cameras.length > 1
     });
     return buildEventListItemHtml(model, {
@@ -25840,6 +25853,7 @@ const FrigateViewCard = class extends HTMLElement {
       resolveSourceEvent: (value) => this._browseFilterController.reviewSourceEvent(value),
       findEventById: (id) => this._findEventById(id),
       media: (id, file) => this._media(id, file),
+      durationLabel: (value) => this._eventMediaDuration(value),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
       showDownloadButtons: !this._isLikelyMobileClient()
     });

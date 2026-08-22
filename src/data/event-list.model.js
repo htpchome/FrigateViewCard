@@ -9,6 +9,7 @@ export function buildEventListItemModel(eventItem, deps) {
     isKeptTab,
     showCameraLabel,
     showDownloadButtons = true,
+    showDurationBadge = true,
   } = deps || {};
 
   const score =
@@ -67,7 +68,8 @@ export function buildEventListItemModel(eventItem, deps) {
     dlSnap,
     camLabel,
     favBtn,
-    duration: durationLabel(eventItem),
+    duration: showDurationBadge ? durationLabel(eventItem) : null,
+    showDurationBadge,
     timeLabel: dateTimeLabel(eventItem?.start_time),
     description: eventItem?.data?.description || "",
   };
@@ -81,7 +83,7 @@ export function buildEventListItemHtml(model, { icons, expanded, compact }) {
   return `
     <div class="list-item${compact ? " compact" : ""} shadow-small xform" data-ev="${model.id}">
       ${model.reviewBar}
-      <div class="et">${model.thumb}<div class="ed">${model.duration}s</div></div>
+      <div class="et">${model.thumb}${model.showDurationBadge ? `<div class="ed">${model.duration}s</div>` : ""}</div>
       <div class="ei">
         <div class="etop"><span class="tb" style="background:${model.labelColorValue}33;color:${model.labelColorValue}">${model.labelText}</span>${model.subl}${model.badge}${model.camLabel}${model.score ? `<span class="esc">${model.score}</span>` : ""}</div>
         <div class="em"><span>${icons.clock}${model.timeLabel}</span>${model.zone ? `<span>${icons.pin}${model.zone}</span>` : ""}</div>

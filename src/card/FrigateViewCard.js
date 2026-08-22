@@ -91,6 +91,7 @@ import {
 } from "../features/navigation/page-shell-registry.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
 import { buildFrigateNotificationMediaPath } from "../integrations/frigate/url.js";
+import { resolveFrigateEventPrePostRollRange } from "../integrations/frigate/event-media.js";
 import { FrigateMediaDownloadController } from "../integrations/frigate/media-download.ctrl.js";
 import {
   discoverFrigateCameraState,
@@ -5403,6 +5404,13 @@ export class FrigateViewCard extends HTMLElement {
       Math.round((ev.end_time || Date.now() / 1000) - ev.start_time),
     );
   }
+  _eventMediaDuration(ev) {
+    const range = resolveFrigateEventPrePostRollRange({
+      event: ev,
+      enabled: this._config?.event_pre_post_roll_enabled === true,
+    });
+    return range?.durationSec ?? this._dur(ev);
+  }
   _eventCardHTML(ev, expanded, compact = false) {
     const showDownloadButtons = !(
       this._isLikelyMobileClient() &&
@@ -5413,10 +5421,11 @@ export class FrigateViewCard extends HTMLElement {
       labelColor,
       icons: ICONS,
       media: (id, file) => this._media(id, file),
-      durationLabel: (value) => this._dur(value),
+      durationLabel: (value) => this._eventMediaDuration(value),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
       isKeptTab: this._tab === "kept",
       showDownloadButtons,
+      showDurationBadge: this._tab !== "snapshot",
       showCameraLabel:
         (this._eventsMode === "all" || this._isGridMixedListMode()) &&
         this._config.cameras.length > 1,
@@ -5667,6 +5676,7 @@ export class FrigateViewCard extends HTMLElement {
         this._browseFilterController.reviewSourceEvent(value),
       findEventById: (id) => this._findEventById(id),
       media: (id, file) => this._media(id, file),
+      durationLabel: (value) => this._eventMediaDuration(value),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
       showDownloadButtons: !this._isLikelyMobileClient(),
     });
