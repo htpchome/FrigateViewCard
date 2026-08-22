@@ -4458,6 +4458,17 @@ export class FrigateViewCard extends HTMLElement {
     return false;
   }
   _handlePrimaryListItemClick(e, target) {
+    const mediaNavigationAction = target.closest(
+      ".ico[data-popup-media-target]",
+    );
+    if (mediaNavigationAction) {
+      e.stopPropagation();
+      this._popupMediaLoaderController.showCarouselEventById(
+        mediaNavigationAction.dataset.popupEventId,
+        mediaNavigationAction.dataset.popupMediaTarget,
+      );
+      return true;
+    }
     const dl = target.closest(".ico[data-dl]");
     if (dl) {
       e.stopPropagation();
@@ -5438,6 +5449,7 @@ export class FrigateViewCard extends HTMLElement {
       durationLabel: (value) => this._eventMediaDuration(value),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
       isKeptTab: this._tab === "kept",
+      browseTab: this._tab,
       showDownloadButtons,
       showDurationBadge: this._tab !== "snapshot",
       showCameraLabel:

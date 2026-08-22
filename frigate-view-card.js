@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1651";
+const VERSION = "1.0.1652";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -16047,8 +16047,8 @@ function buildReviewListItemModel(review, deps) {
   const mediaEvent = sourceEvent || favEv;
   const mediaEventId = String(mediaEvent?.id || firstDet || "");
   const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>` : "";
-  const dlClip = showDownloadButtons && mediaEvent?.has_clip ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
-  const dlSnap = showDownloadButtons && mediaEvent?.has_snapshot ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>` : "";
+  const clipAction = showDownloadButtons && mediaEvent?.has_clip ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
+  const snapshotAction = showDownloadButtons && mediaEvent?.has_snapshot ? `<button class="ico" data-popup-event-id="${mediaEventId}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>` : "";
   return {
     reviewId: review?.id || "",
     firstDet,
@@ -16057,8 +16057,7 @@ function buildReviewListItemModel(review, deps) {
     cameraLabel,
     reviewed,
     favBtn,
-    dlClip,
-    dlSnap,
+    mediaActions: `${clipAction}${snapshotAction}`,
     thumbSrc: firstDet ? media(firstDet, "thumbnail.jpg") : "",
     duration: typeof durationLabel === "function" ? durationLabel(mediaEvent || review) : null,
     timeLabel: dateTimeLabel(review?.start_time)
@@ -16085,7 +16084,7 @@ function buildReviewListItemHtml(model, deps) {
             </span>
           </div>
         </div>
-        <div class="eact">${model.favBtn}${model.dlClip}${model.dlSnap}</div>
+        <div class="eact">${model.favBtn}${model.mediaActions}</div>
       </div>`;
 }
 
@@ -16099,6 +16098,7 @@ function buildEventListItemModel(eventItem, deps) {
     durationLabel,
     dateTimeLabel,
     isKeptTab,
+    browseTab = "",
     showCameraLabel,
     showDownloadButtons = true,
     showDurationBadge = true
@@ -16111,8 +16111,10 @@ function buildEventListItemModel(eventItem, deps) {
   const thumbSrc = media(eventItem?.id, "thumbnail.jpg");
   const thumb = eventItem?.has_snapshot || eventItem?.has_clip ? `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${eventItem.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${icons.person}</div>` : `<div class="tph">${icons.person}</div>`;
   const badge = eventItem?.has_clip ? '<span class="bc">clip</span>' : eventItem?.has_snapshot ? '<span class="bs">snap</span>' : "";
-  const dlClip = showDownloadButtons && eventItem?.has_clip ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
-  const dlSnap = showDownloadButtons && eventItem?.has_snapshot ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>` : "";
+  const isSnapshotTab = browseTab === "snapshot";
+  const clipAction = showDownloadButtons && eventItem?.has_clip ? isSnapshotTab ? `<button class="ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="clip" title="View Clip">${icons.clips}</button>` : `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
+  const snapshotAction = showDownloadButtons && eventItem?.has_snapshot ? isSnapshotTab ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.download}</button>` : `<button class="ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>` : "";
+  const mediaActions = isSnapshotTab ? `${snapshotAction}${clipAction}` : `${clipAction}${snapshotAction}`;
   const camLabel = showCameraLabel ? `<span class="cam-badge">${String(eventItem?.camera || "").replace(/_/g, " ")}</span>` : "";
   const favBtn = eventItem?.retain_indefinitely ? `<button class="ico fav on" data-fav="${eventItem.id}">${icons.star}</button>` : `<button class="ico fav" data-fav="${eventItem.id}">${icons.starO}</button>`;
   return {
@@ -16125,8 +16127,7 @@ function buildEventListItemModel(eventItem, deps) {
     subl,
     thumb,
     badge,
-    dlClip,
-    dlSnap,
+    mediaActions,
     camLabel,
     favBtn,
     duration: showDurationBadge ? durationLabel(eventItem) : null,
@@ -16146,7 +16147,7 @@ function buildEventListItemHtml(model, { icons, expanded, compact }) {
         <div class="em"><span>${icons.clock}${model.timeLabel}</span>${model.zone ? `<span>${icons.pin}${model.zone}</span>` : ""}</div>
         ${desc}
       </div>
-      <div class="eact${compact ? " h" : ""}">${model.favBtn}${model.dlClip}${model.dlSnap}</div>
+      <div class="eact${compact ? " h" : ""}">${model.favBtn}${model.mediaActions}</div>
     </div>`;
 }
 
@@ -24948,6 +24949,17 @@ const FrigateViewCard = class extends HTMLElement {
     return false;
   }
   _handlePrimaryListItemClick(e, target) {
+    const mediaNavigationAction = target.closest(
+      ".ico[data-popup-media-target]"
+    );
+    if (mediaNavigationAction) {
+      e.stopPropagation();
+      this._popupMediaLoaderController.showCarouselEventById(
+        mediaNavigationAction.dataset.popupEventId,
+        mediaNavigationAction.dataset.popupMediaTarget
+      );
+      return true;
+    }
     const dl = target.closest(".ico[data-dl]");
     if (dl) {
       e.stopPropagation();
@@ -25769,6 +25781,7 @@ const FrigateViewCard = class extends HTMLElement {
       durationLabel: (value) => this._eventMediaDuration(value),
       dateTimeLabel: (ts) => this._dateTimeLabel(ts),
       isKeptTab: this._tab === "kept",
+      browseTab: this._tab,
       showDownloadButtons,
       showDurationBadge: this._tab !== "snapshot",
       showCameraLabel: (this._eventsMode === "all" || this._isGridMixedListMode()) && this._config.cameras.length > 1

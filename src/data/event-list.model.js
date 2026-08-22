@@ -7,6 +7,7 @@ export function buildEventListItemModel(eventItem, deps) {
     durationLabel,
     dateTimeLabel,
     isKeptTab,
+    browseTab = "",
     showCameraLabel,
     showDownloadButtons = true,
     showDurationBadge = true,
@@ -39,14 +40,22 @@ export function buildEventListItemModel(eventItem, deps) {
     : eventItem?.has_snapshot
       ? '<span class="bs">snap</span>'
       : "";
-  const dlClip =
+  const isSnapshotTab = browseTab === "snapshot";
+  const clipAction =
     showDownloadButtons && eventItem?.has_clip
-      ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
+      ? isSnapshotTab
+        ? `<button class="ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="clip" title="View Clip">${icons.clips}</button>`
+        : `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
       : "";
-  const dlSnap =
+  const snapshotAction =
     showDownloadButtons && eventItem?.has_snapshot
-      ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.snapshot}</button>`
+      ? isSnapshotTab
+        ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.download}</button>`
+        : `<button class="ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>`
       : "";
+  const mediaActions = isSnapshotTab
+    ? `${snapshotAction}${clipAction}`
+    : `${clipAction}${snapshotAction}`;
   const camLabel = showCameraLabel
     ? `<span class="cam-badge">${String(eventItem?.camera || "").replace(/_/g, " ")}</span>`
     : "";
@@ -64,8 +73,7 @@ export function buildEventListItemModel(eventItem, deps) {
     subl,
     thumb,
     badge,
-    dlClip,
-    dlSnap,
+    mediaActions,
     camLabel,
     favBtn,
     duration: showDurationBadge ? durationLabel(eventItem) : null,
@@ -89,6 +97,6 @@ export function buildEventListItemHtml(model, { icons, expanded, compact }) {
         <div class="em"><span>${icons.clock}${model.timeLabel}</span>${model.zone ? `<span>${icons.pin}${model.zone}</span>` : ""}</div>
         ${desc}
       </div>
-      <div class="eact${compact ? " h" : ""}">${model.favBtn}${model.dlClip}${model.dlSnap}</div>
+      <div class="eact${compact ? " h" : ""}">${model.favBtn}${model.mediaActions}</div>
     </div>`;
 }

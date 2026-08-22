@@ -14,6 +14,7 @@ import { MOBILE_VIEW_PAGE_STYLES } from "../src/features/mobile-view/page.styles
 import { STYLES } from "../src/styles.js";
 
 const ICONS = {
+  clips: "<clips />",
   clock: "<clock />",
   download: "<download />",
   person: "<person />",
@@ -22,7 +23,7 @@ const ICONS = {
   starO: "<star-o />",
 };
 
-test("alert review rows render clip and snapshot download buttons from the source event", () => {
+test("alert review rows render clip download and snapshot view buttons", () => {
   const review = {
     id: "review-1",
     camera: "front_door",
@@ -63,7 +64,10 @@ test("alert review rows render clip and snapshot download buttons from the sourc
 
   assert.equal(html.includes('data-dl="event-1"'), true);
   assert.equal(html.includes('data-dl-file="clip.mp4"'), true);
-  assert.equal(html.includes('data-dl-file="snapshot.jpg"'), true);
+  assert.equal(html.includes('data-dl-file="snapshot.jpg"'), false);
+  assert.equal(html.includes('data-popup-event-id="event-1"'), true);
+  assert.equal(html.includes('data-popup-media-target="snapshot"'), true);
+  assert.equal(html.includes('title="View Snapshot"'), true);
   assert.equal(html.includes('class="eact"'), true);
   assert.equal(html.includes('<div class="ed">22s</div>'), true);
 });
@@ -104,7 +108,61 @@ test("event duration badges render for clips and stay hidden for snapshots", () 
   assert.equal(render(buildModel(false)).includes('class="ed"'), false);
 });
 
-test("event and alert list rows can hide download buttons for mobile clients", () => {
+test("clip, snapshot, and kept rows render media actions in tab order", () => {
+  const renderForTab = (browseTab) => {
+    const model = buildEventListItemModel(
+      {
+        id: "event-1",
+        label: "person",
+        start_time: 1723000000,
+        end_time: 1723000010,
+        has_clip: true,
+        has_snapshot: true,
+        retain_indefinitely: false,
+      },
+      {
+        cap: (value) =>
+          String(value || "").replace(/^./, (char) => char.toUpperCase()),
+        labelColor: () => "#fff",
+        icons: ICONS,
+        media: (id, file) => `/media/${id}/${file}`,
+        durationLabel: () => 10,
+        dateTimeLabel: () => "Fri · 8:44 pm",
+        browseTab,
+        isKeptTab: browseTab === "kept",
+        showCameraLabel: false,
+      },
+    );
+    return buildEventListItemHtml(model, {
+      icons: ICONS,
+      expanded: false,
+      compact: false,
+    });
+  };
+
+  for (const browseTab of ["clips", "kept"]) {
+    const html = renderForTab(browseTab);
+    assert.equal(html.includes('data-dl-file="clip.mp4"'), true);
+    assert.equal(html.includes('data-dl-file="snapshot.jpg"'), false);
+    assert.equal(html.includes('data-popup-media-target="snapshot"'), true);
+    assert.ok(
+      html.indexOf('data-dl-file="clip.mp4"') <
+        html.indexOf('data-popup-media-target="snapshot"'),
+    );
+  }
+
+  const snapshotHtml = renderForTab("snapshot");
+  assert.equal(snapshotHtml.includes('data-dl-file="snapshot.jpg"'), true);
+  assert.equal(snapshotHtml.includes('data-dl-file="clip.mp4"'), false);
+  assert.equal(snapshotHtml.includes('data-popup-media-target="clip"'), true);
+  assert.equal(snapshotHtml.includes('title="View Clip"'), true);
+  assert.ok(
+    snapshotHtml.indexOf('data-dl-file="snapshot.jpg"') <
+      snapshotHtml.indexOf('data-popup-media-target="clip"'),
+  );
+});
+
+test("event and alert list rows can hide media buttons for mobile clients", () => {
   const eventModel = buildEventListItemModel(
     {
       id: "event-1",
@@ -162,10 +220,8 @@ test("event and alert list rows can hide download buttons for mobile clients", (
     },
   );
 
-  assert.equal(eventModel.dlClip, "");
-  assert.equal(eventModel.dlSnap, "");
-  assert.equal(reviewModel.dlClip, "");
-  assert.equal(reviewModel.dlSnap, "");
+  assert.equal(eventModel.mediaActions, "");
+  assert.equal(reviewModel.mediaActions, "");
 });
 
 test("popup clips include a snapshot navigation action when available", () => {
