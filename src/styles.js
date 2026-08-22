@@ -373,9 +373,9 @@ export const STYLES = `
 
 
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
-  .btn-secondary{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
   .btn-primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
-  .cam-tab{font-size: 1rem;padding:0.2em 0.4em;line-height: 1;font-weight:600;white-space:nowrap;border-radius: calc(var(--fvc-border-radius, 0px) / 2);align-items: center;justify-content: center;background:var(--c-bg-panel);border:1px solid var(--c-border2);color:var(--c-text);}  
+  .btn-secondary{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
+  .cam-tab{font-size: 1rem;padding:0.2em 0.4em;line-height: 1;font-weight:600;white-space:nowrap;border-radius: calc(var(--fvc-border-radius, 0px) / 2);align-items: center;justify-content: center;background:var(--c-bg-panel);border:1px solid var(--c-border2);color:var(--c-text);cursor:pointer}  
   .cam-tab:hover{color:var(--c-primary-d);}
   .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
   .cam-tab.active:hover{background:var(--c-primary-d);color:var(--c-text-rev);}
