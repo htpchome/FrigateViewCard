@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1653";
+const VERSION = "1.0.1654";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -201,7 +201,7 @@ const MOBILE_VIEW_PAGE_STYLES = `
   display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"video-controls-left microphone video-controls-right";align-items:center;gap:10px;padding:0px 8px;
   }
   .card.mobile-view-active .mobile-video-controls-left-row{grid-area:video-controls-left;justify-content:flex-start;}
-  .card.mobile-view-active .mobile-microphone-row{grid-area:microphone;justify-content:center;}
+  .card.mobile-view-active .mobile-microphone-row{grid-area:microphone;justify-content:center;gap:6px;}
   .card.mobile-view-active .mobile-video-controls-right-row{grid-area:video-controls-right;justify-content:flex-end;}
   .card.mobile-view-active .mobile-tab-container{
   display:grid;grid-template-columns:max-content auto minmax(0, 1fr);grid-template-areas:"tabs middle tools";align-items:center;gap:10px;padding:0px 8px;margin:3px 8px;border-radius:8px;background-color:var(--c-bg-panel);container-type:inline-size;
@@ -244,10 +244,19 @@ const MOBILE_VIEW_PAGE_STYLES = `
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    padding: 2px 12px;
+    padding: 2px 0;
   }
 
   .card.mobile-view-active .mobile-view-two-way-talk-slot[hidden] {
+    display: none !important;
+  }
+
+  .card.mobile-view-active:not(.mobile-rotate-live):not(.mobile-rotate-live-exit) .live-playback-controls > #mute-btn {
+    display: none !important;
+  }
+
+  .card.mobile-view-active.mobile-rotate-live #mobile-view-mute-btn,
+  .card.mobile-view-active.mobile-rotate-live-exit #mobile-view-mute-btn {
     display: none !important;
   }
 
@@ -3484,12 +3493,17 @@ function buildLiveTakeSnapshotControlMarkup({
 function buildLiveMuteControlMarkup({
   icons,
   streamMuted,
-  buttonClass = "square-btn"
+  buttonClass = "square-btn",
+  buttonId = "mute-btn",
+  region = "live-mute",
+  extraClass = ""
 }) {
   const label = streamMuted ? "Unmute live view" : "Mute live view";
   const icon = streamMuted ? icons.volOff : icons.volOn;
   const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
-  return `<button class="${visualButtonClass} mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
+  const className = [visualButtonClass, "mute-btn", extraClass].filter(Boolean).join(" ");
+  const regionAttribute = region ? ` data-fvc-region="${region}"` : "";
+  return `<button class="${className}" id="${buttonId}"${regionAttribute} title="${label}" aria-label="${label}">${icon}</button>`;
 }
 function buildLivePlaybackControlsMarkup(regions = {}) {
   return `<div class="live-playback-controls overlay-controls" id="live-playback-controls">
@@ -3621,6 +3635,7 @@ function buildMobileViewMainLayoutShellMarkup({
     tabs: "",
     tools: "",
     twoWayTalk: "",
+    mobileInlineMute: "",
     browseHeader: "",
     browse: "",
     footer: "",
@@ -3643,6 +3658,7 @@ function buildMobileViewMainLayoutShellMarkup({
                     </div>
                     <div class="button-holder-row mobile-microphone-row">
                       ${regions.twoWayTalk}
+                      ${regions.mobileInlineMute}
                     </div>
                     <div class="button-holder-row mobile-video-controls-right-row">
                     </div>
@@ -4582,7 +4598,8 @@ function registerDefaultPageShellProfiles(registry, PAGE_IDS2) {
     buildMainLayoutShellMarkup: ({ host, regions, layoutProfile }) => buildMobileViewMainLayoutShellMarkup({
       regions: {
         ...regions || {},
-        twoWayTalk: host?._buildTwoWayTalkMobileButtonMarkup?.() || ""
+        twoWayTalk: host?._buildTwoWayTalkMobileButtonMarkup?.() || "",
+        mobileInlineMute: host?._buildMobileViewInlineMuteButtonMarkup?.() || ""
       },
       layoutProfile
     }),
@@ -24049,6 +24066,17 @@ const FrigateViewCard = class extends HTMLElement {
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
     return `<div class="mobile-view-two-way-talk-slot" id="mobile-view-two-way-talk-slot" data-fvc-region="two-way-talk" ${visible ? "" : "hidden"}>${this._buildTwoWayTalkButtonMarkup()}</div>`;
   }
+  _buildMobileViewInlineMuteButtonMarkup() {
+    if (normalizePageRoute(this._pageId) !== PAGE_IDS.mobileView) return "";
+    return buildLiveMuteControlMarkup({
+      icons: ICONS,
+      streamMuted: this._streamMuted,
+      buttonClass: "icon-btn",
+      buttonId: "mobile-view-mute-btn",
+      region: "",
+      extraClass: "mobile-view-inline-mute-btn"
+    });
+  }
   _buildTwoWayTalkButtonMarkup() {
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
@@ -24792,7 +24820,7 @@ const FrigateViewCard = class extends HTMLElement {
       this._popupMediaControlsController.showTemporarily();
       return true;
     }
-    if (target.closest("#mute-btn")) {
+    if (target.closest("#mute-btn, #mobile-view-mute-btn")) {
       this._toggleMute();
       return true;
     }
@@ -25107,16 +25135,21 @@ const FrigateViewCard = class extends HTMLElement {
     });
   }
   _renderMuteButton() {
-    const btn = this._$("#mute-btn");
-    if (!btn) return;
+    const buttons = [
+      this._$("#mute-btn"),
+      this._$("#mobile-view-mute-btn")
+    ].filter(Boolean);
+    if (!buttons.length) return;
     const hideMute = this._viewMode === "grid";
-    btn.hidden = hideMute;
-    btn.style.display = hideMute ? "none" : "";
-    if (hideMute) return;
     const label = this._streamMuted ? "Unmute live view" : "Mute live view";
-    btn.title = label;
-    btn.setAttribute("aria-label", label);
-    btn.innerHTML = this._streamMuted ? ICONS.volOff : ICONS.volOn;
+    buttons.forEach((button) => {
+      button.hidden = hideMute;
+      button.style.display = hideMute ? "none" : "";
+      if (hideMute) return;
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      button.innerHTML = this._streamMuted ? ICONS.volOff : ICONS.volOn;
+    });
   }
   _timezoneDisplay() {
     const tz = this._hass?.config?.time_zone || "UTC";

@@ -322,6 +322,8 @@ export function registerDefaultPageShellProfiles(registry, PAGE_IDS) {
         regions: {
           ...(regions || {}),
           twoWayTalk: host?._buildTwoWayTalkMobileButtonMarkup?.() || "",
+          mobileInlineMute:
+            host?._buildMobileViewInlineMuteButtonMarkup?.() || "",
         },
         layoutProfile,
       }),

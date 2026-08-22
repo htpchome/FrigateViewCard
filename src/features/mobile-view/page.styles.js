@@ -64,7 +64,7 @@ export const MOBILE_VIEW_PAGE_STYLES = `
   display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"video-controls-left microphone video-controls-right";align-items:center;gap:10px;padding:0px 8px;
   }
   .card.mobile-view-active .mobile-video-controls-left-row{grid-area:video-controls-left;justify-content:flex-start;}
-  .card.mobile-view-active .mobile-microphone-row{grid-area:microphone;justify-content:center;}
+  .card.mobile-view-active .mobile-microphone-row{grid-area:microphone;justify-content:center;gap:6px;}
   .card.mobile-view-active .mobile-video-controls-right-row{grid-area:video-controls-right;justify-content:flex-end;}
   .card.mobile-view-active .mobile-tab-container{
   display:grid;grid-template-columns:max-content auto minmax(0, 1fr);grid-template-areas:"tabs middle tools";align-items:center;gap:10px;padding:0px 8px;margin:3px 8px;border-radius:8px;background-color:var(--c-bg-panel);container-type:inline-size;
@@ -107,10 +107,19 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    padding: 2px 12px;
+    padding: 2px 0;
   }
 
   .card.mobile-view-active .mobile-view-two-way-talk-slot[hidden] {
+    display: none !important;
+  }
+
+  .card.mobile-view-active:not(.mobile-rotate-live):not(.mobile-rotate-live-exit) .live-playback-controls > #mute-btn {
+    display: none !important;
+  }
+
+  .card.mobile-view-active.mobile-rotate-live #mobile-view-mute-btn,
+  .card.mobile-view-active.mobile-rotate-live-exit #mobile-view-mute-btn {
     display: none !important;
   }
 

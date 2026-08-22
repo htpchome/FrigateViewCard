@@ -141,6 +141,7 @@ export function buildMobileViewMainLayoutShellMarkup({
     tabs: "",
     tools: "",
     twoWayTalk: "",
+    mobileInlineMute: "",
     browseHeader: "",
     browse: "",
     footer: "",
@@ -167,6 +168,7 @@ export function buildMobileViewMainLayoutShellMarkup({
                     </div>
                     <div class="button-holder-row mobile-microphone-row">
                       ${regions.twoWayTalk}
+                      ${regions.mobileInlineMute}
                     </div>
                     <div class="button-holder-row mobile-video-controls-right-row">
                     </div>

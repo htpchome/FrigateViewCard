@@ -112,7 +112,7 @@ test("tabs and tools synchronize independently without layout repair", () => {
   assert.equal(methodSource.includes("_createCalendarPanel"), false);
 });
 
-test("live controls share one vertically centered overlay visibility owner", () => {
+test("live controls keep a shared overlay with a mobile inline mute exception", () => {
   assert.equal(
     cardSource.includes(
       'if (!wrap.classList.contains("live-stage--overlay")) return;',
@@ -133,8 +133,20 @@ test("live controls share one vertically centered overlay visibility owner", () 
     true,
   );
   assert.equal(
-    mobileViewStylesSource.includes(".mobile-video-controls-container .mute-btn"),
-    false,
+    mobileViewStylesSource.includes(
+      ".card.mobile-view-active:not(.mobile-rotate-live):not(.mobile-rotate-live-exit) .live-playback-controls > #mute-btn",
+    ),
+    true,
+  );
+  assert.equal(
+    mobileViewStylesSource.includes(
+      ".card.mobile-view-active.mobile-rotate-live #mobile-view-mute-btn",
+    ),
+    true,
+  );
+  assert.equal(
+    cardSource.includes('#mute-btn, #mobile-view-mute-btn'),
+    true,
   );
 });
 

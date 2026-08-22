@@ -3453,6 +3453,18 @@ export class FrigateViewCard extends HTMLElement {
     return `<div class="mobile-view-two-way-talk-slot" id="mobile-view-two-way-talk-slot" data-fvc-region="two-way-talk" ${visible ? "" : "hidden"}>${this._buildTwoWayTalkButtonMarkup()}</div>`;
   }
 
+  _buildMobileViewInlineMuteButtonMarkup() {
+    if (normalizePageRoute(this._pageId) !== PAGE_IDS.mobileView) return "";
+    return buildLiveMuteControlMarkup({
+      icons: ICONS,
+      streamMuted: this._streamMuted,
+      buttonClass: "icon-btn",
+      buttonId: "mobile-view-mute-btn",
+      region: "",
+      extraClass: "mobile-view-inline-mute-btn",
+    });
+  }
+
   _buildTwoWayTalkButtonMarkup() {
     const active = this._twoWayTalkActiveForCurrentCamera();
     const label = active ? "Disable two-way talk" : "Enable two-way talk";
@@ -4297,7 +4309,7 @@ export class FrigateViewCard extends HTMLElement {
       this._popupMediaControlsController.showTemporarily();
       return true;
     }
-    if (target.closest("#mute-btn")) {
+    if (target.closest("#mute-btn, #mobile-view-mute-btn")) {
       this._toggleMute();
       return true;
     }
@@ -4641,16 +4653,21 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _renderMuteButton() {
-    const btn = this._$("#mute-btn");
-    if (!btn) return;
+    const buttons = [
+      this._$("#mute-btn"),
+      this._$("#mobile-view-mute-btn"),
+    ].filter(Boolean);
+    if (!buttons.length) return;
     const hideMute = this._viewMode === "grid";
-    btn.hidden = hideMute;
-    btn.style.display = hideMute ? "none" : "";
-    if (hideMute) return;
     const label = this._streamMuted ? "Unmute live view" : "Mute live view";
-    btn.title = label;
-    btn.setAttribute("aria-label", label);
-    btn.innerHTML = this._streamMuted ? ICONS.volOff : ICONS.volOn;
+    buttons.forEach((button) => {
+      button.hidden = hideMute;
+      button.style.display = hideMute ? "none" : "";
+      if (hideMute) return;
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      button.innerHTML = this._streamMuted ? ICONS.volOff : ICONS.volOn;
+    });
   }
 
   _timezoneDisplay() {

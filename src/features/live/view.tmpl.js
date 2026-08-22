@@ -45,11 +45,18 @@ export function buildLiveMuteControlMarkup({
   icons,
   streamMuted,
   buttonClass = "square-btn",
+  buttonId = "mute-btn",
+  region = "live-mute",
+  extraClass = "",
 }) {
   const label = streamMuted ? "Unmute live view" : "Mute live view";
   const icon = streamMuted ? icons.volOff : icons.volOn;
   const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
-  return `<button class="${visualButtonClass} mute-btn" id="mute-btn" data-fvc-region="live-mute" title="${label}" aria-label="${label}">${icon}</button>`;
+  const className = [visualButtonClass, "mute-btn", extraClass]
+    .filter(Boolean)
+    .join(" ");
+  const regionAttribute = region ? ` data-fvc-region="${region}"` : "";
+  return `<button class="${className}" id="${buttonId}"${regionAttribute} title="${label}" aria-label="${label}">${icon}</button>`;
 }
 
 export function buildLivePlaybackControlsMarkup(regions = {}) {

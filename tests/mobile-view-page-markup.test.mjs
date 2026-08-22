@@ -135,6 +135,8 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
       tools: `<div class="tl-tools-slot" data-fvc-region="tools"><button>Tools</button></div>`,
       twoWayTalk:
         `<div id="mobile-view-two-way-talk-slot" data-fvc-region="two-way-talk"><button id="two-way-talk-btn" hidden></button></div>`,
+      mobileInlineMute:
+        `<button class="icon-btn mute-btn mobile-view-inline-mute-btn" id="mobile-view-mute-btn"></button>`,
       browseHeader: `<div data-fvc-region="browse-header"></div>`,
       browse: `<div class="browse" data-fvc-region="browse"></div>`,
       footer: `<div class="footer" data-fvc-region="footer"></div>`,
@@ -162,6 +164,16 @@ test("mobile view main layout renders centered two-way-talk slot above tabs", ()
     true,
   );
   assert.equal(markup.includes('id="two-way-talk-btn"'), true);
+  assert.equal(markup.includes('id="mobile-view-mute-btn"'), true);
+  assert.equal(
+    markup.indexOf('id="two-way-talk-btn"') <
+      markup.indexOf('id="mobile-view-mute-btn"'),
+    true,
+  );
+  assert.match(
+    markup,
+    /class="button-holder-row mobile-microphone-row">[\s\S]*?two-way-talk-btn[\s\S]*?mobile-view-mute-btn[\s\S]*?<\/div>/,
+  );
   assert.equal(
     markup.match(/data-fvc-region="tabs"/g)?.length,
     1,
