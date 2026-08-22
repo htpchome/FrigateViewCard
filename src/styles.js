@@ -239,7 +239,7 @@ export const STYLES = `
   background-image:
     radial-gradient(
       circle at center,
-      color-mix(in srgb, var(--c-bg-panel) 50%, transparent) 0 50%,
+      color-mix(in srgb, var(--c-bg-panel,#ccc) 50%, transparent) 0 50%,
       transparent 51%
     );
   background-position: center;

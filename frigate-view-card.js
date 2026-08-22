@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1665";
+const VERSION = "1.0.1666";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -816,7 +816,7 @@ const STYLES = `
   background-image:
     radial-gradient(
       circle at center,
-      color-mix(in srgb, var(--c-bg-panel) 50%, transparent) 0 50%,
+      color-mix(in srgb, var(--c-bg-panel,#ccc) 50%, transparent) 0 50%,
       transparent 51%
     );
   background-position: center;
