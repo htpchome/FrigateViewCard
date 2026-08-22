@@ -2,6 +2,7 @@ import {
   ALLOWED_HIDDEN_TABS,
   CARD_TAG,
   DEFAULT_CAMERA_CONNECTION_TYPE,
+  DEFAULT_HIDDEN_TABS,
   DEFAULT_TITLE,
   DEFAULT_SUBTITLE,
   GRID_ALERT_HOLD_MS,
@@ -372,8 +373,11 @@ export const compactEditorConfigForYaml = (
     ? source.hidden_tabs
         .map((id) => (id === "reviews" ? "alerts" : id))
         .filter((id) => ALLOWED_HIDDEN_TABS.includes(id))
-    : [];
-  if (hiddenTabs.length) compact.hidden_tabs = hiddenTabs;
+    : [...DEFAULT_HIDDEN_TABS];
+  const usesDefaultHiddenTabs =
+    hiddenTabs.length === DEFAULT_HIDDEN_TABS.length &&
+    DEFAULT_HIDDEN_TABS.every((tabId) => hiddenTabs.includes(tabId));
+  if (!usesDefaultHiddenTabs) compact.hidden_tabs = hiddenTabs;
 
   if (source.theme === "custom") {
     compact.theme = "custom";

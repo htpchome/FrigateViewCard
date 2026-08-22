@@ -1,6 +1,7 @@
 import {
   DEFAULT_TITLE,
   DEFAULT_SUBTITLE,
+  DEFAULT_HIDDEN_TABS,
   GRID_ROTATION_OPTIONS_SECONDS,
   REALTIME_POLL_OPTIONS_SECONDS,
   GRID_ALERT_HOLD_MS,
@@ -153,7 +154,7 @@ export const applyEditorPreviewDraftToCardConfig = ({
       previewConfig.preview_page_show_title_bars !== false,
     hidden_tabs: Array.isArray(previewConfig.hidden_tabs)
       ? previewConfig.hidden_tabs
-      : [],
+      : [...DEFAULT_HIDDEN_TABS],
     theme: previewConfig.theme === "custom" ? "custom" : "default",
     theme_custom:
       previewConfig.theme_custom &&

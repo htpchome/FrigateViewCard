@@ -23,6 +23,7 @@ import {
   MSE_SWITCH_GRACE_MAX,
   MAX_CAMERAS,
   DEFAULT_CAMERA_CONNECTION_TYPE,
+  DEFAULT_HIDDEN_TABS,
   ALLOWED_HIDDEN_TABS,
   THEME_DEFAULTS,
   THEME_CUSTOM_ROWS,
@@ -1240,7 +1241,7 @@ export class FrigateViewCard extends HTMLElement {
         ? config.hidden_tabs
             .map((id) => (id === "reviews" ? "alerts" : id))
             .filter((id) => ALLOWED_HIDDEN_TABS.includes(id))
-        : [],
+        : [...DEFAULT_HIDDEN_TABS],
       theme: config.theme === "custom" ? "custom" : "default",
       theme_custom:
         config.theme_custom && typeof config.theme_custom === "object"

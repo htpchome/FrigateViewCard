@@ -3,6 +3,7 @@ import {
   DEFAULT_TITLE,
   DEFAULT_SUBTITLE,
   DEFAULT_CAMERA_CONNECTION_TYPE,
+  DEFAULT_HIDDEN_TABS,
   GRID_ALERT_HOLD_MS,
   GRID_ROTATION_OPTIONS_SECONDS,
   MAX_CAMERAS,
@@ -55,11 +56,11 @@ export const normalizeCardConfig = (config) => {
   const src = config && typeof config === "object" ? { ...config } : {};
   const cameras = normalizeCameras(src);
 
-  if (Array.isArray(src.hidden_tabs)) {
-    src.hidden_tabs = src.hidden_tabs
-      .map((id) => (id === "reviews" ? "alerts" : id))
-      .filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
-  }
+  src.hidden_tabs = Array.isArray(src.hidden_tabs)
+    ? src.hidden_tabs
+        .map((id) => (id === "reviews" ? "alerts" : id))
+        .filter((id) => ALLOWED_HIDDEN_TABS.includes(id))
+    : [...DEFAULT_HIDDEN_TABS];
 
   delete src.camera_entity;
 

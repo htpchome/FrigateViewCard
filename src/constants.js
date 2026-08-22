@@ -1,4 +1,4 @@
-export const VERSION = "1.0.1652";
+export const VERSION = "1.0.1653";
 
 export const CARD_TAG = "frigate-view-card";
 export const DEFAULT_TITLE = "FrigateView";
@@ -39,6 +39,7 @@ export const ALLOWED_HIDDEN_TABS = [
   "recordings",
   "kept",
 ];
+export const DEFAULT_HIDDEN_TABS = Object.freeze(["snapshot"]);
 export const THEME_DEFAULTS = Object.freeze({
   "--c-bg-main": "var(--card-background-color)",
   "--c-bg-panel": "var(--secondary-background-color)",

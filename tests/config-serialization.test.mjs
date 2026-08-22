@@ -63,7 +63,7 @@ test("editor YAML config omits normalized default values", () => {
     preview_page_alert_live_duration_seconds: 10,
     wide_view_live_cameras: false,
     wide_view_alert_takeover: false,
-    hidden_tabs: [],
+    hidden_tabs: ["snapshot"],
   });
 
   assert.deepEqual(config, {
@@ -96,10 +96,23 @@ test("title and subtitle defaults normalize and hidden states serialize", () => 
   assert.equal(defaults.subtitle, "{Camera}");
   assert.equal(defaults.display_title, true);
   assert.equal(defaults.display_subtitle, true);
+  assert.deepEqual(defaults.hidden_tabs, ["snapshot"]);
   assert.deepEqual(compact, {
     cameras: [{ entity: "camera.front_door" }],
     display_title: false,
     display_subtitle: false,
+  });
+});
+
+test("explicitly enabling every browse tab survives YAML compaction", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    hidden_tabs: [],
+  });
+
+  assert.deepEqual(config, {
+    cameras: [{ entity: "camera.front_door" }],
+    hidden_tabs: [],
   });
 });
 

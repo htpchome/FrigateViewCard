@@ -3,6 +3,7 @@ import {
   CARD_TAG,
   DEFAULT_TITLE,
   DEFAULT_SUBTITLE,
+  DEFAULT_HIDDEN_TABS,
   DAY,
   RECORDINGS_WINDOW,
   REALTIME_HEAD_POLL_MS,
@@ -523,7 +524,7 @@ export class FrigateViewCardEditor extends HTMLElement {
   }
 
   _normalizeHiddenTabs(hiddenTabs) {
-    if (!Array.isArray(hiddenTabs)) return [];
+    if (!Array.isArray(hiddenTabs)) return [...DEFAULT_HIDDEN_TABS];
     return hiddenTabs
       .map((id) => (id === "reviews" ? "alerts" : id))
       .filter((id) => ALLOWED_HIDDEN_TABS.includes(id));

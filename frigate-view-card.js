@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1652";
+const VERSION = "1.0.1653";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -47,6 +47,7 @@ const ALLOWED_HIDDEN_TABS = [
   "recordings",
   "kept"
 ];
+const DEFAULT_HIDDEN_TABS = Object.freeze(["snapshot"]);
 const THEME_DEFAULTS = Object.freeze({
   "--c-bg-main": "var(--card-background-color)",
   "--c-bg-panel": "var(--secondary-background-color)",
@@ -2142,7 +2143,7 @@ const applyEditorPreviewDraftToCardConfig = ({
       60
     ),
     preview_page_show_title_bars: previewConfig.preview_page_show_title_bars !== false,
-    hidden_tabs: Array.isArray(previewConfig.hidden_tabs) ? previewConfig.hidden_tabs : [],
+    hidden_tabs: Array.isArray(previewConfig.hidden_tabs) ? previewConfig.hidden_tabs : [...DEFAULT_HIDDEN_TABS],
     theme: previewConfig.theme === "custom" ? "custom" : "default",
     theme_custom: previewConfig.theme_custom && typeof previewConfig.theme_custom === "object" ? previewConfig.theme_custom : {},
     theme_custom_defaults: previewConfig.theme_custom_defaults && typeof previewConfig.theme_custom_defaults === "object" ? previewConfig.theme_custom_defaults : {},
@@ -2693,8 +2694,9 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     previewAlertLiveDurationSeconds,
     10
   );
-  const hiddenTabs = Array.isArray(source.hidden_tabs) ? source.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [];
-  if (hiddenTabs.length) compact.hidden_tabs = hiddenTabs;
+  const hiddenTabs = Array.isArray(source.hidden_tabs) ? source.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [...DEFAULT_HIDDEN_TABS];
+  const usesDefaultHiddenTabs = hiddenTabs.length === DEFAULT_HIDDEN_TABS.length && DEFAULT_HIDDEN_TABS.every((tabId) => hiddenTabs.includes(tabId));
+  if (!usesDefaultHiddenTabs) compact.hidden_tabs = hiddenTabs;
   if (source.theme === "custom") {
     compact.theme = "custom";
     const themeCustom = source.theme_custom && typeof source.theme_custom === "object" ? source.theme_custom : {};
@@ -22223,7 +22225,7 @@ const FrigateViewCard = class extends HTMLElement {
         Number(config.grid_rotation_seconds)
       ) ? Number(config.grid_rotation_seconds) : 30,
       browse_expanded: config.browse_expanded === true,
-      hidden_tabs: Array.isArray(config.hidden_tabs) ? config.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [],
+      hidden_tabs: Array.isArray(config.hidden_tabs) ? config.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [...DEFAULT_HIDDEN_TABS],
       theme: config.theme === "custom" ? "custom" : "default",
       theme_custom: config.theme_custom && typeof config.theme_custom === "object" ? Object.fromEntries(
         Object.entries(config.theme_custom).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, normalizeHexColor2(value)]).filter(([, value]) => !!value)
@@ -26017,9 +26019,7 @@ const normalizeCameras = (config) => {
 const normalizeCardConfig = (config) => {
   const src = config && typeof config === "object" ? { ...config } : {};
   const cameras = normalizeCameras(src);
-  if (Array.isArray(src.hidden_tabs)) {
-    src.hidden_tabs = src.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
-  }
+  src.hidden_tabs = Array.isArray(src.hidden_tabs) ? src.hidden_tabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [...DEFAULT_HIDDEN_TABS];
   delete src.camera_entity;
   src.title = String(src.title || "").trim() || DEFAULT_TITLE;
   src.subtitle = String(src.subtitle || "").trim() || DEFAULT_SUBTITLE;
@@ -26477,7 +26477,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
     });
   }
   _normalizeHiddenTabs(hiddenTabs) {
-    if (!Array.isArray(hiddenTabs)) return [];
+    if (!Array.isArray(hiddenTabs)) return [...DEFAULT_HIDDEN_TABS];
     return hiddenTabs.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id));
   }
   _syncHiddenTabsDraftFromConfig(config = this._config) {
