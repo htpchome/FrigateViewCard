@@ -29,14 +29,35 @@ export const buildPopupInfoDownloadActions = ({
 
   if (!id) return actions;
 
+  const addEventDownload = (file, label, icon = "download") => {
+    actions.push({ kind: "event", id, file, label, icon });
+  };
+  const addMediaNavigation = (targetMediaType, label, icon) => {
+    actions.push({
+      kind: "media-navigation",
+      id,
+      targetMediaType,
+      label,
+      icon,
+    });
+  };
+
+  if (normalizedMediaType === "snapshot") {
+    addEventDownload("snapshot.jpg", "Download snapshot");
+    if (hasClip) addMediaNavigation("clip", "View Clip", "clips");
+    return actions;
+  }
+
+  if (["alert", "clip"].includes(normalizedMediaType)) {
+    if (hasClip) addEventDownload("clip.mp4", "Download clip");
+    if (hasSnapshot) {
+      addMediaNavigation("snapshot", "View Snapshot", "snapshot");
+    }
+    return actions;
+  }
+
   const currentFile =
-    normalizedMediaType === "snapshot"
-      ? "snapshot.jpg"
-      : hasClip
-        ? "clip.mp4"
-        : hasSnapshot
-          ? "snapshot.jpg"
-          : "";
+    hasClip ? "clip.mp4" : hasSnapshot ? "snapshot.jpg" : "";
 
   if (currentFile) {
     actions.push({
@@ -144,6 +165,9 @@ const buildPopupInfoDownloadButtonMarkup = (action, icons) => {
   const icon = icons[action.icon] || icons.download;
   if (action.kind === "recording") {
     return `<button class="popup-action" data-rec-dl-start="${action.recStart}" data-rec-dl-end="${action.recEnd}" title="${action.label}" aria-label="${action.label}">${icon}</button>`;
+  }
+  if (action.kind === "media-navigation") {
+    return `<button class="popup-action" data-popup-event-id="${action.id}" data-popup-media-target="${action.targetMediaType}" title="${action.label}" aria-label="${action.label}">${icon}</button>`;
   }
   return `<button class="popup-action" data-dl="${action.id}" data-dl-file="${action.file}" title="${action.label}" aria-label="${action.label}">${icon}</button>`;
 };

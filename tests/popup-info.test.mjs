@@ -66,10 +66,10 @@ test("popup info model derives event details and download actions", () => {
         icon: "download",
       },
       {
-        kind: "event",
+        kind: "media-navigation",
         id: "event-1",
-        file: "snapshot.jpg",
-        label: "Download snapshot",
+        targetMediaType: "snapshot",
+        label: "View Snapshot",
         icon: "snapshot",
       },
     ],
@@ -144,6 +144,8 @@ test("popup info controller owns rendering, hiding, and popup actions", () => {
     formatEventDuration: () => 10,
     onResetRecordingScrub: () => calls.push(["resetScrub"]),
     onMediaCameraChange: (camera) => calls.push(["camera", camera]),
+    onNavigateEventMedia: (id, mediaType) =>
+      calls.push(["navigate", id, mediaType]),
     onDownloadEvent: (id, file) => calls.push(["event", id, file]),
     onDownloadRecording: (start, end) =>
       calls.push(["recording", start, end]),
@@ -163,13 +165,20 @@ test("popup info controller owns rendering, hiding, and popup actions", () => {
   assert.equal(info.hidden, false);
   assert.match(info.innerHTML, /Clip - Front door - 8:44pm - 8\/21/);
   assert.match(info.innerHTML, /data-dl="event-1"/);
+  assert.match(info.innerHTML, /data-popup-media-target="snapshot"/);
   assert.deepEqual(calls.slice(0, 2), [
     ["camera", "front door"],
     ["resetScrub"],
   ]);
 
   const popupEventAction = {
-    dataset: { dl: "event-1", dlFile: "snapshot.jpg" },
+    dataset: { dl: "event-1", dlFile: "clip.mp4" },
+  };
+  const popupMediaAction = {
+    dataset: {
+      popupEventId: "event-1",
+      popupMediaTarget: "snapshot",
+    },
   };
   const popupRecordingAction = {
     dataset: { recDlStart: "200", recDlEnd: "260" },
@@ -177,6 +186,15 @@ test("popup info controller owns rendering, hiding, and popup actions", () => {
   let stopped = 0;
   const clickEvent = { stopPropagation: () => (stopped += 1) };
 
+  assert.equal(
+    controller.handleClick(clickEvent, {
+      closest: (selector) =>
+        selector === ".popup-action[data-popup-media-target]"
+          ? popupMediaAction
+          : null,
+    }),
+    true,
+  );
   assert.equal(
     controller.handleClick(clickEvent, {
       closest: (selector) =>
@@ -194,10 +212,11 @@ test("popup info controller owns rendering, hiding, and popup actions", () => {
     true,
   );
   assert.deepEqual(calls.slice(2), [
-    ["event", "event-1", "snapshot.jpg"],
+    ["navigate", "event-1", "snapshot"],
+    ["event", "event-1", "clip.mp4"],
     ["recording", 200, 260],
   ]);
-  assert.equal(stopped, 2);
+  assert.equal(stopped, 3);
 
   controller.hide();
   assert.equal(info.hidden, true);

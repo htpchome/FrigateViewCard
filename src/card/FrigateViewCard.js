@@ -654,6 +654,8 @@ export class FrigateViewCard extends HTMLElement {
       onMediaCameraChange: (camera) => {
         this._popupLifecycleController.setMediaCamera(camera);
       },
+      onNavigateEventMedia: (id, mediaType) =>
+        this._popupMediaLoaderController?.showCarouselEventById(id, mediaType),
       onDownloadEvent: (id, file) =>
         void this._frigateMediaDownloadController.downloadEvent(id, file),
       onDownloadRecording: (start, end) =>

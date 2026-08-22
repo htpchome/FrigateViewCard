@@ -168,7 +168,7 @@ test("event and alert list rows can hide download buttons for mobile clients", (
   assert.equal(reviewModel.dlSnap, "");
 });
 
-test("popup clip downloads include a separate snapshot action when available", () => {
+test("popup clips include a snapshot navigation action when available", () => {
   const actions = buildPopupInfoDownloadActions({
     id: "event-1",
     mediaType: "clip",
@@ -185,16 +185,16 @@ test("popup clip downloads include a separate snapshot action when available", (
       icon: "download",
     },
     {
-      kind: "event",
+      kind: "media-navigation",
       id: "event-1",
-      file: "snapshot.jpg",
-      label: "Download snapshot",
+      targetMediaType: "snapshot",
+      label: "View Snapshot",
       icon: "snapshot",
     },
   ]);
 });
 
-test("popup snapshot downloads do not duplicate the snapshot action", () => {
+test("popup snapshots use the download icon for snapshot downloads", () => {
   const actions = buildPopupInfoDownloadActions({
     id: "event-1",
     mediaType: "snapshot",
@@ -208,7 +208,33 @@ test("popup snapshot downloads do not duplicate the snapshot action", () => {
       id: "event-1",
       file: "snapshot.jpg",
       label: "Download snapshot",
-      icon: "snapshot",
+      icon: "download",
+    },
+  ]);
+});
+
+test("popup snapshots include clip navigation when a clip is available", () => {
+  const actions = buildPopupInfoDownloadActions({
+    id: "event-1",
+    mediaType: "snapshot",
+    hasClip: true,
+    hasSnapshot: true,
+  });
+
+  assert.deepEqual(actions, [
+    {
+      kind: "event",
+      id: "event-1",
+      file: "snapshot.jpg",
+      label: "Download snapshot",
+      icon: "download",
+    },
+    {
+      kind: "media-navigation",
+      id: "event-1",
+      targetMediaType: "clip",
+      label: "View Clip",
+      icon: "clips",
     },
   ]);
 });

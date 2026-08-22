@@ -10,6 +10,7 @@ export class PopupInfoController {
     formatEventDuration,
     onResetRecordingScrub,
     onMediaCameraChange,
+    onNavigateEventMedia,
     onDownloadEvent,
     onDownloadRecording,
   } = {}) {
@@ -21,6 +22,7 @@ export class PopupInfoController {
     this._formatEventDuration = formatEventDuration;
     this._onResetRecordingScrub = onResetRecordingScrub;
     this._onMediaCameraChange = onMediaCameraChange;
+    this._onNavigateEventMedia = onNavigateEventMedia;
     this._onDownloadEvent = onDownloadEvent;
     this._onDownloadRecording = onDownloadRecording;
   }
@@ -65,6 +67,18 @@ export class PopupInfoController {
   }
 
   handleClick(event, target = event?.target) {
+    const mediaNavigationAction = target?.closest?.(
+      ".popup-action[data-popup-media-target]",
+    );
+    if (mediaNavigationAction) {
+      event?.stopPropagation?.();
+      this._onNavigateEventMedia?.(
+        mediaNavigationAction.dataset.popupEventId,
+        mediaNavigationAction.dataset.popupMediaTarget,
+      );
+      return true;
+    }
+
     const recordingAction = target?.closest?.(
       ".popup-action[data-rec-dl-start]",
     );

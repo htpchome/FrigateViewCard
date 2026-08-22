@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1650";
+const VERSION = "1.0.1651";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -10631,7 +10631,31 @@ const buildPopupInfoDownloadActions = ({
     return actions;
   }
   if (!id) return actions;
-  const currentFile = normalizedMediaType === "snapshot" ? "snapshot.jpg" : hasClip ? "clip.mp4" : hasSnapshot ? "snapshot.jpg" : "";
+  const addEventDownload = (file, label, icon = "download") => {
+    actions.push({ kind: "event", id, file, label, icon });
+  };
+  const addMediaNavigation = (targetMediaType, label, icon) => {
+    actions.push({
+      kind: "media-navigation",
+      id,
+      targetMediaType,
+      label,
+      icon
+    });
+  };
+  if (normalizedMediaType === "snapshot") {
+    addEventDownload("snapshot.jpg", "Download snapshot");
+    if (hasClip) addMediaNavigation("clip", "View Clip", "clips");
+    return actions;
+  }
+  if (["alert", "clip"].includes(normalizedMediaType)) {
+    if (hasClip) addEventDownload("clip.mp4", "Download clip");
+    if (hasSnapshot) {
+      addMediaNavigation("snapshot", "View Snapshot", "snapshot");
+    }
+    return actions;
+  }
+  const currentFile = hasClip ? "clip.mp4" : hasSnapshot ? "snapshot.jpg" : "";
   if (currentFile) {
     actions.push({
       kind: "event",
@@ -10708,6 +10732,9 @@ const buildPopupInfoDownloadButtonMarkup = (action, icons) => {
   if (action.kind === "recording") {
     return `<button class="popup-action" data-rec-dl-start="${action.recStart}" data-rec-dl-end="${action.recEnd}" title="${action.label}" aria-label="${action.label}">${icon}</button>`;
   }
+  if (action.kind === "media-navigation") {
+    return `<button class="popup-action" data-popup-event-id="${action.id}" data-popup-media-target="${action.targetMediaType}" title="${action.label}" aria-label="${action.label}">${icon}</button>`;
+  }
   return `<button class="popup-action" data-dl="${action.id}" data-dl-file="${action.file}" title="${action.label}" aria-label="${action.label}">${icon}</button>`;
 };
 const buildPopupInfoMarkup = ({
@@ -10758,6 +10785,7 @@ const PopupInfoController = class {
     formatEventDuration,
     onResetRecordingScrub,
     onMediaCameraChange,
+    onNavigateEventMedia,
     onDownloadEvent,
     onDownloadRecording
   } = {}) {
@@ -10769,6 +10797,7 @@ const PopupInfoController = class {
     this._formatEventDuration = formatEventDuration;
     this._onResetRecordingScrub = onResetRecordingScrub;
     this._onMediaCameraChange = onMediaCameraChange;
+    this._onNavigateEventMedia = onNavigateEventMedia;
     this._onDownloadEvent = onDownloadEvent;
     this._onDownloadRecording = onDownloadRecording;
   }
@@ -10807,6 +10836,17 @@ const PopupInfoController = class {
     }
   }
   handleClick(event, target = event?.target) {
+    const mediaNavigationAction = target?.closest?.(
+      ".popup-action[data-popup-media-target]"
+    );
+    if (mediaNavigationAction) {
+      event?.stopPropagation?.();
+      this._onNavigateEventMedia?.(
+        mediaNavigationAction.dataset.popupEventId,
+        mediaNavigationAction.dataset.popupMediaTarget
+      );
+      return true;
+    }
     const recordingAction = target?.closest?.(
       ".popup-action[data-rec-dl-start]"
     );
@@ -21680,6 +21720,7 @@ const FrigateViewCard = class extends HTMLElement {
       onMediaCameraChange: (camera) => {
         this._popupLifecycleController.setMediaCamera(camera);
       },
+      onNavigateEventMedia: (id, mediaType) => this._popupMediaLoaderController?.showCarouselEventById(id, mediaType),
       onDownloadEvent: (id, file) => void this._frigateMediaDownloadController.downloadEvent(id, file),
       onDownloadRecording: (start, end) => void this._frigateMediaDownloadController.downloadRecording(start, end)
     });
