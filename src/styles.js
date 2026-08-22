@@ -233,7 +233,7 @@ export const STYLES = `
   .round-btn {
   display: inline-grid;
   place-items: center;  
-  padding: 0.75rem;
+  padding: 0.65rem;
   background-color: var(--c-bg-main);  
   color: var(--c-text2);
   background-image:
