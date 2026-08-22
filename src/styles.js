@@ -233,13 +233,13 @@ export const STYLES = `
   .round-btn {
   display: inline-grid;
   place-items: center;  
-  padding: 0.5rem;
+  padding: 0.75rem;
   background-color: var(--c-bg-main);  
   color: var(--c-text2);
   background-image:
     radial-gradient(
       circle at center,
-      var(--c-bg-panel) 0 50%,
+      color-mix(in srgb, var(--c-bg-panel) 50%, transparent) 0 50%,
       transparent 51%
     );
   background-position: center;

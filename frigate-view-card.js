@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1663";
+const VERSION = "1.0.1664";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -810,13 +810,13 @@ const STYLES = `
   .round-btn {
   display: inline-grid;
   place-items: center;  
-  padding: 0.5rem;
+  padding: 0.75rem;
   background-color: var(--c-bg-main);  
   color: var(--c-text2);
   background-image:
     radial-gradient(
       circle at center,
-      var(--c-bg-panel) 0 50%,
+      color-mix(in srgb, var(--c-bg-panel) 50%, transparent) 0 50%,
       transparent 51%
     );
   background-position: center;
@@ -3492,7 +3492,7 @@ function buildMobileCamSwitcherMarkup({
   const safeActiveIdx = Number.isInteger(activeCamIdx) && activeCamIdx >= 0 && activeCamIdx < cameraList.length ? activeCamIdx : 0;
   const activeCamera = cameraList[safeActiveIdx] || cameraList[0] || null;
   const activeCameraName = activeCamera ? getCameraName(activeCamera) : "Camera";
-  const backButton = previewPageEnabled ? `<button class="round-btn preview-back-btn mobile-cam-picker__back" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left}</button>` : "";
+  const backButton = previewPageEnabled ? `<button class="round-btn preview-back-btn mobile-cam-picker__back" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.back}</button>` : "";
   const cameraOptions = cameraList.map(
     (camera, index) => buildMobileCameraOptionMarkup({
       camera,
