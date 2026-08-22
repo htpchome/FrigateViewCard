@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1661";
+const VERSION = "1.0.1662";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -806,13 +806,11 @@ const STYLES = `
   .icon-btn.active svg{color:var(--c-text);}
   .icon-btn:disabled{opacity:.45;cursor:not-allowed;}
   .icon-btn:disabled:hover svg{color:var(--c-text2);}
-  
+
   .round-btn {
   display: inline-grid;
-  place-items: center;
-  width: 3rem;
-  height: 3rem;
-  padding: 0;
+  place-items: center;  
+  padding: 1rem;
   background-color: var(--c-bg-main);  
   color: var(--c-text2);
   background-image:
@@ -827,7 +825,7 @@ const STYLES = `
   border: none;
   box-shadow: 0 2px 4px var(--c-border2);
   border-radius: 50%;
-  font: 600 1.35rem/1 Arial, sans-serif;
+  font: 600 1.35rem/1 Arial;
   cursor: pointer;
   appearance: none;
   transition:
@@ -836,7 +834,7 @@ const STYLES = `
     transform 0.12s ease;
   }
   .round-btn svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
-  .round-butn:hover{background-size: 210% 210%;}
+  .round-btn:hover{background-size: 210% 210%;}
   .round-btn:hover svg{color:var(--c-text);}
   .round-btn.active {transform: scale(0.95);box-shadow: 0 2px 4px var(--c-border2);background:var(--c-bg-panel);}
   .round-btn.active svg{color:var(--c-text);}
