@@ -255,7 +255,7 @@ export function buildControlsSectionMarkup({
 export function buildPopupShellMarkup({ icons, version }) {
   return `<div id="myPopup" class="popup-content">
             <div class="popup-close-row">
-              <button class="close-btn" aria-label="Close">&times;</button> 
+              <button class="round-btn" aria-label="Close">${icons.close}</button> 
             </div>
             <div class="popup-header"></div>          
             <div class="popup-body">
