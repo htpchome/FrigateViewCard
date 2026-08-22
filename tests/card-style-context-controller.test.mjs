@@ -111,20 +111,11 @@ test("applyTightMargins updates parent spacing and sections row gap", () => {
     host: null,
   };
   const parentElement = {
-    style: {
-      height: "",
-      margin: "8px",
-      padding: "6px",
-      boxSizing: "content-box",
-    },
+    style: { height: "", margin: "8px", padding: "6px" },
   };
   const host = {
     _config: { tight_margins: true },
-    _parentOrigStyle: {
-      margin: "10px",
-      padding: "12px",
-      boxSizing: "content-box",
-    },
+    _parentOrigStyle: { margin: "10px", padding: "12px" },
     _isPreviewContext: () => false,
     shadowRoot: {
       querySelector: () => ({
@@ -147,52 +138,10 @@ test("applyTightMargins updates parent spacing and sections row gap", () => {
   assert.equal(parentElement.style.height, "100%");
   assert.equal(parentElement.style.margin, "0");
   assert.equal(parentElement.style.padding, "0");
-  assert.equal(parentElement.style.boxSizing, "content-box");
   assert.deepEqual(cardToggles, [
     ["toggle", "tight-margins", true],
     ["set", "--ha-view-sections-row-gap", "0px"],
   ]);
-});
-
-test("applyTightMargins contains non-tight percent height wrapper padding", () => {
-  const parentElement = {
-    style: {
-      height: "",
-      margin: "",
-      padding: "",
-      boxSizing: "content-box",
-    },
-  };
-  const host = {
-    _config: {
-      tight_margins: false,
-      stream_height: 100,
-      stream_height_unit: "%",
-    },
-    _parentOrigStyle: {
-      margin: "8px",
-      padding: "11px",
-      boxSizing: "content-box",
-    },
-    _isPreviewContext: () => false,
-    shadowRoot: {
-      querySelector: () => ({
-        classList: { toggle: () => {} },
-      }),
-    },
-    parentElement,
-    tagName: "FRIGATE-VIEW-CARD",
-    parentNode: null,
-    host: null,
-  };
-  const controller = new CardStyleContextController(host);
-
-  controller.applyTightMargins();
-
-  assert.equal(parentElement.style.height, "100%");
-  assert.equal(parentElement.style.margin, "8px");
-  assert.equal(parentElement.style.padding, "11px");
-  assert.equal(parentElement.style.boxSizing, "border-box");
 });
 
 test("resolveCardTokenForHost measures resolved token values", () => {
@@ -402,6 +351,48 @@ test("percent height padding compensation skips content-box wrappers", () => {
     },
     () => {
       assert.equal(controller.resolvePercentHeightWrapperPaddingPx(), 0);
+    },
+  );
+});
+
+test("percent height reserves measured sections view bottom padding", () => {
+  const sectionsView = {
+    tagName: "HUI-SECTIONS-VIEW",
+    parentElement: null,
+  };
+  const sectionsContainer = {
+    tagName: "DIV",
+    parentElement: null,
+    getRootNode: () => ({ host: sectionsView }),
+  };
+  const innerContainer = {
+    tagName: "DIV",
+    parentElement: sectionsContainer,
+  };
+  const parentElement = {
+    tagName: "HUI-CARD",
+    parentElement: innerContainer,
+  };
+  const host = {
+    _config: { tight_margins: false },
+    _isPreviewContext: () => false,
+    parentElement,
+  };
+  const controller = new CardStyleContextController(host);
+
+  withGlobals(
+    {
+      document: global.document,
+      window: global.window,
+      getComputedStyle: (element) => ({
+        paddingBottom: element === sectionsContainer ? "24px" : "0px",
+      }),
+    },
+    () => {
+      assert.equal(
+        controller.resolvePercentHeightSectionsBottomPaddingPx(),
+        24,
+      );
     },
   );
 });

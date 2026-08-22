@@ -77,17 +77,9 @@ export class CardStyleContextController {
     const tightMarginsEnabled = this._host._config?.tight_margins === true;
     const inPreviewContext = this._host._isPreviewContext();
     if (this._host.parentElement) {
-      const containsPercentHeight =
-        !tightMarginsEnabled &&
-        !inPreviewContext &&
-        this._host._config?.stream_height_unit === "%" &&
-        Number(this._host._config?.stream_height) > 0;
       this._host.parentElement.style.height = inPreviewContext
         ? "auto"
         : "100%";
-      this._host.parentElement.style.boxSizing = containsPercentHeight
-        ? "border-box"
-        : this._host._parentOrigStyle?.boxSizing || "";
       if (tightMarginsEnabled) {
         this._host.parentElement.style.margin = "0";
         this._host.parentElement.style.padding = "0";
@@ -194,9 +186,16 @@ export class CardStyleContextController {
               ? Math.min(resolvedPercentHeightPx, wrapperViewportHeightPx)
               : resolvedPercentHeightPx;
           const wrapperPaddingPx = this.resolvePercentHeightWrapperPaddingPx();
+          const sectionsBottomPaddingPx =
+            this.resolvePercentHeightSectionsBottomPaddingPx();
           this._host.style.setProperty(
             "--card-host-height",
-            `${Math.max(1, constrainedHeightPx - wrapperPaddingPx)}px`,
+            `${Math.max(
+              1,
+              constrainedHeightPx -
+                wrapperPaddingPx -
+                sectionsBottomPaddingPx,
+            )}px`,
           );
         } else {
           this._host.style.removeProperty("--card-host-height");
@@ -303,6 +302,32 @@ export class CardStyleContextController {
     const paddingTop = this.parsePxLength(wrapperStyle.paddingTop) ?? 0;
     const paddingBottom = this.parsePxLength(wrapperStyle.paddingBottom) ?? 0;
     return Math.max(0, paddingTop + paddingBottom);
+  }
+
+  resolvePercentHeightSectionsBottomPaddingPx() {
+    if (
+      this._host._config?.tight_margins === true ||
+      this._host._isPreviewContext() ||
+      !this._host.parentElement
+    ) {
+      return 0;
+    }
+
+    let element = this.composedParentElement(this._host.parentElement);
+    let bottomPaddingPx = 0;
+    for (let depth = 0; element && depth < 20; depth += 1) {
+      const elementStyle = getComputedStyle(element);
+      bottomPaddingPx += this.parsePxLength(elementStyle.paddingBottom) ?? 0;
+      if (element.tagName === "HUI-SECTIONS-VIEW") {
+        return Math.max(0, bottomPaddingPx);
+      }
+      element = this.composedParentElement(element);
+    }
+    return 0;
+  }
+
+  composedParentElement(element) {
+    return element?.parentElement || element?.getRootNode?.().host || null;
   }
 
   parsePxLength(value) {
