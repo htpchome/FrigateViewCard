@@ -233,7 +233,7 @@ export const STYLES = `
   .round-btn {
   display: inline-grid;
   place-items: center;  
-  padding: 1rem;
+  padding: 0.5rem;
   background-color: var(--c-bg-main);  
   color: var(--c-text2);
   background-image:
@@ -256,7 +256,7 @@ export const STYLES = `
     box-shadow 0.2s ease,
     transform 0.12s ease;
   }
-  .round-btn svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
+  .round-btn svg{width:36px;height:36px;opacity:0.85;color:var(--c-text2)}
   .round-btn:hover{background-size: 210% 210%;}
   .round-btn:hover svg{color:var(--c-text);}
   .round-btn.active {transform: scale(0.95);box-shadow: 0 2px 4px var(--c-border2);background:var(--c-bg-panel);}
