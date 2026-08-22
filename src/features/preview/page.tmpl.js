@@ -77,7 +77,7 @@ export function buildPreviewCellMarkup({
  * @returns {string}
  */
 export function buildPreviewCameraButtonMarkup({ index, name }) {
-  return `<button class="glass-btn preview-cam-btn" type="button" data-preview-select-camidx="${index}">${name}</button>`;
+  return `<button class="round-btn preview-cam-btn" type="button" data-preview-select-camidx="${index}">${name}</button>`;
 }
 
 /**

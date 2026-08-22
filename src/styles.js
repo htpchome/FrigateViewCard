@@ -229,6 +229,54 @@ export const STYLES = `
   .icon-btn.active svg{color:var(--c-text);}
   .icon-btn:disabled{opacity:.45;cursor:not-allowed;}
   .icon-btn:disabled:hover svg{color:var(--c-text2);}
+  .round-btn {
+  background-color: color:var(--c-bg-main);  
+  color: var(--c-text2);
+  border: none;
+  padding: 5px;
+  font-size: 31px;
+  box-shadow: 0 2px 4px var(--c-border2);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background:var(--c-bg-main);
+  }
+  .round-btn svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
+  .round-btn:hover svg{color:var(--c-text);}
+  .round-btn.active {background:var(--c-bg-panel);}
+  .round-btn.active svg{color:var(--c-text);}
+.round-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: background:var(--c-bg-panel);;
+  border-radius: 50%;
+  z-index: 1; /* Places background beneath the text layer */
+  
+  /* Start completely shrunk in the center */
+  transform: scale(0); 
+  transition: transform 0.4s ease;
+}
+.round-btn span {
+  position: relative;
+  z-index: 2; /* Keeps text visible above the expanding background */
+  color: var(--c-text);;
+  font-weight: 600;
+  transition: color 0.4s ease;
+}
+
+/* Step 4: Hover states */
+.round-btn:hover::before {
+  transform: scale(1); /* Expands background to fill the button */
+}
+
+.round-btn:hover span {
+  color: color:var(--c-text); /* Inverts text color for readability */
+}
+
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
   .more,.end{position:relative;display:flex;min-height:0;align-items:center;justify-content:center;font-size:0.85rem;color:var(--c-text2);padding:6px;}

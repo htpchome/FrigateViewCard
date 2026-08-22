@@ -51,7 +51,7 @@ export function buildMobileCamSwitcherMarkup({
     ? getCameraName(activeCamera)
     : "Camera";
   const backButton = previewPageEnabled
-    ? `<button class="glass-btn cam-tab preview-back-btn mobile-cam-picker__back" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left}</button>`
+    ? `<button class="round-btn cam-tab preview-back-btn mobile-cam-picker__back" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left}</button>`
     : "";
   const cameraOptions = cameraList
     .map((camera, index) =>
