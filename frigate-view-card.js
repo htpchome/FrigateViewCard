@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1647";
+const VERSION = "1.0.1648";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_SUBTITLE = "FrigateView";
 const DAY = 86400;
@@ -874,8 +874,6 @@ const STYLES = `
     background-color: #f5f5f5;color: #333;transition: all 0.2s ease;}
   .close-btn:hover {background-color: #e0e0e0;color: #000;}
 
-
-
   .glass-btn{  display: inline-flex; 
     align-items: center; 
     justify-content: center; 
@@ -942,7 +940,7 @@ const STYLES = `
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
   .btn-secondary{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
   .btn-primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
-  .cam-tab{font-size: 1rem;padding:0.4em;line-height: 1;font-weight:600;padding:6px;white-space:nowrap;}  
+  .cam-tab{font-size: 1rem;padding:0.4em;line-height: 1;font-weight:600;white-space:nowrap;border-radius: calc(var(--fvc-border-radius, 0px) / 2);align-items: center;justify-content: center;background:var(--c-bg-panel);border:1px solid var(--c-text2);color:var(--c-text);}  
   .cam-tab:hover{color:var(--c-primary-d);}
   .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
   .cam-tab.active:hover{background:var(--c-primary-d);color:var(--c-text-rev);}
@@ -3716,7 +3714,7 @@ function buildSingleViewCamSwitcherMarkup({
     const name = getCameraName(camera);
     const active = isSingleView && index === activeCamIdx;
     const available = !includeStatus || isCameraAvailable(camera);
-    return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${available ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
+    return `<button class="cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${available ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
   }).join("");
 }
 function resolveSingleViewTitleText({
@@ -4148,25 +4146,6 @@ function buildToolsMarkup({
         <div class="cal-panel" id="cal-panel" data-fvc-region="calendar-panel" style="display:none"></div>
       </div>`;
   return markup;
-}
-function buildCamSwitcherMarkup({
-  previewPageEnabled,
-  includeStatus,
-  cameras,
-  activeCamIdx,
-  isSingleView,
-  icons,
-  getCameraName,
-  isCameraAvailable
-}) {
-  const backButton = previewPageEnabled ? `<button class="glass-btn cam-tab preview-back-btn" type="button" data-preview-back title="Back to preview page" aria-label="Back to preview page">${icons.left} Back</button>` : "";
-  const cameraButtons = (cameras || []).map((camera, index) => {
-    const name = getCameraName(camera);
-    const active = isSingleView && index === activeCamIdx;
-    const ok = !includeStatus || isCameraAvailable(camera);
-    return `<button class="glass-btn cam-tab shadow-small ${active ? "active" : ""}" data-camidx="${index}"><span class="cam-dot" style="color:${ok ? "#4ade80" : "#ef4444"}">\u25CF</span> ${name}</button>`;
-  }).join("");
-  return `${backButton}${cameraButtons}`;
 }
 function buildInfoRowMarkup({
   title,
