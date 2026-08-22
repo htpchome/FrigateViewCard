@@ -28,16 +28,16 @@ export function buildReviewListItemModel(review, deps) {
   const mediaEventId = String(mediaEvent?.id || firstDet || "");
   const favBtn = firstDet
     ? favEv?.retain_indefinitely
-      ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>`
-      : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>`
+      ? `<button class="tool ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>`
+      : `<button class="tool ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>`
     : "";
   const clipAction =
     showDownloadButtons && mediaEvent?.has_clip
-      ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
+      ? `<button class="tool ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
       : "";
   const snapshotAction =
     showDownloadButtons && mediaEvent?.has_snapshot
-      ? `<button class="ico" data-popup-event-id="${mediaEventId}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>`
+      ? `<button class="tool ico" data-popup-event-id="${mediaEventId}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>`
       : "";
 
   return {

@@ -44,14 +44,14 @@ export function buildEventListItemModel(eventItem, deps) {
   const clipAction =
     showDownloadButtons && eventItem?.has_clip
       ? isSnapshotTab
-        ? `<button class="ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="clip" title="View Clip">${icons.clips}</button>`
-        : `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
+        ? `<button class="tool ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="clip" title="View Clip">${icons.clips}</button>`
+        : `<button class="tool ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
       : "";
   const snapshotAction =
     showDownloadButtons && eventItem?.has_snapshot
       ? isSnapshotTab
-        ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.download}</button>`
-        : `<button class="ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>`
+        ? `<button class="tool ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.download}</button>`
+        : `<button class="tool ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>`
       : "";
   const mediaActions = isSnapshotTab
     ? `${snapshotAction}${clipAction}`
@@ -60,8 +60,8 @@ export function buildEventListItemModel(eventItem, deps) {
     ? `<span class="cam-badge">${String(eventItem?.camera || "").replace(/_/g, " ")}</span>`
     : "";
   const favBtn = eventItem?.retain_indefinitely
-    ? `<button class="ico fav on" data-fav="${eventItem.id}">${icons.star}</button>`
-    : `<button class="ico fav" data-fav="${eventItem.id}">${icons.starO}</button>`;
+    ? `<button class="tool ico fav on" data-fav="${eventItem.id}">${icons.star}</button>`
+    : `<button class="tool ico fav" data-fav="${eventItem.id}">${icons.starO}</button>`;
 
   return {
     id: eventItem?.id,

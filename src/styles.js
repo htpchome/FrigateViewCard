@@ -634,7 +634,7 @@ export const STYLES = `
   }
   .divider {min-height:36px;width:8px;display:flex;align-items:center;justify-content:center;}
   .divider svg {height:24px;width:8px;opacity:0.85;color:var(--c-text2);}
-  .ico{width:30px;height:30px;display:flex;align-items:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
+  .ico{width:30px;height:30px;background:var(--c-bg-panel);}
   .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 

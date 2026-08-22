@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1669";
+const VERSION = "1.0.1670";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -1212,7 +1212,7 @@ const STYLES = `
   }
   .divider {min-height:36px;width:8px;display:flex;align-items:center;justify-content:center;}
   .divider svg {height:24px;width:8px;opacity:0.85;color:var(--c-text2);}
-  .ico{width:30px;height:30px;display:flex;align-items:center;background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:5px;color:var(--c-text2);cursor:pointer;}
+  .ico{width:30px;height:30px;background:var(--c-bg-panel);}
   .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
   .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 
@@ -15935,9 +15935,9 @@ function buildReviewListItemModel(review, deps) {
   const favEv = firstDet ? findEventById(firstDet) : null;
   const mediaEvent = sourceEvent || favEv;
   const mediaEventId = String(mediaEvent?.id || firstDet || "");
-  const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>` : `<button class="ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>` : "";
-  const clipAction = showDownloadButtons && mediaEvent?.has_clip ? `<button class="ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
-  const snapshotAction = showDownloadButtons && mediaEvent?.has_snapshot ? `<button class="ico" data-popup-event-id="${mediaEventId}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>` : "";
+  const favBtn = firstDet ? favEv?.retain_indefinitely ? `<button class="tool ico fav on" data-fav="${firstDet}" title="Unfavorite">${icons.star}</button>` : `<button class="tool ico fav" data-fav="${firstDet}" title="Favorite">${icons.starO}</button>` : "";
+  const clipAction = showDownloadButtons && mediaEvent?.has_clip ? `<button class="tool ico" data-dl="${mediaEventId}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
+  const snapshotAction = showDownloadButtons && mediaEvent?.has_snapshot ? `<button class="tool ico" data-popup-event-id="${mediaEventId}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>` : "";
   return {
     reviewId: review?.id || "",
     firstDet,
@@ -16001,11 +16001,11 @@ function buildEventListItemModel(eventItem, deps) {
   const thumb = eventItem?.has_snapshot || eventItem?.has_clip ? `<img src="${thumbSrc}" loading="lazy" data-thumb-id="${eventItem.id}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="tph" style="display:none">${icons.person}</div>` : `<div class="tph">${icons.person}</div>`;
   const badge = eventItem?.has_clip ? '<span class="bc">clip</span>' : eventItem?.has_snapshot ? '<span class="bs">snap</span>' : "";
   const isSnapshotTab = browseTab === "snapshot";
-  const clipAction = showDownloadButtons && eventItem?.has_clip ? isSnapshotTab ? `<button class="ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="clip" title="View Clip">${icons.clips}</button>` : `<button class="ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
-  const snapshotAction = showDownloadButtons && eventItem?.has_snapshot ? isSnapshotTab ? `<button class="ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.download}</button>` : `<button class="ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>` : "";
+  const clipAction = showDownloadButtons && eventItem?.has_clip ? isSnapshotTab ? `<button class="tool ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="clip" title="View Clip">${icons.clips}</button>` : `<button class="tool ico" data-dl="${eventItem.id}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>` : "";
+  const snapshotAction = showDownloadButtons && eventItem?.has_snapshot ? isSnapshotTab ? `<button class="tool ico" data-dl="${eventItem.id}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.download}</button>` : `<button class="tool ico" data-popup-event-id="${eventItem.id}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>` : "";
   const mediaActions = isSnapshotTab ? `${snapshotAction}${clipAction}` : `${clipAction}${snapshotAction}`;
   const camLabel = showCameraLabel ? `<span class="cam-badge">${String(eventItem?.camera || "").replace(/_/g, " ")}</span>` : "";
-  const favBtn = eventItem?.retain_indefinitely ? `<button class="ico fav on" data-fav="${eventItem.id}">${icons.star}</button>` : `<button class="ico fav" data-fav="${eventItem.id}">${icons.starO}</button>`;
+  const favBtn = eventItem?.retain_indefinitely ? `<button class="tool ico fav on" data-fav="${eventItem.id}">${icons.star}</button>` : `<button class="tool ico fav" data-fav="${eventItem.id}">${icons.starO}</button>`;
   return {
     id: eventItem?.id,
     labelColorValue: labelColor2(eventItem?.label),
