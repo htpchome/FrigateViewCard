@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1644";
+const VERSION = "1.0.1645";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_SUBTITLE = "FrigateView";
 const DAY = 86400;
@@ -1242,7 +1242,8 @@ const STYLES = `
   .popup-close-row {position: absolute;top: 3px;right: 10px;z-index: 5;pointer-events: none;}
   .popup-close-row .close-btn {pointer-events: auto;}
   .popup-header::before {content: '';width: 40px;height: 4px;background-color: var(--handle-color);  border-radius: 3px;}
-  .popup-body {padding: 0 10px 10px 10px;overflow-y: auto;overflow-x:hidden;flex-grow: 1;display: flex;  flex-direction: column;gap: 8px;-webkit-overflow-scrolling: touch;overscroll-behavior-y: contain;}
+  .popup-body {padding: 0 10px 10px 10px;overflow-y:auto;overflow-x:hidden;min-height:0;flex:1 1 auto;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;}
+  .popup-body > * {flex-shrink:0;}
   .popup-shell-ver {margin: 0;font-size: 18px;font-weight: 800;line-height: 1.2;color: var(--c-text2);}
   .popup-info-head {margin:0;padding:7px 10px;background:var(--c-bg-main);border-bottom:1px solid var(--c-border2);color:var(--c-text);font-size:.95rem;font-weight:750;line-height:1.25;letter-spacing:.01em;}
   .popup-media-controls {display:grid;grid-template-columns:2px 36px minmax(0,1fr) 36px 36px 36px 2px;grid-template-areas:"sp1 play progress mute fs airplay sp2" ". . time . . . .";align-items:center;column-gap:5px;row-gap:0;padding:1px 4px 2px;border-radius:8px;background:var(--c-bg-panel);border:1px solid var(--c-border2);box-sizing:border-box;width:100%;}

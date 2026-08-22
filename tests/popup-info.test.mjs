@@ -7,6 +7,15 @@ import {
   buildPopupInfoMarkup,
   buildPopupInfoModel,
 } from "../src/features/popup/info.js";
+import { STYLES } from "../src/styles.js";
+
+test("popup body scrolls instead of shrinking its content sections", () => {
+  assert.match(
+    STYLES,
+    /\.popup-body \{[^}]*overflow-y:auto;[^}]*min-height:0;[^}]*flex:1 1 auto;/,
+  );
+  assert.match(STYLES, /\.popup-body > \* \{flex-shrink:0;\}/);
+});
 
 test("popup info model derives event details and download actions", () => {
   const model = buildPopupInfoModel({

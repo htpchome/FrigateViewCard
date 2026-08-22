@@ -179,7 +179,7 @@ test("older hint reserves its footer height while visually hidden", () => {
     STYLES,
     /\.more\[hidden\]\{display:flex !important;visibility:hidden;pointer-events:none;\}/,
   );
-  assert.match(STYLES, /border-top:1px solid var\(--c-border2\)/);
+  assert.match(STYLES, /border-top:1px solid var\(--c-border\)/);
 });
 
 test("resolveActiveDayLabelFromScroll follows labels against browse anchor", () => {
