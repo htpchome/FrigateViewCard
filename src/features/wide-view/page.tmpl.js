@@ -64,10 +64,7 @@ export function buildWideViewMainLayoutShellMarkup({
             ${regions.information}
             ${regions.cameraSwitcher}
             <div class="${tabsHolderClassName} shadow-small">
-              <div class="button-holder">
-                <div class="button-holder-row tabs-row">
-                  
-                </div>
+              <div class="button-holder button-holder--responsive-toolbar button-holder--no-tabs">
                 <div class="button-holder-row page-nav-row">
                   ${regions.pageNavigation}
                 </div>

@@ -580,6 +580,14 @@ export const STYLES = `
     .button-holder .tabs{justify-content:center;}
     .button-holder .tl-tools-slot{justify-content:center;}
   }
+  @container (max-width: 640px){
+    .button-holder--responsive-toolbar{display:flex;flex-wrap:wrap;justify-content:center;column-gap:8px;row-gap:6px;padding:6px 8px;}
+    .button-holder--responsive-toolbar .page-nav-row{order:1;flex:0 0 auto;justify-content:center;}
+    .button-holder--responsive-toolbar .tools-row{order:2;flex:0 0 auto;justify-content:center;}
+    .button-holder--responsive-toolbar .tabs-row{order:3;flex:1 0 100%;justify-content:center;}
+    .button-holder--responsive-toolbar .tabs{justify-content:center;}
+    .button-holder--responsive-toolbar .tl-tools-slot{justify-content:center;}
+  }
   @media (max-width: 920px){
     .tabs-holder{container-type:inline-size;}
   }

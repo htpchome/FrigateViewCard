@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { buildPreviewPageMainLayoutShellMarkup } from "../src/features/preview/page.tmpl.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
 import { buildWideViewMainLayoutShellMarkup } from "../src/features/wide-view/page.tmpl.js";
+import { STYLES } from "../src/styles.js";
 
 const regions = {
   live: `<div data-fvc-region="live">Live</div>`,
@@ -90,6 +91,28 @@ test("wide view inserts Companion Cameras below its tool controls", () => {
   assert.match(
     markup,
     /data-fvc-region="tools"[\s\S]*?id="wide-companion-panel"[\s\S]*?id="resize-handle"/,
+  );
+});
+
+test("single and wide view toolbars opt into content-aware responsive rows", () => {
+  const singleMarkup = buildSingleViewMainLayoutShellMarkup({ regions });
+  const wideMarkup = buildWideViewMainLayoutShellMarkup({ regions });
+
+  assert.match(
+    singleMarkup,
+    /class="button-holder button-holder--responsive-toolbar"/,
+  );
+  assert.match(
+    wideMarkup,
+    /class="button-holder button-holder--responsive-toolbar button-holder--no-tabs"/,
+  );
+  assert.match(
+    STYLES,
+    /\.button-holder--responsive-toolbar\{display:flex;flex-wrap:wrap;/,
+  );
+  assert.match(
+    STYLES,
+    /\.button-holder--responsive-toolbar \.tabs-row\{order:3;flex:1 0 100%;/,
   );
 });
 

@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1636";
+const VERSION = "1.0.1637";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1142,6 +1142,14 @@ const STYLES = `
     .button-holder .tabs-row,.button-holder .tools-row,.button-holder .page-nav-row{justify-content:center;}
     .button-holder .tabs{justify-content:center;}
     .button-holder .tl-tools-slot{justify-content:center;}
+  }
+  @container (max-width: 640px){
+    .button-holder--responsive-toolbar{display:flex;flex-wrap:wrap;justify-content:center;column-gap:8px;row-gap:6px;padding:6px 8px;}
+    .button-holder--responsive-toolbar .page-nav-row{order:1;flex:0 0 auto;justify-content:center;}
+    .button-holder--responsive-toolbar .tools-row{order:2;flex:0 0 auto;justify-content:center;}
+    .button-holder--responsive-toolbar .tabs-row{order:3;flex:1 0 100%;justify-content:center;}
+    .button-holder--responsive-toolbar .tabs{justify-content:center;}
+    .button-holder--responsive-toolbar .tl-tools-slot{justify-content:center;}
   }
   @media (max-width: 920px){
     .tabs-holder{container-type:inline-size;}
@@ -3745,7 +3753,7 @@ function buildSingleViewMainLayoutShellMarkup({
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
             <div class="${tabsHolderClassName} shadow-small">
-              <div class="button-holder">
+              <div class="button-holder button-holder--responsive-toolbar">
                 <div class="button-holder-row tabs-row">
                   ${regions.tabs}
                 </div>
@@ -3823,10 +3831,7 @@ function buildWideViewMainLayoutShellMarkup({
             ${regions.information}
             ${regions.cameraSwitcher}
             <div class="${tabsHolderClassName} shadow-small">
-              <div class="button-holder">
-                <div class="button-holder-row tabs-row">
-                  
-                </div>
+              <div class="button-holder button-holder--responsive-toolbar button-holder--no-tabs">
                 <div class="button-holder-row page-nav-row">
                   ${regions.pageNavigation}
                 </div>

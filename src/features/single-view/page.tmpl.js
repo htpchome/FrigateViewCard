@@ -116,7 +116,7 @@ export function buildSingleViewMainLayoutShellMarkup({
           <div class="${resizeHandleClassName}" id="resize-handle"></div>
           <div class="${rightColumnClassName}" id="col-right">
             <div class="${tabsHolderClassName} shadow-small">
-              <div class="button-holder">
+              <div class="button-holder button-holder--responsive-toolbar">
                 <div class="button-holder-row tabs-row">
                   ${regions.tabs}
                 </div>
