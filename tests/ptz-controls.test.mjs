@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   canCameraUsePtz,
   hasCameraPtz,
+  isPtzControlsPadEvent,
   normalizeCameraPtzConfig,
   resolvePtzServicePlan,
 } from "../src/features/ptz/index.js";
@@ -68,7 +69,6 @@ test("resolvePtzServicePlan maps press to the Frigate integration PTZ service", 
         target: { entity_id: "camera.driveway" },
       },
     ],
-    readout: "[ptz:up]",
   });
 });
 
@@ -102,7 +102,6 @@ test("resolvePtzServicePlan fans out diagonal moves into parallel Frigate integr
         target: { entity_id: "camera.driveway" },
       },
     ],
-    readout: "[ptz:up-right]",
   });
 });
 
@@ -129,7 +128,6 @@ test("resolvePtzServicePlan stops continuous PTZ moves on release", () => {
         target: { entity_id: "camera.driveway" },
       },
     ],
-    readout: "[ptz:stop]",
   });
 });
 
@@ -155,7 +153,6 @@ test("resolvePtzServicePlan maps zoom in to the Frigate integration PTZ service"
         target: { entity_id: "camera.driveway" },
       },
     ],
-    readout: "[ptz:zoom-in]",
   });
 });
 
@@ -181,7 +178,6 @@ test("resolvePtzServicePlan maps focus out to the Frigate integration PTZ servic
         target: { entity_id: "camera.driveway" },
       },
     ],
-    readout: "[ptz:focus-out]",
   });
 });
 
@@ -216,7 +212,6 @@ test("resolvePtzServicePlan stops zoom and focus actions on release", () => {
         target: { entity_id: "camera.driveway" },
       },
     ],
-    readout: "[ptz:stop]",
   });
   assert.deepEqual(focusStop, zoomStop);
 });
@@ -248,7 +243,6 @@ test("resolvePtzServicePlan uses ONVIF PTZ service for ha_direct cameras", () =>
         target: { entity_id: "camera.driveway" },
       },
     ],
-    readout: "[ptz:left]",
   });
 });
 
@@ -275,7 +269,6 @@ test("resolvePtzServicePlan uses ONVIF stop for ha_direct release", () => {
         target: { entity_id: "camera.driveway" },
       },
     ],
-    readout: "[ptz:stop]",
   });
 });
 
@@ -319,7 +312,6 @@ test("resolvePtzServicePlan stops release even when relative move mode is config
         target: { entity_id: "camera.driveway" },
       },
     ],
-    readout: "[ptz:stop]",
   });
 });
 
@@ -331,4 +323,25 @@ test("hasCameraPtz requires an enabled PTZ camera config", () => {
 test("canCameraUsePtz requires Frigate pan tilt capability", () => {
   assert.equal(canCameraUsePtz({ ptz: true }, { features: ["pt"] }), true);
   assert.equal(canCameraUsePtz({ ptz: true }, { features: ["pt-r"] }), true);
+});
+
+test("isPtzControlsPadEvent recognizes direct and composed circle-pad events", () => {
+  assert.equal(
+    isPtzControlsPadEvent({ target: { id: "controls-pad" } }),
+    true,
+  );
+  assert.equal(
+    isPtzControlsPadEvent({
+      target: { id: "nested-target" },
+      composedPath: () => [{ id: "nested-target" }, { id: "controls-pad" }],
+    }),
+    true,
+  );
+  assert.equal(
+    isPtzControlsPadEvent({
+      target: { id: "other" },
+      composedPath: () => [{ id: "other" }],
+    }),
+    false,
+  );
 });

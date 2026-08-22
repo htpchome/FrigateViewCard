@@ -310,24 +310,19 @@ test("buildToolsMarkup renders Alert Camera Takeover as disabled", () => {
 
 test("buildControlsSectionMarkup enables pan, tilt, and zoom on the circle pad", () => {
   const markup = buildControlsSectionMarkup({
-    cameraName: "Driveway",
-    ptzReady: true,
     panTiltEnabled: true,
     zoomEnabled: true,
-    focusEnabled: true,
   });
 
   assert.match(markup, /<circle-pad-control-2 id="controls-pad"><\/circle-pad-control-2>/);
   assert.doesNotMatch(markup, /disabled-actions=/);
+  assert.doesNotMatch(markup, /controls-readout|Readout/);
 });
 
 test("buildControlsSectionMarkup disables unavailable zoom actions on the circle pad", () => {
   const markup = buildControlsSectionMarkup({
-    cameraName: "Driveway",
-    ptzReady: true,
     panTiltEnabled: true,
     zoomEnabled: false,
-    focusEnabled: false,
   });
 
   assert.match(markup, /disabled-actions="zoom-in zoom-out"/);

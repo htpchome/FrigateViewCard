@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1655";
+const VERSION = "1.0.1656";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -1153,6 +1153,12 @@ const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
+  @media (hover:none), (pointer:coarse) {
+    .tool#controls-btn:not(.active):hover{background:var(--c-bg);color:var(--c-text2);border-color:var(--c-border2);opacity:1;}
+    .tool#controls-btn:not(.active):hover svg{color:var(--c-text2);}
+    .icon-btn#controls-btn:not(.active):hover{background:transparent;color:var(--c-text2);}
+    .icon-btn#controls-btn:not(.active):hover svg{color:var(--c-text2);}
+  }
   @container (max-width: 640px){
     .button-holder{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nav nav" "tabs tools";gap:8px;padding:6px 8px;}
     .button-holder .page-nav-row{justify-content:center;}
@@ -1207,14 +1213,6 @@ const STYLES = `
   .controls-action-btn:hover:not(:disabled),.controls-action-btn:focus-visible:not(:disabled){border-color:var(--c-primary-d);background:var(--c-primary-l);color:var(--c-primary-d);outline:none;}
   .controls-action-btn:active:not(:disabled){transform:translateY(1px) scale(.99);}
   .controls-action-btn:disabled{cursor:not-allowed;color:var(--c-text4);background:var(--c-bg-panel);}
-  .controls-readout{background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:10px;overflow:hidden;}
-  .controls-readout-head{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--c-border2);}
-  .controls-readout-label{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--c-text2);}
-  .controls-readout-clear{background:none;border:1px solid var(--c-border2);color:var(--c-text2);border-radius:8px;font-size:0.72rem;font-weight:600;padding:3px 8px;cursor:pointer;transition:all .2s ease;}
-  .controls-readout-clear:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);background:var(--c-primary-l);}
-  .controls-readout-lines{max-height:154px;overflow-y:auto;padding:8px 10px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:0.82rem;line-height:1.45;color:var(--c-text);}
-  .controls-readout-line{padding:1px 0;}
-  .controls-readout-empty{color:var(--c-text3);font-style:italic;font-family:var(--ha-font-family, Roboto, 'Helvetica Neue', sans-serif);}
 
   .frigate-view{max-height:24px;pointer-events: none;}
   .frigate-view svg{height:24px;pointer-events: none;}
@@ -1363,8 +1361,7 @@ const CIRCLE_PAD_ACTIONS = Object.freeze({
   LEFT: "left",
   UP_LEFT: "up-left",
   ZOOM_IN: "zoom-in",
-  ZOOM_OUT: "zoom-out",
-  MIC: "mic"
+  ZOOM_OUT: "zoom-out"
 });
 const DIRECTION_ACTIONS = Object.freeze(
   new Set([
@@ -1382,18 +1379,15 @@ const DIRECTION_ACTIONS = Object.freeze(
 );
 const EVT_PRESS = "circle-pad-press";
 const EVT_RELEASE = "circle-pad-release";
-const EVT_TOGGLE = "circle-pad-toggle";
 const INPUT_MODE_TOUCH = "touch";
 const INPUT_MODE_MOUSE = "mouse";
 const ACTION_SELECTOR = "[" + CIRCLE_PAD_DATA_ACTION + "]";
-const CENTER_BUTTON_SELECTOR = ".center-button";
 const DISABLED_ACTIONS_ATTR = "disabled-actions";
 const ROOT_EVENT_BINDINGS = Object.freeze([
   ["pointerdown", "_onPointerDown"],
   ["pointerup", "_onPointerUp"],
   ["pointercancel", "_onPointerCancel"],
-  ["pointerleave", "_onPointerLeave"],
-  ["click", "_onClick"]
+  ["pointerleave", "_onPointerLeave"]
 ]);
 const CIRCLE_PAD_STYLES = `
   :host {
@@ -1465,20 +1459,6 @@ circle.circle-pad-middle-circle {
     fill: var(--circle-pad-primary);  }
 }
 
-/* Standalone shadow layer applied exclusively over the center button structure in base state */
-.center-button {
-  box-shadow: 
-    0px 4px 8px rgba(0, 0, 0, 0.12),          /* Your original outer drop shadow */
-    inset 0px 2px 4px rgba(0, 0, 0, 0.15);    /* New subtle inset shadow */
-}
-/* The inner shadow overlay styling */
-.inner-shadow-overlay {
-  fill: none;
-  stroke: var(--circle-pad-text-1);
-  stroke-width: 2;          /* Thickness of the shadow */
-  opacity: 0.15;            /* Softness/transparency of the shadow */
-  filter: url(#simple-blur); /* Applies the blur effect */
-}
 /* Keyboard Accessibility Focus Rings - Set to none to prevent extra lines when active */
 .${CIRCLE_PAD_CLASS} svg:focus, .${CIRCLE_PAD_CLASS} svg:active {
   outline: none;
@@ -1558,10 +1538,6 @@ const CIRCLE_PAD_SVG = `
   <div class="${CIRCLE_PAD_CLASS}__wrapper">
 <svg version="1.1" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
  <defs>
-  <filter id="simple-blur">
-    <feGaussianBlur stdDeviation="1.8"></feGaussianBlur>
-  </filter>
-      
   <filter id="circle-pad-outside-shadow" x="-30%" y="-30%" width="160%" height="160%">
     <feDropShadow dx="0.2" dy="0.2" stdDeviation="2" flood-color="#333333" flood-opacity="0.25"></feDropShadow>
   </filter>
@@ -1619,7 +1595,6 @@ const CirclePadControl = class extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._pressed = new Set();
     this._pressedByPointer = new Map();
-    this._activeMic = false;
     this._mounted = false;
     this._wired = false;
     this._resetRootHandlers();
@@ -1638,14 +1613,6 @@ const CirclePadControl = class extends HTMLElement {
     if (name !== DISABLED_ACTIONS_ATTR) return;
     this._applyDisabledActions();
   }
-  setActive(action, active) {
-    if (action !== CIRCLE_PAD_ACTIONS.MIC) return;
-    this._activeMic = Boolean(active);
-    this._applyMicState();
-  }
-  getState() {
-    return { mic: this._activeMic };
-  }
   _mount() {
     if (this._mounted) return;
     this._mounted = true;
@@ -1658,7 +1625,6 @@ const CirclePadControl = class extends HTMLElement {
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(root);
     this._applyDisabledActions();
-    this._applyMicState();
   }
   _getDisabledActions() {
     return new Set(
@@ -1681,13 +1647,6 @@ const CirclePadControl = class extends HTMLElement {
       }
     }
   }
-  _applyMicState() {
-    if (!this.shadowRoot) return;
-    const mic = this.shadowRoot.querySelector(CENTER_BUTTON_SELECTOR);
-    if (!mic) return;
-    mic.classList.toggle("is-active", this._activeMic);
-    mic.setAttribute("aria-pressed", String(this._activeMic));
-  }
   _setInputMode(mode) {
     if (!this._rootEl) return;
     this._rootEl.setAttribute("data-input-mode", mode);
@@ -1708,7 +1667,6 @@ const CirclePadControl = class extends HTMLElement {
     this._onPointerUp = null;
     this._onPointerCancel = null;
     this._onPointerLeave = null;
-    this._onClick = null;
   }
   _bindRootEvents() {
     if (!this.shadowRoot) return;
@@ -1734,13 +1692,6 @@ const CirclePadControl = class extends HTMLElement {
   }
   _getButtonAction(btn) {
     return btn ? btn.getAttribute(CIRCLE_PAD_DATA_ACTION) : null;
-  }
-  _isMicAction(action) {
-    return action === CIRCLE_PAD_ACTIONS.MIC;
-  }
-  _setMicPressed(btn, pressed) {
-    if (!btn) return;
-    btn.classList.toggle("is-pressed", Boolean(pressed));
   }
   _clearDirectionPressed(btn) {
     if (!btn) return;
@@ -1777,19 +1728,6 @@ const CirclePadControl = class extends HTMLElement {
     this._dispatch(EVT_PRESS, { action });
     this._trySetPointerCapture(btn, pointerId);
   }
-  _handleMicToggleClick(btn) {
-    this._activeMic = !this._activeMic;
-    this._applyMicState();
-    this._setMicPressed(btn, false);
-    this._dispatch(EVT_TOGGLE, {
-      action: CIRCLE_PAD_ACTIONS.MIC,
-      active: this._activeMic
-    });
-    const activeEl = this.shadowRoot && this.shadowRoot.activeElement;
-    if (this._rootEl && this._rootEl.getAttribute("data-input-mode") === INPUT_MODE_TOUCH && activeEl && typeof activeEl.blur === "function") {
-      activeEl.blur();
-    }
-  }
   _handlePointerEnd(ev, ignoreRelatedTarget = false) {
     if (this._releaseDirectionByPointer(ev)) return;
     const btn = this._findActionButton(ev.target);
@@ -1798,10 +1736,6 @@ const CirclePadControl = class extends HTMLElement {
       return;
     }
     const action = this._getButtonAction(btn);
-    if (this._isMicAction(action)) {
-      this._setMicPressed(btn, false);
-      return;
-    }
     if (this._isActionDisabled(action)) return;
     if (!DIRECTION_ACTIONS.has(action) || !this._pressed.has(action)) return;
     this._clearDirectionPressed(btn);
@@ -1822,22 +1756,11 @@ const CirclePadControl = class extends HTMLElement {
       this._setInputModeFromPointer(ev);
       const action = this._getButtonAction(btn);
       if (this._isActionDisabled(action)) return;
-      if (this._isMicAction(action)) {
-        this._setMicPressed(btn, true);
-        this._trySetPointerCapture(btn, ev.pointerId);
-        return;
-      }
       this._handleDirectionPointerDown(btn, action, ev.pointerId);
     };
     this._onPointerUp = (ev) => this._handlePointerRelease(ev);
     this._onPointerCancel = (ev) => this._handlePointerRelease(ev);
     this._onPointerLeave = (ev) => this._handlePointerLeave(ev);
-    this._onClick = (ev) => {
-      const btn = this._findActionButton(ev.target);
-      if (!btn) return;
-      if (!this._isMicAction(this._getButtonAction(btn))) return;
-      this._handleMicToggleClick(btn);
-    };
     this._bindRootEvents();
   }
   _dispatch(type, detail) {
@@ -2283,26 +2206,11 @@ const hasPtzPanTiltCapability = (ptzInfo) => Array.isArray(ptzInfo?.features) &&
 const hasPtzZoomCapability = (ptzInfo) => Array.isArray(ptzInfo?.features) && ptzInfo.features.includes("zoom");
 const hasPtzFocusCapability = (ptzInfo) => Array.isArray(ptzInfo?.features) && ptzInfo.features.includes("focus");
 const canCameraUsePtz = (camera, ptzInfo) => hasCameraPtz(camera) && (isHaDirectCamera(camera) || hasPtzPanTiltCapability(ptzInfo));
-const resolvePtzEmptyStateMessage = (camera, ptzInfo, { loading = false } = {}) => {
-  if (!hasCameraPtz(camera)) {
-    return "PTZ is not configured for the active camera.";
-  }
-  if (loading) {
-    return "Checking Frigate PTZ support for the active camera.";
-  }
-  const hasPanTilt = hasPtzPanTiltCapability(ptzInfo);
-  const hasZoom = hasPtzZoomCapability(ptzInfo);
-  const hasFocus = hasPtzFocusCapability(ptzInfo);
-  if (!hasPanTilt && !hasZoom && !hasFocus) {
-    return "Frigate did not report PTZ support for the active camera.";
-  }
-  if (hasPanTilt && (hasZoom || hasFocus)) {
-    return "Use the circle pad or PTZ buttons to control the active camera.";
-  }
-  if (hasPanTilt) return "Use the circle pad to move the active camera.";
-  if (hasZoom || hasFocus)
-    return "Use the PTZ buttons to control the active camera.";
-  return "Use the circle pad to move the active camera.";
+const isControlsPadTarget = (target) => target?.id === "controls-pad";
+const isPtzControlsPadEvent = (event) => {
+  if (isControlsPadTarget(event?.target)) return true;
+  const path = event?.composedPath?.();
+  return Array.isArray(path) && path.some(isControlsPadTarget);
 };
 const canUsePtzAction = (action, ptzInfo, camera = null) => {
   if (isHaDirectCamera(camera)) {
@@ -2340,14 +2248,12 @@ const resolvePtzServicePlan = ({
             camera,
             moveMode: "Stop"
           })
-        ],
-        readout: "[ptz:stop]"
+        ]
       };
     }
     return {
       executionMode: "sequential",
-      requests: [buildHomeAssistantPtzRequest({ camera, action: "stop" })],
-      readout: "[ptz:stop]"
+      requests: [buildHomeAssistantPtzRequest({ camera, action: "stop" })]
     };
   }
   const directions = PTZ_DIRECTIONS[action];
@@ -2366,8 +2272,7 @@ const resolvePtzServicePlan = ({
             speed: ptz.speed,
             continuousDuration: ptz.continuous_duration
           })
-        ],
-        readout: `[ptz:${action}]`
+        ]
       };
     }
     return {
@@ -2378,8 +2283,7 @@ const resolvePtzServicePlan = ({
           action: "move",
           argument: direction
         })
-      ),
-      readout: `[ptz:${action}]`
+      )
     };
   }
   const singleAction = PTZ_SINGLE_ACTIONS[action];
@@ -2397,8 +2301,7 @@ const resolvePtzServicePlan = ({
           speed: ptz.speed,
           continuousDuration: ptz.continuous_duration
         })
-      ],
-      readout: `[ptz:${action}]`
+      ]
     };
   }
   return {
@@ -2409,8 +2312,7 @@ const resolvePtzServicePlan = ({
         action: singleAction.action,
         argument: singleAction.argument
       })
-    ],
-    readout: `[ptz:${action}]`
+    ]
   };
 };
 
@@ -4282,40 +4184,16 @@ function buildFooterMarkup({
             </div>`;
 }
 function buildControlsSectionMarkup({
-  cameraName: cameraName4 = "Active Camera",
-  ptzReady = false,
   panTiltEnabled = false,
-  zoomEnabled = false,
-  focusEnabled = false
+  zoomEnabled = false
 } = {}) {
   const padDisabledActions = [
     ...panTiltEnabled ? [] : ["up", "right", "down", "left"],
     ...zoomEnabled ? [] : ["zoom-in", "zoom-out"]
   ].join(" ");
-  const buildPtzButton = (action, label, enabled) => `<button
-                class="controls-action-btn"
-                type="button"
-                data-ptz-control="${action}"
-                aria-label="${label}"
-                ${enabled ? "" : "disabled"}
-              >${label}</button>`;
   return `<div class="controls-pad-wrap${panTiltEnabled || zoomEnabled ? "" : " is-disabled"}">
             <circle-pad-control-2 id="controls-pad"${padDisabledActions ? ` disabled-actions="${padDisabledActions}"` : ""}></circle-pad-control-2>
-          </div>
-          <div class="controls-readout">
-            <div class="controls-readout-head">
-              <span class="controls-readout-label">Readout</span>
-              <button class="controls-readout-clear" id="controls-readout-clear" type="button">Clear</button>
-            </div>
-            <div class="controls-readout-lines" id="controls-readout-lines"></div>
-          </div>
-          `;
-}
-function buildControlsReadoutEmptyMarkup(message = "Use the circle pad to move the active camera.") {
-  return `<div class="controls-readout-empty">${message}</div>`;
-}
-function buildControlsReadoutLinesMarkup(lines) {
-  return (lines || []).map((line) => `<div class="controls-readout-line">${line}</div>`).join("");
+          </div>`;
 }
 function buildPopupShellMarkup({ icons, version }) {
   return `<div id="myPopup" class="popup-content">
@@ -15684,52 +15562,6 @@ const BrowseWindowLoaderController = class {
   }
 };
 
-// src/card/controls/readout.js
-function normalizeControlsReadoutLine(text) {
-  return String(text || "").trim();
-}
-function appendControlsReadoutLine(lines, text, maxLines = 200) {
-  const line = normalizeControlsReadoutLine(text);
-  if (!line) {
-    return lines || [];
-  }
-  const nextLines = [...lines || [], line];
-  return nextLines.slice(-Math.max(1, Number(maxLines) || 1));
-}
-function clearControlsReadoutLines() {
-  return [];
-}
-const eventTargetMatchesControlsPad = (target) => target instanceof Element && target.id === "controls-pad";
-function isControlsPadTarget(targetOrEvent) {
-  if (eventTargetMatchesControlsPad(targetOrEvent)) return true;
-  const path = targetOrEvent?.composedPath?.();
-  return Array.isArray(path) && path.some(eventTargetMatchesControlsPad);
-}
-function isControlsReadoutClearTarget(target) {
-  return target instanceof Element && !!target.closest("#controls-readout-clear");
-}
-function resolveControlsPadPressReadoutEntry(event) {
-  if (!isControlsPadTarget(event)) return "";
-  const action = event?.detail?.action;
-  return action ? `[${action}]` : "";
-}
-function resolveControlsPadToggleReadoutEntry(event) {
-  if (!isControlsPadTarget(event)) return "";
-  if (event?.detail?.action !== "mic") return "";
-  return event?.detail?.active ? "[mic:on]" : "[mic:off]";
-}
-function resolveControlsReadoutMarkup(lines, escapeText, emptyMessage) {
-  if (!Array.isArray(lines) || lines.length === 0) {
-    return buildControlsReadoutEmptyMarkup(
-      typeof emptyMessage === "string" ? emptyMessage : void 0
-    );
-  }
-  const escapedLines = lines.map(
-    (line) => typeof escapeText === "function" ? escapeText(line) : String(line || "")
-  );
-  return buildControlsReadoutLinesMarkup(escapedLines);
-}
-
 // src/features/two-way-talk/index.js
 const hasTwoWayTalkCapability = (capabilityInfo) => {
   if (!capabilityInfo || typeof capabilityInfo !== "object") return false;
@@ -21436,17 +21268,11 @@ const FrigateViewCard = class extends HTMLElement {
       if (placeholder) placeholder.style.display = "flex";
     };
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
-    this._controlsReadoutLines = [];
     this._onCirclePadPress = (event) => {
       void this._handleCirclePadPtzEvent(event, "press");
     };
     this._onCirclePadRelease = (event) => {
       void this._handleCirclePadPtzEvent(event, "release");
-    };
-    this._onCirclePadToggle = (event) => {
-      const entry = resolveControlsPadToggleReadoutEntry(event);
-      if (!entry) return;
-      this._appendControlsReadoutEntry(entry);
     };
     this._onPtzControlPointerDown = (event) => {
       void this._handlePtzControlPointerDown(event);
@@ -21461,10 +21287,6 @@ const FrigateViewCard = class extends HTMLElement {
     this.shadowRoot.addEventListener(
       "circle-pad-release",
       this._onCirclePadRelease
-    );
-    this.shadowRoot.addEventListener(
-      "circle-pad-toggle",
-      this._onCirclePadToggle
     );
     this.shadowRoot.addEventListener(
       "pointerdown",
@@ -24938,7 +24760,6 @@ const FrigateViewCard = class extends HTMLElement {
   }
   _handleListClick(e, target) {
     this._pauseSlideshowForInteraction();
-    if (this._handleControlsListClick(e, target)) return true;
     if (this._handlePrimaryListItemClick(e, target)) return true;
     if (this._handleListNavigationClick(e, target)) return true;
     return this._handleRecordingsListClick(e, target);
@@ -25030,12 +24851,6 @@ const FrigateViewCard = class extends HTMLElement {
       return true;
     }
     return false;
-  }
-  _handleControlsListClick(e, target) {
-    if (!isControlsReadoutClearTarget(target)) return false;
-    e.stopPropagation();
-    this._clearControlsReadout();
-    return true;
   }
   _handleEventClick(target) {
     const card = target.closest("[data-ev]");
@@ -25853,27 +25668,16 @@ const FrigateViewCard = class extends HTMLElement {
     const ptzConfigured = hasCameraPtz(this._activeCam);
     const panTiltEnabled = ptzConfigured && hasPtzPanTiltCapability(ptzInfo);
     const zoomEnabled = ptzConfigured && hasPtzZoomCapability(ptzInfo);
-    const focusEnabled = ptzConfigured && hasPtzFocusCapability(ptzInfo);
     this._setListHtmlIfChanged(
       list,
       buildControlsSectionMarkup({
-        cameraName: cap(camDisplayName(this._activeCam || {})),
-        ptzReady: panTiltEnabled || zoomEnabled || focusEnabled,
         panTiltEnabled,
-        zoomEnabled,
-        focusEnabled
+        zoomEnabled
       })
     );
-    this._renderControlsReadout();
-  }
-  _activeCameraHasPtz() {
-    return canCameraUsePtz(this._activeCam, this._activeCameraPtzInfo());
   }
   _activeCameraPtzInfo() {
     return this._cc().ptzInfo || null;
-  }
-  _activeCameraPtzInfoLoading() {
-    return !!this._cc().ptzInfoPromise;
   }
   async _ensureActiveCameraPtzInfo() {
     const entity = this._activeCam?.entity;
@@ -25918,7 +25722,7 @@ const FrigateViewCard = class extends HTMLElement {
     return cache.ptzInfoPromise;
   }
   async _handleCirclePadPtzEvent(event, eventType) {
-    if (!isControlsPadTarget(event)) return;
+    if (!isPtzControlsPadEvent(event)) return;
     await this._handlePtzAction(event?.detail?.action, eventType);
   }
   async _handlePtzAction(action, eventType) {
@@ -25933,17 +25737,7 @@ const FrigateViewCard = class extends HTMLElement {
       action,
       eventType
     });
-    if (!plan) {
-      if (eventType === "press") {
-        this._appendControlsReadoutEntry(
-          resolvePtzEmptyStateMessage(this._activeCam, ptzInfo, {
-            loading: this._activeCameraPtzInfoLoading()
-          })
-        );
-      }
-      return;
-    }
-    this._appendControlsReadoutEntry(plan.readout);
+    if (!plan) return;
     try {
       const executeRequest = async (request) => {
         if (request?.type !== "home_assistant_service") {
@@ -25969,7 +25763,6 @@ const FrigateViewCard = class extends HTMLElement {
       }
     } catch (error) {
       console.warn("[Frigate] PTZ call failed", error);
-      this._appendControlsReadoutEntry("[ptz:error]");
     }
   }
   async _handlePtzControlPointerDown(event) {
@@ -25995,38 +25788,6 @@ const FrigateViewCard = class extends HTMLElement {
     this._activePtzButtonAction = "";
     this._activePtzButtonPointerId = null;
     await this._handlePtzAction(action, "release");
-  }
-  _appendControlsReadoutEntry(text) {
-    this._controlsReadoutLines = appendControlsReadoutLine(
-      this._controlsReadoutLines,
-      text,
-      200
-    );
-    this._renderControlsReadout();
-  }
-  _clearControlsReadout() {
-    this._controlsReadoutLines = clearControlsReadoutLines();
-    this._renderControlsReadout();
-  }
-  _escapeControlsReadoutText(value) {
-    return String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-  _renderControlsReadout() {
-    const el = this._$("#controls-readout-lines");
-    if (!el) return;
-    el.innerHTML = resolveControlsReadoutMarkup(
-      this._controlsReadoutLines,
-      (line) => this._escapeControlsReadoutText(line),
-      resolvePtzEmptyStateMessage(
-        this._activeCam,
-        this._activeCameraPtzInfo(),
-        {
-          loading: this._activeCameraPtzInfoLoading()
-        }
-      )
-    );
-    if (!this._controlsReadoutLines.length) return;
-    el.scrollTop = el.scrollHeight;
   }
   _reviewListItemHTML(review) {
     const model = buildReviewListItemModel(review, {

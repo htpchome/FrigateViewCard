@@ -17,9 +17,6 @@
  *        "circle-pad-release" detail: { action }
  *      Actions: up, up-right, right, down-right, down,
  *               down-left, left, up-left
- *    - Center mic is a toggle:
- *        "circle-pad-toggle"  detail: { action: "mic", active }
- *
  * 3) Sizing behavior
  *    - The control scales to available space (SVG uses a square viewBox,
  *      host/wrapper use width:100%, height:100%, aspect-ratio:1/1).
@@ -39,9 +36,6 @@
  *      pad.addEventListener("circle-pad-release", (e) => {
  *        console.log("release", e.detail.action);
  *      });
- *      pad.addEventListener("circle-pad-toggle", (e) => {
- *        console.log("mic", e.detail.active ? "on" : "off");
- *      });
  *    </script>
  *
  * 5) Home Assistant custom card example
@@ -58,10 +52,6 @@
  *    // pad.addEventListener("circle-pad-release", (e) => {
  *    //   this._handleDirectionStop(e.detail.action);
  *    // });
- *    // pad.addEventListener("circle-pad-toggle", (e) => {
- *    //   this._setMicEnabled(e.detail.active);
- *    // });
- *
  * 6) Optional: hardware gamepad/joystick adapter
  *    - This component does not read Gamepad API directly.
  *    - To support USB/Bluetooth PTZ controllers, map gamepad axes/buttons
@@ -100,11 +90,6 @@
  *          if (dir) emitPad("circle-pad-press", { action: dir });
  *          prevDirection = dir;
  *        }
- *
- *        // Example: first button toggles mic.
- *        if (gp.buttons[0]?.pressed) {
- *          emitPad("circle-pad-toggle", { action: "mic", active: true });
- *        }
  *      }
  *      requestAnimationFrame(pollGamepad);
  *    };
@@ -130,7 +115,6 @@ const CIRCLE_PAD_ACTIONS = Object.freeze({
   UP_LEFT: "up-left",
   ZOOM_IN: "zoom-in",
   ZOOM_OUT: "zoom-out",
-  MIC: "mic",
 });
 
 const DIRECTION_ACTIONS = Object.freeze(
@@ -150,11 +134,9 @@ const DIRECTION_ACTIONS = Object.freeze(
 
 const EVT_PRESS = "circle-pad-press";
 const EVT_RELEASE = "circle-pad-release";
-const EVT_TOGGLE = "circle-pad-toggle";
 const INPUT_MODE_TOUCH = "touch";
 const INPUT_MODE_MOUSE = "mouse";
 const ACTION_SELECTOR = "[" + CIRCLE_PAD_DATA_ACTION + "]";
-const CENTER_BUTTON_SELECTOR = ".center-button";
 const DISABLED_ACTIONS_ATTR = "disabled-actions";
 
 const ROOT_EVENT_BINDINGS = Object.freeze([
@@ -162,7 +144,6 @@ const ROOT_EVENT_BINDINGS = Object.freeze([
   ["pointerup", "_onPointerUp"],
   ["pointercancel", "_onPointerCancel"],
   ["pointerleave", "_onPointerLeave"],
-  ["click", "_onClick"],
 ]);
 
 const CIRCLE_PAD_STYLES = `
@@ -235,20 +216,6 @@ circle.circle-pad-middle-circle {
     fill: var(--circle-pad-primary);  }
 }
 
-/* Standalone shadow layer applied exclusively over the center button structure in base state */
-.center-button {
-  box-shadow: 
-    0px 4px 8px rgba(0, 0, 0, 0.12),          /* Your original outer drop shadow */
-    inset 0px 2px 4px rgba(0, 0, 0, 0.15);    /* New subtle inset shadow */
-}
-/* The inner shadow overlay styling */
-.inner-shadow-overlay {
-  fill: none;
-  stroke: var(--circle-pad-text-1);
-  stroke-width: 2;          /* Thickness of the shadow */
-  opacity: 0.15;            /* Softness/transparency of the shadow */
-  filter: url(#simple-blur); /* Applies the blur effect */
-}
 /* Keyboard Accessibility Focus Rings - Set to none to prevent extra lines when active */
 .${CIRCLE_PAD_CLASS} svg:focus, .${CIRCLE_PAD_CLASS} svg:active {
   outline: none;
@@ -329,10 +296,6 @@ const CIRCLE_PAD_SVG = `
   <div class="${CIRCLE_PAD_CLASS}__wrapper">
 <svg version="1.1" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
  <defs>
-  <filter id="simple-blur">
-    <feGaussianBlur stdDeviation="1.8"></feGaussianBlur>
-  </filter>
-      
   <filter id="circle-pad-outside-shadow" x="-30%" y="-30%" width="160%" height="160%">
     <feDropShadow dx="0.2" dy="0.2" stdDeviation="2" flood-color="#333333" flood-opacity="0.25"></feDropShadow>
   </filter>
@@ -392,7 +355,6 @@ class CirclePadControl extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._pressed = new Set();
     this._pressedByPointer = new Map();
-    this._activeMic = false;
     this._mounted = false;
     this._wired = false;
     this._resetRootHandlers();
@@ -415,16 +377,6 @@ class CirclePadControl extends HTMLElement {
     this._applyDisabledActions();
   }
 
-  setActive(action, active) {
-    if (action !== CIRCLE_PAD_ACTIONS.MIC) return;
-    this._activeMic = Boolean(active);
-    this._applyMicState();
-  }
-
-  getState() {
-    return { mic: this._activeMic };
-  }
-
   _mount() {
     if (this._mounted) return;
     this._mounted = true;
@@ -440,7 +392,6 @@ class CirclePadControl extends HTMLElement {
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(root);
     this._applyDisabledActions();
-    this._applyMicState();
   }
 
   _getDisabledActions() {
@@ -470,14 +421,6 @@ class CirclePadControl extends HTMLElement {
     }
   }
 
-  _applyMicState() {
-    if (!this.shadowRoot) return;
-    const mic = this.shadowRoot.querySelector(CENTER_BUTTON_SELECTOR);
-    if (!mic) return;
-    mic.classList.toggle("is-active", this._activeMic);
-    mic.setAttribute("aria-pressed", String(this._activeMic));
-  }
-
   _setInputMode(mode) {
     if (!this._rootEl) return;
     this._rootEl.setAttribute("data-input-mode", mode);
@@ -502,7 +445,6 @@ class CirclePadControl extends HTMLElement {
     this._onPointerUp = null;
     this._onPointerCancel = null;
     this._onPointerLeave = null;
-    this._onClick = null;
   }
 
   _bindRootEvents() {
@@ -532,15 +474,6 @@ class CirclePadControl extends HTMLElement {
 
   _getButtonAction(btn) {
     return btn ? btn.getAttribute(CIRCLE_PAD_DATA_ACTION) : null;
-  }
-
-  _isMicAction(action) {
-    return action === CIRCLE_PAD_ACTIONS.MIC;
-  }
-
-  _setMicPressed(btn, pressed) {
-    if (!btn) return;
-    btn.classList.toggle("is-pressed", Boolean(pressed));
   }
 
   _clearDirectionPressed(btn) {
@@ -583,26 +516,6 @@ class CirclePadControl extends HTMLElement {
     this._trySetPointerCapture(btn, pointerId);
   }
 
-  _handleMicToggleClick(btn) {
-    this._activeMic = !this._activeMic;
-    this._applyMicState();
-    this._setMicPressed(btn, false);
-    this._dispatch(EVT_TOGGLE, {
-      action: CIRCLE_PAD_ACTIONS.MIC,
-      active: this._activeMic,
-    });
-
-    const activeEl = this.shadowRoot && this.shadowRoot.activeElement;
-    if (
-      this._rootEl &&
-      this._rootEl.getAttribute("data-input-mode") === INPUT_MODE_TOUCH &&
-      activeEl &&
-      typeof activeEl.blur === "function"
-    ) {
-      activeEl.blur();
-    }
-  }
-
   _handlePointerEnd(ev, ignoreRelatedTarget = false) {
     if (this._releaseDirectionByPointer(ev)) return;
 
@@ -617,11 +530,6 @@ class CirclePadControl extends HTMLElement {
     }
 
     const action = this._getButtonAction(btn);
-    if (this._isMicAction(action)) {
-      this._setMicPressed(btn, false);
-      return;
-    }
-
     if (this._isActionDisabled(action)) return;
 
     if (!DIRECTION_ACTIONS.has(action) || !this._pressed.has(action)) return;
@@ -649,25 +557,12 @@ class CirclePadControl extends HTMLElement {
 
       const action = this._getButtonAction(btn);
       if (this._isActionDisabled(action)) return;
-      if (this._isMicAction(action)) {
-        this._setMicPressed(btn, true);
-        this._trySetPointerCapture(btn, ev.pointerId);
-        return;
-      }
-
       this._handleDirectionPointerDown(btn, action, ev.pointerId);
     };
 
     this._onPointerUp = (ev) => this._handlePointerRelease(ev);
     this._onPointerCancel = (ev) => this._handlePointerRelease(ev);
     this._onPointerLeave = (ev) => this._handlePointerLeave(ev);
-
-    this._onClick = (ev) => {
-      const btn = this._findActionButton(ev.target);
-      if (!btn) return;
-      if (!this._isMicAction(this._getButtonAction(btn))) return;
-      this._handleMicToggleClick(btn);
-    };
 
     this._bindRootEvents();
   }
@@ -695,5 +590,4 @@ export {
   CIRCLE_PAD_ACTIONS,
   EVT_PRESS,
   EVT_RELEASE,
-  EVT_TOGGLE,
 };

@@ -120,30 +120,12 @@ export const canCameraUsePtz = (camera, ptzInfo) =>
   hasCameraPtz(camera) &&
   (isHaDirectCamera(camera) || hasPtzPanTiltCapability(ptzInfo));
 
-export const resolvePtzEmptyStateMessage = (
-  camera,
-  ptzInfo,
-  { loading = false } = {},
-) => {
-  if (!hasCameraPtz(camera)) {
-    return "PTZ is not configured for the active camera.";
-  }
-  if (loading) {
-    return "Checking Frigate PTZ support for the active camera.";
-  }
-  const hasPanTilt = hasPtzPanTiltCapability(ptzInfo);
-  const hasZoom = hasPtzZoomCapability(ptzInfo);
-  const hasFocus = hasPtzFocusCapability(ptzInfo);
-  if (!hasPanTilt && !hasZoom && !hasFocus) {
-    return "Frigate did not report PTZ support for the active camera.";
-  }
-  if (hasPanTilt && (hasZoom || hasFocus)) {
-    return "Use the circle pad or PTZ buttons to control the active camera.";
-  }
-  if (hasPanTilt) return "Use the circle pad to move the active camera.";
-  if (hasZoom || hasFocus)
-    return "Use the PTZ buttons to control the active camera.";
-  return "Use the circle pad to move the active camera.";
+const isControlsPadTarget = (target) => target?.id === "controls-pad";
+
+export const isPtzControlsPadEvent = (event) => {
+  if (isControlsPadTarget(event?.target)) return true;
+  const path = event?.composedPath?.();
+  return Array.isArray(path) && path.some(isControlsPadTarget);
 };
 
 const canUsePtzAction = (action, ptzInfo, camera = null) => {
@@ -186,13 +168,11 @@ export const resolvePtzServicePlan = ({
             moveMode: "Stop",
           }),
         ],
-        readout: "[ptz:stop]",
       };
     }
     return {
       executionMode: "sequential",
       requests: [buildHomeAssistantPtzRequest({ camera, action: "stop" })],
-      readout: "[ptz:stop]",
     };
   }
 
@@ -221,7 +201,6 @@ export const resolvePtzServicePlan = ({
             continuousDuration: ptz.continuous_duration,
           }),
         ],
-        readout: `[ptz:${action}]`,
       };
     }
     return {
@@ -233,7 +212,6 @@ export const resolvePtzServicePlan = ({
           argument: direction,
         }),
       ),
-      readout: `[ptz:${action}]`,
     };
   }
 
@@ -259,7 +237,6 @@ export const resolvePtzServicePlan = ({
           continuousDuration: ptz.continuous_duration,
         }),
       ],
-      readout: `[ptz:${action}]`,
     };
   }
 
@@ -272,6 +249,5 @@ export const resolvePtzServicePlan = ({
         argument: singleAction.argument,
       }),
     ],
-    readout: `[ptz:${action}]`,
   };
 };

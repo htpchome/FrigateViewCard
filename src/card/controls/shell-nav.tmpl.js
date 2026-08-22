@@ -240,46 +240,16 @@ export function buildFooterMarkup({
 }
 
 export function buildControlsSectionMarkup({
-  cameraName = "Active Camera",
-  ptzReady = false,
   panTiltEnabled = false,
   zoomEnabled = false,
-  focusEnabled = false,
 } = {}) {
   const padDisabledActions = [
     ...(panTiltEnabled ? [] : ["up", "right", "down", "left"]),
     ...(zoomEnabled ? [] : ["zoom-in", "zoom-out"]),
   ].join(" ");
-  const buildPtzButton = (action, label, enabled) => `<button
-                class="controls-action-btn"
-                type="button"
-                data-ptz-control="${action}"
-                aria-label="${label}"
-                ${enabled ? "" : "disabled"}
-              >${label}</button>`;
   return `<div class="controls-pad-wrap${panTiltEnabled || zoomEnabled ? "" : " is-disabled"}">
             <circle-pad-control-2 id="controls-pad"${padDisabledActions ? ` disabled-actions="${padDisabledActions}"` : ""}></circle-pad-control-2>
-          </div>
-          <div class="controls-readout">
-            <div class="controls-readout-head">
-              <span class="controls-readout-label">Readout</span>
-              <button class="controls-readout-clear" id="controls-readout-clear" type="button">Clear</button>
-            </div>
-            <div class="controls-readout-lines" id="controls-readout-lines"></div>
-          </div>
-          `;
-}
-
-export function buildControlsReadoutEmptyMarkup(
-  message = "Use the circle pad to move the active camera.",
-) {
-  return `<div class="controls-readout-empty">${message}</div>`;
-}
-
-export function buildControlsReadoutLinesMarkup(lines) {
-  return (lines || [])
-    .map((line) => `<div class="controls-readout-line">${line}</div>`)
-    .join("");
+          </div>`;
 }
 
 export function buildPopupShellMarkup({ icons, version }) {

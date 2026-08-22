@@ -85,6 +85,21 @@ test("icon buttons reset native button chrome", () => {
   }
 });
 
+test("touch PTZ buttons reset retained hover styling when inactive", () => {
+  assert.equal(
+    stylesSource.includes("@media (hover:none), (pointer:coarse)"),
+    true,
+  );
+  assert.equal(
+    stylesSource.includes('.tool#controls-btn:not(.active):hover'),
+    true,
+  );
+  assert.equal(
+    stylesSource.includes('.icon-btn#controls-btn:not(.active):hover'),
+    true,
+  );
+});
+
 test("two-way talk start and end paths synchronize the live audio state", () => {
   assert.match(
     cardSource,

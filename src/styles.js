@@ -567,6 +567,12 @@ export const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
+  @media (hover:none), (pointer:coarse) {
+    .tool#controls-btn:not(.active):hover{background:var(--c-bg);color:var(--c-text2);border-color:var(--c-border2);opacity:1;}
+    .tool#controls-btn:not(.active):hover svg{color:var(--c-text2);}
+    .icon-btn#controls-btn:not(.active):hover{background:transparent;color:var(--c-text2);}
+    .icon-btn#controls-btn:not(.active):hover svg{color:var(--c-text2);}
+  }
   @container (max-width: 640px){
     .button-holder{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nav nav" "tabs tools";gap:8px;padding:6px 8px;}
     .button-holder .page-nav-row{justify-content:center;}
@@ -621,14 +627,6 @@ export const STYLES = `
   .controls-action-btn:hover:not(:disabled),.controls-action-btn:focus-visible:not(:disabled){border-color:var(--c-primary-d);background:var(--c-primary-l);color:var(--c-primary-d);outline:none;}
   .controls-action-btn:active:not(:disabled){transform:translateY(1px) scale(.99);}
   .controls-action-btn:disabled{cursor:not-allowed;color:var(--c-text4);background:var(--c-bg-panel);}
-  .controls-readout{background:var(--c-bg-panel);border:1px solid var(--c-border2);border-radius:10px;overflow:hidden;}
-  .controls-readout-head{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--c-border2);}
-  .controls-readout-label{font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--c-text2);}
-  .controls-readout-clear{background:none;border:1px solid var(--c-border2);color:var(--c-text2);border-radius:8px;font-size:0.72rem;font-weight:600;padding:3px 8px;cursor:pointer;transition:all .2s ease;}
-  .controls-readout-clear:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);background:var(--c-primary-l);}
-  .controls-readout-lines{max-height:154px;overflow-y:auto;padding:8px 10px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:0.82rem;line-height:1.45;color:var(--c-text);}
-  .controls-readout-line{padding:1px 0;}
-  .controls-readout-empty{color:var(--c-text3);font-style:italic;font-family:var(--ha-font-family, Roboto, 'Helvetica Neue', sans-serif);}
 
   .frigate-view{max-height:24px;pointer-events: none;}
   .frigate-view svg{height:24px;pointer-events: none;}

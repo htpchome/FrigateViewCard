@@ -181,8 +181,6 @@ import { GridMediaController } from "../features/grid/media.ctrl.js";
 import {
   buildControlsSectionMarkup,
   buildCamSwitcherRegionMarkup,
-  buildControlsReadoutEmptyMarkup,
-  buildControlsReadoutLinesMarkup,
   buildInfoRowMarkup,
   buildPageNavButtonsMarkup,
   buildPageNavMarkup,
@@ -234,21 +232,11 @@ import {
   splitRecordingsHourly,
 } from "../features/recordings/index.js";
 import {
-  appendControlsReadoutLine,
-  clearControlsReadoutLines,
-  isControlsPadTarget,
-  isControlsReadoutClearTarget,
-  resolveControlsPadToggleReadoutEntry,
-  resolveControlsReadoutMarkup,
-} from "./controls/readout.js";
-import {
-  canCameraUsePtz,
   hasCameraPtz,
-  hasPtzFocusCapability,
   hasPtzPanTiltCapability,
   hasPtzZoomCapability,
+  isPtzControlsPadEvent,
   resolvePtzServicePlan,
-  resolvePtzEmptyStateMessage,
 } from "../features/ptz/index.js";
 import { shouldRenderTwoWayTalkButton } from "../features/two-way-talk/index.js";
 import {
@@ -325,17 +313,11 @@ export class FrigateViewCard extends HTMLElement {
     };
 
     this.shadowRoot.addEventListener("error", this._onShadowError, true);
-    this._controlsReadoutLines = [];
     this._onCirclePadPress = (event) => {
       void this._handleCirclePadPtzEvent(event, "press");
     };
     this._onCirclePadRelease = (event) => {
       void this._handleCirclePadPtzEvent(event, "release");
-    };
-    this._onCirclePadToggle = (event) => {
-      const entry = resolveControlsPadToggleReadoutEntry(event);
-      if (!entry) return;
-      this._appendControlsReadoutEntry(entry);
     };
     this._onPtzControlPointerDown = (event) => {
       void this._handlePtzControlPointerDown(event);
@@ -350,10 +332,6 @@ export class FrigateViewCard extends HTMLElement {
     this.shadowRoot.addEventListener(
       "circle-pad-release",
       this._onCirclePadRelease,
-    );
-    this.shadowRoot.addEventListener(
-      "circle-pad-toggle",
-      this._onCirclePadToggle,
     );
     this.shadowRoot.addEventListener(
       "pointerdown",
@@ -4420,7 +4398,6 @@ export class FrigateViewCard extends HTMLElement {
   }
   _handleListClick(e, target) {
     this._pauseSlideshowForInteraction();
-    if (this._handleControlsListClick(e, target)) return true;
     if (this._handlePrimaryListItemClick(e, target)) return true;
     if (this._handleListNavigationClick(e, target)) return true;
     return this._handleRecordingsListClick(e, target);
@@ -4512,12 +4489,6 @@ export class FrigateViewCard extends HTMLElement {
       return true;
     }
     return false;
-  }
-  _handleControlsListClick(e, target) {
-    if (!isControlsReadoutClearTarget(target)) return false;
-    e.stopPropagation();
-    this._clearControlsReadout();
-    return true;
   }
   _handleEventClick(target) {
     const card = target.closest("[data-ev]");
@@ -5499,30 +5470,17 @@ export class FrigateViewCard extends HTMLElement {
     const ptzConfigured = hasCameraPtz(this._activeCam);
     const panTiltEnabled = ptzConfigured && hasPtzPanTiltCapability(ptzInfo);
     const zoomEnabled = ptzConfigured && hasPtzZoomCapability(ptzInfo);
-    const focusEnabled = ptzConfigured && hasPtzFocusCapability(ptzInfo);
     this._setListHtmlIfChanged(
       list,
       buildControlsSectionMarkup({
-        cameraName: cap(camDisplayName(this._activeCam || {})),
-        ptzReady: panTiltEnabled || zoomEnabled || focusEnabled,
         panTiltEnabled,
         zoomEnabled,
-        focusEnabled,
       }),
     );
-    this._renderControlsReadout();
-  }
-
-  _activeCameraHasPtz() {
-    return canCameraUsePtz(this._activeCam, this._activeCameraPtzInfo());
   }
 
   _activeCameraPtzInfo() {
     return this._cc().ptzInfo || null;
-  }
-
-  _activeCameraPtzInfoLoading() {
-    return !!this._cc().ptzInfoPromise;
   }
 
   async _ensureActiveCameraPtzInfo() {
@@ -5578,7 +5536,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   async _handleCirclePadPtzEvent(event, eventType) {
-    if (!isControlsPadTarget(event)) return;
+    if (!isPtzControlsPadEvent(event)) return;
     await this._handlePtzAction(event?.detail?.action, eventType);
   }
 
@@ -5595,18 +5553,8 @@ export class FrigateViewCard extends HTMLElement {
       action,
       eventType,
     });
-    if (!plan) {
-      if (eventType === "press") {
-        this._appendControlsReadoutEntry(
-          resolvePtzEmptyStateMessage(this._activeCam, ptzInfo, {
-            loading: this._activeCameraPtzInfoLoading(),
-          }),
-        );
-      }
-      return;
-    }
+    if (!plan) return;
 
-    this._appendControlsReadoutEntry(plan.readout);
     try {
       const executeRequest = async (request) => {
         if (request?.type !== "home_assistant_service") {
@@ -5634,7 +5582,6 @@ export class FrigateViewCard extends HTMLElement {
       }
     } catch (error) {
       console.warn("[Frigate] PTZ call failed", error);
-      this._appendControlsReadoutEntry("[ptz:error]");
     }
   }
 
@@ -5671,45 +5618,6 @@ export class FrigateViewCard extends HTMLElement {
     this._activePtzButtonAction = "";
     this._activePtzButtonPointerId = null;
     await this._handlePtzAction(action, "release");
-  }
-
-  _appendControlsReadoutEntry(text) {
-    this._controlsReadoutLines = appendControlsReadoutLine(
-      this._controlsReadoutLines,
-      text,
-      200,
-    );
-    this._renderControlsReadout();
-  }
-
-  _clearControlsReadout() {
-    this._controlsReadoutLines = clearControlsReadoutLines();
-    this._renderControlsReadout();
-  }
-
-  _escapeControlsReadoutText(value) {
-    return String(value || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
-
-  _renderControlsReadout() {
-    const el = this._$("#controls-readout-lines");
-    if (!el) return;
-    el.innerHTML = resolveControlsReadoutMarkup(
-      this._controlsReadoutLines,
-      (line) => this._escapeControlsReadoutText(line),
-      resolvePtzEmptyStateMessage(
-        this._activeCam,
-        this._activeCameraPtzInfo(),
-        {
-          loading: this._activeCameraPtzInfoLoading(),
-        },
-      ),
-    );
-    if (!this._controlsReadoutLines.length) return;
-    el.scrollTop = el.scrollHeight;
   }
 
   _reviewListItemHTML(review) {
