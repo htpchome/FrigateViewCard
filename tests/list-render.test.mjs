@@ -148,8 +148,12 @@ test("older hint ignores outer overflow when the current tab list fits", () => {
   }
 });
 
-test("older hint hidden state overrides its flex presentation", () => {
-  assert.match(STYLES, /\.more\[hidden\]\{display:none !important;\}/);
+test("older hint reserves its footer height while visually hidden", () => {
+  assert.match(
+    STYLES,
+    /\.more\[hidden\]\{display:flex !important;visibility:hidden;pointer-events:none;\}/,
+  );
+  assert.match(STYLES, /border-top:1px solid var\(--c-border2\)/);
 });
 
 test("resolveActiveDayLabelFromScroll follows labels against browse anchor", () => {

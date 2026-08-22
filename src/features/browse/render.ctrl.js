@@ -201,7 +201,6 @@ export class BrowseRenderController {
     }
 
     if (this._host._tab === "alerts") {
-      this.syncOlderHint(false);
       return this._renderReviews(list);
     }
 
@@ -240,7 +239,6 @@ export class BrowseRenderController {
     ) {
       return;
     }
-    this.syncOlderHint(false);
     this._renderRecordings(list);
   }
 
@@ -284,7 +282,7 @@ export class BrowseRenderController {
       contentForceHide = null,
       syncOnContent = true,
       syncBrowseHead = false,
-      scheduleDeferredOlderHint = false,
+      scheduleDeferredOlderHint = true,
     } = {},
   ) {
     const syncOlderHint = createOlderHintSyncer((forceHide) =>
@@ -305,10 +303,12 @@ export class BrowseRenderController {
       contentForceHide,
       syncOnContent,
     });
-    if (!hasContent || !syncBrowseHead) return;
+    if (!hasContent) return;
 
     runListPostRenderSync({
-      syncBrowseHead: () => this.syncBrowseHeadFromScroll(),
+      syncBrowseHead: syncBrowseHead
+        ? () => this.syncBrowseHeadFromScroll()
+        : null,
       syncOlderHint,
       forceHide: contentForceHide,
       scheduleDeferredOlderHint,
@@ -325,7 +325,7 @@ export class BrowseRenderController {
       recordings,
       "No recordings in the last 24 hours",
     );
-    applyListMarkupWithOlderHint({
+    const hasContent = applyListMarkupWithOlderHint({
       setHtml: (nextHtml) => this.setListHtmlIfChanged(list, nextHtml),
       html,
       isEmpty: !recordings.length,
@@ -334,6 +334,13 @@ export class BrowseRenderController {
       contentForceHide: false,
       syncOnContent: true,
     });
+    if (hasContent) {
+      runListPostRenderSync({
+        syncOlderHint,
+        forceHide: false,
+        scheduleDeferredOlderHint: true,
+      });
+    }
     this._host._recordingsBrowseNavController?.scheduleBrowseNavUpdate?.();
   }
 
@@ -357,7 +364,7 @@ export class BrowseRenderController {
       emptyForceHide: true,
       contentForceHide: false,
       syncOnContent: false,
-      scheduleDeferredOlderHint: false,
+      scheduleDeferredOlderHint: true,
       syncBrowseHead: true,
     });
   }

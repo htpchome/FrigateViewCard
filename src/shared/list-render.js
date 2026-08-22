@@ -204,7 +204,9 @@ export function runListPostRenderSync({
   syncOlderHint(forceHide);
   if (!scheduleDeferredOlderHint) return;
 
-  requestAnimationFrame(() => syncOlderHint(forceHide));
+  if (typeof globalThis.requestAnimationFrame === "function") {
+    globalThis.requestAnimationFrame(() => syncOlderHint(forceHide));
+  }
   setTimeout(() => syncOlderHint(forceHide), 200);
 }
 
