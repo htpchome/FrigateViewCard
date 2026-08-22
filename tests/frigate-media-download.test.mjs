@@ -76,7 +76,7 @@ test("Frigate download controller signs recordings and dispatches plans", async 
     download: (plan) => downloads.push(plan),
   });
 
-  const eventPlan = controller.downloadEvent("event-1", "clip.mp4");
+  const eventPlan = await controller.downloadEvent("event-1", "clip.mp4");
   const recordingPlan = await controller.downloadRecording(100, 160);
 
   assert.deepEqual(eventPlan, {
@@ -94,6 +94,63 @@ test("Frigate download controller signs recordings and dispatches plans", async 
       filename: "front_door_8-44 pm.mp4",
     },
   ]);
+});
+
+test("Frigate event clip downloads use the padded recording range when enabled", async () => {
+  const downloads = [];
+  const signedPaths = [];
+  const controller = new FrigateMediaDownloadController({
+    getContext: () => ({ clientId: "frigate", cam: "front_door" }),
+    findEventById: () => ({
+      id: "event-1",
+      camera: "front_door",
+      start_time: 100.8,
+      end_time: 110.2,
+    }),
+    isEventPrePostRollEnabled: () => true,
+    signPath: async (path) => {
+      signedPaths.push(path);
+      return `${path}&authSig=abc`;
+    },
+    download: (plan) => downloads.push(plan),
+  });
+
+  const plan = await controller.downloadEvent("event-1", "clip.mp4");
+
+  assert.deepEqual(signedPaths, [
+    "/api/frigate/frigate/recording/front_door/start/95/end/116?download=true",
+  ]);
+  assert.equal(plan.start, 95);
+  assert.equal(plan.end, 116);
+  assert.equal(plan.filename, "front_door_event-1_clip.mp4");
+  assert.deepEqual(downloads, [
+    {
+      url: `${signedPaths[0]}&authSig=abc`,
+      filename: "front_door_event-1_clip.mp4",
+    },
+  ]);
+});
+
+test("Frigate snapshot downloads remain event files when pre-roll is enabled", async () => {
+  const downloads = [];
+  const controller = new FrigateMediaDownloadController({
+    getContext: () => ({ clientId: "frigate", cam: "front_door" }),
+    findEventById: () => ({
+      id: "event-1",
+      start_time: 100,
+      end_time: 110,
+    }),
+    isEventPrePostRollEnabled: () => true,
+    download: (plan) => downloads.push(plan),
+  });
+
+  const plan = await controller.downloadEvent("event-1", "snapshot.jpg");
+
+  assert.equal(
+    plan.url,
+    "/api/frigate/frigate/notifications/event-1/snapshot.jpg?download=true",
+  );
+  assert.deepEqual(downloads, [plan]);
 });
 
 test("browser download helper mounts, clicks, and removes its anchor", () => {

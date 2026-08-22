@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1645";
+const VERSION = "1.0.1646";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_SUBTITLE = "FrigateView";
 const DAY = 86400;
@@ -20,6 +20,7 @@ const REALTIME_RELOAD_DEBOUNCE_MS = 450;
 const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
 const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
 const SNAPSHOT_UPDATE_SECONDS = 60;
+const EVENT_PRE_POST_ROLL_SECONDS = 5;
 const SLIDESHOW_ROTATION_OPTIONS_SECONDS = Object.freeze([
   10,
   20,
@@ -2042,6 +2043,7 @@ const createEditorPreviewDraft = (config) => ({
   realtime_poll_seconds: config.realtime_poll_seconds,
   snapshot_update_seconds: config.snapshot_update_seconds,
   mobile_poll_battery_saver: config.mobile_poll_battery_saver,
+  event_pre_post_roll_enabled: config.event_pre_post_roll_enabled,
   slideshow_rotation_enabled: config.slideshow_rotation_enabled,
   slideshow_rotation_seconds: config.slideshow_rotation_seconds,
   slideshow_alert_hold_seconds: config.slideshow_alert_hold_seconds,
@@ -2104,6 +2106,7 @@ const applyEditorPreviewDraftToCardConfig = ({
       240
     ),
     mobile_poll_battery_saver: previewConfig.mobile_poll_battery_saver === true,
+    event_pre_post_roll_enabled: previewConfig.event_pre_post_roll_enabled === true,
     slideshow_rotation_enabled: previewConfig.slideshow_rotation_enabled === true,
     slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
       Number(previewConfig.slideshow_rotation_seconds)
@@ -2537,6 +2540,12 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     compact,
     "mobile_poll_battery_saver",
     source.mobile_poll_battery_saver === true,
+    false
+  );
+  addIfNotDefault(
+    compact,
+    "event_pre_post_roll_enabled",
+    source.event_pre_post_roll_enabled === true,
     false
   );
   addIfNotDefault(
@@ -3188,6 +3197,9 @@ const buildEditorConfigFromDom = ({
   );
   nextConfig.mobile_poll_battery_saver = resolveSwitchChecked(
     root.querySelector("#mobile_poll_battery_saver")
+  );
+  nextConfig.event_pre_post_roll_enabled = resolveSwitchChecked(
+    root.querySelector("#event_pre_post_roll_enabled")
   );
   nextConfig.slideshow_rotation_enabled = resolveSwitchChecked(
     root.querySelector("#slideshow_rotation_enabled")
@@ -4642,24 +4654,76 @@ const triggerBrowserDownload = ({
   }
 };
 
+// src/integrations/frigate/event-media.js
+const resolveFrigateEventPrePostRollRange = ({
+  event = null,
+  enabled = false,
+  rollSeconds = EVENT_PRE_POST_ROLL_SECONDS
+} = {}) => {
+  if (!enabled || !event) return null;
+  const eventStart = Number(event.start_time);
+  const eventEnd = Number(event.end_time);
+  const padding = Math.max(0, Number(rollSeconds) || 0);
+  if (!Number.isFinite(eventStart) || !Number.isFinite(eventEnd) || eventEnd <= eventStart || padding <= 0) {
+    return null;
+  }
+  const start = Math.max(0, Math.floor(eventStart - padding));
+  const end = Math.ceil(eventEnd + padding);
+  if (end <= start) return null;
+  return {
+    start,
+    end,
+    durationSec: end - start
+  };
+};
+
 // src/integrations/frigate/media-download.ctrl.js
 const FrigateMediaDownloadController = class {
   constructor({
     getContext,
     signPath = async (path) => path,
     formatTime = () => "",
-    download = triggerBrowserDownload
+    download = triggerBrowserDownload,
+    findEventById = () => null,
+    isEventPrePostRollEnabled = () => false
   } = {}) {
     this._getContext = getContext;
     this._signPath = signPath;
     this._formatTime = formatTime;
     this._download = download;
+    this._findEventById = findEventById;
+    this._isEventPrePostRollEnabled = isEventPrePostRollEnabled;
   }
-  downloadEvent(eventId, file) {
+  async downloadEvent(eventId, file) {
     const { clientId = "", cam = "" } = this._getContext?.() || {};
+    const event = this._findEventById?.(eventId) || null;
+    const range = resolveFrigateEventPrePostRollRange({
+      event,
+      enabled: file === "clip.mp4" && this._isEventPrePostRollEnabled?.() === true
+    });
+    if (range) {
+      const camera = event?.camera || cam;
+      const rangePlan = buildFrigateRecordingDownloadPlan({
+        clientId,
+        camera,
+        start: range.start,
+        end: range.end,
+        timeLabel: this._formatTime(range.start)
+      });
+      const eventPlan = buildFrigateEventDownloadPlan({
+        clientId,
+        camera,
+        eventId,
+        file
+      });
+      const url = await this._signPath(rangePlan.path);
+      const signedPlan = { url, filename: eventPlan.filename };
+      this._download(signedPlan);
+      return { ...rangePlan, ...signedPlan };
+    }
     const plan = buildFrigateEventDownloadPlan({
       clientId,
-      camera: cam,
+      camera: event?.camera || cam,
       eventId,
       file
     });
@@ -18247,6 +18311,32 @@ const buildPopupRecordingRenderPlan = ({
   chunkEnd: playbackPlan.chunkEnd,
   sourceCandidates: playbackPlan.sourceCandidates || []
 });
+const buildPopupEventRecordingRenderPlan = ({
+  event = null,
+  opts = {},
+  range = {},
+  playbackPlan = {}
+} = {}) => {
+  const mediaType = opts.mediaType || "clip";
+  return {
+    popupMediaType: mediaType,
+    playing: {
+      id: event?.id || "",
+      eventRecordingStart: range.start,
+      eventRecordingEnd: range.end
+    },
+    infoEvent: event,
+    infoOpts: {
+      ...opts,
+      mediaType,
+      durationSec: range.durationSec
+    },
+    chunkEnd: playbackPlan.chunkEnd,
+    sourceCandidates: playbackPlan.sourceCandidates || [],
+    carouselMediaType: mediaType,
+    carouselActiveId: event?.id || ""
+  };
+};
 const buildPopupRecordingSourceAttemptPlan = ({
   sourceCandidates = [],
   autoplay = true
@@ -18279,7 +18369,9 @@ const buildPopupRecordingScrubInitPlan = ({
 });
 const resolvePopupRecordingLoadOutcomePlan = ({
   playable = false,
-  popupMediaType = "recording"
+  popupMediaType = "recording",
+  carouselMediaType = "recording",
+  carouselActiveId = ""
 }) => {
   if (!playable) {
     return {
@@ -18294,8 +18386,8 @@ const resolvePopupRecordingLoadOutcomePlan = ({
       shouldShowPopupControls: false,
       popupMediaType,
       airPlayMediaType: popupMediaType,
-      carouselMediaType: "recording",
-      carouselActiveId: ""
+      carouselMediaType,
+      carouselActiveId
     };
   }
   return {
@@ -18310,8 +18402,8 @@ const resolvePopupRecordingLoadOutcomePlan = ({
     shouldShowPopupControls: true,
     popupMediaType,
     airPlayMediaType: popupMediaType,
-    carouselMediaType: "recording",
-    carouselActiveId: ""
+    carouselMediaType,
+    carouselActiveId
   };
 };
 
@@ -18377,6 +18469,7 @@ const PopupMediaLoaderController = class {
       mountNodeIntoSlot,
       isIOS,
       preferRecordingHls: () => isIOS || host._isFirefox?.() || host._isEdge?.(),
+      isEventPrePostRollEnabled: () => host._config?.event_pre_post_roll_enabled === true,
       ...loaderDeps
     };
   }
@@ -18473,6 +18566,16 @@ const PopupMediaLoaderController = class {
     });
   }
   showClip(event, opts = {}) {
+    const range = resolveFrigateEventPrePostRollRange({
+      event,
+      enabled: opts.skipPrePostRoll !== true && this._deps.isEventPrePostRollEnabled()
+    });
+    if (range) {
+      return this.showEventRecording(event, opts, range);
+    }
+    return this._showDirectClip(event, opts);
+  }
+  _showDirectClip(event, opts = {}) {
     const renderPlan = buildPopupClipRenderPlan({
       id: event.id,
       opts,
@@ -18490,10 +18593,18 @@ const PopupMediaLoaderController = class {
   }
   showClipById(id, opts = {}) {
     if (!id) return;
+    const event = this._host._findEventById(id);
+    const range = resolveFrigateEventPrePostRollRange({
+      event,
+      enabled: opts.skipPrePostRoll !== true && this._deps.isEventPrePostRollEnabled()
+    });
+    if (range) {
+      return this.showEventRecording(event, opts, range);
+    }
     const renderPlan = buildPopupClipRenderPlan({
       id,
       opts,
-      infoEvent: this._host._findEventById(id),
+      infoEvent: event,
       isIos: this._deps.isIOS,
       includeLookupInfo: true
     });
@@ -18607,10 +18718,27 @@ const PopupMediaLoaderController = class {
     });
   }
   async showRecording(start, end) {
+    return await this._showRecordingRange(start, end);
+  }
+  async showEventRecording(event, opts, range) {
+    return await this._showRecordingRange(range.start, range.end, {
+      event,
+      mediaType: opts.mediaType || "clip",
+      fallbackOpts: opts,
+      range
+    });
+  }
+  async _showRecordingRange(start, end, {
+    event = null,
+    mediaType = "recording",
+    fallbackOpts = {},
+    range = null
+  } = {}) {
     const token = ++this._host._playSeq;
     this._lifecycleController?.enter();
     this._lifecycleController?.clearMediaCleanup();
-    const { clientId, cam } = this._host._cc();
+    const { clientId, cam: activeCamera } = this._host._cc();
+    const cam = event?.camera || activeCamera;
     const playbackPlan = buildRecordingPlaybackPlan({
       clientId,
       camera: cam,
@@ -18618,7 +18746,12 @@ const PopupMediaLoaderController = class {
       end,
       preferHls: this._deps.preferRecordingHls()
     });
-    const renderPlan = buildPopupRecordingRenderPlan({
+    const renderPlan = event ? buildPopupEventRecordingRenderPlan({
+      event,
+      opts: { ...fallbackOpts, mediaType },
+      range,
+      playbackPlan
+    }) : buildPopupRecordingRenderPlan({
       start,
       end,
       playbackPlan
@@ -18637,7 +18770,7 @@ const PopupMediaLoaderController = class {
     if (this._host._playSeq !== token) return;
     const video = this._deps.createVideoElement(
       this._deps.buildVideoOptionsForView(
-        "recording",
+        event ? "popup" : "recording",
         {
           muted: true
         },
@@ -18690,7 +18823,9 @@ const PopupMediaLoaderController = class {
       if (!playable) {
         const outcomePlan2 = resolvePopupRecordingLoadOutcomePlan({
           playable,
-          popupMediaType: renderPlan.popupMediaType
+          popupMediaType: renderPlan.popupMediaType,
+          carouselMediaType: renderPlan.carouselMediaType,
+          carouselActiveId: renderPlan.carouselActiveId
         });
         for (const fn of mediaCleanup) {
           try {
@@ -18706,12 +18841,21 @@ const PopupMediaLoaderController = class {
         }
         this.clearRecordingTransport();
         this._host._clearPopupVideoZoom?.();
+        if (event && this._host._playSeq === token) {
+          this._showDirectClip(event, {
+            ...fallbackOpts,
+            mediaType,
+            skipPrePostRoll: true
+          });
+        }
         return;
       }
     }
     const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
       playable,
-      popupMediaType: renderPlan.popupMediaType
+      popupMediaType: renderPlan.popupMediaType,
+      carouselMediaType: renderPlan.carouselMediaType,
+      carouselActiveId: renderPlan.carouselActiveId
     });
     if (outcomePlan.shouldEnsureAirPlayButton) {
       this._mediaControlsController?.ensurePlaybackButtons(
@@ -18722,27 +18866,29 @@ const PopupMediaLoaderController = class {
       this._host._scheduleRotateOverlayUpdate();
     }
     if (video && outcomePlan.shouldInitPopupMediaControls) {
-      const scrubInitPlan = buildPopupRecordingScrubInitPlan({
-        clientId,
-        cam,
-        start,
-        chunkEnd: renderPlan.chunkEnd,
-        token,
-        sourceUrl: activeSource || video.currentSrc || video.src
-      });
       this._mediaControlsController?.initialize(
         video,
         renderPlan.popupMediaType
       );
-      void this._recordingScrubController?.initialize({
-        clientId: scrubInitPlan.clientId,
-        cam: scrubInitPlan.cam,
-        start: scrubInitPlan.start,
-        end: scrubInitPlan.end,
-        video,
-        token: scrubInitPlan.token,
-        sourceUrl: scrubInitPlan.sourceUrl
-      });
+      if (!event) {
+        const scrubInitPlan = buildPopupRecordingScrubInitPlan({
+          clientId,
+          cam,
+          start,
+          chunkEnd: renderPlan.chunkEnd,
+          token,
+          sourceUrl: activeSource || video.currentSrc || video.src
+        });
+        void this._recordingScrubController?.initialize({
+          clientId: scrubInitPlan.clientId,
+          cam: scrubInitPlan.cam,
+          start: scrubInitPlan.start,
+          end: scrubInitPlan.end,
+          video,
+          token: scrubInitPlan.token,
+          sourceUrl: scrubInitPlan.sourceUrl
+        });
+      }
     }
     if (outcomePlan.shouldRenderCarousel) {
       this._carouselController?.render(
@@ -21432,7 +21578,9 @@ const FrigateViewCard = class extends HTMLElement {
     this._frigateMediaDownloadController = new FrigateMediaDownloadController({
       getContext: () => this._cc(),
       signPath: (path) => this._signed(path),
-      formatTime: (timestamp) => this._time(timestamp)
+      formatTime: (timestamp) => this._time(timestamp),
+      findEventById: (id) => this._findEventById(id),
+      isEventPrePostRollEnabled: () => this._config?.event_pre_post_roll_enabled === true
     });
     this._popupRecordingScrubController = new PopupRecordingScrubController({
       query: (selector) => this._$(selector),
@@ -21459,7 +21607,7 @@ const FrigateViewCard = class extends HTMLElement {
       onMediaCameraChange: (camera) => {
         this._popupLifecycleController.setMediaCamera(camera);
       },
-      onDownloadEvent: (id, file) => this._frigateMediaDownloadController.downloadEvent(id, file),
+      onDownloadEvent: (id, file) => void this._frigateMediaDownloadController.downloadEvent(id, file),
       onDownloadRecording: (start, end) => void this._frigateMediaDownloadController.downloadRecording(start, end)
     });
     this._popupCarouselController = new PopupCarouselController({
@@ -21930,6 +22078,7 @@ const FrigateViewCard = class extends HTMLElement {
         240
       ),
       mobile_poll_battery_saver: config.mobile_poll_battery_saver === true,
+      event_pre_post_roll_enabled: config.event_pre_post_roll_enabled === true,
       slideshow_rotation_enabled: config.slideshow_rotation_enabled === true,
       slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
         Number(config.slideshow_rotation_seconds)
@@ -24673,7 +24822,7 @@ const FrigateViewCard = class extends HTMLElement {
     const dl = target.closest(".ico[data-dl]");
     if (dl) {
       e.stopPropagation();
-      this._frigateMediaDownloadController.downloadEvent(
+      void this._frigateMediaDownloadController.downloadEvent(
         dl.dataset.dl,
         dl.dataset.dlFile
       );
@@ -25137,8 +25286,8 @@ const FrigateViewCard = class extends HTMLElement {
       eventId,
       recordingStart,
       recordingEnd,
-      eventRecordingStart: Number.isFinite(Number(event?.start_time)) ? Math.floor(Number(event.start_time)) : null,
-      eventRecordingEnd: Number.isFinite(Number(event?.end_time)) ? Math.ceil(Number(event.end_time)) : null,
+      eventRecordingStart: Number.isFinite(Number(event?.start_time)) ? playing?.eventRecordingStart ?? Math.floor(Number(event.start_time)) : null,
+      eventRecordingEnd: Number.isFinite(Number(event?.end_time)) ? playing?.eventRecordingEnd ?? Math.ceil(Number(event.end_time)) : null,
       title: `${cap(mediaType || "video")} video`
     };
   }
@@ -25753,6 +25902,7 @@ const normalizeCardConfig = (config) => {
     240
   );
   src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
+  src.event_pre_post_roll_enabled = src.event_pre_post_roll_enabled === true;
   src.slideshow_rotation_enabled = src.slideshow_rotation_enabled === true;
   src.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
     Number(src.slideshow_rotation_seconds)
@@ -26655,6 +26805,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
       "#rounded_corners",
       "#outer_shadows",
       "#mobile_poll_battery_saver",
+      "#event_pre_post_roll_enabled",
       "[data-active-tab]",
       "[data-theme-option]",
       "[data-theme-color]",
@@ -26852,6 +27003,15 @@ const FrigateViewCardEditor = class extends HTMLElement {
             <input id="preview_page_alert_live_duration_seconds" type="range" min="5" max="60" step="1" value="${this._config?.preview_page_alert_live_duration_seconds ?? 10}" style="width:100%">
             <div class="field-helper">How long an alerted snapshot camera remains live on Preview and in Wide View Companion Cameras.</div>
             <div class="field-helper" id="preview_page_alert_live_duration_seconds-output">${this._config?.preview_page_alert_live_duration_seconds ?? 10} seconds</div>
+          </div>
+        </div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:460px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Enable Pre-Roll/Post-Roll</span>
+              <ha-switch id="event_pre_post_roll_enabled" ${this._config?.event_pre_post_roll_enabled ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Adds ${EVENT_PRE_POST_ROLL_SECONDS} seconds before and after Alerts and Clips for popup playback and downloads. Requires Frigate recording footage around the event.</div>
           </div>
         </div>
       </div>
@@ -27587,6 +27747,7 @@ const FrigateViewCardEditor = class extends HTMLElement {
         "rounded_corners",
         "outer_shadows",
         "mobile_poll_battery_saver",
+        "event_pre_post_roll_enabled",
         "snapshot_update_seconds",
         "slideshow_rotation_enabled",
         "grid_mode_enabled",

@@ -34,6 +34,7 @@ export const createEditorPreviewDraft = (config) => ({
   realtime_poll_seconds: config.realtime_poll_seconds,
   snapshot_update_seconds: config.snapshot_update_seconds,
   mobile_poll_battery_saver: config.mobile_poll_battery_saver,
+  event_pre_post_roll_enabled: config.event_pre_post_roll_enabled,
   slideshow_rotation_enabled: config.slideshow_rotation_enabled,
   slideshow_rotation_seconds: config.slideshow_rotation_seconds,
   slideshow_alert_hold_seconds: config.slideshow_alert_hold_seconds,
@@ -103,6 +104,8 @@ export const applyEditorPreviewDraftToCardConfig = ({
       240,
     ),
     mobile_poll_battery_saver: previewConfig.mobile_poll_battery_saver === true,
+    event_pre_post_roll_enabled:
+      previewConfig.event_pre_post_roll_enabled === true,
     slideshow_rotation_enabled:
       previewConfig.slideshow_rotation_enabled === true,
     slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(

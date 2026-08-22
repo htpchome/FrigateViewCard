@@ -558,6 +558,9 @@ export const buildEditorConfigFromDom = ({
   nextConfig.mobile_poll_battery_saver = resolveSwitchChecked(
     root.querySelector("#mobile_poll_battery_saver"),
   );
+  nextConfig.event_pre_post_roll_enabled = resolveSwitchChecked(
+    root.querySelector("#event_pre_post_roll_enabled"),
+  );
   nextConfig.slideshow_rotation_enabled = resolveSwitchChecked(
     root.querySelector("#slideshow_rotation_enabled"),
   );

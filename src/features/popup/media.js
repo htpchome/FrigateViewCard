@@ -107,6 +107,33 @@ export const buildPopupRecordingRenderPlan = ({
   sourceCandidates: playbackPlan.sourceCandidates || [],
 });
 
+export const buildPopupEventRecordingRenderPlan = ({
+  event = null,
+  opts = {},
+  range = {},
+  playbackPlan = {},
+} = {}) => {
+  const mediaType = opts.mediaType || "clip";
+  return {
+    popupMediaType: mediaType,
+    playing: {
+      id: event?.id || "",
+      eventRecordingStart: range.start,
+      eventRecordingEnd: range.end,
+    },
+    infoEvent: event,
+    infoOpts: {
+      ...opts,
+      mediaType,
+      durationSec: range.durationSec,
+    },
+    chunkEnd: playbackPlan.chunkEnd,
+    sourceCandidates: playbackPlan.sourceCandidates || [],
+    carouselMediaType: mediaType,
+    carouselActiveId: event?.id || "",
+  };
+};
+
 export const buildPopupRecordingSourceAttemptPlan = ({
   sourceCandidates = [],
   autoplay = true,
@@ -143,6 +170,8 @@ export const buildPopupRecordingScrubInitPlan = ({
 export const resolvePopupRecordingLoadOutcomePlan = ({
   playable = false,
   popupMediaType = "recording",
+  carouselMediaType = "recording",
+  carouselActiveId = "",
 }) => {
   if (!playable) {
     return {
@@ -157,8 +186,8 @@ export const resolvePopupRecordingLoadOutcomePlan = ({
       shouldShowPopupControls: false,
       popupMediaType,
       airPlayMediaType: popupMediaType,
-      carouselMediaType: "recording",
-      carouselActiveId: "",
+      carouselMediaType,
+      carouselActiveId,
     };
   }
 
@@ -174,7 +203,7 @@ export const resolvePopupRecordingLoadOutcomePlan = ({
     shouldShowPopupControls: true,
     popupMediaType,
     airPlayMediaType: popupMediaType,
-    carouselMediaType: "recording",
-    carouselActiveId: "",
+    carouselMediaType,
+    carouselActiveId,
   };
 };

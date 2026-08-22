@@ -214,6 +214,12 @@ export const compactEditorConfigForYaml = (
   );
   addIfNotDefault(
     compact,
+    "event_pre_post_roll_enabled",
+    source.event_pre_post_roll_enabled === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
     "slideshow_rotation_enabled",
     source.slideshow_rotation_enabled === true,
     false,

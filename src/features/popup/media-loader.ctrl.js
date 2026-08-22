@@ -9,6 +9,7 @@ import { isIOS } from "../../helpers.js";
 import {
   buildPopupClipRenderPlan,
   buildPopupCarouselSelectionPlan,
+  buildPopupEventRecordingRenderPlan,
   buildPopupRecordingRenderPlan,
   buildPopupRecordingScrubInitPlan,
   buildPopupRecordingSourceAttemptPlan,
@@ -19,6 +20,7 @@ import {
   resolvePopupRecordingSeekListenerPlan,
 } from "./media.js";
 import { buildRecordingPlaybackPlan } from "../recordings/index.js";
+import { resolveFrigateEventPrePostRollRange } from "../../integrations/frigate/event-media.js";
 
 const POPUP_MEDIA_MAX_HEIGHT_DVH = 70;
 
@@ -86,6 +88,8 @@ export class PopupMediaLoaderController {
       isIOS,
       preferRecordingHls: () =>
         isIOS || host._isFirefox?.() || host._isEdge?.(),
+      isEventPrePostRollEnabled: () =>
+        host._config?.event_pre_post_roll_enabled === true,
       ...loaderDeps,
     };
   }
@@ -187,6 +191,19 @@ export class PopupMediaLoaderController {
   }
 
   showClip(event, opts = {}) {
+    const range = resolveFrigateEventPrePostRollRange({
+      event,
+      enabled:
+        opts.skipPrePostRoll !== true &&
+        this._deps.isEventPrePostRollEnabled(),
+    });
+    if (range) {
+      return this.showEventRecording(event, opts, range);
+    }
+    return this._showDirectClip(event, opts);
+  }
+
+  _showDirectClip(event, opts = {}) {
     const renderPlan = buildPopupClipRenderPlan({
       id: event.id,
       opts,
@@ -205,10 +222,20 @@ export class PopupMediaLoaderController {
 
   showClipById(id, opts = {}) {
     if (!id) return;
+    const event = this._host._findEventById(id);
+    const range = resolveFrigateEventPrePostRollRange({
+      event,
+      enabled:
+        opts.skipPrePostRoll !== true &&
+        this._deps.isEventPrePostRollEnabled(),
+    });
+    if (range) {
+      return this.showEventRecording(event, opts, range);
+    }
     const renderPlan = buildPopupClipRenderPlan({
       id,
       opts,
-      infoEvent: this._host._findEventById(id),
+      infoEvent: event,
       isIos: this._deps.isIOS,
       includeLookupInfo: true,
     });
@@ -336,10 +363,33 @@ export class PopupMediaLoaderController {
   }
 
   async showRecording(start, end) {
+    return await this._showRecordingRange(start, end);
+  }
+
+  async showEventRecording(event, opts, range) {
+    return await this._showRecordingRange(range.start, range.end, {
+      event,
+      mediaType: opts.mediaType || "clip",
+      fallbackOpts: opts,
+      range,
+    });
+  }
+
+  async _showRecordingRange(
+    start,
+    end,
+    {
+      event = null,
+      mediaType = "recording",
+      fallbackOpts = {},
+      range = null,
+    } = {},
+  ) {
     const token = ++this._host._playSeq;
     this._lifecycleController?.enter();
     this._lifecycleController?.clearMediaCleanup();
-    const { clientId, cam } = this._host._cc();
+    const { clientId, cam: activeCamera } = this._host._cc();
+    const cam = event?.camera || activeCamera;
     const playbackPlan = buildRecordingPlaybackPlan({
       clientId,
       camera: cam,
@@ -347,11 +397,18 @@ export class PopupMediaLoaderController {
       end,
       preferHls: this._deps.preferRecordingHls(),
     });
-    const renderPlan = buildPopupRecordingRenderPlan({
-      start,
-      end,
-      playbackPlan,
-    });
+    const renderPlan = event
+      ? buildPopupEventRecordingRenderPlan({
+          event,
+          opts: { ...fallbackOpts, mediaType },
+          range,
+          playbackPlan,
+        })
+      : buildPopupRecordingRenderPlan({
+          start,
+          end,
+          playbackPlan,
+        });
     const sourceAttemptPlan = buildPopupRecordingSourceAttemptPlan({
       sourceCandidates: renderPlan.sourceCandidates,
     });
@@ -366,7 +423,7 @@ export class PopupMediaLoaderController {
     if (this._host._playSeq !== token) return;
     const video = this._deps.createVideoElement(
       this._deps.buildVideoOptionsForView(
-        "recording",
+        event ? "popup" : "recording",
         {
           muted: true,
         },
@@ -421,6 +478,8 @@ export class PopupMediaLoaderController {
         const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
           playable,
           popupMediaType: renderPlan.popupMediaType,
+          carouselMediaType: renderPlan.carouselMediaType,
+          carouselActiveId: renderPlan.carouselActiveId,
         });
         for (const fn of mediaCleanup) {
           try {
@@ -435,12 +494,21 @@ export class PopupMediaLoaderController {
         }
         this.clearRecordingTransport();
         this._host._clearPopupVideoZoom?.();
+        if (event && this._host._playSeq === token) {
+          this._showDirectClip(event, {
+            ...fallbackOpts,
+            mediaType,
+            skipPrePostRoll: true,
+          });
+        }
         return;
       }
     }
     const outcomePlan = resolvePopupRecordingLoadOutcomePlan({
       playable,
       popupMediaType: renderPlan.popupMediaType,
+      carouselMediaType: renderPlan.carouselMediaType,
+      carouselActiveId: renderPlan.carouselActiveId,
     });
     if (outcomePlan.shouldEnsureAirPlayButton) {
       this._mediaControlsController?.ensurePlaybackButtons(
@@ -451,27 +519,29 @@ export class PopupMediaLoaderController {
       this._host._scheduleRotateOverlayUpdate();
     }
     if (video && outcomePlan.shouldInitPopupMediaControls) {
-      const scrubInitPlan = buildPopupRecordingScrubInitPlan({
-        clientId,
-        cam,
-        start,
-        chunkEnd: renderPlan.chunkEnd,
-        token,
-        sourceUrl: activeSource || video.currentSrc || video.src,
-      });
       this._mediaControlsController?.initialize(
         video,
         renderPlan.popupMediaType,
       );
-      void this._recordingScrubController?.initialize({
-        clientId: scrubInitPlan.clientId,
-        cam: scrubInitPlan.cam,
-        start: scrubInitPlan.start,
-        end: scrubInitPlan.end,
-        video,
-        token: scrubInitPlan.token,
-        sourceUrl: scrubInitPlan.sourceUrl,
-      });
+      if (!event) {
+        const scrubInitPlan = buildPopupRecordingScrubInitPlan({
+          clientId,
+          cam,
+          start,
+          chunkEnd: renderPlan.chunkEnd,
+          token,
+          sourceUrl: activeSource || video.currentSrc || video.src,
+        });
+        void this._recordingScrubController?.initialize({
+          clientId: scrubInitPlan.clientId,
+          cam: scrubInitPlan.cam,
+          start: scrubInitPlan.start,
+          end: scrubInitPlan.end,
+          video,
+          token: scrubInitPlan.token,
+          sourceUrl: scrubInitPlan.sourceUrl,
+        });
+      }
     }
     if (outcomePlan.shouldRenderCarousel) {
       this._carouselController?.render(

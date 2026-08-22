@@ -36,6 +36,7 @@ test("editor YAML config omits normalized default values", () => {
     alerts_reviews_days: 3,
     realtime_poll_seconds: 5,
     mobile_poll_battery_saver: false,
+    event_pre_post_roll_enabled: false,
     snapshot_update_seconds: 60,
     slideshow_rotation_enabled: false,
     slideshow_rotation_seconds: 30,
@@ -76,6 +77,19 @@ test("compact YAML preserves a non-default subtitle", () => {
   });
 
   assert.equal(config.subtitle, "Frigate");
+});
+
+test("pre-roll and post-roll config defaults off and serializes when enabled", () => {
+  const defaults = normalizeCardConfig({
+    cameras: [{ entity: "camera.front_door" }],
+  });
+  const compact = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door" }],
+    event_pre_post_roll_enabled: true,
+  });
+
+  assert.equal(defaults.event_pre_post_roll_enabled, false);
+  assert.equal(compact.event_pre_post_roll_enabled, true);
 });
 
 test("card layout controls normalize to hardened ranges and defaults", () => {
@@ -325,6 +339,28 @@ test("buildEditorConfigFromDom prefers hiddenTabsOverride for hidden tabs", () =
   assert.deepEqual(result.hidden_tabs, ["clips", "alerts"]);
 });
 
+test("buildEditorConfigFromDom reads the pre-roll and post-roll switch", () => {
+  const enabledSwitch = {
+    checked: true,
+    getAttribute: () => "",
+    shadowRoot: null,
+  };
+  const root = {
+    querySelector: (selector) =>
+      selector === "#event_pre_post_roll_enabled" ? enabledSwitch : null,
+    querySelectorAll: () => [],
+  };
+
+  const result = buildEditorConfigFromDom({
+    root,
+    baseConfig: {},
+    cameras: [{ entity: "camera.front_door" }],
+    themeDraftCache: {},
+  });
+
+  assert.equal(result.event_pre_post_roll_enabled, true);
+});
+
 test("compact YAML keeps normalized hidden tabs when non-default", () => {
   const config = compactEditorConfigForYaml({
     cameras: [{ entity: "camera.front_door" }],
@@ -345,6 +381,7 @@ test("preview draft carries hidden tabs and page routes", () => {
     landing_page: "preview",
     mobile_page: "single",
     snapshot_update_seconds: 75,
+    event_pre_post_roll_enabled: true,
     preview_page_alert_live_duration_seconds: 12,
     slideshow_alert_hold_seconds: 14,
     grid_alert_hold_seconds: 16,
@@ -357,6 +394,7 @@ test("preview draft carries hidden tabs and page routes", () => {
   assert.equal(draft.landing_page, "preview");
   assert.equal(draft.mobile_page, "single");
   assert.equal(draft.snapshot_update_seconds, 75);
+  assert.equal(draft.event_pre_post_roll_enabled, true);
   assert.equal(draft.preview_page_alert_live_duration_seconds, 12);
   assert.equal(draft.slideshow_alert_hold_seconds, 14);
   assert.equal(draft.grid_alert_hold_seconds, 16);

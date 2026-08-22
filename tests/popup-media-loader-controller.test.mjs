@@ -180,6 +180,171 @@ test("showRecording signs candidates and initializes popup recording playback on
   );
 });
 
+test("enabled pre-roll and post-roll preserve Alert popup behavior", async () => {
+  const calls = [];
+  const viewer = { innerHTML: "", appended: null };
+  const video = {
+    paused: false,
+    seeking: false,
+    currentSrc: "",
+    src: "",
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    pause: () => {},
+    play: () => Promise.resolve(),
+  };
+  const host = {
+    _playSeq: 0,
+    _cc: () => ({ clientId: "frigate", cam: "front_door" }),
+    _popupInfoController: {
+      render: (_event, opts) => calls.push(["info", opts]),
+    },
+    _popupCarouselController: {
+      render: (type, id) => calls.push(["carousel", type, id]),
+    },
+    _popupMediaControlsController: {
+      initialize: (_video, type) => calls.push(["controls", type]),
+      showTemporarily: () => {},
+      ensurePlaybackButtons: (type) => calls.push(["airplay", type]),
+    },
+    _popupRecordingScrubController: {
+      initialize: () => calls.push(["scrub"]),
+    },
+    _popupLifecycleController: {
+      enter: () => {},
+      clearMediaCleanup: () => {},
+      setMediaState: (state) => calls.push(["state", state]),
+      setMediaCleanup: () => {},
+    },
+    shadowRoot: { querySelector: () => viewer },
+    _signed: async (path) => {
+      calls.push(["signed", path]);
+      return `signed:${path}`;
+    },
+    _attachPopupVideoZoom: () => {},
+    _scheduleRotateOverlayUpdate: () => {},
+    _preparePopupPlaybackTarget: () => {},
+  };
+  const controller = new PopupMediaLoaderController(host, {
+    isEventPrePostRollEnabled: () => true,
+    preferRecordingHls: () => false,
+    buildVideoOptionsForView: (_view, options) => options,
+    createVideoElement: () => video,
+    mountNodeIntoSlot: (slot, node) => {
+      slot.appended = node;
+    },
+  });
+  controller.tryRecordingSource = async () => true;
+
+  await controller.showClip(
+    {
+      id: "event-1",
+      camera: "front_door",
+      start_time: 100,
+      end_time: 110,
+      has_clip: true,
+    },
+    { mediaType: "alert" },
+  );
+
+  assert.equal(
+    calls.some(
+      ([kind, path]) =>
+        kind === "signed" &&
+        path.includes("/recording/front_door/start/95/end/115"),
+    ),
+    true,
+  );
+  assert.deepEqual(
+    calls.find(([kind]) => kind === "state")?.[1],
+    {
+      mediaType: "alert",
+      playing: {
+        id: "event-1",
+        eventRecordingStart: 95,
+        eventRecordingEnd: 115,
+      },
+    },
+  );
+  assert.equal(
+    calls.some(([kind, type]) => kind === "controls" && type === "alert"),
+    true,
+  );
+  assert.equal(
+    calls.some(
+      ([kind, type, id]) =>
+        kind === "carousel" && type === "alert" && id === "event-1",
+    ),
+    true,
+  );
+  assert.equal(calls.some(([kind]) => kind === "scrub"), false);
+});
+
+test("padded Alert playback falls back to the Frigate event clip", async () => {
+  const viewer = { innerHTML: "", appended: null };
+  const createVideoElement = (options) => ({
+    options,
+    paused: false,
+    seeking: false,
+    currentSrc: "",
+    src: "",
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    pause: () => {},
+    play: () => Promise.resolve(),
+  });
+  const host = {
+    _playSeq: 0,
+    _cc: () => ({ clientId: "frigate", cam: "front_door" }),
+    _media: (id, file) => `/media/${id}/${file}`,
+    _popupInfoController: { render: () => {} },
+    _popupCarouselController: { render: () => {} },
+    _popupMediaControlsController: {},
+    _popupRecordingScrubController: { teardown: () => {} },
+    _popupLifecycleController: {
+      enter: () => {},
+      clearMediaCleanup: () => {},
+      setMediaState: () => {},
+    },
+    shadowRoot: { querySelector: () => viewer },
+    _signed: async (path) => path,
+    _attachPopupVideoZoom: () => {},
+    _clearPopupVideoZoom: () => {},
+  };
+  const controller = new PopupMediaLoaderController(host, {
+    isEventPrePostRollEnabled: () => true,
+    preferRecordingHls: () => false,
+    buildVideoOptionsForView: (_view, options) => options,
+    createVideoElement,
+    mountNodeIntoSlot: (slot, node) => {
+      slot.appended = node;
+    },
+  });
+  controller.tryRecordingSource = async () => false;
+  let fallback = null;
+  controller.renderPopupMedia = (payload) => {
+    fallback = payload;
+  };
+
+  await controller.showClip(
+    {
+      id: "event-1",
+      camera: "front_door",
+      start_time: 100,
+      end_time: 110,
+      has_clip: true,
+    },
+    { mediaType: "alert" },
+  );
+
+  assert.equal(fallback.mediaType, "alert");
+  assert.equal(fallback.playingId, "event-1");
+  assert.equal(
+    fallback.mediaElement.options.src.includes("/media/event-1/clip.mp4"),
+    true,
+  );
+});
+
 test("popup media loader owns recording HLS cleanup", () => {
   const host = {};
   const controller = new PopupMediaLoaderController(host);

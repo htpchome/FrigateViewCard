@@ -9,6 +9,7 @@ import {
   REALTIME_POLL_OPTIONS_SECONDS,
   MOBILE_BATTERY_SAVER_POLL_SECONDS,
   SNAPSHOT_UPDATE_SECONDS,
+  EVENT_PRE_POST_ROLL_SECONDS,
   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
   GRID_ROTATION_OPTIONS_SECONDS,
   SLIDESHOW_ALERT_HOLD_MS,
@@ -1082,6 +1083,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       "#rounded_corners",
       "#outer_shadows",
       "#mobile_poll_battery_saver",
+      "#event_pre_post_roll_enabled",
       "[data-active-tab]",
       "[data-theme-option]",
       "[data-theme-color]",
@@ -1326,6 +1328,15 @@ export class FrigateViewCardEditor extends HTMLElement {
             <input id="preview_page_alert_live_duration_seconds" type="range" min="5" max="60" step="1" value="${this._config?.preview_page_alert_live_duration_seconds ?? 10}" style="width:100%">
             <div class="field-helper">How long an alerted snapshot camera remains live on Preview and in Wide View Companion Cameras.</div>
             <div class="field-helper" id="preview_page_alert_live_duration_seconds-output">${this._config?.preview_page_alert_live_duration_seconds ?? 10} seconds</div>
+          </div>
+        </div>
+        <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
+          <div style="display:flex;flex-direction:column;gap:6px;max-width:460px">
+            <div class="layout-row" style="justify-content:flex-start;gap:8px">
+              <span class="field-label" style="margin:0">Enable Pre-Roll/Post-Roll</span>
+              <ha-switch id="event_pre_post_roll_enabled" ${this._config?.event_pre_post_roll_enabled ? "checked" : ""}></ha-switch>
+            </div>
+            <div class="field-helper">Adds ${EVENT_PRE_POST_ROLL_SECONDS} seconds before and after Alerts and Clips for popup playback and downloads. Requires Frigate recording footage around the event.</div>
           </div>
         </div>
       </div>
@@ -2095,6 +2106,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         "rounded_corners",
         "outer_shadows",
         "mobile_poll_battery_saver",
+        "event_pre_post_roll_enabled",
         "snapshot_update_seconds",
         "slideshow_rotation_enabled",
         "grid_mode_enabled",

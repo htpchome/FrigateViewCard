@@ -107,6 +107,8 @@ export const normalizeCardConfig = (config) => {
     240,
   );
   src.mobile_poll_battery_saver = src.mobile_poll_battery_saver === true;
+  src.event_pre_post_roll_enabled =
+    src.event_pre_post_roll_enabled === true;
 
   src.slideshow_rotation_enabled = src.slideshow_rotation_enabled === true;
   src.slideshow_rotation_seconds = SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(

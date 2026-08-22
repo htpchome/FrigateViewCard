@@ -617,6 +617,9 @@ export class FrigateViewCard extends HTMLElement {
       getContext: () => this._cc(),
       signPath: (path) => this._signed(path),
       formatTime: (timestamp) => this._time(timestamp),
+      findEventById: (id) => this._findEventById(id),
+      isEventPrePostRollEnabled: () =>
+        this._config?.event_pre_post_roll_enabled === true,
     });
     this._popupRecordingScrubController =
       new PopupRecordingScrubController({
@@ -649,7 +652,7 @@ export class FrigateViewCard extends HTMLElement {
         this._popupLifecycleController.setMediaCamera(camera);
       },
       onDownloadEvent: (id, file) =>
-        this._frigateMediaDownloadController.downloadEvent(id, file),
+        void this._frigateMediaDownloadController.downloadEvent(id, file),
       onDownloadRecording: (start, end) =>
         void this._frigateMediaDownloadController.downloadRecording(start, end),
     });
@@ -1190,6 +1193,8 @@ export class FrigateViewCard extends HTMLElement {
         240,
       ),
       mobile_poll_battery_saver: config.mobile_poll_battery_saver === true,
+      event_pre_post_roll_enabled:
+        config.event_pre_post_roll_enabled === true,
       slideshow_rotation_enabled: config.slideshow_rotation_enabled === true,
       slideshow_rotation_seconds: SLIDESHOW_ROTATION_OPTIONS_SECONDS.includes(
         Number(config.slideshow_rotation_seconds),
@@ -4441,7 +4446,7 @@ export class FrigateViewCard extends HTMLElement {
     const dl = target.closest(".ico[data-dl]");
     if (dl) {
       e.stopPropagation();
-      this._frigateMediaDownloadController.downloadEvent(
+      void this._frigateMediaDownloadController.downloadEvent(
         dl.dataset.dl,
         dl.dataset.dlFile,
       );
@@ -5021,10 +5026,10 @@ export class FrigateViewCard extends HTMLElement {
       recordingStart,
       recordingEnd,
       eventRecordingStart: Number.isFinite(Number(event?.start_time))
-        ? Math.floor(Number(event.start_time))
+        ? (playing?.eventRecordingStart ?? Math.floor(Number(event.start_time)))
         : null,
       eventRecordingEnd: Number.isFinite(Number(event?.end_time))
-        ? Math.ceil(Number(event.end_time))
+        ? (playing?.eventRecordingEnd ?? Math.ceil(Number(event.end_time)))
         : null,
       title: `${cap(mediaType || "video")} video`,
     };

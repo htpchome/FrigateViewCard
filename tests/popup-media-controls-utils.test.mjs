@@ -10,6 +10,7 @@ import {
 import { buildPopupMediaUrl } from "../src/shared/media/url-utils.js";
 import {
   buildPopupClipRenderPlan,
+  buildPopupEventRecordingRenderPlan,
   buildPopupRecordingRenderPlan,
   buildPopupRecordingScrubInitPlan,
   buildPopupRecordingSourceAttemptPlan,
@@ -259,6 +260,35 @@ test("buildPopupRecordingRenderPlan resolves popup recording state and info opti
       },
       chunkEnd: 180,
       sourceCandidates: ["/a.m3u8", "/a.mp4"],
+    },
+  );
+});
+
+test("buildPopupEventRecordingRenderPlan preserves Alert identity for padded playback", () => {
+  const event = { id: "event-1", camera: "front_door" };
+  assert.deepEqual(
+    buildPopupEventRecordingRenderPlan({
+      event,
+      opts: { mediaType: "alert" },
+      range: { start: 95, end: 116, durationSec: 21 },
+      playbackPlan: {
+        chunkEnd: 116,
+        sourceCandidates: ["/recording-range"],
+      },
+    }),
+    {
+      popupMediaType: "alert",
+      playing: {
+        id: "event-1",
+        eventRecordingStart: 95,
+        eventRecordingEnd: 116,
+      },
+      infoEvent: event,
+      infoOpts: { mediaType: "alert", durationSec: 21 },
+      chunkEnd: 116,
+      sourceCandidates: ["/recording-range"],
+      carouselMediaType: "alert",
+      carouselActiveId: "event-1",
     },
   );
 });
