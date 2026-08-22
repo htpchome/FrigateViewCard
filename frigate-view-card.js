@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1643";
+const VERSION = "1.0.1644";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_SUBTITLE = "FrigateView";
 const DAY = 86400;
@@ -677,7 +677,7 @@ const STYLES = `
   .browse-head-right {display:flex;justify-content center;align-items: center;flex: 0 0 auto;}
   .browse-head-middle {flex:1;text-align:center;font-weight:700;font-size:1rem;letter-spacing:.02em;line-height:1.40;}
 
-  .footer {display: grid;grid-template-columns: minmax(100px, 1fr) minmax(auto, 3fr) minmax(100px, 1fr);line-height:2;min-height:1.5rem;font-size:1.2rem;padding:4px;align-items: center;border-top:1px solid var(--c-border2);box-sizing:border-box;flex:0 0 auto;}
+  .footer {display: grid;grid-template-columns: minmax(100px, 1fr) minmax(auto, 3fr) minmax(100px, 1fr);line-height:2;min-height:1.5rem;font-size:1.2rem;padding:4px;align-items: center;border-top:1px solid var(--c-border);box-sizing:border-box;flex:0 0 auto;}
   .footer.footer--older-hint-only{display:flex;justify-content:center;}
   .wide-footer{display:flex;justify-content:flex-start;align-items:center;line-height:2;min-height:2.5rem;font-size:2rem;padding:4px;text-align:left;}
   
@@ -16068,7 +16068,8 @@ function resolveOlderHintMetrics({ list, browse }) {
     const listBottom = Number(listRect?.bottom);
     const browseBottom = Number(browseRect?.bottom);
     if (Number.isFinite(listBottom) && Number.isFinite(browseBottom)) {
-      hasScrollableContent = scrollTop > 2 || listBottom > browseBottom + 2;
+      const listHasOverflowingContent = Number(list?.scrollHeight || 0) > Number(list?.clientHeight || 0) + 2;
+      hasScrollableContent = scrollTop > 2 || listBottom > browseBottom + 2 || listHasOverflowingContent;
     }
   }
   return {

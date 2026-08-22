@@ -96,7 +96,12 @@ export function resolveOlderHintMetrics({ list, browse }) {
     const listBottom = Number(listRect?.bottom);
     const browseBottom = Number(browseRect?.bottom);
     if (Number.isFinite(listBottom) && Number.isFinite(browseBottom)) {
-      hasScrollableContent = scrollTop > 2 || listBottom > browseBottom + 2;
+      const listHasOverflowingContent =
+        Number(list?.scrollHeight || 0) > Number(list?.clientHeight || 0) + 2;
+      hasScrollableContent =
+        scrollTop > 2 ||
+        listBottom > browseBottom + 2 ||
+        listHasOverflowingContent;
     }
   }
 

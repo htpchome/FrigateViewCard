@@ -148,6 +148,32 @@ test("older hint ignores outer overflow when the current tab list fits", () => {
   }
 });
 
+test("older hint detects content overflow before the flex-shrunk list scrolls", () => {
+  const list = {
+    scrollTop: 0,
+    scrollHeight: 900,
+    clientHeight: 500,
+    querySelector: () => null,
+    getBoundingClientRect: () => ({ bottom: 600 }),
+  };
+  const browse = {
+    scrollTop: 0,
+    scrollHeight: 500,
+    clientHeight: 500,
+    getBoundingClientRect: () => ({ bottom: 600 }),
+  };
+  const originalGetComputedStyle = globalThis.getComputedStyle;
+  globalThis.getComputedStyle = () => ({ overflowY: "visible" });
+
+  try {
+    const metrics = resolveOlderHintMetrics({ list, browse });
+    assert.equal(metrics.scrollTop, 0);
+    assert.equal(metrics.hasScrollableContent, true);
+  } finally {
+    globalThis.getComputedStyle = originalGetComputedStyle;
+  }
+});
+
 test("older hint reserves its footer height while visually hidden", () => {
   assert.match(
     STYLES,
