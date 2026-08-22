@@ -340,8 +340,10 @@ export const STYLES = `
   .stream-loading .dot{width:10px;height:10px;border:2px solid rgba(255,255,255,.3);border-top-color:var(--c-text-rev);border-radius:50%;animation:spin .9s linear infinite;}
 
   .close-btn {width: 40px;height: 40px;border-radius: 50%;display: flex;align-items: center;  justify-content: center;font-size: 24px;line-height: 1;cursor: pointer;border: 1px solid #ccc;
-    background-color: #f5f5f5;color: #333;transition: all 0.2s ease;}
+    background-color: var(--c-bg-main);color: var(--c-text2);transition: all 0.2s ease;}
   .close-btn:hover {background-color: #e0e0e0;color: #000;}
+  .close-btn svg {width:24px; height:24px;}
+  .close-btn:hover svg {color:var(--c-text);}
 
   .glass-btn{  display: inline-flex; 
     align-items: center; 
@@ -378,7 +380,7 @@ export const STYLES = `
     filter: blur(1px) drop-shadow(10px 4px 6px black) brightness(115%);
     }
   .glass-btn:hover{background:rgba(255, 255, 255, 0.3);} 
-  .glass-btn svg{width:30px;height:30px;opacity: 0.8; }
+  .glass-btn svg{width:30px;height:30px;opacity: 0.8;pointer-events: none;}
   .glass-btn:hover svg{width:30px;height:30px;opacity: 0.95; }
 
   .square-btn{
