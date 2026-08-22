@@ -603,6 +603,9 @@ export const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
+  .ico{width:30px !important;height:30px !important;background:var(--c-bg-panel);}
+  .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
+  .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
   @media (hover:none), (pointer:coarse) {
     .tool#controls-btn:not(.active):hover{background:var(--c-bg);color:var(--c-text2);border-color:var(--c-border2);opacity:1;}
     .tool#controls-btn:not(.active):hover svg{color:var(--c-text2);}
@@ -634,9 +637,6 @@ export const STYLES = `
   }
   .divider {min-height:36px;width:8px;display:flex;align-items:center;justify-content:center;}
   .divider svg {height:24px;width:8px;opacity:0.85;color:var(--c-text2);}
-  .ico{width:30px;height:30px;background:var(--c-bg-panel);}
-  .ico svg{width:24px;height:24px;} .ico:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);}
-  .ico.fav.on{color:var(--c-accent);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.12);}
 
   /* ── filter + cal ── */
   .filter-panel,.cal-panel{display: none;position: absolute;top:100%;right:0;background-color: #f1f1f1;min-width: 300px;overflow: auto;border-top: 3px solid var(--c-primary);box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);z-index: 3;padding:20px;}
