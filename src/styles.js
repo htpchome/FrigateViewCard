@@ -592,7 +592,7 @@ export const STYLES = `
   /* ── timeline ── */
   .tl-tools{position:relative;display:flex;gap:4px;}
   .tl-tools-slot{display:flex;align-items:center;justify-content:flex-end;min-width:0;}
-  .tool{display:inline-flex;gap:4px;align-items:center;justify-content:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius:6px;cursor:pointer;padding:2px;transition: all 0.2s ease;min-height:36px;min-width:36px;}
+  .tool{display:inline-flex;gap:4px;align-items:center;justify-content:center;background:var(--c-bg);border:1px solid var(--c-border2);color:var(--c-text2);border-radius: calc(var(--fvc-border-radius, 0px) / 2);cursor:pointer;padding:2px;transition: all 0.2s ease;min-height:36px;min-width:36px;}
   .tool svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .tool ha-icon{width:24px;height:24px;--mdc-icon-size:24px;color:var(--c-text2);opacity:0.85;}
   .tool:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);opacity:1;}
