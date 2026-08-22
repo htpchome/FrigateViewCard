@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1637";
+const VERSION = "1.0.1639";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -2011,7 +2011,7 @@ const normalizeCardHeightUnit = (value) => {
 // src/features/wide-view/config.js
 const WIDE_LEFT_WIDTH_MIN = 25;
 const WIDE_LEFT_WIDTH_MAX = 75;
-const WIDE_LEFT_WIDTH_DEFAULT = 75;
+const WIDE_LEFT_WIDTH_DEFAULT = 60;
 const normalizeWideLeftWidth = (value) => {
   if (value == null || String(value).trim() === "") {
     return WIDE_LEFT_WIDTH_DEFAULT;
@@ -2460,6 +2460,15 @@ const cloneObjectIfPresent = (value) => {
     return { ...value };
   }
 };
+const compactCameraPtzConfigForYaml = (value) => {
+  const normalized = normalizeCameraPtzConfig(value);
+  if (!normalized) return null;
+  const compact = { enabled: true };
+  if (normalized.speed !== PTZ_DEFAULT_SPEED) {
+    compact.speed = normalized.speed;
+  }
+  return compact;
+};
 const compactCameraConfigForYaml = (camera) => {
   const normalized = normalizeCameraConfig(camera, { fallbackName: "" });
   if (!normalized.entity) return null;
@@ -2474,8 +2483,9 @@ const compactCameraConfigForYaml = (camera) => {
   if (normalized.disable_hls_desktop === true) {
     compact.disable_hls_desktop = true;
   }
-  if (normalized.ptz) {
-    compact.ptz = { ...normalized.ptz };
+  const ptz = compactCameraPtzConfigForYaml(normalized.ptz);
+  if (ptz) {
+    compact.ptz = ptz;
   }
   if (normalized.two_way_talk === true) {
     compact.two_way_talk = true;

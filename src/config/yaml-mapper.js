@@ -17,7 +17,10 @@ import {
   PAGE_IDS,
 } from "../features/navigation/router.js";
 import { normalizeBoundedPositiveInteger } from "../helpers.js";
-import { normalizeCameraPtzConfig } from "../features/ptz/index.js";
+import {
+  normalizeCameraPtzConfig,
+  PTZ_DEFAULT_SPEED,
+} from "../features/ptz/index.js";
 import {
   CARD_HEIGHT_DEFAULT,
   CARD_HEIGHT_DEFAULT_UNIT,
@@ -119,6 +122,17 @@ const cloneObjectIfPresent = (value) => {
   }
 };
 
+const compactCameraPtzConfigForYaml = (value) => {
+  const normalized = normalizeCameraPtzConfig(value);
+  if (!normalized) return null;
+
+  const compact = { enabled: true };
+  if (normalized.speed !== PTZ_DEFAULT_SPEED) {
+    compact.speed = normalized.speed;
+  }
+  return compact;
+};
+
 const compactCameraConfigForYaml = (camera) => {
   const normalized = normalizeCameraConfig(camera, { fallbackName: "" });
   if (!normalized.entity) return null;
@@ -133,8 +147,9 @@ const compactCameraConfigForYaml = (camera) => {
   if (normalized.disable_hls_desktop === true) {
     compact.disable_hls_desktop = true;
   }
-  if (normalized.ptz) {
-    compact.ptz = { ...normalized.ptz };
+  const ptz = compactCameraPtzConfigForYaml(normalized.ptz);
+  if (ptz) {
+    compact.ptz = ptz;
   }
   if (normalized.two_way_talk === true) {
     compact.two_way_talk = true;

@@ -1,6 +1,6 @@
 export const WIDE_LEFT_WIDTH_MIN = 25;
 export const WIDE_LEFT_WIDTH_MAX = 75;
-export const WIDE_LEFT_WIDTH_DEFAULT = 75;
+export const WIDE_LEFT_WIDTH_DEFAULT = 60;
 
 export const normalizeWideLeftWidth = (value) => {
   if (value == null || String(value).trim() === "") {

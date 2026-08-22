@@ -4,7 +4,7 @@ const PTZ_SERVICE_DOMAIN = "frigate";
 const PTZ_SERVICE_NAME = "ptz";
 const ONVIF_PTZ_SERVICE_DOMAIN = "onvif";
 const ONVIF_PTZ_SERVICE_NAME = "ptz";
-const PTZ_DEFAULT_SPEED = 0.5;
+export const PTZ_DEFAULT_SPEED = 0.5;
 const PTZ_DIRECTIONS = Object.freeze({
   up: Object.freeze(["up"]),
   "up-right": Object.freeze(["up", "right"]),

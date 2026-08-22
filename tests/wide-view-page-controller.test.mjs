@@ -241,7 +241,7 @@ test("wideViewLayoutState uses hardened width defaults and limits", () => {
   const { host } = createHost({ isWide: true });
   const controller = new WideViewPageController(host, { PAGE_IDS });
 
-  assert.equal(controller.wideViewLayoutState().leftWidth, "75%");
+  assert.equal(controller.wideViewLayoutState().leftWidth, "60%");
   assert.equal(controller.wideViewLayoutState("10").leftWidth, "25%");
   assert.equal(controller.wideViewLayoutState("90").leftWidth, "75%");
 });

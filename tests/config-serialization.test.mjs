@@ -55,7 +55,7 @@ test("editor YAML config omits normalized default values", () => {
     outer_shadows: true,
     outer_rounded_corners: true,
     wide_view: false,
-    col_left_width_pct: 75,
+    col_left_width_pct: 60,
     preview_page_alert_live_duration_seconds: 10,
     wide_view_live_cameras: false,
     wide_view_alert_takeover: false,
@@ -78,8 +78,8 @@ test("card layout controls normalize to hardened ranges and defaults", () => {
   assert.equal(normalizeCardHeightUnit("px"), "%");
   assert.equal(normalizeCardHeightUnit("vh"), "dvh");
   assert.equal(normalizeCardHeightUnit("dvh"), "dvh");
-  assert.equal(normalizeWideLeftWidth(), 75);
-  assert.equal(normalizeWideLeftWidth(null), 75);
+  assert.equal(normalizeWideLeftWidth(), 60);
+  assert.equal(normalizeWideLeftWidth(null), 60);
   assert.equal(normalizeWideLeftWidth(10), 25);
   assert.equal(normalizeWideLeftWidth(90), 75);
 });
@@ -89,13 +89,13 @@ test("compact YAML omits new layout defaults and preserves non-defaults", () => 
     cameras: [{ entity: "camera.front_door" }],
     stream_height: 100,
     stream_height_unit: "%",
-    col_left_width_pct: 75,
+    col_left_width_pct: 60,
   });
   const customized = compactEditorConfigForYaml({
     cameras: [{ entity: "camera.front_door" }],
     stream_height: 80,
     stream_height_unit: "dvh",
-    col_left_width_pct: 60,
+    col_left_width_pct: 75,
   });
 
   assert.deepEqual(defaults, {
@@ -103,7 +103,7 @@ test("compact YAML omits new layout defaults and preserves non-defaults", () => 
   });
   assert.equal(customized.stream_height, 80);
   assert.equal(customized.stream_height_unit, "dvh");
-  assert.equal(customized.col_left_width_pct, 60);
+  assert.equal(customized.col_left_width_pct, 75);
 });
 
 test("camera connection type defaults to go2rtc and is omitted in compact YAML", () => {
@@ -141,7 +141,7 @@ test("camera connection type normalizes HA aliases to ha_direct", () => {
   });
 });
 
-test("compact YAML preserves per-camera PTZ config", () => {
+test("compact YAML only preserves configurable per-camera PTZ values", () => {
   const config = compactEditorConfigForYaml({
     cameras: [
       {
@@ -151,6 +151,7 @@ test("compact YAML preserves per-camera PTZ config", () => {
           move_mode: "RelativeMove",
           speed: 0.4,
           distance: 0.2,
+          continuous_duration: 0.8,
         },
       },
     ],
@@ -162,22 +163,25 @@ test("compact YAML preserves per-camera PTZ config", () => {
         entity: "camera.driveway",
         ptz: {
           enabled: true,
-          move_mode: "ContinuousMove",
           speed: 0.4,
-          distance: 0.2,
-          continuous_duration: null,
         },
       },
     ],
   });
 });
 
-test("compact YAML preserves boolean PTZ enablement", () => {
+test("compact YAML omits the default PTZ speed and internal values", () => {
   const config = compactEditorConfigForYaml({
     cameras: [
       {
         entity: "camera.front_door",
-        ptz: true,
+        ptz: {
+          enabled: true,
+          move_mode: "RelativeMove",
+          speed: 0.5,
+          distance: 0.25,
+          continuous_duration: 0.75,
+        },
       },
     ],
   });
@@ -188,11 +192,22 @@ test("compact YAML preserves boolean PTZ enablement", () => {
         entity: "camera.front_door",
         ptz: {
           enabled: true,
-          move_mode: "ContinuousMove",
-          speed: 0.5,
-          distance: null,
-          continuous_duration: null,
         },
+      },
+    ],
+  });
+});
+
+test("compact YAML preserves boolean PTZ enablement", () => {
+  const config = compactEditorConfigForYaml({
+    cameras: [{ entity: "camera.front_door", ptz: true }],
+  });
+
+  assert.deepEqual(config, {
+    cameras: [
+      {
+        entity: "camera.front_door",
+        ptz: { enabled: true },
       },
     ],
   });

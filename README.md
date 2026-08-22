@@ -77,7 +77,7 @@ cameras:
 | `landing_page`                 | string  | `single-view`            | Default starting page for desktop and tablet. Valid values depend on enabled pages.                                                                                                       |
 | `mobile_page`                  | string  | `mobile-view`            | Starting flow for phones. Valid values: `mobile-view`, `preview-mobile-view`, `preview-single-view`, and `single-view`. Preview combinations open Preview first, then route a selected camera to the named page. The corresponding pages must be enabled. |
 | `deep_link_enabled`            | boolean | `true`                   | Enables URL deep-link handling (`event`, `review`, `camera`, `media`) for this card instance. Set `false` for multi-card dashboards to prevent one card from consuming shared URL params. |
-| `col_left_width_pct`           | number  | `75`                     | Left column width percentage for the Wide View page. Valid range: `25` to `75`.                                                                                                           |
+| `col_left_width_pct`           | number  | `60`                     | Left column width percentage for the Wide View page. Valid range: `25` to `75`.                                                                                                           |
 
 ### Camera Options
 
@@ -104,21 +104,20 @@ cameras:
     connection_type: ha_direct
     ptz:
       enabled: true
-      move_mode: ContinuousMove
-      speed: 0.5
+      speed: 0.7
 title: Frigate
 ```
 
 PTZ notes:
 
-- Use `ptz: true` to enable the default PTZ behavior. It normalizes to `enabled: true`, `move_mode: ContinuousMove`, and `speed: 0.5`.
+- Use `ptz: true` to enable the default PTZ behavior. The editor writes this as `enabled: true` and omits the default speed of `0.5`.
 - PTZ control uses the Home Assistant `frigate.ptz` service because that is the control surface the Frigate integration exposes to cards. Frigate's PTZ API is still used for capability detection via `frigate/ptz/info`.
 - Diagonal presses start both axes together and rely on release to stop continuous movement.
 - The controls tab now asks Frigate for PTZ capability data and only enables movement when Frigate reports pan/tilt support for that camera.
 - Diagonal circle-pad slices are faked by sending the two matching cardinal `move` actions, for example `up-right` sends both `up` and `right`.
-- Use a PTZ object when you need to flag a camera as PTZ-enabled now, and to preserve room for future PTZ options in YAML.
+- Use a PTZ object to enable PTZ and optionally set a non-default `speed`.
 - The controls tab targets the active camera entity, so only cameras with `ptz` enabled respond to the circle pad.
-- The visual editor exposes per-camera PTZ enablement plus `move_mode` and `speed` controls when the selected camera reports PTZ support.
+- The visual editor exposes per-camera PTZ enablement and speed controls when the selected camera reports PTZ support.
 
 ### Custom Theme Colors
 
