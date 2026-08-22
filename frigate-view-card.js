@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1648";
+const VERSION = "1.0.1649";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_SUBTITLE = "FrigateView";
 const DAY = 86400;
@@ -940,7 +940,7 @@ const STYLES = `
   .sv.stream-type{text-transform:uppercase;font-size:0.95rem;}
   .btn-secondary{border:none;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 12px;}
   .btn-primary{background:var(--editor-primary);color:var(--text-primary-color, #ffffff);border-radius:999px;padding:8px 18px;}
-  .cam-tab{font-size: 1rem;padding:0.4em;line-height: 1;font-weight:600;white-space:nowrap;border-radius: calc(var(--fvc-border-radius, 0px) / 2);align-items: center;justify-content: center;background:var(--c-bg-panel);border:1px solid var(--c-text2);color:var(--c-text);}  
+  .cam-tab{font-size: 1rem;padding:0.2em 0.4em;line-height: 1;font-weight:600;white-space:nowrap;border-radius: calc(var(--fvc-border-radius, 0px) / 2);align-items: center;justify-content: center;background:var(--c-bg-panel);border:1px solid var(--c-border2);color:var(--c-text);}  
   .cam-tab:hover{color:var(--c-primary-d);}
   .cam-tab.active{background:var(--c-primary-d);color:var(--c-text-rev);}
   .cam-tab.active:hover{background:var(--c-primary-d);color:var(--c-text-rev);}
