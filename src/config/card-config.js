@@ -23,6 +23,11 @@ import {
   normalizePageRoute,
   PAGE_IDS,
 } from "../features/navigation/router.js";
+import {
+  normalizeCardHeight,
+  normalizeCardHeightUnit,
+} from "../features/card-style/config.js";
+import { normalizeWideLeftWidth } from "../features/wide-view/config.js";
 
 const normalizeCameras = (config) => {
   let cameras = [];
@@ -86,6 +91,9 @@ export const normalizeCardConfig = (config) => {
   src.borders = src.borders !== false;
   src.rounded_corners = src.rounded_corners !== false;
   src.outer_shadows = src.outer_shadows !== false;
+  src.stream_height = normalizeCardHeight(src.stream_height);
+  src.stream_height_unit = normalizeCardHeightUnit(src.stream_height_unit);
+  src.col_left_width_pct = normalizeWideLeftWidth(src.col_left_width_pct);
 
   src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
     Number(src.realtime_poll_seconds),

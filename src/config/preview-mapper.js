@@ -11,6 +11,11 @@ import {
   normalizePageRoute,
 } from "../features/navigation/router.js";
 import { normalizeBoundedPositiveInteger } from "../helpers.js";
+import {
+  normalizeCardHeight,
+  normalizeCardHeightUnit,
+} from "../features/card-style/config.js";
+import { normalizeWideLeftWidth } from "../features/wide-view/config.js";
 
 const normalizePositiveInteger = (value, fallback) => {
   const parsed = parseInt(String(value ?? "").trim(), 10);
@@ -151,10 +156,10 @@ export const applyEditorPreviewDraftToCardConfig = ({
       typeof previewConfig.theme_custom_defaults === "object"
         ? previewConfig.theme_custom_defaults
         : {},
-    stream_height: previewConfig.stream_height
-      ? Number(previewConfig.stream_height)
-      : null,
-    stream_height_unit: previewConfig.stream_height_unit || "vh",
+    stream_height: normalizeCardHeight(previewConfig.stream_height),
+    stream_height_unit: normalizeCardHeightUnit(
+      previewConfig.stream_height_unit,
+    ),
     tight_margins: previewConfig.tight_margins === true,
     shadows: previewConfig.shadows !== false,
     borders: previewConfig.borders !== false,
@@ -166,7 +171,9 @@ export const applyEditorPreviewDraftToCardConfig = ({
       previewConfig.wide_view_alert_takeover === true,
     landing_page: normalizePageRoute(previewConfig.landing_page),
     mobile_page: normalizeMobilePageMode(previewConfig.mobile_page),
-    col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
+    col_left_width_pct: normalizeWideLeftWidth(
+      previewConfig.col_left_width_pct,
+    ),
     video_defaults:
       previewConfig.video_defaults &&
       typeof previewConfig.video_defaults === "object" &&

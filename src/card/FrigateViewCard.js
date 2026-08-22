@@ -272,6 +272,11 @@ import { DeepLinkController } from "../features/navigation/deep-link.ctrl.js";
 import { GridAlertController } from "../features/grid/alert.ctrl.js";
 import { GridPageController } from "../features/grid/page.ctrl.js";
 import { CardStyleContextController } from "../features/card-style/context.ctrl.js";
+import {
+  normalizeCardHeight,
+  normalizeCardHeightUnit,
+} from "../features/card-style/config.js";
+import { normalizeWideLeftWidth } from "../features/wide-view/config.js";
 import { EditorPreviewContextController } from "../features/editor-preview/context.ctrl.js";
 import { PopupMediaLoaderController } from "../features/popup/media-loader.ctrl.js";
 import { ViewportContextController } from "../features/viewport/context.ctrl.js";
@@ -1244,15 +1249,15 @@ export class FrigateViewCard extends HTMLElement {
                 .filter(([, value]) => value === true),
             )
           : {},
-      stream_height: config.stream_height ? Number(config.stream_height) : null,
-      stream_height_unit: config.stream_height_unit || "vh",
+      stream_height: normalizeCardHeight(config.stream_height),
+      stream_height_unit: normalizeCardHeightUnit(config.stream_height_unit),
       compact_preview: config.compact_preview === true,
       tight_margins: config.tight_margins === true,
       shadows: config.shadows !== false,
       borders: config.borders !== false,
       rounded_corners: config.rounded_corners !== false,
       outer_shadows: config.outer_shadows !== false,
-      col_left_width_pct: Number(config.col_left_width_pct) || 50,
+      col_left_width_pct: normalizeWideLeftWidth(config.col_left_width_pct),
       video_defaults: this._normalizeVideoFactoryDefaults(
         config.video_defaults,
       ),

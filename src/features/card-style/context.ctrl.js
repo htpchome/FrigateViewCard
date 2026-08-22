@@ -144,7 +144,7 @@ export class CardStyleContextController {
     const isCompactPreview =
       this._host._config?.compact_preview === true ||
       this._host._isPreviewContext();
-    const configuredHeightUnit = this._host._config.stream_height_unit || "vh";
+    const configuredHeightUnit = this._host._config.stream_height_unit || "%";
     const isDefaultStubPreview =
       this._host._isPreviewContext() &&
       this._host._config?.compact_preview === true &&

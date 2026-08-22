@@ -38,6 +38,11 @@ import {
   withCardTypeForYaml as mapWithCardTypeForYaml,
 } from "./config/yaml-mapper.js";
 import { normalizeCameraPtzConfig } from "./features/ptz/index.js";
+import {
+  normalizeCardHeight,
+  normalizeCardHeightUnit,
+} from "./features/card-style/config.js";
+import { normalizeWideLeftWidth } from "./features/wide-view/config.js";
 
 export function detectDeviceProfile() {
   const nav = typeof navigator !== "undefined" ? navigator : {};
@@ -686,9 +691,9 @@ export const buildEditorConfigFromDom = ({
   const streamHeightUnit =
     root.querySelector("#stream_height_unit")?.dataset.value ||
     root.querySelector("#stream_height_unit")?.value ||
-    "vh";
-  nextConfig.stream_height = streamHeight ? Number(streamHeight) : null;
-  nextConfig.stream_height_unit = streamHeightUnit;
+    "%";
+  nextConfig.stream_height = normalizeCardHeight(streamHeight);
+  nextConfig.stream_height_unit = normalizeCardHeightUnit(streamHeightUnit);
 
   nextConfig.tight_margins = resolveSwitchChecked(
     root.querySelector("#tight_margins"),
@@ -713,13 +718,9 @@ export const buildEditorConfigFromDom = ({
       MOBILE_PAGE_MODES.mobile,
   );
 
-  const leftWidthRaw = root
-    .querySelector("#col_left_width_pct")
-    ?.value?.replace(/%/g, "")
-    .trim();
-  nextConfig.col_left_width_pct = leftWidthRaw
-    ? Math.min(Math.max(parseInt(leftWidthRaw, 10) || 50, 10), 90)
-    : 50;
+  nextConfig.col_left_width_pct = normalizeWideLeftWidth(
+    root.querySelector("#col_left_width_pct")?.value,
+  );
 
   return nextConfig;
 };

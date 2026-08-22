@@ -46,7 +46,6 @@ import {
   dialogActionKindFromEvent,
   wireCameraRowDragAndDrop,
   setFieldErrorState,
-  bindNumericInputField,
   bindSelectorSyncEvents,
   setupSelectSelector,
   setupEntitySelector,
@@ -85,6 +84,17 @@ import {
   PAGE_IDS,
 } from "../features/navigation/router.js";
 import { normalizeCardConfig } from "../config/card-config.js";
+import {
+  CARD_HEIGHT_MAX,
+  CARD_HEIGHT_MIN,
+  normalizeCardHeight,
+  normalizeCardHeightUnit,
+} from "../features/card-style/config.js";
+import {
+  WIDE_LEFT_WIDTH_MAX,
+  WIDE_LEFT_WIDTH_MIN,
+  normalizeWideLeftWidth,
+} from "../features/wide-view/config.js";
 import { createEditorPreviewDraft } from "../config/preview-mapper.js";
 import {
   compactEditorConfigForYaml,
@@ -313,6 +323,19 @@ export class FrigateViewCardEditor extends HTMLElement {
     output.textContent = Number.isFinite(numeric)
       ? `${numeric}${suffix}`
       : output.textContent;
+  }
+
+  _syncStreamHeightOutput() {
+    const output = this.querySelector("#stream_height-output");
+    if (!output) return;
+    const height = normalizeCardHeight(
+      this.querySelector("#stream_height")?.value,
+    );
+    const unit = normalizeCardHeightUnit(
+      this.querySelector("#stream_height_unit")?.dataset.value ||
+        this.querySelector("#stream_height_unit")?.value,
+    );
+    output.textContent = `${height}${unit}`;
   }
 
   _syncCameraModalPtzVisibility({
@@ -625,18 +648,6 @@ export class FrigateViewCardEditor extends HTMLElement {
     } catch (_) {
       return tz.replace(/_/g, " ");
     }
-  }
-
-  _defaultHostVh() {
-    const headerH =
-      parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue(
-          "--header-height",
-        ),
-      ) || 56;
-    return Math.round(
-      ((window.innerHeight - headerH) / window.innerHeight) * 100,
-    );
   }
 
   _rgbToHex(value) {
@@ -1144,12 +1155,11 @@ export class FrigateViewCardEditor extends HTMLElement {
     ).trim();
     const streamHeight = Number(streamHeightRaw);
     const streamHeightMessage =
-      !streamHeightRaw ||
-      (Number.isInteger(streamHeight) &&
-        streamHeight >= 1 &&
-        streamHeight <= 4000)
+      Number.isInteger(streamHeight) &&
+      streamHeight >= CARD_HEIGHT_MIN &&
+      streamHeight <= CARD_HEIGHT_MAX
         ? ""
-        : "Enter a whole number from 1 to 4000, or leave blank.";
+        : `Select a whole number from ${CARD_HEIGHT_MIN} to ${CARD_HEIGHT_MAX}.`;
     this._setEditorFieldError("#stream_height", streamHeightMessage);
     if (streamHeightMessage) valid = false;
 
@@ -1157,23 +1167,19 @@ export class FrigateViewCardEditor extends HTMLElement {
       this.querySelector("#wide_view_page_enabled")?.checked === true;
     const colWidthRaw = String(
       this.querySelector("#col_left_width_pct")?.value || "",
-    )
-      .replace(/%/g, "")
-      .trim();
+    ).trim();
     const colWidth = Number(colWidthRaw);
     const colWidthMessage =
       !wideViewEnabled ||
-      (Number.isInteger(colWidth) && colWidth >= 10 && colWidth <= 90)
+      (Number.isInteger(colWidth) &&
+        colWidth >= WIDE_LEFT_WIDTH_MIN &&
+        colWidth <= WIDE_LEFT_WIDTH_MAX)
         ? ""
-        : "Enter a whole number from 10 to 90.";
+        : `Select a whole number from ${WIDE_LEFT_WIDTH_MIN} to ${WIDE_LEFT_WIDTH_MAX}.`;
     this._setEditorFieldError("#col_left_width_pct", colWidthMessage);
     if (colWidthMessage) valid = false;
 
     return valid;
-  }
-
-  _bindNumericInput(selector, { onSanitize } = {}) {
-    bindNumericInputField({ root: this, selector, onSanitize });
   }
 
   _render() {
@@ -1190,6 +1196,13 @@ export class FrigateViewCardEditor extends HTMLElement {
     const activeTheme = this._config?.theme === "custom" ? "custom" : "default";
     const themeCustom = this._config?.theme_custom || {};
     const themeCustomDefaults = this._config?.theme_custom_defaults || {};
+    const streamHeight = normalizeCardHeight(this._config?.stream_height);
+    const streamHeightUnit = normalizeCardHeightUnit(
+      this._config?.stream_height_unit,
+    );
+    const wideLeftWidth = normalizeWideLeftWidth(
+      this._config?.col_left_width_pct,
+    );
     const pageRouteLabel = (pageId) => {
       if (pageId === PAGE_IDS.mobileView) return "Mobile";
       if (pageId === PAGE_IDS.preview) return "Preview";
@@ -1351,9 +1364,11 @@ export class FrigateViewCardEditor extends HTMLElement {
       <div class="section">
         <span class="field-label">Card Height Limit</span>
         <div style="display:flex;gap:8px;align-items:center">
-          <ha-input name="stream_height" id="stream_height" type="number" value="${this._config?.stream_height || ""}" min="1" placeholder="${this._defaultHostVh()}" style="flex:1"></ha-input>
+          <input name="stream_height" id="stream_height" type="range" min="${CARD_HEIGHT_MIN}" max="${CARD_HEIGHT_MAX}" step="1" value="${streamHeight}" style="flex:1;min-width:160px">
           <ha-selector id="stream_height_unit" style="width:120px"></ha-selector>
         </div>
+        <div class="field-helper">Constrain the card to 50–100% of its available height or the dynamic viewport.</div>
+        <div class="field-helper" id="stream_height-output">${streamHeight}${streamHeightUnit}</div>
         <div class="field-helper" id="stream_height-helper"></div>
       </div>
       <div class="section">
@@ -1471,12 +1486,14 @@ export class FrigateViewCardEditor extends HTMLElement {
         </div>
         <div class="field-helper">Sets the initial state of the Wide View toolbar button that allows alerted cameras to take over the main live view.</div>
       </div>
-      <div id="col-width-row" style="display:flex;align-items:center;gap:6px;margin-top:6px;${this._config?.wide_view_page_enabled ? "" : "display:none"}">
-        <label style="font-size:11px;color:var(--c-text);white-space:nowrap">Left Width %</label>
-        <ha-input type="text" id="col_left_width_pct" value="${this._config?.col_left_width_pct ?? 50}" style="width:70px"></ha-input>
-        <span style="font-size:11px;color:var(--c-text2)">%</span>
+      <div class="section" id="col-width-row" style="${this._config?.wide_view_page_enabled ? "" : "display:none"}">
+        <span class="field-label">Wide View Left Width</span>
+        <input id="col_left_width_pct" type="range" min="${WIDE_LEFT_WIDTH_MIN}" max="${WIDE_LEFT_WIDTH_MAX}" step="1" value="${wideLeftWidth}" style="width:100%">
+        <div class="field-helper">Controls the left column width when Wide View is active.</div>
+        <div class="field-helper" id="col_left_width_pct-output">${wideLeftWidth}%</div>
+        <div class="field-helper" id="col_left_width_pct-helper"></div>
       </div>
-      <div class="field-helper" id="col_left_width_pct-helper">Controls the left column width when the Wide View page is active.</div>`;
+      `;
     const mobileViewPanelContent = `
       <div class="section" style="border-top:none;padding-top:0">
         <div class="layout-row">
@@ -1874,15 +1891,16 @@ export class FrigateViewCardEditor extends HTMLElement {
       element: this.querySelector("#stream_height_unit"),
       hass: this._hass,
       options: [
-        { value: "vh", label: "dvh" },
-        { value: "em", label: "em" },
-        { value: "px", label: "px" },
         { value: "%", label: "%" },
+        { value: "dvh", label: "dvh" },
       ],
-      initialValue: this._config?.stream_height_unit || "vh",
-      fallbackValue: "vh",
-      normalize: (value) => String(value ?? "vh"),
-      onChange: () => update(),
+      initialValue: streamHeightUnit,
+      fallbackValue: "%",
+      normalize: (value) => normalizeCardHeightUnit(value),
+      onChange: () => {
+        this._syncStreamHeightOutput();
+        update();
+      },
     });
 
     setupSelectSelector({
@@ -2025,6 +2043,19 @@ export class FrigateViewCardEditor extends HTMLElement {
         this._setCameraModalPtzSpeedOutput(event.currentTarget?.value);
       },
     );
+    this.querySelector("#stream_height")?.addEventListener("input", () => {
+      this._syncStreamHeightOutput();
+    });
+    this.querySelector("#col_left_width_pct")?.addEventListener(
+      "input",
+      (event) => {
+        this._setRangeValueOutput(
+          "#col_left_width_pct",
+          event.currentTarget?.value,
+          "%",
+        );
+      },
+    );
     [
       "#snapshot_update_seconds",
       "#slideshow_alert_hold_seconds",
@@ -2114,28 +2145,12 @@ export class FrigateViewCardEditor extends HTMLElement {
     const colWidthRow = this.querySelector("#col-width-row");
     if (wideCb && colWidthRow) {
       const syncWideRow = () => {
-        colWidthRow.style.display = wideCb.checked ? "flex" : "none";
+        colWidthRow.style.display = wideCb.checked ? "" : "none";
         this._validateEditorFields();
       };
       wideCb.addEventListener("change", syncWideRow);
       wideCb.addEventListener("value-changed", syncWideRow);
       syncWideRow();
-    }
-
-    if (this.querySelector("#col_left_width_pct")) {
-      this._bindNumericInput("#col_left_width_pct", {
-        onSanitize: () => {
-          this._validateEditorFields();
-        },
-      });
-    }
-
-    if (this.querySelector("#stream_height")) {
-      this._bindNumericInput("#stream_height", {
-        onSanitize: () => {
-          this._validateEditorFields();
-        },
-      });
     }
 
     this._validateEditorFields();

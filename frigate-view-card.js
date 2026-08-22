@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1635";
+const VERSION = "1.0.1636";
 const CARD_TAG = "frigate-view-card";
 const DAY = 86400;
 const RECORDINGS_WINDOW = 24 * 3600;
@@ -1979,6 +1979,43 @@ const createNavigationFactory = ({
   };
 };
 
+// src/features/card-style/config.js
+const CARD_HEIGHT_MIN = 50;
+const CARD_HEIGHT_MAX = 100;
+const CARD_HEIGHT_DEFAULT = 100;
+const CARD_HEIGHT_DEFAULT_UNIT = "%";
+const normalizeCardHeight = (value) => {
+  if (value == null || String(value).trim() === "") {
+    return CARD_HEIGHT_DEFAULT;
+  }
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return CARD_HEIGHT_DEFAULT;
+  return Math.min(
+    CARD_HEIGHT_MAX,
+    Math.max(CARD_HEIGHT_MIN, Math.round(numeric))
+  );
+};
+const normalizeCardHeightUnit = (value) => {
+  const unit = String(value || "").trim().toLowerCase();
+  return unit === "vh" || unit === "dvh" ? "dvh" : CARD_HEIGHT_DEFAULT_UNIT;
+};
+
+// src/features/wide-view/config.js
+const WIDE_LEFT_WIDTH_MIN = 25;
+const WIDE_LEFT_WIDTH_MAX = 75;
+const WIDE_LEFT_WIDTH_DEFAULT = 75;
+const normalizeWideLeftWidth = (value) => {
+  if (value == null || String(value).trim() === "") {
+    return WIDE_LEFT_WIDTH_DEFAULT;
+  }
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return WIDE_LEFT_WIDTH_DEFAULT;
+  return Math.min(
+    WIDE_LEFT_WIDTH_MAX,
+    Math.max(WIDE_LEFT_WIDTH_MIN, Math.round(numeric))
+  );
+};
+
 // src/config/preview-mapper.js
 const normalizePositiveInteger = (value, fallback) => {
   const parsed = parseInt(String(value ?? "").trim(), 10);
@@ -2092,8 +2129,10 @@ const applyEditorPreviewDraftToCardConfig = ({
     theme: previewConfig.theme === "custom" ? "custom" : "default",
     theme_custom: previewConfig.theme_custom && typeof previewConfig.theme_custom === "object" ? previewConfig.theme_custom : {},
     theme_custom_defaults: previewConfig.theme_custom_defaults && typeof previewConfig.theme_custom_defaults === "object" ? previewConfig.theme_custom_defaults : {},
-    stream_height: previewConfig.stream_height ? Number(previewConfig.stream_height) : null,
-    stream_height_unit: previewConfig.stream_height_unit || "vh",
+    stream_height: normalizeCardHeight(previewConfig.stream_height),
+    stream_height_unit: normalizeCardHeightUnit(
+      previewConfig.stream_height_unit
+    ),
     tight_margins: previewConfig.tight_margins === true,
     shadows: previewConfig.shadows !== false,
     borders: previewConfig.borders !== false,
@@ -2104,7 +2143,9 @@ const applyEditorPreviewDraftToCardConfig = ({
     wide_view_alert_takeover: previewConfig.wide_view_alert_takeover === true,
     landing_page: normalizePageRoute(previewConfig.landing_page),
     mobile_page: normalizeMobilePageMode(previewConfig.mobile_page),
-    col_left_width_pct: Number(previewConfig.col_left_width_pct) || 50,
+    col_left_width_pct: normalizeWideLeftWidth(
+      previewConfig.col_left_width_pct
+    ),
     video_defaults: previewConfig.video_defaults && typeof previewConfig.video_defaults === "object" && !Array.isArray(previewConfig.video_defaults) ? previewConfig.video_defaults : base.video_defaults,
     video_live_defaults: previewConfig.video_live_defaults && typeof previewConfig.video_live_defaults === "object" && !Array.isArray(previewConfig.video_live_defaults) ? previewConfig.video_live_defaults : base.video_live_defaults,
     video_popup_defaults: previewConfig.video_popup_defaults && typeof previewConfig.video_popup_defaults === "object" && !Array.isArray(previewConfig.video_popup_defaults) ? previewConfig.video_popup_defaults : base.video_popup_defaults,
@@ -2621,10 +2662,13 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
       compact.theme_custom = compactThemeCustom;
     }
   }
-  const streamHeight = source.stream_height ? Number(source.stream_height) : null;
-  if (streamHeight) compact.stream_height = streamHeight;
-  const streamHeightUnit = source.stream_height_unit || "vh";
-  if (streamHeight && streamHeightUnit !== "vh") {
+  const hasStreamHeight = source.stream_height != null && String(source.stream_height).trim() !== "";
+  const streamHeight = normalizeCardHeight(source.stream_height);
+  if (hasStreamHeight && streamHeight !== CARD_HEIGHT_DEFAULT) {
+    compact.stream_height = streamHeight;
+  }
+  const streamHeightUnit = normalizeCardHeightUnit(source.stream_height_unit);
+  if (hasStreamHeight && streamHeightUnit !== CARD_HEIGHT_DEFAULT_UNIT) {
     compact.stream_height_unit = streamHeightUnit;
   }
   addIfNotDefault(
@@ -2647,8 +2691,13 @@ const compactEditorConfigForYaml = (config, { themeDefaultColors = {} } = {}) =>
     source.outer_shadows !== false,
     true
   );
-  const leftWidth = Number(source.col_left_width_pct) || 50;
-  addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
+  const leftWidth = normalizeWideLeftWidth(source.col_left_width_pct);
+  addIfNotDefault(
+    compact,
+    "col_left_width_pct",
+    leftWidth,
+    WIDE_LEFT_WIDTH_DEFAULT
+  );
   const videoDefaults = cloneObjectIfPresent(source.video_defaults);
   if (videoDefaults) compact.video_defaults = videoDefaults;
   const videoLiveDefaults = cloneObjectIfPresent(source.video_live_defaults);
@@ -3205,9 +3254,9 @@ const buildEditorConfigFromDom = ({
   const hiddenTabs = Array.isArray(hiddenTabsOverride) ? hiddenTabsOverride.map((id) => id === "reviews" ? "alerts" : id).filter((id) => ALLOWED_HIDDEN_TABS.includes(id)) : [...root.querySelectorAll("[data-active-tab]")].filter((element) => !resolveSwitchChecked(element)).map((element) => element.dataset.activeTab).filter((tabId) => ALLOWED_HIDDEN_TABS.includes(tabId));
   nextConfig.hidden_tabs = hiddenTabs.length ? hiddenTabs : [];
   const streamHeight = root.querySelector("#stream_height")?.value;
-  const streamHeightUnit = root.querySelector("#stream_height_unit")?.dataset.value || root.querySelector("#stream_height_unit")?.value || "vh";
-  nextConfig.stream_height = streamHeight ? Number(streamHeight) : null;
-  nextConfig.stream_height_unit = streamHeightUnit;
+  const streamHeightUnit = root.querySelector("#stream_height_unit")?.dataset.value || root.querySelector("#stream_height_unit")?.value || "%";
+  nextConfig.stream_height = normalizeCardHeight(streamHeight);
+  nextConfig.stream_height_unit = normalizeCardHeightUnit(streamHeightUnit);
   nextConfig.tight_margins = resolveSwitchChecked(
     root.querySelector("#tight_margins")
   );
@@ -3221,8 +3270,9 @@ const buildEditorConfigFromDom = ({
   nextConfig.mobile_page = normalizeMobilePageMode(
     root.querySelector("#mobile_page")?.dataset.value || root.querySelector("#mobile_page")?.value || nextConfig.mobile_page || MOBILE_PAGE_MODES.mobile
   );
-  const leftWidthRaw = root.querySelector("#col_left_width_pct")?.value?.replace(/%/g, "").trim();
-  nextConfig.col_left_width_pct = leftWidthRaw ? Math.min(Math.max(parseInt(leftWidthRaw, 10) || 50, 10), 90) : 50;
+  nextConfig.col_left_width_pct = normalizeWideLeftWidth(
+    root.querySelector("#col_left_width_pct")?.value
+  );
   return nextConfig;
 };
 const compactEditorConfigForYaml2 = (config, options = {}) => compactEditorConfigForYaml(config, options);
@@ -17728,7 +17778,7 @@ const CardStyleContextController = class {
     this.applyTightMargins();
     const rawHeight = this._host._config.stream_height;
     const isCompactPreview = this._host._config?.compact_preview === true || this._host._isPreviewContext();
-    const configuredHeightUnit = this._host._config.stream_height_unit || "vh";
+    const configuredHeightUnit = this._host._config.stream_height_unit || "%";
     const isDefaultStubPreview = this._host._isPreviewContext() && this._host._config?.compact_preview === true && configuredHeightUnit === "%" && Number(rawHeight) === 100 && this._host._config?.title === "Frigate Preview" && this._host._config?.subtitle === "Compact preview";
     const configuredHeight = isDefaultStubPreview ? 50 : rawHeight;
     const previewHeightFallback = isCompactPreview && !configuredHeight ? "320px" : "";
@@ -19803,7 +19853,7 @@ const WideViewPageController = class {
     if (!this.isWideViewPageActive()) {
       return { isWide: false, leftWidth: "", rightWidth: "" };
     }
-    const pct = Math.min(Math.max(parseInt(leftWidthPct, 10) || 50, 10), 90);
+    const pct = normalizeWideLeftWidth(leftWidthPct);
     return {
       isWide: true,
       leftWidth: `${pct}%`,
@@ -19855,8 +19905,8 @@ const WideViewPageController = class {
     const onMouseMove = (e) => {
       if (!dragging) return;
       if (!colL || !colR || !layoutWidth) return;
-      const minPct = 10;
-      const maxPct = 90;
+      const minPct = WIDE_LEFT_WIDTH_MIN;
+      const maxPct = WIDE_LEFT_WIDTH_MAX;
       const dx = e.clientX - startX;
       let newLeftWidth = startLeftWidth + dx;
       let pct = newLeftWidth / layoutWidth * 100;
@@ -21855,15 +21905,15 @@ const FrigateViewCard = class extends HTMLElement {
       theme_custom_defaults: config.theme_custom_defaults && typeof config.theme_custom_defaults === "object" ? Object.fromEntries(
         Object.entries(config.theme_custom_defaults).filter(([key]) => THEME_CUSTOM_KEYS.has(key)).map(([key, value]) => [key, value === true]).filter(([, value]) => value === true)
       ) : {},
-      stream_height: config.stream_height ? Number(config.stream_height) : null,
-      stream_height_unit: config.stream_height_unit || "vh",
+      stream_height: normalizeCardHeight(config.stream_height),
+      stream_height_unit: normalizeCardHeightUnit(config.stream_height_unit),
       compact_preview: config.compact_preview === true,
       tight_margins: config.tight_margins === true,
       shadows: config.shadows !== false,
       borders: config.borders !== false,
       rounded_corners: config.rounded_corners !== false,
       outer_shadows: config.outer_shadows !== false,
-      col_left_width_pct: Number(config.col_left_width_pct) || 50,
+      col_left_width_pct: normalizeWideLeftWidth(config.col_left_width_pct),
       video_defaults: this._normalizeVideoFactoryDefaults(
         config.video_defaults
       ),
@@ -25630,6 +25680,9 @@ const normalizeCardConfig = (config) => {
   src.borders = src.borders !== false;
   src.rounded_corners = src.rounded_corners !== false;
   src.outer_shadows = src.outer_shadows !== false;
+  src.stream_height = normalizeCardHeight(src.stream_height);
+  src.stream_height_unit = normalizeCardHeightUnit(src.stream_height_unit);
+  src.col_left_width_pct = normalizeWideLeftWidth(src.col_left_width_pct);
   src.realtime_poll_seconds = REALTIME_POLL_OPTIONS_SECONDS.includes(
     Number(src.realtime_poll_seconds)
   ) ? Number(src.realtime_poll_seconds) : 5;
@@ -25884,6 +25937,17 @@ const FrigateViewCardEditor = class extends HTMLElement {
     if (!output) return;
     const numeric = Number(value);
     output.textContent = Number.isFinite(numeric) ? `${numeric}${suffix}` : output.textContent;
+  }
+  _syncStreamHeightOutput() {
+    const output = this.querySelector("#stream_height-output");
+    if (!output) return;
+    const height = normalizeCardHeight(
+      this.querySelector("#stream_height")?.value
+    );
+    const unit = normalizeCardHeightUnit(
+      this.querySelector("#stream_height_unit")?.dataset.value || this.querySelector("#stream_height_unit")?.value
+    );
+    output.textContent = `${height}${unit}`;
   }
   _syncCameraModalPtzVisibility({
     supported = false,
@@ -26160,16 +26224,6 @@ const FrigateViewCardEditor = class extends HTMLElement {
     } catch (_) {
       return tz.replace(/_/g, " ");
     }
-  }
-  _defaultHostVh() {
-    const headerH = parseFloat(
-      getComputedStyle(document.documentElement).getPropertyValue(
-        "--header-height"
-      )
-    ) || 56;
-    return Math.round(
-      (window.innerHeight - headerH) / window.innerHeight * 100
-    );
   }
   _rgbToHex(value) {
     const m = String(value || "").trim().match(/^rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
@@ -26587,21 +26641,18 @@ const FrigateViewCardEditor = class extends HTMLElement {
       this.querySelector("#stream_height")?.value || ""
     ).trim();
     const streamHeight = Number(streamHeightRaw);
-    const streamHeightMessage = !streamHeightRaw || Number.isInteger(streamHeight) && streamHeight >= 1 && streamHeight <= 4e3 ? "" : "Enter a whole number from 1 to 4000, or leave blank.";
+    const streamHeightMessage = Number.isInteger(streamHeight) && streamHeight >= CARD_HEIGHT_MIN && streamHeight <= CARD_HEIGHT_MAX ? "" : `Select a whole number from ${CARD_HEIGHT_MIN} to ${CARD_HEIGHT_MAX}.`;
     this._setEditorFieldError("#stream_height", streamHeightMessage);
     if (streamHeightMessage) valid = false;
     const wideViewEnabled = this.querySelector("#wide_view_page_enabled")?.checked === true;
     const colWidthRaw = String(
       this.querySelector("#col_left_width_pct")?.value || ""
-    ).replace(/%/g, "").trim();
+    ).trim();
     const colWidth = Number(colWidthRaw);
-    const colWidthMessage = !wideViewEnabled || Number.isInteger(colWidth) && colWidth >= 10 && colWidth <= 90 ? "" : "Enter a whole number from 10 to 90.";
+    const colWidthMessage = !wideViewEnabled || Number.isInteger(colWidth) && colWidth >= WIDE_LEFT_WIDTH_MIN && colWidth <= WIDE_LEFT_WIDTH_MAX ? "" : `Select a whole number from ${WIDE_LEFT_WIDTH_MIN} to ${WIDE_LEFT_WIDTH_MAX}.`;
     this._setEditorFieldError("#col_left_width_pct", colWidthMessage);
     if (colWidthMessage) valid = false;
     return valid;
-  }
-  _bindNumericInput(selector, { onSanitize } = {}) {
-    bindNumericInputField({ root: this, selector, onSanitize });
   }
   _render() {
     const frigEntities = this._frigateEntities();
@@ -26617,6 +26668,13 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const activeTheme = this._config?.theme === "custom" ? "custom" : "default";
     const themeCustom = this._config?.theme_custom || {};
     const themeCustomDefaults = this._config?.theme_custom_defaults || {};
+    const streamHeight = normalizeCardHeight(this._config?.stream_height);
+    const streamHeightUnit = normalizeCardHeightUnit(
+      this._config?.stream_height_unit
+    );
+    const wideLeftWidth = normalizeWideLeftWidth(
+      this._config?.col_left_width_pct
+    );
     const pageRouteLabel = (pageId) => {
       if (pageId === PAGE_IDS.mobileView) return "Mobile";
       if (pageId === PAGE_IDS.preview) return "Preview";
@@ -26771,9 +26829,11 @@ const FrigateViewCardEditor = class extends HTMLElement {
       <div class="section">
         <span class="field-label">Card Height Limit</span>
         <div style="display:flex;gap:8px;align-items:center">
-          <ha-input name="stream_height" id="stream_height" type="number" value="${this._config?.stream_height || ""}" min="1" placeholder="${this._defaultHostVh()}" style="flex:1"></ha-input>
+          <input name="stream_height" id="stream_height" type="range" min="${CARD_HEIGHT_MIN}" max="${CARD_HEIGHT_MAX}" step="1" value="${streamHeight}" style="flex:1;min-width:160px">
           <ha-selector id="stream_height_unit" style="width:120px"></ha-selector>
         </div>
+        <div class="field-helper">Constrain the card to 50\u2013100% of its available height or the dynamic viewport.</div>
+        <div class="field-helper" id="stream_height-output">${streamHeight}${streamHeightUnit}</div>
         <div class="field-helper" id="stream_height-helper"></div>
       </div>
       <div class="section">
@@ -26886,12 +26946,14 @@ const FrigateViewCardEditor = class extends HTMLElement {
         </div>
         <div class="field-helper">Sets the initial state of the Wide View toolbar button that allows alerted cameras to take over the main live view.</div>
       </div>
-      <div id="col-width-row" style="display:flex;align-items:center;gap:6px;margin-top:6px;${this._config?.wide_view_page_enabled ? "" : "display:none"}">
-        <label style="font-size:11px;color:var(--c-text);white-space:nowrap">Left Width %</label>
-        <ha-input type="text" id="col_left_width_pct" value="${this._config?.col_left_width_pct ?? 50}" style="width:70px"></ha-input>
-        <span style="font-size:11px;color:var(--c-text2)">%</span>
+      <div class="section" id="col-width-row" style="${this._config?.wide_view_page_enabled ? "" : "display:none"}">
+        <span class="field-label">Wide View Left Width</span>
+        <input id="col_left_width_pct" type="range" min="${WIDE_LEFT_WIDTH_MIN}" max="${WIDE_LEFT_WIDTH_MAX}" step="1" value="${wideLeftWidth}" style="width:100%">
+        <div class="field-helper">Controls the left column width when Wide View is active.</div>
+        <div class="field-helper" id="col_left_width_pct-output">${wideLeftWidth}%</div>
+        <div class="field-helper" id="col_left_width_pct-helper"></div>
       </div>
-      <div class="field-helper" id="col_left_width_pct-helper">Controls the left column width when the Wide View page is active.</div>`;
+      `;
     const mobileViewPanelContent = `
       <div class="section" style="border-top:none;padding-top:0">
         <div class="layout-row">
@@ -27275,15 +27337,16 @@ const FrigateViewCardEditor = class extends HTMLElement {
       element: this.querySelector("#stream_height_unit"),
       hass: this._hass,
       options: [
-        { value: "vh", label: "dvh" },
-        { value: "em", label: "em" },
-        { value: "px", label: "px" },
-        { value: "%", label: "%" }
+        { value: "%", label: "%" },
+        { value: "dvh", label: "dvh" }
       ],
-      initialValue: this._config?.stream_height_unit || "vh",
-      fallbackValue: "vh",
-      normalize: (value) => String(value ?? "vh"),
-      onChange: () => update()
+      initialValue: streamHeightUnit,
+      fallbackValue: "%",
+      normalize: (value) => normalizeCardHeightUnit(value),
+      onChange: () => {
+        this._syncStreamHeightOutput();
+        update();
+      }
     });
     setupSelectSelector({
       element: this.querySelector("#landing_page"),
@@ -27414,6 +27477,19 @@ const FrigateViewCardEditor = class extends HTMLElement {
         this._setCameraModalPtzSpeedOutput(event.currentTarget?.value);
       }
     );
+    this.querySelector("#stream_height")?.addEventListener("input", () => {
+      this._syncStreamHeightOutput();
+    });
+    this.querySelector("#col_left_width_pct")?.addEventListener(
+      "input",
+      (event) => {
+        this._setRangeValueOutput(
+          "#col_left_width_pct",
+          event.currentTarget?.value,
+          "%"
+        );
+      }
+    );
     [
       "#snapshot_update_seconds",
       "#slideshow_alert_hold_seconds",
@@ -27498,26 +27574,12 @@ const FrigateViewCardEditor = class extends HTMLElement {
     const colWidthRow = this.querySelector("#col-width-row");
     if (wideCb && colWidthRow) {
       const syncWideRow = () => {
-        colWidthRow.style.display = wideCb.checked ? "flex" : "none";
+        colWidthRow.style.display = wideCb.checked ? "" : "none";
         this._validateEditorFields();
       };
       wideCb.addEventListener("change", syncWideRow);
       wideCb.addEventListener("value-changed", syncWideRow);
       syncWideRow();
-    }
-    if (this.querySelector("#col_left_width_pct")) {
-      this._bindNumericInput("#col_left_width_pct", {
-        onSanitize: () => {
-          this._validateEditorFields();
-        }
-      });
-    }
-    if (this.querySelector("#stream_height")) {
-      this._bindNumericInput("#stream_height", {
-        onSanitize: () => {
-          this._validateEditorFields();
-        }
-      });
     }
     this._validateEditorFields();
   }

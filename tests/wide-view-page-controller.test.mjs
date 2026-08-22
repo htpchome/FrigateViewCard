@@ -187,13 +187,13 @@ test("wideViewLayoutState resolves wide layout widths with clamping", () => {
 
   assert.deepEqual(wideController.wideViewLayoutState("120"), {
     isWide: true,
-    leftWidth: "90%",
-    rightWidth: "10%",
+    leftWidth: "75%",
+    rightWidth: "25%",
   });
   assert.deepEqual(wideController.wideViewLayoutState("5"), {
     isWide: true,
-    leftWidth: "10%",
-    rightWidth: "90%",
+    leftWidth: "25%",
+    rightWidth: "75%",
   });
   assert.deepEqual(wideController.wideViewLayoutState("65"), {
     isWide: true,
@@ -235,6 +235,15 @@ test("applyWideLayoutMode applies wide class and widths", () => {
   assert.deepEqual(toggles, [["wide-view", true]]);
   assert.equal(colL.style.width, "65%");
   assert.equal(colR.style.width, "35%");
+});
+
+test("wideViewLayoutState uses hardened width defaults and limits", () => {
+  const { host } = createHost({ isWide: true });
+  const controller = new WideViewPageController(host, { PAGE_IDS });
+
+  assert.equal(controller.wideViewLayoutState().leftWidth, "75%");
+  assert.equal(controller.wideViewLayoutState("10").leftWidth, "25%");
+  assert.equal(controller.wideViewLayoutState("90").leftWidth, "75%");
 });
 
 test("applyLayoutModeForCard resolves layout and applies widths", () => {

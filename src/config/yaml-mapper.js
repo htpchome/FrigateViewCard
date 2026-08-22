@@ -18,6 +18,16 @@ import {
 } from "../features/navigation/router.js";
 import { normalizeBoundedPositiveInteger } from "../helpers.js";
 import { normalizeCameraPtzConfig } from "../features/ptz/index.js";
+import {
+  CARD_HEIGHT_DEFAULT,
+  CARD_HEIGHT_DEFAULT_UNIT,
+  normalizeCardHeight,
+  normalizeCardHeightUnit,
+} from "../features/card-style/config.js";
+import {
+  WIDE_LEFT_WIDTH_DEFAULT,
+  normalizeWideLeftWidth,
+} from "../features/wide-view/config.js";
 
 const normalizePositiveInteger = (value, fallback) => {
   const parsed = parseInt(String(value ?? "").trim(), 10);
@@ -350,12 +360,14 @@ export const compactEditorConfigForYaml = (
     }
   }
 
-  const streamHeight = source.stream_height
-    ? Number(source.stream_height)
-    : null;
-  if (streamHeight) compact.stream_height = streamHeight;
-  const streamHeightUnit = source.stream_height_unit || "vh";
-  if (streamHeight && streamHeightUnit !== "vh") {
+  const hasStreamHeight =
+    source.stream_height != null && String(source.stream_height).trim() !== "";
+  const streamHeight = normalizeCardHeight(source.stream_height);
+  if (hasStreamHeight && streamHeight !== CARD_HEIGHT_DEFAULT) {
+    compact.stream_height = streamHeight;
+  }
+  const streamHeightUnit = normalizeCardHeightUnit(source.stream_height_unit);
+  if (hasStreamHeight && streamHeightUnit !== CARD_HEIGHT_DEFAULT_UNIT) {
     compact.stream_height_unit = streamHeightUnit;
   }
   addIfNotDefault(
@@ -378,8 +390,13 @@ export const compactEditorConfigForYaml = (
     source.outer_shadows !== false,
     true,
   );
-  const leftWidth = Number(source.col_left_width_pct) || 50;
-  addIfNotDefault(compact, "col_left_width_pct", leftWidth, 50);
+  const leftWidth = normalizeWideLeftWidth(source.col_left_width_pct);
+  addIfNotDefault(
+    compact,
+    "col_left_width_pct",
+    leftWidth,
+    WIDE_LEFT_WIDTH_DEFAULT,
+  );
 
   const videoDefaults = cloneObjectIfPresent(source.video_defaults);
   if (videoDefaults) compact.video_defaults = videoDefaults;

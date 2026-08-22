@@ -1,5 +1,11 @@
 import { activateStandardPageRouteLifecycle } from "../navigation/route-lifecycle.js";
 
+import {
+  WIDE_LEFT_WIDTH_MAX,
+  WIDE_LEFT_WIDTH_MIN,
+  normalizeWideLeftWidth,
+} from "./config.js";
+
 export class WideViewPageController {
   constructor(host, constants, options = {}) {
     this._host = host;
@@ -128,7 +134,7 @@ export class WideViewPageController {
       return { isWide: false, leftWidth: "", rightWidth: "" };
     }
 
-    const pct = Math.min(Math.max(parseInt(leftWidthPct, 10) || 50, 10), 90);
+    const pct = normalizeWideLeftWidth(leftWidthPct);
     return {
       isWide: true,
       leftWidth: `${pct}%`,
@@ -186,8 +192,8 @@ export class WideViewPageController {
     const onMouseMove = (e) => {
       if (!dragging) return;
       if (!colL || !colR || !layoutWidth) return;
-      const minPct = 10;
-      const maxPct = 90;
+      const minPct = WIDE_LEFT_WIDTH_MIN;
+      const maxPct = WIDE_LEFT_WIDTH_MAX;
       const dx = e.clientX - startX;
       let newLeftWidth = startLeftWidth + dx;
       let pct = (newLeftWidth / layoutWidth) * 100;
