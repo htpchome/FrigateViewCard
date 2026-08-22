@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1660";
+const VERSION = "1.0.1661";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -806,26 +806,41 @@ const STYLES = `
   .icon-btn.active svg{color:var(--c-text);}
   .icon-btn:disabled{opacity:.45;cursor:not-allowed;}
   .icon-btn:disabled:hover svg{color:var(--c-text2);}
+  
   .round-btn {
-  position: relative;
-  background: var(--c-bg-main);  
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  background-color: var(--c-bg-main);  
   color: var(--c-text2);
+  background-image:
+    radial-gradient(
+      circle at center,
+      var(--c-bg-panel) 0 50%,
+      transparent 51%
+    );
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 0 0;
   border: none;
-  padding: 4px;
   box-shadow: 0 2px 4px var(--c-border2);
   border-radius: 50%;
+  font: 600 1.35rem/1 Arial, sans-serif;
   cursor: pointer;
-  background:var(--c-bg-main);
-  overflow: hidden; 
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.4s ease;
+  appearance: none;
+  transition:
+    background-size 0.35s ease,
+    box-shadow 0.2s ease,
+    transform 0.12s ease;
   }
   .round-btn svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
+  .round-butn:hover{background-size: 210% 210%;}
   .round-btn:hover svg{color:var(--c-text);}
-  .round-btn.active {background:var(--c-bg-panel);}
+  .round-btn.active {transform: scale(0.95);box-shadow: 0 2px 4px var(--c-border2);background:var(--c-bg-panel);}
   .round-btn.active svg{color:var(--c-text);}
+  .round-btn:focus-visible {outline: 2px solid #1683ff;outline-offset: 3px;}
 
   .newtoast{font-size:0.75rem;font-weight:700;color:var(--c-on);}
   .empty{text-align:center;padding:16px;color:var(--c-text3);font-size:0.9rem;line-height:1.5;}
