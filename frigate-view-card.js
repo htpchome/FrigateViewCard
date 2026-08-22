@@ -4,7 +4,7 @@ const __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { 
 const __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/constants.js
-const VERSION = "1.0.1658";
+const VERSION = "1.0.1659";
 const CARD_TAG = "frigate-view-card";
 const DEFAULT_TITLE = "FrigateView";
 const DEFAULT_SUBTITLE = "{Camera}";
@@ -807,16 +807,20 @@ const STYLES = `
   .icon-btn:disabled{opacity:.45;cursor:not-allowed;}
   .icon-btn:disabled:hover svg{color:var(--c-text2);}
   .round-btn {
+  position: relative;
   background-color: color:var(--c-bg-main);  
   color: var(--c-text2);
   border: none;
-  padding: 5px;
-  font-size: 31px;
+  padding: 3px;
   box-shadow: 0 2px 4px var(--c-border2);
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s ease;
   background:var(--c-bg-main);
+  overflow: hidden; 
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.4s ease;
   }
   .round-btn svg{width:24px;height:24px;opacity:0.85;color:var(--c-text2)}
   .round-btn:hover svg{color:var(--c-text);}
@@ -844,12 +848,9 @@ const STYLES = `
   font-weight: 600;
   transition: color 0.4s ease;
 }
-
-/* Step 4: Hover states */
 .round-btn:hover::before {
   transform: scale(1); /* Expands background to fill the button */
 }
-
 .round-btn:hover span {
   color: color:var(--c-text); /* Inverts text color for readability */
 }
