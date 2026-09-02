@@ -8,7 +8,7 @@ import {
 } from "../src/features/preview/page.tmpl.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
 import { buildWideViewMainLayoutShellMarkup } from "../src/features/wide-view/page.tmpl.js";
-import { buildFooterMarkup } from "../src/card/controls/shell-nav.tmpl.js";
+import { buildFooterMarkup } from "../src/card/shell.tmpl.js";
 import { STYLES } from "../src/styles.js";
 
 const regions = {

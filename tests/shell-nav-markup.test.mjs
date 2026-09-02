@@ -3,25 +3,31 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 import {
-  buildBrowseHeaderRegionMarkup,
-  buildBrowseRegionMarkup,
   buildCamSwitcherRegionMarkup,
-  buildControlsSectionMarkup,
   buildFooterMarkup,
   buildInfoRowMarkup,
-  buildLiveEngineWrapMarkup,
+  buildTabsRegionMarkup,
+  buildToolsRegionMarkup,
+} from "../src/card/shell.tmpl.js";
+import {
+  buildTabsMarkup,
+  buildToolsMarkup,
+  resolveToolbarModeButtonStates,
+} from "../src/card/toolbar.tmpl.js";
+import {
   buildPageNavButtonsMarkup,
   buildPageNavMarkup,
-  buildPopupShellMarkup,
-  buildTabsMarkup,
-  buildTabsRegionMarkup,
-  buildToolsMarkup,
-  buildToolsRegionMarkup,
-  resolveToolbarModeButtonStates,
-} from "../src/card/controls/shell-nav.tmpl.js";
+} from "../src/features/navigation/page-nav.tmpl.js";
+import {
+  buildBrowseHeaderRegionMarkup,
+  buildBrowseRegionMarkup,
+} from "../src/features/browse/shell.tmpl.js";
+import { buildControlsSectionMarkup } from "../src/features/ptz/controls.tmpl.js";
+import { buildPopupShellMarkup } from "../src/features/popup/shell.tmpl.js";
 import { STYLES } from "../src/styles.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
 import {
+  buildLiveEngineWrapMarkup,
   buildLiveFullscreenControlMarkup,
   buildLivePictureInPictureControlMarkup,
   buildLivePlaybackControlsMarkup,

@@ -54,8 +54,12 @@ const pageShellRegistrySource = fs.readFileSync(
   new URL("../src/features/navigation/page-shell-registry.js", import.meta.url),
   "utf8",
 );
-const shellNavTemplateSource = fs.readFileSync(
-  new URL("../src/card/controls/shell-nav.tmpl.js", import.meta.url),
+const cardShellTemplateSource = fs.readFileSync(
+  new URL("../src/card/shell.tmpl.js", import.meta.url),
+  "utf8",
+);
+const toolbarTemplateSource = fs.readFileSync(
+  new URL("../src/card/toolbar.tmpl.js", import.meta.url),
   "utf8",
 );
 const go2rtcResolverSource = fs.readFileSync(
@@ -704,12 +708,15 @@ test("preview helpers delegate through the preview page controller", () => {
     ),
     true,
   );
-  assert.equal(
-    previewPageControllerSource.includes(
-      "../../card/controls/shell-nav.tmpl.js",
-    ),
-    false,
-  );
+  for (const forbiddenCardTemplate of [
+    "../../card/shell.tmpl.js",
+    "../../card/toolbar.tmpl.js",
+  ]) {
+    assert.equal(
+      previewPageControllerSource.includes(forbiddenCardTemplate),
+      false,
+    );
+  }
   assert.equal(
     previewPageTemplateSource.includes(
       "export function buildPreviewShellHeaderMarkup",
@@ -1334,7 +1341,8 @@ test("browse markup and DOM synchronization have separate owners", () => {
     "_pageShellRegion",
     ".innerHTML =",
     ".style.",
-    "../../card/controls/shell-nav.tmpl.js",
+    "../../card/shell.tmpl.js",
+    "../../card/toolbar.tmpl.js",
   ]) {
     assert.equal(
       browseListTemplateSource.includes(forbiddenMarkupDependency),
@@ -1370,12 +1378,15 @@ test("browse markup and DOM synchronization have separate owners", () => {
     browseRenderControllerSource.includes("./list.tmpl.js"),
     true,
   );
-  assert.equal(
-    mobileViewPageTemplateSource.includes(
-      "../../card/controls/shell-nav.tmpl.js",
-    ),
-    false,
-  );
+  for (const forbiddenCardTemplate of [
+    "../../card/shell.tmpl.js",
+    "../../card/toolbar.tmpl.js",
+  ]) {
+    assert.equal(
+      mobileViewPageTemplateSource.includes(forbiddenCardTemplate),
+      false,
+    );
+  }
 });
 
 test("page chrome is owned by route templates and controllers", () => {
@@ -2039,7 +2050,7 @@ test("outer page layouts live with their route owners", () => {
     assert.equal(pageShellRegistrySource.includes(templatePath), true);
   }
   assert.equal(
-    shellNavTemplateSource.includes(
+    cardShellTemplateSource.includes(
       "export function buildMainLayoutShellMarkup",
     ),
     false,
@@ -2074,9 +2085,10 @@ test("page profiles own toolbar classes and normalize live-control classes", () 
   assert.equal(pageShellRegistrySource.includes("liveRotateButtonClass"), false);
   assert.equal(cardSource.includes("_syncRotateOverlayButtons"), false);
   assert.equal(
-    shellNavTemplateSource.includes('buttonClass = "tool"'),
+    toolbarTemplateSource.includes('buttonClass = "tool"'),
     true,
   );
+  assert.equal(cardSource.includes("./controls/"), false);
 });
 
 test("editor stylesheet keeps core config surface variables intact", () => {

@@ -216,21 +216,27 @@ import {
   buildMobileViewBackButtonMarkup,
 } from "../features/mobile-view/page.tmpl.js";
 import {
-  buildControlsSectionMarkup,
   buildCamSwitcherRegionMarkup,
   buildInfoRowMarkup,
+  buildFooterMarkup,
+  buildTabsRegionMarkup,
+  buildToolsRegionMarkup,
+} from "./shell.tmpl.js";
+import {
+  buildTabsMarkup,
+  buildToolsMarkup,
+  resolveToolbarModeButtonStates,
+} from "./toolbar.tmpl.js";
+import {
   buildPageNavButtonsMarkup,
   buildPageNavMarkup,
-  buildPopupShellMarkup,
+} from "../features/navigation/page-nav.tmpl.js";
+import {
   buildBrowseHeaderRegionMarkup,
   buildBrowseRegionMarkup,
-  buildFooterMarkup,
-  buildTabsMarkup,
-  buildTabsRegionMarkup,
-  buildToolsMarkup,
-  buildToolsRegionMarkup,
-  resolveToolbarModeButtonStates,
-} from "./controls/shell-nav.tmpl.js";
+} from "../features/browse/shell.tmpl.js";
+import { buildControlsSectionMarkup } from "../features/ptz/controls.tmpl.js";
+import { buildPopupShellMarkup } from "../features/popup/shell.tmpl.js";
 import {
   buildCalendarPanelMarkup,
   buildFilterPanelMarkup,

@@ -46,19 +46,23 @@ export const STYLES = `
     --fvc-mobile-bg: var(--wa-color-neutral-fill-normal, var(--secondary-background-color));
     --fvc-mobile-list: #f0f0f0;
     --fvc-list: #f0f0f0;
+    --fvc-tabs-holder: var(--secondary-background-color);
   }
   .card[data-theme-mode="light"] {
     --fvc-mobile-list: #f0f0f0;
     --fvc-list: #f0f0f0;
+    --fvc-tabs-holder: var(--secondary-background-color);
   }
   .card[data-theme-mode="dark"] {
     --fvc-mobile-list: #181818;
     --fvc-list: #181818;
+    --fvc-tabs-holder: var(--secondary-background-color);
   }
   .card[data-ha-theme="custom"] {
     --fvc-mobile-bg: var(--wa-color-neutral-fill-normal, var(--secondary-background-color));
     --fvc-mobile-list: var(--primary-background-color);
     --fvc-list: var(--secondary-background-color);
+    --fvc-tabs-holder: var(--secondary-background-color);
   }
   .card[data-ha-theme="custom"][data-ha-dark-primary="derived"] {
     --dark-primary-color: color-mix(in srgb, var(--primary-color) 75%, black);
@@ -71,6 +75,7 @@ export const STYLES = `
         --c-bg-mobile-list: var(--fvc-mobile-list);
         --c-bg-list:   var(--fvc-list);
         --c-bg-cam-btn:var(--fvc-list);
+        --c-bg-tabs-holder:   var(--fvc-tabs-holder);
         --c-bg-deep:   #111111;
         --c-text:      var(--primary-text-color);
         --c-text2:     var(--secondary-text-color);
@@ -323,7 +328,7 @@ export const STYLES = `
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
   .small-padding {padding:5px;}
-  .tabs-holder{margin:3px 8px;border-radius:8px;background-color:var(--c-bg-panel);container-type:inline-size;}
+  .tabs-holder{margin:3px 8px;border-radius:8px;background-color:var(--c-bg-tabs-holder);container-type:inline-size;}
   .button-holder{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"tabs nav tools";align-items:center;gap:10px;padding:4px 8px;}
   .button-holder-row{display:flex;align-items:center;min-width:0;}
   .tabs-row{grid-area:tabs;justify-content:flex-start;}

@@ -6,8 +6,8 @@ const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
   "utf8",
 );
-const shellNavSource = fs.readFileSync(
-  new URL("../src/card/controls/shell-nav.tmpl.js", import.meta.url),
+const toolbarTemplateSource = fs.readFileSync(
+  new URL("../src/card/toolbar.tmpl.js", import.meta.url),
   "utf8",
 );
 const stylesSource = fs.readFileSync(
@@ -25,11 +25,11 @@ const popupMediaControlsSource = fs.readFileSync(
 
 test("tools markup owns filter and calendar panel hosts", () => {
   assert.equal(
-    shellNavSource.includes('data-fvc-region="filter-panel"'),
+    toolbarTemplateSource.includes('data-fvc-region="filter-panel"'),
     true,
   );
   assert.equal(
-    shellNavSource.includes('data-fvc-region="calendar-panel"'),
+    toolbarTemplateSource.includes('data-fvc-region="calendar-panel"'),
     true,
   );
   assert.equal(cardSource.includes("this._createFilterPanel();"), false);

@@ -6,7 +6,7 @@ import { buildSingleViewMainLayoutShellMarkup } from "../single-view/page.tmpl.j
 import { buildWideViewMainLayoutShellMarkup } from "../wide-view/page.tmpl.js";
 import { buildPreviewPageMainLayoutShellMarkup } from "../preview/page.tmpl.js";
 import { buildCardViewMainLayoutShellMarkup } from "../card-view/page.tmpl.js";
-import { buildInfoRowMarkup } from "../../card/controls/shell-nav.tmpl.js";
+import { buildInfoRowMarkup } from "../../card/shell.tmpl.js";
 
 export const PAGE_SHELL_REGIONS = Object.freeze({
   live: "live",
