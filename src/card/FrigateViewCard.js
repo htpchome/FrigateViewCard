@@ -234,7 +234,7 @@ import {
 import {
   buildCalendarPanelMarkup,
   buildFilterPanelMarkup,
-} from "./controls/calendar-filter.tmpl.js";
+} from "../features/browse/calendar-filter.tmpl.js";
 import { BrowseCalendarPanelController } from "../features/browse/calendar-panel.ctrl.js";
 import {
   buildFavoriteOptimisticMutation,

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildCalendarPanelMarkup,
   buildFilterPanelMarkup,
-} from "../src/card/controls/calendar-filter.tmpl.js";
+} from "../src/features/browse/calendar-filter.tmpl.js";
 import { BrowseCalendarPanelController } from "../src/features/browse/calendar-panel.ctrl.js";
 
 test("renderCal builds panel markup from active month, day, and activity state", () => {
