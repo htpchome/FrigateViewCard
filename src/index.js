@@ -19,7 +19,8 @@ if (!window.customCards.find((c) => c.type === CARD_TAG))
   });
 
 console.info(
-  `%c FRIGATE-VIEW-CARD %c v${VERSION} `,
-  "color: white; background: #03a9f4; font-weight: 700;",
-  "color: #03a9f4; background: white; font-weight: 700;",
+  `%c FRIGATE-VIEW-CARD %c v${VERSION} %c`,
+  "color: #f7f7f7; background: #171717; font-weight: 700; padding: 3px 7px; border-radius: 3px 0 0 3px;",
+  "color: #ffffff; background: #e64a19; font-weight: 700; padding: 3px 7px; border-radius: 0 3px 3px 0;",
+  "color: inherit; background: transparent; font-weight: normal; padding: 0;",
 );
