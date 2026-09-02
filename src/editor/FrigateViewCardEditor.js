@@ -3005,10 +3005,20 @@ export class FrigateViewCardEditor extends HTMLElement {
             }
             input[type="range"],input[type="checkbox"]{accent-color:var(--c-primary, var(--editor-primary));}
             ha-switch{
+              --primary-color:var(--c-primary, var(--editor-primary));
+              --accent-color:var(--c-primary, var(--editor-primary));
+              --state-active-color:var(--c-primary, var(--editor-primary));
+              --state-on-color:var(--c-primary, var(--editor-primary));
               --switch-checked-color:var(--c-primary, var(--editor-primary));
               --switch-checked-button-color:var(--c-primary, var(--editor-primary));
               --switch-checked-track-color:var(--c-primary-l, var(--editor-primary-l));
               --mdc-theme-secondary:var(--c-primary, var(--editor-primary));
+              --ha-color-fill-primary-loud-resting:var(--c-primary, var(--editor-primary));
+              --ha-color-fill-primary-loud-hover:var(--c-primary, var(--editor-primary));
+              --ha-color-fill-primary-normal-resting:var(--c-primary-l, var(--editor-primary-l));
+              --ha-color-fill-primary-normal-hover:var(--c-primary-l, var(--editor-primary-l));
+              --wa-color-brand-fill-loud:var(--c-primary, var(--editor-primary));
+              --wa-color-brand-fill-normal:var(--c-primary-l, var(--editor-primary-l));
             }
             .ed-wrap{
                 display:flex;

@@ -116,7 +116,15 @@ test("editor range and checkbox controls use the chip primary accent", () => {
 test("editor switches use the same active color pair as choice chips", () => {
   assert.match(
     editorSource,
-    /ha-switch\{[\s\S]*?--switch-checked-color:var\(--c-primary, var\(--editor-primary\)\);/,
+    /ha-switch\{[\s\S]*?--primary-color:var\(--c-primary, var\(--editor-primary\)\);/,
+  );
+  assert.match(
+    editorSource,
+    /--state-on-color:var\(--c-primary, var\(--editor-primary\)\);/,
+  );
+  assert.match(
+    editorSource,
+    /--switch-checked-color:var\(--c-primary, var\(--editor-primary\)\);/,
   );
   assert.match(
     editorSource,
@@ -125,6 +133,14 @@ test("editor switches use the same active color pair as choice chips", () => {
   assert.match(
     editorSource,
     /--switch-checked-track-color:var\(--c-primary-l, var\(--editor-primary-l\)\);/,
+  );
+  assert.match(
+    editorSource,
+    /--ha-color-fill-primary-loud-resting:var\(--c-primary, var\(--editor-primary\)\);/,
+  );
+  assert.match(
+    editorSource,
+    /--wa-color-brand-fill-normal:var\(--c-primary-l, var\(--editor-primary-l\)\);/,
   );
 });
 
