@@ -12,7 +12,7 @@ FrigateViewCard is a camera, events, and recordings card for Home Assistant and 
 - Per-camera `frigate_go2rtc` or `ha_direct` live playback.
 - WebRTC-first card-managed live playback with an MSE hedge and snapshot fallback.
 - Single View, Mobile View, Preview, Wide View, and naturally sized Card View layouts.
-- Alerts, Clips, Snapshots, Recordings, Kept/Favorites, filtering, calendar navigation, and progressive list painting.
+- Alerts, Clips, Snapshots, Recordings, Favorites, filtering, calendar navigation, and progressive list painting.
 - Per-camera Alerts-only or All Reviews behavior used consistently by alert lists, borders, live promotion, and camera takeover.
 - Optional slideshow and 2x2 rotating Grid modes on non-phone devices, with independent Grid ordering and camera exclusion.
 - Alert-driven live promotion on Preview, Grid, Wide View Companion Cameras, and Card View.
@@ -131,11 +131,11 @@ Card View also supports Grid, Slideshow, alert takeover, two-way talk, linked li
 | `display_logo` | boolean | `true` | Displays the FrigateView logo in page footers. The footer keeps its normal height when disabled. |
 | `window_days` | number | `3` | Number of recent days containing event data to load for event-media browsing. The editor offers 1–15. |
 | `alerts_reviews_days` | number | `window_days` | Number of recent days containing qualifying Alerts/Reviews to load and count. The editor offers 1–15. |
-| `realtime_poll_seconds` | number | `5` | Realtime polling interval. Valid values: `2`, `5`, `10`, `15`. |
-| `mobile_poll_battery_saver` | boolean | `false` | Uses 10-second polling on mobile-sized screens to reduce battery and data use. |
+| `realtime_poll_seconds` | number | `5` | How often the card checks for new alerts and reviews when realtime notifications are delayed or missed. Valid values: `2`, `5`, `10`, `15`, `30`, `60`. |
+| `mobile_poll_battery_saver` | boolean | `false` | Uses 60-second polling on mobile devices to reduce battery and data use. |
 | `snapshot_update_seconds` | number | `60` | Snapshot refresh interval for snapshot-based Preview, Grid, and Wide View Companion Camera tiles. Range: `10`–`240`. |
 | `event_pre_post_roll_enabled` | boolean | `false` | Adds 5 seconds before and after Alerts and Clips during popup playback and download when Frigate recording footage is available. |
-| `favorites_mixed_cameras` | boolean | `true` | Combines favorites from all configured cameras in Kept. Set to `false` for the active camera only. |
+| `favorites_mixed_cameras` | boolean | `true` | Combines favorites from all configured cameras in Favorites. Set to `false` for the active camera only. |
 | `deep_link_enabled` | boolean | `true` | Allows this card instance to consume supported notification URL parameters. Disable on cards that should ignore shared dashboard deep links. |
 
 ### Page and mode options
@@ -197,7 +197,7 @@ grid_order:
 
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `hidden_tabs` | list | `[snapshot]` | Browse tabs to hide. Values: `alerts`, `clips`, `snapshot`, `recordings`, `kept`. |
+| `hidden_tabs` | list | `[snapshot]` | Browse tabs to hide. Values: `alerts`, `clips`, `snapshot`, `recordings`, `kept` (Favorites). |
 | `stream_height` | number | `100` | Card Height Limit from `50` to `100`. Does not apply to Card View. |
 | `stream_height_unit` | string | `%` | Height unit. Values: `%`, `dvh`. |
 | `tight_margins` | boolean | `false` | Removes Home Assistant Sections-view padding where available so the card can fill its assigned space. |
@@ -301,7 +301,7 @@ Two-camera groups add per-pane audio selection and focus controls on desktop/tab
 - **Clips** displays events with clip media.
 - **Snapshots** displays snapshot media and is hidden by default.
 - **Recordings** provides day-based recording navigation, progressive loading, and a segmented scrub bar for Alerts and Detections.
-- **Kept** uses Frigate's retained/favorite event state and defaults to a mixed-camera list.
+- **Favorites** uses Frigate's retained/favorite event state and defaults to a mixed-camera list.
 
 The Alerts counters shown for cameras count qualifying Reviews across the configured number of active Alerts/Reviews days. Empty calendar days do not consume that count window.
 
@@ -311,13 +311,13 @@ Browse actions follow the displayed media:
 | --- | --- |
 | Alert or Clip | Favorite, Download Clip, View Snapshot |
 | Snapshot | Favorite, Download Snapshot, View Clip |
-| Kept/Favorite | Favorite plus the matching clip/snapshot download and cross-navigation actions |
+| Favorite | Favorite plus the matching clip/snapshot download and cross-navigation actions |
 
 The popup preserves the selected media type, supports zoom for both videos and snapshots, and sizes itself to the media's intrinsic aspect ratio. Recording markers show an event snapshot preview on hover. Carousel arrows and touch swipes advance by one visible page rather than one item.
 
 When an event thumbnail cannot load, browse items can try the corresponding Frigate Review thumbnail when one is available, then fall back to a consistently sized placeholder. The card does not decode clip video merely to synthesize a list thumbnail.
 
-If Frigate reports a clip that cannot be played, the popup attempts to show the event snapshot with a clear **Clip unavailable** notice. If neither the clip nor snapshot can be loaded, it displays an explanatory missing-media state instead of a broken media element. The card does not copy kept media outside Frigate, so Frigate's configured retention and available files remain authoritative.
+If Frigate reports a clip that cannot be played, the popup attempts to show the event snapshot with a clear **Clip unavailable** notice. If neither the clip nor snapshot can be loaded, it displays an explanatory missing-media state instead of a broken media element. The card does not copy favorite media outside Frigate, so Frigate's configured retention and available files remain authoritative.
 
 ## PTZ and two-way talk
 

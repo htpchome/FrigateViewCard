@@ -1,4 +1,4 @@
-export const VERSION = "1.0.2082";
+export const VERSION = "1.0.2083";
 
 export const CARD_TAG = "frigate-view-card";
 export const DEFAULT_TITLE = "FrigateView";
@@ -13,8 +13,15 @@ export const WINDOW_FETCH_PAGE_LIMIT = 10;
 export const WARM_EVENT_PAGE_LIMIT = 1;
 export const REALTIME_HEAD_POLL_MS = 5000;
 export const REALTIME_RELOAD_DEBOUNCE_MS = 450;
-export const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([2, 5, 10, 15]);
-export const MOBILE_BATTERY_SAVER_POLL_SECONDS = 10;
+export const REALTIME_POLL_OPTIONS_SECONDS = Object.freeze([
+  2,
+  5,
+  10,
+  15,
+  30,
+  60,
+]);
+export const MOBILE_BATTERY_SAVER_POLL_SECONDS = 60;
 export const SNAPSHOT_UPDATE_SECONDS = 60;
 export const SNAPSHOT_UPDATE_OPTIONS_SECONDS = Object.freeze([
   10, 20, 30, 60, 120, 300,

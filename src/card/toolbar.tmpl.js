@@ -26,7 +26,7 @@ export function buildTabsMarkup({
       ${tabMarkup("clips", icons.clips, "Clips")}
       ${tabMarkup("snapshot", icons.snapshot, "Snapshots")}
       ${tabMarkup("recordings", icons.recordings, "Recordings")}
-      ${tabMarkup("kept", icons.star, "Kept events")}`;
+      ${tabMarkup("kept", icons.star, "Favorites")}`;
   return { activeTab, markup };
 }
 

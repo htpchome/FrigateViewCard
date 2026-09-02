@@ -28,6 +28,8 @@ import {
 import {
   MAX_CAMERAS,
   GRID_ALERT_HOLD_OPTIONS_SECONDS,
+  MOBILE_BATTERY_SAVER_POLL_SECONDS,
+  REALTIME_POLL_OPTIONS_SECONDS,
   SNAPSHOT_UPDATE_OPTIONS_SECONDS,
   SLIDESHOW_ALERT_HOLD_OPTIONS_SECONDS,
   PREVIEW_ALERT_LIVE_DURATION_OPTIONS_SECONDS,
@@ -217,6 +219,31 @@ test("requested editor settings use the shared choice-chip control", () => {
   assert.match(
     editorSource,
     /editor-choice-field--single-row" id="slideshow_rotation_seconds"/,
+  );
+});
+
+test("realtime polling offers slower choices and Battery Saver uses one minute", () => {
+  assert.deepEqual(REALTIME_POLL_OPTIONS_SECONDS, [2, 5, 10, 15, 30, 60]);
+  assert.equal(MOBILE_BATTERY_SAVER_POLL_SECONDS, 60);
+  assert.equal(
+    normalizeCardConfig({ realtime_poll_seconds: 30 }).realtime_poll_seconds,
+    30,
+  );
+  assert.equal(
+    normalizeCardConfig({ realtime_poll_seconds: 60 }).realtime_poll_seconds,
+    60,
+  );
+  assert.match(
+    editorSource,
+    /checks for new Frigate alerts and reviews when realtime notifications are delayed or missed/,
+  );
+  assert.match(
+    editorSource,
+    /check for new alerts and reviews every 60 seconds to reduce battery and data use/,
+  );
+  assert.match(
+    editorSource,
+    /#realtime_poll_seconds \.editor-choice-chips\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);\}/,
   );
 });
 

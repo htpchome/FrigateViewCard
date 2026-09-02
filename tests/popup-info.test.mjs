@@ -329,6 +329,17 @@ test("kept popup actions follow the media currently being displayed", () => {
   assert.equal(snapshotModel.mediaType, "snapshot");
 });
 
+test("favorite popup fallback text never exposes the internal kept name", () => {
+  const model = buildPopupInfoModel({
+    options: { id: "event-1", mediaType: "kept", camera: "front door" },
+  });
+  const markup = buildPopupInfoMarkup({ model });
+
+  assert.equal(model.titleLabel, "Favorite");
+  assert.match(markup.headText, /^Favorite - Front door -/);
+  assert.doesNotMatch(markup.infoHtml, /\bKept\b/);
+});
+
 test("unavailable popup media suppresses actions for missing files", () => {
   const event = {
     id: "event-1",

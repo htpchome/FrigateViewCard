@@ -6506,7 +6506,9 @@ export class FrigateViewCard extends HTMLElement {
       eventRecordingEnd: Number.isFinite(Number(event?.end_time))
         ? (playing?.eventRecordingEnd ?? Math.ceil(Number(event.end_time)))
         : null,
-      title: `${cap(mediaType || "video")} video`,
+      title: `${
+        mediaType === "kept" ? "Favorite" : cap(mediaType || "video")
+      } video`,
     };
   }
 

@@ -19,7 +19,7 @@ export function resolveBrowseListHeadingLabel({
       clips: "Recent Clips",
       snapshot: "Recent Snaps",
       alerts: "Recent Alerts",
-      kept: "Kept",
+      kept: "Favorites",
     }[tab] || capitalize(tab || "");
   if (!timestamp || !STICKY_DAY_TABS.includes(tab)) return fallback;
   return `${getWeekday(timestamp)} - ${getMonthDay(timestamp, {

@@ -151,6 +151,8 @@ test("buildTabsMarkup keeps filter and calendar inactive when panels are absent"
   assert.match(toolsMarkup, /data-fvc-region="calendar-panel"/);
   assert.doesNotMatch(toolsMarkup, /id="filter-btn"[^>]*class="tool active"/);
   assert.doesNotMatch(toolsMarkup, /id="cal-btn"[^>]*class="tool active"/);
+  assert.match(tabsMarkup, /data-tab="kept" title="Favorites"/);
+  assert.doesNotMatch(tabsMarkup, /Kept events/);
 });
 
 test("buildTabsMarkup marks filter and calendar active only when open", () => {

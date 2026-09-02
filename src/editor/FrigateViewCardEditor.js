@@ -2486,7 +2486,7 @@ export class FrigateViewCardEditor extends HTMLElement {
               <span class="field-label" style="margin:0">Show Favorites from All Cameras</span>
               <ha-switch id="favorites_mixed_cameras" ${this._config?.favorites_mixed_cameras !== false ? "checked" : ""}></ha-switch>
             </div>
-            <div class="field-helper">Combine favorites from every configured camera in the Kept tab. Disable this to show favorites only for the active camera.</div>
+            <div class="field-helper">Combine favorites from every configured camera in the Favorites tab. Disable this to show favorites only for the active camera.</div>
           </div>
         </div>
       </div>
@@ -2499,7 +2499,7 @@ export class FrigateViewCardEditor extends HTMLElement {
               options: durationEditorChoices(REALTIME_POLL_OPTIONS_SECONDS),
               selectedValue: realtimePollSeconds,
             })}
-            <div class="field-helper">Lower values update faster but use more battery/data.</div>
+            <div class="field-helper">How often the card checks for new Frigate alerts and reviews when realtime notifications are delayed or missed. Lower values update faster but use more battery and data.</div>
           </div>
         </div>
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
@@ -2572,7 +2572,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           ${tabToggle("clips", "Clips")}
           ${tabToggle("snapshot", "Snapshots")}
           ${tabToggle("recordings", "Recordings")}
-          ${tabToggle("kept", "Kept")}
+          ${tabToggle("kept", "Favorites")}
         </div>
       </div>
       <div class="section">
@@ -2795,7 +2795,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           <span class="field-label" style="margin:0">Mobile Battery Saver</span>
           <ha-switch id="mobile_poll_battery_saver" ${this._config?.mobile_poll_battery_saver ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">On mobile-sized screens, use 10s polling to reduce battery use.</div>
+        <div class="field-helper">On mobile devices, check for new alerts and reviews every 60 seconds to reduce battery and data use.</div>
       </div>
       <div class="section">
         <div class="layout-row">
@@ -3087,6 +3087,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             .editor-choice-field--fit{flex:1 1 420px;max-width:560px;}
             .editor-choice-field .field-label{margin:0 0 8px;}
             .editor-choice-chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));gap:8px;width:100%;min-width:0;}
+            #realtime_poll_seconds .editor-choice-chips{grid-template-columns:repeat(3,minmax(0,1fr));}
             .editor-choice-field--single-row .editor-choice-chips{grid-template-columns:repeat(4,minmax(0,1fr));}
             .editor-choice-chips--compact{display:flex;width:auto;gap:6px;}
             .editor-choice-chips--detailed{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));}

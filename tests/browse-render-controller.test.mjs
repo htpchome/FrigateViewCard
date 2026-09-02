@@ -207,8 +207,11 @@ test("browse render controller dispatches events and kept empty state", () => {
     host._tab = "kept";
     host._kept = [];
     controller.renderList();
-    assert.equal(nodes.list.innerHTML.includes("No kept events"), true);
-    assert.equal(nodes.list.innerHTML.includes("star an event to keep it"), true);
+    assert.equal(nodes.list.innerHTML.includes("No favorites"), true);
+    assert.equal(
+      nodes.list.innerHTML.includes("star an event to add it to Favorites"),
+      true,
+    );
   } finally {
     globalThis.requestAnimationFrame = previousAnimationFrame;
   }

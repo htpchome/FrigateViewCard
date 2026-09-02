@@ -38,7 +38,7 @@ export function buildFrigateReceiverMediaPath({
   if (!["alert", "clip", "kept"].includes(normalizedType) || !eventId) {
     return {
       ok: false,
-      message: "Only clips, alerts, kept clips, and recordings can be sent.",
+      message: "Only clips, alerts, favorite clips, and recordings can be sent.",
     };
   }
 

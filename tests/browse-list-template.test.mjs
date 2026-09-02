@@ -36,7 +36,7 @@ test("browse heading templates derive list, recordings, and controls labels", ()
       timestamp: 1722470400,
       ...headingFormatters,
     }),
-    "Kept",
+    "Favorites",
   );
   assert.equal(
     resolveBrowseRecordingsHeadingLabel({

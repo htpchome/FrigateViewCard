@@ -370,8 +370,8 @@ export class BrowseRenderController {
     this.renderListLabel();
     this._renderStandardListMarkup(list, {
       items: kept,
-      emptyMessage: "No kept events",
-      emptyHint: "star an event to keep it",
+      emptyMessage: "No favorites",
+      emptyHint: "star an event to add it to Favorites",
       buildContentHtml: (items) => this.renderKeptContent(items),
       emptyForceHide: false,
       contentForceHide: false,

@@ -2,6 +2,11 @@ import { cap, labelColor } from "../../helpers.js";
 import { ICONS } from "../../icons.js";
 import { escapeHtml, escapeHtmlAttribute } from "../../shared/html.js";
 
+const formatMediaTypeLabel = (mediaType = "") => {
+  const normalized = String(mediaType || "").toLowerCase();
+  return normalized === "kept" ? "Favorite" : cap(normalized || "event");
+};
+
 export const buildPopupInfoDownloadActions = ({
   id = "",
   mediaType = "",
@@ -110,7 +115,7 @@ export const buildPopupInfoModel = ({
 
   const titleLabel = event?.label
     ? cap(event.label)
-    : cap(mediaType || "event");
+    : formatMediaTypeLabel(mediaType);
   const score =
     options.score != null
       ? options.score
@@ -207,7 +212,7 @@ export const buildPopupInfoMarkup = ({
   const compactTime = String(model.time || "-")
     .toLowerCase()
     .replace(/\s+(am|pm)$/i, "$1");
-  const mediaHeading = cap(String(model.mediaType || "media").toLowerCase());
+  const mediaHeading = formatMediaTypeLabel(model.mediaType || "media");
   const cameraHeading = cap(String(model.camera || "-").toLowerCase());
   const headText = `${mediaHeading} - ${cameraHeading} - ${compactTime} - ${model.shortDate}`;
 
