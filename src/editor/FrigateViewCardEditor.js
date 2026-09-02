@@ -822,6 +822,17 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
   }
 
+  _syncPendingConfigChanges(config = this._config) {
+    const baseline = this._savedConfigBaselineSig;
+    const pending =
+      typeof baseline === "string" &&
+      this._configSignature(config) !== baseline;
+    this._hasPendingConfigChanges = pending;
+    const banner = this.querySelector?.("#pending-config-changes");
+    if (banner) banner.hidden = !pending;
+    return pending;
+  }
+
   setConfig(config) {
     this._sourceConfig = config;
     const normalized = this._normalizeConfig(config);
@@ -834,12 +845,20 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
     const incomingSig = this._configSignature(normalized);
     const currentSig = this._configSignature(this._config);
+    if (
+      this._savedConfigBaselineSig === undefined ||
+      this._hasPendingConfigChanges !== true
+    ) {
+      this._savedConfigBaselineSig = incomingSig;
+    }
     if (this._rendered && incomingSig === currentSig) {
       this._config = normalized;
+      this._syncPendingConfigChanges(normalized);
       this._scheduleEditorPreviewLayoutSync();
       return;
     }
     this._config = normalized;
+    this._syncPendingConfigChanges(normalized);
     this._rendered = true;
     this._render();
     this._scheduleEditorPreviewLayoutSync();
@@ -1149,6 +1168,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (from >= cur.length || to >= cur.length) return;
     const cameras = reorderItemsForDrop(cur, from, to, placement);
     this._config = { ...this._config, cameras };
+    this._syncPendingConfigChanges();
     this._render();
     this._dispatch();
   }
@@ -1190,7 +1210,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       cam?.connection_type,
     );
     if (title) title.textContent = index == null ? "Add" : "Edit";
-    if (save) save.textContent = index == null ? "Add" : "Save";
+    if (save) save.textContent = index == null ? "Add" : "Update";
     if (name) name.value = cam?.name || "";
     if (entity) {
       entity.value = cam?.entity || "";
@@ -1506,9 +1526,11 @@ export class FrigateViewCardEditor extends HTMLElement {
   _syncCameraModalGroupFields() {
     const enabled = this._cameraModalGroupEnabled === true;
     const addButton = this.querySelector("#camera-modal-add-secondary");
+    const help = this.querySelector("#camera-modal-secondary-help");
     const removeButton = this.querySelector("#camera-modal-remove-secondary");
     const fields = this.querySelector("#camera-modal-group-fields");
     if (addButton) addButton.hidden = enabled;
+    if (help) help.hidden = enabled;
     if (fields) fields.hidden = !enabled;
     if (removeButton) {
       removeButton.textContent = this._cameraModalSecondaryEntityValue()
@@ -1808,6 +1830,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       ...this._config,
       cameras: limitCameraConfigsByPhysicalCount(cur, MAX_CAMERAS),
     };
+    this._syncPendingConfigChanges();
     this._closeCameraModal();
     this._render();
     this._dispatch();
@@ -1818,6 +1841,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (!Number.isInteger(index) || index < 0 || index >= cur.length) return;
     cur.splice(index, 1);
     this._config = { ...this._config, cameras: cur };
+    this._syncPendingConfigChanges();
     this._render();
     this._dispatch();
   }
@@ -2978,6 +3002,11 @@ export class FrigateViewCardEditor extends HTMLElement {
         ${this._renderSettingsPanel({ id: "landing", title: "Landing Page", icon: "mdi:home-import-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
 
+    const pendingChangesMarkup = `<div id="pending-config-changes" class="pending-config-changes" role="status" aria-live="polite" ${this._hasPendingConfigChanges ? "" : "hidden"}>
+      <ha-icon icon="mdi:content-save-alert-outline" aria-hidden="true"></ha-icon>
+      <span><strong>Changes pending</strong> — use Home Assistant's Save button to keep them.</span>
+    </div>`;
+
     this.innerHTML = `<style>
           :host{
                 --editor-primary-bg: var(--card-background-color);
@@ -3030,7 +3059,10 @@ export class FrigateViewCardEditor extends HTMLElement {
                 font-family: var(--ha-font-family, inherit);
                 font-size: var(--ha-font-size, 14px);
             }
-              .settings-container{display:flex;flex-direction:column;gap:6px;}
+            .settings-container{display:flex;flex-direction:column;gap:6px;}
+            .pending-config-changes{width:100%;min-height:32px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:7px;padding:6px 12px;border:1px solid currentColor;border-radius:999px;color:var(--warning-color, var(--c-accent, var(--editor-primary)));background:color-mix(in srgb,var(--warning-color, var(--c-accent, var(--editor-primary))) 16%,var(--editor-card-bg));font-size:12px;font-weight:600;line-height:1.25;text-align:center;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.16);}
+            .pending-config-changes[hidden]{display:none;}
+            .pending-config-changes ha-icon{--mdc-icon-size:18px;flex:0 0 auto;}
               .settings-panel{
                 border:1px solid var(--c-border2, var(--editor-border));
                 border-radius:16px;
@@ -3271,8 +3303,8 @@ export class FrigateViewCardEditor extends HTMLElement {
             .timezone-helper a{color:var(--c-primary, var(--editor-primary));text-decoration:underline;text-underline-offset:2px;}
 
             .cam-modal.hidden{display:none;}
-            .cam-modal{position:fixed;inset:0;background:rgba(0,0,0,.30);display:flex;align-items:center;justify-content:center;z-index:10;}
-            .cam-modal-card{width:min(640px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow-y:auto;box-sizing:border-box;background:var(--editor-card-bg);color:var(--editor-text);border:var(--editor-border-width) solid var(--editor-border);border-radius:16px;padding:16px;box-shadow:var(--editor-shadow);}
+            .cam-modal{position:fixed;inset:0;box-sizing:border-box;padding:12px;background:rgba(0,0,0,.30);display:flex;align-items:flex-start;justify-content:center;overflow:auto;overscroll-behavior:contain;z-index:10;}
+            .cam-modal-card{flex:0 0 auto;width:min(640px,100%);margin:auto;overflow:visible;box-sizing:border-box;background:var(--editor-card-bg);color:var(--editor-text);border:var(--editor-border-width) solid var(--editor-border);border-radius:16px;padding:16px;box-shadow:var(--editor-shadow);}
             .cam-modal-card ha-input,
             .cam-modal-card ha-selector,
             .cam-modal-card ha-switch{--ha-card-background:var(--editor-card-bg);}
@@ -3285,6 +3317,10 @@ export class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-label{font-size:12px;font-weight:600;color:var(--editor-text);margin-bottom:6px;display:block;}
             .cam-modal-field{margin-bottom:8px;}
             .camera-group-add-row{display:flex;justify-content:flex-start;padding-inline-start:12px;}
+            .camera-group-help{margin:0 0 10px 12px;border-inline-start:3px solid var(--c-primary, var(--editor-primary));border-radius:0 8px 8px 0;background:var(--editor-secondary-bg);color:var(--editor-text);font-size:12px;line-height:1.35;}
+            .camera-group-help[hidden]{display:none;}
+            .camera-group-help summary{padding:7px 10px;color:var(--c-primary, var(--editor-primary));font-weight:700;cursor:pointer;}
+            .camera-group-help-copy{padding:0 10px 9px;color:var(--c-text2, var(--editor-muted));}
             .camera-group-fields{margin:0 0 10px 12px;padding:10px;border-inline-start:3px solid var(--editor-primary);background:var(--editor-secondary-bg);border-radius:0 10px 10px 0;}
             .camera-group-fields[hidden]{display:none!important;}
             .camera-group-fields-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
@@ -3319,7 +3355,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             .cam-btn.danger{background:var(--c-alert);color:var(--c-text-rev);border-color:var(--c-alert);padding:8px 18px;}
             .cam-btn.danger:hover{background:var(--c-alert);border-color:var(--c-alert);filter:brightness(.9);}
             .cam-modal-helper{font-size:11px;color:var(--error-color);min-height:16px;}
-            .cam-confirm-card{width:min(420px,calc(100vw - 24px));}
+            .cam-confirm-card{width:min(420px,100%);}
             .cam-confirm-title{margin:0 0 8px;font-size:20px;color:var(--c-text);}
             .cam-confirm-message{margin:0;color:var(--c-text2);line-height:1.5;}
             @media (max-width:560px){
@@ -3331,6 +3367,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
         </style>
     <div class="ed-wrap">
+      ${pendingChangesMarkup}
       ${settingsPanelsMarkup}
 
       <div id="camera-modal" class="cam-modal hidden">
@@ -3347,8 +3384,10 @@ export class FrigateViewCardEditor extends HTMLElement {
           <div class="cam-modal-field camera-group-add-row">
             <button type="button" id="camera-modal-add-secondary" class="cam-inline-add camera-group-action">${ICONS.cameraAdd}<span>Add second camera</span></button>
           </div>
-          <div class="section ha-navbar-dependent-section">This is for Cameras that have a double internal lens, such as a Doorbell with a Main Camera and a Package Camera.  Or a wide field of view Camera that uses 2 Cameras, or a PTZ camera with one movable camera and one staionnary camera.  Only the Main Camera above will have PTZ or Two Way Talk abilities
-          </div>
+          <details id="camera-modal-secondary-help" class="camera-group-help">
+            <summary>What is a second camera?</summary>
+            <div class="camera-group-help-copy">Use this for devices with two camera entities, such as a doorbell with main and package cameras, a dual-camera wide view, or a PTZ camera paired with a stationary camera. Only the main camera above can provide PTZ or two-way talk controls.</div>
+          </details>
           <div id="camera-modal-group-fields" class="camera-group-fields" hidden>
             <div class="camera-group-fields-head">
               <span class="camera-group-fields-title">Second Camera</span>
@@ -4103,6 +4142,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       ...this._config,
       grid_order: normalizeGridOrderConfig(gridOrder, this._getCams()),
     };
+    this._syncPendingConfigChanges();
     this._render();
     this._hasVisualDraft = true;
   }
@@ -4225,6 +4265,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     this._config = normalizedNextConfig;
     this._syncHiddenTabsDraftFromConfig(normalizedNextConfig);
+    this._syncPendingConfigChanges(normalizedNextConfig);
     if (preview) {
       this._hasVisualDraft = true;
       this._emitPreviewDraft(
@@ -4258,6 +4299,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       }),
     );
     this._syncHiddenTabsDraftFromConfig(this._config);
+    this._syncPendingConfigChanges(this._config);
     const config = withCardTypeForYaml(
       compactEditorConfigForYaml(this._config, {
         themeDefaultColors: this._themeDefaultHexMap(),

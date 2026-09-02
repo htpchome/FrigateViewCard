@@ -109,12 +109,14 @@ test("adding a second camera assigns the next unused group name", () => {
   const nameInput = { value: "" };
   const secondaryInput = { value: "", dataset: {} };
   const addButton = { hidden: false };
+  const help = { hidden: false };
   const fields = { hidden: true };
   const helper = { textContent: "" };
   const nodes = {
     "#camera-modal-name": nameInput,
     "#camera-modal-secondary-entity": secondaryInput,
     "#camera-modal-add-secondary": addButton,
+    "#camera-modal-secondary-help": help,
     "#camera-modal-group-fields": fields,
     "#camera-modal-helper": helper,
   };
@@ -135,6 +137,7 @@ test("adding a second camera assigns the next unused group name", () => {
 
   assert.equal(nameInput.value, "Group C/D");
   assert.equal(addButton.hidden, true);
+  assert.equal(help.hidden, true);
   assert.equal(fields.hidden, false);
 
   editor._setCameraModalGroupEnabled(false);
@@ -142,6 +145,7 @@ test("adding a second camera assigns the next unused group name", () => {
   assert.equal(nameInput.value, "");
   assert.equal(secondaryInput.value, "");
   assert.equal(addButton.hidden, false);
+  assert.equal(help.hidden, false);
   assert.equal(fields.hidden, true);
 });
 
@@ -398,6 +402,8 @@ test("editing a camera restores its linked light and icon", () => {
 
   editor._openCameraModal(0);
 
+  assert.equal(nodes["#camera-modal-title"].textContent, "Edit");
+  assert.equal(nodes["#camera-modal-save"].textContent, "Update");
   assert.equal(nodes["#camera-modal-light-entity"].value, "light.porch");
   assert.equal(nodes["#camera-modal-light-icon"].value, "mdi:coach-lamp");
   assert.equal(nodes["#camera-modal-light-entity-2"].value, "light.driveway");
@@ -736,12 +742,95 @@ test("camera modal close control uses the shared button class and close icon", (
   assert.match(source, /\.standalone-landing-dialog::backdrop/);
   assert.match(source, /id="standalone-landing-page"/);
   assert.match(source, /id="camera-modal-add-secondary"/);
+  assert.match(
+    source,
+    /<details id="camera-modal-secondary-help" class="camera-group-help">\s*<summary>What is a second camera\?<\/summary>/,
+  );
+  assert.match(
+    source,
+    /if \(help\) help\.hidden = enabled;/,
+  );
+  assert.match(
+    source,
+    /if \(save\) save\.textContent = index == null \? "Add" : "Update";/,
+  );
   assert.match(source, /id="camera-modal-secondary-entity"/);
   assert.match(source, /Side by Side/);
   assert.match(source, /Stacked/);
   assert.match(
     source,
     /PTZ and two-way talk capability are detected only on the main camera/,
+  );
+});
+
+test("camera modal scrolls inside the available editor overlay", () => {
+  const source = fs.readFileSync(
+    new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /\.cam-modal\{[^}]*align-items:flex-start;[^}]*overflow:auto;[^}]*overscroll-behavior:contain;/,
+  );
+  assert.match(
+    source,
+    /\.cam-modal-card\{[^}]*width:min\(640px,100%\);[^}]*margin:auto;[^}]*overflow:visible;/,
+  );
+  assert.doesNotMatch(
+    source,
+    /\.cam-modal-card\{[^}]*max-height:calc\(100dvh - 24px\)/,
+  );
+});
+
+test("pending changes banner tracks the saved config baseline", () => {
+  const editor = new FrigateViewCardEditor();
+  const banner = { hidden: true };
+  editor.querySelector = (selector) =>
+    selector === "#pending-config-changes" ? banner : null;
+  editor._savedConfigBaselineSig = editor._configSignature({ title: "Saved" });
+
+  assert.equal(editor._syncPendingConfigChanges({ title: "Saved" }), false);
+  assert.equal(banner.hidden, true);
+  assert.equal(editor._syncPendingConfigChanges({ title: "Changed" }), true);
+  assert.equal(banner.hidden, false);
+  assert.equal(editor._syncPendingConfigChanges({ title: "Saved" }), false);
+  assert.equal(banner.hidden, true);
+});
+
+test("Home Assistant draft echoes do not replace the saved config baseline", () => {
+  const editor = new FrigateViewCardEditor();
+  editor._render = () => {};
+  editor._scheduleEditorPreviewLayoutSync = () => {};
+  editor.setConfig({ title: "Saved" });
+  const savedBaseline = editor._savedConfigBaselineSig;
+
+  const draft = editor._normalizeConfig({ title: "Draft" });
+  editor._config = draft;
+  editor._syncPendingConfigChanges(draft);
+  editor.setConfig({ title: "Draft" });
+
+  assert.equal(editor._savedConfigBaselineSig, savedBaseline);
+  assert.equal(editor._hasPendingConfigChanges, true);
+});
+
+test("pending changes banner is non-blocking and precedes Camera Settings", () => {
+  const source = fs.readFileSync(
+    new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /id="pending-config-changes" class="pending-config-changes" role="status" aria-live="polite"/,
+  );
+  assert.match(
+    source,
+    /\.pending-config-changes\{[^}]*width:100%;[^}]*pointer-events:none;/,
+  );
+  assert.match(
+    source,
+    /<div class="ed-wrap">\s*\$\{pendingChangesMarkup\}\s*\$\{settingsPanelsMarkup\}/,
   );
 });
 
