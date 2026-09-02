@@ -56,9 +56,12 @@ export const STYLES = `
     --fvc-list: #181818;
   }
   .card[data-ha-theme="custom"] {
-    --fvc-mobile-bg: var(--wa-color-neutral-fill-normal, var(--secondary-background-color)); 
+    --fvc-mobile-bg: var(--wa-color-neutral-fill-normal, var(--secondary-background-color));
     --fvc-mobile-list: var(--primary-background-color);
     --fvc-list: var(--secondary-background-color);
+  }
+  .card[data-ha-theme="custom"][data-ha-dark-primary="derived"] {
+    --dark-primary-color: color-mix(in srgb, var(--primary-color) 75%, black);
   }
   .card {
         --c-bg-main:   var(--card-background-color);

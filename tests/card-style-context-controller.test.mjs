@@ -121,6 +121,72 @@ test("syncThemeContext exposes Home Assistant mode and theme source", () => {
   });
 });
 
+test("custom HA themes derive dark primary only when they omit it", () => {
+  const card = { dataset: {} };
+  const host = {
+    _hass: {
+      themes: {
+        darkMode: false,
+        theme: "Incomplete Theme",
+        themes: {
+          "Incomplete Theme": {
+            "primary-color": "#6699cc",
+          },
+          "Complete Theme": {
+            "primary-color": "#6699cc",
+            "dark-primary-color": "#224466",
+          },
+          "Mode Theme": {
+            "primary-color": "#6699cc",
+            modes: {
+              dark: { "dark-primary-color": "#112233" },
+            },
+          },
+        },
+      },
+    },
+    shadowRoot: { querySelector: () => card },
+  };
+  const controller = new CardStyleContextController(host);
+
+  controller.syncThemeContext();
+  assert.equal(card.dataset.haDarkPrimary, "derived");
+
+  host._hass.themes.theme = "Complete Theme";
+  controller.syncThemeContext();
+  assert.equal(card.dataset.haDarkPrimary, undefined);
+
+  host._hass.themes.theme = "Mode Theme";
+  host._hass.themes.darkMode = true;
+  controller.syncThemeContext();
+  assert.equal(card.dataset.haDarkPrimary, undefined);
+
+  host._hass.themes.darkMode = false;
+  controller.syncThemeContext();
+  assert.equal(card.dataset.haDarkPrimary, "derived");
+});
+
+test("unknown custom theme definitions preserve Home Assistant dark primary", () => {
+  const card = { dataset: {} };
+  const host = {
+    _hass: {
+      themes: {
+        darkMode: false,
+        theme: "Unavailable Definition",
+      },
+    },
+    shadowRoot: { querySelector: () => card },
+  };
+  const controller = new CardStyleContextController(host);
+
+  controller.syncThemeContext();
+
+  assert.deepEqual(card.dataset, {
+    themeMode: "light",
+    haTheme: "custom",
+  });
+});
+
 test("card mobile surfaces use the HA token and exact mode list colors", () => {
   assert.doesNotMatch(STYLES, /\.card\(\.dark\)/);
   assert.match(STYLES, /\.card\[data-theme-mode="light"\]/);
@@ -134,6 +200,10 @@ test("card mobile surfaces use the HA token and exact mode list colors", () => {
   assert.match(
     STYLES,
     /\.card\[data-ha-theme="custom"\]\s*\{[\s\S]*?--fvc-mobile-list: var\(--primary-background-color\);[\s\S]*?--fvc-list: var\(--secondary-background-color\);/,
+  );
+  assert.match(
+    STYLES,
+    /\.card\[data-ha-theme="custom"\]\[data-ha-dark-primary="derived"\]\s*\{[\s\S]*?--dark-primary-color: color-mix\(in srgb, var\(--primary-color\) 75%, black\);/,
   );
   assert.doesNotMatch(STYLES, /--fvc-(?:mobile-bg|mobile-list|list): color-mix/);
 });

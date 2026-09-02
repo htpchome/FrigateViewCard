@@ -10,8 +10,41 @@ const HA_DEFAULT_THEME_ALIASES = new Set([
   "default",
   "backend-selected",
 ]);
+const DARK_PRIMARY_THEME_KEYS = Object.freeze([
+  "dark-primary-color",
+  "--dark-primary-color",
+]);
 const MOBILE_SECTIONS_FULL_BLEED_CLASS =
   "mobile-view-sections-full-bleed";
+
+const normalizeThemeName = (value) =>
+  String(value || "").trim().toLowerCase();
+
+const resolveThemeDefinition = (themes, themeName) => {
+  const definitions = themes?.themes;
+  if (!definitions || typeof definitions !== "object") return null;
+  const normalizedName = normalizeThemeName(themeName);
+  const matchingName = Object.keys(definitions).find(
+    (name) => normalizeThemeName(name) === normalizedName,
+  );
+  if (!matchingName) return null;
+  const definition = definitions[matchingName];
+  return definition && typeof definition === "object" ? definition : null;
+};
+
+const hasDeclaredThemeValue = (definition, keys) =>
+  keys.some(
+    (key) =>
+      Object.prototype.hasOwnProperty.call(definition || {}, key) &&
+      String(definition[key] ?? "").trim() !== "",
+  );
+
+const themeDeclaresDarkPrimary = (definition, mode) =>
+  hasDeclaredThemeValue(definition, DARK_PRIMARY_THEME_KEYS) ||
+  hasDeclaredThemeValue(
+    definition?.modes?.[mode],
+    DARK_PRIMARY_THEME_KEYS,
+  );
 
 export const resolveHomeAssistantThemeContext = (hass) => {
   const themes = hass?.themes || {};
@@ -19,24 +52,33 @@ export const resolveHomeAssistantThemeContext = (hass) => {
   const mode = darkMode === true ? "dark" : "light";
   const selectedTheme = String(
     themes.theme || hass?.selectedTheme || "default",
-  )
-    .trim()
-    .toLowerCase();
+  ).trim();
   const configuredDefault = String(
     mode === "dark"
       ? themes.default_dark_theme || themes.default_theme || "default"
       : themes.default_theme || "default",
+  ).trim();
+  const resolvedTheme = HA_DEFAULT_THEME_ALIASES.has(
+    normalizeThemeName(selectedTheme),
   )
-    .trim()
-    .toLowerCase();
-  const resolvedTheme = HA_DEFAULT_THEME_ALIASES.has(selectedTheme)
     ? configuredDefault
     : selectedTheme;
+  const source = HA_DEFAULT_THEME_ALIASES.has(
+    normalizeThemeName(resolvedTheme),
+  )
+    ? "default"
+    : "custom";
+  const themeDefinition =
+    source === "custom"
+      ? resolveThemeDefinition(themes, resolvedTheme)
+      : null;
   return {
     mode,
-    source: HA_DEFAULT_THEME_ALIASES.has(resolvedTheme)
-      ? "default"
-      : "custom",
+    source,
+    deriveDarkPrimary:
+      source === "custom" &&
+      themeDefinition !== null &&
+      !themeDeclaresDarkPrimary(themeDefinition, mode),
   };
 };
 
@@ -83,17 +125,27 @@ export class CardStyleContextController {
     const target =
       card || this._host.shadowRoot?.querySelector?.("#card") || null;
     if (!target) return;
-    const { mode, source } = this.resolveThemeContext();
+    const { mode, source, deriveDarkPrimary } = this.resolveThemeContext();
 
     if (target.dataset) {
       target.dataset.themeMode = mode;
       target.dataset.haTheme = source;
+      if (deriveDarkPrimary) {
+        target.dataset.haDarkPrimary = "derived";
+      } else {
+        delete target.dataset.haDarkPrimary;
+      }
       delete target.dataset.themeName;
       return;
     }
 
     target.setAttribute?.("data-theme-mode", mode);
     target.setAttribute?.("data-ha-theme", source);
+    if (deriveDarkPrimary) {
+      target.setAttribute?.("data-ha-dark-primary", "derived");
+    } else {
+      target.removeAttribute?.("data-ha-dark-primary");
+    }
     target.removeAttribute?.("data-theme-name");
   }
 
