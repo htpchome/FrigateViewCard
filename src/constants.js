@@ -1,4 +1,4 @@
-export const VERSION = "1.0.2081";
+export const VERSION = "1.0.2082";
 
 export const CARD_TAG = "frigate-view-card";
 export const DEFAULT_TITLE = "FrigateView";
@@ -55,6 +55,7 @@ export const THEME_DEFAULTS = Object.freeze({
   "--c-bg-main": "var(--card-background-color)",
   "--c-bg-primary": "var(--primary-background-color)",
   "--c-bg-panel": "var(--secondary-background-color)",
+  "--c-bg-tabs-holder": "var(--fvc-tabs-holder)",
   "--c-bg-deep": "#111111",
   "--c-bg-mobile": "var(--wa-color-neutral-fill-normal, var(--secondary-background-color))",
   "--c-bg-mobile-list": "#f0f0f0",
@@ -81,6 +82,7 @@ export const THEME_CUSTOM_ROWS = Object.freeze([
   { key: "--c-bg-main", label: "Background Color" },
   { key: "--c-bg-primary", label: "Primary Background Color" },
   { key: "--c-bg-panel", label: "Secondary Background Color" },
+  { key: "--c-bg-tabs-holder", label: "Navigation Tabs Background" },
   { key: "--c-bg-deep", label: "Video Background Color" },
   { key: "--c-bg-mobile", label: "Mobile Background Color" },
   { key: "--c-bg-mobile-list", label: "Mobile List Background Color" },

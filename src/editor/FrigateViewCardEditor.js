@@ -1022,6 +1022,16 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (key === "--c-primary-d" && themeContext.deriveDarkPrimary) {
       return this._deriveDarkPrimaryHex();
     }
+    if (key === "--c-bg-tabs-holder") {
+      const usesPrimaryBackground =
+        themeContext.source === "custom" || normalizedMode === "dark";
+      return this._resolveColorToHex(
+        usesPrimaryBackground
+          ? "var(--primary-background-color)"
+          : "var(--secondary-background-color)",
+        normalizedMode === "dark" ? "#181818" : "#f0f0f0",
+      );
+    }
     if (
       key === "--c-bg-mobile-list" ||
       key === "--c-bg-list" ||
@@ -2993,7 +3003,13 @@ export class FrigateViewCardEditor extends HTMLElement {
               --c-accent: var(--accent-color, var(--editor-primary));
               --c-alert: var(--error-color);
             }
-            input[type="range"]{accent-color:var(--editor-primary);}
+            input[type="range"],input[type="checkbox"]{accent-color:var(--c-primary, var(--editor-primary));}
+            ha-switch{
+              --switch-checked-color:var(--c-primary, var(--editor-primary));
+              --switch-checked-button-color:var(--c-primary, var(--editor-primary));
+              --switch-checked-track-color:var(--c-primary-l, var(--editor-primary-l));
+              --mdc-theme-secondary:var(--c-primary, var(--editor-primary));
+            }
             .ed-wrap{
                 display:flex;
                 flex-direction:column;

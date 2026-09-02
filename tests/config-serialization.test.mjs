@@ -106,10 +106,25 @@ test("alert hold controls explain their runtime behavior", () => {
   );
 });
 
-test("editor range controls use the same primary accent as toggles", () => {
+test("editor range and checkbox controls use the chip primary accent", () => {
   assert.match(
     editorSource,
-    /input\[type="range"\]\{accent-color:var\(--editor-primary\);\}/,
+    /input\[type="range"\],input\[type="checkbox"\]\{accent-color:var\(--c-primary, var\(--editor-primary\)\);\}/,
+  );
+});
+
+test("editor switches use the same active color pair as choice chips", () => {
+  assert.match(
+    editorSource,
+    /ha-switch\{[\s\S]*?--switch-checked-color:var\(--c-primary, var\(--editor-primary\)\);/,
+  );
+  assert.match(
+    editorSource,
+    /--switch-checked-button-color:var\(--c-primary, var\(--editor-primary\)\);/,
+  );
+  assert.match(
+    editorSource,
+    /--switch-checked-track-color:var\(--c-primary-l, var\(--editor-primary-l\)\);/,
   );
 });
 
@@ -220,6 +235,10 @@ test("custom theme background rows use the requested order and defaults", () => 
     keys.indexOf("--c-bg-panel"),
   );
   assert.equal(
+    keys.indexOf("--c-bg-panel") + 1,
+    keys.indexOf("--c-bg-tabs-holder"),
+  );
+  assert.equal(
     keys.indexOf("--c-bg-mobile") + 1,
     keys.indexOf("--c-bg-mobile-list"),
   );
@@ -239,6 +258,10 @@ test("custom theme background rows use the requested order and defaults", () => 
     labels["--c-bg-primary"],
     "Primary Background Color",
   );
+  assert.equal(
+    labels["--c-bg-tabs-holder"],
+    "Navigation Tabs Background",
+  );
   assert.equal(labels["--c-bg-mobile"], "Mobile Background Color");
   assert.equal(
     labels["--c-bg-mobile-list"],
@@ -252,6 +275,10 @@ test("custom theme background rows use the requested order and defaults", () => 
   assert.equal(
     THEME_DEFAULTS["--c-bg-primary"],
     "var(--primary-background-color)",
+  );
+  assert.equal(
+    THEME_DEFAULTS["--c-bg-tabs-holder"],
+    "var(--fvc-tabs-holder)",
   );
   assert.match(
     THEME_DEFAULTS["--c-bg-mobile"],
@@ -799,6 +826,7 @@ test("custom background theme colors survive config and YAML mapping", () => {
         modes: ["dark"],
         overrides: {
           "--c-bg-primary": "#123456",
+          "--c-bg-tabs-holder": "#234567",
           "--c-bg-mobile": "#654321",
           "--c-bg-mobile-list": "#345678",
           "--c-bg-list": "#456789",
@@ -816,6 +844,7 @@ test("custom background theme colors survive config and YAML mapping", () => {
       modes: ["dark"],
       overrides: {
         "--c-bg-primary": "#123456",
+        "--c-bg-tabs-holder": "#234567",
         "--c-bg-mobile": "#654321",
         "--c-bg-mobile-list": "#345678",
         "--c-bg-list": "#456789",
@@ -840,6 +869,7 @@ test("custom background theme colors survive config and YAML mapping", () => {
           modes: ["dark"],
           overrides: {
             "--c-bg-primary": "#123456",
+            "--c-bg-tabs-holder": "#234567",
             "--c-bg-mobile": "#654321",
             "--c-bg-mobile-list": "#345678",
             "--c-bg-list": "#456789",

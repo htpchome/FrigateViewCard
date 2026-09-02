@@ -208,6 +208,25 @@ test("card mobile surfaces use the HA token and exact mode list colors", () => {
   assert.doesNotMatch(STYLES, /--fvc-(?:mobile-bg|mobile-list|list): color-mix/);
 });
 
+test("navigation tabs background uses the adaptive theme token", () => {
+  assert.match(
+    STYLES,
+    /\.card\s*\{[\s\S]*?--fvc-tabs-holder: var\(--secondary-background-color\);/,
+  );
+  assert.match(
+    STYLES,
+    /\.card\[data-theme-mode="dark"\]\s*\{[\s\S]*?--fvc-tabs-holder: var\(--primary-background-color\);/,
+  );
+  assert.match(
+    STYLES,
+    /--c-bg-tabs-holder:\s*var\(--fvc-tabs-holder\);/,
+  );
+  assert.match(
+    STYLES,
+    /\.tabs-holder\{[^}]*background-color:var\(--c-bg-tabs-holder\);/,
+  );
+});
+
 test("syncVisualStyleToggles updates card classes and host outer styles", () => {
   const toggles = [];
   const card = {
