@@ -91,11 +91,11 @@ Grid, Slideshow, PTZ, and alert-takeover controls are coordinated so incompatibl
 ### Mobile View
 A Mobile View made to be a Mobile View
 
-![Mobile View](images/mobile-1.png)
-![Mobile View PTZ](images/mobile-2.png)
-![Mobile View Two Way Walk](images/mobile-3.png)
-![Mobile View segment](images/mobile-4.png)
-![Mobile View Preview Page](images/mobile-5.png)
+![Mobile View](images/mobile-1.jpg)
+![Mobile View PTZ](images/mobile-2.jpg)
+![Mobile View Two Way Walk](images/mobile-3.jpg)
+![Mobile View segment](images/mobile-4.jpg)
+![Mobile View Preview Page](images/mobile-5.jpg)
 
 ### Single View
 
