@@ -366,7 +366,7 @@ export const STYLES = `
   background-repeat: no-repeat;
   background-size: 0 0;
   border: none;
-  box-shadow: 0 0 3px 1px var(--c-text4);
+  box-shadow: 0 0 3px 1px var(--c-text3);
   border-radius: 50%;
   font-weight: 600;
   font-size: 1rem;
