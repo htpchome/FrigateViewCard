@@ -95,21 +95,23 @@ A Mobile View made to be a Mobile View
 
 ### Single View
 
-<img width="1035" height="1256" alt="Single View" src="https://github.com/user-attachments/assets/c8bc7392-1f1c-4e64-a2bf-3ed835a2756c" />
+<img src="images/single-view.jpg" alt="Single View" width="400">
 
 ### Wide View
 
-<img width="1000" height="779" alt="Wide View" src="https://github.com/user-attachments/assets/9c570f61-9200-4da8-9da8-850351c3d5da" />
+<img src="images/wide-view.jpg" alt="Wide View" width="400">
 
 Wide View can optionally add a collapsible vertical Timeline beside the browse area. It reuses the active camera's loaded Alert and Event data, follows the calendar and browse filters, and supports 1/6/12/24-hour scales. It begins at the current time, scrolls vertically toward older activity, and keeps time/day labels synchronized with the visible range. Dense activity becomes vertically flippable thumbnail stacks; Alerts receive the alert outline and take precedence over Events at the same point. The responsive panel consumes browse width when space permits and becomes a drawer overlay only after the browse area reaches its protected minimum width.
 
 ### Preview
 
-<img width="1051" height="1193" alt="Preview" src="https://github.com/user-attachments/assets/6359ae45-cceb-4cb6-b8a6-1591df83fbb2" />
+<img src="images/preview-page.jpg" alt="Mobile View" width="400">
 
 ### Card View
 
 Card View is a desktop/tablet layout designed to sit beside other cards in a Home Assistant dashboard. It uses its content and live-video aspect ratio to determine its natural height, so the global Card Height Limit does not apply.
+
+<img src="images/card-view.jpg" alt="Card View" width="400">
 
 Its activity drawer sits between the live view and footer. Either footer handle can open or close it by click, touch, or swipe, and `card_view_drawer_default_open` controls its initial state. The drawer can switch between horizontally paged Alerts and active-camera Recordings. Alerts can be scoped to the active camera or mixed across all configured cameras, and the calendar is available in both activity modes. PTZ temporarily replaces the activity row when active.
 
