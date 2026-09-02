@@ -1,0 +1,272 @@
+import { escapeHtml, escapeHtmlAttribute } from "./html.js";
+
+export function buildEmptyListMessageHtml(message, hint = "") {
+  const base = String(message || "").trim();
+  const extra = String(hint || "").trim();
+  if (!extra) return `<div class="empty">${escapeHtml(base)}</div>`;
+  return `<div class="empty">${escapeHtml(base)}<br><span style="opacity:.6">${escapeHtml(extra)}</span></div>`;
+}
+
+export function appendEndMarker(html, isExhausted) {
+  return `${String(html || "")}${isExhausted ? '<div class="end">— end —</div>' : ""}`;
+}
+
+export function buildStickyDaySectionsHtml(items, deps) {
+  const { getStartTime, getDayKey, getLabel, renderItem } = deps || {};
+
+  let currentDay = null;
+  const sections = [];
+  for (const item of items || []) {
+    const ts = getStartTime(item);
+    const dayKey = getDayKey(ts || 0);
+    if (dayKey !== currentDay) {
+      currentDay = dayKey;
+      sections.push({
+        ts: Math.floor(ts || 0),
+        label: getLabel(ts || null),
+        rows: [],
+      });
+    }
+    sections[sections.length - 1].rows.push(renderItem(item));
+  }
+
+  return sections
+    .map((section, idx) => {
+      const extraClass = idx === 0 ? " list-day-label-first" : "";
+      const ts = Number.isFinite(section.ts) ? Math.floor(section.ts) : 0;
+      return `<section class="list-day-sec"><div class="list-day-label${extraClass}" data-day-ts="${ts}" data-day-label="${escapeHtmlAttribute(section.label)}">${escapeHtml(section.label)}</div>${section.rows.join("")}</section>`;
+    })
+    .join("");
+}
+
+export function resolveOlderHintMetrics({ list, browse }) {
+  const scroller = resolveActiveListScroller({ list, browse });
+  const scrollTop = Number(scroller?.scrollTop || 0);
+  const scrollHeight = Number(scroller?.scrollHeight || 0);
+  const clientHeight = Number(scroller?.clientHeight || 0);
+  const sample = list?.querySelector(".list-item, .rev, .rec");
+  const itemHeight = Number(sample?.getBoundingClientRect?.().height || 60);
+  let hasScrollableContent =
+    clientHeight > 0 && scrollHeight > clientHeight + 2;
+
+  if (
+    scroller === browse &&
+    typeof list?.getBoundingClientRect === "function" &&
+    typeof browse?.getBoundingClientRect === "function"
+  ) {
+    const listRect = list.getBoundingClientRect();
+    const browseRect = browse.getBoundingClientRect();
+    const listBottom = Number(listRect?.bottom);
+    const browseBottom = Number(browseRect?.bottom);
+    if (Number.isFinite(listBottom) && Number.isFinite(browseBottom)) {
+      const listHasOverflowingContent =
+        Number(list?.scrollHeight || 0) > Number(list?.clientHeight || 0) + 2;
+      hasScrollableContent =
+        scrollTop > 2 ||
+        listBottom > browseBottom + 2 ||
+        listHasOverflowingContent;
+    }
+  }
+
+  return {
+    scrollTop,
+    itemHeight,
+    hasScrollableContent,
+  };
+}
+
+export function resolveReturnToTopChipState({
+  forceHide = null,
+  tab = "",
+  scrollTop = 0,
+  itemHeight = 60,
+  hasScrollableContent = false,
+}) {
+  const supportsReturnToTop = [
+    "alerts",
+    "clips",
+    "snapshot",
+    "recordings",
+    "kept",
+  ].includes(String(tab || ""));
+  const threshold = Math.max(120, Number(itemHeight || 60) * 3.5);
+  return {
+    hidden:
+      forceHide === true ||
+      !supportsReturnToTop ||
+      !hasScrollableContent ||
+      Number(scrollTop || 0) < threshold,
+  };
+}
+
+export function applyReturnToTopChipDomState(chipEl, state) {
+  if (!chipEl || !state) return;
+  chipEl.hidden = !!state.hidden;
+  chipEl.setAttribute("aria-hidden", String(!!state.hidden));
+}
+
+export function syncOlderHintFromScroll({
+  returnToTopEl = null,
+  list,
+  browse,
+  tab,
+  forceHide = null,
+}) {
+  if (!returnToTopEl) return;
+
+  const metrics = resolveOlderHintMetrics({ list, browse });
+  const returnToTopState = resolveReturnToTopChipState({
+    forceHide,
+    tab,
+    scrollTop: metrics.scrollTop,
+    itemHeight: metrics.itemHeight,
+    hasScrollableContent: metrics.hasScrollableContent,
+  });
+  applyReturnToTopChipDomState(returnToTopEl, returnToTopState);
+}
+
+export function resolveActiveDayLabelFromScroll({ list, browse }) {
+  if (!list || !browse) return "";
+
+  const labels = Array.from(list.querySelectorAll(".list-day-label"));
+  if (!labels.length) return "";
+
+  const scroller = resolveActiveListScroller({ list, browse });
+  if (!scroller) return "";
+  const anchorTop = Number(scroller.getBoundingClientRect().top || 0) + 2;
+  let active = labels[0];
+  for (const dayLabel of labels) {
+    if (Number(dayLabel.getBoundingClientRect().top || 0) <= anchorTop) {
+      active = dayLabel;
+    } else {
+      break;
+    }
+  }
+
+  return String(active?.dataset?.dayLabel || active?.textContent || "");
+}
+
+export function resolveActiveListScroller({ list, browse }) {
+  if (!list) return browse || null;
+  if (!browse) return list;
+
+  const listHeight = Number(list.scrollHeight || 0);
+  const listClient = Number(list.clientHeight || 0);
+  const listCanOverflow = listHeight > listClient + 2;
+  const listScrollTop = Number(list.scrollTop || 0);
+
+  // If list is already moving, keep using it as the source of truth.
+  if (listScrollTop > 0) return list;
+
+  const styleReader =
+    typeof globalThis.getComputedStyle === "function"
+      ? globalThis.getComputedStyle
+      : null;
+  const overflowY = String(styleReader?.(list)?.overflowY || "").toLowerCase();
+  const listIsScrollContainer =
+    overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay";
+
+  if (listCanOverflow && listIsScrollContainer) return list;
+  return browse;
+}
+
+export function syncDayLabelAlignmentFromScroll({ list, browse }) {
+  if (!list) return 0;
+  const scroller = resolveActiveListScroller({ list, browse });
+  const offsetWidth = Number(scroller?.offsetWidth);
+  const clientWidth = Number(scroller?.clientWidth);
+  const scrollbarWidth =
+    Number.isFinite(offsetWidth) && Number.isFinite(clientWidth)
+      ? Math.max(0, offsetWidth - clientWidth)
+      : 0;
+  const value = `${scrollbarWidth}px`;
+  const style = list.style;
+  if (
+    typeof style?.setProperty === "function" &&
+    style.getPropertyValue?.("--fvc-day-label-scrollbar-width") !== value
+  ) {
+    style.setProperty("--fvc-day-label-scrollbar-width", value);
+  }
+  return scrollbarWidth;
+}
+
+export function runListPostRenderSync({
+  syncBrowseHead,
+  syncOlderHint,
+  forceHide = null,
+  scheduleDeferredOlderHint = false,
+}) {
+  if (typeof syncBrowseHead === "function") {
+    syncBrowseHead();
+  }
+  if (typeof syncOlderHint !== "function") return;
+
+  syncOlderHint(forceHide);
+  if (!scheduleDeferredOlderHint) return;
+
+  if (typeof globalThis.requestAnimationFrame === "function") {
+    globalThis.requestAnimationFrame(() => syncOlderHint(forceHide));
+  }
+  setTimeout(() => syncOlderHint(forceHide), 200);
+}
+
+export function resolveListMarkup({
+  items,
+  emptyMessage,
+  emptyHint = "",
+  buildContentHtml,
+}) {
+  const hasItems = Array.isArray(items) && items.length > 0;
+  if (!hasItems) {
+    return {
+      isEmpty: true,
+      html: buildEmptyListMessageHtml(emptyMessage, emptyHint),
+    };
+  }
+
+  const html =
+    typeof buildContentHtml === "function" ? buildContentHtml(items) : "";
+  return {
+    isEmpty: false,
+    html: String(html || ""),
+  };
+}
+
+export function resolveListLabelTimestamp(items, fallbackTs = null) {
+  const ts = items?.[0]?.start_time;
+  return ts || fallbackTs || null;
+}
+
+export function applyListMarkupWithOlderHint({
+  setHtml,
+  html,
+  isEmpty,
+  syncOlderHint,
+  emptyForceHide = null,
+  contentForceHide = null,
+  syncOnContent = true,
+}) {
+  if (typeof setHtml === "function") {
+    setHtml(html);
+  }
+
+  if (isEmpty) {
+    if (typeof syncOlderHint === "function") {
+      syncOlderHint(emptyForceHide);
+    }
+    return false;
+  }
+
+  if (syncOnContent && typeof syncOlderHint === "function") {
+    syncOlderHint(contentForceHide);
+  }
+  return true;
+}
+
+export function createOlderHintSyncer(syncOlderHint) {
+  return (forceHide = null) => {
+    if (typeof syncOlderHint === "function") {
+      syncOlderHint(forceHide);
+    }
+  };
+}

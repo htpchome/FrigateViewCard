@@ -1,0 +1,373 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { STYLES } from "../src/styles.js";
+
+import {
+  buildPopupCarouselItemMarkup,
+  buildPopupCarouselEvents,
+  buildPopupCarouselContentPlan,
+  buildPopupCarouselScrollPlan,
+  PopupCarouselSwipeController,
+  resolvePopupCarouselActiveScrollLeft,
+  resolvePopupCarouselNavigationState,
+  resolvePopupCarouselRenderPlan,
+  shouldShowPopupCarousel,
+} from "../src/features/popup/carousel.js";
+
+test("shouldShowPopupCarousel only enables supported popup media types", () => {
+  assert.equal(shouldShowPopupCarousel("alert"), true);
+  assert.equal(shouldShowPopupCarousel("snapshot"), true);
+  assert.equal(shouldShowPopupCarousel("recording"), false);
+  assert.equal(shouldShowPopupCarousel(""), false);
+});
+
+test("buildPopupCarouselEvents sorts kept events by start time descending", () => {
+  const events = buildPopupCarouselEvents({
+    mediaType: "kept",
+    kept: [
+      { id: "older", start_time: 10 },
+      { id: "newer", start_time: 20 },
+    ],
+  });
+  assert.deepEqual(
+    events.map((event) => event.id),
+    ["newer", "older"],
+  );
+});
+
+test("buildPopupCarouselEvents resolves unique alert detections in review order", () => {
+  const byId = new Map([
+    ["ev-1", { id: "ev-1", start_time: 11 }],
+    ["ev-2", { id: "ev-2", start_time: 12 }],
+  ]);
+  const events = buildPopupCarouselEvents({
+    mediaType: "alert",
+    reviews: [
+      { start_time: 10, data: { detections: ["ev-1"] } },
+      { start_time: 20, data: { detections: ["ev-2"] } },
+      { start_time: 30, data: { detections: ["ev-2"] } },
+      { start_time: 40, data: { detections: ["missing"] } },
+    ],
+    findEventById: (id) => byId.get(id) || null,
+  });
+  assert.deepEqual(
+    events.map((event) => event.id),
+    ["ev-2", "ev-1"],
+  );
+});
+
+test("buildPopupCarouselEvents filters snapshot and clip media from display events", () => {
+  const displayEvents = [
+    {
+      id: "snapshot-only",
+      start_time: 10,
+      has_snapshot: true,
+      has_clip: false,
+    },
+    { id: "both", start_time: 30, has_snapshot: true, has_clip: true },
+    { id: "clip-only", start_time: 20, has_snapshot: false, has_clip: true },
+  ];
+
+  assert.deepEqual(
+    buildPopupCarouselEvents({
+      mediaType: "snapshot",
+      displayEvents,
+    }).map((event) => event.id),
+    ["both", "snapshot-only"],
+  );
+
+  assert.deepEqual(
+    buildPopupCarouselEvents({
+      mediaType: "clip",
+      displayEvents,
+    }).map((event) => event.id),
+    ["both", "clip-only"],
+  );
+});
+
+test("resolvePopupCarouselRenderPlan hides unsupported, empty, and mobile carousel states", () => {
+  assert.deepEqual(
+    resolvePopupCarouselRenderPlan({
+      mediaType: "recording",
+      eventCount: 3,
+      isTouchUi: true,
+    }),
+    {
+      shouldRender: false,
+      shouldClear: true,
+      hidden: true,
+      touch: false,
+      mobile: false,
+    },
+  );
+
+  assert.deepEqual(
+    resolvePopupCarouselRenderPlan({
+      mediaType: "clip",
+      eventCount: 0,
+      isTouchUi: true,
+    }),
+    {
+      shouldRender: false,
+      shouldClear: true,
+      hidden: true,
+      touch: false,
+      mobile: false,
+    },
+  );
+
+  assert.deepEqual(
+    resolvePopupCarouselRenderPlan({
+      mediaType: "clip",
+      eventCount: 2,
+      isTouchUi: true,
+      isMobileDevice: true,
+    }),
+    {
+      shouldRender: false,
+      shouldClear: true,
+      hidden: true,
+      touch: false,
+      mobile: true,
+    },
+  );
+});
+
+test("buildPopupCarouselContentPlan limits rendering and reuses render plan semantics", () => {
+  const rendered = [];
+  const plan = buildPopupCarouselContentPlan({
+    mediaType: "clip",
+    events: [{ id: "one" }, { id: "two" }, { id: "three" }],
+    activeId: "two",
+    isTouchUi: true,
+    isMobileDevice: false,
+    limit: 2,
+    renderEvent: (event, activeId) => {
+      rendered.push([event.id, activeId]);
+      return `<${event.id}:${activeId}>`;
+    },
+  });
+
+  assert.deepEqual(rendered, [
+    ["one", "two"],
+    ["two", "two"],
+  ]);
+  assert.deepEqual(plan, {
+    shouldRender: true,
+    shouldClear: false,
+    hidden: false,
+    touch: true,
+    mobile: false,
+    html: "<one:two><two:two>",
+  });
+});
+
+test("mobile carousel content skips item markup generation", () => {
+  let renderCount = 0;
+  const plan = buildPopupCarouselContentPlan({
+    mediaType: "alert",
+    events: [{ id: "one" }, { id: "two" }],
+    isMobileDevice: true,
+    renderEvent: () => {
+      renderCount += 1;
+      return "item";
+    },
+  });
+
+  assert.equal(renderCount, 0);
+  assert.deepEqual(plan, {
+    shouldRender: false,
+    shouldClear: true,
+    hidden: true,
+    touch: false,
+    mobile: true,
+    html: "",
+  });
+});
+
+test("buildPopupCarouselScrollPlan advances by one visible carousel page", () => {
+  assert.deepEqual(buildPopupCarouselScrollPlan({
+    itemWidth: 140,
+    viewportWidth: 900,
+    dir: -1,
+  }), {
+    left: -888,
+    behavior: "smooth",
+  });
+  assert.deepEqual(buildPopupCarouselScrollPlan({
+    itemWidth: 0,
+    viewportWidth: 700,
+    dir: 1,
+  }), {
+    left: 700,
+    behavior: "smooth",
+  });
+  assert.deepEqual(buildPopupCarouselScrollPlan({ itemWidth: 140, dir: 1 }), {
+    left: 148,
+    behavior: "smooth",
+  });
+});
+
+test("mobile carousel swipe advances by the same visible page as buttons", () => {
+  const listeners = new Map();
+  const classes = new Set();
+  const animationFrames = [];
+  let frameId = 0;
+  let prevented = false;
+  const row = {
+    scrollLeft: 0,
+    scrollWidth: 1200,
+    clientWidth: 442,
+    addEventListener(type, listener, options = {}) {
+      if (!listeners.has(type)) listeners.set(type, new Set());
+      listeners.get(type).add(listener);
+      options.signal?.addEventListener?.(
+        "abort",
+        () => listeners.get(type)?.delete(listener),
+        { once: true },
+      );
+    },
+    removeEventListener(type, listener) {
+      listeners.get(type)?.delete(listener);
+    },
+    dispatch(type, event) {
+      for (const listener of listeners.get(type) || []) listener(event);
+    },
+    classList: {
+      add: (...tokens) => tokens.forEach((token) => classes.add(token)),
+      remove: (...tokens) => tokens.forEach((token) => classes.delete(token)),
+    },
+  };
+  const controller = new PopupCarouselSwipeController({
+    row,
+    getScrollPlan: (dir) =>
+      buildPopupCarouselScrollPlan({
+        itemWidth: 142,
+        viewportWidth: row.clientWidth,
+        dir,
+      }),
+    now: () => 0,
+    requestFrame: (callback) => {
+      animationFrames.push(callback);
+      frameId += 1;
+      return frameId;
+    },
+    cancelFrame: () => {},
+  }).bind();
+
+  row.dispatch("touchstart", {
+    touches: [{ identifier: 1, clientX: 300, clientY: 40 }],
+  });
+  row.dispatch("touchmove", {
+    touches: [{ identifier: 1, clientX: 250, clientY: 42 }],
+    cancelable: true,
+    preventDefault() {
+      prevented = true;
+    },
+  });
+  assert.equal(prevented, true);
+  assert.equal(classes.has("is-swiping"), true);
+  assert.equal(row.scrollLeft, 50);
+  row.dispatch("touchend", {
+    changedTouches: [{ identifier: 1, clientX: 240, clientY: 42 }],
+  });
+  assert.equal(classes.has("is-settling"), true);
+
+  let frameNow = 0;
+  while (animationFrames.length) {
+    frameNow += 55;
+    animationFrames.shift()(frameNow);
+  }
+
+  assert.equal(row.scrollLeft, 450);
+  assert.equal(classes.has("is-swiping"), false);
+  assert.equal(classes.has("is-settling"), false);
+  controller.dispose();
+});
+
+test("buildPopupCarouselItemMarkup builds active carousel button markup", () => {
+  assert.equal(
+    buildPopupCarouselItemMarkup({
+      event: { id: "ev-1" },
+      activeId: "ev-1",
+      thumbnailHtml: "<img>",
+      title: "Front Door",
+      label: "Person",
+      time: "12:00",
+    }),
+    '<button class="popup-carousel-item active" data-ev="ev-1" title="Front Door"><div class="et"><img></div><div class="popup-carousel-meta"><span>Person</span><span>12:00</span></div></button>',
+  );
+
+  assert.equal(buildPopupCarouselItemMarkup({ event: null }), "");
+});
+
+test("resolvePopupCarouselActiveScrollLeft clamps the active item target", () => {
+  assert.equal(
+    resolvePopupCarouselActiveScrollLeft({ activeOffsetLeft: 40 }),
+    32,
+  );
+  assert.equal(
+    resolvePopupCarouselActiveScrollLeft({ activeOffsetLeft: 4 }),
+    0,
+  );
+});
+
+test("popup carousel navigation only exposes scrollable directions", () => {
+  assert.deepEqual(
+    resolvePopupCarouselNavigationState({
+      scrollLeft: 0,
+      scrollWidth: 1800,
+      viewportWidth: 900,
+    }),
+    { canScrollLeft: false, canScrollRight: true },
+  );
+  assert.deepEqual(
+    resolvePopupCarouselNavigationState({
+      scrollLeft: 450,
+      scrollWidth: 1800,
+      viewportWidth: 900,
+    }),
+    { canScrollLeft: true, canScrollRight: true },
+  );
+  assert.deepEqual(
+    resolvePopupCarouselNavigationState({
+      scrollLeft: 900,
+      scrollWidth: 1800,
+      viewportWidth: 900,
+    }),
+    { canScrollLeft: true, canScrollRight: false },
+  );
+  assert.deepEqual(
+    resolvePopupCarouselNavigationState({
+      scrollLeft: 0,
+      scrollWidth: 800,
+      viewportWidth: 900,
+    }),
+    { canScrollLeft: false, canScrollRight: false },
+  );
+});
+
+test("popup carousel navigation uses fixed glass geometry and hides on mobile devices", () => {
+  assert.doesNotMatch(
+    STYLES,
+    /\.popup-carousel-wrap\.touch \.popup-carousel-nav\s*\{[^}]*display:none/,
+  );
+  assert.match(
+    STYLES,
+    /\.popup-carousel-nav \{[^}]*appearance:none;[^}]*top:calc\(2px \+ 7px\);bottom:auto;width:26px;height:calc\(var\(--popup-carousel-item-height\) - 14px\);[^}]*background:rgba\(255,255,255,\.18\);[^}]*backdrop-filter:blur\(10px\) saturate\(170%\);[^}]*color:#111/,
+  );
+  assert.match(
+    STYLES,
+    /\.popup-carousel-nav svg \{[^}]*width:22px;height:32px;[^}]*scale\(1\.15,1\.25\)/,
+  );
+  assert.match(STYLES, /\.popup-carousel-nav\.left \{[^}]*border-radius:7px/);
+  assert.match(STYLES, /\.popup-carousel-nav\.right \{[^}]*border-radius:7px/);
+  assert.match(
+    STYLES,
+    /\.popup-carousel-wrap\.mobile-device \.popup-carousel-nav \{display:none !important;\}/,
+  );
+  assert.match(
+    STYLES,
+    /\.popup-carousel-wrap\.mobile-device \.popup-carousel \{touch-action:pan-y;\}/,
+  );
+});

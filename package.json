@@ -1,0 +1,18 @@
+{
+  "name": "frigate-view-card",
+  "version": "1.0.1234",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "npm run build && node --check dist/frigate-view-card.js",
+    "test": "npm run build && node --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "hls.js": "1.5.17"
+  },
+  "dependencies": {
+    "ffmpeg": "^0.0.4",
+    "fluent-ffmpeg": "^2.1.3"
+  }
+}

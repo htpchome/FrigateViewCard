@@ -1,0 +1,81 @@
+const MIN_WAIT_MS = 500;
+
+const normalizeWaitMs = (value, fallback) =>
+  Math.max(MIN_WAIT_MS, Number(value ?? fallback));
+
+const normalizeNumber = (value, fallback) => Number(value ?? fallback);
+
+export const resolveHaDirectStartup = (startup = {}) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 8000),
+  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
+  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
+  requireReadyState: normalizeNumber(startup.requireReadyState, 0),
+  strict: startup.strict ?? false,
+  streamType: startup.streamType,
+});
+
+export const buildHaDirectMountPlan = ({
+  startup = {},
+  preferredStreamType,
+}) => {
+  const policy = resolveHaDirectStartup(startup);
+  return {
+    streamType: policy.streamType || preferredStreamType,
+    waitOptions: {
+      minCurrentTime: policy.minCurrentTime,
+      minDecodedFrames: policy.minDecodedFrames,
+      requireReadyState: policy.requireReadyState,
+      strict: policy.strict,
+    },
+    waitMs: policy.waitMs,
+  };
+};
+
+export const resolveMseStartup = (startup = {}) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 8000),
+  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.2),
+  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 2),
+  requireReadyState: normalizeNumber(startup.requireReadyState, 3),
+  strict: startup.strict !== false,
+});
+
+export const resolveWebRtcStartup = ({ startup = {} }) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 7000),
+  minCurrentTime: normalizeNumber(startup.minCurrentTime, 0.05),
+  minDecodedFrames: normalizeNumber(startup.minDecodedFrames, 1),
+  requireReadyState: normalizeNumber(startup.requireReadyState, 0),
+  strict: startup.strict !== false,
+});
+
+export const resolveHlsStartup = (startup = {}) => ({
+  waitMs: normalizeWaitMs(startup.waitMs, 5000),
+});
+
+export const resolveHaDirectMountUnavailableState = () => ({
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false,
+});
+
+export const resolveHaDirectReadyState = ({
+  rotateOverlayActive = false,
+  isCurrentEngine = false,
+  waitSucceeded = false,
+}) => ({
+  shouldApply: Boolean(isCurrentEngine && waitSucceeded),
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false,
+  enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine),
+});
+
+export const resolveHaDirectStabilizedState = ({
+  rotateOverlayActive = false,
+  isCurrentEngine = false,
+}) => ({
+  shouldApply: Boolean(isCurrentEngine),
+  loading: false,
+  fallbackVisible: false,
+  refreshFallbackImage: false,
+  enableNativeControls: Boolean(rotateOverlayActive && isCurrentEngine),
+});

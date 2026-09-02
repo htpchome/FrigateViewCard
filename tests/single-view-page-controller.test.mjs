@@ -1,0 +1,965 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import { SingleViewPageController } from "../src/features/single-view/page.ctrl.js";
+
+const PAGE_IDS = { preview: "preview", wideView: "wide-view" };
+
+const createNode = () => ({
+  style: {},
+  textContent: "",
+  innerHTML: "",
+});
+
+const REGION_ROOT_SELECTORS = {
+  cameraSwitcher: "#cam-switcher",
+  browseHeader: "#browse-head",
+  browse: "#browse",
+  filterPanel: "#filter-panel",
+  calendarPanel: "#cal-panel",
+};
+
+const createHost = ({
+  isWide = false,
+  popupOpen = false,
+  domNodes = {},
+  previewPageEnabled = false,
+  mobileViewActive = false,
+} = {}) => {
+  const calls = [];
+  const nodeMap = domNodes;
+  const host = {
+    _pageId: isWide ? "wide-view" : "single-view",
+    _activeCamIdx: 0,
+    _viewMode: "single",
+    _config: {
+      title: "",
+      subtitle: "Front Patio",
+      cameras: [
+        { entity: "camera.front_door", name: "Front Door" },
+        { entity: "camera.driveway", name: "Driveway" },
+      ],
+    },
+    _activeCam: { entity: "camera.front_door", name: "Front Door" },
+    _activeStreamType: "webrtc",
+    _eventsMode: "all",
+    _tab: "alerts",
+    _winEnd: 1722470400,
+    _hass: {
+      states: {
+        "camera.front_door": { state: "streaming" },
+        "camera.driveway": { state: "streaming" },
+      },
+    },
+    _allDisplayEvents: () => [{ id: 1 }, { id: 2 }],
+    _browseWindowLoaderController: {
+      cameraAlertsCount: () => 2,
+    },
+    _labels: () => ["person", "car"],
+    _weekday: () => "Wed",
+    _monthDay: () => "Jul 31st",
+    _dayKey: () => "2026-07-31",
+    _eventCardHTML: (item) => `<article class="event">${item.id}</article>`,
+    _reviewListItemHTML: (item) =>
+      `<article class="review">${item.id}</article>`,
+    _exhausted: false,
+    _updateRecordingsBrowseNav: () => calls.push(["updateRecordingsBrowseNav"]),
+    _isPreviewPageEnabled: () => previewPageEnabled,
+    _isPreviewPageActive: () => host._pageId === PAGE_IDS.preview,
+    _isMobileViewPageActive: () => mobileViewActive,
+    _stopPreviewMode: () => calls.push(["stopPreview"]),
+    _$: (selector) => {
+      if (selector === "#myPopup" && popupOpen) {
+        return {
+          classList: {
+            contains: (className) => className === "is-open",
+          },
+        };
+      }
+      return nodeMap[selector] || null;
+    },
+    _pageShellRegion: (regionKey) =>
+      host._$(REGION_ROOT_SELECTORS[regionKey] || ""),
+    _pageShellRegionElement: (_regionKey, selector) => host._$(selector),
+    _popupLifecycleController: {
+      close: () => calls.push(["closePopup"]),
+    },
+    _cancelPendingMount: (reason) => calls.push(["cancelPendingMount", reason]),
+    _applyPreviewShellVisibility: () =>
+      calls.push(["applyPreviewShellVisibility"]),
+    _applyCardStyle: () => calls.push(["applyCardStyle"]),
+    _wideViewPageController: {
+      applyStyleLayoutForCard: () => {
+        calls.push(["applyCardStyle"]);
+        calls.push(["applyLayoutMode"]);
+      },
+      applyStyleLayoutAndWideSyncForCard: () => {
+        calls.push(["applyCardStyle"]);
+        calls.push(["applyLayoutMode"]);
+        if (host._pageId === "wide-view") {
+          calls.push(["syncColHeightIfWideView"]);
+        }
+      },
+      applyLayoutModeForCard: () => calls.push(["applyLayoutMode"]),
+      syncColHeightIfWideView: () => {
+        if (host._pageId === "wide-view") {
+          calls.push(["syncColHeightIfWideView"]);
+        }
+      },
+    },
+    _syncColHeight: () => calls.push(["syncColHeight"]),
+    _syncStatus: () => calls.push(["syncStatus"]),
+    _kickLiveIfStale: () => calls.push(["kickLiveIfStale"]),
+    _scheduleResumeLive: (reason) => calls.push(["scheduleResumeLive", reason]),
+    _scheduleGridRefresh: (delayMs) =>
+      calls.push(["scheduleGridRefresh", delayMs]),
+    _probeLatestGridAlert: () => calls.push(["probeLatestGridAlert"]),
+    _renderPreviewPage: () => calls.push(["renderPreviewPage"]),
+    _renderSubtitle: () => calls.push(["renderSubtitle"]),
+    _renderStats: () => calls.push(["renderStats"]),
+    _renderCamSwitcher: () => calls.push(["renderCamSwitcher"]),
+    _syncFooterLogo: () => calls.push(["syncFooterLogo"]),
+    _syncToolbarButtons: () => calls.push(["syncToolbarButtons"]),
+    _syncPageNavigationButtons: () => calls.push(["syncPageNavigationButtons"]),
+    _syncPageNavShell: () => calls.push(["syncPageNavShell"]),
+    _restartRealtimeHeadPollTimer: () =>
+      calls.push(["restartRealtimeHeadPollTimer"]),
+    _navigateToConfiguredLandingPage: (context) =>
+      calls.push(["navigateToConfiguredLandingPage", context]),
+    _startPreviewMode: () => calls.push(["startPreviewMode"]),
+    _cleanupEngine: () => calls.push(["cleanupEngine"]),
+    _clearPreviewTimers: () => calls.push(["clearPreviewTimers"]),
+    _renderShell: () => calls.push(["renderShell"]),
+    _setViewMode: (mode) => calls.push(["setViewMode", mode]),
+    _mountEngine: (...args) => calls.push(["mountEngine", ...args]),
+    _renderShellPreserveLive: () => calls.push(["renderShellPreserveLive"]),
+    _syncTabsShell: () => calls.push(["syncTabsShell"]),
+    _renderListLabel: () => calls.push(["renderListLabel"]),
+    _renderList: () => calls.push(["renderList"]),
+    _renderAll: () => calls.push(["renderAll"]),
+    _previewAlertController: {
+      scheduleAlertWatch: (delayMs) =>
+        calls.push(["schedulePreviewAlertWatch", delayMs]),
+      probeLatestAlert: () => calls.push(["probeLatestPreviewAlert"]),
+    },
+    _gridAlertController: {
+      scheduleAlertWatch: (delayMs) =>
+        calls.push(["scheduleGridAlertWatch", delayMs]),
+    },
+  };
+  return { host, calls };
+};
+
+test("activateStandardPageRoute handles startup and mounts engine", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.activateStandardPageRoute({ startup: true });
+
+  assert.deepEqual(calls, [
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["mountEngine"],
+  ]);
+});
+
+test("activateStandardPageRoute startup grid chooses grid mode", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.activateStandardPageRoute({ startup: true, startInGrid: true });
+
+  assert.deepEqual(calls, [
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["setViewMode", "grid"],
+  ]);
+});
+
+test("activateStandardPageRoute leaves preview and preserves live media", () => {
+  const { host, calls } = createHost({ popupOpen: true });
+  host._pageId = "wide-view";
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.activateStandardPageRoute({ previousPageId: "preview" });
+
+  assert.deepEqual(calls, [
+    ["stopPreview"],
+    ["closePopup"],
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeightIfWideView"],
+    ["renderShellPreserveLive"],
+    ["syncTabsShell"],
+    ["renderAll"],
+  ]);
+});
+
+test("activateStandardPageRoute honors deferCameraSwitch", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.activateStandardPageRoute({ deferCameraSwitch: true });
+
+  assert.deepEqual(calls, [
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["renderShellPreserveLive"],
+    ["syncTabsShell"],
+    ["renderAll"],
+  ]);
+});
+
+test("activateSingleViewPageRoute delegates to standard activation", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.activateSingleViewPageRoute({ startup: true });
+
+  assert.deepEqual(calls, [
+    ["applyPreviewShellVisibility"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["mountEngine"],
+  ]);
+});
+
+test("applyStyleLayoutForCurrentRoute applies style, layout, and wide sync", () => {
+  const wide = createHost({ isWide: true });
+  const wideController = new SingleViewPageController(wide.host, { PAGE_IDS });
+  wideController.applyStyleLayoutForCurrentRoute();
+  assert.deepEqual(wide.calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeightIfWideView"],
+  ]);
+
+  const single = createHost({ isWide: false });
+  const singleController = new SingleViewPageController(single.host, {
+    PAGE_IDS,
+  });
+  singleController.applyStyleLayoutForCurrentRoute();
+  assert.deepEqual(single.calls, [["applyCardStyle"], ["applyLayoutMode"]]);
+});
+
+test("applyNonPreviewSchemaSoftUpdate orchestrates non-preview refresh", () => {
+  const wide = createHost({ isWide: true });
+  const wideController = new SingleViewPageController(wide.host, { PAGE_IDS });
+
+  wideController.applyNonPreviewSchemaSoftUpdate();
+
+  assert.deepEqual(wide.calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeightIfWideView"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderCamSwitcher"],
+    ["syncToolbarButtons"],
+    ["syncPageNavigationButtons"],
+  ]);
+});
+
+test("mountEngineQuietly remounts live engine without render", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.mountEngineQuietly();
+
+  assert.deepEqual(calls, [["mountEngine", null, { quiet: true }]]);
+});
+
+test("mountEngineQuietlyAndRenderAll remounts then renders", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.mountEngineQuietlyAndRenderAll();
+
+  assert.deepEqual(calls, [
+    ["mountEngine", null, { quiet: true }],
+    ["renderAll"],
+  ]);
+});
+
+test("applyPostShellRerenderRouteBehavior navigates when active page is invalid", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyPostShellRerenderRouteBehavior({
+    activePageInvalid: true,
+    previewPageActive: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["navigateToConfiguredLandingPage", { source: "config-page-fallback" }],
+  ]);
+});
+
+test("applyPostShellRerenderRouteBehavior restarts preview when preview page is active", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyPostShellRerenderRouteBehavior({
+    activePageInvalid: false,
+    previewPageActive: true,
+  });
+
+  assert.deepEqual(calls, [["startPreviewMode"]]);
+});
+
+test("applyPostShellRerenderRouteBehavior remounts and renders for non-preview pages", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyPostShellRerenderRouteBehavior({
+    activePageInvalid: false,
+    previewPageActive: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["mountEngine", null, { quiet: true }],
+    ["renderAll"],
+  ]);
+});
+
+test("applyConfigShellRerender navigates on invalid route", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyConfigShellRerender({
+    activePageInvalid: true,
+    previewPageActive: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["cleanupEngine"],
+    ["renderShell"],
+    ["navigateToConfiguredLandingPage", { source: "config-page-fallback" }],
+  ]);
+});
+
+test("applyConfigShellRerender restarts preview when preview page is active", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyConfigShellRerender({
+    activePageInvalid: false,
+    previewPageActive: true,
+  });
+
+  assert.deepEqual(calls, [
+    ["cleanupEngine"],
+    ["renderShell"],
+    ["startPreviewMode"],
+  ]);
+});
+
+test("applyConfigShellRerender remounts and renders for non-preview routes", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyConfigShellRerender({
+    activePageInvalid: false,
+    previewPageActive: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["cleanupEngine"],
+    ["renderShell"],
+    ["mountEngine", null, { quiet: true }],
+    ["renderAll"],
+  ]);
+});
+
+test("applyNonPreviewConfigUpdateTail performs optional remount and poll restart", () => {
+  const { host, calls } = createHost({ isWide: true });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewConfigUpdateTail({
+    needsEngineRemount: true,
+    realtimePollChanged: true,
+  });
+
+  assert.deepEqual(calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeightIfWideView"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderCamSwitcher"],
+    ["syncToolbarButtons"],
+    ["syncPageNavigationButtons"],
+    ["mountEngine", null, { quiet: true }],
+    ["restartRealtimeHeadPollTimer"],
+  ]);
+});
+
+test("applyNonPreviewConfigUpdateTail skips optional steps when disabled", () => {
+  const { host, calls } = createHost({ isWide: false });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewConfigUpdateTail({
+    needsEngineRemount: false,
+    realtimePollChanged: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderCamSwitcher"],
+    ["syncToolbarButtons"],
+    ["syncPageNavigationButtons"],
+  ]);
+});
+
+test("applyNonPreviewHassUpdate applies status, live kick, and style by flags", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewHassUpdate({
+    cameraStateChanged: true,
+    themeChanged: true,
+  });
+
+  assert.deepEqual(calls, [
+    ["renderCamSwitcher"],
+    ["syncStatus"],
+    ["kickLiveIfStale"],
+    ["applyCardStyle"],
+  ]);
+});
+
+test("applyNonPreviewHassUpdate triggers grid alert probing on camera changes", () => {
+  const { host, calls } = createHost();
+  host._viewMode = "grid";
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewHassUpdate({
+    cameraStateChanged: true,
+    themeChanged: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["renderCamSwitcher"],
+    ["syncStatus"],
+    ["kickLiveIfStale"],
+    ["scheduleGridRefresh", 120],
+    ["scheduleGridAlertWatch", 120],
+    ["probeLatestGridAlert"],
+  ]);
+});
+
+test("applyNonPreviewHassUpdate is a no-op when flags are false", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewHassUpdate({
+    cameraStateChanged: false,
+    themeChanged: false,
+  });
+
+  assert.deepEqual(calls, []);
+});
+
+test("applyNonPreviewHassUpdate remounts a recovered active camera", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyNonPreviewHassUpdate({
+    activeCameraRecovered: true,
+  });
+
+  assert.deepEqual(calls, [
+    ["scheduleResumeLive", "active-camera-recovered"],
+  ]);
+});
+
+test("applyHassUpdateRouteFlow handles preview-page branch", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const outcome = controller.applyHassUpdateRouteFlow({
+    cameraStateChanged: true,
+    themeChanged: true,
+    previewPageActive: true,
+  });
+
+  assert.equal(outcome, "preview");
+  assert.deepEqual(calls, [
+    ["renderPreviewPage"],
+    ["schedulePreviewAlertWatch", 120],
+    ["probeLatestPreviewAlert"],
+    ["applyCardStyle"],
+  ]);
+});
+
+test("applyHassUpdateRouteFlow handles non-preview branch", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const outcome = controller.applyHassUpdateRouteFlow({
+    cameraStateChanged: true,
+    themeChanged: true,
+    previewPageActive: false,
+  });
+
+  assert.equal(outcome, "non-preview");
+  assert.deepEqual(calls, [
+    ["renderCamSwitcher"],
+    ["syncStatus"],
+    ["kickLiveIfStale"],
+    ["applyCardStyle"],
+  ]);
+});
+
+test("applyPreviewConfigUpdateTail refreshes preview without timer reset", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyPreviewConfigUpdateTail({
+    previewModeConfigChanged: false,
+    realtimePollChanged: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["renderPreviewPage"],
+  ]);
+});
+
+test("applyPreviewConfigUpdateTail resets preview timers when needed", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyPreviewConfigUpdateTail({
+    previewModeConfigChanged: true,
+    realtimePollChanged: false,
+  });
+
+  assert.deepEqual(calls, [
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["renderPreviewPage"],
+    ["clearPreviewTimers"],
+    ["schedulePreviewAlertWatch", 300],
+  ]);
+});
+
+test("applyEditorPreviewDraftRefresh orchestrates editor preview refresh order", () => {
+  const { host, calls } = createHost({ isWide: true });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyEditorPreviewDraftRefresh();
+
+  assert.deepEqual(calls, [
+    ["syncTabsShell"],
+    ["syncPageNavShell"],
+    ["renderCamSwitcher"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeightIfWideView"],
+    ["syncFooterLogo"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderListLabel"],
+    ["renderList"],
+    ["syncPageNavigationButtons"],
+  ]);
+});
+
+test("applyEditorPreviewDraftRefresh rebuilds the active preview page", () => {
+  const { host, calls } = createHost();
+  host._pageId = PAGE_IDS.preview;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyEditorPreviewDraftRefresh();
+
+  assert.deepEqual(calls, [
+    ["syncTabsShell"],
+    ["syncPageNavShell"],
+    ["renderCamSwitcher"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncFooterLogo"],
+    ["renderPreviewPage"],
+  ]);
+});
+
+test("applyCameraSetChange cleans up engine and clamps active camera index", () => {
+  const { host, calls } = createHost();
+  host._activeCamIdx = 5;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyCameraSetChange({
+    needsEngineRemount: true,
+    nextCameraCount: 2,
+  });
+
+  assert.deepEqual(calls, [["cleanupEngine"]]);
+  assert.equal(host._activeCamIdx, 1);
+});
+
+test("applyCameraSetChange is a no-op when remount is not needed", () => {
+  const { host, calls } = createHost();
+  host._activeCamIdx = 2;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyCameraSetChange({
+    needsEngineRemount: false,
+    nextCameraCount: 1,
+  });
+
+  assert.deepEqual(calls, []);
+  assert.equal(host._activeCamIdx, 2);
+});
+
+test("applyConfigUpdateRouteFlow returns preview outcome without non-preview updates", () => {
+  const { host, calls } = createHost({ isWide: false });
+  host._activeCamIdx = 3;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const outcome = controller.applyConfigUpdateRouteFlow({
+    needsEngineRemount: true,
+    nextCameraCount: 2,
+    needsShellRerender: false,
+    activePageInvalid: false,
+    previewPageActive: true,
+    realtimePollChanged: true,
+  });
+
+  assert.equal(outcome, "preview");
+  assert.deepEqual(calls, [["cleanupEngine"]]);
+  assert.equal(host._activeCamIdx, 1);
+});
+
+test("applyConfigUpdateRouteFlow handles shell rerender branch", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const outcome = controller.applyConfigUpdateRouteFlow({
+    needsEngineRemount: false,
+    nextCameraCount: 2,
+    needsShellRerender: true,
+    activePageInvalid: true,
+    previewPageActive: false,
+    realtimePollChanged: false,
+  });
+
+  assert.equal(outcome, "handled");
+  assert.deepEqual(calls, [
+    ["cleanupEngine"],
+    ["renderShell"],
+    ["navigateToConfiguredLandingPage", { source: "config-page-fallback" }],
+  ]);
+});
+
+test("applyConfigUpdateRouteFlow handles non-preview tail branch", () => {
+  const { host, calls } = createHost({ isWide: true });
+  host._activeCamIdx = 4;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const outcome = controller.applyConfigUpdateRouteFlow({
+    needsEngineRemount: true,
+    nextCameraCount: 3,
+    needsShellRerender: false,
+    activePageInvalid: false,
+    previewPageActive: false,
+    realtimePollChanged: true,
+  });
+
+  assert.equal(outcome, "handled");
+  assert.deepEqual(calls, [
+    ["cleanupEngine"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncColHeightIfWideView"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderCamSwitcher"],
+    ["syncToolbarButtons"],
+    ["syncPageNavigationButtons"],
+    ["mountEngine", null, { quiet: true }],
+    ["restartRealtimeHeadPollTimer"],
+  ]);
+  assert.equal(host._activeCamIdx, 2);
+});
+
+test("single-view render helpers update subtitle and stats through the controller", () => {
+  const nodes = {
+    "#tl-range": createNode(),
+    "#alert-count": createNode(),
+    "#stream-type": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderSubtitle();
+  controller.renderStats();
+
+  assert.equal(nodes["#tl-range"].textContent, "Front Patio");
+  assert.equal(nodes["#alert-count"].textContent, "2");
+  assert.equal(nodes["#stream-type"].textContent, "webrtc");
+});
+
+test("single-view dynamic subtitle follows the active camera and display setting", () => {
+  const nodes = { "#tl-range": createNode() };
+  const { host } = createHost({ domNodes: nodes });
+  host._config.subtitle = "{Camera}";
+  host._config.display_subtitle = false;
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderSubtitle();
+
+  assert.equal(nodes["#tl-range"].textContent, "Front Door");
+  assert.equal(nodes["#tl-range"].hidden, true);
+
+  host._activeCam = { entity: "camera.driveway", name: "Driveway" };
+  host._config.display_subtitle = true;
+  controller.renderSubtitle();
+
+  assert.equal(nodes["#tl-range"].textContent, "Driveway");
+  assert.equal(nodes["#tl-range"].hidden, false);
+});
+
+test("single-view render helpers update status and title through the controller", () => {
+  const nodes = {
+    "#on-dot": createNode(),
+    "#on-lbl": createNode(),
+    "#info-title": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.syncStatus();
+
+  assert.equal(nodes["#on-dot"].style.color, "#4ade80");
+  assert.equal(nodes["#on-lbl"].textContent, "Online");
+  assert.equal(nodes["#info-title"].textContent, "FrigateView");
+  assert.equal(nodes["#info-title"].hidden, false);
+
+  host._config.display_title = false;
+  controller.syncStatus();
+  assert.equal(nodes["#info-title"].hidden, true);
+});
+
+test("single-view camera tokens resolve both fields to Grid in grid mode", () => {
+  const nodes = {
+    "#info-title": createNode(),
+    "#tl-range": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes });
+  host._config.title = "{camera}";
+  host._config.subtitle = "{Camera}";
+  host._viewMode = "grid";
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.syncStatus();
+  controller.renderSubtitle();
+
+  assert.equal(nodes["#info-title"].textContent, "Grid");
+  assert.equal(nodes["#tl-range"].textContent, "Grid");
+});
+
+test("single-view camera switcher render hides for a single camera when preview is disabled", () => {
+  const nodes = {
+    "#cam-switcher": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes, previewPageEnabled: false });
+  host._config.cameras = [{ entity: "camera.front_door", name: "Front Door" }];
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderCamSwitcher();
+
+  assert.equal(nodes["#cam-switcher"].style.display, "none");
+});
+
+test("single-view camera switcher uses page navigation instead of a preview back button", () => {
+  const { host } = createHost({ previewPageEnabled: true });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const markup = controller.camSwitcherMarkup({ includeStatus: true });
+
+  assert.equal(markup.includes("data-preview-back"), false);
+  assert.equal(markup.includes('data-camidx="0"'), true);
+  assert.equal(markup.includes("Front Door"), true);
+});
+
+test("single-view renderLegend populates deterministic legend markup", () => {
+  const nodes = {
+    "#legend": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.renderLegend();
+
+  assert.equal(nodes["#legend"].innerHTML.includes("Person"), true);
+  assert.equal(nodes["#legend"].innerHTML.includes("Car"), true);
+  assert.equal(nodes["#legend"].innerHTML.includes("Front Door rec"), true);
+});
+
+test("single-view list label helpers format alerts and recordings headings", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  assert.equal(
+    controller.listHeadingLabel(1722470400),
+    "Wed - Jul 31st - Recent Alerts",
+  );
+  assert.equal(
+    controller.recordingsHeadingLabel(1722470400),
+    "Wed - Jul 31st - Recordings",
+  );
+
+  host._tab = "recordings";
+  const nodes = {
+    "#browse-head-label": createNode(),
+    "#browse-head": createNode(),
+    "#rec-day-prev": createNode(),
+    "#rec-day-next": createNode(),
+    "#card": {
+      classList: {
+        contains: () => false,
+      },
+    },
+  };
+  host._$ = (selector) => nodes[selector] || null;
+
+  controller.renderListLabel(1722470400);
+
+  assert.equal(nodes["#browse-head"].style.display, "flex");
+  assert.equal(
+    nodes["#browse-head-label"].textContent,
+    "Wed - Jul 31st - Recordings",
+  );
+  assert.equal(nodes["#rec-day-prev"].style.display, "inline-flex");
+  assert.equal(nodes["#rec-day-next"].style.display, "inline-flex");
+  assert.equal(nodes["#rec-day-prev"].disabled, true);
+  assert.equal(nodes["#rec-day-next"].disabled, true);
+  assert.equal(
+    calls.some(([action]) => action === "updateRecordingsBrowseNav"),
+    false,
+  );
+});
+
+test("single-view sticky-day helpers expose grouped section rendering", () => {
+  const { host } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  assert.equal(controller.showStickyDayHeaders(), true);
+
+  const html = controller.renderStickyDaySections(
+    [{ start_time: 1722470400, id: 1 }],
+    (item) => `<article>${item.id}</article>`,
+  );
+
+  assert.equal(html.includes("Wed - Jul 31st - Recent Alerts"), true);
+  assert.equal(html.includes("<article>1</article>"), true);
+});
+
+test("single-view event content helper builds flat and grouped markup", () => {
+  const { host } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  host._tab = "kept";
+  let html = controller.renderEventsContent([{ id: 1 }]);
+  assert.equal(html.includes('<article class="event">1</article>'), true);
+  assert.equal(html.includes("list-day-sec"), false);
+
+  host._tab = "alerts";
+  host._exhausted = true;
+  html = controller.renderEventsContent([{ id: 2, start_time: 1722470400 }]);
+  assert.equal(html.includes("list-day-sec"), true);
+  assert.equal(html.includes("Wed - Jul 31st - Recent Alerts"), true);
+  assert.equal(html.includes('<div class="end">— end —</div>'), true);
+});
+
+test("single-view kept content helper builds flat markup without end marker", () => {
+  const { host } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  host._exhausted = true;
+  const html = controller.renderKeptContent([{ id: 3 }, { id: 4 }]);
+
+  assert.equal(html.includes('<article class="event">3</article>'), true);
+  assert.equal(html.includes('<article class="event">4</article>'), true);
+  assert.equal(html.includes("list-day-sec"), false);
+  assert.equal(html.includes('<div class="end">— end —</div>'), false);
+});
+
+test("single-view review content helper builds grouped markup", () => {
+  const { host } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  const html = controller.renderReviewsContent([
+    { id: 7, start_time: 1722470400 },
+  ]);
+
+  assert.equal(html.includes("list-day-sec"), true);
+  assert.equal(html.includes('<article class="review">7</article>'), true);
+});
+
+test("single-view browse-head sync follows active sticky day label", () => {
+  const labelOne = {
+    dataset: { dayLabel: "Wed - Jul 31st - Recent Alerts" },
+    textContent: "Wed - Jul 31st - Recent Alerts",
+    getBoundingClientRect: () => ({ top: 90 }),
+  };
+  const labelTwo = {
+    dataset: { dayLabel: "Tue - Jul 30th - Recent Alerts" },
+    textContent: "Tue - Jul 30th - Recent Alerts",
+    getBoundingClientRect: () => ({ top: 110 }),
+  };
+  const nodes = {
+    "#list": {
+      scrollHeight: 0,
+      clientHeight: 0,
+      scrollTop: 0,
+      querySelectorAll: () => [labelOne, labelTwo],
+    },
+    "#browse": {
+      scrollTop: 0,
+      getBoundingClientRect: () => ({ top: 100 }),
+    },
+    "#browse-head-label": createNode(),
+  };
+  const { host } = createHost({ domNodes: nodes });
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.syncBrowseHeadFromScroll();
+
+  assert.equal(
+    nodes["#browse-head-label"].textContent,
+    "Wed - Jul 31st - Recent Alerts",
+  );
+});
+
+test("standard render helpers leave omitted regions untouched", () => {
+  const { host } = createHost();
+  host._pageShellRegion = () => null;
+  host._pageShellRegionElement = () => null;
+  host._$ = () => {
+    throw new Error("global selector fallback used");
+  };
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  assert.doesNotThrow(() => controller.renderCamSwitcher());
+  assert.doesNotThrow(() => controller.syncStatus());
+  assert.doesNotThrow(() => controller.renderStats());
+  assert.doesNotThrow(() => controller.renderSubtitle());
+  assert.doesNotThrow(() => controller.renderLegend());
+  assert.doesNotThrow(() => controller.renderListLabel());
+  assert.doesNotThrow(() => controller.syncBrowseHeadFromScroll());
+});

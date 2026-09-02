@@ -1,0 +1,151 @@
+# ── Frigate Configuration for Development ─────────────────────
+# This config uses demo/test cameras that work without real RTSP feeds.
+# Replace with your actual camera RTSP URLs for real testing.
+
+mqtt:
+  enabled: false
+
+# ── go2rtc for WebRTC streaming ──────────────────────────────
+go2rtc:
+  streams:
+    # Demo camera using a test pattern (works without real cameras)
+    front_door:
+      - "ffmpeg:https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4#video=h264"
+    backyard:
+      - "ffmpeg:https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4#video=h264"
+    driveway:
+      - "ffmpeg:https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4#video=h264"
+  webrtc:
+    candidates:
+      - 0.0.0.0:8555
+    listen: :8555
+
+# ── Camera Definitions ───────────────────────────────────────
+cameras:
+  front_door:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/front_door
+          input_args: preset-rtsp-restream-low-latency
+          roles:
+            - detect
+            - record
+
+    detect:
+      enabled: false
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: false
+      alerts:
+        retain:
+          days: 7
+      detections:
+        retain:
+          days: 7
+      continuous:
+        days: 3
+      motion:
+        days: 0
+    objects:
+      track:
+        - person
+        - car
+        - dog
+        - cat
+    motion:
+      threshold: 25
+
+  backyard:
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/backyard
+          input_args: preset-rtsp-restream-low-latency
+          roles:
+            - detect
+            - record
+
+    detect:
+      enabled: false
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: false
+      alerts:
+        retain:
+          days: 1
+      detections:
+        retain:
+          days: 1
+      continuous:
+        days: 1
+      motion:
+        days: 0
+    objects:
+      track:
+        - person
+        - dog
+        - bird
+    motion:
+      threshold: 25
+
+  driveway:
+    enabled: True
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1/driveway
+          input_args: preset-rtsp-restream-low-latency
+          roles:
+            - detect
+            - record
+    detect:
+      enabled: false
+      width: 1280
+      height: 720
+      fps: 5
+    record:
+      enabled: false
+      alerts:
+        retain:
+          days: 1
+      detections:
+        retain:
+          days: 1
+      continuous:
+        days: 1
+      motion:
+        days: 0
+    objects:
+      track:
+        - person
+        - car
+        - truck
+    motion:
+      threshold: 25
+
+# ── Detectors ────────────────────────────────────────────────
+# Using CPU detector for dev (no GPU required)
+detectors:
+  cpu:
+    type: cpu
+    num_threads: 3
+
+# ── Model ────────────────────────────────────────────────────
+model:
+  path: /cpu_model.tflite
+  width: 320
+  height: 320
+
+# ── Birdseye ─────────────────────────────────────────────────
+birdseye:
+  enabled: true
+  width: 1280
+  height: 720
+  quality: 8
+  mode: objects
+
+# ── UI Settings ──────────────────────────────────────────────
+ui: {}
+version: 0.17-0

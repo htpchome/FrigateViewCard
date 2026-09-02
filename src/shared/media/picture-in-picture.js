@@ -1,0 +1,329 @@
+import {
+  beginNativePictureInPictureAllowance,
+  disableNativePictureInPicture,
+  endNativePictureInPictureAllowance,
+  enableNativePictureInPicture,
+} from "./video-factory.js";
+
+export const PICTURE_IN_PICTURE_METHOD_STANDARD = "standard";
+export const PICTURE_IN_PICTURE_METHOD_WEBKIT = "webkit";
+const PICTURE_IN_PICTURE_EXIT_RECHECK_DELAYS_MS = Object.freeze([0, 120]);
+const PICTURE_IN_PICTURE_LAYOUT_REFRESH_DELAY_MS = 180;
+const PICTURE_IN_PICTURE_BUTTON_VIDEO_EVENTS = Object.freeze([
+  "enterpictureinpicture",
+  "leavepictureinpicture",
+  "webkitpresentationmodechanged",
+  "loadedmetadata",
+  "loadeddata",
+  "canplay",
+  "playing",
+  "emptied",
+]);
+
+function resolveOwnerDocument(video, documentObj) {
+  return documentObj || video?.ownerDocument || globalThis.document || null;
+}
+
+export function pictureInPictureElementForVideo(video, documentObj = null) {
+  if (!video) return null;
+  const root = video.getRootNode?.();
+  return (
+    root?.pictureInPictureElement ||
+    resolveOwnerDocument(video, documentObj)?.pictureInPictureElement ||
+    null
+  );
+}
+
+export function isVideoPictureInPictureActive(video, documentObj = null) {
+  if (!video) return false;
+  if (video.webkitPresentationMode === "picture-in-picture") return true;
+  return pictureInPictureElementForVideo(video, documentObj) === video;
+}
+
+export function resolveVideoPictureInPictureSupport({
+  video = null,
+  documentObj = null,
+} = {}) {
+  if (!video) return { supported: false, method: "" };
+  const doc = resolveOwnerDocument(video, documentObj);
+  if (
+    typeof video.requestPictureInPicture === "function" &&
+    doc?.pictureInPictureEnabled !== false
+  ) {
+    return {
+      supported: true,
+      method: PICTURE_IN_PICTURE_METHOD_STANDARD,
+    };
+  }
+
+  if (typeof video.webkitSetPresentationMode === "function") {
+    try {
+      if (
+        typeof video.webkitSupportsPresentationMode !== "function" ||
+        video.webkitSupportsPresentationMode("picture-in-picture")
+      ) {
+        return {
+          supported: true,
+          method: PICTURE_IN_PICTURE_METHOD_WEBKIT,
+        };
+      }
+    } catch (_) {}
+  }
+
+  return { supported: false, method: "" };
+}
+
+function applyDisabledPictureInPictureExitState({
+  video,
+  documentObj,
+  resumePlayback,
+  refreshSuppression = false,
+}) {
+  if (isVideoPictureInPictureActive(video, documentObj)) return;
+  if (refreshSuppression) enableNativePictureInPicture(video);
+  disableNativePictureInPicture(video);
+  if (!resumePlayback || !video?.paused) return;
+  try {
+    const playRequest = video.play?.();
+    playRequest?.catch?.(() => {});
+  } catch (_) {}
+}
+
+function scheduleDisabledPictureInPictureExitRecheck({
+  video,
+  documentObj,
+  resumePlayback,
+  setTimer,
+}) {
+  if (typeof setTimer !== "function") return;
+  for (const delayMs of PICTURE_IN_PICTURE_EXIT_RECHECK_DELAYS_MS) {
+    setTimer(() => {
+      applyDisabledPictureInPictureExitState({
+        video,
+        documentObj,
+        resumePlayback,
+        refreshSuppression: true,
+      });
+    }, delayMs);
+  }
+}
+
+export function refreshVideoPictureInPictureSuppressionLayout({
+  video = null,
+  requestFrame = globalThis.requestAnimationFrame?.bind(globalThis),
+} = {}) {
+  const style = video?.style;
+  if (
+    !style?.setProperty ||
+    !style?.getPropertyValue ||
+    !style?.removeProperty ||
+    typeof video?.getBoundingClientRect !== "function"
+  ) {
+    return false;
+  }
+
+  const bounds = video.getBoundingClientRect();
+  const width = Number(bounds?.width) || 0;
+  if (width <= 0) return false;
+
+  const previousWidth = style.getPropertyValue("width");
+  const previousPriority = style.getPropertyPriority?.("width") || "";
+  const nudgedWidth = `${Math.max(1, Math.round(width) - 1)}px`;
+  style.setProperty("width", nudgedWidth, "important");
+  video.getBoundingClientRect();
+
+  const restore = () => {
+    if (style.getPropertyValue("width") !== nudgedWidth) return;
+    if (previousWidth) {
+      style.setProperty("width", previousWidth, previousPriority);
+    } else {
+      style.removeProperty("width");
+    }
+    video.getBoundingClientRect();
+  };
+  if (typeof requestFrame === "function") requestFrame(restore);
+  else restore();
+  return true;
+}
+
+function schedulePictureInPictureSuppressionLayoutRefresh({
+  video,
+  documentObj,
+  setTimer,
+  requestFrame,
+}) {
+  if (
+    typeof setTimer !== "function" ||
+    !video?.style?.setProperty ||
+    typeof video?.getBoundingClientRect !== "function"
+  ) {
+    return;
+  }
+  setTimer(() => {
+    if (
+      video.isConnected === false ||
+      isVideoPictureInPictureActive(video, documentObj)
+    ) {
+      return;
+    }
+    refreshVideoPictureInPictureSuppressionLayout({ video, requestFrame });
+  }, PICTURE_IN_PICTURE_LAYOUT_REFRESH_DELAY_MS);
+}
+
+export async function toggleVideoPictureInPicture({
+  video = null,
+  documentObj = null,
+  temporarilyAllowDisabled = false,
+  resumePlaybackOnExit = false,
+  setTimer = globalThis.setTimeout?.bind(globalThis),
+  requestFrame = globalThis.requestAnimationFrame?.bind(globalThis),
+} = {}) {
+  const support = resolveVideoPictureInPictureSupport({ video, documentObj });
+  if (!support.supported) {
+    throw new Error("Picture-in-Picture is not supported for this video.");
+  }
+
+  if (support.method === PICTURE_IN_PICTURE_METHOD_STANDARD) {
+    const doc = resolveOwnerDocument(video, documentObj);
+    if (isVideoPictureInPictureActive(video, doc)) {
+      await doc.exitPictureInPicture();
+      if (temporarilyAllowDisabled) {
+        endNativePictureInPictureAllowance(video);
+        applyDisabledPictureInPictureExitState({
+          video,
+          documentObj: doc,
+          resumePlayback: resumePlaybackOnExit,
+        });
+        scheduleDisabledPictureInPictureExitRecheck({
+          video,
+          documentObj: doc,
+          resumePlayback: resumePlaybackOnExit,
+          setTimer,
+        });
+        schedulePictureInPictureSuppressionLayoutRefresh({
+          video,
+          documentObj: doc,
+          setTimer,
+          requestFrame,
+        });
+      }
+      return { active: false, method: support.method };
+    }
+    if (!temporarilyAllowDisabled) {
+      await video.requestPictureInPicture();
+      return { active: true, method: support.method };
+    }
+
+    beginNativePictureInPictureAllowance(video);
+    let restorePending = true;
+    const restoreSuppression = () => {
+      if (!restorePending) return;
+      restorePending = false;
+      endNativePictureInPictureAllowance(video);
+      video.removeEventListener?.(
+        "leavepictureinpicture",
+        restoreSuppression,
+      );
+      applyDisabledPictureInPictureExitState({
+        video,
+        documentObj: doc,
+        resumePlayback: resumePlaybackOnExit,
+      });
+      scheduleDisabledPictureInPictureExitRecheck({
+        video,
+        documentObj: doc,
+        resumePlayback: resumePlaybackOnExit,
+        setTimer,
+      });
+      schedulePictureInPictureSuppressionLayoutRefresh({
+        video,
+        documentObj: doc,
+        setTimer,
+        requestFrame,
+      });
+    };
+    video.addEventListener?.(
+      "leavepictureinpicture",
+      restoreSuppression,
+      { once: true },
+    );
+    try {
+      await video.requestPictureInPicture();
+    } catch (error) {
+      restorePending = false;
+      endNativePictureInPictureAllowance(video);
+      video.removeEventListener?.(
+        "leavepictureinpicture",
+        restoreSuppression,
+      );
+      disableNativePictureInPicture(video);
+      throw error;
+    }
+    return { active: true, method: support.method };
+  }
+
+  const active = isVideoPictureInPictureActive(video, documentObj);
+  video.webkitSetPresentationMode(active ? "inline" : "picture-in-picture");
+  return { active: !active, method: support.method };
+}
+
+export class PictureInPictureButtonController {
+  constructor({ button = null, video = null, documentObj = null } = {}) {
+    this.button = button;
+    this.video = video;
+    this._documentObj = documentObj;
+    this._bound = false;
+  }
+
+  bind() {
+    if (this._bound || !this.button || !this.video) return this;
+    this._bound = true;
+    for (const eventName of PICTURE_IN_PICTURE_BUTTON_VIDEO_EVENTS) {
+      this.video.addEventListener?.(eventName, this._sync);
+    }
+    this.refresh();
+    return this;
+  }
+
+  refresh() {
+    if (!this.button || !this.video) return false;
+    const support = resolveVideoPictureInPictureSupport({
+      video: this.video,
+      documentObj: this._documentObj,
+    });
+    const mediaReady =
+      this.video.readyState === undefined || Number(this.video.readyState) > 0;
+    const available = support.supported && mediaReady;
+    const active =
+      available &&
+      isVideoPictureInPictureActive(this.video, this._documentObj);
+    this.button.hidden = !available;
+    this.button.disabled = !available;
+    this.button.classList?.toggle?.("active", active);
+    this.button.setAttribute?.(
+      "aria-hidden",
+      available ? "false" : "true",
+    );
+    this.button.setAttribute?.("aria-pressed", active ? "true" : "false");
+    this.button.title = active
+      ? "Exit Picture-in-Picture"
+      : "Picture-in-Picture";
+    this.button.setAttribute?.("aria-label", this.button.title);
+    return available;
+  }
+
+  dispose() {
+    if (this._bound && this.video) {
+      for (const eventName of PICTURE_IN_PICTURE_BUTTON_VIDEO_EVENTS) {
+        this.video.removeEventListener?.(eventName, this._sync);
+      }
+    }
+    if (this.button) {
+      this.button.hidden = true;
+      this.button.disabled = true;
+    }
+    this._bound = false;
+  }
+
+  _sync = () => this.refresh();
+}
