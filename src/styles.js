@@ -56,13 +56,13 @@ export const STYLES = `
   .card[data-theme-mode="dark"] {
     --fvc-mobile-list: #181818;
     --fvc-list: #181818;
-    --fvc-tabs-holder: var(--secondary-background-color);
+    --fvc-tabs-holder: var(--primary-background-color);
   }
   .card[data-ha-theme="custom"] {
     --fvc-mobile-bg: var(--wa-color-neutral-fill-normal, var(--secondary-background-color));
     --fvc-mobile-list: var(--primary-background-color);
     --fvc-list: var(--secondary-background-color);
-    --fvc-tabs-holder: var(--secondary-background-color);
+    --fvc-tabs-holder: var(--primary-background-color);
   }
   .card[data-ha-theme="custom"][data-ha-dark-primary="derived"] {
     --dark-primary-color: color-mix(in srgb, var(--primary-color) 75%, black);
