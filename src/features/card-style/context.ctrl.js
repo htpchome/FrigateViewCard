@@ -46,10 +46,18 @@ const themeDeclaresDarkPrimary = (definition, mode) =>
     DARK_PRIMARY_THEME_KEYS,
   );
 
-export const resolveHomeAssistantThemeContext = (hass) => {
+export const resolveHomeAssistantThemeContext = (
+  hass,
+  { mode: requestedMode } = {},
+) => {
   const themes = hass?.themes || {};
   const { darkMode = false } = themes;
-  const mode = darkMode === true ? "dark" : "light";
+  const mode =
+    requestedMode === "dark" || requestedMode === "light"
+      ? requestedMode
+      : darkMode === true
+        ? "dark"
+        : "light";
   const selectedTheme = String(
     themes.theme || hass?.selectedTheme || "default",
   ).trim();

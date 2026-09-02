@@ -997,15 +997,37 @@ export class FrigateViewCardEditor extends HTMLElement {
     );
   }
 
+  _deriveDarkPrimaryHex() {
+    const primary = normalizeHexColor(
+      this._resolveColorToHex("var(--primary-color)", ""),
+    );
+    if (!primary) {
+      return this._resolveColorToHex(
+        THEME_DEFAULTS["--c-primary-d"],
+        "#000000",
+      );
+    }
+    const darkenChannel = (offset) =>
+      Math.round(Number.parseInt(primary.slice(offset, offset + 2), 16) * 0.75)
+        .toString(16)
+        .padStart(2, "0");
+    return `#${darkenChannel(1)}${darkenChannel(3)}${darkenChannel(5)}`;
+  }
+
   _themeDefaultHex(key, mode = this._activeThemeModeKey()) {
     const normalizedMode = normalizeThemeMode(mode);
+    const themeContext = resolveHomeAssistantThemeContext(this._hass, {
+      mode: normalizedMode,
+    });
+    if (key === "--c-primary-d" && themeContext.deriveDarkPrimary) {
+      return this._deriveDarkPrimaryHex();
+    }
     if (
       key === "--c-bg-mobile-list" ||
       key === "--c-bg-list" ||
       key === "--c-bg-cam-btn"
     ) {
-      const { source } = resolveHomeAssistantThemeContext(this._hass);
-      if (source === "custom") {
+      if (themeContext.source === "custom") {
         return this._resolveColorToHex(
           "var(--secondary-background-color)",
           normalizedMode === "dark" ? "#181818" : "#f0f0f0",

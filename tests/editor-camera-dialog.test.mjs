@@ -520,6 +520,45 @@ test("theme color pickers match the exact active mobile surface defaults", () =>
   assert.equal(editor._themeDefaultHex("--c-bg-cam-btn"), "#24384c");
 });
 
+test("Primary Dark picker matches the derived custom HA theme color", () => {
+  const editor = new FrigateViewCardEditor();
+  editor._resolveColorToHex = (value, fallback) => {
+    if (value === "var(--primary-color)") return "#6699cc";
+    if (value === "var(--dark-primary-color)") return "#224466";
+    return fallback;
+  };
+  editor._hass = {
+    themes: {
+      darkMode: false,
+      theme: "Incomplete Theme",
+      themes: {
+        "Incomplete Theme": {
+          "primary-color": "#6699cc",
+        },
+        "Complete Theme": {
+          "primary-color": "#6699cc",
+          "dark-primary-color": "#224466",
+        },
+        "Mode Theme": {
+          "primary-color": "#6699cc",
+          modes: {
+            dark: { "dark-primary-color": "#224466" },
+          },
+        },
+      },
+    },
+  };
+
+  assert.equal(editor._themeDefaultHex("--c-primary-d"), "#4d7399");
+
+  editor._hass.themes.theme = "Complete Theme";
+  assert.equal(editor._themeDefaultHex("--c-primary-d"), "#224466");
+
+  editor._hass.themes.theme = "Mode Theme";
+  assert.equal(editor._themeDefaultHex("--c-primary-d", "light"), "#4d7399");
+  assert.equal(editor._themeDefaultHex("--c-primary-d", "dark"), "#224466");
+});
+
 test("camera modal closes for document clicks outside its card", () => {
   const editor = new FrigateViewCardEditor();
   const insideControl = {};
