@@ -88,6 +88,14 @@ The visual editor keeps YAML compact. Default values are accepted by the card bu
 | Card View | Desktop and tablet | Off | Naturally sized view intended for dashboards that mix FrigateViewCard with other Home Assistant cards. |
 
 Grid, Slideshow, PTZ, and alert-takeover controls are coordinated so incompatible modes cannot be active at the same time. Grid and Slideshow modes are unavailable on phone devices.
+### Mobile View
+A Mobile View made to be a Mobile View
+
+![Mobile View](images/mobile-1.png)
+![Mobile View PTZ](images/mobile-2.png)
+![Mobile View Two Way Walk](images/mobile-3.png)
+![Mobile View segment](images/mobile-4.png)
+![Mobile View Preview Page](images/mobile-5.png)
 
 ### Single View
 
@@ -102,12 +110,6 @@ Wide View can optionally add a collapsible vertical Timeline beside the browse a
 ### Preview
 
 <img width="1051" height="1193" alt="Preview" src="https://github.com/user-attachments/assets/6359ae45-cceb-4cb6-b8a6-1591df83fbb2" />
-
-### Mobile View
-
-<img width="296" height="640" alt="Mobile View" src="https://github.com/user-attachments/assets/c19c3763-289e-4956-ab23-e054e2c66a5c" />
-
-<img width="296" height="640" alt="Mobile PTZ" src="https://github.com/user-attachments/assets/4302b1a6-8a4d-4950-a0cc-c06df3f87824" />
 
 ### Card View
 
