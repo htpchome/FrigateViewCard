@@ -1,7 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { LiveOverlayControlsController } from "../src/card/controls/live-overlay.ctrl.js";
+import {
+  MediaOverlayControlsController as LiveOverlayControlsController,
+} from "../src/shared/media/overlay-controls.ctrl.js";
 
 function createTarget() {
   const listeners = new Map();

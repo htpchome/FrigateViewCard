@@ -242,7 +242,9 @@ import {
 } from "../shared/favorite-mutation.js";
 import { createDateFormatterCache } from "../shared/date-formatter-cache.js";
 import { ListScrollController } from "../features/browse/scroll.ctrl.js";
-import { LiveOverlayControlsController } from "./controls/live-overlay.ctrl.js";
+import {
+  MediaOverlayControlsController as LiveOverlayControlsController,
+} from "../shared/media/overlay-controls.ctrl.js";
 import { PopupInfoController } from "../features/popup/info.ctrl.js";
 import { PopupMediaControlsSurfaceController } from "../features/popup/media.ctrl.js";
 import { PopupCarouselController } from "../features/popup/carousel.ctrl.js";
