@@ -92,10 +92,10 @@ Grid, Slideshow, PTZ, and alert-takeover controls are coordinated so incompatibl
 A Mobile View made to be a Mobile View
 
 <img src="images/mobile-1.jpg" alt="Mobile View" width="200">
-![Mobile View PTZ](images/mobile-2.jpg)
-![Mobile View Two Way Walk](images/mobile-3.jpg)
-![Mobile View segment](images/mobile-4.jpg)
-![Mobile View Preview Page](images/mobile-5.jpg)
+<img src="images/mobile-2.jpg" alt="Mobile View PTZ" width="200">
+<img src="images/mobile-3.jpg" alt="Mobile View Two Way Walk" width="200">
+<img src="images/mobile-4.jpg" alt="Mobile View segment" width="200">
+<img src="images/mobile-5.jpg" alt="Mobile View Preview Page" width="200">
 
 ### Single View
 
