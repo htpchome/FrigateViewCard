@@ -144,7 +144,8 @@ export const STYLES = `
   .card.card-picker-demo #stream-fallback{display:block !important;z-index:6;}
   .card.card-picker-demo .stream-loading,
   .card.card-picker-demo .stream-fallback-status{display:none !important;}
-  .card.card-picker-demo .card-picker-demo-live{position:absolute;inset:0;overflow:hidden;background:var(--c-bg-deep);}
+  .card.card-picker-demo .card-picker-demo-live{position:absolute;inset:0;overflow:hidden;background:#000;}
+  .card.card-picker-demo .card-picker-demo-brand{display:block;width:100%;height:100%;}
   .card.card-picker-demo .card-picker-demo-scene{display:block;width:100%;height:100%;}
   .card.card-picker-demo .card-picker-demo-live > .card-picker-demo-scene{filter:brightness(.68) saturate(.85) contrast(1.1);}
   .card.card-picker-demo .card-picker-demo-scene-sky{fill:var(--c-primary-l);}

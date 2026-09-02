@@ -15,7 +15,12 @@ import {
   compactEditorConfigForYaml,
   withCardTypeForYaml,
 } from "../src/config/yaml-mapper.js";
-import { normalizeCardConfig } from "../src/config/card-config.js";
+import {
+  DEFAULT_CAMERA_ENTITY,
+  PREFERRED_DEFAULT_CAMERA_ENTITIES,
+  normalizeCardConfig,
+  resolvePreferredDefaultCameraEntity,
+} from "../src/config/card-config.js";
 import {
   normalizeCardHeight,
   normalizeCardHeightUnit,
@@ -45,6 +50,45 @@ const editorSource = fs.readFileSync(
   new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
   "utf8",
 );
+
+test("new cards prefer familiar available camera entities in order", () => {
+  assert.deepEqual(PREFERRED_DEFAULT_CAMERA_ENTITIES, [
+    "camera.doorbell",
+    "camera.front_door",
+    "camera.driveway",
+    "camera.garage",
+    "camera.backyard",
+  ]);
+  assert.equal(
+    resolvePreferredDefaultCameraEntity({
+      states: {
+        "camera.driveway": {},
+        "camera.front_door": {},
+        "camera.garage": {},
+      },
+    }),
+    "camera.front_door",
+  );
+  assert.equal(
+    resolvePreferredDefaultCameraEntity({
+      states: {
+        "camera.backyard": {},
+        "camera.garage": {},
+      },
+    }),
+    "camera.garage",
+  );
+});
+
+test("new cards fall back to doorbell when no preferred camera exists", () => {
+  assert.equal(
+    resolvePreferredDefaultCameraEntity({
+      states: { "camera.side_yard": {} },
+    }),
+    DEFAULT_CAMERA_ENTITY,
+  );
+  assert.equal(resolvePreferredDefaultCameraEntity(), "camera.doorbell");
+});
 
 test("card runtime preserves editor-backed favorite and alert hold settings", () => {
   const setConfigStart = cardSource.indexOf("  setConfig(config) {");

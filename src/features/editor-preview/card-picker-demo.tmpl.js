@@ -36,10 +36,28 @@ const buildGenericCameraSceneMarkup = (variant = "entry") => {
     </svg>`;
 };
 
+const buildFrigateViewBrandMarkup = () => `
+  <svg class="card-picker-demo-brand" viewBox="0 0 512 288" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <defs>
+      <linearGradient id="card-picker-demo-brand-gold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffd166"></stop>
+        <stop offset=".55" stop-color="#f6a02d"></stop>
+        <stop offset="1" stop-color="#c77b00"></stop>
+      </linearGradient>
+    </defs>
+    <rect width="512" height="288" fill="#000000"></rect>
+    <g fill="url(#card-picker-demo-brand-gold)" transform="translate(149 3) scale(.45)">
+      <path d="M72 54c18 46 48 83 88 106 27 16 61 28 91 44 23 13 31 29 24 53-5 19-17 40-34 61-18 22-38 41-56 48-27 11-77-6-107-18 59-14 112-43 153-79-51-1-90-7-118-24-36-23-50-76-46-140 1-20 2-38 5-51Z"></path>
+      <path d="M154 20c-15 24-18 45-15 65 4 31 23 54 54 73 20 13 45 23 69 34 31 15 54 34 71 58l-1-34c-22-28-46-46-81-65-46-25-75-49-91-76-8-13-8-35-6-55Z"></path>
+      <path d="M231 343c39-12 74-29 98-52 21-21 28-45 31-90 2-31 16-50 48-56-9-11-19-15-31-15-10-14-22-22-35-23-25 0-43 18-51 50 16-16 37-30 54-25 6 2 11 5 15 9-19 10-28 27-28 49v26c-17-21-36-35-58-45 18 20 26 48 22 76-4 37-27 71-65 96Z"></path>
+    </g>
+    <text x="256" y="226" fill="#bdbdbd" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="300" letter-spacing=".5" text-anchor="middle">FRIGATEVIEW</text>
+    <text x="256" y="259" fill="#f7941d" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="middle">For Home Assistant and Frigate</text>
+  </svg>`;
+
 export function buildCardPickerDemoLiveMarkup() {
-  return `<div class="card-picker-demo-live" role="img" aria-label="Generic camera preview illustration">
-      ${buildGenericCameraSceneMarkup("entry")}
-      <span class="card-picker-demo-live-label">Demo camera</span>
+  return `<div class="card-picker-demo-live" role="img" aria-label="FrigateView preview branding">
+      ${buildFrigateViewBrandMarkup()}
     </div>`;
 }
 

@@ -6,11 +6,15 @@ import {
   buildCardPickerDemoLiveMarkup,
 } from "../src/features/editor-preview/card-picker-demo.tmpl.js";
 
-test("card picker live demo is generic and self-contained", () => {
+test("card picker live demo uses self-contained FrigateView branding", () => {
   const markup = buildCardPickerDemoLiveMarkup();
 
-  assert.match(markup, /Generic camera preview illustration/);
-  assert.match(markup, /card-picker-demo-scene/);
+  assert.match(markup, /FrigateView preview branding/);
+  assert.match(markup, /card-picker-demo-brand/);
+  assert.match(markup, /FRIGATEVIEW/);
+  assert.match(markup, /For Home Assistant and Frigate/);
+  assert.match(markup, /card-picker-demo-brand-gold/);
+  assert.match(markup, /fill="#000000"/);
   assert.doesNotMatch(markup, /https?:\/\//);
   assert.doesNotMatch(markup, /camera\.[a-z0-9_]+/i);
 });

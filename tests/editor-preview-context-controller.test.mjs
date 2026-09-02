@@ -89,7 +89,7 @@ test("renderCardPickerDemo paints an isolated presentation surface", () => {
   assert.deepEqual(cardClasses, ["card-picker-demo"]);
   assert.match(
     nodes["#stream-fallback"].innerHTML,
-    /Generic camera preview illustration/,
+    /FrigateView preview branding/,
   );
   assert.equal(nodes["#stream-fallback"].hidden, false);
   assert.equal(nodes["#browse"].style.display, "flex");

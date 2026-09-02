@@ -112,6 +112,10 @@ import {
 import { normalizeGridOrderConfig } from "../features/grid/config.js";
 import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
 import {
+  DEFAULT_CAMERA_ENTITY,
+  resolvePreferredDefaultCameraEntity,
+} from "../config/card-config.js";
+import {
   buildFrigateNotificationMediaPath,
   buildFrigateReviewThumbnailPath,
 } from "../integrations/frigate/url.js";
@@ -1517,11 +1521,11 @@ export class FrigateViewCard extends HTMLElement {
     }
     return document.createElement(editorTag);
   }
-  static getStubConfig() {
+  static getStubConfig(hass) {
     return {
       cameras: [
         {
-          entity: "camera.front_door",
+          entity: resolvePreferredDefaultCameraEntity(hass),
           alerts_content: "alerts_only",
         },
       ],
@@ -1579,8 +1583,8 @@ export class FrigateViewCard extends HTMLElement {
       // Final safety placeholder: keep card mountable instead of red error state.
       cameras = [
         {
-          entity: "camera.front_door",
-          name: "Front Door",
+          entity: DEFAULT_CAMERA_ENTITY,
+          name: "Doorbell",
           alerts_content: "alerts_only",
         },
       ];

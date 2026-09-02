@@ -43,6 +43,26 @@ import {
 import { limitCameraConfigsByPhysicalCount } from "../features/camera-groups/model.js";
 import { normalizeGridOrderConfig } from "../features/grid/config.js";
 
+export const DEFAULT_CAMERA_ENTITY = "camera.doorbell";
+export const PREFERRED_DEFAULT_CAMERA_ENTITIES = Object.freeze([
+  "camera.doorbell",
+  "camera.front_door",
+  "camera.driveway",
+  "camera.garage",
+  "camera.backyard",
+]);
+
+export const resolvePreferredDefaultCameraEntity = (hass) => {
+  const states = hass?.states;
+  if (!states || typeof states !== "object") return DEFAULT_CAMERA_ENTITY;
+
+  return (
+    PREFERRED_DEFAULT_CAMERA_ENTITIES.find((entityId) =>
+      Object.prototype.hasOwnProperty.call(states, entityId),
+    ) || DEFAULT_CAMERA_ENTITY
+  );
+};
+
 const normalizeCameras = (config) => {
   let cameras = [];
   if (Array.isArray(config?.cameras)) {
