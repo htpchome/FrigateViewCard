@@ -82,36 +82,50 @@ The visual editor keeps YAML compact. Default values are accepted by the card bu
 | View | Devices | Default | Purpose |
 | --- | --- | --- | --- |
 | Single View | Desktop, tablet, phone | Always enabled | Main live camera, camera switcher, full browse area, page navigation, and tools. |
-| Mobile View | Desktop, tablet, phone | Off | Compact phone-oriented live, stream information, camera switcher, browse, microphone, and PTZ layout. |
+| Mobile View | Desktop, tablet, phone | Enabled | Phone-first live view with touch-optimized controls, browsing, talk, PTZ, and Home Assistant navigation options. |
 | Preview | Desktop, tablet, phone | Off | All configured cameras as live or refreshed snapshot tiles. Selecting a camera opens the configured destination view. |
 | Wide View | Desktop and tablet | Off | Resizable two-column layout with the main live camera, browse area, and all ordered Companion Cameras. |
 | Card View | Desktop and tablet | Off | Naturally sized view intended for dashboards that mix FrigateViewCard with other Home Assistant cards. |
 
 Grid, Slideshow, PTZ, and alert-takeover controls are coordinated so incompatible modes cannot be active at the same time. Grid and Slideshow modes are unavailable on phone devices.
-### Mobile View
-A Mobile View made to be a Mobile View
 
-<img src="images/mobile-1.jpg" alt="Mobile View" width="200">&nbsp;&nbsp;<img src="images/mobile-2.jpg" alt="Mobile View PTZ" width="200">&nbsp;&nbsp;<img src="images/mobile-3.jpg" alt="Mobile View Two Way Walk" width="200">&nbsp;&nbsp;<img src="images/mobile-4.jpg" alt="Mobile View segment" width="200">&nbsp;&nbsp;<img src="images/mobile-5.jpg" alt="Mobile View Preview Page" width="200">
+### Mobile View
+
+Mobile View turns a phone into a focused Frigate control center. The active camera, camera picker, alerts, clips, recordings, Favorites, and essential live controls share one touch-optimized layout, keeping common actions close without giving up the card's full media browser. PTZ, two-way talk, linked-light controls, fullscreen rotation, A/B camera-group switching, and recording segment downloads are all adapted for smaller screens.
+
+It can also reshape the surrounding Home Assistant experience. Move the Home Assistant dashboard navbar to the bottom for easier reach, optionally stack each icon above its label, and choose whether that layout follows you across the whole dashboard. A designated FrigateViewCard can provide touch swipe navigation through selected FrigateView pages and Home Assistant dashboard pages, with gesture guards for controls, media, horizontal scrollers, and Home Assistant's native left-edge menu gesture.
+
+For a lighter mobile footprint, Preview can hand the selected camera into Mobile View, inactive overview cameras can stay on refreshed snapshots, and Mobile Battery Saver reduces alert and review polling to once per minute.
+
+<img src="images/mobile-1.jpg" alt="Mobile View live camera and alerts" width="200">&nbsp;&nbsp;<img src="images/mobile-2.jpg" alt="Mobile View PTZ controls" width="200">&nbsp;&nbsp;<img src="images/mobile-3.jpg" alt="Mobile View two-way talk" width="200">&nbsp;&nbsp;<img src="images/mobile-4.jpg" alt="Mobile View recording segment editor" width="200">&nbsp;&nbsp;<img src="images/mobile-5.jpg" alt="Preview to Mobile View camera selection" width="200">
 
 ### Single View
 
-<img src="images/single-view.jpg" alt="Single View" width="400">
+Single View is the card's always-available camera command center. One live camera stays front and center, backed by fast camera switching, stream and alert status, page navigation, and direct access to mute, fullscreen, snapshots, Picture-in-Picture where supported, linked lights, PTZ, and two-way talk.
+
+Below the live view is the complete Frigate media workflow: Alerts, Clips, Snapshots, Recordings, Favorites, filters, calendar navigation, and feature-rich media popups. On desktop and tablet, Single View can also move into Slideshow or a rotating 2x2 Grid, making it equally comfortable as a dedicated security screen or the dependable home base of a larger dashboard.
+
+<img src="images/single-view.png" alt="Single View live camera and Frigate media browser" width="400">
 
 ### Wide View
 
-<img src="images/wide-view.jpg" alt="Wide View" width="400">
+<img src="images/wide-view.png" alt="Wide View" width="400">
 
 Wide View can optionally add a collapsible vertical Timeline beside the browse area. It reuses the active camera's loaded Alert and Event data, follows the calendar and browse filters, and supports 1/6/12/24-hour scales. It begins at the current time, scrolls vertically toward older activity, and keeps time/day labels synchronized with the visible range. Dense activity becomes vertically flippable thumbnail stacks; Alerts receive the alert outline and take precedence over Events at the same point. The responsive panel consumes browse width when space permits and becomes a drawer overlay only after the browse area reaches its protected minimum width.
 
 ### Preview
 
-<img src="images/preview-page.jpg" alt="Mobile View" width="400">
+Preview is the at-a-glance camera overview. Every configured physical camera receives its own responsive tile, including separate A/B tiles for grouped cameras, with optional title bars showing the camera name, stream source, Alerts count, and online state. Selecting any tile carries that camera directly into the configured Single View or Mobile View flow.
+
+Preview can keep every tile live, or use refreshed snapshots to deliver a fast overview with far less network and device load. Desktop and mobile live-tile behavior can be configured independently. When a qualifying alert arrives, a snapshot tile can temporarily promote itself to live video, so the camera that matters comes alive automatically without requiring an always-live camera wall.
+
+<img src="images/preview-page.png" alt="Preview page showing an overview of configured cameras" width="400">
 
 ### Card View
 
 Card View is a desktop/tablet layout designed to sit beside other cards in a Home Assistant dashboard. It uses its content and live-video aspect ratio to determine its natural height, so the global Card Height Limit does not apply.
 
-<img src="images/card-view.jpg" alt="Card View" width="400">
+<img src="images/card-view.png" alt="Card View" width="400">
 
 Its activity drawer sits between the live view and footer. Either footer handle can open or close it by click, touch, or swipe, and `card_view_drawer_default_open` controls its initial state. The drawer can switch between horizontally paged Alerts and active-camera Recordings. Alerts can be scoped to the active camera or mixed across all configured cameras, and the calendar is available in both activity modes. PTZ temporarily replaces the activity row when active.
 
@@ -133,7 +147,7 @@ Card View also supports Grid, Slideshow, alert takeover, two-way talk, linked li
 | `alerts_reviews_days` | number | `window_days` | Number of recent days containing qualifying Alerts/Reviews to load and count. The editor offers 1–15. |
 | `realtime_poll_seconds` | number | `5` | How often the card checks for new alerts and reviews when realtime notifications are delayed or missed. Valid values: `2`, `5`, `10`, `15`, `30`, `60`. |
 | `mobile_poll_battery_saver` | boolean | `false` | Uses 60-second polling on mobile devices to reduce battery and data use. |
-| `snapshot_update_seconds` | number | `60` | Snapshot refresh interval for snapshot-based Preview, Grid, and Wide View Companion Camera tiles. Range: `10`–`240`. |
+| `snapshot_update_seconds` | number | `60` | Snapshot refresh interval for snapshot-based Preview, Grid, and Wide View Companion Camera tiles. Valid values: `10`, `20`, `30`, `60`, `120`, `300`. |
 | `event_pre_post_roll_enabled` | boolean | `false` | Adds 5 seconds before and after Alerts and Clips during popup playback and download when Frigate recording footage is available. |
 | `favorites_mixed_cameras` | boolean | `true` | Combines favorites from all configured cameras in Favorites. Set to `false` for the active camera only. |
 | `deep_link_enabled` | boolean | `true` | Allows this card instance to consume supported notification URL parameters. Disable on cards that should ignore shared dashboard deep links. |
@@ -144,20 +158,29 @@ Card View also supports Grid, Slideshow, alert takeover, two-way talk, linked li
 | --- | --- | --- | --- |
 | `slideshow_rotation_enabled` | boolean | `false` | Enables main-camera Slideshow rotation on non-phone devices. |
 | `slideshow_rotation_seconds` | number | `30` | Slideshow interval. Valid values: `10`, `20`, `30`, `60`. |
-| `slideshow_alert_hold_seconds` | number | `10` | Time an alert takeover is held during Slideshow operation. Range: `5`–`60`. |
+| `slideshow_alert_hold_seconds` | number | `10` | Time an alert takeover is held during Slideshow operation. Valid values: `10`, `20`, `30`, `60`, `120`. |
 | `grid_mode_enabled` | boolean | `false` | Enables the 2x2 Grid mode on non-phone devices when at least two cameras exist. |
 | `grid_order` | object | Default camera order | Optional custom Grid-only camera order. Set `mode: custom`, list visible physical camera entity IDs in `included`, and place Grid-excluded IDs in `excluded`. Camera Settings order is not changed, and grouped A/B members are ordered separately. |
 | `grid_start_in_grid_enabled` | boolean | `false` | Starts in Grid mode and returns to it when re-entering the dashboard. |
 | `grid_live_view_enabled` | boolean | `true` | Keeps visible Grid cameras live. When disabled, tiles use snapshots and qualifying alerts temporarily promote a tile to live. |
 | `grid_rotation_seconds` | number | `30` | Grid-page rotation interval when more than four cameras exist. Valid values: `10`, `20`, `30`, `60`. |
-| `grid_alert_hold_seconds` | number | `10` | Time an alerted Grid tile remains promoted. Range: `5`–`60`. |
-| `mobile_view_page_enabled` | boolean | `false` | Enables Mobile View in navigation and eligible landing-page choices. |
-| `ha_dashboard_swipe_navigation` | boolean | `false` | On touch devices, enables left/right navigation between visible Home Assistant pages after this card loads. Interactive controls, media gestures, horizontal scrollers, subviews, and native screen-edge gestures are excluded. |
+| `grid_alert_hold_seconds` | number | `10` | Time an alerted Grid tile remains promoted. Valid values: `10`, `20`, `30`, `60`. |
+| `mobile_view_page_enabled` | boolean | `true` | Enables Mobile View in navigation and eligible landing-page choices. |
+| `mobile_view_rotate_to_fullscreen` | boolean | `true` | Expands live and popup media to fullscreen when a supported touch device rotates to landscape. |
+| `mobile_view_ha_navbar_bottom` | boolean | `false` | Moves the Home Assistant dashboard navbar to the bottom on phones while Mobile View is active. |
+| `mobile_view_ha_navbar_stack_tabs` | boolean | `false` | With the bottom navbar enabled, centers supported Home Assistant page titles beneath their icons. |
+| `mobile_view_ha_navbar_dashboard` | boolean | `false` | Keeps the bottom-navbar layout active across the whole dashboard after this card loads. |
+| `ha_dashboard_swipe_navigation_owner` | boolean | `false` | Makes this card the one FrigateViewCard responsible for dashboard swipe navigation. Only one card should own it per dashboard. |
+| `ha_dashboard_swipe_navigation` | string | `dashboard-wide` | Swipe scope: `dashboard-wide`, `inside-card`, `landing-dashboard`, or `none`. Touch swipes protect interactive controls, media gestures, horizontal scrollers, and Home Assistant's native left-edge gesture. |
+| `ha_dashboard_swipe_pages` | list | Preview plus landing page | FrigateView pages included by `dashboard-wide` and `inside-card`; the enabled desktop/tablet landing page is always included. |
+| `ha_dashboard_swipe_include_other_cards` | boolean | `false` | In `inside-card` mode, includes eligible FrigateView pages contributed by other cards in the dashboard. |
+| `ha_dashboard_swipe_include_subviews` | boolean | `false` | Allows supported dashboard-wide swipe modes to include Home Assistant subviews. |
+| `ha_dashboard_swipe_mouse_enabled` | boolean | `false` | Allows a primary-button mouse drag to use the configured swipe navigation. |
 | `preview_page_enabled` | boolean | `false` | Enables Preview in navigation and eligible landing-page choices. |
 | `preview_page_live_cameras` | boolean | `false` | Keeps all Preview tiles live. When disabled, tiles use refreshed snapshots and qualifying alerts temporarily promote them to live. |
 | `preview_page_live_cameras_mobile` | boolean | `false` | Separately keeps Preview tiles live on phone and tablet devices. When disabled, those devices use refreshed snapshots even if desktop Preview tiles are configured live. |
 | `preview_page_show_title_bars` | boolean | `true` | Shows camera name, source, Alerts count, and online state beneath Preview tiles. |
-| `preview_page_alert_live_duration_seconds` | number | `10` | Shared live-promotion duration for alerted Preview and Wide View Companion Camera tiles. Range: `5`–`60`. |
+| `preview_page_alert_live_duration_seconds` | number | `10` | Shared live-promotion duration for alerted Preview and Wide View Companion Camera tiles. Valid values: `5`, `10`, `20`, `30`, `60`, `120`. |
 | `wide_view_page_enabled` | boolean | `false` | Enables Wide View for desktop/tablet navigation and landing-page selection. |
 | `wide_view_live_cameras` | boolean | `false` | Keeps all Wide View Companion Cameras live instead of using refreshed snapshots. |
 | `wide_view_alert_takeover` | boolean | `false` | Initial state of the runtime control that lets a qualifying Companion Camera alert take over the main live view. |

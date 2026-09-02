@@ -444,7 +444,10 @@ test("phone landing modes use the configured editor order", () => {
 });
 
 test("phone landing modes only include enabled page combinations", () => {
-  assert.deepEqual(getEnabledMobilePageModes({}), [MOBILE_PAGE_MODES.single]);
+  assert.deepEqual(getEnabledMobilePageModes({}), [
+    MOBILE_PAGE_MODES.mobile,
+    MOBILE_PAGE_MODES.single,
+  ]);
   assert.deepEqual(
     getEnabledMobilePageModes({
       mobile_view_page_enabled: true,
@@ -501,6 +504,7 @@ test("desktop landing page honors enabled wide-view route", () => {
 
   assert.deepEqual(getEnabledPageRoutes(config, DEVICE_ROUTE_BUCKETS.desktop), [
     PAGE_IDS.singleView,
+    PAGE_IDS.mobileView,
     PAGE_IDS.preview,
     PAGE_IDS.wideView,
   ]);
@@ -523,6 +527,7 @@ test("mobile landing page excludes wide-view even when enabled", () => {
 
   assert.deepEqual(getEnabledPageRoutes(config, DEVICE_ROUTE_BUCKETS.mobile), [
     PAGE_IDS.singleView,
+    PAGE_IDS.mobileView,
     PAGE_IDS.preview,
   ]);
   assert.equal(
@@ -543,14 +548,17 @@ test("Card View is a desktop/tablet landing route and is never a phone route", (
 
   assert.deepEqual(getEnabledPageRoutes(config, DEVICE_ROUTE_BUCKETS.desktop), [
     PAGE_IDS.singleView,
+    PAGE_IDS.mobileView,
     PAGE_IDS.cardView,
   ]);
   assert.deepEqual(getEnabledPageRoutes(config, DEVICE_ROUTE_BUCKETS.tablet), [
     PAGE_IDS.singleView,
+    PAGE_IDS.mobileView,
     PAGE_IDS.cardView,
   ]);
   assert.deepEqual(getEnabledPageRoutes(config, DEVICE_ROUTE_BUCKETS.mobile), [
     PAGE_IDS.singleView,
+    PAGE_IDS.mobileView,
   ]);
   assert.equal(
     resolveStartupPageRoute({

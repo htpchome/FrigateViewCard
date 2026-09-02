@@ -1643,7 +1643,7 @@ export class FrigateViewCard extends HTMLElement {
         GRID_ALERT_HOLD_OPTIONS_SECONDS,
         Math.round(GRID_ALERT_HOLD_MS / 1000),
       ),
-      mobile_view_page_enabled: config.mobile_view_page_enabled === true,
+      mobile_view_page_enabled: config.mobile_view_page_enabled !== false,
       mobile_view_rotate_to_fullscreen:
         config.mobile_view_rotate_to_fullscreen !== false,
       mobile_view_outer_border: config.mobile_view_outer_border === true,

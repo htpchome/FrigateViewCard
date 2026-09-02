@@ -923,6 +923,7 @@ test("disabling standalone Card View requires a top-layer replacement landing pa
 
   assert.deepEqual(editor._standaloneLandingPageRoutes(), [
     "single-view",
+    "mobile-view",
     "wide-view",
     "card-view",
   ]);

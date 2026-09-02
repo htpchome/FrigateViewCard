@@ -116,7 +116,7 @@ export const resolveDeviceRouteBucket = (deviceProfile = {}) => {
 export const isPageEnabled = (config, pageId) => {
   if (pageId === PAGE_IDS.singleView) return true;
   if (pageId === PAGE_IDS.mobileView) {
-    return config?.mobile_view_page_enabled === true;
+    return config?.mobile_view_page_enabled !== false;
   }
   if (pageId === PAGE_IDS.preview) return config?.preview_page_enabled === true;
   if (pageId === PAGE_IDS.wideView) {

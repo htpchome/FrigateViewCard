@@ -805,9 +805,12 @@ export const buildEditorConfigFromDom = ({
     GRID_ALERT_HOLD_OPTIONS_SECONDS,
     Math.round(GRID_ALERT_HOLD_MS / 1000),
   );
-  nextConfig.mobile_view_page_enabled = resolveSwitchChecked(
-    root.querySelector("#mobile_view_page_enabled"),
+  const mobileViewPageToggle = root.querySelector(
+    "#mobile_view_page_enabled",
   );
+  nextConfig.mobile_view_page_enabled = mobileViewPageToggle
+    ? resolveSwitchChecked(mobileViewPageToggle)
+    : baseConfig?.mobile_view_page_enabled !== false;
   const rotateToFullscreenToggle = root.querySelector(
     "#mobile_view_rotate_to_fullscreen",
   );

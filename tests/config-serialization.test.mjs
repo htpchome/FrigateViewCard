@@ -1721,6 +1721,7 @@ test("Mobile View presentation settings omit defaults and preserve swipe mode", 
   });
 
   assert.equal(defaults.mobile_view_outer_border, false);
+  assert.equal(defaults.mobile_view_page_enabled, true);
   assert.equal(defaults.mobile_view_rotate_to_fullscreen, true);
   assert.equal(defaults.mobile_view_ha_navbar_bottom, false);
   assert.equal(defaults.mobile_view_ha_navbar_stack_tabs, false);
@@ -1734,6 +1735,13 @@ test("Mobile View presentation settings omit defaults and preserve swipe mode", 
     DASHBOARD_SWIPE_NAVIGATION_MODES.dashboardWide,
   );
   assert.equal(
+    Object.hasOwn(
+      compactEditorConfigForYaml(defaults),
+      "mobile_view_page_enabled",
+    ),
+    false,
+  );
+  assert.equal(
     Object.hasOwn(compactEditorConfigForYaml(defaults), "mobile_view_outer_border"),
     false,
   );
@@ -1743,6 +1751,16 @@ test("Mobile View presentation settings omit defaults and preserve swipe mode", 
       "mobile_view_rotate_to_fullscreen",
     ),
     false,
+  );
+  assert.deepEqual(
+    compactEditorConfigForYaml({
+      cameras: [{ entity: "camera.front_door" }],
+      mobile_view_page_enabled: false,
+    }),
+    {
+      cameras: [{ entity: "camera.front_door" }],
+      mobile_view_page_enabled: false,
+    },
   );
   assert.deepEqual(
     compactEditorConfigForYaml({
@@ -1784,7 +1802,6 @@ test("Mobile View presentation settings omit defaults and preserve swipe mode", 
   );
   assert.deepEqual(config, {
     cameras: [{ entity: "camera.front_door" }],
-    mobile_view_page_enabled: true,
     mobile_view_outer_border: true,
     mobile_view_ha_navbar_bottom: true,
     mobile_view_ha_navbar_stack_tabs: true,
@@ -1893,6 +1910,7 @@ test("desktop swipe pages default to Preview plus landing and save only custom s
   assert.deepEqual(custom.ha_dashboard_swipe_pages, [
     PAGE_IDS.preview,
     PAGE_IDS.singleView,
+    PAGE_IDS.mobileView,
     PAGE_IDS.wideView,
     PAGE_IDS.cardView,
   ]);
@@ -1901,6 +1919,7 @@ test("desktop swipe pages default to Preview plus landing and save only custom s
     [
       PAGE_IDS.preview,
       PAGE_IDS.singleView,
+      PAGE_IDS.mobileView,
       PAGE_IDS.wideView,
       PAGE_IDS.cardView,
     ],
@@ -2009,6 +2028,10 @@ test("editor presents general, layout, and Mobile View controls in their request
   assert.ok(mobilePageIndex >= 0);
   assert.ok(mobilePageIndex < rotateFullscreenIndex);
   assert.ok(rotateFullscreenIndex < batterySaverIndex);
+  assert.match(
+    mobileSource,
+    /mobile_view_page_enabled !== false \? "checked" : ""/,
+  );
   assert.match(
     mobileSource,
     /mobile_view_rotate_to_fullscreen !== false \? "checked" : ""/,

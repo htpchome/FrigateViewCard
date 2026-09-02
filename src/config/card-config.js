@@ -153,7 +153,7 @@ export const normalizeCardConfig = (config) => {
     GRID_ALERT_HOLD_OPTIONS_SECONDS,
     Math.round(GRID_ALERT_HOLD_MS / 1000),
   );
-  src.mobile_view_page_enabled = src.mobile_view_page_enabled === true;
+  src.mobile_view_page_enabled = src.mobile_view_page_enabled !== false;
   src.mobile_view_rotate_to_fullscreen =
     src.mobile_view_rotate_to_fullscreen !== false;
   src.mobile_view_outer_border = src.mobile_view_outer_border === true;

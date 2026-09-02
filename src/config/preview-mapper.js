@@ -75,7 +75,7 @@ export const createEditorPreviewDraft = (config) => ({
   grid_start_in_grid_enabled: config.grid_start_in_grid_enabled,
   grid_live_view_enabled: config.grid_live_view_enabled,
   grid_alert_hold_seconds: config.grid_alert_hold_seconds,
-  mobile_view_page_enabled: config.mobile_view_page_enabled,
+  mobile_view_page_enabled: config.mobile_view_page_enabled !== false,
   mobile_view_rotate_to_fullscreen:
     config.mobile_view_rotate_to_fullscreen,
   mobile_view_outer_border: config.mobile_view_outer_border,
@@ -211,7 +211,7 @@ export const applyEditorPreviewDraftToCardConfig = ({
     )
       ? Number(previewConfig.grid_rotation_seconds)
       : 30,
-    mobile_view_page_enabled: previewConfig.mobile_view_page_enabled === true,
+    mobile_view_page_enabled: previewConfig.mobile_view_page_enabled !== false,
     mobile_view_rotate_to_fullscreen:
       previewConfig.mobile_view_rotate_to_fullscreen !== false,
     mobile_view_outer_border:

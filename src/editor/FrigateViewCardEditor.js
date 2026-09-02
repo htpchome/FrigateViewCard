@@ -2803,7 +2803,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       <div class="section">
         <div class="layout-row">
           <span class="field-label" style="margin:0">Enable Mobile View Page</span>
-          <ha-switch id="mobile_view_page_enabled" ${this._config?.mobile_view_page_enabled ? "checked" : ""}></ha-switch>
+          <ha-switch id="mobile_view_page_enabled" ${this._config?.mobile_view_page_enabled !== false ? "checked" : ""}></ha-switch>
         </div>
         <div class="field-helper">When enabled, Mobile appears in navigation and as a landing page option for both desktop/tablet and phone devices.</div>
       </div>
