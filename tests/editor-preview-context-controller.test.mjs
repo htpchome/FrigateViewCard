@@ -50,6 +50,47 @@ test("isCardPickerPreviewContext detects card picker hosts", () => {
   assert.equal(controller.isPreviewContext(), true);
 });
 
+test("editor preview prepares its configured landing page once", () => {
+  const calls = [];
+  const host = {
+    _config: { landing_page: "preview" },
+    _pageId: "single-view",
+    _started: false,
+    _pageNavigationController: {
+      resolveConfiguredLandingPage: (context) => {
+        calls.push(["resolve", context]);
+        return "preview";
+      },
+      preparePageRouteShell: (pageId) => {
+        calls.push(["prepare", pageId]);
+        host._pageId = pageId;
+      },
+    },
+  };
+  const controller = new EditorPreviewContextController(host);
+  controller.isEditorPreviewContext = () => true;
+
+  assert.equal(controller.syncInitialLandingPage(), "prepared");
+  assert.equal(host._pageId, "preview");
+  assert.equal(controller.syncInitialLandingPage(), null);
+  assert.deepEqual(calls, [
+    ["resolve", { hasPendingDeepLinkTarget: false }],
+    ["prepare", "preview"],
+  ]);
+});
+
+test("editor preview substitutes Single View for a Wide View landing page", () => {
+  const host = {};
+  const controller = new EditorPreviewContextController(host);
+  controller.isEditorPreviewContext = () => true;
+
+  assert.equal(controller.resolveLandingPage("wide-view"), "single-view");
+  assert.equal(controller.resolveLandingPage("preview"), "preview");
+
+  controller.isEditorPreviewContext = () => false;
+  assert.equal(controller.resolveLandingPage("wide-view"), "wide-view");
+});
+
 test("config drafts update preview chrome without rebuilding media or lists", () => {
   const calls = [];
   const host = {
@@ -122,6 +163,49 @@ test("disabling the active page moves the editor preview to Single View", () => 
   assert.equal(controller.applyConfigDraft(), "navigated");
   assert.deepEqual(calls, [
     ["single-view", { source: "editor-preview-page-disabled" }],
+  ]);
+});
+
+test("changing a Wide View landing page moves editor preview to Single View", () => {
+  const calls = [];
+  const host = {
+    _pageId: "preview",
+    _viewMode: "single",
+    _haNavbarController: { sync: () => {} },
+    _haDashboardSwipeNavigationController: { sync: () => {} },
+    _syncVisualStyleToggles: () => {},
+    _haPageBackgroundController: { sync: () => {} },
+    _previewPageController: { syncBottomNavbarPreviewChrome: () => {} },
+    _pageNavigationController: {
+      isPageRouteAvailable: () => true,
+      resolveConfiguredLandingPage: (context) => {
+        calls.push(["resolve", context]);
+        return "wide-view";
+      },
+      navigateToPageRoute: (pageId, context) =>
+        calls.push(["navigate", pageId, context]),
+    },
+    _singleViewPageController: {
+      applyEditorPreviewDraftRefresh: () => calls.push(["soft-preview"]),
+    },
+  };
+  const controller = new EditorPreviewContextController(host);
+  controller.isEditorPreviewContext = () => true;
+
+  assert.equal(
+    controller.applyConfigDraft({
+      previousConfig: { landing_page: "single-view" },
+      nextConfig: { landing_page: "wide-view" },
+    }),
+    "navigated",
+  );
+  assert.deepEqual(calls, [
+    ["resolve", { hasPendingDeepLinkTarget: false }],
+    [
+      "navigate",
+      "single-view",
+      { source: "editor-preview-landing-change" },
+    ],
   ]);
 });
 

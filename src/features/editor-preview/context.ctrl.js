@@ -35,6 +35,7 @@ export class EditorPreviewContextController {
     this._cardPickerDemoEngine = null;
     this._cardPickerDemoList = null;
     this._standaloneDraftReturnPageId = null;
+    this._initialLandingPageSynced = false;
   }
 
   dispose() {
@@ -49,6 +50,39 @@ export class EditorPreviewContextController {
     this._cardPickerDemoEngine = null;
     this._cardPickerDemoList = null;
     this._standaloneDraftReturnPageId = null;
+    this._initialLandingPageSynced = false;
+  }
+
+  resolveLandingPage(pageId) {
+    const targetPageId = normalizePageRoute(pageId);
+    if (!this.isEditorPreviewContext()) return targetPageId;
+    return targetPageId === PAGE_IDS.wideView
+      ? PAGE_IDS.singleView
+      : targetPageId;
+  }
+
+  syncInitialLandingPage() {
+    if (this._initialLandingPageSynced) return null;
+    if (!this.isEditorPreviewContext() || !this._host._config) return null;
+
+    const pageNavigation = this._host._pageNavigationController;
+    const targetPageId = this.resolveLandingPage(
+      pageNavigation?.resolveConfiguredLandingPage?.({
+        hasPendingDeepLinkTarget: false,
+      }),
+    );
+    if (!targetPageId) return null;
+
+    this._initialLandingPageSynced = true;
+    if (targetPageId === this._host._pageId) return "current";
+    if (this._host._started === true) {
+      pageNavigation.navigateToPageRoute?.(targetPageId, {
+        source: "editor-preview-initial-landing",
+      });
+      return "navigated";
+    }
+    pageNavigation.preparePageRouteShell?.(targetPageId);
+    return "prepared";
   }
 
   applyRouteIntent(routeIntent = null) {
@@ -103,6 +137,25 @@ export class EditorPreviewContextController {
         source: "editor-preview-page-disabled",
       });
       return "navigated";
+    }
+
+    const landingPageChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "landing_page",
+    );
+    if (landingPageChanged) {
+      const targetPageId = this.resolveLandingPage(
+        pageNavigation?.resolveConfiguredLandingPage?.({
+          hasPendingDeepLinkTarget: false,
+        }),
+      );
+      if (targetPageId && targetPageId !== this._host._pageId) {
+        void pageNavigation.navigateToPageRoute?.(targetPageId, {
+          source: "editor-preview-landing-change",
+        });
+        return "navigated";
+      }
     }
 
     const camerasChanged = previewKeysChanged(

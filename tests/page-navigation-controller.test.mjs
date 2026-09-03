@@ -456,6 +456,23 @@ test("navigateToConfiguredLandingPage resolves startup page and navigates", () =
   });
 });
 
+test("configured landing mapper can substitute an editor-safe startup page", () => {
+  const h = createHarness();
+  const controller = new PageNavigationController(h.host, h.constants, {
+    mapConfiguredLandingPage: (pageId) =>
+      pageId === PAGE_IDS.wideView ? PAGE_IDS.singleView : pageId,
+  });
+  const context = { hasPendingDeepLinkTarget: false, source: "startup" };
+
+  const result = controller.navigateToConfiguredLandingPage(context);
+
+  assert.equal(result, "navigated:single-view");
+  assert.deepEqual(h.getLastNavigateCall(), {
+    pageId: PAGE_IDS.singleView,
+    context,
+  });
+});
+
 test("phone preview camera targets follow the configured landing flow", () => {
   const h = createHarness();
   h.host._deviceBucket = "mobile";

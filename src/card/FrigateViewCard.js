@@ -716,21 +716,29 @@ export class FrigateViewCard extends HTMLElement {
       PAGE_IDS,
       buildCalendarPanelMarkup,
     });
-    this._pageNavigationController = new PageNavigationController(this, {
-      buildPageNavButtonsMarkup,
-      buildPageNavMarkup,
-      allowsDashboardPageSwipeNavigation,
-      createNavigationFactory,
-      DEVICE_ROUTE_BUCKETS,
-      getEnabledPageRoutes,
-      isDashboardSwipeNavigationEnabled,
-      normalizePageRoute,
-      PAGE_IDS,
-      ICONS,
-      resolveAdjacentPageSwipeRoute,
-      resolveMobilePreviewDestination,
-      resolvePageSwipeOrder,
-    });
+    this._pageNavigationController = new PageNavigationController(
+      this,
+      {
+        buildPageNavButtonsMarkup,
+        buildPageNavMarkup,
+        allowsDashboardPageSwipeNavigation,
+        createNavigationFactory,
+        DEVICE_ROUTE_BUCKETS,
+        getEnabledPageRoutes,
+        isDashboardSwipeNavigationEnabled,
+        normalizePageRoute,
+        PAGE_IDS,
+        ICONS,
+        resolveAdjacentPageSwipeRoute,
+        resolveMobilePreviewDestination,
+        resolvePageSwipeOrder,
+      },
+      {
+        mapConfiguredLandingPage: (pageId) =>
+          this._editorPreviewController?.resolveLandingPage?.(pageId) ||
+          pageId,
+      },
+    );
     this._haNavbarController =
       new HomeAssistantNavbarController(this, {
         isIOS: DEVICE_PROFILE.isIOS,
@@ -1421,6 +1429,7 @@ export class FrigateViewCard extends HTMLElement {
 
   connectedCallback() {
     this._ensureEditorPreviewController();
+    this._editorPreviewController.syncInitialLandingPage();
     const hadPendingDisconnectTeardown = Boolean(this._disconnectTeardownT);
     const hadDashboardLiveGrace = this._dashboardLiveGraceActive;
     this._dashboardLiveGraceActive = false;
@@ -1874,7 +1883,9 @@ export class FrigateViewCard extends HTMLElement {
 
     if (!wasStarted || !prevConfig) {
       // The landing route rebuild in _start() hydrates Mobile View after hass exists.
-      this._renderShell();
+      const landingSync =
+        this._editorPreviewController.syncInitialLandingPage();
+      if (landingSync !== "prepared") this._renderShell();
       return;
     }
 

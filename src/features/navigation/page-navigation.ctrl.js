@@ -21,9 +21,10 @@ export const shouldShowPageToolsDivider = ({
 };
 
 export class PageNavigationController {
-  constructor(host, constants) {
+  constructor(host, constants, { mapConfiguredLandingPage = null } = {}) {
     this._host = host;
     this._constants = constants;
+    this._mapConfiguredLandingPage = mapConfiguredLandingPage;
     this._toolbarDividerResizeObserver = null;
   }
 
@@ -225,9 +226,16 @@ export class PageNavigationController {
   }
 
   resolveConfiguredLandingPage(context = {}) {
-    return this.ensureNavigationFactory().resolveStartupPage({
+    const configuredPageId = this.ensureNavigationFactory().resolveStartupPage({
       hasPendingDeepLinkTarget: context.hasPendingDeepLinkTarget === true,
     });
+    const mappedPageId = this._mapConfiguredLandingPage?.(
+      configuredPageId,
+      context,
+    );
+    return mappedPageId
+      ? this._constants.normalizePageRoute(mappedPageId)
+      : configuredPageId;
   }
 
   resolvePreviewCameraTargetPage(fallbackPageId) {
@@ -247,8 +255,8 @@ export class PageNavigationController {
       : PAGE_IDS.singleView;
   }
 
-  prepareConfiguredLandingPageShell(context = {}) {
-    const nextPageId = this.resolveConfiguredLandingPage(context);
+  preparePageRouteShell(pageId) {
+    const nextPageId = this._constants.normalizePageRoute(pageId);
     const previousPageId = this._host._pageId;
     this._host._pageId = nextPageId;
     this._host._previewPageActive =
@@ -262,6 +270,12 @@ export class PageNavigationController {
       this._host._renderShell?.();
     }
     return nextPageId;
+  }
+
+  prepareConfiguredLandingPageShell(context = {}) {
+    return this.preparePageRouteShell(
+      this.resolveConfiguredLandingPage(context),
+    );
   }
 
   navigateToConfiguredLandingPage(context = {}) {
