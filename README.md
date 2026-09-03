@@ -1,7 +1,18 @@
 # FrigateViewCard
-![AI Assisted](https://shields.io)
+
+[![Latest release](https://img.shields.io/github/v/release/htpchome/FrigateViewCard?display_name=tag&sort=semver&style=flat-square)](https://github.com/htpchome/FrigateViewCard/releases)
+[![Downloads](https://img.shields.io/github/downloads/htpchome/FrigateViewCard/total?style=flat-square)](https://github.com/htpchome/FrigateViewCard/releases)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5?style=flat-square&logo=homeassistant&logoColor=white)](#hacs-recommended)
+[![License: MIT](https://img.shields.io/github/license/htpchome/FrigateViewCard?style=flat-square)](LICENSE)
+[![Home Assistant](https://img.shields.io/badge/Home_Assistant-Compatible-41BDF5?style=flat-square&logo=homeassistant&logoColor=white)](https://www.home-assistant.io/)
+[![Frigate](https://img.shields.io/badge/Frigate-Required-F56A25?style=flat-square)](https://frigate.video/)
+[![AI assisted](https://img.shields.io/badge/Development-AI_assisted-8A2BE2?style=flat-square)](#ai-assisted-development)
 
 FrigateViewCard is a camera, events, and recordings card for Home Assistant and Frigate. It prefers fast WebRTC live playback, supports per-camera transport selection, and provides responsive layouts for desktop, tablet, and phone dashboards.
+
+### AI-assisted development
+
+This project uses AI as a coding assistant. AI-assisted changes are reviewed and tested by the maintainer before release.
 
 > [!CAUTION]
 > This project is under active development. Back up your dashboard configuration before upgrading.
