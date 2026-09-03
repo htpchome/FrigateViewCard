@@ -813,11 +813,10 @@ test("editor updates coalesce and notify Home Assistant that config changed", ()
       },
     ]);
 
-    editor._haDraftAnnounced = true;
     editor._scheduleEditorConfigUpdate();
     assert.equal(scheduled.length, 2);
     scheduled[1]();
-    assert.equal(updates[1].dispatch, false);
+    assert.equal(updates[1].dispatch, true);
   } finally {
     if (originalRequestAnimationFrame === undefined) {
       delete globalThis.requestAnimationFrame;
@@ -857,6 +856,8 @@ test("editor dispatch announces a draft through config-changed", () => {
     constructor(type, init) {
       this.type = type;
       this.detail = init?.detail;
+      this.bubbles = init?.bubbles === true;
+      this.composed = init?.composed === true;
     }
   };
   editor._config = { cameras: [], title: "Updated" };
@@ -871,9 +872,10 @@ test("editor dispatch announces a draft through config-changed", () => {
   try {
     editor._dispatch();
 
-    assert.equal(editor._haDraftAnnounced, true);
     assert.equal(events.length, 1);
     assert.equal(events[0].type, "config-changed");
+    assert.equal(events[0].bubbles, true);
+    assert.equal(events[0].composed, true);
     assert.equal(events[0].detail.config.title, "Updated");
   } finally {
     if (originalCustomEvent === undefined) {

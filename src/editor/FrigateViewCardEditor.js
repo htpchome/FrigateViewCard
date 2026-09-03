@@ -783,7 +783,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       this._previewUpdateRaf = 0;
     }
     this._pendingEditorPreviewRouteIntent = null;
-    this._haDraftAnnounced = false;
     this._editorPreviewLayoutObserver?.disconnect();
     this._editorPreviewLayoutObserver = null;
     this._editorPreviewLayoutObserverTarget = null;
@@ -1429,7 +1428,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
     this._closeStandaloneLandingPageModal({ restoreToggle: false });
     this._u({
-      dispatch: this._haDraftAnnounced !== true,
+      dispatch: true,
       preview: true,
       previewRouteIntent: {
         type: EDITOR_PREVIEW_ROUTE_INTENTS.navigate,
@@ -1913,14 +1912,12 @@ export class FrigateViewCardEditor extends HTMLElement {
                   this._dispatch();
                   this._hasVisualDraft = false;
                 }
-                this._haDraftAnnounced = false;
                 this._emitPreviewDraft(null, {
                   type: EDITOR_PREVIEW_ROUTE_INTENTS.commit,
                 });
                 return;
               }
               this._hasVisualDraft = false;
-              this._haDraftAnnounced = false;
               this._emitPreviewDraft(null);
             };
             button.addEventListener("click", handler, true);
@@ -1939,7 +1936,6 @@ export class FrigateViewCardEditor extends HTMLElement {
         this._dispatch();
         this._hasVisualDraft = false;
       }
-      this._haDraftAnnounced = false;
       this._emitPreviewDraft(null, {
         type: EDITOR_PREVIEW_ROUTE_INTENTS.commit,
       });
@@ -1948,7 +1944,6 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._onDialogSecondaryActionClick = (ev) => {
       if (dialogActionKindFromEvent(ev) !== "secondary") return;
       this._hasVisualDraft = false;
-      this._haDraftAnnounced = false;
       this._emitPreviewDraft(null);
     };
 
@@ -1981,7 +1976,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       const pendingRouteIntent = this._pendingEditorPreviewRouteIntent;
       this._pendingEditorPreviewRouteIntent = null;
       this._u({
-        dispatch: this._haDraftAnnounced !== true,
+        dispatch: true,
         preview: true,
         previewRouteIntent: pendingRouteIntent,
       });
@@ -4121,7 +4116,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     };
     this._render();
     this._hasVisualDraft = true;
-    if (this._haDraftAnnounced !== true) this._dispatch();
+    this._dispatch();
   }
 
   _wireGridOrderControls() {
@@ -4281,10 +4276,11 @@ export class FrigateViewCardEditor extends HTMLElement {
       { sourceConfig: this._config },
     );
     this._lastDispatchedConfigSig = this._configSignature(config);
-    this._haDraftAnnounced = true;
     this.dispatchEvent(
       new CustomEvent("config-changed", {
         detail: { config },
+        bubbles: true,
+        composed: true,
       }),
     );
   }
