@@ -1,5 +1,5 @@
 # FrigateViewCard
-[![AI Generated](https://shields.io)](https://github.com)
+![AI Assisted](https://shields.io)
 
 FrigateViewCard is a camera, events, and recordings card for Home Assistant and Frigate. It prefers fast WebRTC live playback, supports per-camera transport selection, and provides responsive layouts for desktop, tablet, and phone dashboards.
 
