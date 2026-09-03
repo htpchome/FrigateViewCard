@@ -467,7 +467,7 @@ test("draggable config tiles support before, replace, and after drop zones", () 
   ]);
 });
 
-test("Grid order edits notify Home Assistant that config changed", () => {
+test("Grid order edits remain pending without refreshing the card preview", () => {
   const editor = new FrigateViewCardEditor();
   const calls = [];
   editor._config = {
@@ -491,7 +491,8 @@ test("Grid order edits notify Home Assistant that config changed", () => {
     included: ["camera.driveway", "camera.front"],
     excluded: [],
   });
-  assert.deepEqual(calls, ["render-editor", "dispatch-config"]);
+  assert.deepEqual(calls, ["render-editor"]);
+  assert.equal(editor._hasVisualDraft, true);
 });
 
 test("theme color pickers match the exact active mobile surface defaults", () => {
@@ -782,124 +783,21 @@ test("camera modal scrolls inside the available editor overlay", () => {
   );
 });
 
-test("editor updates coalesce and notify Home Assistant only once per edit session", () => {
-  const editor = new FrigateViewCardEditor();
-  const scheduled = [];
-  const updates = [];
-  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
-  globalThis.requestAnimationFrame = (callback) => {
-    scheduled.push(callback);
-    return scheduled.length;
-  };
-  editor._u = (options) => {
-    updates.push(options);
-    if (options.dispatch) editor._haDraftAnnounced = true;
-  };
+test("ordinary editor changes use the pre-bubble lightweight preview flow", () => {
+  const source = fs.readFileSync(
+    new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
+    "utf8",
+  );
 
-  try {
-    editor._scheduleEditorConfigUpdate();
-    editor._scheduleEditorConfigUpdate({
-      type: "navigate",
-      pageId: "wide-view",
-    });
-
-    assert.equal(scheduled.length, 1);
-    scheduled[0]();
-    assert.deepEqual(updates, [
-      {
-        dispatch: true,
-        preview: true,
-        previewRouteIntent: {
-          type: "navigate",
-          pageId: "wide-view",
-        },
-      },
-    ]);
-
-    editor._scheduleEditorConfigUpdate();
-    assert.equal(scheduled.length, 2);
-    scheduled[1]();
-    assert.deepEqual(updates[1], {
-      dispatch: false,
-      preview: true,
-      previewRouteIntent: null,
-    });
-  } finally {
-    if (originalRequestAnimationFrame === undefined) {
-      delete globalThis.requestAnimationFrame;
-    } else {
-      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
-    }
-  }
-});
-
-test("editor rerenders still notify Home Assistant that config changed", () => {
-  const editor = new FrigateViewCardEditor();
-  const calls = [];
-  editor._config = { marker: "before", cameras: [] };
-  editor._themeDraftCache = { light: {}, dark: {} };
-  editor._hiddenTabsDraft = [];
-  editor.querySelector = () => null;
-  editor.querySelectorAll = () => [];
-  editor._validateEditorFields = () => true;
-  editor._getCams = () => [];
-  editor._activeThemeModeKey = () => "light";
-  editor._normalizeConfig = (config) => ({ ...config, marker: "after" });
-  editor._landingPageOptionSignature = (config) => config?.marker;
-  editor._syncHiddenTabsDraftFromConfig = () => {};
-  editor._render = () => calls.push("render-editor");
-  editor._dispatch = () => calls.push("dispatch-config");
-
-  editor._u({ dispatch: true });
-
-  assert.deepEqual(calls, ["render-editor", "dispatch-config"]);
-});
-
-test("no-op preview events do not consume the Home Assistant Save notification", () => {
-  const editor = new FrigateViewCardEditor();
-  const calls = [];
-  editor._config = { marker: "same", cameras: [] };
-  editor._themeDraftCache = { light: {}, dark: {} };
-  editor._hiddenTabsDraft = [];
-  editor.querySelector = () => null;
-  editor.querySelectorAll = () => [];
-  editor._validateEditorFields = () => true;
-  editor._getCams = () => [];
-  editor._activeThemeModeKey = () => "light";
-  editor._normalizeConfig = () => ({ marker: "same", cameras: [] });
-  editor._landingPageOptionSignature = () => "same";
-  editor._syncHiddenTabsDraftFromConfig = () => {};
-  editor._dispatch = () => calls.push("dispatch-config");
-
-  editor._u({ dispatch: true });
-
-  assert.deepEqual(calls, []);
-  assert.notEqual(editor._haDraftAnnounced, true);
-});
-
-test("swipe ownership is captured before the editor rerenders", () => {
-  const editor = new FrigateViewCardEditor();
-  const renderedOwnership = [];
-  let pendingOwnership = false;
-  editor._config = { ha_dashboard_swipe_navigation_owner: true };
-  editor._u = (options) => {
-    editor._config = {
-      ...editor._config,
-      ha_dashboard_swipe_navigation_owner: pendingOwnership,
-    };
-    if (options.dispatch) editor._haDraftAnnounced = true;
-  };
-  editor._render = () => {
-    renderedOwnership.push(
-      editor._config.ha_dashboard_swipe_navigation_owner,
-    );
-  };
-
-  editor._commitDashboardSwipeOwnershipChange();
-  pendingOwnership = true;
-  editor._commitDashboardSwipeOwnershipChange();
-
-  assert.deepEqual(renderedOwnership, [false, true]);
+  assert.match(
+    source,
+    /const update = \(previewRouteIntent = null\) =>\s*this\._u\(\{\s*dispatch: false,\s*preview: true,/,
+  );
+  assert.match(
+    source,
+    /#ha_dashboard_swipe_navigation_owner"\)\s*\?\.addEventListener\("change", \(\) => \{\s*update\(\);\s*this\._render\(\);/,
+  );
+  assert.doesNotMatch(source, /_haDraftAnnounced/);
 });
 
 test("editor dispatch announces a draft through config-changed", () => {
@@ -926,7 +824,6 @@ test("editor dispatch announces a draft through config-changed", () => {
   try {
     editor._dispatch();
 
-    assert.equal(editor._haDraftAnnounced, true);
     assert.equal(events.length, 1);
     assert.equal(events[0].type, "config-changed");
     assert.equal(events[0].bubbles, true);
@@ -1050,7 +947,7 @@ test("disabling standalone Card View requires a top-layer replacement landing pa
   assert.equal(nodes["#landing_page"].dataset.value, "wide-view");
   assert.equal(modal.open, false);
   assert.deepEqual(updateOptions, {
-    dispatch: true,
+    dispatch: false,
     preview: true,
     previewRouteIntent: {
       type: "navigate",
