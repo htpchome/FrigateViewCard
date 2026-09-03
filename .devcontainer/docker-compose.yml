@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ── Development Container ──────────────────────────────────
   devcontainer:
@@ -20,7 +18,7 @@ services:
 
   # ── Home Assistant ─────────────────────────────────────────
   homeassistant:
-    image: ghcr.io/home-assistant/home-assistant:stable
+    image: ghcr.io/home-assistant/home-assistant:2026.9.0
     container_name: homeassistant
     restart: unless-stopped
     privileged: true

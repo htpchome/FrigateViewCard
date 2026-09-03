@@ -524,6 +524,9 @@ npm test
 
 Run `npm run build` after changing application source and before testing or packaging a release.
 
+Before changing the visual editor, configuration persistence, or editor preview,
+read the [Configuration Editor Contract](docs/config-editor-contract.md).
+
 ## Support
 
 I get tired doing all this work stuff, if you like this card you can help keep me awake!

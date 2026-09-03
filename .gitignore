@@ -164,6 +164,7 @@ core
 core.*
 
 # Misc
-docs/
+docs/*
+!docs/config-editor-contract.md
 Agents.md
 ARCHITECTURE.md

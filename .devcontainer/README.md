@@ -6,7 +6,7 @@ A complete development environment for building and testing the FrigateViewCard 
 
 | Service | Port | Description |
 |---------|------|-------------|
-| **Home Assistant** | `8123` | Full Home Assistant instance with Frigate integration |
+| **Home Assistant** | `8123` | Home Assistant Core 2026.9.0 with Frigate integration |
 | **Frigate NVR** | `5000` | Frigate web UI with 3 demo cameras |
 | **go2rtc** | `8554`, `1984` | WebRTC streaming for live camera feeds |
 | **Dev Container** | - | Node.js 20 development environment with FFmpeg |
@@ -16,6 +16,10 @@ in the persistent `frigateviewcard-codex-data` Docker volume. Rebuilding the
 devcontainer does not require reinstalling or signing in to Codex again.
 FFmpeg is installed in the devcontainer image and remains available after every
 container rebuild.
+
+Home Assistant is pinned to Core `2026.9.0` in `docker-compose.yml`. This keeps
+configuration-editor testing reproducible instead of silently moving whenever
+the `stable` container tag changes.
 
 ## Quick Start
 

@@ -193,6 +193,8 @@ Every change must satisfy all of these:
 - every config option that changes visible card output must be normalized,
   persisted, included in the editor preview draft, applied immediately to the
   live editor preview, and protected by focused regression coverage
+- configuration editor changes must preserve the persistence and preview lanes
+  defined in `docs/config-editor-contract.md`
 
 ## 10. AI Working Rules
 

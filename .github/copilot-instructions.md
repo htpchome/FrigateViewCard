@@ -49,6 +49,17 @@ For architectural rationale and refactor strategy, see `docs/refactor-guidelines
 - Tab switches should update only the affected surface rather than forcing broad rerenders.
 - Periodic refresh should not reset browse state when the active window and camera are unchanged.
 
+## Configuration Editor Safety
+
+- Read `docs/config-editor-contract.md` before changing the visual editor,
+  configuration serialization, Save-state behavior, or the live editor preview.
+- Keep Home Assistant dirty-state notification separate from the card's internal
+  visual-preview draft flow.
+- Do not emit `config-changed` for every ordinary edit on Home Assistant versions
+  that provide dirty-state context; doing so rebuilds preview cards and media.
+- Preserve the live engine, media hosts, browse list, scroll state, and active
+  camera during ordinary preview-only updates.
+
 ## Media And Platform Rules
 
 - On iOS, alerts and clips must use the `master.m3u8` playback path.
