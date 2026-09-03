@@ -10,6 +10,9 @@
 
 FrigateViewCard is a camera, events, and recordings card for Home Assistant and Frigate. It prefers fast WebRTC live playback, supports per-camera transport selection, and provides responsive layouts for desktop, tablet, and phone dashboards.
 
+> [!IMPORTANT]
+> FrigateView Card is human-tested with Home Assistant Core 2026.9.0, which is the currently recommended version. Compatibility with earlier Core versions is not verified; friendly bug reports are always welcome.
+
 ## Quick Look
 FrigateViewCard brings your Frigate cameras, alerts, recordings, PTZ, two-way audio, and mobile camera controls together in a single Home Assistant card.
 
