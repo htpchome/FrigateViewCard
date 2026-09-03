@@ -43,6 +43,10 @@ the baseline/draft signature are the source of truth. If a pending-changes
 indicator is ever added again, it must only display that same state; it must not
 control, duplicate, or delay persistence.
 
+The editor's unsaved-changes reminder is therefore presentation-only. It mirrors
+the existing `_hasConfigDraft` result and must never dispatch configuration
+events, calculate a separate dirty state, or participate in preview refreshes.
+
 ## Home Assistant Save-state lane
 
 The preferred path is Home Assistant's `dirtyState` context:

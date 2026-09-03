@@ -819,8 +819,11 @@ test("ordinary editor changes mark dirty and publish an internal preview", () =>
 test("Home Assistant dirty context tracks drafts without config-changed", () => {
   const editor = new FrigateViewCardEditor();
   const updates = [];
+  const reminder = { hidden: true };
   editor._haDirtyBaselineConfig = { title: "Original" };
   editor._haDirtyBaselineSig = JSON.stringify(editor._haDirtyBaselineConfig);
+  editor.querySelector = (selector) =>
+    selector === "#config-save-reminder" ? reminder : null;
   editor._haDirtyStateContext = {
     setState: (config, key) => updates.push({ config, key }),
   };
@@ -829,6 +832,7 @@ test("Home Assistant dirty context tracks drafts without config-changed", () => 
   editor._markHomeAssistantDirty({ title: "Changed" });
 
   assert.equal(editor._hasConfigDraft, true);
+  assert.equal(reminder.hidden, false);
   assert.deepEqual(updates, [
     {
       config: { title: "Original" },
@@ -842,10 +846,43 @@ test("Home Assistant dirty context tracks drafts without config-changed", () => 
 
   editor._markHomeAssistantDirty({ title: "Original" });
   assert.equal(editor._hasConfigDraft, false);
+  assert.equal(reminder.hidden, true);
   assert.deepEqual(updates.at(-1), {
     config: { title: "Original" },
     key: "frigate-view-card-editor",
   });
+});
+
+test("unsaved changes reminder is a passive normal-flow dirty-state mirror", () => {
+  const editor = new FrigateViewCardEditor();
+  const reminder = { hidden: true };
+  editor.querySelector = (selector) =>
+    selector === "#config-save-reminder" ? reminder : null;
+
+  editor._hasConfigDraft = true;
+  editor._syncConfigSaveReminder();
+  assert.equal(reminder.hidden, false);
+
+  editor._hasConfigDraft = false;
+  editor._syncConfigSaveReminder();
+  assert.equal(reminder.hidden, true);
+
+  const source = fs.readFileSync(
+    new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /id="config-save-reminder" class="config-save-reminder" role="status" aria-live="polite"/,
+  );
+  assert.match(
+    source,
+    /\.config-save-reminder\{[^}]*width:100%;[^}]*pointer-events:none;/,
+  );
+  assert.match(
+    source,
+    /<div class="ed-wrap">\s*\$\{configSaveReminderMarkup\}\s*\$\{settingsPanelsMarkup\}/,
+  );
 });
 
 test("older Home Assistant editors fall back to config-changed for Save state", () => {

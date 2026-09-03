@@ -901,6 +901,12 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
   }
 
+  _syncConfigSaveReminder() {
+    const reminder = this.querySelector?.("#config-save-reminder");
+    if (!reminder) return;
+    reminder.hidden = this._hasConfigDraft !== true;
+  }
+
   setConfig(config) {
     this._sourceConfig = config;
     const normalized = this._normalizeConfig(config);
@@ -1993,6 +1999,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       }
       this._hasConfigDraft = false;
       this._hasVisualDraft = false;
+      this._syncConfigSaveReminder();
       this._emitPreviewDraft(null, {
         type: EDITOR_PREVIEW_ROUTE_INTENTS.commit,
       });
@@ -2002,6 +2009,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       if (button?.classList?.contains?.("gui-mode-button")) return;
       this._hasConfigDraft = false;
       this._hasVisualDraft = false;
+      this._syncConfigSaveReminder();
       this._emitPreviewDraft(null);
     };
 
@@ -3115,6 +3123,11 @@ export class FrigateViewCardEditor extends HTMLElement {
         ${this._renderSettingsPanel({ id: "landing", title: "Landing Page", icon: "mdi:home-import-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
 
+    const configSaveReminderMarkup = `<div id="config-save-reminder" class="config-save-reminder" role="status" aria-live="polite" aria-atomic="true" ${this._hasConfigDraft === true ? "" : "hidden"}>
+      <ha-icon icon="mdi:content-save-alert-outline" aria-hidden="true"></ha-icon>
+      <span>Unsaved changes — use Home Assistant's Save button to apply them.</span>
+    </div>`;
+
     this.innerHTML = `<style>
           :host{
                 --editor-primary-bg: var(--card-background-color);
@@ -3168,6 +3181,9 @@ export class FrigateViewCardEditor extends HTMLElement {
                 font-size: var(--ha-font-size, 14px);
             }
             .settings-container{display:flex;flex-direction:column;gap:6px;}
+            .config-save-reminder{box-sizing:border-box;width:100%;min-height:30px;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px 10px;border:1px solid color-mix(in srgb,var(--warning-color, var(--c-accent, var(--editor-primary))) 55%,transparent);border-radius:10px;background:color-mix(in srgb,var(--warning-color, var(--c-accent, var(--editor-primary))) 12%,var(--editor-card-bg));color:var(--warning-color, var(--c-accent, var(--editor-primary)));font-size:12px;font-weight:600;line-height:1.2;text-align:center;pointer-events:none;}
+            .config-save-reminder[hidden]{display:none;}
+            .config-save-reminder ha-icon{--mdc-icon-size:17px;flex:0 0 auto;}
             .settings-panel{
                 border:1px solid var(--c-border2, var(--editor-border));
                 border-radius:16px;
@@ -3472,6 +3488,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
         </style>
     <div class="ed-wrap">
+      ${configSaveReminderMarkup}
       ${settingsPanelsMarkup}
 
       <div id="camera-modal" class="cam-modal hidden">
@@ -4386,6 +4403,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (this._haDirtyBaselineConfig === undefined) return;
     const nextSignature = this._configSignature(nextConfig);
     this._hasConfigDraft = nextSignature !== this._haDirtyBaselineSig;
+    this._syncConfigSaveReminder();
     this._pendingHaDirtyConfig = nextConfig;
     this._seedHomeAssistantDirtyState();
 
