@@ -57,8 +57,10 @@ On Home Assistant OS, Frigate itself may be installed as a Home Assistant add-on
 5. Refresh the browser after installation or upgrade.
 
 HACS installs the generated assets from `dist/`. The main resource remains
-`frigate-view-card.js`; the versioned HLS.js companion is loaded locally only
-when a browser without native HLS needs it for recording playback.
+`frigate-view-card.js`; the editor is loaded when the visual editor opens, and
+the versioned HLS.js companion is loaded only when a browser without native HLS
+needs it for recording playback. FrigateViewCard and HLS.js license files are
+included alongside those assets.
 
 ### Manual installation
 
@@ -67,13 +69,8 @@ the `/local/` URL. On Home Assistant OS, the configuration directory is normally
 shown as `/config`, so `/config/www/frigate-view-card/` becomes
 `/local/frigate-view-card/` in the browser.
 
-1. Download all four generated files from the `dist` directory of the desired
-   release:
-
-   - `frigate-view-card.js`
-   - `frigate-view-card-editor.js`
-   - `frigate-view-card-hls-1.5.17.js`
-   - `frigate-view-card-hls-1.5.17.LICENSE.txt`
+1. Download every file from the `dist` directory of the desired release. Use
+   files from the same release; do not mix versions.
 
 2. Inside your Home Assistant configuration directory, create this dedicated
    folder if it does not already exist:
@@ -91,11 +88,13 @@ shown as `/config`, so `/config/www/frigate-view-card/` becomes
            ├── frigate-view-card.js
            ├── frigate-view-card-editor.js
            ├── frigate-view-card-hls-1.5.17.js
-           └── frigate-view-card-hls-1.5.17.LICENSE.txt
+           ├── frigate-view-card-hls-1.5.17.LICENSE.txt
+           └── frigate-view-card.LICENSE.txt
    ```
 
-   Keep the four files together in that folder. The main card loads the editor
-   and HLS companion file from paths relative to `frigate-view-card.js`.
+   Keep all files together in that folder. The main card loads the editor and
+   HLS companion file from paths relative to `frigate-view-card.js`. The two
+   license files cover FrigateViewCard and its bundled HLS.js dependency.
 
 3. If this is the first time you have created the `www` folder, restart Home
    Assistant once so the `/local/` path is available.
@@ -108,7 +107,7 @@ shown as `/config`, so `/config/www/frigate-view-card/` becomes
 5. Refresh the browser. After an upgrade, use a hard refresh if the previous
    card version is still shown.
 
-You may place the files directly in `www`, but then all four must still be
+You may place the files directly in `www`, but then all files must still be
 siblings and the resource URL would instead be `/local/frigate-view-card.js`.
 The dedicated subfolder above is recommended because it keeps this multi-file
 card separate from other manually installed resources.

@@ -12,8 +12,9 @@ const editorOutputFile = "dist/frigate-view-card-editor.js";
 const hlsOutputFile = "dist/frigate-view-card-hls-1.5.17.js";
 const hlsLicenseOutputFile =
   "dist/frigate-view-card-hls-1.5.17.LICENSE.txt";
+const cardLicenseOutputFile = "dist/frigate-view-card.LICENSE.txt";
 const outputBanner =
-  "/** FrigateView Card - generated file. Edit src/ instead. */";
+  "/** FrigateView Card - generated file. Edit src/ instead. MIT license: frigate-view-card.LICENSE.txt. */";
 
 const buildBundle = async ({ entryPoint, outfile }) => {
   const { outputFiles } = await build({
@@ -58,8 +59,10 @@ const output = await buildBundle({
 // is unavailable and the selected recording source requires it.
 await copyFile("node_modules/hls.js/dist/hls.min.js", hlsOutputFile);
 await copyFile("node_modules/hls.js/LICENSE", hlsLicenseOutputFile);
+await copyFile("LICENSE", cardLicenseOutputFile);
 await chmod(hlsOutputFile, 0o644);
 await chmod(hlsLicenseOutputFile, 0o644);
+await chmod(cardLicenseOutputFile, 0o644);
 
 const outputSizeKib = (Buffer.byteLength(output) / 1024).toFixed(1);
 const editorOutputSizeKib = (

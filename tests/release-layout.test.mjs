@@ -33,6 +33,17 @@ test("HACS release artifact is generated under dist", () => {
     ),
     true,
   );
+  assert.equal(
+    fs.existsSync(repositoryFile("dist/frigate-view-card.LICENSE.txt")),
+    true,
+  );
+  assert.equal(
+    fs.readFileSync(
+      repositoryFile("dist/frigate-view-card.LICENSE.txt"),
+      "utf8",
+    ),
+    fs.readFileSync(repositoryFile("LICENSE"), "utf8"),
+  );
   assert.equal(fs.existsSync(repositoryFile("frigate-view-card.js")), false);
 });
 
@@ -44,6 +55,7 @@ test("HACS release artifact is production-minified", () => {
   const [banner] = bundle.split("\n", 1);
 
   assert.match(banner, /^\/\*\* FrigateView Card - generated file\./);
+  assert.match(banner, /MIT license: frigate-view-card\.LICENSE\.txt/);
   assert.ok(Buffer.byteLength(bundle) < 1_500_000);
   assert.match(bundle, /frigate-view-card-hls-1\.5\.17\.js/);
   assert.match(bundle, /frigate-view-card-editor\.js/);
