@@ -1482,8 +1482,8 @@ export class FrigateViewCard extends HTMLElement {
     this._cardStyleController.syncVisualStyleToggles();
   }
 
-  _syncHostOuterStyles(options = {}) {
-    this._cardStyleController.syncHostOuterStyles(options);
+  _syncHostOuterStyles() {
+    this._cardStyleController.syncHostOuterStyles();
   }
 
   _resolveCardTokenForHost(card, cssProperty, token) {
@@ -4337,7 +4337,6 @@ export class FrigateViewCard extends HTMLElement {
     this._syncFullscreenButtonsVisibility();
     this._syncPictureInPictureButtons();
     this._linkedLightController?.sync?.();
-    this._cardStyleController.repaintHostOuterStylesAfterLayout();
   }
 
   _shouldRenderTwoWayTalkButtonForActiveCamera() {

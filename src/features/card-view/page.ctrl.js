@@ -100,7 +100,10 @@ export class CardViewPageController {
     this._cleanup = new CleanupController();
     this._activityContent = null;
     this._activityMarkup = "";
+    this._toolbarContent = null;
+    this._toolbarMarkup = "";
     this._boundScroller = null;
+    this._scrollControlsFrame = 0;
     this._recordingContextKey = "";
     this._drawerOpen = true;
     this._drawerInitialized = false;
@@ -157,13 +160,17 @@ export class CardViewPageController {
     this._haSeverityByEntity.clear();
     this._activityContent = null;
     this._activityMarkup = "";
+    this._toolbarContent = null;
+    this._toolbarMarkup = "";
     this._boundScroller = null;
+    this._cancelScrollControlsSync();
   }
 
   bind() {
     this._cleanup.dispose();
     this._cleanup = new CleanupController();
     this._boundScroller = null;
+    this._cancelScrollControlsSync();
     const content = this._host._pageShellRegion?.("cardViewActivity");
     if (!content) return;
 
@@ -301,18 +308,44 @@ export class CardViewPageController {
     );
     if (!scroller) {
       this._boundScroller = null;
+      this._cancelScrollControlsSync();
       this.syncScrollControls();
       return;
     }
-    if (scroller === this._boundScroller) {
-      requestAnimationFrame(() => this.syncScrollControls());
-      return;
-    }
+    if (scroller === this._boundScroller) return;
+    this._cancelScrollControlsSync();
     this._boundScroller = scroller;
     this._cleanup.addEventListener(scroller, "scroll", () => {
-      requestAnimationFrame(() => this.syncScrollControls());
+      this._scheduleScrollControlsSync();
     });
-    requestAnimationFrame(() => this.syncScrollControls());
+    this._scheduleScrollControlsSync({ afterPaint: true });
+  }
+
+  _scheduleScrollControlsSync({ afterPaint = false } = {}) {
+    if (this._scrollControlsFrame) return;
+    const requestFrame = globalThis.requestAnimationFrame;
+    if (typeof requestFrame !== "function") {
+      this.syncScrollControls();
+      return;
+    }
+    const sync = () => {
+      this._scrollControlsFrame = 0;
+      if (this.isActive()) this.syncScrollControls();
+    };
+    this._scrollControlsFrame = requestFrame(() => {
+      this._scrollControlsFrame = 0;
+      if (!afterPaint) {
+        sync();
+        return;
+      }
+      this._scrollControlsFrame = requestFrame(sync);
+    });
+  }
+
+  _cancelScrollControlsSync() {
+    if (!this._scrollControlsFrame) return;
+    globalThis.cancelAnimationFrame?.(this._scrollControlsFrame);
+    this._scrollControlsFrame = 0;
   }
 
   camSwitcherMarkup({ includeStatus = true } = {}) {
@@ -413,7 +446,7 @@ export class CardViewPageController {
       this._host._shouldRenderTwoWayTalkButtonForActiveCamera?.() === true;
     const resolvedButtonStates =
       buttonStates || this._host._toolbarButtonStates?.() || {};
-    toolbar.innerHTML = buildCardViewToolbarMarkup({
+    const toolbarMarkup = buildCardViewToolbarMarkup({
       icons: ICONS,
       mode: this._mode,
       showAllAlerts: this._showAllAlerts,
@@ -445,6 +478,14 @@ export class CardViewPageController {
           position: "right",
         }) || "",
     });
+    if (
+      toolbar !== this._toolbarContent ||
+      toolbarMarkup !== this._toolbarMarkup
+    ) {
+      toolbar.innerHTML = toolbarMarkup;
+      this._toolbarContent = toolbar;
+      this._toolbarMarkup = toolbarMarkup;
+    }
     this._host._syncTwoWayTalkSoundwaveSurface?.();
     this._host._linkedLightController?.sync?.();
     this.syncFooterControls(resolvedButtonStates);

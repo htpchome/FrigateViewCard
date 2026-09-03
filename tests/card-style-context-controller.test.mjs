@@ -292,7 +292,7 @@ test("syncHostOuterStyles preserves its last valid shadow during shell replaceme
   assert.equal(host.style.boxShadow, "none");
 });
 
-test("syncHostOuterStyles repaints a preserved shadow after final shell layout", () => {
+test("syncHostOuterStyles preserves the shadow without forcing host layout", () => {
   const card = {};
   let layoutReads = 0;
   const host = {
@@ -310,9 +310,9 @@ test("syncHostOuterStyles repaints a preserved shadow after final shell layout",
   controller.resolveCardTokenForHost = (target, property) =>
     property === "box-shadow" ? "0 3px 8px #0004" : "12px";
 
-  controller.syncHostOuterStyles({ forceRepaint: true });
+  controller.syncHostOuterStyles();
 
-  assert.equal(layoutReads, 1);
+  assert.equal(layoutReads, 0);
   assert.equal(host.style.boxShadow, "0 3px 8px #0004");
 });
 

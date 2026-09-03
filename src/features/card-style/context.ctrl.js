@@ -94,7 +94,6 @@ export class CardStyleContextController {
   constructor(host) {
     this._host = host;
     this._lastValidOuterShadow = "";
-    this._outerShadowRepaintHandle = 0;
   }
 
   visualStyleToggleRules() {
@@ -172,7 +171,7 @@ export class CardStyleContextController {
     this.syncHostOuterStyles();
   }
 
-  syncHostOuterStyles({ forceRepaint = false } = {}) {
+  syncHostOuterStyles() {
     const card = this._host.shadowRoot?.querySelector("#card");
     if (!card) return;
     const outerShadow = this.resolveCardTokenForHost(
@@ -192,7 +191,6 @@ export class CardStyleContextController {
     const outerShadowsEnabled =
       this._host._config?.outer_shadows !== false;
     if (!outerShadowsEnabled) {
-      this.cancelOuterShadowRepaint();
       this._host.style.boxShadow = "none";
     } else {
       if (this.isValidOuterShadow(outerShadow)) {
@@ -207,10 +205,6 @@ export class CardStyleContextController {
           ? currentOuterShadow
           : "");
       if (preservedOuterShadow) {
-        if (forceRepaint) {
-          this._host.style.boxShadow = "none";
-          void this._host.offsetWidth;
-        }
         this._host.style.boxShadow = preservedOuterShadow;
       } else if (typeof this._host.style.removeProperty === "function") {
         this._host.style.removeProperty("box-shadow");
@@ -228,29 +222,6 @@ export class CardStyleContextController {
   isValidOuterShadow(value) {
     const shadow = String(value || "").trim().toLowerCase();
     return shadow !== "" && shadow !== "none";
-  }
-
-  repaintHostOuterStylesAfterLayout() {
-    if (
-      this._outerShadowRepaintHandle ||
-      typeof globalThis.requestAnimationFrame !== "function"
-    ) {
-      if (!this._outerShadowRepaintHandle) {
-        this.syncHostOuterStyles({ forceRepaint: true });
-      }
-      return;
-    }
-    this._outerShadowRepaintHandle = globalThis.requestAnimationFrame(() => {
-      this._outerShadowRepaintHandle = 0;
-      if (this._host?.isConnected === false) return;
-      this.syncHostOuterStyles({ forceRepaint: true });
-    });
-  }
-
-  cancelOuterShadowRepaint() {
-    if (!this._outerShadowRepaintHandle) return;
-    globalThis.cancelAnimationFrame?.(this._outerShadowRepaintHandle);
-    this._outerShadowRepaintHandle = 0;
   }
 
   resolveCardTokenForHost(card, cssProperty, token) {

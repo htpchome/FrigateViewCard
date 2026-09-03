@@ -509,6 +509,22 @@ export class WideViewTimelineController {
       dayKey: this._deps.dayKey,
       isMajorTick: (timestamp) => this._isMajorHourTick(timestamp),
     });
+    let nextScrollTop = previousScrollTop;
+    if (resetToNow) {
+      nextScrollTop = 0;
+    } else if (Number.isFinite(focusTimestamp)) {
+      nextScrollTop = Math.max(
+        0,
+        16 +
+          (layout.anchorEnd - focusTimestamp) * layout.pixelsPerSecond -
+          viewportHeight / 2,
+      );
+    }
+    nextScrollTop = Math.min(
+      Math.max(0, Math.ceil(layout.contentHeight) - viewportHeight),
+      Math.max(0, nextScrollTop),
+    );
+
     content.innerHTML = entries.length
       ? buildWideTimelineContentMarkup({
           layout,
@@ -527,20 +543,9 @@ export class WideViewTimelineController {
     this._lastContextKey = contextKey;
     this._syncScaleControls();
 
-    if (resetToNow) {
-      viewport.scrollTop = 0;
-    } else if (Number.isFinite(focusTimestamp)) {
-      viewport.scrollTop = Math.max(
-        0,
-        16 +
-          (layout.anchorEnd - focusTimestamp) * layout.pixelsPerSecond -
-          viewport.clientHeight / 2,
-      );
-    } else {
-      viewport.scrollTop = previousScrollTop;
-    }
-    this._savedScrollTop = viewport.scrollTop || 0;
-    this._syncDayLabel();
+    viewport.scrollTop = nextScrollTop;
+    this._savedScrollTop = nextScrollTop;
+    this._syncDayLabel(nextScrollTop);
     this._syncClockRefresh();
   }
 
@@ -881,7 +886,7 @@ export class WideViewTimelineController {
     });
   }
 
-  _syncDayLabel() {
+  _syncDayLabel(scrollTop = null) {
     const label = this._host._$("#wide-timeline-day");
     const viewport = this._boundViewport;
     const layout = this._lastLayout;
@@ -890,13 +895,18 @@ export class WideViewTimelineController {
       label.textContent = this._deps.formatDay(this._deps.getWindowEnd());
       return;
     }
+    const hasProvidedScrollTop =
+      scrollTop != null && Number.isFinite(Number(scrollTop));
+    const resolvedScrollTop = hasProvidedScrollTop
+      ? Number(scrollTop)
+      : viewport.scrollTop;
     const timestamp = Math.max(
       layout.rangeStart,
       Math.min(
         layout.anchorEnd + this._clockOffsetSeconds,
         layout.anchorEnd +
           this._clockOffsetSeconds -
-          Math.max(0, viewport.scrollTop - 16) / layout.pixelsPerSecond,
+          Math.max(0, resolvedScrollTop - 16) / layout.pixelsPerSecond,
       ),
     );
     label.textContent = this._deps.formatDay(timestamp);

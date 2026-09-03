@@ -448,6 +448,84 @@ test("Card View preserves alert tile DOM when repeated entry renders are identic
   assert.equal(writes, 1);
 });
 
+test("Card View preserves toolbar DOM when repeated renders are identical", () => {
+  let writes = 0;
+  let markup = "";
+  const toolbar = {};
+  Object.defineProperty(toolbar, "innerHTML", {
+    get: () => markup,
+    set: (value) => {
+      writes += 1;
+      markup = value;
+    },
+  });
+  const host = {
+    _pageId: "card-view",
+    _config: {},
+    _activeCam: { name: "Doorbell", entity: "camera.doorbell" },
+    _viewMode: "single",
+    _toolbarButtonStates: () => ({}),
+    _isGridModeAvailable: () => false,
+    _isSlideshowRotationAvailable: () => false,
+    _shouldRenderTwoWayTalkButtonForActiveCamera: () => false,
+    shadowRoot: {
+      querySelector: (selector) =>
+        selector === "[data-card-view-toolbar]" ? toolbar : null,
+    },
+  };
+  const controller = new CardViewPageController(host, {
+    PAGE_IDS: { cardView: "card-view" },
+  });
+
+  controller.renderToolbar();
+  controller.renderToolbar();
+
+  assert.equal(writes, 1);
+});
+
+test("Card View coalesces initial scroller measurement until after paint", () => {
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  const originalCancelAnimationFrame = globalThis.cancelAnimationFrame;
+  const callbacks = [];
+  const scroller = {
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  const host = {
+    _pageId: "card-view",
+    shadowRoot: {
+      querySelector: (selector) =>
+        selector === "[data-card-view-scroller]" ? scroller : null,
+    },
+  };
+  const controller = new CardViewPageController(host, {
+    PAGE_IDS: { cardView: "card-view" },
+  });
+  let syncs = 0;
+  controller.syncScrollControls = () => {
+    syncs += 1;
+  };
+  globalThis.requestAnimationFrame = (callback) => {
+    callbacks.push(callback);
+    return callbacks.length;
+  };
+  globalThis.cancelAnimationFrame = () => {};
+  try {
+    controller._bindScroller();
+    controller._bindScroller();
+
+    assert.equal(callbacks.length, 1);
+    callbacks.shift()();
+    assert.equal(syncs, 0);
+    assert.equal(callbacks.length, 1);
+    callbacks.shift()();
+    assert.equal(syncs, 1);
+  } finally {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    globalThis.cancelAnimationFrame = originalCancelAnimationFrame;
+  }
+});
+
 test("Card View switches alert scope between all and the active camera", () => {
   const reviews = [
     { id: "front", camera: "front", start_time: 2 },
