@@ -150,6 +150,76 @@ test("syncHassPreviewContext resumes live on preview exit", () => {
   assert.deepEqual(calls, ["hass-edit-exit"]);
 });
 
+test("editor config echoes update state without rebuilding preview content", () => {
+  const preview = makeNode("HUI-CARD-PREVIEW");
+  const calls = [];
+  const host = makeNode("FRIGATE-VIEW-CARD", { parentNode: preview });
+  host._cloneCardConfig = (config) => ({ ...config });
+  host._syncVisualStyleToggles = () => calls.push("style-toggles");
+  host._applyCardStyle = () => calls.push("card-style");
+  host._wideViewPageController = {
+    applyLayoutAndWideSyncForCard: () => calls.push("wide-layout"),
+  };
+  const controller = new EditorPreviewContextController(host);
+
+  assert.equal(
+    controller.applyConfigUpdate({
+      previousConfig: { title: "Before", theme: "default" },
+      nextConfig: { title: "After", theme: "default" },
+    }),
+    true,
+  );
+  assert.equal(host._config.title, "After");
+  assert.equal(host._committedConfig.title, "After");
+  assert.deepEqual(calls, []);
+});
+
+test("editor config echoes apply visual changes without rebuilding media", () => {
+  const preview = makeNode("HUI-CARD-PREVIEW");
+  const calls = [];
+  const host = makeNode("FRIGATE-VIEW-CARD", { parentNode: preview });
+  host._cloneCardConfig = (config) => ({ ...config });
+  host._syncVisualStyleToggles = () => calls.push("style-toggles");
+  host._applyCardStyle = () => calls.push("card-style");
+  host._wideViewPageController = {
+    applyLayoutAndWideSyncForCard: () => calls.push("wide-layout"),
+  };
+  const controller = new EditorPreviewContextController(host);
+
+  assert.equal(
+    controller.applyConfigUpdate({
+      previousConfig: { theme: "default", rounded_corners: true },
+      nextConfig: { theme: "custom", rounded_corners: false },
+    }),
+    true,
+  );
+  assert.deepEqual(calls, ["style-toggles", "card-style"]);
+});
+
+test("editor preview applies wide layout only when its width changes", () => {
+  const preview = makeNode("HUI-CARD-PREVIEW");
+  const calls = [];
+  const host = makeNode("FRIGATE-VIEW-CARD", { parentNode: preview });
+  host._cloneCardConfig = (config) => ({ ...config });
+  host._syncVisualStyleToggles = () => calls.push("style-toggles");
+  host._applyCardStyle = () => calls.push("card-style");
+  host._wideViewPageController = {
+    applyLayoutAndWideSyncForCard: () => calls.push("wide-layout"),
+  };
+  const controller = new EditorPreviewContextController(host);
+
+  controller.applyConfigUpdate({
+    previousConfig: { col_left_width_pct: 50 },
+    nextConfig: { col_left_width_pct: 60 },
+  });
+
+  assert.deepEqual(calls, [
+    "style-toggles",
+    "card-style",
+    "wide-layout",
+  ]);
+});
+
 test("startEditModeWatchdog resumes and kicks when state changes", () => {
   const calls = [];
   const timers = [];

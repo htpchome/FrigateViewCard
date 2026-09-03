@@ -2050,7 +2050,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       if (this._livePreviewRaf) return;
       this._livePreviewRaf = requestAnimationFrame(() => {
         this._livePreviewRaf = 0;
-        this._u({ dispatch: false, preview: true });
+        this._u({ dispatch: true });
       });
     };
 
@@ -3547,8 +3547,8 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const update = (previewRouteIntent = null) =>
       this._u({
-        dispatch: false,
-        preview: true,
+        dispatch: true,
+        preview: Boolean(previewRouteIntent),
         previewRouteIntent,
       });
     const scheduleUpdate = (previewRouteIntent = null) => {
@@ -4117,7 +4117,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       grid_order: normalizeGridOrderConfig(gridOrder, this._getCams()),
     };
     this._render();
-    this._hasVisualDraft = true;
+    this._dispatch();
   }
 
   _wireGridOrderControls() {
@@ -4222,6 +4222,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     previewRouteIntent = null,
   } = {}) {
     if (!this._validateEditorFields()) return;
+    const previousConfigSig = this._configSignature(this._config);
     const cameras = this._getCams();
     const prevOptionSignature = this._landingPageOptionSignature(this._config);
     const nextConfig = buildEditorConfigFromDom({
@@ -4233,6 +4234,8 @@ export class FrigateViewCardEditor extends HTMLElement {
       hiddenTabsOverride: this._hiddenTabsDraft,
     });
     const normalizedNextConfig = this._normalizeConfig(nextConfig);
+    const configChanged =
+      this._configSignature(normalizedNextConfig) !== previousConfigSig;
     const nextOptionSignature =
       this._landingPageOptionSignature(normalizedNextConfig);
 
@@ -4253,9 +4256,8 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
     if (prevOptionSignature !== nextOptionSignature) {
       this._render();
-      return;
     }
-    if (dispatch) this._dispatch();
+    if (dispatch && configChanged) this._dispatch();
   }
 
   _dispatch() {

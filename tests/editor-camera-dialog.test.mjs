@@ -467,7 +467,7 @@ test("draggable config tiles support before, replace, and after drop zones", () 
   ]);
 });
 
-test("Grid order edits remain pending without refreshing the card preview", () => {
+test("Grid order edits notify Home Assistant without refreshing the card preview", () => {
   const editor = new FrigateViewCardEditor();
   const calls = [];
   editor._config = {
@@ -491,8 +491,7 @@ test("Grid order edits remain pending without refreshing the card preview", () =
     included: ["camera.driveway", "camera.front"],
     excluded: [],
   });
-  assert.deepEqual(calls, ["render-editor"]);
-  assert.equal(editor._hasVisualDraft, true);
+  assert.deepEqual(calls, ["render-editor", "dispatch-config"]);
 });
 
 test("theme color pickers match the exact active mobile surface defaults", () => {
@@ -783,7 +782,7 @@ test("camera modal scrolls inside the available editor overlay", () => {
   );
 });
 
-test("ordinary editor changes use the pre-bubble lightweight preview flow", () => {
+test("ordinary editor changes notify Home Assistant without using preview drafts", () => {
   const source = fs.readFileSync(
     new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
     "utf8",
@@ -791,8 +790,9 @@ test("ordinary editor changes use the pre-bubble lightweight preview flow", () =
 
   assert.match(
     source,
-    /const update = \(previewRouteIntent = null\) =>\s*this\._u\(\{\s*dispatch: false,\s*preview: true,/,
+    /const update = \(previewRouteIntent = null\) =>\s*this\._u\(\{\s*dispatch: true,\s*preview: Boolean\(previewRouteIntent\),/,
   );
+  assert.match(source, /this\._u\(\{ dispatch: true \}\);/);
   assert.match(
     source,
     /#ha_dashboard_swipe_navigation_owner"\)\s*\?\.addEventListener\("change", \(\) => \{\s*update\(\);\s*this\._render\(\);/,

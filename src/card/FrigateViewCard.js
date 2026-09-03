@@ -1758,6 +1758,15 @@ export class FrigateViewCard extends HTMLElement {
         nextConfig,
         DEVICE_ROUTE_BUCKETS.desktop,
       );
+    if (
+      wasStarted &&
+      this._editorPreviewController.applyConfigUpdate({
+        previousConfig: prevConfig,
+        nextConfig,
+      })
+    ) {
+      return;
+    }
     const previewEnabledChanged =
       !!prevConfig &&
       prevConfig.preview_page_enabled !== nextConfig.preview_page_enabled;

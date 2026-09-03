@@ -4,6 +4,28 @@ import {
 } from "./card-picker-demo.tmpl.js";
 import { normalizePageRoute, PAGE_IDS } from "../navigation/router.js";
 
+const visualConfigSignature = (config) => {
+  const source = config && typeof config === "object" ? config : {};
+  return JSON.stringify({
+    theme: source.theme,
+    theme_custom: source.theme_custom,
+    theme_custom_defaults: source.theme_custom_defaults,
+    stream_height: source.stream_height,
+    stream_height_unit: source.stream_height_unit,
+    tight_margins: source.tight_margins,
+    shadows: source.shadows,
+    borders: source.borders,
+    rounded_corners: source.rounded_corners,
+    outer_shadows: source.outer_shadows,
+    col_left_width_pct: source.col_left_width_pct,
+  });
+};
+
+const layoutConfigSignature = (config) =>
+  JSON.stringify({
+    col_left_width_pct: config?.col_left_width_pct,
+  });
+
 export const EDITOR_PREVIEW_ROUTE_INTENTS = Object.freeze({
   enterStandalone: "enter-card-view-standalone",
   revertStandaloneDraft: "revert-card-view-standalone-draft",
@@ -82,6 +104,31 @@ export class EditorPreviewContextController {
     }
     this._lastEditorPreviewContext = inEditorPreview;
     return inEditorPreview;
+  }
+
+  applyConfigUpdate({ previousConfig, nextConfig } = {}) {
+    if (!this.isEditorPreviewContext() || !previousConfig || !nextConfig) {
+      return false;
+    }
+
+    const visualChanged =
+      visualConfigSignature(previousConfig) !==
+      visualConfigSignature(nextConfig);
+    const layoutChanged =
+      layoutConfigSignature(previousConfig) !==
+      layoutConfigSignature(nextConfig);
+    this._host._committedConfig = this._host._cloneCardConfig(nextConfig);
+    this._host._config = nextConfig;
+
+    if (visualChanged) {
+      this._host._syncVisualStyleToggles();
+      this._host._applyCardStyle();
+    }
+    if (layoutChanged) {
+      this._host._wideViewPageController?.applyLayoutAndWideSyncForCard?.();
+    }
+
+    return true;
   }
 
   startEditModeWatchdog() {
