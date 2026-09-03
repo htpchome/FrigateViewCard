@@ -140,6 +140,115 @@ test("config drafts update preview chrome without rebuilding media or lists", ()
   assert.equal(calls.some(([name]) => name === "render-list"), false);
 });
 
+test("camera drafts resync linked lights and two-way talk without rebuilding media", () => {
+  const calls = [];
+  const host = {
+    _pageId: "single-view",
+    _viewMode: "single",
+    _activeCamIdx: 0,
+    _haNavbarController: { sync: () => {} },
+    _haDashboardSwipeNavigationController: { sync: () => {} },
+    _syncVisualStyleToggles: () => {},
+    _haPageBackgroundController: { sync: () => {} },
+    _previewPageController: { syncBottomNavbarPreviewChrome: () => {} },
+    _pageNavigationController: { isPageRouteAvailable: () => true },
+    _singleViewPageController: {
+      applyEditorPreviewDraftRefresh: (options) =>
+        calls.push(["soft-preview", options]),
+    },
+    _syncTwoWayTalkRuntimeState: () => calls.push(["two-way-runtime"]),
+    _syncTwoWayTalkButton: () => calls.push(["two-way-button"]),
+    _linkedLightController: {
+      sync: () => calls.push(["linked-lights"]),
+    },
+    _syncToolbarButtons: () => calls.push(["toolbar"]),
+    _cleanupEngine: () => calls.push(["cleanup-engine"]),
+  };
+  const controller = new EditorPreviewContextController(host);
+
+  controller.applyConfigDraft({
+    previousConfig: {
+      cameras: [{ entity: "camera.front_door" }],
+    },
+    nextConfig: {
+      cameras: [
+        {
+          entity: "camera.front_door",
+          two_way_talk: true,
+          linked_entities: [
+            { entity: "light.porch", position: "left" },
+          ],
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(calls, [
+    ["soft-preview", { renderList: false }],
+    ["two-way-runtime"],
+    ["two-way-button"],
+    ["linked-lights"],
+    ["toolbar"],
+  ]);
+  assert.equal(calls.some(([name]) => name === "cleanup-engine"), false);
+});
+
+test("Favorites scope drafts reload only the visible Favorites tab", () => {
+  const calls = [];
+  const host = {
+    _pageId: "single-view",
+    _viewMode: "single",
+    _activeCamIdx: 0,
+    _tab: "kept",
+    _haNavbarController: { sync: () => {} },
+    _haDashboardSwipeNavigationController: { sync: () => {} },
+    _syncVisualStyleToggles: () => {},
+    _haPageBackgroundController: { sync: () => {} },
+    _previewPageController: { syncBottomNavbarPreviewChrome: () => {} },
+    _pageNavigationController: { isPageRouteAvailable: () => true },
+    _singleViewPageController: {
+      applyEditorPreviewDraftRefresh: (options) =>
+        calls.push(["soft-preview", options]),
+    },
+    _syncToolbarButtons: () => calls.push(["toolbar"]),
+    _isPreviewPageActive: () => false,
+    _loadTabData: (tab) => calls.push(["load-tab", tab]),
+  };
+  const controller = new EditorPreviewContextController(host);
+
+  controller.applyConfigDraft({
+    previousConfig: {
+      cameras: [{ entity: "camera.front_door" }],
+      favorites_mixed_cameras: true,
+    },
+    nextConfig: {
+      cameras: [{ entity: "camera.front_door" }],
+      favorites_mixed_cameras: false,
+    },
+  });
+
+  assert.deepEqual(calls, [
+    ["soft-preview", { renderList: false }],
+    ["toolbar"],
+    ["load-tab", "kept"],
+  ]);
+
+  calls.length = 0;
+  host._tab = "alerts";
+  controller.applyConfigDraft({
+    previousConfig: {
+      cameras: [{ entity: "camera.front_door" }],
+      favorites_mixed_cameras: false,
+    },
+    nextConfig: {
+      cameras: [{ entity: "camera.front_door" }],
+      favorites_mixed_cameras: true,
+    },
+  });
+
+  assert.equal(calls.some(([name]) => name === "load-tab"), false);
+});
+
 test("disabling the active page moves the editor preview to Single View", () => {
   const calls = [];
   const host = {

@@ -233,7 +233,25 @@ export class EditorPreviewContextController {
     this._host._singleViewPageController?.applyEditorPreviewDraftRefresh?.({
       renderList: false,
     });
+    if (camerasChanged) {
+      this._host._syncTwoWayTalkRuntimeState?.();
+      this._host._syncTwoWayTalkButton?.();
+      this._host._linkedLightController?.sync?.();
+    }
     this._host._syncToolbarButtons?.();
+
+    const favoritesScopeChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "favorites_mixed_cameras",
+    );
+    if (
+      favoritesScopeChanged &&
+      this._host._tab === "kept" &&
+      this._host._isPreviewPageActive?.() !== true
+    ) {
+      void this._host._loadTabData?.("kept");
+    }
 
     const gridPresentationChanged = previewKeysChanged(
       previousConfig,
