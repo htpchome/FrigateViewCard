@@ -161,6 +161,7 @@ test("activateStandardPageRoute handles startup and mounts engine", () => {
     ["applyCardStyle"],
     ["applyLayoutMode"],
     ["mountEngine"],
+    ["renderAll"],
   ]);
 });
 
@@ -225,6 +226,7 @@ test("activateSingleViewPageRoute delegates to standard activation", () => {
     ["applyCardStyle"],
     ["applyLayoutMode"],
     ["mountEngine"],
+    ["renderAll"],
   ]);
 });
 

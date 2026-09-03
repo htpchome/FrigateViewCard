@@ -54,6 +54,7 @@ test("activateWideViewPageRoute handles startup and mounts engine", () => {
     ["applyLayoutMode"],
     ["syncColHeight"],
     ["mountEngine"],
+    ["renderAll"],
   ]);
 });
 
@@ -72,7 +73,7 @@ test("activateWideViewPageRoute starts the Companion Camera session", () => {
 
   controller.activateWideViewPageRoute({ startup: true });
 
-  assert.deepEqual(calls.slice(-2), [["mountEngine"], ["startCompanions"]]);
+  assert.deepEqual(calls.slice(-2), [["renderAll"], ["startCompanions"]]);
 });
 
 test("Wide View owns Timeline rendering and interaction delegation", () => {
