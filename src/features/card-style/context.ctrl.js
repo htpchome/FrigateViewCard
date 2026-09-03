@@ -93,7 +93,6 @@ export const resolveHomeAssistantThemeContext = (
 export class CardStyleContextController {
   constructor(host) {
     this._host = host;
-    this._lastValidOuterShadow = "";
   }
 
   visualStyleToggleRules() {
@@ -158,85 +157,42 @@ export class CardStyleContextController {
 
   syncVisualStyleToggles() {
     const card = this._host.shadowRoot?.querySelector("#card");
-    if (!card) return;
-    this.syncThemeContext(card);
-    for (const { configKey, className } of this.visualStyleToggleRules()) {
-      const isEnabled = this._host._config?.[configKey] !== false;
-      card.classList.toggle(className, !isEnabled);
+    if (card) {
+      this.syncThemeContext(card);
+      for (const { configKey, className } of this.visualStyleToggleRules()) {
+        const isEnabled = this._host._config?.[configKey] !== false;
+        card.classList.toggle(className, !isEnabled);
+      }
+      card.classList.toggle(
+        "mobile-view-outer-border-off",
+        this.shouldHideMobileViewOuterBorder(),
+      );
     }
-    card.classList.toggle(
-      "mobile-view-outer-border-off",
-      this.shouldHideMobileViewOuterBorder(),
-    );
     this.syncHostOuterStyles();
   }
 
   syncHostOuterStyles() {
-    const card = this._host.shadowRoot?.querySelector("#card");
-    if (!card) return;
-    const outerShadow = this.resolveCardTokenForHost(
-      card,
-      "box-shadow",
-      "var(--fvc-outer-shadow-m)",
+    const outerShadowsOff =
+      this._host._config?.outer_shadows === false ||
+      this.shouldSuppressOuterShadowForPhonePage();
+    this._host.classList?.toggle("outer-shadows-off", outerShadowsOff);
+    this._host.classList?.toggle(
+      "outer-corners-off",
+      this._host._config?.rounded_corners === false,
     );
-    const outerRadius =
-      this._host._config?.rounded_corners === false
-        ? "0px"
-        : this.resolveCardTokenForHost(
-            card,
-            "border-radius",
-            "var(--fvc-outer-border-radius)",
-          );
 
-    const outerShadowsEnabled =
-      this._host._config?.outer_shadows !== false;
-    if (!outerShadowsEnabled) {
-      this._host.style.boxShadow = "none";
-    } else {
-      if (this.isValidOuterShadow(outerShadow)) {
-        this._lastValidOuterShadow = outerShadow;
-      }
-      const currentOuterShadow = String(
-        this._host.style.boxShadow || "",
-      ).trim();
-      const preservedOuterShadow =
-        this._lastValidOuterShadow ||
-        (this.isValidOuterShadow(currentOuterShadow)
-          ? currentOuterShadow
-          : "");
-      if (preservedOuterShadow) {
-        this._host.style.boxShadow = preservedOuterShadow;
-      } else if (typeof this._host.style.removeProperty === "function") {
-        this._host.style.removeProperty("box-shadow");
-      } else {
-        this._host.style.boxShadow = "";
-      }
-    }
-    if (outerRadius) {
-      this._host.style.borderRadius = outerRadius;
-    } else {
-      this._host.style.removeProperty("border-radius");
-    }
+    // Clear values written by older card builds; CSS owns these now.
+    this._host.style?.removeProperty?.("box-shadow");
+    this._host.style?.removeProperty?.("border-radius");
   }
 
-  isValidOuterShadow(value) {
-    const shadow = String(value || "").trim().toLowerCase();
-    return shadow !== "" && shadow !== "none";
-  }
-
-  resolveCardTokenForHost(card, cssProperty, token) {
-    const value = String(token || "").trim();
-    if (!card || !value) return "";
-    const probe = document.createElement("div");
-    probe.style.cssText =
-      "position:absolute;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none;";
-    probe.style.setProperty(cssProperty, value);
-    card.appendChild(probe);
-    const resolved = getComputedStyle(probe)
-      .getPropertyValue(cssProperty)
-      .trim();
-    probe.remove();
-    return resolved || value;
+  shouldSuppressOuterShadowForPhonePage() {
+    if (this._host._isLikelyPhoneClient?.() !== true) return false;
+    return (
+      this._host._isPreviewPageActive?.() === true ||
+      this._host._wideViewPageController?.isWideViewPageActive?.() === true ||
+      this._host._isMobileViewPageActive?.() === true
+    );
   }
 
   applyTightMargins() {

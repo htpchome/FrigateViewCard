@@ -278,7 +278,7 @@ grid_order:
 | `tight_margins` | boolean | `false` | Removes Home Assistant Sections-view padding where available so the card can fill its assigned space. |
 | `mobile_view_outer_border` | boolean | `false` | Shows the theme-colored outer border around Mobile View on any device. |
 | `shadows` | boolean | `true` | Displays shadows inside the card. |
-| `outer_shadows` | boolean | `true` | Displays the shadow around the card. |
+| `outer_shadows` | boolean | `true` | Displays the shadow around the card. Preview, Wide View, and Mobile View automatically omit it on phones. |
 | `borders` | boolean | `true` | Displays borders on event items. |
 | `rounded_corners` | boolean | `true` | Enables rounded card and content corners. |
 | `col_left_width_pct` | number | `60` | Wide View left-column width. Range: `25`–`75`. |

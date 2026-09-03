@@ -2761,7 +2761,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           <span class="field-label" style="margin:0">Shadows (Outside Card)</span>
           <ha-switch id="outer_shadows" ${this._config?.outer_shadows !== false ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Enable or Disable Outer Shadows - this is the shadow around the entire card.  This could be useful on phones or tablets.
+        <div class="field-helper">Enable or Disable Outer Shadows - this is the shadow around the entire card. It is automatically hidden on phones for Preview, Wide View, and Mobile View.
         </div>
       </div>
       <div class="section">

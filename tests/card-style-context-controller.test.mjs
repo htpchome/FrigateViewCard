@@ -229,6 +229,8 @@ test("navigation tabs background uses the adaptive theme token", () => {
 
 test("syncVisualStyleToggles updates card classes and host outer styles", () => {
   const toggles = [];
+  const hostToggles = [];
+  const removedHostStyles = [];
   const card = {
     classList: {
       toggle: (className, value) => toggles.push([className, value]),
@@ -244,11 +246,14 @@ test("syncVisualStyleToggles updates card classes and host outer styles", () => 
     shadowRoot: {
       querySelector: () => card,
     },
-    style: {},
+    classList: {
+      toggle: (className, value) => hostToggles.push([className, value]),
+    },
+    style: {
+      removeProperty: (name) => removedHostStyles.push(name),
+    },
   };
   const controller = new CardStyleContextController(host);
-  controller.resolveCardTokenForHost = (target, property) =>
-    property === "box-shadow" ? "0 0 2px #000" : "12px";
 
   controller.syncVisualStyleToggles();
 
@@ -258,65 +263,97 @@ test("syncVisualStyleToggles updates card classes and host outer styles", () => 
     ["corners-off", true],
     ["mobile-view-outer-border-off", false],
   ]);
-  assert.equal(host.style.boxShadow, "0 0 2px #000");
-  assert.equal(host.style.borderRadius, "0px");
+  assert.deepEqual(hostToggles, [
+    ["outer-shadows-off", false],
+    ["outer-corners-off", true],
+  ]);
+  assert.deepEqual(removedHostStyles, ["box-shadow", "border-radius"]);
   assert.match(
     STYLES,
     /--ha-card-border-radius: var\(--fvc-outer-border-radius\);/,
   );
 });
 
-test("syncHostOuterStyles preserves its last valid shadow during shell replacement", () => {
-  const card = {};
+test("host CSS owns outer shadows across page shell replacements", () => {
+  const hostToggles = [];
+  const removedHostStyles = [];
   const host = {
-    _config: { outer_shadows: true },
-    shadowRoot: {
-      querySelector: () => card,
+    _config: { outer_shadows: true, rounded_corners: true },
+    _isLikelyPhoneClient: () => false,
+    classList: {
+      toggle: (className, value) => hostToggles.push([className, value]),
     },
-    style: {},
+    style: {
+      removeProperty: (name) => removedHostStyles.push(name),
+    },
   };
   const controller = new CardStyleContextController(host);
-  let resolvedShadow = "0 3px 8px #0004";
-  controller.resolveCardTokenForHost = (target, property) =>
-    property === "box-shadow" ? resolvedShadow : "12px";
 
   controller.syncHostOuterStyles();
-  resolvedShadow = "none";
   controller.syncHostOuterStyles();
 
-  assert.equal(host.style.boxShadow, "0 3px 8px #0004");
-
-  host._config.outer_shadows = false;
-  controller.syncHostOuterStyles();
-
-  assert.equal(host.style.boxShadow, "none");
+  assert.deepEqual(hostToggles, [
+    ["outer-shadows-off", false],
+    ["outer-corners-off", false],
+    ["outer-shadows-off", false],
+    ["outer-corners-off", false],
+  ]);
+  assert.deepEqual(removedHostStyles, [
+    "box-shadow",
+    "border-radius",
+    "box-shadow",
+    "border-radius",
+  ]);
+  assert.match(
+    STYLES,
+    /:host\s*\{[\s\S]*?box-shadow: var\(--fvc-outer-shadow-m\);/,
+  );
+  assert.match(STYLES, /:host\(\.outer-shadows-off\)\s*\{ box-shadow: none; \}/);
+  assert.match(STYLES, /\.card\{[\s\S]*?--ha-card-box-shadow: none;/);
 });
 
-test("syncHostOuterStyles preserves the shadow without forcing host layout", () => {
-  const card = {};
+test("full-page outer shadows are suppressed on phones but retained on tablets", () => {
   let layoutReads = 0;
+  let isPhone = true;
+  let page = "preview";
+  const shadowStates = [];
   const host = {
     _config: { outer_shadows: true },
-    shadowRoot: {
-      querySelector: () => card,
+    _isLikelyPhoneClient: () => isPhone,
+    _isPreviewPageActive: () => page === "preview",
+    _isMobileViewPageActive: () => page === "mobile",
+    _wideViewPageController: {
+      isWideViewPageActive: () => page === "wide",
     },
-    style: {},
+    classList: {
+      toggle: (className, value) => {
+        if (className === "outer-shadows-off") shadowStates.push(value);
+      },
+    },
+    style: { removeProperty: () => {} },
     get offsetWidth() {
       layoutReads += 1;
       return 640;
     },
   };
   const controller = new CardStyleContextController(host);
-  controller.resolveCardTokenForHost = (target, property) =>
-    property === "box-shadow" ? "0 3px 8px #0004" : "12px";
 
+  controller.syncHostOuterStyles();
+  page = "wide";
+  controller.syncHostOuterStyles();
+  page = "mobile";
+  controller.syncHostOuterStyles();
+  page = "single";
+  controller.syncHostOuterStyles();
+  page = "mobile";
+  isPhone = false;
   controller.syncHostOuterStyles();
 
   assert.equal(layoutReads, 0);
-  assert.equal(host.style.boxShadow, "0 3px 8px #0004");
+  assert.deepEqual(shadowStates, [true, true, true, false, false]);
 });
 
-test("syncVisualStyleToggles avoids hardcoded host radius fallback", () => {
+test("syncVisualStyleToggles leaves host radius ownership in CSS", () => {
   const card = {
     classList: {
       toggle: () => {},
@@ -332,19 +369,20 @@ test("syncVisualStyleToggles avoids hardcoded host radius fallback", () => {
     shadowRoot: {
       querySelector: () => card,
     },
+    classList: { toggle: () => {} },
     style: {
       removeProperty: (name) => {
-        host._removedProperty = name;
+        host._removedProperties.push(name);
       },
     },
+    _removedProperties: [],
   };
   const controller = new CardStyleContextController(host);
-  controller.resolveCardTokenForHost = () => "";
 
   controller.syncVisualStyleToggles();
 
   assert.equal(host.style.borderRadius, undefined);
-  assert.equal(host._removedProperty, "border-radius");
+  assert.deepEqual(host._removedProperties, ["box-shadow", "border-radius"]);
 });
 
 test("applyTightMargins updates parent spacing and sections row gap", () => {
@@ -439,39 +477,6 @@ test("phone Mobile View full bleed uses the inherited Sections gutter", () => {
   assert.match(
     STYLES,
     /:host\(\.mobile-view-sections-full-bleed\)\s*\{[\s\S]*?width:\s*calc\([\s\S]*?--ha-view-sections-column-gap, 8px[\s\S]*?margin-inline:\s*calc\([\s\S]*?--ha-view-sections-column-gap, 8px/,
-  );
-});
-
-test("resolveCardTokenForHost measures resolved token values", () => {
-  const probe = {
-    style: {
-      cssText: "",
-      setProperty: () => {},
-    },
-    remove: () => {},
-  };
-  const card = {
-    appendChild: (node) => {
-      assert.equal(node, probe);
-    },
-  };
-  const controller = new CardStyleContextController({});
-
-  withGlobals(
-    {
-      document: {
-        createElement: () => probe,
-      },
-      getComputedStyle: () => ({
-        getPropertyValue: () => " 24px ",
-      }),
-    },
-    () => {
-      assert.equal(
-        controller.resolveCardTokenForHost(card, "border-radius", "var(--x)"),
-        "24px",
-      );
-    },
   );
 });
 

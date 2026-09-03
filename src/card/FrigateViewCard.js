@@ -1504,14 +1504,6 @@ export class FrigateViewCard extends HTMLElement {
     this._cardStyleController.syncHostOuterStyles();
   }
 
-  _resolveCardTokenForHost(card, cssProperty, token) {
-    return this._cardStyleController.resolveCardTokenForHost(
-      card,
-      cssProperty,
-      token,
-    );
-  }
-
   _applyTightMargins() {
     this._cardStyleController.applyTightMargins();
   }

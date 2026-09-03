@@ -8,6 +8,11 @@ import { LINKED_LIGHT_STYLES } from "./features/linked-entities/light.styles.js"
 
 export const STYLES = `
   :host {
+    --fvc-shadow-s: var(--ha-box-shadow-s);
+    --fvc-shadow-m: var(--ha-box-shadow-m);
+    --fvc-outer-shadow-m: var(--ha-box-shadow-m);
+    --fvc-border-radius: 15px;
+    --fvc-outer-border-radius: 15px;
     height: var(--card-host-height, 100%) !important;
     max-height: var(--card-host-height, 100%) !important;
     min-height: 0;
@@ -16,8 +21,11 @@ export const STYLES = `
     box-sizing: border-box !important;
     display: block !important;
     border: 0 !important;
-    border-radius: var(--fvc-border-radius);
+    border-radius: var(--fvc-outer-border-radius);
+    box-shadow: var(--fvc-outer-shadow-m);
   }
+  :host(.outer-shadows-off) { box-shadow: none; }
+  :host(.outer-corners-off) { border-radius: 0; }
   :host(.card-picker-demo-host) {
     --card-host-height: 360px !important;
     height: 360px !important;
@@ -106,14 +114,10 @@ export const STYLES = `
     overflow:hidden !important;
     }
   .card{
-    --fvc-shadow-s: var(--ha-box-shadow-s);
-    --fvc-shadow-m: var(--ha-box-shadow-m);
-    --fvc-outer-shadow-m: var(--ha-box-shadow-m);
     --fvc-border-s: 1px solid var(--c-border2);
     --fvc-border-m: 2px solid var(--c-border2);
     --fvc-border-active:  1px solid var(--c-primary);
-    --fvc-border-radius: 15px;
-    --fvc-outer-border-radius: 15px;
+    --ha-card-box-shadow: none;
     --ha-card-border-radius: var(--fvc-outer-border-radius);
     --fvc-footer-height: calc(2.4rem + 8px);
     color:var(--c-text);
