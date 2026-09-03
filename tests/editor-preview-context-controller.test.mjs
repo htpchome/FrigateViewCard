@@ -50,6 +50,81 @@ test("isCardPickerPreviewContext detects card picker hosts", () => {
   assert.equal(controller.isPreviewContext(), true);
 });
 
+test("config drafts update preview chrome without rebuilding media or lists", () => {
+  const calls = [];
+  const host = {
+    _pageId: "single-view",
+    _viewMode: "single",
+    _activeCamIdx: 0,
+    _haNavbarController: { sync: () => calls.push(["ha-navbar"]) },
+    _haDashboardSwipeNavigationController: {
+      sync: () => calls.push(["dashboard-swipe"]),
+    },
+    _syncVisualStyleToggles: () => calls.push(["visual-style"]),
+    _haPageBackgroundController: {
+      sync: () => calls.push(["page-background"]),
+    },
+    _previewPageController: {
+      syncBottomNavbarPreviewChrome: () => calls.push(["preview-chrome"]),
+    },
+    _pageNavigationController: {
+      isPageRouteAvailable: () => true,
+    },
+    _singleViewPageController: {
+      applyEditorPreviewDraftRefresh: (options) =>
+        calls.push(["soft-preview", options]),
+    },
+    _syncToolbarButtons: () => calls.push(["toolbar"]),
+    _cleanupEngine: () => calls.push(["cleanup-engine"]),
+    _renderList: () => calls.push(["render-list"]),
+  };
+  const controller = new EditorPreviewContextController(host);
+
+  const result = controller.applyConfigDraft({
+    previousConfig: { title: "Original", cameras: [] },
+    nextConfig: { title: "Updated", cameras: [] },
+  });
+
+  assert.equal(result, "synced");
+  assert.deepEqual(calls, [
+    ["ha-navbar"],
+    ["dashboard-swipe"],
+    ["visual-style"],
+    ["page-background"],
+    ["preview-chrome"],
+    ["soft-preview", { renderList: false }],
+    ["toolbar"],
+  ]);
+  assert.equal(calls.some(([name]) => name === "cleanup-engine"), false);
+  assert.equal(calls.some(([name]) => name === "render-list"), false);
+});
+
+test("disabling the active page moves the editor preview to Single View", () => {
+  const calls = [];
+  const host = {
+    _pageId: "preview",
+    _haNavbarController: { sync: () => {} },
+    _haDashboardSwipeNavigationController: { sync: () => {} },
+    _syncVisualStyleToggles: () => {},
+    _haPageBackgroundController: { sync: () => {} },
+    _previewPageController: { syncBottomNavbarPreviewChrome: () => {} },
+    _pageNavigationController: {
+      isPageRouteAvailable: () => false,
+      navigateToPageRoute: (pageId, context) =>
+        calls.push([pageId, context]),
+    },
+    _singleViewPageController: {
+      applyEditorPreviewDraftRefresh: () => calls.push(["soft-preview"]),
+    },
+  };
+  const controller = new EditorPreviewContextController(host);
+
+  assert.equal(controller.applyConfigDraft(), "navigated");
+  assert.deepEqual(calls, [
+    ["single-view", { source: "editor-preview-page-disabled" }],
+  ]);
+});
+
 test("renderCardPickerDemo paints an isolated presentation surface", () => {
   const picker = makeNode("HUI-CARD-PICKER");
   const hostClasses = [];

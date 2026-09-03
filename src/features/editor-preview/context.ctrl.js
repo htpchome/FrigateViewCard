@@ -12,6 +12,18 @@ export const EDITOR_PREVIEW_ROUTE_INTENTS = Object.freeze({
   reset: "reset",
 });
 
+const previewValueSignature = (value) => {
+  if (value && typeof value === "object") return JSON.stringify(value);
+  return value;
+};
+
+const previewKeysChanged = (previousConfig, nextConfig, ...keys) =>
+  keys.some(
+    (key) =>
+      previewValueSignature(previousConfig?.[key]) !==
+      previewValueSignature(nextConfig?.[key]),
+  );
+
 export class EditorPreviewContextController {
   constructor(host) {
     this._host = host;
@@ -73,6 +85,123 @@ export class EditorPreviewContextController {
         { source: "editor-preview-route-intent" },
       ) ?? null
     );
+  }
+
+  applyConfigDraft({ previousConfig = {}, nextConfig = {} } = {}) {
+    this._host._haNavbarController?.sync?.();
+    this._host._haDashboardSwipeNavigationController?.sync?.();
+    this._host._syncVisualStyleToggles?.();
+    this._host._haPageBackgroundController?.sync?.();
+    this._host._previewPageController?.syncBottomNavbarPreviewChrome?.();
+    this._host._browseOpen = nextConfig.browse_expanded;
+
+    const pageNavigation = this._host._pageNavigationController;
+    const activePageAvailable =
+      pageNavigation?.isPageRouteAvailable?.(this._host._pageId) !== false;
+    if (!activePageAvailable) {
+      void pageNavigation?.navigateToPageRoute?.(PAGE_IDS.singleView, {
+        source: "editor-preview-page-disabled",
+      });
+      return "navigated";
+    }
+
+    const camerasChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "cameras",
+    );
+    if (camerasChanged) {
+      this._host._activeCamIdx = Math.min(
+        Number(this._host._activeCamIdx) || 0,
+        Math.max(0, (nextConfig.cameras?.length || 1) - 1),
+      );
+    }
+
+    const wideCompanionChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "wide_view_live_cameras",
+      "wide_view_alert_takeover",
+    );
+    if (wideCompanionChanged) {
+      this._host._wideViewPageController?.applyCompanionConfigUpdate?.({
+        takeoverDefaultChanged: previewKeysChanged(
+          previousConfig,
+          nextConfig,
+          "wide_view_alert_takeover",
+        ),
+      });
+    }
+
+    const timelineEnabledChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "wide_view_timeline_enabled",
+    );
+    const timelineDefaultOpenChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "wide_view_timeline_default_open",
+    );
+    const timelineDefaultScaleChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "wide_view_timeline_default_scale",
+    );
+    if (
+      timelineEnabledChanged ||
+      timelineDefaultOpenChanged ||
+      timelineDefaultScaleChanged
+    ) {
+      this._host._wideViewPageController?.applyTimelineConfigUpdate?.({
+        enabledChanged: timelineEnabledChanged,
+        defaultOpenChanged: timelineDefaultOpenChanged,
+        defaultScaleChanged: timelineDefaultScaleChanged,
+      });
+    }
+
+    const cardTakeoverChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "card_view_alert_takeover",
+    );
+    const cardDrawerChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "card_view_drawer_default_open",
+    );
+    if (cardTakeoverChanged || cardDrawerChanged) {
+      this._host._cardViewPageController?.applyConfigUpdate?.({
+        takeoverDefaultChanged: cardTakeoverChanged,
+        drawerDefaultChanged: cardDrawerChanged,
+      });
+    }
+
+    this._host._singleViewPageController?.applyEditorPreviewDraftRefresh?.({
+      renderList: false,
+    });
+    this._host._syncToolbarButtons?.();
+
+    const gridPresentationChanged = previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "cameras",
+      "grid_order",
+      "grid_live_view_enabled",
+    );
+    if (gridPresentationChanged && this._host._viewMode === "grid") {
+      this._host._scheduleGridRefresh?.(0);
+    }
+    if (
+      previewKeysChanged(
+        previousConfig,
+        nextConfig,
+        "snapshot_update_seconds",
+      )
+    ) {
+      this._host._syncSnapshotRefreshTimer?.();
+    }
+    return "synced";
   }
 
   syncHassPreviewContext() {

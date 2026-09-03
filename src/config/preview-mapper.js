@@ -141,34 +141,6 @@ export const createEditorPreviewDraft = (config) => ({
   video_recording_defaults: config.video_recording_defaults,
 });
 
-export const applyEditorVisualPreviewDraftToCardConfig = ({
-  baseConfig,
-  previewConfig,
-}) => {
-  const base = baseConfig && typeof baseConfig === "object" ? baseConfig : {};
-  if (!previewConfig) return base;
-  return {
-    ...base,
-    theme: previewConfig.theme === "custom" ? "custom" : "default",
-    theme_custom: normalizeThemeCustomConfig(previewConfig.theme_custom),
-    theme_custom_defaults: normalizeThemeCustomDefaultsConfig(
-      previewConfig.theme_custom_defaults,
-    ),
-    stream_height: normalizeCardHeight(previewConfig.stream_height),
-    stream_height_unit: normalizeCardHeightUnit(
-      previewConfig.stream_height_unit,
-    ),
-    tight_margins: previewConfig.tight_margins === true,
-    shadows: previewConfig.shadows !== false,
-    borders: previewConfig.borders !== false,
-    rounded_corners: previewConfig.rounded_corners !== false,
-    outer_shadows: previewConfig.outer_shadows !== false,
-    col_left_width_pct: normalizeWideLeftWidth(
-      previewConfig.col_left_width_pct,
-    ),
-  };
-};
-
 export const applyEditorPreviewDraftToCardConfig = ({
   baseConfig,
   previewConfig,

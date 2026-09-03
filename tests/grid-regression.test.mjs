@@ -298,6 +298,42 @@ test("Grid live preference reaches the go2rtc cell mount", () => {
   assert.equal(mountedOptions?.preferWebRtc, true);
 });
 
+test("Grid editor previews always use snapshots", () => {
+  const liveHost = {
+    _isEditorPreviewContext: () => false,
+    _gridLiveViewEnabled: () => true,
+    _isGridCameraAlertLive: () => false,
+  };
+  assert.equal(
+    new GridMediaController(liveHost)._shouldUseLive("camera.front"),
+    true,
+  );
+
+  const alertHost = {
+    _isEditorPreviewContext: () => false,
+    _gridLiveViewEnabled: () => false,
+    _isGridCameraAlertLive: () => true,
+  };
+  assert.equal(
+    new GridMediaController(alertHost)._shouldUseLive("camera.front"),
+    true,
+  );
+
+  const editorHost = {
+    _isEditorPreviewContext: () => true,
+    _gridLiveViewEnabled: () => true,
+    _isGridCameraAlertLive: () => true,
+  };
+  assert.equal(
+    new GridMediaController(editorHost)._shouldUseLive("camera.front"),
+    false,
+  );
+  assert.match(
+    cardSource,
+    /_gridLiveViewEnabled\(\) \{\s*if \(this\._isEditorPreviewContext\(\)\) return false;/,
+  );
+});
+
 test("Grid rotation reuses previously mounted page media", () => {
   const previousDocument = globalThis.document;
   const createElement = () => {

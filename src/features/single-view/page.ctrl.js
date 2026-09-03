@@ -358,7 +358,7 @@ export class SingleViewPageController {
     }
   }
 
-  applyEditorPreviewDraftRefresh() {
+  applyEditorPreviewDraftRefresh({ renderList = true } = {}) {
     this._host._syncTabsShell();
     this._pageNavigation()?.syncPageNavShell?.() ??
       this._host._syncPageNavShell?.();
@@ -373,7 +373,7 @@ export class SingleViewPageController {
     this._host._renderSubtitle();
     this._host._renderStats();
     this._host._renderListLabel();
-    this._host._renderList();
+    if (renderList) this._host._renderList();
     this._pageNavigation()?.syncPageNavigationButtons?.() ??
       this._host._syncPageNavigationButtons?.();
   }

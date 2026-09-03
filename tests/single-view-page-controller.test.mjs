@@ -580,6 +580,27 @@ test("applyEditorPreviewDraftRefresh orchestrates editor preview refresh order",
   ]);
 });
 
+test("applyEditorPreviewDraftRefresh can preserve the rendered browse list", () => {
+  const { host, calls } = createHost();
+  const controller = new SingleViewPageController(host, { PAGE_IDS });
+
+  controller.applyEditorPreviewDraftRefresh({ renderList: false });
+
+  assert.deepEqual(calls, [
+    ["syncTabsShell"],
+    ["syncPageNavShell"],
+    ["renderCamSwitcher"],
+    ["applyCardStyle"],
+    ["applyLayoutMode"],
+    ["syncFooterLogo"],
+    ["syncStatus"],
+    ["renderSubtitle"],
+    ["renderStats"],
+    ["renderListLabel"],
+    ["syncPageNavigationButtons"],
+  ]);
+});
+
 test("applyEditorPreviewDraftRefresh rebuilds the active preview page", () => {
   const { host, calls } = createHost();
   host._pageId = PAGE_IDS.preview;

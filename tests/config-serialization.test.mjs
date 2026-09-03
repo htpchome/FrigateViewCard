@@ -9,7 +9,6 @@ import {
 } from "../src/helpers.js";
 import {
   applyEditorPreviewDraftToCardConfig,
-  applyEditorVisualPreviewDraftToCardConfig,
   createEditorPreviewDraft,
 } from "../src/config/preview-mapper.js";
 import {
@@ -1484,8 +1483,8 @@ test("preview draft carries hidden tabs and page routes", () => {
   ]);
 });
 
-test("visual editor previews change styling without applying content drafts", () => {
-  const previewConfig = applyEditorVisualPreviewDraftToCardConfig({
+test("editor previews apply content and styling from the same draft", () => {
+  const previewConfig = applyEditorPreviewDraftToCardConfig({
     baseConfig: {
       title: "Saved title",
       realtime_poll_seconds: 5,
@@ -1505,8 +1504,8 @@ test("visual editor previews change styling without applying content drafts", ()
     },
   });
 
-  assert.equal(previewConfig.title, "Saved title");
-  assert.equal(previewConfig.realtime_poll_seconds, 5);
+  assert.equal(previewConfig.title, "Unsaved title");
+  assert.equal(previewConfig.realtime_poll_seconds, 60);
   assert.equal(previewConfig.theme, "custom");
   assert.equal(previewConfig.rounded_corners, false);
   assert.equal(previewConfig.stream_height, 80);

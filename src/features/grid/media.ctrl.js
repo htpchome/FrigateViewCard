@@ -574,6 +574,14 @@ export class GridMediaController {
     return this._mountGridCameraCellMedia(cell, options);
   }
 
+  _shouldUseLive(entity) {
+    if (this._host._isEditorPreviewContext?.() === true) return false;
+    return (
+      this._host._gridLiveViewEnabled() ||
+      this._host._isGridCameraAlertLive(entity)
+    );
+  }
+
   _setGridPresentation(slot, active) {
     if (!slot) return;
     slot.hidden = !active;
@@ -719,10 +727,7 @@ export class GridMediaController {
       const cam = idx >= 0 ? cameras[idx] : null;
       const entity = cam?.entity || "";
       const severity = idx >= 0 ? this._host._gridCellSeverity(entity) : "";
-      const useLive =
-        idx >= 0 &&
-        (this._host._gridLiveViewEnabled() ||
-          this._host._isGridCameraAlertLive(entity));
+      const useLive = idx >= 0 && this._shouldUseLive(entity);
       signatureParts.push(
         buildGridSignaturePart({
           index: idx,
@@ -801,9 +806,7 @@ export class GridMediaController {
           : null;
         const severity = this._host._gridCellSeverity(entity);
         applyGridCellSeverityClass(cell, severity);
-        const useLive =
-          this._host._gridLiveViewEnabled() ||
-          this._host._isGridCameraAlertLive(entity);
+        const useLive = this._shouldUseLive(entity);
         cell.dataset.gridUseLive = useLive ? "1" : "0";
         if (entity) {
           this._mountGridCameraCellMedia(cell, {

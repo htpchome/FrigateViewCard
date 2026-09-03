@@ -113,6 +113,20 @@ export class PreviewPageController {
     if (footer) footer.hidden = useBottomNavbarChrome;
   }
 
+  syncHeader() {
+    if (!this.isPreviewPageActive()) return;
+    const titleEl = this._host._$("#preview-shell-title");
+    const subtitleEl = this._host._$("#preview-shell-subtitle");
+    if (titleEl) {
+      titleEl.hidden = this._host._config.display_title === false;
+      titleEl.textContent = this._previewPageTitle();
+    }
+    if (subtitleEl) {
+      subtitleEl.hidden = this._host._config.display_subtitle === false;
+      subtitleEl.textContent = this._host._subtitleText();
+    }
+  }
+
   buildPreviewLayoutShellMarkup() {
     const useBottomNavbarChrome = this.usesBottomNavbarPreviewChrome();
     const previewLogo =
@@ -246,16 +260,7 @@ export class PreviewPageController {
 
     const shell = this.ensurePreviewLayoutShell();
     if (!shell) return;
-    const titleEl = this._host._$("#preview-shell-title");
-    const subtitleEl = this._host._$("#preview-shell-subtitle");
-    if (titleEl) {
-      titleEl.hidden = this._host._config.display_title === false;
-      titleEl.textContent = this._previewPageTitle();
-    }
-    if (subtitleEl) {
-      subtitleEl.hidden = this._host._config.display_subtitle === false;
-      subtitleEl.textContent = this._host._subtitleText();
-    }
+    this.syncHeader();
     this.syncBottomNavbarPreviewChrome();
 
     const cameras = this._displayCameras();

@@ -110,10 +110,7 @@ import {
   limitCameraConfigsByPhysicalCount,
 } from "../features/camera-groups/model.js";
 import { normalizeGridOrderConfig } from "../features/grid/config.js";
-import {
-  applyEditorPreviewDraftToCardConfig,
-  applyEditorVisualPreviewDraftToCardConfig,
-} from "../config/preview-mapper.js";
+import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
 import {
   DEFAULT_CAMERA_ENTITY,
   resolvePreferredDefaultCameraEntity,
@@ -1387,26 +1384,20 @@ export class FrigateViewCard extends HTMLElement {
     if (!this._isEditorPreviewContext()) return;
     if (!this._committedConfig) return;
 
-    const previousWideWidth = this._config?.col_left_width_pct;
+    const previousConfig = this._config;
     const base = this._cloneCardConfig(this._committedConfig);
-    const visualOnly = Boolean(previewConfig && !routeIntent);
-    const next = visualOnly
-      ? applyEditorVisualPreviewDraftToCardConfig({
-          baseConfig: base,
-          previewConfig,
-        })
-      : applyEditorPreviewDraftToCardConfig({
-          baseConfig: base,
-          previewConfig,
-        });
+    const draftOnly = Boolean(previewConfig && !routeIntent);
+    const next = applyEditorPreviewDraftToCardConfig({
+      baseConfig: base,
+      previewConfig,
+    });
 
     this._config = next;
-    if (visualOnly) {
-      this._syncVisualStyleToggles();
-      this._applyCardStyle();
-      if (previousWideWidth !== next.col_left_width_pct) {
-        this._wideViewPageController?.applyLayoutAndWideSyncForCard?.();
-      }
+    if (draftOnly) {
+      this._editorPreviewController.applyConfigDraft({
+        previousConfig,
+        nextConfig: next,
+      });
       return;
     }
     this._haNavbarController?.sync?.();
@@ -2898,7 +2889,7 @@ export class FrigateViewCard extends HTMLElement {
       !this._previewPageController.previewLiveCamerasEnabled();
     const shouldRefreshGrid =
       this._viewMode === "grid" &&
-      this._config?.grid_live_view_enabled === false;
+      !this._gridLiveViewEnabled();
     const shouldRefreshWideCompanions =
       this._wideViewPageController.isWideViewPageActive() &&
       !this._wideViewPageController.companionLiveCamerasEnabled();
@@ -2922,7 +2913,7 @@ export class FrigateViewCard extends HTMLElement {
       }
       if (
         this._viewMode === "grid" &&
-        this._config?.grid_live_view_enabled === false
+        !this._gridLiveViewEnabled()
       ) {
         void this._refreshSnapshotMedia().finally(() => {
           this._syncSnapshotRefreshTimer();
@@ -3012,6 +3003,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _gridLiveViewEnabled() {
+    if (this._isEditorPreviewContext()) return false;
     return this._config?.grid_live_view_enabled !== false;
   }
 

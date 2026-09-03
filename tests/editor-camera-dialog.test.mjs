@@ -467,7 +467,7 @@ test("draggable config tiles support before, replace, and after drop zones", () 
   ]);
 });
 
-test("Grid order edits mark the editor dirty without refreshing the card preview", () => {
+test("Grid order edits mark the editor dirty and publish a preview draft", () => {
   const editor = new FrigateViewCardEditor();
   const calls = [];
   editor._config = {
@@ -492,7 +492,11 @@ test("Grid order edits mark the editor dirty without refreshing the card preview
     included: ["camera.driveway", "camera.front"],
     excluded: [],
   });
-  assert.deepEqual(calls, ["render-editor", "mark-dirty"]);
+  assert.deepEqual(calls, [
+    "render-editor",
+    "preview-draft",
+    "mark-dirty",
+  ]);
 });
 
 test("theme color pickers match the exact active mobile surface defaults", () => {
@@ -783,7 +787,7 @@ test("camera modal scrolls inside the available editor overlay", () => {
   );
 });
 
-test("ordinary editor changes mark dirty without dispatching or previewing", () => {
+test("ordinary editor changes mark dirty and publish an internal preview", () => {
   const source = fs.readFileSync(
     new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
     "utf8",
@@ -791,11 +795,17 @@ test("ordinary editor changes mark dirty without dispatching or previewing", () 
 
   assert.match(
     source,
-    /const update = \(previewRouteIntent = null\) =>\s*this\._u\(\{\s*dispatch: false,\s*preview: Boolean\(previewRouteIntent\),/,
+    /const update = \(previewRouteIntent = null\) =>\s*this\._u\(\{\s*dispatch: false,\s*preview: true,/,
   );
   assert.match(
     source,
-    /const updateVisual = \(\) =>\s*this\._u\(\{ dispatch: false, preview: true \}\);/,
+    /const updateVisual = \(\) => update\(\);/,
+  );
+  assert.match(source, /const EDITOR_TEXT_PREVIEW_DELAY_MS = 200;/);
+  assert.match(source, /const textPreviewSelectors = \["#title", "#subtitle"\];/);
+  assert.match(
+    source,
+    /if \(preview && \(configChanged \|\| previewRouteIntent\)\) \{/,
   );
   assert.match(source, /this\._markHomeAssistantDirty\(/);
   assert.doesNotMatch(source, /this\._u\(\{ dispatch: true \}\);/);
@@ -836,6 +846,20 @@ test("Home Assistant dirty context tracks drafts without config-changed", () => 
     config: { title: "Original" },
     key: "frigate-view-card-editor",
   });
+});
+
+test("older Home Assistant editors fall back to config-changed for Save state", () => {
+  const editor = new FrigateViewCardEditor();
+  const dispatched = [];
+  editor._haDirtyBaselineConfig = { title: "Original" };
+  editor._haDirtyBaselineSig = JSON.stringify(editor._haDirtyBaselineConfig);
+  editor._findHomeAssistantEditCardDialog = () => ({});
+  editor._requestHomeAssistantDirtyStateContext = () => {};
+  editor._dispatch = (config) => dispatched.push(config);
+
+  editor._markHomeAssistantDirty({ title: "Changed" });
+
+  assert.deepEqual(dispatched, [{ title: "Changed" }]);
 });
 
 test("Save commits the final draft directly to the Home Assistant dialog", () => {

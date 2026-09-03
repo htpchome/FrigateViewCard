@@ -159,6 +159,32 @@ test("Preview title supports the active camera token without inheriting grid tex
   assert.equal(controller._previewPageTitle(), "Front Door");
 });
 
+test("Preview header text and visibility update without rebuilding media", () => {
+  const { controller, host } = createHost({
+    previewEnabled: true,
+    pageId: "preview",
+  });
+  const title = { hidden: false, textContent: "" };
+  const subtitle = { hidden: false, textContent: "" };
+  host._$ = (selector) =>
+    ({
+      "#preview-shell-title": title,
+      "#preview-shell-subtitle": subtitle,
+    })[selector] || null;
+  host._config.title = "{Camera}";
+  host._activeCam = { entity: "camera.front_door", name: "Doorbell" };
+  host._config.display_title = false;
+  host._config.display_subtitle = true;
+  host._subtitleText = () => "Updated subtitle";
+
+  controller.syncHeader();
+
+  assert.equal(title.hidden, true);
+  assert.equal(title.textContent, "Doorbell");
+  assert.equal(subtitle.hidden, false);
+  assert.equal(subtitle.textContent, "Updated subtitle");
+});
+
 test("Preview linked lights render in metadata or over media when metadata is hidden", () => {
   const light = "<button data-linked-light-toggle>LIGHT</button>";
   const meta = buildPreviewMetaMarkup({

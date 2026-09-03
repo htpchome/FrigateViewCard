@@ -167,6 +167,7 @@ const CAMERA_MODAL_SELECTOR_IDS = Object.freeze(
 
 const HOME_ASSISTANT_DIRTY_STATE_CONTEXT = "dirtyState";
 const EDITOR_DIRTY_STATE_KEY = "frigate-view-card-editor";
+const EDITOR_TEXT_PREVIEW_DELAY_MS = 200;
 
 const escapeEditorChoiceMarkup = escapeHtml;
 
@@ -837,11 +838,15 @@ export class FrigateViewCardEditor extends HTMLElement {
   }
 
   disconnectedCallback() {
+    if (this._textPreviewUpdateT) {
+      clearTimeout(this._textPreviewUpdateT);
+      this._textPreviewUpdateT = null;
+    }
     if (this._livePreviewRaf) {
       cancelAnimationFrame(this._livePreviewRaf);
       this._livePreviewRaf = 0;
     }
-    this._pendingVisualPreviewUpdate = false;
+    this._pendingEditorPreviewUpdate = false;
     if (this._previewUpdateRaf) {
       cancelAnimationFrame(this._previewUpdateRaf);
       this._previewUpdateRaf = 0;
@@ -1234,6 +1239,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     const cameras = reorderItemsForDrop(cur, from, to, placement);
     this._config = { ...this._config, cameras };
     this._render();
+    this._publishPreviewDraft();
     this._markHomeAssistantDirty(
       this._homeAssistantConfig({ readDom: false }),
     );
@@ -1898,6 +1904,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     };
     this._closeCameraModal();
     this._render();
+    this._publishPreviewDraft();
     this._markHomeAssistantDirty(
       this._homeAssistantConfig({ readDom: false }),
     );
@@ -1909,6 +1916,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     cur.splice(index, 1);
     this._config = { ...this._config, cameras: cur };
     this._render();
+    this._publishPreviewDraft();
     this._markHomeAssistantDirty(
       this._homeAssistantConfig({ readDom: false }),
     );
@@ -2130,16 +2138,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       "[data-theme-default]",
     ];
 
-    const visualPreviewSelectors = [
-      "#stream_height",
-      "#stream_height_unit",
-      "#col_left_width_pct",
-      "#tight_margins",
-      "#shadows",
-      "#borders",
-      "#rounded_corners",
-      "#outer_shadows",
-    ];
+    const textPreviewSelectors = ["#title", "#subtitle"];
 
     const eventMatchesSelectors = (event, selectors) => {
       const path = Array.isArray(event.composedPath?.())
@@ -2152,18 +2151,37 @@ export class FrigateViewCardEditor extends HTMLElement {
       );
     };
 
-    const handlePreviewUpdate = (event) => {
-      if (!eventMatchesSelectors(event, configUpdateSelectors)) return;
-      if (eventMatchesSelectors(event, visualPreviewSelectors)) {
-        this._pendingVisualPreviewUpdate = true;
-      }
+    const schedulePreviewUpdate = () => {
       if (this._livePreviewRaf) return;
       this._livePreviewRaf = requestAnimationFrame(() => {
         this._livePreviewRaf = 0;
-        const preview = this._pendingVisualPreviewUpdate === true;
-        this._pendingVisualPreviewUpdate = false;
+        const preview = this._pendingEditorPreviewUpdate === true;
+        this._pendingEditorPreviewUpdate = false;
         this._u({ dispatch: false, preview });
       });
+    };
+
+    const handlePreviewUpdate = (event) => {
+      if (!eventMatchesSelectors(event, configUpdateSelectors)) return;
+      const isTextPreview = eventMatchesSelectors(
+        event,
+        textPreviewSelectors,
+      );
+      if (isTextPreview && event.type !== "change") {
+        clearTimeout(this._textPreviewUpdateT);
+        this._textPreviewUpdateT = setTimeout(() => {
+          this._textPreviewUpdateT = null;
+          this._pendingEditorPreviewUpdate = true;
+          schedulePreviewUpdate();
+        }, EDITOR_TEXT_PREVIEW_DELAY_MS);
+        return;
+      }
+      if (isTextPreview && this._textPreviewUpdateT) {
+        clearTimeout(this._textPreviewUpdateT);
+        this._textPreviewUpdateT = null;
+      }
+      this._pendingEditorPreviewUpdate = true;
+      schedulePreviewUpdate();
     };
 
     ["input", "change", "value-changed", "selected-changed", "click"].forEach(
@@ -3660,11 +3678,10 @@ export class FrigateViewCardEditor extends HTMLElement {
     const update = (previewRouteIntent = null) =>
       this._u({
         dispatch: false,
-        preview: Boolean(previewRouteIntent),
+        preview: true,
         previewRouteIntent,
       });
-    const updateVisual = () =>
-      this._u({ dispatch: false, preview: true });
+    const updateVisual = () => update();
     const scheduleUpdate = (previewRouteIntent = null) => {
       if (previewRouteIntent) {
         this._pendingEditorPreviewRouteIntent = previewRouteIntent;
@@ -4057,7 +4074,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     bindEventsForIds({
       root: this,
-      ids: ["title", "subtitle", "stream_height", "col_left_width_pct"],
+      ids: ["stream_height", "col_left_width_pct"],
       events: ["change"],
       handler: () => update(),
     });
@@ -4231,6 +4248,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       grid_order: normalizeGridOrderConfig(gridOrder, this._getCams()),
     };
     this._render();
+    this._publishPreviewDraft();
     this._markHomeAssistantDirty(
       this._homeAssistantConfig({ readDom: false }),
     );
@@ -4332,6 +4350,14 @@ export class FrigateViewCardEditor extends HTMLElement {
     );
   }
 
+  _publishPreviewDraft(routeIntent = null) {
+    this._hasVisualDraft = true;
+    this._emitPreviewDraft(
+      createEditorPreviewDraft(this._config),
+      routeIntent,
+    );
+  }
+
   _homeAssistantConfig({ readDom = true } = {}) {
     if (readDom) {
       const cameras = this._getCams();
@@ -4365,7 +4391,13 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     if (!this._haDirtyStateContext) {
       const dialog = this._findHomeAssistantEditCardDialog();
-      dialog?._updateDirtyState?.(nextConfig);
+      if (typeof dialog?._updateDirtyState === "function") {
+        dialog._updateDirtyState(nextConfig);
+      } else {
+        // HA versions before the dirty-state provider still rely on the
+        // documented config-changed event to enable Save.
+        this._dispatch(nextConfig);
+      }
       this._requestHomeAssistantDirtyStateContext();
     }
   }
@@ -4395,7 +4427,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     this._config = normalizedNextConfig;
     this._syncHiddenTabsDraftFromConfig(normalizedNextConfig);
-    if (preview) {
+    if (preview && (configChanged || previewRouteIntent)) {
       this._hasVisualDraft = true;
       this._emitPreviewDraft(
         createEditorPreviewDraft(normalizedNextConfig),
