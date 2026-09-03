@@ -119,7 +119,7 @@ The card includes a visual editor. A minimal YAML configuration is:
 ```yaml
 type: custom:frigate-view-card
 cameras:
-  - entity: camera.front_door
+  - entity: camera.doorbell
 ```
 
 The visual editor keeps YAML compact. Default values are accepted by the card but omitted from saved YAML until changed.
