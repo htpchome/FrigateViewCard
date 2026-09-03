@@ -117,9 +117,9 @@ Wide View can optionally add a collapsible vertical Timeline beside the browse a
 
 Preview is the at-a-glance camera overview. Every configured physical camera receives its own responsive tile, including separate A/B tiles for grouped cameras, with optional title bars showing the camera name, stream source, Alerts count, and online state. Selecting any tile carries that camera directly into the configured Single View or Mobile View flow.
 
-Preview can keep every tile live, or use refreshed snapshots to deliver a fast overview with far less network and device load. Desktop and mobile live-tile behavior can be configured independently. When a qualifying alert arrives, a snapshot tile can temporarily promote itself to live video, so the camera that matters comes alive automatically without requiring an always-live camera wall.
-
 <img src="images/preview-page.png" alt="Preview page showing an overview of configured cameras" width="400">
+
+Preview can keep every tile live, or use refreshed snapshots to deliver a fast overview with far less network and device load. Desktop and mobile live-tile behavior can be configured independently. When a qualifying alert arrives, a snapshot tile can temporarily promote itself to live video, so the camera that matters comes alive automatically without requiring an always-live camera wall.
 
 ### Card View
 
