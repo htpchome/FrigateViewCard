@@ -65,17 +65,56 @@ when a browser without native HLS needs it for recording playback.
 
 ### Manual installation
 
-1. Download the three generated files from the `dist` directory of the desired
-   release: `frigate-view-card.js`, `frigate-view-card-hls-1.5.17.js`, and
-   `frigate-view-card-hls-1.5.17.LICENSE.txt`.
-2. Copy them into the same `www` directory in your Home Assistant configuration
-   folder.
-3. In **Settings → Dashboards → Resources**, add:
+Home Assistant exposes the `www` folder inside its configuration directory at
+the `/local/` URL. On Home Assistant OS, the configuration directory is normally
+shown as `/config`, so `/config/www/frigate-view-card/` becomes
+`/local/frigate-view-card/` in the browser.
 
-   - URL: `/local/frigate-view-card.js`
+1. Download all four generated files from the `dist` directory of the desired
+   release:
+
+   - `frigate-view-card.js`
+   - `frigate-view-card-editor.js`
+   - `frigate-view-card-hls-1.5.17.js`
+   - `frigate-view-card-hls-1.5.17.LICENSE.txt`
+
+2. Inside your Home Assistant configuration directory, create this dedicated
+   folder if it does not already exist:
+
+   ```text
+   www/frigate-view-card/
+   ```
+
+   On Home Assistant OS, the resulting layout should be:
+
+   ```text
+   /config/
+   └── www/
+       └── frigate-view-card/
+           ├── frigate-view-card.js
+           ├── frigate-view-card-editor.js
+           ├── frigate-view-card-hls-1.5.17.js
+           └── frigate-view-card-hls-1.5.17.LICENSE.txt
+   ```
+
+   Keep the four files together in that folder. The main card loads the editor
+   and HLS companion file from paths relative to `frigate-view-card.js`.
+
+3. If this is the first time you have created the `www` folder, restart Home
+   Assistant once so the `/local/` path is available.
+
+4. In **Settings → Dashboards → Resources**, add:
+
+   - URL: `/local/frigate-view-card/frigate-view-card.js`
    - Resource type: **JavaScript Module**
 
-4. Refresh the browser.
+5. Refresh the browser. After an upgrade, use a hard refresh if the previous
+   card version is still shown.
+
+You may place the files directly in `www`, but then all four must still be
+siblings and the resource URL would instead be `/local/frigate-view-card.js`.
+The dedicated subfolder above is recommended because it keeps this multi-file
+card separate from other manually installed resources.
 
 ## Quick start
 
