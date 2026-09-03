@@ -1991,6 +1991,14 @@ export class FrigateViewCardEditor extends HTMLElement {
     });
   }
 
+  _commitDashboardSwipeOwnershipChange() {
+    this._u({
+      dispatch: this._haDraftAnnounced !== true,
+      preview: true,
+    });
+    this._render();
+  }
+
   _wireLivePreviewUpdates() {
     if (this._livePreviewHooksBound) return;
 
@@ -3892,8 +3900,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     this.querySelector("#ha_dashboard_swipe_navigation_owner")
       ?.addEventListener("change", () => {
-        update();
-        this._render();
+        this._commitDashboardSwipeOwnershipChange();
       });
     this.querySelector("#ha_dashboard_swipe_navigation")
       ?.addEventListener("change", (event) => {
@@ -4229,6 +4236,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     previewRouteIntent = null,
   } = {}) {
     if (!this._validateEditorFields()) return;
+    const previousConfigSig = this._configSignature(this._config);
     const cameras = this._getCams();
     const prevOptionSignature = this._landingPageOptionSignature(this._config);
     const nextConfig = buildEditorConfigFromDom({
@@ -4240,6 +4248,8 @@ export class FrigateViewCardEditor extends HTMLElement {
       hiddenTabsOverride: this._hiddenTabsDraft,
     });
     const normalizedNextConfig = this._normalizeConfig(nextConfig);
+    const configChanged =
+      this._configSignature(normalizedNextConfig) !== previousConfigSig;
     const nextOptionSignature =
       this._landingPageOptionSignature(normalizedNextConfig);
 
@@ -4261,7 +4271,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (prevOptionSignature !== nextOptionSignature) {
       this._render();
     }
-    if (dispatch) this._dispatch();
+    if (dispatch && configChanged) this._dispatch();
   }
 
   _dispatch() {

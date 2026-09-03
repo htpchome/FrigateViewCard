@@ -855,6 +855,53 @@ test("editor rerenders still notify Home Assistant that config changed", () => {
   assert.deepEqual(calls, ["render-editor", "dispatch-config"]);
 });
 
+test("no-op preview events do not consume the Home Assistant Save notification", () => {
+  const editor = new FrigateViewCardEditor();
+  const calls = [];
+  editor._config = { marker: "same", cameras: [] };
+  editor._themeDraftCache = { light: {}, dark: {} };
+  editor._hiddenTabsDraft = [];
+  editor.querySelector = () => null;
+  editor.querySelectorAll = () => [];
+  editor._validateEditorFields = () => true;
+  editor._getCams = () => [];
+  editor._activeThemeModeKey = () => "light";
+  editor._normalizeConfig = () => ({ marker: "same", cameras: [] });
+  editor._landingPageOptionSignature = () => "same";
+  editor._syncHiddenTabsDraftFromConfig = () => {};
+  editor._dispatch = () => calls.push("dispatch-config");
+
+  editor._u({ dispatch: true });
+
+  assert.deepEqual(calls, []);
+  assert.notEqual(editor._haDraftAnnounced, true);
+});
+
+test("swipe ownership is captured before the editor rerenders", () => {
+  const editor = new FrigateViewCardEditor();
+  const renderedOwnership = [];
+  let pendingOwnership = false;
+  editor._config = { ha_dashboard_swipe_navigation_owner: true };
+  editor._u = (options) => {
+    editor._config = {
+      ...editor._config,
+      ha_dashboard_swipe_navigation_owner: pendingOwnership,
+    };
+    if (options.dispatch) editor._haDraftAnnounced = true;
+  };
+  editor._render = () => {
+    renderedOwnership.push(
+      editor._config.ha_dashboard_swipe_navigation_owner,
+    );
+  };
+
+  editor._commitDashboardSwipeOwnershipChange();
+  pendingOwnership = true;
+  editor._commitDashboardSwipeOwnershipChange();
+
+  assert.deepEqual(renderedOwnership, [false, true]);
+});
+
 test("editor dispatch announces a draft through config-changed", () => {
   const editor = new FrigateViewCardEditor();
   const events = [];
