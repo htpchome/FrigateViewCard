@@ -103,9 +103,9 @@ For a lighter mobile footprint, Preview can hand the selected camera into Mobile
 
 Single View is the card's always-available camera command center. One live camera stays front and center, backed by fast camera switching, stream and alert status, page navigation, and direct access to mute, fullscreen, snapshots, Picture-in-Picture where supported, linked lights, PTZ, and two-way talk.
 
-Below the live view is the complete Frigate media workflow: Alerts, Clips, Snapshots, Recordings, Favorites, filters, calendar navigation, and feature-rich media popups. On desktop and tablet, Single View can also move into Slideshow or a rotating 2x2 Grid, making it equally comfortable as a dedicated security screen or the dependable home base of a larger dashboard.
-
 <img src="images/single-view.png" alt="Single View live camera and Frigate media browser" width="400">
+
+Below the live view is the complete Frigate media workflow: Alerts, Clips, Snapshots, Recordings, Favorites, filters, calendar navigation, and feature-rich media popups. On desktop and tablet, Single View can also move into Slideshow or a rotating 2x2 Grid, making it equally comfortable as a dedicated security screen or the dependable home base of a larger dashboard.
 
 ### Wide View
 
