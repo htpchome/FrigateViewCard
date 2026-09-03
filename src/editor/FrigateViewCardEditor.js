@@ -165,6 +165,9 @@ const CAMERA_MODAL_SELECTOR_IDS = Object.freeze(
   ]),
 );
 
+const HOME_ASSISTANT_DIRTY_STATE_CONTEXT = "dirtyState";
+const EDITOR_DIRTY_STATE_KEY = "frigate-view-card-editor";
+
 const escapeEditorChoiceMarkup = escapeHtml;
 
 const formatDurationChoice = (value) => {
@@ -210,7 +213,63 @@ export const buildEditorChoiceChipsMarkup = ({
 
 export class FrigateViewCardEditor extends HTMLElement {
   connectedCallback() {
+    this._requestHomeAssistantDirtyStateContext();
     this._scheduleEditorPreviewLayoutSync();
+  }
+
+  _requestHomeAssistantDirtyStateContext() {
+    if (this._haDirtyStateContext || this._haDirtyStateRequestPending) return;
+    this._haDirtyStateRequestPending = true;
+    const request = new Event("context-request", {
+      bubbles: true,
+      composed: true,
+    });
+    request.context = HOME_ASSISTANT_DIRTY_STATE_CONTEXT;
+    request.subscribe = true;
+    request.callback = (context, unsubscribe) => {
+      this._haDirtyStateRequestPending = false;
+      if (!context || typeof context.setState !== "function") return;
+      this._haDirtyStateContext = context;
+      if (
+        typeof unsubscribe === "function" &&
+        !this._haDirtyStateUnsubscribe
+      ) {
+        this._haDirtyStateUnsubscribe = unsubscribe;
+      }
+      this._seedHomeAssistantDirtyState();
+    };
+    this.dispatchEvent(request);
+    this._haDirtyStateRequestPending = false;
+  }
+
+  _seedHomeAssistantDirtyState() {
+    const context = this._haDirtyStateContext;
+    if (!context || this._haDirtyBaselineConfig === undefined) return;
+    if (!this._haDirtyStateSeeded) {
+      this._haDirtyStateSeeded = true;
+      context.setState(
+        this._haDirtyBaselineConfig,
+        EDITOR_DIRTY_STATE_KEY,
+      );
+    }
+    if (this._pendingHaDirtyConfig === undefined) return;
+    const pendingConfig = this._pendingHaDirtyConfig;
+    this._pendingHaDirtyConfig = undefined;
+    context.setState(pendingConfig, EDITOR_DIRTY_STATE_KEY);
+  }
+
+  _findHomeAssistantEditCardDialog() {
+    let node = this;
+    let depth = 0;
+    while (node && depth < 16) {
+      if (String(node.tagName || "").toUpperCase() === "HUI-DIALOG-EDIT-CARD") {
+        return node;
+      }
+      const root = node.getRootNode?.();
+      node = root?.host || node.parentNode || node.host;
+      depth += 1;
+    }
+    return document.querySelector?.("hui-dialog-edit-card") || null;
   }
 
   _queryOpenShadowRoots(root, selector) {
@@ -778,6 +837,11 @@ export class FrigateViewCardEditor extends HTMLElement {
   }
 
   disconnectedCallback() {
+    if (this._livePreviewRaf) {
+      cancelAnimationFrame(this._livePreviewRaf);
+      this._livePreviewRaf = 0;
+    }
+    this._pendingVisualPreviewUpdate = false;
     if (this._previewUpdateRaf) {
       cancelAnimationFrame(this._previewUpdateRaf);
       this._previewUpdateRaf = 0;
@@ -814,6 +878,11 @@ export class FrigateViewCardEditor extends HTMLElement {
         true,
       );
     }
+    this._haDirtyStateUnsubscribe?.();
+    this._haDirtyStateUnsubscribe = null;
+    this._haDirtyStateContext = null;
+    this._haDirtyStateRequestPending = false;
+    this._haDirtyStateSeeded = false;
     this._dialogActionHooksBound = false;
     this._standaloneDraftPreviousLandingPage = null;
     this._emitPreviewDraft(null);
@@ -847,6 +916,16 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._config = normalized;
     this._rendered = true;
     this._render();
+    if (this._haDirtyBaselineConfig === undefined) {
+      this._haDirtyBaselineConfig = this._homeAssistantConfig({
+        readDom: false,
+      });
+      this._haDirtyBaselineSig = this._configSignature(
+        this._haDirtyBaselineConfig,
+      );
+      this._hasConfigDraft = false;
+      this._seedHomeAssistantDirtyState();
+    }
     this._scheduleEditorPreviewLayoutSync();
   }
 
@@ -1155,7 +1234,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     const cameras = reorderItemsForDrop(cur, from, to, placement);
     this._config = { ...this._config, cameras };
     this._render();
-    this._dispatch();
+    this._markHomeAssistantDirty(
+      this._homeAssistantConfig({ readDom: false }),
+    );
   }
 
   _openCameraModal(index = null) {
@@ -1817,7 +1898,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     };
     this._closeCameraModal();
     this._render();
-    this._dispatch();
+    this._markHomeAssistantDirty(
+      this._homeAssistantConfig({ readDom: false }),
+    );
   }
 
   _removeCamera(index) {
@@ -1826,7 +1909,9 @@ export class FrigateViewCardEditor extends HTMLElement {
     cur.splice(index, 1);
     this._config = { ...this._config, cameras: cur };
     this._render();
-    this._dispatch();
+    this._markHomeAssistantDirty(
+      this._homeAssistantConfig({ readDom: false }),
+    );
   }
 
   _wireCameraDragAndDrop() {
@@ -1893,6 +1978,25 @@ export class FrigateViewCardEditor extends HTMLElement {
   _wireEditorDialogActions() {
     if (this._dialogActionHooksBound) return;
 
+    const finishPrimaryAction = () => {
+      this._standaloneDraftPreviousLandingPage = null;
+      if (this._hasConfigDraft) {
+        this._commitDraftToHomeAssistantDialog();
+      }
+      this._hasConfigDraft = false;
+      this._hasVisualDraft = false;
+      this._emitPreviewDraft(null, {
+        type: EDITOR_PREVIEW_ROUTE_INTENTS.commit,
+      });
+    };
+
+    const finishSecondaryAction = (button) => {
+      if (button?.classList?.contains?.("gui-mode-button")) return;
+      this._hasConfigDraft = false;
+      this._hasVisualDraft = false;
+      this._emitPreviewDraft(null);
+    };
+
     const bindDialogActionButtons = () => {
       this._boundDialogActionButtons = [];
       const seenRoots = new Set();
@@ -1903,22 +2007,15 @@ export class FrigateViewCardEditor extends HTMLElement {
         if (root instanceof ShadowRoot && !seenRoots.has(root)) {
           seenRoots.add(root);
           root.querySelectorAll(DIALOG_ACTION_SELECTOR).forEach((button) => {
+            if (this.contains?.(button)) return;
             const kind = dialogActionKindFromElement(button);
             if (!kind) return;
             const handler = () => {
               if (kind === "primary") {
-                this._standaloneDraftPreviousLandingPage = null;
-                if (this._hasVisualDraft) {
-                  this._dispatch();
-                  this._hasVisualDraft = false;
-                }
-                this._emitPreviewDraft(null, {
-                  type: EDITOR_PREVIEW_ROUTE_INTENTS.commit,
-                });
+                finishPrimaryAction();
                 return;
               }
-              this._hasVisualDraft = false;
-              this._emitPreviewDraft(null);
+              finishSecondaryAction(button);
             };
             button.addEventListener("click", handler, true);
             this._boundDialogActionButtons.push({ element: button, handler });
@@ -1931,20 +2028,19 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     this._onDialogPrimaryActionClick = (ev) => {
       if (dialogActionKindFromEvent(ev) !== "primary") return;
-      this._standaloneDraftPreviousLandingPage = null;
-      if (this._hasVisualDraft) {
-        this._dispatch();
-        this._hasVisualDraft = false;
-      }
-      this._emitPreviewDraft(null, {
-        type: EDITOR_PREVIEW_ROUTE_INTENTS.commit,
-      });
+      finishPrimaryAction();
     };
 
     this._onDialogSecondaryActionClick = (ev) => {
       if (dialogActionKindFromEvent(ev) !== "secondary") return;
-      this._hasVisualDraft = false;
-      this._emitPreviewDraft(null);
+      const button = ev
+        .composedPath?.()
+        ?.find?.(
+          (node) =>
+            node instanceof Element &&
+            dialogActionKindFromElement(node) === "secondary",
+        );
+      finishSecondaryAction(button);
     };
 
     this._onCameraModalDocumentClick = (event) => {
@@ -1969,7 +2065,7 @@ export class FrigateViewCardEditor extends HTMLElement {
   _wireLivePreviewUpdates() {
     if (this._livePreviewHooksBound) return;
 
-    const previewUpdateSelectors = [
+    const configUpdateSelectors = [
       "#title",
       "#subtitle",
       "#display_title",
@@ -2034,23 +2130,39 @@ export class FrigateViewCardEditor extends HTMLElement {
       "[data-theme-default]",
     ];
 
-    const shouldPreviewUpdate = (event) => {
+    const visualPreviewSelectors = [
+      "#stream_height",
+      "#stream_height_unit",
+      "#col_left_width_pct",
+      "#tight_margins",
+      "#shadows",
+      "#borders",
+      "#rounded_corners",
+      "#outer_shadows",
+    ];
+
+    const eventMatchesSelectors = (event, selectors) => {
       const path = Array.isArray(event.composedPath?.())
         ? event.composedPath()
         : [];
       return path.some(
         (node) =>
           node instanceof Element &&
-          previewUpdateSelectors.some((selector) => node.matches?.(selector)),
+          selectors.some((selector) => node.matches?.(selector)),
       );
     };
 
     const handlePreviewUpdate = (event) => {
-      if (!shouldPreviewUpdate(event)) return;
+      if (!eventMatchesSelectors(event, configUpdateSelectors)) return;
+      if (eventMatchesSelectors(event, visualPreviewSelectors)) {
+        this._pendingVisualPreviewUpdate = true;
+      }
       if (this._livePreviewRaf) return;
       this._livePreviewRaf = requestAnimationFrame(() => {
         this._livePreviewRaf = 0;
-        this._u({ dispatch: true });
+        const preview = this._pendingVisualPreviewUpdate === true;
+        this._pendingVisualPreviewUpdate = false;
+        this._u({ dispatch: false, preview });
       });
     };
 
@@ -3547,10 +3659,12 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const update = (previewRouteIntent = null) =>
       this._u({
-        dispatch: true,
+        dispatch: false,
         preview: Boolean(previewRouteIntent),
         previewRouteIntent,
       });
+    const updateVisual = () =>
+      this._u({ dispatch: false, preview: true });
     const scheduleUpdate = (previewRouteIntent = null) => {
       if (previewRouteIntent) {
         this._pendingEditorPreviewRouteIntent = previewRouteIntent;
@@ -3566,7 +3680,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     bindThemeControlEvents({
       root: this,
-      update,
+      update: updateVisual,
       themeDraftCache: this._themeDraftCache,
       resolveDefaultHex: (key) =>
         this._themeDefaultHex(key, activeThemeMode),
@@ -4117,7 +4231,9 @@ export class FrigateViewCardEditor extends HTMLElement {
       grid_order: normalizeGridOrderConfig(gridOrder, this._getCams()),
     };
     this._render();
-    this._dispatch();
+    this._markHomeAssistantDirty(
+      this._homeAssistantConfig({ readDom: false }),
+    );
   }
 
   _wireGridOrderControls() {
@@ -4216,8 +4332,46 @@ export class FrigateViewCardEditor extends HTMLElement {
     );
   }
 
+  _homeAssistantConfig({ readDom = true } = {}) {
+    if (readDom) {
+      const cameras = this._getCams();
+      this._config = this._normalizeConfig(
+        buildEditorConfigFromDom({
+          root: this,
+          baseConfig: this._config,
+          cameras,
+          themeDraftCache: this._themeDraftCache,
+          themeMode: this._activeThemeModeKey(),
+          hiddenTabsOverride: this._hiddenTabsDraft,
+        }),
+      );
+      this._syncHiddenTabsDraftFromConfig(this._config);
+    }
+    return withCardTypeForYaml(
+      compactEditorConfigForYaml(this._config, {
+        themeDefaultColors: this._themeDefaultHexMap(),
+      }),
+      { sourceConfig: this._config },
+    );
+  }
+
+  _markHomeAssistantDirty(config = null) {
+    const nextConfig = config || this._homeAssistantConfig();
+    if (this._haDirtyBaselineConfig === undefined) return;
+    const nextSignature = this._configSignature(nextConfig);
+    this._hasConfigDraft = nextSignature !== this._haDirtyBaselineSig;
+    this._pendingHaDirtyConfig = nextConfig;
+    this._seedHomeAssistantDirtyState();
+
+    if (!this._haDirtyStateContext) {
+      const dialog = this._findHomeAssistantEditCardDialog();
+      dialog?._updateDirtyState?.(nextConfig);
+      this._requestHomeAssistantDirtyStateContext();
+    }
+  }
+
   _u({
-    dispatch = true,
+    dispatch = false,
     preview = false,
     previewRouteIntent = null,
   } = {}) {
@@ -4257,28 +4411,30 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (prevOptionSignature !== nextOptionSignature) {
       this._render();
     }
+    if (configChanged) {
+      this._markHomeAssistantDirty(
+        this._homeAssistantConfig({ readDom: false }),
+      );
+    }
     if (dispatch && configChanged) this._dispatch();
   }
 
-  _dispatch() {
-    const cameras = this._getCams();
-    this._config = this._normalizeConfig(
-      buildEditorConfigFromDom({
-        root: this,
-        baseConfig: this._config,
-        cameras,
-        themeDraftCache: this._themeDraftCache,
-        themeMode: this._activeThemeModeKey(),
-        hiddenTabsOverride: this._hiddenTabsDraft,
-      }),
-    );
-    this._syncHiddenTabsDraftFromConfig(this._config);
-    const config = withCardTypeForYaml(
-      compactEditorConfigForYaml(this._config, {
-        themeDefaultColors: this._themeDefaultHexMap(),
-      }),
-      { sourceConfig: this._config },
-    );
+  _commitDraftToHomeAssistantDialog() {
+    const config = this._homeAssistantConfig();
+    const dialog = this._findHomeAssistantEditCardDialog();
+    if (!dialog || !("_cardConfig" in dialog)) {
+      this._dispatch(config);
+      return;
+    }
+    this._lastDispatchedConfig = config;
+    this._lastDispatchedConfigSig = this._configSignature(config);
+    // Commit only at Save; HA rebuilds every preview-mode card on config-changed.
+    dialog._cardConfig = config;
+    dialog._updateDirtyState?.(config);
+  }
+
+  _dispatch(config = this._homeAssistantConfig()) {
+    this._lastDispatchedConfig = config;
     this._lastDispatchedConfigSig = this._configSignature(config);
     this.dispatchEvent(
       new CustomEvent("config-changed", {

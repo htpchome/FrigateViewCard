@@ -110,7 +110,10 @@ import {
   limitCameraConfigsByPhysicalCount,
 } from "../features/camera-groups/model.js";
 import { normalizeGridOrderConfig } from "../features/grid/config.js";
-import { applyEditorPreviewDraftToCardConfig } from "../config/preview-mapper.js";
+import {
+  applyEditorPreviewDraftToCardConfig,
+  applyEditorVisualPreviewDraftToCardConfig,
+} from "../config/preview-mapper.js";
 import {
   DEFAULT_CAMERA_ENTITY,
   resolvePreferredDefaultCameraEntity,
@@ -1384,13 +1387,28 @@ export class FrigateViewCard extends HTMLElement {
     if (!this._isEditorPreviewContext()) return;
     if (!this._committedConfig) return;
 
+    const previousWideWidth = this._config?.col_left_width_pct;
     const base = this._cloneCardConfig(this._committedConfig);
-    const next = applyEditorPreviewDraftToCardConfig({
-      baseConfig: base,
-      previewConfig,
-    });
+    const visualOnly = Boolean(previewConfig && !routeIntent);
+    const next = visualOnly
+      ? applyEditorVisualPreviewDraftToCardConfig({
+          baseConfig: base,
+          previewConfig,
+        })
+      : applyEditorPreviewDraftToCardConfig({
+          baseConfig: base,
+          previewConfig,
+        });
 
     this._config = next;
+    if (visualOnly) {
+      this._syncVisualStyleToggles();
+      this._applyCardStyle();
+      if (previousWideWidth !== next.col_left_width_pct) {
+        this._wideViewPageController?.applyLayoutAndWideSyncForCard?.();
+      }
+      return;
+    }
     this._haNavbarController?.sync?.();
     this._haDashboardSwipeNavigationController?.sync?.();
     this._syncVisualStyleToggles();
@@ -1758,15 +1776,6 @@ export class FrigateViewCard extends HTMLElement {
         nextConfig,
         DEVICE_ROUTE_BUCKETS.desktop,
       );
-    if (
-      wasStarted &&
-      this._editorPreviewController.applyConfigUpdate({
-        previousConfig: prevConfig,
-        nextConfig,
-      })
-    ) {
-      return;
-    }
     const previewEnabledChanged =
       !!prevConfig &&
       prevConfig.preview_page_enabled !== nextConfig.preview_page_enabled;

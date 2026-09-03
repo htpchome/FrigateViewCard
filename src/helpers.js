@@ -255,11 +255,13 @@ export const dialogActionKindFromEvent = (event) => {
     ? event.composedPath()
     : [];
   if (path.some((node) => node?.id === "camera-modal")) return null;
-  const button = path.find(
-    (node) => node instanceof Element && node.matches?.(DIALOG_ACTION_SELECTOR),
-  );
-  if (!(button instanceof Element)) return null;
-  return dialogActionKindFromElement(button);
+  for (const node of path) {
+    if (!(node instanceof Element)) continue;
+    if (!node.matches?.(DIALOG_ACTION_SELECTOR)) continue;
+    const kind = dialogActionKindFromElement(node);
+    if (kind) return kind;
+  }
+  return null;
 };
 
 const CAMERA_ROW_DROP_CLASSES = [

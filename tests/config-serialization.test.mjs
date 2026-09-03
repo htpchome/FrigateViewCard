@@ -9,6 +9,7 @@ import {
 } from "../src/helpers.js";
 import {
   applyEditorPreviewDraftToCardConfig,
+  applyEditorVisualPreviewDraftToCardConfig,
   createEditorPreviewDraft,
 } from "../src/config/preview-mapper.js";
 import {
@@ -1481,6 +1482,35 @@ test("preview draft carries hidden tabs and page routes", () => {
     PAGE_IDS.singleView,
     PAGE_IDS.wideView,
   ]);
+});
+
+test("visual editor previews change styling without applying content drafts", () => {
+  const previewConfig = applyEditorVisualPreviewDraftToCardConfig({
+    baseConfig: {
+      title: "Saved title",
+      realtime_poll_seconds: 5,
+      theme: "default",
+      rounded_corners: true,
+    },
+    previewConfig: {
+      title: "Unsaved title",
+      realtime_poll_seconds: 60,
+      theme: "custom",
+      theme_custom: { light: { "--c-primary": "#112233" } },
+      theme_custom_defaults: { light: {} },
+      rounded_corners: false,
+      stream_height: 80,
+      stream_height_unit: "px",
+      col_left_width_pct: 62,
+    },
+  });
+
+  assert.equal(previewConfig.title, "Saved title");
+  assert.equal(previewConfig.realtime_poll_seconds, 5);
+  assert.equal(previewConfig.theme, "custom");
+  assert.equal(previewConfig.rounded_corners, false);
+  assert.equal(previewConfig.stream_height, 80);
+  assert.equal(previewConfig.col_left_width_pct, 62);
 });
 
 test("compact YAML defaults duration values that are not chip choices", () => {

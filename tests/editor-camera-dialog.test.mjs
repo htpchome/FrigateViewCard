@@ -467,7 +467,7 @@ test("draggable config tiles support before, replace, and after drop zones", () 
   ]);
 });
 
-test("Grid order edits notify Home Assistant without refreshing the card preview", () => {
+test("Grid order edits mark the editor dirty without refreshing the card preview", () => {
   const editor = new FrigateViewCardEditor();
   const calls = [];
   editor._config = {
@@ -477,7 +477,8 @@ test("Grid order edits notify Home Assistant without refreshing the card preview
     ],
   };
   editor._render = () => calls.push("render-editor");
-  editor._dispatch = () => calls.push("dispatch-config");
+  editor._homeAssistantConfig = () => ({ type: "custom:frigate-view-card" });
+  editor._markHomeAssistantDirty = () => calls.push("mark-dirty");
   editor._emitPreviewDraft = () => calls.push("preview-draft");
 
   editor._commitGridOrder({
@@ -491,7 +492,7 @@ test("Grid order edits notify Home Assistant without refreshing the card preview
     included: ["camera.driveway", "camera.front"],
     excluded: [],
   });
-  assert.deepEqual(calls, ["render-editor", "dispatch-config"]);
+  assert.deepEqual(calls, ["render-editor", "mark-dirty"]);
 });
 
 test("theme color pickers match the exact active mobile surface defaults", () => {
@@ -782,7 +783,7 @@ test("camera modal scrolls inside the available editor overlay", () => {
   );
 });
 
-test("ordinary editor changes notify Home Assistant without using preview drafts", () => {
+test("ordinary editor changes mark dirty without dispatching or previewing", () => {
   const source = fs.readFileSync(
     new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
     "utf8",
@@ -790,14 +791,72 @@ test("ordinary editor changes notify Home Assistant without using preview drafts
 
   assert.match(
     source,
-    /const update = \(previewRouteIntent = null\) =>\s*this\._u\(\{\s*dispatch: true,\s*preview: Boolean\(previewRouteIntent\),/,
+    /const update = \(previewRouteIntent = null\) =>\s*this\._u\(\{\s*dispatch: false,\s*preview: Boolean\(previewRouteIntent\),/,
   );
-  assert.match(source, /this\._u\(\{ dispatch: true \}\);/);
+  assert.match(
+    source,
+    /const updateVisual = \(\) =>\s*this\._u\(\{ dispatch: false, preview: true \}\);/,
+  );
+  assert.match(source, /this\._markHomeAssistantDirty\(/);
+  assert.doesNotMatch(source, /this\._u\(\{ dispatch: true \}\);/);
   assert.match(
     source,
     /#ha_dashboard_swipe_navigation_owner"\)\s*\?\.addEventListener\("change", \(\) => \{\s*update\(\);\s*this\._render\(\);/,
   );
   assert.doesNotMatch(source, /_haDraftAnnounced/);
+});
+
+test("Home Assistant dirty context tracks drafts without config-changed", () => {
+  const editor = new FrigateViewCardEditor();
+  const updates = [];
+  editor._haDirtyBaselineConfig = { title: "Original" };
+  editor._haDirtyBaselineSig = JSON.stringify(editor._haDirtyBaselineConfig);
+  editor._haDirtyStateContext = {
+    setState: (config, key) => updates.push({ config, key }),
+  };
+
+  editor._seedHomeAssistantDirtyState();
+  editor._markHomeAssistantDirty({ title: "Changed" });
+
+  assert.equal(editor._hasConfigDraft, true);
+  assert.deepEqual(updates, [
+    {
+      config: { title: "Original" },
+      key: "frigate-view-card-editor",
+    },
+    {
+      config: { title: "Changed" },
+      key: "frigate-view-card-editor",
+    },
+  ]);
+
+  editor._markHomeAssistantDirty({ title: "Original" });
+  assert.equal(editor._hasConfigDraft, false);
+  assert.deepEqual(updates.at(-1), {
+    config: { title: "Original" },
+    key: "frigate-view-card-editor",
+  });
+});
+
+test("Save commits the final draft directly to the Home Assistant dialog", () => {
+  const editor = new FrigateViewCardEditor();
+  const finalConfig = {
+    type: "custom:frigate-view-card",
+    title: "Final title",
+  };
+  const dirtyUpdates = [];
+  const dialog = {
+    _cardConfig: { type: "custom:frigate-view-card", title: "Original" },
+    _updateDirtyState: (config) => dirtyUpdates.push(config),
+  };
+  editor._homeAssistantConfig = () => finalConfig;
+  editor._findHomeAssistantEditCardDialog = () => dialog;
+  editor._dispatch = () => assert.fail("Save should not use config-changed");
+
+  editor._commitDraftToHomeAssistantDialog();
+
+  assert.equal(dialog._cardConfig, finalConfig);
+  assert.deepEqual(dirtyUpdates, [finalConfig]);
 });
 
 test("editor dispatch announces a draft through config-changed", () => {
