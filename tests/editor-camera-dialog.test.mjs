@@ -467,7 +467,7 @@ test("draggable config tiles support before, replace, and after drop zones", () 
   ]);
 });
 
-test("Grid order edits remain pending without refreshing the card preview", () => {
+test("Grid order edits notify Home Assistant that config changed", () => {
   const editor = new FrigateViewCardEditor();
   const calls = [];
   editor._config = {
@@ -491,8 +491,7 @@ test("Grid order edits remain pending without refreshing the card preview", () =
     included: ["camera.driveway", "camera.front"],
     excluded: [],
   });
-  assert.deepEqual(calls, ["render-editor"]);
-  assert.equal(editor._hasVisualDraft, true);
+  assert.deepEqual(calls, ["render-editor", "dispatch-config"]);
 });
 
 test("theme color pickers match the exact active mobile surface defaults", () => {
@@ -783,55 +782,106 @@ test("camera modal scrolls inside the available editor overlay", () => {
   );
 });
 
-test("pending changes banner tracks the saved config baseline", () => {
+test("editor updates coalesce and notify Home Assistant that config changed", () => {
   const editor = new FrigateViewCardEditor();
-  const banner = { hidden: true };
+  const scheduled = [];
+  const updates = [];
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = (callback) => {
+    scheduled.push(callback);
+    return scheduled.length;
+  };
+  editor._u = (options) => updates.push(options);
+
+  try {
+    editor._scheduleEditorConfigUpdate();
+    editor._scheduleEditorConfigUpdate({
+      type: "navigate",
+      pageId: "wide-view",
+    });
+
+    assert.equal(scheduled.length, 1);
+    scheduled[0]();
+    assert.deepEqual(updates, [
+      {
+        dispatch: true,
+        preview: true,
+        previewRouteIntent: {
+          type: "navigate",
+          pageId: "wide-view",
+        },
+      },
+    ]);
+
+    editor._haDraftAnnounced = true;
+    editor._scheduleEditorConfigUpdate();
+    assert.equal(scheduled.length, 2);
+    scheduled[1]();
+    assert.equal(updates[1].dispatch, false);
+  } finally {
+    if (originalRequestAnimationFrame === undefined) {
+      delete globalThis.requestAnimationFrame;
+    } else {
+      globalThis.requestAnimationFrame = originalRequestAnimationFrame;
+    }
+  }
+});
+
+test("editor rerenders still notify Home Assistant that config changed", () => {
+  const editor = new FrigateViewCardEditor();
+  const calls = [];
+  editor._config = { marker: "before", cameras: [] };
+  editor._themeDraftCache = { light: {}, dark: {} };
+  editor._hiddenTabsDraft = [];
+  editor.querySelector = () => null;
+  editor.querySelectorAll = () => [];
+  editor._validateEditorFields = () => true;
+  editor._getCams = () => [];
+  editor._activeThemeModeKey = () => "light";
+  editor._normalizeConfig = (config) => ({ ...config, marker: "after" });
+  editor._landingPageOptionSignature = (config) => config?.marker;
+  editor._syncHiddenTabsDraftFromConfig = () => {};
+  editor._render = () => calls.push("render-editor");
+  editor._dispatch = () => calls.push("dispatch-config");
+
+  editor._u({ dispatch: true });
+
+  assert.deepEqual(calls, ["render-editor", "dispatch-config"]);
+});
+
+test("editor dispatch announces a draft through config-changed", () => {
+  const editor = new FrigateViewCardEditor();
+  const events = [];
+  const originalCustomEvent = globalThis.CustomEvent;
+  globalThis.CustomEvent = class {
+    constructor(type, init) {
+      this.type = type;
+      this.detail = init?.detail;
+    }
+  };
+  editor._config = { cameras: [], title: "Updated" };
+  editor._getCams = () => [];
   editor.querySelector = (selector) =>
-    selector === "#pending-config-changes" ? banner : null;
-  editor._savedConfigBaselineSig = editor._configSignature({ title: "Saved" });
+    selector === "#title" ? { value: "Updated" } : null;
+  editor.querySelectorAll = () => [];
+  editor._syncHiddenTabsDraftFromConfig = () => {};
+  editor._themeDefaultHexMap = () => ({});
+  editor.dispatchEvent = (event) => events.push(event);
 
-  assert.equal(editor._syncPendingConfigChanges({ title: "Saved" }), false);
-  assert.equal(banner.hidden, true);
-  assert.equal(editor._syncPendingConfigChanges({ title: "Changed" }), true);
-  assert.equal(banner.hidden, false);
-  assert.equal(editor._syncPendingConfigChanges({ title: "Saved" }), false);
-  assert.equal(banner.hidden, true);
-});
+  try {
+    editor._dispatch();
 
-test("Home Assistant draft echoes do not replace the saved config baseline", () => {
-  const editor = new FrigateViewCardEditor();
-  editor._render = () => {};
-  editor._scheduleEditorPreviewLayoutSync = () => {};
-  editor.setConfig({ title: "Saved" });
-  const savedBaseline = editor._savedConfigBaselineSig;
-
-  const draft = editor._normalizeConfig({ title: "Draft" });
-  editor._config = draft;
-  editor._syncPendingConfigChanges(draft);
-  editor.setConfig({ title: "Draft" });
-
-  assert.equal(editor._savedConfigBaselineSig, savedBaseline);
-  assert.equal(editor._hasPendingConfigChanges, true);
-});
-
-test("pending changes banner is non-blocking and precedes Camera Settings", () => {
-  const source = fs.readFileSync(
-    new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(
-    source,
-    /id="pending-config-changes" class="pending-config-changes" role="status" aria-live="polite"/,
-  );
-  assert.match(
-    source,
-    /\.pending-config-changes\{[^}]*width:100%;[^}]*pointer-events:none;/,
-  );
-  assert.match(
-    source,
-    /<div class="ed-wrap">\s*\$\{pendingChangesMarkup\}\s*\$\{settingsPanelsMarkup\}/,
-  );
+    assert.equal(editor._haDraftAnnounced, true);
+    assert.equal(events.length, 1);
+    assert.equal(events[0].type, "config-changed");
+    assert.equal(events[0].detail.config.title, "Updated");
+  } finally {
+    if (originalCustomEvent === undefined) {
+      delete globalThis.CustomEvent;
+    } else {
+      globalThis.CustomEvent = originalCustomEvent;
+    }
+  }
 });
 
 test("HA-direct camera PTZ detection uses Frigate capability information", async () => {
@@ -943,7 +993,7 @@ test("disabling standalone Card View requires a top-layer replacement landing pa
   assert.equal(nodes["#landing_page"].dataset.value, "wide-view");
   assert.equal(modal.open, false);
   assert.deepEqual(updateOptions, {
-    dispatch: false,
+    dispatch: true,
     preview: true,
     previewRouteIntent: {
       type: "navigate",

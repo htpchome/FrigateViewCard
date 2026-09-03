@@ -778,6 +778,12 @@ export class FrigateViewCardEditor extends HTMLElement {
   }
 
   disconnectedCallback() {
+    if (this._previewUpdateRaf) {
+      cancelAnimationFrame(this._previewUpdateRaf);
+      this._previewUpdateRaf = 0;
+    }
+    this._pendingEditorPreviewRouteIntent = null;
+    this._haDraftAnnounced = false;
     this._editorPreviewLayoutObserver?.disconnect();
     this._editorPreviewLayoutObserver = null;
     this._editorPreviewLayoutObserverTarget = null;
@@ -822,17 +828,6 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
   }
 
-  _syncPendingConfigChanges(config = this._config) {
-    const baseline = this._savedConfigBaselineSig;
-    const pending =
-      typeof baseline === "string" &&
-      this._configSignature(config) !== baseline;
-    this._hasPendingConfigChanges = pending;
-    const banner = this.querySelector?.("#pending-config-changes");
-    if (banner) banner.hidden = !pending;
-    return pending;
-  }
-
   setConfig(config) {
     this._sourceConfig = config;
     const normalized = this._normalizeConfig(config);
@@ -845,20 +840,12 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
     const incomingSig = this._configSignature(normalized);
     const currentSig = this._configSignature(this._config);
-    if (
-      this._savedConfigBaselineSig === undefined ||
-      this._hasPendingConfigChanges !== true
-    ) {
-      this._savedConfigBaselineSig = incomingSig;
-    }
     if (this._rendered && incomingSig === currentSig) {
       this._config = normalized;
-      this._syncPendingConfigChanges(normalized);
       this._scheduleEditorPreviewLayoutSync();
       return;
     }
     this._config = normalized;
-    this._syncPendingConfigChanges(normalized);
     this._rendered = true;
     this._render();
     this._scheduleEditorPreviewLayoutSync();
@@ -1168,7 +1155,6 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (from >= cur.length || to >= cur.length) return;
     const cameras = reorderItemsForDrop(cur, from, to, placement);
     this._config = { ...this._config, cameras };
-    this._syncPendingConfigChanges();
     this._render();
     this._dispatch();
   }
@@ -1443,7 +1429,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
     this._closeStandaloneLandingPageModal({ restoreToggle: false });
     this._u({
-      dispatch: false,
+      dispatch: this._haDraftAnnounced !== true,
       preview: true,
       previewRouteIntent: {
         type: EDITOR_PREVIEW_ROUTE_INTENTS.navigate,
@@ -1830,7 +1816,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       ...this._config,
       cameras: limitCameraConfigsByPhysicalCount(cur, MAX_CAMERAS),
     };
-    this._syncPendingConfigChanges();
     this._closeCameraModal();
     this._render();
     this._dispatch();
@@ -1841,7 +1826,6 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (!Number.isInteger(index) || index < 0 || index >= cur.length) return;
     cur.splice(index, 1);
     this._config = { ...this._config, cameras: cur };
-    this._syncPendingConfigChanges();
     this._render();
     this._dispatch();
   }
@@ -1929,12 +1913,14 @@ export class FrigateViewCardEditor extends HTMLElement {
                   this._dispatch();
                   this._hasVisualDraft = false;
                 }
+                this._haDraftAnnounced = false;
                 this._emitPreviewDraft(null, {
                   type: EDITOR_PREVIEW_ROUTE_INTENTS.commit,
                 });
                 return;
               }
               this._hasVisualDraft = false;
+              this._haDraftAnnounced = false;
               this._emitPreviewDraft(null);
             };
             button.addEventListener("click", handler, true);
@@ -1953,6 +1939,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         this._dispatch();
         this._hasVisualDraft = false;
       }
+      this._haDraftAnnounced = false;
       this._emitPreviewDraft(null, {
         type: EDITOR_PREVIEW_ROUTE_INTENTS.commit,
       });
@@ -1961,6 +1948,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._onDialogSecondaryActionClick = (ev) => {
       if (dialogActionKindFromEvent(ev) !== "secondary") return;
       this._hasVisualDraft = false;
+      this._haDraftAnnounced = false;
       this._emitPreviewDraft(null);
     };
 
@@ -1981,6 +1969,23 @@ export class FrigateViewCardEditor extends HTMLElement {
     );
     bindDialogActionButtons();
     this._dialogActionHooksBound = true;
+  }
+
+  _scheduleEditorConfigUpdate(previewRouteIntent = null) {
+    if (previewRouteIntent) {
+      this._pendingEditorPreviewRouteIntent = previewRouteIntent;
+    }
+    if (this._previewUpdateRaf) return;
+    this._previewUpdateRaf = requestAnimationFrame(() => {
+      this._previewUpdateRaf = 0;
+      const pendingRouteIntent = this._pendingEditorPreviewRouteIntent;
+      this._pendingEditorPreviewRouteIntent = null;
+      this._u({
+        dispatch: this._haDraftAnnounced !== true,
+        preview: true,
+        previewRouteIntent: pendingRouteIntent,
+      });
+    });
   }
 
   _wireLivePreviewUpdates() {
@@ -2064,11 +2069,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const handlePreviewUpdate = (event) => {
       if (!shouldPreviewUpdate(event)) return;
-      if (this._livePreviewRaf) return;
-      this._livePreviewRaf = requestAnimationFrame(() => {
-        this._livePreviewRaf = 0;
-        this._u({ dispatch: false, preview: true });
-      });
+      this._scheduleEditorConfigUpdate();
     };
 
     ["input", "change", "value-changed", "selected-changed", "click"].forEach(
@@ -3002,11 +3003,6 @@ export class FrigateViewCardEditor extends HTMLElement {
         ${this._renderSettingsPanel({ id: "landing", title: "Landing Page", icon: "mdi:home-import-outline", content: landingPanelContent, active: activeSettingsPanel === "landing" })}
       </div>`;
 
-    const pendingChangesMarkup = `<div id="pending-config-changes" class="pending-config-changes" role="status" aria-live="polite" ${this._hasPendingConfigChanges ? "" : "hidden"}>
-      <ha-icon icon="mdi:content-save-alert-outline" aria-hidden="true"></ha-icon>
-      <span><strong>Changes pending</strong> — use Home Assistant's Save button to keep them.</span>
-    </div>`;
-
     this.innerHTML = `<style>
           :host{
                 --editor-primary-bg: var(--card-background-color);
@@ -3060,10 +3056,7 @@ export class FrigateViewCardEditor extends HTMLElement {
                 font-size: var(--ha-font-size, 14px);
             }
             .settings-container{display:flex;flex-direction:column;gap:6px;}
-            .pending-config-changes{width:100%;min-height:32px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:7px;padding:6px 12px;border:1px solid currentColor;border-radius:999px;color:var(--warning-color, var(--c-accent, var(--editor-primary)));background:color-mix(in srgb,var(--warning-color, var(--c-accent, var(--editor-primary))) 16%,var(--editor-card-bg));font-size:12px;font-weight:600;line-height:1.25;text-align:center;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.16);}
-            .pending-config-changes[hidden]{display:none;}
-            .pending-config-changes ha-icon{--mdc-icon-size:18px;flex:0 0 auto;}
-              .settings-panel{
+            .settings-panel{
                 border:1px solid var(--c-border2, var(--editor-border));
                 border-radius:16px;
                 background:var(--editor-card-bg, var(--editor-card-bg));
@@ -3367,7 +3360,6 @@ export class FrigateViewCardEditor extends HTMLElement {
 
         </style>
     <div class="ed-wrap">
-      ${pendingChangesMarkup}
       ${settingsPanelsMarkup}
 
       <div id="camera-modal" class="cam-modal hidden">
@@ -3572,23 +3564,8 @@ export class FrigateViewCardEditor extends HTMLElement {
     </div>`;
 
     const update = (previewRouteIntent = null) =>
-      this._u({
-        dispatch: false,
-        preview: true,
-        previewRouteIntent,
-      });
-    const scheduleUpdate = (previewRouteIntent = null) => {
-      if (previewRouteIntent) {
-        this._pendingEditorPreviewRouteIntent = previewRouteIntent;
-      }
-      if (this._previewUpdateRaf) return;
-      this._previewUpdateRaf = requestAnimationFrame(() => {
-        this._previewUpdateRaf = 0;
-        const pendingRouteIntent = this._pendingEditorPreviewRouteIntent;
-        this._pendingEditorPreviewRouteIntent = null;
-        update(pendingRouteIntent);
-      });
-    };
+      this._scheduleEditorConfigUpdate(previewRouteIntent);
+    const scheduleUpdate = update;
 
     bindThemeControlEvents({
       root: this,
@@ -4142,9 +4119,9 @@ export class FrigateViewCardEditor extends HTMLElement {
       ...this._config,
       grid_order: normalizeGridOrderConfig(gridOrder, this._getCams()),
     };
-    this._syncPendingConfigChanges();
     this._render();
     this._hasVisualDraft = true;
+    if (this._haDraftAnnounced !== true) this._dispatch();
   }
 
   _wireGridOrderControls() {
@@ -4265,7 +4242,6 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     this._config = normalizedNextConfig;
     this._syncHiddenTabsDraftFromConfig(normalizedNextConfig);
-    this._syncPendingConfigChanges(normalizedNextConfig);
     if (preview) {
       this._hasVisualDraft = true;
       this._emitPreviewDraft(
@@ -4281,7 +4257,6 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
     if (prevOptionSignature !== nextOptionSignature) {
       this._render();
-      return;
     }
     if (dispatch) this._dispatch();
   }
@@ -4299,7 +4274,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       }),
     );
     this._syncHiddenTabsDraftFromConfig(this._config);
-    this._syncPendingConfigChanges(this._config);
     const config = withCardTypeForYaml(
       compactEditorConfigForYaml(this._config, {
         themeDefaultColors: this._themeDefaultHexMap(),
@@ -4307,6 +4281,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       { sourceConfig: this._config },
     );
     this._lastDispatchedConfigSig = this._configSignature(config);
+    this._haDraftAnnounced = true;
     this.dispatchEvent(
       new CustomEvent("config-changed", {
         detail: { config },
