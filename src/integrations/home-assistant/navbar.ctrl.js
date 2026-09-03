@@ -1,6 +1,10 @@
 // Keep Home Assistant shell mutations isolated and fully reversible.
 const NAVBAR_STYLE_ATTRIBUTE = "data-frigate-view-ha-navbar-style";
 const BOTTOM_NAVBAR_EXTRA_HEIGHT_PX = 10;
+const HA_SAFE_AREA_TOP =
+  "var(--safe-area-inset-top, env(safe-area-inset-top, 0px))";
+const HA_SAFE_AREA_BOTTOM =
+  "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))";
 
 const BOTTOM_TAB_INDICATOR_STYLE_TEXT = `
 ha-tab-group-tab[active],
@@ -50,10 +54,11 @@ export const resolveHomeAssistantNavbarStyleText = ({
     .filter(Boolean)
     .join("\n");
 
-const VIEW_BOTTOM_STYLES = Object.freeze({
-  "padding-top": "env(safe-area-inset-top)",
-  "padding-bottom":
-    `calc(var(--header-height, 56px) + ${BOTTOM_NAVBAR_EXTRA_HEIGHT_PX}px + env(safe-area-inset-bottom))`,
+const resolveViewBottomStyles = (isIOS) => ({
+  "padding-top": HA_SAFE_AREA_TOP,
+  "padding-bottom": isIOS
+    ? `calc(var(--header-height, 56px) + ${BOTTOM_NAVBAR_EXTRA_HEIGHT_PX}px + (${HA_SAFE_AREA_BOTTOM} * 0.25))`
+    : `calc(var(--header-height, 56px) + ${BOTTOM_NAVBAR_EXTRA_HEIGHT_PX}px)`,
 });
 
 const TOOLBAR_BOTTOM_STYLES = Object.freeze({
@@ -71,10 +76,21 @@ const resolveHeaderBottomStyles = (isIOS) => ({
   top: "auto",
   bottom: "0px",
   position: "fixed",
+  // HA's top safe area must not travel with a header moved to the bottom.
+  "padding-top": "0px",
   "padding-bottom": isIOS
-    ? "calc(env(safe-area-inset-bottom) * 0.25)"
+    ? `calc(${HA_SAFE_AREA_BOTTOM} * 0.25)`
     : "0px",
 });
+
+const parsePxLength = (value) => {
+  const match = /^(-?\d+(?:\.\d+)?)px$/i.exec(
+    String(value || "").trim(),
+  );
+  if (!match) return null;
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 const canManageInlineStyle = (element) =>
   typeof element?.style?.getPropertyValue === "function" &&
@@ -220,12 +236,13 @@ const restoreManagedGeometry = (state) => {
   restoreInlineStyles(
     state.view,
     state.viewSnapshot,
-    VIEW_BOTTOM_STYLES,
+    state.viewAppliedStyles,
   );
   state.headerSnapshot = null;
   state.headerAppliedStyles = null;
   state.toolbarSnapshot = null;
   state.viewSnapshot = null;
+  state.viewAppliedStyles = null;
   state.geometryApplied = false;
 };
 
@@ -281,6 +298,7 @@ const applyManagedTargets = (state) => {
     (options) => options?.promoteViewInLandscape === true,
   );
   const headerStyles = resolveHeaderBottomStyles(isIOS);
+  const viewStyles = resolveViewBottomStyles(isIOS);
   const targetsChanged =
     state.header !== targets.header ||
     state.toolbar !== targets.toolbar ||
@@ -305,16 +323,18 @@ const applyManagedTargets = (state) => {
       : null;
     state.viewSnapshot = captureInlineStyles(
       targets.view,
-      VIEW_BOTTOM_STYLES,
+      viewStyles,
     );
+    state.viewAppliedStyles = viewStyles;
     state.geometryApplied = true;
   }
 
   if (moveBottom) {
     state.headerAppliedStyles = headerStyles;
+    state.viewAppliedStyles = viewStyles;
     applyInlineStyles(state.header, state.headerAppliedStyles);
     applyInlineStyles(state.toolbar, TOOLBAR_BOTTOM_STYLES);
-    applyInlineStyles(state.view, VIEW_BOTTOM_STYLES);
+    applyInlineStyles(state.view, state.viewAppliedStyles);
   } else {
     restoreManagedGeometry(state);
   }
@@ -353,6 +373,7 @@ const acquireNavbarCustomization = (
       toolbarSnapshot: null,
       view: null,
       viewSnapshot: null,
+      viewAppliedStyles: null,
       geometryApplied: false,
       navbarStyle: null,
       navbarStyleText: "",
@@ -398,6 +419,7 @@ export class HomeAssistantNavbarController {
     {
       MutationObserverCtor = globalThis.MutationObserver,
       documentRef = globalThis.document,
+      getComputedStyleFn = globalThis.getComputedStyle,
       windowRef = globalThis.window,
       isIOS = false,
       queueMicrotaskFn = globalThis.queueMicrotask,
@@ -409,6 +431,10 @@ export class HomeAssistantNavbarController {
     this._MutationObserverCtor = MutationObserverCtor;
     this._documentRef = documentRef;
     this._windowRef = windowRef;
+    this._getComputedStyle =
+      typeof getComputedStyleFn === "function"
+        ? getComputedStyleFn.bind(windowRef || globalThis)
+        : null;
     this._isIOS = isIOS === true;
     this._queueMicrotask =
       typeof queueMicrotaskFn === "function"
@@ -480,6 +506,30 @@ export class HomeAssistantNavbarController {
 
   bottomNavbarExtraHeightPx() {
     return this.isNavbarAtBottom() ? BOTTOM_NAVBAR_EXTRA_HEIGHT_PX : 0;
+  }
+
+  homeAssistantViewContentHeightPx() {
+    if (!this._isMobileDevice()) return null;
+    const huiRoot = this._huiRoot || findHomeAssistantLovelaceRoot(this._host);
+    const targets = resolveHomeAssistantNavbarTargets(huiRoot);
+    const viewportHeight = Number(this._windowRef?.innerHeight) || 0;
+    if (!targets?.view || viewportHeight <= 0) return null;
+
+    const viewStyle = this._getComputedStyle?.(targets.view);
+    if (!viewStyle) return null;
+    const paddingTop =
+      parsePxLength(
+        viewStyle.paddingTop ||
+          viewStyle.getPropertyValue?.("padding-top"),
+      ) ?? 0;
+    const paddingBottom =
+      parsePxLength(
+        viewStyle.paddingBottom ||
+          viewStyle.getPropertyValue?.("padding-bottom"),
+      ) ?? 0;
+    // Explicit card heights must fit inside HA's padded mobile view.
+    const contentHeight = viewportHeight - paddingTop - paddingBottom;
+    return contentHeight > 0 ? contentHeight : null;
   }
 
   shouldStackNavbarTabs() {

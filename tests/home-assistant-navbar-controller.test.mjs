@@ -106,9 +106,10 @@ const createTargets = ({
   return { header, toolbar, view, children };
 };
 
-const createWindow = () => {
+const createWindow = (innerHeight = 844) => {
   const listeners = new Map();
   return {
+    innerHeight,
     location: { pathname: "/lovelace/mobile" },
     addEventListener: (type, listener) => {
       const entries = listeners.get(type) || new Set();
@@ -133,9 +134,12 @@ const createHarness = ({
   queueMicrotaskFn = (callback) => callback(),
   rotateFullscreen = true,
   stackTabs = false,
+  viewPaddingBottom = "34px",
+  viewPaddingTop = "103px",
+  viewportHeight = 844,
 } = {}) => {
   FakeMutationObserver.instances = [];
-  const windowRef = createWindow();
+  const windowRef = createWindow(viewportHeight);
   const documentRef = {
     createElement: () => createStyleElement(),
     querySelector: () => homeAssistant,
@@ -188,6 +192,13 @@ const createHarness = ({
   const controller = new HomeAssistantNavbarController(host, {
     MutationObserverCtor: FakeMutationObserver,
     documentRef,
+    getComputedStyleFn: (element) => {
+      if (element !== currentTargets?.view) return null;
+      return {
+        paddingBottom: viewPaddingBottom,
+        paddingTop: viewPaddingTop,
+      };
+    },
     windowRef,
     isIOS,
     queueMicrotaskFn,
@@ -344,7 +355,11 @@ test("applies the proven bottom-header details and restores exact styles", () =>
   const h = createHarness({ isIOS: true });
   const targets = createTargets({
     documentRef: h.documentRef,
-    headerInitial: { top: "6px", position: "sticky" },
+    headerInitial: {
+      top: "6px",
+      position: "sticky",
+      "padding-top": "47px",
+    },
     toolbarInitial: {
       "border-bottom": "2px solid red",
       height: "56px",
@@ -359,9 +374,10 @@ test("applies the proven bottom-header details and restores exact styles", () =>
   assert.equal(targets.header.style.getPropertyValue("top"), "auto");
   assert.equal(targets.header.style.getPropertyValue("bottom"), "0px");
   assert.equal(targets.header.style.getPropertyValue("position"), "fixed");
+  assert.equal(targets.header.style.getPropertyValue("padding-top"), "0px");
   assert.equal(
     targets.header.style.getPropertyValue("padding-bottom"),
-    "calc(env(safe-area-inset-bottom) * 0.25)",
+    "calc(var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) * 0.25)",
   );
   assert.equal(
     targets.toolbar.style.getPropertyValue("border-top"),
@@ -389,11 +405,11 @@ test("applies the proven bottom-header details and restores exact styles", () =>
   );
   assert.equal(
     targets.view.style.getPropertyValue("padding-top"),
-    "env(safe-area-inset-top)",
+    "var(--safe-area-inset-top, env(safe-area-inset-top, 0px))",
   );
   assert.equal(
     targets.view.style.getPropertyValue("padding-bottom"),
-    "calc(var(--header-height, 56px) + 10px + env(safe-area-inset-bottom))",
+    "calc(var(--header-height, 56px) + 10px + (var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)) * 0.25))",
   );
   assert.equal(targets.children.length, 1);
   assert.match(targets.children[0].textContent, /border-block-start/);
@@ -403,6 +419,10 @@ test("applies the proven bottom-header details and restores exact styles", () =>
   assert.equal(targets.header.style.getPropertyValue("top"), "6px");
   assert.equal(targets.header.style.getPropertyValue("bottom"), "");
   assert.equal(targets.header.style.getPropertyValue("position"), "sticky");
+  assert.equal(
+    targets.header.style.getPropertyValue("padding-top"),
+    "47px",
+  );
   assert.equal(targets.header.style.getPropertyValue("opacity"), "");
   assert.equal(targets.header.style.getPropertyValue("pointer-events"), "");
   assert.equal(targets.header.style.getPropertyValue("transition"), "");
@@ -428,6 +448,22 @@ test("applies the proven bottom-header details and restores exact styles", () =>
   );
   assert.equal(targets.view.style.getPropertyValue("padding-bottom"), "11px");
   assert.equal(targets.children.length, 0);
+});
+
+test("measures the mobile Lovelace content area with either navbar position", () => {
+  const top = createHarness({ moveBottom: false });
+  assert.equal(top.controller.homeAssistantViewContentHeightPx(), 707);
+
+  const bottom = createHarness({
+    moveBottom: true,
+    viewPaddingBottom: "74.5px",
+    viewPaddingTop: "47px",
+  });
+  bottom.controller.sync();
+  assert.equal(bottom.controller.homeAssistantViewContentHeightPx(), 722.5);
+
+  top.host._mobileDevice = false;
+  assert.equal(top.controller.homeAssistantViewContentHeightPx(), null);
 });
 
 test("is always gated by the card's mobile-device detection", () => {

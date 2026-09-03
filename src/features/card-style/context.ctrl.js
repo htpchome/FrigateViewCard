@@ -471,10 +471,16 @@ export class CardStyleContextController {
       this.parsePxLength(haCardHeight) ??
       (viewportHeightPx > 0 ? viewportHeightPx : null);
     if (referenceHeightPx == null) return null;
-    const availableHeightPx = Math.max(
+    const legacyAvailableHeightPx = Math.max(
       1,
       referenceHeightPx - this.resolveBottomNavbarExtraHeightPx(),
     );
+    const homeAssistantViewHeightPx =
+      this.resolveHomeAssistantMobileViewHeightPx();
+    const availableHeightPx =
+      homeAssistantViewHeightPx != null
+        ? Math.min(legacyAvailableHeightPx, homeAssistantViewHeightPx)
+        : legacyAvailableHeightPx;
     return Math.max(1, availableHeightPx * ratio);
   }
 
@@ -492,7 +498,13 @@ export class CardStyleContextController {
     if (viewportHeight <= 0) return null;
 
     const configuredHeight = viewportHeight * ratio;
-    const availableHeight = this.resolveHeightWrapperViewportPx();
+    const wrapperAvailableHeight = this.resolveHeightWrapperViewportPx();
+    const homeAssistantViewHeight =
+      this.resolveHomeAssistantMobileViewHeightPx();
+    const availableHeight =
+      wrapperAvailableHeight != null && homeAssistantViewHeight != null
+        ? Math.min(wrapperAvailableHeight, homeAssistantViewHeight)
+        : wrapperAvailableHeight ?? homeAssistantViewHeight;
     if (availableHeight == null) return Math.max(1, configuredHeight);
 
     const availableCardHeight = Math.max(
@@ -536,6 +548,21 @@ export class CardStyleContextController {
       this._host._haNavbarController?.bottomNavbarExtraHeightPx?.(),
     );
     return Number.isFinite(extraHeight) && extraHeight > 0 ? extraHeight : 0;
+  }
+
+  resolveHomeAssistantMobileViewHeightPx() {
+    if (
+      this._host._isLikelyMobileClient?.() !== true ||
+      this._host._isPreviewContext?.() === true
+    ) {
+      return null;
+    }
+    const availableHeight = Number(
+      this._host._haNavbarController?.homeAssistantViewContentHeightPx?.(),
+    );
+    return Number.isFinite(availableHeight) && availableHeight > 0
+      ? availableHeight
+      : null;
   }
 
   resolveHeightWrapperPaddingPx() {

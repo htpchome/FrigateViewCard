@@ -701,6 +701,116 @@ test("card height reserves only the bottom navbar's added height", () => {
   assert.equal(controller.resolveBottomNavbarExtraHeightPx(), 0);
 });
 
+test("mobile card height stays inside Home Assistant's padded view", () => {
+  const parentElement = {
+    getBoundingClientRect: () => ({ top: 103 }),
+  };
+  const host = {
+    _config: { tight_margins: true },
+    _isPreviewContext: () => false,
+    _isLikelyMobileClient: () => true,
+    _haNavbarController: {
+      bottomNavbarExtraHeightPx: () => 0,
+      homeAssistantViewContentHeightPx: () => 707,
+    },
+    parentElement,
+  };
+  const controller = new CardStyleContextController(host);
+
+  withGlobals(
+    {
+      document: global.document,
+      window: {
+        innerHeight: 844,
+        visualViewport: { height: 844, offsetTop: 0 },
+      },
+      getComputedStyle: global.getComputedStyle,
+    },
+    () => {
+      assert.equal(
+        controller.resolvePercentHostHeightPx({
+          ratio: 1,
+          haCardHeight: "",
+          headerHeight: "56px",
+        }),
+        707,
+      );
+      assert.equal(controller.resolveViewportUnitHostHeightPx(1), 707);
+    },
+  );
+});
+
+test("bottom mobile navbar cap includes its intentional added height once", () => {
+  const host = {
+    _config: { tight_margins: true },
+    _isPreviewContext: () => false,
+    _isLikelyMobileClient: () => true,
+    _haNavbarController: {
+      bottomNavbarExtraHeightPx: () => 10,
+      homeAssistantViewContentHeightPx: () => 722.5,
+    },
+  };
+  const controller = new CardStyleContextController(host);
+
+  withGlobals(
+    {
+      document: global.document,
+      window: {
+        innerHeight: 844,
+        visualViewport: { height: 844, offsetTop: 0 },
+      },
+      getComputedStyle: global.getComputedStyle,
+    },
+    () => {
+      assert.equal(
+        controller.resolvePercentHostHeightPx({
+          ratio: 1,
+          haCardHeight: "844px",
+          headerHeight: "56px",
+        }),
+        722.5,
+      );
+    },
+  );
+});
+
+test("desktop card height ignores the mobile Lovelace content cap", () => {
+  const host = {
+    _config: { tight_margins: true },
+    _isPreviewContext: () => false,
+    _isLikelyMobileClient: () => false,
+    _haNavbarController: {
+      bottomNavbarExtraHeightPx: () => 10,
+      homeAssistantViewContentHeightPx: () => 707,
+    },
+    parentElement: {
+      getBoundingClientRect: () => ({ top: 56 }),
+    },
+  };
+  const controller = new CardStyleContextController(host);
+
+  withGlobals(
+    {
+      document: global.document,
+      window: {
+        innerHeight: 900,
+        visualViewport: { height: 900, offsetTop: 0 },
+      },
+      getComputedStyle: global.getComputedStyle,
+    },
+    () => {
+      assert.equal(
+        controller.resolvePercentHostHeightPx({
+          ratio: 1,
+          haCardHeight: "844px",
+          headerHeight: "56px",
+        }),
+        844,
+      );
+    },
+  );
+});
+
 test("desktop card height never reserves the mobile bottom-navbar increase", () => {
   const host = {
     _isLikelyMobileClient: () => false,
