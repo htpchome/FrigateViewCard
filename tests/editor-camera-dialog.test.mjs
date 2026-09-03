@@ -782,7 +782,7 @@ test("camera modal scrolls inside the available editor overlay", () => {
   );
 });
 
-test("editor updates coalesce and notify Home Assistant that config changed", () => {
+test("editor updates coalesce and notify Home Assistant only once per edit session", () => {
   const editor = new FrigateViewCardEditor();
   const scheduled = [];
   const updates = [];
@@ -791,7 +791,10 @@ test("editor updates coalesce and notify Home Assistant that config changed", ()
     scheduled.push(callback);
     return scheduled.length;
   };
-  editor._u = (options) => updates.push(options);
+  editor._u = (options) => {
+    updates.push(options);
+    if (options.dispatch) editor._haDraftAnnounced = true;
+  };
 
   try {
     editor._scheduleEditorConfigUpdate();
@@ -816,7 +819,11 @@ test("editor updates coalesce and notify Home Assistant that config changed", ()
     editor._scheduleEditorConfigUpdate();
     assert.equal(scheduled.length, 2);
     scheduled[1]();
-    assert.equal(updates[1].dispatch, true);
+    assert.deepEqual(updates[1], {
+      dispatch: false,
+      preview: true,
+      previewRouteIntent: null,
+    });
   } finally {
     if (originalRequestAnimationFrame === undefined) {
       delete globalThis.requestAnimationFrame;
@@ -872,6 +879,7 @@ test("editor dispatch announces a draft through config-changed", () => {
   try {
     editor._dispatch();
 
+    assert.equal(editor._haDraftAnnounced, true);
     assert.equal(events.length, 1);
     assert.equal(events[0].type, "config-changed");
     assert.equal(events[0].bubbles, true);
