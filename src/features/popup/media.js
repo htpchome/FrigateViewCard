@@ -42,12 +42,16 @@ export const buildPopupClipRenderPlan = ({
   opts = {},
   infoEvent = null,
   isIos = false,
+  supportsNativeHls = false,
+  isSafari = false,
   includeLookupInfo = false,
 }) => {
   const mediaType = opts.mediaType || "clip";
   return {
     playingId: id,
-    mediaFile: isIos ? "master.m3u8" : "clip.mp4",
+    // Safari needs HLS when the proxy cannot serve MP4 byte ranges.
+    // Keep Chromium on MP4; its native HLS can stall on Frigate clips.
+    mediaFile: isIos || (isSafari && supportsNativeHls) ? "master.m3u8" : "clip.mp4",
     mediaType,
     infoEvent,
     infoOpts: includeLookupInfo

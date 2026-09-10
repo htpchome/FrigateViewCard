@@ -140,6 +140,63 @@ test("showClipById routes clip loading through popup media rendering", () => {
   assert.equal(typeof rendered.onMediaError, "function");
 });
 
+for (const method of ["showClip", "showClipById"]) {
+  for (const nativeSupport of ["probably", "maybe", ""]) {
+    test(`${method} selects clip transport by native HLS support (${nativeSupport || "none"}) on desktop`, () => {
+      const previousDocument = globalThis.document;
+      globalThis.document = {
+        createElement: (tag) => {
+          assert.equal(tag, "video");
+          return { canPlayType: (mime) => {
+            assert.equal(mime, "application/vnd.apple.mpegurl");
+            return nativeSupport;
+          } };
+        },
+      };
+      try {
+        const event = { id: "desktop-event", camera: "front_door", has_clip: true };
+        const host = {
+          _findEventById: () => event,
+          _media: (id, file) => `/media/${id}/${file}`,
+        };
+        const controller = new PopupMediaLoaderController(host, {
+          isIOS: false,
+          isSafari: () => true,
+          buildVideoOptionsForView: (_view, options) => options,
+          createVideoElement: (options) => ({ options }),
+        });
+        let rendered;
+        controller.renderPopupMedia = (payload) => { rendered = payload; };
+        controller[method](method === "showClip" ? event : event.id);
+        const expected = nativeSupport ? "master.m3u8" : "clip.mp4";
+        assert.ok(rendered.mediaElement.options.src.includes(`/desktop-event/${expected}`));
+      } finally {
+        globalThis.document = previousDocument;
+      }
+    });
+  }
+}
+
+test("Chromium keeps MP4 even when it advertises native HLS support", () => {
+  const event = { id: "chrome-event", has_clip: true };
+  const controller = new PopupMediaLoaderController({
+    _findEventById: () => event,
+    _media: (id, file) => `/media/${id}/${file}`,
+  }, {
+    isIOS: false,
+    isSafari: () => false,
+    supportsNativeHls: () => true,
+    buildVideoOptionsForView: (_view, options) => options,
+    createVideoElement: (options) => ({ options }),
+  });
+  let rendered;
+  controller.renderPopupMedia = (payload) => { rendered = payload; };
+  for (const method of ["showClip", "showClipById"]) {
+    controller[method](method === "showClip" ? event : event.id);
+    assert.ok(rendered.mediaElement.options.src.includes("/chrome-event/clip.mp4"));
+  }
+});
+
 test("unavailable event clips fall back to snapshots and then clear messaging", () => {
   const event = {
     id: "event-1",

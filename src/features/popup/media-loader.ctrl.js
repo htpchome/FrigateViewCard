@@ -144,6 +144,12 @@ export class PopupMediaLoaderController {
       createVideoElement,
       mountNodeIntoSlot,
       isIOS,
+      isSafari: () => globalThis.navigator?.vendor === "Apple Computer, Inc.",
+      supportsNativeHls: () => Boolean(
+        globalThis.document?.createElement("video")?.canPlayType?.(
+          "application/vnd.apple.mpegurl",
+        ),
+      ),
       preferRecordingHls: () =>
         isIOS || host._isFirefox?.() || host._isEdge?.(),
       isEventPrePostRollEnabled: () =>
@@ -369,6 +375,8 @@ export class PopupMediaLoaderController {
       opts,
       infoEvent: event,
       isIos: this._deps.isIOS,
+      supportsNativeHls: this._deps.supportsNativeHls(),
+      isSafari: this._deps.isSafari(),
     });
     const src = this.buildPopupClipSrc(
       event.id,
@@ -402,6 +410,8 @@ export class PopupMediaLoaderController {
       opts,
       infoEvent: event,
       isIos: this._deps.isIOS,
+      supportsNativeHls: this._deps.supportsNativeHls(),
+      isSafari: this._deps.isSafari(),
       includeLookupInfo: true,
     });
     const src = this.buildPopupClipSrc(
