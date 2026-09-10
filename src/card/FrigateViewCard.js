@@ -1428,6 +1428,7 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   connectedCallback() {
+    this._deepLinkController.connect();
     this._ensureEditorPreviewController();
     this._editorPreviewController.syncInitialLandingPage();
     const hadPendingDisconnectTeardown = Boolean(this._disconnectTeardownT);
@@ -2041,6 +2042,7 @@ export class FrigateViewCard extends HTMLElement {
     };
   }
   disconnectedCallback() {
+    this._deepLinkController.disconnect();
     void this._stopPtzMotion("disconnected");
     const preserveDashboardLive =
       this._haDashboardSwipeNavigationController?.isCurrentDashboardScope?.() ===
@@ -2268,6 +2270,7 @@ export class FrigateViewCard extends HTMLElement {
     this._startEditorDialogCloseObserver();
     this._deepLinkController.consumeDeepLinkReviewOpen();
     this._deepLinkController.consumeDeepLinkEventOpen();
+    if (this.isConnected) this._deepLinkController.connect();
     this._refresh = setInterval(() => {
       if (this._isNowWindow()) {
         if (this._isCardViewPageActive()) {

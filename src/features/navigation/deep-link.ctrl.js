@@ -3,6 +3,57 @@ import { cameraMemberEntities } from "../camera-groups/model.js";
 export class DeepLinkController {
   constructor(host) {
     this._host = host;
+    this._onNavigation = () => this.handleNavigation();
+    this._navigationPath = null;
+    this._pendingNavigationUrl = null;
+  }
+
+  connect() {
+    if (this._navigationPath === null) {
+      this._navigationPath = window.location.pathname;
+      for (const event of ["location-changed", "popstate", "hashchange"]) {
+        window.addEventListener(event, this._onNavigation);
+      }
+    }
+    this.handleNavigation();
+  }
+
+  disconnect() {
+    for (const event of ["location-changed", "popstate", "hashchange"]) {
+      window.removeEventListener(event, this._onNavigation);
+    }
+    this._navigationPath = null;
+    this._pendingNavigationUrl = null;
+  }
+
+  handleNavigation() {
+    if (!this._host._started || !this._host.isConnected) return;
+    if (!this.isDeepLinkHandlingEnabled()) return;
+    if (window.location.pathname !== this._navigationPath) return;
+    const params = this.mergedUrlSearchParams();
+    const hasTarget = [
+      "event", "event_id", "frigate_event", "frigate_event_id",
+      "review", "review_id", "frigate_review", "frigate_review_id",
+    ].some((key) => String(params.get(key) || "").trim());
+    // URL cleanup and ordinary dashboard navigation must not reopen a popup.
+    if (!hasTarget) return;
+    if (this._pendingNavigationUrl === window.location.href) return;
+    this.initDeepLinkFromUrl();
+    if (!this.isDeepLinkCandidateForCard()) return;
+    this._pendingNavigationUrl = window.location.href;
+
+    const index = this.deepLinkCameraHintIndex();
+    if (index >= 0 && index !== this._host._activeCamIdx) {
+      // Use the normal switch path so camera caches, live view and list agree.
+      void this._host._switchCamera(index);
+    } else {
+      // A notification may refer to an event not present in the cached list yet.
+      void this._host._browseWindowLoaderController.loadWindow(true, {
+        supersede: true,
+      });
+    }
+    this.consumeDeepLinkReviewOpen();
+    this.consumeDeepLinkEventOpen();
   }
 
   isDeepLinkHandlingEnabled() {
@@ -61,6 +112,7 @@ export class DeepLinkController {
 
       const nextUrl = `${url.pathname}${url.search}${url.hash}`;
       window.history.replaceState(window.history.state, "", nextUrl);
+      this._pendingNavigationUrl = null;
     } catch (_) {}
   }
 
