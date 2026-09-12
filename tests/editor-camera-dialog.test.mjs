@@ -914,7 +914,7 @@ test("camera modal uses a compact ordered accordion around its controls", () => 
   );
   assert.match(
     source,
-    /class="cam-modal-field camera-modal-primary">[\s\S]*?class="camera-modal-floating-label"[^>]*>Camera<\/span>[\s\S]*?<ha-selector id="camera-modal-entity" aria-label="Camera">/,
+    /class="cam-modal-field camera-modal-primary">[\s\S]*?class="camera-modal-selector-label"[^>]*>Camera<\/span>[\s\S]*?<ha-selector id="camera-modal-entity" aria-label="Camera">/,
   );
   assert.match(
     source,

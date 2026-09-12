@@ -4292,6 +4292,9 @@ export class FrigateViewCardEditor extends HTMLElement {
             .camera-modal-accordion-content{padding:10px 12px 12px;background:var(--editor-card-bg);}
             .camera-modal-accordion-content[hidden]{display:none;}
             .camera-modal-primary{padding-bottom:10px;border-bottom:1px solid var(--c-border2, var(--editor-border));}
+            .camera-modal-selector-field{display:block;min-width:0;}
+            .camera-modal-selector-field ha-selector{display:block;width:100%;min-width:0;}
+            .camera-modal-selector-label{display:block;margin:0 0 4px 1px;color:var(--c-text2, var(--editor-muted));font-size:10px;font-weight:400;line-height:1.2;}
             .camera-modal-floating-field{position:relative;display:block;min-width:0;}
             .camera-modal-floating-field ha-selector{display:block;width:100%;min-width:0;}
             .camera-modal-floating-label{position:absolute;top:6px;left:12px;z-index:2;color:var(--c-text2, var(--editor-muted));font-size:10px;font-weight:400;line-height:1;pointer-events:none;}
@@ -4383,8 +4386,8 @@ export class FrigateViewCardEditor extends HTMLElement {
             </div>
             <div class="camera-modal-accordion-content">
               <div class="cam-modal-field camera-modal-primary">
-                <div class="camera-modal-floating-field">
-                  <span class="camera-modal-floating-label" aria-hidden="true">Camera</span>
+                <div class="camera-modal-selector-field">
+                  <span class="camera-modal-selector-label" aria-hidden="true">Camera</span>
                   <ha-selector id="camera-modal-entity" aria-label="Camera"></ha-selector>
                 </div>
               </div>
