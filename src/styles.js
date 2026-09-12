@@ -356,7 +356,7 @@ export const STYLES = `
   .shadow-small {box-shadow: var(--fvc-shadow-s);}  
   .shadow-medium {box-shadow: var(--fvc-shadow-m);}
   .small-padding {padding:5px;}
-  .tabs-holder{margin:3px 8px;border-radius:8px;background-color:var(--c-bg-tabs-holder);container-type:inline-size;}
+  .tabs-holder{margin:3px 8px;border-radius: calc(var(--fvc-border-radius, 0px) / 2);background-color:var(--c-bg-tabs-holder);container-type:inline-size;outline: var(--fvc-border-s);}
   .button-holder{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"tabs nav tools";align-items:center;gap:10px;padding:4px 8px;}
   .button-holder-row{display:flex;align-items:center;min-width:0;}
   .tabs-row{grid-area:tabs;justify-content:flex-start;}
