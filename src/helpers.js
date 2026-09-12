@@ -56,6 +56,7 @@ import {
   normalizeCardViewViewMode,
 } from "./features/card-view/config.js";
 import { normalizePageStartMode } from "./features/navigation/start-mode.js";
+import { sanitizeDisplayText } from "./shared/page-text.js";
 
 export function detectDeviceProfile() {
   const nav = typeof navigator !== "undefined" ? navigator : {};
@@ -678,7 +679,8 @@ export const buildEditorConfigFromDom = ({
   themeMode,
   hiddenTabsOverride,
 }) => {
-  const readTrimmed = (id) => root.querySelector(`#${id}`)?.value?.trim() || "";
+  const readTrimmed = (id) =>
+    sanitizeDisplayText(root.querySelector(`#${id}`)?.value).trim();
   const nextConfig = { ...baseConfig, cameras };
   delete nextConfig.camera_entity;
 
@@ -1188,7 +1190,10 @@ export function normalizeCameraConfig(camera, { fallbackName = null } = {}) {
   if (typeof camera === "string") {
     return {
       entity: camera,
-      name: fallbackName,
+      name:
+        fallbackName == null
+          ? null
+          : sanitizeDisplayText(fallbackName).trim(),
       connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
       alerts_content: "alerts_only",
       ptz: null,
@@ -1196,6 +1201,7 @@ export function normalizeCameraConfig(camera, { fallbackName = null } = {}) {
   }
   if (camera && typeof camera === "object") {
     const entity = camera.entity || camera.camera_entity || null;
+    const rawName = camera.name || fallbackName;
     const group = normalizeCameraGroupConfig(camera.group, {
       primaryEntity: entity,
     });
@@ -1204,7 +1210,8 @@ export function normalizeCameraConfig(camera, { fallbackName = null } = {}) {
     );
     return {
       entity,
-      name: camera.name || fallbackName,
+      name:
+        rawName == null ? null : sanitizeDisplayText(rawName).trim(),
       connection_type: normalizeCameraConnectionType(camera.connection_type),
       alerts_content: normalizeAlertsAreaContent(camera.alerts_content),
       ptz: normalizeCameraPtzConfig(camera.ptz),
@@ -1215,7 +1222,10 @@ export function normalizeCameraConfig(camera, { fallbackName = null } = {}) {
   }
   return {
     entity: null,
-    name: fallbackName,
+    name:
+      fallbackName == null
+        ? null
+        : sanitizeDisplayText(fallbackName).trim(),
     connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
     alerts_content: "alerts_only",
     ptz: null,

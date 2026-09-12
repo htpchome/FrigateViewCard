@@ -7,6 +7,10 @@ import {
   setupEntitySelector,
   setupIconSelector,
 } from "../src/helpers.js";
+import {
+  DISPLAY_TEXT_MAX_LENGTH,
+  sanitizeDisplayText,
+} from "../src/shared/page-text.js";
 
 const originalHTMLElement = globalThis.HTMLElement;
 globalThis.HTMLElement = class {};
@@ -107,7 +111,6 @@ test("camera deletion cancellation leaves the camera untouched", () => {
 test("adding a second camera assigns the next unused group name", () => {
   const editor = new FrigateViewCardEditor();
   const nameInput = { value: "" };
-  const nameLabel = { textContent: "Camera Name" };
   const secondaryInput = { value: "", dataset: {} };
   const addButton = { hidden: false };
   const help = { hidden: false };
@@ -115,7 +118,6 @@ test("adding a second camera assigns the next unused group name", () => {
   const helper = { textContent: "" };
   const nodes = {
     "#camera-modal-name": nameInput,
-    "#camera-modal-name-label": nameLabel,
     "#camera-modal-secondary-entity": secondaryInput,
     "#camera-modal-add-secondary": addButton,
     "#camera-modal-secondary-help": help,
@@ -138,7 +140,7 @@ test("adding a second camera assigns the next unused group name", () => {
   editor._setCameraModalGroupEnabled(true);
 
   assert.equal(nameInput.value, "Group C/D");
-  assert.equal(nameLabel.textContent, "Group Name");
+  assert.equal(nameInput.label, "Group Name");
   assert.equal(addButton.hidden, true);
   assert.equal(help.hidden, true);
   assert.equal(fields.hidden, false);
@@ -146,7 +148,7 @@ test("adding a second camera assigns the next unused group name", () => {
   editor._setCameraModalGroupEnabled(false);
 
   assert.equal(nameInput.value, "");
-  assert.equal(nameLabel.textContent, "Camera Name");
+  assert.equal(nameInput.label, "Camera Name");
   assert.equal(secondaryInput.value, "");
   assert.equal(addButton.hidden, false);
   assert.equal(help.hidden, false);
@@ -226,7 +228,7 @@ test("camera light editor is reusable and uses HA light and icon selectors", () 
   );
   assert.match(
     source,
-    /id="camera-modal-name-label">Camera Name<\/span>\s*<ha-input id="camera-modal-name"[^>]*placeholder="Display name \(optional\)"/,
+    /<ha-input id="camera-modal-name" label="Camera Name"[^>]*maxlength="\$\{DISPLAY_TEXT_MAX_LENGTH\}"[^>]*placeholder="Display name \(optional\)"/,
   );
   assert.match(source, /A light can be linked to multiple cameras/);
   assert.match(
@@ -732,6 +734,97 @@ test("camera modal advanced accordions keep at most one section open", () => {
   assert.equal(sections[1].trigger.attributes["aria-expanded"], "false");
 });
 
+test("camera modal accordion summaries reflect only configured values", () => {
+  const editor = new FrigateViewCardEditor();
+  const summary = () => ({ textContent: "", title: "", hidden: false });
+  const nodes = {
+    "#camera-modal-connection-type": {
+      value: "ha_direct",
+      dataset: { value: "ha_direct" },
+    },
+    "#camera-modal-secondary-entity": {
+      value: "camera.package_camera",
+      dataset: { value: "camera.package_camera" },
+    },
+    "#camera-modal-light-entity": {
+      value: "light.porch",
+      dataset: { value: "light.porch" },
+    },
+    "#camera-modal-light-entity-2": { value: "", dataset: { value: "" } },
+    "#camera-modal-ptz-enabled": { checked: true },
+    "#camera-modal-two-way-talk-enabled": { checked: true },
+    "#camera-modal-connection-summary": summary(),
+    "#camera-modal-additional-summary": summary(),
+    "#camera-modal-lights-summary": summary(),
+    "#camera-modal-options-summary": summary(),
+  };
+  editor._hass = {
+    states: {
+      "camera.package_camera": {
+        attributes: { friendly_name: "Package Camera" },
+      },
+      "light.porch": { attributes: { friendly_name: "Porch Light" } },
+    },
+  };
+  editor._cameraModalGroupEnabled = true;
+  editor._cameraModalLightEnabled = true;
+  editor._cameraModalSecondLightEnabled = false;
+  editor.querySelector = (selector) => nodes[selector] || null;
+
+  editor._syncCameraModalAccordionSummaries();
+
+  assert.equal(nodes["#camera-modal-connection-summary"].textContent, "Home Assistant");
+  assert.equal(nodes["#camera-modal-additional-summary"].textContent, "Package Camera");
+  assert.equal(nodes["#camera-modal-lights-summary"].textContent, "Porch Light");
+  assert.equal(nodes["#camera-modal-options-summary"].textContent, "PTZ · Two-Way Talk");
+  assert.equal(nodes["#camera-modal-options-summary"].hidden, false);
+
+  editor._cameraModalGroupEnabled = false;
+  editor._cameraModalLightEnabled = false;
+  nodes["#camera-modal-ptz-enabled"].checked = false;
+  nodes["#camera-modal-two-way-talk-enabled"].checked = false;
+  editor._syncCameraModalAccordionSummaries();
+
+  assert.equal(nodes["#camera-modal-additional-summary"].textContent, "None configured");
+  assert.equal(nodes["#camera-modal-lights-summary"].textContent, "None configured");
+  assert.equal(nodes["#camera-modal-options-summary"].textContent, "");
+  assert.equal(nodes["#camera-modal-options-summary"].hidden, true);
+});
+
+test("limited display text removes control characters and stops at 24 characters", () => {
+  const raw = `Camera\n${"x".repeat(30)}`;
+  const sanitized = sanitizeDisplayText(raw);
+
+  assert.equal(sanitized.includes("\n"), false);
+  assert.equal(sanitized.length, DISPLAY_TEXT_MAX_LENGTH);
+});
+
+test("limited text fields update their value and counter on the input event", () => {
+  const editor = new FrigateViewCardEditor();
+  const listeners = {};
+  const attributes = {};
+  const field = {
+    value: "",
+    addEventListener: (eventName, handler) => {
+      listeners[eventName] = handler;
+    },
+    setAttribute: (name, value) => {
+      attributes[name] = value;
+    },
+  };
+  const counter = { textContent: "" };
+  editor.querySelector = (selector) =>
+    selector === "#limited" ? field : counter;
+
+  editor._wireLimitedTextField("#limited", "#limited-counter");
+  listeners.input({ detail: { value: `Safe\u0000${"x".repeat(30)}` } });
+
+  assert.equal(field.maxLength, DISPLAY_TEXT_MAX_LENGTH);
+  assert.equal(attributes.maxlength, String(DISPLAY_TEXT_MAX_LENGTH));
+  assert.equal(field.value, `Safe${"x".repeat(20)}`);
+  assert.equal(counter.textContent, "24/24");
+});
+
 test("camera selector outside clicks dismiss the dropdown before the modal", () => {
   const editor = new FrigateViewCardEditor();
   const selector = { id: "camera-modal-entity", nodeType: 1 };
@@ -821,20 +914,29 @@ test("camera modal uses a compact ordered accordion around its controls", () => 
   );
   assert.match(
     source,
-    /class="cam-modal-field camera-modal-primary">\s*<ha-selector id="camera-modal-entity">/,
+    /class="cam-modal-field camera-modal-primary">[\s\S]*?class="camera-modal-floating-label"[^>]*>Camera<\/span>[\s\S]*?<ha-selector id="camera-modal-entity" aria-label="Camera">/,
   );
   assert.match(
     source,
-    /class="camera-modal-accordion camera-modal-accordion-fixed active">[\s\S]*?<span>Camera<\/span>[\s\S]*?id="camera-modal-entity"[\s\S]*?id="camera-modal-name"/,
+    /class="camera-modal-floating-label"[^>]*>Connection Type<\/span>[\s\S]*?<ha-selector id="camera-modal-connection-type" aria-label="Connection Type">/,
   );
+  assert.match(
+    source,
+    /class="camera-modal-accordion camera-modal-accordion-fixed active">[\s\S]*?<span class="camera-modal-accordion-title">Camera<\/span>[\s\S]*?id="camera-modal-entity"[\s\S]*?id="camera-modal-name"/,
+  );
+  const fixedCameraSection = source.slice(
+    source.indexOf('class="camera-modal-accordion camera-modal-accordion-fixed active"'),
+    source.indexOf('data-camera-modal-section="connection"'),
+  );
+  assert.doesNotMatch(fixedCameraSection, /camera-modal-accordion-icon/);
   assert.match(source, /data-camera-modal-section="connection"/);
-  assert.match(source, />Connection Settings<\/span>/);
+  assert.match(source, />Connection Settings<\/span>\s*<span class="camera-modal-accordion-summary" id="camera-modal-connection-summary">Frigate go2rtc<\/span>/);
   assert.match(source, /data-camera-modal-section="additional"/);
-  assert.match(source, />Additional Camera<\/span>/);
+  assert.match(source, /id="camera-modal-additional-summary">None configured<\/span>/);
   assert.match(source, /data-camera-modal-section="lights"/);
-  assert.match(source, />Lights<\/span>/);
+  assert.match(source, /id="camera-modal-lights-summary">None configured<\/span>/);
   assert.match(source, /data-camera-modal-section="options"/);
-  assert.match(source, />Options<\/span>/);
+  assert.match(source, /id="camera-modal-options-summary" hidden><\/span>/);
   assert.doesNotMatch(source, />Camera Settings<\/span>/);
   assert.doesNotMatch(source, />Linked Lights<\/span>/);
   assert.doesNotMatch(source, />Camera Controls<\/span>/);

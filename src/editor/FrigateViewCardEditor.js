@@ -142,6 +142,10 @@ import {
 } from "../config/yaml-mapper.js";
 import { escapeHtml, escapeHtmlAttribute } from "../shared/html.js";
 import {
+  DISPLAY_TEXT_MAX_LENGTH,
+  sanitizeDisplayText,
+} from "../shared/page-text.js";
+import {
   isFrigateIntegrationLoaded,
   resolveFrigateIntegrationStatus,
   resolveHomeAssistantVersionStatus,
@@ -779,7 +783,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         stateMessage.textContent = "";
       }
     }
-
+    this._syncCameraModalAccordionSummaries();
   }
 
   _syncCameraModalTwoWayTalkVisibility({
@@ -836,6 +840,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         twoWayTalkEnabled.checked = false;
       }
     }
+    this._syncCameraModalAccordionSummaries();
   }
 
   async _refreshCameraModalPtzSupport() {
@@ -1556,6 +1561,94 @@ export class FrigateViewCardEditor extends HTMLElement {
     );
   }
 
+  _setCameraModalAccordionSummary(id, value) {
+    const summary = this.querySelector(`#camera-modal-${id}-summary`);
+    if (!summary) return;
+    const text = String(value || "").trim();
+    summary.textContent = text;
+    summary.title = text;
+    summary.hidden = !text;
+  }
+
+  _cameraModalEntityLabel(entity) {
+    const entityId = String(entity || "").trim();
+    return String(
+      this._hass?.states?.[entityId]?.attributes?.friendly_name ||
+        entityId.replace(/^[^.]+\./, "").replace(/_/g, " "),
+    ).trim();
+  }
+
+  _syncCameraModalAccordionSummaries() {
+    this._setCameraModalAccordionSummary(
+      "connection",
+      this._cameraModalConnectionTypeValue() === "ha_direct"
+        ? "Home Assistant"
+        : "Frigate go2rtc",
+    );
+
+    const secondaryEntity = this._cameraModalGroupEnabled
+      ? this._cameraModalSecondaryEntityValue()
+      : "";
+    this._setCameraModalAccordionSummary(
+      "additional",
+      this._cameraModalEntityLabel(secondaryEntity) || "None configured",
+    );
+
+    const lights = [0, 1]
+      .filter((index) => this._cameraModalLightEnabledAt(index))
+      .map((index) => this._cameraModalLightEntityValue(index))
+      .filter(Boolean)
+      .map((entity) =>
+        linkedLightFriendlyName(entity, this._hass?.states?.[entity]),
+      );
+    this._setCameraModalAccordionSummary(
+      "lights",
+      lights.join(", ") || "None configured",
+    );
+
+    const options = [];
+    if (resolveSwitchChecked(this.querySelector("#camera-modal-ptz-enabled"))) {
+      options.push("PTZ");
+    }
+    if (
+      resolveSwitchChecked(
+        this.querySelector("#camera-modal-two-way-talk-enabled"),
+      )
+    ) {
+      options.push("Two-Way Talk");
+    }
+    this._setCameraModalAccordionSummary("options", options.join(" · "));
+  }
+
+  _syncLimitedTextField(selector, counterSelector, value) {
+    const field = this.querySelector(selector);
+    if (!field) return "";
+    const sanitized = sanitizeDisplayText(value ?? field.value);
+    if (field.value !== sanitized) field.value = sanitized;
+    const counter = this.querySelector(counterSelector);
+    if (counter) {
+      counter.textContent = `${sanitized.length}/${DISPLAY_TEXT_MAX_LENGTH}`;
+    }
+    return sanitized;
+  }
+
+  _wireLimitedTextField(selector, counterSelector) {
+    const field = this.querySelector(selector);
+    if (!field) return;
+    field.maxLength = DISPLAY_TEXT_MAX_LENGTH;
+    field.setAttribute?.("maxlength", String(DISPLAY_TEXT_MAX_LENGTH));
+    const sync = (event) =>
+      this._syncLimitedTextField(
+        selector,
+        counterSelector,
+        event?.detail?.value ?? field.value,
+      );
+    ["input", "value-changed", "change"].forEach((eventName) =>
+      field.addEventListener(eventName, sync),
+    );
+    sync();
+  }
+
   _openCameraModal(index = null) {
     const cams = this._getCams();
     const cam =
@@ -1594,7 +1687,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     );
     if (title) title.textContent = index == null ? "Add Camera" : "Edit Camera";
     if (save) save.textContent = index == null ? "Add" : "Update";
-    if (name) name.value = cam?.name || "";
+    if (name) name.value = sanitizeDisplayText(cam?.name);
     if (entity) {
       entity.value = cam?.entity || "";
       entity.dataset.value = cam?.entity || "";
@@ -1663,6 +1756,11 @@ export class FrigateViewCardEditor extends HTMLElement {
       sourceType: selectedConnectionType,
       preserveSelection: cam?.two_way_talk === true,
     });
+    this._syncLimitedTextField(
+      "#camera-modal-name",
+      "#camera-modal-name-counter",
+    );
+    this._syncCameraModalAccordionSummaries();
     void this._refreshCameraModalPtzSupport();
     void this._refreshCameraModalTwoWayTalkSupport();
   }
@@ -1910,14 +2008,16 @@ export class FrigateViewCardEditor extends HTMLElement {
   _syncCameraModalGroupFields() {
     const enabled = this._cameraModalGroupEnabled === true;
     const nameInput = this.querySelector("#camera-modal-name");
-    const nameLabel = this.querySelector("#camera-modal-name-label");
     const addButton = this.querySelector("#camera-modal-add-secondary");
     const help = this.querySelector("#camera-modal-secondary-help");
     const removeButton = this.querySelector("#camera-modal-remove-secondary");
     const fields = this.querySelector("#camera-modal-group-fields");
     const label = enabled ? "Group Name" : "Camera Name";
-    if (nameLabel) nameLabel.textContent = label;
-    if (nameInput) nameInput.setAttribute?.("aria-label", label);
+    if (nameInput) {
+      nameInput.label = label;
+      nameInput.setAttribute?.("label", label);
+      nameInput.setAttribute?.("aria-label", label);
+    }
     if (addButton) addButton.hidden = enabled;
     if (help) help.hidden = enabled;
     if (fields) fields.hidden = !enabled;
@@ -1926,6 +2026,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         ? "Remove camera"
         : "Cancel";
     }
+    this._syncCameraModalAccordionSummaries();
   }
 
   _setCameraModalGroupEnabled(enabled) {
@@ -1961,6 +2062,10 @@ export class FrigateViewCardEditor extends HTMLElement {
     const helper = this.querySelector("#camera-modal-helper");
     if (helper) helper.textContent = "";
     this._syncCameraModalGroupFields();
+    this._syncLimitedTextField(
+      "#camera-modal-name",
+      "#camera-modal-name-counter",
+    );
   }
 
   _cameraModalConnectionTypeValue() {
@@ -2076,6 +2181,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           : "Cancel";
       }
     });
+    this._syncCameraModalAccordionSummaries();
   }
 
   _setCameraModalLightEnabled(enabled, index = 0) {
@@ -2106,9 +2212,9 @@ export class FrigateViewCardEditor extends HTMLElement {
   _saveCameraModal() {
     const entity = this._cameraModalEntityValue();
     const secondaryEntity = this._cameraModalSecondaryEntityValue();
-    const name = (
-      this.querySelector("#camera-modal-name")?.value || ""
-    ).toString();
+    const name = sanitizeDisplayText(
+      this.querySelector("#camera-modal-name")?.value,
+    ).trim();
     const connectionType = normalizeCameraConnectionType(
       this.querySelector("#camera-modal-connection-type")?.dataset?.value ||
         this.querySelector("#camera-modal-connection-type")?.value ||
@@ -3189,6 +3295,12 @@ export class FrigateViewCardEditor extends HTMLElement {
         <span class="cam-helper">${physicalCameraCount} of ${MAX_CAMERAS} cameras configured</span>
       </div>`;
 
+    const titleValue = sanitizeDisplayText(
+      this._config?.title || DEFAULT_TITLE,
+    );
+    const subtitleValue = sanitizeDisplayText(
+      this._config?.subtitle || DEFAULT_SUBTITLE,
+    );
     const generalPanelContent = `
       <div class="environment-version-summary">
         <div class="card-version-status" id="card-version-status" data-update-status="unavailable">
@@ -3210,15 +3322,26 @@ export class FrigateViewCardEditor extends HTMLElement {
           <button class="card-version-update-link" id="card-version-update-link" type="button" hidden>Open update</button>
         </div>
       </div>
-      <div class="text-display-row">
-        <ha-input label="Title" name="title" id="title" type="text" value="${escapeHtmlAttribute(this._config?.title || DEFAULT_TITLE)}" placeholder="${escapeHtmlAttribute(DEFAULT_TITLE)}"></ha-input>
-        <label class="text-display-checkbox"><input id="display_title" type="checkbox" ${this._config?.display_title !== false ? "checked" : ""}> <span>Display</span></label>
+      <div class="text-display-field">
+        <div class="text-display-row">
+          <div class="limited-text-input">
+            <ha-input label="Title" name="title" id="title" type="text" maxlength="${DISPLAY_TEXT_MAX_LENGTH}" value="${escapeHtmlAttribute(titleValue)}" placeholder="${escapeHtmlAttribute(DEFAULT_TITLE)}"></ha-input>
+            <span class="limited-text-counter" id="title-counter" aria-hidden="true">${titleValue.length}/${DISPLAY_TEXT_MAX_LENGTH}</span>
+          </div>
+          <label class="text-display-checkbox"><input id="display_title" type="checkbox" ${this._config?.display_title !== false ? "checked" : ""}> <span>Display</span></label>
+        </div>
+        <div class="field-helper text-display-token-helper">Use <code>{camera}</code> to show the active camera name. Grid mode shows <strong>Grid</strong>.</div>
       </div>
-      <div class="text-display-row">
-        <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" value="${escapeHtmlAttribute(this._config?.subtitle || DEFAULT_SUBTITLE)}" placeholder="${escapeHtmlAttribute(DEFAULT_SUBTITLE)}"></ha-input>
-        <label class="text-display-checkbox"><input id="display_subtitle" type="checkbox" ${this._config?.display_subtitle !== false ? "checked" : ""}> <span>Display</span></label>
+      <div class="text-display-field">
+        <div class="text-display-row">
+          <div class="limited-text-input">
+            <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" maxlength="${DISPLAY_TEXT_MAX_LENGTH}" value="${escapeHtmlAttribute(subtitleValue)}" placeholder="${escapeHtmlAttribute(DEFAULT_SUBTITLE)}"></ha-input>
+            <span class="limited-text-counter" id="subtitle-counter" aria-hidden="true">${subtitleValue.length}/${DISPLAY_TEXT_MAX_LENGTH}</span>
+          </div>
+          <label class="text-display-checkbox"><input id="display_subtitle" type="checkbox" ${this._config?.display_subtitle !== false ? "checked" : ""}> <span>Display</span></label>
+        </div>
+        <div class="field-helper text-display-token-helper">Use <code>{camera}</code> to show the active camera name. Grid mode shows <strong>Grid</strong>.</div>
       </div>
-      <div class="field-helper text-display-token-helper">Use <code>{camera}</code> to show the active camera name. Grid mode shows <strong>Grid</strong>.</div>
       <div class="section">
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
           <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
@@ -3995,10 +4118,13 @@ export class FrigateViewCardEditor extends HTMLElement {
             .card-height-slider-control > #stream_height{width:100%;margin-top:7px;}
             .card-height-value{align-self:flex-start;margin-top:0;}
             .chk-row{display:flex;flex-wrap:wrap;gap:8px 16px;}
+            .text-display-field + .text-display-field{margin-top:8px;}
             .text-display-row{display:flex;align-items:center;gap:12px;min-width:0;}
-            .text-display-row + .text-display-row{margin-top:8px;}
-            .text-display-token-helper{margin:5px 0 12px;}
-            .text-display-row ha-input{flex:1 1 auto;min-width:0;}
+            .text-display-token-helper{margin:4px 0 0;}
+            .text-display-field + .section{margin-top:12px;}
+            .limited-text-input{position:relative;flex:1 1 auto;min-width:0;}
+            .limited-text-input ha-input{display:block;width:100%;min-width:0;}
+            .limited-text-counter{position:absolute;right:11px;top:50%;z-index:1;transform:translateY(-50%);padding-inline-start:6px;background:var(--c-bg-mobile, var(--editor-secondary-bg));color:var(--c-text2, var(--editor-muted));font-size:11px;font-variant-numeric:tabular-nums;line-height:1;pointer-events:none;}
             .text-display-checkbox{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;cursor:pointer;color:var(--c-text, var(--editor-text));font-size:12px;font-weight:600;}
             .text-display-checkbox input{margin:0;}
 
@@ -4154,8 +4280,11 @@ export class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-head-spacer{width:calc(24px + 1rem);height:calc(24px + 1rem);}
             .camera-modal-body{padding:0;border:1px solid var(--c-border2, var(--editor-border));border-radius:12px;overflow:hidden;}
             .camera-modal-accordion + .camera-modal-accordion{border-top:1px solid var(--c-border2, var(--editor-border));}
-            .camera-modal-accordion-bar{box-sizing:border-box;width:100%;min-height:40px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:0;background:var(--c-bg-mobile);color:var(--editor-text);font:inherit;font-size:13px;font-weight:700;line-height:1.2;text-align:left;}
+            .camera-modal-accordion-bar{box-sizing:border-box;width:100%;min-height:40px;display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;background:var(--c-bg-mobile);color:var(--editor-text);font:inherit;font-size:13px;font-weight:700;line-height:1.2;text-align:left;}
             button.camera-modal-accordion-bar{cursor:pointer;appearance:none;}
+            .camera-modal-accordion-title{flex:0 1 auto;min-width:0;}
+            .camera-modal-accordion-summary{min-width:0;margin-inline-start:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--c-text2, var(--editor-muted));font-size:12px;font-weight:500;}
+            .camera-modal-accordion-summary[hidden]{display:none;}
             .camera-modal-accordion-icon{display:inline-flex;width:20px;height:20px;flex:0 0 20px;align-items:center;justify-content:center;color:var(--c-text2, var(--editor-muted));transition:transform .16s ease;}
             .camera-modal-accordion-icon svg{display:block;width:18px;height:18px;}
             .camera-modal-accordion.active .camera-modal-accordion-icon{transform:rotate(180deg);color:var(--c-primary, var(--editor-primary));}
@@ -4163,6 +4292,9 @@ export class FrigateViewCardEditor extends HTMLElement {
             .camera-modal-accordion-content{padding:10px 12px 12px;background:var(--editor-card-bg);}
             .camera-modal-accordion-content[hidden]{display:none;}
             .camera-modal-primary{padding-bottom:10px;border-bottom:1px solid var(--c-border2, var(--editor-border));}
+            .camera-modal-floating-field{position:relative;display:block;min-width:0;}
+            .camera-modal-floating-field ha-selector{display:block;width:100%;min-width:0;}
+            .camera-modal-floating-label{position:absolute;top:6px;left:12px;z-index:2;color:var(--c-text2, var(--editor-muted));font-size:10px;font-weight:400;line-height:1;pointer-events:none;}
             .camera-modal-accordion-content > .cam-modal-field:last-child{margin-bottom:0;}
             .camera-modal-accordion-content > .camera-group-add-row{padding-inline-start:0;}
             .camera-modal-accordion-content > .camera-group-help,
@@ -4247,35 +4379,43 @@ export class FrigateViewCardEditor extends HTMLElement {
           <div class="camera-modal-body">
           <section class="camera-modal-accordion camera-modal-accordion-fixed active">
             <div class="camera-modal-accordion-bar">
-              <span>Camera</span>
-              <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
+              <span class="camera-modal-accordion-title">Camera</span>
             </div>
             <div class="camera-modal-accordion-content">
               <div class="cam-modal-field camera-modal-primary">
-                <ha-selector id="camera-modal-entity"></ha-selector>
+                <div class="camera-modal-floating-field">
+                  <span class="camera-modal-floating-label" aria-hidden="true">Camera</span>
+                  <ha-selector id="camera-modal-entity" aria-label="Camera"></ha-selector>
+                </div>
               </div>
               <div class="cam-modal-field">
-                <span class="cam-modal-label" id="camera-modal-name-label">Camera Name</span>
-                <ha-input id="camera-modal-name" aria-labelledby="camera-modal-name-label" aria-label="Camera Name" placeholder="Display name (optional)"></ha-input>
+                <div class="limited-text-input">
+                  <ha-input id="camera-modal-name" label="Camera Name" aria-label="Camera Name" maxlength="${DISPLAY_TEXT_MAX_LENGTH}" placeholder="Display name (optional)"></ha-input>
+                  <span class="limited-text-counter" id="camera-modal-name-counter" aria-hidden="true">0/${DISPLAY_TEXT_MAX_LENGTH}</span>
+                </div>
               </div>
             </div>
           </section>
           <section class="camera-modal-accordion" data-camera-modal-section="connection">
             <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="connection" aria-expanded="false" aria-controls="camera-modal-connection-content">
-              <span>Connection Settings</span>
+              <span class="camera-modal-accordion-title">Connection Settings</span>
+              <span class="camera-modal-accordion-summary" id="camera-modal-connection-summary">Frigate go2rtc</span>
               <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
             </button>
             <div class="camera-modal-accordion-content" id="camera-modal-connection-content" hidden>
               <div class="cam-modal-field">
-                <span class="cam-modal-label">Connection Type</span>
-                <ha-selector id="camera-modal-connection-type"></ha-selector>
+                <div class="camera-modal-floating-field">
+                  <span class="camera-modal-floating-label" aria-hidden="true">Connection Type</span>
+                  <ha-selector id="camera-modal-connection-type" aria-label="Connection Type"></ha-selector>
+                </div>
                 <div class="field-helper">Requires the Home Assistant Frigate integration.</div>
               </div>
             </div>
           </section>
           <section class="camera-modal-accordion" data-camera-modal-section="additional">
             <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="additional" aria-expanded="false" aria-controls="camera-modal-additional-content">
-              <span>Additional Camera</span>
+              <span class="camera-modal-accordion-title">Additional Camera</span>
+              <span class="camera-modal-accordion-summary" id="camera-modal-additional-summary">None configured</span>
               <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
             </button>
             <div class="camera-modal-accordion-content" id="camera-modal-additional-content" hidden>
@@ -4321,7 +4461,8 @@ export class FrigateViewCardEditor extends HTMLElement {
           </section>
           <section class="camera-modal-accordion" data-camera-modal-section="lights">
             <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="lights" aria-expanded="false" aria-controls="camera-modal-lights-content">
-              <span>Lights</span>
+              <span class="camera-modal-accordion-title">Lights</span>
+              <span class="camera-modal-accordion-summary" id="camera-modal-lights-summary">None configured</span>
               <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
             </button>
             <div class="camera-modal-accordion-content" id="camera-modal-lights-content" hidden>
@@ -4399,7 +4540,8 @@ export class FrigateViewCardEditor extends HTMLElement {
           </section>
           <section class="camera-modal-accordion" data-camera-modal-section="options">
             <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="options" aria-expanded="false" aria-controls="camera-modal-options-content">
-              <span>Options</span>
+              <span class="camera-modal-accordion-title">Options</span>
+              <span class="camera-modal-accordion-summary" id="camera-modal-options-summary" hidden></span>
               <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
             </button>
             <div class="camera-modal-accordion-content" id="camera-modal-options-content" hidden>
@@ -4580,7 +4722,6 @@ export class FrigateViewCardEditor extends HTMLElement {
       element: this.querySelector("#camera-modal-entity"),
       hass: this._hass,
       domain: "camera",
-      label: "Camera",
     });
 
     setupEntitySelector({
@@ -4635,6 +4776,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       initialValue: DEFAULT_CAMERA_CONNECTION_TYPE,
       fallbackValue: DEFAULT_CAMERA_CONNECTION_TYPE,
       normalize: (value) => normalizeCameraConnectionType(value),
+      onChange: () => this._syncCameraModalAccordionSummaries(),
     });
 
     bindClickHandlers(this, [
@@ -4805,6 +4947,12 @@ export class FrigateViewCardEditor extends HTMLElement {
           loading: false,
         }),
     );
+    ["value-changed", "change"].forEach((eventName) => {
+      this.querySelector("#camera-modal-two-way-talk-enabled")?.addEventListener(
+        eventName,
+        () => this._syncCameraModalAccordionSummaries(),
+      );
+    });
     this.querySelector("#camera-modal-ptz-enabled")?.addEventListener(
       "change",
       () =>
@@ -4837,6 +4985,12 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._wireGridOrderControls();
     this._wireSettingsPanels();
     this._wireEditorDialogActions();
+    this._wireLimitedTextField("#title", "#title-counter");
+    this._wireLimitedTextField("#subtitle", "#subtitle-counter");
+    this._wireLimitedTextField(
+      "#camera-modal-name",
+      "#camera-modal-name-counter",
+    );
     this._wireLivePreviewUpdates();
     this._wireStandaloneLandingPageTransition(scheduleUpdate);
     this.querySelector("#card-version-update-link")?.addEventListener(

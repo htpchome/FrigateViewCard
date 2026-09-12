@@ -52,6 +52,7 @@ import {
   THEME_CUSTOM_ROWS,
   THEME_DEFAULTS,
 } from "../src/constants.js";
+import { DISPLAY_TEXT_MAX_LENGTH } from "../src/shared/page-text.js";
 
 const cardSource = fs.readFileSync(
   new URL("../src/card/FrigateViewCard.js", import.meta.url),
@@ -546,11 +547,33 @@ test("custom theme mode scope uses a touch-safe three-way bubble", () => {
 });
 
 test("editor documents the camera token for title and subtitle", () => {
-  assert.match(
-    editorSource,
-    /Use <code>\{camera\}<\/code> to show the active camera name\./,
+  assert.equal(
+    editorSource.match(
+      /Use <code>\{camera\}<\/code> to show the active camera name\./g,
+    )?.length,
+    2,
   );
   assert.match(editorSource, /Grid mode shows <strong>Grid<\/strong>\./);
+});
+
+test("display labels are sanitized and limited to 24 characters", () => {
+  const normalized = normalizeCardConfig({
+    title: `Title\n${"x".repeat(30)}`,
+    subtitle: "s".repeat(30),
+    cameras: [
+      { entity: "camera.front", name: `Front\u0000${"y".repeat(30)}` },
+    ],
+  });
+
+  assert.equal(normalized.title.includes("\n"), false);
+  assert.equal(normalized.title.length, DISPLAY_TEXT_MAX_LENGTH);
+  assert.equal(normalized.subtitle.length, DISPLAY_TEXT_MAX_LENGTH);
+  assert.equal(normalized.cameras[0].name.includes("\u0000"), false);
+  assert.equal(normalized.cameras[0].name.length, DISPLAY_TEXT_MAX_LENGTH);
+  assert.match(editorSource, /id="title"[^>]*maxlength="\$\{DISPLAY_TEXT_MAX_LENGTH\}"/);
+  assert.match(editorSource, /id="subtitle"[^>]*maxlength="\$\{DISPLAY_TEXT_MAX_LENGTH\}"/);
+  assert.match(editorSource, /id="title-counter"/);
+  assert.match(editorSource, /id="subtitle-counter"/);
 });
 
 test("editor YAML config omits normalized default values", () => {

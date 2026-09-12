@@ -50,6 +50,7 @@ import {
   normalizeCardViewViewMode,
 } from "../features/card-view/config.js";
 import { normalizePageStartMode } from "../features/navigation/start-mode.js";
+import { sanitizeDisplayText } from "../shared/page-text.js";
 
 export const DEFAULT_CAMERA_ENTITY = "camera.doorbell";
 export const PREFERRED_DEFAULT_CAMERA_ENTITIES = Object.freeze([
@@ -105,8 +106,8 @@ export const normalizeCardConfig = (config) => {
 
   delete src.camera_entity;
 
-  src.title = String(src.title || "").trim() || DEFAULT_TITLE;
-  src.subtitle = String(src.subtitle || "").trim() || DEFAULT_SUBTITLE;
+  src.title = sanitizeDisplayText(src.title).trim() || DEFAULT_TITLE;
+  src.subtitle = sanitizeDisplayText(src.subtitle).trim() || DEFAULT_SUBTITLE;
   src.display_title = src.display_title !== false;
   src.display_subtitle = src.display_subtitle !== false;
   src.display_logo = src.display_logo !== false;

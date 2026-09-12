@@ -35,7 +35,10 @@ import {
   normalizeNumberChoice,
 } from "../helpers.js";
 import { normalizeCameraPtzConfig } from "../features/ptz/index.js";
-import { isCameraTextToken } from "../shared/page-text.js";
+import {
+  isCameraTextToken,
+  sanitizeDisplayText,
+} from "../shared/page-text.js";
 import {
   CARD_HEIGHT_DEFAULT,
   CARD_HEIGHT_DEFAULT_UNIT,
@@ -98,7 +101,10 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
   if (typeof camera === "string") {
     return {
       entity: camera,
-      name: fallbackName,
+      name:
+        fallbackName == null
+          ? null
+          : sanitizeDisplayText(fallbackName).trim(),
       connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
       alerts_content: "alerts_only",
       ptz: null,
@@ -106,6 +112,7 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
   }
   if (camera && typeof camera === "object") {
     const entity = camera.entity || camera.camera_entity || null;
+    const rawName = camera.name || fallbackName;
     const group = normalizeCameraGroupConfig(camera.group, {
       primaryEntity: entity,
     });
@@ -114,7 +121,8 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
     );
     return {
       entity,
-      name: camera.name || fallbackName,
+      name:
+        rawName == null ? null : sanitizeDisplayText(rawName).trim(),
       connection_type: normalizeCameraConnectionType(camera.connection_type),
       alerts_content: normalizeAlertsAreaContent(camera.alerts_content),
       ptz: normalizeCameraPtzConfig(camera.ptz),
@@ -125,7 +133,10 @@ const normalizeCameraConfig = (camera, { fallbackName = null } = {}) => {
   }
   return {
     entity: null,
-    name: fallbackName,
+    name:
+      fallbackName == null
+        ? null
+        : sanitizeDisplayText(fallbackName).trim(),
     connection_type: DEFAULT_CAMERA_CONNECTION_TYPE,
     alerts_content: "alerts_only",
     ptz: null,
@@ -199,11 +210,11 @@ export const compactEditorConfigForYaml = (
     : [];
   if (cameras.length) compact.cameras = cameras;
 
-  const title = String(source.title || "").trim();
+  const title = sanitizeDisplayText(source.title).trim();
   if (title && title !== DEFAULT_TITLE) {
     compact.title = title;
   }
-  const subtitle = String(source.subtitle || "").trim();
+  const subtitle = sanitizeDisplayText(source.subtitle).trim();
   if (subtitle && !isCameraTextToken(subtitle)) {
     compact.subtitle = subtitle;
   }
