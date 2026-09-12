@@ -4122,16 +4122,15 @@ export class FrigateViewCardEditor extends HTMLElement {
             .cam-modal-card ha-selector,
             .cam-modal-card ha-switch{--ha-card-background:var(--editor-card-bg);}
             .cam-modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-            .camera-modal-card{padding:0;}
-            .camera-modal-card .cam-modal-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;margin:0;padding:12px 16px;border-bottom:1px solid var(--c-border2, var(--editor-border));border-radius:15px 15px 0 0;background:var(--editor-secondary-bg);}
-            .cam-modal-title{min-width:0;color:var(--primary-text-color);font-size:24px;font-weight:600;text-align:center;}
+            .camera-modal-card .cam-modal-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;margin-bottom:10px;}
+            .cam-modal-title{min-width:0;color:var(--primary-text-color);font-size:22px;font-weight:600;text-align:center;}
             .cam-modal-head-spacer{width:calc(24px + 1rem);height:calc(24px + 1rem);}
-            .camera-modal-body{padding:12px 16px 0;}
-            .cam-modal-section-heading{margin:14px 0 8px;padding:9px 11px;border:1px solid var(--c-border2, var(--editor-border));border-radius:10px;background:var(--editor-secondary-bg);}
-            .camera-modal-body > .cam-modal-section-heading:first-child{margin-top:0;}
-            .cam-modal-section-title{display:block;color:var(--editor-text);font-size:14px;font-weight:700;line-height:1.3;}
-            .cam-modal-section-description{display:block;margin-top:2px;color:var(--editor-muted);font-size:11px;line-height:1.4;}
-            .camera-modal-body > .cam-modal-field{box-sizing:border-box;margin-bottom:8px;padding:10px 12px;border:1px solid var(--c-border2, var(--editor-border));border-radius:10px;background:var(--editor-card-bg);}
+            .camera-modal-body{padding:12px;border:1px solid var(--c-border2, var(--editor-border));border-radius:12px;}
+            .cam-modal-section-heading{display:flex;align-items:center;gap:8px;margin:12px 0 8px;color:var(--editor-text);font-size:12px;font-weight:700;line-height:1.3;}
+            .cam-modal-section-heading::after{content:"";height:1px;flex:1 1 auto;background:var(--c-border2, var(--editor-border));}
+            .cam-modal-section-title{flex:0 0 auto;}
+            .camera-modal-body > .cam-modal-field{margin-bottom:8px;}
+            .camera-modal-primary{padding-bottom:10px;border-bottom:1px solid var(--c-border2, var(--editor-border));}
             .camera-modal-body > .camera-group-help,
             .camera-modal-body > .camera-group-fields{margin-inline-start:0;}
             .cam-modal-toggle-row{align-items:center;justify-content:space-between;gap:14px;}
@@ -4178,8 +4177,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             #camera-modal-ptz-rotation-row{margin-top:10px;padding-left:12px;border-left:3px solid var(--c-primary, var(--editor-primary));}
             #camera-modal-ptz-rotation-row .editor-choice-chips{grid-template-columns:repeat(4,minmax(0,1fr));}
             .cam-modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:8px;}
-            .camera-modal-card .cam-modal-helper{margin:0 16px;}
-            .camera-modal-card .cam-modal-foot{margin-top:8px;padding:0 16px 14px;}
+            .camera-modal-card .cam-modal-helper{margin-top:4px;}
             .cam-btn{min-height:38px;border:1px solid transparent;border-radius:999px;background:transparent;color:var(--editor-primary);font-weight:600;cursor:pointer;padding:8px 14px;transition:background .16s ease,color .16s ease,border-color .16s ease;}
             .cam-btn:hover,.cam-btn:focus-visible{background:var(--editor-primary-l);border-color:transparent;color:var(--editor-primary-d);outline:none;}
             .cam-btn.primary{background:var(--editor-primary);color:var(--text-primary-color);border-color:var(--editor-primary);padding:8px 18px;}
@@ -4193,9 +4191,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             .cam-confirm-message{margin:0;color:var(--c-text2);line-height:1.5;}
             @media (max-width:560px){
               .linked-entity-selectors{grid-template-columns:minmax(0,1fr);}
-              .camera-modal-card .cam-modal-head{padding:10px 12px;}
-              .cam-modal-title{font-size:22px;}
-              .camera-modal-body{padding:10px 12px 0;}
+              .camera-modal-body{padding:10px;}
             }
             .standalone-landing-dialog{position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(420px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);overflow:auto;}
             .standalone-landing-dialog::backdrop{background:rgba(0,0,0,.30);}
@@ -4214,11 +4210,7 @@ export class FrigateViewCardEditor extends HTMLElement {
             <div class="cam-modal-head-spacer" aria-hidden="true"></div>
           </div>
           <div class="camera-modal-body">
-            <div class="cam-modal-section-heading">
-              <span class="cam-modal-section-title">Camera Source</span>
-              <span class="cam-modal-section-description">Choose the primary camera or pair it with a second camera.</span>
-            </div>
-          <div class="cam-modal-field">
+          <div class="cam-modal-field camera-modal-primary">
             <ha-selector id="camera-modal-entity"></ha-selector>
           </div>
           <div class="cam-modal-field camera-group-add-row">
@@ -4261,7 +4253,6 @@ export class FrigateViewCardEditor extends HTMLElement {
           </div>
           <div class="cam-modal-section-heading">
             <span class="cam-modal-section-title">Camera Settings</span>
-            <span class="cam-modal-section-description">Set the display name, connection, and alert content.</span>
           </div>
           <div class="cam-modal-field">
             <span class="cam-modal-label" id="camera-modal-name-label">Camera Name</span>
@@ -4283,7 +4274,6 @@ export class FrigateViewCardEditor extends HTMLElement {
           </div>
           <div class="cam-modal-section-heading">
             <span class="cam-modal-section-title">Linked Lights</span>
-            <span class="cam-modal-section-description">Add optional Home Assistant light controls to this camera.</span>
           </div>
           <div class="cam-modal-field camera-group-add-row">
             <button type="button" id="camera-modal-add-light" class="cam-inline-add camera-group-action">${ICONS.lightAdd}<span>Add light</span></button>
@@ -4357,7 +4347,6 @@ export class FrigateViewCardEditor extends HTMLElement {
           </div>
           <div class="cam-modal-section-heading">
             <span class="cam-modal-section-title">Camera Controls</span>
-            <span class="cam-modal-section-description">Enable controls supported by this camera and connection type.</span>
           </div>
           <div class="cam-modal-field">
             <div id="camera-modal-ptz-toggle-row">

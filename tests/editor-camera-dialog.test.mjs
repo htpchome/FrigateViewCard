@@ -764,7 +764,10 @@ test("camera modal close control uses the shared button class and close icon", (
     source,
     /<span class="cam-modal-label">Camera<\/span>\s*<ha-selector id="camera-modal-entity">/,
   );
-  assert.match(source, />Camera Source<\/span>/);
+  assert.match(
+    source,
+    /class="cam-modal-field camera-modal-primary">\s*<ha-selector id="camera-modal-entity">/,
+  );
   assert.match(source, />Camera Settings<\/span>/);
   assert.match(source, />Linked Lights<\/span>/);
   assert.match(source, />Camera Controls<\/span>/);
@@ -774,7 +777,11 @@ test("camera modal close control uses the shared button class and close icon", (
   );
   assert.match(
     source,
-    /\.cam-modal-section-heading\{[^}]*border:1px solid[^}]*background:var\(--editor-secondary-bg\)/,
+    /\.camera-modal-body\{[^}]*border:1px solid[^}]*border-radius:12px;/,
+  );
+  assert.match(
+    source,
+    /\.cam-modal-section-heading::after\{[^}]*height:1px;[^}]*background:var\(--c-border2, var\(--editor-border\)\);/,
   );
   assert.match(
     source,
