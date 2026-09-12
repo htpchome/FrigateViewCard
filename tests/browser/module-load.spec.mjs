@@ -2672,6 +2672,10 @@ test.describe("touch input", () => {
       const cameraRow = card.shadowRoot.querySelector(
         ".card-view-camera-row",
       );
+      const cameraPicker = cameraRow.querySelector(".mobile-cam-picker");
+      const backSlot = cameraRow.querySelector(".card-view-back-slot");
+      const cameraRowRect = cameraRow.getBoundingClientRect();
+      const cameraPickerRect = cameraPicker.getBoundingClientRect();
       return {
         standalone: cardRoot.classList.contains("card-view-standalone"),
         overlay: cardRoot.classList.contains(
@@ -2679,6 +2683,14 @@ test.describe("touch input", () => {
         ),
         videoOnly: cardRoot.classList.contains("card-view-video-panel-only"),
         cameraRowPosition: getComputedStyle(cameraRow).position,
+        cameraPickerWide: cameraPickerRect.width >= 162,
+        cameraPickerCentered:
+          Math.abs(
+            cameraPickerRect.left + cameraPickerRect.width / 2 -
+              (cameraRowRect.left + cameraRowRect.width / 2),
+          ) <= 0.5,
+        backSlotDisplay: getComputedStyle(backSlot).display,
+        backSlotVisibility: getComputedStyle(backSlot).visibility,
         cameraStatusVisible: Boolean(
           cameraRow.querySelector(".mobile-cam-picker__status"),
         ),
@@ -2690,6 +2702,10 @@ test.describe("touch input", () => {
       overlay: false,
       videoOnly: false,
       cameraRowPosition: "relative",
+      cameraPickerWide: true,
+      cameraPickerCentered: true,
+      backSlotDisplay: "block",
+      backSlotVisibility: "hidden",
       cameraStatusVisible: true,
     });
   });

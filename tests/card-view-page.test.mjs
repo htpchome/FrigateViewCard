@@ -1010,7 +1010,11 @@ test("Card View overlay presentation keeps controls on the rounded video stage",
   );
   assert.match(
     CARD_VIEW_PAGE_STYLES,
-    /card-view-standalone \.card-view-back-slot \{display:none;\}/,
+    /card-view-standalone:not\(\.card-view-overlay-presentation\) \.card-view-back-slot \{visibility:hidden;pointer-events:none;\}/,
+  );
+  assert.match(
+    CARD_VIEW_PAGE_STYLES,
+    /card-view-standalone:not\(\.card-view-overlay-presentation\) \.card-view-camera-row \{grid-template-columns:minmax\(0,1fr\) minmax\(162px,2\.4fr\) minmax\(0,1fr\);\}/,
   );
   assert.match(
     CARD_VIEW_PAGE_STYLES,

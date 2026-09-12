@@ -56,7 +56,8 @@ export const CARD_VIEW_PAGE_STYLES = `
   }
   .card.card-view-active.card-view-video-panel-only:not(.card-view-standalone) .card-view-video-only-back svg {width:20px;height:20px;color:currentColor;fill:currentColor;opacity:1;pointer-events:none;}
   .card.card-view-active.card-view-video-panel-only:not(.card-view-standalone) .card-view-back-slot {display:none;}
-  .card.card-view-active.card-view-standalone .card-view-back-slot {display:none;}
+  .card.card-view-active.card-view-standalone:not(.card-view-overlay-presentation) .card-view-camera-row {grid-template-columns:minmax(0,1fr) minmax(162px,2.4fr) minmax(0,1fr);}
+  .card.card-view-active.card-view-standalone:not(.card-view-overlay-presentation) .card-view-back-slot {visibility:hidden;pointer-events:none;}
   .card.card-view-active.card-view-video-panel-only:not(.card-view-standalone) #eng-wrap.camera-group-mobile-member .camera-group-live-pane--primary .camera-group-pane-controls {left:47px;top:8px;}
   .card.card-view-active.card-view-video-panel-only:not(.card-view-standalone) #eng-wrap.camera-group-mobile-member .camera-group-live-pane--primary .camera-group-mobile-toggle {
     box-sizing:border-box;width:32px;height:32px;min-width:32px;min-height:32px;max-width:32px;max-height:32px;padding:4px;gap:0;
