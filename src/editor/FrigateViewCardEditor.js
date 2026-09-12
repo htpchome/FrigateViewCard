@@ -1530,6 +1530,32 @@ export class FrigateViewCardEditor extends HTMLElement {
     );
   }
 
+  _setCameraModalAccordionActive(sectionId = null) {
+    const requestedId = String(sectionId || "");
+    this.querySelectorAll(
+      ".camera-modal-accordion[data-camera-modal-section]",
+    ).forEach((section) => {
+      const active = section.dataset.cameraModalSection === requestedId;
+      section.classList.toggle("active", active);
+      section
+        .querySelector("[data-camera-modal-accordion-toggle]")
+        ?.setAttribute("aria-expanded", active ? "true" : "false");
+      const content = section.querySelector(
+        ".camera-modal-accordion-content",
+      );
+      if (content) content.hidden = !active;
+    });
+  }
+
+  _toggleCameraModalAccordion(sectionId) {
+    const section = this.querySelector(
+      `.camera-modal-accordion[data-camera-modal-section="${String(sectionId || "")}"]`,
+    );
+    this._setCameraModalAccordionActive(
+      section?.classList.contains("active") ? null : sectionId,
+    );
+  }
+
   _openCameraModal(index = null) {
     const cams = this._getCams();
     const cam =
@@ -1620,6 +1646,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       );
     });
     this._syncCameraModalLightFields();
+    this._setCameraModalAccordionActive();
     if (helper) helper.textContent = "";
     this._cameraModalSelectorDismissPending = false;
     this._cameraModalSuppressedClickEvent = null;
@@ -4125,14 +4152,23 @@ export class FrigateViewCardEditor extends HTMLElement {
             .camera-modal-card .cam-modal-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;margin-bottom:10px;}
             .cam-modal-title{min-width:0;color:var(--primary-text-color);font-size:22px;font-weight:600;text-align:center;}
             .cam-modal-head-spacer{width:calc(24px + 1rem);height:calc(24px + 1rem);}
-            .camera-modal-body{padding:12px;border:1px solid var(--c-border2, var(--editor-border));border-radius:12px;}
-            .cam-modal-section-heading{display:flex;align-items:center;gap:8px;margin:12px 0 8px;color:var(--editor-text);font-size:12px;font-weight:700;line-height:1.3;}
-            .cam-modal-section-heading::after{content:"";height:1px;flex:1 1 auto;background:var(--c-border2, var(--editor-border));}
-            .cam-modal-section-title{flex:0 0 auto;}
-            .camera-modal-body > .cam-modal-field{margin-bottom:8px;}
+            .camera-modal-body{padding:0;border:1px solid var(--c-border2, var(--editor-border));border-radius:12px;overflow:hidden;}
+            .camera-modal-accordion + .camera-modal-accordion{border-top:1px solid var(--c-border2, var(--editor-border));}
+            .camera-modal-accordion-bar{box-sizing:border-box;width:100%;min-height:40px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:0;background:var(--c-bg-mobile);color:var(--editor-text);font:inherit;font-size:13px;font-weight:700;line-height:1.2;text-align:left;}
+            button.camera-modal-accordion-bar{cursor:pointer;appearance:none;}
+            .camera-modal-accordion-icon{display:inline-flex;width:20px;height:20px;flex:0 0 20px;align-items:center;justify-content:center;color:var(--c-text2, var(--editor-muted));transition:transform .16s ease;}
+            .camera-modal-accordion-icon svg{display:block;width:18px;height:18px;}
+            .camera-modal-accordion.active .camera-modal-accordion-icon{transform:rotate(180deg);color:var(--c-primary, var(--editor-primary));}
+            .camera-modal-accordion.active > .camera-modal-accordion-bar{color:var(--c-primary, var(--editor-primary));}
+            .camera-modal-accordion-content{padding:10px 12px 12px;background:var(--editor-card-bg);}
+            .camera-modal-accordion-content[hidden]{display:none;}
             .camera-modal-primary{padding-bottom:10px;border-bottom:1px solid var(--c-border2, var(--editor-border));}
-            .camera-modal-body > .camera-group-help,
-            .camera-modal-body > .camera-group-fields{margin-inline-start:0;}
+            .camera-modal-accordion-content > .cam-modal-field:last-child{margin-bottom:0;}
+            .camera-modal-accordion-content > .camera-group-add-row{padding-inline-start:0;}
+            .camera-modal-accordion-content > .camera-group-help,
+            .camera-modal-accordion-content > .camera-group-fields{margin-inline-start:0;}
+            button.camera-modal-accordion-bar:focus-visible{outline:2px solid var(--c-primary, var(--editor-primary));outline-offset:-3px;}
+            @media (hover:hover) and (pointer:fine){button.camera-modal-accordion-bar:hover{background:color-mix(in srgb,var(--c-bg-mobile) 78%,var(--c-primary, var(--editor-primary)));}}
             .cam-modal-toggle-row{align-items:center;justify-content:space-between;gap:14px;}
             .cam-modal-toggle-copy{min-width:0;}
             .cam-modal-toggle-copy .cam-modal-label{margin:0;}
@@ -4191,7 +4227,6 @@ export class FrigateViewCardEditor extends HTMLElement {
             .cam-confirm-message{margin:0;color:var(--c-text2);line-height:1.5;}
             @media (max-width:560px){
               .linked-entity-selectors{grid-template-columns:minmax(0,1fr);}
-              .camera-modal-body{padding:10px;}
             }
             .standalone-landing-dialog{position:fixed;inset:0;margin:auto;box-sizing:border-box;width:min(420px,calc(100vw - 24px));max-width:none;max-height:calc(100dvh - 24px);overflow:auto;}
             .standalone-landing-dialog::backdrop{background:rgba(0,0,0,.30);}
@@ -4210,9 +4245,40 @@ export class FrigateViewCardEditor extends HTMLElement {
             <div class="cam-modal-head-spacer" aria-hidden="true"></div>
           </div>
           <div class="camera-modal-body">
-          <div class="cam-modal-field camera-modal-primary">
-            <ha-selector id="camera-modal-entity"></ha-selector>
-          </div>
+          <section class="camera-modal-accordion camera-modal-accordion-fixed active">
+            <div class="camera-modal-accordion-bar">
+              <span>Camera</span>
+              <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
+            </div>
+            <div class="camera-modal-accordion-content">
+              <div class="cam-modal-field camera-modal-primary">
+                <ha-selector id="camera-modal-entity"></ha-selector>
+              </div>
+              <div class="cam-modal-field">
+                <span class="cam-modal-label" id="camera-modal-name-label">Camera Name</span>
+                <ha-input id="camera-modal-name" aria-labelledby="camera-modal-name-label" aria-label="Camera Name" placeholder="Display name (optional)"></ha-input>
+              </div>
+            </div>
+          </section>
+          <section class="camera-modal-accordion" data-camera-modal-section="connection">
+            <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="connection" aria-expanded="false" aria-controls="camera-modal-connection-content">
+              <span>Connection Settings</span>
+              <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
+            </button>
+            <div class="camera-modal-accordion-content" id="camera-modal-connection-content" hidden>
+              <div class="cam-modal-field">
+                <span class="cam-modal-label">Connection Type</span>
+                <ha-selector id="camera-modal-connection-type"></ha-selector>
+                <div class="field-helper">Requires the Home Assistant Frigate integration.</div>
+              </div>
+            </div>
+          </section>
+          <section class="camera-modal-accordion" data-camera-modal-section="additional">
+            <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="additional" aria-expanded="false" aria-controls="camera-modal-additional-content">
+              <span>Additional Camera</span>
+              <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
+            </button>
+            <div class="camera-modal-accordion-content" id="camera-modal-additional-content" hidden>
           <div class="cam-modal-field camera-group-add-row">
             <button type="button" id="camera-modal-add-secondary" class="cam-inline-add camera-group-action">${ICONS.cameraAdd}<span>Add second camera</span></button>
           </div>
@@ -4251,30 +4317,14 @@ export class FrigateViewCardEditor extends HTMLElement {
               <button type="button" id="camera-modal-remove-secondary" class="cam-inline-remove camera-group-action">Cancel</button>
             </div>
           </div>
-          <div class="cam-modal-section-heading">
-            <span class="cam-modal-section-title">Camera Settings</span>
-          </div>
-          <div class="cam-modal-field">
-            <span class="cam-modal-label" id="camera-modal-name-label">Camera Name</span>
-            <ha-input id="camera-modal-name" aria-labelledby="camera-modal-name-label" aria-label="Camera Name" placeholder="Display name (optional)"></ha-input>
-          </div>
-          <div class="cam-modal-field">
-            <span class="cam-modal-label">Connection Type</span>
-            <ha-selector id="camera-modal-connection-type"></ha-selector>
-            <div class="field-helper">Requires the Home Assistant Frigate integration.</div>
-          </div>
-          <div class="cam-modal-field">
-            <div class="layout-row cam-modal-toggle-row">
-              <div class="cam-modal-toggle-copy">
-                <span class="cam-modal-label">Show All Reviews in Alerts</span>
-                <div class="field-helper">Frigate groups activity into reviews that may contain alerts, detections, or both. Enable this to show every review in the Alerts tab; disable it to show alerts only.</div>
-              </div>
-              <ha-switch id="camera-modal-all-reviews"></ha-switch>
             </div>
-          </div>
-          <div class="cam-modal-section-heading">
-            <span class="cam-modal-section-title">Linked Lights</span>
-          </div>
+          </section>
+          <section class="camera-modal-accordion" data-camera-modal-section="lights">
+            <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="lights" aria-expanded="false" aria-controls="camera-modal-lights-content">
+              <span>Lights</span>
+              <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
+            </button>
+            <div class="camera-modal-accordion-content" id="camera-modal-lights-content" hidden>
           <div class="cam-modal-field camera-group-add-row">
             <button type="button" id="camera-modal-add-light" class="cam-inline-add camera-group-action">${ICONS.lightAdd}<span>Add light</span></button>
           </div>
@@ -4345,8 +4395,22 @@ export class FrigateViewCardEditor extends HTMLElement {
               <button type="button" id="camera-modal-remove-light-2" class="cam-inline-remove camera-group-action">Cancel</button>
             </div>
           </div>
-          <div class="cam-modal-section-heading">
-            <span class="cam-modal-section-title">Camera Controls</span>
+            </div>
+          </section>
+          <section class="camera-modal-accordion" data-camera-modal-section="options">
+            <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="options" aria-expanded="false" aria-controls="camera-modal-options-content">
+              <span>Options</span>
+              <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
+            </button>
+            <div class="camera-modal-accordion-content" id="camera-modal-options-content" hidden>
+          <div class="cam-modal-field">
+            <div class="layout-row cam-modal-toggle-row">
+              <div class="cam-modal-toggle-copy">
+                <span class="cam-modal-label">Show All Reviews in Alerts</span>
+                <div class="field-helper">Frigate groups activity into reviews that may contain alerts, detections, or both. Enable this to show every review in the Alerts tab; disable it to show alerts only.</div>
+              </div>
+              <ha-switch id="camera-modal-all-reviews"></ha-switch>
+            </div>
           </div>
           <div class="cam-modal-field">
             <div id="camera-modal-ptz-toggle-row">
@@ -4383,6 +4447,8 @@ export class FrigateViewCardEditor extends HTMLElement {
             <div class="field-helper">Frigate requires a WebRTC backchannel. Home Assistant is experimental and requires HA WebRTC playback.</div>
           </div>
           <div class="field-helper camera-capability-status" id="camera-modal-two-way-talk-state" style="display:none"></div>
+            </div>
+          </section>
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
@@ -4642,6 +4708,15 @@ export class FrigateViewCardEditor extends HTMLElement {
       handler: (event) => {
         this._openCameraDeleteConfirmation(
           Number(event.currentTarget.dataset.removeCam),
+        );
+      },
+    });
+    bindEachClickHandler({
+      root: this,
+      selector: "[data-camera-modal-accordion-toggle]",
+      handler: (event) => {
+        this._toggleCameraModalAccordion(
+          event.currentTarget.dataset.cameraModalAccordionToggle,
         );
       },
     });

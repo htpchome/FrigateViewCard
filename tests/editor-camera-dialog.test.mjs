@@ -210,14 +210,18 @@ test("camera light editor is reusable and uses HA light and icon selectors", () 
   );
   assert.ok(
     source.indexOf('id="camera-modal-connection-type"') <
-      source.indexOf('id="camera-modal-all-reviews"'),
+      source.indexOf('id="camera-modal-add-secondary"'),
   );
   assert.ok(
-    source.indexOf('id="camera-modal-all-reviews"') <
+    source.indexOf('id="camera-modal-add-secondary"') <
       source.indexOf('id="camera-modal-add-light"'),
   );
   assert.ok(
     source.indexOf('id="camera-modal-light-fields-2"') <
+      source.indexOf('id="camera-modal-all-reviews"'),
+  );
+  assert.ok(
+    source.indexOf('id="camera-modal-all-reviews"') <
       source.indexOf('id="camera-modal-ptz-toggle-row"'),
   );
   assert.match(
@@ -677,6 +681,57 @@ test("camera modal closes for document clicks outside its card", () => {
   );
 });
 
+test("camera modal advanced accordions keep at most one section open", () => {
+  const editor = new FrigateViewCardEditor();
+  const makeSection = (id) => {
+    const classes = new Set();
+    const trigger = {
+      attributes: {},
+      setAttribute(name, value) {
+        this.attributes[name] = value;
+      },
+    };
+    const content = { hidden: true };
+    return {
+      dataset: { cameraModalSection: id },
+      classList: {
+        contains: (name) => classes.has(name),
+        toggle: (name, enabled) =>
+          enabled ? classes.add(name) : classes.delete(name),
+      },
+      querySelector: (selector) =>
+        selector === "[data-camera-modal-accordion-toggle]"
+          ? trigger
+          : content,
+      trigger,
+      content,
+    };
+  };
+  const sections = [makeSection("connection"), makeSection("lights")];
+  editor.querySelectorAll = () => sections;
+  editor.querySelector = (selector) =>
+    sections.find((section) =>
+      selector.includes(`data-camera-modal-section="${section.dataset.cameraModalSection}"`),
+    ) || null;
+
+  editor._toggleCameraModalAccordion("connection");
+  assert.equal(sections[0].classList.contains("active"), true);
+  assert.equal(sections[0].content.hidden, false);
+  assert.equal(sections[0].trigger.attributes["aria-expanded"], "true");
+  assert.equal(sections[1].content.hidden, true);
+
+  editor._toggleCameraModalAccordion("lights");
+  assert.equal(sections[0].classList.contains("active"), false);
+  assert.equal(sections[0].content.hidden, true);
+  assert.equal(sections[1].classList.contains("active"), true);
+  assert.equal(sections[1].content.hidden, false);
+
+  editor._toggleCameraModalAccordion("lights");
+  assert.equal(sections[1].classList.contains("active"), false);
+  assert.equal(sections[1].content.hidden, true);
+  assert.equal(sections[1].trigger.attributes["aria-expanded"], "false");
+});
+
 test("camera selector outside clicks dismiss the dropdown before the modal", () => {
   const editor = new FrigateViewCardEditor();
   const selector = { id: "camera-modal-entity", nodeType: 1 };
@@ -744,7 +799,7 @@ test("camera PTZ editor reads a supported directional rotation", () => {
   assert.equal(editor._cameraModalPtzRotationValue(), 270);
 });
 
-test("camera modal close control uses the shared button class and close icon", () => {
+test("camera modal uses a compact ordered accordion around its controls", () => {
   const source = fs.readFileSync(
     new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
     "utf8",
@@ -768,9 +823,21 @@ test("camera modal close control uses the shared button class and close icon", (
     source,
     /class="cam-modal-field camera-modal-primary">\s*<ha-selector id="camera-modal-entity">/,
   );
-  assert.match(source, />Camera Settings<\/span>/);
-  assert.match(source, />Linked Lights<\/span>/);
-  assert.match(source, />Camera Controls<\/span>/);
+  assert.match(
+    source,
+    /class="camera-modal-accordion camera-modal-accordion-fixed active">[\s\S]*?<span>Camera<\/span>[\s\S]*?id="camera-modal-entity"[\s\S]*?id="camera-modal-name"/,
+  );
+  assert.match(source, /data-camera-modal-section="connection"/);
+  assert.match(source, />Connection Settings<\/span>/);
+  assert.match(source, /data-camera-modal-section="additional"/);
+  assert.match(source, />Additional Camera<\/span>/);
+  assert.match(source, /data-camera-modal-section="lights"/);
+  assert.match(source, />Lights<\/span>/);
+  assert.match(source, /data-camera-modal-section="options"/);
+  assert.match(source, />Options<\/span>/);
+  assert.doesNotMatch(source, />Camera Settings<\/span>/);
+  assert.doesNotMatch(source, />Linked Lights<\/span>/);
+  assert.doesNotMatch(source, />Camera Controls<\/span>/);
   assert.match(
     source,
     /Frigate groups activity into reviews that may contain alerts, detections, or both\. Enable this to show every review in the Alerts tab; disable it to show alerts only\./,
@@ -781,7 +848,7 @@ test("camera modal close control uses the shared button class and close icon", (
   );
   assert.match(
     source,
-    /\.cam-modal-section-heading::after\{[^}]*height:1px;[^}]*background:var\(--c-border2, var\(--editor-border\)\);/,
+    /\.camera-modal-accordion \+ \.camera-modal-accordion\{[^}]*border-top:1px solid/,
   );
   assert.match(
     source,
