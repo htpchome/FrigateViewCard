@@ -205,12 +205,20 @@ test("camera light editor is reusable and uses HA light and icon selectors", () 
   assert.match(source, /required: false/);
   assert.match(source, /\.cam-inline-add\[hidden\]\{display:none!important;\}/);
   assert.ok(
-    source.indexOf('id="camera-modal-light-fields"') <
+    source.indexOf('id="camera-modal-name"') <
       source.indexOf('id="camera-modal-connection-type"'),
   );
   assert.ok(
-    source.indexOf('id="camera-modal-name"') <
-      source.indexOf('id="camera-modal-connection-type"'),
+    source.indexOf('id="camera-modal-connection-type"') <
+      source.indexOf('id="camera-modal-all-reviews"'),
+  );
+  assert.ok(
+    source.indexOf('id="camera-modal-all-reviews"') <
+      source.indexOf('id="camera-modal-add-light"'),
+  );
+  assert.ok(
+    source.indexOf('id="camera-modal-light-fields-2"') <
+      source.indexOf('id="camera-modal-ptz-toggle-row"'),
   );
   assert.match(
     source,
@@ -248,18 +256,18 @@ test("camera light editor is reusable and uses HA light and icon selectors", () 
   const secondaryPanel = source.slice(secondaryPanelStart, secondaryPanelEnd);
   assert.ok(
     secondaryPanel.indexOf('id="camera-modal-remove-secondary"') >
-      secondaryPanel.indexOf("The first camera is the main camera"),
+      secondaryPanel.indexOf("Only the main camera provides PTZ"),
   );
 
   const lightPanelStart = source.indexOf('id="camera-modal-light-fields"');
   const lightPanelEnd = source.indexOf(
-    'id="camera-modal-connection-type"',
+    'id="camera-modal-ptz-toggle-row"',
     lightPanelStart,
   );
   const lightPanel = source.slice(lightPanelStart, lightPanelEnd);
   assert.ok(
     lightPanel.indexOf('id="camera-modal-remove-light"') >
-      lightPanel.indexOf("The same light may be linked"),
+      lightPanel.indexOf("A light can be linked to multiple cameras"),
   );
 });
 
@@ -426,7 +434,7 @@ test("editing a camera restores its linked light and icon", () => {
 
   editor._openCameraModal(0);
 
-  assert.equal(nodes["#camera-modal-title"].textContent, "Edit");
+  assert.equal(nodes["#camera-modal-title"].textContent, "Edit Camera");
   assert.equal(nodes["#camera-modal-save"].textContent, "Update");
   assert.equal(nodes["#camera-modal-light-entity"].value, "light.porch");
   assert.equal(nodes["#camera-modal-light-icon"].value, "mdi:coach-lamp");
@@ -747,6 +755,27 @@ test("camera modal close control uses the shared button class and close icon", (
     /id="camera-modal-close" class="round-btn"[^>]*>\$\{ICONS\.close\}<\/button>/,
   );
   assert.doesNotMatch(source, /id="camera-modal-close"[^>]*>x<\/button>/);
+  assert.match(
+    source,
+    /class="cam-modal-card camera-modal-card"[^>]*aria-labelledby="camera-modal-title"/,
+  );
+  assert.match(source, /id="camera-modal-title">Add Camera<\/div>/);
+  assert.doesNotMatch(
+    source,
+    /<span class="cam-modal-label">Camera<\/span>\s*<ha-selector id="camera-modal-entity">/,
+  );
+  assert.match(source, />Camera Source<\/span>/);
+  assert.match(source, />Camera Settings<\/span>/);
+  assert.match(source, />Linked Lights<\/span>/);
+  assert.match(source, />Camera Controls<\/span>/);
+  assert.match(
+    source,
+    /Frigate groups activity into reviews that may contain alerts, detections, or both\. Enable this to show every review in the Alerts tab; disable it to show alerts only\./,
+  );
+  assert.match(
+    source,
+    /\.cam-modal-section-heading\{[^}]*border:1px solid[^}]*background:var\(--editor-secondary-bg\)/,
+  );
   assert.match(
     source,
     /\$\{physicalCameraCount\} of \$\{MAX_CAMERAS\} cameras configured/,
