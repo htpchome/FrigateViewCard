@@ -23,7 +23,7 @@ const createHost = ({
   mobileDevice = false,
   phoneDevice = false,
   bottomNavbar = false,
-  displayLogo = true,
+  displayFvcBrandLogo = true,
 } = {}) => {
   const calls = [];
   const host = {
@@ -32,7 +32,7 @@ const createHost = ({
       preview_page_live_cameras: liveCameras,
       preview_page_live_cameras_mobile: mobileLiveCameras,
       preview_page_show_title_bars: titleBars,
-      display_logo: displayLogo,
+      display_logo: displayFvcBrandLogo,
       cameras: [{ entity: "camera.front_door" }, { entity: "camera.driveway" }],
     },
     _camCache: {
@@ -122,7 +122,7 @@ test("mobile Preview uses the bottom navbar as its footer and moves enabled bran
 
   assert.equal(controller.usesBottomNavbarPreviewChrome(), true);
   const brandedMarkup = controller.buildPreviewLayoutShellMarkup();
-  assert.match(brandedMarkup, /id="preview-shell-header-logo" >/);
+  assert.match(brandedMarkup, /id="preview-shell-header-fvc-brand-logo" >/);
   assert.match(brandedMarkup, /id="preview-shell-title-block" hidden/);
   assert.match(brandedMarkup, /id="preview-shell-footer" hidden/);
 
@@ -130,7 +130,7 @@ test("mobile Preview uses the bottom navbar as its footer and moves enabled bran
   const titleMarkup = controller.buildPreviewLayoutShellMarkup();
   assert.match(
     titleMarkup,
-    /id="preview-shell-header-logo" hidden><\/div>/,
+    /id="preview-shell-header-fvc-brand-logo" hidden><\/div>/,
   );
   assert.match(titleMarkup, /id="preview-shell-title-block" >/);
   assert.match(titleMarkup, /id="preview-shell-footer" hidden/);

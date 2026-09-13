@@ -174,7 +174,7 @@ export const STYLES = `
   .card.card-picker-demo .stream-loading,
   .card.card-picker-demo .stream-fallback-status{display:none !important;}
   .card.card-picker-demo .card-picker-demo-live{position:absolute;inset:0;overflow:hidden;background:#000;}
-  .card.card-picker-demo .card-picker-demo-brand{display:block;width:100%;height:100%;}
+  .card.card-picker-demo .card-picker-demo-fvc-brand-logo{display:block;width:100%;height:100%;}
   .card.card-picker-demo .card-picker-demo-scene{display:block;width:100%;height:100%;}
   .card.card-picker-demo .card-picker-demo-live > .card-picker-demo-scene{filter:brightness(.68) saturate(.85) contrast(1.1);}
   .card.card-picker-demo .card-picker-demo-scene-sky{fill:var(--c-primary-l);}
@@ -210,8 +210,8 @@ export const STYLES = `
   .card.card-picker-demo .card-picker-demo-alert-badge{position:absolute;left:3px;bottom:2px;padding:1px 3px;border-radius:3px;background:var(--c-bg-deep);color:var(--c-text-rev);font-size:.5rem;line-height:1.1;opacity:.82;}
   .card.card-picker-demo .card-picker-demo-alert:hover{background:var(--c-bg-primary);}
   .card.card-picker-demo .footer{display:grid;flex:0 0 27px;height:27px;grid-template-columns:minmax(0,1fr) auto;min-height:27px;line-height:1;padding:1px 6px;}
-  .card.card-picker-demo .footer .frigate-view{display:flex;align-items:center;max-height:22px;}
-  .card.card-picker-demo .footer .frigate-view svg{height:20px;}
+  .card.card-picker-demo .footer .fvc-brand-logo{display:flex;align-items:center;max-height:22px;}
+  .card.card-picker-demo .footer .fvc-brand-logo svg{height:20px;}
   .card.card-picker-demo .footer-version{font-size:.56rem;padding:0 1px 2px 4px;}
 
   .card .layout{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;width:100%;overflow:hidden !important;}
@@ -706,16 +706,16 @@ export const STYLES = `
 
 
   .preview-shell-brand{min-width:0;display:flex;align-items:center;}
-  .preview-shell-header-logo{display:flex;align-items:center;max-width:min(46vw,170px);}
-  .preview-shell-header-logo svg{width:100%;height:auto;max-height:24px;}
-  .preview-shell-header-logo[hidden],.preview-shell-title[hidden],.preview-shell-footer[hidden]{display:none !important;}
+  .preview-shell-header-fvc-brand-logo{display:flex;align-items:center;max-width:min(46vw,170px);}
+  .preview-shell-header-fvc-brand-logo svg{width:100%;height:auto;max-height:24px;}
+  .preview-shell-header-fvc-brand-logo[hidden],.preview-shell-title[hidden],.preview-shell-footer[hidden]{display:none !important;}
   .preview-shell-title{min-width:0;display:flex;flex-direction:column;gap:2px;}
   .preview-shell-title-main{font-size:1.05rem;font-weight:700;color:var(--c-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .preview-shell-title-sub{font-size:.78rem;color:var(--c-text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .card.preview-active .preview-shell{display:block;flex:1 1 auto;width:100%;min-width:0;min-height:0;padding:10px;box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;}
   .card.preview-active .preview-shell-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;flex:0 0 var(--fvc-footer-height);align-items:center;height:var(--fvc-footer-height);min-height:var(--fvc-footer-height);padding:4px 8px;border-top:1px solid var(--c-border);box-sizing:border-box;}
-  .preview-shell-footer .frigate-view{position:static;max-height:24px;}
-  .preview-shell-footer .frigate-view svg{height:24px;}
+  .preview-shell-footer .fvc-brand-logo{position:static;max-height:24px;}
+  .preview-shell-footer .fvc-brand-logo svg{height:24px;}
   .preview-grid {display: grid;gap: 10px;width: 100%;max-width: 100%;
     grid-template-columns: repeat(auto-fit,minmax(max(min(100%, 420px), calc(33.333% - 10px)),1fr));
   }
@@ -977,10 +977,10 @@ export const STYLES = `
   .controls-preset-chip.is-activating{border-color:var(--c-primary);background:var(--c-primary-l);color:var(--c-primary-d);box-shadow:inset 0 0 0 1px var(--c-primary);}
   .controls-preset-chip:disabled{cursor:wait;opacity:.68;}
   .controls-presets-note{margin-top:6px;color:var(--c-text2);font-size:.72rem;line-height:1.25;text-align:center;}
-  .frigate-view{max-height:24px;pointer-events: none;}
-  .frigate-view svg{height:24px;pointer-events: none;}
-  .frigate-view-accent svg{color:#ff5733;fill:#ff5733;}
-  .frigate-view-accent {color:#ff5733;fill:#ff5733;}
+  .fvc-brand-logo{max-height:24px;pointer-events: none;}
+  .fvc-brand-logo svg{height:24px;pointer-events: none;}
+  .fvc-brand-logo-accent svg{color:#ff5733;fill:#ff5733;}
+  .fvc-brand-logo-accent {color:#ff5733;fill:#ff5733;}
   
   .recording-scrub {display:flex;flex-direction:column;align-items:stretch;gap:6px;margin-top:10px;}
   .recording-scrub[hidden] {display:none;}

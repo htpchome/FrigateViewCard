@@ -23,7 +23,7 @@ const normalizeRegions = (regions = {}) => ({
   calendarPanel: "",
   linkedEntitiesLeft: "",
   linkedEntitiesRight: "",
-  footerLogo: "",
+  footerFvcBrandLogo: "",
   footerVersion: "",
   drawerHandleIcon: "",
   mediaDrawerHandleIcon: "",
@@ -112,7 +112,7 @@ export function buildCardViewMainLayoutShellMarkup({
       </div>
     </div>
     <footer class="card-view-footer" data-fvc-region="footer">
-      <div class="frigate-view">${regions.footerLogo}</div>
+      <div class="fvc-brand-logo">${regions.footerFvcBrandLogo}</div>
       <div class="card-view-footer-center">
         <button class="icon-btn card-view-drawer-handle card-view-drawer-handle--left" type="button" data-card-view-drawer-toggle aria-expanded="true" title="Close activity drawer" aria-label="Close activity drawer">${regions.drawerHandleIcon}</button>
         <div class="card-view-footer-nav">${regions.pageNavigation}</div>

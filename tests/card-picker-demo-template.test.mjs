@@ -11,10 +11,10 @@ test("card picker live demo uses self-contained FrigateView branding", () => {
   const markup = buildCardPickerDemoLiveMarkup();
 
   assert.ok(markup.includes(`${CARD_NAME} preview branding`));
-  assert.match(markup, /card-picker-demo-brand/);
+  assert.match(markup, /card-picker-demo-fvc-brand-logo/);
   assert.ok(markup.includes(CARD_NAME.toUpperCase()));
   assert.match(markup, /For Home Assistant and Frigate/);
-  assert.match(markup, /card-picker-demo-brand-gold/);
+  assert.match(markup, /card-picker-demo-fvc-brand-logo-gold/);
   assert.match(markup, /fill="#000000"/);
   assert.doesNotMatch(markup, /https?:\/\//);
   assert.doesNotMatch(markup, /camera\.[a-z0-9_]+/i);

@@ -28,7 +28,7 @@ function normalizeRegions(regions) {
     browseHeader: "",
     browse: "",
     footer: "",
-    wideFooterIcon: "",
+    wideFooterFvcBrandLogo: "",
     footerVersion: "",
     companionCameras: "",
     timeline: "",
@@ -99,7 +99,7 @@ export function buildWideViewMainLayoutShellMarkup({
             </div>
           </div>
           <div class="wide-footer" data-fvc-region="footer">
-            <div class="frigate-view">${regions.wideFooterIcon}</div>
+            <div class="fvc-brand-logo">${regions.wideFooterFvcBrandLogo}</div>
             ${footerVersion}
           </div>
         </div>`;

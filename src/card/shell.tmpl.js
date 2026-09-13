@@ -63,16 +63,16 @@ export function buildInfoRowMarkup({
 
 export function buildFooterMarkup({
   icons = {},
-  includeFrigateView = true,
-  displayFrigateView = true,
+  includeFvcBrandLogo = true,
+  displayFvcBrandLogo = true,
   version = "",
 } = {}) {
-  if (!includeFrigateView) return "";
-  const frigateView = `<div><div class="frigate-view">${displayFrigateView ? icons.frigateView || "" : ""}</div></div>`;
+  if (!includeFvcBrandLogo) return "";
+  const fvcBrandLogo = `<div><div class="fvc-brand-logo">${displayFvcBrandLogo ? icons.fvcBrandLogo || "" : ""}</div></div>`;
   const normalizedVersion = String(version || "").trim();
   const footerVersion = `<div class="footer-version" ${normalizedVersion ? `aria-label="${CARD_NAME} version ${escapeHtmlAttribute(normalizedVersion)}"` : "hidden"}>${normalizedVersion ? `v${escapeHtml(normalizedVersion)}` : ""}</div>`;
   return `<div class="footer" data-fvc-region="footer">
-              ${frigateView}
+              ${fvcBrandLogo}
               ${footerVersion}
             </div>`;
 }

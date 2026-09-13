@@ -692,7 +692,7 @@ export const buildEditorConfigFromDom = ({
   else delete nextConfig.subtitle;
   const displayTitle = root.querySelector("#display_title");
   const displaySubtitle = root.querySelector("#display_subtitle");
-  const displayLogo = root.querySelector("#display_logo");
+  const displayFvcBrandLogo = root.querySelector("#display_logo");
   const displayVersion = root.querySelector("#display_version");
   nextConfig.display_title = displayTitle
     ? resolveSwitchChecked(displayTitle)
@@ -700,8 +700,8 @@ export const buildEditorConfigFromDom = ({
   nextConfig.display_subtitle = displaySubtitle
     ? resolveSwitchChecked(displaySubtitle)
     : baseConfig?.display_subtitle !== false;
-  nextConfig.display_logo = displayLogo
-    ? resolveSwitchChecked(displayLogo)
+  nextConfig.display_logo = displayFvcBrandLogo
+    ? resolveSwitchChecked(displayFvcBrandLogo)
     : baseConfig?.display_logo !== false;
   nextConfig.display_version = displayVersion
     ? resolveSwitchChecked(displayVersion)

@@ -99,20 +99,23 @@ export class PreviewPageController {
   syncBottomNavbarPreviewChrome() {
     if (!this.isPreviewPageActive()) return;
     const useBottomNavbarChrome = this.usesBottomNavbarPreviewChrome();
-    const logoMarkup =
-      this._host._config.display_logo !== false ? ICONS.frigateView : "";
-    const showHeaderLogo = useBottomNavbarChrome && logoMarkup !== "";
-    const headerLogo = this._host._$("#preview-shell-header-logo");
+    const fvcBrandLogoMarkup =
+      this._host._config.display_logo !== false ? ICONS.fvcBrandLogo : "";
+    const showHeaderFvcBrandLogo =
+      useBottomNavbarChrome && fvcBrandLogoMarkup !== "";
+    const headerFvcBrandLogo = this._host._$(
+      "#preview-shell-header-fvc-brand-logo",
+    );
     const titleBlock = this._host._$("#preview-shell-title-block");
     const footer = this._host._$("#preview-shell-footer");
 
-    if (headerLogo) {
-      if (headerLogo.innerHTML !== logoMarkup) {
-        headerLogo.innerHTML = logoMarkup;
+    if (headerFvcBrandLogo) {
+      if (headerFvcBrandLogo.innerHTML !== fvcBrandLogoMarkup) {
+        headerFvcBrandLogo.innerHTML = fvcBrandLogoMarkup;
       }
-      headerLogo.hidden = !showHeaderLogo;
+      headerFvcBrandLogo.hidden = !showHeaderFvcBrandLogo;
     }
-    if (titleBlock) titleBlock.hidden = showHeaderLogo;
+    if (titleBlock) titleBlock.hidden = showHeaderFvcBrandLogo;
     if (footer) footer.hidden = useBottomNavbarChrome;
   }
 
@@ -132,15 +135,15 @@ export class PreviewPageController {
 
   buildPreviewLayoutShellMarkup() {
     const useBottomNavbarChrome = this.usesBottomNavbarPreviewChrome();
-    const previewLogo =
-      this._host._config.display_logo !== false ? ICONS.frigateView : "";
+    const previewFvcBrandLogo =
+      this._host._config.display_logo !== false ? ICONS.fvcBrandLogo : "";
     const previewShellHeader = buildPreviewShellHeaderMarkup({
       title: this._previewPageTitle(),
       subtitle: this._host._subtitleText(),
       displayTitle: this._host._config.display_title !== false,
       displaySubtitle: this._host._config.display_subtitle !== false,
-      headerLogo: previewLogo,
-      displayHeaderLogo: useBottomNavbarChrome,
+      headerFvcBrandLogo: previewFvcBrandLogo,
+      displayHeaderFvcBrandLogo: useBottomNavbarChrome,
       pageNav:
         this._pageNavigation()?.pageNavMarkup?.() ||
         this._host._pageNavMarkup?.() ||
@@ -149,7 +152,7 @@ export class PreviewPageController {
 
     return buildPreviewLayoutShellMarkup({
       previewShellHeader,
-      previewFooterIcon: previewLogo,
+      previewFooterFvcBrandLogo: previewFvcBrandLogo,
       version:
         this._host._config.display_version !== false ? VERSION : "",
       hideFooter: useBottomNavbarChrome,

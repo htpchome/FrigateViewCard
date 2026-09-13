@@ -675,12 +675,12 @@ test("shared shell builders expose stable page region anchors", () => {
   const tabs = buildTabsRegionMarkup({ markup: "Tabs" });
   const tools = buildToolsRegionMarkup({ markup: "Tools" });
   const footerMarkup = buildFooterMarkup({
-    icons: { frigateView: "F" },
+    icons: { fvcBrandLogo: "F" },
     version: "1.0.0",
   });
   const omittedFooterMarkup = buildFooterMarkup({
-    icons: { frigateView: "F" },
-    includeFrigateView: false,
+    icons: { fvcBrandLogo: "F" },
+    includeFvcBrandLogo: false,
   });
   assert.equal(omittedFooterMarkup, "");
   assert.doesNotMatch(footerMarkup, /older-hint|scroll for older/i);

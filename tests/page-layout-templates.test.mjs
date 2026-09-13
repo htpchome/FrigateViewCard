@@ -9,6 +9,7 @@ import {
 import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
 import { buildWideViewMainLayoutShellMarkup } from "../src/features/wide-view/page.tmpl.js";
 import { buildFooterMarkup } from "../src/card/shell.tmpl.js";
+import { ICONS } from "../src/icons.js";
 import { STYLES } from "../src/styles.js";
 
 const regions = {
@@ -26,7 +27,7 @@ const regions = {
   browseHeader: `<div data-fvc-region="browse-header">Browse Header</div>`,
   browse: `<div data-fvc-region="browse">Browse</div>`,
   footer: `<div data-fvc-region="footer">Footer</div>`,
-  wideFooterIcon: `<svg data-wide-footer-icon></svg>`,
+  wideFooterFvcBrandLogo: `<svg data-wide-footer-fvc-brand-logo></svg>`,
   footerVersion: "1.0.0",
   companionCameras: `<section id="wide-companion-panel">Companions</section>`,
   timeline: `<aside data-fvc-region="timeline">Timeline</aside>`,
@@ -55,25 +56,31 @@ test("preview header can replace its title block with the FrigateView logo", () 
   const withLogo = buildPreviewShellHeaderMarkup({
     title: "FrigateView",
     subtitle: "Driveway",
-    headerLogo: "Logo",
-    displayHeaderLogo: true,
+    headerFvcBrandLogo: "Logo",
+    displayHeaderFvcBrandLogo: true,
     pageNav: "Navigation",
   });
   const withoutLogo = buildPreviewShellHeaderMarkup({
     title: "FrigateView",
     subtitle: "Driveway",
-    headerLogo: "",
-    displayHeaderLogo: true,
+    headerFvcBrandLogo: "",
+    displayHeaderFvcBrandLogo: true,
     pageNav: "Navigation",
   });
 
   assert.match(
     withLogo,
-    /id="preview-shell-header-logo" >Logo<\/div>/,
+    /id="preview-shell-header-fvc-brand-logo" >Logo<\/div>/,
   );
   assert.match(withLogo, /id="preview-shell-title-block" hidden/);
-  assert.match(withoutLogo, /id="preview-shell-header-logo" hidden><\/div>/);
+  assert.match(withoutLogo, /id="preview-shell-header-fvc-brand-logo" hidden><\/div>/);
   assert.match(withoutLogo, /id="preview-shell-title-block" >/);
+});
+
+test("brand logo uses the shared FVC identifiers", () => {
+  assert.match(ICONS.fvcBrandLogo, /class="fvc-brand-logo-accent"/);
+  assert.match(STYLES, /\.fvc-brand-logo\{/);
+  assert.match(STYLES, /\.fvc-brand-logo-accent \{/);
 });
 
 test("route-owned outer templates compose every atomic region once", () => {
@@ -127,7 +134,7 @@ test("wide view keeps one branded footer inside its atomic page root", () => {
   );
   assert.match(
     markup,
-    /<div class="wide-footer" data-fvc-region="footer">\s*<div class="frigate-view"><svg data-wide-footer-icon><\/svg><\/div>/,
+    /<div class="wide-footer" data-fvc-region="footer">\s*<div class="fvc-brand-logo"><svg data-wide-footer-fvc-brand-logo><\/svg><\/div>/,
   );
   assert.equal(markup.match(/data-fvc-region="footer"/g)?.length, 1);
   assert.match(markup, /class="footer-version"[^>]*>v1\.0\.0<\/div>/);
@@ -136,24 +143,24 @@ test("wide view keeps one branded footer inside its atomic page root", () => {
 test("preview view renders the version at the right of its footer", () => {
   const markup = buildPreviewLayoutShellMarkup({
     previewShellHeader: "Header",
-    previewFooterIcon: "Logo",
+    previewFooterFvcBrandLogo: "Logo",
     version: "1.0.0",
   });
 
   assert.match(
     markup,
-    /class="preview-shell-footer"[\s\S]*?class="frigate-view">Logo<\/div>[\s\S]*?class="footer-version"[^>]*>v1\.0\.0<\/div>/,
+    /class="preview-shell-footer"[\s\S]*?class="fvc-brand-logo">Logo<\/div>[\s\S]*?class="footer-version"[^>]*>v1\.0\.0<\/div>/,
   );
 });
 
 test("page footers retain a hidden version target when version display is disabled", () => {
   const standardFooter = buildFooterMarkup({
-    icons: { frigateView: "Logo" },
+    icons: { fvcBrandLogo: "Logo" },
     version: "",
   });
   const previewFooter = buildPreviewLayoutShellMarkup({
     previewShellHeader: "Header",
-    previewFooterIcon: "Logo",
+    previewFooterFvcBrandLogo: "Logo",
     version: "",
   });
   const wideFooter = buildWideViewMainLayoutShellMarkup({
@@ -168,7 +175,7 @@ test("page footers retain a hidden version target when version display is disabl
 test("preview view can remove its footer from layout for the bottom HA navbar", () => {
   const markup = buildPreviewLayoutShellMarkup({
     previewShellHeader: "Header",
-    previewFooterIcon: "Logo",
+    previewFooterFvcBrandLogo: "Logo",
     version: "1.0.0",
     hideFooter: true,
   });
@@ -209,13 +216,13 @@ test("single, preview, and wide footers share one height and centered version al
 
 test("footer logo visibility leaves the fixed footer slot intact", () => {
   const markup = buildFooterMarkup({
-    icons: { frigateView: "Logo" },
-    displayFrigateView: false,
+    icons: { fvcBrandLogo: "Logo" },
+    displayFvcBrandLogo: false,
     version: "1.0.0",
   });
 
   assert.match(markup, /class="footer"/);
-  assert.match(markup, /class="frigate-view"><\/div>/);
+  assert.match(markup, /class="fvc-brand-logo"><\/div>/);
   assert.doesNotMatch(markup, />Logo</);
   assert.match(markup, /class="footer-version"[^>]*>v1\.0\.0<\/div>/);
 });

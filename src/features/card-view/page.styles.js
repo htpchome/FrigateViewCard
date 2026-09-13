@@ -179,8 +179,8 @@ export const CARD_VIEW_PAGE_STYLES = `
   .card.card-view-active .card-view-ptz-button svg {width:28px;height:28px;pointer-events:none;}
   .card.card-view-active .card-view-ptz-button--up svg {transform:rotate(180deg);}
   .card.card-view-active .card-view-footer {display:grid;grid-template-columns:auto minmax(44px,1fr) auto minmax(44px,1fr) auto;align-items:center;gap:4px;flex:0 0 var(--fvc-footer-height);height:var(--fvc-footer-height);min-height:var(--fvc-footer-height);padding:3px 8px;border-top:1px solid var(--c-border);box-sizing:border-box;container-type:inline-size;container-name:card-view-footer;}
-  .card.card-view-active .card-view-footer .frigate-view {grid-column:1;display:flex;align-items:center;max-width:138px;}
-  .card.card-view-active .card-view-footer .frigate-view svg {width:100%;height:auto;}
+  .card.card-view-active .card-view-footer .fvc-brand-logo {grid-column:1;display:flex;align-items:center;max-width:138px;}
+  .card.card-view-active .card-view-footer .fvc-brand-logo svg {width:100%;height:auto;}
   .card.card-view-active .card-view-footer-center {display:contents;}
   .card.card-view-active .card-view-drawer-handle--left {grid-column:2;justify-self:center;}
   .card.card-view-active .card-view-footer-nav {grid-column:3;align-self:center;justify-self:center;}
@@ -734,7 +734,7 @@ export const CARD_VIEW_PAGE_STYLES = `
     .card.card-view-active .card-view-media-drawer-handle svg {transition-duration:1ms;}
   }
   @container card-view-footer (max-width:480px) {
-    .card.card-view-active .card-view-footer .frigate-view {max-width:100px;}
+    .card.card-view-active .card-view-footer .fvc-brand-logo {max-width:100px;}
     .card.card-view-active .card-view-footer .page-nav {gap:2px;}
     .card.card-view-active .card-view-footer .page-nav-btn {width:30px;height:30px;min-width:30px;min-height:30px;}
     .card.card-view-active .card-view-drawer-handle {width:min(100%,64px);height:34px;min-width:40px;min-height:34px;padding:7px 8px;}

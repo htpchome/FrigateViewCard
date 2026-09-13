@@ -2034,7 +2034,7 @@ export class FrigateViewCard extends HTMLElement {
       !!prevConfig &&
       prevConfig.card_view_hide_camera_name !==
         nextConfig.card_view_hide_camera_name;
-    const displayLogoChanged =
+    const displayFvcBrandLogoChanged =
       !!prevConfig && prevConfig.display_logo !== nextConfig.display_logo;
     const previewVisualChanged =
       !!prevConfig &&
@@ -2159,7 +2159,7 @@ export class FrigateViewCard extends HTMLElement {
       wideViewTimelineEnabledChanged ||
       cardViewPageEnabledChanged ||
       cardViewStandaloneChanged ||
-      displayLogoChanged;
+      displayFvcBrandLogoChanged;
     const needsEngineRemount = camerasChanged;
     const snapshotUpdateChanged =
       prevConfig.snapshot_update_seconds !== nextConfig.snapshot_update_seconds;
@@ -4667,14 +4667,14 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   // =======================Render Shell===================================
-  _syncFooterLogo() {
-    const logoMarkup =
-      this._config?.display_logo !== false ? ICONS.frigateView : "";
+  _syncFvcBrandLogo() {
+    const fvcBrandLogoMarkup =
+      this._config?.display_logo !== false ? ICONS.fvcBrandLogo : "";
     this.shadowRoot
-      ?.querySelectorAll?.("#card .frigate-view")
+      ?.querySelectorAll?.("#card .fvc-brand-logo")
       ?.forEach((element) => {
-        if (element.innerHTML === logoMarkup) return;
-        element.innerHTML = logoMarkup;
+        if (element.innerHTML === fvcBrandLogoMarkup) return;
+        element.innerHTML = fvcBrandLogoMarkup;
       });
   }
 
@@ -4698,7 +4698,7 @@ export class FrigateViewCard extends HTMLElement {
     const shellProfile = this._activePageShellLayoutProfile();
     const shellCapabilities = resolvePageCapabilities(shellProfile);
     const isWideViewPage = this._pageId === PAGE_IDS.wideView;
-    const displayLogo = this._config.display_logo !== false;
+    const displayFvcBrandLogo = this._config.display_logo !== false;
     const displayVersion = this._config.display_version !== false;
     const footerVersion = displayVersion ? VERSION : "";
     const infoRow = resolvePageInfoRowMarkup(shellProfile, {
@@ -4773,12 +4773,12 @@ export class FrigateViewCard extends HTMLElement {
       browse: buildBrowseRegionMarkup({ layoutProfile }),
       footer: buildFooterMarkup({
         icons: ICONS,
-        includeFrigateView: !isWideViewPage,
-        displayFrigateView: displayLogo,
+        includeFvcBrandLogo: !isWideViewPage,
+        displayFvcBrandLogo,
         version: footerVersion,
       }),
-      wideFooterIcon:
-        isWideViewPage && displayLogo ? ICONS.frigateView : "",
+      wideFooterFvcBrandLogo:
+        isWideViewPage && displayFvcBrandLogo ? ICONS.fvcBrandLogo : "",
       companionCameras: isWideViewPage
         ? this._wideViewPageController.buildCompanionRegionMarkup()
         : "",
@@ -4788,7 +4788,7 @@ export class FrigateViewCard extends HTMLElement {
       cardViewToolbar: "",
       cardViewActivity: "",
       calendarPanel: "",
-      footerLogo: displayLogo ? ICONS.frigateView : "",
+      footerFvcBrandLogo: displayFvcBrandLogo ? ICONS.fvcBrandLogo : "",
       footerVersion,
       drawerHandleIcon: ICONS.chevron,
       mediaDrawerHandleIcon: ICONS.chevron,

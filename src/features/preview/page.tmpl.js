@@ -152,16 +152,17 @@ export function buildPreviewShellHeaderMarkup({
   subtitle,
   displayTitle = true,
   displaySubtitle = true,
-  headerLogo = "",
-  displayHeaderLogo = false,
+  headerFvcBrandLogo = "",
+  displayHeaderFvcBrandLogo = false,
   pageNav,
 }) {
-  const showHeaderLogo =
-    displayHeaderLogo === true && String(headerLogo || "").trim() !== "";
+  const showHeaderFvcBrandLogo =
+    displayHeaderFvcBrandLogo === true &&
+    String(headerFvcBrandLogo || "").trim() !== "";
   return `<div class="preview-shell-header" id="preview-shell-header">
             <div class="preview-shell-brand">
-              <div class="preview-shell-header-logo frigate-view" id="preview-shell-header-logo" ${showHeaderLogo ? "" : "hidden"}>${headerLogo}</div>
-              <div class="preview-shell-title" id="preview-shell-title-block" ${showHeaderLogo ? "hidden" : ""}>
+              <div class="preview-shell-header-fvc-brand-logo fvc-brand-logo" id="preview-shell-header-fvc-brand-logo" ${showHeaderFvcBrandLogo ? "" : "hidden"}>${headerFvcBrandLogo}</div>
+              <div class="preview-shell-title" id="preview-shell-title-block" ${showHeaderFvcBrandLogo ? "hidden" : ""}>
                 <div class="preview-shell-title-main" id="preview-shell-title" ${displayTitle ? "" : "hidden"}>${escapeHtml(title)}</div>
                 <div class="preview-shell-title-sub" id="preview-shell-subtitle" ${displaySubtitle ? "" : "hidden"}>${escapeHtml(subtitle)}</div>
               </div>
@@ -172,7 +173,7 @@ export function buildPreviewShellHeaderMarkup({
 
 export function buildPreviewLayoutShellMarkup({
   previewShellHeader,
-  previewFooterIcon,
+  previewFooterFvcBrandLogo,
   version = "",
   hideFooter = false,
 }) {
@@ -181,7 +182,7 @@ export function buildPreviewLayoutShellMarkup({
   return `${previewShellHeader}
           <div class="preview-shell" id="preview-shell"></div>
           <div class="preview-shell-footer" id="preview-shell-footer" ${hideFooter ? "hidden" : ""}>
-            <div class="frigate-view">${previewFooterIcon}</div>
+            <div class="fvc-brand-logo">${previewFooterFvcBrandLogo}</div>
             ${footerVersion}
           </div>`;
 }
