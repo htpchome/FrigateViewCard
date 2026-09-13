@@ -84,6 +84,58 @@ test("review metadata hydration caches referenced events outside the event windo
   assert.equal(requests.length, 1);
 });
 
+test("review metadata hydration limits requests across cards sharing a connection", async () => {
+  const connection = {};
+  let activeRequests = 0;
+  let maxActiveRequests = 0;
+  let requestCount = 0;
+  const request = async () => {
+    requestCount += 1;
+    activeRequests += 1;
+    maxActiveRequests = Math.max(maxActiveRequests, activeRequests);
+    await new Promise((resolve) => setImmediate(resolve));
+    activeRequests -= 1;
+    return [];
+  };
+  const createController = (entity, camera) => {
+    const host = {
+      _hass: { connection },
+      _activeCam: { entity },
+      _config: { cameras: [{ entity }] },
+      _camCache: {
+        [entity]: {
+          clientId: "frigate",
+          cam: camera,
+          events: [],
+          reviewEvents: [],
+          reviewEventMetadataWindows: {},
+        },
+      },
+      _findEventById: () => null,
+      _ws: request,
+    };
+    return new BrowseWindowLoaderController(host);
+  };
+  const reviewsFor = (camera, prefix) =>
+    Array.from({ length: 4 }, (_, index) => ({
+      id: `${prefix}-review-${index}`,
+      camera,
+      start_time: (index + 1) * 86400 + 100,
+      end_time: (index + 1) * 86400 + 130,
+      data: { detections: [`${prefix}-event-${index}`] },
+    }));
+  const front = createController("camera.front", "front");
+  const rear = createController("camera.rear", "rear");
+
+  await Promise.all([
+    front.hydrateReviewEventMetadata(reviewsFor("front", "front")),
+    rear.hydrateReviewEventMetadata(reviewsFor("rear", "rear")),
+  ]);
+
+  assert.equal(requestCount, 8);
+  assert.equal(maxActiveRequests, 3);
+});
+
 test("deep-link event lookup batches custom and grouped cameras by Frigate instance", async () => {
   const requests = [];
   const target = {

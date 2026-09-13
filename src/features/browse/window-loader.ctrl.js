@@ -22,12 +22,40 @@ import {
 import { reviewMatchesAlertsOnlyMode } from "./filter-state.js";
 
 const sharedBrowseRequestsByConnection = new WeakMap();
+const sharedReviewMetadataSchedulersByConnection = new WeakMap();
 const REVIEW_EVENT_METADATA_CACHE_MS = 5 * 60 * 1000;
 const REVIEW_EVENT_METADATA_BATCH = 500;
+const REVIEW_EVENT_METADATA_CONCURRENCY = 3;
 const REVIEW_EVENT_METADATA_LIMIT = 250;
 const REVIEW_EVENT_METADATA_PAGE_LIMIT = 2;
 const normalizeCameraName = (value) =>
   String(value || "").trim().toLowerCase();
+
+const createConcurrencyScheduler = (maxConcurrent) => {
+  const concurrency = Math.max(1, Math.floor(Number(maxConcurrent) || 1));
+  const pending = [];
+  let active = 0;
+
+  const drain = () => {
+    while (active < concurrency && pending.length) {
+      const { task, resolve, reject } = pending.shift();
+      active += 1;
+      Promise.resolve()
+        .then(task)
+        .then(resolve, reject)
+        .finally(() => {
+          active -= 1;
+          drain();
+        });
+    }
+  };
+
+  return (task) =>
+    new Promise((resolve, reject) => {
+      pending.push({ task, resolve, reject });
+      drain();
+    });
+};
 
 export class BrowseWindowLoaderController {
   constructor(host, deps = {}) {
@@ -37,6 +65,9 @@ export class BrowseWindowLoaderController {
       ...deps,
     };
     this._localBrowseRequests = new Map();
+    this._localReviewMetadataScheduler = createConcurrencyScheduler(
+      REVIEW_EVENT_METADATA_CONCURRENCY,
+    );
     this._activeGroupWindowPublish = null;
   }
 
@@ -276,6 +307,19 @@ export class BrowseWindowLoaderController {
       sharedBrowseRequestsByConnection.set(connection, requests);
     }
     return requests;
+  }
+
+  _reviewMetadataScheduler() {
+    const connection = this._host?._hass?.connection;
+    if (!connection || typeof connection !== "object") {
+      return this._localReviewMetadataScheduler;
+    }
+    let scheduler = sharedReviewMetadataSchedulersByConnection.get(connection);
+    if (!scheduler) {
+      scheduler = createConcurrencyScheduler(REVIEW_EVENT_METADATA_CONCURRENCY);
+      sharedReviewMetadataSchedulersByConnection.set(connection, scheduler);
+    }
+    return scheduler;
   }
 
   async _requestBrowseItems(payload) {
@@ -537,19 +581,22 @@ export class BrowseWindowLoaderController {
     if (!groups.size) return false;
 
     let changed = false;
+    const schedule = this._reviewMetadataScheduler();
     await Promise.all(
       [...groups.values()].map(async (group) => {
         try {
-          const fetched = await this.fetchWindowedEvents(
-            group.cache.clientId,
-            group.cache.cam,
-            group.after,
-            group.before,
-            {
-              debugLabel: "review-event-metadata",
-              limit: REVIEW_EVENT_METADATA_BATCH,
-              pageLimit: REVIEW_EVENT_METADATA_PAGE_LIMIT,
-            },
+          const fetched = await schedule(() =>
+            this.fetchWindowedEvents(
+              group.cache.clientId,
+              group.cache.cam,
+              group.after,
+              group.before,
+              {
+                debugLabel: "review-event-metadata",
+                limit: REVIEW_EVENT_METADATA_BATCH,
+                pageLimit: REVIEW_EVENT_METADATA_PAGE_LIMIT,
+              },
+            ),
           );
           const known = new Map(
             (group.cache.reviewEvents || []).map((event) => [
