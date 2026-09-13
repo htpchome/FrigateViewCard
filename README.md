@@ -9,18 +9,10 @@
 
 FrigateViewCard is a camera, events, and recordings card for Home Assistant and Frigate. It prefers fast WebRTC live playback, supports per-camera transport selection, and provides responsive layouts for desktop, tablet, and phone dashboards.
 
-> [!IMPORTANT]
-> FrigateView Card is human-tested with Home Assistant Core 2026.9.0, which is the currently recommended version. Compatibility with earlier Core versions is not verified; friendly bug reports are always welcome.
-> The currently recommended Frigate environment is Frigate Home Assistant integration 5.15.6 with Frigate server 0.17.2. The editor reports whether the Frigate integration is loaded; it does not query or infer the integration, server, or container version.
-
 ## Quick Look
 FrigateViewCard brings your Frigate cameras, alerts, recordings, PTZ, two-way audio, and mobile camera controls together in a single Home Assistant card.
 
 <img src="images/overview.png" alt="Single View live camera and Frigate media browser" width="400">
-
-### AI-assisted development
-> [!NOTE]
-> This project uses AI as a coding assistant. AI-assisted changes are reviewed and tested by the maintainer before release.
 
 ## Features
 
@@ -48,11 +40,18 @@ FrigateViewCard brings your Frigate cameras, alerts, recordings, PTZ, two-way au
 - Frigate/go2rtc configured for cameras using the default `frigate_go2rtc` connection type.
 - A current browser. Microphone capture and some media features require a secure Home Assistant connection and browser support.
 
+> [!IMPORTANT]
+> FrigateView Card is tested with Home Assistant Core 2026.9.0, which is the currently recommended version. Compatibility with earlier Core versions is not verified. The Frigate Home Assistant integration is required. 
+
 ### Frigate integration requirement
 
 The Frigate Home Assistant integration must be installed and configured for FrigateViewCard to function properly. The card uses the integration-provided camera entities, services, media APIs, and Home Assistant-exposed Frigate/go2rtc paths.
 
 On Home Assistant OS, Frigate itself may be installed as a Home Assistant add-on. The add-on runs the Frigate server; it does not replace the Frigate Home Assistant integration. Home Assistant OS users running the Frigate add-on must also install and configure the Frigate integration.
+
+### AI-assisted development
+> [!NOTE]
+> This project uses AI as a coding assistant. AI-assisted changes are reviewed and tested by the maintainer before release.
 
 ## Installation
 
@@ -180,11 +179,11 @@ Preview can keep every tile live, or use refreshed snapshots to deliver a fast o
 
 Card View is a naturally sized layout designed to sit beside other cards in a Home Assistant dashboard on desktop, tablet, or phone. It uses its content and live-video aspect ratio to determine its natural height, so the global Card Height Limit does not apply.
 
-<img src="images/card-view.jpg" alt="Card View" width="400">
+<img src="images/card-view.jpg" alt="Card View" width="200">
+<img src="images/card-view-video.jpg" alt="Card View Video" width="200">
+<img src="images/card-view-video-drawer.jpg" alt="Card View" width="200">
 
-Its activity panel sits between the live view and footer. Either footer handle can open or close it by click, touch, or swipe, while `card_view_view_mode` chooses whether Card View starts with only video or with the bottom panel open or closed. The panel can switch between horizontally paged Alerts and active-camera Recordings. Alerts can be scoped to the active camera or mixed across all configured cameras, and the calendar is available in both activity modes. PTZ temporarily replaces the activity row when active.
-
-Card View also supports Grid, Slideshow, alert takeover, two-way talk, linked lights, compact media popups, and conditional footer navigation. Standalone Card View can add a left-side media drawer whose tabs switch between Alerts, Clips, and Snapshots. With `card_view_standalone` enabled, Card View becomes the only FrigateView page on every device.
+The Card View can be configured in a few ways and is designed to insert into dashboards with other cards.  
 
 ## YAML configuration
 
