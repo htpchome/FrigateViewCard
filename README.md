@@ -179,9 +179,7 @@ Preview can keep every tile live, or use refreshed snapshots to deliver a fast o
 
 Card View is a naturally sized layout designed to sit beside other cards in a Home Assistant dashboard on desktop, tablet, or phone. It uses its content and live-video aspect ratio to determine its natural height, so the global Card Height Limit does not apply.
 
-<img src="images/card-view.jpg" alt="Card View" width="200">
-<img src="images/card-view-video.jpg" alt="Card View Video" width="200">
-<img src="images/card-view-video-drawer.jpg" alt="Card View" width="200">
+<img src="images/card-view.jpg" alt="Card View" width="200"><img src="images/card-view-video.jpg" alt="Card View Video" width="200"><img src="images/card-view-video-drawer.jpg" alt="Card View" width="200">
 
 The Card View can be configured in a few ways and is designed to insert into dashboards with other cards.  
 
