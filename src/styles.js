@@ -900,9 +900,9 @@ export const STYLES = `
   .tool.active ha-icon{color:var(--c-text-rev);opacity:1;}
   .tool:disabled{opacity:.45;cursor:not-allowed;color:var(--c-text4);border-color:var(--c-border2);}
   @media (hover:hover) and (pointer:fine){
-    .tool:hover{color:var(--c-primary-d);border-color:var(--c-primary-d);opacity:1;}
-    .tool:hover svg{color:var(--c-primary-d);}
-    .tool:hover ha-icon{color:var(--c-primary-d);opacity:1;}
+    .tool:not(.active):hover:not(:disabled){color:var(--c-primary-d);border-color:var(--c-primary-d);opacity:1;}
+    .tool:not(.active):hover:not(:disabled) svg{color:var(--c-primary-d);}
+    .tool:not(.active):hover:not(:disabled) ha-icon{color:var(--c-primary-d);opacity:1;}
     .tool:disabled:hover{color:var(--c-text4);border-color:var(--c-border2);}
   }
   .ico{min-width:30px !important;min-height:30px !important;width:30px !important;height:30px !important;background:var(--c-bg-panel);}

@@ -129,10 +129,22 @@ test("filter and calendar toolbar hover styles require a hover-capable pointer",
   );
   assert.match(
     stylesSource,
-    /@media \(hover:hover\) and \(pointer:fine\)\{[\s\S]*?\.tool:hover/,
+    /@media \(hover:hover\) and \(pointer:fine\)\{[\s\S]*?\.tool:not\(\.active\):hover:not\(:disabled\)/,
   );
   assert.match(stylesSource, /\.icon-btn\{[^}]*touch-action:manipulation/);
   assert.match(stylesSource, /\.tool\{[^}]*touch-action:manipulation/);
+});
+
+test("active toolbar buttons retain their contrasting icon while hovered", () => {
+  assert.match(
+    stylesSource,
+    /\.tool\.active\{[^}]*background:var\(--c-primary-d\);[^}]*color:var\(--c-text-rev\)/,
+  );
+  assert.match(
+    stylesSource,
+    /\.tool\.active svg\{[^}]*color:var\(--c-text-rev\)/,
+  );
+  assert.doesNotMatch(stylesSource, /\.tool:hover svg/);
 });
 
 test("two-way talk start and end paths synchronize the live audio state", () => {
