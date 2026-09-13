@@ -1200,6 +1200,42 @@ test("dispatches event-tab clicks from the page-shell tabs region", async ({
   expect(selectedTab).toBe("clips");
 });
 
+test("hides the detached page/tools divider in phone Single View", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseUrl);
+
+  const dividerDisplay = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      mobile_view_page_enabled: true,
+      card_view_page_enabled: true,
+    });
+    card._pageId = "single-view";
+    card._renderShell();
+
+    const shell = card.shadowRoot.querySelector("#card");
+    const holder = card.shadowRoot.querySelector(
+      ".button-holder--responsive-toolbar",
+    );
+    const divider = holder.querySelector(".page-tools-divider");
+    holder.classList.add("page-tools-adjacent");
+    const nonMobile = getComputedStyle(divider).display;
+    shell.classList.add("mobile-client");
+
+    return {
+      mobile: getComputedStyle(divider).display,
+      nonMobile,
+    };
+  });
+
+  expect(dividerDisplay).toEqual({ mobile: "none", nonMobile: "flex" });
+});
+
 test("keeps desktop and phone swipe-page chips compact, equal, and responsive", async ({
   page,
 }) => {

@@ -949,6 +949,7 @@ export const STYLES = `
     .card.mobile-client .layout--single-view .button-holder--responsive-toolbar{position:relative;}
     .card.mobile-client .layout--single-view .button-holder--responsive-toolbar .tools-row,
     .card.mobile-client .layout--single-view .button-holder--responsive-toolbar .tl-tools{position:static;}
+    .card.mobile-client .layout--single-view .page-tools-divider{display:none !important;}
     .card.mobile-client .layout--single-view .filter-panel,
     .card.mobile-client .layout--single-view .cal-panel{top:100%;right:8px;width:calc(100% - 16px);min-width:0;max-width:none;padding:12px;box-sizing:border-box;}
   }
