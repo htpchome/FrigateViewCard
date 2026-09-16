@@ -167,6 +167,7 @@ export const normalizeCardConfig = (config) => {
     src.mobile_view_rotate_to_fullscreen === true;
   src.mobile_view_dashboard_background =
     src.mobile_view_dashboard_background !== false;
+  src.mobile_view_header_overlay = src.mobile_view_header_overlay === true;
   src.mobile_view_outer_border = src.mobile_view_outer_border === true;
   src.mobile_view_ha_navbar_bottom =
     src.mobile_view_ha_navbar_bottom === true;

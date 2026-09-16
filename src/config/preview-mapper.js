@@ -87,6 +87,7 @@ export const createEditorPreviewDraft = (config) => ({
     config.mobile_view_rotate_to_fullscreen,
   mobile_view_dashboard_background:
     config.mobile_view_dashboard_background !== false,
+  mobile_view_header_overlay: config.mobile_view_header_overlay === true,
   mobile_view_outer_border: config.mobile_view_outer_border,
   mobile_view_ha_navbar_bottom: config.mobile_view_ha_navbar_bottom,
   mobile_view_ha_navbar_stack_tabs:
@@ -245,6 +246,8 @@ export const applyEditorPreviewDraftToCardConfig = ({
       previewConfig.mobile_view_rotate_to_fullscreen === true,
     mobile_view_dashboard_background:
       previewConfig.mobile_view_dashboard_background !== false,
+    mobile_view_header_overlay:
+      previewConfig.mobile_view_header_overlay === true,
     mobile_view_outer_border:
       previewConfig.mobile_view_outer_border === true,
     mobile_view_ha_navbar_bottom:

@@ -2711,6 +2711,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       "#mobile_view_page_enabled",
       "#mobile_view_rotate_to_fullscreen",
       "#mobile_view_dashboard_background",
+      "#mobile_view_header_overlay",
       "#mobile_view_outer_border",
       "#mobile_view_ha_navbar_bottom",
       "#mobile_view_ha_navbar_stack_tabs",
@@ -3738,6 +3739,13 @@ export class FrigateViewCardEditor extends HTMLElement {
           <ha-switch id="mobile_view_dashboard_background" ${this._config?.mobile_view_dashboard_background !== false ? "checked" : ""}></ha-switch>
         </div>
         <div class="field-helper">Uses the Mobile View background color for the surrounding Home Assistant page on mobile devices.</div>
+      </div>
+      <div class="section" id="mobile-view-header-overlay-row" style="${this._config?.mobile_view_page_enabled !== false ? "" : "display:none"}">
+        <div class="layout-row">
+          <span class="field-label" style="margin:0">Display Cam Picker/Header as an overlay</span>
+          <ha-switch id="mobile_view_header_overlay" ${this._config?.mobile_view_header_overlay === true ? "checked" : ""}></ha-switch>
+        </div>
+        <div class="field-helper">Places the camera header over live video. Header controls fade with the video controls; LIVE remains visible.</div>
       </div>
       <div class="section" id="mobile-view-outer-border-row" style="${this._config?.mobile_view_page_enabled !== false ? "" : "display:none"}">
         <div class="layout-row">
@@ -5093,6 +5101,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         "mobile_view_page_enabled",
         "mobile_view_rotate_to_fullscreen",
         "mobile_view_dashboard_background",
+        "mobile_view_header_overlay",
         "mobile_view_outer_border",
         "mobile_view_ha_navbar_bottom",
         "mobile_view_ha_navbar_stack_tabs",
@@ -5259,24 +5268,26 @@ export class FrigateViewCardEditor extends HTMLElement {
     const mobileViewEnabled = this.querySelector(
       "#mobile_view_page_enabled",
     );
-    const mobileViewOuterBorderRow = this.querySelector(
+    const mobileViewPresentationRows = [
+      "#mobile-view-dashboard-background-row",
+      "#mobile-view-header-overlay-row",
       "#mobile-view-outer-border-row",
-    );
-    if (mobileViewEnabled && mobileViewOuterBorderRow) {
-      const syncMobileViewOuterBorderRow = () => {
-        mobileViewOuterBorderRow.style.display = mobileViewEnabled.checked
-          ? ""
-          : "none";
+    ].map((selector) => this.querySelector(selector)).filter(Boolean);
+    if (mobileViewEnabled && mobileViewPresentationRows.length) {
+      const syncMobileViewPresentationRows = () => {
+        for (const row of mobileViewPresentationRows) {
+          row.style.display = mobileViewEnabled.checked ? "" : "none";
+        }
       };
       mobileViewEnabled.addEventListener(
         "change",
-        syncMobileViewOuterBorderRow,
+        syncMobileViewPresentationRows,
       );
       mobileViewEnabled.addEventListener(
         "value-changed",
-        syncMobileViewOuterBorderRow,
+        syncMobileViewPresentationRows,
       );
-      syncMobileViewOuterBorderRow();
+      syncMobileViewPresentationRows();
     }
 
     const haNavbarBottom = this.querySelector(

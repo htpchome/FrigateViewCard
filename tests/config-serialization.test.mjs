@@ -1667,6 +1667,7 @@ test("preview draft carries hidden tabs and page routes", () => {
     mobile_view_page_enabled: true,
     mobile_view_rotate_to_fullscreen: false,
     mobile_view_dashboard_background: false,
+    mobile_view_header_overlay: true,
     mobile_view_outer_border: true,
     mobile_view_ha_navbar_bottom: true,
     mobile_view_ha_navbar_stack_tabs: true,
@@ -1722,6 +1723,7 @@ test("preview draft carries hidden tabs and page routes", () => {
   assert.equal(draft.mobile_view_page_enabled, true);
   assert.equal(draft.mobile_view_rotate_to_fullscreen, false);
   assert.equal(draft.mobile_view_dashboard_background, false);
+  assert.equal(draft.mobile_view_header_overlay, true);
   assert.equal(draft.mobile_view_outer_border, true);
   assert.equal(draft.mobile_view_ha_navbar_bottom, true);
   assert.equal(draft.mobile_view_ha_navbar_stack_tabs, true);
@@ -1776,6 +1778,7 @@ test("preview draft carries hidden tabs and page routes", () => {
     previewConfig: draft,
   });
   assert.equal(previewConfig.mobile_view_dashboard_background, false);
+  assert.equal(previewConfig.mobile_view_header_overlay, true);
   assert.equal(previewConfig.mobile_view_ha_navbar_bottom, true);
   assert.equal(previewConfig.mobile_view_ha_navbar_stack_tabs, true);
   assert.equal(previewConfig.mobile_view_ha_navbar_dashboard, true);
@@ -2262,6 +2265,10 @@ test("Single, Wide, and Mobile page settings are ordered, gated, and dirty-state
   );
   assert.match(
     editorSource,
+    /id="mobile-view-header-overlay-row" style="\$\{this\._config\?\.mobile_view_page_enabled !== false \? "" : "display:none"\}"/,
+  );
+  assert.match(
+    editorSource,
     /id="mobile-view-outer-border-row" style="\$\{this\._config\?\.mobile_view_page_enabled !== false \? "" : "display:none"\}"/,
   );
   const mobilePanelStart = editorSource.indexOf(
@@ -2277,8 +2284,12 @@ test("Single, Wide, and Mobile page settings are ordered, gated, and dirty-state
       mobilePanel.indexOf("Whole Dashboard"),
   );
   assert.ok(
-    mobilePanel.indexOf("Mobile View Outer Border") >
+    mobilePanel.indexOf("Display Cam Picker/Header as an overlay") >
       mobilePanel.indexOf("Apply background to entire dashboard page"),
+  );
+  assert.ok(
+    mobilePanel.indexOf("Mobile View Outer Border") >
+      mobilePanel.indexOf("Display Cam Picker/Header as an overlay"),
   );
 
   const livePreviewWireStart = editorSource.indexOf(
@@ -2296,6 +2307,7 @@ test("Single, Wide, and Mobile page settings are ordered, gated, and dirty-state
   assert.match(livePreviewWire, /name="single_view_start_mode"/);
   assert.match(livePreviewWire, /name="wide_view_start_mode"/);
   assert.match(livePreviewWire, /#mobile_view_dashboard_background/);
+  assert.match(livePreviewWire, /#mobile_view_header_overlay/);
   assert.doesNotMatch(editorSource, /Start In Grid Mode/);
   assert.doesNotMatch(editorSource, /#grid_start_in_grid_enabled/);
   assert.match(
@@ -2312,6 +2324,7 @@ test("Mobile View presentation settings omit defaults and preserve swipe mode", 
     cameras: [{ entity: "camera.front_door" }],
     mobile_view_page_enabled: true,
     mobile_view_dashboard_background: false,
+    mobile_view_header_overlay: true,
     mobile_view_outer_border: true,
     mobile_view_ha_navbar_bottom: true,
     mobile_view_ha_navbar_stack_tabs: true,
@@ -2327,6 +2340,7 @@ test("Mobile View presentation settings omit defaults and preserve swipe mode", 
   assert.equal(defaults.mobile_view_page_enabled, true);
   assert.equal(defaults.mobile_view_rotate_to_fullscreen, false);
   assert.equal(defaults.mobile_view_dashboard_background, true);
+  assert.equal(defaults.mobile_view_header_overlay, false);
   assert.equal(defaults.mobile_view_ha_navbar_bottom, false);
   assert.equal(defaults.mobile_view_ha_navbar_stack_tabs, false);
   assert.equal(defaults.mobile_view_ha_navbar_dashboard, false);
@@ -2349,6 +2363,13 @@ test("Mobile View presentation settings omit defaults and preserve swipe mode", 
     Object.hasOwn(
       compactEditorConfigForYaml(defaults),
       "mobile_view_dashboard_background",
+    ),
+    false,
+  );
+  assert.equal(
+    Object.hasOwn(
+      compactEditorConfigForYaml(defaults),
+      "mobile_view_header_overlay",
     ),
     false,
   );
@@ -2414,6 +2435,7 @@ test("Mobile View presentation settings omit defaults and preserve swipe mode", 
   assert.deepEqual(config, {
     cameras: [{ entity: "camera.front_door" }],
     mobile_view_dashboard_background: false,
+    mobile_view_header_overlay: true,
     mobile_view_outer_border: true,
     mobile_view_ha_navbar_bottom: true,
     mobile_view_ha_navbar_stack_tabs: true,
@@ -2836,6 +2858,7 @@ test("editor DOM reads the Mobile View HA navbar toggles and swipe mode", () => 
       return selector === "#mobile_view_ha_navbar_bottom" ||
         selector === "#mobile_view_page_enabled" ||
         selector === "#mobile_view_dashboard_background" ||
+        selector === "#mobile_view_header_overlay" ||
         selector === "#mobile_view_ha_navbar_stack_tabs" ||
         selector === "#mobile_view_ha_navbar_dashboard" ||
         selector === "#ha_dashboard_swipe_navigation_owner" ||
@@ -2871,6 +2894,7 @@ test("editor DOM reads the Mobile View HA navbar toggles and swipe mode", () => 
 
   assert.equal(config.mobile_view_ha_navbar_bottom, true);
   assert.equal(config.mobile_view_dashboard_background, true);
+  assert.equal(config.mobile_view_header_overlay, true);
   assert.equal(config.mobile_view_ha_navbar_stack_tabs, true);
   assert.equal(config.mobile_view_ha_navbar_dashboard, true);
   assert.equal(config.ha_dashboard_swipe_navigation_owner, true);

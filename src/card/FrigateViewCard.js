@@ -1842,6 +1842,7 @@ export class FrigateViewCard extends HTMLElement {
         config.mobile_view_rotate_to_fullscreen === true,
       mobile_view_dashboard_background:
         config.mobile_view_dashboard_background !== false,
+      mobile_view_header_overlay: config.mobile_view_header_overlay === true,
       mobile_view_outer_border: config.mobile_view_outer_border === true,
       mobile_view_ha_navbar_bottom:
         config.mobile_view_ha_navbar_bottom === true,
@@ -2085,6 +2086,13 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
     this._syncVisualStyleToggles();
+    if (
+      prevConfig &&
+      prevConfig.mobile_view_header_overlay !==
+      nextConfig.mobile_view_header_overlay
+    ) {
+      this._initLiveOverlayControls();
+    }
     this._syncFooterVersion();
     this._haPageBackgroundController?.sync?.();
     this._previewPageController?.syncBottomNavbarPreviewChrome?.();
@@ -5514,9 +5522,14 @@ export class FrigateViewCard extends HTMLElement {
     const overlayCardView =
       this._isCardViewPageActive() &&
       this._cardViewPageController?.usesOverlayPresentation?.() === true;
+    const overlayMobileView =
+      this._isMobileViewPageActive() &&
+      this._config?.mobile_view_header_overlay === true;
     const interactionSurface = overlayCardView
       ? this._$(".card-view-live-panel") || wrap
-      : wrap;
+      : overlayMobileView
+        ? this._$("#mobile-top") || wrap
+        : wrap;
     const show = (interaction = {}) => {
       if (interaction.pointerType) {
         this._lastLiveOverlayPointerType = interaction.pointerType;

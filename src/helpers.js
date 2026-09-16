@@ -812,6 +812,12 @@ export const buildEditorConfigFromDom = ({
   nextConfig.mobile_view_dashboard_background = dashboardBackgroundToggle
     ? resolveSwitchChecked(dashboardBackgroundToggle)
     : baseConfig?.mobile_view_dashboard_background !== false;
+  const mobileHeaderOverlayToggle = root.querySelector(
+    "#mobile_view_header_overlay",
+  );
+  nextConfig.mobile_view_header_overlay = mobileHeaderOverlayToggle
+    ? resolveSwitchChecked(mobileHeaderOverlayToggle)
+    : baseConfig?.mobile_view_header_overlay === true;
   nextConfig.mobile_view_outer_border = resolveSwitchChecked(
     root.querySelector("#mobile_view_outer_border"),
   );

@@ -129,7 +129,17 @@ export class CardStyleContextController {
     if (this.shouldHideMobileViewOuterBorder()) {
       classes.push("mobile-view-outer-border-off");
     }
+    if (this.shouldOverlayMobileViewHeader()) {
+      classes.push("mobile-view-header-overlay");
+    }
     return classes.join(" ");
+  }
+
+  shouldOverlayMobileViewHeader() {
+    return (
+      this._host._isMobileViewPageActive?.() === true &&
+      this._host._config?.mobile_view_header_overlay === true
+    );
   }
 
   shouldHideMobileViewOuterBorder() {
@@ -184,6 +194,10 @@ export class CardStyleContextController {
         this.shouldHideMobileViewOuterBorder(),
       );
       card.classList.toggle(
+        "mobile-view-header-overlay",
+        this.shouldOverlayMobileViewHeader(),
+      );
+      card.classList.toggle(
         "firefox-client",
         this._host._isFirefox?.() === true,
       );
@@ -220,8 +234,10 @@ export class CardStyleContextController {
     const inPreviewContext = this._host._isPreviewContext();
     const naturalCardView = this._host._isCardViewPageActive?.() === true;
     const homeAssistantAutoHeight =
+      !this.isInEmbeddedPopup() &&
       this.resolveHomeAssistantGridHeightMode() === "auto";
-    const homeAssistantMasonry = this.isInMasonryView();
+    const homeAssistantMasonry =
+      !this.isInEmbeddedPopup() && this.isInMasonryView();
     if (this._host.parentElement) {
       this._host.parentElement.style.height =
         inPreviewContext ||
@@ -328,6 +344,7 @@ export class CardStyleContextController {
   }
 
   resolvePanelViewAspectRatio() {
+    if (this.isInEmbeddedPopup()) return null;
     if (!this.isPanelView() && !this.isSidebarView()) return null;
     if (this._host._isPreviewPageActive?.() === true) return null;
     if (
@@ -348,6 +365,58 @@ export class CardStyleContextController {
       return 1.2;
     }
     return null;
+  }
+
+  embeddedPopupAncestor() {
+    if (this._host._isPreviewContext?.() === true) return null;
+    if (
+      this._host._isMobileViewPageActive?.() !== true &&
+      this._host._singleViewPageController?.isActive?.() !== true
+    ) {
+      return null;
+    }
+
+    let element = this.composedParentElement(this._host);
+    for (let depth = 0; element && depth < 30; depth += 1) {
+      const tagName = String(element.tagName || "").toUpperCase();
+      if (
+        tagName === "DIALOG" ||
+        tagName === "HA-DIALOG" ||
+        element.getAttribute?.("role") === "dialog" ||
+        element.classList?.contains?.("bubble-pop-up") ||
+        element.classList?.contains?.("bubble-pop-up-container") ||
+        element.classList?.contains?.("bubble-popup")
+      ) {
+        return element;
+      }
+      element = this.composedParentElement(element);
+    }
+    return null;
+  }
+
+  isInEmbeddedPopup() {
+    return this.embeddedPopupAncestor() !== null;
+  }
+
+  resolveEmbeddedPopupHeightPx() {
+    const popup = this.embeddedPopupAncestor();
+    const parent = this._host.parentElement;
+    if (!popup || !parent) return null;
+
+    const popupBottom = Number(popup.getBoundingClientRect?.().bottom);
+    const contentTop = Number(parent.getBoundingClientRect?.().top);
+    const bottomPadding = this.parsePxLength(
+      typeof getComputedStyle === "function"
+        ? getComputedStyle(popup).paddingBottom
+        : "",
+    ) ?? 0;
+    const availableHeight = popupBottom - contentTop - bottomPadding;
+    if (Number.isFinite(availableHeight) && availableHeight > 0) {
+      return availableHeight;
+    }
+
+    const parentHeight = this.measureRenderedHeight(parent);
+    return parentHeight > 0 ? parentHeight : null;
   }
 
   clearPanelViewAspectConstraint() {
@@ -470,8 +539,10 @@ export class CardStyleContextController {
       numericHeight > 0 &&
       !this._host._isPreviewContext();
     const naturalCardView = this._host._isCardViewPageActive?.() === true;
-    const homeAssistantGridHeightMode =
-      this.resolveHomeAssistantGridHeightMode();
+    const embeddedPopupHeightPx = this.resolveEmbeddedPopupHeightPx();
+    const homeAssistantGridHeightMode = embeddedPopupHeightPx != null
+      ? null
+      : this.resolveHomeAssistantGridHeightMode();
     const constrainToHaGrid = homeAssistantGridHeightMode === "fixed";
     let requestedHeightPx = null;
     const hostComputedStyle = naturalCardView && !constrainToHaGrid
@@ -481,7 +552,15 @@ export class CardStyleContextController {
       hostComputedStyle?.getPropertyValue("--ha-card-height").trim() || "";
     let expandedForMinimumBrowseHeight = false;
 
-    if (constrainToHaGrid) {
+    if (embeddedPopupHeightPx != null && (isPercentHeight || isViewportHeight)) {
+      requestedHeightPx = Math.max(
+        1,
+        embeddedPopupHeightPx * (numericHeight / 100),
+      );
+      const popupHeight = `${requestedHeightPx}px`;
+      this._host.style.setProperty("--card-host-height", popupHeight);
+      card.style.setProperty("--view-height", popupHeight);
+    } else if (constrainToHaGrid) {
       this._host.style.setProperty("--card-host-height", "100%");
       card.style.setProperty("--view-height", "100%");
     } else if (naturalCardView) {
@@ -863,7 +942,7 @@ export class CardStyleContextController {
     this._host.parentElement.style.height =
       this._viewportMinimumActive ||
       homeAssistantAutoHeight ||
-      this.isInMasonryView()
+      (this.isInMasonryView() && !this.isInEmbeddedPopup())
         ? "auto"
         : "100%";
   }

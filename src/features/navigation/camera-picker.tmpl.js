@@ -84,6 +84,9 @@ export function buildCameraPickerMarkup({
         <div class="sv stream-type" id="stream-type">${escapeHtml(streamType || "--")}</div>
         <div class="sl">Stream</div>
       </div>
-      <div class="sv mobile-cam-picker__dot" id="on-dot" style="color:${online ? "var(--c-on)" : "var(--c-off)"}">●</div>
+      <span class="mobile-cam-picker__live-tile">
+        <span class="sv mobile-cam-picker__dot" id="on-dot" style="color:${online ? "var(--c-on)" : "var(--c-off)"}">●</span>
+        <span class="mobile-cam-picker__live-label">LIVE</span>
+      </span>
     </div>` : ""}`;
 }

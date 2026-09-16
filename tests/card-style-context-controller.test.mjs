@@ -91,6 +91,93 @@ test("Mobile View outer border setting applies on every device", () => {
   assert.equal(controller.cardStateClassNames(), "");
 });
 
+test("Mobile View header overlay class is scoped to its page and toggle", () => {
+  const host = {
+    _config: { mobile_view_outer_border: true, mobile_view_header_overlay: true },
+    _isPreviewPageActive: () => false,
+    _isLikelyMobileClient: () => false,
+    _isLikelyPhoneClient: () => false,
+    _isMobileViewPageActive: () => true,
+  };
+  const controller = new CardStyleContextController(host);
+
+  assert.equal(controller.cardStateClassNames(), "mobile-view-header-overlay");
+  host._isMobileViewPageActive = () => false;
+  assert.equal(controller.cardStateClassNames(), "");
+  host._isMobileViewPageActive = () => true;
+  host._config.mobile_view_header_overlay = false;
+  assert.equal(controller.cardStateClassNames(), "");
+});
+
+test("embedded popup height bypasses dashboard deductions for Mobile and Single View only", () => {
+  const assignedHeights = [];
+  const popup = {
+    tagName: "DIV",
+    classList: { contains: (name) => name === "bubble-pop-up" },
+    getBoundingClientRect: () => ({ bottom: 850 }),
+  };
+  const parentElement = {
+    parentElement: popup,
+    style: {},
+    getBoundingClientRect: () => ({ top: 120, height: 600 }),
+  };
+  const card = {
+    dataset: {},
+    classList: { toggle: () => {} },
+    querySelector: () => null,
+    style: { setProperty: () => {}, removeProperty: () => {} },
+  };
+  const host = {
+    _config: {
+      stream_height: 100,
+      stream_height_unit: "%",
+      tight_margins: false,
+      theme: "default",
+    },
+    _isPreviewContext: () => false,
+    _isMobileViewPageActive: () => true,
+    _isCardViewPageActive: () => false,
+    _isLikelyMobileClient: () => true,
+    _singleViewPageController: { isActive: () => false },
+    parentElement,
+    shadowRoot: { querySelector: () => card },
+    style: {
+      setProperty: (name, value) => {
+        if (name === "--card-host-height") assignedHeights.push(value);
+      },
+      removeProperty: () => {},
+    },
+  };
+  const controller = new CardStyleContextController(host);
+  controller.syncHostOuterStyles = () => {};
+
+  withGlobals(
+    {
+      document: global.document,
+      window: { innerHeight: 900, visualViewport: null },
+      getComputedStyle: (element) => ({
+        boxSizing: "content-box",
+        paddingBottom: element === popup ? "20px" : "0px",
+        getPropertyValue: (name) => name === "--header-height" ? "56px" : "",
+      }),
+    },
+    () => {
+      assert.equal(controller.resolveEmbeddedPopupHeightPx(), 710);
+      controller.applyCardStyle();
+      assert.equal(assignedHeights.at(-1), "710px");
+
+      host._isMobileViewPageActive = () => false;
+      host._singleViewPageController.isActive = () => true;
+      controller.applyCardStyle();
+      assert.equal(assignedHeights.at(-1), "710px");
+
+      host._singleViewPageController.isActive = () => false;
+      controller.applyCardStyle();
+      assert.equal(assignedHeights.at(-1), "780px");
+    },
+  );
+});
+
 test("syncThemeContext exposes Home Assistant mode and theme source", () => {
   const card = { dataset: {} };
   const host = {
@@ -274,6 +361,7 @@ test("syncVisualStyleToggles updates card classes and host outer styles", () => 
     ["borders-off", false],
     ["corners-off", true],
     ["mobile-view-outer-border-off", false],
+    ["mobile-view-header-overlay", false],
     ["firefox-client", false],
   ]);
   assert.deepEqual(hostToggles, [

@@ -377,6 +377,12 @@ export const compactEditorConfigForYaml = (
   );
   addIfNotDefault(
     compact,
+    "mobile_view_header_overlay",
+    source.mobile_view_header_overlay === true,
+    false,
+  );
+  addIfNotDefault(
+    compact,
     "mobile_view_outer_border",
     source.mobile_view_outer_border === true,
     false,

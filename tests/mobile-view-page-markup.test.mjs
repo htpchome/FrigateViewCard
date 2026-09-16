@@ -297,6 +297,35 @@ test("mobile view centers the camera picker between equal side tracks", () => {
   );
 });
 
+test("Mobile View overlay header follows live controls while LIVE stays visible", () => {
+  const picker = buildMobileViewCamSwitcherMarkup({
+    includeStatus: true,
+    cameras: [{ entity: "camera.doorbell", name: "Doorbell" }],
+    activeCamIdx: 0,
+    icons: {},
+    getCameraName: (camera) => camera.name,
+    isCameraAvailable: () => true,
+  });
+  assert.match(picker, /mobile-cam-picker__live-tile/);
+  assert.match(picker, /mobile-cam-picker__live-label">LIVE/);
+  assert.match(
+    MOBILE_VIEW_PAGE_STYLES,
+    /mobile-view-header-overlay \.mobile-top \.cam-switcher \{[\s\S]*?position:absolute;/,
+  );
+  assert.match(
+    MOBILE_VIEW_PAGE_STYLES,
+    /mobile-view-header-overlay\.card-view-overlays-visible :is\([\s\S]*?\.mobile-cam-picker__stream/,
+  );
+  assert.match(
+    MOBILE_VIEW_PAGE_STYLES,
+    /mobile-view-header-overlay \.mobile-cam-picker__live-tile \{[\s\S]*?display:inline-flex;/,
+  );
+  assert.doesNotMatch(
+    MOBILE_VIEW_PAGE_STYLES,
+    /mobile-view-header-overlay\.card-view-overlays-visible \.mobile-cam-picker__live-tile/,
+  );
+});
+
 test("mobile Single View scrolling does not claim the Card View camera row", () => {
   assert.match(
     STYLES,

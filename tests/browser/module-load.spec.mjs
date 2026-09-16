@@ -306,6 +306,117 @@ test("Panel Single and Mobile Views keep their footer inside the viewport", asyn
   }
 });
 
+test("Mobile overlay header and popup height remain scoped to embedded views", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseUrl);
+
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    document.body.style.margin = "0";
+    const popup = document.createElement("div");
+    popup.setAttribute("role", "dialog");
+    Object.assign(popup.style, {
+      position: "fixed",
+      top: "20px",
+      left: "10px",
+      width: "370px",
+      height: "700px",
+      padding: "60px 10px 20px",
+      boxSizing: "border-box",
+      overflow: "hidden",
+    });
+    const wrapper = document.createElement("div");
+    wrapper.style.height = "100%";
+    popup.append(wrapper);
+    document.body.append(popup);
+
+    const card = document.createElement("frigate-view-card");
+    wrapper.append(card);
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      stream_height: 100,
+      stream_height_unit: "%",
+      mobile_view_page_enabled: true,
+      mobile_view_header_overlay: true,
+    });
+    card._pageId = "mobile-view";
+    card._renderShell();
+    card._mobileViewPageController.renderCamSwitcher();
+    card._applyCardStyle();
+
+    const root = card.shadowRoot;
+    const cardRoot = root.querySelector("#card");
+    const header = root.querySelector("#cam-switcher");
+    const stage = root.querySelector("#live-stage");
+    const back = root.querySelector(".mobile-cam-picker__back-slot");
+    const picker = root.querySelector(".mobile-cam-picker");
+    const source = root.querySelector(".mobile-cam-picker__stream");
+    const liveTile = root.querySelector(".mobile-cam-picker__live-tile");
+    cardRoot.classList.remove("card-view-overlays-visible");
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const before = {
+      popupHeight: card.style.getPropertyValue("--card-host-height"),
+      footerFits:
+        root.querySelector('[data-fvc-region="footer"]').getBoundingClientRect().bottom <=
+        popup.getBoundingClientRect().bottom - 20,
+      headerSharesLiveInteraction:
+        card._liveOverlayControlsController?._surface === root.querySelector("#mobile-top"),
+      rowPosition: getComputedStyle(header).position,
+      videoAtCardTop:
+        Math.abs(stage.getBoundingClientRect().top - card.getBoundingClientRect().top) < 2,
+      back: getComputedStyle(back).visibility,
+      picker: getComputedStyle(picker).visibility,
+      source: getComputedStyle(source).visibility,
+      liveTileVisible: getComputedStyle(liveTile).display !== "none" &&
+        getComputedStyle(liveTile).visibility === "visible",
+    };
+    cardRoot.classList.add("card-view-overlays-visible");
+    const after = {
+      back: getComputedStyle(back).visibility,
+      picker: getComputedStyle(picker).visibility,
+      source: getComputedStyle(source).visibility,
+      liveTileVisible: getComputedStyle(liveTile).display !== "none" &&
+        getComputedStyle(liveTile).visibility === "visible",
+    };
+
+    card._pageId = "single-view";
+    card._renderShell();
+    card._applyCardStyle();
+    return {
+      before,
+      after,
+      singleHeight: card.style.getPropertyValue("--card-host-height"),
+      singleFooterFits:
+        card.shadowRoot.querySelector('[data-fvc-region="footer"]').getBoundingClientRect().bottom <=
+        popup.getBoundingClientRect().bottom - 20,
+    };
+  });
+
+  expect(state).toEqual({
+    before: {
+      popupHeight: "620px",
+      footerFits: true,
+      headerSharesLiveInteraction: true,
+      rowPosition: "absolute",
+      videoAtCardTop: true,
+      back: "hidden",
+      picker: "hidden",
+      source: "hidden",
+      liveTileVisible: true,
+    },
+    after: {
+      back: "visible",
+      picker: "visible",
+      source: "visible",
+      liveTileVisible: true,
+    },
+    singleHeight: "620px",
+    singleFooterFits: true,
+  });
+});
+
 test("Panel Card View naturally sizes and caps an open bottom panel", async ({
   page,
 }) => {

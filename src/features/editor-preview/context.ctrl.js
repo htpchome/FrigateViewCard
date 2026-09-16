@@ -273,6 +273,13 @@ export class EditorPreviewContextController {
     this._host._haNavbarController?.sync?.();
     this._host._haDashboardSwipeNavigationController?.sync?.();
     this._host._syncVisualStyleToggles?.();
+    if (previewKeysChanged(
+      previousConfig,
+      nextConfig,
+      "mobile_view_header_overlay",
+    )) {
+      this._host._initLiveOverlayControls?.();
+    }
     this._host._haPageBackgroundController?.sync?.();
     this._host._previewPageController?.syncBottomNavbarPreviewChrome?.();
     this._host._browseOpen = nextConfig.browse_expanded;
