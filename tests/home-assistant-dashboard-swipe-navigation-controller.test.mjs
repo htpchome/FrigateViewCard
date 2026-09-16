@@ -686,6 +686,31 @@ test("interactive, direct-touch, and horizontally scrollable paths are excluded"
   assert.equal(shouldIgnoreDashboardSwipePath([plainSurface], options), false);
 });
 
+test("Bubble popup and backdrop gestures cannot navigate dashboard pages", async () => {
+  const h = createHarness();
+  h.controller.sync();
+  for (const className of [
+    "bubble-pop-up",
+    "bubble-pop-up-container",
+    "bubble-backdrop",
+  ]) {
+    const bubbleSurface = {
+      tagName: "DIV",
+      matches: (selector) => selector.includes(`.${className}`),
+    };
+    const result = swipe(h.rootState.eventTarget, {
+      path: [plainSurface, bubbleSurface],
+    });
+    assert.equal(result.prevented, false);
+    assert.deepEqual(h.windowRef.pushes, []);
+  }
+
+  assert.equal(swipe(h.rootState.eventTarget).prevented, true);
+  await flushSwipeMotion();
+  assert.deepEqual(h.windowRef.pushes, ["/lovelace/two?kiosk=1#now"]);
+  h.controller.disconnect({ force: true });
+});
+
 test("pre-mount navigation recognizes configured dashboard-wide cards", () => {
   assert.equal(
     dashboardConfigEnablesPreMountSwipeNavigation({

@@ -33,14 +33,16 @@ const MINIMUM_BROWSE_REGION_HEIGHT_PX = 244;
 const MINIMUM_CARD_HEIGHT_BUFFER_PX = 8;
 const bubblePopupPaddingStates = new WeakMap();
 const BUBBLE_POPUP_EXTRA_BOTTOM_SPACE = "--bubble-pop-up-extra-bottom-space";
+const BUBBLE_POPUP_OVERSCROLL_Y = "overscroll-behavior-y";
 
-const inlineBubblePopupSpacingDeclarations = (style) =>
+const inlineBubblePopupOverrideDeclarations = (style) =>
   Array.from({ length: style.length }, (_, index) => style.item(index))
     .filter(
       (name) =>
         name === "padding" ||
         name.startsWith("padding-") ||
-        name === BUBBLE_POPUP_EXTRA_BOTTOM_SPACE,
+        name === BUBBLE_POPUP_EXTRA_BOTTOM_SPACE ||
+        name === BUBBLE_POPUP_OVERSCROLL_Y,
     )
     .map((name) => ({
       name,
@@ -48,12 +50,27 @@ const inlineBubblePopupSpacingDeclarations = (style) =>
       priority: style.getPropertyPriority(name),
     }));
 
-const applyBubblePopupTightSpacing = (style, mobileSidePadding = false) => {
+const applyBubblePopupTightSpacing = (
+  style,
+  mobileSidePadding = false,
+  originalDeclarations = [],
+) => {
   const sidePadding = mobileSidePadding ? "4px" : "0";
   style.setProperty("padding-right", sidePadding, "important");
   style.setProperty("padding-bottom", "0", "important");
   style.setProperty("padding-left", sidePadding, "important");
   style.setProperty(BUBBLE_POPUP_EXTRA_BOTTOM_SPACE, "0px", "important");
+  if (mobileSidePadding) {
+    style.setProperty(BUBBLE_POPUP_OVERSCROLL_Y, "none", "important");
+  } else {
+    style.removeProperty(BUBBLE_POPUP_OVERSCROLL_Y);
+    const original = originalDeclarations.find(
+      ({ name }) => name === BUBBLE_POPUP_OVERSCROLL_Y,
+    );
+    if (original) {
+      style.setProperty(original.name, original.value, original.priority);
+    }
+  }
 };
 
 const normalizeThemeName = (value) =>
@@ -304,6 +321,7 @@ export class CardStyleContextController {
         applyBubblePopupTightSpacing(
           container.style,
           [...state.owners.values()].some(Boolean),
+          state.declarations,
         );
       }
       return;
@@ -316,7 +334,7 @@ export class CardStyleContextController {
     if (!state) {
       state = {
         owners: new Map(),
-        declarations: inlineBubblePopupSpacingDeclarations(container.style),
+        declarations: inlineBubblePopupOverrideDeclarations(container.style),
       };
       bubblePopupPaddingStates.set(container, state);
     }
@@ -325,6 +343,7 @@ export class CardStyleContextController {
     applyBubblePopupTightSpacing(
       container.style,
       [...state.owners.values()].some(Boolean),
+      state.declarations,
     );
   }
 
@@ -339,12 +358,13 @@ export class CardStyleContextController {
       applyBubblePopupTightSpacing(
         container.style,
         [...state.owners.values()].some(Boolean),
+        state.declarations,
       );
       return;
     }
 
     const { style } = container;
-    for (const { name } of inlineBubblePopupSpacingDeclarations(style)) {
+    for (const { name } of inlineBubblePopupOverrideDeclarations(style)) {
       style.removeProperty(name);
     }
     for (const { name, value, priority } of state.declarations) {

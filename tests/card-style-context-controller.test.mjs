@@ -555,6 +555,7 @@ test("Bubble popup padding follows mobile-device Mobile View owners and restores
     ["padding-top", "18px"],
     ["padding-inline", "12px", "important"],
     ["--bubble-pop-up-extra-bottom-space", "66px"],
+    ["overscroll-behavior-y", "contain", "important"],
   ]);
   const popup = {
     classList: { contains: (name) => name === "bubble-pop-up-container" },
@@ -583,6 +584,8 @@ test("Bubble popup padding follows mobile-device Mobile View owners and restores
     assert.equal(popupStyle.getPropertyValue(name), "4px");
     assert.equal(popupStyle.getPropertyPriority(name), "important");
   }
+  assert.equal(popupStyle.getPropertyValue("overscroll-behavior-y"), "none");
+  assert.equal(popupStyle.getPropertyPriority("overscroll-behavior-y"), "important");
   assert.equal(popupStyle.getPropertyValue("padding-bottom"), "0");
   assert.equal(popupStyle.getPropertyValue("--bubble-pop-up-extra-bottom-space"), "0px");
   assert.equal(first.wrapper.style.padding, "0");
@@ -591,6 +594,7 @@ test("Bubble popup padding follows mobile-device Mobile View owners and restores
   assert.equal(popupStyle.getPropertyValue("padding-bottom"), "0");
   assert.equal(popupStyle.getPropertyValue("padding-right"), "0");
   assert.equal(popupStyle.getPropertyValue("padding-left"), "0");
+  assert.equal(popupStyle.getPropertyValue("overscroll-behavior-y"), "contain");
   assert.equal(popupStyle.getPropertyValue("--bubble-pop-up-extra-bottom-space"), "0px");
 
   first.host._config.tight_margins = false;
@@ -600,6 +604,8 @@ test("Bubble popup padding follows mobile-device Mobile View owners and restores
   assert.equal(popupStyle.getPropertyPriority("padding-inline"), "important");
   assert.equal(popupStyle.getPropertyValue("padding-bottom"), "");
   assert.equal(popupStyle.getPropertyValue("--bubble-pop-up-extra-bottom-space"), "66px");
+  assert.equal(popupStyle.getPropertyValue("overscroll-behavior-y"), "contain");
+  assert.equal(popupStyle.getPropertyPriority("overscroll-behavior-y"), "important");
 });
 
 test("Masonry View keeps the Home Assistant card wrapper naturally sized", () => {

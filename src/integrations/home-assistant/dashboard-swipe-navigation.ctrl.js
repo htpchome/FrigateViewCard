@@ -93,6 +93,9 @@ const SWIPE_BLOCK_SELECTOR = [
   ".wide-timeline-resize-handle",
   ".card-view-scroller",
   ".linked-light-brightness-popover",
+  ".bubble-pop-up",
+  ".bubble-pop-up-container",
+  ".bubble-backdrop",
   "#filter-panel",
   "#cal-panel",
 ].join(",");
