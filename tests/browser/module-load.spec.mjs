@@ -483,7 +483,7 @@ test("Mobile overlay header follows route changes without replacing the card or 
   });
 });
 
-test("Tight Margins retains Bubble Card top padding and removes its bottom spacer in Single and Mobile View", async ({
+test("Tight Margins keeps Bubble top padding and gives mobile-device Mobile View 4px sides", async ({
   page,
 }) => {
   await page.goto(baseUrl);
@@ -502,6 +502,7 @@ test("Tight Margins retains Bubble Card top padding and removes its bottom space
     spacer.style.height = "var(--bubble-pop-up-extra-bottom-space)";
     popup.attachShadow({ mode: "open" }).append(wrapper, spacer);
     const card = document.createElement("frigate-view-card");
+    card._isLikelyMobileClient = () => true;
     const config = { cameras: [{ entity: "camera.front" }], tight_margins: true };
     card.setConfig(config);
     wrapper.append(card);
@@ -521,18 +522,28 @@ test("Tight Margins retains Bubble Card top padding and removes its bottom space
     card._pageId = "mobile-view";
     card._renderShell();
     const mobile = spacing();
+    card._pageId = "single-view";
+    card._renderShell();
+    const singleAgain = spacing();
+    card._pageId = "mobile-view";
+    card._renderShell();
+    card._isLikelyMobileClient = () => false;
+    card._applyTightMargins();
+    const mobileNonPhone = spacing();
     card.setConfig({ ...config, tight_margins: false });
     card._applyTightMargins();
     const disabled = spacing();
     card.setConfig(config);
     card._applyTightMargins();
     card.remove();
-    return { single, mobile, disabled, disconnected: spacing() };
+    return { single, mobile, singleAgain, mobileNonPhone, disabled, disconnected: spacing() };
   });
 
   expect(state).toEqual({
     single: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px" },
-    mobile: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px" },
+    mobile: { padding: ["14px", "4px", "0px", "4px"], extraBottom: "0px" },
+    singleAgain: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px" },
+    mobileNonPhone: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px" },
     disabled: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px" },
     disconnected: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px" },
   });

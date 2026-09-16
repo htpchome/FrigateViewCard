@@ -550,7 +550,7 @@ test("applyTightMargins updates parent spacing and sections row gap", () => {
   ]);
 });
 
-test("tight margins retain Bubble Card top padding and clear its bottom reserve until the last card releases", () => {
+test("Bubble popup padding follows mobile-device Mobile View owners and restores after the last card releases", () => {
   const popupStyle = createInlineStyle([
     ["padding-top", "18px"],
     ["padding-inline", "12px", "important"],
@@ -560,36 +560,41 @@ test("tight margins retain Bubble Card top padding and clear its bottom reserve 
     classList: { contains: (name) => name === "bubble-pop-up-container" },
     style: popupStyle,
   };
-  const createController = () => {
+  const createController = (mobileDevice = false) => {
     const wrapper = { parentElement: popup, style: { margin: "8px", padding: "8px" } };
     const host = {
       _config: { tight_margins: true },
       _isPreviewContext: () => false,
       _isMobileViewPageActive: () => true,
+      _isLikelyMobileClient: () => mobileDevice,
       parentElement: wrapper,
       shadowRoot: { querySelector: () => null },
     };
     return { controller: new CardStyleContextController(host), host, wrapper };
   };
   const first = createController();
-  const second = createController();
+  const second = createController(true);
 
   first.controller.applyTightMargins();
+  assert.equal(popupStyle.getPropertyValue("padding-left"), "0");
   second.controller.applyTightMargins();
   assert.equal(popupStyle.getPropertyValue("padding-top"), "18px");
-  for (const name of ["padding-right", "padding-bottom", "padding-left"]) {
-    assert.equal(popupStyle.getPropertyValue(name), "0");
+  for (const name of ["padding-right", "padding-left"]) {
+    assert.equal(popupStyle.getPropertyValue(name), "4px");
     assert.equal(popupStyle.getPropertyPriority(name), "important");
   }
+  assert.equal(popupStyle.getPropertyValue("padding-bottom"), "0");
   assert.equal(popupStyle.getPropertyValue("--bubble-pop-up-extra-bottom-space"), "0px");
   assert.equal(first.wrapper.style.padding, "0");
 
-  first.controller.releaseBubblePopupPadding();
+  second.controller.releaseBubblePopupPadding();
   assert.equal(popupStyle.getPropertyValue("padding-bottom"), "0");
+  assert.equal(popupStyle.getPropertyValue("padding-right"), "0");
+  assert.equal(popupStyle.getPropertyValue("padding-left"), "0");
   assert.equal(popupStyle.getPropertyValue("--bubble-pop-up-extra-bottom-space"), "0px");
 
-  second.host._config.tight_margins = false;
-  second.controller.applyTightMargins();
+  first.host._config.tight_margins = false;
+  first.controller.applyTightMargins();
   assert.equal(popupStyle.getPropertyValue("padding-top"), "18px");
   assert.equal(popupStyle.getPropertyValue("padding-inline"), "12px");
   assert.equal(popupStyle.getPropertyPriority("padding-inline"), "important");
