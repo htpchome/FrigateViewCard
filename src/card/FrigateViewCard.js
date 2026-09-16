@@ -35,6 +35,8 @@ import {
 } from "../constants.js";
 import { ICONS } from "../icons.js";
 import { STYLES } from "../styles.js";
+import { createLocalizationController } from "../features/localization/localization.ctrl.js";
+import { applyLocalizedText } from "../features/localization/localized-dom.js";
 // Registers <circle-pad-control-2>; keep this import for its module side effect.
 import "../components/circle-pad/circle-pad.js";
 import {
@@ -441,6 +443,7 @@ export class FrigateViewCard extends HTMLElement {
       this._onPtzControlPointerStop,
     );
     this._hass = null;
+    this._localization = createLocalizationController();
     this._lastHassCameraStateSignature = "";
     this._lastHassLinkedLightStateSignature = "";
     this._lastHassThemeSignature = "";
@@ -2206,6 +2209,9 @@ export class FrigateViewCard extends HTMLElement {
   set hass(hass) {
     this._ensureEditorPreviewController();
     this._hass = hass;
+    if (this._localization.updateHass(hass)) {
+      applyLocalizedText(this.shadowRoot, this._localization.t);
+    }
     if (!this._config) return;
     if (this._editorPreviewController.renderCardPickerDemo()) {
       this._started = true;
@@ -4883,6 +4889,7 @@ export class FrigateViewCard extends HTMLElement {
     ) {
       this._popupLifecycleController.syncShellGeometry();
     }
+    applyLocalizedText(this.shadowRoot, this._localization.t);
   }
 
   _renderShell() {

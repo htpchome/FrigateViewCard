@@ -1,0 +1,13 @@
+{
+  "runtime": {
+    "alerts": "Alerts",
+    "stream": "Stream"
+  },
+  "editor": {
+    "title": "Title",
+    "subtitle": "Subtitle",
+    "display": "Display",
+    "eventHistoryDays": "Event History Days",
+    "alertReviewHistoryDays": "Alert/Review History Days"
+  }
+}

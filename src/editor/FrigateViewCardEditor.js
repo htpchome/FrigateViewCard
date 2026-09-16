@@ -141,6 +141,8 @@ import {
   withCardTypeForYaml,
 } from "../config/yaml-mapper.js";
 import { escapeHtml, escapeHtmlAttribute } from "../shared/html.js";
+import { createLocalizationController } from "../features/localization/localization.ctrl.js";
+import { applyLocalizedText } from "../features/localization/localized-dom.js";
 import {
   DISPLAY_TEXT_MAX_LENGTH,
   sanitizeDisplayText,
@@ -1167,6 +1169,10 @@ export class FrigateViewCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    this._localization ??= createLocalizationController();
+    if (this._localization.updateHass(hass)) {
+      applyLocalizedText(this, this._localization.t);
+    }
     this._pruneChangedCapabilityCaches();
     const modeKey = this._hass?.themes?.darkMode ? "dark" : "light";
     const key = `${this._frigateEntities().join(",")}|${modeKey}`;
@@ -3326,32 +3332,32 @@ export class FrigateViewCardEditor extends HTMLElement {
       <div class="text-display-field">
         <div class="text-display-row">
           <div class="limited-text-input">
-            <ha-input label="Title" name="title" id="title" type="text" maxlength="${DISPLAY_TEXT_MAX_LENGTH}" value="${escapeHtmlAttribute(titleValue)}" placeholder="${escapeHtmlAttribute(DEFAULT_TITLE)}"></ha-input>
+            <ha-input label="Title" data-fvc-i18n-label="editor.title" name="title" id="title" type="text" maxlength="${DISPLAY_TEXT_MAX_LENGTH}" value="${escapeHtmlAttribute(titleValue)}" placeholder="${escapeHtmlAttribute(DEFAULT_TITLE)}"></ha-input>
             <span class="limited-text-counter" id="title-counter" aria-hidden="true">${titleValue.length}/${DISPLAY_TEXT_MAX_LENGTH}</span>
           </div>
-          <label class="text-display-checkbox"><input id="display_title" type="checkbox" ${this._config?.display_title !== false ? "checked" : ""}> <span>Display</span></label>
+          <label class="text-display-checkbox"><input id="display_title" type="checkbox" ${this._config?.display_title !== false ? "checked" : ""}> <span data-fvc-i18n="editor.display">Display</span></label>
         </div>
         <div class="field-helper text-display-token-helper">Use <code>{camera}</code> to show the active camera name. Grid mode shows <strong>Grid</strong>.</div>
       </div>
       <div class="text-display-field">
         <div class="text-display-row">
           <div class="limited-text-input">
-            <ha-input label="Subtitle" name="subtitle" id="subtitle" type="text" maxlength="${DISPLAY_TEXT_MAX_LENGTH}" value="${escapeHtmlAttribute(subtitleValue)}" placeholder="${escapeHtmlAttribute(DEFAULT_SUBTITLE)}"></ha-input>
+            <ha-input label="Subtitle" data-fvc-i18n-label="editor.subtitle" name="subtitle" id="subtitle" type="text" maxlength="${DISPLAY_TEXT_MAX_LENGTH}" value="${escapeHtmlAttribute(subtitleValue)}" placeholder="${escapeHtmlAttribute(DEFAULT_SUBTITLE)}"></ha-input>
             <span class="limited-text-counter" id="subtitle-counter" aria-hidden="true">${subtitleValue.length}/${DISPLAY_TEXT_MAX_LENGTH}</span>
           </div>
-          <label class="text-display-checkbox"><input id="display_subtitle" type="checkbox" ${this._config?.display_subtitle !== false ? "checked" : ""}> <span>Display</span></label>
+          <label class="text-display-checkbox"><input id="display_subtitle" type="checkbox" ${this._config?.display_subtitle !== false ? "checked" : ""}> <span data-fvc-i18n="editor.display">Display</span></label>
         </div>
         <div class="field-helper text-display-token-helper">Use <code>{camera}</code> to show the active camera name. Grid mode shows <strong>Grid</strong>.</div>
       </div>
       <div class="section">
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
           <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
-            <span class="field-label" style="margin:0">Event History Days</span>
+            <span class="field-label" style="margin:0" data-fvc-i18n="editor.eventHistoryDays">Event History Days</span>
             <ha-selector id="event_days" style="width:160px"></ha-selector>
             <div class="field-helper" id="event_days-helper"></div>
           </div>
           <div style="min-width:160px;display:flex;flex-direction:column;gap:6px">
-            <span class="field-label" style="margin:0">Alert/Review History Days</span>
+            <span class="field-label" style="margin:0" data-fvc-i18n="editor.alertReviewHistoryDays">Alert/Review History Days</span>
             <ha-selector id="alerts_reviews_days" style="width:160px"></ha-selector>
             <div class="field-helper" id="alerts_reviews_days-helper"></div>
           </div>
@@ -4636,6 +4642,9 @@ export class FrigateViewCardEditor extends HTMLElement {
           </div>
       </dialog>
     </div>`;
+
+    this._localization ??= createLocalizationController();
+    applyLocalizedText(this, this._localization.t);
 
     const update = (previewRouteIntent = null) =>
       this._u({

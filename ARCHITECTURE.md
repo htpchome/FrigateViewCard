@@ -105,6 +105,10 @@ Browser must not assume:
 
 - pages, routes, deep links, page availability, and page transition rules
 
+`src/features/localization/`
+
+- Home Assistant user-language selection, bundled UI dictionaries, English fallback, and text-only localization updates for runtime and editor
+
 `src/features/linked-entities/`
 
 - per-camera links to Home Assistant entities, linked-control state and presentation, and interaction behavior such as light brightness adjustment

@@ -37,7 +37,7 @@ export function buildInfoRowMarkup({
                 </div>
                 <div class="stat info-alert-stat">
                   <div class="sv" id="alert-count">—</div>
-                  <div class="sl">Alerts</div>
+                  <div class="sl" data-fvc-i18n="runtime.alerts">Alerts</div>
                 </div>
               </div>
               ${pageNav ? `<div class="info-row-page-nav">${pageNav}</div>` : ""}
@@ -51,7 +51,7 @@ export function buildInfoRowMarkup({
               <div class="stats">
                 <div class="stat">
                   <div class="sv stream-type" id="stream-type">--</div>
-                  <div class="sl">Stream</div>
+                  <div class="sl" data-fvc-i18n="runtime.stream">Stream</div>
                 </div>
                 <div class="stat info-online-stat">
                   <div class="sv" id="on-dot" style="color:var(--c-on)">●</div>

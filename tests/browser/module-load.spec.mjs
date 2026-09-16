@@ -145,6 +145,61 @@ test("loads the runtime and editor modules", async ({ page }) => {
   ).toHaveLength(1);
 });
 
+test("language changes update marked card and editor text without replacing media or inputs", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    await import("/frigate-view-card-editor.js");
+
+    const card = document.createElement("frigate-view-card");
+    card.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    card._renderShell();
+    const liveHost = card.shadowRoot.querySelector("#eng-wrap");
+    const alertLabel = card.shadowRoot.querySelector(
+      '[data-fvc-i18n="runtime.alerts"]',
+    );
+    card._localization = {
+      updateHass: () => true,
+      t: (key) => ({ "runtime.alerts": "Alertes", "runtime.stream": "Flux" })[key] || key,
+    };
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+
+    const editor = document.createElement("frigate-view-card-editor");
+    document.body.append(editor);
+    editor.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    editor.hass = { locale: { language: "en" }, states: {}, themes: {} };
+    const titleInput = editor.querySelector("#title");
+    editor._localization = {
+      updateHass: () => true,
+      t: (key) => ({
+        "editor.title": "Titre",
+        "editor.subtitle": "Sous-titre",
+        "editor.display": "Afficher",
+        "editor.eventHistoryDays": "Jours d'historique",
+        "editor.alertReviewHistoryDays": "Jours d'alertes",
+      })[key] || key,
+    };
+    editor.hass = { locale: { language: "fr" }, states: {}, themes: {} };
+
+    return {
+      cardAlertText: alertLabel.textContent,
+      cardLiveHostPreserved: card.shadowRoot.querySelector("#eng-wrap") === liveHost,
+      editorTitle: editor.querySelector("#title").getAttribute("label"),
+      editorDisplay: editor.querySelector('[data-fvc-i18n="editor.display"]').textContent,
+      editorInputPreserved: editor.querySelector("#title") === titleInput,
+    };
+  });
+
+  expect(state).toEqual({
+    cardAlertText: "Alertes",
+    cardLiveHostPreserved: true,
+    editorTitle: "Titre",
+    editorDisplay: "Afficher",
+    editorInputPreserved: true,
+  });
+});
+
 test("loads the generated HLS browser bundle", async ({ page }) => {
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));

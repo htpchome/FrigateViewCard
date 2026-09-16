@@ -57,7 +57,7 @@ export function buildMobileViewInfoRowMarkup({
               <div class="stats">
                 <div class="stat">
                   <div class="sv" id="alert-count">${escapeHtml(resolveMobileViewAlertsCountText(alertsCount))}</div>
-                  <div class="sl">Alerts</div>
+                  <div class="sl" data-fvc-i18n="runtime.alerts">Alerts</div>
                 </div>
               </div>
             </div>`;
