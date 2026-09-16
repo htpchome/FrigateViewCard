@@ -13,6 +13,7 @@ export const CARD_VIEW_PAGE_STYLES = `
     height:auto !important;
     max-height:none !important;
     overflow:visible;
+    isolation:isolate;
   }
   :host(.card-view-natural-height) ha-card,
   :host(.card-view-natural-height) .card.card-view-active {

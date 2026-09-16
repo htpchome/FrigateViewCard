@@ -399,6 +399,62 @@ test("Panel Card View naturally sizes and caps an open bottom panel", async ({
   expect(Math.abs(cramped.footerBottom - cramped.hostBottom)).toBeLessThanOrEqual(1);
 });
 
+test("Card View controls stay below an external dialog while its popup stays above them", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 700 });
+  await page.goto(baseUrl);
+
+  const layers = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    document.body.style.margin = "0";
+
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      card_view_page_enabled: true,
+      card_view_view_mode: "bottom-panel-open",
+    });
+    card._pageId = "card-view";
+    card._renderShell();
+    card._cardViewPageController.syncDrawerState();
+    card.style.width = "540px";
+    card.style.height = "600px";
+
+    const camera = card.shadowRoot.querySelector(".card-view-camera-row");
+    const drawer = card.shadowRoot.querySelector(".card-view-activity");
+    const pointAt = (element) => {
+      const rect = element.getBoundingClientRect();
+      return [rect.left + rect.width / 2, rect.top + rect.height / 2];
+    };
+    const cameraPoint = pointAt(camera);
+    const drawerPoint = pointAt(drawer);
+
+    const externalDialog = document.createElement("div");
+    externalDialog.style.cssText =
+      "position:fixed;inset:0;z-index:5;background:rgba(0,0,0,.3)";
+    document.body.append(externalDialog);
+    const aboveExternalDialog = [cameraPoint, drawerPoint].map(
+      ([x, y]) => document.elementFromPoint(x, y) === externalDialog,
+    );
+
+    externalDialog.remove();
+    const popup = card.shadowRoot.querySelector("#myPopup");
+    popup.style.transition = "none";
+    popup.style.top = "0";
+    popup.classList.add("is-open");
+    const aboveOwnControls = [cameraPoint, drawerPoint].map(([x, y]) =>
+      card.shadowRoot.elementFromPoint(x, y)?.closest("#myPopup") === popup,
+    );
+
+    return { aboveExternalDialog, aboveOwnControls };
+  });
+
+  expect(layers.aboveExternalDialog).toEqual([true, true]);
+  expect(layers.aboveOwnControls).toEqual([true, true]);
+});
+
 test("Sidebar Single and Mobile Views stay ratio-capped within a short viewport", async ({
   page,
 }) => {
