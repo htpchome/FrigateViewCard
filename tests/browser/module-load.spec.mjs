@@ -417,6 +417,59 @@ test("Mobile overlay header and popup height remain scoped to embedded views", a
   });
 });
 
+test("Mobile overlay header follows route changes without replacing the card or live media", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseUrl);
+
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      mobile_view_page_enabled: true,
+      mobile_view_header_overlay: true,
+    });
+    card._pageId = "single-view";
+    card._renderShell();
+
+    const root = card.shadowRoot;
+    const cardRoot = root.querySelector("#card");
+    const live = root.querySelector("#eng-wrap");
+    const initialOverlay = cardRoot.classList.contains("mobile-view-header-overlay");
+
+    card._pageId = "mobile-view";
+    card._renderShellPreserveLive();
+    const entered = {
+      sameCard: root.querySelector("#card") === cardRoot,
+      sameLive: root.querySelector("#eng-wrap") === live,
+      overlay: cardRoot.classList.contains("mobile-view-header-overlay"),
+      headerPosition: getComputedStyle(root.querySelector("#cam-switcher")).position,
+    };
+
+    card._pageId = "single-view";
+    card._renderShellPreserveLive();
+    return {
+      initialOverlay,
+      entered,
+      leftOverlay: cardRoot.classList.contains("mobile-view-header-overlay"),
+    };
+  });
+
+  expect(state).toEqual({
+    initialOverlay: false,
+    entered: {
+      sameCard: true,
+      sameLive: true,
+      overlay: true,
+      headerPosition: "absolute",
+    },
+    leftOverlay: false,
+  });
+});
+
 test("Panel Card View naturally sizes and caps an open bottom panel", async ({
   page,
 }) => {

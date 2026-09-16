@@ -4865,6 +4865,7 @@ export class FrigateViewCard extends HTMLElement {
     this._wideViewPageController.renderCompanionCameras();
     this._applyPreviewShellVisibility();
     this._syncMobileViewPageMarkup();
+    this._syncVisualStyleToggles();
     this._syncCardViewPageMarkup();
     if (this._isCardViewPageActive()) {
       this._cardViewPageController.bind();
