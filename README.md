@@ -219,9 +219,9 @@ The Card View can be configured in a few ways and is designed to insert into das
 | `grid_alert_hold_seconds` | number | `10` | Time an alerted Grid tile remains promoted. Valid values: `10`, `20`, `30`, `60`. |
 | `mobile_view_page_enabled` | boolean | `true` | Enables Mobile View in navigation and eligible landing-page choices. |
 | `mobile_view_rotate_to_fullscreen` | boolean | `false` | Expands live and popup media to fullscreen when a mobile phone rotates to landscape. Tablets, PCs, Home Assistant editing, and card-picker demos are excluded. |
-| `mobile_view_ha_navbar_bottom` | boolean | `false` | Moves the Home Assistant dashboard navbar to the bottom on phones while this card is active. |
+| `mobile_view_ha_navbar_bottom` | boolean | `false` | Moves the Home Assistant dashboard navbar to the bottom on phones while this card is mounted. |
 | `mobile_view_ha_navbar_stack_tabs` | boolean | `false` | With the bottom navbar enabled, centers supported Home Assistant page titles beneath their icons. |
-| `mobile_view_ha_navbar_dashboard` | boolean | `false` | When off, the bottom-navbar layout follows this card across its internal views. When on, this card is the single configured owner; any FrigateView Card loaded on the dashboard applies that layout across every dashboard page. |
+| `mobile_view_ha_navbar_dashboard` | boolean | `false` | When off, the bottom-navbar layout follows this card while mounted. When on, this card is the single configured owner; the layout persists across dashboard pages even if a popup containing the card closes. |
 | `ha_dashboard_swipe_navigation_owner` | boolean | `false` | Makes this card the one FrigateViewCard responsible for dashboard swipe navigation. Only one card should own it per dashboard. |
 | `ha_dashboard_swipe_navigation` | string | `dashboard-wide` | Swipe scope: `dashboard-wide`, `inside-card`, `landing-dashboard`, or `none`. Touch swipes protect interactive controls, media gestures, horizontal scrollers, and Home Assistant's native left-edge gesture. |
 | `ha_dashboard_swipe_pages` | list | Preview plus landing page | FrigateView pages included by `dashboard-wide` and `inside-card`; the enabled desktop/tablet landing page is always included. |

@@ -3731,7 +3731,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           <span class="field-label" style="margin:0">Whole Dashboard</span>
           <ha-switch id="mobile_view_ha_navbar_dashboard" ${dashboardNavbarOwnership.requested ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Off: applies only on this card's Home Assistant page. On: applies across the dashboard and makes this card the owner.</div>
+        <div class="field-helper">Off: applies while this card is mounted on its Home Assistant page. On: applies across the dashboard, including when a popup containing this card is closed.</div>
       </div>
       <div class="section" id="mobile-view-dashboard-background-row" style="${this._config?.mobile_view_page_enabled !== false ? "" : "display:none"}">
         <div class="layout-row">

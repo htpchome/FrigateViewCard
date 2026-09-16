@@ -359,7 +359,7 @@ test("stacks icon-and-title tabs when the master toggle is enabled", () => {
   assert.match(styleText, /font-size: var\(--ha-font-size-xs, 10px\)/);
   assert.match(styleText, /margin-inline-end: 0 !important/);
   assert.match(styleText, /border-block-start/);
-  assert.match(styleText, /#view \{[\s\S]*?z-index: 1 !important;/);
+  assert.doesNotMatch(styleText, /#view\s*\{[\s\S]*?z-index:/);
   assert.match(styleText, /\.header \{[\s\S]*?z-index: 2 !important;/);
   assert.doesNotMatch(styleText, /@media \(orientation: landscape\)/);
 
@@ -500,7 +500,7 @@ test("Whole Dashboard navbar starts before its FrigateView owner page is visited
     dashboardConfig: {
       views: [
         { path: "mobile", cards: [{ type: "entities" }] },
-        { path: "cameras", cards: [ownerConfig] },
+        { path: "cameras", cards: [{ type: "custom:bubble-card", card_type: "pop-up", cards: [ownerConfig] }] },
       ],
     },
     dashboardScope: false,

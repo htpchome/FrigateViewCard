@@ -59,6 +59,45 @@ test.afterAll(async () => {
   });
 });
 
+test("bottom HA navbar styling does not trap Bubble popup behind its backdrop", async ({ page }) => {
+  await page.goto(baseUrl);
+  const navbarSource = await readFile("src/integrations/home-assistant/navbar.ctrl.js", "utf8");
+  const navbarStyles = /const BOTTOM_NAVBAR_STYLE_TEXT = `([\s\S]*?)`;/.exec(navbarSource)?.[1];
+  expect(navbarStyles).toBeTruthy();
+  const state = await page.evaluate((styleText) => {
+    const style = document.createElement("style");
+    style.textContent = `
+      #view { position:relative; width:390px; height:600px; }
+      .bubble-popup { position:absolute; top:100px; left:40px; width:280px; height:200px; z-index:5; }
+      .bubble-backdrop { position:fixed; inset:0; z-index:4; }
+      .header { position:fixed; bottom:0; height:56px; }
+      ${styleText}
+    `;
+    const view = document.createElement("div");
+    view.id = "view";
+    const popup = document.createElement("div");
+    popup.className = "bubble-popup";
+    view.append(popup);
+    const backdrop = document.createElement("div");
+    backdrop.className = "bubble-backdrop";
+    const header = document.createElement("div");
+    header.className = "header";
+    document.body.append(style, view, backdrop, header);
+    const popupOnTop = document.elementFromPoint(100, 150) === popup;
+    const viewZIndex = getComputedStyle(view).zIndex;
+    view.style.zIndex = "1";
+    const backdropWinsWhenViewIsTrapped =
+      document.elementFromPoint(100, 150) === backdrop;
+    return { popupOnTop, viewZIndex, backdropWinsWhenViewIsTrapped };
+  }, navbarStyles);
+
+  expect(state).toEqual({
+    popupOnTop: true,
+    viewZIndex: "auto",
+    backdropWinsWhenViewIsTrapped: true,
+  });
+});
+
 test("loads the runtime and editor modules", async ({ page }) => {
   const consoleMessages = [];
   const pageErrors = [];
@@ -562,6 +601,60 @@ test("Tight Margins keeps Bubble top padding and gives mobile-device Mobile View
     disabled: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px", overscrollY: "contain" },
     disconnected: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px", overscrollY: "contain" },
   });
+});
+
+test("Bubble outer vertical scroll locks only when phone Mobile View fits", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const popup = document.createElement("div");
+    popup.className = "bubble-pop-up-container";
+    popup.style.cssText = "width:390px;height:700px;box-sizing:border-box;overflow-y:auto;padding:14px 12px 22px";
+    const wrapper = document.createElement("div");
+    const shadow = popup.attachShadow({ mode: "open" });
+    shadow.append(wrapper);
+    document.body.append(popup);
+    const card = document.createElement("frigate-view-card");
+    card._isLikelyMobileClient = () => true;
+    card._isLikelyPhoneClient = () => true;
+    card.setConfig({
+      cameras: [{ entity: "camera.front" }],
+      tight_margins: true,
+      stream_height: 100,
+      stream_height_unit: "%",
+    });
+    wrapper.append(card);
+    card._pageId = "mobile-view";
+    card._renderShell();
+    card._applyCardStyle();
+    const fitting = {
+      overflowY: getComputedStyle(popup).overflowY,
+      extraHeight: popup.scrollHeight - popup.clientHeight,
+      browseOverflowY: getComputedStyle(card.shadowRoot.querySelector(".browse")).overflowY,
+    };
+
+    const extra = document.createElement("div");
+    extra.style.height = "40px";
+    shadow.append(extra);
+    card._applyCardStyle();
+    const withExtraContent = getComputedStyle(popup).overflowY;
+    extra.remove();
+    card._pageId = "single-view";
+    card._renderShell();
+    card._applyCardStyle();
+    const singleView = getComputedStyle(popup).overflowY;
+    card.remove();
+    const disconnected = getComputedStyle(popup).overflowY;
+    return { fitting, withExtraContent, singleView, disconnected };
+  });
+
+  expect(state.fitting.overflowY).toBe("hidden");
+  expect(state.fitting.extraHeight).toBeLessThanOrEqual(1);
+  expect(state.fitting.browseOverflowY).toBe("auto");
+  expect(state.withExtraContent).toBe("auto");
+  expect(state.singleView).toBe("auto");
+  expect(state.disconnected).toBe("auto");
 });
 
 test("a dashboard card's return-to-top chip stays beneath an external popup", async ({

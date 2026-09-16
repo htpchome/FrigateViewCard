@@ -34,6 +34,7 @@ const MINIMUM_CARD_HEIGHT_BUFFER_PX = 8;
 const bubblePopupPaddingStates = new WeakMap();
 const BUBBLE_POPUP_EXTRA_BOTTOM_SPACE = "--bubble-pop-up-extra-bottom-space";
 const BUBBLE_POPUP_OVERSCROLL_Y = "overscroll-behavior-y";
+const BUBBLE_POPUP_OVERFLOW_Y = "overflow-y";
 
 const inlineBubblePopupOverrideDeclarations = (style) =>
   Array.from({ length: style.length }, (_, index) => style.item(index))
@@ -42,7 +43,8 @@ const inlineBubblePopupOverrideDeclarations = (style) =>
         name === "padding" ||
         name.startsWith("padding-") ||
         name === BUBBLE_POPUP_EXTRA_BOTTOM_SPACE ||
-        name === BUBBLE_POPUP_OVERSCROLL_Y,
+        name === BUBBLE_POPUP_OVERSCROLL_Y ||
+        name === BUBBLE_POPUP_OVERFLOW_Y,
     )
     .map((name) => ({
       name,
@@ -50,10 +52,19 @@ const inlineBubblePopupOverrideDeclarations = (style) =>
       priority: style.getPropertyPriority(name),
     }));
 
+const restoreBubblePopupInlineDeclaration = (style, declarations, name) => {
+  style.removeProperty(name);
+  const original = declarations.find((entry) => entry.name === name);
+  if (original) {
+    style.setProperty(original.name, original.value, original.priority);
+  }
+};
+
 const applyBubblePopupTightSpacing = (
   style,
   mobileSidePadding = false,
   originalDeclarations = [],
+  lockVerticalScroll = false,
 ) => {
   const sidePadding = mobileSidePadding ? "4px" : "0";
   style.setProperty("padding-right", sidePadding, "important");
@@ -63,13 +74,20 @@ const applyBubblePopupTightSpacing = (
   if (mobileSidePadding) {
     style.setProperty(BUBBLE_POPUP_OVERSCROLL_Y, "none", "important");
   } else {
-    style.removeProperty(BUBBLE_POPUP_OVERSCROLL_Y);
-    const original = originalDeclarations.find(
-      ({ name }) => name === BUBBLE_POPUP_OVERSCROLL_Y,
+    restoreBubblePopupInlineDeclaration(
+      style,
+      originalDeclarations,
+      BUBBLE_POPUP_OVERSCROLL_Y,
     );
-    if (original) {
-      style.setProperty(original.name, original.value, original.priority);
-    }
+  }
+  if (lockVerticalScroll) {
+    style.setProperty(BUBBLE_POPUP_OVERFLOW_Y, "hidden", "important");
+  } else {
+    restoreBubblePopupInlineDeclaration(
+      style,
+      originalDeclarations,
+      BUBBLE_POPUP_OVERFLOW_Y,
+    );
   }
 };
 
@@ -318,10 +336,13 @@ export class CardStyleContextController {
       const state = container && bubblePopupPaddingStates.get(container);
       if (state) {
         state.owners.set(this, mobileSidePadding);
+        const mobileViewOwner = [...state.owners.values()].some(Boolean);
+        if (!mobileViewOwner) state.lockVerticalScroll = false;
         applyBubblePopupTightSpacing(
           container.style,
-          [...state.owners.values()].some(Boolean),
+          mobileViewOwner,
           state.declarations,
+          state.lockVerticalScroll,
         );
       }
       return;
@@ -335,15 +356,41 @@ export class CardStyleContextController {
       state = {
         owners: new Map(),
         declarations: inlineBubblePopupOverrideDeclarations(container.style),
+        lockVerticalScroll: false,
       };
       bubblePopupPaddingStates.set(container, state);
     }
     state.owners.set(this, mobileSidePadding);
     this._bubblePopupPaddingContainer = container;
+    const mobileViewOwner = [...state.owners.values()].some(Boolean);
+    if (!mobileViewOwner) state.lockVerticalScroll = false;
     applyBubblePopupTightSpacing(
       container.style,
-      [...state.owners.values()].some(Boolean),
+      mobileViewOwner,
       state.declarations,
+      state.lockVerticalScroll,
+    );
+  }
+
+  syncBubblePopupVerticalScroll() {
+    const container = this._bubblePopupPaddingContainer;
+    const state = container && bubblePopupPaddingStates.get(container);
+    if (!state) return;
+    const mobileViewOwner = [...state.owners.values()].some(Boolean);
+    const clientHeight = Number(container.clientHeight);
+    const scrollHeight = Number(container.scrollHeight);
+    const lockVerticalScroll =
+      mobileViewOwner &&
+      clientHeight > 0 &&
+      Number.isFinite(scrollHeight) &&
+      scrollHeight <= clientHeight + 1;
+    if (state.lockVerticalScroll === lockVerticalScroll) return;
+    state.lockVerticalScroll = lockVerticalScroll;
+    applyBubblePopupTightSpacing(
+      container.style,
+      mobileViewOwner,
+      state.declarations,
+      lockVerticalScroll,
     );
   }
 
@@ -355,10 +402,13 @@ export class CardStyleContextController {
     if (!state) return;
     state.owners.delete(this);
     if (state.owners.size > 0) {
+      const mobileViewOwner = [...state.owners.values()].some(Boolean);
+      if (!mobileViewOwner) state.lockVerticalScroll = false;
       applyBubblePopupTightSpacing(
         container.style,
-        [...state.owners.values()].some(Boolean),
+        mobileViewOwner,
         state.declarations,
+        state.lockVerticalScroll,
       );
       return;
     }
@@ -785,6 +835,7 @@ export class CardStyleContextController {
     }
 
     this.syncHostOuterStyles();
+    this.syncBubblePopupVerticalScroll();
   }
 
   shouldConstrainToHomeAssistantGridHeight() {

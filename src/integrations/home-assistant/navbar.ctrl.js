@@ -7,10 +7,6 @@ const HA_SAFE_AREA_BOTTOM =
   "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))";
 
 const BOTTOM_NAVBAR_STYLE_TEXT = `
-#view {
-  position: relative !important;
-  z-index: 1 !important;
-}
 .header {
   z-index: 2 !important;
 }
