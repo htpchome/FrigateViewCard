@@ -355,7 +355,20 @@ test("Mobile overlay header and popup height remain scoped to embedded views", a
     const source = root.querySelector(".mobile-cam-picker__stream");
     const liveTile = root.querySelector(".mobile-cam-picker__live-tile");
     cardRoot.classList.remove("card-view-overlays-visible");
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await new Promise((resolve) => {
+      const deadline = performance.now() + 3_000;
+      const waitForHiddenControls = () => {
+        const hidden = [back, picker, source].every(
+          (element) => getComputedStyle(element).visibility === "hidden",
+        );
+        if (hidden || performance.now() >= deadline) {
+          resolve();
+        } else {
+          requestAnimationFrame(waitForHiddenControls);
+        }
+      };
+      waitForHiddenControls();
+    });
     const before = {
       popupHeight: card.style.getPropertyValue("--card-host-height"),
       footerFits:
