@@ -359,6 +359,7 @@ export class CardStyleContextController {
       this._host._isLikelyPhoneClient?.() === true &&
       this._host._isMobileViewPageActive?.() === true &&
       this.isInSectionsView() &&
+      !this.isInEmbeddedPopup() &&
       !this.isPanelView();
     this._host.classList?.toggle(
       MOBILE_SECTIONS_FULL_BLEED_CLASS,

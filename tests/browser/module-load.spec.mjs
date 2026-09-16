@@ -489,8 +489,11 @@ test("Tight Margins keeps Bubble top padding and gives mobile-device Mobile View
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {
     await import("/frigate-view-card.js");
+    const sections = document.createElement("hui-sections-view");
+    sections.style.cssText = "display:block;width:390px";
     const popup = document.createElement("div");
     popup.className = "bubble-pop-up-container";
+    popup.style.cssText = "width:390px;box-sizing:border-box;overflow-x:auto";
     popup.style.setProperty("padding", "14px 18px 22px 26px", "important");
     popup.style.setProperty(
       "--bubble-pop-up-extra-bottom-space",
@@ -503,10 +506,12 @@ test("Tight Margins keeps Bubble top padding and gives mobile-device Mobile View
     popup.attachShadow({ mode: "open" }).append(wrapper, spacer);
     const card = document.createElement("frigate-view-card");
     card._isLikelyMobileClient = () => true;
+    card._isLikelyPhoneClient = () => true;
     const config = { cameras: [{ entity: "camera.front" }], tight_margins: true };
     card.setConfig(config);
     wrapper.append(card);
-    document.body.append(popup);
+    sections.append(popup);
+    document.body.append(sections);
     card._applyTightMargins();
 
     const spacing = () => {
@@ -522,6 +527,13 @@ test("Tight Margins keeps Bubble top padding and gives mobile-device Mobile View
     card._pageId = "mobile-view";
     card._renderShell();
     const mobile = spacing();
+    const cardRect = card.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+    const mobileFitsPopup =
+      !card.classList.contains("mobile-view-sections-full-bleed") &&
+      cardRect.left >= popupRect.left + 3 &&
+      cardRect.right <= popupRect.right - 3 &&
+      popup.scrollWidth <= popup.clientWidth;
     card._pageId = "single-view";
     card._renderShell();
     const singleAgain = spacing();
@@ -536,16 +548,60 @@ test("Tight Margins keeps Bubble top padding and gives mobile-device Mobile View
     card.setConfig(config);
     card._applyTightMargins();
     card.remove();
-    return { single, mobile, singleAgain, mobileNonPhone, disabled, disconnected: spacing() };
+    return { single, mobile, mobileFitsPopup, singleAgain, mobileNonPhone, disabled, disconnected: spacing() };
   });
 
   expect(state).toEqual({
     single: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px" },
     mobile: { padding: ["14px", "4px", "0px", "4px"], extraBottom: "0px" },
+    mobileFitsPopup: true,
     singleAgain: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px" },
     mobileNonPhone: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px" },
     disabled: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px" },
     disconnected: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px" },
+  });
+});
+
+test("a dashboard card's return-to-top chip stays beneath an external popup", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseUrl);
+
+  const layers = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    document.body.style.margin = "0";
+    const card = document.createElement("frigate-view-card");
+    card.setConfig({ cameras: [{ entity: "camera.front" }] });
+    document.body.append(card);
+    card._pageId = "mobile-view";
+    card._renderShell();
+    card.style.setProperty("--card-host-height", "700px");
+
+    const slot = card.shadowRoot.querySelector(".browse-return-top-slot");
+    const chip = card.shadowRoot.querySelector("#browse-return-top");
+    slot.style.cssText = "position:fixed;top:300px;left:120px;width:120px";
+    chip.hidden = false;
+    const rect = chip.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const clickableWithoutPopup =
+      card.shadowRoot.elementFromPoint(x, y)?.closest("#browse-return-top") === chip;
+
+    const backdrop = document.createElement("div");
+    backdrop.style.cssText = "position:fixed;inset:0;z-index:4;background:rgba(0,0,0,.3)";
+    document.body.append(backdrop);
+    return {
+      slotZIndex: getComputedStyle(slot).zIndex,
+      clickableWithoutPopup,
+      backdropAboveChip: document.elementFromPoint(x, y) === backdrop,
+    };
+  });
+
+  expect(layers).toEqual({
+    slotZIndex: "3",
+    clickableWithoutPopup: true,
+    backdropAboveChip: true,
   });
 });
 

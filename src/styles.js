@@ -290,7 +290,7 @@ export const STYLES = `
   .card .browse::-webkit-scrollbar-track{background:transparent;}
   .card .browse::-webkit-scrollbar-thumb{background:var(--c-text2);border-radius:4px;background-clip:content-box;}
 
-  .browse-return-top-slot{position:sticky;top:calc(100% - 50px);z-index:8;display:flex;justify-content:center;align-items:flex-start;width:100%;height:0;min-height:0;pointer-events:none;}
+  .browse-return-top-slot{position:sticky;top:calc(100% - 50px);z-index:3;display:flex;justify-content:center;align-items:flex-start;width:100%;height:0;min-height:0;pointer-events:none;}
   .browse-return-top-chip{appearance:none;-webkit-appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:5px;min-width:72px;min-height:40px;padding:7px 14px;border:1px solid var(--c-border2);border-color:color-mix(in srgb,var(--c-border2) 82%,transparent);border-radius:999px;background:rgba(32,32,32,.72);background:color-mix(in srgb,var(--c-bg-main) 78%,transparent);box-shadow:0 4px 14px rgba(0,0,0,.24);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:var(--c-text);font:inherit;font-size:.78rem;font-weight:750;line-height:1;cursor:pointer;pointer-events:auto;transition:background-color .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease,transform .1s ease;-webkit-tap-highlight-color:transparent;}
   .browse-return-top-chip[hidden]{display:none;}
   .browse-return-top-chip svg{width:18px;height:18px;fill:currentColor;}

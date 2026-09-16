@@ -636,7 +636,7 @@ test("Masonry View keeps the Home Assistant card wrapper naturally sized", () =>
   assert.equal(parentElement.style.height, "auto");
 });
 
-test("tight margins make only phone Mobile View full bleed in Sections View", () => {
+test("tight margins keep phone Mobile View full bleed out of embedded popups", () => {
   const hostToggles = [];
   const sectionsView = {
     tagName: "HUI-SECTIONS-VIEW",
@@ -668,10 +668,20 @@ test("tight margins make only phone Mobile View full bleed in Sections View", ()
   controller.isPanelView = () => false;
 
   controller.applyTightMargins();
+  const popup = {
+    classList: { contains: (name) => name === "bubble-pop-up-container" },
+    parentElement: sectionsView,
+  };
+  host.parentElement.parentElement = popup;
+  controller.applyTightMargins();
+  host.parentElement.parentElement = null;
+  controller.applyTightMargins();
   host._isMobileViewPageActive = () => false;
   controller.applyTightMargins();
 
   assert.deepEqual(hostToggles, [
+    ["mobile-view-sections-full-bleed", true],
+    ["mobile-view-sections-full-bleed", false],
     ["mobile-view-sections-full-bleed", true],
     ["mobile-view-sections-full-bleed", false],
   ]);
