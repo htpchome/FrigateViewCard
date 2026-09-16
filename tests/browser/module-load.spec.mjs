@@ -62,39 +62,51 @@ test.afterAll(async () => {
 test("bottom HA navbar styling does not trap Bubble popup behind its backdrop", async ({ page }) => {
   await page.goto(baseUrl);
   const navbarSource = await readFile("src/integrations/home-assistant/navbar.ctrl.js", "utf8");
-  const navbarStyles = /const BOTTOM_NAVBAR_STYLE_TEXT = `([\s\S]*?)`;/.exec(navbarSource)?.[1];
+  const headerAttribute = /const NAVBAR_HEADER_ATTRIBUTE = "([^"]+)";/.exec(navbarSource)?.[1];
+  const navbarStyles = /const BOTTOM_NAVBAR_STYLE_TEXT = `([\s\S]*?)`;/.exec(navbarSource)?.[1]
+    ?.replaceAll("${NAVBAR_HEADER_ATTRIBUTE}", headerAttribute);
+  expect(headerAttribute).toBeTruthy();
   expect(navbarStyles).toBeTruthy();
-  const state = await page.evaluate((styleText) => {
+  const state = await page.evaluate(({ styleText, headerAttributeName }) => {
     const style = document.createElement("style");
     style.textContent = `
       #view { position:relative; width:390px; height:600px; }
       .bubble-popup { position:absolute; top:100px; left:40px; width:280px; height:200px; z-index:5; }
       .bubble-backdrop { position:fixed; inset:0; z-index:4; }
-      .header { position:fixed; bottom:0; height:56px; }
+      .ha-header { position:fixed; bottom:0; height:56px; }
       ${styleText}
     `;
     const view = document.createElement("div");
     view.id = "view";
     const popup = document.createElement("div");
-    popup.className = "bubble-popup";
+    popup.className = "bubble-popup header";
     view.append(popup);
     const backdrop = document.createElement("div");
     backdrop.className = "bubble-backdrop";
     const header = document.createElement("div");
-    header.className = "header";
+    header.className = "header ha-header";
+    header.setAttribute(headerAttributeName, "");
     document.body.append(style, view, backdrop, header);
     const popupOnTop = document.elementFromPoint(100, 150) === popup;
     const viewZIndex = getComputedStyle(view).zIndex;
     view.style.zIndex = "1";
     const backdropWinsWhenViewIsTrapped =
       document.elementFromPoint(100, 150) === backdrop;
-    return { popupOnTop, viewZIndex, backdropWinsWhenViewIsTrapped };
-  }, navbarStyles);
+    return {
+      popupOnTop,
+      viewZIndex,
+      backdropWinsWhenViewIsTrapped,
+      popupZIndex: getComputedStyle(popup).zIndex,
+      haHeaderZIndex: getComputedStyle(header).zIndex,
+    };
+  }, { styleText: navbarStyles, headerAttributeName: headerAttribute });
 
   expect(state).toEqual({
     popupOnTop: true,
     viewZIndex: "auto",
     backdropWinsWhenViewIsTrapped: true,
+    popupZIndex: "5",
+    haHeaderZIndex: "2",
   });
 });
 

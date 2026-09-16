@@ -1,5 +1,7 @@
 // Keep Home Assistant shell mutations isolated and fully reversible.
 const NAVBAR_STYLE_ATTRIBUTE = "data-frigate-view-ha-navbar-style";
+// Scope z-index rules to HA's resolved header, not popup headers in the view.
+const NAVBAR_HEADER_ATTRIBUTE = "data-frigate-view-ha-navbar-header";
 const BOTTOM_NAVBAR_EXTRA_HEIGHT_PX = 10;
 const HA_SAFE_AREA_TOP =
   "var(--safe-area-inset-top, env(safe-area-inset-top, 0px))";
@@ -7,7 +9,7 @@ const HA_SAFE_AREA_BOTTOM =
   "var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px))";
 
 const BOTTOM_NAVBAR_STYLE_TEXT = `
-.header {
+[${NAVBAR_HEADER_ATTRIBUTE}] {
   z-index: 2 !important;
 }
 ha-tab-group-tab[active],
@@ -39,7 +41,7 @@ const LANDSCAPE_VIEW_PROMOTION_STYLE_TEXT = `
     position: relative !important;
     z-index: 2 !important;
   }
-  .header {
+  [${NAVBAR_HEADER_ATTRIBUTE}] {
     z-index: 1 !important;
   }
 }`;
@@ -405,7 +407,18 @@ const restoreManagedGeometry = (state) => {
 const restoreManagedTargets = (state) => {
   restoreManagedGeometry(state);
   removeNavbarStyle(state);
+  if (state.header?.getAttribute?.(NAVBAR_HEADER_ATTRIBUTE) === "") {
+    if (state.headerAttributeSnapshot === null) {
+      state.header.removeAttribute?.(NAVBAR_HEADER_ATTRIBUTE);
+    } else {
+      state.header.setAttribute?.(
+        NAVBAR_HEADER_ATTRIBUTE,
+        state.headerAttributeSnapshot,
+      );
+    }
+  }
   state.header = null;
+  state.headerAttributeSnapshot = null;
   state.toolbar = null;
   state.view = null;
 };
@@ -472,6 +485,9 @@ const applyManagedTargets = (state) => {
   if (targetsChanged) {
     restoreManagedTargets(state);
     state.header = targets.header;
+    state.headerAttributeSnapshot =
+      targets.header.getAttribute?.(NAVBAR_HEADER_ATTRIBUTE) ?? null;
+    targets.header.setAttribute?.(NAVBAR_HEADER_ATTRIBUTE, "");
     state.toolbar = targets.toolbar;
     state.view = targets.view;
   }
@@ -530,6 +546,7 @@ const acquireNavbarCustomization = (
       owners: new Map(),
       observer: null,
       header: null,
+      headerAttributeSnapshot: null,
       headerSnapshot: null,
       headerAppliedStyles: null,
       toolbar: null,

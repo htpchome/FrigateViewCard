@@ -89,9 +89,13 @@ const createTargets = ({
 } = {}) => {
   const toolbar = { style: createStyle(toolbarInitial) };
   const children = [];
+  const attributes = new Map();
   const header = {
     ownerDocument: documentRef,
     style: createStyle(headerInitial),
+    getAttribute: (name) => attributes.get(name) ?? null,
+    setAttribute: (name, value) => attributes.set(name, String(value)),
+    removeAttribute: (name) => attributes.delete(name),
     querySelector: (selector) => (selector === ".toolbar" ? toolbar : null),
     appendChild: (child) => {
       child.parentNode = header;
@@ -360,7 +364,8 @@ test("stacks icon-and-title tabs when the master toggle is enabled", () => {
   assert.match(styleText, /margin-inline-end: 0 !important/);
   assert.match(styleText, /border-block-start/);
   assert.doesNotMatch(styleText, /#view\s*\{[\s\S]*?z-index:/);
-  assert.match(styleText, /\.header \{[\s\S]*?z-index: 2 !important;/);
+  assert.match(styleText, /\[data-frigate-view-ha-navbar-header\] \{[\s\S]*?z-index: 2 !important;/);
+  assert.doesNotMatch(styleText, /\.header\s*\{/);
   assert.doesNotMatch(styleText, /@media \(orientation: landscape\)/);
 
   h.host._config.mobile_view_ha_navbar_bottom = false;
@@ -551,7 +556,7 @@ test("promotes the dashboard view above the relocated header in landscape", () =
 
   assert.match(styleText, /@media \(orientation: landscape\)/);
   assert.match(styleText, /#view \{[\s\S]*?z-index: 2 !important;/);
-  assert.match(styleText, /\.header \{[\s\S]*?z-index: 1 !important;/);
+  assert.match(styleText, /\[data-frigate-view-ha-navbar-header\] \{[\s\S]*?z-index: 1 !important;/);
   assert.ok(
     styleText.lastIndexOf("z-index: 2 !important;") <
       styleText.lastIndexOf("z-index: 1 !important;"),
@@ -645,6 +650,7 @@ test("applies the proven bottom-header details and restores exact styles", () =>
   assert.equal(targets.header.style.getPropertyValue("top"), "auto");
   assert.equal(targets.header.style.getPropertyValue("bottom"), "0px");
   assert.equal(targets.header.style.getPropertyValue("position"), "fixed");
+  assert.equal(targets.header.getAttribute("data-frigate-view-ha-navbar-header"), "");
   assert.equal(targets.header.style.getPropertyValue("padding-top"), "0px");
   assert.equal(
     targets.header.style.getPropertyValue("padding-bottom"),
@@ -690,6 +696,7 @@ test("applies the proven bottom-header details and restores exact styles", () =>
   assert.equal(targets.header.style.getPropertyValue("top"), "6px");
   assert.equal(targets.header.style.getPropertyValue("bottom"), "");
   assert.equal(targets.header.style.getPropertyValue("position"), "sticky");
+  assert.equal(targets.header.getAttribute("data-frigate-view-ha-navbar-header"), null);
   assert.equal(
     targets.header.style.getPropertyValue("padding-top"),
     "47px",
@@ -797,7 +804,9 @@ test("watches the Lovelace subtree and reapplies to replaced header nodes", () =
   rootObserver.trigger();
 
   assert.equal(original.header.style.getPropertyValue("bottom"), "");
+  assert.equal(original.header.getAttribute("data-frigate-view-ha-navbar-header"), null);
   assert.equal(replacement.header.style.getPropertyValue("bottom"), "0px");
+  assert.equal(replacement.header.getAttribute("data-frigate-view-ha-navbar-header"), "");
 });
 
 test("dashboard scope survives card disconnects and stays inside its dashboard", () => {
@@ -900,5 +909,23 @@ test("cleanup does not overwrite a newer inline value from another owner", () =>
   assert.equal(
     h.getTargets().header.style.getPropertyValue("bottom"),
     "12px",
+  );
+});
+
+test("navbar cleanup preserves an existing header marker", () => {
+  const h = createHarness();
+  h.getTargets().header.setAttribute(
+    "data-frigate-view-ha-navbar-header",
+    "existing",
+  );
+  h.controller.sync();
+  assert.equal(
+    h.getTargets().header.getAttribute("data-frigate-view-ha-navbar-header"),
+    "",
+  );
+  h.controller.disconnect();
+  assert.equal(
+    h.getTargets().header.getAttribute("data-frigate-view-ha-navbar-header"),
+    "existing",
   );
 });
