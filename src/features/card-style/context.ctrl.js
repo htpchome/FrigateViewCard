@@ -31,6 +31,16 @@ const HA_MASONRY_VIEW_TAGS = new Set(["HUI-MASONRY-VIEW"]);
 // Includes the heading and approximately two standard event rows.
 const MINIMUM_BROWSE_REGION_HEIGHT_PX = 244;
 const MINIMUM_CARD_HEIGHT_BUFFER_PX = 8;
+const bubblePopupPaddingStates = new WeakMap();
+
+const inlinePaddingDeclarations = (style) =>
+  Array.from({ length: style.length }, (_, index) => style.item(index))
+    .filter((name) => name === "padding" || name.startsWith("padding-"))
+    .map((name) => ({
+      name,
+      value: style.getPropertyValue(name),
+      priority: style.getPropertyPriority(name),
+    }));
 
 const normalizeThemeName = (value) =>
   String(value || "").trim().toLowerCase();
@@ -257,10 +267,52 @@ export class CardStyleContextController {
           this._host._parentOrigStyle.padding;
       }
     }
+    this.syncBubblePopupPadding(tightMarginsEnabled);
     const card = this._host.shadowRoot?.querySelector("#card");
     if (card) card.classList.toggle("tight-margins", tightMarginsEnabled);
     this.syncMobileSectionsFullBleed(tightMarginsEnabled);
     this.setSectionsRowGap(tightMarginsEnabled);
+  }
+
+  syncBubblePopupPadding(enabled) {
+    let container = enabled ? this.composedParentElement(this._host) : null;
+    for (let depth = 0; container && depth < 30; depth += 1) {
+      if (container.classList?.contains?.("bubble-pop-up-container")) break;
+      container = this.composedParentElement(container);
+    }
+    if (container === this._bubblePopupPaddingContainer) {
+      container?.style?.setProperty("padding", "0", "important");
+      return;
+    }
+
+    this.releaseBubblePopupPadding();
+    if (!container?.classList?.contains?.("bubble-pop-up-container") || !container.style) return;
+
+    let state = bubblePopupPaddingStates.get(container);
+    if (!state) {
+      state = { owners: 0, declarations: inlinePaddingDeclarations(container.style) };
+      bubblePopupPaddingStates.set(container, state);
+    }
+    state.owners += 1;
+    this._bubblePopupPaddingContainer = container;
+    container.style.setProperty("padding", "0", "important");
+  }
+
+  releaseBubblePopupPadding() {
+    const container = this._bubblePopupPaddingContainer;
+    if (!container) return;
+    this._bubblePopupPaddingContainer = null;
+    const state = bubblePopupPaddingStates.get(container);
+    if (!state || --state.owners > 0) return;
+
+    const { style } = container;
+    for (const { name } of inlinePaddingDeclarations(style)) {
+      style.removeProperty(name);
+    }
+    for (const { name, value, priority } of state.declarations) {
+      style.setProperty(name, value, priority);
+    }
+    bubblePopupPaddingStates.delete(container);
   }
 
   syncMobileSectionsFullBleed(tightMarginsEnabled) {

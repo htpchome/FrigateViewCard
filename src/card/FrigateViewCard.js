@@ -2305,6 +2305,7 @@ export class FrigateViewCard extends HTMLElement {
     };
   }
   disconnectedCallback() {
+    this._cardStyleController.releaseBubblePopupPadding();
     this._deepLinkController.disconnect();
     void this._stopPtzMotion("disconnected");
     this._playbackTargetController?.release("popup");

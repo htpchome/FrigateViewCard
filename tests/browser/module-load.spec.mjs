@@ -470,6 +470,45 @@ test("Mobile overlay header follows route changes without replacing the card or 
   });
 });
 
+test("Tight Margins clears all Bubble Card popup padding and restores it", async ({
+  page,
+}) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const popup = document.createElement("div");
+    popup.className = "bubble-pop-up-container";
+    popup.style.setProperty("padding", "14px 18px 22px 26px", "important");
+    const wrapper = document.createElement("div");
+    popup.attachShadow({ mode: "open" }).append(wrapper);
+    const card = document.createElement("frigate-view-card");
+    const config = { cameras: [{ entity: "camera.front" }], tight_margins: true };
+    card.setConfig(config);
+    wrapper.append(card);
+    document.body.append(popup);
+    card._applyTightMargins();
+
+    const sides = () => {
+      const style = getComputedStyle(popup);
+      return [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft];
+    };
+    const enabled = sides();
+    card.setConfig({ ...config, tight_margins: false });
+    card._applyTightMargins();
+    const disabled = sides();
+    card.setConfig(config);
+    card._applyTightMargins();
+    card.remove();
+    return { enabled, disabled, disconnected: sides() };
+  });
+
+  expect(state).toEqual({
+    enabled: ["0px", "0px", "0px", "0px"],
+    disabled: ["14px", "18px", "22px", "26px"],
+    disconnected: ["14px", "18px", "22px", "26px"],
+  });
+});
+
 test("Panel Card View naturally sizes and caps an open bottom panel", async ({
   page,
 }) => {

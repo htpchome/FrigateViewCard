@@ -20,6 +20,22 @@ const withGlobals = (overrides, fn) => {
   }
 };
 
+const createInlineStyle = (initial = []) => {
+  const declarations = new Map(
+    initial.map(([name, value, priority = ""]) => [name, { value, priority }]),
+  );
+  return {
+    get length() { return declarations.size; },
+    item: (index) => [...declarations.keys()][index] || "",
+    getPropertyValue: (name) => declarations.get(name)?.value || "",
+    getPropertyPriority: (name) => declarations.get(name)?.priority || "",
+    setProperty: (name, value, priority = "") => {
+      declarations.set(name, { value, priority });
+    },
+    removeProperty: (name) => declarations.delete(name),
+  };
+};
+
 test("cardStateClassNames reflects disabled toggles and preview state", () => {
   const controller = new CardStyleContextController({
     _config: { shadows: false, borders: true, rounded_corners: false },
@@ -532,6 +548,46 @@ test("applyTightMargins updates parent spacing and sections row gap", () => {
     ["toggle", "tight-margins", true],
     ["set", "--ha-view-sections-row-gap", "0px"],
   ]);
+});
+
+test("tight margins remove Bubble Card popup padding and restore it after the last card releases", () => {
+  const popupStyle = createInlineStyle([
+    ["padding-top", "18px"],
+    ["padding-inline", "12px", "important"],
+  ]);
+  const popup = {
+    classList: { contains: (name) => name === "bubble-pop-up-container" },
+    style: popupStyle,
+  };
+  const createController = () => {
+    const wrapper = { parentElement: popup, style: { margin: "8px", padding: "8px" } };
+    const host = {
+      _config: { tight_margins: true },
+      _isPreviewContext: () => false,
+      _isMobileViewPageActive: () => true,
+      parentElement: wrapper,
+      shadowRoot: { querySelector: () => null },
+    };
+    return { controller: new CardStyleContextController(host), host, wrapper };
+  };
+  const first = createController();
+  const second = createController();
+
+  first.controller.applyTightMargins();
+  second.controller.applyTightMargins();
+  assert.equal(popupStyle.getPropertyValue("padding"), "0");
+  assert.equal(popupStyle.getPropertyPriority("padding"), "important");
+  assert.equal(first.wrapper.style.padding, "0");
+
+  first.controller.releaseBubblePopupPadding();
+  assert.equal(popupStyle.getPropertyValue("padding"), "0");
+
+  second.host._config.tight_margins = false;
+  second.controller.applyTightMargins();
+  assert.equal(popupStyle.getPropertyValue("padding"), "");
+  assert.equal(popupStyle.getPropertyValue("padding-top"), "18px");
+  assert.equal(popupStyle.getPropertyValue("padding-inline"), "12px");
+  assert.equal(popupStyle.getPropertyPriority("padding-inline"), "important");
 });
 
 test("Masonry View keeps the Home Assistant card wrapper naturally sized", () => {

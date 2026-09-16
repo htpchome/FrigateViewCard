@@ -3487,7 +3487,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           <span class="field-label" style="margin:0">Tight Margins</span>
           <ha-switch id="tight_margins" ${this._config?.tight_margins ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Removes Home Assistant's default padding around the card in Sections views.</div>
+        <div class="field-helper">Removes padding around the card in Sections views and Bubble Card popups.</div>
       </div>
       <div class="section">
         <div class="layout-row">
