@@ -470,7 +470,7 @@ test("Mobile overlay header follows route changes without replacing the card or 
   });
 });
 
-test("Tight Margins clears all Bubble Card popup padding and restores it", async ({
+test("Tight Margins retains Bubble Card top padding and removes its bottom spacer in Single and Mobile View", async ({
   page,
 }) => {
   await page.goto(baseUrl);
@@ -479,8 +479,15 @@ test("Tight Margins clears all Bubble Card popup padding and restores it", async
     const popup = document.createElement("div");
     popup.className = "bubble-pop-up-container";
     popup.style.setProperty("padding", "14px 18px 22px 26px", "important");
+    popup.style.setProperty(
+      "--bubble-pop-up-extra-bottom-space",
+      "max(0px, calc(84px - 18px))",
+      "important",
+    );
     const wrapper = document.createElement("div");
-    popup.attachShadow({ mode: "open" }).append(wrapper);
+    const spacer = document.createElement("div");
+    spacer.style.height = "var(--bubble-pop-up-extra-bottom-space)";
+    popup.attachShadow({ mode: "open" }).append(wrapper, spacer);
     const card = document.createElement("frigate-view-card");
     const config = { cameras: [{ entity: "camera.front" }], tight_margins: true };
     card.setConfig(config);
@@ -488,24 +495,33 @@ test("Tight Margins clears all Bubble Card popup padding and restores it", async
     document.body.append(popup);
     card._applyTightMargins();
 
-    const sides = () => {
+    const spacing = () => {
       const style = getComputedStyle(popup);
-      return [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft];
+      return {
+        padding: [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft],
+        extraBottom: getComputedStyle(spacer).height,
+      };
     };
-    const enabled = sides();
+    card._pageId = "single-view";
+    card._renderShell();
+    const single = spacing();
+    card._pageId = "mobile-view";
+    card._renderShell();
+    const mobile = spacing();
     card.setConfig({ ...config, tight_margins: false });
     card._applyTightMargins();
-    const disabled = sides();
+    const disabled = spacing();
     card.setConfig(config);
     card._applyTightMargins();
     card.remove();
-    return { enabled, disabled, disconnected: sides() };
+    return { single, mobile, disabled, disconnected: spacing() };
   });
 
   expect(state).toEqual({
-    enabled: ["0px", "0px", "0px", "0px"],
-    disabled: ["14px", "18px", "22px", "26px"],
-    disconnected: ["14px", "18px", "22px", "26px"],
+    single: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px" },
+    mobile: { padding: ["14px", "0px", "0px", "0px"], extraBottom: "0px" },
+    disabled: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px" },
+    disconnected: { padding: ["14px", "18px", "22px", "26px"], extraBottom: "66px" },
   });
 });
 

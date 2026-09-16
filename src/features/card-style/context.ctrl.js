@@ -32,15 +32,33 @@ const HA_MASONRY_VIEW_TAGS = new Set(["HUI-MASONRY-VIEW"]);
 const MINIMUM_BROWSE_REGION_HEIGHT_PX = 244;
 const MINIMUM_CARD_HEIGHT_BUFFER_PX = 8;
 const bubblePopupPaddingStates = new WeakMap();
+const BUBBLE_POPUP_EXTRA_BOTTOM_SPACE = "--bubble-pop-up-extra-bottom-space";
+const BUBBLE_POPUP_TIGHT_PADDING = [
+  "padding-right",
+  "padding-bottom",
+  "padding-left",
+];
 
-const inlinePaddingDeclarations = (style) =>
+const inlineBubblePopupSpacingDeclarations = (style) =>
   Array.from({ length: style.length }, (_, index) => style.item(index))
-    .filter((name) => name === "padding" || name.startsWith("padding-"))
+    .filter(
+      (name) =>
+        name === "padding" ||
+        name.startsWith("padding-") ||
+        name === BUBBLE_POPUP_EXTRA_BOTTOM_SPACE,
+    )
     .map((name) => ({
       name,
       value: style.getPropertyValue(name),
       priority: style.getPropertyPriority(name),
     }));
+
+const applyBubblePopupTightSpacing = (style) => {
+  for (const name of BUBBLE_POPUP_TIGHT_PADDING) {
+    style.setProperty(name, "0", "important");
+  }
+  style.setProperty(BUBBLE_POPUP_EXTRA_BOTTOM_SPACE, "0px", "important");
+};
 
 const normalizeThemeName = (value) =>
   String(value || "").trim().toLowerCase();
@@ -281,7 +299,7 @@ export class CardStyleContextController {
       container = this.composedParentElement(container);
     }
     if (container === this._bubblePopupPaddingContainer) {
-      container?.style?.setProperty("padding", "0", "important");
+      if (container?.style) applyBubblePopupTightSpacing(container.style);
       return;
     }
 
@@ -290,12 +308,15 @@ export class CardStyleContextController {
 
     let state = bubblePopupPaddingStates.get(container);
     if (!state) {
-      state = { owners: 0, declarations: inlinePaddingDeclarations(container.style) };
+      state = {
+        owners: 0,
+        declarations: inlineBubblePopupSpacingDeclarations(container.style),
+      };
       bubblePopupPaddingStates.set(container, state);
     }
     state.owners += 1;
     this._bubblePopupPaddingContainer = container;
-    container.style.setProperty("padding", "0", "important");
+    applyBubblePopupTightSpacing(container.style);
   }
 
   releaseBubblePopupPadding() {
@@ -306,7 +327,7 @@ export class CardStyleContextController {
     if (!state || --state.owners > 0) return;
 
     const { style } = container;
-    for (const { name } of inlinePaddingDeclarations(style)) {
+    for (const { name } of inlineBubblePopupSpacingDeclarations(style)) {
       style.removeProperty(name);
     }
     for (const { name, value, priority } of state.declarations) {

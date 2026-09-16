@@ -550,10 +550,11 @@ test("applyTightMargins updates parent spacing and sections row gap", () => {
   ]);
 });
 
-test("tight margins remove Bubble Card popup padding and restore it after the last card releases", () => {
+test("tight margins retain Bubble Card top padding and clear its bottom reserve until the last card releases", () => {
   const popupStyle = createInlineStyle([
     ["padding-top", "18px"],
     ["padding-inline", "12px", "important"],
+    ["--bubble-pop-up-extra-bottom-space", "66px"],
   ]);
   const popup = {
     classList: { contains: (name) => name === "bubble-pop-up-container" },
@@ -575,19 +576,25 @@ test("tight margins remove Bubble Card popup padding and restore it after the la
 
   first.controller.applyTightMargins();
   second.controller.applyTightMargins();
-  assert.equal(popupStyle.getPropertyValue("padding"), "0");
-  assert.equal(popupStyle.getPropertyPriority("padding"), "important");
+  assert.equal(popupStyle.getPropertyValue("padding-top"), "18px");
+  for (const name of ["padding-right", "padding-bottom", "padding-left"]) {
+    assert.equal(popupStyle.getPropertyValue(name), "0");
+    assert.equal(popupStyle.getPropertyPriority(name), "important");
+  }
+  assert.equal(popupStyle.getPropertyValue("--bubble-pop-up-extra-bottom-space"), "0px");
   assert.equal(first.wrapper.style.padding, "0");
 
   first.controller.releaseBubblePopupPadding();
-  assert.equal(popupStyle.getPropertyValue("padding"), "0");
+  assert.equal(popupStyle.getPropertyValue("padding-bottom"), "0");
+  assert.equal(popupStyle.getPropertyValue("--bubble-pop-up-extra-bottom-space"), "0px");
 
   second.host._config.tight_margins = false;
   second.controller.applyTightMargins();
-  assert.equal(popupStyle.getPropertyValue("padding"), "");
   assert.equal(popupStyle.getPropertyValue("padding-top"), "18px");
   assert.equal(popupStyle.getPropertyValue("padding-inline"), "12px");
   assert.equal(popupStyle.getPropertyPriority("padding-inline"), "important");
+  assert.equal(popupStyle.getPropertyValue("padding-bottom"), "");
+  assert.equal(popupStyle.getPropertyValue("--bubble-pop-up-extra-bottom-space"), "66px");
 });
 
 test("Masonry View keeps the Home Assistant card wrapper naturally sized", () => {
