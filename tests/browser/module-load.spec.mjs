@@ -155,6 +155,9 @@ test("rotated Mobile View inside Bubble fills the viewport above its backdrop", 
     card._updateRotateOverlayState();
     card._applyCardStyle();
 
+    const liveTopLayer = card.matches(":popover-open");
+    const liveBubbleTransform = getComputedStyle(bubble).transform;
+    const liveBubbleOverflow = getComputedStyle(bubble).overflowY;
     const liveHit = root.elementFromPoint(422, 195);
     const liveEdgeHit = root.elementFromPoint(800, 195);
     const liveInnerHit = bubble.shadowRoot.elementFromPoint(422, 195);
@@ -168,11 +171,16 @@ test("rotated Mobile View inside Bubble fills the viewport above its backdrop", 
     card._applyCardStyle();
     const popupHit = root.elementFromPoint(422, 195);
     const popupEdgeHit = root.elementFromPoint(800, 195);
+    const popupTopLayer = card.matches(":popover-open");
     const hostRect = card.getBoundingClientRect();
     const active = {
       rotationActive: card._rotateOverlayActive,
       liveMode,
       popupMode: card._rotateOverlayMode,
+      liveTopLayer,
+      popupTopLayer,
+      liveBubbleTransform,
+      liveBubbleOverflow,
       viewZIndex: getComputedStyle(root.querySelector("#view")).zIndex,
       backdropCoversLive: liveHit === root.querySelector(".bubble-backdrop"),
       backdropCoversPopup: popupHit === root.querySelector(".bubble-backdrop"),
@@ -196,6 +204,8 @@ test("rotated Mobile View inside Bubble fills the viewport above its backdrop", 
       ...active,
       restored: {
         cover: card.classList.contains("mobile-view-rotate-cover"),
+        popoverOpen: card.matches(":popover-open"),
+        popoverAttribute: card.hasAttribute("popover"),
         transform: getComputedStyle(bubble).transform,
         overflowY: getComputedStyle(bubble).overflowY,
       },
@@ -205,6 +215,10 @@ test("rotated Mobile View inside Bubble fills the viewport above its backdrop", 
   expect(state.rotationActive).toBe(true);
   expect(state.liveMode).toBe("live");
   expect(state.popupMode).toBe("popup");
+  expect(state.liveTopLayer).toBe(true);
+  expect(state.popupTopLayer).toBe(true);
+  expect(state.liveBubbleTransform).toBe("matrix(1, 0, 0, 1, 0, 0)");
+  expect(state.liveBubbleOverflow).toBe("hidden");
   expect(state.backdropCoversLive).toBe(false);
   expect(state.backdropCoversPopup).toBe(false);
   expect(state.liveCardOnTop).toBe(true);
@@ -220,6 +234,8 @@ test("rotated Mobile View inside Bubble fills the viewport above its backdrop", 
   });
   expect(state.restored).toEqual({
     cover: false,
+    popoverOpen: false,
+    popoverAttribute: false,
     transform: "matrix(1, 0, 0, 1, 0, 0)",
     overflowY: "hidden",
   });
@@ -4380,6 +4396,59 @@ test.describe("touch input", () => {
       "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 " +
       "Mobile/15E148 Safari/604.1",
     viewport: { width: 390, height: 844 },
+  });
+
+  test("phone rotation raises an isolated Bubble card above its popup", async ({ page }) => {
+    await page.goto(baseUrl);
+    const portrait = await page.evaluate(async () => {
+      await import("/frigate-view-card.js");
+      document.body.style.margin = "0";
+      const bubble = document.createElement("div");
+      bubble.className = "bubble-pop-up-container";
+      bubble.style.cssText =
+        "position:absolute;top:120px;left:20px;width:350px;height:500px;" +
+        "overflow:hidden;transform:translateY(0);z-index:5";
+      const card = document.createElement("frigate-view-card");
+      card.setConfig({
+        cameras: [{ entity: "camera.front", name: "Front" }],
+        mobile_view_page_enabled: true,
+        mobile_view_rotate_to_fullscreen: true,
+      });
+      bubble.append(card);
+      document.body.append(bubble);
+      const backdrop = document.createElement("div");
+      backdrop.className = "bubble-backdrop";
+      backdrop.style.cssText = "position:fixed;inset:0;z-index:4";
+      document.body.append(backdrop);
+      card._pageId = "mobile-view";
+      card._renderShell();
+      card._syncRotateOverlayViewportState();
+      return {
+        enabled: card._isRotateToFullscreenEnabled(),
+        active: card._rotateOverlayActive,
+        topLayer: card.matches(":popover-open"),
+      };
+    });
+    expect(portrait).toEqual({ enabled: true, active: false, topLayer: false });
+
+    await page.setViewportSize({ width: 844, height: 390 });
+    const landscape = await page.evaluate(() => {
+      const card = document.querySelector(".bubble-pop-up-container frigate-view-card");
+      card._syncRotateOverlayViewportState();
+      const rect = card.getBoundingClientRect();
+      return {
+        active: card._rotateOverlayActive,
+        topLayer: card.matches(":popover-open"),
+        edgeOnCard: document.elementFromPoint(800, 195) === card,
+        rect: [rect.left, rect.top, rect.width, rect.height].map(Math.round),
+      };
+    });
+    expect(landscape).toEqual({
+      active: true,
+      topLayer: true,
+      edgeOnCard: true,
+      rect: [0, 0, 844, 390],
+    });
   });
 
   test("opens and selects from the Card View video-overlay camera picker", async ({

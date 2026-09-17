@@ -210,6 +210,7 @@ export class CardStyleContextController {
   constructor(host) {
     this._host = host;
     this._bubbleFullscreenElements = new Set();
+    this._bubbleFullscreenPopoverOwned = false;
   }
 
   visualStyleToggleRules() {
@@ -490,6 +491,12 @@ export class CardStyleContextController {
       return;
     }
 
+    // The browser top layer escapes Bubble's clipping and stacking contexts.
+    if (this.showBubbleFullscreenPopover()) {
+      this.releaseBubbleFullscreenAncestorStyles();
+      return;
+    }
+
     for (const ancestor of ancestors) {
       if (!ancestor.style) continue;
       if (!this._bubbleFullscreenElements.has(ancestor)) {
@@ -508,7 +515,42 @@ export class CardStyleContextController {
     }
   }
 
-  releaseBubbleFullscreenEscape() {
+  showBubbleFullscreenPopover() {
+    const host = this._host;
+    if (
+      typeof host?.showPopover !== "function" ||
+      typeof host?.hidePopover !== "function" ||
+      (!this._bubbleFullscreenPopoverOwned && host.hasAttribute?.("popover"))
+    ) {
+      return false;
+    }
+    if (!this._bubbleFullscreenPopoverOwned) {
+      host.setAttribute("popover", "manual");
+      this._bubbleFullscreenPopoverOwned = true;
+    }
+    if (host.matches?.(":popover-open")) return true;
+    try {
+      host.showPopover();
+      return true;
+    } catch (_) {
+      this.releaseBubbleFullscreenPopover();
+      return false;
+    }
+  }
+
+  releaseBubbleFullscreenPopover() {
+    if (!this._bubbleFullscreenPopoverOwned) return;
+    this._bubbleFullscreenPopoverOwned = false;
+    const host = this._host;
+    try {
+      if (host.matches?.(":popover-open")) host.hidePopover();
+    } catch (_) {}
+    if (host.getAttribute?.("popover") === "manual") {
+      host.removeAttribute("popover");
+    }
+  }
+
+  releaseBubbleFullscreenAncestorStyles() {
     for (const element of this._bubbleFullscreenElements) {
       const state = bubbleFullscreenStyleStates.get(element);
       if (!state) continue;
@@ -518,6 +560,11 @@ export class CardStyleContextController {
       bubbleFullscreenStyleStates.delete(element);
     }
     this._bubbleFullscreenElements.clear();
+  }
+
+  releaseBubbleFullscreenEscape() {
+    this.releaseBubbleFullscreenPopover();
+    this.releaseBubbleFullscreenAncestorStyles();
   }
 
   syncMobileSectionsFullBleed(tightMarginsEnabled) {

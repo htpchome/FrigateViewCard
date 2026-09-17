@@ -9,6 +9,8 @@ export const MOBILE_VIEW_PAGE_STYLES = `
     height: var(--rotate-vh, 100dvh) !important;
     min-height: var(--rotate-vh, 100dvh) !important;
     max-height: var(--rotate-vh, 100dvh) !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
     z-index: 3000 !important;
     overflow: visible !important;
     border-radius: 0 !important;
