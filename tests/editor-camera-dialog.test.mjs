@@ -464,7 +464,8 @@ test("Grid order editor uses isolated draggable tiles and dynamic groups of four
   assert.match(source, /data-grid-order-mode="custom"/);
   assert.match(source, /class="grid-order-custom camera-group-fields"/);
   assert.match(source, /index % 4 === 0/);
-  assert.match(source, /Grid \$\{Math\.floor\(index \/ 4\) \+ 1\}/);
+  assert.match(source, /const gridNumber = Math\.floor\(index \/ 4\) \+ 1/);
+  assert.match(source, /data-fvc-i18n="editor\.grid\.gridNumber"/);
   assert.match(source, /data-grid-order-exclude=/);
   assert.match(source, /data-grid-order-include=/);
   assert.match(source, /ICONS\.gridExclude/);

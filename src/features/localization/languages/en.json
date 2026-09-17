@@ -7,6 +7,10 @@
     "title": "Title",
     "subtitle": "Subtitle",
     "display": "Display",
+    "duration": {
+      "minutes": "{count} min",
+      "seconds": "{count} sec"
+    },
     "eventHistoryDays": "Event History Days",
     "alertReviewHistoryDays": "Alert/Review History Days",
     "panels": {
@@ -64,8 +68,6 @@
       "snapshotRefreshHelp": "How often snapshots refresh when Live View is off.",
       "alertLiveDuration": "Alert Live Duration",
       "alertLiveDurationHelp": "How long an alerted Preview or Wide View snapshot switches to live.",
-      "durationMinutes": "{count} min",
-      "durationSeconds": "{count} sec",
       "daysRangeValidation": "Select a value from 1 to 15.",
       "timezone": "Timezone",
       "configuredTimezone": "Configured Home Assistant timezone",
@@ -140,6 +142,49 @@
       "showLogoHelp": "Shows {cardName} branding in page footers and the mobile Preview header when the HA navbar is at the bottom.",
       "showVersionNumber": "Show Version Number",
       "showVersionNumberHelp": "Shows the installed version in page footers. General Settings always shows it."
+    },
+    "slideshow": {
+      "enable": "Enable Slideshow Mode",
+      "enableHelp": "Makes Slideshow available. Start or stop it with the Slideshow button.",
+      "cameraRotationInterval": "Camera Rotation Interval",
+      "cameraRotationHelp": "Time between cameras during Slideshow.",
+      "alertHoldDuration": "Alert Hold Duration",
+      "alertHoldHelp": "How long an alert-selected camera remains before rotation resumes."
+    },
+    "grid": {
+      "enable": "Enable Grid Mode",
+      "enableHelp": "Adds a 2×2 grid for at least two cameras. Unavailable on mobile devices.",
+      "order": "Grid Order",
+      "orderAria": "Grid order",
+      "default": "Default",
+      "custom": "Custom",
+      "orderHelp": "Default follows Camera Settings. Custom reorders or excludes cameras only in Grid mode.",
+      "gridNumber": "Grid {number}",
+      "dragToReorder": "Drag to reorder",
+      "excludeFromGrid": "Exclude from Grid",
+      "excludeCameraFromGrid": "Exclude {camera} from Grid",
+      "exclude": "Exclude",
+      "includeInGrid": "Include in Grid",
+      "includeCameraInGrid": "Include {camera} in Grid",
+      "include": "Include",
+      "noIncludedCameras": "No cameras are currently included in Grid mode.",
+      "excludedCameras": "Excluded Cameras",
+      "liveView": "Live View in Grid",
+      "liveViewHelp": "Keeps all visible cameras live. Otherwise, alerts temporarily switch snapshots to live.",
+      "rotationInterval": "Grid Rotation Interval",
+      "rotationHelp": "Time between camera sets when more than four cameras are included.",
+      "alertHoldDuration": "Grid Alert Hold Duration",
+      "alertHoldHelp": "How long an alerted tile stays highlighted and, when needed, live."
+    },
+    "preview": {
+      "enable": "Enable Preview Page",
+      "enableHelp": "Adds Preview to navigation and landing-page options.",
+      "liveDesktop": "Live Cameras on Desktop",
+      "liveDesktopHelp": "Keeps all Preview cameras live on desktops. Otherwise, qualifying alerts and reviews switch snapshots to live.",
+      "liveMobile": "Live Cameras on Mobile",
+      "liveMobileHelp": "Keeps all Preview cameras live on phones and tablets. Otherwise, qualifying alerts and reviews switch snapshots to live.",
+      "showTitleBars": "Show Title Bars",
+      "showTitleBarsHelp": "Shows each camera's name, source, alert count, and status."
     },
     "cameraPanel": {
       "cameras": "Cameras",

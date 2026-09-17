@@ -196,8 +196,8 @@ const localizedDurationEditorChoices = (values) =>
       value,
       label: formatDurationChoice(value),
       translationKey: useMinutes
-        ? "editor.general.durationMinutes"
-        : "editor.general.durationSeconds",
+        ? "editor.duration.minutes"
+        : "editor.duration.seconds",
       translationValues: { count: useMinutes ? minutes : seconds },
     };
   });
@@ -3471,20 +3471,23 @@ export class FrigateViewCardEditor extends HTMLElement {
       .map((entity, index) => {
         const camera = gridOrderCamerasByEntity.get(entity);
         if (!camera) return "";
+        const cameraLabel = this._gridOrderCameraLabel(camera);
+        const cameraValues = escapeHtmlAttribute(JSON.stringify({ camera: cameraLabel }));
+        const gridNumber = Math.floor(index / 4) + 1;
         const gridHeading =
           index % 4 === 0
-            ? `<div class="grid-order-heading">Grid ${Math.floor(index / 4) + 1}</div>`
+            ? `<div class="grid-order-heading" data-fvc-i18n="editor.grid.gridNumber" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ number: gridNumber }))}">Grid ${gridNumber}</div>`
             : "";
         return `${gridHeading}
           <div class="grid-order-row" draggable="true" data-row="${index}" data-grid-order-entity="${escapeHtmlAttribute(entity)}">
-            <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
+            <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder" data-fvc-i18n-title="editor.grid.dragToReorder" data-fvc-i18n-aria-label="editor.grid.dragToReorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
             <div class="grid-order-camera-copy">
-              <div class="cam-name">${escapeHtml(this._gridOrderCameraLabel(camera))}</div>
+              <div class="cam-name">${escapeHtml(cameraLabel)}</div>
               <div class="cam-meta">${escapeHtml(entity)}</div>
             </div>
-            <button class="icon-btn grid-order-action grid-order-action--exclude" type="button" title="Exclude from Grid" aria-label="Exclude ${escapeHtmlAttribute(this._gridOrderCameraLabel(camera))} from Grid" data-grid-order-exclude="${escapeHtmlAttribute(entity)}">
+            <button class="icon-btn grid-order-action grid-order-action--exclude" type="button" title="Exclude from Grid" aria-label="Exclude ${escapeHtmlAttribute(cameraLabel)} from Grid" data-fvc-i18n-title="editor.grid.excludeFromGrid" data-fvc-i18n-aria-label="editor.grid.excludeCameraFromGrid" data-fvc-i18n-values="${cameraValues}" data-grid-order-exclude="${escapeHtmlAttribute(entity)}">
               ${ICONS.gridExclude}
-              <span>Exclude</span>
+              <span data-fvc-i18n="editor.grid.exclude">Exclude</span>
             </button>
           </div>`;
       })
@@ -3493,14 +3496,15 @@ export class FrigateViewCardEditor extends HTMLElement {
       .map((entity) => {
         const camera = gridOrderCamerasByEntity.get(entity);
         if (!camera) return "";
+        const cameraLabel = this._gridOrderCameraLabel(camera);
         return `<div class="grid-order-excluded-row" data-grid-order-entity="${escapeHtmlAttribute(entity)}">
           <div class="grid-order-camera-copy">
-            <div class="cam-name">${escapeHtml(this._gridOrderCameraLabel(camera))}</div>
+            <div class="cam-name">${escapeHtml(cameraLabel)}</div>
             <div class="cam-meta">${escapeHtml(entity)}</div>
           </div>
-          <button class="icon-btn grid-order-action grid-order-action--include" type="button" title="Include in Grid" aria-label="Include ${escapeHtmlAttribute(this._gridOrderCameraLabel(camera))} in Grid" data-grid-order-include="${escapeHtmlAttribute(entity)}">
+          <button class="icon-btn grid-order-action grid-order-action--include" type="button" title="Include in Grid" aria-label="Include ${escapeHtmlAttribute(cameraLabel)} in Grid" data-fvc-i18n-title="editor.grid.includeInGrid" data-fvc-i18n-aria-label="editor.grid.includeCameraInGrid" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ camera: cameraLabel }))}" data-grid-order-include="${escapeHtmlAttribute(entity)}">
             ${ICONS.gridInclude}
-            <span>Include</span>
+            <span data-fvc-i18n="editor.grid.include">Include</span>
           </button>
         </div>`;
       })
@@ -3508,10 +3512,10 @@ export class FrigateViewCardEditor extends HTMLElement {
     const gridOrderCustomMarkup = `
       <div class="grid-order-custom camera-group-fields" ${gridOrder.mode === GRID_ORDER_MODES.custom ? "" : "hidden"}>
         <div class="grid-order-sections">
-          ${gridOrderRows || '<div class="cam-helper">No cameras are currently included in Grid mode.</div>'}
+          ${gridOrderRows || '<div class="cam-helper" data-fvc-i18n="editor.grid.noIncludedCameras">No cameras are currently included in Grid mode.</div>'}
         </div>
         <div class="grid-order-excluded" ${gridOrder.excluded.length ? "" : "hidden"}>
-          <div class="grid-order-heading">Excluded Cameras</div>
+          <div class="grid-order-heading" data-fvc-i18n="editor.grid.excludedCameras">Excluded Cameras</div>
           ${gridOrderExcludedRows}
         </div>
       </div>`;
@@ -3764,38 +3768,38 @@ export class FrigateViewCardEditor extends HTMLElement {
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
           <div style="display:flex;flex-direction:column;gap:6px;max-width:420px">
             <div class="layout-row" style="justify-content:flex-start;gap:8px">
-              <span class="field-label" style="margin:0">Enable Slideshow Mode</span>
+              <span class="field-label" style="margin:0" data-fvc-i18n="editor.slideshow.enable">Enable Slideshow Mode</span>
               <ha-switch id="slideshow_rotation_enabled" ${this._config?.slideshow_rotation_enabled ? "checked" : ""}></ha-switch>
             </div>
-            <div class="field-helper">Makes Slideshow available. Start or stop it with the Slideshow button.</div>
+            <div class="field-helper" data-fvc-i18n="editor.slideshow.enableHelp">Makes Slideshow available. Start or stop it with the Slideshow button.</div>
           </div>
           <div id="slideshow_rotation_row" style="display:${this._config?.slideshow_rotation_enabled ? "flex" : "none"};flex:1 1 100%;width:100%;flex-direction:column;gap:6px">
-            <div class="editor-choice-field editor-choice-field--single-row" id="slideshow_rotation_seconds" role="radiogroup" aria-label="Camera Rotation Interval">
-              <div class="field-label">Camera Rotation Interval</div>
+            <div class="editor-choice-field editor-choice-field--single-row" id="slideshow_rotation_seconds" role="radiogroup" aria-label="Camera Rotation Interval" data-fvc-i18n-aria-label="editor.slideshow.cameraRotationInterval">
+              <div class="field-label" data-fvc-i18n="editor.slideshow.cameraRotationInterval">Camera Rotation Interval</div>
               ${buildEditorBubbleSelectorMarkup({
                 name: "slideshow_rotation_seconds",
-                options: durationEditorChoices(
+                options: localizedDurationEditorChoices(
                   SLIDESHOW_ROTATION_OPTIONS_SECONDS,
                 ),
                 selectedValue: slideshowRotationSeconds,
               })}
             </div>
-            <div class="field-helper">Time between cameras during Slideshow.</div>
+            <div class="field-helper" data-fvc-i18n="editor.slideshow.cameraRotationHelp">Time between cameras during Slideshow.</div>
           </div>
         </div>
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
           <div id="slideshow_alert_hold_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
-            <div class="editor-choice-field" id="slideshow_alert_hold_seconds" role="radiogroup" aria-label="Alert Hold Duration">
-              <div class="field-label">Alert Hold Duration</div>
+            <div class="editor-choice-field" id="slideshow_alert_hold_seconds" role="radiogroup" aria-label="Alert Hold Duration" data-fvc-i18n-aria-label="editor.slideshow.alertHoldDuration">
+              <div class="field-label" data-fvc-i18n="editor.slideshow.alertHoldDuration">Alert Hold Duration</div>
               ${buildEditorBubbleSelectorMarkup({
                 name: "slideshow_alert_hold_seconds",
-                options: durationEditorChoices(
+                options: localizedDurationEditorChoices(
                   SLIDESHOW_ALERT_HOLD_OPTIONS_SECONDS,
                 ),
                 selectedValue: slideshowAlertHoldSeconds,
               })}
             </div>
-            <div class="field-helper">How long an alert-selected camera remains before rotation resumes.</div>
+            <div class="field-helper" data-fvc-i18n="editor.slideshow.alertHoldHelp">How long an alert-selected camera remains before rotation resumes.</div>
           </div>
         </div>
       </div>`;
@@ -3803,31 +3807,31 @@ export class FrigateViewCardEditor extends HTMLElement {
     const previewPanelContent = `
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Enable Preview Page</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.preview.enable">Enable Preview Page</span>
           <ha-switch id="preview_page_enabled" ${this._config?.preview_page_enabled ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Adds Preview to navigation and landing-page options.</div>
+        <div class="field-helper" data-fvc-i18n="editor.preview.enableHelp">Adds Preview to navigation and landing-page options.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Live Cameras on Desktop</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.preview.liveDesktop">Live Cameras on Desktop</span>
           <ha-switch id="preview_page_live_cameras" ${this._config?.preview_page_live_cameras ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Keeps all Preview cameras live on desktops. Otherwise, qualifying alerts and reviews switch snapshots to live.</div>
+        <div class="field-helper" data-fvc-i18n="editor.preview.liveDesktopHelp">Keeps all Preview cameras live on desktops. Otherwise, qualifying alerts and reviews switch snapshots to live.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Live Cameras on Mobile</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.preview.liveMobile">Live Cameras on Mobile</span>
           <ha-switch id="preview_page_live_cameras_mobile" ${this._config?.preview_page_live_cameras_mobile ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Keeps all Preview cameras live on phones and tablets. Otherwise, qualifying alerts and reviews switch snapshots to live.</div>
+        <div class="field-helper" data-fvc-i18n="editor.preview.liveMobileHelp">Keeps all Preview cameras live on phones and tablets. Otherwise, qualifying alerts and reviews switch snapshots to live.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Show Title Bars</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.preview.showTitleBars">Show Title Bars</span>
           <ha-switch id="preview_page_show_title_bars" ${this._config?.preview_page_show_title_bars !== false ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Shows each camera's name, source, alert count, and status.</div>
+        <div class="field-helper" data-fvc-i18n="editor.preview.showTitleBarsHelp">Shows each camera's name, source, alert count, and status.</div>
       </div>`;
     const gridAlertHoldSeconds = normalizeNumberChoice(
       this._config?.grid_alert_hold_seconds,
@@ -4089,54 +4093,54 @@ export class FrigateViewCardEditor extends HTMLElement {
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
           <div style="display:flex;flex-direction:column;gap:6px;max-width:420px">
             <div class="layout-row" style="justify-content:flex-start;gap:8px">
-              <span class="field-label" style="margin:0">Enable Grid Mode</span>
+              <span class="field-label" style="margin:0" data-fvc-i18n="editor.grid.enable">Enable Grid Mode</span>
               <ha-switch id="grid_mode_enabled" ${this._config?.grid_mode_enabled ? "checked" : ""}></ha-switch>
             </div>
-            <div class="field-helper">Adds a 2×2 grid for at least two cameras. Unavailable on mobile devices.</div>
+            <div class="field-helper" data-fvc-i18n="editor.grid.enableHelp">Adds a 2×2 grid for at least two cameras. Unavailable on mobile devices.</div>
           </div>
           <div id="grid_order_row" class="grid-order-config" style="display:${this._config?.grid_mode_enabled ? "flex" : "none"}">
-            <span class="field-label" style="margin:0">Grid Order</span>
-            <div class="theme-seg" role="radiogroup" aria-label="Grid order">
-              <button type="button" class="theme-opt ${gridOrder.mode === GRID_ORDER_MODES.default ? "active" : ""}" data-grid-order-mode="default" role="radio" aria-checked="${gridOrder.mode === GRID_ORDER_MODES.default ? "true" : "false"}">Default</button>
-              <button type="button" class="theme-opt ${gridOrder.mode === GRID_ORDER_MODES.custom ? "active" : ""}" data-grid-order-mode="custom" role="radio" aria-checked="${gridOrder.mode === GRID_ORDER_MODES.custom ? "true" : "false"}">Custom</button>
+            <span class="field-label" style="margin:0" data-fvc-i18n="editor.grid.order">Grid Order</span>
+            <div class="theme-seg" role="radiogroup" aria-label="Grid order" data-fvc-i18n-aria-label="editor.grid.orderAria">
+              <button type="button" class="theme-opt ${gridOrder.mode === GRID_ORDER_MODES.default ? "active" : ""}" data-grid-order-mode="default" role="radio" aria-checked="${gridOrder.mode === GRID_ORDER_MODES.default ? "true" : "false"}" data-fvc-i18n="editor.grid.default">Default</button>
+              <button type="button" class="theme-opt ${gridOrder.mode === GRID_ORDER_MODES.custom ? "active" : ""}" data-grid-order-mode="custom" role="radio" aria-checked="${gridOrder.mode === GRID_ORDER_MODES.custom ? "true" : "false"}" data-fvc-i18n="editor.grid.custom">Custom</button>
             </div>
-            <div class="field-helper">Default follows Camera Settings. Custom reorders or excludes cameras only in Grid mode.</div>
+            <div class="field-helper" data-fvc-i18n="editor.grid.orderHelp">Default follows Camera Settings. Custom reorders or excludes cameras only in Grid mode.</div>
             ${gridOrderCustomMarkup}
           </div>
           <div id="grid_live_row" style="min-width:210px;display:${this._config?.grid_mode_enabled ? "flex" : "none"};flex-direction:column;gap:6px">
             <div class="layout-row" style="justify-content:flex-start;gap:8px">
-              <span class="field-label" style="margin:0">Live View in Grid</span>
+              <span class="field-label" style="margin:0" data-fvc-i18n="editor.grid.liveView">Live View in Grid</span>
               <ha-switch id="grid_live_view_enabled" ${this._config?.grid_live_view_enabled !== false ? "checked" : ""}></ha-switch>
             </div>
-            <div class="field-helper">Keeps all visible cameras live. Otherwise, alerts temporarily switch snapshots to live.</div>
+            <div class="field-helper" data-fvc-i18n="editor.grid.liveViewHelp">Keeps all visible cameras live. Otherwise, alerts temporarily switch snapshots to live.</div>
           </div>
           <div id="grid_rotation_row" style="display:${this._config?.grid_mode_enabled && gridVisibleCameraCount > 4 ? "flex" : "none"};flex:1 1 100%;width:100%;flex-direction:column;gap:6px">
-            <div class="editor-choice-field editor-choice-field--single-row" id="grid_rotation_seconds" role="radiogroup" aria-label="Grid Rotation Interval">
-              <div class="field-label">Grid Rotation Interval</div>
+            <div class="editor-choice-field editor-choice-field--single-row" id="grid_rotation_seconds" role="radiogroup" aria-label="Grid Rotation Interval" data-fvc-i18n-aria-label="editor.grid.rotationInterval">
+              <div class="field-label" data-fvc-i18n="editor.grid.rotationInterval">Grid Rotation Interval</div>
               ${buildEditorBubbleSelectorMarkup({
                 name: "grid_rotation_seconds",
-                options: durationEditorChoices(
+                options: localizedDurationEditorChoices(
                   GRID_ROTATION_OPTIONS_SECONDS,
                 ),
                 selectedValue: gridRotationSeconds,
               })}
             </div>
-            <div class="field-helper">Time between camera sets when more than four cameras are included.</div>
+            <div class="field-helper" data-fvc-i18n="editor.grid.rotationHelp">Time between camera sets when more than four cameras are included.</div>
           </div>
         </div>
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
           <div id="grid_alert_hold_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
-            <div class="editor-choice-field editor-choice-field--single-row" id="grid_alert_hold_seconds" role="radiogroup" aria-label="Grid Alert Hold Duration">
-              <div class="field-label">Grid Alert Hold Duration</div>
+            <div class="editor-choice-field editor-choice-field--single-row" id="grid_alert_hold_seconds" role="radiogroup" aria-label="Grid Alert Hold Duration" data-fvc-i18n-aria-label="editor.grid.alertHoldDuration">
+              <div class="field-label" data-fvc-i18n="editor.grid.alertHoldDuration">Grid Alert Hold Duration</div>
               ${buildEditorBubbleSelectorMarkup({
                 name: "grid_alert_hold_seconds",
-                options: durationEditorChoices(
+                options: localizedDurationEditorChoices(
                   GRID_ALERT_HOLD_OPTIONS_SECONDS,
                 ),
                 selectedValue: gridAlertHoldSeconds,
               })}
             </div>
-            <div class="field-helper">How long an alerted tile stays highlighted and, when needed, live.</div>
+            <div class="field-helper" data-fvc-i18n="editor.grid.alertHoldHelp">How long an alerted tile stays highlighted and, when needed, live.</div>
           </div>
         </div>
       </div>`;

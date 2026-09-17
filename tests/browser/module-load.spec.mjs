@@ -234,8 +234,8 @@ test("General Settings language changes preserve form state and localize status,
       "editor.general.grid": "Grille",
       "editor.general.enablePrePostRoll": "Activer les marges vidéo",
       "editor.general.prePostRollHelp": "Ajoute {seconds} secondes autour de la vidéo.",
-      "editor.general.durationMinutes": "{count} min FR",
-      "editor.general.durationSeconds": "{count} s FR",
+      "editor.duration.minutes": "{count} min FR",
+      "editor.duration.seconds": "{count} s FR",
       "editor.general.fallbackUpdateCheck": "Vérification de secours",
       "editor.general.updateAvailableVersion": "Mise à jour : {version}",
       "editor.general.homeAssistantBelowRecommended": "HA {version} sous {recommended}.",
@@ -497,6 +497,237 @@ test("Layout Settings language changes preserve controls and validation state", 
     tightLabel: "Marges serrées",
     logoLabel: "Afficher le logo FrigateView",
     logoHelp: "Affiche FrigateView dans le pied de page.",
+    configChanged: 0,
+  });
+});
+
+test("Slideshow and Preview language changes preserve enabled switches and durations", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card-editor.js");
+    const editor = document.createElement("frigate-view-card-editor");
+    editor._activeSettingsPanelId = "slideshow";
+    document.body.append(editor);
+    editor.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      slideshow_rotation_enabled: true,
+      slideshow_rotation_seconds: 20,
+      slideshow_alert_hold_seconds: 60,
+      preview_page_enabled: true,
+      preview_page_live_cameras_mobile: true,
+      preview_page_show_title_bars: false,
+    });
+    const hass = { locale: { language: "en" }, states: {}, themes: {} };
+    editor.hass = hass;
+    const slideshowPanel = editor.querySelector('[data-panel="slideshow"]');
+    const slideshowSwitch = editor.querySelector("#slideshow_rotation_enabled");
+    const rotationChoice = editor.querySelector('[name="slideshow_rotation_seconds"][value="20"]');
+    const alertHoldChoice = editor.querySelector('[name="slideshow_alert_hold_seconds"][value="60"]');
+    const previewSwitch = editor.querySelector("#preview_page_enabled");
+    const previewMobileSwitch = editor.querySelector("#preview_page_live_cameras_mobile");
+    const previewTitleSwitch = editor.querySelector("#preview_page_show_title_bars");
+    let configChanged = 0;
+    editor.addEventListener("config-changed", () => { configChanged += 1; });
+
+    const english = editor._localization;
+    const translated = {
+      "editor.slideshow.enable": "Activer le diaporama",
+      "editor.slideshow.cameraRotationInterval": "Intervalle de rotation",
+      "editor.slideshow.alertHoldDuration": "Durée de l'alerte",
+      "editor.duration.seconds": "{count} s FR",
+      "editor.duration.minutes": "{count} min FR",
+      "editor.preview.enable": "Activer l'aperçu",
+      "editor.preview.liveMobile": "Caméras en direct sur mobile",
+      "editor.preview.liveMobileHelp": "Garde les caméras de l'aperçu en direct sur mobile.",
+      "editor.preview.showTitleBars": "Afficher les titres",
+    };
+    editor._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => {
+        const phrase = translated[key];
+        return phrase
+          ? phrase.replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g, (token, name) =>
+            Object.hasOwn(values, name) ? String(values[name]) : token)
+          : english.t(key, values);
+      },
+    };
+    editor.hass = { ...hass, locale: { language: "fr" } };
+
+    return {
+      slideshowPanelPreserved: editor.querySelector('[data-panel="slideshow"]') === slideshowPanel,
+      slideshowPanelOpen: slideshowPanel.classList.contains("active"),
+      slideshowSwitchPreserved: editor.querySelector("#slideshow_rotation_enabled") === slideshowSwitch,
+      slideshowEnabled: slideshowSwitch.checked === true || slideshowSwitch.hasAttribute("checked"),
+      rotationPreserved: editor.querySelector('[name="slideshow_rotation_seconds"][value="20"]') === rotationChoice,
+      rotationChecked: rotationChoice.checked,
+      rotationLabel: rotationChoice.getAttribute("aria-label"),
+      alertHoldPreserved: editor.querySelector('[name="slideshow_alert_hold_seconds"][value="60"]') === alertHoldChoice,
+      alertHoldChecked: alertHoldChoice.checked,
+      alertHoldLabel: alertHoldChoice.getAttribute("aria-label"),
+      slideshowLabel: editor.querySelector('[data-fvc-i18n="editor.slideshow.enable"]').textContent,
+      rotationHeading: editor.querySelector('[data-fvc-i18n="editor.slideshow.cameraRotationInterval"]').textContent,
+      previewSwitchPreserved: editor.querySelector("#preview_page_enabled") === previewSwitch,
+      previewEnabled: previewSwitch.checked === true || previewSwitch.hasAttribute("checked"),
+      previewMobilePreserved: editor.querySelector("#preview_page_live_cameras_mobile") === previewMobileSwitch,
+      previewMobileEnabled: previewMobileSwitch.checked === true || previewMobileSwitch.hasAttribute("checked"),
+      previewTitlePreserved: editor.querySelector("#preview_page_show_title_bars") === previewTitleSwitch,
+      previewTitleEnabled: previewTitleSwitch.checked === true || previewTitleSwitch.hasAttribute("checked"),
+      previewLabel: editor.querySelector('[data-fvc-i18n="editor.preview.enable"]').textContent,
+      previewMobileLabel: editor.querySelector('[data-fvc-i18n="editor.preview.liveMobile"]').textContent,
+      previewMobileHelp: editor.querySelector('[data-fvc-i18n="editor.preview.liveMobileHelp"]').textContent,
+      configChanged,
+    };
+  });
+
+  expect(state).toEqual({
+    slideshowPanelPreserved: true,
+    slideshowPanelOpen: true,
+    slideshowSwitchPreserved: true,
+    slideshowEnabled: true,
+    rotationPreserved: true,
+    rotationChecked: true,
+    rotationLabel: "20 s FR",
+    alertHoldPreserved: true,
+    alertHoldChecked: true,
+    alertHoldLabel: "1 min FR",
+    slideshowLabel: "Activer le diaporama",
+    rotationHeading: "Intervalle de rotation",
+    previewSwitchPreserved: true,
+    previewEnabled: true,
+    previewMobilePreserved: true,
+    previewMobileEnabled: true,
+    previewTitlePreserved: true,
+    previewTitleEnabled: false,
+    previewLabel: "Activer l'aperçu",
+    previewMobileLabel: "Caméras en direct sur mobile",
+    previewMobileHelp: "Garde les caméras de l'aperçu en direct sur mobile.",
+    configChanged: 0,
+  });
+});
+
+test("Grid Mode language changes preserve custom camera order and accessible actions", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card-editor.js");
+    const cameras = Array.from({ length: 6 }, (_, index) => ({
+      entity: `camera.cam_${index + 1}`,
+      name: `Cam ${index + 1}`,
+    }));
+    const included = cameras.slice(0, 5).map(({ entity }) => entity);
+    const excluded = [cameras[5].entity];
+    const editor = document.createElement("frigate-view-card-editor");
+    editor._activeSettingsPanelId = "gridview";
+    document.body.append(editor);
+    editor.setConfig({
+      cameras,
+      grid_mode_enabled: true,
+      grid_live_view_enabled: false,
+      grid_order: { mode: "custom", included, excluded },
+      grid_rotation_seconds: 30,
+      grid_alert_hold_seconds: 60,
+    });
+    const hass = { locale: { language: "en" }, states: {}, themes: {} };
+    editor.hass = hass;
+    const panel = editor.querySelector('[data-panel="gridview"]');
+    const modeButton = editor.querySelector('[data-grid-order-mode="custom"]');
+    const firstRow = editor.querySelector(".grid-order-row");
+    const excludeButton = firstRow.querySelector("[data-grid-order-exclude]");
+    const includeButton = editor.querySelector("[data-grid-order-include]");
+    const rotationChoice = editor.querySelector('[name="grid_rotation_seconds"][value="30"]');
+    const holdChoice = editor.querySelector('[name="grid_alert_hold_seconds"][value="60"]');
+    const liveSwitch = editor.querySelector("#grid_live_view_enabled");
+    let configChanged = 0;
+    editor.addEventListener("config-changed", () => { configChanged += 1; });
+
+    const english = editor._localization;
+    const translated = {
+      "editor.grid.enable": "Activer la grille",
+      "editor.grid.order": "Ordre de la grille",
+      "editor.grid.custom": "Personnalisé",
+      "editor.grid.gridNumber": "Grille {number}",
+      "editor.grid.excludedCameras": "Caméras exclues",
+      "editor.grid.excludeFromGrid": "Exclure de la grille",
+      "editor.grid.excludeCameraFromGrid": "Exclure {camera} de la grille",
+      "editor.grid.exclude": "Exclure",
+      "editor.grid.includeInGrid": "Inclure dans la grille",
+      "editor.grid.includeCameraInGrid": "Inclure {camera} dans la grille",
+      "editor.grid.include": "Inclure",
+      "editor.grid.liveView": "Vidéo en direct dans la grille",
+      "editor.grid.rotationInterval": "Intervalle de rotation de la grille",
+      "editor.grid.alertHoldDuration": "Durée d'alerte de la grille",
+      "editor.duration.seconds": "{count} s FR",
+      "editor.duration.minutes": "{count} min FR",
+    };
+    editor._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => {
+        const phrase = translated[key];
+        return phrase
+          ? phrase.replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g, (token, name) =>
+            Object.hasOwn(values, name) ? String(values[name]) : token)
+          : english.t(key, values);
+      },
+    };
+    editor.hass = { ...hass, locale: { language: "fr" } };
+
+    return {
+      panelPreserved: editor.querySelector('[data-panel="gridview"]') === panel,
+      panelOpen: panel.classList.contains("active"),
+      modePreserved: editor.querySelector('[data-grid-order-mode="custom"]') === modeButton,
+      modeSelected: modeButton.getAttribute("aria-checked"),
+      modeText: modeButton.textContent,
+      firstRowPreserved: editor.querySelector(".grid-order-row") === firstRow,
+      cameraName: firstRow.querySelector(".cam-name").textContent,
+      headings: [...editor.querySelectorAll(".grid-order-sections .grid-order-heading")].map((heading) => heading.textContent),
+      excludedHeading: editor.querySelector(".grid-order-excluded .grid-order-heading").textContent,
+      excludePreserved: firstRow.querySelector("[data-grid-order-exclude]") === excludeButton,
+      excludeTitle: excludeButton.getAttribute("title"),
+      excludeAria: excludeButton.getAttribute("aria-label"),
+      excludeText: excludeButton.querySelector("span").textContent,
+      includePreserved: editor.querySelector("[data-grid-order-include]") === includeButton,
+      includeTitle: includeButton.getAttribute("title"),
+      includeAria: includeButton.getAttribute("aria-label"),
+      includeText: includeButton.querySelector("span").textContent,
+      rotationPreserved: editor.querySelector('[name="grid_rotation_seconds"][value="30"]') === rotationChoice,
+      rotationChecked: rotationChoice.checked,
+      rotationLabel: rotationChoice.getAttribute("aria-label"),
+      holdPreserved: editor.querySelector('[name="grid_alert_hold_seconds"][value="60"]') === holdChoice,
+      holdChecked: holdChoice.checked,
+      holdLabel: holdChoice.getAttribute("aria-label"),
+      livePreserved: editor.querySelector("#grid_live_view_enabled") === liveSwitch,
+      liveEnabled: liveSwitch.checked === true || liveSwitch.hasAttribute("checked"),
+      gridLabel: editor.querySelector('[data-fvc-i18n="editor.grid.enable"]').textContent,
+      configChanged,
+    };
+  });
+
+  expect(state).toEqual({
+    panelPreserved: true,
+    panelOpen: true,
+    modePreserved: true,
+    modeSelected: "true",
+    modeText: "Personnalisé",
+    firstRowPreserved: true,
+    cameraName: "Cam 1",
+    headings: ["Grille 1", "Grille 2"],
+    excludedHeading: "Caméras exclues",
+    excludePreserved: true,
+    excludeTitle: "Exclure de la grille",
+    excludeAria: "Exclure Cam 1 de la grille",
+    excludeText: "Exclure",
+    includePreserved: true,
+    includeTitle: "Inclure dans la grille",
+    includeAria: "Inclure Cam 6 dans la grille",
+    includeText: "Inclure",
+    rotationPreserved: true,
+    rotationChecked: true,
+    rotationLabel: "30 s FR",
+    holdPreserved: true,
+    holdChecked: true,
+    holdLabel: "1 min FR",
+    livePreserved: true,
+    liveEnabled: false,
+    gridLabel: "Activer la grille",
     configChanged: 0,
   });
 });
