@@ -2,6 +2,22 @@
   "runtime": {
     "alerts": "Alerts",
     "stream": "Stream",
+    "linkedLight": {
+      "toggle": {
+        "unavailable": "{name}: Unavailable. Turn on",
+        "unavailableDimmable": "{name}: Unavailable. Turn on. Press and hold to adjust brightness",
+        "on": "{name}: {percent}%. Turn off",
+        "onDimmable": "{name}: {percent}%. Turn off. Press and hold to adjust brightness",
+        "off": "{name}: Off. Turn on",
+        "offDimmable": "{name}: Off. Turn on. Press and hold to adjust brightness"
+      },
+      "powerOff": "Turn off {name}",
+      "powerOn": "Turn on {name} at its previous brightness",
+      "brightnessFor": "Brightness for {name}",
+      "closeBrightness": "Close brightness control",
+      "controlFailed": "Unable to control light",
+      "brightnessFailed": "Unable to adjust light brightness"
+    },
     "pageNav": {
       "navigation": "Page navigation",
       "mobile": "Mobile",

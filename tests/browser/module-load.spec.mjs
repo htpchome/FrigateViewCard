@@ -885,6 +885,101 @@ test("Card View drawers and mode labels localize without remounting live media",
   });
 });
 
+test("linked-light language and state updates preserve the dimmer and its controls", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    const controller = card._linkedLightController;
+    const config = { entity: "light.porch" };
+    const offState = {
+      state: "off",
+      attributes: {
+        friendly_name: "Porch Light",
+        supported_color_modes: ["brightness"],
+      },
+    };
+    card._hass = { states: { "light.porch": offState } };
+    const slot = document.createElement("div");
+    slot.innerHTML = controller._buildMarkup(config, "icon-btn");
+    card.shadowRoot.append(slot);
+    const control = slot.querySelector("[data-linked-light]");
+    const toggle = control.querySelector("[data-linked-light-toggle]");
+    const panel = control.querySelector("[data-linked-light-dimmer-panel]");
+    const slider = control.querySelector("[data-linked-light-brightness]");
+    const power = control.querySelector("[data-linked-light-power]");
+    const close = control.querySelector(".linked-light-dimmer-close");
+    const englishLabel = toggle.title;
+    const translations = {
+      "runtime.linkedLight.toggle.offDimmable": "{name} : éteinte. Allumer. Maintenir pour régler la luminosité",
+      "runtime.linkedLight.toggle.onDimmable": "{name} : {percent} %. Éteindre. Maintenir pour régler la luminosité",
+      "runtime.linkedLight.powerOn": "Allumer {name} à sa luminosité précédente",
+      "runtime.linkedLight.powerOff": "Éteindre {name}",
+      "runtime.linkedLight.brightnessFor": "Luminosité de {name}",
+      "runtime.linkedLight.closeBrightness": "Fermer le réglage de luminosité",
+    };
+    card._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => (translations[key] || key).replace(
+        /\{(\w+)\}/g,
+        (token, name) => values[name] ?? token,
+      ),
+    };
+    card.hass = { locale: { language: "fr" } };
+    const afterLanguage = {
+      toggle: toggle.title,
+      panel: panel.getAttribute("aria-label"),
+      slider: slider.getAttribute("aria-label"),
+      power: power.title,
+      close: close.getAttribute("aria-label"),
+    };
+    controller._patchControl(control, config, {
+      state: "on",
+      attributes: {
+        friendly_name: "Entrée",
+        brightness: 128,
+        supported_color_modes: ["brightness"],
+      },
+    });
+    return {
+      englishLabel,
+      afterLanguage,
+      afterState: {
+        sameControl: slot.querySelector("[data-linked-light]") === control,
+        sameToggle: control.querySelector("[data-linked-light-toggle]") === toggle,
+        sameSlider: control.querySelector("[data-linked-light-brightness]") === slider,
+        toggle: toggle.title,
+        panel: panel.getAttribute("aria-label"),
+        slider: slider.getAttribute("aria-label"),
+        power: power.title,
+        sliderValue: slider.value,
+      },
+    };
+  });
+
+  expect(state).toEqual({
+    englishLabel: "Porch Light: Off. Turn on. Press and hold to adjust brightness",
+    afterLanguage: {
+      toggle: "Porch Light : éteinte. Allumer. Maintenir pour régler la luminosité",
+      panel: "Luminosité de Porch Light",
+      slider: "Luminosité de Porch Light",
+      power: "Allumer Porch Light à sa luminosité précédente",
+      close: "Fermer le réglage de luminosité",
+    },
+    afterState: {
+      sameControl: true,
+      sameToggle: true,
+      sameSlider: true,
+      toggle: "Entrée : 50 %. Éteindre. Maintenir pour régler la luminosité",
+      panel: "Luminosité de Entrée",
+      slider: "Luminosité de Entrée",
+      power: "Éteindre Entrée",
+      sliderValue: "50",
+    },
+  });
+});
+
 test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

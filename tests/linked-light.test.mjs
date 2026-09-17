@@ -14,7 +14,10 @@ import {
   linkedLightSupportsBrightness,
   resolveLinkedLightUiState,
 } from "../src/features/linked-entities/light.model.js";
-import { buildLinkedLightControlMarkup } from "../src/features/linked-entities/light.tmpl.js";
+import {
+  buildLinkedLightControlMarkup,
+  resolveLinkedLightLabels,
+} from "../src/features/linked-entities/light.tmpl.js";
 import { LinkedLightController } from "../src/features/linked-entities/light.ctrl.js";
 import { LINKED_LIGHT_STYLES } from "../src/features/linked-entities/light.styles.js";
 import {
@@ -278,6 +281,9 @@ test("linked light markup uses native HA icons and exposes dimming only when sup
   assert.match(markup, /data-linked-light-brightness/);
   assert.match(markup, /data-linked-light-power/);
   assert.match(markup, /data-linked-light-dimmer-dismiss/);
+  assert.match(markup, /data-fvc-i18n-aria-label="runtime\.linkedLight\.toggle\.onDimmable"/);
+  assert.match(markup, /data-fvc-i18n-aria-label="runtime\.linkedLight\.brightnessFor"/);
+  assert.match(markup, /data-fvc-i18n-aria-label="runtime\.linkedLight\.powerOff"/);
   assert.match(
     markup,
     /data-linked-light-title>Porch Light<\/div>/,
@@ -300,6 +306,43 @@ test("linked light markup uses native HA icons and exposes dimming only when sup
     STYLES,
     /\.round-btn:active:not\(:disabled\)\{transform:scale\(\.95\);/,
   );
+});
+
+test("linked light labels select state-specific translations without losing names", () => {
+  const base = {
+    friendlyName: 'Porch "North"',
+    ui: { available: true, on: false, supportsBrightness: true, brightnessPercent: 42 },
+  };
+  const off = resolveLinkedLightLabels(base);
+  const on = resolveLinkedLightLabels({ ...base, ui: { ...base.ui, on: true } });
+  const unavailable = resolveLinkedLightLabels({
+    ...base,
+    ui: { ...base.ui, available: false },
+  });
+
+  assert.equal(off.buttonKey, "runtime.linkedLight.toggle.offDimmable");
+  assert.equal(on.buttonKey, "runtime.linkedLight.toggle.onDimmable");
+  assert.equal(unavailable.buttonKey, "runtime.linkedLight.toggle.unavailableDimmable");
+  assert.equal(off.powerKey, "runtime.linkedLight.powerOn");
+  assert.equal(on.powerKey, "runtime.linkedLight.powerOff");
+  assert.deepEqual(off.values, { name: 'Porch "North"', percent: 42 });
+
+  const markup = buildLinkedLightControlMarkup({
+    config: { entity: "light.porch" },
+    stateObject: {
+      state: "off",
+      attributes: {
+        friendly_name: 'Porch "North"',
+        brightness: 107,
+        supported_color_modes: ["brightness"],
+      },
+    },
+  });
+  const encodedValues = /data-fvc-i18n-values="([^"]+)"/.exec(markup)?.[1];
+  assert.deepEqual(JSON.parse(encodedValues.replaceAll("&quot;", '"')), {
+    name: 'Porch "North"',
+    percent: 0,
+  });
 });
 
 test("touch linked-light toggles release retained button focus", async () => {
@@ -350,6 +393,49 @@ test("touch linked-light toggles release retained button focus", async () => {
   assert.equal(classes.has("is-pending"), false);
   assert.deepEqual(calls, [
     ["light", "turn_on", { entity_id: "light.porch" }],
+  ]);
+});
+
+test("linked light service errors use localized toast messages", async () => {
+  const toasts = [];
+  const control = { dataset: { linkedLight: "light.porch" } };
+  const host = {
+    shadowRoot: { addEventListener: () => {}, querySelectorAll: () => [] },
+    _hass: {
+      states: { "light.porch": { state: "off", attributes: {} } },
+      callService: async () => { throw new Error("service failed"); },
+    },
+    _localization: {
+      t: (key) => ({
+        "runtime.linkedLight.controlFailed": "Impossible de contrôler la lumière",
+        "runtime.linkedLight.brightnessFailed": "Impossible de régler la luminosité",
+      })[key],
+    },
+    _toast: (message) => toasts.push(message),
+  };
+  const controller = new LinkedLightController(host);
+  const button = {
+    disabled: false,
+    closest: () => control,
+    classList: { add: () => {}, remove: () => {} },
+  };
+  controller.handleClick(
+    { preventDefault: () => {}, stopPropagation: () => {} },
+    { closest: (selector) => selector === "[data-linked-light-toggle]" ? button : null },
+  );
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  await controller.handleChange({
+    target: {
+      closest: () => ({
+        value: "50",
+        closest: () => control,
+      }),
+    },
+  });
+  assert.deepEqual(toasts, [
+    "Impossible de contrôler la lumière",
+    "Impossible de régler la luminosité",
   ]);
 });
 

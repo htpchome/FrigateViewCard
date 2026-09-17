@@ -8,15 +8,28 @@ import {
   linkedLightStateSignature,
   resolveLinkedLightUiState,
 } from "./light.model.js";
-import { buildLinkedLightControlMarkup } from "./light.tmpl.js";
+import {
+  buildLinkedLightControlMarkup,
+  resolveLinkedLightLabels,
+} from "./light.tmpl.js";
 import {
   setHomeAssistantLightBrightness,
   toggleHomeAssistantLight,
 } from "../../integrations/home-assistant/light-control.js";
 import { flattenCameraMembers } from "../camera-groups/model.js";
+import { applyLocalizedText } from "../localization/localized-dom.js";
 
 const LONG_PRESS_MS = 500;
 const LONG_PRESS_MOVE_PX = 12;
+
+const setLabel = (element, key, values, fallback, { title = false } = {}) => {
+  if (!element) return;
+  element.setAttribute("data-fvc-i18n-aria-label", key);
+  if (title) element.setAttribute("data-fvc-i18n-title", key);
+  element.setAttribute("data-fvc-i18n-values", JSON.stringify(values));
+  element.setAttribute("aria-label", fallback);
+  if (title) element.setAttribute("title", fallback);
+};
 
 const releaseTouchFocus = (button, event) => {
   const touchGenerated =
@@ -162,6 +175,7 @@ export class LinkedLightController {
             renderSlot.innerHTML = configs
               .map((config) => this._buildMarkup(config, variant))
               .join("");
+            applyLocalizedText(renderSlot, this.host?._localization?.t);
           } else {
             existingControls.forEach((control, index) => {
               this._patchControl(
@@ -185,18 +199,12 @@ export class LinkedLightController {
     const title = control.querySelector("[data-linked-light-title]");
     const output = control.querySelector("[data-linked-light-output]");
     const power = control.querySelector("[data-linked-light-power]");
+    const panel = control.querySelector("[data-linked-light-dimmer-panel]");
     const icon =
       String(config?.icon || stateObject?.attributes?.icon || "").trim() ||
       "mdi:lightbulb";
     const friendlyName = linkedLightFriendlyName(config?.entity, stateObject);
-    const stateLabel = !ui.available
-      ? "Unavailable"
-      : ui.on
-        ? `${ui.brightnessPercent}%`
-        : "Off";
-    const buttonLabel = `${friendlyName}: ${stateLabel}. ${
-      ui.on ? "Turn off" : "Turn on"
-    }${ui.supportsBrightness ? ". Press and hold to adjust brightness" : ""}`;
+    const labels = resolveLinkedLightLabels({ ui, friendlyName });
     control.style.setProperty("--linked-light-level", ui.brightnessPercent);
     control.dataset.linkedLightPosition = this.position(config);
     if (button) {
@@ -205,10 +213,23 @@ export class LinkedLightController {
       button.classList.toggle("is-off", !ui.on);
       button.classList.toggle("is-dimmed", ui.dimmed);
       button.setAttribute("aria-pressed", ui.on ? "true" : "false");
-      button.setAttribute("aria-label", buttonLabel);
-      button.setAttribute("title", buttonLabel);
+      setLabel(button, labels.buttonKey, labels.values, labels.buttonLabel, {
+        title: true,
+      });
       button.querySelector("ha-icon")?.setAttribute("icon", icon);
     }
+    setLabel(
+      panel,
+      "runtime.linkedLight.brightnessFor",
+      labels.values,
+      labels.brightnessLabel,
+    );
+    setLabel(
+      input,
+      "runtime.linkedLight.brightnessFor",
+      labels.values,
+      labels.brightnessLabel,
+    );
     if (input && this.host?.shadowRoot?.activeElement !== input) {
       input.value = String(ui.brightnessPercent || 1);
     }
@@ -218,16 +239,15 @@ export class LinkedLightController {
       output.textContent = `${ui.brightnessPercent}%`;
     }
     if (power) {
-      const powerLabel = ui.on
-        ? `Turn off ${friendlyName}`
-        : `Turn on ${friendlyName} at its previous brightness`;
       power.disabled = !ui.available;
       power.classList.toggle("is-on", ui.on);
       power.classList.toggle("is-off", !ui.on);
       power.setAttribute("aria-pressed", ui.on ? "true" : "false");
-      power.setAttribute("aria-label", powerLabel);
-      power.setAttribute("title", powerLabel);
+      setLabel(power, labels.powerKey, labels.values, labels.powerLabel, {
+        title: true,
+      });
     }
+    applyLocalizedText(control, this.host?._localization?.t);
   }
 
   handlePointerDown(event) {
@@ -286,7 +306,10 @@ export class LinkedLightController {
       const entity = power.closest("[data-linked-light]")?.dataset?.linkedLight;
       power.classList.add("is-pending");
       void toggleHomeAssistantLight({ hass: this.host?._hass, entity })
-        .catch(() => this.host?._toast?.("Unable to control light"))
+        .catch(() => this.host?._toast?.(
+          this.host?._localization?.t?.("runtime.linkedLight.controlFailed") ||
+            "Unable to control light",
+        ))
         .finally(() => power.classList.remove("is-pending"));
       return true;
     }
@@ -303,7 +326,10 @@ export class LinkedLightController {
       const entity = button.closest("[data-linked-light]")?.dataset?.linkedLight;
       button.classList.add("is-pending");
       void toggleHomeAssistantLight({ hass: this.host?._hass, entity })
-        .catch(() => this.host?._toast?.("Unable to control light"))
+        .catch(() => this.host?._toast?.(
+          this.host?._localization?.t?.("runtime.linkedLight.controlFailed") ||
+            "Unable to control light",
+        ))
         .finally(() => button.classList.remove("is-pending"));
       return true;
     }
@@ -336,7 +362,10 @@ export class LinkedLightController {
         brightnessPercent: input.value,
       });
     } catch (_) {
-      this.host?._toast?.("Unable to adjust light brightness");
+      this.host?._toast?.(
+        this.host?._localization?.t?.("runtime.linkedLight.brightnessFailed") ||
+          "Unable to adjust light brightness",
+      );
     }
   }
 
