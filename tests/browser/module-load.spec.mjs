@@ -315,6 +315,148 @@ test("Single, Wide, and Card View settings localize in place with their choices 
   });
 });
 
+test("Mobile, Swipe, and Landing settings localize in place without resetting selectors or ownership notices", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card-editor.js");
+    const editor = document.createElement("frigate-view-card-editor");
+    document.body.append(editor);
+    editor._dashboardNavbarOwnershipState = () => ({
+      requested: true,
+      isOwner: false,
+      locked: true,
+      conflict: true,
+      owner: {},
+      ownerPage: "<Porch>",
+      dashboardName: "House",
+    });
+    editor._dashboardSwipeOwnershipState = () => ({
+      requested: true,
+      isOwner: false,
+      locked: true,
+      conflict: true,
+      owner: {},
+      ownerPage: "<Porch>",
+      dashboardName: "House",
+    });
+    editor.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      preview_page_enabled: true,
+      mobile_view_page_enabled: true,
+      wide_view_page_enabled: true,
+      card_view_page_enabled: true,
+      mobile_view_header_overlay: true,
+      landing_page: "preview",
+      mobile_page: "preview-mobile-view",
+      ha_dashboard_swipe_navigation_owner: true,
+      ha_dashboard_swipe_navigation: "dashboard-wide",
+    });
+    editor.hass = { locale: { language: "en" }, states: {}, themes: {} };
+    const overlay = editor.querySelector("#mobile_view_header_overlay");
+    const desktopSelector = editor.querySelector("#landing_page");
+    const phoneSelector = editor.querySelector("#mobile_page");
+    const standaloneSelector = editor.querySelector("#standalone-landing-page");
+    const swipeChoice = editor.querySelector('[name="ha_dashboard_swipe_navigation"][value="dashboard-wide"]');
+    const swipePage = editor.querySelector('[name="ha_dashboard_swipe_pages"][value="preview"]');
+    let configChanged = 0;
+    editor.addEventListener("config-changed", () => { configChanged += 1; });
+
+    const english = editor._localization;
+    const translations = {
+      "editor.mobileView.enable": "Activer Vue mobile",
+      "editor.mobileView.headerOverlay": "En-tête superposé",
+      "editor.mobileView.navbarOwnerConflict": "Conflit de barre : {dashboard}, puis {page}, pour {cardName}.",
+      "editor.swipe.control": "Contrôler le balayage",
+      "editor.swipe.dashboardWide": "Tout le tableau",
+      "editor.swipe.dashboardWideHelp": "Balayez les pages et {cardName}.",
+      "editor.swipe.ownerConflict": "Conflit de balayage : {page} dans {dashboard} pour {cardName}.",
+      "editor.swipe.desktopPages": "Pages ordinateur",
+      "editor.swipe.phonePages": "Pages téléphone",
+      "editor.pageNames.preview": "Aperçu",
+      "editor.pageNames.mobile": "Mobile FR",
+      "editor.pageNames.previewMobile": "Aperçu + Mobile FR",
+      "editor.ownership.page": "Page : {page}",
+      "editor.ownership.dashboard": "Tableau : {dashboard}",
+      "editor.landing.desktopPage": "Page initiale",
+      "editor.landing.phonePage": "Page initiale téléphone",
+    };
+    editor._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => {
+        const phrase = translations[key];
+        return phrase
+          ? phrase.replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g, (token, name) =>
+            Object.hasOwn(values, name) ? String(values[name]) : token)
+          : english.t(key, values);
+      },
+    };
+    editor.hass = { locale: { language: "fr" }, states: {}, themes: {} };
+    const navbarNotice = editor.querySelector(".navbar-owner-warning");
+    const swipeNotice = editor.querySelector(".swipe-owner-warning");
+    const optionLabel = (selector, value) => selector.selector.select.options
+      .find((option) => option.value === value)?.label;
+    return {
+      overlayPreserved: editor.querySelector("#mobile_view_header_overlay") === overlay,
+      overlayChecked: overlay.hasAttribute("checked"),
+      overlayLabel: editor.querySelector('[data-fvc-i18n="editor.mobileView.headerOverlay"]').textContent,
+      mobileEnableLabel: editor.querySelector('[data-fvc-i18n="editor.mobileView.enable"]').textContent,
+      navbarNotice: navbarNotice.textContent,
+      navbarStrong: [...navbarNotice.querySelectorAll("strong")].map((item) => item.textContent),
+      swipeNotice: swipeNotice.textContent,
+      swipeStrong: [...swipeNotice.querySelectorAll("strong")].map((item) => item.textContent),
+      swipeHeading: editor.querySelector('[data-fvc-i18n="editor.swipe.control"]').textContent,
+      swipeChoicePreserved: editor.querySelector('[name="ha_dashboard_swipe_navigation"][value="dashboard-wide"]') === swipeChoice,
+      swipeChoiceChecked: swipeChoice.checked,
+      swipeChoiceLabel: editor.querySelector('[data-fvc-i18n="editor.swipe.dashboardWide"]').textContent,
+      swipeChoiceHelp: editor.querySelector('[data-fvc-i18n="editor.swipe.dashboardWideHelp"]').textContent,
+      swipePagePreserved: editor.querySelector('[name="ha_dashboard_swipe_pages"][value="preview"]') === swipePage,
+      swipePageLabel: swipePage.closest("label").querySelector(".editor-choice-chip-text").textContent,
+      desktopGroupAria: editor.querySelector('[data-fvc-i18n-aria-label="editor.swipe.desktopPages"]').getAttribute("aria-label"),
+      desktopSelectorPreserved: editor.querySelector("#landing_page") === desktopSelector,
+      desktopValue: desktopSelector.value,
+      desktopOption: optionLabel(desktopSelector, "preview"),
+      phoneSelectorPreserved: editor.querySelector("#mobile_page") === phoneSelector,
+      phoneValue: phoneSelector.value,
+      phoneOption: optionLabel(phoneSelector, "preview-mobile-view"),
+      standaloneSelectorPreserved: editor.querySelector("#standalone-landing-page") === standaloneSelector,
+      standaloneOption: optionLabel(standaloneSelector, "preview"),
+      desktopLandingHeading: editor.querySelector('[data-fvc-i18n="editor.landing.desktopPage"]').textContent,
+      phoneLandingHeading: editor.querySelector('[data-fvc-i18n="editor.landing.phonePage"]').textContent,
+      configChanged,
+    };
+  });
+
+  expect(state).toMatchObject({
+    overlayPreserved: true,
+    overlayChecked: true,
+    overlayLabel: "En-tête superposé",
+    mobileEnableLabel: "Activer Vue mobile",
+    navbarNotice: "Conflit de barre : Tableau : House, puis Page : <Porch>, pour FrigateView Card.",
+    navbarStrong: ["Tableau : House", "Page : <Porch>"],
+    swipeNotice: "Conflit de balayage : Page : <Porch> dans Tableau : House pour FrigateView Card.",
+    swipeStrong: ["Page : <Porch>", "Tableau : House"],
+    swipeHeading: "Contrôler le balayage",
+    swipeChoicePreserved: true,
+    swipeChoiceChecked: true,
+    swipeChoiceLabel: "Tout le tableau",
+    swipeChoiceHelp: "Balayez les pages et FrigateView.",
+    swipePagePreserved: true,
+    swipePageLabel: "Aperçu",
+    desktopGroupAria: "Pages ordinateur",
+    desktopSelectorPreserved: true,
+    desktopValue: "preview",
+    desktopOption: "Aperçu",
+    phoneSelectorPreserved: true,
+    phoneValue: "preview-mobile-view",
+    phoneOption: "Aperçu + Mobile FR",
+    standaloneSelectorPreserved: true,
+    standaloneOption: "Aperçu",
+    desktopLandingHeading: "Page initiale",
+    phoneLandingHeading: "Page initiale téléphone",
+    configChanged: 0,
+  });
+});
+
 test("General Settings language changes preserve form state and localize status, choices, and links", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

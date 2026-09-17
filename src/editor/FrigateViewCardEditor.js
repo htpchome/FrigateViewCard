@@ -314,12 +314,12 @@ export class FrigateViewCardEditor extends HTMLElement {
     setLocalizedText(element, key, this._localization.t, values);
   }
 
-  _setLocalizedInlineText(element, key, replacements) {
+  _setLocalizedInlineText(element, key, replacements, values = {}) {
     if (!element) return;
     const markers = Object.fromEntries(
       Object.keys(replacements).map((name) => [name, `\u0000${name}\u0000`]),
     );
-    const parts = this._t(key, markers).split(/(\u0000[A-Za-z][A-Za-z0-9_]*\u0000)/g);
+    const parts = this._t(key, { ...values, ...markers }).split(/(\u0000[A-Za-z][A-Za-z0-9_]*\u0000)/g);
     const document = element.ownerDocument;
     const nodes = parts.filter(Boolean).map((part) => {
       const name = part.startsWith("\u0000") ? part.slice(1, -1) : "";
@@ -357,6 +357,83 @@ export class FrigateViewCardEditor extends HTMLElement {
         },
       },
     );
+  }
+
+  _pageRouteLabel(pageId) {
+    const key = {
+      [PAGE_IDS.mobileView]: "editor.pageNames.mobile",
+      [PAGE_IDS.preview]: "editor.pageNames.preview",
+      [PAGE_IDS.wideView]: "editor.pageNames.wideView",
+      [PAGE_IDS.cardView]: "editor.pageNames.cardView",
+      [PAGE_IDS.singleView]: "editor.pageNames.singleView",
+    }[pageId] || "editor.pageNames.singleView";
+    return this._t(key);
+  }
+
+  _mobilePageModeLabel(mode) {
+    const key = {
+      [MOBILE_PAGE_MODES.mobile]: "editor.pageNames.mobile",
+      [MOBILE_PAGE_MODES.card]: "editor.pageNames.cardView",
+      [MOBILE_PAGE_MODES.previewMobile]: "editor.pageNames.previewMobile",
+      [MOBILE_PAGE_MODES.previewSingle]: "editor.pageNames.previewSingle",
+      [MOBILE_PAGE_MODES.single]: "editor.pageNames.singleView",
+    }[mode] || "editor.pageNames.singleView";
+    return this._t(key);
+  }
+
+  _syncLocalizedPageSelectors() {
+    const desktopOptions = (routes) => routes.map((value) => ({
+      value,
+      label: this._pageRouteLabel(value),
+    }));
+    const selectors = [
+      ["#landing_page", desktopOptions(getEnabledPageRoutes(this._config, DEVICE_ROUTE_BUCKETS.desktop))],
+      ["#standalone-landing-page", desktopOptions(this._standaloneLandingPageRoutes())],
+      ["#mobile_page", getEnabledMobilePageModes(this._config).map((value) => ({
+        value,
+        label: this._mobilePageModeLabel(value),
+      }))],
+    ];
+    for (const [selectorId, options] of selectors) {
+      const element = this.querySelector?.(selectorId);
+      if (!element?.selector?.select) continue;
+      const current = element.selector.select.options || [];
+      if (current.length === options.length && current.every((option, index) =>
+        option.value === options[index].value && option.label === options[index].label)) {
+        continue;
+      }
+      element.selector = {
+        ...element.selector,
+        select: { ...element.selector.select, options },
+      };
+    }
+  }
+
+  _syncOwnershipNotices() {
+    for (const element of this.querySelectorAll?.("[data-fvc-ownership-message]") ?? []) {
+      const ownership = element.classList.contains("swipe-owner-warning")
+        ? this._dashboardSwipeOwnershipState()
+        : this._dashboardNavbarOwnershipState();
+      const page = String(ownership.ownerPage || "");
+      const dashboard = String(ownership.dashboardName || this._t("editor.ownership.thisDashboard"));
+      this._setLocalizedInlineText(
+        element,
+        element.dataset.fvcOwnershipMessage,
+        {
+          page: (document) => {
+            const strong = document.createElement("strong");
+            strong.textContent = this._t("editor.ownership.page", { page });
+            return strong;
+          },
+          dashboard: (document) => {
+            const strong = document.createElement("strong");
+            strong.textContent = this._t("editor.ownership.dashboard", { dashboard });
+            return strong;
+          },
+        },
+        { cardName: CARD_DISPLAY_NAME },
+      );
+    }
   }
 
   connectedCallback() {
@@ -1325,6 +1402,8 @@ export class FrigateViewCardEditor extends HTMLElement {
       applyLocalizedText(this, this._localization.t);
       if (this._rendered) {
         this._syncGeneralRichText();
+        this._syncLocalizedPageSelectors();
+        this._syncOwnershipNotices();
         this._syncCameraConnectionTypeOptions();
         this._syncCameraModalGroupFields();
         this._syncConfigSaveReminder();
@@ -1391,7 +1470,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     const locked = Boolean(ownership.owner) && !currentCardIsResolvedOwner;
     const configuredDashboardName =
       String(dashboardConfig?.title || "").trim() ||
-      String(panel?.route?.prefix || "this dashboard")
+      String(panel?.route?.prefix || this._t("editor.ownership.thisDashboard"))
         .replace(/^\/+/, "")
         .replace(/[-_]+/g, " ");
     const dashboardName = configuredDashboardName.replace(
@@ -1401,7 +1480,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     const ownerPage = ownership.owner?.viewTitle ||
       ownership.owner?.viewName ||
       currentViewName ||
-      "another page";
+      this._t("editor.ownership.anotherPage");
     return {
       requested,
       isOwner,
@@ -1443,7 +1522,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     });
     const configuredDashboardName =
       String(dashboardConfig?.title || "").trim() ||
-      String(panel?.route?.prefix || "this dashboard")
+      String(panel?.route?.prefix || this._t("editor.ownership.thisDashboard"))
         .replace(/^\/+/, "")
         .replace(/[-_]+/g, " ");
     const dashboardName = configuredDashboardName.replace(
@@ -1454,7 +1533,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       ownership.owner?.viewTitle ||
       ownership.owner?.viewName ||
       currentViewName ||
-      "another page";
+      this._t("editor.ownership.anotherPage");
     return {
       ...ownership,
       ownerPage,
@@ -3189,30 +3268,38 @@ export class FrigateViewCardEditor extends HTMLElement {
       {
         value: DASHBOARD_SWIPE_NAVIGATION_MODES.dashboardWide,
         label: "Dashboard Wide",
+        labelKey: "editor.swipe.dashboardWide",
         description:
           `Swipe between dashboard pages and selected ${CARD_NAME} pages.`,
+        descriptionKey: "editor.swipe.dashboardWideHelp",
       },
       {
         value: DASHBOARD_SWIPE_NAVIGATION_MODES.insideCard,
         label: "Inside Card Only",
+        labelKey: "editor.swipe.insideCardOnly",
         description:
           `Swipe between selected ${CARD_NAME} pages. Other cards can be included.`,
+        descriptionKey: "editor.swipe.insideCardOnlyHelp",
       },
       {
         value: DASHBOARD_SWIPE_NAVIGATION_MODES.landingDashboard,
         label: "Landing Page + Dashboard Pages",
+        labelKey: "editor.swipe.landingAndDashboard",
         description:
           `Swipe between dashboard pages with the landing page as the only ${CARD_NAME} stop.`,
+        descriptionKey: "editor.swipe.landingAndDashboardHelp",
       },
       {
         value: DASHBOARD_SWIPE_NAVIGATION_MODES.none,
         label: "None",
+        labelKey: "editor.swipe.none",
         description:
           `Keep ownership but disable ${CARD_NAME} swipe navigation.`,
+        descriptionKey: "editor.swipe.noneHelp",
       },
     ];
     const dashboardSwipeChoices = dashboardSwipeOptions
-      .map(({ value, label, description }) => {
+      .map(({ value, label, labelKey, description, descriptionKey }) => {
         const selected = value === dashboardSwipeMode;
         const isInsideCard =
           value === DASHBOARD_SWIPE_NAVIGATION_MODES.insideCard;
@@ -3224,11 +3311,11 @@ export class FrigateViewCardEditor extends HTMLElement {
             <input class="editor-choice-chip-input" type="radio" name="ha_dashboard_swipe_navigation" value="${escapeHtmlAttribute(value)}" ${selected ? "checked" : ""} ${dashboardSwipeSettingsEnabled ? "" : "disabled"}>
             <span class="editor-choice-chip-body">
               <span class="editor-choice-chip-indicator" aria-hidden="true"></span>
-              <span class="editor-choice-chip-copy"><span class="editor-choice-chip-text">${escapeHtml(label)}</span><span class="editor-choice-chip-description">${escapeHtml(description)}</span></span>
+              <span class="editor-choice-chip-copy"><span class="editor-choice-chip-text" data-fvc-i18n="${labelKey}">${escapeHtml(label)}</span><span class="editor-choice-chip-description" data-fvc-i18n="${descriptionKey}" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ cardName: CARD_NAME }))}">${escapeHtml(description)}</span></span>
             </span>
           </label>
-          ${isInsideCard ? `<label class="editor-swipe-choice-footer"><span>Include ${CARD_NAME} Cards on Other Dashboard Pages</span><ha-switch id="ha_dashboard_swipe_include_other_cards" ${this._config?.ha_dashboard_swipe_include_other_cards ? "checked" : ""} ${dashboardSwipeSettingsEnabled && selected ? "" : "disabled"}></ha-switch></label>` : ""}
-          ${supportsSubviews ? `<label class="editor-swipe-choice-footer"><span>Swipe to Subviews</span><ha-switch data-ha-dashboard-swipe-include-subviews="${escapeHtmlAttribute(value)}" ${this._config?.ha_dashboard_swipe_include_subviews ? "checked" : ""} ${dashboardSwipeSettingsEnabled && selected ? "" : "disabled"}></ha-switch></label>` : ""}
+          ${isInsideCard ? `<label class="editor-swipe-choice-footer"><span data-fvc-i18n="editor.swipe.includeOtherCards" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ cardName: CARD_NAME }))}">Include ${CARD_NAME} Cards on Other Dashboard Pages</span><ha-switch id="ha_dashboard_swipe_include_other_cards" ${this._config?.ha_dashboard_swipe_include_other_cards ? "checked" : ""} ${dashboardSwipeSettingsEnabled && selected ? "" : "disabled"}></ha-switch></label>` : ""}
+          ${supportsSubviews ? `<label class="editor-swipe-choice-footer"><span data-fvc-i18n="editor.swipe.swipeToSubviews">Swipe to Subviews</span><ha-switch data-ha-dashboard-swipe-include-subviews="${escapeHtmlAttribute(value)}" ${this._config?.ha_dashboard_swipe_include_subviews ? "checked" : ""} ${dashboardSwipeSettingsEnabled && selected ? "" : "disabled"}></ha-switch></label>` : ""}
         </div>`;
       })
       .join("");
@@ -3256,11 +3343,11 @@ export class FrigateViewCardEditor extends HTMLElement {
       resolveDashboardSwipeMobilePageSelection(this._config),
     );
     const dashboardSwipePageLabels = {
-      [PAGE_IDS.preview]: "Preview",
-      [PAGE_IDS.singleView]: "Single View",
-      [PAGE_IDS.mobileView]: "Mobile View",
-      [PAGE_IDS.wideView]: "Wide View",
-      [PAGE_IDS.cardView]: "Card View",
+      [PAGE_IDS.preview]: { label: "Preview", key: "editor.pageNames.preview" },
+      [PAGE_IDS.singleView]: { label: "Single View", key: "editor.pageNames.singleView" },
+      [PAGE_IDS.mobileView]: { label: "Mobile View", key: "editor.pageNames.mobileView" },
+      [PAGE_IDS.wideView]: { label: "Wide View", key: "editor.pageNames.wideView" },
+      [PAGE_IDS.cardView]: { label: "Card View", key: "editor.pageNames.cardView" },
     };
     const dashboardSwipePageChoices = DASHBOARD_SWIPE_PAGE_OPTIONS.map(
       (pageId) => {
@@ -3273,7 +3360,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           <input class="editor-choice-chip-input" type="checkbox" name="ha_dashboard_swipe_pages" value="${escapeHtmlAttribute(pageId)}" ${selectedDashboardSwipePages.has(pageId) ? "checked" : ""} ${isLandingPage ? 'data-dashboard-swipe-landing="true"' : ""} ${disabled ? "disabled" : ""}>
           <span class="editor-choice-chip-body">
             <span class="editor-choice-chip-indicator" aria-hidden="true"></span>
-            <span class="editor-choice-chip-text">${escapeHtml(dashboardSwipePageLabels[pageId])}</span>
+            <span class="editor-choice-chip-text" data-fvc-i18n="${dashboardSwipePageLabels[pageId].key}">${escapeHtml(dashboardSwipePageLabels[pageId].label)}</span>
           </span>
         </label>`;
       },
@@ -3289,7 +3376,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           <input class="editor-choice-chip-input" type="checkbox" name="ha_dashboard_swipe_mobile_pages" value="${escapeHtmlAttribute(pageId)}" ${selectedDashboardSwipeMobilePages.has(pageId) ? "checked" : ""} ${isLandingPage ? 'data-dashboard-swipe-landing="true"' : ""} ${disabled ? "disabled" : ""}>
           <span class="editor-choice-chip-body">
             <span class="editor-choice-chip-indicator" aria-hidden="true"></span>
-            <span class="editor-choice-chip-text">${escapeHtml(dashboardSwipePageLabels[pageId])}</span>
+            <span class="editor-choice-chip-text" data-fvc-i18n="${dashboardSwipePageLabels[pageId].key}">${escapeHtml(dashboardSwipePageLabels[pageId].label)}</span>
           </span>
         </label>`;
       }).join("");
@@ -3410,28 +3497,14 @@ export class FrigateViewCardEditor extends HTMLElement {
         </label>`,
       )
       .join("");
-    const pageRouteLabel = (pageId) => {
-      if (pageId === PAGE_IDS.mobileView) return "Mobile";
-      if (pageId === PAGE_IDS.preview) return "Preview";
-      if (pageId === PAGE_IDS.wideView) return "Wide View";
-      if (pageId === PAGE_IDS.cardView) return "Card View";
-      return "Single View";
-    };
     const landingPageOptions = getEnabledPageRoutes(
       this._config,
       DEVICE_ROUTE_BUCKETS.desktop,
-    ).map((pageId) => ({ value: pageId, label: pageRouteLabel(pageId) }));
+    ).map((pageId) => ({ value: pageId, label: this._pageRouteLabel(pageId) }));
     const standaloneLandingPageOptions = this._standaloneLandingPageRoutes()
-      .map((pageId) => ({ value: pageId, label: pageRouteLabel(pageId) }));
-    const mobilePageLabels = {
-      [MOBILE_PAGE_MODES.mobile]: "Mobile",
-      [MOBILE_PAGE_MODES.card]: "Card View",
-      [MOBILE_PAGE_MODES.previewMobile]: "Preview + Mobile",
-      [MOBILE_PAGE_MODES.previewSingle]: "Preview + Single View",
-      [MOBILE_PAGE_MODES.single]: "Single View",
-    };
+      .map((pageId) => ({ value: pageId, label: this._pageRouteLabel(pageId) }));
     const mobilePageOptions = getEnabledMobilePageModes(this._config).map(
-      (mode) => ({ value: mode, label: mobilePageLabels[mode] }),
+      (mode) => ({ value: mode, label: this._mobilePageModeLabel(mode) }),
     );
     const tabToggle = (id, label, translationKey) => `<ha-formfield label="${label}" data-fvc-i18n-label="${translationKey}">
           <ha-switch data-active-tab="${id}" ${hiddenTabs.has(id) ? "" : "checked"}></ha-switch>
@@ -3959,102 +4032,102 @@ export class FrigateViewCardEditor extends HTMLElement {
     const mobileViewPanelContent = `
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Enable Mobile View Page</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.mobileView.enable">Enable Mobile View Page</span>
           <ha-switch id="mobile_view_page_enabled" ${this._config?.mobile_view_page_enabled !== false ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Adds Mobile View to navigation and landing-page options on all devices.</div>
+        <div class="field-helper" data-fvc-i18n="editor.mobileView.enableHelp">Adds Mobile View to navigation and landing-page options on all devices.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Rotate to Fullscreen</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.mobileView.rotateToFullscreen">Rotate to Fullscreen</span>
           <ha-switch id="mobile_view_rotate_to_fullscreen" ${this._config?.mobile_view_rotate_to_fullscreen === true ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">On phones, landscape rotation expands live and popup media to fullscreen. Disabled while editing or previewing the card.</div>
+        <div class="field-helper" data-fvc-i18n="editor.mobileView.rotateToFullscreenHelp">On phones, landscape rotation expands live and popup media to fullscreen. Disabled while editing or previewing the card.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Mobile Battery Saver</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.mobileView.batterySaver">Mobile Battery Saver</span>
           <ha-switch id="mobile_poll_battery_saver" ${this._config?.mobile_poll_battery_saver ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Checks for new alerts and reviews every 60 seconds on mobile to reduce battery and data use.</div>
+        <div class="field-helper" data-fvc-i18n="editor.mobileView.batterySaverHelp">Checks for new alerts and reviews every 60 seconds on mobile to reduce battery and data use.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Move HA Navbar to Bottom</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.mobileView.moveNavbarBottom">Move HA Navbar to Bottom</span>
           <ha-switch id="mobile_view_ha_navbar_bottom" ${this._config?.mobile_view_ha_navbar_bottom ? "checked" : ""} ${dashboardNavbarMoveSwitchDisabled ? "disabled" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Moves the Home Assistant dashboard navbar to the bottom on phones.</div>
-        ${dashboardNavbarOwnershipMessage ? `<div class="field-helper navbar-owner-warning">${dashboardNavbarOwnershipMessage}</div>` : ""}
-        ${dashboardNavbarOwnerMessage ? `<div class="field-helper navbar-owner-info">${dashboardNavbarOwnerMessage}</div>` : ""}
+        <div class="field-helper" data-fvc-i18n="editor.mobileView.moveNavbarBottomHelp">Moves the Home Assistant dashboard navbar to the bottom on phones.</div>
+        ${dashboardNavbarOwnershipMessage ? `<div class="field-helper navbar-owner-warning" data-fvc-ownership-message="${dashboardNavbarOwnership.conflict ? "editor.mobileView.navbarOwnerConflict" : "editor.mobileView.navbarOwnerLocked"}">${dashboardNavbarOwnershipMessage}</div>` : ""}
+        ${dashboardNavbarOwnerMessage ? `<div class="field-helper navbar-owner-info" data-fvc-ownership-message="editor.mobileView.navbarOwnerInfo">${dashboardNavbarOwnerMessage}</div>` : ""}
       </div>
       <div class="section ha-navbar-dependent-section" id="mobile-view-ha-navbar-stack-row" style="${this._config?.mobile_view_ha_navbar_bottom ? "" : "display:none"}">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Stack Home Assistant Icon and Label</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.mobileView.stackNavbarIconLabel">Stack Home Assistant Icon and Label</span>
           <ha-switch id="mobile_view_ha_navbar_stack_tabs" ${this._config?.mobile_view_ha_navbar_stack_tabs ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">For tabs showing an icon and title, centers a smaller title below the icon. Other tab styles are unchanged.</div>
+        <div class="field-helper" data-fvc-i18n="editor.mobileView.stackNavbarIconLabelHelp">For tabs showing an icon and title, centers a smaller title below the icon. Other tab styles are unchanged.</div>
       </div>
       <div class="section ha-navbar-dependent-section" id="mobile-view-ha-navbar-dashboard-row" style="${this._config?.mobile_view_ha_navbar_bottom ? "" : "display:none"}">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Whole Dashboard</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.mobileView.wholeDashboard">Whole Dashboard</span>
           <ha-switch id="mobile_view_ha_navbar_dashboard" ${dashboardNavbarOwnership.requested ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Off: applies while this card is mounted on its Home Assistant page. On: applies across the dashboard, including when a popup containing this card is closed.</div>
+        <div class="field-helper" data-fvc-i18n="editor.mobileView.wholeDashboardHelp">Off: applies while this card is mounted on its Home Assistant page. On: applies across the dashboard, including when a popup containing this card is closed.</div>
       </div>
       <div class="section" id="mobile-view-dashboard-background-row" style="${this._config?.mobile_view_page_enabled !== false ? "" : "display:none"}">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Apply background to entire dashboard page</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.mobileView.dashboardBackground">Apply background to entire dashboard page</span>
           <ha-switch id="mobile_view_dashboard_background" ${this._config?.mobile_view_dashboard_background !== false ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Uses the Mobile View background color for the surrounding Home Assistant page on mobile devices.</div>
+        <div class="field-helper" data-fvc-i18n="editor.mobileView.dashboardBackgroundHelp">Uses the Mobile View background color for the surrounding Home Assistant page on mobile devices.</div>
       </div>
       <div class="section" id="mobile-view-header-overlay-row" style="${this._config?.mobile_view_page_enabled !== false ? "" : "display:none"}">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Display Cam Picker/Header as an overlay</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.mobileView.headerOverlay">Display Cam Picker/Header as an overlay</span>
           <ha-switch id="mobile_view_header_overlay" ${this._config?.mobile_view_header_overlay === true ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Places the camera header over live video. Header controls fade with the video controls; LIVE remains visible.</div>
+        <div class="field-helper" data-fvc-i18n="editor.mobileView.headerOverlayHelp">Places the camera header over live video. Header controls fade with the video controls; LIVE remains visible.</div>
       </div>
       <div class="section" id="mobile-view-outer-border-row" style="${this._config?.mobile_view_page_enabled !== false ? "" : "display:none"}">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Mobile View Outer Border</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.mobileView.outerBorder">Mobile View Outer Border</span>
           <ha-switch id="mobile_view_outer_border" ${this._config?.mobile_view_outer_border ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Adds the theme-colored border around Mobile View on all devices.</div>
+        <div class="field-helper" data-fvc-i18n="editor.mobileView.outerBorderHelp">Adds the theme-colored border around Mobile View on all devices.</div>
       </div>
       `;
     const swipeNavigationPanelContent = `
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Control Swipe Navigation</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.swipe.control">Control Swipe Navigation</span>
           <ha-switch id="ha_dashboard_swipe_navigation_owner" ${dashboardSwipeOwnership.requested ? "checked" : ""} ${dashboardSwipeOwnerSwitchDisabled ? "disabled" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Only one ${CARD_DISPLAY_NAME} can control swipe navigation per dashboard.</div>
-        ${dashboardSwipeOwnershipMessage ? `<div class="field-helper swipe-owner-warning">${dashboardSwipeOwnershipMessage}</div>` : ""}
+        <div class="field-helper" data-fvc-i18n="editor.swipe.controlHelp" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ cardName: CARD_DISPLAY_NAME }))}">Only one ${CARD_DISPLAY_NAME} can control swipe navigation per dashboard.</div>
+        ${dashboardSwipeOwnershipMessage ? `<div class="field-helper swipe-owner-warning" data-fvc-ownership-message="${dashboardSwipeOwnership.conflict ? "editor.swipe.ownerConflict" : "editor.swipe.ownerLocked"}">${dashboardSwipeOwnershipMessage}</div>` : ""}
       </div>
       <div class="section swipe-navigation-dependent-section" id="ha-dashboard-swipe-settings" style="${dashboardSwipeSettingsEnabled ? "" : "display:none"}">
-        <div class="editor-choice-field" id="ha_dashboard_swipe_navigation" role="radiogroup" aria-label="Swipe Navigation">
-          <div class="field-label">Swipe Navigation</div>
+        <div class="editor-choice-field" id="ha_dashboard_swipe_navigation" role="radiogroup" aria-label="Swipe Navigation" data-fvc-i18n-aria-label="editor.swipe.heading">
+          <div class="field-label" data-fvc-i18n="editor.swipe.heading">Swipe Navigation</div>
           <div class="editor-choice-chips editor-choice-chips--detailed editor-swipe-choice-grid">${dashboardSwipeChoices}</div>
         </div>
         <div id="ha-dashboard-swipe-page-selection" class="dashboard-swipe-page-selection" style="${dashboardSwipePageSelectionVisible ? "" : "display:none"}">
-          <div class="editor-choice-field dashboard-swipe-device-group" role="group" aria-label="PC/Tablet Swipe Pages">
-            <div class="field-label">PC/Tablet Swipe Pages</div>
+          <div class="editor-choice-field dashboard-swipe-device-group" role="group" aria-label="PC/Tablet Swipe Pages" data-fvc-i18n-aria-label="editor.swipe.desktopPages">
+            <div class="field-label" data-fvc-i18n="editor.swipe.desktopPages">PC/Tablet Swipe Pages</div>
             <div class="editor-choice-chips editor-choice-chips--checkbox dashboard-swipe-pages-grid">${dashboardSwipePageChoices}</div>
           </div>
-          <div class="field-helper dashboard-swipe-landing-note">Only enabled pages are shown. The PC/tablet landing page is always included.</div>
-          <div class="editor-choice-field dashboard-swipe-device-group" role="group" aria-label="Phone Swipe Pages">
-            <div class="field-label">Phone Swipe Pages</div>
+          <div class="field-helper dashboard-swipe-landing-note" data-fvc-i18n="editor.swipe.desktopPagesHelp">Only enabled pages are shown. The PC/tablet landing page is always included.</div>
+          <div class="editor-choice-field dashboard-swipe-device-group" role="group" aria-label="Phone Swipe Pages" data-fvc-i18n-aria-label="editor.swipe.phonePages">
+            <div class="field-label" data-fvc-i18n="editor.swipe.phonePages">Phone Swipe Pages</div>
             <div class="editor-choice-chips editor-choice-chips--checkbox dashboard-swipe-pages-grid">${dashboardSwipeMobilePageChoices}</div>
           </div>
-          <div class="field-helper dashboard-swipe-landing-note">Wide View is unavailable on phones. The phone landing page is always included.</div>
+          <div class="field-helper dashboard-swipe-landing-note" data-fvc-i18n="editor.swipe.phonePagesHelp">Wide View is unavailable on phones. The phone landing page is always included.</div>
         </div>
-        <div class="field-helper">On touch devices, edge swipes remain available for Home Assistant navigation.</div>
+        <div class="field-helper" data-fvc-i18n="editor.swipe.edgeSwipesHelp">On touch devices, edge swipes remain available for Home Assistant navigation.</div>
         <div class="layout-row swipe-mouse-navigation-row">
-          <span class="field-label" style="margin:0">Mouse Swipe Navigation</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.swipe.mouseNavigation">Mouse Swipe Navigation</span>
           <ha-switch id="ha_dashboard_swipe_mouse_enabled" ${this._config?.ha_dashboard_swipe_mouse_enabled ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Enables the same navigation with a primary-button mouse drag.</div>
+        <div class="field-helper" data-fvc-i18n="editor.swipe.mouseNavigationHelp">Enables the same navigation with a primary-button mouse drag.</div>
       </div>
       `;
     const cardViewPanelContent = `
@@ -4113,16 +4186,16 @@ export class FrigateViewCardEditor extends HTMLElement {
       </div>`;
     const landingPanelContent = `
       <div class="section">
-        <span class="field-label">Landing Page</span>
+        <span class="field-label" data-fvc-i18n="editor.landing.desktopPage">Landing Page</span>
         <ha-selector id="landing_page" style="width:220px"></ha-selector>
-        <div class="field-helper">Selects the starting page for desktops and tablets.</div>
-        ${this._config?.card_view_standalone ? '<div class="field-helper standalone-landing-note">Unavailable while Card View is standalone because all devices start in Card View.</div>' : ""}
+        <div class="field-helper" data-fvc-i18n="editor.landing.desktopPageHelp">Selects the starting page for desktops and tablets.</div>
+        ${this._config?.card_view_standalone ? '<div class="field-helper standalone-landing-note" data-fvc-i18n="editor.landing.standaloneUnavailable">Unavailable while Card View is standalone because all devices start in Card View.</div>' : ""}
       </div>
       <div class="section">
-        <span class="field-label">Phone Landing Page</span>
+        <span class="field-label" data-fvc-i18n="editor.landing.phonePage">Phone Landing Page</span>
         <ha-selector id="mobile_page" style="width:220px" ${this._config?.card_view_standalone ? "disabled" : ""}></ha-selector>
-        <div class="field-helper">Sets the phone landing flow. Preview combinations open Preview first, then the selected camera in the paired view. Required pages must be enabled.</div>
-        ${this._config?.card_view_standalone ? '<div class="field-helper standalone-landing-note">Unavailable while Card View is standalone because all devices start in Card View.</div>' : ""}
+        <div class="field-helper" data-fvc-i18n="editor.landing.phonePageHelp">Sets the phone landing flow. Preview combinations open Preview first, then the selected camera in the paired view. Required pages must be enabled.</div>
+        ${this._config?.card_view_standalone ? '<div class="field-helper standalone-landing-note" data-fvc-i18n="editor.landing.standaloneUnavailable">Unavailable while Card View is standalone because all devices start in Card View.</div>' : ""}
       </div>`;
     const gridviewPanelContent = `
       <div class="section">
@@ -4910,6 +4983,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._localization ??= createLocalizationController();
     applyLocalizedText(this, this._localization.t);
     this._syncGeneralRichText();
+    this._syncOwnershipNotices();
 
     const update = (previewRouteIntent = null) =>
       this._u({
