@@ -483,9 +483,20 @@ export class CameraGroupLiveController {
       pane?.setAttribute?.("aria-hidden", obscured ? "true" : "false");
       const button = pane?.querySelector?.("[data-camera-group-focus]");
       if (!button) continue;
-      const label = member === "B" ? "second camera" : "main camera";
-      const title = focused ? "Show both cameras" : `Focus ${label}`;
+      const key = focused
+        ? "runtime.cameraGroup.showBoth"
+        : member === "B"
+          ? "runtime.cameraGroup.focusSecond"
+          : "runtime.cameraGroup.focusMain";
+      const fallback = focused
+        ? "Show both cameras"
+        : member === "B"
+          ? "Focus second camera"
+          : "Focus main camera";
+      const title = this._host._localization?.t?.(key) || fallback;
       button.setAttribute("aria-pressed", focused ? "true" : "false");
+      button.setAttribute("data-fvc-i18n-aria-label", key);
+      button.setAttribute("data-fvc-i18n-title", key);
       button.setAttribute("aria-label", title);
       button.setAttribute("title", title);
       button.innerHTML = focused
@@ -499,7 +510,11 @@ export class CameraGroupLiveController {
       this._host._activeGroupMemberOverride === this.secondaryEntity();
     const currentMember = showingSecondary ? "B" : "A";
     const targetMember = showingSecondary ? "A" : "B";
-    const title = `Show camera ${targetMember}`;
+    const key = "runtime.cameraGroup.showCamera";
+    const values = { member: targetMember };
+    const title =
+      this._host._localization?.t?.(key, values) ||
+      `Show camera ${targetMember}`;
     const buttons = [
       ...(this._host.shadowRoot?.querySelectorAll?.(
         "[data-camera-group-mobile-toggle]",
@@ -507,6 +522,9 @@ export class CameraGroupLiveController {
     ];
     for (const button of buttons) {
       button.setAttribute("aria-pressed", showingSecondary ? "true" : "false");
+      button.setAttribute("data-fvc-i18n-aria-label", key);
+      button.setAttribute("data-fvc-i18n-title", key);
+      button.setAttribute("data-fvc-i18n-values", JSON.stringify(values));
       button.setAttribute("aria-label", title);
       button.setAttribute("title", title);
       button.setAttribute("data-camera-group-current-member", currentMember);

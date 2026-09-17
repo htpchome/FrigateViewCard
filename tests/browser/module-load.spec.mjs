@@ -3876,6 +3876,87 @@ test("positions camera B controls before its stream becomes ready", async ({
   expect(state).toEqual({ ready: false, display: "flex", positioned: true });
 });
 
+test("grouped camera labels relocalize in place through focus and phone member changes", async ({ page }) => {
+  await page.goto(baseUrl);
+
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({
+      cameras: [{
+        entity: "camera.front",
+        group: { secondary_entity: "camera.back", layout: "side_by_side" },
+      }],
+    });
+    card._pageId = "single-view";
+    card._renderShell();
+
+    const root = card.shadowRoot;
+    const live = root.querySelector("#engine");
+    const video = document.createElement("video");
+    live.append(video);
+    const audio = root.querySelector('[data-camera-group-audio="A"]');
+    const focus = root.querySelector('[data-camera-group-focus="B"]');
+    const mobile = root.querySelector("[data-camera-group-mobile-toggle]");
+    const english = card._localization;
+    const phrases = {
+      "runtime.cameraGroup.useMainAudio": "Utiliser audio A",
+      "runtime.cameraGroup.focusSecond": "Agrandir caméra B",
+      "runtime.cameraGroup.showBoth": "Afficher les deux caméras",
+      "runtime.cameraGroup.showCamera": "Afficher caméra {member}",
+    };
+    card._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => (phrases[key] || english.t(key, values)).replace(
+        /\{(\w+)\}/g,
+        (token, name) => values[name] ?? token,
+      ),
+    };
+    const config = card._config;
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+    card._config = config;
+
+    const translated = {
+      audio: audio.getAttribute("aria-label"),
+      focus: focus.getAttribute("aria-label"),
+      mobile: mobile.getAttribute("aria-label"),
+    };
+    const group = card._cameraGroupLiveController;
+    group._focusedMember = "B";
+    group._syncFocusedMember();
+    const focused = focus.getAttribute("aria-label");
+    group._focusedMember = "";
+    group._syncFocusedMember();
+    card._activeGroupMemberOverride = group.secondaryEntity();
+    group._syncMobileMemberButton();
+    return {
+      translated,
+      focused,
+      restored: focus.getAttribute("aria-label"),
+      switched: mobile.getAttribute("aria-label"),
+      mobileValues: mobile.getAttribute("data-fvc-i18n-values"),
+      livePreserved: root.querySelector("#engine video") === video,
+      controlsPreserved: root.querySelector('[data-camera-group-focus="B"]') === focus,
+    };
+  });
+
+  expect(state).toEqual({
+    translated: {
+      audio: "Utiliser audio A",
+      focus: "Agrandir caméra B",
+      mobile: "Afficher caméra B",
+    },
+    focused: "Afficher les deux caméras",
+    restored: "Agrandir caméra B",
+    switched: "Afficher caméra A",
+    mobileValues: '{"member":"A"}',
+    livePreserved: true,
+    controlsPreserved: true,
+  });
+});
+
 test.describe("touch input", () => {
   test.use({
     hasTouch: true,

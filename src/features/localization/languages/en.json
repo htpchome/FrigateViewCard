@@ -19,6 +19,14 @@
       "filter": "Filter",
       "calendar": "Calendar"
     },
+    "cameraGroup": {
+      "useMainAudio": "Use main camera audio",
+      "useSecondAudio": "Use second camera audio",
+      "focusMain": "Focus main camera",
+      "focusSecond": "Focus second camera",
+      "showBoth": "Show both cameras",
+      "showCamera": "Show camera {member}"
+    },
     "linkedLight": {
       "toggle": {
         "unavailable": "{name}: Unavailable. Turn on",

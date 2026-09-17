@@ -10,17 +10,17 @@ export function buildLiveEngineWrapMarkup({ icons }) {
                     </div>
                     <div class="stream-fallback-status" id="stream-fallback-status" data-fvc-i18n="runtime.live.snapshotUnavailable" hidden>Snapshot unavailable</div>
                     <div class="camera-group-pane-controls">
-                      <button class="camera-group-pane-button camera-group-audio-select" type="button" data-media-overlay-ignore data-camera-group-audio="A" title="Use main camera audio" aria-label="Use main camera audio" aria-pressed="true">${icons.volOn}<span>A</span></button>
-                      <button class="camera-group-pane-button camera-group-focus-toggle" type="button" data-media-overlay-ignore data-camera-group-focus="A" title="Focus main camera" aria-label="Focus main camera" aria-pressed="false">${icons.singleView}</button>
-                      <button class="camera-group-pane-button camera-group-mobile-toggle" type="button" data-media-overlay-ignore data-camera-group-mobile-toggle data-camera-group-current-member="A" data-camera-group-target-member="B" title="Show camera B" aria-label="Show camera B" aria-pressed="false">${icons.singleView}<span aria-hidden="true">A</span></button>
+                      <button class="camera-group-pane-button camera-group-audio-select" type="button" data-media-overlay-ignore data-camera-group-audio="A" title="Use main camera audio" aria-label="Use main camera audio" data-fvc-i18n-title="runtime.cameraGroup.useMainAudio" data-fvc-i18n-aria-label="runtime.cameraGroup.useMainAudio" aria-pressed="true">${icons.volOn}<span>A</span></button>
+                      <button class="camera-group-pane-button camera-group-focus-toggle" type="button" data-media-overlay-ignore data-camera-group-focus="A" title="Focus main camera" aria-label="Focus main camera" data-fvc-i18n-title="runtime.cameraGroup.focusMain" data-fvc-i18n-aria-label="runtime.cameraGroup.focusMain" aria-pressed="false">${icons.singleView}</button>
+                      <button class="camera-group-pane-button camera-group-mobile-toggle" type="button" data-media-overlay-ignore data-camera-group-mobile-toggle data-camera-group-current-member="A" data-camera-group-target-member="B" title="Show camera B" aria-label="Show camera B" data-fvc-i18n-title="runtime.cameraGroup.showCamera" data-fvc-i18n-aria-label="runtime.cameraGroup.showCamera" data-fvc-i18n-values='{"member":"B"}' aria-pressed="false">${icons.singleView}<span aria-hidden="true">A</span></button>
                     </div>
                   </div>
                   <div class="camera-group-live-pane camera-group-live-pane--secondary" data-camera-group-member="B" hidden>
                     <div id="camera-group-secondary-engine"></div>
                     <div class="camera-group-member-loading"><span class="dot"></span><span data-fvc-i18n="runtime.live.loading">Loading…</span></div>
                     <div class="camera-group-pane-controls">
-                      <button class="camera-group-pane-button camera-group-audio-select" type="button" data-media-overlay-ignore data-camera-group-audio="B" title="Use second camera audio" aria-label="Use second camera audio" aria-pressed="false">${icons.volOff}<span>B</span></button>
-                      <button class="camera-group-pane-button camera-group-focus-toggle" type="button" data-media-overlay-ignore data-camera-group-focus="B" title="Focus second camera" aria-label="Focus second camera" aria-pressed="false">${icons.singleView}</button>
+                      <button class="camera-group-pane-button camera-group-audio-select" type="button" data-media-overlay-ignore data-camera-group-audio="B" title="Use second camera audio" aria-label="Use second camera audio" data-fvc-i18n-title="runtime.cameraGroup.useSecondAudio" data-fvc-i18n-aria-label="runtime.cameraGroup.useSecondAudio" aria-pressed="false">${icons.volOff}<span>B</span></button>
+                      <button class="camera-group-pane-button camera-group-focus-toggle" type="button" data-media-overlay-ignore data-camera-group-focus="B" title="Focus second camera" aria-label="Focus second camera" data-fvc-i18n-title="runtime.cameraGroup.focusSecond" data-fvc-i18n-aria-label="runtime.cameraGroup.focusSecond" aria-pressed="false">${icons.singleView}</button>
                     </div>
                   </div>
                 </div>

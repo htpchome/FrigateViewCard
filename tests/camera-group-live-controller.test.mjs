@@ -18,6 +18,15 @@ const createClassList = () => {
   };
 };
 
+const createButton = () => {
+  const attributes = new Map();
+  return {
+    innerHTML: "",
+    setAttribute: (name, value) => attributes.set(name, value),
+    getAttribute: (name) => attributes.get(name) ?? null,
+  };
+};
+
 const createHost = () => {
   const primaryVideo = {
     muted: true,
@@ -137,10 +146,64 @@ test("grouped live shell keeps the phone A/B control on the video pane", () => {
   assert.match(markup, /data-camera-group-audio="A"/);
   assert.match(markup, /data-camera-group-focus="A"/);
   assert.match(markup, /data-camera-group-focus="B"/);
+  assert.match(markup, /data-fvc-i18n-title="runtime\.cameraGroup\.useMainAudio"/);
+  assert.match(markup, /data-fvc-i18n-aria-label="runtime\.cameraGroup\.focusSecond"/);
+  assert.match(markup, /data-fvc-i18n-values='\{"member":"B"\}'/);
   assert.match(
     markup,
     /camera-group-live-pane--primary[\s\S]*?data-camera-group-mobile-toggle[^>]*data-camera-group-current-member="A"[^>]*data-camera-group-target-member="B"/,
   );
+});
+
+test("grouped focus labels stay localized as focus changes without remounting", () => {
+  const { host, mounts, primaryPane, secondaryPane } = createHost();
+  const primaryButton = createButton();
+  const secondaryButton = createButton();
+  primaryPane.querySelector = (selector) => selector === "[data-camera-group-focus]"
+    ? primaryButton
+    : null;
+  secondaryPane.querySelector = (selector) => selector === "[data-camera-group-focus]"
+    ? secondaryButton
+    : null;
+  host._localization = {
+    t: (key) => ({
+      "runtime.cameraGroup.focusMain": "A en plein écran",
+      "runtime.cameraGroup.focusSecond": "B en plein écran",
+      "runtime.cameraGroup.showBoth": "Afficher les deux caméras",
+    })[key],
+  };
+  const controller = new CameraGroupLiveController(host);
+
+  controller.sync();
+  assert.equal(primaryButton.getAttribute("aria-label"), "A en plein écran");
+  assert.equal(secondaryButton.getAttribute("aria-label"), "B en plein écran");
+  controller.toggleFocusedMember("B");
+  assert.equal(secondaryButton.getAttribute("aria-label"), "Afficher les deux caméras");
+  assert.equal(secondaryButton.getAttribute("data-fvc-i18n-title"), "runtime.cameraGroup.showBoth");
+  controller.toggleFocusedMember("B");
+  assert.equal(secondaryButton.getAttribute("aria-label"), "B en plein écran");
+  assert.equal(mounts.length, 1);
+});
+
+test("phone A/B toggle localizes its next-camera label and values", () => {
+  const { host } = createHost();
+  const button = createButton();
+  host._isLikelyPhoneClient = () => true;
+  host.shadowRoot = { querySelectorAll: () => [button] };
+  host._localization = {
+    t: (key, { member }) => key === "runtime.cameraGroup.showCamera"
+      ? `Afficher caméra ${member}`
+      : undefined,
+  };
+  const controller = new CameraGroupLiveController(host);
+
+  controller.sync();
+  assert.equal(button.getAttribute("aria-label"), "Afficher caméra B");
+  assert.equal(button.getAttribute("data-fvc-i18n-values"), '{"member":"B"}');
+  host._activeGroupMemberOverride = "camera.package";
+  controller.sync();
+  assert.equal(button.getAttribute("aria-label"), "Afficher caméra A");
+  assert.equal(button.getAttribute("data-fvc-i18n-values"), '{"member":"A"}');
 });
 
 test("grouped camera B controls are positioned before its live stream is ready", () => {
