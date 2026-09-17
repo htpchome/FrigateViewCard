@@ -15,20 +15,20 @@ export const applyLocalizedText = (root, t) => {
     return;
   }
   for (const element of root.querySelectorAll(LOCALIZED_SELECTOR)) {
+    let values = {};
+    const serializedValues = element.getAttribute("data-fvc-i18n-values");
+    if (serializedValues) {
+      try {
+        const parsed = JSON.parse(serializedValues);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          values = parsed;
+        }
+      } catch {
+        values = {};
+      }
+    }
     const textKey = element.getAttribute("data-fvc-i18n");
     if (textKey) {
-      let values = {};
-      const serializedValues = element.getAttribute("data-fvc-i18n-values");
-      if (serializedValues) {
-        try {
-          const parsed = JSON.parse(serializedValues);
-          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-            values = parsed;
-          }
-        } catch {
-          values = {};
-        }
-      }
       const value = t(textKey, values);
       if (element.textContent !== value) element.textContent = value;
     }
@@ -37,7 +37,7 @@ export const applyLocalizedText = (root, t) => {
     )) {
       const key = element.getAttribute(keyAttribute);
       if (!key) continue;
-      const value = t(key);
+      const value = t(key, values);
       if (element.getAttribute(targetAttribute) !== value) {
         element.setAttribute(targetAttribute, value);
       }
@@ -50,14 +50,22 @@ export const setLocalizedText = (element, key, t, values = {}) => {
   if (!key) {
     element.removeAttribute?.("data-fvc-i18n");
     element.removeAttribute?.("data-fvc-i18n-values");
-    element.textContent = "";
+    if (element.textContent) element.textContent = "";
     return;
   }
-  element.setAttribute?.("data-fvc-i18n", key);
-  if (Object.keys(values).length) {
-    element.setAttribute?.("data-fvc-i18n-values", JSON.stringify(values));
-  } else {
-    element.removeAttribute?.("data-fvc-i18n-values");
+  if (element.getAttribute?.("data-fvc-i18n") !== key) {
+    element.setAttribute?.("data-fvc-i18n", key);
   }
-  element.textContent = t(key, values);
+  if (Object.keys(values).length) {
+    const serializedValues = JSON.stringify(values);
+    if (element.getAttribute?.("data-fvc-i18n-values") !== serializedValues) {
+      element.setAttribute?.("data-fvc-i18n-values", serializedValues);
+    }
+  } else {
+    if (element.getAttribute?.("data-fvc-i18n-values") !== null) {
+      element.removeAttribute?.("data-fvc-i18n-values");
+    }
+  }
+  const value = t(key, values);
+  if (element.textContent !== value) element.textContent = value;
 };

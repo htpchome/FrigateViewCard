@@ -184,6 +184,21 @@ const formatDurationChoice = (value) => {
 const durationEditorChoices = (values) =>
   values.map((value) => ({ value, label: formatDurationChoice(value) }));
 
+const localizedDurationEditorChoices = (values) =>
+  values.map((value) => {
+    const seconds = Number(value);
+    const minutes = seconds / 60;
+    const useMinutes = Number.isFinite(seconds) && seconds >= 60 && seconds % 60 === 0;
+    return {
+      value,
+      label: formatDurationChoice(value),
+      translationKey: useMinutes
+        ? "editor.general.durationMinutes"
+        : "editor.general.durationSeconds",
+      translationValues: { count: useMinutes ? minutes : seconds },
+    };
+  });
+
 export const buildEditorChoiceChipsMarkup = ({
   name,
   options,
@@ -225,14 +240,23 @@ const buildEditorBubbleSelectorMarkup = ({
   const safeName = escapeEditorChoiceMarkup(name);
   return `<div class="theme-scope-seg card-view-start-seg editor-bubble-selector" style="--editor-bubble-option-count:${Math.max(1, options.length)}">
     ${options
-      .map(({ value, label, disabled = false, disabledReason = "" }) => {
+      .map(({ value, label, disabled = false, disabledReason = "", translationKey = "", translationValues = {} }) => {
         const safeValue = escapeEditorChoiceMarkup(value);
         const safeLabel = escapeEditorChoiceMarkup(label);
         const safeDisabledReason = escapeHtmlAttribute(disabledReason);
         const optionDisabled = disabled === true;
+        const localizedValues = translationKey
+          ? ` data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify(translationValues))}"`
+          : "";
+        const localizedInput = translationKey
+          ? ` data-fvc-i18n-aria-label="${escapeHtmlAttribute(translationKey)}"${localizedValues}`
+          : "";
+        const localizedLabel = translationKey
+          ? ` data-fvc-i18n="${escapeHtmlAttribute(translationKey)}"${localizedValues}`
+          : "";
         return `<label class="theme-scope-opt card-view-start-opt" data-disabled-guidance="${safeDisabledReason}"${optionDisabled && safeDisabledReason ? ` title="${safeDisabledReason}"` : ""}>
-          <input class="card-view-start-input" type="radio" name="${safeName}" value="${safeValue}" ${String(value) === selected ? "checked" : ""} ${optionDisabled ? "disabled" : ""} aria-label="${safeLabel}${optionDisabled && safeDisabledReason ? `. ${safeDisabledReason}` : ""}">
-          <span>${safeLabel}</span>
+          <input class="card-view-start-input" type="radio" name="${safeName}" value="${safeValue}" ${String(value) === selected ? "checked" : ""} ${optionDisabled ? "disabled" : ""} aria-label="${safeLabel}${optionDisabled && safeDisabledReason ? `. ${safeDisabledReason}` : ""}"${localizedInput}>
+          <span${localizedLabel}>${safeLabel}</span>
         </label>`;
       })
       .join("")}
@@ -260,6 +284,51 @@ export class FrigateViewCardEditor extends HTMLElement {
   _setLocalizedMessage(element, key, values = {}) {
     this._localization ??= createLocalizationController();
     setLocalizedText(element, key, this._localization.t, values);
+  }
+
+  _setLocalizedInlineText(element, key, replacements) {
+    if (!element) return;
+    const markers = Object.fromEntries(
+      Object.keys(replacements).map((name) => [name, `\u0000${name}\u0000`]),
+    );
+    const parts = this._t(key, markers).split(/(\u0000[A-Za-z][A-Za-z0-9_]*\u0000)/g);
+    const document = element.ownerDocument;
+    const nodes = parts.filter(Boolean).map((part) => {
+      const name = part.startsWith("\u0000") ? part.slice(1, -1) : "";
+      return replacements[name]?.(document) ?? document.createTextNode(part);
+    });
+    element.replaceChildren(...nodes);
+  }
+
+  _syncGeneralRichText() {
+    for (const helper of this.querySelectorAll?.(".text-display-token-helper") ?? []) {
+      this._setLocalizedInlineText(helper, "editor.general.cameraTokenHelp", {
+        camera: (document) => {
+          const code = document.createElement("code");
+          code.textContent = "{camera}";
+          return code;
+        },
+        grid: (document) => {
+          const strong = document.createElement("strong");
+          strong.textContent = this._t("editor.general.grid");
+          return strong;
+        },
+      });
+    }
+    this._setLocalizedInlineText(
+      this.querySelector?.("[data-general-timezone-helper]"),
+      "editor.general.timezoneHelp",
+      {
+        profile: (document) => {
+          const link = document.createElement("a");
+          link.href = "/profile/general";
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = this._t("editor.general.homeAssistantProfile");
+          return link;
+        },
+      },
+    );
   }
 
   connectedCallback() {
@@ -1111,9 +1180,23 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (badge.dataset.updateStatus !== updateStatus.status) {
       badge.dataset.updateStatus = updateStatus.status;
     }
-    if (statusText.textContent !== updateStatus.label) {
-      statusText.textContent = updateStatus.label;
-    }
+    const latestVersion = String(
+      states?.[updateStatus.entityId]?.attributes?.latest_version ?? "",
+    ).trim();
+    const version = latestVersion && !latestVersion.toLowerCase().startsWith("v")
+      ? `v${latestVersion}`
+      : latestVersion;
+    const statusKey = {
+      unavailable: "editor.general.updateUnavailable",
+      current: "editor.general.upToDate",
+      available: version
+        ? "editor.general.updateAvailableVersion"
+        : "editor.general.updateAvailable",
+      updating: version
+        ? "editor.general.updatingVersion"
+        : "editor.general.updating",
+    }[updateStatus.status] ?? "editor.general.updateUnavailable";
+    this._setLocalizedMessage(statusText, statusKey, version ? { version } : {});
     const showUpdateLink =
       updateStatus.status === "available" && Boolean(updateStatus.entityId);
     updateLink.hidden = !showUpdateLink;
@@ -1122,13 +1205,11 @@ export class FrigateViewCardEditor extends HTMLElement {
     }
   }
 
-  _syncEnvironmentSupportNotice(selector, state) {
+  _syncEnvironmentSupportNotice(selector, state, key, values = {}) {
     const notice = this.querySelector?.(selector);
     if (!notice) return;
     const text = notice.querySelector?.("[data-environment-support-text]");
-    if (text && text.textContent !== state.label) {
-      text.textContent = state.label;
-    }
+    this._setLocalizedMessage(text, state.visible ? key : null, values);
     if (notice.dataset.supportStatus !== state.status) {
       notice.dataset.supportStatus = state.status;
     }
@@ -1146,10 +1227,20 @@ export class FrigateViewCardEditor extends HTMLElement {
     this._syncEnvironmentSupportNotice(
       "[data-home-assistant-version-notice]",
       homeAssistantStatus,
+      homeAssistantStatus.status === "warning"
+        ? "editor.general.homeAssistantBelowRecommended"
+        : "editor.general.homeAssistantVersion",
+      {
+        version: String(this._hass?.config?.version ?? "").trim(),
+        recommended: RECOMMENDED_HOME_ASSISTANT_VERSION,
+      },
     );
     this._syncEnvironmentSupportNotice(
       "[data-frigate-integration-status]",
       frigateIntegrationStatus,
+      frigateIntegrationStatus.status === "current"
+        ? "editor.general.frigateInstalled"
+        : "editor.general.frigateNotInstalled",
     );
   }
 
@@ -1205,6 +1296,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (languageChanged) {
       applyLocalizedText(this, this._localization.t);
       if (this._rendered) {
+        this._syncGeneralRichText();
         this._syncCameraConnectionTypeOptions();
         this._syncCameraModalGroupFields();
         this._syncConfigSaveReminder();
@@ -2936,6 +3028,13 @@ export class FrigateViewCardEditor extends HTMLElement {
 
   _setEditorFieldError(selector, message) {
     setFieldErrorState(this, selector, message);
+    if (selector !== "#event_days" && selector !== "#alerts_reviews_days") return;
+    const helper = this.querySelector?.(`${selector}-helper`);
+    if (message) {
+      helper?.setAttribute?.("data-fvc-i18n", "editor.general.daysRangeValidation");
+    } else {
+      helper?.removeAttribute?.("data-fvc-i18n");
+    }
   }
 
   _validateEditorFields() {
@@ -2949,7 +3048,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     const eventDaysMessage =
       Number.isInteger(eventDays) && eventDays >= 1 && eventDays <= 15
         ? ""
-        : "Select a value from 1 to 15.";
+        : this._t("editor.general.daysRangeValidation");
     this._setEditorFieldError("#event_days", eventDaysMessage);
     if (eventDaysMessage) valid = false;
 
@@ -2963,7 +3062,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       alertsReviewsDays >= 1 &&
       alertsReviewsDays <= 15
         ? ""
-        : "Select a value from 1 to 15.";
+        : this._t("editor.general.daysRangeValidation");
     this._setEditorFieldError("#alerts_reviews_days", alertsReviewsDaysMessage);
     if (alertsReviewsDaysMessage) valid = false;
 
@@ -3423,7 +3522,7 @@ export class FrigateViewCardEditor extends HTMLElement {
           <span class="environment-item-icon card-version-icon" aria-hidden="true">${ICONS.packageCheck}</span>
           <div class="card-version-copy">
             <strong>${CARD_DISPLAY_NAME}</strong>
-            <span>Version v${escapeHtml(VERSION)} <span aria-hidden="true">•</span> <span id="card-version-update-status" role="status" aria-live="polite">Update status unavailable</span></span>
+            <span><span data-fvc-i18n="editor.general.version" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ version: `v${VERSION}` }))}">Version v${escapeHtml(VERSION)}</span> <span aria-hidden="true">•</span> <span id="card-version-update-status" role="status" aria-live="polite">Update status unavailable</span></span>
             <div class="environment-support-items">
               <div class="environment-support-item" data-home-assistant-version-notice data-support-status="unavailable" role="status" aria-live="polite" hidden>
                 <span class="environment-item-icon" aria-hidden="true">${ICONS.homeAssistant}</span>
@@ -3435,7 +3534,7 @@ export class FrigateViewCardEditor extends HTMLElement {
               </div>
             </div>
           </div>
-          <button class="card-version-update-link" id="card-version-update-link" type="button" hidden>Open update</button>
+          <button class="card-version-update-link" id="card-version-update-link" type="button" data-fvc-i18n="editor.general.openUpdate" hidden>Open update</button>
         </div>
       </div>
       <div class="text-display-field">
@@ -3474,74 +3573,74 @@ export class FrigateViewCardEditor extends HTMLElement {
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
           <div style="display:flex;flex-direction:column;gap:6px;max-width:460px">
             <div class="layout-row" style="justify-content:flex-start;gap:8px">
-              <span class="field-label" style="margin:0">Enable Pre-Roll/Post-Roll</span>
+              <span class="field-label" style="margin:0" data-fvc-i18n="editor.general.enablePrePostRoll">Enable Pre-Roll/Post-Roll</span>
               <ha-switch id="event_pre_post_roll_enabled" ${this._config?.event_pre_post_roll_enabled ? "checked" : ""}></ha-switch>
             </div>
-            <div class="field-helper">Adds ${EVENT_PRE_POST_ROLL_SECONDS} seconds before and after alert and clip playback or downloads. Requires Frigate recordings.</div>
+            <div class="field-helper" data-fvc-i18n="editor.general.prePostRollHelp" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ seconds: EVENT_PRE_POST_ROLL_SECONDS }))}">Adds ${EVENT_PRE_POST_ROLL_SECONDS} seconds before and after alert and clip playback or downloads. Requires Frigate recordings.</div>
           </div>
         </div>
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
           <div style="display:flex;flex-direction:column;gap:6px;max-width:460px">
             <div class="layout-row" style="justify-content:flex-start;gap:8px">
-              <span class="field-label" style="margin:0">Favorites from All Cameras</span>
+              <span class="field-label" style="margin:0" data-fvc-i18n="editor.general.favoritesAllCameras">Favorites from All Cameras</span>
               <ha-switch id="favorites_mixed_cameras" ${this._config?.favorites_mixed_cameras !== false ? "checked" : ""}></ha-switch>
             </div>
-            <div class="field-helper">Shows favorites from all configured cameras. Turn off to show only the active camera.</div>
+            <div class="field-helper" data-fvc-i18n="editor.general.favoritesAllCamerasHelp">Shows favorites from all configured cameras. Turn off to show only the active camera.</div>
           </div>
         </div>
       </div>
       <div class="section">
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start">
-          <div class="editor-choice-field editor-choice-field--fit" id="realtime_poll_seconds" role="radiogroup" aria-label="Fallback Update Check">
-            <div class="field-label">Fallback Update Check</div>
+          <div class="editor-choice-field editor-choice-field--fit" id="realtime_poll_seconds" role="radiogroup" aria-label="Fallback Update Check" data-fvc-i18n-aria-label="editor.general.fallbackUpdateCheck">
+            <div class="field-label" data-fvc-i18n="editor.general.fallbackUpdateCheck">Fallback Update Check</div>
             ${buildEditorBubbleSelectorMarkup({
               name: "realtime_poll_seconds",
-              options: durationEditorChoices(REALTIME_POLL_OPTIONS_SECONDS),
+              options: localizedDurationEditorChoices(REALTIME_POLL_OPTIONS_SECONDS),
               selectedValue: realtimePollSeconds,
             })}
-            <div class="field-helper">Fallback interval for checking new alerts and reviews. Shorter intervals use more battery and data.</div>
+            <div class="field-helper" data-fvc-i18n="editor.general.fallbackUpdateCheckHelp">Fallback interval for checking new alerts and reviews. Shorter intervals use more battery and data.</div>
           </div>
         </div>
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
           <div id="snapshot_update_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
-            <div class="editor-choice-field" id="snapshot_update_seconds" role="radiogroup" aria-label="Snapshot Refresh">
-              <div class="field-label">Snapshot Refresh</div>
+            <div class="editor-choice-field" id="snapshot_update_seconds" role="radiogroup" aria-label="Snapshot Refresh" data-fvc-i18n-aria-label="editor.general.snapshotRefresh">
+              <div class="field-label" data-fvc-i18n="editor.general.snapshotRefresh">Snapshot Refresh</div>
               ${buildEditorBubbleSelectorMarkup({
                 name: "snapshot_update_seconds",
-                options: durationEditorChoices(
+                options: localizedDurationEditorChoices(
                   SNAPSHOT_UPDATE_OPTIONS_SECONDS,
                 ),
                 selectedValue: snapshotUpdateSeconds,
               })}
             </div>
-            <div class="field-helper">How often snapshots refresh when Live View is off.</div>
+            <div class="field-helper" data-fvc-i18n="editor.general.snapshotRefreshHelp">How often snapshots refresh when Live View is off.</div>
           </div>
         </div>
         <div class="layout-row" style="align-items:flex-start;gap:12px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px">
           <div id="preview_alert_live_duration_row" style="min-width:210px;display:flex;flex-direction:column;gap:6px;width:100%">
-            <div class="editor-choice-field" id="preview_page_alert_live_duration_seconds" role="radiogroup" aria-label="Alert Live Duration">
-              <div class="field-label">Alert Live Duration</div>
+            <div class="editor-choice-field" id="preview_page_alert_live_duration_seconds" role="radiogroup" aria-label="Alert Live Duration" data-fvc-i18n-aria-label="editor.general.alertLiveDuration">
+              <div class="field-label" data-fvc-i18n="editor.general.alertLiveDuration">Alert Live Duration</div>
               ${buildEditorBubbleSelectorMarkup({
                 name: "preview_page_alert_live_duration_seconds",
-                options: durationEditorChoices(
+                options: localizedDurationEditorChoices(
                   PREVIEW_ALERT_LIVE_DURATION_OPTIONS_SECONDS,
                 ),
                 selectedValue: previewAlertLiveDurationSeconds,
               })}
             </div>
-            <div class="field-helper">How long an alerted Preview or Wide View snapshot switches to live.</div>
+            <div class="field-helper" data-fvc-i18n="editor.general.alertLiveDurationHelp">How long an alerted Preview or Wide View snapshot switches to live.</div>
           </div>
         </div>
       </div>
       <div class="section">
         <div class="layout-row timezone-row">
-          <span class="field-label" style="margin:0">Timezone</span>
-          <span class="timezone-readout" aria-label="Configured Home Assistant timezone">
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.general.timezone">Timezone</span>
+          <span class="timezone-readout" aria-label="Configured Home Assistant timezone" data-fvc-i18n-aria-label="editor.general.configuredTimezone">
             <ha-icon icon="mdi:map-clock-outline"></ha-icon>
             <span>${escapeHtml(timezoneDisplay)}</span>
           </span>
         </div>
-        <div class="field-helper timezone-helper">Uses the timezone in your <a href="/profile/general" target="_blank" rel="noopener noreferrer">Home Assistant profile</a>.</div>
+        <div class="field-helper timezone-helper" data-general-timezone-helper>Uses the timezone in your <a href="/profile/general" target="_blank" rel="noopener noreferrer">Home Assistant profile</a>.</div>
       </div>`;
 
     const themePanelContent = `
@@ -4756,6 +4855,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     this._localization ??= createLocalizationController();
     applyLocalizedText(this, this._localization.t);
+    this._syncGeneralRichText();
 
     const update = (previewRouteIntent = null) =>
       this._u({

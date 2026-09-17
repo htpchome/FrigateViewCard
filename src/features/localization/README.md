@@ -16,7 +16,9 @@ needed.
 nodes and attributes can use `data-fvc-i18n` and the attribute variants in
 `localized-dom.js`; changing status and validation text can use
 `setLocalizedText()` so its key and placeholder values survive a language
-change. For markup containing HTML, use `t(key, values)` while building the
-markup and escape translated values for their HTML context.
+change. Attribute markers can share `data-fvc-i18n-values` for named values.
+For formatted help text, keep placeholders in one translated sentence and
+insert the formatted elements as DOM nodes, so translations can reorder them
+without treating dictionary text as HTML.
 Camera names, user-configured text, and Frigate-provided labels are data, not
 UI translations.

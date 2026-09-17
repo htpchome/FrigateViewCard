@@ -108,6 +108,47 @@ test("dynamic messages retain named values across language changes and clear cle
   assert.equal(attributes.has("data-fvc-i18n"), false);
 });
 
+test("localized attributes interpolate named values without replacing controls", () => {
+  const attributes = new Map([
+    ["data-fvc-i18n-aria-label", "example.count"],
+    ["data-fvc-i18n-values", JSON.stringify({ count: 4, camera: "Porch" })],
+  ]);
+  const input = {
+    checked: true,
+    getAttribute: (name) => attributes.get(name) ?? null,
+    setAttribute: (name, value) => attributes.set(name, value),
+  };
+  const localization = createLocalizationController({ dictionaries });
+  localization.setLanguage("fr");
+  applyLocalizedText({ querySelectorAll: () => [input] }, localization.t);
+  assert.equal(attributes.get("aria-label"), "Pour Porch : 4 alertes");
+  assert.equal(input.checked, true);
+});
+
+test("repeated localized status sync leaves unchanged text alone", () => {
+  const attributes = new Map();
+  let textValue = "";
+  let textWrites = 0;
+  const status = {
+    get textContent() { return textValue; },
+    set textContent(value) { textValue = value; textWrites += 1; },
+    getAttribute: (name) => attributes.get(name) ?? null,
+    setAttribute: (name, value) => attributes.set(name, value),
+    removeAttribute: (name) => attributes.delete(name),
+  };
+  const localization = createLocalizationController({ dictionaries });
+  setLocalizedText(status, "example.count", localization.t, {
+    count: 2,
+    camera: "Porch",
+  });
+  setLocalizedText(status, "example.count", localization.t, {
+    count: 2,
+    camera: "Porch",
+  });
+  assert.equal(textValue, "2 alerts for Porch");
+  assert.equal(textWrites, 1);
+});
+
 test("all extracted editor keys and settings headings exist in English", () => {
   const source = readFileSync(
     new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),

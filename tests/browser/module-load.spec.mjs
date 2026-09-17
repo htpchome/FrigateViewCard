@@ -200,6 +200,111 @@ test("language changes update marked card and editor text without replacing medi
   });
 });
 
+test("General Settings language changes preserve form state and localize status, choices, and links", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card-editor.js");
+    const editor = document.createElement("frigate-view-card-editor");
+    document.body.append(editor);
+    editor.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    const hass = {
+      locale: { language: "en" },
+      themes: {},
+      config: { version: "2026.8.4", components: ["frigate"] },
+      states: {
+        "update.frigateview_card_update": {
+          state: "on",
+          attributes: { title: "FrigateView Card", latest_version: "1.2.0" },
+        },
+      },
+    };
+    editor.hass = hass;
+    const titleInput = editor.querySelector("#title");
+    titleInput.value = "Front Door";
+    const preRoll = editor.querySelector("#event_pre_post_roll_enabled");
+    preRoll.checked = true;
+    const minuteChoice = editor.querySelector('[name="realtime_poll_seconds"][value="60"]');
+    minuteChoice.checked = true;
+    let configChanged = 0;
+    editor.addEventListener("config-changed", () => { configChanged += 1; });
+
+    const english = editor._localization;
+    const translations = {
+      "editor.general.cameraTokenHelp": "La grille affiche {grid}; utilisez {camera} pour la caméra active.",
+      "editor.general.grid": "Grille",
+      "editor.general.enablePrePostRoll": "Activer les marges vidéo",
+      "editor.general.prePostRollHelp": "Ajoute {seconds} secondes autour de la vidéo.",
+      "editor.general.durationMinutes": "{count} min FR",
+      "editor.general.durationSeconds": "{count} s FR",
+      "editor.general.fallbackUpdateCheck": "Vérification de secours",
+      "editor.general.updateAvailableVersion": "Mise à jour : {version}",
+      "editor.general.homeAssistantBelowRecommended": "HA {version} sous {recommended}.",
+      "editor.general.frigateInstalled": "Frigate installé.",
+      "editor.general.timezoneHelp": "Consultez {profile} pour le fuseau.",
+      "editor.general.homeAssistantProfile": "Profil Home Assistant",
+    };
+    editor._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => {
+        const phrase = translations[key];
+        return phrase
+          ? phrase.replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g, (token, name) =>
+            Object.hasOwn(values, name) ? String(values[name]) : token)
+          : english.t(key, values);
+      },
+    };
+    editor.hass = { ...hass, locale: { language: "fr" } };
+
+    const tokenHelper = editor.querySelector(".text-display-token-helper");
+    const timezoneHelper = editor.querySelector("[data-general-timezone-helper]");
+    return {
+      inputPreserved: editor.querySelector("#title") === titleInput,
+      titleValue: titleInput.value,
+      preRollPreserved: editor.querySelector("#event_pre_post_roll_enabled") === preRoll,
+      preRollChecked: preRoll.checked,
+      minuteChoicePreserved: editor.querySelector('[name="realtime_poll_seconds"][value="60"]') === minuteChoice,
+      minuteChoiceChecked: minuteChoice.checked,
+      minuteLabel: minuteChoice.getAttribute("aria-label"),
+      secondLabel: editor.querySelector('[name="realtime_poll_seconds"][value="2"]').getAttribute("aria-label"),
+      choiceHeading: editor.querySelector("#realtime_poll_seconds .field-label").textContent,
+      preRollLabel: editor.querySelector('[data-fvc-i18n="editor.general.enablePrePostRoll"]').textContent,
+      preRollHelp: editor.querySelector('[data-fvc-i18n="editor.general.prePostRollHelp"]').textContent,
+      tokenText: tokenHelper.textContent,
+      tokenCode: tokenHelper.querySelector("code")?.textContent,
+      tokenStrong: tokenHelper.querySelector("strong")?.textContent,
+      updateStatus: editor.querySelector("#card-version-update-status").textContent,
+      haStatus: editor.querySelector("[data-home-assistant-version-notice] [data-environment-support-text]").textContent,
+      frigateStatus: editor.querySelector("[data-frigate-integration-status] [data-environment-support-text]").textContent,
+      timezoneText: timezoneHelper.textContent,
+      timezoneHref: timezoneHelper.querySelector("a")?.getAttribute("href"),
+      configChanged,
+    };
+  });
+
+  expect(state).toEqual({
+    inputPreserved: true,
+    titleValue: "Front Door",
+    preRollPreserved: true,
+    preRollChecked: true,
+    minuteChoicePreserved: true,
+    minuteChoiceChecked: true,
+    minuteLabel: "1 min FR",
+    secondLabel: "2 s FR",
+    choiceHeading: "Vérification de secours",
+    preRollLabel: "Activer les marges vidéo",
+    preRollHelp: "Ajoute 5 secondes autour de la vidéo.",
+    tokenText: "La grille affiche Grille; utilisez {camera} pour la caméra active.",
+    tokenCode: "{camera}",
+    tokenStrong: "Grille",
+    updateStatus: "Mise à jour : v1.2.0",
+    haStatus: "HA 2026.8.4 sous 2026.9.0.",
+    frigateStatus: "Frigate installé.",
+    timezoneText: "Consultez Profil Home Assistant pour le fuseau.",
+    timezoneHref: "/profile/general",
+    configChanged: 0,
+  });
+});
+
 test("an open camera editor keeps its form and accordion state when language changes", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {
