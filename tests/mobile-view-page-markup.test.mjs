@@ -307,7 +307,7 @@ test("Mobile View overlay header follows live controls while LIVE stays visible"
     isCameraAvailable: () => true,
   });
   assert.match(picker, /mobile-cam-picker__live-tile/);
-  assert.match(picker, /mobile-cam-picker__live-label">LIVE/);
+  assert.match(picker, /mobile-cam-picker__live-label" data-fvc-i18n="runtime\.live\.liveTile">LIVE/);
   assert.match(
     MOBILE_VIEW_PAGE_STYLES,
     /mobile-view-header-overlay \.mobile-top \.cam-switcher \{[\s\S]*?position:absolute;/,

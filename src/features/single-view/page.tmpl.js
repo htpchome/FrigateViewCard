@@ -100,15 +100,15 @@ export function resolveSingleViewOnlineLabel(online) {
 }
 
 export function buildSingleViewLiveBadgeMarkup() {
-  return `<div class="single-view-live-badge" data-single-view-live-badge aria-label="Live camera">
+  return `<div class="single-view-live-badge" data-single-view-live-badge aria-label="Live camera" data-fvc-i18n-aria-label="runtime.live.liveCamera">
             <span class="single-view-live-badge-dot" aria-hidden="true"></span>
-            <span>Live</span>
+            <span data-fvc-i18n="runtime.live.live">Live</span>
           </div>`;
 }
 
 export function buildSingleViewLiveStatusMarkup({ webRtcIcon = "" } = {}) {
   return `<div class="single-view-live-status-overlay" data-single-view-live-status-overlay>
-              <div class="single-view-source-indicator" data-single-view-source-indicator aria-label="Live source" hidden>
+              <div class="single-view-source-indicator" data-single-view-source-indicator aria-label="Live source" data-fvc-i18n-aria-label="runtime.live.liveSource" hidden>
                 <span class="single-view-source-indicator-icon" data-single-view-source-icon aria-hidden="true" hidden>${webRtcIcon}</span>
                 <span class="single-view-source-indicator-text" data-single-view-source-text hidden></span>
               </div>

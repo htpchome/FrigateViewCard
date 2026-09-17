@@ -38,7 +38,10 @@ export function buildMobileViewBackButtonMarkup({
   const destinationLabel = previewPageEnabled
     ? "preview page"
     : "single view";
-  return `<button class="round-btn preview-back-btn mobile-cam-picker__back" type="button" data-page-back title="Back to ${destinationLabel}" aria-label="Back to ${destinationLabel}">${icons.back || ""}</button>`;
+  const labelKey = previewPageEnabled
+    ? "runtime.pageNav.backToPreview"
+    : "runtime.pageNav.backToSingleView";
+  return `<button class="round-btn preview-back-btn mobile-cam-picker__back" type="button" data-page-back title="Back to ${destinationLabel}" aria-label="Back to ${destinationLabel}" data-fvc-i18n-title="${labelKey}" data-fvc-i18n-aria-label="${labelKey}">${icons.back || ""}</button>`;
 }
 
 export function buildMobileViewInfoRowMarkup({

@@ -83,9 +83,9 @@ export function buildCardViewMainLayoutShellMarkup({
             <span class="card-view-source-indicator-icon" data-card-view-source-icon aria-hidden="true" hidden>${regions.cardViewWebRtcIcon}</span>
             <span class="card-view-source-indicator-text" data-card-view-source-text hidden></span>
           </div>
-          <div class="card-view-live-badge" data-card-view-live-badge aria-label="Live camera">
+          <div class="card-view-live-badge" data-card-view-live-badge aria-label="Live camera" data-fvc-i18n-aria-label="runtime.live.liveCamera">
             <span class="card-view-live-badge-dot" aria-hidden="true"></span>
-            <span>Live</span>
+            <span data-fvc-i18n="runtime.live.live">Live</span>
           </div>
         </div>
         <div class="card-view-standalone-linked-overlay media-linked-controls-overlay" data-card-view-standalone-linked-overlay data-media-overlay-ignore>

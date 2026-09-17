@@ -126,6 +126,21 @@ test("localized attributes interpolate named values without replacing controls",
   assert.equal(input.checked, true);
 });
 
+test("snapshot alt text retains its camera value across language changes", () => {
+  const attributes = new Map([
+    ["data-fvc-i18n-alt", "example.count"],
+    ["data-fvc-i18n-values", JSON.stringify({ count: 1, camera: "Porch" })],
+  ]);
+  const image = {
+    getAttribute: (name) => attributes.get(name) ?? null,
+    setAttribute: (name, value) => attributes.set(name, value),
+  };
+  const localization = createLocalizationController({ dictionaries });
+  localization.setLanguage("fr");
+  applyLocalizedText({ querySelectorAll: () => [image] }, localization.t);
+  assert.equal(attributes.get("alt"), "Pour Porch : 1 alertes");
+});
+
 test("repeated localized status sync leaves unchanged text alone", () => {
   const attributes = new Map();
   let textValue = "";

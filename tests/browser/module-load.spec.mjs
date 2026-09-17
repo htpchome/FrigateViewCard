@@ -230,6 +230,93 @@ test("language changes update marked card and editor text without replacing medi
   });
 });
 
+test("runtime camera status and rebuilt picker remain localized without remounting live", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const translations = {
+      "runtime.live.live": "DIRECT",
+      "runtime.live.liveTile": "DIRECT",
+      "runtime.live.liveStatus": "Statut du direct",
+      "runtime.live.loading": "Chargement…",
+      "runtime.live.connecting": "Connexion…",
+      "runtime.live.cameraSnapshot": "Instantané caméra",
+      "runtime.live.offline": "Hors ligne",
+      "runtime.live.cameraOffline": "Caméra hors ligne",
+      "runtime.pageNav.backToPreview": "Retour",
+      "runtime.pageNav.backToSingleView": "Retour",
+      "runtime.stream": "Flux",
+    };
+    const translate = (key, values = {}) => key === "runtime.live.nextSlide"
+      ? `Diapo suivante : ${values.seconds}s`
+      : translations[key] || key;
+
+    const mobile = document.createElement("frigate-view-card");
+    document.body.append(mobile);
+    mobile.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      mobile_view_page_enabled: true,
+    });
+    mobile._pageId = "mobile-view";
+    mobile._renderShell();
+    const mobileLive = mobile.shadowRoot.querySelector("#eng-wrap");
+    const mobileConfig = mobile._config;
+    mobile._localization = { updateHass: () => true, t: translate };
+    mobile._config = null;
+    mobile.hass = { locale: { language: "fr" } };
+    mobile._config = mobileConfig;
+    mobile._mobileViewPageController.renderCamSwitcher();
+    mobile._setStreamLoading(true);
+    mobile._clearSlideshowCountdownOverlay();
+
+    const single = document.createElement("frigate-view-card");
+    document.body.append(single);
+    single.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    single._renderShell();
+    const singleLive = single.shadowRoot.querySelector("#eng-wrap");
+    single._hass = { states: { "camera.front": { state: "unavailable" } } };
+    single._singleViewPageController.syncStatus();
+    const singleConfig = single._config;
+    single._localization = { updateHass: () => true, t: translate };
+    single._config = null;
+    single.hass = { locale: { language: "fr" } };
+    single._config = singleConfig;
+    single._singleViewPageController.syncStatus();
+
+    return {
+      mobileLivePreserved: mobile.shadowRoot.querySelector("#eng-wrap") === mobileLive,
+      stream: mobile.shadowRoot.querySelector(".mobile-cam-picker__stream .sl")?.textContent,
+      liveTile: mobile.shadowRoot.querySelector(".mobile-cam-picker__live-label")?.textContent,
+      statusAria: mobile.shadowRoot.querySelector(".mobile-cam-picker__status")?.getAttribute("aria-label"),
+      backTitle: mobile.shadowRoot.querySelector("[data-page-back]")?.title,
+      loading: mobile.shadowRoot.querySelector("#stream-loading .label")?.textContent,
+      connecting: mobile.shadowRoot.querySelector("#eng-wrap .ph span")?.textContent,
+      snapshotAlt: mobile.shadowRoot.querySelector("#stream-fallback-img")?.alt,
+      countdown: mobile.shadowRoot.querySelector("#slideshow-next-chip")?.textContent,
+      singleLivePreserved: single.shadowRoot.querySelector("#eng-wrap") === singleLive,
+      offline: single.shadowRoot.querySelector("#on-lbl")?.textContent,
+      offlineAria: single.shadowRoot.querySelector("[data-single-view-live-badge]")?.getAttribute("aria-label"),
+      singleBadge: single.shadowRoot.querySelector("[data-single-view-live-badge] span[data-fvc-i18n]")?.textContent,
+    };
+  });
+
+  expect(state).toEqual({
+    mobileLivePreserved: true,
+    stream: "Flux",
+    liveTile: "DIRECT",
+    statusAria: "Statut du direct",
+    backTitle: "Retour",
+    loading: "Chargement…",
+    connecting: "Connexion…",
+    snapshotAlt: "Instantané caméra",
+    countdown: "Diapo suivante : 0s",
+    singleLivePreserved: true,
+    offline: "Hors ligne",
+    offlineAria: "Caméra hors ligne",
+    singleBadge: "DIRECT",
+  });
+});
+
 test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

@@ -6,6 +6,7 @@ import {
 } from "../navigation/start-mode.js";
 import { cap, camDisplayName } from "../../helpers.js";
 import { resolveLiveSourceIndicatorState } from "../../shared/media/source-indicator.js";
+import { setLocalizedText } from "../localization/localized-dom.js";
 import {
   buildSingleViewCamSwitcherMarkup,
   resolveSingleViewAlertsCountText,
@@ -189,14 +190,23 @@ export class SingleViewPageController {
       statusDot.style.color = resolveSingleViewStatusColor(online);
     }
     if (statusLabel) {
-      statusLabel.textContent = resolveSingleViewOnlineLabel(online);
+      setLocalizedText(
+        statusLabel,
+        online ? "runtime.live.online" : "runtime.live.offline",
+        this._host._localization?.t || (() => resolveSingleViewOnlineLabel(online)),
+      );
     }
     if (liveBadge) {
       liveBadge.hidden = this._usesGridText();
       liveBadge.classList?.toggle?.("is-offline", !online);
+      const labelKey = online
+        ? "runtime.live.liveCamera"
+        : "runtime.live.cameraOffline";
+      liveBadge.setAttribute?.("data-fvc-i18n-aria-label", labelKey);
       liveBadge.setAttribute?.(
         "aria-label",
-        online ? "Live camera" : "Camera offline",
+        this._host._localization?.t?.(labelKey) ||
+          (online ? "Live camera" : "Camera offline"),
       );
     }
   }

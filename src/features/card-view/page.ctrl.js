@@ -38,6 +38,7 @@ import {
 } from "./config.js";
 import { CardViewMediaDrawerController } from "./media-drawer.ctrl.js";
 import { resolveLiveSourceIndicatorState } from "../../shared/media/source-indicator.js";
+import { applyLocalizedText } from "../localization/localized-dom.js";
 
 const cameraName = (camera) => cap(camDisplayName(camera));
 const STANDALONE_GRID_INDICATOR_DURATION_MS = GRID_ALERT_HOLD_MS;
@@ -613,6 +614,10 @@ export class CardViewPageController {
         this.usesOverlayPresentation() && this._host._viewMode === "grid"
           ? "Grid"
           : "",
+      activeCameraLabelKey:
+        this.usesOverlayPresentation() && this._host._viewMode === "grid"
+          ? "runtime.live.grid"
+          : "",
       showStatus: !this.usesOverlayPresentation(),
     });
   }
@@ -622,7 +627,10 @@ export class CardViewPageController {
       "cameraSwitcher",
       "[data-mobile-cam-switcher-content]",
     );
-    if (content) content.innerHTML = this.camSwitcherMarkup();
+    if (content) {
+      content.innerHTML = this.camSwitcherMarkup();
+      applyLocalizedText(content, this._host._localization?.t);
+    }
     this.syncStandalonePickerPanelSize();
   }
 

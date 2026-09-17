@@ -1,4 +1,4 @@
-import { escapeHtml } from "../../shared/html.js";
+import { escapeHtml, escapeHtmlAttribute } from "../../shared/html.js";
 
 function buildCameraOptionMarkup({
   camera,
@@ -36,6 +36,7 @@ export function buildCameraPickerMarkup({
   online = true,
   pickerOpen = false,
   activeCameraName: suppliedActiveCameraName = "",
+  activeCameraLabelKey = "",
   showStatus = true,
 }) {
   const cameraList = Array.isArray(cameras) ? cameras : [];
@@ -49,6 +50,10 @@ export function buildCameraPickerMarkup({
   const activeCameraName =
     String(suppliedActiveCameraName || "").trim() ||
     (activeCamera ? getCameraName(activeCamera) : "Camera");
+  const labelKey = activeCameraLabelKey || (activeCamera ? "" : "runtime.live.camera");
+  const localizedLabelAttribute = labelKey
+    ? ` data-fvc-i18n="${escapeHtmlAttribute(labelKey)}"`
+    : "";
   const cameraOptions = cameraList
     .map((camera, index) =>
       buildCameraOptionMarkup({
@@ -71,7 +76,7 @@ export function buildCameraPickerMarkup({
       >
         <span class="mobile-cam-picker__trigger-content">
           <span class="mobile-cam-picker__trigger-dot" aria-hidden="true">●</span>
-          <span class="mobile-cam-picker__label">${escapeHtml(activeCameraName)}</span>
+          <span class="mobile-cam-picker__label"${localizedLabelAttribute}>${escapeHtml(activeCameraName)}</span>
         </span>
         <span class="mobile-cam-picker__chev" aria-hidden="true">${icons.chevron || "v"}</span>
       </button>
@@ -79,14 +84,14 @@ export function buildCameraPickerMarkup({
         ${cameraOptions}
       </div>
     </div>
-    ${showStatus ? `<div class="mobile-cam-picker__status" aria-label="Live status">
+    ${showStatus ? `<div class="mobile-cam-picker__status" aria-label="Live status" data-fvc-i18n-aria-label="runtime.live.liveStatus">
       <div class="mobile-cam-picker__stream">
         <div class="sv stream-type" id="stream-type">${escapeHtml(streamType || "--")}</div>
-        <div class="sl">Stream</div>
+        <div class="sl" data-fvc-i18n="runtime.stream">Stream</div>
       </div>
       <span class="mobile-cam-picker__live-tile">
         <span class="sv mobile-cam-picker__dot" id="on-dot" style="color:${online ? "var(--c-on)" : "var(--c-off)"}">●</span>
-        <span class="mobile-cam-picker__live-label">LIVE</span>
+        <span class="mobile-cam-picker__live-label" data-fvc-i18n="runtime.live.liveTile">LIVE</span>
       </span>
     </div>` : ""}`;
 }

@@ -55,7 +55,7 @@ export function buildInfoRowMarkup({
                 </div>
                 <div class="stat info-online-stat">
                   <div class="sv" id="on-dot" style="color:var(--c-on)">●</div>
-                  <div class="sl" id="on-lbl">Online</div>
+                  <div class="sl" id="on-lbl" data-fvc-i18n="runtime.live.online">Online</div>
                 </div>
               </div>
             </div>`;

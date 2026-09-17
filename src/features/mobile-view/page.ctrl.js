@@ -2,6 +2,7 @@ import { activateStandardPageRouteLifecycle } from "../navigation/route-lifecycl
 import { BrowseRenderController } from "../browse/render.ctrl.js";
 import { cap, camDisplayName } from "../../helpers.js";
 import { ICONS } from "../../icons.js";
+import { applyLocalizedText, setLocalizedText } from "../localization/localized-dom.js";
 import {
   applyMobileViewPageMarkup,
   buildMobileViewCamSwitcherMarkup,
@@ -111,6 +112,7 @@ export class MobileViewPageController {
     );
     if (!content) return;
     content.innerHTML = this.camSwitcherMarkup({ includeStatus: true });
+    applyLocalizedText(content, this._host._localization?.t);
   }
 
   syncStatus() {
@@ -140,7 +142,11 @@ export class MobileViewPageController {
       statusDot.style.color = resolveMobileViewStatusColor(online);
     }
     if (statusLabel) {
-      statusLabel.textContent = resolveMobileViewOnlineLabel(online);
+      setLocalizedText(
+        statusLabel,
+        online ? "runtime.live.online" : "runtime.live.offline",
+        this._host._localization?.t || (() => resolveMobileViewOnlineLabel(online)),
+      );
     }
   }
 

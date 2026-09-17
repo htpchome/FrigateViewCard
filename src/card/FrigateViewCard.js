@@ -36,7 +36,7 @@ import {
 import { ICONS } from "../icons.js";
 import { STYLES } from "../styles.js";
 import { createLocalizationController } from "../features/localization/localization.ctrl.js";
-import { applyLocalizedText } from "../features/localization/localized-dom.js";
+import { applyLocalizedText, setLocalizedText } from "../features/localization/localized-dom.js";
 // Registers <circle-pad-control-2>; keep this import for its module side effect.
 import "../components/circle-pad/circle-pad.js";
 import {
@@ -3017,10 +3017,17 @@ export class FrigateViewCard extends HTMLElement {
   }
 
   _setStreamLoading(loading, text = "Loading…") {
+    const label = this._$("#stream-loading .label");
+    const defaultLabel = text === "Loading…";
+    if (defaultLabel) {
+      setLocalizedText(label, "runtime.live.loading", this._localization.t);
+    } else {
+      label?.removeAttribute("data-fvc-i18n");
+    }
     applyStreamLoadingStateForCard({
       card: this,
       loading,
-      text,
+      text: defaultLabel ? this._localization.t("runtime.live.loading") : text,
     });
   }
 
@@ -3070,7 +3077,10 @@ export class FrigateViewCard extends HTMLElement {
   async _refreshStreamFallbackImage() {
     await runFallbackRefreshCycleForCard({
       card: this,
-      applyHandlers: applyFallbackImageHandlers,
+      applyHandlers: (payload) => applyFallbackImageHandlers({
+        ...payload,
+        t: this._localization.t,
+      }),
       applySource: setFallbackImageSourceIfChanged,
     });
   }
@@ -3648,7 +3658,9 @@ export class FrigateViewCard extends HTMLElement {
     const chip = this._$("#slideshow-next-chip");
     if (chip) {
       chip.hidden = true;
-      chip.textContent = "Next Slide: 0s";
+      setLocalizedText(chip, "runtime.live.nextSlide", this._localization.t, {
+        seconds: 0,
+      });
     }
     this._cardViewPageController?.syncStandaloneSlideshowCountdown?.();
   }
@@ -3669,7 +3681,9 @@ export class FrigateViewCard extends HTMLElement {
         Number(this._slideshowNextSwitchAtMs || 0) - Date.now(),
       );
       const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
-      chip.textContent = `Next Slide: ${remainingSec}s`;
+      setLocalizedText(chip, "runtime.live.nextSlide", this._localization.t, {
+        seconds: remainingSec,
+      });
       chip.hidden = false;
     }
     this._cardViewPageController?.syncStandaloneSlideshowCountdown?.();

@@ -1332,7 +1332,7 @@ test("Video Only Grid labels the camera picker Grid", () => {
   });
   const markup = controller.camSwitcherMarkup();
 
-  assert.match(markup, /mobile-cam-picker__label">Grid</);
+  assert.match(markup, /mobile-cam-picker__label" data-fvc-i18n="runtime\.live\.grid">Grid</);
   assert.match(markup, /data-mobile-camidx="0"/);
   assert.match(markup, /data-mobile-camidx="1"/);
   assert.doesNotMatch(markup, /mobile-cam-picker__status/);

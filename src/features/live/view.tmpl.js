@@ -3,12 +3,12 @@ export function buildLiveEngineWrapMarkup({ icons }) {
                 <div class="camera-group-live-layout" id="camera-group-live-layout">
                   <div class="camera-group-live-pane camera-group-live-pane--primary is-audio-active" data-camera-group-member="A">
                     <frigate-live-stream id="engine">
-                      <div class="ph">${icons.live}<span>Connecting…</span></div>
+                      <div class="ph">${icons.live}<span data-fvc-i18n="runtime.live.connecting">Connecting…</span></div>
                     </frigate-live-stream>
                     <div id="stream-fallback" hidden>
-                      <img id="stream-fallback-img" alt="Camera snapshot">
+                      <img id="stream-fallback-img" alt="Camera snapshot" data-fvc-i18n-alt="runtime.live.cameraSnapshot">
                     </div>
-                    <div class="stream-fallback-status" id="stream-fallback-status" hidden>Snapshot unavailable</div>
+                    <div class="stream-fallback-status" id="stream-fallback-status" data-fvc-i18n="runtime.live.snapshotUnavailable" hidden>Snapshot unavailable</div>
                     <div class="camera-group-pane-controls">
                       <button class="camera-group-pane-button camera-group-audio-select" type="button" data-media-overlay-ignore data-camera-group-audio="A" title="Use main camera audio" aria-label="Use main camera audio" aria-pressed="true">${icons.volOn}<span>A</span></button>
                       <button class="camera-group-pane-button camera-group-focus-toggle" type="button" data-media-overlay-ignore data-camera-group-focus="A" title="Focus main camera" aria-label="Focus main camera" aria-pressed="false">${icons.singleView}</button>
@@ -17,7 +17,7 @@ export function buildLiveEngineWrapMarkup({ icons }) {
                   </div>
                   <div class="camera-group-live-pane camera-group-live-pane--secondary" data-camera-group-member="B" hidden>
                     <div id="camera-group-secondary-engine"></div>
-                    <div class="camera-group-member-loading"><span class="dot"></span><span>Loading…</span></div>
+                    <div class="camera-group-member-loading"><span class="dot"></span><span data-fvc-i18n="runtime.live.loading">Loading…</span></div>
                     <div class="camera-group-pane-controls">
                       <button class="camera-group-pane-button camera-group-audio-select" type="button" data-media-overlay-ignore data-camera-group-audio="B" title="Use second camera audio" aria-label="Use second camera audio" aria-pressed="false">${icons.volOff}<span>B</span></button>
                       <button class="camera-group-pane-button camera-group-focus-toggle" type="button" data-media-overlay-ignore data-camera-group-focus="B" title="Focus second camera" aria-label="Focus second camera" aria-pressed="false">${icons.singleView}</button>
@@ -25,9 +25,9 @@ export function buildLiveEngineWrapMarkup({ icons }) {
                   </div>
                 </div>
                   <div id="grid-engine" aria-hidden="true" hidden></div>
-                  <div class="slideshow-next-chip" id="slideshow-next-chip" hidden>Next Slide: 0s</div>
+                  <div class="slideshow-next-chip" id="slideshow-next-chip" data-fvc-i18n="runtime.live.nextSlide" data-fvc-i18n-values='{"seconds":0}' hidden>Next Slide: 0s</div>
                   <div class="stream-loading" id="stream-loading" hidden>
-                    <span class="dot"></span><span class="label">Loading…</span>
+                    <span class="dot"></span><span class="label" data-fvc-i18n="runtime.live.loading">Loading…</span>
                   </div>
                   <button class="live-resize-grip" id="live-resize-grip" type="button" role="slider" aria-orientation="vertical" aria-label="Resize live view height" title="Drag to resize live view; double-click or double-tap to reset" data-fvc-i18n-aria-label="runtime.live.resizeHeight" data-fvc-i18n-title="runtime.live.resizeHint" hidden>
                     ${icons.chevron}

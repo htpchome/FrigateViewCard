@@ -25,6 +25,7 @@ export const applyFallbackImageHandlers = ({
   statusEl,
   altSrc,
   entity,
+  t,
 }) => {
   if (!img) return;
   hideFallbackStatus(statusEl);
@@ -48,7 +49,18 @@ export const applyFallbackImageHandlers = ({
     });
   };
 
-  img.alt = entity ? `${entity} snapshot` : "Camera snapshot";
+  const altKey = entity
+    ? "runtime.live.entitySnapshot"
+    : "runtime.live.cameraSnapshot";
+  const values = entity ? { entity } : {};
+  img.setAttribute?.("data-fvc-i18n-alt", altKey);
+  if (entity) {
+    img.setAttribute?.("data-fvc-i18n-values", JSON.stringify(values));
+  } else {
+    img.removeAttribute?.("data-fvc-i18n-values");
+  }
+  img.alt = t?.(altKey, values) ||
+    (entity ? `${entity} snapshot` : "Camera snapshot");
 };
 
 export const setFallbackImageSourceIfChanged = ({ img, src }) => {

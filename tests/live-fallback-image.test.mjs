@@ -96,6 +96,25 @@ test("applyFallbackImageHandlers assigns callbacks, status, and alt", () => {
   assert.equal(img.style.objectFit, "cover");
 });
 
+test("fallback snapshot alt uses a localizable camera-aware label", () => {
+  const attributes = new Map();
+  const img = {
+    style: {},
+    setAttribute: (name, value) => attributes.set(name, value),
+    removeAttribute: (name) => attributes.delete(name),
+  };
+  applyFallbackImageHandlers({
+    img,
+    entity: "camera.front",
+    t: (key, { entity }) => `${key}: ${entity}`,
+  });
+  assert.equal(attributes.get("data-fvc-i18n-alt"), "runtime.live.entitySnapshot");
+  assert.deepEqual(JSON.parse(attributes.get("data-fvc-i18n-values")), {
+    entity: "camera.front",
+  });
+  assert.equal(img.alt, "runtime.live.entitySnapshot: camera.front");
+});
+
 test("setFallbackImageSourceIfChanged updates source only when different", () => {
   const img = { src: "https://ha.local/a.jpg" };
 
