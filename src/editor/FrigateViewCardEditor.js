@@ -3031,13 +3031,17 @@ export class FrigateViewCardEditor extends HTMLElement {
 
   _setEditorFieldError(selector, message) {
     setFieldErrorState(this, selector, message);
-    if (selector !== "#event_days" && selector !== "#alerts_reviews_days") return;
+    const key = selector === "#stream_height"
+      ? "editor.layout.cardHeightRangeValidation"
+      : selector === "#event_days" || selector === "#alerts_reviews_days"
+        ? "editor.general.daysRangeValidation"
+        : null;
+    if (!key) return;
     const helper = this.querySelector?.(`${selector}-helper`);
-    if (message) {
-      helper?.setAttribute?.("data-fvc-i18n", "editor.general.daysRangeValidation");
-    } else {
-      helper?.removeAttribute?.("data-fvc-i18n");
-    }
+    const values = selector === "#stream_height"
+      ? { min: CARD_HEIGHT_MIN, max: CARD_HEIGHT_MAX }
+      : {};
+    this._setLocalizedMessage(helper, message ? key : null, values);
   }
 
   _validateEditorFields() {
@@ -3078,7 +3082,10 @@ export class FrigateViewCardEditor extends HTMLElement {
       streamHeight >= CARD_HEIGHT_MIN &&
       streamHeight <= CARD_HEIGHT_MAX
         ? ""
-        : `Select a whole number from ${CARD_HEIGHT_MIN} to ${CARD_HEIGHT_MAX}.`;
+        : this._t("editor.layout.cardHeightRangeValidation", {
+          min: CARD_HEIGHT_MIN,
+          max: CARD_HEIGHT_MAX,
+        });
     this._setEditorFieldError("#stream_height", streamHeightMessage);
     if (streamHeightMessage) valid = false;
 
@@ -3392,7 +3399,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     const mobilePageOptions = getEnabledMobilePageModes(this._config).map(
       (mode) => ({ value: mode, label: mobilePageLabels[mode] }),
     );
-    const tabToggle = (id, label) => `<ha-formfield label="${label}">
+    const tabToggle = (id, label, translationKey) => `<ha-formfield label="${label}" data-fvc-i18n-label="${translationKey}">
           <ha-switch data-active-tab="${id}" ${hiddenTabs.has(id) ? "" : "checked"}></ha-switch>
         </ha-formfield>`;
     const themeRows = THEME_CUSTOM_ROWS.map((row) => {
@@ -3672,23 +3679,23 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const layoutPanelContent = `
       <div class="section">
-        <span class="field-label">Active Tabs</span>
+        <span class="field-label" data-fvc-i18n="editor.layout.activeTabs">Active Tabs</span>
         <div class="chk-row">
-          ${tabToggle("alerts", "Alerts")}
-          ${tabToggle("clips", "Clips")}
-          ${tabToggle("snapshot", "Snapshots")}
-          ${tabToggle("recordings", "Recordings")}
-          ${tabToggle("kept", "Favorites")}
+          ${tabToggle("alerts", "Alerts", "editor.layout.tabs.alerts")}
+          ${tabToggle("clips", "Clips", "editor.layout.tabs.clips")}
+          ${tabToggle("snapshot", "Snapshots", "editor.layout.tabs.snapshot")}
+          ${tabToggle("recordings", "Recordings", "editor.layout.tabs.recordings")}
+          ${tabToggle("kept", "Favorites", "editor.layout.tabs.kept")}
         </div>
       </div>
       <div class="section">
-        <span class="field-label">Card Height Limit</span>
+        <span class="field-label" data-fvc-i18n="editor.layout.cardHeightLimit">Card Height Limit</span>
         <div class="card-height-control">
           <div class="card-height-slider-control">
             <input name="stream_height" id="stream_height" type="range" min="${CARD_HEIGHT_MIN}" max="${CARD_HEIGHT_MAX}" step="1" value="${streamHeight}">
             <div class="field-helper card-height-value" id="stream_height-output">${streamHeight}${streamHeightUnit}</div>
           </div>
-          <div class="editor-choice-field editor-choice-field--compact" id="stream_height_unit" role="radiogroup" aria-label="Card height unit">
+          <div class="editor-choice-field editor-choice-field--compact" id="stream_height_unit" role="radiogroup" aria-label="Card height unit" data-fvc-i18n-aria-label="editor.layout.cardHeightUnit">
             ${buildEditorChoiceChipsMarkup({
               name: "stream_height_unit",
               options: [
@@ -3700,57 +3707,57 @@ export class FrigateViewCardEditor extends HTMLElement {
             })}
           </div>
         </div>
-        <div class="field-helper">Card needs to be set to Auto Height for this to work properly.</div>
+        <div class="field-helper" data-fvc-i18n="editor.layout.autoHeightHelp">Card needs to be set to Auto Height for this to work properly.</div>
         <div class="field-helper" id="stream_height-helper"></div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Tight Margins</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.layout.tightMargins">Tight Margins</span>
           <ha-switch id="tight_margins" ${this._config?.tight_margins ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Removes padding in Sections views. In Bubble Card popups, keeps top padding and removes side and bottom spacing.</div>
+        <div class="field-helper" data-fvc-i18n="editor.layout.tightMarginsHelp">Removes padding in Sections views. In Bubble Card popups, keeps top padding and removes side and bottom spacing.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Inside Shadows</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.layout.insideShadows">Inside Shadows</span>
           <ha-switch id="shadows" ${this._config?.shadows !== false ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Adds shadows to elements inside the card, including event items.</div>
+        <div class="field-helper" data-fvc-i18n="editor.layout.insideShadowsHelp">Adds shadows to elements inside the card, including event items.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Card Shadow</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.layout.cardShadow">Card Shadow</span>
           <ha-switch id="outer_shadows" ${this._config?.outer_shadows !== false ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Adds a shadow around the card. Hidden automatically on phones in Preview, Wide View, and Mobile View.</div>
+        <div class="field-helper" data-fvc-i18n="editor.layout.cardShadowHelp">Adds a shadow around the card. Hidden automatically on phones in Preview, Wide View, and Mobile View.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Event Item Borders</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.layout.eventItemBorders">Event Item Borders</span>
           <ha-switch id="borders" ${this._config?.borders === true ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Adds borders to event items. Useful when inside shadows are off.</div>
+        <div class="field-helper" data-fvc-i18n="editor.layout.eventItemBordersHelp">Adds borders to event items. Useful when inside shadows are off.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Rounded Corners</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.layout.roundedCorners">Rounded Corners</span>
           <ha-switch id="rounded_corners" ${this._config?.rounded_corners !== false ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Rounds the card and media corners.</div>
+        <div class="field-helper" data-fvc-i18n="editor.layout.roundedCornersHelp">Rounds the card and media corners.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Show ${CARD_NAME} Logo</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.layout.showLogo" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ cardName: CARD_NAME }))}">Show ${CARD_NAME} Logo</span>
           <ha-switch id="display_logo" ${this._config?.display_logo !== false ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Shows ${CARD_NAME} branding in page footers and the mobile Preview header when the HA navbar is at the bottom.</div>
+        <div class="field-helper" data-fvc-i18n="editor.layout.showLogoHelp" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ cardName: CARD_NAME }))}">Shows ${CARD_NAME} branding in page footers and the mobile Preview header when the HA navbar is at the bottom.</div>
       </div>
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Show Version Number</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.layout.showVersionNumber">Show Version Number</span>
           <ha-switch id="display_version" ${this._config?.display_version !== false ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Shows the installed version in page footers. General Settings always shows it.</div>
+        <div class="field-helper" data-fvc-i18n="editor.layout.showVersionNumberHelp">Shows the installed version in page footers. General Settings always shows it.</div>
       </div>`;
     const slideshowPanelContent = `
       <div class="section">

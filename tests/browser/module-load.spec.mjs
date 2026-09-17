@@ -397,6 +397,110 @@ test("Theme Settings language changes preserve custom colors and selected modes"
   });
 });
 
+test("Layout Settings language changes preserve controls and validation state", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card-editor.js");
+    const editor = document.createElement("frigate-view-card-editor");
+    editor._activeSettingsPanelId = "layout";
+    document.body.append(editor);
+    editor.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      stream_height: 80,
+      stream_height_unit: "dvh",
+      tight_margins: true,
+      display_logo: false,
+    });
+    const hass = { locale: { language: "en" }, states: {}, themes: {} };
+    editor.hass = hass;
+    const panel = editor.querySelector('[data-panel="layout"]');
+    const slider = editor.querySelector("#stream_height");
+    const heightUnit = editor.querySelector('[name="stream_height_unit"][value="dvh"]');
+    const tightMargins = editor.querySelector("#tight_margins");
+    const logo = editor.querySelector("#display_logo");
+    editor._setEditorFieldError(
+      "#stream_height",
+      editor._t("editor.layout.cardHeightRangeValidation", { min: 50, max: 100 }),
+    );
+    let configChanged = 0;
+    editor.addEventListener("config-changed", () => { configChanged += 1; });
+
+    const english = editor._localization;
+    const translated = {
+      "editor.panels.layout": "Paramètres de disposition",
+      "editor.layout.activeTabs": "Onglets actifs",
+      "editor.layout.tabs.alerts": "Alertes",
+      "editor.layout.cardHeightLimit": "Limite de hauteur",
+      "editor.layout.cardHeightUnit": "Unité de hauteur",
+      "editor.layout.autoHeightHelp": "Utilisez la hauteur automatique.",
+      "editor.layout.cardHeightRangeValidation": "Nombre entier entre {min} et {max}.",
+      "editor.layout.tightMargins": "Marges serrées",
+      "editor.layout.tightMarginsHelp": "Réduit l'espacement autour de la carte.",
+      "editor.layout.showLogo": "Afficher le logo {cardName}",
+      "editor.layout.showLogoHelp": "Affiche {cardName} dans le pied de page.",
+    };
+    editor._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => {
+        const phrase = translated[key];
+        return phrase
+          ? phrase.replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g, (token, name) =>
+            Object.hasOwn(values, name) ? String(values[name]) : token)
+          : english.t(key, values);
+      },
+    };
+    editor.hass = { ...hass, locale: { language: "fr" } };
+
+    return {
+      panelPreserved: editor.querySelector('[data-panel="layout"]') === panel,
+      panelOpen: panel.classList.contains("active"),
+      sliderPreserved: editor.querySelector("#stream_height") === slider,
+      sliderValue: slider.value,
+      unitPreserved: editor.querySelector('[name="stream_height_unit"][value="dvh"]') === heightUnit,
+      unitChecked: heightUnit.checked,
+      unitAria: editor.querySelector("#stream_height_unit").getAttribute("aria-label"),
+      tightPreserved: editor.querySelector("#tight_margins") === tightMargins,
+      tightChecked: tightMargins.checked === true || tightMargins.hasAttribute("checked"),
+      logoPreserved: editor.querySelector("#display_logo") === logo,
+      logoChecked: logo.checked === true || logo.hasAttribute("checked"),
+      activeTabs: editor.querySelector('[data-fvc-i18n="editor.layout.activeTabs"]').textContent,
+      alertsTab: editor.querySelector('[data-active-tab="alerts"]').closest("ha-formfield").getAttribute("label"),
+      heightLabel: editor.querySelector('[data-fvc-i18n="editor.layout.cardHeightLimit"]').textContent,
+      heightHelp: editor.querySelector('[data-fvc-i18n="editor.layout.autoHeightHelp"]').textContent,
+      heightError: editor.querySelector("#stream_height-helper").textContent,
+      heightInvalid: slider.hasAttribute("data-invalid"),
+      tightLabel: editor.querySelector('[data-fvc-i18n="editor.layout.tightMargins"]').textContent,
+      logoLabel: editor.querySelector('[data-fvc-i18n="editor.layout.showLogo"]').textContent,
+      logoHelp: editor.querySelector('[data-fvc-i18n="editor.layout.showLogoHelp"]').textContent,
+      configChanged,
+    };
+  });
+
+  expect(state).toEqual({
+    panelPreserved: true,
+    panelOpen: true,
+    sliderPreserved: true,
+    sliderValue: "80",
+    unitPreserved: true,
+    unitChecked: true,
+    unitAria: "Unité de hauteur",
+    tightPreserved: true,
+    tightChecked: true,
+    logoPreserved: true,
+    logoChecked: false,
+    activeTabs: "Onglets actifs",
+    alertsTab: "Alertes",
+    heightLabel: "Limite de hauteur",
+    heightHelp: "Utilisez la hauteur automatique.",
+    heightError: "Nombre entier entre 50 et 100.",
+    heightInvalid: true,
+    tightLabel: "Marges serrées",
+    logoLabel: "Afficher le logo FrigateView",
+    logoHelp: "Affiche FrigateView dans le pied de page.",
+    configChanged: 0,
+  });
+});
+
 test("an open camera editor keeps its form and accordion state when language changes", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

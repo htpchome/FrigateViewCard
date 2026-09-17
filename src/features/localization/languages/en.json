@@ -113,6 +113,34 @@
         "bg_alert": "Alert/Review"
       }
     },
+    "layout": {
+      "activeTabs": "Active Tabs",
+      "tabs": {
+        "alerts": "Alerts",
+        "clips": "Clips",
+        "snapshot": "Snapshots",
+        "recordings": "Recordings",
+        "kept": "Favorites"
+      },
+      "cardHeightLimit": "Card Height Limit",
+      "cardHeightUnit": "Card height unit",
+      "autoHeightHelp": "Card needs to be set to Auto Height for this to work properly.",
+      "cardHeightRangeValidation": "Select a whole number from {min} to {max}.",
+      "tightMargins": "Tight Margins",
+      "tightMarginsHelp": "Removes padding in Sections views. In Bubble Card popups, keeps top padding and removes side and bottom spacing.",
+      "insideShadows": "Inside Shadows",
+      "insideShadowsHelp": "Adds shadows to elements inside the card, including event items.",
+      "cardShadow": "Card Shadow",
+      "cardShadowHelp": "Adds a shadow around the card. Hidden automatically on phones in Preview, Wide View, and Mobile View.",
+      "eventItemBorders": "Event Item Borders",
+      "eventItemBordersHelp": "Adds borders to event items. Useful when inside shadows are off.",
+      "roundedCorners": "Rounded Corners",
+      "roundedCornersHelp": "Rounds the card and media corners.",
+      "showLogo": "Show {cardName} Logo",
+      "showLogoHelp": "Shows {cardName} branding in page footers and the mobile Preview header when the HA navbar is at the bottom.",
+      "showVersionNumber": "Show Version Number",
+      "showVersionNumberHelp": "Shows the installed version in page footers. General Settings always shows it."
+    },
     "cameraPanel": {
       "cameras": "Cameras",
       "frigateCamerasDetected": "(Frigate cameras detected)",
