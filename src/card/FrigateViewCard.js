@@ -2212,6 +2212,9 @@ export class FrigateViewCard extends HTMLElement {
     if (this._localization.updateHass(hass)) {
       applyLocalizedText(this.shadowRoot, this._localization.t);
       this._browseCalendarPanelController?.syncLocalizedMonthLabel();
+      if (this._config) {
+        this._activeStandardPageController()?.relocalizeBrowseLabels?.();
+      }
     }
     if (!this._config) return;
     if (this._editorPreviewController.renderCardPickerDemo()) {

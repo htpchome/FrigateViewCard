@@ -1030,7 +1030,7 @@ test("single-view event content helper builds flat and grouped markup", () => {
   html = controller.renderEventsContent([{ id: 2, start_time: 1722470400 }]);
   assert.equal(html.includes("list-day-sec"), true);
   assert.equal(html.includes("Wed - Jul 31st - Recent Alerts"), true);
-  assert.equal(html.includes('<div class="end">— end —</div>'), true);
+  assert.equal(html.includes('data-fvc-i18n="runtime.browse.end"'), true);
 });
 
 test("single-view kept content helper builds flat markup without end marker", () => {
@@ -1043,7 +1043,7 @@ test("single-view kept content helper builds flat markup without end marker", ()
   assert.equal(html.includes('<article class="event">3</article>'), true);
   assert.equal(html.includes('<article class="event">4</article>'), true);
   assert.equal(html.includes("list-day-sec"), false);
-  assert.equal(html.includes('<div class="end">— end —</div>'), false);
+  assert.equal(html.includes('data-fvc-i18n="runtime.browse.end"'), false);
 });
 
 test("single-view review content helper builds grouped markup", () => {

@@ -403,6 +403,81 @@ test("browse filters and calendar localize in place and after rebuilding", async
   });
 });
 
+test("browse empty states localize in place and after switching tabs", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    card._renderShell();
+    card._tab = "kept";
+    card._renderList();
+
+    const list = card.shadowRoot.querySelector("#list");
+    const empty = list.querySelector(".empty");
+    const live = card.shadowRoot.querySelector("#eng-wrap");
+    const translations = {
+      "runtime.browse.noFavorites": "Aucun favori",
+      "runtime.browse.favoriteHint": "Ajoutez un événement aux favoris",
+      "runtime.browse.favorites": "Favoris",
+      "runtime.browse.noAlerts": "Aucune alerte",
+      "runtime.browse.recentAlerts": "Alertes récentes",
+      "runtime.browse.noRecordings": "Aucun enregistrement",
+      "runtime.browse.recordings": "Enregistrements",
+      "runtime.browse.datedHeading": "{title} · {date}",
+    };
+    const config = card._config;
+    card._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => (translations[key] || key).replace(
+        /\{(\w+)\}/g,
+        (_, name) => String(values[name] || ""),
+      ),
+    };
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+    card._config = config;
+
+    const inPlace = {
+      emptyPreserved: list.querySelector(".empty") === empty,
+      livePreserved: card.shadowRoot.querySelector("#eng-wrap") === live,
+      message: empty.querySelector("span")?.textContent,
+      hint: empty.querySelectorAll("span")[1]?.textContent,
+    };
+    card._renderList();
+    const afterRefresh = list.querySelector(".empty") === empty;
+    card._tab = "alerts";
+    card._activeCam.alerts_content = "alerts_only";
+    card._renderList();
+    const alerts = list.querySelector(".empty")?.textContent;
+    const alertsHeading = card.shadowRoot.querySelector("#browse-head-label")?.textContent;
+    card._tab = "recordings";
+    card._renderList();
+
+    return {
+      inPlace,
+      afterRefresh,
+      alerts,
+      alertsHeading,
+      recordings: list.querySelector(".empty")?.textContent,
+    };
+  });
+
+  expect(state).toEqual({
+    inPlace: {
+      emptyPreserved: true,
+      livePreserved: true,
+      message: "Aucun favori",
+      hint: "Ajoutez un événement aux favoris",
+    },
+    afterRefresh: true,
+    alerts: "Aucune alerte",
+    alertsHeading: "Alertes récentes",
+    recordings: "Aucun enregistrement",
+  });
+});
+
 test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

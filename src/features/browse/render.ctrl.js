@@ -15,6 +15,11 @@ import {
   hasPtzPanTiltCapability,
 } from "../ptz/index.js";
 import {
+  applyLocalizedText,
+  setLocalizedText,
+} from "../localization/localized-dom.js";
+import {
+  buildBrowseEmptyMarkup,
   buildBrowseEventsContentMarkup,
   buildBrowseKeptContentMarkup,
   buildBrowseLegendMarkup,
@@ -150,6 +155,7 @@ export class BrowseRenderController {
       getMonthDay: (value, options) =>
         this._host._monthDay(value, options),
       capitalize: cap,
+      t: this._host._localization?.t,
     });
   }
 
@@ -161,6 +167,7 @@ export class BrowseRenderController {
       getWeekday: (value) => this._host._weekday(value),
       getMonthDay: (value, options) =>
         this._host._monthDay(value, options),
+      t: this._host._localization?.t,
     });
   }
 
@@ -175,7 +182,39 @@ export class BrowseRenderController {
     return resolveBrowseControlsHeadingLabel({
       cameraName: cameraName(camera),
       ptzReady,
+      t: this._host._localization?.t,
     });
+  }
+
+  relocalizeBrowseLabels() {
+    const list = this._host._pageShellRegionElement("browse", "#list");
+    for (const dayLabel of list?.querySelectorAll?.(".list-day-label[data-day-ts]") || []) {
+      const timestamp = Number(dayLabel.dataset.dayTs);
+      if (!Number.isFinite(timestamp)) continue;
+      const nextLabel = this.listHeadingLabel(timestamp);
+      if (dayLabel.textContent !== nextLabel) dayLabel.textContent = nextLabel;
+      if (dayLabel.dataset.dayLabel !== nextLabel) {
+        dayLabel.dataset.dayLabel = nextLabel;
+      }
+    }
+
+    const label = this._host._pageShellRegionElement(
+      "browseHeader",
+      "#browse-head-label",
+    );
+    if (!label) return;
+    const tab = this._host._tab;
+    const nextLabel = tab === "recordings"
+      ? this.recordingsHeadingLabel(this._host._winEnd)
+      : tab === "controls"
+        ? this.controlsHeadingLabel()
+        : this.showStickyDayHeaders()
+          ? resolveActiveDayLabelFromScroll({
+              list,
+              browse: this._host._pageShellRegion("browse"),
+            }) || this.listHeadingLabel()
+          : this.listHeadingLabel();
+    if (label.textContent !== nextLabel) label.textContent = nextLabel;
   }
 
   renderListLabel(timestamp = null) {
@@ -402,9 +441,17 @@ export class BrowseRenderController {
       return false;
     }
     replaceListMarkupPreservingMedia(list, nextHtml);
+    this._localizeEndMarker(list);
     this._lastListElement = list;
     this._host._lastRenderedListHtml = nextHtml;
     return true;
+  }
+
+  _localizeEndMarker(list) {
+    const t = this._host._localization?.t;
+    if (typeof t === "function") {
+      setLocalizedText(list?.querySelector?.(".end"), "runtime.browse.end", t);
+    }
   }
 
   _renderRecordingsTabList(list) {
@@ -425,7 +472,9 @@ export class BrowseRenderController {
     this._renderStandardListMarkup(list, {
       items: kept,
       emptyMessage: "No favorites",
+      emptyMessageKey: "runtime.browse.noFavorites",
       emptyHint: "star an event to add it to Favorites",
+      emptyHintKey: "runtime.browse.favoriteHint",
       buildContentHtml: (items) => this.renderKeptContent(items),
       emptyForceHide: false,
       contentForceHide: false,
@@ -447,6 +496,9 @@ export class BrowseRenderController {
       emptyMessage: this._host._loading
         ? "Loading events…"
         : "No events in this window",
+      emptyMessageKey: this._host._loading
+        ? "runtime.browse.loadingEvents"
+        : "runtime.browse.noEvents",
       buildContentHtml: (items) =>
         this.renderEventsContent(items, {
           exhausted: firstPaint.limited ? false : this._host._exhausted,
@@ -651,6 +703,7 @@ export class BrowseRenderController {
         return;
       }
       state.renderedCount = end;
+      if (isFinal) this._localizeEndMarker(list);
       if (!isFinal) {
         this._scheduleBrowseProgressiveFrame(appendNextBatch);
         return;
@@ -683,7 +736,9 @@ export class BrowseRenderController {
     {
       items,
       emptyMessage,
+      emptyMessageKey = "",
       emptyHint = "",
+      emptyHintKey = "",
       buildContentHtml,
       emptyForceHide = null,
       contentForceHide = null,
@@ -701,9 +756,23 @@ export class BrowseRenderController {
       emptyHint,
       buildContentHtml,
     });
+    const html = renderState.isEmpty
+      ? buildBrowseEmptyMarkup({
+          message: emptyMessage,
+          messageKey: emptyMessageKey,
+          hint: emptyHint,
+          hintKey: emptyHintKey,
+        })
+      : renderState.html;
     applyListMarkupWithOlderHint({
-      setHtml: (html) => this.setListHtmlIfChanged(list, html),
-      html: renderState.html,
+      setHtml: (nextHtml) => {
+        const changed = this.setListHtmlIfChanged(list, nextHtml);
+        if (renderState.isEmpty && changed) {
+          applyLocalizedText(list, this._host._localization?.t);
+        }
+        return changed;
+      },
+      html,
       isEmpty: renderState.isEmpty,
       syncOlderHint,
       emptyForceHide,
@@ -737,6 +806,15 @@ export class BrowseRenderController {
       contentForceHide: false,
       syncOnContent: false,
     });
+    if (!recordings.length && typeof this._host._localization?.t === "function") {
+      setLocalizedText(
+        list.querySelector?.(".empty"),
+        this._host._loading
+          ? "runtime.browse.loadingRecordings"
+          : "runtime.browse.noRecordings",
+        this._host._localization.t,
+      );
+    }
     this._host._recordingsBrowseNavController?.scheduleBrowseNavUpdate?.();
   }
 
@@ -752,6 +830,13 @@ export class BrowseRenderController {
       : this._host._loading
         ? "Loading alerts…"
         : "No alerts in this window";
+    const emptyMessageKey = showAllReviews
+      ? this._host._loading
+        ? "runtime.browse.loadingReviews"
+        : "runtime.browse.noReviews"
+      : this._host._loading
+        ? "runtime.browse.loadingAlerts"
+        : "runtime.browse.noAlerts";
     const allReviews = [...filteredReviews].sort(
       (a, b) => b.start_time - a.start_time,
     );
@@ -766,6 +851,7 @@ export class BrowseRenderController {
     this._renderStandardListMarkup(list, {
       items: reviews,
       emptyMessage: emptyText,
+      emptyMessageKey,
       buildContentHtml: (items) => this.renderReviewsContent(items),
       emptyForceHide: true,
       contentForceHide: false,

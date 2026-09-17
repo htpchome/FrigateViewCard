@@ -218,6 +218,10 @@ export class MobileViewPageController {
     this._browseRenderController.renderListLabel(ts);
   }
 
+  relocalizeBrowseLabels() {
+    this._browseRenderController.relocalizeBrowseLabels();
+  }
+
   showStickyDayHeaders() {
     return this._browseRenderController.showStickyDayHeaders();
   }

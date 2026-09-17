@@ -1,7 +1,4 @@
-import {
-  appendEndMarker,
-  buildStickyDaySectionsHtml,
-} from "../../shared/list-render.js";
+import { buildStickyDaySectionsHtml } from "../../shared/list-render.js";
 import { escapeHtml, escapeHtmlAttribute } from "../../shared/html.js";
 
 const STICKY_DAY_TABS = Object.freeze(["alerts", "clips", "snapshot"]);
@@ -12,19 +9,29 @@ export function resolveBrowseListHeadingLabel({
   getWeekday,
   getMonthDay,
   capitalize,
+  t,
 } = {}) {
-  const fallback =
+  const heading =
     {
-      recordings: "Recordings",
-      clips: "Recent Clips",
-      snapshot: "Recent Snaps",
-      alerts: "Recent Alerts",
-      kept: "Favorites",
-    }[tab] || capitalize(tab || "");
+      recordings: ["runtime.browse.recordings", "Recordings"],
+      clips: ["runtime.browse.recentClips", "Recent Clips"],
+      snapshot: ["runtime.browse.recentSnaps", "Recent Snaps"],
+      alerts: ["runtime.browse.recentAlerts", "Recent Alerts"],
+      kept: ["runtime.browse.favorites", "Favorites"],
+    }[tab];
+  const fallback = heading
+    ? t?.(heading[0]) || heading[1]
+    : capitalize(tab || "");
   if (!timestamp || !STICKY_DAY_TABS.includes(tab)) return fallback;
-  return `${getWeekday(timestamp)} - ${getMonthDay(timestamp, {
+  const weekday = getWeekday(timestamp);
+  const date = getMonthDay(timestamp, {
     ordinal: true,
-  })} - ${fallback}`;
+  });
+  return t?.("runtime.browse.datedHeading", {
+    weekday,
+    date,
+    title: fallback,
+  }) || `${weekday} - ${date} - ${fallback}`;
 }
 
 export function resolveBrowseRecordingsHeadingLabel({
@@ -33,18 +40,49 @@ export function resolveBrowseRecordingsHeadingLabel({
   nowSec,
   getWeekday,
   getMonthDay,
+  t,
 } = {}) {
   const target = Math.floor(timestamp || windowEnd || nowSec);
-  return `${getWeekday(target)} - ${getMonthDay(target, {
+  const weekday = getWeekday(target);
+  const date = getMonthDay(target, {
     ordinal: true,
-  })} - Recordings`;
+  });
+  const title = t?.("runtime.browse.recordings") || "Recordings";
+  return t?.("runtime.browse.datedHeading", {
+    weekday,
+    date,
+    title,
+  }) || `${weekday} - ${date} - ${title}`;
 }
 
 export function resolveBrowseControlsHeadingLabel({
   cameraName,
   ptzReady = false,
+  t,
 } = {}) {
-  return `${cameraName} · ${ptzReady ? "Frigate PTZ ready" : "PTZ unavailable"}`;
+  const key = ptzReady
+    ? "runtime.browse.ptzReady"
+    : "runtime.browse.ptzUnavailable";
+  const fallback = ptzReady ? "Frigate PTZ ready" : "PTZ unavailable";
+  return `${cameraName} · ${t?.(key) || fallback}`;
+}
+
+export function buildBrowseEmptyMarkup({
+  message = "",
+  messageKey = "",
+  hint = "",
+  hintKey = "",
+} = {}) {
+  const messageAttribute = messageKey
+    ? ` data-fvc-i18n="${escapeHtmlAttribute(messageKey)}"`
+    : "";
+  if (!hint) {
+    return `<div class="empty"${messageAttribute}>${escapeHtml(message)}</div>`;
+  }
+  const hintAttribute = hintKey
+    ? ` data-fvc-i18n="${escapeHtmlAttribute(hintKey)}"`
+    : "";
+  return `<div class="empty"><span${messageAttribute}>${escapeHtml(message)}</span><br><span style="opacity:.6"${hintAttribute}>${escapeHtml(hint)}</span></div>`;
 }
 
 export function shouldShowBrowseStickyDayHeaders(tab) {
@@ -81,7 +119,7 @@ export function buildBrowseEventsContentMarkup({
         renderItem,
       })
     : items.map((item) => renderItem(item)).join("");
-  return appendEndMarker(content, exhausted);
+  return `${content}${exhausted ? '<div class="end" data-fvc-i18n="runtime.browse.end">— end —</div>' : ""}`;
 }
 
 export function buildBrowseKeptContentMarkup({

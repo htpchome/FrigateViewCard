@@ -150,6 +150,37 @@ test("browse render controller owns alert ordering and avoids duplicate DOM writ
   assert.equal(listWrites(), 1);
 });
 
+test("browse day headings relocalize without replacing list rows", () => {
+  const { host, nodes, listWrites } = createHost();
+  const controller = new BrowseRenderController(host);
+  const row = { id: "preserved" };
+  const dayLabel = {
+    dataset: { dayTs: "1722470400", dayLabel: "Wed - Jul 31st - Recent Alerts" },
+    textContent: "Wed - Jul 31st - Recent Alerts",
+    getBoundingClientRect: () => ({ top: 0 }),
+  };
+  nodes.list.querySelectorAll = (selector) => selector.startsWith(".list-day-label")
+    ? [dayLabel]
+    : [row];
+  host._localization = {
+    t: (key, values = {}) => {
+      if (key === "runtime.browse.recentAlerts") return "Alertes récentes";
+      if (key === "runtime.browse.datedHeading") {
+        return `${values.title} · ${values.date}`;
+      }
+      return key;
+    },
+  };
+
+  controller.relocalizeBrowseLabels();
+
+  assert.equal(dayLabel.textContent, "Alertes récentes · Jul 31st");
+  assert.equal(dayLabel.dataset.dayLabel, dayLabel.textContent);
+  assert.equal(nodes.browseLabel.textContent, dayLabel.textContent);
+  assert.equal(nodes.list.querySelectorAll(".list-item")[0], row);
+  assert.equal(listWrites(), 0);
+});
+
 test("browse render controller writes unchanged markup into a replaced list node", () => {
   const { host, nodes } = createHost();
   const controller = new BrowseRenderController(host);

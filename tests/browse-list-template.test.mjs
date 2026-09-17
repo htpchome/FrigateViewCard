@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildBrowseEmptyMarkup,
   buildBrowseEventsContentMarkup,
   buildBrowseKeptContentMarkup,
   buildBrowseLegendMarkup,
@@ -54,6 +55,61 @@ test("browse heading templates derive list, recordings, and controls labels", ()
     }),
     "Driveway · Frigate PTZ ready",
   );
+});
+
+test("browse headings use localized titles and date ordering", () => {
+  const translations = {
+    "runtime.browse.recentAlerts": "Alertes récentes",
+    "runtime.browse.recordings": "Enregistrements",
+    "runtime.browse.ptzUnavailable": "PTZ indisponible",
+  };
+  const t = (key, values = {}) => key === "runtime.browse.datedHeading"
+    ? `${values.title} · ${values.date} · ${values.weekday}`
+    : translations[key];
+
+  assert.equal(
+    resolveBrowseListHeadingLabel({
+      tab: "alerts",
+      timestamp: 1722470400,
+      ...headingFormatters,
+      t,
+    }),
+    "Alertes récentes · Jul 31st · Wed",
+  );
+  assert.equal(
+    resolveBrowseRecordingsHeadingLabel({
+      timestamp: 1722470400,
+      nowSec: 0,
+      ...headingFormatters,
+      t,
+    }),
+    "Enregistrements · Jul 31st · Wed",
+  );
+  assert.equal(
+    resolveBrowseControlsHeadingLabel({
+      cameraName: "Driveway",
+      t,
+    }),
+    "Driveway · PTZ indisponible",
+  );
+});
+
+test("browse empty and end markup retain localization keys", () => {
+  const empty = buildBrowseEmptyMarkup({
+    message: "No favorites",
+    messageKey: "runtime.browse.noFavorites",
+    hint: "star an event",
+    hintKey: "runtime.browse.favoriteHint",
+  });
+  const end = buildBrowseEventsContentMarkup({
+    items: [{ id: 1 }],
+    renderItem,
+    exhausted: true,
+  });
+
+  assert.match(empty, /data-fvc-i18n="runtime\.browse\.noFavorites"/);
+  assert.match(empty, /data-fvc-i18n="runtime\.browse\.favoriteHint"/);
+  assert.match(end, /data-fvc-i18n="runtime\.browse\.end"/);
 });
 
 test("browse sticky day selection is deterministic by tab", () => {
