@@ -218,8 +218,9 @@ test("Card View shell owns live, a collapsible activity drawer, arrows, and foot
   assert.match(markup, /class="footer-version" hidden><\/div>/);
   assert.equal(
     (markup.match(/data-card-view-drawer-toggle/g) || []).length,
-    2,
+    3,
   );
+  assert.match(markup, /class="card-view-drawer-stage-handle"/);
   assert.match(markup, /card-view-drawer-handle--left/);
   assert.match(markup, /card-view-drawer-handle--right/);
   assert.match(markup, /data-card-view-scroll="-1"/);
@@ -1289,11 +1290,11 @@ test("Card View shares the Mobile View camera picker and uses a two-state drawer
   );
   assert.match(
     CARD_VIEW_PAGE_STYLES,
-    /card-view-drawer\.is-open \+ \.card-view-footer \.card-view-drawer-handle svg \{transform:rotate\(180deg\);\}/,
+    /card-view-drawer\.is-open \+ \.card-view-footer \.card-view-drawer-handle svg \{transform:rotate\(0deg\);\}/,
   );
   assert.match(
     CARD_VIEW_PAGE_STYLES,
-    /card-view-drawer\.is-closed \+ \.card-view-footer \.card-view-drawer-handle svg \{transform:rotate\(0deg\);\}/,
+    /card-view-drawer\.is-closed \+ \.card-view-footer \.card-view-drawer-handle svg \{transform:rotate\(180deg\);\}/,
   );
   assert.match(
     CARD_VIEW_PAGE_STYLES,
@@ -1305,7 +1306,7 @@ test("Card View shares the Mobile View camera picker and uses a two-state drawer
   );
   assert.match(
     CARD_VIEW_PAGE_STYLES,
-    /card-view-natural-height\.panel-view-aspect-constrained\.card-view-bottom-panel-open[\s\S]*height:var\(--fvc-panel-view-card-height\) !important;[\s\S]*card-view-live-panel \{[\s\S]*flex:1 1 0;min-height:0;[\s\S]*card-view-live-stage \{[\s\S]*flex:1 1 0;min-height:0;overflow:hidden;[\s\S]*card-view-drawer \{[\s\S]*flex:0 0 auto;[\s\S]*#eng-wrap \{[\s\S]*height:100%;max-height:100%;aspect-ratio:auto;/,
+    /card-view-natural-height\.card-view-panel-height-capped\.card-view-bottom-panel-open[\s\S]*height:var\(--fvc-panel-view-card-height\) !important;[\s\S]*card-view-live-panel \{[\s\S]*flex:1 1 0;min-height:0;[\s\S]*card-view-live-stage \{[\s\S]*flex:1 1 0;min-height:0;overflow:hidden;[\s\S]*card-view-drawer \{[\s\S]*flex:0 0 auto;[\s\S]*#eng-wrap \{[\s\S]*height:100%;max-height:100%;aspect-ratio:auto;/,
   );
   assert.match(
     CARD_VIEW_PAGE_STYLES,

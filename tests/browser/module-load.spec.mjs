@@ -2910,6 +2910,123 @@ test("Panel Card View naturally sizes and caps an open bottom panel", async ({
   expect(Math.abs(cramped.footerBottom - cramped.hostBottom)).toBeLessThanOrEqual(1);
 });
 
+test("Sidebar Card View keeps its live stage legible with the drawer open", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 700 });
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    document.body.style.margin = "0";
+    const sidebar = document.createElement("hui-sidebar-view");
+    sidebar.style.display = "block";
+    sidebar.style.width = "550px";
+    document.body.append(sidebar);
+    const card = document.createElement("frigate-view-card");
+    sidebar.append(card);
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      stream_height: 100,
+      stream_height_unit: "%",
+      card_view_page_enabled: true,
+      card_view_view_mode: "bottom-panel-open",
+    });
+    card._pageId = "card-view";
+    card._renderShell();
+    card._cardViewPageController.syncDrawerState();
+    card._applyCardStyle();
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    card._applyCardStyle();
+    const root = card.shadowRoot;
+    const stage = root.querySelector(".card-view-live-stage");
+    const drawer = root.querySelector("[data-card-view-drawer]");
+    return {
+      stageWidth: stage.getBoundingClientRect().width,
+      stageHeight: stage.getBoundingClientRect().height,
+      drawerHeight: drawer.getBoundingClientRect().height,
+      hostHeight: card.getBoundingClientRect().height,
+    };
+  });
+  expect(state.drawerHeight).toBeGreaterThan(0);
+  expect(state.stageWidth / state.stageHeight).toBeCloseTo(16 / 9, 1);
+  const resized = await page.evaluate(async () => {
+    const sidebar = document.querySelector("hui-sidebar-view");
+    const card = sidebar.querySelector("frigate-view-card");
+    sidebar.style.width = "720px";
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    card._applyCardStyle();
+    const stage = card.shadowRoot.querySelector(".card-view-live-stage");
+    return {
+      width: stage.getBoundingClientRect().width,
+      height: stage.getBoundingClientRect().height,
+    };
+  });
+  expect(resized.width).toBeGreaterThan(state.stageWidth);
+  expect(resized.width / resized.height).toBeCloseTo(16 / 9, 1);
+});
+
+test("Card View drawer handles respond to a downward drag in Panel and Sidebar", async ({ page }) => {
+  for (const viewTag of ["hui-panel-view", "hui-sidebar-view"]) {
+    await page.setViewportSize({ width: 900, height: 700 });
+    await page.goto(baseUrl);
+    await page.evaluate(async (tagName) => {
+      await import("/frigate-view-card.js");
+      document.body.style.margin = "0";
+      const view = document.createElement(tagName);
+      view.style.display = "block";
+      view.style.width = "550px";
+      document.body.append(view);
+      const card = document.createElement("frigate-view-card");
+      view.append(card);
+      card.setConfig({
+        cameras: [{ entity: "camera.front", name: "Front" }],
+        stream_height: 100,
+        stream_height_unit: "%",
+        card_view_page_enabled: true,
+        card_view_view_mode: "bottom-panel-open",
+      });
+      card._pageId = "card-view";
+      card._renderShell();
+      card._cardViewPageController.syncDrawerState();
+      card._applyCardStyle();
+    }, viewTag);
+
+    const handle = page.locator("frigate-view-card .card-view-drawer-stage-handle");
+    await expect(handle).toBeVisible();
+    const bounds = await handle.boundingBox();
+    expect(bounds).toBeTruthy();
+    const x = bounds.x + bounds.width / 2;
+    const y = bounds.y + bounds.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x, y + 40, { steps: 5 });
+    await page.mouse.up();
+    await expect(page.locator("frigate-view-card [data-card-view-drawer]")).toHaveAttribute("data-drawer-state", "closed");
+    const activityHeight = await page.evaluate(() => {
+      const activity = document.querySelector("frigate-view-card")
+        .shadowRoot.querySelector(".card-view-activity");
+      return activity.getBoundingClientRect().height;
+    });
+    expect(activityHeight).toBeGreaterThan(0);
+    await page.waitForTimeout(420);
+    const footerHandle = page.locator("frigate-view-card .card-view-drawer-handle--left");
+    await footerHandle.click();
+    await expect(page.locator("frigate-view-card [data-card-view-drawer]")).toHaveAttribute("data-drawer-state", "open");
+    const reopened = await page.evaluate(() => {
+      const card = document.querySelector("frigate-view-card");
+      const stage = card.shadowRoot.querySelector(".card-view-live-stage");
+      const footer = card.shadowRoot.querySelector('[data-fvc-region="footer"]');
+      return {
+        stageHeight: stage.getBoundingClientRect().height,
+        footerBottom: footer.getBoundingClientRect().bottom,
+        hostBottom: card.getBoundingClientRect().bottom,
+      };
+    });
+    expect(reopened.stageHeight).toBeGreaterThan(0);
+    expect(Math.abs(reopened.footerBottom - reopened.hostBottom)).toBeLessThanOrEqual(2);
+    await handle.click();
+    await expect(page.locator("frigate-view-card [data-card-view-drawer]")).toHaveAttribute("data-drawer-state", "closed");
+  }
+});
+
 test("Card View controls stay below an external dialog while its popup stays above them", async ({
   page,
 }) => {

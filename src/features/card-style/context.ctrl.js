@@ -18,6 +18,8 @@ const MOBILE_SECTIONS_FULL_BLEED_CLASS =
   "mobile-view-sections-full-bleed";
 const PANEL_ASPECT_CONSTRAINED_CLASS =
   "panel-view-aspect-constrained";
+const CARD_VIEW_PANEL_HEIGHT_CAPPED_CLASS =
+  "card-view-panel-height-capped";
 const PANEL_ASPECT_MAX_WIDTH_PROPERTY =
   "--fvc-panel-view-max-width";
 const PANEL_ASPECT_HEIGHT_PROPERTY =
@@ -585,6 +587,10 @@ export class CardStyleContextController {
       PANEL_ASPECT_CONSTRAINED_CLASS,
       false,
     );
+    this._host.classList?.toggle?.(
+      CARD_VIEW_PANEL_HEIGHT_CAPPED_CLASS,
+      false,
+    );
     if (this._panelAspectConstraintActive) {
       this._host.style?.removeProperty?.(
         PANEL_ASPECT_MAX_WIDTH_PROPERTY,
@@ -653,6 +659,10 @@ export class CardStyleContextController {
     this._host.classList?.toggle?.(
       PANEL_ASPECT_CONSTRAINED_CLASS,
       true,
+    );
+    this._host.classList?.toggle?.(
+      CARD_VIEW_PANEL_HEIGHT_CAPPED_CLASS,
+      useNaturalPanelHeight,
     );
     this._host.style?.setProperty?.(
       PANEL_ASPECT_MAX_WIDTH_PROPERTY,
@@ -1047,9 +1057,9 @@ export class CardStyleContextController {
       return null;
     }
     const cameraRow = card.querySelector(".card-view-camera-row");
-    const drawer = card.querySelector("[data-card-view-drawer]");
+    const drawerContent = card.querySelector(".card-view-activity");
     const footer = card.querySelector('[data-fvc-region="footer"]');
-    const fixedHeights = [cameraRow, drawer, footer].map((element) =>
+    const fixedHeights = [cameraRow, drawerContent, footer].map((element) =>
       this.measureRenderedHeight(element),
     );
     if (fixedHeights.some((height) => height <= 0)) return null;

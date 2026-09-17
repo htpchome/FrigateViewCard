@@ -55,6 +55,7 @@ export function buildCardViewMainLayoutShellMarkup({
       </div>
       <div class="live-stage live-stage--overlay card-view-live-stage" id="live-stage">
         ${regions.live}
+        <button class="card-view-drawer-stage-handle" type="button" data-card-view-drawer-toggle data-media-overlay-ignore aria-expanded="true" title="Close activity drawer" aria-label="Close activity drawer" data-fvc-i18n-title="runtime.cardView.closeActivityDrawer" data-fvc-i18n-aria-label="runtime.cardView.closeActivityDrawer">${regions.drawerHandleIcon}</button>
         <button class="round-btn card-view-video-only-back" type="button" data-card-view-video-back title="Leave Card View" aria-label="Leave Card View" data-fvc-i18n-title="runtime.cardView.leave" data-fvc-i18n-aria-label="runtime.cardView.leave">${regions.cardViewVideoBackIcon}</button>
         ${buildLivePlaybackControlsMarkup(regions)}
         <aside class="card-view-media-drawer is-closed" data-card-view-media-drawer data-media-overlay-ignore hidden>
