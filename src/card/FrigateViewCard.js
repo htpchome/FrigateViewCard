@@ -5520,8 +5520,8 @@ export class FrigateViewCard extends HTMLElement {
       this._showTwoWayTalkResultBubble(false);
       if (!useGo2Rtc) {
         this._toast(
-          this._localization?.t?.("runtime.twoWayTalk.haConnectionFailed") ||
-            "Home Assistant WebRTC could not establish two-way talk. Verify that the camera stream has a working audio backchannel.",
+          "Home Assistant WebRTC could not establish two-way talk. Verify that the camera stream has a working audio backchannel.",
+          { localizationKey: "runtime.twoWayTalk.haConnectionFailed" },
         );
       }
       this._twoWayTalkSoundwaveController?.stop();
@@ -7391,7 +7391,9 @@ export class FrigateViewCard extends HTMLElement {
     const isFirefox = this._isFirefox();
     const support = resolveVideoPictureInPictureSupport({ video, documentObj });
     if (!support.supported) {
-      this._toast("Picture-in-Picture is not supported for this video.");
+      this._toast("Picture-in-Picture is not supported for this video.", {
+        localizationKey: "runtime.notifications.pipUnsupported",
+      });
       this._syncPictureInPictureButtons();
       return;
     }
@@ -7410,6 +7412,12 @@ export class FrigateViewCard extends HTMLElement {
         reason
           ? `Picture-in-Picture could not start: ${reason}`
           : "Picture-in-Picture could not start in this browser.",
+        reason
+          ? {
+              localizationKey: "runtime.notifications.pipStartFailedWithReason",
+              localizationValues: { reason },
+            }
+          : { localizationKey: "runtime.notifications.pipStartFailed" },
       );
     } finally {
       this._syncPictureInPictureButtons();
@@ -7771,6 +7779,9 @@ export class FrigateViewCard extends HTMLElement {
             {
               tone: optimistic.nextRetained ? "success" : "warning",
               placement: toastPlacement,
+              localizationKey: optimistic.nextRetained
+                ? "runtime.notifications.favoritesAdded"
+                : "runtime.notifications.favoritesRemoved",
             },
           );
           return optimistic.nextRetained;
@@ -7801,7 +7812,13 @@ export class FrigateViewCard extends HTMLElement {
             optimistic.nextRetained
               ? "Could not add to Favorites"
               : "Could not remove from Favorites",
-            { tone: "error", placement: toastPlacement },
+            {
+              tone: "error",
+              placement: toastPlacement,
+              localizationKey: optimistic.nextRetained
+                ? "runtime.notifications.favoritesAddFailed"
+                : "runtime.notifications.favoritesRemoveFailed",
+            },
           );
           return optimistic.previousRetained;
         },
@@ -7902,7 +7919,18 @@ export class FrigateViewCard extends HTMLElement {
       }
     }
 
-    t.textContent = msg;
+    if (normalizedOptions.localizationKey) {
+      setLocalizedText(
+        t,
+        normalizedOptions.localizationKey,
+        (key, values) => this._localization?.t?.(key, values) || msg,
+        normalizedOptions.localizationValues || {},
+      );
+    } else {
+      t.removeAttribute?.("data-fvc-i18n");
+      t.removeAttribute?.("data-fvc-i18n-values");
+      t.textContent = msg;
+    }
     t.hidden = false;
     t.dataset.placement = placement;
     clearTimeout(this._toastT);

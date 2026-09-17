@@ -479,7 +479,11 @@ test("favorite confirmation uses the browse success toast after Frigate accepts 
   assert.deepEqual(notifications, [
     [
       "Added to Favorites",
-      { tone: "success", placement: "browse" },
+      {
+        tone: "success",
+        placement: "browse",
+        localizationKey: "runtime.notifications.favoritesAdded",
+      },
     ],
   ]);
 });
@@ -497,7 +501,14 @@ test("popup favorite confirmation returns state and uses popup placement", async
 
   assert.equal(retained, true);
   assert.deepEqual(notifications, [
-    ["Added to Favorites", { tone: "success", placement: "popup" }],
+    [
+      "Added to Favorites",
+      {
+        tone: "success",
+        placement: "popup",
+        localizationKey: "runtime.notifications.favoritesAdded",
+      },
+    ],
   ]);
 });
 
@@ -518,7 +529,11 @@ test("favorite removal uses the browse warning toast after Frigate accepts it", 
   assert.deepEqual(notifications, [
     [
       "Removed from Favorites",
-      { tone: "warning", placement: "browse" },
+      {
+        tone: "warning",
+        placement: "browse",
+        localizationKey: "runtime.notifications.favoritesRemoved",
+      },
     ],
   ]);
 });
@@ -546,7 +561,33 @@ test("favorite failure rolls back and uses the browse error toast", async () => 
   assert.deepEqual(notifications, [
     [
       "Could not add to Favorites",
-      { tone: "error", placement: "browse" },
+      {
+        tone: "error",
+        placement: "browse",
+        localizationKey: "runtime.notifications.favoritesAddFailed",
+      },
     ],
   ]);
+});
+
+test("favorite removal failure keeps its localized error key", async () => {
+  const { context, notifications } = createFavoriteContext({
+    retained: true,
+    callWS: async () => { throw new Error("retain failed"); },
+  });
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  try {
+    assert.equal(await FrigateViewCard.prototype._toggleFav.call(context, "event-1"), true);
+  } finally {
+    console.warn = originalWarn;
+  }
+  assert.deepEqual(notifications, [[
+    "Could not remove from Favorites",
+    {
+      tone: "error",
+      placement: "browse",
+      localizationKey: "runtime.notifications.favoritesRemoveFailed",
+    },
+  ]]);
 });

@@ -321,6 +321,86 @@ test("two-way talk labels and feedback relocalize without replacing controls or 
   });
 });
 
+test("toast feedback relocalizes in place and clears markers for plain status messages", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    card.setConfig({ cameras: [{ entity: "camera.front" }] });
+    card._renderShell();
+    const root = card.shadowRoot;
+    const toast = root.querySelector("#toast");
+    card._toast("Added to Favorites", {
+      duration: 10000,
+      tone: "success",
+      localizationKey: "runtime.notifications.favoritesAdded",
+    });
+    const english = toast.textContent;
+    const original = card._localization;
+    const phrases = {
+      "runtime.notifications.favoritesAdded": "Ajouté aux favoris",
+      "runtime.notifications.pipUnsupported": "Incrustation indisponible",
+      "runtime.notifications.pipStartFailedWithReason": "Impossible de démarrer : {reason}",
+    };
+    card._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => (phrases[key] || original.t(key, values)).replace(
+        /\{(\w+)\}/g,
+        (token, name) => values[name] ?? token,
+      ),
+    };
+    const config = card._config;
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+    card._config = config;
+    const translated = toast.textContent;
+    card._syncPictureInPictureButtons = () => {};
+    card._isFirefox = () => false;
+    await card._togglePictureInPicture({
+      ownerDocument: { pictureInPictureEnabled: true },
+      getRootNode: () => null,
+      requestPictureInPicture: async () => { throw new Error("blocked"); },
+    });
+    const withReason = toast.textContent;
+    const storedValues = toast.getAttribute("data-fvc-i18n-values");
+    await card._togglePictureInPicture(null);
+    const unsupported = toast.textContent;
+    card._toast("Status supplied by an integration", { duration: 10000 });
+    const plain = toast.textContent;
+    const markerCleared = !toast.hasAttribute("data-fvc-i18n") &&
+      !toast.hasAttribute("data-fvc-i18n-values");
+    card._config = null;
+    card.hass = { locale: { language: "fr-CA" } };
+    card._config = config;
+    const plainAfterLanguageChange = toast.textContent;
+    const toastPreserved = root.querySelector("#toast") === toast;
+    clearTimeout(card._toastT);
+    return {
+      english,
+      translated,
+      withReason,
+      storedValues,
+      unsupported,
+      plain,
+      markerCleared,
+      plainAfterLanguageChange,
+      toastPreserved,
+    };
+  });
+
+  expect(state).toEqual({
+    english: "Added to Favorites",
+    translated: "Ajouté aux favoris",
+    withReason: "Impossible de démarrer : blocked",
+    storedValues: '{"reason":"blocked"}',
+    unsupported: "Incrustation indisponible",
+    plain: "Status supplied by an integration",
+    markerCleared: true,
+    plainAfterLanguageChange: "Status supplied by an integration",
+    toastPreserved: true,
+  });
+});
+
 test("runtime camera status and rebuilt picker remain localized without remounting live", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

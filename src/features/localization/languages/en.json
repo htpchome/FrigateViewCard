@@ -38,6 +38,15 @@
       "failed": "Two-way talk failed to connect",
       "haConnectionFailed": "Home Assistant WebRTC could not establish two-way talk. Verify that the camera stream has a working audio backchannel."
     },
+    "notifications": {
+      "favoritesAdded": "Added to Favorites",
+      "favoritesRemoved": "Removed from Favorites",
+      "favoritesAddFailed": "Could not add to Favorites",
+      "favoritesRemoveFailed": "Could not remove from Favorites",
+      "pipUnsupported": "Picture-in-Picture is not supported for this video.",
+      "pipStartFailedWithReason": "Picture-in-Picture could not start: {reason}",
+      "pipStartFailed": "Picture-in-Picture could not start in this browser."
+    },
     "linkedLight": {
       "toggle": {
         "unavailable": "{name}: Unavailable. Turn on",
