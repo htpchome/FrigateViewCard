@@ -18,8 +18,10 @@ export function previewMediaSeverityClass(severity) {
  * @param {boolean} online Whether camera is currently online.
  * @returns {string}
  */
-export function buildPreviewStatusMarkup(online) {
-  return `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">●</span>${online ? "Online" : "Offline"}`;
+export function buildPreviewStatusMarkup(online, t = null) {
+  const key = online ? "runtime.preview.online" : "runtime.preview.offline";
+  const label = typeof t === "function" ? t(key) : online ? "Online" : "Offline";
+  return `<span class="dot" style="color:${online ? "#4ade80" : "#ef4444"}">●</span>${escapeHtml(label)}`;
 }
 
 export function buildPreviewLightRegionMarkup({
@@ -68,8 +70,17 @@ export function buildPreviewMetaMarkup({
   linkedLightPosition = "right",
   linkedLightLeftMarkup = "",
   linkedLightRightMarkup = "",
+  t = null,
 }) {
   if (!showTitleBars) return "";
+  const sourceText =
+    typeof t === "function"
+      ? t("runtime.preview.streamSource", { source: sourceLabel })
+      : `Stream Source: ${sourceLabel}`;
+  const alertsText =
+    typeof t === "function"
+      ? t("runtime.preview.alertsCount", { count: alertsCount })
+      : `Alerts: ${alertsCount}`;
   const light = buildPreviewLightRegionMarkup({
     cameraEntity,
     linkedLightMarkup,
@@ -79,9 +90,9 @@ export function buildPreviewMetaMarkup({
   });
   return `<div class="preview-meta${light ? " preview-meta--with-light" : ""}">
               <div class="preview-meta-name">${escapeHtml(name)}</div>
-              <div class="preview-meta-status">${buildPreviewStatusMarkup(online)}</div>
-              <div class="preview-meta-source">Stream Source: ${escapeHtml(sourceLabel)}</div>
-              <div class="preview-meta-alerts">Alerts: ${escapeHtml(alertsCount)}</div>
+              <div class="preview-meta-status">${buildPreviewStatusMarkup(online, t)}</div>
+              <div class="preview-meta-source">${escapeHtml(sourceText)}</div>
+              <div class="preview-meta-alerts">${escapeHtml(alertsText)}</div>
               ${light}
             </div>`;
 }
@@ -176,9 +187,20 @@ export function buildPreviewLayoutShellMarkup({
   previewFooterFvcBrandLogo,
   version = "",
   hideFooter = false,
+  t = null,
 }) {
   const normalizedVersion = String(version || "").trim();
-  const footerVersion = `<div class="footer-version" ${normalizedVersion ? `aria-label="${CARD_NAME} version ${escapeHtmlAttribute(normalizedVersion)}"` : "hidden"}>${normalizedVersion ? `v${escapeHtml(normalizedVersion)}` : ""}</div>`;
+  const versionLabel =
+    typeof t === "function"
+      ? t("runtime.preview.versionLabel", {
+          name: CARD_NAME,
+          version: normalizedVersion,
+        })
+      : `${CARD_NAME} version ${normalizedVersion}`;
+  const versionValues = escapeHtmlAttribute(
+    JSON.stringify({ name: CARD_NAME, version: normalizedVersion }),
+  );
+  const footerVersion = `<div class="footer-version" ${normalizedVersion ? `aria-label="${escapeHtmlAttribute(versionLabel)}" data-fvc-i18n-aria-label="runtime.preview.versionLabel" data-fvc-i18n-values="${versionValues}"` : "hidden"}>${normalizedVersion ? `v${escapeHtml(normalizedVersion)}` : ""}</div>`;
   return `${previewShellHeader}
           <div class="preview-shell" id="preview-shell"></div>
           <div class="preview-shell-footer" id="preview-shell-footer" ${hideFooter ? "hidden" : ""}>

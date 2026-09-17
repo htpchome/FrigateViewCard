@@ -1,3 +1,5 @@
+import { escapeHtml } from "../../shared/html.js";
+
 /**
  * Builds one signature fragment for a grid slot.
  * @param {object} args
@@ -66,7 +68,8 @@ export function createGridLabelElement(labelText) {
  * @param {HTMLDivElement} cell
  * @param {string} liveIconSvg
  */
-export function renderGridEmptyPlaceholder(cell, liveIconSvg) {
+export function renderGridEmptyPlaceholder(cell, liveIconSvg, t = null) {
   cell.classList.add("empty");
-  cell.innerHTML = `<div class="ph">${liveIconSvg}<span>Empty</span></div>`;
+  const label = typeof t === "function" ? t("runtime.grid.empty") : "Empty";
+  cell.innerHTML = `<div class="ph">${liveIconSvg}<span data-fvc-i18n="runtime.grid.empty">${escapeHtml(label)}</span></div>`;
 }

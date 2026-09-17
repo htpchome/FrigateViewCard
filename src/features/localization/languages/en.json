@@ -102,10 +102,39 @@
       "backToPreview": "Back to preview page",
       "backToSingleView": "Back to single view"
     },
+    "preview": {
+      "online": "Online",
+      "offline": "Offline",
+      "streamSource": "Stream Source: {source}",
+      "alertsCount": "Alerts: {count}",
+      "snapshot": "Snapshot",
+      "haLive": "HA Live",
+      "streamLive": "{stream} Live",
+      "live": "Live",
+      "loading": "Loading…",
+      "unavailable": "Unavailable",
+      "versionLabel": "{name} version {version}"
+    },
+    "ptz": {
+      "presets": "Camera presets",
+      "presetsNote": "Camera Presets - presets are set on the camera.",
+      "moveToPreset": "Move camera to preset {name}",
+      "right": "Right",
+      "down": "Down",
+      "up": "Up",
+      "left": "Left",
+      "zoomOut": "Zoom Out",
+      "zoomIn": "Zoom In"
+    },
+    "grid": {
+      "empty": "Empty"
+    },
     "live": {
       "fullscreen": "Fullscreen live",
       "pictureInPicture": "Picture-in-Picture live",
       "takeSnapshot": "Take Snapshot",
+      "snapshotTaken": "Snapshot taken",
+      "snapshotFailed": "Unable to take snapshot",
       "closeRotatedFullscreen": "Close rotated fullscreen view",
       "resizeHeight": "Resize live view height",
       "resizeHint": "Drag to resize live view; double-click or double-tap to reset",

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { GridMediaController } from "../src/features/grid/media.ctrl.js";
 import { GridPageController } from "../src/features/grid/page.ctrl.js";
+import { renderGridEmptyPlaceholder } from "../src/features/grid/page.tmpl.js";
 
 const source = fs.readFileSync(
   new URL("../dist/frigate-view-card.js", import.meta.url),
@@ -36,6 +37,16 @@ const stylesSource = fs.readFileSync(
   new URL("../src/styles.js", import.meta.url),
   "utf8",
 );
+
+test("empty grid placeholders use localized, escaped text", () => {
+  const cell = {
+    classList: { add: () => {} },
+    innerHTML: "",
+  };
+  renderGridEmptyPlaceholder(cell, "<svg></svg>", () => "Vide & prêt");
+  assert.match(cell.innerHTML, /data-fvc-i18n="runtime\.grid\.empty"/);
+  assert.match(cell.innerHTML, /Vide &amp; prêt/);
+});
 
 test("grid mode config is wired through card and editor", () => {
   assert.equal(source.includes("grid_mode_enabled"), true);

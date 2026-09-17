@@ -908,7 +908,11 @@ export class GridMediaController {
         cell.classList.add("empty");
       }
       if (cell.classList.contains("empty")) {
-        renderGridEmptyPlaceholder(cell, this._liveIconSvg);
+        renderGridEmptyPlaceholder(
+          cell,
+          this._liveIconSvg,
+          this._host._localization?.t,
+        );
       }
     }
     this._activateGridPage(session, pageKey);

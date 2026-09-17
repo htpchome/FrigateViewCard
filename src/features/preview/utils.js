@@ -65,13 +65,20 @@ export function resolvePreviewStreamSourceLabel({
   useLive,
   connectionType,
   liveStreamHint,
+  t = null,
 }) {
-  if (!useLive) return "Snapshot";
-  if (connectionType === "ha_direct") return "HA Live";
+  const translate = (key, fallback, values = {}) =>
+    typeof t === "function" ? t(key, values) : fallback;
+  if (!useLive) return translate("runtime.preview.snapshot", "Snapshot");
+  if (connectionType === "ha_direct") {
+    return translate("runtime.preview.haLive", "HA Live");
+  }
   const hint = String(liveStreamHint || "")
     .trim()
     .toUpperCase();
-  return hint ? `${hint} Live` : "Live";
+  return hint
+    ? translate("runtime.preview.streamLive", `${hint} Live`, { stream: hint })
+    : translate("runtime.preview.live", "Live");
 }
 
 /**

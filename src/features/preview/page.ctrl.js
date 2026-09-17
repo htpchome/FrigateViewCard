@@ -15,6 +15,7 @@ import {
 import { ICONS } from "../../icons.js";
 import { DEFAULT_TITLE, VERSION } from "../../constants.js";
 import { cap, camDisplayName, DEVICE_PROFILE } from "../../helpers.js";
+import { escapeHtml } from "../../shared/html.js";
 import { resolveCameraAwareText } from "../../shared/page-text.js";
 import {
   buildHaCameraStreamState,
@@ -156,6 +157,7 @@ export class PreviewPageController {
       version:
         this._host._config.display_version !== false ? VERSION : "",
       hideFooter: useBottomNavbarChrome,
+      t: this._host._localization?.t,
     });
   }
 
@@ -236,6 +238,7 @@ export class PreviewPageController {
       useLive,
       connectionType: this._host._cameraConnectionType(entity),
       liveStreamHint: this.previewCameraLiveStreamHint(entity),
+      t: this._host._localization?.t,
     });
   }
 
@@ -370,6 +373,7 @@ export class PreviewPageController {
             cameraEntity: entity,
             linkedLightLeftMarkup,
             linkedLightRightMarkup,
+            t: this._host._localization?.t,
           }),
         });
       })
@@ -444,6 +448,8 @@ export class PreviewPageController {
   }
 
   updatePreviewMeta() {
+    if (!this.isPreviewPageActive()) return;
+    const t = this._host._localization?.t;
     const showTitleBars = this.previewShowTitleBarsEnabled();
     this._host.shadowRoot
       .querySelectorAll("[data-preview-camidx]")
@@ -468,15 +474,23 @@ export class PreviewPageController {
         const useLive = this.previewShouldUseLive(entity);
         const status = cell.querySelector(".preview-meta-status");
         if (status) {
-          status.innerHTML = buildPreviewStatusMarkup(online);
+          status.innerHTML = buildPreviewStatusMarkup(online, t);
         }
         const source = cell.querySelector(".preview-meta-source");
         if (source) {
-          source.textContent = `Stream Source: ${this.previewStreamSourceLabel(entity, useLive)}`;
+          const sourceLabel = this.previewStreamSourceLabel(entity, useLive);
+          source.textContent =
+            typeof t === "function"
+              ? t("runtime.preview.streamSource", { source: sourceLabel })
+              : `Stream Source: ${sourceLabel}`;
         }
         const alerts = cell.querySelector(".preview-meta-alerts");
         if (alerts) {
-          alerts.textContent = `Alerts: ${this.previewAlertsCount(entity)}`;
+          const count = this.previewAlertsCount(entity);
+          alerts.textContent =
+            typeof t === "function"
+              ? t("runtime.preview.alertsCount", { count })
+              : `Alerts: ${count}`;
         }
       });
   }
@@ -486,7 +500,8 @@ export class PreviewPageController {
     const hosts = this._host.shadowRoot.querySelectorAll(".preview-media-host");
     if (!this._host._hass?.states) {
       hosts.forEach((host) => {
-        host.innerHTML = `<div class="ph">${ICONS.live}<span>Loading…</span></div>`;
+        const label = this._host._localization?.t?.("runtime.preview.loading") ?? "Loading…";
+        host.innerHTML = `<div class="ph">${ICONS.live}<span data-fvc-i18n="runtime.preview.loading">${escapeHtml(label)}</span></div>`;
       });
       return;
     }
@@ -508,7 +523,8 @@ export class PreviewPageController {
         : null;
       host.innerHTML = "";
       if (!entity) {
-        host.innerHTML = `<div class="ph">${ICONS.live}<span>Unavailable</span></div>`;
+        const label = this._host._localization?.t?.("runtime.preview.unavailable") ?? "Unavailable";
+        host.innerHTML = `<div class="ph">${ICONS.live}<span data-fvc-i18n="runtime.preview.unavailable">${escapeHtml(label)}</span></div>`;
         return;
       }
       this._host._gridMediaController.mountCameraCellMedia(host, {

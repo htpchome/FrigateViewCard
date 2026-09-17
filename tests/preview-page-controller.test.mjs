@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { GridMediaController } from "../src/features/grid/media.ctrl.js";
 import { PreviewPageController } from "../src/features/preview/page.ctrl.js";
+import { resolvePreviewStreamSourceLabel } from "../src/features/preview/utils.js";
 import { STYLES } from "../src/styles.js";
 import {
   buildPreviewCellMarkup,
@@ -150,6 +151,80 @@ test("preview helpers derive values from host state", () => {
   assert.equal(controller.previewShouldUseLive("camera.front_door"), true);
   assert.equal(controller.previewAlertsCount("camera.front_door"), 1);
   assert.equal(controller.previewAlertsCount("camera.driveway"), 2);
+});
+
+test("Preview metadata and source labels translate without replacing media", () => {
+  const phrases = {
+    "runtime.preview.online": "En ligne",
+    "runtime.preview.offline": "Hors ligne",
+    "runtime.preview.streamSource": "Source du flux : {source}",
+    "runtime.preview.alertsCount": "Alertes : {count}",
+    "runtime.preview.snapshot": "Instantané",
+    "runtime.preview.haLive": "Direct HA",
+    "runtime.preview.streamLive": "Direct {stream}",
+    "runtime.preview.live": "Direct",
+  };
+  const t = (key, values = {}) =>
+    phrases[key].replace(/\{([A-Za-z]+)\}/g, (_, name) => values[name]);
+  assert.equal(
+    resolvePreviewStreamSourceLabel({ useLive: false, t }),
+    "Instantané",
+  );
+  assert.equal(
+    resolvePreviewStreamSourceLabel({
+      useLive: true,
+      connectionType: "ha_direct",
+      t,
+    }),
+    "Direct HA",
+  );
+  assert.equal(
+    resolvePreviewStreamSourceLabel({
+      useLive: true,
+      connectionType: "frigate_go2rtc",
+      liveStreamHint: "mse",
+      t,
+    }),
+    "Direct MSE",
+  );
+
+  const media = {
+    dataset: { previewMediaEntity: "camera.front_door" },
+    classList: { remove: () => {}, add: () => {} },
+  };
+  const status = { innerHTML: "" };
+  const source = { textContent: "" };
+  const alerts = { textContent: "" };
+  const cell = {
+    querySelector: (selector) =>
+      ({
+        ".preview-media-host": media,
+        ".preview-meta-status": status,
+        ".preview-meta-source": source,
+        ".preview-meta-alerts": alerts,
+      })[selector] || null,
+  };
+  const { controller, host } = createHost({ pageId: "preview" });
+  host._localization = { t };
+  host.shadowRoot = { querySelectorAll: () => [cell] };
+  controller.updatePreviewMeta();
+
+  assert.match(status.innerHTML, /En ligne/);
+  assert.equal(source.textContent, "Source du flux : Instantané");
+  assert.equal(alerts.textContent, "Alertes : 1");
+  assert.equal(cell.querySelector(".preview-media-host"), media);
+
+  const markup = buildPreviewMetaMarkup({
+    showTitleBars: true,
+    name: "Doorbell",
+    online: false,
+    sourceLabel: "Instantané",
+    alertsCount: 2,
+    t,
+  });
+  assert.match(markup, /Hors ligne/);
+  assert.match(markup, /Source du flux : Instantané/);
+  assert.match(markup, /Alertes : 2/);
 });
 
 test("Preview title supports the active camera token without inheriting grid text", () => {

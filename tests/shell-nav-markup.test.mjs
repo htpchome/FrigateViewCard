@@ -22,7 +22,10 @@ import {
   buildBrowseHeaderRegionMarkup,
   buildBrowseRegionMarkup,
 } from "../src/features/browse/shell.tmpl.js";
-import { buildControlsSectionMarkup } from "../src/features/ptz/controls.tmpl.js";
+import {
+  buildControlsSectionMarkup,
+  syncControlsPadLabels,
+} from "../src/features/ptz/controls.tmpl.js";
 import { buildPopupShellMarkup } from "../src/features/popup/shell.tmpl.js";
 import { STYLES } from "../src/styles.js";
 import { buildSingleViewMainLayoutShellMarkup } from "../src/features/single-view/page.tmpl.js";
@@ -501,6 +504,56 @@ test("buildControlsSectionMarkup renders imported PTZ preset chips safely", () =
     /Camera Presets - presets are set on the camera\./,
   );
   assert.doesNotMatch(markup, /controls-presets-label/);
+});
+
+test("PTZ preset text and nested pad labels relocalize without replacing controls", () => {
+  const phrases = {
+    "runtime.ptz.presets": "Préréglages de caméra",
+    "runtime.ptz.presetsNote": "Réglés sur la caméra.",
+    "runtime.ptz.moveToPreset": "Déplacer vers {name}",
+    "runtime.ptz.right": "Droite",
+    "runtime.ptz.down": "Bas",
+    "runtime.ptz.up": "Haut",
+    "runtime.ptz.left": "Gauche",
+    "runtime.ptz.zoomOut": "Dézoomer",
+    "runtime.ptz.zoomIn": "Zoomer",
+  };
+  const t = (key, values = {}) =>
+    phrases[key].replace(/\{([A-Za-z]+)\}/g, (_, name) => values[name]);
+  const markup = buildControlsSectionMarkup({
+    presetItems: [{ name: 'Entry & "Side"' }],
+    t,
+  });
+  assert.match(markup, /aria-label="Préréglages de caméra"/);
+  assert.match(markup, /Réglés sur la caméra\./);
+  assert.match(markup, /Déplacer vers Entry &amp; &quot;Side&quot;/);
+  assert.match(markup, /data-fvc-i18n-values=/);
+
+  const labels = new Map();
+  const buttons = new Map(
+    ["right", "down", "up", "left", "zoom-out", "zoom-in"].map((action) => [
+      action,
+      {
+        getAttribute: () => labels.get(action),
+        setAttribute: (_name, value) => labels.set(action, value),
+      },
+    ]),
+  );
+  const pad = {
+    shadowRoot: {
+      querySelector: (selector) =>
+        buttons.get(selector.match(/data-circle-pad-action="([^"]+)"/)?.[1]),
+    },
+  };
+  syncControlsPadLabels(pad, t);
+  assert.deepEqual(Object.fromEntries(labels), {
+    right: "Droite",
+    down: "Bas",
+    up: "Haut",
+    left: "Gauche",
+    "zoom-out": "Dézoomer",
+    "zoom-in": "Zoomer",
+  });
 });
 
 test("buildControlsSectionMarkup omits the preset disclaimer without camera presets", () => {

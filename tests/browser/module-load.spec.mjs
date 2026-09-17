@@ -361,6 +361,102 @@ test("language changes update marked card and editor text without replacing medi
   });
 });
 
+test("Preview metadata relocalizes without replacing camera media", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      preview_page_enabled: true,
+    });
+    card._pageId = "preview";
+    card._renderShell();
+    const cell = document.createElement("div");
+    cell.dataset.previewCamidx = "0";
+    cell.innerHTML = `
+      <div class="preview-media-host" data-preview-media-entity="camera.front"><video></video></div>
+      <div class="preview-meta-status">Online</div>
+      <div class="preview-meta-source">Stream Source: Snapshot</div>
+      <div class="preview-meta-alerts">Alerts: 2</div>
+    `;
+    card.shadowRoot.querySelector("#card").append(cell);
+    const video = cell.querySelector("video");
+    card._browseWindowLoaderController.cameraAlertsCount = () => 2;
+    card._isPreviewCameraAlertLive = () => false;
+    const english = card._localization;
+    const phrases = {
+      "runtime.preview.online": "En ligne",
+      "runtime.preview.snapshot": "Instantané",
+      "runtime.preview.streamSource": "Source du flux : {source}",
+      "runtime.preview.alertsCount": "Alertes : {count}",
+    };
+    card._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => {
+        const phrase = phrases[key] || english.t(key, values);
+        return phrase.replace(/\{([A-Za-z]+)\}/g, (_, name) => values[name]);
+      },
+    };
+    card._editorPreviewController.renderCardPickerDemo = () => true;
+    card._applyCardStyle = () => {};
+    card.hass = {
+      locale: { language: "fr" },
+      states: { "camera.front": { state: "idle" } },
+    };
+    return {
+      status: cell.querySelector(".preview-meta-status").textContent,
+      source: cell.querySelector(".preview-meta-source").textContent,
+      alerts: cell.querySelector(".preview-meta-alerts").textContent,
+      sameVideo: cell.querySelector("video") === video,
+    };
+  });
+
+  expect(state).toEqual({
+    status: "●En ligne",
+    source: "Source du flux : Instantané",
+    alerts: "Alertes : 2",
+    sameVideo: true,
+  });
+});
+
+test("snapshot result feedback relocalizes in place", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    card.setConfig({ cameras: [{ entity: "camera.front" }] });
+    card._renderShell();
+    card._localization = {
+      updateHass: () => true,
+      t: (key) => ({
+        "runtime.live.snapshotTaken": "Capture enregistrée",
+        "runtime.live.snapshotFailed": "Capture impossible",
+      })[key],
+    };
+    card._showSnapshotResultBubble("live", true);
+    const bubble = card.shadowRoot.querySelector(".snapshot-result-bubble");
+    const initialText = bubble?.textContent;
+    card._localization.t = (key) => ({
+      "runtime.live.snapshotTaken": "Snapshot saved",
+      "runtime.live.snapshotFailed": "Snapshot failed",
+    })[key];
+    card._editorPreviewController.renderCardPickerDemo = () => true;
+    card._applyCardStyle = () => {};
+    card.hass = { locale: { language: "en" }, states: {} };
+    return {
+      initialText,
+      currentText: bubble?.textContent,
+      sameBubble: card.shadowRoot.querySelector(".snapshot-result-bubble") === bubble,
+    };
+  });
+  expect(state).toEqual({
+    initialText: "Capture enregistrée",
+    currentText: "Snapshot saved",
+    sameBubble: true,
+  });
+});
+
 test("two-way talk labels and feedback relocalize without replacing controls or live", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

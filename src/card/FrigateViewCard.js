@@ -232,7 +232,10 @@ import {
   buildBrowseHeaderRegionMarkup,
   buildBrowseRegionMarkup,
 } from "../features/browse/shell.tmpl.js";
-import { buildControlsSectionMarkup } from "../features/ptz/controls.tmpl.js";
+import {
+  buildControlsSectionMarkup,
+  syncControlsPadLabels,
+} from "../features/ptz/controls.tmpl.js";
 import { buildPopupShellMarkup } from "../features/popup/shell.tmpl.js";
 import {
   buildCalendarPanelMarkup,
@@ -2244,6 +2247,8 @@ export class FrigateViewCard extends HTMLElement {
     if (this._localization.updateHass(hass)) {
       applyLocalizedText(this.shadowRoot, this._localization.t);
       this._browseCalendarPanelController?.syncLocalizedMonthLabel();
+      this._previewPageController?.updatePreviewMeta();
+      syncControlsPadLabels(this._$("#controls-pad"), this._localization.t);
       if (this._config) {
         this._activeStandardPageController()?.relocalizeBrowseLabels?.();
       }
@@ -7248,9 +7253,11 @@ export class FrigateViewCard extends HTMLElement {
     existing?.remove?.();
     const bubble = document.createElement("div");
     bubble.className = `snapshot-result-bubble ${success ? "success" : "failure"}`;
-    bubble.textContent = success
-      ? "Snapshot taken"
-      : "Unable to take snapshot";
+    setLocalizedText(
+      bubble,
+      success ? "runtime.live.snapshotTaken" : "runtime.live.snapshotFailed",
+      this._localization.t,
+    );
     surface.appendChild(bubble);
 
     const previousTimer = this._snapshotResultTimers?.[scope];
@@ -8238,8 +8245,10 @@ export class FrigateViewCard extends HTMLElement {
         panTiltEnabled,
         zoomEnabled,
         presetItems,
+        t: this._localization.t,
       }),
     );
+    syncControlsPadLabels(this._$("#controls-pad"), this._localization.t);
   }
 
   _activeCameraPtzInfo() {
