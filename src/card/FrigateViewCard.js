@@ -2211,6 +2211,7 @@ export class FrigateViewCard extends HTMLElement {
     this._hass = hass;
     if (this._localization.updateHass(hass)) {
       applyLocalizedText(this.shadowRoot, this._localization.t);
+      this._browseCalendarPanelController?.syncLocalizedMonthLabel();
     }
     if (!this._config) return;
     if (this._editorPreviewController.renderCardPickerDemo()) {
@@ -8038,9 +8039,10 @@ export class FrigateViewCard extends HTMLElement {
     return `${pick("year")}-${pick("month")}-${pick("day")}`;
   }
   _calendarMonthLabel(monthDate, timeZone = this._tz()) {
+    const locale = this._localization.resolvedLanguage;
     return this._dateFormatter(
-      "calendar-month",
-      [],
+      `calendar-month-${locale}`,
+      locale,
       { month: "long", year: "numeric" },
       timeZone,
     ).format(monthDate);

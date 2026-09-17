@@ -1,4 +1,5 @@
 import { DEFAULT_EVENT_DAYS } from "../../constants.js";
+import { applyLocalizedText } from "../localization/localized-dom.js";
 
 export class BrowseCalendarPanelController {
   constructor(host, deps = {}) {
@@ -153,8 +154,24 @@ export class BrowseCalendarPanelController {
       todayDateString: this.calendarTodayDateString(),
       daysWithActivity: this._host._daysWithActivity,
       timeZone,
+      locale: this._host._localization?.resolvedLanguage || "en",
       monthLabel: this._host._calendarMonthLabel?.(monthDate, timeZone) || "",
       showReset: !!this._host._calSelectedDay,
     });
+    applyLocalizedText(panel, this._host._localization?.t);
+  }
+
+  syncLocalizedMonthLabel() {
+    const panel = this._host._pageShellRegion("calendarPanel");
+    const label = panel?.querySelector?.("[data-fvc-calendar-month]");
+    if (!label) return;
+    const monthDate = this.resolveCalendarMonthDate();
+    const monthText = this._host._calendarMonthLabel?.(
+      monthDate,
+      this._host._tz(),
+    );
+    if (monthText && label.textContent !== monthText) {
+      label.textContent = monthText;
+    }
   }
 }

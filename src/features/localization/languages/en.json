@@ -39,6 +39,33 @@
       "nextSlide": "Next Slide: {seconds}s",
       "camera": "Camera",
       "grid": "Grid"
+    },
+    "browse": {
+      "previousDay": "Previous day",
+      "nextDay": "Next day",
+      "new": "new ✦",
+      "returnToTop": "Return to top",
+      "top": "Top",
+      "loading": "Loading…",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "resetCalendar": "Reset",
+      "weekdays": {
+        "monday": "M",
+        "tuesday": "T",
+        "wednesday": "W",
+        "thursday": "T",
+        "friday": "F",
+        "saturday": "S",
+        "sunday": "S"
+      },
+      "filter": {
+        "label": "Label",
+        "zone": "Zone",
+        "show": "Show",
+        "all": "All",
+        "favorites": "★ Favorites"
+      }
     }
   },
   "editor": {

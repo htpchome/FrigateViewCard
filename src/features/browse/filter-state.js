@@ -1,3 +1,5 @@
+import { applyLocalizedText } from "../localization/localized-dom.js";
+
 const addFilterValues = (target, values) => {
   const candidates = Array.isArray(values) ? values : [values];
   candidates.forEach((value) => {
@@ -365,6 +367,7 @@ export class BrowseFilterController {
       filterZone: this._host._filterZone,
       favOnly: this._host._favOnly,
     });
+    applyLocalizedText(filterPanel, this._host._localization?.t);
   }
 
   reviewsForTabBase() {

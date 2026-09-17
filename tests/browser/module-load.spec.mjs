@@ -317,6 +317,92 @@ test("runtime camera status and rebuilt picker remain localized without remounti
   });
 });
 
+test("browse filters and calendar localize in place and after rebuilding", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    card._renderShell();
+    card._calMonth = new Date(Date.UTC(2026, 7, 15, 12));
+    card._calSelectedDay = "2026-08-05";
+    card._browseFilterController.renderFilter();
+    card._browseCalendarPanelController.renderCal();
+
+    const root = card.shadowRoot;
+    const live = root.querySelector("#eng-wrap");
+    const filter = root.querySelector("#filter-panel");
+    const calendar = root.querySelector("#cal-panel");
+    const filterLabel = filter.querySelector('[data-fvc-i18n="runtime.browse.filter.label"]');
+    const reset = calendar.querySelector("[data-cal-reset]");
+    const month = calendar.querySelector("[data-fvc-calendar-month]");
+    const translations = {
+      "runtime.browse.filter.label": "Étiquette",
+      "runtime.browse.filter.zone": "Zone",
+      "runtime.browse.filter.show": "Afficher",
+      "runtime.browse.filter.all": "Tous",
+      "runtime.browse.filter.favorites": "★ Favoris",
+      "runtime.browse.resetCalendar": "Réinitialiser",
+      "runtime.browse.weekdays.monday": "L",
+      "runtime.browse.previousMonth": "Mois précédent",
+      "runtime.browse.previousDay": "Jour précédent",
+      "runtime.browse.top": "Haut",
+    };
+    const config = card._config;
+    card._localization = {
+      resolvedLanguage: "fr",
+      updateHass: () => true,
+      t: (key) => translations[key] || key,
+    };
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+    card._config = config;
+    const translatedInPlace = {
+      livePreserved: root.querySelector("#eng-wrap") === live,
+      filterLabelPreserved: filter.querySelector('[data-fvc-i18n="runtime.browse.filter.label"]') === filterLabel,
+      resetPreserved: calendar.querySelector("[data-cal-reset]") === reset,
+      monthPreserved: calendar.querySelector("[data-fvc-calendar-month]") === month,
+      label: filterLabel.textContent,
+      reset: reset.textContent,
+      month: month.textContent,
+      previousDay: root.querySelector("#rec-day-prev")?.title,
+      top: root.querySelector("#browse-return-top span")?.textContent,
+    };
+    card._browseFilterController.renderFilter();
+    card._browseCalendarPanelController.renderCal();
+    return {
+      translatedInPlace,
+      rebuiltLabel: filter.querySelector('[data-fvc-i18n="runtime.browse.filter.label"]')?.textContent,
+      rebuiltAll: filter.querySelector('[data-flabel="all"]')?.textContent,
+      rebuiltReset: calendar.querySelector("[data-cal-reset]")?.textContent,
+      rebuiltMonth: calendar.querySelector("[data-fvc-calendar-month]")?.textContent,
+      rebuiltMonday: calendar.querySelector('[data-fvc-i18n="runtime.browse.weekdays.monday"]')?.textContent,
+      rebuiltMonthAria: calendar.querySelector('[data-cal-nav="-1"]')?.getAttribute("aria-label"),
+    };
+  });
+
+  expect(state).toEqual({
+    translatedInPlace: {
+      livePreserved: true,
+      filterLabelPreserved: true,
+      resetPreserved: true,
+      monthPreserved: true,
+      label: "Étiquette",
+      reset: "Réinitialiser",
+      month: "août 2026",
+      previousDay: "Jour précédent",
+      top: "Haut",
+    },
+    rebuiltLabel: "Étiquette",
+    rebuiltAll: "Tous",
+    rebuiltReset: "Réinitialiser",
+    rebuiltMonth: "août 2026",
+    rebuiltMonday: "L",
+    rebuiltMonthAria: "Mois précédent",
+  });
+});
+
 test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

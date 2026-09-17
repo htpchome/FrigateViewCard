@@ -221,7 +221,7 @@ test("calendar reset control is only rendered for an explicit day selection", ()
   assert.doesNotMatch(defaultMarkup, /data-cal-reset/);
   assert.doesNotMatch(defaultMarkup, />Today</);
   assert.match(cachedLabelMarkup, />Cached August 2026</);
-  assert.match(selectedMarkup, /data-cal-reset>Reset</);
+  assert.match(selectedMarkup, /data-cal-reset data-fvc-i18n="runtime\.browse\.resetCalendar">Reset</);
   assert.match(selectedMarkup, /cday active[^>]*data-cal-day="2026-08-05"/);
   assert.match(selectedMarkup, /cday today[^>]*data-cal-day="2026-08-06"/);
   assert.match(
@@ -241,7 +241,7 @@ test("filter panel aligns wrapped chips and marks multiple selections", () => {
 
   assert.match(
     markup,
-    /<span class="frow-l">Label<\/span><div class="frow-chips">/,
+    /<span class="frow-l" data-fvc-i18n="runtime\.browse\.filter\.label">Label<\/span><div class="frow-chips">/,
   );
   assert.match(
     markup,
@@ -261,7 +261,7 @@ test("filter panel aligns wrapped chips and marks multiple selections", () => {
   );
   assert.match(
     markup,
-    /class="chip " type="button" aria-pressed="false" data-flabel="all"/,
+    /class="chip " type="button" aria-pressed="false" data-flabel="all" data-fvc-i18n="runtime\.browse\.filter\.all"/,
   );
 });
 
