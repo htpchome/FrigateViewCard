@@ -158,12 +158,25 @@ test("language changes update marked card and editor text without replacing medi
     const alertLabel = card.shadowRoot.querySelector(
       '[data-fvc-i18n="runtime.alerts"]',
     );
+    const pageNavButton = card.shadowRoot.querySelector(
+      '[data-fvc-i18n-title="runtime.pageNav.singleView"]',
+    );
+    const fullscreenButton = card.shadowRoot.querySelector("#live-fs-btn");
     card._localization = {
       updateHass: () => true,
-      t: (key) => ({ "runtime.alerts": "Alertes", "runtime.stream": "Flux" })[key] || key,
+      t: (key) => ({
+        "runtime.alerts": "Alertes",
+        "runtime.stream": "Flux",
+        "runtime.pageNav.singleView": "Vue unique",
+        "runtime.live.fullscreen": "Plein écran",
+        "runtime.live.mute": "Couper le son",
+        "runtime.live.unmute": "Rétablir le son",
+      })[key] || key,
     };
     card._config = null;
     card.hass = { locale: { language: "fr" } };
+    card._renderMuteButton();
+    card._pageNavigationController.syncPageNavShell();
 
     const editor = document.createElement("frigate-view-card-editor");
     document.body.append(editor);
@@ -178,6 +191,7 @@ test("language changes update marked card and editor text without replacing medi
         "editor.display": "Afficher",
         "editor.eventHistoryDays": "Jours d'historique",
         "editor.alertReviewHistoryDays": "Jours d'alertes",
+        "editor.grid.dragToReorder": "Réordonner",
       })[key] || key,
     };
     editor.hass = { locale: { language: "fr" }, states: {}, themes: {} };
@@ -185,18 +199,34 @@ test("language changes update marked card and editor text without replacing medi
     return {
       cardAlertText: alertLabel.textContent,
       cardLiveHostPreserved: card.shadowRoot.querySelector("#eng-wrap") === liveHost,
+      pageNavRegenerated: card.shadowRoot.querySelector(
+        '[data-fvc-i18n-title="runtime.pageNav.singleView"]',
+      ) !== pageNavButton,
+      pageNavTitle: card.shadowRoot.querySelector(
+        '[data-fvc-i18n-title="runtime.pageNav.singleView"]',
+      )?.title,
+      fullscreenButtonPreserved: card.shadowRoot.querySelector("#live-fs-btn") === fullscreenButton,
+      fullscreenButtonTitle: fullscreenButton?.title,
+      muteButtonTitle: card.shadowRoot.querySelector("#mute-btn")?.title,
       editorTitle: editor.querySelector("#title").getAttribute("label"),
       editorDisplay: editor.querySelector('[data-fvc-i18n="editor.display"]').textContent,
       editorInputPreserved: editor.querySelector("#title") === titleInput,
+      editorDragTitle: editor.querySelector(".cam-drag")?.title,
     };
   });
 
   expect(state).toEqual({
     cardAlertText: "Alertes",
     cardLiveHostPreserved: true,
+    pageNavRegenerated: true,
+    pageNavTitle: "Vue unique",
+    fullscreenButtonPreserved: true,
+    fullscreenButtonTitle: "Plein écran",
+    muteButtonTitle: "Rétablir le son",
     editorTitle: "Titre",
     editorDisplay: "Afficher",
     editorInputPreserved: true,
+    editorDragTitle: "Réordonner",
   });
 });
 

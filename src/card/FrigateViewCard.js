@@ -6958,13 +6958,21 @@ export class FrigateViewCard extends HTMLElement {
     if (!buttons.length) return;
     const talkActive = this._twoWayTalkActiveForCurrentCamera();
     const muted = this._resolveLiveMuteControlMuted();
-    const label = talkActive
+    const labelKey = talkActive
+      ? muted
+        ? "runtime.live.unmuteIncoming"
+        : "runtime.live.muteIncoming"
+      : muted
+        ? "runtime.live.unmute"
+        : "runtime.live.mute";
+    const fallbackLabel = talkActive
       ? muted
         ? "Unmute incoming audio"
         : "Mute incoming audio"
       : muted
         ? "Unmute live view"
         : "Mute live view";
+    const label = this._localization?.t?.(labelKey) || fallbackLabel;
     buttons.forEach((button) => {
       const inlineTalkMute = button.id === "two-way-talk-mute-btn";
       const hideMute =
@@ -6981,6 +6989,8 @@ export class FrigateViewCard extends HTMLElement {
       button.hidden = hideMute;
       button.style.display = hideMute ? "none" : "";
       if (hideMute) return;
+      button.setAttribute("data-fvc-i18n-title", labelKey);
+      button.setAttribute("data-fvc-i18n-aria-label", labelKey);
       button.title = label;
       button.setAttribute("aria-label", label);
       button.innerHTML = muted ? ICONS.volOff : ICONS.volOn;

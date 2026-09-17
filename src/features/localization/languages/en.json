@@ -1,7 +1,27 @@
 {
   "runtime": {
     "alerts": "Alerts",
-    "stream": "Stream"
+    "stream": "Stream",
+    "pageNav": {
+      "navigation": "Page navigation",
+      "mobile": "Mobile",
+      "preview": "Preview",
+      "wideView": "Wide View",
+      "cardView": "Card View",
+      "singleView": "Single View"
+    },
+    "live": {
+      "fullscreen": "Fullscreen live",
+      "pictureInPicture": "Picture-in-Picture live",
+      "takeSnapshot": "Take Snapshot",
+      "closeRotatedFullscreen": "Close rotated fullscreen view",
+      "resizeHeight": "Resize live view height",
+      "resizeHint": "Drag to resize live view; double-click or double-tap to reset",
+      "mute": "Mute live view",
+      "unmute": "Unmute live view",
+      "muteIncoming": "Mute incoming audio",
+      "unmuteIncoming": "Unmute incoming audio"
+    }
   },
   "editor": {
     "title": "Title",

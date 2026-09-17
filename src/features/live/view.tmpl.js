@@ -29,14 +29,14 @@ export function buildLiveEngineWrapMarkup({ icons }) {
                   <div class="stream-loading" id="stream-loading" hidden>
                     <span class="dot"></span><span class="label">Loading…</span>
                   </div>
-                  <button class="live-resize-grip" id="live-resize-grip" type="button" role="slider" aria-orientation="vertical" aria-label="Resize live view height" title="Drag to resize live view; double-click or double-tap to reset" hidden>
+                  <button class="live-resize-grip" id="live-resize-grip" type="button" role="slider" aria-orientation="vertical" aria-label="Resize live view height" title="Drag to resize live view; double-click or double-tap to reset" data-fvc-i18n-aria-label="runtime.live.resizeHeight" data-fvc-i18n-title="runtime.live.resizeHint" hidden>
                     ${icons.chevron}
                   </button>
               </div>`;
 }
 
 export function buildRotateOverlayDismissButtonMarkup({ icons = {} } = {}) {
-  return `<button class="rotate-overlay-dismiss" type="button" data-rotate-overlay-dismiss data-media-overlay-ignore title="Close rotated fullscreen view" aria-label="Close rotated fullscreen view">${icons.close || ""}</button>`;
+  return `<button class="rotate-overlay-dismiss" type="button" data-rotate-overlay-dismiss data-media-overlay-ignore title="Close rotated fullscreen view" aria-label="Close rotated fullscreen view" data-fvc-i18n-title="runtime.live.closeRotatedFullscreen" data-fvc-i18n-aria-label="runtime.live.closeRotatedFullscreen">${icons.close || ""}</button>`;
 }
 
 const resolveLiveControlButtonClass = (buttonClass) =>
@@ -47,7 +47,7 @@ export function buildLiveFullscreenControlMarkup({
   buttonClass = "square-btn",
 }) {
   const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
-  return `<button class="${visualButtonClass} live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live">${icons.expand}</button>`;
+  return `<button class="${visualButtonClass} live-fs-btn" id="live-fs-btn" data-fvc-region="live-fullscreen" title="Fullscreen live" aria-label="Fullscreen live" data-fvc-i18n-title="runtime.live.fullscreen" data-fvc-i18n-aria-label="runtime.live.fullscreen">${icons.expand}</button>`;
 }
 
 export function buildLivePictureInPictureControlMarkup({
@@ -55,7 +55,7 @@ export function buildLivePictureInPictureControlMarkup({
   buttonClass = "square-btn",
 }) {
   const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
-  return `<button class="${visualButtonClass} live-pip-btn" id="live-pip-btn" data-fvc-region="live-picture-in-picture" type="button" title="Picture-in-Picture live" aria-label="Picture-in-Picture live" aria-pressed="false" hidden>${icons.pipPopOut}</button>`;
+  return `<button class="${visualButtonClass} live-pip-btn" id="live-pip-btn" data-fvc-region="live-picture-in-picture" type="button" title="Picture-in-Picture live" aria-label="Picture-in-Picture live" data-fvc-i18n-title="runtime.live.pictureInPicture" data-fvc-i18n-aria-label="runtime.live.pictureInPicture" aria-pressed="false" hidden>${icons.pipPopOut}</button>`;
 }
 
 export function buildLiveTakeSnapshotControlMarkup({
@@ -63,7 +63,7 @@ export function buildLiveTakeSnapshotControlMarkup({
   buttonClass = "square-btn",
 }) {
   const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
-  return `<button class="${visualButtonClass} live-take-snapshot-btn" id="live-take-snapshot-btn" data-fvc-region="live-take-snapshot" type="button" title="Take Snapshot" aria-label="Take Snapshot">${icons.takeSnapshot}</button>`;
+  return `<button class="${visualButtonClass} live-take-snapshot-btn" id="live-take-snapshot-btn" data-fvc-region="live-take-snapshot" type="button" title="Take Snapshot" aria-label="Take Snapshot" data-fvc-i18n-title="runtime.live.takeSnapshot" data-fvc-i18n-aria-label="runtime.live.takeSnapshot">${icons.takeSnapshot}</button>`;
 }
 
 export function buildLiveMuteControlMarkup({
@@ -77,6 +77,7 @@ export function buildLiveMuteControlMarkup({
   hidden = false,
 }) {
   const label = streamMuted ? "Unmute live view" : "Mute live view";
+  const labelKey = streamMuted ? "runtime.live.unmute" : "runtime.live.mute";
   const icon = streamMuted ? icons.volOff : icons.volOn;
   const visualButtonClass = resolveLiveControlButtonClass(buttonClass);
   const className = [
@@ -91,7 +92,7 @@ export function buildLiveMuteControlMarkup({
   const pressedAttribute =
     typeof pressed === "boolean" ? ` aria-pressed="${pressed}"` : "";
   const hiddenAttribute = hidden ? " hidden" : "";
-  return `<button class="${className}" id="${buttonId}"${regionAttribute}${pressedAttribute}${hiddenAttribute} title="${label}" aria-label="${label}">${icon}</button>`;
+  return `<button class="${className}" id="${buttonId}"${regionAttribute}${pressedAttribute}${hiddenAttribute} title="${label}" aria-label="${label}" data-fvc-i18n-title="${labelKey}" data-fvc-i18n-aria-label="${labelKey}">${icon}</button>`;
 }
 
 export function buildLivePlaybackControlsMarkup(regions = {}) {

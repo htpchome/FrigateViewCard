@@ -3567,7 +3567,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       .map(
         (cam, i) => `
       <div class="cam-row" draggable="true" data-row="${i}">
-        <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
+        <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder" data-fvc-i18n-title="editor.grid.dragToReorder" data-fvc-i18n-aria-label="editor.grid.dragToReorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
         <div><div class="cam-name">${escapeHtml(this._cameraLabel(cam))}</div><div class="cam-meta">${escapeHtml(this._cameraMetaLabel(cam))}</div></div>
                 <button class="cam-action" type="button" title="Edit" aria-label="Edit" data-fvc-i18n-title="editor.actions.edit" data-fvc-i18n-aria-label="editor.actions.edit" data-edit-cam="${i}"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg></button>
                 <button class="cam-action" type="button" title="Delete" aria-label="Delete" data-fvc-i18n-title="editor.actions.delete" data-fvc-i18n-aria-label="editor.actions.delete" data-remove-cam="${i}"><svg viewBox="0 0 24 24" style="width:24px; height:24px" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg></button>

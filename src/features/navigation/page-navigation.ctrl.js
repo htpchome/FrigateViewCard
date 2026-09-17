@@ -1,3 +1,5 @@
+import { applyLocalizedText } from "../localization/localized-dom.js";
+
 export const shouldShowPageToolsDivider = ({
   holderDisplay = "",
   pageNavigationRect = null,
@@ -126,6 +128,15 @@ export class PageNavigationController {
     return "Single View";
   }
 
+  pageRouteLocalizationKey(pageId) {
+    const { PAGE_IDS } = this._constants;
+    if (pageId === PAGE_IDS.mobileView) return "runtime.pageNav.mobile";
+    if (pageId === PAGE_IDS.preview) return "runtime.pageNav.preview";
+    if (pageId === PAGE_IDS.wideView) return "runtime.pageNav.wideView";
+    if (pageId === PAGE_IDS.cardView) return "runtime.pageNav.cardView";
+    return "runtime.pageNav.singleView";
+  }
+
   pageRouteIcon(pageId) {
     const { PAGE_IDS, ICONS = {} } = this._constants;
     if (pageId === PAGE_IDS.mobileView) return ICONS.mobileView || "";
@@ -152,6 +163,7 @@ export class PageNavigationController {
       activePageId: this._constants.normalizePageRoute(this._host._pageId),
       getRouteLabel: (pageId) => this.pageRouteLabel(pageId),
       getRouteIcon: (pageId) => this.pageRouteIcon(pageId),
+      getRouteLocalizationKey: (pageId) => this.pageRouteLocalizationKey(pageId),
     });
   }
 
@@ -162,12 +174,16 @@ export class PageNavigationController {
       activePageId: this._constants.normalizePageRoute(this._host._pageId),
       getRouteLabel: (pageId) => this.pageRouteLabel(pageId),
       getRouteIcon: (pageId) => this.pageRouteIcon(pageId),
+      getRouteLocalizationKey: (pageId) => this.pageRouteLocalizationKey(pageId),
     });
   }
 
   syncPageNavShell() {
     const nav = this._host._pageShellRegion("pageNavigation");
-    if (nav) nav.innerHTML = this.pageNavButtonsMarkup();
+    if (nav) {
+      nav.innerHTML = this.pageNavButtonsMarkup();
+      applyLocalizedText(nav, this._host._localization?.t);
+    }
     this.syncPageNavigationButtons();
     this.syncToolbarDividerAfterMutation();
   }
