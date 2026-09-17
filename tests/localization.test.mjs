@@ -10,6 +10,7 @@ import {
   applyLocalizedText,
   setLocalizedText,
 } from "../src/features/localization/localized-dom.js";
+import { THEME_CUSTOM_ROWS } from "../src/constants.js";
 
 const dictionaries = {
   en: {
@@ -165,5 +166,13 @@ test("all extracted editor keys and settings headings exist in English", () => {
   }
   for (const key of keys) {
     assert.notEqual(localization.t(key), key, `Missing English localization: ${key}`);
+  }
+});
+
+test("every editable theme color has an English localization key", () => {
+  const localization = createLocalizationController();
+  for (const { key, label } of THEME_CUSTOM_ROWS) {
+    const suffix = key.replace(/^--c-/, "").replaceAll("-", "_");
+    assert.equal(localization.t(`editor.theme.colors.${suffix}`), label);
   }
 });

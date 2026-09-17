@@ -184,6 +184,9 @@ const formatDurationChoice = (value) => {
 const durationEditorChoices = (values) =>
   values.map((value) => ({ value, label: formatDurationChoice(value) }));
 
+const themeColorLocalizationKey = (key) =>
+  `editor.theme.colors.${String(key).replace(/^--c-/, "").replaceAll("-", "_")}`;
+
 const localizedDurationEditorChoices = (values) =>
   values.map((value) => {
     const seconds = Number(value);
@@ -3394,6 +3397,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         </ha-formfield>`;
     const themeRows = THEME_CUSTOM_ROWS.map((row) => {
       const key = row.key;
+      const labelKey = themeColorLocalizationKey(key);
       const defaultHex = this._themeDefaultHex(key, activeThemeMode);
       const saved = normalizeHexColor(activeThemeCustom[key]);
       const draft = normalizeHexColor(activeThemeDraft[key]);
@@ -3404,8 +3408,8 @@ export class FrigateViewCardEditor extends HTMLElement {
       return `
         <div class="theme-custom-row" data-theme-row="${key}">
           <div class="theme-custom-label">
-            <div>${row.label}</div>
-            ${showWarn ? '<div class="theme-custom-warn">Draft changes require card config save.</div>' : ""}
+            <div data-fvc-i18n="${labelKey}">${row.label}</div>
+            ${showWarn ? '<div class="theme-custom-warn" data-fvc-i18n="editor.theme.draftChangesRequireSave">Draft changes require card config save.</div>' : ""}
           </div>
           <div class="theme-color-wrap">
             <input class="theme-color-input" type="color" data-theme-color="${key}" value="${visibleValue}" ${useDefault ? "disabled" : ""}>
@@ -3415,22 +3419,24 @@ export class FrigateViewCardEditor extends HTMLElement {
               data-theme-reset="${key}"
               title="Reset to default color"
               aria-label="Reset to default color"
+              data-fvc-i18n-title="editor.theme.resetDefaultColor"
+              data-fvc-i18n-aria-label="editor.theme.resetDefaultColor"
               ${useDefault ? "hidden" : ""}
             >
               <ha-icon icon="mdi:autorenew"></ha-icon>
             </button>
           </div>
-          <ha-formfield label="Use Default">
+          <ha-formfield label="Use Default" data-fvc-i18n-label="editor.theme.useDefault">
             <ha-switch data-theme-default="${key}" ${useDefault ? "checked" : ""}></ha-switch>
           </ha-formfield>
         </div>`;
     }).join("");
     const themeScopeButtons = [
-      { value: "light", label: "Light", icon: "mdi:white-balance-sunny" },
-      { value: "dark", label: "Dark", icon: "mdi:weather-night" },
-      { value: "both", label: "Both", icon: "mdi:theme-light-dark" },
+      { value: "light", label: "Light", icon: "mdi:white-balance-sunny", labelKey: "editor.theme.light", ariaKey: "editor.theme.applyLightMode" },
+      { value: "dark", label: "Dark", icon: "mdi:weather-night", labelKey: "editor.theme.dark", ariaKey: "editor.theme.applyDarkMode" },
+      { value: "both", label: "Both", icon: "mdi:theme-light-dark", labelKey: "editor.theme.both", ariaKey: "editor.theme.applyBothModes" },
     ]
-      .map(({ value, label, icon }) => {
+      .map(({ value, label, icon, labelKey, ariaKey }) => {
         const isActive = activeThemeScope === value;
         return `<button
           type="button"
@@ -3439,7 +3445,8 @@ export class FrigateViewCardEditor extends HTMLElement {
           role="radio"
           aria-checked="${isActive ? "true" : "false"}"
           aria-label="Apply custom theme in ${label.toLowerCase()} mode${value === "both" ? "s" : ""}"
-        ><ha-icon icon="${icon}"></ha-icon><span>${label}</span></button>`;
+          data-fvc-i18n-aria-label="${ariaKey}"
+        ><ha-icon icon="${icon}"></ha-icon><span data-fvc-i18n="${labelKey}">${label}</span></button>`;
       })
       .join("");
     const cameraRows = cams
@@ -3645,18 +3652,18 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const themePanelContent = `
       <div class="section">
-        <span class="field-label">Theme</span>
+        <span class="field-label" data-fvc-i18n="editor.theme.theme">Theme</span>
         <div class="theme-row">
-          <div class="theme-seg" id="theme-seg" role="radiogroup" aria-label="Theme">
-            <button type="button" class="theme-opt ${activeTheme === "default" ? "active" : ""}" data-theme-option="default" role="radio" aria-checked="${activeTheme === "default" ? "true" : "false"}">Home Assistant Theme</button>
-            <button type="button" class="theme-opt ${activeTheme === "custom" ? "active" : ""}" data-theme-option="custom" role="radio" aria-checked="${activeTheme === "custom" ? "true" : "false"}">Custom</button>
+          <div class="theme-seg" id="theme-seg" role="radiogroup" aria-label="Theme" data-fvc-i18n-aria-label="editor.theme.theme">
+            <button type="button" class="theme-opt ${activeTheme === "default" ? "active" : ""}" data-theme-option="default" role="radio" aria-checked="${activeTheme === "default" ? "true" : "false"}" data-fvc-i18n="editor.theme.homeAssistantTheme">Home Assistant Theme</button>
+            <button type="button" class="theme-opt ${activeTheme === "custom" ? "active" : ""}" data-theme-option="custom" role="radio" aria-checked="${activeTheme === "custom" ? "true" : "false"}" data-fvc-i18n="editor.theme.custom">Custom</button>
           </div>
         </div>
         <div id="theme-custom-panel" class="theme-custom-panel" ${activeTheme === "custom" ? "" : "hidden"}>
           <div class="theme-custom-body">
             <div class="theme-custom-scope">
-              <span class="theme-custom-scope-label">Apply this custom theme in</span>
-              <div class="theme-scope-seg" role="radiogroup" aria-label="Custom theme modes">${themeScopeButtons}</div>
+              <span class="theme-custom-scope-label" data-fvc-i18n="editor.theme.applyCustomThemeIn">Apply this custom theme in</span>
+              <div class="theme-scope-seg" role="radiogroup" aria-label="Custom theme modes" data-fvc-i18n-aria-label="editor.theme.customThemeModes">${themeScopeButtons}</div>
             </div>
             ${themeRows}
           </div>

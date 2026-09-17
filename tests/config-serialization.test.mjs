@@ -534,7 +534,7 @@ test("custom theme mode scope uses a touch-safe three-way bubble", () => {
   assert.doesNotMatch(editorSource, /Custom Color Overrides/);
   assert.match(
     editorSource,
-    /<ha-icon icon="\$\{icon\}"><\/ha-icon><span>\$\{label\}<\/span>/,
+    /<ha-icon icon="\$\{icon\}"><\/ha-icon><span data-fvc-i18n="\$\{labelKey\}">\$\{label\}<\/span>/,
   );
   assert.match(
     editorSource,

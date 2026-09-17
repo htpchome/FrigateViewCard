@@ -305,6 +305,98 @@ test("General Settings language changes preserve form state and localize status,
   });
 });
 
+test("Theme Settings language changes preserve custom colors and selected modes", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card-editor.js");
+    const editor = document.createElement("frigate-view-card-editor");
+    document.body.append(editor);
+    editor.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      theme: "custom",
+      theme_custom: [{
+        modes: ["light", "dark"],
+        overrides: { "--c-bg-main": "#112233" },
+      }],
+    });
+    const hass = { locale: { language: "en" }, states: {}, themes: { darkMode: false } };
+    editor.hass = hass;
+    const customButton = editor.querySelector('[data-theme-option="custom"]');
+    const bothButton = editor.querySelector('[data-theme-scope="both"]');
+    const colorInput = editor.querySelector('[data-theme-color="--c-bg-main"]');
+    const defaultToggle = editor.querySelector('[data-theme-default="--c-bg-main"]');
+    const resetButton = editor.querySelector('[data-theme-reset="--c-bg-main"]');
+    let configChanged = 0;
+    editor.addEventListener("config-changed", () => { configChanged += 1; });
+
+    const english = editor._localization;
+    const translated = {
+      "editor.panels.theme": "Paramètres du thème",
+      "editor.theme.theme": "Thème",
+      "editor.theme.homeAssistantTheme": "Thème Home Assistant",
+      "editor.theme.custom": "Personnalisé",
+      "editor.theme.applyCustomThemeIn": "Appliquer le thème dans",
+      "editor.theme.customThemeModes": "Modes du thème personnalisé",
+      "editor.theme.both": "Les deux",
+      "editor.theme.applyBothModes": "Appliquer dans les deux modes",
+      "editor.theme.colors.bg_main": "Couleur de fond",
+      "editor.theme.draftChangesRequireSave": "Enregistrer la configuration pour appliquer.",
+      "editor.theme.resetDefaultColor": "Rétablir la couleur par défaut",
+      "editor.theme.useDefault": "Valeur par défaut",
+    };
+    editor._localization = {
+      updateHass: () => true,
+      t: (key, values) => translated[key] || english.t(key, values),
+    };
+    editor.hass = { ...hass, locale: { language: "fr" } };
+
+    const row = editor.querySelector('[data-theme-row="--c-bg-main"]');
+    return {
+      customButtonPreserved: editor.querySelector('[data-theme-option="custom"]') === customButton,
+      customSelected: customButton.classList.contains("active"),
+      customText: customButton.textContent,
+      customPanelOpen: !editor.querySelector("#theme-custom-panel").hidden,
+      bothButtonPreserved: editor.querySelector('[data-theme-scope="both"]') === bothButton,
+      bothSelected: bothButton.getAttribute("aria-checked"),
+      bothText: bothButton.textContent,
+      bothAria: bothButton.getAttribute("aria-label"),
+      colorInputPreserved: row.querySelector('[data-theme-color="--c-bg-main"]') === colorInput,
+      colorValue: colorInput.value,
+      defaultTogglePreserved: row.querySelector('[data-theme-default="--c-bg-main"]') === defaultToggle,
+      defaultChecked: defaultToggle.checked === true || defaultToggle.hasAttribute("checked"),
+      rowLabel: row.querySelector(".theme-custom-label > div").textContent,
+      warning: row.querySelector(".theme-custom-warn")?.textContent,
+      resetPreserved: row.querySelector('[data-theme-reset="--c-bg-main"]') === resetButton,
+      resetTitle: resetButton.getAttribute("title"),
+      resetAria: resetButton.getAttribute("aria-label"),
+      defaultLabel: row.querySelector("ha-formfield").getAttribute("label"),
+      configChanged,
+    };
+  });
+
+  expect(state).toEqual({
+    customButtonPreserved: true,
+    customSelected: true,
+    customText: "Personnalisé",
+    customPanelOpen: true,
+    bothButtonPreserved: true,
+    bothSelected: "true",
+    bothText: "Les deux",
+    bothAria: "Appliquer dans les deux modes",
+    colorInputPreserved: true,
+    colorValue: "#112233",
+    defaultTogglePreserved: true,
+    defaultChecked: false,
+    rowLabel: "Couleur de fond",
+    warning: "Enregistrer la configuration pour appliquer.",
+    resetPreserved: true,
+    resetTitle: "Rétablir la couleur par défaut",
+    resetAria: "Rétablir la couleur par défaut",
+    defaultLabel: "Valeur par défaut",
+    configChanged: 0,
+  });
+});
+
 test("an open camera editor keeps its form and accordion state when language changes", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {
