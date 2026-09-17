@@ -627,6 +627,45 @@ test("promotes the dashboard view above the relocated header in landscape", () =
   assert.equal(topNavbar.getTargets().children.length, 0);
 });
 
+test("Bubble rotation suspends view promotion from another card and restores it on exit", () => {
+  const h = createHarness({ moveBottom: false, rotateOverlayCover: true });
+  assert.equal(h.controller.sync(), true);
+  assert.match(
+    h.getTargets().children[0].textContent,
+    /@media \(orientation: landscape\)/,
+  );
+
+  const bubble = {
+    parentNode: h.host.parentNode,
+    classList: {
+      contains: (className) => className === "bubble-pop-up-container",
+    },
+  };
+  const popupHost = {
+    isConnected: true,
+    parentNode: bubble,
+    _config: { mobile_view_ha_navbar_bottom: false },
+    _isLikelyMobileClient: () => true,
+    _isLikelyPhoneClient: () => true,
+    _isRotateOverlayViewportCoverActive: () => true,
+    _isDashboardEditMode: () => false,
+  };
+  const popupController = new HomeAssistantNavbarController(popupHost, {
+    MutationObserverCtor: FakeMutationObserver,
+    documentRef: h.documentRef,
+    windowRef: h.windowRef,
+    findCurrentHuiRoot: h.getCurrentHuiRoot,
+  });
+  assert.equal(popupController.sync(), true);
+  assert.equal(h.getTargets().children.length, 0);
+
+  popupController.disconnect({ force: true });
+  assert.match(
+    h.getTargets().children[0].textContent,
+    /@media \(orientation: landscape\)/,
+  );
+});
+
 test("applies the proven bottom-header details and restores exact styles", () => {
   const h = createHarness({ isIOS: true });
   const targets = createTargets({

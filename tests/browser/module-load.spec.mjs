@@ -110,6 +110,92 @@ test("bottom HA navbar styling does not trap Bubble popup behind its backdrop", 
   });
 });
 
+test("rotated Mobile View inside Bubble stays above its backdrop", async ({ page }) => {
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.goto(baseUrl);
+
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    document.body.style.margin = "0";
+    const shell = document.createElement("hui-root");
+    const root = shell.attachShadow({ mode: "open" });
+    root.innerHTML = `
+      <style>
+        #view { position: relative; width: 844px; height: 390px; }
+        .header { position: fixed; z-index: 1; height: 56px; }
+        .bubble-pop-up-container { position: absolute; inset: 0; z-index: 5; }
+        .bubble-backdrop { position: fixed; inset: 0; z-index: 4; }
+      </style>
+      <div id="view"><div class="bubble-pop-up-container"></div></div>
+      <div class="bubble-backdrop"></div>
+      <div class="header"><div class="toolbar"></div></div>
+    `;
+    document.body.append(shell);
+    const card = document.createElement("frigate-view-card");
+    card._isLikelyMobileClient = () => true;
+    card._isLikelyPhoneClient = () => true;
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      mobile_view_page_enabled: true,
+      mobile_view_rotate_to_fullscreen: true,
+    });
+    const bubble = root.querySelector(".bubble-pop-up-container");
+    const wrapper = document.createElement("div");
+    bubble.attachShadow({ mode: "open" }).append(wrapper);
+    wrapper.append(card);
+    card._pageId = "mobile-view";
+    card._renderShell();
+    card._isMobileTabletViewport = () => true;
+    card._isLandscapeViewport = () => true;
+    card._updateRotateOverlayState();
+
+    const liveHit = root.elementFromPoint(422, 195);
+    const liveInnerHit = bubble.shadowRoot.elementFromPoint(422, 195);
+    const liveMode = card._rotateOverlayMode;
+    const popup = card.shadowRoot.querySelector("#myPopup");
+    const viewer = card.shadowRoot.querySelector("#viewer");
+    popup.classList.add("is-open");
+    viewer.style.display = "flex";
+    viewer.append(document.createElement("video"));
+    card._updateRotateOverlayState();
+    const popupHit = root.elementFromPoint(422, 195);
+    const hostRect = card.getBoundingClientRect();
+    return {
+      rotationActive: card._rotateOverlayActive,
+      liveMode,
+      popupMode: card._rotateOverlayMode,
+      viewZIndex: getComputedStyle(root.querySelector("#view")).zIndex,
+      backdropCoversLive: liveHit === root.querySelector(".bubble-backdrop"),
+      backdropCoversPopup: popupHit === root.querySelector(".bubble-backdrop"),
+      liveCardOnTop:
+        liveHit === bubble && liveInnerHit === card,
+      popupCardOnTop:
+        popupHit === bubble && bubble.shadowRoot.elementFromPoint(422, 195) === card,
+      fullscreenRect: {
+        left: Math.round(hostRect.left),
+        top: Math.round(hostRect.top),
+        width: Math.round(hostRect.width),
+        height: Math.round(hostRect.height),
+      },
+    };
+  });
+
+  expect(state.rotationActive).toBe(true);
+  expect(state.liveMode).toBe("live");
+  expect(state.popupMode).toBe("popup");
+  expect(state.backdropCoversLive).toBe(false);
+  expect(state.backdropCoversPopup).toBe(false);
+  expect(state.liveCardOnTop).toBe(true);
+  expect(state.popupCardOnTop).toBe(true);
+  expect(state.viewZIndex).toBe("auto");
+  expect(state.fullscreenRect).toEqual({
+    left: 0,
+    top: 0,
+    width: 844,
+    height: 390,
+  });
+});
+
 test("loads the runtime and editor modules", async ({ page }) => {
   const consoleMessages = [];
   const pageErrors = [];

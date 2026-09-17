@@ -153,6 +153,21 @@ const composedParent = (element) => {
   return root && root !== element ? root.host || null : element.host || null;
 };
 
+const isInsideBubblePopup = (host) => {
+  let element = composedParent(host);
+  for (let depth = 0; element && depth < 40; depth += 1) {
+    if (
+      element.classList?.contains?.("bubble-pop-up") ||
+      element.classList?.contains?.("bubble-pop-up-container") ||
+      element.classList?.contains?.("bubble-popup")
+    ) {
+      return true;
+    }
+    element = composedParent(element);
+  }
+  return false;
+};
+
 export const findHomeAssistantLovelaceRoot = (host) => {
   let current = host;
   for (let depth = 0; current && depth < 40; depth += 1) {
@@ -463,9 +478,15 @@ const applyManagedTargets = (state) => {
   const stackTabs = ownerOptions.some(
     (options) => options?.stackTabs === true,
   );
-  const promoteViewInLandscape = ownerOptions.some(
-    (options) => options?.promoteViewInLandscape === true,
+  const bubblePopupRotateActive = ownerOptions.some(
+    (options) => options?.bubblePopupRotateActive === true,
   );
+  // Promoting #view traps Bubble's popup beneath its sibling backdrop.
+  const promoteViewInLandscape =
+    !bubblePopupRotateActive &&
+    ownerOptions.some(
+      (options) => options?.promoteViewInLandscape === true,
+    );
   const reserveDashboardEditActions = ownerOptions.some(
     (options) => options?.reserveDashboardEditActions === true,
   );
@@ -536,6 +557,7 @@ const acquireNavbarCustomization = (
     moveBottom = false,
     stackTabs = false,
     promoteViewInLandscape = false,
+    bubblePopupRotateActive = false,
     reserveDashboardEditActions = false,
   } = {},
 ) => {
@@ -576,6 +598,7 @@ const acquireNavbarCustomization = (
     moveBottom,
     stackTabs,
     promoteViewInLandscape,
+    bubblePopupRotateActive,
     reserveDashboardEditActions,
   });
   return applyManagedTargets(state);
@@ -645,13 +668,17 @@ export class HomeAssistantNavbarController {
     const moveBottom = config?.mobile_view_ha_navbar_bottom === true;
     const dashboardEdit =
       this._host?._isDashboardEditMode?.() === true;
-    const promoteViewInLandscape =
+    const rotateCoverActive =
       this._host?.isConnected !== false &&
       this._host?._isLikelyPhoneClient?.() === true &&
       !dashboardEdit &&
       this._host?._isRotateOverlayViewportCoverActive?.() === true;
+    const bubblePopupRotateActive =
+      rotateCoverActive && isInsideBubblePopup(this._host);
+    const promoteViewInLandscape = rotateCoverActive && !bubblePopupRotateActive;
     return {
       moveBottom,
+      bubblePopupRotateActive,
       stackTabs:
         moveBottom &&
         config?.mobile_view_ha_navbar_stack_tabs === true,
@@ -686,12 +713,12 @@ export class HomeAssistantNavbarController {
   }
 
   shouldCustomizeNavbar(policy = this._dashboardNavbarPolicy()) {
-    const { moveBottom, promoteViewInLandscape } =
+    const { moveBottom, promoteViewInLandscape, bubblePopupRotateActive } =
       this._requestedCustomizations(policy.config);
     if (!this._isMobileDevice()) {
       return false;
     }
-    if (promoteViewInLandscape) return true;
+    if (promoteViewInLandscape || bubblePopupRotateActive) return true;
     if (!moveBottom) return false;
     if (policy.dashboardScope) {
       return (
@@ -770,6 +797,7 @@ export class HomeAssistantNavbarController {
       moveBottom,
       stackTabs,
       promoteViewInLandscape,
+      bubblePopupRotateActive,
       reserveDashboardEditActions,
     } = this._requestedCustomizations(
       config || this._dashboardNavbarPolicy(huiRoot).config,
@@ -780,6 +808,7 @@ export class HomeAssistantNavbarController {
       moveBottom,
       stackTabs,
       promoteViewInLandscape,
+      bubblePopupRotateActive,
       reserveDashboardEditActions,
     });
   }
