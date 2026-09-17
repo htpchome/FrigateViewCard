@@ -511,12 +511,7 @@ export class CardViewPageController {
     const changed = nextOpen !== this._drawerOpen;
     this._drawerOpen = nextOpen;
     this.syncDrawerState();
-    if (changed) {
-      this.renderActivity();
-      if (this._host.classList?.contains?.("card-view-panel-height-capped")) {
-        this._host._applyCardStyle?.();
-      }
-    }
+    if (changed) this.renderActivity();
     return this._drawerOpen;
   }
 

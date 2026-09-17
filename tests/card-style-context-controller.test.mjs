@@ -828,19 +828,13 @@ test("Panel View ratio caps and centers the card from its applied height", () =>
   controller.syncPanelViewAspectConstraint(null);
   ratio = null;
   controller.syncPanelViewAspectConstraint(null);
-  assert.deepEqual(classCalls.filter(([name]) => name === "panel-view-aspect-constrained"), [
+  assert.deepEqual(classCalls, [
     ["panel-view-aspect-constrained", true],
     ["panel-view-aspect-constrained", true],
     ["panel-view-aspect-constrained", false],
     ["panel-view-aspect-constrained", true],
     ["panel-view-aspect-constrained", false],
   ]);
-  assert.equal(
-    classCalls
-      .filter(([name]) => name === "card-view-panel-height-capped")
-      .every(([, enabled]) => enabled === false),
-    true,
-  );
   assert.equal(
     styleCalls.some(
       ([action, name]) =>
@@ -903,9 +897,8 @@ test("Panel View derives the card height from a narrower parent", () => {
   assert.equal(styleValues.get("--fvc-panel-view-card-height"), "400px");
 });
 
-test("Panel Card View caps its natural height without capping Sidebar", () => {
+test("Panel Card View uses natural height while Sidebar retains its ratio height", () => {
   const styleValues = new Map();
-  const classes = new Map();
   const host = {
     parentElement: {
       getBoundingClientRect: () => ({ width: 560 }),
@@ -914,7 +907,7 @@ test("Panel Card View caps its natural height without capping Sidebar", () => {
     _cardViewPageController: {
       usesOverlayPresentation: () => false,
     },
-    classList: { toggle: (name, enabled) => classes.set(name, enabled) },
+    classList: { toggle: () => {} },
     style: {
       getPropertyValue: (name) => styleValues.get(name) || "",
       setProperty: (name, value) => styleValues.set(name, value),
@@ -931,19 +924,17 @@ test("Panel Card View caps its natural height without capping Sidebar", () => {
 
   assert.equal(styleValues.get("--fvc-panel-view-max-width"), "1260px");
   assert.equal(styleValues.get("--fvc-panel-view-card-height"), "620px");
-  assert.equal(classes.get("card-view-panel-height-capped"), true);
 
   controller.isPanelView = () => false;
   controller.syncPanelViewAspectConstraint(null);
 
   assert.equal(styleValues.get("--fvc-panel-view-card-height"), "400px");
-  assert.equal(classes.get("card-view-panel-height-capped"), false);
 });
 
 test("Panel Card View derives its natural height from video and chrome", () => {
   const elements = new Map([
     [".card-view-camera-row", { clientHeight: 44 }],
-    [".card-view-activity", { clientHeight: 150 }],
+    ["[data-card-view-drawer]", { clientHeight: 150 }],
     ['[data-fvc-region="footer"]', { clientHeight: 48 }],
     [
       "#eng-wrap",

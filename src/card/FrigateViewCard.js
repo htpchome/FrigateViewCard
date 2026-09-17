@@ -1369,6 +1369,13 @@ export class FrigateViewCard extends HTMLElement {
           : { videoWidth: 16, videoHeight: 9 };
       },
       getAvailableGrowth: () => {
+        if (
+          this._isCardViewPageActive() &&
+          (this._cardStyleController.isPanelView() ||
+            this._cardStyleController.isSidebarView())
+        ) {
+          return null;
+        }
         const browse = this._$("#browse");
         const footer = this._$('[data-fvc-region="footer"]');
         if (!browse || !footer || footer.hidden) return null;

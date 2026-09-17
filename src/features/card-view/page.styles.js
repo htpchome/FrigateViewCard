@@ -82,44 +82,6 @@ export const CARD_VIEW_PAGE_STYLES = `
   .card.card-view-active .card-view-live-panel {position:relative;display:flex;flex:0 0 auto;flex-direction:column;width:100%;min-width:0;container-type:inline-size;container-name:card-view-live;}
   .card.card-view-active .card-view-live-stage {width:100%;flex:0 0 auto;}
   .card.card-view-active #eng-wrap {max-height:none;}
-  .card.card-view-active .card-view-drawer-stage-handle {display:none;}
-  :host(.panel-view-aspect-constrained) .card.card-view-active:not(.card-view-video-panel-only) .card-view-drawer-stage-handle {
-    position:absolute;z-index:35;left:50%;bottom:6px;display:grid;place-items:center;width:64px;height:26px;
-    box-sizing:border-box;margin:0;padding:2px;border:1px solid var(--fvc-media-overlay-border);border-radius:999px;
-    color:var(--fvc-media-overlay-text);background:var(--fvc-media-overlay-bg);box-shadow:var(--fvc-media-overlay-shadow);
-    transform:translateX(-50%);cursor:pointer;touch-action:none;user-select:none;
-  }
-  :host(.panel-view-aspect-constrained) .card.card-view-active:not(.card-view-video-panel-only) .card-view-drawer-stage-handle svg {
-    width:18px;height:18px;pointer-events:none;transition:transform 180ms ease;
-  }
-  :host(.panel-view-aspect-constrained.card-view-bottom-panel-open) .card.card-view-active .card-view-drawer-stage-handle svg {transform:rotate(0deg);}
-  :host(.panel-view-aspect-constrained):not(.card-view-bottom-panel-open) .card.card-view-active .card-view-drawer-stage-handle svg {transform:rotate(180deg);}
-  :host(.panel-view-aspect-constrained) .card.card-view-active:not(.card-view-video-panel-only) .card-view-drawer-stage-handle:active {background:var(--fvc-media-overlay-bg-hover);}
-  @media (hover:hover) and (pointer:fine) {
-    :host(.panel-view-aspect-constrained) .card.card-view-active:not(.card-view-video-panel-only) .card-view-drawer-stage-handle:hover {background:var(--fvc-media-overlay-bg-hover);border-color:var(--fvc-media-overlay-border-hover);}
-  }
-  :host(.card-view-natural-height.card-view-panel-height-capped.card-view-bottom-panel-open) {
-    height:var(--fvc-panel-view-card-height) !important;
-    max-height:var(--fvc-panel-view-card-height) !important;
-    overflow:hidden;
-  }
-  :host(.card-view-natural-height.card-view-panel-height-capped.card-view-bottom-panel-open) ha-card,
-  :host(.card-view-natural-height.card-view-panel-height-capped.card-view-bottom-panel-open) .card.card-view-active,
-  :host(.card-view-natural-height.card-view-panel-height-capped.card-view-bottom-panel-open) .card.card-view-active .card-view-layout {
-    height:100% !important;max-height:100% !important;overflow:hidden !important;
-  }
-  :host(.card-view-natural-height.card-view-panel-height-capped.card-view-bottom-panel-open) .card.card-view-active .card-view-live-panel {
-    flex:1 1 0;min-height:0;
-  }
-  :host(.card-view-natural-height.card-view-panel-height-capped.card-view-bottom-panel-open) .card.card-view-active .card-view-live-stage {
-    flex:1 1 0;min-height:0;overflow:hidden;
-  }
-  :host(.card-view-natural-height.card-view-panel-height-capped.card-view-bottom-panel-open) .card.card-view-active .card-view-drawer {
-    flex:0 0 auto;
-  }
-  :host(.card-view-natural-height.card-view-panel-height-capped.card-view-bottom-panel-open) .card.card-view-active #eng-wrap {
-    height:100%;max-height:100%;aspect-ratio:auto;
-  }
   .card.card-view-active .card-view-drawer {
     display:grid;grid-template-rows:minmax(0,1fr);min-height:0;overflow:visible;
     transition:grid-template-rows 240ms cubic-bezier(.22,.61,.36,1);
@@ -211,8 +173,8 @@ export const CARD_VIEW_PAGE_STYLES = `
   .card.card-view-active .card-view-drawer-handle svg {
     width:20px;height:20px;transition:transform 180ms ease;
   }
-  .card.card-view-active .card-view-drawer.is-open + .card-view-footer .card-view-drawer-handle svg {transform:rotate(0deg);}
-  .card.card-view-active .card-view-drawer.is-closed + .card-view-footer .card-view-drawer-handle svg {transform:rotate(180deg);}
+  .card.card-view-active .card-view-drawer.is-open + .card-view-footer .card-view-drawer-handle svg {transform:rotate(180deg);}
+  .card.card-view-active .card-view-drawer.is-closed + .card-view-footer .card-view-drawer-handle svg {transform:rotate(0deg);}
   .card.card-view-active .card-view-footer-end {grid-column:5;position:relative;display:flex;align-items:center;justify-content:flex-end;gap:5px;justify-self:end;min-width:0;}
   .card.card-view-active .card-view-linked-light .linked-light-button{width:32px;height:32px;min-width:32px;min-height:32px;}
   .card.card-view-active .card-view-footer-calendar {width:32px;height:32px;min-width:32px;min-height:32px;}

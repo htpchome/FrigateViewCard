@@ -2817,7 +2817,7 @@ test("a dashboard card's return-to-top chip stays beneath an external popup", as
   });
 });
 
-test("Panel Card View naturally sizes and caps an open bottom panel", async ({
+test("Panel Card View keeps its live aspect when the open drawer exceeds the viewport", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 640, height: 768 });
@@ -2884,7 +2884,6 @@ test("Panel Card View naturally sizes and caps an open bottom panel", async ({
   });
 
   const roomy = await sample();
-  expect(roomy.constrainedHeight).toBe(`${roomy.hostHeight}px`);
   expect(roomy.openClass).toBe(true);
   expect(roomy.hostHeight).toBeLessThan(740);
   expect(roomy.hostWidth).toBeLessThanOrEqual(640);
@@ -2902,10 +2901,8 @@ test("Panel Card View naturally sizes and caps an open bottom panel", async ({
 
   const cramped = await sample();
   expect(cramped.constrainedHeight).toBe("472px");
-  expect(cramped.hostHeight).toBe(472);
-  expect(cramped.hostBottom).toBeLessThanOrEqual(500);
-  expect(cramped.stageHeight).toBeLessThan(roomy.stageHeight);
-  expect(cramped.stageHeight).toBeGreaterThan(0);
+  expect(cramped.hostHeight).toBeGreaterThan(472);
+  expect(cramped.stageWidth / cramped.stageHeight).toBeCloseTo(16 / 9, 1);
   expect(cramped.drawerHeight).toBeGreaterThan(0);
   expect(Math.abs(cramped.footerBottom - cramped.hostBottom)).toBeLessThanOrEqual(1);
 });
@@ -2963,67 +2960,82 @@ test("Sidebar Card View keeps its live stage legible with the drawer open", asyn
   expect(resized.width / resized.height).toBeCloseTo(16 / 9, 1);
 });
 
-test("Card View drawer handles respond to a downward drag in Panel and Sidebar", async ({ page }) => {
+test("the existing live resize grip grows Card View video in Panel and Sidebar", async ({ page }) => {
   for (const viewTag of ["hui-panel-view", "hui-sidebar-view"]) {
-    await page.setViewportSize({ width: 900, height: 700 });
-    await page.goto(baseUrl);
-    await page.evaluate(async (tagName) => {
-      await import("/frigate-view-card.js");
-      document.body.style.margin = "0";
-      const view = document.createElement(tagName);
-      view.style.display = "block";
-      view.style.width = "550px";
-      document.body.append(view);
-      const card = document.createElement("frigate-view-card");
-      view.append(card);
-      card.setConfig({
-        cameras: [{ entity: "camera.front", name: "Front" }],
-        stream_height: 100,
-        stream_height_unit: "%",
-        card_view_page_enabled: true,
-        card_view_view_mode: "bottom-panel-open",
-      });
-      card._pageId = "card-view";
-      card._renderShell();
-      card._cardViewPageController.syncDrawerState();
-      card._applyCardStyle();
-    }, viewTag);
+    for (const viewMode of ["bottom-panel-open", "bottom-panel-closed"]) {
+      await page.setViewportSize({ width: 900, height: 700 });
+      await page.goto(baseUrl);
+      const before = await page.evaluate(async ({ tagName, mode }) => {
+        await import("/frigate-view-card.js");
+        document.body.style.margin = "0";
+        const view = document.createElement(tagName);
+        view.style.display = "block";
+        view.style.width = "550px";
+        document.body.append(view);
+        const card = document.createElement("frigate-view-card");
+        view.append(card);
+        card.setConfig({
+          cameras: [{ entity: "camera.front", name: "Front" }],
+          stream_height: 100,
+          stream_height_unit: "%",
+          card_view_page_enabled: true,
+          card_view_view_mode: mode,
+        });
+        card._pageId = "card-view";
+        card._renderShell();
+        card._viewMode = "single";
+        card._activeStreamType = "mse";
+        card.shadowRoot.querySelector("#stream-fallback").hidden = true;
+        card._cardViewPageController.syncDrawerState();
+        card._applyCardStyle();
+        const media = new EventTarget();
+        media.videoWidth = 1920;
+        media.videoHeight = 1080;
+        card._liveViewResizeController.attachMedia(media);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await new Promise((resolve) => setTimeout(resolve, 280));
+        card._applyCardStyle();
+        const root = card.shadowRoot;
+        const wrap = root.querySelector("#eng-wrap");
+        const grip = root.querySelector("#live-resize-grip");
+        return {
+          gripVisible: !grip.hidden,
+          gripMaximum: Number(grip.getAttribute("aria-valuemax")),
+          wrapHeight: wrap.getBoundingClientRect().height,
+          hostHeight: card.getBoundingClientRect().height,
+          drawerState: root.querySelector("[data-card-view-drawer]").dataset.drawerState,
+        };
+      }, { tagName: viewTag, mode: viewMode });
 
-    const handle = page.locator("frigate-view-card .card-view-drawer-stage-handle");
-    await expect(handle).toBeVisible();
-    const bounds = await handle.boundingBox();
-    expect(bounds).toBeTruthy();
-    const x = bounds.x + bounds.width / 2;
-    const y = bounds.y + bounds.height / 2;
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    await page.mouse.move(x, y + 40, { steps: 5 });
-    await page.mouse.up();
-    await expect(page.locator("frigate-view-card [data-card-view-drawer]")).toHaveAttribute("data-drawer-state", "closed");
-    const activityHeight = await page.evaluate(() => {
-      const activity = document.querySelector("frigate-view-card")
-        .shadowRoot.querySelector(".card-view-activity");
-      return activity.getBoundingClientRect().height;
-    });
-    expect(activityHeight).toBeGreaterThan(0);
-    await page.waitForTimeout(420);
-    const footerHandle = page.locator("frigate-view-card .card-view-drawer-handle--left");
-    await footerHandle.click();
-    await expect(page.locator("frigate-view-card [data-card-view-drawer]")).toHaveAttribute("data-drawer-state", "open");
-    const reopened = await page.evaluate(() => {
-      const card = document.querySelector("frigate-view-card");
-      const stage = card.shadowRoot.querySelector(".card-view-live-stage");
-      const footer = card.shadowRoot.querySelector('[data-fvc-region="footer"]');
-      return {
-        stageHeight: stage.getBoundingClientRect().height,
-        footerBottom: footer.getBoundingClientRect().bottom,
-        hostBottom: card.getBoundingClientRect().bottom,
-      };
-    });
-    expect(reopened.stageHeight).toBeGreaterThan(0);
-    expect(Math.abs(reopened.footerBottom - reopened.hostBottom)).toBeLessThanOrEqual(2);
-    await handle.click();
-    await expect(page.locator("frigate-view-card [data-card-view-drawer]")).toHaveAttribute("data-drawer-state", "closed");
+      expect(before.gripVisible).toBe(true);
+      expect(before.gripMaximum).toBeGreaterThan(56);
+      const grip = page.locator("frigate-view-card #live-resize-grip");
+      const bounds = await grip.boundingBox();
+      expect(bounds).toBeTruthy();
+      const x = bounds.x + bounds.width / 2;
+      const y = bounds.y + bounds.height / 2;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      await page.mouse.move(x, y + 90, { steps: 6 });
+      await page.mouse.up();
+
+      const after = await page.evaluate(() => {
+        const card = document.querySelector("frigate-view-card");
+        const root = card.shadowRoot;
+        const wrap = root.querySelector("#eng-wrap");
+        const footer = root.querySelector('[data-fvc-region="footer"]');
+        return {
+          wrapHeight: wrap.getBoundingClientRect().height,
+          hostHeight: card.getBoundingClientRect().height,
+          footerGap: Math.abs(footer.getBoundingClientRect().bottom - card.getBoundingClientRect().bottom),
+          drawerState: root.querySelector("[data-card-view-drawer]").dataset.drawerState,
+        };
+      });
+      expect(after.wrapHeight - before.wrapHeight).toBeGreaterThan(50);
+      expect(after.hostHeight - before.hostHeight, JSON.stringify({ viewTag, viewMode, before, after })).toBeGreaterThan(50);
+      expect(after.footerGap).toBeLessThanOrEqual(2);
+      expect(after.drawerState).toBe(before.drawerState);
+    }
   }
 });
 
