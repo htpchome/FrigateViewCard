@@ -764,6 +764,8 @@ test("popup custom media controls include volume and place AirPlay beside fullsc
     /id="popup-media-volume"[^>]*type="range"[^>]*min="0"[^>]*max="100"/,
   );
   assert.match(markup, /id="popup-media-airplay"[^>]* hidden/);
+  assert.match(markup, /id="popup-media-play"[^>]*data-fvc-i18n-title="runtime\.popup\.playPause"/);
+  assert.match(markup, /id="popup-media-progress"[^>]*data-fvc-i18n-aria-label="runtime\.popup\.mediaProgress"/);
   assert.doesNotMatch(markup, /id="popup-info-head"/);
   assert.match(markup, /id="recording-scrub-preview"[^>]* hidden/);
   assert.match(markup, /id="recording-scrub-preview-image"/);
@@ -784,11 +786,11 @@ test("popup custom media controls include volume and place AirPlay beside fullsc
   );
   assert.match(
     markup,
-    /id="recording-segment-reset"[^>]*>R<span>Reset<\/span>/,
+    /id="recording-segment-reset"[^>]*>R<span data-fvc-i18n="runtime\.popup\.segment\.reset">Reset<\/span>/,
   );
   assert.match(
     markup,
-    /id="recording-segment-cancel"[^>]*>X<span>Cancel<\/span>/,
+    /id="recording-segment-cancel"[^>]*>X<span data-fvc-i18n="runtime\.popup\.segment\.cancel">Cancel<\/span>/,
   );
   assert.doesNotMatch(
     markup,
@@ -801,6 +803,8 @@ test("popup custom media controls include volume and place AirPlay beside fullsc
   assert.match(markup, /id="recording-segment-preview-modal"[^>]* hidden/);
   assert.match(markup, /id="recording-segment-preview-video-host"/);
   assert.match(markup, /id="recording-segment-preview-download"/);
+  assert.match(markup, /data-fvc-i18n="runtime\.popup\.segment\.guidance"/);
+  assert.match(markup, /id="recording-segment-preview-status"[^>]*data-fvc-i18n="runtime\.popup\.segment\.preparingPreview"/);
   assert.match(markup, /Preview Segment/);
   assert.match(markup, /Download Segment/);
   assert.match(

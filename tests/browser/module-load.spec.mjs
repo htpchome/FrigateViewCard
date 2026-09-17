@@ -572,6 +572,83 @@ test("browse row language changes preserve event, review, and recording nodes", 
   });
 });
 
+test("popup controls and segment guidance localize without remounting media", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    card._renderShell();
+    const root = card.shadowRoot;
+    const viewer = root.querySelector("#viewer");
+    const video = document.createElement("video");
+    viewer.append(video);
+    const popup = root.querySelector("#myPopup");
+    const play = root.querySelector("#popup-media-play");
+    const airplay = root.querySelector("#popup-media-airplay");
+    const progress = root.querySelector("#popup-media-progress");
+    const manager = root.querySelector("#recording-segment-manager");
+    progress.value = "417";
+    airplay.dataset.playbackBaseTitle = "AirPlay video";
+    manager.hidden = false;
+    const translations = {
+      "runtime.popup.close": "Fermer",
+      "runtime.popup.playPause": "Lecture/Pause",
+      "runtime.popup.mediaProgress": "Progression",
+      "runtime.popup.airplayVideo": "Diffuser la vidéo",
+      "runtime.popup.segment.select": "Choisir un segment",
+      "runtime.popup.segment.guidance": "Déplacez les poignées pour choisir la partie à conserver.",
+      "runtime.popup.segment.reset": "Réinitialiser",
+      "runtime.popup.segment.previewTitle": "Aperçu du segment",
+      "runtime.popup.segment.preparingPreview": "Préparation de l’aperçu…",
+    };
+    const config = card._config;
+    card._localization = {
+      updateHass: () => true,
+      t: (key) => translations[key] || key,
+    };
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+    card._config = config;
+    card._syncPlaybackTargetButtons();
+
+    return {
+      popupPreserved: root.querySelector("#myPopup") === popup,
+      videoPreserved: root.querySelector("#viewer video") === video,
+      playPreserved: root.querySelector("#popup-media-play") === play,
+      managerStillOpen: !manager.hidden,
+      progressValue: progress.value,
+      closeLabel: root.querySelector("#close-btn")?.getAttribute("aria-label"),
+      playTitle: play.title,
+      airplayTitleAfterSync: airplay.title,
+      progressLabel: progress.getAttribute("aria-label"),
+      segmentHeading: manager.querySelector("strong")?.textContent,
+      segmentGuidance: manager.querySelector(".recording-segment-manager-copy span")?.textContent,
+      reset: root.querySelector("#recording-segment-reset span")?.textContent,
+      previewTitle: root.querySelector("#recording-segment-preview-title")?.textContent,
+      previewStatus: root.querySelector("#recording-segment-preview-status")?.textContent,
+    };
+  });
+
+  expect(state).toEqual({
+    popupPreserved: true,
+    videoPreserved: true,
+    playPreserved: true,
+    managerStillOpen: true,
+    progressValue: "417",
+    closeLabel: "Fermer",
+    playTitle: "Lecture/Pause",
+    airplayTitleAfterSync: "Diffuser la vidéo",
+    progressLabel: "Progression",
+    segmentHeading: "Choisir un segment",
+    segmentGuidance: "Déplacez les poignées pour choisir la partie à conserver.",
+    reset: "Réinitialiser",
+    previewTitle: "Aperçu du segment",
+    previewStatus: "Préparation de l’aperçu…",
+  });
+});
+
 test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

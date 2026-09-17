@@ -902,6 +902,7 @@ export class FrigateViewCard extends HTMLElement {
     this._popupRecordingScrubController =
       new PopupRecordingScrubController({
         query: (selector) => this._$(selector),
+        t: this._localization.t,
         fetchReviews: (clientId, cam, start, end) =>
           this._browseWindowLoaderController.fetchWindowedReviews(
             clientId,
@@ -1060,6 +1061,7 @@ export class FrigateViewCard extends HTMLElement {
       new PopupMediaControlsSurfaceController({
         query: (selector) => this._$(selector),
         formatTime: formatRecordingScrubTime,
+        t: this._localization.t,
         shouldUseCustomControls: (mediaType) =>
           this._usePopupCustomControls(mediaType),
         isAutoHideActive: () =>
@@ -3927,8 +3929,10 @@ export class FrigateViewCard extends HTMLElement {
     };
     const sync = (selector, supported, fallbackTitle) => {
       this.shadowRoot.querySelectorAll(selector).forEach((button) => {
-        const baseTitle =
-          button.dataset.playbackBaseTitle || button.title || fallbackTitle;
+        const translationKey = button.getAttribute("data-fvc-i18n-title");
+        const baseTitle = translationKey
+          ? this._localization.t(translationKey)
+          : button.dataset.playbackBaseTitle || button.title || fallbackTitle;
         button.dataset.playbackBaseTitle = baseTitle;
         button.hidden = !supported;
         button.disabled = !supported;

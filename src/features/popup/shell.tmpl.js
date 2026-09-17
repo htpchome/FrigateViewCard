@@ -1,35 +1,35 @@
 export function buildPopupShellMarkup({ icons, version }) {
   return `<div id="myPopup" class="popup-content" data-no-swipe>
             <div class="popup-close-row">
-              <button id="close-btn" class="close-btn round-btn" type="button" aria-label="Close">${icons.close}</button>
+              <button id="close-btn" class="close-btn round-btn" type="button" aria-label="Close" data-fvc-i18n-aria-label="runtime.popup.close">${icons.close}</button>
             </div>
             <div class="popup-header"></div>
             <div class="popup-body">
               <div class="viewer" id="viewer" style="display:none"></div>
               <div class="popup-card-view-label" id="popup-card-view-label" aria-live="polite" hidden></div>
-              <div class="popup-card-view-actions" id="popup-card-view-actions" aria-label="Media actions" hidden></div>
+              <div class="popup-card-view-actions" id="popup-card-view-actions" aria-label="Media actions" data-fvc-i18n-aria-label="runtime.popup.mediaActions" hidden></div>
               <div class="popup-card-view-resize-host" id="popup-card-view-resize-host" hidden></div>
               <div class="popup-media-controls" id="popup-media-controls" hidden>
                 <span class="popup-media-controls-spacer" aria-hidden="true"></span>
-                <button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause">${icons.play}</button>
-                <input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress">
+                <button class="popup-media-btn" id="popup-media-play" type="button" title="Play/Pause" aria-label="Play/Pause" data-fvc-i18n-title="runtime.popup.playPause" data-fvc-i18n-aria-label="runtime.popup.playPause">${icons.play}</button>
+                <input class="popup-media-progress" id="popup-media-progress" type="range" min="0" max="1000" value="0" step="1" aria-label="Media progress" data-fvc-i18n-aria-label="runtime.popup.mediaProgress">
                 <span class="popup-media-time" id="popup-media-time">0:00/0:00</span>
-                <button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute">${icons.volOn}</button>
-                <input class="popup-media-volume" id="popup-media-volume" type="range" min="0" max="100" value="100" step="1" title="Volume" aria-label="Volume">
-                <button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen">${icons.expand}</button>
-                <button class="popup-media-btn" id="popup-media-airplay" type="button" title="AirPlay video" aria-label="AirPlay video" hidden>${icons.airplayVideo}</button>
+                <button class="popup-media-btn" id="popup-media-mute" type="button" title="Mute" aria-label="Mute" data-fvc-i18n-title="runtime.popup.mute" data-fvc-i18n-aria-label="runtime.popup.mute">${icons.volOn}</button>
+                <input class="popup-media-volume" id="popup-media-volume" type="range" min="0" max="100" value="100" step="1" title="Volume" aria-label="Volume" data-fvc-i18n-title="runtime.popup.volume" data-fvc-i18n-aria-label="runtime.popup.volume">
+                <button class="popup-media-btn" id="popup-media-fs" type="button" title="Fullscreen" aria-label="Fullscreen" data-fvc-i18n-title="runtime.popup.fullscreen" data-fvc-i18n-aria-label="runtime.popup.fullscreen">${icons.expand}</button>
+                <button class="popup-media-btn" id="popup-media-airplay" type="button" title="AirPlay video" aria-label="AirPlay video" data-fvc-i18n-title="runtime.popup.airplayVideo" data-fvc-i18n-aria-label="runtime.popup.airplayVideo" hidden>${icons.airplayVideo}</button>
                 <span class="popup-media-controls-spacer" aria-hidden="true"></span>
               </div>
                 <div class="recording-scrub" id="recording-scrub" hidden>
                   <div class="recording-scrub-main-row">
-                    <button class="recording-scrub-play" id="recording-scrub-play" type="button" title="Play recording" aria-label="Play recording">${icons.play}</button>
+                    <button class="recording-scrub-play" id="recording-scrub-play" type="button" title="Play recording" aria-label="Play recording" data-fvc-i18n-title="runtime.popup.segment.playRecording" data-fvc-i18n-aria-label="runtime.popup.segment.playRecording">${icons.play}</button>
                     <div class="recording-scrub-track" id="recording-scrub-track">
                       <div class="recording-segment-selection" id="recording-segment-selection" hidden>
                         <div class="recording-segment-shade recording-segment-shade--start" id="recording-segment-shade-start"></div>
                         <div class="recording-segment-keep" id="recording-segment-keep"></div>
                         <div class="recording-segment-shade recording-segment-shade--end" id="recording-segment-shade-end"></div>
-                        <button class="recording-segment-handle recording-segment-handle--start" id="recording-segment-handle-start" data-recording-segment-handle="start" type="button" role="slider" aria-label="Segment start" aria-orientation="horizontal"><span class="recording-segment-handle-time" id="recording-segment-handle-start-time" aria-hidden="true">0:00</span></button>
-                        <button class="recording-segment-handle recording-segment-handle--end" id="recording-segment-handle-end" data-recording-segment-handle="end" type="button" role="slider" aria-label="Segment end" aria-orientation="horizontal"><span class="recording-segment-handle-time" id="recording-segment-handle-end-time" aria-hidden="true">0:00</span></button>
+                        <button class="recording-segment-handle recording-segment-handle--start" id="recording-segment-handle-start" data-recording-segment-handle="start" type="button" role="slider" aria-label="Segment start" data-fvc-i18n-aria-label="runtime.popup.segment.start" aria-orientation="horizontal"><span class="recording-segment-handle-time" id="recording-segment-handle-start-time" aria-hidden="true">0:00</span></button>
+                        <button class="recording-segment-handle recording-segment-handle--end" id="recording-segment-handle-end" data-recording-segment-handle="end" type="button" role="slider" aria-label="Segment end" data-fvc-i18n-aria-label="runtime.popup.segment.end" aria-orientation="horizontal"><span class="recording-segment-handle-time" id="recording-segment-handle-end-time" aria-hidden="true">0:00</span></button>
                       </div>
                       <div class="recording-scrub-ticks" id="recording-scrub-ticks"></div>
                       <div class="recording-scrub-markers" id="recording-scrub-markers"></div>
@@ -46,51 +46,51 @@ export function buildPopupShellMarkup({ icons, version }) {
                     <span id="recording-scrub-end">0:00</span>
                   </div>
                 </div>
-                <section class="recording-segment-manager" id="recording-segment-manager" aria-label="Recording segment download" hidden>
+                <section class="recording-segment-manager" id="recording-segment-manager" aria-label="Recording segment download" data-fvc-i18n-aria-label="runtime.popup.segment.downloadRegion" hidden>
                   <div class="recording-segment-manager-copy">
-                    <strong>Select a recording segment</strong>
-                    <span>Drag the handles to choose what to keep. Green is downloaded; red is excluded.</span>
+                    <strong data-fvc-i18n="runtime.popup.segment.select">Select a recording segment</strong>
+                    <span data-fvc-i18n="runtime.popup.segment.guidance">Drag the handles to choose what to keep. Green is downloaded; red is excluded.</span>
                   </div>
                   <div class="recording-segment-manager-footer">
                     <div class="recording-segment-summary" id="recording-segment-summary" aria-live="polite">
                       <span><b id="recording-segment-start-label">0:00</b> – <b id="recording-segment-end-label">0:00</b></span>
-                      <span id="recording-segment-duration">Entire recording</span>
+                      <span id="recording-segment-duration" data-fvc-i18n="runtime.popup.segment.entireRecording">Entire recording</span>
                     </div>
                     <div class="recording-segment-manager-controls">
                       <div class="recording-segment-manager-tools">
-                        <button class="recording-segment-tool recording-segment-reset" id="recording-segment-reset" type="button" title="Reset segment" aria-label="Reset segment">${icons.rotate || ""}<span>Reset</span></button>
-                        <button class="recording-segment-tool recording-segment-cancel" id="recording-segment-cancel" type="button" title="Cancel segment selection" aria-label="Cancel segment selection">${icons.close}<span>Cancel</span></button>
+                        <button class="recording-segment-tool recording-segment-reset" id="recording-segment-reset" type="button" title="Reset segment" aria-label="Reset segment" data-fvc-i18n-title="runtime.popup.segment.resetSegment" data-fvc-i18n-aria-label="runtime.popup.segment.resetSegment">${icons.rotate || ""}<span data-fvc-i18n="runtime.popup.segment.reset">Reset</span></button>
+                        <button class="recording-segment-tool recording-segment-cancel" id="recording-segment-cancel" type="button" title="Cancel segment selection" aria-label="Cancel segment selection" data-fvc-i18n-title="runtime.popup.segment.cancelSelection" data-fvc-i18n-aria-label="runtime.popup.segment.cancelSelection">${icons.close}<span data-fvc-i18n="runtime.popup.segment.cancel">Cancel</span></button>
                       </div>
                       <div class="recording-segment-manager-actions">
-                        <button class="recording-segment-preview-button" id="recording-segment-preview-button" type="button">${icons.play}<span>Preview Segment</span></button>
-                        <button class="recording-segment-download" id="recording-segment-download" type="button">${icons.download}<span>Download Segment</span></button>
+                        <button class="recording-segment-preview-button" id="recording-segment-preview-button" type="button">${icons.play}<span data-fvc-i18n="runtime.popup.segment.preview">Preview Segment</span></button>
+                        <button class="recording-segment-download" id="recording-segment-download" type="button">${icons.download}<span data-fvc-i18n="runtime.popup.segment.download">Download Segment</span></button>
                       </div>
                     </div>
                   </div>
                 </section>
                 <div class="popup-info" id="popup-info" hidden></div>
                 <div class="popup-carousel-wrap" id="popup-carousel-wrap" hidden>
-                  <button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" type="button" title="Previous carousel page" aria-label="Previous carousel page" aria-controls="popup-carousel" hidden>${icons.left}
+                  <button class="popup-carousel-nav left" id="popup-carousel-left" data-carousel-dir="-1" type="button" title="Previous carousel page" aria-label="Previous carousel page" data-fvc-i18n-title="runtime.popup.previousCarouselPage" data-fvc-i18n-aria-label="runtime.popup.previousCarouselPage" aria-controls="popup-carousel" hidden>${icons.left}
                   </button>
                   <div class="popup-carousel" id="popup-carousel"></div>
-                  <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" type="button" title="Next carousel page" aria-label="Next carousel page" aria-controls="popup-carousel" hidden>${icons.right}
+                  <button class="popup-carousel-nav right" id="popup-carousel-right" data-carousel-dir="1" type="button" title="Next carousel page" aria-label="Next carousel page" data-fvc-i18n-title="runtime.popup.nextCarouselPage" data-fvc-i18n-aria-label="runtime.popup.nextCarouselPage" aria-controls="popup-carousel" hidden>${icons.right}
                   </button>
                 </div>
             </div>
             <div class="recording-segment-preview-modal" id="recording-segment-preview-modal" hidden>
-              <button class="recording-segment-preview-backdrop" type="button" data-recording-segment-preview-close aria-label="Close segment preview"></button>
+              <button class="recording-segment-preview-backdrop" type="button" data-recording-segment-preview-close aria-label="Close segment preview" data-fvc-i18n-aria-label="runtime.popup.segment.closePreview"></button>
               <section class="recording-segment-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="recording-segment-preview-title">
                 <header class="recording-segment-preview-head">
                   <div>
-                    <strong id="recording-segment-preview-title">Segment Preview</strong>
+                    <strong id="recording-segment-preview-title" data-fvc-i18n="runtime.popup.segment.previewTitle">Segment Preview</strong>
                     <span id="recording-segment-preview-range">0:00 – 0:00</span>
                   </div>
-                  <button class="recording-segment-preview-close" type="button" data-recording-segment-preview-close aria-label="Close segment preview">${icons.close}</button>
+                  <button class="recording-segment-preview-close" type="button" data-recording-segment-preview-close aria-label="Close segment preview" data-fvc-i18n-aria-label="runtime.popup.segment.closePreview">${icons.close}</button>
                 </header>
                 <div class="recording-segment-preview-video-host" id="recording-segment-preview-video-host"></div>
-                <div class="recording-segment-preview-status" id="recording-segment-preview-status">Preparing segment preview…</div>
+                <div class="recording-segment-preview-status" id="recording-segment-preview-status" data-fvc-i18n="runtime.popup.segment.preparingPreview">Preparing segment preview…</div>
                 <footer class="recording-segment-preview-actions">
-                  <button class="recording-segment-download" id="recording-segment-preview-download" type="button">${icons.download}<span>Download Segment</span></button>
+                  <button class="recording-segment-download" id="recording-segment-preview-download" type="button">${icons.download}<span data-fvc-i18n="runtime.popup.segment.download">Download Segment</span></button>
                 </footer>
               </section>
             </div>

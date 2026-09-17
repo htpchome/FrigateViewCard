@@ -175,6 +175,7 @@ export class PopupMediaControlsSurfaceController {
     createBinding = (options) => new PopupMediaControlsController(options),
     createOverlayControls = (options) =>
       new MediaOverlayControlsController(options),
+    t,
   } = {}) {
     this._query = query;
     this._formatTime = formatTime;
@@ -193,6 +194,7 @@ export class PopupMediaControlsSurfaceController {
     this._clearTimer = clearTimer;
     this._createBinding = createBinding;
     this._createOverlayControls = createOverlayControls;
+    this._t = t;
     this._binding = null;
     this._video = null;
     this._hideTimer = null;
@@ -305,6 +307,7 @@ export class PopupMediaControlsSurfaceController {
       id,
       className,
       title,
+      translationKey,
       icon,
       pressed = null,
     }) => {
@@ -313,8 +316,13 @@ export class PopupMediaControlsSurfaceController {
       button.className = `${buttonClass} ${className}`;
       button.id = id;
       button.type = "button";
-      button.title = title;
-      button.setAttribute("aria-label", title);
+      const label = typeof this._t === "function"
+        ? this._t(translationKey)
+        : title;
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      button.setAttribute("data-fvc-i18n-title", translationKey);
+      button.setAttribute("data-fvc-i18n-aria-label", translationKey);
       if (pressed !== null) {
         button.setAttribute("aria-pressed", String(pressed));
       }
@@ -335,12 +343,14 @@ export class PopupMediaControlsSurfaceController {
         id: "popup-mobile-fs-btn",
         className: "popup-mobile-fs-btn",
         title: "Fullscreen",
+        translationKey: "runtime.popup.fullscreen",
         icon: this._icons.expand,
       });
       const airPlayButton = appendButton({
         id: "popup-mobile-airplay-btn",
         className: "popup-mobile-airplay-btn",
         title: "AirPlay video",
+        translationKey: "runtime.popup.airplayVideo",
         icon: this._icons.airplayVideo,
       });
       if (airPlayButton) airPlayButton.hidden = true;
@@ -351,6 +361,7 @@ export class PopupMediaControlsSurfaceController {
         id: "popup-airplay-btn",
         className: "popup-airplay-btn",
         title: "AirPlay video",
+        translationKey: "runtime.popup.airplayVideo",
         icon: this._icons.airplayVideo,
       });
       if (airPlayButton) airPlayButton.hidden = true;
@@ -361,6 +372,7 @@ export class PopupMediaControlsSurfaceController {
         id: "popup-pip-btn",
         className: "popup-pip-btn",
         title: "Picture-in-Picture",
+        translationKey: "runtime.popup.pictureInPicture",
         icon: this._icons.pipPopOut,
         pressed: false,
       });
@@ -371,6 +383,7 @@ export class PopupMediaControlsSurfaceController {
       id: "popup-take-snapshot-btn",
       className: "popup-take-snapshot-btn",
       title: "Take Snapshot",
+      translationKey: "runtime.popup.takeSnapshot",
       icon: this._icons.takeSnapshot,
     });
 

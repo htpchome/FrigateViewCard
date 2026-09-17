@@ -475,6 +475,54 @@ test("popup recording segment manager shades, resets, and downloads its selected
   assert.equal(elements.get("#recording-segment-reset").disabled, true);
 });
 
+test("recording segment state exposes localized copy without changing its range", async () => {
+  const elements = createScrubElements();
+  const translations = {
+    "runtime.popup.segment.entireRecordingDuration": "Enregistrement entier · {duration}",
+    "runtime.popup.segment.selectedDuration": "Durée choisie · {duration}",
+    "runtime.popup.segment.playRecording": "Lire l’enregistrement",
+    "runtime.popup.segment.preparingPreview": "Préparation de l’aperçu…",
+    "runtime.popup.segment.previewPlayerUnavailable": "Lecteur indisponible.",
+  };
+  const controller = new PopupRecordingScrubController({
+    query: (selector) => elements.get(selector) || null,
+    t: (key, values = {}) => (translations[key] || key).replace(
+      /\{(\w+)\}/g,
+      (_, name) => String(values[name] ?? ""),
+    ),
+    isPlaybackTokenCurrent: () => true,
+    createPreviewVideo: () => null,
+    createScrubBinding: () => ({ bind() {}, dispose() {} }),
+  });
+  await controller.initialize({
+    clientId: "frigate",
+    cam: "garage",
+    start: 100,
+    end: 200,
+    video: {},
+    token: 1,
+  });
+
+  controller.toggleSegmentManager();
+  const duration = elements.get("#recording-segment-duration");
+  assert.equal(duration.textContent, "Enregistrement entier · 1:40");
+  assert.equal(duration.getAttribute("data-fvc-i18n-values"), '{"duration":"1:40"}');
+  assert.equal(elements.get("#recording-scrub-play").title, "Lire l’enregistrement");
+  controller._updateSegmentHandle("start", 120);
+  assert.equal(duration.textContent, "Durée choisie · 1:20");
+  assert.deepEqual(controller.segmentRange(), { start: 120, end: 200 });
+
+  assert.equal(await controller.openSegmentPreview(), false);
+  const status = elements.get("#recording-segment-preview-status");
+  assert.equal(status.textContent, "Lecteur indisponible.");
+  assert.equal(
+    status.getAttribute("data-fvc-i18n"),
+    "runtime.popup.segment.previewPlayerUnavailable",
+  );
+  controller.closeSegmentPreview();
+  assert.equal(status.textContent, "Préparation de l’aperçu…");
+});
+
 test("popup recording segment manager extends only its selectable timeline", async () => {
   const elements = createScrubElements();
   const downloads = [];

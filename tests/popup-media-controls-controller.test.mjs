@@ -487,6 +487,11 @@ test("popup media controls surface renders snapshot, PiP, and AirPlay buttons", 
   };
   const controller = new PopupMediaControlsSurfaceController({
     query: (selector) => (selector === "#viewer" ? viewer : null),
+    t: (key) => ({
+      "runtime.popup.airplayVideo": "Diffuser la vidéo",
+      "runtime.popup.pictureInPicture": "Image dans l’image",
+      "runtime.popup.takeSnapshot": "Capturer une image",
+    }[key] || key),
     shouldUseCustomControls: () => false,
     isMobileTabletViewport: () => false,
     isFirefox: () => false,
@@ -510,6 +515,11 @@ test("popup media controls surface renders snapshot, PiP, and AirPlay buttons", 
   assert.equal(playbackControls.children[0].innerHTML, "airplay-icon");
   assert.equal(playbackControls.children[1].innerHTML, "pip-icon");
   assert.equal(playbackControls.children[2].innerHTML, "snapshot-icon");
+  assert.equal(playbackControls.children[1].title, "Image dans l’image");
+  assert.equal(
+    playbackControls.children[2]["data-fvc-i18n-aria-label"],
+    "runtime.popup.takeSnapshot",
+  );
   assert.deepEqual(calls, [["syncPlayback"], ["syncPictureInPicture"]]);
 });
 

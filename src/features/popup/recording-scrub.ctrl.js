@@ -1,5 +1,6 @@
 import { buildFrigateRecordingReviewMarkers } from "../../integrations/frigate/recording-review-markers.js";
 import { CleanupController } from "../../shared/cleanup.js";
+import { setLocalizedText } from "../localization/localized-dom.js";
 import {
   buildRecordingScrubDecorations,
   formatRecordingScrubTime,
@@ -117,6 +118,7 @@ export class PopupRecordingScrubController {
     markerCacheMaxEntries = POPUP_RECORDING_MARKER_CACHE_MAX_ENTRIES,
     setTimer = globalThis.setTimeout?.bind(globalThis),
     clearTimer = globalThis.clearTimeout?.bind(globalThis),
+    t,
   } = {}) {
     this._query = query;
     this._fetchReviews = fetchReviews;
@@ -136,6 +138,7 @@ export class PopupRecordingScrubController {
     this._createScrubBinding = createScrubBinding;
     this._setTimer = setTimer;
     this._clearTimer = clearTimer;
+    this._t = t;
     this._markerCacheMaxEntries = Math.max(
       1,
       Math.floor(Number(markerCacheMaxEntries) || 0),
@@ -152,6 +155,21 @@ export class PopupRecordingScrubController {
       maxEntries: this._markerCacheMaxEntries,
     });
     this._initGeneration = 0;
+  }
+
+  _setLocalizedCopy(element, key, fallback, values = {}) {
+    if (!element) return;
+    if (!key) {
+      element.textContent = "";
+      element.removeAttribute?.("data-fvc-i18n");
+      element.removeAttribute?.("data-fvc-i18n-values");
+      return;
+    }
+    if (typeof this._t === "function") {
+      setLocalizedText(element, key, this._t, values);
+      return;
+    }
+    element.textContent = fallback;
   }
 
   range() {
@@ -828,11 +846,17 @@ export class PopupRecordingScrubController {
     const duration = Math.max(0, state.segmentEnd - state.segmentStart);
     const fullRecording =
       state.segmentStart === state.start && state.segmentEnd === state.end;
-    if (elements.segmentDuration) {
-      elements.segmentDuration.textContent = fullRecording
-        ? `Entire recording · ${formatRecordingScrubTime(duration)}`
-        : `Selected duration · ${formatRecordingScrubTime(duration)}`;
-    }
+    const durationText = formatRecordingScrubTime(duration);
+    this._setLocalizedCopy(
+      elements.segmentDuration,
+      fullRecording
+        ? "runtime.popup.segment.entireRecordingDuration"
+        : "runtime.popup.segment.selectedDuration",
+      fullRecording
+        ? `Entire recording · ${durationText}`
+        : `Selected duration · ${durationText}`,
+      { duration: durationText },
+    );
     if (elements.segmentReset) elements.segmentReset.disabled = fullRecording;
     if (elements.segmentPreviewButton) {
       elements.segmentPreviewButton.disabled =
@@ -867,11 +891,17 @@ export class PopupRecordingScrubController {
     if (!button) return;
     const paused = video?.paused !== false;
     const label = paused ? "Play recording" : "Pause recording";
+    const key = paused
+      ? "runtime.popup.segment.playRecording"
+      : "runtime.popup.segment.pauseRecording";
     const icon = paused ? this._playIcon : this._pauseIcon;
     if (icon) button.innerHTML = icon;
     button.disabled = !video;
-    button.title = label;
-    button.setAttribute?.("aria-label", label);
+    const localizedLabel = typeof this._t === "function" ? this._t(key) : label;
+    button.title = localizedLabel;
+    button.setAttribute?.("aria-label", localizedLabel);
+    button.setAttribute?.("data-fvc-i18n-title", key);
+    button.setAttribute?.("data-fvc-i18n-aria-label", key);
   }
 
   _toggleRecordingPlayback() {
@@ -925,7 +955,11 @@ export class PopupRecordingScrubController {
     elements.segmentPreviewModal.hidden = false;
     if (elements.segmentPreviewStatus) {
       elements.segmentPreviewStatus.hidden = false;
-      elements.segmentPreviewStatus.textContent = "Preparing segment preview…";
+      this._setLocalizedCopy(
+        elements.segmentPreviewStatus,
+        "runtime.popup.segment.preparingPreview",
+        "Preparing segment preview…",
+      );
     }
     elements.segmentPreviewVideoHost.innerHTML = "";
     this._syncSegmentUi(elements);
@@ -935,8 +969,11 @@ export class PopupRecordingScrubController {
     if (!video) {
       state.segmentPreviewPending = false;
       if (elements.segmentPreviewStatus) {
-        elements.segmentPreviewStatus.textContent =
-          "Unable to create the segment preview player.";
+        this._setLocalizedCopy(
+          elements.segmentPreviewStatus,
+          "runtime.popup.segment.previewPlayerUnavailable",
+          "Unable to create the segment preview player.",
+        );
       }
       this._syncSegmentUi(elements);
       return false;
@@ -987,9 +1024,11 @@ export class PopupRecordingScrubController {
     state.segmentPreviewPending = false;
     if (elements.segmentPreviewStatus) {
       elements.segmentPreviewStatus.hidden = playable;
-      elements.segmentPreviewStatus.textContent = playable
-        ? ""
-        : "Unable to load the selected recording segment.";
+      this._setLocalizedCopy(
+        elements.segmentPreviewStatus,
+        playable ? "" : "runtime.popup.segment.previewUnavailable",
+        "Unable to load the selected recording segment.",
+      );
     }
     this._syncSegmentUi(elements);
     return playable;
@@ -1025,7 +1064,11 @@ export class PopupRecordingScrubController {
     }
     if (elements.segmentPreviewStatus) {
       elements.segmentPreviewStatus.hidden = false;
-      elements.segmentPreviewStatus.textContent = "Preparing segment preview…";
+      this._setLocalizedCopy(
+        elements.segmentPreviewStatus,
+        "runtime.popup.segment.preparingPreview",
+        "Preparing segment preview…",
+      );
     }
     this._syncSegmentUi(elements);
     if (restoreFocus) this._previewReturnFocus?.focus?.();
