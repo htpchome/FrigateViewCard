@@ -17,6 +17,7 @@ import {
   buildWideTimelineEmptyMarkup,
   buildWideTimelinePanelMarkup,
 } from "./timeline.tmpl.js";
+import { applyLocalizedText } from "../localization/localized-dom.js";
 
 const nextFrame = (callback) => {
   if (typeof requestAnimationFrame === "function") {
@@ -461,6 +462,7 @@ export class WideViewTimelineController {
       sliding: true,
       slideDirection: direction,
     });
+    applyLocalizedText(canvas, this._host._localization?.t);
     for (const line of canvas.querySelectorAll(
       "[data-wide-timeline-link-stack]",
     )) {
@@ -594,6 +596,7 @@ export class WideViewTimelineController {
           slideDirection,
         })
       : buildWideTimelineEmptyMarkup({ loading: this._deps.isLoading() });
+    applyLocalizedText(content, this._host._localization?.t);
     this._lastLayout = layout;
     this._clockOffsetSeconds = 0;
     this._lastViewportHeight = viewportHeight;
@@ -656,10 +659,21 @@ export class WideViewTimelineController {
     panel.setAttribute("aria-hidden", open ? "false" : "true");
     if ("inert" in panel) panel.inert = !open;
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    toggle.setAttribute("aria-label", open ? "Collapse Timeline" : "Open Timeline");
-    toggle.title = open
-      ? "Drag to resize or click to collapse Timeline"
-      : "Open Timeline";
+    const labelKey = open
+      ? "runtime.wideView.timeline.collapse"
+      : "runtime.wideView.timeline.open";
+    const titleKey = open
+      ? "runtime.wideView.timeline.collapseHint"
+      : "runtime.wideView.timeline.open";
+    toggle.setAttribute("data-fvc-i18n-aria-label", labelKey);
+    toggle.setAttribute("data-fvc-i18n-title", titleKey);
+    toggle.setAttribute(
+      "aria-label",
+      this._host._localization?.t?.(labelKey) ||
+        (open ? "Collapse Timeline" : "Open Timeline"),
+    );
+    toggle.title = this._host._localization?.t?.(titleKey) ||
+      (open ? "Drag to resize or click to collapse Timeline" : "Open Timeline");
     toggle.innerHTML = open
       ? this._deps.icons.left || ""
       : this._deps.icons.right || "";
@@ -781,7 +795,14 @@ export class WideViewTimelineController {
 
   _syncScaleControls() {
     const output = this._host._$("#wide-timeline-scale-output");
-    if (output) output.textContent = `${this._scaleHours}h`;
+    if (output) {
+      const key = "runtime.wideView.timeline.hours";
+      const values = { count: this._scaleHours };
+      output.setAttribute("data-fvc-i18n", key);
+      output.setAttribute("data-fvc-i18n-values", JSON.stringify(values));
+      output.textContent = this._host._localization?.t?.(key, values) ||
+        `${this._scaleHours}h`;
+    }
     const zoomIn = this._host.shadowRoot?.querySelector?.(
       '[data-wide-timeline-scale="in"]',
     );

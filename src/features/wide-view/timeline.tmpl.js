@@ -14,23 +14,23 @@ export const buildWideTimelinePanelMarkup = ({
   icons = {},
   open = false,
   scaleHours = 12,
-} = {}) => `<aside class="wide-timeline-panel" id="wide-timeline-panel" data-fvc-region="timeline" aria-label="Camera event timeline" aria-hidden="${open ? "false" : "true"}">
+} = {}) => `<aside class="wide-timeline-panel" id="wide-timeline-panel" data-fvc-region="timeline" aria-label="Camera event timeline" data-fvc-i18n-aria-label="runtime.wideView.timeline.cameraEvents" aria-hidden="${open ? "false" : "true"}">
     <div class="wide-timeline-header">
       <div class="wide-timeline-heading">
-        <span>Timeline</span>
+        <span data-fvc-i18n="runtime.wideView.timeline.title">Timeline</span>
         <span class="wide-timeline-day" id="wide-timeline-day"></span>
       </div>
-      <div class="wide-timeline-scale" role="group" aria-label="Timeline scale">
-        <button type="button" data-wide-timeline-scale="in" title="Show less time" aria-label="Show less time">−</button>
-        <output id="wide-timeline-scale-output" aria-live="polite">${scaleHours}h</output>
-        <button type="button" data-wide-timeline-scale="out" title="Show more time" aria-label="Show more time">+</button>
+      <div class="wide-timeline-scale" role="group" aria-label="Timeline scale" data-fvc-i18n-aria-label="runtime.wideView.timeline.scale">
+        <button type="button" data-wide-timeline-scale="in" title="Show less time" aria-label="Show less time" data-fvc-i18n-title="runtime.wideView.timeline.lessTime" data-fvc-i18n-aria-label="runtime.wideView.timeline.lessTime">−</button>
+        <output id="wide-timeline-scale-output" aria-live="polite" data-fvc-i18n="runtime.wideView.timeline.hours" data-fvc-i18n-values="${escapeHtml(JSON.stringify({ count: scaleHours }))}">${scaleHours}h</output>
+        <button type="button" data-wide-timeline-scale="out" title="Show more time" aria-label="Show more time" data-fvc-i18n-title="runtime.wideView.timeline.moreTime" data-fvc-i18n-aria-label="runtime.wideView.timeline.moreTime">+</button>
       </div>
     </div>
-    <div class="wide-timeline-viewport" id="wide-timeline-viewport" tabindex="0" aria-label="Scrollable event timeline">
+    <div class="wide-timeline-viewport" id="wide-timeline-viewport" tabindex="0" aria-label="Scrollable event timeline" data-fvc-i18n-aria-label="runtime.wideView.timeline.scrollable">
       <div class="wide-timeline-content" id="wide-timeline-content"></div>
     </div>
   </aside>
-  <button class="wide-timeline-toggle" id="wide-timeline-toggle" type="button" data-wide-timeline-toggle aria-controls="wide-timeline-panel" aria-expanded="${open ? "true" : "false"}" title="${open ? "Drag to resize or click to collapse Timeline" : "Open Timeline"}" aria-label="${open ? "Collapse Timeline" : "Open Timeline"}">${open ? icons.left || "" : icons.right || ""}</button>`;
+  <button class="wide-timeline-toggle" id="wide-timeline-toggle" type="button" data-wide-timeline-toggle aria-controls="wide-timeline-panel" aria-expanded="${open ? "true" : "false"}" title="${open ? "Drag to resize or click to collapse Timeline" : "Open Timeline"}" aria-label="${open ? "Collapse Timeline" : "Open Timeline"}" data-fvc-i18n-title="runtime.wideView.timeline.${open ? "collapseHint" : "open"}" data-fvc-i18n-aria-label="runtime.wideView.timeline.${open ? "collapse" : "open"}">${open ? icons.left || "" : icons.right || ""}</button>`;
 
 const buildTimelineTickMarkup = (tick) => {
   const y = rounded(tick.y);
@@ -88,16 +88,25 @@ export const buildWideTimelineCardMarkup = ({
     : `<span class="wide-timeline-card-placeholder tph" aria-hidden="true">${icons.person || ""}</span>`;
   const timeLabel = formatTime(entry.startTime);
   const clickLabel = `${entry.kind === "alert" ? "Play alert" : entry.hasClip ? "Play clip" : "View snapshot"}: ${entry.label}, ${timeLabel}`;
+  const clickLabelKey = entry.kind === "alert"
+    ? "runtime.wideView.timeline.playAlert"
+    : entry.hasClip
+      ? "runtime.wideView.timeline.playClip"
+      : "runtime.wideView.timeline.viewSnapshot";
+  const clickLabelValues = escapeHtml(JSON.stringify({
+    label: entry.label,
+    time: timeLabel,
+  }));
   const cycle = count > 1
-    ? `<button class="wide-timeline-stack-cycle" type="button" data-wide-timeline-stack-next="${escapeHtml(group.id)}" title="Show next event in this stack" aria-label="Show next event in this stack"><span>${activeIndex + 1}/${count}</span>${icons.chevron || icons.right || ""}</button>`
+    ? `<button class="wide-timeline-stack-cycle" type="button" data-wide-timeline-stack-next="${escapeHtml(group.id)}" title="Show next event in this stack" aria-label="Show next event in this stack" data-fvc-i18n-title="runtime.wideView.timeline.nextStackEvent" data-fvc-i18n-aria-label="runtime.wideView.timeline.nextStackEvent"><span>${activeIndex + 1}/${count}</span>${icons.chevron || icons.right || ""}</button>`
     : "";
   const stackTitle = count > 1
-    ? ` title="${count} events stacked — use the mouse wheel or stack button to browse"`
+    ? ` title="${count} events stacked — use the mouse wheel or stack button to browse" data-fvc-i18n-title="runtime.wideView.timeline.stackedEvents" data-fvc-i18n-values="${escapeHtml(JSON.stringify({ count }))}"`
     : "";
 
   return `<article class="wide-timeline-stack${stackClass}${alertClass}${slideClass}" style="--timeline-card-y:${rounded(group.cardTop)}px" data-wide-timeline-stack="${escapeHtml(group.id)}"${stackTitle}>
       ${underlays}
-      <button class="wide-timeline-card-main et${entry.kind === "alert" ? " alert" : ""}${entry.thumbnailUrl ? " has-thumbnail" : " is-placeholder"}" type="button" data-wide-timeline-entry="${escapeHtml(entry.id)}" aria-label="${escapeHtml(clickLabel)}">
+      <button class="wide-timeline-card-main et${entry.kind === "alert" ? " alert" : ""}${entry.thumbnailUrl ? " has-thumbnail" : " is-placeholder"}" type="button" data-wide-timeline-entry="${escapeHtml(entry.id)}" aria-label="${escapeHtml(clickLabel)}" data-fvc-i18n-aria-label="${clickLabelKey}" data-fvc-i18n-values="${clickLabelValues}">
         ${thumbnail}
         <span class="wide-timeline-card-label">${escapeHtml(entry.label)}</span>
         <span class="wide-timeline-card-time">${escapeHtml(timeLabel)}</span>
@@ -149,4 +158,4 @@ export const buildWideTimelineContentMarkup = ({
 };
 
 export const buildWideTimelineEmptyMarkup = ({ loading = false } = {}) =>
-  `<div class="wide-timeline-empty" role="status">${loading ? "Loading timeline…" : "No alerts or events in this window"}</div>`;
+  `<div class="wide-timeline-empty" role="status" data-fvc-i18n="runtime.wideView.timeline.${loading ? "loading" : "empty"}">${loading ? "Loading timeline…" : "No alerts or events in this window"}</div>`;

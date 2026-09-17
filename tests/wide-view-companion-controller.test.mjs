@@ -121,6 +121,8 @@ test("Companion Cameras region exposes an accessible drag handle", () => {
   assert.match(markup, /aria-controls="wide-companion-grid"/);
   assert.match(markup, /data-wide-companion-expand-button/);
   assert.match(markup, /aria-expanded="false"/);
+  assert.match(markup, /data-fvc-i18n="runtime\.wideView\.companionCameras"/);
+  assert.match(markup, /data-fvc-i18n-aria-label="runtime\.wideView\.resizeCompanionArea"/);
   assert.match(
     STYLES,
     /\.wide-companion-surface\{[^}]*position:absolute;[^}]*inset:calc\(0px - var\(--wide-companion-expansion\)\)[^}]*padding:0 8px 4px/,
@@ -177,10 +179,11 @@ test("Companion Cameras render every configured camera in user order", () => {
   assert.match(grid.innerHTML, /data-wide-companion-camidx="0"/);
   assert.match(grid.innerHTML, /data-wide-companion-camidx="1"/);
   assert.match(grid.innerHTML, /Driveway/);
-  assert.match(grid.innerHTML, /aria-label="Online">●<\/span>/);
+  assert.match(grid.innerHTML, /aria-label="Online"[^>]*>●<\/span>/);
+  assert.match(grid.innerHTML, /data-fvc-i18n-aria-label="runtime\.live\.online"/);
   assert.match(
     grid.innerHTML,
-    /wide-companion-meta-status[\s\S]*?aria-label="Online">●<\/span>[\s\S]*?wide-companion-meta-name[^>]*>Driveway/,
+    /wide-companion-meta-status[\s\S]*?aria-label="Online"[^>]*>●<\/span>[\s\S]*?wide-companion-meta-name[^>]*>Driveway/,
   );
   assert.doesNotMatch(grid.innerHTML, /<\/span>Online/);
   assert.doesNotMatch(grid.innerHTML, /Stream Source:/);

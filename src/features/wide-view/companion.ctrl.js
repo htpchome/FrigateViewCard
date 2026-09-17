@@ -9,6 +9,7 @@ import {
   buildWideCompanionStatusMarkup,
 } from "./companion.tmpl.js";
 import { flattenCameraMembers } from "../camera-groups/model.js";
+import { applyLocalizedText } from "../localization/localized-dom.js";
 
 const LIVE_STREAM_HINTS = new Set(["webrtc", "mse", "hls"]);
 const COMPANION_GRID_GAP_PX = 8;
@@ -386,18 +387,21 @@ export class WideViewCompanionController {
       String(Math.round(nextExpansion)),
     );
     const expanded = nextExpansion > 0.5;
+    const key = expanded
+      ? "runtime.wideView.collapseCompanionCameras"
+      : "runtime.wideView.expandCompanionCameras";
+    const fallback = expanded
+      ? "Collapse Companion Cameras"
+      : "Expand Companion Cameras";
+    const label = this._host._localization?.t?.(key) || fallback;
     this._panelExpansionButton.setAttribute?.(
       "aria-expanded",
       expanded ? "true" : "false",
     );
-    this._panelExpansionButton.setAttribute?.(
-      "aria-label",
-      expanded ? "Collapse Companion Cameras" : "Expand Companion Cameras",
-    );
-    this._panelExpansionButton.setAttribute?.(
-      "title",
-      expanded ? "Collapse Companion Cameras" : "Expand Companion Cameras",
-    );
+    this._panelExpansionButton.setAttribute?.("data-fvc-i18n-aria-label", key);
+    this._panelExpansionButton.setAttribute?.("data-fvc-i18n-title", key);
+    this._panelExpansionButton.setAttribute?.("aria-label", label);
+    this._panelExpansionButton.setAttribute?.("title", label);
     if (scheduleLayout) {
       this._host._wideViewPageController?.syncColHeightIfWideView?.();
     }
@@ -579,6 +583,7 @@ export class WideViewCompanionController {
         });
       })
       .join("");
+    applyLocalizedText(grid, this._host._localization?.t);
     this.mountMedia();
     this._host._syncSnapshotRefreshTimer?.();
     this._host._wideViewPageController?.syncColHeightIfWideView?.();
@@ -606,7 +611,10 @@ export class WideViewCompanionController {
         const online =
           this._host._hass?.states?.[entity]?.state !== "unavailable";
         const status = cell.querySelector?.(".wide-companion-meta-status");
-        if (status) status.innerHTML = buildWideCompanionStatusMarkup(online);
+        if (status) {
+          status.innerHTML = buildWideCompanionStatusMarkup(online);
+          applyLocalizedText(status, this._host._localization?.t);
+        }
       });
   }
 
@@ -618,7 +626,8 @@ export class WideViewCompanionController {
       ) || [];
     if (!this._host._hass?.states) {
       mediaHosts.forEach((mediaHost) => {
-        mediaHost.innerHTML = `<div class="ph">${this._constants.ICONS.live}<span>Loading…</span></div>`;
+        mediaHost.innerHTML = `<div class="ph">${this._constants.ICONS.live}<span data-fvc-i18n="runtime.live.loading">Loading…</span></div>`;
+        applyLocalizedText(mediaHost, this._host._localization?.t);
       });
       return;
     }
@@ -640,7 +649,8 @@ export class WideViewCompanionController {
         : null;
       mediaHost.innerHTML = "";
       if (!entity) {
-        mediaHost.innerHTML = `<div class="ph">${this._constants.ICONS.live}<span>Unavailable</span></div>`;
+        mediaHost.innerHTML = `<div class="ph">${this._constants.ICONS.live}<span data-fvc-i18n="runtime.wideView.unavailable">Unavailable</span></div>`;
+        applyLocalizedText(mediaHost, this._host._localization?.t);
         return;
       }
       this._host._gridMediaController.mountCameraCellMedia(mediaHost, {

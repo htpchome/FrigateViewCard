@@ -8,7 +8,8 @@ const companionSeverityClass = (severity) => {
 
 export function buildWideCompanionStatusMarkup(online) {
   const status = online ? "Online" : "Offline";
-  return `<span class="dot" style="color:var(${online ? "--c-on" : "--c-off"})" title="${status}" aria-label="${status}">●</span>`;
+  const key = online ? "runtime.live.online" : "runtime.live.offline";
+  return `<span class="dot" style="color:var(${online ? "--c-on" : "--c-off"})" title="${status}" aria-label="${status}" data-fvc-i18n-title="${key}" data-fvc-i18n-aria-label="${key}">●</span>`;
 }
 
 export function buildWideCompanionMetaMarkup({
@@ -35,18 +36,18 @@ export function buildWideCompanionCellMarkup({
 }
 
 export function buildWideCompanionRegionMarkup({ chevronIcon = "" } = {}) {
-  return `<section class="wide-companion-panel" id="wide-companion-panel" aria-label="Companion Cameras">
+  return `<section class="wide-companion-panel" id="wide-companion-panel" aria-label="Companion Cameras" data-fvc-i18n-aria-label="runtime.wideView.companionCameras">
             <div class="wide-companion-surface">
               <div class="wide-companion-header">
-                <div class="wide-companion-resize-handle" data-wide-companion-resize-handle role="separator" tabindex="0" aria-label="Resize Companion Cameras area" aria-orientation="horizontal" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-controls="wide-companion-grid" title="Drag up or down to resize the Companion Cameras area">
-                  <div class="wide-companion-title">Companion Cameras</div>
+                <div class="wide-companion-resize-handle" data-wide-companion-resize-handle role="separator" tabindex="0" aria-label="Resize Companion Cameras area" data-fvc-i18n-aria-label="runtime.wideView.resizeCompanionArea" aria-orientation="horizontal" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-controls="wide-companion-grid" title="Drag up or down to resize the Companion Cameras area" data-fvc-i18n-title="runtime.wideView.resizeCompanionHint">
+                  <div class="wide-companion-title" data-fvc-i18n="runtime.wideView.companionCameras">Companion Cameras</div>
                   <span class="wide-companion-resize-affordance" aria-hidden="true">
                     <span class="wide-companion-resize-arrow wide-companion-resize-arrow--up">${chevronIcon}</span>
-                    <span class="wide-companion-resize-label">Resize Area</span>
+                    <span class="wide-companion-resize-label" data-fvc-i18n="runtime.wideView.resizeArea">Resize Area</span>
                     <span class="wide-companion-resize-arrow">${chevronIcon}</span>
                   </span>
                 </div>
-                <button class="wide-companion-expand-button" type="button" data-wide-companion-expand-button aria-controls="wide-companion-grid" aria-expanded="false" title="Expand Companion Cameras" aria-label="Expand Companion Cameras">${chevronIcon}</button>
+                <button class="wide-companion-expand-button" type="button" data-wide-companion-expand-button aria-controls="wide-companion-grid" aria-expanded="false" title="Expand Companion Cameras" aria-label="Expand Companion Cameras" data-fvc-i18n-title="runtime.wideView.expandCompanionCameras" data-fvc-i18n-aria-label="runtime.wideView.expandCompanionCameras">${chevronIcon}</button>
               </div>
               <div class="preview-grid wide-companion-grid" id="wide-companion-grid"></div>
             </div>

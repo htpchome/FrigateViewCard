@@ -18,6 +18,35 @@
       "controlFailed": "Unable to control light",
       "brightnessFailed": "Unable to adjust light brightness"
     },
+    "wideView": {
+      "resizeVideo": "Resize Video",
+      "companionCameras": "Companion Cameras",
+      "resizeCompanionArea": "Resize Companion Cameras area",
+      "resizeCompanionHint": "Drag up or down to resize the Companion Cameras area",
+      "resizeArea": "Resize Area",
+      "expandCompanionCameras": "Expand Companion Cameras",
+      "collapseCompanionCameras": "Collapse Companion Cameras",
+      "unavailable": "Unavailable",
+      "timeline": {
+        "title": "Timeline",
+        "cameraEvents": "Camera event timeline",
+        "scale": "Timeline scale",
+        "lessTime": "Show less time",
+        "moreTime": "Show more time",
+        "hours": "{count}h",
+        "scrollable": "Scrollable event timeline",
+        "open": "Open Timeline",
+        "collapse": "Collapse Timeline",
+        "collapseHint": "Drag to resize or click to collapse Timeline",
+        "playAlert": "Play alert: {label}, {time}",
+        "playClip": "Play clip: {label}, {time}",
+        "viewSnapshot": "View snapshot: {label}, {time}",
+        "nextStackEvent": "Show next event in this stack",
+        "stackedEvents": "{count} events stacked — use the mouse wheel or stack button to browse",
+        "loading": "Loading timeline…",
+        "empty": "No alerts or events in this window"
+      }
+    },
     "pageNav": {
       "navigation": "Page navigation",
       "mobile": "Mobile",

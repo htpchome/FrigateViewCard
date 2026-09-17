@@ -86,7 +86,7 @@ export function buildWideViewMainLayoutShellMarkup({
               ${regions.companionCameras}
 
             </div>
-            <div class="${resizeHandleClassName}" id="resize-handle" title="Resize Video" aria-label="Resize Video"></div>
+            <div class="${resizeHandleClassName}" id="resize-handle" title="Resize Video" aria-label="Resize Video" data-fvc-i18n-title="runtime.wideView.resizeVideo" data-fvc-i18n-aria-label="runtime.wideView.resizeVideo"></div>
             <div class="${rightColumnClassName}" id="col-right">
               ${regions.timeline}
               <div class="${tabsHolderClassName} shadow-small">

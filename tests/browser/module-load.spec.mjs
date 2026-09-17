@@ -980,6 +980,121 @@ test("linked-light language and state updates preserve the dimmer and its contro
   });
 });
 
+test("Wide View companion and timeline labels follow language and panel state in place", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      wide_view_page_enabled: true,
+      wide_view_timeline_enabled: true,
+      wide_view_timeline_default_open: true,
+    });
+    card._pageId = "wide-view";
+    card._renderShell();
+    const root = card.shadowRoot;
+    const live = root.querySelector("#live-stage");
+    const video = document.createElement("video");
+    live.append(video);
+    const expand = root.querySelector("[data-wide-companion-expand-button]");
+    const timelineToggle = root.querySelector("[data-wide-timeline-toggle]");
+    const status = root.querySelector(".wide-companion-meta-status .dot");
+    const originalT = card._localization.t;
+    const translations = {
+      "runtime.wideView.companionCameras": "Caméras associées",
+      "runtime.wideView.resizeCompanionArea": "Redimensionner les caméras associées",
+      "runtime.wideView.expandCompanionCameras": "Développer les caméras associées",
+      "runtime.wideView.collapseCompanionCameras": "Réduire les caméras associées",
+      "runtime.wideView.timeline.title": "Chronologie",
+      "runtime.wideView.timeline.open": "Ouvrir la chronologie",
+      "runtime.wideView.timeline.collapse": "Fermer la chronologie",
+      "runtime.wideView.timeline.collapseHint": "Glisser pour redimensionner ou cliquer pour fermer",
+      "runtime.wideView.timeline.hours": "{count} heures",
+      "runtime.wideView.timeline.empty": "Aucun événement dans cette période",
+      "runtime.wideView.timeline.playClip": "Lire la vidéo : {label}, {time}",
+      "runtime.live.online": "En ligne",
+    };
+    const t = (key, values = {}) => (translations[key] || originalT(key, values)).replace(
+      /\{(\w+)\}/g,
+      (token, name) => values[name] ?? token,
+    );
+    card._localization = { updateHass: () => true, t };
+    const config = card._config;
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+    card._config = config;
+    const translated = {
+      livePreserved: live.querySelector("video") === video,
+      expandPreserved: root.querySelector("[data-wide-companion-expand-button]") === expand,
+      timelinePreserved: root.querySelector("[data-wide-timeline-toggle]") === timelineToggle,
+      companionTitle: root.querySelector(".wide-companion-title")?.textContent,
+      resizeLabel: root.querySelector("[data-wide-companion-resize-handle]")?.getAttribute("aria-label"),
+      expandLabel: expand.getAttribute("aria-label"),
+      timelineTitle: root.querySelector(".wide-timeline-heading span")?.textContent,
+      statusTitle: status?.title,
+    };
+    const companion = card._wideViewCompanionController;
+    companion._panelExpansionPanel = root.querySelector("#wide-companion-panel");
+    companion._panelExpansionHandle = root.querySelector("[data-wide-companion-resize-handle]");
+    companion._panelExpansionButton = expand;
+    companion._panelExpansionMaxPx = 100;
+    companion._setPanelExpansion(40, { scheduleLayout: false });
+    const collapsedLabel = expand.getAttribute("aria-label");
+    const timeline = card._wideViewTimelineController;
+    timeline._open = true;
+    timeline._syncPanelState();
+    timeline._scaleHours = 6;
+    timeline._syncScaleControls();
+    timeline.render({ force: true });
+    const empty = root.querySelector(".wide-timeline-empty")?.textContent;
+    const now = Math.floor(Date.now() / 1000);
+    const event = {
+      id: "clip-1",
+      camera: "front",
+      label: "person",
+      start_time: now - 50,
+      end_time: now - 40,
+      has_clip: true,
+    };
+    timeline._deps.getAllEvents = () => [event];
+    timeline._deps.getVisibleEvents = () => [event];
+    timeline.render({ force: true });
+    return {
+      translated,
+      collapsedLabel,
+      timelineToggleLabel: timelineToggle.getAttribute("aria-label"),
+      timelineToggleTitle: timelineToggle.title,
+      scale: root.querySelector("#wide-timeline-scale-output")?.textContent,
+      empty,
+      clipLabel: root.querySelector(".wide-timeline-card-main")?.getAttribute("aria-label"),
+      livePreservedAfterState: live.querySelector("video") === video,
+    };
+  });
+
+  const { clipLabel, ...rest } = state;
+  expect(clipLabel).toMatch(/^Lire la vidéo : Person, /);
+  expect(rest).toEqual({
+    translated: {
+      livePreserved: true,
+      expandPreserved: true,
+      timelinePreserved: true,
+      companionTitle: "Caméras associées",
+      resizeLabel: "Redimensionner les caméras associées",
+      expandLabel: "Développer les caméras associées",
+      timelineTitle: "Chronologie",
+      statusTitle: "En ligne",
+    },
+    collapsedLabel: "Réduire les caméras associées",
+    timelineToggleLabel: "Fermer la chronologie",
+    timelineToggleTitle: "Glisser pour redimensionner ou cliquer pour fermer",
+    scale: "6 heures",
+    empty: "Aucun événement dans cette période",
+    livePreservedAfterState: true,
+  });
+});
+
 test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

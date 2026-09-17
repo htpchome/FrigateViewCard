@@ -129,6 +129,8 @@ test("dense timeline activity stacks newest first and preserves every marker", (
   assert.match(markup, /class="wide-timeline-card-main et alert/);
   assert.match(markup, />1\/3</);
   assert.match(markup, /3 events stacked/);
+  assert.match(markup, /data-fvc-i18n-aria-label="runtime\.wideView\.timeline\.playAlert"/);
+  assert.match(markup, /data-fvc-i18n-title="runtime\.wideView\.timeline\.stackedEvents"/);
   assert.match(markup, /wide-timeline-card-underlay et depth-1[^>]*>[\s\S]*middle\.jpg/);
   assert.match(markup, /wide-timeline-card-underlay et depth-2[^>]*>[\s\S]*oldest\.jpg/);
   assert.match(markup, /--timeline-card-width:160px/);
@@ -283,6 +285,8 @@ test("timeline panel starts collapsed unless explicitly opened", () => {
   assert.match(collapsed, /aria-expanded="false"/);
   assert.match(open, /aria-hidden="false"/);
   assert.match(open, />6h<\/output>/);
+  assert.match(open, /data-fvc-i18n="runtime\.wideView\.timeline\.hours"/);
+  assert.match(open, /data-fvc-i18n-aria-label="runtime\.wideView\.timeline\.cameraEvents"/);
   assert.doesNotMatch(open, /wide-timeline-resize/);
   assert.match(open, /Drag to resize or click to collapse Timeline/);
   assert.doesNotMatch(
@@ -307,10 +311,10 @@ test("timeline panel starts collapsed unless explicitly opened", () => {
   );
   assert.match(
     open,
-    /data-wide-timeline-scale="in"[^>]*aria-label="Show less time">−<\/button>/,
+    /data-wide-timeline-scale="in"[^>]*aria-label="Show less time"[^>]*>−<\/button>/,
   );
   assert.match(
     open,
-    /data-wide-timeline-scale="out"[^>]*aria-label="Show more time">\+<\/button>/,
+    /data-wide-timeline-scale="out"[^>]*aria-label="Show more time"[^>]*>\+<\/button>/,
   );
 });
