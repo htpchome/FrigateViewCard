@@ -156,6 +156,37 @@ test("buildTabsMarkup keeps filter and calendar inactive when panels are absent"
   assert.doesNotMatch(tabsMarkup, /Kept events/);
 });
 
+test("shared toolbar marks tab and changing mode labels for localization", () => {
+  const { markup: tabs } = buildTabsMarkup({
+    tab: "alerts",
+    hiddenTabs: [],
+    viewMode: "single",
+    icons,
+  });
+  const tools = buildToolsMarkup({
+    tab: "alerts",
+    viewMode: "grid",
+    icons,
+    isGridModeAvailable: true,
+    isSlideshowRotationAvailable: true,
+    isSlideshowActive: true,
+    isControlsVisible: true,
+    showSingleAlertTakeover: true,
+    singleAlertTakeoverEnabled: true,
+    gridButtonIcon: "G",
+    slideshowButtonIcon: "L",
+  });
+
+  assert.match(tabs, /data-tab="alerts"[^>]*data-fvc-i18n-title="runtime\.toolbar\.alerts"/);
+  assert.match(tabs, /data-tab="kept"[^>]*data-fvc-i18n-title="runtime\.toolbar\.favorites"/);
+  assert.match(tools, /id="grid-btn"[^>]*data-fvc-i18n-title="runtime\.toolbar\.stopGrid"/);
+  assert.match(tools, /id="single-alert-takeover-btn"[^>]*data-fvc-i18n-title="runtime\.toolbar\.disableAlertTakeover"/);
+  assert.match(tools, /id="slideshow-btn"[^>]*data-fvc-i18n-title="runtime\.toolbar\.stopSlideshow"/);
+  assert.match(tools, /id="controls-btn"[^>]*data-fvc-i18n-aria-label="runtime\.toolbar\.controls"/);
+  assert.match(tools, /id="filter-btn"[^>]*data-fvc-i18n-aria-label="runtime\.toolbar\.filter"/);
+  assert.match(tools, /id="cal-btn"[^>]*data-fvc-i18n-aria-label="runtime\.toolbar\.calendar"/);
+});
+
 test("buildTabsMarkup marks filter and calendar active only when open", () => {
   const { markup: tabsMarkup } = buildTabsMarkup({
     tab: "alerts",

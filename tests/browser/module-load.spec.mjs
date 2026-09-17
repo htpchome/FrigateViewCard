@@ -1095,6 +1095,119 @@ test("Wide View companion and timeline labels follow language and panel state in
   });
 });
 
+test("shared toolbar stays localized across mode changes and shell refreshes", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      single_view_page_enabled: true,
+    });
+    card._pageId = "single-view";
+    card._renderShell();
+    const root = card.shadowRoot;
+    const live = root.querySelector("#live-stage");
+    const video = document.createElement("video");
+    live.append(video);
+    let gridActive = false;
+    let takeoverActive = false;
+    card._isGridModeAvailable = () => true;
+    card._isGridSessionActive = () => gridActive;
+    card._isSlideshowRotationAvailable = () => true;
+    card._isAlertCameraTakeoverAvailable = () => true;
+    card._singleViewPageController.isActive = () => true;
+    card._singleViewPageController.alertTakeoverEnabled = () => takeoverActive;
+    card._mobileViewPageController.shouldShowAlertTakeoverButton = () => false;
+    card._syncTabsShell();
+    const grid = root.querySelector("#grid-btn");
+    const slideshow = root.querySelector("#slideshow-btn");
+    const takeover = root.querySelector("#single-alert-takeover-btn");
+    const translations = {
+      "runtime.toolbar.alerts": "Alertes",
+      "runtime.toolbar.favorites": "Favoris",
+      "runtime.toolbar.startGrid": "Démarrer la grille",
+      "runtime.toolbar.stopGrid": "Arrêter la grille",
+      "runtime.toolbar.startSlideshow": "Démarrer le diaporama",
+      "runtime.toolbar.stopSlideshow": "Arrêter le diaporama",
+      "runtime.toolbar.enableAlertTakeover": "Activer le suivi des alertes",
+      "runtime.toolbar.disableAlertTakeover": "Désactiver le suivi des alertes",
+      "runtime.toolbar.filter": "Filtrer",
+      "runtime.toolbar.calendar": "Calendrier",
+    };
+    const originalT = card._localization.t;
+    card._localization = {
+      updateHass: () => true,
+      t: (key, values) => translations[key] || originalT(key, values),
+    };
+    const config = card._config;
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+    card._config = config;
+    const translated = {
+      videoPreserved: live.querySelector("video") === video,
+      alerts: root.querySelector('[data-tab="alerts"]')?.title,
+      favorites: root.querySelector('[data-tab="kept"]')?.title,
+      grid: grid.title,
+      slideshow: slideshow.title,
+      takeover: takeover.title,
+      filter: root.querySelector("#filter-btn")?.getAttribute("aria-label"),
+      calendar: root.querySelector("#cal-btn")?.getAttribute("aria-label"),
+    };
+    gridActive = true;
+    takeoverActive = true;
+    card._slideshowActive = true;
+    card._syncToolbarButtons();
+    const changed = {
+      gridPreserved: root.querySelector("#grid-btn") === grid,
+      slideshowPreserved: root.querySelector("#slideshow-btn") === slideshow,
+      takeoverPreserved: root.querySelector("#single-alert-takeover-btn") === takeover,
+      grid: grid.title,
+      slideshow: slideshow.title,
+      takeover: takeover.title,
+    };
+    card._syncTabsShell();
+    return {
+      translated,
+      changed,
+      rebuilt: {
+        grid: root.querySelector("#grid-btn")?.title,
+        slideshow: root.querySelector("#slideshow-btn")?.title,
+        takeover: root.querySelector("#single-alert-takeover-btn")?.title,
+        videoPreserved: live.querySelector("video") === video,
+      },
+    };
+  });
+
+  expect(state).toEqual({
+    translated: {
+      videoPreserved: true,
+      alerts: "Alertes",
+      favorites: "Favoris",
+      grid: "Démarrer la grille",
+      slideshow: "Démarrer le diaporama",
+      takeover: "Activer le suivi des alertes",
+      filter: "Filtrer",
+      calendar: "Calendrier",
+    },
+    changed: {
+      gridPreserved: true,
+      slideshowPreserved: true,
+      takeoverPreserved: true,
+      grid: "Arrêter la grille",
+      slideshow: "Arrêter le diaporama",
+      takeover: "Désactiver le suivi des alertes",
+    },
+    rebuilt: {
+      grid: "Arrêter la grille",
+      slideshow: "Arrêter le diaporama",
+      takeover: "Désactiver le suivi des alertes",
+      videoPreserved: true,
+    },
+  });
+});
+
 test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

@@ -3748,6 +3748,13 @@ export class FrigateViewCard extends HTMLElement {
 
   _syncToolbarButtons() {
     const buttonStates = this._toolbarButtonStates();
+    const setToolLabel = (button, key, fallback) => {
+      const label = this._localization?.t?.(key) || fallback;
+      button.setAttribute("data-fvc-i18n-title", key);
+      button.setAttribute("data-fvc-i18n-aria-label", key);
+      button.setAttribute("title", label);
+      button.setAttribute("aria-label", label);
+    };
     const toolsRegion = this._pageShellRegion("tools");
     if (
       toolsRegion &&
@@ -3801,12 +3808,9 @@ export class FrigateViewCard extends HTMLElement {
         "aria-pressed",
         gridAvailable && gridActive ? "true" : "false",
       );
-      gridBtn.setAttribute(
-        "title",
-        gridActive ? "Stop grid mode" : "Start grid mode",
-      );
-      gridBtn.setAttribute(
-        "aria-label",
+      setToolLabel(
+        gridBtn,
+        `runtime.toolbar.${gridActive ? "stopGrid" : "startGrid"}`,
         gridActive ? "Stop grid mode" : "Start grid mode",
       );
       gridBtn.innerHTML = this._gridButtonIcon();
@@ -3831,6 +3835,7 @@ export class FrigateViewCard extends HTMLElement {
       const label = active
         ? "Disable Alert Camera Takeover"
         : "Enable Alert Camera Takeover";
+      const labelKey = `runtime.toolbar.${active ? "disableAlertTakeover" : "enableAlertTakeover"}`;
       alertTakeoverBtn.classList.toggle("active", active);
       alertTakeoverBtn.disabled =
         buttonStates.wideAlertTakeoverDisabled;
@@ -3838,8 +3843,7 @@ export class FrigateViewCard extends HTMLElement {
         "aria-pressed",
         active ? "true" : "false",
       );
-      alertTakeoverBtn.setAttribute("title", label);
-      alertTakeoverBtn.setAttribute("aria-label", label);
+      setToolLabel(alertTakeoverBtn, labelKey, label);
       alertTakeoverBtn.innerHTML = ICONS.alerts;
     }
 
@@ -3857,14 +3861,9 @@ export class FrigateViewCard extends HTMLElement {
         "aria-pressed",
         this._slideshowActive && available ? "true" : "false",
       );
-      slideshowBtn.setAttribute(
-        "title",
-        this._slideshowActive
-          ? "Stop slideshow rotation"
-          : "Start slideshow rotation",
-      );
-      slideshowBtn.setAttribute(
-        "aria-label",
+      setToolLabel(
+        slideshowBtn,
+        `runtime.toolbar.${this._slideshowActive ? "stopSlideshow" : "startSlideshow"}`,
         this._slideshowActive
           ? "Stop slideshow rotation"
           : "Start slideshow rotation",
@@ -4672,8 +4671,14 @@ export class FrigateViewCard extends HTMLElement {
 
     const prevTab = this._tab;
     const tabsMarkup = this._buildTabsMarkup();
-    if (tabs) tabs.innerHTML = tabsMarkup;
-    if (toolsSlot) toolsSlot.innerHTML = this._getToolsMarkup();
+    if (tabs) {
+      tabs.innerHTML = tabsMarkup;
+      applyLocalizedText(tabs, this._localization?.t);
+    }
+    if (toolsSlot) {
+      toolsSlot.innerHTML = this._getToolsMarkup();
+      applyLocalizedText(toolsSlot, this._localization?.t);
+    }
     this._pageNavigationController.syncToolbarDividerAfterMutation();
     if (this._tab !== prevTab) {
       void this._loadTabData(this._tab);

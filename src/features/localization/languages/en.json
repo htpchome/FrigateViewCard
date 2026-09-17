@@ -2,6 +2,23 @@
   "runtime": {
     "alerts": "Alerts",
     "stream": "Stream",
+    "toolbar": {
+      "alerts": "Alerts",
+      "clips": "Clips",
+      "snapshots": "Snapshots",
+      "recordings": "Recordings",
+      "favorites": "Favorites",
+      "ptzControls": "PTZ Controls",
+      "controls": "Controls",
+      "startGrid": "Start grid mode",
+      "stopGrid": "Stop grid mode",
+      "enableAlertTakeover": "Enable Alert Camera Takeover",
+      "disableAlertTakeover": "Disable Alert Camera Takeover",
+      "startSlideshow": "Start slideshow rotation",
+      "stopSlideshow": "Stop slideshow rotation",
+      "filter": "Filter",
+      "calendar": "Calendar"
+    },
     "linkedLight": {
       "toggle": {
         "unavailable": "{name}: Unavailable. Turn on",
