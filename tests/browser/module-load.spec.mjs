@@ -200,6 +200,88 @@ test("language changes update marked card and editor text without replacing medi
   });
 });
 
+test("an open camera editor keeps its form and accordion state when language changes", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card-editor.js");
+    const editor = document.createElement("frigate-view-card-editor");
+    document.body.append(editor);
+    editor.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    editor.hass = { locale: { language: "en" }, states: {}, themes: {} };
+    let configChanged = 0;
+    editor.addEventListener("config-changed", () => { configChanged += 1; });
+    editor._openCameraModal(0);
+    editor._setCameraModalAccordionActive("additional");
+    const modal = editor.querySelector("#camera-modal");
+    const name = editor.querySelector("#camera-modal-name");
+    const connection = editor.querySelector("#camera-modal-connection-type");
+    const connectionValue = connection.value;
+    name.value = "My Front Door";
+    editor._setLocalizedMessage(
+      editor.querySelector("#camera-modal-helper"),
+      "editor.cameraModal.cameraRequired",
+    );
+
+    const english = editor._localization;
+    const translated = {
+      "editor.panels.camera": "Paramètres des caméras",
+      "editor.cameraModal.editCamera": "Modifier la caméra",
+      "editor.cameraModal.addCamera": "Ajouter une caméra",
+      "editor.cameraModal.additionalCamera": "Caméra supplémentaire",
+      "editor.cameraModal.cameraName": "Nom de caméra",
+      "editor.cameraModal.noneConfigured": "Aucune configurée",
+      "editor.cameraModal.frigateGo2rtcDefault": "Frigate go2rtc (défaut)",
+      "editor.cameraModal.cameraRequired": "La caméra est requise.",
+      "editor.actions.update": "Mettre à jour",
+    };
+    editor._localization = {
+      updateHass: () => true,
+      t: (key, values) => translated[key] || english.t(key, values),
+    };
+    editor.hass = { locale: { language: "fr" }, states: {}, themes: {} };
+
+    const preserved = {
+      modal: editor.querySelector("#camera-modal") === modal,
+      nameInput: editor.querySelector("#camera-modal-name") === name,
+      nameValue: name.value,
+      nameLabel: name.label,
+      additionalOpen: editor.querySelector(
+        '[data-camera-modal-section="additional"]',
+      ).classList.contains("active"),
+      title: editor.querySelector("#camera-modal-title").textContent,
+      save: editor.querySelector("#camera-modal-save").textContent,
+      summary: editor.querySelector("#camera-modal-additional-summary").textContent,
+      panel: editor.querySelector('[data-panel="camera"] h3').textContent,
+      helper: editor.querySelector("#camera-modal-helper").textContent,
+      connectionValuePreserved: connection.value === connectionValue,
+      connectionLabel: connection.selector.select.options[0].label,
+      configChanged,
+    };
+    editor._openCameraModal(null);
+    return {
+      ...preserved,
+      newCameraTitle: editor.querySelector("#camera-modal-title").textContent,
+    };
+  });
+
+  expect(state).toEqual({
+    modal: true,
+    nameInput: true,
+    nameValue: "My Front Door",
+    nameLabel: "Nom de caméra",
+    additionalOpen: true,
+    title: "Modifier la caméra",
+    save: "Mettre à jour",
+    summary: "Aucune configurée",
+    panel: "Paramètres des caméras",
+    helper: "La caméra est requise.",
+    connectionValuePreserved: true,
+    connectionLabel: "Frigate go2rtc (défaut)",
+    configChanged: 0,
+    newCameraTitle: "Ajouter une caméra",
+  });
+});
+
 test("loads the generated HLS browser bundle", async ({ page }) => {
   const pageErrors = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));

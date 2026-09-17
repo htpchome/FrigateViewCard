@@ -245,11 +245,11 @@ test("camera light editor is reusable and uses HA light and icon selectors", () 
   );
   assert.match(
     source,
-    /<span class="cam-modal-label">Light<\/span>\s*<ha-selector id="camera-modal-light-entity">/,
+    /<span class="cam-modal-label"[^>]*>Light<\/span>\s*<ha-selector id="camera-modal-light-entity">/,
   );
   assert.match(
     source,
-    /<span class="cam-modal-label">Icon<\/span>\s*<ha-selector id="camera-modal-light-icon">/,
+    /<span class="cam-modal-label"[^>]*>Icon<\/span>\s*<ha-selector id="camera-modal-light-icon">/,
   );
 
   const secondaryPanelStart = source.indexOf(
@@ -907,22 +907,22 @@ test("camera modal uses a compact ordered accordion around its controls", () => 
     source,
     /class="cam-modal-card camera-modal-card"[^>]*aria-labelledby="camera-modal-title"/,
   );
-  assert.match(source, /id="camera-modal-title">Add Camera<\/div>/);
+  assert.match(source, /id="camera-modal-title"[^>]*>Add Camera<\/div>/);
   assert.doesNotMatch(
     source,
     /<span class="cam-modal-label">Camera<\/span>\s*<ha-selector id="camera-modal-entity">/,
   );
   assert.match(
     source,
-    /class="cam-modal-field camera-modal-primary">[\s\S]*?class="camera-modal-selector-label"[^>]*>Camera<\/span>[\s\S]*?<ha-selector id="camera-modal-entity" aria-label="Camera">/,
+    /class="cam-modal-field camera-modal-primary">[\s\S]*?class="camera-modal-selector-label"[^>]*>Camera<\/span>[\s\S]*?<ha-selector id="camera-modal-entity" aria-label="Camera"[^>]*>/,
   );
   assert.match(
     source,
-    /class="camera-modal-floating-label"[^>]*>Connection Type<\/span>[\s\S]*?<ha-selector id="camera-modal-connection-type" aria-label="Connection Type">/,
+    /class="camera-modal-floating-label"[^>]*>Connection Type<\/span>[\s\S]*?<ha-selector id="camera-modal-connection-type" aria-label="Connection Type"[^>]*>/,
   );
   assert.match(
     source,
-    /class="camera-modal-accordion camera-modal-accordion-fixed active">[\s\S]*?<span class="camera-modal-accordion-title">Camera<\/span>[\s\S]*?id="camera-modal-entity"[\s\S]*?id="camera-modal-name"/,
+    /class="camera-modal-accordion camera-modal-accordion-fixed active">[\s\S]*?<span class="camera-modal-accordion-title"[^>]*>Camera<\/span>[\s\S]*?id="camera-modal-entity"[\s\S]*?id="camera-modal-name"/,
   );
   const fixedCameraSection = source.slice(
     source.indexOf('class="camera-modal-accordion camera-modal-accordion-fixed active"'),
@@ -958,11 +958,11 @@ test("camera modal uses a compact ordered accordion around its controls", () => 
   );
   assert.match(
     source,
-    /value: "frigate_go2rtc", label: "Frigate go2rtc \(default\)"/,
+    /value: "frigate_go2rtc", label: this\._t\("editor\.cameraModal\.frigateGo2rtcDefault"\)/,
   );
   assert.match(
     source,
-    /value: "ha_direct", label: "Home Assistant"/,
+    /value: "ha_direct", label: this\._t\("editor\.cameraModal\.homeAssistant"\)/,
   );
   assert.match(
     source,
@@ -977,7 +977,7 @@ test("camera modal uses a compact ordered accordion around its controls", () => 
   assert.match(source, /id="camera-modal-add-secondary"/);
   assert.match(
     source,
-    /<details id="camera-modal-secondary-help" class="camera-group-help">\s*<summary>What is a second camera\?<\/summary>/,
+    /<details id="camera-modal-secondary-help" class="camera-group-help">\s*<summary[^>]*>What is a second camera\?<\/summary>/,
   );
   assert.match(
     source,
@@ -985,7 +985,7 @@ test("camera modal uses a compact ordered accordion around its controls", () => 
   );
   assert.match(
     source,
-    /if \(save\) save\.textContent = index == null \? "Add" : "Update";/,
+    /save\.textContent = this\._t\(saveKey\);/,
   );
   assert.match(source, /id="camera-modal-secondary-entity"/);
   assert.match(source, /Side by Side/);

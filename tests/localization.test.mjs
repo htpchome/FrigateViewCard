@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   createLocalizationController,
   normalizeLanguageCode,
   resolveHassLanguage,
 } from "../src/features/localization/localization.ctrl.js";
-import { applyLocalizedText } from "../src/features/localization/localized-dom.js";
+import {
+  applyLocalizedText,
+  setLocalizedText,
+} from "../src/features/localization/localized-dom.js";
 
 const dictionaries = {
   en: {
@@ -16,7 +20,10 @@ const dictionaries = {
     },
   },
   fr: {
-    example: { title: "Caméra" },
+    example: {
+      title: "Caméra",
+      count: "Pour {camera} : {count} alertes",
+    },
   },
   "fr-CA": {
     example: { title: "Caméra canadienne" },
@@ -66,6 +73,7 @@ test("updates only marked text and attributes without replacing elements", () =>
     textContent: "Original",
     getAttribute: (name) => attributes.get(name) ?? null,
     setAttribute: (name, value) => attributes.set(name, value),
+    removeAttribute: (name) => attributes.delete(name),
   };
   const root = { querySelectorAll: () => [element] };
   const localization = createLocalizationController({ dictionaries });
@@ -76,4 +84,45 @@ test("updates only marked text and attributes without replacing elements", () =>
   assert.equal(root.querySelectorAll()[0], element);
   applyLocalizedText(root, localization.t);
   assert.equal(element.textContent, "Caméra");
+});
+
+test("dynamic messages retain named values across language changes and clear cleanly", () => {
+  const attributes = new Map();
+  const element = {
+    textContent: "",
+    getAttribute: (name) => attributes.get(name) ?? null,
+    setAttribute: (name, value) => attributes.set(name, value),
+    removeAttribute: (name) => attributes.delete(name),
+  };
+  const localization = createLocalizationController({ dictionaries });
+  setLocalizedText(element, "example.count", localization.t, {
+    count: 2,
+    camera: "Porch",
+  });
+  assert.equal(element.textContent, "2 alerts for Porch");
+  localization.setLanguage("fr");
+  applyLocalizedText({ querySelectorAll: () => [element] }, localization.t);
+  assert.equal(element.textContent, "Pour Porch : 2 alertes");
+  setLocalizedText(element, null, localization.t);
+  assert.equal(element.textContent, "");
+  assert.equal(attributes.has("data-fvc-i18n"), false);
+});
+
+test("all extracted editor keys and settings headings exist in English", () => {
+  const source = readFileSync(
+    new URL("../src/editor/FrigateViewCardEditor.js", import.meta.url),
+    "utf8",
+  );
+  const localization = createLocalizationController();
+  const keys = new Set(
+    [...source.matchAll(/editor\.[A-Za-z0-9.]+/g)]
+      .map(([key]) => key)
+      .filter((key) => !key.endsWith(".")),
+  );
+  for (const [, panelId] of source.matchAll(/_renderSettingsPanel\(\{ id: "([^"]+)"/g)) {
+    keys.add(`editor.panels.${panelId}`);
+  }
+  for (const key of keys) {
+    assert.notEqual(localization.t(key), key, `Missing English localization: ${key}`);
+  }
 });

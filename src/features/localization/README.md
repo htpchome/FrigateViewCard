@@ -14,7 +14,9 @@ needed.
 
 `en.json` is the source of truth for keys and named placeholders. Plain-text
 nodes and attributes can use `data-fvc-i18n` and the attribute variants in
-`localized-dom.js`. For markup containing HTML, use `t(key, values)` while
-building the markup and escape translated values for their HTML context.
+`localized-dom.js`; changing status and validation text can use
+`setLocalizedText()` so its key and placeholder values survive a language
+change. For markup containing HTML, use `t(key, values)` while building the
+markup and escape translated values for their HTML context.
 Camera names, user-configured text, and Frigate-provided labels are data, not
 UI translations.

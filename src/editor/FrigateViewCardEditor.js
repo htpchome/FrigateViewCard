@@ -142,7 +142,7 @@ import {
 } from "../config/yaml-mapper.js";
 import { escapeHtml, escapeHtmlAttribute } from "../shared/html.js";
 import { createLocalizationController } from "../features/localization/localization.ctrl.js";
-import { applyLocalizedText } from "../features/localization/localized-dom.js";
+import { applyLocalizedText, setLocalizedText } from "../features/localization/localized-dom.js";
 import {
   DISPLAY_TEXT_MAX_LENGTH,
   sanitizeDisplayText,
@@ -197,15 +197,18 @@ export const buildEditorChoiceChipsMarkup = ({
   );
   return `<div class="editor-choice-chips${compact ? " editor-choice-chips--compact" : ""}${hasDescriptions ? " editor-choice-chips--detailed" : ""}">
     ${options
-      .map(({ value, label, description = "", disabled = false }) => {
+      .map(({ value, label, description = "", disabled = false, translationKey = "" }) => {
         const safeValue = escapeEditorChoiceMarkup(value);
         const safeLabel = escapeEditorChoiceMarkup(label);
         const safeDescription = escapeEditorChoiceMarkup(description);
+        const textKey = translationKey
+          ? ` data-fvc-i18n="${escapeHtmlAttribute(translationKey)}"`
+          : "";
         return `<label class="editor-choice-chip">
           <input class="editor-choice-chip-input" type="radio" name="${safeName}" value="${safeValue}" ${String(value) === selected ? "checked" : ""} ${disabled ? "disabled" : ""}>
           <span class="editor-choice-chip-body">
             <span class="editor-choice-chip-indicator" aria-hidden="true"></span>
-            ${hasDescriptions ? `<span class="editor-choice-chip-copy"><span class="editor-choice-chip-text">${safeLabel}</span><span class="editor-choice-chip-description">${safeDescription}</span></span>` : `<span class="editor-choice-chip-text">${safeLabel}</span>`}
+            ${hasDescriptions ? `<span class="editor-choice-chip-copy"><span class="editor-choice-chip-text"${textKey}>${safeLabel}</span><span class="editor-choice-chip-description">${safeDescription}</span></span>` : `<span class="editor-choice-chip-text"${textKey}>${safeLabel}</span>`}
           </span>
         </label>`;
       })
@@ -249,6 +252,16 @@ const buildPageStartModeControl = ({
   });
 
 export class FrigateViewCardEditor extends HTMLElement {
+  _t(key, values = {}) {
+    this._localization ??= createLocalizationController();
+    return this._localization.t(key, values);
+  }
+
+  _setLocalizedMessage(element, key, values = {}) {
+    this._localization ??= createLocalizationController();
+    setLocalizedText(element, key, this._localization.t, values);
+  }
+
   connectedCallback() {
     this._requestHomeAssistantDirtyStateContext();
     this._scheduleEditorPreviewLayoutSync();
@@ -749,6 +762,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     sourceType = DEFAULT_CAMERA_CONNECTION_TYPE,
     preserveSelection = false,
   } = {}) {
+    this._localization ??= createLocalizationController();
     const toggleRow = this.querySelector("#camera-modal-ptz-toggle-row");
     const stateMessage = this.querySelector("#camera-modal-ptz-state");
     const ptzEnabled = this.querySelector("#camera-modal-ptz-enabled");
@@ -773,16 +787,23 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (stateMessage) {
       if (loading) {
         stateMessage.style.display = "block";
-        stateMessage.textContent = isHaDirect
-          ? "Checking Frigate PTZ support. Home Assistant remains the live connection."
-          : "Checking Frigate PTZ support for this camera.";
+        setLocalizedText(
+          stateMessage,
+          isHaDirect
+            ? "editor.cameraModal.checkingPtzHa"
+            : "editor.cameraModal.checkingPtzFrigate",
+          this._localization.t,
+        );
       } else if (!supported) {
         stateMessage.style.display = "block";
-        stateMessage.textContent =
-          "Frigate did not report PTZ pan/tilt support for this camera.";
+        setLocalizedText(
+          stateMessage,
+          "editor.cameraModal.ptzUnsupported",
+          this._localization.t,
+        );
       } else {
         stateMessage.style.display = "none";
-        stateMessage.textContent = "";
+        setLocalizedText(stateMessage, null, this._localization.t);
       }
     }
     this._syncCameraModalAccordionSummaries();
@@ -794,6 +815,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     sourceType = DEFAULT_CAMERA_CONNECTION_TYPE,
     preserveSelection = false,
   } = {}) {
+    this._localization ??= createLocalizationController();
     const twoWayTalkToggleRow = this.querySelector(
       "#camera-modal-two-way-talk-toggle-row",
     );
@@ -803,10 +825,6 @@ export class FrigateViewCardEditor extends HTMLElement {
     const twoWayTalkStateMessage = this.querySelector(
       "#camera-modal-two-way-talk-state",
     );
-    const sourceLabel =
-      normalizeCameraConnectionType(sourceType) === "ha_direct"
-        ? "Home Assistant"
-        : "Frigate";
     const isHaDirect =
       normalizeCameraConnectionType(sourceType) === "ha_direct";
     const showToggle = supported || loading || preserveSelection;
@@ -818,21 +836,32 @@ export class FrigateViewCardEditor extends HTMLElement {
     if (twoWayTalkStateMessage) {
       if (loading) {
         twoWayTalkStateMessage.style.display = "block";
-        twoWayTalkStateMessage.textContent = isHaDirect
-          ? "Checking Home Assistant WebRTC playback support for this camera."
-          : `Checking ${sourceLabel} two-way talk support for this camera.`;
+        setLocalizedText(
+          twoWayTalkStateMessage,
+          isHaDirect
+            ? "editor.cameraModal.checkingTalkHa"
+            : "editor.cameraModal.checkingTalkFrigate",
+          this._localization.t,
+        );
       } else if (!supported) {
         twoWayTalkStateMessage.style.display = "block";
-        twoWayTalkStateMessage.textContent = isHaDirect
-          ? "Home Assistant did not report WebRTC playback for this camera, which is required for HA-direct two-way talk."
-          : `${sourceLabel} did not report two-way talk support for this camera.`;
+        setLocalizedText(
+          twoWayTalkStateMessage,
+          isHaDirect
+            ? "editor.cameraModal.talkUnsupportedHa"
+            : "editor.cameraModal.talkUnsupportedFrigate",
+          this._localization.t,
+        );
       } else if (isHaDirect) {
         twoWayTalkStateMessage.style.display = "block";
-        twoWayTalkStateMessage.textContent =
-          "Experimental: Home Assistant reports WebRTC playback, but does not report talkback capability. Enable only if this camera's Home Assistant WebRTC path accepts outgoing audio.";
+        setLocalizedText(
+          twoWayTalkStateMessage,
+          "editor.cameraModal.talkExperimentalHa",
+          this._localization.t,
+        );
       } else {
         twoWayTalkStateMessage.style.display = "none";
-        twoWayTalkStateMessage.textContent = "";
+        setLocalizedText(twoWayTalkStateMessage, null, this._localization.t);
       }
     }
     if (twoWayTalkEnabled) {
@@ -1039,9 +1068,11 @@ export class FrigateViewCardEditor extends HTMLElement {
     reminder.setAttribute?.("data-config-save-state", dirty ? "dirty" : "clean");
     const text = reminder.querySelector?.("[data-config-save-reminder-text]");
     if (text) {
-      text.textContent = dirty
-        ? "Unsaved changes — use Home Assistant's Save button to apply them."
-        : "No pending changes.";
+      const key = dirty
+        ? "editor.status.unsavedChanges"
+        : "editor.status.noPendingChanges";
+      text.setAttribute?.("data-fvc-i18n", key);
+      text.textContent = this._t(key);
     }
   }
 
@@ -1170,8 +1201,15 @@ export class FrigateViewCardEditor extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     this._localization ??= createLocalizationController();
-    if (this._localization.updateHass(hass)) {
+    const languageChanged = this._localization.updateHass(hass);
+    if (languageChanged) {
       applyLocalizedText(this, this._localization.t);
+      if (this._rendered) {
+        this._syncCameraConnectionTypeOptions();
+        this._syncCameraModalGroupFields();
+        this._syncConfigSaveReminder();
+        this._syncCameraDeleteConfirmationMessage();
+      }
     }
     this._pruneChangedCapabilityCaches();
     const modeKey = this._hass?.themes?.darkMode ? "dark" : "light";
@@ -1584,12 +1622,45 @@ export class FrigateViewCardEditor extends HTMLElement {
     ).trim();
   }
 
+  _syncCameraConnectionTypeOptions() {
+    const selector = this.querySelector("#camera-modal-connection-type");
+    if (!selector?.selector?.select) return;
+    const options = [
+      {
+        value: "frigate_go2rtc",
+        label: this._t("editor.cameraModal.frigateGo2rtcDefault"),
+      },
+      {
+        value: "ha_direct",
+        label: this._t("editor.cameraModal.homeAssistant"),
+      },
+    ];
+    const currentOptions = selector.selector.select.options || [];
+    if (
+      currentOptions.length === options.length &&
+      currentOptions.every(
+        (option, index) =>
+          option.value === options[index].value &&
+          option.label === options[index].label,
+      )
+    ) {
+      return;
+    }
+    selector.selector = {
+      ...selector.selector,
+      select: {
+        ...selector.selector.select,
+        options,
+      },
+    };
+  }
+
   _syncCameraModalAccordionSummaries() {
     this._setCameraModalAccordionSummary(
       "connection",
       this._cameraModalConnectionTypeValue() === "ha_direct"
-        ? "Home Assistant"
-        : "Frigate go2rtc",
+        ? this._t("editor.cameraModal.homeAssistant")
+        : this._t("editor.cameraModal.frigateGo2rtc"),
     );
 
     const secondaryEntity = this._cameraModalGroupEnabled
@@ -1597,7 +1668,8 @@ export class FrigateViewCardEditor extends HTMLElement {
       : "";
     this._setCameraModalAccordionSummary(
       "additional",
-      this._cameraModalEntityLabel(secondaryEntity) || "None configured",
+      this._cameraModalEntityLabel(secondaryEntity) ||
+        this._t("editor.cameraModal.noneConfigured"),
     );
 
     const lights = [0, 1]
@@ -1609,7 +1681,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       );
     this._setCameraModalAccordionSummary(
       "lights",
-      lights.join(", ") || "None configured",
+      lights.join(", ") || this._t("editor.cameraModal.noneConfigured"),
     );
 
     const options = [];
@@ -1621,7 +1693,7 @@ export class FrigateViewCardEditor extends HTMLElement {
         this.querySelector("#camera-modal-two-way-talk-enabled"),
       )
     ) {
-      options.push("Two-Way Talk");
+      options.push(this._t("editor.cameraModal.twoWayTalk"));
     }
     this._setCameraModalAccordionSummary("options", options.join(" · "));
   }
@@ -1691,8 +1763,18 @@ export class FrigateViewCardEditor extends HTMLElement {
     const selectedConnectionType = normalizeCameraConnectionType(
       cam?.connection_type,
     );
-    if (title) title.textContent = index == null ? "Add Camera" : "Edit Camera";
-    if (save) save.textContent = index == null ? "Add" : "Update";
+    const titleKey = index == null
+      ? "editor.cameraModal.addCamera"
+      : "editor.cameraModal.editCamera";
+    const saveKey = index == null ? "editor.actions.add" : "editor.actions.update";
+    if (title) {
+      title.setAttribute?.("data-fvc-i18n", titleKey);
+      title.textContent = this._t(titleKey);
+    }
+    if (save) {
+      save.setAttribute?.("data-fvc-i18n", saveKey);
+      save.textContent = this._t(saveKey);
+    }
     if (name) name.value = sanitizeDisplayText(cam?.name);
     if (entity) {
       entity.value = cam?.entity || "";
@@ -1746,7 +1828,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     });
     this._syncCameraModalLightFields();
     this._setCameraModalAccordionActive();
-    if (helper) helper.textContent = "";
+    this._setLocalizedMessage(helper, null);
     this._cameraModalSelectorDismissPending = false;
     this._cameraModalSuppressedClickEvent = null;
     if (modal) modal.classList.remove("hidden");
@@ -1841,12 +1923,21 @@ export class FrigateViewCardEditor extends HTMLElement {
       return;
     }
     this._pendingCameraRemovalIndex = index;
-    const message = this.querySelector("#camera-delete-message");
-    if (message) {
-      message.textContent = `Are you sure you want to delete “${this._cameraLabel(cameras[index])}”? This action cannot be undone.`;
-    }
+    this._syncCameraDeleteConfirmationMessage();
     this.querySelector("#camera-delete-modal")?.classList.remove("hidden");
     this.querySelector("#camera-delete-confirm")?.focus?.();
+  }
+
+  _syncCameraDeleteConfirmationMessage() {
+    const index = this._pendingCameraRemovalIndex;
+    const cameras = this._getCams();
+    if (!Number.isInteger(index) || !cameras[index]) return;
+    const message = this.querySelector("#camera-delete-message");
+    if (message) {
+      this._setLocalizedMessage(message, "editor.cameraModal.deleteConfirm", {
+        camera: this._cameraLabel(cameras[index]),
+      });
+    }
   }
 
   _closeCameraDeleteConfirmation() {
@@ -1878,7 +1969,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       selector.dataset.value = selectedRoute;
     }
     const helper = this.querySelector("#standalone-landing-helper");
-    if (helper) helper.textContent = "";
+    this._setLocalizedMessage(helper, null);
     this._standaloneLandingModalOpen = true;
     const modal = this.querySelector("#standalone-landing-modal");
     try {
@@ -1920,7 +2011,10 @@ export class FrigateViewCardEditor extends HTMLElement {
     );
     if (!this._standaloneLandingPageRoutes().includes(selectedRoute)) {
       const helper = this.querySelector("#standalone-landing-helper");
-      if (helper) helper.textContent = "Select an available landing page.";
+      this._setLocalizedMessage(
+        helper,
+        "editor.cameraModal.selectLandingPage",
+      );
       return;
     }
 
@@ -2018,19 +2112,26 @@ export class FrigateViewCardEditor extends HTMLElement {
     const help = this.querySelector("#camera-modal-secondary-help");
     const removeButton = this.querySelector("#camera-modal-remove-secondary");
     const fields = this.querySelector("#camera-modal-group-fields");
-    const label = enabled ? "Group Name" : "Camera Name";
+    const labelKey = enabled
+      ? "editor.cameraModal.groupName"
+      : "editor.cameraModal.cameraName";
+    const label = this._t(labelKey);
     if (nameInput) {
       nameInput.label = label;
       nameInput.setAttribute?.("label", label);
       nameInput.setAttribute?.("aria-label", label);
+      nameInput.setAttribute?.("data-fvc-i18n-label", labelKey);
+      nameInput.setAttribute?.("data-fvc-i18n-aria-label", labelKey);
     }
     if (addButton) addButton.hidden = enabled;
     if (help) help.hidden = enabled;
     if (fields) fields.hidden = !enabled;
     if (removeButton) {
-      removeButton.textContent = this._cameraModalSecondaryEntityValue()
-        ? "Remove camera"
-        : "Cancel";
+      const removeKey = this._cameraModalSecondaryEntityValue()
+        ? "editor.cameraModal.removeCamera"
+        : "editor.actions.cancel";
+      removeButton.setAttribute?.("data-fvc-i18n", removeKey);
+      removeButton.textContent = this._t(removeKey);
     }
     this._syncCameraModalAccordionSummaries();
   }
@@ -2066,7 +2167,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       }
     }
     const helper = this.querySelector("#camera-modal-helper");
-    if (helper) helper.textContent = "";
+    this._setLocalizedMessage(helper, null);
     this._syncCameraModalGroupFields();
     this._syncLimitedTextField(
       "#camera-modal-name",
@@ -2182,9 +2283,13 @@ export class FrigateViewCardEditor extends HTMLElement {
       );
       if (fields) fields.hidden = !enabled;
       if (removeButton) {
-        removeButton.textContent = this._cameraModalLightEntityValue(index)
-          ? `Remove light${index === 1 ? " 2" : ""}`
-          : "Cancel";
+        const removeKey = this._cameraModalLightEntityValue(index)
+          ? index === 1
+            ? "editor.cameraModal.removeSecondLight"
+            : "editor.cameraModal.removeLight"
+          : "editor.actions.cancel";
+        removeButton.setAttribute?.("data-fvc-i18n", removeKey);
+        removeButton.textContent = this._t(removeKey);
       }
     });
     this._syncCameraModalAccordionSummaries();
@@ -2211,7 +2316,7 @@ export class FrigateViewCardEditor extends HTMLElement {
       }
     }
     const helper = this.querySelector("#camera-modal-helper");
-    if (helper) helper.textContent = "";
+    this._setLocalizedMessage(helper, null);
     this._syncCameraModalLightFields();
   }
 
@@ -2254,15 +2359,15 @@ export class FrigateViewCardEditor extends HTMLElement {
       : null;
     const helper = this.querySelector("#camera-modal-helper");
     if (!entity) {
-      if (helper) helper.textContent = "Camera is required.";
+      this._setLocalizedMessage(helper, "editor.cameraModal.cameraRequired");
       return;
     }
     if (this._cameraModalGroupEnabled && !secondaryEntity) {
-      if (helper) helper.textContent = "Second camera is required.";
+      this._setLocalizedMessage(helper, "editor.cameraModal.secondCameraRequired");
       return;
     }
     if (this._cameraModalGroupEnabled && secondaryEntity === entity) {
-      if (helper) helper.textContent = "Choose two different cameras.";
+      this._setLocalizedMessage(helper, "editor.cameraModal.differentCamerasRequired");
       return;
     }
     if (
@@ -2270,14 +2375,14 @@ export class FrigateViewCardEditor extends HTMLElement {
         ({ entity: lightEntity }) => !lightEntity.startsWith("light."),
       )
     ) {
-      if (helper) helper.textContent = "Select a light entity.";
+      this._setLocalizedMessage(helper, "editor.cameraModal.lightEntityRequired");
       return;
     }
     if (
       new Set(requestedLinkedLights.map(({ entity: lightEntity }) => lightEntity))
         .size !== requestedLinkedLights.length
     ) {
-      if (helper) helper.textContent = "Choose two different lights.";
+      this._setLocalizedMessage(helper, "editor.cameraModal.differentLightsRequired");
       return;
     }
     const cur = [...this._getCams()];
@@ -2287,7 +2392,7 @@ export class FrigateViewCardEditor extends HTMLElement {
     const requestedEntities = [entity];
     if (this._cameraModalGroupEnabled) requestedEntities.push(secondaryEntity);
     if (requestedEntities.some((value) => usedEntities.includes(value))) {
-      if (helper) helper.textContent = "That camera is already configured.";
+      this._setLocalizedMessage(helper, "editor.cameraModal.cameraAlreadyConfigured");
       return;
     }
     const group = this._cameraModalGroupEnabled
@@ -2314,7 +2419,9 @@ export class FrigateViewCardEditor extends HTMLElement {
         countPhysicalCameras(cur) + cameraMemberEntities(nextCamera).length >
         MAX_CAMERAS
       ) {
-        if (helper) helper.textContent = `Maximum ${MAX_CAMERAS} cameras.`;
+        this._setLocalizedMessage(helper, "editor.cameraModal.maximumCameras", {
+          max: MAX_CAMERAS,
+        });
         return;
       }
       cur.push(nextCamera);
@@ -2322,7 +2429,9 @@ export class FrigateViewCardEditor extends HTMLElement {
       const next = [...cur];
       next[this._editingCamIndex] = nextCamera;
       if (countPhysicalCameras(next) > MAX_CAMERAS) {
-        if (helper) helper.textContent = `Maximum ${MAX_CAMERAS} cameras.`;
+        this._setLocalizedMessage(helper, "editor.cameraModal.maximumCameras", {
+          max: MAX_CAMERAS,
+        });
         return;
       }
       cur[this._editingCamIndex] = nextCamera;
@@ -2377,13 +2486,13 @@ export class FrigateViewCardEditor extends HTMLElement {
     return `<section class="settings-panel ${active ? "active" : ""}" data-panel="${escapeHtmlAttribute(id)}">
       <button type="button" class="setting-title" data-panel-toggle="${escapeHtmlAttribute(id)}" aria-expanded="${active ? "true" : "false"}">
         ${iconMarkup}
-        <h3>${escapeHtml(title)}</h3>
+        <h3 data-fvc-i18n="editor.panels.${escapeHtmlAttribute(id)}">${escapeHtml(title)}</h3>
       </button>
       <div class="setting-content">
         ${content}
         <div class="settings-more-slot">
-          <button type="button" class="settings-more-chip" data-panel-more title="Show more options" aria-label="Show more options" hidden>
-            <span>More</span>
+          <button type="button" class="settings-more-chip" data-panel-more title="Show more options" aria-label="Show more options" data-fvc-i18n-title="editor.actions.showMoreOptions" data-fvc-i18n-aria-label="editor.actions.showMoreOptions" hidden>
+            <span data-fvc-i18n="editor.actions.more">More</span>
             ${ICONS.chevron}
           </button>
         </div>
@@ -3240,8 +3349,8 @@ export class FrigateViewCardEditor extends HTMLElement {
       <div class="cam-row" draggable="true" data-row="${i}">
         <button class="cam-drag" type="button" title="Drag to reorder" aria-label="Drag to reorder"><ha-icon icon="mdi:drag-horizontal-variant"></ha-icon></button>
         <div><div class="cam-name">${escapeHtml(this._cameraLabel(cam))}</div><div class="cam-meta">${escapeHtml(this._cameraMetaLabel(cam))}</div></div>
-                <button class="cam-action" type="button" title="Edit" aria-label="Edit" data-edit-cam="${i}"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg></button>
-                <button class="cam-action" type="button" title="Delete" aria-label="Delete" data-remove-cam="${i}"><svg viewBox="0 0 24 24" style="width:24px; height:24px" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg></button>
+                <button class="cam-action" type="button" title="Edit" aria-label="Edit" data-fvc-i18n-title="editor.actions.edit" data-fvc-i18n-aria-label="editor.actions.edit" data-edit-cam="${i}"><svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.94L14.06,6.19L3,17.25Z" /></svg></button>
+                <button class="cam-action" type="button" title="Delete" aria-label="Delete" data-fvc-i18n-title="editor.actions.delete" data-fvc-i18n-aria-label="editor.actions.delete" data-remove-cam="${i}"><svg viewBox="0 0 24 24" style="width:24px; height:24px" fill="currentColor"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" /></svg></button>
       </div>`,
       )
       .join("");
@@ -3296,10 +3405,10 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const cameraPanelContent = `
       <div class="section">
-        <span class="field-label">Cameras ${frigEntities.length ? '<small style="font-weight:400;color:var(--c-text2)">(Frigate cameras detected)</small>' : ""}</span>
+        <span class="field-label"><span data-fvc-i18n="editor.cameraPanel.cameras">Cameras</span> ${frigEntities.length ? '<small style="font-weight:400;color:var(--c-text2)" data-fvc-i18n="editor.cameraPanel.frigateCamerasDetected">(Frigate cameras detected)</small>' : ""}</span>
         <div class="cam-wrap" id="cam-list">${cameraRows}</div>
-        ${canAddCamera ? '<div class="cam-toolbar"><button id="camera-add" class="cam-add" type="button">Add</button></div>' : ""}
-        <span class="cam-helper">${physicalCameraCount} of ${MAX_CAMERAS} cameras configured</span>
+        ${canAddCamera ? '<div class="cam-toolbar"><button id="camera-add" class="cam-add" type="button" data-fvc-i18n="editor.actions.add">Add</button></div>' : ""}
+        <span class="cam-helper" data-fvc-i18n="editor.cameraPanel.configuredCount" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ count: physicalCameraCount, max: MAX_CAMERAS }))}">${physicalCameraCount} of ${MAX_CAMERAS} cameras configured</span>
       </div>`;
 
     const titleValue = sanitizeDisplayText(
@@ -3940,7 +4049,7 @@ export class FrigateViewCardEditor extends HTMLElement {
 
     const configSaveReminderMarkup = `<div id="config-save-reminder" class="config-save-reminder" role="status" aria-live="polite" aria-atomic="true" data-config-save-state="${this._hasConfigDraft === true ? "dirty" : "clean"}">
       <span class="config-save-reminder-icon" aria-hidden="true">${ICONS.packageCheck}</span>
-      <span data-config-save-reminder-text>${this._hasConfigDraft === true ? "Unsaved changes — use Home Assistant's Save button to apply them." : "No pending changes."}</span>
+      <span data-config-save-reminder-text data-fvc-i18n="${this._hasConfigDraft === true ? "editor.status.unsavedChanges" : "editor.status.noPendingChanges"}">${this._hasConfigDraft === true ? "Unsaved changes — use Home Assistant's Save button to apply them." : "No pending changes."}</span>
     </div>`;
 
     this.innerHTML = `<style>
@@ -4389,25 +4498,25 @@ export class FrigateViewCardEditor extends HTMLElement {
       <div id="camera-modal" class="cam-modal hidden">
         <div class="cam-modal-card camera-modal-card" role="dialog" aria-modal="true" aria-labelledby="camera-modal-title">
           <div class="cam-modal-head">
-            <button type="button" id="camera-modal-close" class="round-btn" title="Close" aria-label="Close">${ICONS.close}</button>
-            <div class="cam-modal-title" id="camera-modal-title">Add Camera</div>
+            <button type="button" id="camera-modal-close" class="round-btn" title="Close" aria-label="Close" data-fvc-i18n-title="editor.actions.close" data-fvc-i18n-aria-label="editor.actions.close">${ICONS.close}</button>
+            <div class="cam-modal-title" id="camera-modal-title" data-fvc-i18n="editor.cameraModal.addCamera">Add Camera</div>
             <div class="cam-modal-head-spacer" aria-hidden="true"></div>
           </div>
           <div class="camera-modal-body">
           <section class="camera-modal-accordion camera-modal-accordion-fixed active">
             <div class="camera-modal-accordion-bar">
-              <span class="camera-modal-accordion-title">Camera</span>
+              <span class="camera-modal-accordion-title" data-fvc-i18n="editor.cameraModal.camera">Camera</span>
             </div>
             <div class="camera-modal-accordion-content">
               <div class="cam-modal-field camera-modal-primary">
                 <div class="camera-modal-selector-field">
-                  <span class="camera-modal-selector-label" aria-hidden="true">Camera</span>
-                  <ha-selector id="camera-modal-entity" aria-label="Camera"></ha-selector>
+                  <span class="camera-modal-selector-label" aria-hidden="true" data-fvc-i18n="editor.cameraModal.camera">Camera</span>
+                  <ha-selector id="camera-modal-entity" aria-label="Camera" data-fvc-i18n-aria-label="editor.cameraModal.camera"></ha-selector>
                 </div>
               </div>
               <div class="cam-modal-field">
                 <div class="limited-text-input">
-                  <ha-input id="camera-modal-name" label="Camera Name" aria-label="Camera Name" maxlength="${DISPLAY_TEXT_MAX_LENGTH}" placeholder="Display name (optional)"></ha-input>
+                  <ha-input id="camera-modal-name" label="Camera Name" aria-label="Camera Name" data-fvc-i18n-label="editor.cameraModal.cameraName" data-fvc-i18n-aria-label="editor.cameraModal.cameraName" data-fvc-i18n-placeholder="editor.cameraModal.displayNamePlaceholder" maxlength="${DISPLAY_TEXT_MAX_LENGTH}" placeholder="Display name (optional)"></ha-input>
                   <span class="limited-text-counter" id="camera-modal-name-counter" aria-hidden="true">0/${DISPLAY_TEXT_MAX_LENGTH}</span>
                 </div>
               </div>
@@ -4415,149 +4524,151 @@ export class FrigateViewCardEditor extends HTMLElement {
           </section>
           <section class="camera-modal-accordion" data-camera-modal-section="connection">
             <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="connection" aria-expanded="false" aria-controls="camera-modal-connection-content">
-              <span class="camera-modal-accordion-title">Connection Settings</span>
+              <span class="camera-modal-accordion-title" data-fvc-i18n="editor.cameraModal.connectionSettings">Connection Settings</span>
               <span class="camera-modal-accordion-summary" id="camera-modal-connection-summary">Frigate go2rtc</span>
               <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
             </button>
             <div class="camera-modal-accordion-content" id="camera-modal-connection-content" hidden>
               <div class="cam-modal-field">
                 <div class="camera-modal-floating-field">
-                  <span class="camera-modal-floating-label" aria-hidden="true">Connection Type</span>
-                  <ha-selector id="camera-modal-connection-type" aria-label="Connection Type"></ha-selector>
+                  <span class="camera-modal-floating-label" aria-hidden="true" data-fvc-i18n="editor.cameraModal.connectionType">Connection Type</span>
+                  <ha-selector id="camera-modal-connection-type" aria-label="Connection Type" data-fvc-i18n-aria-label="editor.cameraModal.connectionType"></ha-selector>
                 </div>
-                <div class="field-helper">Requires the Home Assistant Frigate integration.</div>
+                <div class="field-helper" data-fvc-i18n="editor.cameraModal.frigateIntegrationRequired">Requires the Home Assistant Frigate integration.</div>
               </div>
             </div>
           </section>
           <section class="camera-modal-accordion" data-camera-modal-section="additional">
             <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="additional" aria-expanded="false" aria-controls="camera-modal-additional-content">
-              <span class="camera-modal-accordion-title">Additional Camera</span>
+              <span class="camera-modal-accordion-title" data-fvc-i18n="editor.cameraModal.additionalCamera">Additional Camera</span>
               <span class="camera-modal-accordion-summary" id="camera-modal-additional-summary">None configured</span>
               <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
             </button>
             <div class="camera-modal-accordion-content" id="camera-modal-additional-content" hidden>
           <div class="cam-modal-field camera-group-add-row">
-            <button type="button" id="camera-modal-add-secondary" class="cam-inline-add camera-group-action">${ICONS.cameraAdd}<span>Add second camera</span></button>
+            <button type="button" id="camera-modal-add-secondary" class="cam-inline-add camera-group-action">${ICONS.cameraAdd}<span data-fvc-i18n="editor.cameraModal.addSecondCamera">Add second camera</span></button>
           </div>
           <details id="camera-modal-secondary-help" class="camera-group-help">
-            <summary>What is a second camera?</summary>
-            <div class="camera-group-help-copy">Combines two camera entities into one view, such as main and package cameras. Only the main camera provides PTZ or two-way talk.</div>
+            <summary data-fvc-i18n="editor.cameraModal.secondCameraHelpTitle">What is a second camera?</summary>
+            <div class="camera-group-help-copy" data-fvc-i18n="editor.cameraModal.secondCameraHelp">Combines two camera entities into one view, such as main and package cameras. Only the main camera provides PTZ or two-way talk.</div>
           </details>
           <div id="camera-modal-group-fields" class="camera-group-fields" hidden>
             <div class="camera-group-fields-head">
-              <span class="camera-group-fields-title">Second Camera</span>
+              <span class="camera-group-fields-title" data-fvc-i18n="editor.cameraModal.secondCamera">Second Camera</span>
             </div>
             <div class="camera-group-secondary-row">
               <div class="camera-group-selector">
                 <ha-selector id="camera-modal-secondary-entity"></ha-selector>
               </div>
             </div>
-            <div class="editor-choice-field camera-group-layout-field" role="radiogroup" aria-label="Live View Layout">
-              <div class="cam-modal-label">Live View Layout</div>
+            <div class="editor-choice-field camera-group-layout-field" role="radiogroup" aria-label="Live View Layout" data-fvc-i18n-aria-label="editor.cameraModal.liveViewLayout">
+              <div class="cam-modal-label" data-fvc-i18n="editor.cameraModal.liveViewLayout">Live View Layout</div>
               ${buildEditorChoiceChipsMarkup({
                 name: "camera-modal-group-layout",
                 options: [
                   {
                     value: CAMERA_GROUP_LAYOUTS.sideBySide,
                     label: "Side by Side",
+                    translationKey: "editor.cameraModal.sideBySide",
                   },
                   {
                     value: CAMERA_GROUP_LAYOUTS.stacked,
                     label: "Stacked",
+                    translationKey: "editor.cameraModal.stacked",
                   },
                 ],
                 selectedValue: CAMERA_GROUP_LAYOUTS.sideBySide,
               })}
             </div>
-            <div class="field-helper">Only the main camera provides PTZ and two-way talk. Put the controllable camera first.</div>
+            <div class="field-helper" data-fvc-i18n="editor.cameraModal.mainCameraControlsHelp">Only the main camera provides PTZ and two-way talk. Put the controllable camera first.</div>
             <div class="camera-group-fields-footer">
-              <button type="button" id="camera-modal-remove-secondary" class="cam-inline-remove camera-group-action">Cancel</button>
+              <button type="button" id="camera-modal-remove-secondary" class="cam-inline-remove camera-group-action" data-fvc-i18n="editor.actions.cancel">Cancel</button>
             </div>
           </div>
             </div>
           </section>
           <section class="camera-modal-accordion" data-camera-modal-section="lights">
             <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="lights" aria-expanded="false" aria-controls="camera-modal-lights-content">
-              <span class="camera-modal-accordion-title">Lights</span>
+              <span class="camera-modal-accordion-title" data-fvc-i18n="editor.cameraModal.lights">Lights</span>
               <span class="camera-modal-accordion-summary" id="camera-modal-lights-summary">None configured</span>
               <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
             </button>
             <div class="camera-modal-accordion-content" id="camera-modal-lights-content" hidden>
           <div class="cam-modal-field camera-group-add-row">
-            <button type="button" id="camera-modal-add-light" class="cam-inline-add camera-group-action">${ICONS.lightAdd}<span>Add light</span></button>
+            <button type="button" id="camera-modal-add-light" class="cam-inline-add camera-group-action">${ICONS.lightAdd}<span data-fvc-i18n="editor.cameraModal.addLight">Add light</span></button>
           </div>
           <div id="camera-modal-light-fields" class="camera-group-fields" hidden>
             <div class="camera-group-fields-head">
-              <span class="camera-group-fields-title">Linked Light</span>
+              <span class="camera-group-fields-title" data-fvc-i18n="editor.cameraModal.linkedLight">Linked Light</span>
             </div>
             <div class="linked-entity-row">
               <div class="linked-entity-selectors">
                 <div class="linked-entity-field">
-                  <span class="cam-modal-label">Light</span>
+                  <span class="cam-modal-label" data-fvc-i18n="editor.cameraModal.light">Light</span>
                   <ha-selector id="camera-modal-light-entity"></ha-selector>
                 </div>
                 <div class="linked-entity-field">
-                  <span class="cam-modal-label">Icon</span>
+                  <span class="cam-modal-label" data-fvc-i18n="editor.cameraModal.icon">Icon</span>
                   <ha-selector id="camera-modal-light-icon"></ha-selector>
                 </div>
               </div>
             </div>
-            <div class="editor-choice-field camera-group-layout-field" role="radiogroup" aria-label="Button Position">
-              <div class="cam-modal-label">Button Position</div>
+            <div class="editor-choice-field camera-group-layout-field" role="radiogroup" aria-label="Button Position" data-fvc-i18n-aria-label="editor.cameraModal.buttonPosition">
+              <div class="cam-modal-label" data-fvc-i18n="editor.cameraModal.buttonPosition">Button Position</div>
               ${buildEditorChoiceChipsMarkup({
                 name: "camera-modal-light-position",
                 options: [
-                  { value: LINKED_LIGHT_POSITIONS.left, label: "Left" },
-                  { value: LINKED_LIGHT_POSITIONS.right, label: "Right" },
+                  { value: LINKED_LIGHT_POSITIONS.left, label: "Left", translationKey: "editor.cameraModal.left" },
+                  { value: LINKED_LIGHT_POSITIONS.right, label: "Right", translationKey: "editor.cameraModal.right" },
                 ],
                 selectedValue: LINKED_LIGHT_POSITIONS.right,
               })}
             </div>
-            <div class="field-helper">Adds a Home Assistant light button beside the microphone. A light can be linked to multiple cameras.</div>
+            <div class="field-helper" data-fvc-i18n="editor.cameraModal.lightHelp">Adds a Home Assistant light button beside the microphone. A light can be linked to multiple cameras.</div>
             <div class="camera-group-fields-footer">
-              <button type="button" id="camera-modal-remove-light" class="cam-inline-remove camera-group-action">Cancel</button>
+              <button type="button" id="camera-modal-remove-light" class="cam-inline-remove camera-group-action" data-fvc-i18n="editor.actions.cancel">Cancel</button>
             </div>
           </div>
           <div class="cam-modal-field camera-group-add-row">
-            <button type="button" id="camera-modal-add-light-2" class="cam-inline-add camera-group-action" hidden>${ICONS.lightAdd}<span>Add second light</span></button>
+            <button type="button" id="camera-modal-add-light-2" class="cam-inline-add camera-group-action" hidden>${ICONS.lightAdd}<span data-fvc-i18n="editor.cameraModal.addSecondLight">Add second light</span></button>
           </div>
           <div id="camera-modal-light-fields-2" class="camera-group-fields" hidden>
             <div class="camera-group-fields-head">
-              <span class="camera-group-fields-title">Second Linked Light</span>
+              <span class="camera-group-fields-title" data-fvc-i18n="editor.cameraModal.secondLinkedLight">Second Linked Light</span>
             </div>
             <div class="linked-entity-row">
               <div class="linked-entity-selectors">
                 <div class="linked-entity-field">
-                  <span class="cam-modal-label">Light</span>
+                  <span class="cam-modal-label" data-fvc-i18n="editor.cameraModal.light">Light</span>
                   <ha-selector id="camera-modal-light-entity-2"></ha-selector>
                 </div>
                 <div class="linked-entity-field">
-                  <span class="cam-modal-label">Icon</span>
+                  <span class="cam-modal-label" data-fvc-i18n="editor.cameraModal.icon">Icon</span>
                   <ha-selector id="camera-modal-light-icon-2"></ha-selector>
                 </div>
               </div>
             </div>
-            <div class="editor-choice-field camera-group-layout-field" role="radiogroup" aria-label="Button Position">
-              <div class="cam-modal-label">Button Position</div>
+            <div class="editor-choice-field camera-group-layout-field" role="radiogroup" aria-label="Button Position" data-fvc-i18n-aria-label="editor.cameraModal.buttonPosition">
+              <div class="cam-modal-label" data-fvc-i18n="editor.cameraModal.buttonPosition">Button Position</div>
               ${buildEditorChoiceChipsMarkup({
                 name: "camera-modal-light-position-2",
                 options: [
-                  { value: LINKED_LIGHT_POSITIONS.left, label: "Left" },
-                  { value: LINKED_LIGHT_POSITIONS.right, label: "Right" },
+                  { value: LINKED_LIGHT_POSITIONS.left, label: "Left", translationKey: "editor.cameraModal.left" },
+                  { value: LINKED_LIGHT_POSITIONS.right, label: "Right", translationKey: "editor.cameraModal.right" },
                 ],
                 selectedValue: LINKED_LIGHT_POSITIONS.right,
               })}
             </div>
-            <div class="field-helper">Places the second light independently on either side of the microphone.</div>
+            <div class="field-helper" data-fvc-i18n="editor.cameraModal.secondLightHelp">Places the second light independently on either side of the microphone.</div>
             <div class="camera-group-fields-footer">
-              <button type="button" id="camera-modal-remove-light-2" class="cam-inline-remove camera-group-action">Cancel</button>
+              <button type="button" id="camera-modal-remove-light-2" class="cam-inline-remove camera-group-action" data-fvc-i18n="editor.actions.cancel">Cancel</button>
             </div>
           </div>
             </div>
           </section>
           <section class="camera-modal-accordion" data-camera-modal-section="options">
             <button type="button" class="camera-modal-accordion-bar" data-camera-modal-accordion-toggle="options" aria-expanded="false" aria-controls="camera-modal-options-content">
-              <span class="camera-modal-accordion-title">Options</span>
+              <span class="camera-modal-accordion-title" data-fvc-i18n="editor.cameraModal.options">Options</span>
               <span class="camera-modal-accordion-summary" id="camera-modal-options-summary" hidden></span>
               <span class="camera-modal-accordion-icon" aria-hidden="true">${ICONS.chevron}</span>
             </button>
@@ -4565,8 +4676,8 @@ export class FrigateViewCardEditor extends HTMLElement {
           <div class="cam-modal-field">
             <div class="layout-row cam-modal-toggle-row">
               <div class="cam-modal-toggle-copy">
-                <span class="cam-modal-label">Show All Reviews in Alerts</span>
-                <div class="field-helper">Frigate groups activity into reviews that may contain alerts, detections, or both. Enable this to show every review in the Alerts tab; disable it to show alerts only.</div>
+                <span class="cam-modal-label" data-fvc-i18n="editor.cameraModal.showAllReviews">Show All Reviews in Alerts</span>
+                <div class="field-helper" data-fvc-i18n="editor.cameraModal.showAllReviewsHelp">Frigate groups activity into reviews that may contain alerts, detections, or both. Enable this to show every review in the Alerts tab; disable it to show alerts only.</div>
               </div>
               <ha-switch id="camera-modal-all-reviews"></ha-switch>
             </div>
@@ -4575,14 +4686,14 @@ export class FrigateViewCardEditor extends HTMLElement {
             <div id="camera-modal-ptz-toggle-row">
               <div class="layout-row cam-modal-toggle-row">
                 <div class="cam-modal-toggle-copy">
-                  <span class="cam-modal-label">Enable PTZ Controls</span>
-                  <div class="field-helper">Adds pan and tilt controls when supported.</div>
+                  <span class="cam-modal-label" data-fvc-i18n="editor.cameraModal.enablePtz">Enable PTZ Controls</span>
+                  <div class="field-helper" data-fvc-i18n="editor.cameraModal.ptzHelp">Adds pan and tilt controls when supported.</div>
                 </div>
                 <ha-switch id="camera-modal-ptz-enabled"></ha-switch>
               </div>
             <div id="camera-modal-ptz-rotation-row" hidden>
-              <div class="editor-choice-field camera-group-layout-field" role="radiogroup" aria-label="PTZ Control Rotation">
-                <div class="cam-modal-label">PTZ Control Rotation</div>
+              <div class="editor-choice-field camera-group-layout-field" role="radiogroup" aria-label="PTZ Control Rotation" data-fvc-i18n-aria-label="editor.cameraModal.ptzRotation">
+                <div class="cam-modal-label" data-fvc-i18n="editor.cameraModal.ptzRotation">PTZ Control Rotation</div>
                 ${buildEditorChoiceChipsMarkup({
                   name: "camera-modal-ptz-rotation",
                   options: PTZ_CONTROL_ROTATIONS.map((rotation) => ({
@@ -4593,17 +4704,17 @@ export class FrigateViewCardEditor extends HTMLElement {
                   compact: true,
                 })}
               </div>
-              <div class="field-helper">Rotates directional commands to match the camera image. At 90°, Up sends Left.</div>
+              <div class="field-helper" data-fvc-i18n="editor.cameraModal.ptzRotationHelp">Rotates directional commands to match the camera image. At 90°, Up sends Left.</div>
             </div>
             </div>
             <div class="field-helper camera-capability-status" id="camera-modal-ptz-state" style="display:none"></div>
           </div>
           <div class="cam-modal-field" id="camera-modal-two-way-talk-toggle-row" style="display:none">
             <div class="layout-row" style="justify-content:flex-start;gap:8px">
-              <span class="cam-modal-label" style="margin:0">Enable Two-Way Talk</span>
+              <span class="cam-modal-label" style="margin:0" data-fvc-i18n="editor.cameraModal.enableTwoWayTalk">Enable Two-Way Talk</span>
               <ha-switch id="camera-modal-two-way-talk-enabled"></ha-switch>
             </div>
-            <div class="field-helper">Frigate requires a WebRTC backchannel. Home Assistant is experimental and requires HA WebRTC playback.</div>
+            <div class="field-helper" data-fvc-i18n="editor.cameraModal.twoWayTalkHelp">Frigate requires a WebRTC backchannel. Home Assistant is experimental and requires HA WebRTC playback.</div>
           </div>
           <div class="field-helper camera-capability-status" id="camera-modal-two-way-talk-state" style="display:none"></div>
             </div>
@@ -4611,34 +4722,34 @@ export class FrigateViewCardEditor extends HTMLElement {
           </div>
           <div class="cam-modal-helper" id="camera-modal-helper"></div>
           <div class="cam-modal-foot">
-            <button type="button" id="camera-modal-cancel" class="cam-btn">Cancel</button>
-            <button type="button" id="camera-modal-save" class="cam-btn primary">Add</button>
+            <button type="button" id="camera-modal-cancel" class="cam-btn" data-fvc-i18n="editor.actions.cancel">Cancel</button>
+            <button type="button" id="camera-modal-save" class="cam-btn primary" data-fvc-i18n="editor.actions.add">Add</button>
           </div>
         </div>
       </div>
 
       <div id="camera-delete-modal" class="cam-modal hidden">
         <div class="cam-modal-card cam-confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="camera-delete-title" aria-describedby="camera-delete-message">
-          <h3 class="cam-confirm-title" id="camera-delete-title">Delete camera?</h3>
+          <h3 class="cam-confirm-title" id="camera-delete-title" data-fvc-i18n="editor.cameraModal.deleteCamera">Delete camera?</h3>
           <p class="cam-confirm-message" id="camera-delete-message"></p>
           <div class="cam-modal-foot">
-            <button type="button" id="camera-delete-cancel" class="cam-btn">Cancel</button>
-            <button type="button" id="camera-delete-confirm" class="cam-btn danger">Delete</button>
+            <button type="button" id="camera-delete-cancel" class="cam-btn" data-fvc-i18n="editor.actions.cancel">Cancel</button>
+            <button type="button" id="camera-delete-confirm" class="cam-btn danger" data-fvc-i18n="editor.actions.delete">Delete</button>
           </div>
         </div>
       </div>
 
       <dialog id="standalone-landing-modal" class="cam-modal-card cam-confirm-card standalone-landing-dialog" aria-labelledby="standalone-landing-title" aria-describedby="standalone-landing-message">
-          <h3 class="cam-confirm-title" id="standalone-landing-title">Choose a landing page</h3>
-          <p class="cam-confirm-message" id="standalone-landing-message">Card View will no longer be the standalone desktop and tablet view. Select the desktop and tablet landing page to use after standalone mode is disabled.</p>
+          <h3 class="cam-confirm-title" id="standalone-landing-title" data-fvc-i18n="editor.cameraModal.chooseLandingPage">Choose a landing page</h3>
+          <p class="cam-confirm-message" id="standalone-landing-message" data-fvc-i18n="editor.cameraModal.chooseLandingPageHelp">Card View will no longer be the standalone desktop and tablet view. Select the desktop and tablet landing page to use after standalone mode is disabled.</p>
           <div class="cam-modal-field" style="margin-top:12px">
-            <span class="cam-modal-label">Landing Page</span>
+            <span class="cam-modal-label" data-fvc-i18n="editor.cameraModal.landingPage">Landing Page</span>
             <ha-selector id="standalone-landing-page" style="width:100%"></ha-selector>
           </div>
           <div class="cam-modal-helper" id="standalone-landing-helper"></div>
           <div class="cam-modal-foot">
-            <button type="button" id="standalone-landing-cancel" class="cam-btn">Cancel</button>
-            <button type="button" id="standalone-landing-confirm" class="cam-btn primary">Apply</button>
+            <button type="button" id="standalone-landing-cancel" class="cam-btn" data-fvc-i18n="editor.actions.cancel">Cancel</button>
+            <button type="button" id="standalone-landing-confirm" class="cam-btn primary" data-fvc-i18n="editor.actions.apply">Apply</button>
           </div>
       </dialog>
     </div>`;
@@ -4790,8 +4901,8 @@ export class FrigateViewCardEditor extends HTMLElement {
       element: this.querySelector("#camera-modal-connection-type"),
       hass: this._hass,
       options: [
-        { value: "frigate_go2rtc", label: "Frigate go2rtc (default)" },
-        { value: "ha_direct", label: "Home Assistant" },
+        { value: "frigate_go2rtc", label: this._t("editor.cameraModal.frigateGo2rtcDefault") },
+        { value: "ha_direct", label: this._t("editor.cameraModal.homeAssistant") },
       ],
       initialValue: DEFAULT_CAMERA_CONNECTION_TYPE,
       fallbackValue: DEFAULT_CAMERA_CONNECTION_TYPE,

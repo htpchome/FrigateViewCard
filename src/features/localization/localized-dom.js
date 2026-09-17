@@ -17,7 +17,19 @@ export const applyLocalizedText = (root, t) => {
   for (const element of root.querySelectorAll(LOCALIZED_SELECTOR)) {
     const textKey = element.getAttribute("data-fvc-i18n");
     if (textKey) {
-      const value = t(textKey);
+      let values = {};
+      const serializedValues = element.getAttribute("data-fvc-i18n-values");
+      if (serializedValues) {
+        try {
+          const parsed = JSON.parse(serializedValues);
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            values = parsed;
+          }
+        } catch {
+          values = {};
+        }
+      }
+      const value = t(textKey, values);
       if (element.textContent !== value) element.textContent = value;
     }
     for (const [keyAttribute, targetAttribute] of Object.entries(
@@ -31,4 +43,21 @@ export const applyLocalizedText = (root, t) => {
       }
     }
   }
+};
+
+export const setLocalizedText = (element, key, t, values = {}) => {
+  if (!element) return;
+  if (!key) {
+    element.removeAttribute?.("data-fvc-i18n");
+    element.removeAttribute?.("data-fvc-i18n-values");
+    element.textContent = "";
+    return;
+  }
+  element.setAttribute?.("data-fvc-i18n", key);
+  if (Object.keys(values).length) {
+    element.setAttribute?.("data-fvc-i18n-values", JSON.stringify(values));
+  } else {
+    element.removeAttribute?.("data-fvc-i18n-values");
+  }
+  element.textContent = t(key, values);
 };
