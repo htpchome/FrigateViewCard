@@ -478,6 +478,100 @@ test("browse empty states localize in place and after switching tabs", async ({ 
   });
 });
 
+test("browse row language changes preserve event, review, and recording nodes", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    card._renderShell();
+    card._tab = "clips";
+    card._mediaForCamera = () => "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
+    card._media = () => "data:image/gif;base64,R0lGODlhAQABAAAAACw=";
+    card._reviewThumbnailForCamera = () => "";
+    const event = {
+      id: "event-1",
+      camera: "front_door",
+      label: "person",
+      start_time: 1723000000,
+      end_time: 1723000010,
+      has_clip: true,
+      has_snapshot: true,
+    };
+    card._browseFilterController.reviewSourceEvent = () => event;
+    const review = {
+      id: "review-1",
+      camera: "front_door",
+      severity: "alert",
+      start_time: 1723000000,
+      data: { detections: ["event-1"], objects: ["person", "car", "dog"] },
+    };
+    const list = card.shadowRoot.querySelector("#list");
+    list.innerHTML = card._eventCardHTML(event, false)
+      + card._reviewListItemHTML(review)
+      + card._recordingsListMarkup([{
+        start_time: 1723000000,
+        end_time: 1723000050,
+        events: 2,
+        _fvc_group_member: "Garage",
+      }]);
+    const eventRow = list.querySelector('[data-ev="event-1"]');
+    const reviewRow = list.querySelector('[data-review-id="review-1"]');
+    const recordingRow = list.querySelector("[data-rs]");
+    const thumbnail = eventRow.querySelector("img");
+    const translations = {
+      "runtime.browse.row.clips": "Vidéos",
+      "runtime.browse.row.favorite": "Favori",
+      "runtime.browse.row.downloadClip": "Télécharger la vidéo",
+      "runtime.browse.row.viewSnapshot": "Voir l’image",
+      "runtime.browse.row.alert": "Alerte",
+      "runtime.browse.row.oneMoreObject": "Encore {count} objet",
+      "runtime.browse.row.eventAbbreviation": "év.",
+      "runtime.browse.row.downloadRecordingFromCamera": "Télécharger depuis {camera}",
+    };
+    const config = card._config;
+    card._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => (translations[key] || key).replace(
+        /\{(\w+)\}/g,
+        (_, name) => String(values[name] ?? ""),
+      ),
+    };
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+    card._config = config;
+
+    return {
+      eventPreserved: list.querySelector('[data-ev="event-1"]') === eventRow,
+      reviewPreserved: list.querySelector('[data-review-id="review-1"]') === reviewRow,
+      recordingPreserved: list.querySelector("[data-rs]") === recordingRow,
+      thumbnailPreserved: eventRow.querySelector("img") === thumbnail,
+      clip: eventRow.querySelector('[data-fvc-i18n="runtime.browse.row.clips"]')?.textContent,
+      download: eventRow.querySelector('[data-dl-file="clip.mp4"]')?.title,
+      severity: reviewRow.querySelector('[data-fvc-i18n="runtime.browse.row.alert"]')?.textContent,
+      objects: [...reviewRow.querySelectorAll(".review-object-tag")].map((tag) => tag.textContent),
+      overflow: reviewRow.querySelector(".review-object-overflow")?.title,
+      recordingCount: recordingRow.querySelector('[data-fvc-i18n="runtime.browse.row.eventAbbreviation"]')?.textContent,
+      recordingDownload: recordingRow.querySelector("[data-rec-dl-start]")?.title,
+    };
+  });
+
+  expect(state).toEqual({
+    eventPreserved: true,
+    reviewPreserved: true,
+    recordingPreserved: true,
+    thumbnailPreserved: true,
+    clip: "Vidéos",
+    download: "Télécharger la vidéo",
+    severity: "Alerte",
+    objects: ["Person", "Car", "Dog", "Person", "Car"],
+    overflow: "Encore 1 objet",
+    recordingCount: "év.",
+    recordingDownload: "Télécharger depuis Garage",
+  });
+});
+
 test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

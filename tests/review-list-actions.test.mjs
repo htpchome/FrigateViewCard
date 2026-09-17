@@ -25,6 +25,69 @@ const ICONS = {
   starO: "<star-o />",
 };
 
+test("event row labels localize without translating Frigate event data", () => {
+  const translations = {
+    "runtime.browse.row.clips": "Vidéos",
+    "runtime.browse.row.favorite": "Ajouter aux favoris",
+    "runtime.browse.row.downloadClip": "Télécharger la vidéo",
+    "runtime.browse.row.viewSnapshot": "Voir l’image",
+  };
+  const model = buildEventListItemModel({
+    id: "event-1",
+    label: "person",
+    camera: "front_door",
+    has_clip: true,
+    has_snapshot: true,
+  }, {
+    cap: (value) => String(value || "").replace(/^./, (char) => char.toUpperCase()),
+    labelColor: () => "#fff",
+    icons: ICONS,
+    media: () => "/thumbnail.jpg",
+    durationLabel: () => 10,
+    formatTime: () => "1:00 pm",
+    browseTab: "clips",
+    showCameraLabel: true,
+    t: (key) => translations[key] || key,
+  });
+  const html = buildEventListItemHtml(model, {
+    icons: ICONS,
+    expanded: false,
+    compact: false,
+  });
+
+  assert.match(html, /data-fvc-i18n="runtime\.browse\.row\.clips">Vidéos/);
+  assert.match(html, /title="Ajouter aux favoris".*data-fvc-i18n-title="runtime\.browse\.row\.favorite"/);
+  assert.match(html, /title="Télécharger la vidéo".*data-fvc-i18n-title="runtime\.browse\.row\.downloadClip"/);
+  assert.match(html, /title="Voir l’image".*data-fvc-i18n-title="runtime\.browse\.row\.viewSnapshot"/);
+  assert.match(html, />Person<\/span>/);
+  assert.match(html, />front door<\/span>/);
+});
+
+test("review severity and hidden-object guidance localize without changing object tags", () => {
+  const t = (key, values = {}) => ({
+    "runtime.browse.row.alert": "Alerte",
+    "runtime.browse.row.oneMoreObject": "Encore {count} objet",
+  }[key] || key).replace("{count}", String(values.count ?? ""));
+  const model = buildReviewListItemModel({
+    id: "review-1",
+    severity: "alert",
+    data: { objects: ["person", "car", "dog"] },
+  }, {
+    cap: (value) => String(value || "").replace(/^./, (char) => char.toUpperCase()),
+    icons: ICONS,
+    resolveSourceEvent: () => null,
+    media: () => "",
+    t,
+  });
+  const html = buildReviewListItemHtml(model, { icons: ICONS });
+
+  assert.match(html, /data-fvc-i18n="runtime\.browse\.row\.alert">Alerte/);
+  assert.match(html, /title="Encore 1 objet"/);
+  assert.match(html, /data-fvc-i18n-values="\{&quot;count&quot;:1\}"/);
+  assert.match(html, />Person<\/span>/);
+  assert.match(html, />Car<\/span>/);
+});
+
 test("event and alert rows share ordered time, day, and single-zone metadata", () => {
   const eventModel = buildEventListItemModel(
     {
@@ -72,7 +135,7 @@ test("event and alert rows share ordered time, day, and single-zone metadata", (
     eventHtml,
     /class="subl list-bubble" style="--list-tag-color:#3b82f6">Resident/,
   );
-  assert.match(eventHtml, /class="bc list-bubble">Clips/);
+  assert.match(eventHtml, /data-fvc-i18n="runtime\.browse\.row\.clips">Clips/);
   assert.match(
     eventHtml,
     /data-thumb-fallback-src="\/media\/review-1\/front_door\/review_thumbnail\.webp"/,
@@ -144,7 +207,7 @@ test("event and alert rows share ordered time, day, and single-zone metadata", (
   assert.doesNotMatch(reviewHtml, /class="rev-t"/);
   assert.match(
     reviewHtml,
-    /class="review-severity-chip review-severity-chip--alert list-bubble">Alert/,
+    /data-fvc-i18n="runtime\.browse\.row\.alert">Alert/,
   );
   assert.match(reviewHtml, /list-item-middle--standard/);
   assert.match(reviewHtml, /list-item-middle--narrow/);
@@ -358,8 +421,8 @@ test("clip, snapshot, and kept rows render media actions in tab order", () => {
   }
 
   const snapshotHtml = renderForTab("snapshot");
-  assert.match(snapshotHtml, /class="bs list-bubble">Snapshot</);
-  assert.doesNotMatch(snapshotHtml, /class="bc list-bubble">Clips</);
+  assert.match(snapshotHtml, /data-fvc-i18n="runtime\.browse\.row\.snapshot">Snapshot</);
+  assert.doesNotMatch(snapshotHtml, /data-fvc-i18n="runtime\.browse\.row\.clips"/);
   assert.equal(snapshotHtml.includes('data-dl-file="snapshot.jpg"'), true);
   assert.equal(snapshotHtml.includes('data-dl-file="clip.mp4"'), false);
   assert.equal(snapshotHtml.includes('data-popup-media-target="clip"'), true);

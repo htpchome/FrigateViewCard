@@ -26,7 +26,7 @@ test("buildRecordingsListMarkup renders duration and event count for finished re
   assert.match(html, /data-re="225"/);
   assert.match(html, /<div class="ric">REC<\/div>/);
   assert.match(html, /<div class="rt">T100 – T225<\/div>/);
-  assert.match(html, /<div class="rsub">2m 5s · 3 ev<\/div>/);
+  assert.match(html, /<div class="rsub">2m 5s · 3 <span data-fvc-i18n="runtime\.browse\.row\.eventAbbreviation">ev<\/span><\/div>/);
   assert.match(html, />DL<\/button>/);
 });
 
@@ -44,4 +44,25 @@ test("buildRecordingsListMarkup uses nowSec for open-ended recordings and omits 
   assert.match(html, /<div class="rt">T600 – T645<\/div>/);
   assert.match(html, /<div class="rsub">45s<\/div>/);
   assert.doesNotMatch(html, / · 0 ev/);
+});
+
+test("recording row localizes its count and camera-specific download label", () => {
+  const t = (key, values = {}) => ({
+    "runtime.browse.row.eventAbbreviation": "év.",
+    "runtime.browse.row.downloadRecordingFromCamera": "Télécharger depuis {camera}",
+  }[key] || key).replace("{camera}", values.camera || "");
+  const html = buildRecordingsListMarkup({
+    recordings: [{
+      start_time: 100,
+      end_time: 150,
+      events: 2,
+      _fvc_group_member: 'Front "Door"',
+    }],
+    formatTime: (timestamp) => String(timestamp),
+    t,
+  });
+
+  assert.match(html, /2 <span data-fvc-i18n="runtime\.browse\.row\.eventAbbreviation">év\.<\/span>/);
+  assert.match(html, /title="Télécharger depuis Front &quot;Door&quot;"/);
+  assert.match(html, /data-fvc-i18n-values="\{&quot;camera&quot;:&quot;Front \\&quot;Door\\&quot;&quot;\}"/);
 });

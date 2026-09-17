@@ -46,7 +46,7 @@ const browseItemsSignature = (items) => {
   }
 };
 
-const appendProgressiveListMarkup = (list, html) => {
+const appendProgressiveListMarkup = (list, html, t) => {
   const documentRef = list?.ownerDocument || globalThis.document;
   if (
     !documentRef?.createElement ||
@@ -59,6 +59,7 @@ const appendProgressiveListMarkup = (list, html) => {
   const template = documentRef.createElement("template");
   template.innerHTML = html;
   const fragment = template.content;
+  applyLocalizedText(fragment, t);
   const lastSection = list.lastElementChild?.matches?.(".list-day-sec")
     ? list.lastElementChild
     : null;
@@ -187,6 +188,7 @@ export class BrowseRenderController {
   }
 
   relocalizeBrowseLabels() {
+    this._reviewRowMarkupCache.clear();
     const list = this._host._pageShellRegionElement("browse", "#list");
     for (const dayLabel of list?.querySelectorAll?.(".list-day-label[data-day-ts]") || []) {
       const timestamp = Number(dayLabel.dataset.dayTs);
@@ -441,17 +443,10 @@ export class BrowseRenderController {
       return false;
     }
     replaceListMarkupPreservingMedia(list, nextHtml);
-    this._localizeEndMarker(list);
+    applyLocalizedText(list, this._host._localization?.t);
     this._lastListElement = list;
     this._host._lastRenderedListHtml = nextHtml;
     return true;
-  }
-
-  _localizeEndMarker(list) {
-    const t = this._host._localization?.t;
-    if (typeof t === "function") {
-      setLocalizedText(list?.querySelector?.(".end"), "runtime.browse.end", t);
-    }
   }
 
   _renderRecordingsTabList(list) {
@@ -694,6 +689,7 @@ export class BrowseRenderController {
       const appended = this._appendProgressiveListMarkup(
         list,
         buildBatchMarkup(items.slice(start, end), isFinal),
+        this._host._localization?.t,
       );
       if (!appended) {
         state.status = "complete";
@@ -703,7 +699,6 @@ export class BrowseRenderController {
         return;
       }
       state.renderedCount = end;
-      if (isFinal) this._localizeEndMarker(list);
       if (!isFinal) {
         this._scheduleBrowseProgressiveFrame(appendNextBatch);
         return;
@@ -765,13 +760,7 @@ export class BrowseRenderController {
         })
       : renderState.html;
     applyListMarkupWithOlderHint({
-      setHtml: (nextHtml) => {
-        const changed = this.setListHtmlIfChanged(list, nextHtml);
-        if (renderState.isEmpty && changed) {
-          applyLocalizedText(list, this._host._localization?.t);
-        }
-        return changed;
-      },
+      setHtml: (nextHtml) => this.setListHtmlIfChanged(list, nextHtml),
       html,
       isEmpty: renderState.isEmpty,
       syncOlderHint,

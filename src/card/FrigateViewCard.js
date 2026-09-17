@@ -5672,6 +5672,7 @@ export class FrigateViewCard extends HTMLElement {
       downloadIcon: ICONS.download,
       formatTime: (ts) => this._time(ts),
       nowSec: this._winEnd || Date.now() / 1000,
+      t: this._localization.t,
     });
   }
 
@@ -8109,6 +8110,7 @@ export class FrigateViewCard extends HTMLElement {
       browseTab: this._tab,
       showDownloadButtons,
       showDurationBadge: this._tab !== "snapshot",
+      t: this._localization.t,
       fallbackThumbSrc: fallbackReview
         ? this._reviewThumbnailForCamera(fallbackReview, ev?.camera)
         : "",
@@ -8416,6 +8418,7 @@ export class FrigateViewCard extends HTMLElement {
       ),
       showDownloadButtons,
       showFavoriteButton,
+      t: this._localization.t,
     });
     return buildReviewListItemHtml(model, { cap, icons: ICONS });
   }

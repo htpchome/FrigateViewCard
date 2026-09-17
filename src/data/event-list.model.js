@@ -1,6 +1,18 @@
 import { buildBrowseThumbnailImageMarkup } from "../features/browse/thumbnail.tmpl.js";
 import { escapeHtml, escapeHtmlAttribute } from "../shared/html.js";
 
+const rowText = (t, key, fallback) =>
+  typeof t === "function" ? t(`runtime.browse.row.${key}`) : fallback;
+
+const rowActionLabel = (t, key, fallback) => {
+  const text = escapeHtmlAttribute(rowText(t, key, fallback));
+  const translationKey = `runtime.browse.row.${key}`;
+  return `title="${text}" aria-label="${text}" data-fvc-i18n-title="${translationKey}" data-fvc-i18n-aria-label="${translationKey}"`;
+};
+
+const rowBadge = (className, t, key, fallback) =>
+  `<span class="${className} list-bubble" data-fvc-i18n="runtime.browse.row.${key}">${escapeHtml(rowText(t, key, fallback))}</span>`;
+
 export function buildEventListItemModel(eventItem, deps) {
   const {
     cap,
@@ -17,6 +29,7 @@ export function buildEventListItemModel(eventItem, deps) {
     showDownloadButtons = true,
     showDurationBadge = true,
     fallbackThumbSrc = "",
+    t,
   } = deps || {};
 
   const score =
@@ -51,25 +64,25 @@ export function buildEventListItemModel(eventItem, deps) {
       : `<div class="tph">${icons.person}</div>`;
   const isSnapshotTab = browseTab === "snapshot";
   const badge = isSnapshotTab
-    ? '<span class="bs list-bubble">Snapshot</span>'
+    ? rowBadge("bs", t, "snapshot", "Snapshot")
     : browseTab === "clips"
-      ? '<span class="bc list-bubble">Clips</span>'
+      ? rowBadge("bc", t, "clips", "Clips")
       : eventItem?.has_clip
-        ? '<span class="bc list-bubble">Clip</span>'
+        ? rowBadge("bc", t, "clip", "Clip")
         : eventItem?.has_snapshot
-          ? '<span class="bs list-bubble">Snapshot</span>'
+          ? rowBadge("bs", t, "snapshot", "Snapshot")
           : "";
   const clipAction =
     showDownloadButtons && eventItem?.has_clip
       ? isSnapshotTab
-        ? `<button class="tool ico" data-popup-event-id="${escapeHtmlAttribute(eventItem.id)}" data-popup-media-target="clip" title="View Clip">${icons.clips}</button>`
-        : `<button class="tool ico" data-dl="${escapeHtmlAttribute(eventItem.id)}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
+        ? `<button class="tool ico" data-popup-event-id="${escapeHtmlAttribute(eventItem.id)}" data-popup-media-target="clip" ${rowActionLabel(t, "viewClip", "View Clip")}>${icons.clips}</button>`
+        : `<button class="tool ico" data-dl="${escapeHtmlAttribute(eventItem.id)}" data-dl-file="clip.mp4" ${rowActionLabel(t, "downloadClip", "Download clip")}>${icons.download}</button>`
       : "";
   const snapshotAction =
     showDownloadButtons && eventItem?.has_snapshot
       ? isSnapshotTab
-        ? `<button class="tool ico" data-dl="${escapeHtmlAttribute(eventItem.id)}" data-dl-file="snapshot.jpg" title="Download snapshot">${icons.download}</button>`
-        : `<button class="tool ico" data-popup-event-id="${escapeHtmlAttribute(eventItem.id)}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>`
+        ? `<button class="tool ico" data-dl="${escapeHtmlAttribute(eventItem.id)}" data-dl-file="snapshot.jpg" ${rowActionLabel(t, "downloadSnapshot", "Download snapshot")}>${icons.download}</button>`
+        : `<button class="tool ico" data-popup-event-id="${escapeHtmlAttribute(eventItem.id)}" data-popup-media-target="snapshot" ${rowActionLabel(t, "viewSnapshot", "View Snapshot")}>${icons.snapshot}</button>`
       : "";
   const mediaActions = isSnapshotTab
     ? `${snapshotAction}${clipAction}`
@@ -78,8 +91,8 @@ export function buildEventListItemModel(eventItem, deps) {
     ? `<span class="cam-badge list-bubble">${escapeHtml(String(eventItem?.camera || "").replace(/_/g, " "))}</span>`
     : "";
   const favBtn = eventItem?.retain_indefinitely
-    ? `<button class="tool ico fav on" data-fav="${escapeHtmlAttribute(eventItem.id)}">${icons.star}</button>`
-    : `<button class="tool ico fav" data-fav="${escapeHtmlAttribute(eventItem.id)}">${icons.starO}</button>`;
+    ? `<button class="tool ico fav on" data-fav="${escapeHtmlAttribute(eventItem.id)}" ${rowActionLabel(t, "unfavorite", "Unfavorite")}>${icons.star}</button>`
+    : `<button class="tool ico fav" data-fav="${escapeHtmlAttribute(eventItem.id)}" ${rowActionLabel(t, "favorite", "Favorite")}>${icons.starO}</button>`;
   return {
     id: eventItem?.id,
     labelColorValue: labelColor(eventItem?.label),

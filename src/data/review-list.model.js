@@ -1,6 +1,15 @@
 import { buildBrowseThumbnailImageMarkup } from "../features/browse/thumbnail.tmpl.js";
 import { escapeHtml, escapeHtmlAttribute } from "../shared/html.js";
 
+const rowText = (t, key, fallback, values = {}) =>
+  typeof t === "function" ? t(`runtime.browse.row.${key}`, values) : fallback;
+
+const rowActionLabel = (t, key, fallback) => {
+  const text = escapeHtmlAttribute(rowText(t, key, fallback));
+  const translationKey = `runtime.browse.row.${key}`;
+  return `title="${text}" aria-label="${text}" data-fvc-i18n-title="${translationKey}" data-fvc-i18n-aria-label="${translationKey}"`;
+};
+
 export function buildReviewListItemModel(review, deps) {
   const {
     cap,
@@ -16,9 +25,11 @@ export function buildReviewListItemModel(review, deps) {
     showDownloadButtons = true,
     showFavoriteButton = true,
     fallbackThumbSrc = "",
+    t,
   } = deps || {};
 
   const sev = review?.severity === "alert" ? "alert" : "detection";
+  const severityKey = `runtime.browse.row.${sev}`;
   const firstDet =
     (review?.data?.detections && review.data.detections[0]) || "";
   const sourceEvent = resolveSourceEvent(review);
@@ -30,6 +41,8 @@ export function buildReviewListItemModel(review, deps) {
   const mediaEvent = sourceEvent || favEv;
   const metadataTitle = String(review?.data?.metadata?.title || "").trim();
   const rawObjects = (review?.data?.objects || []).filter(Boolean);
+  const usesSeverityFallback =
+    !rawObjects.length && !metadataTitle && !mediaEvent?.label;
   if (!rawObjects.length) {
     rawObjects.push(metadataTitle || mediaEvent?.label || sev);
   }
@@ -50,19 +63,22 @@ export function buildReviewListItemModel(review, deps) {
   const mediaEventId = String(mediaEvent?.id || firstDet || "");
   const favBtn = showFavoriteButton && firstDet
     ? favEv?.retain_indefinitely
-      ? `<button class="tool ico fav on" data-fav="${escapeHtmlAttribute(firstDet)}" title="Unfavorite">${icons.star}</button>`
-      : `<button class="tool ico fav" data-fav="${escapeHtmlAttribute(firstDet)}" title="Favorite">${icons.starO}</button>`
+      ? `<button class="tool ico fav on" data-fav="${escapeHtmlAttribute(firstDet)}" ${rowActionLabel(t, "unfavorite", "Unfavorite")}>${icons.star}</button>`
+      : `<button class="tool ico fav" data-fav="${escapeHtmlAttribute(firstDet)}" ${rowActionLabel(t, "favorite", "Favorite")}>${icons.starO}</button>`
     : "";
   const clipAction =
     showDownloadButtons && mediaEvent?.has_clip
-      ? `<button class="tool ico" data-dl="${escapeHtmlAttribute(mediaEventId)}" data-dl-file="clip.mp4" title="Download clip">${icons.download}</button>`
+      ? `<button class="tool ico" data-dl="${escapeHtmlAttribute(mediaEventId)}" data-dl-file="clip.mp4" ${rowActionLabel(t, "downloadClip", "Download clip")}>${icons.download}</button>`
       : "";
   const snapshotAction =
     showDownloadButtons && mediaEvent?.has_snapshot
-      ? `<button class="tool ico" data-popup-event-id="${escapeHtmlAttribute(mediaEventId)}" data-popup-media-target="snapshot" title="View Snapshot">${icons.snapshot}</button>`
+      ? `<button class="tool ico" data-popup-event-id="${escapeHtmlAttribute(mediaEventId)}" data-popup-media-target="snapshot" ${rowActionLabel(t, "viewSnapshot", "View Snapshot")}>${icons.snapshot}</button>`
       : "";
   const objectTags = objects.map((label) => ({
-    text: cap(label),
+    text: usesSeverityFallback
+      ? rowText(t, sev, cap(label))
+      : cap(label),
+    ...(usesSeverityFallback ? { translationKey: severityKey } : {}),
     color:
       typeof labelColor === "function"
         ? labelColor(String(label).toLowerCase())
@@ -86,7 +102,9 @@ export function buildReviewListItemModel(review, deps) {
     reviewId: review?.id || "",
     firstDet,
     sev,
-    severityLabel: cap(sev),
+    severityLabel: rowText(t, sev, cap(sev)),
+    severityKey,
+    t,
     title,
     cameraLabel,
     objectTags,
@@ -124,11 +142,21 @@ const buildReviewObjectTagsHtml = (model, { limit } = {}) => {
     : objectTags;
   const hiddenCount = objectTags.length - visibleTags.length;
   const tagsHtml = visibleTags
-    .map(({ text, color }) => `<span class="tb review-object-tag list-bubble" style="--list-tag-color:${escapeHtmlAttribute(color)}">${escapeHtml(text)}</span>`)
+    .map(({ text, color, translationKey }) => `<span class="tb review-object-tag list-bubble" style="--list-tag-color:${escapeHtmlAttribute(color)}"${translationKey ? ` data-fvc-i18n="${translationKey}"` : ""}>${escapeHtml(text)}</span>`)
     .join("");
-  const overflowHtml = hiddenCount > 0
-    ? `<span class="review-object-overflow list-bubble" title="${hiddenCount} more detected object${hiddenCount === 1 ? "" : "s"}" aria-label="${hiddenCount} more detected object${hiddenCount === 1 ? "" : "s"}">+${hiddenCount}</span>`
-    : "";
+  let overflowHtml = "";
+  if (hiddenCount > 0) {
+    const overflowKey = hiddenCount === 1 ? "oneMoreObject" : "moreObjects";
+    const overflowFallback = `${hiddenCount} more detected object${hiddenCount === 1 ? "" : "s"}`;
+    const overflowText = escapeHtmlAttribute(rowText(
+      model?.t,
+      overflowKey,
+      overflowFallback,
+      { count: hiddenCount },
+    ));
+    const overflowValues = escapeHtmlAttribute(JSON.stringify({ count: hiddenCount }));
+    overflowHtml = `<span class="review-object-overflow list-bubble" title="${overflowText}" aria-label="${overflowText}" data-fvc-i18n-title="runtime.browse.row.${overflowKey}" data-fvc-i18n-aria-label="runtime.browse.row.${overflowKey}" data-fvc-i18n-values="${overflowValues}">+${hiddenCount}</span>`;
+  }
   return `${tagsHtml}${overflowHtml}`;
 };
 
@@ -153,7 +181,7 @@ const buildReviewMetaHtml = (
     <span class="list-item-meta-unit time-meta">${icons.clock || ""}<span>${escapeHtml(model.timeLabel)}</span></span>
     ${model.dayLabel ? `<span class="list-item-meta-unit date-meta">${icons.calendar || ""}<span>${escapeHtml(model.dayLabel)}</span></span>` : ""}
     ${model.zone ? `<span class="list-item-meta-unit zone-meta">${icons.pin || ""}<span>${escapeHtml(model.zone)}</span></span>` : ""}
-    ${showSeverity ? `<span class="review-severity-chip review-severity-chip--${model.sev} list-bubble">${cap(model.sev)}</span>` : ""}
+    ${showSeverity ? `<span class="review-severity-chip review-severity-chip--${model.sev} list-bubble" data-fvc-i18n="${model.severityKey || `runtime.browse.row.${model.sev}`}">${escapeHtml(model.severityLabel || cap(model.sev))}</span>` : ""}
   </div>`;
 
 export function buildReviewListItemStandardPresentationHtml(model, deps) {
@@ -196,7 +224,7 @@ export function buildReviewListItemHtml(model, deps) {
                   thumbId: model.firstDet,
                 })}
                   <div class="tph" style="display:none">${icons.person}</div>
-                  <span class="review-thumbnail-severity review-severity-chip review-severity-chip--${model.sev} list-bubble">${escapeHtml(model.severityLabel)}</span>
+                  <span class="review-thumbnail-severity review-severity-chip review-severity-chip--${model.sev} list-bubble" data-fvc-i18n="${model.severityKey || `runtime.browse.row.${model.sev}`}">${escapeHtml(model.severityLabel)}</span>
                   ${model.duration != null ? `<div class="ed">${escapeHtml(model.duration)}s</div>` : ""}
                 </div>`
     : "";
