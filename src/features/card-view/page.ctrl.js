@@ -7,6 +7,7 @@ import {
   GRID_ALERT_HOLD_MS,
 } from "../../constants.js";
 import { CleanupController } from "../../shared/cleanup.js";
+import { escapeHtmlAttribute } from "../../shared/html.js";
 import { resolveCameraAwareText } from "../../shared/page-text.js";
 import {
   collectFilterLabelsFromEvents,
@@ -172,6 +173,7 @@ export class CardViewPageController {
       formatDateTime: (timestamp) =>
         this._host._dateTimeLabel?.(timestamp) || "",
       formatTime: (timestamp) => this._host._time?.(timestamp) || "",
+      t: this._host._localization?.t,
       onSelectEvent: (id, mediaType) => {
         this._host._pauseSlideshowForInteraction?.();
         this._host._popupMediaLoaderController?.showCarouselEventById?.(
@@ -538,12 +540,18 @@ export class CardViewPageController {
     for (const handle of this._host.shadowRoot?.querySelectorAll?.(
       "[data-card-view-drawer-toggle]",
     ) || []) {
+      const key = this._drawerOpen
+        ? "runtime.cardView.closeActivityDrawer"
+        : "runtime.cardView.openActivityDrawer";
       const label = this._drawerOpen
         ? "Close activity drawer"
         : "Open activity drawer";
+      const localizedLabel = this._host._localization?.t?.(key) || label;
       handle.setAttribute?.("aria-expanded", String(this._drawerOpen));
-      handle.setAttribute?.("aria-label", label);
-      handle.setAttribute?.("title", label);
+      handle.setAttribute?.("data-fvc-i18n-aria-label", key);
+      handle.setAttribute?.("data-fvc-i18n-title", key);
+      handle.setAttribute?.("aria-label", localizedLabel);
+      handle.setAttribute?.("title", localizedLabel);
     }
     this.syncFooterControls();
   }
@@ -692,9 +700,23 @@ export class CardViewPageController {
     );
     sourceIndicator.hidden = !sourceState.visible;
     sourceIndicator.title = sourceState.label;
+    const sourceKey = sourceState.visible
+      ? "runtime.cardView.liveSourceWithType"
+      : "runtime.live.liveSource";
+    sourceIndicator.setAttribute?.("data-fvc-i18n-aria-label", sourceKey);
+    if (sourceState.visible) {
+      sourceIndicator.setAttribute?.(
+        "data-fvc-i18n-values",
+        JSON.stringify({ source: sourceState.label }),
+      );
+    } else {
+      sourceIndicator.removeAttribute?.("data-fvc-i18n-values");
+    }
     sourceIndicator.setAttribute?.(
       "aria-label",
-      sourceState.visible ? `${sourceState.label} live source` : "Live source",
+      this._host._localization?.t?.(sourceKey, {
+        source: sourceState.label,
+      }) || (sourceState.visible ? `${sourceState.label} live source` : "Live source"),
     );
     if (sourceIcon) sourceIcon.hidden = !sourceState.showIcon;
     if (sourceText) {
@@ -894,6 +916,7 @@ export class CardViewPageController {
     panel.hidden = !this._mediaDrawerCalendarOpen;
     if (this._mediaDrawerCalendarOpen) {
       panel.innerHTML = this._calendarPanelMarkup();
+      applyLocalizedText(panel, this._host._localization?.t);
     }
   }
 
@@ -931,6 +954,7 @@ export class CardViewPageController {
       filterZone: this._host._filterZone,
       favOnly: this._host._favOnly,
     }) || "";
+    applyLocalizedText(panel, this._host._localization?.t);
   }
 
   _handleMediaDrawerFilterOption(target) {
@@ -994,6 +1018,7 @@ export class CardViewPageController {
     if (markup !== this._standaloneModeControlsMarkup) {
       container.innerHTML = markup;
       this._standaloneModeControlsMarkup = markup;
+      applyLocalizedText(container, this._host._localization?.t);
     }
     this._syncStandaloneGridIndicator(container);
     this.syncStandaloneSlideshowCountdown();
@@ -1143,6 +1168,7 @@ export class CardViewPageController {
       toolbar.innerHTML = toolbarMarkup;
       this._toolbarContent = toolbar;
       this._toolbarMarkup = toolbarMarkup;
+      applyLocalizedText(toolbar, this._host._localization?.t);
     }
     this._host._syncTwoWayTalkSoundwaveSurface?.();
     this._host._linkedLightController?.sync?.();
@@ -1211,9 +1237,14 @@ export class CardViewPageController {
       const loading = this._mode === "recordings"
         ? this._recordingsLoading
         : this._alertsLoading;
+      const emptyKey = loading
+        ? "runtime.cardView.loading"
+        : this._mode === "recordings"
+          ? "runtime.cardView.noRecordings"
+          : "runtime.cardView.noRecentAlerts";
       this._setActivityMarkup(
         content,
-        `<div class="card-view-empty">${loading ? "Loading…" : this._mode === "recordings" ? "No recordings for this day" : "No recent alerts"}</div>`,
+        `<div class="card-view-empty" data-fvc-i18n="${emptyKey}">${loading ? "Loading…" : this._mode === "recordings" ? "No recordings for this day" : "No recent alerts"}</div>`,
       );
       this.syncScrollControls();
       return;
@@ -1257,6 +1288,7 @@ export class CardViewPageController {
       return false;
     }
     content.innerHTML = normalized;
+    applyLocalizedText(content, this._host._localization?.t);
     this._activityContent = content;
     this._activityMarkup = normalized;
     this._boundScroller = null;
@@ -1275,6 +1307,13 @@ export class CardViewPageController {
     const durationLabel = `${minutes ? `${minutes}m ` : ""}${seconds}s`;
     const cameraEntity = String(recording?._fvc_camera_entity || "");
     const member = String(recording?._fvc_group_member || "");
+    const eventCount = Number(recording?.events) || 0;
+    const eventCountKey = eventCount === 1
+      ? "runtime.cardView.oneEvent"
+      : "runtime.cardView.eventCount";
+    const eventCountMarkup = eventCount
+      ? ` · <span data-fvc-i18n="${eventCountKey}" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ count: eventCount }))}">${eventCount} ${eventCount === 1 ? "event" : "events"}</span>`
+      : "";
     const cameraData = cameraEntity
       ? ` data-rec-camera-entity="${cameraEntity}"`
       : "";
@@ -1282,9 +1321,9 @@ export class CardViewPageController {
       <div class="ric">${ICONS.recordings}${member ? `<span class="recording-group-member">${member}</span>` : ""}</div>
       <div class="rinf">
         <div class="rt">${this._host._dateTimeLabel(start)}</div>
-        <div class="rsub">${this._host._time(start)} – ${this._host._time(end)} · ${durationLabel}${recording?.events ? ` · ${recording.events} events` : ""}</div>
+        <div class="rsub">${this._host._time(start)} – ${this._host._time(end)} · ${durationLabel}${eventCountMarkup}</div>
       </div>
-      <button class="rp" data-rec-dl-start="${start}" data-rec-dl-end="${end}"${cameraData} title="Download recording" aria-label="Download recording">${ICONS.download}</button>
+      <button class="rp" data-rec-dl-start="${start}" data-rec-dl-end="${end}"${cameraData} title="Download recording" aria-label="Download recording" data-fvc-i18n-title="runtime.cardView.downloadRecording" data-fvc-i18n-aria-label="runtime.cardView.downloadRecording">${ICONS.download}</button>
     </div>`;
   }
 
@@ -1801,6 +1840,7 @@ export class CardViewPageController {
     panel.hidden = !this._calendarOpen;
     if (!this._calendarOpen) return;
     panel.innerHTML = this._calendarPanelMarkup();
+    applyLocalizedText(panel, this._host._localization?.t);
   }
 
   _formatDateString(parts) {

@@ -755,6 +755,136 @@ test("popup metadata and unavailable-media copy localize in place", async ({ pag
   });
 });
 
+test("Card View drawers and mode labels localize without remounting live media", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const translations = {
+      "runtime.cardView.alerts": "Alertes",
+      "runtime.cardView.clips": "Vidéos",
+      "runtime.cardView.showRecordings": "Voir les enregistrements",
+      "runtime.cardView.gotoRecordings": "Aller aux enregistrements",
+      "runtime.cardView.showRecentAlerts": "Voir les alertes récentes",
+      "runtime.cardView.gotoAlerts": "Aller aux alertes",
+      "runtime.cardView.showCameraAlerts": "Voir les alertes de {camera}",
+      "runtime.cardView.closeActivityDrawer": "Fermer le panneau",
+      "runtime.cardView.openActivityDrawer": "Ouvrir le panneau",
+      "runtime.cardView.openMediaDrawer": "Ouvrir les médias",
+      "runtime.cardView.closeMediaDrawer": "Fermer les médias",
+      "runtime.cardView.drawer.noAlerts": "Aucune alerte disponible",
+      "runtime.cardView.drawer.noClips": "Aucune vidéo disponible",
+    };
+    const t = (key, values = {}) => (translations[key] || key).replace(
+      /\{(\w+)\}/g,
+      (token, name) => values[name] ?? token,
+    );
+    const switchLanguage = (card) => {
+      const config = card._config;
+      card._localization = { updateHass: () => true, t };
+      card._cardViewPageController._mediaDrawerController._t = t;
+      card._config = null;
+      card.hass = { locale: { language: "fr" } };
+      card._config = config;
+    };
+
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      card_view_page_enabled: true,
+      card_view_view_mode: "bottom-panel-open",
+    });
+    card._pageId = "card-view";
+    card._renderShell();
+    card._cardViewPageController.renderToolbar();
+    const root = card.shadowRoot;
+    const live = root.querySelector("#live-stage");
+    const video = document.createElement("video");
+    live.append(video);
+    const swap = root.querySelector("[data-card-view-swap]");
+    const activityHandle = root.querySelector("[data-card-view-drawer-toggle]");
+    switchLanguage(card);
+    const activityBefore = {
+      livePreserved: live.querySelector("video") === video,
+      swapPreserved: root.querySelector("[data-card-view-swap]") === swap,
+      handlePreserved: root.querySelector("[data-card-view-drawer-toggle]") === activityHandle,
+      heading: root.querySelector(".card-view-activity-heading")?.textContent,
+      swapTitle: swap.title,
+      swapText: swap.querySelector(".card-view-mode-switch-label")?.textContent,
+      handleTitle: activityHandle.title,
+      scopeText: root.querySelector(".card-view-alert-scope-switch .card-view-mode-switch-label")?.textContent,
+    };
+    card._cardViewPageController.setDrawerOpen(false);
+    const closedHandleTitle = activityHandle.title;
+    card._cardViewPageController._mode = "recordings";
+    card._cardViewPageController.renderToolbar();
+    const recordingsModeTitle = root.querySelector("[data-card-view-swap]")?.title;
+
+    const overlay = document.createElement("frigate-view-card");
+    document.body.append(overlay);
+    overlay.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      card_view_page_enabled: true,
+      card_view_view_mode: "video-only",
+      card_view_media_drawer_enabled: true,
+    });
+    overlay._pageId = "card-view";
+    overlay._renderShell();
+    const overlayRoot = overlay.shadowRoot;
+    const drawer = overlay._cardViewPageController._mediaDrawerController;
+    drawer._onOpenChange = () => {};
+    drawer._onSelectType = () => {};
+    drawer._getEvents = () => [];
+    drawer.setOpen(true);
+    const mediaHandle = overlayRoot.querySelector("[data-card-view-media-drawer-toggle]");
+    const alertsTab = overlayRoot.querySelector('[data-card-view-media-drawer-type="alerts"]');
+    const empty = overlayRoot.querySelector(".card-view-media-drawer-empty");
+    switchLanguage(overlay);
+    const mediaBefore = {
+      handlePreserved: overlayRoot.querySelector("[data-card-view-media-drawer-toggle]") === mediaHandle,
+      tabPreserved: overlayRoot.querySelector('[data-card-view-media-drawer-type="alerts"]') === alertsTab,
+      emptyPreserved: overlayRoot.querySelector(".card-view-media-drawer-empty") === empty,
+      handleTitle: mediaHandle.title,
+      alertsTab: alertsTab.textContent,
+      empty: empty?.textContent,
+    };
+    drawer.selectType("clips");
+    return {
+      activityBefore,
+      closedHandleTitle,
+      recordingsModeTitle,
+      mediaBefore,
+      clipsTab: overlayRoot.querySelector('[data-card-view-media-drawer-type="clips"]')?.textContent,
+      clipsEmpty: overlayRoot.querySelector(".card-view-media-drawer-empty")?.textContent,
+    };
+  });
+
+  expect(state).toEqual({
+    activityBefore: {
+      livePreserved: true,
+      swapPreserved: true,
+      handlePreserved: true,
+      heading: "Alertes",
+      swapTitle: "Voir les enregistrements",
+      swapText: "Aller aux enregistrements",
+      handleTitle: "Fermer le panneau",
+      scopeText: "Voir les alertes de Front",
+    },
+    closedHandleTitle: "Ouvrir le panneau",
+    recordingsModeTitle: "Voir les alertes récentes",
+    mediaBefore: {
+      handlePreserved: true,
+      tabPreserved: true,
+      emptyPreserved: true,
+      handleTitle: "Fermer les médias",
+      alertsTab: "Alertes",
+      empty: "Aucune alerte disponible",
+    },
+    clipsTab: "Vidéos",
+    clipsEmpty: "Aucune vidéo disponible",
+  });
+});
+
 test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

@@ -1,6 +1,7 @@
 import { cap } from "../../helpers.js";
 import { CleanupController } from "../../shared/cleanup.js";
 import { escapeHtml, escapeHtmlAttribute } from "../../shared/html.js";
+import { applyLocalizedText } from "../localization/localized-dom.js";
 import {
   CARD_VIEW_MEDIA_DRAWER_ORDER,
   CARD_VIEW_MEDIA_DRAWER_TYPES,
@@ -24,6 +25,14 @@ const DRAWER_LABELS = Object.freeze({
   [CARD_VIEW_MEDIA_DRAWER_TYPES.snapshots]: "Snapshots",
   [CARD_VIEW_MEDIA_DRAWER_TYPES.recordings]: "Recordings",
   [CARD_VIEW_MEDIA_DRAWER_TYPES.favorites]: "Favorites",
+});
+
+const DRAWER_EMPTY_TRANSLATION_KEYS = Object.freeze({
+  [CARD_VIEW_MEDIA_DRAWER_TYPES.alerts]: ["loadingAlerts", "noAlerts"],
+  [CARD_VIEW_MEDIA_DRAWER_TYPES.clips]: ["loadingClips", "noClips"],
+  [CARD_VIEW_MEDIA_DRAWER_TYPES.snapshots]: ["loadingSnapshots", "noSnapshots"],
+  [CARD_VIEW_MEDIA_DRAWER_TYPES.recordings]: ["loadingRecordings", "noRecordings"],
+  [CARD_VIEW_MEDIA_DRAWER_TYPES.favorites]: ["loadingFavorites", "noFavorites"],
 });
 
 export const resolveCardViewMediaDrawerPopupType = (value) =>
@@ -59,6 +68,7 @@ export const buildCardViewMediaDrawerItemMarkup = ({
   thumbnailUrl = "",
   title = "",
   label = "",
+  labelKey = "",
   time = "",
   placeholderIcon = "",
 } = {}) => {
@@ -70,7 +80,7 @@ export const buildCardViewMediaDrawerItemMarkup = ({
       <span class="card-view-media-drawer-placeholder" aria-hidden="true">${placeholderIcon}</span>
       <img src="${escapeHtmlAttribute(thumbnailUrl)}" alt="" loading="lazy" decoding="async" data-card-view-media-thumbnail>
     </span>
-    <span class="card-view-media-drawer-meta"><span>${escapeHtml(label)}</span><span>${escapeHtml(time)}</span></span>
+    <span class="card-view-media-drawer-meta"><span${labelKey ? ` data-fvc-i18n="${labelKey}"` : ""}>${escapeHtml(label)}</span><span>${escapeHtml(time)}</span></span>
   </button>`;
 };
 
@@ -78,6 +88,8 @@ export const buildCardViewMediaDrawerRecordingMarkup = ({
   recording = null,
   title = "",
   label = "Recording",
+  labelKey = "",
+  labelValues = {},
   time = "",
   placeholderIcon = "",
 } = {}) => {
@@ -85,11 +97,14 @@ export const buildCardViewMediaDrawerRecordingMarkup = ({
   const end = Math.floor(Number(recording?.end_time) || Date.now() / 1000);
   if (!start || end <= start) return "";
   const cameraEntity = String(recording?._fvc_camera_entity || "");
+  const valuesAttribute = Object.keys(labelValues).length
+    ? ` data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify(labelValues))}"`
+    : "";
   return `<button class="card-view-media-drawer-item" type="button" data-card-view-media-recording-start="${start}" data-card-view-media-recording-end="${end}"${cameraEntity ? ` data-card-view-media-recording-entity="${escapeHtmlAttribute(cameraEntity)}"` : ""} title="${escapeHtmlAttribute(title)}">
     <span class="card-view-media-drawer-thumbnail card-view-media-drawer-thumbnail--recording">
       <span class="card-view-media-drawer-placeholder" aria-hidden="true">${placeholderIcon}</span>
     </span>
-    <span class="card-view-media-drawer-meta"><span>${escapeHtml(label)}</span><span>${escapeHtml(time)}</span></span>
+    <span class="card-view-media-drawer-meta"><span${labelKey ? ` data-fvc-i18n="${labelKey}"${valuesAttribute}` : ""}>${escapeHtml(label)}</span><span>${escapeHtml(time)}</span></span>
   </button>`;
 };
 
@@ -143,6 +158,7 @@ export class CardViewMediaDrawerController {
     mediaUrl = () => "",
     formatDateTime = () => "",
     formatTime = () => "",
+    t,
     onSelectEvent = () => {},
     onSelectRecording = () => {},
     onSelectType = () => {},
@@ -167,6 +183,7 @@ export class CardViewMediaDrawerController {
     this._mediaUrl = mediaUrl;
     this._formatDateTime = formatDateTime;
     this._formatTime = formatTime;
+    this._t = t;
     this._onSelectEvent = onSelectEvent;
     this._onSelectRecording = onSelectRecording;
     this._onSelectType = onSelectType;
@@ -272,10 +289,16 @@ export class CardViewMediaDrawerController {
     }
     const handle = this._query("[data-card-view-media-drawer-toggle]");
     if (handle) {
+      const key = open
+        ? "runtime.cardView.closeMediaDrawer"
+        : "runtime.cardView.openMediaDrawer";
       const label = open ? "Close media drawer" : "Open media drawer";
+      const localizedLabel = this._t?.(key) || label;
       handle.setAttribute?.("aria-expanded", String(open));
-      handle.setAttribute?.("aria-label", label);
-      handle.setAttribute?.("title", label);
+      handle.setAttribute?.("data-fvc-i18n-aria-label", key);
+      handle.setAttribute?.("data-fvc-i18n-title", key);
+      handle.setAttribute?.("aria-label", localizedLabel);
+      handle.setAttribute?.("title", localizedLabel);
     }
   }
 
@@ -336,11 +359,16 @@ export class CardViewMediaDrawerController {
       const isLoading = isRecording
         ? this._isRecordingsLoading()
         : this._isEventsLoading(drawerType);
+      const emptyKeySuffix = DRAWER_EMPTY_TRANSLATION_KEYS[drawerType]?.[
+        isLoading ? 0 : 1
+      ];
+      const emptyKey = `runtime.cardView.drawer.${emptyKeySuffix}`;
       scroller.innerHTML = items.length
         ? isRecording
           ? recordings.map((recording) => this._recordingMarkup(recording)).join("")
           : events.map((event) => this._eventMarkup(event, drawerType)).join("")
-        : `<div class="card-view-media-drawer-empty">${isLoading ? `Loading ${DRAWER_LABELS[drawerType].toLowerCase()}…` : `No ${DRAWER_LABELS[drawerType].toLowerCase()} available`}</div>`;
+        : `<div class="card-view-media-drawer-empty" data-fvc-i18n="${emptyKey}">${isLoading ? `Loading ${DRAWER_LABELS[drawerType].toLowerCase()}…` : `No ${DRAWER_LABELS[drawerType].toLowerCase()} available`}</div>`;
+      applyLocalizedText(scroller, this._t);
       scroller.scrollTop = previousScrollTop;
       for (const image of scroller.querySelectorAll?.(
         "[data-card-view-media-thumbnail]",
@@ -470,6 +498,7 @@ export class CardViewMediaDrawerController {
       ),
       title: this._formatDateTime(event.start_time || 0),
       label: cap(event.label || "event"),
+      labelKey: event.label ? "" : "runtime.cardView.event",
       time: this._formatTime(event.start_time || 0),
       placeholderIcon: this._icons.person || "",
     });
@@ -481,6 +510,10 @@ export class CardViewMediaDrawerController {
       recording,
       title: this._formatDateTime(recording.start_time || 0),
       label: member ? `Recording ${member}` : "Recording",
+      labelKey: member
+        ? "runtime.cardView.recordingMember"
+        : "runtime.cardView.recording",
+      labelValues: member ? { member } : {},
       time: this._formatTime(recording.start_time || 0),
       placeholderIcon: this._icons.recordings || "",
     });

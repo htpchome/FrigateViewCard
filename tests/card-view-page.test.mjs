@@ -48,6 +48,29 @@ test("Card View groups tiles into full-width scroll pages", () => {
   ]);
 });
 
+test("Card View recording tiles mark event counts and download labels for localization", () => {
+  const controller = new CardViewPageController({
+    _dateTimeLabel: () => "Today",
+    _time: () => "12:00",
+  });
+  const single = controller._recordingTileMarkup({
+    start_time: 100,
+    end_time: 160,
+    events: 1,
+  });
+  const multiple = controller._recordingTileMarkup({
+    start_time: 100,
+    end_time: 160,
+    events: 2,
+  });
+
+  assert.match(single, /data-fvc-i18n="runtime\.cardView\.oneEvent"/);
+  assert.match(single, /data-fvc-i18n-values="\{&quot;count&quot;:1\}"/);
+  assert.match(single, />1 event<\/span>/);
+  assert.match(multiple, /data-fvc-i18n="runtime\.cardView\.eventCount"/);
+  assert.match(multiple, /data-fvc-i18n-aria-label="runtime\.cardView\.downloadRecording"/);
+});
+
 test("Video Only Card View opens deep links in its overlay presentation", () => {
   const calls = [];
   const host = {
@@ -802,7 +825,7 @@ test("Card View toolbar swaps alert and recording controls without a day heading
     linkedLightRightMarkup: "light",
   });
   assert.match(markup, />Recordings</);
-  assert.match(markup, /card-view-mode-switch-label">Goto Alerts</);
+  assert.match(markup, /card-view-mode-switch-label" data-fvc-i18n="runtime\.cardView\.gotoAlerts">Goto Alerts</);
   assert.match(markup, /card-view-toolbar-center/);
   assert.match(markup, /data-fvc-region="two-way-talk">microphone/);
   assert.match(
@@ -825,14 +848,15 @@ test("Card View toolbar swaps alert and recording controls without a day heading
     icons: { recordings: "recordings" },
     activeCameraName: "Doorbell",
   });
-  assert.match(alertsMarkup, /card-view-activity-heading">Alerts</);
+  assert.match(alertsMarkup, /card-view-activity-heading" data-fvc-i18n="runtime\.cardView\.alerts">Alerts</);
   assert.doesNotMatch(alertsMarkup, /Recent Alerts/);
   assert.match(
     alertsMarkup,
-    /card-view-mode-switch-label">Goto Recordings</,
+    /card-view-mode-switch-label" data-fvc-i18n="runtime\.cardView\.gotoRecordings">Goto Recordings</,
   );
   assert.match(alertsMarkup, /data-card-view-alert-scope/);
   assert.match(alertsMarkup, />Show Doorbell Alerts</);
+  assert.match(alertsMarkup, /data-fvc-i18n-values="\{&quot;camera&quot;:&quot;Doorbell&quot;\}"/);
   assert.doesNotMatch(markup, /data-card-view-alert-scope/);
 });
 
