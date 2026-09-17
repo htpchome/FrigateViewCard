@@ -2347,6 +2347,7 @@ export class FrigateViewCard extends HTMLElement {
     };
   }
   disconnectedCallback() {
+    this._cardStyleController.releaseBubbleFullscreenEscape();
     this._cardStyleController.releaseBubblePopupPadding();
     this._deepLinkController.disconnect();
     void this._stopPtzMotion("disconnected");
@@ -3147,6 +3148,9 @@ export class FrigateViewCard extends HTMLElement {
     }
     this.classList.toggle(
       MOBILE_VIEW_ROTATE_COVER_CLASS,
+      uiPlan.retainViewportCover,
+    );
+    this._cardStyleController?.syncBubbleFullscreenEscape?.(
       uiPlan.retainViewportCover,
     );
     this._rotateOverlayActive = uiPlan.active;
@@ -6142,6 +6146,7 @@ export class FrigateViewCard extends HTMLElement {
       this._syncLiveRotateZoomPresentation(c);
       if (exitPlan.releaseViewportCover) {
         this.classList.remove(MOBILE_VIEW_ROTATE_COVER_CLASS);
+        this._cardStyleController?.releaseBubbleFullscreenEscape?.();
         this._haNavbarController?.sync?.();
       }
       this._rotateOverlayExitT = null;

@@ -32,9 +32,51 @@ const HA_MASONRY_VIEW_TAGS = new Set(["HUI-MASONRY-VIEW"]);
 const MINIMUM_BROWSE_REGION_HEIGHT_PX = 244;
 const MINIMUM_CARD_HEIGHT_BUFFER_PX = 8;
 const bubblePopupPaddingStates = new WeakMap();
+const bubbleFullscreenStyleStates = new WeakMap();
 const BUBBLE_POPUP_EXTRA_BOTTOM_SPACE = "--bubble-pop-up-extra-bottom-space";
 const BUBBLE_POPUP_OVERSCROLL_Y = "overscroll-behavior-y";
 const BUBBLE_POPUP_OVERFLOW_Y = "overflow-y";
+const BUBBLE_FULLSCREEN_STYLE_OVERRIDES = Object.freeze({
+  transform: "none",
+  translate: "none",
+  scale: "none",
+  rotate: "none",
+  filter: "none",
+  "backdrop-filter": "none",
+  perspective: "none",
+  contain: "none",
+  "content-visibility": "visible",
+  "will-change": "auto",
+  "clip-path": "none",
+  "overflow-x": "visible",
+  "overflow-y": "visible",
+});
+
+const bubbleFullscreenStyleSnapshot = (style) =>
+  Object.keys(BUBBLE_FULLSCREEN_STYLE_OVERRIDES).map((name) => ({
+    name,
+    value: style.getPropertyValue(name),
+    priority: style.getPropertyPriority(name),
+  }));
+
+const applyBubbleFullscreenStyle = (style) => {
+  for (const [name, value] of Object.entries(BUBBLE_FULLSCREEN_STYLE_OVERRIDES)) {
+    style.setProperty(name, value, "important");
+  }
+};
+
+const restoreBubbleFullscreenStyle = (style, declarations) => {
+  for (const { name, value, priority } of declarations) {
+    if (
+      style.getPropertyValue(name) !== BUBBLE_FULLSCREEN_STYLE_OVERRIDES[name] ||
+      style.getPropertyPriority(name) !== "important"
+    ) {
+      continue;
+    }
+    if (value) style.setProperty(name, value, priority);
+    else style.removeProperty(name);
+  }
+};
 
 const inlineBubblePopupOverrideDeclarations = (style) =>
   Array.from({ length: style.length }, (_, index) => style.item(index))
@@ -167,6 +209,7 @@ export const resolveHomeAssistantThemeContext = (
 export class CardStyleContextController {
   constructor(host) {
     this._host = host;
+    this._bubbleFullscreenElements = new Set();
   }
 
   visualStyleToggleRules() {
@@ -421,6 +464,60 @@ export class CardStyleContextController {
       style.setProperty(name, value, priority);
     }
     bubblePopupPaddingStates.delete(container);
+  }
+
+  syncBubbleFullscreenEscape(enabled) {
+    if (!enabled) {
+      this.releaseBubbleFullscreenEscape();
+      return;
+    }
+
+    const ancestors = [];
+    let element = this.composedParentElement(this._host);
+    for (let depth = 0; element && depth < 40; depth += 1) {
+      if (element.id === "view" || element.tagName === "HUI-ROOT") break;
+      ancestors.push(element);
+      element = this.composedParentElement(element);
+    }
+    const inBubblePopup = ancestors.some(
+      (ancestor) =>
+        ancestor.classList?.contains?.("bubble-pop-up") ||
+        ancestor.classList?.contains?.("bubble-pop-up-container") ||
+        ancestor.classList?.contains?.("bubble-popup"),
+    );
+    if (!inBubblePopup) {
+      this.releaseBubbleFullscreenEscape();
+      return;
+    }
+
+    for (const ancestor of ancestors) {
+      if (!ancestor.style) continue;
+      if (!this._bubbleFullscreenElements.has(ancestor)) {
+        let state = bubbleFullscreenStyleStates.get(ancestor);
+        if (!state) {
+          state = {
+            owners: new Set(),
+            declarations: bubbleFullscreenStyleSnapshot(ancestor.style),
+          };
+          bubbleFullscreenStyleStates.set(ancestor, state);
+        }
+        state.owners.add(this);
+        this._bubbleFullscreenElements.add(ancestor);
+      }
+      applyBubbleFullscreenStyle(ancestor.style);
+    }
+  }
+
+  releaseBubbleFullscreenEscape() {
+    for (const element of this._bubbleFullscreenElements) {
+      const state = bubbleFullscreenStyleStates.get(element);
+      if (!state) continue;
+      state.owners.delete(this);
+      if (state.owners.size) continue;
+      restoreBubbleFullscreenStyle(element.style, state.declarations);
+      bubbleFullscreenStyleStates.delete(element);
+    }
+    this._bubbleFullscreenElements.clear();
   }
 
   syncMobileSectionsFullBleed(tightMarginsEnabled) {

@@ -110,7 +110,7 @@ test("bottom HA navbar styling does not trap Bubble popup behind its backdrop", 
   });
 });
 
-test("rotated Mobile View inside Bubble stays above its backdrop", async ({ page }) => {
+test("rotated Mobile View inside Bubble fills the viewport above its backdrop", async ({ page }) => {
   await page.setViewportSize({ width: 844, height: 390 });
   await page.goto(baseUrl);
 
@@ -123,7 +123,10 @@ test("rotated Mobile View inside Bubble stays above its backdrop", async ({ page
       <style>
         #view { position: relative; width: 844px; height: 390px; }
         .header { position: fixed; z-index: 1; height: 56px; }
-        .bubble-pop-up-container { position: absolute; inset: 0; z-index: 5; }
+        .bubble-pop-up-container {
+          position: absolute; top: 40px; left: 30px; width: 600px; height: 300px;
+          overflow: hidden; transform: translateY(0); z-index: 5;
+        }
         .bubble-backdrop { position: fixed; inset: 0; z-index: 4; }
       </style>
       <div id="view"><div class="bubble-pop-up-container"></div></div>
@@ -138,6 +141,7 @@ test("rotated Mobile View inside Bubble stays above its backdrop", async ({ page
       cameras: [{ entity: "camera.front", name: "Front" }],
       mobile_view_page_enabled: true,
       mobile_view_rotate_to_fullscreen: true,
+      tight_margins: true,
     });
     const bubble = root.querySelector(".bubble-pop-up-container");
     const wrapper = document.createElement("div");
@@ -145,11 +149,14 @@ test("rotated Mobile View inside Bubble stays above its backdrop", async ({ page
     wrapper.append(card);
     card._pageId = "mobile-view";
     card._renderShell();
+    card._applyTightMargins();
     card._isMobileTabletViewport = () => true;
     card._isLandscapeViewport = () => true;
     card._updateRotateOverlayState();
+    card._applyCardStyle();
 
     const liveHit = root.elementFromPoint(422, 195);
+    const liveEdgeHit = root.elementFromPoint(800, 195);
     const liveInnerHit = bubble.shadowRoot.elementFromPoint(422, 195);
     const liveMode = card._rotateOverlayMode;
     const popup = card.shadowRoot.querySelector("#myPopup");
@@ -158,9 +165,11 @@ test("rotated Mobile View inside Bubble stays above its backdrop", async ({ page
     viewer.style.display = "flex";
     viewer.append(document.createElement("video"));
     card._updateRotateOverlayState();
+    card._applyCardStyle();
     const popupHit = root.elementFromPoint(422, 195);
+    const popupEdgeHit = root.elementFromPoint(800, 195);
     const hostRect = card.getBoundingClientRect();
-    return {
+    const active = {
       rotationActive: card._rotateOverlayActive,
       liveMode,
       popupMode: card._rotateOverlayMode,
@@ -171,11 +180,24 @@ test("rotated Mobile View inside Bubble stays above its backdrop", async ({ page
         liveHit === bubble && liveInnerHit === card,
       popupCardOnTop:
         popupHit === bubble && bubble.shadowRoot.elementFromPoint(422, 195) === card,
+      liveFillsViewport: liveEdgeHit === bubble,
+      popupFillsViewport: popupEdgeHit === bubble,
       fullscreenRect: {
         left: Math.round(hostRect.left),
         top: Math.round(hostRect.top),
         width: Math.round(hostRect.width),
         height: Math.round(hostRect.height),
+      },
+    };
+    card._isLandscapeViewport = () => false;
+    card._updateRotateOverlayState();
+    await new Promise((resolve) => setTimeout(resolve, 360));
+    return {
+      ...active,
+      restored: {
+        cover: card.classList.contains("mobile-view-rotate-cover"),
+        transform: getComputedStyle(bubble).transform,
+        overflowY: getComputedStyle(bubble).overflowY,
       },
     };
   });
@@ -187,12 +209,19 @@ test("rotated Mobile View inside Bubble stays above its backdrop", async ({ page
   expect(state.backdropCoversPopup).toBe(false);
   expect(state.liveCardOnTop).toBe(true);
   expect(state.popupCardOnTop).toBe(true);
+  expect(state.liveFillsViewport).toBe(true);
+  expect(state.popupFillsViewport).toBe(true);
   expect(state.viewZIndex).toBe("auto");
   expect(state.fullscreenRect).toEqual({
     left: 0,
     top: 0,
     width: 844,
     height: 390,
+  });
+  expect(state.restored).toEqual({
+    cover: false,
+    transform: "matrix(1, 0, 0, 1, 0, 0)",
+    overflowY: "hidden",
   });
 });
 
