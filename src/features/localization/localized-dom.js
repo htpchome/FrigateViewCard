@@ -3,6 +3,7 @@ const LOCALIZED_ATTRIBUTES = Object.freeze({
   "data-fvc-i18n-aria-label": "aria-label",
   "data-fvc-i18n-label": "label",
   "data-fvc-i18n-placeholder": "placeholder",
+  "data-fvc-i18n-disabled-guidance": "data-disabled-guidance",
 });
 
 const LOCALIZED_SELECTOR = [

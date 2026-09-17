@@ -200,6 +200,121 @@ test("language changes update marked card and editor text without replacing medi
   });
 });
 
+test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card-editor.js");
+    const editor = document.createElement("frigate-view-card-editor");
+    document.body.append(editor);
+    editor.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+      single_view_alert_takeover: true,
+      wide_view_page_enabled: true,
+      wide_view_timeline_enabled: true,
+      wide_view_timeline_default_scale: 6,
+      card_view_page_enabled: true,
+      card_view_view_mode: "bottom-panel-open",
+    });
+    editor.hass = { locale: { language: "en" }, states: {}, themes: {} };
+    const takeover = editor.querySelector("#single_view_alert_takeover");
+    const wideScale = editor.querySelector('[name="wide_view_timeline_default_scale"][value="6"]');
+    const cardMode = editor.querySelector('[name="card_view_view_mode"][value="bottom-panel-open"]');
+    const disabledGrid = editor.querySelector('[name="single_view_start_mode"][value="grid"]');
+    const disabledGridLabel = disabledGrid.closest("label");
+    editor._setEditorFieldError("#col_left_width_pct", "Select a whole number from 25 to 75.");
+    let configChanged = 0;
+    editor.addEventListener("config-changed", () => { configChanged += 1; });
+
+    const english = editor._localization;
+    const translations = {
+      "editor.singleView.startWithAlertTakeover": "Démarrer avec prise en charge",
+      "editor.singleView.startModeAria": "Mode initial Vue unique",
+      "editor.startMode.heading": "Mode initial",
+      "editor.startMode.live": "Direct",
+      "editor.startMode.grid": "Grille",
+      "editor.startMode.gridDisabledReason": "Activez la grille d'abord.",
+      "editor.startMode.gridDisabledAria": "Grille. Activez la grille d'abord.",
+      "editor.wideView.enable": "Activer Vue large",
+      "editor.wideView.initialTimelineRange": "Plage initiale",
+      "editor.wideView.leftColumnWidth": "Largeur gauche",
+      "editor.wideView.columnWidthRangeValidation": "Choisir entre {min} et {max}.",
+      "editor.duration.hours": "{count} heures",
+      "editor.cardView.enable": "Activer Vue carte",
+      "editor.cardView.startModeAria": "Mode initial Vue carte",
+      "editor.cardView.viewMode": "Mode d'affichage",
+      "editor.cardView.bottomPanelOpen": "Panneau ouvert",
+      "editor.cardView.standaloneHelp": "Vue carte est la seule page {cardName}.",
+    };
+    editor._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => {
+        const phrase = translations[key];
+        return phrase
+          ? phrase.replace(/\{([A-Za-z][A-Za-z0-9_]*)\}/g, (token, name) =>
+            Object.hasOwn(values, name) ? String(values[name]) : token)
+          : english.t(key, values);
+      },
+    };
+    editor.hass = { locale: { language: "fr" }, states: {}, themes: {} };
+
+    return {
+      takeoverPreserved: editor.querySelector("#single_view_alert_takeover") === takeover,
+      takeoverChecked: takeover.hasAttribute("checked"),
+      takeoverLabel: editor.querySelector('[data-fvc-i18n="editor.singleView.startWithAlertTakeover"]').textContent,
+      singleStartAria: editor.querySelector('[data-fvc-i18n-aria-label="editor.singleView.startModeAria"]').getAttribute("aria-label"),
+      startHeading: editor.querySelector('[data-fvc-i18n="editor.startMode.heading"]').textContent,
+      liveChoice: editor.querySelector('[name="single_view_start_mode"][value="live"]').getAttribute("aria-label"),
+      gridChoice: disabledGrid.getAttribute("aria-label"),
+      gridDisabled: disabledGrid.disabled,
+      gridTooltip: disabledGridLabel.title,
+      gridGuidance: disabledGridLabel.dataset.disabledGuidance,
+      wideEnable: editor.querySelector('[data-fvc-i18n="editor.wideView.enable"]').textContent,
+      timelineRange: editor.querySelector('[data-fvc-i18n="editor.wideView.initialTimelineRange"]').textContent,
+      wideScalePreserved: editor.querySelector('[name="wide_view_timeline_default_scale"][value="6"]') === wideScale,
+      wideScaleChecked: wideScale.checked,
+      wideScaleLabel: wideScale.getAttribute("aria-label"),
+      wideWidthHeading: editor.querySelector('[data-fvc-i18n="editor.wideView.leftColumnWidth"]').textContent,
+      wideWidthError: editor.querySelector("#col_left_width_pct-helper").textContent,
+      cardEnable: editor.querySelector('[data-fvc-i18n="editor.cardView.enable"]').textContent,
+      cardStartAria: editor.querySelector('[data-fvc-i18n-aria-label="editor.cardView.startModeAria"]').getAttribute("aria-label"),
+      cardModeHeading: editor.querySelector('[data-fvc-i18n="editor.cardView.viewMode"]').textContent,
+      cardModePreserved: editor.querySelector('[name="card_view_view_mode"][value="bottom-panel-open"]') === cardMode,
+      cardModeChecked: cardMode.checked,
+      cardModeLabel: cardMode.nextElementSibling.textContent,
+      standaloneHelp: editor.querySelector('[data-fvc-i18n="editor.cardView.standaloneHelp"]').textContent,
+      configChanged,
+    };
+  });
+
+  expect(state).toMatchObject({
+    takeoverPreserved: true,
+    takeoverChecked: true,
+    takeoverLabel: "Démarrer avec prise en charge",
+    singleStartAria: "Mode initial Vue unique",
+    startHeading: "Mode initial",
+    liveChoice: "Direct",
+    gridChoice: "Grille. Activez la grille d'abord.",
+    gridDisabled: true,
+    gridTooltip: "Activez la grille d'abord.",
+    gridGuidance: "Activez la grille d'abord.",
+    wideEnable: "Activer Vue large",
+    timelineRange: "Plage initiale",
+    wideScalePreserved: true,
+    wideScaleChecked: true,
+    wideScaleLabel: "6 heures",
+    wideWidthHeading: "Largeur gauche",
+    wideWidthError: "Choisir entre 25 et 75.",
+    cardEnable: "Activer Vue carte",
+    cardStartAria: "Mode initial Vue carte",
+    cardModeHeading: "Mode d'affichage",
+    cardModePreserved: true,
+    cardModeChecked: true,
+    cardModeLabel: "Panneau ouvert",
+    standaloneHelp: "Vue carte est la seule page FrigateView.",
+    configChanged: 0,
+  });
+});
+
 test("General Settings language changes preserve form state and localize status, choices, and links", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

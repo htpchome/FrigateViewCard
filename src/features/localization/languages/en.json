@@ -8,6 +8,8 @@
     "subtitle": "Subtitle",
     "display": "Display",
     "duration": {
+      "hour": "{count} hour",
+      "hours": "{count} hours",
       "minutes": "{count} min",
       "seconds": "{count} sec"
     },
@@ -185,6 +187,59 @@
       "liveMobileHelp": "Keeps all Preview cameras live on phones and tablets. Otherwise, qualifying alerts and reviews switch snapshots to live.",
       "showTitleBars": "Show Title Bars",
       "showTitleBarsHelp": "Shows each camera's name, source, alert count, and status."
+    },
+    "startMode": {
+      "heading": "Start Mode",
+      "help": "Sets the opening mode. Enable Grid or Slideshow before selecting it.",
+      "live": "Live",
+      "grid": "Grid",
+      "slideshow": "Slideshow",
+      "gridDisabledReason": "Enable Grid Mode in Grid Mode Settings to use this option.",
+      "slideshowDisabledReason": "Enable Slideshow Mode in Slideshow Settings to use this option.",
+      "gridDisabledAria": "Grid. Enable Grid Mode in Grid Mode Settings to use this option.",
+      "slideshowDisabledAria": "Slideshow. Enable Slideshow Mode in Slideshow Settings to use this option."
+    },
+    "singleView": {
+      "startWithAlertTakeover": "Start with Alert Takeover",
+      "startWithAlertTakeoverHelp": "Sets whether alert takeover is on when Single View opens.",
+      "startModeAria": "Single View Start Mode"
+    },
+    "wideView": {
+      "enable": "Enable Wide View Page",
+      "enableHelp": "Adds Wide View to navigation and desktop/tablet landing-page options.",
+      "startModeAria": "Wide View Start Mode",
+      "liveCompanionCameras": "Live Companion Cameras",
+      "liveCompanionCamerasHelp": "Keeps all companion cameras live. Otherwise, qualifying alerts switch snapshots to live.",
+      "startWithAlertTakeover": "Start with Alert Takeover",
+      "startWithAlertTakeoverHelp": "Sets whether alert takeover is on when Wide View opens.",
+      "enableTimelinePanel": "Enable Timeline Panel",
+      "enableTimelinePanelHelp": "Adds a collapsible timeline beside the event list. It follows the active camera, or all cameras in Grid mode.",
+      "openTimelineByDefault": "Open Timeline by Default",
+      "openTimelineByDefaultHelp": "Opens the Timeline with Wide View. Its drawer handle remains available when closed.",
+      "initialTimelineRange": "Initial Timeline Range",
+      "initialTimelineRangeHelp": "Sets the initial time range. Change it later from the Timeline header.",
+      "leftColumnWidth": "Left Column Width",
+      "leftColumnWidthHelp": "Sets the width of Wide View's left column.",
+      "columnWidthRangeValidation": "Select a whole number from {min} to {max}."
+    },
+    "cardView": {
+      "enable": "Enable Card View Page",
+      "enableHelp": "Adds a naturally sized live-camera page on any device. Card Height Limit does not apply.",
+      "startModeAria": "Card View Start Mode",
+      "startModeHelp": "Sets the Video Only live mode. Enable Grid or Slideshow before selecting it.",
+      "standalone": "Standalone Card View",
+      "standaloneHelp": "Makes Card View the only {cardName} page on all devices. Removes page links and the back button.",
+      "startWithAlertTakeover": "Start with Alert Takeover",
+      "startWithAlertTakeoverHelp": "Sets whether alert takeover is on when Card View opens.",
+      "viewMode": "View Mode",
+      "viewModeHelp": "Starts with video only, or with the activity panel open or closed.",
+      "videoOnly": "Video Only",
+      "bottomPanelOpen": "Bottom Panel Open",
+      "bottomPanelClosed": "Bottom Panel Closed",
+      "enableMediaDrawer": "Enable Media Drawer",
+      "enableMediaDrawerHelp": "Shows a media drawer on the left in Video Only mode.",
+      "hideCameraName": "Hide Camera Name",
+      "hideCameraNameHelp": "Hides the camera picker until the video is hovered or touched. Also applies in Grid mode."
     },
     "cameraPanel": {
       "cameras": "Cameras",

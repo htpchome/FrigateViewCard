@@ -243,7 +243,7 @@ const buildEditorBubbleSelectorMarkup = ({
   const safeName = escapeEditorChoiceMarkup(name);
   return `<div class="theme-scope-seg card-view-start-seg editor-bubble-selector" style="--editor-bubble-option-count:${Math.max(1, options.length)}">
     ${options
-      .map(({ value, label, disabled = false, disabledReason = "", translationKey = "", translationValues = {} }) => {
+      .map(({ value, label, disabled = false, disabledReason = "", translationKey = "", translationValues = {}, ariaTranslationKey = "", disabledReasonTranslationKey = "" }) => {
         const safeValue = escapeEditorChoiceMarkup(value);
         const safeLabel = escapeEditorChoiceMarkup(label);
         const safeDisabledReason = escapeHtmlAttribute(disabledReason);
@@ -251,13 +251,19 @@ const buildEditorBubbleSelectorMarkup = ({
         const localizedValues = translationKey
           ? ` data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify(translationValues))}"`
           : "";
-        const localizedInput = translationKey
-          ? ` data-fvc-i18n-aria-label="${escapeHtmlAttribute(translationKey)}"${localizedValues}`
+        const localizedInput = ariaTranslationKey || translationKey
+          ? ` data-fvc-i18n-aria-label="${escapeHtmlAttribute(ariaTranslationKey || translationKey)}"${localizedValues}`
           : "";
         const localizedLabel = translationKey
           ? ` data-fvc-i18n="${escapeHtmlAttribute(translationKey)}"${localizedValues}`
           : "";
-        return `<label class="theme-scope-opt card-view-start-opt" data-disabled-guidance="${safeDisabledReason}"${optionDisabled && safeDisabledReason ? ` title="${safeDisabledReason}"` : ""}>
+        const localizedDisabledGuidance = disabledReasonTranslationKey
+          ? ` data-fvc-i18n-disabled-guidance="${escapeHtmlAttribute(disabledReasonTranslationKey)}"`
+          : "";
+        const localizedTitle = optionDisabled && disabledReasonTranslationKey
+          ? ` data-fvc-i18n-title="${escapeHtmlAttribute(disabledReasonTranslationKey)}"`
+          : "";
+        return `<label class="theme-scope-opt card-view-start-opt" data-disabled-guidance="${safeDisabledReason}"${localizedDisabledGuidance}${optionDisabled && safeDisabledReason ? ` title="${safeDisabledReason}"${localizedTitle}` : ""}>
           <input class="card-view-start-input" type="radio" name="${safeName}" value="${safeValue}" ${String(value) === selected ? "checked" : ""} ${optionDisabled ? "disabled" : ""} aria-label="${safeLabel}${optionDisabled && safeDisabledReason ? `. ${safeDisabledReason}` : ""}"${localizedInput}>
           <span${localizedLabel}>${safeLabel}</span>
         </label>`;
@@ -275,7 +281,26 @@ const buildPageStartModeControl = ({
   buildEditorBubbleSelectorMarkup({
     name,
     selectedValue: normalizePageStartMode(selectedValue),
-    options: pageStartModeOptions({ gridEnabled, slideshowEnabled }),
+    options: pageStartModeOptions({ gridEnabled, slideshowEnabled }).map((option) => ({
+      ...option,
+      ...{
+        live: { translationKey: "editor.startMode.live" },
+        grid: {
+          translationKey: "editor.startMode.grid",
+          disabledReasonTranslationKey: "editor.startMode.gridDisabledReason",
+          ariaTranslationKey: option.disabled
+            ? "editor.startMode.gridDisabledAria"
+            : "editor.startMode.grid",
+        },
+        slideshow: {
+          translationKey: "editor.startMode.slideshow",
+          disabledReasonTranslationKey: "editor.startMode.slideshowDisabledReason",
+          ariaTranslationKey: option.disabled
+            ? "editor.startMode.slideshowDisabledAria"
+            : "editor.startMode.slideshow",
+        },
+      }[option.value],
+    })),
   });
 
 export class FrigateViewCardEditor extends HTMLElement {
@@ -3035,12 +3060,16 @@ export class FrigateViewCardEditor extends HTMLElement {
       ? "editor.layout.cardHeightRangeValidation"
       : selector === "#event_days" || selector === "#alerts_reviews_days"
         ? "editor.general.daysRangeValidation"
+        : selector === "#col_left_width_pct"
+          ? "editor.wideView.columnWidthRangeValidation"
         : null;
     if (!key) return;
     const helper = this.querySelector?.(`${selector}-helper`);
     const values = selector === "#stream_height"
       ? { min: CARD_HEIGHT_MIN, max: CARD_HEIGHT_MAX }
-      : {};
+      : selector === "#col_left_width_pct"
+        ? { min: WIDE_LEFT_WIDTH_MIN, max: WIDE_LEFT_WIDTH_MAX }
+        : {};
     this._setLocalizedMessage(helper, message ? key : null, values);
   }
 
@@ -3101,7 +3130,10 @@ export class FrigateViewCardEditor extends HTMLElement {
         colWidth >= WIDE_LEFT_WIDTH_MIN &&
         colWidth <= WIDE_LEFT_WIDTH_MAX)
         ? ""
-        : `Select a whole number from ${WIDE_LEFT_WIDTH_MIN} to ${WIDE_LEFT_WIDTH_MAX}.`;
+        : this._t("editor.wideView.columnWidthRangeValidation", {
+          min: WIDE_LEFT_WIDTH_MIN,
+          max: WIDE_LEFT_WIDTH_MAX,
+        });
     this._setEditorFieldError("#col_left_width_pct", colWidthMessage);
     if (colWidthMessage) valid = false;
 
@@ -3359,20 +3391,22 @@ export class FrigateViewCardEditor extends HTMLElement {
       this._config?.card_view_view_mode,
     );
     const cardViewViewModeControl = [
-      { value: CARD_VIEW_VIEW_MODES.videoOnly, label: "Video Only" },
+      { value: CARD_VIEW_VIEW_MODES.videoOnly, label: "Video Only", translationKey: "editor.cardView.videoOnly" },
       {
         value: CARD_VIEW_VIEW_MODES.bottomPanelOpen,
         label: "Bottom Panel Open",
+        translationKey: "editor.cardView.bottomPanelOpen",
       },
       {
         value: CARD_VIEW_VIEW_MODES.bottomPanelClosed,
         label: "Bottom Panel Closed",
+        translationKey: "editor.cardView.bottomPanelClosed",
       },
     ]
       .map(
-        ({ value, label }) => `<label class="theme-scope-opt card-view-start-opt">
+        ({ value, label, translationKey }) => `<label class="theme-scope-opt card-view-start-opt">
           <input class="card-view-start-input" type="radio" name="card_view_view_mode" value="${value}" ${cardViewViewMode === value ? "checked" : ""}>
-          <span>${label}</span>
+          <span data-fvc-i18n="${translationKey}">${label}</span>
         </label>`,
       )
       .join("");
@@ -3841,81 +3875,83 @@ export class FrigateViewCardEditor extends HTMLElement {
     const singleViewPanelContent = `
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Start with Alert Takeover</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.singleView.startWithAlertTakeover">Start with Alert Takeover</span>
           <ha-switch id="single_view_alert_takeover" ${this._config?.single_view_alert_takeover ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Sets whether alert takeover is on when Single View opens.</div>
+        <div class="field-helper" data-fvc-i18n="editor.singleView.startWithAlertTakeoverHelp">Sets whether alert takeover is on when Single View opens.</div>
       </div>
       <div class="section">
-        <div class="editor-choice-field" role="radiogroup" aria-label="Single View Start Mode">
-          <div class="field-label">Start Mode</div>
+        <div class="editor-choice-field" role="radiogroup" aria-label="Single View Start Mode" data-fvc-i18n-aria-label="editor.singleView.startModeAria">
+          <div class="field-label" data-fvc-i18n="editor.startMode.heading">Start Mode</div>
           ${singleViewStartModeControl}
         </div>
-        <div class="field-helper">Sets the opening mode. Enable Grid or Slideshow before selecting it.</div>
+        <div class="field-helper" data-fvc-i18n="editor.startMode.help">Sets the opening mode. Enable Grid or Slideshow before selecting it.</div>
       </div>`;
     const wideViewPanelContent = `
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Enable Wide View Page</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.wideView.enable">Enable Wide View Page</span>
           <ha-switch id="wide_view_page_enabled" ${this._config?.wide_view_page_enabled ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Adds Wide View to navigation and desktop/tablet landing-page options.</div>
+        <div class="field-helper" data-fvc-i18n="editor.wideView.enableHelp">Adds Wide View to navigation and desktop/tablet landing-page options.</div>
       </div>
       <div id="wide-view-page-options" style="display:${this._config?.wide_view_page_enabled ? "contents" : "none"}">
         <div class="section">
-          <div class="editor-choice-field" role="radiogroup" aria-label="Wide View Start Mode">
-            <div class="field-label">Start Mode</div>
+          <div class="editor-choice-field" role="radiogroup" aria-label="Wide View Start Mode" data-fvc-i18n-aria-label="editor.wideView.startModeAria">
+            <div class="field-label" data-fvc-i18n="editor.startMode.heading">Start Mode</div>
             ${wideViewStartModeControl}
           </div>
-          <div class="field-helper">Sets the opening mode. Enable Grid or Slideshow before selecting it.</div>
+          <div class="field-helper" data-fvc-i18n="editor.startMode.help">Sets the opening mode. Enable Grid or Slideshow before selecting it.</div>
         </div>
         <div class="section">
           <div class="layout-row">
-            <span class="field-label" style="margin:0">Live Companion Cameras</span>
+            <span class="field-label" style="margin:0" data-fvc-i18n="editor.wideView.liveCompanionCameras">Live Companion Cameras</span>
             <ha-switch id="wide_view_live_cameras" ${this._config?.wide_view_live_cameras ? "checked" : ""}></ha-switch>
           </div>
-          <div class="field-helper">Keeps all companion cameras live. Otherwise, qualifying alerts switch snapshots to live.</div>
+          <div class="field-helper" data-fvc-i18n="editor.wideView.liveCompanionCamerasHelp">Keeps all companion cameras live. Otherwise, qualifying alerts switch snapshots to live.</div>
         </div>
         <div class="section">
           <div class="layout-row">
-            <span class="field-label" style="margin:0">Start with Alert Takeover</span>
+            <span class="field-label" style="margin:0" data-fvc-i18n="editor.wideView.startWithAlertTakeover">Start with Alert Takeover</span>
             <ha-switch id="wide_view_alert_takeover" ${this._config?.wide_view_alert_takeover ? "checked" : ""}></ha-switch>
           </div>
-          <div class="field-helper">Sets whether alert takeover is on when Wide View opens.</div>
+          <div class="field-helper" data-fvc-i18n="editor.wideView.startWithAlertTakeoverHelp">Sets whether alert takeover is on when Wide View opens.</div>
         </div>
       </div>
       <div class="section" id="wide-timeline-enabled-row" style="${this._config?.wide_view_page_enabled ? "" : "display:none"}">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Enable Timeline Panel</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.wideView.enableTimelinePanel">Enable Timeline Panel</span>
           <ha-switch id="wide_view_timeline_enabled" ${this._config?.wide_view_timeline_enabled ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Adds a collapsible timeline beside the event list. It follows the active camera, or all cameras in Grid mode.</div>
+        <div class="field-helper" data-fvc-i18n="editor.wideView.enableTimelinePanelHelp">Adds a collapsible timeline beside the event list. It follows the active camera, or all cameras in Grid mode.</div>
       </div>
       <div class="section timeline-dependent-section" id="wide-timeline-default-open-row" style="${this._config?.wide_view_page_enabled && this._config?.wide_view_timeline_enabled ? "" : "display:none"}">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Open Timeline by Default</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.wideView.openTimelineByDefault">Open Timeline by Default</span>
           <ha-switch id="wide_view_timeline_default_open" ${this._config?.wide_view_timeline_default_open ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Opens the Timeline with Wide View. Its drawer handle remains available when closed.</div>
+        <div class="field-helper" data-fvc-i18n="editor.wideView.openTimelineByDefaultHelp">Opens the Timeline with Wide View. Its drawer handle remains available when closed.</div>
       </div>
       <div class="section timeline-dependent-section" id="wide-timeline-default-scale-row" style="${this._config?.wide_view_page_enabled && this._config?.wide_view_timeline_enabled ? "" : "display:none"}">
-        <div class="editor-choice-field" id="wide_view_timeline_default_scale" role="radiogroup" aria-label="Initial Timeline Range">
-          <div class="field-label">Initial Timeline Range</div>
+        <div class="editor-choice-field" id="wide_view_timeline_default_scale" role="radiogroup" aria-label="Initial Timeline Range" data-fvc-i18n-aria-label="editor.wideView.initialTimelineRange">
+          <div class="field-label" data-fvc-i18n="editor.wideView.initialTimelineRange">Initial Timeline Range</div>
           ${buildEditorBubbleSelectorMarkup({
             name: "wide_view_timeline_default_scale",
             options: WIDE_TIMELINE_SCALE_OPTIONS_HOURS.map((value) => ({
               value,
               label: `${value} hour${value === 1 ? "" : "s"}`,
+              translationKey: value === 1 ? "editor.duration.hour" : "editor.duration.hours",
+              translationValues: { count: value },
             })),
             selectedValue: timelineDefaultScale,
           })}
         </div>
-        <div class="field-helper">Sets the initial time range. Change it later from the Timeline header.</div>
+        <div class="field-helper" data-fvc-i18n="editor.wideView.initialTimelineRangeHelp">Sets the initial time range. Change it later from the Timeline header.</div>
       </div>
       <div class="section" id="col-width-row" style="${this._config?.wide_view_page_enabled ? "" : "display:none"}">
-        <span class="field-label">Left Column Width</span>
+        <span class="field-label" data-fvc-i18n="editor.wideView.leftColumnWidth">Left Column Width</span>
         <input id="col_left_width_pct" type="range" min="${WIDE_LEFT_WIDTH_MIN}" max="${WIDE_LEFT_WIDTH_MAX}" step="1" value="${wideLeftWidth}" style="width:100%">
-        <div class="field-helper">Sets the width of Wide View's left column.</div>
+        <div class="field-helper" data-fvc-i18n="editor.wideView.leftColumnWidthHelp">Sets the width of Wide View's left column.</div>
         <div class="field-helper" id="col_left_width_pct-output">${wideLeftWidth}%</div>
         <div class="field-helper" id="col_left_width_pct-helper"></div>
       </div>
@@ -4024,54 +4060,54 @@ export class FrigateViewCardEditor extends HTMLElement {
     const cardViewPanelContent = `
       <div class="section">
         <div class="layout-row">
-          <span class="field-label" style="margin:0">Enable Card View Page</span>
+          <span class="field-label" style="margin:0" data-fvc-i18n="editor.cardView.enable">Enable Card View Page</span>
           <ha-switch id="card_view_page_enabled" ${this._config?.card_view_page_enabled ? "checked" : ""}></ha-switch>
         </div>
-        <div class="field-helper">Adds a naturally sized live-camera page on any device. Card Height Limit does not apply.</div>
+        <div class="field-helper" data-fvc-i18n="editor.cardView.enableHelp">Adds a naturally sized live-camera page on any device. Card Height Limit does not apply.</div>
       </div>
       <div class="card-view-page-options" id="card-view-page-options" style="${this._config?.card_view_page_enabled ? "" : "display:none"}">
         <div class="section">
-          <div class="editor-choice-field" role="radiogroup" aria-label="Card View Start Mode">
-            <div class="field-label">Start Mode</div>
+          <div class="editor-choice-field" role="radiogroup" aria-label="Card View Start Mode" data-fvc-i18n-aria-label="editor.cardView.startModeAria">
+            <div class="field-label" data-fvc-i18n="editor.startMode.heading">Start Mode</div>
             ${cardViewStartModeControl}
           </div>
-          <div class="field-helper">Sets the Video Only live mode. Enable Grid or Slideshow before selecting it.</div>
+          <div class="field-helper" data-fvc-i18n="editor.cardView.startModeHelp">Sets the Video Only live mode. Enable Grid or Slideshow before selecting it.</div>
         </div>
         <div class="section">
           <div class="layout-row">
-            <span class="field-label" style="margin:0">Standalone Card View</span>
+            <span class="field-label" style="margin:0" data-fvc-i18n="editor.cardView.standalone">Standalone Card View</span>
             <ha-switch id="card_view_standalone" ${this._config?.card_view_standalone ? "checked" : ""}></ha-switch>
           </div>
-          <div class="field-helper">Makes Card View the only ${CARD_NAME} page on all devices. Removes page links and the back button.</div>
+          <div class="field-helper" data-fvc-i18n="editor.cardView.standaloneHelp" data-fvc-i18n-values="${escapeHtmlAttribute(JSON.stringify({ cardName: CARD_NAME }))}">Makes Card View the only ${CARD_NAME} page on all devices. Removes page links and the back button.</div>
         </div>
         <div class="section">
           <div class="layout-row">
-            <span class="field-label" style="margin:0">Start with Alert Takeover</span>
+            <span class="field-label" style="margin:0" data-fvc-i18n="editor.cardView.startWithAlertTakeover">Start with Alert Takeover</span>
             <ha-switch id="card_view_alert_takeover" ${this._config?.card_view_alert_takeover ? "checked" : ""}></ha-switch>
           </div>
-          <div class="field-helper">Sets whether alert takeover is on when Card View opens.</div>
+          <div class="field-helper" data-fvc-i18n="editor.cardView.startWithAlertTakeoverHelp">Sets whether alert takeover is on when Card View opens.</div>
         </div>
         <div class="section">
-          <div class="editor-choice-field" role="radiogroup" aria-label="View Mode">
-            <div class="field-label">View Mode</div>
+          <div class="editor-choice-field" role="radiogroup" aria-label="View Mode" data-fvc-i18n-aria-label="editor.cardView.viewMode">
+            <div class="field-label" data-fvc-i18n="editor.cardView.viewMode">View Mode</div>
             <div class="theme-scope-seg card-view-start-seg card-view-mode-seg">${cardViewViewModeControl}</div>
           </div>
-          <div class="field-helper">Starts with video only, or with the activity panel open or closed.</div>
+          <div class="field-helper" data-fvc-i18n="editor.cardView.viewModeHelp">Starts with video only, or with the activity panel open or closed.</div>
         </div>
         <div class="card-view-video-only-options" id="card-view-video-only-options" style="${cardViewViewMode === CARD_VIEW_VIEW_MODES.videoOnly ? "" : "display:none"}">
           <div class="section">
             <div class="layout-row">
-              <span class="field-label" style="margin:0">Enable Media Drawer</span>
+              <span class="field-label" style="margin:0" data-fvc-i18n="editor.cardView.enableMediaDrawer">Enable Media Drawer</span>
               <ha-switch id="card_view_media_drawer_enabled" ${this._config?.card_view_media_drawer_enabled !== false ? "checked" : ""}></ha-switch>
             </div>
-            <div class="field-helper">Shows a media drawer on the left in Video Only mode.</div>
+            <div class="field-helper" data-fvc-i18n="editor.cardView.enableMediaDrawerHelp">Shows a media drawer on the left in Video Only mode.</div>
           </div>
           <div class="section">
             <div class="layout-row">
-              <span class="field-label" style="margin:0">Hide Camera Name</span>
+              <span class="field-label" style="margin:0" data-fvc-i18n="editor.cardView.hideCameraName">Hide Camera Name</span>
               <ha-switch id="card_view_hide_camera_name" ${this._config?.card_view_hide_camera_name !== false ? "checked" : ""}></ha-switch>
             </div>
-            <div class="field-helper">Hides the camera picker until the video is hovered or touched. Also applies in Grid mode.</div>
+            <div class="field-helper" data-fvc-i18n="editor.cardView.hideCameraNameHelp">Hides the camera picker until the video is hovered or touched. Also applies in Grid mode.</div>
           </div>
         </div>
       </div>`;
