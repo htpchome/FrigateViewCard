@@ -523,8 +523,10 @@ test("popup recording model and markup include the range download action", () =>
   );
   assert.match(
     markup.infoHtml,
-    /<h2 class="popup-info-head" id="popup-info-head"><span class="popup-info-head-text">Recording - Back yard - 9:00pm - 8\/21<\/span><\/h2>/,
+    /<h2 class="popup-info-head" id="popup-info-head"><span class="popup-info-head-text"><span data-fvc-i18n="runtime\.popup\.info\.recording">Recording<\/span> - Back yard - 9:00pm - 8\/21<\/span><\/h2>/,
   );
+  assert.match(markup.infoHtml, /data-fvc-i18n="runtime\.popup\.info\.camera">Camera/);
+  assert.match(markup.infoHtml, /data-fvc-i18n-title="runtime\.popup\.info\.downloadRecording"/);
   assert.match(markup.infoHtml, /data-rec-dl-start="200"/);
   assert.match(markup.infoHtml, /data-rec-dl-end="260"/);
   assert.match(
@@ -632,7 +634,7 @@ test("popup info controller owns rendering, hiding, and popup actions", () => {
   );
 
   assert.equal(info.hidden, false);
-  assert.match(info.innerHTML, /Clip - Front door - 8:44pm - 8\/21/);
+  assert.match(info.innerHTML, /data-fvc-i18n="runtime\.popup\.info\.clip">Clip<\/span> - Front door - 8:44pm - 8\/21/);
   assert.match(info.innerHTML, /data-dl="event-1"/);
   assert.match(info.innerHTML, /data-popup-media-target="snapshot"/);
   assert.deepEqual(calls.slice(0, 2), [

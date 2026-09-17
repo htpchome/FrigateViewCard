@@ -113,6 +113,7 @@ export const resolvePopupViewResizeZoomScale = () => 1;
 
 export const createPopupViewResizeGrip = (
   documentRef = globalThis.document,
+  t,
 ) => {
   const grip = documentRef?.createElement?.("button");
   if (!grip) return null;
@@ -121,9 +122,17 @@ export const createPopupViewResizeGrip = (
   grip.hidden = true;
   grip.setAttribute("role", "slider");
   grip.setAttribute("aria-orientation", "vertical");
-  grip.setAttribute("aria-label", "Resize popup media view");
-  grip.title =
-    "Drag to resize popup media; double-click or double-tap to reset";
+  const labelKey = "runtime.popup.resizeHeight";
+  const hintKey = "runtime.popup.resizeHint";
+  grip.setAttribute(
+    "aria-label",
+    typeof t === "function" ? t(labelKey) : "Resize popup media view",
+  );
+  grip.setAttribute("data-fvc-i18n-aria-label", labelKey);
+  grip.title = typeof t === "function"
+    ? t(hintKey)
+    : "Drag to resize popup media; double-click or double-tap to reset";
+  grip.setAttribute("data-fvc-i18n-title", hintKey);
   return grip;
 };
 

@@ -9,6 +9,7 @@ import {
 } from "../../shared/media/url-utils.js";
 import { resolveDisplayedFrameDimensions } from "../../shared/media/frame-capture.js";
 import { isIOS } from "../../helpers.js";
+import { applyLocalizedText } from "../localization/localized-dom.js";
 import {
   buildPopupClipRenderPlan,
   buildPopupCarouselSelectionPlan,
@@ -182,7 +183,10 @@ export class PopupMediaLoaderController {
     if (!viewer || !media) return null;
     const zoomController =
       this._host._attachPopupVideoZoom?.(media) || null;
-    const grip = this._deps.createPopupViewResizeGrip?.();
+    const grip = this._deps.createPopupViewResizeGrip?.(
+      globalThis.document,
+      this._host._localization?.t,
+    );
     if (!grip) return null;
     viewer.appendChild?.(grip);
     const controller = this._deps.createPopupViewResizeController?.({
@@ -302,6 +306,7 @@ export class PopupMediaLoaderController {
     } else {
       viewer.innerHTML = renderPlan.viewerHtml;
     }
+    applyLocalizedText(viewer, this._host._localization?.t);
     const popup = this._host._$?.("#myPopup") || null;
     const body = popup?.querySelector(".popup-body");
     if (body) body.scrollTop = 0;
@@ -540,8 +545,8 @@ export class PopupMediaLoaderController {
       html: `
         <img class="snap" src="${this.buildPopupSnapshotSrc(event)}">
         <div class="popup-media-fallback-notice" role="status" aria-live="polite">
-          <strong>Clip unavailable</strong>
-          <span>Showing the event snapshot. Frigate reported a clip for this event, but playback could not be loaded.</span>
+          <strong data-fvc-i18n="runtime.popup.clipUnavailable">Clip unavailable</strong>
+          <span data-fvc-i18n="runtime.popup.clipFallbackDetail">Showing the event snapshot. Frigate reported a clip for this event, but playback could not be loaded.</span>
         </div>`,
       mediaType,
       infoEvent: event,
@@ -570,16 +575,22 @@ export class PopupMediaLoaderController {
     const title = snapshotOnly
       ? "Snapshot unavailable"
       : "Media unavailable";
+    const titleKey = snapshotOnly
+      ? "runtime.popup.snapshotUnavailable"
+      : "runtime.popup.mediaUnavailable";
     const detail = snapshotOnly
       ? "The requested snapshot could not be loaded from Frigate."
       : "Frigate reported media for this event, but neither the clip nor snapshot could be loaded.";
+    const detailKey = snapshotOnly
+      ? "runtime.popup.snapshotUnavailableDetail"
+      : "runtime.popup.mediaUnavailableDetail";
     this.renderPopupMedia({
       playingId: event?.id || "",
       html: `
         <div class="popup-media-unavailable" role="status" aria-live="polite">
-          <strong>${title}</strong>
-          <span>${detail}</span>
-          <span>Media may be missing, may have changed, or may have been removed according to the retention policy configured for this camera. Review the camera's recording retention settings in Frigate.</span>
+          <strong data-fvc-i18n="${titleKey}">${title}</strong>
+          <span data-fvc-i18n="${detailKey}">${detail}</span>
+          <span data-fvc-i18n="runtime.popup.retentionDetail">Media may be missing, may have changed, or may have been removed according to the retention policy configured for this camera. Review the camera's recording retention settings in Frigate.</span>
         </div>`,
       mediaType,
       infoEvent: event,
@@ -795,7 +806,8 @@ export class PopupMediaLoaderController {
     this._infoController?.render(renderPlan.infoEvent, renderPlan.infoOpts);
     this._lifecycleController?.setMediaCamera?.(cam);
     const viewer = this._host.shadowRoot.querySelector("#viewer");
-    viewer.innerHTML = '<div class="ld">Loading…</div>';
+    viewer.innerHTML = '<div class="ld" data-fvc-i18n="runtime.popup.loading">Loading…</div>';
+    applyLocalizedText(viewer, this._host._localization?.t);
     if (this._host._playSeq !== token) return;
     const video = this._deps.createVideoElement(
       this._deps.buildVideoOptionsForView(
@@ -939,6 +951,7 @@ export class PopupMediaLoaderController {
         runMediaCleanup();
         if (outcomePlan.shouldShowError) {
           viewer.innerHTML = outcomePlan.errorHtml;
+          applyLocalizedText(viewer, this._host._localization?.t);
         }
         this._mediaControlsController?.resetWithoutVideo?.();
         if (outcomePlan.shouldTeardownScrub) {

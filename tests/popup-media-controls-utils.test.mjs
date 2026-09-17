@@ -424,7 +424,7 @@ test("resolvePopupRecordingSeekListenerPlan keeps recording seek listener order 
 test("resolvePopupRecordingLoadOutcomePlan separates failure and success UI follow-up", () => {
   assert.deepEqual(resolvePopupRecordingLoadOutcomePlan({ playable: false }), {
     shouldShowError: true,
-    errorHtml: '<div class="ld">Unable to load recording</div>',
+    errorHtml: '<div class="ld" data-fvc-i18n="runtime.popup.recordingUnavailable">Unable to load recording</div>',
     shouldTeardownScrub: true,
     shouldHideScrub: true,
     shouldEnsureAirPlayButton: false,

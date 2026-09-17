@@ -218,7 +218,7 @@ export const resolvePopupRecordingLoadOutcomePlan = ({
   if (!playable) {
     return {
       shouldShowError: true,
-      errorHtml: '<div class="ld">Unable to load recording</div>',
+      errorHtml: '<div class="ld" data-fvc-i18n="runtime.popup.recordingUnavailable">Unable to load recording</div>',
       shouldTeardownScrub: true,
       shouldHideScrub: true,
       shouldEnsureAirPlayButton: false,

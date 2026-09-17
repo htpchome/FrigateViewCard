@@ -990,6 +990,7 @@ export class FrigateViewCard extends HTMLElement {
       });
     this._popupInfoController = new PopupInfoController({
       query: (selector) => this._$(selector),
+      t: this._localization.t,
       getActiveCamera: () => this._cc().cam,
       formatTime: (timestamp) => this._time(timestamp),
       formatWeekday: (timestamp) => this._weekday(timestamp),

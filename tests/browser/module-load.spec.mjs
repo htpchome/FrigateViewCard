@@ -649,6 +649,112 @@ test("popup controls and segment guidance localize without remounting media", as
   });
 });
 
+test("popup metadata and unavailable-media copy localize in place", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({ cameras: [{ entity: "camera.front", name: "Front" }] });
+    card._renderShell();
+    const root = card.shadowRoot;
+    const viewer = root.querySelector("#viewer");
+    const video = document.createElement("video");
+    viewer.append(video);
+    const event = {
+      id: "event-1",
+      camera: "front",
+      label: "person",
+      start_time: 100,
+      has_clip: true,
+      has_snapshot: true,
+    };
+    card._popupInfoController.render(event, { mediaType: "clip" });
+    const info = root.querySelector("#popup-info");
+    const cameraLabel = info.querySelector('[data-fvc-i18n="runtime.popup.info.camera"]');
+    const download = info.querySelector('[data-dl-file="clip.mp4"]');
+    const translations = {
+      "runtime.popup.info.clip": "Vidéo",
+      "runtime.popup.info.camera": "Caméra",
+      "runtime.popup.info.downloadClip": "Télécharger la vidéo",
+      "runtime.popup.info.addFavorite": "Ajouter aux favoris",
+      "runtime.popup.info.removeFavorite": "Retirer des favoris",
+      "runtime.popup.mediaUnavailable": "Média indisponible",
+      "runtime.popup.mediaUnavailableDetail": "La vidéo et l’image sont indisponibles.",
+      "runtime.popup.retentionDetail": "Vérifiez la durée de conservation.",
+    };
+    const config = card._config;
+    card._localization = {
+      updateHass: () => true,
+      t: (key) => translations[key] || key,
+    };
+    card._popupInfoController._t = card._localization.t;
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+    card._config = config;
+    const infoState = {
+      videoPreserved: viewer.querySelector("video") === video,
+      cameraLabelPreserved: info.querySelector('[data-fvc-i18n="runtime.popup.info.camera"]') === cameraLabel,
+      downloadPreserved: info.querySelector('[data-dl-file="clip.mp4"]') === download,
+      cameraLabel: cameraLabel.textContent,
+      headingStartsLocalized: info.querySelector(".popup-info-head-text")?.textContent.startsWith("Vidéo - Front - "),
+      downloadTitle: download.title,
+      objectLabel: info.querySelector(".popup-info-title .tb")?.textContent,
+    };
+
+    card._popupInfoController.render(event, {
+      mediaType: "clip",
+      presentation: "card-view-drawer",
+    });
+    const favorite = root.querySelector("#popup-card-view-actions [data-popup-favorite]");
+    const favoriteBefore = favorite.title;
+    card._popupInfoController._syncFavoriteAction(favorite, true);
+    const favoriteAfter = favorite.title;
+
+    card._popupMediaLoaderController.showUnavailableMedia(event, {
+      mediaType: "clip",
+    }, { unavailableType: "media", hasClip: false });
+    const unavailable = viewer.querySelector(".popup-media-unavailable");
+    const unavailableTitle = unavailable?.querySelector("strong");
+    const fallbackBefore = unavailableTitle?.textContent;
+    translations["runtime.popup.mediaUnavailable"] = "Support manquant";
+    card._config = null;
+    card.hass = { locale: { language: "fr-CA" } };
+    card._config = config;
+    return {
+      infoState,
+      favoriteBefore,
+      favoriteAfter,
+      favoriteKey: favorite.getAttribute("data-fvc-i18n-title"),
+      unavailablePreserved: viewer.querySelector(".popup-media-unavailable") === unavailable,
+      fallbackBefore,
+      fallbackAfter: unavailableTitle?.textContent,
+      fallbackDetail: unavailable?.querySelectorAll("span")[0]?.textContent,
+      retentionDetail: unavailable?.querySelectorAll("span")[1]?.textContent,
+    };
+  });
+
+  expect(state).toEqual({
+    infoState: {
+      videoPreserved: true,
+      cameraLabelPreserved: true,
+      downloadPreserved: true,
+      cameraLabel: "Caméra",
+      headingStartsLocalized: true,
+      downloadTitle: "Télécharger la vidéo",
+      objectLabel: "Person",
+    },
+    favoriteBefore: "Ajouter aux favoris",
+    favoriteAfter: "Retirer des favoris",
+    favoriteKey: "runtime.popup.info.removeFavorite",
+    unavailablePreserved: true,
+    fallbackBefore: "Média indisponible",
+    fallbackAfter: "Support manquant",
+    fallbackDetail: "La vidéo et l’image sont indisponibles.",
+    retentionDetail: "Vérifiez la durée de conservation.",
+  });
+});
+
 test("Single, Wide, and Card View settings localize in place with their choices and guidance", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

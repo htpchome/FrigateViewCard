@@ -3,6 +3,7 @@ import {
   buildPopupInfoMarkup,
   buildPopupInfoModel,
 } from "./info.js";
+import { applyLocalizedText } from "../localization/localized-dom.js";
 import { isCardViewDrawerPopupPresentation } from "./media.js";
 
 export class PopupInfoController {
@@ -20,6 +21,7 @@ export class PopupInfoController {
     onToggleFavorite,
     onDownloadEvent,
     onDownloadRecording,
+    t,
   } = {}) {
     this._query = query;
     this._getActiveCamera = getActiveCamera;
@@ -34,6 +36,7 @@ export class PopupInfoController {
     this._onToggleFavorite = onToggleFavorite;
     this._onDownloadEvent = onDownloadEvent;
     this._onDownloadRecording = onDownloadRecording;
+    this._t = t;
     this._navigationPresentation = "";
   }
 
@@ -80,6 +83,7 @@ export class PopupInfoController {
       if (actions) {
         actions.innerHTML = overlay.actionsHtml;
         actions.hidden = !overlay.actionsHtml;
+        applyLocalizedText(actions, this._t);
       }
       return model;
     }
@@ -90,6 +94,7 @@ export class PopupInfoController {
     const markup = buildPopupInfoMarkup({ event, model });
     info.innerHTML = markup.infoHtml;
     info.hidden = false;
+    applyLocalizedText(info, this._t);
     return model;
   }
 
@@ -195,9 +200,15 @@ export class PopupInfoController {
     if (!action || action.isConnected === false) return;
     const active = retained === true;
     const label = active ? "Remove from Favorites" : "Add to Favorites";
+    const key = active
+      ? "runtime.popup.info.removeFavorite"
+      : "runtime.popup.info.addFavorite";
+    const localizedLabel = typeof this._t === "function" ? this._t(key) : label;
     action.classList?.toggle?.("active", active);
     action.setAttribute?.("aria-pressed", String(active));
-    action.setAttribute?.("aria-label", label);
-    action.setAttribute?.("title", label);
+    action.setAttribute?.("data-fvc-i18n-aria-label", key);
+    action.setAttribute?.("data-fvc-i18n-title", key);
+    action.setAttribute?.("aria-label", localizedLabel);
+    action.setAttribute?.("title", localizedLabel);
   }
 }

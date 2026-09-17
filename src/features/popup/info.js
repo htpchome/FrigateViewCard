@@ -7,6 +7,33 @@ const formatMediaTypeLabel = (mediaType = "") => {
   return normalized === "kept" ? "Favorite" : cap(normalized || "event");
 };
 
+const MEDIA_TYPE_TRANSLATION_KEYS = Object.freeze({
+  alert: "runtime.popup.info.alert",
+  clip: "runtime.popup.info.clip",
+  event: "runtime.popup.info.event",
+  kept: "runtime.popup.info.favorite",
+  media: "runtime.popup.info.media",
+  recording: "runtime.popup.info.recording",
+  snapshot: "runtime.popup.info.snapshot",
+});
+
+const mediaTypeTranslationKey = (mediaType) =>
+  MEDIA_TYPE_TRANSLATION_KEYS[String(mediaType || "event").toLowerCase()] || "";
+
+const downloadActionTranslationKey = (action) => {
+  if (action.kind === "recording-segment") return "runtime.popup.segment.download";
+  if (action.kind === "recording") return "runtime.popup.info.downloadRecording";
+  if (action.kind === "media-navigation") {
+    if (action.targetMediaType === "clip") return "runtime.popup.info.viewClip";
+    if (action.targetMediaType === "snapshot") return "runtime.popup.info.viewSnapshot";
+  }
+  if (action.kind === "event") {
+    if (action.file === "clip.mp4") return "runtime.popup.info.downloadClip";
+    if (action.file === "snapshot.jpg") return "runtime.popup.info.downloadSnapshot";
+  }
+  return "";
+};
+
 export const buildPopupInfoDownloadActions = ({
   id = "",
   mediaType = "",
@@ -181,16 +208,20 @@ export const buildPopupInfoModel = ({
 export const buildPopupInfoDownloadButtonMarkup = (action, icons) => {
   const icon = icons[action.icon] || icons.download;
   const label = escapeHtmlAttribute(action.label);
+  const translationKey = downloadActionTranslationKey(action);
+  const localizationAttributes = translationKey
+    ? ` data-fvc-i18n-title="${translationKey}" data-fvc-i18n-aria-label="${translationKey}"`
+    : "";
   if (action.kind === "recording-segment") {
-    return `<button class="popup-action" data-rec-segment-toggle type="button" title="${label}" aria-label="${label}" aria-controls="recording-segment-manager" aria-expanded="false" disabled>${icon}</button>`;
+    return `<button class="popup-action" data-rec-segment-toggle type="button" title="${label}" aria-label="${label}"${localizationAttributes} aria-controls="recording-segment-manager" aria-expanded="false" disabled>${icon}</button>`;
   }
   if (action.kind === "recording") {
-    return `<button class="popup-action" data-rec-dl-start="${escapeHtmlAttribute(action.recStart)}" data-rec-dl-end="${escapeHtmlAttribute(action.recEnd)}" type="button" title="${label}" aria-label="${label}">${icon}</button>`;
+    return `<button class="popup-action" data-rec-dl-start="${escapeHtmlAttribute(action.recStart)}" data-rec-dl-end="${escapeHtmlAttribute(action.recEnd)}" type="button" title="${label}" aria-label="${label}"${localizationAttributes}>${icon}</button>`;
   }
   if (action.kind === "media-navigation") {
-    return `<button class="popup-action" data-popup-event-id="${escapeHtmlAttribute(action.id)}" data-popup-media-target="${escapeHtmlAttribute(action.targetMediaType)}" type="button" title="${label}" aria-label="${label}">${icon}</button>`;
+    return `<button class="popup-action" data-popup-event-id="${escapeHtmlAttribute(action.id)}" data-popup-media-target="${escapeHtmlAttribute(action.targetMediaType)}" type="button" title="${label}" aria-label="${label}"${localizationAttributes}>${icon}</button>`;
   }
-  return `<button class="popup-action" data-dl="${escapeHtmlAttribute(action.id)}" data-dl-file="${escapeHtmlAttribute(action.file)}" type="button" title="${label}" aria-label="${label}">${icon}</button>`;
+  return `<button class="popup-action" data-dl="${escapeHtmlAttribute(action.id)}" data-dl-file="${escapeHtmlAttribute(action.file)}" type="button" title="${label}" aria-label="${label}"${localizationAttributes}>${icon}</button>`;
 };
 
 export const buildCardViewPopupFavoriteButtonMarkup = ({
@@ -201,9 +232,12 @@ export const buildCardViewPopupFavoriteButtonMarkup = ({
   if (!id) return "";
   const active = retained === true;
   const label = active ? "Remove from Favorites" : "Add to Favorites";
+  const translationKey = active
+    ? "runtime.popup.info.removeFavorite"
+    : "runtime.popup.info.addFavorite";
   const activeIcon = icons.star || ICONS.star;
   const inactiveIcon = icons.starO || ICONS.starO;
-  return `<button class="popup-action popup-action--favorite${active ? " active" : ""}" data-popup-favorite="${escapeHtmlAttribute(id)}" type="button" title="${label}" aria-label="${label}" aria-pressed="${active}"><span class="popup-favorite-icon popup-favorite-icon--active" aria-hidden="true">${activeIcon}</span><span class="popup-favorite-icon popup-favorite-icon--inactive" aria-hidden="true">${inactiveIcon}</span></button>`;
+  return `<button class="popup-action popup-action--favorite${active ? " active" : ""}" data-popup-favorite="${escapeHtmlAttribute(id)}" type="button" title="${label}" aria-label="${label}" data-fvc-i18n-title="${translationKey}" data-fvc-i18n-aria-label="${translationKey}" aria-pressed="${active}"><span class="popup-favorite-icon popup-favorite-icon--active" aria-hidden="true">${activeIcon}</span><span class="popup-favorite-icon popup-favorite-icon--inactive" aria-hidden="true">${inactiveIcon}</span></button>`;
 };
 
 export const buildCardViewPopupOverlayMarkup = ({
@@ -253,26 +287,36 @@ export const buildPopupInfoMarkup = ({
     .toLowerCase()
     .replace(/\s+(am|pm)$/i, "$1");
   const mediaHeading = formatMediaTypeLabel(model.mediaType || "media");
+  const mediaHeadingKey = mediaTypeTranslationKey(model.mediaType || "media");
+  const mediaHeadingMarkup = mediaHeadingKey
+    ? `<span data-fvc-i18n="${mediaHeadingKey}">${escapeHtml(mediaHeading)}</span>`
+    : escapeHtml(mediaHeading);
   const cameraHeading = cap(String(model.camera || "-").toLowerCase());
   const headText = `${mediaHeading} - ${cameraHeading} - ${compactTime} - ${model.shortDate}`;
+  const titleLabelKey = !event?.label && model.titleLabel === formatMediaTypeLabel(model.mediaType)
+    ? mediaTypeTranslationKey(model.mediaType)
+    : "";
+  const titleLabelMarker = titleLabelKey
+    ? ` data-fvc-i18n="${titleLabelKey}"`
+    : "";
 
   return {
     headText,
     infoHtml: `
-          <h2 class="popup-info-head" id="popup-info-head"><span class="popup-info-head-text">${escapeHtml(headText)}</span></h2>
+          <h2 class="popup-info-head" id="popup-info-head"><span class="popup-info-head-text">${mediaHeadingMarkup} - ${escapeHtml(cameraHeading)} - ${escapeHtml(compactTime)} - ${escapeHtml(model.shortDate)}</span></h2>
           <div class="popup-info-content">
             <div class="popup-info-title">
-              <span class="tb" style="background:${escapeHtmlAttribute(color)}33;color:${escapeHtmlAttribute(color)}">${escapeHtml(model.titleLabel)}</span>
+              <span class="tb" style="background:${escapeHtmlAttribute(color)}33;color:${escapeHtmlAttribute(color)}"${titleLabelMarker}>${escapeHtml(model.titleLabel)}</span>
               ${subLabel ? `<span class="subl list-bubble" style="--list-tag-color:${escapeHtmlAttribute(subLabelColor)}">${escapeHtml(cap(subLabel))}</span>` : ""}
             </div>
             <div class="popup-info-grid">
-              <div class="popup-info-row"><span class="popup-info-k">Camera</span><span class="popup-info-v">${escapeHtml(model.camera)}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Day/Date</span><span class="popup-info-v">${escapeHtml(model.dayDate)}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Time</span><span class="popup-info-v">${escapeHtml(model.time)}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Duration</span><span class="popup-info-v">${escapeHtml(model.duration)}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Objects</span><span class="popup-info-v">${escapeHtml(model.objects)}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Zone</span><span class="popup-info-v">${escapeHtml(model.zone)}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k">Score</span><span class="popup-info-v">${escapeHtml(model.score)}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.camera">Camera</span><span class="popup-info-v">${escapeHtml(model.camera)}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.dayDate">Day/Date</span><span class="popup-info-v">${escapeHtml(model.dayDate)}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.time">Time</span><span class="popup-info-v">${escapeHtml(model.time)}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.duration">Duration</span><span class="popup-info-v">${escapeHtml(model.duration)}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.objects">Objects</span><span class="popup-info-v">${escapeHtml(model.objects)}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.zone">Zone</span><span class="popup-info-v">${escapeHtml(model.zone)}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.score">Score</span><span class="popup-info-v">${escapeHtml(model.score)}</span></div>
               <div class="popup-info-actions">${downloadButtons}</div>
             </div>
           </div>

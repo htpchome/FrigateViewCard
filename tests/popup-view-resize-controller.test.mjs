@@ -3,6 +3,7 @@ import { test } from "node:test";
 
 import {
   PopupViewResizeController,
+  createPopupViewResizeGrip,
   placePopupViewResizeGrip,
   resolvePopupViewAvailableMaxHeight,
   resolvePopupViewRenderedMaxHeightRatio,
@@ -10,6 +11,23 @@ import {
   resolvePopupViewResizeZoomScale,
 } from "../src/features/popup/view-resize.ctrl.js";
 import { STYLES } from "../src/styles.js";
+
+test("popup resize grip keeps localized accessibility text on the same control", () => {
+  const attributes = new Map();
+  const grip = createPopupViewResizeGrip({
+    createElement: () => ({
+      setAttribute: (name, value) => attributes.set(name, value),
+    }),
+  }, (key) => ({
+    "runtime.popup.resizeHeight": "Redimensionner le média",
+    "runtime.popup.resizeHint": "Glisser pour redimensionner",
+  })[key]);
+
+  assert.equal(attributes.get("aria-label"), "Redimensionner le média");
+  assert.equal(attributes.get("data-fvc-i18n-aria-label"), "runtime.popup.resizeHeight");
+  assert.equal(attributes.get("data-fvc-i18n-title"), "runtime.popup.resizeHint");
+  assert.equal(grip.title, "Glisser pour redimensionner");
+});
 
 class FakeStyle {
   constructor() {
