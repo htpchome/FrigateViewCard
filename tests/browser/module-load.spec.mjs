@@ -230,6 +230,97 @@ test("language changes update marked card and editor text without replacing medi
   });
 });
 
+test("two-way talk labels and feedback relocalize without replacing controls or live", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    card.setConfig({ cameras: [{ entity: "camera.front", two_way_talk: true }] });
+    card._pageId = "single-view";
+    card._renderShell();
+    const root = card.shadowRoot;
+    const live = root.querySelector("#live-stage");
+    const video = document.createElement("video");
+    live.append(video);
+    const talk = root.querySelector("#two-way-talk-btn");
+    const microphone = root.querySelector("#two-way-talk-microphone-mute-btn");
+    card._showTwoWayTalkResultBubble(true);
+    const bubble = root.querySelector(".two-way-talk-result-bubble");
+    const english = card._localization;
+    const phrases = {
+      "runtime.twoWayTalk.enable": "Activer la conversation",
+      "runtime.twoWayTalk.cancelConnection": "Annuler la connexion",
+      "runtime.twoWayTalk.disable": "Arrêter la conversation",
+      "runtime.twoWayTalk.endMuted": "Terminer (micro coupé)",
+      "runtime.twoWayTalk.muteMicrophone": "Couper le microphone",
+      "runtime.twoWayTalk.unmuteMicrophone": "Activer le microphone",
+      "runtime.twoWayTalk.connected": "Conversation connectée",
+      "runtime.twoWayTalk.failed": "Échec de la connexion",
+    };
+    card._localization = {
+      updateHass: () => true,
+      t: (key, values = {}) => phrases[key] || english.t(key, values),
+    };
+    const config = card._config;
+    card._config = null;
+    card.hass = { locale: { language: "fr" } };
+    card._config = config;
+    const initial = talk?.getAttribute("aria-label");
+    const success = bubble?.textContent;
+    card._syncTwoWayTalkSoundwaveSurface = () => {};
+    card._renderMuteButton = () => {};
+    card._syncToolbarButtons = () => {};
+    card._dismissLinkedLightDimmers = () => {};
+    card._twoWayTalkStarting = true;
+    card._syncTwoWayTalkButton();
+    const connecting = talk.getAttribute("aria-label");
+    card._twoWayTalkStarting = false;
+    let muted = false;
+    card._twoWayTalkActiveForCurrentCamera = () => true;
+    card._twoWayTalkMicrophoneMutedForCurrentCamera = () => muted;
+    card._syncTwoWayTalkButton();
+    const active = talk.getAttribute("aria-label");
+    const mute = microphone.getAttribute("aria-label");
+    muted = true;
+    card._syncTwoWayTalkButton();
+    const activeMuted = talk.getAttribute("aria-label");
+    const unmute = microphone.getAttribute("aria-label");
+    const bubblePreserved = root.querySelector(".two-way-talk-result-bubble") === bubble;
+    card._showTwoWayTalkResultBubble(false);
+    const failure = root.querySelector(".two-way-talk-result-bubble")?.textContent;
+    card._clearTwoWayTalkResultBubble();
+    return {
+      initial,
+      connecting,
+      active,
+      mute,
+      activeMuted,
+      unmute,
+      success,
+      failure,
+      bubblePreserved,
+      talkPreserved: root.querySelector("#two-way-talk-btn") === talk,
+      microphonePreserved: root.querySelector("#two-way-talk-microphone-mute-btn") === microphone,
+      livePreserved: root.querySelector("#live-stage video") === video,
+    };
+  });
+
+  expect(state).toEqual({
+    initial: "Activer la conversation",
+    connecting: "Annuler la connexion",
+    active: "Arrêter la conversation",
+    mute: "Couper le microphone",
+    activeMuted: "Terminer (micro coupé)",
+    unmute: "Activer le microphone",
+    success: "Conversation connectée",
+    failure: "Échec de la connexion",
+    bubblePreserved: true,
+    talkPreserved: true,
+    microphonePreserved: true,
+    livePreserved: true,
+  });
+});
+
 test("runtime camera status and rebuilt picker remain localized without remounting live", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

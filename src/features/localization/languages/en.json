@@ -27,6 +27,17 @@
       "showBoth": "Show both cameras",
       "showCamera": "Show camera {member}"
     },
+    "twoWayTalk": {
+      "cancelConnection": "Cancel two-way talk connection",
+      "endMuted": "End two-way talk (microphone muted)",
+      "disable": "Disable two-way talk",
+      "enable": "Enable two-way talk",
+      "muteMicrophone": "Mute microphone",
+      "unmuteMicrophone": "Unmute microphone",
+      "connected": "Two-way talk connected",
+      "failed": "Two-way talk failed to connect",
+      "haConnectionFailed": "Home Assistant WebRTC could not establish two-way talk. Verify that the camera stream has a working audio backchannel."
+    },
     "linkedLight": {
       "toggle": {
         "unavailable": "{name}: Unavailable. Turn on",

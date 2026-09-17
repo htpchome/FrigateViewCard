@@ -451,6 +451,7 @@ test("desktop talk controls keep the microphone centered and reveal synchronized
   assert.match(connectingMarkup, /info-row-mic-btn connecting round-btn/);
   assert.match(connectingMarkup, /aria-busy="true"/);
   assert.match(connectingMarkup, /Cancel two-way talk connection/);
+  assert.match(connectingMarkup, /data-fvc-i18n-title="runtime\.twoWayTalk\.cancelConnection"/);
 
   ctx._twoWayTalkStarting = false;
   ctx._streamMuted = false;
@@ -511,6 +512,18 @@ test("desktop talk controls keep the microphone centered and reveal synchronized
   assert.match(standaloneMarkup, /two-way-talk-microphone-mute-btn/);
   assert.doesNotMatch(standaloneMarkup, /two-way-talk-inline-mute-btn/);
   assert.doesNotMatch(standaloneMarkup, /id="two-way-talk-mute-btn"/);
+
+  ctx._localization = {
+    t: (key) => ({
+      "runtime.twoWayTalk.disable": 'Arrêter le "micro"',
+      "runtime.twoWayTalk.muteMicrophone": "Couper le microphone",
+    })[key],
+  };
+  ctx._twoWayTalkSession.microphoneMuted = false;
+  const localizedMarkup = ctx._buildTwoWayTalkControlRowMarkup();
+  assert.match(localizedMarkup, /title="Arrêter le &quot;micro&quot;"/);
+  assert.match(localizedMarkup, /title="Couper le microphone"/);
+  assert.match(localizedMarkup, /data-fvc-i18n-aria-label="runtime\.twoWayTalk\.muteMicrophone"/);
 });
 
 test("Grid mode suppresses the active camera two-way-talk control", () => {

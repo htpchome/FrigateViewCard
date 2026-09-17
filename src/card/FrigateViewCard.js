@@ -37,6 +37,7 @@ import { ICONS } from "../icons.js";
 import { STYLES } from "../styles.js";
 import { createLocalizationController } from "../features/localization/localization.ctrl.js";
 import { applyLocalizedText, setLocalizedText } from "../features/localization/localized-dom.js";
+import { escapeHtmlAttribute } from "../shared/html.js";
 // Registers <circle-pad-control-2>; keep this import for its module side effect.
 import "../components/circle-pad/circle-pad.js";
 import {
@@ -365,6 +366,27 @@ import {
 const CARD_VIEW_OVERLAYS_IDLE_CLASS = "card-view-overlays-idle";
 const CARD_VIEW_OVERLAYS_TOUCH_IDLE_CLASS =
   "card-view-overlays-touch-idle";
+
+const TWO_WAY_TALK_LABELS = Object.freeze({
+  cancel: { key: "runtime.twoWayTalk.cancelConnection", fallback: "Cancel two-way talk connection" },
+  endMuted: { key: "runtime.twoWayTalk.endMuted", fallback: "End two-way talk (microphone muted)" },
+  disable: { key: "runtime.twoWayTalk.disable", fallback: "Disable two-way talk" },
+  enable: { key: "runtime.twoWayTalk.enable", fallback: "Enable two-way talk" },
+  muteMicrophone: { key: "runtime.twoWayTalk.muteMicrophone", fallback: "Mute microphone" },
+  unmuteMicrophone: { key: "runtime.twoWayTalk.unmuteMicrophone", fallback: "Unmute microphone" },
+});
+
+const resolveTwoWayTalkButtonLabel = ({ connecting, active, microphoneMuted }) =>
+  connecting
+    ? TWO_WAY_TALK_LABELS.cancel
+    : active
+      ? microphoneMuted
+        ? TWO_WAY_TALK_LABELS.endMuted
+        : TWO_WAY_TALK_LABELS.disable
+      : TWO_WAY_TALK_LABELS.enable;
+
+const resolveMicrophoneButtonLabel = (muted) =>
+  muted ? TWO_WAY_TALK_LABELS.unmuteMicrophone : TWO_WAY_TALK_LABELS.muteMicrophone;
 
 export class FrigateViewCard extends HTMLElement {
   constructor() {
@@ -5125,7 +5147,8 @@ export class FrigateViewCard extends HTMLElement {
     const active = this._twoWayTalkActiveForCurrentCamera();
     const microphoneMuted =
       this._twoWayTalkMicrophoneMutedForCurrentCamera();
-    const label = microphoneMuted ? "Unmute microphone" : "Mute microphone";
+    const { key, fallback } = resolveMicrophoneButtonLabel(microphoneMuted);
+    const label = escapeHtmlAttribute(this._localization?.t?.(key) || fallback);
     const microphoneActive = active && !microphoneMuted;
     const className = [
       "icon-btn",
@@ -5137,7 +5160,7 @@ export class FrigateViewCard extends HTMLElement {
     ]
       .filter(Boolean)
       .join(" ");
-    return `<button class="${className}" id="${buttonId}" type="button" ${active ? "" : "hidden"} aria-pressed="${microphoneActive ? "true" : "false"}" title="${label}" aria-label="${label}">${microphoneMuted ? ICONS.micOff : ICONS.micOn}</button>`;
+    return `<button class="${className}" id="${buttonId}" type="button" ${active ? "" : "hidden"} aria-pressed="${microphoneActive ? "true" : "false"}" title="${label}" aria-label="${label}" data-fvc-i18n-title="${key}" data-fvc-i18n-aria-label="${key}">${microphoneMuted ? ICONS.micOff : ICONS.micOn}</button>`;
   }
 
   _shouldRenderTwoWayTalkSoundwave() {
@@ -5168,15 +5191,14 @@ export class FrigateViewCard extends HTMLElement {
     const active = this._twoWayTalkActiveForCurrentCamera();
     const connecting = this._twoWayTalkStarting === true && !active;
     const microphoneMuted = this._twoWayTalkMicrophoneMutedForCurrentCamera();
-    const label = connecting
-      ? "Cancel two-way talk connection"
-      : active
-        ? microphoneMuted
-          ? "End two-way talk (microphone muted)"
-          : "Disable two-way talk"
-        : "Enable two-way talk";
+    const { key, fallback } = resolveTwoWayTalkButtonLabel({
+      connecting,
+      active,
+      microphoneMuted,
+    });
+    const label = escapeHtmlAttribute(this._localization?.t?.(key) || fallback);
     const visible = this._shouldRenderTwoWayTalkButtonForActiveCamera();
-    return `<button class="info-row-mic-btn${active ? " active" : ""}${connecting ? " connecting" : ""}${microphoneMuted ? " microphone-muted" : ""} round-btn" id="two-way-talk-btn" type="button" ${visible ? "" : "hidden"} aria-pressed="${active ? "true" : "false"}" aria-busy="${connecting ? "true" : "false"}" title="${label}" aria-label="${label}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
+    return `<button class="info-row-mic-btn${active ? " active" : ""}${connecting ? " connecting" : ""}${microphoneMuted ? " microphone-muted" : ""} round-btn" id="two-way-talk-btn" type="button" ${visible ? "" : "hidden"} aria-pressed="${active ? "true" : "false"}" aria-busy="${connecting ? "true" : "false"}" title="${label}" aria-label="${label}" data-fvc-i18n-title="${key}" data-fvc-i18n-aria-label="${key}">${active ? ICONS.micOn : ICONS.micOff}</button>`;
   }
 
   _buildLinkedLightControlMarkup({
@@ -5270,13 +5292,12 @@ export class FrigateViewCard extends HTMLElement {
     );
     if (active) this._dismissLinkedLightDimmers();
     const microphoneMuted = this._twoWayTalkMicrophoneMutedForCurrentCamera();
-    const label = connecting
-      ? "Cancel two-way talk connection"
-      : active
-        ? microphoneMuted
-          ? "End two-way talk (microphone muted)"
-          : "Disable two-way talk"
-        : "Enable two-way talk";
+    const { key, fallback } = resolveTwoWayTalkButtonLabel({
+      connecting,
+      active,
+      microphoneMuted,
+    });
+    const label = this._localization?.t?.(key) || fallback;
     this.shadowRoot
       ?.querySelectorAll?.(".two-way-talk-control-row")
       ?.forEach((row) => row.classList.toggle("has-inline-mute", active));
@@ -5288,6 +5309,8 @@ export class FrigateViewCard extends HTMLElement {
       button.classList.toggle("microphone-muted", microphoneMuted);
       button.setAttribute("aria-pressed", active ? "true" : "false");
       button.setAttribute("aria-busy", connecting ? "true" : "false");
+      button.setAttribute("data-fvc-i18n-title", key);
+      button.setAttribute("data-fvc-i18n-aria-label", key);
       button.setAttribute("title", label);
       button.setAttribute("aria-label", label);
       button.innerHTML = active ? ICONS.micOn : ICONS.micOff;
@@ -5295,9 +5318,10 @@ export class FrigateViewCard extends HTMLElement {
     this.shadowRoot
       ?.querySelectorAll?.(".two-way-talk-microphone-mute-btn")
       ?.forEach((microphoneMuteButton) => {
-        const microphoneLabel = microphoneMuted
-          ? "Unmute microphone"
-          : "Mute microphone";
+        const microphoneState = resolveMicrophoneButtonLabel(microphoneMuted);
+        const microphoneLabel =
+          this._localization?.t?.(microphoneState.key) ||
+          microphoneState.fallback;
         microphoneMuteButton.hidden = !active;
         microphoneMuteButton.style.display = active ? "" : "none";
         microphoneMuteButton.classList.toggle("active", !microphoneMuted);
@@ -5309,6 +5333,8 @@ export class FrigateViewCard extends HTMLElement {
           "aria-pressed",
           microphoneMuted ? "false" : "true",
         );
+        microphoneMuteButton.setAttribute("data-fvc-i18n-title", microphoneState.key);
+        microphoneMuteButton.setAttribute("data-fvc-i18n-aria-label", microphoneState.key);
         microphoneMuteButton.setAttribute("title", microphoneLabel);
         microphoneMuteButton.setAttribute("aria-label", microphoneLabel);
         microphoneMuteButton.innerHTML = microphoneMuted
@@ -5360,9 +5386,13 @@ export class FrigateViewCard extends HTMLElement {
     bubble.className = `two-way-talk-result-bubble ${
       success ? "success" : "failure"
     }`;
-    bubble.textContent = success
+    const key = success
+      ? "runtime.twoWayTalk.connected"
+      : "runtime.twoWayTalk.failed";
+    const fallback = success
       ? "Two-way talk connected"
       : "Two-way talk failed to connect";
+    setLocalizedText(bubble, key, this._localization?.t || (() => fallback));
     surface.appendChild(bubble);
     this._twoWayTalkResultBubble = bubble;
     this._twoWayTalkResultTimer = setTimeout(() => {
@@ -5490,7 +5520,8 @@ export class FrigateViewCard extends HTMLElement {
       this._showTwoWayTalkResultBubble(false);
       if (!useGo2Rtc) {
         this._toast(
-          "Home Assistant WebRTC could not establish two-way talk. Verify that the camera stream has a working audio backchannel.",
+          this._localization?.t?.("runtime.twoWayTalk.haConnectionFailed") ||
+            "Home Assistant WebRTC could not establish two-way talk. Verify that the camera stream has a working audio backchannel.",
         );
       }
       this._twoWayTalkSoundwaveController?.stop();
