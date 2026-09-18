@@ -125,7 +125,33 @@ test("bundled French resolves regional HA locales", () => {
   );
 });
 
-test("full catalogs cover English keys and regional Spanish overrides preserve placeholders", () => {
+test("Portuguese and Brazilian Portuguese use regional wording with layered fallback", () => {
+  const localization = createLocalizationController();
+  localization.updateHass({ locale: { language: "pt_PT" } });
+  assert.equal(localization.language, "pt-PT");
+  assert.equal(localization.resolvedLanguage, "pt-PT");
+  assert.equal(localization.t("runtime.live.liveTile"), "DIRETO");
+  assert.equal(localization.t("runtime.live.camera"), "Câmara");
+  assert.equal(localization.t("editor.actions.delete"), "Eliminar");
+
+  localization.updateHass({ locale: { language: "pt_BR" } });
+  assert.equal(localization.language, "pt-BR");
+  assert.equal(localization.resolvedLanguage, "pt-BR");
+  assert.equal(localization.t("runtime.live.liveTile"), "AO VIVO");
+  assert.equal(localization.t("runtime.live.camera"), "Câmera");
+  assert.equal(localization.t("editor.actions.delete"), "Excluir");
+  assert.equal(localization.t("runtime.toolbar.alerts"), "Alertas");
+  assert.equal(
+    localization.t("editor.cameraModal.deleteConfirm", { camera: "Entrada" }),
+    "Tem certeza de que deseja excluir “Entrada”? Esta ação não pode ser desfeita.",
+  );
+
+  localization.updateHass({ locale: { language: "pt_AO" } });
+  assert.equal(localization.language, "pt-AO");
+  assert.equal(localization.resolvedLanguage, "pt");
+});
+
+test("full catalogs cover English keys and regional overrides preserve placeholders", () => {
   const load = (file) => JSON.parse(readFileSync(
     new URL("../src/features/localization/languages/" + file + ".json", import.meta.url),
     "utf8",
@@ -138,7 +164,7 @@ test("full catalogs cover English keys and regional Spanish overrides preserve p
   const english = new Map(flatten(load("en")));
   const placeholders = (value) => [...value.matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/g)]
     .map((match) => match[1]).sort();
-  for (const language of ["de", "es", "fr"]) {
+  for (const language of ["de", "es", "fr", "pt"]) {
     const translated = new Map(flatten(load(language)));
     assert.deepEqual([...translated.keys()].sort(), [...english.keys()].sort());
     for (const [key, source] of english) {
@@ -150,17 +176,19 @@ test("full catalogs cover English keys and regional Spanish overrides preserve p
       );
     }
   }
-  const spanish = new Map(flatten(load("es")));
-  const regional = new Map(flatten(load("es-419")));
-  for (const [key, translation] of regional) {
-    assert.ok(english.has(key), "Unknown regional Spanish key: " + key);
-    assert.ok(translation.trim(), "Empty regional Spanish translation: " + key);
-    assert.notEqual(translation, spanish.get(key), "Redundant regional override: " + key);
-    assert.deepEqual(
-      placeholders(translation),
-      placeholders(english.get(key)),
-      "Placeholder mismatch in es-419: " + key,
-    );
+  for (const [baseLanguage, regionalLanguage] of [["es", "es-419"], ["pt", "pt-BR"]]) {
+    const base = new Map(flatten(load(baseLanguage)));
+    const regional = new Map(flatten(load(regionalLanguage)));
+    for (const [key, translation] of regional) {
+      assert.ok(english.has(key), "Unknown " + regionalLanguage + " key: " + key);
+      assert.ok(translation.trim(), "Empty " + regionalLanguage + " translation: " + key);
+      assert.notEqual(translation, base.get(key), "Redundant regional override: " + key);
+      assert.deepEqual(
+        placeholders(translation),
+        placeholders(english.get(key)),
+        "Placeholder mismatch in " + regionalLanguage + ": " + key,
+      );
+    }
   }
 });
 

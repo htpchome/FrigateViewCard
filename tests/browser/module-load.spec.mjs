@@ -330,6 +330,47 @@ test("bundled French catalog resolves regional Home Assistant locales in card an
   expect(labels).toEqual({ runtime: "Alertes", editor: "Ajouter", resolved: "fr" });
 });
 
+test("bundled Portuguese catalogs resolve European and Brazilian variants", async ({ page }) => {
+  await page.goto(baseUrl);
+  const labels = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    await import("/frigate-view-card-editor.js");
+    const card = document.createElement("frigate-view-card");
+    const editor = document.createElement("frigate-view-card-editor");
+    editor._t("editor.actions.delete");
+    card._localization.updateHass({ locale: { language: "pt-PT" } });
+    editor._localization.updateHass({ locale: { language: "pt-PT" } });
+    const portuguese = {
+      resolved: card._localization.resolvedLanguage,
+      live: card._localization.t("runtime.live.liveTile"),
+      camera: card._localization.t("runtime.live.camera"),
+      delete: editor._t("editor.actions.delete"),
+    };
+    card._localization.updateHass({ locale: { language: "pt-BR" } });
+    editor._localization.updateHass({ locale: { language: "pt-BR" } });
+    return {
+      portuguese,
+      brazilian: {
+        resolved: card._localization.resolvedLanguage,
+        live: card._localization.t("runtime.live.liveTile"),
+        camera: card._localization.t("runtime.live.camera"),
+        delete: editor._t("editor.actions.delete"),
+        inherited: card._localization.t("runtime.toolbar.alerts"),
+      },
+    };
+  });
+  expect(labels).toEqual({
+    portuguese: { resolved: "pt-PT", live: "DIRETO", camera: "Câmara", delete: "Eliminar" },
+    brazilian: {
+      resolved: "pt-BR",
+      live: "AO VIVO",
+      camera: "Câmera",
+      delete: "Excluir",
+      inherited: "Alertas",
+    },
+  });
+});
+
 test("language changes update marked card and editor text without replacing media or inputs", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

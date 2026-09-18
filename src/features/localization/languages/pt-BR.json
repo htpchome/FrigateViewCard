@@ -1,0 +1,371 @@
+{
+  "runtime": {
+    "toolbar": {
+      "ptzControls": "Controles PTZ",
+      "controls": "Controles",
+      "startGrid": "Iniciar modo de grade",
+      "stopGrid": "Sair do modo de grade",
+      "enableAlertTakeover": "Ativar mudança para a câmera em alerta",
+      "disableAlertTakeover": "Desativar mudança para a câmera em alerta"
+    },
+    "cameraGroup": {
+      "useMainAudio": "Usar áudio da câmera principal",
+      "useSecondAudio": "Usar áudio da segunda câmera",
+      "focusMain": "Selecionar câmera principal",
+      "focusSecond": "Selecionar segunda câmera",
+      "showBoth": "Mostrar ambas as câmeras",
+      "showCamera": "Mostrar câmera {member}"
+    },
+    "twoWayTalk": {
+      "cancelConnection": "Cancelar conexão de áudio bidirecional",
+      "failed": "Falha na conexão do áudio bidirecional",
+      "haConnectionFailed": "O Home Assistant WebRTC não conseguiu estabelecer áudio bidirecional. Verifique se a transmissão da câmera tem um canal de retorno de áudio funcional."
+    },
+    "linkedLight": {
+      "toggle": {
+        "unavailableDimmable": "{name}: indisponível. Ligar. Pressione e segure para ajustar o brilho",
+        "onDimmable": "{name}: {percent}%. Desligar. Pressione e segure para ajustar o brilho",
+        "offDimmable": "{name}: desligada. Ligar. Pressione e segure para ajustar o brilho"
+      },
+      "closeBrightness": "Fechar controle do brilho"
+    },
+    "wideView": {
+      "companionCameras": "Câmeras adicionais",
+      "resizeCompanionArea": "Redimensionar área das câmeras adicionais",
+      "resizeCompanionHint": "Arraste para cima ou para baixo para redimensionar a área das câmeras adicionais",
+      "expandCompanionCameras": "Expandir câmeras adicionais",
+      "collapseCompanionCameras": "Recolher câmeras adicionais",
+      "timeline": {
+        "cameraEvents": "Linha do tempo de eventos da câmera",
+        "stackedEvents": "{count} eventos agrupados — use a rodinha do mouse ou o botão do grupo para navegar entre eles",
+        "loading": "Carregando linha do tempo…",
+        "title": "Linha do tempo",
+        "scale": "Escala da linha do tempo",
+        "scrollable": "Linha do tempo de eventos rolável",
+        "open": "Abrir linha do tempo",
+        "collapse": "Recolher linha do tempo",
+        "collapseHint": "Arraste para redimensionar ou clique para recolher a linha do tempo"
+      }
+    },
+    "pageNav": {
+      "preview": "Prévia",
+      "backToPreview": "Voltar à página de prévia",
+      "mobile": "Celular"
+    },
+    "preview": {
+      "haLive": "HA ao vivo",
+      "streamLive": "{stream} ao vivo",
+      "live": "Ao vivo",
+      "loading": "Carregando…"
+    },
+    "cardPickerDemo": {
+      "brandLabel": "Marca FrigateView na prévia",
+      "demoCamera": "Câmera de demonstração"
+    },
+    "ptz": {
+      "presets": "Posições predefinidas da câmera",
+      "presetsNote": "As posições predefinidas são configuradas na câmera.",
+      "moveToPreset": "Mover câmera para a posição {name}"
+    },
+    "live": {
+      "fullscreen": "Vídeo ao vivo em tela cheia",
+      "pictureInPicture": "Vídeo ao vivo em modo imagem na imagem",
+      "closeRotatedFullscreen": "Fechar tela cheia após rotação",
+      "resizeHeight": "Alterar altura da visualização ao vivo",
+      "resizeHint": "Arraste para redimensionar a vista ao vivo; clique ou toque duas vezes para redefinir",
+      "mute": "Silenciar visualização ao vivo",
+      "unmute": "Ativar som da visualização ao vivo",
+      "live": "Ao vivo",
+      "liveTile": "AO VIVO",
+      "liveStatus": "Estado da transmissão ao vivo",
+      "liveCamera": "Câmera ao vivo",
+      "cameraOffline": "Câmera offline",
+      "liveSource": "Origem da transmissão ao vivo",
+      "connecting": "Conectando…",
+      "loading": "Carregando…",
+      "cameraSnapshot": "Instantâneo da câmera",
+      "camera": "Câmera",
+      "grid": "Grade"
+    },
+    "cardView": {
+      "exitFullscreen": "Sair da tela cheia",
+      "previousMedia": "Mídia anterior",
+      "moreMedia": "Mais mídia",
+      "drawerMedia": "Mídia do painel",
+      "filterMedia": "Filtrar mídia",
+      "openMediaDrawer": "Abrir painel de mídia",
+      "closeMediaDrawer": "Fechar painel de mídia",
+      "startGrid": "Iniciar modo de grade",
+      "stopGrid": "Sair do modo de grade",
+      "enableAlertTakeover": "Ativar mudança para a câmera em alerta",
+      "disableAlertTakeover": "Desativar mudança para a câmera em alerta",
+      "ptzControls": "Controles PTZ",
+      "openPtzControls": "Abrir controles PTZ",
+      "closePtzControls": "Fechar controles PTZ",
+      "moveCamera": {
+        "left": "Mover câmera para a esquerda",
+        "up": "Mover câmera para cima",
+        "down": "Mover câmera para baixo",
+        "right": "Mover câmera para a direita"
+      },
+      "liveSourceWithType": "Origem da transmissão ao vivo: {source}",
+      "loading": "Carregando…",
+      "downloadRecording": "Baixar gravação",
+      "drawer": {
+        "loadingAlerts": "Carregando alertas…",
+        "loadingClips": "Carregando clipes…",
+        "loadingSnapshots": "Carregando instantâneos…",
+        "loadingRecordings": "Carregando gravações…",
+        "loadingFavorites": "Carregando favoritos…"
+      }
+    },
+    "popup": {
+      "mediaActions": "Ações de mídia",
+      "fullscreen": "Tela cheia",
+      "resizeHeight": "Alterar altura da janela de mídia",
+      "resizeHint": "Arraste para redimensionar o conteúdo de mídia; clique ou toque duas vezes para redefinir",
+      "loading": "Carregando…",
+      "mediaUnavailable": "Mídia indisponível",
+      "clipFallbackDetail": "O instantâneo do evento está sendo exibido. O Frigate indicou um clipe para este evento, mas não foi possível carregá-lo para reprodução.",
+      "snapshotUnavailableDetail": "Não foi possível carregar o instantâneo solicitado do Frigate.",
+      "mediaUnavailableDetail": "O Frigate indicou conteúdo de mídia para este evento, mas não foi possível carregar o clipe nem o instantâneo.",
+      "retentionDetail": "A mídia pode estar indisponível, ter sido alterada ou removida conforme a política de retenção configurada para esta câmera. Verifique as configurações de retenção de gravações da câmera no Frigate.",
+      "info": {
+        "media": "Mídia",
+        "camera": "Câmera",
+        "downloadRecording": "Baixar gravação",
+        "downloadClip": "Baixar clipe",
+        "downloadSnapshot": "Baixar instantâneo"
+      },
+      "segment": {
+        "downloadRegion": "Baixar segmento da gravação",
+        "guidance": "Arraste as alças para escolher o que manter. A parte verde será baixada; a vermelha será excluída.",
+        "resetSegment": "Redefinir segmento",
+        "reset": "Redefinir",
+        "download": "Baixar segmento",
+        "closePreview": "Fechar prévia do segmento",
+        "previewTitle": "Prévia do segmento",
+        "preparingPreview": "Preparando prévia do segmento…",
+        "previewPlayerUnavailable": "Não foi possível criar o reprodutor da prévia do segmento."
+      }
+    },
+    "browse": {
+      "loading": "Carregando…",
+      "loadingEvents": "Carregando eventos…",
+      "loadingRecordings": "Carregando gravações…",
+      "loadingReviews": "Carregando revisões…",
+      "loadingAlerts": "Carregando alertas…",
+      "row": {
+        "detection": "Detecção",
+        "downloadClip": "Baixar clipe",
+        "downloadSnapshot": "Baixar instantâneo",
+        "downloadRecording": "Baixar gravação",
+        "downloadRecordingFromCamera": "Baixar gravação da câmera {camera}",
+        "oneMoreObject": "{count} outro objeto detectado",
+        "moreObjects": "{count} outros objetos detectados"
+      },
+      "resetCalendar": "Redefinir"
+    }
+  },
+  "editor": {
+    "panels": {
+      "camera": "Configurações das câmeras",
+      "general": "Configurações gerais",
+      "theme": "Configurações do tema",
+      "layout": "Configurações de layout",
+      "slideshow": "Configurações da apresentação",
+      "gridview": "Configurações do modo de grade",
+      "preview": "Página de prévia"
+    },
+    "actions": {
+      "delete": "Excluir"
+    },
+    "status": {
+      "unsavedChanges": "Alterações não salvas — use o botão Salvar do Home Assistant para aplicá-las."
+    },
+    "general": {
+      "updatingVersion": "Atualizando para {version}",
+      "cameraTokenHelp": "Use {camera} para mostrar o nome da câmera ativa. O modo de grade mostra {grid}.",
+      "grid": "Grade",
+      "favoritesAllCameras": "Favoritos de todas as câmeras",
+      "favoritesAllCamerasHelp": "Mostra os favoritos de todas as câmeras configuradas. Desative para mostrar apenas os da câmera ativa.",
+      "snapshotRefreshHelp": "Frequência de atualização dos instantâneos quando a vista ao vivo está desligada.",
+      "alertLiveDuration": "Duração da transmissão ao vivo após alerta",
+      "alertLiveDurationHelp": "Tempo durante o qual um instantâneo na Prévia ou Vista ampla mostra vídeo ao vivo após um alerta.",
+      "prePostRollHelp": "Adiciona {seconds} segundos antes e depois da reprodução ou do download de alertas e clipes. Requer gravações do Frigate."
+    },
+    "theme": {
+      "resetDefaultColor": "Restaurar cor padrão",
+      "useDefault": "Usar padrão",
+      "draftChangesRequireSave": "É preciso salvar a configuração do cartão para aplicar as alterações temporárias.",
+      "colors": {
+        "bg_tabs_holder": "Fundo das abas de navegação",
+        "bg_cam_btn": "Cor de fundo do botão da câmera",
+        "bg_detect": "Detecção/Movimento",
+        "border": "Primeira cor da borda",
+        "border2": "Segunda cor da borda"
+      }
+    },
+    "layout": {
+      "cardShadowHelp": "Adiciona uma sombra ao redor do cartão. Ela é ocultada automaticamente em celulares na Prévia, Vista ampla e Vista móvel.",
+      "roundedCornersHelp": "Arredonda os cantos do cartão e da mídia.",
+      "showLogo": "Mostrar logotipo de {cardName}",
+      "showLogoHelp": "Mostra a marca {cardName} nos rodapés e no cabeçalho móvel da Prévia quando a barra de navegação do HA está na parte inferior.",
+      "showVersionNumberHelp": "Mostra a versão instalada nos rodapés. Ela também permanece visível nas Configurações gerais.",
+      "tightMarginsHelp": "Remove o espaçamento interno nas visualizações de seções. Nas janelas do Bubble Card, mantém o espaçamento superior e remove o lateral e o inferior.",
+      "activeTabs": "Abas ativas",
+      "autoHeightHelp": "Para funcionar corretamente, a altura do cartão precisa estar definida como Automática.",
+      "eventItemBorders": "Bordas dos eventos",
+      "eventItemBordersHelp": "Adiciona bordas aos eventos. Útil quando as sombras internas estão desativadas."
+    },
+    "slideshow": {
+      "cameraRotationInterval": "Intervalo de mudança de câmera",
+      "cameraRotationHelp": "Tempo entre câmeras durante a apresentação.",
+      "alertHoldHelp": "Tempo durante o qual a câmera selecionada por um alerta permanece antes de a rotação retomar."
+    },
+    "grid": {
+      "enable": "Ativar modo de grade",
+      "enableHelp": "Adiciona uma grade 2×2 para pelo menos duas câmeras. Indisponível em dispositivos móveis.",
+      "order": "Ordem da grade",
+      "orderAria": "Ordem da grade",
+      "default": "Padrão",
+      "orderHelp": "A ordem padrão segue as Configurações das câmeras. A personalizada reordena ou exclui câmeras apenas no modo de grade.",
+      "gridNumber": "Grade {number}",
+      "excludeFromGrid": "Excluir da grade",
+      "excludeCameraFromGrid": "Excluir {camera} da grade",
+      "includeInGrid": "Incluir na grade",
+      "includeCameraInGrid": "Incluir {camera} na grade",
+      "noIncludedCameras": "No momento, não há câmeras incluídas no modo de grade.",
+      "excludedCameras": "Câmeras excluídas",
+      "liveView": "Vista ao vivo na grade",
+      "liveViewHelp": "Mantém todas as câmeras visíveis ao vivo. Caso contrário, os alertas passam temporariamente os instantâneos para vídeo ao vivo.",
+      "rotationInterval": "Intervalo de rotação da grade",
+      "rotationHelp": "Tempo entre grupos de câmeras quando estão incluídas mais de quatro.",
+      "alertHoldDuration": "Duração do destaque por alerta na grade",
+      "alertHoldHelp": "Tempo durante o qual um bloco em alerta fica destacado e, se necessário, ao vivo."
+    },
+    "preview": {
+      "enable": "Ativar página de prévia",
+      "enableHelp": "Adiciona a Prévia à navegação e às opções de página inicial.",
+      "liveDesktop": "Câmeras ao vivo no computador",
+      "liveDesktopHelp": "Mantém todas as câmeras da Prévia ao vivo nos computadores. Caso contrário, alertas e revisões elegíveis passam os instantâneos para vídeo ao vivo.",
+      "liveMobile": "Câmeras ao vivo no celular",
+      "liveMobileHelp": "Mantém todas as câmeras da Prévia ao vivo nos celulares e tablets. Caso contrário, alertas e revisões elegíveis passam os instantâneos para vídeo ao vivo.",
+      "showTitleBarsHelp": "Mostra o nome, a origem, o número de alertas e o estado de cada câmera."
+    },
+    "startMode": {
+      "help": "Define o modo ao abrir. Ative a grade ou a apresentação antes de as selecionar.",
+      "live": "Ao vivo",
+      "grid": "Grade",
+      "gridDisabledReason": "Ative o modo de grade nas Configurações do modo de grade para usar esta opção.",
+      "slideshowDisabledReason": "Ative o modo de apresentação nas Configurações da apresentação para usar esta opção.",
+      "gridDisabledAria": "Grade. Ative o modo de grade nas Configurações do modo de grade para usar esta opção.",
+      "slideshowDisabledAria": "Apresentação. Ative o modo de apresentação nas Configurações da apresentação para usar esta opção."
+    },
+    "singleView": {
+      "startWithAlertTakeoverHelp": "Define se a mudança para a câmera em alerta está ativa ao abrir a Vista individual."
+    },
+    "wideView": {
+      "liveCompanionCameras": "Câmeras adicionais ao vivo",
+      "liveCompanionCamerasHelp": "Mantém todas as câmeras adicionais ao vivo. Caso contrário, os alertas elegíveis passam os instantâneos para vídeo ao vivo.",
+      "startWithAlertTakeoverHelp": "Define se a mudança para a câmera em alerta está ativa ao abrir a Vista ampla.",
+      "enableTimelinePanelHelp": "Adiciona uma linha do tempo recolhível ao lado da lista de eventos. Segue a câmera ativa ou todas as câmeras no modo de grade.",
+      "openTimelineByDefault": "Abrir linha do tempo por padrão",
+      "enableTimelinePanel": "Ativar painel da linha do tempo",
+      "openTimelineByDefaultHelp": "Abre a linha do tempo com a Vista ampla. A alça permanece disponível quando ela está fechada.",
+      "initialTimelineRange": "Período inicial da linha do tempo",
+      "initialTimelineRangeHelp": "Define o período inicial. Pode alterá-lo mais tarde no cabeçalho da linha do tempo."
+    },
+    "cardView": {
+      "enableHelp": "Adiciona uma página de câmera ao vivo cuja altura se adapta ao conteúdo em qualquer dispositivo. O limite de altura do cartão não se aplica.",
+      "startModeHelp": "Define o modo ao vivo quando a opção Vídeo apenas está selecionada. Ative a grade ou a apresentação antes de as selecionar.",
+      "standaloneHelp": "Torna a Vista de cartão a única página de {cardName} em todos os dispositivos. Remove os links entre páginas e o botão Voltar.",
+      "standalone": "Vista de cartão independente",
+      "startWithAlertTakeoverHelp": "Define se a mudança para a câmera em alerta está ativa ao abrir a Vista de cartão.",
+      "enableMediaDrawer": "Ativar painel de mídia",
+      "enableMediaDrawerHelp": "Mostra um painel de mídia à esquerda no modo Vídeo apenas.",
+      "hideCameraName": "Ocultar nome da câmera",
+      "hideCameraNameHelp": "Oculta o seletor de câmera até passar o mouse sobre o vídeo ou tocar nele. Também se aplica ao modo de grade."
+    },
+    "pageNames": {
+      "preview": "Prévia",
+      "previewMobile": "Prévia + Celular",
+      "previewSingle": "Prévia + Vista individual",
+      "mobile": "Celular"
+    },
+    "mobileView": {
+      "rotateToFullscreen": "Girar para tela cheia",
+      "rotateToFullscreenHelp": "Nos celulares, girar o aparelho para a horizontal expande o vídeo ao vivo e a mídia das janelas para tela cheia. Desativado durante a edição ou prévia do cartão.",
+      "batterySaver": "Economia de bateria no celular",
+      "batterySaverHelp": "Verifica novos alertas e revisões a cada 60 segundos no celular para poupar bateria e dados.",
+      "moveNavbarBottomHelp": "Move a barra de navegação do painel do Home Assistant para a parte inferior nos celulares.",
+      "navbarOwnerConflict": "Este cartão também reivindica Painel completo no YAML, mas o {cardName} em {page} {dashboard} controla esta opção. Desative Painel completo aqui ou remova a configuração YAML duplicada.",
+      "navbarOwnerLocked": "O {cardName} em {page} {dashboard} controla Mover barra de navegação do HA para baixo. Desative Painel completo nesse local para alterar esta configuração.",
+      "stackNavbarIconLabelHelp": "Nas abas com ícone e título, centraliza um título menor abaixo do ícone. Os outros estilos de aba não mudam.",
+      "headerOverlay": "Exibir seletor de câmera e cabeçalho sobre o vídeo",
+      "headerOverlayHelp": "Coloca o cabeçalho da câmera sobre o vídeo ao vivo. Os controles do cabeçalho desaparecem com os do vídeo; AO VIVO permanece visível.",
+      "outerBorder": "Borda externa da Vista móvel",
+      "outerBorderHelp": "Adiciona a borda com a cor do tema ao redor da Vista móvel em todos os dispositivos."
+    },
+    "swipe": {
+      "ownerConflict": "Este cartão também reivindica o controle do deslize no YAML, mas o {cardName} em {page} {dashboard} controla-o. Desative esta opção aqui ou remova a configuração YAML duplicada.",
+      "noneHelp": "Mantenha o controle, mas desative a navegação por deslize de {cardName}.",
+      "phonePages": "Páginas acessíveis por deslize no celular",
+      "phonePagesHelp": "A Vista ampla não está disponível em celulares. A página inicial do celular está sempre incluída.",
+      "mouseNavigation": "Navegação por arrasto com o mouse",
+      "mouseNavigationHelp": "Permite a mesma navegação ao arrastar com o botão principal do mouse.",
+      "landingAndDashboardHelp": "Deslize entre as páginas do painel, com a página inicial como única parada de {cardName}."
+    },
+    "landing": {
+      "phonePage": "Página inicial do celular",
+      "phonePageHelp": "Define a sequência inicial no celular. As combinações com Prévia abrem primeiro essa página e depois a câmera selecionada na vista associada. As páginas necessárias têm de estar ativadas.",
+      "standaloneUnavailable": "Indisponível enquanto a Vista de cartão estiver no modo independente, pois todos os dispositivos iniciam nessa vista."
+    },
+    "cameraPanel": {
+      "cameras": "Câmeras",
+      "frigateCamerasDetected": "(câmeras Frigate detectadas)",
+      "configuredCount": "{count} de {max} câmeras configuradas"
+    },
+    "cameraModal": {
+      "addCamera": "Adicionar câmera",
+      "editCamera": "Editar câmera",
+      "camera": "Câmera",
+      "cameraName": "Nome da câmera",
+      "displayNamePlaceholder": "Nome de exibição (opcional)",
+      "connectionSettings": "Configurações de conexão",
+      "connectionType": "Tipo de conexão",
+      "frigateGo2rtcDefault": "Frigate go2rtc (padrão)",
+      "additionalCamera": "Câmera adicional",
+      "addSecondCamera": "Adicionar segunda câmera",
+      "secondCameraHelpTitle": "O que é uma segunda câmera?",
+      "secondCameraHelp": "Combina duas entidades de câmera em uma única visualização, como uma câmera principal e outra para entregas. Somente a câmera principal oferece PTZ ou áudio bidirecional.",
+      "secondCamera": "Segunda câmera",
+      "liveViewLayout": "Layout da visualização ao vivo",
+      "mainCameraControlsHelp": "Somente a câmera principal oferece PTZ e áudio bidirecional. Coloque a câmera com controles em primeiro lugar.",
+      "removeCamera": "Remover câmera",
+      "lightHelp": "Adiciona um botão de luz do Home Assistant junto ao microfone. Uma luz pode estar associada a várias câmeras.",
+      "showAllReviewsHelp": "O Frigate agrupa a atividade em revisões que podem conter alertas, detecções ou ambos. Ative para mostrar todas as revisões na aba Alertas; desative para mostrar apenas alertas.",
+      "enablePtz": "Ativar controles PTZ",
+      "ptzHelp": "Adiciona controles de rotação e inclinação quando suportados.",
+      "ptzRotation": "Rotação dos controles PTZ",
+      "ptzRotationHelp": "Gira os comandos direcionais para corresponder à imagem da câmera. A 90°, Cima envia Esquerda.",
+      "checkingPtzHa": "Verificando suporte PTZ do Frigate. O Home Assistant continua sendo a conexão ao vivo.",
+      "checkingPtzFrigate": "Verificando suporte PTZ do Frigate para esta câmera.",
+      "ptzUnsupported": "O Frigate não indicou suporte PTZ de rotação/inclinação para esta câmera.",
+      "checkingTalkHa": "Verificando suporte de reprodução WebRTC do Home Assistant para esta câmera.",
+      "checkingTalkFrigate": "Verificando suporte de áudio bidirecional do Frigate para esta câmera.",
+      "talkUnsupportedHa": "O Home Assistant não indicou reprodução WebRTC para esta câmera, necessária para áudio bidirecional na conexão direta com o HA.",
+      "talkUnsupportedFrigate": "O Frigate não indicou suporte de áudio bidirecional para esta câmera.",
+      "talkExperimentalHa": "Experimental: o Home Assistant indica reprodução WebRTC, mas não informa se há suporte para retorno de áudio. Ative apenas se a rota WebRTC desta câmera no Home Assistant aceitar áudio de saída.",
+      "cameraRequired": "É necessária uma câmera.",
+      "secondCameraRequired": "É necessária uma segunda câmera.",
+      "differentCamerasRequired": "Escolha duas câmeras diferentes.",
+      "cameraAlreadyConfigured": "Esta câmera já está configurada.",
+      "maximumCameras": "Máximo de {max} câmeras.",
+      "deleteCamera": "Excluir câmera?",
+      "deleteConfirm": "Tem certeza de que deseja excluir “{camera}”? Esta ação não pode ser desfeita.",
+      "chooseLandingPageHelp": "A Vista de cartão deixará de ser a única vista no computador e tablet. Selecione a página inicial que será usada nesses dispositivos após desativar o modo independente.",
+      "twoWayTalkHelp": "O Frigate requer um canal de retorno WebRTC. No Home Assistant, o recurso é experimental e requer reprodução WebRTC do HA."
+    }
+  }
+}
