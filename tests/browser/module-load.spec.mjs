@@ -311,6 +311,25 @@ test("bundled Spanish catalogs resolve base and Latin American variants", async 
   });
 });
 
+test("bundled French catalog resolves regional Home Assistant locales in card and editor", async ({ page }) => {
+  await page.goto(baseUrl);
+  const labels = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    await import("/frigate-view-card-editor.js");
+    const card = document.createElement("frigate-view-card");
+    const editor = document.createElement("frigate-view-card-editor");
+    card._localization.updateHass({ locale: { language: "fr-CA" } });
+    editor._t("editor.actions.add");
+    editor._localization.updateHass({ locale: { language: "fr-CA" } });
+    return {
+      runtime: card._localization.t("runtime.toolbar.alerts"),
+      editor: editor._t("editor.actions.add"),
+      resolved: card._localization.resolvedLanguage,
+    };
+  });
+  expect(labels).toEqual({ runtime: "Alertes", editor: "Ajouter", resolved: "fr" });
+});
+
 test("language changes update marked card and editor text without replacing media or inputs", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

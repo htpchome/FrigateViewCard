@@ -6,10 +6,11 @@ successively shorter locale codes, and finally `en`. Missing keys also use
 their English value.
 
 Home Assistant does not automatically load a custom card's language files.
-The bundled languages are English (`en`), German (`de`), Spanish (`es`), and
-Latin American Spanish (`es-419`). Regional locales inherit their base language
-before falling back to English. The `es-419` file contains only regional
-wording differences and inherits all other entries from `es`.
+The bundled languages are English (`en`), German (`de`), Spanish (`es`),
+Latin American Spanish (`es-419`), and French (`fr`). Regional locales inherit
+their base language before falling back to English; for example, `fr-CA`
+inherits `fr`. The `es-419` file contains only regional wording differences
+and inherits all other entries from `es`.
 To add a translation, put a JSON file in `languages/` using its HA locale code
 (for example, `pt-BR.json`), then add a static import and registry entry in
 `localization.ctrl.js`. The build bundles registered dictionaries into both

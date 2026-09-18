@@ -2,6 +2,7 @@ import english from "./languages/en.json" with { type: "json" };
 import german from "./languages/de.json" with { type: "json" };
 import spanish from "./languages/es.json" with { type: "json" };
 import latinAmericanSpanish from "./languages/es-419.json" with { type: "json" };
+import french from "./languages/fr.json" with { type: "json" };
 
 const DEFAULT_LANGUAGE = "en";
 const bundledLanguages = Object.freeze({
@@ -9,6 +10,7 @@ const bundledLanguages = Object.freeze({
   de: german,
   es: spanish,
   "es-419": latinAmericanSpanish,
+  fr: french,
 });
 
 export const normalizeLanguageCode = (language) => {
