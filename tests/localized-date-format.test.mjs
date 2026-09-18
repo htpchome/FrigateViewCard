@@ -70,6 +70,26 @@ test("translated locales use natural order and explicit HA time preference", () 
     "19:18",
   );
   assert.equal(
+    formatLocalizedMonthDay(timestamp, {
+      locale: "es",
+      ordinal: true,
+      formatter,
+    }),
+    "17 sept",
+  );
+  assert.equal(
+    formatLocalizedTime(timestamp, { locale: "es", formatter }),
+    "19:18",
+  );
+  assert.equal(
+    formatLocalizedTime(timestamp, {
+      locale: "es-419",
+      timeFormat: "24",
+      formatter,
+    }),
+    "19:18",
+  );
+  assert.equal(
     formatLocalizedTime(timestamp, {
       locale: "en",
       timeFormat: "24",

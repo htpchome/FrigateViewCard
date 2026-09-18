@@ -1,8 +1,15 @@
 import english from "./languages/en.json" with { type: "json" };
 import german from "./languages/de.json" with { type: "json" };
+import spanish from "./languages/es.json" with { type: "json" };
+import latinAmericanSpanish from "./languages/es-419.json" with { type: "json" };
 
 const DEFAULT_LANGUAGE = "en";
-const bundledLanguages = Object.freeze({ en: english, de: german });
+const bundledLanguages = Object.freeze({
+  en: english,
+  de: german,
+  es: spanish,
+  "es-419": latinAmericanSpanish,
+});
 
 export const normalizeLanguageCode = (language) => {
   const candidate = String(language ?? "").trim().replaceAll("_", "-");

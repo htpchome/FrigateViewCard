@@ -276,6 +276,41 @@ test("loads the runtime and editor modules", async ({ page }) => {
   ).toHaveLength(1);
 });
 
+test("bundled Spanish catalogs resolve base and Latin American variants", async ({ page }) => {
+  await page.goto(baseUrl);
+  const labels = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    await import("/frigate-view-card-editor.js");
+    const card = document.createElement("frigate-view-card");
+    const editor = document.createElement("frigate-view-card-editor");
+    card._localization.updateHass({ locale: { language: "es-ES" } });
+    editor._t("editor.actions.add");
+    editor._localization.updateHass({ locale: { language: "es-ES" } });
+    const spanish = {
+      runtime: card._localization.t("runtime.toolbar.alerts"),
+      editor: editor._t("editor.actions.add"),
+    };
+    card._localization.updateHass({ locale: { language: "es-419" } });
+    editor._localization.updateHass({ locale: { language: "es-419" } });
+    return {
+      spanish,
+      latinAmerican: {
+        runtime: card._localization.t("runtime.cardPickerDemo.vehicleArea"),
+        editor: editor._t("editor.actions.add"),
+        inherited: editor._t("editor.actions.cancel"),
+      },
+    };
+  });
+  expect(labels).toEqual({
+    spanish: { runtime: "Alertas", editor: "Añadir" },
+    latinAmerican: {
+      runtime: "entrada de autos",
+      editor: "Agregar",
+      inherited: "Cancelar",
+    },
+  });
+});
+
 test("language changes update marked card and editor text without replacing media or inputs", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

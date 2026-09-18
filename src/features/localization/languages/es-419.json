@@ -1,0 +1,101 @@
+{
+  "runtime": {
+    "notifications": {
+      "favoritesAdded": "Agregado a Favoritos",
+      "favoritesAddFailed": "No se pudo agregar a Favoritos"
+    },
+    "wideView": {
+      "timeline": {
+        "stackedEvents": "{count} eventos agrupados: usa la rueda del mouse o el botón del grupo para recorrerlos"
+      }
+    },
+    "cardPickerDemo": {
+      "vehicleArea": "entrada de autos"
+    },
+    "popup": {
+      "info": {
+        "addFavorite": "Agregar a Favoritos"
+      }
+    },
+    "browse": {
+      "favoriteHint": "Marca un evento con la estrella para agregarlo a Favoritos"
+    }
+  },
+  "editor": {
+    "panels": {
+      "camera": "Configuración de cámaras",
+      "general": "Configuración general",
+      "theme": "Configuración del tema",
+      "layout": "Configuración de diseño",
+      "slideshow": "Configuración de presentación",
+      "gridview": "Configuración del modo cuadrícula"
+    },
+    "actions": {
+      "add": "Agregar"
+    },
+    "general": {
+      "prePostRollHelp": "Agrega {seconds} segundos antes y después de la reproducción o descarga de alertas y clips. Requiere grabaciones de Frigate."
+    },
+    "layout": {
+      "tightMarginsHelp": "Elimina el espacio interior en las vistas de secciones. En las ventanas emergentes de Bubble Card conserva el espacio superior y elimina los espacios laterales e inferiores.",
+      "insideShadowsHelp": "Agrega sombras a los elementos dentro de la tarjeta, incluidos los eventos.",
+      "cardShadowHelp": "Agrega una sombra alrededor de la tarjeta. Se oculta automáticamente en celulares en Vista previa, Vista amplia y Vista móvil.",
+      "eventItemBordersHelp": "Agrega bordes a los eventos. Útil cuando las sombras internas están desactivadas.",
+      "showVersionNumberHelp": "Muestra la versión instalada en los pies de página. Siempre aparece en Configuración general."
+    },
+    "grid": {
+      "enableHelp": "Agrega una cuadrícula de 2×2 para al menos dos cámaras. No está disponible en dispositivos móviles.",
+      "orderHelp": "El orden predeterminado sigue Configuración de cámaras. El personalizado reordena o excluye cámaras solo en modo cuadrícula."
+    },
+    "preview": {
+      "enableHelp": "Agrega Vista previa a la navegación y a las opciones de página de inicio.",
+      "liveDesktop": "Cámaras en vivo en computadoras",
+      "liveDesktopHelp": "Mantiene en vivo todas las cámaras de Vista previa en computadoras. De lo contrario, las alertas y revisiones que cumplan los criterios cambian las capturas a video en vivo.",
+      "liveMobile": "Cámaras en vivo en celulares",
+      "liveMobileHelp": "Mantiene en vivo todas las cámaras de Vista previa en celulares y tabletas. De lo contrario, las alertas y revisiones que cumplan los criterios cambian las capturas a video en vivo."
+    },
+    "startMode": {
+      "gridDisabledReason": "Activa el modo cuadrícula en Configuración del modo cuadrícula para usar esta opción.",
+      "slideshowDisabledReason": "Activa el modo presentación en Configuración de presentación para usar esta opción.",
+      "gridDisabledAria": "Cuadrícula. Activa el modo cuadrícula en Configuración del modo cuadrícula para usar esta opción.",
+      "slideshowDisabledAria": "Presentación. Activa el modo presentación en Configuración de presentación para usar esta opción."
+    },
+    "wideView": {
+      "enableHelp": "Agrega Vista amplia a la navegación y a las opciones de página de inicio para computadoras y tabletas.",
+      "enableTimelinePanelHelp": "Agrega una línea de tiempo plegable junto a la lista de eventos. Sigue la cámara activa o todas las cámaras en modo cuadrícula."
+    },
+    "cardView": {
+      "enableHelp": "Agrega una página de cámara en vivo cuyo tamaño se adapta al contenido en cualquier dispositivo. No se aplica el límite de altura de la tarjeta.",
+      "hideCameraNameHelp": "Oculta el selector de cámara hasta que se pasa el mouse por el video o se toca. También se aplica en modo cuadrícula."
+    },
+    "mobileView": {
+      "enableHelp": "Agrega Vista móvil a la navegación y a las opciones de página de inicio en todos los dispositivos.",
+      "rotateToFullscreenHelp": "En celulares, al girar a horizontal, el video en vivo y los medios de ventanas emergentes se amplían a pantalla completa. Se desactiva mientras se edita o previsualiza la tarjeta.",
+      "moveNavbarBottomHelp": "Mueve la barra de navegación del panel de Home Assistant a la parte inferior en celulares.",
+      "outerBorderHelp": "Agrega el borde del color del tema alrededor de Vista móvil en todos los dispositivos."
+    },
+    "swipe": {
+      "desktopPagesHelp": "Solo se muestran las páginas activadas. La página de inicio de computadora/tableta siempre está incluida.",
+      "phonePages": "Páginas deslizables en celulares",
+      "phonePagesHelp": "Vista amplia no está disponible en celulares. La página de inicio del celular siempre está incluida.",
+      "mouseNavigation": "Navegación por deslizamiento con el mouse",
+      "mouseNavigationHelp": "Permite la misma navegación arrastrando con el botón principal del mouse."
+    },
+    "landing": {
+      "desktopPageHelp": "Selecciona la página inicial para computadoras y tabletas.",
+      "phonePage": "Página de inicio del celular",
+      "phonePageHelp": "Establece la secuencia inicial en celulares. Las combinaciones con Vista previa abren primero Vista previa y después la cámara seleccionada en la vista asociada. Las páginas necesarias deben estar activadas."
+    },
+    "cameraModal": {
+      "addCamera": "Agregar cámara",
+      "addSecondCamera": "Agregar segunda cámara",
+      "addLight": "Agregar luz",
+      "addSecondLight": "Agregar segunda luz",
+      "sideBySide": "Lado a lado",
+      "cameraName": "Nombre de la cámara",
+      "lightHelp": "Agrega un botón de luz de Home Assistant junto al micrófono. Una luz puede vincularse a varias cámaras.",
+      "ptzHelp": "Agrega controles de giro e inclinación cuando están disponibles.",
+      "chooseLandingPageHelp": "Vista de tarjeta dejará de ser la única vista de computadora y tableta. Selecciona la página de inicio que se usará en esos dispositivos cuando se desactive el modo independiente."
+    }
+  }
+}

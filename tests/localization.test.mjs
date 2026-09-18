@@ -80,7 +80,39 @@ test("bundled German resolves regional HA locales and falls back to English per 
   assert.equal(sparse.t("runtime.toolbar.recordings"), "Recordings");
 });
 
-test("German catalog covers every English key with matching placeholders", () => {
+test("Spanish and Latin American Spanish use regional wording with layered fallback", () => {
+  const localization = createLocalizationController();
+  localization.updateHass({ locale: { language: "es_ES" } });
+  assert.equal(localization.language, "es-ES");
+  assert.equal(localization.resolvedLanguage, "es");
+  assert.equal(localization.t("editor.actions.add"), "Añadir");
+  assert.equal(localization.t("editor.preview.liveDesktop"), "Cámaras en vivo en el ordenador");
+
+  localization.updateHass({ locale: { language: "es_419" } });
+  assert.equal(localization.language, "es-419");
+  assert.equal(localization.resolvedLanguage, "es-419");
+  assert.equal(localization.t("editor.actions.add"), "Agregar");
+  assert.equal(localization.t("editor.preview.liveDesktop"), "Cámaras en vivo en computadoras");
+  assert.equal(localization.t("runtime.cardPickerDemo.vehicleArea"), "entrada de autos");
+  assert.equal(localization.t("runtime.toolbar.alerts"), "Alertas");
+
+  const english = JSON.parse(readFileSync(
+    new URL("../src/features/localization/languages/en.json", import.meta.url),
+    "utf8",
+  ));
+  const sparse = createLocalizationController({
+    dictionaries: {
+      en: english,
+      es: { runtime: { toolbar: { alerts: "Alertas" } } },
+      "es-419": { runtime: { toolbar: { alerts: "Avisos" } } },
+    },
+  });
+  sparse.setLanguage("es-419");
+  assert.equal(sparse.t("runtime.toolbar.alerts"), "Avisos");
+  assert.equal(sparse.t("runtime.toolbar.recordings"), "Recordings");
+});
+
+test("full catalogs cover English keys and regional Spanish overrides preserve placeholders", () => {
   const load = (file) => JSON.parse(readFileSync(
     new URL("../src/features/localization/languages/" + file + ".json", import.meta.url),
     "utf8",
@@ -91,16 +123,30 @@ test("German catalog covers every English key with matching placeholders", () =>
       : flatten(entry, prefix + key + "."),
   );
   const english = new Map(flatten(load("en")));
-  const german = new Map(flatten(load("de")));
-  assert.deepEqual([...german.keys()].sort(), [...english.keys()].sort());
   const placeholders = (value) => [...value.matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/g)]
     .map((match) => match[1]).sort();
-  for (const [key, source] of english) {
-    assert.ok(german.get(key)?.trim(), "Empty German translation: " + key);
+  for (const language of ["de", "es"]) {
+    const translated = new Map(flatten(load(language)));
+    assert.deepEqual([...translated.keys()].sort(), [...english.keys()].sort());
+    for (const [key, source] of english) {
+      assert.ok(translated.get(key)?.trim(), "Empty " + language + " translation: " + key);
+      assert.deepEqual(
+        placeholders(translated.get(key)),
+        placeholders(source),
+        "Placeholder mismatch in " + language + ": " + key,
+      );
+    }
+  }
+  const spanish = new Map(flatten(load("es")));
+  const regional = new Map(flatten(load("es-419")));
+  for (const [key, translation] of regional) {
+    assert.ok(english.has(key), "Unknown regional Spanish key: " + key);
+    assert.ok(translation.trim(), "Empty regional Spanish translation: " + key);
+    assert.notEqual(translation, spanish.get(key), "Redundant regional override: " + key);
     assert.deepEqual(
-      placeholders(german.get(key)),
-      placeholders(source),
-      "Placeholder mismatch: " + key,
+      placeholders(translation),
+      placeholders(english.get(key)),
+      "Placeholder mismatch in es-419: " + key,
     );
   }
 });
