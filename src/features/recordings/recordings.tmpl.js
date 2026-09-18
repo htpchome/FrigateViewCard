@@ -46,7 +46,7 @@ export function buildRecordingsListMarkup({
       return `<div class="list-item shadow-xform shadow-small" data-rs="${recordingStart}" data-re="${recordingEnd}"${cameraData}>
         <div class="ric">${recordingsIcon}${member ? `<span class="recording-group-member">${escapeHtml(member)}</span>` : ""}</div>
         <div class="rinf">
-          <div class="rt">${escapeHtml(formatTime(recording.start_time))} – ${escapeHtml(formatTime(recording.end_time || safeNowSec))}</div>
+          <div class="rt"><span data-fvc-date-format="time" data-fvc-date-ts="${recordingStart}">${escapeHtml(formatTime(recording.start_time))}</span> – <span data-fvc-date-format="time" data-fvc-date-ts="${recordingEnd}">${escapeHtml(formatTime(recording.end_time || safeNowSec))}</span></div>
           <div class="rsub">${durationLabel}${recording.events ? ` · ${escapeHtml(recording.events)} <span data-fvc-i18n="runtime.browse.row.eventAbbreviation">${escapeHtml(typeof t === "function" ? t("runtime.browse.row.eventAbbreviation") : "ev")}</span>` : ""}</div>
         </div>
         <button class="rp" data-rec-dl-start="${recordingStart}" data-rec-dl-end="${recordingEnd}"${cameraData} title="${downloadLabel}" aria-label="${downloadLabel}" data-fvc-i18n-title="${downloadKey}" data-fvc-i18n-aria-label="${downloadKey}"${downloadValues}>${downloadIcon}</button>

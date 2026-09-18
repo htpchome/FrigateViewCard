@@ -22,3 +22,9 @@ insert the formatted elements as DOM nodes, so translations can reorder them
 without treating dictionary text as HTML.
 Camera names, user-configured text, and Frigate-provided labels are data, not
 UI translations.
+
+Displayed dates use the resolved card language and Home Assistant's configured
+time zone. The English fallback keeps the card's existing month/day, ordinal,
+and 12-hour presentation. An explicit Home Assistant 12/24-hour preference
+overrides the default time style. Internal day keys and time-zone arithmetic
+remain locale-independent.

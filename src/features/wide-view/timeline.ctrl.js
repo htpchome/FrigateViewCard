@@ -992,7 +992,10 @@ export class WideViewTimelineController {
     const layout = this._lastLayout;
     if (!label) return;
     if (!viewport || !layout?.pixelsPerSecond) {
-      label.textContent = this._deps.formatDay(this._deps.getWindowEnd());
+      const timestamp = this._deps.getWindowEnd();
+      label.textContent = this._deps.formatDay(timestamp);
+      label.setAttribute?.("data-fvc-date-format", "weekdayDateDot");
+      label.setAttribute?.("data-fvc-date-ts", String(timestamp));
       return;
     }
     const hasProvidedScrollTop =
@@ -1010,6 +1013,8 @@ export class WideViewTimelineController {
       ),
     );
     label.textContent = this._deps.formatDay(timestamp);
+    label.setAttribute?.("data-fvc-date-format", "weekdayDateDot");
+    label.setAttribute?.("data-fvc-date-ts", String(timestamp));
   }
 
   _handleWheel(event) {

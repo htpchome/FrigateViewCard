@@ -36,9 +36,9 @@ const buildTimelineTickMarkup = (tick) => {
   const y = rounded(tick.y);
   const minorClass = tick.minor ? " is-minor" : "";
   return `<div class="wide-timeline-tick${tick.dayLabel ? " is-day-start" : ""}${minorClass}" style="--timeline-y:${y}px">
-      ${tick.timeLabel ? `<span class="wide-timeline-tick-time">${escapeHtml(tick.timeLabel)}</span>` : ""}
+      ${tick.timeLabel ? `<span class="wide-timeline-tick-time" data-fvc-date-format="time" data-fvc-date-ts="${escapeHtml(tick.timestamp)}">${escapeHtml(tick.timeLabel)}</span>` : ""}
       <span class="wide-timeline-tick-mark" aria-hidden="true"></span>
-      ${tick.dayLabel ? `<span class="wide-timeline-day-divider">${escapeHtml(tick.dayLabel)}</span>` : ""}
+      ${tick.dayLabel ? `<span class="wide-timeline-day-divider" data-fvc-date-format="weekdayDateDot" data-fvc-date-ts="${escapeHtml(tick.timestamp)}">${escapeHtml(tick.dayLabel)}</span>` : ""}
     </div>`;
 };
 
@@ -106,10 +106,10 @@ export const buildWideTimelineCardMarkup = ({
 
   return `<article class="wide-timeline-stack${stackClass}${alertClass}${slideClass}" style="--timeline-card-y:${rounded(group.cardTop)}px" data-wide-timeline-stack="${escapeHtml(group.id)}"${stackTitle}>
       ${underlays}
-      <button class="wide-timeline-card-main et${entry.kind === "alert" ? " alert" : ""}${entry.thumbnailUrl ? " has-thumbnail" : " is-placeholder"}" type="button" data-wide-timeline-entry="${escapeHtml(entry.id)}" aria-label="${escapeHtml(clickLabel)}" data-fvc-i18n-aria-label="${clickLabelKey}" data-fvc-i18n-values="${clickLabelValues}">
+      <button class="wide-timeline-card-main et${entry.kind === "alert" ? " alert" : ""}${entry.thumbnailUrl ? " has-thumbnail" : " is-placeholder"}" type="button" data-wide-timeline-entry="${escapeHtml(entry.id)}" aria-label="${escapeHtml(clickLabel)}" data-fvc-i18n-aria-label="${clickLabelKey}" data-fvc-i18n-values="${clickLabelValues}" data-fvc-date-format="time" data-fvc-date-ts="${escapeHtml(entry.startTime)}" data-fvc-date-i18n-value="time">
         ${thumbnail}
         <span class="wide-timeline-card-label">${escapeHtml(entry.label)}</span>
-        <span class="wide-timeline-card-time">${escapeHtml(timeLabel)}</span>
+        <span class="wide-timeline-card-time" data-fvc-date-format="time" data-fvc-date-ts="${escapeHtml(entry.startTime)}">${escapeHtml(timeLabel)}</span>
         <span class="wide-timeline-card-duration ed">${escapeHtml(entry.duration)}s</span>
       </button>
       ${cycle}

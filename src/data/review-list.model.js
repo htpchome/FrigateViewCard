@@ -122,6 +122,7 @@ export function buildReviewListItemModel(review, deps) {
       typeof durationLabel === "function"
         ? durationLabel(mediaEvent || review)
         : null,
+    startTime: review?.start_time,
     timeLabel:
       typeof formatTime === "function"
         ? formatTime(review?.start_time)
@@ -178,8 +179,8 @@ const buildReviewMetaHtml = (
   { cap, icons, showSeverity = true },
 ) => `
   <div class="rev-m list-item-meta">
-    <span class="list-item-meta-unit time-meta">${icons.clock || ""}<span>${escapeHtml(model.timeLabel)}</span></span>
-    ${model.dayLabel ? `<span class="list-item-meta-unit date-meta">${icons.calendar || ""}<span>${escapeHtml(model.dayLabel)}</span></span>` : ""}
+    <span class="list-item-meta-unit time-meta">${icons.clock || ""}<span data-fvc-date-format="time" data-fvc-date-ts="${escapeHtmlAttribute(model.startTime)}">${escapeHtml(model.timeLabel)}</span></span>
+    ${model.dayLabel ? `<span class="list-item-meta-unit date-meta">${icons.calendar || ""}<span data-fvc-date-format="weekdayDate" data-fvc-date-ts="${escapeHtmlAttribute(model.startTime)}">${escapeHtml(model.dayLabel)}</span></span>` : ""}
     ${model.zone ? `<span class="list-item-meta-unit zone-meta">${icons.pin || ""}<span>${escapeHtml(model.zone)}</span></span>` : ""}
     ${showSeverity ? `<span class="review-severity-chip review-severity-chip--${model.sev} list-bubble" data-fvc-i18n="${model.severityKey || `runtime.browse.row.${model.sev}`}">${escapeHtml(model.severityLabel || cap(model.sev))}</span>` : ""}
   </div>`;

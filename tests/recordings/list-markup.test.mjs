@@ -25,7 +25,7 @@ test("buildRecordingsListMarkup renders duration and event count for finished re
   assert.match(html, /data-rs="100"/);
   assert.match(html, /data-re="225"/);
   assert.match(html, /<div class="ric">REC<\/div>/);
-  assert.match(html, /<div class="rt">T100 – T225<\/div>/);
+  assert.match(html, /<div class="rt"><span data-fvc-date-format="time" data-fvc-date-ts="100">T100<\/span> – <span data-fvc-date-format="time" data-fvc-date-ts="225">T225<\/span><\/div>/);
   assert.match(html, /<div class="rsub">2m 5s · 3 <span data-fvc-i18n="runtime\.browse\.row\.eventAbbreviation">ev<\/span><\/div>/);
   assert.match(html, />DL<\/button>/);
 });
@@ -41,7 +41,7 @@ test("buildRecordingsListMarkup uses nowSec for open-ended recordings and omits 
 
   assert.match(html, /data-rec-dl-start="600"/);
   assert.match(html, /data-rec-dl-end="645"/);
-  assert.match(html, /<div class="rt">T600 – T645<\/div>/);
+  assert.match(html, /<div class="rt"><span data-fvc-date-format="time" data-fvc-date-ts="600">T600<\/span> – <span data-fvc-date-format="time" data-fvc-date-ts="645">T645<\/span><\/div>/);
   assert.match(html, /<div class="rsub">45s<\/div>/);
   assert.doesNotMatch(html, / · 0 ev/);
 });

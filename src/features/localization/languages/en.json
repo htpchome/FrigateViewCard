@@ -129,6 +129,13 @@
     "grid": {
       "empty": "Empty"
     },
+    "date": {
+      "weekdayDate": "{weekday} {date}",
+      "weekdayDateDot": "{weekday} · {date}",
+      "weekdayDateHyphen": "{weekday} - {date}",
+      "dateTime": "{weekday} - {date} - {time}",
+      "popupOverlay": "{camera} {time} - {date}"
+    },
     "live": {
       "fullscreen": "Fullscreen live",
       "pictureInPicture": "Picture-in-Picture live",

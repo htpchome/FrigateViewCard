@@ -5,6 +5,7 @@ import {
 } from "./info.js";
 import { applyLocalizedText } from "../localization/localized-dom.js";
 import { isCardViewDrawerPopupPresentation } from "./media.js";
+import { cap } from "../../helpers.js";
 
 export class PopupInfoController {
   constructor({
@@ -52,6 +53,7 @@ export class PopupInfoController {
       formatWeekday: this._formatWeekday,
       formatMonthDay: this._formatMonthDay,
       formatEventDuration: this._formatEventDuration,
+      t: this._t,
     });
     if (!model) {
       this.hide();
@@ -73,11 +75,25 @@ export class PopupInfoController {
         fullDate: this._formatFullDate?.(
           options.startTime ?? event?.start_time,
         ),
+        t: this._t,
       });
       const label = this._query?.("#popup-card-view-label");
       if (label) {
         label.textContent = overlay.labelText;
         label.hidden = false;
+        const startTime = options.startTime ?? event?.start_time;
+        if (startTime) {
+          label.setAttribute?.("data-fvc-date-ts", String(startTime));
+          label.setAttribute?.("data-fvc-date-format", "popupOverlay");
+          label.setAttribute?.(
+            "data-fvc-date-camera",
+            cap(String(model.camera || "-").toLowerCase()),
+          );
+        } else {
+          label.removeAttribute?.("data-fvc-date-ts");
+          label.removeAttribute?.("data-fvc-date-format");
+          label.removeAttribute?.("data-fvc-date-camera");
+        }
       }
       const actions = this._query?.("#popup-card-view-actions");
       if (actions) {

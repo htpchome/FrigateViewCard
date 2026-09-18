@@ -131,6 +131,7 @@ export const buildPopupInfoModel = ({
   formatWeekday = () => "-",
   formatMonthDay = () => "-",
   formatEventDuration = () => 1,
+  t = null,
 } = {}) => {
   const id = event?.id || options.id || "";
   const mediaType =
@@ -161,7 +162,12 @@ export const buildPopupInfoModel = ({
   const startTs = options.startTime ?? event?.start_time;
   const time = startTs ? formatTime(startTs) : "-";
   const dayDate = startTs
-    ? `${formatWeekday(startTs)} - ${formatMonthDay(startTs, { ordinal: true })}`
+    ? (typeof t === "function"
+        ? t("runtime.date.weekdayDateHyphen", {
+            weekday: formatWeekday(startTs),
+            date: formatMonthDay(startTs, { ordinal: true }),
+          })
+        : `${formatWeekday(startTs)} - ${formatMonthDay(startTs, { ordinal: true })}`)
     : "-";
   const shortDate = startTs
     ? formatMonthDay(startTs, { numeric: true })
@@ -187,6 +193,7 @@ export const buildPopupInfoModel = ({
     score,
     zone,
     objects,
+    startTime: startTs,
     dayDate,
     shortDate,
     time,
@@ -245,13 +252,19 @@ export const buildCardViewPopupOverlayMarkup = ({
   event = null,
   fullDate = "-",
   icons = ICONS,
+  t = null,
 } = {}) => {
   if (!model) return { labelText: "", actionsHtml: "" };
   const compactTime = String(model.time || "-")
-    .toLowerCase()
     .replace(/\s+(am|pm)$/i, "$1");
   const camera = cap(String(model.camera || "-").toLowerCase());
-  const labelText = `${camera} ${compactTime} - ${String(fullDate || "-")}`;
+  const labelText = typeof t === "function"
+    ? t("runtime.date.popupOverlay", {
+        camera,
+        time: compactTime,
+        date: String(fullDate || "-"),
+      })
+    : `${camera} ${compactTime} - ${String(fullDate || "-")}`;
   const favoriteHtml = model.mediaType === "recording"
     ? ""
     : buildCardViewPopupFavoriteButtonMarkup({
@@ -284,7 +297,6 @@ export const buildPopupInfoMarkup = ({
     .map((action) => buildPopupInfoDownloadButtonMarkup(action, icons))
     .join("");
   const compactTime = String(model.time || "-")
-    .toLowerCase()
     .replace(/\s+(am|pm)$/i, "$1");
   const mediaHeading = formatMediaTypeLabel(model.mediaType || "media");
   const mediaHeadingKey = mediaTypeTranslationKey(model.mediaType || "media");
@@ -303,7 +315,7 @@ export const buildPopupInfoMarkup = ({
   return {
     headText,
     infoHtml: `
-          <h2 class="popup-info-head" id="popup-info-head"><span class="popup-info-head-text">${mediaHeadingMarkup} - ${escapeHtml(cameraHeading)} - ${escapeHtml(compactTime)} - ${escapeHtml(model.shortDate)}</span></h2>
+          <h2 class="popup-info-head" id="popup-info-head"><span class="popup-info-head-text">${mediaHeadingMarkup} - ${escapeHtml(cameraHeading)} - <span data-fvc-date-format="compactTime" data-fvc-date-ts="${escapeHtmlAttribute(model.startTime)}">${escapeHtml(compactTime)}</span> - <span data-fvc-date-format="shortDate" data-fvc-date-ts="${escapeHtmlAttribute(model.startTime)}">${escapeHtml(model.shortDate)}</span></span></h2>
           <div class="popup-info-content">
             <div class="popup-info-title">
               <span class="tb" style="background:${escapeHtmlAttribute(color)}33;color:${escapeHtmlAttribute(color)}"${titleLabelMarker}>${escapeHtml(model.titleLabel)}</span>
@@ -311,8 +323,8 @@ export const buildPopupInfoMarkup = ({
             </div>
             <div class="popup-info-grid">
               <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.camera">Camera</span><span class="popup-info-v">${escapeHtml(model.camera)}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.dayDate">Day/Date</span><span class="popup-info-v">${escapeHtml(model.dayDate)}</span></div>
-              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.time">Time</span><span class="popup-info-v">${escapeHtml(model.time)}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.dayDate">Day/Date</span><span class="popup-info-v" data-fvc-date-format="weekdayDateHyphen" data-fvc-date-ts="${escapeHtmlAttribute(model.startTime)}">${escapeHtml(model.dayDate)}</span></div>
+              <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.time">Time</span><span class="popup-info-v" data-fvc-date-format="time" data-fvc-date-ts="${escapeHtmlAttribute(model.startTime)}">${escapeHtml(model.time)}</span></div>
               <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.duration">Duration</span><span class="popup-info-v">${escapeHtml(model.duration)}</span></div>
               <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.objects">Objects</span><span class="popup-info-v">${escapeHtml(model.objects)}</span></div>
               <div class="popup-info-row"><span class="popup-info-k" data-fvc-i18n="runtime.popup.info.zone">Zone</span><span class="popup-info-v">${escapeHtml(model.zone)}</span></div>

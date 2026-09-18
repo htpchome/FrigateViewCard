@@ -36,6 +36,11 @@ import {
 import { ICONS } from "../icons.js";
 import { STYLES } from "../styles.js";
 import { createLocalizationController } from "../features/localization/localization.ctrl.js";
+import {
+  formatLocalizedMonthDay,
+  formatLocalizedTime,
+} from "../features/localization/date-format.js";
+import { applyLocalizedDates } from "../features/localization/date-dom.js";
 import { applyLocalizedText, setLocalizedText } from "../features/localization/localized-dom.js";
 import { escapeHtmlAttribute } from "../shared/html.js";
 // Registers <circle-pad-control-2>; keep this import for its module side effect.
@@ -763,10 +768,7 @@ export class FrigateViewCard extends HTMLElement {
       durationForEvent: (event) => this._eventMediaDuration(event),
       capitalize: (value) => cap(value),
       formatTime: (timestamp) => this._time(timestamp),
-      formatDay: (timestamp) =>
-        `${this._weekday(timestamp)} · ${this._monthDay(timestamp, {
-          ordinal: true,
-        })}`,
+      formatDay: (timestamp) => this._weekdayDate(timestamp, "weekdayDateDot"),
       dayKey: (timestamp) => this._dayKey(timestamp),
       timezoneParts: (timestamp) => this._tzParts(timestamp),
       timezoneDateTimeToEpoch: (...parts) =>
@@ -1021,15 +1023,7 @@ export class FrigateViewCard extends HTMLElement {
       formatWeekday: (timestamp) => this._weekday(timestamp),
       formatMonthDay: (timestamp, options) =>
         this._monthDay(timestamp, options),
-      formatFullDate: (timestamp) =>
-        timestamp
-          ? this._dateFormatter("popup-card-view-date", "en-US", {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            }).format(new Date(timestamp * 1000))
-          : "-",
+      formatFullDate: (timestamp) => this._fullDate(timestamp),
       formatEventDuration: (event) => this._dur(event),
       onResetRecordingScrub: () =>
         this._popupRecordingScrubController.teardown(),
@@ -2243,15 +2237,24 @@ export class FrigateViewCard extends HTMLElement {
   }
   set hass(hass) {
     this._ensureEditorPreviewController();
+    const previousTimeFormat = this._hass?.locale?.time_format;
+    const previousTimeZone = this._hass?.config?.time_zone;
     this._hass = hass;
-    if (this._localization.updateHass(hass)) {
-      applyLocalizedText(this.shadowRoot, this._localization.t);
+    const languageChanged = this._localization.updateHass(hass);
+    const dateSettingsChanged =
+      previousTimeFormat !== hass?.locale?.time_format ||
+      previousTimeZone !== hass?.config?.time_zone;
+    if (languageChanged || dateSettingsChanged) {
+      this._applyLocalizedDates();
       this._browseCalendarPanelController?.syncLocalizedMonthLabel();
-      this._previewPageController?.updatePreviewMeta();
-      syncControlsPadLabels(this._$("#controls-pad"), this._localization.t);
       if (this._config) {
         this._activeStandardPageController()?.relocalizeBrowseLabels?.();
       }
+    }
+    if (languageChanged) {
+      applyLocalizedText(this.shadowRoot, this._localization.t);
+      this._previewPageController?.updatePreviewMeta();
+      syncControlsPadLabels(this._$("#controls-pad"), this._localization.t);
     }
     if (!this._config) return;
     if (this._editorPreviewController.renderCardPickerDemo()) {
@@ -4443,7 +4446,7 @@ export class FrigateViewCard extends HTMLElement {
   _dateFormatter(name, locales, options, timeZone = this._tz()) {
     const resolvedTimeZone = String(timeZone || "UTC");
     return this._dateFormatterCache.get(
-      `${name}|${resolvedTimeZone}`,
+      JSON.stringify([name, resolvedTimeZone, locales, options]),
       locales,
       { ...options, timeZone: resolvedTimeZone },
     );
@@ -8071,32 +8074,28 @@ export class FrigateViewCard extends HTMLElement {
     this._activeStandardPageController().renderLegend();
   }
   _time(ts) {
-    return this._dateFormatter("time", [], {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    })
-      .format(new Date(ts * 1000))
-      .toLowerCase();
+    return formatLocalizedTime(ts, {
+      locale: this._localization.resolvedLanguage,
+      timeFormat: this._hass?.locale?.time_format,
+      formatter: (name, locale, options) =>
+        this._dateFormatter(name, locale, options),
+    });
   }
   _weekday(ts) {
-    return this._dateFormatter("weekday", "en-US", {
+    const locale = this._localization.resolvedLanguage;
+    return this._dateFormatter("weekday", locale, {
       weekday: "short",
     }).format(new Date(ts * 1000));
   }
   _monthDay(ts, { ordinal = false, numeric = false } = {}) {
-    const parts = this._dateFormatter(
-      numeric ? "month-day-numeric" : "month-day",
-      "en-US",
-      {
-        month: numeric ? "numeric" : "short",
-        day: "numeric",
-      },
-    ).formatToParts(new Date(ts * 1000));
-    const month = parts.find((p) => p.type === "month")?.value || "";
-    const day = Number(parts.find((p) => p.type === "day")?.value || 0);
-    if (numeric) return `${month}/${day}`;
-    return `${month} ${ordinal ? this._ordinal(day) : day}`.trim();
+    return formatLocalizedMonthDay(ts, {
+      locale: this._localization.resolvedLanguage,
+      numeric,
+      ordinal,
+      formatter: (name, locale, options) =>
+        this._dateFormatter(name, locale, options),
+      ordinalize: (day) => this._ordinal(day),
+    });
   }
   _ordinal(n) {
     const mod100 = n % 100;
@@ -8108,7 +8107,45 @@ export class FrigateViewCard extends HTMLElement {
     return `${n}th`;
   }
   _dateTimeLabel(ts) {
-    return `${this._weekday(ts)} - ${this._monthDay(ts)} - ${this._time(ts)}`;
+    return this._localization.t("runtime.date.dateTime", {
+      weekday: this._weekday(ts),
+      date: this._monthDay(ts),
+      time: this._time(ts),
+    });
+  }
+  _weekdayDate(ts, key = "weekdayDate") {
+    return this._localization.t(`runtime.date.${key}`, {
+      weekday: this._weekday(ts),
+      date: this._monthDay(ts, { ordinal: key !== "weekdayDate" }),
+    });
+  }
+  _fullDate(ts) {
+    if (!ts) return "-";
+    const locale = this._localization.resolvedLanguage;
+    return this._dateFormatter("popup-card-view-date", locale, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(ts * 1000));
+  }
+  _applyLocalizedDates() {
+    applyLocalizedDates(this.shadowRoot, {
+      time: (ts) => this._time(ts),
+      compactTime: (ts) => this._time(ts).replace(/\s+(am|pm)$/i, "$1"),
+      weekdayDate: (ts) => this._weekdayDate(ts),
+      weekdayDateDot: (ts) => this._weekdayDate(ts, "weekdayDateDot"),
+      weekdayDateHyphen: (ts) => this._weekdayDate(ts, "weekdayDateHyphen"),
+      shortDate: (ts) => this._monthDay(ts, { numeric: true }),
+      fullDate: (ts) => this._fullDate(ts),
+      dateTime: (ts) => this._dateTimeLabel(ts),
+      popupOverlay: (ts, element) =>
+        this._localization.t("runtime.date.popupOverlay", {
+          camera: element.getAttribute("data-fvc-date-camera") || "-",
+          time: this._time(ts).replace(/\s+(am|pm)$/i, "$1"),
+          date: this._fullDate(ts),
+        }),
+    });
   }
   _listHeadingLabel(ts = null) {
     return this._activeStandardPageController().listHeadingLabel(ts);
@@ -8193,7 +8230,7 @@ export class FrigateViewCard extends HTMLElement {
         this._mediaForCamera(id, file, ev?.camera),
       durationLabel: (value) => this._eventMediaDuration(value),
       formatTime: (ts) => this._time(ts),
-      formatDay: (ts) => `${this._weekday(ts)} ${this._monthDay(ts)}`,
+      formatDay: (ts) => this._weekdayDate(ts),
       isKeptTab: this._tab === "kept",
       browseTab: this._tab,
       showDownloadButtons,
@@ -8500,7 +8537,7 @@ export class FrigateViewCard extends HTMLElement {
           : this._media(id, file),
       durationLabel: (value) => this._eventMediaDuration(value),
       formatTime: (ts) => this._time(ts),
-      formatDay: (ts) => `${this._weekday(ts)} ${this._monthDay(ts)}`,
+      formatDay: (ts) => this._weekdayDate(ts),
       labelColor,
       fallbackThumbSrc: this._reviewThumbnailForCamera(
         review,

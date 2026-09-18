@@ -29,7 +29,14 @@ export const buildPopupCarouselItemMarkup = ({
 }) => {
   if (!event?.id) return "";
   const active = event.id === activeId ? " active" : "";
-  return `<button class="popup-carousel-item${active}" data-ev="${escapeHtmlAttribute(event.id)}" title="${escapeHtmlAttribute(title)}"><div class="et">${thumbnailHtml}</div><div class="popup-carousel-meta"><span>${escapeHtml(label)}</span><span>${escapeHtml(time)}</span></div></button>`;
+  const timestamp = Number(event.start_time);
+  const dateMarker = event.start_time != null && Number.isFinite(timestamp)
+    ? ` data-fvc-date-format="dateTime" data-fvc-date-ts="${timestamp}" data-fvc-date-attribute="title"`
+    : "";
+  const timeMarker = dateMarker
+    ? ` data-fvc-date-format="time" data-fvc-date-ts="${timestamp}"`
+    : "";
+  return `<button class="popup-carousel-item${active}" data-ev="${escapeHtmlAttribute(event.id)}" title="${escapeHtmlAttribute(title)}"${dateMarker}><div class="et">${thumbnailHtml}</div><div class="popup-carousel-meta"><span>${escapeHtml(label)}</span><span${timeMarker}>${escapeHtml(time)}</span></div></button>`;
 };
 
 export const shouldShowPopupCarousel = (mediaType = "") =>

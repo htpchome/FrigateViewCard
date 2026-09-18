@@ -457,6 +457,103 @@ test("snapshot result feedback relocalizes in place", async ({ page }) => {
   });
 });
 
+test("date labels follow HA language and time format without replacing media", async ({ page }) => {
+  await page.goto(baseUrl);
+  const state = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const timestamp = Date.UTC(2026, 8, 17, 19, 18) / 1000;
+    const card = document.createElement("frigate-view-card");
+    card.setConfig({ cameras: [{ entity: "camera.front" }] });
+    card._renderShell();
+    card._hass = { config: { time_zone: "UTC" }, locale: { language: "en" } };
+    const english = {
+      time: card._time(timestamp),
+      date: card._monthDay(timestamp, { ordinal: true }),
+      weekday: card._weekday(timestamp),
+      rowDate: card._weekdayDate(timestamp),
+      timelineDate: card._weekdayDate(timestamp, "weekdayDateDot"),
+    };
+    const surface = card.shadowRoot.querySelector("#card");
+    const media = document.createElement("video");
+    const time = document.createElement("span");
+    time.setAttribute("data-fvc-date-format", "time");
+    time.setAttribute("data-fvc-date-ts", String(timestamp));
+    time.textContent = english.time;
+    surface.append(media, time);
+    const originalTranslation = card._localization.t;
+    let language = "en";
+    card._localization = {
+      get resolvedLanguage() { return language; },
+      updateHass: (hass) => {
+        const next = hass?.locale?.language || "en";
+        const changed = next !== language;
+        language = next;
+        return changed;
+      },
+      t: (key, values = {}) => {
+        const phrase = language === "fr" && key === "runtime.date.weekdayDate"
+          ? "{date} {weekday}"
+          : originalTranslation(key, values);
+        return phrase.replace(/\{([A-Za-z]+)\}/g, (_, name) => values[name]);
+      },
+    };
+    card._editorPreviewController.renderCardPickerDemo = () => true;
+    card._applyCardStyle = () => {};
+    card.hass = {
+      config: { time_zone: "UTC" },
+      locale: { language: "fr" },
+      states: {},
+    };
+    const french = {
+      time: time.textContent,
+      date: card._monthDay(timestamp, { ordinal: true }),
+      weekday: card._weekday(timestamp),
+      sameMedia: surface.querySelector("video") === media,
+      sameTimeNode: surface.querySelector("[data-fvc-date-format='time']") === time,
+    };
+    card.hass = {
+      config: { time_zone: "UTC" },
+      locale: { language: "en" },
+      states: {},
+    };
+    card.hass = {
+      config: { time_zone: "UTC" },
+      locale: { language: "en", time_format: "24" },
+      states: {},
+    };
+    return {
+      english,
+      french,
+      explicit24: time.textContent,
+      expectedFrenchDate: new Intl.DateTimeFormat("fr", {
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(timestamp * 1000)),
+      expectedFrenchWeekday: new Intl.DateTimeFormat("fr", {
+        weekday: "short",
+        timeZone: "UTC",
+      }).format(new Date(timestamp * 1000)),
+    };
+  });
+
+  expect(state.english).toEqual({
+    time: "7:18 pm",
+    date: "Sep 17th",
+    weekday: "Thu",
+    rowDate: "Thu Sep 17",
+    timelineDate: "Thu · Sep 17th",
+  });
+  expect(state.french).toMatchObject({
+    time: "19:18",
+    date: state.expectedFrenchDate,
+    weekday: state.expectedFrenchWeekday,
+    sameMedia: true,
+    sameTimeNode: true,
+  });
+  expect(state.explicit24).toBe("19:18");
+});
+
 test("two-way talk labels and feedback relocalize without replacing controls or live", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {

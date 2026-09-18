@@ -287,6 +287,19 @@ test("modern row formatting skips legacy labels and duplicate event lookup", () 
 
   assert.equal(eventModel.timeLabel, "2:00 pm");
   assert.equal(reviewModel.timeLabel, "2:00 pm");
+  const eventHtml = buildEventListItemHtml(eventModel, {
+    icons: ICONS,
+    expanded: false,
+    compact: false,
+  });
+  const reviewHtml = buildReviewListItemHtml(reviewModel, {
+    cap: (value) => value,
+    icons: ICONS,
+  });
+  for (const html of [eventHtml, reviewHtml]) {
+    assert.match(html, /data-fvc-date-format="time" data-fvc-date-ts="100"/);
+    assert.match(html, /data-fvc-date-format="weekdayDate" data-fvc-date-ts="100"/);
+  }
   assert.equal(legacyFormatCalls, 0);
   assert.equal(duplicateLookupCalls, 0);
 });
