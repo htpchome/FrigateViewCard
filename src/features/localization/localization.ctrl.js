@@ -7,6 +7,7 @@ import portuguese from "./languages/pt.json" with { type: "json" };
 import brazilianPortuguese from "./languages/pt-BR.json" with { type: "json" };
 import italian from "./languages/it.json" with { type: "json" };
 import polish from "./languages/pl.json" with { type: "json" };
+import catalan from "./languages/ca.json" with { type: "json" };
 
 const DEFAULT_LANGUAGE = "en";
 const bundledLanguages = Object.freeze({
@@ -20,6 +21,7 @@ const bundledLanguages = Object.freeze({
   "pt-BR": brazilianPortuguese,
   it: italian,
   pl: polish,
+  ca: catalan,
 });
 
 export const normalizeLanguageCode = (language) => {

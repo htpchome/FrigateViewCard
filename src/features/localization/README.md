@@ -8,8 +8,8 @@ their English value.
 Home Assistant does not automatically load a custom card's language files.
 The bundled languages are English (`en`), German (`de`), Spanish (`es`),
 Latin American Spanish (`es-419`), French (`fr`), European Portuguese (`pt`),
-Brazilian Portuguese (`pt-BR`), Italian (`it`), and Polish (`pl`). Regional locales inherit
-their base language before falling back to English; for example, `fr-CA`
+Brazilian Portuguese (`pt-BR`), Italian (`it`), Polish (`pl`), and Catalan (`ca`).
+Regional locales inherit their base language before falling back to English; for example, `fr-CA`
 inherits `fr`.
 The `es-419` and `pt-BR` files contain only regional wording differences and
 inherit all other entries from `es` and `pt`, respectively. `pt-PT` uses the
