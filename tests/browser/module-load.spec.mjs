@@ -391,6 +391,26 @@ test("bundled Italian catalog resolves regional Home Assistant locales in card a
   expect(labels).toEqual({ runtime: "Avvisi", live: "DIRETTA", editor: "Aggiungi", resolved: "it" });
 });
 
+test("bundled Polish catalog resolves regional Home Assistant locales in card and editor", async ({ page }) => {
+  await page.goto(baseUrl);
+  const labels = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    await import("/frigate-view-card-editor.js");
+    const card = document.createElement("frigate-view-card");
+    const editor = document.createElement("frigate-view-card-editor");
+    card._localization.updateHass({ locale: { language: "pl-PL" } });
+    editor._t("editor.actions.add");
+    editor._localization.updateHass({ locale: { language: "pl-PL" } });
+    return {
+      runtime: card._localization.t("runtime.toolbar.alerts"),
+      live: card._localization.t("runtime.live.liveTile"),
+      editor: editor._t("editor.actions.add"),
+      resolved: card._localization.resolvedLanguage,
+    };
+  });
+  expect(labels).toEqual({ runtime: "Alerty", live: "NA ŻYWO", editor: "Dodaj", resolved: "pl" });
+});
+
 test("language changes update marked card and editor text without replacing media or inputs", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {
@@ -4708,8 +4728,8 @@ test.describe("touch input", () => {
 
   test("phone rotation raises an isolated Bubble card above its popup", async ({ page }) => {
     await page.goto(baseUrl);
-    const portrait = await page.evaluate(async () => {
-      await import("/frigate-view-card.js");
+    await page.addScriptTag({ url: "/frigate-view-card.js", type: "module" });
+    const portrait = await page.evaluate(() => {
       document.body.style.margin = "0";
       const bubble = document.createElement("div");
       bubble.className = "bubble-pop-up-container";
