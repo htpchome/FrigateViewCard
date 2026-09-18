@@ -54,26 +54,26 @@ const buildFvcBrandLogoMarkup = () => `
       <path d="M231 343c39-12 74-29 98-52 21-21 28-45 31-90 2-31 16-50 48-56-9-11-19-15-31-15-10-14-22-22-35-23-25 0-43 18-51 50 16-16 37-30 54-25 6 2 11 5 15 9-19 10-28 27-28 49v26c-17-21-36-35-58-45 18 20 26 48 22 76-4 37-27 71-65 96Z"></path>
     </g>
     <text x="256" y="226" fill="#bdbdbd" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="300" letter-spacing=".5" text-anchor="middle">${CARD_NAME.toUpperCase()}</text>
-    <text x="256" y="259" fill="#f7941d" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="middle">For Home Assistant and Frigate</text>
+    <text x="256" y="259" fill="#f7941d" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="middle" data-fvc-i18n="runtime.cardPickerDemo.brandTagline">For Home Assistant and Frigate</text>
   </svg>`;
 
 export function buildCardPickerDemoLiveMarkup() {
-  return `<div class="card-picker-demo-live" role="img" aria-label="${CARD_NAME} preview branding">
+  return `<div class="card-picker-demo-live" role="img" aria-label="${CARD_NAME} preview branding" data-fvc-i18n-aria-label="runtime.cardPickerDemo.brandLabel">
       ${buildFvcBrandLogoMarkup()}
     </div>`;
 }
 
 const buildDemoAlertMarkup = ({ variant, title, area, age }) => `
-  <div class="list-item compact shadow-small card-picker-demo-alert" aria-label="Demo alert: ${title}">
+  <div class="list-item compact shadow-small card-picker-demo-alert" aria-label="Demo alert: ${title}" data-fvc-i18n-aria-label="runtime.cardPickerDemo.${variant}AlertLabel">
     <div class="et alert">
       ${buildGenericCameraSceneMarkup(variant)}
-      <span class="card-picker-demo-alert-badge">Demo</span>
+      <span class="card-picker-demo-alert-badge" data-fvc-i18n="runtime.cardPickerDemo.demo">Demo</span>
     </div>
     <div class="rev-inf">
-      <div class="rev-t">${title} <span class="cam-badge list-bubble">${area}</span></div>
+      <div class="rev-t"><span data-fvc-i18n="runtime.cardPickerDemo.${variant}Title">${title}</span> <span class="cam-badge list-bubble" data-fvc-i18n="runtime.cardPickerDemo.${variant}Area">${area}</span></div>
       <div class="rev-m">
-        <span class="time-meta">${age}</span>
-        <span class="review-meta">Alert</span>
+        <span class="time-meta" data-fvc-i18n="runtime.cardPickerDemo.${variant}Age">${age}</span>
+        <span class="review-meta" data-fvc-i18n="runtime.browse.row.alert">Alert</span>
       </div>
     </div>
   </div>`;

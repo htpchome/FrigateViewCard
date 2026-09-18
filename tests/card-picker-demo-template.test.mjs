@@ -6,6 +6,11 @@ import {
   buildCardPickerDemoLiveMarkup,
 } from "../src/features/editor-preview/card-picker-demo.tmpl.js";
 import { CARD_NAME } from "../src/constants.js";
+import { createLocalizationController } from "../src/features/localization/localization.ctrl.js";
+
+const markedKeys = (markup) => [
+  ...markup.matchAll(/data-fvc-i18n(?:-aria-label)?="([^"]+)"/g),
+].map((match) => match[1]);
 
 test("card picker live demo uses self-contained FrigateView branding", () => {
   const markup = buildCardPickerDemoLiveMarkup();
@@ -18,6 +23,14 @@ test("card picker live demo uses self-contained FrigateView branding", () => {
   assert.match(markup, /fill="#000000"/);
   assert.doesNotMatch(markup, /https?:\/\//);
   assert.doesNotMatch(markup, /camera\.[a-z0-9_]+/i);
+  assert.deepEqual(markedKeys(markup), [
+    "runtime.cardPickerDemo.brandLabel",
+    "runtime.cardPickerDemo.brandTagline",
+  ]);
+  const t = createLocalizationController().t;
+  for (const key of markedKeys(markup)) {
+    assert.notEqual(t(key), key, `Missing English translation: ${key}`);
+  }
 });
 
 test("card picker alert demo renders two inert synthetic alerts", () => {
@@ -27,4 +40,8 @@ test("card picker alert demo renders two inert synthetic alerts", () => {
   assert.equal(markup.match(/card-picker-demo-alert-badge/g)?.length, 2);
   assert.doesNotMatch(markup, /data-review-open|data-ev|data-dl/);
   assert.doesNotMatch(markup, /https?:\/\//);
+  const t = createLocalizationController().t;
+  for (const key of markedKeys(markup)) {
+    assert.notEqual(t(key), key, `Missing English translation: ${key}`);
+  }
 });

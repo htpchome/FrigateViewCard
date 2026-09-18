@@ -3,6 +3,8 @@ import {
   buildCardPickerDemoLiveMarkup,
 } from "./card-picker-demo.tmpl.js";
 import { CARD_NAME } from "../../constants.js";
+import { createLocalizationController } from "../localization/localization.ctrl.js";
+import { applyLocalizedText } from "../localization/localized-dom.js";
 import { normalizePageRoute, PAGE_IDS } from "../navigation/router.js";
 
 const EDITOR_LIFECYCLE_TRANSITION_GRACE_MS = 2000;
@@ -10,6 +12,7 @@ const EDITOR_LIFECYCLE_TRANSITION_GRACE_MS = 2000;
 // instead of retaining media engines in a global registry.
 const EDITOR_LIVE_HANDOFF_REQUEST_EVENT =
   "frigate-view-card-editor-live-handoff-request";
+const englishT = createLocalizationController().t;
 
 export const EDITOR_PREVIEW_ROUTE_INTENTS = Object.freeze({
   enterStandalone: "enter-card-view-standalone",
@@ -902,6 +905,7 @@ export class EditorPreviewContextController {
     const browseHeaderLabel = root?.querySelector?.("#browse-head-label");
     const list = root?.querySelector?.("#list");
     if (!card || !engine || !browse || !browseHeader || !list) return true;
+    const t = this._host._localization?.t ?? englishT;
 
     card.classList?.add?.("card-picker-demo");
     const demoSurface = fallback || engine;
@@ -915,13 +919,15 @@ export class EditorPreviewContextController {
     }
     browse.style.display = "flex";
     browseHeader.style.display = "flex";
-    if (browseHeaderLabel) browseHeaderLabel.textContent = "Recent Alerts";
+    if (browseHeaderLabel) browseHeaderLabel.textContent = t("runtime.browse.recentAlerts");
 
     const alertsMarkup = buildCardPickerDemoAlertsMarkup();
     if (this._cardPickerDemoList !== list) {
       list.innerHTML = alertsMarkup;
       this._cardPickerDemoList = list;
     }
+    applyLocalizedText(demoSurface, t);
+    applyLocalizedText(list, t);
     this._host._lastRenderedListHtml = alertsMarkup;
 
     const title = root.querySelector?.("#info-title");
@@ -931,10 +937,10 @@ export class EditorPreviewContextController {
     const statusLabel = root.querySelector?.("#on-lbl");
     const statusDot = root.querySelector?.("#on-dot");
     if (title) title.textContent = CARD_NAME;
-    if (subtitle) subtitle.textContent = "Demo Camera";
-    if (streamType) streamType.textContent = "Demo";
+    if (subtitle) subtitle.textContent = t("runtime.cardPickerDemo.demoCamera");
+    if (streamType) streamType.textContent = t("runtime.cardPickerDemo.demo");
     if (alertCount) alertCount.textContent = "2";
-    if (statusLabel) statusLabel.textContent = "Online";
+    if (statusLabel) statusLabel.textContent = t("runtime.preview.online");
     if (statusDot) statusDot.style.color = "var(--c-on)";
 
     return true;

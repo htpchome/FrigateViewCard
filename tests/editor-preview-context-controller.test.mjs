@@ -7,6 +7,7 @@ import {
   EditorPreviewContextController,
 } from "../src/features/editor-preview/context.ctrl.js";
 import { CARD_NAME } from "../src/constants.js";
+import { createLocalizationController } from "../src/features/localization/localization.ctrl.js";
 
 const withGlobals = (overrides, fn) => {
   const originalWindow = global.window;
@@ -536,6 +537,16 @@ test("renderCardPickerDemo paints an isolated presentation surface", () => {
   const picker = makeNode("HUI-CARD-PICKER");
   const hostClasses = [];
   const cardClasses = [];
+  let listMarkup = "Loading…";
+  let listWrites = 0;
+  const demoTextAttributes = new Map([
+    ["data-fvc-i18n", "runtime.cardPickerDemo.personTitle"],
+  ]);
+  const demoText = {
+    textContent: "Person",
+    getAttribute: (name) => demoTextAttributes.get(name) ?? null,
+    setAttribute: (name, value) => demoTextAttributes.set(name, value),
+  };
   const nodes = {
     "#card": {
       classList: { add: (className) => cardClasses.push(className) },
@@ -549,7 +560,11 @@ test("renderCardPickerDemo paints an isolated presentation surface", () => {
     "#browse": { style: { display: "none" } },
     "#browse-head": { style: { display: "none" } },
     "#browse-head-label": { textContent: "" },
-    "#list": { innerHTML: "Loading…" },
+    "#list": {
+      get innerHTML() { return listMarkup; },
+      set innerHTML(value) { listMarkup = value; listWrites++; },
+      querySelectorAll: () => [demoText],
+    },
     "#info-title": { textContent: "" },
     "#tl-range": { textContent: "" },
     "#stream-type": { textContent: "" },
@@ -558,6 +573,19 @@ test("renderCardPickerDemo paints an isolated presentation surface", () => {
     "#on-dot": { style: { color: "" } },
   };
   const host = makeNode("FRIGATE-VIEW-CARD", { parentNode: picker });
+  const englishT = createLocalizationController().t;
+  let language = "en";
+  host._localization = {
+    t: (key) => language === "fr"
+      ? {
+          "runtime.browse.recentAlerts": "Alertes récentes",
+          "runtime.cardPickerDemo.demoCamera": "Caméra de démonstration",
+          "runtime.cardPickerDemo.demo": "Démo",
+          "runtime.cardPickerDemo.personTitle": "Personne",
+          "runtime.preview.online": "En ligne",
+        }[key] ?? englishT(key)
+      : englishT(key),
+  };
   host.classList = {
     toggle: (className, enabled) => hostClasses.push([className, enabled]),
   };
@@ -588,6 +616,15 @@ test("renderCardPickerDemo paints an isolated presentation surface", () => {
   assert.equal(nodes["#alert-count"].textContent, "2");
   assert.equal(nodes["#on-lbl"].textContent, "Online");
   assert.equal(nodes["#on-dot"].style.color, "var(--c-on)");
+
+  language = "fr";
+  assert.equal(controller.renderCardPickerDemo(), true);
+  assert.equal(listWrites, 1);
+  assert.equal(demoText.textContent, "Personne");
+  assert.equal(nodes["#browse-head-label"].textContent, "Alertes récentes");
+  assert.equal(nodes["#tl-range"].textContent, "Caméra de démonstration");
+  assert.equal(nodes["#stream-type"].textContent, "Démo");
+  assert.equal(nodes["#on-lbl"].textContent, "En ligne");
 });
 
 test("renderCardPickerDemo suppresses normal startup before the shell exists", () => {

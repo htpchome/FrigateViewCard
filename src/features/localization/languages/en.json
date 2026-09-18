@@ -115,6 +115,20 @@
       "unavailable": "Unavailable",
       "versionLabel": "{name} version {version}"
     },
+    "cardPickerDemo": {
+      "brandTagline": "For Home Assistant and Frigate",
+      "brandLabel": "FrigateView preview branding",
+      "demo": "Demo",
+      "demoCamera": "Demo Camera",
+      "personAlertLabel": "Demo alert: Person",
+      "personTitle": "Person",
+      "personArea": "entry",
+      "personAge": "2 min ago",
+      "vehicleAlertLabel": "Demo alert: Vehicle",
+      "vehicleTitle": "Vehicle",
+      "vehicleArea": "driveway",
+      "vehicleAge": "8 min ago"
+    },
     "ptz": {
       "presets": "Camera presets",
       "presetsNote": "Camera Presets - presets are set on the camera.",
