@@ -6,6 +6,8 @@ successively shorter locale codes, and finally `en`. Missing keys also use
 their English value.
 
 Home Assistant does not automatically load a custom card's language files.
+The bundled languages are English (`en`) and German (`de`); regional German
+locales such as `de-DE` use `de` before falling back to English.
 To add a translation, put a JSON file in `languages/` using its HA locale code
 (for example, `pt-BR.json`), then add a static import and registry entry in
 `localization.ctrl.js`. The build bundles registered dictionaries into both

@@ -1,7 +1,8 @@
 import english from "./languages/en.json" with { type: "json" };
+import german from "./languages/de.json" with { type: "json" };
 
 const DEFAULT_LANGUAGE = "en";
-const bundledLanguages = Object.freeze({ en: english });
+const bundledLanguages = Object.freeze({ en: english, de: german });
 
 export const normalizeLanguageCode = (language) => {
   const candidate = String(language ?? "").trim().replaceAll("_", "-");

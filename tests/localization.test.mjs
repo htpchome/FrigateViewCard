@@ -56,6 +56,55 @@ test("falls back from exact locale to base language, then English per key", () =
   assert.equal(localization.t("example.missing"), "example.missing");
 });
 
+test("bundled German resolves regional HA locales and falls back to English per key", () => {
+  const localization = createLocalizationController();
+  localization.updateHass({ locale: { language: "de_DE" } });
+  assert.equal(localization.language, "de-DE");
+  assert.equal(localization.resolvedLanguage, "de");
+  assert.equal(localization.t("runtime.toolbar.alerts"), "Alarme");
+  assert.equal(
+    localization.t("editor.cameraModal.deleteConfirm", { camera: "Haustür" }),
+    "Möchtest du „Haustür“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+  );
+
+  const english = JSON.parse(readFileSync(
+    new URL("../src/features/localization/languages/en.json", import.meta.url),
+    "utf8",
+  ));
+  const sparse = createLocalizationController({
+    dictionaries: { en: english, de: { runtime: { toolbar: { alerts: "Alarme" } } } },
+  });
+  sparse.setLanguage("de-DE");
+  assert.equal(sparse.t("runtime.toolbar.alerts"), "Alarme");
+  assert.equal(sparse.t("runtime.toolbar.clips"), "Clips");
+  assert.equal(sparse.t("runtime.toolbar.recordings"), "Recordings");
+});
+
+test("German catalog covers every English key with matching placeholders", () => {
+  const load = (file) => JSON.parse(readFileSync(
+    new URL("../src/features/localization/languages/" + file + ".json", import.meta.url),
+    "utf8",
+  ));
+  const flatten = (value, prefix = "") => Object.entries(value).flatMap(([key, entry]) =>
+    typeof entry === "string"
+      ? [[prefix + key, entry]]
+      : flatten(entry, prefix + key + "."),
+  );
+  const english = new Map(flatten(load("en")));
+  const german = new Map(flatten(load("de")));
+  assert.deepEqual([...german.keys()].sort(), [...english.keys()].sort());
+  const placeholders = (value) => [...value.matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/g)]
+    .map((match) => match[1]).sort();
+  for (const [key, source] of english) {
+    assert.ok(german.get(key)?.trim(), "Empty German translation: " + key);
+    assert.deepEqual(
+      placeholders(german.get(key)),
+      placeholders(source),
+      "Placeholder mismatch: " + key,
+    );
+  }
+});
+
 test("interpolates only supplied named values", () => {
   const localization = createLocalizationController({ dictionaries });
   assert.equal(
