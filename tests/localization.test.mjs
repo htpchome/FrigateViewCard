@@ -193,6 +193,20 @@ test("bundled Catalan resolves regional HA locales", () => {
   );
 });
 
+test("bundled Greek resolves regional HA locales", () => {
+  const localization = createLocalizationController();
+  localization.updateHass({ locale: { language: "el_GR" } });
+  assert.equal(localization.language, "el-GR");
+  assert.equal(localization.resolvedLanguage, "el");
+  assert.equal(localization.t("runtime.toolbar.alerts"), "Ειδοποιήσεις");
+  assert.equal(localization.t("runtime.live.liveTile"), "ΖΩΝΤΑΝΑ");
+  assert.equal(localization.t("editor.actions.add"), "Προσθήκη");
+  assert.equal(
+    localization.t("editor.cameraModal.deleteConfirm", { camera: "Είσοδος" }),
+    "Είστε βέβαιοι ότι θέλετε να διαγράψετε την κάμερα «Είσοδος»; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
+  );
+});
+
 test("full catalogs cover English keys and regional overrides preserve placeholders", () => {
   const load = (file) => JSON.parse(readFileSync(
     new URL("../src/features/localization/languages/" + file + ".json", import.meta.url),
@@ -206,7 +220,7 @@ test("full catalogs cover English keys and regional overrides preserve placehold
   const english = new Map(flatten(load("en")));
   const placeholders = (value) => [...value.matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/g)]
     .map((match) => match[1]).sort();
-  for (const language of ["de", "es", "fr", "pt", "it", "pl", "ca"]) {
+  for (const language of ["de", "es", "fr", "pt", "it", "pl", "ca", "el"]) {
     const translated = new Map(flatten(load(language)));
     assert.deepEqual([...translated.keys()].sort(), [...english.keys()].sort());
     for (const [key, source] of english) {

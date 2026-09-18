@@ -431,6 +431,26 @@ test("bundled Catalan catalog resolves regional Home Assistant locales in card a
   expect(labels).toEqual({ runtime: "Alertes", live: "EN DIRECTE", editor: "Afegeix", resolved: "ca" });
 });
 
+test("bundled Greek catalog resolves regional Home Assistant locales in card and editor", async ({ page }) => {
+  await page.goto(baseUrl);
+  const labels = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    await import("/frigate-view-card-editor.js");
+    const card = document.createElement("frigate-view-card");
+    const editor = document.createElement("frigate-view-card-editor");
+    card._localization.updateHass({ locale: { language: "el-GR" } });
+    editor._t("editor.actions.add");
+    editor._localization.updateHass({ locale: { language: "el-GR" } });
+    return {
+      runtime: card._localization.t("runtime.toolbar.alerts"),
+      live: card._localization.t("runtime.live.liveTile"),
+      editor: editor._t("editor.actions.add"),
+      resolved: card._localization.resolvedLanguage,
+    };
+  });
+  expect(labels).toEqual({ runtime: "Ειδοποιήσεις", live: "ΖΩΝΤΑΝΑ", editor: "Προσθήκη", resolved: "el" });
+});
+
 test("language changes update marked card and editor text without replacing media or inputs", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {
