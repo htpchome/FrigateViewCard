@@ -151,6 +151,20 @@ test("Portuguese and Brazilian Portuguese use regional wording with layered fall
   assert.equal(localization.resolvedLanguage, "pt");
 });
 
+test("bundled Italian resolves regional HA locales", () => {
+  const localization = createLocalizationController();
+  localization.updateHass({ locale: { language: "it_CH" } });
+  assert.equal(localization.language, "it-CH");
+  assert.equal(localization.resolvedLanguage, "it");
+  assert.equal(localization.t("runtime.toolbar.alerts"), "Avvisi");
+  assert.equal(localization.t("runtime.live.liveTile"), "DIRETTA");
+  assert.equal(localization.t("editor.actions.add"), "Aggiungi");
+  assert.equal(
+    localization.t("editor.cameraModal.deleteConfirm", { camera: "Ingresso" }),
+    "Vuoi davvero eliminare «Ingresso»? Questa azione non può essere annullata.",
+  );
+});
+
 test("full catalogs cover English keys and regional overrides preserve placeholders", () => {
   const load = (file) => JSON.parse(readFileSync(
     new URL("../src/features/localization/languages/" + file + ".json", import.meta.url),
@@ -164,7 +178,7 @@ test("full catalogs cover English keys and regional overrides preserve placehold
   const english = new Map(flatten(load("en")));
   const placeholders = (value) => [...value.matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/g)]
     .map((match) => match[1]).sort();
-  for (const language of ["de", "es", "fr", "pt"]) {
+  for (const language of ["de", "es", "fr", "pt", "it"]) {
     const translated = new Map(flatten(load(language)));
     assert.deepEqual([...translated.keys()].sort(), [...english.keys()].sort());
     for (const [key, source] of english) {

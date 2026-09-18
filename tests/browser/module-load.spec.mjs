@@ -371,6 +371,26 @@ test("bundled Portuguese catalogs resolve European and Brazilian variants", asyn
   });
 });
 
+test("bundled Italian catalog resolves regional Home Assistant locales in card and editor", async ({ page }) => {
+  await page.goto(baseUrl);
+  const labels = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    await import("/frigate-view-card-editor.js");
+    const card = document.createElement("frigate-view-card");
+    const editor = document.createElement("frigate-view-card-editor");
+    card._localization.updateHass({ locale: { language: "it-IT" } });
+    editor._t("editor.actions.add");
+    editor._localization.updateHass({ locale: { language: "it-IT" } });
+    return {
+      runtime: card._localization.t("runtime.toolbar.alerts"),
+      live: card._localization.t("runtime.live.liveTile"),
+      editor: editor._t("editor.actions.add"),
+      resolved: card._localization.resolvedLanguage,
+    };
+  });
+  expect(labels).toEqual({ runtime: "Avvisi", live: "DIRETTA", editor: "Aggiungi", resolved: "it" });
+});
+
 test("language changes update marked card and editor text without replacing media or inputs", async ({ page }) => {
   await page.goto(baseUrl);
   const state = await page.evaluate(async () => {
