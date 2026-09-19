@@ -71,7 +71,10 @@ export function buildFooterMarkup({
   const fvcBrandLogo = `<div><div class="fvc-brand-logo">${displayFvcBrandLogo ? icons.fvcBrandLogo || "" : ""}</div></div>`;
   const normalizedVersion = String(version || "").trim();
   const footerVersion = `<div class="footer-version" ${normalizedVersion ? `aria-label="${CARD_NAME} version ${escapeHtmlAttribute(normalizedVersion)}"` : "hidden"}>${normalizedVersion ? `v${escapeHtml(normalizedVersion)}` : ""}</div>`;
-  return `<div class="footer" data-fvc-region="footer">
+  const footerClass = displayFvcBrandLogo
+    ? "footer"
+    : "footer footer--logo-hidden";
+  return `<div class="${footerClass}" data-fvc-region="footer">
               ${fvcBrandLogo}
               ${footerVersion}
             </div>`;

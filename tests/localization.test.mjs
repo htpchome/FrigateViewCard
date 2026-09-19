@@ -80,6 +80,22 @@ test("bundled German resolves regional HA locales and falls back to English per 
   assert.equal(sparse.t("runtime.toolbar.recordings"), "Recordings");
 });
 
+test("British English overrides US spelling and inherits unchanged English text", () => {
+  const localization = createLocalizationController();
+  localization.updateHass({ locale: { language: "en_GB" } });
+  assert.equal(localization.language, "en-GB");
+  assert.equal(localization.resolvedLanguage, "en-GB");
+  assert.equal(localization.t("runtime.toolbar.favorites"), "Favourites");
+  assert.equal(localization.t("runtime.popup.info.addFavorite"), "Add to Favourites");
+  assert.equal(localization.t("editor.theme.colors.bg_main"), "Background Colour");
+  assert.equal(localization.t("editor.mobileView.stackNavbarIconLabelHelp").includes("centres"), true);
+  assert.equal(localization.t("editor.actions.cancel"), "Cancel");
+
+  localization.updateHass({ locale: { language: "en_AU" } });
+  assert.equal(localization.resolvedLanguage, "en");
+  assert.equal(localization.t("runtime.toolbar.favorites"), "Favorites");
+});
+
 test("Spanish and Latin American Spanish use regional wording with layered fallback", () => {
   const localization = createLocalizationController();
   localization.updateHass({ locale: { language: "es_ES" } });
@@ -232,7 +248,7 @@ test("full catalogs cover English keys and regional overrides preserve placehold
       );
     }
   }
-  for (const [baseLanguage, regionalLanguage] of [["es", "es-419"], ["pt", "pt-BR"]]) {
+  for (const [baseLanguage, regionalLanguage] of [["en", "en-GB"], ["es", "es-419"], ["pt", "pt-BR"]]) {
     const base = new Map(flatten(load(baseLanguage)));
     const regional = new Map(flatten(load(regionalLanguage)));
     for (const [key, translation] of regional) {

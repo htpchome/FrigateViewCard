@@ -265,6 +265,9 @@ export const STYLES = `
 
   .footer {display:grid;grid-template-columns:minmax(100px,1fr) minmax(100px,1fr);flex:0 0 var(--fvc-footer-height);height:var(--fvc-footer-height);min-height:var(--fvc-footer-height);line-height:1;font-size:1.2rem;padding:4px;align-items:center;border-top:1px solid var(--c-border);box-sizing:border-box;}
   .footer-version{justify-self:end;align-self:center;padding:0 .3rem;color:var(--c-text2);font-size:.68rem;font-weight:600;line-height:1;white-space:nowrap;}
+  .footer.footer--logo-hidden{grid-template-columns:minmax(0,1fr);flex:0 0 auto;height:auto;min-height:1.15rem;padding:2px 4px;}
+  .footer.footer--logo-hidden > :first-child{display:none;}
+  .footer.footer--logo-hidden .footer-version{padding:1px .3rem;}
   .wide-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;flex:0 0 var(--fvc-footer-height);height:var(--fvc-footer-height);min-height:var(--fvc-footer-height);line-height:1;font-size:1.2rem;padding:4px;text-align:left;border-top:1px solid var(--c-border);box-sizing:border-box;}
   
   .list.recordings-swipe-active{position:relative;overflow:hidden;}

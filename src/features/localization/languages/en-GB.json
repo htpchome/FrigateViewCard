@@ -1,0 +1,79 @@
+{
+  "runtime": {
+    "toolbar": {
+      "favorites": "Favourites"
+    },
+    "notifications": {
+      "favoritesAdded": "Added to Favourites",
+      "favoritesRemoved": "Removed from Favourites",
+      "favoritesAddFailed": "Could not add to Favourites",
+      "favoritesRemoveFailed": "Could not remove from Favourites"
+    },
+    "cardView": {
+      "favorites": "Favourites",
+      "drawer": {
+        "loadingFavorites": "Loading favourites…",
+        "noFavorites": "No favourites available"
+      }
+    },
+    "popup": {
+      "info": {
+        "favorite": "Favourite",
+        "addFavorite": "Add to Favourites",
+        "removeFavorite": "Remove from Favourites"
+      }
+    },
+    "browse": {
+      "noFavorites": "No favourites",
+      "favoriteHint": "star an event to add it to Favourites",
+      "favorites": "Favourites",
+      "row": {
+        "favorite": "Favourite",
+        "unfavorite": "Unfavourite"
+      },
+      "filter": {
+        "favorites": "★ Favourites"
+      }
+    }
+  },
+  "editor": {
+    "general": {
+      "favoritesAllCameras": "Favourites from All Cameras",
+      "favoritesAllCamerasHelp": "Shows favourites from all configured cameras. Turn off to show only the active camera."
+    },
+    "theme": {
+      "resetDefaultColor": "Reset to default colour",
+      "colors": {
+        "bg_main": "Background Colour",
+        "bg_primary": "Primary Background Colour",
+        "bg_panel": "Secondary Background Colour",
+        "bg_deep": "Video Background Colour",
+        "bg_mobile": "Mobile Background Colour",
+        "bg_mobile_list": "Mobile List Background Colour",
+        "bg_list": "List Background Colour",
+        "bg_cam_btn": "Camera Button Background Colour",
+        "text": "Primary Text Colour",
+        "text2": "Secondary Text Colour",
+        "text3": "Third Text Colour",
+        "text4": "Fourth Text Colour",
+        "text_rev": "Reverse Text Colour",
+        "border": "Border Colour One",
+        "border2": "Border Colour Two",
+        "primary": "Primary Colour",
+        "primary_l": "Primary Light Colour",
+        "primary_d": "Primary Dark Colour",
+        "accent": "Accent Colour"
+      }
+    },
+    "layout": {
+      "tabs": {
+        "kept": "Favourites"
+      }
+    },
+    "mobileView": {
+      "stackNavbarIconLabelHelp": "For tabs showing an icon and title, centres a smaller title below the icon. Other tab styles are unchanged.",
+      "dashboardBackgroundHelp": "Uses the Mobile View background colour for the surrounding Home Assistant page on mobile devices.",
+      "outerBorderHelp": "Adds the theme-coloured border around Mobile View on all devices."
+    }
+  }
+}

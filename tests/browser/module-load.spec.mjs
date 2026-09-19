@@ -276,6 +276,31 @@ test("loads the runtime and editor modules", async ({ page }) => {
   ).toHaveLength(1);
 });
 
+test("bundled British English uses regional wording and inherits unchanged English text", async ({ page }) => {
+  await page.goto(baseUrl);
+  const labels = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    await import("/frigate-view-card-editor.js");
+    const card = document.createElement("frigate-view-card");
+    const editor = document.createElement("frigate-view-card-editor");
+    card._localization.updateHass({ locale: { language: "en-GB" } });
+    editor._t("editor.actions.cancel");
+    editor._localization.updateHass({ locale: { language: "en-GB" } });
+    return {
+      runtime: card._localization.t("runtime.toolbar.favorites"),
+      editor: editor._t("editor.theme.colors.bg_main"),
+      inherited: editor._t("editor.actions.cancel"),
+      resolved: card._localization.resolvedLanguage,
+    };
+  });
+  expect(labels).toEqual({
+    runtime: "Favourites",
+    editor: "Background Colour",
+    inherited: "Cancel",
+    resolved: "en-GB",
+  });
+});
+
 test("bundled Spanish catalogs resolve base and Latin American variants", async ({ page }) => {
   await page.goto(baseUrl);
   const labels = await page.evaluate(async () => {
@@ -2958,6 +2983,62 @@ test("Panel Single and Mobile Views keep their footer inside the viewport", asyn
     expect(view.browseHeight).toBeGreaterThan(0);
     expect(view.browseOverflowY).toBe("auto");
     expect(view.wrapperHeight).toBe("100%");
+  }
+});
+
+test("Single and Mobile View footers become compact when the logo is disabled", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1_200, height: 900 });
+  await page.goto(baseUrl);
+
+  const result = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+
+    const sample = (pageId, displayLogo) => {
+      const card = document.createElement("frigate-view-card");
+      card.style.cssText = "display:block;width:500px;height:700px";
+      document.body.append(card);
+      card.setConfig({
+        cameras: [{ entity: "camera.front", name: "Front" }],
+        mobile_view_page_enabled: true,
+        display_logo: displayLogo,
+        display_version: true,
+      });
+      card._pageId = pageId;
+      card._renderShell();
+
+      const footer = card.shadowRoot.querySelector(
+        '[data-fvc-region="footer"]',
+      );
+      const state = {
+        height: footer.getBoundingClientRect().height,
+        compact: footer.classList.contains("footer--logo-hidden"),
+        hasLogo: Boolean(footer.querySelector(".fvc-brand-logo svg")),
+        versionVisible: !footer.querySelector(".footer-version").hidden,
+      };
+      card.remove();
+      return state;
+    };
+
+    return {
+      singleWithLogo: sample("single-view", true),
+      singleWithoutLogo: sample("single-view", false),
+      mobileWithLogo: sample("mobile-view", true),
+      mobileWithoutLogo: sample("mobile-view", false),
+    };
+  });
+
+  for (const [withLogo, withoutLogo] of [
+    [result.singleWithLogo, result.singleWithoutLogo],
+    [result.mobileWithLogo, result.mobileWithoutLogo],
+  ]) {
+    expect(withLogo.compact).toBe(false);
+    expect(withLogo.hasLogo).toBe(true);
+    expect(withoutLogo.compact).toBe(true);
+    expect(withoutLogo.hasLogo).toBe(false);
+    expect(withoutLogo.versionVisible).toBe(true);
+    expect(withoutLogo.height).toBeLessThan(withLogo.height);
   }
 });
 

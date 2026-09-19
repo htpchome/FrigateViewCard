@@ -39,6 +39,28 @@ test("English display keeps its current date and 12-hour time", () => {
   );
 });
 
+test("British English uses day/month dates and 24-hour time unless HA overrides it", () => {
+  const formatter = formatterFor("UTC");
+  assert.equal(resolveDisplayHour12("en-GB", "language"), undefined);
+  assert.equal(formatLocalizedMonthDay(timestamp, {
+    locale: "en-GB",
+    ordinal: true,
+    formatter,
+    ordinalize,
+  }), "17 Sept");
+  assert.equal(formatLocalizedMonthDay(timestamp, {
+    locale: "en-GB",
+    numeric: true,
+    formatter,
+  }), "17/09");
+  assert.equal(formatLocalizedTime(timestamp, { locale: "en-GB", formatter }), "19:18");
+  assert.equal(formatLocalizedTime(timestamp, {
+    locale: "en-GB",
+    timeFormat: "12",
+    formatter,
+  }), "7:18 pm");
+});
+
 test("translated locales use natural order and explicit HA time preference", () => {
   const formatter = formatterFor("UTC");
   assert.equal(resolveDisplayHour12("fr", "language"), undefined);

@@ -1,4 +1,5 @@
 import english from "./languages/en.json" with { type: "json" };
+import britishEnglish from "./languages/en-GB.json" with { type: "json" };
 import german from "./languages/de.json" with { type: "json" };
 import spanish from "./languages/es.json" with { type: "json" };
 import latinAmericanSpanish from "./languages/es-419.json" with { type: "json" };
@@ -13,6 +14,7 @@ import greek from "./languages/el.json" with { type: "json" };
 const DEFAULT_LANGUAGE = "en";
 const bundledLanguages = Object.freeze({
   en: english,
+  "en-GB": britishEnglish,
   de: german,
   es: spanish,
   "es-419": latinAmericanSpanish,

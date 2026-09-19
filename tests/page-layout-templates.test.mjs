@@ -214,17 +214,25 @@ test("single, preview, and wide footers share one height and centered version al
   );
 });
 
-test("footer logo visibility leaves the fixed footer slot intact", () => {
+test("shared footer marks its no-logo state for compact layout", () => {
   const markup = buildFooterMarkup({
     icons: { fvcBrandLogo: "Logo" },
     displayFvcBrandLogo: false,
     version: "1.0.0",
   });
 
-  assert.match(markup, /class="footer"/);
+  assert.match(markup, /class="footer footer--logo-hidden"/);
   assert.match(markup, /class="fvc-brand-logo"><\/div>/);
   assert.doesNotMatch(markup, />Logo</);
   assert.match(markup, /class="footer-version"[^>]*>v1\.0\.0<\/div>/);
+  assert.match(
+    STYLES,
+    /\.footer\.footer--logo-hidden\{[^}]*grid-template-columns:minmax\(0,1fr\);[^}]*flex:0 0 auto;[^}]*height:auto;[^}]*min-height:1\.15rem;[^}]*padding:2px 4px;/,
+  );
+  assert.match(
+    STYLES,
+    /\.footer\.footer--logo-hidden > :first-child\{display:none;\}/,
+  );
 });
 
 test("wide view inserts Companion Cameras below its tool controls", () => {
