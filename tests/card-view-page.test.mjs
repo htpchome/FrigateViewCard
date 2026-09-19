@@ -1283,7 +1283,22 @@ test("Card View toolbar exposes shared Grid and Slideshow mode states", () => {
 test("Card View shares the Mobile View camera picker and uses a two-state drawer", () => {
   assert.match(CAMERA_PICKER_STYLES, /\.card\.mobile-view-active/);
   assert.match(CAMERA_PICKER_STYLES, /\.card\.card-view-active/);
-  assert.match(CAMERA_PICKER_STYLES, /background:rgba\(255,255,255,\.2\)/);
+  assert.match(
+    CAMERA_PICKER_STYLES,
+    /mobile-cam-picker__panel[\s\S]*?background:color-mix\(in srgb,var\(--c-bg-panel\) 20%,transparent\)/,
+  );
+  assert.match(
+    CAMERA_PICKER_STYLES,
+    /mobile-cam-picker__option \{[\s\S]*?background:color-mix\(in srgb,var\(--c-bg-primary\) 18%,transparent\)/,
+  );
+  assert.match(
+    CAMERA_PICKER_STYLES,
+    /mobile-cam-picker__option:hover \{\s*background:color-mix\(in srgb,var\(--c-bg-primary\) 28%,transparent\)/,
+  );
+  assert.match(
+    CAMERA_PICKER_STYLES,
+    /mobile-cam-picker__option\.is-active \{[\s\S]*?background:color-mix\(in srgb,var\(--c-bg-primary\) 34%,transparent\)/,
+  );
   assert.match(
     CARD_VIEW_PAGE_STYLES,
     /card-view-calendar-panel[\s\S]*top:auto;[^}]*bottom:calc\(100% \+ 7px\)/,

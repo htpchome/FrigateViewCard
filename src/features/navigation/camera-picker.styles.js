@@ -147,7 +147,7 @@ export const CAMERA_PICKER_STYLES = `
     box-sizing:border-box;
     border:1px solid rgba(255,255,255,.28);
     border-radius:10px;
-    background:rgba(255,255,255,.2);
+    background:color-mix(in srgb,var(--c-bg-panel) 20%,transparent);
     backdrop-filter:blur(8px) saturate(180%);
     -webkit-backdrop-filter:blur(8px) saturate(180%);
     box-shadow:0 8px 32px rgba(31,38,135,.2),inset 0 0 0 1px rgba(255,255,255,.35);
@@ -168,7 +168,7 @@ export const CAMERA_PICKER_STYLES = `
     justify-content:flex-start;
     border:1px solid rgba(255,255,255,.28);
     border-radius:8px;
-    background:rgba(255,255,255,.18);
+    background:color-mix(in srgb,var(--c-bg-primary) 18%,transparent);
     backdrop-filter:blur(5px) saturate(170%);
     -webkit-backdrop-filter:blur(5px) saturate(170%);
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);
@@ -182,13 +182,13 @@ export const CAMERA_PICKER_STYLES = `
   }
 
   :is(.card.mobile-view-active,.card.card-view-active) .mobile-cam-picker__option:hover {
-    background:rgba(255,255,255,.28);
+    background:color-mix(in srgb,var(--c-bg-primary) 28%,transparent);
     border-color:rgba(255,255,255,.5);
   }
 
   :is(.card.mobile-view-active,.card.card-view-active) .mobile-cam-picker__option.is-active {
     border-color:rgba(255,255,255,.58);
-    background:rgba(255,255,255,.34);
+    background:color-mix(in srgb,var(--c-bg-primary) 34%,transparent);
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.55),0 0 0 1px color-mix(in srgb,var(--c-primary-d) 55%,transparent);
     color:var(--c-primary-d);
   }

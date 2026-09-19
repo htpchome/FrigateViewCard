@@ -4837,6 +4837,53 @@ test("grouped camera labels relocalize in place through focus and phone member c
   });
 });
 
+test("camera picker dropdown surfaces follow the card background theme", async ({
+  page,
+}) => {
+  await page.goto(baseUrl);
+
+  const colors = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    document.body.append(card);
+    card.setConfig({
+      cameras: [
+        { entity: "camera.front", name: "Front" },
+        { entity: "camera.back", name: "Back" },
+      ],
+      mobile_view_page_enabled: true,
+    });
+    card._pageId = "mobile-view";
+    card._mobileCamSwitcherOpen = true;
+    card._renderShell();
+    card._renderCamSwitcher();
+
+    const root = card.shadowRoot;
+    const cardRoot = root.querySelector("#card");
+    const panel = root.querySelector(".mobile-cam-picker__panel");
+    const options = root.querySelectorAll(".mobile-cam-picker__option");
+    const sample = async ({ panelColor, optionColor }) => {
+      cardRoot.style.setProperty("--c-bg-panel", panelColor);
+      cardRoot.style.setProperty("--c-bg-primary", optionColor);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      return {
+        panel: getComputedStyle(panel).backgroundColor,
+        active: getComputedStyle(options[0]).backgroundColor,
+        option: getComputedStyle(options[1]).backgroundColor,
+      };
+    };
+
+    return {
+      light: await sample({ panelColor: "#f2f2f2", optionColor: "#ffffff" }),
+      dark: await sample({ panelColor: "#242424", optionColor: "#111111" }),
+    };
+  });
+
+  expect(colors.light.panel).not.toBe(colors.dark.panel);
+  expect(colors.light.active).not.toBe(colors.dark.active);
+  expect(colors.light.option).not.toBe(colors.dark.option);
+});
+
 test.describe("touch input", () => {
   test.use({
     hasTouch: true,
