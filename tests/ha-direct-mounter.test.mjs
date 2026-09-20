@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { createHaDirectMounter } from "../src/features/live/ha-direct-mounter.js";
+import { createMseGraceController } from "../src/features/live/mse-grace-controller.js";
 
 function createFakeVideo(id = "first-video") {
   const listeners = new Map();
@@ -9,6 +10,15 @@ function createFakeVideo(id = "first-video") {
   let nextCallback = 0;
   return {
     tagName: "VIDEO", id, paused: true, readyState: 0, currentTime: 0, videoWidth: 0,
+    style: { cssText: "" },
+    dataset: {},
+    classList: { add() {} },
+    setAttribute() {},
+    removeAttribute() {},
+    play() {
+      this.paused = false;
+      return Promise.resolve();
+    },
     addEventListener(type, handler) {
       const handlers = listeners.get(type) || new Set();
       handlers.add(handler);
@@ -86,16 +96,36 @@ const flushAsyncWork = () => new Promise((resolve) => setImmediate(resolve));
 
 function withFakeDocument(run) {
   const previousDocument = globalThis.document;
+  const hlsPlayers = [];
   globalThis.document = {
     createElement: (tag) => {
-      if (String(tag).toLowerCase() !== "ha-hls-player") {
-        throw new Error(`Unexpected tag: ${tag}`);
+      const normalizedTag = String(tag).toLowerCase();
+      if (normalizedTag === "ha-hls-player") {
+        const player = createFakeStreamElement();
+        hlsPlayers.push(player);
+        return player;
       }
-      return createFakeStreamElement();
+      if (normalizedTag === "div") {
+        return {
+          isConnected: false,
+          style: { cssText: "" },
+          children: [],
+          setAttribute() {},
+          appendChild(child) {
+            this.children.push(child);
+            child.parentElement = this;
+            return child;
+          },
+          remove() {
+            this.isConnected = false;
+          },
+        };
+      }
+      throw new Error(`Unexpected tag: ${tag}`);
     },
   };
   return Promise.resolve()
-    .then(() => run())
+    .then(() => run({ hlsPlayers }))
     .finally(() => {
       globalThis.document = previousDocument;
     });
@@ -911,6 +941,155 @@ test("HLS recovery without frame callbacks requires unpaused time advancement", 
     await flushAsyncWork();
     assert.equal(h.types.at(-1), "hls");
     h.mounter.release(h.engine);
+  });
+});
+
+test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate connection", async () => {
+  await withFakeDocument(async ({ hlsPlayers }) => {
+    const hass = {
+      states: {
+        "camera.front": {
+          entity_id: "camera.front",
+          attributes: {},
+        },
+      },
+    };
+    let engine = null;
+    let activeStreamType = "snapshot";
+    let fallbackVisible = true;
+    let mounter = null;
+    const assignEngine = (nextEngine, options = {}) => {
+      if (engine === nextEngine) return;
+      if (options.retainPrevious !== true) mounter?.release?.(engine);
+      engine = nextEngine;
+    };
+    const applyFallbackState = (visible) => {
+      fallbackVisible = visible === true;
+    };
+    mounter = createHaDirectMounter({
+      getHass: () => hass,
+      getPreferredStreamType: () => "hls",
+      getStreamMuted: () => true,
+      getRotateOverlayActive: () => false,
+      isCurrentEngine: (candidate) => engine === candidate,
+      waitForStreamStart: async () => true,
+      assignCommittedEngine: assignEngine,
+      onCommittedMediaReady: () => {},
+      onCommittedStream: (type) => {
+        activeStreamType = type;
+        applyFallbackState(false);
+      },
+      applyResolvedStreamUiState: (state) => {
+        applyFallbackState(state?.fallbackVisible);
+      },
+      setLiveNativeControls: () => {},
+    });
+    const shadowRoot = {
+      appendChild(node) {
+        node.isConnected = true;
+        return node;
+      },
+    };
+    const graceController = createMseGraceController({
+      graceMs: 20_000,
+      graceMax: 3,
+      getShadowRoot: () => shadowRoot,
+      getScopeKey: () => ({ id: "ha-direct-hls-integration" }),
+      getPendingMountDestroyers: () => [],
+      setPendingMountDestroyers: () => {},
+      getPendingWebRtcTakeoverTimer: () => null,
+      setPendingWebRtcTakeoverTimer: () => {},
+      clearRotateOverlayAudioSync: () => {},
+      clearRotateVideoFullscreenStyle: () => {},
+      getEngine: () => engine,
+      setEngine: assignEngine,
+      getActiveStreamType: () => activeStreamType,
+      getStreamMuted: () => true,
+      setEngineMountedMuted: () => {},
+      getRotateOverlayActive: () => false,
+      attachVideoFit: () => {},
+      setActiveStreamType: (type) => {
+        activeStreamType = type;
+      },
+      setStreamLoading: () => {},
+      setStreamFallbackVisible: applyFallbackState,
+      setLiveNativeControls: () => {},
+      releaseHaDirectEngine: (releasedEngine) =>
+        mounter.release(releasedEngine),
+      adoptHaDirectWebRtcEngine: () => {
+        throw new Error("HLS must not enter WebRTC ownership adoption");
+      },
+    });
+    const initialSlot = {
+      innerHTML: "",
+      appendChild(node) {
+        this.child = node;
+        node.parentElement = this;
+      },
+    };
+
+    await mounter.tryMount(
+      initialSlot,
+      { streamType: "hls" },
+      { entity: "camera.front", commit: true },
+    );
+    await flushAsyncWork();
+
+    const mountedEngine = engine;
+    assert.equal(hlsPlayers.length, 1);
+    assert.equal(activeStreamType, "hls");
+    assert.equal(fallbackVisible, false);
+    assert.equal(mountedEngine.listenerCount("streams"), 1);
+
+    graceController.cleanupEngine({ preserveLiveEntity: "camera.front" });
+    const cachedEntry = graceController.takeGraceHaDirectEntry(
+      "camera.front",
+      "hls",
+    );
+
+    assert.equal(engine, null);
+    assert.equal(cachedEntry?.engine, mountedEngine);
+    assert.equal(hlsPlayers.length, 1);
+    assert.equal(mountedEngine.listenerCount("streams"), 1);
+
+    const returnSlot = {
+      innerHTML: "occupied",
+      appendChild(node) {
+        this.child = node;
+        node.parentElement = this;
+      },
+    };
+    assert.equal(
+      graceController.adoptGraceHaDirectEngine(
+        returnSlot,
+        cachedEntry.engine,
+      ),
+      true,
+    );
+    assert.equal(engine, mountedEngine);
+    assert.equal(returnSlot.child, mountedEngine);
+    assert.equal(hlsPlayers.length, 1);
+    assert.equal(activeStreamType, "hls");
+
+    mountedEngine.dispatch("streams", { hasVideo: false });
+    await flushAsyncWork();
+    assert.equal(activeStreamType, "snapshot");
+    assert.equal(fallbackVisible, true);
+    assert.equal(mountedEngine.video.pendingFrames().length, 1);
+
+    mountedEngine.video.presentFrame();
+    await flushAsyncWork();
+    assert.equal(activeStreamType, "hls");
+    assert.equal(fallbackVisible, false);
+    assert.equal(hlsPlayers.length, 1);
+
+    graceController.cleanupEngine();
+    assert.equal(engine, null);
+    assert.equal(mountedEngine.listenerCount("load"), 0);
+    assert.equal(mountedEngine.listenerCount("streams"), 0);
+    assert.equal(mountedEngine.video.listenerCount("timeupdate"), 0);
+    assert.equal(mountedEngine.video.pendingFrames().length, 0);
+    graceController.clearGracePool();
   });
 });
 
