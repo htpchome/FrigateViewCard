@@ -22,6 +22,8 @@ const HA_DIRECT_HIDDEN_ATTEMPT_STYLE =
   "position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;left:-9999px;top:-9999px;background:var(--c-bg-deep)";
 const HA_DIRECT_VISIBLE_STYLE =
   "width:100%;height:100%;display:block;background:var(--c-bg-deep)";
+const HA_DIRECT_TIME_RECOVERY_MIN_ADVANCES = 2;
+const HA_DIRECT_TIME_RECOVERY_MIN_PROGRESS_SECONDS = 0.05;
 
 export function createHaDirectMounter({
   getHass,
@@ -121,25 +123,54 @@ export function createHaDirectMounter({
       binding.recoveryVideo = video;
       let active = true;
       let frameId = null;
-      let lastTime = Number(video.currentTime) || 0;
+      const initialTime = Number(video.currentTime);
+      let lastTime = Number.isFinite(initialTime) ? initialTime : null;
+      let advancingSamples = 0;
+      let progressStartTime = null;
       const isActive = () =>
         active && !binding.disposed && binding.failed &&
         isCurrentEngine(engine) &&
         findActiveHaCameraStreamVideo(engine) === video;
+      const hasUsablePlaybackState = () => {
+        const playbackRate = Number(video.playbackRate);
+        return !video.paused && !video.ended && !video.seeking &&
+          Number(video.readyState) >= 2 && Number(video.videoWidth) > 0 &&
+          (!Number.isFinite(playbackRate) || playbackRate > 0);
+      };
+      const resetTimeEvidence = (time) => {
+        lastTime = Number.isFinite(time) ? time : null;
+        advancingSamples = 0;
+        progressStartTime = null;
+      };
       const recover = () => {
         if (!isActive()) return;
-        if (
-          video.paused || Number(video.readyState) < 2 ||
-          !(Number(video.videoWidth) > 0)
-        ) return;
+        if (!hasUsablePlaybackState()) return;
         binding.failed = false;
         binding.cleanupRecovery();
         applyReady(engine, "hls");
       };
       const onTimeUpdate = () => {
-        const time = Number(video.currentTime) || 0;
-        if (time > lastTime) recover();
+        if (!isActive()) return;
+        const time = Number(video.currentTime);
+        if (!Number.isFinite(time) || !hasUsablePlaybackState()) {
+          resetTimeEvidence(time);
+          return;
+        }
+        if (lastTime == null || time < lastTime) {
+          resetTimeEvidence(time);
+          return;
+        }
+        if (time === lastTime) return;
+        advancingSamples += 1;
+        if (progressStartTime == null) progressStartTime = time;
         lastTime = time;
+        if (
+          advancingSamples >= HA_DIRECT_TIME_RECOVERY_MIN_ADVANCES &&
+          time - progressStartTime >=
+            HA_DIRECT_TIME_RECOVERY_MIN_PROGRESS_SECONDS
+        ) {
+          recover();
+        }
       };
       const onFrame = () => {
         frameId = null;
@@ -154,9 +185,8 @@ export function createHaDirectMounter({
         binding.recoveryVideo = null;
         binding.cleanupRecovery = () => {};
       };
-      // A load/playing event or old buffered frames cannot prove recovery.
-      // Watch advancing unpaused video too: the HA app's WKWebView can
-      // advance HLS playback without delivering its advertised frame callback.
+      // A lone time jump can be a seek or stale buffered state. WKWebView may
+      // omit frame callbacks, so require sustained playback as the fallback.
       video.addEventListener?.("timeupdate", onTimeUpdate);
       if (typeof video.requestVideoFrameCallback === "function") {
         frameId = video.requestVideoFrameCallback(onFrame);

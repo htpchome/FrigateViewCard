@@ -199,7 +199,15 @@ test("rotated Mobile View inside Bubble fills the viewport above its backdrop", 
     };
     card._isLandscapeViewport = () => false;
     card._updateRotateOverlayState();
-    await new Promise((resolve) => setTimeout(resolve, 360));
+    const restoreDeadline = performance.now() + 2_000;
+    while (
+      (card.classList.contains("mobile-view-rotate-cover") ||
+        card.matches(":popover-open") ||
+        card.hasAttribute("popover")) &&
+      performance.now() < restoreDeadline
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
     return {
       ...active,
       restored: {

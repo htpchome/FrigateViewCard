@@ -825,6 +825,10 @@ test("HLS recovers through timeupdate when frame callbacks exist but stay silent
     video.currentTime = 1;
     video.dispatch("timeupdate");
     await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot"]);
+    video.currentTime = 1.1;
+    video.dispatch("timeupdate");
+    await flushAsyncWork();
     assert.deepEqual(h.types, ["snapshot", "hls"]);
     assert.equal(video.pendingFrames().length, 0);
     h.mounter.release(h.engine);
@@ -939,7 +943,68 @@ test("HLS recovery without frame callbacks requires unpaused time advancement", 
     video.currentTime = 12;
     video.dispatch("timeupdate");
     await flushAsyncWork();
+    assert.equal(h.types.at(-1), "snapshot", "one advancing sample is insufficient");
+    video.currentTime = 13;
+    video.dispatch("timeupdate");
+    await flushAsyncWork();
     assert.equal(h.types.at(-1), "hls");
+    h.mounter.release(h.engine);
+  });
+});
+
+test("HLS timeupdate recovery resets evidence across seeks and unusable playback", async () => {
+  await withFakeDocument(async () => {
+    const h = createHlsHarness(async () => false);
+    await h.mount();
+    await flushAsyncWork();
+    const video = h.engine.video;
+    video.requestVideoFrameCallback = undefined;
+    video.readyState = 4;
+    video.videoWidth = 2560;
+    video.paused = false;
+
+    video.seeking = true;
+    video.currentTime = 30;
+    video.dispatch("timeupdate");
+    video.seeking = false;
+    video.currentTime = 30.1;
+    video.dispatch("timeupdate");
+    assert.deepEqual(h.types, ["snapshot"]);
+
+    video.readyState = 1;
+    video.currentTime = 30.2;
+    video.dispatch("timeupdate");
+    video.readyState = 4;
+    video.currentTime = 30.3;
+    video.dispatch("timeupdate");
+    video.currentTime = 30.4;
+    video.dispatch("timeupdate");
+    assert.deepEqual(h.types, ["snapshot", "hls"]);
+    h.mounter.release(h.engine);
+  });
+});
+
+test("HLS timeupdate recovery ignores isolated jumps and backward movement", async () => {
+  await withFakeDocument(async () => {
+    const h = createHlsHarness(async () => false);
+    await h.mount();
+    await flushAsyncWork();
+    const video = h.engine.video;
+    video.requestVideoFrameCallback = undefined;
+    video.readyState = 4;
+    video.videoWidth = 2560;
+    video.paused = false;
+
+    video.currentTime = 100;
+    video.dispatch("timeupdate");
+    video.currentTime = 5;
+    video.dispatch("timeupdate");
+    video.currentTime = 5.1;
+    video.dispatch("timeupdate");
+    assert.deepEqual(h.types, ["snapshot"]);
+    video.currentTime = 5.2;
+    video.dispatch("timeupdate");
+    assert.deepEqual(h.types, ["snapshot", "hls"]);
     h.mounter.release(h.engine);
   });
 });
