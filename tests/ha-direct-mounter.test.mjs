@@ -1083,8 +1083,17 @@ test("HA Direct HLS grace-cache reuse preserves recovery without a duplicate con
     assert.equal(fallbackVisible, false);
     assert.equal(hlsPlayers.length, 1);
 
-    graceController.cleanupEngine();
+    mountedEngine.dispatch("streams", { hasVideo: false });
+    await flushAsyncWork();
+    assert.equal(activeStreamType, "snapshot");
+    assert.equal(fallbackVisible, true);
+
+    graceController.cleanupEngine({ preserveLiveEntity: "camera.front" });
     assert.equal(engine, null);
+    assert.equal(
+      graceController.takeGraceHaDirectEntry("camera.front", "hls"),
+      null,
+    );
     assert.equal(mountedEngine.listenerCount("load"), 0);
     assert.equal(mountedEngine.listenerCount("streams"), 0);
     assert.equal(mountedEngine.video.listenerCount("timeupdate"), 0);
