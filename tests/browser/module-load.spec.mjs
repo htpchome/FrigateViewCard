@@ -4520,6 +4520,73 @@ test("hides the detached page/tools divider in phone Single View", async ({
   expect(dividerDisplay).toEqual({ mobile: "none", nonMobile: "flex" });
 });
 
+test("phone Single View source badge follows live controls while LIVE remains visible", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(baseUrl);
+
+  const states = await page.evaluate(async () => {
+    await import("/frigate-view-card.js");
+    const card = document.createElement("frigate-view-card");
+    card.style.display = "block";
+    card.style.width = "390px";
+    document.body.style.margin = "0";
+    document.body.append(card);
+    card.setConfig({
+      cameras: [{ entity: "camera.front", name: "Front" }],
+    });
+    card._pageId = "single-view";
+    card._renderShell();
+
+    const stage = card.shadowRoot.querySelector("#live-stage");
+    const controls = card.shadowRoot.querySelector(".live-playback-controls");
+    const source = card.shadowRoot.querySelector(
+      "[data-single-view-source-indicator]",
+    );
+    const live = card.shadowRoot.querySelector(
+      "[data-single-view-live-badge]",
+    );
+    source.hidden = false;
+
+    const sample = () => ({
+      controlsOpacity: getComputedStyle(controls).opacity,
+      liveDisplay: getComputedStyle(live).display,
+      sourceOpacity: getComputedStyle(source).opacity,
+      sourceVisibility: getComputedStyle(source).visibility,
+    });
+    const hidden = sample();
+    stage.classList.add("live-controls-visible");
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const visible = sample();
+    stage.classList.remove("live-controls-visible");
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const restored = sample();
+    return { hidden, visible, restored };
+  });
+
+  expect(states).toEqual({
+    hidden: {
+      controlsOpacity: "0",
+      liveDisplay: "flex",
+      sourceOpacity: "0",
+      sourceVisibility: "hidden",
+    },
+    visible: {
+      controlsOpacity: "1",
+      liveDisplay: "flex",
+      sourceOpacity: "1",
+      sourceVisibility: "visible",
+    },
+    restored: {
+      controlsOpacity: "0",
+      liveDisplay: "flex",
+      sourceOpacity: "0",
+      sourceVisibility: "hidden",
+    },
+  });
+});
+
 test("keeps desktop and phone swipe-page chips compact, equal, and responsive", async ({
   page,
 }) => {

@@ -84,6 +84,18 @@ export const SINGLE_VIEW_PAGE_STYLES = `
       display: inline-flex;
     }
 
+    .card .layout--single-view .single-view-source-indicator {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .16s ease, visibility 0s linear .16s;
+    }
+
+    .card .layout--single-view #live-stage.live-controls-visible .single-view-source-indicator {
+      opacity: 1;
+      visibility: visible;
+      transition-delay: 0s;
+    }
+
     .card .layout--single-view .info-left {
       min-width: 0;
       overflow: hidden;
