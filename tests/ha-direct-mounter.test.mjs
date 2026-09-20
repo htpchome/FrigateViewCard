@@ -3,9 +3,44 @@ import assert from "node:assert/strict";
 
 import { createHaDirectMounter } from "../src/features/live/ha-direct-mounter.js";
 
+function createFakeVideo(id = "first-video") {
+  const listeners = new Map();
+  const callbacks = new Map();
+  let nextCallback = 0;
+  return {
+    tagName: "VIDEO", id, paused: true, readyState: 0, currentTime: 0, videoWidth: 0,
+    addEventListener(type, handler) {
+      const handlers = listeners.get(type) || new Set();
+      handlers.add(handler);
+      listeners.set(type, handlers);
+    },
+    removeEventListener(type, handler) { listeners.get(type)?.delete(handler); },
+    dispatch(type) {
+      for (const handler of [...(listeners.get(type) || [])]) handler({ type, target: this });
+    },
+    requestVideoFrameCallback(handler) {
+      callbacks.set(++nextCallback, handler);
+      return nextCallback;
+    },
+    cancelVideoFrameCallback(id) { callbacks.delete(id); },
+    pendingFrames() { return [...callbacks.values()]; },
+    presentFrame() {
+      this.paused = false;
+      this.readyState = 4;
+      this.videoWidth = 2560;
+      this.currentTime += 0.04;
+      const pending = [...callbacks.values()];
+      callbacks.clear();
+      for (const handler of pending) handler(0, { presentedFrames: 1 });
+      this.dispatch("timeupdate");
+    },
+    listenerCount(type) { return listeners.get(type)?.size || 0; },
+  };
+}
+
 function createFakeStreamElement() {
   const listeners = new Map();
-  const firstVideo = { tagName: "VIDEO", id: "first-video" };
+  const firstVideo = createFakeVideo();
   let video = firstVideo;
   return {
     tagName: "HA-HLS-PLAYER",
@@ -32,9 +67,9 @@ function createFakeStreamElement() {
     removeEventListener(type, handler) {
       listeners.get(type)?.delete(handler);
     },
-    dispatch(type) {
+    dispatch(type, detail) {
       for (const handler of listeners.get(type) || []) {
-        handler({ type, target: this });
+        handler({ type, target: this, detail });
       }
     },
     listenerCount(type) {
@@ -433,6 +468,13 @@ test("ha direct mounter replaces WebRTC with HLS when no video frame starts", as
     assert.deepEqual(committedTypes, ["hls"]);
     assert.equal(readinessTargets.includes("webrtc"), true);
     assert.equal(readinessTargets.includes("HA-HLS-PLAYER"), true);
+
+    assignedEngine.dispatch("streams", { hasVideo: false });
+    await flushAsyncWork();
+    assert.equal(committedTypes.at(-1), "snapshot");
+    assignedEngine.video.presentFrame();
+    await flushAsyncWork();
+    assert.equal(committedTypes.at(-1), "hls");
   } finally {
     mounter.release(assignedEngine);
     globalThis.document = previousDocument;
@@ -635,6 +677,241 @@ test("ha direct mounter shows ready HLS while WebRTC continues and takes over", 
     globalThis.MediaStream = previousMediaStream;
     globalThis.RTCPeerConnection = previousPeerConnection;
   }
+});
+
+function createHlsHarness(waitForStreamStart = async () => true) {
+  let current = null;
+  const types = [];
+  const states = [];
+  const mounter = createHaDirectMounter({
+    getHass: () => ({ states: { "camera.front": { attributes: {} } } }),
+    getPreferredStreamType: () => "hls",
+    getStreamMuted: () => true,
+    getRotateOverlayActive: () => false,
+    isCurrentEngine: engine => current === engine,
+    waitForStreamStart,
+    assignCommittedEngine: engine => { current = engine; },
+    onCommittedMediaReady: () => {},
+    onCommittedStream: type => types.push(type),
+    applyResolvedStreamUiState: state => states.push(state),
+    setLiveNativeControls: () => {},
+  });
+  return {
+    mounter, types, states,
+    get engine() { return current; },
+    setCurrent(engine) { current = engine; },
+    mount: () => mounter.tryMount({ innerHTML: "", appendChild() {} }, null, {
+      entity: "camera.front", commit: true,
+    }),
+  };
+}
+
+test("HLS clears a timed-out snapshot only after a fresh video frame", async () => {
+  await withFakeDocument(async () => {
+    const h = createHlsHarness(async () => false);
+    await h.mount();
+    await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot"]);
+    const video = h.engine.video;
+    video.currentTime = 100;
+    video.readyState = 4;
+    video.paused = false;
+    h.engine.dispatch("load");
+    h.engine.dispatch("streams", { hasVideo: true });
+    await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot"], "old buffered data is not recovery");
+    video.presentFrame();
+    await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot", "hls"]);
+    assert.equal(h.states.at(-1).fallbackVisible, false);
+    assert.equal(video.pendingFrames().length, 0);
+    h.mounter.release(h.engine);
+  });
+});
+
+test("HLS recovers from repeated stream errors without hiding genuine failures", async () => {
+  await withFakeDocument(async () => {
+    const h = createHlsHarness();
+    await h.mount();
+    await flushAsyncWork();
+    for (let i = 0; i < 2; i++) {
+      h.engine.dispatch("streams", { hasVideo: false });
+      await flushAsyncWork();
+      assert.equal(h.types.at(-1), "snapshot");
+      h.engine.video.dispatch("playing");
+      assert.equal(h.types.at(-1), "snapshot", "playing event alone is insufficient");
+      h.engine.video.presentFrame();
+      await flushAsyncWork();
+      assert.equal(h.types.at(-1), "hls");
+    }
+    assert.deepEqual(h.types, ["hls", "snapshot", "hls", "snapshot", "hls"]);
+    h.mounter.release(h.engine);
+  });
+});
+
+test("a stale startup timeout cannot overwrite recovered HLS", async () => {
+  await withFakeDocument(async () => {
+    let finishStartup;
+    const h = createHlsHarness(() => new Promise(resolve => { finishStartup = resolve; }));
+    await h.mount();
+    h.engine.dispatch("streams", { hasVideo: false });
+    await flushAsyncWork();
+    h.engine.video.presentFrame();
+    await flushAsyncWork();
+    finishStartup(false);
+    await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot", "hls"]);
+    h.mounter.release(h.engine);
+  });
+});
+
+test("a stale startup success cannot clear a newer HLS failure", async () => {
+  await withFakeDocument(async () => {
+    let finishStartup;
+    const h = createHlsHarness(() => new Promise(resolve => { finishStartup = resolve; }));
+    await h.mount();
+    h.engine.dispatch("streams", { hasVideo: false });
+    await flushAsyncWork();
+    finishStartup(true);
+    await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot"]);
+    h.engine.video.presentFrame();
+    await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot", "hls"]);
+    h.mounter.release(h.engine);
+  });
+});
+
+test("HLS recovers through timeupdate when frame callbacks exist but stay silent", async () => {
+  await withFakeDocument(async () => {
+    const h = createHlsHarness(async () => false);
+    await h.mount();
+    await flushAsyncWork();
+    const video = h.engine.video;
+    assert.equal(video.pendingFrames().length, 1);
+    video.readyState = 4;
+    video.videoWidth = 2560;
+    video.paused = false;
+    video.currentTime = 1;
+    video.dispatch("timeupdate");
+    await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot", "hls"]);
+    assert.equal(video.pendingFrames().length, 0);
+    h.mounter.release(h.engine);
+  });
+});
+
+test("audio-only HLS time advancement does not clear the snapshot", async () => {
+  await withFakeDocument(async () => {
+    const h = createHlsHarness();
+    await h.mount();
+    await flushAsyncWork();
+    const video = h.engine.video;
+    video.requestVideoFrameCallback = undefined;
+    h.engine.dispatch("streams", { hasVideo: false });
+    await flushAsyncWork();
+    video.readyState = 4;
+    video.paused = false;
+    video.currentTime = 1;
+    video.dispatch("timeupdate");
+    assert.equal(video.videoWidth, 0);
+    assert.equal(h.types.at(-1), "snapshot");
+    h.mounter.release(h.engine);
+  });
+});
+
+test("a paused HLS frame does not clear fallback and recovery remains armed", async () => {
+  await withFakeDocument(async () => {
+    const h = createHlsHarness(async () => false);
+    await h.mount();
+    await flushAsyncWork();
+    const video = h.engine.video;
+    const callback = video.pendingFrames()[0];
+    assert.equal(typeof callback, "function");
+    video.readyState = 4;
+    callback();
+    assert.deepEqual(h.types, ["snapshot"]);
+    video.presentFrame();
+    await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot", "hls"]);
+    h.mounter.release(h.engine);
+  });
+});
+
+test("HLS release cancels recovery and rejects already-queued frame callbacks", async () => {
+  await withFakeDocument(async () => {
+    const h = createHlsHarness(async () => false);
+    await h.mount();
+    await flushAsyncWork();
+    const video = h.engine.video;
+    const queued = video.pendingFrames();
+    assert.equal(queued.length, 1);
+    h.mounter.release(h.engine);
+    assert.equal(video.pendingFrames().length, 0);
+    assert.equal(video.listenerCount("timeupdate"), 0);
+    video.paused = false;
+    video.readyState = 4;
+    queued[0]();
+    assert.deepEqual(h.types, ["snapshot"]);
+  });
+});
+
+test("HLS recovery follows replacement video and ignores an obsolete engine", async () => {
+  await withFakeDocument(async () => {
+    const h = createHlsHarness(async () => false);
+    await h.mount();
+    await flushAsyncWork();
+    const engine = h.engine;
+    const oldVideo = engine.video;
+    const queued = oldVideo.pendingFrames();
+    assert.equal(queued.length, 1);
+    engine.video = createFakeVideo("replacement");
+    engine.dispatch("load");
+    await flushAsyncWork();
+    assert.equal(oldVideo.pendingFrames().length, 0);
+    oldVideo.paused = false;
+    oldVideo.readyState = 4;
+    queued[0]();
+    assert.deepEqual(h.types, ["snapshot"]);
+    engine.video.presentFrame();
+    await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot", "hls"]);
+    engine.dispatch("streams", { hasVideo: false });
+    await flushAsyncWork();
+    h.setCurrent({});
+    engine.video.presentFrame();
+    await flushAsyncWork();
+    assert.deepEqual(h.types, ["snapshot", "hls", "snapshot"]);
+    h.mounter.release(engine);
+  });
+});
+
+test("HLS recovery without frame callbacks requires unpaused time advancement", async () => {
+  await withFakeDocument(async () => {
+    const h = createHlsHarness();
+    await h.mount();
+    await flushAsyncWork();
+    const video = h.engine.video;
+    video.requestVideoFrameCallback = undefined;
+    video.currentTime = 10;
+    video.readyState = 4;
+    video.videoWidth = 2560;
+    h.engine.dispatch("streams", { hasVideo: false });
+    await flushAsyncWork();
+    video.dispatch("timeupdate");
+    assert.equal(h.types.at(-1), "snapshot");
+    video.currentTime = 11;
+    video.dispatch("timeupdate");
+    assert.equal(h.types.at(-1), "snapshot", "paused seeking is not playback");
+    video.paused = false;
+    video.dispatch("playing");
+    assert.equal(h.types.at(-1), "snapshot");
+    video.currentTime = 12;
+    video.dispatch("timeupdate");
+    await flushAsyncWork();
+    assert.equal(h.types.at(-1), "hls");
+    h.mounter.release(h.engine);
+  });
 });
 
 test("ha direct mounter serializes WebRTC teardown before the next offer", async () => {

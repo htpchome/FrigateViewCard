@@ -59,6 +59,7 @@ export function createHaDirectMounter({
     }
     binding.disposed = true;
     binding.revision += 1;
+    binding.cleanupRecovery?.();
     binding.abortController.abort();
     binding.fallbackAbortController?.abort?.();
     binding.fallbackEngine?.remove?.();
@@ -100,14 +101,75 @@ export function createHaDirectMounter({
     applyResolvedStreamUiState(resolveHaDirectFailedState());
   };
 
-  const bindHlsMedia = (engine, onFailed) => {
+  const bindHlsMedia = (engine) => {
     const binding = {
       disposed: false,
       revision: 0,
+      failed: false,
+      failureRevision: 0,
+      recoveryVideo: null,
+      cleanupRecovery: () => {},
       abortController: new AbortController(),
       reconcile: null,
       onStreams: null,
       takeoverEngine: null,
+    };
+    const watchRecovery = (video) => {
+      if (binding.recoveryVideo === video) return;
+      binding.cleanupRecovery();
+      if (!video) return;
+      binding.recoveryVideo = video;
+      let active = true;
+      let frameId = null;
+      let lastTime = Number(video.currentTime) || 0;
+      const isActive = () =>
+        active && !binding.disposed && binding.failed &&
+        isCurrentEngine(engine) &&
+        findActiveHaCameraStreamVideo(engine) === video;
+      const recover = () => {
+        if (!isActive()) return;
+        if (
+          video.paused || Number(video.readyState) < 2 ||
+          !(Number(video.videoWidth) > 0)
+        ) return;
+        binding.failed = false;
+        binding.cleanupRecovery();
+        applyReady(engine, "hls");
+      };
+      const onTimeUpdate = () => {
+        const time = Number(video.currentTime) || 0;
+        if (time > lastTime) recover();
+        lastTime = time;
+      };
+      const onFrame = () => {
+        frameId = null;
+        if (!isActive()) return;
+        recover();
+        if (isActive()) frameId = video.requestVideoFrameCallback(onFrame);
+      };
+      binding.cleanupRecovery = () => {
+        active = false;
+        if (frameId != null) video.cancelVideoFrameCallback?.(frameId);
+        video.removeEventListener?.("timeupdate", onTimeUpdate);
+        binding.recoveryVideo = null;
+        binding.cleanupRecovery = () => {};
+      };
+      // A load/playing event or old buffered frames cannot prove recovery.
+      // Watch advancing unpaused video too: the HA app's WKWebView can
+      // advance HLS playback without delivering its advertised frame callback.
+      video.addEventListener?.("timeupdate", onTimeUpdate);
+      if (typeof video.requestVideoFrameCallback === "function") {
+        frameId = video.requestVideoFrameCallback(onFrame);
+      }
+    };
+    binding.fail = () => {
+      if (binding.disposed || !isCurrentEngine(engine)) return;
+      if (!binding.failed) {
+        binding.failed = true;
+        binding.failureRevision += 1;
+        applyFailed(engine);
+      }
+      binding.reconcile();
     };
     binding.reconcile = () => {
       const revision = ++binding.revision;
@@ -122,11 +184,12 @@ export function createHaDirectMounter({
         }
         const video = findActiveHaCameraStreamVideo(engine);
         if (video) onCommittedMediaReady?.(engine, video);
+        if (binding.failed) watchRecovery(video);
       })();
     };
     binding.onStreams = (event) => {
-      if (event?.detail?.hasVideo === false) onFailed?.(binding);
-      binding.reconcile();
+      if (event?.detail?.hasVideo === false) binding.fail();
+      else binding.reconcile();
     };
     mediaBindings.set(engine, binding);
     engine.addEventListener?.("load", binding.reconcile, true);
@@ -241,25 +304,21 @@ export function createHaDirectMounter({
       }
 
       assignCommittedEngine(engine);
-      let failureHandled = false;
-      const fail = (binding) => {
-        if (failureHandled || binding.disposed || !isCurrentEngine(engine)) {
-          return;
-        }
-        failureHandled = true;
-        applyFailed(engine);
-      };
-      const binding = bindHlsMedia(engine, fail);
+      const binding = bindHlsMedia(engine);
       if (getRotateOverlayActive()) setLiveNativeControls(true);
       void (async () => {
+        const failureRevision = binding.failureRevision;
         const ready = await waitForStreamStart(engine, haDirectPlan.waitMs, {
           ...haDirectPlan.waitOptions,
           abortSignal: binding.abortController.signal,
           resolveVideo: () => findActiveHaCameraStreamVideo(engine),
         });
         if (binding.disposed || !isCurrentEngine(engine)) return;
+        // A stream error transfers readiness ownership to the recovery watcher.
+        // The older startup result must not undo its newer failure or recovery.
+        if (failureRevision !== binding.failureRevision) return;
         if (!ready) {
-          fail(binding);
+          binding.fail();
           return;
         }
         applyReady(engine, "hls");
@@ -287,15 +346,7 @@ export function createHaDirectMounter({
       if (!retainPrevious) removeSlotChildrenExcept(engine);
       if (engine.parentElement !== slot) slot.appendChild(engine);
       assignCommittedEngine(engine, { retainPrevious });
-      let failureHandled = false;
-      const fail = (binding) => {
-        if (failureHandled || binding.disposed || !isCurrentEngine(engine)) {
-          return;
-        }
-        failureHandled = true;
-        applyFailed(engine);
-      };
-      bindHlsMedia(engine, fail);
+      bindHlsMedia(engine);
       if (getRotateOverlayActive()) setLiveNativeControls(true);
       applyReady(engine, "hls");
       return { ok: true, type: "hls", engine, slot };
